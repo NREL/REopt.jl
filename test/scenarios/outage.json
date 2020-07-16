@@ -1,0 +1,33 @@
+{
+    "Site": {
+        "longitude": -91.7337,
+        "latitude": 35.2468
+    },
+    "ElectricUtility": {
+        "outage_start_timesteps": [100, 200],
+        "outage_durations": [10]
+    },
+    "Generator": {
+        "fuel_avail_gal": 10000.0,
+        "min_turn_down_pct": 0.0,
+        "fuel_slope_gal_per_kwh": 0.0656,
+        "om_cost_per_kw": 10.0,
+        "only_runs_during_grid_outage": true,
+        "sells_energy_back_to_grid": false
+    },
+    "PV": {
+    },
+    "ElectricLoad": {
+        "doe_reference_name": "RetailStore",
+        "annual_kwh": 10000000.0,
+        "city": "LosAngeles"
+    },
+    "ElectricTariff": {
+        "urdb_label": "5ed6c1a15457a3367add15ae"
+    },
+    "Storage": {},
+    "Financial": {
+        "VoLL": 100.0,
+        "microgrid_premium_pct": 0.15
+    }
+}

@@ -1,0 +1,43 @@
+{
+    "Site": {
+        "longitude": -91.7337,
+        "latitude": 35.2468
+    },
+    "PV": {
+        "macrs_bonus_pct": 0.0,
+        "max_kw": 200.0,
+        "cost_per_kw": 2000.0,
+        "tilt": 10.0,
+        "degradation_pct": 0.005,
+        "macrs_option_years": 5,
+        "total_itc_pct": 0.3,
+        "module_type": 0,
+        "array_type": 1,
+        "om_cost_per_kw": 16.0,
+        "macrs_itc_reduction": 0.5,
+        "azimuth": 180.0,
+        "dc_ac_ratio": 1.1
+    },
+    "ElectricLoad": {
+        "doe_reference_name": "MidriseApartment",
+        "annual_kwh": 259525.0,
+        "city": "Atlanta"
+    },
+    "Storage": {
+        "max_kwh": 0.0,
+        "max_kw": 0.0
+    },
+    "ElectricTariff": {
+        "monthly_energy_rates": [0.15, 0.2, 0.21, 0.23, 0.27, 0.19, 0.22, 0.17, 0.24, 0.26, 0.18, 0.2],
+        "monthly_demand_rates": [0.08, 0.11, 0, 0, 0.15, 0.14, 0.09, 0.06, 0, 0, 0.05, 0]
+    },
+    "Financial": {
+        "elec_cost_escalation_pct": 0.026,
+        "offtaker_discount_pct": 0.081,
+        "owner_discount_pct": 0.081,
+        "analysis_years": 20,
+        "offtaker_tax_pct": 0.26,
+        "owner_tax_pct": 0.26,
+        "om_cost_escalation_pct": 0.025
+    }
+}
