@@ -14,6 +14,7 @@ MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
 MutableArithmetics = "d8a4904e-b15c-11e9-3269-09a3773c0cb0"
 
 [compat]
+MathOptInterface = "0.9"
 MutableArithmetics = "0.2"
 JSON = "0.21"
 HTTP = "0.8"
