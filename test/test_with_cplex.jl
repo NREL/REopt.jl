@@ -72,6 +72,19 @@ end
 end
 
 
+@testset "Minimize Unserved Load" begin
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, "./scenarios/outage.json")
+
+    @test results["expected_outage_cost"] ≈ 0
+    @test results["total_unserved_load"] ≈ 0
+    @test value(m[:binMGTechUsed]["Generator"]) == 1
+    @test value(m[:binMGTechUsed]["PV"]) == 1
+    @test value(m[:binMGStorageUsed]) == 1
+    @test results["lcc"] ≈ 5.8326926e7
+end
+
+
 
 ## equivalent REopt Lite API Post for test 2:
 #   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
