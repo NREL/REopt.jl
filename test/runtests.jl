@@ -32,23 +32,31 @@ using Test
 #=
 To test with only one solver:
 julia> using Pkg
-julia> Pkg.test("REoptLite"; test_args=["Xpress"])
+julia> Pkg.test("REoptLite"; test_args=["Cbc"])
+
+nlaws 200721: only running Cbc tests here b/c cannot get CPLEX and Xpress licences on to Github
+    servers (runtests.jl is automated in Github Actions with ci.yml).
 =#
 
 @testset "REoptLite.jl" begin
-    if isempty(ARGS) || "all" in ARGS
-        all_tests = true
-    else
-        all_tests = false
-    end
-    if all_tests || "CPLEX" in ARGS
-        @testset "test_with_cplex" begin
-            include("test_with_cplex.jl")
+    # if isempty(ARGS) || "all" in ARGS
+    #     all_tests = true
+    # else
+    #     all_tests = false
+    # end
+    # if all_tests || "CPLEX" in ARGS
+    #     @testset "test_with_cplex" begin
+    #         include("test_with_cplex.jl")
+    #     end
+    # end
+    # if all_tests || "Xpress" in ARGS
+    #     @testset "test_with_xpress" begin
+    #         include("test_with_xpress.jl")
+    #     end
+    # end
+    # if all_tests || "Cbc" in ARGS
+        @testset "test_with_cbc" begin
+            include("test_with_cbc.jl")
         end
-    end
-    if all_tests || "Xpress" in ARGS
-        @testset "test_with_xpress" begin
-            include("test_with_xpress.jl")
-        end
-    end
+    # end
 end
