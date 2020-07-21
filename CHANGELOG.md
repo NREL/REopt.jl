@@ -1,5 +1,8 @@
 # REoptLite Changelog
 
+## dev
+- add support for custom ElectricLoad `loads_kw` input
+
 ## v0.1.1 Fix build.jl
 deps/build.jl had a relative path dependency, fixed with an absolute path.
 
