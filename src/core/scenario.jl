@@ -83,11 +83,7 @@ function Scenario(d::Dict)
         storage = Storage(storage_dict, financial)
     end
 
-    reopt_path = "."
-    if endswith(pwd(), "test")
-        reopt_path = ".."
-    end
-    electric_load = ElectricLoad(; reopt_path=reopt_path, dictkeys_tosymbols(d["ElectricLoad"])...)
+    electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...)
 
     electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 
                                        year=electric_load.year

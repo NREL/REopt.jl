@@ -30,65 +30,48 @@
 struct ElectricLoad
     loads_kw::Array{Real,1}
     year::Int
-    doe_reference_name::String
-    city::String # TODO replace city with climate zone look-up based on lat/lon
-    annual_kwh::Union{Float64, Nothing}
-    monthly_totals_kwh::Array{Real,1}
     critical_loads_kw::Array{Real,1}
-    loads_kw_is_net::Bool
-    critical_loads_kw_is_net::Bool
-    critical_load_pct::Float64
-end
-
-
-"""
-ElectricLoad constructor with default values (except loads_kw)
-"""
-function ElectricLoadBuilder(;
-    loads_kw::Array{<:Real,1},
-    year::Int = 2019,
-    doe_reference_name::String = "",
-    city::String = "",
-    annual_kwh::Union{Float64, Nothing} = nothing,
-    monthly_totals_kwh::Array{<:Real,1} = Real[],
-    critical_loads_kw::Array{<:Real,1} = Real[],
-    loads_kw_is_net::Bool = true,
-    critical_loads_kw_is_net::Bool = false,
-    critical_load_pct::Float64 = 0.5
-    )
-    if isempty(critical_loads_kw)
-        critical_loads_kw = critical_load_pct * loads_kw
+    
+    function ElectricLoad(;
+        loads_kw::Union{Missing, Array{<:Real,1}} = missing,
+        year::Int = 2019,
+        doe_reference_name::Union{Missing, String} = missing,
+        city::Union{Missing, String} = missing,
+        annual_kwh::Union{Float64, Nothing} = nothing,
+        monthly_totals_kwh::Array{<:Real,1} = Real[],
+        critical_loads_kw::Union{Missing, Array{Real,1}} = missing,
+        loads_kw_is_net::Bool = true,
+        critical_loads_kw_is_net::Bool = false,
+        critical_load_pct::Float64 = 0.5
+        )
+        
+        if !ismissing(loads_kw)
+            if ismissing(critical_loads_kw)
+                critical_loads_kw = critical_load_pct * loads_kw
+            end
+            return new(
+                loads_kw,
+                year,
+                critical_loads_kw
+            )     
+    
+        elseif !ismissing(doe_reference_name)  && !ismissing(city)
+            # NOTE: must use year that starts on Sunday with DOE reference doe_ref_profiles
+            year = 2017
+            loads_kw = BuiltInElectricLoad(city, doe_reference_name, annual_kwh=annual_kwh)
+            if ismissing(critical_loads_kw)
+                critical_loads_kw = critical_load_pct * loads_kw
+            end
+            return new(
+                loads_kw,
+                year,
+                critical_loads_kw
+            )
+            
+        else
+            error("Cannot construct ElectricLoad. You must provide either loads_kw or [doe_reference_name, city].")
+        end
     end
-    ElectricLoad(
-        loads_kw,
-        year,
-        doe_reference_name,
-        city,
-        annual_kwh,
-        monthly_totals_kwh,
-        critical_loads_kw,
-        loads_kw_is_net,
-        critical_loads_kw_is_net,
-        critical_load_pct,
-    )
-end
-
-
-function ElectricLoad(;
-    city::String,
-    doe_reference_name::String,
-    annual_kwh::Union{Float64,Nothing}=nothing,
-    reopt_path::String="."
-    )
-    # NOTE: must use year that starts on Sunday with DOE reference doe_ref_profiles
-    year = 2017
-    loads_kw = BuiltInElectricLoad(city, doe_reference_name, annual_kwh=annual_kwh, reopt_path=reopt_path)
-    ElectricLoadBuilder(;
-        loads_kw=loads_kw,
-        year=year,
-        city=city,
-        doe_reference_name=doe_reference_name
-    )
 end
 
 
@@ -96,7 +79,6 @@ function BuiltInElectricLoad(
     city::String,
     buildingtype::String;
     annual_kwh::Union{Float64,Nothing}=nothing,
-    reopt_path::String="."
     )
     lib_path = joinpath(dirname(@__FILE__), "..", "..", "data")
     # TODO set path with joinpath(dirname(pathof(REoptLite)), "..", "data") once REopt is a pkg
@@ -413,6 +395,7 @@ function BuiltInElectricLoad(
     if isnothing(annual_kwh)
         annual_kwh = annual_loads[city][lowercase(buildingtype)]
     end
+     # TODO implement BuiltInElectricLoad scaling based on monthly_totals_kwh
 
     profile_path = joinpath(lib_path, string("Load8760_norm_" * city * "_" * buildingtype * ".dat"))
     normalized_profile = vec(readdlm(profile_path, '\n', Float64, '\n'))
