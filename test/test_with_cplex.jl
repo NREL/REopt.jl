@@ -37,7 +37,7 @@ using REoptLite
 @testset "BAU Scenario" begin
     model = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
     results = run_reopt(model, "./scenarios/no_techs.json")
-    @test all(isapprox.(results["GridToLoad"], results["inputs"].elec_load, atol=0.001))
+    @test all(isapprox.(results["GridToLoad"], results["inputs"].elec_load.loads_kw, atol=0.001))
 end
 
 
@@ -65,15 +65,15 @@ end
     model = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
     results = run_reopt(model, "./scenarios/pv_storage.json")
 
-    @test results["PV_kw"] ≈ 216.6667 atol=0.01
+    @test results["PV_kw"] ≈ 217 atol=1
     @test results["lcc"] ≈ 1.23887e7 rtol=1e-5
-    @test results["batt_kw"] ≈ 55.82 atol=0.01
-    @test results["batt_kwh"] ≈ 78.6885 atol=0.01
+    @test results["batt_kw"] ≈ 56 atol=1
+    @test results["batt_kwh"] ≈ 79 atol=1
 end
 
 
 @testset "Minimize Unserved Load" begin
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
     results = run_reopt(m, "./scenarios/outage.json")
 
     @test results["expected_outage_cost"] ≈ 0
