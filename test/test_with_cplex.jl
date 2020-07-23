@@ -79,9 +79,9 @@ end
     @test results["expected_outage_cost"] ≈ 0
     @test results["total_unserved_load"] ≈ 0
     @test value(m[:binMGTechUsed]["Generator"]) == 1
-    @test value(m[:binMGTechUsed]["PV"]) == 1
+    @test value(m[:binMGTechUsed]["PV"]) == 0
     @test value(m[:binMGStorageUsed]) == 1
-    @test results["lcc"] ≈ 5.8326926e7
+    @test results["lcc"] ≈ 5.8696549e7
 end
 
 
