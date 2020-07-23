@@ -50,11 +50,12 @@ function add_outage_cost_constraints(m,p)
     )
 
     @constraint(m, [t in p.techs],
-        m[:binMGTechUsed][t] => {m[:dvMGTechUpgradeCost][t] >= p.microgrid_premium_pct * m[:PerTechCapCosts][t]}
+        m[:binMGTechUsed][t] => {m[:dvMGTechUpgradeCost][t] >= p.microgrid_premium_pct * p.two_party_factor *
+		                         p.cap_cost_slope[t] * m[:dvSize][t]}
     )
 
     @constraint(m, [t in p.techs],
-        m[:binMGTechUsed][t] => {m[:dvPurchaseSize][t] >= 1.0}  # 1 kW min size to prevent binaryMGTechUsed = 1 with zero cost
+        m[:binMGTechUsed][t] => {m[:dvSize][t] >= 1.0}  # 1 kW min size to prevent binaryMGTechUsed = 1 with zero cost
     )
 
     @constraint(m,
