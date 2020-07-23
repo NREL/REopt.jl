@@ -27,10 +27,12 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-struct ElectricLoad
+mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off of (critical_)loads_kw_is_net
     loads_kw::Array{Real,1}
     year::Int
     critical_loads_kw::Array{Real,1}
+    loads_kw_is_net::Bool
+    critical_loads_kw_is_net::Bool
     
     function ElectricLoad(;
         loads_kw::Union{Missing, Array{<:Real,1}} = missing,
@@ -52,7 +54,9 @@ struct ElectricLoad
             return new(
                 loads_kw,
                 year,
-                critical_loads_kw
+                critical_loads_kw,
+                loads_kw_is_net,
+                critical_loads_kw_is_net
             )     
     
         elseif !ismissing(doe_reference_name)  && !ismissing(city)
@@ -65,7 +69,9 @@ struct ElectricLoad
             return new(
                 loads_kw,
                 year,
-                critical_loads_kw
+                critical_loads_kw,
+                loads_kw_is_net,
+                critical_loads_kw_is_net
             )
             
         else

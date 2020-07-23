@@ -88,7 +88,7 @@ end
     @test value(m[:binMGTechUsed]["Generator"]) == 1
     @test value(m[:binMGTechUsed]["PV"]) == 0
     @test value(m[:binMGStorageUsed]) == 1
-    @test results["lcc"] ≈ 5.8696549e7
+    @test results["lcc"] ≈ 6.5789084e7
 end
 
 ## equivalent REopt Lite API Post for test 2:

@@ -99,6 +99,10 @@ function REoptInputs(s::Scenario)
     # levelization_factor = DenseAxisArray([0.9539], techs)
     # levelization_factor = DenseAxisArray([0.9539, 1.0], techs)  # w/generator
     time_steps_with_grid, time_steps_without_grid, = setup_electric_utility_inputs(s)
+    
+    if any(pv.existing_kw > 0 for pv in s.pvs)
+        adjust_load_profile(s, production_factor)
+    end
 
     REoptInputs(
         techs,
@@ -338,4 +342,19 @@ function setup_electric_utility_inputs(s::Scenario)
         time_steps_with_grid = Int[i for i in range(1, stop=length(s.electric_load.loads_kw))]
     end
     return time_steps_with_grid, time_steps_without_grid
+end
+
+
+function adjust_load_profile(s::Scenario, production_factor::DenseAxisArray)
+    if s.electric_load.loads_kw_is_net
+        for pv in s.pvs if pv.existing_kw > 0
+            s.electric_load.loads_kw .+= pv.existing_kw * production_factor[pv.name, :]
+        end end
+    end
+    
+    if s.electric_load.critical_loads_kw_is_net
+        for pv in s.pvs if pv.existing_kw > 0
+            s.electric_load.critical_loads_kw .+= pv.existing_kw * production_factor[pv.name, :]
+        end end
+    end
 end
