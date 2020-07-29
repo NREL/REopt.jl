@@ -32,9 +32,11 @@ struct Site
     longitude
     land_acres
     roof_squarefeet
+    min_resil_timesteps
     function Site(;latitude::Real, longitude::Real, 
                    land_acres::Union{Float64, Nothing}=nothing, 
-                   roof_squarefeet::Union{Float64, Nothing}=nothing
+                   roof_squarefeet::Union{Float64, Nothing}=nothing,
+                   min_resil_timesteps::Int=0,
         ) 
         invalid_args = String[]
         if !(-90 <= latitude < 90)
@@ -46,6 +48,6 @@ struct Site
         if length(invalid_args) > 0
             error("Invalid argument values: $(invalid_args)")
         end
-        new(latitude, longitude, land_acres, roof_squarefeet)
+        new(latitude, longitude, land_acres, roof_squarefeet, min_resil_timesteps)
     end
 end

@@ -130,12 +130,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_tou_peak_constraint(m, p)
 	end
 
-	@expression(m, PerTechCapCosts[t in p.techs], p.two_party_factor *
-		p.cap_cost_slope[t] * m[:dvPurchaseSize][t]  # TODO add Yintercept and binary
-	)
-	
 	@expression(m, TotalTechCapCosts, p.two_party_factor *
-		sum( PerTechCapCosts[t] for t in p.techs )
+		sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in p.techs )  # TODO add Yintercept and binary
 	)
 	
 	@expression(m, TotalStorageCapCosts, p.two_party_factor *
@@ -190,6 +186,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			@constraint(m, [s in p.elecutil.scenarios, tz in p.elecutil.outage_start_timesteps, ts in p.elecutil.outage_timesteps],
 				m[:binMGGenIsOnInTS][s, tz, ts] == 0
 			)
+		end
+		
+		if p.min_resil_timesteps > 0
+			add_min_hours_crit_ld_met_constraint(m,p)
 		end
 	end
 

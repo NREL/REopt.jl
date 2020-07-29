@@ -38,6 +38,12 @@ function add_dv_UnservedLoad_constraints(m,p)
     )
 end
 
+# constrain minimum hours that critical load is met
+function add_min_hours_crit_ld_met_constraint(m,p)
+    @constraint(m, [s in p.elecutil.scenarios, tz in p.elecutil.outage_start_timesteps, ts in 1:p.min_resil_timesteps],
+        m[:dvUnservedLoad][s, tz, ts] <= 0
+    )
+end
 
 function add_outage_cost_constraints(m,p)
     # TODO: fixed cost, account for outage_is_major_event
@@ -50,11 +56,12 @@ function add_outage_cost_constraints(m,p)
     )
 
     @constraint(m, [t in p.techs],
-        m[:binMGTechUsed][t] => {m[:dvMGTechUpgradeCost][t] >= p.microgrid_premium_pct * m[:PerTechCapCosts][t]}
+        m[:binMGTechUsed][t] => {m[:dvMGTechUpgradeCost][t] >= p.microgrid_premium_pct * p.two_party_factor *
+		                         p.cap_cost_slope[t] * m[:dvSize][t]}
     )
 
     @constraint(m, [t in p.techs],
-        m[:binMGTechUsed][t] => {m[:dvPurchaseSize][t] >= 1.0}  # 1 kW min size to prevent binaryMGTechUsed = 1 with zero cost
+        m[:binMGTechUsed][t] => {m[:dvSize][t] >= 1.0}  # 1 kW min size to prevent binaryMGTechUsed = 1 with zero cost
     )
 
     @constraint(m,

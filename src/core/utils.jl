@@ -141,6 +141,13 @@ end
 function dictkeys_tosymbols(d::Dict)
     d2 = Dict()
     for (k, v) in d
+        if k == "loads_kw" && !isempty(v)
+            try
+                v = convert(Array{Real, 1}, v)
+            catch
+                @warn "Unable to convert loads_kw to an Array{Real, 1}"
+            end
+        end
         d2[Symbol(k)] = v
     end
     return d2

@@ -37,7 +37,7 @@ using REoptLite
 @testset "BAU Scenario" begin
     model = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
     results = run_reopt(model, "./scenarios/no_techs.json")
-    @test all(isapprox.(results["GridToLoad"], results["inputs"].elec_load, atol=0.001))
+    @test all(isapprox.(results["GridToLoad"], results["inputs"].elec_load.loads_kw, atol=0.001))
 end
 
 
@@ -65,10 +65,31 @@ end
     model = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
     results = run_reopt(model, "./scenarios/pv_storage.json")
 
-    @test results["PV_kw"] ≈ 216.6667 atol=0.01
+    @test results["PV_kw"] ≈ 217 atol=1
     @test results["lcc"] ≈ 1.23887e7 rtol=1e-5
-    @test results["batt_kw"] ≈ 55.82 atol=0.01
-    @test results["batt_kwh"] ≈ 78.6885 atol=0.01
+    @test results["batt_kw"] ≈ 56 atol=1
+    @test results["batt_kwh"] ≈ 79 atol=1
+end
+
+
+@testset "Minimize Unserved Load" begin
+    m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
+    results = run_reopt(m, "./scenarios/outage.json")
+
+    @test results["expected_outage_cost"] ≈ 0
+    @test results["total_unserved_load"] ≈ 0
+    @test value(m[:binMGTechUsed]["Generator"]) == 1
+    @test value(m[:binMGTechUsed]["PV"]) == 0
+    @test value(m[:binMGStorageUsed]) == 1
+    @test results["lcc"] ≈ 6.5789084e7
+    
+    #=
+    Scenario with $0/kWh VoLL, 12x169 hour outages, 1kW load/hour, and min_resil_timesteps = 168
+    - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
+    =#
+    m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
+    results = run_reopt(m, ".test/scenarios/nogridcost_minresilhours.json")
+    @test results["total_unserved_load"] ≈ 12
 end
 
 

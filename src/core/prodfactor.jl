@@ -27,8 +27,6 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-using Logging
-
 function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly")
 
     url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
@@ -41,7 +39,7 @@ function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly")
 
     try
         @info "Querying PVWatts for prodfactor with " pv.name
-        r = HTTP.get(url, require_ssl_verification=false)  # cannot verify on NREL VPN
+        r = HTTP.get(url)
         response = JSON.parse(String(r.body))
         if r.status != 200
             error("Bad response from PVWatts: $(response["errors"])")

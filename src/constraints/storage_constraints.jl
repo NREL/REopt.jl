@@ -107,6 +107,12 @@ function add_storage_dispatch_constraints(m, p, b)
 	@constraint(m, [ts in p.time_steps],
         m[:dvStoredEnergy][b,ts] <= m[:dvStorageEnergy][b]
     )
+    
+    for b in setdiff(p.storage.types, p.storage.can_grid_charge)
+        for ts in p.time_steps_with_grid
+            fix(m[:dvGridToStorage][b, ts], 0.0, force=true)
+        end
+	end
 end
 
 

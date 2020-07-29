@@ -2,6 +2,11 @@
 
 ## dev
 - add support for custom ElectricLoad `loads_kw` input
+- enforce storage cannot grid charge
+- include existing capacity in microgrid upgrade cost
+- implement ElectricLoad `loads_kw_is_net` and `critical_loads_kw_is_net`
+    - add existing PV production to raw load profile is `true`
+- add min_resil_timesteps input and optional constraint for minimum timesteps that critical load must be met in every outage
 
 ## v0.1.1 Fix build.jl
 deps/build.jl had a relative path dependency, fixed with an absolute path.
