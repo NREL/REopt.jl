@@ -38,6 +38,12 @@ function add_dv_UnservedLoad_constraints(m,p)
     )
 end
 
+# constrain minimum hours that critical load is met
+function add_min_hours_crit_ld_met_constraint(m,p)
+    @constraint(m, [s in p.elecutil.scenarios, tz in p.elecutil.outage_start_timesteps, ts in 1:p.min_resil_timesteps],
+        m[:dvUnservedLoad][s, tz, ts] <= 0
+    )
+end
 
 function add_outage_cost_constraints(m,p)
     # TODO: fixed cost, account for outage_is_major_event
