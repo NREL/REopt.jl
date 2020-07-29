@@ -187,6 +187,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 				m[:binMGGenIsOnInTS][s, tz, ts] == 0
 			)
 		end
+		
+		if p.min_resil_timesteps > 0
+			add_min_hours_crit_ld_met_constraint(m,p)
+		end
 	end
 
 

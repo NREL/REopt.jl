@@ -44,7 +44,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         critical_loads_kw::Union{Missing, Array{Real,1}} = missing,
         loads_kw_is_net::Bool = true,
         critical_loads_kw_is_net::Bool = false,
-        critical_load_pct::Float64 = 0.5
+        critical_load_pct::Real = 0.5
         )
         
         if !ismissing(loads_kw)

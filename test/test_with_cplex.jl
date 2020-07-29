@@ -82,6 +82,14 @@ end
     @test value(m[:binMGTechUsed]["PV"]) == 0
     @test value(m[:binMGStorageUsed]) == 1
     @test results["lcc"] ≈ 6.5789084e7
+    
+    #=
+    Scenario with $0/kWh VoLL, 12x169 hour outages, 1kW load/hour, and min_resil_timesteps = 168
+    - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
+    =#
+    m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
+    results = run_reopt(m, ".test/scenarios/nogridcost_minresilhours.json")
+    @test results["total_unserved_load"] ≈ 12
 end
 
 
