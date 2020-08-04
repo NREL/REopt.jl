@@ -57,24 +57,41 @@ function add_outage_cost_constraints(m,p)
 
     @constraint(m, [t in p.techs],
         m[:binMGTechUsed][t] => {m[:dvMGTechUpgradeCost][t] >= p.microgrid_premium_pct * p.two_party_factor *
-		                         p.cap_cost_slope[t] * m[:dvSize][t]}
-    )
-
-    @constraint(m, [t in p.techs],
-        m[:binMGTechUsed][t] => {m[:dvSize][t] >= 1.0}  # 1 kW min size to prevent binaryMGTechUsed = 1 with zero cost
+		                         p.cap_cost_slope[t] * m[:dvMGsize][t]}
     )
 
     @constraint(m,
         m[:binMGStorageUsed] => {m[:dvMGStorageUpgradeCost] >= p.microgrid_premium_pct * m[:TotalStorageCapCosts]}
     )
-
-    @constraint(m, [b in p.storage.types],
-        m[:binMGStorageUsed] => {m[:dvStoragePower][b] >= 1.0} # 1 kW min size to prevent binaryMGStorageUsed = 1 with zero cost
-    )
     
     @expression(m, mgTotalTechUpgradeCost,
         sum( m[:dvMGTechUpgradeCost][t] for t in p.techs )
     )
+end
+
+
+function add_MG_size_constraints(m,p)
+    @constraint(m, [t in p.techs],
+        m[:binMGTechUsed][t] => {m[:dvMGsize][t] >= 1.0}  # 1 kW min size to prevent binaryMGTechUsed = 1 with zero cost
+    )
+
+    @constraint(m, [b in p.storage.types],
+        m[:binMGStorageUsed] => {m[:dvStoragePower][b] >= 1.0} # 1 kW min size to prevent binaryMGStorageUsed = 1 with zero cost
+    )
+    @info "p.mg_tech_sizes_equal_grid_sizes", p.mg_tech_sizes_equal_grid_sizes
+    if p.mg_tech_sizes_equal_grid_sizes
+        @info "here"
+        @constraint(m, [t in p.techs],
+            m[:dvMGsize][t] == m[:dvSize][t]
+        )
+    else
+        @info "there"
+        @constraint(m, [t in p.techs],
+            m[:dvMGsize][t] <= m[:dvSize][t]
+        )
+    end
+        
+    
 end
 
 
@@ -101,7 +118,7 @@ function add_MG_production_constraints(m,p)
     end
     
     @constraint(m, [t in p.techs, s in p.elecutil.scenarios, tz in p.elecutil.outage_start_timesteps, ts in p.elecutil.outage_timesteps],
-        m[:dvMGRatedProduction][t, s, tz, ts] <= m[:dvSize][t]
+        m[:dvMGRatedProduction][t, s, tz, ts] <= m[:dvMGsize][t]
     )
 end
 
@@ -145,13 +162,13 @@ end
 
 function add_binMGGenIsOnInTS_constraints(m,p)
     # The following 2 constraints define binMGGenIsOnInTS to be the binary corollary to dvMGRatedProd for generator,
-    # i.e. binMGGenIsOnInTS = 1 for dvMGRatedProd > min_turn_down_pct * dvSize, and binMGGenIsOnInTS = 0 for dvMGRatedProd = 0
+    # i.e. binMGGenIsOnInTS = 1 for dvMGRatedProd > min_turn_down_pct * dvMGsize, and binMGGenIsOnInTS = 0 for dvMGRatedProd = 0
     @constraint(m, [t in p.gentechs, s in p.elecutil.scenarios, tz in p.elecutil.outage_start_timesteps, ts in p.elecutil.outage_timesteps],
         !m[:binMGGenIsOnInTS][s, tz, ts] => { m[:dvMGRatedProduction][t, s, tz, ts] <= 0 }
     )
     @constraint(m, [t in p.gentechs, s in p.elecutil.scenarios, tz in p.elecutil.outage_start_timesteps, ts in p.elecutil.outage_timesteps],
         m[:binMGGenIsOnInTS][s, tz, ts] => { 
-            m[:dvMGRatedProduction][t, s, tz, ts] >= p.generator.min_turn_down_pct * m[:dvSize][t]
+            m[:dvMGRatedProduction][t, s, tz, ts] >= p.generator.min_turn_down_pct * m[:dvMGsize][t]
         }
     )
     @constraint(m, [t in p.gentechs, s in p.elecutil.scenarios, tz in p.elecutil.outage_start_timesteps, ts in p.elecutil.outage_timesteps],
@@ -218,7 +235,7 @@ function add_cannot_have_MG_with_only_PVwind_constraints(m, p)
     # can't "turn down" renewable_techs
     if !isempty(renewable_techs)
         @constraint(m, [t in renewable_techs, s in p.elecutil.scenarios, tz in p.elecutil.outage_start_timesteps, ts in p.elecutil.outage_timesteps],
-            m[:binMGTechUsed][t] => { m[:dvMGRatedProduction][t, s, tz, ts] >= m[:dvSize][t] }
+            m[:binMGTechUsed][t] => { m[:dvMGRatedProduction][t, s, tz, ts] >= m[:dvMGsize][t] }
         )
         @constraint(m, [t in renewable_techs, s in p.elecutil.scenarios, tz in p.elecutil.outage_start_timesteps, ts in p.elecutil.outage_timesteps],
             !m[:binMGTechUsed][t] => { m[:dvMGRatedProduction][t, s, tz, ts] <= 0 }
