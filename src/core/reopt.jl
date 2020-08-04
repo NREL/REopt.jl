@@ -176,6 +176,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_MG_production_constraints(m,p)
 		add_MG_storage_dispatch_constraints(m,p)
 		add_cannot_have_MG_with_only_PVwind_constraints(m,p)
+		add_MG_size_constraints(m,p)
 		
 		if !isempty(p.gentechs)
 			add_MG_fuel_burn_constraints(m,p)
@@ -430,6 +431,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 			dvMaxOutageCost[S] >= 0 # maximum outage cost dependent on number of outage durations
 			dvMGTechUpgradeCost[p.techs] >= 0
 			dvMGStorageUpgradeCost >= 0
+			dvMGsize[p.techs] >= 0
 			
 			dvMGFuelUsed[p.techs, S, tZeros] >= 0
 			dvMGMaxFuelUsage[S] >= 0
@@ -496,4 +498,11 @@ end
 function add_outage_results(m, p, r::Dict)
 	r["expected_outage_cost"] = value(m[:ExpectedOutageCost])
 	r["total_unserved_load"] = sum(value.(m[:dvUnservedLoad]))
+	
+	if !isempty(p.pvtechs)
+		for t in p.pvtechs
+			# TODO add microgrid dispatch results as well as other MG results
+			r[string(t, "mg_kw")] = round(value(m[:dvMGsize][t]), digits=4)
+		end
+	end
 end
