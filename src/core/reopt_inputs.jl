@@ -69,6 +69,7 @@ struct REoptInputs
     generator::Generator
     elecutil::ElectricUtility
     min_resil_timesteps::Int
+    mg_tech_sizes_equal_grid_sizes::Bool
 end
 
 function REoptInputs(fp::String)
@@ -141,7 +142,8 @@ function REoptInputs(s::Scenario)
         s.storage,
         s.generator,
         s.electric_utility,
-        s.site.min_resil_timesteps
+        s.site.min_resil_timesteps,
+        s.site.mg_tech_sizes_equal_grid_sizes
     )
 end
 
