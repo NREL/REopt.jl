@@ -97,6 +97,12 @@ end
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/nogridcost_minresilhours.json")
     @test results["total_unserved_load"] ≈ 12
+    
+    # testing dvUnserved load, which would output 100 kWh for this scenario before output fix
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, "./scenarios/nogridcost_multiscenario.json")
+    @test results["total_unserved_load"] ≈ 60
+    
 end
 
 ## equivalent REopt Lite API Post for test 2:

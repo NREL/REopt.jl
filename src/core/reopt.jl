@@ -497,7 +497,14 @@ end
 
 function add_outage_results(m, p, r::Dict)
 	r["expected_outage_cost"] = value(m[:ExpectedOutageCost])
-	r["total_unserved_load"] = sum(value.(m[:dvUnservedLoad]))
+	r["total_unserved_load"] = 0
+	for s in p.elecutil.scenarios
+		r["total_unserved_load"] += sum(value.(m[:dvUnservedLoad])[s, tz, ts]
+			for tz in p.elecutil.outage_start_timesteps, 
+				ts in 1:p.elecutil.outage_durations[s]
+		) # need the ts in 1:p.elecutil.outage_durations[s] b/c dvUnservedLoad has unused values in third dimension
+	end
+	r["total_unserved_load"] = round(r["total_unserved_load"], digits=2)
 	
 	if !isempty(p.pvtechs)
 		for t in p.pvtechs
