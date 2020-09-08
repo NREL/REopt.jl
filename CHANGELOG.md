@@ -1,6 +1,7 @@
 # REoptLite Changelog
 
-## dev
+## v0.3.0
+#### Improvements
 - add separate decision variables and constraints for microgrid tech capacities
     - new Site input `mg_tech_sizes_equal_grid_sizes` (boolean), when `false` the microgrid tech capacities are constrained to be <= the grid connected tech capacities
 #### bug fixes
