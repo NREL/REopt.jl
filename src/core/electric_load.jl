@@ -39,7 +39,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         year::Int = 2019,
         doe_reference_name::Union{Missing, String} = missing,
         city::Union{Missing, String} = missing,
-        annual_kwh::Union{Float64, Nothing} = nothing,
+        annual_kwh::Union{Real, Nothing} = nothing,
         monthly_totals_kwh::Array{<:Real,1} = Real[],
         critical_loads_kw::Union{Missing, Array{Real,1}} = missing,
         loads_kw_is_net::Bool = true,

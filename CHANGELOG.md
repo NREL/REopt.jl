@@ -1,5 +1,14 @@
 # REoptLite Changelog
 
+## v0.3.0
+#### Improvements
+- add separate decision variables and constraints for microgrid tech capacities
+    - new Site input `mg_tech_sizes_equal_grid_sizes` (boolean), when `false` the microgrid tech capacities are constrained to be <= the grid connected tech capacities
+#### bug fixes
+- allow non-integer `outage_probabilities`
+- correct `total_unserved_load` output
+- don't `add_min_hours_crit_ld_met_constraint` unless `min_resil_timesteps <= length(elecutil.outage_timesteps)`
+
 ## v0.2.0
 #### Improvements
 - add support for custom ElectricLoad `loads_kw` input
