@@ -40,9 +40,11 @@ end
 
 # constrain minimum hours that critical load is met
 function add_min_hours_crit_ld_met_constraint(m,p)
-    @constraint(m, [s in p.elecutil.scenarios, tz in p.elecutil.outage_start_timesteps, ts in 1:p.min_resil_timesteps],
-        m[:dvUnservedLoad][s, tz, ts] <= 0
-    )
+    if p.min_resil_timesteps <= length(p.elecutil.outage_timesteps)
+        @constraint(m, [s in p.elecutil.scenarios, tz in p.elecutil.outage_start_timesteps, ts in 1:p.min_resil_timesteps],
+            m[:dvUnservedLoad][s, tz, ts] <= 0
+        )
+    end
 end
 
 function add_outage_cost_constraints(m,p)
