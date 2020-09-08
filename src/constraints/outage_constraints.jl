@@ -78,20 +78,16 @@ function add_MG_size_constraints(m,p)
     @constraint(m, [b in p.storage.types],
         m[:binMGStorageUsed] => {m[:dvStoragePower][b] >= 1.0} # 1 kW min size to prevent binaryMGStorageUsed = 1 with zero cost
     )
-    @info "p.mg_tech_sizes_equal_grid_sizes", p.mg_tech_sizes_equal_grid_sizes
+    
     if p.mg_tech_sizes_equal_grid_sizes
-        @info "here"
         @constraint(m, [t in p.techs],
             m[:dvMGsize][t] == m[:dvSize][t]
         )
     else
-        @info "there"
         @constraint(m, [t in p.techs],
             m[:dvMGsize][t] <= m[:dvSize][t]
         )
     end
-        
-    
 end
 
 
