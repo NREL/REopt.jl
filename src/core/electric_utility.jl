@@ -34,7 +34,7 @@ Base.@kwdef struct ElectricUtility
     # with max taken over outage start time, expectation taken over outage duration
     outage_start_timesteps::Array{Int,1}=Int[]  # we minimize the maximum outage cost over outage start times
     outage_durations::Array{Int,1}=Int[]  # one-to-one with outage_probabilities, outage_durations can be a random variable
-    outage_probabilities::Array{Int,1}=[1.0]
+    outage_probabilities::Array{Real,1}=[1.0]
     outage_timesteps::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:maximum(outage_durations)
     scenarios::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:length(outage_durations)
 end
