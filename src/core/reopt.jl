@@ -37,6 +37,12 @@ function run_reopt(REopt::JuMP.AbstractModel, fp::String)
 end
 
 
+function run_reopt(REopt::JuMP.AbstractModel, d::Dict)
+	s = Scenario(d)
+	run_reopt(REopt, REoptInputs(s))
+end
+
+
 """
 	function build_reopt!(m::JuMP.AbstractModel, fp::String
 		; lpf::Union{Nothing, JuMP.AbstractModel}=nothing
