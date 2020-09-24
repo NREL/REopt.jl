@@ -470,19 +470,19 @@ function add_generator_results(m, p, r::Dict)
 
 	generatorToBatt = @expression(m, [ts in p.time_steps],
 		sum(m[:dvProductionToStorage][b, t, ts] for b in p.storage.types, t in p.gentechs))
-	r["generatorToBatt"] = round.(value.(generatorToBatt), digits=3)
+	r["generatorToBatt"] = convert(Array, round.(value.(generatorToBatt), digits=3))
 
 	generatorToGrid = @expression(m, [ts in p.time_steps],
 		sum(m[:dvWHLexport][t, ts] + m[:dvNEMexport][t, ts] for t in p.gentechs)
 	)
-	r["generatorToGrid"] = round.(value.(generatorToGrid), digits=3)
+	r["generatorToGrid"] = convert(Array, round.(value.(generatorToGrid), digits=3))
 
 	generatorToLoad = @expression(m, [ts in p.time_steps],
 		sum(m[:dvRatedProduction][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
 			for t in p.gentechs) -
 			generatorToBatt[ts] - generatorToGrid[ts]
 	)
-	r["generatorToLoad"] = round.(value.(generatorToLoad), digits=3)
+	r["generatorToLoad"] = convert(Array, round.(value.(generatorToLoad), digits=3))
 
     GeneratorFuelUsed = @expression(m, sum(m[:dvFuelUsage][t, ts] for t in p.gentechs, ts in p.time_steps))
 	r["fuel_used_gal"] = round(value(GeneratorFuelUsed), digits=2)
@@ -511,11 +511,73 @@ function add_outage_results(m, p, r::Dict)
 		) # need the ts in 1:p.elecutil.outage_durations[s] b/c dvUnservedLoad has unused values in third dimension
 	end
 	r["total_unserved_load"] = round(r["total_unserved_load"], digits=2)
-	
+	r["dvUnservedLoad"] = value.(m[:dvUnservedLoad]).data
+	r["mg_storage_upgrade_cost"] = value(m[:dvMGStorageUpgradeCost])
+	r["dvMGDischargeFromStorage"] = value.(m[:dvMGDischargeFromStorage]).data
 	if !isempty(p.pvtechs)
 		for t in p.pvtechs
 			# TODO add microgrid dispatch results as well as other MG results
 			r[string(t, "mg_kw")] = round(value(m[:dvMGsize][t]), digits=4)
+			r[string("mg_", t, "_upgrade_cost")] = round(value(m[:dvMGTechUpgradeCost][t]), digits=2)
+
+			if !isempty(p.storage.types)
+				PVtoBatt = (m[:dvMGProductionToStorage][t, s, tz, ts] for 
+					s in p.elecutil.scenarios,
+					tz in p.elecutil.outage_start_timesteps,
+					ts in p.elecutil.outage_timesteps)
+			else
+				PVtoBatt = []
+			end
+			r[string("mg", t, "toBatt")] = convert(Array, round.(value.(PVtoBatt), digits=3))
+
+			PVtoCUR = (m[:dvMGCurtail][t, s, tz, ts] for 
+				s in p.elecutil.scenarios,
+				tz in p.elecutil.outage_start_timesteps,
+				ts in p.elecutil.outage_timesteps)
+			r[string("mg", t, "toCurtail")] = convert(Array, round.(value.(PVtoCUR), digits=3))
+
+			PVtoLoad = (
+				m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts] 
+						* p.levelization_factor[t]
+				- m[:dvMGCurtail][t, s, tz, ts]
+				- m[:dvMGProductionToStorage][t, s, tz, ts] for 
+					s in p.elecutil.scenarios,
+					tz in p.elecutil.outage_start_timesteps,
+					ts in p.elecutil.outage_timesteps
+			)
+			r[string("mg", t, "toLoad")] = convert(Array, round.(value.(PVtoLoad), digits=3))
+		end
+	end
+	if !isempty(p.gentechs)
+		for t in p.gentechs
+			r[string("mg_", t, "_fuel_used")] = value.(m[:dvMGFuelUsed][t, :, :]).data
+
+			if !isempty(p.storage.types)
+				GenToBatt = (m[:dvMGProductionToStorage][t, s, tz, ts] for 
+					s in p.elecutil.scenarios,
+					tz in p.elecutil.outage_start_timesteps,
+					ts in p.elecutil.outage_timesteps)
+			else
+				GenToBatt = []
+			end
+			r[string("mg", t, "toBatt")] = convert(Array, round.(value.(GenToBatt), digits=3))
+
+			GENtoCUR = (m[:dvMGCurtail][t, s, tz, ts] for 
+				s in p.elecutil.scenarios,
+				tz in p.elecutil.outage_start_timesteps,
+				ts in p.elecutil.outage_timesteps)
+			r[string("mg", t, "toCurtail")] = convert(Array, round.(value.(GENtoCUR), digits=3))
+
+			GENtoLoad = (
+				m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts] 
+						* p.levelization_factor[t]
+				- m[:dvMGCurtail][t, s, tz, ts]
+				- m[:dvMGProductionToStorage][t, s, tz, ts] for 
+					s in p.elecutil.scenarios,
+					tz in p.elecutil.outage_start_timesteps,
+					ts in p.elecutil.outage_timesteps
+			)
+			r[string("mg", t, "toLoad")] = convert(Array, round.(value.(GENtoLoad), digits=3))
 		end
 	end
 end
