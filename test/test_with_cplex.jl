@@ -88,7 +88,7 @@ end
     - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
     =#
     m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
-    results = run_reopt(m, ".test/scenarios/nogridcost_minresilhours.json")
+    results = run_reopt(m, "./scenarios/nogridcost_minresilhours.json")
     @test results["total_unserved_load"] ≈ 12
 end
 
