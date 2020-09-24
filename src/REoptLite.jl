@@ -36,7 +36,6 @@ export
     build_reopt!,
     reopt_results
 
-import MutableArithmetics  # TODO can be removed once https://github.com/jump-dev/JuMP.jl/issues/2260 is in release
 import HTTP
 import JSON
 
