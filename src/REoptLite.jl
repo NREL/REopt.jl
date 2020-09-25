@@ -34,7 +34,8 @@ export
     REoptInputs,
     run_reopt,
     build_reopt!,
-    reopt_results
+    reopt_results,
+    simulate_outages
 
 import HTTP
 import JSON
@@ -72,4 +73,6 @@ include("constraints/electric_utility_constraints.jl")
 include("constraints/generator_constraints.jl")
 include("core/reopt.jl")
 
-end # module
+include("outagesim/outage_simulator.jl")
+
+end
