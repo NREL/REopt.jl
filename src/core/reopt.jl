@@ -508,7 +508,7 @@ function add_outage_results(m, p, r::Dict)
 	# function to optionally get the outage dispatch values so that we don't slow down returning the
 	# other results.
 	r["expected_outage_cost"] = value(m[:ExpectedOutageCost])
-	r["max_outage_cost_per_outage_duration"] = value.(m[:dvMaxOutageCost])
+	r["max_outage_cost_per_outage_duration"] = value.(m[:dvMaxOutageCost]).data
 	r["total_unserved_load"] = 0
 	for s in p.elecutil.scenarios
 		r["total_unserved_load"] += sum(value.(m[:dvUnservedLoad])[s, tz, ts]
