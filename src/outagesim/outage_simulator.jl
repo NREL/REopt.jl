@@ -213,3 +213,29 @@ function process_results(r, n_timesteps)
         "probs_of_surviving" => y_vals,
     )
 end
+
+
+function simulate_outages(d::Dict)
+    batt_roundtrip_efficiency = d["inputs"].storage.charge_efficiency[:elec] * 
+                                d["inputs"].storage.discharge_efficiency[:elec]
+    if "PVtoLoad" in keys(d)
+        pv_kw_ac_hourly = d["PVtoBatt"] + d["PVtoCUR"] + d["PVtoLoad"] + d["PVtoNEM"] + d["PVtoWHL"]
+    else
+        pv_kw_ac_hourly = repeat([0], length(d["inputs"].time_steps))
+    end
+
+    simulate_outages(;
+        batt_kwh=get(d, "batt_kwh", 0), 
+        batt_kw=get(d, "batt_kw", 0), 
+        pv_kw_ac_hourly=pv_kw_ac_hourly,
+        init_soc=d["year_one_soc_series_pct"], 
+        critical_loads_kw=d["inputs"].elec_load.critical_loads_kw, 
+        wind_kw_ac_hourly=[],
+        batt_roundtrip_efficiency=batt_roundtrip_efficiency,
+        diesel_kw=get(d, "Generator_mg_kw", get(d, "generator_kw", 0)), 
+        fuel_available=d["inputs"].generator.fuel_avail_gal,
+        b=d["inputs"].generator.fuel_intercept_gal_per_hr,
+        m=d["inputs"].generator.fuel_slope_gal_per_kwh, 
+        diesel_min_turndown=d["inputs"].generator.min_turn_down_pct
+    )
+end
