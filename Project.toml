@@ -1,7 +1,7 @@
 name = "REoptLite"
 uuid = "0144022d-7626-48b7-867b-06d945449d75"
 authors = ["Nick Laws <nick.laws@nrel.gov>"]
-version = "0.3.0"
+version = "0.4.0"
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
@@ -11,12 +11,10 @@ JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
-MutableArithmetics = "d8a4904e-b15c-11e9-3269-09a3773c0cb0"
 
 [compat]
-julia = "1.4"
-MathOptInterface = "0.9"
-MutableArithmetics = "0.2"
-JSON = "0.21"
 HTTP = "0.8"
+JSON = "0.21"
 JuMP = "0.21"
+MathOptInterface = "0.9"
+julia = "1.4"

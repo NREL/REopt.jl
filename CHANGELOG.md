@@ -1,5 +1,20 @@
 # REoptLite Changelog
 
+## v0.4.0
+#### Improvements
+- add `simulate_outages` function (similar to REopt Lite API outage simulator)
+- removed MutableArithmetics package from Project.toml (since JuMP now has method for `value(::MutableArithmetics.Zero)`)
+- added outage related outputs:
+    - Generator_mg_kw
+    - mg_Generator_upgrade_cost
+    - mg_Generator_fuel_used
+    - mg_PV_upgrade_cost
+    - mg_storage_upgrade_cost
+    - dvUnservedLoad array
+    - max_outage_cost_per_outage_duration
+- allow VoLL values to be subtype of Real (rather than only Real)
+- add `run_reopt` method for scenario Dict
+
 ## v0.3.0
 #### Improvements
 - add separate decision variables and constraints for microgrid tech capacities

@@ -167,9 +167,6 @@ function filter_dict_to_match_struct_field_names(d::Dict, s::DataType)
 end
 
 
-JuMP.value(x::Number) = x  # for @expression(REopt, ExportBenefitYr1, 0) and similar
-JuMP.value(::MutableArithmetics.Zero) = 0
-
 function npv(rate::Float64, cash_flows::Array)
     npv = cash_flows[1]
     for (y, c) in enumerate(cash_flows[2:end])
@@ -177,4 +174,3 @@ function npv(rate::Float64, cash_flows::Array)
     end
     return npv
 end
-
