@@ -269,7 +269,9 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; obj::Int=2)
 	end
 
 	@info "Model built. Optimizing..."
+	tstart = time()
 	optimize!(m)
+	time_elapsed = time() - tstart
 	if termination_status(m) == MOI.TIME_LIMIT
 		status = "timed-out"
     elseif termination_status(m) == MOI.OPTIMAL
@@ -278,6 +280,7 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; obj::Int=2)
 		status = "not optimal"
 	end
 	@info "REopt solved with " termination_status(m)
+	@info "Solving took $(round(time_elapsed, digits=3)) seconds."
 
 	lcc = nothing
 	try
@@ -289,8 +292,11 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; obj::Int=2)
 			"lcc" => lcc
 		)
 	end
-
+	
+	tstart = time()
 	results = reopt_results(m, p)
+	time_elapsed = time() - tstart
+	@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status
 	results["inputs"] = p
 	results["lcc"] = lcc
@@ -300,6 +306,7 @@ end
 
 function reopt_results(m::JuMP.AbstractModel, p::REoptInputs)
 
+	tstart = time()
     @expression(m, Year1UtilityEnergy,  p.hours_per_timestep * sum(
 		m[:dvGridPurchase][ts] for ts in p.time_steps)
 	)
@@ -384,12 +391,23 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs)
 		results[string(t, "_net_fixed_om_costs")] = round(value(PVPerUnitSizeOMCosts) * (1 - p.owner_tax_pct), digits=0)
 	end
 	end
+	
+	time_elapsed = time() - tstart
+	@info "Base results processing took $(round(time_elapsed, digits=3)) seconds."
+	
+	tstart = time()
 	if !isempty(p.gentechs)
 		add_generator_results(m, p, results)
 	end
+	time_elapsed = time() - tstart
+	@info "Generator results processing took $(round(time_elapsed, digits=3)) seconds."
+	
+	tstart = time()
 	if !isempty(p.elecutil.outage_durations)
 		add_outage_results(m, p, results)
 	end
+	time_elapsed = time() - tstart
+	@info "Outage results processing took $(round(time_elapsed, digits=3)) seconds."
 	return results
 end
 
