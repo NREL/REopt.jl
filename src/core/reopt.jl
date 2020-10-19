@@ -269,7 +269,9 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; obj::Int=2)
 	end
 
 	@info "Model built. Optimizing..."
+	tstart = time()
 	optimize!(m)
+	time_elapsed = time() - tstart
 	if termination_status(m) == MOI.TIME_LIMIT
 		status = "timed-out"
     elseif termination_status(m) == MOI.OPTIMAL
@@ -278,6 +280,7 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; obj::Int=2)
 		status = "not optimal"
 	end
 	@info "REopt solved with " termination_status(m)
+	@info "Solving took $(round(time_elapsed, digits=3)) seconds."
 
 	lcc = nothing
 	try
@@ -289,8 +292,11 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; obj::Int=2)
 			"lcc" => lcc
 		)
 	end
-
+	
+	tstart = time()
 	results = reopt_results(m, p)
+	time_elapsed = time() - tstart
+	@info "Total results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status
 	results["inputs"] = p
 	results["lcc"] = lcc
@@ -300,6 +306,7 @@ end
 
 function reopt_results(m::JuMP.AbstractModel, p::REoptInputs)
 
+	tstart = time()
     @expression(m, Year1UtilityEnergy,  p.hours_per_timestep * sum(
 		m[:dvGridPurchase][ts] for ts in p.time_steps)
 	)
@@ -384,12 +391,23 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs)
 		results[string(t, "_net_fixed_om_costs")] = round(value(PVPerUnitSizeOMCosts) * (1 - p.owner_tax_pct), digits=0)
 	end
 	end
+	
+	time_elapsed = time() - tstart
+	@info "Base results processing took $(round(time_elapsed, digits=3)) seconds."
+	
+	tstart = time()
 	if !isempty(p.gentechs)
 		add_generator_results(m, p, results)
 	end
+	time_elapsed = time() - tstart
+	@info "Generator results processing took $(round(time_elapsed, digits=3)) seconds."
+	
+	tstart = time()
 	if !isempty(p.elecutil.outage_durations)
 		add_outage_results(m, p, results)
 	end
+	time_elapsed = time() - tstart
+	@info "Outage results processing took $(round(time_elapsed, digits=3)) seconds."
 	return results
 end
 
@@ -510,13 +528,6 @@ function add_outage_results(m, p, r::Dict)
 	r["expected_outage_cost"] = value(m[:ExpectedOutageCost])
 	r["max_outage_cost_per_outage_duration"] = value.(m[:dvMaxOutageCost]).data
 	r["total_unserved_load"] = 0
-	for s in p.elecutil.scenarios
-		r["total_unserved_load"] += sum(value.(m[:dvUnservedLoad])[s, tz, ts]
-			for tz in p.elecutil.outage_start_timesteps, 
-				ts in 1:p.elecutil.outage_durations[s]
-		) # need the ts in 1:p.elecutil.outage_durations[s] b/c dvUnservedLoad has unused values in third dimension
-	end
-	r["total_unserved_load"] = round(r["total_unserved_load"], digits=2)
 	r["dvUnservedLoad"] = value.(m[:dvUnservedLoad]).data
 	r["mg_storage_upgrade_cost"] = value(m[:dvMGStorageUpgradeCost])
 	# r["dvMGDischargeFromStorage"] = value.(m[:dvMGDischargeFromStorage]).data
