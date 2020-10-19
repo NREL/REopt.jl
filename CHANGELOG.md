@@ -1,5 +1,12 @@
 # REoptLite Changelog
 
+
+## v0.4.1
+#### bug fixes
+- removed `total_unserved_load` output because it can take hours to generate and can error out when outage indices are not consecutive
+#### Improvements
+- add @info for time spent processing results
+
 ## v0.4.0
 #### Improvements
 - add `simulate_outages` function (similar to REopt Lite API outage simulator)
