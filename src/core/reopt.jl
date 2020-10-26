@@ -527,7 +527,6 @@ function add_outage_results(m, p, r::Dict)
 	# other results.
 	r["expected_outage_cost"] = value(m[:ExpectedOutageCost])
 	r["max_outage_cost_per_outage_duration"] = value.(m[:dvMaxOutageCost]).data
-	r["total_unserved_load"] = 0
 	r["dvUnservedLoad"] = value.(m[:dvUnservedLoad]).data
 	r["mg_storage_upgrade_cost"] = value(m[:dvMGStorageUpgradeCost])
 	# r["dvMGDischargeFromStorage"] = value.(m[:dvMGDischargeFromStorage]).data
