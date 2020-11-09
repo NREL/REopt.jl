@@ -1,6 +1,6 @@
 # REoptLite Changelog
 
-## develop
+## v0.5.0
 #### bug fixes
 - handle missing input key for `year_one_soc_series_pct` in `outage_simulator` 
 - remove erroneous `total_unserved_load = 0` output
