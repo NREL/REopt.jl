@@ -32,6 +32,7 @@ function add_dv_UnservedLoad_constraints(m,p)
     @constraint(m, [s in p.elecutil.scenarios, tz in p.elecutil.outage_start_timesteps, ts in p.elecutil.outage_timesteps],
         m[:dvUnservedLoad][s, tz, ts] >= p.elec_load.critical_loads_kw[tz+ts]
         - sum(  m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts] * p.levelization_factor[t]
+              - m[:dvMGProductionToStorage][t, s, tz, ts] - m[:dvMGCurtail][t, s, tz, ts]
             for t in p.techs
         )
         - m[:dvMGDischargeFromStorage][s, tz, ts]
