@@ -102,19 +102,9 @@ function add_MG_production_constraints(m,p)
 		p.production_factor[t, tz+ts] * p.levelization_factor[t] * m[:dvMGRatedProduction][t, s, tz, ts]
     )
 
-    if !isempty(p.gentechs)
-        @constraint(m, [t in p.gentechs, s in p.elecutil.scenarios, tz in p.elecutil.outage_start_timesteps, ts in p.elecutil.outage_timesteps], 
-            m[:dvMGRatedProduction][t, s, tz, ts] in MOI.Semicontinuous(p.generator.min_turn_down_pct, p.max_sizes[t])
-        )
-        other_techs = setdiff(p.techs, p.gentechs)
-        @constraint(m, [t in other_techs, s in p.elecutil.scenarios, tz in p.elecutil.outage_start_timesteps, ts in p.elecutil.outage_timesteps], 
-            m[:dvMGRatedProduction][t, s, tz, ts] >= 0
-        )
-    else
-        @constraint(m, [t in p.techs, s in p.elecutil.scenarios, tz in p.elecutil.outage_start_timesteps, ts in p.elecutil.outage_timesteps], 
-            m[:dvMGRatedProduction][t, s, tz, ts] >= 0
-        )
-    end
+    @constraint(m, [t in p.techs, s in p.elecutil.scenarios, tz in p.elecutil.outage_start_timesteps, ts in p.elecutil.outage_timesteps], 
+        m[:dvMGRatedProduction][t, s, tz, ts] >= 0
+    )
     
     @constraint(m, [t in p.techs, s in p.elecutil.scenarios, tz in p.elecutil.outage_start_timesteps, ts in p.elecutil.outage_timesteps],
         m[:dvMGRatedProduction][t, s, tz, ts] <= m[:dvMGsize][t]
