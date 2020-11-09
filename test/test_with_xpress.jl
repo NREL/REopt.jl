@@ -84,11 +84,11 @@ end
     results = run_reopt(m, "./scenarios/outage.json")
 
     @test results["expected_outage_cost"] ≈ 0
-    @test results["total_unserved_load"] ≈ 0
+    @test sum(results["unserved_load_per_outage"]) ≈ 0
     @test value(m[:binMGTechUsed]["Generator"]) == 1
     @test value(m[:binMGTechUsed]["PV"]) == 0
     @test value(m[:binMGStorageUsed]) == 1
-    @test results["lcc"] ≈ 6.5789084e7
+    @test results["lcc"] ≈ 7.3661109e7
     
     #=
     Scenario with $0/kWh VoLL, 12x169 hour outages, 1kW load/hour, and min_resil_timesteps = 168
@@ -96,12 +96,12 @@ end
     =#
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/nogridcost_minresilhours.json")
-    @test results["total_unserved_load"] ≈ 12
+    @test sum(results["unserved_load_per_outage"]) ≈ 12
     
     # testing dvUnserved load, which would output 100 kWh for this scenario before output fix
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/nogridcost_multiscenario.json")
-    @test results["total_unserved_load"] ≈ 60
+    @test sum(results["unserved_load_per_outage"]) ≈ 60
     
 end
 

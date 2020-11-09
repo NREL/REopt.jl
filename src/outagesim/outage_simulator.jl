@@ -228,7 +228,7 @@ function simulate_outages(d::Dict)
         batt_kwh=get(d, "batt_kwh", 0), 
         batt_kw=get(d, "batt_kw", 0), 
         pv_kw_ac_hourly=pv_kw_ac_hourly,
-        init_soc=d["year_one_soc_series_pct"], 
+        init_soc=get(d, "year_one_soc_series_pct", []), 
         critical_loads_kw=d["inputs"].elec_load.critical_loads_kw, 
         wind_kw_ac_hourly=[],
         batt_roundtrip_efficiency=batt_roundtrip_efficiency,

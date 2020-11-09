@@ -527,8 +527,16 @@ function add_outage_results(m, p, r::Dict)
 	# other results.
 	r["expected_outage_cost"] = value(m[:ExpectedOutageCost])
 	r["max_outage_cost_per_outage_duration"] = value.(m[:dvMaxOutageCost]).data
-	r["total_unserved_load"] = 0
-	r["dvUnservedLoad"] = value.(m[:dvUnservedLoad]).data
+	dvUnservedLoad = value.(m[:dvUnservedLoad]).data
+	S = length(p.elecutil.scenarios)
+	T = length(p.elecutil.outage_start_timesteps)
+	unserved_load_per_outage = Array{Float64}(undef, S, T)
+	for s in 1:S, t in 1:T
+		unserved_load_per_outage[s, t] = sum(dvUnservedLoad[s, t, ts] for 
+											 ts in 1:p.elecutil.outage_durations[s]) 
+	# need the ts in 1:p.elecutil.outage_durations[s] b/c dvUnservedLoad has unused values in third dimension
+	end
+	r["unserved_load_per_outage"] = round.(unserved_load_per_outage, digits=2)
 	r["mg_storage_upgrade_cost"] = value(m[:dvMGStorageUpgradeCost])
 	# r["dvMGDischargeFromStorage"] = value.(m[:dvMGDischargeFromStorage]).data
 
