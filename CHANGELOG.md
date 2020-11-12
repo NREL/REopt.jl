@@ -1,5 +1,10 @@
 # REoptLite Changelog
 
+## v0.5.1
+#### Improvements
+- added outage dispatch outputs and sped up their derivation
+- removed redundant generator minimum turn down constraint
+
 ## v0.5.0
 #### bug fixes
 - handle missing input key for `year_one_soc_series_pct` in `outage_simulator` 
