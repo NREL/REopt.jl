@@ -1,5 +1,9 @@
 # REoptLite Changelog
 
+## develop
+#### bug fixes
+- outage_simulator.jl had bug with summing over empty `Any[]`
+
 ## v0.5.1
 #### Improvements
 - added outage dispatch outputs and sped up their derivation
