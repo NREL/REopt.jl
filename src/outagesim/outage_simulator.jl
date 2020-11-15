@@ -152,8 +152,8 @@ function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=0
                 "resilience_hours_min" => 0,
                 "resilience_hours_max" => 0,
                 "resilience_hours_avg" => 0,
-                "outage_durations" => [],
-                "probs_of_surviving" => [],
+                "outage_durations" => Int[],
+                "probs_of_surviving" => Float64[],
             )
         end
     end
