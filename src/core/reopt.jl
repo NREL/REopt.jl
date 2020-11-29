@@ -59,21 +59,13 @@ end
 
 
 """
-	function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs
-		; lpf::Union{Nothing, JuMP.AbstractModel}=nothing
-	)
-Add variables and constraints for REopt m. optional lpf m is for bilevel problems where the
-	exported power in each time step is a decision variable in the linear power flow problem (lpf).
+	function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
+Add variables and constraints for REopt model.
 """
 function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 	add_variables!(m, p)
 
-    ##############################################################################
-	#############  		Constraints									 #############
-	##############################################################################
-
-	## Temporary workaround for outages time_steps_without_grid
 	for ts in p.time_steps_without_grid
 
 		fix(m[:dvGridPurchase][ts], 0.0, force=true)
