@@ -265,7 +265,9 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; obj::Int=2)
 	if obj == 1
 		@objective(m, Min, m[:Costs])
 	elseif obj == 2  # Keep SOC high
-		@objective(m, Min, m[:Costs] - sum(m[:dvStoredEnergy][:elec, ts] for ts in p.time_steps)/8760.)
+		@objective(m, Min, m[:Costs] - sum(m[:dvStoredEnergy][:elec, ts] for ts in p.time_steps) /
+									   (8760. / p.hours_per_timestep)
+		)
 	end
 
 	@info "Model built. Optimizing..."
