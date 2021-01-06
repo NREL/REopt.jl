@@ -152,8 +152,8 @@ function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=0
                 "resilience_hours_min" => 0,
                 "resilience_hours_max" => 0,
                 "resilience_hours_avg" => 0,
-                "outage_durations" => [],
-                "probs_of_surviving" => [],
+                "outage_durations" => Int[],
+                "probs_of_surviving" => Float64[],
             )
         end
     end
@@ -215,24 +215,42 @@ function process_results(r, n_timesteps)
 end
 
 
-function simulate_outages(d::Dict)
+function simulate_outages(d::Dict; microgrid_only::Bool=false)
     batt_roundtrip_efficiency = d["inputs"].storage.charge_efficiency[:elec] * 
                                 d["inputs"].storage.discharge_efficiency[:elec]
+
+    # TODO handle generic PV names
     if "PVtoLoad" in keys(d)
         pv_kw_ac_hourly = d["PVtoBatt"] + d["PVtoCUR"] + d["PVtoLoad"] + d["PVtoNEM"] + d["PVtoWHL"]
     else
         pv_kw_ac_hourly = repeat([0], length(d["inputs"].time_steps))
     end
 
+    if microgrid_only && !Bool(get(d, "PV_upgraded", false))
+        pv_kw_ac_hourly = repeat([0], length(d["inputs"].time_steps))
+    end
+
+    batt_kwh = get(d, "batt_kwh", 0)
+    batt_kw = get(d, "batt_kw", 0)
+    if microgrid_only && !Bool(get(d, "storage_upgraded", false))
+        batt_kwh = 0
+        batt_kw = 0
+    end
+
+    diesel_kw = get(d, "Generator_mg_kw", get(d, "generator_kw", 0))
+    if microgrid_only
+        diesel_kw = get(d, "Generator_mg_kw", 0)
+    end
+
     simulate_outages(;
-        batt_kwh=get(d, "batt_kwh", 0), 
-        batt_kw=get(d, "batt_kw", 0), 
+        batt_kwh=batt_kwh, 
+        batt_kw=batt_kw, 
         pv_kw_ac_hourly=pv_kw_ac_hourly,
         init_soc=get(d, "year_one_soc_series_pct", []), 
         critical_loads_kw=d["inputs"].elec_load.critical_loads_kw, 
         wind_kw_ac_hourly=[],
         batt_roundtrip_efficiency=batt_roundtrip_efficiency,
-        diesel_kw=get(d, "Generator_mg_kw", get(d, "generator_kw", 0)), 
+        diesel_kw=diesel_kw, 
         fuel_available=d["inputs"].generator.fuel_avail_gal,
         b=d["inputs"].generator.fuel_intercept_gal_per_hr,
         m=d["inputs"].generator.fuel_slope_gal_per_kwh, 
