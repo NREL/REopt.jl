@@ -34,13 +34,15 @@ struct Site
     roof_squarefeet
     min_resil_timesteps
     mg_tech_sizes_equal_grid_sizes
+    node
     function Site(;
         latitude::Real, 
         longitude::Real, 
-        land_acres::Union{Float64, Nothing}=nothing, 
-        roof_squarefeet::Union{Float64, Nothing}=nothing,
+        land_acres::Union{Float64, Nothing} = nothing, 
+        roof_squarefeet::Union{Float64, Nothing} = nothing,
         min_resil_timesteps::Int=0,
-        mg_tech_sizes_equal_grid_sizes::Bool = true
+        mg_tech_sizes_equal_grid_sizes::Bool = true,
+        node::Int = 1, 
         )
         invalid_args = String[]
         if !(-90 <= latitude < 90)
@@ -53,6 +55,6 @@ struct Site
             error("Invalid argument values: $(invalid_args)")
         end
         new(latitude, longitude, land_acres, roof_squarefeet, min_resil_timesteps, 
-            mg_tech_sizes_equal_grid_sizes)
+            mg_tech_sizes_equal_grid_sizes, node)
     end
 end
