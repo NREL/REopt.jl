@@ -98,6 +98,17 @@ end
 end
 
 
+@testset "Multiple Sites" begin
+    m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
+    ps = [
+        REoptInputs("./scenarios/pv_storage.json"),
+        REoptInputs("./scenarios/monthly_rate.json"),
+    ];
+    results = run_reopt(m, ps)
+    @test results[1]["lcc"] + results[2]["lcc"] ≈ 1.23887e7 + 437169.0 rtol=1e-5
+end
+
+
 
 ## equivalent REopt Lite API Post for test 2:
 #   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
