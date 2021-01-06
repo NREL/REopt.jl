@@ -13,7 +13,7 @@ Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
 
 [compat]
-HTTP = "0.8"
+HTTP = "0.8, 0.9"
 JSON = "0.21"
 JuMP = "0.21"
 MathOptInterface = "0.9"
