@@ -81,7 +81,7 @@ end
     @test value(m[:binMGTechUsed]["Generator"]) == 1
     @test value(m[:binMGTechUsed]["PV"]) == 0
     @test value(m[:binMGStorageUsed]) == 1
-    @test results["lcc"] ≈ 7.3661109e7
+    @test results["lcc"] ≈ 7.3676588e7
     
     #=
     Scenario with $0/kWh VoLL, 12x169 hour outages, 1kW load/hour, and min_resil_timesteps = 168

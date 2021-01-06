@@ -280,33 +280,23 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; obj::Int=2)
         status = "optimal"
     else
 		status = "not optimal"
+		@warn "REopt solved with " termination_status(m), ", returning the model."
+		return m
 	end
 	@info "REopt solved with " termination_status(m)
 	@info "Solving took $(round(time_elapsed, digits=3)) seconds."
 
-	lcc = nothing
-	try
-		lcc = round(JuMP.objective_value(m)+ 0.0001*value(m[:MinChargeAdder]))
-	catch
-		return Dict(
-			"status" => status,
-			"inputs" => p,
-			"lcc" => lcc
-		)
-	end
-	
 	tstart = time()
 	results = reopt_results(m, p)
 	time_elapsed = time() - tstart
 	@info "Total results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status
 	results["inputs"] = p
-	results["lcc"] = lcc
 	return results
 end
 
 
-function reopt_results(m::JuMP.AbstractModel, p::REoptInputs)
+function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 
 	tstart = time()
     @expression(m, Year1UtilityEnergy,  p.hours_per_timestep * sum(
@@ -322,6 +312,7 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs)
 
     results = Dict{String, Any}("batt_kwh" => value(m[:dvStorageEnergy][:elec]))
     results["batt_kw"] = value(m[:dvStoragePower][:elec])
+	results["lcc"] = round(value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)]))
 
     if results["batt_kwh"] != 0
     	soc = (m[:dvStoredEnergy][:elec, ts] for ts in p.time_steps)
