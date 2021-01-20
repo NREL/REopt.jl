@@ -1,8 +1,8 @@
 # REoptLite Changelog
 
-## develop
+## v0.5.3
 #### Improvements
-- compatible with Julia v1.5
+- compatible with Julia 1.5
 
 ## v0.5.2
 #### bug fixes
