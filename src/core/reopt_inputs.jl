@@ -354,13 +354,13 @@ end
 function adjust_load_profile(s::Scenario, production_factor::DenseAxisArray)
     if s.electric_load.loads_kw_is_net
         for pv in s.pvs if pv.existing_kw > 0
-            s.electric_load.loads_kw .+= pv.existing_kw * production_factor[pv.name, :]
+            s.electric_load.loads_kw .+= pv.existing_kw * production_factor[pv.name, :].data
         end end
     end
     
     if s.electric_load.critical_loads_kw_is_net
         for pv in s.pvs if pv.existing_kw > 0
-            s.electric_load.critical_loads_kw .+= pv.existing_kw * production_factor[pv.name, :]
+            s.electric_load.critical_loads_kw .+= pv.existing_kw * production_factor[pv.name, :].data
         end end
     end
 end

@@ -1,6 +1,10 @@
 # REoptLite Changelog
 
-## develop
+## v0.5.3
+#### Improvements
+- compatible with Julia 1.5
+
+## v0.5.2
 #### bug fixes
 - outage_simulator.jl had bug with summing over empty `Any[]`
 
