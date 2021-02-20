@@ -1,5 +1,10 @@
 # REoptLite Changelog
 
+## develop
+#### Improvements
+- Added multi-node (site) capability for PV and Storage
+- started documentation process using Github Pages and Documenter.jl
+
 ## v0.5.3
 #### Improvements
 - compatible with Julia 1.5
