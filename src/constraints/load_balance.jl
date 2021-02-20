@@ -28,43 +28,43 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 
-function add_load_balance_constraints(m, p) 
+function add_load_balance_constraints(m, p; _n="") 
 
 	##Constraint (8a): Electrical Load Balancing with Grid
 	@constraint(m, [ts in p.time_steps_with_grid],
-		sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[:dvRatedProduction][t,ts] for t in p.elec_techs) +  
-		sum( m[:dvDischargeFromStorage][b,ts] for b in p.storage.types ) + 
-		m[:dvGridPurchase][ts] ==
-		sum( sum(m[:dvProductionToStorage][b, t, ts] for b in p.storage.types) 
-			+ m[:dvWHLexport][t, ts] + m[:dvNEMexport][t, ts] + m[:dvCurtail][t, ts] for t in p.elec_techs)
-		+ sum(m[:dvStorageExport][b, u, ts] for b in p.storage.types, u in p.storage.export_bins) 
-		+ sum(m[:dvGridToStorage][b, ts] for b in p.storage.types)
+		sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.elec_techs) +  
+		sum( m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.storage.types ) + 
+		m[Symbol("dvGridPurchase"*_n)][ts] ==
+		sum( sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.storage.types) 
+			+ m[Symbol("dvWHLexport"*_n)][t, ts] + m[Symbol("dvNEMexport"*_n)][t, ts] + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.elec_techs)
+		+ sum(m[Symbol("dvStorageExport"*_n)][b, u, ts] for b in p.storage.types, u in p.storage.export_bins) 
+		+ sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.types)
 		+ p.elec_load.loads_kw[ts]
 	)
 	
 	##Constraint (8b): Electrical Load Balancing without Grid
 	@constraint(m, [ts in p.time_steps_without_grid],
-		sum(p.production_factor[t,ts] * p.levelization_factor[t] * m[:dvRatedProduction][t,ts] for t in p.elec_techs) +  
-		sum( m[:dvDischargeFromStorage][b,ts] for b in p.storage.types )  ==
-        sum( sum(m[:dvProductionToStorage][b, t, ts] for b in p.storage.types) + 
-        m[:dvWHLexport][t, ts] + m[:dvNEMexport][t, ts] + m[:dvCurtail][t, ts] for t in p.elec_techs) +
+		sum(p.production_factor[t,ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.elec_techs) +  
+		sum( m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.storage.types )  ==
+        sum( sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.storage.types) + 
+        m[Symbol("dvWHLexport"*_n)][t, ts] + m[Symbol("dvNEMexport"*_n)][t, ts] + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.elec_techs) +
         p.elec_load.critical_loads_kw[ts]
 	)
 end
 
 
-function add_production_constraints(m, p)
+function add_production_constraints(m, p; _n="")
 	# Constraint (4d): Electrical production sent to storage or export must be less than technology's rated production
 	@constraint(m, [t in p.elec_techs, ts in p.time_steps_with_grid],
-		sum(m[:dvProductionToStorage][b, t, ts] for b in p.storage.types)  
-	  + m[:dvWHLexport][t, ts] + m[:dvNEMexport][t, ts] + m[:dvCurtail][t, ts] <= 
-		p.production_factor[t, ts] * p.levelization_factor[t] * m[:dvRatedProduction][t, ts]
+		sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.storage.types)  
+	  + m[Symbol("dvWHLexport"*_n)][t, ts] + m[Symbol("dvNEMexport"*_n)][t, ts] + m[Symbol("dvCurtail"*_n)][t, ts] <= 
+		p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t, ts]
 	)
 
 	# Constraint (4e): Electrical production sent to storage or grid must be less than technology's rated production - no grid
 	@constraint(m, [t in p.elec_techs, ts in p.time_steps_without_grid],
-		sum(m[:dvProductionToStorage][b, t, ts] for b in p.storage.types)  <= 
-		p.production_factor[t, ts] * p.levelization_factor[t] * m[:dvRatedProduction][t, ts]
+		sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.storage.types)  <= 
+		p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t, ts]
 	)
 
 end

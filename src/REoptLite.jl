@@ -72,6 +72,7 @@ include("constraints/tech_constraints.jl")
 include("constraints/electric_utility_constraints.jl")
 include("constraints/generator_constraints.jl")
 include("core/reopt.jl")
+include("core/reopt_multinode.jl")
 
 include("outagesim/outage_simulator.jl")
 

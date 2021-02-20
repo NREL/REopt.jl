@@ -192,7 +192,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 	end
 
-
 	@expression(m, TotalEnergyChargesUtil, p.pwf_e * p.hours_per_timestep *
 		sum( p.etariff.energy_rates[ts] * m[:dvGridPurchase][ts] for ts in p.time_steps)
 	)
@@ -257,7 +256,9 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; obj::Int=2)
 	if obj == 1
 		@objective(m, Min, m[:Costs])
 	elseif obj == 2  # Keep SOC high
-		@objective(m, Min, m[:Costs] - sum(m[:dvStoredEnergy][:elec, ts] for ts in p.time_steps)/8760.)
+		@objective(m, Min, m[:Costs] - sum(m[:dvStoredEnergy][:elec, ts] for ts in p.time_steps) /
+									   (8760. / p.hours_per_timestep)
+		)
 	end
 
 	@info "Model built. Optimizing..."
@@ -270,116 +271,106 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; obj::Int=2)
         status = "optimal"
     else
 		status = "not optimal"
+		@warn "REopt solved with " termination_status(m), ", returning the model."
+		return m
 	end
 	@info "REopt solved with " termination_status(m)
 	@info "Solving took $(round(time_elapsed, digits=3)) seconds."
 
-	lcc = nothing
-	try
-		lcc = round(JuMP.objective_value(m)+ 0.0001*value(m[:MinChargeAdder]))
-	catch
-		return Dict(
-			"status" => status,
-			"inputs" => p,
-			"lcc" => lcc
-		)
-	end
-	
 	tstart = time()
 	results = reopt_results(m, p)
 	time_elapsed = time() - tstart
 	@info "Total results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status
 	results["inputs"] = p
-	results["lcc"] = lcc
 	return results
 end
 
 
-function reopt_results(m::JuMP.AbstractModel, p::REoptInputs)
+function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 
 	tstart = time()
-    @expression(m, Year1UtilityEnergy,  p.hours_per_timestep * sum(
-		m[:dvGridPurchase][ts] for ts in p.time_steps)
-	)
-    Year1EnergyCost = m[:TotalEnergyChargesUtil] / p.pwf_e
-    Year1DemandCost = m[:TotalDemandCharges] / p.pwf_e
-    Year1DemandTOUCost = m[:DemandTOUCharges] / p.pwf_e
-    Year1DemandFlatCost = m[:DemandFlatCharges] / p.pwf_e
-    Year1FixedCharges = m[:TotalFixedCharges] / p.pwf_e
-    Year1MinCharges = m[:MinChargeAdder] / p.pwf_e
+    m[Symbol("Year1UtilityEnergy"*_n)] = p.hours_per_timestep * sum(
+		m[Symbol("dvGridPurchase"*_n)][ts] for ts in p.time_steps)
+    Year1EnergyCost = m[Symbol("TotalEnergyChargesUtil"*_n)] / p.pwf_e
+    Year1DemandCost = m[Symbol("TotalDemandCharges"*_n)] / p.pwf_e
+    Year1DemandTOUCost = m[Symbol("DemandTOUCharges"*_n)] / p.pwf_e
+    Year1DemandFlatCost = m[Symbol("DemandFlatCharges"*_n)] / p.pwf_e
+    Year1FixedCharges = m[Symbol("TotalFixedCharges"*_n)] / p.pwf_e
+    Year1MinCharges = m[Symbol("MinChargeAdder"*_n)] / p.pwf_e
     Year1Bill = Year1EnergyCost + Year1DemandCost + Year1FixedCharges + Year1MinCharges
 
-    results = Dict{String, Any}("batt_kwh" => value(m[:dvStorageEnergy][:elec]))
-    results["batt_kw"] = value(m[:dvStoragePower][:elec])
+    results = Dict{String, Any}("batt_kwh" => value(m[Symbol("dvStorageEnergy"*_n)][:elec]))
+	results["batt_kw"] = value(m[Symbol("dvStoragePower"*_n)][:elec])
+	results["lcc"] = round(value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)]))
 
     if results["batt_kwh"] != 0
-    	soc = (m[:dvStoredEnergy][:elec, ts] for ts in p.time_steps)
+    	soc = (m[Symbol("dvStoredEnergy"*_n)][:elec, ts] for ts in p.time_steps)
         results["year_one_soc_series_pct"] = value.(soc) ./ results["batt_kwh"]
     else
         results["year_one_soc_series_pct"] = []
     end
 
-    net_capital_costs_plus_om = value(m[:TotalTechCapCosts] + m[:TotalStorageCapCosts]) +
-                                value(m[:TotalPerUnitSizeOMCosts]) * (1 - p.owner_tax_pct)
+    net_capital_costs_plus_om = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)]) +
+                                value(m[Symbol("TotalPerUnitSizeOMCosts"*_n)]) * (1 - p.owner_tax_pct)
+    push!(results, Dict(
+		"year_one_utility_kwh" => round(value(m[Symbol("Year1UtilityEnergy"*_n)]), digits=2),
+		"year_one_energy_cost" => round(value(Year1EnergyCost), digits=2),
+		"year_one_demand_cost" => round(value(Year1DemandCost), digits=2),
+		"year_one_demand_tou_cost" => round(value(Year1DemandTOUCost), digits=2),
+		"year_one_demand_flat_cost" => round(value(Year1DemandFlatCost), digits=2),
+		"year_one_export_benefit" => round(value(m[Symbol("ExportBenefitYr1"*_n)]), digits=0),
+		"year_one_fixed_cost" => round(Year1FixedCharges, digits=0),
+		"year_one_min_charge_adder" => round(value(Year1MinCharges), digits=2),
+		"year_one_bill" => round(value(Year1Bill), digits=2),
+		"total_energy_cost" => round(value(m[Symbol("TotalEnergyChargesUtil"*_n)]) * (1 - p.offtaker_tax_pct), digits=2),
+		"total_demand_cost" => round(value(m[Symbol("TotalDemandCharges"*_n)]) * (1 - p.offtaker_tax_pct), digits=2),
+		"total_fixed_cost" => round(m[Symbol("TotalFixedCharges"*_n)] * (1 - p.offtaker_tax_pct), digits=2),
+		"total_export_benefit" => -1 * round(value(m[Symbol("TotalExportBenefit"*_n)]) * (1 - p.offtaker_tax_pct), digits=2),
+		"total_min_charge_adder" => round(value(m[Symbol("MinChargeAdder"*_n)]) * (1 - p.offtaker_tax_pct), digits=2),
+		"net_capital_costs_plus_om" => round(net_capital_costs_plus_om, digits=0),
+		"net_capital_costs" => round(value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)]), digits=2)
+	)...)
 
-    push!(results, Dict("year_one_utility_kwh" => round(value(Year1UtilityEnergy), digits=2),
-						 "year_one_energy_cost" => round(value(Year1EnergyCost), digits=2),
-						 "year_one_demand_cost" => round(value(Year1DemandCost), digits=2),
-						 "year_one_demand_tou_cost" => round(value(Year1DemandTOUCost), digits=2),
-						 "year_one_demand_flat_cost" => round(value(Year1DemandFlatCost), digits=2),
-						 "year_one_export_benefit" => round(value(m[:ExportBenefitYr1]), digits=0),
-						 "year_one_fixed_cost" => round(Year1FixedCharges, digits=0),
-						 "year_one_min_charge_adder" => round(value(Year1MinCharges), digits=2),
-						 "year_one_bill" => round(value(Year1Bill), digits=2),
-						 "total_energy_cost" => round(value(m[:TotalEnergyChargesUtil]) * (1 - p.offtaker_tax_pct), digits=2),
-						 "total_demand_cost" => round(value(m[:TotalDemandCharges]) * (1 - p.offtaker_tax_pct), digits=2),
-						 "total_fixed_cost" => round(m[:TotalFixedCharges] * (1 - p.offtaker_tax_pct), digits=2),
-						 "total_export_benefit" => -1 * round(value(m[:TotalExportBenefit]) * (1 - p.offtaker_tax_pct), digits=2),
-						 "total_min_charge_adder" => round(value(m[:MinChargeAdder]) * (1 - p.offtaker_tax_pct), digits=2),
-						 "net_capital_costs_plus_om" => round(net_capital_costs_plus_om, digits=0),
-						 "net_capital_costs" => round(value(m[:TotalTechCapCosts] + m[:TotalStorageCapCosts]), digits=2))...)
-
-    GridToBatt = (sum(m[:dvGridToStorage][b, ts] for b in p.storage.types) for ts in p.time_steps)
+	GridToBatt = (sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.types) 
+				 for ts in p.time_steps)
     results["GridToBatt"] = round.(value.(GridToBatt), digits=3)
 
-	GridToLoad = (m[:dvGridPurchase][ts] - sum(m[:dvGridToStorage][b, ts] for b in p.storage.types) for ts in p.time_steps)
+	GridToLoad = (m[Symbol("dvGridPurchase"*_n)][ts] - sum(m[Symbol("dvGridToStorage"*_n)][b, ts] 
+				  for b in p.storage.types) for ts in p.time_steps)
     results["GridToLoad"] = round.(value.(GridToLoad), digits=3)
 
 	if !isempty(p.pvtechs)
     for t in p.pvtechs
 
-		results[string(t, "_kw")] = round(value(m[:dvSize][t]), digits=4)
+		results[string(t, "_kw")] = round(value(m[Symbol("dvSize"*_n)][t]), digits=4)
 
 		# NOTE: must use anonymous expressions in this loop to overwrite values for cases with multiple PV
 		if !isempty(p.storage.types)
-			PVtoBatt = (sum(m[:dvProductionToStorage][b, t, ts] for b in p.storage.types) for ts in p.time_steps)
+			PVtoBatt = (sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.storage.types) for ts in p.time_steps)
 		else
 			PVtoBatt = repeat([0], length(p.time_steps))
 		end
 		results[string(t, "toBatt")] = round.(value.(PVtoBatt), digits=3)
 
-		PVtoNEM = (m[:dvNEMexport][t, ts] for ts in p.time_steps)
+		PVtoNEM = (m[Symbol("dvNEMexport"*_n)][t, ts] for ts in p.time_steps)
 		results[string(t, "toNEM")] = round.(value.(PVtoNEM), digits=3)
 
-		PVtoWHL = (m[:dvWHLexport][t, ts] for ts in p.time_steps)
+		PVtoWHL = (m[Symbol("dvWHLexport"*_n)][t, ts] for ts in p.time_steps)
 		results[string(t, "toWHL")] = round.(value.(PVtoWHL), digits=3)
 
-		PVtoCUR = (m[:dvCurtail][t, ts] for ts in p.time_steps)
+		PVtoCUR = (m[Symbol("dvCurtail"*_n)][t, ts] for ts in p.time_steps)
 		results[string(t, "toCUR")] = round.(value.(PVtoCUR), digits=3)
-
-		PVtoLoad = (m[:dvRatedProduction][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
+		PVtoLoad = (m[Symbol("dvRatedProduction"*_n)][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
 					- results[string(t, "toCUR")][ts]
 					- results[string(t, "toWHL")][ts]
 					- results[string(t, "toNEM")][ts]
 					- results[string(t, "toBatt")][ts] for ts in p.time_steps
 		)
 		results[string(t, "toLoad")] = round.(value.(PVtoLoad), digits=3)
-
-		Year1PvProd = (sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts] for ts in p.time_steps) * p.hours_per_timestep)
+		Year1PvProd = (sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] for ts in p.time_steps) * p.hours_per_timestep)
 		results[string("year_one_energy_produced_", t)] = round(value(Year1PvProd), digits=0)
-
-		PVPerUnitSizeOMCosts = p.om_cost_per_kw[t] * p.pwf_om * m[:dvSize][t]
+		PVPerUnitSizeOMCosts = p.om_cost_per_kw[t] * p.pwf_om * m[Symbol("dvSize"*_n)][t]
 		results[string(t, "_net_fixed_om_costs")] = round(value(PVPerUnitSizeOMCosts) * (1 - p.owner_tax_pct), digits=0)
 	end
 	end
@@ -388,14 +379,14 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs)
 	@info "Base results processing took $(round(time_elapsed, digits=3)) seconds."
 	
 	tstart = time()
-	if !isempty(p.gentechs)
+	if !isempty(p.gentechs) && isempty(_n)  # generators not included in multinode model
 		add_generator_results(m, p, results)
 	end
 	time_elapsed = time() - tstart
 	@info "Generator results processing took $(round(time_elapsed, digits=3)) seconds."
 	
 	tstart = time()
-	if !isempty(p.elecutil.outage_durations)
+	if !isempty(p.elecutil.outage_durations) && isempty(_n)  # outages not included in multinode model
 		add_outage_results(m, p, results)
 	end
 	time_elapsed = time() - tstart
@@ -510,6 +501,7 @@ function add_generator_results(m, p, r::Dict)
 	r["average_yearly_gen_energy_produced"] = round(value(AverageGenProd), digits=0)
 	nothing
 end
+
 
 function add_outage_results(m, p, r::Dict)
 	# TODO with many outages the dispatch arrays are so large that it can take hours to create them

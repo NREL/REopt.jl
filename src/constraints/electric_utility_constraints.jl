@@ -27,20 +27,20 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-function add_export_constraints(m, p)
+function add_export_constraints(m, p; _n="")
 
     ##Constraint (8e): Production export no greater than production
     @constraint(m, [t in p.techs, ts in p.time_steps_with_grid],
-        p.production_factor[t,ts] * p.levelization_factor[t] * m[:dvRatedProduction][t,ts] >= 
-        m[:dvWHLexport][t, ts] + m[:dvNEMexport][t, ts] + m[:dvCurtail][t, ts]
+        p.production_factor[t,ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] >= 
+        m[Symbol("dvWHLexport"*_n)][t, ts] + m[Symbol("dvNEMexport"*_n)][t, ts] + m[Symbol("dvCurtail"*_n)][t, ts]
     )
     
     ##Constraint (8f): Total sales to grid no greater than annual allocation - storage tiers
     @constraint(m,
         p.hours_per_timestep * ( 
-        sum( m[:dvStorageExport][b,u,ts] for b in p.storage.types, u in p.storage.export_bins, ts in p.time_steps_with_grid if !(u in p.etariff.curtail_bins)) 
-        + sum( m[:dvWHLexport][t, ts] for t in p.techs, ts in p.time_steps_with_grid)
-        + sum( m[:dvNEMexport][t, ts] for t in p.techs, ts in p.time_steps_with_grid)
+        sum( m[Symbol("dvStorageExport"*_n)][b,u,ts] for b in p.storage.types, u in p.storage.export_bins, ts in p.time_steps_with_grid if !(u in p.etariff.curtail_bins)) 
+        + sum( m[Symbol("dvWHLexport"*_n)][t, ts] for t in p.techs, ts in p.time_steps_with_grid)
+        + sum( m[Symbol("dvNEMexport"*_n)][t, ts] for t in p.techs, ts in p.time_steps_with_grid)
         ) <= p.max_grid_export_kwh
     )
 
@@ -49,32 +49,32 @@ function add_export_constraints(m, p)
    # note that hours_per_timestep is cancelled on both sides, but used for unit consistency (convert power to energy)
     @constraint(m,
         p.hours_per_timestep * ( 
-        sum( m[:dvNEMexport][t, ts] for t in p.techs, ts in p.time_steps)
-        + sum( m[:dvStorageExport][b, u, ts] for b in p.storage.types, u in p.storage.export_bins, ts in p.time_steps)
-        ) <= p.hours_per_timestep * sum( m[:dvGridPurchase][ts] for ts in p.time_steps)
+        sum( m[Symbol("dvNEMexport"*_n)][t, ts] for t in p.techs, ts in p.time_steps)
+        + sum( m[Symbol("dvStorageExport"*_n)][b, u, ts] for b in p.storage.types, u in p.storage.export_bins, ts in p.time_steps)
+        ) <= p.hours_per_timestep * sum( m[Symbol("dvGridPurchase"*_n)][ts] for ts in p.time_steps)
     )
 end
 
 
-function add_monthly_peak_constraint(m, p)
+function add_monthly_peak_constraint(m, p; _n="")
 	## Constraint (11d): Monthly peak demand is >= demand at each hour in the month
 	@constraint(m, [mth in p.months, ts in p.etariff.time_steps_monthly[mth]],
-    m[:dvPeakDemandMonth][mth] >= m[:dvGridPurchase][ts]
+    m[Symbol("dvPeakDemandMonth"*_n)][mth] >= m[Symbol("dvGridPurchase"*_n)][ts]
     )
 end
 
 
-function add_tou_peak_constraint(m, p)
+function add_tou_peak_constraint(m, p; _n="")
     ## Constraint (12d): Ratchet peak demand is >= demand at each hour in the ratchet` 
     @constraint(m, [r in p.ratchets, ts in p.etariff.tou_demand_ratchet_timesteps[r]],
-        m[:dvPeakDemandTOU][r] >= m[:dvGridPurchase][ts]
+        m[Symbol("dvPeakDemandTOU"*_n)][r] >= m[Symbol("dvGridPurchase"*_n)][ts]
     )
 end
 
 
-function add_mincharge_constraint(m, p)
+function add_mincharge_constraint(m, p; _n="")
     @constraint(m, MinChargeAddCon, 
-        m[:MinChargeAdder] >= m[:TotalMinCharge] - ( m[:TotalEnergyChargesUtil] + 
-        m[:TotalDemandCharges] + m[:TotalExportBenefit] + m[:TotalFixedCharges] )
+        m[Symbol("MinChargeAdder"*_n)] >= m[Symbol("TotalMinCharge"*_n)] - ( m[Symbol("TotalEnergyChargesUtil"*_n)] + 
+        m[Symbol("TotalDemandCharges"*_n)] + m[Symbol("TotalExportBenefit"*_n)] + m[Symbol("TotalFixedCharges"*_n)] )
     )
 end
