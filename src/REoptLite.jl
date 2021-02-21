@@ -37,7 +37,8 @@ export
     reopt_results,
     simulate_outages,
     # for docs:
-    ElectricLoad
+    ElectricLoad,
+    Financial
 
 import HTTP
 import JSON

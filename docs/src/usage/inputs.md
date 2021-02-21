@@ -50,3 +50,7 @@ This scenario will consider the option to purchase a solar PV system to reduce e
 ElectricLoad
 ```
 
+### Financial values
+```@docs
+Financial
+```
