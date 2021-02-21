@@ -30,16 +30,25 @@
 import MathOptInterface
 const MOI = MathOptInterface
 
+"""
+	run_reopt(m::JuMP.AbstractModel, fp::String)
 
-function run_reopt(REopt::JuMP.AbstractModel, fp::String)
+Solve the model using the `Scenario` defined in JSON file stored at the file path `fp`.
+"""
+function run_reopt(m::JuMP.AbstractModel, fp::String)
 	s = Scenario(JSON.parsefile(fp))
-	run_reopt(REopt, REoptInputs(s))
+	run_reopt(m, REoptInputs(s))
 end
 
 
-function run_reopt(REopt::JuMP.AbstractModel, d::Dict)
+"""
+	run_reopt(m::JuMP.AbstractModel, d::Dict)
+
+Solve the model using the `Scenario` defined in dict `d`.
+"""
+function run_reopt(m::JuMP.AbstractModel, d::Dict)
 	s = Scenario(d)
-	run_reopt(REopt, REoptInputs(s))
+	run_reopt(m, REoptInputs(s))
 end
 
 

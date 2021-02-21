@@ -4,7 +4,6 @@
 !!! note
     This package is currently under development and not necessarily stable. It contains a subset of the [REopt Lite API](https://github.com/NREL/REopt_Lite_API) capabilities.
 
-```@docs
-build_reopt!(m::JuMP.AbstractModel, fp::String)
-Scenario(d::Dict)
+```@contents
+Depth = 3
 ```

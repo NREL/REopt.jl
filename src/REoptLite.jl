@@ -35,7 +35,9 @@ export
     run_reopt,
     build_reopt!,
     reopt_results,
-    simulate_outages
+    simulate_outages,
+    # for docs:
+    ElectricLoad
 
 import HTTP
 import JSON

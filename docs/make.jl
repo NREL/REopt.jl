@@ -8,6 +8,7 @@ makedocs(
             "usage/examples.md",
             "usage/inputs.md",
         ],
+        "methods.md"
     ],
 
 )

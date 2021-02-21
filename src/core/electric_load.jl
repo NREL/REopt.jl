@@ -27,6 +27,60 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+    ElectricLoad(;
+        loads_kw::Union{Missing, Array{<:Real,1}} = missing,
+        year::Int = 2019,
+        doe_reference_name::Union{Missing, String} = missing,
+        city::Union{Missing, String} = missing,
+        annual_kwh::Union{Real, Nothing} = nothing,
+        monthly_totals_kwh::Array{<:Real,1} = Real[],
+        critical_loads_kw::Union{Missing, Array{Real,1}} = missing,
+        loads_kw_is_net::Bool = true,
+        critical_loads_kw_is_net::Bool = false,
+        critical_load_pct::Real = 0.5
+    )
+
+Must provide either `loads_kw` or [`doe_reference_name` and `city`]. When using the 
+[`doe_reference_name` and `city`] option, choose `city` from one of the 
+cities used to represent the ASHRAE climate zones:
+- Albuquerque
+- Atlanta
+- Baltimore
+- Boulder
+- Chicago
+- Duluth
+- Fairbanks
+- Helena
+- Houston
+- LosAngeles
+- Miami
+- Minneapolis
+- Phoenix
+- SanFrancisco
+- Seattle
+and `doe_reference_name` from:
+- FastFoodRest
+- FullServiceRest
+- Hospital
+- LargeHotel
+- LargeOffice
+- MediumOffice
+- MidriseApartment
+- Outpatient
+- PrimarySchool
+- RetailStore
+- SecondarySchool
+- SmallHotel
+- SmallOffice
+- StripMall
+- Supermarket
+- Warehouse
+- FlatLoad
+
+Each `city` and `doe_reference_name` combination has a default `annual_kwh`, or you can provide your
+own `annual_kwh` or `monthly_totals_kwh` and the reference profile will be scaled appropriately.
+"""
 mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off of (critical_)loads_kw_is_net
     loads_kw::Array{Real,1}
     year::Int
@@ -87,7 +141,7 @@ function BuiltInElectricLoad(
     annual_kwh::Union{Float64,Nothing}=nothing,
     )
     lib_path = joinpath(dirname(@__FILE__), "..", "..", "data")
-    # TODO set path with joinpath(dirname(pathof(REoptLite)), "..", "data") once REopt is a pkg
+    # TODO determine city from latitude, longitude
     annual_loads = Dict(
         "Albuquerque" => Dict(
             "fastfoodrest" => 193235,
