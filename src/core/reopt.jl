@@ -44,12 +44,10 @@ end
 
 
 """
-	function build_reopt!(m::JuMP.AbstractModel, fp::String
-		; lpf::Union{Nothing, JuMP.AbstractModel}=nothing
-	)
-Add variables and constraints for REopt model. optional lpf model is for bilevel problems where the
-	exported power in each time step is a decision variable in the linear power flow problem (lpf).
-	fp is used to load in JSON file to construct REoptInputs.
+	build_reopt!(m::JuMP.AbstractModel, fp::String)
+
+Add variables and constraints for REopt model. 
+`fp` is used to load in JSON file to construct REoptInputs.
 """
 function build_reopt!(m::JuMP.AbstractModel, fp::String)
 	s = Scenario(JSON.parsefile(fp))
