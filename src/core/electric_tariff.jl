@@ -55,7 +55,7 @@ end
 function ElectricTariff(;
     urdb_label::String="",
     urdb_response::Dict=Dict(),
-    year::Int=2019,
+    year::Int=2020,
     time_steps_per_hour::Int=1,
     NEM::Bool=false,
     wholesale_rate::T=nothing, 
