@@ -3,8 +3,8 @@ This package is currently under development and only has a subset of capabilitie
 
 Note: this package has been tested only with Julia 1.4 and 1.5 and may not be compatible with older versions.
 
-[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://USER_NAME.github.io/PACKAGE_NAME.jl/stable)
-[![](https://img.shields.io/badge/docs-latest-blue.svg)](https://USER_NAME.github.io/PACKAGE_NAME.jl/latest)
+[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://nrel.github.io/REoptLite.jl/stable)
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://nrel.github.io/REoptLite/dev)
 
 
 ## Uncertain outages
