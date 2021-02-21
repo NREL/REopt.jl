@@ -38,7 +38,33 @@ struct Scenario
     generator::Generator
 end
 
+"""
+    Scenario(d::Dict)
 
+Constructor for Scenario struct, where `d` has upper-case keys:
+- Site (required)
+- ElectricTariff (required)
+- ElectricLoad (required)
+- PV (optional, can be Array)
+- Storage (optional)
+- ElectricUtility (optional)
+- Financial (optional)
+- Generator (optional)
+
+All values of `d` are expected to `Dicts` except for `PV`, which can be either a `Dict` or `Dict[]`.
+```
+struct Scenario
+    site::Site
+    pvs::Array{PV, 1}
+    storage::Storage
+    electric_tariff::ElectricTariff
+    electric_load::ElectricLoad
+    electric_utility::ElectricUtility
+    financial::Financial
+    generator::Generator
+end
+```
+"""
 function Scenario(d::Dict)
     # TODO add validate! functions for each input struct
     

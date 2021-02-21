@@ -6,4 +6,5 @@
 
 ```@docs
 build_reopt!(m::JuMP.AbstractModel, fp::String)
+Scenario(d::Dict)
 ```
