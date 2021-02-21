@@ -38,7 +38,8 @@ export
     simulate_outages,
     # for docs:
     ElectricLoad,
-    Financial
+    Financial,
+    ElectricUtility
 
 import HTTP
 import JSON
