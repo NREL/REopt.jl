@@ -30,7 +30,7 @@
 """
     ElectricLoad(;
         loads_kw::Union{Missing, Array{<:Real,1}} = missing,
-        year::Int = 2019,
+        year::Int = 2020,
         doe_reference_name::Union{Missing, String} = missing,
         city::Union{Missing, String} = missing,
         annual_kwh::Union{Real, Nothing} = nothing,
@@ -90,7 +90,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
     
     function ElectricLoad(;
         loads_kw::Union{Missing, Array{<:Real,1}} = missing,
-        year::Int = 2019,
+        year::Int = 2020,
         doe_reference_name::Union{Missing, String} = missing,
         city::Union{Missing, String} = missing,
         annual_kwh::Union{Real, Nothing} = nothing,
@@ -115,6 +115,9 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
     
         elseif !ismissing(doe_reference_name)  && !ismissing(city)
             # NOTE: must use year that starts on Sunday with DOE reference doe_ref_profiles
+            if year != 2017
+                @warn "Changing ElectricLoad.year to 2017 because DOE reference profiles start on a Sunday."
+            end
             year = 2017
             loads_kw = BuiltInElectricLoad(city, doe_reference_name, annual_kwh=annual_kwh)
             if ismissing(critical_loads_kw)
