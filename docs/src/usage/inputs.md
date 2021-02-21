@@ -57,3 +57,8 @@ Financial
 ```@docs
 ElectricUtility
 ```
+
+## Generator
+```@docs
+Generator
+```

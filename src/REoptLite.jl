@@ -39,7 +39,8 @@ export
     # for docs:
     ElectricLoad,
     Financial,
-    ElectricUtility
+    ElectricUtility,
+    Generator
 
 import HTTP
 import JSON
