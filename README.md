@@ -3,6 +3,9 @@ This package is currently under development and only has a subset of capabilitie
 
 Note: this package has been tested only with Julia 1.4 and 1.5 and may not be compatible with older versions.
 
+[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://USER_NAME.github.io/PACKAGE_NAME.jl/stable)
+[![](https://img.shields.io/badge/docs-latest-blue.svg)](https://USER_NAME.github.io/PACKAGE_NAME.jl/latest)
+
 
 ## Uncertain outages
 The full details of the model will be published in _Laws et al. 2021, Co-Optimizing Distributed Energy Resources for Grid-connected Benefits and Resilience Benefits Under Uncertain Grid Reliability, [Submitted]_. In brief, the model is set up to minimize the maximum expected outage cost (while minimizing the lifecycle cost of energy including utility tariff costs), where the maximum is taken over outage start times, and the expectation is taken over outage durations.
