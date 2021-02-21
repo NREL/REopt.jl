@@ -5,6 +5,10 @@ makedocs(
     pages = [
         "Home" => "index.md",
         "examples.md",
+        "Usage" => Any[
+            "usage/examples.md",
+            "usage/inputs.md",
+        ],
     ],
 
 )

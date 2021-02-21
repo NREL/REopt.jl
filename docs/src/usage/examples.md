@@ -11,3 +11,5 @@ m = Model(Xpress.Optimizer)
 results = run_reopt(m, "path/to/scenario.json")
 ```
 The `results` is a `Dict`.
+
+For more on the `scenario.json` see the [Inputs](@ref) section.
