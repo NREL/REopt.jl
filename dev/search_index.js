@@ -1,0 +1,3 @@
+var documenterSearchIndex = {"docs":
+[{"location":"#REoptLite.jl-Documentation","page":"REoptLite.jl Documentation","title":"REoptLite.jl Documentation","text":"","category":"section"},{"location":"","page":"REoptLite.jl Documentation","title":"REoptLite.jl Documentation","text":"build_reopt!(m::JuMP.AbstractModel, fp::String)","category":"page"},{"location":"#REoptLite.build_reopt!-Tuple{AbstractModel,String}","page":"REoptLite.jl Documentation","title":"REoptLite.build_reopt!","text":"build_reopt!(m::JuMP.AbstractModel, fp::String)\n\nAdd variables and constraints for REopt model.  fp is used to load in JSON file to construct REoptInputs.\n\n\n\n\n\n","category":"method"}]
+}
