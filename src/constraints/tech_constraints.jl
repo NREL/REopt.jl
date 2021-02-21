@@ -27,29 +27,29 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-function add_tech_size_constraints(m, p)
+function add_tech_size_constraints(m, p; _n="")
 
     # PV techs can be constrained by space available based on location at site (roof, ground, both)
     @constraint(m, [loc in p.pvlocations],
-        sum(m[:dvSize][t] * p.pv_to_location[t, loc] for t in p.pvtechs) <= p.maxsize_pv_locations[loc]
+        sum(m[Symbol("dvSize"*_n)][t] * p.pv_to_location[t, loc] for t in p.pvtechs) <= p.maxsize_pv_locations[loc]
     )
 
     # max size limit
     @constraint(m, [t in p.techs],
-        m[:dvSize][t] <= p.max_sizes[t]
+        m[Symbol("dvSize"*_n)][t] <= p.max_sizes[t]
     )
 
     ##Constraint (7c): Minimum size for each tech
     @constraint(m, [t in p.techs],
-        m[:dvSize][t] >= p.min_sizes[t]
+        m[Symbol("dvSize"*_n)][t] >= p.min_sizes[t]
     )
 
     @constraint(m, [t in p.techs],
-        m[:dvPurchaseSize][t] >= m[:dvSize][t] - p.existing_sizes[t]
+        m[Symbol("dvPurchaseSize"*_n)][t] >= m[Symbol("dvSize"*_n)][t] - p.existing_sizes[t]
     )
 
     ## Constraint (7d): Non-turndown technologies are always at rated production
     @constraint(m, [t in p.techs_no_turndown, ts in p.time_steps],
-        m[:dvRatedProduction][t,ts] == m[:dvSize][t]
+        m[Symbol("dvRatedProduction"*_n)][t,ts] == m[Symbol("dvSize"*_n)][t]
     )
 end

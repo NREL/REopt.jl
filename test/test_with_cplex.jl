@@ -81,7 +81,7 @@ end
     @test value(m[:binMGTechUsed]["Generator"]) == 1
     @test value(m[:binMGTechUsed]["PV"]) == 0
     @test value(m[:binMGStorageUsed]) == 1
-    @test results["lcc"] ≈ 7.3661109e7
+    @test results["lcc"] ≈ 7.3676588e7
     
     #=
     Scenario with $0/kWh VoLL, 12x169 hour outages, 1kW load/hour, and min_resil_timesteps = 168
@@ -95,6 +95,17 @@ end
     m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
     results = run_reopt(m, "./scenarios/nogridcost_multiscenario.json")
     @test sum(results["unserved_load_per_outage"]) ≈ 60
+end
+
+
+@testset "Multiple Sites" begin
+    m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
+    ps = [
+        REoptInputs("./scenarios/pv_storage.json"),
+        REoptInputs("./scenarios/monthly_rate.json"),
+    ];
+    results = run_reopt(m, ps)
+    @test results[1]["lcc"] + results[2]["lcc"] ≈ 1.23887e7 + 437169.0 rtol=1e-5
 end
 
 
