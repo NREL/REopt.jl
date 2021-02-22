@@ -49,8 +49,8 @@ function Generator(;
 )
 ```
 !!! note
-Not using fuel_cost_per_gallon b/c we assume that any existing fuel
-is a sunk cost, and currently the model only has existing fuel determined by fuel_avail_gal.
+    Not using fuel_cost_per_gallon b/c we assume that any existing fuel
+    is a sunk cost, and currently the model only has existing fuel determined by fuel_avail_gal.
 """
 struct Generator <: AbstractGenerator
     existing_kw
