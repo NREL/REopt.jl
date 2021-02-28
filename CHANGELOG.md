@@ -1,9 +1,10 @@
 # REoptLite Changelog
 
-## develop
+## v0.6.0
 #### Improvements
 - Added multi-node (site) capability for PV and Storage
 - started documentation process using Github Pages and Documenter.jl
+- restructured outputs to align with the input structure, for example top-level keys added for `ElectricTariff` and `PV` in the outputs
 
 ## v0.5.3
 #### Improvements
