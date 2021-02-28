@@ -33,15 +33,6 @@ using Cbc
 using JSON
 using REoptLite
 
-# TODO: remove some tests to make test suite faster?
-@testset "BAU Scenario" begin
-    model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
-    results = run_reopt(model, "./scenarios/no_techs.json")
-    @test all(isapprox.(results["ElectricUtility"]["year_one_to_load_series_kw"], 
-                        results["inputs"].elec_load.loads_kw, atol=0.001))
-end
-
-
 @testset "January Export Rates" begin
     model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
     data = JSON.parsefile("./scenarios/monthly_rate.json")
