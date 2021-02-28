@@ -44,13 +44,13 @@ export
 
 import HTTP
 import JSON
-
 using JuMP
 using JuMP.Containers: DenseAxisArray
 using Logging
 using DelimitedFiles
 using Dates
 import MathOptInterface
+import Dates: daysinmonth, Date, isleapyear
 const MOI = MathOptInterface
 
 include("keys.jl")
@@ -76,6 +76,16 @@ include("constraints/load_balance.jl")
 include("constraints/tech_constraints.jl")
 include("constraints/electric_utility_constraints.jl")
 include("constraints/generator_constraints.jl")
+
+include("results/results.jl")
+include("results/electric_tariff.jl")
+include("results/electric_utility.jl")
+include("results/financial.jl")
+include("results/generator.jl")
+include("results/pv.jl")
+include("results/storage.jl")
+include("results/outages.jl")
+
 include("core/reopt.jl")
 include("core/reopt_multinode.jl")
 

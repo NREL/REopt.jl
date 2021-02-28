@@ -37,7 +37,8 @@ using REoptLite
 @testset "BAU Scenario" begin
     model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(model, "./scenarios/no_techs.json")
-    @test all(isapprox.(results["GridToLoad"], results["inputs"].elec_load.loads_kw, atol=0.001))
+    @test all(isapprox.(results["ElectricUtility"]["year_one_to_load_series_kw"], 
+              results["inputs"].elec_load.loads_kw, atol=0.001))
 end
 
 
@@ -55,10 +56,9 @@ end
     inputs = REoptInputs(s)
     results = run_reopt(model, inputs)
 
-
-    @test results["PV_kw"] ≈ 70.3084 atol=0.01
-    @test results["lcc"] ≈ 430747.0 rtol=1e-5 # with levelization_factor hack the LCC is within 5e-5 of REopt Lite API LCC
-    @test all(x == 0.0 for x in results["PVtoLoad"][1:744])
+    @test results["PV"]["size_kw"] ≈ 70.3084 atol=0.01
+    @test results["Financial"]["lcc_us_dollars"] ≈ 430747.0 rtol=1e-5 # with levelization_factor hack the LCC is within 5e-5 of REopt Lite API LCC
+    @test all(x == 0.0 for x in results["PV"]["year_one_to_load_series_kw"][1:744])
 end
 
 
@@ -66,17 +66,18 @@ end
     model2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results2 = run_reopt(model2, "./scenarios/pv_storage.json")
 
-    @test results2["PV_kw"] ≈ 216.6667 atol=0.01
-    @test results2["lcc"] ≈ 1.23887e7 rtol=1e-5
-    @test results2["batt_kw"] ≈ 55.9 atol=0.1
-    @test results2["batt_kwh"] ≈ 78.9 atol=0.1
+    @test results2["PV"]["size_kw"] ≈ 216.6667 atol=0.01
+    @test results2["Financial"]["lcc_us_dollars"] ≈ 1.23887e7 rtol=1e-5
+    @test results2["Storage"]["size_kw"] ≈ 55.9 atol=0.1
+    @test results2["Storage"]["size_kwh"] ≈ 78.9 atol=0.1
 end
 
 @testset "Outage with Generator" begin
     model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(model, "./scenarios/generator.json")
-    @test results["generator_kw"] ≈ 8.12 atol=0.01
-    @test (sum(results["generatorToLoad"][i] for i in 1:9) + sum(results["generatorToLoad"][i] for i in 13:8760)) == 0
+    @test results["Generator"]["size_kw"] ≈ 8.12 atol=0.01
+    @test (sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 1:9) + 
+           sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 13:8760)) == 0
 end
 
 @testset "Minimize Unserved Load" begin
@@ -88,7 +89,7 @@ end
     @test value(m[:binMGTechUsed]["Generator"]) == 1
     @test value(m[:binMGTechUsed]["PV"]) == 0
     @test value(m[:binMGStorageUsed]) == 1
-    @test results["lcc"] ≈ 7.3661109e7
+    @test results["Financial"]["lcc_us_dollars"] ≈ 7.3681609e7 atol=5e4
     
     #=
     Scenario with $0/kWh VoLL, 12x169 hour outages, 1kW load/hour, and min_resil_timesteps = 168

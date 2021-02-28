@@ -27,35 +27,20 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly")
+function add_electric_utility_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+    r = Dict{String, Any}()
 
-    url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
-        "&lat=", latitude , "&lon=", longitude, "&tilt=", pv.tilt,
-        "&system_capacity=1", "&azimuth=", pv.azimuth, "&module_type=", pv.module_type,
-        "&array_type=", pv.array_type, "&losses=", round(pv.losses*100, digits=3), "&dc_ac_ratio=", pv.dc_ac_ratio,
-        "&gcr=", 0.4, "&inv_eff=", pv.inv_eff*100, "&timeframe=", timeframe, "&dataset=nsrdb",
-        "&radius=", 100
-    )
+    Year1UtilityEnergy = p.hours_per_timestep * sum(m[Symbol("dvGridPurchase"*_n)][ts] for ts in p.time_steps)
+    r["year_one_energy_supplied_kwh"] = round(value(Year1UtilityEnergy), digits=2)
 
-    try
-        @info "Querying PVWatts for prodfactor with " pv.name
-        r = HTTP.get(url)
-        response = JSON.parse(String(r.body))
-        if r.status != 200
-            error("Bad response from PVWatts: $(response["errors"])")
-            # julia does not get here even with status != 200 b/c it jumps ahead to CIDER/reopt/src/core/reopt_inputs.jl:114
-            # and raises ArgumentError: indexed assignment with a single value to many locations is not supported; perhaps use broadcasting `.=` instead?
-        end
-        @info "PVWatts success."
-        watts = get(response["outputs"], "ac", []) / 1000  # scale to 1 kW system (* 1 kW / 1000 W)
+    GridToLoad = (m[Symbol("dvGridPurchase"*_n)][ts] - sum(m[Symbol("dvGridToStorage"*_n)][b, ts] 
+				  for b in p.storage.types) for ts in p.time_steps)
+    r["year_one_to_load_series_kw"] = round.(value.(GridToLoad), digits=3)
 
-        return collect(watts)
-    catch e
-        return "Error occurred : $e"
-    end
-end
+    GridToBatt = (sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.types) 
+				  for ts in p.time_steps)
+    r["year_one_to_battery_series_kw"] = round.(value.(GridToBatt), digits=3)
 
-
-function prodfactor(g::Generator; ts_per_hour::Int=1)
-    return ones(8760 * ts_per_hour)
+    d["ElectricUtility"] = r
+    nothing
 end

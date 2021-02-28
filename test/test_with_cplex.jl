@@ -37,7 +37,8 @@ using REoptLite
 @testset "BAU Scenario" begin
     model = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
     results = run_reopt(model, "./scenarios/no_techs.json")
-    @test all(isapprox.(results["GridToLoad"], results["inputs"].elec_load.loads_kw, atol=0.001))
+    @test all(isapprox.(results["ElectricUtility"]["year_one_to_load_series_kw"], 
+              results["inputs"].elec_load.loads_kw, atol=0.001))
 end
 
 
@@ -55,9 +56,9 @@ end
     inputs = REoptInputs(s)
     results = run_reopt(model, inputs)
 
-    @test results["PV_kw"] ≈ 70.3084 atol=0.01
-    @test results["lcc"] ≈ 430747.0 rtol=1e-5 # with levelization_factor hack the LCC is with 5e-5 of REopt Lite API LCC
-    @test all(x == 0.0 for x in results["PVtoLoad"][1:744])
+    @test results["PV"]["size_kw"] ≈ 70.3084 atol=0.01
+    @test results["Financial"]["lcc_us_dollars"] ≈ 430747.0 rtol=1e-5 # with levelization_factor hack the LCC is with 5e-5 of REopt Lite API LCC
+    @test all(x == 0.0 for x in results["PV"]["year_one_to_load_series_kw"][1:744])
 end
 
 
@@ -65,10 +66,10 @@ end
     model = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
     results = run_reopt(model, "./scenarios/pv_storage.json")
 
-    @test results["PV_kw"] ≈ 217 atol=1
-    @test results["lcc"] ≈ 1.23887e7 rtol=1e-5
-    @test results["batt_kw"] ≈ 56 atol=1
-    @test results["batt_kwh"] ≈ 79 atol=1
+    @test results["PV"]["size_kw"] ≈ 217 atol=1
+    @test results["Financial"]["lcc_us_dollars"] ≈ 1.23887e7 rtol=1e-5
+    @test results["Storage"]["size_kw"] ≈ 56 atol=1
+    @test results["Storage"]["size_kwh"] ≈ 79 atol=1
 end
 
 
@@ -81,7 +82,7 @@ end
     @test value(m[:binMGTechUsed]["Generator"]) == 1
     @test value(m[:binMGTechUsed]["PV"]) == 0
     @test value(m[:binMGStorageUsed]) == 1
-    @test results["lcc"] ≈ 7.3676588e7
+    @test results["Financial"]["lcc_us_dollars"] ≈ 7.3681609e7 atol=5e4
     
     #=
     Scenario with $0/kWh VoLL, 12x169 hour outages, 1kW load/hour, and min_resil_timesteps = 168
@@ -105,7 +106,7 @@ end
         REoptInputs("./scenarios/monthly_rate.json"),
     ];
     results = run_reopt(m, ps)
-    @test results[1]["lcc"] + results[2]["lcc"] ≈ 1.23887e7 + 437169.0 rtol=1e-5
+    @test results[1]["Financial"]["lcc_us_dollars"] + results[2]["Financial"]["lcc_us_dollars"] ≈ 1.23887e7 + 437169.0 rtol=1e-5
 end
 
 

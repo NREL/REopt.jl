@@ -27,35 +27,20 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly")
+function add_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::Symbol; _n="")
+    r = Dict{String, Any}()
+    r["size_kwh"] = value(m[Symbol("dvStorageEnergy"*_n)][b])
+    r["size_kw"] = value(m[Symbol("dvStoragePower"*_n)][b])
 
-    url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
-        "&lat=", latitude , "&lon=", longitude, "&tilt=", pv.tilt,
-        "&system_capacity=1", "&azimuth=", pv.azimuth, "&module_type=", pv.module_type,
-        "&array_type=", pv.array_type, "&losses=", round(pv.losses*100, digits=3), "&dc_ac_ratio=", pv.dc_ac_ratio,
-        "&gcr=", 0.4, "&inv_eff=", pv.inv_eff*100, "&timeframe=", timeframe, "&dataset=nsrdb",
-        "&radius=", 100
-    )
-
-    try
-        @info "Querying PVWatts for prodfactor with " pv.name
-        r = HTTP.get(url)
-        response = JSON.parse(String(r.body))
-        if r.status != 200
-            error("Bad response from PVWatts: $(response["errors"])")
-            # julia does not get here even with status != 200 b/c it jumps ahead to CIDER/reopt/src/core/reopt_inputs.jl:114
-            # and raises ArgumentError: indexed assignment with a single value to many locations is not supported; perhaps use broadcasting `.=` instead?
-        end
-        @info "PVWatts success."
-        watts = get(response["outputs"], "ac", []) / 1000  # scale to 1 kW system (* 1 kW / 1000 W)
-
-        return collect(watts)
-    catch e
-        return "Error occurred : $e"
+    if r["size_kwh"] != 0
+    	soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
+        r["year_one_soc_series_pct"] = value.(soc) ./ r["size_kwh"]
+    else
+        r["year_one_soc_series_pct"] = []
     end
-end
-
-
-function prodfactor(g::Generator; ts_per_hour::Int=1)
-    return ones(8760 * ts_per_hour)
+    # TODO add year_one_to_grid_series_kw
+    # TODO add year_one_to_load_series_kw
+    # TODO handle other storage type names
+    d["Storage"] = r
+    nothing
 end

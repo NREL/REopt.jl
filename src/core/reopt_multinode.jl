@@ -124,10 +124,8 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
                 sum( p.etariff.export_rates[u][ts] * m[Symbol("dvStorageExport"*_n)][b,u,ts] 
                      for b in p.storage.can_grid_charge, u in p.storage.export_bins)
             end
-            m[Symbol("ExportBenefitYr1"*_n)] = m[Symbol("TotalExportBenefit"*_n)] / p.pwf_e
         else
             m[Symbol("TotalExportBenefit"*_n)] = 0
-            m[Symbol("ExportBenefitYr1"*_n)] = 0
         end
 	
 		#################################  Objective Function   ########################################

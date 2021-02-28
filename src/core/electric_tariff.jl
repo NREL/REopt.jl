@@ -27,7 +27,6 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-import Dates: daysinmonth, Date
 """
 data for electric tariff in reopt model
     can be defined using custom rates or URDB rate
@@ -229,6 +228,9 @@ function get_monthly_timesteps(year::Int; time_steps_per_hour=1)
     for m in range(1, stop=12)
         n_days = daysinmonth(Date(string(year) * "-" * string(m)))
         stop = n_days * 24 * time_steps_per_hour + i - 1
+        if m == 2 && isleapyear(year)
+            stop -= 24 * time_steps_per_hour  # TODO support extra day in leap years?
+        end
         steps = [step for step in range(i, stop=stop)]
         append!(a, [steps])
         i = stop + 1

@@ -27,35 +27,36 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly")
-
-    url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
-        "&lat=", latitude , "&lon=", longitude, "&tilt=", pv.tilt,
-        "&system_capacity=1", "&azimuth=", pv.azimuth, "&module_type=", pv.module_type,
-        "&array_type=", pv.array_type, "&losses=", round(pv.losses*100, digits=3), "&dc_ac_ratio=", pv.dc_ac_ratio,
-        "&gcr=", 0.4, "&inv_eff=", pv.inv_eff*100, "&timeframe=", timeframe, "&dataset=nsrdb",
-        "&radius=", 100
-    )
-
-    try
-        @info "Querying PVWatts for prodfactor with " pv.name
-        r = HTTP.get(url)
-        response = JSON.parse(String(r.body))
-        if r.status != 200
-            error("Bad response from PVWatts: $(response["errors"])")
-            # julia does not get here even with status != 200 b/c it jumps ahead to CIDER/reopt/src/core/reopt_inputs.jl:114
-            # and raises ArgumentError: indexed assignment with a single value to many locations is not supported; perhaps use broadcasting `.=` instead?
-        end
-        @info "PVWatts success."
-        watts = get(response["outputs"], "ac", []) / 1000  # scale to 1 kW system (* 1 kW / 1000 W)
-
-        return collect(watts)
-    catch e
-        return "Error occurred : $e"
+function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
+	tstart = time()
+    d = Dict{String, Any}()
+    for b in p.storage.types
+        add_storage_results(m, p, d, b; _n)
     end
-end
 
+    add_electric_tariff_results(m, p, d; _n)
+    add_electric_utility_results(m, p, d; _n)
+    add_financial_results(m, p, d; _n)
 
-function prodfactor(g::Generator; ts_per_hour::Int=1)
-    return ones(8760 * ts_per_hour)
+	if !isempty(p.pvtechs)
+        add_pv_results(m, p, d; _n)
+	end
+	
+	time_elapsed = time() - tstart
+	@info "Base results processing took $(round(time_elapsed, digits=3)) seconds."
+	
+	if !isempty(p.gentechs) && isempty(_n)  # generators not included in multinode model
+        tstart = time()
+		add_generator_results(m, p, d)
+        time_elapsed = time() - tstart
+        @info "Generator results processing took $(round(time_elapsed, digits=3)) seconds."
+	end
+	
+	if !isempty(p.elecutil.outage_durations) && isempty(_n)  # outages not included in multinode model
+        tstart = time()
+		add_outage_results(m, p, d)
+        time_elapsed = time() - tstart
+        @info "Outage results processing took $(round(time_elapsed, digits=3)) seconds."
+	end
+	return d
 end

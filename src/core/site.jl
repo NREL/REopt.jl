@@ -28,7 +28,9 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 struct Site
+    "required"
     latitude
+    "required"
     longitude
     land_acres
     roof_squarefeet

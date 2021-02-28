@@ -442,6 +442,9 @@ function get_tou_demand_steps(d::Dict; year::Int, month::Int, period::Int, time_
         plus_days = 0
         for m in range(1, stop=month-1)
             plus_days += daysinmonth(Date(string(year) * "-" * string(m)))
+            if m == 2 && isleapyear(year)
+                plus_days -= 1
+            end
         end
         start_hour += plus_days * 24
         start_step = start_hour * time_steps_per_hour
