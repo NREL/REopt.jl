@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Inputs · REoptLite.jl Documentation</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">REoptLite.jl Documentation</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Usage</span><ul><li><a class="tocitem" href="../examples/">Examples</a></li><li class="is-active"><a class="tocitem" href>Inputs</a><ul class="internal"><li><a class="tocitem" href="#ElectricLoad"><span>ElectricLoad</span></a></li><li><a class="tocitem" href="#Financial-values"><span>Financial values</span></a></li><li><a class="tocitem" href="#ElectricUtility"><span>ElectricUtility</span></a></li><li><a class="tocitem" href="#Generator"><span>Generator</span></a></li></ul></li></ul></li><li><a class="tocitem" href="../../methods/">Methods</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Usage</a></li><li class="is-active"><a href>Inputs</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Inputs</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/NREL/REoptLite/blob/master/docs/src/usage/inputs.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Inputs"><a class="docs-heading-anchor" href="#Inputs">Inputs</a><a id="Inputs-1"></a><a class="docs-heading-anchor-permalink" href="#Inputs" title="Permalink"></a></h1><p>Inputs to <code>run_reopt</code> can be provided in one of three format:</p><ol><li>a file path (string) to a JSON file,</li><li>a <code>Dict</code>, or</li><li>using the <code>REoptInputs</code> struct</li></ol><p>The first option is perhaps the most straightforward one. For example, the minimum requirements for a JSON scenario file would look like:</p><pre><code class="language-javascript">{
+    &quot;Site&quot;: {
+        &quot;longitude&quot;: -118.1164613,
+        &quot;latitude&quot;: 34.5794343
+    },
+    &quot;ElectricLoad&quot;: {
+        &quot;doe_reference_name&quot;: &quot;MidriseApartment&quot;,
+        &quot;annual_kwh&quot;: 1000000.0,
+        &quot;city&quot;: &quot;Boulder&quot;
+    },
+    &quot;ElectricTariff&quot;: {
+        &quot;urdb_label&quot;: &quot;5ed6c1a15457a3367add15ae&quot;
+    }
+}</code></pre><p>The order of the keys do not matter. Note that this scenario does not include any energy generation technologies and therefore the results can be used as a baseline for comparison to scenarios that result in cost-optimal generation technologies.</p><p>To add PV to the analysis simply add a PV key with an empty dictionary (to use default values):</p><pre><code class="language-javascript">{
+    &quot;Site&quot;: {
+        &quot;longitude&quot;: -118.1164613,
+        &quot;latitude&quot;: 34.5794343
+    },
+    &quot;ElectricLoad&quot;: {
+        &quot;doe_reference_name&quot;: &quot;MidriseApartment&quot;,
+        &quot;annual_kwh&quot;: 1000000.0,
+        &quot;city&quot;: &quot;Boulder&quot;
+    },
+    &quot;ElectricTariff&quot;: {
+        &quot;urdb_label&quot;: &quot;5ed6c1a15457a3367add15ae&quot;
+    },
+    &quot;PV&quot;: {}
+}</code></pre><p>This scenario will consider the option to purchase a solar PV system to reduce energy costs, and if solar PV can reduce the energy costs then REopt Lite will provide the optimal PV capacity (assuming perfect foresight!). To use other than default values for <code>PV</code> see the <a href="https://github.com/NREL/REoptLite/blob/master/src/core/pv.jl">PV struct definition</a>.  For example, the site under consideration might have some existing PV capacity to account for, which can be done by setting the <code>existing_kw</code> key to the appropriate value.</p><h2 id="ElectricLoad"><a class="docs-heading-anchor" href="#ElectricLoad">ElectricLoad</a><a id="ElectricLoad-1"></a><a class="docs-heading-anchor-permalink" href="#ElectricLoad" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-binding" id="REoptLite.ElectricLoad" href="#REoptLite.ElectricLoad"><code>REoptLite.ElectricLoad</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia">ElectricLoad(;
+    loads_kw::Union{Missing, Array{&lt;:Real,1}} = missing,
+    year::Int = 2020,
+    doe_reference_name::Union{Missing, String} = missing,
+    city::Union{Missing, String} = missing,
+    annual_kwh::Union{Real, Nothing} = nothing,
+    monthly_totals_kwh::Array{&lt;:Real,1} = Real[],
+    critical_loads_kw::Union{Missing, Array{Real,1}} = missing,
+    loads_kw_is_net::Bool = true,
+    critical_loads_kw_is_net::Bool = false,
+    critical_load_pct::Real = 0.5
+)</code></pre><p>Must provide either <code>loads_kw</code> or [<code>doe_reference_name</code> and <code>city</code>]. When using the  [<code>doe_reference_name</code> and <code>city</code>] option, choose <code>city</code> from one of the  cities used to represent the ASHRAE climate zones:</p><ul><li>Albuquerque</li><li>Atlanta</li><li>Baltimore</li><li>Boulder</li><li>Chicago</li><li>Duluth</li><li>Fairbanks</li><li>Helena</li><li>Houston</li><li>LosAngeles</li><li>Miami</li><li>Minneapolis</li><li>Phoenix</li><li>SanFrancisco</li><li>Seattle</li></ul><p>and <code>doe_reference_name</code> from:</p><ul><li>FastFoodRest</li><li>FullServiceRest</li><li>Hospital</li><li>LargeHotel</li><li>LargeOffice</li><li>MediumOffice</li><li>MidriseApartment</li><li>Outpatient</li><li>PrimarySchool</li><li>RetailStore</li><li>SecondarySchool</li><li>SmallHotel</li><li>SmallOffice</li><li>StripMall</li><li>Supermarket</li><li>Warehouse</li><li>FlatLoad</li></ul><p>Each <code>city</code> and <code>doe_reference_name</code> combination has a default <code>annual_kwh</code>, or you can provide your own <code>annual_kwh</code> or <code>monthly_totals_kwh</code> and the reference profile will be scaled appropriately.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/NREL/REoptLite/blob/7415e95d72ff91ebb576315a0b6622b1edded372/src/core/electric_load.jl#L30-L83">source</a></section></article><h2 id="Financial-values"><a class="docs-heading-anchor" href="#Financial-values">Financial values</a><a id="Financial-values-1"></a><a class="docs-heading-anchor-permalink" href="#Financial-values" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-binding" id="REoptLite.Financial" href="#REoptLite.Financial"><code>REoptLite.Financial</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia">Financial</code></pre><pre><code class="language-none">Base.@kwdef struct Financial
+    om_cost_escalation_pct::Float64 = 0.025
+    elec_cost_escalation_pct::Float64 = 0.023
+    offtaker_tax_pct::Float64 = 0.26
+    offtaker_discount_pct = 0.083
+    two_party_ownership::Bool = false
+    owner_tax_pct::Float64 = 0.26
+    owner_discount_pct::Float64 = 0.083
+    analysis_years::Int = 25
+    macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576]  # IRS pub 946
+    macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446]
+    VoLL::Union{Array{R,1}, R} where R&lt;:Real = 1.00
+    microgrid_premium_pct::Float64 = 0.3
+end</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/JuliaLang/julia/blob/788b2c77c10c2160f4794a4d4b6b81a95a90940c/base/#L0-L18">source</a></section></article><h2 id="ElectricUtility"><a class="docs-heading-anchor" href="#ElectricUtility">ElectricUtility</a><a id="ElectricUtility-1"></a><a class="docs-heading-anchor-permalink" href="#ElectricUtility" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-binding" id="REoptLite.ElectricUtility" href="#REoptLite.ElectricUtility"><code>REoptLite.ElectricUtility</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia">ElectricUtility</code></pre><pre><code class="language-none">Base.@kwdef struct ElectricUtility
+    outage_start_timestep::Int=0  # for modeling a single outage, with critical load spliced into the baseline load ...
+    outage_end_timestep::Int=0  # ... utiltity production_factor = 0 during the outage
+    # variables below used for minimax the expected outage cost,
+    # with max taken over outage start time, expectation taken over outage duration
+    outage_start_timesteps::Array{Int,1}=Int[]  # we minimize the maximum outage cost over outage start times
+    outage_durations::Array{Int,1}=Int[]  # one-to-one with outage_probabilities, outage_durations can be a random variable
+    outage_probabilities::Array{Real,1}=[1.0]
+    outage_timesteps::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:maximum(outage_durations)
+    scenarios::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:length(outage_durations)
+end</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/JuliaLang/julia/blob/788b2c77c10c2160f4794a4d4b6b81a95a90940c/base/#L0-L15">source</a></section></article><h2 id="Generator"><a class="docs-heading-anchor" href="#Generator">Generator</a><a id="Generator-1"></a><a class="docs-heading-anchor-permalink" href="#Generator" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-binding" id="REoptLite.Generator" href="#REoptLite.Generator"><code>REoptLite.Generator</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia">Generator</code></pre><p>struct with inner constructor:</p><pre><code class="language-none">function Generator(;
+    existing_kw::Real=0,
+    min_kw::Real=0,
+    max_kw::Real=1.0e6,
+    cost_per_kw::Real=500.0,
+    om_cost_per_kw::Real=10.0,
+    om_cost_per_kwh::Float64=0.0,
+    fuel_cost_per_gallon::Float64 = 3.0,
+    fuel_slope_gal_per_kwh::Float64 = 0.076,
+    fuel_intercept_gal_per_hr::Float64 = 0.0,
+    fuel_avail_gal::Float64 = 660.0,
+    min_turn_down_pct::Float64 = 0.0,
+    only_runs_during_grid_outage::Bool = true,
+    sells_energy_back_to_grid::Bool = false
+)</code></pre><div class="admonition is-info"><header class="admonition-header">Note</header><div class="admonition-body"><p>Not using fuel<em>cost</em>per<em>gallon b/c we assume that any existing fuel is a sunk cost, and currently the model only has existing fuel determined by fuel</em>avail_gal.</p></div></div></div><a class="docs-sourcelink" target="_blank" href="https://github.com/NREL/REoptLite/blob/7415e95d72ff91ebb576315a0b6622b1edded372/src/core/generator.jl#L30-L54">source</a></section></article></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../examples/">« Examples</a><a class="docs-footer-nextpage" href="../../methods/">Methods »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 28 February 2021 01:04">Sunday 28 February 2021</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
