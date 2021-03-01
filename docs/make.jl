@@ -7,6 +7,7 @@ makedocs(
         "Usage" => Any[
             "usage/examples.md",
             "usage/inputs.md",
+            "usage/outputs.md"
         ],
         "methods.md"
     ],

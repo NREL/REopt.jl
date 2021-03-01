@@ -39,6 +39,7 @@ export
     # for docs:
     ElectricLoad,
     Financial,
+    add_financial_results,
     ElectricUtility,
     Generator
 
