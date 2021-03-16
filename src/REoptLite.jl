@@ -44,6 +44,8 @@ export
 
 import HTTP
 import JSON
+import LinDistFlow 
+const LDF = LinDistFlow
 using JuMP
 using JuMP.Containers: DenseAxisArray
 using Logging
