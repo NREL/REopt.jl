@@ -3,6 +3,8 @@
 ## dev
 #### Improvements
 - removed Storage.can_grid_export
+- add optional integer constraint to prevent simultaneous export and import of power
+- added warnings when adding integer variables
 
 ## v0.6.0
 #### Improvements

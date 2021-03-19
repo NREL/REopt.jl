@@ -76,3 +76,17 @@ function add_mincharge_constraint(m, p; _n="")
         m[Symbol("TotalDemandCharges"*_n)] + m[Symbol("TotalExportBenefit"*_n)] + m[Symbol("TotalFixedCharges"*_n)] )
     )
 end
+
+
+function add_simultaneous_export_import_constraint(m, p; _n="")
+    @constraint(m, NoGridPurchasesBinary[ts in p.time_steps],
+          m[Symbol("dvGridPurchase"*_n)][ts] 
+        + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.types)
+        - (1 - m[Symbol("binNoGridPurchases"*_n)][ts]) * 1.0E9 <= 0
+    )
+    @constraint(m, ExportOnlyAfterSiteLoadMetCon[ts in p.time_steps],
+          sum( m[Symbol("dvWHLexport"*_n)][t, ts] for t in p.techs )
+        + sum( m[Symbol("dvNEMexport"*_n)][t, ts] for t in p.techs)
+        - m[Symbol("binNoGridPurchases"*_n)][ts] * 1.0E9 <= 0
+    )
+end

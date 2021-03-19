@@ -133,6 +133,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_tou_peak_constraint(m, p)
 	end
 
+	if !(p.elecutil.allow_simultaneous_export_import)
+		add_simultaneous_export_import_constraint(m, p)
+	end
+
 	@expression(m, TotalTechCapCosts, p.two_party_factor *
 		sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in p.techs )  # TODO add Yintercept and binary
 	)
@@ -307,15 +311,26 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvPeakDemandMonth[p.months] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0
 	end
+	# TODO: combine dvNEMexport and dvWHLexport into dvProductionToGrid
 
 	if !isempty(p.gentechs)  # Problem becomes a MILP
+		@warn """Adding binary variable to model gas generator. 
+				 Some solvers are very slow with integer variables"""
 		@variables m begin
 			dvFuelUsage[p.gentechs, p.time_steps] >= 0 # Fuel burned by technology t in each time step
 			binGenIsOnInTS[p.gentechs, p.time_steps], Bin  # 1 If technology t is operating in time step h; 0 otherwise
 		end
 	end
 
+	if !(p.elecutil.allow_simultaneous_export_import)
+		@warn """Adding binary variable to prevent simultaneous grid import/export. 
+				 Some solvers are very slow with integer variables"""
+		@variable(m, binNoGridPurchases[p.time_steps], Bin)
+	end
+
 	if !isempty(p.elecutil.outage_durations) # add dvUnserved Load if there is at least one outage
+		@warn """Adding binary variable to model outages. 
+				 Some solvers are very slow with integer variables"""
 		max_outage_duration = maximum(p.elecutil.outage_durations)
 		outage_timesteps = p.elecutil.outage_timesteps
 		tZeros = p.elecutil.outage_start_timesteps

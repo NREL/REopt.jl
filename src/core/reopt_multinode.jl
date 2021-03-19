@@ -267,6 +267,10 @@ function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
         if !isempty(p.etariff.tou_demand_ratchet_timesteps)
             add_tou_peak_constraint(m, p; _n=_n)
         end
+
+		if !(p.elecutil.allow_simultaneous_export_import)
+			add_simultaneous_export_import_constraint(m, p; _n=_n)
+		end
     
     end
 end
