@@ -37,7 +37,6 @@ function add_load_balance_constraints(m, p; _n="")
 		m[Symbol("dvGridPurchase"*_n)][ts] ==
 		sum( sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.storage.types) 
 			+ m[Symbol("dvWHLexport"*_n)][t, ts] + m[Symbol("dvNEMexport"*_n)][t, ts] + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.elec_techs)
-		+ sum(m[Symbol("dvStorageExport"*_n)][b, u, ts] for b in p.storage.types, u in p.storage.export_bins) 
 		+ sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.types)
 		+ p.elec_load.loads_kw[ts]
 	)

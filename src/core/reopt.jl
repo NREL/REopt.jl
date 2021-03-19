@@ -96,8 +96,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 						m[:dvProductionToStorage][b, t, ts] == 0)
 			@constraint(m, [ts in p.time_steps], m[:dvDischargeFromStorage][b, ts] == 0)
 			@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
-			@constraint(m, [u in p.storage.export_bins, ts in p.time_steps],
-						m[:dvStorageExport][b, u, ts] == 0)
 		else
 			add_storage_size_constraints(m, p, b)
 			add_storage_dispatch_constraints(m, p, b)
@@ -164,8 +162,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	if !isempty(p.techs)
 		# NOTE: levelization_factor is baked into dvNEMexport, dvWHLexport
 		@expression(m, TotalExportBenefit, p.pwf_e * p.hours_per_timestep * sum(
-			sum( p.etariff.export_rates[u][ts] * m[:dvStorageExport][b,u,ts] for b in p.storage.can_grid_charge, u in p.storage.export_bins)
-		  + sum( p.etariff.export_rates[:NEM][ts] * m[:dvNEMexport][t, ts] for t in p.techs)
+			sum( p.etariff.export_rates[:NEM][ts] * m[:dvNEMexport][t, ts] for t in p.techs)
 		  + sum( p.etariff.export_rates[:WHL][ts] * m[:dvWHLexport][t, ts]  for t in p.techs)
 			for ts in p.time_steps )
 		)
@@ -306,7 +303,6 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvStoredEnergy[p.storage.types, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
 		dvStoragePower[p.storage.types] >= 0   # Power capacity of storage system b [kW]
 		dvStorageEnergy[p.storage.types] >= 0   # Energy capacity of storage system b [kWh]
-		dvStorageExport[p.storage.types, p.storage.export_bins, p.time_steps] >= 0  # storage to the grid or curtail [kW]
 		dvPeakDemandTOU[p.ratchets] >= 0  # Peak electrical power demand during ratchet r [kW]
 		dvPeakDemandMonth[p.months] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0

@@ -1,5 +1,9 @@
 # REoptLite Changelog
 
+## dev
+#### Improvements
+- removed Storage.can_grid_export
+
 ## v0.6.0
 #### Improvements
 - Added multi-node (site) capability for PV and Storage
