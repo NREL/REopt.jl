@@ -5,32 +5,49 @@ Outline:
     - set Pⱼ's = -1 * (dvGridPurchase_j - dvWHLexport_j - dvNEMexport_j)
 3. solve model
 """
+# TODO add complementary constraint to UL for dvWHLexport_ and dvGridPurchase_ (don't want it in LL s.t. it stays linear)
 
-function LDF.build_ldf!(m::JuMP.AbstractModel, p::Inputs, reoptnodes::Array{String, 1})
 
+function LDF.build_ldf!(m::JuMP.AbstractModel, p::LDF.Inputs, ps::Array{REoptInputs, 1})
     LDF.add_variables(m, p)
+    add_expressions(m, ps)
     LDF.constrain_power_balance(m, p)
     LDF.constrain_substation_voltage(m, p)
     LDF.constrain_KVL(m, p)
-    LDF.constrain_loads(m, p, reoptnodes)
+    LDF.constrain_loads(m, p, ps)
     LDF.constrain_bounds(m, p)
 
 end
 
-function LDF.constrain_loads(m::JuMP.AbstractModel, p::LDF.Inputs, reoptnodes::Array{String, 1})
+
+function add_expressions(m::JuMP.AbstractModel, ps::Array{REoptInputs, 1})
+    for p in ps
+        _n = string("_", p.node)
+        m[Symbol("TotalExport"*_n)] = @expression(m, [t in p.time_steps],
+            sum(
+                m[Symbol("dvWHLexport"*_n)][tech, t]
+                +  m[Symbol("dvNEMexport"*_n)][tech, t] 
+                for tech in p.techs
+            )
+        )
+    end
+end
+
+
+function LDF.constrain_loads(m::JuMP.AbstractModel, p::LDF.Inputs, ps::Array{REoptInputs, 1})
+    reopt_nodes = [rs.node for rs in ps]
 
     Pⱼ = m[:Pⱼ]
     Qⱼ = m[:Qⱼ]
+    # positive values are injections
 
     for j in p.busses
         if j in keys(p.Pload)
-            if parse(Int, j) in reoptnodes
-                j_int = parse(Int, j)
-                i = indexin([j_int], reoptnodes)[1]
-
+            if parse(Int, j) in reopt_nodes
                 @constraint(m, [t in 1:p.Ntimesteps],
                     Pⱼ[j,t] == 1e3/p.Sbase * (  # 1e3 b/c REopt values in kW
-                        - m[Symbol("dvNetGridDraw_" * j)][t]
+                        m[Symbol("TotalExport_" * j)][t]
+                        - m[Symbol("dvGridPurchase_" * j)][t]
                     )
                 )
             else
@@ -45,10 +62,11 @@ function LDF.constrain_loads(m::JuMP.AbstractModel, p::LDF.Inputs, reoptnodes::A
         end
         
         if j in keys(p.Qload)
-            if j in reoptnodes
+            if parse(Int, j) in reopt_nodes
                 @constraint(m, [t in 1:p.Ntimesteps],
-                    Qⱼ[j,t] == 1e3/p.Sbase * (  # 1e3 b/c REopt values in kW
-                        - m[Symbol("dvNetGridDraw_" * j)][t] * p.pf
+                    Qⱼ[j,t] == 1e3/p.Sbase * p.pf * (  # 1e3 b/c REopt values in kW
+                    m[Symbol("TotalExport_" * j)][t]
+                        - m[Symbol("dvGridPurchase_" * j)][t]
                     )
                 )
             else
@@ -65,6 +83,7 @@ function LDF.constrain_loads(m::JuMP.AbstractModel, p::LDF.Inputs, reoptnodes::A
     p.Nequality_cons += 2 * (p.Nnodes - 1) * p.Ntimesteps
 end
 
+# TODO add LDF results (here and in LDF package)
 
 function run_reopt(m::JuMP.AbstractModel, p::REoptInputs, ldf::LDF.Inputs)
 
