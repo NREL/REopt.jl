@@ -102,6 +102,42 @@ end
 end
 
 
+@testset "LinDistFlow" begin
+    m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
+    ps = [
+        REoptInputs("./scenarios/pv_storage.json"),
+        REoptInputs("./scenarios/monthly_rate.json"),
+    ];
+    # make dummy REoptInputs with fixed systems for other nodes in network?
+    load_nodes = Dict(
+        "3" => [],
+        "10" => [],
+    )
+    ldf_inputs = LinDistFlow.Inputs(
+        "data/car10lines.dss", 
+        "0", 
+        "data/car10linecodes.dss";
+        Pload=load_nodes, 
+        Qload=load_nodes,
+        Sbase=1e6, 
+        Vbase=12.5e3, 
+        v0 = 1.00,
+        v_uplim = 1.05,
+        v_lolim = 0.95,
+        Ntimesteps = 8760
+    );
+    build_reopt!(m, ps)
+    LinDistFlow.build_ldf!(m, ldf_inputs, ps)
+    add_objective!(m, ps)
+    optimize!(m)
+
+    results = reopt_results(m, ps)  # taking ~ 5 minutes !
+    @test results[10]["Financial"]["lcc_us_dollars"] + results[3]["Financial"]["lcc_us_dollars"] ≈ 1.23887e7 + 437169.0 rtol=1e-5
+    P0 = value.(m[:Pⱼ]["0",:]).data * ldf_inputs.Sbase / 1e3;  # converting to kW
+    TotalGridPurchases = value.(m[:dvGridPurchase_3]).data + value.(m[:dvGridPurchase_10]).data; 
+    @test maximum(TotalGridPurchases) ≈ maximum(P0) rtol = 1e-5
+end
+
 
 ## equivalent REopt Lite API Post for test 2:
 #   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
