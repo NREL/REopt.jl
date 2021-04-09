@@ -36,6 +36,7 @@ export
     build_reopt!,
     reopt_results,
     simulate_outages,
+    add_variables!,
     # for docs:
     ElectricLoad,
     Financial,
