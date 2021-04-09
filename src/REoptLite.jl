@@ -37,6 +37,8 @@ export
     reopt_results,
     simulate_outages,
     add_variables!,
+    add_objective!,
+    LinDistFlow,
     # for docs:
     ElectricLoad,
     Financial,
@@ -93,5 +95,7 @@ include("core/reopt.jl")
 include("core/reopt_multinode.jl")
 
 include("outagesim/outage_simulator.jl")
+
+include("lindistflow/extend.jl")
 
 end
