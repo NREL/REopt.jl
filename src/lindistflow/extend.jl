@@ -34,10 +34,6 @@ function add_expressions(m::JuMP.AbstractModel, ps::Array{REoptInputs, 1})
                 +  m[Symbol("dvNEMexport"*_n)][tech, t] 
                 for tech in p.techs
             )
-            + sum(
-                m[Symbol("dvStorageExport"*_n)][b, u, t] 
-                for b in p.storage.types, u in p.storage.export_bins
-            )  # TODO rm dvStorageExport from REoptLite?
         )
     end
 end

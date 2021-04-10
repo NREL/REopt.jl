@@ -38,8 +38,7 @@ function add_export_constraints(m, p; _n="")
     ##Constraint (8f): Total sales to grid no greater than annual allocation - storage tiers
     @constraint(m,
         p.hours_per_timestep * ( 
-        sum( m[Symbol("dvStorageExport"*_n)][b,u,ts] for b in p.storage.types, u in p.storage.export_bins, ts in p.time_steps_with_grid if !(u in p.etariff.curtail_bins)) 
-        + sum( m[Symbol("dvWHLexport"*_n)][t, ts] for t in p.techs, ts in p.time_steps_with_grid)
+        sum( m[Symbol("dvWHLexport"*_n)][t, ts] for t in p.techs, ts in p.time_steps_with_grid)
         + sum( m[Symbol("dvNEMexport"*_n)][t, ts] for t in p.techs, ts in p.time_steps_with_grid)
         ) <= p.max_grid_export_kwh
     )
@@ -50,7 +49,6 @@ function add_export_constraints(m, p; _n="")
     @constraint(m,
         p.hours_per_timestep * ( 
         sum( m[Symbol("dvNEMexport"*_n)][t, ts] for t in p.techs, ts in p.time_steps)
-        + sum( m[Symbol("dvStorageExport"*_n)][b, u, ts] for b in p.storage.types, u in p.storage.export_bins, ts in p.time_steps)
         ) <= p.hours_per_timestep * sum( m[Symbol("dvGridPurchase"*_n)][ts] for ts in p.time_steps)
     )
 end

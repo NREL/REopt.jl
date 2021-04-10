@@ -38,7 +38,6 @@ Base.@kwdef struct ElecStorage <: AbstractStorage
     soc_min_pct::Float64 = 0.2
     soc_init_pct::Float64 = 0.5
     can_grid_charge::Bool = true
-    can_grid_export::Bool = false
     cost_per_kw::Float64 = 840.0
     cost_per_kwh::Float64 = 420.0
     replace_cost_per_kw::Float64 = 410.0
@@ -65,7 +64,6 @@ struct Storage <: AbstractStorage
     soc_init_pct::DenseAxisArray{Float64,1}
     cost_per_kw::DenseAxisArray{Float64,1}
     cost_per_kwh::DenseAxisArray{Float64,1}
-    export_bins::Array{Symbol,1}  # default set in Storage method
     can_grid_charge::Array{Symbol,1}
     grid_charge_efficiency::Float64
 end
@@ -80,7 +78,6 @@ Construct Storage struct from Dict with keys for each storage type (eg. :elec) a
 function Storage(d::Dict, f::Financial)  # nested dict
     types = Symbol[]
     can_grid_charge = Symbol[]
-    export_bins = []
     raw_vals = Dict(zip(fieldnames(Storage), [Float64[] for _ in range(1, stop=fieldcount(Storage))]))
 
     for (storage_type, input_dict) in d
@@ -92,19 +89,12 @@ function Storage(d::Dict, f::Financial)  # nested dict
         if storage_instance.can_grid_charge
             push!(can_grid_charge, storage_type)
         end
-
-        if storage_instance.can_grid_export
-            export_bins = [:NEM, :WHL]
-        end
-        # TODO: change storage export bins when have more than one storage type
-
         fill_storage_vals!(raw_vals, storage_instance, storage_type, f)
     end
 
     storage_args = Dict(
         :types => types, 
         :can_grid_charge => can_grid_charge, 
-        :export_bins => export_bins
     )
     d2 = Dict()  # Julia won't let me use storage_args: "unable to check bounds for indices of type Symbol"
     for k in keys(raw_vals)
@@ -125,7 +115,6 @@ function Storage(d::Dict, f::Financial)  # nested dict
         d2[:soc_init_pct],
         d2[:cost_per_kw],
         d2[:cost_per_kwh],
-        storage_args[:export_bins],
         storage_args[:can_grid_charge],
         grid_charge_efficiency
     )

@@ -47,6 +47,7 @@ export
 
 import HTTP
 import JSON
+using LinDistFlow  # required to export LinDistFlow
 import LinDistFlow 
 const LDF = LinDistFlow
 using JuMP

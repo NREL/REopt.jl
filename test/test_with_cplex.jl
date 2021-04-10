@@ -98,7 +98,7 @@ end
         REoptInputs("./scenarios/monthly_rate.json"),
     ];
     results = run_reopt(m, ps)
-    @test results[1]["Financial"]["lcc_us_dollars"] + results[2]["Financial"]["lcc_us_dollars"] ≈ 1.23887e7 + 437169.0 rtol=1e-5
+    @test results[3]["Financial"]["lcc_us_dollars"] + results[10]["Financial"]["lcc_us_dollars"] ≈ 1.23887e7 + 437169.0 rtol=1e-5
 end
 
 
@@ -131,11 +131,11 @@ end
     add_objective!(m, ps)
     optimize!(m)
 
-    results = reopt_results(m, ps)  # taking ~ 5 minutes !
+    results = reopt_results(m, ps)
     @test results[10]["Financial"]["lcc_us_dollars"] + results[3]["Financial"]["lcc_us_dollars"] ≈ 1.23887e7 + 437169.0 rtol=1e-5
     P0 = value.(m[:Pⱼ]["0",:]).data * ldf_inputs.Sbase / 1e3;  # converting to kW
     TotalGridPurchases = value.(m[:dvGridPurchase_3]).data + value.(m[:dvGridPurchase_10]).data; 
-    @test maximum(TotalGridPurchases) ≈ maximum(P0) rtol = 1e-5
+    @test maximum(TotalGridPurchases) ≈ maximum(P0) rtol = 1e-5  # lossless model
 end
 
 
