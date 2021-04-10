@@ -318,7 +318,6 @@ function run_reopt(m::JuMP.AbstractModel, ps::Array{REoptInputs}; obj::Int=2)
 	time_elapsed = time() - tstart
 	@info "Total results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status
-	results["inputs"] = ps
 	return results
 end
 
