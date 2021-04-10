@@ -8,7 +8,9 @@ Outline:
 # TODO add complementary constraint to UL for dvWHLexport_ and dvGridPurchase_ (don't want it in LL s.t. it stays linear)
 
 
-function LDF.build_ldf!(m::JuMP.AbstractModel, p::LDF.Inputs, ps::Array{REoptInputs, 1})
+function LDF.build_ldf!(m::JuMP.AbstractModel, p::LDF.Inputs, ps::Array{REoptInputs, 1};
+        make_import_export_complementary::Bool=true
+    )
     LDF.add_variables(m, p)
     add_expressions(m, ps)
     LDF.constrain_power_balance(m, p)
@@ -17,6 +19,9 @@ function LDF.build_ldf!(m::JuMP.AbstractModel, p::LDF.Inputs, ps::Array{REoptInp
     LDF.constrain_loads(m, p, ps)
     LDF.constrain_bounds(m, p)
 
+    if make_import_export_complementary
+        add_complementary_constraints(m, ps)
+    end
 end
 
 
@@ -29,6 +34,28 @@ function add_expressions(m::JuMP.AbstractModel, ps::Array{REoptInputs, 1})
                 +  m[Symbol("dvNEMexport"*_n)][tech, t] 
                 for tech in p.techs
             )
+            + sum(
+                m[Symbol("dvStorageExport"*_n)][b, u, t] 
+                for b in p.storage.types, u in p.storage.export_bins
+            )  # TODO rm dvStorageExport from REoptLite?
+        )
+    end
+end
+
+
+function add_complementary_constraints(m::JuMP.AbstractModel, ps::Array{REoptInputs, 1})
+    for p in ps
+        _n = string("_", p.node)
+
+        b_n = "b"*_n
+        m[Symbol(b_n)] = @variable(m, [p.time_steps], base_name=b_n, Bin)
+    
+        @constraint(m, [t in p.time_steps],
+            m[Symbol("dvGridPurchase"*_n)][t] - (1 - m[Symbol(b_n)][t]) * 1.0E7 <= 0
+        )
+
+        @constraint(m, [t in p.time_steps],
+            m[Symbol("TotalExport"*_n)][t] - m[Symbol(b_n)][t] * 1.0E7 <= 0
         )
     end
 end
