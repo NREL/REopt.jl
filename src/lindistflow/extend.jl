@@ -42,17 +42,11 @@ end
 function add_complementary_constraints(m::JuMP.AbstractModel, ps::Array{REoptInputs, 1})
     for p in ps
         _n = string("_", p.node)
-
-        b_n = "b"*_n
-        m[Symbol(b_n)] = @variable(m, [p.time_steps], base_name=b_n, Bin)
-    
-        @constraint(m, [t in p.time_steps],
-            m[Symbol("dvGridPurchase"*_n)][t] - (1 - m[Symbol(b_n)][t]) * 1.0E7 <= 0
-        )
-
-        @constraint(m, [t in p.time_steps],
-            m[Symbol("TotalExport"*_n)][t] - m[Symbol(b_n)][t] * 1.0E7 <= 0
-        )
+        for (i, e) in zip(m[Symbol("dvGridPurchase"*_n)], m[Symbol("TotalExport"*_n)])
+            @constraint(m,
+                [i, e] in MOI.SOS1([1.0, 2.0])
+            )
+        end
     end
 end
 
