@@ -291,7 +291,7 @@ function run_reopt(m::JuMP.AbstractModel, ps::Array{REoptInputs}; obj::Int=2)
 	@info "Model built. Optimizing..."
 	tstart = time()
 	optimize!(m)
-	time_elapsed = time() - tstart
+	opt_time = round(time() - tstart, digits=3)
 	if termination_status(m) == MOI.TIME_LIMIT
 		status = "timed-out"
     elseif termination_status(m) == MOI.OPTIMAL
@@ -302,14 +302,14 @@ function run_reopt(m::JuMP.AbstractModel, ps::Array{REoptInputs}; obj::Int=2)
         return m
 	end
 	@info "REopt solved with " termination_status(m)
-    @info "Solving took $(round(time_elapsed, digits=3)) seconds."
+	@info "Solving took $(opt_time) seconds."
     
 	tstart = time()
 	results = reopt_results(m, ps)
 	time_elapsed = time() - tstart
 	@info "Total results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status
-	results["inputs"] = ps
+	results["solver_seconds"] = opt_time
 	return results
 end
 
