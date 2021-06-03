@@ -28,6 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 struct Scenario
+    settings:Settings
     site::Site
     pvs::Array{PV, 1}
     storage::Storage
@@ -66,7 +67,11 @@ end
 ```
 """
 function Scenario(d::Dict)
-    # TODO add validate! functions for each input struct
+    if haskey(d, "Settings")
+        settings = Settings(;dictkeys_tosymbols(d["Settings"])...)
+    else
+        settings = Settings()
+    end
     
     site = Site(;dictkeys_tosymbols(d["Site"])...)
     
@@ -122,6 +127,7 @@ function Scenario(d::Dict)
     end
 
     return Scenario(
+        settings,
         site, 
         pvs, 
         storage, 
