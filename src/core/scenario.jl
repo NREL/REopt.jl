@@ -28,7 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 struct Scenario
-    settings:Settings
+    settings::Settings
     site::Site
     pvs::Array{PV, 1}
     storage::Storage
