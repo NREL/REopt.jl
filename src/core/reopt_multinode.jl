@@ -276,10 +276,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 end
 
 
-function run_reopt(m::JuMP.AbstractModel, ps::Array{REoptInputs}; obj::Int=2)
-
-	build_reopt!(m, ps)
-
+function add_objective!(m::JuMP.AbstractModel, ps::Array{REoptInputs}; obj::Int=2)
 	if obj == 1
 		@objective(m, Min, sum(m[Symbol(string("Costs_", p.node))] for p in ps))
 	elseif obj == 2  # Keep SOC high
@@ -287,6 +284,15 @@ function run_reopt(m::JuMP.AbstractModel, ps::Array{REoptInputs}; obj::Int=2)
         - sum(sum(m[Symbol(string("dvStoredEnergy_", p.node))][:elec, ts] 
             for ts in p.time_steps) for p in ps) / (8760. / ps[1].hours_per_timestep))
 	end  # TODO need to handle different hours_per_timestep?
+	nothing
+end
+
+
+function run_reopt(m::JuMP.AbstractModel, ps::Array{REoptInputs}; obj::Int=2)
+
+	build_reopt!(m, ps)
+
+	add_objective!(m, ps; obj)
 
 	@info "Model built. Optimizing..."
 	tstart = time()
@@ -315,6 +321,7 @@ end
 
 
 function reopt_results(m::JuMP.AbstractModel, ps::Array{REoptInputs})
+	# TODO address Warning: The addition operator has been used on JuMP expressions a large number of times.
 	results = Dict{Union{Int, String}, Any}()
 	for p in ps
 		results[p.node] = reopt_results(m, p; _n=string("_", p.node))

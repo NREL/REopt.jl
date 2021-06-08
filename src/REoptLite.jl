@@ -37,6 +37,8 @@ export
     reopt_results,
     simulate_outages,
     add_variables!,
+    add_objective!,
+    LinDistFlow,
     # for docs:
     ElectricLoad,
     Financial,
@@ -45,6 +47,9 @@ export
 
 import HTTP
 import JSON
+using LinDistFlow  # required to export LinDistFlow
+import LinDistFlow 
+const LDF = LinDistFlow
 using JuMP
 using JuMP.Containers: DenseAxisArray
 using Logging
@@ -92,5 +97,7 @@ include("core/reopt.jl")
 include("core/reopt_multinode.jl")
 
 include("outagesim/outage_simulator.jl")
+
+include("lindistflow/extend.jl")
 
 end

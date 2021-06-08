@@ -89,7 +89,6 @@ function Storage(d::Dict, f::Financial)  # nested dict
         if storage_instance.can_grid_charge
             push!(can_grid_charge, storage_type)
         end
-
         fill_storage_vals!(raw_vals, storage_instance, storage_type, f)
     end
 

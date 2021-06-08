@@ -49,7 +49,8 @@ using REoptLite
     results = run_reopt(model, inputs)
 
     @test results["PV"]["size_kw"] ≈ 70.3084 atol=0.01
-    @test results["Financial"]["lcc_us_dollars"] ≈ 430747.0 rtol=1e-5 # with levelization_factor hack the LCC is within 5e-5 of REopt Lite API LCC
+    @test results["Financial"]["lcc_us_dollars"] ≈ 430747.0 rtol=1e-5 
+    # with levelization_factor hack the LCC is within 5e-5 of REopt Lite API LCC
     @test all(x == 0.0 for x in results["PV"]["year_one_to_load_series_kw"][1:744])
 end
 

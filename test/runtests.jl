@@ -36,6 +36,8 @@ julia> Pkg.test("REoptLite"; test_args=["Cbc"])
 
 nlaws 200721: only running Cbc tests here b/c cannot get CPLEX and Xpress licences on to Github
     servers (runtests.jl is automated in Github Actions with ci.yml).
+
+TODO: combine tests into one file and pass in Solver
 =#
 
 @testset "REoptLite.jl" begin

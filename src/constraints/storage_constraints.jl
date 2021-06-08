@@ -122,5 +122,4 @@ function add_storage_sum_constraints(m, p; _n="")
 	@constraint(m, [ts in p.time_steps_with_grid],
         m[Symbol("dvGridPurchase"*_n)][ts] >= sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.types)
     )
-    
 end

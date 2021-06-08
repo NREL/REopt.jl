@@ -1,0 +1,10 @@
+New Line.L0_1     Phases=1 Bus1=0.1        Bus2=1.1        LineCode=0_1   Length=1
+New Line.L1_2     Phases=1 Bus1=1.1        Bus2=2.1        LineCode=1_2   Length=1
+New Line.L2_3     Phases=1 Bus1=2.1        Bus2=3.1        LineCode=2_3   Length=1
+New Line.L2_4     Phases=1 Bus1=2.1        Bus2=4.1        LineCode=2_4   Length=1
+New Line.L4_5     Phases=1 Bus1=4.1        Bus2=5.1        LineCode=4_5   Length=1
+New Line.L5_6     Phases=1 Bus1=5.1        Bus2=6.1        LineCode=5_6   Length=1
+New Line.L6_7     Phases=1 Bus1=6.1        Bus2=7.1        LineCode=6_7   Length=1
+New Line.L7_8     Phases=1 Bus1=7.1        Bus2=8.1        LineCode=7_8   Length=1
+New Line.L8_9     Phases=1 Bus1=8.1        Bus2=9.1        LineCode=8_9   Length=1
+New Line.L9_10    Phases=1 Bus1=9.1        Bus2=10.1       LineCode=9_10  Length=1
