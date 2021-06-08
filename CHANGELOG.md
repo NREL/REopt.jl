@@ -4,7 +4,8 @@
 #### Improvements
 - removed Storage.can_grid_export
 - add optional integer constraint to prevent simultaneous export and import of power
-- added warnings when adding integer variables
+- add warnings when adding integer variables
+- add ability to add LinDistFlow constraints to multinode models
 
 ## v0.6.0
 #### Improvements
