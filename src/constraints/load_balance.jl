@@ -31,16 +31,19 @@
 function add_load_balance_constraints(m, p; _n="") 
 
 	##Constraint (8a): Electrical Load Balancing with Grid
-	@constraint(m, [ts in p.time_steps_with_grid],
+	conrefs = @constraint(m, [ts in p.time_steps_with_grid],
 		sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.elec_techs) +  
 		sum( m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.storage.types ) + 
 		m[Symbol("dvGridPurchase"*_n)][ts] ==
 		sum( sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.storage.types) 
 			+ m[Symbol("dvWHLexport"*_n)][t, ts] + m[Symbol("dvNEMexport"*_n)][t, ts] + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.elec_techs)
-		+ sum(m[Symbol("dvStorageExport"*_n)][b, u, ts] for b in p.storage.types, u in p.storage.export_bins) 
 		+ sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.types)
 		+ p.elec_load.loads_kw[ts]
 	)
+
+	for (i, cr) in enumerate(conrefs)
+		JuMP.set_name(cr, "con_load_balance"*_n*string("_t", i))
+	end
 	
 	##Constraint (8b): Electrical Load Balancing without Grid
 	@constraint(m, [ts in p.time_steps_without_grid],

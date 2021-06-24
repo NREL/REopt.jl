@@ -2,7 +2,7 @@
     "Site": {
         "longitude": -91.7337,
         "latitude": 35.2468,
-        "node": 2
+        "node": 10
     },
     "PV": {
         "macrs_bonus_pct": 0.0,
@@ -22,7 +22,8 @@
     "ElectricLoad": {
         "doe_reference_name": "MidriseApartment",
         "annual_kwh": 259525.0,
-        "city": "Atlanta"
+        "city": "Atlanta",
+        "year": 2017
     },
     "Storage": {
         "max_kwh": 0.0,

@@ -122,10 +122,4 @@ function add_storage_sum_constraints(m, p; _n="")
 	@constraint(m, [ts in p.time_steps_with_grid],
         m[Symbol("dvGridPurchase"*_n)][ts] >= sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.types)
     )
-
-	##Constraint (8d): Storage export no greater than discharge from Storage
-	@constraint(m, [ts in p.time_steps_with_grid],
-        sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.storage.types)  >= 
-            sum(m[Symbol("dvStorageExport"*_n)][b, u, ts] for b in p.storage.types, u in p.storage.export_bins)
-    )
 end

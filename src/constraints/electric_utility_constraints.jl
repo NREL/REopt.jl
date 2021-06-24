@@ -38,8 +38,7 @@ function add_export_constraints(m, p; _n="")
     ##Constraint (8f): Total sales to grid no greater than annual allocation - storage tiers
     @constraint(m,
         p.hours_per_timestep * ( 
-        sum( m[Symbol("dvStorageExport"*_n)][b,u,ts] for b in p.storage.types, u in p.storage.export_bins, ts in p.time_steps_with_grid if !(u in p.etariff.curtail_bins)) 
-        + sum( m[Symbol("dvWHLexport"*_n)][t, ts] for t in p.techs, ts in p.time_steps_with_grid)
+        sum( m[Symbol("dvWHLexport"*_n)][t, ts] for t in p.techs, ts in p.time_steps_with_grid)
         + sum( m[Symbol("dvNEMexport"*_n)][t, ts] for t in p.techs, ts in p.time_steps_with_grid)
         ) <= p.max_grid_export_kwh
     )
@@ -48,10 +47,9 @@ function add_export_constraints(m, p; _n="")
    ##Constraint (9c): Net metering only -- can't sell more than you purchase
    # note that hours_per_timestep is cancelled on both sides, but used for unit consistency (convert power to energy)
     @constraint(m,
-        p.hours_per_timestep * ( 
+        p.hours_per_timestep * 
         sum( m[Symbol("dvNEMexport"*_n)][t, ts] for t in p.techs, ts in p.time_steps)
-        + sum( m[Symbol("dvStorageExport"*_n)][b, u, ts] for b in p.storage.types, u in p.storage.export_bins, ts in p.time_steps)
-        ) <= p.hours_per_timestep * sum( m[Symbol("dvGridPurchase"*_n)][ts] for ts in p.time_steps)
+        <= p.hours_per_timestep * sum( m[Symbol("dvGridPurchase"*_n)][ts] for ts in p.time_steps)
     )
 end
 
@@ -76,5 +74,19 @@ function add_mincharge_constraint(m, p; _n="")
     @constraint(m, MinChargeAddCon, 
         m[Symbol("MinChargeAdder"*_n)] >= m[Symbol("TotalMinCharge"*_n)] - ( m[Symbol("TotalEnergyChargesUtil"*_n)] + 
         m[Symbol("TotalDemandCharges"*_n)] + m[Symbol("TotalExportBenefit"*_n)] + m[Symbol("TotalFixedCharges"*_n)] )
+    )
+end
+
+
+function add_simultaneous_export_import_constraint(m, p; _n="")
+    @constraint(m, NoGridPurchasesBinary[ts in p.time_steps],
+          m[Symbol("dvGridPurchase"*_n)][ts] 
+        + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.types)
+        - (1 - m[Symbol("binNoGridPurchases"*_n)][ts]) * 1.0E9 <= 0
+    )
+    @constraint(m, ExportOnlyAfterSiteLoadMetCon[ts in p.time_steps],
+          sum( m[Symbol("dvWHLexport"*_n)][t, ts] for t in p.techs )
+        + sum( m[Symbol("dvNEMexport"*_n)][t, ts] for t in p.techs)
+        - m[Symbol("binNoGridPurchases"*_n)][ts] * 1.0E9 <= 0
     )
 end

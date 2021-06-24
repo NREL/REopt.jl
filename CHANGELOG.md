@@ -1,5 +1,14 @@
 # REoptLite Changelog
 
+## v0.7.0
+#### Improvements
+- removed Storage.can_grid_export
+- add optional integer constraint to prevent simultaneous export and import of power
+- add warnings when adding integer variables
+- add ability to add LinDistFlow constraints to multinode models
+- no longer require `ElectricLoad.city` input (look up ASHRAE climate zone from lat/lon)
+- compatible with Julia 1.6
+
 ## v0.6.0
 #### Improvements
 - Added multi-node (site) capability for PV and Storage

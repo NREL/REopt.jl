@@ -119,11 +119,6 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
                 sum( p.etariff.export_rates[:NEM][ts] * m[Symbol("dvNEMexport"*_n)][t, ts] for t in p.techs)
               + sum( p.etariff.export_rates[:WHL][ts] * m[Symbol("dvWHLexport"*_n)][t, ts]  for t in p.techs)
                 for ts in p.time_steps )
-            if !isempty(p.storage.export_bins)
-                m[Symbol("TotalExportBenefit"*_n)] += p.pwf_e * p.hours_per_timestep *
-                sum( p.etariff.export_rates[u][ts] * m[Symbol("dvStorageExport"*_n)][b,u,ts] 
-                     for b in p.storage.can_grid_charge, u in p.storage.export_bins)
-            end
         else
             m[Symbol("TotalExportBenefit"*_n)] = 0
         end
@@ -243,8 +238,6 @@ function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
                             m[Symbol("dvProductionToStorage"*_n)][b, t, ts] == 0)
                 @constraint(m, [ts in p.time_steps], m[Symbol("dvDischargeFromStorage"*_n)][b, ts] == 0)
                 @constraint(m, [ts in p.time_steps], m[Symbol("dvGridToStorage"*_n)][b, ts] == 0)
-                @constraint(m, [u in p.storage.export_bins, ts in p.time_steps],
-                            m[Symbol("dvStorageExport"*_n)][b, u, ts] == 0)
             else
                 add_storage_size_constraints(m, p, b; _n=_n)
                 add_storage_dispatch_constraints(m, p, b; _n=_n)
@@ -274,15 +267,16 @@ function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
         if !isempty(p.etariff.tou_demand_ratchet_timesteps)
             add_tou_peak_constraint(m, p; _n=_n)
         end
+
+		if !(p.elecutil.allow_simultaneous_export_import)
+			add_simultaneous_export_import_constraint(m, p; _n=_n)
+		end
     
     end
 end
 
 
-function run_reopt(m::JuMP.AbstractModel, ps::Array{REoptInputs}; obj::Int=2)
-
-	build_reopt!(m, ps)
-
+function add_objective!(m::JuMP.AbstractModel, ps::Array{REoptInputs}; obj::Int=2)
 	if obj == 1
 		@objective(m, Min, sum(m[Symbol(string("Costs_", p.node))] for p in ps))
 	elseif obj == 2  # Keep SOC high
@@ -290,11 +284,20 @@ function run_reopt(m::JuMP.AbstractModel, ps::Array{REoptInputs}; obj::Int=2)
         - sum(sum(m[Symbol(string("dvStoredEnergy_", p.node))][:elec, ts] 
             for ts in p.time_steps) for p in ps) / (8760. / ps[1].hours_per_timestep))
 	end  # TODO need to handle different hours_per_timestep?
+	nothing
+end
+
+
+function run_reopt(m::JuMP.AbstractModel, ps::Array{REoptInputs}; obj::Int=2)
+
+	build_reopt!(m, ps)
+
+	add_objective!(m, ps; obj)
 
 	@info "Model built. Optimizing..."
 	tstart = time()
 	optimize!(m)
-	time_elapsed = time() - tstart
+	opt_time = round(time() - tstart, digits=3)
 	if termination_status(m) == MOI.TIME_LIMIT
 		status = "timed-out"
     elseif termination_status(m) == MOI.OPTIMAL
@@ -305,19 +308,20 @@ function run_reopt(m::JuMP.AbstractModel, ps::Array{REoptInputs}; obj::Int=2)
         return m
 	end
 	@info "REopt solved with " termination_status(m)
-    @info "Solving took $(round(time_elapsed, digits=3)) seconds."
+	@info "Solving took $(opt_time) seconds."
     
 	tstart = time()
 	results = reopt_results(m, ps)
 	time_elapsed = time() - tstart
 	@info "Total results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status
-	results["inputs"] = ps
+	results["solver_seconds"] = opt_time
 	return results
 end
 
 
 function reopt_results(m::JuMP.AbstractModel, ps::Array{REoptInputs})
+	# TODO address Warning: The addition operator has been used on JuMP expressions a large number of times.
 	results = Dict{Union{Int, String}, Any}()
 	for p in ps
 		results[p.node] = reopt_results(m, p; _n=string("_", p.node))

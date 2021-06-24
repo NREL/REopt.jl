@@ -49,19 +49,20 @@ using REoptLite
     results = run_reopt(model, inputs)
 
     @test results["PV"]["size_kw"] ≈ 70.3084 atol=0.01
-    @test results["Financial"]["lcc_us_dollars"] ≈ 430747.0 rtol=1e-5 # with levelization_factor hack the LCC is within 5e-5 of REopt Lite API LCC
+    @test results["Financial"]["lcc_us_dollars"] ≈ 430747.0 rtol=1e-5 
+    # with levelization_factor hack the LCC is within 5e-5 of REopt Lite API LCC
     @test all(x == 0.0 for x in results["PV"]["year_one_to_load_series_kw"][1:744])
 end
 
 
 @testset "Solar and Storage" begin
-    model2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results2 = run_reopt(model2, "./scenarios/pv_storage.json")
+    model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(model, "./scenarios/pv_storage.json")
 
-    @test results2["PV"]["size_kw"] ≈ 216.6667 atol=0.01
-    @test results2["Financial"]["lcc_us_dollars"] ≈ 1.23887e7 rtol=1e-5
-    @test results2["Storage"]["size_kw"] ≈ 55.9 atol=0.1
-    @test results2["Storage"]["size_kwh"] ≈ 78.9 atol=0.1
+    @test results["PV"]["size_kw"] ≈ 216.6667 atol=0.01
+    @test results["Financial"]["lcc_us_dollars"] ≈ 1.23887e7 rtol=1e-5
+    @test results["Storage"]["size_kw"] ≈ 55.9 atol=0.1
+    @test results["Storage"]["size_kwh"] ≈ 78.9 atol=0.1
 end
 
 @testset "Outage with Generator" begin

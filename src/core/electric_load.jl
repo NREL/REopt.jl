@@ -92,13 +92,15 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         loads_kw::Union{Missing, Array{<:Real,1}} = missing,
         year::Int = 2020,
         doe_reference_name::Union{Missing, String} = missing,
-        city::Union{Missing, String} = missing,
+        city::String = "",
         annual_kwh::Union{Real, Nothing} = nothing,
         monthly_totals_kwh::Array{<:Real,1} = Real[],
         critical_loads_kw::Union{Missing, Array{Real,1}} = missing,
         loads_kw_is_net::Bool = true,
         critical_loads_kw_is_net::Bool = false,
-        critical_load_pct::Real = 0.5
+        critical_load_pct::Real = 0.5,
+        latitude::Float64,
+        longitude::Float64
         )
         
         if !ismissing(loads_kw)
@@ -113,13 +115,13 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
                 critical_loads_kw_is_net
             )     
     
-        elseif !ismissing(doe_reference_name)  && !ismissing(city)
+        elseif !ismissing(doe_reference_name)
             # NOTE: must use year that starts on Sunday with DOE reference doe_ref_profiles
             if year != 2017
                 @warn "Changing ElectricLoad.year to 2017 because DOE reference profiles start on a Sunday."
             end
             year = 2017
-            loads_kw = BuiltInElectricLoad(city, doe_reference_name, annual_kwh=annual_kwh)
+            loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, annual_kwh=annual_kwh)
             if ismissing(critical_loads_kw)
                 critical_loads_kw = critical_load_pct * loads_kw
             end
@@ -132,7 +134,8 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             )
             
         else
-            error("Cannot construct ElectricLoad. You must provide either loads_kw or [doe_reference_name, city].")
+            error("Cannot construct ElectricLoad. You must provide either loads_kw, [doe_reference_name, city], 
+                  or [doe_reference_name, latitude, longitude].")
         end
     end
 end
@@ -140,11 +143,12 @@ end
 
 function BuiltInElectricLoad(
     city::String,
-    buildingtype::String;
-    annual_kwh::Union{Float64,Nothing}=nothing,
+    buildingtype::String,
+    latitude::Float64,
+    longitude::Float64;
+    annual_kwh::Union{Float64,Nothing}=nothing
     )
     lib_path = joinpath(dirname(@__FILE__), "..", "..", "data")
-    # TODO determine city from latitude, longitude
     annual_loads = Dict(
         "Albuquerque" => Dict(
             "fastfoodrest" => 193235,
@@ -460,8 +464,67 @@ function BuiltInElectricLoad(
     end
      # TODO implement BuiltInElectricLoad scaling based on monthly_totals_kwh
 
+    if isempty(city)
+        city = find_ashrae_zone_city(latitude, longitude)
+    end
     profile_path = joinpath(lib_path, string("Load8760_norm_" * city * "_" * buildingtype * ".dat"))
     normalized_profile = vec(readdlm(profile_path, '\n', Float64, '\n'))
 
     load = [annual_kwh * ld for ld in normalized_profile]
+end
+
+
+function find_ashrae_zone_city(lat, lon)::String
+    file_path = joinpath(dirname(@__FILE__), "..", "..", "data", "climate_cities.shp")
+    table = Shapefile.Table(file_path)
+    geoms = Shapefile.shapes(table)
+    # TODO following for loop is relatively slow
+    for (row, geo) in enumerate(geoms)
+        g = length(geo.points)
+        nodes = zeros(g, 2)
+        edges = zeros(g, 2)
+        for (i,p) in enumerate(geo.points)
+            nodes[i,:] = [p.x, p.y]
+            edges[i,:] = [i, i+1]
+        end
+        edges[g, :] = [g, 1]
+        edges = convert(Array{Int64,2}, edges)
+        # shapefiles have longitude as x, latitude as y  
+        if inpoly2([lon, lat], nodes, edges)[1]
+            return table.city[row]
+        end
+        GC.gc()
+    end
+    @info "Could not find latitude/longitude in U.S. Using geometrically nearest city."
+    cities = [
+        (city="Miami", lat=25.761680, lon=-80.191790),
+        (city="Houston", lat=29.760427, lon=-95.369803),
+        (city="Phoenix", lat=33.448377, lon=-112.074037),
+        (city="Atlanta", lat=33.748995, lon=-84.387982),
+        (city="LasVegas", lat=36.1699, lon=-115.1398),
+        (city="LosAngeles", lat=34.052234, lon=-118.243685),
+        (city="SanFrancisco", lat=37.3382, lon=-121.8863),
+        (city="Baltimore", lat=39.290385, lon=-76.612189),
+        (city="Albuquerque", lat=35.085334, lon=-106.605553),
+        (city="Seattle", lat=47.606209, lon=-122.332071),
+        (city="Chicago", lat=41.878114, lon=-87.629798),
+        (city="Boulder", lat=40.014986, lon=-105.270546),
+        (city="Minneapolis", lat=44.977753, lon=-93.265011),
+        (city="Helena", lat=46.588371, lon=-112.024505,),
+        (city="Duluth", lat=46.786672, lon=-92.100485),
+        (city="Fairbanks", lat=59.0397, lon=-158.4575),
+    ]
+    min_distance = 0.0
+    nearest_city = ""
+    for (i, c) in enumerate(cities)
+        distance = sqrt((lat - c.lat)^2 + (lon - c.lon)^2)
+        if i == 1
+            min_distance = distance
+            nearest_city = c.city
+        elseif distance < min_distance
+            min_distance = distance
+            nearest_city = c.city
+        end
+    end
+    return nearest_city
 end

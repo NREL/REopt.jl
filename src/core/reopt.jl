@@ -96,8 +96,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 						m[:dvProductionToStorage][b, t, ts] == 0)
 			@constraint(m, [ts in p.time_steps], m[:dvDischargeFromStorage][b, ts] == 0)
 			@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
-			@constraint(m, [u in p.storage.export_bins, ts in p.time_steps],
-						m[:dvStorageExport][b, u, ts] == 0)
 		else
 			add_storage_size_constraints(m, p, b)
 			add_storage_dispatch_constraints(m, p, b)
@@ -135,6 +133,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_tou_peak_constraint(m, p)
 	end
 
+	if !(p.elecutil.allow_simultaneous_export_import)
+		add_simultaneous_export_import_constraint(m, p)
+	end
+
 	@expression(m, TotalTechCapCosts, p.two_party_factor *
 		sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in p.techs )  # TODO add Yintercept and binary
 	)
@@ -164,8 +166,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	if !isempty(p.techs)
 		# NOTE: levelization_factor is baked into dvNEMexport, dvWHLexport
 		@expression(m, TotalExportBenefit, p.pwf_e * p.hours_per_timestep * sum(
-			sum( p.etariff.export_rates[u][ts] * m[:dvStorageExport][b,u,ts] for b in p.storage.can_grid_charge, u in p.storage.export_bins)
-		  + sum( p.etariff.export_rates[:NEM][ts] * m[:dvNEMexport][t, ts] for t in p.techs)
+			sum( p.etariff.export_rates[:NEM][ts] * m[:dvNEMexport][t, ts] for t in p.techs)
 		  + sum( p.etariff.export_rates[:WHL][ts] * m[:dvWHLexport][t, ts]  for t in p.techs)
 			for ts in p.time_steps )
 		)
@@ -269,7 +270,7 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; obj::Int=2)
 	@info "Model built. Optimizing..."
 	tstart = time()
 	optimize!(m)
-	time_elapsed = time() - tstart
+	opt_time = round(time() - tstart, digits=3)
 	if termination_status(m) == MOI.TIME_LIMIT
 		status = "timed-out"
     elseif termination_status(m) == MOI.OPTIMAL
@@ -280,13 +281,14 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; obj::Int=2)
 		return m
 	end
 	@info "REopt solved with " termination_status(m)
-	@info "Solving took $(round(time_elapsed, digits=3)) seconds."
+	@info "Solving took $(opt_time) seconds."
 
 	tstart = time()
 	results = reopt_results(m, p)
 	time_elapsed = time() - tstart
 	@info "Total results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status
+	results["solver_seconds"] = opt_time
 	return results
 end
 
@@ -306,20 +308,30 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvStoredEnergy[p.storage.types, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
 		dvStoragePower[p.storage.types] >= 0   # Power capacity of storage system b [kW]
 		dvStorageEnergy[p.storage.types] >= 0   # Energy capacity of storage system b [kWh]
-		dvStorageExport[p.storage.types, p.storage.export_bins, p.time_steps] >= 0  # storage to the grid or curtail [kW]
 		dvPeakDemandTOU[p.ratchets] >= 0  # Peak electrical power demand during ratchet r [kW]
 		dvPeakDemandMonth[p.months] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0
 	end
+	# TODO: combine dvNEMexport and dvWHLexport into dvProductionToGrid
 
 	if !isempty(p.gentechs)  # Problem becomes a MILP
+		@warn """Adding binary variable to model gas generator. 
+				 Some solvers are very slow with integer variables"""
 		@variables m begin
 			dvFuelUsage[p.gentechs, p.time_steps] >= 0 # Fuel burned by technology t in each time step
 			binGenIsOnInTS[p.gentechs, p.time_steps], Bin  # 1 If technology t is operating in time step h; 0 otherwise
 		end
 	end
 
+	if !(p.elecutil.allow_simultaneous_export_import)
+		@warn """Adding binary variable to prevent simultaneous grid import/export. 
+				 Some solvers are very slow with integer variables"""
+		@variable(m, binNoGridPurchases[p.time_steps], Bin)
+	end
+
 	if !isempty(p.elecutil.outage_durations) # add dvUnserved Load if there is at least one outage
+		@warn """Adding binary variable to model outages. 
+				 Some solvers are very slow with integer variables"""
 		max_outage_duration = maximum(p.elecutil.outage_durations)
 		outage_timesteps = p.elecutil.outage_timesteps
 		tZeros = p.elecutil.outage_start_timesteps

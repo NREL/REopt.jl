@@ -36,7 +36,7 @@ struct Site
     roof_squarefeet
     min_resil_timesteps
     mg_tech_sizes_equal_grid_sizes
-    node
+    node  # TODO validate that multinode Sites do not share node numbers? Or just raise warning
     function Site(;
         latitude::Real, 
         longitude::Real, 

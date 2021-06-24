@@ -1,0 +1,42 @@
+New object=circuit.car38
+~ basekv=1 Bus1=0 pu=1.00 phases=1 R1=0 X1=0.0001
+
+New linecode.0_1 nphases=1 BaseFreq=60
+~ rmatrix = [.0242]
+~ xmatrix = [.00482]
+
+New linecode.1_2 nphases=1 BaseFreq=60
+~ rmatrix = [.2273]
+~ xmatrix = [.07435]
+
+New linecode.2_3 nphases=1 BaseFreq=60
+~ rmatrix = [.0763]
+~ xmatrix = [.0182]
+
+New linecode.2_4 nphases=1 BaseFreq=60
+~ rmatrix = [.0436]
+~ xmatrix = [.01427]
+
+New linecode.4_5 nphases=1 BaseFreq=60
+~ rmatrix = [.0258]
+~ xmatrix = [.00844]
+
+New linecode.5_6 nphases=1 BaseFreq=60
+~ rmatrix = [.0105]
+~ xmatrix = [.00107]
+
+New linecode.6_7 nphases=1 BaseFreq=60
+~ rmatrix = [.0232]
+~ xmatrix = [.00236]
+
+New linecode.7_8 nphases=1 BaseFreq=60
+~ rmatrix = [.0751]
+~ xmatrix = [.0267]
+
+New linecode.8_9 nphases=1 BaseFreq=60
+~ rmatrix = [.1144]
+~ xmatrix = [.0273]
+
+New linecode.9_10 nphases=1 BaseFreq=60
+~ rmatrix = [.1903]
+~ xmatrix = [.0677]

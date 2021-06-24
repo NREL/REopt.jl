@@ -36,6 +36,9 @@ export
     build_reopt!,
     reopt_results,
     simulate_outages,
+    add_variables!,
+    add_objective!,
+    LinDistFlow,
     # for docs:
     ElectricLoad,
     Financial,
@@ -45,6 +48,9 @@ export
 
 import HTTP
 import JSON
+using LinDistFlow  # required to export LinDistFlow
+import LinDistFlow 
+const LDF = LinDistFlow
 using JuMP
 using JuMP.Containers: DenseAxisArray
 using Logging
@@ -53,11 +59,14 @@ using Dates
 import MathOptInterface
 import Dates: daysinmonth, Date, isleapyear
 const MOI = MathOptInterface
+using Shapefile
+using PolygonInbounds
 
 include("keys.jl")
 include("core/types.jl")
 include("core/utils.jl")
 
+include("core/settings.jl")
 include("core/site.jl")
 include("core/financial.jl")
 include("core/pv.jl")
@@ -91,5 +100,7 @@ include("core/reopt.jl")
 include("core/reopt_multinode.jl")
 
 include("outagesim/outage_simulator.jl")
+
+include("lindistflow/extend.jl")
 
 end
