@@ -23,7 +23,6 @@
     "ElectricLoad": {
         "doe_reference_name": "RetailStore",
         "annual_kwh": 10000000.0,
-        "city": "LosAngeles",
         "year": 2017
     },
     "Storage": {
