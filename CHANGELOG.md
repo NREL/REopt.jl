@@ -6,6 +6,7 @@
 - add optional integer constraint to prevent simultaneous export and import of power
 - add warnings when adding integer variables
 - add ability to add LinDistFlow constraints to multinode models
+- no longer require `ElectricLoad.city` input (look up ASHRAE climate zone from lat/lon)
 
 ## v0.6.0
 #### Improvements
