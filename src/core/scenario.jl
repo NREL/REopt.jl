@@ -114,7 +114,9 @@ function Scenario(d::Dict)
         storage = Storage(storage_dict, financial)
     end
 
-    electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...)
+    electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
+                                   latitude=site.latitude, longitude=site.longitude
+                                )
 
     electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 
                                        year=electric_load.year

@@ -58,6 +58,8 @@ using Dates
 import MathOptInterface
 import Dates: daysinmonth, Date, isleapyear
 const MOI = MathOptInterface
+using Shapefile
+using PolygonInbounds
 
 include("keys.jl")
 include("core/types.jl")
