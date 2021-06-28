@@ -459,14 +459,15 @@ function BuiltInElectricLoad(
         error("buildingtype $(buildingtype) not in $(default_buildings).")
     end
 
-    if isnothing(annual_kwh)
-        annual_kwh = annual_loads[city][lowercase(buildingtype)]
-    end
-     # TODO implement BuiltInElectricLoad scaling based on monthly_totals_kwh
-
     if isempty(city)
         city = find_ashrae_zone_city(latitude, longitude)
     end
+
+    if isnothing(annual_kwh)
+        annual_kwh = annual_loads[city][lowercase(buildingtype)]
+    end
+    # TODO implement BuiltInElectricLoad scaling based on monthly_totals_kwh
+
     profile_path = joinpath(lib_path, string("Load8760_norm_" * city * "_" * buildingtype * ".dat"))
     normalized_profile = vec(readdlm(profile_path, '\n', Float64, '\n'))
 
