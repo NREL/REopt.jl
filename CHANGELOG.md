@@ -1,5 +1,9 @@
 # REoptLite Changelog
 
+## v0.7.1
+##### bug fixes
+- ElectricLoad.city default is empty string, must be filled in before annual_kwh look up
+
 ## v0.7.0
 #### Improvements
 - removed Storage.can_grid_export
