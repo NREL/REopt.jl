@@ -50,6 +50,7 @@ struct PV <: AbstractTech
     acres_per_kw
     inv_eff
     dc_ac_ratio
+    prod_factor_series_kw
 
     function PV(;
         tilt::Real,
@@ -73,7 +74,8 @@ struct PV <: AbstractTech
         kw_per_square_foot::Float64=0.01,
         acres_per_kw::Float64=6e-3,
         inv_eff::Float64=0.96,
-        dc_ac_ratio::Float64=1.2
+        dc_ac_ratio::Float64=1.2,
+        prod_factor_series_kw::Union{Missing, Array{Real,1}} = missing
         )
 
         # validate inputs
@@ -132,7 +134,8 @@ struct PV <: AbstractTech
             kw_per_square_foot,
             acres_per_kw,
             inv_eff,
-            dc_ac_ratio
+            dc_ac_ratio,
+            prod_factor_series_kw
         )
     end
 end
