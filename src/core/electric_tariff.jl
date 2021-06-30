@@ -137,7 +137,7 @@ function ElectricTariff(;
     whl_rate = create_export_rate(wholesale_rate, length(energy_rates), time_steps_per_hour)
     
     if !NEM & (sum(whl_rate) >= 0)
-        export_rates = []
+        export_rates = DenseAxisArray{Array{Float64,1}}(undef, [])
         export_bins = Symbol[]
     elseif !NEM
         export_bins = [:WHL]
