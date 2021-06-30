@@ -82,9 +82,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			fix(m[:dvProductionToGrid][t, u, ts], 0.0, force=true)
 		end
 	end
-    for ts in [1:744]
-        fix(m[:dvCurtail]["PV", ts], 0.0, force=true)
-    end
 
 	for b in p.storage.types
 		if p.storage.max_kw[b] == 0 || p.storage.max_kwh[b] == 0

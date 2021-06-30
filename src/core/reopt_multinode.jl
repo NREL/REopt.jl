@@ -9,9 +9,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 		"dvPurchaseSize",
 	]
 	dvs_idx_on_techs_timesteps = String[
-		"dvWHLexport",
         "dvCurtail",
-        "dvNEMexport",
 		"dvRatedProduction",
 	]
 	dvs_idx_on_storagetypes = String[
@@ -62,6 +60,11 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 		dv = "MinChargeAdder"*_n
 		m[Symbol(dv)] = @variable(m, base_name=dv, lower_bound=0)
 
+        if !isempty(p.etariff.export_bins)
+            dv = "dvProductionToGrid"*_n
+            m[Symbol(dv)] = @variable(m, [p.elec_techs, p.etariff.export_bins, p.time_steps], base_name=dv, lower_bound=0)
+        end
+
 		ex_name = "TotalTechCapCosts"*_n
 		m[Symbol(ex_name)] = @expression(m, p.two_party_factor *
 			sum( p.cap_cost_slope[t] * m[Symbol("dvPurchaseSize"*_n)][t] for t in p.techs ) 
@@ -108,9 +111,7 @@ function add_bounds(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 		"dvPurchaseSize",
 	]
 	dvs_idx_on_techs_timesteps = String[
-		"dvWHLexport",
         "dvCurtail",
-        "dvNEMexport",
 		"dvRatedProduction",
 	]
 	dvs_idx_on_storagetypes = String[
@@ -221,7 +222,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
             add_tou_peak_constraint(m, p; _n=_n)
         end
 
-		if !(p.elecutil.allow_simultaneous_export_import)
+		if !(p.elecutil.allow_simultaneous_export_import) & !isempty(p.etariff.export_bins)
 			add_simultaneous_export_import_constraint(m, p; _n=_n)
 		end
     
