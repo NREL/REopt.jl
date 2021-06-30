@@ -99,6 +99,16 @@ end
     
 end
 
+@testset "Multiple Sites" begin
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    ps = [
+        REoptInputs("./scenarios/pv_storage.json"),
+        REoptInputs("./scenarios/monthly_rate.json"),
+    ];
+    results = run_reopt(m, ps)
+    @test results[3]["Financial"]["lcc_us_dollars"] + results[10]["Financial"]["lcc_us_dollars"] ≈ 1.23887e7 + 437169.0 rtol=1e-5
+end
+
 ## equivalent REopt Lite API Post for test 2:
 #   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
 # {"Scenario": {
