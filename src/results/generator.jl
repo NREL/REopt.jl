@@ -49,7 +49,7 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 	r["year_one_to_battery_series_kw"] = round.(value.(generatorToBatt), digits=3)
 
 	generatorToGrid = @expression(m, [ts in p.time_steps],
-		sum(m[:dvWHLexport][t, ts] + m[:dvNEMexport][t, ts] for t in p.gentechs)
+		sum(m[:dvProductionToGrid][t, u, ts] for t in p.gentechs, u in p.export_bins_by_tech[t])
 	)
 	r["year_one_to_grid_series_kw"] = round.(value.(generatorToGrid), digits=3)
 

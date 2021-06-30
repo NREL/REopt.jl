@@ -78,11 +78,13 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			fix(m[:dvGridToStorage][t, ts], 0.0, force=true)
 		end
 
-		for t in p.techs
-			fix(m[:dvNEMexport][t, ts], 0.0, force=true)
-			fix(m[:dvWHLexport][t, ts], 0.0, force=true)
+		for t in p.elec_techs, u in p.export_bins_by_tech[t]
+			fix(m[:dvProductionToGrid][t, u, ts], 0.0, force=true)
 		end
 	end
+    for ts in [1:744]
+        fix(m[:dvCurtail]["PV", ts], 0.0, force=true)
+    end
 
 	for b in p.storage.types
 		if p.storage.max_kw[b] == 0 || p.storage.max_kwh[b] == 0
@@ -130,7 +132,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_tou_peak_constraint(m, p)
 	end
 
-	if !(p.elecutil.allow_simultaneous_export_import)
+	if !(p.elecutil.allow_simultaneous_export_import) & !isempty(p.etariff.export_bins)
 		add_simultaneous_export_import_constraint(m, p)
 	end
 
@@ -251,12 +253,10 @@ end
 
 function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 	@variables m begin
-		dvWHLexport[p.techs, p.time_steps] >= 0  # [kW]
 		dvSize[p.techs] >= 0  # System Size of Technology t [kW]
 		dvPurchaseSize[p.techs] >= 0  # system kW beyond existing_kw that must be purchased
 		dvGridPurchase[p.time_steps] >= 0  # Power from grid dispatched to meet electrical load [kW]
 		dvRatedProduction[p.techs, p.time_steps] >= 0  # Rated production of technology t [kW]
-		dvNEMexport[p.techs, p.time_steps] >= 0  # [kW]
 		dvCurtail[p.techs, p.time_steps] >= 0  # [kW]
 		dvProductionToStorage[p.storage.types, p.techs, p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
 		dvDischargeFromStorage[p.storage.types, p.time_steps] >= 0 # Power discharged from storage system b [kW]
@@ -268,7 +268,6 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvPeakDemandMonth[p.months] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0
 	end
-	# TODO: combine dvNEMexport and dvWHLexport into dvProductionToGrid
 
 	if !isempty(p.gentechs)  # Problem becomes a MILP
 		@warn """Adding binary variable to model gas generator. 
@@ -279,7 +278,12 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 	end
 
-	if !(p.elecutil.allow_simultaneous_export_import)
+    if !isempty(p.etariff.export_bins)
+        @variable(m, dvProductionToGrid[p.elec_techs, p.etariff.export_bins, p.time_steps] >= 0)
+        
+    end
+
+	if !(p.elecutil.allow_simultaneous_export_import) & !isempty(p.etariff.export_bins)
 		@warn """Adding binary variable to prevent simultaneous grid import/export. 
 				 Some solvers are very slow with integer variables"""
 		@variable(m, binNoGridPurchases[p.time_steps], Bin)

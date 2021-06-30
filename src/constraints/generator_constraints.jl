@@ -60,9 +60,8 @@ function add_gen_can_run_constraints(m,p)
 	end
 
 	if !(p.generator.sells_energy_back_to_grid)
-		for ts in p.time_steps
-			fix(m[:dvNEMexport]["Generator", ts], 0.0, force=true)
-			fix(m[:dvWHLexport]["Generator", ts], 0.0, force=true)
+		for ts in p.time_steps, u in p.export_bins_by_tech["Generator"]
+			fix(m[:dvProductionToGrid]["Generator", ts], 0.0, force=true)
 		end
 	end
 end

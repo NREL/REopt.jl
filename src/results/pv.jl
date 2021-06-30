@@ -11,13 +11,15 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 		end
 		r["year_one_to_battery_series_kw"] = round.(value.(PVtoBatt), digits=3)
 
-		PVtoNEM = (m[Symbol("dvNEMexport"*_n)][t, ts] for ts in p.time_steps)
-		r[string(t, "toNEM")] = round.(value.(PVtoNEM), digits=3)
+        r["year_one_to_grid_series_kw"] = zeros(size(r["year_one_to_battery_series_kw"]))
+        if !isempty(p.etariff.export_bins)
+            PVtoGrid = @expression(m, [ts in p.time_steps],
+                    sum(m[:dvProductionToGrid][t, u, ts] for u in p.export_bins_by_tech[t]))
+            r["year_one_to_grid_series_kw"] = round.(value.(PVtoGrid), digits=3).data
 
-		PVtoWHL = (m[Symbol("dvWHLexport"*_n)][t, ts] for ts in p.time_steps)
-		r[string(t, "toWHL")] = round.(value.(PVtoWHL), digits=3)
-
-        r["year_one_to_grid_series_kw"] = r[string(t, "toWHL")] .+ r[string(t, "toNEM")]
+            r["average_annual_energy_exported"] = round(
+                sum(r["year_one_to_grid_series_kw"]) * p.hours_per_timestep, digits=0)
+        end
 
 		PVtoCUR = (m[Symbol("dvCurtail"*_n)][t, ts] for ts in p.time_steps)
 		r["year_one_curtailed_production_series_kw"] = round.(value.(PVtoCUR), digits=3)

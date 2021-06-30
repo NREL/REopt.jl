@@ -30,27 +30,30 @@
 function add_export_constraints(m, p; _n="")
 
     ##Constraint (8e): Production export no greater than production
-    @constraint(m, [t in p.techs, ts in p.time_steps_with_grid],
-        p.production_factor[t,ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] >= 
-        m[Symbol("dvWHLexport"*_n)][t, ts] + m[Symbol("dvNEMexport"*_n)][t, ts] + m[Symbol("dvCurtail"*_n)][t, ts]
+    @constraint(m, [t in p.elec_techs, ts in p.time_steps_with_grid],
+        p.production_factor[t,ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] 
+        >= sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for u in p.export_bins_by_tech[t]) 
+        + m[Symbol("dvCurtail"*_n)][t, ts]
     )
     
     ##Constraint (8f): Total sales to grid no greater than annual allocation - storage tiers
     @constraint(m,
-        p.hours_per_timestep * ( 
-        sum( m[Symbol("dvWHLexport"*_n)][t, ts] for t in p.techs, ts in p.time_steps_with_grid)
-        + sum( m[Symbol("dvNEMexport"*_n)][t, ts] for t in p.techs, ts in p.time_steps_with_grid)
+        p.hours_per_timestep * sum( m[Symbol("dvProductionToGrid"*_n)][t, u, ts] 
+            for t in p.elec_techs, u in p.export_bins_by_tech[t], ts in p.time_steps_with_grid
         ) <= p.max_grid_export_kwh
     )
 
-   ### Constraint set (9): Net Meter Module 
-   ##Constraint (9c): Net metering only -- can't sell more than you purchase
-   # note that hours_per_timestep is cancelled on both sides, but used for unit consistency (convert power to energy)
-    @constraint(m,
-        p.hours_per_timestep * 
-        sum( m[Symbol("dvNEMexport"*_n)][t, ts] for t in p.techs, ts in p.time_steps)
-        <= p.hours_per_timestep * sum( m[Symbol("dvGridPurchase"*_n)][ts] for ts in p.time_steps)
-    )
+    ### Constraint set (9): Net Meter Module 
+    ##Constraint (9c): Net metering only -- can't sell more than you purchase
+    # note that hours_per_timestep is cancelled on both sides, but used for unit consistency (convert power to energy)
+    NEM_techs = String[t for t in p.elec_techs if :NEM in p.export_bins_by_tech[t]]
+    if !isempty(NEM_techs)
+        @constraint(m,
+            p.hours_per_timestep * sum( m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
+            for t in NEM_techs, ts in p.time_steps)
+            <= p.hours_per_timestep * sum( m[Symbol("dvGridPurchase"*_n)][ts] for ts in p.time_steps)
+        )
+    end
 end
 
 
@@ -85,8 +88,7 @@ function add_simultaneous_export_import_constraint(m, p; _n="")
         - (1 - m[Symbol("binNoGridPurchases"*_n)][ts]) * 1.0E9 <= 0
     )
     @constraint(m, ExportOnlyAfterSiteLoadMetCon[ts in p.time_steps],
-          sum( m[Symbol("dvWHLexport"*_n)][t, ts] for t in p.techs )
-        + sum( m[Symbol("dvNEMexport"*_n)][t, ts] for t in p.techs)
+        sum(m[Symbol("dvProductionToGrid"*_n)][t,u,ts] for t in p.elec_techs, u in p.export_bins_by_tech[t])
         - m[Symbol("binNoGridPurchases"*_n)][ts] * 1.0E9 <= 0
     )
 end
@@ -129,12 +131,13 @@ function add_elec_utility_expressions(m, p; _n="")
 		@constraint(m, MinChargeAddCon, m[Symbol("MinChargeAdder"*_n)] == 0)
 	end
 	
-    if !isempty(p.techs)
-        # NOTE: levelization_factor is baked into dvNEMexport, dvWHLexport
-        m[Symbol("TotalExportBenefit"*_n)] = p.pwf_e * p.hours_per_timestep * sum(
-            sum( p.etariff.export_rates[:NEM][ts] * m[Symbol("dvNEMexport"*_n)][t, ts] for t in p.techs)
-          + sum( p.etariff.export_rates[:WHL][ts] * m[Symbol("dvWHLexport"*_n)][t, ts]  for t in p.techs)
-            for ts in p.time_steps )
+    if !isempty(p.etariff.export_bins)
+        # NOTE: levelization_factor is baked into dvProductionToGrid
+        m[Symbol("TotalExportBenefit"*_n)] = @expression(m, p.pwf_e * p.hours_per_timestep *
+            sum( sum(p.etariff.export_rates[u][ts] * m[Symbol("dvProductionToGrid"*_n)][t, u, ts] 
+                 for u in p.etariff.export_bins, t in p.techs_by_export_bins[u])
+            for ts in p.time_steps)
+        )
     else
         m[Symbol("TotalExportBenefit"*_n)] = 0
     end
