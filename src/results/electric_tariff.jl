@@ -48,7 +48,7 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
                                     r["year_one_fixed_cost_us_dollars"]  + r["year_one_min_charge_adder_us_dollars"]
                                 
     r["total_export_benefit_us_dollars"] = -1 * round(value(m[Symbol("TotalExportBenefit"*_n)]) * (1 - p.offtaker_tax_pct), digits=2)
-    r["year_one_export_benefit_us_dollars"] = round(value(m[Symbol("TotalExportBenefit"*_n)]) / p.pwf_e, digits=0)
+    r["year_one_export_benefit_us_dollars"] = -1 * round(value(m[Symbol("TotalExportBenefit"*_n)]) / p.pwf_e, digits=0)
     
     d["ElectricTariff"] = r
     nothing
