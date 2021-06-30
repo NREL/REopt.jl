@@ -41,6 +41,8 @@ export
     LinDistFlow,
     MPCScenario,
     MPCInputs,
+    run_mpc,
+    build_mpc!,
     # for docs:
     ElectricLoad,
     Financial,
@@ -104,8 +106,10 @@ include("outagesim/outage_simulator.jl")
 
 include("lindistflow/extend.jl")
 
-include("mpc/mpc_structs.jl")
-include("mpc/mpc_scenario.jl")
-include("mpc/mpc_inputs.jl")
+include("mpc/structs.jl")
+include("mpc/scenario.jl")
+include("mpc/inputs.jl")
+include("mpc/results.jl")
+include("mpc/model.jl")
 
 end

@@ -45,8 +45,8 @@ function MPCElectricTariff(d::Dict)
     monthly_demand_rates = [get(d, "monthly_demand_rate", 0.0)]
     time_steps_monthly = [collect(range(1, length=length(energy_rates)))]
 
-    tou_demand_rates = get(d, "tou_demand_rates", [0.0])
-    tou_demand_timesteps = get(d, "tou_demand_timesteps", [[0.0]])
+    tou_demand_rates = get(d, "tou_demand_rates", Float64[])
+    tou_demand_timesteps = get(d, "tou_demand_timesteps", [])
 
     # TODO can remove these inputs?
     fixed_monthly_charge = 0.0
@@ -158,6 +158,7 @@ function Generator(;
 """
 struct MPCGenerator <: AbstractGenerator
     size_kw
+    max_kw
     fuel_cost_per_gallon
     fuel_slope_gal_per_kwh
     fuel_intercept_gal_per_hr
@@ -177,8 +178,11 @@ struct MPCGenerator <: AbstractGenerator
         sells_energy_back_to_grid::Bool = false
         )
 
+        max_kw = size_kw
+
         new(
             size_kw,
+            max_kw,
             fuel_cost_per_gallon,
             fuel_slope_gal_per_kwh,
             fuel_intercept_gal_per_hr,

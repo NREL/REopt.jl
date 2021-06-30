@@ -53,6 +53,7 @@ struct MPCInputs
     storage::MPCStorage
     generator::MPCGenerator
     elecutil::ElectricUtility
+    max_grid_export_kwh::Float64
 end
 
 
@@ -69,7 +70,7 @@ function MPCInputs(s::MPCScenario)
     techs, pvtechs, gentechs, production_factor, existing_sizes = setup_tech_inputs(s)
     elec_techs = techs  # only modeling electric loads/techs so far
     techs_no_turndown = pvtechs
-
+    max_grid_export_kwh = sum(s.electric_load.loads_kw)
     months = 1:length(s.electric_tariff.monthly_demand_rates)
 
     techs_by_exportbin = DenseAxisArray([ techs, techs, techs], s.electric_tariff.export_bins)
@@ -108,6 +109,7 @@ function MPCInputs(s::MPCScenario)
         s.storage,
         s.generator,
         s.electric_utility,
+        max_grid_export_kwh
         # s.site.min_resil_timesteps,
         # s.site.mg_tech_sizes_equal_grid_sizes,
         # s.site.node
