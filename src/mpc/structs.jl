@@ -32,7 +32,6 @@ struct MPCElectricTariff
 
     export_rates::DenseAxisArray{Array{Float64,1}}
     export_bins::Array{Symbol,1}
-    curtail_bins::Array{Symbol,1}
 end
 
 
@@ -80,8 +79,7 @@ function MPCElectricTariff(d::Dict)
         annual_min_charge,
         min_monthly_charge,
         export_rates,
-        export_bins,
-        curtail_bins
+        export_bins
     )
 end
 
