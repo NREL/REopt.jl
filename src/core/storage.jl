@@ -79,6 +79,7 @@ function Storage(d::Dict, f::Financial)  # nested dict
     types = Symbol[]
     can_grid_charge = Symbol[]
     raw_vals = Dict(zip(fieldnames(Storage), [Float64[] for _ in range(1, stop=fieldcount(Storage))]))
+    # raw_vals has keys = fieldnames(Storage) and values = arrays of values for each type in types
 
     for (storage_type, input_dict) in d
 

@@ -39,6 +39,8 @@ export
     add_variables!,
     add_objective!,
     LinDistFlow,
+    MPCScenario,
+    MPCInputs,
     # for docs:
     ElectricLoad,
     Financial,
@@ -101,5 +103,9 @@ include("core/reopt_multinode.jl")
 include("outagesim/outage_simulator.jl")
 
 include("lindistflow/extend.jl")
+
+include("mpc/mpc_structs.jl")
+include("mpc/mpc_scenario.jl")
+include("mpc/mpc_inputs.jl")
 
 end

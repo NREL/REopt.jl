@@ -341,7 +341,7 @@ function setup_present_worth_factors(s::Scenario, techs::Array{String, 1}, pvtec
 end
 
 
-function setup_electric_utility_inputs(s::Scenario)
+function setup_electric_utility_inputs(s::AbstractScenario)
     if s.electric_utility.outage_end_timestep > 0 &&
             s.electric_utility.outage_end_timestep > s.electric_utility.outage_start_timestep
         time_steps_without_grid = Int[i for i in range(s.electric_utility.outage_start_timestep,
