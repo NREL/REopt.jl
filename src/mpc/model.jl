@@ -87,9 +87,8 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 			fix(m[:dvGridToStorage][t, ts], 0.0, force=true)
 		end
 
-		for t in p.techs
-			fix(m[:dvNEMexport][t, ts], 0.0, force=true)
-			fix(m[:dvWHLexport][t, ts], 0.0, force=true)
+		for t in p.elec_techs, u in p.export_bins_by_tech[t]
+			fix(m[:dvProductionToGrid][t, u, ts], 0.0, force=true)
 		end
 	end
 
@@ -138,7 +137,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		add_tou_peak_constraint(m, p)
 	end
 
-	if !(p.elecutil.allow_simultaneous_export_import)
+	if !(p.elecutil.allow_simultaneous_export_import) & !isempty(p.etariff.export_bins)
 		add_simultaneous_export_import_constraint(m, p)
 	end
 
@@ -219,12 +218,10 @@ end
 
 function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
     @variables m begin
-		dvWHLexport[p.techs, p.time_steps] >= 0  # [kW]
 		# dvSize[p.techs] >= 0  # System Size of Technology t [kW]
 		# dvPurchaseSize[p.techs] >= 0  # system kW beyond existing_kw that must be purchased
 		dvGridPurchase[p.time_steps] >= 0  # Power from grid dispatched to meet electrical load [kW]
 		dvRatedProduction[p.techs, p.time_steps] >= 0  # Rated production of technology t [kW]
-		dvNEMexport[p.techs, p.time_steps] >= 0  # [kW]
 		dvCurtail[p.techs, p.time_steps] >= 0  # [kW]
 		dvProductionToStorage[p.storage.types, p.techs, p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
 		dvDischargeFromStorage[p.storage.types, p.time_steps] >= 0 # Power discharged from storage system b [kW]
@@ -235,6 +232,10 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 		dvPeakDemandTOU[p.ratchets] >= 0  # Peak electrical power demand during ratchet r [kW]
 		dvPeakDemandMonth[p.months] >= 0  # Peak electrical power demand during month m [kW]
 		# MinChargeAdder >= 0
+	end
+
+	if !isempty(p.etariff.export_bins)
+		@variable(m, dvProductionToGrid[p.elec_techs, p.etariff.export_bins, p.time_steps] >= 0)
 	end
 
     m[:dvSize] = p.existing_sizes
