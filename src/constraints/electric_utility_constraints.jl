@@ -90,3 +90,65 @@ function add_simultaneous_export_import_constraint(m, p; _n="")
         - m[Symbol("binNoGridPurchases"*_n)][ts] * 1.0E9 <= 0
     )
 end
+
+
+function add_elec_utility_expressions(m, p; _n="")
+    m[Symbol("TotalEnergyChargesUtil"*_n)] = @expression(m, p.pwf_e * p.hours_per_timestep * 
+        sum( p.etariff.energy_rates[ts] * m[Symbol("dvGridPurchase"*_n)][ts] for ts in p.time_steps) 
+    )
+
+    if !isempty(p.etariff.tou_demand_rates)
+        m[Symbol("DemandTOUCharges"*_n)] = @expression(m, 
+            p.pwf_e * sum( p.etariff.tou_demand_rates[r] * m[Symbol("dvPeakDemandTOU"*_n)][r] for r in p.ratchets)
+        )
+    else
+        m[Symbol("DemandTOUCharges"*_n)] = 0
+    end
+
+    if !isempty(p.etariff.monthly_demand_rates)
+        m[Symbol("DemandFlatCharges"*_n)] = @expression(m, 
+            p.pwf_e * sum( p.etariff.monthly_demand_rates[mth] * m[Symbol("dvPeakDemandMonth"*_n)][mth] for mth in p.months) 
+        )
+    else
+        m[Symbol("DemandFlatCharges"*_n)] = 0
+    end
+
+    m[Symbol("TotalDemandCharges"*_n)] = m[Symbol("DemandTOUCharges"*_n)] + m[Symbol("DemandFlatCharges"*_n)]
+    
+    m[Symbol("TotalFixedCharges"*_n)] = p.pwf_e * p.etariff.fixed_monthly_charge * 12
+        
+    if p.etariff.annual_min_charge > 12 * p.etariff.min_monthly_charge
+        m[Symbol("TotalMinCharge"*_n)] = p.etariff.annual_min_charge 
+    else
+        m[Symbol("TotalMinCharge"*_n)] = 12 * p.etariff.min_monthly_charge
+    end
+
+	if m[Symbol("TotalMinCharge"*_n)] >= 1e-2
+		add_mincharge_constraint(m, p)
+	else
+		@constraint(m, MinChargeAddCon, m[Symbol("MinChargeAdder"*_n)] == 0)
+	end
+	
+    if !isempty(p.techs)
+        # NOTE: levelization_factor is baked into dvNEMexport, dvWHLexport
+        m[Symbol("TotalExportBenefit"*_n)] = p.pwf_e * p.hours_per_timestep * sum(
+            sum( p.etariff.export_rates[:NEM][ts] * m[Symbol("dvNEMexport"*_n)][t, ts] for t in p.techs)
+          + sum( p.etariff.export_rates[:WHL][ts] * m[Symbol("dvWHLexport"*_n)][t, ts]  for t in p.techs)
+            for ts in p.time_steps )
+    else
+        m[Symbol("TotalExportBenefit"*_n)] = 0
+    end
+
+    m[Symbol("TotalElecBill"*_n)] = 
+        m[Symbol("TotalEnergyChargesUtil"*_n)] 
+        + m[Symbol("TotalDemandCharges"*_n)] 
+        + m[Symbol("TotalExportBenefit"*_n)] 
+        + m[Symbol("TotalFixedCharges"*_n)] 
+        + 0.999 * m[Symbol("MinChargeAdder"*_n)]
+    #= Note: 0.999 * MinChargeAdder in Objective b/c when 
+        TotalMinCharge > (TotalEnergyCharges + TotalDemandCharges + TotalExportBenefit + TotalFixedCharges)
+		it is arbitrary where the min charge ends up (eg. could be in TotalDemandCharges or MinChargeAdder).
+		0.001 * MinChargeAdder is added back into LCC when writing to results.  
+    =#
+    nothing
+end

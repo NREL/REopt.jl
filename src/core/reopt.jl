@@ -27,9 +27,6 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-import MathOptInterface
-const MOI = MathOptInterface
-
 """
 	run_reopt(m::JuMP.AbstractModel, fp::String)
 
@@ -163,17 +160,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:TotalGenFuelCharges] = 0.0
 	end
 
-	if !isempty(p.techs)
-		# NOTE: levelization_factor is baked into dvNEMexport, dvWHLexport
-		@expression(m, TotalExportBenefit, p.pwf_e * p.hours_per_timestep * sum(
-			sum( p.etariff.export_rates[:NEM][ts] * m[:dvNEMexport][t, ts] for t in p.techs)
-		  + sum( p.etariff.export_rates[:WHL][ts] * m[:dvWHLexport][t, ts]  for t in p.techs)
-			for ts in p.time_steps )
-		)
-	else
-		@expression(m, TotalExportBenefit, 0)
-	end
-
 	if !isempty(p.elecutil.outage_durations)
 		add_dv_UnservedLoad_constraints(m,p)
 		add_outage_cost_constraints(m,p)
@@ -198,35 +184,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 	end
 
-	@expression(m, TotalEnergyChargesUtil, p.pwf_e * p.hours_per_timestep *
-		sum( p.etariff.energy_rates[ts] * m[:dvGridPurchase][ts] for ts in p.time_steps)
-	)
-
-	if !isempty(p.etariff.tou_demand_rates)
-		@expression(m, DemandTOUCharges, p.pwf_e * sum( p.etariff.tou_demand_rates[r] * m[:dvPeakDemandTOU][r] for r in p.ratchets) )
-	else
-		@expression(m, DemandTOUCharges, 0)
-	end
-
-	if !isempty(p.etariff.monthly_demand_rates)
-		@expression(m, DemandFlatCharges, p.pwf_e * sum( p.etariff.monthly_demand_rates[mth] * m[:dvPeakDemandMonth][mth] for mth in p.months) )
-	else
-		@expression(m, DemandFlatCharges, 0)
-	end
-	@expression(m, TotalDemandCharges, DemandTOUCharges + DemandFlatCharges)
-	@expression(m, TotalFixedCharges, p.pwf_e * p.etariff.fixed_monthly_charge * 12)
-
-	if p.etariff.annual_min_charge > 12 * p.etariff.min_monthly_charge
-        TotalMinCharge = p.etariff.annual_min_charge
-    else
-        TotalMinCharge = 12 * p.etariff.min_monthly_charge
-    end
-
-	if TotalMinCharge >= 1e-2
-		add_mincharge_constraint(m, p)
-	else
-		@constraint(m, MinChargeAddCon, m[:MinChargeAdder] == 0)
-	end
+	add_elec_utility_expressions(m, p)
 
 	#################################  Objective Function   ########################################
 	@expression(m, Costs,
@@ -243,14 +201,12 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         m[:TotalGenFuelCharges] * (1 - p.offtaker_tax_pct) +
 
 		# Utility Bill, tax deductible for offtaker
-		(TotalEnergyChargesUtil + TotalDemandCharges + TotalExportBenefit + TotalFixedCharges + 0.999 * m[:MinChargeAdder]) * (1 - p.offtaker_tax_pct)
+		m[:TotalElecBill] * (1 - p.offtaker_tax_pct)
 	);
 	if !isempty(p.elecutil.outage_durations)
 		add_to_expression!(Costs, m[:ExpectedOutageCost] + m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost] + m[:ExpectedMGFuelCost])
 	end
-    #= Note: 0.9999*MinChargeAdder in Objective b/c when TotalMinCharge > (TotalEnergyCharges + TotalDemandCharges + TotalExportBenefit + TotalFixedCharges)
-		it is arbitrary where the min charge ends up (eg. could be in TotalDemandCharges or MinChargeAdder).
-		0.0001*MinChargeAdder is added back into LCC when writing to results.  =#
+    
 	nothing
 end
 
