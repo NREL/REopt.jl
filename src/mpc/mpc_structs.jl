@@ -99,15 +99,15 @@ end
 
 
 Base.@kwdef struct MPCStorage
-    types::Array{Symbol,1} = [:Elec]
+    types::Array{Symbol,1} = [:elec]
     size_kw::DenseAxisArray{Float64,1}
     size_kwh::DenseAxisArray{Float64,1}
-    charge_efficiency::DenseAxisArray{Float64,1} = DenseAxisArray([0.96 * 0.975^2], [:Elec])
-    discharge_efficiency::DenseAxisArray{Float64,1} = DenseAxisArray([0.96 * 0.975^2], [:Elec])
-    soc_min_pct::DenseAxisArray{Float64,1} = DenseAxisArray([0.2], [:Elec])
-    soc_init_pct::DenseAxisArray{Float64,1} = DenseAxisArray([0.5], [:Elec])
-    can_grid_charge::Array{Symbol,1} = [:Elec]
-    grid_charge_efficiency::DenseAxisArray{Float64,1} = DenseAxisArray([0.96 * 0.975^2], [:Elec])
+    charge_efficiency::DenseAxisArray{Float64,1} = DenseAxisArray([0.96 * 0.975^2], [:elec])
+    discharge_efficiency::DenseAxisArray{Float64,1} = DenseAxisArray([0.96 * 0.975^2], [:elec])
+    soc_min_pct::DenseAxisArray{Float64,1} = DenseAxisArray([0.2], [:elec])
+    soc_init_pct::DenseAxisArray{Float64,1} = DenseAxisArray([0.5], [:elec])
+    can_grid_charge::Array{Symbol,1} = [:elec]
+    grid_charge_efficiency::DenseAxisArray{Float64,1} = DenseAxisArray([0.96 * 0.975^2], [:elec])
 end
 
 
@@ -117,14 +117,14 @@ NOTE: d must have symbolic keys
 """
 function MPCStorage(d::Dict)
     d2 = Dict()
-    d2[:can_grid_charge] = get(d, :can_grid_charge, false) ? [:Elec] : Symbol[]
+    d2[:can_grid_charge] = get(d, :can_grid_charge, false) ? [:elec] : Symbol[]
     if haskey(d, :can_grid_charge)
         pop!(d, :can_grid_charge)
     end
     # have to convert to all d values to DenseAxisArray's with storage type as Axis
     # (only modeling Elec storage in MPC for now)
     for (k,v) in d
-        d2[k] = DenseAxisArray([v], [:Elec])
+        d2[k] = DenseAxisArray([v], [:elec])
     end
 
     return MPCStorage(; d2...)
