@@ -93,6 +93,7 @@ include("constraints/generator_constraints.jl")
 include("mpc/structs.jl")
 include("mpc/scenario.jl")
 include("mpc/inputs.jl")
+include("mpc/constraints.jl")
 
 include("results/results.jl")
 include("results/electric_tariff.jl")

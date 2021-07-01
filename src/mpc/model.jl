@@ -168,6 +168,8 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 	end
 
 	add_elec_utility_expressions(m, p)
+    add_previous_monthly_peak_constraint(m, p)
+    add_previous_tou_peak_constraint(m, p)
 
     # TODO: random outages in MPC?
 	if !isempty(p.elecutil.outage_durations)

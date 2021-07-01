@@ -17,15 +17,15 @@ end
 
 
 struct MPCElectricTariff
-    monthly_previous_peak_demand::Float64
-    energy_rates::Array{Float64,1} 
+    energy_rates::AbstractVector{Float64}
 
-    monthly_demand_rates::Array{Float64,1}
+    monthly_demand_rates::AbstractVector{Float64}
     time_steps_monthly::Array{Array{Int64,1},1}  # length = 0 or 12
+    monthly_previous_peak_demands::AbstractVector{Float64}
 
-    tou_demand_rates::Array{Float64,1}
+    tou_demand_rates::AbstractVector{Float64}
     tou_demand_ratchet_timesteps::Array{Array{Int64,1},1}  # length = n_tou_demand_ratchets
-    tou_previous_peak_demands::Array{Float64,1}
+    tou_previous_peak_demands::AbstractVector{Float64}
 
     fixed_monthly_charge::Float64
     annual_min_charge::Float64
@@ -40,9 +40,9 @@ end
     MPCElectricTariff(d::Dict)
 
 function for parsing user inputs into 
-```julia
+
     struct MPCElectricTariff
-        monthly_previous_peak_demand::Float64
+        monthly_previous_peak_demands::Array{Float64,1}
         energy_rates::Array{Float64,1} 
 
         monthly_demand_rates::Array{Float64,1}
@@ -59,16 +59,19 @@ function for parsing user inputs into
         export_rates::DenseAxisArray{Array{Float64,1}}
         export_bins::Array{Symbol,1}
     end
-```
+
 
 Keys for `d` include:
     - `energy_rates`
         - REQUIRED
         - must have length equal to `ElectricLoad.loads_kw`
-    - `monthly_demand_rate`
-        - default = 0
-    - `monthly_previous_peak_demand`
-        - default = 0
+    - `monthly_demand_rates`
+        - default = [0]
+    - `time_steps_monthly`
+        - array of arrays for integer time steps that the `monthly_demand_rates` apply to
+        - default = [collect(1:length(energy_rates))]
+    - `monthly_previous_peak_demands`
+        - default = [0]
     - `tou_demand_rates`
         - an array of time-of-use demand rates
         - must have length equal to `tou_demand_timesteps`
@@ -92,9 +95,9 @@ function MPCElectricTariff(d::Dict)
 
     energy_rates = d["energy_rates"]
 
-    monthly_demand_rates = [get(d, "monthly_demand_rate", 0.0)]
-    time_steps_monthly = [collect(range(1, length=length(energy_rates)))]
-    monthly_previous_peak_demand = get(d, "monthly_previous_peak_demand", 0.0)
+    monthly_demand_rates = get(d, "monthly_demand_rates", [0.0])
+    time_steps_monthly = get(d, "time_steps_monthly", [collect(1:length(energy_rates))])
+    monthly_previous_peak_demands = get(d, "monthly_previous_peak_demands", [0.0])
 
     tou_demand_rates = get(d, "tou_demand_rates", Float64[])
     tou_demand_timesteps = get(d, "tou_demand_timesteps", [])
@@ -132,10 +135,10 @@ function MPCElectricTariff(d::Dict)
     end
     
     MPCElectricTariff(
-        monthly_previous_peak_demand,
         energy_rates,
         monthly_demand_rates,
         time_steps_monthly,
+        monthly_previous_peak_demands,
         tou_demand_rates,
         tou_demand_timesteps,
         tou_previous_peak_demands,
