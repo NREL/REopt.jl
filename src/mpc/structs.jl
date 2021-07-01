@@ -17,7 +17,7 @@ end
 
 
 struct MPCElectricTariff
-    previous_peak_demand::Float64
+    monthly_previous_peak_demand::Float64
     energy_rates::Array{Float64,1} 
 
     monthly_demand_rates::Array{Float64,1}
@@ -25,6 +25,7 @@ struct MPCElectricTariff
 
     tou_demand_rates::Array{Float64,1}
     tou_demand_ratchet_timesteps::Array{Array{Int64,1},1}  # length = n_tou_demand_ratchets
+    tou_previous_peak_demands::Array{Float64,1}
 
     fixed_monthly_charge::Float64
     annual_min_charge::Float64
@@ -35,18 +36,70 @@ struct MPCElectricTariff
 end
 
 
+"""
+    MPCElectricTariff(d::Dict)
+
+function for parsing user inputs into 
+```julia
+    struct MPCElectricTariff
+        monthly_previous_peak_demand::Float64
+        energy_rates::Array{Float64,1} 
+
+        monthly_demand_rates::Array{Float64,1}
+        time_steps_monthly::Array{Array{Int64,1},1}  # length = 0 or 12
+
+        tou_demand_rates::Array{Float64,1}
+        tou_demand_ratchet_timesteps::Array{Array{Int64,1},1}  # length = n_tou_demand_ratchets
+        tou_previous_peak_demands::Array{Float64,1}
+
+        fixed_monthly_charge::Float64
+        annual_min_charge::Float64
+        min_monthly_charge::Float64
+
+        export_rates::DenseAxisArray{Array{Float64,1}}
+        export_bins::Array{Symbol,1}
+    end
+```
+
+Keys for `d` include:
+    - `energy_rates`
+        - REQUIRED
+        - must have length equal to `ElectricLoad.loads_kw`
+    - `monthly_demand_rate`
+        - default = 0
+    - `monthly_previous_peak_demand`
+        - default = 0
+    - `tou_demand_rates`
+        - an array of time-of-use demand rates
+        - must have length equal to `tou_demand_timesteps`
+        - default = []
+    - `tou_demand_timesteps`
+        - an array of arrays for the integer time steps that apply to the `tou_demand_rates`
+        - default = []
+    - `tou_previous_peak_demands`
+        - an array of the previous peak demands set in each time-of-use demand period
+        - must have length equal to `tou_demand_timesteps`
+        - default = []
+    - `net_metering`
+        - boolean, if `true` then customer DER export is compensated at the `energy_rates`
+    - `export_rates`
+        - can be a <:Real or Array{<:Real, 1}, or not provided
+        - if provided, customer DER export is compensated at the `export_rates`
+
+NOTE: if both `net_metering=true` and `export_rates` are provided then the model can choose from either option.
+"""
 function MPCElectricTariff(d::Dict)
 
     energy_rates = d["energy_rates"]
-    previous_peak_demand = get(d, "previous_peak_demand", 0.0)
-    # TODO set missing values to zeros of appropriate sizes
 
     monthly_demand_rates = [get(d, "monthly_demand_rate", 0.0)]
     time_steps_monthly = [collect(range(1, length=length(energy_rates)))]
+    monthly_previous_peak_demand = get(d, "monthly_previous_peak_demand", 0.0)
 
     tou_demand_rates = get(d, "tou_demand_rates", Float64[])
     tou_demand_timesteps = get(d, "tou_demand_timesteps", [])
-    @assert length(tou_demand_rates) == length(tou_demand_timesteps)
+    tou_previous_peak_demands = get(d, "tou_previous_peak_demands", Float64[])
+    @assert length(tou_demand_rates) == length(tou_demand_timesteps) == length(tou_previous_peak_demands)
 
     # TODO can remove these inputs?
     fixed_monthly_charge = 0.0
@@ -54,17 +107,16 @@ function MPCElectricTariff(d::Dict)
     min_monthly_charge = 0.0
 
     # TODO handle tiered rates
-    export_bins = [:NEM, :WHL, :CUR]
-    curtail_bins = [:CUR]
-    nem_rate = [100.0 for _ in energy_rates]
-    if get(d, "net_metering", false)
+    export_bins = [:NEM, :WHL]
+    nem_rate = []
+    NEM = get(d, "net_metering", false)
+    if NEM
         nem_rate = [-0.999 * x for x in energy_rates]
     end
     # export_rates can be a <:Real or Array{<:Real, 1}, or not provided
     export_rates = get(d, "export_rates", nothing)
     whl_rate = create_export_rate(export_rates, length(energy_rates), 1)
 
-    NEM = get(d, "net_metering", false)
     if !NEM & (sum(whl_rate) >= 0)
         export_rates = DenseAxisArray{Array{Float64,1}}(undef, [])
         export_bins = Symbol[]
@@ -80,12 +132,13 @@ function MPCElectricTariff(d::Dict)
     end
     
     MPCElectricTariff(
-        previous_peak_demand,
+        monthly_previous_peak_demand,
         energy_rates,
         monthly_demand_rates,
         time_steps_monthly,
         tou_demand_rates,
         tou_demand_timesteps,
+        tou_previous_peak_demands,
         fixed_monthly_charge,
         annual_min_charge,
         min_monthly_charge,
