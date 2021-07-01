@@ -72,7 +72,6 @@ struct REoptInputs <: AbstractInputs
     mg_tech_sizes_equal_grid_sizes::Bool
     node::Int
     export_bins_by_tech::Dict
-    techs_by_export_bins::Dict
 end
 
 
@@ -123,7 +122,6 @@ function REoptInputs(s::Scenario)
     end
 
     export_bins_by_tech = Dict(zip(elec_techs, [repeat(s.electric_tariff.export_bins, length(elec_techs))]))
-    techs_by_export_bins = Dict(zip(s.electric_tariff.export_bins, [repeat(elec_techs, length(s.electric_tariff.export_bins))]))
     # TODO implement export bins by tech (rather than assuming that all techs share the export_bins)
 
 
@@ -166,8 +164,7 @@ function REoptInputs(s::Scenario)
         s.site.min_resil_timesteps,
         s.site.mg_tech_sizes_equal_grid_sizes,
         s.site.node,
-        export_bins_by_tech,
-        techs_by_export_bins
+        export_bins_by_tech
     )
 end
 

@@ -49,13 +49,12 @@ struct MPCInputs <: AbstractInputs
     two_party_factor::Float64
     etariff::MPCElectricTariff
     ratchets::UnitRange
-    techs_by_exportbin::DenseAxisArray{Array{String,1}}  # indexed on [:NEM, :WHL, :CUR]
+    techs_by_exportbin::DenseAxisArray{Array{String,1}}  # indexed on [:NEM, :WHL]
     storage::MPCStorage
     generator::MPCGenerator
     elecutil::ElectricUtility
     max_grid_export_kwh::Float64
     export_bins_by_tech::Dict
-    techs_by_export_bins::Dict
 end
 
 
@@ -86,7 +85,6 @@ function MPCInputs(s::MPCScenario)
     time_steps_with_grid, time_steps_without_grid, = setup_electric_utility_inputs(s)
 
     export_bins_by_tech = Dict(zip(elec_techs, [repeat(s.electric_tariff.export_bins, length(elec_techs))]))
-    techs_by_export_bins = Dict(zip(s.electric_tariff.export_bins, [repeat(elec_techs, length(s.electric_tariff.export_bins))]))
     # TODO implement export bins by tech (rather than assuming that all techs share the export_bins)
  
     MPCInputs(
@@ -116,8 +114,7 @@ function MPCInputs(s::MPCScenario)
         s.generator,
         s.electric_utility,
         max_grid_export_kwh,
-        export_bins_by_tech,
-        techs_by_export_bins
+        export_bins_by_tech
         # s.site.min_resil_timesteps,
         # s.site.mg_tech_sizes_equal_grid_sizes,
         # s.site.node

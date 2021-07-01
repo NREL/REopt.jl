@@ -135,7 +135,7 @@ function add_elec_utility_expressions(m, p; _n="")
         # NOTE: levelization_factor is baked into dvProductionToGrid
         m[Symbol("TotalExportBenefit"*_n)] = @expression(m, p.pwf_e * p.hours_per_timestep *
             sum( sum(p.etariff.export_rates[u][ts] * m[Symbol("dvProductionToGrid"*_n)][t, u, ts] 
-                 for u in p.etariff.export_bins, t in p.techs_by_export_bins[u])
+                 for u in p.etariff.export_bins, t in p.techs_by_exportbin[u])
             for ts in p.time_steps)
         )
     else
