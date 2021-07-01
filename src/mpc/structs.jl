@@ -46,6 +46,7 @@ function MPCElectricTariff(d::Dict)
 
     tou_demand_rates = get(d, "tou_demand_rates", Float64[])
     tou_demand_timesteps = get(d, "tou_demand_timesteps", [])
+    @assert length(tou_demand_rates) == length(tou_demand_timesteps)
 
     # TODO can remove these inputs?
     fixed_monthly_charge = 0.0
@@ -62,12 +63,22 @@ function MPCElectricTariff(d::Dict)
     # export_rates can be a <:Real or Array{<:Real, 1}, or not provided
     export_rates = get(d, "export_rates", nothing)
     whl_rate = create_export_rate(export_rates, length(energy_rates), 1)
-    cur_rate = create_export_rate(get(d, "curtail_cost", 0), length(energy_rates), 1)
 
-    export_rates = DenseAxisArray([nem_rate, whl_rate, cur_rate], export_bins)
-
-    @assert length(tou_demand_rates) == length(tou_demand_timesteps)
-
+    NEM = get(d, "net_metering", false)
+    if !NEM & (sum(whl_rate) >= 0)
+        export_rates = DenseAxisArray{Array{Float64,1}}(undef, [])
+        export_bins = Symbol[]
+    elseif !NEM
+        export_bins = [:WHL]
+        export_rates = DenseAxisArray([whl_rate], export_bins)
+    elseif (sum(whl_rate) >= 0)
+        export_bins = [:NEM]
+        export_rates = DenseAxisArray([nem_rate], export_bins)
+    else
+        export_bins = [:NEM, :WHL]  # TODO add :EXC to align with REopt Lite API
+        export_rates = DenseAxisArray([nem_rate, whl_rate], export_bins)
+    end
+    
     MPCElectricTariff(
         previous_peak_demand,
         energy_rates,

@@ -53,3 +53,19 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     d["ElectricTariff"] = r
     nothing
 end
+
+
+function add_electric_tariff_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
+    r = Dict{String, Any}()
+    m[Symbol("energy_purchased"*_n)] = p.hours_per_timestep * 
+        sum(m[Symbol("dvGridPurchase"*_n)][ts] for ts in p.time_steps)
+
+    r["energy_cost_us_dollars"] = round(value(m[Symbol("TotalEnergyChargesUtil"*_n)]), digits=2)
+
+    r["demand_cost_us_dollars"] = round(value(m[Symbol("TotalDemandCharges"*_n)]), digits=2)
+                                
+    r["export_benefit_us_dollars"] = -1 * round(value(m[Symbol("TotalExportBenefit"*_n)]), digits=0)
+    
+    d["ElectricTariff"] = r
+    nothing
+end

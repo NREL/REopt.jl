@@ -90,6 +90,10 @@ include("constraints/tech_constraints.jl")
 include("constraints/electric_utility_constraints.jl")
 include("constraints/generator_constraints.jl")
 
+include("mpc/structs.jl")
+include("mpc/scenario.jl")
+include("mpc/inputs.jl")
+
 include("results/results.jl")
 include("results/electric_tariff.jl")
 include("results/electric_utility.jl")
@@ -106,9 +110,6 @@ include("outagesim/outage_simulator.jl")
 
 include("lindistflow/extend.jl")
 
-include("mpc/structs.jl")
-include("mpc/scenario.jl")
-include("mpc/inputs.jl")
 include("mpc/results.jl")
 include("mpc/model.jl")
 

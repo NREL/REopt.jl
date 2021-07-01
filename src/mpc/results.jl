@@ -28,22 +28,23 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 function mpc_results(m::JuMP.AbstractModel, p::MPCInputs; _n="")
-	# tstart = time()
-    # d = Dict{String, Any}()
-    # for b in p.storage.types
-    #     add_storage_results(m, p, d, b; _n)
-    # end
+	tstart = time()
+    d = Dict{String, Any}()
+    for b in p.storage.types
+        if p.storage.size_kwh[b] > 0
+            add_storage_results(m, p, d, b; _n)
+        end
+    end
 
-    # add_electric_tariff_results(m, p, d; _n)
-    # add_electric_utility_results(m, p, d; _n)
-    # add_financial_results(m, p, d; _n)
+    add_electric_tariff_results(m, p, d; _n)
+    add_electric_utility_results(m, p, d; _n)
 
-	# if !isempty(p.pvtechs)
-    #     add_pv_results(m, p, d; _n)
-	# end
+	if !isempty(p.pvtechs)
+        add_pv_results(m, p, d; _n)
+	end
 	
-	# time_elapsed = time() - tstart
-	# @info "Base results processing took $(round(time_elapsed, digits=3)) seconds."
+	time_elapsed = time() - tstart
+	@info "Base results processing took $(round(time_elapsed, digits=3)) seconds."
 	
 	# if !isempty(p.gentechs) && isempty(_n)  # generators not included in multinode model
     #     tstart = time()
@@ -58,5 +59,5 @@ function mpc_results(m::JuMP.AbstractModel, p::MPCInputs; _n="")
     #     time_elapsed = time() - tstart
     #     @info "Outage results processing took $(round(time_elapsed, digits=3)) seconds."
 	# end
-	# return d
+	return d
 end

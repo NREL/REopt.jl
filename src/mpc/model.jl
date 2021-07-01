@@ -29,7 +29,7 @@
 # *********************************************************************************
 function run_mpc(m::JuMP.AbstractModel, fp::String)
 	s = MPCScenario(JSON.parsefile(fp))
-	run_MPC(m, MPCInputs(s))
+	run_mpc(m, MPCInputs(s))
 end
 
 
@@ -67,7 +67,7 @@ function run_mpc(m::JuMP.AbstractModel, p::MPCInputs; obj::Int=2)
 	@info "Solving took $(opt_time) seconds."
 
 	tstart = time()
-	results = reopt_results(m, p)
+	results = mpc_results(m, p)
 	time_elapsed = time() - tstart
 	@info "Total results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status

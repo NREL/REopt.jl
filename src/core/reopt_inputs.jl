@@ -32,7 +32,7 @@
 use Scenario struct to create reopt.jl model inputs
 """
 
-struct REoptInputs
+struct REoptInputs <: AbstractInputs
     techs::Array{String, 1}
     pvtechs::Array{String, 1}
     gentechs::Array{String,1}

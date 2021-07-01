@@ -27,7 +27,7 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-function add_electric_utility_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 
     Year1UtilityEnergy = p.hours_per_timestep * sum(m[Symbol("dvGridPurchase"*_n)][ts] for ts in p.time_steps)

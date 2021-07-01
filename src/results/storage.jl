@@ -44,3 +44,17 @@ function add_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::
     d["Storage"] = r
     nothing
 end
+
+
+function add_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b::Symbol; _n="")
+    r = Dict{String, Any}()
+
+    soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
+    r["year_one_soc_series_pct"] = value.(soc) ./ p.storage.size_kwh[b]
+    
+    # TODO add year_one_to_grid_series_kw
+    # TODO add year_one_to_load_series_kw
+    # TODO handle other storage type names
+    d["Storage"] = r
+    nothing
+end
