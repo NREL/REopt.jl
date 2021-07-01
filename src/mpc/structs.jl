@@ -118,6 +118,9 @@ function MPCElectricTariff(d::Dict)
     end
     # export_rates can be a <:Real or Array{<:Real, 1}, or not provided
     export_rates = get(d, "export_rates", nothing)
+    if !isnothing(export_rates)
+        export_rates = convert(Vector{Real}, export_rates)
+    end
     whl_rate = create_export_rate(export_rates, length(energy_rates), 1)
 
     if !NEM & (sum(whl_rate) >= 0)
@@ -165,14 +168,14 @@ end
 
 Base.@kwdef struct MPCStorage
     types::Array{Symbol,1} = [:elec]
-    size_kw::DenseAxisArray{Float64,1}
-    size_kwh::DenseAxisArray{Float64,1}
-    charge_efficiency::DenseAxisArray{Float64,1} = DenseAxisArray([0.96 * 0.975^2], [:elec])
-    discharge_efficiency::DenseAxisArray{Float64,1} = DenseAxisArray([0.96 * 0.975^2], [:elec])
-    soc_min_pct::DenseAxisArray{Float64,1} = DenseAxisArray([0.2], [:elec])
-    soc_init_pct::DenseAxisArray{Float64,1} = DenseAxisArray([0.5], [:elec])
+    size_kw::Dict{Symbol, Float64}
+    size_kwh::Dict{Symbol, Float64}
+    charge_efficiency::Dict{Symbol, Float64} = Dict(:elec => 0.96 * 0.975^2)
+    discharge_efficiency::Dict{Symbol, Float64} = Dict(:elec => 0.96 * 0.975^2)
+    soc_min_pct::Dict{Symbol, Float64} = Dict(:elec => 0.2)
+    soc_init_pct::Dict{Symbol, Float64} = Dict(:elec => 0.5)
     can_grid_charge::Array{Symbol,1} = [:elec]
-    grid_charge_efficiency::DenseAxisArray{Float64,1} = DenseAxisArray([0.96 * 0.975^2], [:elec])
+    grid_charge_efficiency::Dict{Symbol, Float64} = Dict(:elec => 0.96 * 0.975^2)
 end
 
 
@@ -187,9 +190,9 @@ function MPCStorage(d::Dict)
         pop!(d, :can_grid_charge)
     end
     # have to convert to all d values to DenseAxisArray's with storage type as Axis
-    # (only modeling Elec storage in MPC for now)
+    # (only modeling elec storage in MPC for now)
     for (k,v) in d
-        d2[k] = DenseAxisArray([v], [:elec])
+        d2[k] = Dict(:elec => convert(Float64, v))
     end
 
     return MPCStorage(; d2...)

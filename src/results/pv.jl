@@ -73,14 +73,15 @@ function add_pv_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
         r = Dict{String, Any}()
 
 		# NOTE: must use anonymous expressions in this loop to overwrite values for cases with multiple PV
-		if !isempty(p.storage.types)
+		if p.storage.size_kw[:elec] > 0  # TODO handle multiple storage types
 			PVtoBatt = (sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.storage.types) for ts in p.time_steps)
+            PVtoBatt = round.(value.(PVtoBatt), digits=3)
+            r["to_battery_series_kw"] = PVtoBatt
 		else
 			PVtoBatt = repeat([0], length(p.time_steps))
 		end
-		r["to_battery_series_kw"] = round.(value.(PVtoBatt), digits=3)
 
-        r["to_grid_series_kw"] = zeros(size(r["to_battery_series_kw"]))
+        r["to_grid_series_kw"] = zeros(length(p.time_steps))
         if !isempty(p.etariff.export_bins)
             PVtoGrid = @expression(m, [ts in p.time_steps],
                     sum(m[:dvProductionToGrid][t, u, ts] for u in p.export_bins_by_tech[t]))
@@ -92,7 +93,7 @@ function add_pv_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
 		PVtoLoad = (m[Symbol("dvRatedProduction"*_n)][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
 					- r["curtailed_production_series_kw"][ts]
 					- r["to_grid_series_kw"][ts]
-					- r["to_battery_series_kw"][ts] for ts in p.time_steps
+					- PVtoBatt[ts] for ts in p.time_steps
 		)
 		r["to_load_series_kw"] = round.(value.(PVtoLoad), digits=3)
 		Year1PvProd = (sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] for ts in p.time_steps) * p.hours_per_timestep)

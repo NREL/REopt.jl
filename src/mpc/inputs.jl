@@ -67,7 +67,7 @@ end
 function MPCInputs(s::MPCScenario)
 
     time_steps = 1:length(s.electric_load.loads_kw)
-    hours_per_timestep = 8760.0 / length(s.electric_load.loads_kw)
+    hours_per_timestep = 1 / s.settings.time_steps_per_hour
     techs, pvtechs, gentechs, production_factor, existing_sizes = setup_tech_inputs(s)
     elec_techs = techs  # only modeling electric loads/techs so far
     techs_no_turndown = pvtechs

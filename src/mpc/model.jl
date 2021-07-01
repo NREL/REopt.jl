@@ -242,8 +242,8 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 
     m[:dvSize] = p.existing_sizes
 
-    m[:dvStoragePower] = DenseAxisArray([p.storage.size_kw], p.storage.types)
-    m[:dvStorageEnergy] = DenseAxisArray([p.storage.size_kwh], p.storage.types)
+    m[:dvStoragePower] = p.storage.size_kw
+    m[:dvStorageEnergy] = p.storage.size_kwh
     # not modeling min charges since control does not affect them
     m[:MinChargeAdder] = 0
 
