@@ -161,6 +161,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:TotalGenFuelCharges] = 0.0
 	end
 
+	add_elec_utility_expressions(m, p)
+
 	if !isempty(p.elecutil.outage_durations)
 		add_dv_UnservedLoad_constraints(m,p)
 		add_outage_cost_constraints(m,p)
@@ -184,8 +186,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			add_min_hours_crit_ld_met_constraint(m,p)
 		end
 	end
-
-	add_elec_utility_expressions(m, p)
 
 	#################################  Objective Function   ########################################
 	@expression(m, Costs,

@@ -74,7 +74,7 @@ end
 
 
 function add_mincharge_constraint(m, p; _n="")
-    @constraint(m, MinChargeAddCon, 
+    @constraint(m, 
         m[Symbol("MinChargeAdder"*_n)] >= m[Symbol("TotalMinCharge"*_n)] - ( m[Symbol("TotalEnergyChargesUtil"*_n)] + 
         m[Symbol("TotalDemandCharges"*_n)] + m[Symbol("TotalExportBenefit"*_n)] + m[Symbol("TotalFixedCharges"*_n)] )
     )
@@ -95,6 +95,18 @@ end
 
 
 function add_elec_utility_expressions(m, p; _n="")
+
+    if !isempty(p.etariff.export_bins) & !isempty(p.techs)
+        # NOTE: levelization_factor is baked into dvProductionToGrid
+        m[Symbol("TotalExportBenefit"*_n)] = @expression(m, p.pwf_e * p.hours_per_timestep *
+            sum( sum(p.etariff.export_rates[u][ts] * m[Symbol("dvProductionToGrid"*_n)][t, u, ts] 
+                 for u in p.etariff.export_bins, t in p.techs_by_exportbin[u])
+            for ts in p.time_steps)
+        )
+    else
+        m[Symbol("TotalExportBenefit"*_n)] = 0
+    end
+
     m[Symbol("TotalEnergyChargesUtil"*_n)] = @expression(m, p.pwf_e * p.hours_per_timestep * 
         sum( p.etariff.energy_rates[ts] * m[Symbol("dvGridPurchase"*_n)][ts] for ts in p.time_steps) 
     )
@@ -106,7 +118,7 @@ function add_elec_utility_expressions(m, p; _n="")
     else
         m[Symbol("DemandTOUCharges"*_n)] = 0
     end
-
+    
     if !isempty(p.etariff.monthly_demand_rates)
         m[Symbol("DemandFlatCharges"*_n)] = @expression(m, 
             p.pwf_e * sum( p.etariff.monthly_demand_rates[mth] * m[Symbol("dvPeakDemandMonth"*_n)][mth] for mth in p.months) 
@@ -116,7 +128,7 @@ function add_elec_utility_expressions(m, p; _n="")
     end
 
     m[Symbol("TotalDemandCharges"*_n)] = m[Symbol("DemandTOUCharges"*_n)] + m[Symbol("DemandFlatCharges"*_n)]
-    
+
     m[Symbol("TotalFixedCharges"*_n)] = p.pwf_e * p.etariff.fixed_monthly_charge * 12
         
     if p.etariff.annual_min_charge > 12 * p.etariff.min_monthly_charge
@@ -128,26 +140,16 @@ function add_elec_utility_expressions(m, p; _n="")
 	if m[Symbol("TotalMinCharge"*_n)] >= 1e-2
 		add_mincharge_constraint(m, p)
 	else
-		@constraint(m, MinChargeAddCon, m[Symbol("MinChargeAdder"*_n)] == 0)
+		@constraint(m, m[Symbol("MinChargeAdder"*_n)] == 0)
 	end
-	
-    if !isempty(p.etariff.export_bins)
-        # NOTE: levelization_factor is baked into dvProductionToGrid
-        m[Symbol("TotalExportBenefit"*_n)] = @expression(m, p.pwf_e * p.hours_per_timestep *
-            sum( sum(p.etariff.export_rates[u][ts] * m[Symbol("dvProductionToGrid"*_n)][t, u, ts] 
-                 for u in p.etariff.export_bins, t in p.techs_by_exportbin[u])
-            for ts in p.time_steps)
-        )
-    else
-        m[Symbol("TotalExportBenefit"*_n)] = 0
-    end
 
-    m[Symbol("TotalElecBill"*_n)] = 
+    m[Symbol("TotalElecBill"*_n)] = (
         m[Symbol("TotalEnergyChargesUtil"*_n)] 
         + m[Symbol("TotalDemandCharges"*_n)] 
         + m[Symbol("TotalExportBenefit"*_n)] 
         + m[Symbol("TotalFixedCharges"*_n)] 
         + 0.999 * m[Symbol("MinChargeAdder"*_n)]
+    )
     #= Note: 0.999 * MinChargeAdder in Objective b/c when 
         TotalMinCharge > (TotalEnergyCharges + TotalDemandCharges + TotalExportBenefit + TotalFixedCharges)
 		it is arbitrary where the min charge ends up (eg. could be in TotalDemandCharges or MinChargeAdder).
