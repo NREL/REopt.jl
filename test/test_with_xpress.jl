@@ -109,6 +109,14 @@ end
     @test results[3]["Financial"]["lcc_us_dollars"] + results[10]["Financial"]["lcc_us_dollars"] ≈ 1.23887e7 + 437169.0 rtol=1e-5
 end
 
+@testset "MPC" begin
+    model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_mpc(model, "./scenarios/mpc.json")
+    # @test results["Generator"]["size_kw"] ≈ 8.12 atol=0.01
+    # @test (sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 1:9) + 
+    #        sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 13:8760)) == 0
+end
+
 ## equivalent REopt Lite API Post for test 2:
 #   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
 # {"Scenario": {
