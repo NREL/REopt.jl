@@ -42,12 +42,7 @@ export
     MPCScenario,
     MPCInputs,
     run_mpc,
-    build_mpc!,
-    # for docs:
-    ElectricLoad,
-    Financial,
-    ElectricUtility,
-    Generator
+    build_mpc!
 
 import HTTP
 import JSON

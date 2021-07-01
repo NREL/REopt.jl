@@ -27,18 +27,39 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+    run_mpc(m::JuMP.AbstractModel, fp::String)
+
+Solve the model predictive control problem using the `MPCScenario` defined in the JSON file stored at the file path `fp`.
+
+Returns a Dict of results with keys matching those in the `MPCScenario`.
+"""
 function run_mpc(m::JuMP.AbstractModel, fp::String)
 	s = MPCScenario(JSON.parsefile(fp))
 	run_mpc(m, MPCInputs(s))
 end
 
 
+"""
+    run_mpc(m::JuMP.AbstractModel,  d::Dict)
+
+Solve the model predictive control problem using the `MPCScenario` defined in the dict `d`.
+
+Returns a Dict of results with keys matching those in the `MPCScenario`.
+"""
 function run_mpc(m::JuMP.AbstractModel, d::Dict)
 	s = MPCScenario(d)
 	run_mpc(m, MPCInputs(s))
 end
 
 
+"""
+    run_mpc(m::JuMP.AbstractModel, p::MPCInputs; obj::Int=2)
+
+Solve the model predictive control problem using the `MPCInputs`.
+
+Returns a Dict of results with keys matching those in the `MPCScenario`.
+"""
 function run_mpc(m::JuMP.AbstractModel, p::MPCInputs; obj::Int=2)
     build_mpc!(m, p)
 
@@ -76,6 +97,13 @@ function run_mpc(m::JuMP.AbstractModel, p::MPCInputs; obj::Int=2)
 end
 
 
+"""
+    build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
+
+Add variables and constraints for model predictive control model. 
+Similar to a REopt model but with any length of horizon (instead of one calendar year,
+and the DER sizes must be provided.
+"""
 function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
     add_variables!(m, p)
 

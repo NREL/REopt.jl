@@ -50,6 +50,21 @@ struct ElectricTariff
 end
 
 
+"""
+    ElectricTariff
+
+    function ElectricTariff(;
+        urdb_label::String="",
+        urdb_response::Dict=Dict(),
+        year::Int=2020,
+        time_steps_per_hour::Int=1,
+        NEM::Bool=false,
+        wholesale_rate::T=nothing, 
+        monthly_energy_rates::Array=[],
+        monthly_demand_rates::Array=[],
+        ) where {T <: Union{Nothing, Int, Float64, Array}, S <: Union{Nothing, Int, Float64, Array}}
+    
+"""
 function ElectricTariff(;
     urdb_label::String="",
     urdb_response::Dict=Dict(),
@@ -57,7 +72,6 @@ function ElectricTariff(;
     time_steps_per_hour::Int=1,
     NEM::Bool=false,
     wholesale_rate::T=nothing, 
-    curtail_cost::S=0,
     monthly_energy_rates::Array=[],
     monthly_demand_rates::Array=[],
     ) where {T <: Union{Nothing, Int, Float64, Array}, S <: Union{Nothing, Int, Float64, Array}}

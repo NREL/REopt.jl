@@ -1,5 +1,5 @@
-# Inputs
-Inputs to `run_reopt` can be provided in one of three format:
+# REopt Inputs
+Inputs to `run_reopt` can be provided in one of three formats:
 1. a file path (string) to a JSON file,
 2. a `Dict`, or
 3. using the `REoptInputs` struct
@@ -45,20 +45,30 @@ This scenario will consider the option to purchase a solar PV system to reduce e
 
 ## ElectricLoad
 ```@docs
-ElectricLoad
+REoptLite.ElectricLoad
 ```
 
 ## Financial values
 ```@docs
-Financial
+REoptLite.Financial
 ```
 
 ## ElectricUtility
 ```@docs
-ElectricUtility
+REoptLite.ElectricUtility
 ```
 
 ## Generator
 ```@docs
-Generator
+REoptLite.Generator
+```
+
+## ElectricTariff
+```@docs
+REoptLite.ElectricTariff
+```
+
+## Settings
+```@docs
+REoptLite.Settings
 ```
