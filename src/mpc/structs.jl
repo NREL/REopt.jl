@@ -316,6 +316,7 @@ struct MPCGenerator <: AbstractGenerator
     min_turn_down_pct
     only_runs_during_grid_outage
     sells_energy_back_to_grid
+    om_cost_per_kwh
 
     function MPCGenerator(;
         size_kw::Real,
@@ -325,7 +326,8 @@ struct MPCGenerator <: AbstractGenerator
         fuel_avail_gal::Float64 = 660.0,
         min_turn_down_pct::Float64 = 0.0,  # TODO change this to non-zero value
         only_runs_during_grid_outage::Bool = true,
-        sells_energy_back_to_grid::Bool = false
+        sells_energy_back_to_grid::Bool = false,
+        om_cost_per_kwh::Float64=0.0,
         )
 
         max_kw = size_kw
@@ -340,6 +342,7 @@ struct MPCGenerator <: AbstractGenerator
             min_turn_down_pct,
             only_runs_during_grid_outage,
             sells_energy_back_to_grid,
+            om_cost_per_kwh,
         )
     end
 end

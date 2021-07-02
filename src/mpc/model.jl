@@ -168,19 +168,6 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 	if !(p.elecutil.allow_simultaneous_export_import) & !isempty(p.etariff.export_bins)
 		add_simultaneous_export_import_constraint(m, p)
 	end
-
-	# @expression(m, TotalTechCapCosts, p.two_party_factor *
-	# 	sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in p.techs )  # TODO add Yintercept and binary
-	# )
-	
-	# @expression(m, TotalStorageCapCosts, p.two_party_factor *
-	# 	sum(  p.storage.cost_per_kw[b] * m[:dvStoragePower][b]
-	# 		+ p.storage.cost_per_kwh[b] * m[:dvStorageEnergy][b] for b in p.storage.types )
-	# )
-	
-	# @expression(m, TotalPerUnitSizeOMCosts, p.two_party_factor * p.pwf_om *
-	# 	sum( p.om_cost_per_kw[t] * m[:dvSize][t] for t in p.techs )
-	# )
 	
     if !isempty(p.gentechs)
 		m[:TotalPerUnitProdOMCosts] = @expression(m, 

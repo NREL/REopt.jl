@@ -54,7 +54,7 @@ struct MPCInputs <: AbstractInputs
     generator::MPCGenerator
     elecutil::ElectricUtility
     max_grid_export_kwh::Float64
-    export_bins_by_tech::Dict
+    export_bins_by_tech::Dict{String, Array{Symbol, 1}}
 end
 
 
@@ -84,7 +84,10 @@ function MPCInputs(s::MPCScenario)
 
     time_steps_with_grid, time_steps_without_grid, = setup_electric_utility_inputs(s)
 
-    export_bins_by_tech = Dict(zip(elec_techs, [repeat(s.electric_tariff.export_bins, length(elec_techs))]))
+    export_bins_by_tech = Dict{String, Array{Symbol, 1}}()
+    for t in elec_techs
+        export_bins_by_tech[t] = s.electric_tariff.export_bins
+    end
     # TODO implement export bins by tech (rather than assuming that all techs share the export_bins)
  
     MPCInputs(
@@ -153,7 +156,7 @@ function setup_tech_inputs(s::MPCScenario)
     return techs, pvtechs, gentechs, production_factor, existing_sizes
 end
 
-# TODO do we need any PV location inputs?
+
 function setup_pv_inputs(s::MPCScenario, existing_sizes, production_factor)
     for pv in s.pvs
         production_factor[pv.name, :] = pv.prod_factor_series_kw
@@ -165,6 +168,6 @@ end
 
 function setup_gen_inputs(s::MPCScenario, existing_sizes, production_factor)
     existing_sizes["Generator"] = s.generator.size_kw
-    production_factor["Generator", :] = prodfactor(s.generator)
+    production_factor["Generator", :] = ones(length(s.electric_load.loads_kw))
     return nothing
 end
