@@ -121,7 +121,10 @@ function REoptInputs(s::Scenario)
         adjust_load_profile(s, production_factor)
     end
 
-    export_bins_by_tech = Dict(zip(elec_techs, repeat([s.electric_tariff.export_bins], length(elec_techs))))
+    export_bins_by_tech = Dict{String, Array{Symbol, 1}}()
+    for t in elec_techs
+        export_bins_by_tech[t] = s.electric_tariff.export_bins
+    end
     # TODO implement export bins by tech (rather than assuming that all techs share the export_bins)
 
 
