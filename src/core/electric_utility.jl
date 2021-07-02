@@ -29,20 +29,20 @@
 # *********************************************************************************
 """
     ElectricUtility
-```
-Base.@kwdef struct ElectricUtility
-    outage_start_timestep::Int=0  # for modeling a single outage, with critical load spliced into the baseline load ...
-    outage_end_timestep::Int=0  # ... utiltity production_factor = 0 during the outage
-    allow_simultaneous_export_import::Bool=true  # if true the site has two meters (in effect)
-    # variables below used for minimax the expected outage cost,
-    # with max taken over outage start time, expectation taken over outage duration
-    outage_start_timesteps::Array{Int,1}=Int[]  # we minimize the maximum outage cost over outage start times
-    outage_durations::Array{Int,1}=Int[]  # one-to-one with outage_probabilities, outage_durations can be a random variable
-    outage_probabilities::Array{Real,1}=[1.0]
-    outage_timesteps::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:maximum(outage_durations)
-    scenarios::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:length(outage_durations)
-end
-```
+
+    Base.@kwdef struct ElectricUtility
+        outage_start_timestep::Int=0  # for modeling a single outage, with critical load spliced into the baseline load ...
+        outage_end_timestep::Int=0  # ... utiltity production_factor = 0 during the outage
+        allow_simultaneous_export_import::Bool=true  # if true the site has two meters (in effect)
+        # variables below used for minimax the expected outage cost,
+        # with max taken over outage start time, expectation taken over outage duration
+        outage_start_timesteps::Array{Int,1}=Int[]  # we minimize the maximum outage cost over outage start times
+        outage_durations::Array{Int,1}=Int[]  # one-to-one with outage_probabilities, outage_durations can be a random variable
+        outage_probabilities::Array{Real,1}=[1.0]
+        outage_timesteps::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:maximum(outage_durations)
+        scenarios::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:length(outage_durations)
+    end
+
 """
 Base.@kwdef struct ElectricUtility
     outage_start_timestep::Int=0  # for modeling a single outage, with critical load spliced into the baseline load ...

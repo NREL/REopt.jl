@@ -299,12 +299,10 @@ function MPCGenerator(;
     fuel_avail_gal::Float64 = 660.0,
     min_turn_down_pct::Float64 = 0.0,  # TODO change this to non-zero value
     only_runs_during_grid_outage::Bool = true,
-    sells_energy_back_to_grid::Bool = false
+    sells_energy_back_to_grid::Bool = false,
+    om_cost_per_kwh::Float64=0.0,
     )
 ```
-!!! note
-    Not using fuel_cost_per_gallon b/c we assume that any existing fuel
-    is a sunk cost, and currently the model only has existing fuel determined by fuel_avail_gal.
 """
 struct MPCGenerator <: AbstractGenerator
     size_kw

@@ -62,7 +62,7 @@ end
         wholesale_rate::T=nothing, 
         monthly_energy_rates::Array=[],
         monthly_demand_rates::Array=[],
-        ) where {T <: Union{Nothing, Int, Float64, Array}, S <: Union{Nothing, Int, Float64, Array}}
+    ) where {T <: Union{Nothing, Int, Float64, Array}, S <: Union{Nothing, Int, Float64, Array}}
     
 """
 function ElectricTariff(;
