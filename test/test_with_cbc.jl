@@ -71,7 +71,6 @@ end
            sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 13:8760)) == 0
 end
 
-# TODO test MPC with Generator
 # TODO test MPC with outages
 @testset "MPC" begin
     model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
