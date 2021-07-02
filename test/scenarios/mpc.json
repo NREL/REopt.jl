@@ -101,6 +101,7 @@
             0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05]
     },
     "Generator": {
-        "size_kw": 30
+        "size_kw": 30,
+        "only_runs_during_grid_outage": false
     }
 }
