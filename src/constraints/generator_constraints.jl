@@ -52,17 +52,15 @@ end
 
 
 function add_gen_can_run_constraints(m,p)
-	# TODO use p.gentechs here in place of "Generator" ?
 	if p.generator.only_runs_during_grid_outage
-		for ts in p.time_steps_with_grid
-			fix(m[:dvRatedProduction]["Generator", ts], 0.0, force=true)
+		for ts in p.time_steps_with_grid, t in p.gentechs
+			fix(m[:dvRatedProduction][t, ts], 0.0, force=true)
 		end
 	end
 
 	if !(p.generator.sells_energy_back_to_grid)
-		for ts in p.time_steps
-			fix(m[:dvNEMexport]["Generator", ts], 0.0, force=true)
-			fix(m[:dvWHLexport]["Generator", ts], 0.0, force=true)
+		for t in p.gentechs, u in p.export_bins_by_tech[t], ts in p.time_steps
+			fix(m[:dvProductionToGrid][t, u, ts], 0.0, force=true)
 		end
 	end
 end

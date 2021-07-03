@@ -51,7 +51,7 @@ Base.@kwdef struct ElecStorage <: AbstractStorage
     total_rebate_per_kw::Float64 = 0.0
 end
 
-
+# TODO change all DenseAxisArray's into Dicts 
 struct Storage <: AbstractStorage
     types::Array{Symbol,1}
     min_kw::DenseAxisArray{Float64,1}
@@ -65,7 +65,7 @@ struct Storage <: AbstractStorage
     cost_per_kw::DenseAxisArray{Float64,1}
     cost_per_kwh::DenseAxisArray{Float64,1}
     can_grid_charge::Array{Symbol,1}
-    grid_charge_efficiency::Float64
+    grid_charge_efficiency::Dict{Symbol, Float64}
 end
 
 
@@ -79,6 +79,7 @@ function Storage(d::Dict, f::Financial)  # nested dict
     types = Symbol[]
     can_grid_charge = Symbol[]
     raw_vals = Dict(zip(fieldnames(Storage), [Float64[] for _ in range(1, stop=fieldcount(Storage))]))
+    # raw_vals has keys = fieldnames(Storage) and values = arrays of values for each type in types
 
     for (storage_type, input_dict) in d
 
@@ -101,7 +102,7 @@ function Storage(d::Dict, f::Financial)  # nested dict
         d2[k] = DenseAxisArray(raw_vals[k], types)
     end
 
-    grid_charge_efficiency = d2[:charge_efficiency][:elec]
+    grid_charge_efficiency = Dict(:elec => convert(Float64, d2[:charge_efficiency][:elec]))
 
     return Storage(
         storage_args[:types],

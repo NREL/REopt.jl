@@ -41,8 +41,11 @@
         critical_load_pct::Real = 0.5
     )
 
-Must provide either `loads_kw` or [`doe_reference_name` and `city`]. When using the 
-[`doe_reference_name` and `city`] option, choose `city` from one of the 
+Must provide either `loads_kw` or [`doe_reference_name` and `city`] or `doe_reference_name`. 
+
+When only `doe_reference_name` is provided the `Site.latitude` and `Site.longitude` are used to look up the ASHRAE climate zone, which determines the appropriate DoE Commercial Reference Building profile.
+
+When using the [`doe_reference_name` and `city`] option, choose `city` from one of the 
 cities used to represent the ASHRAE climate zones:
 - Albuquerque
 - Atlanta

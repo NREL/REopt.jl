@@ -27,31 +27,34 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-function add_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::Symbol; _n="")
-    r = Dict{String, Any}()
-    r["size_kwh"] = value(m[Symbol("dvStorageEnergy"*_n)][b])
-    r["size_kw"] = value(m[Symbol("dvStoragePower"*_n)][b])
-
-    if r["size_kwh"] != 0
-    	soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
-        r["year_one_soc_series_pct"] = round.(value.(soc) ./ r["size_kwh"], digits=3)
-    else
-        r["year_one_soc_series_pct"] = []
+function mpc_results(m::JuMP.AbstractModel, p::MPCInputs; _n="")
+	tstart = time()
+    d = Dict{String, Any}()
+    for b in p.storage.types
+        if p.storage.size_kwh[b] > 0
+            add_storage_results(m, p, d, b; _n)
+        end
     end
 
-    # TODO handle other storage type names
-    d["Storage"] = r
-    nothing
-end
+    add_electric_tariff_results(m, p, d; _n)
+    add_electric_utility_results(m, p, d; _n)
 
+	if !isempty(p.pvtechs)
+        add_pv_results(m, p, d; _n)
+	end
 
-function add_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b::Symbol; _n="")
-    r = Dict{String, Any}()
-
-    soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
-    r["soc_series_pct"] = round.(value.(soc) ./ p.storage.size_kwh[b], digits=3)
-
-    # TODO handle other storage types
-    d["Storage"] = r
-    nothing
+	if !isempty(p.gentechs)
+        add_generator_results(m, p, d; _n)
+	end
+	
+	time_elapsed = time() - tstart
+	@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
+	
+	# if !isempty(p.elecutil.outage_durations) && isempty(_n)  # outages not included in multinode model
+    #     tstart = time()
+	# 	add_outage_results(m, p, d)
+    #     time_elapsed = time() - tstart
+    #     @info "Outage results processing took $(round(time_elapsed, digits=3)) seconds."
+	# end
+	return d
 end

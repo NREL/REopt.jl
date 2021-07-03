@@ -29,10 +29,6 @@
 # *********************************************************************************
 function add_storage_size_constraints(m, p, b; _n="")
     # TODO add formal types for storage (i.e. "b")
-    # Constraint (4a): initial state of charge
-	@constraint(m,
-        m[Symbol("dvStoredEnergy"*_n)][b, 0] == p.storage.soc_init_pct[b] * m[Symbol("dvStorageEnergy"*_n)][b]
-    )
 
 	# Constraint (4b)-1: Lower bound on Storage Energy Capacity
 	@constraint(m,
@@ -57,12 +53,16 @@ end
 
 
 function add_storage_dispatch_constraints(m, p, b; _n="")
+    # Constraint (4a): initial state of charge
+	@constraint(m,
+        m[Symbol("dvStoredEnergy"*_n)][b, 0] == p.storage.soc_init_pct[b] * m[Symbol("dvStorageEnergy"*_n)][b]
+    )
 				
 	# Constraint (4g): state-of-charge for electrical storage - with grid
 	@constraint(m, [ts in p.time_steps_with_grid],
         m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_timestep * (  
             sum(p.storage.charge_efficiency[b] * m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.elec_techs) 
-            + p.storage.grid_charge_efficiency * m[Symbol("dvGridToStorage"*_n)][b, ts] 
+            + p.storage.grid_charge_efficiency[b] * m[Symbol("dvGridToStorage"*_n)][b, ts] 
             - m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.storage.discharge_efficiency[b]
         )
 	)

@@ -2,10 +2,10 @@
 Outline:
 1. Construct LDF.Inputs from openDSS file, load dict
 2. Add power flow constraints to m, 
-    - set Pⱼ's = -1 * (dvGridPurchase_j - dvWHLexport_j - dvNEMexport_j)
+    - set Pⱼ's = -1 * (dvGridPurchase_j - dvProductionToGrid_j)
 3. solve model
 """
-# TODO add complementary constraint to UL for dvWHLexport_ and dvGridPurchase_ (don't want it in LL s.t. it stays linear)
+# TODO add complementary constraint to UL for dvProductionToGrid_ and dvGridPurchase_ (don't want it in LL s.t. it stays linear)
 
 
 function LDF.build_ldf!(m::JuMP.AbstractModel, p::LDF.Inputs, ps::Array{REoptInputs, 1};
@@ -30,9 +30,8 @@ function add_expressions(m::JuMP.AbstractModel, ps::Array{REoptInputs, 1})
         _n = string("_", p.node)
         m[Symbol("TotalExport"*_n)] = @expression(m, [t in p.time_steps],
             sum(
-                m[Symbol("dvWHLexport"*_n)][tech, t]
-                +  m[Symbol("dvNEMexport"*_n)][tech, t] 
-                for tech in p.techs
+                m[Symbol("dvProductionToGrid"*_n)][t,u,ts] 
+                for t in p.elec_techs, u in p.export_bins_by_tech[t]
             )
         )
     end

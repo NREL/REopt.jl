@@ -29,22 +29,22 @@
 # *********************************************************************************
 """
     Financial
-```
-Base.@kwdef struct Financial
-    om_cost_escalation_pct::Float64 = 0.025
-    elec_cost_escalation_pct::Float64 = 0.023
-    offtaker_tax_pct::Float64 = 0.26
-    offtaker_discount_pct = 0.083
-    two_party_ownership::Bool = false
-    owner_tax_pct::Float64 = 0.26
-    owner_discount_pct::Float64 = 0.083
-    analysis_years::Int = 25
-    macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576]  # IRS pub 946
-    macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446]
-    VoLL::Union{Array{R,1}, R} where R<:Real = 1.00
-    microgrid_premium_pct::Float64 = 0.3
-end
-```
+
+    Base.@kwdef struct Financial
+        om_cost_escalation_pct::Float64 = 0.025
+        elec_cost_escalation_pct::Float64 = 0.023
+        offtaker_tax_pct::Float64 = 0.26
+        offtaker_discount_pct = 0.083
+        two_party_ownership::Bool = false
+        owner_tax_pct::Float64 = 0.26
+        owner_discount_pct::Float64 = 0.083
+        analysis_years::Int = 25
+        macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576]  # IRS pub 946
+        macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446]
+        VoLL::Union{Array{R,1}, R} where R<:Real = 1.00
+        microgrid_premium_pct::Float64 = 0.3
+    end
+
 """
 Base.@kwdef struct Financial
     om_cost_escalation_pct::Float64 = 0.025
