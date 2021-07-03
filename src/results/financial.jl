@@ -27,6 +27,17 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+    add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+
+Adds the Financial results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+Note: the node number is an empty string if evaluating a single `Site`.
+
+Financial results:
+- `lcc_us_dollars` Optimal lifecycle cost
+- `net_capital_costs_plus_om_us_dollars` Capital cost for all technologies plus present value of operations and maintenance over anlaysis period
+- `net_capital_costs` Net capital costs for all technologies, in present value, including replacement costs and incentives.
+"""
 function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
     r["lcc_us_dollars"] = round(value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)]))

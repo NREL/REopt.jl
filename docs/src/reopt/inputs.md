@@ -43,6 +43,17 @@ To add PV to the analysis simply add a PV key with an empty dictionary (to use d
 ```
 This scenario will consider the option to purchase a solar PV system to reduce energy costs, and if solar PV can reduce the energy costs then REopt Lite will provide the optimal PV capacity (assuming perfect foresight!). To use other than default values for `PV` see the [PV struct definition](https://github.com/NREL/REoptLite/blob/master/src/core/pv.jl).  For example, the site under consideration might have some existing PV capacity to account for, which can be done by setting the `existing_kw` key to the appropriate value.
 
+## Scenario
+The `Scenario` struct captures all of the objects that can be included in a scenario.json:
+```@docs
+Scenario
+```
+
+## REoptInputs
+```@docs
+REoptLite.REoptInputs
+```
+
 ## ElectricLoad
 ```@docs
 REoptLite.ElectricLoad
