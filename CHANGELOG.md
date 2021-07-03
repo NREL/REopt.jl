@@ -1,6 +1,6 @@
 # REoptLite Changelog
 
-## develop
+## v0.7.2
 #### Improvements
 - added PV.prod_factor_series_kw input (can skip PVWatts call)
 - added `run_mpc` capability, which dispatches DER for minimum energy cost over an arbitrary time horizon
