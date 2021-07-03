@@ -27,76 +27,70 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-struct Scenario <: AbstractScenario
+struct MPCScenario <: AbstractScenario
     settings::Settings
-    site::Site
-    pvs::Array{PV, 1}
-    storage::Storage
-    electric_tariff::ElectricTariff
-    electric_load::ElectricLoad
+    pvs::Array{MPCPV, 1}
+    storage::MPCStorage
+    electric_tariff::MPCElectricTariff
+    electric_load::MPCElectricLoad
     electric_utility::ElectricUtility
-    financial::Financial
-    generator::Generator
+    financial::MPCFinancial
+    generator::MPCGenerator
 end
 
-"""
-    Scenario(d::Dict)
 
-Constructor for Scenario struct, where `d` has upper-case keys:
-- Site (required)
-- ElectricTariff (required)
-- ElectricLoad (required)
-- PV (optional, can be Array)
-- Storage (optional)
-- ElectricUtility (optional)
-- Financial (optional)
-- Generator (optional)
-
-All values of `d` are expected to `Dicts` except for `PV`, which can be either a `Dict` or `Dict[]`.
-```
-struct Scenario
-    site::Site
-    pvs::Array{PV, 1}
-    storage::Storage
-    electric_tariff::ElectricTariff
-    electric_load::ElectricLoad
-    electric_utility::ElectricUtility
-    financial::Financial
-    generator::Generator
-end
-```
 """
-function Scenario(d::Dict)
+    MPCScenario(d::Dict)
+
+Method for creating the MPCScenario struct:
+    struct MPCScenario <: AbstractScenario
+        settings::Settings
+        pvs::Array{MPCPV, 1}
+        storage::MPCStorage
+        electric_tariff::MPCElectricTariff
+        electric_load::MPCElectricLoad
+        electric_utility::ElectricUtility
+        financial::MPCFinancial
+        generator::MPCGenerator
+    end
+The Dict `d` must have at a minimum the keys:
+    - "ElectricLoad"
+    - "ElectricTariff"
+Other options include:
+    - "PV", which can contain a Dict or Dict[]
+    - "Storage"
+    - "Generator"
+    - "ElectricUtility"
+    - "Settings"
+    - "Financial"
+"""
+function MPCScenario(d::Dict)
     if haskey(d, "Settings")
         settings = Settings(;dictkeys_tosymbols(d["Settings"])...)
     else
         settings = Settings()
     end
     
-    site = Site(;dictkeys_tosymbols(d["Site"])...)
-    
-    pvs = PV[]
+    pvs = MPCPV[]
     if haskey(d, "PV")
         if typeof(d["PV"]) <: AbstractArray
             for (i, pv) in enumerate(d["PV"])
-                check_pv_tilt!(pv, site)
                 if !(haskey(pv, "name"))
                     pv["name"] = string("PV", i)
                 end
-                push!(pvs, PV(;dictkeys_tosymbols(pv)...))
+                push!(pvs, MPCPV(;dictkeys_tosymbols(pv)...))
             end
         elseif typeof(d["PV"]) <: AbstractDict
-            check_pv_tilt!(d["PV"], site)
-            push!(pvs, PV(;dictkeys_tosymbols(d["PV"])...))
+            push!(pvs, MPCPV(;dictkeys_tosymbols(d["PV"])...))
         else
             error("PV input must be Dict or Dict[].")
         end
     end
 
     if haskey(d, "Financial")
-        financial = Financial(; dictkeys_tosymbols(d["Financial"])...)
+        financial = MPCFinancial(; dictkeys_tosymbols(d["Financial"])...)
     else
-        financial = Financial()
+        financial = MPCFinancial()
     end
 
     if haskey(d, "ElectricUtility")
@@ -107,30 +101,25 @@ function Scenario(d::Dict)
 
     if haskey(d, "Storage")
         # only modeling electrochemical storage so far
-        storage_dict = Dict(:elec => dictkeys_tosymbols(d["Storage"]))
-        storage = Storage(storage_dict, financial)
+        storage_dict = Dict(dictkeys_tosymbols(d["Storage"]))
+        storage = MPCStorage(storage_dict)
     else
-        storage_dict = Dict(:elec => Dict(:max_kw => 0))
-        storage = Storage(storage_dict, financial)
+        storage_dict = Dict(:size_kw => 0.0, :size_kwh => 0.0)
+        storage = MPCStorage(storage_dict)
     end
 
-    electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
-                                   latitude=site.latitude, longitude=site.longitude
-                                )
+    electric_load = MPCElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...)
 
-    electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 
-                                       year=electric_load.year
-                                    )
+    electric_tariff = MPCElectricTariff(d["ElectricTariff"])
 
     if haskey(d, "Generator")
-        generator = Generator(; dictkeys_tosymbols(d["Generator"])...)
+        generator = MPCGenerator(; dictkeys_tosymbols(d["Generator"])...)
     else
-        generator = Generator(; max_kw=0)
+        generator = MPCGenerator(; size_kw=0)
     end
 
-    return Scenario(
+    return MPCScenario(
         settings,
-        site, 
         pvs, 
         storage, 
         electric_tariff, 
@@ -139,11 +128,4 @@ function Scenario(d::Dict)
         financial,
         generator
     )
-end
-
-
-function check_pv_tilt!(pv::Dict, site::Site)
-    if !(haskey(pv, "tilt"))
-        pv["tilt"] = site.latitude
-    end
 end

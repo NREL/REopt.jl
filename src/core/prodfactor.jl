@@ -29,6 +29,10 @@
 # *********************************************************************************
 function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly")
 
+    if !(ismissing(pv.prod_factor_series_kw))
+        return pv.prod_factor_series_kw
+    end
+
     url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
         "&lat=", latitude , "&lon=", longitude, "&tilt=", pv.tilt,
         "&system_capacity=1", "&azimuth=", pv.azimuth, "&module_type=", pv.module_type,
@@ -56,6 +60,6 @@ function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly")
 end
 
 
-function prodfactor(g::Generator; ts_per_hour::Int=1)
+function prodfactor(g::AbstractGenerator; ts_per_hour::Int=1)
     return ones(8760 * ts_per_hour)
 end

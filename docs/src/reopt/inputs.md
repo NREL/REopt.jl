@@ -1,5 +1,5 @@
-# Inputs
-Inputs to `run_reopt` can be provided in one of three format:
+# REopt Inputs
+Inputs to `run_reopt` can be provided in one of three formats:
 1. a file path (string) to a JSON file,
 2. a `Dict`, or
 3. using the `REoptInputs` struct
@@ -49,27 +49,37 @@ The `Scenario` struct captures all of the objects that can be included in a scen
 Scenario
 ```
 
+## REoptInputs
+```@docs
+REoptLite.REoptInputs
+```
+
 ## ElectricLoad
 ```@docs
-ElectricLoad
+REoptLite.ElectricLoad
 ```
 
 ## Financial values
 ```@docs
-Financial
+REoptLite.Financial
 ```
 
 ## ElectricUtility
 ```@docs
-ElectricUtility
+REoptLite.ElectricUtility
 ```
 
 ## Generator
 ```@docs
-Generator
+REoptLite.Generator
 ```
 
-## REoptInputs
+## ElectricTariff
 ```@docs
-REoptInputs
+REoptLite.ElectricTariff
+```
+
+## Settings
+```@docs
+REoptLite.Settings
 ```

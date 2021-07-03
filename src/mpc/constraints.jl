@@ -27,31 +27,19 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-function add_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::Symbol; _n="")
-    r = Dict{String, Any}()
-    r["size_kwh"] = value(m[Symbol("dvStorageEnergy"*_n)][b])
-    r["size_kw"] = value(m[Symbol("dvStoragePower"*_n)][b])
-
-    if r["size_kwh"] != 0
-    	soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
-        r["year_one_soc_series_pct"] = round.(value.(soc) ./ r["size_kwh"], digits=3)
-    else
-        r["year_one_soc_series_pct"] = []
-    end
-
-    # TODO handle other storage type names
-    d["Storage"] = r
-    nothing
+function add_previous_monthly_peak_constraint(m::JuMP.AbstractModel, p::MPCInputs; _n="")
+	## Constraint (11d): Monthly peak demand is >= demand at each time step in the month
+	@constraint(m, [mth in p.months, ts in p.etariff.time_steps_monthly[mth]],
+    m[Symbol("dvPeakDemandMonth"*_n)][mth] >= p.etariff.monthly_previous_peak_demands[mth]
+    )
 end
 
 
-function add_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b::Symbol; _n="")
-    r = Dict{String, Any}()
-
-    soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
-    r["soc_series_pct"] = round.(value.(soc) ./ p.storage.size_kwh[b], digits=3)
-
-    # TODO handle other storage types
-    d["Storage"] = r
-    nothing
+function add_previous_tou_peak_constraint(m::JuMP.AbstractModel, p::MPCInputs; _n="")
+    ## Constraint (12d): TOU peak demand is >= demand at each time step in the period` 
+    @constraint(m, [r in p.ratchets],
+        m[Symbol("dvPeakDemandTOU"*_n)][r] >= p.etariff.tou_previous_peak_demands[r]
+    )
 end
+
+

@@ -47,10 +47,24 @@ struct ElectricTariff
 
     export_rates::DenseAxisArray{Array{Float64,1}}
     export_bins::Array{Symbol,1}
-    curtail_bins::Array{Symbol,1}
 end
 
 
+"""
+    ElectricTariff
+
+    function ElectricTariff(;
+        urdb_label::String="",
+        urdb_response::Dict=Dict(),
+        year::Int=2020,
+        time_steps_per_hour::Int=1,
+        NEM::Bool=false,
+        wholesale_rate::T=nothing, 
+        monthly_energy_rates::Array=[],
+        monthly_demand_rates::Array=[],
+    ) where {T <: Union{Nothing, Int, Float64, Array}, S <: Union{Nothing, Int, Float64, Array}}
+    
+"""
 function ElectricTariff(;
     urdb_label::String="",
     urdb_response::Dict=Dict(),
@@ -58,7 +72,6 @@ function ElectricTariff(;
     time_steps_per_hour::Int=1,
     NEM::Bool=false,
     wholesale_rate::T=nothing, 
-    curtail_cost::S=0,
     monthly_energy_rates::Array=[],
     monthly_demand_rates::Array=[],
     ) where {T <: Union{Nothing, Int, Float64, Array}, S <: Union{Nothing, Int, Float64, Array}}
@@ -135,13 +148,21 @@ function ElectricTariff(;
         - otherwise set to 100 dollars/kWh
     - curtail cost set to zero by default, but can be specified same as wholesale rate
     =#
-    export_bins = [:NEM, :WHL, :CUR]
-    curtail_bins = [:CUR]
-
     whl_rate = create_export_rate(wholesale_rate, length(energy_rates), time_steps_per_hour)
-
-    curtail_costs = create_export_rate(curtail_cost, length(energy_rates), time_steps_per_hour)
-    export_rates = DenseAxisArray([ nem_rate, whl_rate, curtail_costs ], export_bins)
+    
+    if !NEM & (sum(whl_rate) >= 0)
+        export_rates = DenseAxisArray{Array{Float64,1}}(undef, [])
+        export_bins = Symbol[]
+    elseif !NEM
+        export_bins = [:WHL]
+        export_rates = DenseAxisArray([whl_rate], export_bins)
+    elseif (sum(whl_rate) >= 0)
+        export_bins = [:NEM]
+        export_rates = DenseAxisArray([nem_rate], export_bins)
+    else
+        export_bins = [:NEM, :WHL]  # TODO add :EXC to align with REopt Lite API
+        export_rates = DenseAxisArray([nem_rate, whl_rate], export_bins)
+    end
 
     ElectricTariff(
         energy_rates,
@@ -153,8 +174,7 @@ function ElectricTariff(;
         annual_min_charge,
         min_monthly_charge,
         export_rates,
-        export_bins,
-        curtail_bins
+        export_bins
     )
 end
 

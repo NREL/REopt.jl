@@ -32,7 +32,7 @@
 use Scenario struct to create reopt.jl model inputs
 """
 
-struct REoptInputs
+struct REoptInputs <: AbstractInputs
     techs::Array{String, 1}
     pvtechs::Array{String, 1}
     gentechs::Array{String,1}
@@ -71,6 +71,7 @@ struct REoptInputs
     min_resil_timesteps::Int
     mg_tech_sizes_equal_grid_sizes::Bool
     node::Int
+    export_bins_by_tech::Dict
 end
 
 
@@ -120,6 +121,13 @@ function REoptInputs(s::Scenario)
         adjust_load_profile(s, production_factor)
     end
 
+    export_bins_by_tech = Dict{String, Array{Symbol, 1}}()
+    for t in elec_techs
+        export_bins_by_tech[t] = s.electric_tariff.export_bins
+    end
+    # TODO implement export bins by tech (rather than assuming that all techs share the export_bins)
+
+
     REoptInputs(
         techs,
         pvtechs,
@@ -158,7 +166,8 @@ function REoptInputs(s::Scenario)
         s.electric_utility,
         s.site.min_resil_timesteps,
         s.site.mg_tech_sizes_equal_grid_sizes,
-        s.site.node
+        s.site.node,
+        export_bins_by_tech
     )
 end
 
@@ -341,7 +350,7 @@ function setup_present_worth_factors(s::Scenario, techs::Array{String, 1}, pvtec
 end
 
 
-function setup_electric_utility_inputs(s::Scenario)
+function setup_electric_utility_inputs(s::AbstractScenario)
     if s.electric_utility.outage_end_timestep > 0 &&
             s.electric_utility.outage_end_timestep > s.electric_utility.outage_start_timestep
         time_steps_without_grid = Int[i for i in range(s.electric_utility.outage_start_timestep,

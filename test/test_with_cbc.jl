@@ -71,6 +71,15 @@ end
            sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 13:8760)) == 0
 end
 
+# TODO test MPC with outages
+@testset "MPC" begin
+    model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
+    r = run_mpc(model, "./scenarios/mpc.json")
+    @test maximum(r["ElectricUtility"]["to_load_series_kw"][1:15]) <= 98.0 
+    @test maximum(r["ElectricUtility"]["to_load_series_kw"][16:24]) <= 97.0
+    @test sum(r["PV"]["to_grid_series_kw"]) ≈ 0
+end
+
 ## much too slow with Cbc (killed after 8 hours)
 # @testset "Minimize Unserved Load" begin
 #     m = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))

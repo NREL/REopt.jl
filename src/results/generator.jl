@@ -49,7 +49,7 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 	r["year_one_to_battery_series_kw"] = round.(value.(generatorToBatt), digits=3)
 
 	generatorToGrid = @expression(m, [ts in p.time_steps],
-		sum(m[:dvWHLexport][t, ts] + m[:dvNEMexport][t, ts] for t in p.gentechs)
+		sum(m[:dvProductionToGrid][t, u, ts] for t in p.gentechs, u in p.export_bins_by_tech[t])
 	)
 	r["year_one_to_grid_series_kw"] = round.(value.(generatorToGrid), digits=3)
 
@@ -74,6 +74,46 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 			for t in p.gentechs, ts in p.time_steps)
 	)
 	r["average_yearly_energy_produced_kwh"] = round(value(AverageGenProd), digits=0)
+    
+	d["Generator"] = r
+    nothing
+end
+
+
+function add_generator_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
+    r = Dict{String, Any}()
+
+	r["variable_om_cost_us_dollars"] = round(value(m[:TotalPerUnitProdOMCosts]), digits=0)
+	r["fuel_cost_us_dollars"] = round(value(m[:TotalGenFuelCharges]), digits=2)
+
+    if p.storage.size_kw[:elec] > 0
+        generatorToBatt = @expression(m, [ts in p.time_steps],
+            sum(m[:dvProductionToStorage][b, t, ts] for b in p.storage.types, t in p.gentechs))
+        r["to_battery_series_kw"] = round.(value.(generatorToBatt), digits=3).data
+    else
+        generatorToBatt = zeros(length(p.time_steps))
+    end
+
+	generatorToGrid = @expression(m, [ts in p.time_steps],
+		sum(m[:dvProductionToGrid][t, u, ts] for t in p.gentechs, u in p.export_bins_by_tech[t])
+	)
+	r["to_grid_series_kw"] = round.(value.(generatorToGrid), digits=3).data
+
+	generatorToLoad = @expression(m, [ts in p.time_steps],
+		sum(m[:dvRatedProduction][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
+			for t in p.gentechs) -
+			generatorToBatt[ts] - generatorToGrid[ts]
+	)
+	r["to_load_series_kw"] = round.(value.(generatorToLoad), digits=3).data
+
+    GeneratorFuelUsed = @expression(m, sum(m[:dvFuelUsage][t, ts] for t in p.gentechs, ts in p.time_steps))
+	r["fuel_used_gal"] = round(value(GeneratorFuelUsed), digits=2)
+
+	Year1GenProd = @expression(m,
+		p.hours_per_timestep * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts]
+			for t in p.gentechs, ts in p.time_steps)
+	)
+	r["energy_produced_kwh"] = round(value(Year1GenProd), digits=0)
     
 	d["Generator"] = r
     nothing

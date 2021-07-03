@@ -27,7 +27,7 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-function add_electric_utility_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 
     Year1UtilityEnergy = p.hours_per_timestep * sum(m[Symbol("dvGridPurchase"*_n)][ts] for ts in p.time_steps)
@@ -40,6 +40,28 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::REoptInputs, d::
     GridToBatt = (sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.types) 
 				  for ts in p.time_steps)
     r["year_one_to_battery_series_kw"] = round.(value.(GridToBatt), digits=3)
+
+    d["ElectricUtility"] = r
+    nothing
+end
+
+
+function add_electric_utility_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
+    r = Dict{String, Any}()
+
+    Year1UtilityEnergy = p.hours_per_timestep * sum(m[Symbol("dvGridPurchase"*_n)][ts] for ts in p.time_steps)
+    r["energy_supplied_kwh"] = round(value(Year1UtilityEnergy), digits=2)
+
+    if p.storage.size_kw[:elec] > 0
+        GridToBatt = @expression(m, [ts in p.time_steps], 
+            sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.types) 
+		)
+        r["to_battery_series_kw"] = round.(value.(GridToBatt), digits=3).data
+    else
+        GridToBatt = zeros(length(p.time_steps))
+    end
+    GridToLoad = @expression(m, [ts in p.time_steps], m[Symbol("dvGridPurchase"*_n)][ts] - GridToBatt[ts])
+    r["to_load_series_kw"] = round.(value.(GridToLoad), digits=3).data
 
     d["ElectricUtility"] = r
     nothing

@@ -9,9 +9,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 		"dvPurchaseSize",
 	]
 	dvs_idx_on_techs_timesteps = String[
-		"dvWHLexport",
         "dvCurtail",
-        "dvNEMexport",
 		"dvRatedProduction",
 	]
 	dvs_idx_on_storagetypes = String[
@@ -62,6 +60,11 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 		dv = "MinChargeAdder"*_n
 		m[Symbol(dv)] = @variable(m, base_name=dv, lower_bound=0)
 
+        if !isempty(p.etariff.export_bins)
+            dv = "dvProductionToGrid"*_n
+            m[Symbol(dv)] = @variable(m, [p.elec_techs, p.etariff.export_bins, p.time_steps], base_name=dv, lower_bound=0)
+        end
+
 		ex_name = "TotalTechCapCosts"*_n
 		m[Symbol(ex_name)] = @expression(m, p.two_party_factor *
 			sum( p.cap_cost_slope[t] * m[Symbol("dvPurchaseSize"*_n)][t] for t in p.techs ) 
@@ -78,50 +81,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 			sum( p.om_cost_per_kw[t] * m[Symbol("dvSize"*_n)][t] for t in p.techs ) 
 		)
 	
-		ex_name = "TotalEnergyChargesUtil"*_n
-		m[Symbol(ex_name)] = @expression(m, p.pwf_e * p.hours_per_timestep * 
-			sum( p.etariff.energy_rates[ts] * m[Symbol("dvGridPurchase"*_n)][ts] for ts in p.time_steps) 
-		)
-	
-		ex_name = "DemandTOUCharges"*_n
-		if !isempty(p.etariff.tou_demand_rates)
-			m[Symbol(ex_name)] = @expression(m, 
-				p.pwf_e * sum( p.etariff.tou_demand_rates[r] * m[Symbol("dvPeakDemandTOU"*_n)][r] for r in p.ratchets)
-			)
-		else
-			m[Symbol(ex_name)] = @expression(m, 0)
-		end
-	
-		ex_name = "DemandFlatCharges"*_n
-		if !isempty(p.etariff.monthly_demand_rates)
-			m[Symbol(ex_name)] = @expression(m, 
-				p.pwf_e * sum( p.etariff.monthly_demand_rates[mth] * m[Symbol("dvPeakDemandMonth"*_n)][mth] for mth in p.months) 
-			)
-		else
-			m[Symbol(ex_name)] = @expression(m, 0)
-		end
-
-		ex_name = "TotalDemandCharges"*_n
-		m[Symbol(ex_name)] = @expression(m, m[Symbol("DemandTOUCharges"*_n)] + m[Symbol("DemandFlatCharges"*_n)])
-		
-		ex_name = "TotalFixedCharges"*_n
-		m[Symbol(ex_name)] = @expression(m, p.pwf_e * p.etariff.fixed_monthly_charge * 12)
-			
-		if p.etariff.annual_min_charge > 12 * p.etariff.min_monthly_charge
-			m[Symbol("TotalMinCharge"*_n)] = p.etariff.annual_min_charge 
-		else
-			m[Symbol("TotalMinCharge"*_n)] = 12 * p.etariff.min_monthly_charge
-        end
-
-        if !isempty(p.techs)
-            # NOTE: levelization_factor is baked into dvNEMexport, dvWHLexport
-            m[Symbol("TotalExportBenefit"*_n)] = p.pwf_e * p.hours_per_timestep * sum(
-                sum( p.etariff.export_rates[:NEM][ts] * m[Symbol("dvNEMexport"*_n)][t, ts] for t in p.techs)
-              + sum( p.etariff.export_rates[:WHL][ts] * m[Symbol("dvWHLexport"*_n)][t, ts]  for t in p.techs)
-                for ts in p.time_steps )
-        else
-            m[Symbol("TotalExportBenefit"*_n)] = 0
-        end
+		add_elec_utility_expressions(m, p; _n=_n)
 	
 		#################################  Objective Function   ########################################
 		m[Symbol("Costs"*_n)] = @expression(m,
@@ -132,11 +92,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 			m[Symbol("TotalPerUnitSizeOMCosts"*_n)] * (1 - p.owner_tax_pct) +
 	
 			# Utility Bill, tax deductible for offtaker, including export benefit
-			( m[Symbol("TotalEnergyChargesUtil"*_n)] 
-			+ m[Symbol("TotalDemandCharges"*_n)]
-			+ m[Symbol("TotalFixedCharges"*_n)]
-            + 0.999 * m[Symbol("MinChargeAdder"*_n)]
-            + m[Symbol("TotalExportBenefit"*_n)] ) * (1 - p.offtaker_tax_pct)
+			m[Symbol("TotalElecBill"*_n)] * (1 - p.offtaker_tax_pct)
 		);
     end
     add_bounds(m, ps)
@@ -155,9 +111,7 @@ function add_bounds(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 		"dvPurchaseSize",
 	]
 	dvs_idx_on_techs_timesteps = String[
-		"dvWHLexport",
         "dvCurtail",
-        "dvNEMexport",
 		"dvRatedProduction",
 	]
 	dvs_idx_on_storagetypes = String[
@@ -268,7 +222,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
             add_tou_peak_constraint(m, p; _n=_n)
         end
 
-		if !(p.elecutil.allow_simultaneous_export_import)
+		if !(p.elecutil.allow_simultaneous_export_import) & !isempty(p.etariff.export_bins)
 			add_simultaneous_export_import_constraint(m, p; _n=_n)
 		end
     

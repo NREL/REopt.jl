@@ -2,17 +2,15 @@
 To use REopt Lite you will need to have a solver installed. REoptLite.jl has been tested with Xpress, Cbc, and CPLEX solvers, but it should work with other Linear Progam solvers (for PV and Storage scenarios) or Mixed Integer Linear Program solvers (for scenarios with outages and/or Generators).
 
 ## Basic
-```julia
-using Xpress
-using JuMP
-using REoptLite
+```@example
+using REoptLite, JuMP, Cbc
 
-m = Model(Xpress.Optimizer)
-results = run_reopt(m, "path/to/scenario.json")
+m = Model(Cbc.Optimizer)
+results = run_reopt(m, "test/scenarios/pv_storage.json")
 ```
-The `results` is a `Dict`. For more on the `results` see the [Outputs](@ref) section.
+See [pv_storage.json](https://github.com/NREL/REoptLite/blob/master/test/scenarios/pv_storage.json) for details on the Scenario.
 
-For more on the `scenario.json` see the [Inputs](@ref) section.
+For more on the `scenario.json` see the [REopt Inputs](@ref) section.
 
 ## Advanced
 

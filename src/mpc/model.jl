@@ -28,47 +28,84 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-	run_reopt(m::JuMP.AbstractModel, fp::String)
+    run_mpc(m::JuMP.AbstractModel, fp::String)
 
-Solve the model using the `Scenario` defined in JSON file stored at the file path `fp`.
+Solve the model predictive control problem using the `MPCScenario` defined in the JSON file stored at the file path `fp`.
+
+Returns a Dict of results with keys matching those in the `MPCScenario`.
 """
-function run_reopt(m::JuMP.AbstractModel, fp::String)
-	s = Scenario(JSON.parsefile(fp))
-	run_reopt(m, REoptInputs(s))
+function run_mpc(m::JuMP.AbstractModel, fp::String)
+	s = MPCScenario(JSON.parsefile(fp))
+	run_mpc(m, MPCInputs(s))
 end
 
 
 """
-	run_reopt(m::JuMP.AbstractModel, d::Dict)
+    run_mpc(m::JuMP.AbstractModel,  d::Dict)
 
-Solve the model using the `Scenario` defined in dict `d`.
+Solve the model predictive control problem using the `MPCScenario` defined in the dict `d`.
+
+Returns a Dict of results with keys matching those in the `MPCScenario`.
 """
-function run_reopt(m::JuMP.AbstractModel, d::Dict)
-	s = Scenario(d)
-	run_reopt(m, REoptInputs(s))
+function run_mpc(m::JuMP.AbstractModel, d::Dict)
+	s = MPCScenario(d)
+	run_mpc(m, MPCInputs(s))
 end
 
 
 """
-	build_reopt!(m::JuMP.AbstractModel, fp::String)
+    run_mpc(m::JuMP.AbstractModel, p::MPCInputs; obj::Int=2)
 
-Add variables and constraints for REopt model. 
-`fp` is used to load in JSON file to construct REoptInputs.
+Solve the model predictive control problem using the `MPCInputs`.
+
+Returns a Dict of results with keys matching those in the `MPCScenario`.
 """
-function build_reopt!(m::JuMP.AbstractModel, fp::String)
-	s = Scenario(JSON.parsefile(fp))
-	build_reopt!(m, REoptInputs(s))
-	nothing
+function run_mpc(m::JuMP.AbstractModel, p::MPCInputs; obj::Int=2)
+    build_mpc!(m, p)
+
+    if obj == 1
+		@objective(m, Min, m[:Costs])
+	elseif obj == 2  # Keep SOC high
+		@objective(m, Min, m[:Costs] - sum(m[:dvStoredEnergy][:elec, ts] for ts in p.time_steps) /
+									   (8760. / p.hours_per_timestep)
+		)
+	end
+
+	@info "Model built. Optimizing..."
+	tstart = time()
+	optimize!(m)
+	opt_time = round(time() - tstart, digits=3)
+	if termination_status(m) == MOI.TIME_LIMIT
+		status = "timed-out"
+    elseif termination_status(m) == MOI.OPTIMAL
+        status = "optimal"
+    else
+		status = "not optimal"
+		@warn "MPC solved with " termination_status(m), ", returning the model."
+		return m
+	end
+	@info "MPC solved with " termination_status(m)
+	@info "Solving took $(opt_time) seconds."
+
+	tstart = time()
+	results = mpc_results(m, p)
+	time_elapsed = time() - tstart
+	@info "Total results processing took $(round(time_elapsed, digits=3)) seconds."
+	results["status"] = status
+	results["solver_seconds"] = opt_time
+	return results
 end
 
 
 """
-	function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
-Add variables and constraints for REopt model.
-"""
-function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
+    build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 
-	add_variables!(m, p)
+Add variables and constraints for model predictive control model. 
+Similar to a REopt model but with any length of horizon (instead of one calendar year,
+and the DER sizes must be provided.
+"""
+function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
+    add_variables!(m, p)
 
 	for ts in p.time_steps_without_grid
 
@@ -78,24 +115,19 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			fix(m[:dvGridToStorage][t, ts], 0.0, force=true)
 		end
 
-        if !isempty(p.etariff.export_bins)
-            for t in p.elec_techs, u in p.export_bins_by_tech[t]
-                fix(m[:dvProductionToGrid][t, u, ts], 0.0, force=true)
-            end
-        end
+		for t in p.elec_techs, u in p.export_bins_by_tech[t]
+			fix(m[:dvProductionToGrid][t, u, ts], 0.0, force=true)
+		end
 	end
 
 	for b in p.storage.types
-		if p.storage.max_kw[b] == 0 || p.storage.max_kwh[b] == 0
+		if p.storage.size_kw[b] == 0 || p.storage.size_kwh[b] == 0
 			@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
-			@constraint(m, m[:dvStorageEnergy][b] == 0)
-			@constraint(m, m[:dvStoragePower][b] == 0)
 			@constraint(m, [t in p.elec_techs, ts in p.time_steps_with_grid],
 						m[:dvProductionToStorage][b, t, ts] == 0)
 			@constraint(m, [ts in p.time_steps], m[:dvDischargeFromStorage][b, ts] == 0)
 			@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
 		else
-			add_storage_size_constraints(m, p, b)
 			add_storage_dispatch_constraints(m, p, b)
 		end
 	end
@@ -107,14 +139,16 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_gen_rated_prod_constraint(m,p)
 	end
 
-	if any(max_kw->max_kw > 0, (p.storage.max_kw[b] for b in p.storage.types))
+	if any(size_kw->size_kw > 0, (p.storage.size_kw[b] for b in p.storage.types))
 		add_storage_sum_constraints(m, p)
 	end
 
 	add_production_constraints(m, p)
 
 	if !isempty(p.techs)
-		add_tech_size_constraints(m, p)
+		@constraint(m, [t in p.techs_no_turndown, ts in p.time_steps],
+            m[:dvRatedProduction][t,ts] == m[:dvSize][t]
+        )
 	end
 
 	add_load_balance_constraints(m, p)
@@ -134,26 +168,13 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	if !(p.elecutil.allow_simultaneous_export_import) & !isempty(p.etariff.export_bins)
 		add_simultaneous_export_import_constraint(m, p)
 	end
-
-	@expression(m, TotalTechCapCosts, p.two_party_factor *
-		sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in p.techs )  # TODO add Yintercept and binary
-	)
-	
-	@expression(m, TotalStorageCapCosts, p.two_party_factor *
-		sum(  p.storage.cost_per_kw[b] * m[:dvStoragePower][b]
-			+ p.storage.cost_per_kwh[b] * m[:dvStorageEnergy][b] for b in p.storage.types )
-	)
-	
-	@expression(m, TotalPerUnitSizeOMCosts, p.two_party_factor * p.pwf_om *
-		sum( p.om_cost_per_kw[t] * m[:dvSize][t] for t in p.techs )
-	)
 	
     if !isempty(p.gentechs)
-		m[:TotalPerUnitProdOMCosts] = @expression(m, p.two_party_factor * p.pwf_om *
+		m[:TotalPerUnitProdOMCosts] = @expression(m, 
 			sum(p.generator.om_cost_per_kwh * p.hours_per_timestep *
 			m[:dvRatedProduction][t, ts] for t in p.gentechs, ts in p.time_steps)
 		)
-		m[:TotalGenFuelCharges] = @expression(m, p.pwf_e *
+		m[:TotalGenFuelCharges] = @expression(m,
 			sum(m[:dvFuelUsage][t,ts] * p.generator.fuel_cost_per_gallon for t in p.gentechs, ts in p.time_steps)
 		)
     else
@@ -162,7 +183,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
 	add_elec_utility_expressions(m, p)
+    add_previous_monthly_peak_constraint(m, p)
+    add_previous_tou_peak_constraint(m, p)
 
+    # TODO: random outages in MPC?
 	if !isempty(p.elecutil.outage_durations)
 		add_dv_UnservedLoad_constraints(m,p)
 		add_outage_cost_constraints(m,p)
@@ -189,71 +213,30 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 	#################################  Objective Function   ########################################
 	@expression(m, Costs,
-		# Capital Costs
-		TotalTechCapCosts + TotalStorageCapCosts +
 
-		# Fixed O&M, tax deductible for owner
-		TotalPerUnitSizeOMCosts * (1 - p.owner_tax_pct) +
+		# Variable O&M
+		m[:TotalPerUnitProdOMCosts] +
 
-		# Variable O&M, tax deductible for owner
-		m[:TotalPerUnitProdOMCosts] * (1 - p.owner_tax_pct) +
+		# Total Generator Fuel Costs
+        m[:TotalGenFuelCharges] +
 
-		# Total Generator Fuel Costs, tax deductible for offtaker
-        m[:TotalGenFuelCharges] * (1 - p.offtaker_tax_pct) +
-
-		# Utility Bill, tax deductible for offtaker
-		m[:TotalElecBill] * (1 - p.offtaker_tax_pct)
+		# Utility Bill
+		m[:TotalElecBill]
 	);
 	if !isempty(p.elecutil.outage_durations)
 		add_to_expression!(Costs, m[:ExpectedOutageCost] + m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost] + m[:ExpectedMGFuelCost])
 	end
-    
+    #= Note: 0.9999*MinChargeAdder in Objective b/c when TotalMinCharge > (TotalEnergyCharges + TotalDemandCharges + TotalExportBenefit + TotalFixedCharges)
+		it is arbitrary where the min charge ends up (eg. could be in TotalDemandCharges or MinChargeAdder).
+		0.0001*MinChargeAdder is added back into LCC when writing to results.  =#
 	nothing
 end
 
 
-function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; obj::Int=2)
-
-	build_reopt!(m, p)
-
-	if obj == 1
-		@objective(m, Min, m[:Costs])
-	elseif obj == 2  # Keep SOC high
-		@objective(m, Min, m[:Costs] - sum(m[:dvStoredEnergy][:elec, ts] for ts in p.time_steps) /
-									   (8760. / p.hours_per_timestep)
-		)
-	end
-
-	@info "Model built. Optimizing..."
-	tstart = time()
-	optimize!(m)
-	opt_time = round(time() - tstart, digits=3)
-	if termination_status(m) == MOI.TIME_LIMIT
-		status = "timed-out"
-    elseif termination_status(m) == MOI.OPTIMAL
-        status = "optimal"
-    else
-		status = "not optimal"
-		@warn "REopt solved with " termination_status(m), ", returning the model."
-		return m
-	end
-	@info "REopt solved with " termination_status(m)
-	@info "Solving took $(opt_time) seconds."
-
-	tstart = time()
-	results = reopt_results(m, p)
-	time_elapsed = time() - tstart
-	@info "Total results processing took $(round(time_elapsed, digits=3)) seconds."
-	results["status"] = status
-	results["solver_seconds"] = opt_time
-	return results
-end
-
-
-function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
-	@variables m begin
-		dvSize[p.techs] >= 0  # System Size of Technology t [kW]
-		dvPurchaseSize[p.techs] >= 0  # system kW beyond existing_kw that must be purchased
+function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
+    @variables m begin
+		# dvSize[p.techs] >= 0  # System Size of Technology t [kW]
+		# dvPurchaseSize[p.techs] >= 0  # system kW beyond existing_kw that must be purchased
 		dvGridPurchase[p.time_steps] >= 0  # Power from grid dispatched to meet electrical load [kW]
 		dvRatedProduction[p.techs, p.time_steps] >= 0  # Rated production of technology t [kW]
 		dvCurtail[p.techs, p.time_steps] >= 0  # [kW]
@@ -261,12 +244,23 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvDischargeFromStorage[p.storage.types, p.time_steps] >= 0 # Power discharged from storage system b [kW]
 		dvGridToStorage[p.storage.types, p.time_steps] >= 0 # Electrical power delivered to storage by the grid [kW]
 		dvStoredEnergy[p.storage.types, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
-		dvStoragePower[p.storage.types] >= 0   # Power capacity of storage system b [kW]
-		dvStorageEnergy[p.storage.types] >= 0   # Energy capacity of storage system b [kWh]
+		# dvStoragePower[p.storage.types] >= 0   # Power capacity of storage system b [kW]
+		# dvStorageEnergy[p.storage.types] >= 0   # Energy capacity of storage system b [kWh]
 		dvPeakDemandTOU[p.ratchets] >= 0  # Peak electrical power demand during ratchet r [kW]
 		dvPeakDemandMonth[p.months] >= 0  # Peak electrical power demand during month m [kW]
-		MinChargeAdder >= 0
+		# MinChargeAdder >= 0
 	end
+
+	if !isempty(p.etariff.export_bins)
+		@variable(m, dvProductionToGrid[p.elec_techs, p.etariff.export_bins, p.time_steps] >= 0)
+	end
+
+    m[:dvSize] = p.existing_sizes
+
+    m[:dvStoragePower] = p.storage.size_kw
+    m[:dvStorageEnergy] = p.storage.size_kwh
+    # not modeling min charges since control does not affect them
+    m[:MinChargeAdder] = 0
 
 	if !isempty(p.gentechs)  # Problem becomes a MILP
 		@warn """Adding binary variable to model gas generator. 
@@ -277,12 +271,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 	end
 
-    if !isempty(p.etariff.export_bins)
-        @variable(m, dvProductionToGrid[p.elec_techs, p.etariff.export_bins, p.time_steps] >= 0)
-        
-    end
-
-	if !(p.elecutil.allow_simultaneous_export_import) & !isempty(p.etariff.export_bins)
+	if !(p.elecutil.allow_simultaneous_export_import)
 		@warn """Adding binary variable to prevent simultaneous grid import/export. 
 				 Some solvers are very slow with integer variables"""
 		@variable(m, binNoGridPurchases[p.time_steps], Bin)
@@ -303,21 +292,18 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 			dvMGRatedProduction[p.techs, S, tZeros, outage_timesteps]  # MG Rated Production at every timestep.  Multiply by ProdFactor to get actual energy
 			dvMGStoredEnergy[S, tZeros, 0:max_outage_duration] >= 0 # State of charge of the MG storage system
 			dvMaxOutageCost[S] >= 0 # maximum outage cost dependent on number of outage durations
-			dvMGTechUpgradeCost[p.techs] >= 0
-			dvMGStorageUpgradeCost >= 0
-			dvMGsize[p.techs] >= 0
+			# dvMGTechUpgradeCost[p.techs] >= 0
+			# dvMGStorageUpgradeCost >= 0
+			# dvMGsize[p.techs] >= 0
 			
 			dvMGFuelUsed[p.techs, S, tZeros] >= 0
 			dvMGMaxFuelUsage[S] >= 0
 			dvMGMaxFuelCost[S] >= 0
 			dvMGCurtail[p.techs, S, tZeros, outage_timesteps] >= 0
 
-			binMGStorageUsed, Bin # 1 if MG storage battery used, 0 otherwise
-			binMGTechUsed[p.techs], Bin # 1 if MG tech used, 0 otherwise
+			# binMGStorageUsed, Bin # 1 if MG storage battery used, 0 otherwise
+			# binMGTechUsed[p.techs], Bin # 1 if MG tech used, 0 otherwise
 			binMGGenIsOnInTS[S, tZeros, outage_timesteps], Bin
 		end
 	end
-
 end
-
-

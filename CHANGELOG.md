@@ -1,5 +1,10 @@
 # REoptLite Changelog
 
+## develop
+#### Improvements
+- added PV.prod_factor_series_kw input (can skip PVWatts call)
+- added `run_mpc` capability, which dispatches DER for minimum energy cost over an arbitrary time horizon
+
 ## v0.7.1
 ##### bug fixes
 - ElectricLoad.city default is empty string, must be filled in before annual_kwh look up
