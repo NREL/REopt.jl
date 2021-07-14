@@ -52,9 +52,10 @@ Constructor for Scenario struct, where `d` has upper-case keys:
 - Financial (optional)
 - Generator (optional)
 
-All values of `d` are expected to `Dicts` except for `PV`, which can be either a `Dict` or `Dict[]`.
+All values of `d` are expected to be `Dicts` except for `PV`, which can be either a `Dict` or `Dict[]`.
 ```
 struct Scenario
+    settings::Settings
     site::Site
     pvs::Array{PV, 1}
     storage::Storage
