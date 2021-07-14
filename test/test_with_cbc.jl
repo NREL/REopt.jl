@@ -69,6 +69,9 @@ end
     @test results["Generator"]["size_kw"] ≈ 8.12 atol=0.01
     @test (sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 1:9) + 
            sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 13:8760)) == 0
+    p = REoptInputs("./scenarios/generator.json")
+    simresults = simulate_outages(results, p)
+    @test simresults["resilience_hours_max"] == 11
 end
 
 # TODO test MPC with outages

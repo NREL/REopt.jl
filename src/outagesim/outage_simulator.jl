@@ -110,34 +110,45 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
 end
 
 
-function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=0, critical_loads_kw=[], wind_kw_ac_hourly=[],
+"""
+    simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=0, critical_loads_kw=[], wind_kw_ac_hourly=[],
+        batt_roundtrip_efficiency=0.829, diesel_kw=0, fuel_available=0, b=0, m=0, diesel_min_turndown=0.3,
+    )
+
+Time series simulation of outages starting at every time step of the year. Used to calculate how many time steps the 
+critical load can be met in every outage, which in turn is used to determine probabilities of meeting the critical load.
+
+# Arguments
+- batt_kwh: float, battery storage capacity
+- batt_kw: float, battery inverter capacity
+- pv_kw_ac_hourly: list of floats, AC production of PV system
+- init_soc: list of floats between 0 and 1 inclusive, initial state-of-charge
+- critical_loads_kw: list of floats
+- wind_kw_ac_hourly: list of floats, AC production of wind turbine
+- batt_roundtrip_efficiency: roundtrip battery efficiency
+- diesel_kw: float, diesel generator capacity
+- fuel_available: float, gallons of diesel fuel available
+- b: float, diesel fuel burn rate intercept coefficient (y = m*x + b*rated_capacity)  [gal/kwh/kw]
+- m: float, diesel fuel burn rate slope (y = m*x + b*rated_capacity)  [gal/kWh]
+- diesel_min_turndown: minimum generator turndown in fraction of generator capacity (0 to 1)
+
+Returns a dict
+```
+{
+    "resilience_by_timestep": r,
+    "resilience_hours_min": r_min,
+    "resilience_hours_max": r_max,
+    "resilience_hours_avg": r_avg,
+    "outage_durations": x_vals,
+    "probs_of_surviving": y_vals,
+    "probs_of_surviving_by_month": y_vals_group_month,
+    "probs_of_surviving_by_hour_of_the_day": y_vals_group_hour,
+}
+```
+"""
+function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[], critical_loads_kw=[], wind_kw_ac_hourly=[],
                      batt_roundtrip_efficiency=0.829, diesel_kw=0, fuel_available=0, b=0, m=0, diesel_min_turndown=0.3,
                      )
-    """
-    :param batt_kwh: float, battery storage capacity
-    :param batt_kw: float, battery inverter capacity
-    :param pv_kw_ac_hourly: list of floats, AC production of PV system
-    :param init_soc: list of floats between 0 and 1 inclusive, initial state-of-charge
-    :param critical_loads_kw: list of floats
-    :param wind_kw_ac_hourly: list of floats, AC production of wind turbine
-    :param batt_roundtrip_efficiency: roundtrip battery efficiency
-    :param diesel_kw: float, diesel generator capacity
-    :param fuel_available: float, gallons of diesel fuel available
-    :param b: float, diesel fuel burn rate intercept coefficient (y = m*x + b*rated_capacity)  [gal/kwh/kw]
-    :param m: float, diesel fuel burn rate slope (y = m*x + b*rated_capacity)  [gal/kWh]
-    :param diesel_min_turndown: minimum generator turndown in fraction of generator capacity (0 to 1)
-    :return: dict,
-        {
-            "resilience_by_timestep": r,
-            "resilience_hours_min": r_min,
-            "resilience_hours_max": r_max,
-            "resilience_hours_avg": r_avg,
-            "outage_durations": x_vals,
-            "probs_of_surviving": y_vals,
-            "probs_of_surviving_by_month": y_vals_group_month,
-            "probs_of_surviving_by_hour_of_the_day": y_vals_group_hour,
-        }
-    """
     n_timesteps = length(critical_loads_kw)
     n_steps_per_hour = Int(n_timesteps / 8760)
     r = repeat([0], n_timesteps)
@@ -172,18 +183,18 @@ function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=0
     
     for time_step in 1:n_timesteps
         r[time_step] = simulate_outage(;
-            init_time_step=time_step,
-            diesel_kw=diesel_kw,
-            fuel_available=fuel_available,
-            b=b, m=m,
-            diesel_min_turndown=diesel_min_turndown,
-            batt_kwh=batt_kwh,
-            batt_kw=batt_kw,
-            batt_roundtrip_efficiency=batt_roundtrip_efficiency,
-            n_timesteps=n_timesteps,
-            n_steps_per_hour=n_steps_per_hour,
-            batt_soc_kwh=init_soc[time_step] * batt_kwh,
-            crit_load=load_minus_der
+            init_time_step = time_step,
+            diesel_kw = diesel_kw,
+            fuel_available = fuel_available,
+            b = b, m = m,
+            diesel_min_turndown = diesel_min_turndown,
+            batt_kwh = batt_kwh,
+            batt_kw = batt_kw,
+            batt_roundtrip_efficiency = batt_roundtrip_efficiency,
+            n_timesteps = n_timesteps,
+            n_steps_per_hour = n_steps_per_hour,
+            batt_soc_kwh = init_soc[time_step] * batt_kwh,
+            crit_load = load_minus_der
         )
     end
     results = process_results(r, n_timesteps)
@@ -215,45 +226,58 @@ function process_results(r, n_timesteps)
 end
 
 
-function simulate_outages(d::Dict; microgrid_only::Bool=false)
-    batt_roundtrip_efficiency = d["inputs"].storage.charge_efficiency[:elec] * 
-                                d["inputs"].storage.discharge_efficiency[:elec]
+function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
+    batt_roundtrip_efficiency = p.storage.charge_efficiency[:elec] * 
+                                p.storage.discharge_efficiency[:elec]
 
     # TODO handle generic PV names
-    if "PVtoLoad" in keys(d)
-        pv_kw_ac_hourly = d["PVtoBatt"] + d["PVtoCUR"] + d["PVtoLoad"] + d["PVtoNEM"] + d["PVtoWHL"]
-    else
-        pv_kw_ac_hourly = repeat([0], length(d["inputs"].time_steps))
+    pv_kw_ac_hourly = zeros(length(p.time_steps))
+    if "PV" in keys(d)
+        pv_kw_ac_hourly = (
+            get(d["PV"], "year_one_to_battery_series_kw", zeros(length(p.time_steps)))
+          + get(d["PV"], "year_one_curtailed_production_series_kw", zeros(length(p.time_steps)))
+          + get(d["PV"], "year_one_to_load_series_kw", zeros(length(p.time_steps)))
+          + get(d["PV"], "year_one_to_grid_series_kw", zeros(length(p.time_steps)))
+        )
     end
-
     if microgrid_only && !Bool(get(d, "PV_upgraded", false))
-        pv_kw_ac_hourly = repeat([0], length(d["inputs"].time_steps))
+        pv_kw_ac_hourly = zeros(length(p.time_steps))
     end
 
-    batt_kwh = get(d, "batt_kwh", 0)
-    batt_kw = get(d, "batt_kw", 0)
+    batt_kwh = 0
+    batt_kw = 0
+    init_soc = []
+    if "Storage" in keys(d)
+        batt_kwh = get(d["Storage"], "size_kwh", 0)
+        batt_kw = get(d["Storage"], "size_kw", 0)
+        init_soc = get(d["Storage"], "year_one_soc_series_pct", [])
+    end
     if microgrid_only && !Bool(get(d, "storage_upgraded", false))
         batt_kwh = 0
         batt_kw = 0
+        init_soc = []
     end
 
-    diesel_kw = get(d, "Generator_mg_kw", get(d, "generator_kw", 0))
+    diesel_kw = 0
+    if "Generator" in keys(d)
+        diesel_kw = get(d["Generator"], "size_kw", 0)
+    end
     if microgrid_only
         diesel_kw = get(d, "Generator_mg_kw", 0)
     end
 
     simulate_outages(;
-        batt_kwh=batt_kwh, 
-        batt_kw=batt_kw, 
-        pv_kw_ac_hourly=pv_kw_ac_hourly,
-        init_soc=get(d, "year_one_soc_series_pct", []), 
-        critical_loads_kw=d["inputs"].elec_load.critical_loads_kw, 
-        wind_kw_ac_hourly=[],
-        batt_roundtrip_efficiency=batt_roundtrip_efficiency,
-        diesel_kw=diesel_kw, 
-        fuel_available=d["inputs"].generator.fuel_avail_gal,
-        b=d["inputs"].generator.fuel_intercept_gal_per_hr,
-        m=d["inputs"].generator.fuel_slope_gal_per_kwh, 
-        diesel_min_turndown=d["inputs"].generator.min_turn_down_pct
+        batt_kwh = batt_kwh, 
+        batt_kw = batt_kw, 
+        pv_kw_ac_hourly = pv_kw_ac_hourly,
+        init_soc = init_soc, 
+        critical_loads_kw = p.elec_load.critical_loads_kw, 
+        wind_kw_ac_hourly = [],
+        batt_roundtrip_efficiency = batt_roundtrip_efficiency,
+        diesel_kw = diesel_kw, 
+        fuel_available = p.generator.fuel_avail_gal,
+        b = p.generator.fuel_intercept_gal_per_hr,
+        m = p.generator.fuel_slope_gal_per_kwh, 
+        diesel_min_turndown = p.generator.min_turn_down_pct
     )
 end

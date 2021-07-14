@@ -58,7 +58,7 @@ function add_outage_results(m, p, r::Dict)
 
 			# need the following logic b/c can have non-zero mg capacity when not using the capacity
 			# due to the constraint for setting the mg capacities equal to the grid connected capacities
-			if Bool(r[t * "_upgraded"])
+			if Bool(round(r[t * "_upgraded"], digits=1))
 				r[string(t, "mg_kw")] = round(value(m[:dvMGsize][t]), digits=4)
 			else
 				r[string(t, "mg_kw")] = 0
@@ -99,7 +99,7 @@ function add_outage_results(m, p, r::Dict)
 
 			# need the following logic b/c can have non-zero mg capacity when not using the capacity
 			# due to the constraint for setting the mg capacities equal to the grid connected capacities
-			if Bool(r[t * "_upgraded"])
+			if Bool(round(r[t * "_upgraded"], digits=1))
 				r[string(t, "_mg_kw")] = round(value(m[:dvMGsize][t]), digits=4)
 			else
 				r[string(t, "mg_kw")] = 0
