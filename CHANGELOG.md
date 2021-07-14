@@ -1,5 +1,10 @@
 # REoptLite Changelog
 
+## v0.7.3
+##### bug fixes
+- outage results processing would fail sometimes when an integer variable was not exact (e.g. 1.000000001)
+- fixed `simulate_outages` for revised results formats (key names changed to align with the REopt Lite API)
+
 ## v0.7.2
 #### Improvements
 - added PV.prod_factor_series_kw input (can skip PVWatts call)
