@@ -337,7 +337,7 @@ function setup_present_worth_factors(s::Scenario, techs::Array{String, 1}, pvtec
         s.financial.owner_discount_pct
     )
 
-    if s.financial.two_party_ownership
+    if s.financial.third_party_ownership
         pwf_offtaker = annuity(s.financial.analysis_years, 0.0, s.financial.offtaker_discount_pct)
         pwf_owner = annuity(s.financial.analysis_years, 0.0, s.financial.owner_discount_pct)
         two_party_factor = (pwf_offtaker * (1 - s.financial.offtaker_tax_pct)) /

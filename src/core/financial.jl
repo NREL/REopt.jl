@@ -35,7 +35,7 @@
         elec_cost_escalation_pct::Float64 = 0.023
         offtaker_tax_pct::Float64 = 0.26
         offtaker_discount_pct = 0.083
-        two_party_ownership::Bool = false
+        third_party_ownership::Bool = false
         owner_tax_pct::Float64 = 0.26
         owner_discount_pct::Float64 = 0.083
         analysis_years::Int = 25
@@ -51,7 +51,7 @@ Base.@kwdef struct Financial
     elec_cost_escalation_pct::Float64 = 0.023
     offtaker_tax_pct::Float64 = 0.26
     offtaker_discount_pct = 0.083
-    two_party_ownership::Bool = false
+    third_party_ownership::Bool = false
     owner_tax_pct::Float64 = 0.26
     owner_discount_pct::Float64 = 0.083
     analysis_years::Int = 25
