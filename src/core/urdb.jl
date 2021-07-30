@@ -60,50 +60,33 @@ end
 
 
 """
-    URDBrate(urdb_label::String, year::Int)
+    URDBrate(urdb_label::String, year::Int=2019; time_steps_per_hour=1)
 
-download URDB dict, parse into reopt inputs, return ElectricTariff struct.
+download URDB dict, parse into reopt inputs, return URDBrate struct.
     year is required to align weekday/weekend schedules.
 """
 function URDBrate(urdb_label::String, year::Int=2019; time_steps_per_hour=1)
-    rate = download_urdb(urdb_label)
-    demand_min = get(rate, "peakkwcapacitymin", 0.0)  # TODO add check for site min demand against tariff?
+    urdb_response = download_urdb(urdb_label)
+    URDBrate(urdb_response, year; time_steps_per_hour=time_steps_per_hour)
+end
 
-    n_monthly_demand_tiers, monthly_demand_tier_limits, monthly_demand_rates,
-      n_tou_demand_tiers, tou_demand_tier_limits, tou_demand_rates, tou_demand_ratchet_timesteps =
-      parse_demand_rates(rate, year)
 
-    energy_rates, energy_tier_limits = parse_urdb_energy_costs(rate, year)
+"""
+    URDBrate(util_name::String, rate_name::String, year::Int=2019; time_steps_per_hour=1)
 
-    fixed_monthly_charge, annual_min_charge, min_monthly_charge = parse_urdb_fixed_charges(rate)
-
-    URDBrate(
-        year,
-        time_steps_per_hour,
-
-        energy_rates,
-        energy_tier_limits,
-
-        n_monthly_demand_tiers,
-        monthly_demand_tier_limits,
-        monthly_demand_rates,
-
-        n_tou_demand_tiers,
-        tou_demand_tier_limits,
-        tou_demand_rates,
-        tou_demand_ratchet_timesteps,
-
-        fixed_monthly_charge,
-        annual_min_charge,
-        min_monthly_charge,
-    )
+download URDB dict, parse into reopt inputs, return URDBrate struct.
+    year is required to align weekday/weekend schedules.
+"""
+function URDBrate(util_name::String, rate_name::String, year::Int=2019; time_steps_per_hour=1)
+    urdb_response = download_urdb(util_name, rate_name)
+    URDBrate(urdb_response, year; time_steps_per_hour=time_steps_per_hour)
 end
 
 
 """
     URDBrate(urdb_response::Dict, year::Int)
 
-process URDB dict, parse into reopt inputs, return ElectricTariff struct.
+process URDB response dict, parse into reopt inputs, return URDBrate struct.
     year is required to align weekday/weekend schedules.
 """
 function URDBrate(urdb_response::Dict, year::Int=2019; time_steps_per_hour=1)
@@ -141,7 +124,7 @@ function URDBrate(urdb_response::Dict, year::Int=2019; time_steps_per_hour=1)
 end
 
 
-function download_urdb(urdb_label::String; version::Int=7)
+function download_urdb(urdb_label::String; version::Int=8)
     url = string("https://api.openei.org/utility_rates", "?api_key=", urdb_key,
                 "&version=", version , "&format=json", "&detail=full",
                 "&getpage=", urdb_label
@@ -167,6 +150,54 @@ function download_urdb(urdb_label::String; version::Int=7)
     else
         error("Could not find $(urdb_label) in URDB.")
     end
+end
+
+
+function download_urdb(util_name::String, rate_name::String; version::Int=8)
+    url = string("https://api.openei.org/utility_rates", "?api_key=", urdb_key,
+                "&version=", version , "&format=json", "&detail=full",
+                "&ratesforutility=", replace(util_name, "&" => "%26")
+    )
+    response = nothing
+    try
+        @info "Checking URDB for " rate_name
+        r = HTTP.get(url, require_ssl_verification=false)  # cannot verify on NREL VPN
+        response = JSON.parse(String(r.body))
+        if r.status != 200
+            error("Bad response from URDB: $(response["errors"])")  # TODO URDB has "errors"?
+        end
+    catch e
+        error("Error occurred :$(e)")
+    end
+
+    rates = response["items"]  # response['items'] contains a vector of dicts
+    if length(rates) == 0
+        error("Could not find $(urdb_label) in URDB.")
+    end
+
+    matched_rates = []
+    start_dates = []
+
+    for rate in rates
+        if contains(rate_name, rate["name"])
+            push!(matched_rates, rate)  # urdb can contain multiple rates of same name
+            if "startdate" in keys(rate)
+                push!(start_dates, rate["startdate"])
+            end
+        end
+    end
+
+    # find the newest rate of those that match the rate_name
+    newest_index = 1  # covers the case where one rate is returned without a "startdate"
+    if length(start_dates) > 1 && length(start_dates) == length(matched_rates)
+        _, newest_index = findmax(start_dates)
+    end
+    
+    if length(matched_rates) == 0
+        error("Could not find $(rate_name) in URDB.")
+    end
+
+    return matched_rates[newest_index]
 end
 
 

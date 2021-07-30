@@ -53,21 +53,33 @@ end
 """
     ElectricTariff
 
+    ElectricTariff constructor
+    
     function ElectricTariff(;
         urdb_label::String="",
         urdb_response::Dict=Dict(),
+        urdb_utility_name::String="",
+        urdb_rate_name::String="",
         year::Int=2020,
         time_steps_per_hour::Int=1,
         NEM::Bool=false,
         wholesale_rate::T=nothing, 
         monthly_energy_rates::Array=[],
         monthly_demand_rates::Array=[],
-    ) where {T <: Union{Nothing, Int, Float64, Array}, S <: Union{Nothing, Int, Float64, Array}}
+        blended_annual_energy_rate::S=nothing,
+        blended_annual_demand_rate::R=nothing,
+        ) where {
+            T <: Union{Nothing, Int, Float64, Array}, 
+            S <: Union{Nothing, Int, Float64}, 
+            R <: Union{Nothing, Int, Float64}
+        }
     
 """
 function ElectricTariff(;
     urdb_label::String="",
     urdb_response::Dict=Dict(),
+    urdb_utility_name::String="",
+    urdb_rate_name::String="",
     year::Int=2020,
     time_steps_per_hour::Int=1,
     NEM::Bool=false,
@@ -92,6 +104,10 @@ function ElectricTariff(;
     elseif !isempty(urdb_response)
 
         u = URDBrate(urdb_response, year, time_steps_per_hour=time_steps_per_hour)
+
+    elseif !isempty(urdb_utility_name) && !isempty(urdb_rate_name)
+
+        u = URDBrate(urdb_utility_name, urdb_rate_name, year, time_steps_per_hour=time_steps_per_hour)
 
     elseif !isempty(monthly_energy_rates) && !isempty(monthly_demand_rates)
 
