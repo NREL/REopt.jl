@@ -74,7 +74,13 @@ function ElectricTariff(;
     wholesale_rate::T=nothing, 
     monthly_energy_rates::Array=[],
     monthly_demand_rates::Array=[],
-    ) where {T <: Union{Nothing, Int, Float64, Array}, S <: Union{Nothing, Int, Float64, Array}}
+    blended_annual_energy_rate::S=nothing,
+    blended_annual_demand_rate::R=nothing,
+    ) where {
+        T <: Union{Nothing, Int, Float64, Array}, 
+        S <: Union{Nothing, Int, Float64}, 
+        R <: Union{Nothing, Int, Float64}
+    }
     
     nem_rate = [100.0 for _ in 1:8760*time_steps_per_hour]
 
@@ -91,10 +97,10 @@ function ElectricTariff(;
 
         invalid_args = String[]
         if !(length(monthly_energy_rates) == 12)
-            push!(invalid_args, "length(monthly_energy_rates) must equal, got length $(length(monthly_energy_rates))")
+            push!(invalid_args, "length(monthly_energy_rates) must equal 12, got length $(length(monthly_energy_rates))")
         end
         if !(length(monthly_demand_rates) == 12)
-            push!(invalid_args, "length(monthly_demand_rates) must equal, got length $(length(monthly_demand_rates))")
+            push!(invalid_args, "length(monthly_demand_rates) must equal 12, got length $(length(monthly_demand_rates))")
         end
         if length(invalid_args) > 0
             error("Invalid argument values: $(invalid_args)")
@@ -102,7 +108,6 @@ function ElectricTariff(;
 
         tou_demand_rates = Float64[]
         tou_demand_ratchet_timesteps = []
-        demand_rates_monthly = monthly_demand_rates
         time_steps_monthly = get_monthly_timesteps(year, time_steps_per_hour=time_steps_per_hour)
         energy_rates = Real[]
         for m in 1:12
@@ -116,8 +121,25 @@ function ElectricTariff(;
         if NEM
             nem_rate = [-0.999 * x for x in energy_rates]
         end
+
+    elseif !isnothing(blended_annual_energy_rate) && !isnothing(blended_annual_demand_rate)
+
+        tou_demand_rates = Float64[]
+        tou_demand_ratchet_timesteps = []
+        time_steps_monthly = get_monthly_timesteps(year, time_steps_per_hour=time_steps_per_hour)
+        energy_rates = repeat(Real[blended_annual_energy_rate], 8760 * time_steps_per_hour)
+        monthly_demand_rates = repeat(Real[blended_annual_demand_rate], 12)
+
+        fixed_monthly_charge = 0.0
+        annual_min_charge = 0.0
+        min_monthly_charge = 0.0
+
+        if NEM
+            nem_rate = [-0.999 * x for x in energy_rates]
+        end
+
     else
-        error("Creating ElectricTariff requires at least urdb_label or monthly rates.")
+        error("Creating ElectricTariff requires at least urdb_label, urdb_response, monthly rates, or annual rates.")
     end
 
     if !isnothing(u)
@@ -143,9 +165,7 @@ function ElectricTariff(;
     #= export_rates
     3 "tiers": 1. NEM (Net Energy Metering), 2. WHL (Wholesale), 3. CUR (Curtail)
     - if NEM then set ExportRate[:Nem, :] to energy_rate[tier_with_lowest_energy_rate, :]
-        - otherwise set to 100 dollars/kWh
     - user can provide either scalar wholesale rate or vector of timesteps, 
-        - otherwise set to 100 dollars/kWh
     - curtail cost set to zero by default, but can be specified same as wholesale rate
     =#
     whl_rate = create_export_rate(wholesale_rate, length(energy_rates), time_steps_per_hour)

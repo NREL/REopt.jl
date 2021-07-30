@@ -4,12 +4,12 @@
         "latitude": 34.5794343
     },
     "ElectricLoad": {
-        "doe_reference_name": "MidriseApartment",
-        "annual_kwh": 1000000.0,
-        "city": "Boulder"
+        "doe_reference_name": "FlatLoad",
+        "annual_kwh": 10000.0
     },
     "ElectricTariff": {
-        "urdb_label": "5ed6c1a15457a3367add15ae"
+        "blended_annual_energy_rate": 0.1,
+        "blended_annual_demand_rate": 10
     }
 
 }

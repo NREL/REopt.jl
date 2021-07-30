@@ -54,6 +54,12 @@ using REoptLite
     @test all(x == 0.0 for x in results["PV"]["year_one_to_load_series_kw"][1:744])
 end
 
+@testset "Blended tariff" begin
+    model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(model, "./scenarios/no_techs.json")
+    @test results["ElectricTariff"]["year_one_energy_cost_us_dollars"] ≈ 1000.0
+    @test results["ElectricTariff"]["year_one_demand_cost_us_dollars"] ≈ 136.99
+end
 
 @testset "Solar and Storage" begin
     model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
