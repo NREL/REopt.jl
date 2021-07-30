@@ -141,7 +141,13 @@ end
 function dictkeys_tosymbols(d::Dict)
     d2 = Dict()
     for (k, v) in d
-        if k in ["loads_kw", "prod_factor_series_kw"] && !isempty(v)
+        if k in [
+            "loads_kw", "critical_loads_kw",
+            "monthly_totals_kwh",
+            "prod_factor_series_kw", 
+            "monthly_energy_rates", "monthly_demand_rates",
+            "wholesale_rate"
+            ] && !isnothing(v)
             try
                 v = convert(Array{Real, 1}, v)
             catch
