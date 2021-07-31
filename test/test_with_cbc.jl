@@ -89,6 +89,19 @@ end
     @test sum(r["PV"]["to_grid_series_kw"]) ≈ 0
 end
 
+@testset "Complex Incentives" begin
+    """
+    This test was compared against the API test:
+        reo.tests.test_reopt_url.EntryResourceTest.test_complex_incentives
+    when using the hardcoded levelization_factor in this package's REoptInputs function.
+    The two LCC's matched within 0.00005%. (The Julia pkg LCC is 1.0971991e7)
+    """
+    model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
+    results = run_reopt(model, "./scenarios/incentives.json")
+    @test results["Financial"]["lcc_us_dollars"] ≈ 1.1152536e7 atol=5e4  
+    # The Cbc LCC is 1.7% higher than the Xpress LCC ? Probably due to integer issues in Cbc
+end
+
 ## much too slow with Cbc (killed after 8 hours)
 # @testset "Minimize Unserved Load" begin
 #     m = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
