@@ -8,7 +8,7 @@
     },
     "PV": {
         "macrs_bonus_pct": 0.4,
-        "cost_per_kw": 2000.0,
+        "installed_cost_per_kw": 2000.0,
         "tilt": 34.579,
         "degradation_pct": 0.005,
         "macrs_option_years": 5,
@@ -32,7 +32,7 @@
         "macrs_bonus_pct": 0.4,
         "replace_cost_per_kw": 460.0,
         "replace_cost_per_kwh": 230.0,
-        "cost_per_kw": 1000.0,
+        "installed_cost_per_kw": 1000.0,
         "cost_per_kwh": 500.0,
         "total_itc_pct": 0.0
     },

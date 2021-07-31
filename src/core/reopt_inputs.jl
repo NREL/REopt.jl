@@ -377,7 +377,7 @@ function setup_gen_inputs(s::Scenario, max_sizes, min_sizes, existing_sizes,
     max_sizes["Generator"] = s.generator.max_kw
     min_sizes["Generator"] = s.generator.existing_kw + s.generator.min_kw
     existing_sizes["Generator"] = s.generator.existing_kw
-    cap_cost_slope["Generator"] = s.generator.cost_per_kw
+    cap_cost_slope["Generator"] = s.generator.installed_cost_per_kw
     om_cost_per_kw["Generator"] = s.generator.om_cost_per_kw
     production_factor["Generator", :] = prodfactor(s.generator)
     return nothing

@@ -23,7 +23,7 @@
         "max_kw": 0,
         "macrs_bonus_pct": 0.4,
         "tilt": 35.2468,
-        "cost_per_kw": 2000.0,
+        "installed_cost_per_kw": 2000.0,
         "degradation_pct": 0.005,
         "macrs_option_years": 5,
         "federal_itc_pct": 0.3,

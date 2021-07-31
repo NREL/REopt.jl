@@ -40,7 +40,7 @@ struct PV <: AbstractTech
     existing_kw
     min_kw
     max_kw
-    cost_per_kw
+    installed_cost_per_kw
     om_cost_per_kw
     degradation_pct
     macrs_option_years
@@ -79,7 +79,7 @@ struct PV <: AbstractTech
         existing_kw::Real=0,
         min_kw::Real=0,
         max_kw::Real=1.0e9,
-        cost_per_kw::Real=1600.0,
+        installed_cost_per_kw::Real=1600.0,
         om_cost_per_kw::Real=16.0,
         degradation_pct::Real=0.005,
         macrs_option_years::Int = 5,
@@ -153,7 +153,7 @@ struct PV <: AbstractTech
             existing_kw,
             min_kw,
             max_kw,
-            cost_per_kw,
+            installed_cost_per_kw,
             om_cost_per_kw,
             degradation_pct,
             macrs_option_years,

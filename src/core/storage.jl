@@ -38,7 +38,7 @@ Base.@kwdef struct ElecStorage <: AbstractStorage
     soc_min_pct::Float64 = 0.2
     soc_init_pct::Float64 = 0.5
     can_grid_charge::Bool = true
-    cost_per_kw::Float64 = 840.0
+    installed_cost_per_kw::Float64 = 840.0
     cost_per_kwh::Float64 = 420.0
     replace_cost_per_kw::Float64 = 410.0
     replace_cost_per_kwh::Float64 = 200.0
@@ -62,7 +62,7 @@ struct Storage <: AbstractStorage
     discharge_efficiency::DenseAxisArray{Float64,1}
     soc_min_pct::DenseAxisArray{Float64,1}
     soc_init_pct::DenseAxisArray{Float64,1}
-    cost_per_kw::DenseAxisArray{Float64,1}
+    installed_cost_per_kw::DenseAxisArray{Float64,1}
     cost_per_kwh::DenseAxisArray{Float64,1}
     can_grid_charge::Array{Symbol,1}
     grid_charge_efficiency::Dict{Symbol, Float64}
@@ -114,7 +114,7 @@ function Storage(d::Dict, f::Financial)  # nested dict
         d2[:discharge_efficiency],
         d2[:soc_min_pct],
         d2[:soc_init_pct],
-        d2[:cost_per_kw],
+        d2[:installed_cost_per_kw],
         d2[:cost_per_kwh],
         storage_args[:can_grid_charge],
         grid_charge_efficiency
@@ -134,8 +134,8 @@ function fill_storage_vals!(d::Dict{Symbol, Array{Float64,1}}, s::AbstractStorag
     push!(d[:charge_efficiency], s.rectifier_efficiency_pct * s.internal_efficiency_pct^0.5)
     push!(d[:discharge_efficiency], s.inverter_efficiency_pct * s.internal_efficiency_pct^0.5)
 
-    push!(d[:cost_per_kw], effective_cost(;
-        itc_basis=s.cost_per_kw,
+    push!(d[:installed_cost_per_kw], effective_cost(;
+        itc_basis=s.installed_cost_per_kw,
         replacement_cost=s.replace_cost_per_kw,
         replacement_year=s.inverter_replacement_year,
         discount_rate=f.owner_discount_pct,

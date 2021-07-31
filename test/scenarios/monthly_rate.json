@@ -7,7 +7,7 @@
     "PV": {
         "macrs_bonus_pct": 0.0,
         "max_kw": 200.0,
-        "cost_per_kw": 2000.0,
+        "installed_cost_per_kw": 2000.0,
         "tilt": 10.0,
         "degradation_pct": 0.005,
         "macrs_option_years": 5,
