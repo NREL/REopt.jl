@@ -26,7 +26,7 @@
         "cost_per_kw": 2000.0,
         "degradation_pct": 0.005,
         "macrs_option_years": 5,
-        "total_itc_pct": 0.3,
+        "federal_itc_pct": 0.3,
         "module_type": 0,
         "array_type": 1,
         "om_cost_per_kw": 16.0,

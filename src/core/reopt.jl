@@ -136,8 +136,17 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
 	@expression(m, TotalTechCapCosts, p.two_party_factor *
-		sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in p.techs )  # TODO add Yintercept and binary
+		  sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in setdiff(p.techs, p.segmented_techs) )
 	)
+    if !isempty(p.segmented_techs)
+        @warn "adding binary variables to model cost curves"
+        add_cost_curve_vars_and_constraints(m, p)
+        add_to_expression!(TotalTechCapCosts, p.two_party_factor *
+            sum( p.cap_cost_slope[t][s] * m[Symbol("dvSegmentSystemSize"*t)][s] 
+            + p.seg_yint[t][s]  * m[Symbol("binSegment"*t)][s] 
+            for t in p.segmented_techs, s in p.n_segs_by_tech[t] )
+        )
+    end
 	
 	@expression(m, TotalStorageCapCosts, p.two_party_factor *
 		sum(  p.storage.cost_per_kw[b] * m[:dvStoragePower][b]
