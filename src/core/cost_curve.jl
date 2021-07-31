@@ -32,6 +32,41 @@ slope(x1, y1, x2, y2) = (y2 - y1) / (x2 - x1)
 
 intercept(x1, y1, x2, y2) = y2 - slope(x1, y1, x2, y2) * x2
 
+function insert_u_bp(xp_array_incent, yp_array_incent, region, u_xbp, u_ybp, p, u_cap)
+    push!(xp_array_incent[region], u_xbp)
+    push!(yp_array_incent[region], u_ybp - u_ybp * p + u_cap)
+    return xp_array_incent, yp_array_incent
+end
+
+
+function insert_p_bp(xp_array_incent, yp_array_incent, region, p_xbp, p_ybp, u, p_cap)
+    push!(xp_array_incent[region], p_xbp)
+    push!(yp_array_incent[region], p_ybp - (p_cap + p_xbp * u))
+    return xp_array_incent, yp_array_incent
+end
+
+
+function insert_u_after_p_bp(xp_array_incent, yp_array_incent, region, u_xbp, u_ybp, p, p_cap, u_cap)
+    xp_array_incent[region].append(u_xbp)
+    if p_cap == 0
+        push!(yp_array_incent[region], u_ybp - (p * u_ybp + u_cap))
+    else
+        push!(yp_array_incent[region], u_ybp - (p_cap + u_cap))
+    end
+    return xp_array_incent, yp_array_incent
+end
+
+
+function insert_p_after_u_bp(xp_array_incent, yp_array_incent, region, p_xbp, p_ybp, u, u_cap, p_cap)
+    push!(xp_array_incent[region], p_xbp)
+    if u_cap == 0
+        push!(yp_array_incent[region], p_ybp - (p_cap + u * p_xbp))
+    else
+        push!(yp_array_incent[region], p_ybp - (p_cap + u_cap))
+    end
+    return xp_array_incent, yp_array_incent
+end
+
 
 """
     cost_curve(tech::AbstractTech, financial::Financial)
@@ -341,7 +376,7 @@ function cost_curve(tech::AbstractTech, financial::Financial)
             macrs_itc_reduction = macrs_itc_reduction,
             rebate_per_kw = rebate_federal
         )
-        # The way REopt incentives currently work, the federal rebate is the only incentive that doesn"t reduce ITC basis
+        # The way REopt incentives currently work, the federal rebate is the only incentive that doesn't reduce ITC basis
         push!(updated_cap_cost_slope, updated_slope)
     end
 
@@ -352,5 +387,6 @@ function cost_curve(tech::AbstractTech, financial::Financial)
     end
     cap_cost_slope = updated_cap_cost_slope
     cap_cost_yint = updated_y_intercept
+
     return cap_cost_slope, cost_curve_bp_x, cap_cost_yint, n_segments
 end
