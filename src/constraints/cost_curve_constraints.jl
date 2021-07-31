@@ -64,10 +64,10 @@ function add_cost_curve_vars_and_constraints(m, p; _n="")
 
     for t in p.segmented_techs
         dv = "dvSegmentSystemSize" * t
-        m[Symbol(dv)] = @variable(m, [1:p.SegSize[t]], base_name=dv, lower_bound=0)
+        m[Symbol(dv)] = @variable(m, [1:p.n_segs_by_tech[t]], base_name=dv, lower_bound=0)
 
         dv = "binSegment" * t
-        m[Symbol(dv)] = @variable(m, [1:p.SegSize[t]], base_name=dv, binary=true)
+        m[Symbol(dv)] = @variable(m, [1:p.n_segs_by_tech[t]], base_name=dv, binary=true)
     end
 
     # TODO SegmentMinSize and SegmentMaxSize need to be dicts (not DenseAxisArray) so that they can be non-rectangular
