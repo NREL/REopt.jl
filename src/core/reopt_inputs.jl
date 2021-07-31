@@ -38,6 +38,7 @@ struct REoptInputs <: AbstractInputs
     gentechs::Array{String,1}
     elec_techs::Array{String, 1}
     segmented_techs::Array{String, 1}
+    pbi_techs::Array{String, 1}
     techs_no_turndown::Array{String, 1}
     min_sizes::DenseAxisArray{Float64, 1}  # (techs)
     max_sizes::DenseAxisArray{Float64, 1}  # (techs)
@@ -77,6 +78,10 @@ struct REoptInputs <: AbstractInputs
     seg_min_size::Dict{String, Dict{Int, Float64}}
     seg_max_size::Dict{String, Dict{Int, Float64}}
     seg_yint::Dict{String, Dict{Int, Float64}}
+    pbi_pwf::Dict{String, Any}  # (pbi_techs)
+    pbi_max_benefit::Dict{String, Any}  # (pbi_techs)
+    pbi_max_kw::Dict{String, Any}  # (pbi_techs)
+    pbi_benefit_per_kwh::Dict{String, Any}  # (pbi_techs)
 end
 
 
@@ -97,6 +102,12 @@ function REoptInputs(fp::String)
     REoptInputs(s)
 end
 
+
+"""
+    REoptInputs(s::Scenario)
+
+Constructor for REoptInputs
+"""
 function REoptInputs(s::Scenario)
 
     time_steps = 1:length(s.electric_load.loads_kw)
@@ -106,6 +117,8 @@ function REoptInputs(s::Scenario)
         seg_max_size, seg_yint  = setup_tech_inputs(s)
     elec_techs = techs  # only modeling electric loads/techs so far
     techs_no_turndown = pvtechs
+
+    pbi_techs, pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
 
     max_grid_export_kwh = sum(s.electric_load.loads_kw)
 
@@ -140,6 +153,7 @@ function REoptInputs(s::Scenario)
         gentechs,
         elec_techs,
         segmented_techs,
+        pbi_techs,
         techs_no_turndown,
         min_sizes,
         max_sizes,
@@ -178,10 +192,20 @@ function REoptInputs(s::Scenario)
         n_segs_by_tech,
         seg_min_size,
         seg_max_size,
-        seg_yint
+        seg_yint,
+        pbi_pwf, 
+        pbi_max_benefit, 
+        pbi_max_kw, 
+        pbi_benefit_per_kwh
     )
 end
 
+
+"""
+    function setup_tech_inputs(s::Scenario)
+
+Create data arrays associated with techs necessary to build the JuMP model.
+"""
 function setup_tech_inputs(s::Scenario)
 
     pvtechs = String[pv.name for pv in s.pvs]
@@ -232,6 +256,34 @@ function setup_tech_inputs(s::Scenario)
     return techs, pvtechs, gentechs, segmented_techs, pv_to_location, maxsize_pv_locations, pvlocations, production_factor,
     max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, seg_min_size, seg_max_size, 
     seg_yint
+end
+
+
+"""
+    setup_pbi_inputs(s::Scenario, techs::Array{String, 1})
+
+Create data arrays for production based incentives. 
+All arrays can be empty if no techs have production_incentive_per_kwh > 0.
+"""
+function setup_pbi_inputs(s::Scenario, techs::Array{String, 1})
+
+    pbi_techs = String[]
+    pbi_pwf = Dict{String, Any}()
+    pbi_max_benefit = Dict{String, Any}()
+    pbi_max_kw = Dict{String, Any}()
+    pbi_benefit_per_kwh = Dict{String, Any}()
+
+    for tech in techs
+        T = typeof(eval(Meta.parse(tech)))
+        if :production_incentive_per_kwh in fieldnames(T)
+            if eval(Meta.parse("s."*tech*".production_incentive_per_kwh")) > 0
+                push!(pbi_techs, tech)
+                pbi_pwf[tech], pbi_max_benefit[tech], pbi_max_kw[tech], pbi_benefit_per_kwh[tech] = 
+                    production_incentives(eval(Meta.parse("s."*tech)), s.financial)
+            end
+        end
+    end
+    return pbi_techs, pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh
 end
 
 
@@ -407,4 +459,33 @@ function adjust_load_profile(s::Scenario, production_factor::DenseAxisArray)
             s.electric_load.critical_loads_kw .+= pv.existing_kw * production_factor[pv.name, :].data
         end end
     end
+end
+
+
+"""
+    production_incentives(tech::AbstractTech, financial::Financial)
+
+Intermediate function for building the PBI arrays in REoptInputs
+"""
+function production_incentives(tech::AbstractTech, financial::Financial)
+    pwf_prod_incent = 0.0
+    max_prod_incent = 0.0
+    max_size_for_prod_incent = 0.0
+    production_incentive_rate = 0.0
+    T = typeof(tech)
+
+    if !(nameof(T) in [:Generator, :Boiler, :Elecchl, :Absorpchl])
+        if :degradation_pct in fieldnames(T)  # PV has degradation
+            pwf_prod_incent = annuity_escalation(tech.production_incentive_years, -1*tech.degradation_pct,
+                                                 financial.owner_discount_pct)
+        else
+            # prod incentives have zero escalation rate
+            pwf_prod_incent = annuity(tech.production_incentive_years, 0, financial.owner_discount_pct)
+        end
+        max_prod_incent = tech.production_incentive_max_benefit
+        max_size_for_prod_incent = tech.production_incentive_max_kw
+        production_incentive_rate = tech.production_incentive_per_kwh
+    end
+
+    return pwf_prod_incent, max_prod_incent, max_size_for_prod_incent, production_incentive_rate
 end

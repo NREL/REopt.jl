@@ -44,6 +44,22 @@ function annuity(years::Int, rate_escalation::Float64, rate_discount::Float64)
 end
 
 
+function annuity_escalation(analysis_period::Int, rate_escalation::Float64, rate_discount::Float64)
+    """
+    :param analysis_period: years
+    :param rate_escalation: escalation rate
+    :param rate_discount: discount rate
+    :return: present worth factor with escalation (inflation, or degradation if negative)
+    NOTE: assumes escalation/degradation starts in year 2 (unlike the `annuity` function above)
+    """
+    pwf = 0
+    for yr in range(1, stop=analysis_period + 1)
+        pwf += (1 + rate_escalation)^(yr - 1) / (1 + rate_discount)^yr
+    end
+    return pwf
+end
+
+
 function levelization_factor(years::Int, rate_escalation::Float64, rate_discount::Float64, 
     rate_degradation::Float64)
     #=

@@ -59,6 +59,10 @@ struct PV <: AbstractTech
     utility_ibi_max
     utility_rebate_per_kw
     utility_rebate_max
+    production_incentive_per_kwh
+    production_incentive_max_benefit
+    production_incentive_years
+    production_incentive_max_kw
 
     function PV(;
         tilt::Real,
@@ -92,6 +96,10 @@ struct PV <: AbstractTech
         utility_ibi_max::Float64 = 1.0e10,
         utility_rebate_per_kw::Float64 = 0.0,
         utility_rebate_max::Float64 = 1.0e10,
+        production_incentive_per_kwh::Float64 = 0.0,
+        production_incentive_max_benefit::Float64 = 1.0e9,
+        production_incentive_years::Float64 = 1.0,
+        production_incentive_max_kw::Float64 = 1.0e9
         )
 
         # validate inputs
@@ -159,7 +167,11 @@ struct PV <: AbstractTech
             utility_ibi_pct,
             utility_ibi_max,
             utility_rebate_per_kw,
-            utility_rebate_max
+            utility_rebate_max,
+            production_incentive_per_kwh,
+            production_incentive_max_benefit,
+            production_incentive_years,
+            production_incentive_max_kw
         )
     end
 end

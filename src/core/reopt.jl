@@ -147,6 +147,12 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             for t in p.segmented_techs, s in p.n_segs_by_tech[t] )
         )
     end
+
+    if !isempty(p.pbi_techs)
+        add_prod_incent_vars_and_constraints(m, p)
+    else
+        m[:TotalProductionIncentive] = 0
+    end
 	
 	@expression(m, TotalStorageCapCosts, p.two_party_factor *
 		sum(  p.storage.cost_per_kw[b] * m[:dvStoragePower][b]
@@ -211,7 +217,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         m[:TotalGenFuelCharges] * (1 - p.offtaker_tax_pct) +
 
 		# Utility Bill, tax deductible for offtaker
-		m[:TotalElecBill] * (1 - p.offtaker_tax_pct)
+		m[:TotalElecBill] * (1 - p.offtaker_tax_pct) -
+
+        # Subtract Incentives, which are taxable
+		m[:TotalProductionIncentive] * (1 - p.owner_tax_pct)
 	);
 	if !isempty(p.elecutil.outage_durations)
 		add_to_expression!(Costs, m[:ExpectedOutageCost] + m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost] + m[:ExpectedMGFuelCost])
