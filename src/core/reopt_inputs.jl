@@ -473,7 +473,7 @@ function production_incentives(tech::AbstractTech, financial::Financial)
     max_size_for_prod_incent = 0.0
     production_incentive_rate = 0.0
     T = typeof(tech)
-
+    # TODO should Generator be excluded? (v1 has the PBI inputs for Generator)
     if !(nameof(T) in [:Generator, :Boiler, :Elecchl, :Absorpchl])
         if :degradation_pct in fieldnames(T)  # PV has degradation
             pwf_prod_incent = annuity_escalation(tech.production_incentive_years, -1*tech.degradation_pct,

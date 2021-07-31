@@ -36,7 +36,8 @@ function add_export_constraints(m, p; _n="")
         + m[Symbol("dvCurtail"*_n)][t, ts]
     )
     
-    ##Constraint (8f): Total sales to grid no greater than annual allocation - storage tiers
+    ##Constraint (8f): Total sales to grid no greater than annual allocation
+    # TODO: rm this constraint if API PR approved
     @constraint(m,
         p.hours_per_timestep * sum( m[Symbol("dvProductionToGrid"*_n)][t, u, ts] 
             for t in p.elec_techs, u in p.export_bins_by_tech[t], ts in p.time_steps_with_grid
@@ -82,6 +83,7 @@ end
 
 
 function add_simultaneous_export_import_constraint(m, p; _n="")
+    # TODO change to indicators
     @constraint(m, NoGridPurchasesBinary[ts in p.time_steps],
           m[Symbol("dvGridPurchase"*_n)][ts] 
         + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.types)
