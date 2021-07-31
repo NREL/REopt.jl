@@ -139,16 +139,18 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		  sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in setdiff(p.techs, p.segmented_techs) )
 	)
     if !isempty(p.segmented_techs)
-        @warn "adding binary variables to model cost curves"
+        @warn "adding binary variable(s) to model cost curves"
         add_cost_curve_vars_and_constraints(m, p)
-        add_to_expression!(TotalTechCapCosts, p.two_party_factor *
-            sum( p.cap_cost_slope[t][s] * m[Symbol("dvSegmentSystemSize"*t)][s] 
-            + p.seg_yint[t][s]  * m[Symbol("binSegment"*t)][s] 
-            for t in p.segmented_techs, s in p.n_segs_by_tech[t] )
-        )
+        for t in p.segmented_techs  # cannot have this for statement in sum( ... for t in ...) ???
+           TotalTechCapCosts += p.two_party_factor * (
+                sum(p.cap_cost_slope[t][s] * m[Symbol("dvSegmentSystemSize"*t)][s] + 
+                    p.seg_yint[t][s] * m[Symbol("binSegment"*t)][s] for s in p.n_segs_by_tech[t])
+            )
+        end
     end
 
     if !isempty(p.pbi_techs)
+        @warn "adding binary variable(s) to model production based incentives"
         add_prod_incent_vars_and_constraints(m, p)
     else
         m[:TotalProductionIncentive] = 0
