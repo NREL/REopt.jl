@@ -37,8 +37,8 @@ function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly")
         "&lat=", latitude , "&lon=", longitude, "&tilt=", pv.tilt,
         "&system_capacity=1", "&azimuth=", pv.azimuth, "&module_type=", pv.module_type,
         "&array_type=", pv.array_type, "&losses=", round(pv.losses*100, digits=3), "&dc_ac_ratio=", pv.dc_ac_ratio,
-        "&gcr=", 0.4, "&inv_eff=", pv.inv_eff*100, "&timeframe=", timeframe, "&dataset=nsrdb",
-        "&radius=", 100
+        "&gcr=", pv.gcr, "&inv_eff=", pv.inv_eff*100, "&timeframe=", timeframe, "&dataset=nsrdb",
+        "&radius=", pv.radius
     )
 
     try
@@ -51,11 +51,13 @@ function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly")
             # and raises ArgumentError: indexed assignment with a single value to many locations is not supported; perhaps use broadcasting `.=` instead?
         end
         @info "PVWatts success."
-        watts = get(response["outputs"], "ac", []) / 1000  # scale to 1 kW system (* 1 kW / 1000 W)
-
-        return collect(watts)
+        watts = collect(get(response["outputs"], "ac", []) / 1000)  # scale to 1 kW system (* 1 kW / 1000 W)
+        if length(watts) != 8760
+            @error "PVWatts did not return a valid production factor. Got $watts"
+        end
+        return watts
     catch e
-        return "Error occurred : $e"
+        @error "Error occurred when calling PVWatts: $e"
     end
 end
 

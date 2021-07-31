@@ -33,6 +33,8 @@ struct PV <: AbstractTech
     module_type
     losses
     azimuth
+    gcr
+    radius
     name
     location
     existing_kw
@@ -70,6 +72,8 @@ struct PV <: AbstractTech
         module_type::Int=0,
         losses::Real=0.14,
         azimuth::Real=180,
+        gcr::Real=0.4,
+        radius::Int=0,
         name::String="PV",
         location::String="both",
         existing_kw::Real=0,
@@ -142,6 +146,8 @@ struct PV <: AbstractTech
             module_type,
             losses,
             azimuth,
+            gcr,
+            radius,
             name,
             location,
             existing_kw,
