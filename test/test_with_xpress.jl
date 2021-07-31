@@ -126,6 +126,18 @@ end
     @test sum(r["PV"]["to_grid_series_kw"]) ≈ 0
 end
 
+@testset "Complex Incentives" begin
+    """
+    This test was compared against the API test:
+        reo.tests.test_reopt_url.EntryResourceTest.test_complex_incentives
+    when using the hardcoded levelization_factor in this package's REoptInputs function.
+    The two LCC's matched within 0.00005%. (The Julia pkg LCC is  1.0971991e7)
+    """
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, "./scenarios/incentives.json")
+    @test results["Financial"]["lcc_us_dollars"] ≈ 1.0968526e7 atol=5e4  
+end
+
 ## equivalent REopt Lite API Post for test 2:
 #   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
 # {"Scenario": {
