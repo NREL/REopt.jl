@@ -37,11 +37,13 @@ struct REoptInputs <: AbstractInputs
     pvtechs::Array{String, 1}
     gentechs::Array{String,1}
     elec_techs::Array{String, 1}
+    segmented_techs::Array{String, 1}
+    pbi_techs::Array{String, 1}
     techs_no_turndown::Array{String, 1}
     min_sizes::DenseAxisArray{Float64, 1}  # (techs)
     max_sizes::DenseAxisArray{Float64, 1}  # (techs)
     existing_sizes::DenseAxisArray{Float64, 1}  # (techs)
-    cap_cost_slope::DenseAxisArray{Float64, 1}  # (techs)
+    cap_cost_slope::Dict{String, Any}  # (techs)
     om_cost_per_kw::DenseAxisArray{Float64, 1}  # (techs)
     max_grid_export_kwh::Float64
     elec_load::ElectricLoad
@@ -72,6 +74,14 @@ struct REoptInputs <: AbstractInputs
     mg_tech_sizes_equal_grid_sizes::Bool
     node::Int
     export_bins_by_tech::Dict
+    n_segs_by_tech::Dict{String, Int}
+    seg_min_size::Dict{String, Dict{Int, Float64}}
+    seg_max_size::Dict{String, Dict{Int, Float64}}
+    seg_yint::Dict{String, Dict{Int, Float64}}
+    pbi_pwf::Dict{String, Any}  # (pbi_techs)
+    pbi_max_benefit::Dict{String, Any}  # (pbi_techs)
+    pbi_max_kw::Dict{String, Any}  # (pbi_techs)
+    pbi_benefit_per_kwh::Dict{String, Any}  # (pbi_techs)
 end
 
 
@@ -92,14 +102,23 @@ function REoptInputs(fp::String)
     REoptInputs(s)
 end
 
+
+"""
+    REoptInputs(s::Scenario)
+
+Constructor for REoptInputs
+"""
 function REoptInputs(s::Scenario)
 
     time_steps = 1:length(s.electric_load.loads_kw)
     hours_per_timestep = 8760.0 / length(s.electric_load.loads_kw)
-    techs, pvtechs, gentechs, pv_to_location, maxsize_pv_locations, pvlocations, production_factor,
-        max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw  = setup_tech_inputs(s)
+    techs, pvtechs, gentechs, segmented_techs, pv_to_location, maxsize_pv_locations, pvlocations, production_factor,
+        max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, seg_min_size, 
+        seg_max_size, seg_yint  = setup_tech_inputs(s)
     elec_techs = techs  # only modeling electric loads/techs so far
     techs_no_turndown = pvtechs
+
+    pbi_techs, pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
 
     max_grid_export_kwh = sum(s.electric_load.loads_kw)
 
@@ -133,6 +152,8 @@ function REoptInputs(s::Scenario)
         pvtechs,
         gentechs,
         elec_techs,
+        segmented_techs,
+        pbi_techs,
         techs_no_turndown,
         min_sizes,
         max_sizes,
@@ -167,10 +188,24 @@ function REoptInputs(s::Scenario)
         s.site.min_resil_timesteps,
         s.site.mg_tech_sizes_equal_grid_sizes,
         s.site.node,
-        export_bins_by_tech
+        export_bins_by_tech,
+        n_segs_by_tech,
+        seg_min_size,
+        seg_max_size,
+        seg_yint,
+        pbi_pwf, 
+        pbi_max_benefit, 
+        pbi_max_kw, 
+        pbi_benefit_per_kwh
     )
 end
 
+
+"""
+    function setup_tech_inputs(s::Scenario)
+
+Create data arrays associated with techs necessary to build the JuMP model.
+"""
 function setup_tech_inputs(s::Scenario)
 
     pvtechs = String[pv.name for pv in s.pvs]
@@ -180,6 +215,7 @@ function setup_tech_inputs(s::Scenario)
 
     techs = copy(pvtechs)
     gentechs = String[]
+    segmented_techs = String[]
     if s.generator.max_kw > 0
         push!(techs, "Generator")
         push!(gentechs, "Generator")
@@ -191,9 +227,15 @@ function setup_tech_inputs(s::Scenario)
     max_sizes = DenseAxisArray{Float64}(undef, techs)
     min_sizes = DenseAxisArray{Float64}(undef, techs)
     existing_sizes = DenseAxisArray{Float64}(undef, techs)
-    cap_cost_slope = DenseAxisArray{Float64}(undef, techs)
+    cap_cost_slope = Dict{String, Any}()
     om_cost_per_kw = DenseAxisArray{Float64}(undef, techs)
     production_factor = DenseAxisArray{Float64}(undef, techs, time_steps)
+    
+    #REoptInputs indexed on segmented_techs
+    n_segs_by_tech = Dict{String, Int}()
+    seg_min_size = Dict{String, Any}()
+    seg_max_size = Dict{String, Any}()
+    seg_yint = Dict{String, Any}()
 
     # PV specific arrays
     pvlocations = [:roof, :ground, :both]
@@ -203,23 +245,52 @@ function setup_tech_inputs(s::Scenario)
 
     if !isempty(pvtechs)
         setup_pv_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
-                        pvlocations, pv_to_location, maxsize_pv_locations)
+                        pvlocations, pv_to_location, maxsize_pv_locations, segmented_techs, n_segs_by_tech, 
+                        seg_min_size, seg_max_size, seg_yint)
     end
 
     if "Generator" in techs
         setup_gen_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor)
     end
 
-    return techs, pvtechs, gentechs, pv_to_location, maxsize_pv_locations, pvlocations, production_factor,
-    max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw
+    return techs, pvtechs, gentechs, segmented_techs, pv_to_location, maxsize_pv_locations, pvlocations, production_factor,
+    max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, seg_min_size, seg_max_size, 
+    seg_yint
+end
+
+
+"""
+    setup_pbi_inputs(s::Scenario, techs::Array{String, 1})
+
+Create data arrays for production based incentives. 
+All arrays can be empty if no techs have production_incentive_per_kwh > 0.
+"""
+function setup_pbi_inputs(s::Scenario, techs::Array{String, 1})
+
+    pbi_techs = String[]
+    pbi_pwf = Dict{String, Any}()
+    pbi_max_benefit = Dict{String, Any}()
+    pbi_max_kw = Dict{String, Any}()
+    pbi_benefit_per_kwh = Dict{String, Any}()
+
+    for tech in techs
+        T = typeof(eval(Meta.parse(tech)))
+        if :production_incentive_per_kwh in fieldnames(T)
+            if eval(Meta.parse("s."*tech*".production_incentive_per_kwh")) > 0
+                push!(pbi_techs, tech)
+                pbi_pwf[tech], pbi_max_benefit[tech], pbi_max_kw[tech], pbi_benefit_per_kwh[tech] = 
+                    production_incentives(eval(Meta.parse("s."*tech)), s.financial)
+            end
+        end
+    end
+    return pbi_techs, pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh
 end
 
 
 function setup_pv_inputs(s::Scenario, max_sizes, min_sizes,
     existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
-    pvlocations, pv_to_location, maxsize_pv_locations)
-
-    time_steps = 1:length(s.electric_load.loads_kw)
+    pvlocations, pv_to_location, maxsize_pv_locations, 
+    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint)
 
     pv_roof_limited, pv_ground_limited, pv_space_limited = false, false, false
     roof_existing_pv_kw, ground_existing_pv_kw, both_existing_pv_kw = 0.0, 0.0, 0.0
@@ -267,18 +338,21 @@ function setup_pv_inputs(s::Scenario, max_sizes, min_sizes,
         min_sizes[pv.name] = pv.existing_kw + pv.min_kw
         max_sizes[pv.name] = pv.existing_kw + beyond_existing_kw
 
-        cap_cost_slope[pv.name] = effective_cost(;
-            itc_basis=pv.cost_per_kw,
-            replacement_cost=0.0,
-            replacement_year=s.financial.analysis_years,
-            discount_rate=s.financial.owner_discount_pct,
-            tax_rate=s.financial.owner_tax_pct,
-            itc=pv.total_itc_pct,
-            macrs_schedule = pv.macrs_option_years == 7 ? s.financial.macrs_seven_year : s.financial.macrs_five_year,
-            macrs_bonus_pct=pv.macrs_bonus_pct,
-            macrs_itc_reduction = pv.macrs_itc_reduction,
-            rebate_per_kw = pv.total_rebate_per_kw
-        )
+        cost_slope, cost_curve_bp_x, cost_yint, n_segments = cost_curve(pv, s.financial)
+        cap_cost_slope[pv.name] = cost_slope[1]
+        if n_segments > 1
+            cap_cost_slope[pv.name] = cost_slope
+            push!(segmented_techs, pv.name)
+            seg_max_size[pv.name] = Dict{Int,Float64}()
+            seg_min_size[pv.name] = Dict{Int,Float64}()
+            n_segs_by_tech[pv.name] = n_segments
+            seg_yint[pv.name] = Dict{Int,Float64}()
+            for s in 1:n_segments
+                seg_min_size[pv.name][s] = cost_curve_bp_x[s]
+                seg_max_size[pv.name][s] = cost_curve_bp_x[s+1]
+                seg_yint[pv.name][s] = cost_yint[s]
+            end
+        end
         
         om_cost_per_kw[pv.name] = pv.om_cost_per_kw
     end
@@ -299,11 +373,11 @@ end
 
 function setup_gen_inputs(s::Scenario, max_sizes, min_sizes, existing_sizes,
     cap_cost_slope, om_cost_per_kw, production_factor)
-
+    # TODO add incentives to Generator and use cost_curve function
     max_sizes["Generator"] = s.generator.max_kw
     min_sizes["Generator"] = s.generator.existing_kw + s.generator.min_kw
     existing_sizes["Generator"] = s.generator.existing_kw
-    cap_cost_slope["Generator"] = s.generator.cost_per_kw
+    cap_cost_slope["Generator"] = s.generator.installed_cost_per_kw
     om_cost_per_kw["Generator"] = s.generator.om_cost_per_kw
     production_factor["Generator", :] = prodfactor(s.generator)
     return nothing
@@ -337,7 +411,7 @@ function setup_present_worth_factors(s::Scenario, techs::Array{String, 1}, pvtec
         s.financial.owner_discount_pct
     )
 
-    if s.financial.two_party_ownership
+    if s.financial.third_party_ownership
         pwf_offtaker = annuity(s.financial.analysis_years, 0.0, s.financial.offtaker_discount_pct)
         pwf_owner = annuity(s.financial.analysis_years, 0.0, s.financial.owner_discount_pct)
         two_party_factor = (pwf_offtaker * (1 - s.financial.offtaker_tax_pct)) /
@@ -385,4 +459,33 @@ function adjust_load_profile(s::Scenario, production_factor::DenseAxisArray)
             s.electric_load.critical_loads_kw .+= pv.existing_kw * production_factor[pv.name, :].data
         end end
     end
+end
+
+
+"""
+    production_incentives(tech::AbstractTech, financial::Financial)
+
+Intermediate function for building the PBI arrays in REoptInputs
+"""
+function production_incentives(tech::AbstractTech, financial::Financial)
+    pwf_prod_incent = 0.0
+    max_prod_incent = 0.0
+    max_size_for_prod_incent = 0.0
+    production_incentive_rate = 0.0
+    T = typeof(tech)
+    # TODO should Generator be excluded? (v1 has the PBI inputs for Generator)
+    if !(nameof(T) in [:Generator, :Boiler, :Elecchl, :Absorpchl])
+        if :degradation_pct in fieldnames(T)  # PV has degradation
+            pwf_prod_incent = annuity_escalation(tech.production_incentive_years, -1*tech.degradation_pct,
+                                                 financial.owner_discount_pct)
+        else
+            # prod incentives have zero escalation rate
+            pwf_prod_incent = annuity(tech.production_incentive_years, 0, financial.owner_discount_pct)
+        end
+        max_prod_incent = tech.production_incentive_max_benefit
+        max_size_for_prod_incent = tech.production_incentive_max_kw
+        production_incentive_rate = tech.production_incentive_per_kwh
+    end
+
+    return pwf_prod_incent, max_prod_incent, max_size_for_prod_incent, production_incentive_rate
 end

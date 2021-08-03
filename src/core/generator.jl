@@ -36,7 +36,7 @@ function Generator(;
     existing_kw::Real=0,
     min_kw::Real=0,
     max_kw::Real=1.0e6,
-    cost_per_kw::Real=500.0,
+    installed_cost_per_kw::Real=500.0,
     om_cost_per_kw::Real=10.0,
     om_cost_per_kwh::Float64=0.0,
     fuel_cost_per_gallon::Float64 = 3.0,
@@ -53,7 +53,7 @@ struct Generator <: AbstractGenerator
     existing_kw
     min_kw
     max_kw
-    cost_per_kw
+    installed_cost_per_kw
     om_cost_per_kw
     om_cost_per_kwh
     fuel_cost_per_gallon
@@ -68,7 +68,7 @@ struct Generator <: AbstractGenerator
         existing_kw::Real=0,
         min_kw::Real=0,
         max_kw::Real=1.0e6,
-        cost_per_kw::Real=500.0,
+        installed_cost_per_kw::Real=500.0,
         om_cost_per_kw::Real=10.0,
         om_cost_per_kwh::Float64=0.0,
         fuel_cost_per_gallon::Float64 = 3.0,
@@ -84,7 +84,7 @@ struct Generator <: AbstractGenerator
             existing_kw,
             min_kw,
             max_kw,
-            cost_per_kw,
+            installed_cost_per_kw,
             om_cost_per_kw,
             om_cost_per_kwh,
             fuel_cost_per_gallon,

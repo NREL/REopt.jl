@@ -37,7 +37,7 @@
     },
     "Financial": {
         "VoLL": 100.0,
-        "two_party_ownership": true,
+        "third_party_ownership": true,
         "offtaker_tax_pct": 0.0,
         "owner_discount_pct": 0.1,
         "offtaker_discount_pct": 0.03

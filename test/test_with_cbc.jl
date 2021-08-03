@@ -52,15 +52,21 @@ using REoptLite
     @test all(x == 0.0 for x in results["PV"]["year_one_to_load_series_kw"][1:744])
 end
 
+@testset "Blended tariff" begin
+    model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
+    results = run_reopt(model, "./scenarios/no_techs.json")
+    @test results["ElectricTariff"]["year_one_energy_cost_us_dollars"] ≈ 1000.0
+    @test results["ElectricTariff"]["year_one_demand_cost_us_dollars"] ≈ 136.99
+end
 
 @testset "Solar and Storage" begin
-    model2 = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
-    results2 = run_reopt(model2, "./scenarios/pv_storage.json")
+    model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
+    results = run_reopt(model, "./scenarios/pv_storage.json")
 
-    @test results2["PV"]["size_kw"] ≈ 216.6667 atol=0.01
-    @test results2["Financial"]["lcc_us_dollars"] ≈ 1.23887e7 rtol=1e-5
-    @test results2["Storage"]["size_kw"] ≈ 55.9 atol=0.1
-    @test results2["Storage"]["size_kwh"] ≈ 78.9 atol=0.1
+    @test results["PV"]["size_kw"] ≈ 216.6667 atol=0.01
+    @test results["Financial"]["lcc_us_dollars"] ≈ 1.23887e7 rtol=1e-5
+    @test results["Storage"]["size_kw"] ≈ 55.9 atol=0.1
+    @test results["Storage"]["size_kwh"] ≈ 78.9 atol=0.1
 end
 
 @testset "Outage with Generator" begin
@@ -81,6 +87,19 @@ end
     @test maximum(r["ElectricUtility"]["to_load_series_kw"][1:15]) <= 98.0 
     @test maximum(r["ElectricUtility"]["to_load_series_kw"][16:24]) <= 97.0
     @test sum(r["PV"]["to_grid_series_kw"]) ≈ 0
+end
+
+@testset "Complex Incentives" begin
+    """
+    This test was compared against the API test:
+        reo.tests.test_reopt_url.EntryResourceTest.test_complex_incentives
+    when using the hardcoded levelization_factor in this package's REoptInputs function.
+    The two LCC's matched within 0.00005%. (The Julia pkg LCC is 1.0971991e7)
+    """
+    model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
+    results = run_reopt(model, "./scenarios/incentives.json")
+    @test results["Financial"]["lcc_us_dollars"] ≈ 1.1152536e7 atol=5e4  
+    # The Cbc LCC is 1.7% higher than the Xpress LCC ? Probably due to integer issues in Cbc
 end
 
 ## much too slow with Cbc (killed after 8 hours)

@@ -8,17 +8,17 @@
     },
     "PV": {
         "macrs_bonus_pct": 0.4,
-        "cost_per_kw": 2000.0,
+        "installed_cost_per_kw": 2000.0,
         "tilt": 34.579,
         "degradation_pct": 0.005,
         "macrs_option_years": 5,
-        "total_itc_pct": 0.3,
+        "federal_itc_pct": 0.3,
         "module_type": 0,
         "array_type": 1,
         "om_cost_per_kw": 16.0,
         "macrs_itc_reduction": 0.5,
         "azimuth": 180.0,
-        "total_rebate_per_kw": 350.0
+        "federal_rebate_per_kw": 350.0
     },
     "ElectricLoad": {
         "doe_reference_name": "RetailStore",
@@ -32,7 +32,7 @@
         "macrs_bonus_pct": 0.4,
         "replace_cost_per_kw": 460.0,
         "replace_cost_per_kwh": 230.0,
-        "cost_per_kw": 1000.0,
+        "installed_cost_per_kw": 1000.0,
         "cost_per_kwh": 500.0,
         "total_itc_pct": 0.0
     },

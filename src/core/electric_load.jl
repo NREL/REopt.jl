@@ -92,7 +92,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
     critical_loads_kw_is_net::Bool
     
     function ElectricLoad(;
-        loads_kw::Union{Missing, Array{<:Real,1}} = missing,
+        loads_kw::Array{<:Real,1} = Real[],
         year::Int = 2020,
         doe_reference_name::Union{Missing, String} = missing,
         city::String = "",
@@ -106,7 +106,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         longitude::Float64
         )
         
-        if !ismissing(loads_kw)
+        if length(loads_kw) > 0
             if ismissing(critical_loads_kw)
                 critical_loads_kw = critical_load_pct * loads_kw
             end

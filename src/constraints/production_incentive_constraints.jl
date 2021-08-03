@@ -27,41 +27,30 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly")
+"""
+    add_prod_incent_vars_and_constraints(m, p)
 
-    if !(ismissing(pv.prod_factor_series_kw))
-        return pv.prod_factor_series_kw
-    end
+When pbi_techs is not empty this function is called to add the variables and constraints for modeling production based
+incentives.
+"""
+function add_prod_incent_vars_and_constraints(m, p)
 
-    url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
-        "&lat=", latitude , "&lon=", longitude, "&tilt=", pv.tilt,
-        "&system_capacity=1", "&azimuth=", pv.azimuth, "&module_type=", pv.module_type,
-        "&array_type=", pv.array_type, "&losses=", round(pv.losses*100, digits=3), "&dc_ac_ratio=", pv.dc_ac_ratio,
-        "&gcr=", pv.gcr, "&inv_eff=", pv.inv_eff*100, "&timeframe=", timeframe, "&dataset=nsrdb",
-        "&radius=", pv.radius
+    @variable(m, dvProdIncent[p.pbi_techs] >= 0)
+    @variable(m, binProdIncent[p.pbi_techs], Bin)
+
+	##Constraint (6a)-1: Production Incentive Upper Bound
+	@constraint(m, ProdIncentUBCon[t in p.pbi_techs],
+		m[:dvProdIncent][t] <= m[:binProdIncent][t] * p.pbi_max_benefit[t] * p.pbi_pwf[t] * p.two_party_factor)
+
+	##Constraint (6a)-2: Production Incentive According to Production
+	@constraint(m, IncentByProductionCon[t in p.pbi_techs],
+		m[:dvProdIncent][t] <= p.hours_per_timestep * p.pbi_benefit_per_kwh[t] * p.pbi_pwf[t] * p.two_party_factor *
+			sum(p.production_factor[t, ts] * m[:dvRatedProduction][t,ts] for ts in p.time_steps)
+	)
+	##Constraint (6b): System size max to achieve production incentive
+	@constraint(m, IncentBySystemSizeCon[t in p.pbi_techs],
+		m[:dvSize][t]  <= p.pbi_max_kw[t] + p.max_sizes[t] * (1 - m[:binProdIncent][t])
     )
 
-    try
-        @info "Querying PVWatts for prodfactor with " pv.name
-        r = HTTP.get(url)
-        response = JSON.parse(String(r.body))
-        if r.status != 200
-            error("Bad response from PVWatts: $(response["errors"])")
-            # julia does not get here even with status != 200 b/c it jumps ahead to CIDER/reopt/src/core/reopt_inputs.jl:114
-            # and raises ArgumentError: indexed assignment with a single value to many locations is not supported; perhaps use broadcasting `.=` instead?
-        end
-        @info "PVWatts success."
-        watts = collect(get(response["outputs"], "ac", []) / 1000)  # scale to 1 kW system (* 1 kW / 1000 W)
-        if length(watts) != 8760
-            @error "PVWatts did not return a valid production factor. Got $watts"
-        end
-        return watts
-    catch e
-        @error "Error occurred when calling PVWatts: $e"
-    end
-end
-
-
-function prodfactor(g::AbstractGenerator; ts_per_hour::Int=1)
-    return ones(8760 * ts_per_hour)
+	m[:TotalProductionIncentive] = @expression(m, sum(m[:dvProdIncent][t] for t in p.pbi_techs))
 end

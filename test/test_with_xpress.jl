@@ -54,6 +54,12 @@ using REoptLite
     @test all(x == 0.0 for x in results["PV"]["year_one_to_load_series_kw"][1:744])
 end
 
+@testset "Blended tariff" begin
+    model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(model, "./scenarios/no_techs.json")
+    @test results["ElectricTariff"]["year_one_energy_cost_us_dollars"] ≈ 1000.0
+    @test results["ElectricTariff"]["year_one_demand_cost_us_dollars"] ≈ 136.99
+end
 
 @testset "Solar and Storage" begin
     model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
@@ -118,6 +124,18 @@ end
     @test maximum(r["ElectricUtility"]["to_load_series_kw"][1:15]) <= 98.0 
     @test maximum(r["ElectricUtility"]["to_load_series_kw"][16:24]) <= 97.0
     @test sum(r["PV"]["to_grid_series_kw"]) ≈ 0
+end
+
+@testset "Complex Incentives" begin
+    """
+    This test was compared against the API test:
+        reo.tests.test_reopt_url.EntryResourceTest.test_complex_incentives
+    when using the hardcoded levelization_factor in this package's REoptInputs function.
+    The two LCC's matched within 0.00005%. (The Julia pkg LCC is  1.0971991e7)
+    """
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, "./scenarios/incentives.json")
+    @test results["Financial"]["lcc_us_dollars"] ≈ 1.0968526e7 atol=5e4  
 end
 
 ## equivalent REopt Lite API Post for test 2:

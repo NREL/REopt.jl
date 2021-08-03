@@ -136,11 +136,28 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
 	@expression(m, TotalTechCapCosts, p.two_party_factor *
-		sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in p.techs )  # TODO add Yintercept and binary
+		  sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in setdiff(p.techs, p.segmented_techs) )
 	)
+    if !isempty(p.segmented_techs)
+        @warn "adding binary variable(s) to model cost curves"
+        add_cost_curve_vars_and_constraints(m, p)
+        for t in p.segmented_techs  # cannot have this for statement in sum( ... for t in ...) ???
+           TotalTechCapCosts += p.two_party_factor * (
+                sum(p.cap_cost_slope[t][s] * m[Symbol("dvSegmentSystemSize"*t)][s] + 
+                    p.seg_yint[t][s] * m[Symbol("binSegment"*t)][s] for s in p.n_segs_by_tech[t])
+            )
+        end
+    end
+
+    if !isempty(p.pbi_techs)
+        @warn "adding binary variable(s) to model production based incentives"
+        add_prod_incent_vars_and_constraints(m, p)
+    else
+        m[:TotalProductionIncentive] = 0
+    end
 	
 	@expression(m, TotalStorageCapCosts, p.two_party_factor *
-		sum(  p.storage.cost_per_kw[b] * m[:dvStoragePower][b]
+		sum(  p.storage.installed_cost_per_kw[b] * m[:dvStoragePower][b]
 			+ p.storage.cost_per_kwh[b] * m[:dvStorageEnergy][b] for b in p.storage.types )
 	)
 	
@@ -202,7 +219,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         m[:TotalGenFuelCharges] * (1 - p.offtaker_tax_pct) +
 
 		# Utility Bill, tax deductible for offtaker
-		m[:TotalElecBill] * (1 - p.offtaker_tax_pct)
+		m[:TotalElecBill] * (1 - p.offtaker_tax_pct) -
+
+        # Subtract Incentives, which are taxable
+		m[:TotalProductionIncentive] * (1 - p.owner_tax_pct)
 	);
 	if !isempty(p.elecutil.outage_durations)
 		add_to_expression!(Costs, m[:ExpectedOutageCost] + m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost] + m[:ExpectedMGFuelCost])
