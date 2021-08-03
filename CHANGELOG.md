@@ -1,5 +1,14 @@
 # REoptLite Changelog
 
+## develop
+- new `ElectricTariff` input options:
+    - `urdb_utility_name` and `urdb_rate_name`
+    - `blended_annual_energy_rate` and `blended_annual_demand_rate`
+- added two capabilities that require binary variables:
+    - tax, production, and capacity incentives for PV (compatible with any energy generation technology)
+    - technology cost curve modeling capability
+    - both of these capabilities are only used for the technologies that require them (based on input values), unlike the API which always models these capabilities (and therefore always includes the binary variables).
+
 ## v0.7.3
 ##### bug fixes
 - outage results processing would fail sometimes when an integer variable was not exact (e.g. 1.000000001)
