@@ -56,6 +56,7 @@ using DelimitedFiles
 using Dates
 import MathOptInterface
 import Dates: daysinmonth, Date, isleapyear
+import DelimitedFiles: readdlm
 const MOI = MathOptInterface
 using Shapefile
 using PolygonInbounds
@@ -68,6 +69,7 @@ include("core/settings.jl")
 include("core/site.jl")
 include("core/financial.jl")
 include("core/pv.jl")
+include("core/wind.jl")
 include("core/storage.jl")
 include("core/generator.jl")
 include("core/electric_load.jl")
