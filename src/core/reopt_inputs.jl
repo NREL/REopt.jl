@@ -63,7 +63,7 @@ struct REoptInputs <: AbstractInputs
     microgrid_premium_pct::Float64
     pvlocations::Array{Symbol, 1}
     maxsize_pv_locations::DenseAxisArray{Float64, 1}  # indexed on pvlocations
-    pv_to_location::DenseAxisArray{Int, 2}  # (pv_techs, pvlocations)
+    pv_to_location::DenseAxisArray{Int, 2}  # (pvtechs, pvlocations)
     etariff::ElectricTariff
     ratchets::UnitRange
     techs_by_exportbin::DenseAxisArray{Array{String,1}}  # indexed on [:NEM, :WHL, :CUR]
@@ -111,7 +111,7 @@ Constructor for REoptInputs
 function REoptInputs(s::Scenario)
 
     time_steps = 1:length(s.electric_load.loads_kw)
-    hours_per_timestep = 8760.0 / length(s.electric_load.loads_kw)
+    hours_per_timestep = 1 / s.settings.time_steps_per_hour
     techs, pvtechs, gentechs, segmented_techs, pv_to_location, maxsize_pv_locations, pvlocations, production_factor,
         max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, seg_min_size, 
         seg_max_size, seg_yint  = setup_tech_inputs(s)
@@ -216,6 +216,9 @@ function setup_tech_inputs(s::Scenario)
     techs = copy(pvtechs)
     gentechs = String[]
     segmented_techs = String[]
+    if s.wind.max_kw > 0
+        push!(techs, "Wind")
+    end
     if s.generator.max_kw > 0
         push!(techs, "Generator")
         push!(gentechs, "Generator")
@@ -247,6 +250,10 @@ function setup_tech_inputs(s::Scenario)
         setup_pv_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
                         pvlocations, pv_to_location, maxsize_pv_locations, segmented_techs, n_segs_by_tech, 
                         seg_min_size, seg_max_size, seg_yint)
+    end
+
+    if "Wind" in techs
+        setup_wind_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor)
     end
 
     if "Generator" in techs
@@ -367,6 +374,19 @@ function setup_pv_inputs(s::Scenario, max_sizes, min_sizes,
         maxsize_pv_locations[:both] = float(both_existing_pv_kw + roof_max_kw + land_max_kw)
     end
 
+    return nothing
+end
+
+
+function setup_wind_inputs(s::Scenario, max_sizes, min_sizes, existing_sizes,
+    cap_cost_slope, om_cost_per_kw, production_factor)
+    # TODO add incentives to Wind and use cost_curve function
+    max_sizes["Wind"] = s.wind.max_kw
+    min_sizes["Wind"] = s.wind.min_kw
+    existing_sizes["Wind"] = 0.0
+    cap_cost_slope["Wind"] = s.wind.installed_cost_per_kw
+    om_cost_per_kw["Wind"] = s.wind.om_cost_per_kw
+    production_factor["Wind", :] = prodfactor(s.wind, s.site.latitude, s.site.longitude, s.settings.time_steps_per_hour)
     return nothing
 end
 
