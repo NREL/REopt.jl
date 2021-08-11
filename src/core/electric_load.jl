@@ -149,8 +149,8 @@ function BuiltInElectricLoad(
     buildingtype::String,
     latitude::Float64,
     longitude::Float64;
-    annual_kwh::Union{Float64,Nothing}=nothing
-    )
+    annual_kwh::Union{T, Nothing}=nothing
+    ) where T <: Real
     lib_path = joinpath(dirname(@__FILE__), "..", "..", "data")
     annual_loads = Dict(
         "Albuquerque" => Dict(
