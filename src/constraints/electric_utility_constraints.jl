@@ -75,15 +75,16 @@ end
 
 
 function add_simultaneous_export_import_constraint(m, p; _n="")
-    # TODO change to indicators
     @constraint(m, NoGridPurchasesBinary[ts in p.time_steps],
-          m[Symbol("dvGridPurchase"*_n)][ts] 
-        + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.types)
-        - (1 - m[Symbol("binNoGridPurchases"*_n)][ts]) * 1.0E9 <= 0
+        m[Symbol("binNoGridPurchases"*_n)][ts] => {
+          m[Symbol("dvGridPurchase"*_n)][ts] +
+          sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.types) <= 0
+        }
     )
     @constraint(m, ExportOnlyAfterSiteLoadMetCon[ts in p.time_steps],
-        sum(m[Symbol("dvProductionToGrid"*_n)][t,u,ts] for t in p.elec_techs, u in p.export_bins_by_tech[t])
-        - m[Symbol("binNoGridPurchases"*_n)][ts] * 1.0E9 <= 0
+        !m[Symbol("binNoGridPurchases"*_n)][ts] => {
+            sum(m[Symbol("dvProductionToGrid"*_n)][t,u,ts] for t in p.elec_techs, u in p.export_bins_by_tech[t]) <= 0
+        }
     )
 end
 
