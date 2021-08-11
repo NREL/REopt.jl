@@ -52,7 +52,7 @@ struct REoptInputs <: AbstractInputs
     hours_per_timestep::Float64
     months::UnitRange
     production_factor::DenseAxisArray{Float64, 2}  # (techs, time_steps)
-    levelization_factor::DenseAxisArray{Float64, 1}  # (techs)
+    levelization_factor::Dict{String, Float64}  # (techs)
     VoLL::Array{R, 1} where R<:Real #default set to 1 US dollar per kwh
     pwf_e::Float64
     pwf_om::Float64
@@ -114,8 +114,11 @@ function REoptInputs(s::Scenario)
     techs, pvtechs, gentechs, segmented_techs, pv_to_location, maxsize_pv_locations, pvlocations, production_factor,
         max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, seg_min_size, 
         seg_max_size, seg_yint  = setup_tech_inputs(s)
-    elec_techs = techs  # only modeling electric loads/techs so far
-    techs_no_turndown = pvtechs
+    elec_techs = copy(techs)  # only modeling electric loads/techs so far
+    techs_no_turndown = copy(pvtechs)
+    if "Wind" in techs
+        append!(techs_no_turndown, ["Wind"])
+    end
 
     pbi_techs, pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
 
@@ -129,8 +132,8 @@ function REoptInputs(s::Scenario)
     # for test_with_cplex (test_time_of_export_rate) and makes the test values match.
     # the REopt code herein uses the Desktop method for levelization_factor, which is more accurate
     # (Desktop has non-linear degradation vs. linear degradation in API)
-    # levelization_factor = DenseAxisArray([0.9539], techs)
-    # levelization_factor = DenseAxisArray([0.9539, 1.0], techs)  # w/generator
+    # levelization_factor = Dict("PV" => 0.9539)
+    # levelization_factor = Dict("PV" => 0.9539, "Generator" => 1.0)  # w/generator
     time_steps_with_grid, time_steps_without_grid, = setup_electric_utility_inputs(s)
     
     if any(pv.existing_kw > 0 for pv in s.pvs)
@@ -402,17 +405,14 @@ end
 
 function setup_present_worth_factors(s::Scenario, techs::Array{String, 1}, pvtechs::Array{String, 1})
 
-    lvl_factor = DenseAxisArray{Float64}(undef, techs)
-    for (i, tech) in enumerate(pvtechs)
+    lvl_factor = Dict(t => 1.0 for t in techs)  # default levelization_factor of 1.0
+    for (i, tech) in enumerate(pvtechs)  # replace 1.0 with actual PV levelization_factor (only tech with degradation)
         lvl_factor[tech] = levelization_factor(
             s.financial.analysis_years,
             s.financial.elec_cost_escalation_pct,
             s.financial.offtaker_discount_pct,
             s.pvs[i].degradation_pct  # TODO generalize for any tech (not just pvs)
         )
-    end
-    if "Generator" in techs
-        lvl_factor["Generator"] = 1
     end
 
     pwf_e = annuity(

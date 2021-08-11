@@ -42,7 +42,7 @@ struct MPCInputs <: AbstractInputs
     hours_per_timestep::Float64
     months::UnitRange
     production_factor::DenseAxisArray{Float64, 2}  # (techs, time_steps)
-    levelization_factor::DenseAxisArray{Float64, 1}  # (techs)
+    levelization_factor::Dict{String, Float64}  # (techs)
     VoLL::Array{R, 1} where R<:Real #default set to 1 US dollar per kwh
     pwf_e::Float64
     pwf_om::Float64
@@ -75,7 +75,7 @@ function MPCInputs(s::MPCScenario)
     techs_by_exportbin = DenseAxisArray([ techs, techs, techs], s.electric_tariff.export_bins)
     # TODO account for which techs have access to export bins (when we add more techs than PV)
 
-    levelization_factor = DenseAxisArray(repeat([1.0], length(techs)), techs)
+    levelization_factor = Dict(t => 1.0 for t in techs)
     pwf_e = 1.0
     pwf_om = 1.0
     two_party_factor = 1.0
