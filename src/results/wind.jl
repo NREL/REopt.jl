@@ -27,42 +27,41 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
-	tstart = time()
-    d = Dict{String, Any}()
-    for b in p.storage.types
-        if p.storage.max_kw[b] > 0
-            add_storage_results(m, p, d, b; _n)
-        end
-    end
+function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+    r = Dict{String, Any}()
+    t = "Wind"
+	GenPerUnitSizeOMCosts = @expression(m, p.two_party_factor * p.pwf_om * m[:dvSize][t] * p.om_cost_per_kw[t])
 
-    add_electric_tariff_results(m, p, d; _n)
-    add_electric_utility_results(m, p, d; _n)
-    add_financial_results(m, p, d; _n)
+	r["size_kw"] = value(m[:dvSize][t])
+	r["total_om_cost_us_dollars"] = round(value(GenPerUnitSizeOMCosts) * (1 - p.owner_tax_pct), digits=0)
+	r["year_one_om_cost_us_dollars"] = round(value(GenPerUnitSizeOMCosts) / (p.pwf_om * p.two_party_factor), digits=0)
 
-	if !isempty(p.pvtechs)
-        add_pv_results(m, p, d; _n)
-	end
+	generatorToBatt = @expression(m, [ts in p.time_steps],
+		sum(m[:dvProductionToStorage][b, t, ts] for b in p.storage.types, t in p.gentechs))
+	r["year_one_to_battery_series_kw"] = round.(value.(generatorToBatt), digits=3)
 
-    if "Wind" in p.techs
-        add_wind_results(m, p, d; _n)
-    end
-	
-	time_elapsed = time() - tstart
-	@info "Base results processing took $(round(time_elapsed, digits=3)) seconds."
-	
-	if !isempty(p.gentechs) && isempty(_n)  # generators not included in multinode model
-        tstart = time()
-		add_generator_results(m, p, d)
-        time_elapsed = time() - tstart
-        @info "Generator results processing took $(round(time_elapsed, digits=3)) seconds."
-	end
-	
-	if !isempty(p.elecutil.outage_durations) && isempty(_n)  # outages not included in multinode model
-        tstart = time()
-		add_outage_results(m, p, d)
-        time_elapsed = time() - tstart
-        @info "Outage results processing took $(round(time_elapsed, digits=3)) seconds."
-	end
-	return d
+	generatorToGrid = @expression(m, [ts in p.time_steps],
+		sum(m[:dvProductionToGrid][t, u, ts] for u in p.export_bins_by_tech[t])
+	)
+	r["year_one_to_grid_series_kw"] = round.(value.(generatorToGrid), digits=3)
+
+	generatorToLoad = @expression(m, [ts in p.time_steps],
+		    m[:dvRatedProduction][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t] -
+			generatorToBatt[ts] - generatorToGrid[ts]
+	)
+	r["year_one_to_load_series_kw"] = round.(value.(generatorToLoad), digits=3)
+
+	Year1GenProd = @expression(m,
+		p.hours_per_timestep * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts]
+			for ts in p.time_steps)
+	)
+	r["year_one_energy_produced_kwh"] = round(value(Year1GenProd), digits=0)
+	AverageGenProd = @expression(m,
+		p.hours_per_timestep * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts] *
+		p.levelization_factor[t] for ts in p.time_steps)
+	)
+	r["average_yearly_energy_produced_kwh"] = round(value(AverageGenProd), digits=0)
+    
+	d["Wind"] = r
+    nothing
 end

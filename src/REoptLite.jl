@@ -103,6 +103,7 @@ include("results/generator.jl")
 include("results/pv.jl")
 include("results/storage.jl")
 include("results/outages.jl")
+include("results/wind.jl")
 
 include("core/reopt.jl")
 include("core/reopt_multinode.jl")
