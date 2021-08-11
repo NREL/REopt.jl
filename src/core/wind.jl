@@ -33,7 +33,7 @@ struct Wind <: AbstractTech
     max_kw::Float64
     installed_cost_per_kw::Float64
     om_cost_per_kw::Float64
-    prod_factor_series_kw::AbstractArray{Float64,1}
+    prod_factor_series_kw::Union{Missing, Array{Real,1}}
     size_class::String
     hub_height::Float64
     wind_meters_per_sec::AbstractArray{Float64,1}
@@ -63,7 +63,7 @@ struct Wind <: AbstractTech
         max_kw = 1.0e9,
         installed_cost_per_kw = 3013.0,
         om_cost_per_kw = 40.0,
-        prod_factor_series_kw = [],
+        prod_factor_series_kw = missing,
         size_class = "",
         wind_meters_per_sec = [],
         wind_direction_degrees = [],
