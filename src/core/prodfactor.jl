@@ -171,7 +171,15 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
                             2.5, 2.5, 2.5, 0, 0, 0, 0, 0, 0, 0]
         )
 
-        hdl = Libc.Libdl.dlopen(joinpath(dirname(@__FILE__), "..", "sam", "libssc.so"))
+        if Sys.isapple() || Sys.islinux()
+            libfile = "libssc.so"
+        elseif Sys.iswindows()
+            libfile = "ssc.dll"
+        else
+            @error """Unsupported platform for using the SAM Wind module. 
+                      You can alternatively provide the Wind.prod_factor_series_kw"""
+        end
+        hdl = Libc.Libdl.dlopen(joinpath(dirname(@__FILE__), "..", "sam", libfile))
         wind_module = @ccall ssc_module_create("windpower"::Cstring)::Ptr{Cvoid}
         wind_resource = @ccall ssc_data_create()::Ptr{Cvoid}  # data pointer
         @ccall ssc_module_exec_set_print(0::Cint)::Cvoid
@@ -196,11 +204,10 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
             fields::Ptr{Cvoid}, length(fields)::Cint)::Cvoid
 
         nrows, ncols = size(resources)
-        t=[row for row in eachrow(resources)];
+        t = [row for row in eachrow(resources)];
         t2 = reduce(vcat, t);
         # the values in python api are sent to SAM as vector (35040) with rows concatenated
         c_resources = [convert(Float64, t2[i]) for i in eachindex(t2)]
-        # sam_resources = collect(eachrow(c_resources))
         @ccall ssc_data_set_matrix(wind_resource::Ptr{Cvoid}, "data"::Cstring, c_resources::Ptr{Cvoid}, 
             Cint(nrows)::Cint, Cint(ncols)::Cint)::Cvoid
 
@@ -212,9 +219,6 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
         # a = @ccall ssc_data_get_matrix(wind_resource::Ptr{Cvoid}, "data"::Cstring, Ref(Cint(4))::Ptr{Cint}, Ref(Cint(4))::Ptr{Cint})::Ptr{Cfloat}
         # unsafe_load(a, 1)
         # unsafe_load(a, 35040)
-        # but still get Log Error: exec fail(windpower): error reading wind resource file at 0:  time -1 from 
-        # Bool(@ccall ssc_module_exec(wind_module::Ptr{Cvoid}, data::Ptr{Cvoid})::Cint)
-        # which comes from https://github.com/NREL/ssc/blob/586d518727cb90601f3f8276df1875408071509c/ssc/cmod_windfile.cpp#L91
 
         # Scaler inputs
         @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_resource_shear"::Cstring, 0.14000000059604645::Cfloat)::Cvoid
@@ -252,11 +256,11 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
         @ccall ssc_data_set_array(data::Ptr{Cvoid}, "wind_farm_yCoordinates"::Cstring, 
             wind_farm_yCoordinates::Ptr{Cvoid}, 1::Cint)::Cvoid
 
-        # get SAM prodfactor
+        # example of getting a number:
         # val = convert(Cfloat, 0.0)
         # ref = Ref(val)
-        # Float64(ref[])
         # @ccall ssc_data_get_number(data::Ptr{Cvoid}, "wind_resource_shear"::Cstring, ref::Ptr{Cfloat})::Cvoid
+        # Float64(ref[])
         
         if !Bool(@ccall ssc_module_exec(wind_module::Ptr{Cvoid}, data::Ptr{Cvoid})::Cint)
             log_type = 0
