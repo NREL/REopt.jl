@@ -29,11 +29,11 @@
 # *********************************************************************************
 function add_export_constraints(m, p; _n="")
 
-    ##Constraint (8e): Production export no greater than production
+    ##Constraint (8e): Production export and curtailment no greater than production
     @constraint(m, [t in p.elec_techs, ts in p.time_steps_with_grid],
         p.production_factor[t,ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] 
-        >= sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for u in p.export_bins_by_tech[t]) 
-        + m[Symbol("dvCurtail"*_n)][t, ts]
+        >= sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for u in p.export_bins_by_tech[t]) +
+           m[Symbol("dvCurtail"*_n)][t, ts]
     )
 
     ### Constraint set (9): Net Meter Module 
@@ -91,7 +91,7 @@ end
 
 function add_elec_utility_expressions(m, p; _n="")
 
-    if !isempty(p.etariff.export_bins) & !isempty(p.techs)
+    if !isempty(p.etariff.export_bins) && !isempty(p.techs)
         # NOTE: levelization_factor is baked into dvProductionToGrid
         m[Symbol("TotalExportBenefit"*_n)] = @expression(m, p.pwf_e * p.hours_per_timestep *
             sum( sum(p.etariff.export_rates[u][ts] * m[Symbol("dvProductionToGrid"*_n)][t, u, ts] 
