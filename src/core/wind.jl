@@ -27,7 +27,74 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+    Wind
 
+struct with inner constructor:
+```julia
+function Wind(;
+    min_kw = 0.0,
+    max_kw = 1.0e9,
+    installed_cost_per_kw = 0.0,
+    om_cost_per_kw = 40.0,
+    prod_factor_series_kw = missing,
+    size_class = "",
+    wind_meters_per_sec = [],
+    wind_direction_degrees = [],
+    temperature_celsius = [],
+    pressure_atmospheres = [],
+    macrs_option_years = 5,
+    macrs_bonus_pct = 0.0,
+    macrs_itc_reduction = 0.5,
+    federal_itc_pct = 0.26,
+    federal_rebate_per_kw = 0.0,
+    state_ibi_pct = 0.0,
+    state_ibi_max = 1.0e10,
+    state_rebate_per_kw = 0.0,
+    state_rebate_max = 1.0e10,
+    utility_ibi_pct = 0.0,
+    utility_ibi_max = 1.0e10,
+    utility_rebate_per_kw = 0.0,
+    utility_rebate_max = 1.0e10,
+    production_incentive_per_kwh = 0.0,
+    production_incentive_max_benefit = 1.0e9,
+    production_incentive_years = 1,
+    production_incentive_max_kw = 1.0e9,
+)
+```
+
+`size_class` must be one of ["residential", "commercial", "medium", "large"].
+
+If no `installed_cost_per_kw` is provided (or it is 0.0) then it is determined from:
+```julia
+size_class_to_installed_cost = Dict(
+    "residential"=> 11950.0,
+    "commercial"=> 7390.0,
+    "medium"=> 4440.0,
+    "large"=> 3450.0
+)
+```
+
+The Federal Investment Tax Credit is adjusted based on the `size_class` as follows (if the default of 0.3 is not changed):
+```julia
+size_class_to_itc_incentives = Dict(
+    "residential"=> 0.3,
+    "commercial"=> 0.3,
+    "medium"=> 0.12,
+    "large"=> 0.12
+)
+```
+
+If the `prod_factor_series_kw` is not provided then NREL's System Advisor Model (SAM) is used to get the wind turbine 
+production factor.
+
+Wind resource values are optional, i.e.
+(`wind_meters_per_sec`, `wind_direction_degrees`, `temperature_celsius`, and `pressure_atmospheres`).
+If not provided then the resource values are downloaded from NREL's Wind Toolkit.
+These values are passed to SAM to get the turbine production factor.
+
+
+"""
 struct Wind <: AbstractTech
     min_kw::Float64
     max_kw::Float64
@@ -61,7 +128,7 @@ struct Wind <: AbstractTech
     function Wind(;
         min_kw = 0.0,
         max_kw = 1.0e9,
-        installed_cost_per_kw = 3013.0,
+        installed_cost_per_kw = 0.0,
         om_cost_per_kw = 40.0,
         prod_factor_series_kw = missing,
         size_class = "",
@@ -106,13 +173,19 @@ struct Wind <: AbstractTech
             "medium"=> 0.12,
             "large"=> 0.12
         )
-        """
-        If the size_class is not provided then it is determined by average load. 
-        """
+        
         if length(size_class) == 0
             size_class = "large"
         elseif !(size_class in keys(size_class_to_hub_height))
             @error "Wind.size_class must be one of $(keys(size_class_to_hub_height))"
+        end
+
+        if installed_cost_per_kw == 0.0
+            installed_cost_per_kw = size_class_to_installed_cost[size_class]
+        end
+
+        if federal_itc_pct == 0.3
+            federal_itc_pct = size_class_to_itc_incentives[size_class]
         end
 
         hub_height = size_class_to_hub_height[size_class]

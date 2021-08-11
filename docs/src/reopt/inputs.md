@@ -69,6 +69,11 @@ REoptLite.Financial
 REoptLite.ElectricUtility
 ```
 
+## Wind
+```@docs
+REoptLite.Wind
+```
+
 ## Generator
 ```@docs
 REoptLite.Generator
