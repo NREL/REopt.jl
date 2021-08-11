@@ -69,6 +69,11 @@ REoptLite.Financial
 REoptLite.ElectricUtility
 ```
 
+## PV
+```@docs
+REoptLite.PV
+```
+
 ## Wind
 ```@docs
 REoptLite.Wind
