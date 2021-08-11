@@ -61,6 +61,9 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 		p.levelization_factor[t] for ts in p.time_steps)
 	)
 	r["average_yearly_energy_produced_kwh"] = round(value(AverageGenProd), digits=0)
+
+    WindToCUR = (m[Symbol("dvCurtail"*_n)][t, ts] for ts in p.time_steps)
+    r["year_one_curtailed_production_series_kw"] = round.(value.(WindToCUR), digits=3)
     
 	d["Wind"] = r
     nothing
