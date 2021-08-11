@@ -73,7 +73,7 @@ a production factor time-series using resource data and the System Advisor Model
 If the user does not provide the resource data, the latitude and longitude are used to get the resource data from the
 Wind Toolkit.
 """
-function prodfactor(wind::Wind, latitude::Real, longitude::Real)
+function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_hour::Int)
 
     if !(ismissing(wind.prod_factor_series_kw))
         return wind.prod_factor_series_kw
@@ -138,14 +138,17 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real)
     # Initialize SAM inputs
     hdl = nothing
     sam_prodfactor = []
+
+    # Corresponding size in kW for generic reference turbines sizes
+    system_capacity_lookup = Dict(
+        "large"=> 2000,
+        "medium" => 250,
+        "commercial"=> 100,
+        "residential"=> 2.5
+    )
+    system_capacity = system_capacity_lookup[wind.size_class]
+
     try
-        # Corresponding size in kW for generic reference turbines sizes
-        system_capacity_lookup = Dict(
-            "large"=> 2000,
-            "medium" => 250,
-            "commercial"=> 100,
-            "residential"=> 2.5
-        )
         #   Corresponding rotor diameter in meters for generic reference turbines sizes
         rotor_diameter_lookup = Dict(
             "large" => 55*2,
@@ -168,10 +171,10 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real)
                             2.5, 2.5, 2.5, 0, 0, 0, 0, 0, 0, 0]
         )
 
-        # ssc_module_exec_set_print ?
-        hdl = Libc.Libdl.dlopen("sam/ssc.dylib")
+        hdl = Libc.Libdl.dlopen(joinpath(dirname(@__FILE__), "..", "sam", "libssc.so"))
         wind_module = @ccall ssc_module_create("windpower"::Cstring)::Ptr{Cvoid}
         wind_resource = @ccall ssc_data_create()::Ptr{Cvoid}  # data pointer
+        @ccall ssc_module_exec_set_print(0::Cint)::Cvoid
 
         @ccall ssc_data_set_number(wind_resource::Ptr{Cvoid}, "latitude"::Cstring, latitude::Cfloat)::Cvoid
         @ccall ssc_data_set_number(wind_resource::Ptr{Cvoid}, "longitude"::Cstring, longitude::Cfloat)::Cvoid
@@ -182,21 +185,21 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real)
         for h in heights_for_sam
             append!(heights_array, repeat([h], 4))
         end
-        heights_array = convert(Array{Cfloat}, heights_array)
+        heights_array = convert(Array{Float64}, heights_array)
         @ccall ssc_data_set_array(wind_resource::Ptr{Cvoid}, "heights"::Cstring, 
            heights_array::Ptr{Cvoid}, length(heights_array)::Cint)::Cvoid
 
         # setup column data types: temperature=1, pressure=2, degree=3, speed=4
         fields = collect(repeat(range(1, stop=4), length(heights_for_sam)))
-        fields = convert(Array{Cint}, fields)
+        fields = convert(Array{Float64}, fields)
         @ccall ssc_data_set_array(wind_resource::Ptr{Cvoid}, "fields"::Cstring, 
             fields::Ptr{Cvoid}, length(fields)::Cint)::Cvoid
 
         nrows, ncols = size(resources)
         t=[row for row in eachrow(resources)];
-        t2=reduce(vcat, t);
+        t2 = reduce(vcat, t);
         # the values in python api are sent to SAM as vector (35040) with rows concatenated
-        c_resources = [convert(Cfloat, t2[i]) for i in eachindex(t2)]
+        c_resources = [convert(Float64, t2[i]) for i in eachindex(t2)]
         # sam_resources = collect(eachrow(c_resources))
         @ccall ssc_data_set_matrix(wind_resource::Ptr{Cvoid}, "data"::Cstring, c_resources::Ptr{Cvoid}, 
             Cint(nrows)::Cint, Cint(ncols)::Cint)::Cvoid
@@ -218,7 +221,7 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real)
         @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_resource_turbulence_coeff"::Cstring, 
             0.10000000149011612::Cfloat)::Cvoid
         @ccall ssc_data_set_number(data::Ptr{Cvoid}, "system_capacity"::Cstring, 
-            system_capacity_lookup[wind.size_class]::Cfloat)::Cvoid
+            system_capacity::Cfloat)::Cvoid
         @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_resource_model_choice"::Cstring, 0::Cfloat)::Cvoid
         @ccall ssc_data_set_number(data::Ptr{Cvoid}, "weibull_reference_height"::Cstring, 50::Cfloat)::Cvoid
         @ccall ssc_data_set_number(data::Ptr{Cvoid}, "weibull_k_factor"::Cstring, 2::Cfloat)::Cvoid
@@ -226,27 +229,26 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real)
         @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_turbine_rotor_diameter"::Cstring, 
             rotor_diameter_lookup[wind.size_class]::Cfloat)::Cvoid
         @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_turbine_hub_ht"::Cstring, wind.hub_height::Cfloat)::Cvoid
-        @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_turbine_hub_ht"::Cstring, wind.hub_height::Cfloat)::Cvoid
         @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_turbine_max_cp"::Cstring, 0.44999998807907104::Cfloat)::Cvoid
         @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_farm_losses_percent"::Cstring, 0::Cfloat)::Cvoid
         @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_farm_wake_model"::Cstring, 0::Cfloat)::Cvoid
         @ccall ssc_data_set_number(data::Ptr{Cvoid}, "adjust:constant"::Cstring, 0::Cfloat)::Cvoid
 
         # Array inputs
-        speeds = convert(Array{Cfloat},
+        speeds = convert(Array{Float64},
             [0., 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25])
         @ccall ssc_data_set_array(data::Ptr{Cvoid}, "wind_turbine_powercurve_windspeeds"::Cstring, 
             speeds::Ptr{Cvoid}, length(speeds)::Cint)::Cvoid
         
-        powercurve = convert(Array{Cfloat}, wind_turbine_powercurve_lookup[wind.size_class])
+        powercurve = convert(Array{Float64}, wind_turbine_powercurve_lookup[wind.size_class])
         @ccall ssc_data_set_array(data::Ptr{Cvoid}, "wind_turbine_powercurve_powerout"::Cstring, 
             powercurve::Ptr{Cvoid}, length(powercurve)::Cint)::Cvoid
         
-        wind_farm_xCoordinates = [Cfloat(0)]
+        wind_farm_xCoordinates = [Float64(0)]
         @ccall ssc_data_set_array(data::Ptr{Cvoid}, "wind_farm_xCoordinates"::Cstring, 
             wind_farm_xCoordinates::Ptr{Cvoid}, 1::Cint)::Cvoid
         
-        wind_farm_yCoordinates = [Cfloat(0)]
+        wind_farm_yCoordinates = [Float64(0)]
         @ccall ssc_data_set_array(data::Ptr{Cvoid}, "wind_farm_yCoordinates"::Cstring, 
             wind_farm_yCoordinates::Ptr{Cvoid}, 1::Cint)::Cvoid
 
@@ -255,11 +257,8 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real)
         # ref = Ref(val)
         # Float64(ref[])
         # @ccall ssc_data_get_number(data::Ptr{Cvoid}, "wind_resource_shear"::Cstring, ref::Ptr{Cfloat})::Cvoid
-        # @ccall ssc_module_exec_set_print(0::Cint)::Cvoid
-
-        Bool(@ccall ssc_module_exec(wind_module::Ptr{Cvoid}, data::Ptr{Cvoid})::Cint)
         
-        if Bool(@ccall ssc_module_exec(wind_module::Ptr{Cvoid}, data::Ptr{Cvoid})::Cint)
+        if !Bool(@ccall ssc_module_exec(wind_module::Ptr{Cvoid}, data::Ptr{Cvoid})::Cint)
             log_type = 0
             log_type_ref = Ref(log_type)
             log_time = 0
@@ -274,17 +273,30 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real)
             end
         end
 
-        @ccall ssc_module_free(wind_module::Ptr{Cvoid})::Cvoid   
         len = 0
         len_ref = Ref(len)
-        a = @ccall ssc_data_get_array(data::Ptr{Cvoid}, "gen"::Cstring, len_ref::Ptr{Cvoid})::Ptr{Cvoid}
+        a = @ccall ssc_data_get_array(data::Ptr{Cvoid}, "gen"::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}
         for i in range(1, stop=8760)
             push!(sam_prodfactor, unsafe_load(a, i))
         end
-        @ccall ssc_data_free(wind_resource::Ptr{Cvoid})::Cvoid
+        @ccall ssc_module_free(wind_module::Ptr{Cvoid})::Cvoid   
         @ccall ssc_data_free(data::Ptr{Cvoid})::Cvoid
 
     finally
         Libc.Libdl.dlclose(hdl)
     end
+
+    if !(length(sam_prodfactor) == 8760)
+        @error "Wind production factor from SAM has length $(length(sam_prodfactor)) (should be 8760)."
+    end
+
+    @assert !(nothing in sam_prodfactor) "Did not get complete Wind production factor from SAM."
+
+    # normalize by system_capacity
+    normalized_prod_factor = sam_prodfactor ./ system_capacity
+    # upsample if time steps per hour > 1
+    if time_steps_per_hour > 1
+        normalized_prod_factor = repeat(normalized_prod_factor, inner=time_steps_per_hour)
+    end
+    return normalized_prod_factor
 end
