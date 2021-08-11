@@ -45,7 +45,6 @@ struct REoptInputs <: AbstractInputs
     existing_sizes::DenseAxisArray{Float64, 1}  # (techs)
     cap_cost_slope::Dict{String, Any}  # (techs)
     om_cost_per_kw::DenseAxisArray{Float64, 1}  # (techs)
-    max_grid_export_kwh::Float64
     elec_load::ElectricLoad
     time_steps::UnitRange
     time_steps_with_grid::Array{Int, 1}
@@ -120,8 +119,6 @@ function REoptInputs(s::Scenario)
 
     pbi_techs, pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
 
-    max_grid_export_kwh = sum(s.electric_load.loads_kw)
-
     months = 1:length(s.electric_tariff.monthly_demand_rates)
 
     techs_by_exportbin = DenseAxisArray([ techs, techs, techs], s.electric_tariff.export_bins)
@@ -160,7 +157,6 @@ function REoptInputs(s::Scenario)
         existing_sizes,
         cap_cost_slope,
         om_cost_per_kw,
-        max_grid_export_kwh,
         s.electric_load,
         time_steps,
         time_steps_with_grid,

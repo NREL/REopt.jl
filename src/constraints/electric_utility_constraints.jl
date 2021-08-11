@@ -35,14 +35,6 @@ function add_export_constraints(m, p; _n="")
         >= sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for u in p.export_bins_by_tech[t]) 
         + m[Symbol("dvCurtail"*_n)][t, ts]
     )
-    
-    ##Constraint (8f): Total sales to grid no greater than annual allocation
-    # TODO: rm this constraint if API PR approved
-    @constraint(m,
-        p.hours_per_timestep * sum( m[Symbol("dvProductionToGrid"*_n)][t, u, ts] 
-            for t in p.elec_techs, u in p.export_bins_by_tech[t], ts in p.time_steps_with_grid
-        ) <= p.max_grid_export_kwh
-    )
 
     ### Constraint set (9): Net Meter Module 
     ##Constraint (9c): Net metering only -- can't sell more than you purchase
