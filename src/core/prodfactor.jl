@@ -171,7 +171,9 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
                             2.5, 2.5, 2.5, 0, 0, 0, 0, 0, 0, 0]
         )
 
-        if Sys.isapple() || Sys.islinux()
+        if Sys.isapple() 
+            libfile = "libssc.dylib"
+        elseif Sys.islinux()
             libfile = "libssc.so"
         elseif Sys.iswindows()
             libfile = "ssc.dll"
