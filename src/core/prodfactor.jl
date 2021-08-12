@@ -181,7 +181,7 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
             @error """Unsupported platform for using the SAM Wind module. 
                       You can alternatively provide the Wind.prod_factor_series_kw"""
         end
-        hdl = Libc.Libdl.dlopen(joinpath(dirname(@__FILE__), "..", "sam", libfile))
+        hdl = Libc.Libdl.dlopen(joinpath(dirname(@__FILE__), "..", "sam", libfile), Libc.Libdl.RTLD_GLOBAL)
         wind_module = @ccall ssc_module_create("windpower"::Cstring)::Ptr{Cvoid}
         wind_resource = @ccall ssc_data_create()::Ptr{Cvoid}  # data pointer
         @ccall ssc_module_exec_set_print(0::Cint)::Cvoid
