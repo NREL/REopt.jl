@@ -305,5 +305,4 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
         normalized_prod_factor = repeat(normalized_prod_factor, inner=time_steps_per_hour)
     end
     return normalized_prod_factor
-    # TODO: how to silence "entering exec" from SAM?
 end
