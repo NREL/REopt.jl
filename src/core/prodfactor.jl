@@ -186,10 +186,10 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
         wind_resource = @ccall ssc_data_create()::Ptr{Cvoid}  # data pointer
         @ccall ssc_module_exec_set_print(0::Cint)::Cvoid
 
-        @ccall ssc_data_set_number(wind_resource::Ptr{Cvoid}, "latitude"::Cstring, latitude::Cfloat)::Cvoid
-        @ccall ssc_data_set_number(wind_resource::Ptr{Cvoid}, "longitude"::Cstring, longitude::Cfloat)::Cvoid
-        @ccall ssc_data_set_number(wind_resource::Ptr{Cvoid}, "elevation"::Cstring, 0::Cfloat)::Cvoid  # not used in SAM
-        @ccall ssc_data_set_number(wind_resource::Ptr{Cvoid}, "year"::Cstring, 2012::Cfloat)::Cvoid
+        @ccall ssc_data_set_number(wind_resource::Ptr{Cvoid}, "latitude"::Cstring, latitude::Cdouble)::Cvoid
+        @ccall ssc_data_set_number(wind_resource::Ptr{Cvoid}, "longitude"::Cstring, longitude::Cdouble)::Cvoid
+        @ccall ssc_data_set_number(wind_resource::Ptr{Cvoid}, "elevation"::Cstring, 0::Cdouble)::Cvoid  # not used in SAM
+        @ccall ssc_data_set_number(wind_resource::Ptr{Cvoid}, "year"::Cstring, 2012::Cdouble)::Cvoid
 
         heights_array = []  # have to repeat heights for each resource column
         for h in heights_for_sam
@@ -197,20 +197,20 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
         end
         heights_array = convert(Array{Float64}, heights_array)
         @ccall ssc_data_set_array(wind_resource::Ptr{Cvoid}, "heights"::Cstring, 
-           heights_array::Ptr{Cvoid}, length(heights_array)::Cint)::Cvoid
+           heights_array::Ptr{Cdouble}, length(heights_array)::Cint)::Cvoid
 
         # setup column data types: temperature=1, pressure=2, degree=3, speed=4
         fields = collect(repeat(range(1, stop=4), length(heights_for_sam)))
         fields = convert(Array{Float64}, fields)
         @ccall ssc_data_set_array(wind_resource::Ptr{Cvoid}, "fields"::Cstring, 
-            fields::Ptr{Cvoid}, length(fields)::Cint)::Cvoid
+            fields::Ptr{Cdouble}, length(fields)::Cint)::Cvoid
 
         nrows, ncols = size(resources)
         t = [row for row in eachrow(resources)];
         t2 = reduce(vcat, t);
         # the values in python api are sent to SAM as vector (35040) with rows concatenated
         c_resources = [convert(Float64, t2[i]) for i in eachindex(t2)]
-        @ccall ssc_data_set_matrix(wind_resource::Ptr{Cvoid}, "data"::Cstring, c_resources::Ptr{Cvoid}, 
+        @ccall ssc_data_set_matrix(wind_resource::Ptr{Cvoid}, "data"::Cstring, c_resources::Ptr{Cdouble}, 
             Cint(nrows)::Cint, Cint(ncols)::Cint)::Cvoid
 
         data = @ccall ssc_data_create()::Ptr{Cvoid}  # data pointer
@@ -218,50 +218,50 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
         @ccall ssc_data_free(wind_resource::Ptr{Cvoid})::Cvoid
 
         # # can get the same values back with:
-        # a = @ccall ssc_data_get_matrix(wind_resource::Ptr{Cvoid}, "data"::Cstring, Ref(Cint(4))::Ptr{Cint}, Ref(Cint(4))::Ptr{Cint})::Ptr{Cfloat}
+        # a = @ccall ssc_data_get_matrix(wind_resource::Ptr{Cvoid}, "data"::Cstring, Ref(Cint(4))::Ptr{Cint}, Ref(Cint(4))::Ptr{Cint})::Ptr{Cdouble}
         # unsafe_load(a, 1)
         # unsafe_load(a, 35040)
 
         # Scaler inputs
-        @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_resource_shear"::Cstring, 0.14000000059604645::Cfloat)::Cvoid
+        @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_resource_shear"::Cstring, 0.14000000059604645::Cdouble)::Cvoid
         @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_resource_turbulence_coeff"::Cstring, 
-            0.10000000149011612::Cfloat)::Cvoid
+            0.10000000149011612::Cdouble)::Cvoid
         @ccall ssc_data_set_number(data::Ptr{Cvoid}, "system_capacity"::Cstring, 
-            system_capacity::Cfloat)::Cvoid
-        @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_resource_model_choice"::Cstring, 0::Cfloat)::Cvoid
-        @ccall ssc_data_set_number(data::Ptr{Cvoid}, "weibull_reference_height"::Cstring, 50::Cfloat)::Cvoid
-        @ccall ssc_data_set_number(data::Ptr{Cvoid}, "weibull_k_factor"::Cstring, 2::Cfloat)::Cvoid
-        @ccall ssc_data_set_number(data::Ptr{Cvoid}, "weibull_wind_speed"::Cstring, 7.25::Cfloat)::Cvoid
+            system_capacity::Cdouble)::Cvoid
+        @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_resource_model_choice"::Cstring, 0::Cdouble)::Cvoid
+        @ccall ssc_data_set_number(data::Ptr{Cvoid}, "weibull_reference_height"::Cstring, 50::Cdouble)::Cvoid
+        @ccall ssc_data_set_number(data::Ptr{Cvoid}, "weibull_k_factor"::Cstring, 2::Cdouble)::Cvoid
+        @ccall ssc_data_set_number(data::Ptr{Cvoid}, "weibull_wind_speed"::Cstring, 7.25::Cdouble)::Cvoid
         @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_turbine_rotor_diameter"::Cstring, 
-            rotor_diameter_lookup[wind.size_class]::Cfloat)::Cvoid
-        @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_turbine_hub_ht"::Cstring, wind.hub_height::Cfloat)::Cvoid
-        @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_turbine_max_cp"::Cstring, 0.44999998807907104::Cfloat)::Cvoid
-        @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_farm_losses_percent"::Cstring, 0::Cfloat)::Cvoid
-        @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_farm_wake_model"::Cstring, 0::Cfloat)::Cvoid
-        @ccall ssc_data_set_number(data::Ptr{Cvoid}, "adjust:constant"::Cstring, 0::Cfloat)::Cvoid
+            rotor_diameter_lookup[wind.size_class]::Cdouble)::Cvoid
+        @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_turbine_hub_ht"::Cstring, wind.hub_height::Cdouble)::Cvoid
+        @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_turbine_max_cp"::Cstring, 0.44999998807907104::Cdouble)::Cvoid
+        @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_farm_losses_percent"::Cstring, 0::Cdouble)::Cvoid
+        @ccall ssc_data_set_number(data::Ptr{Cvoid}, "wind_farm_wake_model"::Cstring, 0::Cdouble)::Cvoid
+        @ccall ssc_data_set_number(data::Ptr{Cvoid}, "adjust:constant"::Cstring, 0::Cdouble)::Cvoid
 
         # Array inputs
         speeds = convert(Array{Float64},
             [0., 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25])
         @ccall ssc_data_set_array(data::Ptr{Cvoid}, "wind_turbine_powercurve_windspeeds"::Cstring, 
-            speeds::Ptr{Cvoid}, length(speeds)::Cint)::Cvoid
+            speeds::Ptr{Cdouble}, length(speeds)::Cint)::Cvoid
         
         powercurve = convert(Array{Float64}, wind_turbine_powercurve_lookup[wind.size_class])
         @ccall ssc_data_set_array(data::Ptr{Cvoid}, "wind_turbine_powercurve_powerout"::Cstring, 
-            powercurve::Ptr{Cvoid}, length(powercurve)::Cint)::Cvoid
+            powercurve::Ptr{Cdouble}, length(powercurve)::Cint)::Cvoid
         
         wind_farm_xCoordinates = [Float64(0)]
         @ccall ssc_data_set_array(data::Ptr{Cvoid}, "wind_farm_xCoordinates"::Cstring, 
-            wind_farm_xCoordinates::Ptr{Cvoid}, 1::Cint)::Cvoid
+            wind_farm_xCoordinates::Ptr{Cdouble}, 1::Cint)::Cvoid
         
         wind_farm_yCoordinates = [Float64(0)]
         @ccall ssc_data_set_array(data::Ptr{Cvoid}, "wind_farm_yCoordinates"::Cstring, 
-            wind_farm_yCoordinates::Ptr{Cvoid}, 1::Cint)::Cvoid
+            wind_farm_yCoordinates::Ptr{Cdouble}, 1::Cint)::Cvoid
 
         # example of getting a number:
-        # val = convert(Cfloat, 0.0)
+        # val = convert(Cdouble, 0.0)
         # ref = Ref(val)
-        # @ccall ssc_data_get_number(data::Ptr{Cvoid}, "wind_resource_shear"::Cstring, ref::Ptr{Cfloat})::Cvoid
+        # @ccall ssc_data_get_number(data::Ptr{Cvoid}, "wind_resource_shear"::Cstring, ref::Ptr{Cdouble})::Cvoid
         # Float64(ref[])
         
         if !Bool(@ccall ssc_module_exec(wind_module::Ptr{Cvoid}, data::Ptr{Cvoid})::Cint)
