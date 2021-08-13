@@ -186,7 +186,6 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
         
         hdl = Libc.Libdl.dlopen(joinpath(dirname(@__FILE__), "..", "sam", libfile), Libc.Libdl.RTLD_GLOBAL)
         
-        end
         wind_module = @ccall ssc_module_create("windpower"::Cstring)::Ptr{Cvoid}
         wind_resource = @ccall ssc_data_create()::Ptr{Cvoid}  # data pointer
         @ccall ssc_module_exec_set_print(0::Cint)::Cvoid
