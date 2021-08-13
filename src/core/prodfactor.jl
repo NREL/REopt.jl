@@ -175,19 +175,17 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
             libfile = "libssc.dylib"
         elseif Sys.islinux()
             libfile = "libssc.so"
-        elseif Sys.iswindows()
-            libfile = "ssc.dll"
+        # elseif Sys.iswindows()
+        #     libfile = "ssc.dll"
+        # TODO: Cannot get the ssc.dll to export the C++ functions 
+        # https://discourse.julialang.org/t/ccall-on-windows-could-not-load-symbol-the-specified-procedure-could-not-be-found/66291
         else
             @error """Unsupported platform for using the SAM Wind module. 
                       You can alternatively provide the Wind.prod_factor_series_kw"""
         end
         
-        if Sys.islinux() || Sys.isapple()
-            hdl = Libc.Libdl.dlopen(joinpath(dirname(@__FILE__), "..", "sam", libfile), Libc.Libdl.RTLD_GLOBAL)
-        else
-            hdl = Libc.Libdl.dlopen(joinpath(dirname(@__FILE__), "..", "sam", libfile),
-                Libc.Libdl.RTLD_LAZY|Libc.Libdl.RTLD_DEEPBIND|Libc.Libdl.RTLD_GLOBAL
-            )
+        hdl = Libc.Libdl.dlopen(joinpath(dirname(@__FILE__), "..", "sam", libfile), Libc.Libdl.RTLD_GLOBAL)
+        
         end
         wind_module = @ccall ssc_module_create("windpower"::Cstring)::Ptr{Cvoid}
         wind_resource = @ccall ssc_data_create()::Ptr{Cvoid}  # data pointer
