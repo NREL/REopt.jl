@@ -13,9 +13,8 @@ jobs:
 
     steps:
       - name: Windows git setup
-          if: runner.os == 'Windows'
-          run:
-            git config --global core.autocrlf false
+        if: runner.os == 'Windows'
+        run:  git config --global core.autocrlf false
       - uses: actions/checkout@v1.0.0
       - uses: julia-actions/setup-julia@latest
         with:
