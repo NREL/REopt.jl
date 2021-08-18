@@ -12,6 +12,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macOS-latest]
 
     steps:
+      - run:  git config --global core.autocrlf false
       - uses: actions/checkout@v1.0.0
       - uses: julia-actions/setup-julia@latest
         with:
