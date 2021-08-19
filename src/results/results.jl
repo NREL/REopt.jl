@@ -31,7 +31,9 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 	tstart = time()
     d = Dict{String, Any}()
     for b in p.storage.types
-        add_storage_results(m, p, d, b; _n)
+        if p.storage.max_kw[b] > 0
+            add_storage_results(m, p, d, b; _n)
+        end
     end
 
     add_electric_tariff_results(m, p, d; _n)
@@ -41,6 +43,10 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 	if !isempty(p.pvtechs)
         add_pv_results(m, p, d; _n)
 	end
+
+    if "Wind" in p.techs
+        add_wind_results(m, p, d; _n)
+    end
 	
 	time_elapsed = time() - tstart
 	@info "Base results processing took $(round(time_elapsed, digits=3)) seconds."

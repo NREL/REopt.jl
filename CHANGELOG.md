@@ -1,6 +1,7 @@
 # REoptLite Changelog
 
 ## develop
+- added `Wind` module, relying on System Advisor Model Wind module for production factors and Wind Toolkit for resource data
 - new `ElectricTariff` input options:
     - `urdb_utility_name` and `urdb_rate_name`
     - `blended_annual_energy_rate` and `blended_annual_demand_rate`
@@ -11,7 +12,7 @@
 - `cost_per_kw[h]` input fields are now `installed_cost_per_kw[h]` to distinguish it from other costs like `om_cost_per_kw[h]`
 - Financial input field refactored: `two_party_ownership` -> `third_party_ownership`
 - `total_itc_pct` -> `federal_itc_pct` on technology inputs
-- Two new tests: Blended Tariff and Complex Incentives (which aligns with API results)
+- Three new tests: Wind, Blended Tariff and Complex Incentives (which aligns with API results)
 
 ## v0.7.3
 ##### bug fixes

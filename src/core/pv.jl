@@ -27,6 +27,54 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+    PV
+
+struct with inner constructor:
+```julia
+function PV(;
+    tilt::Real,
+    array_type::Int=1,
+    module_type::Int=0,
+    losses::Real=0.14,
+    azimuth::Real=180,
+    gcr::Real=0.4,
+    radius::Int=0,
+    name::String="PV",
+    location::String="both",
+    existing_kw::Real=0,
+    min_kw::Real=0,
+    max_kw::Real=1.0e9,
+    installed_cost_per_kw::Real=1600.0,
+    om_cost_per_kw::Real=16.0,
+    degradation_pct::Real=0.005,
+    macrs_option_years::Int = 5,
+    macrs_bonus_pct::Float64 = 1.0,
+    macrs_itc_reduction::Float64 = 0.5,
+    kw_per_square_foot::Float64=0.01,
+    acres_per_kw::Float64=6e-3,
+    inv_eff::Float64=0.96,
+    dc_ac_ratio::Float64=1.2,
+    prod_factor_series_kw::Union{Missing, Array{Real,1}} = missing,
+    federal_itc_pct::Float64 = 0.26,
+    federal_rebate_per_kw::Float64 = 0.0,
+    state_ibi_pct::Float64 = 0.0,
+    state_ibi_max::Float64 = 1.0e10,
+    state_rebate_per_kw::Float64 = 0.0,
+    state_rebate_max::Float64 = 1.0e10,
+    utility_ibi_pct::Float64 = 0.0,
+    utility_ibi_max::Float64 = 1.0e10,
+    utility_rebate_per_kw::Float64 = 0.0,
+    utility_rebate_max::Float64 = 1.0e10,
+    production_incentive_per_kwh::Float64 = 0.0,
+    production_incentive_max_benefit::Float64 = 1.0e9,
+    production_incentive_years::Float64 = 1.0,
+    production_incentive_max_kw::Float64 = 1.0e9
+)
+```
+!!! note
+    If `tilt` is not provided then it is set to the `Site.latitude`. (Which is handled in the `Scenario` struct.)
+"""
 struct PV <: AbstractTech
     tilt
     array_type

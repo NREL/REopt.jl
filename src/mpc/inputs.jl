@@ -42,7 +42,7 @@ struct MPCInputs <: AbstractInputs
     hours_per_timestep::Float64
     months::UnitRange
     production_factor::DenseAxisArray{Float64, 2}  # (techs, time_steps)
-    levelization_factor::DenseAxisArray{Float64, 1}  # (techs)
+    levelization_factor::Dict{String, Float64}  # (techs)
     VoLL::Array{R, 1} where R<:Real #default set to 1 US dollar per kwh
     pwf_e::Float64
     pwf_om::Float64
@@ -53,7 +53,6 @@ struct MPCInputs <: AbstractInputs
     storage::MPCStorage
     generator::MPCGenerator
     elecutil::ElectricUtility
-    max_grid_export_kwh::Float64
     export_bins_by_tech::Dict{String, Array{Symbol, 1}}
 end
 
@@ -71,13 +70,12 @@ function MPCInputs(s::MPCScenario)
     techs, pvtechs, gentechs, production_factor, existing_sizes = setup_tech_inputs(s)
     elec_techs = techs  # only modeling electric loads/techs so far
     techs_no_turndown = pvtechs
-    max_grid_export_kwh = sum(s.electric_load.loads_kw)
     months = 1:length(s.electric_tariff.monthly_demand_rates)
 
     techs_by_exportbin = DenseAxisArray([ techs, techs, techs], s.electric_tariff.export_bins)
     # TODO account for which techs have access to export bins (when we add more techs than PV)
 
-    levelization_factor = DenseAxisArray(repeat([1.0], length(techs)), techs)
+    levelization_factor = Dict(t => 1.0 for t in techs)
     pwf_e = 1.0
     pwf_om = 1.0
     two_party_factor = 1.0
@@ -116,7 +114,6 @@ function MPCInputs(s::MPCScenario)
         s.storage,
         s.generator,
         s.electric_utility,
-        max_grid_export_kwh,
         export_bins_by_tech
         # s.site.min_resil_timesteps,
         # s.site.mg_tech_sizes_equal_grid_sizes,
