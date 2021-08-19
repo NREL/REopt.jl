@@ -1,7 +1,7 @@
 # REoptLite Julia package
-This package is currently under development and only has a subset of capabilities of the REopt Lite model used in the [REopt Lite API](https://github.com/NREL/REopt_Lite_API). For example, the Wind model, CHP model, and tiered electric utility tariffs are not yet modeled in this code. However this code is easier to use than the API (only dependencies are Julia and a solver) and has a novel model for uncertain outages.
+This package is currently under development and only has a subset of capabilities of the REopt Lite model used in the [REopt Lite API](https://github.com/NREL/REopt_Lite_API). For example, the CHP model and tiered electric utility tariffs are not yet modeled in this code. However this code is easier to use than the API (only dependencies are Julia and a solver) and has a novel model for uncertain outages.
 
-Note: this package has been tested only with Julia 1.4 and 1.5 and may not be compatible with older versions.
+Note: this package has been tested with Julia 1.4, 1.5, and 1.6 and may not be compatible with older versions.
 
 <!-- [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://nrel.github.io/REoptLite.jl/stable) -->
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://nrel.github.io/REoptLite/dev)
