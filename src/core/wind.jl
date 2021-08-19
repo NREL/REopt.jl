@@ -102,7 +102,7 @@ struct Wind <: AbstractTech
     om_cost_per_kw::Float64
     prod_factor_series_kw::Union{Missing, Array{Real,1}}
     size_class::String
-    hub_height::Float64
+    hub_height::T where T <: Real
     wind_meters_per_sec::AbstractArray{Float64,1}
     wind_direction_degrees::AbstractArray{Float64,1}
     temperature_celsius::AbstractArray{Float64,1}

@@ -94,7 +94,6 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
         """
         SAM can interpolate the wind power if the wind.hub_height is not one of the windtoolkit_hub_heights.
             If we do need to interpolate then we need to provide SAM with the resources for two hub heights.
-        TODO: Do we have to save the two resources in one file (like API)? Or, can we pass both in the `data_matrix`?
         """
         if !(wind.hub_height in windtoolkit_hub_heights)
             if wind.hub_height < minimum(windtoolkit_hub_heights)
