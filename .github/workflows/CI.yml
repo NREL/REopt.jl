@@ -17,6 +17,5 @@ jobs:
         with:
           version: ${{ matrix.julia-version }}
       - uses: julia-actions/julia-buildpkg@latest
-      - uses: mxschmitt/action-tmate@v3
-        if: runner.os == 'Windows'
+      # - uses: mxschmitt/action-tmate@v3  # for interactive debugging
       - uses: julia-actions/julia-runtest@latest

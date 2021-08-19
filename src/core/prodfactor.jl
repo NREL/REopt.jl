@@ -148,30 +148,30 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
         "residential"=> 2.5
     )
     system_capacity = system_capacity_lookup[wind.size_class]
+    
+    # Corresponding rotor diameter in meters for generic reference turbines sizes
+    rotor_diameter_lookup = Dict(
+        "large" => 55*2,
+        "medium" => 21.9*2,
+        "commercial" => 13.8*2,
+        "residential" => 1.85*2
+    )
+    wind_turbine_powercurve_lookup = Dict(
+        "large" => [0, 0, 0, 70.119, 166.208, 324.625, 560.952, 890.771, 1329.664,
+                    1893.213, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000,
+                    2000, 2000, 2000, 2000, 2000, 2000],
+        "medium"=> [0, 0, 0, 8.764875, 20.776, 40.578125, 70.119, 111.346375, 166.208,
+                    236.651625, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250,
+                    250, 250, 250, 250, 250],
+        "commercial"=> [0, 0, 0, 3.50595, 8.3104, 16.23125, 28.0476, 44.53855, 66.4832,
+                        94.66065, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
+                        100, 100, 100, 100, 100],
+        "residential"=> [0, 0, 0, 0.070542773, 0.1672125, 0.326586914, 0.564342188,
+                        0.896154492, 1.3377, 1.904654883, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5,
+                        2.5, 2.5, 2.5, 0, 0, 0, 0, 0, 0, 0]
+    )
 
-    try
-        #   Corresponding rotor diameter in meters for generic reference turbines sizes
-        rotor_diameter_lookup = Dict(
-            "large" => 55*2,
-            "medium" => 21.9*2,
-            "commercial" => 13.8*2,
-            "residential" => 1.85*2
-        )
-        wind_turbine_powercurve_lookup = Dict(
-            "large" => [0, 0, 0, 70.119, 166.208, 324.625, 560.952, 890.771, 1329.664,
-                        1893.213, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000,
-                        2000, 2000, 2000, 2000, 2000, 2000],
-            "medium"=> [0, 0, 0, 8.764875, 20.776, 40.578125, 70.119, 111.346375, 166.208,
-                        236.651625, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250,
-                        250, 250, 250, 250, 250],
-            "commercial"=> [0, 0, 0, 3.50595, 8.3104, 16.23125, 28.0476, 44.53855, 66.4832,
-                            94.66065, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
-                            100, 100, 100, 100, 100],
-            "residential"=> [0, 0, 0, 0.070542773, 0.1672125, 0.326586914, 0.564342188,
-                            0.896154492, 1.3377, 1.904654883, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5,
-                            2.5, 2.5, 2.5, 0, 0, 0, 0, 0, 0, 0]
-        )
-
+    try        
         if Sys.isapple() 
             libfile = "libssc.dylib"
         elseif Sys.islinux()
@@ -182,25 +182,7 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
             @error """Unsupported platform for using the SAM Wind module. 
                       You can alternatively provide the Wind.prod_factor_series_kw"""
         end
-        
 
-        #= Another approach to ccall:
-    
-        hdl = Libc.Libdl.dlopen("ssc.dll")
-        ssc_module_create = Libc.Libdl.dlsym(hdl, :ssc_module_create)
-        wind_module = @ccall $ssc_module_create("windpower"::Cstring)::Ptr{Cvoid}
-
-        ssc_data_create = Libc.Libdl.dlsym(hdl, :ssc_data_create)
-        wind_resource = @ccall $ssc_data_create()::Ptr{Cvoid}
-
-        ssc_data_set_number = Libc.Libdl.dlsym(hdl, :ssc_data_set_number)
-        @ccall $ssc_data_set_number(wind_resource::Ptr{Cvoid}, "latitude"::Cstring, 45.3::Cdouble)::Cvoid
-        
-        Libc.Libd.dlclose(hdl)  # in case you already have a handle open
-
-        =#
-
-        # hdl = Libc.Libdl.dlopen(joinpath(dirname(@__FILE__), "..", "sam", libfile), Libc.Libdl.RTLD_GLOBAL)
         global hdl = joinpath(dirname(@__FILE__), "..", "sam", libfile)
         wind_module = @ccall hdl.ssc_module_create("windpower"::Cstring)::Ptr{Cvoid}
         wind_resource = @ccall hdl.ssc_data_create()::Ptr{Cvoid}  # data pointer
@@ -309,7 +291,8 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
         @ccall hdl.ssc_data_free(data::Ptr{Cvoid})::Cvoid
 
     catch e
-        @error "Problem calling SAM C library: $e"
+        @error "Problem calling SAM C library!"
+        showerror(stdout, e)
     end
 
     if !(length(sam_prodfactor) == 8760)
