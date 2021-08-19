@@ -180,26 +180,25 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
             libfile = "ssc.dll"
         # TODO: Cannot get the ssc.dll to export the C++ functions 
         # https://discourse.julialang.org/t/ccall-on-windows-could-not-load-symbol-the-specified-procedure-could-not-be-found/66291
+        """
+    
+    hdl = Libc.Libdl.dlopen("ssc.dll")
+    ssc_module_create = Libc.Libdl.dlsym(hdl, :ssc_module_create)
+    wind_module = @ccall $ssc_module_create("windpower"::Cstring)::Ptr{Cvoid}
+
+    ssc_data_create = Libc.Libdl.dlsym(hdl, :ssc_data_create)
+    wind_resource = @ccall $ssc_data_create()::Ptr{Cvoid}
+
+    ssc_data_set_number = Libc.Libdl.dlsym(hdl, :ssc_data_set_number)
+    @ccall $ssc_data_set_number(wind_resource::Ptr{Cvoid}, "latitude"::Cstring, 45.3::Cdouble)::Cvoid
+    
+    Libc.Libd.dlclose(hdl)  # in case you already have a handle open
+
+        """
         else
             @error """Unsupported platform for using the SAM Wind module. 
                       You can alternatively provide the Wind.prod_factor_series_kw"""
         end
-
-        """
-    
-        hdl = Libc.Libdl.dlopen("ssc.dll")
-        ssc_module_create = Libc.Libdl.dlsym(hdl, :ssc_module_create)
-        wind_module = @ccall $ssc_module_create("windpower"::Cstring)::Ptr{Cvoid}
-
-        ssc_data_create = Libc.Libdl.dlsym(hdl, :ssc_data_create)
-        wind_resource = @ccall $ssc_data_create()::Ptr{Cvoid}
-
-        ssc_data_set_number = Libc.Libdl.dlsym(hdl, :ssc_data_set_number)
-        @ccall $ssc_data_set_number(wind_resource::Ptr{Cvoid}, "latitude"::Cstring, 45.3::Cdouble)::Cvoid
-        
-        Libc.Libd.dlclose(hdl)  # in case you already have a handle open
-
-        """
         
         # hdl = Libc.Libdl.dlopen(joinpath(dirname(@__FILE__), "..", "sam", libfile), Libc.Libdl.RTLD_GLOBAL)
         global hdl = joinpath(dirname(@__FILE__), "..", "sam", libfile)
