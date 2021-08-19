@@ -137,7 +137,6 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
     end  # done filling in resources (can contain one Vector of Vectors or multiple Vectors of Vectors)
 
     # Initialize SAM inputs
-    global hdl = nothing
     sam_prodfactor = []
 
     # Corresponding size in kW for generic reference turbines sizes
@@ -202,7 +201,7 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
         """
         
         # hdl = Libc.Libdl.dlopen(joinpath(dirname(@__FILE__), "..", "sam", libfile), Libc.Libdl.RTLD_GLOBAL)
-        global hdl = joinpath(dirname(@__FILE__), "..", "sam", libfile)
+        const hdl = joinpath(dirname(@__FILE__), "..", "sam", libfile)
         wind_module = @ccall hdl.ssc_module_create("windpower"::Cstring)::Ptr{Cvoid}
         wind_resource = @ccall hdl.ssc_data_create()::Ptr{Cvoid}  # data pointer
         @ccall hdl.ssc_module_exec_set_print(0::Cint)::Cvoid

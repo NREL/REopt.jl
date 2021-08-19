@@ -60,7 +60,6 @@ import DelimitedFiles: readdlm
 const MOI = MathOptInterface
 using Shapefile
 using PolygonInbounds
-global hdl = nothing
 
 include("keys.jl")
 include("core/types.jl")
