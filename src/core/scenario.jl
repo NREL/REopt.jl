@@ -31,6 +31,7 @@ struct Scenario <: AbstractScenario
     settings::Settings
     site::Site
     pvs::Array{PV, 1}
+    wind::Wind
     storage::Storage
     electric_tariff::ElectricTariff
     electric_load::ElectricLoad
@@ -123,6 +124,12 @@ function Scenario(d::Dict)
                                        year=electric_load.year
                                     )
 
+    if haskey(d, "Wind")
+        wind = Wind(; dictkeys_tosymbols(d["Wind"])...)
+    else
+        wind = Wind(; max_kw=0)
+    end
+
     if haskey(d, "Generator")
         generator = Generator(; dictkeys_tosymbols(d["Generator"])...)
     else
@@ -133,6 +140,7 @@ function Scenario(d::Dict)
         settings,
         site, 
         pvs, 
+        wind,
         storage, 
         electric_tariff, 
         electric_load, 

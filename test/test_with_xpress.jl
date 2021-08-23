@@ -138,6 +138,28 @@ end
     @test results["Financial"]["lcc_us_dollars"] ≈ 1.0968526e7 atol=5e4  
 end
 
+
+@testset "Wind" begin
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, "./scenarios/wind.json")
+    @test results["Wind"]["size_kw"] ≈ 3752 atol=0.1
+    @test results["Financial"]["lcc_us_dollars"] ≈ 8.591017e6 rtol=1e-5
+    #= 
+    0.5% higher LCC in this package as compared to API ? 8,591,017 vs 8,551,172
+    - both have zero curtailment
+    - same energy to grid: 5,839,317 vs 5,839,322
+    - same energy to load: 4,160,683 vs 4,160,677
+    - same city: Boulder
+    - same total wind prod factor
+    
+    REoptLite.jl has:
+    - bigger turbine: 3752 vs 3735
+    - net_capital_costs_plus_om_us_dollars: 8,576,590 vs. 8,537,480
+
+    TODO: will these discrepancies be addressed once NMIL binaries are added?
+    =#
+end
+
 ## equivalent REopt Lite API Post for test 2:
 #   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
 # {"Scenario": {
