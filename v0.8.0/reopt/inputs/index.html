@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>REopt Inputs · REoptLite.jl Documentation</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">REoptLite.jl Documentation</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">REopt Lite</span><ul><li><a class="tocitem" href="../examples/">Examples</a></li><li class="is-active"><a class="tocitem" href>REopt Inputs</a><ul class="internal"><li><a class="tocitem" href="#Scenario"><span>Scenario</span></a></li><li><a class="tocitem" href="#REoptInputs"><span>REoptInputs</span></a></li><li><a class="tocitem" href="#ElectricLoad"><span>ElectricLoad</span></a></li><li><a class="tocitem" href="#Financial-values"><span>Financial values</span></a></li><li><a class="tocitem" href="#ElectricUtility"><span>ElectricUtility</span></a></li><li><a class="tocitem" href="#PV"><span>PV</span></a></li><li><a class="tocitem" href="#Wind"><span>Wind</span></a></li><li><a class="tocitem" href="#Generator"><span>Generator</span></a></li><li><a class="tocitem" href="#ElectricTariff"><span>ElectricTariff</span></a></li><li><a class="tocitem" href="#Settings"><span>Settings</span></a></li></ul></li><li><a class="tocitem" href="../methods/">Methods</a></li></ul></li><li><span class="tocitem">Model Predictive Control</span><ul><li><a class="tocitem" href="../../mpc/examples/">MPC Examples</a></li><li><a class="tocitem" href="../../mpc/inputs/">MPC Inputs</a></li><li><a class="tocitem" href="../../mpc/methods/">Methods</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">REopt Lite</a></li><li class="is-active"><a href>REopt Inputs</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>REopt Inputs</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/NREL/REoptLite/blob/master/docs/src/reopt/inputs.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="REopt-Inputs"><a class="docs-heading-anchor" href="#REopt-Inputs">REopt Inputs</a><a id="REopt-Inputs-1"></a><a class="docs-heading-anchor-permalink" href="#REopt-Inputs" title="Permalink"></a></h1><p>Inputs to <code>run_reopt</code> can be provided in one of three formats:</p><ol><li>a file path (string) to a JSON file,</li><li>a <code>Dict</code>, or</li><li>using the <code>REoptInputs</code> struct</li></ol><p>The first option is perhaps the most straightforward one. For example, the minimum requirements for a JSON scenario file would look like:</p><pre><code class="language-javascript">{
+    &quot;Site&quot;: {
+        &quot;longitude&quot;: -118.1164613,
+        &quot;latitude&quot;: 34.5794343
+    },
+    &quot;ElectricLoad&quot;: {
+        &quot;doe_reference_name&quot;: &quot;MidriseApartment&quot;,
+        &quot;annual_kwh&quot;: 1000000.0,
+        &quot;city&quot;: &quot;Boulder&quot;
+    },
+    &quot;ElectricTariff&quot;: {
+        &quot;urdb_label&quot;: &quot;5ed6c1a15457a3367add15ae&quot;
+    }
+}</code></pre><p>The order of the keys do not matter. Note that this scenario does not include any energy generation technologies and therefore the results can be used as a baseline for comparison to scenarios that result in cost-optimal generation technologies.</p><p>To add PV to the analysis simply add a PV key with an empty dictionary (to use default values):</p><pre><code class="language-javascript">{
+    &quot;Site&quot;: {
+        &quot;longitude&quot;: -118.1164613,
+        &quot;latitude&quot;: 34.5794343
+    },
+    &quot;ElectricLoad&quot;: {
+        &quot;doe_reference_name&quot;: &quot;MidriseApartment&quot;,
+        &quot;annual_kwh&quot;: 1000000.0,
+        &quot;city&quot;: &quot;Boulder&quot;
+    },
+    &quot;ElectricTariff&quot;: {
+        &quot;urdb_label&quot;: &quot;5ed6c1a15457a3367add15ae&quot;
+    },
+    &quot;PV&quot;: {}
+}</code></pre><p>This scenario will consider the option to purchase a solar PV system to reduce energy costs, and if solar PV can reduce the energy costs then REopt Lite will provide the optimal PV capacity (assuming perfect foresight!). To use other than default values for <code>PV</code> see the <a href="https://github.com/NREL/REoptLite/blob/master/src/core/pv.jl">PV struct definition</a>.  For example, the site under consideration might have some existing PV capacity to account for, which can be done by setting the <code>existing_kw</code> key to the appropriate value.</p><h2 id="Scenario"><a class="docs-heading-anchor" href="#Scenario">Scenario</a><a id="Scenario-1"></a><a class="docs-heading-anchor-permalink" href="#Scenario" title="Permalink"></a></h2><p>The <code>Scenario</code> struct captures all of the objects that can be included in a scenario.json:</p><article class="docstring"><header><a class="docstring-binding" id="REoptLite.Scenario" href="#REoptLite.Scenario"><code>REoptLite.Scenario</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia">Scenario(d::Dict)</code></pre><p>Constructor for Scenario struct, where <code>d</code> has upper-case keys:</p><ul><li>Site (required)</li><li>ElectricTariff (required)</li><li>ElectricLoad (required)</li><li>PV (optional, can be Array)</li><li>Storage (optional)</li><li>ElectricUtility (optional)</li><li>Financial (optional)</li><li>Generator (optional)</li></ul><p>All values of <code>d</code> are expected to be <code>Dicts</code> except for <code>PV</code>, which can be either a <code>Dict</code> or <code>Dict[]</code>.</p><pre><code class="language-none">struct Scenario
+    settings::Settings
+    site::Site
+    pvs::Array{PV, 1}
+    storage::Storage
+    electric_tariff::ElectricTariff
+    electric_load::ElectricLoad
+    electric_utility::ElectricUtility
+    financial::Financial
+    generator::Generator
+end</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/NREL/REoptLite/blob/dd466eba338ab3bb15bb989799c917d90a409fbd/src/core/scenario.jl#L43-L70">source</a></section></article><h2 id="REoptInputs"><a class="docs-heading-anchor" href="#REoptInputs">REoptInputs</a><a id="REoptInputs-1"></a><a class="docs-heading-anchor-permalink" href="#REoptInputs" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-binding" id="REoptLite.REoptInputs" href="#REoptLite.REoptInputs"><code>REoptLite.REoptInputs</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia">REoptInputs(fp::String)</code></pre><p>Use <code>fp</code> to load in JSON scenario:</p><pre><code class="language-none">function REoptInputs(fp::String)
+    s = Scenario(JSON.parsefile(fp))
+    REoptInputs(s)
+end</code></pre><p>Useful if you want to manually modify REoptInputs before solving the model.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/NREL/REoptLite/blob/dd466eba338ab3bb15bb989799c917d90a409fbd/src/core/reopt_inputs.jl#L87-L98">source</a></section><section><div><pre><code class="language-none">REoptInputs(s::Scenario)</code></pre><p>Constructor for REoptInputs</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/NREL/REoptLite/blob/dd466eba338ab3bb15bb989799c917d90a409fbd/src/core/reopt_inputs.jl#L105-L109">source</a></section></article><h2 id="ElectricLoad"><a class="docs-heading-anchor" href="#ElectricLoad">ElectricLoad</a><a id="ElectricLoad-1"></a><a class="docs-heading-anchor-permalink" href="#ElectricLoad" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-binding" id="REoptLite.ElectricLoad" href="#REoptLite.ElectricLoad"><code>REoptLite.ElectricLoad</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia">ElectricLoad(;
+    loads_kw::Union{Missing, Array{&lt;:Real,1}} = missing,
+    year::Int = 2020,
+    doe_reference_name::Union{Missing, String} = missing,
+    city::Union{Missing, String} = missing,
+    annual_kwh::Union{Real, Nothing} = nothing,
+    monthly_totals_kwh::Array{&lt;:Real,1} = Real[],
+    critical_loads_kw::Union{Missing, Array{Real,1}} = missing,
+    loads_kw_is_net::Bool = true,
+    critical_loads_kw_is_net::Bool = false,
+    critical_load_pct::Real = 0.5
+)</code></pre><p>Must provide either <code>loads_kw</code> or [<code>doe_reference_name</code> and <code>city</code>] or <code>doe_reference_name</code>. </p><p>When only <code>doe_reference_name</code> is provided the <code>Site.latitude</code> and <code>Site.longitude</code> are used to look up the ASHRAE climate zone, which determines the appropriate DoE Commercial Reference Building profile.</p><p>When using the [<code>doe_reference_name</code> and <code>city</code>] option, choose <code>city</code> from one of the  cities used to represent the ASHRAE climate zones:</p><ul><li>Albuquerque</li><li>Atlanta</li><li>Baltimore</li><li>Boulder</li><li>Chicago</li><li>Duluth</li><li>Fairbanks</li><li>Helena</li><li>Houston</li><li>LosAngeles</li><li>Miami</li><li>Minneapolis</li><li>Phoenix</li><li>SanFrancisco</li><li>Seattle</li></ul><p>and <code>doe_reference_name</code> from:</p><ul><li>FastFoodRest</li><li>FullServiceRest</li><li>Hospital</li><li>LargeHotel</li><li>LargeOffice</li><li>MediumOffice</li><li>MidriseApartment</li><li>Outpatient</li><li>PrimarySchool</li><li>RetailStore</li><li>SecondarySchool</li><li>SmallHotel</li><li>SmallOffice</li><li>StripMall</li><li>Supermarket</li><li>Warehouse</li><li>FlatLoad</li></ul><p>Each <code>city</code> and <code>doe_reference_name</code> combination has a default <code>annual_kwh</code>, or you can provide your own <code>annual_kwh</code> or <code>monthly_totals_kwh</code> and the reference profile will be scaled appropriately.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/NREL/REoptLite/blob/dd466eba338ab3bb15bb989799c917d90a409fbd/src/core/electric_load.jl#L30-L86">source</a></section></article><h2 id="Financial-values"><a class="docs-heading-anchor" href="#Financial-values">Financial values</a><a id="Financial-values-1"></a><a class="docs-heading-anchor-permalink" href="#Financial-values" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-binding" id="REoptLite.Financial" href="#REoptLite.Financial"><code>REoptLite.Financial</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia">Financial</code></pre><p>Financial data struct with inner constructor:</p><pre><code class="language-julia">function Financial(;
+    om_cost_escalation_pct::Float64 = 0.025,
+    elec_cost_escalation_pct::Float64 = 0.023,
+    offtaker_tax_pct::Float64 = 0.26,
+    offtaker_discount_pct = 0.083,
+    third_party_ownership::Bool = false,
+    owner_tax_pct::Float64 = 0.26,
+    owner_discount_pct::Float64 = 0.083,
+    analysis_years::Int = 25,
+    VoLL::Union{Array{R,1}, R} where R&lt;:Real = 1.00,
+    microgrid_premium_pct::Float64 = 0.3,
+    macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
+    macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446]
+)</code></pre><div class="admonition is-info"><header class="admonition-header">Note</header><div class="admonition-body"><p>When <code>third_party_ownership</code> is <code>false</code> the offtaker&#39;s discount and tax percentages are used throughout the model:</p><pre><code class="language-julia">    if !third_party_ownership
+        owner_tax_pct = offtaker_tax_pct
+        owner_discount_pct = offtaker_discount_pct
+    end</code></pre></div></div></div><a class="docs-sourcelink" target="_blank" href="https://github.com/NREL/REoptLite/blob/dd466eba338ab3bb15bb989799c917d90a409fbd/src/core/financial.jl#L30-L59">source</a></section></article><h2 id="ElectricUtility"><a class="docs-heading-anchor" href="#ElectricUtility">ElectricUtility</a><a id="ElectricUtility-1"></a><a class="docs-heading-anchor-permalink" href="#ElectricUtility" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-binding" id="REoptLite.ElectricUtility" href="#REoptLite.ElectricUtility"><code>REoptLite.ElectricUtility</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia">ElectricUtility
+
+Base.@kwdef struct ElectricUtility
+    outage_start_timestep::Int=0  # for modeling a single outage, with critical load spliced into the baseline load ...
+    outage_end_timestep::Int=0  # ... utiltity production_factor = 0 during the outage
+    allow_simultaneous_export_import::Bool=true  # if true the site has two meters (in effect)
+    # variables below used for minimax the expected outage cost,
+    # with max taken over outage start time, expectation taken over outage duration
+    outage_start_timesteps::Array{Int,1}=Int[]  # we minimize the maximum outage cost over outage start times
+    outage_durations::Array{Int,1}=Int[]  # one-to-one with outage_probabilities, outage_durations can be a random variable
+    outage_probabilities::Array{Real,1}=[1.0]
+    outage_timesteps::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:maximum(outage_durations)
+    scenarios::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:length(outage_durations)
+end</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/NREL/REoptLite/blob/dd466eba338ab3bb15bb989799c917d90a409fbd/src/core/electric_utility.jl#L30-L46">source</a></section></article><h2 id="PV"><a class="docs-heading-anchor" href="#PV">PV</a><a id="PV-1"></a><a class="docs-heading-anchor-permalink" href="#PV" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-binding" id="REoptLite.PV" href="#REoptLite.PV"><code>REoptLite.PV</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia">PV</code></pre><p>struct with inner constructor:</p><pre><code class="language-julia">function PV(;
+    tilt::Real,
+    array_type::Int=1,
+    module_type::Int=0,
+    losses::Real=0.14,
+    azimuth::Real=180,
+    gcr::Real=0.4,
+    radius::Int=0,
+    name::String=&quot;PV&quot;,
+    location::String=&quot;both&quot;,
+    existing_kw::Real=0,
+    min_kw::Real=0,
+    max_kw::Real=1.0e9,
+    installed_cost_per_kw::Real=1600.0,
+    om_cost_per_kw::Real=16.0,
+    degradation_pct::Real=0.005,
+    macrs_option_years::Int = 5,
+    macrs_bonus_pct::Float64 = 1.0,
+    macrs_itc_reduction::Float64 = 0.5,
+    kw_per_square_foot::Float64=0.01,
+    acres_per_kw::Float64=6e-3,
+    inv_eff::Float64=0.96,
+    dc_ac_ratio::Float64=1.2,
+    prod_factor_series_kw::Union{Missing, Array{Real,1}} = missing,
+    federal_itc_pct::Float64 = 0.26,
+    federal_rebate_per_kw::Float64 = 0.0,
+    state_ibi_pct::Float64 = 0.0,
+    state_ibi_max::Float64 = 1.0e10,
+    state_rebate_per_kw::Float64 = 0.0,
+    state_rebate_max::Float64 = 1.0e10,
+    utility_ibi_pct::Float64 = 0.0,
+    utility_ibi_max::Float64 = 1.0e10,
+    utility_rebate_per_kw::Float64 = 0.0,
+    utility_rebate_max::Float64 = 1.0e10,
+    production_incentive_per_kwh::Float64 = 0.0,
+    production_incentive_max_benefit::Float64 = 1.0e9,
+    production_incentive_years::Float64 = 1.0,
+    production_incentive_max_kw::Float64 = 1.0e9
+)</code></pre><div class="admonition is-info"><header class="admonition-header">Note</header><div class="admonition-body"><p>If <code>tilt</code> is not provided then it is set to the <code>Site.latitude</code>. (Which is handled in the <code>Scenario</code> struct.)</p></div></div></div><a class="docs-sourcelink" target="_blank" href="https://github.com/NREL/REoptLite/blob/dd466eba338ab3bb15bb989799c917d90a409fbd/src/core/pv.jl#L30-L77">source</a></section></article><h2 id="Wind"><a class="docs-heading-anchor" href="#Wind">Wind</a><a id="Wind-1"></a><a class="docs-heading-anchor-permalink" href="#Wind" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-binding" id="REoptLite.Wind" href="#REoptLite.Wind"><code>REoptLite.Wind</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia">Wind</code></pre><p>struct with inner constructor:</p><pre><code class="language-julia">function Wind(;
+    min_kw = 0.0,
+    max_kw = 1.0e9,
+    installed_cost_per_kw = 0.0,
+    om_cost_per_kw = 40.0,
+    prod_factor_series_kw = missing,
+    size_class = &quot;&quot;,
+    wind_meters_per_sec = [],
+    wind_direction_degrees = [],
+    temperature_celsius = [],
+    pressure_atmospheres = [],
+    macrs_option_years = 5,
+    macrs_bonus_pct = 0.0,
+    macrs_itc_reduction = 0.5,
+    federal_itc_pct = 0.26,
+    federal_rebate_per_kw = 0.0,
+    state_ibi_pct = 0.0,
+    state_ibi_max = 1.0e10,
+    state_rebate_per_kw = 0.0,
+    state_rebate_max = 1.0e10,
+    utility_ibi_pct = 0.0,
+    utility_ibi_max = 1.0e10,
+    utility_rebate_per_kw = 0.0,
+    utility_rebate_max = 1.0e10,
+    production_incentive_per_kwh = 0.0,
+    production_incentive_max_benefit = 1.0e9,
+    production_incentive_years = 1,
+    production_incentive_max_kw = 1.0e9,
+)</code></pre><p><code>size_class</code> must be one of [&quot;residential&quot;, &quot;commercial&quot;, &quot;medium&quot;, &quot;large&quot;].</p><p>If no <code>installed_cost_per_kw</code> is provided (or it is 0.0) then it is determined from:</p><pre><code class="language-julia">size_class_to_installed_cost = Dict(
+    &quot;residential&quot;=&gt; 11950.0,
+    &quot;commercial&quot;=&gt; 7390.0,
+    &quot;medium&quot;=&gt; 4440.0,
+    &quot;large&quot;=&gt; 3450.0
+)</code></pre><p>The Federal Investment Tax Credit is adjusted based on the <code>size_class</code> as follows (if the default of 0.3 is not changed):</p><pre><code class="language-julia">size_class_to_itc_incentives = Dict(
+    &quot;residential&quot;=&gt; 0.3,
+    &quot;commercial&quot;=&gt; 0.3,
+    &quot;medium&quot;=&gt; 0.12,
+    &quot;large&quot;=&gt; 0.12
+)</code></pre><p>If the <code>prod_factor_series_kw</code> is not provided then NREL&#39;s System Advisor Model (SAM) is used to get the wind turbine  production factor.</p><p>Wind resource values are optional, i.e. (<code>wind_meters_per_sec</code>, <code>wind_direction_degrees</code>, <code>temperature_celsius</code>, and <code>pressure_atmospheres</code>). If not provided then the resource values are downloaded from NREL&#39;s Wind Toolkit. These values are passed to SAM to get the turbine production factor.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/NREL/REoptLite/blob/dd466eba338ab3bb15bb989799c917d90a409fbd/src/core/wind.jl#L30-L97">source</a></section></article><h2 id="Generator"><a class="docs-heading-anchor" href="#Generator">Generator</a><a id="Generator-1"></a><a class="docs-heading-anchor-permalink" href="#Generator" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-binding" id="REoptLite.Generator" href="#REoptLite.Generator"><code>REoptLite.Generator</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia">Generator</code></pre><p>struct with inner constructor:</p><pre><code class="language-julia">function Generator(;
+    existing_kw::Real=0,
+    min_kw::Real=0,
+    max_kw::Real=1.0e6,
+    installed_cost_per_kw::Real=500.0,
+    om_cost_per_kw::Real=10.0,
+    om_cost_per_kwh::Float64=0.0,
+    fuel_cost_per_gallon::Float64 = 3.0,
+    fuel_slope_gal_per_kwh::Float64 = 0.076,
+    fuel_intercept_gal_per_hr::Float64 = 0.0,
+    fuel_avail_gal::Float64 = 660.0,
+    min_turn_down_pct::Float64 = 0.0,
+    only_runs_during_grid_outage::Bool = true,
+    sells_energy_back_to_grid::Bool = false
+)</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/NREL/REoptLite/blob/dd466eba338ab3bb15bb989799c917d90a409fbd/src/core/generator.jl#L30-L51">source</a></section></article><h2 id="ElectricTariff"><a class="docs-heading-anchor" href="#ElectricTariff">ElectricTariff</a><a id="ElectricTariff-1"></a><a class="docs-heading-anchor-permalink" href="#ElectricTariff" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-binding" id="REoptLite.ElectricTariff" href="#REoptLite.ElectricTariff"><code>REoptLite.ElectricTariff</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia">ElectricTariff
+
+ElectricTariff constructor
+
+function ElectricTariff(;
+    urdb_label::String=&quot;&quot;,
+    urdb_response::Dict=Dict(),
+    urdb_utility_name::String=&quot;&quot;,
+    urdb_rate_name::String=&quot;&quot;,
+    year::Int=2020,
+    time_steps_per_hour::Int=1,
+    NEM::Bool=false,
+    wholesale_rate::T=nothing, 
+    monthly_energy_rates::Array=[],
+    monthly_demand_rates::Array=[],
+    blended_annual_energy_rate::S=nothing,
+    blended_annual_demand_rate::R=nothing,
+    ) where {
+        T &lt;: Union{Nothing, Int, Float64, Array}, 
+        S &lt;: Union{Nothing, Int, Float64}, 
+        R &lt;: Union{Nothing, Int, Float64}
+    }</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/NREL/REoptLite/blob/dd466eba338ab3bb15bb989799c917d90a409fbd/src/core/electric_tariff.jl#L53-L77">source</a></section></article><h2 id="Settings"><a class="docs-heading-anchor" href="#Settings">Settings</a><a id="Settings-1"></a><a class="docs-heading-anchor-permalink" href="#Settings" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-binding" id="REoptLite.Settings" href="#REoptLite.Settings"><code>REoptLite.Settings</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia">Settings</code></pre><p>Data struct for top-level Scenario settings. Captures inputs that do not logically fall under any of the other data structs.</p><pre><code class="language-none">Base.@kwdef struct Settings
+    time_steps_per_hour::Int = 1
+end</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/NREL/REoptLite/blob/dd466eba338ab3bb15bb989799c917d90a409fbd/src/core/settings.jl#L30-L39">source</a></section></article></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../examples/">« Examples</a><a class="docs-footer-nextpage" href="../methods/">Methods »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 23 August 2021 21:22">Monday 23 August 2021</span>. Using Julia version 1.6.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
