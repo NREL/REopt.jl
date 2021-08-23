@@ -1,6 +1,6 @@
 # REoptLite Changelog
 
-## develop
+## v0.8.0
 - added `Wind` module, relying on System Advisor Model Wind module for production factors and Wind Toolkit for resource data
 - new `ElectricTariff` input options:
     - `urdb_utility_name` and `urdb_rate_name`
