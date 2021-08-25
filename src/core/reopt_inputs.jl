@@ -111,10 +111,9 @@ function REoptInputs(s::Scenario)
 
     time_steps = 1:length(s.electric_load.loads_kw)
     hours_per_timestep = 1 / s.settings.time_steps_per_hour
-    techs, pvtechs, gentechs, segmented_techs, pv_to_location, maxsize_pv_locations, pvlocations, production_factor,
-        max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, seg_min_size, 
-        seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech = setup_tech_inputs(s)
-    elec_techs = copy(techs)  # only modeling electric loads/techs so far
+    techs, pvtechs, gentechs, elec_techs, segmented_techs, pv_to_location, maxsize_pv_locations, pvlocations, 
+        production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
+        seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech = setup_tech_inputs(s)
     techs_no_turndown = copy(pvtechs)
     if "Wind" in techs
         append!(techs_no_turndown, ["Wind"])
@@ -215,6 +214,8 @@ function setup_tech_inputs(s::Scenario)
         push!(gentechs, "Generator")
     end
 
+    elec_techs = copy(techs)  # only modeling electric loads/techs so far
+
     time_steps = 1:length(s.electric_load.loads_kw)
 
     # REoptInputs indexed on techs:
@@ -253,7 +254,8 @@ function setup_tech_inputs(s::Scenario)
     end
 
     if "Generator" in techs
-        setup_gen_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor)
+        setup_gen_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
+            techs_by_exportbin)
     end
 
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
@@ -261,9 +263,9 @@ function setup_tech_inputs(s::Scenario)
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
     end
 
-    return techs, pvtechs, gentechs, segmented_techs, pv_to_location, maxsize_pv_locations, pvlocations, production_factor,
-    max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, seg_min_size, seg_max_size, 
-    seg_yint, techs_by_exportbin
+    return techs, pvtechs, gentechs, elec_techs, segmented_techs, pv_to_location, maxsize_pv_locations, pvlocations, 
+    production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
+    seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech
 end
 
 
@@ -363,13 +365,7 @@ function setup_pv_inputs(s::Scenario, max_sizes, min_sizes,
         end
         
         om_cost_per_kw[pv.name] = pv.om_cost_per_kw
-        if pv.can_net_meter && :NEM in keys(techs_by_exportbin)
-            push!(techs_by_exportbin[:NEM], pv.name)
-        end
-        
-        if pv.can_wholesale && :WHL in keys(techs_by_exportbin)
-            push!(techs_by_exportbin[:WHL], pv.name)
-        end
+        fillin_techs_by_exportbin(techs_by_exportbin, pv, pv.name)
     end
 
     if pv_roof_limited
@@ -395,19 +391,13 @@ function setup_wind_inputs(s::Scenario, max_sizes, min_sizes, existing_sizes,
     cap_cost_slope["Wind"] = s.wind.installed_cost_per_kw
     om_cost_per_kw["Wind"] = s.wind.om_cost_per_kw
     production_factor["Wind", :] = prodfactor(s.wind, s.site.latitude, s.site.longitude, s.settings.time_steps_per_hour)
-    if s.wind.can_net_meter && :NEM in keys(techs_by_exportbin)
-        push!(techs_by_exportbin[:NEM], "Wind")
-    end
-    
-    if s.wind.can_wholesale && :WHL in keys(techs_by_exportbin)
-        push!(techs_by_exportbin[:WHL], "Wind")
-    end
+    fillin_techs_by_exportbin(techs_by_exportbin, s.wind, "Wind")
     return nothing
 end
 
 
 function setup_gen_inputs(s::Scenario, max_sizes, min_sizes, existing_sizes,
-    cap_cost_slope, om_cost_per_kw, production_factor)
+    cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin)
     # TODO add incentives to Generator and use cost_curve function
     max_sizes["Generator"] = s.generator.max_kw
     min_sizes["Generator"] = s.generator.existing_kw + s.generator.min_kw
@@ -415,6 +405,7 @@ function setup_gen_inputs(s::Scenario, max_sizes, min_sizes, existing_sizes,
     cap_cost_slope["Generator"] = s.generator.installed_cost_per_kw
     om_cost_per_kw["Generator"] = s.generator.om_cost_per_kw
     production_factor["Generator", :] = prodfactor(s.generator)
+    fillin_techs_by_exportbin(techs_by_exportbin, s.generator, "Generator")
     return nothing
 end
 
@@ -520,4 +511,16 @@ function production_incentives(tech::AbstractTech, financial::Financial)
     end
 
     return pwf_prod_incent, max_prod_incent, max_size_for_prod_incent, production_incentive_rate
+end
+
+
+function fillin_techs_by_exportbin(techs_by_exportbin::Dict, tech::AbstractTech, tech_name::String)
+    if tech.can_net_meter && :NEM in keys(techs_by_exportbin)
+        push!(techs_by_exportbin[:NEM], tech_name)
+    end
+    
+    if tech.can_wholesale && :WHL in keys(techs_by_exportbin)
+        push!(techs_by_exportbin[:WHL], tech_name)
+    end
+    return nothing
 end
