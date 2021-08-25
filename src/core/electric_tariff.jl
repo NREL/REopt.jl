@@ -73,6 +73,10 @@ end
             S <: Union{Nothing, Int, Float64}, 
             R <: Union{Nothing, Int, Float64}
         }
+
+!!! note
+    The `NEM` boolean is determined by the ElectricUtility.net_metering_limit_kw. There is no need to pass in a `NEM`
+    value.
     
 """
 function ElectricTariff(;
