@@ -55,4 +55,6 @@ Base.@kwdef struct ElectricUtility
     outage_probabilities::Array{Real,1}=[1.0]
     outage_timesteps::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:maximum(outage_durations)
     scenarios::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:length(outage_durations)
+    net_metering_limit_kw::Real = 0
+    interconnection_limit_kw::Real = 1.0e9
 end
