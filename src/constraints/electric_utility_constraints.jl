@@ -36,15 +36,60 @@ function add_export_constraints(m, p; _n="")
            m[Symbol("dvCurtail"*_n)][t, ts]
     )
 
-    ### Constraint set (9): Net Meter Module 
-    ##Constraint (9c): Net metering only -- can't sell more than you purchase
-    # note that hours_per_timestep is cancelled on both sides, but used for unit consistency (convert power to energy)
+    m[Symbol("NEMExportBenefit"*_n)] = 0
+    binNEM = 0
     NEM_techs = String[t for t in p.elec_techs if :NEM in p.export_bins_by_tech[t]]
+    WHL_techs = String[t for t in p.elec_techs if :WHL in p.export_bins_by_tech[t]]
+    # TODO add can_net_meter to each tech and use to define export_bins_by_tech
+
     if !isempty(NEM_techs)
+
+        # Constraint (9c): Net metering only -- can't sell more than you purchase
+        # hours_per_timestep is cancelled on both sides, but used for unit consistency (convert power to energy)
         @constraint(m,
             p.hours_per_timestep * sum( m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
             for t in NEM_techs, ts in p.time_steps)
             <= p.hours_per_timestep * sum( m[Symbol("dvGridPurchase"*_n)][ts] for ts in p.time_steps)
+        )
+
+        if p.elecutil.net_metering_limit_kw == p.elecutil.interconnection_limit_kw && isempty(WHL_techs)
+            # no need for binNEM
+            binNEM = 1
+            @constraint(m,
+                sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.elecutil.interconnection_limit_kw
+            )
+        else
+            if !(isempty(_n))
+                @error """Binaries decisions for net metering capacity limit is not implemented for multinode models to keep 
+                            them linear. Please set the net metering limit to zero or equal to the interconnection limit."""
+            end
+            binNEM = @variable(m, binary = true)
+
+            # If choosing to take advantage of NEM, must have total capacity less than net_metering_limit_kw
+            @constraint(m,
+                binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.elecutil.net_metering_limit_kw}
+            )
+            @constraint(m,
+                !binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.elecutil.interconnection_limit_kw}
+            )
+        end
+        
+        m[Symbol("NEMExportBenefit"*_n)] = @expression(m, binNEM * p.pwf_e * p.hours_per_timestep *
+            sum( sum(p.etariff.export_rates[:NEM][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
+                    for t in p.techs_by_exportbin[:NEM])
+            for ts in p.time_steps)
+        )
+    end
+    m[:binNEM] = binNEM
+
+    m[Symbol("WHLExportBenefit"*_n)] = 0
+    if !isempty(WHL_techs)
+        @variable(m, binWHL, Bin)
+        @constraint(m, binNEM + m[:binWHL] == 1)  # can either NEM or WHL export, not both
+        m[Symbol("WHLExportBenefit"*_n)] = @expression(m, m[:binWHL] * p.pwf_e * p.hours_per_timestep *
+            sum( sum(p.etariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
+                    for t in p.techs_by_exportbin[:WHL])
+            for ts in p.time_steps)
         )
     end
 end
@@ -93,11 +138,8 @@ function add_elec_utility_expressions(m, p; _n="")
 
     if !isempty(p.etariff.export_bins) && !isempty(p.techs)
         # NOTE: levelization_factor is baked into dvProductionToGrid
-        m[Symbol("TotalExportBenefit"*_n)] = @expression(m, p.pwf_e * p.hours_per_timestep *
-            sum( sum(p.etariff.export_rates[u][ts] * m[Symbol("dvProductionToGrid"*_n)][t, u, ts] 
-                 for u in p.etariff.export_bins, t in p.techs_by_exportbin[u])
-            for ts in p.time_steps)
-        )
+        m[Symbol("TotalExportBenefit"*_n)] = m[Symbol("NEMExportBenefit"*_n)] + m[Symbol("WHLExportBenefit"*_n)]
+        # TODO add EXC benefits
     else
         m[Symbol("TotalExportBenefit"*_n)] = 0
     end
