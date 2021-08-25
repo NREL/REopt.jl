@@ -113,7 +113,7 @@ function REoptInputs(s::Scenario)
     hours_per_timestep = 1 / s.settings.time_steps_per_hour
     techs, pvtechs, gentechs, segmented_techs, pv_to_location, maxsize_pv_locations, pvlocations, production_factor,
         max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, seg_min_size, 
-        seg_max_size, seg_yint, techs_by_exportbin = setup_tech_inputs(s)
+        seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech = setup_tech_inputs(s)
     elec_techs = copy(techs)  # only modeling electric loads/techs so far
     techs_no_turndown = copy(pvtechs)
     if "Wind" in techs
@@ -136,12 +136,7 @@ function REoptInputs(s::Scenario)
     if any(pv.existing_kw > 0 for pv in s.pvs)
         adjust_load_profile(s, production_factor)
     end
-
-    export_bins_by_tech = Dict{String, Array{Symbol, 1}}()
-    for t in elec_techs
-        export_bins_by_tech[t] = s.electric_tariff.export_bins
-    end
-    # TODO implement export bins by tech (rather than assuming that all techs share the export_bins)
+    # TODO use Xpress in Actions?
 
 
     REoptInputs(
@@ -230,8 +225,10 @@ function setup_tech_inputs(s::Scenario)
     om_cost_per_kw = DenseAxisArray{Float64}(undef, techs)
     production_factor = DenseAxisArray{Float64}(undef, techs, time_steps)
 
+    # export related inputs
     techs_by_exportbin = Dict(k => [] for k in s.electric_tariff.export_bins)
-    
+    export_bins_by_tech = Dict{String, Array{Symbol, 1}}()
+
     #REoptInputs indexed on segmented_techs
     n_segs_by_tech = Dict{String, Int}()
     seg_min_size = Dict{String, Any}()
@@ -257,6 +254,11 @@ function setup_tech_inputs(s::Scenario)
 
     if "Generator" in techs
         setup_gen_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor)
+    end
+
+    # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
+    for t in elec_techs
+        export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
     end
 
     return techs, pvtechs, gentechs, segmented_techs, pv_to_location, maxsize_pv_locations, pvlocations, production_factor,
