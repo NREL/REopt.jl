@@ -45,7 +45,7 @@ struct ElectricTariff
     annual_min_charge::Float64
     min_monthly_charge::Float64
 
-    export_rates::DenseAxisArray{Array{Float64,1}}
+    export_rates::Dict{Symbol, AbstractArray}
     export_bins::Array{Symbol,1}
 end
 
@@ -87,13 +87,15 @@ function ElectricTariff(;
     year::Int=2020,
     time_steps_per_hour::Int=1,
     NEM::Bool=false,
-    wholesale_rate::T=nothing, 
+    wholesale_rate::T1=nothing,
+    export_rate_beyond_net_metering_limit::T2=nothing,
     monthly_energy_rates::Array=[],
     monthly_demand_rates::Array=[],
     blended_annual_energy_rate::S=nothing,
     blended_annual_demand_rate::R=nothing,
     ) where {
-        T <: Union{Nothing, Int, Float64, Array}, 
+        T1 <: Union{Nothing, Int, Float64, Array}, 
+        T2 <: Union{Nothing, Int, Float64, Array}, 
         S <: Union{Nothing, Int, Float64}, 
         R <: Union{Nothing, Int, Float64}
     }
@@ -183,25 +185,44 @@ function ElectricTariff(;
     end
 
     #= export_rates
-    3 "tiers": 1. NEM (Net Energy Metering), 2. WHL (Wholesale), 3. CUR (Curtail)
+    There are three Export tiers and their associated export rates (negative values):
+    1. NEM (Net Energy Metering)
+    2. WHL (Wholesale)
+    3. EXC (Excess, beyond NEM)
+
+    Only one of NEM and Wholesale can be exported into due to the binary constraints.
+    Excess can be exported into in the same time step as NEM or Wholesale.
+
+    Excess is meant to be combined with NEM: NEM export is limited to the total grid purchased energy in a year and some
+    utilities offer a compensation mechanism for export beyond the site load.
+    The Excess tier does not have really have a purpose with the Wholesale tier. (It used to be effectively curtailment).
+
     - if NEM then set ExportRate[:Nem, :] to energy_rate[tier_with_lowest_energy_rate, :]
     - user can provide either scalar wholesale rate or vector of timesteps, 
-    - curtail cost set to zero by default, but can be specified same as wholesale rate
     =#
     whl_rate = create_export_rate(wholesale_rate, length(energy_rates), time_steps_per_hour)
+    exc_rate = create_export_rate(export_rate_beyond_net_metering_limit, length(energy_rates), time_steps_per_hour)
     
     if !NEM & (sum(whl_rate) >= 0)
-        export_rates = DenseAxisArray{Array{Float64,1}}(undef, [])
+        export_rates = Dict{Symbol, AbstractArray}()
         export_bins = Symbol[]
     elseif !NEM
         export_bins = [:WHL]
-        export_rates = DenseAxisArray([whl_rate], export_bins)
+        export_rates = Dict(:WHL => whl_rate)
     elseif (sum(whl_rate) >= 0)
         export_bins = [:NEM]
-        export_rates = DenseAxisArray([nem_rate], export_bins)
+        export_rates = Dict(:NEM => nem_rate)
+        if sum(exc_rate) < 0
+            push!(export_bins, :EXC)
+            export_rates[:EXC] = exc_rate
+        end
     else
-        export_bins = [:NEM, :WHL]  # TODO add :EXC to align with REopt Lite API
-        export_rates = DenseAxisArray([nem_rate, whl_rate], export_bins)
+        export_bins = [:NEM, :WHL]
+        export_rates = Dict(:NEM => nem_rate, :WHL => whl_rate)
+        if sum(exc_rate) < 0
+            push!(export_bins, :EXC)
+            export_rates[:EXC] = exc_rate
+        end
     end
 
     ElectricTariff(

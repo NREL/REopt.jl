@@ -205,7 +205,7 @@ function MPCElectricTariff(d::Dict)
         export_bins = [:NEM]
         export_rates = DenseAxisArray([nem_rate], export_bins)
     else
-        export_bins = [:NEM, :WHL]  # TODO add :EXC to align with REopt Lite API
+        export_bins = [:NEM, :WHL]  # NOTE: not modeling EXC bin b/c MPC does not track annaul energy exported
         export_rates = DenseAxisArray([nem_rate, whl_rate], export_bins)
     end
     
