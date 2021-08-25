@@ -70,6 +70,8 @@ function PV(;
     production_incentive_max_benefit::Float64 = 1.0e9,
     production_incentive_years::Float64 = 1.0,
     production_incentive_max_kw::Float64 = 1.0e9
+    can_net_meter::Bool = true,
+    can_wholesale::Bool = true
 )
 ```
 !!! note
@@ -113,6 +115,8 @@ struct PV <: AbstractTech
     production_incentive_max_benefit
     production_incentive_years
     production_incentive_max_kw
+    can_net_meter
+    can_wholesale
 
     function PV(;
         tilt::Real,
@@ -151,7 +155,9 @@ struct PV <: AbstractTech
         production_incentive_per_kwh::Float64 = 0.0,
         production_incentive_max_benefit::Float64 = 1.0e9,
         production_incentive_years::Float64 = 1.0,
-        production_incentive_max_kw::Float64 = 1.0e9
+        production_incentive_max_kw::Float64 = 1.0e9,
+        can_net_meter::Bool = true,
+        can_wholesale::Bool = true
         )
 
         # validate inputs
@@ -225,7 +231,9 @@ struct PV <: AbstractTech
             production_incentive_per_kwh,
             production_incentive_max_benefit,
             production_incentive_years,
-            production_incentive_max_kw
+            production_incentive_max_kw,
+            can_net_meter,
+            can_wholesale
         )
     end
 end
