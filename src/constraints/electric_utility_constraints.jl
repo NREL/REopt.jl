@@ -40,7 +40,6 @@ function add_export_constraints(m, p; _n="")
     binNEM = 0
     NEM_techs = String[t for t in p.elec_techs if :NEM in p.export_bins_by_tech[t]]
     WHL_techs = String[t for t in p.elec_techs if :WHL in p.export_bins_by_tech[t]]
-    # TODO add can_net_meter to each tech and use to define export_bins_by_tech
 
     if !isempty(NEM_techs)
 

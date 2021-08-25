@@ -79,7 +79,7 @@ struct Generator <: AbstractGenerator
         fuel_slope_gal_per_kwh::Float64 = 0.076,
         fuel_intercept_gal_per_hr::Float64 = 0.0,
         fuel_avail_gal::Float64 = 660.0,
-        min_turn_down_pct::Float64 = 0.0,  # TODO change this to non-zero value
+        min_turn_down_pct::Float64 = 0.0,
         only_runs_during_grid_outage::Bool = true,
         sells_energy_back_to_grid::Bool = false,
         can_net_meter::Bool = true,

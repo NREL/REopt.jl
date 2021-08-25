@@ -71,10 +71,3 @@ function add_gen_rated_prod_constraint(m, p)
 		m[:dvSize][t] >= m[:dvRatedProduction][t, ts]
 	)
 end
-
-# # TODO add this constraint to model
-# function add_gen_min_turndown_constraint(m,p)
-# 	@constraint(m, [t in p.gentechs, ts in p.time_steps],
-# 		m[:dvRatedProduction][t, ts] in MOI.Semicontinuous(p.generator.min_turn_down_pct, p.max_sizes[t])
-# 	)
-# end

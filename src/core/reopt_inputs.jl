@@ -135,8 +135,6 @@ function REoptInputs(s::Scenario)
     if any(pv.existing_kw > 0 for pv in s.pvs)
         adjust_load_profile(s, production_factor)
     end
-    # TODO use Xpress in Actions?
-
 
     REoptInputs(
         techs,

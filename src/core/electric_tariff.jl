@@ -236,9 +236,6 @@ function get_tier_with_lowest_energy_rate(u::URDBrate)
     return tier_with_lowest_energy_cost
 end
 
-# TODO: dispatch custom rates based on options: TOU, monthly, etc.
-function CustomRate(flat_energy::Real, flat_demand::Real=0) end
-
 
 """
     function create_export_rate(e::Nothing, N::Int, ts_per_hour::Int=1)
