@@ -47,7 +47,8 @@ function Generator(;
     only_runs_during_grid_outage::Bool = true,
     sells_energy_back_to_grid::Bool = false,
     can_net_meter::Bool = false,
-    can_wholesale::Bool = false
+    can_wholesale::Bool = false,
+    can_export_beyond_nem_limit = false
 )
 ```
 """
