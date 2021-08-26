@@ -36,15 +36,15 @@ function add_export_constraints(m, p; _n="")
            m[Symbol("dvCurtail"*_n)][t, ts]
     )
 
-    m[Symbol("NEMExportBenefit"*_n)] = 0
-    m[Symbol("EXCExportBenefit"*_n)] = 0
-    m[Symbol("WHLExportBenefit"*_n)] = 0
     binNEM = 0
+    binWHL = 0
+    NEM_benefit = 0
+    EXC_benefit = 0
+    WHL_benefit = 0
     NEM_techs = String[t for t in p.elec_techs if :NEM in p.export_bins_by_tech[t]]
     WHL_techs = String[t for t in p.elec_techs if :WHL in p.export_bins_by_tech[t]]
 
     if !isempty(NEM_techs)
-
         # Constraint (9c): Net metering only -- can't sell more than you purchase
         # hours_per_timestep is cancelled on both sides, but used for unit consistency (convert power to energy)
         @constraint(m,
@@ -54,17 +54,33 @@ function add_export_constraints(m, p; _n="")
         )
 
         if p.elecutil.net_metering_limit_kw == p.elecutil.interconnection_limit_kw && isempty(WHL_techs)
-            # no need for binNEM
+            # no need for binNEM nor binWHL
             binNEM = 1
             @constraint(m,
                 sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.elecutil.interconnection_limit_kw
             )
+            NEM_benefit = @expression(m, p.pwf_e * p.hours_per_timestep *
+                sum( sum(p.etariff.export_rates[:NEM][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
+                    for t in p.techs_by_exportbin[:NEM]) for ts in p.time_steps)
+            )
+            if :EXC in p.etariff.export_bins
+                EXC_benefit = @expression(m, p.pwf_e * p.hours_per_timestep *
+                    sum( sum(p.etariff.export_rates[:EXC][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :EXC, ts] 
+                        for t in p.techs_by_exportbin[:EXC]) for ts in p.time_steps)
+                )
+            end
         else
             if !(isempty(_n))
                 @error """Binaries decisions for net metering capacity limit is not implemented for multinode models to keep 
                             them linear. Please set the net metering limit to zero or equal to the interconnection limit."""
             end
+
             binNEM = @variable(m, binary = true)
+            @warn "Adding binary variable for net metering choice. Some solvers are slow with binaries."
+
+            # Good to bound the benefit
+            max_bene = sum([ld*rate for (ld,rate) in zip(p.elec_load.loads_kw, p.etariff.export_rates[:NEM])])*10
+            NEM_benefit = @variable(m, lower_bound = max_bene)
 
             # If choosing to take advantage of NEM, must have total capacity less than net_metering_limit_kw
             @constraint(m,
@@ -73,33 +89,61 @@ function add_export_constraints(m, p; _n="")
             @constraint(m,
                 !binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.elecutil.interconnection_limit_kw}
             )
-        end
-        
-        m[Symbol("NEMExportBenefit"*_n)] = @expression(m, binNEM * p.pwf_e * p.hours_per_timestep *
-            sum( sum(p.etariff.export_rates[:NEM][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
-                    for t in p.techs_by_exportbin[:NEM])
-            for ts in p.time_steps)
-        )
 
-        if :EXC in p.etariff.export_bins
-            m[Symbol("EXCExportBenefit"*_n)] = @expression(m, binNEM * p.pwf_e * p.hours_per_timestep *
-                sum( sum(p.etariff.export_rates[:EXC][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :EXC, ts] 
-                        for t in p.techs_by_exportbin[:EXC])
-                for ts in p.time_steps)
+            # binary choice for NEM benefit
+            @constraint(m,
+                binNEM => {NEM_benefit >= p.pwf_e * p.hours_per_timestep *
+                    sum( sum(p.etariff.export_rates[:NEM][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
+                        for t in p.techs_by_exportbin[:NEM]) for ts in p.time_steps)
+                }
             )
+            @constraint(m, !binNEM => {NEM_benefit >= 0})
+
+            EXC_benefit = 0
+            if :EXC in p.etariff.export_bins
+                EXC_benefit = @variable(m, lower_bound = max_bene)
+                @constraint(m,
+                    binNEM => {EXC_benefit >= p.pwf_e * p.hours_per_timestep *
+                        sum( sum(p.etariff.export_rates[:EXC][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :EXC, ts] 
+                            for t in p.techs_by_exportbin[:EXC]) for ts in p.time_steps)
+                    }
+                )
+                @constraint(m, !binNEM => {EXC_benefit >= 0})
+            end
         end
     end
-    m[:binNEM] = binNEM
 
     if !isempty(WHL_techs)
-        @variable(m, binWHL, Bin)
-        @constraint(m, binNEM + m[:binWHL] == 1)  # can either NEM or WHL export, not both
-        m[Symbol("WHLExportBenefit"*_n)] = @expression(m, m[:binWHL] * p.pwf_e * p.hours_per_timestep *
-            sum( sum(p.etariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
-                    for t in p.techs_by_exportbin[:WHL])
-            for ts in p.time_steps)
-        )
+
+        if typeof(binNEM) <: Real  # no need for wholesale binary
+            binWHL = 1
+            WHL_benefit = @expression(m, p.pwf_e * p.hours_per_timestep *
+                sum( sum(p.etariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
+                        for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
+            )
+        else
+            binWHL = @variable(m, binary = true)
+            @warn "Adding binary variable for wholesale export choice. Some solvers are slow with binaries."
+            max_bene = sum([ld*rate for (ld,rate) in zip(p.elec_load.loads_kw, p.etariff.export_rates[:WHL])])*10
+            WHL_benefit = @variable(m, lower_bound = max_bene)
+
+            @constraint(m, binNEM + binWHL == 1)  # can either NEM or WHL export, not both
+
+            @constraint(m,
+                binWHL => {WHL_benefit >= p.pwf_e * p.hours_per_timestep *
+                    sum( sum(p.etariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
+                            for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
+                }
+            )
+            @constraint(m, !binWHL => {WHL_benefit >= 0})
+        end
     end
+
+    # register the benefits in the model
+    m[Symbol("NEM_benefit"*_n)] = NEM_benefit
+    m[Symbol("EXC_benefit"*_n)] = EXC_benefit
+    m[Symbol("WHL_benefit"*_n)] = WHL_benefit
+    nothing
 end
 
 
@@ -146,8 +190,8 @@ function add_elec_utility_expressions(m, p; _n="")
 
     if !isempty(p.etariff.export_bins) && !isempty(p.techs)
         # NOTE: levelization_factor is baked into dvProductionToGrid
-        m[Symbol("TotalExportBenefit"*_n)] = m[Symbol("NEMExportBenefit"*_n)] + m[Symbol("WHLExportBenefit"*_n)] +
-                                             m[Symbol("EXCExportBenefit"*_n)]
+        m[Symbol("TotalExportBenefit"*_n)] = m[Symbol("NEM_benefit"*_n)] + m[Symbol("WHL_benefit"*_n)] +
+                                             m[Symbol("EXC_benefit"*_n)]
     else
         m[Symbol("TotalExportBenefit"*_n)] = 0
     end
