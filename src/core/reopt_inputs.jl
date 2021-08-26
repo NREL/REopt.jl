@@ -515,7 +515,7 @@ end
 function fillin_techs_by_exportbin(techs_by_exportbin::Dict, tech::AbstractTech, tech_name::String)
     if tech.can_net_meter && :NEM in keys(techs_by_exportbin)
         push!(techs_by_exportbin[:NEM], tech_name)
-        if :EXC in keys(techs_by_exportbin)
+        if tech.can_export_beyond_nem_limit && :EXC in keys(techs_by_exportbin)
             push!(techs_by_exportbin[:EXC], tech_name)
         end
     end

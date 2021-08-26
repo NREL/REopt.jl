@@ -67,6 +67,7 @@ struct Generator <: AbstractGenerator
     sells_energy_back_to_grid
     can_net_meter
     can_wholesale
+    can_export_beyond_nem_limit
 
     function Generator(;
         existing_kw::Real=0,
@@ -83,7 +84,8 @@ struct Generator <: AbstractGenerator
         only_runs_during_grid_outage::Bool = true,
         sells_energy_back_to_grid::Bool = false,
         can_net_meter::Bool = true,
-        can_wholesale::Bool = true
+        can_wholesale::Bool = true,
+        can_export_beyond_nem_limit = true
         )
 
         new(
@@ -101,7 +103,8 @@ struct Generator <: AbstractGenerator
             only_runs_during_grid_outage,
             sells_energy_back_to_grid,
             can_net_meter,
-            can_wholesale
+            can_wholesale,
+            can_export_beyond_nem_limit
         )
     end
 end
