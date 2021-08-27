@@ -125,6 +125,14 @@ end
 end
 
 
+@testset "TieredRate" begin
+    expected_year_one_energy_cost = 2342.88
+    m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
+    results = run_reopt(m, "./scenarios/tiered_rate.json")
+    @test results["ElectricTariff"]["year_one_energy_cost_us_dollars"] ≈ 2342.88
+end
+
+
 ## much too slow with Cbc (killed after 8 hours)
 # @testset "Minimize Unserved Load" begin
 #     m = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
