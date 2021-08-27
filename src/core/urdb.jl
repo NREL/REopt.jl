@@ -40,10 +40,11 @@ Contains some of the data for ElectricTariff
 struct URDBrate <: REoptData
     energy_rates::Array{Float64,2}  # tier X time
     energy_tier_limits::Array{Real,1}
+    n_energy_tiers::Int
 
     n_monthly_demand_tiers::Int
     monthly_demand_tier_limits::Array{Real,1}
-    monthly_demand_rates::Array{Float64,2}  # month X tier TODO change tier locations in reopt.jl to be consistent
+    monthly_demand_rates::Array{Float64,2}  # month X tier
 
     n_tou_demand_tiers::Int
     tou_demand_tier_limits::Array{Real,1}
@@ -95,12 +96,14 @@ function URDBrate(urdb_response::Dict, year::Int=2019; time_steps_per_hour=1)
       parse_demand_rates(urdb_response, year)
 
     energy_rates, energy_tier_limits = parse_urdb_energy_costs(urdb_response, year)
+    n_energy_tiers = length(energy_tier_limits)
 
     fixed_monthly_charge, annual_min_charge, min_monthly_charge = parse_urdb_fixed_charges(urdb_response)
 
     URDBrate(
         energy_rates,
         energy_tier_limits,
+        n_energy_tiers,
 
         n_monthly_demand_tiers,
         monthly_demand_tier_limits,
