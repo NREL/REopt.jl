@@ -121,7 +121,7 @@ function REoptInputs(s::Scenario)
 
     pbi_techs, pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
 
-    months = 1:Int(length(s.electric_tariff.monthly_demand_rates) / s.electric_tariff.n_monthly_demand_tiers)
+    months = 1:12
 
     levelization_factor, pwf_e, pwf_om, two_party_factor = setup_present_worth_factors(s, techs, pvtechs)
     # the following hardcoded value for levelization_factor matches the public REopt API value
