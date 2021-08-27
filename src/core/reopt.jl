@@ -123,7 +123,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_export_constraints(m, p)
 	end
 
-	if !isempty(p.etariff.time_steps_monthly)
+	if !isempty(p.etariff.monthly_demand_rates)
 		add_monthly_peak_constraint(m, p)
 	end
 
@@ -284,7 +284,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvStoragePower[p.storage.types] >= 0   # Power capacity of storage system b [kW]
 		dvStorageEnergy[p.storage.types] >= 0   # Energy capacity of storage system b [kWh]
 		dvPeakDemandTOU[p.ratchets] >= 0  # Peak electrical power demand during ratchet r [kW]
-		dvPeakDemandMonth[p.months] >= 0  # Peak electrical power demand during month m [kW]
+		dvPeakDemandMonth[p.months, 1:p.etariff.n_monthly_demand_tiers] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0
 	end
 
