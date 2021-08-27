@@ -214,7 +214,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
             add_export_constraints(m, p; _n=_n)
         end
     
-        if !isempty(p.etariff.time_steps_monthly)
+        if !isempty(p.etariff.monthly_demand_rates)
             add_monthly_peak_constraint(m, p; _n=_n)
         end
     

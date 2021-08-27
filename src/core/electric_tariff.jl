@@ -115,6 +115,7 @@ function ElectricTariff(;
     n_monthly_demand_tiers = 1
     tou_demand_tier_limits = Float64[]
     n_tou_demand_tiers = 1
+    time_steps_monthly = get_monthly_timesteps(year, time_steps_per_hour=time_steps_per_hour)
 
     u = nothing
     if !isempty(urdb_label)
@@ -144,7 +145,6 @@ function ElectricTariff(;
 
         tou_demand_rates = Float64[]
         tou_demand_ratchet_timesteps = []
-        time_steps_monthly = get_monthly_timesteps(year, time_steps_per_hour=time_steps_per_hour)
         energy_rates = Real[]
         for m in 1:12
             append!(energy_rates, [monthly_energy_rates[m] for ts in time_steps_monthly[m]])
@@ -162,7 +162,6 @@ function ElectricTariff(;
 
         tou_demand_rates = Float64[]
         tou_demand_ratchet_timesteps = []
-        time_steps_monthly = get_monthly_timesteps(year, time_steps_per_hour=time_steps_per_hour)
         energy_rates = repeat(Real[blended_annual_energy_rate], 8760 * time_steps_per_hour)
         monthly_demand_rates = repeat(Real[blended_annual_demand_rate], 12)
 
@@ -202,16 +201,15 @@ function ElectricTariff(;
             n_energy_tiers, n_monthly_demand_tiers, n_tou_demand_tiers = 1, 1, 1
         end
 
-        time_steps_monthly = Array[]
-        if !isempty(u.monthly_demand_rates)
-            time_steps_monthly = 
-                get_monthly_timesteps(year, time_steps_per_hour=time_steps_per_hour)
-        end
-
         tou_demand_ratchet_timesteps = u.tou_demand_ratchet_timesteps
         fixed_monthly_charge = u.fixed_monthly_charge
         annual_min_charge = u.annual_min_charge
         min_monthly_charge = u.min_monthly_charge
+    else
+        # need to reshape cost vectors to arrays (2nd dim is for tiers)
+        energy_rates = reshape(energy_rates, :, 1)
+        monthly_demand_rates = reshape(monthly_demand_rates, :, 1)
+        tou_demand_rates = reshape(tou_demand_rates, :, 1)
     end
 
     #= export_rates

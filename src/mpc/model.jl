@@ -157,7 +157,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		add_export_constraints(m, p)
 	end
 
-	if !isempty(p.etariff.time_steps_monthly)
+	if !isempty(p.etariff.monthly_demand_rates)
 		add_monthly_peak_constraint(m, p)
 	end
 
