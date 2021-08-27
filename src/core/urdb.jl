@@ -38,7 +38,7 @@ abstract type REoptData end
 Contains some of the data for ElectricTariff
 """
 struct URDBrate <: REoptData
-    energy_rates::Array{Float64,2}  # tier X time
+    energy_rates::Array{Float64,2}  # time X tier
     energy_tier_limits::Array{Real,1}
     n_energy_tiers::Int
 
@@ -95,8 +95,7 @@ function URDBrate(urdb_response::Dict, year::Int=2019; time_steps_per_hour=1)
       n_tou_demand_tiers, tou_demand_tier_limits, tou_demand_rates, tou_demand_ratchet_timesteps =
       parse_demand_rates(urdb_response, year)
 
-    energy_rates, energy_tier_limits = parse_urdb_energy_costs(urdb_response, year)
-    n_energy_tiers = length(energy_tier_limits)
+    energy_rates, energy_tier_limits, n_energy_tiers = parse_urdb_energy_costs(urdb_response, year)
 
     fixed_monthly_charge, annual_min_charge, min_monthly_charge = parse_urdb_fixed_charges(urdb_response)
 
@@ -291,8 +290,8 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
             end
         end
     end
-    energy_rates = reshape(energy_cost_vector, (n_energy_tiers, :))
-    return energy_rates, energy_tier_limits_kwh
+    energy_rates = reshape(energy_cost_vector, (:, n_energy_tiers))
+    return energy_rates, energy_tier_limits_kwh, n_energy_tiers
 end
 
 
@@ -311,7 +310,7 @@ function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8)
         monthly_demand_rates = parse_urdb_monthly_demand(d, n_monthly_demand_tiers)
     else
         monthly_demand_tier_limits = []
-        n_monthly_demand_tiers = 0
+        n_monthly_demand_tiers = 1
         monthly_demand_rates = Array{Float64,2}(undef, 0, 0)
     end
 
