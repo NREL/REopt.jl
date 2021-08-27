@@ -147,11 +147,44 @@ function add_export_constraints(m, p; _n="")
 end
 
 
+"""
+    add_monthly_peak_constraint(m, p; _n="")
+
+Only used if ElectricTariff has monthly demand rates.
+Adds dvPeakDemandMonth to the model and sets it to greater than dvGridPurchase across each month.
+If the monthly demand rate is tiered than also adds binMonthlyDemandTier and constraints.
+"""
 function add_monthly_peak_constraint(m, p; _n="")
+
 	## Constraint (11d): Monthly peak demand is >= demand at each hour in the month
 	@constraint(m, [mth in p.months, ts in p.etariff.time_steps_monthly[mth]],
-    m[Symbol("dvPeakDemandMonth"*_n)][mth] >= m[Symbol("dvGridPurchase"*_n)][ts]
+        sum(m[Symbol("dvPeakDemandMonth"*_n)][mth, t] for t in 1:p.etariff.n_monthly_demand_tiers) 
+            >= m[Symbol("dvGridPurchase"*_n)][ts]
     )
+
+    if p.etariff.n_monthly_demand_tiers > 1  # only need binaries if more than one tier
+        @warn "Adding binary variables to model monthly demand tiers."
+        ntiers = p.etariff.n_monthly_demand_tiers
+        dv = "binMonthlyDemandTier" * _n
+        m[Symbol(dv)] = @variable(m, [p.months, 1:ntiers], binary = true, lower_bound = 0, 
+                                  base_name = dv)
+        b = m[Symbol(dv)]
+        # Upper bound on peak electrical power demand by month, tier; if tier is selected (0 o.w.)
+        @constraint(m, [mth in p.months, tier in 1:ntiers],
+            m[Symbol("dvPeakDemandMonth"*_n)][mth, tier] <= p.etariff.monthly_demand_tier_limits[tier] * 
+                b[mth, tier]
+        )
+
+        # Monthly peak electrical power demand tier ordering
+        @constraint(m, [mth in p.months, tier in 2:ntiers], b[mth, tier] <= b[mth, tier-1])
+
+        # One monthly peak electrical power demand tier must be full before next one is active
+        @constraint(m, [mth in p.months, tier in 2:ntiers],
+        b[mth, tier] * p.etariff.monthly_demand_tier_limits[tier-1] <= 
+            m[Symbol("dvPeakDemandMonth"*_n)][mth, tier-1]
+        )
+        # TODO implement NewMaxDemandMonthsInTier, which adds mth index to monthly_demand_tier_limits
+    end
 end
 
 
@@ -209,8 +242,9 @@ function add_elec_utility_expressions(m, p; _n="")
     end
     
     if !isempty(p.etariff.monthly_demand_rates)
-        m[Symbol("DemandFlatCharges"*_n)] = @expression(m, 
-            p.pwf_e * sum( p.etariff.monthly_demand_rates[mth] * m[Symbol("dvPeakDemandMonth"*_n)][mth] for mth in p.months) 
+        m[Symbol("DemandFlatCharges"*_n)] = @expression(m, p.pwf_e * 
+            sum( p.etariff.monthly_demand_rates[mth, t] * m[Symbol("dvPeakDemandMonth"*_n)][mth, t] 
+                for mth in p.months, t in 1:p.etariff.n_monthly_demand_tiers) 
         )
     else
         m[Symbol("DemandFlatCharges"*_n)] = 0
