@@ -38,9 +38,6 @@ abstract type REoptData end
 Contains some of the data for ElectricTariff
 """
 struct URDBrate <: REoptData
-    year::Int
-    time_steps_per_hour::Int
-
     energy_rates::Array{Float64,2}  # tier X time
     energy_tier_limits::Array{Real,1}
 
@@ -102,9 +99,6 @@ function URDBrate(urdb_response::Dict, year::Int=2019; time_steps_per_hour=1)
     fixed_monthly_charge, annual_min_charge, min_monthly_charge = parse_urdb_fixed_charges(urdb_response)
 
     URDBrate(
-        year,
-        time_steps_per_hour,
-
         energy_rates,
         energy_tier_limits,
 
