@@ -50,7 +50,7 @@ function add_export_constraints(m, p; _n="")
         @constraint(m,
             p.hours_per_timestep * sum( m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
             for t in NEM_techs, ts in p.time_steps)
-            <= p.hours_per_timestep * sum( m[Symbol("dvGridPurchase"*_n), tier][ts] 
+            <= p.hours_per_timestep * sum( m[Symbol("dvGridPurchase"*_n)][ts, tier]
                 for ts in p.time_steps, tier in 1:p.etariff.n_energy_tiers)
         )
 
