@@ -33,16 +33,19 @@ data for electric tariff in reopt model
 """
 # TODO function for creating BAU inputs: don't need for tariff b/c Tech repeats no longer needed?
 struct ElectricTariff
-    energy_rates::AbstractArray{Float64,1} # gets a second dim with tiers
+    energy_rates::AbstractArray{Float64, 2} # gets a second dim with tiers
     energy_tier_limits::AbstractArray{Float64,1}
+    n_energy_tiers::Int
 
-    monthly_demand_rates::AbstractArray{Float64,1} # gets a second dim with tiers
+    monthly_demand_rates::AbstractArray{Float64, 2} # gets a second dim with tiers
     time_steps_monthly::AbstractArray{AbstractArray{Int64,1},1}  # length = 0 or 12
     monthly_demand_tier_limits::AbstractArray{Float64,1}
+    n_monthly_demand_tiers::Int
 
-    tou_demand_rates::AbstractArray{Float64,1} # gets a second dim with tiers
+    tou_demand_rates::AbstractArray{Float64, 2} # gets a second dim with tiers
     tou_demand_ratchet_timesteps::AbstractArray{AbstractArray{Int64,1},1}  # length = n_tou_demand_ratchets
     tou_demand_tier_limits::AbstractArray{Float64,1}
+    n_tou_demand_tiers::Int
 
     fixed_monthly_charge::Float64
     annual_min_charge::Float64
@@ -96,19 +99,22 @@ function ElectricTariff(;
     monthly_demand_rates::Array=[],
     blended_annual_energy_rate::S=nothing,
     blended_annual_demand_rate::R=nothing,
+    remove_tiers::Bool=false
     ) where {
         T1 <: Union{Nothing, Int, Float64, Array}, 
         T2 <: Union{Nothing, Int, Float64, Array}, 
         S <: Union{Nothing, Int, Float64}, 
         R <: Union{Nothing, Int, Float64}
     }
-    
+    # TODO remove_tiers for multinode models
     nem_rate = Float64[]
 
     energy_tier_limits = Float64[]
+    n_energy_tiers = 1
     monthly_demand_tier_limits = Float64[]
+    n_monthly_demand_tiers = 1
     tou_demand_tier_limits = Float64[]
-
+    n_tou_demand_tiers = 1
 
     u = nothing
     if !isempty(urdb_label)
@@ -172,14 +178,30 @@ function ElectricTariff(;
         error("Creating ElectricTariff requires at least urdb_label, urdb_response, monthly rates, or annual rates.")
     end
 
-    if !isnothing(u)
+    if !isnothing(u)  # use URDBrate
 
         if NEM
             t = get_tier_with_lowest_energy_rate(u)
             nem_rate = [-0.999 * x for x in u.energy_rates[t,:]]
         end
 
-        energy_rates, monthly_demand_rates, tou_demand_rates = remove_tiers_from_urdb_rate(u)
+        energy_rates = u.energy_rates
+        energy_tier_limits = u.energy_tier_limits
+        n_energy_tiers = u.n_energy_tiers
+        monthly_demand_rates = u.monthly_demand_rates
+        monthly_demand_tier_limits = u.monthly_demand_tier_limits
+        n_monthly_demand_tiers = u.n_monthly_demand_tiers
+        tou_demand_rates = u.tou_demand_rates
+        tou_demand_tier_limits = u.tou_demand_tier_limits
+        n_tou_demand_tiers = u.n_tou_demand_tiers
+
+        if remove_tiers
+            energy_rates, monthly_demand_rates, tou_demand_rates = remove_tiers_from_urdb_rate(u)
+            energy_tier_limits, monthly_demand_tier_limits, tou_demand_tier_limits = 
+                Float64[], Float64[], Float64[]
+            n_energy_tiers, n_monthly_demand_tiers, n_tou_demand_tiers = 1, 1, 1
+        end
+
         time_steps_monthly = Array[]
         if !isempty(u.monthly_demand_rates)
             time_steps_monthly = 
@@ -199,11 +221,11 @@ function ElectricTariff(;
     3. EXC (Excess, beyond NEM)
 
     Only one of NEM and Wholesale can be exported into due to the binary constraints.
-    Excess can be exported into in the same time step as NEM or Wholesale.
+    Excess can be exported into in the same time step as NEM.
 
     Excess is meant to be combined with NEM: NEM export is limited to the total grid purchased energy in a year and some
     utilities offer a compensation mechanism for export beyond the site load.
-    The Excess tier does not have really have a purpose with the Wholesale tier. (It used to be effectively curtailment).
+    The Excess tier is not available with the Wholesale tier.
 
     - if NEM then set ExportRate[:Nem, :] to energy_rate[tier_with_lowest_energy_rate, :]
     - user can provide either scalar wholesale rate or vector of timesteps, 
@@ -236,12 +258,15 @@ function ElectricTariff(;
     ElectricTariff(
         energy_rates,
         energy_tier_limits,
+        n_energy_tiers,
         monthly_demand_rates,
         time_steps_monthly,
         monthly_demand_tier_limits,
+        n_monthly_demand_tiers,
         tou_demand_rates,
         tou_demand_ratchet_timesteps,
         tou_demand_tier_limits,
+        n_tou_demand_tiers,
         fixed_monthly_charge,
         annual_min_charge,
         min_monthly_charge,
