@@ -33,20 +33,23 @@ data for electric tariff in reopt model
 """
 # TODO function for creating BAU inputs: don't need for tariff b/c Tech repeats no longer needed?
 struct ElectricTariff
-    energy_rates::Array{Float64,1} 
+    energy_rates::AbstractArray{Float64,1} # gets a second dim with tiers
+    energy_tier_limits::AbstractArray{Float64,1}
 
-    monthly_demand_rates::Array{Float64,1}
-    time_steps_monthly::Array{Array{Int64,1},1}  # length = 0 or 12
+    monthly_demand_rates::AbstractArray{Float64,1} # gets a second dim with tiers
+    time_steps_monthly::AbstractArray{AbstractArray{Int64,1},1}  # length = 0 or 12
+    monthly_demand_tier_limits::AbstractArray{Float64,1}
 
-    tou_demand_rates::Array{Float64,1}
-    tou_demand_ratchet_timesteps::Array{Array{Int64,1},1}  # length = n_tou_demand_ratchets
+    tou_demand_rates::AbstractArray{Float64,1} # gets a second dim with tiers
+    tou_demand_ratchet_timesteps::AbstractArray{AbstractArray{Int64,1},1}  # length = n_tou_demand_ratchets
+    tou_demand_tier_limits::AbstractArray{Float64,1}
 
     fixed_monthly_charge::Float64
     annual_min_charge::Float64
     min_monthly_charge::Float64
 
     export_rates::Dict{Symbol, AbstractArray}
-    export_bins::Array{Symbol,1}
+    export_bins::AbstractArray{Symbol,1}
 end
 
 
@@ -100,7 +103,12 @@ function ElectricTariff(;
         R <: Union{Nothing, Int, Float64}
     }
     
-    nem_rate = [100.0 for _ in 1:8760*time_steps_per_hour]
+    nem_rate = Float64[]
+
+    energy_tier_limits = Float64[]
+    monthly_demand_tier_limits = Float64[]
+    tou_demand_tier_limits = Float64[]
+
 
     u = nothing
     if !isempty(urdb_label)
@@ -227,10 +235,13 @@ function ElectricTariff(;
 
     ElectricTariff(
         energy_rates,
+        energy_tier_limits,
         monthly_demand_rates,
         time_steps_monthly,
+        monthly_demand_tier_limits,
         tou_demand_rates,
         tou_demand_ratchet_timesteps,
+        tou_demand_tier_limits,
         fixed_monthly_charge,
         annual_min_charge,
         min_monthly_charge,
@@ -277,11 +288,11 @@ end
 
 
 """
-    function create_export_rate(e::Array{<:Real, 1}, N::Int, ts_per_hour::Int=1)
+    function create_export_rate(e::AbstractArray{<:Real, 1}, N::Int, ts_per_hour::Int=1)
 
 Check length of e and upsample if length(e) != N
 """
-function create_export_rate(e::Array{<:Real, 1}, N::Int, ts_per_hour::Int=1)
+function create_export_rate(e::AbstractArray{<:Real, 1}, N::Int, ts_per_hour::Int=1)
     Ne = length(e)
     if Ne != Int(N/ts_per_hour) || Ne != N
         @error "Export rates do not have correct number of entries. Must be $(N) or $(Int(N/ts_per_hour))."
