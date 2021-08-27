@@ -50,7 +50,8 @@ function add_export_constraints(m, p; _n="")
         @constraint(m,
             p.hours_per_timestep * sum( m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
             for t in NEM_techs, ts in p.time_steps)
-            <= p.hours_per_timestep * sum( m[Symbol("dvGridPurchase"*_n)][ts] for ts in p.time_steps)
+            <= p.hours_per_timestep * sum( m[Symbol("dvGridPurchase"*_n), tier][ts] 
+                for ts in p.time_steps, tier in 1:p.etariff.n_energy_tiers)
         )
 
         if p.elecutil.net_metering_limit_kw == p.elecutil.interconnection_limit_kw && isempty(WHL_techs)
@@ -159,15 +160,14 @@ function add_monthly_peak_constraint(m, p; _n="")
 	## Constraint (11d): Monthly peak demand is >= demand at each hour in the month
 	@constraint(m, [mth in p.months, ts in p.etariff.time_steps_monthly[mth]],
         sum(m[Symbol("dvPeakDemandMonth"*_n)][mth, t] for t in 1:p.etariff.n_monthly_demand_tiers) 
-            >= m[Symbol("dvGridPurchase"*_n)][ts]
+            >= sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.etariff.n_energy_tiers)
     )
 
     if p.etariff.n_monthly_demand_tiers > 1  # only need binaries if more than one tier
         @warn "Adding binary variables to model monthly demand tiers."
         ntiers = p.etariff.n_monthly_demand_tiers
         dv = "binMonthlyDemandTier" * _n
-        m[Symbol(dv)] = @variable(m, [p.months, 1:ntiers], binary = true, lower_bound = 0, 
-                                  base_name = dv)
+        m[Symbol(dv)] = @variable(m, [p.months, 1:ntiers], binary = true, base_name = dv)
         b = m[Symbol(dv)]
         # Upper bound on peak electrical power demand by month, tier; if tier is selected (0 o.w.)
         @constraint(m, [mth in p.months, tier in 1:ntiers],
@@ -191,7 +191,8 @@ end
 function add_tou_peak_constraint(m, p; _n="")
     ## Constraint (12d): Ratchet peak demand is >= demand at each hour in the ratchet` 
     @constraint(m, [r in p.ratchets, ts in p.etariff.tou_demand_ratchet_timesteps[r]],
-        m[Symbol("dvPeakDemandTOU"*_n)][r] >= m[Symbol("dvGridPurchase"*_n)][ts]
+        m[Symbol("dvPeakDemandTOU"*_n)][r] >= 
+        sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.etariff.n_energy_tiers)
     )
 end
 
@@ -207,7 +208,7 @@ end
 function add_simultaneous_export_import_constraint(m, p; _n="")
     @constraint(m, NoGridPurchasesBinary[ts in p.time_steps],
         m[Symbol("binNoGridPurchases"*_n)][ts] => {
-          m[Symbol("dvGridPurchase"*_n)][ts] +
+          sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.etariff.n_energy_tiers) +
           sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.types) <= 0
         }
     )
@@ -230,7 +231,8 @@ function add_elec_utility_expressions(m, p; _n="")
     end
 
     m[Symbol("TotalEnergyChargesUtil"*_n)] = @expression(m, p.pwf_e * p.hours_per_timestep * 
-        sum( p.etariff.energy_rates[ts] * m[Symbol("dvGridPurchase"*_n)][ts] for ts in p.time_steps) 
+        sum( p.etariff.energy_rates[ts, tier] * m[Symbol("dvGridPurchase"*_n)][ts, tier] 
+            for ts in p.time_steps, tier in 1:p.etariff.n_energy_tiers) 
     )
 
     if !isempty(p.etariff.tou_demand_rates)
