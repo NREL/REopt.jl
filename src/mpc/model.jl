@@ -246,10 +246,11 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 		dvStoredEnergy[p.storage.types, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
 		# dvStoragePower[p.storage.types] >= 0   # Power capacity of storage system b [kW]
 		# dvStorageEnergy[p.storage.types] >= 0   # Energy capacity of storage system b [kWh]
-		dvPeakDemandTOU[p.ratchets] >= 0  # Peak electrical power demand during ratchet r [kW]
+		dvPeakDemandTOU[p.ratchets, 1:1] >= 0  # Peak electrical power demand during ratchet r [kW]
 		dvPeakDemandMonth[p.months] >= 0  # Peak electrical power demand during month m [kW]
 		# MinChargeAdder >= 0
 	end
+	# TODO: tiers in MPC tariffs and variables?
 
 	if !isempty(p.etariff.export_bins)
 		@variable(m, dvProductionToGrid[p.elec_techs, p.etariff.export_bins, p.time_steps] >= 0)

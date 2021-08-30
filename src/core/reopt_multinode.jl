@@ -46,10 +46,10 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 		m[Symbol(dv)] = @variable(m, [p.time_steps], base_name=dv, lower_bound=0)
 
 		dv = "dvPeakDemandTOU"*_n
-		m[Symbol(dv)] = @variable(m, [p.ratchets], base_name=dv, lower_bound=0)
+		m[Symbol(dv)] = @variable(m, [p.ratchets, 1:1], base_name=dv, lower_bound=0)
 
 		dv = "dvPeakDemandMonth"*_n
-		m[Symbol(dv)] = @variable(m, [p.months], base_name=dv, lower_bound=0)
+		m[Symbol(dv)] = @variable(m, [p.months, 1:1], base_name=dv, lower_bound=0)
 
 		dv = "dvProductionToStorage"*_n
 		m[Symbol(dv)] = @variable(m, [p.storage.types, p.techs, p.time_steps], base_name=dv, lower_bound=0)
@@ -155,10 +155,10 @@ function add_bounds(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 		@constraint(m, [ts in p.time_steps], -m[Symbol(dv)][ts] ≤ 0)
 
 		dv = "dvPeakDemandTOU"*_n
-		@constraint(m, [r in p.ratchets], -m[Symbol(dv)][r] ≤ 0)
+		@constraint(m, [r in p.ratchets, 1:1], -m[Symbol(dv)][r] ≤ 0)
 
 		dv = "dvPeakDemandMonth"*_n
-		@constraint(m, [mth in p.months], -m[Symbol(dv)][mth] ≤ 0)
+		@constraint(m, [mth in p.months, 1:1], -m[Symbol(dv)][mth] ≤ 0)
 
 		dv = "dvProductionToStorage"*_n
         @constraint(m, [b in p.storage.types, tech in p.techs, ts in p.time_steps], 
