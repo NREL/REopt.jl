@@ -34,6 +34,10 @@ using JSON
 using REoptLite
 
 
+#=
+add a time-of-export rate that is greater than retail rate for the month of January,
+check to make sure that PV does NOT export unless the site load is met first for the month of January.
+=#
 @testset "January Export Rates" begin
     model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     data = JSON.parsefile("./scenarios/monthly_rate.json")
@@ -43,15 +47,14 @@ using REoptLite
     data["ElectricTariff"]["wholesale_rate"] =
         append!(repeat([jan_rate + 0.1], 31 * 24), repeat([0.0], 8760 - 31*24))
     data["ElectricTariff"]["monthly_demand_rates"] = repeat([0], 12)
+    data["ElectricUtility"] = Dict("allow_simultaneous_export_import" => false)
 
     s = Scenario(data)
     inputs = REoptInputs(s)
     results = run_reopt(model, inputs)
 
-    @test results["PV"]["size_kw"] ≈ 70.3084 atol=0.01
-    @test results["Financial"]["lcc_us_dollars"] ≈ 430747.0 rtol=1e-5 
-    # with levelization_factor hack the LCC is within 5e-5 of REopt Lite API LCC
-    @test all(x == 0.0 for x in results["PV"]["year_one_to_load_series_kw"][1:744])
+    @test all(x == 0.0 for (i,x) in enumerate(results["ElectricUtility"]["year_one_to_load_series_kw"][1:744]) 
+              if results["PV"]["year_one_to_grid_series_kw"][i] > 0)
 end
 
 @testset "Blended tariff" begin
