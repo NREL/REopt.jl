@@ -27,17 +27,16 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-abstract type REoptData end
 # https://discourse.julialang.org/t/vector-of-matrices-vs-multidimensional-arrays/9602/5
 # 5d2360465457a3f77ddc131e has TOU demand
 # 59bc22705457a3372642da67 has monthly tiered demand (no TOU demand)
 
 """
-    Base.@kwdef struct URDBrate <: REoptData
+    Base.@kwdef struct URDBrate
 
 Contains some of the data for ElectricTariff
 """
-struct URDBrate <: REoptData
+struct URDBrate
     energy_rates::Array{Float64,2}  # time X tier
     energy_tier_limits::Array{Real,1}
     n_energy_tiers::Int
