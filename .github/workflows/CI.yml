@@ -30,4 +30,4 @@ jobs:
             TRANSCRYPT_PASSWORD: ${{ secrets.TRANSCRYPT_PASSWORD }}
           run: ./.github/scripts/decrypt.sh 
         - name: Build containers and run tests
-          run: docker-compose up -d
+          run: docker-compose up
