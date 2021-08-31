@@ -29,5 +29,7 @@ jobs:
           env:
             TRANSCRYPT_PASSWORD: ${{ secrets.TRANSCRYPT_PASSWORD }}
           run: ./.github/scripts/decrypt.sh 
-        - name: Build containers and run tests
-          run: docker-compose up
+        - name: Build containers
+          run: docker-compose up -d
+        - name: Execute tests in container
+          run: docker exec jul julia --project=. -e 'import Pkg; Pkg.test("REoptLite"; test_args=["Xpress"])'
