@@ -27,18 +27,14 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-using Test
-using JuMP
 using CPLEX
-using JSON
-using REoptLite
 
 
 #=
 add a time-of-export rate that is greater than retail rate for the month of January,
 check to make sure that PV does NOT export unless the site load is met first for the month of January.
 =#
-@testset "January Export Rates" begin
+@testset "Do not allow_simultaneous_export_import" begin
     model = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
     data = JSON.parsefile("./scenarios/monthly_rate.json")
 
