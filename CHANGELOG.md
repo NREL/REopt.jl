@@ -1,5 +1,12 @@
 # REoptLite Changelog
 
+## v0.9.0
+- `ElectricTariff.NEM` boolean is now determined by `ElectricUtility.net_metering_limit_kw` (true if limit > 0)
+- added `ElectricUtility` inputs for `net_metering_limit_kw` and `interconnection_limit_kw`
+- added binary choice for net metering vs. wholesale export
+- added `ElectricTariff.export_rate_beyond_net_metering_limit` input (scalar or vector allowed)
+- added `can_net_meter`, `can_wholesale`, `can_export_beyond_nem_limit` tech inputs (`PV`, `Wind`, `Generator`)
+
 ## v0.8.0
 - added `Wind` module, relying on System Advisor Model Wind module for production factors and Wind Toolkit for resource data
 - new `ElectricTariff` input options:

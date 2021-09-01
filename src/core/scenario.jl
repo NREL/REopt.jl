@@ -121,7 +121,8 @@ function Scenario(d::Dict)
                                 )
 
     electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 
-                                       year=electric_load.year
+                                       year=electric_load.year,
+                                       NEM=electric_utility.net_metering_limit_kw > 0
                                     )
 
     if haskey(d, "Wind")

@@ -89,10 +89,4 @@ function add_cost_curve_vars_and_constraints(m, p; _n="")
     @constraint(m, SegmentSelectCon[t in p.segmented_techs],
         sum(m[Symbol("binSegment"*t)][s] for s in 1:p.n_segs_by_tech[t]) <= 1
     )
-
-    # TODO use the following constraint in place of the last one once implement net metering limit (and TechClass)
-    ##Constraint (7h): At most one segment allowed
-    # @constraint(m, SegmentSelectCon[c in p.TechClass, t in p.TechsInClass[c]],
-    #     sum(m[Symbol("binSegment"*t)][s] for s in 1:p.n_segs_by_tech[t]) <= m[:binSingleBasicTech][t,c]
-    # )
 end
