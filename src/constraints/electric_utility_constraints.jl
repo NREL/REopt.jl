@@ -152,7 +152,7 @@ end
     add_monthly_peak_constraint(m, p; _n="")
 
 Only used if ElectricTariff has monthly demand rates.
-Adds dvPeakDemandMonth to the model and sets it to greater than dvGridPurchase across each month.
+Sets dvPeakDemandMonth to greater than dvGridPurchase across each month.
 If the monthly demand rate is tiered than also adds binMonthlyDemandTier and constraints.
 """
 function add_monthly_peak_constraint(m, p; _n="")
