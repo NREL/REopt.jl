@@ -73,7 +73,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 		ex_name = "TotalStorageCapCosts"*_n
 		m[Symbol(ex_name)] = @expression(m, p.two_party_factor * 
 			sum(  p.storage.installed_cost_per_kw[b] * m[Symbol("dvStoragePower"*_n)][b] 
-				+ p.storage.cost_per_kwh[b] * m[Symbol("dvStorageEnergy"*_n)][b] for b in p.storage.types )
+				+ p.storage.installed_cost_per_kwh[b] * m[Symbol("dvStorageEnergy"*_n)][b] for b in p.storage.types )
 		)
 
 		ex_name = "TotalPerUnitSizeOMCosts"*_n
