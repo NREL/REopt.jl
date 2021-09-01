@@ -3,7 +3,8 @@ version: "2.1"
 services:
 
   xpress:
+    container_name: jul
     build:
       context: .
-    command: ['julia', '--project=.',  '-e', 'import Pkg; Pkg.test("REoptLite"; test_args=["Xpress"])']
+    command: tail -F anything
     mac_address: 08:00:27:7d:c5:3b
