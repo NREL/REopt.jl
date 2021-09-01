@@ -35,7 +35,6 @@ add a time-of-export rate that is greater than retail rate for the month of Janu
 check to make sure that PV does NOT export unless the site load is met first for the month of January.
 =#
 @testset "Do not allow_simultaneous_export_import" begin
-    @test false == true
     model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     data = JSON.parsefile("./scenarios/monthly_rate.json")
 
