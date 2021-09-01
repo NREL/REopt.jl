@@ -194,7 +194,7 @@ function add_tou_peak_constraint(m, p; _n="")
         sum(m[Symbol("dvPeakDemandTOU"*_n)][r, tier] for tier in 1:p.etariff.n_tou_demand_tiers) >= 
         sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.etariff.n_energy_tiers)
     )
-    # TODO: add lookback demand charges
+
     if p.etariff.n_tou_demand_tiers > 1
         @warn "Adding binary variables to model TOU demand tiers."
         ntiers = p.etariff.n_tou_demand_tiers
@@ -203,25 +203,25 @@ function add_tou_peak_constraint(m, p; _n="")
         b = m[Symbol(dv)]
 
         # Upper bound on peak electrical power demand by tier, by ratchet, if tier is selected (0 o.w.)
-        @constraint(m, [r in p.ratchets, tier in 1:p.etariff.n_tou_demand_tiers],
+        @constraint(m, [r in p.ratchets, tier in 1:ntiers],
             m[Symbol("dvPeakDemandTOU"*_n)][r, tier] <= p.etariff.tou_demand_tier_limits[tier] * b[r, tier]
         )
 
         # Ratchet peak electrical power ratchet tier ordering
-        @constraint(m, [r in p.ratchets, tier in 2:p.etariff.n_tou_demand_tiers],
+        @constraint(m, [r in p.ratchets, tier in 2:ntiers],
             b[r, tier] <= b[r, tier-1]
         )
 
         # One ratchet peak electrical power demand tier must be full before next one is active
-        @constraint(m, [r in p.ratchets, tier in 2:p.etariff.n_tou_demand_tiers],
+        @constraint(m, [r in p.ratchets, tier in 2:ntiers],
             b[r, tier] * p.etariff.tou_demand_tier_limits[tier-1] 
             <= m[Symbol("dvPeakDemandTOU"*_n)][r, tier-1]
         )
 
-        # Ratchet peak demand is >= demand at each hour in the ratchet`
+        # Ratchet peak demand is >= demand at each hour in the ratchet
         @constraint(m, [r in p.ratchets, ts in p.etariff.tou_demand_ratchet_timesteps[r]],
-            sum(m[Symbol("dvPeakDemandTOU"*_n)][r, tier] for tier in 1:p.etariff.n_tou_demand_tiers) 
-            >= sum( m[:dvGridPurchase][u, ts] for u in p.PricingTier )
+            sum(m[Symbol("dvPeakDemandTOU"*_n)][r, tier] for tier in 1:ntiers) 
+            >= sum( m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.etariff.n_energy_tiers )
         )
     end
     # TODO implement NewMaxDemandInTier
@@ -278,6 +278,61 @@ function add_energy_tier_constraints(m, p; _n="")
         <= 0
     )
     # TODO implement NewMaxUsageInTier
+end
+
+
+"""
+    add_demand_lookback_constraints(m, p; _n="")
+
+Only necessary if ElectricTariff.demand_lookback_percent > 0
+"""
+function add_demand_lookback_constraints(m, p; _n="")
+    dv = "dvPeakDemandLookback" * _n
+    m[Symbol(dv)] = @variable(m, [p.months], base_name = dv, lower_bound = 0)
+
+	if p.etariff.demand_lookback_range != 0  # then the dvPeakDemandLookback varies by month
+
+		##Constraint (12e): dvPeakDemandLookback is the highest peak demand in DemandLookbackMonths
+		for mth in p.months
+			if mth > p.etariff.demand_lookback_range
+				@constraint(m, [lm in 1:p.etariff.demand_lookback_range, ts in p.etariff.time_steps_monthly[mth - lm]],
+					m[Symbol(dv)][mth] ≥ sum( m[Symbol("dvGridPurchase"*_n)][ts, tier] 
+                                              for tier in 1:p.etariff.n_energy_tiers )
+				)
+			else  # need to handle rollover months
+				for lm in 1:p.etariff.demand_lookback_range
+					lkbkmonth = mth - lm
+					if lkbkmonth ≤ 0
+						lkbkmonth += 12
+					end
+					@constraint(m, [ts in p.etariff.time_steps_monthly[lkbkmonth]],
+						m[Symbol(dv)][mth] ≥ sum( m[Symbol("dvGridPurchase"*_n)][ts, tier] 
+                                                  for tier in 1:p.etariff.n_energy_tiers )
+					)
+				end
+			end
+		end
+
+		##Constraint (12f): Ratchet peak demand charge is bounded below by lookback
+		@constraint(m, [mth in p.months],
+			sum( m[Symbol("dvPeakDemandMonth"*_n)][mth, tier] for tier in 1:p.etariff.n_monthly_demand_tiers ) >=
+			p.etariff.demand_lookback_percent * m[Symbol(dv)][mth]
+		)
+
+	else  # dvPeakDemandLookback does not vary by month
+
+		##Constraint (12e): dvPeakDemandLookback is the highest peak demand in DemandLookbackMonths
+		@constraint(m, [lm in p.etariff.demand_lookback_months],
+			m[Symbol(dv)][1] >= sum(m[Symbol("dvPeakDemandMonth"*_n)][lm, tier] for tier in 1:p.etariff.n_monthly_demand_tiers)
+		)
+
+		##Constraint (12f): Ratchet peak demand charge is bounded below by lookback
+		@constraint(m, [mth in p.months],
+			sum( m[Symbol("dvPeakDemandMonth"*_n)][mth, tier] for tier in 1:p.etariff.n_monthly_demand_tiers ) >=
+			p.etariff.demand_lookback_percent * m[Symbol(dv)][1]
+		)
+	end
+
 end
 
 
