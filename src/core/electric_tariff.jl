@@ -28,8 +28,11 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-data for electric tariff in reopt model
-    can be defined using custom rates or URDB rate
+    struct ElectricTariff
+
+- data for electric tariff in reopt model
+- can be defined using custom rates or URDB rate
+- very similar to the URDB struct but includes export rates and bins
 """
 # TODO function for creating BAU inputs: don't need for tariff b/c Tech repeats no longer needed?
 struct ElectricTariff
@@ -46,6 +49,10 @@ struct ElectricTariff
     tou_demand_ratchet_timesteps::AbstractArray{AbstractArray{Int64,1},1}  # length = n_tou_demand_ratchets
     tou_demand_tier_limits::AbstractArray{Float64,1}
     n_tou_demand_tiers::Int
+
+    demand_lookback_months::AbstractArray{Int,1}
+    demand_lookback_percent::Float64
+    demand_lookback_range::Int
 
     fixed_monthly_charge::Float64
     annual_min_charge::Float64
@@ -99,7 +106,11 @@ function ElectricTariff(;
     monthly_demand_rates::Array=[],
     blended_annual_energy_rate::S=nothing,
     blended_annual_demand_rate::R=nothing,
-    remove_tiers::Bool=false
+    remove_tiers::Bool=false,
+    demand_lookback_months::AbstractArray{Int64, 1}=Int64[],
+    demand_lookback_percent::Float64=0.0,
+    demand_lookback_range::Int=0,
+
     ) where {
         T1 <: Union{Nothing, Int, Float64, Array}, 
         T2 <: Union{Nothing, Int, Float64, Array}, 
@@ -202,6 +213,9 @@ function ElectricTariff(;
         end
 
         tou_demand_ratchet_timesteps = u.tou_demand_ratchet_timesteps
+        demand_lookback_months = u.demand_lookback_months
+        demand_lookback_percent = u.demand_lookback_percent
+        demand_lookback_range = u.demand_lookback_range
         fixed_monthly_charge = u.fixed_monthly_charge
         annual_min_charge = u.annual_min_charge
         min_monthly_charge = u.min_monthly_charge
@@ -265,6 +279,9 @@ function ElectricTariff(;
         tou_demand_ratchet_timesteps,
         tou_demand_tier_limits,
         n_tou_demand_tiers,
+        demand_lookback_months,
+        demand_lookback_percent,
+        demand_lookback_range,
         fixed_monthly_charge,
         annual_min_charge,
         min_monthly_charge,
