@@ -1,0 +1,17 @@
+{
+    "Site": {
+        "longitude": -84.387982,
+        "latitude": 33.748995
+    },
+    "ElectricLoad": {
+        "doe_reference_name": "MidriseApartment",
+        "annual_kwh": 24000.0
+    },
+    "ElectricTariff": {
+        "urdb_label": "539f6a23ec4f024411ec8bf9"
+    },
+    "Financial": {
+        "offtaker_tax_pct": 0.26,
+        "elec_cost_escalation_pct": 0.026
+    }
+}
