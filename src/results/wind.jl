@@ -33,8 +33,8 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	GenPerUnitSizeOMCosts = @expression(m, p.two_party_factor * p.pwf_om * m[:dvSize][t] * p.om_cost_per_kw[t])
 
 	r["size_kw"] = value(m[:dvSize][t])
-	r["total_om_cost_us_dollars"] = round(value(GenPerUnitSizeOMCosts) * (1 - p.owner_tax_pct), digits=0)
-	r["year_one_om_cost_us_dollars"] = round(value(GenPerUnitSizeOMCosts) / (p.pwf_om * p.two_party_factor), digits=0)
+	r["total_om_cost"] = round(value(GenPerUnitSizeOMCosts) * (1 - p.owner_tax_pct), digits=0)
+	r["year_one_om_cost"] = round(value(GenPerUnitSizeOMCosts) / (p.pwf_om * p.two_party_factor), digits=0)
 
 	generatorToBatt = @expression(m, [ts in p.time_steps],
 		sum(m[:dvProductionToStorage][b, t, ts] for b in p.storage.types, t in p.gentechs))

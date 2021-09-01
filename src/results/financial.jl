@@ -34,14 +34,14 @@ Adds the Financial results to the dictionary passed back from `run_reopt` using 
 Note: the node number is an empty string if evaluating a single `Site`.
 
 Financial results:
-- `lcc_us_dollars` Optimal lifecycle cost
-- `net_capital_costs_plus_om_us_dollars` Capital cost for all technologies plus present value of operations and maintenance over anlaysis period
+- `lcc` Optimal lifecycle cost
+- `net_capital_costs_plus_om` Capital cost for all technologies plus present value of operations and maintenance over anlaysis period
 - `net_capital_costs` Net capital costs for all technologies, in present value, including replacement costs and incentives.
 """
 function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
-    r["lcc_us_dollars"] = round(value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)]))
-    r["net_capital_costs_plus_om_us_dollars"] = round(
+    r["lcc"] = round(value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)]))
+    r["net_capital_costs_plus_om"] = round(
         value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)]) +
         value(m[Symbol("TotalPerUnitSizeOMCosts"*_n)]) * (1 - p.owner_tax_pct), digits=0
     )
