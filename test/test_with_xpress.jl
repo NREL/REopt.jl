@@ -53,12 +53,6 @@ check to make sure that PV does NOT export unless the site load is met first for
               if results["PV"]["year_one_to_grid_series_kw"][i] > 0)
 end
 
-@testset "Blended tariff" begin
-    model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt(model, "./scenarios/no_techs.json")
-    @test results["ElectricTariff"]["year_one_energy_cost_us_dollars"] ≈ 1000.0
-    @test results["ElectricTariff"]["year_one_demand_cost_us_dollars"] ≈ 136.99
-end
 
 @testset "Solar and Storage" begin
     model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
@@ -135,6 +129,38 @@ end
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/incentives.json")
     @test results["Financial"]["lcc_us_dollars"] ≈ 1.0968526e7 atol=5e4  
+end
+
+@testset verbose = true "Rate Structures" begin
+
+    @testset "Tiered Energy" begin
+        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        results = run_reopt(m, "./scenarios/tiered_rate.json")
+        @test results["ElectricTariff"]["year_one_energy_cost_us_dollars"] ≈ 2342.88
+    end
+
+    @testset "Lookback Demand Charges" begin
+        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        results = run_reopt(m, "./scenarios/lookback_rate.json")
+        @test results["ElectricTariff"]["year_one_demand_cost_us_dollars"] ≈ 721.99
+    end
+
+    @testset "Blended tariff" begin
+        model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        results = run_reopt(model, "./scenarios/no_techs.json")
+        @test results["ElectricTariff"]["year_one_energy_cost_us_dollars"] ≈ 1000.0
+        @test results["ElectricTariff"]["year_one_demand_cost_us_dollars"] ≈ 136.99
+    end
+
+    # # tiered monthly demand rate  TODO: expected results?
+    # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    # data = JSON.parsefile("./scenarios/tiered_rate.json")
+    # data["ElectricTariff"]["urdb_label"] = "59bc22705457a3372642da67"
+    # s = Scenario(data)
+    # inputs = REoptInputs(s)
+    # results = run_reopt(m, inputs)
+
+    # TODO test for tiered TOU demand rates
 end
 
 
