@@ -46,10 +46,10 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 		m[Symbol(dv)] = @variable(m, [p.time_steps], base_name=dv, lower_bound=0)
 
 		dv = "dvPeakDemandTOU"*_n
-		m[Symbol(dv)] = @variable(m, [p.ratchets], base_name=dv, lower_bound=0)
+		m[Symbol(dv)] = @variable(m, [p.ratchets, 1], base_name=dv, lower_bound=0)
 
 		dv = "dvPeakDemandMonth"*_n
-		m[Symbol(dv)] = @variable(m, [p.months], base_name=dv, lower_bound=0)
+		m[Symbol(dv)] = @variable(m, [p.months, 1], base_name=dv, lower_bound=0)
 
 		dv = "dvProductionToStorage"*_n
 		m[Symbol(dv)] = @variable(m, [p.storage.types, p.techs, p.time_steps], base_name=dv, lower_bound=0)
@@ -155,10 +155,10 @@ function add_bounds(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 		@constraint(m, [ts in p.time_steps], -m[Symbol(dv)][ts] ≤ 0)
 
 		dv = "dvPeakDemandTOU"*_n
-		@constraint(m, [r in p.ratchets], -m[Symbol(dv)][r] ≤ 0)
+		@constraint(m, [r in p.ratchets], -m[Symbol(dv)][r, 1] ≤ 0)
 
 		dv = "dvPeakDemandMonth"*_n
-		@constraint(m, [mth in p.months], -m[Symbol(dv)][mth] ≤ 0)
+		@constraint(m, [mth in p.months], -m[Symbol(dv)][mth, 1] ≤ 0)
 
 		dv = "dvProductionToStorage"*_n
         @constraint(m, [b in p.storage.types, tech in p.techs, ts in p.time_steps], 
@@ -214,7 +214,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
             add_export_constraints(m, p; _n=_n)
         end
     
-        if !isempty(p.etariff.time_steps_monthly)
+        if !isempty(p.etariff.monthly_demand_rates)
             add_monthly_peak_constraint(m, p; _n=_n)
         end
     
@@ -225,6 +225,10 @@ function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 		if !(p.elecutil.allow_simultaneous_export_import) & !isempty(p.etariff.export_bins)
 			add_simultaneous_export_import_constraint(m, p; _n=_n)
 		end
+
+        if p.etariff.demand_lookback_percent > 0
+            add_demand_lookback_constraints(m, p; _n=_n)
+        end
     
     end
 end
