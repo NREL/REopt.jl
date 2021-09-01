@@ -140,7 +140,7 @@ end
 end
 
 
-@testset "TieredRate" begin
+@testset "TieredRates" begin
     expected_year_one_energy_cost = 2342.88
     m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
     results = run_reopt(m, "./scenarios/tiered_rate.json")
