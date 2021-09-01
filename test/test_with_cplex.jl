@@ -27,30 +27,30 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-using Test
-using JuMP
 using CPLEX
-using JSON
-using REoptLite
 
 
-@testset "January Export Rates" begin
+#=
+add a time-of-export rate that is greater than retail rate for the month of January,
+check to make sure that PV does NOT export unless the site load is met first for the month of January.
+=#
+@testset "Do not allow_simultaneous_export_import" begin
     model = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
     data = JSON.parsefile("./scenarios/monthly_rate.json")
 
     # create wholesale_rate with compensation in January > retail rate
     jan_rate = data["ElectricTariff"]["monthly_energy_rates"][1]
-    data["ElectricTariff"]["wholesale_rate"] = 
+    data["ElectricTariff"]["wholesale_rate"] =
         append!(repeat([jan_rate + 0.1], 31 * 24), repeat([0.0], 8760 - 31*24))
     data["ElectricTariff"]["monthly_demand_rates"] = repeat([0], 12)
+    data["ElectricUtility"] = Dict("allow_simultaneous_export_import" => false)
 
     s = Scenario(data)
     inputs = REoptInputs(s)
     results = run_reopt(model, inputs)
 
-    @test results["PV"]["size_kw"] ≈ 70.3084 atol=0.01
-    @test results["Financial"]["lcc_us_dollars"] ≈ 430747.0 rtol=1e-5 # with levelization_factor hack the LCC is with 5e-5 of REopt Lite API LCC
-    @test all(x == 0.0 for x in results["PV"]["year_one_to_load_series_kw"][1:744])
+    @test all(x == 0.0 for (i,x) in enumerate(results["ElectricUtility"]["year_one_to_load_series_kw"][1:744]) 
+              if results["PV"]["year_one_to_grid_series_kw"][i] > 0)
 end
 
 
