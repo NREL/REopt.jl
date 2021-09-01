@@ -49,6 +49,7 @@ Base.@kwdef struct ElecStorage <: AbstractStorage
     macrs_itc_reduction::Float64 = 0.5
     total_itc_pct::Float64 = 0.0
     total_rebate_per_kw::Float64 = 0.0
+    total_rebate_per_kwh::Float64 = 0.0
 end
 
 # TODO change all DenseAxisArray's into Dicts 
@@ -157,4 +158,5 @@ function fill_storage_vals!(d::Dict{Symbol, Array{Float64,1}}, s::AbstractStorag
         macrs_bonus_pct=s.macrs_bonus_pct,
         macrs_itc_reduction = s.macrs_itc_reduction
     ))
+    d[:installed_cost_per_kwh][end] -= s.total_rebate_per_kwh
 end
