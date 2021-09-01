@@ -50,6 +50,10 @@ struct URDBrate
     tou_demand_rates::Array{Float64,2}  # ratchet X tier
     tou_demand_ratchet_timesteps::Array{Array{Int64,1},1}  # length = n_tou_demand_ratchets
 
+    demand_lookback_months::AbstractArray{Int,1}
+    demand_lookback_percent::Float64
+    demand_lookback_range::Int
+
     fixed_monthly_charge::Float64
     annual_min_charge::Float64
     min_monthly_charge::Float64
@@ -98,6 +102,9 @@ function URDBrate(urdb_response::Dict, year::Int=2019; time_steps_per_hour=1)
 
     fixed_monthly_charge, annual_min_charge, min_monthly_charge = parse_urdb_fixed_charges(urdb_response)
 
+
+    demand_lookback_months, demand_lookback_percent, demand_lookback_range = parse_urdb_lookback_charges(urdb_response)
+
     URDBrate(
         energy_rates,
         energy_tier_limits,
@@ -111,6 +118,10 @@ function URDBrate(urdb_response::Dict, year::Int=2019; time_steps_per_hour=1)
         tou_demand_tier_limits,
         tou_demand_rates,
         tou_demand_ratchet_timesteps,
+
+        demand_lookback_months,
+        demand_lookback_percent,
+        demand_lookback_range,
 
         fixed_monthly_charge,
         annual_min_charge,
@@ -506,4 +517,36 @@ function parse_urdb_fixed_charges(d::Dict)
     annual_min = Float64(get(d, "annualmincharge", 0.0))
     min_monthly = Float64(get(d, "minmonthlycharge", 0.0))
     return fixed_monthly, annual_min, min_monthly
+end
+
+
+"""
+    parse_urdb_lookback_charges(d::Dict)
+
+URDB lookback fields:
+- lookbackMonths
+    - Type: array
+    - Array of 12 booleans, true or false, indicating months in which lookbackPercent applies.
+        If any of these is true, lookbackRange should be zero.
+- lookbackPercent
+    - Type: decimal
+    - Lookback percentage. Applies to either lookbackMonths with value=1, or a lookbackRange.
+- lookbackRange
+    - Type: integer
+    - Number of months for which lookbackPercent applies. If not 0, lookbackMonths values should all be 0.
+"""
+function parse_urdb_lookback_charges(d::Dict)
+    lookback_months = get(d, "lookbackMonths", Int[])
+    lookback_percent = Float64(get(d, "lookbackPercent", 0.0))
+    lookback_range = Int64(get(d, "lookbackRange", 0.0))
+
+    reopt_lookback_months = Int[]
+    if lookback_range != 0 && length(lookback_months) == 12
+        for mth in range(1, stop=12)
+            if lookback_months[mth] == 1
+                push!(reopt_lookback_months, mth)
+            end
+        end
+    end
+    return reopt_lookback_months, lookback_percent, lookback_range
 end
