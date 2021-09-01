@@ -81,6 +81,10 @@ end
         monthly_demand_rates::Array=[],
         blended_annual_energy_rate::S=nothing,
         blended_annual_demand_rate::R=nothing,
+        remove_tiers::Bool=false,
+        demand_lookback_months::AbstractArray{Int64, 1}=Int64[],
+        demand_lookback_percent::Float64=0.0,
+        demand_lookback_range::Int=0,
         ) where {
             T <: Union{Nothing, Int, Float64, Array}, 
             S <: Union{Nothing, Int, Float64}, 
