@@ -37,12 +37,12 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 			for t in p.gentechs, ts in p.time_steps)
 	)
 	r["size_kw"] = value(sum(m[:dvSize][t] for t in p.gentechs))
-	r["total_fixed_om_cost_us_dollars"] = round(value(GenPerUnitSizeOMCosts) * (1 - p.owner_tax_pct), digits=0)
-	r["total_variable_om_cost_us_dollars"] = round(value(m[:TotalPerUnitProdOMCosts]) * (1 - p.owner_tax_pct), digits=0)
-	r["total_fuel_cost_us_dollars"] = round(value(m[:TotalGenFuelCharges]) * (1 - p.offtaker_tax_pct), digits=2)
-	r["year_one_fuel_cost_us_dollars"] = round(value(m[:TotalGenFuelCharges]) / p.pwf_e, digits=2)
-	r["year_one_variable_om_cost_us_dollars"] = round(value(GenPerUnitProdOMCosts) / (p.pwf_om * p.two_party_factor), digits=0)
-	r["year_one_fixed_om_cost_us_dollars"] = round(value(GenPerUnitSizeOMCosts) / (p.pwf_om * p.two_party_factor), digits=0)
+	r["total_fixed_om_cost"] = round(value(GenPerUnitSizeOMCosts) * (1 - p.owner_tax_pct), digits=0)
+	r["total_variable_om_cost"] = round(value(m[:TotalPerUnitProdOMCosts]) * (1 - p.owner_tax_pct), digits=0)
+	r["total_fuel_cost"] = round(value(m[:TotalGenFuelCharges]) * (1 - p.offtaker_tax_pct), digits=2)
+	r["year_one_fuel_cost"] = round(value(m[:TotalGenFuelCharges]) / p.pwf_e, digits=2)
+	r["year_one_variable_om_cost"] = round(value(GenPerUnitProdOMCosts) / (p.pwf_om * p.two_party_factor), digits=0)
+	r["year_one_fixed_om_cost"] = round(value(GenPerUnitSizeOMCosts) / (p.pwf_om * p.two_party_factor), digits=0)
 
 	generatorToBatt = @expression(m, [ts in p.time_steps],
 		sum(m[:dvProductionToStorage][b, t, ts] for b in p.storage.types, t in p.gentechs))
@@ -83,8 +83,8 @@ end
 function add_generator_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 
-	r["variable_om_cost_us_dollars"] = round(value(m[:TotalPerUnitProdOMCosts]), digits=0)
-	r["fuel_cost_us_dollars"] = round(value(m[:TotalGenFuelCharges]), digits=2)
+	r["variable_om_cost"] = round(value(m[:TotalPerUnitProdOMCosts]), digits=0)
+	r["fuel_cost"] = round(value(m[:TotalGenFuelCharges]), digits=2)
 
     if p.storage.size_kw[:elec] > 0
         generatorToBatt = @expression(m, [ts in p.time_steps],

@@ -1,9 +1,10 @@
 # REoptLite Changelog
 
-## v0.9.1
+## develop
 - added modeling capability for tiered rates (energy, TOU demand, and monthly demand charges)
     - all of these tiered rates require binaries, which are conditionally added to the model
 - added modeling capability for lookback demand charges
+- removed "_us_dollars" from all names
 
 ## v0.9.0
 - `ElectricTariff.NEM` boolean is now determined by `ElectricUtility.net_metering_limit_kw` (true if limit > 0)
