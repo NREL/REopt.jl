@@ -72,7 +72,9 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 	for ts in p.time_steps_without_grid
 
-		fix(m[:dvGridPurchase][ts], 0.0, force=true)
+		for tier in 1:p.etariff.n_energy_tiers
+			fix(m[:dvGridPurchase][ts, tier] , 0.0, force=true)
+		end
 
 		for t in p.storage.types
 			fix(m[:dvGridToStorage][t, ts], 0.0, force=true)
@@ -123,7 +125,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_export_constraints(m, p)
 	end
 
-	if !isempty(p.etariff.time_steps_monthly)
+	if !isempty(p.etariff.monthly_demand_rates)
 		add_monthly_peak_constraint(m, p)
 	end
 
@@ -134,6 +136,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	if !(p.elecutil.allow_simultaneous_export_import) & !isempty(p.etariff.export_bins)
 		add_simultaneous_export_import_constraint(m, p)
 	end
+
+	if p.etariff.n_energy_tiers > 1
+		add_energy_tier_constraints(m, p)
+	end
+
+    if p.etariff.demand_lookback_percent > 0
+        add_demand_lookback_constraints(m, p)
+    end
 
 	@expression(m, TotalTechCapCosts, p.two_party_factor *
 		  sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in setdiff(p.techs, p.segmented_techs) )
@@ -274,7 +284,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 	@variables m begin
 		dvSize[p.techs] >= 0  # System Size of Technology t [kW]
 		dvPurchaseSize[p.techs] >= 0  # system kW beyond existing_kw that must be purchased
-		dvGridPurchase[p.time_steps] >= 0  # Power from grid dispatched to meet electrical load [kW]
+		dvGridPurchase[p.time_steps, 1:p.etariff.n_energy_tiers] >= 0  # Power from grid dispatched to meet electrical load [kW]
 		dvRatedProduction[p.techs, p.time_steps] >= 0  # Rated production of technology t [kW]
 		dvCurtail[p.techs, p.time_steps] >= 0  # [kW]
 		dvProductionToStorage[p.storage.types, p.techs, p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
@@ -283,8 +293,8 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvStoredEnergy[p.storage.types, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
 		dvStoragePower[p.storage.types] >= 0   # Power capacity of storage system b [kW]
 		dvStorageEnergy[p.storage.types] >= 0   # Energy capacity of storage system b [kWh]
-		dvPeakDemandTOU[p.ratchets] >= 0  # Peak electrical power demand during ratchet r [kW]
-		dvPeakDemandMonth[p.months] >= 0  # Peak electrical power demand during month m [kW]
+		dvPeakDemandTOU[p.ratchets, 1:p.etariff.n_tou_demand_tiers] >= 0  # Peak electrical power demand during ratchet r [kW]
+		dvPeakDemandMonth[p.months, 1:p.etariff.n_monthly_demand_tiers] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0
 	end
 

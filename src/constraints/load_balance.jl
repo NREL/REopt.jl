@@ -35,7 +35,7 @@ function add_load_balance_constraints(m, p; _n="")
         conrefs = @constraint(m, [ts in p.time_steps_with_grid],
             sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.elec_techs) +  
             sum( m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.storage.types ) + 
-            m[Symbol("dvGridPurchase"*_n)][ts] ==
+            sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.etariff.n_energy_tiers) ==
             sum( sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.storage.types) 
                 + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.elec_techs)
             + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.types)
@@ -45,7 +45,7 @@ function add_load_balance_constraints(m, p; _n="")
         conrefs = @constraint(m, [ts in p.time_steps_with_grid],
             sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.elec_techs) +  
             sum( m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.storage.types ) + 
-            m[Symbol("dvGridPurchase"*_n)][ts] ==
+            sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.etariff.n_energy_tiers) ==
             sum(  sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.storage.types) 
                 + sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for u in p.export_bins_by_tech[t]) 
                 + m[Symbol("dvCurtail"*_n)][t, ts] 
