@@ -33,7 +33,7 @@
         "replace_cost_per_kw": 460.0,
         "replace_cost_per_kwh": 230.0,
         "installed_cost_per_kw": 1000.0,
-        "cost_per_kwh": 500.0,
+        "installed_cost_per_kwh": 500.0,
         "total_itc_pct": 0.0
     },
     "ElectricTariff": {
