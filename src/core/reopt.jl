@@ -337,7 +337,4 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 			binMGGenIsOnInTS[S, tZeros, outage_timesteps], Bin
 		end
 	end
-
 end
-
-

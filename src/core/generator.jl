@@ -45,7 +45,10 @@ function Generator(;
     fuel_avail_gal::Float64 = 660.0,
     min_turn_down_pct::Float64 = 0.0,
     only_runs_during_grid_outage::Bool = true,
-    sells_energy_back_to_grid::Bool = false
+    sells_energy_back_to_grid::Bool = false,
+    can_net_meter::Bool = false,
+    can_wholesale::Bool = false,
+    can_export_beyond_nem_limit = false
 )
 ```
 """
@@ -63,6 +66,9 @@ struct Generator <: AbstractGenerator
     min_turn_down_pct
     only_runs_during_grid_outage
     sells_energy_back_to_grid
+    can_net_meter
+    can_wholesale
+    can_export_beyond_nem_limit
 
     function Generator(;
         existing_kw::Real=0,
@@ -75,9 +81,12 @@ struct Generator <: AbstractGenerator
         fuel_slope_gal_per_kwh::Float64 = 0.076,
         fuel_intercept_gal_per_hr::Float64 = 0.0,
         fuel_avail_gal::Float64 = 660.0,
-        min_turn_down_pct::Float64 = 0.0,  # TODO change this to non-zero value
+        min_turn_down_pct::Float64 = 0.0,
         only_runs_during_grid_outage::Bool = true,
-        sells_energy_back_to_grid::Bool = false
+        sells_energy_back_to_grid::Bool = false,
+        can_net_meter::Bool = true,
+        can_wholesale::Bool = true,
+        can_export_beyond_nem_limit = true
         )
 
         new(
@@ -94,6 +103,9 @@ struct Generator <: AbstractGenerator
             min_turn_down_pct,
             only_runs_during_grid_outage,
             sells_energy_back_to_grid,
+            can_net_meter,
+            can_wholesale,
+            can_export_beyond_nem_limit
         )
     end
 end

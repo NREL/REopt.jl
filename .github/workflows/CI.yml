@@ -3,7 +3,7 @@ name: Run tests
 on: [push, pull_request]
 
 jobs:
-  test:
+  cbctests:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -19,3 +19,17 @@ jobs:
       - uses: julia-actions/julia-buildpkg@latest
       # - uses: mxschmitt/action-tmate@v3  # for interactive debugging
       - uses: julia-actions/julia-runtest@latest
+
+  xpresstests:
+      runs-on: ubuntu-18.04
+
+      steps:
+        - uses: actions/checkout@v2
+        - name: Decrypt
+          env:
+            TRANSCRYPT_PASSWORD: ${{ secrets.TRANSCRYPT_PASSWORD }}
+          run: ./.github/scripts/decrypt.sh 
+        - name: Build containers
+          run: docker-compose up -d
+        - name: Execute tests in container
+          run: docker exec jul julia --project=. -e 'import Pkg; Pkg.test("REoptLite"; test_args=["Xpress"])'

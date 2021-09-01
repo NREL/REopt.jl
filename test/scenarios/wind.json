@@ -25,7 +25,9 @@
     },
     "ElectricTariff": {
         "monthly_demand_rates": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        "NEM": true,
         "monthly_energy_rates": [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2]
+    },
+    "ElectricUtility": {
+        "net_metering_limit_kw": 1e8
     }
 }

@@ -60,6 +60,9 @@ function Wind(;
     production_incentive_max_benefit = 1.0e9,
     production_incentive_years = 1,
     production_incentive_max_kw = 1.0e9,
+    can_net_meter = true,
+    can_wholesale = true,
+    can_export_beyond_nem_limit = true
 )
 ```
 
@@ -124,6 +127,9 @@ struct Wind <: AbstractTech
     production_incentive_max_benefit::Float64
     production_incentive_years::Int
     production_incentive_max_kw::Float64
+    can_net_meter::Bool
+    can_wholesale::Bool
+    can_export_beyond_nem_limit::Bool
 
     function Wind(;
         min_kw = 0.0,
@@ -153,6 +159,9 @@ struct Wind <: AbstractTech
         production_incentive_max_benefit = 1.0e9,
         production_incentive_years = 1,
         production_incentive_max_kw = 1.0e9,
+        can_net_meter = true,
+        can_wholesale = true,
+        can_export_beyond_nem_limit = true
         )
         size_class_to_hub_height = Dict(
             "residential"=> 20,
@@ -218,7 +227,10 @@ struct Wind <: AbstractTech
             production_incentive_per_kwh,
             production_incentive_max_benefit,
             production_incentive_years,
-            production_incentive_max_kw
+            production_incentive_max_kw,
+            can_net_meter,
+            can_wholesale,
+            can_export_beyond_nem_limit
         )
     end
 end
