@@ -102,6 +102,7 @@ end
 end
 
 
+# TODO implement LinDistFlow test in Xpress (and Cbc?)
 @testset "LinDistFlow" begin
     m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
     ps = [
@@ -138,6 +139,15 @@ end
     @test maximum(TotalGridPurchases) ≈ maximum(P0) rtol = 1e-5  # lossless model
 end
 
+
+@testset "TieredRate" begin
+    expected_year_one_energy_cost = 2342.88
+    m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
+    results = run_reopt(m, "./scenarios/tiered_rate.json")
+    @test results["ElectricTariff"]["year_one_energy_cost_us_dollars"] ≈ 2342.88
+
+    urdb_label = "59bc22705457a3372642da67"  # tiered monthly demand rate
+end
 
 ## equivalent REopt Lite API Post for test 2:
 #   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
