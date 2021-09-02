@@ -227,8 +227,8 @@ end
 
 
 function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
-    batt_roundtrip_efficiency = p.storage.charge_efficiency[:elec] * 
-                                p.storage.discharge_efficiency[:elec]
+    batt_roundtrip_efficiency = p.s.storage.charge_efficiency[:elec] * 
+                                p.s.storage.discharge_efficiency[:elec]
 
     # TODO handle generic PV names
     pv_kw_ac_hourly = zeros(length(p.time_steps))

@@ -78,7 +78,7 @@ function add_MG_size_constraints(m,p)
         m[:binMGTechUsed][t] => {m[:dvMGsize][t] >= 1.0}  # 1 kW min size to prevent binaryMGTechUsed = 1 with zero cost
     )
 
-    @constraint(m, [b in p.storage.types],
+    @constraint(m, [b in p.s.storage.types],
         m[:binMGStorageUsed] => {m[:dvStoragePower][b] >= 1.0} # 1 kW min size to prevent binaryMGStorageUsed = 1 with zero cost
     )
     
@@ -176,14 +176,14 @@ function add_MG_storage_dispatch_constraints(m,p)
     # state of charge
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_timesteps, ts in p.s.electric_utility.outage_timesteps],
         m[:dvMGStoredEnergy][s, tz, ts] == m[:dvMGStoredEnergy][s, tz, ts-1] + p.hours_per_timestep * (
-            p.storage.charge_efficiency[:elec] * sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs)
-            - m[:dvMGDischargeFromStorage][s, tz, ts] / p.storage.discharge_efficiency[:elec]
+            p.s.storage.charge_efficiency[:elec] * sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs)
+            - m[:dvMGDischargeFromStorage][s, tz, ts] / p.s.storage.discharge_efficiency[:elec]
         )
     )
 
     # Minimum state of charge
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_timesteps, ts in p.s.electric_utility.outage_timesteps],
-        m[:dvMGStoredEnergy][s, tz, ts] >=  p.storage.soc_min_pct[:elec] * m[:dvStorageEnergy][:elec]
+        m[:dvMGStoredEnergy][s, tz, ts] >=  p.s.storage.soc_min_pct[:elec] * m[:dvStorageEnergy][:elec]
     )
     
     # Dispatch to MG electrical storage is no greater than inverter capacity

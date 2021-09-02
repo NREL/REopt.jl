@@ -76,7 +76,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			fix(m[:dvGridPurchase][ts, tier] , 0.0, force=true)
 		end
 
-		for t in p.storage.types
+		for t in p.s.storage.types
 			fix(m[:dvGridToStorage][t, ts], 0.0, force=true)
 		end
 
@@ -87,8 +87,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         end
 	end
 
-	for b in p.storage.types
-		if p.storage.max_kw[b] == 0 || p.storage.max_kwh[b] == 0
+	for b in p.s.storage.types
+		if p.s.storage.max_kw[b] == 0 || p.s.storage.max_kwh[b] == 0
 			@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
 			@constraint(m, m[:dvStorageEnergy][b] == 0)
 			@constraint(m, m[:dvStoragePower][b] == 0)
@@ -109,7 +109,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_gen_rated_prod_constraint(m,p)
 	end
 
-	if any(max_kw->max_kw > 0, (p.storage.max_kw[b] for b in p.storage.types))
+	if any(max_kw->max_kw > 0, (p.s.storage.max_kw[b] for b in p.s.storage.types))
 		add_storage_sum_constraints(m, p)
 	end
 
@@ -167,8 +167,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     end
 	
 	@expression(m, TotalStorageCapCosts, p.two_party_factor *
-		sum(  p.storage.installed_cost_per_kw[b] * m[:dvStoragePower][b]
-			+ p.storage.installed_cost_per_kwh[b] * m[:dvStorageEnergy][b] for b in p.storage.types )
+		sum(  p.s.storage.installed_cost_per_kw[b] * m[:dvStoragePower][b]
+			+ p.s.storage.installed_cost_per_kwh[b] * m[:dvStorageEnergy][b] for b in p.s.storage.types )
 	)
 	
 	@expression(m, TotalPerUnitSizeOMCosts, p.two_party_factor * p.pwf_om *
@@ -287,12 +287,12 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvGridPurchase[p.time_steps, 1:p.etariff.n_energy_tiers] >= 0  # Power from grid dispatched to meet electrical load [kW]
 		dvRatedProduction[p.techs, p.time_steps] >= 0  # Rated production of technology t [kW]
 		dvCurtail[p.techs, p.time_steps] >= 0  # [kW]
-		dvProductionToStorage[p.storage.types, p.techs, p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
-		dvDischargeFromStorage[p.storage.types, p.time_steps] >= 0 # Power discharged from storage system b [kW]
-		dvGridToStorage[p.storage.types, p.time_steps] >= 0 # Electrical power delivered to storage by the grid [kW]
-		dvStoredEnergy[p.storage.types, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
-		dvStoragePower[p.storage.types] >= 0   # Power capacity of storage system b [kW]
-		dvStorageEnergy[p.storage.types] >= 0   # Energy capacity of storage system b [kWh]
+		dvProductionToStorage[p.s.storage.types, p.techs, p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
+		dvDischargeFromStorage[p.s.storage.types, p.time_steps] >= 0 # Power discharged from storage system b [kW]
+		dvGridToStorage[p.s.storage.types, p.time_steps] >= 0 # Electrical power delivered to storage by the grid [kW]
+		dvStoredEnergy[p.s.storage.types, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
+		dvStoragePower[p.s.storage.types] >= 0   # Power capacity of storage system b [kW]
+		dvStorageEnergy[p.s.storage.types] >= 0   # Energy capacity of storage system b [kWh]
 		dvPeakDemandTOU[p.ratchets, 1:p.etariff.n_tou_demand_tiers] >= 0  # Peak electrical power demand during ratchet r [kW]
 		dvPeakDemandMonth[p.months, 1:p.etariff.n_monthly_demand_tiers] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0

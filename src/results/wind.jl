@@ -37,7 +37,7 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["year_one_om_cost"] = round(value(GenPerUnitSizeOMCosts) / (p.pwf_om * p.two_party_factor), digits=0)
 
 	generatorToBatt = @expression(m, [ts in p.time_steps],
-		sum(m[:dvProductionToStorage][b, t, ts] for b in p.storage.types, t in p.gentechs))
+		sum(m[:dvProductionToStorage][b, t, ts] for b in p.s.storage.types, t in p.gentechs))
 	r["year_one_to_battery_series_kw"] = round.(value.(generatorToBatt), digits=3)
 
 	generatorToGrid = @expression(m, [ts in p.time_steps],
