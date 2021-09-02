@@ -61,27 +61,26 @@ incentives.
 """
 function upfront_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     upfront_capex = 0
-    # TODO make compatible with multinode
 
     if !isempty(p.gentechs) && isempty(_n)  # generators not included in multinode model
-        upfront_capex += p.s.generator.installed_cost_per_kw * value.(m[:dvPurchaseSize])["Generator"]
+        upfront_capex += p.s.generator.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Generator"]
     end
 
     if !isempty(p.pvtechs)
         for pv in p.s.pvs
-            upfront_capex += pv.installed_cost_per_kw * value.(m[:dvPurchaseSize])[pv.name]
+            upfront_capex += pv.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])[pv.name]
         end
     end
 
     for b in p.s.storage.types
         if p.s.storage.max_kw[b] > 0
-            upfront_capex += p.s.storage.installed_cost_per_kw[b]  * value.(m[:dvStoragePower])[b] + 
-                             p.s.storage.installed_cost_per_kwh[b] * value.(m[:dvStorageEnergy])[b]
+            upfront_capex += p.s.storage.installed_cost_per_kw[b]  * value.(m[Symbol("dvStoragePower"*_n)])[b] + 
+                             p.s.storage.installed_cost_per_kwh[b] * value.(m[Symbol("dvStorageEnergy"*_n)])[b]
         end
     end
 
     if "Wind" in p.techs
-        upfront_capex += p.s.wind.installed_cost_per_kw * value.(m[:dvPurchaseSize])["Wind"]
+        upfront_capex += p.s.wind.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Wind"]
     end
 
     # TODO thermal tech costs
