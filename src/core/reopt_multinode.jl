@@ -21,7 +21,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 		"dvGridToStorage",
 	]
 	for p in ps
-		_n = string("_", p.node)
+		_n = string("_", p.s.site.node)
 		for dv in dvs_idx_on_techs
 			x = dv*_n
 			m[Symbol(x)] = @variable(m, [p.techs], base_name=x, lower_bound=0)
@@ -123,7 +123,7 @@ function add_bounds(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 		"dvGridToStorage",
 	]
 	for p in ps
-        _n = string("_", p.node)
+        _n = string("_", p.s.site.node)
         
 		for dv in dvs_idx_on_techs
 			x = dv*_n
@@ -181,7 +181,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
     @warn "Outages are not currently modeled in multinode mode."
     @warn "Diesel generators are not currently modeled in multinode mode."
     for p in ps
-        _n = string("_", p.node)
+        _n = string("_", p.s.site.node)
 
         for b in p.s.storage.types
             if p.s.storage.max_kw[b] == 0 || p.s.storage.max_kwh[b] == 0
@@ -236,10 +236,10 @@ end
 
 function add_objective!(m::JuMP.AbstractModel, ps::Array{REoptInputs}; obj::Int=2)
 	if obj == 1
-		@objective(m, Min, sum(m[Symbol(string("Costs_", p.node))] for p in ps))
+		@objective(m, Min, sum(m[Symbol(string("Costs_", p.s.site.node))] for p in ps))
 	elseif obj == 2  # Keep SOC high
-		@objective(m, Min, sum(m[Symbol(string("Costs_", p.node))] for p in ps)
-        - sum(sum(m[Symbol(string("dvStoredEnergy_", p.node))][:elec, ts] 
+		@objective(m, Min, sum(m[Symbol(string("Costs_", p.s.site.node))] for p in ps)
+        - sum(sum(m[Symbol(string("dvStoredEnergy_", p.s.site.node))][:elec, ts] 
             for ts in p.time_steps) for p in ps) / (8760. / ps[1].hours_per_timestep))
 	end  # TODO need to handle different hours_per_timestep?
 	nothing
@@ -282,7 +282,7 @@ function reopt_results(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 	# TODO address Warning: The addition operator has been used on JuMP expressions a large number of times.
 	results = Dict{Union{Int, String}, Any}()
 	for p in ps
-		results[p.node] = reopt_results(m, p; _n=string("_", p.node))
+		results[p.s.site.node] = reopt_results(m, p; _n=string("_", p.s.site.node))
 	end
 	return results
 end
