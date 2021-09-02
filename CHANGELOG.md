@@ -4,7 +4,8 @@
 - added modeling capability for tiered rates (energy, TOU demand, and monthly demand charges)
     - all of these tiered rates require binaries, which are conditionally added to the model
 - added modeling capability for lookback demand charges
-- removed "_us_dollars" from all names
+- removed "_us_dollars" from all names and generally aligned names with API
+- added more outputs from the API (eg. `initial_capital_costs`)
 
 ## v0.9.0
 - `ElectricTariff.NEM` boolean is now determined by `ElectricUtility.net_metering_limit_kw` (true if limit > 0)
