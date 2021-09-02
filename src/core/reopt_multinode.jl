@@ -89,10 +89,10 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 			m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)] +  
 			
 			## Fixed O&M, tax deductible for owner
-			m[Symbol("TotalPerUnitSizeOMCosts"*_n)] * (1 - p.owner_tax_pct) +
+			m[Symbol("TotalPerUnitSizeOMCosts"*_n)] * (1 - p.s.financial.owner_tax_pct) +
 	
 			# Utility Bill, tax deductible for offtaker, including export benefit
-			m[Symbol("TotalElecBill"*_n)] * (1 - p.offtaker_tax_pct)
+			m[Symbol("TotalElecBill"*_n)] * (1 - p.s.financial.offtaker_tax_pct)
 		);
     end
     add_bounds(m, ps)

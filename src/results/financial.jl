@@ -43,7 +43,7 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     r["lcc"] = round(value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)]))
     r["net_capital_costs_plus_om"] = round(
         value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)]) +
-        value(m[Symbol("TotalPerUnitSizeOMCosts"*_n)]) * (1 - p.owner_tax_pct), digits=0
+        value(m[Symbol("TotalPerUnitSizeOMCosts"*_n)]) * (1 - p.s.financial.owner_tax_pct), digits=0
     )
     r["net_capital_costs"] = round(value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)]), 
                                    digits=2)
