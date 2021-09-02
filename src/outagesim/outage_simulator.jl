@@ -275,9 +275,9 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
         wind_kw_ac_hourly = [],
         batt_roundtrip_efficiency = batt_roundtrip_efficiency,
         diesel_kw = diesel_kw, 
-        fuel_available = p.generator.fuel_avail_gal,
-        b = p.generator.fuel_intercept_gal_per_hr,
-        m = p.generator.fuel_slope_gal_per_kwh, 
-        diesel_min_turndown = p.generator.min_turn_down_pct
+        fuel_available = p.s.generator.fuel_avail_gal,
+        b = p.s.generator.fuel_intercept_gal_per_hr,
+        m = p.s.generator.fuel_slope_gal_per_kwh, 
+        diesel_min_turndown = p.s.generator.min_turn_down_pct
     )
 end

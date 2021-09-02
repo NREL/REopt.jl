@@ -62,7 +62,7 @@ function upfront_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     upfront_capex = 0
 
     if !isempty(p.gentechs) && isempty(_n)  # generators not included in multinode model
-        upfront_capex += p.generator.installed_cost_per_kw * value.(m[:dvPurchasSize])["Generator"]
+        upfront_capex += p.s.generator.installed_cost_per_kw * value.(m[:dvPurchasSize])["Generator"]
     end
 
     if !isempty(p.pvtechs)
