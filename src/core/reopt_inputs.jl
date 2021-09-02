@@ -68,7 +68,6 @@ struct REoptInputs <: AbstractInputs
     techs_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL, :CUR]
     storage::Storage
     generator::Generator
-    elecutil::ElectricUtility
     min_resil_timesteps::Int
     mg_tech_sizes_equal_grid_sizes::Bool
     node::Int
@@ -172,7 +171,6 @@ function REoptInputs(s::Scenario)
         techs_by_exportbin,
         s.storage,
         s.generator,
-        s.electric_utility,
         s.site.min_resil_timesteps,
         s.site.mg_tech_sizes_equal_grid_sizes,
         s.site.node,

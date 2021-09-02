@@ -68,5 +68,6 @@ function upfront_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     if !isempty(p.pvtechs)
         for pv in p.pvtechs
             upfront_capex += value.(m[:dvPurchasSize])[pv]
+        end
     end
 end
