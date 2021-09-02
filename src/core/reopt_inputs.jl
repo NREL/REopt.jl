@@ -33,6 +33,7 @@ use Scenario struct to create reopt.jl model inputs
 """
 
 struct REoptInputs <: AbstractInputs
+    s::Scenario
     techs::Array{String, 1}
     pvtechs::Array{String, 1}
     gentechs::Array{String,1}
@@ -45,7 +46,6 @@ struct REoptInputs <: AbstractInputs
     existing_sizes::DenseAxisArray{Float64, 1}  # (techs)
     cap_cost_slope::Dict{String, Any}  # (techs)
     om_cost_per_kw::DenseAxisArray{Float64, 1}  # (techs)
-    elec_load::ElectricLoad
     time_steps::UnitRange
     time_steps_with_grid::Array{Int, 1}
     time_steps_without_grid::Array{Int, 1}
@@ -137,6 +137,7 @@ function REoptInputs(s::Scenario)
     end
 
     REoptInputs(
+        s,
         techs,
         pvtechs,
         gentechs,
@@ -149,7 +150,6 @@ function REoptInputs(s::Scenario)
         existing_sizes,
         cap_cost_slope,
         om_cost_per_kw,
-        s.electric_load,
         time_steps,
         time_steps_with_grid,
         time_steps_without_grid,
