@@ -47,7 +47,6 @@ struct MPCInputs <: AbstractInputs
     pwf_e::Float64
     pwf_om::Float64
     two_party_factor::Float64
-    etariff::MPCElectricTariff
     ratchets::UnitRange
     techs_by_exportbin::DenseAxisArray{Array{String,1}}  # indexed on [:NEM, :WHL]
     export_bins_by_tech::Dict{String, Array{Symbol, 1}}
@@ -105,7 +104,6 @@ function MPCInputs(s::MPCScenario)
         pwf_om,
         two_party_factor,
         # maxsize_pv_locations,
-        s.electric_tariff,
         1:length(s.electric_tariff.tou_demand_ratchet_timesteps),  # ratchets
         techs_by_exportbin,
         export_bins_by_tech

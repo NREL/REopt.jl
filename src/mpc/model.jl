@@ -153,19 +153,19 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 
 	add_load_balance_constraints(m, p)
 
-	if !isempty(p.etariff.export_bins)
+	if !isempty(p.s.electric_tariff.export_bins)
 		add_export_constraints(m, p)
 	end
 
-	if !isempty(p.etariff.monthly_demand_rates)
+	if !isempty(p.s.electric_tariff.monthly_demand_rates)
 		add_monthly_peak_constraint(m, p)
 	end
 
-	if !isempty(p.etariff.tou_demand_ratchet_timesteps)
+	if !isempty(p.s.electric_tariff.tou_demand_ratchet_timesteps)
 		add_tou_peak_constraint(m, p)
 	end
 
-	if !(p.s.electric_utility.allow_simultaneous_export_import) & !isempty(p.etariff.export_bins)
+	if !(p.s.electric_utility.allow_simultaneous_export_import) & !isempty(p.s.electric_tariff.export_bins)
 		add_simultaneous_export_import_constraint(m, p)
 	end
 	
@@ -252,8 +252,8 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 	end
 	# TODO: tiers in MPC tariffs and variables?
 
-	if !isempty(p.etariff.export_bins)
-		@variable(m, dvProductionToGrid[p.elec_techs, p.etariff.export_bins, p.time_steps] >= 0)
+	if !isempty(p.s.electric_tariff.export_bins)
+		@variable(m, dvProductionToGrid[p.elec_techs, p.s.electric_tariff.export_bins, p.time_steps] >= 0)
 	end
 
     m[:dvSize] = p.existing_sizes
