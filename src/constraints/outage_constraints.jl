@@ -59,7 +59,7 @@ function add_outage_cost_constraints(m,p)
     )
 
     @constraint(m, [t in p.techs],
-        m[:binMGTechUsed][t] => {m[:dvMGTechUpgradeCost][t] >= p.s.financial.microgrid_upgrade_cost_pct * p.two_party_factor *
+        m[:binMGTechUsed][t] => {m[:dvMGTechUpgradeCost][t] >= p.s.financial.microgrid_upgrade_cost_pct * p.third_party_factor *
 		                         p.cap_cost_slope[t] * m[:dvMGsize][t]}
     )
 

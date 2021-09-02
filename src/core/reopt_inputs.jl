@@ -56,7 +56,7 @@ struct REoptInputs <: AbstractInputs
     value_of_lost_load_per_kwh::Array{R, 1} where R<:Real #default set to 1 US dollar per kwh
     pwf_e::Float64
     pwf_om::Float64
-    two_party_factor::Float64
+    third_party_factor::Float64
     pvlocations::Array{Symbol, 1}
     maxsize_pv_locations::DenseAxisArray{Float64, 1}  # indexed on pvlocations
     pv_to_location::DenseAxisArray{Int, 2}  # (pvtechs, pvlocations)
@@ -113,7 +113,7 @@ function REoptInputs(s::Scenario)
 
     months = 1:12
 
-    levelization_factor, pwf_e, pwf_om, two_party_factor = setup_present_worth_factors(s, techs, pvtechs)
+    levelization_factor, pwf_e, pwf_om, third_party_factor = setup_present_worth_factors(s, techs, pvtechs)
     # the following hardcoded value for levelization_factor matches the public REopt API value
     # for test_with_cplex (test_time_of_export_rate) and makes the test values match.
     # the REopt code herein uses the Desktop method for levelization_factor, which is more accurate
@@ -150,7 +150,7 @@ function REoptInputs(s::Scenario)
         typeof(s.financial.value_of_lost_load_per_kwh) <: Array{<:Real, 1} ? s.financial.value_of_lost_load_per_kwh : fill(s.financial.value_of_lost_load_per_kwh, length(time_steps)),
         pwf_e,
         pwf_om,
-        two_party_factor,
+        third_party_factor,
         pvlocations,
         maxsize_pv_locations,
         pv_to_location,
@@ -415,13 +415,13 @@ function setup_present_worth_factors(s::Scenario, techs::Array{String, 1}, pvtec
     if s.financial.third_party_ownership
         pwf_offtaker = annuity(s.financial.analysis_years, 0.0, s.financial.offtaker_discount_pct)
         pwf_owner = annuity(s.financial.analysis_years, 0.0, s.financial.owner_discount_pct)
-        two_party_factor = (pwf_offtaker * (1 - s.financial.offtaker_tax_pct)) /
+        third_party_factor = (pwf_offtaker * (1 - s.financial.offtaker_tax_pct)) /
                            (pwf_owner * (1 - s.financial.owner_tax_pct))
     else
-        two_party_factor = 1.0
+        third_party_factor = 1.0
     end
 
-    return lvl_factor, pwf_e, pwf_om, two_party_factor
+    return lvl_factor, pwf_e, pwf_om, third_party_factor
 end
 
 

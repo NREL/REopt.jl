@@ -145,14 +145,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         add_demand_lookback_constraints(m, p)
     end
 
-	@expression(m, TotalTechCapCosts, p.two_party_factor *
+	@expression(m, TotalTechCapCosts, p.third_party_factor *
 		  sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in setdiff(p.techs, p.segmented_techs) )
 	)
     if !isempty(p.segmented_techs)
         @warn "adding binary variable(s) to model cost curves"
         add_cost_curve_vars_and_constraints(m, p)
         for t in p.segmented_techs  # cannot have this for statement in sum( ... for t in ...) ???
-           TotalTechCapCosts += p.two_party_factor * (
+           TotalTechCapCosts += p.third_party_factor * (
                 sum(p.cap_cost_slope[t][s] * m[Symbol("dvSegmentSystemSize"*t)][s] + 
                     p.seg_yint[t][s] * m[Symbol("binSegment"*t)][s] for s in p.n_segs_by_tech[t])
             )
@@ -166,17 +166,17 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         m[:TotalProductionIncentive] = 0
     end
 	
-	@expression(m, TotalStorageCapCosts, p.two_party_factor *
+	@expression(m, TotalStorageCapCosts, p.third_party_factor *
 		sum(  p.s.storage.installed_cost_per_kw[b] * m[:dvStoragePower][b]
 			+ p.s.storage.installed_cost_per_kwh[b] * m[:dvStorageEnergy][b] for b in p.s.storage.types )
 	)
 	
-	@expression(m, TotalPerUnitSizeOMCosts, p.two_party_factor * p.pwf_om *
+	@expression(m, TotalPerUnitSizeOMCosts, p.third_party_factor * p.pwf_om *
 		sum( p.om_cost_per_kw[t] * m[:dvSize][t] for t in p.techs )
 	)
 	
     if !isempty(p.gentechs)
-		m[:TotalPerUnitProdOMCosts] = @expression(m, p.two_party_factor * p.pwf_om *
+		m[:TotalPerUnitProdOMCosts] = @expression(m, p.third_party_factor * p.pwf_om *
 			sum(p.s.generator.om_cost_per_kwh * p.hours_per_timestep *
 			m[:dvRatedProduction][t, ts] for t in p.gentechs, ts in p.time_steps)
 		)
