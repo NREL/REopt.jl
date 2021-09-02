@@ -58,7 +58,7 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         @info "Generator results processing took $(round(time_elapsed, digits=3)) seconds."
 	end
 	
-	if !isempty(p.elecutil.outage_durations) && isempty(_n)  # outages not included in multinode model
+	if !isempty(p.s.electric_utility.outage_durations) && isempty(_n)  # outages not included in multinode model
         tstart = time()
 		add_outage_results(m, p, d)
         time_elapsed = time() - tstart

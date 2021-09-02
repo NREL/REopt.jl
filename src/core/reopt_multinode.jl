@@ -222,7 +222,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
             add_tou_peak_constraint(m, p; _n=_n)
         end
 
-		if !(p.elecutil.allow_simultaneous_export_import) & !isempty(p.etariff.export_bins)
+		if !(p.s.electric_utility.allow_simultaneous_export_import) & !isempty(p.etariff.export_bins)
 			add_simultaneous_export_import_constraint(m, p; _n=_n)
 		end
 

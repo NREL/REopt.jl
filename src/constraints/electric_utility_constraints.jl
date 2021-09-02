@@ -54,11 +54,11 @@ function add_export_constraints(m, p; _n="")
                 for ts in p.time_steps, tier in 1:p.etariff.n_energy_tiers)
         )
 
-        if p.elecutil.net_metering_limit_kw == p.elecutil.interconnection_limit_kw && isempty(WHL_techs)
+        if p.s.electric_utility.net_metering_limit_kw == p.s.electric_utility.interconnection_limit_kw && isempty(WHL_techs)
             # no need for binNEM nor binWHL
             binNEM = 1
             @constraint(m,
-                sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.elecutil.interconnection_limit_kw
+                sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.interconnection_limit_kw
             )
             NEM_benefit = @expression(m, p.pwf_e * p.hours_per_timestep *
                 sum( sum(p.etariff.export_rates[:NEM][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
@@ -85,10 +85,10 @@ function add_export_constraints(m, p; _n="")
 
             # If choosing to take advantage of NEM, must have total capacity less than net_metering_limit_kw
             @constraint(m,
-                binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.elecutil.net_metering_limit_kw}
+                binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.net_metering_limit_kw}
             )
             @constraint(m,
-                !binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.elecutil.interconnection_limit_kw}
+                !binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.interconnection_limit_kw}
             )
 
             # binary choice for NEM benefit

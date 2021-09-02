@@ -133,7 +133,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_tou_peak_constraint(m, p)
 	end
 
-	if !(p.elecutil.allow_simultaneous_export_import) & !isempty(p.etariff.export_bins)
+	if !(p.s.electric_utility.allow_simultaneous_export_import) & !isempty(p.etariff.export_bins)
 		add_simultaneous_export_import_constraint(m, p)
 	end
 
@@ -190,7 +190,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 	add_elec_utility_expressions(m, p)
 
-	if !isempty(p.elecutil.outage_durations)
+	if !isempty(p.s.electric_utility.outage_durations)
 		add_dv_UnservedLoad_constraints(m,p)
 		add_outage_cost_constraints(m,p)
 		add_MG_production_constraints(m,p)
@@ -204,7 +204,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		else
 			m[:ExpectedMGFuelUsed] = 0
 			m[:ExpectedMGFuelCost] = 0
-			@constraint(m, [s in p.elecutil.scenarios, tz in p.elecutil.outage_start_timesteps, ts in p.elecutil.outage_timesteps],
+			@constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_timesteps, ts in p.s.electric_utility.outage_timesteps],
 				m[:binMGGenIsOnInTS][s, tz, ts] == 0
 			)
 		end
@@ -234,7 +234,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         # Subtract Incentives, which are taxable
 		m[:TotalProductionIncentive] * (1 - p.owner_tax_pct)
 	);
-	if !isempty(p.elecutil.outage_durations)
+	if !isempty(p.s.electric_utility.outage_durations)
 		add_to_expression!(Costs, m[:ExpectedOutageCost] + m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost] + m[:ExpectedMGFuelCost])
 	end
     
@@ -312,19 +312,19 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
         
     end
 
-	if !(p.elecutil.allow_simultaneous_export_import) & !isempty(p.etariff.export_bins)
+	if !(p.s.electric_utility.allow_simultaneous_export_import) & !isempty(p.etariff.export_bins)
 		@warn """Adding binary variable to prevent simultaneous grid import/export. 
 				 Some solvers are very slow with integer variables"""
 		@variable(m, binNoGridPurchases[p.time_steps], Bin)
 	end
 
-	if !isempty(p.elecutil.outage_durations) # add dvUnserved Load if there is at least one outage
+	if !isempty(p.s.electric_utility.outage_durations) # add dvUnserved Load if there is at least one outage
 		@warn """Adding binary variable to model outages. 
 				 Some solvers are very slow with integer variables"""
-		max_outage_duration = maximum(p.elecutil.outage_durations)
-		outage_timesteps = p.elecutil.outage_timesteps
-		tZeros = p.elecutil.outage_start_timesteps
-		S = p.elecutil.scenarios
+		max_outage_duration = maximum(p.s.electric_utility.outage_durations)
+		outage_timesteps = p.s.electric_utility.outage_timesteps
+		tZeros = p.s.electric_utility.outage_start_timesteps
+		S = p.s.electric_utility.scenarios
 		# TODO: currently defining more decision variables than necessary b/c using rectangular arrays, could use dicts of decision variables instead
 		@variables m begin # if there is more than one specified outage, there can be more othan one outage start time
 			dvUnservedLoad[S, tZeros, outage_timesteps] >= 0 # unserved load not met by system
