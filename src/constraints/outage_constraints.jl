@@ -51,7 +51,7 @@ end
 function add_outage_cost_constraints(m,p)
     # TODO: fixed cost, account for outage_is_major_event
     @constraint(m, [s in p.elecutil.scenarios, tz in p.elecutil.outage_start_timesteps],
-        m[:dvMaxOutageCost][s] >= p.pwf_e * sum(p.VoLL[tz+ts] * m[:dvUnservedLoad][s, tz, ts] for ts in 1:p.elecutil.outage_durations[s])
+        m[:dvMaxOutageCost][s] >= p.pwf_e * sum(p.value_of_lost_load_per_kwh[tz+ts] * m[:dvUnservedLoad][s, tz, ts] for ts in 1:p.elecutil.outage_durations[s])
     )
 
     @expression(m, ExpectedOutageCost,

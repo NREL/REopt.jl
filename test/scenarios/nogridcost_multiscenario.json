@@ -55,6 +55,6 @@
   "Generator": {
   },
   "Financial": {
-    "VoLL": 0.0
+    "value_of_lost_load_per_kwh": 0.0
   }
 }

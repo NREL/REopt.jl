@@ -45,11 +45,11 @@ end
     MPCFinancial
 
     Base.@kwdef struct MPCFinancial
-        VoLL::Union{Array{R,1}, R} where R<:Real = 1.00
+        value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00
     end
 """
 Base.@kwdef struct MPCFinancial
-    VoLL::Union{Array{R,1}, R} where R<:Real = 1.00
+    value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00
 end
 
 
