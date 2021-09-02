@@ -30,9 +30,9 @@
 function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 
-	GenPerUnitSizeOMCosts = @expression(m, p.two_party_factor * p.pwf_om * sum(m[:dvSize][t] * p.om_cost_per_kw[t] for t in p.gentechs))
+	GenPerUnitSizeOMCosts = @expression(m, p.third_party_factor * p.pwf_om * sum(m[:dvSize][t] * p.om_cost_per_kw[t] for t in p.gentechs))
 
-	GenPerUnitProdOMCosts = @expression(m, p.two_party_factor * p.pwf_om * p.hours_per_timestep *
+	GenPerUnitProdOMCosts = @expression(m, p.third_party_factor * p.pwf_om * p.hours_per_timestep *
 		sum(m[:dvRatedProduction][t, ts] * p.production_factor[t, ts] * p.s.generator.om_cost_per_kwh
 			for t in p.gentechs, ts in p.time_steps)
 	)
@@ -41,8 +41,8 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 	r["total_variable_om_cost"] = round(value(m[:TotalPerUnitProdOMCosts]) * (1 - p.s.financial.owner_tax_pct), digits=0)
 	r["total_fuel_cost"] = round(value(m[:TotalGenFuelCharges]) * (1 - p.s.financial.offtaker_tax_pct), digits=2)
 	r["year_one_fuel_cost"] = round(value(m[:TotalGenFuelCharges]) / p.pwf_e, digits=2)
-	r["year_one_variable_om_cost"] = round(value(GenPerUnitProdOMCosts) / (p.pwf_om * p.two_party_factor), digits=0)
-	r["year_one_fixed_om_cost"] = round(value(GenPerUnitSizeOMCosts) / (p.pwf_om * p.two_party_factor), digits=0)
+	r["year_one_variable_om_cost"] = round(value(GenPerUnitProdOMCosts) / (p.pwf_om * p.third_party_factor), digits=0)
+	r["year_one_fixed_om_cost"] = round(value(GenPerUnitSizeOMCosts) / (p.pwf_om * p.third_party_factor), digits=0)
 
 	generatorToBatt = @expression(m, [ts in p.time_steps],
 		sum(m[:dvProductionToStorage][b, t, ts] for b in p.s.storage.types, t in p.gentechs))
