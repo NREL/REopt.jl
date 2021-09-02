@@ -104,7 +104,7 @@ add non-negative bounds to decision variables
 """
 function add_bounds(m::JuMP.AbstractModel, ps::Array{REoptInputs})
     
-	reopt_nodes = [rs.node for rs in ps]
+	reopt_nodes = [rs.s.site.node for rs in ps]
 	
 	dvs_idx_on_techs = String[
 		"dvSize",
