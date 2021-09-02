@@ -99,7 +99,7 @@
     - mg_storage_upgrade_cost
     - dvUnservedLoad array
     - max_outage_cost_per_outage_duration
-- allow VoLL values to be subtype of Real (rather than only Real)
+- allow value_of_lost_load_per_kwh values to be subtype of Real (rather than only Real)
 - add `run_reopt` method for scenario Dict
 
 ## v0.3.0

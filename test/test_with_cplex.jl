@@ -77,7 +77,7 @@ end
     @test results["Financial"]["lcc"] ≈ 7.3681609e7 atol=5e4
     
     #=
-    Scenario with $0/kWh VoLL, 12x169 hour outages, 1kW load/hour, and min_resil_timesteps = 168
+    Scenario with $0/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_timesteps = 168
     - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
     =#
     m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))

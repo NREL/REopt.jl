@@ -53,7 +53,7 @@ struct REoptInputs <: AbstractInputs
     months::UnitRange
     production_factor::DenseAxisArray{Float64, 2}  # (techs, time_steps)
     levelization_factor::Dict{String, Float64}  # (techs)
-    VoLL::Array{R, 1} where R<:Real #default set to 1 US dollar per kwh
+    value_of_lost_load_per_kwh::Array{R, 1} where R<:Real #default set to 1 US dollar per kwh
     pwf_e::Float64
     pwf_om::Float64
     two_party_factor::Float64
@@ -157,7 +157,7 @@ function REoptInputs(s::Scenario)
         months,
         production_factor,
         levelization_factor,
-        typeof(s.financial.VoLL) <: Array{<:Real, 1} ? s.financial.VoLL : fill(s.financial.VoLL, length(time_steps)),
+        typeof(s.financial.value_of_lost_load_per_kwh) <: Array{<:Real, 1} ? s.financial.value_of_lost_load_per_kwh : fill(s.financial.value_of_lost_load_per_kwh, length(time_steps)),
         pwf_e,
         pwf_om,
         two_party_factor,
