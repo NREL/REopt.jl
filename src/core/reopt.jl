@@ -220,19 +220,19 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		TotalTechCapCosts + TotalStorageCapCosts +
 
 		# Fixed O&M, tax deductible for owner
-		TotalPerUnitSizeOMCosts * (1 - p.owner_tax_pct) +
+		TotalPerUnitSizeOMCosts * (1 - p.s.financial.owner_tax_pct) +
 
 		# Variable O&M, tax deductible for owner
-		m[:TotalPerUnitProdOMCosts] * (1 - p.owner_tax_pct) +
+		m[:TotalPerUnitProdOMCosts] * (1 - p.s.financial.owner_tax_pct) +
 
 		# Total Generator Fuel Costs, tax deductible for offtaker
-        m[:TotalGenFuelCharges] * (1 - p.offtaker_tax_pct) +
+        m[:TotalGenFuelCharges] * (1 - p.s.financial.offtaker_tax_pct) +
 
 		# Utility Bill, tax deductible for offtaker
-		m[:TotalElecBill] * (1 - p.offtaker_tax_pct) -
+		m[:TotalElecBill] * (1 - p.s.financial.offtaker_tax_pct) -
 
         # Subtract Incentives, which are taxable
-		m[:TotalProductionIncentive] * (1 - p.owner_tax_pct)
+		m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_pct)
 	);
 	if !isempty(p.s.electric_utility.outage_durations)
 		add_to_expression!(Costs, m[:ExpectedOutageCost] + m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost] + m[:ExpectedMGFuelCost])

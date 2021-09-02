@@ -57,9 +57,6 @@ struct REoptInputs <: AbstractInputs
     pwf_e::Float64
     pwf_om::Float64
     two_party_factor::Float64
-    owner_tax_pct::Float64
-    offtaker_tax_pct::Float64
-    microgrid_upgrade_cost_pct::Float64
     pvlocations::Array{Symbol, 1}
     maxsize_pv_locations::DenseAxisArray{Float64, 1}  # indexed on pvlocations
     pv_to_location::DenseAxisArray{Int, 2}  # (pvtechs, pvlocations)
@@ -158,9 +155,6 @@ function REoptInputs(s::Scenario)
         pwf_e,
         pwf_om,
         two_party_factor,
-        s.financial.owner_tax_pct,
-        s.financial.offtaker_tax_pct,
-        s.financial.microgrid_upgrade_cost_pct,
         pvlocations,
         maxsize_pv_locations,
         pv_to_location,
