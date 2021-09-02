@@ -41,8 +41,8 @@ end
 
 # constrain minimum hours that critical load is met
 function add_min_hours_crit_ld_met_constraint(m,p)
-    if p.min_resil_timesteps <= length(p.s.electric_utility.outage_timesteps)
-        @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_timesteps, ts in 1:p.min_resil_timesteps],
+    if p.s.site.min_resil_timesteps <= length(p.s.electric_utility.outage_timesteps)
+        @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_timesteps, ts in 1:p.s.site.min_resil_timesteps],
             m[:dvUnservedLoad][s, tz, ts] <= 0
         )
     end
@@ -82,7 +82,7 @@ function add_MG_size_constraints(m,p)
         m[:binMGStorageUsed] => {m[:dvStoragePower][b] >= 1.0} # 1 kW min size to prevent binaryMGStorageUsed = 1 with zero cost
     )
     
-    if p.mg_tech_sizes_equal_grid_sizes
+    if p.s.site.mg_tech_sizes_equal_grid_sizes
         @constraint(m, [t in p.techs],
             m[:dvMGsize][t] == m[:dvSize][t]
         )

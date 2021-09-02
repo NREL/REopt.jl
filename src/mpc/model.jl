@@ -206,7 +206,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 			)
 		end
 		
-		if p.min_resil_timesteps > 0
+		if p.s.site.min_resil_timesteps > 0
 			add_min_hours_crit_ld_met_constraint(m,p)
 		end
 	end
