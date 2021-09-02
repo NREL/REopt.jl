@@ -115,15 +115,15 @@ end
 function add_MG_fuel_burn_constraints(m,p)
     # Define dvMGFuelUsed by summing over outage timesteps.
     @constraint(m, [t in p.gentechs, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_timesteps],
-        m[:dvMGFuelUsed][t, s, tz] == p.generator.fuel_slope_gal_per_kwh * p.hours_per_timestep * p.levelization_factor[t] *
+        m[:dvMGFuelUsed][t, s, tz] == p.s.generator.fuel_slope_gal_per_kwh * p.hours_per_timestep * p.levelization_factor[t] *
         sum( p.production_factor[t, tz+ts] * m[:dvMGRatedProduction][t, s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s])
-        + p.generator.fuel_intercept_gal_per_hr * p.hours_per_timestep * 
+        + p.s.generator.fuel_intercept_gal_per_hr * p.hours_per_timestep * 
         sum( m[:binMGGenIsOnInTS][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s])
     )
 
     # For each outage the fuel used is <= fuel_avail_gal
     @constraint(m, [t in p.gentechs, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_timesteps],
-        m[:dvMGFuelUsed][t, s, tz] <= p.generator.fuel_avail_gal
+        m[:dvMGFuelUsed][t, s, tz] <= p.s.generator.fuel_avail_gal
     )
     
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_timesteps],
@@ -136,7 +136,7 @@ function add_MG_fuel_burn_constraints(m,p)
 
     # fuel cost = gallons * $/gal for each tech, outage
     @expression(m, MGFuelCost[t in p.gentechs, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_timesteps],
-        m[:dvMGFuelUsed][t, s, tz] * p.generator.fuel_cost_per_gallon
+        m[:dvMGFuelUsed][t, s, tz] * p.s.generator.fuel_cost_per_gallon
     )
     
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_timesteps],
@@ -157,7 +157,7 @@ function add_binMGGenIsOnInTS_constraints(m,p)
     )
     @constraint(m, [t in p.gentechs, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_timesteps, ts in p.s.electric_utility.outage_timesteps],
         m[:binMGGenIsOnInTS][s, tz, ts] => { 
-            m[:dvMGRatedProduction][t, s, tz, ts] >= p.generator.min_turn_down_pct * m[:dvMGsize][t]
+            m[:dvMGRatedProduction][t, s, tz, ts] >= p.s.generator.min_turn_down_pct * m[:dvMGsize][t]
         }
     )
     @constraint(m, [t in p.gentechs, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_timesteps, ts in p.s.electric_utility.outage_timesteps],

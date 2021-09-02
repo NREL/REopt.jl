@@ -177,11 +177,11 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	
     if !isempty(p.gentechs)
 		m[:TotalPerUnitProdOMCosts] = @expression(m, p.two_party_factor * p.pwf_om *
-			sum(p.generator.om_cost_per_kwh * p.hours_per_timestep *
+			sum(p.s.generator.om_cost_per_kwh * p.hours_per_timestep *
 			m[:dvRatedProduction][t, ts] for t in p.gentechs, ts in p.time_steps)
 		)
 		m[:TotalGenFuelCharges] = @expression(m, p.pwf_e *
-			sum(m[:dvFuelUsage][t,ts] * p.generator.fuel_cost_per_gallon for t in p.gentechs, ts in p.time_steps)
+			sum(m[:dvFuelUsage][t,ts] * p.s.generator.fuel_cost_per_gallon for t in p.gentechs, ts in p.time_steps)
 		)
     else
 		m[:TotalPerUnitProdOMCosts] = 0.0

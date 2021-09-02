@@ -33,7 +33,7 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 	GenPerUnitSizeOMCosts = @expression(m, p.two_party_factor * p.pwf_om * sum(m[:dvSize][t] * p.om_cost_per_kw[t] for t in p.gentechs))
 
 	GenPerUnitProdOMCosts = @expression(m, p.two_party_factor * p.pwf_om * p.hours_per_timestep *
-		sum(m[:dvRatedProduction][t, ts] * p.production_factor[t, ts] * p.generator.om_cost_per_kwh
+		sum(m[:dvRatedProduction][t, ts] * p.production_factor[t, ts] * p.s.generator.om_cost_per_kwh
 			for t in p.gentechs, ts in p.time_steps)
 	)
 	r["size_kw"] = value(sum(m[:dvSize][t] for t in p.gentechs))
