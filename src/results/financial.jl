@@ -47,43 +47,79 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     )
     r["net_capital_costs"] = round(value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)]), 
                                    digits=2)
-    r["initial_capital_costs"] = upfront_capex(m, p; _n=_n)
+    r["initial_capital_costs"] = initial_capex(m, p; _n=_n)
+    r["initial_capital_costs_after_incentives"] = initial_capex_after_incentives(m, p, r["net_capital_costs"]; _n=_n)
     d["Financial"] = r
     nothing
 end
 
 
 """
-    upfront_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
+    initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 
 Calculate and return the up-front capital costs for all technologies, in present value, excluding replacement costs and 
 incentives.
 """
-function upfront_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
-    upfront_capex = 0
+function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
+    initial_capex = 0
 
     if !isempty(p.gentechs) && isempty(_n)  # generators not included in multinode model
-        upfront_capex += p.s.generator.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Generator"]
+        initial_capex += p.s.generator.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Generator"]
     end
 
     if !isempty(p.pvtechs)
         for pv in p.s.pvs
-            upfront_capex += pv.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])[pv.name]
+            initial_capex += pv.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])[pv.name]
         end
     end
 
     for b in p.s.storage.types
         if p.s.storage.max_kw[b] > 0
-            upfront_capex += p.s.storage.installed_cost_per_kw[b]  * value.(m[Symbol("dvStoragePower"*_n)])[b] + 
+            initial_capex += p.s.storage.installed_cost_per_kw[b]  * value.(m[Symbol("dvStoragePower"*_n)])[b] + 
                              p.s.storage.installed_cost_per_kwh[b] * value.(m[Symbol("dvStorageEnergy"*_n)])[b]
         end
     end
 
     if "Wind" in p.techs
-        upfront_capex += p.s.wind.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Wind"]
+        initial_capex += p.s.wind.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Wind"]
     end
 
     # TODO thermal tech costs
 
-    return upfront_capex
+    return initial_capex
+end
+
+
+"""
+    initial_capex_after_incentives(m::JuMP.AbstractModel, p::REoptInputs, net_capital_costs::Float64; _n="")
+
+The net_capital_costs output is the initial capex after incentives, except it includes the battery
+replacement cost in present value. So we calculate the initial_capex_after_incentives as net_capital_costs
+minus the battery replacement cost in present value.
+Note that the owner_discount_pct and owner_tax_pct are set to the offtaker_discount_pct and offtaker_tax_pct
+respectively when third_party_ownership is False.
+"""
+function initial_capex_after_incentives(m::JuMP.AbstractModel, p::REoptInputs, net_capital_costs::Float64; _n="")
+    initial_capex_after_incentives = net_capital_costs / p.third_party_factor
+
+    for b in p.s.storage.types
+
+        if !(:inverter_replacement_year in fieldnames(typeof(p.s.storage.raw_inputs[b])))
+            continue
+        end
+
+        pwf_inverter = 1 / ((1 + p.s.financial.owner_discount_pct)^p.s.storage.raw_inputs[b].inverter_replacement_year)
+
+        pwf_storage  = 1 / ((1 + p.s.financial.owner_discount_pct)^p.s.storage.raw_inputs[b].battery_replacement_year)
+
+        inverter_future_cost = p.s.storage.raw_inputs[b].replace_cost_per_kw * value.(m[Symbol("dvStoragePower"*_n)])[b]
+
+        storage_future_cost = p.s.storage.raw_inputs[b].replace_cost_per_kwh * value.(m[Symbol("dvStorageEnergy"*_n)])[b]
+
+        # NOTE these initial costs include the tax benefit available to commercial entities
+        initial_capex_after_incentives -= inverter_future_cost * pwf_inverter * (1 - p.s.financial.owner_tax_pct)
+        initial_capex_after_incentives -= storage_future_cost  * pwf_storage  * (1 - p.s.financial.owner_tax_pct)
+    end
+
+    return round(initial_capex_after_incentives, digits=2)
 end
