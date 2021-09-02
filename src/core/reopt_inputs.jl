@@ -66,7 +66,6 @@ struct REoptInputs <: AbstractInputs
     etariff::ElectricTariff
     ratchets::UnitRange
     techs_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL, :CUR]
-    storage::Storage
     generator::Generator
     min_resil_timesteps::Int
     mg_tech_sizes_equal_grid_sizes::Bool
@@ -169,7 +168,6 @@ function REoptInputs(s::Scenario)
         s.electric_tariff,
         1:length(s.electric_tariff.tou_demand_ratchet_timesteps),  # ratchets
         techs_by_exportbin,
-        s.storage,
         s.generator,
         s.site.min_resil_timesteps,
         s.site.mg_tech_sizes_equal_grid_sizes,

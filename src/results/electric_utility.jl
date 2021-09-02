@@ -35,11 +35,11 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
     r["year_one_energy_supplied_kwh"] = round(value(Year1UtilityEnergy), digits=2)
 
     GridToLoad = (sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in p.etariff.n_energy_tiers) 
-                  - sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.types) 
+                  - sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types) 
                   for ts in p.time_steps)
     r["year_one_to_load_series_kw"] = round.(value.(GridToLoad), digits=3)
 
-    GridToBatt = (sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.types) 
+    GridToBatt = (sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types) 
 				  for ts in p.time_steps)
     r["year_one_to_battery_series_kw"] = round.(value.(GridToBatt), digits=3)
 
@@ -56,9 +56,9 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::MPCInputs, d::Di
                                                          tier in p.etariff.n_energy_tiers)
     r["energy_supplied_kwh"] = round(value(Year1UtilityEnergy), digits=2)
 
-    if p.storage.size_kw[:elec] > 0
+    if p.s.storage.size_kw[:elec] > 0
         GridToBatt = @expression(m, [ts in p.time_steps], 
-            sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.types) 
+            sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types) 
 		)
         r["to_battery_series_kw"] = round.(value.(GridToBatt), digits=3).data
     else

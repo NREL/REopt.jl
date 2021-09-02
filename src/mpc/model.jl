@@ -111,7 +111,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 
 		fix(m[:dvGridPurchase][ts], 0.0, force=true)
 
-		for t in p.storage.types
+		for t in p.s.storage.types
 			fix(m[:dvGridToStorage][t, ts], 0.0, force=true)
 		end
 
@@ -120,8 +120,8 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		end
 	end
 
-	for b in p.storage.types
-		if p.storage.size_kw[b] == 0 || p.storage.size_kwh[b] == 0
+	for b in p.s.storage.types
+		if p.s.storage.size_kw[b] == 0 || p.s.storage.size_kwh[b] == 0
 			@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
 			@constraint(m, [t in p.elec_techs, ts in p.time_steps_with_grid],
 						m[:dvProductionToStorage][b, t, ts] == 0)
@@ -139,7 +139,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		add_gen_rated_prod_constraint(m,p)
 	end
 
-	if any(size_kw->size_kw > 0, (p.storage.size_kw[b] for b in p.storage.types))
+	if any(size_kw->size_kw > 0, (p.s.storage.size_kw[b] for b in p.s.storage.types))
 		add_storage_sum_constraints(m, p)
 	end
 
@@ -240,12 +240,12 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 		dvGridPurchase[p.time_steps] >= 0  # Power from grid dispatched to meet electrical load [kW]
 		dvRatedProduction[p.techs, p.time_steps] >= 0  # Rated production of technology t [kW]
 		dvCurtail[p.techs, p.time_steps] >= 0  # [kW]
-		dvProductionToStorage[p.storage.types, p.techs, p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
-		dvDischargeFromStorage[p.storage.types, p.time_steps] >= 0 # Power discharged from storage system b [kW]
-		dvGridToStorage[p.storage.types, p.time_steps] >= 0 # Electrical power delivered to storage by the grid [kW]
-		dvStoredEnergy[p.storage.types, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
-		# dvStoragePower[p.storage.types] >= 0   # Power capacity of storage system b [kW]
-		# dvStorageEnergy[p.storage.types] >= 0   # Energy capacity of storage system b [kWh]
+		dvProductionToStorage[p.s.storage.types, p.techs, p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
+		dvDischargeFromStorage[p.s.storage.types, p.time_steps] >= 0 # Power discharged from storage system b [kW]
+		dvGridToStorage[p.s.storage.types, p.time_steps] >= 0 # Electrical power delivered to storage by the grid [kW]
+		dvStoredEnergy[p.s.storage.types, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
+		# dvStoragePower[p.s.storage.types] >= 0   # Power capacity of storage system b [kW]
+		# dvStorageEnergy[p.s.storage.types] >= 0   # Energy capacity of storage system b [kWh]
 		dvPeakDemandTOU[p.ratchets, 1:1] >= 0  # Peak electrical power demand during ratchet r [kW]
 		dvPeakDemandMonth[p.months] >= 0  # Peak electrical power demand during month m [kW]
 		# MinChargeAdder >= 0
@@ -258,8 +258,8 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 
     m[:dvSize] = p.existing_sizes
 
-    m[:dvStoragePower] = p.storage.size_kw
-    m[:dvStorageEnergy] = p.storage.size_kwh
+    m[:dvStoragePower] = p.s.storage.size_kw
+    m[:dvStorageEnergy] = p.s.storage.size_kwh
     # not modeling min charges since control does not affect them
     m[:MinChargeAdder] = 0
 

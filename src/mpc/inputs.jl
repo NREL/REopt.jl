@@ -50,7 +50,6 @@ struct MPCInputs <: AbstractInputs
     etariff::MPCElectricTariff
     ratchets::UnitRange
     techs_by_exportbin::DenseAxisArray{Array{String,1}}  # indexed on [:NEM, :WHL]
-    storage::MPCStorage
     generator::MPCGenerator
     export_bins_by_tech::Dict{String, Array{Symbol, 1}}
 end
@@ -110,7 +109,6 @@ function MPCInputs(s::MPCScenario)
         s.electric_tariff,
         1:length(s.electric_tariff.tou_demand_ratchet_timesteps),  # ratchets
         techs_by_exportbin,
-        s.storage,
         s.generator,
         export_bins_by_tech
         # s.site.min_resil_timesteps,
