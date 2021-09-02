@@ -47,6 +47,7 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     )
     r["net_capital_costs"] = round(value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)]), 
                                    digits=2)
+    r["initial_capital_costs"] = upfront_capex(m, p; _n=_n)
     d["Financial"] = r
     nothing
 end
@@ -60,14 +61,30 @@ incentives.
 """
 function upfront_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     upfront_capex = 0
+    # TODO make compatible with multinode
 
     if !isempty(p.gentechs) && isempty(_n)  # generators not included in multinode model
-        upfront_capex += p.s.generator.installed_cost_per_kw * value.(m[:dvPurchasSize])["Generator"]
+        upfront_capex += p.s.generator.installed_cost_per_kw * value.(m[:dvPurchaseSize])["Generator"]
     end
 
     if !isempty(p.pvtechs)
-        for pv in p.pvtechs
-            upfront_capex += value.(m[:dvPurchasSize])[pv]
+        for pv in p.s.pvs
+            upfront_capex += pv.installed_cost_per_kw * value.(m[:dvPurchaseSize])[pv.name]
         end
     end
+
+    for b in p.s.storage.types
+        if p.s.storage.max_kw[b] > 0
+            upfront_capex += p.s.storage.installed_cost_per_kw[b]  * value.(m[:dvStoragePower])[b] + 
+                             p.s.storage.installed_cost_per_kwh[b] * value.(m[:dvStorageEnergy])[b]
+        end
+    end
+
+    if "Wind" in p.techs
+        upfront_capex += p.s.wind.installed_cost_per_kw * value.(m[:dvPurchaseSize])["Wind"]
+    end
+
+    # TODO thermal tech costs
+
+    return upfront_capex
 end
