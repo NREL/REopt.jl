@@ -50,3 +50,23 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     d["Financial"] = r
     nothing
 end
+
+
+"""
+    upfront_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
+
+Calculate and return the up-front capital costs for all technologies, in present value, excluding replacement costs and 
+incentives.
+"""
+function upfront_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
+    upfront_capex = 0
+
+    if !isempty(p.gentechs) && isempty(_n)  # generators not included in multinode model
+        upfront_capex += p.generator.installed_cost_per_kw * value.(m[:dvPurchasSize])["Generator"]
+    end
+
+    if !isempty(p.pvtechs)
+        for pv in p.pvtechs
+            upfront_capex += value.(m[:dvPurchasSize])[pv]
+    end
+end

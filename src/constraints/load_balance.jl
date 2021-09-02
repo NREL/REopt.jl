@@ -39,7 +39,7 @@ function add_load_balance_constraints(m, p; _n="")
             sum( sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.storage.types) 
                 + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.elec_techs)
             + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.types)
-            + p.elec_load.loads_kw[ts]
+            + p.s.elec_load.loads_kw[ts]
         )
     else
         conrefs = @constraint(m, [ts in p.time_steps_with_grid],
@@ -51,7 +51,7 @@ function add_load_balance_constraints(m, p; _n="")
                 + m[Symbol("dvCurtail"*_n)][t, ts] 
             for t in p.elec_techs)
             + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.types)
-            + p.elec_load.loads_kw[ts]
+            + p.s.elec_load.loads_kw[ts]
         )
     end
 
@@ -65,7 +65,7 @@ function add_load_balance_constraints(m, p; _n="")
 		sum( m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.storage.types )  ==
         sum( sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.storage.types) + 
         m[Symbol("dvCurtail"*_n)][t, ts] for t in p.elec_techs) +
-        p.elec_load.critical_loads_kw[ts]
+        p.s.elec_load.critical_loads_kw[ts]
 	)
 end
 
