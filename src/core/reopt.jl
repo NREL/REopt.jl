@@ -72,7 +72,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 	for ts in p.time_steps_without_grid
 
-		for tier in 1:p.etariff.n_energy_tiers
+		for tier in 1:p.s.electric_tariff.n_energy_tiers
 			fix(m[:dvGridPurchase][ts, tier] , 0.0, force=true)
 		end
 
@@ -80,7 +80,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			fix(m[:dvGridToStorage][t, ts], 0.0, force=true)
 		end
 
-        if !isempty(p.etariff.export_bins)
+        if !isempty(p.s.electric_tariff.export_bins)
             for t in p.elec_techs, u in p.export_bins_by_tech[t]
                 fix(m[:dvProductionToGrid][t, u, ts], 0.0, force=true)
             end
@@ -121,27 +121,27 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 	add_load_balance_constraints(m, p)
 
-	if !isempty(p.etariff.export_bins)
+	if !isempty(p.s.electric_tariff.export_bins)
 		add_export_constraints(m, p)
 	end
 
-	if !isempty(p.etariff.monthly_demand_rates)
+	if !isempty(p.s.electric_tariff.monthly_demand_rates)
 		add_monthly_peak_constraint(m, p)
 	end
 
-	if !isempty(p.etariff.tou_demand_ratchet_timesteps)
+	if !isempty(p.s.electric_tariff.tou_demand_ratchet_timesteps)
 		add_tou_peak_constraint(m, p)
 	end
 
-	if !(p.s.electric_utility.allow_simultaneous_export_import) & !isempty(p.etariff.export_bins)
+	if !(p.s.electric_utility.allow_simultaneous_export_import) & !isempty(p.s.electric_tariff.export_bins)
 		add_simultaneous_export_import_constraint(m, p)
 	end
 
-	if p.etariff.n_energy_tiers > 1
+	if p.s.electric_tariff.n_energy_tiers > 1
 		add_energy_tier_constraints(m, p)
 	end
 
-    if p.etariff.demand_lookback_percent > 0
+    if p.s.electric_tariff.demand_lookback_percent > 0
         add_demand_lookback_constraints(m, p)
     end
 
@@ -284,7 +284,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 	@variables m begin
 		dvSize[p.techs] >= 0  # System Size of Technology t [kW]
 		dvPurchaseSize[p.techs] >= 0  # system kW beyond existing_kw that must be purchased
-		dvGridPurchase[p.time_steps, 1:p.etariff.n_energy_tiers] >= 0  # Power from grid dispatched to meet electrical load [kW]
+		dvGridPurchase[p.time_steps, 1:p.s.electric_tariff.n_energy_tiers] >= 0  # Power from grid dispatched to meet electrical load [kW]
 		dvRatedProduction[p.techs, p.time_steps] >= 0  # Rated production of technology t [kW]
 		dvCurtail[p.techs, p.time_steps] >= 0  # [kW]
 		dvProductionToStorage[p.s.storage.types, p.techs, p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
@@ -293,8 +293,8 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvStoredEnergy[p.s.storage.types, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
 		dvStoragePower[p.s.storage.types] >= 0   # Power capacity of storage system b [kW]
 		dvStorageEnergy[p.s.storage.types] >= 0   # Energy capacity of storage system b [kWh]
-		dvPeakDemandTOU[p.ratchets, 1:p.etariff.n_tou_demand_tiers] >= 0  # Peak electrical power demand during ratchet r [kW]
-		dvPeakDemandMonth[p.months, 1:p.etariff.n_monthly_demand_tiers] >= 0  # Peak electrical power demand during month m [kW]
+		dvPeakDemandTOU[p.ratchets, 1:p.s.electric_tariff.n_tou_demand_tiers] >= 0  # Peak electrical power demand during ratchet r [kW]
+		dvPeakDemandMonth[p.months, 1:p.s.electric_tariff.n_monthly_demand_tiers] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0
 	end
 
@@ -307,12 +307,12 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 	end
 
-    if !isempty(p.etariff.export_bins)
-        @variable(m, dvProductionToGrid[p.elec_techs, p.etariff.export_bins, p.time_steps] >= 0)
+    if !isempty(p.s.electric_tariff.export_bins)
+        @variable(m, dvProductionToGrid[p.elec_techs, p.s.electric_tariff.export_bins, p.time_steps] >= 0)
         
     end
 
-	if !(p.s.electric_utility.allow_simultaneous_export_import) & !isempty(p.etariff.export_bins)
+	if !(p.s.electric_utility.allow_simultaneous_export_import) & !isempty(p.s.electric_tariff.export_bins)
 		@warn """Adding binary variable to prevent simultaneous grid import/export. 
 				 Some solvers are very slow with integer variables"""
 		@variable(m, binNoGridPurchases[p.time_steps], Bin)

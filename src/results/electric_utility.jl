@@ -31,10 +31,10 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
     r = Dict{String, Any}()
 
     Year1UtilityEnergy = p.hours_per_timestep * sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] 
-        for ts in p.time_steps, tier in p.etariff.n_energy_tiers)
+        for ts in p.time_steps, tier in p.s.electric_tariff.n_energy_tiers)
     r["year_one_energy_supplied_kwh"] = round(value(Year1UtilityEnergy), digits=2)
 
-    GridToLoad = (sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in p.etariff.n_energy_tiers) 
+    GridToLoad = (sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in p.s.electric_tariff.n_energy_tiers) 
                   - sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types) 
                   for ts in p.time_steps)
     r["year_one_to_load_series_kw"] = round.(value.(GridToLoad), digits=3)
@@ -53,7 +53,7 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::MPCInputs, d::Di
 
     Year1UtilityEnergy = p.hours_per_timestep * 
         sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for ts in p.time_steps, 
-                                                         tier in p.etariff.n_energy_tiers)
+                                                         tier in p.s.electric_tariff.n_energy_tiers)
     r["energy_supplied_kwh"] = round(value(Year1UtilityEnergy), digits=2)
 
     if p.s.storage.size_kw[:elec] > 0
@@ -65,7 +65,7 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::MPCInputs, d::Di
         GridToBatt = zeros(length(p.time_steps))
     end
     GridToLoad = @expression(m, [ts in p.time_steps], 
-        sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in p.etariff.n_energy_tiers) - 
+        sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in p.s.electric_tariff.n_energy_tiers) - 
         GridToBatt[ts]
     )
     r["to_load_series_kw"] = round.(value.(GridToLoad), digits=3).data

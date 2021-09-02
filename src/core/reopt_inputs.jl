@@ -60,7 +60,6 @@ struct REoptInputs <: AbstractInputs
     pvlocations::Array{Symbol, 1}
     maxsize_pv_locations::DenseAxisArray{Float64, 1}  # indexed on pvlocations
     pv_to_location::DenseAxisArray{Int, 2}  # (pvtechs, pvlocations)
-    etariff::ElectricTariff
     ratchets::UnitRange
     techs_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL, :CUR]
     min_resil_timesteps::Int
@@ -158,7 +157,6 @@ function REoptInputs(s::Scenario)
         pvlocations,
         maxsize_pv_locations,
         pv_to_location,
-        s.electric_tariff,
         1:length(s.electric_tariff.tou_demand_ratchet_timesteps),  # ratchets
         techs_by_exportbin,
         s.site.min_resil_timesteps,

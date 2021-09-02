@@ -120,7 +120,7 @@ function add_storage_sum_constraints(m, p; _n="")
 
 	##Constraint (8c): Grid-to-storage no greater than grid purchases 
 	@constraint(m, [ts in p.time_steps_with_grid],
-      sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.etariff.n_energy_tiers) >= 
+      sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) >= 
       sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types)
     )
 end

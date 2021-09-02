@@ -60,9 +60,9 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 		dv = "MinChargeAdder"*_n
 		m[Symbol(dv)] = @variable(m, base_name=dv, lower_bound=0)
 
-        if !isempty(p.etariff.export_bins)
+        if !isempty(p.s.electric_tariff.export_bins)
             dv = "dvProductionToGrid"*_n
-            m[Symbol(dv)] = @variable(m, [p.elec_techs, p.etariff.export_bins, p.time_steps], base_name=dv, lower_bound=0)
+            m[Symbol(dv)] = @variable(m, [p.elec_techs, p.s.electric_tariff.export_bins, p.time_steps], base_name=dv, lower_bound=0)
         end
 
 		ex_name = "TotalTechCapCosts"*_n
@@ -210,23 +210,23 @@ function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
     
         add_load_balance_constraints(m, p; _n=_n)
     
-        if !isempty(p.etariff.export_bins)
+        if !isempty(p.s.electric_tariff.export_bins)
             add_export_constraints(m, p; _n=_n)
         end
     
-        if !isempty(p.etariff.monthly_demand_rates)
+        if !isempty(p.s.electric_tariff.monthly_demand_rates)
             add_monthly_peak_constraint(m, p; _n=_n)
         end
     
-        if !isempty(p.etariff.tou_demand_ratchet_timesteps)
+        if !isempty(p.s.electric_tariff.tou_demand_ratchet_timesteps)
             add_tou_peak_constraint(m, p; _n=_n)
         end
 
-		if !(p.s.electric_utility.allow_simultaneous_export_import) & !isempty(p.etariff.export_bins)
+		if !(p.s.electric_utility.allow_simultaneous_export_import) & !isempty(p.s.electric_tariff.export_bins)
 			add_simultaneous_export_import_constraint(m, p; _n=_n)
 		end
 
-        if p.etariff.demand_lookback_percent > 0
+        if p.s.electric_tariff.demand_lookback_percent > 0
             add_demand_lookback_constraints(m, p; _n=_n)
         end
     

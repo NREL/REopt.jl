@@ -41,7 +41,7 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 		r["year_one_to_battery_series_kw"] = round.(value.(PVtoBatt), digits=3)
 
         r["year_one_to_grid_series_kw"] = zeros(size(r["year_one_to_battery_series_kw"]))
-        if !isempty(p.etariff.export_bins)
+        if !isempty(p.s.electric_tariff.export_bins)
             PVtoGrid = @expression(m, [ts in p.time_steps],
                     sum(m[:dvProductionToGrid][t, u, ts] for u in p.export_bins_by_tech[t]))
             r["year_one_to_grid_series_kw"] = round.(value.(PVtoGrid), digits=3).data
@@ -82,7 +82,7 @@ function add_pv_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
 		end
 
         r["to_grid_series_kw"] = zeros(length(p.time_steps))
-        if !isempty(p.etariff.export_bins)
+        if !isempty(p.s.electric_tariff.export_bins)
             PVtoGrid = @expression(m, [ts in p.time_steps],
                     sum(m[:dvProductionToGrid][t, u, ts] for u in p.export_bins_by_tech[t]))
             r["to_grid_series_kw"] = round.(value.(PVtoGrid), digits=3).data
