@@ -79,6 +79,9 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 		m[Symbol(ex_name)] = @expression(m, p.third_party_factor * p.pwf_om * 
 			sum( p.om_cost_per_kw[t] * m[Symbol("dvSize"*_n)][t] for t in p.techs ) 
 		)
+
+        ex_name = "TotalPerUnitProdOMCosts"*_n
+		m[Symbol(ex_name)] = 0
 	
 		add_elec_utility_expressions(m, p; _n=_n)
 	
