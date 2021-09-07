@@ -31,6 +31,7 @@ module REoptLite
 
 export
     Scenario,
+    BAUScenario,
     REoptInputs,
     run_reopt,
     build_reopt!,
@@ -79,6 +80,7 @@ include("core/prodfactor.jl")
 include("core/urdb.jl")
 include("core/electric_tariff.jl")
 include("core/scenario.jl")
+include("core/bau_scenario.jl")
 include("core/reopt_inputs.jl")
 include("core/cost_curve.jl")
 
