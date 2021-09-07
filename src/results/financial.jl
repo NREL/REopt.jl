@@ -41,14 +41,25 @@ Financial results:
 function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
     r["lcc"] = round(value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)]))
+    r["total_om_costs_before_tax"] = value(  m[Symbol("TotalPerUnitSizeOMCosts"*_n)] 
+                                           + m[Symbol("TotalPerUnitProdOMCosts"*_n)])
+    r["year_one_om_costs_before_tax"] = r["total_om_costs_before_tax"] / (p.pwf_om * p.third_party_factor)
+    r["total_om_costs_after_tax"] = r["total_om_costs_before_tax"] * (1 - p.s.financial.owner_tax_pct)
+    r["year_one_om_costs_after_tax"] = r["total_om_costs_after_tax"] / (p.pwf_om * p.third_party_factor)
+
     r["net_capital_costs_plus_om"] = round(
         value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)]) +
-        value(m[Symbol("TotalPerUnitSizeOMCosts"*_n)]) * (1 - p.s.financial.owner_tax_pct), digits=0
+        r["total_om_costs_after_tax"], digits=0
     )
     r["net_capital_costs"] = round(value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)]), 
                                    digits=2)
     r["initial_capital_costs"] = initial_capex(m, p; _n=_n)
     r["initial_capital_costs_after_incentives"] = initial_capex_after_incentives(m, p, r["net_capital_costs"]; _n=_n)
+
+    future_replacement_cost, present_replacement_cost = replacement_costs_future_and_present(m, p; _n=_n)
+    r["replacement_costs"] = future_replacement_cost
+    r["om_and_replacement_present_cost_after_tax"] = present_replacement_cost + r["total_om_costs_after_tax"]
+
     d["Financial"] = r
     nothing
 end
@@ -122,4 +133,30 @@ function initial_capex_after_incentives(m::JuMP.AbstractModel, p::REoptInputs, n
     end
 
     return round(initial_capex_after_incentives, digits=2)
+end
+
+
+"""
+    replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInputs; _n="")
+
+returns two values: the future and present costs of replacing all storage systems
+"""
+function replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInputs; _n="")
+    future_cost = 0
+    present_cost = 0
+    for b in p.s.storage.types
+
+        if !(:inverter_replacement_year in fieldnames(typeof(p.s.storage.raw_inputs[b])))
+            continue
+        end
+        future_cost_inverter = p.s.storage.raw_inputs[b].replace_cost_per_kw * value.(m[Symbol("dvStoragePower"*_n)])[b]
+        future_cost_storage = p.s.storage.raw_inputs[b].replace_cost_per_kwh * value.(m[Symbol("dvStorageEnergy"*_n)])[b]
+        future_cost += future_cost_inverter + future_cost_storage
+
+        present_cost += future_cost_inverter * (1 - p.s.financial.owner_tax_pct) / 
+            ((1 + p.s.financial.owner_discount_pct)^p.s.storage.raw_inputs[b].inverter_replacement_year)
+        present_cost += future_cost_storage * (1 - p.s.financial.owner_tax_pct) / 
+            ((1 + p.s.financial.owner_discount_pct)^p.s.storage.raw_inputs[b].battery_replacement_year)
+    end
+    return round(future_cost, digits=2), round(present_cost, digits=2)
 end
