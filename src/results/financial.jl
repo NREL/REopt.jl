@@ -40,19 +40,16 @@ Financial results:
 """
 function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
-    r["lcc"] = round(value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)]))
-    r["total_om_costs_before_tax"] = value(  m[Symbol("TotalPerUnitSizeOMCosts"*_n)] 
-                                           + m[Symbol("TotalPerUnitProdOMCosts"*_n)])
+    r["lcc"] = value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)])
+    r["total_om_costs_before_tax"] = value(m[Symbol("TotalPerUnitSizeOMCosts"*_n)] + 
+                                           m[Symbol("TotalPerUnitProdOMCosts"*_n)])
     r["year_one_om_costs_before_tax"] = r["total_om_costs_before_tax"] / (p.pwf_om * p.third_party_factor)
     r["total_om_costs_after_tax"] = r["total_om_costs_before_tax"] * (1 - p.s.financial.owner_tax_pct)
     r["year_one_om_costs_after_tax"] = r["total_om_costs_after_tax"] / (p.pwf_om * p.third_party_factor)
 
-    r["net_capital_costs_plus_om"] = round(
-        value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)]) +
-        r["total_om_costs_after_tax"], digits=0
-    )
-    r["net_capital_costs"] = round(value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)]), 
-                                   digits=2)
+    r["net_capital_costs_plus_om"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)]) +
+        r["total_om_costs_after_tax"]
+    r["net_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)])
     r["initial_capital_costs"] = initial_capex(m, p; _n=_n)
     r["initial_capital_costs_after_incentives"] = initial_capex_after_incentives(m, p, r["net_capital_costs"]; _n=_n)
 
@@ -60,7 +57,7 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     r["replacement_costs"] = future_replacement_cost
     r["om_and_replacement_present_cost_after_tax"] = present_replacement_cost + r["total_om_costs_after_tax"]
 
-    d["Financial"] = r
+    d["Financial"] = Dict(k => round(v, digits=2) for (k,v) in r)
     nothing
 end
 
@@ -132,7 +129,7 @@ function initial_capex_after_incentives(m::JuMP.AbstractModel, p::REoptInputs, n
         initial_capex_after_incentives -= storage_future_cost  * pwf_storage  * (1 - p.s.financial.owner_tax_pct)
     end
 
-    return round(initial_capex_after_incentives, digits=2)
+    return initial_capex_after_incentives
 end
 
 
@@ -158,5 +155,5 @@ function replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInp
         present_cost += future_cost_storage * (1 - p.s.financial.owner_tax_pct) / 
             ((1 + p.s.financial.owner_discount_pct)^p.s.storage.raw_inputs[b].battery_replacement_year)
     end
-    return round(future_cost, digits=2), round(present_cost, digits=2)
+    return future_cost, present_cost
 end
