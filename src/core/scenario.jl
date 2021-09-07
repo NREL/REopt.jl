@@ -152,6 +152,16 @@ function Scenario(d::Dict)
 end
 
 
+"""
+    Scenario(fp::String)
+
+Consruct Scenario from filepath `fp` to JSON with keys aligned with the `Scenario(d::Dict)` method.
+"""
+function Scenario(fp::String)
+    Scenario(JSON.parsefile(fp))
+end
+
+
 function check_pv_tilt!(pv::Dict, site::Site)
     if !(haskey(pv, "tilt"))
         pv["tilt"] = site.latitude
