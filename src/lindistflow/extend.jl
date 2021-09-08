@@ -51,7 +51,7 @@ end
 
 
 function LDF.constrain_loads(m::JuMP.AbstractModel, p::LDF.Inputs, ps::Array{REoptInputs, 1})
-    reopt_nodes = [rs.node for rs in ps]
+    reopt_nodes = [p.s.site.node for p in ps]
 
     Pⱼ = m[:Pⱼ]
     Qⱼ = m[:Qⱼ]
