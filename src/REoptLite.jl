@@ -82,6 +82,7 @@ include("core/electric_tariff.jl")
 include("core/scenario.jl")
 include("core/bau_scenario.jl")
 include("core/reopt_inputs.jl")
+include("core/bau_inputs.jl")
 include("core/cost_curve.jl")
 
 include("constraints/outage_constraints.jl")
