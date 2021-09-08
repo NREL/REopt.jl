@@ -50,6 +50,48 @@ end
 
 
 """
+	run_reopt(m::JuMP.AbstractModel, s::AbstractScenario)
+
+Solve the model using a `Scenario` or `BAUScenario`.
+"""
+function run_reopt(m::JuMP.AbstractModel, s::AbstractScenario)
+	run_reopt(m, REoptInputs(s))
+end
+
+
+"""
+    run_reopt(t::Tuple{JuMP.AbstractModel, AbstractScenario})
+
+Method for use with Threads when running BAU in parallel with optimal scenario.
+"""
+function run_reopt(t::Tuple{JuMP.AbstractModel, AbstractScenario})
+	run_reopt(t[1], REoptInputs(t[2]))
+end
+
+
+"""
+    run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractModel
+
+Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) models in `ms` and inputs from `d`.
+"""
+function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractModel
+    s = Scenario(d)
+    if !s.settings.run_bau
+        @warn "Only using first Model and not running BAU case because Settings.run_bau == false."
+	    run_reopt(ms[1], s)
+    end
+    baus = BAUScenario(s)
+    inputs = ((ms[1], baus), (ms[2], s))
+    rs = Any[0, 0]
+    Threads.@threads for i = 1:2
+        rs[i] = run_reopt(inputs[i])
+    end
+    # combined_results = combine_results(rs)
+    return rs
+end
+
+
+"""
 	build_reopt!(m::JuMP.AbstractModel, fp::String)
 
 Add variables and constraints for REopt model. 
