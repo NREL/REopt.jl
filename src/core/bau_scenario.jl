@@ -42,9 +42,9 @@ end
 
 
 function set_max_kw_to_existing(tech::AbstractTech)
-    techdict = Dict(fn => getfield(x, fn) for fn in fieldnames(typeof(x)))
+    techdict = Dict(fn => getfield(tech, fn) for fn in fieldnames(typeof(tech)))
     techdict[:max_kw] = techdict[:existing_kw]
-    eval(Meta.parse(string(typeof(tech)) * "(; techdict...)"))
+    eval(Meta.parse(string(typeof(tech)) * "(; $techdict...)"))
 end
 
 
