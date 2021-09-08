@@ -33,7 +33,7 @@ use Scenario struct to create reopt.jl model inputs
 """
 
 struct REoptInputs <: AbstractInputs
-    s::Scenario
+    s::AbstractScenario
     techs::Array{String, 1}
     pvtechs::Array{String, 1}
     gentechs::Array{String,1}
@@ -93,11 +93,11 @@ end
 
 
 """
-    REoptInputs(s::Scenario)
+    REoptInputs(s::AbstractScenario)
 
 Constructor for REoptInputs
 """
-function REoptInputs(s::Scenario)
+function REoptInputs(s::AbstractScenario)
 
     time_steps = 1:length(s.electric_load.loads_kw)
     hours_per_timestep = 1 / s.settings.time_steps_per_hour
@@ -170,11 +170,11 @@ end
 
 
 """
-    function setup_tech_inputs(s::Scenario)
+    function setup_tech_inputs(s::AbstractScenario)
 
 Create data arrays associated with techs necessary to build the JuMP model.
 """
-function setup_tech_inputs(s::Scenario)
+function setup_tech_inputs(s::AbstractScenario)
 
     pvtechs = String[pv.name for pv in s.pvs]
     if length(Base.Set(pvtechs)) != length(pvtechs)
@@ -248,12 +248,12 @@ end
 
 
 """
-    setup_pbi_inputs(s::Scenario, techs::Array{String, 1})
+    setup_pbi_inputs(s::AbstractScenario, techs::Array{String, 1})
 
 Create data arrays for production based incentives. 
 All arrays can be empty if no techs have production_incentive_per_kwh > 0.
 """
-function setup_pbi_inputs(s::Scenario, techs::Array{String, 1})
+function setup_pbi_inputs(s::AbstractScenario, techs::Array{String, 1})
 
     pbi_techs = String[]
     pbi_pwf = Dict{String, Any}()
@@ -275,7 +275,7 @@ function setup_pbi_inputs(s::Scenario, techs::Array{String, 1})
 end
 
 
-function setup_pv_inputs(s::Scenario, max_sizes, min_sizes,
+function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
     existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
     pvlocations, pv_to_location, maxsize_pv_locations, 
     segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_by_exportbin)
@@ -360,7 +360,7 @@ function setup_pv_inputs(s::Scenario, max_sizes, min_sizes,
 end
 
 
-function setup_wind_inputs(s::Scenario, max_sizes, min_sizes, existing_sizes,
+function setup_wind_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes,
     cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin)
     # TODO add incentives to Wind and use cost_curve function
     max_sizes["Wind"] = s.wind.max_kw
@@ -374,7 +374,7 @@ function setup_wind_inputs(s::Scenario, max_sizes, min_sizes, existing_sizes,
 end
 
 
-function setup_gen_inputs(s::Scenario, max_sizes, min_sizes, existing_sizes,
+function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes,
     cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin)
     # TODO add incentives to Generator and use cost_curve function
     max_sizes["Generator"] = s.generator.max_kw
@@ -388,7 +388,7 @@ function setup_gen_inputs(s::Scenario, max_sizes, min_sizes, existing_sizes,
 end
 
 
-function setup_present_worth_factors(s::Scenario, techs::Array{String, 1}, pvtechs::Array{String, 1})
+function setup_present_worth_factors(s::AbstractScenario, techs::Array{String, 1}, pvtechs::Array{String, 1})
 
     lvl_factor = Dict(t => 1.0 for t in techs)  # default levelization_factor of 1.0
     for (i, tech) in enumerate(pvtechs)  # replace 1.0 with actual PV levelization_factor (only tech with degradation)
@@ -448,7 +448,7 @@ function setup_electric_utility_inputs(s::AbstractScenario)
 end
 
 
-function adjust_load_profile(s::Scenario, production_factor::DenseAxisArray)
+function adjust_load_profile(s::AbstractScenario, production_factor::DenseAxisArray)
     if s.electric_load.loads_kw_is_net
         for pv in s.pvs if pv.existing_kw > 0
             s.electric_load.loads_kw .+= pv.existing_kw * production_factor[pv.name, :].data
