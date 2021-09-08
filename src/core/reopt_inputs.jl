@@ -41,11 +41,11 @@ struct REoptInputs <: AbstractInputs
     segmented_techs::Array{String, 1}
     pbi_techs::Array{String, 1}
     techs_no_turndown::Array{String, 1}
-    min_sizes::DenseAxisArray{Float64, 1}  # (techs)
-    max_sizes::DenseAxisArray{Float64, 1}  # (techs)
-    existing_sizes::DenseAxisArray{Float64, 1}  # (techs)
+    min_sizes::Dict{String, Float64}  # (techs)
+    max_sizes::Dict{String, Float64}  # (techs)
+    existing_sizes::Dict{String, Float64}  # (techs)
     cap_cost_slope::Dict{String, Any}  # (techs)
-    om_cost_per_kw::DenseAxisArray{Float64, 1}  # (techs)
+    om_cost_per_kw::Dict{String, Float64}  # (techs)
     time_steps::UnitRange
     time_steps_with_grid::Array{Int, 1}
     time_steps_without_grid::Array{Int, 1}
@@ -197,11 +197,11 @@ function setup_tech_inputs(s::AbstractScenario)
     time_steps = 1:length(s.electric_load.loads_kw)
 
     # REoptInputs indexed on techs:
-    max_sizes = DenseAxisArray{Float64}(undef, techs)
-    min_sizes = DenseAxisArray{Float64}(undef, techs)
-    existing_sizes = DenseAxisArray{Float64}(undef, techs)
+    max_sizes = Dict(t => 0.0 for t in techs)
+    min_sizes = Dict(t => 0.0 for t in techs)
+    existing_sizes = Dict(t => 0.0 for t in techs)
     cap_cost_slope = Dict{String, Any}()
-    om_cost_per_kw = DenseAxisArray{Float64}(undef, techs)
+    om_cost_per_kw = Dict(t => 0.0 for t in techs)
     production_factor = DenseAxisArray{Float64}(undef, techs, time_steps)
 
     # export related inputs
