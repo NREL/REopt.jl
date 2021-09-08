@@ -228,12 +228,12 @@ function setup_tech_inputs(s::AbstractScenario)
 
     if "Wind" in techs
         setup_wind_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor, 
-            techs_by_exportbin)
+            techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint)
     end
 
     if "Generator" in techs
         setup_gen_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
-            techs_by_exportbin)
+            techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint)
     end
 
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
@@ -272,6 +272,41 @@ function setup_pbi_inputs(s::AbstractScenario, techs::Array{String, 1})
         end
     end
     return pbi_techs, pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh
+end
+
+
+"""
+    update_cost_curve!(tech::AbstractTech, tech_name::String, financial::Financial,
+        cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+    )
+
+Modifies cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint based on tech attributes.
+In the simplest case (zero incentives, no existing_kw) the cap_cost_slope is updated with:
+```julia
+    cap_cost_slope[tech_name] = tech.installed_cost_per_kw
+```
+However, if there are non-zero incentives or `existing_kw` then there will be more than one cost curve segment typically
+and all of the other arguments will be updated as well.
+"""
+function update_cost_curve!(tech::AbstractTech, tech_name::String, financial::Financial,
+    cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+    )
+    cost_slope, cost_curve_bp_x, cost_yint, n_segments = cost_curve(tech, financial)
+    cap_cost_slope[tech_name] = cost_slope[1]
+    if n_segments > 1
+        cap_cost_slope[tech_name] = cost_slope
+        push!(segmented_techs, tech_name)
+        seg_max_size[tech_name] = Dict{Int,Float64}()
+        seg_min_size[tech_name] = Dict{Int,Float64}()
+        n_segs_by_tech[tech_name] = n_segments
+        seg_yint[tech_name] = Dict{Int,Float64}()
+        for s in 1:n_segments
+            seg_min_size[tech_name][s] = cost_curve_bp_x[s]
+            seg_max_size[tech_name][s] = cost_curve_bp_x[s+1]
+            seg_yint[tech_name][s] = cost_yint[s]
+        end
+    end
+    nothing
 end
 
 
@@ -326,21 +361,9 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
         min_sizes[pv.name] = pv.existing_kw + pv.min_kw
         max_sizes[pv.name] = pv.existing_kw + beyond_existing_kw
 
-        cost_slope, cost_curve_bp_x, cost_yint, n_segments = cost_curve(pv, s.financial)
-        cap_cost_slope[pv.name] = cost_slope[1]
-        if n_segments > 1
-            cap_cost_slope[pv.name] = cost_slope
-            push!(segmented_techs, pv.name)
-            seg_max_size[pv.name] = Dict{Int,Float64}()
-            seg_min_size[pv.name] = Dict{Int,Float64}()
-            n_segs_by_tech[pv.name] = n_segments
-            seg_yint[pv.name] = Dict{Int,Float64}()
-            for s in 1:n_segments
-                seg_min_size[pv.name][s] = cost_curve_bp_x[s]
-                seg_max_size[pv.name][s] = cost_curve_bp_x[s+1]
-                seg_yint[pv.name][s] = cost_yint[s]
-            end
-        end
+        update_cost_curve!(pv, pv.name, s.financial,
+            cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+        )
         
         om_cost_per_kw[pv.name] = pv.om_cost_per_kw
         fillin_techs_by_exportbin(techs_by_exportbin, pv, pv.name)
@@ -361,12 +384,15 @@ end
 
 
 function setup_wind_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes,
-    cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin)
-    # TODO add incentives to Wind and use cost_curve function
+    cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin,
+    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+    )
     max_sizes["Wind"] = s.wind.max_kw
     min_sizes["Wind"] = s.wind.min_kw
     existing_sizes["Wind"] = 0.0
-    cap_cost_slope["Wind"] = s.wind.installed_cost_per_kw
+    update_cost_curve!(s.wind, "Wind", s.financial,
+        cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+    )
     om_cost_per_kw["Wind"] = s.wind.om_cost_per_kw
     production_factor["Wind", :] = prodfactor(s.wind, s.site.latitude, s.site.longitude, s.settings.time_steps_per_hour)
     fillin_techs_by_exportbin(techs_by_exportbin, s.wind, "Wind")
@@ -375,12 +401,15 @@ end
 
 
 function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes,
-    cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin)
-    # TODO add incentives to Generator and use cost_curve function
+    cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin,
+    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+    )
     max_sizes["Generator"] = s.generator.max_kw
     min_sizes["Generator"] = s.generator.existing_kw + s.generator.min_kw
     existing_sizes["Generator"] = s.generator.existing_kw
-    cap_cost_slope["Generator"] = s.generator.installed_cost_per_kw
+    update_cost_curve!(s.generator, "Generator", s.financial,
+        cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+    )
     om_cost_per_kw["Generator"] = s.generator.om_cost_per_kw
     production_factor["Generator", :] = prodfactor(s.generator)
     fillin_techs_by_exportbin(techs_by_exportbin, s.generator, "Generator")
