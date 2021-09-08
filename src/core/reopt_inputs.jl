@@ -208,7 +208,7 @@ function setup_tech_inputs(s::AbstractScenario)
     techs_by_exportbin = Dict(k => [] for k in s.electric_tariff.export_bins)
     export_bins_by_tech = Dict{String, Array{Symbol, 1}}()
 
-    #REoptInputs indexed on segmented_techs
+    # REoptInputs indexed on segmented_techs
     n_segs_by_tech = Dict{String, Int}()
     seg_min_size = Dict{String, Any}()
     seg_max_size = Dict{String, Any}()
