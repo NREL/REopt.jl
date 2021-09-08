@@ -60,7 +60,9 @@ function BAUScenario(s::Scenario)
     # set all PV.max_kw to existing_kw
     pvs = PV[]
     for pv in s.pvs
-        push!(pvs, set_max_kw_to_existing(pv))
+        if pv.existing_kw > 0
+            push!(pvs, set_max_kw_to_existing(pv))
+        end
     end
 
     # set Generator.max_kw to existing_kw
