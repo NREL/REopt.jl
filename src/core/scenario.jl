@@ -48,6 +48,7 @@ Constructor for Scenario struct, where `d` has upper-case keys:
 - ElectricTariff (required)
 - ElectricLoad (required)
 - PV (optional, can be Array)
+- Wind (optional)
 - Storage (optional)
 - ElectricUtility (optional)
 - Financial (optional)
@@ -59,6 +60,7 @@ struct Scenario
     settings::Settings
     site::Site
     pvs::Array{PV, 1}
+    wind::Wind
     storage::Storage
     electric_tariff::ElectricTariff
     electric_load::ElectricLoad

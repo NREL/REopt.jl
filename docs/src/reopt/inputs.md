@@ -61,12 +61,17 @@ BAUScenario
 REoptLite.REoptInputs
 ```
 
+## Site
+```@docs
+REoptLite.Site
+```
+
 ## ElectricLoad
 ```@docs
 REoptLite.ElectricLoad
 ```
 
-## Financial values
+## Financial
 ```@docs
 REoptLite.Financial
 ```

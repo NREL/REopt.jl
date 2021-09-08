@@ -27,6 +27,23 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+    Site
+
+Inputs related to the physical location:
+
+```julia
+function Site(;
+    latitude::Real, 
+    longitude::Real, 
+    land_acres::Union{Float64, Nothing} = nothing, 
+    roof_squarefeet::Union{Float64, Nothing} = nothing,
+    min_resil_timesteps::Int=0,
+    mg_tech_sizes_equal_grid_sizes::Bool = true,
+    node::Int = 1, 
+    )
+```
+"""
 struct Site
     "required"
     latitude
