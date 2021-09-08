@@ -34,7 +34,6 @@
 - can be defined using custom rates or URDB rate
 - very similar to the URDB struct but includes export rates and bins
 """
-# TODO function for creating BAU inputs: don't need for tariff b/c Tech repeats no longer needed?
 struct ElectricTariff
     energy_rates::AbstractArray{Float64, 2} # gets a second dim with tiers
     energy_tier_limits::AbstractArray{Float64,1}
