@@ -64,8 +64,8 @@ end
 
 Method for use with Threads when running BAU in parallel with optimal scenario.
 """
-function run_reopt(t::Tuple{JuMP.AbstractModel, AbstractScenario})
-	run_reopt(t[1], REoptInputs(t[2]))
+function run_reopt(t::Tuple{JuMP.AbstractModel, AbstractInputs})
+	run_reopt(t[1], t[2])
 end
 
 
@@ -90,10 +90,14 @@ function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractMod
     s = Scenario(d)
     if !s.settings.run_bau
         @warn "Only using first Model and not running BAU case because Settings.run_bau == false."
-	    run_reopt(ms[1], s)
+	    results = run_reopt(ms[1], s)
+        return results
     end
-    baus = BAUScenario(s)
-    inputs = ((ms[1], baus), (ms[2], s))
+
+    opt_inputs = REoptInputs(s)
+    bau_inputs = BAUInputs(opt_inputs)
+
+    inputs = ((ms[1], bau_inputs), (ms[2], opt_inputs))
     rs = Any[0, 0]
     Threads.@threads for i = 1:2
         rs[i] = run_reopt(inputs[i])
