@@ -70,6 +70,18 @@ end
 
 
 """
+    run_reopt(ms::AbstractArray{T, 1}, fp::String) where T <: JuMP.AbstractModel
+
+Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) models in `ms` and inputs defined in the
+JSON file at the filepath `fp`.
+"""
+function run_reopt(ms::AbstractArray{T, 1}, fp::String) where T <: JuMP.AbstractModel
+    d = JSON.parsefile(fp)
+    run_reopt(ms, d)
+end
+
+
+"""
     run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractModel
 
 Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) models in `ms` and inputs from `d`.
