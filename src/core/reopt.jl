@@ -98,8 +98,7 @@ function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractMod
     Threads.@threads for i = 1:2
         rs[i] = run_reopt(inputs[i])
     end
-    # combined_results = combine_results(rs)
-    return rs
+    combine_results(rs[1], rs[2])
 end
 
 

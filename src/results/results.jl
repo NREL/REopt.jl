@@ -66,3 +66,43 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 	end
 	return d
 end
+
+
+"""
+
+Combine two results dictionaries into one using BAU and optimal scenario results.
+"""
+function combine_results(bau::Dict, opt::Dict,; _n="")
+    # TODO not all API names have "_bau" at the end of the output keys
+    bau_outputs = (
+        ("Financial", "lcc"),
+        ("ElectricTariff", "year_one_energy_cost"),
+        ("ElectricTariff", "year_one_demand_cost"),
+        ("ElectricTariff", "year_one_fixed_cost"),
+        ("ElectricTariff", "year_one_min_charge_adder"),
+        ("ElectricTariff", "total_energy_cost"),
+        ("ElectricTariff", "total_demand_cost"),
+        ("ElectricTariff", "total_fixed_cost"),
+        ("ElectricTariff", "total_min_charge_adder"),
+        ("ElectricTariff", "total_export_benefit"),
+        ("ElectricTariff", "year_one_bill"),
+        ("ElectricTariff", "year_one_export_benefit"),
+        ("ElectricTariff", "year_one_to_load_series_kw"),  
+        ("ElectricTariff", "year_one_energy_supplied_kwh"),
+        ("PV", "average_yearly_energy_produced_kwh"),
+        ("PV", "year_one_energy_produced_kwh"),
+        ("Generator", "fuel_used_gal"),
+    )
+
+    for t in bau_outputs
+        if t[1] in keys(opt) && t[1] in keys(bau)
+            if t[2] in keys(bau[t[1]])
+                opt[t[1]][t[2] * "_bau"] = bau[t[1]][t[2]]
+            end
+        end
+    end
+    opt["Financial"]["net_om_costs_bau"] = bau["Financial"]["total_om_costs_after_tax"]
+    opt["Financial"]["npv"] = opt["Financial"]["lcc_bau"] - opt["Financial"]["lcc"]
+
+    return opt
+end
