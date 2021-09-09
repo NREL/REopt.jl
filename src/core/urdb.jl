@@ -513,9 +513,32 @@ end
 return fixed_monthly, annual_min, min_monthly :: Float64
 """
 function parse_urdb_fixed_charges(d::Dict)
-    fixed_monthly = Float64(get(d, "fixedmonthlycharge", 0.0))
-    annual_min = Float64(get(d, "annualmincharge", 0.0))
-    min_monthly = Float64(get(d, "minmonthlycharge", 0.0))
+    fixed_monthly = 0.0
+    annual_min = 0.0
+    min_monthly = 0.0
+
+    # first try $/month, then check if $/day exists, as of 1/28/2020 there were only $/day and $month entries in the URDB
+    if get(d, "fixedchargeunits", "") == "\$/month" 
+        fixed_monthly = Float64(get(d, "fixedchargefirstmeter", 0.0))
+    end
+    if get(d, "fixedchargeunits", "") == "\$/day"
+        fixed_monthly = Float64(get(d, "fixedchargefirstmeter", 0.0) * 30.4375)
+        # scalar intended to approximate annual charges over 12 month period, derived from 365.25/12
+    end
+
+    if get(d, "minchargeunits", "") == "\$/month"
+        min_monthly = Float64(get(d, "mincharge", 0.0))
+        # first try $/month, then check if $/day or $/year exists, as of 1/28/2020 these were the only unit types in the urdb
+    end
+    if get(d, "minchargeunits", "") == "\$/day"
+        min_monthly = Float64(get(d, "mincharge", 0.0) * 30.4375 )
+        # scalar intended to approximate annual charges over 12 month period, derived from 365.25/12
+    end
+
+    if get(d, "minchargeunits", "") == "\$/year"
+        annual_min = Float64(get(d, "mincharge", 0.0))
+    end
+    
     return fixed_monthly, annual_min, min_monthly
 end
 
