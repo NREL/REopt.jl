@@ -93,6 +93,11 @@ function combine_results(bau::Dict, opt::Dict)
         ("PV", "average_yearly_energy_produced_kwh"),
         ("PV", "year_one_energy_produced_kwh"),
         ("Generator", "fuel_used_gal"),
+        ("Generator", "total_fixed_om_cost"),
+        ("Generator", "total_variable_om_cost"),
+        ("Generator", "total_fuel_cost"),
+        ("Generator", "year_one_fuel_cost"),
+        ("Generator", "year_one_variable_om_cost"),
     )
 
     for t in bau_outputs
