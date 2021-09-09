@@ -83,8 +83,8 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 
     for b in p.s.storage.types
         if p.s.storage.max_kw[b] > 0
-            initial_capex += p.s.storage.installed_cost_per_kw[b]  * value.(m[Symbol("dvStoragePower"*_n)])[b] + 
-                             p.s.storage.installed_cost_per_kwh[b] * value.(m[Symbol("dvStorageEnergy"*_n)])[b]
+            initial_capex += p.s.storage.raw_inputs[b].installed_cost_per_kw * value.(m[Symbol("dvStoragePower"*_n)])[b] + 
+                p.s.storage.raw_inputs[b].installed_cost_per_kwh * value.(m[Symbol("dvStorageEnergy"*_n)])[b]
         end
     end
 
