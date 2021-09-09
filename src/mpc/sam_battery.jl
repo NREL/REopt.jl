@@ -27,9 +27,6 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-#module SAM_batt_stateful
-#export SAM_Battery, run_sam_battery, get_sam_battery_data
-
 global hdl
 
 using JSON
@@ -45,7 +42,7 @@ struct SAM_Battery
         global hdl = nothing
 
         data = JSON.parsefile(file_path)
-        print("Read in JSON file")
+        print("Read in JSON file\n")
         try        
             if Sys.isapple() 
                 libfile = "libssc.dylib"
@@ -63,19 +60,21 @@ struct SAM_Battery
             batt_data = @ccall hdl.ssc_data_create()::Ptr{Cvoid}  # data pointer
             @ccall hdl.ssc_module_exec_set_print(0::Cint)::Cvoid
 
-            print("Populating data")
+            print("Populating data\n")
             for (key, value) in data
                 try
                     if (typeof(value)<:Number)
                         @ccall hdl.ssc_data_set_number(batt_data::Ptr{Cvoid}, key::Cstring, value::Cdouble)::Cvoid
                     elseif (isa(value, Array))
-                        if (ndims(value) > 1)
+                        if (ndims(value) == 1)
                             @ccall hdl.ssc_data_set_array(batt_data::Ptr{Cvoid}, key::Cstring, 
                                 value::Ptr{Cdouble}, length(value)::Cint)::Cvoid
-                        else
+                        elseif (ndims(value) > 1)
                             nrows, ncols = size(value)
                             @ccall hdl.ssc_data_set_matrix(batt_data::Ptr{Cvoid}, key::Cstring, value::Ptr{Cdouble}, 
                                 Cint(nrows)::Cint, Cint(ncols)::Cint)::Cvoid
+                        else
+                            print(key, " had dimension 0")
                         end
                     else
                         @error "Unexpected type in battery params array"
@@ -97,17 +96,18 @@ struct SAM_Battery
     end
 end
 
-function run_sam_battery(batt::SAM_Battery, power::Vector{AbstractFloat})
+function run_sam_battery(batt::SAM_Battery, power::Vector{Float64})
     for p in power
         try
             @ccall hdl.ssc_data_set_number(batt.batt_data::Ptr{Cvoid}, "input_power"::Cstring, p::Cdouble)::Cvoid
+            print("Set input power")
             
             if !Bool(@ccall hdl.ssc_module_exec(batt.batt_data::Ptr{Cvoid}, batt.batt_model::Ptr{Cvoid})::Cint)
                 log_type = 0
                 log_type_ref = Ref(log_type)
                 log_time = 0
                 log_time_ref = Ref(log_time)
-                msg_ptr = @ccall hdl.ssc_module_log(wind_module::Ptr{Cvoid}, 0::Cint, log_type_ref::Ptr{Cvoid}, 
+                msg_ptr = @ccall hdl.ssc_module_log(batt.batt_model::Ptr{Cvoid}, 0::Cint, log_type_ref::Ptr{Cvoid}, 
                                                 log_time_ref::Ptr{Cvoid})::Cstring
                 msg = "no message from ssc_module_log."
                 try
@@ -133,9 +133,7 @@ function get_sam_battery_number(batt::SAM_Battery, key::String)
 end
 
 function free_sam_battery(batt::SAM_Battery)
-    @ccall hdl.ssc_module_free(batt.batt_model::Ptr{Cvoid})::Cvoid   
+    @ccall hdl.ssc_module_free(batt.batt_model::Ptr{Cvoid})::Cvoid  
     @ccall hdl.ssc_data_free(batt.batt_data::Ptr{Cvoid})::Cvoid
     return nothing
 end
-
-#end
