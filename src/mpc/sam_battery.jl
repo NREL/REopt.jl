@@ -27,8 +27,8 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-module SAM_batt_stateful
-export SAM_Battery
+#module SAM_batt_stateful
+#export SAM_Battery, run_sam_battery, get_sam_battery_data
 
 global hdl
 
@@ -97,4 +97,45 @@ struct SAM_Battery
     end
 end
 
+function run_sam_battery(batt::SAM_Battery, power::Vector{AbstractFloat})
+    for p in power
+        try
+            @ccall hdl.ssc_data_set_number(batt.batt_data::Ptr{Cvoid}, "input_power"::Cstring, p::Cdouble)::Cvoid
+            
+            if !Bool(@ccall hdl.ssc_module_exec(batt.batt_data::Ptr{Cvoid}, batt.batt_model::Ptr{Cvoid})::Cint)
+                log_type = 0
+                log_type_ref = Ref(log_type)
+                log_time = 0
+                log_time_ref = Ref(log_time)
+                msg_ptr = @ccall hdl.ssc_module_log(wind_module::Ptr{Cvoid}, 0::Cint, log_type_ref::Ptr{Cvoid}, 
+                                                log_time_ref::Ptr{Cvoid})::Cstring
+                msg = "no message from ssc_module_log."
+                try
+                    msg = unsafe_string(msg_ptr)
+                finally
+                    @error("SAM Wind simulation error: $msg")
+                end
+            end
+        catch e
+            @error "Problem running SAM stateful battery"
+            showerror(stdout, e)
+        end
+    end
+    return nothing # Should this be success/failure?
 end
+
+
+function get_sam_battery_number(batt::SAM_Battery, key::String)
+    val = convert(Cdouble, 0.0)
+    ref = Ref(val)
+    @ccall hdl.ssc_data_get_number(batt.batt_data::Ptr{Cvoid}, key::Cstring, ref::Ptr{Cdouble})::Cuchar #Returns bool
+    return Float64(ref[])
+end
+
+function free_sam_battery(batt::SAM_Battery)
+    @ccall hdl.ssc_module_free(batt.batt_model::Ptr{Cvoid})::Cvoid   
+    @ccall hdl.ssc_data_free(batt.batt_data::Ptr{Cvoid})::Cvoid
+    return nothing
+end
+
+#end
