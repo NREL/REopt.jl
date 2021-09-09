@@ -94,10 +94,20 @@ function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractMod
         return results
     end
 
-    opt_inputs = REoptInputs(s)
-    bau_inputs = BAUInputs(opt_inputs)
+    run_reopt(ms, REoptInputs(s))
+end
 
-    inputs = ((ms[1], bau_inputs), (ms[2], opt_inputs))
+
+"""
+    run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.AbstractModel
+
+Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) models in `ms` and inputs from `p`.
+"""
+function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.AbstractModel
+
+    bau_inputs = BAUInputs(p)
+
+    inputs = ((ms[1], bau_inputs), (ms[2], p))
     rs = Any[0, 0]
     Threads.@threads for i = 1:2
         rs[i] = run_reopt(inputs[i])
