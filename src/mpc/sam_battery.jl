@@ -66,26 +66,36 @@ struct SAM_Battery
                     if (typeof(value)<:Number)
                         @ccall hdl.ssc_data_set_number(batt_data::Ptr{Cvoid}, key::Cstring, value::Cdouble)::Cvoid
                     elseif (isa(value, Array))
-                        if (ndims(value) == 1)
-                            @ccall hdl.ssc_data_set_array(batt_data::Ptr{Cvoid}, key::Cstring, 
-                                value::Ptr{Cdouble}, length(value)::Cint)::Cvoid
+                        if (ndims(value) == 1 && length(value) > 0)
+                            if (isa(value[1], Number))
+                                @ccall hdl.ssc_data_set_array(batt_data::Ptr{Cvoid}, key::Cstring, 
+                                    value::Ptr{Cdouble}, length(value)::Cint)::Cvoid
+                            elseif(isa(value[1], Array))
+                                nrows = length(value)
+                                ncols = length(value[1])
+                                @ccall hdl.ssc_data_set_matrix(batt_data::Ptr{Cvoid}, key::Cstring, value::Ptr{Cdouble}, 
+                                    Cint(nrows)::Cint, Cint(ncols)::Cint)::Cvoid
+                            end
                         elseif (ndims(value) > 1)
                             nrows, ncols = size(value)
                             @ccall hdl.ssc_data_set_matrix(batt_data::Ptr{Cvoid}, key::Cstring, value::Ptr{Cdouble}, 
                                 Cint(nrows)::Cint, Cint(ncols)::Cint)::Cvoid
                         else
-                            print(key, " had dimension 0")
+                            print(key, " had dimension 0\n")
                         end
                     else
                         @error "Unexpected type in battery params array"
                         showerror(stdout, key)
                     end
                 catch e
+                    print("Error with ", key, "\n")
                     @error "Problem updating battery data in SAM C library!"
                     showerror(stdout, e)
                 end
     
             end
+
+            @ccall hdl.ssc_stateful_module_setup(batt_model::Ptr{Cvoid}, batt_data::Ptr{Cvoid})::Cint
 
         catch e
             @error "Problem calling SAM C library!"
@@ -102,7 +112,7 @@ function run_sam_battery(batt::SAM_Battery, power::Vector{Float64})
             @ccall hdl.ssc_data_set_number(batt.batt_data::Ptr{Cvoid}, "input_power"::Cstring, p::Cdouble)::Cvoid
             print("Set input power")
             
-            if !Bool(@ccall hdl.ssc_module_exec(batt.batt_data::Ptr{Cvoid}, batt.batt_model::Ptr{Cvoid})::Cint)
+            if !Bool(@ccall hdl.ssc_module_exec(batt.batt_model::Ptr{Cvoid}, batt.batt_data::Ptr{Cvoid})::Cint)
                 log_type = 0
                 log_type_ref = Ref(log_type)
                 log_time = 0
@@ -113,7 +123,7 @@ function run_sam_battery(batt::SAM_Battery, power::Vector{Float64})
                 try
                     msg = unsafe_string(msg_ptr)
                 finally
-                    @error("SAM Wind simulation error: $msg")
+                    @error("SAM Battery simulation error: $msg")
                 end
             end
         catch e
