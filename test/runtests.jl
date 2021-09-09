@@ -89,7 +89,7 @@ else  # run Cbc tests
     @testset "Outage with Generator" begin
         model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
         results = run_reopt(model, "./scenarios/generator.json")
-        @test results["Generator"]["size_kw"] ≈ 8.12 atol=0.01
+        @test results["Generator"]["size_kw"] ≈ 8.13 atol=0.01
         @test (sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 1:9) + 
             sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 13:8760)) == 0
         p = REoptInputs("./scenarios/generator.json")
