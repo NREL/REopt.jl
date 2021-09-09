@@ -10,7 +10,7 @@
         "annual_kwh": 10000000.0
     },
     "PV": {
-        "production_incentive_years": 1.0, 
+        "production_incentive_years": 1, 
         "macrs_bonus_pct": 0.4, 
         "production_incentive_max_benefit": 1000000000.0, 
         "radius": 0, 
