@@ -110,6 +110,7 @@ include("results/pv.jl")
 include("results/storage.jl")
 include("results/outages.jl")
 include("results/wind.jl")
+include("results/electric_load.jl")
 
 include("core/reopt.jl")
 include("core/reopt_multinode.jl")

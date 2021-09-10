@@ -39,6 +39,7 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     add_electric_tariff_results(m, p, d; _n)
     add_electric_utility_results(m, p, d; _n)
     add_financial_results(m, p, d; _n)
+    add_electric_load_results(m, p, d; _n)
 
 	if !isempty(p.pvtechs)
         add_pv_results(m, p, d; _n)
