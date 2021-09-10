@@ -104,15 +104,15 @@ end
 Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) models in `ms` and inputs from `p`.
 """
 function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.AbstractModel
-
     bau_inputs = BAUInputs(p)
-
     inputs = ((ms[1], bau_inputs), (ms[2], p))
     rs = Any[0, 0]
     Threads.@threads for i = 1:2
         rs[i] = run_reopt(inputs[i])
     end
-    combine_results(rs[1], rs[2])
+    results_dict = combine_results(rs[1], rs[2])
+    results_dict["Financial"] = merge(results_dict["Financial"], proforma_results(p, results_dict))
+    return results_dict
 end
 
 
