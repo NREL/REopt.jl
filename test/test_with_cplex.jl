@@ -59,7 +59,7 @@ end
     results = run_reopt(model, "./scenarios/pv_storage.json")
 
     @test results["PV"]["size_kw"] ≈ 217 atol=1
-    @test results["Financial"]["lcc"] ≈ 1.23887e7 rtol=1e-5
+    @test results["Financial"]["lcc"] ≈ 1.240037e7 rtol=1e-5
     @test results["Storage"]["size_kw"] ≈ 56 atol=1
     @test results["Storage"]["size_kwh"] ≈ 79 atol=1
 end
@@ -74,7 +74,7 @@ end
     @test value(m[:binMGTechUsed]["Generator"]) == 1
     @test value(m[:binMGTechUsed]["PV"]) == 0
     @test value(m[:binMGStorageUsed]) == 1
-    @test results["Financial"]["lcc"] ≈ 7.3681609e7 atol=5e4
+    @test results["Financial"]["lcc"] ≈ 7.3879557e7 atol=5e4
     
     #=
     Scenario with $0/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_timesteps = 168
