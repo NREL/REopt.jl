@@ -234,10 +234,10 @@ function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 end
 
 
-function add_objective!(m::JuMP.AbstractModel, ps::Array{REoptInputs}; obj::Int=2)
-	if obj == 1
+function add_objective!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
+	if !(any(p.s.settings.add_soc_incentive for p in ps))
 		@objective(m, Min, sum(m[Symbol(string("Costs_", p.s.site.node))] for p in ps))
-	elseif obj == 2  # Keep SOC high
+	else # Keep SOC high
 		@objective(m, Min, sum(m[Symbol(string("Costs_", p.s.site.node))] for p in ps)
         - sum(sum(m[Symbol(string("dvStoredEnergy_", p.s.site.node))][:elec, ts] 
             for ts in p.time_steps) for p in ps) / (8760. / ps[1].hours_per_timestep))
@@ -246,11 +246,11 @@ function add_objective!(m::JuMP.AbstractModel, ps::Array{REoptInputs}; obj::Int=
 end
 
 
-function run_reopt(m::JuMP.AbstractModel, ps::Array{REoptInputs}; obj::Int=2)
+function run_reopt(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 
 	build_reopt!(m, ps)
 
-	add_objective!(m, ps; obj)
+	add_objective!(m, ps)
 
 	@info "Model built. Optimizing..."
 	tstart = time()

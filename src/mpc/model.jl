@@ -54,18 +54,18 @@ end
 
 
 """
-    run_mpc(m::JuMP.AbstractModel, p::MPCInputs; obj::Int=2)
+    run_mpc(m::JuMP.AbstractModel, p::MPCInputs)
 
 Solve the model predictive control problem using the `MPCInputs`.
 
 Returns a Dict of results with keys matching those in the `MPCScenario`.
 """
-function run_mpc(m::JuMP.AbstractModel, p::MPCInputs; obj::Int=2)
+function run_mpc(m::JuMP.AbstractModel, p::MPCInputs)
     build_mpc!(m, p)
 
-    if obj == 1
+    if !p.s.settings.add_soc_incentive
 		@objective(m, Min, m[:Costs])
-	elseif obj == 2  # Keep SOC high
+	else # Keep SOC high
 		@objective(m, Min, m[:Costs] - sum(m[:dvStoredEnergy][:elec, ts] for ts in p.time_steps) /
 									   (8760. / p.hours_per_timestep)
 		)
