@@ -309,13 +309,13 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 end
 
 
-function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; obj::Int=2)
+function run_reopt(m::JuMP.AbstractModel, p::REoptInputs)
 
 	build_reopt!(m, p)
 
-	if obj == 1
+	if !p.s.settings.add_soc_incentive
 		@objective(m, Min, m[:Costs])
-	elseif obj == 2  # Keep SOC high
+	else  # Keep SOC high
 		@objective(m, Min, m[:Costs] - sum(m[:dvStoredEnergy][:elec, ts] for ts in p.time_steps) /
 									   (8760. / p.hours_per_timestep)
 		)
