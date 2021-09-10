@@ -60,10 +60,13 @@ end
     results = run_reopt([m1,m2], "./scenarios/pv_storage.json")
 
     @test results["PV"]["size_kw"] ≈ 216.6667 atol=0.01
-    @test results["Financial"]["lcc"] ≈ 1.23887e7 rtol=1e-5
-    @test results["Financial"]["lcc_bau"] ≈ 1.27547e7 rtol=1e-5
+    @test results["Financial"]["lcc"] ≈ 1.240037e7 rtol=1e-5
+    @test results["Financial"]["lcc_bau"] ≈ 12766397 rtol=1e-5
     @test results["Storage"]["size_kw"] ≈ 55.9 atol=0.1
     @test results["Storage"]["size_kwh"] ≈ 78.9 atol=0.1
+    proforma_npv = REoptLite.npv(results["Financial"]["offtaker_annual_free_cashflows"] - 
+        results["Financial"]["offtaker_annual_free_cashflows_bau"], 0.081)
+    @test results["Financial"]["npv"] ≈ proforma_npv atol=1
 end
 
 @testset "Outage with Generator, outate simulator" begin
@@ -86,7 +89,7 @@ end
     @test value(m[:binMGTechUsed]["Generator"]) == 1
     @test value(m[:binMGTechUsed]["PV"]) == 0
     @test value(m[:binMGStorageUsed]) == 1
-    @test results["Financial"]["lcc"] ≈ 7.3681609e7 atol=5e4
+    @test results["Financial"]["lcc"] ≈ 7.3879557e7 atol=5e4
     
     #=
     Scenario with $0/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_timesteps = 168
@@ -110,7 +113,7 @@ end
         REoptInputs("./scenarios/monthly_rate.json"),
     ];
     results = run_reopt(m, ps)
-    @test results[3]["Financial"]["lcc"] + results[10]["Financial"]["lcc"] ≈ 1.23887e7 + 437169.0 rtol=1e-5
+    @test results[3]["Financial"]["lcc"] + results[10]["Financial"]["lcc"] ≈ 1.240037e7 + 437169.0 rtol=1e-5
 end
 
 @testset "MPC" begin

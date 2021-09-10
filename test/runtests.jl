@@ -78,12 +78,12 @@ else  # run Cbc tests
 
     @testset "Solar and Storage" begin
         model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
-        results = run_reopt(model, "./scenarios/pv_storage.json")
+        r = run_reopt(model, "./scenarios/pv_storage.json")
 
-        @test results["PV"]["size_kw"] ≈ 216.6667 atol=0.01
-        @test results["Financial"]["lcc"] ≈ 1.23887e7 rtol=1e-5
-        @test results["Storage"]["size_kw"] ≈ 55.9 atol=0.1
-        @test results["Storage"]["size_kwh"] ≈ 78.9 atol=0.1
+        @test r["PV"]["size_kw"] ≈ 216.6667 atol=0.01
+        @test r["Financial"]["lcc"] ≈ 12404202 rtol=1e-5
+        @test r["Storage"]["size_kw"] ≈ 55.4756 atol=0.1
+        @test r["Storage"]["size_kwh"] ≈ 79.6065 atol=0.1
     end
 
     @testset "Outage with Generator" begin
