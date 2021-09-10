@@ -74,7 +74,6 @@ end
 Combine two results dictionaries into one using BAU and optimal scenario results.
 """
 function combine_results(bau::Dict, opt::Dict)
-    # TODO not all API names have "_bau" at the end of the output keys
     bau_outputs = (
         ("Financial", "lcc"),
         ("ElectricTariff", "year_one_energy_cost"),

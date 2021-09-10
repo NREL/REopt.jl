@@ -56,6 +56,8 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     future_replacement_cost, present_replacement_cost = replacement_costs_future_and_present(m, p; _n=_n)
     r["replacement_costs"] = future_replacement_cost
     r["om_and_replacement_present_cost_after_tax"] = present_replacement_cost + r["total_om_costs_after_tax"]
+    r["developer_om_and_replacement_present_cost_after_tax"] = r["om_and_replacement_present_cost_after_tax"] / 
+        p.third_party_factor
 
     d["Financial"] = Dict(k => round(v, digits=2) for (k,v) in r)
     nothing
