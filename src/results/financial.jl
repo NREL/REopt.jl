@@ -157,3 +157,24 @@ function replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInp
     end
     return future_cost, present_cost
 end
+
+
+"""
+    add_proforma_results(p::REoptInputs, d::Dict)
+
+Only works after `combine_results` because it relies on BAU outputs.
+"""
+function add_proforma_results(p::REoptInputs, d::Dict)
+    f = d["Financial"]
+
+    f["simple_payback_years"],
+    f["irr_pct"],
+    f["net_present_cost"],
+    f["annualized_payment_to_third_party"],
+    f["offtaker_annual_free_cashflow_series"],
+    f["offtaker_annual_free_cashflow_series_bau"],
+    f["offtaker_discounted_annual_free_cashflow_series"],
+    f["offtaker_discounted_annual_free_cashflow_series_bau"],
+    f["developer_annual_free_cashflow_series"] = calculate_proforma_metrics(p, d)
+    nothing
+end
