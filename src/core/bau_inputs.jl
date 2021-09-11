@@ -68,27 +68,23 @@ function BAUInputs(p::REoptInputs)
     seg_yint = Dict{String, Any}()
 
     # PV specific arrays
-    pv_to_location = DenseAxisArray{Int}(undef, pvtechs, p.pvlocations)
+    pv_to_location = Dict(t => Dict{Symbol, Int}() for t in pvtechs)
 
     levelization_factor = Dict(t => 1.0 for t in techs)
 
     for pvname in pvtechs  # copy the optimal scenario inputs for existing PV systems
         production_factor[pvname, :] = p.production_factor[pvname, :]
-        pv_to_location[pvname, :, :] = p.pv_to_location[pvname, :, :]
+        pv_to_location[pvname] = p.pv_to_location[pvname]
         existing_sizes[pvname] = p.existing_sizes[pvname]
         min_sizes[pvname] = p.existing_sizes[pvname]
         max_sizes[pvname] = p.existing_sizes[pvname]
-        n_segs_by_tech[pvname] = p.n_segs_by_tech[pvname]
-        seg_min_size[pvname] = p.seg_min_size[pvname]
-        seg_max_size[pvname] = p.seg_max_size[pvname]
-        seg_yint[pvname] = p.seg_yint[pvname]
         om_cost_per_kw[pvname] = p.om_cost_per_kw[pvname]
         levelization_factor[pvname] = p.levelization_factor[pvname]
-        cap_cost_slope[pvname] = p.cap_cost_slope[pvname]
+        cap_cost_slope[pvname] = 0.0
         if pvname in p.pbi_techs
             push!(pbi_techs, pvname)
         end
-        pv = findfirst(pv -> pv.name == pvname, p.s.pvs)
+        pv = p.s.pvs[findfirst(pv -> pv.name == pvname, p.s.pvs)]
         fillin_techs_by_exportbin(techs_by_exportbin, pv, pv.name)
     end
 
@@ -96,7 +92,7 @@ function BAUInputs(p::REoptInputs)
         max_sizes["Generator"] = p.s.generator.existing_kw
         min_sizes["Generator"] = p.s.generator.existing_kw
         existing_sizes["Generator"] = p.s.generator.existing_kw
-        cap_cost_slope["Generator"] = p.s.generator.installed_cost_per_kw
+        cap_cost_slope["Generator"] = 0.0
         om_cost_per_kw["Generator"] = p.s.generator.om_cost_per_kw
         production_factor["Generator", :] = p.production_factor["Generator", :]
         fillin_techs_by_exportbin(techs_by_exportbin, p.s.generator, "Generator")
@@ -108,6 +104,19 @@ function BAUInputs(p::REoptInputs)
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
     for t in elec_techs
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
+    end
+
+    t0, tf = p.s.electric_utility.outage_start_timestep, p.s.electric_utility.outage_end_timestep
+    if tf > t0 && t0 > 0
+        original_crit_lds = copy(p.s.electric_load.critical_loads_kw)
+        update_bau_outage_outputs(bau_scenario, original_crit_lds, t0, tf, production_factor)
+
+        if bau_scenario.outage_outputs.bau_critical_load_met_time_steps > 0  
+        # include critical load in bau load for the time that it can be met
+            bau_scenario.electric_load.critical_loads_kw[
+                t0 : t0 + bau_scenario.outage_outputs.bau_critical_load_met_time_steps
+                ] = original_crit_lds[t0 : t0 + bau_scenario.outage_outputs.bau_critical_load_met_time_steps]
+        end
     end
 
     REoptInputs(
@@ -150,4 +159,81 @@ function BAUInputs(p::REoptInputs)
         p.pbi_max_kw, 
         p.pbi_benefit_per_kwh
     )
+end
+
+
+"""
+    update_bau_outage_outputs(s::BAUScenario, crit_load, t0, tf, production_factors)
+
+Update the `bau_critical_load_met` and `bau_critical_load_met_time_steps`  values.
+"""
+function update_bau_outage_outputs(s::BAUScenario, crit_load, t0, tf, production_factors)
+
+    pv_kw_series = Float64[]  # actual output (not normalized)
+
+    if any(pv.existing_kw > 0 for pv in s.pvs)  # fill in pv_kw_series
+        for pv in s.pvs
+            if pv.existing_kw > 0
+                if length(pv_kw_series) == 0  # first non-zero existing_kw
+                    pv_kw_series = pv.existing_kw * production_factors[pv.name, t0:tf]
+                else
+                    pv_kw_series += pv.existing_kw * production_factors[pv.name, t0:tf]
+                end
+            end
+        end
+    end
+
+    s.outage_outputs.bau_critical_load_met, s.outage_outputs.bau_critical_load_met_time_steps = 
+        bau_outage_check(crit_load[t0:tf], pv_kw_series, s.generator, s.settings.time_steps_per_hour)
+    nothing
+end
+
+
+"""
+    bau_outage_check(critical_loads_kw::AbstractArray, pv_kw_series::AbstractArray, gen::Generator, 
+        time_steps_per_hour::Int)
+
+Determine if existing generator and/or PV can meet critical load and for how long.
+    
+return: (Bool, Int) boolean for if the entire critical load is met and Int for number of time steps the existing 
+    generator and PV can meet the critical load
+"""
+function bau_outage_check(critical_loads_kw::AbstractArray, pv_kw_series::AbstractArray, gen::Generator, 
+    time_steps_per_hour::Int)
+    
+    fuel_gal = copy(gen.fuel_avail_gal)
+    if gen.existing_kw == 0 && length(pv_kw_series) == 0
+        return false, 0
+    end
+
+    if gen.existing_kw > 0
+        if length(pv_kw_series) == 0
+            pv_kw_series = zeros(length(critical_loads_kw))
+        end
+
+        for (i, (load, pv)) in enumerate(zip(critical_loads_kw, pv_kw_series))
+            unmet = load - pv
+            if unmet > 0
+                fuel_kwh = (fuel_gal - gen.fuel_intercept_gal_per_hr) / gen.fuel_slope_gal_per_kwh
+                gen_avail = minimum([fuel_kwh, gen.existing_kw * (1.0 / time_steps_per_hour)])
+                gen_output = maximum([minimum([unmet, gen_avail]), gen.min_turn_down_pct * gen.existing_kw])
+                fuel_needed = gen.fuel_intercept_gal_per_hr + gen.fuel_slope_gal_per_kwh * gen_output
+                fuel_gal -= fuel_needed
+
+                if gen_output < unmet
+                    return false, i-1
+                end
+            end
+        end
+
+    else  # gen.existing_kw = 0 and pv.existing_kw > 0
+        for (i, (load, pv)) in enumerate(zip(critical_loads_kw, pv_kw_series))
+            unmet = load - pv
+            if unmet > 0
+                return false, i-1
+            end
+        end
+    end
+
+    return true, length(critical_loads_kw)
 end

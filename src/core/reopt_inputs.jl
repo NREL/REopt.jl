@@ -31,7 +31,6 @@
 
 use Scenario struct to create reopt.jl model inputs
 """
-
 struct REoptInputs <: AbstractInputs
     s::AbstractScenario
     techs::Array{String, 1}
@@ -59,7 +58,7 @@ struct REoptInputs <: AbstractInputs
     third_party_factor::Float64
     pvlocations::Array{Symbol, 1}
     maxsize_pv_locations::DenseAxisArray{Float64, 1}  # indexed on pvlocations
-    pv_to_location::DenseAxisArray{Int, 2}  # (pvtechs, pvlocations)
+    pv_to_location::Dict{String, Dict{Symbol, Int64}}  # (pvtechs, pvlocations)
     ratchets::UnitRange
     techs_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL, :CUR]
     export_bins_by_tech::Dict
@@ -216,7 +215,7 @@ function setup_tech_inputs(s::AbstractScenario)
 
     # PV specific arrays
     pvlocations = [:roof, :ground, :both]
-    pv_to_location = DenseAxisArray{Int}(undef, pvtechs, pvlocations)
+    pv_to_location = Dict(t => Dict(loc => 0) for (t, loc) in zip(pvtechs, pvlocations))
     maxsize_pv_locations = DenseAxisArray([1.0e5, 1.0e5, 1.0e5], pvlocations)
     # default to large max size per location. Max size by roof, ground, both
 
@@ -323,9 +322,9 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
         production_factor[pv.name, :] = prodfactor(pv, s.site.latitude, s.site.longitude)
         for location in pvlocations
             if pv.location == location
-                pv_to_location[pv.name, location] = 1
+                pv_to_location[pv.name][location] = 1
             else
-                pv_to_location[pv.name, location] = 0
+                pv_to_location[pv.name][location] = 0
             end
         end
 
@@ -454,6 +453,15 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Array{String, 1
 end
 
 
+"""
+    setup_electric_utility_inputs(s::AbstractScenario)
+
+Define the `time_steps_with_grid` and `time_steps_without_grid` (detministic outage).
+
+NOTE: v1 of the API spliced the critical_loads_kw into the loads_kw during outages but this splicing is no longer needed
+now that the constraints are properly applied over `time_steps_with_grid` and `time_steps_without_grid` using loads_kw
+and critical_loads_kw respectively.
+"""
 function setup_electric_utility_inputs(s::AbstractScenario)
     if s.electric_utility.outage_end_timestep > 0 &&
             s.electric_utility.outage_end_timestep > s.electric_utility.outage_start_timestep
@@ -477,6 +485,11 @@ function setup_electric_utility_inputs(s::AbstractScenario)
 end
 
 
+"""
+    adjust_load_profile(s::AbstractScenario, production_factor::DenseAxisArray)
+
+Adjust the (critical_)loads_kw based off of (critical_)loads_kw_is_net
+"""
 function adjust_load_profile(s::AbstractScenario, production_factor::DenseAxisArray)
     if s.electric_load.loads_kw_is_net
         for pv in s.pvs if pv.existing_kw > 0
