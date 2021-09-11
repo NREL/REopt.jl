@@ -140,11 +140,17 @@ function proforma_results(p::REoptInputs, d::Dict)
         # It is assumed that the offtaker will pay for this at a rate that is not marked up
         # to cover developer profits
         fixed_and_var_om = d["Generator"]["year_one_fixed_om_cost"] + d["Generator"]["year_one_variable_om_cost"]
-        fixed_and_var_om_bau = d["Generator"]["year_one_fixed_om_cost_bau"] + d["Generator"]["year_one_variable_om_cost_bau"]
+        fixed_and_var_om_bau = 0.0
+        year_one_fuel_cost_bau = 0.0
+        if p.s.generator.existing_kw > 0
+            fixed_and_var_om_bau = d["Generator"]["year_one_fixed_om_cost_bau"] + 
+                                   d["Generator"]["year_one_variable_om_cost_bau"]
+            year_one_fuel_cost_bau = d["Generator"]["year_one_fuel_cost_bau"]
+        end
         if !third_party
             annual_om = -1 * (fixed_and_var_om + d["Generator"]["year_one_fuel_cost"])
 
-            annual_om_bau = -1 * (fixed_and_var_om_bau + (d["Generator"]["year_one_fuel_cost_bau"]))
+            annual_om_bau = -1 * (fixed_and_var_om_bau + year_one_fuel_cost_bau)
         else
             annual_om = -1 * fixed_and_var_om
 

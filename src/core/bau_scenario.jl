@@ -27,6 +27,19 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+    OutageOutputs
+
+Struct for storing `bau_critical_load_met` and `bau_critical_load_met_time_steps`.
+This struct is attached to the BAUScenario s.t. the outputs can be passed back to the user.
+It is mutable s.t. that it can be adjusted in BAUInputs.
+"""
+Base.@kwdef mutable struct OutageOutputs
+    bau_critical_load_met::Bool = true
+    bau_critical_load_met_time_steps::Int = 0
+end
+
+
 struct BAUScenario <: AbstractScenario
     settings::Settings
     site::Site
@@ -38,6 +51,7 @@ struct BAUScenario <: AbstractScenario
     electric_utility::ElectricUtility
     financial::Financial
     generator::Generator
+    outage_outputs::OutageOutputs
 end
 
 
@@ -74,6 +88,23 @@ function BAUScenario(s::Scenario)
 
     # no existing storage
     storage = Storage(Dict(:elec => Dict(:max_kw => 0)), s.financial)
+    
+    t0, tf = s.electric_utility.outage_start_timestep, s.electric_utility.outage_end_timestep
+    #=
+    When a deterministic grid outage is modeled we must adjust the BAU critical load profile to keep the problem 
+    feasible and to get the same ElectricTariff costs in both the optimal and BAU scenarios
+    (because the BAU scenario may not have enough existing capacity to meet the critical load and because during an
+    outage no grid costs are incurred).
+    In the simplest case we set the BAU critical_loads_kw to zero during the outage. 
+    However, if the BAU scenario has existing Generator and/or PV we calculate how many time steps the critical load can 
+    be met and make the critical load non-zero for those time steps in order to show the most realistic dispatch results.
+    This calculation requires the PV prod_factor_series_kw and so it is done in BAUInputs.
+    =#
+    elec_load = deepcopy(s.electric_load)
+    if tf > t0 && t0 > 0
+        elec_load.critical_loads_kw[t0:tf] = zeros(tf-t0+1)  # set crit load to zero 
+    end
+    outage_outputs = OutageOutputs()
 
     return BAUScenario(
         s.settings,
@@ -82,9 +113,10 @@ function BAUScenario(s::Scenario)
         wind,
         storage, 
         s.electric_tariff, 
-        s.electric_load, 
+        elec_load, 
         s.electric_utility, 
         s.financial,
-        generator
+        generator,
+        outage_outputs
     )
 end

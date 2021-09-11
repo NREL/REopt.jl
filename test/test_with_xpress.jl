@@ -69,13 +69,17 @@ end
     @test results["Financial"]["npv"] ≈ proforma_npv atol=1
 end
 
-@testset "Outage with Generator, outate simulator" begin
-    model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt(model, "./scenarios/generator.json")
+@testset "Outage with Generator, outate simulator, BAU critical load outputs" begin
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    p = REoptInputs("./scenarios/generator.json")
+    results = run_reopt([m1,m2], p)
     @test results["Generator"]["size_kw"] ≈ 8.13 atol=0.01
     @test (sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 1:9) + 
            sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 13:8760)) == 0
-    p = REoptInputs("./scenarios/generator.json")
+    @test results["ElectricLoad"]["bau_critical_load_met"] == false
+    @test results["ElectricLoad"]["bau_critical_load_met_time_steps"] == 0
+    
     simresults = simulate_outages(results, p)
     @test simresults["resilience_hours_max"] == 11
 end
