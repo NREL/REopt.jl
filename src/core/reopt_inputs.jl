@@ -463,18 +463,18 @@ now that the constraints are properly applied over `time_steps_with_grid` and `t
 and critical_loads_kw respectively.
 """
 function setup_electric_utility_inputs(s::AbstractScenario)
-    if s.electric_utility.outage_end_timestep > 0 &&
-            s.electric_utility.outage_end_timestep > s.electric_utility.outage_start_timestep
-        time_steps_without_grid = Int[i for i in range(s.electric_utility.outage_start_timestep,
-                                                    stop=s.electric_utility.outage_end_timestep)]
-        if s.electric_utility.outage_start_timestep > 1
+    if s.electric_utility.outage_end_time_step > 0 &&
+            s.electric_utility.outage_end_time_step > s.electric_utility.outage_start_time_step
+        time_steps_without_grid = Int[i for i in range(s.electric_utility.outage_start_time_step,
+                                                    stop=s.electric_utility.outage_end_time_step)]
+        if s.electric_utility.outage_start_time_step > 1
             time_steps_with_grid = append!(
-                Int[i for i in range(1, stop=s.electric_utility.outage_start_timestep - 1)],
-                Int[i for i in range(s.electric_utility.outage_end_timestep + 1,
+                Int[i for i in range(1, stop=s.electric_utility.outage_start_time_step - 1)],
+                Int[i for i in range(s.electric_utility.outage_end_time_step + 1,
                                      stop=length(s.electric_load.loads_kw))]
             )
         else
-            time_steps_with_grid = Int[i for i in range(s.electric_utility.outage_end_timestep + 1,
+            time_steps_with_grid = Int[i for i in range(s.electric_utility.outage_end_time_step + 1,
                                        stop=length(s.electric_load.loads_kw))]
         end
     else

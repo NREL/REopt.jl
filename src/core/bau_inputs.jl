@@ -106,7 +106,7 @@ function BAUInputs(p::REoptInputs)
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
     end
 
-    t0, tf = p.s.electric_utility.outage_start_timestep, p.s.electric_utility.outage_end_timestep
+    t0, tf = p.s.electric_utility.outage_start_time_step, p.s.electric_utility.outage_end_time_step
     if tf > t0 && t0 > 0
         original_crit_lds = copy(p.s.electric_load.critical_loads_kw)
         update_bau_outage_outputs(bau_scenario, original_crit_lds, t0, tf, production_factor)

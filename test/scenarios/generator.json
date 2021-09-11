@@ -6,8 +6,8 @@
         "land_acres": 1.0
     },
     "ElectricUtility": {
-        "outage_start_timestep": 10,
-        "outage_end_timestep": 12
+        "outage_start_time_step": 10,
+        "outage_end_time_step": 12
     },
     "Generator": {
         "max_kw": 500.0,

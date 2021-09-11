@@ -89,7 +89,7 @@ function BAUScenario(s::Scenario)
     # no existing storage
     storage = Storage(Dict(:elec => Dict(:max_kw => 0)), s.financial)
     
-    t0, tf = s.electric_utility.outage_start_timestep, s.electric_utility.outage_end_timestep
+    t0, tf = s.electric_utility.outage_start_time_step, s.electric_utility.outage_end_time_step
     #=
     When a deterministic grid outage is modeled we must adjust the BAU critical load profile to keep the problem 
     feasible and to get the same ElectricTariff costs in both the optimal and BAU scenarios

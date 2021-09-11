@@ -9,6 +9,7 @@
 - added option to run Business As Usual scenario in parallel with optimal scenario (default is `true`)
 - added incentives (and cost curves) to `Wind` and `Generator`
 - fixed bug in URDB fixed charges
+- renamed `outage_start(end)_timestep` to `outage_start(end)_time_step`
 
 ## v0.9.0
 - `ElectricTariff.NEM` boolean is now determined by `ElectricUtility.net_metering_limit_kw` (true if limit > 0)
