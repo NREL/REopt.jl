@@ -31,10 +31,10 @@ global hdl
 
 using JSON
 
-struct SAM_Battery
-    params
-    batt_model
-    batt_data
+mutable struct SAM_Battery
+    params::AbstractDict
+    batt_model::Ptr{Cvoid}
+    batt_data::Ptr{Cvoid}
 
     function SAM_Battery(file_path::String)
         batt_model = nothing
@@ -110,7 +110,6 @@ function run_sam_battery(batt::SAM_Battery, power::Vector{Float64})
     for p in power
         try
             @ccall hdl.ssc_data_set_number(batt.batt_data::Ptr{Cvoid}, "input_power"::Cstring, p::Cdouble)::Cvoid
-            print("Set input power")
             
             if !Bool(@ccall hdl.ssc_module_exec(batt.batt_model::Ptr{Cvoid}, batt.batt_data::Ptr{Cvoid})::Cint)
                 log_type = 0
@@ -136,14 +135,19 @@ end
 
 
 function get_sam_battery_number(batt::SAM_Battery, key::String)
-    val = convert(Cdouble, 0.0)
-    ref = Ref(val)
-    @ccall hdl.ssc_data_get_number(batt.batt_data::Ptr{Cvoid}, key::Cstring, ref::Ptr{Cdouble})::Cuchar #Returns bool
-    return Float64(ref[])
+    if (batt.batt_data != Ptr{Cvoid}(C_NULL) && batt.batt_model != Ptr{Cvoid}(C_NULL)) 
+        val = convert(Cdouble, 0.0)
+        ref = Ref(val)
+        @ccall hdl.ssc_data_get_number(batt.batt_data::Ptr{Cvoid}, key::Cstring, ref::Ptr{Cdouble})::Cuchar #Returns bool
+        return Float64(ref[])
+    end
+    @error "Battery variables were already freed. Can no longer read battery data."
 end
 
 function free_sam_battery(batt::SAM_Battery)
     @ccall hdl.ssc_module_free(batt.batt_model::Ptr{Cvoid})::Cvoid  
+    batt.batt_model = Ptr{Cvoid}(C_NULL)
     @ccall hdl.ssc_data_free(batt.batt_data::Ptr{Cvoid})::Cvoid
+    batt.batt_data = Ptr{Cvoid}(C_NULL)
     return nothing
 end
