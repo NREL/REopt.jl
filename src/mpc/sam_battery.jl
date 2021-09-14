@@ -31,6 +31,17 @@ global hdl
 
 using JSON
 
+"""
+    SAM_Battery
+struct with inner constructor:
+    ```julia
+    SAM_Battery(file_path::String)
+    ```
+
+    where file_path is a path to the battery's JSON definition.
+    Fields for the JSON file are defined at https://nrel-pysam.readthedocs.io/en/master/modules/BatteryStateful.html
+    An example is provided at test\\data\\test_batt.json     
+"""
 mutable struct SAM_Battery
     params::AbstractDict
     batt_model::Ptr{Cvoid}
@@ -106,6 +117,12 @@ mutable struct SAM_Battery
     end
 end
 
+"""
+    run_sam_battery(batt::SAM_Battery, power::Vector{Float64})
+Function takes a SAM_Battery, and runs it for steps equal to the length of power
+Amount of time is defined in dt, as passed to the constructor of SAM_Battery
+Units of power are in kW, positive is discharging, negative is charging
+"""
 function run_sam_battery(batt::SAM_Battery, power::Vector{Float64})
     for p in power
         try
@@ -133,8 +150,12 @@ function run_sam_battery(batt::SAM_Battery, power::Vector{Float64})
     return nothing # Should this be success/failure?
 end
 
-
-function get_sam_battery_number(batt::SAM_Battery, key::String)
+"""
+    get_sam_battery_number(batt::SAM_Battery, key::String)::Float64
+Possible keys are defined at https://nrel-pysam.readthedocs.io/en/master/modules/BatteryStateful.html
+Only type "float" will be returned from this function, others will either need a seperate function or an extension/renaming of this function
+"""
+function get_sam_battery_number(batt::SAM_Battery, key::String)::Float64
     if (batt.batt_data != Ptr{Cvoid}(C_NULL) && batt.batt_model != Ptr{Cvoid}(C_NULL)) 
         val = convert(Cdouble, 0.0)
         ref = Ref(val)
@@ -144,7 +165,12 @@ function get_sam_battery_number(batt::SAM_Battery, key::String)
     @error "Battery variables were already freed. Can no longer read battery data."
 end
 
-function free_sam_battery(batt::SAM_Battery)
+"""
+free_sam_battery(batt::SAM_Battery)::Nothing
+Frees the underlying c memory associated with SAM battery.
+If other functions attempt to use SAM_Battery after this is called, they will throw an error
+"""
+function free_sam_battery(batt::SAM_Battery)::Nothing
     @ccall hdl.ssc_module_free(batt.batt_model::Ptr{Cvoid})::Cvoid  
     batt.batt_model = Ptr{Cvoid}(C_NULL)
     @ccall hdl.ssc_data_free(batt.batt_data::Ptr{Cvoid})::Cvoid
