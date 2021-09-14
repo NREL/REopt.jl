@@ -159,3 +159,99 @@ function replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInp
     end
     return future_cost, present_cost
 end
+
+
+"""
+    calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
+
+The Levelized Cost of Energy (LCOE) is calculated as annualized costs (capital and O+M translated to current value) 
+divided by annuale energy output.
+"""
+function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
+    existing_kw = :existing_kw in fieldnames(typeof(tech)) ? tech.existing_kw : 0.0
+    new_kw = get(tech_results, "size_kw", 0) - existing_kw # new capacity
+    if new_kw == 0
+        return 0.0
+    end
+
+    years = p.s.financial.analysis_years # length of financial life
+    # TODO is most of this calculated in proforma metrics?
+    if p.s.financial.third_party_ownership
+        discount_pct = p.s.financial.owner_discount_pct
+        federal_tax_pct = p.s.financial.owner_tax_pct
+    else
+        discount_pct = p.s.financial.offtaker_discount_pct
+        federal_tax_pct = p.s.financial.offtaker_tax_pct
+    end
+
+    capital_costs = new_kw * tech.installed_cost_per_kw # pre-incentive capital costs
+
+    annual_om = new_kw * tech.om_cost_per_kw # NPV of O&M charges escalated over financial life
+
+    om_series = [annual_om * (1+p.s.financial.om_cost_escalation_pct)^yr for yr in 1:years]
+    npv_om = sum([om * (1.0/(1.0+discount_pct))^yr for (yr, om) in enumerate(om_series)])
+
+    #Incentives as calculated in the spreadsheet, note utility incentives are applied before state incentives
+    utility_ibi = min(capital_costs * tech.utility_ibi_pct, tech.utility_ibi_max)
+    utility_cbi = min(new_kw * tech.utility_rebate_per_kw, tech.utility_rebate_max)
+    state_ibi = min((capital_costs - utility_ibi - utility_cbi) * tech.state_ibi_pct, tech.state_ibi_max)
+    state_cbi = min(new_kw * tech.state_rebate_per_kw, tech.state_rebate_max)
+    federal_cbi = new_kw * tech.federal_rebate_per_kw
+    ibi = utility_ibi + state_ibi  #total investment-based incentives
+    cbi = utility_cbi + federal_cbi + state_cbi #total capacity-based incentives
+
+    #calculate energy in the BAU case, used twice later on
+    existing_energy_bau = get(tech_results, "year_one_energy_produced_kwh_bau", 0)
+
+    #calculate the value of the production-based incentive stream
+    npv_pbi = 0
+    year_one_energy_produced = get(tech_results, "year_one_energy_produced_kwh", 0)
+    degradation_pct = :degradation_pct in fieldnames(typeof(tech)) ? tech.degradation_pct : 0.0
+    if tech.production_incentive_max_benefit > 0
+        for yr in 1:years
+            if yr < tech.production_incentive_years
+                degredation_pct = (1- degradation_pct)^yr
+                base_pbi = minimum([tech.production_incentive_per_kwh * 
+                    (year_one_energy_produced - existing_energy_bau) * degredation_pct,  
+                    tech.production_incentive_max_benefit * degredation_pct 
+                ])
+                npv_pbi += base_pbi * (1.0/(1.0+discount_pct))^(yr+1)
+            end
+        end
+    end
+
+    npv_federal_itc = 0
+    federal_itc_basis = capital_costs - state_ibi - utility_ibi - state_cbi - utility_cbi - federal_cbi
+    federal_itc_amount = tech.federal_itc_pct * federal_itc_basis
+    npv_federal_itc = federal_itc_amount * (1.0/(1.0+discount_pct))
+
+    depreciation_schedule = zeros(years)
+    if tech.macrs_option_years in [5,7]
+        if tech.macrs_option_years == 5
+            schedule = p.s.financial.macrs_five_year
+        elseif tech.macrs_option_years == 7
+            schedule = p.s.financial.macrs_seven_year
+        end
+        macrs_bonus_basis = federal_itc_basis - (federal_itc_basis * tech.federal_itc_pct * tech.macrs_itc_reduction)
+        macrs_basis = macrs_bonus_basis * (1 - tech.macrs_bonus_pct)
+        for (i,r) in enumerate(schedule)
+            if i-1 < length(depreciation_schedule)
+                depreciation_schedule[i] = macrs_basis * r
+            end
+        end
+        depreciation_schedule[1] += tech.macrs_bonus_pct * macrs_bonus_basis
+    end
+
+    tax_deductions = (om_series + depreciation_schedule) * federal_tax_pct
+    npv_tax_deductions = sum([i* (1.0/(1.0+discount_pct))^yr for (yr,i) in enumerate(tax_deductions)])
+
+    #we only care about the energy produced by new capacity in LCOE calcs
+    annual_energy = year_one_energy_produced - existing_energy_bau
+    npv_annual_energy = sum([annual_energy * (1.0/(1.0+discount_pct))^yr * 
+        (1- degradation_pct)^(yr-1) for yr in 1:years])
+
+    #LCOE is calculated as annualized costs divided by annualized energy
+    lcoe = (capital_costs + npv_om - npv_pbi - cbi - ibi - npv_federal_itc - npv_tax_deductions ) / npv_annual_energy
+
+    return round(lcoe, digits=4)
+end

@@ -84,7 +84,7 @@ function BAUInputs(p::REoptInputs)
         if pvname in p.pbi_techs
             push!(pbi_techs, pvname)
         end
-        pv = p.s.pvs[findfirst(pv -> pv.name == pvname, p.s.pvs)]
+        pv = get_pv_by_name(pvname, p.s.pvs)
         fillin_techs_by_exportbin(techs_by_exportbin, pv, pv.name)
     end
 

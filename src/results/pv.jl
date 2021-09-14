@@ -63,6 +63,7 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
         r["average_yearly_energy_produced_kwh"] = r["year_one_energy_produced_kwh"] * p.levelization_factor[t]
 		PVPerUnitSizeOMCosts = p.om_cost_per_kw[t] * p.pwf_om * m[Symbol("dvSize"*_n)][t]
 		r["total_om_cost"] = round(value(PVPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_pct), digits=0)
+        r["lcoe_per_kwh"] = calculate_lcoe(p, r, get_pv_by_name(t, p.s.pvs))
         d[t] = r
 	end
     nothing

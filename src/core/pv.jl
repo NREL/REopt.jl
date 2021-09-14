@@ -241,3 +241,8 @@ struct PV <: AbstractTech
         )
     end
 end
+
+
+function get_pv_by_name(name::String, pvs::AbstractArray{PV, 1})
+    pvs[findfirst(pv -> pv.name == name, pvs)]
+end

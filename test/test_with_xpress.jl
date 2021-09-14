@@ -60,6 +60,7 @@ end
     results = run_reopt([m1,m2], "./scenarios/pv_storage.json")
 
     @test results["PV"]["size_kw"] ≈ 216.6667 atol=0.01
+    @test results["PV"]["lcoe_per_kwh"] ≈ 0.0483 atol = 0.001
     @test results["Financial"]["lcc"] ≈ 1.240037e7 rtol=1e-5
     @test results["Financial"]["lcc_bau"] ≈ 12766397 rtol=1e-5
     @test results["Storage"]["size_kw"] ≈ 55.9 atol=0.1

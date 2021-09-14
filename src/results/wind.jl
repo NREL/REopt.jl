@@ -64,7 +64,8 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 
     WindToCUR = (m[Symbol("dvCurtail"*_n)][t, ts] for ts in p.time_steps)
     r["year_one_curtailed_production_series_kw"] = round.(value.(WindToCUR), digits=3)
-    
+    r["lcoe_per_kwh"] = calculate_lcoe(p, r, p.s.wind)
+
 	d["Wind"] = r
     nothing
 end
