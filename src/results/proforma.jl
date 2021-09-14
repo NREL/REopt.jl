@@ -298,8 +298,7 @@ end
 
 Update the Metrics struct for the given `tech`
 """
-function update_metrics(m::Metrics, p::REoptInputs, tech, tech_name::String, results::Dict, third_party::Bool)
-    # TODO tech::AbstractTech
+function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_name::String, results::Dict, third_party::Bool)
     total_kw = results[tech_name]["size_kw"]
     existing_kw = :existing_kw in fieldnames(typeof(tech)) ? tech.existing_kw : 0
     new_kw = total_kw - existing_kw
