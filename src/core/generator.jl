@@ -86,6 +86,7 @@ struct Generator <: AbstractGenerator
     can_net_meter
     can_wholesale
     can_export_beyond_nem_limit
+    can_curtail
     macrs_option_years
     macrs_bonus_pct
     macrs_itc_reduction
@@ -118,9 +119,10 @@ struct Generator <: AbstractGenerator
         min_turn_down_pct::Float64 = 0.0,
         only_runs_during_grid_outage::Bool = true,
         sells_energy_back_to_grid::Bool = false,
-        can_net_meter::Bool = true,
-        can_wholesale::Bool = true,
-        can_export_beyond_nem_limit = true,
+        can_net_meter::Bool = false,
+        can_wholesale::Bool = false,
+        can_export_beyond_nem_limit = false,
+        can_curtail::Bool = false,
         macrs_option_years::Int = 0,
         macrs_bonus_pct::Float64 = 1.0,
         macrs_itc_reduction::Float64 = 0.0,
@@ -157,6 +159,7 @@ struct Generator <: AbstractGenerator
             can_net_meter,
             can_wholesale,
             can_export_beyond_nem_limit,
+            can_curtail,
             macrs_option_years,
             macrs_bonus_pct,
             macrs_itc_reduction,

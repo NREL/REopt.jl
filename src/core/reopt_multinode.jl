@@ -206,6 +206,9 @@ function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
     
         if !isempty(p.techs)
             add_tech_size_constraints(m, p; _n=_n)
+            if !isempty(p.techs_no_curtail)
+                add_no_curtail_constraints(m, p; _n=_n)
+            end
         end
     
         add_load_balance_constraints(m, p; _n=_n)

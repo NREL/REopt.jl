@@ -119,6 +119,7 @@ struct PV <: AbstractTech
     can_net_meter
     can_wholesale
     can_export_beyond_nem_limit
+    can_curtail
 
     function PV(;
         tilt::Real,
@@ -161,6 +162,7 @@ struct PV <: AbstractTech
         can_net_meter::Bool = true,
         can_wholesale::Bool = true,
         can_export_beyond_nem_limit::Bool = true,
+        can_curtail::Bool = true,
         )
 
         # validate inputs
@@ -237,7 +239,8 @@ struct PV <: AbstractTech
             production_incentive_max_kw,
             can_net_meter,
             can_wholesale,
-            can_export_beyond_nem_limit
+            can_export_beyond_nem_limit,
+            can_curtail
         )
     end
 end
