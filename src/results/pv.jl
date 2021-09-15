@@ -41,12 +41,13 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 		r["year_one_to_battery_series_kw"] = round.(value.(PVtoBatt), digits=3)
 
         r["year_one_to_grid_series_kw"] = zeros(size(r["year_one_to_battery_series_kw"]))
+        r["average_annual_energy_exported_kwh"] = 0.0
         if !isempty(p.s.electric_tariff.export_bins)
             PVtoGrid = @expression(m, [ts in p.time_steps],
                     sum(m[:dvProductionToGrid][t, u, ts] for u in p.export_bins_by_tech[t]))
             r["year_one_to_grid_series_kw"] = round.(value.(PVtoGrid), digits=3).data
 
-            r["average_annual_energy_exported"] = round(
+            r["average_annual_energy_exported_kwh"] = round(
                 sum(r["year_one_to_grid_series_kw"]) * p.hours_per_timestep, digits=0)
         end
 
@@ -60,7 +61,7 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 		r["year_one_to_load_series_kw"] = round.(value.(PVtoLoad), digits=3)
 		Year1PvProd = (sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] for ts in p.time_steps) * p.hours_per_timestep)
 		r["year_one_energy_produced_kwh"] = round(value(Year1PvProd), digits=0)
-        r["average_yearly_energy_produced_kwh"] = r["year_one_energy_produced_kwh"] * p.levelization_factor[t]
+        r["average_annual_energy_produced_kwh"] = r["year_one_energy_produced_kwh"] * p.levelization_factor[t]
 		PVPerUnitSizeOMCosts = p.om_cost_per_kw[t] * p.pwf_om * m[Symbol("dvSize"*_n)][t]
 		r["total_om_cost"] = round(value(PVPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_pct), digits=0)
         r["lcoe_per_kwh"] = calculate_lcoe(p, r, get_pv_by_name(t, p.s.pvs))
