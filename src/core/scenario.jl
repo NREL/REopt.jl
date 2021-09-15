@@ -128,7 +128,8 @@ function Scenario(d::Dict)
                                     )
 
     if haskey(d, "Wind")
-        wind = Wind(; dictkeys_tosymbols(d["Wind"])...)
+        wind = Wind(; dictkeys_tosymbols(d["Wind"])..., 
+                    average_elec_load=sum(electric_load.loads_kw) / length(electric_load.loads_kw))
     else
         wind = Wind(; max_kw=0)
     end
