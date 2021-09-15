@@ -38,6 +38,7 @@ function BAUInputs(p::REoptInputs)
 
     techs = copy(pvtechs)
     techs_no_turndown = copy(pvtechs)
+    techs_no_curtail = String[]
     gentechs = String[]
     pbi_techs = String[]
 
@@ -86,6 +87,9 @@ function BAUInputs(p::REoptInputs)
         end
         pv = get_pv_by_name(pvname, p.s.pvs)
         fillin_techs_by_exportbin(techs_by_exportbin, pv, pv.name)
+        if !pv.can_curtail
+            push!(techs_no_curtail, pv.name)
+        end
     end
 
     if "Generator" in techs
@@ -98,6 +102,9 @@ function BAUInputs(p::REoptInputs)
         fillin_techs_by_exportbin(techs_by_exportbin, p.s.generator, "Generator")
         if "Generator" in p.pbi_techs
             push!(pbi_techs, "Generator")
+        end
+        if !p.s.generator.can_curtail
+            push!(techs_no_curtail, "Generator")
         end
     end
 
@@ -128,6 +135,7 @@ function BAUInputs(p::REoptInputs)
         segmented_techs,
         pbi_techs,
         techs_no_turndown,
+        techs_no_curtail,
         min_sizes,
         max_sizes,
         existing_sizes,

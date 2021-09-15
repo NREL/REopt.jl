@@ -130,6 +130,7 @@ struct Wind <: AbstractTech
     can_net_meter::Bool
     can_wholesale::Bool
     can_export_beyond_nem_limit::Bool
+    can_curtail::Bool
 
     function Wind(;
         min_kw = 0.0,
@@ -162,6 +163,7 @@ struct Wind <: AbstractTech
         can_net_meter = true,
         can_wholesale = true,
         can_export_beyond_nem_limit = true,
+        can_curtail= true,
         average_elec_load = 0.0
         )
         size_class_to_hub_height = Dict(
@@ -239,7 +241,8 @@ struct Wind <: AbstractTech
             production_incentive_max_kw,
             can_net_meter,
             can_wholesale,
-            can_export_beyond_nem_limit
+            can_export_beyond_nem_limit,
+            can_curtail
         )
     end
 end

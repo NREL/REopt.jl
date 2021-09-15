@@ -40,6 +40,7 @@ struct REoptInputs <: AbstractInputs
     segmented_techs::Array{String, 1}
     pbi_techs::Array{String, 1}
     techs_no_turndown::Array{String, 1}
+    techs_no_curtail::Array{String, 1}
     min_sizes::Dict{String, Float64}  # (techs)
     max_sizes::Dict{String, Float64}  # (techs)
     existing_sizes::Dict{String, Float64}  # (techs)
@@ -100,7 +101,8 @@ function REoptInputs(s::AbstractScenario)
 
     time_steps = 1:length(s.electric_load.loads_kw)
     hours_per_timestep = 1 / s.settings.time_steps_per_hour
-    techs, pvtechs, gentechs, elec_techs, segmented_techs, pv_to_location, maxsize_pv_locations, pvlocations, 
+    techs, pvtechs, gentechs, elec_techs, segmented_techs, techs_no_curtail, 
+        pv_to_location, maxsize_pv_locations, pvlocations, 
         production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
         seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech = setup_tech_inputs(s)
     techs_no_turndown = copy(pvtechs)
@@ -134,6 +136,7 @@ function REoptInputs(s::AbstractScenario)
         segmented_techs,
         pbi_techs,
         techs_no_turndown,
+        techs_no_curtail,
         min_sizes,
         max_sizes,
         existing_sizes,
@@ -182,6 +185,7 @@ function setup_tech_inputs(s::AbstractScenario)
 
     techs = copy(pvtechs)
     gentechs = String[]
+    techs_no_curtail = String[]
     segmented_techs = String[]
     if s.wind.max_kw > 0
         push!(techs, "Wind")
@@ -222,17 +226,17 @@ function setup_tech_inputs(s::AbstractScenario)
     if !isempty(pvtechs)
         setup_pv_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
                         pvlocations, pv_to_location, maxsize_pv_locations, segmented_techs, n_segs_by_tech, 
-                        seg_min_size, seg_max_size, seg_yint, techs_by_exportbin)
+                        seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, techs_no_curtail)
     end
 
     if "Wind" in techs
         setup_wind_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor, 
-            techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint)
+            techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_no_curtail)
     end
 
     if "Generator" in techs
         setup_gen_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
-            techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint)
+            techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_no_curtail)
     end
 
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
@@ -240,7 +244,8 @@ function setup_tech_inputs(s::AbstractScenario)
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
     end
 
-    return techs, pvtechs, gentechs, elec_techs, segmented_techs, pv_to_location, maxsize_pv_locations, pvlocations, 
+    return techs, pvtechs, gentechs, elec_techs, segmented_techs, techs_no_curtail,
+    pv_to_location, maxsize_pv_locations, pvlocations, 
     production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
     seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech
 end
@@ -312,7 +317,7 @@ end
 function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
     existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
     pvlocations, pv_to_location, maxsize_pv_locations, 
-    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_by_exportbin)
+    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, techs_no_curtail)
 
     pv_roof_limited, pv_ground_limited, pv_space_limited = false, false, false
     roof_existing_pv_kw, ground_existing_pv_kw, both_existing_pv_kw = 0.0, 0.0, 0.0
@@ -366,6 +371,10 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
         
         om_cost_per_kw[pv.name] = pv.om_cost_per_kw
         fillin_techs_by_exportbin(techs_by_exportbin, pv, pv.name)
+
+        if !pv.can_curtail
+            push!(techs_no_curtail, pv.name)
+        end
     end
 
     if pv_roof_limited
@@ -384,7 +393,7 @@ end
 
 function setup_wind_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes,
     cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin,
-    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_no_curtail
     )
     max_sizes["Wind"] = s.wind.max_kw
     min_sizes["Wind"] = s.wind.min_kw
@@ -395,13 +404,16 @@ function setup_wind_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_s
     om_cost_per_kw["Wind"] = s.wind.om_cost_per_kw
     production_factor["Wind", :] = prodfactor(s.wind, s.site.latitude, s.site.longitude, s.settings.time_steps_per_hour)
     fillin_techs_by_exportbin(techs_by_exportbin, s.wind, "Wind")
+    if !s.wind.can_curtail
+        push!(techs_no_curtail, "Wind")
+    end
     return nothing
 end
 
 
 function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes,
     cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin,
-    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_no_curtail
     )
     max_sizes["Generator"] = s.generator.max_kw
     min_sizes["Generator"] = s.generator.existing_kw + s.generator.min_kw
@@ -412,6 +424,9 @@ function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_si
     om_cost_per_kw["Generator"] = s.generator.om_cost_per_kw
     production_factor["Generator", :] = prodfactor(s.generator)
     fillin_techs_by_exportbin(techs_by_exportbin, s.generator, "Generator")
+    if !s.generator.can_curtail
+        push!(techs_no_curtail, "Generator")
+    end
     return nothing
 end
 

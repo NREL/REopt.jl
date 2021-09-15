@@ -53,3 +53,12 @@ function add_tech_size_constraints(m, p; _n="")
         m[Symbol("dvRatedProduction"*_n)][t,ts] == m[Symbol("dvSize"*_n)][t]
     )
 end
+
+
+function add_no_curtail_constraints(m, p; _n="")
+    for t in p.techs_no_curtail
+        for ts in p.time_steps
+            fix(m[Symbol("dvCurtail"*_n)][t, ts] , 0.0, force=true)
+        end
+    end
+end
