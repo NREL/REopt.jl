@@ -30,8 +30,8 @@
 function mpc_results(m::JuMP.AbstractModel, p::MPCInputs; _n="")
 	tstart = time()
     d = Dict{String, Any}()
-    for b in p.storage.types
-        if p.storage.size_kwh[b] > 0
+    for b in p.s.storage.types
+        if p.s.storage.size_kwh[b] > 0
             add_storage_results(m, p, d, b; _n)
         end
     end
@@ -50,7 +50,7 @@ function mpc_results(m::JuMP.AbstractModel, p::MPCInputs; _n="")
 	time_elapsed = time() - tstart
 	@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
 	
-	# if !isempty(p.elecutil.outage_durations) && isempty(_n)  # outages not included in multinode model
+	# if !isempty(p.s.electric_utility.outage_durations) && isempty(_n)  # outages not included in multinode model
     #     tstart = time()
 	# 	add_outage_results(m, p, d)
     #     time_elapsed = time() - tstart

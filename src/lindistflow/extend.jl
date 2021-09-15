@@ -27,7 +27,7 @@ end
 
 function add_expressions(m::JuMP.AbstractModel, ps::Array{REoptInputs, 1})
     for p in ps
-        _n = string("_", p.node)
+        _n = string("_", p.s.site.node)
         m[Symbol("TotalExport"*_n)] = @expression(m, [t in p.time_steps],
             sum(
                 m[Symbol("dvProductionToGrid"*_n)][t,u,ts] 
@@ -40,7 +40,7 @@ end
 
 function add_complementary_constraints(m::JuMP.AbstractModel, ps::Array{REoptInputs, 1})
     for p in ps
-        _n = string("_", p.node)
+        _n = string("_", p.s.site.node)
         for (i, e) in zip(m[Symbol("dvGridPurchase"*_n)], m[Symbol("TotalExport"*_n)])
             @constraint(m,
                 [i, e] in MOI.SOS1([1.0, 2.0])
@@ -51,7 +51,7 @@ end
 
 
 function LDF.constrain_loads(m::JuMP.AbstractModel, p::LDF.Inputs, ps::Array{REoptInputs, 1})
-    reopt_nodes = [rs.node for rs in ps]
+    reopt_nodes = [p.s.site.node for p in ps]
 
     Pⱼ = m[:Pⱼ]
     Qⱼ = m[:Qⱼ]

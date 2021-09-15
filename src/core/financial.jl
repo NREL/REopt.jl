@@ -41,8 +41,8 @@ function Financial(;
     owner_tax_pct::Float64 = 0.26,
     owner_discount_pct::Float64 = 0.083,
     analysis_years::Int = 25,
-    VoLL::Union{Array{R,1}, R} where R<:Real = 1.00,
-    microgrid_premium_pct::Float64 = 0.3,
+    value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00,
+    microgrid_upgrade_cost_pct::Float64 = 0.3,
     macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
     macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446]
 )
@@ -66,8 +66,8 @@ struct Financial
     owner_tax_pct::Float64
     owner_discount_pct::Float64
     analysis_years::Int
-    VoLL::Union{Array{R,1}, R} where R<:Real
-    microgrid_premium_pct::Float64
+    value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real
+    microgrid_upgrade_cost_pct::Float64
     macrs_five_year::Array{Float64,1}
     macrs_seven_year::Array{Float64,1}
 
@@ -80,8 +80,8 @@ struct Financial
         owner_tax_pct::Float64 = 0.26,
         owner_discount_pct::Float64 = 0.083,
         analysis_years::Int = 25,
-        VoLL::Union{Array{R,1}, R} where R<:Real = 1.00,
-        microgrid_premium_pct::Float64 = 0.3,
+        value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00,
+        microgrid_upgrade_cost_pct::Float64 = 0.3,
         macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
         macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446]
     )
@@ -99,8 +99,8 @@ struct Financial
             owner_tax_pct,
             owner_discount_pct,
             analysis_years,
-            VoLL,
-            microgrid_premium_pct,
+            value_of_lost_load_per_kwh,
+            microgrid_upgrade_cost_pct,
             macrs_five_year,
             macrs_seven_year
         )

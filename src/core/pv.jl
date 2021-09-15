@@ -68,7 +68,7 @@ function PV(;
     utility_rebate_max::Float64 = 1.0e10,
     production_incentive_per_kwh::Float64 = 0.0,
     production_incentive_max_benefit::Float64 = 1.0e9,
-    production_incentive_years::Float64 = 1.0,
+    production_incentive_years::Int = 1,
     production_incentive_max_kw::Float64 = 1.0e9
     can_net_meter::Bool = true,
     can_wholesale::Bool = true,
@@ -156,7 +156,7 @@ struct PV <: AbstractTech
         utility_rebate_max::Float64 = 1.0e10,
         production_incentive_per_kwh::Float64 = 0.0,
         production_incentive_max_benefit::Float64 = 1.0e9,
-        production_incentive_years::Float64 = 1.0,
+        production_incentive_years::Int = 1,
         production_incentive_max_kw::Float64 = 1.0e9,
         can_net_meter::Bool = true,
         can_wholesale::Bool = true,
@@ -240,4 +240,9 @@ struct PV <: AbstractTech
             can_export_beyond_nem_limit
         )
     end
+end
+
+
+function get_pv_by_name(name::String, pvs::AbstractArray{PV, 1})
+    pvs[findfirst(pv -> pv.name == name, pvs)]
 end

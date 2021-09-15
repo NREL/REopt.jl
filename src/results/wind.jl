@@ -30,26 +30,37 @@
 function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
     t = "Wind"
-	GenPerUnitSizeOMCosts = @expression(m, p.two_party_factor * p.pwf_om * m[:dvSize][t] * p.om_cost_per_kw[t])
+	per_unit_size_om = @expression(m, p.third_party_factor * p.pwf_om * m[:dvSize][t] * p.om_cost_per_kw[t])
 
 	r["size_kw"] = value(m[:dvSize][t])
-	r["total_om_cost_us_dollars"] = round(value(GenPerUnitSizeOMCosts) * (1 - p.owner_tax_pct), digits=0)
-	r["year_one_om_cost_us_dollars"] = round(value(GenPerUnitSizeOMCosts) / (p.pwf_om * p.two_party_factor), digits=0)
+	r["total_om_cost"] = round(value(per_unit_size_om) * (1 - p.s.financial.owner_tax_pct), digits=0)
+	r["year_one_om_cost"] = round(value(per_unit_size_om) / (p.pwf_om * p.third_party_factor), digits=0)
 
-	generatorToBatt = @expression(m, [ts in p.time_steps],
-		sum(m[:dvProductionToStorage][b, t, ts] for b in p.storage.types, t in p.gentechs))
-	r["year_one_to_battery_series_kw"] = round.(value.(generatorToBatt), digits=3)
+	prod_to_storage = @expression(m, [ts in p.time_steps],
+		sum(m[:dvProductionToStorage][b, t, ts] for b in p.s.storage.types, t in p.gentechs))
+	r["year_one_to_battery_series_kw"] = round.(value.(prod_to_storage), digits=3)
+
+    r["year_one_to_grid_series_kw"] = zeros(size(r["year_one_to_battery_series_kw"]))
+    r["average_annual_energy_exported_kwh"] = 0.0
+    if !isempty(p.s.electric_tariff.export_bins)
+        wind_to_grid = @expression(m, [ts in p.time_steps],
+                sum(m[:dvProductionToGrid][t, u, ts] for u in p.export_bins_by_tech[t]))
+        r["year_one_to_grid_series_kw"] = round.(value.(wind_to_grid), digits=3).data
+
+        r["average_annual_energy_exported_kwh"] = round(
+            sum(r["year_one_to_grid_series_kw"]) * p.hours_per_timestep, digits=0)
+    end
 
 	generatorToGrid = @expression(m, [ts in p.time_steps],
 		sum(m[:dvProductionToGrid][t, u, ts] for u in p.export_bins_by_tech[t])
 	)
 	r["year_one_to_grid_series_kw"] = round.(value.(generatorToGrid), digits=3)
 
-	generatorToLoad = @expression(m, [ts in p.time_steps],
+	prod_to_load = @expression(m, [ts in p.time_steps],
 		    m[:dvRatedProduction][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t] -
-			generatorToBatt[ts] - generatorToGrid[ts]
+			prod_to_storage[ts] - generatorToGrid[ts]
 	)
-	r["year_one_to_load_series_kw"] = round.(value.(generatorToLoad), digits=3)
+	r["year_one_to_load_series_kw"] = round.(value.(prod_to_load), digits=3)
 
 	Year1GenProd = @expression(m,
 		p.hours_per_timestep * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts]
@@ -60,11 +71,12 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 		p.hours_per_timestep * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts] *
 		p.levelization_factor[t] for ts in p.time_steps)
 	)
-	r["average_yearly_energy_produced_kwh"] = round(value(AverageGenProd), digits=0)
+	r["average_annual_energy_produced_kwh"] = round(value(AverageGenProd), digits=0)
 
     WindToCUR = (m[Symbol("dvCurtail"*_n)][t, ts] for ts in p.time_steps)
     r["year_one_curtailed_production_series_kw"] = round.(value.(WindToCUR), digits=3)
-    
+    r["lcoe_per_kwh"] = calculate_lcoe(p, r, p.s.wind)
+
 	d["Wind"] = r
     nothing
 end

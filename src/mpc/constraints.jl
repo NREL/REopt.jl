@@ -29,8 +29,8 @@
 # *********************************************************************************
 function add_previous_monthly_peak_constraint(m::JuMP.AbstractModel, p::MPCInputs; _n="")
 	## Constraint (11d): Monthly peak demand is >= demand at each time step in the month
-	@constraint(m, [mth in p.months, ts in p.etariff.time_steps_monthly[mth]],
-    m[Symbol("dvPeakDemandMonth"*_n)][mth] >= p.etariff.monthly_previous_peak_demands[mth]
+	@constraint(m, [mth in p.months, ts in p.s.electric_tariff.time_steps_monthly[mth]],
+    m[Symbol("dvPeakDemandMonth"*_n)][mth, 1] >= p.s.electric_tariff.monthly_previous_peak_demands[mth]
     )
 end
 
@@ -38,7 +38,7 @@ end
 function add_previous_tou_peak_constraint(m::JuMP.AbstractModel, p::MPCInputs; _n="")
     ## Constraint (12d): TOU peak demand is >= demand at each time step in the period` 
     @constraint(m, [r in p.ratchets],
-        m[Symbol("dvPeakDemandTOU"*_n)][r] >= p.etariff.tou_previous_peak_demands[r]
+        m[Symbol("dvPeakDemandTOU"*_n)][r, 1] >= p.s.electric_tariff.tou_previous_peak_demands[r]
     )
 end
 

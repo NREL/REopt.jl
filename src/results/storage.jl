@@ -35,8 +35,12 @@ function add_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::
     if r["size_kwh"] != 0
     	soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
         r["year_one_soc_series_pct"] = round.(value.(soc) ./ r["size_kwh"], digits=3)
+
+        discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
+        r["year_one_to_load_series_kw"] = round.(value.(discharge), digits=3)
     else
         r["year_one_soc_series_pct"] = []
+        r["year_one_to_load_series_kw"] = []
     end
 
     # TODO handle other storage type names
@@ -49,7 +53,7 @@ function add_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b::Sy
     r = Dict{String, Any}()
 
     soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
-    r["soc_series_pct"] = round.(value.(soc) ./ p.storage.size_kwh[b], digits=3)
+    r["soc_series_pct"] = round.(value.(soc) ./ p.s.storage.size_kwh[b], digits=3)
 
     # TODO handle other storage types
     d["Storage"] = r

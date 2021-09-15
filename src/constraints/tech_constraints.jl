@@ -31,7 +31,7 @@ function add_tech_size_constraints(m, p; _n="")
 
     # PV techs can be constrained by space available based on location at site (roof, ground, both)
     @constraint(m, [loc in p.pvlocations],
-        sum(m[Symbol("dvSize"*_n)][t] * p.pv_to_location[t, loc] for t in p.pvtechs) <= p.maxsize_pv_locations[loc]
+        sum(m[Symbol("dvSize"*_n)][t] * p.pv_to_location[t][loc] for t in p.pvtechs) <= p.maxsize_pv_locations[loc]
     )
 
     # max size limit

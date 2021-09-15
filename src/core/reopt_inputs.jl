@@ -31,8 +31,8 @@
 
 use Scenario struct to create reopt.jl model inputs
 """
-
 struct REoptInputs <: AbstractInputs
+    s::AbstractScenario
     techs::Array{String, 1}
     pvtechs::Array{String, 1}
     gentechs::Array{String,1}
@@ -40,12 +40,11 @@ struct REoptInputs <: AbstractInputs
     segmented_techs::Array{String, 1}
     pbi_techs::Array{String, 1}
     techs_no_turndown::Array{String, 1}
-    min_sizes::DenseAxisArray{Float64, 1}  # (techs)
-    max_sizes::DenseAxisArray{Float64, 1}  # (techs)
-    existing_sizes::DenseAxisArray{Float64, 1}  # (techs)
+    min_sizes::Dict{String, Float64}  # (techs)
+    max_sizes::Dict{String, Float64}  # (techs)
+    existing_sizes::Dict{String, Float64}  # (techs)
     cap_cost_slope::Dict{String, Any}  # (techs)
-    om_cost_per_kw::DenseAxisArray{Float64, 1}  # (techs)
-    elec_load::ElectricLoad
+    om_cost_per_kw::Dict{String, Float64}  # (techs)
     time_steps::UnitRange
     time_steps_with_grid::Array{Int, 1}
     time_steps_without_grid::Array{Int, 1}
@@ -53,25 +52,15 @@ struct REoptInputs <: AbstractInputs
     months::UnitRange
     production_factor::DenseAxisArray{Float64, 2}  # (techs, time_steps)
     levelization_factor::Dict{String, Float64}  # (techs)
-    VoLL::Array{R, 1} where R<:Real #default set to 1 US dollar per kwh
+    value_of_lost_load_per_kwh::Array{R, 1} where R<:Real #default set to 1 US dollar per kwh
     pwf_e::Float64
     pwf_om::Float64
-    two_party_factor::Float64
-    owner_tax_pct::Float64
-    offtaker_tax_pct::Float64
-    microgrid_premium_pct::Float64
+    third_party_factor::Float64
     pvlocations::Array{Symbol, 1}
     maxsize_pv_locations::DenseAxisArray{Float64, 1}  # indexed on pvlocations
-    pv_to_location::DenseAxisArray{Int, 2}  # (pvtechs, pvlocations)
-    etariff::ElectricTariff
+    pv_to_location::Dict{String, Dict{Symbol, Int64}}  # (pvtechs, pvlocations)
     ratchets::UnitRange
     techs_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL, :CUR]
-    storage::Storage
-    generator::Generator
-    elecutil::ElectricUtility
-    min_resil_timesteps::Int
-    mg_tech_sizes_equal_grid_sizes::Bool
-    node::Int
     export_bins_by_tech::Dict
     n_segs_by_tech::Dict{String, Int}
     seg_min_size::Dict{String, Dict{Int, Float64}}
@@ -103,11 +92,11 @@ end
 
 
 """
-    REoptInputs(s::Scenario)
+    REoptInputs(s::AbstractScenario)
 
 Constructor for REoptInputs
 """
-function REoptInputs(s::Scenario)
+function REoptInputs(s::AbstractScenario)
 
     time_steps = 1:length(s.electric_load.loads_kw)
     hours_per_timestep = 1 / s.settings.time_steps_per_hour
@@ -121,9 +110,9 @@ function REoptInputs(s::Scenario)
 
     pbi_techs, pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
 
-    months = 1:length(s.electric_tariff.monthly_demand_rates)
+    months = 1:12
 
-    levelization_factor, pwf_e, pwf_om, two_party_factor = setup_present_worth_factors(s, techs, pvtechs)
+    levelization_factor, pwf_e, pwf_om, third_party_factor = setup_present_worth_factors(s, techs, pvtechs)
     # the following hardcoded value for levelization_factor matches the public REopt API value
     # for test_with_cplex (test_time_of_export_rate) and makes the test values match.
     # the REopt code herein uses the Desktop method for levelization_factor, which is more accurate
@@ -137,6 +126,7 @@ function REoptInputs(s::Scenario)
     end
 
     REoptInputs(
+        s,
         techs,
         pvtechs,
         gentechs,
@@ -149,7 +139,6 @@ function REoptInputs(s::Scenario)
         existing_sizes,
         cap_cost_slope,
         om_cost_per_kw,
-        s.electric_load,
         time_steps,
         time_steps_with_grid,
         time_steps_without_grid,
@@ -157,25 +146,15 @@ function REoptInputs(s::Scenario)
         months,
         production_factor,
         levelization_factor,
-        typeof(s.financial.VoLL) <: Array{<:Real, 1} ? s.financial.VoLL : fill(s.financial.VoLL, length(time_steps)),
+        typeof(s.financial.value_of_lost_load_per_kwh) <: Array{<:Real, 1} ? s.financial.value_of_lost_load_per_kwh : fill(s.financial.value_of_lost_load_per_kwh, length(time_steps)),
         pwf_e,
         pwf_om,
-        two_party_factor,
-        s.financial.owner_tax_pct,
-        s.financial.offtaker_tax_pct,
-        s.financial.microgrid_premium_pct,
+        third_party_factor,
         pvlocations,
         maxsize_pv_locations,
         pv_to_location,
-        s.electric_tariff,
         1:length(s.electric_tariff.tou_demand_ratchet_timesteps),  # ratchets
         techs_by_exportbin,
-        s.storage,
-        s.generator,
-        s.electric_utility,
-        s.site.min_resil_timesteps,
-        s.site.mg_tech_sizes_equal_grid_sizes,
-        s.site.node,
         export_bins_by_tech,
         n_segs_by_tech,
         seg_min_size,
@@ -190,11 +169,11 @@ end
 
 
 """
-    function setup_tech_inputs(s::Scenario)
+    function setup_tech_inputs(s::AbstractScenario)
 
 Create data arrays associated with techs necessary to build the JuMP model.
 """
-function setup_tech_inputs(s::Scenario)
+function setup_tech_inputs(s::AbstractScenario)
 
     pvtechs = String[pv.name for pv in s.pvs]
     if length(Base.Set(pvtechs)) != length(pvtechs)
@@ -217,18 +196,18 @@ function setup_tech_inputs(s::Scenario)
     time_steps = 1:length(s.electric_load.loads_kw)
 
     # REoptInputs indexed on techs:
-    max_sizes = DenseAxisArray{Float64}(undef, techs)
-    min_sizes = DenseAxisArray{Float64}(undef, techs)
-    existing_sizes = DenseAxisArray{Float64}(undef, techs)
+    max_sizes = Dict(t => 0.0 for t in techs)
+    min_sizes = Dict(t => 0.0 for t in techs)
+    existing_sizes = Dict(t => 0.0 for t in techs)
     cap_cost_slope = Dict{String, Any}()
-    om_cost_per_kw = DenseAxisArray{Float64}(undef, techs)
+    om_cost_per_kw = Dict(t => 0.0 for t in techs)
     production_factor = DenseAxisArray{Float64}(undef, techs, time_steps)
 
     # export related inputs
     techs_by_exportbin = Dict(k => [] for k in s.electric_tariff.export_bins)
     export_bins_by_tech = Dict{String, Array{Symbol, 1}}()
 
-    #REoptInputs indexed on segmented_techs
+    # REoptInputs indexed on segmented_techs
     n_segs_by_tech = Dict{String, Int}()
     seg_min_size = Dict{String, Any}()
     seg_max_size = Dict{String, Any}()
@@ -236,7 +215,7 @@ function setup_tech_inputs(s::Scenario)
 
     # PV specific arrays
     pvlocations = [:roof, :ground, :both]
-    pv_to_location = DenseAxisArray{Int}(undef, pvtechs, pvlocations)
+    pv_to_location = Dict(t => Dict(loc => 0) for (t, loc) in zip(pvtechs, pvlocations))
     maxsize_pv_locations = DenseAxisArray([1.0e5, 1.0e5, 1.0e5], pvlocations)
     # default to large max size per location. Max size by roof, ground, both
 
@@ -248,12 +227,12 @@ function setup_tech_inputs(s::Scenario)
 
     if "Wind" in techs
         setup_wind_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor, 
-            techs_by_exportbin)
+            techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint)
     end
 
     if "Generator" in techs
         setup_gen_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
-            techs_by_exportbin)
+            techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint)
     end
 
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
@@ -268,12 +247,12 @@ end
 
 
 """
-    setup_pbi_inputs(s::Scenario, techs::Array{String, 1})
+    setup_pbi_inputs(s::AbstractScenario, techs::Array{String, 1})
 
 Create data arrays for production based incentives. 
 All arrays can be empty if no techs have production_incentive_per_kwh > 0.
 """
-function setup_pbi_inputs(s::Scenario, techs::Array{String, 1})
+function setup_pbi_inputs(s::AbstractScenario, techs::Array{String, 1})
 
     pbi_techs = String[]
     pbi_pwf = Dict{String, Any}()
@@ -295,7 +274,42 @@ function setup_pbi_inputs(s::Scenario, techs::Array{String, 1})
 end
 
 
-function setup_pv_inputs(s::Scenario, max_sizes, min_sizes,
+"""
+    update_cost_curve!(tech::AbstractTech, tech_name::String, financial::Financial,
+        cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+    )
+
+Modifies cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint based on tech attributes.
+In the simplest case (zero incentives, no existing_kw) the cap_cost_slope is updated with:
+```julia
+    cap_cost_slope[tech_name] = tech.installed_cost_per_kw
+```
+However, if there are non-zero incentives or `existing_kw` then there will be more than one cost curve segment typically
+and all of the other arguments will be updated as well.
+"""
+function update_cost_curve!(tech::AbstractTech, tech_name::String, financial::Financial,
+    cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+    )
+    cost_slope, cost_curve_bp_x, cost_yint, n_segments = cost_curve(tech, financial)
+    cap_cost_slope[tech_name] = cost_slope[1]
+    if n_segments > 1
+        cap_cost_slope[tech_name] = cost_slope
+        push!(segmented_techs, tech_name)
+        seg_max_size[tech_name] = Dict{Int,Float64}()
+        seg_min_size[tech_name] = Dict{Int,Float64}()
+        n_segs_by_tech[tech_name] = n_segments
+        seg_yint[tech_name] = Dict{Int,Float64}()
+        for s in 1:n_segments
+            seg_min_size[tech_name][s] = cost_curve_bp_x[s]
+            seg_max_size[tech_name][s] = cost_curve_bp_x[s+1]
+            seg_yint[tech_name][s] = cost_yint[s]
+        end
+    end
+    nothing
+end
+
+
+function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
     existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
     pvlocations, pv_to_location, maxsize_pv_locations, 
     segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_by_exportbin)
@@ -308,9 +322,9 @@ function setup_pv_inputs(s::Scenario, max_sizes, min_sizes,
         production_factor[pv.name, :] = prodfactor(pv, s.site.latitude, s.site.longitude)
         for location in pvlocations
             if pv.location == location
-                pv_to_location[pv.name, location] = 1
+                pv_to_location[pv.name][location] = 1
             else
-                pv_to_location[pv.name, location] = 0
+                pv_to_location[pv.name][location] = 0
             end
         end
 
@@ -346,21 +360,9 @@ function setup_pv_inputs(s::Scenario, max_sizes, min_sizes,
         min_sizes[pv.name] = pv.existing_kw + pv.min_kw
         max_sizes[pv.name] = pv.existing_kw + beyond_existing_kw
 
-        cost_slope, cost_curve_bp_x, cost_yint, n_segments = cost_curve(pv, s.financial)
-        cap_cost_slope[pv.name] = cost_slope[1]
-        if n_segments > 1
-            cap_cost_slope[pv.name] = cost_slope
-            push!(segmented_techs, pv.name)
-            seg_max_size[pv.name] = Dict{Int,Float64}()
-            seg_min_size[pv.name] = Dict{Int,Float64}()
-            n_segs_by_tech[pv.name] = n_segments
-            seg_yint[pv.name] = Dict{Int,Float64}()
-            for s in 1:n_segments
-                seg_min_size[pv.name][s] = cost_curve_bp_x[s]
-                seg_max_size[pv.name][s] = cost_curve_bp_x[s+1]
-                seg_yint[pv.name][s] = cost_yint[s]
-            end
-        end
+        update_cost_curve!(pv, pv.name, s.financial,
+            cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+        )
         
         om_cost_per_kw[pv.name] = pv.om_cost_per_kw
         fillin_techs_by_exportbin(techs_by_exportbin, pv, pv.name)
@@ -380,13 +382,16 @@ function setup_pv_inputs(s::Scenario, max_sizes, min_sizes,
 end
 
 
-function setup_wind_inputs(s::Scenario, max_sizes, min_sizes, existing_sizes,
-    cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin)
-    # TODO add incentives to Wind and use cost_curve function
+function setup_wind_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes,
+    cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin,
+    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+    )
     max_sizes["Wind"] = s.wind.max_kw
     min_sizes["Wind"] = s.wind.min_kw
     existing_sizes["Wind"] = 0.0
-    cap_cost_slope["Wind"] = s.wind.installed_cost_per_kw
+    update_cost_curve!(s.wind, "Wind", s.financial,
+        cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+    )
     om_cost_per_kw["Wind"] = s.wind.om_cost_per_kw
     production_factor["Wind", :] = prodfactor(s.wind, s.site.latitude, s.site.longitude, s.settings.time_steps_per_hour)
     fillin_techs_by_exportbin(techs_by_exportbin, s.wind, "Wind")
@@ -394,13 +399,16 @@ function setup_wind_inputs(s::Scenario, max_sizes, min_sizes, existing_sizes,
 end
 
 
-function setup_gen_inputs(s::Scenario, max_sizes, min_sizes, existing_sizes,
-    cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin)
-    # TODO add incentives to Generator and use cost_curve function
+function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes,
+    cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin,
+    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+    )
     max_sizes["Generator"] = s.generator.max_kw
     min_sizes["Generator"] = s.generator.existing_kw + s.generator.min_kw
     existing_sizes["Generator"] = s.generator.existing_kw
-    cap_cost_slope["Generator"] = s.generator.installed_cost_per_kw
+    update_cost_curve!(s.generator, "Generator", s.financial,
+        cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+    )
     om_cost_per_kw["Generator"] = s.generator.om_cost_per_kw
     production_factor["Generator", :] = prodfactor(s.generator)
     fillin_techs_by_exportbin(techs_by_exportbin, s.generator, "Generator")
@@ -408,7 +416,7 @@ function setup_gen_inputs(s::Scenario, max_sizes, min_sizes, existing_sizes,
 end
 
 
-function setup_present_worth_factors(s::Scenario, techs::Array{String, 1}, pvtechs::Array{String, 1})
+function setup_present_worth_factors(s::AbstractScenario, techs::Array{String, 1}, pvtechs::Array{String, 1})
 
     lvl_factor = Dict(t => 1.0 for t in techs)  # default levelization_factor of 1.0
     for (i, tech) in enumerate(pvtechs)  # replace 1.0 with actual PV levelization_factor (only tech with degradation)
@@ -435,29 +443,38 @@ function setup_present_worth_factors(s::Scenario, techs::Array{String, 1}, pvtec
     if s.financial.third_party_ownership
         pwf_offtaker = annuity(s.financial.analysis_years, 0.0, s.financial.offtaker_discount_pct)
         pwf_owner = annuity(s.financial.analysis_years, 0.0, s.financial.owner_discount_pct)
-        two_party_factor = (pwf_offtaker * (1 - s.financial.offtaker_tax_pct)) /
+        third_party_factor = (pwf_offtaker * (1 - s.financial.offtaker_tax_pct)) /
                            (pwf_owner * (1 - s.financial.owner_tax_pct))
     else
-        two_party_factor = 1.0
+        third_party_factor = 1.0
     end
 
-    return lvl_factor, pwf_e, pwf_om, two_party_factor
+    return lvl_factor, pwf_e, pwf_om, third_party_factor
 end
 
 
+"""
+    setup_electric_utility_inputs(s::AbstractScenario)
+
+Define the `time_steps_with_grid` and `time_steps_without_grid` (detministic outage).
+
+NOTE: v1 of the API spliced the critical_loads_kw into the loads_kw during outages but this splicing is no longer needed
+now that the constraints are properly applied over `time_steps_with_grid` and `time_steps_without_grid` using loads_kw
+and critical_loads_kw respectively.
+"""
 function setup_electric_utility_inputs(s::AbstractScenario)
-    if s.electric_utility.outage_end_timestep > 0 &&
-            s.electric_utility.outage_end_timestep > s.electric_utility.outage_start_timestep
-        time_steps_without_grid = Int[i for i in range(s.electric_utility.outage_start_timestep,
-                                                    stop=s.electric_utility.outage_end_timestep)]
-        if s.electric_utility.outage_start_timestep > 1
+    if s.electric_utility.outage_end_time_step > 0 &&
+            s.electric_utility.outage_end_time_step > s.electric_utility.outage_start_time_step
+        time_steps_without_grid = Int[i for i in range(s.electric_utility.outage_start_time_step,
+                                                    stop=s.electric_utility.outage_end_time_step)]
+        if s.electric_utility.outage_start_time_step > 1
             time_steps_with_grid = append!(
-                Int[i for i in range(1, stop=s.electric_utility.outage_start_timestep - 1)],
-                Int[i for i in range(s.electric_utility.outage_end_timestep + 1,
+                Int[i for i in range(1, stop=s.electric_utility.outage_start_time_step - 1)],
+                Int[i for i in range(s.electric_utility.outage_end_time_step + 1,
                                      stop=length(s.electric_load.loads_kw))]
             )
         else
-            time_steps_with_grid = Int[i for i in range(s.electric_utility.outage_end_timestep + 1,
+            time_steps_with_grid = Int[i for i in range(s.electric_utility.outage_end_time_step + 1,
                                        stop=length(s.electric_load.loads_kw))]
         end
     else
@@ -468,7 +485,12 @@ function setup_electric_utility_inputs(s::AbstractScenario)
 end
 
 
-function adjust_load_profile(s::Scenario, production_factor::DenseAxisArray)
+"""
+    adjust_load_profile(s::AbstractScenario, production_factor::DenseAxisArray)
+
+Adjust the (critical_)loads_kw based off of (critical_)loads_kw_is_net
+"""
+function adjust_load_profile(s::AbstractScenario, production_factor::DenseAxisArray)
     if s.electric_load.loads_kw_is_net
         for pv in s.pvs if pv.existing_kw > 0
             s.electric_load.loads_kw .+= pv.existing_kw * production_factor[pv.name, :].data

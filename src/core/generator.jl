@@ -48,7 +48,24 @@ function Generator(;
     sells_energy_back_to_grid::Bool = false,
     can_net_meter::Bool = false,
     can_wholesale::Bool = false,
-    can_export_beyond_nem_limit = false
+    can_export_beyond_nem_limit = false,
+    macrs_option_years::Int = 0,
+    macrs_bonus_pct::Float64 = 1.0,
+    macrs_itc_reduction::Float64 = 0.0,
+    federal_itc_pct::Float64 = 0.0,
+    federal_rebate_per_kw::Float64 = 0.0,
+    state_ibi_pct::Float64 = 0.0,
+    state_ibi_max::Float64 = 1.0e10,
+    state_rebate_per_kw::Float64 = 0.0,
+    state_rebate_max::Float64 = 1.0e10,
+    utility_ibi_pct::Float64 = 0.0,
+    utility_ibi_max::Float64 = 1.0e10,
+    utility_rebate_per_kw::Float64 = 0.0,
+    utility_rebate_max::Float64 = 1.0e10,
+    production_incentive_per_kwh::Float64 = 0.0,
+    production_incentive_max_benefit::Float64 = 1.0e9,
+    production_incentive_years::Int = 0,
+    production_incentive_max_kw::Float64 = 1.0e9,
 )
 ```
 """
@@ -69,6 +86,23 @@ struct Generator <: AbstractGenerator
     can_net_meter
     can_wholesale
     can_export_beyond_nem_limit
+    macrs_option_years
+    macrs_bonus_pct
+    macrs_itc_reduction
+    federal_itc_pct
+    federal_rebate_per_kw
+    state_ibi_pct
+    state_ibi_max
+    state_rebate_per_kw
+    state_rebate_max
+    utility_ibi_pct
+    utility_ibi_max
+    utility_rebate_per_kw
+    utility_rebate_max
+    production_incentive_per_kwh
+    production_incentive_max_benefit
+    production_incentive_years
+    production_incentive_max_kw
 
     function Generator(;
         existing_kw::Real=0,
@@ -86,7 +120,24 @@ struct Generator <: AbstractGenerator
         sells_energy_back_to_grid::Bool = false,
         can_net_meter::Bool = true,
         can_wholesale::Bool = true,
-        can_export_beyond_nem_limit = true
+        can_export_beyond_nem_limit = true,
+        macrs_option_years::Int = 0,
+        macrs_bonus_pct::Float64 = 1.0,
+        macrs_itc_reduction::Float64 = 0.0,
+        federal_itc_pct::Float64 = 0.0,
+        federal_rebate_per_kw::Float64 = 0.0,
+        state_ibi_pct::Float64 = 0.0,
+        state_ibi_max::Float64 = 1.0e10,
+        state_rebate_per_kw::Float64 = 0.0,
+        state_rebate_max::Float64 = 1.0e10,
+        utility_ibi_pct::Float64 = 0.0,
+        utility_ibi_max::Float64 = 1.0e10,
+        utility_rebate_per_kw::Float64 = 0.0,
+        utility_rebate_max::Float64 = 1.0e10,
+        production_incentive_per_kwh::Float64 = 0.0,
+        production_incentive_max_benefit::Float64 = 1.0e9,
+        production_incentive_years::Int = 0,
+        production_incentive_max_kw::Float64 = 1.0e9,
         )
 
         new(
@@ -105,7 +156,24 @@ struct Generator <: AbstractGenerator
             sells_energy_back_to_grid,
             can_net_meter,
             can_wholesale,
-            can_export_beyond_nem_limit
+            can_export_beyond_nem_limit,
+            macrs_option_years,
+            macrs_bonus_pct,
+            macrs_itc_reduction,
+            federal_itc_pct,
+            federal_rebate_per_kw,
+            state_ibi_pct,
+            state_ibi_max,
+            state_rebate_per_kw,
+            state_rebate_max,
+            utility_ibi_pct,
+            utility_ibi_max,
+            utility_rebate_per_kw,
+            utility_rebate_max,
+            production_incentive_per_kwh,
+            production_incentive_max_benefit,
+            production_incentive_years,
+            production_incentive_max_kw
         )
     end
 end

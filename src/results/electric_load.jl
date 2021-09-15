@@ -27,53 +27,13 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-"""
-    Site
+function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+    r = Dict{String, Any}()
 
-Inputs related to the physical location:
-
-```julia
-function Site(;
-    latitude::Real, 
-    longitude::Real, 
-    land_acres::Union{Float64, Nothing} = nothing, 
-    roof_squarefeet::Union{Float64, Nothing} = nothing,
-    min_resil_timesteps::Int=0,
-    mg_tech_sizes_equal_grid_sizes::Bool = true,
-    node::Int = 1, 
-    )
-```
-"""
-struct Site
-    "required"
-    latitude
-    "required"
-    longitude
-    land_acres
-    roof_squarefeet
-    min_resil_timesteps
-    mg_tech_sizes_equal_grid_sizes
-    node  # TODO validate that multinode Sites do not share node numbers? Or just raise warning
-    function Site(;
-        latitude::Real, 
-        longitude::Real, 
-        land_acres::Union{Float64, Nothing} = nothing, 
-        roof_squarefeet::Union{Float64, Nothing} = nothing,
-        min_resil_timesteps::Int=0,
-        mg_tech_sizes_equal_grid_sizes::Bool = true,
-        node::Int = 1, 
-        )
-        invalid_args = String[]
-        if !(-90 <= latitude < 90)
-            push!(invalid_args, "latitude must satisfy -90 <= latitude < 90, got $(latitude)")
-        end
-        if !(-180 <= longitude < 180)
-            push!(invalid_args, "longitude must satisfy -180 <= longitude < 180, got $(longitude)")
-        end
-        if length(invalid_args) > 0
-            error("Invalid argument values: $(invalid_args)")
-        end
-        new(latitude, longitude, land_acres, roof_squarefeet, min_resil_timesteps, 
-            mg_tech_sizes_equal_grid_sizes, node)
-    end
+    r["load_series_kw"] = p.s.electric_load.loads_kw
+    r["critical_load_series_kw"] = p.s.electric_load.critical_loads_kw
+    r["annual_calculated_kwh"] = sum(r["load_series_kw"])
+    
+    d["ElectricLoad"] = r
+    nothing
 end

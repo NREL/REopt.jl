@@ -59,7 +59,7 @@ end
     results = run_reopt(model, "./scenarios/pv_storage.json")
 
     @test results["PV"]["size_kw"] ≈ 217 atol=1
-    @test results["Financial"]["lcc_us_dollars"] ≈ 1.23887e7 rtol=1e-5
+    @test results["Financial"]["lcc"] ≈ 1.240037e7 rtol=1e-5
     @test results["Storage"]["size_kw"] ≈ 56 atol=1
     @test results["Storage"]["size_kwh"] ≈ 79 atol=1
 end
@@ -74,10 +74,10 @@ end
     @test value(m[:binMGTechUsed]["Generator"]) == 1
     @test value(m[:binMGTechUsed]["PV"]) == 0
     @test value(m[:binMGStorageUsed]) == 1
-    @test results["Financial"]["lcc_us_dollars"] ≈ 7.3681609e7 atol=5e4
+    @test results["Financial"]["lcc"] ≈ 7.3879557e7 atol=5e4
     
     #=
-    Scenario with $0/kWh VoLL, 12x169 hour outages, 1kW load/hour, and min_resil_timesteps = 168
+    Scenario with $0/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_timesteps = 168
     - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
     =#
     m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
@@ -98,10 +98,11 @@ end
         REoptInputs("./scenarios/monthly_rate.json"),
     ];
     results = run_reopt(m, ps)
-    @test results[3]["Financial"]["lcc_us_dollars"] + results[10]["Financial"]["lcc_us_dollars"] ≈ 1.23887e7 + 437169.0 rtol=1e-5
+    @test results[3]["Financial"]["lcc"] + results[10]["Financial"]["lcc"] ≈ 1.23887e7 + 437169.0 rtol=1e-5
 end
 
 
+# TODO implement LinDistFlow test in Xpress (and Cbc?)
 @testset "LinDistFlow" begin
     m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
     ps = [
@@ -132,12 +133,21 @@ end
     optimize!(m)
 
     results = reopt_results(m, ps)
-    @test results[10]["Financial"]["lcc_us_dollars"] + results[3]["Financial"]["lcc_us_dollars"] ≈ 1.23887e7 + 437169.0 rtol=1e-5
+    @test results[10]["Financial"]["lcc"] + results[3]["Financial"]["lcc"] ≈ 1.23887e7 + 437169.0 rtol=1e-5
     P0 = value.(m[:Pⱼ]["0",:]).data * ldf_inputs.Sbase / 1e3;  # converting to kW
     TotalGridPurchases = value.(m[:dvGridPurchase_3]).data + value.(m[:dvGridPurchase_10]).data; 
     @test maximum(TotalGridPurchases) ≈ maximum(P0) rtol = 1e-5  # lossless model
 end
 
+
+@testset "TieredRates" begin
+    expected_year_one_energy_cost = 2342.88
+    m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
+    results = run_reopt(m, "./scenarios/tiered_rate.json")
+    @test results["ElectricTariff"]["year_one_energy_cost"] ≈ 2342.88
+
+    urdb_label = "59bc22705457a3372642da67"  # tiered monthly demand rate
+end
 
 ## equivalent REopt Lite API Post for test 2:
 #   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
@@ -149,17 +159,17 @@ end
 #         "land_acres": 1.0,
 #     "PV": {
 #         "macrs_bonus_pct": 0.4,
-#         "installed_cost_us_dollars_per_kw": 2000.0,
+#         "installed_cost_per_kw": 2000.0,
 #         "tilt": 34.579,
 #         "degradation_pct": 0.005,
 #         "macrs_option_years": 5,
 #         "federal_itc_pct": 0.3,
 #         "module_type": 0,
 #         "array_type": 1,
-#         "om_cost_us_dollars_per_kw": 16.0,
+#         "om_cost_per_kw": 16.0,
 #         "macrs_itc_reduction": 0.5,
 #         "azimuth": 180.0,
-#         "federal_rebate_us_dollars_per_kw": 350.0,
+#         "federal_rebate_per_kw": 350.0,
 #         "dc_ac_ratio": 1.1
 #     },
 #     "LoadProfile": {
@@ -168,16 +178,16 @@ end
 #         "city": "LosAngeles"
 #     },
 #     "Storage": {
-#         "total_rebate_us_dollars_per_kw": 100.0,
+#         "total_rebate_per_kw": 100.0,
 #         "macrs_option_years": 5,
 #         "can_grid_charge": true,
 #         "macrs_bonus_pct": 0.4,
 #         "macrs_itc_reduction": 0.5,
 #         "total_itc_pct": 0,
-#         "installed_cost_us_dollars_per_kw": 1000.0,
-#         "installed_cost_us_dollars_per_kwh": 500.0,
-#         "replace_cost_us_dollars_per_kw": 460.0,
-#         "replace_cost_us_dollars_per_kwh": 230.0
+#         "installed_cost_per_kw": 1000.0,
+#         "installed_cost_per_kwh": 500.0,
+#         "replace_cost_per_kw": 460.0,
+#         "replace_cost_per_kwh": 230.0
 #     },
 #     "ElectricTariff": {
 #         "urdb_label": "5ed6c1a15457a3367add15ae"

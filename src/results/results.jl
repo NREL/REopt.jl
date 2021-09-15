@@ -30,8 +30,8 @@
 function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 	tstart = time()
     d = Dict{String, Any}()
-    for b in p.storage.types
-        if p.storage.max_kw[b] > 0
+    for b in p.s.storage.types
+        if p.s.storage.max_kw[b] > 0
             add_storage_results(m, p, d, b; _n)
         end
     end
@@ -39,6 +39,7 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     add_electric_tariff_results(m, p, d; _n)
     add_electric_utility_results(m, p, d; _n)
     add_financial_results(m, p, d; _n)
+    add_electric_load_results(m, p, d; _n)
 
 	if !isempty(p.pvtechs)
         add_pv_results(m, p, d; _n)
@@ -58,11 +59,61 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         @info "Generator results processing took $(round(time_elapsed, digits=3)) seconds."
 	end
 	
-	if !isempty(p.elecutil.outage_durations) && isempty(_n)  # outages not included in multinode model
+	if !isempty(p.s.electric_utility.outage_durations) && isempty(_n)  # outages not included in multinode model
         tstart = time()
 		add_outage_results(m, p, d)
         time_elapsed = time() - tstart
         @info "Outage results processing took $(round(time_elapsed, digits=3)) seconds."
 	end
 	return d
+end
+
+
+"""
+    combine_results(bau::Dict, opt::Dict)
+    
+Combine two results dictionaries into one using BAU and optimal scenario results.
+"""
+function combine_results(bau::Dict, opt::Dict, bau_scenario::BAUScenario)
+    bau_outputs = (
+        ("Financial", "lcc"),
+        ("ElectricTariff", "year_one_energy_cost"),
+        ("ElectricTariff", "year_one_demand_cost"),
+        ("ElectricTariff", "year_one_fixed_cost"),
+        ("ElectricTariff", "year_one_min_charge_adder"),
+        ("ElectricTariff", "total_energy_cost"),
+        ("ElectricTariff", "total_demand_cost"),
+        ("ElectricTariff", "total_fixed_cost"),
+        ("ElectricTariff", "total_min_charge_adder"),
+        ("ElectricTariff", "total_export_benefit"),
+        ("ElectricTariff", "year_one_bill"),
+        ("ElectricTariff", "year_one_export_benefit"),
+        ("ElectricUtility", "year_one_to_load_series_kw"),  
+        ("ElectricUtility", "year_one_energy_supplied_kwh"),
+        ("PV", "average_annual_energy_produced_kwh"),
+        ("PV", "year_one_energy_produced_kwh"),
+        ("PV", "total_om_cost"),
+        ("Generator", "fuel_used_gal"),
+        ("Generator", "total_fixed_om_cost"),
+        ("Generator", "total_variable_om_cost"),
+        ("Generator", "total_fuel_cost"),
+        ("Generator", "year_one_fuel_cost"),
+        ("Generator", "year_one_variable_om_cost"),
+        ("Generator", "year_one_fixed_om_cost"),
+    )
+
+    for t in bau_outputs
+        if t[1] in keys(opt) && t[1] in keys(bau)
+            if t[2] in keys(bau[t[1]])
+                opt[t[1]][t[2] * "_bau"] = bau[t[1]][t[2]]
+            end
+        end
+    end
+    opt["Financial"]["net_om_costs_bau"] = bau["Financial"]["total_om_costs_after_tax"]
+    opt["Financial"]["npv"] = opt["Financial"]["lcc_bau"] - opt["Financial"]["lcc"]
+
+    opt["ElectricLoad"]["bau_critical_load_met"] = bau_scenario.outage_outputs.bau_critical_load_met
+    opt["ElectricLoad"]["bau_critical_load_met_time_steps"] = bau_scenario.outage_outputs.bau_critical_load_met_time_steps
+
+    return opt
 end

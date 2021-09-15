@@ -31,8 +31,8 @@
     ElectricUtility
 
     Base.@kwdef struct ElectricUtility
-        outage_start_timestep::Int=0  # for modeling a single outage, with critical load spliced into the baseline load ...
-        outage_end_timestep::Int=0  # ... utiltity production_factor = 0 during the outage
+        outage_start_time_step::Int=0  # for modeling a single outage, with critical load spliced into the baseline load ...
+        outage_end_time_step::Int=0  # ... utiltity production_factor = 0 during the outage
         allow_simultaneous_export_import::Bool=true  # if true the site has two meters (in effect)
         # variables below used for minimax the expected outage cost,
         # with max taken over outage start time, expectation taken over outage duration
@@ -45,8 +45,8 @@
 
 """
 Base.@kwdef struct ElectricUtility
-    outage_start_timestep::Int=0  # for modeling a single outage, with critical load spliced into the baseline load ...
-    outage_end_timestep::Int=0  # ... utiltity production_factor = 0 during the outage
+    outage_start_time_step::Int=0  # for modeling a single outage, with critical load spliced into the baseline load ...
+    outage_end_time_step::Int=0  # ... utiltity production_factor = 0 during the outage
     allow_simultaneous_export_import::Bool=true  # if true the site has two meters (in effect)
     # variables below used for minimax the expected outage cost,
     # with max taken over outage start time, expectation taken over outage duration

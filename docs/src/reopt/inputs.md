@@ -49,9 +49,21 @@ The `Scenario` struct captures all of the objects that can be included in a scen
 Scenario
 ```
 
+## BAUScenario
+The `BAUScenario` struct is for running Business-As-Usual scenarios, i.e. without any new technologies.
+The results of the BAU scenario are used to calculate other `Financial` results such as the net present value.
+```@docs
+BAUScenario
+```
+
 ## REoptInputs
 ```@docs
 REoptLite.REoptInputs
+```
+
+## Site
+```@docs
+REoptLite.Site
 ```
 
 ## ElectricLoad
@@ -59,7 +71,7 @@ REoptLite.REoptInputs
 REoptLite.ElectricLoad
 ```
 
-## Financial values
+## Financial
 ```@docs
 REoptLite.Financial
 ```
