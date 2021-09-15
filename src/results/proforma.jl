@@ -328,16 +328,16 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
     # Production-based incentives
     pbi_series = Float64[]
     pbi_series_bau = Float64[]
-    existing_energy_bau = third_party ? get(results[tech.name], "year_one_energy_produced_kwh_bau", 0) : 0
+    existing_energy_bau = third_party ? get(results[tech_name], "year_one_energy_produced_kwh_bau", 0) : 0
     for yr in range(0, stop=years-1)
         if yr < tech.production_incentive_years
-            degredation_pct = (1 - tech.degradation_pct)^yr
+            degredation_pct = :degradation_pct in fieldnames(typeof(tech)) ? (1 - tech.degradation_pct)^yr : 1.0
             base_pbi = minimum([
-                tech.production_incentive_per_kwh * (results[tech.name]["year_one_energy_produced_kwh"] - existing_energy_bau) * degredation_pct,  
+                tech.production_incentive_per_kwh * (results[tech_name]["year_one_energy_produced_kwh"] - existing_energy_bau) * degredation_pct,  
                 tech.production_incentive_max_benefit * degredation_pct
             ])
             base_pbi_bau = minimum([
-                tech.production_incentive_per_kwh * get(results[tech.name], "year_one_energy_produced_kwh_bau", 0) * degredation_pct,  
+                tech.production_incentive_per_kwh * get(results[tech_name], "year_one_energy_produced_kwh_bau", 0) * degredation_pct,  
                 tech.production_incentive_max_benefit * degredation_pct 
             ])
             push!(pbi_series, base_pbi)

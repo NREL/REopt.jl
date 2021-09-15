@@ -73,7 +73,7 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 		p.levelization_factor[t]
 			for t in p.gentechs, ts in p.time_steps)
 	)
-	r["average_yearly_energy_produced_kwh"] = round(value(AverageGenProd), digits=0)
+	r["average_annual_energy_produced_kwh"] = round(value(AverageGenProd), digits=0)
     
 	d["Generator"] = r
     nothing
