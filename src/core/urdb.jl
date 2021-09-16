@@ -27,31 +27,32 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-abstract type REoptData end
 # https://discourse.julialang.org/t/vector-of-matrices-vs-multidimensional-arrays/9602/5
 # 5d2360465457a3f77ddc131e has TOU demand
 # 59bc22705457a3372642da67 has monthly tiered demand (no TOU demand)
 
 """
-    Base.@kwdef struct URDBrate <: REoptData
+    Base.@kwdef struct URDBrate
 
 Contains some of the data for ElectricTariff
 """
-struct URDBrate <: REoptData
-    year::Int
-    time_steps_per_hour::Int
-
-    energy_rates::Array{Float64,2}  # tier X time
+struct URDBrate
+    energy_rates::Array{Float64,2}  # time X tier
     energy_tier_limits::Array{Real,1}
+    n_energy_tiers::Int
 
     n_monthly_demand_tiers::Int
     monthly_demand_tier_limits::Array{Real,1}
-    monthly_demand_rates::Array{Float64,2}  # month X tier TODO change tier locations in reopt.jl to be consistent
+    monthly_demand_rates::Array{Float64,2}  # month X tier
 
     n_tou_demand_tiers::Int
     tou_demand_tier_limits::Array{Real,1}
     tou_demand_rates::Array{Float64,2}  # ratchet X tier
     tou_demand_ratchet_timesteps::Array{Array{Int64,1},1}  # length = n_tou_demand_ratchets
+
+    demand_lookback_months::AbstractArray{Int,1}
+    demand_lookback_percent::Float64
+    demand_lookback_range::Int
 
     fixed_monthly_charge::Float64
     annual_min_charge::Float64
@@ -97,16 +98,17 @@ function URDBrate(urdb_response::Dict, year::Int=2019; time_steps_per_hour=1)
       n_tou_demand_tiers, tou_demand_tier_limits, tou_demand_rates, tou_demand_ratchet_timesteps =
       parse_demand_rates(urdb_response, year)
 
-    energy_rates, energy_tier_limits = parse_urdb_energy_costs(urdb_response, year)
+    energy_rates, energy_tier_limits, n_energy_tiers = parse_urdb_energy_costs(urdb_response, year)
 
     fixed_monthly_charge, annual_min_charge, min_monthly_charge = parse_urdb_fixed_charges(urdb_response)
 
-    URDBrate(
-        year,
-        time_steps_per_hour,
 
+    demand_lookback_months, demand_lookback_percent, demand_lookback_range = parse_urdb_lookback_charges(urdb_response)
+
+    URDBrate(
         energy_rates,
         energy_tier_limits,
+        n_energy_tiers,
 
         n_monthly_demand_tiers,
         monthly_demand_tier_limits,
@@ -116,6 +118,10 @@ function URDBrate(urdb_response::Dict, year::Int=2019; time_steps_per_hour=1)
         tou_demand_tier_limits,
         tou_demand_rates,
         tou_demand_ratchet_timesteps,
+
+        demand_lookback_months,
+        demand_lookback_percent,
+        demand_lookback_range,
 
         fixed_monthly_charge,
         annual_min_charge,
@@ -294,8 +300,8 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
             end
         end
     end
-    energy_rates = reshape(energy_cost_vector, (n_energy_tiers, :))
-    return energy_rates, energy_tier_limits_kwh
+    energy_rates = reshape(energy_cost_vector, (:, n_energy_tiers))
+    return energy_rates, energy_tier_limits_kwh, n_energy_tiers
 end
 
 
@@ -314,7 +320,7 @@ function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8)
         monthly_demand_rates = parse_urdb_monthly_demand(d, n_monthly_demand_tiers)
     else
         monthly_demand_tier_limits = []
-        n_monthly_demand_tiers = 0
+        n_monthly_demand_tiers = 1
         monthly_demand_rates = Array{Float64,2}(undef, 0, 0)
     end
 
@@ -507,8 +513,63 @@ end
 return fixed_monthly, annual_min, min_monthly :: Float64
 """
 function parse_urdb_fixed_charges(d::Dict)
-    fixed_monthly = Float64(get(d, "fixedmonthlycharge", 0.0))
-    annual_min = Float64(get(d, "annualmincharge", 0.0))
-    min_monthly = Float64(get(d, "minmonthlycharge", 0.0))
+    fixed_monthly = 0.0
+    annual_min = 0.0
+    min_monthly = 0.0
+
+    # first try $/month, then check if $/day exists, as of 1/28/2020 there were only $/day and $month entries in the URDB
+    if get(d, "fixedchargeunits", "") == "\$/month" 
+        fixed_monthly = Float64(get(d, "fixedchargefirstmeter", 0.0))
+    end
+    if get(d, "fixedchargeunits", "") == "\$/day"
+        fixed_monthly = Float64(get(d, "fixedchargefirstmeter", 0.0) * 30.4375)
+        # scalar intended to approximate annual charges over 12 month period, derived from 365.25/12
+    end
+
+    if get(d, "minchargeunits", "") == "\$/month"
+        min_monthly = Float64(get(d, "mincharge", 0.0))
+        # first try $/month, then check if $/day or $/year exists, as of 1/28/2020 these were the only unit types in the urdb
+    end
+    if get(d, "minchargeunits", "") == "\$/day"
+        min_monthly = Float64(get(d, "mincharge", 0.0) * 30.4375 )
+        # scalar intended to approximate annual charges over 12 month period, derived from 365.25/12
+    end
+
+    if get(d, "minchargeunits", "") == "\$/year"
+        annual_min = Float64(get(d, "mincharge", 0.0))
+    end
+    
     return fixed_monthly, annual_min, min_monthly
+end
+
+
+"""
+    parse_urdb_lookback_charges(d::Dict)
+
+URDB lookback fields:
+- lookbackMonths
+    - Type: array
+    - Array of 12 booleans, true or false, indicating months in which lookbackPercent applies.
+        If any of these is true, lookbackRange should be zero.
+- lookbackPercent
+    - Type: decimal
+    - Lookback percentage. Applies to either lookbackMonths with value=1, or a lookbackRange.
+- lookbackRange
+    - Type: integer
+    - Number of months for which lookbackPercent applies. If not 0, lookbackMonths values should all be 0.
+"""
+function parse_urdb_lookback_charges(d::Dict)
+    lookback_months = get(d, "lookbackMonths", Int[])
+    lookback_percent = Float64(get(d, "lookbackPercent", 0.0))
+    lookback_range = Int64(get(d, "lookbackRange", 0.0))
+
+    reopt_lookback_months = Int[]
+    if lookback_range != 0 && length(lookback_months) == 12
+        for mth in range(1, stop=12)
+            if lookback_months[mth] == 1
+                push!(reopt_lookback_months, mth)
+            end
+        end
+    end
+    return reopt_lookback_months, lookback_percent, lookback_range
 end

@@ -36,13 +36,13 @@ function add_outage_results(m, p, r::Dict)
 	r["expected_outage_cost"] = value(m[:ExpectedOutageCost])
 	r["max_outage_cost_per_outage_duration"] = value.(m[:dvMaxOutageCost]).data
 	r["dvUnservedLoad"] = value.(m[:dvUnservedLoad]).data
-	S = length(p.elecutil.scenarios)
-	T = length(p.elecutil.outage_start_timesteps)
+	S = length(p.s.electric_utility.scenarios)
+	T = length(p.s.electric_utility.outage_start_timesteps)
 	unserved_load_per_outage = Array{Float64}(undef, S, T)
 	for s in 1:S, t in 1:T
 		unserved_load_per_outage[s, t] = sum(r["dvUnservedLoad"][s, t, ts] for 
-											 ts in 1:p.elecutil.outage_durations[s]) 
-	# need the ts in 1:p.elecutil.outage_durations[s] b/c dvUnservedLoad has unused values in third dimension
+											 ts in 1:p.s.electric_utility.outage_durations[s]) 
+	# need the ts in 1:p.s.electric_utility.outage_durations[s] b/c dvUnservedLoad has unused values in third dimension
 	end
 	r["unserved_load_per_outage"] = round.(unserved_load_per_outage, digits=2)
 	r["mg_storage_upgrade_cost"] = value(m[:dvMGStorageUpgradeCost])
@@ -65,20 +65,20 @@ function add_outage_results(m, p, r::Dict)
 			end
 			r[string("mg_", t, "_upgrade_cost")] = round(value(m[:dvMGTechUpgradeCost][t]), digits=2)
 
-			if !isempty(p.storage.types)
+			if !isempty(p.s.storage.types)
 				PVtoBatt = (m[:dvMGProductionToStorage][t, s, tz, ts] for 
-					s in p.elecutil.scenarios,
-					tz in p.elecutil.outage_start_timesteps,
-					ts in p.elecutil.outage_timesteps)
+					s in p.s.electric_utility.scenarios,
+					tz in p.s.electric_utility.outage_start_timesteps,
+					ts in p.s.electric_utility.outage_timesteps)
 			else
 				PVtoBatt = []
 			end
 			r[string("mg", t, "toBatt")] = round.(value.(PVtoBatt), digits=3)
 
 			PVtoCUR = (m[:dvMGCurtail][t, s, tz, ts] for 
-				s in p.elecutil.scenarios,
-				tz in p.elecutil.outage_start_timesteps,
-				ts in p.elecutil.outage_timesteps)
+				s in p.s.electric_utility.scenarios,
+				tz in p.s.electric_utility.outage_start_timesteps,
+				ts in p.s.electric_utility.outage_timesteps)
 			r[string("mg", t, "toCurtail")] = round.(value.(PVtoCUR), digits=3)
 
 			PVtoLoad = (
@@ -86,9 +86,9 @@ function add_outage_results(m, p, r::Dict)
 						* p.levelization_factor[t]
 				- m[:dvMGCurtail][t, s, tz, ts]
 				- m[:dvMGProductionToStorage][t, s, tz, ts] for 
-					s in p.elecutil.scenarios,
-					tz in p.elecutil.outage_start_timesteps,
-					ts in p.elecutil.outage_timesteps
+					s in p.s.electric_utility.scenarios,
+					tz in p.s.electric_utility.outage_start_timesteps,
+					ts in p.s.electric_utility.outage_timesteps
 			)
 			r[string("mg", t, "toLoad")] = round.(value.(PVtoLoad), digits=3)
 		end
@@ -108,20 +108,20 @@ function add_outage_results(m, p, r::Dict)
 			r[string("mg_", t, "_fuel_used")] = value.(m[:dvMGFuelUsed][t, :, :]).data
 			r[string("mg_", t, "_upgrade_cost")] = round(value(m[:dvMGTechUpgradeCost][t]), digits=2)
 
-			if !isempty(p.storage.types)
+			if !isempty(p.s.storage.types)
 				GenToBatt = (m[:dvMGProductionToStorage][t, s, tz, ts] for 
-					s in p.elecutil.scenarios,
-					tz in p.elecutil.outage_start_timesteps,
-					ts in p.elecutil.outage_timesteps)
+					s in p.s.electric_utility.scenarios,
+					tz in p.s.electric_utility.outage_start_timesteps,
+					ts in p.s.electric_utility.outage_timesteps)
 			else
 				GenToBatt = []
 			end
 			r[string("mg", t, "toBatt")] = round.(value.(GenToBatt), digits=3)
 
 			GENtoCUR = (m[:dvMGCurtail][t, s, tz, ts] for 
-				s in p.elecutil.scenarios,
-				tz in p.elecutil.outage_start_timesteps,
-				ts in p.elecutil.outage_timesteps)
+				s in p.s.electric_utility.scenarios,
+				tz in p.s.electric_utility.outage_start_timesteps,
+				ts in p.s.electric_utility.outage_timesteps)
 			r[string("mg", t, "toCurtail")] = round.(value.(GENtoCUR), digits=3)
 
 			GENtoLoad = (
@@ -129,9 +129,9 @@ function add_outage_results(m, p, r::Dict)
 						* p.levelization_factor[t]
 				- m[:dvMGCurtail][t, s, tz, ts]
 				- m[:dvMGProductionToStorage][t, s, tz, ts] for 
-					s in p.elecutil.scenarios,
-					tz in p.elecutil.outage_start_timesteps,
-					ts in p.elecutil.outage_timesteps
+					s in p.s.electric_utility.scenarios,
+					tz in p.s.electric_utility.outage_start_timesteps,
+					ts in p.s.electric_utility.outage_timesteps
 			)
 			r[string("mg", t, "toLoad")] = round.(value.(GENtoLoad), digits=3)
 		end

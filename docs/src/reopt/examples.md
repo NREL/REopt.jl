@@ -17,7 +17,7 @@ For more on the `scenario.json` see the [REopt Inputs](@ref) section.
 ### Manipulating Inputs
 A `scenario.json` goes through two conversion steps before the data is passed to the JuMP model:
 1. Conversion to a [Scenario](@ref) struct
-2. Converstion to a [REoptInputs](@ref) struct
+2. Conversion to a [REoptInputs](@ref) struct
 `REoptInputs` captures all the data arrays and sets necessary to build the JuMP model, and it can be manually modified before building the model:
 ```julia
 using Xpress

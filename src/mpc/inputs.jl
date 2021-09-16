@@ -29,13 +29,13 @@
 # *********************************************************************************
 
 struct MPCInputs <: AbstractInputs
+    s::MPCScenario
     techs::Array{String, 1}
     pvtechs::Array{String, 1}
     gentechs::Array{String,1}
     elec_techs::Array{String, 1}
     techs_no_turndown::Array{String, 1}
     existing_sizes::DenseAxisArray{Float64, 1}  # (techs)
-    elec_load::MPCElectricLoad
     time_steps::UnitRange
     time_steps_with_grid::Array{Int, 1}
     time_steps_without_grid::Array{Int, 1}
@@ -43,16 +43,12 @@ struct MPCInputs <: AbstractInputs
     months::UnitRange
     production_factor::DenseAxisArray{Float64, 2}  # (techs, time_steps)
     levelization_factor::Dict{String, Float64}  # (techs)
-    VoLL::Array{R, 1} where R<:Real #default set to 1 US dollar per kwh
+    value_of_lost_load_per_kwh::Array{R, 1} where R<:Real #default set to 1 US dollar per kwh
     pwf_e::Float64
     pwf_om::Float64
-    two_party_factor::Float64
-    etariff::MPCElectricTariff
+    third_party_factor::Float64
     ratchets::UnitRange
     techs_by_exportbin::DenseAxisArray{Array{String,1}}  # indexed on [:NEM, :WHL]
-    storage::MPCStorage
-    generator::MPCGenerator
-    elecutil::ElectricUtility
     export_bins_by_tech::Dict{String, Array{Symbol, 1}}
 end
 
@@ -78,7 +74,7 @@ function MPCInputs(s::MPCScenario)
     levelization_factor = Dict(t => 1.0 for t in techs)
     pwf_e = 1.0
     pwf_om = 1.0
-    two_party_factor = 1.0
+    third_party_factor = 1.0
 
     time_steps_with_grid, time_steps_without_grid, = setup_electric_utility_inputs(s)
 
@@ -89,13 +85,13 @@ function MPCInputs(s::MPCScenario)
     # TODO implement export bins by tech (rather than assuming that all techs share the export_bins)
  
     MPCInputs(
+        s,
         techs,
         pvtechs,
         gentechs,
         elec_techs,
         techs_no_turndown,
         existing_sizes,
-        s.electric_load,
         time_steps,
         time_steps_with_grid,
         time_steps_without_grid,
@@ -103,17 +99,13 @@ function MPCInputs(s::MPCScenario)
         months,
         production_factor,
         levelization_factor,  # TODO need this?
-        typeof(s.financial.VoLL) <: Array{<:Real, 1} ? s.financial.VoLL : fill(s.financial.VoLL, length(time_steps)),
+        typeof(s.financial.value_of_lost_load_per_kwh) <: Array{<:Real, 1} ? s.financial.value_of_lost_load_per_kwh : fill(s.financial.value_of_lost_load_per_kwh, length(time_steps)),
         pwf_e,
         pwf_om,
-        two_party_factor,
+        third_party_factor,
         # maxsize_pv_locations,
-        s.electric_tariff,
         1:length(s.electric_tariff.tou_demand_ratchet_timesteps),  # ratchets
         techs_by_exportbin,
-        s.storage,
-        s.generator,
-        s.electric_utility,
         export_bins_by_tech
         # s.site.min_resil_timesteps,
         # s.site.mg_tech_sizes_equal_grid_sizes,

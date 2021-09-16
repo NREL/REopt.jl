@@ -7,7 +7,9 @@ makedocs(
         "REopt Lite" => Any[
             "reopt/examples.md",
             "reopt/inputs.md",
-            "reopt/methods.md"
+            "reopt/outputs.md",
+            "reopt/methods.md",
+            "reopt/design.md"
         ],
         "Model Predictive Control" => Any[
             "mpc/examples.md",

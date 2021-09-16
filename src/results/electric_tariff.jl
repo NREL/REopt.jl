@@ -30,25 +30,25 @@
 function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
     m[Symbol("Year1UtilityEnergy"*_n)] = p.hours_per_timestep * 
-        sum(m[Symbol("dvGridPurchase"*_n)][ts] for ts in p.time_steps)
+        sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers)
 
-    r["total_energy_cost_us_dollars"] = round(value(m[Symbol("TotalEnergyChargesUtil"*_n)]) * (1 - p.offtaker_tax_pct), digits=2)
-    r["year_one_energy_cost_us_dollars"] = round(value(m[Symbol("TotalEnergyChargesUtil"*_n)]) / p.pwf_e, digits=2)
+    r["total_energy_cost"] = round(value(m[Symbol("TotalEnergyChargesUtil"*_n)]) * (1 - p.s.financial.offtaker_tax_pct), digits=2)
+    r["year_one_energy_cost"] = round(value(m[Symbol("TotalEnergyChargesUtil"*_n)]) / p.pwf_e, digits=2)
 
-    r["total_demand_cost_us_dollars"] = round(value(m[Symbol("TotalDemandCharges"*_n)]) * (1 - p.offtaker_tax_pct), digits=2)
-    r["year_one_demand_cost_us_dollars"] = round(value(m[Symbol("TotalDemandCharges"*_n)]) / p.pwf_e, digits=2)
+    r["total_demand_cost"] = round(value(m[Symbol("TotalDemandCharges"*_n)]) * (1 - p.s.financial.offtaker_tax_pct), digits=2)
+    r["year_one_demand_cost"] = round(value(m[Symbol("TotalDemandCharges"*_n)]) / p.pwf_e, digits=2)
     
-    r["total_fixed_cost_us_dollars"] = round(m[Symbol("TotalFixedCharges"*_n)] * (1 - p.offtaker_tax_pct), digits=2)
-    r["year_one_fixed_cost_us_dollars"] = round(m[Symbol("TotalFixedCharges"*_n)] / p.pwf_e, digits=0)
+    r["total_fixed_cost"] = round(m[Symbol("TotalFixedCharges"*_n)] * (1 - p.s.financial.offtaker_tax_pct), digits=2)
+    r["year_one_fixed_cost"] = round(m[Symbol("TotalFixedCharges"*_n)] / p.pwf_e, digits=0)
 
-    r["total_min_charge_adder_us_dollars"] = round(value(m[Symbol("MinChargeAdder"*_n)]) * (1 - p.offtaker_tax_pct), digits=2)
-    r["year_one_min_charge_adder_us_dollars"] = round(value(m[Symbol("MinChargeAdder"*_n)]) / p.pwf_e, digits=2)
+    r["total_min_charge_adder"] = round(value(m[Symbol("MinChargeAdder"*_n)]) * (1 - p.s.financial.offtaker_tax_pct), digits=2)
+    r["year_one_min_charge_adder"] = round(value(m[Symbol("MinChargeAdder"*_n)]) / p.pwf_e, digits=2)
 
-    r["year_one_bill_us_dollars"] = r["year_one_energy_cost_us_dollars"] + r["year_one_demand_cost_us_dollars"] +
-                                    r["year_one_fixed_cost_us_dollars"]  + r["year_one_min_charge_adder_us_dollars"]
+    r["year_one_bill"] = r["year_one_energy_cost"] + r["year_one_demand_cost"] +
+                                    r["year_one_fixed_cost"]  + r["year_one_min_charge_adder"]
                                 
-    r["total_export_benefit_us_dollars"] = -1 * round(value(m[Symbol("TotalExportBenefit"*_n)]) * (1 - p.offtaker_tax_pct), digits=2)
-    r["year_one_export_benefit_us_dollars"] = -1 * round(value(m[Symbol("TotalExportBenefit"*_n)]) / p.pwf_e, digits=0)
+    r["total_export_benefit"] = -1 * round(value(m[Symbol("TotalExportBenefit"*_n)]) * (1 - p.s.financial.offtaker_tax_pct), digits=2)
+    r["year_one_export_benefit"] = -1 * round(value(m[Symbol("TotalExportBenefit"*_n)]) / p.pwf_e, digits=0)
     
     d["ElectricTariff"] = r
     nothing
@@ -60,11 +60,11 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dic
     m[Symbol("energy_purchased"*_n)] = p.hours_per_timestep * 
         sum(m[Symbol("dvGridPurchase"*_n)][ts] for ts in p.time_steps)
 
-    r["energy_cost_us_dollars"] = round(value(m[Symbol("TotalEnergyChargesUtil"*_n)]), digits=2)
+    r["energy_cost"] = round(value(m[Symbol("TotalEnergyChargesUtil"*_n)]), digits=2)
 
-    r["demand_cost_us_dollars"] = round(value(m[Symbol("TotalDemandCharges"*_n)]), digits=2)
+    r["demand_cost"] = round(value(m[Symbol("TotalDemandCharges"*_n)]), digits=2)
                                 
-    r["export_benefit_us_dollars"] = -1 * round(value(m[Symbol("TotalExportBenefit"*_n)]), digits=0)
+    r["export_benefit"] = -1 * round(value(m[Symbol("TotalExportBenefit"*_n)]), digits=0)
     
     d["ElectricTariff"] = r
     nothing

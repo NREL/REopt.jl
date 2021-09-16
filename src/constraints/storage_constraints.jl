@@ -32,22 +32,22 @@ function add_storage_size_constraints(m, p, b; _n="")
 
 	# Constraint (4b)-1: Lower bound on Storage Energy Capacity
 	@constraint(m,
-        m[Symbol("dvStorageEnergy"*_n)][b] >= p.storage.min_kwh[b]
+        m[Symbol("dvStorageEnergy"*_n)][b] >= p.s.storage.min_kwh[b]
     )
 
 	# Constraint (4b)-2: Upper bound on Storage Energy Capacity
 	@constraint(m,
-        m[Symbol("dvStorageEnergy"*_n)][b] <= p.storage.max_kwh[b]
+        m[Symbol("dvStorageEnergy"*_n)][b] <= p.s.storage.max_kwh[b]
     )
 
 	# Constraint (4c)-1: Lower bound on Storage Power Capacity
 	@constraint(m,
-        m[Symbol("dvStoragePower"*_n)][b] >= p.storage.min_kw[b]
+        m[Symbol("dvStoragePower"*_n)][b] >= p.s.storage.min_kw[b]
     )
 
 	# Constraint (4c)-2: Upper bound on Storage Power Capacity
 	@constraint(m,
-        m[Symbol("dvStoragePower"*_n)][b] <= p.storage.max_kw[b]
+        m[Symbol("dvStoragePower"*_n)][b] <= p.s.storage.max_kw[b]
     )
 end
 
@@ -55,29 +55,29 @@ end
 function add_storage_dispatch_constraints(m, p, b; _n="")
     # Constraint (4a): initial state of charge
 	@constraint(m,
-        m[Symbol("dvStoredEnergy"*_n)][b, 0] == p.storage.soc_init_pct[b] * m[Symbol("dvStorageEnergy"*_n)][b]
+        m[Symbol("dvStoredEnergy"*_n)][b, 0] == p.s.storage.soc_init_pct[b] * m[Symbol("dvStorageEnergy"*_n)][b]
     )
 				
 	# Constraint (4g): state-of-charge for electrical storage - with grid
 	@constraint(m, [ts in p.time_steps_with_grid],
         m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_timestep * (  
-            sum(p.storage.charge_efficiency[b] * m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.elec_techs) 
-            + p.storage.grid_charge_efficiency[b] * m[Symbol("dvGridToStorage"*_n)][b, ts] 
-            - m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.storage.discharge_efficiency[b]
+            sum(p.s.storage.charge_efficiency[b] * m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.elec_techs) 
+            + p.s.storage.grid_charge_efficiency[b] * m[Symbol("dvGridToStorage"*_n)][b, ts] 
+            - m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.s.storage.discharge_efficiency[b]
         )
 	)
 
 	# Constraint (4h): state-of-charge for electrical storage - no grid
 	@constraint(m, [ts in p.time_steps_without_grid],
         m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_timestep * (  
-            sum(p.storage.charge_efficiency[b] * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.elec_techs) 
-            - m[Symbol("dvDischargeFromStorage"*_n)][b, ts] / p.storage.discharge_efficiency[b]
+            sum(p.s.storage.charge_efficiency[b] * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.elec_techs) 
+            - m[Symbol("dvDischargeFromStorage"*_n)][b, ts] / p.s.storage.discharge_efficiency[b]
         )
     )
 
 	# Constraint (4j): Minimum state of charge
 	@constraint(m, [ts in p.time_steps],
-        m[Symbol("dvStoredEnergy"*_n)][b, ts] >= p.storage.soc_min_pct[b] * m[Symbol("dvStorageEnergy"*_n)][b]
+        m[Symbol("dvStoredEnergy"*_n)][b, ts] >= p.s.storage.soc_min_pct[b] * m[Symbol("dvStorageEnergy"*_n)][b]
     )
 
 	# Constraint (4i)-1: Dispatch to electrical storage is no greater than power capacity
@@ -108,7 +108,7 @@ function add_storage_dispatch_constraints(m, p, b; _n="")
         m[Symbol("dvStoredEnergy"*_n)][b,ts] <= m[Symbol("dvStorageEnergy"*_n)][b]
     )
     
-    for b in setdiff(p.storage.types, p.storage.can_grid_charge)
+    for b in setdiff(p.s.storage.types, p.s.storage.can_grid_charge)
         for ts in p.time_steps_with_grid
             fix(m[Symbol("dvGridToStorage"*_n)][b, ts], 0.0, force=true)
         end
@@ -120,6 +120,7 @@ function add_storage_sum_constraints(m, p; _n="")
 
 	##Constraint (8c): Grid-to-storage no greater than grid purchases 
 	@constraint(m, [ts in p.time_steps_with_grid],
-        m[Symbol("dvGridPurchase"*_n)][ts] >= sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.types)
+      sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) >= 
+      sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types)
     )
 end

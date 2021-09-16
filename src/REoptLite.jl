@@ -31,6 +31,7 @@ module REoptLite
 
 export
     Scenario,
+    BAUScenario,
     REoptInputs,
     run_reopt,
     build_reopt!,
@@ -60,6 +61,7 @@ import DelimitedFiles: readdlm
 const MOI = MathOptInterface
 using Shapefile
 using PolygonInbounds
+using Roots: fzero  # for IRR
 global hdl = nothing
 
 include("keys.jl")
@@ -79,7 +81,9 @@ include("core/prodfactor.jl")
 include("core/urdb.jl")
 include("core/electric_tariff.jl")
 include("core/scenario.jl")
+include("core/bau_scenario.jl")
 include("core/reopt_inputs.jl")
+include("core/bau_inputs.jl")
 include("core/cost_curve.jl")
 
 include("constraints/outage_constraints.jl")
@@ -99,12 +103,14 @@ include("mpc/constraints.jl")
 include("results/results.jl")
 include("results/electric_tariff.jl")
 include("results/electric_utility.jl")
+include("results/proforma.jl")
 include("results/financial.jl")
 include("results/generator.jl")
 include("results/pv.jl")
 include("results/storage.jl")
 include("results/outages.jl")
 include("results/wind.jl")
+include("results/electric_load.jl")
 
 include("core/reopt.jl")
 include("core/reopt_multinode.jl")

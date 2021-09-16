@@ -227,8 +227,8 @@ end
 
 
 function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
-    batt_roundtrip_efficiency = p.storage.charge_efficiency[:elec] * 
-                                p.storage.discharge_efficiency[:elec]
+    batt_roundtrip_efficiency = p.s.storage.charge_efficiency[:elec] * 
+                                p.s.storage.discharge_efficiency[:elec]
 
     # TODO handle generic PV names
     pv_kw_ac_hourly = zeros(length(p.time_steps))
@@ -271,13 +271,13 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
         batt_kw = batt_kw, 
         pv_kw_ac_hourly = pv_kw_ac_hourly,
         init_soc = init_soc, 
-        critical_loads_kw = p.elec_load.critical_loads_kw, 
+        critical_loads_kw = p.s.electric_load.critical_loads_kw, 
         wind_kw_ac_hourly = [],
         batt_roundtrip_efficiency = batt_roundtrip_efficiency,
         diesel_kw = diesel_kw, 
-        fuel_available = p.generator.fuel_avail_gal,
-        b = p.generator.fuel_intercept_gal_per_hr,
-        m = p.generator.fuel_slope_gal_per_kwh, 
-        diesel_min_turndown = p.generator.min_turn_down_pct
+        fuel_available = p.s.generator.fuel_avail_gal,
+        b = p.s.generator.fuel_intercept_gal_per_hr,
+        m = p.s.generator.fuel_slope_gal_per_kwh, 
+        diesel_min_turndown = p.s.generator.min_turn_down_pct
     )
 end

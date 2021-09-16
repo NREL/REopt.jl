@@ -36,7 +36,7 @@
         "macrs_option_years": 5
     },
     "Financial": {
-        "VoLL": 100.0,
+        "value_of_lost_load_per_kwh": 100.0,
         "third_party_ownership": true,
         "offtaker_tax_pct": 0.0,
         "owner_discount_pct": 0.1,

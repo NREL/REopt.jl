@@ -45,11 +45,11 @@ end
     MPCFinancial
 
     Base.@kwdef struct MPCFinancial
-        VoLL::Union{Array{R,1}, R} where R<:Real = 1.00
+        value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00
     end
 """
 Base.@kwdef struct MPCFinancial
-    VoLL::Union{Array{R,1}, R} where R<:Real = 1.00
+    value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00
 end
 
 
@@ -72,14 +72,17 @@ end
 
 struct MPCElectricTariff
     energy_rates::AbstractVector{Float64}
+    n_energy_tiers::Int
 
     monthly_demand_rates::AbstractVector{Float64}
     time_steps_monthly::Array{Array{Int64,1},1}  # length = 0 or 12
     monthly_previous_peak_demands::AbstractVector{Float64}
+    n_monthly_demand_tiers::Int
 
     tou_demand_rates::AbstractVector{Float64}
     tou_demand_ratchet_timesteps::Array{Array{Int64,1},1}  # length = n_tou_demand_ratchets
     tou_previous_peak_demands::AbstractVector{Float64}
+    n_tou_demand_tiers::Int
 
     fixed_monthly_charge::Float64
     annual_min_charge::Float64
@@ -211,12 +214,15 @@ function MPCElectricTariff(d::Dict)
     
     MPCElectricTariff(
         energy_rates,
+        1,
         monthly_demand_rates,
         time_steps_monthly,
         monthly_previous_peak_demands,
+        1,
         tou_demand_rates,
         tou_demand_timesteps,
         tou_previous_peak_demands,
+        1,
         fixed_monthly_charge,
         annual_min_charge,
         min_monthly_charge,

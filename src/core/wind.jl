@@ -130,6 +130,7 @@ struct Wind <: AbstractTech
     can_net_meter::Bool
     can_wholesale::Bool
     can_export_beyond_nem_limit::Bool
+    can_curtail::Bool
 
     function Wind(;
         min_kw = 0.0,
@@ -161,7 +162,9 @@ struct Wind <: AbstractTech
         production_incentive_max_kw = 1.0e9,
         can_net_meter = true,
         can_wholesale = true,
-        can_export_beyond_nem_limit = true
+        can_export_beyond_nem_limit = true,
+        can_curtail= true,
+        average_elec_load = 0.0
         )
         size_class_to_hub_height = Dict(
             "residential"=> 20,
@@ -183,8 +186,16 @@ struct Wind <: AbstractTech
             "large"=> 0.12
         )
         
-        if length(size_class) == 0
-            size_class = "large"
+        if size_class == ""
+            if average_elec_load <= 12.5
+                size_class = "residential"
+            elseif average_elec_load <= 100
+                size_class = "commercial"
+            elseif average_elec_load <= 1000
+                size_class = "medium"
+            else
+                size_class = "large"
+            end
         elseif !(size_class in keys(size_class_to_hub_height))
             @error "Wind.size_class must be one of $(keys(size_class_to_hub_height))"
         end
@@ -230,7 +241,8 @@ struct Wind <: AbstractTech
             production_incentive_max_kw,
             can_net_meter,
             can_wholesale,
-            can_export_beyond_nem_limit
+            can_export_beyond_nem_limit,
+            can_curtail
         )
     end
 end
