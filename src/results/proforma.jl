@@ -288,6 +288,7 @@ function proforma_results(p::REoptInputs, d::Dict)
         # skip years where cumulative cashflow is positive and the previous year's is too
         end
     end
+    r["simple_payback_years"] = round(r["simple_payback_years"], digits=2)
 
     return r
 end
@@ -396,9 +397,7 @@ function irr(cashflows::AbstractArray{Float64, 1})
     rate = 0.0
     try
         rate = fzero(f, [0.0, 0.99])
-    catch
-        @info "catch!"
     finally
-        return rate
+        return round(rate, digits=2)
     end
 end

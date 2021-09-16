@@ -110,7 +110,7 @@ function combine_results(bau::Dict, opt::Dict, bau_scenario::BAUScenario)
         end
     end
     opt["Financial"]["net_om_costs_bau"] = bau["Financial"]["total_om_costs_after_tax"]
-    opt["Financial"]["npv"] = opt["Financial"]["lcc_bau"] - opt["Financial"]["lcc"]
+    opt["Financial"]["npv"] = round(opt["Financial"]["lcc_bau"] - opt["Financial"]["lcc"], digits=2)
 
     opt["ElectricLoad"]["bau_critical_load_met"] = bau_scenario.outage_outputs.bau_critical_load_met
     opt["ElectricLoad"]["bau_critical_load_met_time_steps"] = bau_scenario.outage_outputs.bau_critical_load_met_time_steps
