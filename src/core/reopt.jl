@@ -351,6 +351,11 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs)
 end
 
 
+"""
+    add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
+
+Add JuMP variables to the model.
+"""
 function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 	@variables m begin
 		dvSize[p.techs] >= 0  # System Size of Technology t [kW]
