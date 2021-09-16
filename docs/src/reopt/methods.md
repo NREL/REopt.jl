@@ -1,6 +1,14 @@
 # Methods
 ```@docs
-run_reopt
-build_reopt!(m::JuMP.AbstractModel, fp::String)
 Scenario(d::Dict)
+```
+
+## run_reopt
+```@docs
+run_reopt
+```
+
+## build_reopt!
+```@docs
+build_reopt!(m::JuMP.AbstractModel, fp::String)
 ```

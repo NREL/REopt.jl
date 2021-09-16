@@ -35,8 +35,11 @@ Captures inputs that do not logically fall under any of the other data structs.
 
     Base.@kwdef struct Settings
         time_steps_per_hour::Int = 1
+        run_bau::Bool = true
     end
 """
 Base.@kwdef struct Settings
     time_steps_per_hour::Int = 1
+    run_bau::Bool = true
+    add_soc_incentive::Bool = true
 end

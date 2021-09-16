@@ -31,7 +31,7 @@ function add_tech_size_constraints(m, p; _n="")
 
     # PV techs can be constrained by space available based on location at site (roof, ground, both)
     @constraint(m, [loc in p.pvlocations],
-        sum(m[Symbol("dvSize"*_n)][t] * p.pv_to_location[t, loc] for t in p.pvtechs) <= p.maxsize_pv_locations[loc]
+        sum(m[Symbol("dvSize"*_n)][t] * p.pv_to_location[t][loc] for t in p.pvtechs) <= p.maxsize_pv_locations[loc]
     )
 
     # max size limit
@@ -52,4 +52,13 @@ function add_tech_size_constraints(m, p; _n="")
     @constraint(m, [t in p.techs_no_turndown, ts in p.time_steps],
         m[Symbol("dvRatedProduction"*_n)][t,ts] == m[Symbol("dvSize"*_n)][t]
     )
+end
+
+
+function add_no_curtail_constraints(m, p; _n="")
+    for t in p.techs_no_curtail
+        for ts in p.time_steps
+            fix(m[Symbol("dvCurtail"*_n)][t, ts] , 0.0, force=true)
+        end
+    end
 end

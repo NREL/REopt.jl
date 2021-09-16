@@ -39,7 +39,7 @@ Base.@kwdef struct ElecStorage <: AbstractStorage
     soc_init_pct::Float64 = 0.5
     can_grid_charge::Bool = true
     installed_cost_per_kw::Float64 = 840.0
-    cost_per_kwh::Float64 = 420.0
+    installed_cost_per_kwh::Float64 = 420.0
     replace_cost_per_kw::Float64 = 410.0
     replace_cost_per_kwh::Float64 = 200.0
     inverter_replacement_year::Int = 10
@@ -49,21 +49,23 @@ Base.@kwdef struct ElecStorage <: AbstractStorage
     macrs_itc_reduction::Float64 = 0.5
     total_itc_pct::Float64 = 0.0
     total_rebate_per_kw::Float64 = 0.0
+    total_rebate_per_kwh::Float64 = 0.0
 end
 
-# TODO change all DenseAxisArray's into Dicts 
+
 struct Storage <: AbstractStorage
     types::Array{Symbol,1}
-    min_kw::DenseAxisArray{Float64,1}
-    max_kw::DenseAxisArray{Float64,1}
-    min_kwh::DenseAxisArray{Float64,1}
-    max_kwh::DenseAxisArray{Float64,1}
-    charge_efficiency::DenseAxisArray{Float64,1}
-    discharge_efficiency::DenseAxisArray{Float64,1}
-    soc_min_pct::DenseAxisArray{Float64,1}
-    soc_init_pct::DenseAxisArray{Float64,1}
-    installed_cost_per_kw::DenseAxisArray{Float64,1}
-    cost_per_kwh::DenseAxisArray{Float64,1}
+    raw_inputs::Dict{Symbol, AbstractStorage}
+    min_kw::Dict{Symbol, Float64}
+    max_kw::Dict{Symbol, Float64}
+    min_kwh::Dict{Symbol, Float64}
+    max_kwh::Dict{Symbol, Float64}
+    charge_efficiency::Dict{Symbol, Float64}
+    discharge_efficiency::Dict{Symbol, Float64}
+    soc_min_pct::Dict{Symbol, Float64}
+    soc_init_pct::Dict{Symbol, Float64}
+    installed_cost_per_kw::Dict{Symbol, Float64}
+    installed_cost_per_kwh::Dict{Symbol, Float64}
     can_grid_charge::Array{Symbol,1}
     grid_charge_efficiency::Dict{Symbol, Float64}
 end
@@ -78,7 +80,7 @@ Construct Storage struct from Dict with keys for each storage type (eg. :elec) a
 function Storage(d::Dict, f::Financial)  # nested dict
     types = Symbol[]
     can_grid_charge = Symbol[]
-    raw_vals = Dict(zip(fieldnames(Storage), [Float64[] for _ in range(1, stop=fieldcount(Storage))]))
+    raw_vals = Dict(zip(fieldnames(Storage), [Any[] for _ in range(1, stop=fieldcount(Storage))]))
     # raw_vals has keys = fieldnames(Storage) and values = arrays of values for each type in types
 
     for (storage_type, input_dict) in d
@@ -90,7 +92,7 @@ function Storage(d::Dict, f::Financial)  # nested dict
         if storage_instance.can_grid_charge
             push!(can_grid_charge, storage_type)
         end
-        fill_storage_vals!(raw_vals, storage_instance, storage_type, f)
+        fill_storage_vals!(raw_vals, storage_instance, f)
     end
 
     storage_args = Dict(
@@ -99,13 +101,14 @@ function Storage(d::Dict, f::Financial)  # nested dict
     )
     d2 = Dict()  # Julia won't let me use storage_args: "unable to check bounds for indices of type Symbol"
     for k in keys(raw_vals)
-        d2[k] = DenseAxisArray(raw_vals[k], types)
+        d2[k] = Dict(zip(types, raw_vals[k]))
     end
 
     grid_charge_efficiency = Dict(:elec => convert(Float64, d2[:charge_efficiency][:elec]))
 
     return Storage(
         storage_args[:types],
+        d2[:raw_inputs],
         d2[:min_kw],
         d2[:max_kw],
         d2[:min_kwh],
@@ -115,7 +118,7 @@ function Storage(d::Dict, f::Financial)  # nested dict
         d2[:soc_min_pct],
         d2[:soc_init_pct],
         d2[:installed_cost_per_kw],
-        d2[:cost_per_kwh],
+        d2[:installed_cost_per_kwh],
         storage_args[:can_grid_charge],
         grid_charge_efficiency
     )
@@ -123,7 +126,13 @@ function Storage(d::Dict, f::Financial)  # nested dict
 end
 
 
-function fill_storage_vals!(d::Dict{Symbol, Array{Float64,1}}, s::AbstractStorage, t::Symbol, f::Financial)
+"""
+    fill_storage_vals!(d::Dict, s::AbstractStorage, f::Financial)
+
+Fill `d`'s values using `s` and `f`. The dict `d` must have keys equivalent to the fieldnames(Storage)
+"""
+function fill_storage_vals!(d::Dict, s::AbstractStorage, f::Financial)
+    push!(d[:raw_inputs], s)
     push!(d[:min_kw], s.min_kw)
     push!(d[:max_kw], s.max_kw)
     push!(d[:min_kwh], s.min_kwh)
@@ -146,8 +155,8 @@ function fill_storage_vals!(d::Dict{Symbol, Array{Float64,1}}, s::AbstractStorag
         macrs_itc_reduction = s.macrs_itc_reduction,
         rebate_per_kw = s.total_rebate_per_kw
     ))
-    push!(d[:cost_per_kwh], effective_cost(;
-        itc_basis=s.cost_per_kwh,
+    push!(d[:installed_cost_per_kwh], effective_cost(;
+        itc_basis=s.installed_cost_per_kwh,
         replacement_cost=s.replace_cost_per_kwh,
         replacement_year=s.inverter_replacement_year,
         discount_rate=f.owner_discount_pct,
@@ -157,4 +166,5 @@ function fill_storage_vals!(d::Dict{Symbol, Array{Float64,1}}, s::AbstractStorag
         macrs_bonus_pct=s.macrs_bonus_pct,
         macrs_itc_reduction = s.macrs_itc_reduction
     ))
+    d[:installed_cost_per_kwh][end] -= s.total_rebate_per_kwh
 end

@@ -48,6 +48,7 @@ Constructor for Scenario struct, where `d` has upper-case keys:
 - ElectricTariff (required)
 - ElectricLoad (required)
 - PV (optional, can be Array)
+- Wind (optional)
 - Storage (optional)
 - ElectricUtility (optional)
 - Financial (optional)
@@ -59,6 +60,7 @@ struct Scenario
     settings::Settings
     site::Site
     pvs::Array{PV, 1}
+    wind::Wind
     storage::Storage
     electric_tariff::ElectricTariff
     electric_load::ElectricLoad
@@ -126,7 +128,8 @@ function Scenario(d::Dict)
                                     )
 
     if haskey(d, "Wind")
-        wind = Wind(; dictkeys_tosymbols(d["Wind"])...)
+        wind = Wind(; dictkeys_tosymbols(d["Wind"])..., 
+                    average_elec_load=sum(electric_load.loads_kw) / length(electric_load.loads_kw))
     else
         wind = Wind(; max_kw=0)
     end
@@ -149,6 +152,16 @@ function Scenario(d::Dict)
         financial,
         generator
     )
+end
+
+
+"""
+    Scenario(fp::String)
+
+Consruct Scenario from filepath `fp` to JSON with keys aligned with the `Scenario(d::Dict)` method.
+"""
+function Scenario(fp::String)
+    Scenario(JSON.parsefile(fp))
 end
 
 

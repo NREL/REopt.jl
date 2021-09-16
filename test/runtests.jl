@@ -65,31 +65,31 @@ else  # run Cbc tests
         results = run_reopt(model, inputs)
 
         @test results["PV"]["size_kw"] ≈ 70.3084 atol=0.01
-        @test results["Financial"]["lcc_us_dollars"] ≈ 430747.0 rtol=1e-5 # with levelization_factor hack the LCC is within 5e-5 of REopt Lite API LCC
+        @test results["Financial"]["lcc"] ≈ 430747.0 rtol=1e-5 # with levelization_factor hack the LCC is within 5e-5 of REopt Lite API LCC
         @test all(x == 0.0 for x in results["PV"]["year_one_to_load_series_kw"][1:744])
     end
 
     @testset "Blended tariff" begin
         model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
         results = run_reopt(model, "./scenarios/no_techs.json")
-        @test results["ElectricTariff"]["year_one_energy_cost_us_dollars"] ≈ 1000.0
-        @test results["ElectricTariff"]["year_one_demand_cost_us_dollars"] ≈ 136.99
+        @test results["ElectricTariff"]["year_one_energy_cost"] ≈ 1000.0
+        @test results["ElectricTariff"]["year_one_demand_cost"] ≈ 136.99
     end
 
     @testset "Solar and Storage" begin
         model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
-        results = run_reopt(model, "./scenarios/pv_storage.json")
+        r = run_reopt(model, "./scenarios/pv_storage.json")
 
-        @test results["PV"]["size_kw"] ≈ 216.6667 atol=0.01
-        @test results["Financial"]["lcc_us_dollars"] ≈ 1.23887e7 rtol=1e-5
-        @test results["Storage"]["size_kw"] ≈ 55.9 atol=0.1
-        @test results["Storage"]["size_kwh"] ≈ 78.9 atol=0.1
+        @test r["PV"]["size_kw"] ≈ 216.6667 atol=0.01
+        @test r["Financial"]["lcc"] ≈ 1.240037e7 rtol=1e-5
+        @test r["Storage"]["size_kw"] ≈ 55.9 atol=0.1
+        @test r["Storage"]["size_kwh"] ≈ 78.9 atol=0.1
     end
 
     @testset "Outage with Generator" begin
         model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
         results = run_reopt(model, "./scenarios/generator.json")
-        @test results["Generator"]["size_kw"] ≈ 8.12 atol=0.01
+        @test results["Generator"]["size_kw"] ≈ 8.13 atol=0.01
         @test (sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 1:9) + 
             sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 13:8760)) == 0
         p = REoptInputs("./scenarios/generator.json")
@@ -115,7 +115,7 @@ else  # run Cbc tests
         """
         model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
         results = run_reopt(model, "./scenarios/incentives.json")
-        @test results["Financial"]["lcc_us_dollars"] ≈ 1.1152536e7 atol=5e4  
+        @test results["Financial"]["lcc"] ≈ 1.1152536e7 atol=5e4  
         # The Cbc LCC is 1.7% higher than the Xpress LCC ? Probably due to integer issues in Cbc
     end
 
@@ -123,7 +123,7 @@ else  # run Cbc tests
         model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
         results = run_reopt(model, "./scenarios/wind.json")
         @test results["Wind"]["size_kw"] ≈ 3752 atol=0.1
-        @test results["Financial"]["lcc_us_dollars"] ≈ 8.591017e6 rtol=1e-5
+        @test results["Financial"]["lcc"] ≈ 8.591017e6 rtol=1e-5
         #= 
         0.5% higher LCC in this package as compared to API ? 8,591,017 vs 8,551,172
         - both have zero curtailment
@@ -134,7 +134,7 @@ else  # run Cbc tests
         
         REoptLite.jl has:
         - bigger turbine: 3752 vs 3735
-        - net_capital_costs_plus_om_us_dollars: 8,576,590 vs. 8,537,480
+        - net_capital_costs_plus_om: 8,576,590 vs. 8,537,480
 
         TODO: will these discrepancies be addressed once NMIL binaries are added?
         =#

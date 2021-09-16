@@ -1,5 +1,16 @@
 # REoptLite Changelog
 
+## develop
+- added modeling capability for tiered rates (energy, TOU demand, and monthly demand charges)
+    - all of these tiered rates require binaries, which are conditionally added to the model
+- added modeling capability for lookback demand charges
+- removed "_us_dollars" from all names and generally aligned names with API
+- added more outputs from the API (eg. `initial_capital_costs`)
+- added option to run Business As Usual scenario in parallel with optimal scenario (default is `true`)
+- added incentives (and cost curves) to `Wind` and `Generator`
+- fixed bug in URDB fixed charges
+- renamed `outage_start(end)_timestep` to `outage_start(end)_time_step`
+
 ## v0.9.0
 - `ElectricTariff.NEM` boolean is now determined by `ElectricUtility.net_metering_limit_kw` (true if limit > 0)
 - added `ElectricUtility` inputs for `net_metering_limit_kw` and `interconnection_limit_kw`
@@ -93,7 +104,7 @@
     - mg_storage_upgrade_cost
     - dvUnservedLoad array
     - max_outage_cost_per_outage_duration
-- allow VoLL values to be subtype of Real (rather than only Real)
+- allow value_of_lost_load_per_kwh values to be subtype of Real (rather than only Real)
 - add `run_reopt` method for scenario Dict
 
 ## v0.3.0
