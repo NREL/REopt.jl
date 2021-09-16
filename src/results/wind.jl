@@ -32,7 +32,7 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     t = "Wind"
 	per_unit_size_om = @expression(m, p.third_party_factor * p.pwf_om * m[:dvSize][t] * p.om_cost_per_kw[t])
 
-	r["size_kw"] = value(m[:dvSize][t])
+	r["size_kw"] = round(value(m[:dvSize][t]), digits=2)
 	r["total_om_cost"] = round(value(per_unit_size_om) * (1 - p.s.financial.owner_tax_pct), digits=0)
 	r["year_one_om_cost"] = round(value(per_unit_size_om) / (p.pwf_om * p.third_party_factor), digits=0)
 
