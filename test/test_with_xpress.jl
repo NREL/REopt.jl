@@ -67,7 +67,7 @@ end
     @test results["Storage"]["size_kwh"] ≈ 78.9 atol=0.1
     proforma_npv = REoptLite.npv(results["Financial"]["offtaker_annual_free_cashflows"] - 
         results["Financial"]["offtaker_annual_free_cashflows_bau"], 0.081)
-    @test results["Financial"]["npv"] ≈ proforma_npv atol=1
+    @test results["Financial"]["npv"] ≈ proforma_npv rtol=0.0001
 end
 
 @testset "Outage with Generator, outate simulator, BAU critical load outputs" begin
