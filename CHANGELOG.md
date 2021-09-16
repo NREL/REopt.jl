@@ -1,6 +1,6 @@
 # REoptLite Changelog
 
-## develop
+## v0.10.0
 - added modeling capability for tiered rates (energy, TOU demand, and monthly demand charges)
     - all of these tiered rates require binaries, which are conditionally added to the model
 - added modeling capability for lookback demand charges
