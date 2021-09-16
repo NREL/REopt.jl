@@ -3,6 +3,7 @@ Inputs to `run_reopt` can be provided in one of three formats:
 1. a file path (string) to a JSON file,
 2. a `Dict`, or
 3. using the `REoptInputs` struct
+Any one of these types can be passed to the [`run_reopt`](https://nrel.github.io/REoptLite/stable/reopt/methods/#run_reopt) method.
 
 The first option is perhaps the most straightforward one. For example, the minimum requirements for a JSON scenario file would look like:
 ```javascript
@@ -54,11 +55,6 @@ The `BAUScenario` struct is for running Business-As-Usual scenarios, i.e. withou
 The results of the BAU scenario are used to calculate other `Financial` results such as the net present value.
 ```@docs
 BAUScenario
-```
-
-## REoptInputs
-```@docs
-REoptLite.REoptInputs
 ```
 
 ## Site
