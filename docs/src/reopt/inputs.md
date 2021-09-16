@@ -57,11 +57,6 @@ The results of the BAU scenario are used to calculate other `Financial` results 
 BAUScenario
 ```
 
-## REoptInputs
-```@docs
-REoptLite.REoptInputs
-```
-
 ## Site
 ```@docs
 REoptLite.Site

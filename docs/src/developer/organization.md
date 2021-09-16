@@ -9,28 +9,28 @@ Contains all of the files for constructing this package's documentation.
 ## src
 All of the code necessary for this package.
 
-### constraints
+### src/constraints
 Mathematical model constraints organized by which high-level structures they primarily impact.
 
-### core
+### src/core
 The code that is central to this package. These files are used to build the inputs and the JuMP model. Some highlights:
-- `scenario.jl` is the entry point for user's inputs. It uses many of the other files in the core directory to construct the high level inputs (such electric_load.jl, financial.jl, and electric_tariff.jl).
+- `scenario.jl` is the entry point for user's inputs. It uses many of the other files in the core directory to construct the high level inputs (such `electric_load.jl`, `financial.jl`, and `electric_tariff.jl`).
 - `reopt_inputs.jl` uses the [Scenario](@ref) to construct the inputs necessary to build the JuMP model
 - `reopt.jl` contains the methods for building and runnning the mathematical model
 
-### lindistflow
+### src/lindistflow
 Code for adding a LinDistFlow model to a multi-node REopt model.
 
-### mpc
+### src/mpc
 A Model Predictive Control implementation of REopt.
 
-### outagesim
+### src/outagesim
 The outage simulator code, which calculates some resilience metrics such as the probability of surviving varying outage durations.
 
-### results
+### src/results
 All of the code for post-processing an optimized model and creating the results dictionary returned to the user.
 
-### sam
+### src/sam
 System Advisor Model libraries used by this package for the Wind model.
 
 ## test

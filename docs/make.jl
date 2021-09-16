@@ -18,6 +18,7 @@ makedocs(
         "Developer" => Any[
             "developer/concept.md",
             "developer/organization.md",
+            "developer/inputs.md",
         ]
     ],
     workdir = joinpath(@__DIR__, "..")
