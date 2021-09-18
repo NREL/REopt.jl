@@ -96,9 +96,9 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
     function ElectricLoad(;
         loads_kw::Array{<:Real,1} = Real[],
         year::Int = 2020,
-        doe_reference_name::Union{Missing, String} = missing,
+        doe_reference_name::String = "",
         blended_doe_reference_names::Array{String, 1} = String[],
-        blended_doe_reference_percents::Array{<:Float64,1} = Float64[],
+        blended_doe_reference_percents::Array{<:Real,1} = Real[],
         city::String = "",
         annual_kwh::Union{Real, Nothing} = nothing,
         monthly_totals_kwh::Array{<:Real,1} = Real[],
@@ -122,7 +122,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
                 critical_loads_kw_is_net
             )     
     
-        elseif !ismissing(doe_reference_name)
+        elseif !isempty(doe_reference_name)
             # NOTE: must use year that starts on Sunday with DOE reference doe_ref_profiles
             if year != 2017
                 @warn "Changing ElectricLoad.year to 2017 because DOE reference profiles start on a Sunday."
