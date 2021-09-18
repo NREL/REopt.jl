@@ -32,6 +32,8 @@
         loads_kw::Union{Missing, Array{<:Real,1}} = missing,
         year::Int = 2020,
         doe_reference_name::Union{Missing, String} = missing,
+        blended_doe_reference_names::Array{String, 1} = String[],
+        blended_doe_reference_percents::Array{<:Float64,1} = Float64[],
         city::Union{Missing, String} = missing,
         annual_kwh::Union{Real, Nothing} = nothing,
         monthly_totals_kwh::Array{<:Real,1} = Real[],
@@ -41,7 +43,7 @@
         critical_load_pct::Real = 0.5
     )
 
-Must provide either `loads_kw` or [`doe_reference_name` and `city`] or `doe_reference_name`. 
+Must provide either `loads_kw` or [`doe_reference_name` and `city`] or `doe_reference_name` or [`blended_doe_reference_names` and `blended_doe_reference_percents`]. 
 
 When only `doe_reference_name` is provided the `Site.latitude` and `Site.longitude` are used to look up the ASHRAE climate zone, which determines the appropriate DoE Commercial Reference Building profile.
 
@@ -95,6 +97,8 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         loads_kw::Array{<:Real,1} = Real[],
         year::Int = 2020,
         doe_reference_name::Union{Missing, String} = missing,
+        blended_doe_reference_names::Array{String, 1} = String[],
+        blended_doe_reference_percents::Array{<:Float64,1} = Float64[],
         city::String = "",
         annual_kwh::Union{Real, Nothing} = nothing,
         monthly_totals_kwh::Array{<:Real,1} = Real[],
@@ -135,10 +139,47 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
                 loads_kw_is_net,
                 critical_loads_kw_is_net
             )
-            
+
+        elseif length(blended_doe_reference_names) > 1 && 
+            length(blended_doe_reference_names) == length(blended_doe_reference_percents)
+            @assert sum(blended_doe_reference_percents) ≈ 1 "The sum of the blended_doe_reference_percents must equal 1"
+            if year != 2017
+                @warn "Changing ElectricLoad.year to 2017 because DOE reference profiles start on a Sunday."
+            end
+            year = 2017
+            length(blended_doe_reference_percents) == length(blended_doe_reference_names)
+            city = find_ashrae_zone_city(latitude, longitude)  # avoid redundant look-ups
+            profiles = Array[]  # collect the built in profiles
+            for name in blended_doe_reference_names
+                push!(profiles, BuiltInElectricLoad(city, name, latitude, longitude, annual_kwh=annual_kwh))
+            end
+            if isnothing(annual_kwh) # then annual_kwh should be the sum of all the profiles' annual kwhs
+                # we have to rescale the built in profiles to the total_kwh by normalizing them with their
+                # own annual kwh and multiplying by the total kwh
+                annual_kwhs = [sum(profile) for profile in profiles]
+                total_kwh = sum(annual_kwhs)
+                for idx in 1:length(profiles)
+                    profiles[idx] .*= total_kwh / annual_kwhs[idx]
+                end
+            end
+            for idx in 1:length(profiles)  # scale the profiles
+                profiles[idx] .*= blended_doe_reference_percents[idx]
+            end
+            loads_kw = sum(profiles)
+            if ismissing(critical_loads_kw)
+                critical_loads_kw = critical_load_pct * loads_kw
+            end
+            return new(
+                loads_kw,
+                year,
+                critical_loads_kw,
+                loads_kw_is_net,
+                critical_loads_kw_is_net
+            )
         else
-            error("Cannot construct ElectricLoad. You must provide either loads_kw, [doe_reference_name, city], 
-                  or [doe_reference_name, latitude, longitude].")
+            error("Cannot construct ElectricLoad. You must provide either [loads_kw], [doe_reference_name, city], 
+                  [doe_reference_name, latitude, longitude], 
+                  or [blended_doe_reference_names, blended_doe_reference_percents].")
         end
     end
 end

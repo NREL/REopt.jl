@@ -113,7 +113,6 @@ function ElectricTariff(;
     demand_lookback_months::AbstractArray{Int64, 1}=Int64[],
     demand_lookback_percent::Float64=0.0,
     demand_lookback_range::Int=0,
-
     ) where {
         T1 <: Union{Nothing, Int, Float64, Array}, 
         T2 <: Union{Nothing, Int, Float64, Array}, 
