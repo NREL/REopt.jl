@@ -216,6 +216,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         add_demand_lookback_constraints(m, p)
     end
 
+    if !isempty(p.s.electric_tariff.coincpeak_periods)
+        add_coincident_peak_charge_constraints(m, p)
+    end
+
 	@expression(m, TotalTechCapCosts, p.third_party_factor *
 		  sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in setdiff(p.techs, p.segmented_techs) )
 	)

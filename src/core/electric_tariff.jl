@@ -59,6 +59,10 @@ struct ElectricTariff
 
     export_rates::Dict{Symbol, AbstractArray}
     export_bins::AbstractArray{Symbol,1}
+
+    coincident_peak_load_active_timesteps::AbstractVector{AbstractVector{Int64}}
+    coincident_peak_load_charge_per_kw::AbstractVector{Float64}
+    coincpeak_periods::AbstractVector{Int64}
 end
 
 
@@ -116,6 +120,8 @@ function ElectricTariff(;
     demand_lookback_months::AbstractArray{Int64, 1}=Int64[],
     demand_lookback_percent::Float64=0.0,
     demand_lookback_range::Int=0,
+    coincident_peak_load_active_timesteps::Vector{Vector{Int64}}=[Int64[]],
+    coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[]
     ) where {
         T1 <: Union{Nothing, Int, Float64, Array}, 
         T2 <: Union{Nothing, Int, Float64, Array}, 
@@ -307,6 +313,11 @@ function ElectricTariff(;
         end
     end
 
+    coincpeak_periods = Int64[]
+    if !isempty(coincident_peak_load_charge_per_kw)
+        coincpeak_periods = collect(1:length(coincident_peak_load_charge_per_kw))
+    end
+
     ElectricTariff(
         energy_rates,
         energy_tier_limits,
@@ -326,7 +337,10 @@ function ElectricTariff(;
         annual_min_charge,
         min_monthly_charge,
         export_rates,
-        export_bins
+        export_bins,
+        coincident_peak_load_active_timesteps,
+        coincident_peak_load_charge_per_kw,
+        coincpeak_periods
     )
 end
 
