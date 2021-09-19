@@ -128,7 +128,8 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
                 @warn "Changing ElectricLoad.year to 2017 because DOE reference profiles start on a Sunday."
             end
             year = 2017
-            loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, annual_kwh=annual_kwh)
+            loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, year, annual_kwh=annual_kwh, 
+                                           monthly_totals_kwh=monthly_totals_kwh)
             if ismissing(critical_loads_kw)
                 critical_loads_kw = critical_load_pct * loads_kw
             end
@@ -151,15 +152,20 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             city = find_ashrae_zone_city(latitude, longitude)  # avoid redundant look-ups
             profiles = Array[]  # collect the built in profiles
             for name in blended_doe_reference_names
-                push!(profiles, BuiltInElectricLoad(city, name, latitude, longitude, annual_kwh=annual_kwh))
+                push!(profiles, BuiltInElectricLoad(city, name, latitude, longitude, year, annual_kwh=annual_kwh, 
+                                                    monthly_totals_kwh=monthly_totals_kwh))
             end
             if isnothing(annual_kwh) # then annual_kwh should be the sum of all the profiles' annual kwhs
                 # we have to rescale the built in profiles to the total_kwh by normalizing them with their
                 # own annual kwh and multiplying by the total kwh
                 annual_kwhs = [sum(profile) for profile in profiles]
                 total_kwh = sum(annual_kwhs)
+                monthly_scaler = 1
+                if length(monthly_totals_kwh) == 12
+                    monthly_scaler = length(blended_doe_reference_names)
+                end
                 for idx in 1:length(profiles)
-                    profiles[idx] .*= total_kwh / annual_kwhs[idx]
+                    profiles[idx] .*= total_kwh / annual_kwhs[idx] / monthly_scaler
                 end
             end
             for idx in 1:length(profiles)  # scale the profiles
@@ -189,9 +195,12 @@ function BuiltInElectricLoad(
     city::String,
     buildingtype::String,
     latitude::Float64,
-    longitude::Float64;
-    annual_kwh::Union{T, Nothing}=nothing
-    ) where T <: Real
+    longitude::Float64,
+    year::Int;
+    annual_kwh::Union{<:Real, Nothing}=nothing,
+    monthly_totals_kwh::Union{<:Real, Vector{<:Real}}=nothing,
+    )
+    monthly_scalers = ones(12)
     lib_path = joinpath(dirname(@__FILE__), "..", "..", "data")
     annual_loads = Dict(
         "Albuquerque" => Dict(
@@ -507,15 +516,38 @@ function BuiltInElectricLoad(
         city = find_ashrae_zone_city(latitude, longitude)
     end
 
-    if isnothing(annual_kwh)
-        annual_kwh = annual_loads[city][lowercase(buildingtype)]
-    end
-    # TODO implement BuiltInElectricLoad scaling based on monthly_totals_kwh
-
     profile_path = joinpath(lib_path, string("Load8760_norm_" * city * "_" * buildingtype * ".dat"))
     normalized_profile = vec(readdlm(profile_path, '\n', Float64, '\n'))
+    
+    if length(monthly_totals_kwh) == 12
+        annual_kwh = 1.0
+        t0 = 1
+        for month in 1:12
+            plus_hours = daysinmonth(Date(string(year) * "-" * string(month))) * 24
+            if month == 2 && isleapyear(year)
+                plus_hours -= 24
+            end
+            month_total = sum(normalized_profile[t0:t0+plus_hours-1])
+            if month_total == 0.0  # avoid division by zero
+                monthly_scalers[month] = 0.0
+            else
+                monthly_scalers[month] = monthly_totals_kwh[month] / month_total
+            end
+            t0 += plus_hours
+        end
+    elseif isnothing(annual_kwh)
+        annual_kwh = annual_loads[city][lowercase(buildingtype)]
+    end
 
-    load = [annual_kwh * ld for ld in normalized_profile]
+    scaled_load = Float64[]
+    datetime = DateTime(year, 1, 1, 1)
+    for ld in normalized_profile
+        month = Month(datetime).value
+        push!(scaled_load, ld * annual_kwh * monthly_scalers[month])
+        datetime += Dates.Hour(1)
+    end
+
+    return scaled_load
 end
 
 
