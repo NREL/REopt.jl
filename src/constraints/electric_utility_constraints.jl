@@ -332,7 +332,19 @@ function add_demand_lookback_constraints(m, p; _n="")
 			p.s.electric_tariff.demand_lookback_percent * m[Symbol(dv)][1]
 		)
 	end
+end
 
+
+function add_coincident_peak_charge_constraints(m, p; _n="")
+	## Constraint (14a): in each coincident peak period, charged CP demand is the max of demand in all CP timesteps
+    dv = "dvPeakDemandCP" * _n
+    m[Symbol(dv)] = @variable(m, [p.s.electric_tariff.coincpeak_periods], lower_bound = 0, base_name = dv)
+	@constraint(m, 
+        [prd in p.s.electric_tariff.coincpeak_periods, 
+         ts in p.s.electric_tariff.coincident_peak_load_active_timesteps[prd]],
+		m[Symbol("dvPeakDemandCP"*_n)][prd] >= sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] 
+                                                                      for tier in 1:p.s.electric_tariff.n_energy_tiers)
+	)
 end
 
 
@@ -385,11 +397,21 @@ function add_elec_utility_expressions(m, p; _n="")
 		@constraint(m, m[Symbol("MinChargeAdder"*_n)] == 0)
 	end
 
+    if !isempty(p.s.electric_tariff.coincpeak_periods)
+        m[Symbol("TotalCPCharges"*_n)] = @expression(m, p.pwf_e * 
+            sum( p.s.electric_tariff.coincident_peak_load_charge_per_kw[prd] * m[Symbol("dvPeakDemandCP"*_n)][prd] 
+                for prd in p.s.electric_tariff.coincpeak_periods ) 
+        )
+    else
+        m[Symbol("TotalCPCharges"*_n)] = 0
+    end
+
     m[Symbol("TotalElecBill"*_n)] = (
         m[Symbol("TotalEnergyChargesUtil"*_n)] 
         + m[Symbol("TotalDemandCharges"*_n)] 
         + m[Symbol("TotalExportBenefit"*_n)] 
         + m[Symbol("TotalFixedCharges"*_n)] 
+        + m[Symbol("TotalCPCharges"*_n)]
         + 0.999 * m[Symbol("MinChargeAdder"*_n)]
     )
     #= Note: 0.999 * MinChargeAdder in Objective b/c when 

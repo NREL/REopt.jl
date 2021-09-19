@@ -88,6 +88,8 @@ function combine_results(bau::Dict, opt::Dict, bau_scenario::BAUScenario)
         ("ElectricTariff", "total_export_benefit"),
         ("ElectricTariff", "year_one_bill"),
         ("ElectricTariff", "year_one_export_benefit"),
+        ("ElectricTariff", "year_one_coincident_peak_cost"),
+        ("ElectricTariff", "total_coincident_peak_cost"),
         ("ElectricUtility", "year_one_to_load_series_kw"),  
         ("ElectricUtility", "year_one_energy_supplied_kwh"),
         ("PV", "average_annual_energy_produced_kwh"),

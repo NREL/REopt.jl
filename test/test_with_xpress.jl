@@ -162,6 +162,13 @@ end
         @test results["ElectricTariff"]["year_one_demand_cost"] ≈ 136.99
     end
 
+    @testset "Coincident Peak Charges" begin
+        model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        results = run_reopt(model, "./scenarios/coincident_peak.json")
+        @test results["ElectricTariff"]["year_one_coincident_peak_cost"] ≈ 15.0
+        @test results["ElectricTariff"]["total_coincident_peak_cost"] ≈ 15.0 * 12.94887 atol=0.1
+    end
+
     # # tiered monthly demand rate  TODO: expected results?
     # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     # data = JSON.parsefile("./scenarios/tiered_rate.json")
