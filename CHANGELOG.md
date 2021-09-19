@@ -3,6 +3,8 @@
 ## develop
 - add ElectricLoad.blended_doe_reference_names & blended_doe_reference_percents
 - add ElectricLoad.monthly_totals_kwh builtin profile scaling
+- add ElectricTariff inputs: `add_monthly_rates_to_urdb_rate`, `tou_energy_rates_per_kwh`, 
+    `add_tou_energy_rates_to_urdb_rate`
 
 ## v0.10.0
 - add modeling capability for tiered rates (energy, TOU demand, and monthly demand charges)

@@ -109,6 +109,9 @@ function ElectricTariff(;
     monthly_demand_rates::Array=[],
     blended_annual_energy_rate::S=nothing,
     blended_annual_demand_rate::R=nothing,
+    add_monthly_rates_to_urdb_rate::Bool=false,
+    tou_energy_rates_per_kwh::Array=[],
+    add_tou_energy_rates_to_urdb_rate::Bool=false,
     remove_tiers::Bool=false,
     demand_lookback_months::AbstractArray{Int64, 1}=Int64[],
     demand_lookback_percent::Float64=0.0,
@@ -142,6 +145,21 @@ function ElectricTariff(;
     elseif !isempty(urdb_utility_name) && !isempty(urdb_rate_name)
 
         u = URDBrate(urdb_utility_name, urdb_rate_name, year, time_steps_per_hour=time_steps_per_hour)
+
+    elseif !isempty(tou_energy_rates_per_kwh) && length(tou_energy_rates_per_kwh) == 8760*time_steps_per_hour
+
+        tou_demand_rates = Float64[]
+        tou_demand_ratchet_timesteps = []
+        energy_rates = tou_energy_rates_per_kwh
+        monthly_demand_rates = convert(Array{Float64}, monthly_demand_rates)
+
+        fixed_monthly_charge = 0.0
+        annual_min_charge = 0.0
+        min_monthly_charge = 0.0
+
+        if NEM
+            nem_rate = [-0.999 * x for x in energy_rates]
+        end
 
     elseif !isempty(monthly_energy_rates) && !isempty(monthly_demand_rates)
 
@@ -200,6 +218,7 @@ function ElectricTariff(;
         energy_rates = u.energy_rates
         energy_tier_limits = u.energy_tier_limits
         n_energy_tiers = u.n_energy_tiers
+        users_monthly_demand_rates = copy(monthly_demand_rates)
         monthly_demand_rates = u.monthly_demand_rates
         monthly_demand_tier_limits = u.monthly_demand_tier_limits
         n_monthly_demand_tiers = u.n_monthly_demand_tiers
@@ -221,6 +240,25 @@ function ElectricTariff(;
         fixed_monthly_charge = u.fixed_monthly_charge
         annual_min_charge = u.annual_min_charge
         min_monthly_charge = u.min_monthly_charge
+
+        if add_monthly_rates_to_urdb_rate 
+            if length(monthly_energy_rates) == 12
+                for tier in 1:size(energy_rates, 2), mth in 1:12, ts in time_steps_monthly[mth]
+                    energy_rates[ts, tier] += monthly_energy_rates[mth]
+                end
+            end
+            if length(users_monthly_demand_rates) == 12
+                for tier in 1:size(monthly_demand_rates, 2), mth in 1:12
+                    monthly_demand_rates[mth, tier] += users_monthly_demand_rates[mth]
+                end
+            end
+        end
+
+        if add_tou_energy_rates_to_urdb_rate && length(tou_energy_rates_per_kwh) == size(energy_rates, 1)
+            for tier in 1:size(energy_rates, 2)
+                energy_rates[1:end, tier] += tou_energy_rates_per_kwh
+            end
+        end
     else
         # need to reshape cost vectors to arrays (2nd dim is for tiers)
         energy_rates = reshape(energy_rates, :, 1)
