@@ -90,6 +90,11 @@ struct MPCElectricTariff
 
     export_rates::DenseAxisArray{Array{Float64,1}}
     export_bins::Array{Symbol,1}
+
+    # coincident_peak not used in MPC but must implement it for model building
+    coincident_peak_load_active_timesteps::AbstractVector{AbstractVector{Int64}}
+    coincident_peak_load_charge_per_kw::AbstractVector{Float64}
+    coincpeak_periods::AbstractVector{Int64}
 end
 
 
@@ -227,7 +232,12 @@ function MPCElectricTariff(d::Dict)
         annual_min_charge,
         min_monthly_charge,
         export_rates,
-        export_bins
+        export_bins,
+
+        # empty values for coincident_peak
+        [Int64[]],
+        Float64[],
+        Int64[],
     )
 end
 

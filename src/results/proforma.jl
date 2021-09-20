@@ -278,7 +278,7 @@ function proforma_results(p::REoptInputs, d::Dict)
         return r
     end
 
-    for i in 1:years
+    for i in 2:years
         # add years where the cumulative cashflow is negative
         if cumulative_cashflow[i] < 0
             r["simple_payback_years"] += 1
