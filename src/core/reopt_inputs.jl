@@ -154,16 +154,17 @@ function REoptInputs(s::AbstractScenario)
         append!(techs_no_turndown, ["Wind"])
     end
 
-    pbi_techs, pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
+    pbi_techs, pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs, pvtechs)
 
     months = 1:12
 
     levelization_factor, pwf_e, pwf_om, third_party_factor = setup_present_worth_factors(s, techs, pvtechs)
-    # the following hardcoded value for levelization_factor matches the public REopt API value
-    # for test_with_cplex (test_time_of_export_rate) and makes the test values match.
+    # the following hardcoded values for levelization_factor matches the public REopt API value
+    # and makes the test values match.
     # the REopt code herein uses the Desktop method for levelization_factor, which is more accurate
     # (Desktop has non-linear degradation vs. linear degradation in API)
     # levelization_factor = Dict("PV" => 0.9539)
+    # levelization_factor = Dict("ground" => 0.942238, "roof_east" => 0.942238, "roof_west" => 0.942238)
     # levelization_factor = Dict("PV" => 0.9539, "Generator" => 1.0)  # w/generator
     time_steps_with_grid, time_steps_without_grid, = setup_electric_utility_inputs(s)
     
@@ -296,12 +297,12 @@ end
 
 
 """
-    setup_pbi_inputs(s::AbstractScenario, techs::Array{String, 1})
+    setup_pbi_inputs(s::AbstractScenario, techs::Array{String, 1}, pvtechs::Array{String, 1})
 
 Create data arrays for production based incentives. 
 All arrays can be empty if no techs have production_incentive_per_kwh > 0.
 """
-function setup_pbi_inputs(s::AbstractScenario, techs::Array{String, 1})
+function setup_pbi_inputs(s::AbstractScenario, techs::Array{String, 1}, pvtechs::Array{String, 1})
 
     pbi_techs = String[]
     pbi_pwf = Dict{String, Any}()
@@ -310,14 +311,24 @@ function setup_pbi_inputs(s::AbstractScenario, techs::Array{String, 1})
     pbi_benefit_per_kwh = Dict{String, Any}()
 
     for tech in techs
-        T = typeof(eval(Meta.parse(tech)))
-        if :production_incentive_per_kwh in fieldnames(T)
-            if eval(Meta.parse("s."*tech*".production_incentive_per_kwh")) > 0
+        if !(tech in pvtechs)
+            T = typeof(eval(Meta.parse(tech)))
+            if :production_incentive_per_kwh in fieldnames(T)
+                if eval(Meta.parse("s."*tech*".production_incentive_per_kwh")) > 0
+                    push!(pbi_techs, tech)
+                    pbi_pwf[tech], pbi_max_benefit[tech], pbi_max_kw[tech], pbi_benefit_per_kwh[tech] = 
+                        production_incentives(eval(Meta.parse("s."*tech)), s.financial)
+                end
+            end
+        else
+            pv = get_pv_by_name(tech, s.pvs)
+            if pv.production_incentive_per_kwh > 0
                 push!(pbi_techs, tech)
                 pbi_pwf[tech], pbi_max_benefit[tech], pbi_max_kw[tech], pbi_benefit_per_kwh[tech] = 
-                    production_incentives(eval(Meta.parse("s."*tech)), s.financial)
+                    production_incentives(pv, s.financial)
             end
         end
+        
     end
     return pbi_techs, pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh
 end
