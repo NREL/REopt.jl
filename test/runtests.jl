@@ -50,6 +50,20 @@ else  # run Cbc tests
         test with Xpress and CPLEX) the problem does not solve in under five hours.
     So, we test some simple cases with Cbc to stay aware of solve times with a free solver.
     =#
+    @testset "Inputs" begin
+        @testset "hybrid profile" begin
+            electric_load = REoptLite.ElectricLoad(; 
+                blended_doe_reference_percents = [0.2, 0.2, 0.2, 0.2, 0.2],
+                blended_doe_reference_names    = ["RetailStore", "LargeOffice", "MediumOffice", "SmallOffice", "Warehouse"],
+                annual_kwh                     = 50000.0,
+                year                           = 2017,
+                city                           = "Atlanta",
+                latitude                       = 35.2468, 
+                longitude                      = -91.7337
+            )
+            @test sum(electric_load.loads_kw) ≈ 50000.0
+        end
+    end
     @testset "January Export Rates" begin
         model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
         data = JSON.parsefile("./scenarios/monthly_rate.json")

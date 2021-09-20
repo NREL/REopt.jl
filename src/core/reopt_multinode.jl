@@ -232,6 +232,10 @@ function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
         if p.s.electric_tariff.demand_lookback_percent > 0
             add_demand_lookback_constraints(m, p; _n=_n)
         end
+
+        if !isempty(p.s.electric_tariff.coincpeak_periods)
+            add_coincident_peak_charge_constraints(m, p; _n=_n)
+        end
     
     end
 end

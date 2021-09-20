@@ -1,0 +1,16 @@
+{
+    "Site": {
+        "longitude": -91.7,
+        "latitude": 35.2
+    },
+    "ElectricLoad": {
+        "doe_reference_name": "FlatLoad",
+        "annual_kwh": 8760.0
+    },
+    "ElectricTariff": {
+        "coincident_peak_load_active_timesteps": [[1, 2, 100], [6000, 7000]],
+        "coincident_peak_load_charge_per_kw": [10, 5],
+        "blended_annual_energy_rate": 1.0,
+        "blended_annual_demand_rate": 0.0
+    }
+}
