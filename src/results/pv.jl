@@ -114,7 +114,7 @@ The last step in results processing: if more than one PV was modeled then move t
 level keys (that use each PV.name) to an array of results with "PV" as the top key in the results dict `d`.
 """
 function organize_multiple_pv_results(p::REoptInputs, d::Dict)
-    if length(p.pvtechs) == 1
+    if length(p.pvtechs) == 1 && p.pvtechs[1] == "PV"
         return nothing
     end
     pvs = Dict[]
