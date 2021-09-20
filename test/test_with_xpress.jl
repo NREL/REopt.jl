@@ -53,7 +53,6 @@ check to make sure that PV does NOT export unless the site load is met first for
               if results["PV"]["year_one_to_grid_series_kw"][i] > 0)
 end
 
-
 @testset "Solar and Storage w/BAU" begin
     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
@@ -180,7 +179,6 @@ end
     # TODO test for tiered TOU demand rates
 end
 
-
 @testset "Wind" begin
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/wind.json")
@@ -200,6 +198,27 @@ end
 
     TODO: will these discrepancies be addressed once NMIL binaries are added?
     =#
+end
+
+@testset "Multiple PVs" begin
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt([m1,m2], "./scenarios/multiple_pvs.json")
+
+    ground_pv = results["PV"][findfirst(pv -> pv["name"] == "ground", results["PV"])]
+    roof_west = results["PV"][findfirst(pv -> pv["name"] == "roof_west", results["PV"])]
+    roof_east = results["PV"][findfirst(pv -> pv["name"] == "roof_east", results["PV"])]
+
+    @test ground_pv["size_kw"] ≈ 15 atol=0.1
+    @test roof_west["size_kw"] ≈ 7 atol=0.1
+    @test roof_east["size_kw"] ≈ 4 atol=0.1
+    @test ground_pv["total_om_cost_bau"] ≈ 782.0 atol=0.1
+    @test roof_west["total_om_cost_bau"] ≈ 782.0 atol=0.1
+    @test ground_pv["average_annual_energy_produced_kwh_bau"] ≈ 8844.19 atol=0.1
+    @test roof_west["average_annual_energy_produced_kwh_bau"] ≈ 7440.1 atol=0.1
+    @test ground_pv["average_annual_energy_produced_kwh"] ≈ 26533.54 atol=0.1
+    @test roof_west["average_annual_energy_produced_kwh"] ≈ 10416.52 atol=0.1
+    @test roof_east["average_annual_energy_produced_kwh"] ≈ 6482.37 atol=0.1
 end
 
 ## equivalent REopt Lite API Post for test 2:

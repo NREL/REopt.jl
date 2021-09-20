@@ -105,3 +105,24 @@ function add_pv_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
 	end
     nothing
 end
+
+
+"""
+    organize_multiple_pv_results(p::REoptInputs, d::Dict)
+
+The last step in results processing: if more than one PV was modeled then move their results from the top
+level keys (that use each PV.name) to an array of results with "PV" as the top key in the results dict `d`.
+"""
+function organize_multiple_pv_results(p::REoptInputs, d::Dict)
+    if length(p.pvtechs) == 1
+        return nothing
+    end
+    pvs = Dict[]
+    for pvname in p.pvtechs
+        d[pvname]["name"] = pvname  # add name to results dict to distinguish each PV
+        push!(pvs, d[pvname])
+        delete!(d, pvname)
+    end
+    d["PV"] = pvs
+    nothing
+end

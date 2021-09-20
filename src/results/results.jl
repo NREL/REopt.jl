@@ -74,7 +74,7 @@ end
     
 Combine two results dictionaries into one using BAU and optimal scenario results.
 """
-function combine_results(bau::Dict, opt::Dict, bau_scenario::BAUScenario)
+function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAUScenario)
     bau_outputs = (
         ("Financial", "lcc"),
         ("ElectricTariff", "year_one_energy_cost"),
@@ -108,6 +108,14 @@ function combine_results(bau::Dict, opt::Dict, bau_scenario::BAUScenario)
         if t[1] in keys(opt) && t[1] in keys(bau)
             if t[2] in keys(bau[t[1]])
                 opt[t[1]][t[2] * "_bau"] = bau[t[1]][t[2]]
+            end
+        elseif t[1] == "PV" && !isempty(p.pvtechs)
+            for pvname in p.pvtechs
+                if pvname in keys(opt) && pvname in keys(bau)
+                    if t[2] in keys(bau[pvname])
+                        opt[pvname][t[2] * "_bau"] = bau[pvname][t[2]]
+                    end
+                end
             end
         end
     end
