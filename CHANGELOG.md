@@ -1,5 +1,8 @@
 # REoptLite Changelog
 
+## develop
+- change all output keys starting with "total_" or "net_" to "lifecycle_" (except "net_present_cost")
+
 ## v0.11.0
 - add ElectricLoad.blended_doe_reference_names & blended_doe_reference_percents
 - add ElectricLoad.monthly_totals_kwh builtin profile scaling

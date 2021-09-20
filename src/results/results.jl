@@ -81,24 +81,24 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("ElectricTariff", "year_one_demand_cost"),
         ("ElectricTariff", "year_one_fixed_cost"),
         ("ElectricTariff", "year_one_min_charge_adder"),
-        ("ElectricTariff", "total_energy_cost"),
-        ("ElectricTariff", "total_demand_cost"),
-        ("ElectricTariff", "total_fixed_cost"),
-        ("ElectricTariff", "total_min_charge_adder"),
-        ("ElectricTariff", "total_export_benefit"),
+        ("ElectricTariff", "lifecycle_energy_cost"),
+        ("ElectricTariff", "lifecycle_demand_cost"),
+        ("ElectricTariff", "lifecycle_fixed_cost"),
+        ("ElectricTariff", "lifecycle_min_charge_adder"),
+        ("ElectricTariff", "lifecycle_export_benefit"),
         ("ElectricTariff", "year_one_bill"),
         ("ElectricTariff", "year_one_export_benefit"),
         ("ElectricTariff", "year_one_coincident_peak_cost"),
-        ("ElectricTariff", "total_coincident_peak_cost"),
+        ("ElectricTariff", "lifecycle_coincident_peak_cost"),
         ("ElectricUtility", "year_one_to_load_series_kw"),  
         ("ElectricUtility", "year_one_energy_supplied_kwh"),
         ("PV", "average_annual_energy_produced_kwh"),
         ("PV", "year_one_energy_produced_kwh"),
-        ("PV", "total_om_cost"),
+        ("PV", "lifecycle_om_cost"),
         ("Generator", "fuel_used_gal"),
-        ("Generator", "total_fixed_om_cost"),
-        ("Generator", "total_variable_om_cost"),
-        ("Generator", "total_fuel_cost"),
+        ("Generator", "lifecycle_fixed_om_cost"),
+        ("Generator", "lifecycle_variable_om_cost"),
+        ("Generator", "lifecycle_fuel_cost"),
         ("Generator", "year_one_fuel_cost"),
         ("Generator", "year_one_variable_om_cost"),
         ("Generator", "year_one_fixed_om_cost"),
@@ -119,7 +119,7 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
             end
         end
     end
-    opt["Financial"]["net_om_costs_bau"] = bau["Financial"]["total_om_costs_after_tax"]
+    opt["Financial"]["lifecycle_om_costs_bau"] = bau["Financial"]["lifecycle_om_costs_after_tax"]
     opt["Financial"]["npv"] = round(opt["Financial"]["lcc_bau"] - opt["Financial"]["lcc"], digits=2)
 
     opt["ElectricLoad"]["bau_critical_load_met"] = bau_scenario.outage_outputs.bau_critical_load_met
