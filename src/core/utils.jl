@@ -157,17 +157,37 @@ end
 function dictkeys_tosymbols(d::Dict)
     d2 = Dict()
     for (k, v) in d
+        # handling some type conversions for API inputs and JSON
         if k in [
             "loads_kw", "critical_loads_kw",
             "monthly_totals_kwh",
             "prod_factor_series_kw", 
             "monthly_energy_rates", "monthly_demand_rates",
-            "wholesale_rate"
+            "wholesale_rate", "blended_doe_reference_percents",
+            "coincident_peak_load_charge_per_kw"
             ] && !isnothing(v)
             try
                 v = convert(Array{Real, 1}, v)
             catch
                 @warn "Unable to convert $k to an Array{Real, 1}"
+            end
+        end
+        if k in [
+            "blended_doe_reference_names"
+        ]
+            try
+                v = convert(Array{String, 1}, v)
+            catch
+                @warn "Unable to convert $k to an Array{String, 1}"
+            end
+        end
+        if k in [
+            "coincident_peak_load_active_timesteps"
+        ]
+            try
+                v = convert(Vector{Vector{Int64}}, v)
+            catch
+                @warn "Unable to convert $k to a Vector{Vector{Int64}}"
             end
         end
         d2[Symbol(k)] = v

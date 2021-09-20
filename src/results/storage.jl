@@ -29,8 +29,8 @@
 # *********************************************************************************
 function add_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::Symbol; _n="")
     r = Dict{String, Any}()
-    r["size_kwh"] = value(m[Symbol("dvStorageEnergy"*_n)][b])
-    r["size_kw"] = value(m[Symbol("dvStoragePower"*_n)][b])
+    r["size_kwh"] = round(value(m[Symbol("dvStorageEnergy"*_n)][b]), digits=2)
+    r["size_kw"] = round(value(m[Symbol("dvStoragePower"*_n)][b]), digits=2)
 
     if r["size_kwh"] != 0
     	soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)

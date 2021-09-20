@@ -61,7 +61,7 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 		r["year_one_to_load_series_kw"] = round.(value.(PVtoLoad), digits=3)
 		Year1PvProd = (sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] for ts in p.time_steps) * p.hours_per_timestep)
 		r["year_one_energy_produced_kwh"] = round(value(Year1PvProd), digits=0)
-        r["average_annual_energy_produced_kwh"] = r["year_one_energy_produced_kwh"] * p.levelization_factor[t]
+        r["average_annual_energy_produced_kwh"] = round(r["year_one_energy_produced_kwh"] * p.levelization_factor[t], digits=2)
 		PVPerUnitSizeOMCosts = p.om_cost_per_kw[t] * p.pwf_om * m[Symbol("dvSize"*_n)][t]
 		r["total_om_cost"] = round(value(PVPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_pct), digits=0)
         r["lcoe_per_kwh"] = calculate_lcoe(p, r, get_pv_by_name(t, p.s.pvs))
@@ -103,5 +103,26 @@ function add_pv_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
 		r["energy_produced_kwh"] = round(value(Year1PvProd), digits=0)
         d[t] = r
 	end
+    nothing
+end
+
+
+"""
+    organize_multiple_pv_results(p::REoptInputs, d::Dict)
+
+The last step in results processing: if more than one PV was modeled then move their results from the top
+level keys (that use each PV.name) to an array of results with "PV" as the top key in the results dict `d`.
+"""
+function organize_multiple_pv_results(p::REoptInputs, d::Dict)
+    if length(p.pvtechs) == 1
+        return nothing
+    end
+    pvs = Dict[]
+    for pvname in p.pvtechs
+        d[pvname]["name"] = pvname  # add name to results dict to distinguish each PV
+        push!(pvs, d[pvname])
+        delete!(d, pvname)
+    end
+    d["PV"] = pvs
     nothing
 end

@@ -1,29 +1,36 @@
 # REoptLite Changelog
 
-## develop
-- added modeling capability for tiered rates (energy, TOU demand, and monthly demand charges)
+## v0.11.0
+- add ElectricLoad.blended_doe_reference_names & blended_doe_reference_percents
+- add ElectricLoad.monthly_totals_kwh builtin profile scaling
+- add ElectricTariff inputs: `add_monthly_rates_to_urdb_rate`, `tou_energy_rates_per_kwh`, 
+    `add_tou_energy_rates_to_urdb_rate`, `coincident_peak_load_charge_per_kw`, `coincident_peak_load_active_timesteps`
+- handle multiple PV outputs
+
+## v0.10.0
+- add modeling capability for tiered rates (energy, TOU demand, and monthly demand charges)
     - all of these tiered rates require binaries, which are conditionally added to the model
-- added modeling capability for lookback demand charges
+- add modeling capability for lookback demand charges
 - removed "_us_dollars" from all names and generally aligned names with API
-- added more outputs from the API (eg. `initial_capital_costs`)
-- added option to run Business As Usual scenario in parallel with optimal scenario (default is `true`)
-- added incentives (and cost curves) to `Wind` and `Generator`
+- add more outputs from the API (eg. `initial_capital_costs`)
+- add option to run Business As Usual scenario in parallel with optimal scenario (default is `true`)
+- add incentives (and cost curves) to `Wind` and `Generator`
 - fixed bug in URDB fixed charges
 - renamed `outage_start(end)_timestep` to `outage_start(end)_time_step`
 
 ## v0.9.0
 - `ElectricTariff.NEM` boolean is now determined by `ElectricUtility.net_metering_limit_kw` (true if limit > 0)
-- added `ElectricUtility` inputs for `net_metering_limit_kw` and `interconnection_limit_kw`
-- added binary choice for net metering vs. wholesale export
-- added `ElectricTariff.export_rate_beyond_net_metering_limit` input (scalar or vector allowed)
-- added `can_net_meter`, `can_wholesale`, `can_export_beyond_nem_limit` tech inputs (`PV`, `Wind`, `Generator`)
+- add `ElectricUtility` inputs for `net_metering_limit_kw` and `interconnection_limit_kw`
+- add binary choice for net metering vs. wholesale export
+- add `ElectricTariff.export_rate_beyond_net_metering_limit` input (scalar or vector allowed)
+- add `can_net_meter`, `can_wholesale`, `can_export_beyond_nem_limit` tech inputs (`PV`, `Wind`, `Generator`)
 
 ## v0.8.0
-- added `Wind` module, relying on System Advisor Model Wind module for production factors and Wind Toolkit for resource data
+- add `Wind` module, relying on System Advisor Model Wind module for production factors and Wind Toolkit for resource data
 - new `ElectricTariff` input options:
     - `urdb_utility_name` and `urdb_rate_name`
     - `blended_annual_energy_rate` and `blended_annual_demand_rate`
-- added two capabilities that require binary variables:
+- add two capabilities that require binary variables:
     - tax, production, and capacity incentives for PV (compatible with any energy generation technology)
     - technology cost curve modeling capability
     - both of these capabilities are only used for the technologies that require them (based on input values), unlike the API which always models these capabilities (and therefore always includes the binary variables).
@@ -39,8 +46,8 @@
 
 ## v0.7.2
 #### Improvements
-- added PV.prod_factor_series_kw input (can skip PVWatts call)
-- added `run_mpc` capability, which dispatches DER for minimum energy cost over an arbitrary time horizon
+- add PV.prod_factor_series_kw input (can skip PVWatts call)
+- add `run_mpc` capability, which dispatches DER for minimum energy cost over an arbitrary time horizon
 
 ## v0.7.1
 ##### bug fixes
@@ -57,7 +64,7 @@
 
 ## v0.6.0
 #### Improvements
-- Added multi-node (site) capability for PV and Storage
+- add multi-node (site) capability for PV and Storage
 - started documentation process using Github Pages and Documenter.jl
 - restructured outputs to align with the input structure, for example top-level keys added for `ElectricTariff` and `PV` in the outputs
 
@@ -74,7 +81,7 @@
 
 ## v0.5.1
 #### Improvements
-- added outage dispatch outputs and sped up their derivation
+- added outage dispatch outputs and speed up their derivation
 - removed redundant generator minimum turn down constraint
 
 ## v0.5.0
@@ -96,7 +103,7 @@
 #### Improvements
 - add `simulate_outages` function (similar to REopt Lite API outage simulator)
 - removed MutableArithmetics package from Project.toml (since JuMP now has method for `value(::MutableArithmetics.Zero)`)
-- added outage related outputs:
+- add outage related outputs:
     - Generator_mg_kw
     - mg_Generator_upgrade_cost
     - mg_Generator_fuel_used

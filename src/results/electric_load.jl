@@ -32,7 +32,7 @@ function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
 
     r["load_series_kw"] = p.s.electric_load.loads_kw
     r["critical_load_series_kw"] = p.s.electric_load.critical_loads_kw
-    r["annual_calculated_kwh"] = sum(r["load_series_kw"])
+    r["annual_calculated_kwh"] = round(sum(r["load_series_kw"]), digits=2)
     
     d["ElectricLoad"] = r
     nothing

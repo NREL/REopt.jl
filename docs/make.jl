@@ -8,13 +8,17 @@ makedocs(
             "reopt/examples.md",
             "reopt/inputs.md",
             "reopt/outputs.md",
-            "reopt/methods.md",
-            "reopt/design.md"
+            "reopt/methods.md"
         ],
         "Model Predictive Control" => Any[
             "mpc/examples.md",
             "mpc/inputs.md",
             "mpc/methods.md",
+        ],
+        "Developer" => Any[
+            "developer/concept.md",
+            "developer/organization.md",
+            "developer/inputs.md",
         ]
     ],
     workdir = joinpath(@__DIR__, "..")

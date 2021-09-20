@@ -28,8 +28,52 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
+    REoptInputs
 
-use Scenario struct to create reopt.jl model inputs
+The data structure for all the inputs necessary to construct the JuMP model.
+```julia
+struct REoptInputs <: AbstractInputs
+    s::AbstractScenario
+    techs::Array{String, 1}
+    pvtechs::Array{String, 1}
+    gentechs::Array{String,1}
+    elec_techs::Array{String, 1}
+    segmented_techs::Array{String, 1}
+    pbi_techs::Array{String, 1}
+    techs_no_turndown::Array{String, 1}
+    techs_no_curtail::Array{String, 1}
+    min_sizes::Dict{String, Float64}  # (techs)
+    max_sizes::Dict{String, Float64}  # (techs)
+    existing_sizes::Dict{String, Float64}  # (techs)
+    cap_cost_slope::Dict{String, Any}  # (techs)
+    om_cost_per_kw::Dict{String, Float64}  # (techs)
+    time_steps::UnitRange
+    time_steps_with_grid::Array{Int, 1}
+    time_steps_without_grid::Array{Int, 1}
+    hours_per_timestep::Float64
+    months::UnitRange
+    production_factor::DenseAxisArray{Float64, 2}  # (techs, time_steps)
+    levelization_factor::Dict{String, Float64}  # (techs)
+    value_of_lost_load_per_kwh::Array{R, 1} where R<:Real #default set to 1 US dollar per kwh
+    pwf_e::Float64
+    pwf_om::Float64
+    third_party_factor::Float64
+    pvlocations::Array{Symbol, 1}
+    maxsize_pv_locations::DenseAxisArray{Float64, 1}  # indexed on pvlocations
+    pv_to_location::Dict{String, Dict{Symbol, Int64}}  # (pvtechs, pvlocations)
+    ratchets::UnitRange
+    techs_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL, :CUR]
+    export_bins_by_tech::Dict
+    n_segs_by_tech::Dict{String, Int}
+    seg_min_size::Dict{String, Dict{Int, Float64}}
+    seg_max_size::Dict{String, Dict{Int, Float64}}
+    seg_yint::Dict{String, Dict{Int, Float64}}
+    pbi_pwf::Dict{String, Any}  # (pbi_techs)
+    pbi_max_benefit::Dict{String, Any}  # (pbi_techs)
+    pbi_max_kw::Dict{String, Any}  # (pbi_techs)
+    pbi_benefit_per_kwh::Dict{String, Any}  # (pbi_techs)
+end
+```
 """
 struct REoptInputs <: AbstractInputs
     s::AbstractScenario
@@ -40,6 +84,7 @@ struct REoptInputs <: AbstractInputs
     segmented_techs::Array{String, 1}
     pbi_techs::Array{String, 1}
     techs_no_turndown::Array{String, 1}
+    techs_no_curtail::Array{String, 1}
     min_sizes::Dict{String, Float64}  # (techs)
     max_sizes::Dict{String, Float64}  # (techs)
     existing_sizes::Dict{String, Float64}  # (techs)
@@ -94,13 +139,14 @@ end
 """
     REoptInputs(s::AbstractScenario)
 
-Constructor for REoptInputs
+Constructor for REoptInputs. Translates the `Scenario` into all the data necessary for building the JuMP model.
 """
 function REoptInputs(s::AbstractScenario)
 
     time_steps = 1:length(s.electric_load.loads_kw)
     hours_per_timestep = 1 / s.settings.time_steps_per_hour
-    techs, pvtechs, gentechs, elec_techs, segmented_techs, pv_to_location, maxsize_pv_locations, pvlocations, 
+    techs, pvtechs, gentechs, elec_techs, segmented_techs, techs_no_curtail, 
+        pv_to_location, maxsize_pv_locations, pvlocations, 
         production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
         seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech = setup_tech_inputs(s)
     techs_no_turndown = copy(pvtechs)
@@ -108,16 +154,17 @@ function REoptInputs(s::AbstractScenario)
         append!(techs_no_turndown, ["Wind"])
     end
 
-    pbi_techs, pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
+    pbi_techs, pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs, pvtechs)
 
     months = 1:12
 
     levelization_factor, pwf_e, pwf_om, third_party_factor = setup_present_worth_factors(s, techs, pvtechs)
-    # the following hardcoded value for levelization_factor matches the public REopt API value
-    # for test_with_cplex (test_time_of_export_rate) and makes the test values match.
+    # the following hardcoded values for levelization_factor matches the public REopt API value
+    # and makes the test values match.
     # the REopt code herein uses the Desktop method for levelization_factor, which is more accurate
     # (Desktop has non-linear degradation vs. linear degradation in API)
     # levelization_factor = Dict("PV" => 0.9539)
+    # levelization_factor = Dict("ground" => 0.942238, "roof_east" => 0.942238, "roof_west" => 0.942238)
     # levelization_factor = Dict("PV" => 0.9539, "Generator" => 1.0)  # w/generator
     time_steps_with_grid, time_steps_without_grid, = setup_electric_utility_inputs(s)
     
@@ -134,6 +181,7 @@ function REoptInputs(s::AbstractScenario)
         segmented_techs,
         pbi_techs,
         techs_no_turndown,
+        techs_no_curtail,
         min_sizes,
         max_sizes,
         existing_sizes,
@@ -182,6 +230,7 @@ function setup_tech_inputs(s::AbstractScenario)
 
     techs = copy(pvtechs)
     gentechs = String[]
+    techs_no_curtail = String[]
     segmented_techs = String[]
     if s.wind.max_kw > 0
         push!(techs, "Wind")
@@ -222,17 +271,17 @@ function setup_tech_inputs(s::AbstractScenario)
     if !isempty(pvtechs)
         setup_pv_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
                         pvlocations, pv_to_location, maxsize_pv_locations, segmented_techs, n_segs_by_tech, 
-                        seg_min_size, seg_max_size, seg_yint, techs_by_exportbin)
+                        seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, techs_no_curtail)
     end
 
     if "Wind" in techs
         setup_wind_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor, 
-            techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint)
+            techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_no_curtail)
     end
 
     if "Generator" in techs
         setup_gen_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
-            techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint)
+            techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_no_curtail)
     end
 
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
@@ -240,19 +289,20 @@ function setup_tech_inputs(s::AbstractScenario)
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
     end
 
-    return techs, pvtechs, gentechs, elec_techs, segmented_techs, pv_to_location, maxsize_pv_locations, pvlocations, 
+    return techs, pvtechs, gentechs, elec_techs, segmented_techs, techs_no_curtail,
+    pv_to_location, maxsize_pv_locations, pvlocations, 
     production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
     seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech
 end
 
 
 """
-    setup_pbi_inputs(s::AbstractScenario, techs::Array{String, 1})
+    setup_pbi_inputs(s::AbstractScenario, techs::Array{String, 1}, pvtechs::Array{String, 1})
 
 Create data arrays for production based incentives. 
 All arrays can be empty if no techs have production_incentive_per_kwh > 0.
 """
-function setup_pbi_inputs(s::AbstractScenario, techs::Array{String, 1})
+function setup_pbi_inputs(s::AbstractScenario, techs::Array{String, 1}, pvtechs::Array{String, 1})
 
     pbi_techs = String[]
     pbi_pwf = Dict{String, Any}()
@@ -261,14 +311,24 @@ function setup_pbi_inputs(s::AbstractScenario, techs::Array{String, 1})
     pbi_benefit_per_kwh = Dict{String, Any}()
 
     for tech in techs
-        T = typeof(eval(Meta.parse(tech)))
-        if :production_incentive_per_kwh in fieldnames(T)
-            if eval(Meta.parse("s."*tech*".production_incentive_per_kwh")) > 0
+        if !(tech in pvtechs)
+            T = typeof(eval(Meta.parse(tech)))
+            if :production_incentive_per_kwh in fieldnames(T)
+                if eval(Meta.parse("s."*tech*".production_incentive_per_kwh")) > 0
+                    push!(pbi_techs, tech)
+                    pbi_pwf[tech], pbi_max_benefit[tech], pbi_max_kw[tech], pbi_benefit_per_kwh[tech] = 
+                        production_incentives(eval(Meta.parse("s."*tech)), s.financial)
+                end
+            end
+        else
+            pv = get_pv_by_name(tech, s.pvs)
+            if pv.production_incentive_per_kwh > 0
                 push!(pbi_techs, tech)
                 pbi_pwf[tech], pbi_max_benefit[tech], pbi_max_kw[tech], pbi_benefit_per_kwh[tech] = 
-                    production_incentives(eval(Meta.parse("s."*tech)), s.financial)
+                    production_incentives(pv, s.financial)
             end
         end
+        
     end
     return pbi_techs, pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh
 end
@@ -312,7 +372,7 @@ end
 function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
     existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
     pvlocations, pv_to_location, maxsize_pv_locations, 
-    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_by_exportbin)
+    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, techs_no_curtail)
 
     pv_roof_limited, pv_ground_limited, pv_space_limited = false, false, false
     roof_existing_pv_kw, ground_existing_pv_kw, both_existing_pv_kw = 0.0, 0.0, 0.0
@@ -366,6 +426,10 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
         
         om_cost_per_kw[pv.name] = pv.om_cost_per_kw
         fillin_techs_by_exportbin(techs_by_exportbin, pv, pv.name)
+
+        if !pv.can_curtail
+            push!(techs_no_curtail, pv.name)
+        end
     end
 
     if pv_roof_limited
@@ -384,7 +448,7 @@ end
 
 function setup_wind_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes,
     cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin,
-    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_no_curtail
     )
     max_sizes["Wind"] = s.wind.max_kw
     min_sizes["Wind"] = s.wind.min_kw
@@ -395,13 +459,16 @@ function setup_wind_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_s
     om_cost_per_kw["Wind"] = s.wind.om_cost_per_kw
     production_factor["Wind", :] = prodfactor(s.wind, s.site.latitude, s.site.longitude, s.settings.time_steps_per_hour)
     fillin_techs_by_exportbin(techs_by_exportbin, s.wind, "Wind")
+    if !s.wind.can_curtail
+        push!(techs_no_curtail, "Wind")
+    end
     return nothing
 end
 
 
 function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes,
     cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin,
-    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_no_curtail
     )
     max_sizes["Generator"] = s.generator.max_kw
     min_sizes["Generator"] = s.generator.existing_kw + s.generator.min_kw
@@ -412,6 +479,9 @@ function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_si
     om_cost_per_kw["Generator"] = s.generator.om_cost_per_kw
     production_factor["Generator", :] = prodfactor(s.generator)
     fillin_techs_by_exportbin(techs_by_exportbin, s.generator, "Generator")
+    if !s.generator.can_curtail
+        push!(techs_no_curtail, "Generator")
+    end
     return nothing
 end
 

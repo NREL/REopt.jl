@@ -74,7 +74,7 @@ end
     
 Combine two results dictionaries into one using BAU and optimal scenario results.
 """
-function combine_results(bau::Dict, opt::Dict, bau_scenario::BAUScenario)
+function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAUScenario)
     bau_outputs = (
         ("Financial", "lcc"),
         ("ElectricTariff", "year_one_energy_cost"),
@@ -88,6 +88,8 @@ function combine_results(bau::Dict, opt::Dict, bau_scenario::BAUScenario)
         ("ElectricTariff", "total_export_benefit"),
         ("ElectricTariff", "year_one_bill"),
         ("ElectricTariff", "year_one_export_benefit"),
+        ("ElectricTariff", "year_one_coincident_peak_cost"),
+        ("ElectricTariff", "total_coincident_peak_cost"),
         ("ElectricUtility", "year_one_to_load_series_kw"),  
         ("ElectricUtility", "year_one_energy_supplied_kwh"),
         ("PV", "average_annual_energy_produced_kwh"),
@@ -107,10 +109,18 @@ function combine_results(bau::Dict, opt::Dict, bau_scenario::BAUScenario)
             if t[2] in keys(bau[t[1]])
                 opt[t[1]][t[2] * "_bau"] = bau[t[1]][t[2]]
             end
+        elseif t[1] == "PV" && !isempty(p.pvtechs)
+            for pvname in p.pvtechs
+                if pvname in keys(opt) && pvname in keys(bau)
+                    if t[2] in keys(bau[pvname])
+                        opt[pvname][t[2] * "_bau"] = bau[pvname][t[2]]
+                    end
+                end
+            end
         end
     end
     opt["Financial"]["net_om_costs_bau"] = bau["Financial"]["total_om_costs_after_tax"]
-    opt["Financial"]["npv"] = opt["Financial"]["lcc_bau"] - opt["Financial"]["lcc"]
+    opt["Financial"]["npv"] = round(opt["Financial"]["lcc_bau"] - opt["Financial"]["lcc"], digits=2)
 
     opt["ElectricLoad"]["bau_critical_load_met"] = bau_scenario.outage_outputs.bau_critical_load_met
     opt["ElectricLoad"]["bau_critical_load_met_time_steps"] = bau_scenario.outage_outputs.bau_critical_load_met_time_steps

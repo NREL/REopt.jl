@@ -65,7 +65,8 @@ end
 Method for use with Threads when running BAU in parallel with optimal scenario.
 """
 function run_reopt(t::Tuple{JuMP.AbstractModel, AbstractInputs})
-	run_reopt(t[1], t[2])
+	run_reopt(t[1], t[2]; organize_pvs=false)
+    # must organize_pvs after adding proforma results
 end
 
 
@@ -111,8 +112,9 @@ function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.Abst
         rs[i] = run_reopt(inputs[i])
     end
     # TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
-    results_dict = combine_results(rs[1], rs[2], bau_inputs.s)
+    results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
     results_dict["Financial"] = merge(results_dict["Financial"], proforma_results(p, results_dict))
+    organize_multiple_pv_results(p, results_dict)
     return results_dict
 end
 
@@ -185,6 +187,9 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 	if !isempty(p.techs)
 		add_tech_size_constraints(m, p)
+        if !isempty(p.techs_no_curtail)
+            add_no_curtail_constraints(m, p)
+        end
 	end
 
 	add_load_balance_constraints(m, p)
@@ -211,6 +216,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
     if p.s.electric_tariff.demand_lookback_percent > 0
         add_demand_lookback_constraints(m, p)
+    end
+
+    if !isempty(p.s.electric_tariff.coincpeak_periods)
+        add_coincident_peak_charge_constraints(m, p)
     end
 
 	@expression(m, TotalTechCapCosts, p.third_party_factor *
@@ -310,7 +319,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 end
 
 
-function run_reopt(m::JuMP.AbstractModel, p::REoptInputs)
+function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 
 	build_reopt!(m, p)
 
@@ -344,10 +353,18 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs)
 	@info "Total results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status
 	results["solver_seconds"] = opt_time
+    if organize_pvs  # do not want to organize_pvs when running BAU case in parallel b/c then proform code fails
+        organize_multiple_pv_results(p, results)
+    end
 	return results
 end
 
 
+"""
+    add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
+
+Add JuMP variables to the model.
+"""
 function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 	@variables m begin
 		dvSize[p.techs] >= 0  # System Size of Technology t [kW]
