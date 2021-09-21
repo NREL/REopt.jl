@@ -38,6 +38,7 @@ struct REoptInputs <: AbstractInputs
     pvtechs::Array{String, 1}
     gentechs::Array{String,1}
     elec_techs::Array{String, 1}
+    heating_techs::Array{String, 1}
     segmented_techs::Array{String, 1}
     pbi_techs::Array{String, 1}
     techs_no_turndown::Array{String, 1}
@@ -81,6 +82,7 @@ struct REoptInputs <: AbstractInputs
     pvtechs::Array{String, 1}
     gentechs::Array{String,1}
     elec_techs::Array{String, 1}
+    heating_techs::Array{String, 1}
     segmented_techs::Array{String, 1}
     pbi_techs::Array{String, 1}
     techs_no_turndown::Array{String, 1}
@@ -145,7 +147,7 @@ function REoptInputs(s::AbstractScenario)
 
     time_steps = 1:length(s.electric_load.loads_kw)
     hours_per_timestep = 1 / s.settings.time_steps_per_hour
-    techs, pvtechs, gentechs, elec_techs, segmented_techs, techs_no_curtail, 
+    techs, pvtechs, gentechs, elec_techs, heating_techs, segmented_techs, techs_no_curtail, 
         pv_to_location, maxsize_pv_locations, pvlocations, 
         production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
         seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech = setup_tech_inputs(s)
@@ -178,6 +180,7 @@ function REoptInputs(s::AbstractScenario)
         pvtechs,
         gentechs,
         elec_techs,
+        heating_techs,
         segmented_techs,
         pbi_techs,
         techs_no_turndown,
@@ -232,12 +235,17 @@ function setup_tech_inputs(s::AbstractScenario)
     gentechs = String[]
     techs_no_curtail = String[]
     segmented_techs = String[]
+    heating_techs = String[]
     if s.wind.max_kw > 0
         push!(techs, "Wind")
     end
     if s.generator.max_kw > 0
         push!(techs, "Generator")
         push!(gentechs, "Generator")
+    end
+    if s.existing_boiler.max_kw > 0
+        push!(techs, "ExistingBoiler")
+        push!(heating_techs, "ExistingBoiler")
     end
 
     elec_techs = copy(techs)  # only modeling electric loads/techs so far
@@ -289,7 +297,7 @@ function setup_tech_inputs(s::AbstractScenario)
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
     end
 
-    return techs, pvtechs, gentechs, elec_techs, segmented_techs, techs_no_curtail,
+    return techs, pvtechs, gentechs, elec_techs, heating_techs, segmented_techs, techs_no_curtail,
     pv_to_location, maxsize_pv_locations, pvlocations, 
     production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
     seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech
