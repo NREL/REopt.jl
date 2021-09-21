@@ -35,13 +35,15 @@ struct DomesticHotWaterLoad
         city::String = "",
         blended_doe_reference_names::Array{String, 1} = String[],
         blended_doe_reference_percents::Array{<:Real,1} = Real[],
-        annual_mmbtu::Real,
+        annual_mmbtu::Union{Real, Nothing} = nothing,
         monthly_mmbtu::Array{<:Real,1} = Real[],
-        addressable_load_fraction,  # TODO
+        # addressable_load_fraction,  # TODO
         loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
-        time_steps_per_hour::Int = 1
+        time_steps_per_hour::Int = 1,
+        latitude::Float64=0.0,
+        longitude::Float64=0.0
     )
-        if length(loads_kw) > 0
+        if length(loads_mmbtu_per_hour) > 0
 
             if !(length(loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
                 @error "Provided domestic hot water load does not match the time_steps_per_hour."
@@ -91,13 +93,15 @@ struct SpaceHeatingLoad
         city::String = "",
         blended_doe_reference_names::Array{String, 1} = String[],
         blended_doe_reference_percents::Array{<:Real,1} = Real[],
-        annual_mmbtu::Real,
+        annual_mmbtu::Union{Real, Nothing} = nothing,
         monthly_mmbtu::Array{<:Real,1} = Real[],
-        addressable_load_fraction,  # TODO
+        # addressable_load_fraction,  # TODO
         loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
-        time_steps_per_hour::Int = 1
+        time_steps_per_hour::Int = 1,
+        latitude::Float64=0.0,
+        longitude::Float64=0.0
     )
-        if length(loads_kw) > 0
+        if length(loads_mmbtu_per_hour) > 0
 
             if !(length(loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
                 @error "Provided space heating load does not match the time_steps_per_hour."

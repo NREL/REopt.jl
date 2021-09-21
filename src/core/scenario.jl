@@ -38,6 +38,8 @@ struct Scenario <: AbstractScenario
     electric_utility::ElectricUtility
     financial::Financial
     generator::Generator
+    dhw_load::DomesticHotWaterLoad
+    space_heating_load::SpaceHeatingLoad
 end
 
 """
@@ -53,6 +55,8 @@ Constructor for Scenario struct, where `d` has upper-case keys:
 - ElectricUtility (optional)
 - Financial (optional)
 - Generator (optional)
+- DomesticHotWaterLoad (optional)
+- SpaceHeatingLoad (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV`, which can be either a `Dict` or `Dict[]`.
 ```
@@ -67,6 +71,8 @@ struct Scenario
     electric_utility::ElectricUtility
     financial::Financial
     generator::Generator
+    dhw_load::DomesticHotWaterLoad
+    space_heating_load::SpaceHeatingLoad
 end
 ```
 """
@@ -128,7 +134,24 @@ function Scenario(d::Dict)
                                        NEM=electric_utility.net_metering_limit_kw > 0, 
                                        time_steps_per_hour=settings.time_steps_per_hour
                                     )
-    # TODO use electric_load.city for thermal loads
+
+    if haskey(d, "DomesticHotWaterLoad")
+        dhw_load = DomesticHotWaterLoad(; dictkeys_tosymbols(d["DomesticHotWaterLoad"])...,
+                                                latitude=site.latitude, longitude=site.longitude, 
+                                                time_steps_per_hour=settings.time_steps_per_hour
+                                                )
+    else
+        dhw_load = DomesticHotWaterLoad(; loads_mmbtu_per_hour=repeat([0.0], 8760))
+    end
+                                    
+    if haskey(d, "SpaceHeatingLoad")
+        space_heating_load = SpaceHeatingLoad(; dictkeys_tosymbols(d["SpaceHeatingLoad"])...,
+                                                latitude=site.latitude, longitude=site.longitude, 
+                                                time_steps_per_hour=settings.time_steps_per_hour
+                                             )
+    else
+        space_heating_load = SpaceHeatingLoad(; loads_mmbtu_per_hour=repeat([0.0], 8760))
+    end
 
     if haskey(d, "Wind")
         wind = Wind(; dictkeys_tosymbols(d["Wind"])..., 
@@ -153,7 +176,9 @@ function Scenario(d::Dict)
         electric_load, 
         electric_utility, 
         financial,
-        generator
+        generator,
+        dhw_load,
+        space_heating_load
     )
 end
 
