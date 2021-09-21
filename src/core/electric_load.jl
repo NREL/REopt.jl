@@ -143,35 +143,10 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
 
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
-            @assert sum(blended_doe_reference_percents) ≈ 1 "The sum of the blended_doe_reference_percents must equal 1"
-            if year != 2017
-                @warn "Changing ElectricLoad.year to 2017 because DOE reference profiles start on a Sunday."
-            end
-            year = 2017
-            length(blended_doe_reference_percents) == length(blended_doe_reference_names)
-            city = find_ashrae_zone_city(latitude, longitude)  # avoid redundant look-ups
-            profiles = Array[]  # collect the built in profiles
-            for name in blended_doe_reference_names
-                push!(profiles, BuiltInElectricLoad(city, name, latitude, longitude, year, annual_kwh=annual_kwh, 
-                                                    monthly_totals_kwh=monthly_totals_kwh))
-            end
-            if isnothing(annual_kwh) # then annual_kwh should be the sum of all the profiles' annual kwhs
-                # we have to rescale the built in profiles to the total_kwh by normalizing them with their
-                # own annual kwh and multiplying by the total kwh
-                annual_kwhs = [sum(profile) for profile in profiles]
-                total_kwh = sum(annual_kwhs)
-                monthly_scaler = 1
-                if length(monthly_totals_kwh) == 12
-                    monthly_scaler = length(blended_doe_reference_names)
-                end
-                for idx in 1:length(profiles)
-                    profiles[idx] .*= total_kwh / annual_kwhs[idx] / monthly_scaler
-                end
-            end
-            for idx in 1:length(profiles)  # scale the profiles
-                profiles[idx] .*= blended_doe_reference_percents[idx]
-            end
-            loads_kw = sum(profiles)
+            loads_kw = blend_and_scale_doe_profiles(BuiltInElectricLoad, latitude, longitude, year, 
+                                                    blended_doe_reference_names, blended_doe_reference_percents, city, 
+                                                    annual_kwh, monthly_totals_kwh)
+
             if ismissing(critical_loads_kw)
                 critical_loads_kw = critical_load_pct * loads_kw
             end
@@ -604,4 +579,49 @@ function find_ashrae_zone_city(lat, lon)::String
         end
     end
     return nearest_city
+end
+
+
+function blend_and_scale_doe_profiles(
+    constructor,
+    latitude::Float64,
+    longitude::Float64,
+    year::Int = 2017,
+    blended_doe_reference_names::Array{String, 1} = String[],
+    blended_doe_reference_percents::Array{<:Real,1} = Real[],
+    city::String = "",
+    annual_kwh::Union{Real, Nothing} = nothing,
+    monthly_totals_kwh::Array{<:Real,1} = Real[],
+    )
+
+    @assert sum(blended_doe_reference_percents) ≈ 1 "The sum of the blended_doe_reference_percents must equal 1"
+    if year != 2017
+        @warn "Changing ElectricLoad.year to 2017 because DOE reference profiles start on a Sunday."
+    end
+    year = 2017
+    if isempty(city)
+        city = find_ashrae_zone_city(latitude, longitude)  # avoid redundant look-ups
+    end
+    profiles = Array[]  # collect the built in profiles
+    for name in blended_doe_reference_names
+        push!(profiles, constructor(city, name, latitude, longitude, year, annual_kwh=annual_kwh, 
+                                    monthly_totals_kwh=monthly_totals_kwh))
+    end
+    if isnothing(annual_kwh) # then annual_kwh should be the sum of all the profiles' annual kwhs
+        # we have to rescale the built in profiles to the total_kwh by normalizing them with their
+        # own annual kwh and multiplying by the total kwh
+        annual_kwhs = [sum(profile) for profile in profiles]
+        total_kwh = sum(annual_kwhs)
+        monthly_scaler = 1
+        if length(monthly_totals_kwh) == 12
+            monthly_scaler = length(blended_doe_reference_names)
+        end
+        for idx in 1:length(profiles)
+            profiles[idx] .*= total_kwh / annual_kwhs[idx] / monthly_scaler
+        end
+    end
+    for idx in 1:length(profiles)  # scale the profiles
+        profiles[idx] .*= blended_doe_reference_percents[idx]
+    end
+    sum(profiles)
 end
