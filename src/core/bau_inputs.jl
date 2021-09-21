@@ -41,10 +41,15 @@ function BAUInputs(p::REoptInputs)
     techs_no_curtail = String[]
     gentechs = String[]
     pbi_techs = String[]
+    heating_techs = String[]
 
     if p.s.generator.existing_kw > 0
         push!(techs, "Generator")
         push!(gentechs, "Generator")
+    end
+    if p.s.existing_boiler.max_kw > 0
+        push!(techs, "ExistingBoiler")
+        push!(heating_techs, "ExistingBoiler")
     end
 
     elec_techs = copy(techs)  # only modeling electric loads/techs so far
@@ -132,6 +137,7 @@ function BAUInputs(p::REoptInputs)
         pvtechs,
         gentechs,
         elec_techs,
+        heating_techs,
         segmented_techs,
         pbi_techs,
         techs_no_turndown,

@@ -40,6 +40,7 @@ struct Scenario <: AbstractScenario
     generator::Generator
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
+    existing_boiler::ExistingBoiler
 end
 
 """
@@ -57,6 +58,7 @@ Constructor for Scenario struct, where `d` has upper-case keys:
 - Generator (optional)
 - DomesticHotWaterLoad (optional)
 - SpaceHeatingLoad (optional)
+- ExistingBoiler (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV`, which can be either a `Dict` or `Dict[]`.
 ```
@@ -73,6 +75,7 @@ struct Scenario
     generator::Generator
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
+    existing_boiler::ExistingBoiler
 end
 ```
 """
@@ -153,6 +156,12 @@ function Scenario(d::Dict)
         space_heating_load = SpaceHeatingLoad(; loads_mmbtu_per_hour=repeat([0.0], 8760))
     end
 
+    if haskey(d, "ExistingBoiler")
+        existing_boiler = ExistingBoiler(; dictkeys_tosymbols(d["ExistingBoiler"])...)
+    else
+        existing_boiler = ExistingBoiler(; max_kw=0)
+    end
+
     if haskey(d, "Wind")
         wind = Wind(; dictkeys_tosymbols(d["Wind"])..., 
                     average_elec_load=sum(electric_load.loads_kw) / length(electric_load.loads_kw))
@@ -178,7 +187,8 @@ function Scenario(d::Dict)
         financial,
         generator,
         dhw_load,
-        space_heating_load
+        space_heating_load,
+        existing_boiler
     )
 end
 
