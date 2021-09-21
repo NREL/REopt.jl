@@ -88,7 +88,7 @@ own `annual_kwh` or `monthly_totals_kwh` and the reference profile will be scale
 """
 mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off of (critical_)loads_kw_is_net
     loads_kw::Array{Real,1}
-    year::Int
+    year::Int  # used in ElectricTariff to align rate schedule with weekdays/weekends
     critical_loads_kw::Array{Real,1}
     loads_kw_is_net::Bool
     critical_loads_kw_is_net::Bool
@@ -201,7 +201,7 @@ function BuiltInElectricLoad(
     monthly_totals_kwh::Union{<:Real, Vector{<:Real}}=nothing,
     )
     monthly_scalers = ones(12)
-    lib_path = joinpath(dirname(@__FILE__), "..", "..", "data")
+    lib_path = joinpath(dirname(@__FILE__), "..", "..", "data", "load_profiles", "electric")
     annual_loads = Dict(
         "Albuquerque" => Dict(
             "fastfoodrest" => 193235,
