@@ -119,12 +119,14 @@ function Scenario(d::Dict)
     end
 
     electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
-                                   latitude=site.latitude, longitude=site.longitude
+                                   latitude=site.latitude, longitude=site.longitude, 
+                                   time_steps_per_hour=settings.time_steps_per_hour
                                 )
 
     electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 
                                        year=electric_load.year,
-                                       NEM=electric_utility.net_metering_limit_kw > 0
+                                       NEM=electric_utility.net_metering_limit_kw > 0, 
+                                       time_steps_per_hour=settings.time_steps_per_hour
                                     )
 
     if haskey(d, "Wind")
