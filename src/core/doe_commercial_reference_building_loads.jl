@@ -47,6 +47,8 @@ const default_buildings = [
     "FlatLoad",
 ]
 
+const mmbtu_to_kwh = 293.07107
+
 
 function find_ashrae_zone_city(lat, lon)::String
     file_path = joinpath(dirname(@__FILE__), "..", "..", "data", "climate_cities.shp")

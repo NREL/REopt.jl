@@ -128,6 +128,7 @@ function Scenario(d::Dict)
                                        NEM=electric_utility.net_metering_limit_kw > 0, 
                                        time_steps_per_hour=settings.time_steps_per_hour
                                     )
+    # TODO use electric_load.city for thermal loads
 
     if haskey(d, "Wind")
         wind = Wind(; dictkeys_tosymbols(d["Wind"])..., 
