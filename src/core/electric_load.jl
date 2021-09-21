@@ -144,7 +144,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         else
             error("Cannot construct ElectricLoad. You must provide either [loads_kw], [doe_reference_name, city], 
                   [doe_reference_name, latitude, longitude], 
-                  or [blended_doe_reference_names, blended_doe_reference_percents].")
+                  or [blended_doe_reference_names, blended_doe_reference_percents] with city or latitude and longitude.")
         end
 
         if length(loads_kw) < 8760*time_steps_per_hour
