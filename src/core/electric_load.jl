@@ -107,20 +107,19 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         critical_loads_kw_is_net::Bool = false,
         critical_load_pct::Real = 0.5,
         latitude::Float64,
-        longitude::Float64
+        longitude::Float64,
+        time_steps_per_hour::Int = 1
         )
         
         if length(loads_kw) > 0
+
+            if !(length(loads_kw) / time_steps_per_hour ≈ 8760)
+                @error "Provided electric load does not match the time_steps_per_hour."
+            end
+            
             if ismissing(critical_loads_kw)
                 critical_loads_kw = critical_load_pct * loads_kw
             end
-            return new(
-                loads_kw,
-                year,
-                critical_loads_kw,
-                loads_kw_is_net,
-                critical_loads_kw_is_net
-            )     
     
         elseif !isempty(doe_reference_name)
             # NOTE: must use year that starts on Sunday with DOE reference doe_ref_profiles
@@ -132,13 +131,6 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             if ismissing(critical_loads_kw)
                 critical_loads_kw = critical_load_pct * loads_kw
             end
-            return new(
-                loads_kw,
-                year,
-                critical_loads_kw,
-                loads_kw_is_net,
-                critical_loads_kw_is_net
-            )
 
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
@@ -149,18 +141,24 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             if ismissing(critical_loads_kw)
                 critical_loads_kw = critical_load_pct * loads_kw
             end
-            return new(
-                loads_kw,
-                year,
-                critical_loads_kw,
-                loads_kw_is_net,
-                critical_loads_kw_is_net
-            )
         else
             error("Cannot construct ElectricLoad. You must provide either [loads_kw], [doe_reference_name, city], 
                   [doe_reference_name, latitude, longitude], 
                   or [blended_doe_reference_names, blended_doe_reference_percents].")
         end
+
+        if length(loads_kw) < 8760*time_steps_per_hour
+            loads_kw = repeat(loads_kw, inner=time_steps_per_hour / (length(loads_kw)/8760))
+            @info "Repeating electric loads in each hour to match the time_steps_per_hour."
+        end
+
+        new(
+            loads_kw,
+            year,
+            critical_loads_kw,
+            loads_kw_is_net,
+            critical_loads_kw_is_net
+        )
     end
 end
 
