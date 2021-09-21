@@ -178,7 +178,7 @@ function download_urdb(util_name::String, rate_name::String; version::Int=8)
 
     rates = response["items"]  # response['items'] contains a vector of dicts
     if length(rates) == 0
-        error("Could not find $(urdb_label) in URDB.")
+        error("Could not find $(rate_name) in URDB.")
     end
 
     matched_rates = []

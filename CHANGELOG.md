@@ -1,5 +1,10 @@
 # REoptLite Changelog
 
+## v0.12.0
+- change all output keys starting with "total_" or "net_" to "lifecycle_" (except "net_present_cost")
+- bug fix in urdb.jl when rate_name not found
+- update pv results for single PV in an array
+
 ## v0.11.0
 - add ElectricLoad.blended_doe_reference_names & blended_doe_reference_percents
 - add ElectricLoad.monthly_totals_kwh builtin profile scaling

@@ -165,7 +165,7 @@ end
         model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         results = run_reopt(model, "./scenarios/coincident_peak.json")
         @test results["ElectricTariff"]["year_one_coincident_peak_cost"] ≈ 15.0
-        @test results["ElectricTariff"]["total_coincident_peak_cost"] ≈ 15.0 * 12.94887 atol=0.1
+        @test results["ElectricTariff"]["lifecycle_coincident_peak_cost"] ≈ 15.0 * 12.94887 atol=0.1
     end
 
     # # tiered monthly demand rate  TODO: expected results?
@@ -212,8 +212,8 @@ end
     @test ground_pv["size_kw"] ≈ 15 atol=0.1
     @test roof_west["size_kw"] ≈ 7 atol=0.1
     @test roof_east["size_kw"] ≈ 4 atol=0.1
-    @test ground_pv["total_om_cost_bau"] ≈ 782.0 atol=0.1
-    @test roof_west["total_om_cost_bau"] ≈ 782.0 atol=0.1
+    @test ground_pv["lifecycle_om_cost_bau"] ≈ 782.0 atol=0.1
+    @test roof_west["lifecycle_om_cost_bau"] ≈ 782.0 atol=0.1
     @test ground_pv["average_annual_energy_produced_kwh_bau"] ≈ 8844.19 atol=0.1
     @test roof_west["average_annual_energy_produced_kwh_bau"] ≈ 7440.1 atol=0.1
     @test ground_pv["average_annual_energy_produced_kwh"] ≈ 26533.54 atol=0.1
