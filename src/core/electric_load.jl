@@ -92,6 +92,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
     critical_loads_kw::Array{Real,1}
     loads_kw_is_net::Bool
     critical_loads_kw_is_net::Bool
+    city::String
     
     function ElectricLoad(;
         loads_kw::Array{<:Real,1} = Real[],
@@ -106,9 +107,9 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         loads_kw_is_net::Bool = true,
         critical_loads_kw_is_net::Bool = false,
         critical_load_pct::Real = 0.5,
+        time_steps_per_hour::Int = 1,
         latitude::Float64,
-        longitude::Float64,
-        time_steps_per_hour::Int = 1
+        longitude::Float64
         )
         
         if length(loads_kw) > 0
