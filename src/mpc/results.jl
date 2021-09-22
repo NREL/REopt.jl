@@ -39,11 +39,11 @@ function mpc_results(m::JuMP.AbstractModel, p::MPCInputs; _n="")
     add_electric_tariff_results(m, p, d; _n)
     add_electric_utility_results(m, p, d; _n)
 
-	if !isempty(p.pvtechs)
+	if !isempty(p.techs.pv)
         add_pv_results(m, p, d; _n)
 	end
 
-	if !isempty(p.gentechs)
+	if !isempty(p.techs.gen)
         add_generator_results(m, p, d; _n)
 	end
 	

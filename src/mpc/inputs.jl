@@ -30,19 +30,15 @@
 
 struct MPCInputs <: AbstractInputs
     s::MPCScenario
-    techs::Array{String, 1}
-    pvtechs::Array{String, 1}
-    gentechs::Array{String,1}
-    elec_techs::Array{String, 1}
-    techs_no_turndown::Array{String, 1}
-    existing_sizes::DenseAxisArray{Float64, 1}  # (techs)
+    techs::Techs
+    existing_sizes::DenseAxisArray{Float64, 1}  # (techs.all)
     time_steps::UnitRange
     time_steps_with_grid::Array{Int, 1}
     time_steps_without_grid::Array{Int, 1}
     hours_per_timestep::Float64
     months::UnitRange
-    production_factor::DenseAxisArray{Float64, 2}  # (techs, time_steps)
-    levelization_factor::Dict{String, Float64}  # (techs)
+    production_factor::DenseAxisArray{Float64, 2}  # (techs.all, time_steps)
+    levelization_factor::Dict{String, Float64}  # (techs.all)
     value_of_lost_load_per_kwh::Array{R, 1} where R<:Real #default set to 1 US dollar per kwh
     pwf_e::Float64
     pwf_om::Float64
@@ -63,15 +59,13 @@ function MPCInputs(s::MPCScenario)
 
     time_steps = 1:length(s.electric_load.loads_kw)
     hours_per_timestep = 1 / s.settings.time_steps_per_hour
-    techs, pvtechs, gentechs, production_factor, existing_sizes = setup_tech_inputs(s)
-    elec_techs = techs  # only modeling electric loads/techs so far
-    techs_no_turndown = pvtechs
+    techs, production_factor, existing_sizes = setup_tech_inputs(s)
     months = 1:length(s.electric_tariff.monthly_demand_rates)
 
-    techs_by_exportbin = DenseAxisArray([ techs, techs, techs], s.electric_tariff.export_bins)
+    techs_by_exportbin = DenseAxisArray([ techs.all, techs.all, techs.all], s.electric_tariff.export_bins)
     # TODO account for which techs have access to export bins (when we add more techs than PV)
 
-    levelization_factor = Dict(t => 1.0 for t in techs)
+    levelization_factor = Dict(t => 1.0 for t in techs.all)
     pwf_e = 1.0
     pwf_om = 1.0
     third_party_factor = 1.0
@@ -79,7 +73,7 @@ function MPCInputs(s::MPCScenario)
     time_steps_with_grid, time_steps_without_grid, = setup_electric_utility_inputs(s)
 
     export_bins_by_tech = Dict{String, Array{Symbol, 1}}()
-    for t in elec_techs
+    for t in techs.elec
         export_bins_by_tech[t] = s.electric_tariff.export_bins
     end
     # TODO implement export bins by tech (rather than assuming that all techs share the export_bins)
@@ -87,10 +81,6 @@ function MPCInputs(s::MPCScenario)
     MPCInputs(
         s,
         techs,
-        pvtechs,
-        gentechs,
-        elec_techs,
-        techs_no_turndown,
         existing_sizes,
         time_steps,
         time_steps_with_grid,
@@ -116,33 +106,23 @@ end
 
 function setup_tech_inputs(s::MPCScenario)
 
-    pvtechs = String[pv.name for pv in s.pvs]
-    if length(Base.Set(pvtechs)) != length(pvtechs)
-        error("PV names must be unique, got $(pvtechs)")
-    end
-
-    techs = copy(pvtechs)
-    gentechs = String[]
-    if s.generator.size_kw > 0
-        push!(techs, "Generator")
-        push!(gentechs, "Generator")
-    end
+    techs = Techs(s)
 
     time_steps = 1:length(s.electric_load.loads_kw)
 
     # REoptInputs indexed on techs:
-    existing_sizes = DenseAxisArray{Float64}(undef, techs)
-    production_factor = DenseAxisArray{Float64}(undef, techs, time_steps)
+    existing_sizes = DenseAxisArray{Float64}(undef, techs.all)
+    production_factor = DenseAxisArray{Float64}(undef, techs.all, time_steps)
 
-    if !isempty(pvtechs)
+    if !isempty(techs.pv)
         setup_pv_inputs(s, existing_sizes, production_factor)
     end
 
-    if "Generator" in techs
+    if "Generator" in techs.all
         setup_gen_inputs(s, existing_sizes, production_factor)
     end
 
-    return techs, pvtechs, gentechs, production_factor, existing_sizes
+    return techs, production_factor, existing_sizes
 end
 
 
