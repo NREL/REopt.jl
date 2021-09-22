@@ -135,3 +135,39 @@ function Techs(s::Scenario)
         thermal_techs
     )
 end
+
+
+"""
+    Techs(s::MPCScenario) 
+
+Create a `Techs` struct for the MPCInputs
+"""
+function Techs(s::MPCScenario)
+    pvtechs = String[pv.name for pv in s.pvs]
+    if length(Base.Set(pvtechs)) != length(pvtechs)
+        error("PV names must be unique, got $(pvtechs)")
+    end
+
+    all_techs = copy(pvtechs)
+    techs_no_turndown = copy(pvtechs)
+    gentechs = String[]
+    if s.generator.size_kw > 0
+        push!(all_techs, "Generator")
+        push!(gentechs, "Generator")
+    end
+
+    Techs(
+        all_techs,
+        all_techs,
+        pvtechs,
+        gentechs,
+        String[],
+        String[],
+        techs_no_turndown,
+        String[],
+        String[],
+        String[],
+        String[],
+        String[]
+    )
+end
