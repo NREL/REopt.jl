@@ -28,7 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 
-function add_load_balance_constraints(m, p; _n="") 
+function add_elec_load_balance_constraints(m, p; _n="") 
 
 	##Constraint (8a): Electrical Load Balancing with Grid
     if isempty(p.s.electric_tariff.export_bins)
@@ -93,4 +93,51 @@ function add_production_constraints(m, p; _n="")
 		p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t, ts]
 	)
 
+end
+
+
+function add_thermal_load_constraints(m, p; _n="")
+	### Constraint set (5) - hot and cold thermal loads
+
+	##Constraint (5a): Cold thermal loads
+	# if !isempty(p.CoolingTechs)
+	# 	@constraint(m, ColdThermalLoadCon[ts in p.time_steps],
+	# 			sum(p.production_factor[t,ts] * m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.CoolingTechs) +
+	# 			sum(m[:dvDischargeFromStorage][b,ts] for b in p.ColdTES) ==
+	# 			p.CoolingLoad[ts] -
+	# 			sum(p.GHPCoolingThermalServed[g,ts] * m[:binGHP][g] for g in p.GHPOptions) +
+	# 			sum(m[:dvProductionToStorage][b,t,ts] for b in p.ColdTES, t in p.CoolingTechs)
+	# 	)
+	# end
+
+	##Constraint (5b): Hot thermal loads
+	if !isempty(p.heating_techs)
+        # if !isempty(p.SteamTurbineTechs)
+        #     @constraint(m, HotThermalLoadCon[ts in p.time_steps],
+        #             # sum(m[Symbol("dvThermalProduction"*_n)][t,ts] - m[:dvThermalToSteamTurbine][t,ts] for t in p.CHPTechs) +
+        #             # sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.SteamTurbineTechs) +
+        #             sum(p.production_factor[t,ts] * (m[Symbol("dvThermalProduction"*_n)][t,ts] - m[:dvThermalToSteamTurbine][t,ts]) for t in p.boiler_techs)
+        #             # + sum(p.GHPHeatingThermalServed[g,ts] * m[:binGHP][g] for g in p.GHPOptions)
+        #             # + sum(m[:dvDischargeFromStorage][b,ts] for b in p.HotTES) 
+        #             ==
+        #             p.HeatingLoad[ts] * p.s.existing_boiler.efficiency
+        #             # + sum(m[:dvProductionToWaste][t,ts] for t in p.CHPTechs) +
+        #             # sum(m[:dvProductionToStorage][b,t,ts] for b in p.HotTES, t in p.heating_techs) +
+        #             # sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.AbsorptionChillers) / p.AbsorptionChillerCOP
+        #     )
+        # else
+            @constraint(m, [ts in p.time_steps],
+                    # sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.CHPTechs) +
+                    sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.boiler_techs)
+                    # TODO do all thermal techs have production_factor = 1 ? get rid of it if so
+                    # + sum(m[:dvDischargeFromStorage][b,ts] for b in p.HotTES)
+                    # + sum(p.GHPHeatingThermalServed[g,ts] * m[:binGHP][g] for g in p.GHPOptions)
+                    ==
+                    (p.s.dhw_load.loads_kw[ts] + p.s.space_heating_load.loads_kw[ts]) * p.s.existing_boiler.efficiency
+                    # + sum(m[:dvProductionToWaste][t,ts] for t in p.CHPTechs) +
+                    # sum(m[:dvProductionToStorage][b,t,ts] for b in p.HotTES, t in p.heating_techs)  +
+                    # sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.AbsorptionChillers) / p.AbsorptionChillerCOP
+            )
+        # end
+	end
 end

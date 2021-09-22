@@ -51,6 +51,9 @@ struct BAUScenario <: AbstractScenario
     electric_utility::ElectricUtility
     financial::Financial
     generator::Generator
+    dhw_load::DomesticHotWaterLoad
+    space_heating_load::SpaceHeatingLoad
+    existing_boiler::ExistingBoiler
     outage_outputs::OutageOutputs
 end
 
@@ -117,6 +120,9 @@ function BAUScenario(s::Scenario)
         s.electric_utility, 
         s.financial,
         generator,
+        s.dhw_load,
+        s.space_heating_load,
+        s.existing_boiler,
         outage_outputs
     )
 end

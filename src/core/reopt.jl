@@ -192,7 +192,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         end
 	end
 
-	add_load_balance_constraints(m, p)
+	add_elec_load_balance_constraints(m, p)
 
 	if !isempty(p.s.electric_tariff.export_bins)
 		add_export_constraints(m, p)
@@ -220,6 +220,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
     if !isempty(p.s.electric_tariff.coincpeak_periods)
         add_coincident_peak_charge_constraints(m, p)
+    end
+
+    if !isempty(p.boiler_techs)
+        add_boiler_tech_constraints(m, p)
+    end
+
+    if !isempty(p.thermal_techs)
+        add_thermal_load_constraints(m, p)  # split into heating and cooling constraints?
     end
 
 	@expression(m, TotalTechCapCosts, p.third_party_factor *
@@ -387,14 +395,16 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		@warn """Adding binary variable to model gas generator. 
 				 Some solvers are very slow with integer variables"""
 		@variables m begin
-			dvFuelUsage[p.gentechs, p.time_steps] >= 0 # Fuel burned by technology t in each time step
 			binGenIsOnInTS[p.gentechs, p.time_steps], Bin  # 1 If technology t is operating in time step h; 0 otherwise
 		end
 	end
 
+    if !isempty(p.fuel_burning_techs)
+		@variable(m, dvFuelUsage[p.fuel_burning_techs, p.time_steps] >= 0) # Fuel burned by technology t in each time step
+    end
+
     if !isempty(p.s.electric_tariff.export_bins)
         @variable(m, dvProductionToGrid[p.elec_techs, p.s.electric_tariff.export_bins, p.time_steps] >= 0)
-        
     end
 
 	if !(p.s.electric_utility.allow_simultaneous_export_import) & !isempty(p.s.electric_tariff.export_bins)
@@ -402,6 +412,10 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 				 Some solvers are very slow with integer variables"""
 		@variable(m, binNoGridPurchases[p.time_steps], Bin)
 	end
+
+    if !isempty(p.thermal_techs)
+        @variable(m, dvThermalProduction[p.thermal_techs, p.time_steps] >= 0)
+    end
 
 	if !isempty(p.s.electric_utility.outage_durations) # add dvUnserved Load if there is at least one outage
 		@warn """Adding binary variable to model outages. 

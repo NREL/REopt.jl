@@ -50,19 +50,11 @@ struct DomesticHotWaterLoad
             end
 
         elseif !isempty(doe_reference_name)
-            # NOTE: must use year that starts on Sunday with DOE reference doe_ref_profiles
-            if year != 2017
-                @warn "Changing DomesticHotWaterLoad.year to 2017 because DOE reference profiles start on a Sunday."
-            end
-            year = 2017
-            loads_kw = BuiltInDomesticHotWaterLoad(city, doe_reference_name, latitude, longitude, year, annual_mmbtu, monthly_mmbtu)
-            if ismissing(critical_loads_kw)
-                critical_loads_kw = critical_load_pct * loads_kw
-            end
+            loads_mmbtu_per_hour = BuiltInDomesticHotWaterLoad(city, doe_reference_name, latitude, longitude, 2017, annual_mmbtu, monthly_mmbtu)
 
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
-            loads_mmbtu_per_hour = blend_and_scale_doe_profiles(BuiltInDomesticHotWaterLoad, latitude, longitude, year, 
+            loads_mmbtu_per_hour = blend_and_scale_doe_profiles(BuiltInDomesticHotWaterLoad, latitude, longitude, 2017, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_mmbtu, monthly_mmbtu)
         else
@@ -71,10 +63,10 @@ struct DomesticHotWaterLoad
                 or [blended_doe_reference_names, blended_doe_reference_percents, city].")
         end
 
-        loads_kw = loads_mmbtu_per_hour .* mmbtu_to_kwh
+        loads_kw = loads_mmbtu_per_hour * mmbtu_to_kwh
 
         if length(loads_kw) < 8760*time_steps_per_hour
-            loads_kw = repeat(loads_kw, inner=time_steps_per_hour / (length(loads_kw)/8760))
+            loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw)/8760)))
             @info "Repeating domestic hot water loads in each hour to match the time_steps_per_hour."
         end
 
@@ -108,19 +100,11 @@ struct SpaceHeatingLoad
             end
 
         elseif !isempty(doe_reference_name)
-            # NOTE: must use year that starts on Sunday with DOE reference doe_ref_profiles
-            if year != 2017
-                @warn "Changing SpaceHeatingLoad.year to 2017 because DOE reference profiles start on a Sunday."
-            end
-            year = 2017
-            loads_kw = BuiltInSpaceHeatingLoad(city, doe_reference_name, latitude, longitude, year, annual_mmbtu, monthly_mmbtu)
-            if ismissing(critical_loads_kw)
-                critical_loads_kw = critical_load_pct * loads_kw
-            end
+            loads_mmbtu_per_hour = BuiltInSpaceHeatingLoad(city, doe_reference_name, latitude, longitude, 2017, annual_mmbtu, monthly_mmbtu)
 
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
-            loads_mmbtu_per_hour = blend_and_scale_doe_profiles(BuiltInSpaceHeatingLoad, latitude, longitude, year, 
+            loads_mmbtu_per_hour = blend_and_scale_doe_profiles(BuiltInSpaceHeatingLoad, latitude, longitude, 2017, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_mmbtu, monthly_mmbtu)
         else
@@ -129,10 +113,10 @@ struct SpaceHeatingLoad
                 or [blended_doe_reference_names, blended_doe_reference_percents, city].")
         end
 
-        loads_kw = loads_mmbtu_per_hour .* mmbtu_to_kwh
+        loads_kw = loads_mmbtu_per_hour * mmbtu_to_kwh
 
         if length(loads_kw) < 8760*time_steps_per_hour
-            loads_kw = repeat(loads_kw, inner=time_steps_per_hour / (length(loads_kw)/8760))
+            loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw)/8760)))
             @info "Repeating space heating loads in each hour to match the time_steps_per_hour."
         end
 
@@ -467,7 +451,7 @@ function BuiltInDomesticHotWaterLoad(
     if isnothing(annual_mmbtu)
         annual_mmbtu = dhw_annual_mmbtu[city][lowercase(buildingtype)]
     end
-    built_in_load("domestic_hot_water", city, buildingtype, year, annual_energy, monthly_mmbtu)
+    built_in_load("domestic_hot_water", city, buildingtype, year, annual_mmbtu, monthly_mmbtu)
 end
 
 
@@ -481,7 +465,7 @@ function BuiltInSpaceHeatingLoad(
     monthly_mmbtu::Union{<:Real, Vector{<:Real}}=nothing,
     )
     spaceheating_annual_mmbtu = Dict(
-        "Miami" => (
+        "Miami" => Dict(
             "fastfoodrest" => 5.426780867,
             "fullservicerest" => 12.03181471,
             "hospital" => 6248.413294,
@@ -500,7 +484,7 @@ function BuiltInSpaceHeatingLoad(
             "warehouse" => 56.0796017,
             "flatload" => 605.2352137
         ),
-        "Houston" => (
+        "Houston" => Dict(
             "fastfoodrest" => 85.49111065,
             "fullservicerest" => 199.7942842,
             "hospital" => 8732.10385,
@@ -519,7 +503,7 @@ function BuiltInSpaceHeatingLoad(
             "warehouse" => 475.9377273,
             "flatload" => 1277.307359
         ),
-        "Phoenix" => (
+        "Phoenix" => Dict(
             "fastfoodrest" => 57.89972381,
             "fullservicerest" => 147.2569493,
             "hospital" => 9382.021026,
@@ -538,7 +522,7 @@ function BuiltInSpaceHeatingLoad(
             "warehouse" => 362.42249280000004,
             "flatload" => 1188.188154
         ),
-        "Atlanta" => (
+        "Atlanta" => Dict(
             "fastfoodrest" => 168.8402371,
             "fullservicerest" => 379.5865464,
             "hospital" => 10467.659959999999,
@@ -557,7 +541,7 @@ function BuiltInSpaceHeatingLoad(
             "warehouse" => 930.9449202,
             "flatload" => 1888.856302
         ),
-        "LasVegas" => (
+        "LasVegas" => Dict(
             "fastfoodrest" => 100.0877773,
             "fullservicerest" => 247.21791319999997,
             "hospital" => 9100.302056,
@@ -576,7 +560,7 @@ function BuiltInSpaceHeatingLoad(
             "warehouse" => 579.7671637999999,
             "flatload" => 1413.3882199999998
         ),
-        "LosAngeles" => (
+        "LosAngeles" => Dict(
             "fastfoodrest" => 40.90390152,
             "fullservicerest" => 97.94277036,
             "hospital" => 10346.1713,
@@ -595,7 +579,7 @@ function BuiltInSpaceHeatingLoad(
             "warehouse" => 323.96697819999997,
             "flatload" => 1228.8385369999999
         ),
-        "SanFrancisco" => (
+        "SanFrancisco" => Dict(
             "fastfoodrest" => 127.22328700000001,
             "fullservicerest" => 362.48645889999995,
             "hospital" => 11570.9155,
@@ -614,7 +598,7 @@ function BuiltInSpaceHeatingLoad(
             "warehouse" => 675.6758453,
             "flatload" => 1808.604729
         ),
-        "Baltimore" => (
+        "Baltimore" => Dict(
             "fastfoodrest" => 305.2671204,
             "fullservicerest" => 657.1337578,
             "hospital" => 11253.61694,
@@ -633,7 +617,7 @@ function BuiltInSpaceHeatingLoad(
             "warehouse" => 1568.722061,
             "flatload" => 2539.2645399999997
         ),
-        "Albuquerque" => (
+        "Albuquerque" => Dict(
             "fastfoodrest" => 199.73581399999998,
             "fullservicerest" => 398.5712205,
             "hospital" => 8371.240776999999,
@@ -652,7 +636,7 @@ function BuiltInSpaceHeatingLoad(
             "warehouse" => 1151.250885,
             "flatload" => 1854.437216
         ),
-        "Seattle" => (
+        "Seattle" => Dict(
             "fastfoodrest" => 255.5992711,
             "fullservicerest" => 627.5634984000001,
             "hospital" => 11935.157290000001,
@@ -671,7 +655,7 @@ function BuiltInSpaceHeatingLoad(
             "warehouse" => 1137.398514,
             "flatload" => 2506.1340600000003
         ),
-        "Chicago" => (
+        "Chicago" => Dict(
             "fastfoodrest" => 441.93439000000006,
             "fullservicerest" => 888.3312571,
             "hospital" => 12329.57943,
@@ -690,7 +674,7 @@ function BuiltInSpaceHeatingLoad(
             "warehouse" => 2256.477231,
             "flatload" => 3258.766323
         ),
-        "Boulder" => (
+        "Boulder" => Dict(
             "fastfoodrest" => 306.8980525,
             "fullservicerest" => 642.8843574,
             "hospital" => 9169.381845,
@@ -709,7 +693,7 @@ function BuiltInSpaceHeatingLoad(
             "warehouse" => 1704.8648210000001,
             "flatload" => 2394.8859239999997
         ),
-        "Minneapolis" => (
+        "Minneapolis" => Dict(
             "fastfoodrest" => 588.8854722,
             "fullservicerest" => 1121.229499,
             "hospital" => 13031.2313,
@@ -728,7 +712,7 @@ function BuiltInSpaceHeatingLoad(
             "warehouse" => 3231.223746,
             "flatload" => 4004.001148
         ),
-        "Helena" => (
+        "Helena" => Dict(
             "fastfoodrest" => 468.8276835,
             "fullservicerest" => 934.8994934,
             "hospital" => 10760.57411,
@@ -747,7 +731,7 @@ function BuiltInSpaceHeatingLoad(
             "warehouse" => 2504.784991,
             "flatload" => 3252.362248
         ),
-        "Duluth" => (
+        "Duluth" => Dict(
             "fastfoodrest" => 738.1353594999999,
             "fullservicerest" => 1400.36692,
             "hospital" => 14179.84149,
@@ -766,7 +750,7 @@ function BuiltInSpaceHeatingLoad(
             "warehouse" => 3962.122014,
             "flatload" => 4741.886326
         ),
-        "Fairbanks" => (
+        "Fairbanks" => Dict(
             "fastfoodrest" => 1245.3608279999999,
             "fullservicerest" => 2209.293209,
             "hospital" => 20759.042680000002,
@@ -795,5 +779,5 @@ function BuiltInSpaceHeatingLoad(
     if isnothing(annual_mmbtu)
         annual_mmbtu = spaceheating_annual_mmbtu[city][lowercase(buildingtype)]
     end
-    built_in_load("space_heating", city, buildingtype, year, annual_energy, monthly_mmbtu)
+    built_in_load("space_heating", city, buildingtype, year, annual_mmbtu, monthly_mmbtu)
 end

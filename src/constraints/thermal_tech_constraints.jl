@@ -27,46 +27,32 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-struct ExistingBoiler <: AbstractThermalTech  # useful to create AbstractHeatingTech or AbstractThermalTech?
-    max_kw::Real
-    efficiency::Real
 
-    function ExistingBoiler(;
-        production_type::String = "hot_water",
-        chp_prime_mover::String = "",
-        # max_thermal_factor_on_peak_load::Real,
-        # production_type::String,
-        efficiency::Real = 0.0,
-        # can_supply_steam_turbine::Bool,
-        # emissions_factor_lb_CO2_per_mmbtu::Real,
-        max_kw::Real=0
-    )
-        @assert production_type in ["steam", "hot_water"]
-
-        production_type_by_chp_prime_mover = Dict(
-            "recip_engine" => "hot_water",
-            "micro_turbine" => "hot_water",
-            "combustion_turbine" => "steam",
-            "fuel_cell" => "hot_water"
+function add_boiler_tech_constraints(m, p; _n="")
+    
+    if !isempty(p.boiler_techs)
+        # Constraint (1e): Total Fuel burn for Boiler
+        @constraint(m, [t in p.boiler_techs, ts in p.time_steps],
+            m[:dvFuelUsage][t,ts] == p.hours_per_timestep * (
+                m[Symbol("dvThermalProduction"*_n)][t,ts] / p.boiler_efficiency[t]
+            )  # TODO removed p.production_factor[t,ts] * b/c all 1's for boiler; do we need it?
         )
 
-        efficiency_defaults = Dict(
-            "hot_water" => 0.80,
-            "steam" => 0.75
-        )
+        # Constraint (4f)-1: (Hot) Thermal production sent to storage must be less than technology's rated production
+        # if !isempty(p.steam_techs)
+        #     @constraint(m, [b in p.HotTES, t in p.boiler_techs, ts in p.time_steps],
+        #         m[:dvProductionToStorage][b,t,ts] + m[:dvThermalToSteamTurbine][t,ts] <=
+        #         p.production_factor[t,ts] * m[Symbol("dvThermalProduction"*_n)][t,ts]
+        #     )
+        # else
+            # @constraint(m, [b in p.HotTES, t in p.boiler_techs, ts in p.time_steps],
+            #     m[:dvProductionToStorage][b,t,ts] <= p.production_factor[t,ts] * m[Symbol("dvThermalProduction"*_n)][t,ts]
+            # )
+        # end
 
-        if efficiency == 0.0 && max_kw > 0
-            if !isempty(chp_prime_mover)
-                production_type = production_type_by_chp_prime_mover[chp_prime_mover]
-            end
-            efficiency = efficiency_defaults[production_type]
-        end
-
-        # max_kw = max(boiler_fuel_series_bau) * self.boiler_efficiency * self.max_thermal_factor_on_peak_load * mmbtu_to_kwh
-
-        new(
-            max_kw,
-            efficiency
+        # Constraint (7_heating_prod_size): Production limit based on size for boiler
+        @constraint(m, [t in p.boiler_techs, ts in p.time_steps],
+            m[Symbol("dvThermalProduction"*_n)][t,ts] <= m[Symbol("dvSize"*_n)][t]
         )
     end
 end

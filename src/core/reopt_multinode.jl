@@ -211,7 +211,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
             end
         end
     
-        add_load_balance_constraints(m, p; _n=_n)
+        add_elec_load_balance_constraints(m, p; _n=_n)
     
         if !isempty(p.s.electric_tariff.export_bins)
             add_export_constraints(m, p; _n=_n)
