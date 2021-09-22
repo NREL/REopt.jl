@@ -29,7 +29,11 @@
 # *********************************************************************************
 using Xpress
 
-
+@testet "Thermal loads" begin
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt([m1,m2], "./scenarios/thermal_load.json")
+end
 #=
 add a time-of-export rate that is greater than retail rate for the month of January,
 check to make sure that PV does NOT export unless the site load is met first for the month of January.

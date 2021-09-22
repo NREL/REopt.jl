@@ -37,22 +37,30 @@ function BAUInputs(p::REoptInputs)
     pvtechs = String[pv.name for pv in bau_scenario.pvs]
 
     techs = copy(pvtechs)
+    elec_techs = copy(pvtechs)
     techs_no_turndown = copy(pvtechs)
     techs_no_curtail = String[]
     gentechs = String[]
     pbi_techs = String[]
     heating_techs = String[]
+    boiler_techs = String[]
 
     if p.s.generator.existing_kw > 0
         push!(techs, "Generator")
         push!(gentechs, "Generator")
+        push!(elec_techs, "Generator")
     end
+
+    boiler_efficiency = Dict{String, Float64}()
     if p.s.existing_boiler.max_kw > 0
         push!(techs, "ExistingBoiler")
         push!(heating_techs, "ExistingBoiler")
+        push!(boiler_techs, "ExistingBoiler")
+        boiler_efficiency["ExistingBoiler"] = p.s.existing_boiler.efficiency
     end
 
-    elec_techs = copy(techs)  # only modeling electric loads/techs so far
+    fuel_burning_techs = union(gentechs, boiler_techs)
+    thermal_techs = union(heating_techs, boiler_techs)
 
     # REoptInputs indexed on techs:
     max_sizes = Dict(t => 0.0 for t in techs)
@@ -113,6 +121,10 @@ function BAUInputs(p::REoptInputs)
         end
     end
 
+    if "ExistingBoiler" in techs
+        setup_existing_boiler_inputs(bau_scenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope)
+    end
+
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
     for t in elec_techs
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
@@ -138,6 +150,9 @@ function BAUInputs(p::REoptInputs)
         gentechs,
         elec_techs,
         heating_techs,
+        boiler_techs,
+        fuel_burning_techs,
+        thermal_techs,
         segmented_techs,
         pbi_techs,
         techs_no_turndown,
@@ -171,7 +186,8 @@ function BAUInputs(p::REoptInputs)
         p.pbi_pwf, 
         p.pbi_max_benefit, 
         p.pbi_max_kw, 
-        p.pbi_benefit_per_kwh
+        p.pbi_benefit_per_kwh,
+        boiler_efficiency
     )
 end
 

@@ -151,7 +151,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
         )
 	end
 
-	add_load_balance_constraints(m, p)
+	add_elec_load_balance_constraints(m, p)
 
 	if !isempty(p.s.electric_tariff.export_bins)
 		add_export_constraints(m, p)

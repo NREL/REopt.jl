@@ -97,6 +97,7 @@ include("constraints/electric_utility_constraints.jl")
 include("constraints/generator_constraints.jl")
 include("constraints/cost_curve_constraints.jl")
 include("constraints/production_incentive_constraints.jl")
+include("constraints/thermal_tech_constraints.jl")
 
 include("mpc/structs.jl")
 include("mpc/scenario.jl")

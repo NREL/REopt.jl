@@ -83,6 +83,9 @@ struct REoptInputs <: AbstractInputs
     gentechs::Array{String,1}
     elec_techs::Array{String, 1}
     heating_techs::Array{String, 1}
+    boiler_techs::Array{String, 1}
+    fuel_burning_techs::Array{String, 1}
+    thermal_techs::Array{String, 1}
     segmented_techs::Array{String, 1}
     pbi_techs::Array{String, 1}
     techs_no_turndown::Array{String, 1}
@@ -117,6 +120,7 @@ struct REoptInputs <: AbstractInputs
     pbi_max_benefit::Dict{String, Any}  # (pbi_techs)
     pbi_max_kw::Dict{String, Any}  # (pbi_techs)
     pbi_benefit_per_kwh::Dict{String, Any}  # (pbi_techs)
+    boiler_efficiency::Dict{String, Float64}
 end
 
 
@@ -147,14 +151,17 @@ function REoptInputs(s::AbstractScenario)
 
     time_steps = 1:length(s.electric_load.loads_kw)
     hours_per_timestep = 1 / s.settings.time_steps_per_hour
-    techs, pvtechs, gentechs, elec_techs, heating_techs, segmented_techs, techs_no_curtail, 
-        pv_to_location, maxsize_pv_locations, pvlocations, 
+    techs, pvtechs, gentechs, elec_techs, heating_techs, boiler_techs, fuel_burning_techs, segmented_techs, 
+        techs_no_curtail, pv_to_location, maxsize_pv_locations, pvlocations, 
         production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
-        seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech = setup_tech_inputs(s)
+        seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency = 
+        setup_tech_inputs(s)
+    
     techs_no_turndown = copy(pvtechs)
     if "Wind" in techs
         append!(techs_no_turndown, ["Wind"])
     end
+    thermal_techs = union(heating_techs, boiler_techs)
 
     pbi_techs, pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs, pvtechs)
 
@@ -167,7 +174,7 @@ function REoptInputs(s::AbstractScenario)
     # (Desktop has non-linear degradation vs. linear degradation in API)
     # levelization_factor = Dict("PV" => 0.9539)
     # levelization_factor = Dict("ground" => 0.942238, "roof_east" => 0.942238, "roof_west" => 0.942238)
-    # levelization_factor = Dict("PV" => 0.9539, "Generator" => 1.0)  # w/generator
+    # levelization_factor = Dict("PV" => 0.9539, "Generator" => 1.0)
     time_steps_with_grid, time_steps_without_grid, = setup_electric_utility_inputs(s)
     
     if any(pv.existing_kw > 0 for pv in s.pvs)
@@ -181,6 +188,9 @@ function REoptInputs(s::AbstractScenario)
         gentechs,
         elec_techs,
         heating_techs,
+        boiler_techs,
+        fuel_burning_techs,
+        thermal_techs,
         segmented_techs,
         pbi_techs,
         techs_no_turndown,
@@ -214,7 +224,8 @@ function REoptInputs(s::AbstractScenario)
         pbi_pwf, 
         pbi_max_benefit, 
         pbi_max_kw, 
-        pbi_benefit_per_kwh
+        pbi_benefit_per_kwh,
+        boiler_efficiency
     )
 end
 
@@ -232,25 +243,33 @@ function setup_tech_inputs(s::AbstractScenario)
     end
 
     techs = copy(pvtechs)
+    elec_techs = copy(pvtechs)
     gentechs = String[]
     techs_no_curtail = String[]
     segmented_techs = String[]
     heating_techs = String[]
+    boiler_techs = String[]
     if s.wind.max_kw > 0
         push!(techs, "Wind")
+        push!(elec_techs, "Wind")
     end
     if s.generator.max_kw > 0
         push!(techs, "Generator")
         push!(gentechs, "Generator")
+        push!(elec_techs, "Generator")
     end
+
+    boiler_efficiency = Dict{String, Float64}()
+    production_factor = DenseAxisArray{Float64}(undef, techs, 1:length(s.electric_load.loads_kw))
+
     if s.existing_boiler.max_kw > 0
         push!(techs, "ExistingBoiler")
         push!(heating_techs, "ExistingBoiler")
+        push!(boiler_techs, "ExistingBoiler")
+        boiler_efficiency["ExistingBoiler"] = s.existing_boiler.efficiency
     end
 
-    elec_techs = copy(techs)  # only modeling electric loads/techs so far
-
-    time_steps = 1:length(s.electric_load.loads_kw)
+    fuel_burning_techs = union(gentechs, boiler_techs)
 
     # REoptInputs indexed on techs:
     max_sizes = Dict(t => 0.0 for t in techs)
@@ -258,7 +277,6 @@ function setup_tech_inputs(s::AbstractScenario)
     existing_sizes = Dict(t => 0.0 for t in techs)
     cap_cost_slope = Dict{String, Any}()
     om_cost_per_kw = Dict(t => 0.0 for t in techs)
-    production_factor = DenseAxisArray{Float64}(undef, techs, time_steps)
 
     # export related inputs
     techs_by_exportbin = Dict(k => [] for k in s.electric_tariff.export_bins)
@@ -292,15 +310,19 @@ function setup_tech_inputs(s::AbstractScenario)
             techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_no_curtail)
     end
 
+    if "ExistingBoiler" in techs
+        setup_existing_boiler_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope)
+    end
+
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
     for t in elec_techs
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
     end
 
-    return techs, pvtechs, gentechs, elec_techs, heating_techs, segmented_techs, techs_no_curtail,
-    pv_to_location, maxsize_pv_locations, pvlocations, 
+    return techs, pvtechs, gentechs, elec_techs, heating_techs, boiler_techs, fuel_burning_techs, segmented_techs, 
+    techs_no_curtail, pv_to_location, maxsize_pv_locations, pvlocations, 
     production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
-    seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech
+    seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency
 end
 
 
@@ -490,6 +512,16 @@ function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_si
     if !s.generator.can_curtail
         push!(techs_no_curtail, "Generator")
     end
+    return nothing
+end
+
+
+function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope)
+    max_sizes["ExistingBoiler"] = s.existing_boiler.max_kw
+    min_sizes["ExistingBoiler"] = 0.0
+    existing_sizes["ExistingBoiler"] = 0.0
+    cap_cost_slope["ExistingBoiler"] = 0.0
+    # om_cost_per_kw["ExistingBoiler"] = 0.0
     return nothing
 end
 
