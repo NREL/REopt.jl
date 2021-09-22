@@ -30,9 +30,9 @@
 
 function add_boiler_tech_constraints(m, p; _n="")
     
-    if !isempty(p.boiler_techs)
+    if !isempty(p.techs.boiler)
         # Constraint (1e): Total Fuel burn for Boiler
-        @constraint(m, [t in p.boiler_techs, ts in p.time_steps],
+        @constraint(m, [t in p.techs.boiler, ts in p.time_steps],
             m[:dvFuelUsage][t,ts] == p.hours_per_timestep * (
                 m[Symbol("dvThermalProduction"*_n)][t,ts] / p.boiler_efficiency[t]
             )  # TODO removed p.production_factor[t,ts] * b/c all 1's for boiler; do we need it?
@@ -40,18 +40,18 @@ function add_boiler_tech_constraints(m, p; _n="")
 
         # Constraint (4f)-1: (Hot) Thermal production sent to storage must be less than technology's rated production
         # if !isempty(p.steam_techs)
-        #     @constraint(m, [b in p.HotTES, t in p.boiler_techs, ts in p.time_steps],
+        #     @constraint(m, [b in p.HotTES, t in p.techs.boiler, ts in p.time_steps],
         #         m[:dvProductionToStorage][b,t,ts] + m[:dvThermalToSteamTurbine][t,ts] <=
         #         p.production_factor[t,ts] * m[Symbol("dvThermalProduction"*_n)][t,ts]
         #     )
         # else
-            # @constraint(m, [b in p.HotTES, t in p.boiler_techs, ts in p.time_steps],
+            # @constraint(m, [b in p.HotTES, t in p.techs.boiler, ts in p.time_steps],
             #     m[:dvProductionToStorage][b,t,ts] <= p.production_factor[t,ts] * m[Symbol("dvThermalProduction"*_n)][t,ts]
             # )
         # end
 
         # Constraint (7_heating_prod_size): Production limit based on size for boiler
-        @constraint(m, [t in p.boiler_techs, ts in p.time_steps],
+        @constraint(m, [t in p.techs.boiler, ts in p.time_steps],
             m[Symbol("dvThermalProduction"*_n)][t,ts] <= m[Symbol("dvSize"*_n)][t]
         )
     end

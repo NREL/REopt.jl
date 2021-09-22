@@ -34,15 +34,7 @@ The data structure for all the inputs necessary to construct the JuMP model.
 ```julia
 struct REoptInputs <: AbstractInputs
     s::AbstractScenario
-    techs::Array{String, 1}
-    pvtechs::Array{String, 1}
-    gentechs::Array{String,1}
-    elec_techs::Array{String, 1}
-    heating_techs::Array{String, 1}
-    segmented_techs::Array{String, 1}
-    pbi_techs::Array{String, 1}
-    techs_no_turndown::Array{String, 1}
-    techs_no_curtail::Array{String, 1}
+    techs::Techs
     min_sizes::Dict{String, Float64}  # (techs)
     max_sizes::Dict{String, Float64}  # (techs)
     existing_sizes::Dict{String, Float64}  # (techs)
@@ -61,7 +53,7 @@ struct REoptInputs <: AbstractInputs
     third_party_factor::Float64
     pvlocations::Array{Symbol, 1}
     maxsize_pv_locations::DenseAxisArray{Float64, 1}  # indexed on pvlocations
-    pv_to_location::Dict{String, Dict{Symbol, Int64}}  # (pvtechs, pvlocations)
+    pv_to_location::Dict{String, Dict{Symbol, Int64}}  # (techs.pv, pvlocations)
     ratchets::UnitRange
     techs_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL, :CUR]
     export_bins_by_tech::Dict
@@ -78,18 +70,7 @@ end
 """
 struct REoptInputs <: AbstractInputs
     s::AbstractScenario
-    techs::Array{String, 1}
-    pvtechs::Array{String, 1}
-    gentechs::Array{String,1}
-    elec_techs::Array{String, 1}
-    heating_techs::Array{String, 1}
-    boiler_techs::Array{String, 1}
-    fuel_burning_techs::Array{String, 1}
-    thermal_techs::Array{String, 1}
-    segmented_techs::Array{String, 1}
-    pbi_techs::Array{String, 1}
-    techs_no_turndown::Array{String, 1}
-    techs_no_curtail::Array{String, 1}
+    techs::Techs
     min_sizes::Dict{String, Float64}  # (techs)
     max_sizes::Dict{String, Float64}  # (techs)
     existing_sizes::Dict{String, Float64}  # (techs)
@@ -108,7 +89,7 @@ struct REoptInputs <: AbstractInputs
     third_party_factor::Float64
     pvlocations::Array{Symbol, 1}
     maxsize_pv_locations::DenseAxisArray{Float64, 1}  # indexed on pvlocations
-    pv_to_location::Dict{String, Dict{Symbol, Int64}}  # (pvtechs, pvlocations)
+    pv_to_location::Dict{String, Dict{Symbol, Int64}}  # (techs.pv, pvlocations)
     ratchets::UnitRange
     techs_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL, :CUR]
     export_bins_by_tech::Dict
@@ -151,23 +132,16 @@ function REoptInputs(s::AbstractScenario)
 
     time_steps = 1:length(s.electric_load.loads_kw)
     hours_per_timestep = 1 / s.settings.time_steps_per_hour
-    techs, pvtechs, gentechs, elec_techs, heating_techs, boiler_techs, fuel_burning_techs, segmented_techs, 
-        techs_no_curtail, pv_to_location, maxsize_pv_locations, pvlocations, 
+    techs, pv_to_location, maxsize_pv_locations, pvlocations, 
         production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
         seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency = 
         setup_tech_inputs(s)
-    
-    techs_no_turndown = copy(pvtechs)
-    if "Wind" in techs
-        append!(techs_no_turndown, ["Wind"])
-    end
-    thermal_techs = union(heating_techs, boiler_techs)
 
-    pbi_techs, pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs, pvtechs)
+    pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
 
     months = 1:12
 
-    levelization_factor, pwf_e, pwf_om, third_party_factor = setup_present_worth_factors(s, techs, pvtechs)
+    levelization_factor, pwf_e, pwf_om, third_party_factor = setup_present_worth_factors(s, techs)
     # the following hardcoded values for levelization_factor matches the public REopt API value
     # and makes the test values match.
     # the REopt code herein uses the Desktop method for levelization_factor, which is more accurate
@@ -184,17 +158,6 @@ function REoptInputs(s::AbstractScenario)
     REoptInputs(
         s,
         techs,
-        pvtechs,
-        gentechs,
-        elec_techs,
-        heating_techs,
-        boiler_techs,
-        fuel_burning_techs,
-        thermal_techs,
-        segmented_techs,
-        pbi_techs,
-        techs_no_turndown,
-        techs_no_curtail,
         min_sizes,
         max_sizes,
         existing_sizes,
@@ -237,52 +200,23 @@ Create data arrays associated with techs necessary to build the JuMP model.
 """
 function setup_tech_inputs(s::AbstractScenario)
 
-    pvtechs = String[pv.name for pv in s.pvs]
-    if length(Base.Set(pvtechs)) != length(pvtechs)
-        error("PV names must be unique, got $(pvtechs)")
-    end
-
-    techs = copy(pvtechs)
-    elec_techs = copy(pvtechs)
-    gentechs = String[]
-    techs_no_curtail = String[]
-    segmented_techs = String[]
-    heating_techs = String[]
-    boiler_techs = String[]
-    if s.wind.max_kw > 0
-        push!(techs, "Wind")
-        push!(elec_techs, "Wind")
-    end
-    if s.generator.max_kw > 0
-        push!(techs, "Generator")
-        push!(gentechs, "Generator")
-        push!(elec_techs, "Generator")
-    end
+    techs = Techs(s)
 
     boiler_efficiency = Dict{String, Float64}()
-    production_factor = DenseAxisArray{Float64}(undef, techs, 1:length(s.electric_load.loads_kw))
-
-    if s.existing_boiler.max_kw > 0
-        push!(techs, "ExistingBoiler")
-        push!(heating_techs, "ExistingBoiler")
-        push!(boiler_techs, "ExistingBoiler")
-        boiler_efficiency["ExistingBoiler"] = s.existing_boiler.efficiency
-    end
-
-    fuel_burning_techs = union(gentechs, boiler_techs)
+    production_factor = DenseAxisArray{Float64}(undef, techs.all, 1:length(s.electric_load.loads_kw))
 
     # REoptInputs indexed on techs:
-    max_sizes = Dict(t => 0.0 for t in techs)
-    min_sizes = Dict(t => 0.0 for t in techs)
-    existing_sizes = Dict(t => 0.0 for t in techs)
+    max_sizes = Dict(t => 0.0 for t in techs.all)
+    min_sizes = Dict(t => 0.0 for t in techs.all)
+    existing_sizes = Dict(t => 0.0 for t in techs.all)
     cap_cost_slope = Dict{String, Any}()
-    om_cost_per_kw = Dict(t => 0.0 for t in techs)
+    om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
 
     # export related inputs
     techs_by_exportbin = Dict(k => [] for k in s.electric_tariff.export_bins)
     export_bins_by_tech = Dict{String, Array{Symbol, 1}}()
 
-    # REoptInputs indexed on segmented_techs
+    # REoptInputs indexed on techs.segmented
     n_segs_by_tech = Dict{String, Int}()
     seg_min_size = Dict{String, Any}()
     seg_max_size = Dict{String, Any}()
@@ -290,62 +224,60 @@ function setup_tech_inputs(s::AbstractScenario)
 
     # PV specific arrays
     pvlocations = [:roof, :ground, :both]
-    pv_to_location = Dict(t => Dict(loc => 0) for (t, loc) in zip(pvtechs, pvlocations))
+    pv_to_location = Dict(t => Dict(loc => 0) for (t, loc) in zip(techs.pv, pvlocations))
     maxsize_pv_locations = DenseAxisArray([1.0e5, 1.0e5, 1.0e5], pvlocations)
     # default to large max size per location. Max size by roof, ground, both
 
-    if !isempty(pvtechs)
+    if !isempty(techs.pv)
         setup_pv_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
-                        pvlocations, pv_to_location, maxsize_pv_locations, segmented_techs, n_segs_by_tech, 
-                        seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, techs_no_curtail)
+                        pvlocations, pv_to_location, maxsize_pv_locations, techs.segmented, n_segs_by_tech, 
+                        seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, techs.no_curtail)
     end
 
-    if "Wind" in techs
+    if "Wind" in techs.all
         setup_wind_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor, 
-            techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_no_curtail)
+            techs_by_exportbin, techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs.no_curtail)
     end
 
-    if "Generator" in techs
+    if "Generator" in techs.all
         setup_gen_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
-            techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_no_curtail)
+            techs_by_exportbin, techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs.no_curtail)
     end
 
-    if "ExistingBoiler" in techs
-        setup_existing_boiler_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope)
+    if "ExistingBoiler" in techs.all
+        setup_existing_boiler_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency)
     end
 
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
-    for t in elec_techs
+    for t in techs.elec
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
     end
 
-    return techs, pvtechs, gentechs, elec_techs, heating_techs, boiler_techs, fuel_burning_techs, segmented_techs, 
-    techs_no_curtail, pv_to_location, maxsize_pv_locations, pvlocations, 
+    return techs, pv_to_location, maxsize_pv_locations, pvlocations, 
     production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
     seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency
 end
 
 
 """
-    setup_pbi_inputs(s::AbstractScenario, techs::Array{String, 1}, pvtechs::Array{String, 1})
+    setup_pbi_inputs(s::AbstractScenario, techs::Techs)
 
 Create data arrays for production based incentives. 
 All arrays can be empty if no techs have production_incentive_per_kwh > 0.
 """
-function setup_pbi_inputs(s::AbstractScenario, techs::Array{String, 1}, pvtechs::Array{String, 1})
+function setup_pbi_inputs(s::AbstractScenario, techs::Techs)
 
-    pbi_techs = String[]
     pbi_pwf = Dict{String, Any}()
     pbi_max_benefit = Dict{String, Any}()
     pbi_max_kw = Dict{String, Any}()
     pbi_benefit_per_kwh = Dict{String, Any}()
 
-    for tech in techs
-        if !(tech in pvtechs)
+    for tech in techs.all
+        if !(tech in techs.pv)
             T = typeof(eval(Meta.parse(tech)))
             if :production_incentive_per_kwh in fieldnames(T)
                 if eval(Meta.parse("s."*tech*".production_incentive_per_kwh")) > 0
-                    push!(pbi_techs, tech)
+                    push!(techs.pbi, tech)
                     pbi_pwf[tech], pbi_max_benefit[tech], pbi_max_kw[tech], pbi_benefit_per_kwh[tech] = 
                         production_incentives(eval(Meta.parse("s."*tech)), s.financial)
                 end
@@ -353,14 +285,14 @@ function setup_pbi_inputs(s::AbstractScenario, techs::Array{String, 1}, pvtechs:
         else
             pv = get_pv_by_name(tech, s.pvs)
             if pv.production_incentive_per_kwh > 0
-                push!(pbi_techs, tech)
+                push!(techs.pbi, tech)
                 pbi_pwf[tech], pbi_max_benefit[tech], pbi_max_kw[tech], pbi_benefit_per_kwh[tech] = 
                     production_incentives(pv, s.financial)
             end
         end
         
     end
-    return pbi_techs, pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh
+    return pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh
 end
 
 
@@ -516,20 +448,21 @@ function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_si
 end
 
 
-function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope)
+function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency)
     max_sizes["ExistingBoiler"] = s.existing_boiler.max_kw
     min_sizes["ExistingBoiler"] = 0.0
     existing_sizes["ExistingBoiler"] = 0.0
     cap_cost_slope["ExistingBoiler"] = 0.0
+    boiler_efficiency["ExistingBoiler"] = s.existing_boiler.efficiency
     # om_cost_per_kw["ExistingBoiler"] = 0.0
     return nothing
 end
 
 
-function setup_present_worth_factors(s::AbstractScenario, techs::Array{String, 1}, pvtechs::Array{String, 1})
+function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
 
-    lvl_factor = Dict(t => 1.0 for t in techs)  # default levelization_factor of 1.0
-    for (i, tech) in enumerate(pvtechs)  # replace 1.0 with actual PV levelization_factor (only tech with degradation)
+    lvl_factor = Dict(t => 1.0 for t in techs.all)  # default levelization_factor of 1.0
+    for (i, tech) in enumerate(techs.pv)  # replace 1.0 with actual PV levelization_factor (only tech with degradation)
         lvl_factor[tech] = levelization_factor(
             s.financial.analysis_years,
             s.financial.elec_cost_escalation_pct,

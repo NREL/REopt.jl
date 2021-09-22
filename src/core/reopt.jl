@@ -151,7 +151,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 
         if !isempty(p.s.electric_tariff.export_bins)
-            for t in p.elec_techs, u in p.export_bins_by_tech[t]
+            for t in p.techs.elec, u in p.export_bins_by_tech[t]
                 fix(m[:dvProductionToGrid][t, u, ts], 0.0, force=true)
             end
         end
@@ -162,7 +162,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
 			@constraint(m, m[:dvStorageEnergy][b] == 0)
 			@constraint(m, m[:dvStoragePower][b] == 0)
-			@constraint(m, [t in p.elec_techs, ts in p.time_steps_with_grid],
+			@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
 						m[:dvProductionToStorage][b, t, ts] == 0)
 			@constraint(m, [ts in p.time_steps], m[:dvDischargeFromStorage][b, ts] == 0)
 			@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
@@ -172,7 +172,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 	end
 
-	if !isempty(p.gentechs)
+	if !isempty(p.techs.gen)
 		add_fuel_burn_constraints(m,p)
 		add_binGenIsOnInTS_constraints(m,p)
 		add_gen_can_run_constraints(m,p)
@@ -185,9 +185,9 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 	add_production_constraints(m, p)
 
-	if !isempty(p.techs)
+	if !isempty(p.techs.all)
 		add_tech_size_constraints(m, p)
-        if !isempty(p.techs_no_curtail)
+        if !isempty(p.techs.no_curtail)
             add_no_curtail_constraints(m, p)
         end
 	end
@@ -222,21 +222,21 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         add_coincident_peak_charge_constraints(m, p)
     end
 
-    if !isempty(p.boiler_techs)
+    if !isempty(p.techs.boiler)
         add_boiler_tech_constraints(m, p)
     end
 
-    if !isempty(p.thermal_techs)
+    if !isempty(p.techs.thermal)
         add_thermal_load_constraints(m, p)  # split into heating and cooling constraints?
     end
 
 	@expression(m, TotalTechCapCosts, p.third_party_factor *
-		  sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in setdiff(p.techs, p.segmented_techs) )
+		  sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in setdiff(p.techs.all, p.techs.segmented) )
 	)
-    if !isempty(p.segmented_techs)
+    if !isempty(p.techs.segmented)
         @warn "adding binary variable(s) to model cost curves"
         add_cost_curve_vars_and_constraints(m, p)
-        for t in p.segmented_techs  # cannot have this for statement in sum( ... for t in ...) ???
+        for t in p.techs.segmented  # cannot have this for statement in sum( ... for t in ...) ???
            TotalTechCapCosts += p.third_party_factor * (
                 sum(p.cap_cost_slope[t][s] * m[Symbol("dvSegmentSystemSize"*t)][s] + 
                     p.seg_yint[t][s] * m[Symbol("binSegment"*t)][s] for s in p.n_segs_by_tech[t])
@@ -244,7 +244,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         end
     end
 
-    if !isempty(p.pbi_techs)
+    if !isempty(p.techs.pbi)
         @warn "adding binary variable(s) to model production based incentives"
         add_prod_incent_vars_and_constraints(m, p)
     else
@@ -257,16 +257,16 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	)
 	
 	@expression(m, TotalPerUnitSizeOMCosts, p.third_party_factor * p.pwf_om *
-		sum( p.om_cost_per_kw[t] * m[:dvSize][t] for t in p.techs )
+		sum( p.om_cost_per_kw[t] * m[:dvSize][t] for t in p.techs.all )
 	)
 	
-    if !isempty(p.gentechs)
+    if !isempty(p.techs.gen)
 		m[:TotalPerUnitProdOMCosts] = @expression(m, p.third_party_factor * p.pwf_om *
 			sum(p.s.generator.om_cost_per_kwh * p.hours_per_timestep *
-			m[:dvRatedProduction][t, ts] for t in p.gentechs, ts in p.time_steps)
+			m[:dvRatedProduction][t, ts] for t in p.techs.gen, ts in p.time_steps)
 		)
 		m[:TotalGenFuelCharges] = @expression(m, p.pwf_e *
-			sum(m[:dvFuelUsage][t,ts] * p.s.generator.fuel_cost_per_gallon for t in p.gentechs, ts in p.time_steps)
+			sum(m[:dvFuelUsage][t,ts] * p.s.generator.fuel_cost_per_gallon for t in p.techs.gen, ts in p.time_steps)
 		)
     else
 		m[:TotalPerUnitProdOMCosts] = 0.0
@@ -283,7 +283,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_cannot_have_MG_with_only_PVwind_constraints(m,p)
 		add_MG_size_constraints(m,p)
 		
-		if !isempty(p.gentechs)
+		if !isempty(p.techs.gen)
 			add_MG_fuel_burn_constraints(m,p)
 			add_binMGGenIsOnInTS_constraints(m,p)
 		else
@@ -375,12 +375,12 @@ Add JuMP variables to the model.
 """
 function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 	@variables m begin
-		dvSize[p.techs] >= 0  # System Size of Technology t [kW]
-		dvPurchaseSize[p.techs] >= 0  # system kW beyond existing_kw that must be purchased
+		dvSize[p.techs.all] >= 0  # System Size of Technology t [kW]
+		dvPurchaseSize[p.techs.all] >= 0  # system kW beyond existing_kw that must be purchased
 		dvGridPurchase[p.time_steps, 1:p.s.electric_tariff.n_energy_tiers] >= 0  # Power from grid dispatched to meet electrical load [kW]
-		dvRatedProduction[p.techs, p.time_steps] >= 0  # Rated production of technology t [kW]
-		dvCurtail[p.techs, p.time_steps] >= 0  # [kW]
-		dvProductionToStorage[p.s.storage.types, p.techs, p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
+		dvRatedProduction[p.techs.all, p.time_steps] >= 0  # Rated production of technology t [kW]
+		dvCurtail[p.techs.all, p.time_steps] >= 0  # [kW]
+		dvProductionToStorage[p.s.storage.types, p.techs.all, p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
 		dvDischargeFromStorage[p.s.storage.types, p.time_steps] >= 0 # Power discharged from storage system b [kW]
 		dvGridToStorage[p.s.storage.types, p.time_steps] >= 0 # Electrical power delivered to storage by the grid [kW]
 		dvStoredEnergy[p.s.storage.types, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
@@ -391,20 +391,20 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		MinChargeAdder >= 0
 	end
 
-	if !isempty(p.gentechs)  # Problem becomes a MILP
+	if !isempty(p.techs.gen)  # Problem becomes a MILP
 		@warn """Adding binary variable to model gas generator. 
 				 Some solvers are very slow with integer variables"""
 		@variables m begin
-			binGenIsOnInTS[p.gentechs, p.time_steps], Bin  # 1 If technology t is operating in time step h; 0 otherwise
+			binGenIsOnInTS[p.techs.gen, p.time_steps], Bin  # 1 If technology t is operating in time step h; 0 otherwise
 		end
 	end
 
-    if !isempty(p.fuel_burning_techs)
-		@variable(m, dvFuelUsage[p.fuel_burning_techs, p.time_steps] >= 0) # Fuel burned by technology t in each time step
+    if !isempty(p.techs.fuel_burning)
+		@variable(m, dvFuelUsage[p.techs.fuel_burning, p.time_steps] >= 0) # Fuel burned by technology t in each time step
     end
 
     if !isempty(p.s.electric_tariff.export_bins)
-        @variable(m, dvProductionToGrid[p.elec_techs, p.s.electric_tariff.export_bins, p.time_steps] >= 0)
+        @variable(m, dvProductionToGrid[p.techs.elec, p.s.electric_tariff.export_bins, p.time_steps] >= 0)
     end
 
 	if !(p.s.electric_utility.allow_simultaneous_export_import) & !isempty(p.s.electric_tariff.export_bins)
@@ -413,8 +413,8 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		@variable(m, binNoGridPurchases[p.time_steps], Bin)
 	end
 
-    if !isempty(p.thermal_techs)
-        @variable(m, dvThermalProduction[p.thermal_techs, p.time_steps] >= 0)
+    if !isempty(p.techs.thermal)
+        @variable(m, dvThermalProduction[p.techs.thermal, p.time_steps] >= 0)
     end
 
 	if !isempty(p.s.electric_utility.outage_durations) # add dvUnserved Load if there is at least one outage
@@ -427,22 +427,22 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		# TODO: currently defining more decision variables than necessary b/c using rectangular arrays, could use dicts of decision variables instead
 		@variables m begin # if there is more than one specified outage, there can be more othan one outage start time
 			dvUnservedLoad[S, tZeros, outage_timesteps] >= 0 # unserved load not met by system
-			dvMGProductionToStorage[p.techs, S, tZeros, outage_timesteps] >= 0 # Electricity going to the storage system during each timestep
+			dvMGProductionToStorage[p.techs.elec, S, tZeros, outage_timesteps] >= 0 # Electricity going to the storage system during each timestep
 			dvMGDischargeFromStorage[S, tZeros, outage_timesteps] >= 0 # Electricity coming from the storage system during each timestep
-			dvMGRatedProduction[p.techs, S, tZeros, outage_timesteps]  # MG Rated Production at every timestep.  Multiply by ProdFactor to get actual energy
+			dvMGRatedProduction[p.techs.elec, S, tZeros, outage_timesteps]  # MG Rated Production at every timestep.  Multiply by ProdFactor to get actual energy
 			dvMGStoredEnergy[S, tZeros, 0:max_outage_duration] >= 0 # State of charge of the MG storage system
 			dvMaxOutageCost[S] >= 0 # maximum outage cost dependent on number of outage durations
-			dvMGTechUpgradeCost[p.techs] >= 0
+			dvMGTechUpgradeCost[p.techs.elec] >= 0
 			dvMGStorageUpgradeCost >= 0
-			dvMGsize[p.techs] >= 0
+			dvMGsize[p.techs.elec] >= 0
 			
-			dvMGFuelUsed[p.techs, S, tZeros] >= 0
+			dvMGFuelUsed[p.techs.elec, S, tZeros] >= 0
 			dvMGMaxFuelUsage[S] >= 0
 			dvMGMaxFuelCost[S] >= 0
-			dvMGCurtail[p.techs, S, tZeros, outage_timesteps] >= 0
+			dvMGCurtail[p.techs.elec, S, tZeros, outage_timesteps] >= 0
 
 			binMGStorageUsed, Bin # 1 if MG storage battery used, 0 otherwise
-			binMGTechUsed[p.techs], Bin # 1 if MG tech used, 0 otherwise
+			binMGTechUsed[p.techs.elec], Bin # 1 if MG tech used, 0 otherwise
 			binMGGenIsOnInTS[S, tZeros, outage_timesteps], Bin
 		end
 	end
