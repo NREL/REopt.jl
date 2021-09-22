@@ -34,6 +34,17 @@ abstract type AbstractScenario end
 abstract type AbstractInputs end
 abstract type AbstractThermalTech <: AbstractGenerator end
 
-abstract type ExistsNew end
-abstract type Exists <: ExistsNew end
-abstract type New <: ExistsNew end
+mutable struct Techs
+    all::Vector{String}
+    elec::Vector{String}
+    pv::Vector{String}
+    gen::Vector{String}
+    pbi::Vector{String}
+    no_curtail::Vector{String}
+    no_turndown::Vector{String}
+    segmented::Vector{String}
+    heating::Vector{String}
+    boiler::Vector{String}
+    fuel_burning::Vector{String}
+    thermal::Vector{String}
+end

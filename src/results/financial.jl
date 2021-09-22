@@ -73,11 +73,11 @@ incentives.
 function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     initial_capex = 0
 
-    if !isempty(p.gentechs) && isempty(_n)  # generators not included in multinode model
+    if !isempty(p.techs.gen) && isempty(_n)  # generators not included in multinode model
         initial_capex += p.s.generator.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Generator"]
     end
 
-    if !isempty(p.pvtechs)
+    if !isempty(p.techs.pv)
         for pv in p.s.pvs
             initial_capex += pv.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])[pv.name]
         end
@@ -90,7 +90,7 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         end
     end
 
-    if "Wind" in p.techs
+    if "Wind" in p.techs.all
         initial_capex += p.s.wind.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Wind"]
     end
 

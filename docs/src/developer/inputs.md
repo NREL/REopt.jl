@@ -16,20 +16,20 @@ At a high level the REoptInputs constructor does the following tasks:
 
 #### Index Sets
 There are a few `String[]` that are built by REoptInputs that are then used as index sets in the model constraints.
-The primary index set is the `techs` array of strings, which contains all the technolgy names that are being modeled.
-With the `techs` array we can easily apply a constraint over all technolgies. For example:
+The primary index set is the `techs.all` array of strings, which contains all the technolgy names that are being modeled.
+With the `techs.all` array we can easily apply a constraint over all technolgies. For example:
 ```julia
-@constraint(m, [t in p.techs],
+@constraint(m, [t in p.techs.all],
     m[Symbol("dvSize"*_n)][t] <= p.max_sizes[t]
 )
 ```
 where `p` is the `REoptInputs` struct. There are a couple things to note from this last example:
 1. The decision variable `dvSize` is accessed in the JuMP.Model `m` using the `Symbol` notation so that this constraint can be used in the multi-node case in addition to the single node case. The `_n` input value is an empty string by default and in the case of a multi-node model the `_n` string will be set by the `Site.node` integer. For example, if `Site.node` is `3` then `_n` is "_3".
-2. The `p.max_sizes` array is also indexed on `p.techs`. The `max_sizes` is built in the REoptInputs constructor by using all the technologies in the `Scenario` that have `max_kw` values greater than zero.
+2. The `p.max_sizes` array is also indexed on `p.techs.all`. The `max_sizes` is built in the REoptInputs constructor by using all the technologies in the `Scenario` that have `max_kw` values greater than zero.
 
-Besides the `techs` array the are many sub-sets, such as `pvtechs`, `gentechs`, `elec_techs`, `segmented_techs`, `techs_no_curtail`, that allow us to apply constraints to those sets. For example:
+Besides the `techs.all` array the are many sub-sets, such as `techs.pv`, `techs.gen`, `techs.elec`, `p.techs.segmented`, `techs.no_curtail`, that allow us to apply constraints to those sets. For example:
 ```julia
-for t in p.techs_no_curtail
+for t in p.techs.no_curtail
     for ts in p.time_steps
         fix(m[Symbol("dvCurtail"*_n)][t, ts] , 0.0, force=true)
     end

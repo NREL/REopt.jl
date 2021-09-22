@@ -29,7 +29,7 @@
 # *********************************************************************************
 using Xpress
 
-@testet "Thermal loads" begin
+@testset "Thermal loads" begin
     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt([m1,m2], "./scenarios/thermal_load.json")
