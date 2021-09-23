@@ -133,7 +133,7 @@ function add_thermal_load_constraints(m, p; _n="")
                     # + sum(m[:dvDischargeFromStorage][b,ts] for b in p.HotTES)
                     # + sum(p.GHPHeatingThermalServed[g,ts] * m[:binGHP][g] for g in p.GHPOptions)
                     ==
-                    (p.s.dhw_load.loads_kw[ts] + p.s.space_heating_load.loads_kw[ts]) * p.s.existing_boiler.efficiency
+                    (p.s.dhw_load.loads_kw[ts] + p.s.space_heating_load.loads_kw[ts])
                     # + sum(m[:dvProductionToWaste][t,ts] for t in p.CHPTechs) +
                     # sum(m[:dvProductionToStorage][b,t,ts] for b in p.HotTES, t in p.techs.heating)  +
                     # sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.AbsorptionChillers) / p.AbsorptionChillerCOP

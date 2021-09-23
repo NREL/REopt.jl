@@ -142,10 +142,16 @@ function built_in_load(type::String, city::String, buildingtype::String,
     end
 
     scaled_load = Float64[]
+    boiler_efficiency = 1.0
+    if type in ["domestic_hot_water", "space_heating"]
+        # CRB thermal "loads" are in terms of energy input required (boiler fuel), not the actual energy demand.
+        # So we multiply the fuel energy by the boiler_efficiency to get the actual energy demand.
+        boiler_efficiency = 0.8  
+    end
     datetime = DateTime(year, 1, 1, 1)
     for ld in normalized_profile
         month = Month(datetime).value
-        push!(scaled_load, ld * annual_energy * monthly_scalers[month])
+        push!(scaled_load, ld * annual_energy * monthly_scalers[month] * boiler_efficiency)
         datetime += Dates.Hour(1)
     end
 
