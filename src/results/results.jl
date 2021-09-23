@@ -65,6 +65,11 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         time_elapsed = time() - tstart
         @info "Outage results processing took $(round(time_elapsed, digits=3)) seconds."
 	end
+
+    if !isempty(p.techs.boiler)
+        add_existing_boiler_results(m, p, d)
+    end
+
 	return d
 end
 
