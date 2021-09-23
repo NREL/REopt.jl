@@ -35,27 +35,27 @@ Note: the node number is an empty string if evaluating a single `Site`.
 
 Financial results:
 - `lcc` Optimal lifecycle cost
-- `net_capital_costs_plus_om` Capital cost for all technologies plus present value of operations and maintenance over anlaysis period
-- `net_capital_costs` Net capital costs for all technologies, in present value, including replacement costs and incentives.
+- `lifecycle_capital_costs_plus_om` Capital cost for all technologies plus present value of operations and maintenance over anlaysis period
+- `lifecycle_capital_costs` Net capital costs for all technologies, in present value, including replacement costs and incentives.
 """
 function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
     r["lcc"] = value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)])
-    r["total_om_costs_before_tax"] = value(m[Symbol("TotalPerUnitSizeOMCosts"*_n)] + 
+    r["lifecycle_om_costs_before_tax"] = value(m[Symbol("TotalPerUnitSizeOMCosts"*_n)] + 
                                            m[Symbol("TotalPerUnitProdOMCosts"*_n)])
-    r["year_one_om_costs_before_tax"] = r["total_om_costs_before_tax"] / (p.pwf_om * p.third_party_factor)
-    r["total_om_costs_after_tax"] = r["total_om_costs_before_tax"] * (1 - p.s.financial.owner_tax_pct)
-    r["year_one_om_costs_after_tax"] = r["total_om_costs_after_tax"] / (p.pwf_om * p.third_party_factor)
+    r["year_one_om_costs_before_tax"] = r["lifecycle_om_costs_before_tax"] / (p.pwf_om * p.third_party_factor)
+    r["lifecycle_om_costs_after_tax"] = r["lifecycle_om_costs_before_tax"] * (1 - p.s.financial.owner_tax_pct)
+    r["year_one_om_costs_after_tax"] = r["lifecycle_om_costs_after_tax"] / (p.pwf_om * p.third_party_factor)
 
-    r["net_capital_costs_plus_om"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)]) +
-        r["total_om_costs_after_tax"]
-    r["net_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)])
+    r["lifecycle_capital_costs_plus_om"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)]) +
+        r["lifecycle_om_costs_after_tax"]
+    r["lifecycle_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)])
     r["initial_capital_costs"] = initial_capex(m, p; _n=_n)
-    r["initial_capital_costs_after_incentives"] = initial_capex_after_incentives(m, p, r["net_capital_costs"]; _n=_n)
+    r["initial_capital_costs_after_incentives"] = initial_capex_after_incentives(m, p, r["lifecycle_capital_costs"]; _n=_n)
 
     future_replacement_cost, present_replacement_cost = replacement_costs_future_and_present(m, p; _n=_n)
     r["replacement_costs"] = future_replacement_cost
-    r["om_and_replacement_present_cost_after_tax"] = present_replacement_cost + r["total_om_costs_after_tax"]
+    r["om_and_replacement_present_cost_after_tax"] = present_replacement_cost + r["lifecycle_om_costs_after_tax"]
     r["developer_om_and_replacement_present_cost_after_tax"] = r["om_and_replacement_present_cost_after_tax"] / 
         p.third_party_factor
 
@@ -101,16 +101,16 @@ end
 
 
 """
-    initial_capex_after_incentives(m::JuMP.AbstractModel, p::REoptInputs, net_capital_costs::Float64; _n="")
+    initial_capex_after_incentives(m::JuMP.AbstractModel, p::REoptInputs, lifecycle_capital_costs::Float64; _n="")
 
-The net_capital_costs output is the initial capex after incentives, except it includes the battery
-replacement cost in present value. So we calculate the initial_capex_after_incentives as net_capital_costs
+The lifecycle_capital_costs output is the initial capex after incentives, except it includes the battery
+replacement cost in present value. So we calculate the initial_capex_after_incentives as lifecycle_capital_costs
 minus the battery replacement cost in present value.
 Note that the owner_discount_pct and owner_tax_pct are set to the offtaker_discount_pct and offtaker_tax_pct
 respectively when third_party_ownership is False.
 """
-function initial_capex_after_incentives(m::JuMP.AbstractModel, p::REoptInputs, net_capital_costs::Float64; _n="")
-    initial_capex_after_incentives = net_capital_costs / p.third_party_factor
+function initial_capex_after_incentives(m::JuMP.AbstractModel, p::REoptInputs, lifecycle_capital_costs::Float64; _n="")
+    initial_capex_after_incentives = lifecycle_capital_costs / p.third_party_factor
 
     for b in p.s.storage.types
 
