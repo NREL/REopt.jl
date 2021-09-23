@@ -138,30 +138,6 @@ function Scenario(d::Dict)
                                        time_steps_per_hour=settings.time_steps_per_hour
                                     )
 
-    if haskey(d, "DomesticHotWaterLoad")
-        dhw_load = DomesticHotWaterLoad(; dictkeys_tosymbols(d["DomesticHotWaterLoad"])...,
-                                                latitude=site.latitude, longitude=site.longitude, 
-                                                time_steps_per_hour=settings.time_steps_per_hour
-                                                )
-    else
-        dhw_load = DomesticHotWaterLoad(; loads_mmbtu_per_hour=repeat([0.0], 8760))
-    end
-                                    
-    if haskey(d, "SpaceHeatingLoad")
-        space_heating_load = SpaceHeatingLoad(; dictkeys_tosymbols(d["SpaceHeatingLoad"])...,
-                                                latitude=site.latitude, longitude=site.longitude, 
-                                                time_steps_per_hour=settings.time_steps_per_hour
-                                             )
-    else
-        space_heating_load = SpaceHeatingLoad(; loads_mmbtu_per_hour=repeat([0.0], 8760))
-    end
-
-    if haskey(d, "ExistingBoiler")
-        existing_boiler = ExistingBoiler(; dictkeys_tosymbols(d["ExistingBoiler"])...)
-    else
-        existing_boiler = ExistingBoiler(; max_kw=0)
-    end
-
     if haskey(d, "Wind")
         wind = Wind(; dictkeys_tosymbols(d["Wind"])..., 
                     average_elec_load=sum(electric_load.loads_kw) / length(electric_load.loads_kw))
@@ -173,6 +149,42 @@ function Scenario(d::Dict)
         generator = Generator(; dictkeys_tosymbols(d["Generator"])...)
     else
         generator = Generator(; max_kw=0)
+    end
+
+    max_heat_demand_kw = 0.0
+    if haskey(d, "DomesticHotWaterLoad")
+        add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["DomesticHotWaterLoad"])
+        dhw_load = DomesticHotWaterLoad(; dictkeys_tosymbols(d["DomesticHotWaterLoad"])...,
+                                          latitude=site.latitude, longitude=site.longitude, 
+                                          time_steps_per_hour=settings.time_steps_per_hour
+                                        )
+        max_heat_demand_kw = maximum(dhw_load.loads_kw)
+    else
+        dhw_load = DomesticHotWaterLoad(; loads_mmbtu_per_hour=repeat([0.0], 8760))
+    end
+                                    
+    if haskey(d, "SpaceHeatingLoad")
+        add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["SpaceHeatingLoad"])
+        space_heating_load = SpaceHeatingLoad(; dictkeys_tosymbols(d["SpaceHeatingLoad"])...,
+                                                latitude=site.latitude, longitude=site.longitude, 
+                                                time_steps_per_hour=settings.time_steps_per_hour
+                                              )
+        
+        max_heat_demand_kw = maximum(vcat(space_heating_load.loads_kw, max_heat_demand_kw))
+    else
+        space_heating_load = SpaceHeatingLoad(; loads_mmbtu_per_hour=repeat([0.0], 8760))
+    end
+
+    if max_heat_demand_kw > 0
+        vals = Dict{Symbol, Any}()
+        vals[:max_heat_demand_kw] = max_heat_demand_kw
+        vals[:time_steps_per_hour] = settings.time_steps_per_hour
+        if haskey(d, "ExistingBoiler")
+            vals = merge(vals, dictkeys_tosymbols(d["ExistingBoiler"]))
+        end
+        existing_boiler = ExistingBoiler(; vals...)
+    else
+        existing_boiler = ExistingBoiler(0.0, 0.0, Real[])
     end
 
     return Scenario(
@@ -206,5 +218,19 @@ end
 function check_pv_tilt!(pv::Dict, site::Site)
     if !(haskey(pv, "tilt"))
         pv["tilt"] = site.latitude
+    end
+end
+
+
+function add_doe_reference_names_from_elec_to_thermal_loads(elec::Dict, thermal::Dict)
+    string_keys = [
+        "doe_reference_name",
+        "blended_doe_reference_names",
+        "blended_doe_reference_percents",
+    ]
+    for k in string_keys
+        if !(k in keys(thermal)) && k in keys(elec)
+            thermal[k] = elec[k]
+        end
     end
 end
