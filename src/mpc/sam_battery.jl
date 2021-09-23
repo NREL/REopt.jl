@@ -47,7 +47,7 @@ mutable struct SAM_Battery
     batt_model::Ptr{Cvoid}
     batt_data::Ptr{Cvoid}
 
-    function SAM_Battery(file_path::String)
+    function SAM_Battery(file_path::String, desired_capacity::Number)
         batt_model = nothing
         batt_data = nothing
         global hdl = nothing
@@ -105,6 +105,11 @@ mutable struct SAM_Battery
                 end
     
             end
+            
+            @ccall hdl.ssc_data_set_number(batt_data::Ptr{Cvoid}, "desired_capacity"::Cstring, desired_capacity::Cdouble)::Cvoid
+            @ccall hdl.ssc_data_set_number(batt_data::Ptr{Cvoid}, "desired_voltage"::Cstring, 500.0::Cdouble)::Cvoid # Need to set this for Size_batterystateful to work, 500 is the default in the SAM GUI
+
+            @ccall hdl.Size_batterystateful(batt_data::Ptr{Cvoid})::Cvoid
 
             @ccall hdl.ssc_stateful_module_setup(batt_model::Ptr{Cvoid}, batt_data::Ptr{Cvoid})::Cint
 
