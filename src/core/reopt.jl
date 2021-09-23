@@ -114,7 +114,9 @@ function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.Abst
     # TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
     results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
     results_dict["Financial"] = merge(results_dict["Financial"], proforma_results(p, results_dict))
-    organize_multiple_pv_results(p, results_dict)
+    if !isempty(p.techs.pv)
+        organize_multiple_pv_results(p, results_dict)
+    end
     return results_dict
 end
 
@@ -356,7 +358,7 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 	@info "Total results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status
 	results["solver_seconds"] = opt_time
-    if organize_pvs  # do not want to organize_pvs when running BAU case in parallel b/c then proform code fails
+    if organize_pvs && !isempty(p.techs.pv)  # do not want to organize_pvs when running BAU case in parallel b/c then proform code fails
         organize_multiple_pv_results(p, results)
     end
 	return results
