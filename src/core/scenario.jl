@@ -170,7 +170,7 @@ function Scenario(d::Dict)
                                                 time_steps_per_hour=settings.time_steps_per_hour
                                               )
         
-        max_heat_demand_kw = maximum(vcat(space_heating_load.loads_kw, max_heat_demand_kw))
+        max_heat_demand_kw = maximum(space_heating_load.loads_kw .+ max_heat_demand_kw)
     else
         space_heating_load = SpaceHeatingLoad(; loads_mmbtu_per_hour=repeat([0.0], 8760))
     end

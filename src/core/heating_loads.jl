@@ -134,7 +134,7 @@ function BuiltInDomesticHotWaterLoad(
     longitude::Float64,
     year::Int,
     annual_mmbtu::Union{<:Real, Nothing}=nothing,
-    monthly_mmbtu::Union{<:Real, Vector{<:Real}}=nothing,
+    monthly_mmbtu::Union{Vector{<:Real}, Nothing}=nothing
     )
     dhw_annual_mmbtu = Dict(
         "Miami" => Dict(
@@ -462,7 +462,7 @@ function BuiltInSpaceHeatingLoad(
     longitude::Float64,
     year::Int,
     annual_mmbtu::Union{<:Real, Nothing}=nothing,
-    monthly_mmbtu::Union{<:Real, Vector{<:Real}}=nothing,
+    monthly_mmbtu::Union{Vector{<:Real}, Nothing}=nothing,
     )
     spaceheating_annual_mmbtu = Dict(
         "Miami" => Dict(

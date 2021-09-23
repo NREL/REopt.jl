@@ -30,9 +30,25 @@
 using Xpress
 
 @testset "Thermal loads" begin
-    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt([m1,m2], "./scenarios/thermal_load.json")
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, "./scenarios/thermal_load.json")
+
+    @test round(results["ExistingBoiler"]["year_one_boiler_fuel_consumption_mmbtu"], digits=0) ≈ 2905
+    
+    # data = JSON.parsefile("./scenarios/thermal_load.json")
+    # data["DomesticHotWaterLoad"]["loads_mmbtu_per_hour"] = repeat([0.5], 8760)
+    # data["SpaceHeatingLoad"]["loads_mmbtu_per_hour"] = repeat([0.5], 8760)
+    # s = Scenario(data)
+    # inputs = REoptInputs(s)
+    # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    # results = run_reopt(m, inputs)
+
+    # @test round(results["ExistingBoiler"]["year_one_boiler_fuel_consumption_mmbtu"], digits=0) ≈ 8760
+    #=
+    The fuel consumption is 8760 / 0.8 = 10950, but in the API the "fuel load" is 8760 (and the thermal load is 8760*.8)
+    Are these the units that people will enter thier space and dhw loads in? (I.e. in the energy content of the fuel)
+    =#
+
 end
 #=
 add a time-of-export rate that is greater than retail rate for the month of January,
