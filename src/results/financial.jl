@@ -59,6 +59,10 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     r["developer_om_and_replacement_present_cost_after_tax"] = r["om_and_replacement_present_cost_after_tax"] / 
         p.third_party_factor
 
+    if !isempty(p.techs.fuel_burning)
+        r["lifecycle_fuel_costs_after_tax"] = value(m[:TotalFuelCosts]) * (1 - p.s.financial.offtaker_tax_pct)
+    end
+
     d["Financial"] = Dict(k => round(v, digits=2) for (k,v) in r)
     nothing
 end

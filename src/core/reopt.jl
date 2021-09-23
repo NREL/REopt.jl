@@ -172,23 +172,46 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 	end
 
-	if !isempty(p.techs.gen)
-		add_fuel_burn_constraints(m,p)
-		add_binGenIsOnInTS_constraints(m,p)
-		add_gen_can_run_constraints(m,p)
-		add_gen_rated_prod_constraint(m,p)
-	end
-
 	if any(max_kw->max_kw > 0, (p.s.storage.max_kw[b] for b in p.s.storage.types))
 		add_storage_sum_constraints(m, p)
 	end
 
 	add_production_constraints(m, p)
 
+    m[:TotalPerUnitProdOMCosts] = 0.0
+    m[:TotalFuelCosts] = 0.0
+    m[:TotalProductionIncentive] = 0
+
 	if !isempty(p.techs.all)
 		add_tech_size_constraints(m, p)
+        
         if !isempty(p.techs.no_curtail)
             add_no_curtail_constraints(m, p)
+        end
+	
+        if !isempty(p.techs.gen)
+            add_gen_constraints(m, p)
+            m[:TotalPerUnitProdOMCosts] = @expression(m, p.third_party_factor * p.pwf_om *
+                sum(p.s.generator.om_cost_per_kwh * p.hours_per_timestep *
+                m[:dvRatedProduction][t, ts] for t in p.techs.gen, ts in p.time_steps)
+            )
+            m[:TotalGenFuelCosts] = @expression(m, p.pwf_e *
+                sum(m[:dvFuelUsage][t,ts] * p.s.generator.fuel_cost_per_gallon for t in p.techs.gen, ts in p.time_steps)
+            )
+            m[:TotalFuelCosts] += m[:TotalGenFuelCosts]
+        end
+
+        if !isempty(p.techs.boiler)
+            add_boiler_tech_constraints(m, p)
+        end
+    
+        if !isempty(p.techs.thermal)
+            add_thermal_load_constraints(m, p)  # split into heating and cooling constraints?
+        end
+
+        if !isempty(p.techs.pbi)
+            @warn "adding binary variable(s) to model production based incentives"
+            add_prod_incent_vars_and_constraints(m, p)
         end
 	end
 
@@ -222,14 +245,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         add_coincident_peak_charge_constraints(m, p)
     end
 
-    if !isempty(p.techs.boiler)
-        add_boiler_tech_constraints(m, p)
-    end
-
-    if !isempty(p.techs.thermal)
-        add_thermal_load_constraints(m, p)  # split into heating and cooling constraints?
-    end
-
 	@expression(m, TotalTechCapCosts, p.third_party_factor *
 		  sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in setdiff(p.techs.all, p.techs.segmented) )
 	)
@@ -243,13 +258,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             )
         end
     end
-
-    if !isempty(p.techs.pbi)
-        @warn "adding binary variable(s) to model production based incentives"
-        add_prod_incent_vars_and_constraints(m, p)
-    else
-        m[:TotalProductionIncentive] = 0
-    end
 	
 	@expression(m, TotalStorageCapCosts, p.third_party_factor *
 		sum(  p.s.storage.installed_cost_per_kw[b] * m[:dvStoragePower][b]
@@ -259,19 +267,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	@expression(m, TotalPerUnitSizeOMCosts, p.third_party_factor * p.pwf_om *
 		sum( p.om_cost_per_kw[t] * m[:dvSize][t] for t in p.techs.all )
 	)
-	
-    if !isempty(p.techs.gen)
-		m[:TotalPerUnitProdOMCosts] = @expression(m, p.third_party_factor * p.pwf_om *
-			sum(p.s.generator.om_cost_per_kwh * p.hours_per_timestep *
-			m[:dvRatedProduction][t, ts] for t in p.techs.gen, ts in p.time_steps)
-		)
-		m[:TotalGenFuelCharges] = @expression(m, p.pwf_e *
-			sum(m[:dvFuelUsage][t,ts] * p.s.generator.fuel_cost_per_gallon for t in p.techs.gen, ts in p.time_steps)
-		)
-    else
-		m[:TotalPerUnitProdOMCosts] = 0.0
-		m[:TotalGenFuelCharges] = 0.0
-	end
 
 	add_elec_utility_expressions(m, p)
 
@@ -310,8 +305,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		# Variable O&M, tax deductible for owner
 		m[:TotalPerUnitProdOMCosts] * (1 - p.s.financial.owner_tax_pct) +
 
-		# Total Generator Fuel Costs, tax deductible for offtaker
-        m[:TotalGenFuelCharges] * (1 - p.s.financial.offtaker_tax_pct) +
+		# Total Fuel Costs, tax deductible for offtaker
+        m[:TotalFuelCosts] * (1 - p.s.financial.offtaker_tax_pct) +
 
 		# Utility Bill, tax deductible for offtaker
 		m[:TotalElecBill] * (1 - p.s.financial.offtaker_tax_pct) -
