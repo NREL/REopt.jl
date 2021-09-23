@@ -86,6 +86,7 @@ struct REoptInputs <: AbstractInputs
     value_of_lost_load_per_kwh::Array{R, 1} where R<:Real #default set to 1 US dollar per kwh
     pwf_e::Float64
     pwf_om::Float64
+    pwf_fuel::Dict{String, Float64}
     third_party_factor::Float64
     pvlocations::Array{Symbol, 1}
     maxsize_pv_locations::DenseAxisArray{Float64, 1}  # indexed on pvlocations
@@ -141,7 +142,7 @@ function REoptInputs(s::AbstractScenario)
 
     months = 1:12
 
-    levelization_factor, pwf_e, pwf_om, third_party_factor = setup_present_worth_factors(s, techs)
+    levelization_factor, pwf_e, pwf_om, pwf_fuel, third_party_factor = setup_present_worth_factors(s, techs)
     # the following hardcoded values for levelization_factor matches the public REopt API value
     # and makes the test values match.
     # the REopt code herein uses the Desktop method for levelization_factor, which is more accurate
@@ -173,6 +174,7 @@ function REoptInputs(s::AbstractScenario)
         typeof(s.financial.value_of_lost_load_per_kwh) <: Array{<:Real, 1} ? s.financial.value_of_lost_load_per_kwh : fill(s.financial.value_of_lost_load_per_kwh, length(time_steps)),
         pwf_e,
         pwf_om,
+        pwf_fuel,
         third_party_factor,
         pvlocations,
         maxsize_pv_locations,
@@ -482,6 +484,16 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
         s.financial.om_cost_escalation_pct,
         s.financial.owner_discount_pct
     )
+    pwf_fuel = Dict{String, Float64}()
+    for t in techs.fuel_burning
+        if t == "ExistingBoiler"
+            pwf_fuel["ExistingBoiler"] = annuity(
+                s.financial.analysis_years,
+                s.financial.boiler_fuel_cost_escalation_pct,
+                s.financial.offtaker_discount_pct
+            )
+        end
+    end
 
     if s.financial.third_party_ownership
         pwf_offtaker = annuity(s.financial.analysis_years, 0.0, s.financial.offtaker_discount_pct)
@@ -492,7 +504,7 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
         third_party_factor = 1.0
     end
 
-    return lvl_factor, pwf_e, pwf_om, third_party_factor
+    return lvl_factor, pwf_e, pwf_om, pwf_fuel, third_party_factor
 end
 
 
