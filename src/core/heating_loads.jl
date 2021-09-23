@@ -63,7 +63,7 @@ struct DomesticHotWaterLoad
                 or [blended_doe_reference_names, blended_doe_reference_percents, city].")
         end
 
-        loads_kw = loads_mmbtu_per_hour * mmbtu_to_kwh
+        loads_kw = loads_mmbtu_per_hour * MMBTU_TO_KWH
 
         if length(loads_kw) < 8760*time_steps_per_hour
             loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw)/8760)))
@@ -113,7 +113,7 @@ struct SpaceHeatingLoad
                 or [blended_doe_reference_names, blended_doe_reference_percents, city].")
         end
 
-        loads_kw = loads_mmbtu_per_hour * mmbtu_to_kwh
+        loads_kw = loads_mmbtu_per_hour * MMBTU_TO_KWH
 
         if length(loads_kw) < 8760*time_steps_per_hour
             loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw)/8760)))

@@ -55,7 +55,7 @@ function ExistingBoiler(;
         "fuel_cell" => "hot_water"
     )
 
-    fuel_cost_per_kwh = fuel_cost_per_mmbtu / mmbtu_to_kwh
+    fuel_cost_per_kwh = fuel_cost_per_mmbtu / MMBTU_TO_KWH
     fuel_cost_series = per_hour_value_to_time_series(fuel_cost_per_kwh, time_steps_per_hour, 
                                                      "ExistingBoiler.fuel_cost_per_mmbtu")
 
