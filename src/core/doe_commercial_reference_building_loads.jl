@@ -47,7 +47,7 @@ const default_buildings = [
     "FlatLoad",
 ]
 
-const mmbtu_to_kwh = 293.07107
+const MMBTU_TO_KWH = 293.07107
 
 
 function find_ashrae_zone_city(lat, lon)::String
