@@ -84,7 +84,7 @@ function add_generator_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n=
     r = Dict{String, Any}()
 
 	r["variable_om_cost"] = round(value(m[:TotalPerUnitProdOMCosts]), digits=0)
-	r["fuel_cost"] = round(value(TotalGenFuelCosts), digits=2)
+	r["fuel_cost"] = round(value(m[:TotalGenFuelCosts]), digits=2)
 
     if p.s.storage.size_kw[:elec] > 0
         generatorToBatt = @expression(m, [ts in p.time_steps],
