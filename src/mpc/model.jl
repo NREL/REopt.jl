@@ -132,13 +132,6 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		end
 	end
 
-	if !isempty(p.techs.gen)
-		add_fuel_burn_constraints(m,p)
-		add_binGenIsOnInTS_constraints(m,p)
-		add_gen_can_run_constraints(m,p)
-		add_gen_rated_prod_constraint(m,p)
-	end
-
 	if any(size_kw->size_kw > 0, (p.s.storage.size_kw[b] for b in p.s.storage.types))
 		add_storage_sum_constraints(m, p)
 	end
@@ -169,17 +162,19 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		add_simultaneous_export_import_constraint(m, p)
 	end
 	
+    m[:TotalFuelCosts] = 0.0
+    m[:TotalPerUnitProdOMCosts] = 0.0
+
     if !isempty(p.techs.gen)
-		m[:TotalPerUnitProdOMCosts] = @expression(m, 
+        add_gen_constraints(m, p)
+		m[:TotalPerUnitProdOMCosts] += @expression(m, 
 			sum(p.s.generator.om_cost_per_kwh * p.hours_per_timestep *
 			m[:dvRatedProduction][t, ts] for t in p.techs.gen, ts in p.time_steps)
 		)
-		m[:TotalGenFuelCharges] = @expression(m,
-			sum(m[:dvFuelUsage][t,ts] * p.s.generator.fuel_cost_per_gallon for t in p.techs.gen, ts in p.time_steps)
-		)
-    else
-		m[:TotalPerUnitProdOMCosts] = 0.0
-		m[:TotalGenFuelCharges] = 0.0
+        m[:TotalGenFuelCosts] = @expression(m,
+            sum(m[:dvFuelUsage][t,ts] * p.s.generator.fuel_cost_per_gallon for t in p.techs.gen, ts in p.time_steps)
+        )
+        m[:TotalFuelCosts] += m[:TotalGenFuelCosts]
 	end
 
 	add_elec_utility_expressions(m, p)
@@ -218,7 +213,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		m[:TotalPerUnitProdOMCosts] +
 
 		# Total Generator Fuel Costs
-        m[:TotalGenFuelCharges] +
+        m[:TotalFuelCosts] +
 
 		# Utility Bill
 		m[:TotalElecBill]

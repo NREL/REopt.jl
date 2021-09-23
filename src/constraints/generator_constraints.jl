@@ -71,3 +71,12 @@ function add_gen_rated_prod_constraint(m, p)
 		m[:dvSize][t] >= m[:dvRatedProduction][t, ts]
 	)
 end
+
+
+function add_gen_constraints(m, p)
+
+    add_fuel_burn_constraints(m,p)
+    add_binGenIsOnInTS_constraints(m,p)
+    add_gen_can_run_constraints(m,p)
+    add_gen_rated_prod_constraint(m,p)
+end

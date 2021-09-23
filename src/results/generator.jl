@@ -39,8 +39,8 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 	r["size_kw"] = round(value(sum(m[:dvSize][t] for t in p.techs.gen)), digits=2)
 	r["lifecycle_fixed_om_cost"] = round(value(GenPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_pct), digits=0)
 	r["lifecycle_variable_om_cost"] = round(value(m[:TotalPerUnitProdOMCosts]) * (1 - p.s.financial.owner_tax_pct), digits=0)
-	r["lifecycle_fuel_cost"] = round(value(m[:TotalGenFuelCharges]) * (1 - p.s.financial.offtaker_tax_pct), digits=2)
-	r["year_one_fuel_cost"] = round(value(m[:TotalGenFuelCharges]) / p.pwf_e, digits=2)
+	r["lifecycle_fuel_cost"] = round(value(m[:TotalGenFuelCosts]) * (1 - p.s.financial.offtaker_tax_pct), digits=2)
+	r["year_one_fuel_cost"] = round(value(m[:TotalGenFuelCosts]) / p.pwf_e, digits=2)
 	r["year_one_variable_om_cost"] = round(value(GenPerUnitProdOMCosts) / (p.pwf_om * p.third_party_factor), digits=0)
 	r["year_one_fixed_om_cost"] = round(value(GenPerUnitSizeOMCosts) / (p.pwf_om * p.third_party_factor), digits=0)
 
@@ -84,7 +84,7 @@ function add_generator_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n=
     r = Dict{String, Any}()
 
 	r["variable_om_cost"] = round(value(m[:TotalPerUnitProdOMCosts]), digits=0)
-	r["fuel_cost"] = round(value(m[:TotalGenFuelCharges]), digits=2)
+	r["fuel_cost"] = round(value(TotalGenFuelCosts), digits=2)
 
     if p.s.storage.size_kw[:elec] > 0
         generatorToBatt = @expression(m, [ts in p.time_steps],

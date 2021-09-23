@@ -10,13 +10,8 @@
         "blended_annual_energy_rate": 0.1,
         "blended_annual_demand_rate": 10
     },
-    "ExistingBoiler": {
-        "max_kw": 1e6
-    },
     "SpaceHeatingLoad": {
-        "doe_reference_name": "Hospital"
     },
     "DomesticHotWaterLoad": {
-        "doe_reference_name": "Hospital"
     }
 }
