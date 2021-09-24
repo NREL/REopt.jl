@@ -38,32 +38,32 @@ struct DomesticHotWaterLoad
         annual_mmbtu::Union{Real, Nothing} = nothing,
         monthly_mmbtu::Array{<:Real,1} = Real[],
         # addressable_load_fraction,  # TODO
-        loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
+        fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
         time_steps_per_hour::Int = 1,
         latitude::Float64=0.0,
         longitude::Float64=0.0
     )
-        if length(loads_mmbtu_per_hour) > 0
+        if length(fuel_loads_mmbtu_per_hour) > 0
 
-            if !(length(loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
+            if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
                 @error "Provided domestic hot water load does not match the time_steps_per_hour."
             end
 
+            loads_kw = fuel_loads_mmbtu_per_hour .* (MMBTU_TO_KWH * EXISTING_BOILER_EFFICIENCY)
+
         elseif !isempty(doe_reference_name)
-            loads_mmbtu_per_hour = BuiltInDomesticHotWaterLoad(city, doe_reference_name, latitude, longitude, 2017, annual_mmbtu, monthly_mmbtu)
+            loads_kw = BuiltInDomesticHotWaterLoad(city, doe_reference_name, latitude, longitude, 2017, annual_mmbtu, monthly_mmbtu)
 
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
-            loads_mmbtu_per_hour = blend_and_scale_doe_profiles(BuiltInDomesticHotWaterLoad, latitude, longitude, 2017, 
+            loads_kw = blend_and_scale_doe_profiles(BuiltInDomesticHotWaterLoad, latitude, longitude, 2017, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_mmbtu, monthly_mmbtu)
         else
-            error("Cannot construct DomesticHotWaterLoad. You must provide either [loads_mmbtu_per_hour], 
+            error("Cannot construct DomesticHotWaterLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
                 [doe_reference_name, city],
                 or [blended_doe_reference_names, blended_doe_reference_percents, city].")
         end
-
-        loads_kw = loads_mmbtu_per_hour * MMBTU_TO_KWH
 
         if length(loads_kw) < 8760*time_steps_per_hour
             loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw)/8760)))
@@ -88,32 +88,32 @@ struct SpaceHeatingLoad
         annual_mmbtu::Union{Real, Nothing} = nothing,
         monthly_mmbtu::Array{<:Real,1} = Real[],
         # addressable_load_fraction,  # TODO
-        loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
+        fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
         time_steps_per_hour::Int = 1,
         latitude::Float64=0.0,
         longitude::Float64=0.0
     )
-        if length(loads_mmbtu_per_hour) > 0
+        if length(fuel_loads_mmbtu_per_hour) > 0
 
-            if !(length(loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
+            if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
                 @error "Provided space heating load does not match the time_steps_per_hour."
             end
 
+            loads_kw = fuel_loads_mmbtu_per_hour .* (MMBTU_TO_KWH * EXISTING_BOILER_EFFICIENCY)
+
         elseif !isempty(doe_reference_name)
-            loads_mmbtu_per_hour = BuiltInSpaceHeatingLoad(city, doe_reference_name, latitude, longitude, 2017, annual_mmbtu, monthly_mmbtu)
+            loads_kw = BuiltInSpaceHeatingLoad(city, doe_reference_name, latitude, longitude, 2017, annual_mmbtu, monthly_mmbtu)
 
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
-            loads_mmbtu_per_hour = blend_and_scale_doe_profiles(BuiltInSpaceHeatingLoad, latitude, longitude, 2017, 
+            loads_kw = blend_and_scale_doe_profiles(BuiltInSpaceHeatingLoad, latitude, longitude, 2017, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_mmbtu, monthly_mmbtu)
         else
-            error("Cannot construct BuiltInSpaceHeatingLoad. You must provide either [loads_mmbtu_per_hour], 
+            error("Cannot construct BuiltInSpaceHeatingLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
                 [doe_reference_name, city], 
                 or [blended_doe_reference_names, blended_doe_reference_percents, city].")
         end
-
-        loads_kw = loads_mmbtu_per_hour * MMBTU_TO_KWH
 
         if length(loads_kw) < 8760*time_steps_per_hour
             loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw)/8760)))

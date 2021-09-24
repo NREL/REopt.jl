@@ -160,7 +160,7 @@ function Scenario(d::Dict)
                                         )
         max_heat_demand_kw = maximum(dhw_load.loads_kw)
     else
-        dhw_load = DomesticHotWaterLoad(; loads_mmbtu_per_hour=repeat([0.0], 8760))
+        dhw_load = DomesticHotWaterLoad(; fuel_loads_mmbtu_per_hour=repeat([0.0], 8760))
     end
                                     
     if haskey(d, "SpaceHeatingLoad")
@@ -172,7 +172,7 @@ function Scenario(d::Dict)
         
         max_heat_demand_kw = maximum(space_heating_load.loads_kw .+ max_heat_demand_kw)
     else
-        space_heating_load = SpaceHeatingLoad(; loads_mmbtu_per_hour=repeat([0.0], 8760))
+        space_heating_load = SpaceHeatingLoad(; fuel_loads_mmbtu_per_hour=repeat([0.0], 8760))
     end
 
     if max_heat_demand_kw > 0
