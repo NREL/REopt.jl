@@ -27,6 +27,8 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+const EXISTING_BOILER_EFFICIENCY = 0.8
+
 struct ExistingBoiler <: AbstractThermalTech  # useful to create AbstractHeatingTech or AbstractThermalTech?
     max_kw::Real
     efficiency::Real
@@ -60,7 +62,7 @@ function ExistingBoiler(;
                                                      "ExistingBoiler.fuel_cost_per_mmbtu")
 
     efficiency_defaults = Dict(
-        "hot_water" => 0.80,
+        "hot_water" => EXISTING_BOILER_EFFICIENCY,
         "steam" => 0.75
     )
 
