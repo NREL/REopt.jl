@@ -107,7 +107,6 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         loads_kw_is_net::Bool = true,
         critical_loads_kw_is_net::Bool = false,
         critical_load_pct::Real = 0.5,
-        time_steps_per_hour::Int = 1,
         latitude::Float64,
         longitude::Float64,
         time_steps_per_hour::Int = 1
