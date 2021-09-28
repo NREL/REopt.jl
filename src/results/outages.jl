@@ -48,13 +48,13 @@ function add_outage_results(m, p, r::Dict)
 	r["mg_storage_upgrade_cost"] = value(m[:dvMGStorageUpgradeCost])
 	r["dvMGDischargeFromStorage"] = value.(m[:dvMGDischargeFromStorage]).data
 
-	for t in p.techs
+	for t in p.techs.all
 		r[t * "_upgraded"] = value(m[:binMGTechUsed][t])
 	end
 	r["storage_upgraded"] = value(m[:binMGStorageUsed])
 
-	if !isempty(p.pvtechs)
-		for t in p.pvtechs
+	if !isempty(p.techs.pv)
+		for t in p.techs.pv
 
 			# need the following logic b/c can have non-zero mg capacity when not using the capacity
 			# due to the constraint for setting the mg capacities equal to the grid connected capacities
@@ -94,8 +94,8 @@ function add_outage_results(m, p, r::Dict)
 		end
 	end
 
-	if !isempty(p.gentechs)
-		for t in p.gentechs
+	if !isempty(p.techs.gen)
+		for t in p.techs.gen
 
 			# need the following logic b/c can have non-zero mg capacity when not using the capacity
 			# due to the constraint for setting the mg capacities equal to the grid connected capacities

@@ -92,6 +92,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
     critical_loads_kw::Array{Real,1}
     loads_kw_is_net::Bool
     critical_loads_kw_is_net::Bool
+    city::String
     
     function ElectricLoad(;
         loads_kw::Array{<:Real,1} = Real[],
@@ -106,6 +107,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         loads_kw_is_net::Bool = true,
         critical_loads_kw_is_net::Bool = false,
         critical_load_pct::Real = 0.5,
+        time_steps_per_hour::Int = 1,
         latitude::Float64,
         longitude::Float64,
         time_steps_per_hour::Int = 1
@@ -124,7 +126,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         elseif !isempty(doe_reference_name)
             # NOTE: must use year that starts on Sunday with DOE reference doe_ref_profiles
             if year != 2017
-                @warn "Changing ElectricLoad.year to 2017 because DOE reference profiles start on a Sunday."
+                @warn "Changing load profile year to 2017 because DOE reference profiles start on a Sunday."
             end
             year = 2017
             loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, year, annual_kwh, monthly_totals_kwh)
@@ -144,7 +146,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         else
             error("Cannot construct ElectricLoad. You must provide either [loads_kw], [doe_reference_name, city], 
                   [doe_reference_name, latitude, longitude], 
-                  or [blended_doe_reference_names, blended_doe_reference_percents].")
+                  or [blended_doe_reference_names, blended_doe_reference_percents] with city or latitude and longitude.")
         end
 
         if length(loads_kw) < 8760*time_steps_per_hour

@@ -59,6 +59,10 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     r["developer_om_and_replacement_present_cost_after_tax"] = r["om_and_replacement_present_cost_after_tax"] / 
         p.third_party_factor
 
+    if !isempty(p.techs.fuel_burning)
+        r["lifecycle_fuel_costs_after_tax"] = value(m[:TotalFuelCosts]) * (1 - p.s.financial.offtaker_tax_pct)
+    end
+
     d["Financial"] = Dict(k => round(v, digits=2) for (k,v) in r)
     nothing
 end
@@ -73,11 +77,11 @@ incentives.
 function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     initial_capex = 0
 
-    if !isempty(p.gentechs) && isempty(_n)  # generators not included in multinode model
+    if !isempty(p.techs.gen) && isempty(_n)  # generators not included in multinode model
         initial_capex += p.s.generator.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Generator"]
     end
 
-    if !isempty(p.pvtechs)
+    if !isempty(p.techs.pv)
         for pv in p.s.pvs
             initial_capex += pv.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])[pv.name]
         end
@@ -90,7 +94,7 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         end
     end
 
-    if "Wind" in p.techs
+    if "Wind" in p.techs.all
         initial_capex += p.s.wind.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Wind"]
     end
 

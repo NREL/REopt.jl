@@ -115,7 +115,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 			fix(m[:dvGridToStorage][t, ts], 0.0, force=true)
 		end
 
-		for t in p.elec_techs, u in p.export_bins_by_tech[t]
+		for t in p.techs.elec, u in p.export_bins_by_tech[t]
 			fix(m[:dvProductionToGrid][t, u, ts], 0.0, force=true)
 		end
 	end
@@ -123,7 +123,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 	for b in p.s.storage.types
 		if p.s.storage.size_kw[b] == 0 || p.s.storage.size_kwh[b] == 0
 			@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
-			@constraint(m, [t in p.elec_techs, ts in p.time_steps_with_grid],
+			@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
 						m[:dvProductionToStorage][b, t, ts] == 0)
 			@constraint(m, [ts in p.time_steps], m[:dvDischargeFromStorage][b, ts] == 0)
 			@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
@@ -132,26 +132,19 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		end
 	end
 
-	if !isempty(p.gentechs)
-		add_fuel_burn_constraints(m,p)
-		add_binGenIsOnInTS_constraints(m,p)
-		add_gen_can_run_constraints(m,p)
-		add_gen_rated_prod_constraint(m,p)
-	end
-
 	if any(size_kw->size_kw > 0, (p.s.storage.size_kw[b] for b in p.s.storage.types))
 		add_storage_sum_constraints(m, p)
 	end
 
 	add_production_constraints(m, p)
 
-	if !isempty(p.techs)
-		@constraint(m, [t in p.techs_no_turndown, ts in p.time_steps],
+	if !isempty(p.techs.no_turndown)
+		@constraint(m, [t in p.techs.no_turndown, ts in p.time_steps],
             m[:dvRatedProduction][t,ts] == m[:dvSize][t]
         )
 	end
 
-	add_load_balance_constraints(m, p)
+	add_elec_load_balance_constraints(m, p)
 
 	if !isempty(p.s.electric_tariff.export_bins)
 		add_export_constraints(m, p)
@@ -169,17 +162,19 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		add_simultaneous_export_import_constraint(m, p)
 	end
 	
-    if !isempty(p.gentechs)
-		m[:TotalPerUnitProdOMCosts] = @expression(m, 
+    m[:TotalFuelCosts] = 0.0
+    m[:TotalPerUnitProdOMCosts] = 0.0
+
+    if !isempty(p.techs.gen)
+        add_gen_constraints(m, p)
+		m[:TotalPerUnitProdOMCosts] += @expression(m, 
 			sum(p.s.generator.om_cost_per_kwh * p.hours_per_timestep *
-			m[:dvRatedProduction][t, ts] for t in p.gentechs, ts in p.time_steps)
+			m[:dvRatedProduction][t, ts] for t in p.techs.gen, ts in p.time_steps)
 		)
-		m[:TotalGenFuelCharges] = @expression(m,
-			sum(m[:dvFuelUsage][t,ts] * p.s.generator.fuel_cost_per_gallon for t in p.gentechs, ts in p.time_steps)
-		)
-    else
-		m[:TotalPerUnitProdOMCosts] = 0.0
-		m[:TotalGenFuelCharges] = 0.0
+        m[:TotalGenFuelCosts] = @expression(m,
+            sum(m[:dvFuelUsage][t,ts] * p.s.generator.fuel_cost_per_gallon for t in p.techs.gen, ts in p.time_steps)
+        )
+        m[:TotalFuelCosts] += m[:TotalGenFuelCosts]
 	end
 
 	add_elec_utility_expressions(m, p)
@@ -195,7 +190,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		add_cannot_have_MG_with_only_PVwind_constraints(m,p)
 		add_MG_size_constraints(m,p)
 		
-		if !isempty(p.gentechs)
+		if !isempty(p.techs.gen)
 			add_MG_fuel_burn_constraints(m,p)
 			add_binMGGenIsOnInTS_constraints(m,p)
 		else
@@ -218,7 +213,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		m[:TotalPerUnitProdOMCosts] +
 
 		# Total Generator Fuel Costs
-        m[:TotalGenFuelCharges] +
+        m[:TotalFuelCosts] +
 
 		# Utility Bill
 		m[:TotalElecBill]
@@ -235,12 +230,12 @@ end
 
 function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
     @variables m begin
-		# dvSize[p.techs] >= 0  # System Size of Technology t [kW]
-		# dvPurchaseSize[p.techs] >= 0  # system kW beyond existing_kw that must be purchased
+		# dvSize[p.techs.all] >= 0  # System Size of Technology t [kW]
+		# dvPurchaseSize[p.techs.all] >= 0  # system kW beyond existing_kw that must be purchased
 		dvGridPurchase[p.time_steps] >= 0  # Power from grid dispatched to meet electrical load [kW]
-		dvRatedProduction[p.techs, p.time_steps] >= 0  # Rated production of technology t [kW]
-		dvCurtail[p.techs, p.time_steps] >= 0  # [kW]
-		dvProductionToStorage[p.s.storage.types, p.techs, p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
+		dvRatedProduction[p.techs.all, p.time_steps] >= 0  # Rated production of technology t [kW]
+		dvCurtail[p.techs.all, p.time_steps] >= 0  # [kW]
+		dvProductionToStorage[p.s.storage.types, p.techs.all, p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
 		dvDischargeFromStorage[p.s.storage.types, p.time_steps] >= 0 # Power discharged from storage system b [kW]
 		dvGridToStorage[p.s.storage.types, p.time_steps] >= 0 # Electrical power delivered to storage by the grid [kW]
 		dvStoredEnergy[p.s.storage.types, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
@@ -253,7 +248,7 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 	# TODO: tiers in MPC tariffs and variables?
 
 	if !isempty(p.s.electric_tariff.export_bins)
-		@variable(m, dvProductionToGrid[p.elec_techs, p.s.electric_tariff.export_bins, p.time_steps] >= 0)
+		@variable(m, dvProductionToGrid[p.techs.elec, p.s.electric_tariff.export_bins, p.time_steps] >= 0)
 	end
 
     m[:dvSize] = p.existing_sizes
@@ -263,12 +258,12 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
     # not modeling min charges since control does not affect them
     m[:MinChargeAdder] = 0
 
-	if !isempty(p.gentechs)  # Problem becomes a MILP
+	if !isempty(p.techs.gen)  # Problem becomes a MILP
 		@warn """Adding binary variable to model gas generator. 
 				 Some solvers are very slow with integer variables"""
 		@variables m begin
-			dvFuelUsage[p.gentechs, p.time_steps] >= 0 # Fuel burned by technology t in each time step
-			binGenIsOnInTS[p.gentechs, p.time_steps], Bin  # 1 If technology t is operating in time step h; 0 otherwise
+			dvFuelUsage[p.techs.gen, p.time_steps] >= 0 # Fuel burned by technology t in each time step
+			binGenIsOnInTS[p.techs.gen, p.time_steps], Bin  # 1 If technology t is operating in time step h; 0 otherwise
 		end
 	end
 
@@ -288,22 +283,22 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 		# TODO: currently defining more decision variables than necessary b/c using rectangular arrays, could use dicts of decision variables instead
 		@variables m begin # if there is more than one specified outage, there can be more othan one outage start time
 			dvUnservedLoad[S, tZeros, outage_timesteps] >= 0 # unserved load not met by system
-			dvMGProductionToStorage[p.techs, S, tZeros, outage_timesteps] >= 0 # Electricity going to the storage system during each timestep
+			dvMGProductionToStorage[p.techs.all, S, tZeros, outage_timesteps] >= 0 # Electricity going to the storage system during each timestep
 			dvMGDischargeFromStorage[S, tZeros, outage_timesteps] >= 0 # Electricity coming from the storage system during each timestep
-			dvMGRatedProduction[p.techs, S, tZeros, outage_timesteps]  # MG Rated Production at every timestep.  Multiply by ProdFactor to get actual energy
+			dvMGRatedProduction[p.techs.all, S, tZeros, outage_timesteps]  # MG Rated Production at every timestep.  Multiply by ProdFactor to get actual energy
 			dvMGStoredEnergy[S, tZeros, 0:max_outage_duration] >= 0 # State of charge of the MG storage system
 			dvMaxOutageCost[S] >= 0 # maximum outage cost dependent on number of outage durations
-			# dvMGTechUpgradeCost[p.techs] >= 0
+			# dvMGTechUpgradeCost[p.techs.all] >= 0
 			# dvMGStorageUpgradeCost >= 0
-			# dvMGsize[p.techs] >= 0
+			# dvMGsize[p.techs.all] >= 0
 			
-			dvMGFuelUsed[p.techs, S, tZeros] >= 0
+			dvMGFuelUsed[p.techs.all, S, tZeros] >= 0
 			dvMGMaxFuelUsage[S] >= 0
 			dvMGMaxFuelCost[S] >= 0
-			dvMGCurtail[p.techs, S, tZeros, outage_timesteps] >= 0
+			dvMGCurtail[p.techs.all, S, tZeros, outage_timesteps] >= 0
 
 			# binMGStorageUsed, Bin # 1 if MG storage battery used, 0 otherwise
-			# binMGTechUsed[p.techs], Bin # 1 if MG tech used, 0 otherwise
+			# binMGTechUsed[p.techs.all], Bin # 1 if MG tech used, 0 otherwise
 			binMGGenIsOnInTS[S, tZeros, outage_timesteps], Bin
 		end
 	end

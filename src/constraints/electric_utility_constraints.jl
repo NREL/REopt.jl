@@ -30,7 +30,7 @@
 function add_export_constraints(m, p; _n="")
 
     ##Constraint (8e): Production export and curtailment no greater than production
-    @constraint(m, [t in p.elec_techs, ts in p.time_steps_with_grid],
+    @constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
         p.production_factor[t,ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] 
         >= sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for u in p.export_bins_by_tech[t]) +
            m[Symbol("dvCurtail"*_n)][t, ts]
@@ -41,8 +41,8 @@ function add_export_constraints(m, p; _n="")
     NEM_benefit = 0
     EXC_benefit = 0
     WHL_benefit = 0
-    NEM_techs = String[t for t in p.elec_techs if :NEM in p.export_bins_by_tech[t]]
-    WHL_techs = String[t for t in p.elec_techs if :WHL in p.export_bins_by_tech[t]]
+    NEM_techs = String[t for t in p.techs.elec if :NEM in p.export_bins_by_tech[t]]
+    WHL_techs = String[t for t in p.techs.elec if :WHL in p.export_bins_by_tech[t]]
 
     if !isempty(NEM_techs)
         # Constraint (9c): Net metering only -- can't sell more than you purchase
@@ -245,7 +245,7 @@ function add_simultaneous_export_import_constraint(m, p; _n="")
     )
     @constraint(m, ExportOnlyAfterSiteLoadMetCon[ts in p.time_steps],
         !m[Symbol("binNoGridPurchases"*_n)][ts] => {
-            sum(m[Symbol("dvProductionToGrid"*_n)][t,u,ts] for t in p.elec_techs, u in p.export_bins_by_tech[t]) <= 0
+            sum(m[Symbol("dvProductionToGrid"*_n)][t,u,ts] for t in p.techs.elec, u in p.export_bins_by_tech[t]) <= 0
         }
     )
 end
@@ -350,7 +350,7 @@ end
 
 function add_elec_utility_expressions(m, p; _n="")
 
-    if !isempty(p.s.electric_tariff.export_bins) && !isempty(p.techs)
+    if !isempty(p.s.electric_tariff.export_bins) && !isempty(p.techs.all)
         # NOTE: levelization_factor is baked into dvProductionToGrid
         m[Symbol("TotalExportBenefit"*_n)] = m[Symbol("NEM_benefit"*_n)] + m[Symbol("WHL_benefit"*_n)] +
                                              m[Symbol("EXC_benefit"*_n)]

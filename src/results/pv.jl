@@ -28,7 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
-    for t in p.pvtechs
+    for t in p.techs.pv
         r = Dict{String, Any}()
 		r["size_kw"] = round(value(m[Symbol("dvSize"*_n)][t]), digits=4)
 
@@ -72,7 +72,7 @@ end
 
 
 function add_pv_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
-    for t in p.pvtechs
+    for t in p.techs.pv
         r = Dict{String, Any}()
 
 		# NOTE: must use anonymous expressions in this loop to overwrite values for cases with multiple PV
@@ -114,11 +114,11 @@ The last step in results processing: if more than one PV was modeled then move t
 level keys (that use each PV.name) to an array of results with "PV" as the top key in the results dict `d`.
 """
 function organize_multiple_pv_results(p::REoptInputs, d::Dict)
-    if length(p.pvtechs) == 1 && p.pvtechs[1] == "PV"
+    if length(p.techs.pv) == 1 && p.techs.pv[1] == "PV"
         return nothing
     end
     pvs = Dict[]
-    for pvname in p.pvtechs
+    for pvname in p.techs.pv
         d[pvname]["name"] = pvname  # add name to results dict to distinguish each PV
         push!(pvs, d[pvname])
         delete!(d, pvname)
