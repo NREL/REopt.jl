@@ -88,10 +88,11 @@ own `annual_kwh` or `monthly_totals_kwh` and the reference profile will be scale
 """
 mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off of (critical_)loads_kw_is_net
     loads_kw::Array{Real,1}
-    year::Int
+    year::Int  # used in ElectricTariff to align rate schedule with weekdays/weekends
     critical_loads_kw::Array{Real,1}
     loads_kw_is_net::Bool
     critical_loads_kw_is_net::Bool
+    city::String
     
     function ElectricLoad(;
         loads_kw::Array{<:Real,1} = Real[],
@@ -107,86 +108,58 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         critical_loads_kw_is_net::Bool = false,
         critical_load_pct::Real = 0.5,
         latitude::Float64,
-        longitude::Float64
+        longitude::Float64,
+        time_steps_per_hour::Int = 1
         )
         
         if length(loads_kw) > 0
+
+            if !(length(loads_kw) / time_steps_per_hour ≈ 8760)
+                @error "Provided electric load does not match the time_steps_per_hour."
+            end
+            
             if ismissing(critical_loads_kw)
                 critical_loads_kw = critical_load_pct * loads_kw
             end
-            return new(
-                loads_kw,
-                year,
-                critical_loads_kw,
-                loads_kw_is_net,
-                critical_loads_kw_is_net
-            )     
     
         elseif !isempty(doe_reference_name)
             # NOTE: must use year that starts on Sunday with DOE reference doe_ref_profiles
             if year != 2017
-                @warn "Changing ElectricLoad.year to 2017 because DOE reference profiles start on a Sunday."
+                @warn "Changing load profile year to 2017 because DOE reference profiles start on a Sunday."
             end
             year = 2017
-            loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, year, annual_kwh=annual_kwh, 
-                                           monthly_totals_kwh=monthly_totals_kwh)
+            loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, year, annual_kwh, monthly_totals_kwh)
             if ismissing(critical_loads_kw)
                 critical_loads_kw = critical_load_pct * loads_kw
             end
-            return new(
-                loads_kw,
-                year,
-                critical_loads_kw,
-                loads_kw_is_net,
-                critical_loads_kw_is_net
-            )
 
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
-            @assert sum(blended_doe_reference_percents) ≈ 1 "The sum of the blended_doe_reference_percents must equal 1"
-            if year != 2017
-                @warn "Changing ElectricLoad.year to 2017 because DOE reference profiles start on a Sunday."
-            end
-            year = 2017
-            length(blended_doe_reference_percents) == length(blended_doe_reference_names)
-            city = find_ashrae_zone_city(latitude, longitude)  # avoid redundant look-ups
-            profiles = Array[]  # collect the built in profiles
-            for name in blended_doe_reference_names
-                push!(profiles, BuiltInElectricLoad(city, name, latitude, longitude, year, annual_kwh=annual_kwh, 
-                                                    monthly_totals_kwh=monthly_totals_kwh))
-            end
-            if isnothing(annual_kwh) # then annual_kwh should be the sum of all the profiles' annual kwhs
-                # we have to rescale the built in profiles to the total_kwh by normalizing them with their
-                # own annual kwh and multiplying by the total kwh
-                annual_kwhs = [sum(profile) for profile in profiles]
-                total_kwh = sum(annual_kwhs)
-                monthly_scaler = 1
-                if length(monthly_totals_kwh) == 12
-                    monthly_scaler = length(blended_doe_reference_names)
-                end
-                for idx in 1:length(profiles)
-                    profiles[idx] .*= total_kwh / annual_kwhs[idx] / monthly_scaler
-                end
-            end
-            for idx in 1:length(profiles)  # scale the profiles
-                profiles[idx] .*= blended_doe_reference_percents[idx]
-            end
-            loads_kw = sum(profiles)
+            loads_kw = blend_and_scale_doe_profiles(BuiltInElectricLoad, latitude, longitude, year, 
+                                                    blended_doe_reference_names, blended_doe_reference_percents, city, 
+                                                    annual_kwh, monthly_totals_kwh)
+
             if ismissing(critical_loads_kw)
                 critical_loads_kw = critical_load_pct * loads_kw
             end
-            return new(
-                loads_kw,
-                year,
-                critical_loads_kw,
-                loads_kw_is_net,
-                critical_loads_kw_is_net
-            )
         else
             error("Cannot construct ElectricLoad. You must provide either [loads_kw], [doe_reference_name, city], 
                   [doe_reference_name, latitude, longitude], 
-                  or [blended_doe_reference_names, blended_doe_reference_percents].")
+                  or [blended_doe_reference_names, blended_doe_reference_percents] with city or latitude and longitude.")
         end
+
+        if length(loads_kw) < 8760*time_steps_per_hour
+            loads_kw = repeat(loads_kw, inner=time_steps_per_hour / (length(loads_kw)/8760))
+            @info "Repeating electric loads in each hour to match the time_steps_per_hour."
+        end
+
+        new(
+            loads_kw,
+            year,
+            critical_loads_kw,
+            loads_kw_is_net,
+            critical_loads_kw_is_net
+        )
     end
 end
 
@@ -196,12 +169,11 @@ function BuiltInElectricLoad(
     buildingtype::String,
     latitude::Float64,
     longitude::Float64,
-    year::Int;
+    year::Int,
     annual_kwh::Union{<:Real, Nothing}=nothing,
     monthly_totals_kwh::Union{<:Real, Vector{<:Real}}=nothing,
     )
-    monthly_scalers = ones(12)
-    lib_path = joinpath(dirname(@__FILE__), "..", "..", "data")
+    
     annual_loads = Dict(
         "Albuquerque" => Dict(
             "fastfoodrest" => 193235,
@@ -489,25 +461,6 @@ function BuiltInElectricLoad(
             "flatload" => 500000
         ),
     )
-    default_buildings = [
-        "FastFoodRest",
-        "FullServiceRest",
-        "Hospital",
-        "LargeHotel",
-        "LargeOffice",
-        "MediumOffice",
-        "MidriseApartment",
-        "Outpatient",
-        "PrimarySchool",
-        "RetailStore",
-        "SecondarySchool",
-        "SmallHotel",
-        "SmallOffice",
-        "StripMall",
-        "Supermarket",
-        "Warehouse",
-        "FlatLoad",
-    ]
     if !(buildingtype in default_buildings)
         error("buildingtype $(buildingtype) not in $(default_buildings).")
     end
@@ -516,92 +469,9 @@ function BuiltInElectricLoad(
         city = find_ashrae_zone_city(latitude, longitude)
     end
 
-    profile_path = joinpath(lib_path, string("Load8760_norm_" * city * "_" * buildingtype * ".dat"))
-    normalized_profile = vec(readdlm(profile_path, '\n', Float64, '\n'))
-    
-    if length(monthly_totals_kwh) == 12
-        annual_kwh = 1.0
-        t0 = 1
-        for month in 1:12
-            plus_hours = daysinmonth(Date(string(year) * "-" * string(month))) * 24
-            if month == 2 && isleapyear(year)
-                plus_hours -= 24
-            end
-            month_total = sum(normalized_profile[t0:t0+plus_hours-1])
-            if month_total == 0.0  # avoid division by zero
-                monthly_scalers[month] = 0.0
-            else
-                monthly_scalers[month] = monthly_totals_kwh[month] / month_total
-            end
-            t0 += plus_hours
-        end
-    elseif isnothing(annual_kwh)
+    if isnothing(annual_kwh)
         annual_kwh = annual_loads[city][lowercase(buildingtype)]
     end
 
-    scaled_load = Float64[]
-    datetime = DateTime(year, 1, 1, 1)
-    for ld in normalized_profile
-        month = Month(datetime).value
-        push!(scaled_load, ld * annual_kwh * monthly_scalers[month])
-        datetime += Dates.Hour(1)
-    end
-
-    return scaled_load
-end
-
-
-function find_ashrae_zone_city(lat, lon)::String
-    file_path = joinpath(dirname(@__FILE__), "..", "..", "data", "climate_cities.shp")
-    table = Shapefile.Table(file_path)
-    geoms = Shapefile.shapes(table)
-    # TODO following for loop is relatively slow
-    for (row, geo) in enumerate(geoms)
-        g = length(geo.points)
-        nodes = zeros(g, 2)
-        edges = zeros(g, 2)
-        for (i,p) in enumerate(geo.points)
-            nodes[i,:] = [p.x, p.y]
-            edges[i,:] = [i, i+1]
-        end
-        edges[g, :] = [g, 1]
-        edges = convert(Array{Int64,2}, edges)
-        # shapefiles have longitude as x, latitude as y  
-        if inpoly2([lon, lat], nodes, edges)[1]
-            return table.city[row]
-        end
-        GC.gc()
-    end
-    @info "Could not find latitude/longitude in U.S. Using geometrically nearest city."
-    cities = [
-        (city="Miami", lat=25.761680, lon=-80.191790),
-        (city="Houston", lat=29.760427, lon=-95.369803),
-        (city="Phoenix", lat=33.448377, lon=-112.074037),
-        (city="Atlanta", lat=33.748995, lon=-84.387982),
-        (city="LasVegas", lat=36.1699, lon=-115.1398),
-        (city="LosAngeles", lat=34.052234, lon=-118.243685),
-        (city="SanFrancisco", lat=37.3382, lon=-121.8863),
-        (city="Baltimore", lat=39.290385, lon=-76.612189),
-        (city="Albuquerque", lat=35.085334, lon=-106.605553),
-        (city="Seattle", lat=47.606209, lon=-122.332071),
-        (city="Chicago", lat=41.878114, lon=-87.629798),
-        (city="Boulder", lat=40.014986, lon=-105.270546),
-        (city="Minneapolis", lat=44.977753, lon=-93.265011),
-        (city="Helena", lat=46.588371, lon=-112.024505,),
-        (city="Duluth", lat=46.786672, lon=-92.100485),
-        (city="Fairbanks", lat=59.0397, lon=-158.4575),
-    ]
-    min_distance = 0.0
-    nearest_city = ""
-    for (i, c) in enumerate(cities)
-        distance = sqrt((lat - c.lat)^2 + (lon - c.lon)^2)
-        if i == 1
-            min_distance = distance
-            nearest_city = c.city
-        elseif distance < min_distance
-            min_distance = distance
-            nearest_city = c.city
-        end
-    end
-    return nearest_city
+    built_in_load("electric", city, buildingtype, year, annual_kwh, monthly_totals_kwh)
 end
