@@ -65,6 +65,7 @@ struct REoptInputs <: AbstractInputs
     pbi_max_benefit::Dict{String, Any}  # (pbi_techs)
     pbi_max_kw::Dict{String, Any}  # (pbi_techs)
     pbi_benefit_per_kwh::Dict{String, Any}  # (pbi_techs)
+    boiler_efficiency::Dict{String, Float64}
 end
 ```
 """

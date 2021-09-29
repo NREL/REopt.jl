@@ -14,8 +14,7 @@ The first option is perhaps the most straightforward one. For example, the minim
     },
     "ElectricLoad": {
         "doe_reference_name": "MidriseApartment",
-        "annual_kwh": 1000000.0,
-        "city": "Boulder"
+        "annual_kwh": 1000000.0
     },
     "ElectricTariff": {
         "urdb_label": "5ed6c1a15457a3367add15ae"
@@ -33,8 +32,7 @@ To add PV to the analysis simply add a PV key with an empty dictionary (to use d
     },
     "ElectricLoad": {
         "doe_reference_name": "MidriseApartment",
-        "annual_kwh": 1000000.0,
-        "city": "Boulder"
+        "annual_kwh": 1000000.0
     },
     "ElectricTariff": {
         "urdb_label": "5ed6c1a15457a3367add15ae"
