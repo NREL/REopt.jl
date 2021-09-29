@@ -80,7 +80,7 @@ end
 """
     Techs(s::Scenario) 
 
-Create a `Techs` struct for the REoptInputs
+Create a `Techs` struct for the REoptInputs.
 """
 function Techs(s::Scenario)
     pvtechs = String[pv.name for pv in s.pvs]

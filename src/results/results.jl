@@ -27,6 +27,11 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+    reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
+
+Create a dictionary of results with string keys for each Scenario structure modeled.
+"""
 function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 	tstart = time()
     d = Dict{String, Any}()
