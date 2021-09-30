@@ -54,6 +54,9 @@ function add_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b::Sy
 
     soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
     r["soc_series_pct"] = round.(value.(soc) ./ p.s.storage.size_kwh[b], digits=3)
+    discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
+    r["to_load_series_kw"] = round.(value.(discharge), digits=3)
+    # NOTE: we no longer allow Storage to export to the grid (to align with typical export rules for retail customers)
 
     # TODO handle other storage types
     d["Storage"] = r
