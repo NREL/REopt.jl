@@ -31,7 +31,7 @@ function add_expressions(m::JuMP.AbstractModel, ps::Array{REoptInputs, 1})
         m[Symbol("TotalExport"*_n)] = @expression(m, [t in p.time_steps],
             sum(
                 m[Symbol("dvProductionToGrid"*_n)][t,u,ts] 
-                for t in p.elec_techs, u in p.export_bins_by_tech[t]
+                for t in p.techs.elec, u in p.export_bins_by_tech[t]
             )
         )
     end
