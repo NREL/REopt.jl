@@ -106,13 +106,26 @@ mutable struct SAM_Battery
     
             end
             
+            desired_voltage = 500.0 # Need to set this for Size_batterystateful to work, 500 is the default in the SAM GUI
+
             @ccall hdl.ssc_data_set_number(batt_data::Ptr{Cvoid}, "desired_capacity"::Cstring, desired_capacity::Cdouble)::Cvoid
-            @ccall hdl.ssc_data_set_number(batt_data::Ptr{Cvoid}, "desired_voltage"::Cstring, 500.0::Cdouble)::Cvoid # Need to set this for Size_batterystateful to work, 500 is the default in the SAM GUI
+            @ccall hdl.ssc_data_set_number(batt_data::Ptr{Cvoid}, "desired_voltage"::Cstring, desired_voltage::Cdouble)::Cvoid 
 
             @ccall hdl.Size_batterystateful(batt_data::Ptr{Cvoid})::Cvoid
 
             @ccall hdl.ssc_stateful_module_setup(batt_model::Ptr{Cvoid}, batt_data::Ptr{Cvoid})::Cint
 
+            # Make some numbers that are needed for computing degraded capacity more accessible
+            vnom_cell = data["Vnom_default"]
+            num_cells = ceil(desired_voltage / vnom_cell)
+            num_strings = round(desired_capacity * 1000.0 / (data["Qfull"] * num_cells * vnom_cell))
+            nominal_voltage = vnom_cell * num_cells
+
+            data["num_cells"] = num_cells
+            data["num_strings"] = num_strings
+            data["nominal_voltage"] = nominal_voltage
+
+            print(data)
         catch e
             @error "Problem calling SAM C library!"
             showerror(stdout, e)
@@ -126,7 +139,7 @@ end
     run_sam_battery(batt::SAM_Battery, power::Vector{Float64})
 Function takes a SAM_Battery, and runs it for steps equal to the length of power
 Amount of time is defined in dt, as passed to the constructor of SAM_Battery
-Units of power are in kW, positive is discharging, negative is charging
+Units of power are in DC kW, positive is discharging, negative is charging
 """
 function run_sam_battery(batt::SAM_Battery, power::Vector{Float64})
     for p in power
@@ -168,6 +181,7 @@ function get_sam_battery_number(batt::SAM_Battery, key::String)::Float64
         return Float64(ref[])
     end
     @error "Battery variables were already freed. Can no longer read battery data."
+    showerror(stdout, e)
 end
 
 """
@@ -181,4 +195,57 @@ function free_sam_battery(batt::SAM_Battery)::Nothing
     @ccall hdl.ssc_data_free(batt.batt_data::Ptr{Cvoid})::Cvoid
     batt.batt_data = Ptr{Cvoid}(C_NULL)
     return nothing
+end
+
+"""
+get_batt_power_time_series(results::Dict{String, Any}, inverter_efficiency_pct::Float64, rectifier_efficiency_pct::Float64)::Vector{Float64}
+Converts AC power flow outputs from the results dictionary into a DC powers vector that can be used by run_sam_battery
+"""
+function get_batt_power_time_series(results::Dict{String, Any}, inverter_efficiency_pct::Float64, rectifier_efficiency_pct::Float64)::Vector{Float64}
+    pv_to_battery = results["PV"]["to_battery_series_kw"]
+    grid_to_battery = results["ElectricUtility"]["to_battery_series_kw"]
+    battery_to_load = results["Storage"]["to_load_series_kw"]
+
+    batt_power_series = zeros(0)
+    n = length(pv_to_battery)
+    i = 1
+    while i <= n
+        charge = pv_to_battery[i] + grid_to_battery[i]
+        batt_power = battery_to_load[i] - charge
+
+        # Covert AC to DC
+        if (batt_power > 0)
+            batt_power /= rectifier_efficiency_pct
+        else
+            batt_power *= inverter_efficiency_pct
+        end
+
+        append!(batt_power_series, batt_power)
+        i += 1
+    end
+
+    return batt_power_series
+end
+
+"""
+function update_mpc_from_batt_stateful(batt::SAM_Battery, inputs::Dict{String, Any})::Dict{String, Any}
+Use the SAM battery model to update the SOC and degraded capacity for the next MPC run
+    Must run run_sam_battery prior to this function to populate required data in C structs
+"""
+function update_mpc_from_batt_stateful(batt::SAM_Battery, inputs::Dict{String, Any})::Dict{String, Any}
+    Q_max = get_sam_battery_number(batt, "Q_max")
+
+    if (Q_max == 0)
+        @error "SAM_Battery is reporting zero capacity. Please run at least one timestep before calling this function"
+        showerror(stdout, e)
+        return inputs
+    end
+
+    nominal_voltage = batt.params["nominal_voltage"]
+
+    inputs["Storage"]["size_kwh"] = Q_max * nominal_voltage * 1e-3
+    
+    inputs["Storage"]["soc_init_pct"] = get_sam_battery_number(batt, "SOC")
+
+    return inputs
 end

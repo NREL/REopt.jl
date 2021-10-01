@@ -1,4 +1,4 @@
-{"control_mode": 1, "input_power": 0, "chem": 1, "nominal_energy": 19.2154, "nominal_voltage": 3.6,
+{"control_mode": 1, "input_power": 0, "chem": 1, "nominal_energy": 19.2154, "nominal_voltage": 500,
               "initial_SOC": 50, "maximum_SOC": 100.000, "minimum_SOC": 0.000, "dt_hr": 1, "voltage_choice": 0,
               "Vnom_default": 3.6, "resistance": 0.001155, "Vfull": 4.200, "Vexp": 3.529, "Vnom": 3.342, "Vcut" : 2.771, "Qfull": 3.2,
               "Qexp": 2.584, "Qnom": 3.1259, "C_rate": 0.200, "mass": 190.251, "surface_area": 2.53426, "Cp": 1500,
