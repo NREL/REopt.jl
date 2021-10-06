@@ -62,7 +62,7 @@ function ExistingBoiler(;
                                                      "ExistingBoiler.fuel_cost_per_mmbtu")
 
     efficiency_defaults = Dict(
-        "hot_water" => EXISTING_BOILER_EFFICIENCY,
+        "hot_water" => 0.8,
         "steam" => 0.75
     )
 
