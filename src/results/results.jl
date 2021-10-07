@@ -27,6 +27,11 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+    reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
+
+Create a dictionary of results with string keys for each Scenario structure modeled.
+"""
 function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 	tstart = time()
     d = Dict{String, Any}()
@@ -41,18 +46,18 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     add_financial_results(m, p, d; _n)
     add_electric_load_results(m, p, d; _n)
 
-	if !isempty(p.pvtechs)
+	if !isempty(p.techs.pv)
         add_pv_results(m, p, d; _n)
 	end
 
-    if "Wind" in p.techs
+    if "Wind" in p.techs.all
         add_wind_results(m, p, d; _n)
     end
 	
 	time_elapsed = time() - tstart
 	@info "Base results processing took $(round(time_elapsed, digits=3)) seconds."
 	
-	if !isempty(p.gentechs) && isempty(_n)  # generators not included in multinode model
+	if !isempty(p.techs.gen) && isempty(_n)  # generators not included in multinode model
         tstart = time()
 		add_generator_results(m, p, d)
         time_elapsed = time() - tstart
@@ -65,6 +70,11 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         time_elapsed = time() - tstart
         @info "Outage results processing took $(round(time_elapsed, digits=3)) seconds."
 	end
+
+    if !isempty(p.techs.boiler)
+        add_existing_boiler_results(m, p, d)
+    end
+
 	return d
 end
 
@@ -109,8 +119,8 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
             if t[2] in keys(bau[t[1]])
                 opt[t[1]][t[2] * "_bau"] = bau[t[1]][t[2]]
             end
-        elseif t[1] == "PV" && !isempty(p.pvtechs)
-            for pvname in p.pvtechs
+        elseif t[1] == "PV" && !isempty(p.techs.pv)
+            for pvname in p.techs.pv
                 if pvname in keys(opt) && pvname in keys(bau)
                     if t[2] in keys(bau[pvname])
                         opt[pvname][t[2] * "_bau"] = bau[pvname][t[2]]

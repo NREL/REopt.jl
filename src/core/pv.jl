@@ -55,7 +55,7 @@ function PV(;
     acres_per_kw::Float64=6e-3,
     inv_eff::Float64=0.96,
     dc_ac_ratio::Float64=1.2,
-    prod_factor_series_kw::Union{Missing, Array{Real,1}} = missing,
+    prod_factor_series::Union{Missing, Array{Real,1}} = missing,
     federal_itc_pct::Float64 = 0.26,
     federal_rebate_per_kw::Float64 = 0.0,
     state_ibi_pct::Float64 = 0.0,
@@ -101,7 +101,7 @@ struct PV <: AbstractTech
     acres_per_kw
     inv_eff
     dc_ac_ratio
-    prod_factor_series_kw
+    prod_factor_series
     federal_itc_pct
     federal_rebate_per_kw
     state_ibi_pct
@@ -144,7 +144,7 @@ struct PV <: AbstractTech
         acres_per_kw::Float64=6e-3,
         inv_eff::Float64=0.96,
         dc_ac_ratio::Float64=1.2,
-        prod_factor_series_kw::Union{Missing, Array{Real,1}} = missing,
+        prod_factor_series::Union{Missing, Array{Real,1}} = missing,
         federal_itc_pct::Float64 = 0.26,
         federal_rebate_per_kw::Float64 = 0.0,
         state_ibi_pct::Float64 = 0.0,
@@ -222,7 +222,7 @@ struct PV <: AbstractTech
             acres_per_kw,
             inv_eff,
             dc_ac_ratio,
-            prod_factor_series_kw,
+            prod_factor_series,
             federal_itc_pct,
             federal_rebate_per_kw,
             state_ibi_pct,

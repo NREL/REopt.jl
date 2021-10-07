@@ -23,12 +23,12 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 		_n = string("_", p.s.site.node)
 		for dv in dvs_idx_on_techs
 			x = dv*_n
-			m[Symbol(x)] = @variable(m, [p.techs], base_name=x, lower_bound=0)
+			m[Symbol(x)] = @variable(m, [p.techs.all], base_name=x, lower_bound=0)
 		end
 
 		for dv in dvs_idx_on_techs_timesteps
 			x = dv*_n
-			m[Symbol(x)] = @variable(m, [p.techs, p.time_steps], base_name=x, lower_bound=0)
+			m[Symbol(x)] = @variable(m, [p.techs.all, p.time_steps], base_name=x, lower_bound=0)
 		end
 
 		for dv in dvs_idx_on_storagetypes
@@ -51,7 +51,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 		m[Symbol(dv)] = @variable(m, [p.months, 1], base_name=dv, lower_bound=0)
 
 		dv = "dvProductionToStorage"*_n
-		m[Symbol(dv)] = @variable(m, [p.s.storage.types, p.techs, p.time_steps], base_name=dv, lower_bound=0)
+		m[Symbol(dv)] = @variable(m, [p.s.storage.types, p.techs.all, p.time_steps], base_name=dv, lower_bound=0)
 
 		dv = "dvStoredEnergy"*_n
 		m[Symbol(dv)] = @variable(m, [p.s.storage.types, 0:p.time_steps[end]], base_name=dv, lower_bound=0)
@@ -61,12 +61,12 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 
         if !isempty(p.s.electric_tariff.export_bins)
             dv = "dvProductionToGrid"*_n
-            m[Symbol(dv)] = @variable(m, [p.elec_techs, p.s.electric_tariff.export_bins, p.time_steps], base_name=dv, lower_bound=0)
+            m[Symbol(dv)] = @variable(m, [p.techs.elec, p.s.electric_tariff.export_bins, p.time_steps], base_name=dv, lower_bound=0)
         end
 
 		ex_name = "TotalTechCapCosts"*_n
 		m[Symbol(ex_name)] = @expression(m, p.third_party_factor *
-			sum( p.cap_cost_slope[t] * m[Symbol("dvPurchaseSize"*_n)][t] for t in p.techs ) 
+			sum( p.cap_cost_slope[t] * m[Symbol("dvPurchaseSize"*_n)][t] for t in p.techs.all ) 
 		)
 
 		ex_name = "TotalStorageCapCosts"*_n
@@ -77,7 +77,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 
 		ex_name = "TotalPerUnitSizeOMCosts"*_n
 		m[Symbol(ex_name)] = @expression(m, p.third_party_factor * p.pwf_om * 
-			sum( p.om_cost_per_kw[t] * m[Symbol("dvSize"*_n)][t] for t in p.techs ) 
+			sum( p.om_cost_per_kw[t] * m[Symbol("dvSize"*_n)][t] for t in p.techs.all ) 
 		)
 
         ex_name = "TotalPerUnitProdOMCosts"*_n
@@ -127,12 +127,12 @@ function add_bounds(m::JuMP.AbstractModel, ps::Array{REoptInputs})
         
 		for dv in dvs_idx_on_techs
 			x = dv*_n
-			@constraint(m, [tech in p.techs], -m[Symbol(x)][tech] ≤ 0 )
+			@constraint(m, [tech in p.techs.all], -m[Symbol(x)][tech] ≤ 0 )
 		end
 
 		for dv in dvs_idx_on_techs_timesteps
 			x = dv*_n
-            @constraint(m, [tech in p.techs, ts in p.time_steps], 
+            @constraint(m, [tech in p.techs.all, ts in p.time_steps], 
                 -m[Symbol(x)][tech, ts] ≤ 0
             )
 		end
@@ -161,7 +161,7 @@ function add_bounds(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 		@constraint(m, [mth in p.months], -m[Symbol(dv)][mth, 1] ≤ 0)
 
 		dv = "dvProductionToStorage"*_n
-        @constraint(m, [b in p.s.storage.types, tech in p.techs, ts in p.time_steps], 
+        @constraint(m, [b in p.s.storage.types, tech in p.techs.all, ts in p.time_steps], 
             -m[Symbol(dv)][b, tech, ts] ≤ 0
         )
 
@@ -188,7 +188,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
                 @constraint(m, [ts in p.time_steps], m[Symbol("dvStoredEnergy"*_n)][b, ts] == 0)
                 @constraint(m, m[Symbol("dvStorageEnergy"*_n)][b] == 0)
                 @constraint(m, m[Symbol("dvStoragePower"*_n)][b] == 0)
-                @constraint(m, [t in p.elec_techs, ts in p.time_steps_with_grid],
+                @constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
                             m[Symbol("dvProductionToStorage"*_n)][b, t, ts] == 0)
                 @constraint(m, [ts in p.time_steps], m[Symbol("dvDischargeFromStorage"*_n)][b, ts] == 0)
                 @constraint(m, [ts in p.time_steps], m[Symbol("dvGridToStorage"*_n)][b, ts] == 0)
@@ -204,14 +204,14 @@ function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
     
         add_production_constraints(m, p; _n=_n)
     
-        if !isempty(p.techs)
+        if !isempty(p.techs.all)
             add_tech_size_constraints(m, p; _n=_n)
-            if !isempty(p.techs_no_curtail)
+            if !isempty(p.techs.no_curtail)
                 add_no_curtail_constraints(m, p; _n=_n)
             end
         end
     
-        add_load_balance_constraints(m, p; _n=_n)
+        add_elec_load_balance_constraints(m, p; _n=_n)
     
         if !isempty(p.s.electric_tariff.export_bins)
             add_export_constraints(m, p; _n=_n)

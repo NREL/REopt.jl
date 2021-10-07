@@ -27,46 +27,33 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-abstract type AbstractTech end
-abstract type AbstractStorage end
-abstract type AbstractGenerator <: AbstractTech end
-abstract type AbstractScenario end
-abstract type AbstractInputs end
-abstract type AbstractThermalTech <: AbstractGenerator end
 
-"""
-    Techs
+function add_boiler_tech_constraints(m, p; _n="")
+    m[:TotalFuelCosts] += @expression(m,
+        sum(m[:dvFuelUsage]["ExistingBoiler", ts] * p.s.existing_boiler.fuel_cost_series[ts] for ts in p.time_steps)
+    )
+    
+    # Constraint (1e): Total Fuel burn for Boiler
+    @constraint(m, [t in p.techs.boiler, ts in p.time_steps],
+        m[:dvFuelUsage][t,ts] == p.hours_per_timestep * (
+            m[Symbol("dvThermalProduction"*_n)][t,ts] / p.boiler_efficiency[t]
+        )  # TODO removed p.production_factor[t,ts] * b/c all 1's for boiler; do we need it?
+    )
 
-`Techs` contains the index sets that are used to define the model constraints and decision variables.
+    # Constraint (4f)-1: (Hot) Thermal production sent to storage must be less than technology's rated production
+    # if !isempty(p.steam_techs)
+    #     @constraint(m, [b in p.HotTES, t in p.techs.boiler, ts in p.time_steps],
+    #         m[:dvProductionToStorage][b,t,ts] + m[:dvThermalToSteamTurbine][t,ts] <=
+    #         p.production_factor[t,ts] * m[Symbol("dvThermalProduction"*_n)][t,ts]
+    #     )
+    # else
+        # @constraint(m, [b in p.HotTES, t in p.techs.boiler, ts in p.time_steps],
+        #     m[:dvProductionToStorage][b,t,ts] <= p.production_factor[t,ts] * m[Symbol("dvThermalProduction"*_n)][t,ts]
+        # )
+    # end
 
-```julia
-mutable struct Techs
-    all::Vector{String}
-    elec::Vector{String}
-    pv::Vector{String}
-    gen::Vector{String}
-    pbi::Vector{String}
-    no_curtail::Vector{String}
-    no_turndown::Vector{String}
-    segmented::Vector{String}
-    heating::Vector{String}
-    boiler::Vector{String}
-    fuel_burning::Vector{String}
-    thermal::Vector{String}
-end
-```
-"""
-mutable struct Techs
-    all::Vector{String}
-    elec::Vector{String}
-    pv::Vector{String}
-    gen::Vector{String}
-    pbi::Vector{String}
-    no_curtail::Vector{String}
-    no_turndown::Vector{String}
-    segmented::Vector{String}
-    heating::Vector{String}
-    boiler::Vector{String}
-    fuel_burning::Vector{String}
-    thermal::Vector{String}
+    # Constraint (7_heating_prod_size): Production limit based on size for boiler
+    @constraint(m, [t in p.techs.boiler, ts in p.time_steps],
+        m[Symbol("dvThermalProduction"*_n)][t,ts] <= m[Symbol("dvSize"*_n)][t]
+    )
 end

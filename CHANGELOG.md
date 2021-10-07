@@ -51,7 +51,7 @@
 
 ## v0.7.2
 #### Improvements
-- add PV.prod_factor_series_kw input (can skip PVWatts call)
+- add PV.prod_factor_series input (can skip PVWatts call)
 - add `run_mpc` capability, which dispatches DER for minimum energy cost over an arbitrary time horizon
 
 ## v0.7.1
