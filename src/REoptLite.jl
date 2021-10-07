@@ -88,6 +88,7 @@ include("core/bau_scenario.jl")
 include("core/reopt_inputs.jl")
 include("core/bau_inputs.jl")
 include("core/cost_curve.jl")
+include("core/chp.jl")
 
 include("constraints/outage_constraints.jl")
 include("constraints/storage_constraints.jl")
