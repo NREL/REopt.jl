@@ -27,46 +27,57 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-abstract type AbstractTech end
-abstract type AbstractStorage end
-abstract type AbstractGenerator <: AbstractTech end
-abstract type AbstractScenario end
-abstract type AbstractInputs end
-abstract type AbstractThermalTech <: AbstractGenerator end
+const EXISTING_BOILER_EFFICIENCY = 0.8
 
-"""
-    Techs
-
-`Techs` contains the index sets that are used to define the model constraints and decision variables.
-
-```julia
-mutable struct Techs
-    all::Vector{String}
-    elec::Vector{String}
-    pv::Vector{String}
-    gen::Vector{String}
-    pbi::Vector{String}
-    no_curtail::Vector{String}
-    no_turndown::Vector{String}
-    segmented::Vector{String}
-    heating::Vector{String}
-    boiler::Vector{String}
-    fuel_burning::Vector{String}
-    thermal::Vector{String}
+struct ExistingBoiler <: AbstractThermalTech  # useful to create AbstractHeatingTech or AbstractThermalTech?
+    max_kw::Real
+    efficiency::Real
+    fuel_cost_series::AbstractVector{<:Real}
 end
-```
-"""
-mutable struct Techs
-    all::Vector{String}
-    elec::Vector{String}
-    pv::Vector{String}
-    gen::Vector{String}
-    pbi::Vector{String}
-    no_curtail::Vector{String}
-    no_turndown::Vector{String}
-    segmented::Vector{String}
-    heating::Vector{String}
-    boiler::Vector{String}
-    fuel_burning::Vector{String}
-    thermal::Vector{String}
+
+
+function ExistingBoiler(;
+    max_heat_demand_kw::Real=0,
+    production_type::String = "hot_water",
+    chp_prime_mover::String = "",
+    max_thermal_factor_on_peak_load::Real = 1.25,
+    efficiency::Real = 0.0,
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
+    time_steps_per_hour::Int = 1
+    # fuel_type::String = "natural_gas"  # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"],
+    # can_supply_steam_turbine::Bool,
+    # emissions_factor_lb_CO2_per_mmbtu::Real,
+)
+    @assert production_type in ["steam", "hot_water"]
+
+    production_type_by_chp_prime_mover = Dict(
+        "recip_engine" => "hot_water",
+        "micro_turbine" => "hot_water",
+        "combustion_turbine" => "steam",
+        "fuel_cell" => "hot_water"
+    )
+
+    fuel_cost_per_kwh = fuel_cost_per_mmbtu / MMBTU_TO_KWH
+    fuel_cost_series = per_hour_value_to_time_series(fuel_cost_per_kwh, time_steps_per_hour, 
+                                                     "ExistingBoiler.fuel_cost_per_mmbtu")
+
+    efficiency_defaults = Dict(
+        "hot_water" => 0.8,
+        "steam" => 0.75
+    )
+
+    if efficiency == 0.0
+        if !isempty(chp_prime_mover)
+            production_type = production_type_by_chp_prime_mover[chp_prime_mover]
+        end
+        efficiency = efficiency_defaults[production_type]
+    end
+
+    max_kw = max_heat_demand_kw * max_thermal_factor_on_peak_load
+
+    ExistingBoiler(
+        max_kw,
+        efficiency,
+        fuel_cost_series
+    )
 end

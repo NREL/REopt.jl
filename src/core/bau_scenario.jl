@@ -51,6 +51,9 @@ struct BAUScenario <: AbstractScenario
     electric_utility::ElectricUtility
     financial::Financial
     generator::Generator
+    dhw_load::DomesticHotWaterLoad
+    space_heating_load::SpaceHeatingLoad
+    existing_boiler::ExistingBoiler
     outage_outputs::OutageOutputs
 end
 
@@ -98,7 +101,7 @@ function BAUScenario(s::Scenario)
     In the simplest case we set the BAU critical_loads_kw to zero during the outage. 
     However, if the BAU scenario has existing Generator and/or PV we calculate how many time steps the critical load can 
     be met and make the critical load non-zero for those time steps in order to show the most realistic dispatch results.
-    This calculation requires the PV prod_factor_series_kw and so it is done in BAUInputs.
+    This calculation requires the PV prod_factor_series and so it is done in BAUInputs.
     =#
     elec_load = deepcopy(s.electric_load)
     if tf > t0 && t0 > 0
@@ -117,6 +120,9 @@ function BAUScenario(s::Scenario)
         s.electric_utility, 
         s.financial,
         generator,
+        s.dhw_load,
+        s.space_heating_load,
+        s.existing_boiler,
         outage_outputs
     )
 end

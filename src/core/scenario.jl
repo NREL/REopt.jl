@@ -38,6 +38,9 @@ struct Scenario <: AbstractScenario
     electric_utility::ElectricUtility
     financial::Financial
     generator::Generator
+    dhw_load::DomesticHotWaterLoad
+    space_heating_load::SpaceHeatingLoad
+    existing_boiler::ExistingBoiler
 end
 
 """
@@ -53,6 +56,9 @@ Constructor for Scenario struct, where `d` has upper-case keys:
 - ElectricUtility (optional)
 - Financial (optional)
 - Generator (optional)
+- DomesticHotWaterLoad (optional)
+- SpaceHeatingLoad (optional)
+- ExistingBoiler (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV`, which can be either a `Dict` or `Dict[]`.
 ```
@@ -67,6 +73,9 @@ struct Scenario
     electric_utility::ElectricUtility
     financial::Financial
     generator::Generator
+    dhw_load::DomesticHotWaterLoad
+    space_heating_load::SpaceHeatingLoad
+    existing_boiler::ExistingBoiler
 end
 ```
 """
@@ -119,12 +128,14 @@ function Scenario(d::Dict)
     end
 
     electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
-                                   latitude=site.latitude, longitude=site.longitude
+                                   latitude=site.latitude, longitude=site.longitude, 
+                                   time_steps_per_hour=settings.time_steps_per_hour
                                 )
 
     electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 
                                        year=electric_load.year,
-                                       NEM=electric_utility.net_metering_limit_kw > 0
+                                       NEM=electric_utility.net_metering_limit_kw > 0, 
+                                       time_steps_per_hour=settings.time_steps_per_hour
                                     )
 
     if haskey(d, "Wind")
@@ -140,6 +151,42 @@ function Scenario(d::Dict)
         generator = Generator(; max_kw=0)
     end
 
+    max_heat_demand_kw = 0.0
+    if haskey(d, "DomesticHotWaterLoad")
+        add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["DomesticHotWaterLoad"])
+        dhw_load = DomesticHotWaterLoad(; dictkeys_tosymbols(d["DomesticHotWaterLoad"])...,
+                                          latitude=site.latitude, longitude=site.longitude, 
+                                          time_steps_per_hour=settings.time_steps_per_hour
+                                        )
+        max_heat_demand_kw = maximum(dhw_load.loads_kw)
+    else
+        dhw_load = DomesticHotWaterLoad(; fuel_loads_mmbtu_per_hour=repeat([0.0], 8760))
+    end
+                                    
+    if haskey(d, "SpaceHeatingLoad")
+        add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["SpaceHeatingLoad"])
+        space_heating_load = SpaceHeatingLoad(; dictkeys_tosymbols(d["SpaceHeatingLoad"])...,
+                                                latitude=site.latitude, longitude=site.longitude, 
+                                                time_steps_per_hour=settings.time_steps_per_hour
+                                              )
+        
+        max_heat_demand_kw = maximum(space_heating_load.loads_kw .+ max_heat_demand_kw)
+    else
+        space_heating_load = SpaceHeatingLoad(; fuel_loads_mmbtu_per_hour=repeat([0.0], 8760))
+    end
+
+    if max_heat_demand_kw > 0
+        vals = Dict{Symbol, Any}()
+        vals[:max_heat_demand_kw] = max_heat_demand_kw
+        vals[:time_steps_per_hour] = settings.time_steps_per_hour
+        if haskey(d, "ExistingBoiler")
+            vals = merge(vals, dictkeys_tosymbols(d["ExistingBoiler"]))
+        end
+        existing_boiler = ExistingBoiler(; vals...)
+    else
+        existing_boiler = ExistingBoiler(0.0, 0.0, Real[])
+    end
+
     return Scenario(
         settings,
         site, 
@@ -150,7 +197,10 @@ function Scenario(d::Dict)
         electric_load, 
         electric_utility, 
         financial,
-        generator
+        generator,
+        dhw_load,
+        space_heating_load,
+        existing_boiler
     )
 end
 
@@ -168,5 +218,19 @@ end
 function check_pv_tilt!(pv::Dict, site::Site)
     if !(haskey(pv, "tilt"))
         pv["tilt"] = site.latitude
+    end
+end
+
+
+function add_doe_reference_names_from_elec_to_thermal_loads(elec::Dict, thermal::Dict)
+    string_keys = [
+        "doe_reference_name",
+        "blended_doe_reference_names",
+        "blended_doe_reference_percents",
+    ]
+    for k in string_keys
+        if !(k in keys(thermal)) && k in keys(elec)
+            thermal[k] = elec[k]
+        end
     end
 end

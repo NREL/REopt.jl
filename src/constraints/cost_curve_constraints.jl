@@ -42,10 +42,10 @@ zero cost (and slope) from zero kw to the existing_kw. Instead, we now have dvPu
 To avoid unnecessary decision variables (and constraints) we use anonymous variables and register them in the model 
 manually. With this method the decision variable containers do not have to be rectangular.
 For example, (as implemented in v1 of the API) the decision variable dvSegmentSystemSize is indexed on 
-[p.Techs, p.Subdivision, p.Seg], where:
+[p.techs.all, p.Subdivision, p.Seg], where:
     - p.Subdivision is hardcoded to ["CapCost"] - and so it is unnecessary, 
     - p.Seg is the maximum number of segments in any cost curve
-    - and p.Techs includes all technologies
+    - and p.techs.all includes all technologies
 We can instead construct dvSegmentSystemSize as follows:
 ```julia
     for t in p.SegmentedTechs
@@ -62,7 +62,7 @@ modeled using the following binary variables and constraints.
 """
 function add_cost_curve_vars_and_constraints(m, p; _n="")
 
-    for t in p.segmented_techs
+    for t in p.techs.segmented
         dv = "dvSegmentSystemSize" * t
         m[Symbol(dv)] = @variable(m, [1:p.n_segs_by_tech[t]], base_name=dv, lower_bound=0)
 
@@ -71,22 +71,22 @@ function add_cost_curve_vars_and_constraints(m, p; _n="")
     end
 
     ##Constraint (7f)-1: Minimum segment size
-        @constraint(m, SegmentSizeMinCon[t in p.segmented_techs, s in 1:p.n_segs_by_tech[t]],
+        @constraint(m, SegmentSizeMinCon[t in p.techs.segmented, s in 1:p.n_segs_by_tech[t]],
         m[Symbol("dvSegmentSystemSize"*t)][s] >= p.seg_min_size[t][s] * m[Symbol("binSegment"*t)][s]
     )
 
     ##Constraint (7f)-2: Maximum segment size
-    @constraint(m, SegmentSizeMaxCon[t in p.segmented_techs, s in 1:p.n_segs_by_tech[t]],
+    @constraint(m, SegmentSizeMaxCon[t in p.techs.segmented, s in 1:p.n_segs_by_tech[t]],
         m[Symbol("dvSegmentSystemSize"*t)][s] <= p.seg_max_size[t][s] * m[Symbol("binSegment"*t)][s]
     )
 
     ##Constraint (7g):  Segments add up to system size
-    @constraint(m, SegmentSizeAddCon[t in p.segmented_techs],
+    @constraint(m, SegmentSizeAddCon[t in p.techs.segmented],
         sum(m[Symbol("dvSegmentSystemSize"*t)][s] for s in 1:p.n_segs_by_tech[t]) == m[:dvPurchaseSize][t]
     )
 
     ##Constraint (7h): At most one segment allowed
-    @constraint(m, SegmentSelectCon[t in p.segmented_techs],
+    @constraint(m, SegmentSelectCon[t in p.techs.segmented],
         sum(m[Symbol("binSegment"*t)][s] for s in 1:p.n_segs_by_tech[t]) <= 1
     )
 end

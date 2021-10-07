@@ -32,48 +32,35 @@
 Create a REoptInputs for the Business As Usual scenario.
 """
 function BAUInputs(p::REoptInputs)
-
     bau_scenario = BAUScenario(p.s)
-    pvtechs = String[pv.name for pv in bau_scenario.pvs]
+    techs = Techs(p, bau_scenario)
 
-    techs = copy(pvtechs)
-    techs_no_turndown = copy(pvtechs)
-    techs_no_curtail = String[]
-    gentechs = String[]
-    pbi_techs = String[]
+    boiler_efficiency = Dict{String, Float64}()
 
-    if p.s.generator.existing_kw > 0
-        push!(techs, "Generator")
-        push!(gentechs, "Generator")
-    end
-
-    elec_techs = copy(techs)  # only modeling electric loads/techs so far
-
-    # REoptInputs indexed on techs:
-    max_sizes = Dict(t => 0.0 for t in techs)
-    min_sizes = Dict(t => 0.0 for t in techs)
-    existing_sizes = Dict(t => 0.0 for t in techs)
+    # REoptInputs indexed on techs.all:
+    max_sizes = Dict(t => 0.0 for t in techs.all)
+    min_sizes = Dict(t => 0.0 for t in techs.all)
+    existing_sizes = Dict(t => 0.0 for t in techs.all)
     cap_cost_slope = Dict{String, Any}()
-    om_cost_per_kw = Dict(t => 0.0 for t in techs)
-    production_factor = DenseAxisArray{Float64}(undef, techs, p.time_steps)
+    om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
+    production_factor = DenseAxisArray{Float64}(undef, techs.all, p.time_steps)
 
     # export related inputs
     techs_by_exportbin = Dict(k => [] for k in p.s.electric_tariff.export_bins)
     export_bins_by_tech = Dict{String, Array{Symbol, 1}}()
 
-    # REoptInputs indexed on segmented_techs
-    segmented_techs = String[]  # no cost curves in BAU case because all techs have zero cap_cost_slope
+    # REoptInputs indexed on techs.segmented
     n_segs_by_tech = Dict{String, Int}()
     seg_min_size = Dict{String, Any}()
     seg_max_size = Dict{String, Any}()
     seg_yint = Dict{String, Any}()
 
     # PV specific arrays
-    pv_to_location = Dict(t => Dict{Symbol, Int}() for t in pvtechs)
+    pv_to_location = Dict(t => Dict{Symbol, Int}() for t in techs.pv)
 
-    levelization_factor = Dict(t => 1.0 for t in techs)
+    levelization_factor = Dict(t => 1.0 for t in techs.all)
 
-    for pvname in pvtechs  # copy the optimal scenario inputs for existing PV systems
+    for pvname in techs.pv  # copy the optimal scenario inputs for existing PV systems
         production_factor[pvname, :] = p.production_factor[pvname, :]
         pv_to_location[pvname] = p.pv_to_location[pvname]
         existing_sizes[pvname] = p.existing_sizes[pvname]
@@ -82,17 +69,17 @@ function BAUInputs(p::REoptInputs)
         om_cost_per_kw[pvname] = p.om_cost_per_kw[pvname]
         levelization_factor[pvname] = p.levelization_factor[pvname]
         cap_cost_slope[pvname] = 0.0
-        if pvname in p.pbi_techs
+        if pvname in p.techs.pbi
             push!(pbi_techs, pvname)
         end
         pv = get_pv_by_name(pvname, p.s.pvs)
         fillin_techs_by_exportbin(techs_by_exportbin, pv, pv.name)
         if !pv.can_curtail
-            push!(techs_no_curtail, pv.name)
+            push!(techs.no_curtail, pv.name)
         end
     end
 
-    if "Generator" in techs
+    if "Generator" in techs.all
         max_sizes["Generator"] = p.s.generator.existing_kw
         min_sizes["Generator"] = p.s.generator.existing_kw
         existing_sizes["Generator"] = p.s.generator.existing_kw
@@ -100,16 +87,20 @@ function BAUInputs(p::REoptInputs)
         om_cost_per_kw["Generator"] = p.s.generator.om_cost_per_kw
         production_factor["Generator", :] = p.production_factor["Generator", :]
         fillin_techs_by_exportbin(techs_by_exportbin, p.s.generator, "Generator")
-        if "Generator" in p.pbi_techs
+        if "Generator" in p.techs.pbi
             push!(pbi_techs, "Generator")
         end
         if !p.s.generator.can_curtail
-            push!(techs_no_curtail, "Generator")
+            push!(techs.no_curtail, "Generator")
         end
     end
 
+    if "ExistingBoiler" in techs.all
+        setup_existing_boiler_inputs(bau_scenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency)
+    end
+
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
-    for t in elec_techs
+    for t in techs.elec
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
     end
 
@@ -129,13 +120,6 @@ function BAUInputs(p::REoptInputs)
     REoptInputs(
         bau_scenario,
         techs,
-        pvtechs,
-        gentechs,
-        elec_techs,
-        segmented_techs,
-        pbi_techs,
-        techs_no_turndown,
-        techs_no_curtail,
         min_sizes,
         max_sizes,
         existing_sizes,
@@ -151,6 +135,7 @@ function BAUInputs(p::REoptInputs)
         p.value_of_lost_load_per_kwh,
         p.pwf_e,
         p.pwf_om,
+        p.pwf_fuel,
         p.third_party_factor,
         p.pvlocations,
         p.maxsize_pv_locations,
@@ -165,7 +150,8 @@ function BAUInputs(p::REoptInputs)
         p.pbi_pwf, 
         p.pbi_max_benefit, 
         p.pbi_max_kw, 
-        p.pbi_benefit_per_kwh
+        p.pbi_benefit_per_kwh,
+        boiler_efficiency
     )
 end
 

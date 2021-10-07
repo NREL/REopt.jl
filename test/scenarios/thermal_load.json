@@ -1,0 +1,31 @@
+{
+    "Site": {
+        "latitude": 37.78, 
+        "longitude": -122.45
+    },
+    "Financial": {
+        "om_cost_escalation_pct": 0.01,
+        "elec_cost_escalation_pct": 0.006,
+        "offtaker_discount_pct": 0.07,
+        "analysis_years": 25,
+        "offtaker_tax_pct": 0.0
+    },
+    "ElectricLoad": {
+        "doe_reference_name": "Hospital"
+    },
+    "ElectricTariff": {
+        "blended_annual_energy_rate": 0.06,
+        "blended_annual_demand_rate": 0.0
+    },
+    "SpaceHeatingLoad": {
+        "doe_reference_name": "LargeOffice"
+    },
+    "DomesticHotWaterLoad": {
+        "doe_reference_name": "LargeOffice"
+    },
+    "ExistingBoiler": {
+        "fuel_cost_per_mmbtu": [11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11],
+        "efficiency": 0.8,
+        "production_type": "steam"
+    }
+}

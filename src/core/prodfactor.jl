@@ -30,8 +30,8 @@
 
 function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly")
 
-    if !(ismissing(pv.prod_factor_series_kw))
-        return pv.prod_factor_series_kw
+    if !(ismissing(pv.prod_factor_series))
+        return pv.prod_factor_series
     end
 
     url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
@@ -69,15 +69,15 @@ end
 """
     prodfactor(wind::Wind, latitude::Real, longitude::Real)
 
-If the user does not provide their own prod_factor_series_kw for the Wind turbine, then this method creates
+If the user does not provide their own prod_factor_series for the Wind turbine, then this method creates
 a production factor time-series using resource data and the System Advisor Model Wind module.
 If the user does not provide the resource data, the latitude and longitude are used to get the resource data from the
 Wind Toolkit.
 """
 function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_hour::Int)
 
-    if !(ismissing(wind.prod_factor_series_kw))
-        return wind.prod_factor_series_kw
+    if !(ismissing(wind.prod_factor_series))
+        return wind.prod_factor_series
     end
 
     resources = []
@@ -179,7 +179,7 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
             libfile = "ssc.dll"
         else
             @error """Unsupported platform for using the SAM Wind module. 
-                      You can alternatively provide the Wind.prod_factor_series_kw"""
+                      You can alternatively provide the Wind.prod_factor_series"""
         end
 
         global hdl = joinpath(dirname(@__FILE__), "..", "sam", libfile)
