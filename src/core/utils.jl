@@ -161,7 +161,7 @@ function dictkeys_tosymbols(d::Dict)
         if k in [
             "loads_kw", "critical_loads_kw",
             "monthly_totals_kwh",
-            "prod_factor_series_kw", 
+            "prod_factor_series", 
             "monthly_energy_rates", "monthly_demand_rates",
             "wholesale_rate", "blended_doe_reference_percents",
             "coincident_peak_load_charge_per_kw", "fuel_cost_per_mmbtu"

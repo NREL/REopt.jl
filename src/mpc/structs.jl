@@ -59,14 +59,14 @@ end
 Base.@kwdef struct MPCPV
     name::String="PV"
     size_kw::Real = 0
-    prod_factor_series_kw::Union{Missing, Array{Real,1}} = missing
+    prod_factor_series::Union{Missing, Array{Real,1}} = missing
 end
 ```
 """
 Base.@kwdef struct MPCPV
     name::String="PV"
     size_kw::Real = 0
-    prod_factor_series_kw::Union{Missing, Array{Real,1}} = missing
+    prod_factor_series::Union{Missing, Array{Real,1}} = missing
 end
 
 
