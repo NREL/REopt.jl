@@ -1,5 +1,8 @@
 # REoptLite Changelog
 
+## dev
+- add ExistingBoiler and CRB heating loads
+
 ## v0.12.0
 - change all output keys starting with "total_" or "net_" to "lifecycle_" (except "net_present_cost")
 - bug fix in urdb.jl when rate_name not found
