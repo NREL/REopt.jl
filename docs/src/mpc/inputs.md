@@ -36,14 +36,14 @@ The simplest scenario does not have any dispatch optimization and is essentially
 }
 ```
 !!! note
-    The `ElectricLoad.loads_kw` can have an arbitrary length, but its length must be the same lengths as many other inputs such as the `MPCElectricTariff.energy_rates` and the `PV.prod_factor_series_kw`.
+    The `ElectricLoad.loads_kw` can have an arbitrary length, but its length must be the same lengths as many other inputs such as the `MPCElectricTariff.energy_rates` and the `PV.prod_factor_series`.
 
 Here is a more complex `MPCScenario`, which is used in [MPC Examples](@ref):
 ```javascript
 {
     "PV": {
         "size_kw": 150,
-        "prod_factor_series_kw": [
+        "prod_factor_series": [
             0.0,
             0.0,
             0.0,
