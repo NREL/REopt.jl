@@ -176,13 +176,21 @@ function Scenario(d::Dict)
     end
 
     if max_heat_demand_kw > 0
-        vals = Dict{Symbol, Any}()
-        vals[:max_heat_demand_kw] = max_heat_demand_kw
-        vals[:time_steps_per_hour] = settings.time_steps_per_hour
-        if haskey(d, "ExistingBoiler")
-            vals = merge(vals, dictkeys_tosymbols(d["ExistingBoiler"]))
+        boiler_inputs = Dict{Symbol, Any}()
+        boiler_inputs[:max_heat_demand_kw] = max_heat_demand_kw
+        boiler_inputs[:time_steps_per_hour] = settings.time_steps_per_hour
+
+        if haskey(d, "CHP")
+            chp = CHP(; dictkeys_tosymbols(d["CHP"])...)
+            if haskey(d["CHP"], "prime_mover")
+                boiler_inputs[:chp_prime_mover] = d["CHP"]["prime_mover"]
+            end
         end
-        existing_boiler = ExistingBoiler(; vals...)
+
+        if haskey(d, "ExistingBoiler")
+            boiler_inputs = merge(boiler_inputs, dictkeys_tosymbols(d["ExistingBoiler"]))
+        end
+        existing_boiler = ExistingBoiler(; boiler_inputs...)
     else
         existing_boiler = ExistingBoiler(0.0, 0.0, Real[])
     end

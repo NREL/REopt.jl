@@ -45,6 +45,14 @@ using Xpress
 
     @test round(results["ExistingBoiler"]["year_one_boiler_fuel_consumption_mmbtu"], digits=0) ≈ 8760
 end
+
+@testset "CHP" begin
+    data = JSON.parsefile("./scenarios/thermal_load.json")
+    data["CHP"] = Dict("prime_mover" => "recip_engine")
+    s = Scenario(data)
+end
+
+
 #=
 add a time-of-export rate that is greater than retail rate for the month of January,
 check to make sure that PV does NOT export unless the site load is met first for the month of January.
