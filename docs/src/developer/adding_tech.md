@@ -94,7 +94,7 @@ which uses the model `m` and the `REoptInputs` `p` to add results to the diction
     The `_n` argument is used in many places in REopt to optionally modeled multinode scenarios. The default value for `_n` is an empty string. When modeling multiple nodes the `n` in the `_n` string is set to the `Site.node` value, which is an integer. For example, if the `Site.node` is `3` then `_n = "_3"`.
 
 ## 5. Testing the new technology
-Adding a new test is not necessarily the last step in adding a technology to the REopt model. In fact, it is best to use a simple test to test your code as you add the new technolgy and then adapt the test as you add more capability to the code. For example, once you have created you new technology's input interface you can test just creating a `Scenario` with the new technology by passing the path to a JSON file that contains the minimum required inputs for your new technology. This might look like:
+Adding a new test is not necessarily the last step in adding a technology to the REopt model. In fact, it is best to use a simple test to test your code as you add the new technolgy and then adapt the test as you add more capability to the code. For example, once you have created you new technology's input interface you can test just creating a `Scenario` with the new technology by passing the path to a JSON file that contains the minimum required inputs for a Scenario and your new technology. This might look like:
 ```julia
 @testset "My new technology" begin
     s = Scenario("path/to/mynewtech.json")
