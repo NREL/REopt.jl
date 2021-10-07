@@ -1,7 +1,7 @@
 {
     "PV": {
         "size_kw": 150,
-        "prod_factor_series_kw": [
+        "prod_factor_series": [
             0.0,
             0.0,
             0.0,
