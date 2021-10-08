@@ -136,20 +136,23 @@ function CHP(;
     # emissions_factor_lb_CO2_per_mmbtu::Float64,
 )
     # Must provide prime_mover or all of custom_chp_inputs
-    custom_chp_inputs = [
-        installed_cost_per_kw, tech_size_for_cost_curve, om_cost_per_kwh, elec_effic_full_load, 
-        elec_effic_half_load, min_turn_down_pct, thermal_effic_full_load, thermal_effic_half_load,
-         min_allowable_kw, max_kw, cooling_thermal_factor
-    ]
-    custom_chp_inputs_strings = [
-        "installed_cost_per_kw", "tech_size_for_cost_curve", "om_cost_per_kwh", "elec_effic_full_load", 
-        "elec_effic_half_load", "min_turn_down_pct", "thermal_effic_full_load", "thermal_effic_half_load", 
-        "min_allowable_kw", "max_kw", "cooling_thermal_factor"
-    ]
+    custom_chp_inputs = Dict{Symbol, Any}(
+        :installed_cost_per_kw => installed_cost_per_kw, 
+        :tech_size_for_cost_curve => tech_size_for_cost_curve, 
+        :om_cost_per_kwh => om_cost_per_kwh, 
+        :elec_effic_full_load => elec_effic_full_load, 
+        :elec_effic_half_load => elec_effic_half_load, 
+        :min_turn_down_pct => min_turn_down_pct, 
+        :thermal_effic_full_load => thermal_effic_full_load, 
+        :thermal_effic_half_load => thermal_effic_half_load,
+        :min_allowable_kw => min_allowable_kw, 
+        :max_kw => max_kw, 
+        :cooling_thermal_factor => cooling_thermal_factor
+    )
 
     if isempty(prime_mover)
-        if any(isnan(v) for v in custom_chp_inputs) || isempty(unavailability_periods)
-            @error "To model CHP you must provide at least `prime_mover` from $(prime_movers) or all of $(custom_chp_inputs_strings) and unavailability_periods."
+        if any(isnan(v) for v in values(custom_chp_inputs)) || isempty(unavailability_periods)
+            @error "To model CHP you must provide at least `prime_mover` from $(prime_movers) or all of $([string(k) for k in keys(custom_chp_inputs)]) and unavailability_periods."
         end
     elseif !(isempty(prime_mover))
         @assert prime_mover in prime_movers
@@ -159,11 +162,11 @@ function CHP(;
             boiler_type = "hot_water"
         end
         # set all missing default values in custom_chp_inputs
-        if any(isnan(v) for v in custom_chp_inputs) || isempty(unavailability_periods)
+        if any(isnan(v) for v in values(custom_chp_inputs)) || isempty(unavailability_periods)
             defaults = get_prime_mover_defaults(prime_mover, boiler_type, size_class)
-            for (v,k) in zip(custom_chp_inputs, custom_chp_inputs_strings)
+            for (k,v) in custom_chp_inputs
                 if isnan(v)
-                    v = defaults[k]
+                    custom_chp_inputs[k] = defaults[string(k)]
                 end
             end
             if isempty(unavailability_periods)
@@ -172,20 +175,19 @@ function CHP(;
         end
     end
 
-
     CHP(
         prime_mover,
-        installed_cost_per_kw,
-        tech_size_for_cost_curve,
-        om_cost_per_kwh,
-        elec_effic_half_load,
-        elec_effic_full_load,
-        min_turn_down_pct,
-        thermal_effic_full_load,
-        thermal_effic_half_load,
-        min_allowable_kw,
-        max_kw,
-        cooling_thermal_factor, 
+        custom_chp_inputs[:installed_cost_per_kw],
+        custom_chp_inputs[:tech_size_for_cost_curve],
+        custom_chp_inputs[:om_cost_per_kwh],
+        custom_chp_inputs[:elec_effic_half_load],
+        custom_chp_inputs[:elec_effic_full_load],
+        custom_chp_inputs[:min_turn_down_pct],
+        custom_chp_inputs[:thermal_effic_full_load],
+        custom_chp_inputs[:thermal_effic_half_load],
+        custom_chp_inputs[:min_allowable_kw],
+        custom_chp_inputs[:max_kw],
+        custom_chp_inputs[:cooling_thermal_factor], 
         unavailability_periods,
     
         size_class,
@@ -257,11 +259,17 @@ function get_prime_mover_defaults(prime_mover::String, boiler_type::String, size
         if key in ["thermal_effic_full_load", "thermal_effic_half_load"]
             prime_mover_defaults[key] = pmds[prime_mover][key][boiler_type][size_class]
         elseif key == "unavailability_periods"
-            prime_mover_defaults[key] = pmds[prime_mover][key]
+            prime_mover_defaults[key] = convert(Vector{Dict}, pmds[prime_mover][key])
         else
             prime_mover_defaults[key] = pmds[prime_mover][key][size_class]
         end
     end
     pmds = nothing
+
+    for (k,v) in prime_mover_defaults
+        if typeof(v) <: AbstractVector{Any} && k != "unavailability_periods"
+            prime_mover_defaults[k] = convert(Vector{Float64}, v)  # JSON.parsefile makes things Vector{Any}
+        end
+    end
     return prime_mover_defaults
 end
