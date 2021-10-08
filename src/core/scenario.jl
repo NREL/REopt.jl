@@ -41,6 +41,7 @@ struct Scenario <: AbstractScenario
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
     existing_boiler::ExistingBoiler
+    chp::Union{CHP, Nothing}  # use nothing for more items when they are not modeled?
 end
 
 """
@@ -175,6 +176,7 @@ function Scenario(d::Dict)
         space_heating_load = SpaceHeatingLoad(; fuel_loads_mmbtu_per_hour=repeat([0.0], 8760))
     end
 
+    chp = nothing
     if max_heat_demand_kw > 0
         boiler_inputs = Dict{Symbol, Any}()
         boiler_inputs[:max_heat_demand_kw] = max_heat_demand_kw
@@ -208,7 +210,8 @@ function Scenario(d::Dict)
         generator,
         dhw_load,
         space_heating_load,
-        existing_boiler
+        existing_boiler,
+        chp
     )
 end
 
