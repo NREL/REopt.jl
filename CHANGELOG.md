@@ -1,5 +1,8 @@
 # REoptLite Changelog
 
+## dev
+- add ExistingBoiler and CRB heating loads
+
 ## v0.12.0
 - change all output keys starting with "total_" or "net_" to "lifecycle_" (except "net_present_cost")
 - bug fix in urdb.jl when rate_name not found
@@ -51,7 +54,7 @@
 
 ## v0.7.2
 #### Improvements
-- add PV.prod_factor_series_kw input (can skip PVWatts call)
+- add PV.prod_factor_series input (can skip PVWatts call)
 - add `run_mpc` capability, which dispatches DER for minimum energy cost over an arbitrary time horizon
 
 ## v0.7.1

@@ -57,7 +57,7 @@ Any new technology should have a `technologyname.jl` file in the `src/core` dire
 
 When adding a new technology to REopt one must decide on how a user of the REopt will define the technology. Continuing with the `PV` example we saw that we need to define the `production_factor` for the `PV` technology in every time step. The `production_factor` varies from zero to one and defines the availability of the technology. For `PV` we have a default method for creating the `production_factor` as well as allow the user to provide their own `production_factor`.
 
-We let the user define the `production_factor` by providing the `PV`s `prod_factor_series_kw` input in their JSON file or dictionary when creating their [Scenario](@ref). If the user does not provide a value for `prod_factor_series_kw` then we use the PVWatts API to get a `production_factor` based on the `Site.latitude` and `Site.longitude`. The [PV](@ref) inputs structure also allows the user to change the arguments that are passed to PVWatts.
+We let the user define the `production_factor` by providing the `PV`s `prod_factor_series` input in their JSON file or dictionary when creating their [Scenario](@ref). If the user does not provide a value for `prod_factor_series` then we use the PVWatts API to get a `production_factor` based on the `Site.latitude` and `Site.longitude`. The [PV](@ref) inputs structure also allows the user to change the arguments that are passed to PVWatts.
 
 
 ## 3. REopt Inputs
@@ -94,7 +94,7 @@ which uses the model `m` and the `REoptInputs` `p` to add results to the diction
     The `_n` argument is used in many places in REopt to optionally modeled multinode scenarios. The default value for `_n` is an empty string. When modeling multiple nodes the `n` in the `_n` string is set to the `Site.node` value, which is an integer. For example, if the `Site.node` is `3` then `_n = "_3"`.
 
 ## 5. Testing the new technology
-Adding a new test is not necessarily the last step in adding a technology to the REopt model. In fact, it is best to use a simple test to test your code as you add the new technolgy and then adapt the test as you add more capability to the code. For example, once you have created you new technology's input interface you can test just creating a `Scenario` with the new technology by passing the path to a JSON file that contains the minimum required inputs for your new technology. This might look like:
+Adding a new test is not necessarily the last step in adding a technology to the REopt model. In fact, it is best to use a simple test to test your code as you add the new technolgy and then adapt the test as you add more capability to the code. For example, once you have created you new technology's input interface you can test just creating a `Scenario` with the new technology by passing the path to a JSON file that contains the minimum required inputs for a Scenario and your new technology. This might look like:
 ```julia
 @testset "My new technology" begin
     s = Scenario("path/to/mynewtech.json")
