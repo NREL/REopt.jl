@@ -573,3 +573,64 @@ function parse_urdb_lookback_charges(d::Dict)
     end
     return reopt_lookback_months, lookback_percent, lookback_range
 end
+
+function get_subset_of_urdb(rate::URDBrate, t_start::Integer, t_end::Integer)::Dict
+    energy_rates = rate.energy_rates[t_start:t_end] # Just take the first tier until the model supports tiers
+    
+    # Export rates not presented in URDB, ignore
+
+    # For now, assume the demand rates from the month of t_start - later update this to mix demand charges based on time intervals with multiple months (is the model aware?)
+    month = month_of_hour(t_start)
+    print("Month ", month, "\n")
+    monthly_demand = rate.monthly_demand_rates[month:month]
+
+    # What if different months have different numbers of periods?
+    periods_per_month = floor(Int, size(rate.tou_demand_rates)[1] / 12)
+
+    start_index = periods_per_month * (month - 1) + 1
+    end_index = periods_per_month * month
+
+    print("start index ", start_index, "\n")
+    print("end_index ", end_index, "\n")
+
+    tou_demand = rate.tou_demand_rates[start_index:end_index]
+
+    function is_in_range(item::Integer)
+        return item >= t_start && item <= t_end
+    end
+
+    tou_rate_sched = []
+    i = start_index
+    while i <= end_index
+        rates_at_time = filter(is_in_range, rate.tou_demand_ratchet_timesteps[i])
+        rates_at_time = rates_at_time .- (t_start - 1)
+        push!(tou_rate_sched, rates_at_time)
+        i += 1
+    end
+
+    
+    results = Dict("energy_rates" => energy_rates, "monthly_demand_rates" => monthly_demand, 
+        "tou_demand_rates" => tou_demand, "tou_demand_timesteps" => tou_rate_sched)
+
+    return results
+end
+
+function month_of_hour(time::Integer)
+
+        # returns month number 1..12 given
+        #   time: hour index in year 1..8760
+        if (time < 0) return 0 end
+        if (time < 745) return 1 end
+        if (time < 1417) return 2 end
+        if (time < 2161) return 3 end
+        if (time < 2881) return 4 end
+        if (time < 3625) return 5 end
+        if (time < 4345) return 6 end
+        if (time < 5089) return 7 end
+        if (time < 5833) return 8 end
+        if (time < 6553) return 9 end
+        if (time < 7297) return 10 end
+        if (time < 8017) return 11 end
+        if (time < 8761) return 12 end
+        return 0;
+end

@@ -228,11 +228,11 @@ function get_batt_power_time_series(results::Dict{String, Any}, inverter_efficie
 end
 
 """
-function update_mpc_from_batt_stateful(batt::SAM_Battery, inputs::Dict{String, Any})::Dict{String, Any}
+function update_mpc_from_batt_stateful(batt::SAM_Battery, inputs::Dict)::Dict{String, Any}
 Use the SAM battery model to update the SOC and degraded capacity for the next MPC run
     Must run run_sam_battery prior to this function to populate required data in C structs
 """
-function update_mpc_from_batt_stateful(batt::SAM_Battery, inputs::Dict{String, Any})::Dict{String, Any}
+function update_mpc_from_batt_stateful(batt::SAM_Battery, inputs::Dict)::Dict{String, Any}
     Q_max = get_sam_battery_number(batt, "Q_max")
 
     if (Q_max == 0)
@@ -245,7 +245,9 @@ function update_mpc_from_batt_stateful(batt::SAM_Battery, inputs::Dict{String, A
 
     inputs["Storage"]["size_kwh"] = Q_max * nominal_voltage * 1e-3
     
-    inputs["Storage"]["soc_init_pct"] = get_sam_battery_number(batt, "SOC")
+    inputs["Storage"]["soc_init_pct"] = get_sam_battery_number(batt, "SOC") / 100.0
+
+    # TODO - track and update efficiency numbers
 
     return inputs
 end
