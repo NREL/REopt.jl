@@ -140,6 +140,9 @@ end
     r = run_mpc(model, "./scenarios/mpc.json")
     @test maximum(r["ElectricUtility"]["to_load_series_kw"][1:15]) <= 98.0 
     @test maximum(r["ElectricUtility"]["to_load_series_kw"][16:24]) <= 97.0
+    previous_peak_charges = 98 * 10 + 97 * 15
+    next_month_peak_charges = maximum(r["ElectricUtility"]["to_load_series_kw"][21:24]) * 12
+    @test r["ElectricTariff"]["demand_cost"] ≈ previous_peak_charges + next_month_peak_charges atol=0.01
     @test sum(r["PV"]["to_grid_series_kw"]) ≈ 0
 end
 

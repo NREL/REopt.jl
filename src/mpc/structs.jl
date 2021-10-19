@@ -138,10 +138,14 @@ Keys for `d` include:
 
     - array of arrays for integer time steps that the `monthly_demand_rates` apply to
     - default = [collect(1:length(energy_rates))]
+    - length must match the length of `monthly_demand_rates` because both are indexed by month
 
   - `monthly_previous_peak_demands`
 
     - default = [0]
+    - length must match the length of `monthly_demand_rates` because both are indexed by month
+        - NOTE: when providing more than one month of `monthly_demand_rates` then the last value of 
+          `monthly_previous_peak_demands` will typically be zero (because the peak in the last month has not been set)
 
   - `tou_demand_rates`
 
