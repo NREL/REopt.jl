@@ -264,12 +264,13 @@ end
 Base.@kwdef struct MPCElecStorage
     size_kw::Float64
     size_kwh::Float64
-    charge_efficiency::Float64
-    discharge_efficiency::Float64
-    soc_min_pct::Float64
-    soc_init_pct::Float64
+    internal_efficiency_pct::Float64 = 0.975
+    inverter_efficiency_pct::Float64 = 0.96
+    rectifier_efficiency_pct::Float64 = 0.96
+    soc_min_pct::Float64 = 0.2
+    soc_init_pct::Float64 = 0.5
     can_grid_charge::Bool = true
-    grid_charge_efficiency::Float64
+    grid_charge_efficiency::Float64 = 0.96 * 0.975^0.5
 end
 
 
@@ -277,32 +278,38 @@ Base.@kwdef struct MPCStorage
     types::Array{Symbol,1} = [:elec]
     size_kw::Dict{Symbol, Float64}
     size_kwh::Dict{Symbol, Float64}
-    charge_efficiency::Dict{Symbol, Float64} = Dict(:elec => 0.96 * 0.975^2)
-    discharge_efficiency::Dict{Symbol, Float64} = Dict(:elec => 0.96 * 0.975^2)
+    charge_efficiency::Dict{Symbol, Float64} = Dict(:elec => 0.96 * 0.975^0.5)
+    discharge_efficiency::Dict{Symbol, Float64} = Dict(:elec => 0.96 * 0.975^0.5)
     soc_min_pct::Dict{Symbol, Float64} = Dict(:elec => 0.2)
     soc_init_pct::Dict{Symbol, Float64} = Dict(:elec => 0.5)
     can_grid_charge::Array{Symbol,1} = [:elec]
-    grid_charge_efficiency::Dict{Symbol, Float64} = Dict(:elec => 0.96 * 0.975^2)
+    grid_charge_efficiency::Dict{Symbol, Float64} = Dict(:elec => 0.96 * 0.975^0.5)
 end
 
 
 """
+    MPCStorage(d::Dict)
 
-NOTE: d must have symbolic keys
+Constructor for MPCElecStorage (no thermal technologies in MPC yet). Parses the user's inputs
+    into the MPCStorage struct
 """
 function MPCStorage(d::Dict)
-    d2 = Dict()
-    d2[:can_grid_charge] = get(d, :can_grid_charge, false) ? [:elec] : Symbol[]
-    if haskey(d, :can_grid_charge)
-        pop!(d, :can_grid_charge)
-    end
-    # have to convert to all d values to DenseAxisArray's with storage type as Axis
-    # (only modeling elec storage in MPC for now)
-    for (k,v) in d
-        d2[k] = Dict(:elec => convert(Float64, v))
-    end
+    elec_storage = MPCElecStorage(; dictkeys_tosymbols(d)...)
+    charge_efficiency =  elec_storage.rectifier_efficiency_pct * elec_storage.internal_efficiency_pct^0.5
+    discharge_efficiency = elec_storage.inverter_efficiency_pct * elec_storage.internal_efficiency_pct^0.5
+    
+    can_grid_charge = elec_storage.can_grid_charge ? [:elec] : Symbol[]
 
-    return MPCStorage(; d2...)
+    return MPCStorage(;
+        size_kw = Dict(:elec => elec_storage.size_kw),
+        size_kwh = Dict(:elec => elec_storage.size_kwh),
+        charge_efficiency = Dict(:elec => charge_efficiency),
+        discharge_efficiency = Dict(:elec => discharge_efficiency),
+        soc_min_pct = Dict(:elec => elec_storage.soc_min_pct),
+        soc_init_pct = Dict(:elec => elec_storage.soc_init_pct),
+        can_grid_charge = can_grid_charge,
+        grid_charge_efficiency = Dict(:elec => charge_efficiency)
+    )
 end
 
 
