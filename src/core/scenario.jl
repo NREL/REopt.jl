@@ -42,6 +42,7 @@ struct Scenario <: AbstractScenario
     space_heating_load::SpaceHeatingLoad
     existing_boiler::ExistingBoiler
     chp::Union{CHP, Nothing}  # use nothing for more items when they are not modeled?
+    flexible_hvac::Union{FlexibleHVAC, Nothing}
 end
 
 """
@@ -60,6 +61,8 @@ Constructor for Scenario struct, where `d` has upper-case keys:
 - DomesticHotWaterLoad (optional)
 - SpaceHeatingLoad (optional)
 - ExistingBoiler (optional)
+- CHP (optional)
+- FlexibleHVAC (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV`, which can be either a `Dict` or `Dict[]`.
 ```
@@ -77,6 +80,8 @@ struct Scenario
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
     existing_boiler::ExistingBoiler
+    chp::Union{CHP, Nothing}
+    flexible_hvac::Union{FlexibleHVAC, Nothing}
 end
 ```
 """
@@ -177,6 +182,7 @@ function Scenario(d::Dict)
     end
 
     chp = nothing
+    flexible_hvac = nothing
     if max_heat_demand_kw > 0
         boiler_inputs = Dict{Symbol, Any}()
         boiler_inputs[:max_heat_demand_kw] = max_heat_demand_kw
@@ -193,6 +199,10 @@ function Scenario(d::Dict)
             boiler_inputs = merge(boiler_inputs, dictkeys_tosymbols(d["ExistingBoiler"]))
         end
         existing_boiler = ExistingBoiler(; boiler_inputs...)
+
+        if haskey(d, "FlexibleHVAC")
+            flexible_hvac = FlexibleHVAC(; dictkeys_tosymbols(d["FlexibleHVAC"])...)
+        end
     else
         existing_boiler = ExistingBoiler(0.0, 0.0, Real[])
     end
@@ -211,7 +221,8 @@ function Scenario(d::Dict)
         dhw_load,
         space_heating_load,
         existing_boiler,
-        chp
+        chp,
+        flexible_hvac
     )
 end
 
