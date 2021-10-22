@@ -52,6 +52,23 @@ end
     s = Scenario(data)
 end
 
+@testset "FlexibleHVAC" begin
+    d = JSON.parsefile("./scenarios/thermal_load.json");
+    coefs = JSON.parsefile("./data/flex_hvac_data.json");
+    d["FlexibleHVAC"] = Dict(
+        "control_node" => 5,
+        "initial_temperatures" => repeat([22], 9),
+        "comfort_temperature_upper_bound" => 30.0,
+        "comfort_temperature_lower_bound" => 10.0,
+        "installed_cost" => 1000.0,
+    )
+    d["FlexibleHVAC"] = merge(d["FlexibleHVAC"], coefs);
+    s = Scenario(d);
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    p = REoptInputs(s);
+    build_reopt!(m, p)
+    
+end
 
 #=
 add a time-of-export rate that is greater than retail rate for the month of January,
