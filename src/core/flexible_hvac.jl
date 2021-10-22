@@ -56,7 +56,7 @@ function FlexibleHVAC(;
     =#
     A = Matrix(hcat(Vector{Float64}.(system_matrix)...))
     B = Matrix(hcat(Vector{Float64}.(input_matrix)...))
-    u = Matrix(hcat(Vector{Float64}.(exogenous_inputs)...))
+    u = Matrix(hcat(Vector{Float64}.(exogenous_inputs)...))'
     # TODO should the above Matrices be transposed? (What was the intended format in test_flexloads.py?)
     FlexibleHVAC(
         A,
