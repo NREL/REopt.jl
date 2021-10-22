@@ -69,4 +69,5 @@ mutable struct Techs
     boiler::Vector{String}
     fuel_burning::Vector{String}
     thermal::Vector{String}
+    flexible::Vector{String}
 end
