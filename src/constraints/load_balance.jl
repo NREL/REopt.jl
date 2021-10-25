@@ -99,10 +99,10 @@ end
 function add_thermal_load_constraints(m, p; _n="")
 
     dvSpaceHeatShiftkW = zeros(length(p.time_steps))
+    dvTemperature = nothing
     if !isempty(p.techs.flexible)
         dvSpaceHeatShiftkW = @variable(m, [p.time_steps])
-        N = size(p.s.flexible_hvac.system_matrix, 1)
-        J = size(p.s.flexible_hvac.input_matrix, 2)
+        (N, J) = size(p.s.flexible_hvac.input_matrix)
         dvTemperature = @variable(m, [1:N, p.time_steps])
 
         #  cannot shift more than demand in any time step, and can only increase the demand up to the heating capacity
