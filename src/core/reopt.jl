@@ -195,6 +195,15 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	
         if !isempty(p.techs.gen)
             add_gen_constraints(m, p)
+            m[:TotalGenPerUnitProdOMCosts] = @expression(m, p.third_party_factor * p.pwf_om *
+                sum(p.om_cost_per_kwh["Generator"] * p.hours_per_timestep *
+                m[:dvRatedProduction][t, ts] for t in p.techs.gen, ts in p.time_steps)
+            )
+            m[:TotalPerUnitProdOMCosts] += m[:TotalGenPerUnitProdOMCosts]
+            m[:TotalGenFuelCosts] = @expression(m, p.pwf_e *
+                sum(m[:dvFuelUsage][t,ts] * p.s.generator.fuel_cost_per_gallon for t in p.techs.gen, ts in p.time_steps)
+            )
+            m[:TotalFuelCosts] += m[:TotalGenFuelCosts]
         end
 
         if !isempty(p.techs.chp)
