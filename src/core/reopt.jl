@@ -181,6 +181,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	add_production_constraints(m, p)
 
     m[:TotalPerUnitProdOMCosts] = 0.0
+    m[:TotalPerUnitHourOMCosts] = 0.0
     m[:TotalFuelCosts] = 0.0
     m[:TotalProductionIncentive] = 0
 
@@ -193,14 +194,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	
         if !isempty(p.techs.gen)
             add_gen_constraints(m, p)
-            m[:TotalPerUnitProdOMCosts] = @expression(m, p.third_party_factor * p.pwf_om *
-                sum(p.s.generator.om_cost_per_kwh * p.hours_per_timestep *
-                m[:dvRatedProduction][t, ts] for t in p.techs.gen, ts in p.time_steps)
-            )
-            m[:TotalGenFuelCosts] = @expression(m, p.pwf_e *
-                sum(m[:dvFuelUsage][t,ts] * p.s.generator.fuel_cost_per_gallon for t in p.techs.gen, ts in p.time_steps)
-            )
-            m[:TotalFuelCosts] += m[:TotalGenFuelCosts]
+        end
+
+        if !isempty(p.techs.chp)
+            add_chp_constraints(m, p)
         end
 
         if !isempty(p.techs.boiler)
@@ -254,10 +251,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         @warn "adding binary variable(s) to model cost curves"
         add_cost_curve_vars_and_constraints(m, p)
         for t in p.techs.segmented  # cannot have this for statement in sum( ... for t in ...) ???
-           TotalTechCapCosts += p.third_party_factor * (
+           add_to_expression!(TotalTechCapCosts, p.third_party_factor * (
                 sum(p.cap_cost_slope[t][s] * m[Symbol("dvSegmentSystemSize"*t)][s] + 
-                    p.seg_yint[t][s] * m[Symbol("binSegment"*t)][s] for s in p.n_segs_by_tech[t])
-            )
+                    p.seg_yint[t][s] * m[Symbol("binSegment"*t)][s] for s in 1:p.n_segs_by_tech[t])
+            ))
         end
     end
 	
@@ -305,7 +302,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		TotalPerUnitSizeOMCosts * (1 - p.s.financial.owner_tax_pct) +
 
 		# Variable O&M, tax deductible for owner
-		m[:TotalPerUnitProdOMCosts] * (1 - p.s.financial.owner_tax_pct) +
+		(m[:TotalPerUnitProdOMCosts] + m[:TotalPerUnitHourOMCosts]) * (1 - p.s.financial.owner_tax_pct) +
 
 		# Total Fuel Costs, tax deductible for offtaker
         m[:TotalFuelCosts] * (1 - p.s.financial.offtaker_tax_pct) +
