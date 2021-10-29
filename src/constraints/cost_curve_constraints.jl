@@ -61,7 +61,6 @@ In this fashion only technologies with more than one cost curve segment, and onl
 modeled using the following binary variables and constraints.
 """
 function add_cost_curve_vars_and_constraints(m, p; _n="")
-
     for t in p.techs.segmented
         dv = "dvSegmentSystemSize" * t
         m[Symbol(dv)] = @variable(m, [1:p.n_segs_by_tech[t]], base_name=dv, lower_bound=0)
@@ -71,7 +70,7 @@ function add_cost_curve_vars_and_constraints(m, p; _n="")
     end
 
     ##Constraint (7f)-1: Minimum segment size
-        @constraint(m, SegmentSizeMinCon[t in p.techs.segmented, s in 1:p.n_segs_by_tech[t]],
+    @constraint(m, SegmentSizeMinCon[t in p.techs.segmented, s in 1:p.n_segs_by_tech[t]],
         m[Symbol("dvSegmentSystemSize"*t)][s] >= p.seg_min_size[t][s] * m[Symbol("binSegment"*t)][s]
     )
 
