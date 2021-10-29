@@ -308,3 +308,10 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
     end
     return normalized_prod_factor
 end
+
+function prodfactor(chp::AbstractCHP, ts_per_hour::Int=1)
+    # TODO apply CHP unavailability_periods to prodfactor    
+    # Copy function(s) from utilities.py
+    return ones(8760 * ts_per_hour)
+end
+
