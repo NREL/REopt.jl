@@ -28,6 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 using Xpress
+include("../src/core/utils.jl")
 
 @testset "Thermal loads" begin
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
@@ -47,9 +48,72 @@ using Xpress
 end
 
 @testset "CHP" begin
-    data = JSON.parsefile("./scenarios/thermal_load.json")
-    data["CHP"] = Dict("prime_mover" => "recip_engine")
-    s = Scenario(data)
+    data = JSON.parsefile("./scenarios/chp_sizing.json")
+    
+    #Sizing CHP with non-constant efficiency, no cost curve, no unavailability_periods
+    data_sizing = data
+    s = Scenario(data_sizing)
+    inputs = REoptInputs(s)
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+    results = run_reopt(m, inputs)
+
+    @test round(results["CHP"]["size_kw"], digits=0) ≈ 468.7 atol=1.0
+    @test round(results["Financial"]["lcc"], digits=0) ≈ 1.3476e7 atol=1.0e7
+
+    # Fixed size CHP with cost curve, no unavailability_periods
+    data_cost_curve = data
+    data_cost_curve["CHP"]["prime_mover"] = "recip_engine"
+    data_cost_curve["CHP"]["size_class"] = 2
+    data_cost_curve["CHP"]["min_kw"] = 800
+    data_cost_curve["CHP"]["max_kw"] = 800
+    data_cost_curve["CHP"]["installed_cost_per_kw"] = [2900.0, 2700.0, 2370.0]
+    data_cost_curve["CHP"]["tech_sizes_for_cost_curve"] = [100.0, 600.0, 1140.0]
+
+    data_cost_curve["CHP"]["federal_itc_pct"] = 0.1
+    data_cost_curve["CHP"]["macrs_option_years"] = 0
+    data_cost_curve["CHP"]["macrs_bonus_pct"] = 0.0
+    data_cost_curve["CHP"]["macrs_itc_reduction"] = 0.0
+
+    # init_capex = 600 * 2700 + (800 - 600) * slope, where
+    # slope = (1140 * 2370 - 600 * 2700) / (1140 - 600)
+    init_capex_chp_expected = 2020666.67
+    lifecycle_capex_chp_expected = init_capex_chp_expected - 
+        npv(data_cost_curve["Financial"]["offtaker_discount_pct"], 
+        [0, init_capex_chp_expected * data_cost_curve["CHP"]["federal_itc_pct"]])
+
+    #PV
+    data_cost_curve["PV"]["min_kw"] = 1500
+    data_cost_curve["PV"]["max_kw"] = 1500
+    data_cost_curve["PV"]["installed_cost_per_kw"] = 1600
+    data_cost_curve["PV"]["federal_itc_pct"] = 0.26
+    data_cost_curve["PV"]["macrs_option_years"] = 0
+    data_cost_curve["PV"]["macrs_bonus_pct"] = 0.0
+    data_cost_curve["PV"]["macrs_itc_reduction"] = 0.0
+
+    init_capex_pv_expected = data_cost_curve["PV"]["max_kw"] * data_cost_curve["PV"]["installed_cost_per_kw"]
+    lifecycle_capex_pv_expected = init_capex_pv_expected - 
+        npv(data_cost_curve["Financial"]["offtaker_discount_pct"], 
+        [0, init_capex_pv_expected * data_cost_curve["PV"]["federal_itc_pct"]])
+
+    s = Scenario(data_cost_curve)
+    inputs = REoptInputs(s)
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+    results = run_reopt(m, inputs)
+
+    open("chp_results.json","w") do f 
+        JSON.print(f, results) 
+    end
+
+    init_capex_total_expected = init_capex_chp_expected + init_capex_pv_expected
+    lifecycle_capex_total_expected = lifecycle_capex_chp_expected + lifecycle_capex_pv_expected
+
+    init_capex_total = results["Financial"]["initial_capital_costs"]
+    lifecycle_capex_total = results["Financial"]["initial_capital_costs_after_incentives"]
+
+
+    # # The values compared to the expected values may change if optimization parameters were changed
+    @test init_capex_total_expected ≈ init_capex_total atol=1.0
+    @test lifecycle_capex_total_expected ≈ lifecycle_capex_total atol=1.0
 end
 
 
