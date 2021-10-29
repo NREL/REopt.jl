@@ -180,6 +180,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 	add_production_constraints(m, p)
 
+    m[:TotalTechCapCosts] = 0.0
     m[:TotalPerUnitProdOMCosts] = 0.0
     m[:TotalPerUnitHourOMCosts] = 0.0
     m[:TotalFuelCosts] = 0.0
@@ -244,17 +245,19 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         add_coincident_peak_charge_constraints(m, p)
     end
 
-	@expression(m, TotalTechCapCosts, p.third_party_factor *
-		  sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in setdiff(p.techs.all, p.techs.segmented) )
-	)
+    if !isempty(setdiff(p.techs.all, p.techs.segmented))
+        m[:TotalTechCapCosts] += p.third_party_factor *
+            sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in setdiff(p.techs.all, p.techs.segmented))
+    end
+
     if !isempty(p.techs.segmented)
         @warn "adding binary variable(s) to model cost curves"
         add_cost_curve_vars_and_constraints(m, p)
         for t in p.techs.segmented  # cannot have this for statement in sum( ... for t in ...) ???
-           add_to_expression!(TotalTechCapCosts, p.third_party_factor * (
+            m[:TotalTechCapCosts] += p.third_party_factor * (
                 sum(p.cap_cost_slope[t][s] * m[Symbol("dvSegmentSystemSize"*t)][s] + 
                     p.seg_yint[t][s] * m[Symbol("binSegment"*t)][s] for s in 1:p.n_segs_by_tech[t])
-            ))
+            )
         end
     end
 	
@@ -296,7 +299,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	#################################  Objective Function   ########################################
 	@expression(m, Costs,
 		# Capital Costs
-		TotalTechCapCosts + TotalStorageCapCosts +
+		m[:TotalTechCapCosts] + TotalStorageCapCosts +
 
 		# Fixed O&M, tax deductible for owner
 		TotalPerUnitSizeOMCosts * (1 - p.s.financial.owner_tax_pct) +
