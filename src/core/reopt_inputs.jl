@@ -484,7 +484,8 @@ function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_sl
     )
     om_cost_per_kw["CHP"] = s.chp.om_cost_per_kw
     om_cost_per_kwh["CHP"] = s.chp.om_cost_per_kwh
-    production_factor["CHP", :] = prodfactor(s.chp)
+    production_factor["CHP", :] = prodfactor(s.chp, s.electric_load.year, s.electric_utility.outage_start_time_step, 
+        s.electric_utility.outage_end_time_step, s.settings.time_steps_per_hour)
     fillin_techs_by_exportbin(techs_by_exportbin, s.chp, "CHP")
     if !s.chp.can_curtail
         push!(techs_no_curtail, "CHP")

@@ -91,8 +91,8 @@ can_curtail::Bool = false
 Base.@kwdef mutable struct CHP <: AbstractCHP
     prime_mover::String = ""
     # following must be provided by user if not providing prime_mover
-    installed_cost_per_kw::Union{Float64, AbstractVector{Float64}} = []
-    tech_sizes_for_cost_curve::AbstractVector{Float64} = []
+    installed_cost_per_kw::Union{Float64, AbstractVector{Float64}} = Float64[]
+    tech_sizes_for_cost_curve::AbstractVector{Float64} = Float64[]
     om_cost_per_kwh::Float64 = NaN
     elec_effic_half_load = NaN
     elec_effic_full_load::Float64 = NaN
@@ -199,6 +199,8 @@ function CHP(d::Dict)
         for (k, v) in custom_chp_inputs
             if k in [:installed_cost_per_kw, :tech_sizes_for_cost_curve]
                 if update_installed_cost_params
+                    # println(string(k)*" = ", defaults[string(k)])
+                    # println("Type of "*string(k)*" = ", typeof(defaults[string(k)]))
                     setproperty!(chp, k, defaults[string(k)])
                 end
             elseif isnan(v)
