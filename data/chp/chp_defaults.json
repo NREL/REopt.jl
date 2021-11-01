@@ -26,7 +26,7 @@
         1430.0
       ]
     ],
-    "tech_size_for_cost_curve": [
+    "tech_sizes_for_cost_curve": [
       [
         30,
         9300
@@ -285,7 +285,7 @@
         2400.0
       ]
     ],
-    "tech_size_for_cost_curve": [
+    "tech_sizes_for_cost_curve": [
       [
         30,
         1290
@@ -496,7 +496,7 @@
         1474.0
       ]
     ],
-    "tech_size_for_cost_curve": [
+    "tech_sizes_for_cost_curve": [
       [
         950,
         20000
@@ -733,7 +733,7 @@
         3680.0
       ]
     ],
-    "tech_size_for_cost_curve": [
+    "tech_sizes_for_cost_curve": [
       [
         440,
         9300
