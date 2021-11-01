@@ -128,7 +128,7 @@ end
         7) Unavailability intervals that do not intersect with grid-outages result in no CHP production
     """
     # Sizing CHP with non-constant efficiency, no cost curve, no unavailability_periods
-    data = JSON.parsefile("./scenarios/chp_unavailability_resilience.json")
+    data = JSON.parsefile("./scenarios/chp_unavailability_outage.json")
 
     # Add unavailability periods that 1) intersect (ignored) and 2) don't intersect with outage period
     data["CHP"]["unavailability_periods"] = [Dict([("month", 1), ("start_week_of_month", 2),
