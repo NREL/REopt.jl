@@ -81,11 +81,16 @@ function add_cost_curve_vars_and_constraints(m, p; _n="")
 
     ##Constraint (7g):  Segments add up to system size
     @constraint(m, SegmentSizeAddCon[t in p.techs.segmented],
-        sum(m[Symbol("dvSegmentSystemSize"*t)][s] for s in 1:p.n_segs_by_tech[t]) == m[:dvPurchaseSize][t]
+        sum(m[Symbol("dvSegmentSystemSize"*t)][s] for s in 1:p.n_segs_by_tech[t]) == m[Symbol("dvPurchaseSize"*_n)][t]
     )
 
     ##Constraint (7h): At most one segment allowed
     @constraint(m, SegmentSelectCon[t in p.techs.segmented],
         sum(m[Symbol("binSegment"*t)][s] for s in 1:p.n_segs_by_tech[t]) <= 1
+    )
+
+    # Required for other constraints which are size-dependent; this is very similar to constraint in tech_constraints.jl, but has == instead of >=
+    @constraint(m, [t in p.techs.segmented],
+        m[Symbol("dvPurchaseSize"*_n)][t] == m[Symbol("dvSize"*_n)][t] - p.existing_sizes[t]
     )
 end

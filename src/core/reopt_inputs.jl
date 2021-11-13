@@ -328,7 +328,12 @@ function update_cost_curve!(tech::AbstractTech, tech_name::String, financial::Fi
     )
     cost_slope, cost_curve_bp_x, cost_yint, n_segments = cost_curve(tech, financial)
     cap_cost_slope[tech_name] = cost_slope[1]
-    if n_segments > 1
+    if isdefined(tech, :min_allowable_kw)
+        min_allowable_kw = tech.min_allowable_kw
+    else
+        min_allowable_kw = 0.0
+    end
+    if n_segments > 1 || (typeof(tech)==CHP && tech.min_allowable_kw > 0.0)
         cap_cost_slope[tech_name] = cost_slope
         push!(segmented_techs, tech_name)
         seg_max_size[tech_name] = Dict{Int,Float64}()
@@ -336,7 +341,7 @@ function update_cost_curve!(tech::AbstractTech, tech_name::String, financial::Fi
         n_segs_by_tech[tech_name] = n_segments
         seg_yint[tech_name] = Dict{Int,Float64}()
         for s in 1:n_segments
-            seg_min_size[tech_name][s] = cost_curve_bp_x[s]
+            seg_min_size[tech_name][s] = max(cost_curve_bp_x[s], min_allowable_kw)
             seg_max_size[tech_name][s] = cost_curve_bp_x[s+1]
             seg_yint[tech_name][s] = cost_yint[s]
         end
@@ -399,7 +404,7 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
         update_cost_curve!(pv, pv.name, s.financial,
             cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
         )
-        
+
         om_cost_per_kw[pv.name] = pv.om_cost_per_kw
         fillin_techs_by_exportbin(techs_by_exportbin, pv, pv.name)
 
