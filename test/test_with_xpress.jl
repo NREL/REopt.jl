@@ -59,24 +59,30 @@ end
     @test round(results["Financial"]["lcc"], digits=0) ≈ 1.3476e7 atol=1.0e7
 end
 
-@testset "CHP Cost Curve" begin
+@testset "CHP Cost Curve and Min Allowable Size" begin
     # Fixed size CHP with cost curve, no unavailability_periods
     data_cost_curve = JSON.parsefile("./scenarios/chp_sizing.json")
+    data_cost_curve["CHP"] = Dict()
     data_cost_curve["CHP"]["prime_mover"] = "recip_engine"
     data_cost_curve["CHP"]["size_class"] = 2
-    data_cost_curve["CHP"]["min_kw"] = 800
-    data_cost_curve["CHP"]["max_kw"] = 800
-    data_cost_curve["CHP"]["installed_cost_per_kw"] = [2900.0, 2700.0, 2370.0]
-    data_cost_curve["CHP"]["tech_sizes_for_cost_curve"] = [100.0, 600.0, 1140.0]
+    data_cost_curve["CHP"]["fuel_cost_per_mmbtu"] = 8.0
+    data_cost_curve["CHP"]["min_kw"] = 0
+    data_cost_curve["CHP"]["min_allowable_kw"] = 555.5
+    data_cost_curve["CHP"]["max_kw"] = 1000
+    data_cost_curve["CHP"]["installed_cost_per_kw"] = 1800.0
+    data_cost_curve["CHP"]["installed_cost_per_kw"] = [2300.0, 1800.0, 1500.0]
+    data_cost_curve["CHP"]["tech_sizes_for_cost_curve"] = [100.0, 300.0, 1140.0]
 
     data_cost_curve["CHP"]["federal_itc_pct"] = 0.1
     data_cost_curve["CHP"]["macrs_option_years"] = 0
     data_cost_curve["CHP"]["macrs_bonus_pct"] = 0.0
     data_cost_curve["CHP"]["macrs_itc_reduction"] = 0.0
 
-    # init_capex = 600 * 2700 + (800 - 600) * slope, where
-    # slope = (1140 * 2370 - 600 * 2700) / (1140 - 600)
-    init_capex_chp_expected = 2020666.67
+    expected_x = data_cost_curve["CHP"]["min_allowable_kw"]
+    cap_cost_y = data_cost_curve["CHP"]["installed_cost_per_kw"]
+    cap_cost_x = data_cost_curve["CHP"]["tech_sizes_for_cost_curve"]
+    slope = (cap_cost_x[3] * cap_cost_y[3] - cap_cost_x[2] * cap_cost_y[2]) / (cap_cost_x[3] - cap_cost_x[2])
+    init_capex_chp_expected = cap_cost_x[2] * cap_cost_y[2] + (expected_x - cap_cost_x[2]) * slope
     lifecycle_capex_chp_expected = init_capex_chp_expected - 
         npv(data_cost_curve["Financial"]["offtaker_discount_pct"], 
         [0, init_capex_chp_expected * data_cost_curve["CHP"]["federal_itc_pct"]])
@@ -111,9 +117,12 @@ end
     lifecycle_capex_total = results["Financial"]["initial_capital_costs_after_incentives"]
 
 
-    # The values compared to the expected values may change if optimization parameters were changed
-    @test init_capex_total_expected ≈ init_capex_total atol=1.0
-    @test lifecycle_capex_total_expected ≈ lifecycle_capex_total atol=1.0
+    # Check initial CapEx (pre-incentive/tax) and life cycle CapEx (post-incentive/tax) cost with expect
+    @test init_capex_total_expected ≈ init_capex_total atol=0.0001*init_capex_total_expected
+    @test lifecycle_capex_total_expected ≈ lifecycle_capex_total atol=0.0001*lifecycle_capex_total_expected
+
+    # Test CHP.min_allowable_kw - the size would otherwise be ~100 kW less by setting min_allowable_kw to zero
+    @test results["CHP"]["size_kw"] ≈ data_cost_curve["CHP"]["min_allowable_kw"] atol=0.1
 end
 
 @testset "CHP Unavailability and Outage" begin
