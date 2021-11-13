@@ -288,7 +288,7 @@ end
     """
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/incentives.json")
-    @test results["Financial"]["lcc"] ≈ 1.0968526e7 atol=5e4  
+    @test results["Financial"]["lcc"] ≈ 1.094596365e7 atol=5e4  
 end
 
 @testset verbose = true "Rate Structures" begin
