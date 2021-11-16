@@ -40,7 +40,6 @@ struct REoptInputs <: AbstractInputs
     existing_sizes::Dict{String, Float64}  # (techs)
     cap_cost_slope::Dict{String, Any}  # (techs)
     om_cost_per_kw::Dict{String, Float64}  # (techs)
-    om_cost_per_kwh::Dict{String, Float64}  # (techs)
     time_steps::UnitRange
     time_steps_with_grid::Array{Int, 1}
     time_steps_without_grid::Array{Int, 1}
@@ -78,7 +77,6 @@ struct REoptInputs <: AbstractInputs
     existing_sizes::Dict{String, Float64}  # (techs)
     cap_cost_slope::Dict{String, Any}  # (techs)
     om_cost_per_kw::Dict{String, Float64}  # (techs)
-    om_cost_per_kwh::Dict{String, Float64}  # (techs)
     time_steps::UnitRange
     time_steps_with_grid::Array{Int, 1}
     time_steps_without_grid::Array{Int, 1}
@@ -137,7 +135,7 @@ function REoptInputs(s::AbstractScenario)
     time_steps = 1:length(s.electric_load.loads_kw)
     hours_per_timestep = 1 / s.settings.time_steps_per_hour
     techs, pv_to_location, maxsize_pv_locations, pvlocations, 
-        production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, om_cost_per_kwh,
+        production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, 
         n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency = 
         setup_tech_inputs(s)
 
@@ -167,7 +165,6 @@ function REoptInputs(s::AbstractScenario)
         existing_sizes,
         cap_cost_slope,
         om_cost_per_kw,
-        om_cost_per_kwh,
         time_steps,
         time_steps_with_grid,
         time_steps_without_grid,
@@ -217,7 +214,6 @@ function setup_tech_inputs(s::AbstractScenario)
     existing_sizes = Dict(t => 0.0 for t in techs.all)
     cap_cost_slope = Dict{String, Any}()
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
-    om_cost_per_kwh = Dict(t => 0.0 for t in techs.all)
 
     # export related inputs
     techs_by_exportbin = Dict(k => [] for k in s.electric_tariff.export_bins)
@@ -247,7 +243,7 @@ function setup_tech_inputs(s::AbstractScenario)
     end
 
     if "Generator" in techs.all
-        setup_gen_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, om_cost_per_kwh, 
+        setup_gen_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, 
             production_factor, techs_by_exportbin, techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, 
             seg_yint, techs.no_curtail)
     end
@@ -257,7 +253,7 @@ function setup_tech_inputs(s::AbstractScenario)
     end
 
     if "CHP" in techs.all
-        setup_chp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, om_cost_per_kwh, 
+        setup_chp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, 
             production_factor, techs_by_exportbin, techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, 
             seg_yint, techs.no_curtail)  
     end
@@ -268,7 +264,7 @@ function setup_tech_inputs(s::AbstractScenario)
     end
 
     return techs, pv_to_location, maxsize_pv_locations, pvlocations, 
-    production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, om_cost_per_kwh,
+    production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, 
     n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency
 end
 
@@ -448,7 +444,7 @@ end
 
 
 function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes,
-    cap_cost_slope, om_cost_per_kw, om_cost_per_kwh, production_factor, techs_by_exportbin,
+    cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin,
     segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_no_curtail
     )
     max_sizes["Generator"] = s.generator.max_kw
@@ -458,7 +454,6 @@ function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_si
         cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
     )
     om_cost_per_kw["Generator"] = s.generator.om_cost_per_kw
-    om_cost_per_kwh["Generator"] = s.generator.om_cost_per_kwh
     production_factor["Generator", :] = prodfactor(s.generator)
     fillin_techs_by_exportbin(techs_by_exportbin, s.generator, "Generator")
     if !s.generator.can_curtail
@@ -478,7 +473,7 @@ function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes,
     return nothing
 end
 
-function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, om_cost_per_kwh, 
+function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw,  
     production_factor, techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint,
     techs_no_curtail
     )
@@ -488,7 +483,6 @@ function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_sl
         cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
     )
     om_cost_per_kw["CHP"] = s.chp.om_cost_per_kw
-    om_cost_per_kwh["CHP"] = s.chp.om_cost_per_kwh
     production_factor["CHP", :] = prodfactor(s.chp, s.electric_load.year, s.electric_utility.outage_start_time_step, 
         s.electric_utility.outage_end_time_step, s.settings.time_steps_per_hour)
     fillin_techs_by_exportbin(techs_by_exportbin, s.chp, "CHP")

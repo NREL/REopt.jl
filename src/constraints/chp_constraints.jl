@@ -40,9 +40,7 @@ function add_chp_fuel_burn_constraints(m, p; _n="")
                                                      "CHP.fuel_cost_per_mmbtu")
     m[:TotalCHPFuelCosts] = @expression(m, p.pwf_fuel["CHP"] *
         sum(m[:dvFuelUsage]["CHP", ts] * fuel_cost_series[ts] for ts in p.time_steps)
-        )
-    m[:TotalFuelCosts] += m[:TotalCHPFuelCosts]                                                
-
+    )      
     # Conditionally add dvFuelBurnYIntercept if coefficient p.FuelBurnYIntRate is greater than ~zero
     if fuel_burn_intercept > 1.0E-7
         dv = "dvFuelBurnYIntercept"*_n
@@ -89,29 +87,32 @@ function add_chp_thermal_production_constraints(m, p; _n="")
 
         #Constraint (2a-1): Upper Bounds on Thermal Production Y-Intercept
         @constraint(m, CHPYInt2a1Con[t in p.techs.chp, ts in p.time_steps],
-                    m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts] <= thermal_prod_intercept * m[Symbol("dvSize"*_n)][t]
-                    )
+            m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts] <= thermal_prod_intercept * m[Symbol("dvSize"*_n)][t]
+        )
         # Constraint (2a-2): Upper Bounds on Thermal Production Y-Intercept
         @constraint(m, CHPYInt2a2Con[t in p.techs.chp, ts in p.time_steps],
-                    m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts] <= thermal_prod_intercept * p.s.chp.max_kw * m[Symbol("binCHPIsOnInTS"*_n)][t,ts]
-                    )
+            m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts] <= thermal_prod_intercept * p.s.chp.max_kw 
+            * m[Symbol("binCHPIsOnInTS"*_n)][t,ts]
+        )
         #Constraint (2b): Lower Bounds on Thermal Production Y-Intercept
         @constraint(m, CHPYInt2bCon[t in p.techs.chp, ts in p.time_steps],
-                    m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts] >= thermal_prod_intercept * m[Symbol("dvSize"*_n)][t] - thermal_prod_intercept * p.s.chp.max_kw * (1 - m[Symbol("binCHPIsOnInTS"*_n)][t,ts])
-                    )
+            m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts] >= thermal_prod_intercept * m[Symbol("dvSize"*_n)][t] 
+            - thermal_prod_intercept * p.s.chp.max_kw * (1 - m[Symbol("binCHPIsOnInTS"*_n)][t,ts])
+        )
         # Constraint (2c): Thermal Production of CHP
         # Note: p.HotWaterAmbientFactor[t,ts] * p.HotWaterThermalFactor[t,ts] removed from this but present in math
         @constraint(m, CHPThermalProductionCon[t in p.techs.chp, ts in p.time_steps],
-                    m[Symbol("dvThermalProduction"*_n)][t,ts] ==
-                    thermal_prod_slope * p.production_factor[t,ts] * m[Symbol("dvRatedProduction"*_n)][t,ts] + m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts] #+
-                    #m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
-                    )
+            m[Symbol("dvThermalProduction"*_n)][t,ts] ==
+            thermal_prod_slope * p.production_factor[t,ts] * m[Symbol("dvRatedProduction"*_n)][t,ts] 
+            + m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts] #+
+            #m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
+        )
     else
         @constraint(m, CHPThermalProductionConLinear[t in p.techs.chp, ts in p.time_steps],
-                    m[Symbol("dvThermalProduction"*_n)][t,ts] ==
-                    thermal_prod_slope * p.production_factor[t,ts] * m[Symbol("dvRatedProduction"*_n)][t,ts] #+
-                    #m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
-                    )        
+            m[Symbol("dvThermalProduction"*_n)][t,ts] ==
+            thermal_prod_slope * p.production_factor[t,ts] * m[Symbol("dvRatedProduction"*_n)][t,ts] #+
+            #m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
+        )        
     end
     
     #TODO move this to another function, conditionally add under add_chp_constraints function
@@ -157,55 +158,67 @@ function add_chp_rated_prod_constraint(m, p; _n="")
     )
 end
 
+
+"""
+    add_chp_hourly_om_charges(m, p; _n="")
+
+- add decision variable "dvOMByHourBySizeCHP"*_n for the hourly CHP operations and maintenance costs
+- add the cost to TotalPerUnitHourOMCosts
+"""
 function add_chp_hourly_om_charges(m, p; _n="")
     dv = "dvOMByHourBySizeCHP"*_n
     m[Symbol(dv)] = @variable(m, [p.techs.chp, p.time_steps], base_name=dv, lower_bound=0)
 
     #Constraint CHP-hourly-om-a: om per hour, per time step >= per_unit_size_cost * size for when on, >= zero when off
 	@constraint(m, CHPHourlyOMBySizeA[t in p.techs.chp, ts in p.time_steps],
-					p.s.chp.om_cost_per_hr_per_kw_rated * m[Symbol("dvSize"*_n)][t] -
-					p.max_size[t] * p.s.chp.om_cost_per_hr_per_kw_rated * (1-m[Symbol("binCHPIsOnInTS"*_n)][t,ts])
-					   <= m[Symbol("dvOMByHourBySizeCHP"*_n)][t, ts]
-					)
+        p.s.chp.om_cost_per_hr_per_kw_rated * m[Symbol("dvSize"*_n)][t] -
+        p.max_size[t] * p.s.chp.om_cost_per_hr_per_kw_rated * (1-m[Symbol("binCHPIsOnInTS"*_n)][t,ts])
+            <= m[Symbol("dvOMByHourBySizeCHP"*_n)][t, ts]
+    )
 	#Constraint CHP-hourly-om-b: om per hour, per time step <= per_unit_size_cost * size for each hour
 	@constraint(m, CHPHourlyOMBySizeB[t in p.techs.chp, ts in p.time_steps],
-					p.s.chp.om_cost_per_hr_per_kw_rated * m[Symbol("dvSize"*_n)][t]
-					   >= m[Symbol("dvOMByHourBySizeCHP"*_n)][t, ts]
-					)
+        p.s.chp.om_cost_per_hr_per_kw_rated * m[Symbol("dvSize"*_n)][t]
+            >= m[Symbol("dvOMByHourBySizeCHP"*_n)][t, ts]
+    )
 	#Constraint CHP-hourly-om-c: om per hour, per time step <= zero when off, <= per_unit_size_cost*max_size
 	@constraint(m, CHPHourlyOMBySizeC[t in p.techs.chp, ts in p.time_steps],
-					p.max_size[t] * p.s.chp.om_cost_per_hr_per_kw_rated * m[Symbol("binCHPIsOnInTS"*_n)][t,ts]
-					   >= m[Symbol("dvOMByHourBySizeCHP"*_n)][t, ts]
-					)
+        p.max_size[t] * p.s.chp.om_cost_per_hr_per_kw_rated * m[Symbol("binCHPIsOnInTS"*_n)][t,ts]
+            >= m[Symbol("dvOMByHourBySizeCHP"*_n)][t, ts]
+    )
+    
+    m[:TotalHourlyCHPOMCosts] = @expression(m, p.third_party_factor * p.pwf_om * 
+    sum(m[Symbol(dv)][t, ts] * p.hours_per_timestep for t in p.techs.chp, ts in p.time_steps))
+    nothing
 end
 
 
-# Logic here to conditionally add constraints
+"""
+    add_chp_constraints(m, p; _n="")
+
+Used in src/reopt.jl to add_chp_constraints if !isempty(p.techs.chp) to add CHP operating constraints and 
+cost expressions.
+"""
 function add_chp_constraints(m, p; _n="")
     # TODO if chp.min_turn_down_pct is 0.0, and there is no fuel burn or thermal y-intercept, we don't need the binary below
     @warn """Adding binary variable to model CHP. 
                 Some solvers are very slow with integer variables"""
     @variables m begin
-        binCHPIsOnInTS[p.techs.chp, p.time_steps], Bin  # 1 If technology t is operating in time step h; 0 otherwise
+        binCHPIsOnInTS[p.techs.chp, p.time_steps], Bin  # 1 If technology t is operating in time step; 0 otherwise
 	end    
     
-    if p.s.chp.om_cost_per_hr_per_kw_rated > 1.0E-7
-        add_chp_hourly_om_charges(m, p)
-        m[:TotalHourlyCHPOMCosts] = @expression(m, p.third_party_factor * p.pwf_om * 
-            sum(m[:dvOMByHourBySizeCHP][t, ts] * p.hours_per_timestep for t in p.techs.chp, ts in p.time_steps))                
-        m[:TotalPerUnitHourOMCosts] += m[:TotalHourlyCHPOMCosts]
-    end
-    
+    m[:TotalHourlyCHPOMCosts] = 0
+    m[:TotalCHPFuelCosts] = 0
     m[:TotalCHPPerUnitProdOMCosts] = @expression(m, p.third_party_factor * p.pwf_om *
-        sum(p.om_cost_per_kwh["CHP"] * p.hours_per_timestep *
+        sum(p.s.chp.om_cost_per_kwh * p.hours_per_timestep *
         m[:dvRatedProduction][t, ts] for t in p.techs.chp, ts in p.time_steps)
     )
-    m[:TotalPerUnitProdOMCosts] += m[:TotalCHPPerUnitProdOMCosts]
+
+    if p.s.chp.om_cost_per_hr_per_kw_rated > 1.0E-7
+        add_chp_hourly_om_charges(m, p)
+    end
 
     add_chp_fuel_burn_constraints(m, p; _n=_n)
     add_chp_thermal_production_constraints(m, p; _n=_n)
     add_binCHPIsOnInTS_constraints(m, p; _n=_n)
     add_chp_rated_prod_constraint(m, p; _n=_n)
 end
-
-# Note, add_chp_hourly_om_charges is called conditionally in reopt.jl
