@@ -216,13 +216,6 @@ function CHP(d::Dict)
 end
 
 
-
-# make structs for all the prime movers and just attach the appropriate one to the CHP struct?
-# (use the values in API input_files/CHP/chp_default_data.json)
-# "thermal_effic_full_load", "thermal_effic_half_load" vary by boiler using hot water or steam
-# if not providing prime_mover then must provide:
-
-
 """
     get_prime_mover_defaults(prime_mover::String, boiler_type::String, size_class::Int)
 
