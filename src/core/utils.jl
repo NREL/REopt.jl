@@ -256,17 +256,15 @@ end
 """
 generate_year_profile_hourly(year::Int64, consecutive_periods::Dict[])
 
-This function creates a year-specific 8760 profile with 1.0 for timesteps which are defined in the relative_periods based on
-    generalized (non-year specific) datetime metrics. All other values are 0.0. This functions uses Dates packages/libraries.
+This function creates a year-specific hourly (8760) profile with 1.0 value for timesteps which are defined in `consecutive_periods` based on
+    relative (non-year specific) datetime metrics. All other values are 0.0. This functions uses the `Dates` package.
 
-:param year: year for applying consecutive_periods changes based on year and leap years (cut off 12/31/year)
-:param consecutive_periods: either list of dictionaries where each dict defines a period (keys = "month", "start_week_of_month", "start_day_of_week", "start_hour", "duration_hours"; length N periods)
-    **NOT YET:** OR can be a Pandas DataFrame with columns equivalent to the dict keys in which case it gets converted to list_of_dict. All of the value types are integers.
-:return year_profile_hourly: 8760 profile with 1.0 for timesteps defined in consecutive_periods, else 0.0.
-:return errors_list: used for validation - errors related to the input consecutive_periods and the year's calendar
+- `year` applies the relative calendar-based `consecutive_periods` to the year's calendar and handles leap years by truncating the last day
+- `consecutive_periods` is a list of dictionaries where each dict defines a consecutive period of time which gets a value of 1.0
+-- keys for each dict must include "month", "start_week_of_month", "start_day_of_week", "start_hour", "duration_hours
+- Returns the `year_profile_hourly` which is an 8760 profile with 1.0 for timesteps defined in consecutive_periods, and 0.0 for all other hours.
 """
 function generate_year_profile_hourly(year::Int64, consecutive_periods::AbstractVector{Dict})
-    errors_list = []
     # Create datetime series of the year, remove last day of the year if leap year
     if Dates.isleapyear(year)
         end_year_datetime = DateTime(string(year)*"-12-30T23:00:00")
@@ -277,11 +275,6 @@ function generate_year_profile_hourly(year::Int64, consecutive_periods::Abstract
     dt_hourly = collect(DateTime(string(year)*"-01-01T00:00:00"):Hour(1):end_year_datetime)
     
     year_profile_hourly = zeros(8760)
-    
-    # TODO allow DataFrame?
-    # Check if the consecutive_periods is a list_of_dict or other (must be Pandas DataFrame), and if other, convert to list_of_dict
-    # if not isinstance(consecutive_periods, list):
-    #     consecutive_periods = consecutive_periods.to_dict('records')
 
     # Note, day = 1 is Monday, not Sunday
     day_of_week_name = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
