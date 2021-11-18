@@ -106,10 +106,6 @@ end
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
     results = run_reopt(m, inputs)
 
-    open("chp_results.json","w") do f 
-        JSON.print(f, results) 
-    end
-
     init_capex_total_expected = init_capex_chp_expected + init_capex_pv_expected
     lifecycle_capex_total_expected = lifecycle_capex_chp_expected + lifecycle_capex_pv_expected
 
