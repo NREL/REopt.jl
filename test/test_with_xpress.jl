@@ -45,6 +45,7 @@ using Xpress
 
     @test round(results["ExistingBoiler"]["year_one_boiler_fuel_consumption_mmbtu"], digits=0) ≈ 8760
 end
+
 #=
 add a time-of-export rate that is greater than retail rate for the month of January,
 check to make sure that PV does NOT export unless the site load is met first for the month of January.
@@ -181,6 +182,15 @@ end
         results = run_reopt(model, "./scenarios/coincident_peak.json")
         @test results["ElectricTariff"]["year_one_coincident_peak_cost"] ≈ 15.0
         @test results["ElectricTariff"]["lifecycle_coincident_peak_cost"] ≈ 15.0 * 12.94887 atol=0.1
+    end
+
+    @testset "URDB sell rate" begin
+        #= The URDB contains at least one "Customer generation" tariff that only has a "sell" key in the energyratestructure (the tariff tested here)
+        =#
+        model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        p = REoptInputs("./scenarios/URDB_customer_generation.json")
+        results = run_reopt(model, p)
+        @test results["PV"]["size_kw"] = p.max_sizes["PV"]
     end
 
     # # tiered monthly demand rate  TODO: expected results?

@@ -57,6 +57,8 @@ struct URDBrate
     fixed_monthly_charge::Float64
     annual_min_charge::Float64
     min_monthly_charge::Float64
+
+    sell_rates::Array{Float64,2}  # time X tier
 end
 
 
@@ -98,7 +100,7 @@ function URDBrate(urdb_response::Dict, year::Int=2019; time_steps_per_hour=1)
       n_tou_demand_tiers, tou_demand_tier_limits, tou_demand_rates, tou_demand_ratchet_timesteps =
       parse_demand_rates(urdb_response, year)
 
-    energy_rates, energy_tier_limits, n_energy_tiers = parse_urdb_energy_costs(urdb_response, year)
+    energy_rates, energy_tier_limits, n_energy_tiers, sell_rates = parse_urdb_energy_costs(urdb_response, year)
 
     fixed_monthly_charge, annual_min_charge, min_monthly_charge = parse_urdb_fixed_charges(urdb_response)
 
@@ -126,6 +128,8 @@ function URDBrate(urdb_response::Dict, year::Int=2019; time_steps_per_hour=1)
         fixed_monthly_charge,
         annual_min_charge,
         min_monthly_charge,
+
+        sell_rates
     )
 end
 
@@ -240,15 +244,13 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
         # energy_tier is a dictionary, eg. {'max': 1000, 'rate': 0.07531, 'adj': 0.0119, 'unit': 'kWh'}
         energy_tier_max = get(energy_tier, "max", bigM)
 
-        if "rate" in keys(energy_tier) || "adj" in keys(energy_tier)
+        if "rate" in keys(energy_tier) || "adj" in keys(energy_tier)  || "sell" in keys(energy_tier)
             append!(energy_tier_limits_kwh, energy_tier_max)
         end
 
-        if "unit" in keys(energy_tier)
-            if string(energy_tier["unit"]) != "kWh"
-                @warn "Using average rate in tier due to exotic units of " energy_tier["unit"]
-                non_kwh_units = true
-            end
+        if "unit" in keys(energy_tier) && string(energy_tier["unit"]) != "kWh"
+            @warn "Using average rate in tier due to exotic units of " energy_tier["unit"]
+            non_kwh_units = true
         end
 
         append!(rates, get(energy_tier, "rate", 0) + get(energy_tier, "adj", 0))
@@ -261,6 +263,7 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
     end
 
     energy_cost_vector = Float64[]
+    sell_vector = Float64[]
 
     for tier in range(1, stop=n_energy_tiers)
 
@@ -292,16 +295,19 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
                         rate = get(d["energyratestructure"][period][tier_use], "rate", 0)
                     end
                     total_rate = rate + get(d["energyratestructure"][period][tier_use], "adj", 0)
+                    sell = get(d["energyratestructure"][period][tier_use], "sell", 0)
 
                     for step in range(1, stop=time_steps_per_hour)  # repeat hourly rates intrahour
                         append!(energy_cost_vector, round(total_rate, digits=6))
+                        append!(sell_vector, round(-sell, digits=6))
                     end
                 end
             end
         end
     end
     energy_rates = reshape(energy_cost_vector, (:, n_energy_tiers))
-    return energy_rates, energy_tier_limits_kwh, n_energy_tiers
+    sell_rates = reshape(sell_vector, (:, n_energy_tiers))
+    return energy_rates, energy_tier_limits_kwh, n_energy_tiers, sell_rates
 end
 
 
