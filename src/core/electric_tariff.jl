@@ -289,6 +289,9 @@ function ElectricTariff(;
     - user can provide either scalar wholesale rate or vector of timesteps, 
     =#
     whl_rate = create_export_rate(wholesale_rate, length(energy_rates), time_steps_per_hour)
+    if !isnothing(u) && sum(u.sell_rates) < 0
+        whl_rate += u.sell_rates
+    end
     exc_rate = create_export_rate(export_rate_beyond_net_metering_limit, length(energy_rates), time_steps_per_hour)
     
     if !NEM & (sum(whl_rate) >= 0)
@@ -365,10 +368,10 @@ end
 
 """
     function create_export_rate(e::Nothing, N::Int, ts_per_hour::Int=1)
-No export rate provided by user: set to 100 dollars/kWh for all time
+No export rate provided by user: set to 0 dollars/kWh for all time
 """
 function create_export_rate(e::Nothing, N::Int, ts_per_hour::Int=1)
-    [100 for _ in range(1, stop=N) for ts in 1:ts_per_hour]
+    [0 for _ in range(1, stop=N) for ts in 1:ts_per_hour]
 end
 
 
