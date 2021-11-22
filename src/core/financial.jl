@@ -35,6 +35,8 @@ Financial data struct with inner constructor:
 function Financial(;
     om_cost_escalation_pct::Float64 = 0.025,
     elec_cost_escalation_pct::Float64 = 0.023,
+    boiler_fuel_cost_escalation_pct::Float64
+    chp_fuel_cost_escalation_pct::Float64    
     offtaker_tax_pct::Float64 = 0.26,
     offtaker_discount_pct = 0.083,
     third_party_ownership::Bool = false,
@@ -61,6 +63,7 @@ struct Financial
     om_cost_escalation_pct::Float64
     elec_cost_escalation_pct::Float64
     boiler_fuel_cost_escalation_pct::Float64
+    chp_fuel_cost_escalation_pct::Float64
     offtaker_tax_pct::Float64
     offtaker_discount_pct
     third_party_ownership::Bool
@@ -76,6 +79,7 @@ struct Financial
         om_cost_escalation_pct::Float64 = 0.025,
         elec_cost_escalation_pct::Float64 = 0.023,
         boiler_fuel_cost_escalation_pct::Float64 = 0.034,
+        chp_fuel_cost_escalation_pct::Float64 = 0.034,
         offtaker_tax_pct::Float64 = 0.26,
         offtaker_discount_pct = 0.083,
         third_party_ownership::Bool = false,
@@ -96,6 +100,7 @@ struct Financial
             om_cost_escalation_pct,
             elec_cost_escalation_pct,
             boiler_fuel_cost_escalation_pct,
+            chp_fuel_cost_escalation_pct,
             offtaker_tax_pct,
             offtaker_discount_pct,
             third_party_ownership,

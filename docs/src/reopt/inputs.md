@@ -90,6 +90,11 @@ REoptLite.Wind
 REoptLite.Generator
 ```
 
+## CHP
+```@docs
+REoptLite.CHP
+```
+
 ## ElectricTariff
 ```@docs
 REoptLite.ElectricTariff
