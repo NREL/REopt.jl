@@ -130,7 +130,6 @@ else  # run Cbc tests
         model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
         results = run_reopt(model, "./scenarios/incentives.json")
         @test results["Financial"]["lcc"] ≈ 1.094596365e7 atol=1e4  
-        # The Cbc LCC is 1.7% higher than the Xpress LCC ? Probably due to integer issues in Cbc
     end
 
     @testset "Wind" begin

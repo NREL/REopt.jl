@@ -254,7 +254,7 @@ function per_hour_value_to_time_series(x::AbstractVector{<:Real}, time_steps_per
 end
 
 """
-generate_year_profile_hourly(year::Int64, consecutive_periods::Dict[])
+    generate_year_profile_hourly(year::Int64, consecutive_periods::AbstractVector{Dict})
 
 This function creates a year-specific hourly (8760) profile with 1.0 value for timesteps which are defined in `consecutive_periods` based on
     relative (non-year specific) datetime metrics. All other values are 0.0. This functions uses the `Dates` package.

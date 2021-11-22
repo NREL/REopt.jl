@@ -135,8 +135,8 @@ function REoptInputs(s::AbstractScenario)
     time_steps = 1:length(s.electric_load.loads_kw)
     hours_per_timestep = 1 / s.settings.time_steps_per_hour
     techs, pv_to_location, maxsize_pv_locations, pvlocations, 
-        production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, 
-        n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency = 
+        production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
+        seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency = 
         setup_tech_inputs(s)
 
     pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
@@ -243,8 +243,8 @@ function setup_tech_inputs(s::AbstractScenario)
     end
 
     if "Generator" in techs.all
-        setup_gen_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, 
-            production_factor, techs_by_exportbin, techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, 
+        setup_gen_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor, 
+            techs_by_exportbin, techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, 
             seg_yint, techs.no_curtail)
     end
 
@@ -264,8 +264,8 @@ function setup_tech_inputs(s::AbstractScenario)
     end
 
     return techs, pv_to_location, maxsize_pv_locations, pvlocations, 
-    production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, 
-    n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency
+    production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
+    seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency
 end
 
 
