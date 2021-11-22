@@ -33,6 +33,7 @@ abstract type AbstractGenerator <: AbstractTech end
 abstract type AbstractScenario end
 abstract type AbstractInputs end
 abstract type AbstractThermalTech <: AbstractGenerator end
+abstract type AbstractCHP <: AbstractTech end
 
 """
     Techs
@@ -53,6 +54,7 @@ mutable struct Techs
     boiler::Vector{String}
     fuel_burning::Vector{String}
     thermal::Vector{String}
+    chp::Vector{String}
 end
 ```
 """
@@ -69,4 +71,5 @@ mutable struct Techs
     boiler::Vector{String}
     fuel_burning::Vector{String}
     thermal::Vector{String}
+    chp::Vector{String}
 end

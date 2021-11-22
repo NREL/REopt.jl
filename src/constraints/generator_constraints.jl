@@ -73,10 +73,22 @@ function add_gen_rated_prod_constraint(m, p)
 end
 
 
-function add_gen_constraints(m, p)
+"""
+    add_gen_constraints(m, p)
 
+Add Generator operational constraints and cost expressions.
+"""
+function add_gen_constraints(m, p)
     add_fuel_burn_constraints(m,p)
     add_binGenIsOnInTS_constraints(m,p)
     add_gen_can_run_constraints(m,p)
     add_gen_rated_prod_constraint(m,p)
+
+    m[:TotalGenPerUnitProdOMCosts] = @expression(m, p.third_party_factor * p.pwf_om *
+        sum(p.s.generator.om_cost_per_kwh * p.hours_per_timestep *
+        m[:dvRatedProduction][t, ts] for t in p.techs.gen, ts in p.time_steps)
+    )
+    m[:TotalGenFuelCosts] = @expression(m, p.pwf_e *
+        sum(m[:dvFuelUsage][t,ts] * p.s.generator.fuel_cost_per_gallon for t in p.techs.gen, ts in p.time_steps)
+    )
 end
