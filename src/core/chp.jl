@@ -144,8 +144,7 @@ end
 
 
 function CHP(d::Dict)
-    dsymb = dictkeys_tosymbols(d)
-    chp = CHP(; dsymb...)
+    chp = CHP(; dictkeys_tosymbols(d)...)
 
     # Must provide prime_mover or all of custom_chp_inputs
     custom_chp_inputs = Dict{Symbol, Any}(
@@ -199,8 +198,6 @@ function CHP(d::Dict)
         for (k, v) in custom_chp_inputs
             if k in [:installed_cost_per_kw, :tech_sizes_for_cost_curve]
                 if update_installed_cost_params
-                    # println(string(k)*" = ", defaults[string(k)])
-                    # println("Type of "*string(k)*" = ", typeof(defaults[string(k)]))
                     setproperty!(chp, k, defaults[string(k)])
                 end
             elseif isnan(v)
