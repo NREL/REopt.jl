@@ -2,6 +2,8 @@
 
 ## dev
 - add ExistingBoiler and CRB heating loads
+- add CHP technology
+- add URDB "sell" value from `energyratestructure` to wholesale rate
 
 ## v0.12.0
 - change all output keys starting with "total_" or "net_" to "lifecycle_" (except "net_present_cost")
