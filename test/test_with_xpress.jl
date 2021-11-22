@@ -28,7 +28,6 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 using Xpress
-include("../src/core/utils.jl")
 
 @testset "Thermal loads" begin
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
@@ -84,7 +83,7 @@ end
     slope = (cap_cost_x[3] * cap_cost_y[3] - cap_cost_x[2] * cap_cost_y[2]) / (cap_cost_x[3] - cap_cost_x[2])
     init_capex_chp_expected = cap_cost_x[2] * cap_cost_y[2] + (expected_x - cap_cost_x[2]) * slope
     lifecycle_capex_chp_expected = init_capex_chp_expected - 
-        npv(data_cost_curve["Financial"]["offtaker_discount_pct"], 
+        REoptLite.npv(data_cost_curve["Financial"]["offtaker_discount_pct"], 
         [0, init_capex_chp_expected * data_cost_curve["CHP"]["federal_itc_pct"]])
 
     #PV
@@ -98,7 +97,7 @@ end
 
     init_capex_pv_expected = data_cost_curve["PV"]["max_kw"] * data_cost_curve["PV"]["installed_cost_per_kw"]
     lifecycle_capex_pv_expected = init_capex_pv_expected - 
-        npv(data_cost_curve["Financial"]["offtaker_discount_pct"], 
+        REoptLite.npv(data_cost_curve["Financial"]["offtaker_discount_pct"], 
         [0, init_capex_pv_expected * data_cost_curve["PV"]["federal_itc_pct"]])
 
     s = Scenario(data_cost_curve)
