@@ -324,12 +324,11 @@ function update_cost_curve!(tech::AbstractTech, tech_name::String, financial::Fi
     )
     cost_slope, cost_curve_bp_x, cost_yint, n_segments = cost_curve(tech, financial)
     cap_cost_slope[tech_name] = cost_slope[1]
+    min_allowable_kw = 0.0
     if isdefined(tech, :min_allowable_kw)
         min_allowable_kw = tech.min_allowable_kw
-    else
-        min_allowable_kw = 0.0
     end
-    if n_segments > 1 || (typeof(tech)==CHP && tech.min_allowable_kw > 0.0)
+    if n_segments > 1 || (typeof(tech)==CHP && min_allowable_kw > 0.0)
         cap_cost_slope[tech_name] = cost_slope
         push!(segmented_techs, tech_name)
         seg_max_size[tech_name] = Dict{Int,Float64}()
