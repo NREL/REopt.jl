@@ -190,7 +190,7 @@ end
         model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         p = REoptInputs("./scenarios/URDB_customer_generation.json")
         results = run_reopt(model, p)
-        @test results["PV"]["size_kw"] = p.max_sizes["PV"]
+        @test results["PV"]["size_kw"] ≈ p.max_sizes["PV"]
     end
 
     # # tiered monthly demand rate  TODO: expected results?
