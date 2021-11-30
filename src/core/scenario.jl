@@ -181,20 +181,17 @@ function Scenario(d::Dict)
         space_heating_load = SpaceHeatingLoad(; fuel_loads_mmbtu_per_hour=repeat([0.0], 8760))
     end
 
-    chp = nothing
     flexible_hvac = nothing
     if max_heat_demand_kw > 0
         boiler_inputs = Dict{Symbol, Any}()
         boiler_inputs[:max_heat_demand_kw] = max_heat_demand_kw
         boiler_inputs[:time_steps_per_hour] = settings.time_steps_per_hour
-
-        if haskey(d, "CHP")
-            chp = CHP(; dictkeys_tosymbols(d["CHP"])...)
+        # If CHP is considered, prime_mover may inform the default boiler efficiency
+        if haskey(d, "CHP") 
             if haskey(d["CHP"], "prime_mover")
                 boiler_inputs[:chp_prime_mover] = d["CHP"]["prime_mover"]
             end
         end
-
         if haskey(d, "ExistingBoiler")
             boiler_inputs = merge(boiler_inputs, dictkeys_tosymbols(d["ExistingBoiler"]))
         end
@@ -205,6 +202,11 @@ function Scenario(d::Dict)
         end
     else
         existing_boiler = ExistingBoiler(0.0, 0.0, Real[])
+    end
+
+    chp = nothing
+    if haskey(d, "CHP")
+        chp = CHP(d["CHP"])
     end
 
     return Scenario(
