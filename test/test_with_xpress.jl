@@ -46,10 +46,78 @@ using Xpress
     @test round(results["ExistingBoiler"]["year_one_boiler_fuel_consumption_mmbtu"], digits=0) ≈ 8760
 end
 
-@testset "CHP" begin
-    data = JSON.parsefile("./scenarios/thermal_load.json")
-    data["CHP"] = Dict("prime_mover" => "recip_engine")
-    s = Scenario(data)
+@testset "CHP Sizing" begin
+    # Sizing CHP with non-constant efficiency, no cost curve, no unavailability_periods
+    data_sizing = JSON.parsefile("./scenarios/chp_sizing.json")
+    s = Scenario(data_sizing)
+    inputs = REoptInputs(s)
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+    results = run_reopt(m, inputs)
+
+    @test round(results["CHP"]["size_kw"], digits=0) ≈ 468.7 atol=1.0
+    @test round(results["Financial"]["lcc"], digits=0) ≈ 1.3476e7 atol=1.0e7
+end
+
+@testset "CHP Cost Curve and Min Allowable Size" begin
+    # Fixed size CHP with cost curve, no unavailability_periods
+    data_cost_curve = JSON.parsefile("./scenarios/chp_sizing.json")
+    data_cost_curve["CHP"] = Dict()
+    data_cost_curve["CHP"]["prime_mover"] = "recip_engine"
+    data_cost_curve["CHP"]["size_class"] = 2
+    data_cost_curve["CHP"]["fuel_cost_per_mmbtu"] = 8.0
+    data_cost_curve["CHP"]["min_kw"] = 0
+    data_cost_curve["CHP"]["min_allowable_kw"] = 555.5
+    data_cost_curve["CHP"]["max_kw"] = 1000
+    data_cost_curve["CHP"]["installed_cost_per_kw"] = 1800.0
+    data_cost_curve["CHP"]["installed_cost_per_kw"] = [2300.0, 1800.0, 1500.0]
+    data_cost_curve["CHP"]["tech_sizes_for_cost_curve"] = [100.0, 300.0, 1140.0]
+
+    data_cost_curve["CHP"]["federal_itc_pct"] = 0.1
+    data_cost_curve["CHP"]["macrs_option_years"] = 0
+    data_cost_curve["CHP"]["macrs_bonus_pct"] = 0.0
+    data_cost_curve["CHP"]["macrs_itc_reduction"] = 0.0
+
+    expected_x = data_cost_curve["CHP"]["min_allowable_kw"]
+    cap_cost_y = data_cost_curve["CHP"]["installed_cost_per_kw"]
+    cap_cost_x = data_cost_curve["CHP"]["tech_sizes_for_cost_curve"]
+    slope = (cap_cost_x[3] * cap_cost_y[3] - cap_cost_x[2] * cap_cost_y[2]) / (cap_cost_x[3] - cap_cost_x[2])
+    init_capex_chp_expected = cap_cost_x[2] * cap_cost_y[2] + (expected_x - cap_cost_x[2]) * slope
+    lifecycle_capex_chp_expected = init_capex_chp_expected - 
+        REoptLite.npv(data_cost_curve["Financial"]["offtaker_discount_pct"], 
+        [0, init_capex_chp_expected * data_cost_curve["CHP"]["federal_itc_pct"]])
+
+    #PV
+    data_cost_curve["PV"]["min_kw"] = 1500
+    data_cost_curve["PV"]["max_kw"] = 1500
+    data_cost_curve["PV"]["installed_cost_per_kw"] = 1600
+    data_cost_curve["PV"]["federal_itc_pct"] = 0.26
+    data_cost_curve["PV"]["macrs_option_years"] = 0
+    data_cost_curve["PV"]["macrs_bonus_pct"] = 0.0
+    data_cost_curve["PV"]["macrs_itc_reduction"] = 0.0
+
+    init_capex_pv_expected = data_cost_curve["PV"]["max_kw"] * data_cost_curve["PV"]["installed_cost_per_kw"]
+    lifecycle_capex_pv_expected = init_capex_pv_expected - 
+        REoptLite.npv(data_cost_curve["Financial"]["offtaker_discount_pct"], 
+        [0, init_capex_pv_expected * data_cost_curve["PV"]["federal_itc_pct"]])
+
+    s = Scenario(data_cost_curve)
+    inputs = REoptInputs(s)
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+    results = run_reopt(m, inputs)
+
+    init_capex_total_expected = init_capex_chp_expected + init_capex_pv_expected
+    lifecycle_capex_total_expected = lifecycle_capex_chp_expected + lifecycle_capex_pv_expected
+
+    init_capex_total = results["Financial"]["initial_capital_costs"]
+    lifecycle_capex_total = results["Financial"]["initial_capital_costs_after_incentives"]
+
+
+    # Check initial CapEx (pre-incentive/tax) and life cycle CapEx (post-incentive/tax) cost with expect
+    @test init_capex_total_expected ≈ init_capex_total atol=0.0001*init_capex_total_expected
+    @test lifecycle_capex_total_expected ≈ lifecycle_capex_total atol=0.0001*lifecycle_capex_total_expected
+
+    # Test CHP.min_allowable_kw - the size would otherwise be ~100 kW less by setting min_allowable_kw to zero
+    @test results["CHP"]["size_kw"] ≈ data_cost_curve["CHP"]["min_allowable_kw"] atol=0.1
 end
 
 @testset "FlexibleHVAC" begin
@@ -67,7 +135,62 @@ end
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     p = REoptInputs(s);
     build_reopt!(m, p)
+end
     
+@testset "CHP Unavailability and Outage" begin
+    """
+    Validation to ensure that:
+        1) CHP meets load during outage without exporting
+        2) CHP never exports if chp.can_wholesale and chp.can_net_meter inputs are False (default)
+        3) CHP does not "curtail", i.e. send power to a load bank when chp.can_curtail is False (default)
+        4) CHP min_turn_down_pct is ignored during an outage
+        5) **Not until cooling is added:** Cooling load gets zeroed out during the outage period
+        6) Unavailability intervals that intersect with grid-outages get ignored
+        7) Unavailability intervals that do not intersect with grid-outages result in no CHP production
+    """
+    # Sizing CHP with non-constant efficiency, no cost curve, no unavailability_periods
+    data = JSON.parsefile("./scenarios/chp_unavailability_outage.json")
+
+    # Add unavailability periods that 1) intersect (ignored) and 2) don't intersect with outage period
+    data["CHP"]["unavailability_periods"] = [Dict([("month", 1), ("start_week_of_month", 2),
+            ("start_day_of_week", 1), ("start_hour", 1), ("duration_hours", 8)]),
+            Dict([("month", 1), ("start_week_of_month", 2),
+            ("start_day_of_week", 3), ("start_hour", 9), ("duration_hours", 8)])]
+
+    # Manually doing the math from the unavailability defined above
+    unavail_1_start = 24 + 1
+    unavail_1_end = unavail_1_start + 8 - 1
+    unavail_2_start = 24*3 + 9
+    unavail_2_end = unavail_2_start + 8 - 1
+    
+    # Specify the CHP.min_turn_down_pct which is NOT used during an outage
+    data["CHP"]["min_turn_down_pct"] = 0.5
+    # Specify outage period; outage timesteps are 1-indexed
+    outage_start = unavail_1_start
+    data["ElectricUtility"]["outage_start_time_step"] = outage_start
+    outage_end = unavail_1_end
+    data["ElectricUtility"]["outage_end_time_step"] = outage_end
+    data["ElectricLoad"]["critical_load_pct"] = 0.25
+
+    s = Scenario(data)
+    inputs = REoptInputs(s)
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+    results = run_reopt(m, inputs)
+
+    tot_elec_load = results["ElectricLoad"]["load_series_kw"]
+    chp_total_elec_prod = results["CHP"]["year_one_electric_production_series_kw"]
+    chp_to_load = results["CHP"]["year_one_to_load_series_kw"]
+    chp_export = results["CHP"]["year_one_to_grid_series_kw"]
+    #cooling_elec_load = results["LoadProfileChillerThermal"]["year_one_chiller_electric_load_kw"]
+
+    # The values compared to the expected values
+    #@test sum([(chp_to_load[i] - tot_elec_load[i]) for i in outage_start:outage_end])) == 0.0
+    critical_load = tot_elec_load[outage_start:outage_end] * data["ElectricLoad"]["critical_load_pct"]
+    @test sum(chp_to_load[outage_start:outage_end]) ≈ sum(critical_load) atol=0.1
+    @test sum(chp_export) == 0.0
+    @test sum(chp_total_elec_prod) ≈ sum(chp_to_load) atol=1.0e-5*sum(chp_total_elec_prod)
+    #@test sum(cooling_elec_load[outage_start:outage_end]) == 0.0 
+    @test sum(chp_total_elec_prod[unavail_2_start:unavail_2_end]) == 0.0  
 end
 
 #=
@@ -177,7 +300,7 @@ end
     """
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/incentives.json")
-    @test results["Financial"]["lcc"] ≈ 1.0968526e7 atol=5e4  
+    @test results["Financial"]["lcc"] ≈ 1.094596365e7 atol=5e4  
 end
 
 @testset verbose = true "Rate Structures" begin
@@ -206,6 +329,15 @@ end
         results = run_reopt(model, "./scenarios/coincident_peak.json")
         @test results["ElectricTariff"]["year_one_coincident_peak_cost"] ≈ 15.0
         @test results["ElectricTariff"]["lifecycle_coincident_peak_cost"] ≈ 15.0 * 12.94887 atol=0.1
+    end
+
+    @testset "URDB sell rate" begin
+        #= The URDB contains at least one "Customer generation" tariff that only has a "sell" key in the energyratestructure (the tariff tested here)
+        =#
+        model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        p = REoptInputs("./scenarios/URDB_customer_generation.json")
+        results = run_reopt(model, p)
+        @test results["PV"]["size_kw"] ≈ p.max_sizes["PV"]
     end
 
     # # tiered monthly demand rate  TODO: expected results?
