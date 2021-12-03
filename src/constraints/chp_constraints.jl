@@ -201,7 +201,7 @@ function add_chp_constraints(m, p; _n="")
                 Some solvers are very slow with integer variables"""
     @variables m begin
         binCHPIsOnInTS[p.techs.chp, p.time_steps], Bin  # 1 If technology t is operating in time step; 0 otherwise
-	end    
+    end    
     
     m[:TotalHourlyCHPOMCosts] = 0
     m[:TotalCHPFuelCosts] = 0
