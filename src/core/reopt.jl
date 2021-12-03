@@ -265,6 +265,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             )
         end
     end
+
+	if (!isempty(p.techs.chp)) && (!isempty(p.techs.thermal))
+ 			m[:TotalTechCapCosts] += sum(p.s.chp.supplementary_firing_capital_cost_per_kw * m[:dvSupplementaryFiringCHPSize][t] for t in p.techs.chp)
+	end
 	
 	@expression(m, TotalStorageCapCosts, p.third_party_factor *
 		sum(  p.s.storage.installed_cost_per_kw[b] * m[:dvStoragePower][b]
