@@ -46,12 +46,12 @@ function add_chp_fuel_burn_constraints(m, p; _n="")
         dv = "dvFuelBurnYIntercept"*_n
         m[Symbol(dv)] = @variable(m, [p.techs.chp, p.time_steps], base_name=dv, lower_bound=0)
 
-        #Constraint (1c1): Total Fuel burn for CHP **with** y-intercept fuel burn
+        #Constraint (1c1): Total Fuel burn for CHP **with** y-intercept fuel burn and supplementary firing
         @constraint(m, CHPFuelBurnCon[t in p.techs.chp, ts in p.time_steps],
             m[Symbol("dvFuelUsage"*_n)][t,ts]  == p.hours_per_timestep * (
                 m[Symbol("dvFuelBurnYIntercept"*_n)][t,ts] +
                 p.production_factor[t,ts] * fuel_burn_slope * m[Symbol("dvRatedProduction"*_n)][t,ts] #+
-                #m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] / p.s.chpSupplementaryFireEfficiency
+                m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] / p.s.chpSupplementaryFireEfficiency
             )
         )
         #Constraint (1d): Y-intercept fuel burn for CHP
@@ -104,14 +104,14 @@ function add_chp_thermal_production_constraints(m, p; _n="")
         @constraint(m, CHPThermalProductionCon[t in p.techs.chp, ts in p.time_steps],
             m[Symbol("dvThermalProduction"*_n)][t,ts] ==
             thermal_prod_slope * p.production_factor[t,ts] * m[Symbol("dvRatedProduction"*_n)][t,ts] 
-            + m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts] #+
-            #m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
+            + m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts] +
+            m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
         )
     else
         @constraint(m, CHPThermalProductionConLinear[t in p.techs.chp, ts in p.time_steps],
             m[Symbol("dvThermalProduction"*_n)][t,ts] ==
             thermal_prod_slope * p.production_factor[t,ts] * m[Symbol("dvRatedProduction"*_n)][t,ts] #+
-            #m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
+            m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
         )        
     end
     
