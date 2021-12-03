@@ -220,6 +220,9 @@ function add_chp_constraints(m, p; _n="")
     add_chp_rated_prod_constraint(m, p; _n=_n)
 
     if p.s.chp.supplementary_firing_max_steam_ratio > 1.0
+        @variable m begin
+            binUseSupplementaryFiring[p.techs.chp, p.time_steps], Bin #Z^{db}_{t}: 1 if supplementary firing is included with CHP system, 0 o.w.
+        end
         add_chp_supplementary_firing_constraints(m,p; _n=_n)
     else
         for t in p.techs.chp
