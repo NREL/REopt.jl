@@ -29,6 +29,28 @@
 # *********************************************************************************
 using Xpress
 
+@testset "Battery degradation" begin
+    p1 = REoptInputs("scenarios/pv_storage.json");
+    m1 = Model(Xpress.Optimizer)
+    d1 = run_reopt(m1,p1);
+    @info("avg soc = $(sum(d1["Storage"]["year_one_soc_series_pct"]) / 8760)")
+
+    # remove replacement cost for scenario with degradation
+    data = JSON.parsefile("scenarios/pv_storage.json");
+    data["Storage"]["replace_cost_per_kw"] = 0.0
+    data["Storage"]["replace_cost_per_kwh"] = 0.0
+    p = REoptInputs(Scenario(data));
+
+    m = Model(Xpress.Optimizer)
+    build_reopt!(m, p);
+    REoptLite.add_degradation(m, p, d1, 1e-3, 5e-6);
+    optimize!(m)
+    d = REoptLite.reopt_results(m, p)
+    
+    @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
+
+end
+
 @testset "Thermal loads" begin
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/thermal_load.json")
