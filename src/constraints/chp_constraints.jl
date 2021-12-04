@@ -117,7 +117,14 @@ function add_chp_thermal_production_constraints(m, p; _n="")
     
 end
 
-function add_supplementary_firing_constraints(m, p; _n="")
+"""
+add_chp_supplementary_firing_constraints(m, p; _n="")
+
+Used by add_chp_constraints to add supplementary firing constraints if 
+    p.s.chp.supplementary_firing_max_steam_ratio > 1.0 to add CHP supplementary firing operating constraints.  
+    Else, the supplementary firing dispatch and size decision variables are set to zero.
+"""
+function add_chp_supplementary_firing_constraints(m, p; _n="")
     thermal_prod_full_load = 1.0 / p.s.chp.elec_effic_full_load * p.s.chp.thermal_effic_full_load  # [kWt/kWe]
     thermal_prod_half_load = 0.5 / p.s.chp.elec_effic_half_load * p.s.chp.thermal_effic_half_load   # [kWt/kWe]
     thermal_prod_slope = (thermal_prod_full_load - thermal_prod_half_load) / (1.0 - 0.5)  # [kWt/kWe]
