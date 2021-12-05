@@ -324,14 +324,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	if !isempty(p.s.electric_utility.outage_durations)
 		add_to_expression!(Costs, m[:ExpectedOutageCost] + m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost] + m[:ExpectedMGFuelCost])
 	end
-    
-	nothing
-end
-
-
-function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
-
-	build_reopt!(m, p)
 
 	if !p.s.settings.add_soc_incentive
 		@objective(m, Min, m[:Costs])
@@ -340,6 +332,14 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 									   (8760. / p.hours_per_timestep)
 		)
 	end
+    
+	nothing
+end
+
+
+function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
+
+	build_reopt!(m, p)
 
 	@info "Model built. Optimizing..."
 	tstart = time()
