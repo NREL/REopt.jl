@@ -424,6 +424,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 			dvThermalProduction[p.techs.thermal, p.time_steps] >= 0
 			dvSupplementaryThermalProduction[p.techs.chp, p.time_steps] >= 0
 			dvSupplementaryFiringCHPSize[p.techs.chp] >= 0  #X^{\sigma db}_{t}: System size of CHP with supplementary firing [kW]
+		end
     end
 
 	if !isempty(p.s.electric_utility.outage_durations) # add dvUnserved Load if there is at least one outage
