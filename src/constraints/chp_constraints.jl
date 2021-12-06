@@ -50,8 +50,8 @@ function add_chp_fuel_burn_constraints(m, p; _n="")
         @constraint(m, CHPFuelBurnCon[t in p.techs.chp, ts in p.time_steps],
             m[Symbol("dvFuelUsage"*_n)][t,ts]  == p.hours_per_timestep * (
                 m[Symbol("dvFuelBurnYIntercept"*_n)][t,ts] +
-                p.production_factor[t,ts] * fuel_burn_slope * m[Symbol("dvRatedProduction"*_n)][t,ts] #+
-                m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] / p.s.chpSupplementaryFireEfficiency
+                p.production_factor[t,ts] * fuel_burn_slope * m[Symbol("dvRatedProduction"*_n)][t,ts] +
+                m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] / p.s.chp.supplementary_firing_efficiency
             )
         )
         #Constraint (1d): Y-intercept fuel burn for CHP
@@ -63,8 +63,8 @@ function add_chp_fuel_burn_constraints(m, p; _n="")
         #Constraint (1c2): Total Fuel burn for CHP **without** y-intercept fuel burn
         @constraint(m, CHPFuelBurnConLinear[t in p.techs.chp, ts in p.time_steps],
             m[Symbol("dvFuelUsage"*_n)][t,ts]  == p.hours_per_timestep * (
-                p.production_factor[t,ts] * fuel_burn_slope * m[Symbol("dvRatedProduction"*_n)][t,ts] #+
-                #m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] / p.s.chpSupplementaryFireEfficiency
+                p.production_factor[t,ts] * fuel_burn_slope * m[Symbol("dvRatedProduction"*_n)][t,ts] +
+                m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] / p.s.chp.supplementary_firing_efficiency
             )
         )
     end 
@@ -110,7 +110,7 @@ function add_chp_thermal_production_constraints(m, p; _n="")
     else
         @constraint(m, CHPThermalProductionConLinear[t in p.techs.chp, ts in p.time_steps],
             m[Symbol("dvThermalProduction"*_n)][t,ts] ==
-            thermal_prod_slope * p.production_factor[t,ts] * m[Symbol("dvRatedProduction"*_n)][t,ts] #+
+            thermal_prod_slope * p.production_factor[t,ts] * m[Symbol("dvRatedProduction"*_n)][t,ts] +
             m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
         )        
     end
