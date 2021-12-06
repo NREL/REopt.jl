@@ -30,24 +30,138 @@
 using Xpress
 
 @testset "Battery degradation" begin
-    p1 = REoptInputs("scenarios/pv_storage.json");
+    data = JSON.parsefile("scenarios/pv_storage.json");
+    data["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
+    p1 = REoptInputs(Scenario(data));
     m1 = Model(Xpress.Optimizer)
     d1 = run_reopt(m1,p1);
     @info("avg soc = $(sum(d1["Storage"]["year_one_soc_series_pct"]) / 8760)")
+    # 0.6113
 
     # remove replacement cost for scenario with degradation
-    data = JSON.parsefile("scenarios/pv_storage.json");
     data["Storage"]["replace_cost_per_kw"] = 0.0
     data["Storage"]["replace_cost_per_kwh"] = 0.0
     p = REoptInputs(Scenario(data));
 
     m = Model(Xpress.Optimizer)
     build_reopt!(m, p);
-    REoptLite.add_degradation(m, p, d1, 1e-3, 5e-6);
+    REoptLite.add_degradation(m, p, d1, 1e-3, 5e-5);
     optimize!(m)
-    d = REoptLite.reopt_results(m, p)
+    d = REoptLite.reopt_results(m, p) # same BESS as no degradation, but lowers avg soc
     
     @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
+    # 0.38619
+
+
+    m = Model(Xpress.Optimizer)
+    build_reopt!(m, p);
+    REoptLite.add_degradation(m, p, d1, 1e-3, 5e-4); # k_cyc=1e-3 gives same results
+    optimize!(m)
+    d = REoptLite.reopt_results(m, p) # same BESS as no degradation, but lowers avg soc
+    
+    @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
+
+
+    m = Model(Xpress.Optimizer)
+    build_reopt!(m, p);
+    REoptLite.add_degradation(m, p, d1, 1e-3, 5e-3); 
+    optimize!(m)
+    d = REoptLite.reopt_results(m, p) 
+    #"size_kw"=>43.54, "size_kwh"=>57.42 
+    # much longer solve time
+    
+    @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
+    # 0.278630
+    # julia> value(m[:d_0p8])
+    # 7253.000022266379
+
+    # julia> value(m[:N_batt_replacements])
+    # 0.008584470818808127
+
+    # julia> value(m[:Costs])
+    # 1.2393526757456677e7
+
+
+
+    m = Model(Xpress.Optimizer)
+    build_reopt!(m, p);
+    REoptLite.add_degradation(m, p, d1, 1e-3, 1e-2);
+    optimize!(m)
+    d = REoptLite.reopt_results(m, p) 
+    # "size_kw"=>40.6, "size_kwh"=>53.54
+    # julia> value(m[:d_0p8])
+    # 7204.0000002005
+
+    # julia> value(m[:N_batt_replacements])
+    # 0.017534246538603703
+
+    # julia> value(m[:Costs])
+    # 1.2394871657043787e7
+    #     @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
+    # [ Info: avg soc = 0.2916865296803653
+
+
+
+
+    ## do results change based off of expanding bilinear terms? all of the above was run without the expansion. repeating with expansion below:
+
+    data = JSON.parsefile("scenarios/pv_storage.json");
+    data["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
+    p1 = REoptInputs(Scenario(data));
+    m1 = Model(Xpress.Optimizer)
+    d1 = run_reopt(m1,p1);
+    @info("avg soc = $(sum(d1["Storage"]["year_one_soc_series_pct"]) / 8760)")
+    # 0.6113
+
+    # remove replacement cost for scenario with degradation
+    data["Storage"]["replace_cost_per_kw"] = 0.0
+    data["Storage"]["replace_cost_per_kwh"] = 0.0
+    p = REoptInputs(Scenario(data));
+
+    m2 = Model(Xpress.Optimizer)
+    build_reopt!(m2, p);
+    REoptLite.add_degradation(m2, p, d1, 1e-3, 5e-5; expand_bilinear_terms=true);
+    optimize!(m2)
+    d2 = REoptLite.reopt_results(m2, p) # BESS was same as no degradation, but now size_kw"=>54.84, "size_kwh"=>76.15 vs. "size_kw"=>55.88, "size_kwh"=>78.91 w/o degradation
+    
+    @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
+    # was 0.38619 and now is 0.56409, N_batt_replacements = 0.0 still, but maybe the SOH plot is steeper and more accurate?
+
+    #=
+    using Plots
+    plot(value.(m[:SOH].data), label="no expansion")
+    plot!(value.(m2[:SOH].data), label="expansion")
+    savefig("SOH_wwo_expansion_kcal001_kcyc00005.pdf")
+    =#
+
+
+    m3 = Model(Xpress.Optimizer)
+    build_reopt!(m3, p);
+    REoptLite.add_degradation(m3, p, d1, 1e-3, 1e-2; expand_bilinear_terms=true);
+    optimize!(m3)
+    d3 = REoptLite.reopt_results(m3, p) 
+    # was "size_kw"=>40.6, "size_kwh"=>53.54 now "size_kw"=>54.84, "size_kwh"=>76.15
+    # julia> value(m[:d_0p8])
+    # was 7204.0000002005 now 2365.000004234173
+
+    # julia> value(m[:N_batt_replacements])
+    # was 0.017534246538603703 now 2.1123287671243745
+
+    # julia> value(m[:Costs])
+    # was 1.2394871657043787e7 now 1.2389671546073029e7
+    #     @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
+    # was [ Info: avg soc = 0.2916865296803653 now 0.4002
+
+    m4 = Model(Xpress.Optimizer)
+    build_reopt!(m4, p);
+    REoptLite.add_degradation(m4, p, d1, 1e-3, 1e-2);
+    optimize!(m4)
+    d4 = REoptLite.reopt_results(m4, p) 
+
+    # plot(value.(m4[:SOH].data), label="no expansion")
+    # plot!(value.(m3[:SOH].data), label="expansion")
+    # savefig("SOH_wwo_expansion_kcal001_kcyc01.pdf")
+    ## SOH is going up at times because of minus Emin_ terms in expansion 
 
 end
 

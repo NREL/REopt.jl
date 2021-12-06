@@ -65,6 +65,8 @@ function add_degradation_variables(m, p)
     @variable(m, Eminus_sum[days] >= 0)
     @variable(m, Emax[days] >= 0)
     @variable(m, Emin[days] >= 0)
+    @variable(m, EFC[days] >= 0)
+    @variable(m, DODmax[days] >= 0)
 end
 
 
@@ -95,6 +97,12 @@ function constrain_degradation_variables(m, p; b=:elec)
         @constraint(m,
             m[:Eminus_sum][d] == sum(m[:dvDischargeFromStorage][b, ts] for ts in ts0:tsF)
         )
+        @constraint(m,
+            m[:EFC][d] == m[:Eplus_sum][d] + m[:Eminus_sum][d]
+        )
+        @constraint(m,
+            m[:DODmax][d] == m[:Emax][d] - m[:Emin][d]
+        )
     end
 end
 
@@ -120,6 +128,10 @@ function get_battery_bounds_from_result_dict(p::REoptInputs, d::Dict)
     Eplus_sum_lower = zeros(D)
     Eminus_sum_upper = zeros(D)
     Eminus_sum_lower = zeros(D)
+    EFC_upper = zeros(D)
+    EFC_lower = zeros(D)
+    DODmax_upper = zeros(D)
+    DODmax_lower = zeros(D)
     # TODO options for defining bounds? for example could just use Bkwh for Emax_upper in all days
     # instead of the optimal Emax_upper w/o degradation. However, it seems that with degradation 
     # would generally use the battery less then w/o degradation.
@@ -137,6 +149,8 @@ function get_battery_bounds_from_result_dict(p::REoptInputs, d::Dict)
         # Eplus_sum_lower[d] = stays zero
         Eminus_sum_upper[d] = sum(Eminus[ts0:tsF])
         # Eminus_sum_lower[d] = stays zero
+        EFC_upper[d] = Eplus_sum_upper[d] + Eminus_sum_upper[d]
+        DODmax_upper[d] = Emax_upper[d] - Emin_upper[d] 
     end
     return Dict(
         "Emax_upper" => Emax_upper, 
@@ -147,12 +161,16 @@ function get_battery_bounds_from_result_dict(p::REoptInputs, d::Dict)
         "Eplus_sum_lower" => Eplus_sum_lower, 
         "Eminus_sum_upper" => Eminus_sum_upper, 
         "Eminus_sum_lower" => Eminus_sum_lower,
-        "Bkwh" => Bkwh
+        "Bkwh" => Bkwh,
+        "EFC_upper" => EFC_upper, 
+        "EFC_lower" => EFC_lower, 
+        "DODmax_upper" => DODmax_upper, 
+        "DODmax_lower" => DODmax_lower, 
     )
 end
 
 
-function add_degradation(m, p, d::Dict, k_cal::Float64, k_cyc::Float64; time_exponent=0.5, b=:elec)
+function add_degradation(m, p, d::Dict, k_cal::Float64, k_cyc::Float64; time_exponent=0.5, b=:elec, expand_bilinear_terms=false)
     days = 1:365*p.s.financial.analysis_years
     @variable(m, SOH[days])
 
@@ -166,35 +184,53 @@ function add_degradation(m, p, d::Dict, k_cal::Float64, k_cyc::Float64; time_exp
     bounds = get_battery_bounds_from_result_dict(p, d)
 
     # TODO? one bilinear set for DODmax * EFC ?
-    for bilinear_set in (
-        (m[:Emax].data, m[:Eplus_sum].data, "Emax_Eplus_sum"),
-        (m[:Emax].data, m[:Eminus_sum].data, "Emax_Eminus_sum"),
-        (m[:Emin].data, m[:Eplus_sum].data, "Emin_Eplus_sum"),
-        (m[:Emin].data, m[:Eminus_sum].data, "Emin_Eminus_sum"),
+
+    if expand_bilinear_terms
+        for bilinear_set in (
+            (m[:Emax].data, m[:Eplus_sum].data, "Emax_Eplus_sum"),
+            (m[:Emax].data, m[:Eminus_sum].data, "Emax_Eminus_sum"),
+            (m[:Emin].data, m[:Eplus_sum].data, "Emin_Eplus_sum"),
+            (m[:Emin].data, m[:Eminus_sum].data, "Emin_Eminus_sum"),
+            )
+            add_mccormick_constraints(m, bilinear_set[3], days,
+                bilinear_set[1], bilinear_set[2], 
+                bounds[bilinear_set[3][1:5]*"upper"], 
+                bounds[bilinear_set[3][1:5]*"lower"], 
+                bounds[bilinear_set[3][6:end]*"_upper"], 
+                bounds[bilinear_set[3][6:end]*"_lower"]
+            )
+        end
+
+        @constraint(m, [d in 2:days[end]],
+            SOH[d] == SOH[d-1] - time_exponent * k_cal * m[:Eavg][d-1] * d^(time_exponent-1) 
+                      - k_cyc/(2*bounds["Bkwh"]) * 
+                       (  m[:Emax_Eplus_sum][d-1] + m[:Emax_Eminus_sum][d-1] 
+                        - m[:Emin_Eplus_sum][d-1] - m[:Emin_Eminus_sum][d-1])
         )
-        add_mccormick_constraints(m, bilinear_set[3], days,
-            bilinear_set[1], bilinear_set[2], 
-            bounds[bilinear_set[3][1:5]*"upper"], 
-            bounds[bilinear_set[3][1:5]*"lower"], 
-            bounds[bilinear_set[3][6:end]*"_upper"], 
-            bounds[bilinear_set[3][6:end]*"_lower"]
+    else
+        add_mccormick_constraints(m, "EFC_DODmax", days,
+            m[:EFC].data, m[:DODmax].data, 
+            bounds["EFC_upper"], 
+            bounds["EFC_lower"], 
+            bounds["DODmax_upper"], 
+            bounds["DODmax_lower"]
+        )
+
+        @constraint(m, [d in 2:days[end]],
+            SOH[d] == SOH[d-1] - time_exponent * k_cal * m[:Eavg][d-1] * d^(time_exponent-1) - k_cyc/(2*bounds["Bkwh"]) * m[:EFC_DODmax][d-1]
         )
     end
     @constraint(m, SOH[1] == bounds["Bkwh"])
-    @constraint(m, [d in 2:days[end]],
-        SOH[d] == SOH[d-1] - time_exponent * k_cal * m[:Eavg][d-1] * d^(time_exponent-1) - k_cyc/(2*bounds["Bkwh"]) * 
-                 (  m[:Emax_Eplus_sum][d-1] + m[:Emax_Eminus_sum][d-1] 
-                  - m[:Emin_Eplus_sum][d-1] - m[:Emin_Eminus_sum][d-1])
-    )
+
     @variable(m, soh_indicator[days], Bin)
 
-    # @constraint(m, [d in days],
-    #     soh_indicator[d] => {SOH[d] >= 0.8*bounds["Bkwh"]}
-    # )
-    # why do we need the opposite indicator ??? model does not hold the indicator constraint above
     @constraint(m, [d in days],
-        !soh_indicator[d] => {SOH[d] <= 0.8*bounds["Bkwh"]}
+        soh_indicator[d] => {SOH[d] >= 0.8*bounds["Bkwh"]}
     )
+    # why do we need the opposite indicator ??? model does not hold the indicator constraint above
+    # @constraint(m, [d in days],
+    #     !soh_indicator[d] => {SOH[d] <= 0.8*bounds["Bkwh"]}
+    # )
     # @variable(m, d_0p8 >= 0)
     @expression(m, d_0p8, sum(soh_indicator[d] for d in days))
 
@@ -216,52 +252,15 @@ function add_degradation(m, p, d::Dict, k_cal::Float64, k_cyc::Float64; time_exp
             N_batt_replacements >= (pair[2][2] - pair[1][2]) / (pair[2][1] - pair[1][1]) * (d_0p8 - pair[1][1]) + pair[1][2]
         )
     end
-
-    m[:Costs] += p.s.storage.installed_cost_per_kwh[:elec] /20 * N_batt_replacements
+    # TODO scale battery replacement cost
+    # NOTE adding to Costs expression does not modify the objective function
+    @objective(m, Min, m[:Costs] + p.s.storage.installed_cost_per_kwh[:elec] /5 * m[:N_batt_replacements])
+    set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
+    # TODO increase threads?
 end
 # TODO raise error for multisite with degradation
 
 #=
-Getting solutions with max size_kw=10000.0 with size_kwh = 0.0 ????
-
-
-Gives storage cost with no benefit ???
-julia> value(m[:TotalStorageCapCosts])
-5.577452e6
-
-
-Something to do with McCormick constraints or bounds? 
-Model is choosing all zeros for bilinear terms but upper bounds sum to big numbers
-
-julia> sum(bounds["Emin_upper"])
-338509.69620000024
-
-julia> sum(bounds["Emax_upper"])
-567205.0800000001
-
-julia> sum(bounds["Eplus_sum_upper"])
-231140.01559999996
-
-julia> sum(bounds["Eminus_sum_upper"])
-231613.47559999992
-
-soh = value.(m[:SOH]);
-sohi = value.(m[:soh_indicator]);
-bounds = REoptLite.get_battery_bounds_from_result_dict(p, d1);
-
-
-julia> sum(value.(m[:dvGridToStorage])[:elec, :])
-0.0
-
-julia> sum(value.(m[:dvStoredEnergy][:elec,:]))
-0.0
-
-julia> sum(value.(m[:dvDischargeFromStorage][:elec,:]))
-0.0
-
-
-
-julia> value(m[:Costs])
-1.8479958589985766e7
-
+soh_indicator is not working: even though SOH goes below 0.8*bounds["BkWh"] the soh_indicator is
+one for all days 
 =# 
