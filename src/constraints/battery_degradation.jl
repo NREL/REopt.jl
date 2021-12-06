@@ -259,8 +259,3 @@ function add_degradation(m, p, d::Dict, k_cal::Float64, k_cyc::Float64; time_exp
     # TODO increase threads?
 end
 # TODO raise error for multisite with degradation
-
-#=
-soh_indicator is not working: even though SOH goes below 0.8*bounds["BkWh"] the soh_indicator is
-one for all days 
-=# 
