@@ -47,7 +47,7 @@
     }, 
     "CHP": {
         "prime_mover": "recip_engine",
-        "fuel_cost_per_mmbtu": [10.0],
+        "fuel_cost_per_mmbtu": 10.0,
         "min_kw": 800,
         "max_kw": 800,
         "installed_cost_per_kw": 2416.7,
