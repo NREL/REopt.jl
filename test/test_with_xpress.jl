@@ -176,6 +176,33 @@ end
     @test sum(chp_total_elec_prod[unavail_2_start:unavail_2_end]) == 0.0  
 end
 
+@testset "CHP Supplementary firing sizing and usage" begin
+    """
+    Test to ensure that supplementary firing works as intended.  The thermal and electrical loads 
+    are constant, and the CHP system size is fixed; the supplementary firing has a similar cost to 
+    the boiler and is purcahsed and used when the boiler efficiency is set to a lower value than
+    that of the supplementary firing. 
+    """
+    data = JSON.parsefile("./scenarios/chp_supplementary_firing.json")
+    data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10000
+
+    #part 1: supplementary firing not used when less efficient than the boiler and expensive 
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m1, data)
+    @test results["CHP"]["size_kw"] == 800
+    @test results["CHP"]["supplementary_firing_kw"] == 0
+    @test results["CHP"]["year_one_electric_energy_produced_kwh"] ≈ 800*8760 rtol=1e-5
+    @test results["CHP"]["year_one_thermal_energy_produced_kwh"] ≈ 800*(0.4418/0.3573)*8760 rtol=1e-5
+    
+    #part 2: supplementary firing used when more efficient than the boiler and low-cost
+    data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10
+    data["ExistingBoiler"]["efficiency"] = 0.85
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m2, data)
+    @test results["CHP"]["supplementary_firing_kw"] ≈ 800 atol=0.1
+    @test results["CHP"]["year_one_thermal_energy_produced_kwh"] ≈ 122756 rtol=1e-3
+end
+
 #=
 add a time-of-export rate that is greater than retail rate for the month of January,
 check to make sure that PV does NOT export unless the site load is met first for the month of January.
