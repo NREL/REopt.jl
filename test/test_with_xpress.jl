@@ -188,7 +188,9 @@ end
 
     #part 1: supplementary firing not used when less efficient than the boiler and expensive 
     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt(m1, data)
+    s = Scenario(data)
+    inputs = REoptInputs(s)
+    results = run_reopt(m1, inputs)
     @test results["CHP"]["size_kw"] == 800
     @test results["CHP"]["size_supplemental_firing_kw"] == 0
     @test results["CHP"]["year_one_electric_energy_produced_kwh"] ≈ 800*8760 rtol=1e-5
@@ -198,7 +200,9 @@ end
     data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10
     data["ExistingBoiler"]["efficiency"] = 0.85
     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt(m2, data)
+    s = Scenario(data)
+    inputs = REoptInputs(s)
+    results = run_reopt(m2, inputs)
     @test results["CHP"]["size_supplemental_firing_kw"] ≈ 800 atol=0.1
     @test results["CHP"]["year_one_thermal_energy_produced_kwh"] ≈ 122756 rtol=1e-3
 end
