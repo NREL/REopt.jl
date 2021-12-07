@@ -46,6 +46,7 @@ CHP results:
 - `year_one_thermal_to_load_series_mmbtu_per_hour` Thermal power to serve the heating load time-series array [MMBtu/hr]
 - `year_one_chp_fuel_cost` Fuel cost from fuel consumed by the CHP system [\$]
 - `lifecycle_chp_fuel_cost` Fuel cost from fuel consumed by the CHP system [\$]
+- `supplementary_firing_kw` Power capacity of CHP supplementary firing system [kW]
 """
 function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
@@ -100,7 +101,8 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["lifecycle_chp_fuel_cost"] = round(value(m[:TotalCHPFuelCosts]) * p.s.financial.offtaker_tax_pct, digits=3)
 	#r["year_one_chp_standby_cost_us_dollars"] = round(value(m[Symbol("Year1CHPStandbyCharges"]), digits=0)
 	#r["lifecycle_chp_standby_cost_us_dollars"] = round(value(m[Symbol("TotalCHPStandbyCharges] * m[Symbol("r_tax_fraction_offtaker]), digits=0)
-	
+	r["supplementary_firing_kw"] = round(value(m[Symbol("dvSupplementaryFiringCHPSize")*_n]["CHP"]), digits=3)
+
     d["CHP"] = r
     nothing
 end
