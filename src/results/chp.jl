@@ -51,7 +51,7 @@ CHP results:
 function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 	r["size_kw"] = value(sum(m[Symbol("dvSize"*_n)][t] for t in p.techs.chp))
-    #r["size_supplemental_firing_kw"] = value(sum(m[Symbol("dvSupplementaryFiringCHPSize"*_n)][t] for t in p.techs.chp))
+    r["size_supplemental_firing_kw"] = value(sum(m[Symbol("dvSupplementaryFiringSize"*_n)][t] for t in p.techs.chp))
 	@expression(m, CHPFuelUsedKWH, sum(m[Symbol("dvFuelUsage"*_n)][t, ts] for t in p.techs.chp, ts in p.time_steps))
 	r["year_one_fuel_used_mmbtu"] = round(value(CHPFuelUsedKWH) / MMBTU_TO_KWH, digits=3)
 	@expression(m, Year1CHPElecProd,
@@ -101,8 +101,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["lifecycle_chp_fuel_cost"] = round(value(m[:TotalCHPFuelCosts]) * p.s.financial.offtaker_tax_pct, digits=3)
 	#r["year_one_chp_standby_cost_us_dollars"] = round(value(m[Symbol("Year1CHPStandbyCharges"]), digits=0)
 	#r["lifecycle_chp_standby_cost_us_dollars"] = round(value(m[Symbol("TotalCHPStandbyCharges] * m[Symbol("r_tax_fraction_offtaker]), digits=0)
-	r["supplementary_firing_kw"] = round(value(m[Symbol("dvSupplementaryFiringCHPSize")*_n]["CHP"]), digits=3)
-
+	
     d["CHP"] = r
     nothing
 end

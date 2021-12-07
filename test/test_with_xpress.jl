@@ -190,7 +190,7 @@ end
     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m1, data)
     @test results["CHP"]["size_kw"] == 800
-    @test results["CHP"]["supplementary_firing_kw"] == 0
+    @test results["CHP"]["size_supplemental_firing_kw"] == 0
     @test results["CHP"]["year_one_electric_energy_produced_kwh"] ≈ 800*8760 rtol=1e-5
     @test results["CHP"]["year_one_thermal_energy_produced_kwh"] ≈ 800*(0.4418/0.3573)*8760 rtol=1e-5
     
@@ -199,7 +199,7 @@ end
     data["ExistingBoiler"]["efficiency"] = 0.85
     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m2, data)
-    @test results["CHP"]["supplementary_firing_kw"] ≈ 800 atol=0.1
+    @test results["CHP"]["size_supplemental_firing_kw"] ≈ 800 atol=0.1
     @test results["CHP"]["year_one_thermal_energy_produced_kwh"] ≈ 122756 rtol=1e-3
 end
 

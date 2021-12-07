@@ -132,7 +132,7 @@ function add_chp_supplementary_firing_constraints(m, p; _n="")
     # Constrain upper limit of dvSupplementaryThermalProduction, using auxiliary variable for (size * useSupplementaryFiring)
     @constraint(m, CHPSupplementaryFireCon[t in p.techs.chp, ts in p.time_steps],
                 m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] <=
-                (p.s.chp.supplementary_firing_max_steam_ratio - 1.0) * p.production_factor[t,ts] * (thermal_prod_slope * m[Symbol("dvSupplementaryFiringCHPSize"*_n)][t] + m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts])
+                (p.s.chp.supplementary_firing_max_steam_ratio - 1.0) * p.production_factor[t,ts] * (thermal_prod_slope * m[Symbol("dvSupplementaryFiringSize"*_n)][t] + m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts])
                 )
     # Constrain lower limit of 0 if CHP tech is off
     @constraint(m, NoCHPSupplementaryFireOffCon[t in p.techs.chp, ts in p.time_steps],
@@ -226,7 +226,7 @@ function add_chp_constraints(m, p; _n="")
         add_chp_supplementary_firing_constraints(m,p; _n=_n)
     else
         for t in p.techs.chp
-            fix(m[Symbol("dvSupplementaryFiringCHPSize"*_n)][t], 0.0, force=true)
+            fix(m[Symbol("dvSupplementaryFiringSize"*_n)][t], 0.0, force=true)
             for ts in p.time_steps
                 fix(m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts], 0.0, force=true)
             end

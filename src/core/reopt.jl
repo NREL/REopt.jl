@@ -267,7 +267,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     end
 
 	if (!isempty(p.techs.chp)) && (!isempty(p.techs.thermal))
- 			m[:TotalTechCapCosts] += sum(p.s.chp.supplementary_firing_capital_cost_per_kw * m[:dvSupplementaryFiringCHPSize][t] for t in p.techs.chp)
+ 			m[:TotalTechCapCosts] += sum(p.s.chp.supplementary_firing_capital_cost_per_kw * m[:dvSupplementaryFiringSize][t] for t in p.techs.chp)
 	end
 	
 	@expression(m, TotalStorageCapCosts, p.third_party_factor *
@@ -423,7 +423,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
         @variables m begin
 			dvThermalProduction[p.techs.thermal, p.time_steps] >= 0
 			dvSupplementaryThermalProduction[p.techs.chp, p.time_steps] >= 0
-			dvSupplementaryFiringCHPSize[p.techs.chp] >= 0  #X^{\sigma db}_{t}: System size of CHP with supplementary firing [kW]
+			dvSupplementaryFiringSize[p.techs.chp] >= 0  #X^{\sigma db}_{t}: System size of CHP with supplementary firing [kW]
 		end
     end
 
