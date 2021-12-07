@@ -60,7 +60,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["year_one_electric_energy_produced_kwh"] = round(value(Year1CHPElecProd), digits=3)
 	@expression(m, Year1CHPThermalProdKWH,
 		p.hours_per_timestep * sum(m[Symbol("dvThermalProduction"*_n)][t,ts] + 
-        #m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] - 
+        m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] - 
         m[Symbol("dvProductionToWaste"*_n)][t,ts] 
             for t in p.techs.chp, ts in p.time_steps))
 	r["year_one_thermal_energy_produced_mmbtu"] = round(value(Year1CHPThermalProdKWH) / MMBTU_TO_KWH, digits=3)
