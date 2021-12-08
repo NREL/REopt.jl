@@ -198,6 +198,7 @@ function Scenario(d::Dict)
         existing_boiler = ExistingBoiler(; boiler_inputs...)
 
         if haskey(d, "FlexibleHVAC")
+            # TODO how to handle Matrix from JSON (to Dict) ?
             flexible_hvac = FlexibleHVAC(; dictkeys_tosymbols(d["FlexibleHVAC"])...)
         end
     else

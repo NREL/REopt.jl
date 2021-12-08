@@ -43,6 +43,7 @@ function Techs(p::REoptInputs, s::BAUScenario)
     gentechs = String[]
     pbi_techs = String[]
     heating_techs = String[]
+    cooling_techs = String[]
     boiler_techs = String[]
     flexible_techs = String[]
     chp_techs = String[]
@@ -72,6 +73,7 @@ function Techs(p::REoptInputs, s::BAUScenario)
         techs_no_turndown,
         segmented_techs,
         heating_techs,
+        cooling_techs,
         boiler_techs,
         fuel_burning_techs,
         thermal_techs,
@@ -100,6 +102,7 @@ function Techs(s::Scenario)
     techs_no_curtail = String[]
     segmented_techs = String[]
     heating_techs = String[]
+    cooling_techs = String[]
     boiler_techs = String[]
     flexible_techs = String[]
     chp_techs = String[]
@@ -146,6 +149,7 @@ function Techs(s::Scenario)
         techs_no_turndown,
         segmented_techs,
         heating_techs,
+        cooling_techs,
         boiler_techs,
         fuel_burning_techs,
         thermal_techs,
@@ -182,6 +186,7 @@ function Techs(s::MPCScenario)
         String[],
         String[],
         techs_no_turndown,
+        String[],
         String[],
         String[],
         String[],
