@@ -185,6 +185,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     m[:TotalPerUnitHourOMCosts] = 0.0
     m[:TotalFuelCosts] = 0.0
     m[:TotalProductionIncentive] = 0
+	m[:dvComfortLimitViolationCost] = 0.0
 
 	if !isempty(p.techs.all)
 		add_tech_size_constraints(m, p)
@@ -210,7 +211,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             add_boiler_tech_constraints(m, p)
         end
     
-		m[:dvComfortLimitViolationCost] = 0.0
         if !isempty(p.techs.thermal)
             add_thermal_load_constraints(m, p)  # split into heating and cooling constraints?
         end
