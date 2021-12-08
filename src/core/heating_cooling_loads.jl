@@ -157,12 +157,14 @@ struct CoolingLoad
             loads_kw = fuel_loads_ton_per_hour .* TONHOUR_TO_KWH
 
         elseif !isempty(doe_reference_name)
-            loads_kw = BuiltInCoolingLoad(city, doe_reference_name, latitude, longitude, 2017, annual_tonhour, monthly_tonhour)
+            loads_kw = BuiltInCoolingLoad(city, doe_reference_name, latitude, longitude, 2017, 
+                                          annual_tonhour, monthly_tonhour)
 
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
             loads_kw = blend_and_scale_doe_profiles(BuiltInCoolingLoad, latitude, longitude, 2017, 
-                                                    blended_doe_reference_names, blended_doe_reference_percents, city, 
+                                                    blended_doe_reference_names, 
+                                                    blended_doe_reference_percents, city, 
                                                     annual_tonhour, monthly_tonhour)
         
         elseif !isnothing(loads_fraction) && (length(site_electric_load_profile) / time_steps_per_hour ≈ 8760)
@@ -177,7 +179,8 @@ struct CoolingLoad
             end
             timeseries = collect(DateTime(2017,1,1) : Minute(60/time_steps_per_hour) : 
                                  DateTime(2017,1,1) + Minute(8760*60 - 60/time_steps_per_hour))
-            loads_kw = monthly_fraction[month(dt)] * site_electric_load_profile[ts] for (ts, dt) in enumerate(timeseries)
+            loads_kw = [monthly_fraction[month(dt)] * site_electric_load_profile[ts] for (ts, dt) 
+                        in enumerate(timeseries)]
 
         elseif !isnothing(annual_fraction) && (length(site_electric_load_profile) / time_steps_per_hour ≈ 8760)
             loads_kw = annual_fraction * site_electric_load_profile
