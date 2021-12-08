@@ -39,29 +39,56 @@ struct FlexibleHVAC
     installed_cost::Float64
 end
 
+# function FlexibleHVAC(;
+#     system_matrix::AbstractVector,
+#     input_matrix::AbstractVector,
+#     exogenous_inputs::AbstractVector,
+#     control_node::Int64,
+#     initial_temperatures::AbstractVector,
+#     comfort_temperature_upper_bound::Float64,
+#     comfort_temperature_lower_bound::Float64,
+#     installed_cost::Float64
+#     )
+#     #=
+#     When loading in JSON list of lists we get a Vector{Any}, containing more Vector{Any}
+#     Convert the Vector of Vectors to a Matrix with:
+#     Matrix(hcat(Vector{Float64}.(<VectorOfVectors-from-JSON>)...))
+#     =#
+#     A = Matrix(hcat(Vector{Float64}.(system_matrix)...))
+#     B = Matrix(hcat(Vector{Float64}.(input_matrix)...))
+#     u = Matrix(hcat(Vector{Float64}.(exogenous_inputs)...))'
+#     # TODO should the above Matrices be transposed? (What was the intended format in test_flexloads.py?)
+#     FlexibleHVAC(
+#         A,
+#         B,
+#         u,
+#         control_node,
+#         initial_temperatures,
+#         comfort_temperature_upper_bound,
+#         comfort_temperature_lower_bound,
+#         installed_cost,
+#     )
+# end
+
+"""
+
+When the A, B, and u values are in Matrix format (note u is normally a vector but in our case it has a time index in the second dimension)
+"""
 function FlexibleHVAC(;
-    system_matrix::AbstractVector,
-    input_matrix::AbstractVector,
-    exogenous_inputs::AbstractVector,
+    system_matrix::AbstractMatrix,
+    input_matrix::AbstractMatrix,
+    exogenous_inputs::AbstractMatrix,
     control_node::Int64,
     initial_temperatures::AbstractVector,
-    comfort_temperature_upper_bound::Float64,
-    comfort_temperature_lower_bound::Float64,
+    comfort_temperature_upper_bound::Real,
+    comfort_temperature_lower_bound::Real,
     installed_cost::Float64
     )
-    #=
-    When loading in JSON list of lists we get a Vector{Any}, containing more Vector{Any}
-    Convert the Vector of Vectors to a Matrix with:
-    Matrix(hcat(Vector{Float64}.(<VectorOfVectors-from-JSON>)...))
-    =#
-    A = Matrix(hcat(Vector{Float64}.(system_matrix)...))
-    B = Matrix(hcat(Vector{Float64}.(input_matrix)...))
-    u = Matrix(hcat(Vector{Float64}.(exogenous_inputs)...))'
-    # TODO should the above Matrices be transposed? (What was the intended format in test_flexloads.py?)
+    
     FlexibleHVAC(
-        A,
-        B,
-        u,
+        system_matrix,
+        input_matrix,
+        exogenous_inputs,
         control_node,
         initial_temperatures,
         comfort_temperature_upper_bound,

@@ -126,15 +126,169 @@ end
     d["FlexibleHVAC"] = Dict(
         "control_node" => 5,
         "initial_temperatures" => repeat([22], 9),
-        "comfort_temperature_upper_bound" => 30.0,
-        "comfort_temperature_lower_bound" => 10.0,
+        "comfort_temperature_upper_bound" => 50.0,
+        "comfort_temperature_lower_bound" => 0.0,
         "installed_cost" => 1000.0,
     )
     d["FlexibleHVAC"] = merge(d["FlexibleHVAC"], coefs);
     s = Scenario(d);
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    m = Model(optimizer_with_attributes(Xpress.Optimizer))#, "OUTPUTLOG" => 0))
     p = REoptInputs(s);
     build_reopt!(m, p)
+    optimize!(m)
+    results = reopt_results(m,p)
+
+
+    # with no incentive to flex the existing boiler the solution should have zero for dvSpaceHeatShiftkW and the dvThermalProduction for ExistingBoiler should ≈ BAU input profile for space heating?
+    sum(p.s.space_heating_load.loads_kw+p.s.dhw_load.loads_kw) ≈ value(sum(m[Symbol("dvThermalProduction")]["ExistingBoiler", :]))
+    @test sum(value.(m[:dvSpaceHeatShiftkW])) ≈ 0 atol = 1e-5
+    # from thermal loads test:
+    @test round(results["ExistingBoiler"]["year_one_boiler_fuel_consumption_mmbtu"], digits=0) ≈ 2905
+
+    # why is model shifting thermal demand without economic incentive? (flat rate)
+    # what is wrong with dvTemperature ? (goes super high order 1e7)
+
+    #=
+    Run with single RC model
+    1 state/control node
+    2 inputs: Ta and Qheat
+    A = [1/(RC)], B = [1/(RC) 1/C], u = [Ta; Q]
+    NOTE exogenous_inputs allows for parasitic heat, modeled as zeros here
+    =#
+    include("../src/keys.jl")
+    using HTTP
+    R = 0.00025  # K/kW
+    C = 1e5   # kJ/K
+
+    function get_ambient_temperature(latitude::Real, longitude::Real; timeframe="hourly")
+
+        url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
+            "&lat=", latitude , "&lon=", longitude, "&tilt=", latitude,
+            "&system_capacity=1", "&azimuth=", 180, "&module_type=", 0,
+            "&array_type=", 0, "&losses=", 14,
+            "&timeframe=", timeframe, "&dataset=nsrdb"
+        )
+    
+        try
+            @info "Querying PVWatts for ambient temperature... "
+            r = HTTP.get(url)
+            response = JSON.parse(String(r.body))
+            if r.status != 200
+                error("Bad response from PVWatts: $(response["errors"])")
+            end
+            @info "PVWatts success."
+            tamb = collect(get(response["outputs"], "tamb", []))  # Celcius
+            if length(tamb) != 8760
+                @error "PVWatts did not return a valid temperature. Got $tamb"
+            end
+            return tamb
+        catch e
+            @error "Error occurred when calling PVWatts: $e"
+        end
+    end
+    tamb = get_ambient_temperature(37.78, -122.45);
+
+    d = JSON.parsefile("./scenarios/thermal_load.json");
+    A = reshape([-1/(R*C)], 1,1)
+    B = [1/(R*C) 1/C]
+    u = [tamb zeros(8760)]';
+    d["FlexibleHVAC"] = Dict(
+        "control_node" => 1,
+        "initial_temperatures" => [21],
+        "comfort_temperature_upper_bound" => 22.0,
+        "comfort_temperature_lower_bound" => 19.8,
+        "installed_cost" => 0.0,
+        "system_matrix" => A,
+        "input_matrix" => B,
+        "exogenous_inputs" => u
+    )
+    s = Scenario(d);
+    p = REoptInputs(s);
+
+    m = Model(optimizer_with_attributes(Xpress.Optimizer))#, "OUTPUTLOG" => 0))
+    build_reopt!(m, p)
+    optimize!(m)
+    results = reopt_results(m,p)
+
+
+    # choosing flex b/c can consume less boiler fuel: "total_boiler_fuel_cost" => 49268.2 vs 5.2753e5 w/o flex
+    # which doesn't seem fair! try reducing R and C
+
+
+    R = 0.000025  # K/kW
+    C = 1e4   # kJ/K
+    d = JSON.parsefile("./scenarios/thermal_load.json");
+    A = reshape([-1/(R*C)], 1,1)
+    B = [1/(R*C) 1/C]
+    u = [tamb zeros(8760)]';
+
+    d["FlexibleHVAC"] = Dict(
+        "control_node" => 1,
+        "initial_temperatures" => [21],
+        "comfort_temperature_upper_bound" => 22.0,
+        "comfort_temperature_lower_bound" => 19.8,
+        "installed_cost" => 0.0,
+        "system_matrix" => A,
+        "input_matrix" => B,
+        "exogenous_inputs" => u
+    )
+    s = Scenario(d);
+    p = REoptInputs(s);
+
+    m = Model(optimizer_with_attributes(Xpress.Optimizer))#, "OUTPUTLOG" => 0))
+    build_reopt!(m, p)
+
+    optimize!(m)
+    results = reopt_results(m,p)
+     #=
+    That did it: reducing R and C by an order of magnitude made it more economical to meet the bau heating load
+    "total_boiler_fuel_cost" => 5.2753e5
+    julia> value(m[:binFlexHVAC])
+    -0.0
+
+    julia> sum(p.s.space_heating_load.loads_kw+p.s.dhw_load.loads_kw) ≈ value(sum(m[Symbol("dvThermalProduction")]["ExistingBoiler", :]))
+    true
+    =#
+
+    # force FlexibleHVAC with slack in comfort constaints:
+    m = Model(optimizer_with_attributes(Xpress.Optimizer))#, "OUTPUTLOG" => 0))
+    build_reopt!(m, p)
+
+    @constraint(m, m[:binFlexHVAC] >=1)
+
+    optimize!(m)
+    results = reopt_results(m,p)
+    # problem is now feasible, but max temperature is over 29 because no cooling system (and low RC)
+
+
+    #=
+    Try a TOU rate with lower R and C
+    =#
+    d = JSON.parsefile("./scenarios/thermal_load.json");
+    d["FlexibleHVAC"] = Dict(
+        "control_node" => 1,
+        "initial_temperatures" => [21],
+        "comfort_temperature_upper_bound" => 22.0,
+        "comfort_temperature_lower_bound" => 19.8,
+        "installed_cost" => 0.0,
+        "system_matrix" => A,
+        "input_matrix" => B,
+        "exogenous_inputs" => u
+    )
+    d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = rand(Float64, (8760))*(55555-55).+55;
+    s = Scenario(d);
+    p = REoptInputs(s);
+
+    m = Model(optimizer_with_attributes(Xpress.Optimizer))#, "OUTPUTLOG" => 0))
+    build_reopt!(m, p)
+
+    optimize!(m)
+    results = reopt_results(m,p)
+    # even with time varying fuel cost up to $50k/hour does not choose flexible_hvac
+    # because of the upper_comfort_slack cost (no cooling means that must violate upper bound by over 7 deg C)
+    # problem is being able to cool the building, which isn't modeled yet
+    # TODO add cooling capability
+
 end
     
 @testset "CHP Unavailability and Outage" begin

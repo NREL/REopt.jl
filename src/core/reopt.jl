@@ -319,7 +319,9 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:TotalElecBill] * (1 - p.s.financial.offtaker_tax_pct) -
 
         # Subtract Incentives, which are taxable
-		m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_pct)
+		m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_pct) +
+
+		m[:dvComfortLimitViolationCost]
 	);
 	if !isempty(p.s.electric_utility.outage_durations)
 		add_to_expression!(Costs, m[:ExpectedOutageCost] + m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost] + m[:ExpectedMGFuelCost])

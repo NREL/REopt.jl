@@ -98,50 +98,63 @@ end
 
 function add_thermal_load_constraints(m, p; _n="")
 
-    dvSpaceHeatShiftkW = zeros(length(p.time_steps))
+    binFlexHVAC = 0
     dvTemperature = nothing
+    dvComfortLimitViolationCost = 0
+
     if !isempty(p.techs.flexible)
-        dvSpaceHeatShiftkW = @variable(m, [p.time_steps])
+        binFlexHVAC = @variable(m, binary = true)
         (N, J) = size(p.s.flexible_hvac.input_matrix)
         dvTemperature = @variable(m, [1:N, p.time_steps])
-
-        #  cannot shift more than demand in any time step, and can only increase the demand up to the heating capacity
-        @constraint(m, [ts in p.time_steps],
-            dvSpaceHeatShiftkW[ts] <= 
-            p.s.space_heating_load.loads_kw[ts]
-        )
-        @constraint(m, [ts in p.time_steps],
-            p.s.space_heating_load.loads_kw[ts] - sum(m[Symbol("dvSize"*_n)][t] for t in p.techs.heating)
-            <= dvSpaceHeatShiftkW[ts]
-        )
-
-        # net shifted demand is zero (all of demand is met - not accounting for variable efficiency)
-        @constraint(m, sum(dvSpaceHeatShiftkW[ts] for ts in p.time_steps) == 0)
 
         # initialize space temperatures
         @constraint(m, dvTemperature[:, 1] .== p.s.flexible_hvac.initial_temperatures)
 
         # space temperature evolution based on state-space model
+        # TODO time scaling for dt?
         input_vec = zeros(N)
         input_vec[p.s.flexible_hvac.control_node] = 1
+
         @constraint(m, [n in 1:N, ts in 2:length(p.time_steps)],
-            dvTemperature[n, ts] == sum(p.s.flexible_hvac.system_matrix[n, m] * dvTemperature[m, ts-1] for m=1:N)
-                + sum(p.s.flexible_hvac.input_matrix[n, j] * p.s.flexible_hvac.exogenous_inputs[j, ts-1] for j=1:J)
-                + input_vec[n] * sum(p.s.flexible_hvac.input_matrix[n, p.s.flexible_hvac.control_node] 
-                  * sum(m[Symbol("dvThermalProduction"*_n)][t, ts-1] for t in p.techs.heating))
+            binFlexHVAC => { dvTemperature[n, ts] == dvTemperature[n, ts-1] + sum(p.s.flexible_hvac.system_matrix[n, m] * dvTemperature[m, ts-1] for m=1:N) + sum(p.s.flexible_hvac.input_matrix[n, j] * p.s.flexible_hvac.exogenous_inputs[j, ts-1] for j=1:J) + 
+            input_vec[n] * sum(p.s.flexible_hvac.input_matrix[n, p.s.flexible_hvac.control_node] * 
+            sum(m[Symbol("dvThermalProduction"*_n)][t, ts-1] for t in p.techs.heating)
+                )
+            }
         )
+        # TODO convert dvThermalProduction units? to ? shouldn't the conversion be in input_matrix coef? COP in Xiang's test is 4-5, fan_power_ratio = 0, hp prod factor generally between 1 and 2
+        ## TODO? slack with penalty for comfort limits? (to prevent infeasible problems)
+        ## TODO check eigen values / stability of system matrix?
+
+        # can bound dvTemperature regardless of binFlexHVAC
+        @variable(m, lower_comfort_slack[p.time_steps] >=0)
         @constraint(m, [ts in p.time_steps], 
-            p.s.flexible_hvac.comfort_temperature_lower_bound <= dvTemperature[p.s.flexible_hvac.control_node, ts]
+            p.s.flexible_hvac.comfort_temperature_lower_bound - lower_comfort_slack[ts] <= dvTemperature[p.s.flexible_hvac.control_node, ts]
         )
-        @constraint(m, [ts in p.time_steps], 
-            dvTemperature[p.s.flexible_hvac.control_node, ts] <= p.s.flexible_hvac.comfort_temperature_upper_bound
+        @variable(m, upper_comfort_slack[p.time_steps] >=0)
+        @constraint(m, [ts in p.time_steps],
+            dvTemperature[p.s.flexible_hvac.control_node, ts] <= p.s.flexible_hvac.comfort_temperature_upper_bound + upper_comfort_slack[ts]
+        )
+        dvComfortLimitViolationCost = @expression(m,  1e9 * sum(lower_comfort_slack[ts] + upper_comfort_slack[ts] for ts in p.time_steps))
+
+        @variable(m, dvFlexHVACcost >= 0)
+        @constraint(m, binFlexHVAC => { dvFlexHVACcost >= m[Symbol("dvPurchaseSize"*_n)]["ExistingBoiler"] * p.s.flexible_hvac.installed_cost})
+        # TODO rm hardcoded "ExistingBoiler"
+        m[:TotalTechCapCosts] += dvFlexHVACcost
+
+        @constraint(m, [ts in p.time_steps],
+            !binFlexHVAC => { sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.techs.chp) +
+                sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.boiler) ==
+                (p.s.dhw_load.loads_kw[ts] + p.s.space_heating_load.loads_kw[ts]) +
+                sum(m[Symbol("dvProductionToWaste"*_n)][t,ts] for t in p.techs.chp)
+            }
         )
 
-
-        # TODO indicator for installed_cost of FlexibleHVAC
     end
-    m[Symbol("dvSpaceHeatShiftkW"*_n)] = dvSpaceHeatShiftkW
+
+    m[Symbol("binFlexHVAC"*_n)] = binFlexHVAC
     m[Symbol("dvTemperature"*_n)] = dvTemperature
+    m[Symbol("dvComfortLimitViolationCost"*_n)] = dvComfortLimitViolationCost
 
 	### Constraint set (5) - hot and cold thermal loads
 
@@ -157,7 +170,7 @@ function add_thermal_load_constraints(m, p; _n="")
 	# end
 
 	##Constraint (5b): Hot thermal loads
-	if !isempty(p.techs.heating)
+	if !isempty(p.techs.heating) && isempty(p.techs.flexible)
         
         # if !isempty(p.SteamTurbineTechs)
         #     @constraint(m, HotThermalLoadCon[ts in p.time_steps],
@@ -180,7 +193,7 @@ function add_thermal_load_constraints(m, p; _n="")
                     # + sum(m[:dvDischargeFromStorage][b,ts] for b in p.HotTES)
                     # + sum(p.GHPHeatingThermalServed[g,ts] * m[:binGHP][g] for g in p.GHPOptions)
                     ==
-                    (p.s.dhw_load.loads_kw[ts] + p.s.space_heating_load.loads_kw[ts]) - dvSpaceHeatShiftkW[ts]
+                    (p.s.dhw_load.loads_kw[ts] + p.s.space_heating_load.loads_kw[ts])
                     + sum(m[Symbol("dvProductionToWaste"*_n)][t,ts] for t in p.techs.chp) #+
                     # sum(m[:dvProductionToStorage][b,t,ts] for b in p.HotTES, t in p.techs.heating)  +
                     # sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.AbsorptionChillers) / p.AbsorptionChillerCOP
