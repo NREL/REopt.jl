@@ -65,6 +65,12 @@ function add_existing_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
 	r["total_boiler_fuel_cost"] = round(value(TotalBoilerFuelCharges) * (1 - p.s.financial.offtaker_tax_pct), digits=3)
 	r["year_one_boiler_fuel_cost"] = round(value(TotalBoilerFuelCharges) / p.pwf_fuel["ExistingBoiler"], digits=3)
 
+    if !isempty(p.techs.flexible) && value(m[:binFlexHVAC]) ≈ 1.0
+        if any(value.(m[:lower_comfort_slack]) .>= 1.0) || any(value.(m[:upper_comfort_slack]) .>= 1.0)
+            @warn "The comfort limits were violated by at least one degree Celcius to keep the problem feasible."
+        end
+    end
+
     d["ExistingBoiler"] = r
 	nothing
 end
