@@ -210,6 +210,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             add_boiler_tech_constraints(m, p)
         end
     
+		m[:dvComfortLimitViolationCost] = 0.0
         if !isempty(p.techs.thermal)
             add_thermal_load_constraints(m, p)  # split into heating and cooling constraints?
         end
