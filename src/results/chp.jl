@@ -35,6 +35,7 @@ Note: the node number is an empty string if evaluating a single `Site`.
 
 CHP results:
 - `size_kw` Power capacity size of the CHP system [kW]
+- `size_supplemental_firing_kw` Power capacity of CHP supplementary firing system [kW]
 - `year_one_fuel_used_mmbtu` Fuel consumed in year one [MMBtu]
 - `year_one_electric_energy_produced_kwh` Electric energy produced in year one [kWh]
 - `year_one_thermal_energy_produced_mmbtu` Thermal energy produced in year one [MMBtu]
@@ -46,7 +47,6 @@ CHP results:
 - `year_one_thermal_to_load_series_mmbtu_per_hour` Thermal power to serve the heating load time-series array [MMBtu/hr]
 - `year_one_chp_fuel_cost` Fuel cost from fuel consumed by the CHP system [\$]
 - `lifecycle_chp_fuel_cost` Fuel cost from fuel consumed by the CHP system [\$]
-- `supplementary_firing_kw` Power capacity of CHP supplementary firing system [kW]
 """
 function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
