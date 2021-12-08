@@ -40,6 +40,9 @@ Financial results:
 """
 function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
+    if !(Symbol("dvComfortLimitViolationCost"*_n) in keys(m.obj_dict))
+        m[Symbol("dvComfortLimitViolationCost"*_n)] = 0.0
+    end
     r["lcc"] = value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)]) - value(m[Symbol("dvComfortLimitViolationCost"*_n)])
     r["lifecycle_om_costs_before_tax"] = value(m[Symbol("TotalPerUnitSizeOMCosts"*_n)] + 
                                            m[Symbol("TotalPerUnitProdOMCosts"*_n)])
