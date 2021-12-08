@@ -192,6 +192,7 @@ function Techs(s::MPCScenario)
         String[],
         String[],
         String[],
+        String[],
         String[]
     )
 end
