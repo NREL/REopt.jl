@@ -54,6 +54,7 @@ struct BAUScenario <: AbstractScenario
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
     existing_boiler::ExistingBoiler
+    existing_chiller::ExistingChiller
     outage_outputs::OutageOutputs
 end
 
@@ -123,6 +124,7 @@ function BAUScenario(s::Scenario)
         s.dhw_load,
         s.space_heating_load,
         s.existing_boiler,
+        s.existing_chiller,
         outage_outputs
     )
 end
