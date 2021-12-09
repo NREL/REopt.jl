@@ -48,7 +48,7 @@ const default_buildings = [
 ]
 
 const MMBTU_TO_KWH = 293.07107
-const TONHOUR_TO_KWH = 3.51685
+const TONHOUR_TO_KWH_THERMAL = 3.51685
 
 
 function find_ashrae_zone_city(lat, lon)::String

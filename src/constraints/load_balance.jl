@@ -39,6 +39,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
             sum( sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types) 
                 + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.elec)
             + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types)
+            + sum(m[Symbol("dvThermalProduction"*_n)][t, ts] / p.cop[t] for t in p.techs.cooling)
             + p.s.electric_load.loads_kw[ts]
         )
     else
@@ -117,9 +118,11 @@ function add_thermal_load_constraints(m, p; _n="")
 
         @constraint(m, [n in 1:N, ts in 2:length(p.time_steps)],
             binFlexHVAC => { dvTemperature[n, ts] == dvTemperature[n, ts-1] + sum(p.s.flexible_hvac.system_matrix[n, m] * dvTemperature[m, ts-1] for m=1:N) + sum(p.s.flexible_hvac.input_matrix[n, j] * p.s.flexible_hvac.exogenous_inputs[j, ts-1] for j=1:J) + 
-            input_vec[n] * sum(p.s.flexible_hvac.input_matrix[n, p.s.flexible_hvac.control_node] * 
-            sum(m[Symbol("dvThermalProduction"*_n)][t, ts-1] for t in p.techs.heating)
+            input_vec[n] * sum(p.s.flexible_hvac.input_matrix[n, p.s.flexible_hvac.control_node] * (
+                sum(m[Symbol("dvThermalProduction"*_n)][t, ts-1] for t in p.techs.heating) -
+                sum(m[Symbol("dvThermalProduction"*_n)][t, ts-1] for t in p.techs.cooling) 
                 )
+            )
             }
         )
         # TODO convert dvThermalProduction units? to ? shouldn't the conversion be in input_matrix coef? COP in Xiang's test is 4-5, fan_power_ratio = 0, hp prod factor generally between 1 and 2
@@ -150,14 +153,17 @@ function add_thermal_load_constraints(m, p; _n="")
             }
         )
 
+        @constraint(m, [ts in p.time_steps],
+            !binFlexHVAC => {sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.cooling) ==
+                p.s.cooling_load.loads_kw_thermal[ts]
+            }
+        )
+
     end
 
     m[Symbol("binFlexHVAC"*_n)] = binFlexHVAC
     m[Symbol("dvTemperature"*_n)] = dvTemperature
     m[Symbol("dvComfortLimitViolationCost"*_n)] = dvComfortLimitViolationCost
-
-	### Constraint set (5) - hot and cold thermal loads
-
 
 	##Constraint (5b): Hot thermal loads
 	if !isempty(p.techs.heating) && isempty(p.techs.flexible)
@@ -204,9 +210,9 @@ function add_thermal_load_constraints(m, p; _n="")
 	# end
 
     if !isempty(p.techs.cooling) && isempty(p.techs.flexible)
-        # @constraint(m, [ts in p.time_steps],
-        #     sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.cooling) ==
-        #     p.s.cooling_load.loads_kw[ts]
-        # )
+        @constraint(m, [ts in p.time_steps],
+            sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.cooling) ==
+            p.s.cooling_load.loads_kw_thermal[ts]
+        )
     end
 end

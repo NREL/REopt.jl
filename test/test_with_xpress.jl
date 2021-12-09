@@ -44,6 +44,7 @@ using Xpress
     results = run_reopt(m, inputs)
 
     @test round(results["ExistingBoiler"]["year_one_boiler_fuel_consumption_mmbtu"], digits=0) ≈ 8760
+    # TODO chiller tests
 end
 
 @testset "CHP Sizing" begin
