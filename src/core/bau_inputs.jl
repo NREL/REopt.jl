@@ -43,7 +43,7 @@ function BAUInputs(p::REoptInputs)
     existing_sizes = Dict(t => 0.0 for t in techs.all)
     cap_cost_slope = Dict{String, Any}()
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
-    cop = Dict(t => 0.0 for t in techs.coolin)
+    cop = Dict(t => 0.0 for t in techs.cooling)
     production_factor = DenseAxisArray{Float64}(undef, techs.all, p.time_steps)
 
     # export related inputs
