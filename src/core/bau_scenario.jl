@@ -54,7 +54,7 @@ struct BAUScenario <: AbstractScenario
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
     existing_boiler::ExistingBoiler
-    existing_chiller::ExistingChiller
+    existing_chiller::Union{ExistingChiller, Nothing}
     outage_outputs::OutageOutputs
 end
 
