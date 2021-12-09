@@ -60,8 +60,13 @@ function Techs(p::REoptInputs, s::BAUScenario)
         push!(boiler_techs, "ExistingBoiler")
     end
 
+    if !isnothing(s.existing_chiller)
+        push!(all_techs, "ExistingChiller")
+        push!(cooling_techs, "ExistingChiller")
+    end
+
     fuel_burning_techs = union(gentechs, boiler_techs, chp_techs)
-    thermal_techs = union(heating_techs, boiler_techs)
+    thermal_techs = union(heating_techs, boiler_techs, cooling_techs)
 
     Techs(
         all_techs,
@@ -136,7 +141,12 @@ function Techs(s::Scenario)
         push!(chp_techs, "CHP")
     end
 
-    thermal_techs = union(heating_techs, boiler_techs, chp_techs)
+    if !isnothing(s.existing_chiller)
+        push!(all_techs, "ExistingChiller")
+        push!(cooling_techs, "ExistingChiller")
+    end
+
+    thermal_techs = union(heating_techs, boiler_techs, chp_techs, cooling_techs)
     fuel_burning_techs = union(gentechs, boiler_techs, chp_techs)
 
     Techs(

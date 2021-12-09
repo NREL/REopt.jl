@@ -127,8 +127,26 @@ struct SpaceHeatingLoad
 end
 
 
+function get_existing_chiller_cop(max_thermal_factor_on_peak_load; loads_kw=nothing, loads_kw_thermal=nothing)
+    if !isnothing(loads_kw_thermal)
+        max_cooling_load_tons = maximum(loads_kw_thermal) / TONHOUR_TO_KWH_THERMAL
+    elseif !isnothing(loads_kw)
+        max_cooling_load_tons = maximum(loads_kw) / TONHOUR_TO_KWH_THERMAL * 4.55
+    end
+    estimated_max_chiller_thermal_capacity_tons = max_cooling_load_tons * max_thermal_factor_on_peak_load
+    if estimated_max_chiller_thermal_capacity_tons < 100.0
+        return 4.40
+    else
+        return 4.69
+    end
+end
+
+
+# TODO? electric load gets reduced by the cooling electric load
+# TODO? Zero out cooling load for outage hours
 struct CoolingLoad
-    loads_kw::Array{Real, 1}
+    loads_kw_thermal::Array{Real, 1}
+    existing_chiller_cop::Real
 
     function CoolingLoad(;
         doe_reference_name::String = "",
@@ -141,20 +159,23 @@ struct CoolingLoad
         annual_fraction::Union{Real, Nothing} = nothing,
         monthly_fraction::Union{Real, Nothing} = nothing,
         loads_fraction::Array{<:Real,1} = Real[],
-        chiller_cop::Real = 1, # TODO
+        chiller_cop::Union{Real, Nothing} = nothing,
         site_electric_load_profile = Real[],
         time_steps_per_hour::Int = 1,
         latitude::Float64=0.0,
-        longitude::Float64=0.0
+        longitude::Float64=0.0,
+        max_thermal_factor_on_peak_load::Real=1.25
     )
-        # determine the timeseries of electric loads_kw
+        # determine the timeseries of loads_kw_thermal
+        loads_kw_thermal = nothing
+        loads_kw = nothing
         if length(fuel_loads_ton_per_hour) > 0
 
             if !(length(fuel_loads_ton_per_hour) / time_steps_per_hour ≈ 8760)
                 @error "Provided space heating load does not match the time_steps_per_hour."
             end
 
-            loads_kw = fuel_loads_ton_per_hour .* TONHOUR_TO_KWH
+            loads_kw_thermal = fuel_loads_ton_per_hour .* TONHOUR_TO_KWH_THERMAL
 
         elseif !isempty(doe_reference_name)
             loads_kw = BuiltInCoolingLoad(city, doe_reference_name, latitude, longitude, 2017, 
@@ -191,13 +212,24 @@ struct CoolingLoad
                 or the site_electric_load_profile along with one of [loads_fraction, monthly_fraction, annual_fraction].")
         end
 
-        if length(loads_kw) < 8760*time_steps_per_hour
-            loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw)/8760)))
+        if isnothing(chiller_cop)
+            chiller_cop = get_existing_chiller_cop(max_thermal_factor_on_peak_load;
+                                loads_kw=loads_kw, loads_kw_thermal=loads_kw_thermal)
+        end
+
+        if isnothing(loads_kw_thermal)  # have to convert electric loads_kw to thermal load
+            loads_kw_thermal = chiller_cop * loads_kw
+        end
+
+        if length(loads_kw_thermal) < 8760*time_steps_per_hour
+            loads_kw_thermal = repeat(loads_kw_thermal, inner=Int(time_steps_per_hour / 
+                               (length(loads_kw_thermal)/8760)))
             @info "Repeating cooling loads in each hour to match the time_steps_per_hour."
         end
 
         new(
-            loads_kw
+            loads_kw_thermal,
+            chiller_cop
         )
     end
 
@@ -1184,11 +1216,11 @@ function BuiltInCoolingLoad(
     if isnothing(annual_tonhour)
         annual_kwh = cooling_annual_kwh[city][buildingtype]
     else
-        annual_kwh = annual_tonhour * TONHOUR_TO_KWH
+        annual_kwh = annual_tonhour * TONHOUR_TO_KWH_THERMAL
     end
     monthly_kwh = Real[]
     if length(monthly_tonhour) == 12
-        monthly_kwh = monthly_tonhour * TONHOUR_TO_KWH
+        monthly_kwh = monthly_tonhour * TONHOUR_TO_KWH_THERMAL
     end
     built_in_load("cooling", city, buildingtype, year, annual_kwh, monthly_kwh)
 end

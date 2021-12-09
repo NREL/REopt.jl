@@ -40,9 +40,11 @@ struct Scenario <: AbstractScenario
     generator::Generator
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
+    cooling_load::CoolingLoad
     existing_boiler::ExistingBoiler
     chp::Union{CHP, Nothing}  # use nothing for more items when they are not modeled?
     flexible_hvac::Union{FlexibleHVAC, Nothing}
+    existing_chiller::Union{ExistingChiller, Nothing}
 end
 
 """
@@ -60,9 +62,11 @@ Constructor for Scenario struct, where `d` has upper-case keys:
 - Generator (optional)
 - DomesticHotWaterLoad (optional)
 - SpaceHeatingLoad (optional)
+- CoolingLoad (optional)
 - ExistingBoiler (optional)
 - CHP (optional)
 - FlexibleHVAC (optional)
+- ExistingChiller (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV`, which can be either a `Dict` or `Dict[]`.
 ```
@@ -79,9 +83,11 @@ struct Scenario
     generator::Generator
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
+    cooling_load::CoolingLoad
     existing_boiler::ExistingBoiler
     chp::Union{CHP, Nothing}
     flexible_hvac::Union{FlexibleHVAC, Nothing}
+    existing_chiller::Union{ExistingChiller, Nothing}
 end
 ```
 """
@@ -210,6 +216,35 @@ function Scenario(d::Dict)
         chp = CHP(d["CHP"])
     end
 
+    max_cooling_demand_kw = 0
+    if haskey(d, "CoolingLoad")
+        add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["CoolingLoad"])
+        d["CoolingLoad"]["site_electric_load_profile"] = electric_load.loads_kw
+        if haskey(d, "ExistingChiller") && haskey(d["ExistingChiller"], "cop")
+            d["CoolingLoad"]["chiller_cop"] = d["ExistingChiller"]["cop"]
+        end
+        cooling_load = CoolingLoad(; dictkeys_tosymbols(d["CoolingLoad"])...,
+                                    latitude=site.latitude, longitude=site.longitude, 
+                                    time_steps_per_hour=settings.time_steps_per_hour
+                                    )
+        max_cooling_demand_kw = maximum(cooling_load.loads_kw_thermal)
+    else
+        cooling_load = CoolingLoad(; fuel_loads_ton_per_hour=repeat([0.0], 8760))
+    end
+
+    existing_chiller = nothing
+    if max_cooling_demand_kw > 0
+        chiller_inputs = Dict{Symbol, Any}()
+        chiller_inputs[:loads_kw_thermal] = cooling_load.loads_kw_thermal
+        if haskey(d, "ExistingChiller")
+            chiller_inputs = merge(chiller_inputs, dictkeys_tosymbols(d["ExistingChiller"]))
+        end
+        if !haskey(chiller_inputs, :cop)
+            chiller_inputs[:cop] = cooling_load.existing_chiller_cop
+        end
+        existing_chiller = ExistingChiller(; chiller_inputs...)
+    end
+
     return Scenario(
         settings,
         site, 
@@ -223,9 +258,11 @@ function Scenario(d::Dict)
         generator,
         dhw_load,
         space_heating_load,
+        cooling_load,
         existing_boiler,
         chp,
-        flexible_hvac
+        flexible_hvac,
+        existing_chiller
     )
 end
 
