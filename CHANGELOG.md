@@ -1,6 +1,6 @@
 # REoptLite Changelog
 
-## dev
+## v0.12.1
 - add ExistingBoiler and CRB heating loads
 
 ## v0.12.0
