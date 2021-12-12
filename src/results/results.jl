@@ -83,6 +83,10 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         add_existing_chiller_results(m, p, d)
     end
 
+    if !isnothing(p.s.flexible_hvac)
+        add_flexible_hvac_results(m, p, d)
+    end
+
 	return d
 end
 
@@ -120,6 +124,7 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("Generator", "year_one_fuel_cost"),
         ("Generator", "year_one_variable_om_cost"),
         ("Generator", "year_one_fixed_om_cost"),
+        ("FlexibleHVAC", "temperatures_degC_node_by_time")
     )
 
     for t in bau_outputs
@@ -142,6 +147,8 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
 
     opt["ElectricLoad"]["bau_critical_load_met"] = bau_scenario.outage_outputs.bau_critical_load_met
     opt["ElectricLoad"]["bau_critical_load_met_time_steps"] = bau_scenario.outage_outputs.bau_critical_load_met_time_steps
+
+    # TODO add FlexibleHVAC opex savings
 
     return opt
 end

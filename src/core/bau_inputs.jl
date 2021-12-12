@@ -47,14 +47,14 @@ function BAUInputs(p::REoptInputs)
     production_factor = DenseAxisArray{Float64}(undef, techs.all, p.time_steps)
 
     # export related inputs
-    techs_by_exportbin = Dict(k => [] for k in p.s.electric_tariff.export_bins)
+    techs_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in p.s.electric_tariff.export_bins)
     export_bins_by_tech = Dict{String, Array{Symbol, 1}}()
 
     # REoptInputs indexed on techs.segmented
     n_segs_by_tech = Dict{String, Int}()
-    seg_min_size = Dict{String, Any}()
-    seg_max_size = Dict{String, Any}()
-    seg_yint = Dict{String, Any}()
+    seg_min_size = Dict{String, Dict{Int, Float64}}()
+    seg_max_size = Dict{String, Dict{Int, Float64}}()
+    seg_yint = Dict{String, Dict{Int, Float64}}()
 
     # PV specific arrays
     pv_to_location = Dict(t => Dict{Symbol, Int}() for t in techs.pv)

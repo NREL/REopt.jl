@@ -27,50 +27,28 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-abstract type AbstractTech end
-abstract type AbstractStorage end
-abstract type AbstractGenerator <: AbstractTech end
-abstract type AbstractScenario end
-abstract type AbstractInputs end
-abstract type AbstractThermalTech <: AbstractGenerator end
-abstract type AbstractCHP <: AbstractTech end
+function add_flexible_hvac_results(m::JuMP.AbstractModel, p::REoptInputs{Scenario}, d::Dict; _n="")
+    r = Dict{String, Any}()
+    binFlexHVAC = value(m[:binFlexHVAC])
+    r["purchased"] = string(Bool(binFlexHVAC))
+    r["temperatures_degC_node_by_time"] = value.(m[Symbol("dvTemperature"*_n)]).data
+    r["upgrade_cost"] = Int(binFlexHVAC) * p.s.flexible_hvac.installed_cost
 
-"""
-    Techs
+    if binFlexHVAC ≈ 1.0
+        if any(value.(m[:lower_comfort_slack]) .>= 1.0) || any(value.(m[:upper_comfort_slack]) .>= 1.0)
+            @warn "The comfort limits were violated by at least one degree Celcius to keep the problem feasible."
+        end
+    end
 
-`Techs` contains the index sets that are used to define the model constraints and decision variables.
-
-```julia
-mutable struct Techs
-    all::Vector{String}
-    elec::Vector{String}
-    pv::Vector{String}
-    gen::Vector{String}
-    pbi::Vector{String}
-    no_curtail::Vector{String}
-    no_turndown::Vector{String}
-    segmented::Vector{String}
-    heating::Vector{String}
-    boiler::Vector{String}
-    fuel_burning::Vector{String}
-    thermal::Vector{String}
-    chp::Vector{String}
+    d["FlexibleHVAC"] = r
+	nothing
 end
-```
-"""
-mutable struct Techs
-    all::Vector{String}
-    elec::Vector{String}
-    pv::Vector{String}
-    gen::Vector{String}
-    pbi::Vector{String}
-    no_curtail::Vector{String}
-    no_turndown::Vector{String}
-    segmented::Vector{String}
-    heating::Vector{String}
-    cooling::Vector{String}
-    boiler::Vector{String}
-    fuel_burning::Vector{String}
-    thermal::Vector{String}
-    chp::Vector{String}
+
+function add_flexible_hvac_results(m::JuMP.AbstractModel, p::REoptInputs{BAUScenario}, d::Dict; _n="")
+    r = Dict{String, Any}()
+
+    r["temperatures_degC_node_by_time"] = m[Symbol("dvTemperature"*_n)]
+
+    d["FlexibleHVAC"] = r
+	nothing
 end

@@ -45,7 +45,6 @@ function Techs(p::REoptInputs, s::BAUScenario)
     heating_techs = String[]
     cooling_techs = String[]
     boiler_techs = String[]
-    flexible_techs = String[]
     chp_techs = String[]
 
     if p.s.generator.existing_kw > 0
@@ -82,7 +81,6 @@ function Techs(p::REoptInputs, s::BAUScenario)
         boiler_techs,
         fuel_burning_techs,
         thermal_techs,
-        flexible_techs,
         chp_techs
     )
 end
@@ -109,7 +107,6 @@ function Techs(s::Scenario)
     heating_techs = String[]
     cooling_techs = String[]
     boiler_techs = String[]
-    flexible_techs = String[]
     chp_techs = String[]
     if s.wind.max_kw > 0
         push!(all_techs, "Wind")
@@ -129,10 +126,6 @@ function Techs(s::Scenario)
 
     if "Wind" in all_techs
         append!(techs_no_turndown, ["Wind"])
-    end
-
-    if !isnothing(s.flexible_hvac)
-        push!(flexible_techs, "FlexibleHVAC")
     end
     
     if !isnothing(s.chp)
@@ -163,7 +156,6 @@ function Techs(s::Scenario)
         boiler_techs,
         fuel_burning_techs,
         thermal_techs,
-        flexible_techs,
         chp_techs
     )
 end

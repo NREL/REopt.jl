@@ -56,6 +56,7 @@ struct BAUScenario <: AbstractScenario
     existing_boiler::Union{ExistingBoiler, Nothing}
     existing_chiller::Union{ExistingChiller, Nothing}
     outage_outputs::OutageOutputs
+    flexible_hvac::Union{BAU_HVAC, Nothing}
 end
 
 
@@ -110,6 +111,11 @@ function BAUScenario(s::Scenario)
     end
     outage_outputs = OutageOutputs()
 
+    flexible_hvac = nothing
+    if !isnothing(s.flexible_hvac)
+        flexible_hvac = s.flexible_hvac.bau_hvac
+    end
+
     return BAUScenario(
         s.settings,
         s.site, 
@@ -125,6 +131,7 @@ function BAUScenario(s::Scenario)
         s.space_heating_load,
         s.existing_boiler,
         s.existing_chiller,
-        outage_outputs
+        outage_outputs,
+        flexible_hvac
     )
 end
