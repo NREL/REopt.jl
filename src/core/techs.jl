@@ -54,7 +54,7 @@ function Techs(p::REoptInputs, s::BAUScenario)
         push!(elec, "Generator")
     end
 
-    if p.s.existing_boiler.max_kw > 0
+    if !isnothing(s.existing_boiler)
         push!(all_techs, "ExistingBoiler")
         push!(heating_techs, "ExistingBoiler")
         push!(boiler_techs, "ExistingBoiler")
@@ -121,7 +121,7 @@ function Techs(s::Scenario)
         push!(elec, "Generator")
     end
 
-    if s.existing_boiler.max_kw > 0
+    if !isnothing(s.existing_boiler)
         push!(all_techs, "ExistingBoiler")
         push!(heating_techs, "ExistingBoiler")
         push!(boiler_techs, "ExistingBoiler")

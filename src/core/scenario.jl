@@ -41,7 +41,7 @@ struct Scenario <: AbstractScenario
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
     cooling_load::CoolingLoad
-    existing_boiler::ExistingBoiler
+    existing_boiler::Union{ExistingBoiler, Nothing}
     chp::Union{CHP, Nothing}  # use nothing for more items when they are not modeled?
     flexible_hvac::Union{FlexibleHVAC, Nothing}
     existing_chiller::Union{ExistingChiller, Nothing}
@@ -84,7 +84,7 @@ struct Scenario
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
     cooling_load::CoolingLoad
-    existing_boiler::ExistingBoiler
+    existing_boiler::Union{ExistingBoiler, Nothing}
     chp::Union{CHP, Nothing}
     flexible_hvac::Union{FlexibleHVAC, Nothing}
     existing_chiller::Union{ExistingChiller, Nothing}
@@ -164,7 +164,7 @@ function Scenario(d::Dict)
     end
 
     max_heat_demand_kw = 0.0
-    if haskey(d, "DomesticHotWaterLoad")
+    if haskey(d, "DomesticHotWaterLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["DomesticHotWaterLoad"])
         dhw_load = DomesticHotWaterLoad(; dictkeys_tosymbols(d["DomesticHotWaterLoad"])...,
                                           latitude=site.latitude, longitude=site.longitude, 
@@ -175,7 +175,7 @@ function Scenario(d::Dict)
         dhw_load = DomesticHotWaterLoad(; fuel_loads_mmbtu_per_hour=repeat([0.0], 8760))
     end
                                     
-    if haskey(d, "SpaceHeatingLoad")
+    if haskey(d, "SpaceHeatingLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["SpaceHeatingLoad"])
         space_heating_load = SpaceHeatingLoad(; dictkeys_tosymbols(d["SpaceHeatingLoad"])...,
                                                 latitude=site.latitude, longitude=site.longitude, 
@@ -188,7 +188,54 @@ function Scenario(d::Dict)
     end
 
     flexible_hvac = nothing
-    if max_heat_demand_kw > 0
+    existing_boiler = nothing
+
+    if haskey(d, "FlexibleHVAC")
+        # TODO how to handle Matrix from JSON (to Dict) ?
+        flexible_hvac = FlexibleHVAC(; dictkeys_tosymbols(d["FlexibleHVAC"])...)
+
+        if sum(flexible_hvac.bau_hvac.existing_boiler_kw_thermal) ≈ 0.0 && 
+            sum(flexible_hvac.bau_hvac.existing_chiller_kw_thermal) ≈ 0.0
+            @warn "The FlexibleHVAC inputs indicate that no heating nor cooling is required. Not creating FlexibleHVAC model."
+            flexible_hvac = nothing
+        else
+            # ExistingChiller and/or ExistingBoiler are added based on BAU_HVAC energy required to keep temperature within bounds
+            if sum(flexible_hvac.bau_hvac.existing_boiler_kw_thermal) > 0
+                boiler_inputs = Dict{Symbol, Any}()
+                boiler_inputs[:max_heat_demand_kw] = maximum(flexible_hvac.bau_hvac.existing_boiler_kw_thermal)
+                boiler_inputs[:time_steps_per_hour] = settings.time_steps_per_hour
+                if haskey(d, "ExistingBoiler")
+                    boiler_inputs = merge(boiler_inputs, dictkeys_tosymbols(d["ExistingBoiler"]))
+                end
+                existing_boiler = ExistingBoiler(; boiler_inputs...)
+                # TODO automatically add CHP or other heating techs?
+                # TODO increase max_thermal_factor_on_peak_load to allow more heating flexibility?
+            end
+
+            if sum(flexible_hvac.bau_hvac.existing_chiller_kw_thermal) > 0
+                chiller_inputs = Dict{Symbol, Any}()
+                chiller_inputs[:loads_kw_thermal] = flexible_hvac.bau_hvac.existing_chiller_kw_thermal
+                if haskey(d, "ExistingChiller")
+                    chiller_inputs = merge(chiller_inputs, dictkeys_tosymbols(d["ExistingChiller"]))
+                end
+                existing_chiller = ExistingChiller(; chiller_inputs...)
+            end
+
+            if haskey(d, "SpaceHeatingLoad")
+                @warn "Not using SpaceHeatingLoad because FlexibleHVAC was provided."
+            end
+
+            if haskey(d, "DomesticHotWaterLoad")
+                @warn "Not using DomesticHotWaterLoad because FlexibleHVAC was provided."
+            end
+
+            if haskey(d, "CoolingLoad")
+                @warn "Not using CoolingLoad because FlexibleHVAC was provided."
+            end
+        end
+    end
+
+    if max_heat_demand_kw > 0 && !haskey(d, "FlexibleHVAC")  # create ExistingBoler
         boiler_inputs = Dict{Symbol, Any}()
         boiler_inputs[:max_heat_demand_kw] = max_heat_demand_kw
         boiler_inputs[:time_steps_per_hour] = settings.time_steps_per_hour
@@ -202,13 +249,6 @@ function Scenario(d::Dict)
             boiler_inputs = merge(boiler_inputs, dictkeys_tosymbols(d["ExistingBoiler"]))
         end
         existing_boiler = ExistingBoiler(; boiler_inputs...)
-
-        if haskey(d, "FlexibleHVAC")
-            # TODO how to handle Matrix from JSON (to Dict) ?
-            flexible_hvac = FlexibleHVAC(; dictkeys_tosymbols(d["FlexibleHVAC"])...)
-        end
-    else
-        existing_boiler = ExistingBoiler(0.0, 0.0, Real[])
     end
 
     chp = nothing
@@ -217,11 +257,12 @@ function Scenario(d::Dict)
     end
 
     max_cooling_demand_kw = 0
-    if haskey(d, "CoolingLoad")
+    if haskey(d, "CoolingLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["CoolingLoad"])
         d["CoolingLoad"]["site_electric_load_profile"] = electric_load.loads_kw
         if haskey(d, "ExistingChiller") && haskey(d["ExistingChiller"], "cop")
-            d["CoolingLoad"]["chiller_cop"] = d["ExistingChiller"]["cop"]
+            # TODO warn if replacing CoolingLoad.existing_chiller_cop ? Or remove this if block ?
+            d["CoolingLoad"]["existing_chiller_cop"] = d["ExistingChiller"]["cop"]
         end
         cooling_load = CoolingLoad(; dictkeys_tosymbols(d["CoolingLoad"])...,
                                     latitude=site.latitude, longitude=site.longitude, 
@@ -233,14 +274,11 @@ function Scenario(d::Dict)
     end
 
     existing_chiller = nothing
-    if max_cooling_demand_kw > 0
+    if max_cooling_demand_kw > 0 && !haskey(d, "FlexibleHVAC")  # create ExistingChiller
         chiller_inputs = Dict{Symbol, Any}()
         chiller_inputs[:loads_kw_thermal] = cooling_load.loads_kw_thermal
         if haskey(d, "ExistingChiller")
             chiller_inputs = merge(chiller_inputs, dictkeys_tosymbols(d["ExistingChiller"]))
-        end
-        if !haskey(chiller_inputs, :cop)
-            chiller_inputs[:cop] = cooling_load.existing_chiller_cop
         end
         existing_chiller = ExistingChiller(; chiller_inputs...)
     end
