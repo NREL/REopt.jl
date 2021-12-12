@@ -126,7 +126,7 @@ struct SpaceHeatingLoad
     end
 end
 
-
+# TODO wbecker delete get_existing_chiller_cop if EXISTING_CHILLER_COP = 4.55 is okay
 function get_existing_chiller_cop(max_thermal_factor_on_peak_load; loads_kw=nothing, loads_kw_thermal=nothing)
     if !isnothing(loads_kw_thermal)
         max_cooling_load_tons = maximum(loads_kw_thermal) / TONHOUR_TO_KWH_THERMAL
@@ -159,7 +159,7 @@ struct CoolingLoad
         annual_fraction::Union{Real, Nothing} = nothing,
         monthly_fraction::Union{Real, Nothing} = nothing,
         loads_fraction::Array{<:Real,1} = Real[],
-        chiller_cop::Union{Real, Nothing} = nothing,
+        existing_chiller_cop::Real = EXISTING_CHILLER_COP,
         site_electric_load_profile = Real[],
         time_steps_per_hour::Int = 1,
         latitude::Float64=0.0,
@@ -212,13 +212,14 @@ struct CoolingLoad
                 or the site_electric_load_profile along with one of [loads_fraction, monthly_fraction, annual_fraction].")
         end
 
-        if isnothing(chiller_cop)
-            chiller_cop = get_existing_chiller_cop(max_thermal_factor_on_peak_load;
-                                loads_kw=loads_kw, loads_kw_thermal=loads_kw_thermal)
-        end
+        # TODO wbecker delete the following if EXISTING_CHILLER_COP = 4.55 is okay to replace look up get_existing_chiller_cop
+        # if isnothing(existing_chiller_cop)
+        #     existing_chiller_cop = get_existing_chiller_cop(max_thermal_factor_on_peak_load;
+        #                         loads_kw=loads_kw, loads_kw_thermal=loads_kw_thermal)
+        # end
 
         if isnothing(loads_kw_thermal)  # have to convert electric loads_kw to thermal load
-            loads_kw_thermal = chiller_cop * loads_kw
+            loads_kw_thermal = existing_chiller_cop * loads_kw
         end
 
         if length(loads_kw_thermal) < 8760*time_steps_per_hour
@@ -229,7 +230,7 @@ struct CoolingLoad
 
         new(
             loads_kw_thermal,
-            chiller_cop
+            existing_chiller_cop
         )
     end
 

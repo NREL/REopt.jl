@@ -36,7 +36,7 @@ end
 
 function ExistingChiller(;
         loads_kw_thermal::Vector{<:Real},
-        cop::Real = 4.55,
+        cop::Real = EXISTING_CHILLER_COP,
         max_thermal_factor_on_peak_load::Real=1.25
     )
     max_kw = maximum(loads_kw_thermal) * max_thermal_factor_on_peak_load

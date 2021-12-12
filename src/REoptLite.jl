@@ -64,6 +64,8 @@ using PolygonInbounds
 using Roots: fzero  # for IRR
 global hdl = nothing
 
+const EXISTING_CHILLER_COP = 4.55
+
 include("keys.jl")
 include("core/types.jl")
 include("core/utils.jl")
