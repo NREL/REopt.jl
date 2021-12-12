@@ -69,8 +69,8 @@ struct REoptInputs <: AbstractInputs
 end
 ```
 """
-struct REoptInputs <: AbstractInputs
-    s::AbstractScenario
+struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
+    s::ScenarioType
     techs::Techs
     min_sizes::Dict{String, Float64}  # (techs)
     max_sizes::Dict{String, Float64}  # (techs)
@@ -219,14 +219,14 @@ function setup_tech_inputs(s::AbstractScenario)
     cop = Dict(t => 0.0 for t in techs.cooling)
 
     # export related inputs
-    techs_by_exportbin = Dict(k => [] for k in s.electric_tariff.export_bins)
+    techs_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in s.electric_tariff.export_bins)
     export_bins_by_tech = Dict{String, Array{Symbol, 1}}()
 
     # REoptInputs indexed on techs.segmented
     n_segs_by_tech = Dict{String, Int}()
-    seg_min_size = Dict{String, Any}()
-    seg_max_size = Dict{String, Any}()
-    seg_yint = Dict{String, Any}()
+    seg_min_size = Dict{String, Dict{Int, Float64}}()
+    seg_max_size = Dict{String, Dict{Int, Float64}}()
+    seg_yint = Dict{String, Dict{Int, Float64}}()
 
     # PV specific arrays
     pvlocations = [:roof, :ground, :both]

@@ -127,6 +127,7 @@ include("results/electric_load.jl")
 include("results/existing_boiler.jl")
 include("results/existing_chiller.jl")
 include("results/chp.jl")
+include("results/flexible_hvac.jl")
 
 include("core/reopt.jl")
 include("core/reopt_multinode.jl")

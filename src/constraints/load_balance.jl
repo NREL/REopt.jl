@@ -103,12 +103,12 @@ function add_thermal_load_constraints(m, p; _n="")
     m[Symbol("dvTemperature"*_n)] = 0
     m[Symbol("dvComfortLimitViolationCost"*_n)] = 0
 
-    if !isempty(p.techs.flexible)
+    if !isnothing(p.s.flexible_hvac)
         add_flexible_hvac_constraints(m, p, _n=_n) 
     end
 
 	##Constraint (5b): Hot thermal loads
-	if !isempty(p.techs.heating) && isempty(p.techs.flexible)
+	if !isempty(p.techs.heating) && isnothing(p.s.flexible_hvac)
         
         # if !isempty(p.SteamTurbineTechs)
         #     @constraint(m, HotThermalLoadCon[ts in p.time_steps],
@@ -152,7 +152,7 @@ function add_thermal_load_constraints(m, p; _n="")
 	# end
 
     # TODO do we need production_factor for chillers?
-    if !isempty(p.techs.cooling) && isempty(p.techs.flexible)
+    if !isempty(p.techs.cooling) && isnothing(p.s.flexible_hvac)
         @constraint(m, [ts in p.time_steps],
             sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.cooling) ==
             p.s.cooling_load.loads_kw_thermal[ts]

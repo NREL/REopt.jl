@@ -27,7 +27,7 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-function add_flexible_hvac_constraints(m, p; _n="") 
+function add_flexible_hvac_constraints(m, p::REoptInputs; _n="") 
 
     binFlexHVAC = @variable(m, binary = true)
     (N, J) = size(p.s.flexible_hvac.input_matrix)
@@ -76,12 +76,12 @@ function add_flexible_hvac_constraints(m, p; _n="")
             p.s.flexible_hvac.temperature_lower_bound_degC - lower_comfort_slack[ts] <= 
             dvTemperature[p.s.flexible_hvac.control_node, ts]
         )
-        # # when only heating the upper temperature limit is the highest temperature seen naturally
-        # @constraint(m, [ts in p.time_steps],
-        #     dvTemperature[p.s.flexible_hvac.control_node, ts] <= 
-        #     maximum(p.s.flexible_hvac.bau_hvac.temperatures[p.s.flexible_hvac.control_node, :]) + 
-        #     upper_comfort_slack[ts]
-        # )
+        # when only heating the upper temperature limit is the highest temperature seen naturally
+        @constraint(m, [ts in p.time_steps],
+            dvTemperature[p.s.flexible_hvac.control_node, ts] <= 
+            maximum(p.s.flexible_hvac.bau_hvac.temperatures[p.s.flexible_hvac.control_node, :]) + 
+            upper_comfort_slack[ts]
+        )
 
     elseif !isempty(p.techs.cooling)
 
@@ -135,5 +135,35 @@ function add_flexible_hvac_constraints(m, p; _n="")
     m[Symbol("binFlexHVAC"*_n)] = binFlexHVAC
     m[Symbol("dvTemperature"*_n)] = dvTemperature
     m[Symbol("dvComfortLimitViolationCost"*_n)] = dvComfortLimitViolationCost
+    nothing
+end
+
+
+"""
+    function add_flexible_hvac_constraints(m, p::REoptInputs{BAUScenario}; _n="")
+
+For the BAU scenario we enforce the deadband control pattern using the values from BAU_HVAC.
+"""
+function add_flexible_hvac_constraints(m, p::REoptInputs{BAUScenario}; _n="") 
+
+    # If not buying FlexibleHVAC then the BAU (deadband) thermal loads must be met
+    # TODO account for different tech efficiencies in following?
+
+    if !isempty(p.techs.heating)
+        @constraint(m, [ts in p.time_steps],
+            sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.heating) == 
+            p.s.flexible_hvac.existing_boiler_kw_thermal[ts]
+        )
+    end
+    if !isempty(p.techs.cooling)
+        @constraint(m, [ts in p.time_steps],
+            sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.cooling) == 
+            p.s.flexible_hvac.existing_chiller_kw_thermal[ts]
+        )
+    end
+
+    m[Symbol("binFlexHVAC"*_n)] = 0
+    m[Symbol("dvTemperature"*_n)] = p.s.flexible_hvac.temperatures
+    m[Symbol("dvComfortLimitViolationCost"*_n)] = 0.0
     nothing
 end
