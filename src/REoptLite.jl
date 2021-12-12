@@ -96,6 +96,7 @@ include("core/cost_curve.jl")
 
 include("constraints/outage_constraints.jl")
 include("constraints/storage_constraints.jl")
+include("constraints/flexible_hvac.jl")
 include("constraints/load_balance.jl")
 include("constraints/tech_constraints.jl")
 include("constraints/electric_utility_constraints.jl")
