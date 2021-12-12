@@ -99,17 +99,13 @@ end
 
 function add_thermal_load_constraints(m, p; _n="")
 
-    binFlexHVAC = 0
-    dvTemperature = 0
-    dvComfortLimitViolationCost = 0
+    m[Symbol("binFlexHVAC"*_n)] = 0
+    m[Symbol("dvTemperature"*_n)] = 0
+    m[Symbol("dvComfortLimitViolationCost"*_n)] = 0
 
     if !isempty(p.techs.flexible)
         add_flexible_hvac_constraints(m, p, _n=_n) 
     end
-
-    m[Symbol("binFlexHVAC"*_n)] = binFlexHVAC
-    # m[Symbol("dvTemperature"*_n)] = dvTemperature
-    m[Symbol("dvComfortLimitViolationCost"*_n)] = dvComfortLimitViolationCost
 
 	##Constraint (5b): Hot thermal loads
 	if !isempty(p.techs.heating) && isempty(p.techs.flexible)

@@ -28,7 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 function add_flexible_hvac_constraints(m, p; _n="") 
-    
+
     binFlexHVAC = @variable(m, binary = true)
     (N, J) = size(p.s.flexible_hvac.input_matrix)
     dvTemperature = @variable(m, [1:N, p.time_steps])
@@ -119,18 +119,21 @@ function add_flexible_hvac_constraints(m, p; _n="")
     # If not buying FlexibleHVAC then the BAU (deadband) thermal loads must be met
     # TODO account for different tech efficiencies in following?
 
-    # not enforcing the following constraint ?!?
-    @constraint(m, [ts in p.time_steps],
-        !binFlexHVAC => { sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.heating) ==
-            p.s.flexible_hvac.bau_hvac.existing_boiler_kw_thermal[ts]
-        }
-    )
+    if !isempty(p.techs.heating)
+        @constraint(m, [ts in p.time_steps],
+            !binFlexHVAC => { sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.heating) == p.s.flexible_hvac.bau_hvac.existing_boiler_kw_thermal[ts]
+            }
+        )
+    end
+    if !isempty(p.techs.cooling)
+        @constraint(m, [ts in p.time_steps],
+            !binFlexHVAC => { sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.cooling) == p.s.flexible_hvac.bau_hvac.existing_chiller_kw_thermal[ts]
+            }
+        )
+    end
 
-    @constraint(m, [ts in p.time_steps],
-        !binFlexHVAC => { sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.cooling) ==
-            p.s.flexible_hvac.bau_hvac.existing_chiller_kw_thermal[ts]
-        }
-    )
-
-    
+    m[Symbol("binFlexHVAC"*_n)] = binFlexHVAC
+    m[Symbol("dvTemperature"*_n)] = dvTemperature
+    m[Symbol("dvComfortLimitViolationCost"*_n)] = dvComfortLimitViolationCost
+    nothing
 end
