@@ -122,6 +122,7 @@ include("results/outages.jl")
 include("results/wind.jl")
 include("results/electric_load.jl")
 include("results/existing_boiler.jl")
+include("results/existing_chiller.jl")
 include("results/chp.jl")
 
 include("core/reopt.jl")

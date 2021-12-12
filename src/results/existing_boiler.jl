@@ -62,7 +62,7 @@ function add_existing_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
             p.s.existing_boiler.fuel_cost_series[ts] * m[:dvFuelUsage]["ExistingBoiler", ts] for ts in p.time_steps
         )
     )
-	r["total_boiler_fuel_cost"] = round(value(TotalBoilerFuelCharges) * (1 - p.s.financial.offtaker_tax_pct), digits=3)
+	r["lifecycle_boiler_fuel_cost"] = round(value(TotalBoilerFuelCharges) * (1 - p.s.financial.offtaker_tax_pct), digits=3)
 	r["year_one_boiler_fuel_cost"] = round(value(TotalBoilerFuelCharges) / p.pwf_fuel["ExistingBoiler"], digits=3)
 
     if !isempty(p.techs.flexible) && value(m[:binFlexHVAC]) ≈ 1.0

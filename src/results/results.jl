@@ -79,6 +79,10 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         add_existing_boiler_results(m, p, d)
     end
 
+    if !isnothing(p.s.existing_chiller)
+        add_existing_chiller_results(m, p, d)
+    end
+
 	return d
 end
 
