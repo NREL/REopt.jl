@@ -100,69 +100,15 @@ end
 function add_thermal_load_constraints(m, p; _n="")
 
     binFlexHVAC = 0
-    dvTemperature = nothing
+    dvTemperature = 0
     dvComfortLimitViolationCost = 0
 
     if !isempty(p.techs.flexible)
-        binFlexHVAC = @variable(m, binary = true)
-        (N, J) = size(p.s.flexible_hvac.input_matrix)
-        dvTemperature = @variable(m, [1:N, p.time_steps])
-
-        # initialize space temperatures
-        @constraint(m, dvTemperature[:, 1] .== p.s.flexible_hvac.initial_temperatures)
-
-        # space temperature evolution based on state-space model
-        # TODO time scaling for dt?
-        input_vec = zeros(N)
-        input_vec[p.s.flexible_hvac.control_node] = 1
-
-        @constraint(m, [n in 1:N, ts in 2:length(p.time_steps)],
-            binFlexHVAC => { dvTemperature[n, ts] == dvTemperature[n, ts-1] + sum(p.s.flexible_hvac.system_matrix[n, m] * dvTemperature[m, ts-1] for m=1:N) + sum(p.s.flexible_hvac.input_matrix[n, j] * p.s.flexible_hvac.exogenous_inputs[j, ts-1] for j=1:J) + 
-            input_vec[n] * sum(p.s.flexible_hvac.input_matrix[n, p.s.flexible_hvac.control_node] * (
-                sum(m[Symbol("dvThermalProduction"*_n)][t, ts-1] for t in p.techs.heating) -
-                sum(m[Symbol("dvThermalProduction"*_n)][t, ts-1] for t in p.techs.cooling) 
-                )
-            )
-            }
-        )
-        # TODO convert dvThermalProduction units? to ? shouldn't the conversion be in input_matrix coef? COP in Xiang's test is 4-5, fan_power_ratio = 0, hp prod factor generally between 1 and 2
-        ## TODO? slack with penalty for comfort limits? (to prevent infeasible problems)
-        ## TODO check eigen values / stability of system matrix?
-
-        # can bound dvTemperature regardless of binFlexHVAC
-        @variable(m, lower_comfort_slack[p.time_steps] >=0)
-        @constraint(m, [ts in p.time_steps], 
-            p.s.flexible_hvac.comfort_temperature_lower_bound - lower_comfort_slack[ts] <= dvTemperature[p.s.flexible_hvac.control_node, ts]
-        )
-        @variable(m, upper_comfort_slack[p.time_steps] >=0)
-        @constraint(m, [ts in p.time_steps],
-            dvTemperature[p.s.flexible_hvac.control_node, ts] <= p.s.flexible_hvac.comfort_temperature_upper_bound + upper_comfort_slack[ts]
-        )
-        dvComfortLimitViolationCost = @expression(m,  1e9 * sum(lower_comfort_slack[ts] + upper_comfort_slack[ts] for ts in p.time_steps))
-
-        @variable(m, dvFlexHVACcost >= 0)
-        @constraint(m, binFlexHVAC => { dvFlexHVACcost >= m[Symbol("dvPurchaseSize"*_n)]["ExistingBoiler"] * p.s.flexible_hvac.installed_cost})
-        # TODO rm hardcoded "ExistingBoiler"
-        m[:TotalTechCapCosts] += dvFlexHVACcost
-
-        @constraint(m, [ts in p.time_steps],
-            !binFlexHVAC => { sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.techs.chp) +
-                sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.boiler) ==
-                (p.s.dhw_load.loads_kw[ts] + p.s.space_heating_load.loads_kw[ts]) +
-                sum(m[Symbol("dvProductionToWaste"*_n)][t,ts] for t in p.techs.chp)
-            }
-        )
-
-        @constraint(m, [ts in p.time_steps],
-            !binFlexHVAC => {sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.cooling) ==
-                p.s.cooling_load.loads_kw_thermal[ts]
-            }
-        )
-
+        add_flexible_hvac_constraints(m, p, _n=_n) 
     end
 
     m[Symbol("binFlexHVAC"*_n)] = binFlexHVAC
-    m[Symbol("dvTemperature"*_n)] = dvTemperature
+    # m[Symbol("dvTemperature"*_n)] = dvTemperature
     m[Symbol("dvComfortLimitViolationCost"*_n)] = dvComfortLimitViolationCost
 
 	##Constraint (5b): Hot thermal loads
@@ -209,6 +155,7 @@ function add_thermal_load_constraints(m, p; _n="")
 	# 	)
 	# end
 
+    # TODO do we need production_factor for chillers?
     if !isempty(p.techs.cooling) && isempty(p.techs.flexible)
         @constraint(m, [ts in p.time_steps],
             sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.cooling) ==
