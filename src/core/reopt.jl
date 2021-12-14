@@ -266,8 +266,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         end
     end
 
-	if (!isempty(p.techs.chp)) && (!isempty(p.techs.thermal))
- 			m[:TotalTechCapCosts] += sum(p.s.chp.supplementary_firing_capital_cost_per_kw * m[:dvSupplementaryFiringSize][t] for t in p.techs.chp)
+	if (!isempty(p.techs.chp)) && (p.s.chp.chp_standby_rate_us_dollars_per_kw_per_month > 1.0e-7)
+ 		expression(m, TotalCHPStandbyCharges, sum(p.f.pwf_e * 12 * p.s.chp.chp_standby_rate_us_dollars_per_kw_per_month * m[:dvSize][t] for t in p.techs.chp))
+	else
+		expression(m, TotalCHPStandbyCharges, 0.0)
+	end
+
+	if (!isempty(p.techs.chp)) && (p.techs.thermal))
+		m[:TotalTechCapCosts] += sum(p.s.chp.supplementary_firing_capital_cost_per_kw * m[:dvSupplementaryFiringSize][t] for t in p.techs.chp)
 	end
 	
 	@expression(m, TotalStorageCapCosts, p.third_party_factor *
@@ -318,6 +324,9 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 		# Total Fuel Costs, tax deductible for offtaker
         m[:TotalFuelCosts] * (1 - p.s.financial.offtaker_tax_pct) +
+
+		#CHP Standby Charges
+		m[:TotalCHPStandbyCharges] * p.f.r_tax_fraction_offtaker
 
 		# Utility Bill, tax deductible for offtaker
 		m[:TotalElecBill] * (1 - p.s.financial.offtaker_tax_pct) -
