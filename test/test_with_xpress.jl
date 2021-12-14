@@ -123,8 +123,6 @@ end
 
 @testset "FlexibleHVAC" begin
 
-    # TODO? mv get_ambient_temperature to utils?
-    using HTTP
     @testset "Single RC Model heating only" begin
         #=
         Single RC model:
