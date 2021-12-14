@@ -104,11 +104,14 @@ function add_thermal_load_constraints(m, p; _n="")
     m[Symbol("dvComfortLimitViolationCost"*_n)] = 0
 
     if !isnothing(p.s.flexible_hvac)
+        #= FlexibleHVAC does not require equality constraints for thermal loads. The thermal loads
+        are instead a function of the energy required to keep the space temperature within the 
+        comfort limits.
+        =#
         add_flexible_hvac_constraints(m, p, _n=_n) 
-    end
 
 	##Constraint (5b): Hot thermal loads
-	if !isempty(p.techs.heating) && isnothing(p.s.flexible_hvac)
+    elseif !isempty(p.techs.heating)
         
         # if !isempty(p.SteamTurbineTechs)
         #     @constraint(m, HotThermalLoadCon[ts in p.time_steps],
@@ -137,8 +140,6 @@ function add_thermal_load_constraints(m, p; _n="")
                     # sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.AbsorptionChillers) / p.AbsorptionChillerCOP
             )
         # end
-	end
-
 
 	##Constraint (5a): Cold thermal loads
 	# if !isempty(p.CoolingTechs)
@@ -152,7 +153,7 @@ function add_thermal_load_constraints(m, p; _n="")
 	# end
 
     # TODO do we need production_factor for chillers?
-    if !isempty(p.techs.cooling) && isnothing(p.s.flexible_hvac)
+    elseif !isempty(p.techs.cooling)
         @constraint(m, [ts in p.time_steps],
             sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.cooling) ==
             p.s.cooling_load.loads_kw_thermal[ts]

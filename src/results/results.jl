@@ -124,7 +124,8 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("Generator", "year_one_fuel_cost"),
         ("Generator", "year_one_variable_om_cost"),
         ("Generator", "year_one_fixed_om_cost"),
-        ("FlexibleHVAC", "temperatures_degC_node_by_time")
+        ("FlexibleHVAC", "temperatures_degC_node_by_time"),
+        ("ExistingBoiler", "lifecycle_boiler_fuel_cost" )
     )
 
     for t in bau_outputs

@@ -29,9 +29,10 @@
 # *********************************************************************************
 
 function add_boiler_tech_constraints(m, p; _n="")
-    m[:TotalFuelCosts] += @expression(m, p.pwf_fuel["ExistingBoiler"] *
-        sum(m[:dvFuelUsage]["ExistingBoiler", ts] * p.s.existing_boiler.fuel_cost_series[ts] for ts in p.time_steps)
-    )
+    m[:TotalExistingBoilerFuelCosts] = @expression(m, p.pwf_fuel["ExistingBoiler"] *
+    sum(m[:dvFuelUsage]["ExistingBoiler", ts] * p.s.existing_boiler.fuel_cost_series[ts] for ts in p.time_steps)
+)
+    m[:TotalFuelCosts] += m[:TotalExistingBoilerFuelCosts]
     
     # Constraint (1e): Total Fuel burn for Boiler
     @constraint(m, [t in p.techs.boiler, ts in p.time_steps],
