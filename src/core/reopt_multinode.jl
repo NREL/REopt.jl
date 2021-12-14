@@ -1,7 +1,7 @@
 
 
 
-function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
+function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) where T <: AbstractScenario
 	
 	dvs_idx_on_techs = String[
 		"dvSize",
@@ -104,7 +104,7 @@ end
 """
 add non-negative bounds to decision variables
 """
-function add_bounds(m::JuMP.AbstractModel, ps::Array{REoptInputs})
+function add_bounds(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) where T <: AbstractScenario
 	
 	dvs_idx_on_techs = String[
 		"dvSize",
@@ -176,7 +176,7 @@ function add_bounds(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 end
 
 
-function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
+function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) where T <: AbstractScenario
     add_variables!(m, ps)
     @warn "Outages are not currently modeled in multinode mode."
     @warn "Diesel generators are not currently modeled in multinode mode."
@@ -241,7 +241,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 end
 
 
-function add_objective!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
+function add_objective!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) where T <: AbstractScenario
 	if !(any(p.s.settings.add_soc_incentive for p in ps))
 		@objective(m, Min, sum(m[Symbol(string("Costs_", p.s.site.node))] for p in ps))
 	else # Keep SOC high
@@ -253,7 +253,7 @@ function add_objective!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 end
 
 
-function run_reopt(m::JuMP.AbstractModel, ps::Array{REoptInputs})
+function run_reopt(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) where T <: AbstractScenario
 
 	build_reopt!(m, ps)
 
@@ -285,7 +285,7 @@ function run_reopt(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 end
 
 
-function reopt_results(m::JuMP.AbstractModel, ps::Array{REoptInputs})
+function reopt_results(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) where T <: AbstractScenario
 	# TODO address Warning: The addition operator has been used on JuMP expressions a large number of times.
 	results = Dict{Union{Int, String}, Any}()
 	for p in ps
