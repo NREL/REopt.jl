@@ -307,3 +307,30 @@ function generate_year_profile_hourly(year::Int64, consecutive_periods::Abstract
     end
     return year_profile_hourly
 end
+
+
+function get_ambient_temperature(latitude::Real, longitude::Real; timeframe="hourly")
+    url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
+        "&lat=", latitude , "&lon=", longitude, "&tilt=", latitude,
+        "&system_capacity=1", "&azimuth=", 180, "&module_type=", 0,
+        "&array_type=", 0, "&losses=", 14,
+        "&timeframe=", timeframe, "&dataset=nsrdb"
+    )
+
+    try
+        @info "Querying PVWatts for ambient temperature... "
+        r = HTTP.get(url)
+        response = JSON.parse(String(r.body))
+        if r.status != 200
+            error("Bad response from PVWatts: $(response["errors"])")
+        end
+        @info "PVWatts success."
+        tamb = collect(get(response["outputs"], "tamb", []))  # Celcius
+        if length(tamb) != 8760
+            @error "PVWatts did not return a valid temperature. Got $tamb"
+        end
+        return tamb
+    catch e
+        @error "Error occurred when calling PVWatts: $e"
+    end
+end

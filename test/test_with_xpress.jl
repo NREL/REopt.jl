@@ -138,34 +138,7 @@ end
         fuel cost (and the FlexibleHVAC installed_cost is less than the achievable savings).
         =#
 
-        include("../src/keys.jl")
-        function get_ambient_temperature(latitude::Real, longitude::Real; timeframe="hourly")
-            url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
-                "&lat=", latitude , "&lon=", longitude, "&tilt=", latitude,
-                "&system_capacity=1", "&azimuth=", 180, "&module_type=", 0,
-                "&array_type=", 0, "&losses=", 14,
-                "&timeframe=", timeframe, "&dataset=nsrdb"
-            )
-        
-            try
-                @info "Querying PVWatts for ambient temperature... "
-                r = HTTP.get(url)
-                response = JSON.parse(String(r.body))
-                if r.status != 200
-                    error("Bad response from PVWatts: $(response["errors"])")
-                end
-                @info "PVWatts success."
-                tamb = collect(get(response["outputs"], "tamb", []))  # Celcius
-                if length(tamb) != 8760
-                    @error "PVWatts did not return a valid temperature. Got $tamb"
-                end
-                return tamb
-            catch e
-                @error "Error occurred when calling PVWatts: $e"
-            end
-        end
-
-        tamb = get_ambient_temperature(37.78, -122.45);
+        tamb = REoptLite.get_ambient_temperature(37.78, -122.45);
         R = 0.00025  # K/kW
         C = 1e5   # kJ/K
         d = JSON.parsefile("./scenarios/thermal_load.json");
