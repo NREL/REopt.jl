@@ -114,8 +114,8 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     supplementary_firing_capital_cost_per_kw::Float64 = 150.0
     supplementary_firing_max_steam_ratio::Float64 = 1.0
     supplementary_firing_efficiency::Float64 = 0.92
-    chp_standby_rate_us_dollars_per_kw_per_month = 0.0
-    chp_does_not_reduce_demand_charges = false
+    chp_standby_rate_us_dollars_per_kw_per_month::Float64 = 0.0
+    chp_does_not_reduce_demand_charges::Bool = false
     use_default_derate::Bool = true
     max_derate_factor::Float64 = 1.0
     derate_start_temp_degF::Float64 = 0.0
