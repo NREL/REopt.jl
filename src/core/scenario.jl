@@ -189,6 +189,7 @@ function Scenario(d::Dict)
 
     flexible_hvac = nothing
     existing_boiler = nothing
+    existing_chiller = nothing
 
     if haskey(d, "FlexibleHVAC")
         # TODO how to handle Matrix from JSON (to Dict) ?
@@ -273,7 +274,6 @@ function Scenario(d::Dict)
         cooling_load = CoolingLoad(; fuel_loads_ton_per_hour=repeat([0.0], 8760))
     end
 
-    existing_chiller = nothing
     if max_cooling_demand_kw > 0 && !haskey(d, "FlexibleHVAC")  # create ExistingChiller
         chiller_inputs = Dict{Symbol, Any}()
         chiller_inputs[:loads_kw_thermal] = cooling_load.loads_kw_thermal

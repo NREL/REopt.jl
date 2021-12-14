@@ -131,14 +131,17 @@ end
         A = [1/(RC)], B = [1/(RC) 1/C], u = [Ta; Q]
         NOTE exogenous_inputs (u) allows for parasitic heat, but it is input as zeros here
 
-        We start with no technologies except ExistingBoiler. FlexibleHVAC is only worth purchasing
-        if its cost is neglible (i.e. below the lcc_bau * MIPTOL) or if there is a time-varying
-        fuel cost (and the FlexibleHVAC installed_cost is less than the achievable savings).
+        We start with no technologies except ExistingBoiler and ExistingChiller. 
+        FlexibleHVAC is only worth purchasing if its cost is neglible (i.e. below the lcc_bau * MIPTOL) 
+        or if there is a time-varying fuel and/or electricity cost 
+        (and the FlexibleHVAC installed_cost is less than the achievable savings).
         =#
 
-        tamb = REoptLite.get_ambient_temperature(37.78, -122.45);
+        # Austin, TX -> existing_chiller and existing_boiler added with FlexibleHVAC
+        tamb = REoptLite.get_ambient_temperature(30.2672, -97.7431);
         R = 0.00025  # K/kW
         C = 1e5   # kJ/K
+        # the starting scenario has flat fuel and electricty costs
         d = JSON.parsefile("./scenarios/thermal_load.json");
         A = reshape([-1/(R*C)], 1,1)
         B = [1/(R*C) 1/C]
@@ -161,6 +164,7 @@ end
         @test r["Financial"]["npv"] == 0
 
         # put in a time varying fuel cost, which should make purchasing the FlexibleHVAC system economical
+        # with flat ElectricTariff the ExistingChiller does not benefit from FlexibleHVAC
         d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = rand(Float64, (8760))*(50-5).+5;
         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
@@ -178,31 +182,31 @@ end
         @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
         @test r["Financial"]["npv"] == 0
 
+        # add TOU ElectricTariff and expect to benefit from using ExistingChiller intelligently
+        d["ElectricTariff"] = Dict("urdb_label" => "5ed6c1a15457a3367add15ae")
+
+        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        r = run_reopt([m1,m2], d)
+
+        elec_cost_savings = r["ElectricTariff"]["lifecycle_demand_cost_bau"] + r["ElectricTariff"]["lifecycle_energy_cost_bau"] - r["ElectricTariff"]["lifecycle_demand_cost"] - r["ElectricTariff"]["lifecycle_energy_cost"]
+        fuel_cost_savings = r["ExistingBoiler"]["lifecycle_boiler_fuel_cost_bau"] - r["ExistingBoiler"]["lifecycle_boiler_fuel_cost"]
+        @test fuel_cost_savings + elec_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
+
+        # now increase the FlexibleHVAC installed_cost to the fuel costs savings + elec_cost_savings 
+        # + 100 and expect that the FlexibleHVAC is not purchased
+        d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + elec_cost_savings + 100
+        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        r = run_reopt([m1,m2], d)
+        @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
+        @test r["Financial"]["npv"] == 0
+
     end
 
-    # TODO test with cooling, hot/cold TES
+    # TODO test with hot/cold TES
     # TODO test with new heating/cooling techs
-    # TODO test with PV and Storage
-
-
-    ## TODO compare with REopt API?
-    # d = JSON.parsefile("./scenarios/thermal_load.json");
-    # coefs = JSON.parsefile("./data/flex_hvac_data.json");
-    # d["FlexibleHVAC"] = Dict(
-    #     "control_node" => 5,
-    #     "initial_temperatures" => repeat([22], 9),
-    #     "temperature_upper_bound_degC" => 50.0,
-    #     "temperature_lower_bound_degC" => 0.0,
-    #     "installed_cost" => 1000.0,
-    # )
-    # d["FlexibleHVAC"] = merge(d["FlexibleHVAC"], coefs);
-    # s = Scenario(d);
-    # m = Model(optimizer_with_attributes(Xpress.Optimizer))#, "OUTPUTLOG" => 0))
-    # p = REoptInputs(s);
-    # build_reopt!(m, p)
-    # optimize!(m)
-    # results = reopt_results(m,p)
-
+    # TODO test with PV and Storage?
 
     # TODO plot deadband (BAU_HVAC) temperatures vs. optimal flexed temperatures
     #=
