@@ -106,7 +106,7 @@ function make_bau_hvac(A, B, u, control_node, initial_temperatures, T_hi, T_lo)
             B * u[:, ts-1]
 
         if !isnothing(T_hi) && temperatures[control_node, ts] > T_hi
-            deltaT = temperatures[control_node, ts] - T_hi + 0.5
+            deltaT = temperatures[control_node, ts] - T_hi
             thermal_kw["ExistingChiller"][ts] = deltaT / B[control_node, control_node]
 
             temperatures[:, ts] = temperatures[:, ts-1] + 
@@ -115,7 +115,7 @@ function make_bau_hvac(A, B, u, control_node, initial_temperatures, T_hi, T_lo)
                 input_vec .* B[:, control_node] * thermal_kw["ExistingChiller"][ts]
 
         elseif !isnothing(T_lo) && temperatures[control_node, ts] < T_lo
-            deltaT = T_lo + 0.5 - temperatures[control_node, ts]
+            deltaT = T_lo - temperatures[control_node, ts]
             thermal_kw["ExistingBoiler"][ts] = deltaT / B[control_node, control_node] 
 
             temperatures[:, ts] = temperatures[:, ts-1] + 
