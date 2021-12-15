@@ -142,7 +142,6 @@ function get_existing_chiller_cop(max_thermal_factor_on_peak_load; loads_kw=noth
 end
 
 
-# TODO? electric load gets reduced by the cooling electric load
 # TODO? Zero out cooling load for outage hours
 struct CoolingLoad
     loads_kw_thermal::Array{Real, 1}
