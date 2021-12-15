@@ -212,7 +212,7 @@ end
     inputs = REoptInputs(s)
     results = run_reopt(m2, inputs)
     @test results["CHP"]["size_supplemental_firing_kw"] ≈ 278.73 atol=0.1
-    @test results["CHP"]["year_one_thermal_energy_produced_mmbtu"] ≈ 138624 atol=1e-5
+    @test results["CHP"]["year_one_thermal_energy_produced_mmbtu"] ≈ 138624 rtol=1e-5
     @test results["ElectricTariff"]["lifecycle_demand_cost"] ≈ 5212.7 rtol=1e-5
 end
 
