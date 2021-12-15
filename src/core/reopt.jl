@@ -185,6 +185,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     m[:TotalPerUnitHourOMCosts] = 0.0
     m[:TotalFuelCosts] = 0.0
     m[:TotalProductionIncentive] = 0
+	m[:TotalCHPStandbyCharges] = 0
 
 	if !isempty(p.techs.all)
 		add_tech_size_constraints(m, p)
@@ -204,6 +205,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             m[:TotalPerUnitProdOMCosts] += m[:TotalCHPPerUnitProdOMCosts]
             m[:TotalFuelCosts] += m[:TotalCHPFuelCosts]        
             m[:TotalPerUnitHourOMCosts] += m[:TotalHourlyCHPOMCosts]
+
+			if p.s.chp.standby_rate_us_dollars_per_kw_per_month > 1.0e-7
+				m[:TotalCHPStandbyCharges] += sum(p.s.financial.pwf_e * 12 * p.s.chp.standby_rate_us_dollars_per_kw_per_month * m[:dvSize][t] for t in p.techs.chp)
+			end
+
+			if !isempty(p.techs.thermal)
+				m[:TotalTechCapCosts] += sum(p.s.chp.supplementary_firing_capital_cost_per_kw * m[:dvSupplementaryFiringSize][t] for t in p.techs.chp)
+			end
         end
 
         if !isempty(p.techs.boiler)
@@ -265,16 +274,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             )
         end
     end
-
-	if (!isempty(p.techs.chp)) && (p.s.chp.standby_rate_us_dollars_per_kw_per_month > 1.0e-7)
- 		@expression(m, TotalCHPStandbyCharges, sum(p.s.financial.pwf_e * 12 * p.s.chp.standby_rate_us_dollars_per_kw_per_month * m[:dvSize][t] for t in p.techs.chp))
-	else
-		@expression(m, TotalCHPStandbyCharges, 0.0)
-	end
-
-	if (!isempty(p.techs.chp)) && (!isempty(p.techs.thermal))
-		m[:TotalTechCapCosts] += sum(p.s.chp.supplementary_firing_capital_cost_per_kw * m[:dvSupplementaryFiringSize][t] for t in p.techs.chp)
-	end
 	
 	@expression(m, TotalStorageCapCosts, p.third_party_factor *
 		sum(  p.s.storage.installed_cost_per_kw[b] * m[:dvStoragePower][b]
