@@ -171,7 +171,7 @@ end
         r = run_reopt([m1,m2], d)
         # all of the savings are from the ExistingBoiler fuel costs
         @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === true
-        fuel_cost_savings = r["ExistingBoiler"]["lifecycle_boiler_fuel_cost_bau"] - r["ExistingBoiler"]["lifecycle_boiler_fuel_cost"]
+        fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost"]
         @test fuel_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
 
         # now increase the FlexibleHVAC installed_cost to the fuel costs savings + 100 and expect that the FlexibleHVAC is not purchased
@@ -190,7 +190,7 @@ end
         r = run_reopt([m1,m2], d)
 
         elec_cost_savings = r["ElectricTariff"]["lifecycle_demand_cost_bau"] + r["ElectricTariff"]["lifecycle_energy_cost_bau"] - r["ElectricTariff"]["lifecycle_demand_cost"] - r["ElectricTariff"]["lifecycle_energy_cost"]
-        fuel_cost_savings = r["ExistingBoiler"]["lifecycle_boiler_fuel_cost_bau"] - r["ExistingBoiler"]["lifecycle_boiler_fuel_cost"]
+        fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost"]
         @test fuel_cost_savings + elec_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
 
         # now increase the FlexibleHVAC installed_cost to the fuel costs savings + elec_cost_savings 
