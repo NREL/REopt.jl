@@ -118,7 +118,7 @@ function add_chp_thermal_production_constraints(m, p; _n="")
 end
 
 """
-add_chp_supplementary_firing_constraints(m, p; _n="")
+    add_chp_supplementary_firing_constraints(m, p; _n="")
 
 Used by add_chp_constraints to add supplementary firing constraints if 
     p.s.chp.supplementary_firing_max_steam_ratio > 1.0 to add CHP supplementary firing operating constraints.  
