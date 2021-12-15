@@ -2,7 +2,7 @@
 
 ## dev
 - add ExistingBoiler and CRB heating loads
-- add CHP technology
+- add CHP technology, including supplementary firing
 - add URDB "sell" value from `energyratestructure` to wholesale rate
 
 ## v0.12.0
