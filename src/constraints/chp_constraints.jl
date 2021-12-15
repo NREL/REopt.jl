@@ -46,12 +46,12 @@ function add_chp_fuel_burn_constraints(m, p; _n="")
         dv = "dvFuelBurnYIntercept"*_n
         m[Symbol(dv)] = @variable(m, [p.techs.chp, p.time_steps], base_name=dv, lower_bound=0)
 
-        #Constraint (1c1): Total Fuel burn for CHP **with** y-intercept fuel burn
+        #Constraint (1c1): Total Fuel burn for CHP **with** y-intercept fuel burn and supplementary firing
         @constraint(m, CHPFuelBurnCon[t in p.techs.chp, ts in p.time_steps],
             m[Symbol("dvFuelUsage"*_n)][t,ts]  == p.hours_per_timestep * (
                 m[Symbol("dvFuelBurnYIntercept"*_n)][t,ts] +
-                p.production_factor[t,ts] * fuel_burn_slope * m[Symbol("dvRatedProduction"*_n)][t,ts] #+
-                #m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] / p.s.chpSupplementaryFireEfficiency
+                p.production_factor[t,ts] * fuel_burn_slope * m[Symbol("dvRatedProduction"*_n)][t,ts] +
+                m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] / p.s.chp.supplementary_firing_efficiency
             )
         )
         #Constraint (1d): Y-intercept fuel burn for CHP
@@ -63,8 +63,8 @@ function add_chp_fuel_burn_constraints(m, p; _n="")
         #Constraint (1c2): Total Fuel burn for CHP **without** y-intercept fuel burn
         @constraint(m, CHPFuelBurnConLinear[t in p.techs.chp, ts in p.time_steps],
             m[Symbol("dvFuelUsage"*_n)][t,ts]  == p.hours_per_timestep * (
-                p.production_factor[t,ts] * fuel_burn_slope * m[Symbol("dvRatedProduction"*_n)][t,ts] #+
-                #m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] / p.s.chpSupplementaryFireEfficiency
+                p.production_factor[t,ts] * fuel_burn_slope * m[Symbol("dvRatedProduction"*_n)][t,ts] +
+                m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] / p.s.chp.supplementary_firing_efficiency
             )
         )
     end 
@@ -104,40 +104,40 @@ function add_chp_thermal_production_constraints(m, p; _n="")
         @constraint(m, CHPThermalProductionCon[t in p.techs.chp, ts in p.time_steps],
             m[Symbol("dvThermalProduction"*_n)][t,ts] ==
             thermal_prod_slope * p.production_factor[t,ts] * m[Symbol("dvRatedProduction"*_n)][t,ts] 
-            + m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts] #+
-            #m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
+            + m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts] +
+            m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
         )
     else
         @constraint(m, CHPThermalProductionConLinear[t in p.techs.chp, ts in p.time_steps],
             m[Symbol("dvThermalProduction"*_n)][t,ts] ==
-            thermal_prod_slope * p.production_factor[t,ts] * m[Symbol("dvRatedProduction"*_n)][t,ts] #+
-            #m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
+            thermal_prod_slope * p.production_factor[t,ts] * m[Symbol("dvRatedProduction"*_n)][t,ts] +
+            m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
         )        
     end
     
-    #TODO move this to another function, conditionally add under add_chp_constraints function
-    # # Supplementary firing thermal constraint
-    # if p.s.chpSupplementaryFireMaxRatio > 1.0
-    #     # Constrain upper limit of dvSupplementaryThermalProduction, using auxiliary variable for (size * useSupplementaryFiring)
-    #     @constraint(m, CHPSupplementaryFireCon[t in p.techs.chp, ts in p.time_steps],
-    #                 m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] <=
-    #                 (p.s.chpSupplementaryFireMaxRatio - 1.0) * p.production_factor[t,ts] * (p.s.chpThermalProdSlope[t] * m[Symbol("dvSupplementaryFiringCHPSize"*_n)][t] + m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts])
-    #                 )
-    #     # Constrain lower limit of 0 if CHP tech is off
-    #     @constraint(m, NoCHPSupplementaryFireOffCon[t in p.techs.chp, ts in p.time_steps],
-    #                 !m[Symbol("binCHPIsOnInTS"*_n)][t,ts] => {m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] <= 0.0}
-    #                 )
-    #     # Constrain lower limit of 0 if binUseSupplementaryFiring is 0
-    #     @constraint(m, NoCHPSupplementaryFireNotChosenCon[t in p.techs.chp, ts in p.time_steps],
-    #                 !m[Symbol("binUseSupplementaryFiring"*_n)][t] => {m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] <= 0.0}
-    #                 )
-    # else
-    #     for t in p.techs.chp
-    #         for ts in p.time_steps
-    #             fix(m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts], 0.0, force=true)
-    #         end
-    #     end
-    # end
+end
+
+"""
+    add_chp_supplementary_firing_constraints(m, p; _n="")
+
+Used by add_chp_constraints to add supplementary firing constraints if 
+    p.s.chp.supplementary_firing_max_steam_ratio > 1.0 to add CHP supplementary firing operating constraints.  
+    Else, the supplementary firing dispatch and size decision variables are set to zero.
+"""
+function add_chp_supplementary_firing_constraints(m, p; _n="")
+    thermal_prod_full_load = 1.0 / p.s.chp.elec_effic_full_load * p.s.chp.thermal_effic_full_load  # [kWt/kWe]
+    thermal_prod_half_load = 0.5 / p.s.chp.elec_effic_half_load * p.s.chp.thermal_effic_half_load   # [kWt/kWe]
+    thermal_prod_slope = (thermal_prod_full_load - thermal_prod_half_load) / (1.0 - 0.5)  # [kWt/kWe]
+
+    # Constrain upper limit of dvSupplementaryThermalProduction, using auxiliary variable for (size * useSupplementaryFiring)
+    @constraint(m, CHPSupplementaryFireCon[t in p.techs.chp, ts in p.time_steps],
+                m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] <=
+                (p.s.chp.supplementary_firing_max_steam_ratio - 1.0) * p.production_factor[t,ts] * (thermal_prod_slope * m[Symbol("dvSupplementaryFiringSize"*_n)][t] + m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts])
+                )
+    # Constrain lower limit of 0 if CHP tech is off
+    @constraint(m, NoCHPSupplementaryFireOffCon[t in p.techs.chp, ts in p.time_steps],
+                !m[Symbol("binCHPIsOnInTS"*_n)][t,ts] => {m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] <= 0.0}
+                )
 end
 
 function add_binCHPIsOnInTS_constraints(m, p; _n="")
@@ -204,7 +204,7 @@ function add_chp_constraints(m, p; _n="")
                 Some solvers are very slow with integer variables"""
     @variables m begin
         binCHPIsOnInTS[p.techs.chp, p.time_steps], Bin  # 1 If technology t is operating in time step; 0 otherwise
-	end    
+    end    
     
     m[:TotalHourlyCHPOMCosts] = 0
     m[:TotalCHPFuelCosts] = 0
@@ -221,4 +221,15 @@ function add_chp_constraints(m, p; _n="")
     add_chp_thermal_production_constraints(m, p; _n=_n)
     add_binCHPIsOnInTS_constraints(m, p; _n=_n)
     add_chp_rated_prod_constraint(m, p; _n=_n)
+
+    if p.s.chp.supplementary_firing_max_steam_ratio > 1.0
+        add_chp_supplementary_firing_constraints(m,p; _n=_n)
+    else
+        for t in p.techs.chp
+            fix(m[Symbol("dvSupplementaryFiringSize"*_n)][t], 0.0, force=true)
+            for ts in p.time_steps
+                fix(m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts], 0.0, force=true)
+            end
+        end
+    end
 end
