@@ -95,6 +95,11 @@ REoptLite.Generator
 REoptLite.CHP
 ```
 
+## SpaceHeatingLoad
+```@docs
+REoptLite.SpaceHeatingLoad
+```
+
 ## ElectricTariff
 ```@docs
 REoptLite.ElectricTariff
