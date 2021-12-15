@@ -100,6 +100,11 @@ REoptLite.CHP
 REoptLite.SpaceHeatingLoad
 ```
 
+## CoolingLoad
+```@docs
+REoptLite.CoolingLoad
+```
+
 ## ElectricTariff
 ```@docs
 REoptLite.ElectricTariff
