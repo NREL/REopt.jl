@@ -34,11 +34,11 @@ function add_existing_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     # TODO we convert MMBTU_TO_KWH from user inputs to the model, and then back to mmbtu in outputs: why not stay in mmbtu?
 	r["year_one_fuel_consumption_mmbtu_per_hr"] = 
         round.(value.(m[:dvFuelUsage]["ExistingBoiler", ts] for ts in p.time_steps) / MMBTU_TO_KWH, digits=3)
-    r["year_one_fuel_consumption_mmbtu"] = round(sum(r["year_one_boiler_fuel_consumption_mmbtu_per_hr"]), digits=3)
+    r["year_one_fuel_consumption_mmbtu"] = round(sum(r["year_one_fuel_consumption_mmbtu_per_hr"]), digits=3)
 
 	r["year_one_thermal_production_mmbtu_per_hr"] = 
         round.(value.(m[:dvThermalProduction]["ExistingBoiler", ts] for ts in p.time_steps) / MMBTU_TO_KWH, digits=3)
-	r["year_one_thermal_production_mmbtu"] = round(sum(r["year_one_boiler_thermal_production_mmbtu_per_hr"]), digits=3)
+	r["year_one_thermal_production_mmbtu"] = round(sum(r["year_one_thermal_production_mmbtu_per_hr"]), digits=3)
 
 	# @expression(m, BoilerToHotTES[ts in p.time_steps],
 	# 	m[:dvProductionToStorage]["HotTES","ExistingBoiler",ts])

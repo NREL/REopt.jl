@@ -329,8 +329,10 @@ function add_doe_reference_names_from_elec_to_thermal_loads(elec::Dict, thermal:
         "blended_doe_reference_percents",
     ]
     for k in string_keys
-        if !(k in keys(thermal)) && k in keys(elec)
-            thermal[k] = elec[k]
+        if k in keys(elec) 
+            if !(k in keys(thermal)) || isempty(thermal[k])
+                thermal[k] = elec[k]
+            end
         end
     end
 end
