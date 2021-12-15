@@ -158,7 +158,7 @@ If the monthly demand rate is tiered than also adds binMonthlyDemandTier and con
 function add_monthly_peak_constraint(m, p; _n="")
 
 	## Constraint (11d): Monthly peak demand is >= demand at each hour in the month
-    if (!isempty(p.techs.chp)) && p.s.chp.does_not_reduce_demand_charges
+    if (!isempty(p.techs.chp)) && !(p.s.chp.reduces_demand_charges)
         @constraint(m, [mth in p.months, ts in p.s.electric_tariff.time_steps_monthly[mth]],
             sum(m[Symbol("dvPeakDemandMonth"*_n)][mth, t] for t in 1:p.s.electric_tariff.n_monthly_demand_tiers) 
             >= sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) + 
