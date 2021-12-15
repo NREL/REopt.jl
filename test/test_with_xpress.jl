@@ -176,6 +176,46 @@ end
     @test sum(chp_total_elec_prod[unavail_2_start:unavail_2_end]) == 0.0  
 end
 
+@testset "CHP Supplementary firing and standby" begin
+    """
+    Test to ensure that supplementary firing and standby charges work as intended.  The thermal and 
+    electrical loads are constant, and the CHP system size is fixed; the supplementary firing has a
+    similar cost to the boiler and is purcahsed and used when the boiler efficiency is set to a lower 
+    value than that of the supplementary firing. The test also ensures that demand charges are  
+    correctly calculated when CHP is and is not allowed to reduce demand charges.
+    """
+    data = JSON.parsefile("./scenarios/chp_supplementary_firing.json")
+    data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10000
+    data["ElectricLoad"]["loads_kw"] = Array{Real,1}(undef,8760)
+    data["ElectricLoad"]["loads_kw"][1:8760] .= 800
+    data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = Array{Real,1}(undef,8760)
+    data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"][1:8760] .= 6.0
+    data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"] = Array{Real,1}(undef,8760)
+    data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"][1:8760] .= 6.0
+    #part 1: supplementary firing not used when less efficient than the boiler and expensive 
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    s = Scenario(data)
+    inputs = REoptInputs(s)
+    results = run_reopt(m1, inputs)
+    @test results["CHP"]["size_kw"] == 800
+    @test results["CHP"]["size_supplemental_firing_kw"] == 0
+    @test results["CHP"]["year_one_electric_energy_produced_kwh"] ≈ 800*8760 rtol=1e-5
+    @test results["CHP"]["year_one_thermal_energy_produced_mmbtu"] ≈ 800*(0.4418/0.3573)*8760/293.07107 rtol=1e-5
+    @test results["ElectricTariff"]["lifecycle_demand_cost"] == 0
+
+    #part 2: supplementary firing used when more efficient than the boiler and low-cost; demand charges not reduced by CHP
+    data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10
+    data["CHP"]["reduces_demand_charges"] = false
+    data["ExistingBoiler"]["efficiency"] = 0.85
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    s = Scenario(data)
+    inputs = REoptInputs(s)
+    results = run_reopt(m2, inputs)
+    @test results["CHP"]["size_supplemental_firing_kw"] ≈ 278.73 atol=0.1
+    @test results["CHP"]["year_one_thermal_energy_produced_mmbtu"] ≈ 138624 rtol=1e-5
+    @test results["ElectricTariff"]["lifecycle_demand_cost"] ≈ 5212.7 rtol=1e-5
+end
+
 #=
 add a time-of-export rate that is greater than retail rate for the month of January,
 check to make sure that PV does NOT export unless the site load is met first for the month of January.

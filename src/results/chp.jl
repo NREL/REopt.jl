@@ -35,6 +35,7 @@ Note: the node number is an empty string if evaluating a single `Site`.
 
 CHP results:
 - `size_kw` Power capacity size of the CHP system [kW]
+- `size_supplemental_firing_kw` Power capacity of CHP supplementary firing system [kW]
 - `year_one_fuel_used_mmbtu` Fuel consumed in year one [MMBtu]
 - `year_one_electric_energy_produced_kwh` Electric energy produced in year one [kWh]
 - `year_one_thermal_energy_produced_mmbtu` Thermal energy produced in year one [MMBtu]
@@ -50,7 +51,7 @@ CHP results:
 function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 	r["size_kw"] = value(sum(m[Symbol("dvSize"*_n)][t] for t in p.techs.chp))
-    #r["size_supplemental_firing_kw"] = value(sum(m[Symbol("dvSupplementaryFiringCHPSize"*_n)][t] for t in p.techs.chp))
+    r["size_supplemental_firing_kw"] = value(sum(m[Symbol("dvSupplementaryFiringSize"*_n)][t] for t in p.techs.chp))
 	@expression(m, CHPFuelUsedKWH, sum(m[Symbol("dvFuelUsage"*_n)][t, ts] for t in p.techs.chp, ts in p.time_steps))
 	r["year_one_fuel_used_mmbtu"] = round(value(CHPFuelUsedKWH) / MMBTU_TO_KWH, digits=3)
 	@expression(m, Year1CHPElecProd,
@@ -59,7 +60,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["year_one_electric_energy_produced_kwh"] = round(value(Year1CHPElecProd), digits=3)
 	@expression(m, Year1CHPThermalProdKWH,
 		p.hours_per_timestep * sum(m[Symbol("dvThermalProduction"*_n)][t,ts] + 
-        #m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] - 
+        m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] - 
         m[Symbol("dvProductionToWaste"*_n)][t,ts] 
             for t in p.techs.chp, ts in p.time_steps))
 	r["year_one_thermal_energy_produced_mmbtu"] = round(value(Year1CHPThermalProdKWH) / MMBTU_TO_KWH, digits=3)
@@ -98,9 +99,11 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["year_one_thermal_to_load_series_mmbtu_per_hour"] = round.(value.(CHPThermalToLoadKWH) / MMBTU_TO_KWH, digits=5)
     r["year_one_chp_fuel_cost"] = round(value(m[:TotalCHPFuelCosts] / p.pwf_fuel["CHP"]), digits=3)                
 	r["lifecycle_chp_fuel_cost"] = round(value(m[:TotalCHPFuelCosts]) * p.s.financial.offtaker_tax_pct, digits=3)
-	#r["year_one_chp_standby_cost_us_dollars"] = round(value(m[Symbol("Year1CHPStandbyCharges"]), digits=0)
-	#r["lifecycle_chp_standby_cost_us_dollars"] = round(value(m[Symbol("TotalCHPStandbyCharges] * m[Symbol("r_tax_fraction_offtaker]), digits=0)
+	#Standby charges and hourly O&M
+	r["lifecycle_chp_standby_cost_us_dollars"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) * p.s.financial.offtaker_tax_pct, digits=0)
+	r["year_one_chp_standby_cost_us_dollars"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) / p.pwf_e, digits=0)
 	
+
     d["CHP"] = r
     nothing
 end

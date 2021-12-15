@@ -185,6 +185,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     m[:TotalPerUnitHourOMCosts] = 0.0
     m[:TotalFuelCosts] = 0.0
     m[:TotalProductionIncentive] = 0
+	m[:TotalCHPStandbyCharges] = 0
 
 	if !isempty(p.techs.all)
 		add_tech_size_constraints(m, p)
@@ -204,6 +205,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             m[:TotalPerUnitProdOMCosts] += m[:TotalCHPPerUnitProdOMCosts]
             m[:TotalFuelCosts] += m[:TotalCHPFuelCosts]        
             m[:TotalPerUnitHourOMCosts] += m[:TotalHourlyCHPOMCosts]
+
+			if p.s.chp.standby_rate_us_dollars_per_kw_per_month > 1.0e-7
+				m[:TotalCHPStandbyCharges] += sum(p.s.financial.pwf_e * 12 * p.s.chp.standby_rate_us_dollars_per_kw_per_month * m[:dvSize][t] for t in p.techs.chp)
+			end
+
+			if !isempty(p.techs.thermal)
+				m[:TotalTechCapCosts] += sum(p.s.chp.supplementary_firing_capital_cost_per_kw * m[:dvSupplementaryFiringSize][t] for t in p.techs.chp)
+			end
         end
 
         if !isempty(p.techs.boiler)
@@ -315,6 +324,9 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		# Total Fuel Costs, tax deductible for offtaker
         m[:TotalFuelCosts] * (1 - p.s.financial.offtaker_tax_pct) +
 
+		#CHP Standby Charges
+		m[:TotalCHPStandbyCharges] * (1 - p.s.financial.offtaker_tax_pct) +
+
 		# Utility Bill, tax deductible for offtaker
 		m[:TotalElecBill] * (1 - p.s.financial.offtaker_tax_pct) -
 
@@ -416,7 +428,11 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
     if !isempty(p.techs.thermal)
-        @variable(m, dvThermalProduction[p.techs.thermal, p.time_steps] >= 0)
+        @variables m begin
+			dvThermalProduction[p.techs.thermal, p.time_steps] >= 0
+			dvSupplementaryThermalProduction[p.techs.chp, p.time_steps] >= 0
+			dvSupplementaryFiringSize[p.techs.chp] >= 0  #X^{\sigma db}_{t}: System size of CHP with supplementary firing [kW]
+		end
     end
 
 	if !isempty(p.s.electric_utility.outage_durations) # add dvUnserved Load if there is at least one outage
