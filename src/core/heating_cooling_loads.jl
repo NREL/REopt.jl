@@ -77,6 +77,35 @@ struct DomesticHotWaterLoad
 end
 
 
+"""
+    function SpaceHeatingLoad(;
+        doe_reference_name::String = "",
+        city::String = "",
+        blended_doe_reference_names::Array{String, 1} = String[],
+        blended_doe_reference_percents::Array{<:Real,1} = Real[],
+        annual_mmbtu::Union{Real, Nothing} = nothing,
+        monthly_mmbtu::Array{<:Real,1} = Real[],
+        fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[]
+    )
+
+There are many ways to define a `SpaceHeatingLoad`:
+1. a time-series via the `fuel_loads_mmbtu_per_hour`,
+2. scaling a DoE Commercial Reference Building (CRB) profile or a blend of CRB profiles to either
+the `annual_mmbtu` or `monthly_mmbtu` values;
+3. or using the `doe_reference_name` or `blended_doe_reference_names` from the `ElectricLoad`.
+
+When using an `ElectricLoad` defined from a `doe_reference_name` or `blended_doe_reference_names` 
+one only needs to provide an empty Dict in the scenario JSON to add a `SpaceHeatingLoad` to a 
+`Scenario`, i.e.:
+```json
+...
+"ElectricLoad": {"doe_reference_name": "MidriseApartment"},
+"SpaceHeatingLoad" : {},
+...
+```
+In this case the values provided for `doe_reference_name`, or  `blended_doe_reference_names` and 
+`blended_doe_reference_percents` are copied from the `ElectricLoad` to the `SpaceHeatingLoad`.
+"""
 struct SpaceHeatingLoad
     loads_kw::Array{Real, 1}
 
