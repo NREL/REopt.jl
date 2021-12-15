@@ -100,15 +100,8 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r["year_one_chp_fuel_cost"] = round(value(m[:TotalCHPFuelCosts] / p.pwf_fuel["CHP"]), digits=3)                
 	r["lifecycle_chp_fuel_cost"] = round(value(m[:TotalCHPFuelCosts]) * p.s.financial.offtaker_tax_pct, digits=3)
 	#Standby charges and hourly O&M
-	if p.s.chp.om_cost_per_hr_per_kw_rated > 1.0E-7
-		@expression(m, TotalHourlyCHPOMCosts, 
-			p.two_party_factor * p.pwf_om * p.TimeStepScaling * sum(m[:dvOMByHourBySizeCHP][t, ts] 
-			for t in p.CHPTechs, ts in p.TimeStep))	
-	else
-		expression(m, TotalHourlyCHPOMCosts, 0.0)
-	end
-	r["year_one_chp_standby_cost_us_dollars"] = round(value(m[Symbol("Year1CHPStandbyCharges"]), digits=0)
-	r["lifecycle_chp_standby_cost_us_dollars"] = round(value(m[Symbol("TotalCHPStandbyCharges] * m[Symbol("r_tax_fraction_offtaker]), digits=0)
+	r["lifecycle_chp_standby_cost_us_dollars"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) * p.s.financial.offtaker_tax_pct, digits=0)
+	r["year_one_chp_standby_cost_us_dollars"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) / p.pwf_e, digits=0)
 	
 
     d["CHP"] = r
