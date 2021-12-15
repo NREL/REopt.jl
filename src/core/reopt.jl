@@ -326,7 +326,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         m[:TotalFuelCosts] * (1 - p.s.financial.offtaker_tax_pct) +
 
 		#CHP Standby Charges
-		m[:TotalCHPStandbyCharges] * p.s.financial.offtaker_tax_pct +
+		m[:TotalCHPStandbyCharges] * (1 - p.s.financial.offtaker_tax_pct) +
 
 		# Utility Bill, tax deductible for offtaker
 		m[:TotalElecBill] * (1 - p.s.financial.offtaker_tax_pct) -
