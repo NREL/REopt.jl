@@ -205,7 +205,7 @@ end
 
     #part 2: supplementary firing used when more efficient than the boiler and low-cost; demand charges not reduced by CHP
     data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10
-    data["CHP"]["chp_does_not_reduce_demand_charges"] = true
+    data["CHP"]["does_not_reduce_demand_charges"] = true
     data["ExistingBoiler"]["efficiency"] = 0.85
     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     s = Scenario(data)
