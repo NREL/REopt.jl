@@ -90,8 +90,7 @@ end
 
 There are many ways to define a `SpaceHeatingLoad`:
 1. a time-series via the `fuel_loads_mmbtu_per_hour`,
-2. scaling a DoE Commercial Reference Building (CRB) profile or a blend of CRB profiles to either
-the `annual_mmbtu` or `monthly_mmbtu` values;
+2. scaling a DoE Commercial Reference Building (CRB) profile or a blend of CRB profiles to either the `annual_mmbtu` or `monthly_mmbtu` values;
 3. or using the `doe_reference_name` or `blended_doe_reference_names` from the `ElectricLoad`.
 
 When using an `ElectricLoad` defined from a `doe_reference_name` or `blended_doe_reference_names` 
@@ -172,6 +171,40 @@ end
 
 
 # TODO? Zero out cooling load for outage hours
+"""
+    function CoolingLoad(;
+        doe_reference_name::String = "",
+        city::String = "",
+        blended_doe_reference_names::Array{String, 1} = String[],
+        blended_doe_reference_percents::Array{<:Real,1} = Real[],
+        annual_tonhour::Union{Real, Nothing} = nothing,
+        monthly_tonhour::Array{<:Real,1} = Real[],
+        fuel_loads_ton_per_hour::Array{<:Real,1} = Real[],
+        annual_fraction::Union{Real, Nothing} = nothing,
+        monthly_fraction::Union{Real, Nothing} = nothing,
+        loads_fraction::Array{<:Real,1} = Real[],
+        existing_chiller_cop::Real = EXISTING_CHILLER_COP
+    )
+
+
+
+There are many ways to define a `CoolingLoad`:
+1. a time-series via the `fuel_loads_ton_per_hour`,
+2. scaling a DoE Commercial Reference Building (CRB) profile or a blend of CRB profiles to either the `annual_fraction` or `monthly_fraction` values;
+3. or using the `doe_reference_name` or `blended_doe_reference_names` from the `ElectricLoad`.
+
+When using an `ElectricLoad` defined from a `doe_reference_name` or `blended_doe_reference_names` 
+one only needs to provide an empty Dict in the scenario JSON to add a `CoolingLoad` to a 
+`Scenario`, i.e.:
+```json
+...
+"ElectricLoad": {"doe_reference_name": "MidriseApartment"},
+"CoolingLoad" : {},
+...
+```
+In this case the values provided for `doe_reference_name`, or  `blended_doe_reference_names` and 
+`blended_doe_reference_percents` are copied from the `ElectricLoad` to the `CoolingLoad`.
+"""
 struct CoolingLoad
     loads_kw_thermal::Array{Real, 1}
     existing_chiller_cop::Real
@@ -192,7 +225,7 @@ struct CoolingLoad
         time_steps_per_hour::Int = 1,
         latitude::Float64=0.0,
         longitude::Float64=0.0,
-        max_thermal_factor_on_peak_load::Real=1.25
+        max_thermal_factor_on_peak_load::Real=1.25 # TODO wbecker delete the max_thermal_factor_on_peak_load if EXISTING_CHILLER_COP = 4.55 is okay to replace look up get_existing_chiller_cop
     )
         # determine the timeseries of loads_kw_thermal
         loads_kw_thermal = nothing
