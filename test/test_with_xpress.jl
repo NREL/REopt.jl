@@ -29,126 +29,126 @@
 # *********************************************************************************
 using Xpress
 
-@testset "Battery degradation" begin
+# @testset "Battery degradation" begin
 
-    # scenarios with SCE tariff
-    data = JSON.parsefile("scenarios/pv_storage.json");
-    data["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
-    p1 = REoptInputs(Scenario(data));
-    m1 = Model(Xpress.Optimizer)
-    d1 = run_reopt(m1,p1);
-    @info("avg soc = $(sum(d1["Storage"]["year_one_soc_series_pct"]) / 8760)")
-    # 0.6113
+#     # scenarios with SCE tariff
+#     data = JSON.parsefile("scenarios/pv_storage.json");
+#     data["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
+#     p1 = REoptInputs(Scenario(data));
+#     m1 = Model(Xpress.Optimizer)
+#     d1 = run_reopt(m1,p1);
+#     @info("avg soc = $(sum(d1["Storage"]["year_one_soc_series_pct"]) / 8760)")
+#     # 0.6113
     
-    open("results_no_degradation_SCE.json","w") do f
-        JSON.print(f, d1)
-    end
+#     open("results_no_degradation_SCE.json","w") do f
+#         JSON.print(f, d1)
+#     end
 
-    # remove replacement cost for scenario with degradation
-    data["Storage"]["replace_cost_per_kw"] = 0.0
-    data["Storage"]["replace_cost_per_kwh"] = 0.0
-    p = REoptInputs(Scenario(data));
+#     # remove replacement cost for scenario with degradation
+#     data["Storage"]["replace_cost_per_kw"] = 0.0
+#     data["Storage"]["replace_cost_per_kwh"] = 0.0
+#     p = REoptInputs(Scenario(data));
 
-    m = Model(Xpress.Optimizer)
-    build_reopt!(m, p);
-    REoptLite.add_degradation(m, p, d1, 1e-3, 5e-5);
-    optimize!(m)
-    d = REoptLite.reopt_results(m, p) # same BESS as no degradation, but lowers avg soc
+#     m = Model(Xpress.Optimizer)
+#     build_reopt!(m, p);
+#     REoptLite.add_degradation(m, p, d1, 1e-3, 5e-5);
+#     optimize!(m)
+#     d = REoptLite.reopt_results(m, p) # same BESS as no degradation, but lowers avg soc
     
-    @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
-    # 0.38619
+#     @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
+#     # 0.38619
 
-    d["Storage"]["SOH"] = value.(m[:SOH]) / d1["Storage"]["size_kwh"]
-    d["Storage"]["EFC_DODmax"] = value.(m[:EFC_DODmax])
-    d["Storage"]["Eavg"] = value.(m[:Eavg])
-    d["Storage"]["d_0p8"] = value(m[:d_0p8])
-    d["Storage"]["N_batt_replacements"] = value(m[:N_batt_replacements])
+#     d["Storage"]["SOH"] = value.(m[:SOH]) / d1["Storage"]["size_kwh"]
+#     d["Storage"]["EFC_DODmax"] = value.(m[:EFC_DODmax])
+#     d["Storage"]["Eavg"] = value.(m[:Eavg])
+#     d["Storage"]["d_0p8"] = value(m[:d_0p8])
+#     d["Storage"]["N_batt_replacements"] = value(m[:N_batt_replacements])
     
-    open("results_kcyc0p001_kcal0p00005_no_expansion_SCE.json","w") do f
-        JSON.print(f, d)
-    end
+#     open("results_kcyc0p001_kcal0p00005_no_expansion_SCE.json","w") do f
+#         JSON.print(f, d)
+#     end
 
 
 
-    # SCE with expansion
-    m = Model(Xpress.Optimizer)
-    build_reopt!(m, p);
-    REoptLite.add_degradation(m, p, d1, 1e-3, 5e-5; expand_bilinear_terms=true);
-    optimize!(m)
-    d = REoptLite.reopt_results(m, p) # same BESS as no degradation, but lowers avg soc
+#     # SCE with expansion
+#     m = Model(Xpress.Optimizer)
+#     build_reopt!(m, p);
+#     REoptLite.add_degradation(m, p, d1, 1e-3, 5e-5; expand_bilinear_terms=true);
+#     optimize!(m)
+#     d = REoptLite.reopt_results(m, p) # same BESS as no degradation, but lowers avg soc
     
-    @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
-    # 0.38619
+#     @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
+#     # 0.38619
 
-    d["Storage"]["SOH"] = value.(m[:SOH]) / d1["Storage"]["size_kwh"]
-    d["Storage"]["EFC_DODmax"] = value.(m[:EFC_DODmax])
-    d["Storage"]["Eavg"] = value.(m[:Eavg])
-    d["Storage"]["d_0p8"] = value(m[:d_0p8])
-    d["Storage"]["N_batt_replacements"] = value(m[:N_batt_replacements])
+#     d["Storage"]["SOH"] = value.(m[:SOH]) / d1["Storage"]["size_kwh"]
+#     d["Storage"]["EFC_DODmax"] = value.(m[:EFC_DODmax])
+#     d["Storage"]["Eavg"] = value.(m[:Eavg])
+#     d["Storage"]["d_0p8"] = value(m[:d_0p8])
+#     d["Storage"]["N_batt_replacements"] = value(m[:N_batt_replacements])
     
-    open("results_kcyc0p001_kcal0p00005_with_expansion_SCE.json","w") do f
-        JSON.print(f, d)
-    end
+#     open("results_kcyc0p001_kcal0p00005_with_expansion_SCE.json","w") do f
+#         JSON.print(f, d)
+#     end
 
 
 
 
 
-    # PGE rate 
-    data = JSON.parsefile("scenarios/pv_storage.json");
-    data["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
-    data["ElectricTariff"]["urdb_label"] = "5e1676e95457a3f87673e3b0"  
+#     # PGE rate 
+#     data = JSON.parsefile("scenarios/pv_storage.json");
+#     data["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
+#     data["ElectricTariff"]["urdb_label"] = "5e1676e95457a3f87673e3b0"  
 
-    # base case
-    p1 = REoptInputs(Scenario(data));
-    m1 = Model(Xpress.Optimizer)
-    d1 = run_reopt(m1,p1);
-    @info("avg soc = $(sum(d1["Storage"]["year_one_soc_series_pct"]) / 8760)")
-    # 0.6113
+#     # base case
+#     p1 = REoptInputs(Scenario(data));
+#     m1 = Model(Xpress.Optimizer)
+#     d1 = run_reopt(m1,p1);
+#     @info("avg soc = $(sum(d1["Storage"]["year_one_soc_series_pct"]) / 8760)")
+#     # 0.6113
     
-    open("results_no_degradation_PGE.json","w") do f
-        JSON.print(f, d1)
-    end
+#     open("results_no_degradation_PGE.json","w") do f
+#         JSON.print(f, d1)
+#     end
 
 
-    data["Storage"]["replace_cost_per_kw"] = 0.0
-    data["Storage"]["replace_cost_per_kwh"] = 0.0
-    m = Model(Xpress.Optimizer)
-    p = REoptInputs(Scenario(data));
-    build_reopt!(m, p);
-    REoptLite.add_degradation(m, p, d1, 1e-3, 5e-5);
-    optimize!(m)
-    d = REoptLite.reopt_results(m, p)
+#     data["Storage"]["replace_cost_per_kw"] = 0.0
+#     data["Storage"]["replace_cost_per_kwh"] = 0.0
+#     m = Model(Xpress.Optimizer)
+#     p = REoptInputs(Scenario(data));
+#     build_reopt!(m, p);
+#     REoptLite.add_degradation(m, p, d1, 1e-3, 5e-5);
+#     optimize!(m)
+#     d = REoptLite.reopt_results(m, p)
 
-    d["Storage"]["SOH"] = value.(m[:SOH]) / d1["Storage"]["size_kwh"]
-    d["Storage"]["EFC_DODmax"] = value.(m[:EFC_DODmax])
-    d["Storage"]["Eavg"] = value.(m[:Eavg])
-    d["Storage"]["d_0p8"] = value.(m[:d_0p8])
-    d["Storage"]["N_batt_replacements"] = value(m[:N_batt_replacements])
+#     d["Storage"]["SOH"] = value.(m[:SOH]) / d1["Storage"]["size_kwh"]
+#     d["Storage"]["EFC_DODmax"] = value.(m[:EFC_DODmax])
+#     d["Storage"]["Eavg"] = value.(m[:Eavg])
+#     d["Storage"]["d_0p8"] = value.(m[:d_0p8])
+#     d["Storage"]["N_batt_replacements"] = value(m[:N_batt_replacements])
     
-    open("results_kcyc0p001_kcal0p00005_no_expansion_PGE.json","w") do f
-        JSON.print(f, d)
-    end
+#     open("results_kcyc0p001_kcal0p00005_no_expansion_PGE.json","w") do f
+#         JSON.print(f, d)
+#     end
 
 
-    # with expansion
-    data["ElectricTariff"]["urdb_label"] = "5e1676e95457a3f87673e3b0"  
-    m = Model(Xpress.Optimizer)
-    p = REoptInputs(Scenario(data));
-    build_reopt!(m, p);
-    REoptLite.add_degradation(m, p, d1, 1e-3, 5e-5; expand_bilinear_terms=true);
-    optimize!(m)
-    d = REoptLite.reopt_results(m, p)
+#     # with expansion
+#     data["ElectricTariff"]["urdb_label"] = "5e1676e95457a3f87673e3b0"  
+#     m = Model(Xpress.Optimizer)
+#     p = REoptInputs(Scenario(data));
+#     build_reopt!(m, p);
+#     REoptLite.add_degradation(m, p, d1, 1e-3, 5e-5; expand_bilinear_terms=true);
+#     optimize!(m)
+#     d = REoptLite.reopt_results(m, p)
 
-    d["Storage"]["SOH"] = value.(m[:SOH]) / d1["Storage"]["size_kwh"]
-    d["Storage"]["EFC_DODmax"] = value.(m[:EFC_DODmax])
-    d["Storage"]["Eavg"] = value.(m[:Eavg])
-    d["Storage"]["d_0p8"] = value.(m[:d_0p8])
-    d["Storage"]["N_batt_replacements"] = value(m[:N_batt_replacements])
+#     d["Storage"]["SOH"] = value.(m[:SOH]) / d1["Storage"]["size_kwh"]
+#     d["Storage"]["EFC_DODmax"] = value.(m[:EFC_DODmax])
+#     d["Storage"]["Eavg"] = value.(m[:Eavg])
+#     d["Storage"]["d_0p8"] = value.(m[:d_0p8])
+#     d["Storage"]["N_batt_replacements"] = value(m[:N_batt_replacements])
     
-    open("results_kcyc0p001_kcal0p00005_with_expansion_PGE.json","w") do f
-        JSON.print(f, d)
-    end
+#     open("results_kcyc0p001_kcal0p00005_with_expansion_PGE.json","w") do f
+#         JSON.print(f, d)
+#     end
 
 
 
@@ -157,118 +157,118 @@ using Xpress
 
 
 
-    # increase k_cyc
-    m = Model(Xpress.Optimizer)
-    build_reopt!(m, p);
-    REoptLite.add_degradation(m, p, d1, 1e-3, 5e-4); # k_cyc=1e-3 gives same results
-    optimize!(m)
-    d = REoptLite.reopt_results(m, p) # same BESS as no degradation, but lowers avg soc
+#     # increase k_cyc
+#     m = Model(Xpress.Optimizer)
+#     build_reopt!(m, p);
+#     REoptLite.add_degradation(m, p, d1, 1e-3, 5e-4); # k_cyc=1e-3 gives same results
+#     optimize!(m)
+#     d = REoptLite.reopt_results(m, p) # same BESS as no degradation, but lowers avg soc
     
-    @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
+#     @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
 
-    # increase k_cyc
-    m = Model(Xpress.Optimizer)
-    build_reopt!(m, p);
-    REoptLite.add_degradation(m, p, d1, 1e-3, 5e-3); 
-    optimize!(m)
-    d = REoptLite.reopt_results(m, p) 
-    #"size_kw"=>43.54, "size_kwh"=>57.42 
-    # much longer solve time
+#     # increase k_cyc
+#     m = Model(Xpress.Optimizer)
+#     build_reopt!(m, p);
+#     REoptLite.add_degradation(m, p, d1, 1e-3, 5e-3); 
+#     optimize!(m)
+#     d = REoptLite.reopt_results(m, p) 
+#     #"size_kw"=>43.54, "size_kwh"=>57.42 
+#     # much longer solve time
     
-    @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
-    # 0.278630
-    # julia> value(m[:d_0p8])
-    # 7253.000022266379
+#     @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
+#     # 0.278630
+#     # julia> value(m[:d_0p8])
+#     # 7253.000022266379
 
-    # julia> value(m[:N_batt_replacements])
-    # 0.008584470818808127
+#     # julia> value(m[:N_batt_replacements])
+#     # 0.008584470818808127
 
-    # julia> value(m[:Costs])
-    # 1.2393526757456677e7
-
-
-    # increase k_cyc
-    m = Model(Xpress.Optimizer)
-    build_reopt!(m, p);
-    REoptLite.add_degradation(m, p, d1, 1e-3, 1e-2);
-    optimize!(m)
-    d = REoptLite.reopt_results(m, p) 
-    # "size_kw"=>40.6, "size_kwh"=>53.54
-    # julia> value(m[:d_0p8])
-    # 7204.0000002005
-
-    # julia> value(m[:N_batt_replacements])
-    # 0.017534246538603703
-
-    # julia> value(m[:Costs])
-    # 1.2394871657043787e7
-    #     @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
-    # [ Info: avg soc = 0.2916865296803653
+#     # julia> value(m[:Costs])
+#     # 1.2393526757456677e7
 
 
+#     # increase k_cyc
+#     m = Model(Xpress.Optimizer)
+#     build_reopt!(m, p);
+#     REoptLite.add_degradation(m, p, d1, 1e-3, 1e-2);
+#     optimize!(m)
+#     d = REoptLite.reopt_results(m, p) 
+#     # "size_kw"=>40.6, "size_kwh"=>53.54
+#     # julia> value(m[:d_0p8])
+#     # 7204.0000002005
+
+#     # julia> value(m[:N_batt_replacements])
+#     # 0.017534246538603703
+
+#     # julia> value(m[:Costs])
+#     # 1.2394871657043787e7
+#     #     @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
+#     # [ Info: avg soc = 0.2916865296803653
 
 
-    ## do results change based off of expanding bilinear terms? all of the above was run without the expansion. repeating with expansion below:
 
-    data = JSON.parsefile("scenarios/pv_storage.json");
-    data["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
-    p1 = REoptInputs(Scenario(data));
-    m1 = Model(Xpress.Optimizer)
-    d1 = run_reopt(m1,p1);
-    @info("avg soc = $(sum(d1["Storage"]["year_one_soc_series_pct"]) / 8760)")
-    # 0.6113
 
-    # remove replacement cost for scenario with degradation
-    data["Storage"]["replace_cost_per_kw"] = 0.0
-    data["Storage"]["replace_cost_per_kwh"] = 0.0
-    p = REoptInputs(Scenario(data));
+#     ## do results change based off of expanding bilinear terms? all of the above was run without the expansion. repeating with expansion below:
 
-    m2 = Model(Xpress.Optimizer)
-    build_reopt!(m2, p);
-    REoptLite.add_degradation(m2, p, d1, 1e-3, 5e-5; expand_bilinear_terms=true);
-    optimize!(m2)
-    d2 = REoptLite.reopt_results(m2, p) # BESS was same as no degradation, but now size_kw"=>54.84, "size_kwh"=>76.15 vs. "size_kw"=>55.88, "size_kwh"=>78.91 w/o degradation
+#     data = JSON.parsefile("scenarios/pv_storage.json");
+#     data["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
+#     p1 = REoptInputs(Scenario(data));
+#     m1 = Model(Xpress.Optimizer)
+#     d1 = run_reopt(m1,p1);
+#     @info("avg soc = $(sum(d1["Storage"]["year_one_soc_series_pct"]) / 8760)")
+#     # 0.6113
+
+#     # remove replacement cost for scenario with degradation
+#     data["Storage"]["replace_cost_per_kw"] = 0.0
+#     data["Storage"]["replace_cost_per_kwh"] = 0.0
+#     p = REoptInputs(Scenario(data));
+
+#     m2 = Model(Xpress.Optimizer)
+#     build_reopt!(m2, p);
+#     REoptLite.add_degradation(m2, p, d1, 1e-3, 5e-5; expand_bilinear_terms=true);
+#     optimize!(m2)
+#     d2 = REoptLite.reopt_results(m2, p) # BESS was same as no degradation, but now size_kw"=>54.84, "size_kwh"=>76.15 vs. "size_kw"=>55.88, "size_kwh"=>78.91 w/o degradation
     
-    @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
-    # was 0.38619 and now is 0.56409, N_batt_replacements = 0.0 still, but maybe the SOH plot is steeper and more accurate?
+#     @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
+#     # was 0.38619 and now is 0.56409, N_batt_replacements = 0.0 still, but maybe the SOH plot is steeper and more accurate?
 
-    #=
-    using Plots
-    plot(value.(m[:SOH].data), label="no expansion")
-    plot!(value.(m2[:SOH].data), label="expansion")
-    savefig("SOH_wwo_expansion_kcal001_kcyc00005.pdf")
-    =#
+#     #=
+#     using Plots
+#     plot(value.(m[:SOH].data), label="no expansion")
+#     plot!(value.(m2[:SOH].data), label="expansion")
+#     savefig("SOH_wwo_expansion_kcal001_kcyc00005.pdf")
+#     =#
 
 
-    m3 = Model(Xpress.Optimizer)
-    build_reopt!(m3, p);
-    REoptLite.add_degradation(m3, p, d1, 1e-3, 1e-2; expand_bilinear_terms=true);
-    optimize!(m3)
-    d3 = REoptLite.reopt_results(m3, p) 
-    # was "size_kw"=>40.6, "size_kwh"=>53.54 now "size_kw"=>54.84, "size_kwh"=>76.15
-    # julia> value(m[:d_0p8])
-    # was 7204.0000002005 now 2365.000004234173
+#     m3 = Model(Xpress.Optimizer)
+#     build_reopt!(m3, p);
+#     REoptLite.add_degradation(m3, p, d1, 1e-3, 1e-2; expand_bilinear_terms=true);
+#     optimize!(m3)
+#     d3 = REoptLite.reopt_results(m3, p) 
+#     # was "size_kw"=>40.6, "size_kwh"=>53.54 now "size_kw"=>54.84, "size_kwh"=>76.15
+#     # julia> value(m[:d_0p8])
+#     # was 7204.0000002005 now 2365.000004234173
 
-    # julia> value(m[:N_batt_replacements])
-    # was 0.017534246538603703 now 2.1123287671243745
+#     # julia> value(m[:N_batt_replacements])
+#     # was 0.017534246538603703 now 2.1123287671243745
 
-    # julia> value(m[:Costs])
-    # was 1.2394871657043787e7 now 1.2389671546073029e7
-    #     @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
-    # was [ Info: avg soc = 0.2916865296803653 now 0.4002
+#     # julia> value(m[:Costs])
+#     # was 1.2394871657043787e7 now 1.2389671546073029e7
+#     #     @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
+#     # was [ Info: avg soc = 0.2916865296803653 now 0.4002
 
-    m4 = Model(Xpress.Optimizer)
-    build_reopt!(m4, p);
-    REoptLite.add_degradation(m4, p, d1, 1e-3, 1e-2);
-    optimize!(m4)
-    d4 = REoptLite.reopt_results(m4, p) 
+#     m4 = Model(Xpress.Optimizer)
+#     build_reopt!(m4, p);
+#     REoptLite.add_degradation(m4, p, d1, 1e-3, 1e-2);
+#     optimize!(m4)
+#     d4 = REoptLite.reopt_results(m4, p) 
 
-    # plot(value.(m4[:SOH].data), label="no expansion")
-    # plot!(value.(m3[:SOH].data), label="expansion")
-    # savefig("SOH_wwo_expansion_kcal001_kcyc01.pdf")
-    ## SOH is going up at times because of minus Emin_ terms in expansion 
+#     # plot(value.(m4[:SOH].data), label="no expansion")
+#     # plot!(value.(m3[:SOH].data), label="expansion")
+#     # savefig("SOH_wwo_expansion_kcal001_kcyc01.pdf")
+#     ## SOH is going up at times because of minus Emin_ terms in expansion 
 
-end
+# end
 
 @testset "Thermal loads" begin
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
