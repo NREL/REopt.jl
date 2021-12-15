@@ -266,8 +266,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         end
     end
 
-	if (!isempty(p.techs.chp)) && (p.s.chp.chp_standby_rate_us_dollars_per_kw_per_month > 1.0e-7)
- 		@expression(m, TotalCHPStandbyCharges, sum(p.s.financial.pwf_e * 12 * p.s.chp.chp_standby_rate_us_dollars_per_kw_per_month * m[:dvSize][t] for t in p.techs.chp))
+	if (!isempty(p.techs.chp)) && (p.s.chp.standby_rate_us_dollars_per_kw_per_month > 1.0e-7)
+ 		@expression(m, TotalCHPStandbyCharges, sum(p.s.financial.pwf_e * 12 * p.s.chp.standby_rate_us_dollars_per_kw_per_month * m[:dvSize][t] for t in p.techs.chp))
 	else
 		@expression(m, TotalCHPStandbyCharges, 0.0)
 	end
