@@ -16,7 +16,8 @@
         "doe_reference_name": "MidriseApartment"
     },
     "ElectricTariff": {
-        "urdb_label": "5e1676e95457a3f87673e3b0"
+        "monthly_energy_rates": [0.15, 0.2, 0.21, 0.23, 0.27, 0.19, 0.22, 0.17, 0.24, 0.26, 0.18, 0.2],
+        "monthly_demand_rates": [0.08, 0.11, 0, 0, 0.15, 0.14, 0.09, 0.06, 0, 0, 0.05, 0]
     },
     "SpaceHeatingLoad": {
         "doe_reference_name": "MidriseApartment"

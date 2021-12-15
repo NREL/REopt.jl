@@ -176,12 +176,13 @@ end
     @test sum(chp_total_elec_prod[unavail_2_start:unavail_2_end]) == 0.0  
 end
 
-@testset "CHP Supplementary firing sizing and usage" begin
+@testset "CHP Supplementary firing and standby" begin
     """
-    Test to ensure that supplementary firing works as intended.  The thermal and electrical loads 
-    are constant, and the CHP system size is fixed; the supplementary firing has a similar cost to 
-    the boiler and is purcahsed and used when the boiler efficiency is set to a lower value than
-    that of the supplementary firing. 
+    Test to ensure that supplementary firing and standby charges work as intended.  The thermal and 
+    electrical loads are constant, and the CHP system size is fixed; the supplementary firing has a
+    similar cost to the boiler and is purcahsed and used when the boiler efficiency is set to a lower 
+    value than that of the supplementary firing. The test also ensures that demand charges are  
+    correctly calculated when CHP is and is not allowed to reduce demand charges.
     """
     data = JSON.parsefile("./scenarios/chp_supplementary_firing.json")
     data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10000
@@ -200,16 +201,19 @@ end
     @test results["CHP"]["size_supplemental_firing_kw"] == 0
     @test results["CHP"]["year_one_electric_energy_produced_kwh"] ≈ 800*8760 rtol=1e-5
     @test results["CHP"]["year_one_thermal_energy_produced_mmbtu"] ≈ 800*(0.4418/0.3573)*8760/293.07107 rtol=1e-5
-    
-    #part 2: supplementary firing used when more efficient than the boiler and low-cost
+    @test results["ElectricTariff"]["lifecycle_demand_cost"] == 0
+
+    #part 2: supplementary firing used when more efficient than the boiler and low-cost; demand charges not reduced by CHP
     data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10
+    data["CHP"]["chp_does_not_reduce_demand_charges"] = true
     data["ExistingBoiler"]["efficiency"] = 0.85
     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     s = Scenario(data)
     inputs = REoptInputs(s)
     results = run_reopt(m2, inputs)
     @test results["CHP"]["size_supplemental_firing_kw"] ≈ 278.73 atol=0.1
-    @test results["CHP"]["year_one_thermal_energy_produced_mmbtu"] ≈ 138624 rtol=1e-3
+    @test results["CHP"]["year_one_thermal_energy_produced_mmbtu"] ≈ 138624 atol=1e-5
+    @test results["ElectricTariff"]["lifecycle_demand_cost"] ≈ 5212.7 rtol 1e-5
 end
 
 #=
