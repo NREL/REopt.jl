@@ -171,7 +171,7 @@ function BuiltInElectricLoad(
     longitude::Float64,
     year::Int,
     annual_kwh::Union{<:Real, Nothing}=nothing,
-    monthly_totals_kwh::Union{<:Real, Vector{<:Real}}=nothing,
+    monthly_totals_kwh::Vector{<:Real}=Real[],
     )
     
     annual_loads = Dict(
