@@ -29,3 +29,8 @@ REoptLite.add_generator_results
 ```@docs
 REoptLite.add_chp_results
 ```
+
+## Uncertain Outages outputs
+```@docs
+REoptLite.add_outage_results
+```
