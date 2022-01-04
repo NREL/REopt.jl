@@ -25,6 +25,11 @@ REoptLite.add_electric_utility_results
 REoptLite.add_pv_results
 ```
 
+## Wind outputs
+```@docs
+REoptLite.add_wind_results
+```
+
 ## Storage outputs
 ```@docs
 REoptLite.add_storage_results
