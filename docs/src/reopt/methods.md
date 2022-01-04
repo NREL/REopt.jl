@@ -10,3 +10,8 @@ run_reopt
 ```@docs
 build_reopt!
 ```
+
+## simulate_outages
+```@docs
+simulate_outages
+```
