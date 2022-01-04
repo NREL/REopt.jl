@@ -27,6 +27,27 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+    add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+
+Adds the PV results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+Note: the node number is an empty string if evaluating a single `Site`.
+
+!!! warn
+    The key(s) used to access PV outputs in the results dictionary is determined by the `PV.name` value to allow for modeling multiple PV options. (The default `PV.name` is "PV".)
+
+PV results:
+- `size_kw` Optimal PV capacity
+- `lifecycle_om_cost` Lifecycle operations and maintenance cost in present value, after tax
+- `year_one_energy_produced_kwh` Energy produced over the first year
+- `average_annual_energy_produced_kwh` Average annual energy produced when accounting for degradation
+- `lcoe_per_kwh` Levelized Cost of Energy produced by the PV system
+- `year_one_to_load_series_kw` Vector of power used to meet load over the first year
+- `year_one_to_battery_series_kw` Vector of power used to charge the battery over the first year
+- `year_one_to_grid_series_kw` Vector of power exported to the grid over the first year
+- `year_one_curtailed_production_series_kw` Vector of power curtailed over the first year
+- `average_annual_energy_exported_kwh` Average annual energy exported to the grid
+"""
 function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     for t in p.techs.pv
         r = Dict{String, Any}()
