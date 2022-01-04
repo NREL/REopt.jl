@@ -20,6 +20,11 @@ REoptLite.add_electric_load_results
 REoptLite.add_electric_utility_results
 ```
 
+## PV outputs
+```@docs
+REoptLite.add_pv_results
+```
+
 ## Generator outputs
 ```@docs
 REoptLite.add_generator_results
