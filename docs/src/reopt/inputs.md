@@ -65,6 +65,12 @@ REoptLite.Site
 REoptLite.ElectricLoad
 ```
 
+## ElectricTariff
+```@docs
+REoptLite.ElectricTariff
+REoptLite.ElectricTariff()
+```
+
 ## Financial
 ```@docs
 REoptLite.Financial
@@ -93,12 +99,6 @@ REoptLite.Generator
 ## CHP
 ```@docs
 REoptLite.CHP
-```
-
-## ElectricTariff
-```@docs
-REoptLite.ElectricTariff
-REoptLite.ElectricTariff()
 ```
 
 ## Settings
