@@ -45,8 +45,8 @@ function DomesticHotWaterLoad(;
     monthly_mmbtu::Array{<:Real,1} = Real[],
     fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
     time_steps_per_hour::Int = 1,
-    latitude::Float64=0.0,
-    longitude::Float64=0.0
+    latitude::Real=0.0,
+    longitude::Real=0.0
 )
 ```
 """
@@ -63,8 +63,8 @@ struct DomesticHotWaterLoad
         # addressable_load_fraction,  # TODO
         fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],  # TODO shouldn't this be per_time_step?
         time_steps_per_hour::Int = 1,
-        latitude::Float64=0.0,
-        longitude::Float64=0.0
+        latitude::Real=0.0,
+        longitude::Real=0.0
     )
         if length(fuel_loads_mmbtu_per_hour) > 0
 
@@ -118,8 +118,8 @@ function SpaceHeatingLoad(;
     monthly_mmbtu::Array{<:Real,1} = Real[],
     fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
     time_steps_per_hour::Int = 1,
-    latitude::Float64=0.0,
-    longitude::Float64=0.0
+    latitude::Real=0.0,
+    longitude::Real=0.0
 )
 ```
 """
@@ -136,8 +136,8 @@ struct SpaceHeatingLoad
         # addressable_load_fraction,  # TODO
         fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
         time_steps_per_hour::Int = 1,
-        latitude::Float64=0.0,
-        longitude::Float64=0.0
+        latitude::Real=0.0,
+        longitude::Real=0.0
     )
         if length(fuel_loads_mmbtu_per_hour) > 0
 
@@ -176,8 +176,8 @@ end
 function BuiltInDomesticHotWaterLoad(
     city::String,
     buildingtype::String,
-    latitude::Float64,
-    longitude::Float64,
+    latitude::Real,
+    longitude::Real,
     year::Int,
     annual_mmbtu::Union{<:Real, Nothing}=nothing,
     monthly_mmbtu::Union{Vector{<:Real}, Nothing}=nothing
@@ -504,8 +504,8 @@ end
 function BuiltInSpaceHeatingLoad(
     city::String,
     buildingtype::String,
-    latitude::Float64,
-    longitude::Float64,
+    latitude::Real,
+    longitude::Real,
     year::Int,
     annual_mmbtu::Union{<:Real, Nothing}=nothing,
     monthly_mmbtu::Union{Vector{<:Real}, Nothing}=nothing,
