@@ -98,6 +98,7 @@ REoptLite.CHP
 ## ElectricTariff
 ```@docs
 REoptLite.ElectricTariff
+REoptLite.ElectricTariff()
 ```
 
 ## Settings

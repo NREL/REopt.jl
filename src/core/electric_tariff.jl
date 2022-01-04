@@ -69,30 +69,31 @@ end
 """
     ElectricTariff
 
-    ElectricTariff constructor
-    
-    function ElectricTariff(;
-        urdb_label::String="",
-        urdb_response::Dict=Dict(),
-        urdb_utility_name::String="",
-        urdb_rate_name::String="",
-        year::Int=2020,
-        time_steps_per_hour::Int=1,
-        NEM::Bool=false,
-        wholesale_rate::T=nothing, 
-        monthly_energy_rates::Array=[],
-        monthly_demand_rates::Array=[],
-        blended_annual_energy_rate::S=nothing,
-        blended_annual_demand_rate::R=nothing,
-        remove_tiers::Bool=false,
-        demand_lookback_months::AbstractArray{Int64, 1}=Int64[],
-        demand_lookback_percent::Float64=0.0,
-        demand_lookback_range::Int=0,
-        ) where {
-            T <: Union{Nothing, Int, Float64, Array}, 
-            S <: Union{Nothing, Int, Float64}, 
-            R <: Union{Nothing, Int, Float64}
-        }
+ElectricTariff constructor
+```julia
+function ElectricTariff(;
+    urdb_label::String="",
+    urdb_response::Dict=Dict(),
+    urdb_utility_name::String="",
+    urdb_rate_name::String="",
+    year::Int=2020,
+    time_steps_per_hour::Int=1,
+    NEM::Bool=false,
+    wholesale_rate::T=nothing, 
+    monthly_energy_rates::Array=[],
+    monthly_demand_rates::Array=[],
+    blended_annual_energy_rate::S=nothing,
+    blended_annual_demand_rate::R=nothing,
+    remove_tiers::Bool=false,
+    demand_lookback_months::AbstractArray{Int64, 1}=Int64[],
+    demand_lookback_percent::Float64=0.0,
+    demand_lookback_range::Int=0,
+    ) where {
+        T <: Union{Nothing, Int, Float64, Array}, 
+        S <: Union{Nothing, Int, Float64}, 
+        R <: Union{Nothing, Int, Float64}
+    }
+```
 
 !!! note
     The `NEM` boolean is determined by the ElectricUtility.net_metering_limit_kw. There is no need to pass in a `NEM`
