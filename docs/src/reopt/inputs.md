@@ -86,6 +86,11 @@ REoptLite.ElectricUtility
 REoptLite.PV
 ```
 
+## Storage
+```@docs
+REoptLite.ElecStorage
+```
+
 ## Wind
 ```@docs
 REoptLite.Wind
@@ -94,6 +99,21 @@ REoptLite.Wind
 ## Generator
 ```@docs
 REoptLite.Generator
+```
+
+## DomesticHotWaterLoad
+```@docs
+REoptLite.DomesticHotWaterLoad
+```
+
+## SpaceHeatingLoad
+```@docs
+REoptLite.SpaceHeatingLoad
+```
+
+## ExistingBoiler
+```@docs
+REoptLite.ExistingBoiler
 ```
 
 ## CHP
