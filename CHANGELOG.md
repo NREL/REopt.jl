@@ -1,12 +1,14 @@
 # REoptLite Changelog
 
-## v0.12.1
-- add ExistingBoiler and CRB heating loads
+## v0.12.2
 - add CHP technology, including supplementary firing
 - add URDB "sell" value from `energyratestructure` to wholesale rate
 - update docs
 - allow annual or monthly energy rate w/o demand rate
 - allow integer latitude/longitude
+
+## v0.12.1
+- add ExistingBoiler and CRB heating loads
 
 ## v0.12.0
 - change all output keys starting with "total_" or "net_" to "lifecycle_" (except "net_present_cost")
