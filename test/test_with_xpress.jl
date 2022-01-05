@@ -427,12 +427,9 @@ end
     """
     data = JSON.parsefile("./scenarios/chp_supplementary_firing.json")
     data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10000
-    data["ElectricLoad"]["loads_kw"] = Array{Real,1}(undef,8760)
-    data["ElectricLoad"]["loads_kw"][1:8760] .= 800
-    data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = Array{Real,1}(undef,8760)
-    data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"][1:8760] .= 6.0
-    data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"] = Array{Real,1}(undef,8760)
-    data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"][1:8760] .= 6.0
+    data["ElectricLoad"]["loads_kw"] = repeat([800.0], 8760)
+    data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([6.0], 8760)
+    data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([6.0], 8760)
     #part 1: supplementary firing not used when less efficient than the boiler and expensive 
     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     s = Scenario(data)
@@ -515,8 +512,8 @@ end
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/outage.json")
 
-    @test results["expected_outage_cost"] ≈ 0
-    @test sum(results["unserved_load_per_outage"]) ≈ 0
+    @test results["Outages"]["expected_outage_cost"] ≈ 0
+    @test sum(results["Outages"]["unserved_load_per_outage"]) ≈ 0
     @test value(m[:binMGTechUsed]["Generator"]) == 1
     @test value(m[:binMGTechUsed]["PV"]) == 0
     @test value(m[:binMGStorageUsed]) == 1
@@ -528,12 +525,12 @@ end
     =#
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/nogridcost_minresilhours.json")
-    @test sum(results["unserved_load_per_outage"]) ≈ 12
+    @test sum(results["Outages"]["unserved_load_per_outage"]) ≈ 12
     
     # testing dvUnserved load, which would output 100 kWh for this scenario before output fix
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/nogridcost_multiscenario.json")
-    @test sum(results["unserved_load_per_outage"]) ≈ 60
+    @test sum(results["Outages"]["unserved_load_per_outage"]) ≈ 60
     
 end
 

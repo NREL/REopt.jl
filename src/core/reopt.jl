@@ -135,7 +135,7 @@ end
 
 
 """
-	function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
+	build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 Add variables and constraints for REopt model.
 """
 function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)

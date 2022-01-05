@@ -27,6 +27,25 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+	add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+
+Adds the Wind results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+Note: the node number is an empty string if evaluating a single `Site`.
+
+Wind results:
+- `size_kw` Optimal Wind capacity
+- `lifecycle_om_cost` Lifecycle operations and maintenance cost in present value, after tax
+- `year_one_om_cost` Operations and maintenance cost in the first year
+- `year_one_to_battery_series_kw` Vector of power used to charge the battery over the first year
+- `year_one_to_grid_series_kw` Vector of power exported to the grid over the first year
+- `average_annual_energy_exported_kwh` Average annual energy exported to the grid
+- `year_one_to_load_series_kw` Vector of power used to meet load over the first year
+- `year_one_energy_produced_kwh` Energy produced over the first year
+- `average_annual_energy_produced_kwh` Average annual energy produced when accounting for degradation
+- `lcoe_per_kwh` Levelized Cost of Energy produced by the PV system
+- `year_one_curtailed_production_series_kw` Vector of power curtailed over the first year
+"""
 function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
     t = "Wind"

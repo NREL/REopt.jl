@@ -164,8 +164,8 @@ end
 """
     blend_and_scale_doe_profiles(
         constructor,
-        latitude::Float64,
-        longitude::Float64,
+        latitude::Real,
+        longitude::Real,
         year::Int,
         blended_doe_reference_names::Array{String, 1},
         blended_doe_reference_percents::Array{<:Real,1},
@@ -182,8 +182,8 @@ Given `blended_doe_reference_names` and `blended_doe_reference_percents` use the
 """
 function blend_and_scale_doe_profiles(
     constructor,
-    latitude::Float64,
-    longitude::Float64,
+    latitude::Real,
+    longitude::Real,
     year::Int,
     blended_doe_reference_names::Array{String, 1},
     blended_doe_reference_percents::Array{<:Real,1},
