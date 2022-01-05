@@ -186,12 +186,9 @@ end
     """
     data = JSON.parsefile("./scenarios/chp_supplementary_firing.json")
     data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10000
-    data["ElectricLoad"]["loads_kw"] = Array{Real,1}(undef,8760)
-    data["ElectricLoad"]["loads_kw"][1:8760] .= 800
-    data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = Array{Real,1}(undef,8760)
-    data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"][1:8760] .= 6.0
-    data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"] = Array{Real,1}(undef,8760)
-    data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"][1:8760] .= 6.0
+    data["ElectricLoad"]["loads_kw"] = repeat([800.0], 8760)
+    data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([6.0], 8760)
+    data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([6.0], 8760)
     #part 1: supplementary firing not used when less efficient than the boiler and expensive 
     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     s = Scenario(data)
