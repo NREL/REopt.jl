@@ -168,14 +168,16 @@ function ElectricTariff(;
             nem_rate = [-0.999 * x for x in energy_rates]
         end
 
-    elseif !isempty(monthly_energy_rates) && !isempty(monthly_demand_rates)
+    elseif !isempty(monthly_energy_rates)
 
         invalid_args = String[]
         if !(length(monthly_energy_rates) == 12)
             push!(invalid_args, "length(monthly_energy_rates) must equal 12, got length $(length(monthly_energy_rates))")
         end
-        if !(length(monthly_demand_rates) == 12)
+        if !isempty(monthly_demand_rates) && !(length(monthly_demand_rates) == 12)
             push!(invalid_args, "length(monthly_demand_rates) must equal 12, got length $(length(monthly_demand_rates))")
+        else
+            monthly_demand_rates = repeat([0.0], 12)
         end
         if length(invalid_args) > 0
             error("Invalid argument values: $(invalid_args)")
@@ -196,12 +198,16 @@ function ElectricTariff(;
             nem_rate = [-0.999 * x for x in energy_rates]
         end
 
-    elseif !isnothing(blended_annual_energy_rate) && !isnothing(blended_annual_demand_rate)
+    elseif !isnothing(blended_annual_energy_rate)
 
         tou_demand_rates = Float64[]
         tou_demand_ratchet_timesteps = []
         energy_rates = repeat(Real[blended_annual_energy_rate], 8760 * time_steps_per_hour)
-        monthly_demand_rates = repeat(Real[blended_annual_demand_rate], 12)
+        if !isnothing(blended_annual_demand_rate)
+            monthly_demand_rates = repeat(Real[blended_annual_demand_rate], 12)
+        else
+            monthly_demand_rates = repeat([0.0], 12)
+        end
 
         fixed_monthly_charge = 0.0
         annual_min_charge = 0.0
