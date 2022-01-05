@@ -243,12 +243,19 @@ function setup_tech_inputs(s::AbstractScenario)
     end
 
     if "Generator" in techs.all
-        setup_gen_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
-            techs_by_exportbin, techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs.no_curtail)
+        setup_gen_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor, 
+            techs_by_exportbin, techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, 
+            seg_yint, techs.no_curtail)
     end
 
     if "ExistingBoiler" in techs.all
         setup_existing_boiler_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency)
+    end
+
+    if "CHP" in techs.all
+        setup_chp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, 
+            production_factor, techs_by_exportbin, techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, 
+            seg_yint, techs.no_curtail)  
     end
 
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
@@ -317,7 +324,11 @@ function update_cost_curve!(tech::AbstractTech, tech_name::String, financial::Fi
     )
     cost_slope, cost_curve_bp_x, cost_yint, n_segments = cost_curve(tech, financial)
     cap_cost_slope[tech_name] = cost_slope[1]
-    if n_segments > 1
+    min_allowable_kw = 0.0
+    if isdefined(tech, :min_allowable_kw)
+        min_allowable_kw = tech.min_allowable_kw
+    end
+    if n_segments > 1 || (typeof(tech)==CHP && min_allowable_kw > 0.0)
         cap_cost_slope[tech_name] = cost_slope
         push!(segmented_techs, tech_name)
         seg_max_size[tech_name] = Dict{Int,Float64}()
@@ -325,7 +336,7 @@ function update_cost_curve!(tech::AbstractTech, tech_name::String, financial::Fi
         n_segs_by_tech[tech_name] = n_segments
         seg_yint[tech_name] = Dict{Int,Float64}()
         for s in 1:n_segments
-            seg_min_size[tech_name][s] = cost_curve_bp_x[s]
+            seg_min_size[tech_name][s] = max(cost_curve_bp_x[s], min_allowable_kw)
             seg_max_size[tech_name][s] = cost_curve_bp_x[s+1]
             seg_yint[tech_name][s] = cost_yint[s]
         end
@@ -388,7 +399,7 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
         update_cost_curve!(pv, pv.name, s.financial,
             cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
         )
-        
+
         om_cost_per_kw[pv.name] = pv.om_cost_per_kw
         fillin_techs_by_exportbin(techs_by_exportbin, pv, pv.name)
 
@@ -461,6 +472,25 @@ function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes,
     return nothing
 end
 
+function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw,  
+    production_factor, techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint,
+    techs_no_curtail
+    )
+    max_sizes["CHP"] = s.chp.max_kw
+    min_sizes["CHP"] = s.chp.min_kw
+    update_cost_curve!(s.chp, "CHP", s.financial,
+        cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+    )
+    om_cost_per_kw["CHP"] = s.chp.om_cost_per_kw
+    production_factor["CHP", :] = prodfactor(s.chp, s.electric_load.year, s.electric_utility.outage_start_time_step, 
+        s.electric_utility.outage_end_time_step, s.settings.time_steps_per_hour)
+    fillin_techs_by_exportbin(techs_by_exportbin, s.chp, "CHP")
+    if !s.chp.can_curtail
+        push!(techs_no_curtail, "CHP")
+    end  
+    return nothing
+end
+
 
 function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
 
@@ -494,6 +524,13 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
                 s.financial.offtaker_discount_pct
             )
         end
+        if t == "CHP"
+            pwf_fuel["CHP"] = annuity(
+                s.financial.analysis_years,
+                s.financial.chp_fuel_cost_escalation_pct,
+                s.financial.offtaker_discount_pct
+            )
+        end        
     end
 
     if s.financial.third_party_ownership
