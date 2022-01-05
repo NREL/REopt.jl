@@ -51,6 +51,7 @@ end
     Scenario(d::Dict)
 
 Constructor for Scenario struct, where `d` has upper-case keys:
+<<<<<<< HEAD
 - Site (required)
 - ElectricTariff (required)
 - ElectricLoad (required)
@@ -67,6 +68,21 @@ Constructor for Scenario struct, where `d` has upper-case keys:
 - CHP (optional)
 - FlexibleHVAC (optional)
 - ExistingChiller (optional)
+=======
+- [Site](@ref) (required)
+- [ElectricTariff](@ref) (required)
+- [ElectricLoad](@ref) (required)
+- [PV](@ref) (optional, can be Array)
+- [Wind](@ref) (optional)
+- [Storage](@ref) (optional)
+- [ElectricUtility](@ref) (optional)
+- [Financial](@ref) (optional)
+- [Generator](@ref) (optional)
+- [DomesticHotWaterLoad](@ref) (optional)
+- [SpaceHeatingLoad](@ref) (optional)
+- [ExistingBoiler](@ref) (optional)
+- [CHP](@ref) (optional)
+>>>>>>> develop
 
 All values of `d` are expected to be `Dicts` except for `PV`, which can be either a `Dict` or `Dict[]`.
 ```

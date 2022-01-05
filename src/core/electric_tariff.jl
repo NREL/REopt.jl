@@ -69,30 +69,31 @@ end
 """
     ElectricTariff
 
-    ElectricTariff constructor
-    
-    function ElectricTariff(;
-        urdb_label::String="",
-        urdb_response::Dict=Dict(),
-        urdb_utility_name::String="",
-        urdb_rate_name::String="",
-        year::Int=2020,
-        time_steps_per_hour::Int=1,
-        NEM::Bool=false,
-        wholesale_rate::T=nothing, 
-        monthly_energy_rates::Array=[],
-        monthly_demand_rates::Array=[],
-        blended_annual_energy_rate::S=nothing,
-        blended_annual_demand_rate::R=nothing,
-        remove_tiers::Bool=false,
-        demand_lookback_months::AbstractArray{Int64, 1}=Int64[],
-        demand_lookback_percent::Float64=0.0,
-        demand_lookback_range::Int=0,
-        ) where {
-            T <: Union{Nothing, Int, Float64, Array}, 
-            S <: Union{Nothing, Int, Float64}, 
-            R <: Union{Nothing, Int, Float64}
-        }
+ElectricTariff constructor
+```julia
+function ElectricTariff(;
+    urdb_label::String="",
+    urdb_response::Dict=Dict(),
+    urdb_utility_name::String="",
+    urdb_rate_name::String="",
+    year::Int=2020,
+    time_steps_per_hour::Int=1,
+    NEM::Bool=false,
+    wholesale_rate::T=nothing, 
+    monthly_energy_rates::Array=[],
+    monthly_demand_rates::Array=[],
+    blended_annual_energy_rate::S=nothing,
+    blended_annual_demand_rate::R=nothing,
+    remove_tiers::Bool=false,
+    demand_lookback_months::AbstractArray{Int64, 1}=Int64[],
+    demand_lookback_percent::Float64=0.0,
+    demand_lookback_range::Int=0,
+    ) where {
+        T <: Union{Nothing, Int, Float64, Array}, 
+        S <: Union{Nothing, Int, Float64}, 
+        R <: Union{Nothing, Int, Float64}
+    }
+```
 
 !!! note
     The `NEM` boolean is determined by the ElectricUtility.net_metering_limit_kw. There is no need to pass in a `NEM`
@@ -167,14 +168,16 @@ function ElectricTariff(;
             nem_rate = [-0.999 * x for x in energy_rates]
         end
 
-    elseif !isempty(monthly_energy_rates) && !isempty(monthly_demand_rates)
+    elseif !isempty(monthly_energy_rates)
 
         invalid_args = String[]
         if !(length(monthly_energy_rates) == 12)
             push!(invalid_args, "length(monthly_energy_rates) must equal 12, got length $(length(monthly_energy_rates))")
         end
-        if !(length(monthly_demand_rates) == 12)
+        if !isempty(monthly_demand_rates) && !(length(monthly_demand_rates) == 12)
             push!(invalid_args, "length(monthly_demand_rates) must equal 12, got length $(length(monthly_demand_rates))")
+        else
+            monthly_demand_rates = repeat([0.0], 12)
         end
         if length(invalid_args) > 0
             error("Invalid argument values: $(invalid_args)")
@@ -195,12 +198,16 @@ function ElectricTariff(;
             nem_rate = [-0.999 * x for x in energy_rates]
         end
 
-    elseif !isnothing(blended_annual_energy_rate) && !isnothing(blended_annual_demand_rate)
+    elseif !isnothing(blended_annual_energy_rate)
 
         tou_demand_rates = Float64[]
         tou_demand_ratchet_timesteps = []
         energy_rates = repeat(Real[blended_annual_energy_rate], 8760 * time_steps_per_hour)
-        monthly_demand_rates = repeat(Real[blended_annual_demand_rate], 12)
+        if !isnothing(blended_annual_demand_rate)
+            monthly_demand_rates = repeat(Real[blended_annual_demand_rate], 12)
+        else
+            monthly_demand_rates = repeat([0.0], 12)
+        end
 
         fixed_monthly_charge = 0.0
         annual_min_charge = 0.0
