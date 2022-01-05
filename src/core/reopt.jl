@@ -135,7 +135,7 @@ end
 
 
 """
-	function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
+	build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 Add variables and constraints for REopt model.
 """
 function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
@@ -180,9 +180,12 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 	add_production_constraints(m, p)
 
+    m[:TotalTechCapCosts] = 0.0
     m[:TotalPerUnitProdOMCosts] = 0.0
+    m[:TotalPerUnitHourOMCosts] = 0.0
     m[:TotalFuelCosts] = 0.0
     m[:TotalProductionIncentive] = 0
+	m[:TotalCHPStandbyCharges] = 0
 
 	if !isempty(p.techs.all)
 		add_tech_size_constraints(m, p)
@@ -193,14 +196,23 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	
         if !isempty(p.techs.gen)
             add_gen_constraints(m, p)
-            m[:TotalPerUnitProdOMCosts] = @expression(m, p.third_party_factor * p.pwf_om *
-                sum(p.s.generator.om_cost_per_kwh * p.hours_per_timestep *
-                m[:dvRatedProduction][t, ts] for t in p.techs.gen, ts in p.time_steps)
-            )
-            m[:TotalGenFuelCosts] = @expression(m, p.pwf_e *
-                sum(m[:dvFuelUsage][t,ts] * p.s.generator.fuel_cost_per_gallon for t in p.techs.gen, ts in p.time_steps)
-            )
+            m[:TotalPerUnitProdOMCosts] += m[:TotalGenPerUnitProdOMCosts]
             m[:TotalFuelCosts] += m[:TotalGenFuelCosts]
+        end
+
+        if !isempty(p.techs.chp)
+            add_chp_constraints(m, p)
+            m[:TotalPerUnitProdOMCosts] += m[:TotalCHPPerUnitProdOMCosts]
+            m[:TotalFuelCosts] += m[:TotalCHPFuelCosts]        
+            m[:TotalPerUnitHourOMCosts] += m[:TotalHourlyCHPOMCosts]
+
+			if p.s.chp.standby_rate_us_dollars_per_kw_per_month > 1.0e-7
+				m[:TotalCHPStandbyCharges] += sum(p.s.financial.pwf_e * 12 * p.s.chp.standby_rate_us_dollars_per_kw_per_month * m[:dvSize][t] for t in p.techs.chp)
+			end
+
+			if !isempty(p.techs.thermal)
+				m[:TotalTechCapCosts] += sum(p.s.chp.supplementary_firing_capital_cost_per_kw * m[:dvSupplementaryFiringSize][t] for t in p.techs.chp)
+			end
         end
 
         if !isempty(p.techs.boiler)
@@ -247,16 +259,18 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         add_coincident_peak_charge_constraints(m, p)
     end
 
-	@expression(m, TotalTechCapCosts, p.third_party_factor *
-		  sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in setdiff(p.techs.all, p.techs.segmented) )
-	)
+    if !isempty(setdiff(p.techs.all, p.techs.segmented))
+        m[:TotalTechCapCosts] += p.third_party_factor *
+            sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in setdiff(p.techs.all, p.techs.segmented))
+    end
+
     if !isempty(p.techs.segmented)
         @warn "adding binary variable(s) to model cost curves"
         add_cost_curve_vars_and_constraints(m, p)
         for t in p.techs.segmented  # cannot have this for statement in sum( ... for t in ...) ???
-           TotalTechCapCosts += p.third_party_factor * (
+            m[:TotalTechCapCosts] += p.third_party_factor * (
                 sum(p.cap_cost_slope[t][s] * m[Symbol("dvSegmentSystemSize"*t)][s] + 
-                    p.seg_yint[t][s] * m[Symbol("binSegment"*t)][s] for s in p.n_segs_by_tech[t])
+                    p.seg_yint[t][s] * m[Symbol("binSegment"*t)][s] for s in 1:p.n_segs_by_tech[t])
             )
         end
     end
@@ -299,16 +313,19 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	#################################  Objective Function   ########################################
 	@expression(m, Costs,
 		# Capital Costs
-		TotalTechCapCosts + TotalStorageCapCosts +
+		m[:TotalTechCapCosts] + TotalStorageCapCosts +
 
 		# Fixed O&M, tax deductible for owner
 		TotalPerUnitSizeOMCosts * (1 - p.s.financial.owner_tax_pct) +
 
 		# Variable O&M, tax deductible for owner
-		m[:TotalPerUnitProdOMCosts] * (1 - p.s.financial.owner_tax_pct) +
+		(m[:TotalPerUnitProdOMCosts] + m[:TotalPerUnitHourOMCosts]) * (1 - p.s.financial.owner_tax_pct) +
 
 		# Total Fuel Costs, tax deductible for offtaker
         m[:TotalFuelCosts] * (1 - p.s.financial.offtaker_tax_pct) +
+
+		#CHP Standby Charges
+		m[:TotalCHPStandbyCharges] * (1 - p.s.financial.offtaker_tax_pct) +
 
 		# Utility Bill, tax deductible for offtaker
 		m[:TotalElecBill] * (1 - p.s.financial.offtaker_tax_pct) -
@@ -411,7 +428,11 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
     if !isempty(p.techs.thermal)
-        @variable(m, dvThermalProduction[p.techs.thermal, p.time_steps] >= 0)
+        @variables m begin
+			dvThermalProduction[p.techs.thermal, p.time_steps] >= 0
+			dvSupplementaryThermalProduction[p.techs.chp, p.time_steps] >= 0
+			dvSupplementaryFiringSize[p.techs.chp] >= 0  #X^{\sigma db}_{t}: System size of CHP with supplementary firing [kW]
+		end
     end
 
 	if !isempty(p.s.electric_utility.outage_durations) # add dvUnserved Load if there is at least one outage

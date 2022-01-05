@@ -41,24 +41,26 @@ struct Scenario <: AbstractScenario
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
     existing_boiler::ExistingBoiler
+    chp::Union{CHP, Nothing}  # use nothing for more items when they are not modeled?
 end
 
 """
     Scenario(d::Dict)
 
 Constructor for Scenario struct, where `d` has upper-case keys:
-- Site (required)
-- ElectricTariff (required)
-- ElectricLoad (required)
-- PV (optional, can be Array)
-- Wind (optional)
-- Storage (optional)
-- ElectricUtility (optional)
-- Financial (optional)
-- Generator (optional)
-- DomesticHotWaterLoad (optional)
-- SpaceHeatingLoad (optional)
-- ExistingBoiler (optional)
+- [Site](@ref) (required)
+- [ElectricTariff](@ref) (required)
+- [ElectricLoad](@ref) (required)
+- [PV](@ref) (optional, can be Array)
+- [Wind](@ref) (optional)
+- [Storage](@ref) (optional)
+- [ElectricUtility](@ref) (optional)
+- [Financial](@ref) (optional)
+- [Generator](@ref) (optional)
+- [DomesticHotWaterLoad](@ref) (optional)
+- [SpaceHeatingLoad](@ref) (optional)
+- [ExistingBoiler](@ref) (optional)
+- [CHP](@ref) (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV`, which can be either a `Dict` or `Dict[]`.
 ```
@@ -76,6 +78,7 @@ struct Scenario
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
     existing_boiler::ExistingBoiler
+    chp::CHP
 end
 ```
 """
@@ -176,15 +179,26 @@ function Scenario(d::Dict)
     end
 
     if max_heat_demand_kw > 0
-        vals = Dict{Symbol, Any}()
-        vals[:max_heat_demand_kw] = max_heat_demand_kw
-        vals[:time_steps_per_hour] = settings.time_steps_per_hour
-        if haskey(d, "ExistingBoiler")
-            vals = merge(vals, dictkeys_tosymbols(d["ExistingBoiler"]))
+        boiler_inputs = Dict{Symbol, Any}()
+        boiler_inputs[:max_heat_demand_kw] = max_heat_demand_kw
+        boiler_inputs[:time_steps_per_hour] = settings.time_steps_per_hour
+        # If CHP is considered, prime_mover may inform the default boiler efficiency
+        if haskey(d, "CHP") 
+            if haskey(d["CHP"], "prime_mover")
+                boiler_inputs[:chp_prime_mover] = d["CHP"]["prime_mover"]
+            end
         end
-        existing_boiler = ExistingBoiler(; vals...)
+        if haskey(d, "ExistingBoiler")
+            boiler_inputs = merge(boiler_inputs, dictkeys_tosymbols(d["ExistingBoiler"]))
+        end
+        existing_boiler = ExistingBoiler(; boiler_inputs...)
     else
         existing_boiler = ExistingBoiler(0.0, 0.0, Real[])
+    end
+
+    chp = nothing
+    if haskey(d, "CHP")
+        chp = CHP(d["CHP"])
     end
 
     return Scenario(
@@ -200,7 +214,8 @@ function Scenario(d::Dict)
         generator,
         dhw_load,
         space_heating_load,
-        existing_boiler
+        existing_boiler,
+        chp
     )
 end
 
