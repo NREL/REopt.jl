@@ -65,6 +65,12 @@ REoptLite.Site
 REoptLite.ElectricLoad
 ```
 
+## ElectricTariff
+```@docs
+REoptLite.ElectricTariff
+REoptLite.ElectricTariff()
+```
+
 ## Financial
 ```@docs
 REoptLite.Financial
@@ -80,6 +86,11 @@ REoptLite.ElectricUtility
 REoptLite.PV
 ```
 
+## Storage
+```@docs
+REoptLite.ElecStorage
+```
+
 ## Wind
 ```@docs
 REoptLite.Wind
@@ -90,9 +101,9 @@ REoptLite.Wind
 REoptLite.Generator
 ```
 
-## CHP
+## DomesticHotWaterLoad
 ```@docs
-REoptLite.CHP
+REoptLite.DomesticHotWaterLoad
 ```
 
 ## SpaceHeatingLoad
@@ -100,14 +111,14 @@ REoptLite.CHP
 REoptLite.SpaceHeatingLoad
 ```
 
-## CoolingLoad
+## ExistingBoiler
 ```@docs
-REoptLite.CoolingLoad
+REoptLite.ExistingBoiler
 ```
 
-## ElectricTariff
+## CHP
 ```@docs
-REoptLite.ElectricTariff
+REoptLite.CHP
 ```
 
 ## Settings

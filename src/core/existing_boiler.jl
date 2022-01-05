@@ -37,12 +37,25 @@ end
 
 
 """
-TODO document all thermal techs and loads
+    ExistingBoiler
 
 !!! note
     The `ExistingBoiler` default operating cost is zero. Please provide the `fuel_cost_per_mmbtu` field
     for the `ExistingBoiler` if you want non-zero BAU heating costs. The `fuel_cost_per_mmbtu` can be
     a scalar, a list of 12 monthly values, or a time series of values for every time step.
+    ExistingBoiler
+
+```julia
+function ExistingBoiler(;
+    max_heat_demand_kw::Real=0,
+    production_type::String = "hot_water",
+    chp_prime_mover::String = "",
+    max_thermal_factor_on_peak_load::Real = 1.25,
+    efficiency::Real = 0.0,
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
+    time_steps_per_hour::Int = 1
+)
+```
 """
 function ExistingBoiler(;
     max_heat_demand_kw::Real=0,
