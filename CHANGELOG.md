@@ -1,5 +1,8 @@
 # REoptLite Changelog
 
+## v0.12.3
+- add utils for PVwatts: `get_ambient_temperature` and `get_pvwatts_prodfactor`
+
 ## v0.12.2
 - add CHP technology, including supplementary firing
 - add URDB "sell" value from `energyratestructure` to wholesale rate
