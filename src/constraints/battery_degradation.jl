@@ -98,7 +98,7 @@ function constrain_degradation_variables(m, p; b=:elec)
             m[:Eminus_sum][d] == sum(m[:dvDischargeFromStorage][b, ts] for ts in ts0:tsF)
         )
         @constraint(m,
-            m[:EFC][d] == m[:Eplus_sum][d] + m[:Eminus_sum][d]
+            m[:EFC][d] == (m[:Eplus_sum][d] + m[:Eminus_sum][d]) / 2
         )
         @constraint(m,
             m[:DODmax][d] == m[:Emax][d] - m[:Emin][d]
@@ -170,7 +170,15 @@ function get_battery_bounds_from_result_dict(p::REoptInputs, d::Dict)
 end
 
 
-function add_degradation(m, p, d::Dict, k_cal::Float64, k_cyc::Float64; time_exponent=0.5, b=:elec, expand_bilinear_terms=false)
+"""
+
+Assumptions:
+- effectively normalizing average SOC, EFC, and DODmax by the battery capacity from a REopt solution w/o degradation
+    - TODO what if no battey in w/o degradation results?
+    - NOTE the average SOC, EFC, and DODmax variables are in absolute units making the SOH variable start at the 
+        battery capacity w/o degradation
+"""
+function add_degradation(m, p, d::Dict, k_cal::Float64, k_cyc::Float64, k_dod::Float64; time_exponent=0.5, b=:elec)
     days = 1:365*p.s.financial.analysis_years
     @variable(m, SOH[days])
 
@@ -179,57 +187,29 @@ function add_degradation(m, p, d::Dict, k_cal::Float64, k_cyc::Float64; time_exp
     For now take the limits from previous REopt run in the Dict d.
     =#
     add_degradation_variables(m, p)
-    constrain_degradation_variables(m, p; b=:elec)
+    constrain_degradation_variables(m, p, b=b)
 
-    bounds = get_battery_bounds_from_result_dict(p, d)
+    bounds = get_battery_bounds_from_result_dict(p, d)  # TODO rm this method? was for bounds in McCormick constraints
+    Qo = bounds["Bkwh"]
 
-    # TODO? one bilinear set for DODmax * EFC ?
-
-    if expand_bilinear_terms
-        for bilinear_set in (
-            (m[:Emax].data, m[:Eplus_sum].data, "Emax_Eplus_sum"),
-            (m[:Emax].data, m[:Eminus_sum].data, "Emax_Eminus_sum"),
-            (m[:Emin].data, m[:Eplus_sum].data, "Emin_Eplus_sum"),
-            (m[:Emin].data, m[:Eminus_sum].data, "Emin_Eminus_sum"),
-            )
-            add_mccormick_constraints(m, bilinear_set[3], days,
-                bilinear_set[1], bilinear_set[2], 
-                bounds[bilinear_set[3][1:5]*"upper"], 
-                bounds[bilinear_set[3][1:5]*"lower"], 
-                bounds[bilinear_set[3][6:end]*"_upper"], 
-                bounds[bilinear_set[3][6:end]*"_lower"]
-            )
-        end
-
-        @constraint(m, [d in 2:days[end]],
-            SOH[d] == SOH[d-1] - time_exponent * k_cal * m[:Eavg][d-1] * d^(time_exponent-1) 
-                      - k_cyc/(2*bounds["Bkwh"]) * 
-                       (  m[:Emax_Eplus_sum][d-1] + m[:Emax_Eminus_sum][d-1] 
-                        - m[:Emin_Eplus_sum][d-1] - m[:Emin_Eminus_sum][d-1])
+    @constraint(m, [d in 2:days[end]],
+        SOH[d] == SOH[d-1] - p.hours_per_timestep * (
+            k_cal * time_exponent * m[:Eavg][d-1] * d^(time_exponent-1) 
+            + k_cyc * m[:EFC][d-1]
+            + k_dod * m[:DODmax][d-1]
         )
-    else
-        add_mccormick_constraints(m, "EFC_DODmax", days,
-            m[:EFC].data, m[:DODmax].data, 
-            bounds["EFC_upper"], 
-            bounds["EFC_lower"], 
-            bounds["DODmax_upper"], 
-            bounds["DODmax_lower"]
-        )
+    )
 
-        @constraint(m, [d in 2:days[end]],
-            SOH[d] == SOH[d-1] - time_exponent * k_cal * m[:Eavg][d-1] * d^(time_exponent-1) - k_cyc/(2*bounds["Bkwh"]) * m[:EFC_DODmax][d-1]
-        )
-    end
-    @constraint(m, SOH[1] == bounds["Bkwh"])
+    @constraint(m, SOH[1] == Qo)
 
     @variable(m, soh_indicator[days], Bin)
 
     @constraint(m, [d in days],
-        soh_indicator[d] => {SOH[d] >= 0.8*bounds["Bkwh"]}
+        soh_indicator[d] => {SOH[d] >= 0.8*Qo}
     )
     # why do we need the opposite indicator ??? model does not hold the indicator constraint above
     # @constraint(m, [d in days],
-    #     !soh_indicator[d] => {SOH[d] <= 0.8*bounds["Bkwh"]}
+    #     !soh_indicator[d] => {SOH[d] <= 0.8*Qo}
     # )
     # @variable(m, d_0p8 >= 0)
     @expression(m, d_0p8, sum(soh_indicator[d] for d in days))
