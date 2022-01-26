@@ -27,6 +27,16 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+function add_egat_constraints(m, p; _n="")
+    ##Constraint for EGAT to limit imported power to line limit at each timestep
+    @constraint(m, ElecImportMaxCon[ts in p.time_steps_with_grid],
+        100000 >=
+        sum( m[Symbol("dvGridPurchase"*_n)][ts,tier] for tier in 1:p.s.electric_tariff.n_energy_tiers ) -
+        sum( m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for t in p.techs.elec, u in p.export_bins_by_tech[t] )
+    )
+
+end
+
 function add_export_constraints(m, p; _n="")
 
     ##Constraint (8e): Production export and curtailment no greater than production
