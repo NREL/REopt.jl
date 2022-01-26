@@ -29,21 +29,23 @@
 # *********************************************************************************
 """
     ElectricLoad(;
-        loads_kw::Union{Missing, Array{<:Real,1}} = missing,
+        loads_kw::Array{<:Real,1} = Real[],
+        path_to_csv::String = "",
         year::Int = 2020,
-        doe_reference_name::Union{Missing, String} = missing,
+        doe_reference_name::String = "",
         blended_doe_reference_names::Array{String, 1} = String[],
-        blended_doe_reference_percents::Array{<:Float64,1} = Float64[],
-        city::Union{Missing, String} = missing,
+        blended_doe_reference_percents::Array{<:Real,1} = Real[],
+        city::String = "",
         annual_kwh::Union{Real, Nothing} = nothing,
         monthly_totals_kwh::Array{<:Real,1} = Real[],
         critical_loads_kw::Union{Missing, Array{Real,1}} = missing,
         loads_kw_is_net::Bool = true,
         critical_loads_kw_is_net::Bool = false,
-        critical_load_pct::Real = 0.5
+        critical_load_pct::Real = 0.5,
+        time_steps_per_hour::Int = 1
     )
 
-Must provide either `loads_kw` or [`doe_reference_name` and `city`] or `doe_reference_name` or [`blended_doe_reference_names` and `blended_doe_reference_percents`]. 
+Must provide either `loads_kw` or `path_to_csv` or [`doe_reference_name` and `city`] or `doe_reference_name` or [`blended_doe_reference_names` and `blended_doe_reference_percents`]. 
 
 When only `doe_reference_name` is provided the `Site.latitude` and `Site.longitude` are used to look up the ASHRAE climate zone, which determines the appropriate DoE Commercial Reference Building profile.
 
@@ -96,6 +98,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
     
     function ElectricLoad(;
         loads_kw::Array{<:Real,1} = Real[],
+        path_to_csv::String = "",
         year::Int = 2020,
         doe_reference_name::String = "",
         blended_doe_reference_names::Array{String, 1} = String[],
@@ -117,9 +120,17 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             if !(length(loads_kw) / time_steps_per_hour ≈ 8760)
                 @error "Provided electric load does not match the time_steps_per_hour."
             end
-            
-            if ismissing(critical_loads_kw)
-                critical_loads_kw = critical_load_pct * loads_kw
+
+        elseif !isempty(path_to_csv)
+            try
+                loads_kw = vec(readdlm(path_to_csv, ',', Float64, '\n'))
+            catch e
+                @error "Unable to read in electric load profile from $path_to_csv. Please provide a valid path to a csv with no header."
+                throw(e) 
+            end
+
+            if !(length(loads_kw) / time_steps_per_hour ≈ 8760)
+                @error "Provided electric load does not match the time_steps_per_hour."
             end
     
         elseif !isempty(doe_reference_name)
@@ -129,19 +140,12 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             end
             year = 2017
             loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, year, annual_kwh, monthly_totals_kwh)
-            if ismissing(critical_loads_kw)
-                critical_loads_kw = critical_load_pct * loads_kw
-            end
 
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
             loads_kw = blend_and_scale_doe_profiles(BuiltInElectricLoad, latitude, longitude, year, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_kwh, monthly_totals_kwh)
-
-            if ismissing(critical_loads_kw)
-                critical_loads_kw = critical_load_pct * loads_kw
-            end
         else
             error("Cannot construct ElectricLoad. You must provide either [loads_kw], [doe_reference_name, city], 
                   [doe_reference_name, latitude, longitude], 
@@ -151,6 +155,10 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         if length(loads_kw) < 8760*time_steps_per_hour
             loads_kw = repeat(loads_kw, inner=time_steps_per_hour / (length(loads_kw)/8760))
             @info "Repeating electric loads in each hour to match the time_steps_per_hour."
+        end
+
+        if ismissing(critical_loads_kw)
+            critical_loads_kw = critical_load_pct * loads_kw
         end
 
         new(
