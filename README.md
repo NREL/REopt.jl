@@ -1,11 +1,11 @@
-# REoptLite Julia package
+# REopt Julia package
 This package is currently under development and only has a subset of capabilities of the REopt Lite model used in the [REopt Lite API](https://github.com/NREL/REopt_Lite_API). For example, the CHP model and thermal loads are not yet modeled in this code. However this code is easier to use than the API (only dependencies are Julia and a solver) and has a novel model for uncertain outages.
 
 Note: this package has been tested with Julia 1.4, 1.5, and 1.6 and may not be compatible with older versions.
 
 For more information please see the documentation:
-<!-- [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://nrel.github.io/REoptLite.jl/stable) -->
-[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://nrel.github.io/REoptLite/dev)
+<!-- [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://nrel.github.io/REopt.jl/stable) -->
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://nrel.github.io/REopt/dev)
 
 
 ## Uncertain outages
@@ -17,11 +17,11 @@ Evaluating only `PV` and `Storage` requires a linear program solver. Adding a ge
 ```
 using Xpress
 using JuMP
-using REoptLite
+using REopt
 
 m = Model(Xpress.Optimizer)
 results = run_reopt(m, "path/to/scenario.json")
 ```
 See the `test/scenarios` directory for examples of `scenario.json`.
 
-For more details see the [documentation](https://nrel.github.io/REoptLite/dev).
+For more details see the [documentation](https://nrel.github.io/REopt/dev).

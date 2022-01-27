@@ -1,4 +1,4 @@
-# REoptLite.jl
+# REopt.jl
 *Renewable Energy Optimization and Integration*
 
 !!! note
@@ -7,5 +7,5 @@
 ## Installing
 ```julia
 using Pkg
-Pkg.add("REoptLite")
+Pkg.add("REopt")
 ```

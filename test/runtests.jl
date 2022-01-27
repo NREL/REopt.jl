@@ -31,7 +31,7 @@ using Test
 using JuMP
 using Cbc
 using JSON
-using REoptLite
+using REopt
 
 
 if "Xpress" in ARGS
@@ -52,7 +52,7 @@ else  # run Cbc tests
     =#
     @testset "Inputs" begin
         @testset "hybrid profile" begin
-            electric_load = REoptLite.ElectricLoad(; 
+            electric_load = REopt.ElectricLoad(; 
                 blended_doe_reference_percents = [0.2, 0.2, 0.2, 0.2, 0.2],
                 blended_doe_reference_names    = ["RetailStore", "LargeOffice", "MediumOffice", "SmallOffice", "Warehouse"],
                 annual_kwh                     = 50000.0,
@@ -145,7 +145,7 @@ else  # run Cbc tests
         - same city: Boulder
         - same total wind prod factor
         
-        REoptLite.jl has:
+        REopt.jl has:
         - bigger turbine: 3752 vs 3735
         - net_capital_costs_plus_om: 8,576,590 vs. 8,537,480
 
