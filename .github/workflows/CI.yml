@@ -32,4 +32,4 @@ jobs:
         - name: Build containers
           run: docker-compose up -d
         - name: Execute tests in container
-          run: docker exec jul julia --project=. -e 'import Pkg; Pkg.test("REoptLite"; test_args=["Xpress"])'
+          run: docker exec jul julia --project=. -e 'import Pkg; Pkg.test("REopt"; test_args=["Xpress"])'

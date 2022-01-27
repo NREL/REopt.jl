@@ -83,7 +83,7 @@ end
     slope = (cap_cost_x[3] * cap_cost_y[3] - cap_cost_x[2] * cap_cost_y[2]) / (cap_cost_x[3] - cap_cost_x[2])
     init_capex_chp_expected = cap_cost_x[2] * cap_cost_y[2] + (expected_x - cap_cost_x[2]) * slope
     lifecycle_capex_chp_expected = init_capex_chp_expected - 
-        REoptLite.npv(data_cost_curve["Financial"]["offtaker_discount_pct"], 
+        REopt.npv(data_cost_curve["Financial"]["offtaker_discount_pct"], 
         [0, init_capex_chp_expected * data_cost_curve["CHP"]["federal_itc_pct"]])
 
     #PV
@@ -97,7 +97,7 @@ end
 
     init_capex_pv_expected = data_cost_curve["PV"]["max_kw"] * data_cost_curve["PV"]["installed_cost_per_kw"]
     lifecycle_capex_pv_expected = init_capex_pv_expected - 
-        REoptLite.npv(data_cost_curve["Financial"]["offtaker_discount_pct"], 
+        REopt.npv(data_cost_curve["Financial"]["offtaker_discount_pct"], 
         [0, init_capex_pv_expected * data_cost_curve["PV"]["federal_itc_pct"]])
 
     s = Scenario(data_cost_curve)
@@ -247,7 +247,7 @@ end
     @test results["Financial"]["lcc_bau"] ≈ 12766397 rtol=1e-5
     @test results["Storage"]["size_kw"] ≈ 55.9 atol=0.1
     @test results["Storage"]["size_kwh"] ≈ 78.9 atol=0.1
-    proforma_npv = REoptLite.npv(results["Financial"]["offtaker_annual_free_cashflows"] - 
+    proforma_npv = REopt.npv(results["Financial"]["offtaker_annual_free_cashflows"] - 
         results["Financial"]["offtaker_annual_free_cashflows_bau"], 0.081)
     @test results["Financial"]["npv"] ≈ proforma_npv rtol=0.0001
 end
@@ -384,7 +384,7 @@ end
     - same city: Boulder
     - same total wind prod factor
     
-    REoptLite.jl has:
+    REopt.jl has:
     - bigger turbine: 3752 vs 3735
     - net_capital_costs_plus_om: 8,576,590 vs. 8,537,480
 
