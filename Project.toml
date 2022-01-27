@@ -1,5 +1,5 @@
-name = "REoptLite"
-uuid = "0144022d-7626-48b7-867b-06d945449d75"
+name = "REopt"
+uuid = "d36ad4e8-d74a-4f7a-ace1-eaea049febf6"
 authors = ["Nick Laws <nick.laws@nrel.gov>"]
 version = "0.12.3"
 

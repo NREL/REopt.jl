@@ -1,4 +1,4 @@
-# REoptLite Changelog
+# REopt Changelog
 
 ## v0.12.3
 - add utils for PVwatts: `get_ambient_temperature` and `get_pvwatts_prodfactor`

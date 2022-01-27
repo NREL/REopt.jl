@@ -3,7 +3,7 @@ Inputs to `run_reopt` can be provided in one of three formats:
 1. a file path (string) to a JSON file,
 2. a `Dict`, or
 3. using the `REoptInputs` struct
-Any one of these types can be passed to the [`run_reopt`](https://nrel.github.io/REoptLite/stable/reopt/methods/#run_reopt) method.
+Any one of these types can be passed to the [`run_reopt`](https://nrel.github.io/REopt/stable/reopt/methods/#run_reopt) method.
 
 The first option is perhaps the most straightforward one. For example, the minimum requirements for a JSON scenario file would look like:
 ```javascript
@@ -40,7 +40,7 @@ To add PV to the analysis simply add a PV key with an empty dictionary (to use d
     "PV": {}
 }
 ```
-This scenario will consider the option to purchase a solar PV system to reduce energy costs, and if solar PV can reduce the energy costs then REopt Lite will provide the optimal PV capacity (assuming perfect foresight!). To use other than default values for `PV` see the [PV struct definition](https://github.com/NREL/REoptLite/blob/master/src/core/pv.jl).  For example, the site under consideration might have some existing PV capacity to account for, which can be done by setting the `existing_kw` key to the appropriate value.
+This scenario will consider the option to purchase a solar PV system to reduce energy costs, and if solar PV can reduce the energy costs then REopt Lite will provide the optimal PV capacity (assuming perfect foresight!). To use other than default values for `PV` see the [PV struct definition](https://github.com/NREL/REopt/blob/master/src/core/pv.jl).  For example, the site under consideration might have some existing PV capacity to account for, which can be done by setting the `existing_kw` key to the appropriate value.
 
 ## Scenario
 The `Scenario` struct captures all of the objects that can be included in a scenario.json:
@@ -57,71 +57,71 @@ BAUScenario
 
 ## Site
 ```@docs
-REoptLite.Site
+REopt.Site
 ```
 
 ## ElectricLoad
 ```@docs
-REoptLite.ElectricLoad
+REopt.ElectricLoad
 ```
 
 ## ElectricTariff
 ```@docs
-REoptLite.ElectricTariff
-REoptLite.ElectricTariff()
+REopt.ElectricTariff
+REopt.ElectricTariff()
 ```
 
 ## Financial
 ```@docs
-REoptLite.Financial
+REopt.Financial
 ```
 
 ## ElectricUtility
 ```@docs
-REoptLite.ElectricUtility
+REopt.ElectricUtility
 ```
 
 ## PV
 ```@docs
-REoptLite.PV
+REopt.PV
 ```
 
 ## Storage
 ```@docs
-REoptLite.ElecStorage
+REopt.ElecStorage
 ```
 
 ## Wind
 ```@docs
-REoptLite.Wind
+REopt.Wind
 ```
 
 ## Generator
 ```@docs
-REoptLite.Generator
+REopt.Generator
 ```
 
 ## DomesticHotWaterLoad
 ```@docs
-REoptLite.DomesticHotWaterLoad
+REopt.DomesticHotWaterLoad
 ```
 
 ## SpaceHeatingLoad
 ```@docs
-REoptLite.SpaceHeatingLoad
+REopt.SpaceHeatingLoad
 ```
 
 ## ExistingBoiler
 ```@docs
-REoptLite.ExistingBoiler
+REopt.ExistingBoiler
 ```
 
 ## CHP
 ```@docs
-REoptLite.CHP
+REopt.CHP
 ```
 
 ## Settings
 ```@docs
-REoptLite.Settings
+REopt.Settings
 ```
