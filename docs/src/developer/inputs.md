@@ -5,7 +5,7 @@ The REoptInputs structure uses the [Scenario](@ref) to build all of the data nec
 ```@docs
 REoptInputs
 REoptInputs(fp::String)
-REoptInputs(s::REoptLite.AbstractScenario)
+REoptInputs(s::REopt.AbstractScenario)
 ```
 
 ## Design Concepts for REoptInputs
