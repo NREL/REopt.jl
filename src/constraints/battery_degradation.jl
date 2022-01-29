@@ -78,69 +78,6 @@ function constrain_degradation_variables(m, p; b=:elec)
 end
 
 
-function get_battery_bounds_from_result_dict(p::REoptInputs, d::Dict)
-    # TODO define the degradation terms in weekly values to reduce variables?
-    days = 1:365*p.s.financial.analysis_years
-    ts_per_day = 24 / p.hours_per_timestep
-    ts_per_year = ts_per_day * 365
-    soc = d["Storage"]["year_one_soc_series_pct"]
-    Bkwh = d["Storage"]["size_kwh"]
-    soc_kwh = Bkwh * soc
-    soc_kwh_zero = vcat([p.s.storage.soc_init_pct[:elec] * Bkwh], soc_kwh)
-    Eminus = [e < 0 ? abs(e) : 0 for e in diff(soc_kwh_zero)]
-    Eplus = [e > 0 ? e : 0 for e in diff(soc_kwh_zero)]
-
-    D = length(days)
-    Emax_upper = zeros(D)
-    Emax_lower = zeros(D)
-    Emin_upper = zeros(D)
-    Emin_lower = zeros(D)
-    Eplus_sum_upper = zeros(D)
-    Eplus_sum_lower = zeros(D)
-    Eminus_sum_upper = zeros(D)
-    Eminus_sum_lower = zeros(D)
-    EFC_upper = zeros(D)
-    EFC_lower = zeros(D)
-    DODmax_upper = zeros(D)
-    DODmax_lower = zeros(D)
-    # TODO options for defining bounds? for example could just use Bkwh for Emax_upper in all days
-    # instead of the optimal Emax_upper w/o degradation. However, it seems that with degradation 
-    # would generally use the battery less then w/o degradation.
-    for d in days
-        ts0 = Int((ts_per_day * (d - 1) + 1) % ts_per_year)
-        tsF = Int(ts_per_day * d % ts_per_year)
-        if tsF == 0
-            tsF = Int(ts_per_day * 365)
-        end
-        Emax_upper[d] = maximum(soc_kwh[ts0:tsF])
-        # Emax_lower[d] = stays zero
-        Emin_upper[d] = minimum(soc_kwh[ts0:tsF])
-        # Emin_lower[d] = stays zero
-        Eplus_sum_upper[d] = sum(Eplus[ts0:tsF])
-        # Eplus_sum_lower[d] = stays zero
-        Eminus_sum_upper[d] = sum(Eminus[ts0:tsF])
-        # Eminus_sum_lower[d] = stays zero
-        EFC_upper[d] = Eplus_sum_upper[d] + Eminus_sum_upper[d]
-        DODmax_upper[d] = Emax_upper[d] - Emin_upper[d] 
-    end
-    return Dict(
-        "Emax_upper" => Emax_upper, 
-        "Emax_lower" => Emax_lower, 
-        "Emin_upper" => Emin_upper, 
-        "Emin_lower" => Emin_lower, 
-        "Eplus_sum_upper" => Eplus_sum_upper, 
-        "Eplus_sum_lower" => Eplus_sum_lower, 
-        "Eminus_sum_upper" => Eminus_sum_upper, 
-        "Eminus_sum_lower" => Eminus_sum_lower,
-        "Bkwh" => Bkwh,
-        "EFC_upper" => EFC_upper, 
-        "EFC_lower" => EFC_lower, 
-        "DODmax_upper" => DODmax_upper, 
-        "DODmax_lower" => DODmax_lower, 
-    )
-end
-
-
 """
 
 Assumptions:
@@ -149,15 +86,12 @@ Assumptions:
     - NOTE the average SOC, EFC, and DODmax variables are in absolute units making the SOH variable start at the 
         battery capacity w/o degradation
 """
-function add_degradation(m, p, d::Dict, k_cal::Float64, k_cyc::Float64, k_dod::Float64; time_exponent=0.5, b=:elec)
+function add_degradation(m, p, Qo::Float64, k_cal::Float64, k_cyc::Float64, k_dod::Float64; time_exponent=0.5, b=:elec)
     days = 1:365*p.s.financial.analysis_years
     @variable(m, SOH[days])
 
     add_degradation_variables(m, p)
     constrain_degradation_variables(m, p, b=b)
-
-    bounds = get_battery_bounds_from_result_dict(p, d)  # TODO rm this method? was for bounds in McCormick constraints
-    Qo = bounds["Bkwh"]
 
     @constraint(m, [d in 2:days[end]],
         SOH[d] == SOH[d-1] - p.hours_per_timestep * (
