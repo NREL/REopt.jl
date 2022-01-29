@@ -28,35 +28,6 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 
-"""
-
-Create a convex relaxation for the bilinear product of two variables x*y by defining the McCormick
-envelop. Also adds a new variable `varname` to the model `m` for the product x*y.
-"""
-function add_mccormick_constraints(m, varname::String, varindices::UnitRange{Int64},
-    x::Vector{JuMP.VariableRef}, y::Vector{JuMP.VariableRef}, 
-    xu::Vector{<:Real}, xl::Vector{<:Real}, yu::Vector{<:Real}, yl::Vector{<:Real})
-
-    w = m[Symbol(varname)] = @variable(m, [varindices], base_name = varname)
-
-    @constraint(m, [d in varindices],
-        w[d] >= xl[d] * y[d] + x[d] * yl[d] - xl[d] * yl[d]
-    )
-    
-    @constraint(m, [d in varindices],
-        w[d] >= xu[d] * y[d] + x[d] * yu[d] - xu[d] * yu[d]
-    )
-    
-    @constraint(m, [d in varindices],
-        w[d] <= xl[d] * y[d] + x[d] * yu[d] - xl[d] * yu[d]
-    )
-    
-    @constraint(m, [d in varindices],
-        w[d] <= xu[d] * y[d] + x[d] * yl[d] - xu[d] * yl[d]
-    )
-    return w
-end
-
 
 function add_degradation_variables(m, p)
     days = 1:365*p.s.financial.analysis_years
@@ -182,10 +153,6 @@ function add_degradation(m, p, d::Dict, k_cal::Float64, k_cyc::Float64, k_dod::F
     days = 1:365*p.s.financial.analysis_years
     @variable(m, SOH[days])
 
-    #= 
-    TODO create input struct for bounds to pass to add_mccormick_constraints?
-    For now take the limits from previous REopt run in the Dict d.
-    =#
     add_degradation_variables(m, p)
     constrain_degradation_variables(m, p, b=b)
 
