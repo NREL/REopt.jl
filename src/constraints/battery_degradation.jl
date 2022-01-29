@@ -100,42 +100,42 @@ function add_degradation(m, p, Qo::Float64, k_cal::Float64, k_cyc::Float64, k_do
             + k_dod * m[:DODmax][d-1]
         )
     )
+    # NOTE SOH can be negative
 
     @constraint(m, SOH[1] == Qo)
+    # NOTE SOH is _not_ normalized, and has units of kWh
 
     @variable(m, soh_indicator[days], Bin)
 
-    @constraint(m, [d in days],
-        soh_indicator[d] => {SOH[d] >= 0.8*Qo}
-    )
-    # why do we need the opposite indicator ??? model does not hold the indicator constraint above
     # @constraint(m, [d in days],
-    #     !soh_indicator[d] => {SOH[d] <= 0.8*Qo}
+    #     soh_indicator[d] => {SOH[d] >= 0.8*Qo}
     # )
-    # @variable(m, d_0p8 >= 0)
-    @expression(m, d_0p8, sum(soh_indicator[d] for d in days))
+    # @expression(m, d_0p8, sum(soh_indicator[d] for d in days))
 
-    # build piecewise linear approximation of Ndays / d_0p8 - 1
-    Ndays = days[end]
-    points = (
-        (0, 20),
-        (Ndays/5, 4),
-        (Ndays/4, 3),
-        (Ndays/3, 2),
-        (Ndays/2, 1),
-        (3*Ndays/4, 1/3),
-        (Ndays, 0.0)
-    )
-    point_pairs = ((pt1, pt2) for (pt1, pt2) in zip(points[1:end-1], points[2:end]))
-    @variable(m, N_batt_replacements >= 0)
-    for pair in point_pairs
-        @constraint(m, 
-            N_batt_replacements >= (pair[2][2] - pair[1][2]) / (pair[2][1] - pair[1][1]) * (d_0p8 - pair[1][1]) + pair[1][2]
-        )
-    end
+    # # build piecewise linear approximation of Ndays / d_0p8 - 1
+    # Ndays = days[end]
+    # points = (
+    #     (0, 20),
+    #     (Ndays/5, 4),
+    #     (Ndays/4, 3),
+    #     (Ndays/3, 2),
+    #     (Ndays/2, 1),
+    #     (3*Ndays/4, 1/3),
+    #     (Ndays, 0.0)
+    # )
+    # point_pairs = ((pt1, pt2) for (pt1, pt2) in zip(points[1:end-1], points[2:end]))
+    # @variable(m, N_batt_replacements >= 0)
+    # for pair in point_pairs
+    #     @constraint(m, 
+    #         N_batt_replacements >= (pair[2][2] - pair[1][2]) / (pair[2][1] - pair[1][1]) * (d_0p8 - pair[1][1]) + pair[1][2]
+    #     )
+    # end
+    
     # TODO scale battery replacement cost
     # NOTE adding to Costs expression does not modify the objective function
-    @objective(m, Min, m[:Costs] + p.s.storage.installed_cost_per_kwh[:elec] /5 * m[:N_batt_replacements])
+    @objective(m, Min, 
+        m[:Costs] + p.s.storage.installed_cost_per_kwh[:elec]/5 * (Qo - SOH[end])/Qo 
+    )
     set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
     # TODO increase threads?
 end
