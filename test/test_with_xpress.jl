@@ -30,21 +30,25 @@
 using Xpress
 
 # @testset "Battery degradation" begin
-#     kcal_A = 0.00097326
-#     kcyc_A = 8.8593e-07
-#     kdod_A = 0.00017858
+#     kcal_A = 2.24e-03
+#     kcyc_A = 5.20e-05
+#     kdod_A = 0.0
     
-#     kcal_B = 0.0014236
-#     kcyc_B = 4.5605e-07
-#     kdod_B = 2.6658e-05
+#     kcal_B = 2.80e-04
+#     kcyc_B = 2.61e-05
+#     kdod_B = 0.0
     
-#     kcal_C = 0.0014471
-#     kcyc_C = 1.3111e-06
-#     kdod_C = 0.00012759
+#     kcal_C = 1.34e-03
+#     kcyc_C = 9.42e-05
+#     kdod_C = 0.0
     
-#     kcal_D = 0.0016676
-#     kcyc_D = 1.7046e-06
-#     kdod_D = 0.00019014
+#     kcal_D = 3.63e-03
+#     kcyc_D = 8.51e-05
+#     kdod_D = 0.0
+    
+#     kcal_E = 1.22e-03
+#     kcyc_E = 1.14e-03
+#     kdod_E = 0.0
 
 #     # scenarios with SCE tariff, no degradation
 #     data = JSON.parsefile("scenarios/pv_storage.json");
@@ -65,17 +69,17 @@ using Xpress
 #     p = REoptInputs(Scenario(data));
 
 #     # loop through sets of coefficients
-#     for ltr in ["_A", "_B", "_C", "_D"]
+#     for ltr in ["_A", "_B", "_C", "_D", "_E"]
 
 #         m = Model(Xpress.Optimizer)
 #         build_reopt!(m, p);
-#         REoptLite.add_degradation(m, p, d1, 
+#         REopt.add_degradation(m, p, d1["Storage"]["size_kwh"],
 #             eval(Meta.parse("kcal"*ltr)), 
 #             eval(Meta.parse("kcyc"*ltr)), 
-#             eval(Meta.parse("kdod"*ltr)), 
+#             eval(Meta.parse("kdod"*ltr))
 #         );
 #         optimize!(m)
-#         d = REoptLite.reopt_results(m, p)
+#         d = REopt.reopt_results(m, p)
         
 #         @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
     
@@ -83,9 +87,9 @@ using Xpress
 #         d["Storage"]["EFC"] = value.(m[:EFC]);
 #         d["Storage"]["DODmax"] = value.(m[:DODmax]);
 #         d["Storage"]["Eavg"] = value.(m[:Eavg]);
-#         d["Storage"]["d_0p8"] = value(m[:d_0p8])
-#         d["Storage"]["N_batt_replacements"] = value(m[:N_batt_replacements])
-#         @info("N_batt_replacements = $(d["Storage"]["N_batt_replacements"])")
+#         # d["Storage"]["d_0p8"] = value(m[:d_0p8])
+#         # d["Storage"]["N_batt_replacements"] = value(m[:N_batt_replacements])
+#         @info("SOH[end] = $(d["Storage"]["SOH"][end])")
         
 #         open("results_degr_SCE"*ltr*".json","w") do f
 #             JSON.print(f, d)
@@ -116,24 +120,25 @@ using Xpress
 #     data["Storage"]["replace_cost_per_kwh"] = 0.0
 #     p = REoptInputs(Scenario(data));
 
-#     for ltr in ["_A", "_B", "_C", "_D"]
+#     for ltr in ["_A", "_B", "_C", "_D", "_E"]
 #         m = Model(Xpress.Optimizer)
 #         build_reopt!(m, p);
-#         REoptLite.add_degradation(m, p, d1, 
+#         REopt.add_degradation(m, p, d1["Storage"]["size_kwh"], 
 #             eval(Meta.parse("kcal"*ltr)), 
 #             eval(Meta.parse("kcyc"*ltr)), 
 #             eval(Meta.parse("kdod"*ltr)), 
 #         );
 #         optimize!(m)
-#         d = REoptLite.reopt_results(m, p)
+#         d = REopt.reopt_results(m, p)
 
 #         d["Storage"]["SOH"] = value.(m[:SOH]) / d1["Storage"]["size_kwh"];
 #         d["Storage"]["EFC"] = value.(m[:EFC]);
 #         d["Storage"]["DODmax"] = value.(m[:DODmax]);
 #         d["Storage"]["Eavg"] = value.(m[:Eavg]);
-#         d["Storage"]["d_0p8"] = value(m[:d_0p8])
-#         d["Storage"]["N_batt_replacements"] = value(m[:N_batt_replacements])
-#         @info("N_batt_replacements = $(d["Storage"]["N_batt_replacements"])")
+#         # d["Storage"]["d_0p8"] = value(m[:d_0p8])
+#         # d["Storage"]["N_batt_replacements"] = value(m[:N_batt_replacements])
+#         # @info("N_batt_replacements = $(d["Storage"]["N_batt_replacements"])")
+#         @info("SOH[end] = $(d["Storage"]["SOH"][end])")
         
 #         open("results_degr_PGE"*ltr*".json","w") do f
 #             JSON.print(f, d)
