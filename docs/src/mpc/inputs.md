@@ -150,32 +150,32 @@ Note that the keys of the input `Dict` or JSON file do not need the `MPC` prefix
 
 ## MPCElectricTariff
 ```@docs
-REoptLite.MPCElectricTariff(d::Dict)
+REopt.MPCElectricTariff(d::Dict)
 ```
 
 ## MPCElectricLoad
 ```@docs
-REoptLite.MPCElectricLoad
+REopt.MPCElectricLoad
 ```
 
 ## MPCElecStorage
 ```@docs
-REoptLite.MPCElecStorage
+REopt.MPCElecStorage
 ```
 
 ## MPCFinancial
 ```@docs
-REoptLite.MPCFinancial
+REopt.MPCFinancial
 ```
 
 ## MPCPV
 ```@docs
-REoptLite.MPCPV
+REopt.MPCPV
 ```
 
 ## MPCGenerator
 ```@docs
-REoptLite.MPCGenerator
+REopt.MPCGenerator
 ```
 
 ## MPCSettings

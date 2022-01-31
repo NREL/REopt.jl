@@ -37,9 +37,9 @@ From the load balance constraint we can see that the `PV` technology (and each `
 The `p.techs` data structure is defined as follows:
 ### Techs
 ```@docs
-REoptLite.Techs
-REoptLite.Techs(s::Scenario)
-REoptLite.Techs(p::REoptInputs, s::BAUScenario)
+REopt.Techs
+REopt.Techs(s::Scenario)
+REopt.Techs(p::REoptInputs, s::BAUScenario)
 ```
 
 From the [Techs](@ref) definition we can see that there are already a lot of different energy generation technology categories in REopt. Adding a new technology to the model could be as simple as adding the appropriate inputs to `REoptInputs` (described in the next section) and using the `Techs` structure to define which variables and constraints apply to the new technology.

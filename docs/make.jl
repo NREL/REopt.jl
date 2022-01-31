@@ -1,10 +1,10 @@
-using Documenter, REoptLite, JuMP
+using Documenter, REopt, JuMP
 
 makedocs(
-    sitename="REoptLite.jl Documentation",
+    sitename="REopt.jl Documentation",
     pages = [
         "Home" => "index.md",
-        "REopt Lite" => Any[
+        "REopt" => Any[
             "reopt/examples.md",
             "reopt/inputs.md",
             "reopt/outputs.md",
@@ -26,5 +26,5 @@ makedocs(
 )
 
 deploydocs(
-    repo = "github.com/NREL/REoptLite.git",
+    repo = "github.com/NREL/REopt.git",
 )
