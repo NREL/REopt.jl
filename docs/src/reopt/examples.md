@@ -1,5 +1,5 @@
 # Examples
-To use REopt Lite you will need to have a solver installed. REopt.jl has been tested with Xpress, Cbc, and CPLEX solvers, but it should work with other Linear Progam solvers (for PV and Storage scenarios) or Mixed Integer Linear Program solvers (for scenarios with outages and/or Generators).
+To use REopt you will need to have a solver installed. REopt.jl has been tested with Xpress, Cbc, and CPLEX solvers, but it should work with other Linear Progam solvers (for PV and Storage scenarios) or Mixed Integer Linear Program solvers (for scenarios with outages and/or Generators).
 
 ## Basic
 ```julia

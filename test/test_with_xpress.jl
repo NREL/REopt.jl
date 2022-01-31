@@ -413,7 +413,7 @@ end
     @test roof_east["average_annual_energy_produced_kwh"] ≈ 6482.37 atol=0.1
 end
 
-## equivalent REopt Lite API Post for test 2:
+## equivalent REopt API Post for test 2:
 #   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
 # {"Scenario": {
 #     "Site": {
