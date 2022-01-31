@@ -9,7 +9,7 @@ For more information please see the documentation:
 
 
 ## Quick Start
-Evaluating only `PV` and `Storage` requires a linear program solver. Adding a generator and/or multiple outages makes the problem mixed-integer linear, and thus requires a MILP solver. See https://jump.dev/JuMP.jl/stable/installation/ for a list of solvers. The REopt Lite package has been tested with `Xpress`, `Cbc` and `CPLEX`.
+Evaluating only `PV` and `Storage` requires a linear program solver. Adding a generator and/or multiple outages makes the problem mixed-integer linear, and thus requires a MILP solver. See https://jump.dev/JuMP.jl/stable/installation/ for a list of solvers. The REopt package has been tested with `Xpress`, `Cbc` and `CPLEX`.
 ### Example
 ```
 using Xpress
