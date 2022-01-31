@@ -149,7 +149,7 @@ end
     urdb_label = "59bc22705457a3372642da67"  # tiered monthly demand rate
 end
 
-## equivalent REopt Lite API Post for test 2:
+## equivalent REopt API Post for test 2:
 #   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
 # {"Scenario": {
 #     "Site": {

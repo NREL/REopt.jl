@@ -60,7 +60,7 @@
 ## v0.7.3
 ##### bug fixes
 - outage results processing would fail sometimes when an integer variable was not exact (e.g. 1.000000001)
-- fixed `simulate_outages` for revised results formats (key names changed to align with the REopt Lite API)
+- fixed `simulate_outages` for revised results formats (key names changed to align with the REopt API)
 
 ## v0.7.2
 #### Improvements
@@ -119,7 +119,7 @@
 
 ## v0.4.0
 #### Improvements
-- add `simulate_outages` function (similar to REopt Lite API outage simulator)
+- add `simulate_outages` function (similar to REopt API outage simulator)
 - removed MutableArithmetics package from Project.toml (since JuMP now has method for `value(::MutableArithmetics.Zero)`)
 - add outage related outputs:
     - Generator_mg_kw
@@ -156,4 +156,4 @@
 deps/build.jl had a relative path dependency, fixed with an absolute path.
 
 ## v0.1.0 Initial release
-This package is currently under development and only has a subset of capabilities of the REopt Lite model used in the REopt Lite API. For example, the Wind model, tiered electric utility tariffs, and piecewise linear cost curves are not yet modeled in this code. However this code is easier to use than the API (only dependencies are Julia and a solver) and has a novel model for uncertain outages.
+This package is currently under development and only has a subset of capabilities of the REopt model used in the REopt API. For example, the Wind model, tiered electric utility tariffs, and piecewise linear cost curves are not yet modeled in this code. However this code is easier to use than the API (only dependencies are Julia and a solver) and has a novel model for uncertain outages.

@@ -4,7 +4,7 @@ makedocs(
     sitename="REopt.jl Documentation",
     pages = [
         "Home" => "index.md",
-        "REopt Lite" => Any[
+        "REopt" => Any[
             "reopt/examples.md",
             "reopt/inputs.md",
             "reopt/outputs.md",
