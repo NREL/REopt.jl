@@ -138,7 +138,7 @@ end
         =#
 
         # Austin, TX -> existing_chiller and existing_boiler added with FlexibleHVAC
-        tamb = REoptLite.get_ambient_temperature(30.2672, -97.7431);
+        tamb = REopt.get_ambient_temperature(30.2672, -97.7431);
         R = 0.00025  # K/kW
         C = 1e5   # kJ/K
         # the starting scenario has flat fuel and electricty costs
