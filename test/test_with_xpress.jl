@@ -83,9 +83,9 @@ using Xpress
         
 #         @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
     
-#         d["Storage"]["SOH"] = value.(m[:SOH]) / d1["Storage"]["size_kwh"];
-#         d["Storage"]["EFC"] = value.(m[:EFC]);
-#         d["Storage"]["DODmax"] = value.(m[:DODmax]);
+#         d["Storage"]["SOH"] = value.(m[:SOH]) / value.(m[:dvStorageEnergy])[:elec];
+#         d["Storage"]["EFC"] = value.(m[:EFC]) / value.(m[:dvStorageEnergy])[:elec];
+#         d["Storage"]["DODmax"] = value.(m[:DODmax]) / value.(m[:dvStorageEnergy])[:elec];
 #         d["Storage"]["Eavg"] = value.(m[:Eavg]);
 #         # d["Storage"]["d_0p8"] = value(m[:d_0p8])
 #         # d["Storage"]["N_batt_replacements"] = value(m[:N_batt_replacements])
@@ -131,9 +131,9 @@ using Xpress
 #         optimize!(m)
 #         d = REopt.reopt_results(m, p)
 
-#         d["Storage"]["SOH"] = value.(m[:SOH]) / d1["Storage"]["size_kwh"];
-#         d["Storage"]["EFC"] = value.(m[:EFC]);
-#         d["Storage"]["DODmax"] = value.(m[:DODmax]);
+#         d["Storage"]["SOH"] = value.(m[:SOH]) / value.(m[:dvStorageEnergy])[:elec];
+#         d["Storage"]["EFC"] = value.(m[:EFC]) / value.(m[:dvStorageEnergy])[:elec];
+#         d["Storage"]["DODmax"] = value.(m[:DODmax]) / value.(m[:dvStorageEnergy])[:elec];
 #         d["Storage"]["Eavg"] = value.(m[:Eavg]);
 #         # d["Storage"]["d_0p8"] = value(m[:d_0p8])
 #         # d["Storage"]["N_batt_replacements"] = value(m[:N_batt_replacements])
