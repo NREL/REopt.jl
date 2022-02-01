@@ -102,7 +102,7 @@ function add_degradation(m, p, Qo::Float64, k_cal::Float64, k_cyc::Float64, k_do
     )
     # NOTE SOH can be negative
 
-    @constraint(m, SOH[1] == Qo)
+    @constraint(m, SOH[1] == m[:dvStorageEnergy][b])
     # NOTE SOH is _not_ normalized, and has units of kWh
 
     @variable(m, soh_indicator[days], Bin)
@@ -134,7 +134,7 @@ function add_degradation(m, p, Qo::Float64, k_cal::Float64, k_cyc::Float64, k_do
     # TODO scale battery replacement cost
     # NOTE adding to Costs expression does not modify the objective function
     @objective(m, Min, 
-        m[:Costs] + p.s.storage.installed_cost_per_kwh[:elec]/5 * (Qo - SOH[end])/Qo 
+        m[:Costs] + p.s.storage.installed_cost_per_kwh[:elec]/5 * (SOH[1] - SOH[end])
     )
     set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
     # TODO increase threads?
