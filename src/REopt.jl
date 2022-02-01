@@ -63,6 +63,7 @@ using Shapefile
 using PolygonInbounds
 using Roots: fzero  # for IRR
 global hdl = nothing
+import PlotlyJS
 
 include("keys.jl")
 include("core/types.jl")
