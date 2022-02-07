@@ -250,6 +250,28 @@ function Storage(d::Dict, f::Financial)  # nested dict
         d2[k] = Dict(zip(types, raw_vals[k]))
     end
 
+    if haskey(d2, "min_gal")  #TES technologies have gallons in raw inputs
+        d2[:min_kw] = Dict()
+        d2[:max_kw] = Dict()
+        d2[:min_kwh] = Dict()
+        d2[:max_kwh] = Dict()
+        d2[:installed_cost_per_kw] = Dict()
+        d2[:installed_cost_per_kwh] = Dict()
+        for (storage_type, min_gal) in d2[:min_kw]
+            delta_T_degF = d2[:hot_water_temp_degF][storage_type] - d2[:cool_water_temp_degF][storage_type]
+            avg_cp_kj_per_kgK = 998.2 
+            avg_rho_kg_per_m3 = 4.184 #TODO: add CoolProp reference or perform analogous calculations for water and build lookup tables
+            gal_to_kwh = convert_gal_to_kwh(delta_T_degF, avg_rho_kg_per_m3, avg_cp_kj_per_kgK)
+            d2[:min_kw][storage_type] = 0.
+            d2[:max_kw][storage_type] = 1.0e9
+            d2[:min_kwh][storage_type] = d2[:min_gal][storage_type] * gal_to_kwh
+            d2[:max_kwh][storage_type] = d2[:max_gal][storage_type] * gal_to_kwh
+            d2[:installed_cost_per_kw][storage_type] = 0.0
+            d2[:installed_cost_per_kwh][storage_type] = d2[:installed_cost_per_gal][storage_type] * gal_to_kwh
+            d2[:om_cost_per_kwh][storage_type] = d2[:om_cost_per_gal][storage_type] * gal_to_kwh
+        end
+    end
+
     grid_charge_efficiency = Dict(:elec => convert(Float64, d2[:charge_efficiency][:elec]))
 
     return Storage(
