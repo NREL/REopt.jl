@@ -106,6 +106,118 @@ end
 
 
 """
+    HotTES
+
+    Hot thermal energy storage sytem; specifically, a hot water system used to 
+    meet thermal heating loads.
+
+```julia
+Base.@kwdef struct HotTES <: AbstractStorage
+    min_gal::Float64 = 0.0
+    max_gal::Float64 = 0.0
+    hot_supply_water_temp_degF::Float64 = 180.0
+    cooled_return_water_temp_degF::Float64 = 160.0
+    internal_efficiency_pct::Float64 = 0.999999
+    soc_min_pct::Float64 = 0.1
+    soc_init_pct::Float64 = 0.5
+    installed_cost_per_gal::Float64 = 1.50
+    thermal_decay_rate_fraction::Float64 = 0.0004
+    om_cost_us_dollars_per_gal::Float64 = 0.0
+    macrs_option_years::Int = 0
+    macrs_bonus_pct::Float64 = 0.0
+    macrs_itc_reduction::Float64 = 0.0
+    total_itc_pct::Float64 = 0.0
+    total_rebate_per_kw::Float64 = 0.0
+    total_rebate_per_kwh::Float64 = 0.0
+end
+```
+"""
+Base.@kwdef struct HotTES <: AbstractStorage
+    min_gal::Float64 = 0.0
+    max_gal::Float64 = 0.0
+    hot_water_temp_degF::Float64 = 180.0
+    cool_water_temp_degF::Float64 = 160.0
+    internal_efficiency_pct::Float64 = 0.999999
+    soc_min_pct::Float64 = 0.1
+    soc_init_pct::Float64 = 0.5
+    installed_cost_per_gal::Float64 = 1.50
+    thermal_decay_rate_fraction::Float64 = 0.0004
+    om_cost_per_gal::Float64 = 0.0
+    macrs_option_years::Int = 0
+    macrs_bonus_pct::Float64 = 0.0
+    macrs_itc_reduction::Float64 = 0.0
+    total_itc_pct::Float64 = 0.0
+    total_rebate_per_kw::Float64 = 0.0
+    total_rebate_per_kwh::Float64 = 0.0
+end
+
+
+"""
+    ColdTES
+
+    Cold thermal energy storage sytem; specifically, a chilled water system used to 
+    meet thermal cooling loads.
+
+```julia
+Base.@kwdef struct ColdTES <: AbstractStorage
+    min_gal::Float64 = 0.0
+    max_gal::Float64 = 0.0
+    chilled_supply_water_temp_degF::Float64 = 44.0
+    warmed_return_water_temp_degF::Float64 = 56.0
+    internal_efficiency_pct::Float64 = 0.999999
+    soc_min_pct::Float64 = 0.1
+    soc_init_pct::Float64 = 0.5
+    installed_cost_per_gal::Float64 = 1.50
+    thermal_decay_rate_fraction::Float64 = 0.0004
+    om_cost_us_dollars_per_gal::Float64 = 0.0
+    macrs_option_years::Int = 0
+    macrs_bonus_pct::Float64 = 0.0
+    macrs_itc_reduction::Float64 = 0.0
+    total_itc_pct::Float64 = 0.0
+    total_rebate_per_kw::Float64 = 0.0
+    total_rebate_per_kwh::Float64 = 0.0
+end
+```
+"""
+Base.@kwdef struct ColdStorage <: AbstractStorage
+    min_gal::Float64 = 0.0
+    max_gal::Float64 = 0.0
+    hot_water_temp_degF::Float64 = 44.0
+    cool_water_temp_degF::Float64 = 56.0
+    internal_efficiency_pct::Float64 = 0.999999
+    soc_min_pct::Float64 = 0.1
+    soc_init_pct::Float64 = 0.5
+    installed_cost_per_gal::Float64 = 1.50
+    thermal_decay_rate_fraction::Float64 = 0.0004
+    om_cost_per_gal::Float64 = 0.0
+    macrs_option_years::Int = 0
+    macrs_bonus_pct::Float64 = 0.0
+    macrs_itc_reduction::Float64 = 0.0
+    total_itc_pct::Float64 = 0.0
+    total_rebate_per_kw::Float64 = 0.0
+    total_rebate_per_kwh::Float64 = 0.0
+end
+
+
+struct Storage <: AbstractStorage
+    types::Array{Symbol,1}
+    raw_inputs::Dict{Symbol, AbstractStorage}
+    min_kw::Dict{Symbol, Float64}
+    max_kw::Dict{Symbol, Float64}
+    min_kwh::Dict{Symbol, Float64}
+    max_kwh::Dict{Symbol, Float64}
+    charge_efficiency::Dict{Symbol, Float64}
+    discharge_efficiency::Dict{Symbol, Float64}
+    soc_min_pct::Dict{Symbol, Float64}
+    soc_init_pct::Dict{Symbol, Float64}
+    installed_cost_per_kw::Dict{Symbol, Float64}
+    installed_cost_per_kwh::Dict{Symbol, Float64}
+    can_grid_charge::Array{Symbol,1}
+    grid_charge_efficiency::Dict{Symbol, Float64}
+end
+
+
+"""
     # function Storage(d::Dict{Symbol,Dict}, f::Financial)
 
 Construct Storage struct from Dict with keys for each storage type (eg. :elec) and values with
