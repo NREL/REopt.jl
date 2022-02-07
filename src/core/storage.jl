@@ -115,14 +115,14 @@ end
 Base.@kwdef struct HotTES <: AbstractStorage
     min_gal::Float64 = 0.0
     max_gal::Float64 = 0.0
-    hot_supply_water_temp_degF::Float64 = 180.0
-    cooled_return_water_temp_degF::Float64 = 160.0
+    hot_water_temp_degF::Float64 = 180.0
+    cool_water_temp_degF::Float64 = 160.0
     internal_efficiency_pct::Float64 = 0.999999
     soc_min_pct::Float64 = 0.1
     soc_init_pct::Float64 = 0.5
     installed_cost_per_gal::Float64 = 1.50
     thermal_decay_rate_fraction::Float64 = 0.0004
-    om_cost_us_dollars_per_gal::Float64 = 0.0
+    om_cost_per_gal::Float64 = 0.0
     macrs_option_years::Int = 0
     macrs_bonus_pct::Float64 = 0.0
     macrs_itc_reduction::Float64 = 0.0
@@ -162,14 +162,14 @@ end
 Base.@kwdef struct ColdTES <: AbstractStorage
     min_gal::Float64 = 0.0
     max_gal::Float64 = 0.0
-    chilled_supply_water_temp_degF::Float64 = 44.0
-    warmed_return_water_temp_degF::Float64 = 56.0
+    hot_water_temp_degF::Float64 = 44.0
+    cool_water_temp_degF::Float64 = 56.0
     internal_efficiency_pct::Float64 = 0.999999
     soc_min_pct::Float64 = 0.1
     soc_init_pct::Float64 = 0.5
     installed_cost_per_gal::Float64 = 1.50
     thermal_decay_rate_fraction::Float64 = 0.0004
-    om_cost_us_dollars_per_gal::Float64 = 0.0
+    om_cost_per_gal::Float64 = 0.0
     macrs_option_years::Int = 0
     macrs_bonus_pct::Float64 = 0.0
     macrs_itc_reduction::Float64 = 0.0
