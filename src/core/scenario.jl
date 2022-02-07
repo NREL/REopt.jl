@@ -138,6 +138,25 @@ function Scenario(d::Dict)
         storage = Storage(storage_dict, financial)
     end
 
+    if haskey(d, "HotTES")
+        # only modeling electrochemical storage so far
+        hot_storage_dict = Dict(:elec => dictkeys_tosymbols(d["HotTES"]))
+        hot_storage = Storage(storage_dict, financial)
+    else
+        hot_storage_dict = Dict(:elec => Dict(:max_kwh => 0))
+        hot_storage = Storage(storage_dict, financial)
+    end
+
+    if haskey(d, "ColdTES")
+        # only modeling electrochemical storage so far
+        cold_storage_dict = Dict(:elec => dictkeys_tosymbols(d["ColdTES"]))
+        cold_storage = Storage(storage_dict, financial)
+    else
+        cold_storage_dict = Dict(:elec => Dict(:max_kwh => 0))
+        cold_storage = Storage(storage_dict, financial)
+    end
+
+
     electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
                                    latitude=site.latitude, longitude=site.longitude, 
                                    time_steps_per_hour=settings.time_steps_per_hour
