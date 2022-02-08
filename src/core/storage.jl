@@ -57,8 +57,8 @@ function Storage(s::Scenario)
     cold_storage = String[]
 
     if s.elec_storage.max_kw > 0
-        push!(all_storage, "ElecStorage")
-        push!(elec_storage, "ElecStorage")
+        push!(all_storage, "ElectricStorage")
+        push!(elec_storage, "ElectricStorage")
     end
 
     if s.hot_tes.max_kw > 0
