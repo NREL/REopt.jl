@@ -29,6 +29,12 @@
 # *********************************************************************************
 using Xpress
 
+@testset "Emissions" begin
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, "./scenarios/emissiions.json")
+    @test round(results["Site"]["analysis_period_emissions_reduction_CO2_pct"]) ≈ 0.5
+end
+
 @testset "Thermal loads" begin
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/thermal_load.json")
