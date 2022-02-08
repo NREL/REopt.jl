@@ -30,24 +30,24 @@
 using Xpress
 
 # @testset "Battery degradation" begin
-#     kcal_A = 2.24e-03
-#     kcyc_A = 5.20e-05
+#     kcal_A = 1.09E-03
+#     kcyc_A = 3.33E-05
 #     kdod_A = 0.0
     
-#     kcal_B = 2.80e-04
-#     kcyc_B = 2.61e-05
+#     kcal_B = 1.29E-03
+#     kcyc_B = 1.31E-05
 #     kdod_B = 0.0
     
-#     kcal_C = 1.34e-03
-#     kcyc_C = 9.42e-05
+#     kcal_C = 1.32E-03
+#     kcyc_C = 9.13E-05
 #     kdod_C = 0.0
     
-#     kcal_D = 3.63e-03
-#     kcyc_D = 8.51e-05
+#     kcal_D = 3.02E-03
+#     kcyc_D = 3.48E-05
 #     kdod_D = 0.0
     
-#     kcal_E = 1.22e-03
-#     kcyc_E = 1.14e-03
+#     kcal_E = 2.46E-03
+#     kcyc_E = 7.82E-05
 #     kdod_E = 0.0
 
 #     # scenarios with SCE tariff, no degradation
