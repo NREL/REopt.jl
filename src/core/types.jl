@@ -74,3 +74,28 @@ mutable struct Techs
     thermal::Vector{String}
     chp::Vector{String}
 end
+
+
+"""
+    Storage
+
+    `Storage` contains the index sets that are used to define the model constraints and decision variables
+    for storage technologies.
+
+```julia
+mutable struct Storage
+    all::Vector{String}
+    elec::Vector{String}
+    thermal::Vector{String}
+    hot_tes::Vector{String}
+    cold_tes::Vector{String}
+end
+```
+"""
+mutable struct Storage
+    all::Vector{String}
+    elec::Vector{String}
+    thermal::Vector{String}
+    hot_tes::Vector{String}
+    cold_tes::Vector{String}
+end
