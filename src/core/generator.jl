@@ -66,6 +66,10 @@ function Generator(;
     production_incentive_max_benefit::Float64 = 1.0e9,
     production_incentive_years::Int = 0,
     production_incentive_max_kw::Float64 = 1.0e9,
+    emissions_factor_lb_CO2_per_gal::Union{Missing,Float64} = missing,
+    emissions_factor_lb_NOX_per_gal::Union{Missing,Float64} = missing,
+    emissions_factor_lb_SO2_per_gal::Union{Missing,Float64} = missing,
+    emissions_factor_lb_PM25_per_gal::Union{Missing,Float64} = missing
 )
 ```
 """
@@ -104,6 +108,10 @@ struct Generator <: AbstractGenerator
     production_incentive_max_benefit
     production_incentive_years
     production_incentive_max_kw
+    emissions_factor_lb_CO2_per_gal
+    emissions_factor_lb_NOX_per_gal
+    emissions_factor_lb_SO2_per_gal
+    emissions_factor_lb_PM25_per_gal
 
     function Generator(;
         existing_kw::Real=0,
@@ -140,6 +148,10 @@ struct Generator <: AbstractGenerator
         production_incentive_max_benefit::Float64 = 1.0e9,
         production_incentive_years::Int = 0,
         production_incentive_max_kw::Float64 = 1.0e9,
+        emissions_factor_lb_CO2_per_gal::Union{Missing,Float64} = missing,
+        emissions_factor_lb_NOX_per_gal::Union{Missing,Float64} = missing,
+        emissions_factor_lb_SO2_per_gal::Union{Missing,Float64} = missing,
+        emissions_factor_lb_PM25_per_gal::Union{Missing,Float64} = missing
         )
 
         new(
@@ -176,7 +188,11 @@ struct Generator <: AbstractGenerator
             production_incentive_per_kwh,
             production_incentive_max_benefit,
             production_incentive_years,
-            production_incentive_max_kw
+            production_incentive_max_kw,
+            emissions_factor_lb_CO2_per_gal,
+            emissions_factor_lb_NOX_per_gal,
+            emissions_factor_lb_SO2_per_gal,
+            emissions_factor_lb_PM25_per_gal
         )
     end
 end

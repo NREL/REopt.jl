@@ -46,7 +46,18 @@ function Financial(;
     value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00,
     microgrid_upgrade_cost_pct::Float64 = 0.3,
     macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
-    macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446]
+    macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
+    co2_cost_us_dollars_per_tonne::Union{Missing,Float64} = missing,
+    nox_cost_us_dollars_per_tonne_grid::Union{Missing,Float64} = missing,
+    so2_cost_us_dollars_per_tonne::Union{Missing,Float64} = missing,
+    pm25_cost_us_dollars_per_tonne::Union{Missing,Float64} = missing,
+    nox_cost_us_dollars_per_tonne_onsite_fuelburn::Union{Missing,Float64} = missing,
+    so2_cost_us_dollars_per_tonne_onsite_fuelburn::Union{Missing,Float64} = missing,
+    pm25_cost_us_dollars_per_tonne_onsite_fuelburn::Union{Missing,Float64} = missing,
+    co2_cost_escalation_pct::Union{Missing,Float64} = missing,
+    nox_cost_escalation_pct::Union{Missing,Float64} = missing,
+    so2_cost_escalation_pct::Union{Missing,Float64} = missing,
+    pm25_cost_escalation_pct::Union{Missing,Float64} = missing
 )
 ```
 
@@ -74,6 +85,17 @@ struct Financial
     microgrid_upgrade_cost_pct::Float64
     macrs_five_year::Array{Float64,1}
     macrs_seven_year::Array{Float64,1}
+    co2_cost_us_dollars_per_tonne::Union{Missing,Float64}
+    nox_cost_us_dollars_per_tonne_grid::Union{Missing,Float64}
+    so2_cost_us_dollars_per_tonne::Union{Missing,Float64}
+    pm25_cost_us_dollars_per_tonne::Union{Missing,Float64}
+    nox_cost_us_dollars_per_tonne_onsite_fuelburn::Union{Missing,Float64}
+    so2_cost_us_dollars_per_tonne_onsite_fuelburn::Union{Missing,Float64}
+    pm25_cost_us_dollars_per_tonne_onsite_fuelburn::Union{Missing,Float64}
+    co2_cost_escalation_pct::Union{Missing,Float64}
+    nox_cost_escalation_pct::Union{Missing,Float64}
+    so2_cost_escalation_pct::Union{Missing,Float64}
+    pm25_cost_escalation_pct::Union{Missing,Float64}
 
     function Financial(;
         om_cost_escalation_pct::Float64 = 0.025,
@@ -89,12 +111,25 @@ struct Financial
         value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00,
         microgrid_upgrade_cost_pct::Float64 = 0.3,
         macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
-        macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446]
+        macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
+        co2_cost_us_dollars_per_tonne::Union{Missing,Float64} = missing,
+        nox_cost_us_dollars_per_tonne_grid::Union{Missing,Float64} = missing,
+        so2_cost_us_dollars_per_tonne::Union{Missing,Float64} = missing,
+        pm25_cost_us_dollars_per_tonne::Union{Missing,Float64} = missing,
+        nox_cost_us_dollars_per_tonne_onsite_fuelburn::Union{Missing,Float64} = missing,
+        so2_cost_us_dollars_per_tonne_onsite_fuelburn::Union{Missing,Float64} = missing,
+        pm25_cost_us_dollars_per_tonne_onsite_fuelburn::Union{Missing,Float64} = missing,
+        co2_cost_escalation_pct::Union{Missing,Float64} = missing,
+        nox_cost_escalation_pct::Union{Missing,Float64} = missing,
+        so2_cost_escalation_pct::Union{Missing,Float64} = missing,
+        pm25_cost_escalation_pct::Union{Missing,Float64} = missing
     )
         if !third_party_ownership
             owner_tax_pct = offtaker_tax_pct
             owner_discount_pct = offtaker_discount_pct
         end
+
+        #TODO: fill in missing emissions fields from easiur
 
         return new(
             om_cost_escalation_pct,
@@ -110,7 +145,17 @@ struct Financial
             value_of_lost_load_per_kwh,
             microgrid_upgrade_cost_pct,
             macrs_five_year,
-            macrs_seven_year
+            macrs_seven_year,
+            co2_cost_us_dollars_per_tonne,
+            nox_cost_us_dollars_per_tonne_grid,
+            so2_cost_us_dollars_per_tonne,
+            pm25_cost_us_dollars_per_tonne,
+            nox_cost_us_dollars_per_tonne_onsite_fuelburn,
+            so2_cost_us_dollars_per_tonne_onsite_fuelburn,
+            pm25_cost_us_dollars_per_tonne_onsite_fuelburn,
+            nox_cost_escalation_pct,
+            so2_cost_escalation_pct,
+            pm25_cost_escalation_pct
         )
     end
 end

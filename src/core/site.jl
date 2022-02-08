@@ -40,6 +40,10 @@ function Site(;
     roof_squarefeet::Union{Float64, Nothing} = nothing,
     min_resil_timesteps::Int=0,
     mg_tech_sizes_equal_grid_sizes::Bool = true,
+    co2_emissions_reduction_min_pct::Float64 = 0.0,
+    co2_emissions_reduction_max_pct::Float64 = 1.0,
+    include_exported_renewable_electricity_in_total::Bool = True,
+    include_exported_elec_emissions_in_total::Bool = True,
     node::Int = 1, 
     )
 ```
@@ -53,6 +57,10 @@ struct Site
     roof_squarefeet
     min_resil_timesteps
     mg_tech_sizes_equal_grid_sizes
+    co2_emissions_reduction_min_pct
+    co2_emissions_reduction_max_pct
+    include_exported_renewable_electricity_in_total
+    include_exported_elec_emissions_in_total
     node  # TODO validate that multinode Sites do not share node numbers? Or just raise warning
     function Site(;
         latitude::Real, 
@@ -61,6 +69,10 @@ struct Site
         roof_squarefeet::Union{Float64, Nothing} = nothing,
         min_resil_timesteps::Int=0,
         mg_tech_sizes_equal_grid_sizes::Bool = true,
+        co2_emissions_reduction_min_pct::Float64 = 0.0,
+        co2_emissions_reduction_max_pct::Float64 = 1.0,
+        include_exported_renewable_electricity_in_total::Bool = True,
+        include_exported_elec_emissions_in_total::Bool = True,
         node::Int = 1, 
         )
         invalid_args = String[]
@@ -74,6 +86,8 @@ struct Site
             error("Invalid argument values: $(invalid_args)")
         end
         new(latitude, longitude, land_acres, roof_squarefeet, min_resil_timesteps, 
-            mg_tech_sizes_equal_grid_sizes, node)
+            mg_tech_sizes_equal_grid_sizes, co2_emissions_reduction_min_pct, 
+            co2_emissions_reduction_max_pct, include_exported_renewable_electricity_in_total, 
+            include_exported_elec_emissions_in_total, node)
     end
 end

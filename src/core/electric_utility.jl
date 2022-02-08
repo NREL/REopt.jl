@@ -31,6 +31,15 @@
     ElectricUtility
 
     Base.@kwdef struct ElectricUtility
+        emissions_region::String = "",
+        emissions_factor_series_lb_CO2_per_kwh::Array{Float64} = [],
+        emissions_factor_series_lb_NOx_per_kwh::Array{Float64} = [],
+        emissions_factor_series_lb_SO2_per_kwh::Array{Float64} = [],
+        emissions_factor_series_lb_PM25_per_kwh::Array{Float64} = [],
+        emissions_factor_CO2_pct_decrease::Float64 = 0.01174,
+        emissions_factor_NOX_pct_decrease::Float64 = 0.01174,
+        emissions_factor_SO2_pct_decrease::Float64 = 0.01174,
+        emissions_factor_PM25_pct_decrease::Float64 = 0.01174,
         outage_start_time_step::Int=0  # for modeling a single outage, with critical load spliced into the baseline load ...
         outage_end_time_step::Int=0  # ... utiltity production_factor = 0 during the outage
         allow_simultaneous_export_import::Bool=true  # if true the site has two meters (in effect)
@@ -45,6 +54,15 @@
 
 """
 Base.@kwdef struct ElectricUtility
+    emissions_region::String = ""
+    emissions_factor_series_lb_CO2_per_kwh::Array{Float64} = []
+    emissions_factor_series_lb_NOx_per_kwh::Array{Float64} = []
+    emissions_factor_series_lb_SO2_per_kwh::Array{Float64} = []
+    emissions_factor_series_lb_PM25_per_kwh::Array{Float64} = []
+    emissions_factor_CO2_pct_decrease::Float64 = 0.01174
+    emissions_factor_NOX_pct_decrease::Float64 = 0.01174
+    emissions_factor_SO2_pct_decrease::Float64 = 0.01174
+    emissions_factor_PM25_pct_decrease::Float64 = 0.01174
     outage_start_time_step::Int=0  # for modeling a single outage, with critical load spliced into the baseline load ...
     outage_end_time_step::Int=0  # ... utiltity production_factor = 0 during the outage
     allow_simultaneous_export_import::Bool=true  # if true the site has two meters (in effect)
