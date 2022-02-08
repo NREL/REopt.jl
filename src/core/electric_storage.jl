@@ -85,72 +85,49 @@ Base.@kwdef struct ElectricStorage <: AbstractStorage
 end
 
 struct ElectricStorage <: AbstractStorage
-    types::Array{Symbol,1}
-    raw_inputs::Dict{Symbol, AbstractStorage}
-    min_kw::Dict{Symbol, Float64}
-    max_kw::Dict{Symbol, Float64}
-    min_kwh::Dict{Symbol, Float64}
-    max_kwh::Dict{Symbol, Float64}
-    charge_efficiency::Dict{Symbol, Float64}
-    discharge_efficiency::Dict{Symbol, Float64}
-    soc_min_pct::Dict{Symbol, Float64}
-    soc_init_pct::Dict{Symbol, Float64}
-    installed_cost_per_kw::Dict{Symbol, Float64}
-    installed_cost_per_kwh::Dict{Symbol, Float64}
-    can_grid_charge::Array{Symbol,1}
-    grid_charge_efficiency::Dict{Symbol, Float64}
+    type::Symbol
+    min_kw::Float64
+    max_kw::Float64
+    min_kwh::Float64
+    max_kwh::Float64
+    charge_efficiency::Float64
+    discharge_efficiency::Float64
+    soc_min_pct::Float64
+    soc_init_pct::Float64
+    installed_cost_per_kw::Float64
+    installed_cost_per_kwh::Float64
+    can_grid_charge::Bool
+    grid_charge_efficiency::Float64
 end
 
 
 """
-    # function Storage(d::Dict{Symbol,Dict}, f::Financial)
+    # function ElectricStorage(d::Dict{Symbol,Dict}, f::Financial)
 
-Construct Storage struct from Dict with keys for each storage type (eg. :elec) and values with
-    input dicts for each storage type. Note that the REopt inputs are indexed on the storage type.
+Construct ElectricStorage struct from Dict with keys-val pairs from the 
+    REopt ElectricStorage inputs. 
 """
-function Storage(d::Dict, f::Financial)  # nested dict
-    types = Symbol[]
-    can_grid_charge = Symbol[]
-    raw_vals = Dict(zip(fieldnames(Storage), [Any[] for _ in range(1, stop=fieldcount(Storage))]))
-    # raw_vals has keys = fieldnames(Storage) and values = arrays of values for each type in types
-
-    for (storage_type, input_dict) in d
-
-        push!(types, storage_type)
-        struct_name = string(titlecase(string(storage_type)) * "Storage")  # eg. ElecStorage
-        storage_instance = eval(Meta.parse(struct_name * "(;$input_dict...)"))
-
-        if storage_instance.can_grid_charge
-            push!(can_grid_charge, storage_type)
-        end
-        fill_storage_vals!(raw_vals, storage_instance, f)
+function ElectricStorage(d::Dict, f::Financial)  
+    if d[:can_grid_charge]
+        grid_charge_efficiency = d[:charge_efficiency]
+    else
+        grid_charge_efficiency = 0.0
     end
+    fill_storage_vals!(d, f)
 
-    storage_args = Dict(
-        :types => types, 
-        :can_grid_charge => can_grid_charge, 
-    )
-    d2 = Dict()  # Julia won't let me use storage_args: "unable to check bounds for indices of type Symbol"
-    for k in keys(raw_vals)
-        d2[k] = Dict(zip(types, raw_vals[k]))
-    end
-
-    grid_charge_efficiency = Dict(:elec => convert(Float64, d2[:charge_efficiency][:elec]))
-
-    return Storage(
-        storage_args[:types],
-        d2[:raw_inputs],
-        d2[:min_kw],
-        d2[:max_kw],
-        d2[:min_kwh],
-        d2[:max_kwh],
-        d2[:charge_efficiency],
-        d2[:discharge_efficiency],
-        d2[:soc_min_pct],
-        d2[:soc_init_pct],
-        d2[:installed_cost_per_kw],
-        d2[:installed_cost_per_kwh],
-        storage_args[:can_grid_charge],
+    return ElectricStorage(
+        "ElectricStorage",
+        d[:min_kw],
+        d[:max_kw],
+        d[:min_kwh],
+        d[:max_kwh],
+        d[:charge_efficiency],
+        d[:discharge_efficiency],
+        d[:soc_min_pct],
+        d[:soc_init_pct],
+        d[:installed_cost_per_kw],
+        d[:installed_cost_per_kwh],
+        d[:can_grid_charge],
         grid_charge_efficiency
     )
     # TODO expand for smart thermostat
