@@ -42,4 +42,6 @@ Base.@kwdef struct Settings
     time_steps_per_hour::Int = 1
     run_bau::Bool = true
     add_soc_incentive::Bool = true
+    include_climate_in_objective::Bool = false
+    include_health_in_objective::Bool = false
 end
