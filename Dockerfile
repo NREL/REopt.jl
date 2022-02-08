@@ -1,6 +1,6 @@
 FROM reopt/xpressbase AS xpress
 
-FROM julia:1.7
+FROM julia:1.6.5
 
 # Install Xpress solver
 ENV XPRESSDIR=/opt/xpressmp
