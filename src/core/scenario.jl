@@ -133,30 +133,25 @@ function Scenario(d::Dict)
 
     if haskey(d, "ElectricStorage")
         # only modeling electrochemical storage so far
-        storage_dict = Dict(:elec => dictkeys_tosymbols(d["ElectricStorage"]))
-        elec_storage = Storage(storage_dict, financial)
+        storage_dict = dictkeys_tosymbols(d["ElectricStorage"])
     else
-        storage_dict = Dict(:elec => Dict(:max_kw => 0))
-        elec_storage = Storage(storage_dict, financial)
+        storage_dict = Dict(:max_kwh => 0)
     end
+    elec_storage = Storage(storage_dict, financial)
 
     if haskey(d, "HotThermalStorage")
-        # only modeling electrochemical storage so far
-        hot_storage_dict = Dict(:hot_tes => dictkeys_tosymbols(d["HotThermalStorage"]))
-        hot_tes = Storage(hot_storage_dict, financial)
+        hot_storage_dict = dictkeys_tosymbols(d["HotThermalStorage"])
     else
-        hot_storage_dict = Dict(:hot_tes => Dict(:max_kwh => 0))
-        hot_tes = Storage(hot_storage_dict, financial)
+        hot_storage_dict = Dict(:max_kwh => 0)
     end
+    hot_tes = Storage(hot_storage_dict, financial)
 
     if haskey(d, "ColdThermalStorage")
-        # only modeling electrochemical storage so far
-        cold_storage_dict = Dict(:cold_tes => dictkeys_tosymbols(d["ColdThermalStorage"]))
-        cold_tes = Storage(cold_storage_dict, financial)
+        cold_storage_dict = dictkeys_tosymbols(d["ColdThermalStorage"])
     else
-        cold_storage_dict = Dict(:cold_tes => Dict(:max_kwh => 0))
-        cold_tes = Storage(cold_storage_dict, financial)
+        cold_storage_dict = Dict(:max_kwh => 0)
     end
+    cold_tes = Storage(cold_storage_dict, financial)
 
 
     electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
