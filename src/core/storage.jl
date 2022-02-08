@@ -29,6 +29,99 @@
 # *********************************************************************************
 
 
+"""
+    Storage(p::REoptInputs, s::BAUScenario)
+
+    Create a `Storage` struct for the BAUInputs; assumes no storage.
+"""
+function Storage(p::REoptInputs, s::BAUScenario)
+    Storage(
+        String[],
+        String[],
+        String[],
+        String[],
+        String[]
+    )
+end
+
+
+"""
+    Storage(s::Scenario) 
+
+    Create a `Storage` struct for the REoptInputs.
+"""
+function Storage(s::Scenario)
+    all_storage = String[]
+    elec_storage = String[]
+    hot_storage = String[]
+    cold_storage = String[]
+
+    if s.elec_storage.max_kw > 0
+        push!(all_storage, "ElecStorage")
+        push!(elec_storage, "ElecStorage")
+    end
+
+    if s.hot_tes.max_kw > 0
+        push!(all_storage, "HotThermalStorage")
+        push!(hot_storage, "HotThermalStorage")
+    end
+
+    if s.cold_tes.max_kw > 0
+        push!(all_storage, "HotThermalStorage")
+        push!(cold_storage, "ColdThermalStorage")
+    end
+
+    thermal_storage = union(hot_storage, cold_storage)
+
+    Storage(
+        all_storage,
+        elec_storage,
+        thermal_storage,
+        hot_storage,
+        cold_storage
+    )
+end
+
+
+"""
+    Storage(s::MPCScenario) 
+
+    Create a `Storage` struct for the MPCInputs
+"""
+function Storage(s::MPCScenario)
+    # TODO: Confirm storage models are continuous, keep this as is? 
+    all_storage = String[]
+    elec_storage = String[]
+    hot_storage = String[]
+    cold_storage = String[]
+
+    if s.elec_storage.max_kw > 0
+        push!(all_storage, "ElecStorage")
+        push!(elec_storage, "ElecStorage")
+    end
+
+    if s.hot_tes.max_kw > 0
+        push!(all_storage, "HotThermalStorage")
+        push!(hot_storage, "HotThermalStorage")
+    end
+
+    if s.cold_tes.max_kw > 0
+        push!(all_storage, "HotThermalStorage")
+        push!(cold_storage, "ColdThermalStorage")
+    end
+
+    thermal_storage = union(hot_storage, cold_storage)
+
+    Storage(
+        all_storage,
+        elec_storage,
+        thermal_storage,
+        hot_storage,
+        cold_storage
+    )
+end
+
+
 
 """
     fill_storage_vals!(d::Dict, f::Financial)
