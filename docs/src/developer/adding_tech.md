@@ -16,12 +16,12 @@ First, the `PV` technology can meet electrical demand and thus is part of the `t
 ```julia
 @constraint(m, [ts in p.time_steps_with_grid],
     sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.elec) 
-    + sum( m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types ) 
+    + sum( m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.storage.elec ) 
     + sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) 
     ==
-    sum( sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types) 
+    sum( sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.storage.elec) 
     + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.elec)
-    + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types)
+    + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.elec)
     + p.s.electric_load.loads_kw[ts]
 )
 ```
