@@ -108,7 +108,7 @@ function add_storage_dispatch_constraints(m, p, b; _n="")
         m[Symbol("dvStoredEnergy"*_n)][b,ts] <= m[Symbol("dvStorageEnergy"*_n)][b]
     )
     
-    for b in setdiff(p.s.storage.types, p.s.storage.can_grid_charge)
+    for b in setdiff(p.storage.elec, p.s.storage.can_grid_charge)
         for ts in p.time_steps_with_grid
             fix(m[Symbol("dvGridToStorage"*_n)][b, ts], 0.0, force=true)
         end
@@ -121,6 +121,6 @@ function add_storage_sum_constraints(m, p; _n="")
 	##Constraint (8c): Grid-to-storage no greater than grid purchases 
 	@constraint(m, [ts in p.time_steps_with_grid],
       sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) >= 
-      sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types)
+      sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.elec)
     )
 end

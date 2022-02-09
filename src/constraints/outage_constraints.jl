@@ -78,7 +78,7 @@ function add_MG_size_constraints(m,p)
         m[:binMGTechUsed][t] => {m[:dvMGsize][t] >= 1.0}  # 1 kW min size to prevent binaryMGTechUsed = 1 with zero cost
     )
 
-    @constraint(m, [b in p.s.storage.types],
+    @constraint(m, [b in p.storage.all],
         m[:binMGStorageUsed] => {m[:dvStoragePower][b] >= 1.0} # 1 kW min size to prevent binaryMGStorageUsed = 1 with zero cost
     )
     

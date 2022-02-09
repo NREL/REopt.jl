@@ -66,7 +66,7 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 	r["year_one_fixed_om_cost"] = round(value(GenPerUnitSizeOMCosts) / (p.pwf_om * p.third_party_factor), digits=0)
 
 	generatorToBatt = @expression(m, [ts in p.time_steps],
-		sum(m[:dvProductionToStorage][b, t, ts] for b in p.s.storage.types, t in p.techs.gen))
+		sum(m[:dvProductionToStorage][b, t, ts] for b in p.storage.elec, t in p.techs.gen))
 	r["year_one_to_battery_series_kw"] = round.(value.(generatorToBatt), digits=3)
 
 	generatorToGrid = @expression(m, [ts in p.time_steps],
@@ -109,7 +109,7 @@ function add_generator_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n=
 
     if p.s.storage.size_kw[:elec] > 0
         generatorToBatt = @expression(m, [ts in p.time_steps],
-            sum(m[:dvProductionToStorage][b, t, ts] for b in p.s.storage.types, t in p.techs.gen))
+            sum(m[:dvProductionToStorage][b, t, ts] for b in p.storage.elec, t in p.techs.gen))
         r["to_battery_series_kw"] = round.(value.(generatorToBatt), digits=3).data
     else
         generatorToBatt = zeros(length(p.time_steps))
