@@ -26,5 +26,5 @@ makedocs(
 )
 
 deploydocs(
-    repo = "github.com/NREL/REopt.git",
+    repo = "github.com/NREL/REopt.jl.git",
 )
