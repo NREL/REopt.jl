@@ -1,7 +1,7 @@
 name = "REopt"
 uuid = "d36ad4e8-d74a-4f7a-ace1-eaea049febf6"
 authors = ["Nick Laws <nick.laws@nrel.gov>"]
-version = "0.12.3"
+version = "0.12.4"
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
