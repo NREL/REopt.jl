@@ -511,6 +511,68 @@ function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_sl
 end
 
 
+function setup_elec_storage_inputs(s::AbstractScenario, min_power_sizes, max_power_sizes, min_energy_sizes,
+    max_energy_sizes, charge_efficiencies, discharge_efficiencies, soc_mins, soc_inits, cap_cost_powers, 
+    cap_cost_energies, grid_charges, grid_charge_efficiencies
+    )
+    min_power_sizes["ElectricStorage"] = s.elec_storage.min_kw
+    max_power_sizes["ElectricStorage"] = s.elec_storage.max_kw
+    min_energy_sizes["ElectricStorage"] = s.elec_storage.min_kwh
+    max_energy_sizes["ElectricStorage"] = s.elec_storage.max_kwh
+    charge_efficiencies["ElectricStorage"] = s.elec_storage.charge_efficiency
+    discharge_efficiencies["ElectricStorage"] = s.elec_storage.discharge_efficiency
+    soc_mins["ElectricStorage"] = s.elec_storage.soc_min_pct
+    soc_inits["ElectricStorage"] = s.elec_storage.soc_init_pct
+    cap_cost_powers["ElectricStorage"] = s.elec_storage.installed_cost_per_kw
+    cap_cost_energies["ElectricStorage"] = s.elec_storage.installed_cost_per_kwh
+    grid_charge_efficiencies["ElectricStorage"] = s.elec_storage.grid_charge_efficiency
+    if s.elec_storage.can_grid_charge
+        push!(grid_charges, "ElectricStorage")
+    end  
+    return nothing
+end
+
+
+function setup_hot_thermal_storage_inputs(s::AbstractScenario, min_power_sizes, max_power_sizes, min_energy_sizes,
+    max_energy_sizes, charge_efficiencies, discharge_efficiencies, soc_min, soc_init, cap_cost_per_kw, 
+    cap_cost_per_kwh, thermal_decays, om_cost_per_kwh
+    )
+    min_power_sizes["HotThermalStorage"] = s.hot_tes.min_kw
+    max_power_sizes["HotThermalStorage"] = s.hot_tes.max_kw
+    min_energy_sizes["HotThermalStorage"] = s.hot_tes.min_kwh
+    max_energy_sizes["HotThermalStorage"] = s.hot_tes.max_kwh
+    charge_efficiencies["HotThermalStorage"] = s.hot_tes.charge_efficiency
+    discharge_efficiencies["HotThermalStorage"] = s.hot_tes.discharge_efficiency
+    soc_mins["HotThermalStorage"] = s.hot_tes.soc_min_pct
+    soc_inits["HotThermalStorage"] = s.hot_tes.soc_init_pct
+    cap_cost_powers["HotThermalStorage"] = s.hot_tes.installed_cost_per_kw
+    cap_cost_energies["HotThermalStorage"] = s.hot_tes.installed_cost_per_kwh
+    thermal_decays["HotThermalStorage"] = s.hot_tes.thermal_decay_rate_fraction
+    om_cost_per_kwh["HotThermalStorage"] = s.hot_tes.om_cost_per_kwh
+    return nothing
+end
+
+
+function setup_hot_thermal_storage_inputs(s::AbstractScenario, min_power_sizes, max_power_sizes, min_energy_sizes,
+    max_energy_sizes, charge_efficiencies, discharge_efficiencies, soc_min, soc_init, cap_cost_per_kw, 
+    cap_cost_per_kwh, thermal_decays, om_cost_per_kwh
+    )
+    min_power_sizes["ColdThermalStorage"] = s.cold_tes.min_kw
+    max_power_sizes["ColdThermalStorage"] = s.cold_tes.max_kw
+    min_energy_sizes["ColdThermalStorage"] = s.cold_tes.min_kwh
+    max_energy_sizes["ColdThermalStorage"] = s.cold_tes.max_kwh
+    charge_efficiencies["ColdThermalStorage"] = s.cold_tes.charge_efficiency
+    discharge_efficiencies["ColdThermalStorage"] = s.cold_tes.discharge_efficiency
+    soc_mins["ColdThermalStorage"] = s.cold_tes.soc_min_pct
+    soc_inits["ColdThermalStorage"] = s.cold_tes.soc_init_pct
+    cap_cost_powers["ColdThermalStorage"] = s.cold_tes.installed_cost_per_kw
+    cap_cost_energies["ColdThermalStorage"] = s.cold_tes.installed_cost_per_kwh
+    thermal_decays["ColdThermalStorage"] = s.cold_tes.thermal_decay_rate_fraction
+    om_cost_per_kwh["ColdThermalStorage"] = s.cold_tes.om_cost_per_kwh
+    return nothing
+end
+
+
 function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
 
     lvl_factor = Dict(t => 1.0 for t in techs.all)  # default levelization_factor of 1.0
