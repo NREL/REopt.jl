@@ -119,11 +119,11 @@ function add_thermal_load_constraints(m, p; _n="")
         #             # sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.SteamTurbineTechs) +
         #             sum(p.production_factor[t,ts] * (m[Symbol("dvThermalProduction"*_n)][t,ts] - m[:dvThermalToSteamTurbine][t,ts]) for t in p.techs.boiler)
         #             # + sum(p.GHPHeatingThermalServed[g,ts] * m[:binGHP][g] for g in p.GHPOptions)
-        #             # + sum(m[:dvDischargeFromStorage][b,ts] for b in p.HotTES) 
+        #             # + sum(m[:dvDischargeFromStorage][b,ts] for b in p.storage.hot_tes) 
         #             ==
         #             p.HeatingLoad[ts] * p.s.existing_boiler.efficiency
         #             # + sum(m[:dvProductionToWaste][t,ts] for t in p.CHPTechs) +
-        #             # sum(m[:dvProductionToStorage][b,t,ts] for b in p.HotTES, t in p.techs.heating) +
+        #             # sum(m[:dvProductionToStorage][b,t,ts] for b in p.storage.hot_tes, t in p.techs.heating) +
         #             # sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.AbsorptionChillers) / p.AbsorptionChillerCOP
         #     )
         # else
@@ -131,12 +131,12 @@ function add_thermal_load_constraints(m, p; _n="")
                     sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.techs.chp) +
                     sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.boiler)
                     # TODO do all thermal techs have production_factor = 1 ? get rid of it if so
-                    # + sum(m[:dvDischargeFromStorage][b,ts] for b in p.HotTES)
+                    + sum(m[:dvDischargeFromStorage][b,ts] for b in p.storage.hot_tes)
                     # + sum(p.GHPHeatingThermalServed[g,ts] * m[:binGHP][g] for g in p.GHPOptions)
                     ==
                     (p.s.dhw_load.loads_kw[ts] + p.s.space_heating_load.loads_kw[ts])
                     + sum(m[Symbol("dvProductionToWaste"*_n)][t,ts] for t in p.techs.chp) #+
-                    # sum(m[:dvProductionToStorage][b,t,ts] for b in p.HotTES, t in p.techs.heating)  +
+                    sum(m[:dvProductionToStorage][b,t,ts] for b in p.storage.hot_tes, t in p.techs.heating)  +
                     # sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.AbsorptionChillers) / p.AbsorptionChillerCOP
             )
         # end
