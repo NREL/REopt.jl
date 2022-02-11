@@ -47,6 +47,7 @@ struct Scenario <: AbstractScenario
     chp::Union{CHP, Nothing}  # use nothing for more items when they are not modeled?
     flexible_hvac::Union{FlexibleHVAC, Nothing}
     existing_chiller::Union{ExistingChiller, Nothing}
+    storage_data::Dict{Symbol, Any}
 end
 
 """
@@ -137,21 +138,26 @@ function Scenario(d::Dict)
     else
         storage_dict = Dict(:max_kwh => 0)
     end
-    elec_storage = Storage(storage_dict, financial)
+    elec_storage = ElectricStorage(storage_dict, financial)
 
     if haskey(d, "HotThermalStorage")
         hot_storage_dict = dictkeys_tosymbols(d["HotThermalStorage"])
     else
         hot_storage_dict = Dict(:max_kwh => 0)
     end
-    hot_tes = Storage(hot_storage_dict, financial)
+    hot_tes = HotThermalStorage(hot_storage_dict, financial)
 
     if haskey(d, "ColdThermalStorage")
         cold_storage_dict = dictkeys_tosymbols(d["ColdThermalStorage"])
     else
         cold_storage_dict = Dict(:max_kwh => 0)
     end
-    cold_tes = Storage(cold_storage_dict, financial)
+    cold_tes = ColdThermalStorage(cold_storage_dict, financial)
+    storage_data = Dict(
+        "ElectricStorage" => elec_storage,
+        "HotThermalStorage" => hot_tes,
+        "ColdThermalStorage" => cold_tes
+    )
 
 
     electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
@@ -317,7 +323,8 @@ function Scenario(d::Dict)
         existing_boiler,
         chp,
         flexible_hvac,
-        existing_chiller
+        existing_chiller,
+        storage_data
     )
 end
 
