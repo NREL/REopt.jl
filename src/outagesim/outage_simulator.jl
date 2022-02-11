@@ -252,8 +252,8 @@ Returns a dict
 ```
 """
 function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
-    batt_roundtrip_efficiency = p.s.storage.charge_efficiency[:elec] * 
-                                p.s.storage.discharge_efficiency[:elec]
+    batt_roundtrip_efficiency = p.s.storage_data["ElectricStorage"].charge_efficiency 
+                                p.s.storage_data["ElectricStorage"].discharge_efficiency
 
     # TODO handle generic PV names
     pv_kw_ac_hourly = zeros(length(p.time_steps))

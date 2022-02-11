@@ -121,7 +121,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 	end
 
 	for b in p.storage.all
-		if p.s.storage.size_kw[b] == 0 || p.s.storage.size_kwh[b] == 0
+		if p.s.storage_data[b].size_kw == 0 || p.s.storage_data[b].size_kwh == 0
 			@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
 			@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
 						m[:dvProductionToStorage][b, t, ts] == 0)
@@ -134,7 +134,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		end
 	end
 
-	if any(size_kw->size_kw > 0, (p.s.storage.size_kw[b] for b in p.storage.all))
+	if any(size_kw->size_kw > 0, (p.s.storage_data[b].size_kw for b in p.storage.all))
 		add_storage_sum_constraints(m, p)
 	end
 
@@ -255,8 +255,8 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 
     m[:dvSize] = p.existing_sizes
 
-    m[:dvStoragePower] = p.s.storage.size_kw
-    m[:dvStorageEnergy] = p.s.storage.size_kwh
+    m[:dvStoragePower] = p.s.storage_data["ElectricStorage"].size_kw
+    m[:dvStorageEnergy] = p.s.storage_data["ElectricStorage"].size_kwh
     # not modeling min charges since control does not affect them
     m[:MinChargeAdder] = 0
 

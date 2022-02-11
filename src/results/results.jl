@@ -36,7 +36,7 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 	tstart = time()
     d = Dict{String, Any}()
     for b in p.storage.all
-        if p.s.storage.max_kw[b] > 0
+        if p.s.storage_data[b].max_kw > 0
             add_storage_results(m, p, d, b; _n)
         end
     end

@@ -160,7 +160,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
 	for b in p.storage.all
-		if p.s.storage.max_kw[b] == 0 || p.s.storage.max_kwh[b] == 0
+		if p.s.storage_data[b].max_kw == 0 || p.s.storage_data[b].max_kwh == 0
 			@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
 			@constraint(m, m[:dvStorageEnergy][b] == 0)
 			@constraint(m, m[:dvStoragePower][b] == 0)
@@ -176,7 +176,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 	end
 
-	if any(max_kw->max_kw > 0, (p.s.storage.max_kw[b] for b in p.storage.all))
+	if any(max_kw->max_kw > 0, (p.s.storage_data[b].max_kw for b in p.storage.all))
 		add_storage_sum_constraints(m, p)
 	end
 
@@ -279,8 +279,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     end
 	
 	@expression(m, TotalStorageCapCosts, p.third_party_factor *
-		sum(  p.s.storage.installed_cost_per_kw[b] * m[:dvStoragePower][b]
-			+ p.s.storage.installed_cost_per_kwh[b] * m[:dvStorageEnergy][b] for b in p.storage.all )
+		sum(  p.s.storage_data[b].installed_cost_per_kw * m[:dvStoragePower][b]
+			+ p.s.storage_data[b].installed_cost_per_kwh * m[:dvStorageEnergy][b] for b in p.storage.all )
 	)
 	
 	@expression(m, TotalPerUnitSizeOMCosts, p.third_party_factor * p.pwf_om *
