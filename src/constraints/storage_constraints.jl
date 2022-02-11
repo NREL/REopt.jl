@@ -32,22 +32,22 @@ function add_storage_size_constraints(m, p, b; _n="")
 
 	# Constraint (4b)-1: Lower bound on Storage Energy Capacity
 	@constraint(m,
-        m[Symbol("dvStorageEnergy"*_n)][b] >= p.s.storage.min_kwh[b]
+        m[Symbol("dvStorageEnergy"*_n)][b] >= p.s.storage_data[b].min_kwh
     )
 
 	# Constraint (4b)-2: Upper bound on Storage Energy Capacity
 	@constraint(m,
-        m[Symbol("dvStorageEnergy"*_n)][b] <= p.s.storage.max_kwh[b]
+        m[Symbol("dvStorageEnergy"*_n)][b] <= p.s.storage_data[b].max_kwh
     )
 
 	# Constraint (4c)-1: Lower bound on Storage Power Capacity
 	@constraint(m,
-        m[Symbol("dvStoragePower"*_n)][b] >= p.s.storage.min_kw[b]
+        m[Symbol("dvStoragePower"*_n)][b] >= p.s.storage_data[b].min_kw
     )
 
 	# Constraint (4c)-2: Upper bound on Storage Power Capacity
 	@constraint(m,
-        m[Symbol("dvStoragePower"*_n)][b] <= p.s.storage.max_kw[b]
+        m[Symbol("dvStoragePower"*_n)][b] <= p.s.storage_data[b].max_kw
     )
 end
 
@@ -55,29 +55,29 @@ end
 function add_storage_dispatch_constraints(m, p, b; _n="")
     # Constraint (4a): initial state of charge
 	@constraint(m,
-        m[Symbol("dvStoredEnergy"*_n)][b, 0] == p.s.storage.soc_init_pct[b] * m[Symbol("dvStorageEnergy"*_n)][b]
+        m[Symbol("dvStoredEnergy"*_n)][b, 0] == p.s.storage_data[b].soc_init_pct * m[Symbol("dvStorageEnergy"*_n)][b]
     )
 				
 	# Constraint (4g): state-of-charge for electrical storage - with grid
 	@constraint(m, [ts in p.time_steps_with_grid],
         m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_timestep * (  
-            sum(p.s.storage.charge_efficiency[b] * m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) 
-            + p.s.storage.grid_charge_efficiency[b] * m[Symbol("dvGridToStorage"*_n)][b, ts] 
-            - m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.s.storage.discharge_efficiency[b]
+            sum(p.s.storage_data[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) 
+            + p.s.storage_data[b].grid_charge_efficiency * m[Symbol("dvGridToStorage"*_n)][b, ts] 
+            - m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.s.storage_data[b].discharge_efficiency
         )
 	)
 
 	# Constraint (4h): state-of-charge for electrical storage - no grid
 	@constraint(m, [ts in p.time_steps_without_grid],
         m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_timestep * (  
-            sum(p.s.storage.charge_efficiency[b] * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.elec) 
-            - m[Symbol("dvDischargeFromStorage"*_n)][b, ts] / p.s.storage.discharge_efficiency[b]
+            sum(p.s.storage_data[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.elec) 
+            - m[Symbol("dvDischargeFromStorage"*_n)][b, ts] / p.s.storage_data[b].discharge_efficiency
         )
     )
 
 	# Constraint (4j): Minimum state of charge
 	@constraint(m, [ts in p.time_steps],
-        m[Symbol("dvStoredEnergy"*_n)][b, ts] >= p.s.storage.soc_min_pct[b] * m[Symbol("dvStorageEnergy"*_n)][b]
+        m[Symbol("dvStoredEnergy"*_n)][b, ts] >= p.s.storage_data[b].soc_min_pct * m[Symbol("dvStorageEnergy"*_n)][b]
     )
 
 	# Constraint (4i)-1: Dispatch to electrical storage is no greater than power capacity

@@ -71,8 +71,8 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 
 		ex_name = "TotalStorageCapCosts"*_n
 		m[Symbol(ex_name)] = @expression(m, p.third_party_factor * 
-			sum(  p.s.storage.installed_cost_per_kw[b] * m[Symbol("dvStoragePower"*_n)][b] 
-				+ p.s.storage.installed_cost_per_kwh[b] * m[Symbol("dvStorageEnergy"*_n)][b] for b in p.storage.elec )
+			sum(  p.s.storage_data[b].installed_cost_per_kw * m[Symbol("dvStoragePower"*_n)][b] 
+				+ p.s.storage_data[b].installed_cost_per_kwh * m[Symbol("dvStorageEnergy"*_n)][b] for b in p.storage.elec )
 		)
 
 		ex_name = "TotalPerUnitSizeOMCosts"*_n
@@ -184,7 +184,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
         _n = string("_", p.s.site.node)
 
         for b in p.storage.all
-            if p.s.storage.max_kw[b] == 0 || p.s.storage.max_kwh[b] == 0
+            if p.s.storage_data[b].max_kw == 0 || p.s.storage_data[b].max_kwh == 0
                 @constraint(m, [ts in p.time_steps], m[Symbol("dvStoredEnergy"*_n)][b, ts] == 0)
                 @constraint(m, m[Symbol("dvStorageEnergy"*_n)][b] == 0)
                 @constraint(m, m[Symbol("dvStoragePower"*_n)][b] == 0)
@@ -198,7 +198,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
             end
         end
 
-        if any(max_kw->max_kw > 0, (p.s.storage.max_kw[b] for b in p.storage.all))
+        if any(max_kw->max_kw > 0, (p.s.storage_data[b].max_kw for b in p.storage.all))
             add_storage_sum_constraints(m, p; _n=_n)
         end
     
