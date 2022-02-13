@@ -72,9 +72,7 @@ function plot_violin_compare_soc_efc(d1::Dict, d2::Dict;
 
     layout = PlotlyJS.Layout(
         title_text = title,
-        font=attr(
-            size=20
-        ),
+        font_size=20,
         # tickfont_size=20
     )
 
