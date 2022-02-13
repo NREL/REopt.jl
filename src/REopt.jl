@@ -134,4 +134,7 @@ include("lindistflow/extend.jl")
 include("mpc/results.jl")
 include("mpc/model.jl")
 
+include("plot/battery_degradation.jl")
+include("plot/dispatch.jl")
+
 end
