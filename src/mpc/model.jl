@@ -130,7 +130,16 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 				@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
 			end
 		else
-			add_elec_storage_dispatch_constraints(m, p, b)
+			add_general_storage_dispatch_constraints(m, p, b)
+			if b in p.storage.elec
+				add_elec_storage_dispatch_constraints(m, p, b)
+			elseif b in p.storage.hot_tes
+				add_hot_thermal_storage_dispatch_constraints(m, p, b)
+			elseif b in p.storage.cold_tes
+				add_cold_thermal_storage_dispatch_constraints(m, p, b)
+			else
+				@error("Invalid storage does not fall in a thermal or electrical set")
+			end
 		end
 	end
 
