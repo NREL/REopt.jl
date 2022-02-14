@@ -3,6 +3,10 @@
 ## dev
 - add FlexibleHVAC model
 
+## v0.12.4
+- rm "Lite" from docs
+- prioritize `urdb_response` over `urdb_label` in `ElectricTariff`
+
 ## v0.12.3
 - add utils for PVwatts: `get_ambient_temperature` and `get_pvwatts_prodfactor`
 
