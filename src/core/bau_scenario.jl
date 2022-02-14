@@ -45,7 +45,7 @@ struct BAUScenario <: AbstractScenario
     site::Site
     pvs::Array{PV, 1}
     wind::Wind
-    storage::Storage
+    elec_storage::ElectricStorage
     electric_tariff::ElectricTariff
     electric_load::ElectricLoad
     electric_utility::ElectricUtility
@@ -57,6 +57,7 @@ struct BAUScenario <: AbstractScenario
     existing_chiller::Union{ExistingChiller, Nothing}
     outage_outputs::OutageOutputs
     flexible_hvac::Union{BAU_HVAC, Nothing}
+    storage_data::Dict{Symbol,AbstractStorage}
 end
 
 
@@ -105,7 +106,10 @@ function BAUScenario(s::Scenario)
     wind = Wind(; max_kw=0)
 
     # no existing storage
-    storage = Storage(Dict(:elec => Dict(:max_kw => 0)), s.financial)
+    elec_storage = ElectricStorage(Dict(:elec => Dict(:max_kw => 0)), s.financial)
+    storage_data = Dict(
+        "ElectricStorage" => elec_storage
+    )
     
     t0, tf = s.electric_utility.outage_start_time_step, s.electric_utility.outage_end_time_step
     #=
@@ -140,7 +144,7 @@ function BAUScenario(s::Scenario)
         site, 
         pvs, 
         wind,
-        storage, 
+        elec_storage, 
         s.electric_tariff, 
         elec_load, 
         s.electric_utility, 
@@ -151,6 +155,7 @@ function BAUScenario(s::Scenario)
         s.existing_boiler,
         s.existing_chiller,
         outage_outputs,
-        flexible_hvac
+        flexible_hvac,
+        storage_data
     )
 end
