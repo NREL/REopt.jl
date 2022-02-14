@@ -52,11 +52,31 @@ function add_storage_size_constraints(m, p, b; _n="")
 end
 
 
-function add_elec_storage_dispatch_constraints(m, p, b; _n="")
+function add_general_storage_dispatch_constraints(m, p, b; _n="")
     # Constraint (4a): initial state of charge
 	@constraint(m,
         m[Symbol("dvStoredEnergy"*_n)][b, 0] == p.s.storage_data[b].soc_init_pct * m[Symbol("dvStorageEnergy"*_n)][b]
     )
+
+    #Constraint (4n): State of charge upper bound is storage system size
+    @constraint(m, [ts in p.time_steps],
+        m[Symbol("dvStoredEnergy"*_n)][b,ts] <= m[Symbol("dvStorageEnergy"*_n)][b]
+    )
+
+    # Constraint (4j): Minimum state of charge
+	@constraint(m, [ts in p.time_steps],
+        m[Symbol("dvStoredEnergy"*_n)][b, ts] >= p.s.storage_data[b].soc_min_pct * m[Symbol("dvStorageEnergy"*_n)][b]
+    )
+
+    #Constraint (4j): Dispatch from storage is no greater than power capacity
+	@constraint(m, [ts in p.time_steps],
+        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts]
+    )
+
+end
+
+
+function add_elec_storage_dispatch_constraints(m, p, b; _n="")
 				
 	# Constraint (4g): state-of-charge for electrical storage - with grid
 	@constraint(m, [ts in p.time_steps_with_grid],
@@ -75,20 +95,10 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
         )
     )
 
-	# Constraint (4j): Minimum state of charge
-	@constraint(m, [ts in p.time_steps],
-        m[Symbol("dvStoredEnergy"*_n)][b, ts] >= p.s.storage_data[b].soc_min_pct * m[Symbol("dvStorageEnergy"*_n)][b]
-    )
-
 	# Constraint (4i)-1: Dispatch to electrical storage is no greater than power capacity
 	@constraint(m, [ts in p.time_steps],
         m[Symbol("dvStoragePower"*_n)][b] >= 
             sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) + m[Symbol("dvGridToStorage"*_n)][b, ts]
-    )
-	
-	#Constraint (4j): Dispatch from storage is no greater than power capacity
-	@constraint(m, [ts in p.time_steps],
-        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts]
     )
 	
 	#Constraint (4k)-alt: Dispatch to and from electrical storage is no greater than power capacity
@@ -103,11 +113,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
             sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec)
     )
 					
-	#Constraint (4n): State of charge upper bound is storage system size
-	@constraint(m, [ts in p.time_steps],
-        m[Symbol("dvStoredEnergy"*_n)][b,ts] <= m[Symbol("dvStorageEnergy"*_n)][b]
-    )
-    
+    # Remove grid-to-storage as an option if option to grid charge is turned off
     if p.s.storage_data[b].can_grid_charge
         for ts in p.time_steps_with_grid
             fix(m[Symbol("dvGridToStorage"*_n)][b, ts], 0.0, force=true)
@@ -115,8 +121,21 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
 	end
 end
 
-function add_thermal_storage_dispatch_constraints(m, p, b; _n="")
-    nothing
+function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
+    
+    #Constraint (4n)-1: Dispatch to and from thermal storage is no greater than power capacity
+	@constraint(m, DischargeLEQCapHotCon[b in p.storage.hot_tes, ts in p.TimeStep],
+        m[:dvStorageCapPower][b] >= m[:dvDischargeFromStorage][b,ts] + sum(m[:dvProductionToStorage][b,t,ts] for t in p.HeatingTechs)
+    )
+
+end
+
+function add_cold_thermal_storage_dispatch_constraints(m, p, b; _n="")
+
+    #Constraint (4n)-2: Dispatch to and from thermal storage is no greater than power capacity
+    @constraint(m, DischargeLEQCapColdCon[b in p.storage.cold_tes, ts in p.TimeStep],
+        m[:dvStorageCapPower][b] >= m[:dvDischargeFromStorage][b,ts] + sum(m[:dvProductionToStorage][b,t,ts] for t in p.CoolingTechs)
+    )
 end
 
 function add_storage_sum_constraints(m, p; _n="")
