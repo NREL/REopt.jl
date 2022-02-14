@@ -172,7 +172,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			end
 		else
 			add_storage_size_constraints(m, p, b)
-			add_storage_dispatch_constraints(m, p, b)
+			add_elec_storage_dispatch_constraints(m, p, b)
 		end
 	end
 

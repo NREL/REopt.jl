@@ -130,7 +130,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 				@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
 			end
 		else
-			add_storage_dispatch_constraints(m, p, b)
+			add_elec_storage_dispatch_constraints(m, p, b)
 		end
 	end
 

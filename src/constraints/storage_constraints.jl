@@ -52,7 +52,7 @@ function add_storage_size_constraints(m, p, b; _n="")
 end
 
 
-function add_storage_dispatch_constraints(m, p, b; _n="")
+function add_elec_storage_dispatch_constraints(m, p, b; _n="")
     # Constraint (4a): initial state of charge
 	@constraint(m,
         m[Symbol("dvStoredEnergy"*_n)][b, 0] == p.s.storage_data[b].soc_init_pct * m[Symbol("dvStorageEnergy"*_n)][b]
@@ -115,6 +115,9 @@ function add_storage_dispatch_constraints(m, p, b; _n="")
 	end
 end
 
+function add_thermal_storage_dispatch_constraints(m, p, b; _n="")
+    nothing
+end
 
 function add_storage_sum_constraints(m, p; _n="")
 
