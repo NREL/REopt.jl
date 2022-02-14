@@ -44,7 +44,7 @@ Base.@kwdef struct ElecStorage <: AbstractStorage
     inverter_efficiency_pct::Float64 = 0.96
     rectifier_efficiency_pct::Float64 = 0.96
     soc_min_pct::Float64 = 0.2
-    soc_init_pct::Float64 = 0.5
+    soc_init_pct::Float64 = off_grid_flag ? 1.0 : 0.5
     can_grid_charge::Bool = true
     installed_cost_per_kw::Float64 = 840.0
     installed_cost_per_kwh::Float64 = 420.0
@@ -62,6 +62,7 @@ end
 ```
 """
 Base.@kwdef struct ElecStorage <: AbstractStorage
+    off_grid_flag::Bool = false
     min_kw::Float64 = 0.0
     max_kw::Float64 = 1.0e4
     min_kwh::Float64 = 0.0
@@ -70,8 +71,8 @@ Base.@kwdef struct ElecStorage <: AbstractStorage
     inverter_efficiency_pct::Float64 = 0.96
     rectifier_efficiency_pct::Float64 = 0.96
     soc_min_pct::Float64 = 0.2
-    soc_init_pct::Float64 = 0.5
-    can_grid_charge::Bool = true
+    soc_init_pct::Float64 = off_grid_flag ? 1.0 : 0.5
+    can_grid_charge::Bool = off_grid_flag ? false : true
     installed_cost_per_kw::Float64 = 840.0
     installed_cost_per_kwh::Float64 = 420.0
     replace_cost_per_kw::Float64 = 410.0
@@ -124,7 +125,11 @@ function Storage(d::Dict, f::Financial)  # nested dict
         storage_instance = eval(Meta.parse(struct_name * "(;$input_dict...)"))
 
         if storage_instance.can_grid_charge
-            push!(can_grid_charge, storage_type)
+            if storage_instance.off_grid_flag 
+                @error "Grid cannot charge storage in off-grid scenarios."
+            else
+                push!(can_grid_charge, storage_type)
+            end
         end
         fill_storage_vals!(raw_vals, storage_instance, f)
     end

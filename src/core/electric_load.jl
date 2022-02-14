@@ -40,7 +40,11 @@
         critical_loads_kw::Union{Missing, Array{Real,1}} = missing,
         loads_kw_is_net::Bool = true,
         critical_loads_kw_is_net::Bool = false,
-        critical_load_pct::Real = 0.5
+        critical_load_pct::Real = 0.5,
+        critical_load_pct::Real = off_grid_flag ? 1.0 : 0.5, # if off grid, 1.0, else 0.5
+        time_steps_per_hour::Int = 1,
+        operating_reserve_required_pct::Real = off_grid_flag ? 0.1 : 0.0, # if off grid, 10%, else 0%
+        min_load_met_annual_pct::Real = off_grid_flag ? 0.99999 : 1.0 # if off grid, 99.999%, else 100%
     )
 
 Must provide either `loads_kw` or [`doe_reference_name` and `city`] or `doe_reference_name` or [`blended_doe_reference_names` and `blended_doe_reference_percents`]. 
@@ -93,8 +97,11 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
     loads_kw_is_net::Bool
     critical_loads_kw_is_net::Bool
     city::String
+    operating_reserve_required_pct::Real
+    min_load_met_annual_pct::Real
     
     function ElectricLoad(;
+        off_grid_flag::Bool = false,
         loads_kw::Array{<:Real,1} = Real[],
         year::Int = 2020,
         doe_reference_name::String = "",
@@ -106,12 +113,22 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         critical_loads_kw::Union{Missing, Array{Real,1}} = missing,
         loads_kw_is_net::Bool = true,
         critical_loads_kw_is_net::Bool = false,
-        critical_load_pct::Real = 0.5,
+        critical_load_pct::Real = off_grid_flag ? 1.0 : 0.5, # if off grid, 1.0, else 0.5
         latitude::Real,
         longitude::Real,
-        time_steps_per_hour::Int = 1
+        time_steps_per_hour::Int = 1,
+        operating_reserve_required_pct::Real = off_grid_flag ? 0.1 : 0.0, # if off grid, 10%, else 0%
+        min_load_met_annual_pct::Real = off_grid_flag ? 0.99999 : 1.0 # if off grid, 99.999%, else 100%. Applied to each timestep as a % of electric load.
         )
         
+        if off_grid_flag  && !(critical_load_pct == 1.0)
+            @error "ElectricLoad critical_load_pct must be 1.0 (100%) for off-grid scenarios."
+        end
+
+        if !(off_grid_flag) && !(operating_reserve_required_pct == 0.0)
+            @error "ElectricLoad operating_reserve_required_pct must be 0 for on-grid scenarios. Operating reserve requirements apply to off-grid scenarios only."
+        end
+
         if length(loads_kw) > 0
 
             if !(length(loads_kw) / time_steps_per_hour ≈ 8760)
@@ -158,7 +175,10 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             year,
             critical_loads_kw,
             loads_kw_is_net,
-            critical_loads_kw_is_net
+            critical_loads_kw_is_net,
+            city,
+            operating_reserve_required_pct,
+            min_load_met_annual_pct
         )
     end
 end
