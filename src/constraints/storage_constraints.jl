@@ -108,7 +108,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
         m[Symbol("dvStoredEnergy"*_n)][b,ts] <= m[Symbol("dvStorageEnergy"*_n)][b]
     )
     
-    for b in setdiff(p.storage.elec, p.s.storage.can_grid_charge)
+    if p.s.storage_data[b].can_grid_charge
         for ts in p.time_steps_with_grid
             fix(m[Symbol("dvGridToStorage"*_n)][b, ts], 0.0, force=true)
         end
