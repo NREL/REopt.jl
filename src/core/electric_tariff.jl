@@ -79,17 +79,24 @@ function ElectricTariff(;
     year::Int=2020,
     time_steps_per_hour::Int=1,
     NEM::Bool=false,
-    wholesale_rate::T=nothing, 
+    wholesale_rate::T1=nothing,
+    export_rate_beyond_net_metering_limit::T2=nothing,
     monthly_energy_rates::Array=[],
     monthly_demand_rates::Array=[],
     blended_annual_energy_rate::S=nothing,
     blended_annual_demand_rate::R=nothing,
+    add_monthly_rates_to_urdb_rate::Bool=false,
+    tou_energy_rates_per_kwh::Array=[],
+    add_tou_energy_rates_to_urdb_rate::Bool=false,
     remove_tiers::Bool=false,
     demand_lookback_months::AbstractArray{Int64, 1}=Int64[],
     demand_lookback_percent::Float64=0.0,
     demand_lookback_range::Int=0,
+    coincident_peak_load_active_timesteps::Vector{Vector{Int64}}=[Int64[]],
+    coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[]
     ) where {
-        T <: Union{Nothing, Int, Float64, Array}, 
+        T1 <: Union{Nothing, Int, Float64, Array}, 
+        T2 <: Union{Nothing, Int, Float64, Array}, 
         S <: Union{Nothing, Int, Float64}, 
         R <: Union{Nothing, Int, Float64}
     }
@@ -141,13 +148,13 @@ function ElectricTariff(;
     time_steps_monthly = get_monthly_timesteps(year, time_steps_per_hour=time_steps_per_hour)
 
     u = nothing
-    if !isempty(urdb_label)
-
-        u = URDBrate(urdb_label, year, time_steps_per_hour=time_steps_per_hour)
-
-    elseif !isempty(urdb_response)
+    if !isempty(urdb_response)
 
         u = URDBrate(urdb_response, year, time_steps_per_hour=time_steps_per_hour)
+
+    elseif !isempty(urdb_label)
+
+        u = URDBrate(urdb_label, year, time_steps_per_hour=time_steps_per_hour)
 
     elseif !isempty(urdb_utility_name) && !isempty(urdb_rate_name)
 
