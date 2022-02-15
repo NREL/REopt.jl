@@ -140,15 +140,15 @@ function Scenario(d::Dict)
     end
     elec_storage = ElecStorage(storage_dict, financial)
 
-    if haskey(d, "HotStorage")
-        hot_storage_dict = dictkeys_tosymbols(d["HotStorage"])
+    if haskey(d, "HotThermalStorage")
+        hot_storage_dict = dictkeys_tosymbols(d["HotThermalStorage"])
     else
         hot_storage_dict = Dict(:max_kwh => 0)
     end
     hot_tes = HotThermalStorage(hot_storage_dict, financial)
 
-    if haskey(d, "ColdStorage")
-        cold_storage_dict = dictkeys_tosymbols(d["ColdStorage"])
+    if haskey(d, "ColdThermalStorage")
+        cold_storage_dict = dictkeys_tosymbols(d["ColdThermalStorage"])
     else
         cold_storage_dict = Dict(:max_kwh => 0)
     end
