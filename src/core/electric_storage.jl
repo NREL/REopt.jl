@@ -59,7 +59,7 @@ Base.@kwdef struct ElectricStorage <: AbstractStorage
 end
 ```
 """
-Base.@kwdef struct ElectricStorage <: AbstractStorage
+Base.@kwdef struct ElecStorage <: AbstractStorage
     min_kw::Float64 = 0.0
     max_kw::Float64 = 1.0e4
     min_kwh::Float64 = 0.0
@@ -84,7 +84,7 @@ Base.@kwdef struct ElectricStorage <: AbstractStorage
     total_rebate_per_kwh::Float64 = 0.0
 end
 
-struct ElectricStorage <: AbstractStorage
+struct ElecStorage <: AbstractStorage
     type::Symbol
     min_kw::Float64
     max_kw::Float64
@@ -102,12 +102,12 @@ end
 
 
 """
-    # function ElectricStorage(d::Dict{Symbol,Dict}, f::Financial)
+    # function ElecStorage(d::Dict{Symbol,Dict}, f::Financial)
 
-Construct ElectricStorage struct from Dict with keys-val pairs from the 
-    REopt ElectricStorage inputs. 
+Construct ElecStorage struct from Dict with keys-val pairs from the 
+    REopt ElectricStorage and Financial inputs. 
 """
-function ElectricStorage(d::Dict, f::Financial)  
+function ElecStorage(d::Dict, f::Financial)  
     if d[:can_grid_charge]
         grid_charge_efficiency = d[:charge_efficiency]
     else
