@@ -539,7 +539,7 @@ end
 #         "annual_kwh": 10000000.0,
 #         "city": "LosAngeles"
 #     },
-#     "Storage": {
+#     "ElectricStorage": {
 #         "total_rebate_per_kw": 100.0,
 #         "macrs_option_years": 5,
 #         "can_grid_charge": true,

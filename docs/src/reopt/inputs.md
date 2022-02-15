@@ -86,9 +86,9 @@ REopt.ElectricUtility
 REopt.PV
 ```
 
-## Storage
+## ElectricStorage
 ```@docs
-REopt.ElecStorage
+REopt.ElectricStorage
 ```
 
 ## Wind
