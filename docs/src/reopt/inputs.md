@@ -91,6 +91,16 @@ REopt.PV
 REopt.ElectricStorage
 ```
 
+## HotStorage
+```@docs
+REopt.HotStorage
+```
+
+## ColdStorage
+```@docs
+REopt.ColdStorage
+```
+
 ## Wind
 ```@docs
 REopt.Wind
