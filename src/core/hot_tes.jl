@@ -36,7 +36,7 @@ HotThermalStorage
     meet thermal cooling loads.
 
 ```julia
-Base.@kwdef struct HotThermalStorage <: AbstractStorage
+Base.@kwdef struct HotStorage <: AbstractStorage
     min_gal::Float64 = 0.0
     max_gal::Float64 = 0.0
     hot_water_temp_degF::Float64 = 44.0
