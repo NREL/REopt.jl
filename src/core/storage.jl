@@ -130,7 +130,7 @@ end
 """
 function fill_storage_vals!(d::Dict, f::Financial)
     d[:charge_efficiency] = d[:rectifier_efficiency_pct] * d[:internal_efficiency_pct]^0.5
-    d[:discharge_efficiency] = d[:inverter_efficiency_pct] * d[:s.internal_efficiency_pct]^0.5)
+    d[:discharge_efficiency] = d[:inverter_efficiency_pct] * d[:s.internal_efficiency_pct]^0.5
     d[:installed_cost_per_kw] = effective_cost(;
         itc_basis = d[:installed_cost_per_kw],
         replacement_cost = d[:replace_cost_per_kw],

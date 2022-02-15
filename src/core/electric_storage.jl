@@ -59,7 +59,7 @@ Base.@kwdef struct ElectricStorage <: AbstractStorage
 end
 ```
 """
-Base.@kwdef struct ElecStorage <: AbstractStorage
+Base.@kwdef struct ElectricStorage <: AbstractStorage
     min_kw::Float64 = 0.0
     max_kw::Float64 = 1.0e4
     min_kwh::Float64 = 0.0
@@ -115,7 +115,7 @@ function ElecStorage(d::Dict, f::Financial)
     end
     fill_storage_vals!(d, f)
 
-    return ElectricStorage(
+    return ElecStorage(
         "ElectricStorage",
         d[:min_kw],
         d[:max_kw],
