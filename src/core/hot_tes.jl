@@ -99,7 +99,7 @@ end
     # function HotThermalStorage(d::Dict{Symbol,Dict}, f::Financial)
 
     Construct HotThermalStorage struct from Dict with keys-val pairs from the 
-    REopt ColdStorage and Financial inputs. 
+    REopt HotStorage and Financial inputs. 
 """
 function HotThermalStorage(d::Dict, f::Financial)  
     

@@ -30,7 +30,7 @@
 
 
 """
-    ColdThermalStorage
+    ColdStorage
 
     Cold thermal energy storage sytem; specifically, a chilled water system used to 
     meet thermal cooling loads.
