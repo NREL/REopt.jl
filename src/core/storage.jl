@@ -123,36 +123,44 @@ end
 
 
 
-"""
-    fill_storage_vals!(d::Dict, f::Financial)
-
-    Fill storage dictionary `d`'s values using financial model `f`. The dict `d` must have keys equivalent to the fieldnames(Storage)
-"""
-function fill_storage_vals!(d::Dict, f::Financial)
-    d[:charge_efficiency] = d[:rectifier_efficiency_pct] * d[:internal_efficiency_pct]^0.5
-    d[:discharge_efficiency] = d[:inverter_efficiency_pct] * d[:s.internal_efficiency_pct]^0.5
+function fill_financial_storage_vals!(d::Dict, s::AbstractStorage, f::Financial, is_electric::Bool)    
+    if is_electric
+        installed_cost_per_kw = s.installed_cost_per_kw
+        installed_cost_per_kwh = s.installed_cost_per_kwh
+        replace_cost_per_kw = s.replace_cost_per_kw
+        replace_cost_per_kwh = s.replace_cost_per_kwh
+        replacement_year = s.inverter_replacement_year
+    else
+        installed_cost_per_kw = 0.0
+        installed_cost_per_kwh = s.installed_cost_per_gal * d[:kwh_per_gal]
+        replace_cost_per_kw = 0.0
+        replace_cost_per_kwh = 0.0
+        replacement_year = 100
+    end
+    
     d[:installed_cost_per_kw] = effective_cost(;
-        itc_basis = d[:installed_cost_per_kw],
-        replacement_cost = d[:replace_cost_per_kw],
-        replacement_year = d[:inverter_replacement_year],
+        itc_basis = installed_cost_per_kw,
+        replacement_cost = replace_cost_per_kw,
+        replacement_year = replacement_year,
         discount_rate = f.owner_discount_pct,
         tax_rate = f.owner_tax_pct,
-        itc = d[:total_itc_pct],
-        macrs_schedule = d[:macrs_option_years] == 7 ? f.macrs_seven_year : f.macrs_five_year,
-        macrs_bonus_pct = d[:macrs_bonus_pct],
-        macrs_itc_reduction = d[:macrs_itc_reduction],
-        rebate_per_kw = d[:total_rebate_per_kw]
+        itc = s.total_itc_pct,
+        macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year,
+        macrs_bonus_pct = s.macrs_bonus_pct,
+        macrs_itc_reduction = s.macrs_itc_reduction,
+        rebate_per_kw = s.total_rebate_per_kw
     )
     d[:installed_cost_per_kwh] = effective_cost(;
-        itc_basis = d[:installed_cost_per_kwh],
-        replacement_cost = d[:replace_cost_per_kwh],
-        replacement_year = d[:inverter_replacement_year],
+        itc_basis = installed_cost_per_kwh,
+        replacement_cost = replace_cost_per_kwh,
+        replacement_year = replacement_year,
         discount_rate = f.owner_discount_pct,
         tax_rate = f.owner_tax_pct,
-        itc = d[:total_itc_pct],
-        macrs_schedule = d[:macrs_option_years] == 7 ? f.macrs_seven_year : f.macrs_five_year,
-        macrs_bonus_pct = d[:macrs_bonus_pct],
-        macrs_itc_reduction = d[:macrs_itc_reduction]
+        itc = s.total_itc_pct,
+        macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year,
+        macrs_bonus_pct = s.macrs_bonus_pct,
+        macrs_itc_reduction = s.macrs_itc_reduction
     )
 
 end
+
