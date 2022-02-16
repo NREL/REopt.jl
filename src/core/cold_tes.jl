@@ -39,8 +39,8 @@
 Base.@kwdef struct ColdThermalStorage <: AbstractStorage
     min_gal::Float64 = 0.0
     max_gal::Float64 = 0.0
-    hot_water_temp_degF::Float64 = 44.0
-    cool_water_temp_degF::Float64 = 56.0
+    hot_water_temp_degF::Float64 = 56.0
+    cool_water_temp_degF::Float64 = 44.0
     internal_efficiency_pct::Float64 = 0.999999
     soc_min_pct::Float64 = 0.1
     soc_init_pct::Float64 = 0.5
@@ -59,8 +59,8 @@ end
 Base.@kwdef struct ColdStorage <: AbstractStorage
     min_gal::Float64 = 0.0
     max_gal::Float64 = 0.0
-    hot_water_temp_degF::Float64 = 44.0
-    cool_water_temp_degF::Float64 = 56.0
+    hot_water_temp_degF::Float64 = 56.0
+    cool_water_temp_degF::Float64 = 44.0
     internal_efficiency_pct::Float64 = 0.999999
     soc_min_pct::Float64 = 0.1
     soc_init_pct::Float64 = 0.5
