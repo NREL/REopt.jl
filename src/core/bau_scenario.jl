@@ -45,7 +45,7 @@ struct BAUScenario <: AbstractScenario
     site::Site
     pvs::Array{PV, 1}
     wind::Wind
-    elec_storage::ElectricStorage
+    elec_storage::ElecStorage
     electric_tariff::ElectricTariff
     electric_load::ElectricLoad
     electric_utility::ElectricUtility
