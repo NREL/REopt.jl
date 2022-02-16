@@ -85,7 +85,8 @@ Base.@kwdef struct ElectricStorage <: AbstractStorage
 end
 
 struct ElecStorage <: AbstractStorage
-    type::Symbol
+    type::String
+    raw_inputs::Dict{String,AbstractStorage}
     min_kw::Float64
     max_kw::Float64
     min_kwh::Float64
@@ -108,7 +109,9 @@ Construct ElecStorage struct from Dict with keys-val pairs from the
     REopt ElectricStorage and Financial inputs. 
 """
 function ElecStorage(d::Dict, f::Financial)  
-    if d[:can_grid_charge]
+    s = eval(Meta.parse("ElectricStorage" * "(;$d...)"))
+    raw_inputs = Dict("ElectricStorage" => s)
+    if s.can_grid_charge
         grid_charge_efficiency = d[:charge_efficiency]
     else
         grid_charge_efficiency = 0.0
@@ -117,17 +120,17 @@ function ElecStorage(d::Dict, f::Financial)
 
     return ElecStorage(
         "ElectricStorage",
-        d[:min_kw],
-        d[:max_kw],
-        d[:min_kwh],
-        d[:max_kwh],
+        s.min_kw,
+        s.max_kw,
+        s.min_kwh,
+        s.max_kwh,
         d[:charge_efficiency],
         d[:discharge_efficiency],
-        d[:soc_min_pct],
-        d[:soc_init_pct],
+        s.soc_min_pct,
+        s.soc_init_pct,
         d[:installed_cost_per_kw],
         d[:installed_cost_per_kwh],
-        d[:can_grid_charge],
+        s.can_grid_charge,
         grid_charge_efficiency
     )
     # TODO expand for smart thermostat
