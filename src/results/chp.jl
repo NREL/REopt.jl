@@ -71,7 +71,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 			for t in p.techs.chp, u in p.export_bins_by_tech[t]))
 	r["year_one_to_grid_series_kw"] = round.(value.(CHPtoGrid), digits=3)
 	@expression(m, CHPtoBatt[ts in p.time_steps],
-		sum(m[Symbol("dvProductionToStorage"*_n)][:elec,t,ts] for t in p.techs.chp))
+		sum(m[Symbol("dvProductionToStorage"*_n)][:ElectricStorage,t,ts] for t in p.techs.chp))
 	r["year_one_to_battery_series_kw"] = round.(value.(CHPtoBatt), digits=3)
 	@expression(m, CHPtoLoad[ts in p.time_steps],
 		sum(m[Symbol("dvRatedProduction"*_n)][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
