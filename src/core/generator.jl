@@ -66,6 +66,7 @@ function Generator(;
     production_incentive_max_benefit::Float64 = 1.0e9,
     production_incentive_years::Int = 0,
     production_incentive_max_kw::Float64 = 1.0e9,
+    num_generators::Int = 1
 )
 ```
 """
@@ -104,6 +105,7 @@ struct Generator <: AbstractGenerator
     production_incentive_max_benefit
     production_incentive_years
     production_incentive_max_kw
+    num_generators
 
     function Generator(;
         existing_kw::Real=0,
@@ -140,6 +142,7 @@ struct Generator <: AbstractGenerator
         production_incentive_max_benefit::Float64 = 1.0e9,
         production_incentive_years::Int = 0,
         production_incentive_max_kw::Float64 = 1.0e9,
+        num_generators::Int = 1,
         )
 
         new(
@@ -176,7 +179,8 @@ struct Generator <: AbstractGenerator
             production_incentive_per_kwh,
             production_incentive_max_benefit,
             production_incentive_years,
-            production_incentive_max_kw
+            production_incentive_max_kw,
+            num_generators
         )
     end
 end

@@ -42,6 +42,7 @@ struct Scenario <: AbstractScenario
     space_heating_load::SpaceHeatingLoad
     existing_boiler::ExistingBoiler
     chp::Union{CHP, Nothing}  # use nothing for more items when they are not modeled?
+    backup_reliability::BackupReliability
 end
 
 """
@@ -201,6 +202,13 @@ function Scenario(d::Dict)
         chp = CHP(d["CHP"])
     end
 
+    if haskey(d, "BackupReliability")
+        backup_reliability = BackupReliability(; dictkeys_tosymbols(d["BackupReliability"])...)
+    else
+        backup_reliability = BackupReliability()
+    end
+
+
     return Scenario(
         settings,
         site, 
@@ -215,7 +223,8 @@ function Scenario(d::Dict)
         dhw_load,
         space_heating_load,
         existing_boiler,
-        chp
+        chp,
+        backup_reliability
     )
 end
 

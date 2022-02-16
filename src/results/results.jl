@@ -45,6 +45,7 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     add_electric_utility_results(m, p, d; _n)
     add_financial_results(m, p, d; _n)
     add_electric_load_results(m, p, d; _n)
+    add_backup_reliability_results(m, p, d)
 
 	if !isempty(p.techs.pv)
         add_pv_results(m, p, d; _n)

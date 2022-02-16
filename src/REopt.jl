@@ -121,11 +121,13 @@ include("results/wind.jl")
 include("results/electric_load.jl")
 include("results/existing_boiler.jl")
 include("results/chp.jl")
+include("results/backup_reliability.jl")
 
 include("core/reopt.jl")
 include("core/reopt_multinode.jl")
 
 include("outagesim/outage_simulator.jl")
+include("outagesim/backup_reliability.jl")
 
 include("lindistflow/extend.jl")
 
