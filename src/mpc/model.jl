@@ -66,7 +66,7 @@ function run_mpc(m::JuMP.AbstractModel, p::MPCInputs)
     if !p.s.settings.add_soc_incentive
 		@objective(m, Min, m[:Costs])
 	else # Keep SOC high
-		@objective(m, Min, m[:Costs] - sum(m[:dvStoredEnergy][:elec, ts] for ts in p.time_steps) /
+		@objective(m, Min, m[:Costs] - sum(m[:dvStoredEnergy][:ElectricStorage, ts] for ts in p.time_steps) /
 									   (8760. / p.hours_per_timestep)
 		)
 	end
