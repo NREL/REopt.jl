@@ -375,5 +375,5 @@ function convert_gal_to_kwh(delta_T_degF::Real, rho_kg_per_m3::Real, cp_kj_per_k
     kj_per_m3 = rho_kg_per_m3 * cp_kj_per_kgK * delta_T_K  # [kJ/m^3]
     kj_per_gal = kj_per_m3 / 264.172   # divide by gal/m^3 to get: [kJ/gal]
     kwh_per_gal = kj_per_gal / 3600.0  # divide by kJ/kWh, i.e., sec/hr, to get: [kWh/gal]
-    return gal_to_kwh
+    return kwh_per_gal
 end
