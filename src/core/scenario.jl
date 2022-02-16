@@ -47,7 +47,7 @@ struct Scenario <: AbstractScenario
     chp::Union{CHP, Nothing}  # use nothing for more items when they are not modeled?
     flexible_hvac::Union{FlexibleHVAC, Nothing}
     existing_chiller::Union{ExistingChiller, Nothing}
-    storage_data::Dict{Symbol, Any}
+    storage_data::Dict{Symbol, AbstractStorage}
 end
 
 """
@@ -77,7 +77,9 @@ struct Scenario
     site::Site
     pvs::Array{PV, 1}
     wind::Wind
-    storage::Storage
+    elec_storage::ElecStorage
+    hot_tes::HotThermalStorage
+    cold_tes::ColdThermalStorage
     electric_tariff::ElectricTariff
     electric_load::ElectricLoad
     electric_utility::ElectricUtility
@@ -154,9 +156,9 @@ function Scenario(d::Dict)
     end
     cold_tes = ColdThermalStorage(cold_storage_dict, financial)
     storage_data = Dict(
-        "ElectricStorage" => elec_storage,
-        "HotThermalStorage" => hot_tes,
-        "ColdThermalStorage" => cold_tes
+        :ElectricStorage => elec_storage,
+        :HotThermalStorage => hot_tes,
+        :ColdThermalStorage => cold_tes
     )
 
 
