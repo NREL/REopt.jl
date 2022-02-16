@@ -77,7 +77,8 @@ end
 
 
 struct ColdThermalStorage <: AbstractStorage
-    type::Symbol
+    type::String
+    raw_inputs::Dict{String,AbstractStorage}
     min_kw::Float64
     max_kw::Float64
     min_kwh::Float64
@@ -103,33 +104,36 @@ end
 """
 function ColdThermalStorage(d::Dict, f::Financial)  
     
-    delta_T_degF = d2[:hot_water_temp_degF] - d2[:cool_water_temp_degF]
+    s = eval(Meta.parse("ColdStorage" * "(;$d...)"))
+    raw_inputs = Dict("ColdThermalStorage" => s)
+
+    delta_T_degF = s.hot_water_temp_degF - s.cool_water_temp_degF
     avg_cp_kj_per_kgK = 998.2 
     avg_rho_kg_per_m3 = 4.184 #TODO: add CoolProp reference or perform analogous calculations for water and build lookup tables
-    gal_to_kwh = convert_gal_to_kwh(delta_T_degF, avg_rho_kg_per_m3, avg_cp_kj_per_kgK)
+    kwh_per_gal = convert_gal_to_kwh(delta_T_degF, avg_rho_kg_per_m3, avg_cp_kj_per_kgK)
     d[:min_kw] = 0.0
     d[:max_kw] = 1.0e9
-    d[:min_kwh] = d2[:min_gal] * gal_to_kwh
-    d[:max_kwh] = d2[:max_gal] * gal_to_kwh
-    d[:installed_cost_per_kw] = 0.0
-    d[:installed_cost_per_kwh] = d2[:installed_cost_per_gal] * gal_to_kwh
-    d[:om_cost_per_kwh] = d2[:om_cost_per_gal] * gal_to_kwh
+    d[:min_kwh] = s.min_gal * kwh_per_gal
+    d[:max_kwh] = s.max_gal * kwh_per_gal
+    d[:om_cost_per_kwh] = s.om_cost_per_gal * kwh_per_gal
+    d[:kwh_per_gal] = kwh_per_gal
 
     fill_storage_vals!(d, f)
 
     return ColdThermalStorage(
         "ColdThermalStorage",
+        raw_inputs,
         d[:min_kw],
         d[:max_kw],
         d[:min_kwh],
         d[:max_kwh],
         d[:charge_efficiency],
         d[:discharge_efficiency],
-        d[:soc_min_pct],
-        d[:soc_init_pct],
+        s.soc_min_pct,
+        s.soc_init_pct,
         d[:installed_cost_per_kw],
         d[:installed_cost_per_kwh],
-        d[:thermal_decay_rate_fraction],
+        s.thermal_decay_rate_fraction,
         d[:om_cost_per_kwh]
     )
     # TODO expand for smart thermostat
