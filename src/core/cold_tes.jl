@@ -94,8 +94,6 @@ struct ColdThermalStorage <: AbstractStorage
 end
 
 
-
-
 """
     # function ColdThermalStorage(d::Dict{Symbol,Dict}, f::Financial)
 
@@ -118,7 +116,10 @@ function ColdThermalStorage(d::Dict, f::Financial)
     d[:om_cost_per_kwh] = s.om_cost_per_gal * kwh_per_gal
     d[:kwh_per_gal] = kwh_per_gal
 
-    fill_storage_vals!(d, f)
+    d[:charge_efficiency] = s.internal_efficiency_pct^0.5
+    d[:discharge_efficiency] = s.internal_efficiency_pct^0.5
+
+    fill_financial_storage_vals!(d, s, f, false)
 
     return ColdThermalStorage(
         "ColdThermalStorage",

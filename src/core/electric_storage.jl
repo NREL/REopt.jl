@@ -111,15 +111,21 @@ Construct ElecStorage struct from Dict with keys-val pairs from the
 function ElecStorage(d::Dict, f::Financial)  
     s = eval(Meta.parse("ElectricStorage" * "(;$d...)"))
     raw_inputs = Dict("ElectricStorage" => s)
+
+    d[:charge_efficiency] = s.rectifier_efficiency_pct * s.internal_efficiency_pct^0.5
+    d[:discharge_efficiency] = s.inverter_efficiency_pct * s.internal_efficiency_pct^0.5
+
     if s.can_grid_charge
         grid_charge_efficiency = d[:charge_efficiency]
     else
         grid_charge_efficiency = 0.0
     end
-    fill_storage_vals!(d, f)
+
+    fill_financial_storage_vals!(d, s, f, true)
 
     return ElecStorage(
         "ElectricStorage",
+        raw_inputs,
         s.min_kw,
         s.max_kw,
         s.min_kwh,
