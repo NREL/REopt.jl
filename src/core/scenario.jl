@@ -32,7 +32,7 @@ struct Scenario <: AbstractScenario
     site::Site
     pvs::Array{PV, 1}
     wind::Wind
-    elec_storage::ElectricStorage
+    elec_storage::ElecStorage
     hot_tes::HotThermalStorage
     cold_tes::ColdThermalStorage
     electric_tariff::ElectricTariff
@@ -136,21 +136,21 @@ function Scenario(d::Dict)
         # only modeling electrochemical storage so far
         storage_dict = dictkeys_tosymbols(d["ElectricStorage"])
     else
-        storage_dict = Dict(:max_kwh => 0)
+        storage_dict = Dict(:max_kw => 0.0)
     end
     elec_storage = ElecStorage(storage_dict, financial)
 
     if haskey(d, "HotThermalStorage")
         hot_storage_dict = dictkeys_tosymbols(d["HotThermalStorage"])
     else
-        hot_storage_dict = Dict(:max_kwh => 0)
+        hot_storage_dict = Dict(:max_gal => 0.0)
     end
     hot_tes = HotThermalStorage(hot_storage_dict, financial)
 
     if haskey(d, "ColdThermalStorage")
         cold_storage_dict = dictkeys_tosymbols(d["ColdThermalStorage"])
     else
-        cold_storage_dict = Dict(:max_kwh => 0)
+        cold_storage_dict = Dict(:max_gal => 0.0)
     end
     cold_tes = ColdThermalStorage(cold_storage_dict, financial)
     storage_data = Dict(
