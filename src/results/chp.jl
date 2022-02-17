@@ -82,9 +82,13 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 		sum(m[Symbol("dvRatedProduction"*_n)][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
 			for t in p.techs.chp) - CHPtoBatt[ts] - CHPtoGrid[ts])
 	r["year_one_to_load_series_kw"] = round.(value.(CHPtoLoad), digits=3)
-	# @expression(m, CHPtoHotTES[ts in p.time_steps],
-	# 	sum(m[Symbol("dvProductionToStorage"*_n)]["HotTES",t,ts] for t in p.techs.chp))
-	# r["year_one_thermal_to_tes_series_mmbtu_per_hour"] = round.(value.(CHPtoHotTES), digits=5)
+	if !isempty(p.storage.hot_tes)
+		@expression(m, CHPtoHotTES[ts in p.time_steps],
+			sum(m[Symbol("dvProductionToStorage"*_n)]["HotThermalStorage",t,ts] for t in p.techs.chp))
+	else 
+		CHPtoHotTES = zeros(length(p.time_steps))
+	end
+	r["year_one_thermal_to_tes_series_mmbtu_per_hour"] = round.(value.(CHPtoHotTES), digits=5)
     # if !isempty(p.SteamTurbineTechs)
     #     @expression(m, CHPToSteamTurbine[ts in p.time_steps], sum(m[Symbol("dvThermalToSteamTurbine"*_n)][t,ts] for t in p.techs.chp))
     #     r["year_one_thermal_to_steamturbine_series_mmbtu_per_hour"] = round.(value.(CHPToSteamTurbine), digits=3)
@@ -100,7 +104,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	# 		for t in p.techs.chp) - CHPtoHotTES[ts] - CHPToSteamTurbine[ts] - CHPThermalToWaste[ts])
     @expression(m, CHPThermalToLoadKWH[ts in p.time_steps],
         sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.techs.chp) - 
-        CHPThermalToWasteKWH[ts])
+        CHPtoHotTES[ts] - CHPThermalToWasteKWH[ts])
 	r["year_one_thermal_to_load_series_mmbtu_per_hour"] = round.(value.(CHPThermalToLoadKWH) / MMBTU_TO_KWH, digits=5)
     r["year_one_chp_fuel_cost"] = round(value(m[:TotalCHPFuelCosts] / p.pwf_fuel["CHP"]), digits=3)                
 	r["lifecycle_chp_fuel_cost"] = round(value(m[:TotalCHPFuelCosts]) * p.s.financial.offtaker_tax_pct, digits=3)
