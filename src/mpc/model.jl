@@ -264,8 +264,8 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 
     m[:dvSize] = p.existing_sizes
 
-    m[:dvStoragePower] = p.s.storage_data["ElectricStorage"].size_kw
-    m[:dvStorageEnergy] = p.s.storage_data["ElectricStorage"].size_kwh
+    m[:dvStoragePower] = p.s.storage_data[:ElectricStorage].size_kw
+    m[:dvStorageEnergy] = p.s.storage_data[:ElectricStorage].size_kwh
     # not modeling min charges since control does not affect them
     m[:MinChargeAdder] = 0
 
