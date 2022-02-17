@@ -106,7 +106,7 @@ function BAUScenario(s::Scenario)
     wind = Wind(; max_kw=0)
 
     # no existing storage
-    elec_storage = ElecStorage(Dict(:max_kw => 0), s.financial)
+    elec_storage = ElecStorage(Dict(:max_kw => 0.0), s.financial)
     storage_data = Dict(
         "ElectricStorage" => elec_storage
     )
