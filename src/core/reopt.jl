@@ -164,11 +164,11 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
 			@constraint(m, m[:dvStorageEnergy][b] == 0)
 			@constraint(m, m[:dvStoragePower][b] == 0)
-			@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
-						m[:dvProductionToStorage][b, t, ts] == 0)
 			@constraint(m, [ts in p.time_steps], m[:dvDischargeFromStorage][b, ts] == 0)
 			if b in p.storage.elec
 				@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
+				@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
+						m[:dvProductionToStorage][b, t, ts] == 0)
 			end
 		else
 			add_storage_size_constraints(m, p, b)
