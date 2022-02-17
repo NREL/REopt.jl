@@ -46,6 +46,8 @@ struct BAUScenario <: AbstractScenario
     pvs::Array{PV, 1}
     wind::Wind
     elec_storage::ElecStorage
+    hot_tes::HotThermalStorage
+    cold_tes::ColdThermalStorage
     electric_tariff::ElectricTariff
     electric_load::ElectricLoad
     electric_utility::ElectricUtility
@@ -107,8 +109,12 @@ function BAUScenario(s::Scenario)
 
     # no existing storage
     elec_storage = ElecStorage(Dict(:max_kw => 0.0), s.financial)
+    hot_tes = HotThermalStorage(Dict(:max_gal => 0.0), s.financial)
+    cold_tes = ColdThermalStorage(Dict(:max_gal => 0.0), s.financial)
     storage_data = Dict(
-        "ElectricStorage" => elec_storage
+        :ElectricStorage => elec_storage,
+        :HotThermalStorage => hot_tes,
+        :ColdThermalStorage => cold_tes
     )
     
     t0, tf = s.electric_utility.outage_start_time_step, s.electric_utility.outage_end_time_step
@@ -145,6 +151,8 @@ function BAUScenario(s::Scenario)
         pvs, 
         wind,
         elec_storage, 
+        hot_tes,
+        cold_tes,
         s.electric_tariff, 
         elec_load, 
         s.electric_utility, 
