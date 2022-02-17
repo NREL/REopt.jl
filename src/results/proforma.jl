@@ -92,11 +92,11 @@ function proforma_results(p::REoptInputs, d::Dict)
     end
 
     # calculate Storage o+m costs, incentives, and depreciation
-    if "Storage" in keys(d) && d["Storage"]["size_kw"] > 0
+    if "ElectricStorage" in keys(d) && d["Storage"]["size_kw"] > 0
         # TODO handle other types of storage
-        storage = p.s.storage_data["ElectricStorage"].raw_inputs
-        total_kw = d["Storage"]["size_kw"]
-        total_kwh = d["Storage"]["size_kwh"]
+        storage = p.s.storage_data[:ElectricStorage].raw_inputs
+        total_kw = d["ElectricStorage"]["size_kw"]
+        total_kwh = d["ElectricStorage"]["size_kwh"]
         capital_cost = total_kw * storage.installed_cost_per_kw + total_kwh * storage.installed_cost_per_kwh
         battery_replacement_year = storage.battery_replacement_year
         battery_replacement_cost = -1 * ((total_kw * storage.replace_cost_per_kw) + (
