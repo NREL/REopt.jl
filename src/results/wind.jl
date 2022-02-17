@@ -55,9 +55,13 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["lifecycle_om_cost"] = round(value(per_unit_size_om) * (1 - p.s.financial.owner_tax_pct), digits=0)
 	r["year_one_om_cost"] = round(value(per_unit_size_om) / (p.pwf_om * p.third_party_factor), digits=0)
 
-	prod_to_storage = @expression(m, [ts in p.time_steps],
-		sum(m[:dvProductionToStorage][b, t, ts] for b in p.storage.elec, t in p.techs.gen))
-	r["year_one_to_battery_series_kw"] = round.(value.(prod_to_storage), digits=3)
+	if !isempty(p.storage.elec)
+		prod_to_storage = @expression(m, [ts in p.time_steps],
+			sum(m[:dvProductionToStorage][b, t, ts] for b in p.storage.elec))
+		r["year_one_to_battery_series_kw"] = round.(value.(prod_to_storage), digits=3)
+	else
+		r["year_one_to_battery_series_kw"] = zeros(length(p.time_steps))
+	end
 
     r["year_one_to_grid_series_kw"] = zeros(size(r["year_one_to_battery_series_kw"]))
     r["average_annual_energy_exported_kwh"] = 0.0
