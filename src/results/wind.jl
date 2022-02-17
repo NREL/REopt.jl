@@ -58,10 +58,10 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	if !isempty(p.storage.elec)
 		prod_to_storage = @expression(m, [ts in p.time_steps],
 			sum(m[:dvProductionToStorage][b, t, ts] for b in p.storage.elec))
-		r["year_one_to_battery_series_kw"] = round.(value.(prod_to_storage), digits=3)
 	else
-		r["year_one_to_battery_series_kw"] = zeros(length(p.time_steps))
+		prod_to_storage = zeros(length(p.time_steps))
 	end
+	r["year_one_to_battery_series_kw"] = round.(value.(prod_to_storage), digits=3)
 
     r["year_one_to_grid_series_kw"] = zeros(size(r["year_one_to_battery_series_kw"]))
     r["average_annual_energy_exported_kwh"] = 0.0
