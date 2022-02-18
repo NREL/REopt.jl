@@ -27,6 +27,18 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+
+"""
+	get_inputs(m::JuMP.AbstractModel, fp::String)
+
+Return REoptInputs(s) where s is the `Scenario` defined in JSON file stored at the file path `fp`.
+"""
+function get_inputs(fp::String)
+	s = Scenario(JSON.parsefile(fp))
+	inputs = REoptInputs(s)
+	return s, inputs
+end
+
 """
 	run_reopt(m::JuMP.AbstractModel, fp::String)
 
