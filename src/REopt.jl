@@ -43,7 +43,8 @@ export
     MPCScenario,
     MPCInputs,
     run_mpc,
-    build_mpc!
+    build_mpc!,
+    get_inputs
 
 import HTTP
 import JSON
