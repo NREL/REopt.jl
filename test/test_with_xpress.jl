@@ -343,8 +343,8 @@ end
     @test results["PV"]["lcoe_per_kwh"] ≈ 0.0483 atol = 0.001
     @test results["Financial"]["lcc"] ≈ 1.240037e7 rtol=1e-5
     @test results["Financial"]["lcc_bau"] ≈ 12766397 rtol=1e-5
-    @test results["Storage"]["size_kw"] ≈ 55.9 atol=0.1
-    @test results["Storage"]["size_kwh"] ≈ 78.9 atol=0.1
+    @test results["ElectricStorage"]["size_kw"] ≈ 55.9 atol=0.1
+    @test results["ElectricStorage"]["size_kwh"] ≈ 78.9 atol=0.1
     proforma_npv = REopt.npv(results["Financial"]["offtaker_annual_free_cashflows"] - 
         results["Financial"]["offtaker_annual_free_cashflows_bau"], 0.081)
     @test results["Financial"]["npv"] ≈ proforma_npv rtol=0.0001
