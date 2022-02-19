@@ -272,10 +272,10 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
     batt_kwh = 0
     batt_kw = 0
     init_soc = []
-    if "Storage" in keys(d)
-        batt_kwh = get(d["Storage"], "size_kwh", 0)
-        batt_kw = get(d["Storage"], "size_kw", 0)
-        init_soc = get(d["Storage"], "year_one_soc_series_pct", [])
+    if "ElectricStorage" in keys(d)
+        batt_kwh = get(d["ElectricStorage"], "size_kwh", 0)
+        batt_kw = get(d["ElectricStorage"], "size_kw", 0)
+        init_soc = get(d["ElectricStorage"], "year_one_soc_series_pct", [])
     end
     if microgrid_only && !Bool(get(d, "storage_upgraded", false))
         batt_kwh = 0

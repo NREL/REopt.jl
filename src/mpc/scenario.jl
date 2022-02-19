@@ -58,7 +58,7 @@ The Dict `d` must have at a minimum the keys:
     - "ElectricTariff"
 Other options include:
     - "PV", which can contain a Dict or Dict[]
-    - "Storage"
+    - "ElectricStorage"
     - "Generator"
     - "ElectricUtility"
     - "Settings"
@@ -99,9 +99,9 @@ function MPCScenario(d::Dict)
         electric_utility = ElectricUtility()
     end
 
-    if haskey(d, "Storage")
+    if haskey(d, "ElectricStorage")
         # only modeling electrochemical storage so far
-        storage_dict = Dict(dictkeys_tosymbols(d["Storage"]))
+        storage_dict = Dict(dictkeys_tosymbols(d["ElectricStorage"]))
         storage = MPCStorage(storage_dict)
     else
         storage_dict = Dict(:size_kw => 0.0, :size_kwh => 0.0)
