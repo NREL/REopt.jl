@@ -1,7 +1,7 @@
-name = "REopt"
-uuid = "d36ad4e8-d74a-4f7a-ace1-eaea049febf6"
-authors = ["Nick Laws <nick.laws@nrel.gov>"]
-version = "0.12.4"
+name = "REopt_V1"
+uuid = "b85a6053-cf40-480e-8236-e072944217c8"
+authors = ["sericson0 <sericson0@gmail.com>"]
+version = "0.1.0"
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"

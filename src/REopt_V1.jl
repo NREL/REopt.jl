@@ -27,7 +27,7 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-module REopt
+module REopt_V1
 
 export
     Scenario,
@@ -61,6 +61,8 @@ import DelimitedFiles: readdlm
 const MOI = MathOptInterface
 using Shapefile
 using PolygonInbounds
+using LinearAlgebra
+using Statistics
 using Roots: fzero  # for IRR
 global hdl = nothing
 
@@ -83,6 +85,7 @@ include("core/electric_utility.jl")
 include("core/prodfactor.jl")
 include("core/urdb.jl")
 include("core/electric_tariff.jl")
+include("core/backup_reliability.jl")
 include("core/chp.jl")
 include("core/scenario.jl")
 include("core/bau_scenario.jl")

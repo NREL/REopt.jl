@@ -57,7 +57,7 @@ struct BackupReliability
     microgrid_only::Bool
 
     function BackupReliability(;
-        gen::Float64 = 0.9998,
+        gen_oa::Float64 = 0.9998,
         gen_fts::Float64 = 0.0066, 
         gen_ftr::Float64 = 0.00157,
         num_gens::Int = 0,

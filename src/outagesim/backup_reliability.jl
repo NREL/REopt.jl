@@ -27,7 +27,6 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-using LinearAlgebra
 Numeric = Union{Int, Float64}
 
 """
@@ -442,7 +441,10 @@ end
 #_____________________________________________________________________________________________________________________
 
 function return_backup_reliability(d::Dict, p::REoptInputs)
-    microgrid_only = p.s.microgrid_only
+    #TODO add microgrid_only boolian to scenario
+    # microgrid_only = p.s.microgrid_only
+
+    microgrid_only = false
 
     pv_kw_ac_hourly = zeros(length(p.time_steps))
     if "PV" in keys(d)
@@ -499,7 +501,6 @@ function return_backup_reliability(d::Dict, p::REoptInputs)
     gen_capacity = p.s.backup_reliability.gen_capacity
     num_battery_bins = p.s.backup_reliability.num_battery_bins
     microgrid_only = p.s.backup_reliability.microgrid_only
-    
     if gen_capacity < 0.1
         if num_gens <= 1
             gen_capacity = diesel_kw
@@ -510,7 +511,7 @@ function return_backup_reliability(d::Dict, p::REoptInputs)
     elseif num_gens == 0
         num_gens = ceil(Int, diesel_kw / gen_capacity)
     end
-
+    
     #No reliability calculations if no generators
     if gen_capacity < 0.1
         return []
@@ -537,7 +538,7 @@ function process_reliability_results(results, n_timeseteps, max_outage_duration)
     if results == []
         marginal_duration_means = zeros(max_outage_duration)
         marginal_duration_mins = zeros(max_outage_duration)
-        marginal_final_resilience_hourly = zeros(n_timeseteps)
+        marginal_final_resilience = zeros(n_timeseteps)
         cumulative_duration_means = zeros(max_outage_duration)
         cumulative_duration_mins = zeros(max_outage_duration)
         cumulative_final_resilience = zeros(n_timeseteps)
@@ -545,7 +546,7 @@ function process_reliability_results(results, n_timeseteps, max_outage_duration)
         marginal_results = results[1]
         cumulative_results = results[2]
         marginal_duration_means = mean(marginal_results, dims = 1)
-        marginal_duration_mins = minimum(max_outage_duration, dims = 1)
+        marginal_duration_mins = minimum(marginal_results, dims = 1)
         marginal_final_resilience = marginal_results[:, max_outage_duration]
         cumulative_duration_means = mean(cumulative_results, dims = 1)
         cumulative_duration_mins = minimum(cumulative_results, dims = 1)
@@ -562,10 +563,10 @@ function process_reliability_results(results, n_timeseteps, max_outage_duration)
     )
 end
 
-function backup_reliability(d::Dict, p::REoptInputs)
-    results = return_backup_reliability(d::Dict, p::REoptInputs)
-    return process_reliability_results(results, length(p.time_steps), p.s.backup_reliability.max_outage_duration)
-end
+# function backup_reliability(d::Dict, p::REoptInputs)
+#     results = return_backup_reliability(d::Dict, p::REoptInputs)
+#     return process_reliability_results(results, length(p.time_steps), p.s.backup_reliability.max_outage_duration)
+# end
 
 
 # function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diesel_min_turndown, batt_kwh, batt_kw,
