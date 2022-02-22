@@ -112,9 +112,9 @@ function BAUScenario(s::Scenario)
     hot_tes = HotThermalStorage(Dict(:max_gal => 0.0), s.financial)
     cold_tes = ColdThermalStorage(Dict(:max_gal => 0.0), s.financial)
     storage_data = Dict(
-        :ElectricStorage => elec_storage,
-        :HotThermalStorage => hot_tes,
-        :ColdThermalStorage => cold_tes
+        "ElectricStorage" => elec_storage,
+        "HotThermalStorage" => hot_tes,
+        "ColdThermalStorage" => cold_tes
     )
     
     t0, tf = s.electric_utility.outage_start_time_step, s.electric_utility.outage_end_time_step
