@@ -86,7 +86,7 @@ end
 
 struct ElecStorage <: AbstractStorage
     type::Symbol
-    raw_inputs::Dict{Symbol,AbstractStorage}
+    raw_inputs::AbstractStorage
     min_kw::Float64
     max_kw::Float64
     min_kwh::Float64
@@ -110,7 +110,7 @@ Construct ElecStorage struct from Dict with keys-val pairs from the
 """
 function ElecStorage(d::Dict, f::Financial)  
     s = eval(Meta.parse("ElectricStorage" * "(;$d...)"))
-    raw_inputs = Dict(:ElectricStorage => s)
+    raw_inputs = s
 
     d[:charge_efficiency] = s.rectifier_efficiency_pct * s.internal_efficiency_pct^0.5
     d[:discharge_efficiency] = s.inverter_efficiency_pct * s.internal_efficiency_pct^0.5

@@ -78,7 +78,7 @@ end
 
 struct HotThermalStorage <: AbstractStorage
     type::String
-    raw_inputs::Dict{String,AbstractStorage}
+    raw_inputs::AbstractStorage
     min_kw::Float64
     max_kw::Float64
     min_kwh::Float64
@@ -104,7 +104,7 @@ end
 """
 function HotThermalStorage(d::Dict, f::Financial)  
     s = eval(Meta.parse("HotStorage" * "(;$d...)"))
-    raw_inputs = Dict("HotThermalStorage" => s)
+    raw_inputs = s
 
     delta_T_degF = s.hot_water_temp_degF - s.cool_water_temp_degF
     avg_cp_kj_per_kgK = 998.2 
