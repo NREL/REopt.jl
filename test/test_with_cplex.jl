@@ -60,8 +60,8 @@ end
 
     @test results["PV"]["size_kw"] ≈ 217 atol=1
     @test results["Financial"]["lcc"] ≈ 1.240037e7 rtol=1e-5
-    @test results["Storage"]["size_kw"] ≈ 56 atol=1
-    @test results["Storage"]["size_kwh"] ≈ 79 atol=1
+    @test results["ElectricStorage"]["size_kw"] ≈ 56 atol=1
+    @test results["ElectricStorage"]["size_kwh"] ≈ 79 atol=1
 end
 
 

@@ -40,7 +40,7 @@ Storage results:
 - `year_one_to_load_series_kw` Vector of power used to meet load over the first year
 - `year_one_to_grid_series_kw` Vector of power exported to the grid over the first year
 """
-function add_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::Symbol; _n="")
+function add_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::String; _n="")
     r = Dict{String, Any}()
     r["size_kwh"] = round(value(m[Symbol("dvStorageEnergy"*_n)][b]), digits=2)
     r["size_kw"] = round(value(m[Symbol("dvStoragePower"*_n)][b]), digits=2)
@@ -56,19 +56,17 @@ function add_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::
         r["year_one_to_load_series_kw"] = []
     end
 
-    # TODO handle other storage type names
-    d["Storage"] = r
+    d[b] = r
     nothing
 end
 
 
-function add_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b::Symbol; _n="")
+function add_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b::String; _n="")
     r = Dict{String, Any}()
 
     soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
     r["soc_series_pct"] = round.(value.(soc) ./ p.s.storage_data[b].size_kwh, digits=3)
 
-    # TODO handle other storage types
-    d["Storage"] = r
+    d[b] = r
     nothing
 end
