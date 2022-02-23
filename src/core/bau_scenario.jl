@@ -59,7 +59,7 @@ struct BAUScenario <: AbstractScenario
     existing_chiller::Union{ExistingChiller, Nothing}
     outage_outputs::OutageOutputs
     flexible_hvac::Union{BAU_HVAC, Nothing}
-    storage_data::Dict{Symbol,AbstractStorage}
+    storage_data::Dict{String,AbstractStorage}
 end
 
 
