@@ -161,6 +161,8 @@ function fill_financial_storage_vals!(d::Dict, s::AbstractStorage, f::Financial,
         macrs_bonus_pct = s.macrs_bonus_pct,
         macrs_itc_reduction = s.macrs_itc_reduction
     )
+    
+    d[:installed_cost_per_kwh] -= s.total_rebate_per_kwh
 
 end
 
