@@ -85,7 +85,7 @@ Base.@kwdef struct ElectricStorage <: AbstractStorage
 end
 
 struct ElecStorage <: AbstractStorage
-    type::Symbol
+    type::String
     raw_inputs::AbstractStorage
     min_kw::Float64
     max_kw::Float64
@@ -124,7 +124,7 @@ function ElecStorage(d::Dict, f::Financial)
     fill_financial_storage_vals!(d, s, f, true)
 
     return ElecStorage(
-        :ElectricStorage,
+        "ElectricStorage",
         raw_inputs,
         s.min_kw,
         s.max_kw,

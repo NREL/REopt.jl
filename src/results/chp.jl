@@ -72,7 +72,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["year_one_to_grid_series_kw"] = round.(value.(CHPtoGrid), digits=3)
 	if !isempty(p.storage.elec)
 		@expression(m, CHPtoBatt[ts in p.time_steps],
-			sum(m[Symbol("dvProductionToStorage"*_n)][:ElectricStorage,t,ts] for t in p.techs.chp))
+			sum(m[Symbol("dvProductionToStorage"*_n)]["ElectricStorage",t,ts] for t in p.techs.chp))
 	else
 		CHPtoBatt = zeros(length(p.time_steps))
 	end
