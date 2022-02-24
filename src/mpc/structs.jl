@@ -270,15 +270,15 @@ end
 
 
 Base.@kwdef struct MPCStorage
-    types::Array{Symbol,1} = [:ElectricStorage]
-    size_kw::Dict{Symbol, Float64}
-    size_kwh::Dict{Symbol, Float64}
-    charge_efficiency::Dict{Symbol, Float64} = Dict(:ElectricStorage => 0.96 * 0.975^2)
-    discharge_efficiency::Dict{Symbol, Float64} = Dict(:ElectricStorage => 0.96 * 0.975^2)
-    soc_min_pct::Dict{Symbol, Float64} = Dict(:ElectricStorage => 0.2)
-    soc_init_pct::Dict{Symbol, Float64} = Dict(:ElectricStorage => 0.5)
-    can_grid_charge::Array{Symbol,1} = [:ElectricStorage]
-    grid_charge_efficiency::Dict{Symbol, Float64} = Dict(:ElectricStorage => 0.96 * 0.975^2)
+    type::String = "ElectricStorage"
+    size_kw::Float64
+    size_kwh::Float64
+    charge_efficiency::Float64 =  0.96 * 0.975^2
+    discharge_efficiency::Float64 =  0.96 * 0.975^2
+    soc_min_pct::Float64 = 0.2
+    soc_init_pct::Float64 = 0.5
+    can_grid_charge::Bool = true
+    grid_charge_efficiency::Float64 = 0.96 * 0.975^2
 end
 
 
@@ -287,18 +287,18 @@ end
 NOTE: d must have symbolic keys
 """
 function MPCStorage(d::Dict)
-    d2 = Dict()
-    d2[:can_grid_charge] = get(d, :can_grid_charge, false) ? [:ElectricStorage] : Symbol[]
-    if haskey(d, :can_grid_charge)
-        pop!(d, :can_grid_charge)
-    end
-    # have to convert to all d values to DenseAxisArray's with storage type as Axis
-    # (only modeling elec storage in MPC for now)
-    for (k,v) in d
-        d2[k] = Dict(:ElectricStorage => convert(Float64, v))
-    end
-
-    return MPCStorage(; d2...)
+    s = eval(Meta.parse("MPCElecStorage" * "(;$d...)"))
+    return MPCStorage(
+        "ElectricStorage",
+        s.size_kw,
+        s.size_kwh,
+        s.charge_efficiency,
+        s.discharge_efficiency,
+        s.soc_min_pct,
+        s.soc_init_pct,
+        s.can_grid_charge,
+        s.grid_charge_efficiency
+    )
 end
 
 
