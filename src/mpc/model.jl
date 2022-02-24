@@ -66,7 +66,7 @@ function run_mpc(m::JuMP.AbstractModel, p::MPCInputs)
     if !p.s.settings.add_soc_incentive
 		@objective(m, Min, m[:Costs])
 	else # Keep SOC high
-		@objective(m, Min, m[:Costs] - sum(m[:dvStoredEnergy][:ElectricStorage, ts] for ts in p.time_steps) /
+		@objective(m, Min, m[:Costs] - sum(m[:dvStoredEnergy]["ElectricStorage", ts] for ts in p.time_steps) /
 									   (8760. / p.hours_per_timestep)
 		)
 	end
@@ -264,8 +264,8 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 
     m[:dvSize] = p.existing_sizes
 
-    m[:dvStoragePower] = p.s.storage_data[:ElectricStorage].size_kw
-    m[:dvStorageEnergy] = p.s.storage_data[:ElectricStorage].size_kwh
+    m[:dvStoragePower] = p.s.storage_data["ElectricStorage"].size_kw
+    m[:dvStorageEnergy] = p.s.storage_data["ElectricStorage"].size_kwh
     # not modeling min charges since control does not affect them
     m[:MinChargeAdder] = 0
 
