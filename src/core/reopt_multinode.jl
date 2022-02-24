@@ -255,7 +255,7 @@ function add_objective!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 		@objective(m, Min, sum(m[Symbol(string("Costs_", p.s.site.node))] for p in ps))
 	else # Keep SOC high
 		@objective(m, Min, sum(m[Symbol(string("Costs_", p.s.site.node))] for p in ps)
-        - sum(sum(m[Symbol(string("dvStoredEnergy_", p.s.site.node))][:ElectricStorage, ts] 
+        - sum(sum(m[Symbol(string("dvStoredEnergy_", p.s.site.node))]["ElectricStorage", ts] 
             for ts in p.time_steps) for p in ps) / (8760. / ps[1].hours_per_timestep))
 	end  # TODO need to handle different hours_per_timestep?
 	nothing
