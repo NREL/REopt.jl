@@ -1,5 +1,8 @@
 # REopt Changelog
 
+## develop
+- fix bugs for time_steps_per_hour != 1
+
 ## v0.12.4
 - rm "Lite" from docs
 - prioritize `urdb_response` over `urdb_label` in `ElectricTariff`
