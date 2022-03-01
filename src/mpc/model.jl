@@ -197,7 +197,9 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		add_dv_UnservedLoad_constraints(m,p)
 		add_outage_cost_constraints(m,p)
 		add_MG_production_constraints(m,p)
-		add_MG_storage_dispatch_constraints(m,p)
+		if !isempty(p.storage.elec)	
+			add_MG_storage_dispatch_constraints(m,p)
+		end
 		add_cannot_have_MG_with_only_PVwind_constraints(m,p)
 		add_MG_size_constraints(m,p)
 		
