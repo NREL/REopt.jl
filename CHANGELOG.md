@@ -1,6 +1,7 @@
 # REopt Changelog
 
-## dev
+## develop
+- fix bugs for time_steps_per_hour != 1
 - add FlexibleHVAC model
 
 ## v0.12.4
