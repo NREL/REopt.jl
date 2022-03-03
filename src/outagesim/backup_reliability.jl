@@ -193,7 +193,7 @@ Return a vector of number of bins battery is shifted by
 - `batt_discharge_efficiency::Numeric`: batt_discharge_efficiency = battery_discharge / battery_reduction_in_soc
 
 """
-function battery_bin_shift(;excess_generation::Vector, bin_size::Numeric, batt_kw::Numeric,
+function battery_bin_shift(excess_generation::Vector, bin_size::Numeric, batt_kw::Numeric,
                                 batt_charge_efficiency::Numeric, batt_discharge_efficiency::Numeric)::Vector{Int} 
     #Determines how many battery bins to shift by
     #Lose energy charging battery and use more energy discharging battery
@@ -218,7 +218,7 @@ Updates ``gen_battery_prob_matrix`` in place to account for change in battery st
 
 shifts probabiilities in column i by ``shift_vector``[i] positions, accounting for accumulation at 0 or full soc   
 """
-function shift_gen_battery_prob_matrix!(;gen_battery_prob_matrix::Matrix, shift_vector::Vector{Int})
+function shift_gen_battery_prob_matrix!(;gen_battery_prob_matrix::Matrix, shift_vector::Vector)
     M = size(gen_battery_prob_matrix, 1)
 
     for i in 1:length(shift_vector) 
