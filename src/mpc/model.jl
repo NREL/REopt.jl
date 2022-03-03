@@ -254,8 +254,8 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 		dvDischargeFromStorage[p.storage.all, p.time_steps] >= 0 # Power discharged from storage system b [kW]
 		dvGridToStorage[p.storage.elec, p.time_steps] >= 0 # Electrical power delivered to storage by the grid [kW]
 		dvStoredEnergy[p.storage.all, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
-		# dvStoragePower[p.storage.all] >= 0   # Power capacity of storage system b [kW]
-		# dvStorageEnergy[p.storage.all] >= 0   # Energy capacity of storage system b [kWh]
+		dvStoragePower[p.storage.all] >= 0   # Power capacity of storage system b [kW]
+		dvStorageEnergy[p.storage.all] >= 0   # Energy capacity of storage system b [kWh]
 		dvPeakDemandTOU[p.ratchets, 1:1] >= 0  # Peak electrical power demand during ratchet r [kW]
 		dvPeakDemandMonth[p.months] >= 0  # Peak electrical power demand during month m [kW]
 		# MinChargeAdder >= 0
@@ -268,9 +268,12 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 
     m[:dvSize] = p.existing_sizes
 
-    m[:dvStoragePower] = p.s.storage_data["ElectricStorage"].size_kw
-    m[:dvStorageEnergy] = p.s.storage_data["ElectricStorage"].size_kwh
-    # not modeling min charges since control does not affect them
+	for b in p.storage.all
+		fix(m[:dvStoragePower][b], p.s.storage_data["ElectricStorage"].size_kw, force=true)
+		fix(m[:dvStorageEnergy][b], p.s.storage_data["ElectricStorage"].size_kwh, force=true)
+	end
+
+	# not modeling min charges since control does not affect them
     m[:MinChargeAdder] = 0
 
 	if !isempty(p.techs.gen)  # Problem becomes a MILP
