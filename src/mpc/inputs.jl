@@ -31,6 +31,7 @@
 struct MPCInputs <: AbstractInputs
     s::MPCScenario
     techs::Techs
+    storage::Storage
     existing_sizes::DenseAxisArray{Float64, 1}  # (techs.all)
     time_steps::UnitRange
     time_steps_with_grid::Array{Int, 1}
@@ -60,6 +61,7 @@ function MPCInputs(s::MPCScenario)
     time_steps = 1:length(s.electric_load.loads_kw)
     hours_per_timestep = 1 / s.settings.time_steps_per_hour
     techs, production_factor, existing_sizes = setup_tech_inputs(s)
+    storage = Storage(s)
     months = 1:length(s.electric_tariff.monthly_demand_rates)
 
     techs_by_exportbin = DenseAxisArray([ techs.all, techs.all, techs.all], s.electric_tariff.export_bins)
@@ -81,6 +83,7 @@ function MPCInputs(s::MPCScenario)
     MPCInputs(
         s,
         techs,
+        storage,
         existing_sizes,
         time_steps,
         time_steps_with_grid,

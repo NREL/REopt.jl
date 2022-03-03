@@ -36,6 +36,7 @@ struct MPCScenario <: AbstractScenario
     electric_utility::ElectricUtility
     financial::MPCFinancial
     generator::MPCGenerator
+    storage_data::Dict{String, MPCStorage}
 end
 
 
@@ -107,6 +108,7 @@ function MPCScenario(d::Dict)
         storage_dict = Dict(:size_kw => 0.0, :size_kwh => 0.0)
         storage = MPCStorage(storage_dict)
     end
+    storage_data = Dict("ElectricStorage" => storage)
 
     electric_load = MPCElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...)
 
@@ -126,6 +128,7 @@ function MPCScenario(d::Dict)
         electric_load, 
         electric_utility, 
         financial,
-        generator
+        generator,
+        storage_data
     )
 end
