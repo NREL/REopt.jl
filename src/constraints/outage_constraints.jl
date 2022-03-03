@@ -219,6 +219,23 @@ function add_MG_storage_dispatch_constraints(m,p)
 end
 
 
+function fix_MG_storage_variables(m, p)
+    fix(m[:dvMGStorageUpgradeCost], 0.0, force=true)
+    fix(m[:binMGStorageUsed], 0, force=true)
+    for s in p.s.electric_utility.scenarios
+        for tz in p.s.electric_utility.outage_start_timesteps
+            for ts in p.s.electric_utility.outage_timesteps
+                fix(m[:dvMGDischargeFromStorage][s, tz, ts], 0.0, force=true)
+                fix(m[:dvMGStoredEnergy][s, tz, ts], 0.0, force=true)
+                for t in p.techs.elec
+                    fix(m[:dvMGProductionToStorage][t, s, tz, ts], 0.0, force=true)
+                end
+            end
+        end
+    end
+end
+
+
 function add_cannot_have_MG_with_only_PVwind_constraints(m, p)
     renewable_techs = setdiff(p.techs.elec, p.techs.gen)
     # can't "turn down" renewable_techs
