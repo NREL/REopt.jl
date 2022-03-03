@@ -95,19 +95,9 @@ function Storage(s::MPCScenario)
     hot_storage = String[]
     cold_storage = String[]
 
-    if s.elec_storage.max_kw > 0.0 && s.elec_storage.max_kwh > 0.0
+    if s.storage.size_kw > 0.0 && s.storage.size_kwh > 0.0
         push!(all_storage, "ElectricStorage")
         push!(elec_storage, "ElectricStorage")
-    end
-
-    if s.hot_tes.max_kw > 0.0 && s.hot_tes.max_kwh > 0.0
-        push!(all_storage, "HotThermalStorage")
-        push!(hot_storage, "HotThermalStorage")
-    end
-
-    if s.cold_tes.max_kw > 0.0 && s.cold_tes.max_kwh > 0.0
-        push!(all_storage, "ColdThermalStorage")
-        push!(cold_storage, "ColdThermalStorage")
     end
 
     thermal_storage = union(hot_storage, cold_storage)
