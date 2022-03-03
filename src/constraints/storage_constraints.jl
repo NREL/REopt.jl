@@ -114,7 +114,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
     )
 					
     # Remove grid-to-storage as an option if option to grid charge is turned off
-    if p.s.storage_data[b].can_grid_charge
+    if !(p.s.storage_data[b].can_grid_charge)
         for ts in p.time_steps_with_grid
             fix(m[Symbol("dvGridToStorage"*_n)][b, ts], 0.0, force=true)
         end
