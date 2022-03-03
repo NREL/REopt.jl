@@ -97,7 +97,7 @@ function add_pv_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
         r = Dict{String, Any}()
 
 		# NOTE: must use anonymous expressions in this loop to overwrite values for cases with multiple PV
-		if !isempty(p.s.storage.elec) 
+		if !isempty(p.storage.elec) 
 			PVtoBatt = (sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.storage.elec) for ts in p.time_steps)
             PVtoBatt = round.(value.(PVtoBatt), digits=3)
 		else
