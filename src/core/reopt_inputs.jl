@@ -355,7 +355,8 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
     roof_max_kw, land_max_kw = 1.0e5, 1.0e5
 
     for pv in s.pvs
-        production_factor[pv.name, :] = prodfactor(pv, s.site.latitude, s.site.longitude)
+        production_factor[pv.name, :] = prodfactor(pv, s.site.latitude, s.site.longitude; 
+            time_steps_per_hour=s.settings.time_steps_per_hour)
         for location in pvlocations
             if pv.location == location
                 pv_to_location[pv.name][location] = 1
