@@ -16,8 +16,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 		"dvStorageEnergy",
 	]
 	dvs_idx_on_storagetypes_timesteps = String[
-		"dvDischargeFromStorage",
-		"dvGridToStorage",
+		"dvDischargeFromStorage"
 	]
 	for p in ps
 		_n = string("_", p.s.site.node)
@@ -38,8 +37,11 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 
 		for dv in dvs_idx_on_storagetypes_timesteps
 			x = dv*_n
-			m[Symbol(x)] = @variable(m, [p.storage.elec, p.time_steps], base_name=x, lower_bound=0)
+			m[Symbol(x)] = @variable(m, [p.storage.all, p.time_steps], base_name=x, lower_bound=0)
 		end
+
+		dv = "dvGridToStorage"*_n
+		m[Symbol(dv)] = @variable(m, [p.storage.elec, p.time_steps], base_name=dv, lower_bound=0)
 
 		dv = "dvGridPurchase"*_n
 		m[Symbol(dv)] = @variable(m, [p.time_steps], base_name=dv, lower_bound=0)
@@ -51,10 +53,10 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 		m[Symbol(dv)] = @variable(m, [p.months, 1], base_name=dv, lower_bound=0)
 
 		dv = "dvProductionToStorage"*_n
-		m[Symbol(dv)] = @variable(m, [p.storage.elec, p.techs.all, p.time_steps], base_name=dv, lower_bound=0)
+		m[Symbol(dv)] = @variable(m, [p.storage.all, p.techs.all, p.time_steps], base_name=dv, lower_bound=0)
 
 		dv = "dvStoredEnergy"*_n
-		m[Symbol(dv)] = @variable(m, [p.storage.elec, 0:p.time_steps[end]], base_name=dv, lower_bound=0)
+		m[Symbol(dv)] = @variable(m, [p.storage.all, 0:p.time_steps[end]], base_name=dv, lower_bound=0)
 
 		dv = "MinChargeAdder"*_n
 		m[Symbol(dv)] = @variable(m, base_name=dv, lower_bound=0)
@@ -194,13 +196,13 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
                 @constraint(m, [ts in p.time_steps], m[Symbol("dvGridToStorage"*_n)][b, ts] == 0)
             else
                 add_storage_size_constraints(m, p, b; _n=_n)
-                add_general_storage_dispatch_constraints(m, p, b)
+                add_general_storage_dispatch_constraints(m, p, b; _n=_n)
 				if b in p.storage.elec
-					add_elec_storage_dispatch_constraints(m, p, b)
+					add_elec_storage_dispatch_constraints(m, p, b; _n=_n)
 				elseif b in p.storage.hot_tes
-					add_hot_thermal_storage_dispatch_constraints(m, p, b)
+					add_hot_thermal_storage_dispatch_constraints(m, p, b; _n=_n)
 				elseif b in p.storage.cold_tes
-					add_cold_thermal_storage_dispatch_constraints(m, p, b)
+					add_cold_thermal_storage_dispatch_constraints(m, p, b; _n=_n)
 				else
 					@error("Invalid storage does not fall in a thermal or electrical set")
 				end
@@ -255,8 +257,8 @@ function add_objective!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 		@objective(m, Min, sum(m[Symbol(string("Costs_", p.s.site.node))] for p in ps))
 	else # Keep SOC high
 		@objective(m, Min, sum(m[Symbol(string("Costs_", p.s.site.node))] for p in ps)
-        - sum(sum(m[Symbol(string("dvStoredEnergy_", p.s.site.node))]["ElectricStorage", ts] 
-            for ts in p.time_steps) for p in ps) / (8760. / ps[1].hours_per_timestep))
+        - sum(sum(sum(m[Symbol(string("dvStoredEnergy_", p.s.site.node))][b, ts] 
+            for ts in p.time_steps) for b in p.storage.elec) for p in ps) / (8760. / ps[1].hours_per_timestep))
 	end  # TODO need to handle different hours_per_timestep?
 	nothing
 end
