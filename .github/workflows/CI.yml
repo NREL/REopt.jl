@@ -18,7 +18,8 @@ jobs:
           version: ${{ matrix.julia-version }}
       - uses: julia-actions/julia-buildpkg@latest
       # - uses: mxschmitt/action-tmate@v3  # for interactive debugging
-      - uses: julia-actions/julia-runtest@latest
+      - run: julia --project=. -e 'using Pkg; Pkg.test()'
+        shell: bash
 
   xpresstests:
       runs-on: ubuntu-18.04
