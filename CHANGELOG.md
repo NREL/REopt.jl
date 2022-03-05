@@ -2,7 +2,8 @@
 
 ## develop
 - fix bugs for time_steps_per_hour != 1
-- add FlexibleHVAC model
+- add FlexibleHVAC model (still testing)
+- start thermal energy storage modeling
 
 ## v0.12.4
 - rm "Lite" from docs
