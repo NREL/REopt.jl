@@ -52,11 +52,6 @@ function add_storage_size_constraints(m, p, b; _n="")
 end
 
 
-function add_storage_power_constraints(m, p, b; _n="")
-
-end
-
-
 function add_general_storage_dispatch_constraints(m, p, b; _n="")
     # Constraint (4a): initial state of charge
 	@constraint(m,

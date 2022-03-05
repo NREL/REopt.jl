@@ -4,6 +4,8 @@
 - fix bugs for time_steps_per_hour != 1
 - add FlexibleHVAC model (still testing)
 - start thermal energy storage modeling
+- refactor `Storage` as `ElectricStorage`
+- add `ExistingBoiler` and `ExistingChiller`
 
 ## v0.12.4
 - rm "Lite" from docs
