@@ -243,62 +243,32 @@ end
 
 
 """
-    MPCElecStorage
+    MPCElectricStorage
+
 ```julia
-Base.@kwdef struct MPCElecStorage
+Base.@kwdef struct MPCElectricStorage < AbstractElectricStorage
     size_kw::Float64
     size_kwh::Float64
-    charge_efficiency::Float64
-    discharge_efficiency::Float64
-    soc_min_pct::Float64
-    soc_init_pct::Float64
+    charge_efficiency::Float64 =  0.96 * 0.975^2
+    discharge_efficiency::Float64 =  0.96 * 0.975^2
+    soc_min_pct::Float64 = 0.2
+    soc_init_pct::Float64 = 0.5
     can_grid_charge::Bool = true
-    grid_charge_efficiency::Float64
+    grid_charge_efficiency::Float64 = 0.96 * 0.975^2
 end
 ```
 """
-Base.@kwdef struct MPCElecStorage
+Base.@kwdef struct MPCElectricStorage <: AbstractElectricStorage
     size_kw::Float64
     size_kwh::Float64
-    charge_efficiency::Float64 =  0.96 * 0.975^2
-    discharge_efficiency::Float64 =  0.96 * 0.975^2
+    charge_efficiency::Float64 = 0.96 * 0.975^2
+    discharge_efficiency::Float64 = 0.96 * 0.975^2
     soc_min_pct::Float64 = 0.2
     soc_init_pct::Float64 = 0.5
     can_grid_charge::Bool = true
     grid_charge_efficiency::Float64 = 0.96 * 0.975^2
-end
-
-
-Base.@kwdef struct MPCStorage
-    type::String = "ElectricStorage"
-    size_kw::Float64
-    size_kwh::Float64
-    charge_efficiency::Float64 =  0.96 * 0.975^2
-    discharge_efficiency::Float64 =  0.96 * 0.975^2
-    soc_min_pct::Float64 = 0.2
-    soc_init_pct::Float64 = 0.5
-    can_grid_charge::Bool = true
-    grid_charge_efficiency::Float64 = 0.96 * 0.975^2
-end
-
-
-"""
-
-NOTE: d must have symbolic keys
-"""
-function MPCStorage(d::Dict)
-    s = eval(Meta.parse("MPCElecStorage" * "(;$d...)"))
-    return MPCStorage(
-        "ElectricStorage",
-        s.size_kw,
-        s.size_kwh,
-        s.charge_efficiency,
-        s.discharge_efficiency,
-        s.soc_min_pct,
-        s.soc_init_pct,
-        s.can_grid_charge,
-        s.grid_charge_efficiency
-    )
+    max_kw::Float64 = size_kw
+    max_kwh::Float64 = size_kwh
 end
 
 

@@ -46,7 +46,7 @@ Method for creating the MPCScenario struct:
     struct MPCScenario <: AbstractScenario
         settings::Settings
         pvs::Array{MPCPV, 1}
-        storage::MPCStorage
+        storage::Storage
         electric_tariff::MPCElectricTariff
         electric_load::MPCElectricLoad
         electric_utility::ElectricUtility
@@ -105,7 +105,7 @@ function MPCScenario(d::Dict)
     else
         storage_dict = Dict(:size_kw => 0.0, :size_kwh => 0.0)
     end
-    storage = Storage(Dict("ElectricStorage" => MPCStorage(storage_dict)))
+    storage = Storage(Dict{String, AbstractStorage}("ElectricStorage" => MPCElectricStorage(; storage_dict...)))
 
     electric_load = MPCElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...)
 
