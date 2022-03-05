@@ -34,7 +34,6 @@ Create a REoptInputs for the Business As Usual scenario.
 function BAUInputs(p::REoptInputs)
     bau_scenario = BAUScenario(p.s)
     techs = Techs(p, bau_scenario)
-    storage = Storage(p, bau_scenario)
 
     boiler_efficiency = Dict{String, Float64}()
 
@@ -126,7 +125,6 @@ function BAUInputs(p::REoptInputs)
     REoptInputs(
         bau_scenario,
         techs,
-        storage,
         min_sizes,
         max_sizes,
         existing_sizes,
