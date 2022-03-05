@@ -32,30 +32,35 @@ function add_storage_size_constraints(m, p, b; _n="")
 
 	# Constraint (4b)-1: Lower bound on Storage Energy Capacity
 	@constraint(m,
-        m[Symbol("dvStorageEnergy"*_n)][b] >= p.s.storage_data[b].min_kwh
+        m[Symbol("dvStorageEnergy"*_n)][b] >= p.s.storage.attr[b].min_kwh
     )
 
 	# Constraint (4b)-2: Upper bound on Storage Energy Capacity
 	@constraint(m,
-        m[Symbol("dvStorageEnergy"*_n)][b] <= p.s.storage_data[b].max_kwh
+        m[Symbol("dvStorageEnergy"*_n)][b] <= p.s.storage.attr[b].max_kwh
     )
 
 	# Constraint (4c)-1: Lower bound on Storage Power Capacity
 	@constraint(m,
-        m[Symbol("dvStoragePower"*_n)][b] >= p.s.storage_data[b].min_kw
+        m[Symbol("dvStoragePower"*_n)][b] >= p.s.storage.attr[b].min_kw
     )
 
 	# Constraint (4c)-2: Upper bound on Storage Power Capacity
 	@constraint(m,
-        m[Symbol("dvStoragePower"*_n)][b] <= p.s.storage_data[b].max_kw
+        m[Symbol("dvStoragePower"*_n)][b] <= p.s.storage.attr[b].max_kw
     )
+end
+
+
+function add_storage_power_constraints(m, p, b; _n="")
+
 end
 
 
 function add_general_storage_dispatch_constraints(m, p, b; _n="")
     # Constraint (4a): initial state of charge
 	@constraint(m,
-        m[Symbol("dvStoredEnergy"*_n)][b, 0] == p.s.storage_data[b].soc_init_pct * m[Symbol("dvStorageEnergy"*_n)][b]
+        m[Symbol("dvStoredEnergy"*_n)][b, 0] == p.s.storage.attr[b].soc_init_pct * m[Symbol("dvStorageEnergy"*_n)][b]
     )
 
     #Constraint (4n): State of charge upper bound is storage system size
@@ -65,7 +70,7 @@ function add_general_storage_dispatch_constraints(m, p, b; _n="")
 
     # Constraint (4j): Minimum state of charge
 	@constraint(m, [ts in p.time_steps],
-        m[Symbol("dvStoredEnergy"*_n)][b, ts] >= p.s.storage_data[b].soc_min_pct * m[Symbol("dvStorageEnergy"*_n)][b]
+        m[Symbol("dvStoredEnergy"*_n)][b, ts] >= p.s.storage.attr[b].soc_min_pct * m[Symbol("dvStorageEnergy"*_n)][b]
     )
 
     #Constraint (4j): Dispatch from storage is no greater than power capacity
@@ -81,17 +86,17 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
 	# Constraint (4g): state-of-charge for electrical storage - with grid
 	@constraint(m, [ts in p.time_steps_with_grid],
         m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_timestep * (  
-            sum(p.s.storage_data[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) 
-            + p.s.storage_data[b].grid_charge_efficiency * m[Symbol("dvGridToStorage"*_n)][b, ts] 
-            - m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.s.storage_data[b].discharge_efficiency
+            sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) 
+            + p.s.storage.attr[b].grid_charge_efficiency * m[Symbol("dvGridToStorage"*_n)][b, ts] 
+            - m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.s.storage.attr[b].discharge_efficiency
         )
 	)
 
 	# Constraint (4h): state-of-charge for electrical storage - no grid
 	@constraint(m, [ts in p.time_steps_without_grid],
         m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_timestep * (  
-            sum(p.s.storage_data[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.elec) 
-            - m[Symbol("dvDischargeFromStorage"*_n)][b, ts] / p.s.storage_data[b].discharge_efficiency
+            sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.elec) 
+            - m[Symbol("dvDischargeFromStorage"*_n)][b, ts] / p.s.storage.attr[b].discharge_efficiency
         )
     )
 
@@ -114,7 +119,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
     )
 					
     # Remove grid-to-storage as an option if option to grid charge is turned off
-    if !(p.s.storage_data[b].can_grid_charge)
+    if !(p.s.storage.attr[b].can_grid_charge)
         for ts in p.time_steps_with_grid
             fix(m[Symbol("dvGridToStorage"*_n)][b, ts], 0.0, force=true)
         end
@@ -122,19 +127,88 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
 end
 
 function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
+
+    # # Constraint (4f)-1: (Hot) Thermal production sent to storage or grid must be less than technology's rated production
+	# # Constraint (4f)-1a: BoilerTechs
+	# if !isempty(p.BoilerTechs)
+	# 	if !isempty(p.SteamTurbineTechs)
+    #         @constraint(m, BoilerTechProductionFlowCon[b in p.HotTES, t in p.BoilerTechs, ts in p.time_steps],
+    #                 m[:dvProductionToStorage][b,t,ts] + m[:dvThermalToSteamTurbine][t,ts]  <=
+    #                 p.ProductionFactor[t,ts] * m[:dvThermalProduction][t,ts]
+    #                 )
+    #     else
+    #         @constraint(m, BoilerTechProductionFlowCon[b in p.HotTES, t in p.BoilerTechs, ts in p.time_steps],
+    #                 m[:dvProductionToStorage][b,t,ts]  <=
+    #                 p.ProductionFactor[t,ts] * m[:dvThermalProduction][t,ts]
+    #                 )
+    #     end
+    # end
+
+    # # Constraint (4f)-1b: SteamTurbineTechs
+	# if !isempty(p.SteamTurbineTechs)
+	# 	@constraint(m, SteamTurbineTechProductionFlowCon[b in p.HotTES, t in p.SteamTurbineTechs, ts in p.time_steps],
+	# 		m[:dvProductionToStorage][b,t,ts] <= 
+	# 		p.ProductionFactor[t,ts] * m[:dvThermalProduction][t,ts]
+	# 		)
+	# end
+
+    # # Constraint (4g): CHP Thermal production sent to storage or grid must be less than technology's rated production
+	# if !isempty(p.CHPTechs)
+	# 	if !isempty(p.SteamTurbineTechs)
+    #         @constraint(m, CHPTechProductionFlowCon[b in p.HotTES, t in p.CHPTechs, ts in p.time_steps],
+    #                 m[:dvProductionToStorage][b,t,ts] + m[:dvProductionToWaste][t,ts] + m[:dvThermalToSteamTurbine][t,ts] <=
+    #                 m[:dvThermalProduction][t,ts]
+    #                 )
+    #     else
+    #         @constraint(m, CHPTechProductionFlowCon[b in p.HotTES, t in p.CHPTechs, ts in p.time_steps],
+    #                 m[:dvProductionToStorage][b,t,ts] + m[:dvProductionToWaste][t,ts] <=
+    #                 m[:dvThermalProduction][t,ts]
+    #                 )
+    #     end
+	# end
+
+    # Constraint (4j)-1: Reconcile state-of-charge for (hot) thermal storage
+	@constraint(m, [b in p.storage.types.hot, ts in p.time_steps],
+    m[:dvStorageSOC][b,ts] == m[:dvStorageSOC][b,ts-1] + p.time_stepsScaling * (
+        sum(p.ChargeEfficiency[t,b] * m[:dvProductionToStorage][b,t,ts] for t in p.HeatingTechs) -
+        m[:dvDischargeFromStorage][b,ts] / p.s.storage.attr[b].DischargeEfficiency[b] -
+        p.s.storage.attr[b].DecayRate * m[:dvStorageEnergy][b]
+        )
+    )
     
     #Constraint (4n)-1: Dispatch to and from thermal storage is no greater than power capacity
-	@constraint(m, DischargeLEQCapHotCon[b in p.storage.hot_tes, ts in p.TimeStep],
-        m[:dvStorageCapPower][b] >= m[:dvDischargeFromStorage][b,ts] + sum(m[:dvProductionToStorage][b,t,ts] for t in p.HeatingTechs)
+	@constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
+        m[:dvStoragePower][b] >= 
+        m[:dvDischargeFromStorage][b,ts] + 
+        sum(m[:dvProductionToStorage][b,t,ts] for t in p.HeatingTechs)
     )
+    # TODO missing thermal storage constraints from API ???
 
 end
 
 function add_cold_thermal_storage_dispatch_constraints(m, p, b; _n="")
 
+    # # Constraint (4f)-2: (Cold) Thermal production sent to storage or grid must be less than technology's rated production
+	# if !isempty(p.CoolingTechs)
+	# 	@constraint(m, CoolingTechProductionFlowCon[b in p.ColdTES, t in p.CoolingTechs, ts in p.time_steps],
+    # 	        m[:dvProductionToStorage][b,t,ts]  <=
+	# 			p.ProductionFactor[t,ts] * m[:dvThermalProduction][t,ts]
+	# 			)
+	# end
+
+    # # Constraint (4j)-2: Reconcile state-of-charge for (cold) thermal storage
+	# @constraint(m, ColdTESInventoryCon[b in p.ColdTES, ts in p.time_steps],
+    # m[:dvStorageSOC][b,ts] == m[:dvStorageSOC][b,ts-1] + p.time_stepsScaling * (
+    #     sum(p.ChargeEfficiency[t,b] * m[:dvProductionToStorage][b,t,ts] for t in p.CoolingTechs) -
+    #     m[:dvDischargeFromStorage][b,ts]/p.DischargeEfficiency[b] -
+    #     p.s.storage.typesDecayRate[b] * m[:dvStorageEnergy][b]
+    #     )
+    # )
+
     #Constraint (4n)-2: Dispatch to and from thermal storage is no greater than power capacity
-    @constraint(m, DischargeLEQCapColdCon[b in p.storage.cold_tes, ts in p.TimeStep],
-        m[:dvStorageCapPower][b] >= m[:dvDischargeFromStorage][b,ts] + sum(m[:dvProductionToStorage][b,t,ts] for t in p.CoolingTechs)
+    @constraint(m, [b in p.s.storage.types.cold, ts in p.time_steps],
+        m[:dvStoragePower][b] >= m[:dvDischargeFromStorage][b,ts] + 
+        sum(m[:dvProductionToStorage][b,t,ts] for t in p.CoolingTechs)
     )
 end
 
@@ -143,6 +217,6 @@ function add_storage_sum_constraints(m, p; _n="")
 	##Constraint (8c): Grid-to-storage no greater than grid purchases 
 	@constraint(m, [ts in p.time_steps_with_grid],
       sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) >= 
-      sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.elec)
+      sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec)
     )
 end

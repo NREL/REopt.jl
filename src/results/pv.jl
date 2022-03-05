@@ -54,8 +54,8 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 		r["size_kw"] = round(value(m[Symbol("dvSize"*_n)][t]), digits=4)
 
 		# NOTE: must use anonymous expressions in this loop to overwrite values for cases with multiple PV
-		if !isempty(p.storage.elec)
-			PVtoBatt = (sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.storage.elec) for ts in p.time_steps)
+		if !isempty(p.s.storage.types.elec)
+			PVtoBatt = (sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) for ts in p.time_steps)
 		else
 			PVtoBatt = repeat([0], length(p.time_steps))
 		end
@@ -97,8 +97,8 @@ function add_pv_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
         r = Dict{String, Any}()
 
 		# NOTE: must use anonymous expressions in this loop to overwrite values for cases with multiple PV
-		if !isempty(p.storage.elec) 
-			PVtoBatt = (sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.storage.elec) for ts in p.time_steps)
+		if !isempty(p.s.storage.types.elec) 
+			PVtoBatt = (sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) for ts in p.time_steps)
             PVtoBatt = round.(value.(PVtoBatt), digits=3)
 		else
 			PVtoBatt = zeros(length(p.time_steps))

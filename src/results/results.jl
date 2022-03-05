@@ -35,8 +35,8 @@ Create a dictionary of results with string keys for each Scenario structure mode
 function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 	tstart = time()
     d = Dict{String, Any}()
-    for b in p.storage.all
-        if p.s.storage_data[b].max_kw > 0 && p.s.storage_data[b].max_kwh > 0
+    for b in p.s.storage.types.all
+        if p.s.storage.attr[b].max_kw > 0 && p.s.storage.attr[b].max_kwh > 0
             add_storage_results(m, p, d, b; _n)
         end
     end
