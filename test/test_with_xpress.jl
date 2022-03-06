@@ -216,6 +216,14 @@ end
     plot!(r["FlexibleHVAC"]["temperatures_degC_node_by_time"][1,:], line=(:dot))
     =#
 
+    @testset "placeholder 5 param RC model" begin
+        d = JSON.parsefile("./scenarios/thermal_load.json");
+        d["FlexibleHVAC"] = JSON.parsefile("./scenarios/placeholderFlexibleHVAC.json")["FlexibleHVAC"]
+        # TODO how to distinguish FlexibleHVAC from JSON file in Scenario?
+        s = Scenario(d; from_json=true)
+
+    end
+
 end
     
 @testset "CHP Unavailability and Outage" begin
