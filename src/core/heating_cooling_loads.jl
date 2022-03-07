@@ -256,7 +256,7 @@ struct CoolingLoad
         if length(fuel_loads_ton_per_hour) > 0
 
             if !(length(fuel_loads_ton_per_hour) / time_steps_per_hour ≈ 8760)
-                @error "Provided space heating load does not match the time_steps_per_hour."
+                @error "Provided cooling load does not match the time_steps_per_hour."
             end
 
             loads_kw_thermal = fuel_loads_ton_per_hour .* TONHOUR_TO_KWH_THERMAL
@@ -303,7 +303,7 @@ struct CoolingLoad
         # end
 
         if isnothing(loads_kw_thermal)  # have to convert electric loads_kw to thermal load
-            loads_kw_thermal = existing_chiller_cop * loads_kw
+            loads_kw_thermal = EXISTING_CHILLER_COP * loads_kw
         end
 
         if length(loads_kw_thermal) < 8760*time_steps_per_hour
