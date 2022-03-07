@@ -235,7 +235,7 @@ end
 
         #= put in a time varying fuel cost, which should make purchasing the FlexibleHVAC system economical
            with flat ElectricTariff the ExistingChiller does not benefit from FlexibleHVAC =#
-        d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = rand(Float64, (8760))*(50-5).+5;
+        d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = rand(Float64, (8760))*(50-25).+25;
         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         r = run_reopt([m1,m2], REoptInputs(Scenario(d; flex_hvac_from_json=true)))
@@ -255,6 +255,7 @@ end
         # add TOU ElectricTariff and expect to benefit from using ExistingChiller intelligently
         d["ElectricTariff"] = Dict("tou_energy_rates_per_kwh" => rand(Float64, (8760))*(0.80-0.45).+0.45)
         d["FlexibleHVAC"]["temperature_upper_bound_degC"] = 18.0  # lower the upper bound to give Chiller more cost savings opportunity
+        d["FlexibleHVAC"]["installed_cost"] = 300
         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         r = run_reopt([m1,m2], REoptInputs(Scenario(d; flex_hvac_from_json=true)))
@@ -275,12 +276,9 @@ end
         r = run_reopt([m1,m2], REoptInputs(Scenario(d; flex_hvac_from_json=true)))
         @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
         @test r["Financial"]["npv"] == 0
-
-
     end
-
 end
-    
+
 @testset "CHP Unavailability and Outage" begin
     """
     Validation to ensure that:
