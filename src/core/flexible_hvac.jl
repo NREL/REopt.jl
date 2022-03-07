@@ -38,6 +38,7 @@ end
 
 
 """
+    FlexibleHVAC
 
 Every model with `FlexibleHVAC` includes a preprocessing step to calculate the business-as-usual (BAU)
 cost of meeting the thermal loads using a dead-band controller. The BAU cost is then used in the 
@@ -45,6 +46,14 @@ binary decision for purchasing the `FlexibleHVAC` system: if the `FlexibleHVAC` 
 the heating and cooling costs are determined by the HVAC dispatch that minimizes the lifecycle cost
 of energy. If the `FlexibleHVAC` system is not purchased then the BAU heating and cooling costs must
 be paid.
+
+There are two construction methods for `FlexibleHVAC`, which depend on whether or not the data was 
+loaded in from a JSON file. The issue with data from JSON is that the vector-of-vectors from the JSON 
+file must be appropriately converted to Julia Matrices. When loading in a Scenario from JSON that 
+includes a `FlexibleHVAC` model if you include the `flex_hvac_from_json` argument to the `Scenario` 
+constructor then the conversion to Matrices will be done appropriately. For example:
+
+
 
 !!! note
     At least one of the inputs for `temperature_upper_bound_degC` or `temperature_lower_bound_degC`
@@ -75,6 +84,7 @@ end
 
 
 """
+    make_bau_hvac(A, B, u, control_node, initial_temperatures, T_hi, T_lo)
 
 Determine the business-as-usual (BAU) energy cost for keeping the building temperature within the
 bounds using a discrete-time simulation. The simulation assumes a dead band control by calculating 
@@ -133,8 +143,13 @@ function make_bau_hvac(A, B, u, control_node, initial_temperatures, T_hi, T_lo)
 end
 
 
+"""
+    FlexibleHVAC(dict_from_json::Dict)
+
+
+"""
 function FlexibleHVAC(
-    dict_from_json::Dict
+        dict_from_json::Dict
     )
     #=
     When loading in JSON list of lists we get a Vector{Any}, containing more Vector{Any}
@@ -166,18 +181,28 @@ function FlexibleHVAC(
 end
 
 """
+    function FlexibleHVAC(;
+        system_matrix::AbstractMatrix,
+        input_matrix::AbstractMatrix,
+        exogenous_inputs::AbstractMatrix,
+        control_node::Int64,
+        initial_temperatures::AbstractVector,
+        temperature_upper_bound_degC::Union{Real, Nothing} = nothing,
+        temperature_lower_bound_degC::Union{Real, Nothing} = nothing,
+        installed_cost::Float64
+    )
 
 When the A, B, and u values are in Matrix format (note u is normally a vector but in our case it has a time index in the second dimension)
 """
 function FlexibleHVAC(;
-    system_matrix::AbstractMatrix,
-    input_matrix::AbstractMatrix,
-    exogenous_inputs::AbstractMatrix,
-    control_node::Int64,
-    initial_temperatures::AbstractVector,
-    temperature_upper_bound_degC::Union{Real, Nothing} = nothing,
-    temperature_lower_bound_degC::Union{Real, Nothing} = nothing,
-    installed_cost::Float64
+        system_matrix::AbstractMatrix,
+        input_matrix::AbstractMatrix,
+        exogenous_inputs::AbstractMatrix,
+        control_node::Int64,
+        initial_temperatures::AbstractVector,
+        temperature_upper_bound_degC::Union{Real, Nothing} = nothing,
+        temperature_lower_bound_degC::Union{Real, Nothing} = nothing,
+        installed_cost::Float64
     )
 
     bau_hvac = make_bau_hvac(system_matrix, input_matrix, exogenous_inputs, control_node, 

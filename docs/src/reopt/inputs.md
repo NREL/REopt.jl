@@ -135,3 +135,10 @@ REopt.CHP
 ```@docs
 REopt.Settings
 ```
+
+## FlexibleHVAC
+```@docs
+REopt.FlexibleHVAC
+REopt.FlexibleHVAC()
+REopt.FlexibleHVAC(::Dict)
+```
