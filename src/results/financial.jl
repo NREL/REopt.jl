@@ -90,10 +90,10 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         end
     end
 
-    for b in p.storage.all
-        if p.s.storage_data[b].max_kw > 0
-            initial_capex += p.s.storage_data[b].raw_inputs.installed_cost_per_kw * value.(m[Symbol("dvStoragePower"*_n)])[b] + 
-                p.s.storage_data[b].raw_inputs.installed_cost_per_kwh * value.(m[Symbol("dvStorageEnergy"*_n)])[b]
+    for b in p.s.storage.types.all
+        if p.s.storage.attr[b].max_kw > 0
+            initial_capex += p.s.storage.attr[b].installed_cost_per_kw * value.(m[Symbol("dvStoragePower"*_n)])[b] + 
+                p.s.storage.attr[b].installed_cost_per_kwh * value.(m[Symbol("dvStorageEnergy"*_n)])[b]
         end
     end
 
@@ -147,19 +147,19 @@ respectively when third_party_ownership is False.
 function initial_capex_after_incentives(m::JuMP.AbstractModel, p::REoptInputs, lifecycle_capital_costs::Float64; _n="")
     initial_capex_after_incentives = lifecycle_capital_costs / p.third_party_factor
 
-    for b in p.storage.all
+    for b in p.s.storage.types.all
 
-        if !(:inverter_replacement_year in fieldnames(typeof(p.s.storage_data[b].raw_inputs)))
+        if !(:inverter_replacement_year in fieldnames(typeof(p.s.storage.attr[b])))
             continue
         end
 
-        pwf_inverter = 1 / ((1 + p.s.financial.owner_discount_pct)^p.s.storage_data[b].raw_inputs.inverter_replacement_year)
+        pwf_inverter = 1 / ((1 + p.s.financial.owner_discount_pct)^p.s.storage.attr[b].inverter_replacement_year)
 
-        pwf_storage  = 1 / ((1 + p.s.financial.owner_discount_pct)^p.s.storage_data[b].raw_inputs.battery_replacement_year)
+        pwf_storage  = 1 / ((1 + p.s.financial.owner_discount_pct)^p.s.storage.attr[b].battery_replacement_year)
 
-        inverter_future_cost = p.s.storage_data[b].raw_inputs.replace_cost_per_kw * value.(m[Symbol("dvStoragePower"*_n)])[b]
+        inverter_future_cost = p.s.storage.attr[b].replace_cost_per_kw * value.(m[Symbol("dvStoragePower"*_n)])[b]
 
-        storage_future_cost = p.s.storage_data[b].raw_inputs.replace_cost_per_kwh * value.(m[Symbol("dvStorageEnergy"*_n)])[b]
+        storage_future_cost = p.s.storage.attr[b].replace_cost_per_kwh * value.(m[Symbol("dvStorageEnergy"*_n)])[b]
 
         # NOTE these initial costs include the tax benefit available to commercial entities
         initial_capex_after_incentives -= inverter_future_cost * pwf_inverter * (1 - p.s.financial.owner_tax_pct)
@@ -178,19 +178,19 @@ returns two values: the future and present costs of replacing all storage system
 function replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     future_cost = 0
     present_cost = 0
-    for b in p.storage.all
+    for b in p.s.storage.types.all
 
-        if !(:inverter_replacement_year in fieldnames(typeof(p.s.storage_data[b].raw_inputs)))
+        if !(:inverter_replacement_year in fieldnames(typeof(p.s.storage.attr[b])))
             continue
         end
-        future_cost_inverter = p.s.storage_data[b].raw_inputs.replace_cost_per_kw * value.(m[Symbol("dvStoragePower"*_n)])[b]
-        future_cost_storage = p.s.storage_data[b].raw_inputs.replace_cost_per_kwh * value.(m[Symbol("dvStorageEnergy"*_n)])[b]
+        future_cost_inverter = p.s.storage.attr[b].replace_cost_per_kw * value.(m[Symbol("dvStoragePower"*_n)])[b]
+        future_cost_storage = p.s.storage.attr[b].replace_cost_per_kwh * value.(m[Symbol("dvStorageEnergy"*_n)])[b]
         future_cost += future_cost_inverter + future_cost_storage
 
         present_cost += future_cost_inverter * (1 - p.s.financial.owner_tax_pct) / 
-            ((1 + p.s.financial.owner_discount_pct)^p.s.storage_data[b].raw_inputs.inverter_replacement_year)
+            ((1 + p.s.financial.owner_discount_pct)^p.s.storage.attr[b].inverter_replacement_year)
         present_cost += future_cost_storage * (1 - p.s.financial.owner_tax_pct) / 
-            ((1 + p.s.financial.owner_discount_pct)^p.s.storage_data[b].raw_inputs.battery_replacement_year)
+            ((1 + p.s.financial.owner_discount_pct)^p.s.storage.attr[b].battery_replacement_year)
     end
     return future_cost, present_cost
 end

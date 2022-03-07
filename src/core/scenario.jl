@@ -32,9 +32,7 @@ struct Scenario <: AbstractScenario
     site::Site
     pvs::Array{PV, 1}
     wind::Wind
-    elec_storage::ElecStorage
-    hot_tes::HotThermalStorage
-    cold_tes::ColdThermalStorage
+    storage::Storage
     electric_tariff::ElectricTariff
     electric_load::ElectricLoad
     electric_utility::ElectricUtility
@@ -47,11 +45,10 @@ struct Scenario <: AbstractScenario
     chp::Union{CHP, Nothing}  # use nothing for more items when they are not modeled?
     flexible_hvac::Union{FlexibleHVAC, Nothing}
     existing_chiller::Union{ExistingChiller, Nothing}
-    storage_data::Dict{String, AbstractStorage}
 end
 
 """
-    Scenario(d::Dict)
+    Scenario(d::Dict; flex_hvac_from_json=false)
 
 Constructor for Scenario struct, where `d` has upper-case keys:
 - [Site](@ref) (required)
@@ -59,7 +56,7 @@ Constructor for Scenario struct, where `d` has upper-case keys:
 - [ElectricLoad](@ref) (required)
 - [PV](@ref) (optional, can be Array)
 - [Wind](@ref) (optional)
-- [Storage](@ref) (optional)
+- [ElectricStorage](@ref) (optional)
 - [ElectricUtility](@ref) (optional)
 - [Financial](@ref) (optional)
 - [Generator](@ref) (optional)
@@ -71,31 +68,11 @@ Constructor for Scenario struct, where `d` has upper-case keys:
 - ExistingChiller (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV`, which can be either a `Dict` or `Dict[]`.
-```
-struct Scenario
-    settings::Settings
-    site::Site
-    pvs::Array{PV, 1}
-    wind::Wind
-    elec_storage::ElecStorage
-    hot_tes::HotThermalStorage
-    cold_tes::ColdThermalStorage
-    electric_tariff::ElectricTariff
-    electric_load::ElectricLoad
-    electric_utility::ElectricUtility
-    financial::Financial
-    generator::Generator
-    dhw_load::DomesticHotWaterLoad
-    space_heating_load::SpaceHeatingLoad
-    cooling_load::CoolingLoad
-    existing_boiler::Union{ExistingBoiler, Nothing}
-    chp::Union{CHP, Nothing}
-    flexible_hvac::Union{FlexibleHVAC, Nothing}
-    existing_chiller::Union{ExistingChiller, Nothing}
-end
-```
+
+Set `flex_hvac_from_json=true` if `FlexibleHVAC` values were loaded in from JSON (necessary to 
+handle conversion of Vector of Vectors from JSON to a Matrix in Julia).
 """
-function Scenario(d::Dict)
+function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d, "Settings")
         settings = Settings(;dictkeys_tosymbols(d["Settings"])...)
     else
@@ -134,33 +111,24 @@ function Scenario(d::Dict)
         electric_utility = ElectricUtility()
     end
 
-    if haskey(d, "ElectricStorage")
-        # only modeling electrochemical storage so far
+    storage_structs = Dict{String, AbstractStorage}()
+    if haskey(d,  "ElectricStorage")
         storage_dict = dictkeys_tosymbols(d["ElectricStorage"])
     else
         storage_dict = Dict(:max_kw => 0.0)
     end
-    elec_storage = ElecStorage(storage_dict, financial)
-
+    storage_structs["ElectricStorage"] = ElectricStorage(storage_dict, financial)
+    # TODO stop building ElectricStorage when it is not modeled by user 
+    #       (requires significant changes to constraints, variables)
     if haskey(d, "HotThermalStorage")
-        hot_storage_dict = dictkeys_tosymbols(d["HotThermalStorage"])
-    else
-        hot_storage_dict = Dict(:max_gal => 0.0)
+        params = HotThermalStorageDefaults(; dictkeys_tosymbols(d["HotThermalStorage"])...)
+        storage_structs["HotThermalStorage"] = ThermalStorage(params, financial, settings.time_steps_per_hour)
     end
-    hot_tes = HotThermalStorage(hot_storage_dict, financial)
-
     if haskey(d, "ColdThermalStorage")
-        cold_storage_dict = dictkeys_tosymbols(d["ColdThermalStorage"])
-    else
-        cold_storage_dict = Dict(:max_gal => 0.0)
+        params = ColdThermalStorageDefaults(; dictkeys_tosymbols(d["ColdThermalStorage"])...)
+        storage_structs["ColdThermalStorage"] = ThermalStorage(params, financial, settings.time_steps_per_hour)
     end
-    cold_tes = ColdThermalStorage(cold_storage_dict, financial)
-    storage_data = Dict(
-        "ElectricStorage" => elec_storage,
-        "HotThermalStorage" => hot_tes,
-        "ColdThermalStorage" => cold_tes
-    )
-
+    storage = Storage(storage_structs)
 
     electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
                                    latitude=site.latitude, longitude=site.longitude, 
@@ -216,7 +184,11 @@ function Scenario(d::Dict)
 
     if haskey(d, "FlexibleHVAC")
         # TODO how to handle Matrix from JSON (to Dict) ?
-        flexible_hvac = FlexibleHVAC(; dictkeys_tosymbols(d["FlexibleHVAC"])...)
+        if flex_hvac_from_json
+            flexible_hvac = FlexibleHVAC(d["FlexibleHVAC"])
+        else
+            flexible_hvac = FlexibleHVAC(; dictkeys_tosymbols(d["FlexibleHVAC"])...)
+        end
 
         if sum(flexible_hvac.bau_hvac.existing_boiler_kw_thermal) ≈ 0.0 && 
             sum(flexible_hvac.bau_hvac.existing_chiller_kw_thermal) ≈ 0.0
@@ -311,9 +283,7 @@ function Scenario(d::Dict)
         site, 
         pvs, 
         wind,
-        elec_storage,
-        hot_tes,
-        cold_tes, 
+        storage,
         electric_tariff, 
         electric_load, 
         electric_utility, 
@@ -325,8 +295,7 @@ function Scenario(d::Dict)
         existing_boiler,
         chp,
         flexible_hvac,
-        existing_chiller,
-        storage_data
+        existing_chiller
     )
 end
 
@@ -337,7 +306,7 @@ end
 Consruct Scenario from filepath `fp` to JSON with keys aligned with the `Scenario(d::Dict)` method.
 """
 function Scenario(fp::String)
-    Scenario(JSON.parsefile(fp))
+    Scenario(JSON.parsefile(fp); flex_hvac_from_json=true)
 end
 
 

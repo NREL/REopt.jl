@@ -65,7 +65,7 @@ function add_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b::St
     r = Dict{String, Any}()
 
     soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
-    r["soc_series_pct"] = round.(value.(soc) ./ p.s.storage_data[b].size_kwh, digits=3)
+    r["soc_series_pct"] = round.(value.(soc) ./ p.s.storage.attr[b].size_kwh, digits=3)
 
     d[b] = r
     nothing
