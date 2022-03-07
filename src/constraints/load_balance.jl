@@ -151,9 +151,10 @@ function add_thermal_load_constraints(m, p; _n="")
 	# 			sum(m[:dvProductionToStorage][b,t,ts] for b in p.storage.cold_tes, t in p.CoolingTechs)
 	# 	)
 	# end
+    end
 
     # TODO do we need production_factor for chillers?
-    elseif !isempty(p.techs.cooling)
+    if !isempty(p.techs.cooling)
         @constraint(m, [ts in p.time_steps],
             sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.cooling) ==
             p.s.cooling_load.loads_kw_thermal[ts]
