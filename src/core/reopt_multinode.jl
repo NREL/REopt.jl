@@ -32,16 +32,16 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 
 		for dv in dvs_idx_on_storagetypes
 			x = dv*_n
-			m[Symbol(x)] = @variable(m, [p.storage.elec], base_name=x, lower_bound=0)
+			m[Symbol(x)] = @variable(m, [p.s.storage.types.elec], base_name=x, lower_bound=0)
 		end
 
 		for dv in dvs_idx_on_storagetypes_timesteps
 			x = dv*_n
-			m[Symbol(x)] = @variable(m, [p.storage.all, p.time_steps], base_name=x, lower_bound=0)
+			m[Symbol(x)] = @variable(m, [p.s.storage.types.all, p.time_steps], base_name=x, lower_bound=0)
 		end
 
 		dv = "dvGridToStorage"*_n
-		m[Symbol(dv)] = @variable(m, [p.storage.elec, p.time_steps], base_name=dv, lower_bound=0)
+		m[Symbol(dv)] = @variable(m, [p.s.storage.types.elec, p.time_steps], base_name=dv, lower_bound=0)
 
 		dv = "dvGridPurchase"*_n
 		m[Symbol(dv)] = @variable(m, [p.time_steps], base_name=dv, lower_bound=0)
@@ -53,10 +53,10 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 		m[Symbol(dv)] = @variable(m, [p.months, 1], base_name=dv, lower_bound=0)
 
 		dv = "dvProductionToStorage"*_n
-		m[Symbol(dv)] = @variable(m, [p.storage.all, p.techs.all, p.time_steps], base_name=dv, lower_bound=0)
+		m[Symbol(dv)] = @variable(m, [p.s.storage.types.all, p.techs.all, p.time_steps], base_name=dv, lower_bound=0)
 
 		dv = "dvStoredEnergy"*_n
-		m[Symbol(dv)] = @variable(m, [p.storage.all, 0:p.time_steps[end]], base_name=dv, lower_bound=0)
+		m[Symbol(dv)] = @variable(m, [p.s.storage.types.all, 0:p.time_steps[end]], base_name=dv, lower_bound=0)
 
 		dv = "MinChargeAdder"*_n
 		m[Symbol(dv)] = @variable(m, base_name=dv, lower_bound=0)
@@ -73,8 +73,8 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 
 		ex_name = "TotalStorageCapCosts"*_n
 		m[Symbol(ex_name)] = @expression(m, p.third_party_factor * 
-			sum(  p.s.storage_data[b].installed_cost_per_kw * m[Symbol("dvStoragePower"*_n)][b] 
-				+ p.s.storage_data[b].installed_cost_per_kwh * m[Symbol("dvStorageEnergy"*_n)][b] for b in p.storage.elec )
+			sum(p.s.storage.attr[b].net_present_cost_per_kw * m[Symbol("dvStoragePower"*_n)][b] for b in p.s.storage.types.elec)
+			+ sum(p.s.storage.attr[b].net_present_cost_per_kwh * m[Symbol("dvStorageEnergy"*_n)][b] for b in p.s.storage.types.all)
 		)
 
 		ex_name = "TotalPerUnitSizeOMCosts"*_n
@@ -141,14 +141,14 @@ function add_bounds(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) w
 
 		for dv in dvs_idx_on_storagetypes
 			x = dv*_n
-            @constraint(m, [b in p.storage.elec], 
+            @constraint(m, [b in p.s.storage.types.elec], 
                 -m[Symbol(x)][b] ≤ 0
             )
 		end
 
 		for dv in dvs_idx_on_storagetypes_timesteps
 			x = dv*_n
-            @constraint(m, [b in p.storage.elec, ts in p.time_steps], 
+            @constraint(m, [b in p.s.storage.types.elec, ts in p.time_steps], 
                 -m[Symbol(x)][b, ts] ≤ 0
             )
 		end
@@ -163,12 +163,12 @@ function add_bounds(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) w
 		@constraint(m, [mth in p.months], -m[Symbol(dv)][mth, 1] ≤ 0)
 
 		dv = "dvProductionToStorage"*_n
-        @constraint(m, [b in p.storage.elec, tech in p.techs.all, ts in p.time_steps], 
+        @constraint(m, [b in p.s.storage.types.elec, tech in p.techs.all, ts in p.time_steps], 
             -m[Symbol(dv)][b, tech, ts] ≤ 0
         )
 
 		dv = "dvStoredEnergy"*_n
-        @constraint(m, [b in p.storage.elec, ts in 0:p.time_steps[end]], 
+        @constraint(m, [b in p.s.storage.types.elec, ts in 0:p.time_steps[end]], 
             -m[Symbol(dv)][b, ts] ≤ 0
         )
 
@@ -185,8 +185,8 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
     for p in ps
         _n = string("_", p.s.site.node)
 
-        for b in p.storage.all
-            if p.s.storage_data[b].max_kw == 0 || p.s.storage_data[b].max_kwh == 0
+        for b in p.s.storage.types.all
+            if p.s.storage.attr[b].max_kw == 0 || p.s.storage.attr[b].max_kwh == 0
                 @constraint(m, [ts in p.time_steps], m[Symbol("dvStoredEnergy"*_n)][b, ts] == 0)
                 @constraint(m, m[Symbol("dvStorageEnergy"*_n)][b] == 0)
                 @constraint(m, m[Symbol("dvStoragePower"*_n)][b] == 0)
@@ -197,19 +197,17 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
             else
                 add_storage_size_constraints(m, p, b; _n=_n)
                 add_general_storage_dispatch_constraints(m, p, b; _n=_n)
-				if b in p.storage.elec
+				if b in p.s.storage.types.elec
 					add_elec_storage_dispatch_constraints(m, p, b; _n=_n)
-				elseif b in p.storage.hot_tes
+				elseif b in p.s.storage.types.hot
 					add_hot_thermal_storage_dispatch_constraints(m, p, b; _n=_n)
-				elseif b in p.storage.cold_tes
+				elseif b in p.s.storage.types.cold
 					add_cold_thermal_storage_dispatch_constraints(m, p, b; _n=_n)
-				else
-					@error("Invalid storage does not fall in a thermal or electrical set")
 				end
             end
         end
 
-        if any(max_kw->max_kw > 0, (p.s.storage_data[b].max_kw for b in p.storage.all))
+        if any(max_kw->max_kw > 0, (p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec))
             add_storage_sum_constraints(m, p; _n=_n)
         end
     
@@ -258,7 +256,7 @@ function add_objective!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 	else # Keep SOC high
 		@objective(m, Min, sum(m[Symbol(string("Costs_", p.s.site.node))] for p in ps)
         - sum(sum(sum(m[Symbol(string("dvStoredEnergy_", p.s.site.node))][b, ts] 
-            for ts in p.time_steps) for b in p.storage.elec) for p in ps) / (8760. / ps[1].hours_per_timestep))
+            for ts in p.time_steps) for b in p.s.storage.types.elec) for p in ps) / (8760. / ps[1].hours_per_timestep))
 	end  # TODO need to handle different hours_per_timestep?
 	nothing
 end

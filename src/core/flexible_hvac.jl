@@ -132,36 +132,38 @@ function make_bau_hvac(A, B, u, control_node, initial_temperatures, T_hi, T_lo)
     )
 end
 
-# function FlexibleHVAC(;
-#     system_matrix::AbstractVector,
-#     input_matrix::AbstractVector,
-#     exogenous_inputs::AbstractVector,
-#     control_node::Int64,
-#     initial_temperatures::AbstractVector,
-#     temperature_upper_bound_degC::Float64,
-#     temperature_lower_bound_degC::Float64,
-#     installed_cost::Float64
-#     )
-#     #=
-#     When loading in JSON list of lists we get a Vector{Any}, containing more Vector{Any}
-#     Convert the Vector of Vectors to a Matrix with:
-#     Matrix(hcat(Vector{Float64}.(<VectorOfVectors-from-JSON>)...))
-#     =#
-#     A = Matrix(hcat(Vector{Float64}.(system_matrix)...))
-#     B = Matrix(hcat(Vector{Float64}.(input_matrix)...))
-#     u = Matrix(hcat(Vector{Float64}.(exogenous_inputs)...))'
-#     # TODO should the above Matrices be transposed? (What was the intended format in test_flexloads.py?)
-#     FlexibleHVAC(
-#         A,
-#         B,
-#         u,
-#         control_node,
-#         initial_temperatures,
-#         temperature_upper_bound_degC,
-#         temperature_lower_bound_degC,
-#         installed_cost,
-#     )
-# end
+
+function FlexibleHVAC(
+    dict_from_json::Dict
+    )
+    #=
+    When loading in JSON list of lists we get a Vector{Any}, containing more Vector{Any}
+    Convert the Vector of Vectors to a Matrix with:
+    Matrix(hcat(Vector{Float64}.(<VectorOfVectors-from-JSON>)...))
+    =#
+    A = Matrix(hcat(Vector{Float64}.(dict_from_json["system_matrix"])...))
+    B = Matrix(hcat(Vector{Float64}.(dict_from_json["input_matrix"])...))
+    u = Matrix(hcat(Vector{Float64}.(dict_from_json["exogenous_inputs"])...))'
+   
+    bau_hvac = make_bau_hvac(A, B, u, 
+        dict_from_json["control_node"], 
+        dict_from_json["initial_temperatures"], 
+        dict_from_json["temperature_upper_bound_degC"], 
+        dict_from_json["temperature_lower_bound_degC"]
+    )
+
+    FlexibleHVAC(
+        A,
+        B,
+        u,
+        dict_from_json["control_node"],
+        dict_from_json["initial_temperatures"],
+        dict_from_json["temperature_upper_bound_degC"],
+        dict_from_json["temperature_lower_bound_degC"],
+        dict_from_json["installed_cost"],
+        bau_hvac
+    )
+end
 
 """
 

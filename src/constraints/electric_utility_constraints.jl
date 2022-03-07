@@ -163,7 +163,7 @@ function add_monthly_peak_constraint(m, p; _n="")
             sum(m[Symbol("dvPeakDemandMonth"*_n)][mth, t] for t in 1:p.s.electric_tariff.n_monthly_demand_tiers) 
             >= sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) + 
             sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t, ts] for t in p.techs.chp) - 
-            sum(sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.storage.elec) for t in p.techs.chp) -
+            sum(sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) for t in p.techs.chp) -
             sum(sum(m[Symbol("dvProductionToGrid")][t,u,ts] for u in p.export_bins_by_tech[t]) for t in p.techs.chp)
                 
         )
@@ -251,7 +251,7 @@ function add_simultaneous_export_import_constraint(m, p; _n="")
     @constraint(m, NoGridPurchasesBinary[ts in p.time_steps],
         m[Symbol("binNoGridPurchases"*_n)][ts] => {
           sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) +
-          sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.storage.elec) <= 0
+          sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec) <= 0
         }
     )
     @constraint(m, ExportOnlyAfterSiteLoadMetCon[ts in p.time_steps],

@@ -29,12 +29,14 @@
 # *********************************************************************************
 abstract type AbstractTech end
 abstract type AbstractStorage end
+abstract type AbstractThermalStorage <: AbstractStorage end
+abstract type AbstractElectricStorage <: AbstractStorage end
 abstract type AbstractGenerator <: AbstractTech end
 abstract type AbstractScenario end
 abstract type AbstractInputs end
 abstract type AbstractThermalTech <: AbstractGenerator end
 abstract type AbstractCHP <: AbstractTech end
-
+abstract type AbstractThermalStorageDefaults end
 """
     Techs
 
@@ -73,29 +75,4 @@ mutable struct Techs
     fuel_burning::Vector{String}
     thermal::Vector{String}
     chp::Vector{String}
-end
-
-
-"""
-    Storage
-
-    `Storage` contains the index sets that are used to define the model constraints and decision variables
-    for storage technologies.
-
-```julia
-mutable struct Storage
-    all::Vector{String}
-    elec::Vector{String}
-    thermal::Vector{String}
-    hot_tes::Vector{String}
-    cold_tes::Vector{String}
-end
-```
-"""
-mutable struct Storage
-    all::Vector{String}
-    elec::Vector{String}
-    thermal::Vector{String}
-    hot_tes::Vector{String}
-    cold_tes::Vector{String}
 end

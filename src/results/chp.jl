@@ -70,7 +70,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	@expression(m, CHPtoGrid[ts in p.time_steps], sum(m[Symbol("dvProductionToGrid"*_n)][t,u,ts]
 			for t in p.techs.chp, u in p.export_bins_by_tech[t]))
 	r["year_one_to_grid_series_kw"] = round.(value.(CHPtoGrid), digits=3)
-	if !isempty(p.storage.elec)
+	if !isempty(p.s.storage.types.elec)
 		@expression(m, CHPtoBatt[ts in p.time_steps],
 			sum(m[Symbol("dvProductionToStorage"*_n)]["ElectricStorage",t,ts] for t in p.techs.chp))
 	else
@@ -82,7 +82,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 		sum(m[Symbol("dvRatedProduction"*_n)][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
 			for t in p.techs.chp) - CHPtoBatt[ts] - CHPtoGrid[ts])
 	r["year_one_to_load_series_kw"] = round.(value.(CHPtoLoad), digits=3)
-	if !isempty(p.storage.hot_tes)
+	if !isempty(p.s.storage.types.hot)
 		@expression(m, CHPtoHotTES[ts in p.time_steps],
 			sum(m[Symbol("dvProductionToStorage"*_n)]["HotThermalStorage",t,ts] for t in p.techs.chp))
 	else 
