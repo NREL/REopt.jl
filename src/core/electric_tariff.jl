@@ -228,7 +228,7 @@ function ElectricTariff(;
         end
 
     else
-        error("Creating ElectricTariff requires at least urdb_label, urdb_response, monthly rates, or annual rates.")
+        error("Creating ElectricTariff requires at least urdb_label, urdb_response, monthly rates, annual rates, or tou_energy_rates_per_kwh.")
     end
 
     if !isnothing(u)  # use URDBrate
