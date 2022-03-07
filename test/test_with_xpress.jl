@@ -28,6 +28,8 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 using Xpress
+using Random
+Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tests
 
 @testset "Thermal loads" begin
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
