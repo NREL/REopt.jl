@@ -28,7 +28,8 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 
-function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly")
+function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly", 
+    time_steps_per_hour::Int=1)
 
     if !(ismissing(pv.prod_factor_series))
         return pv.prod_factor_series
@@ -53,6 +54,9 @@ function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly")
         watts = collect(get(response["outputs"], "ac", []) / 1000)  # scale to 1 kW system (* 1 kW / 1000 W)
         if length(watts) != 8760
             @error "PVWatts did not return a valid production factor. Got $watts"
+        end
+        if time_steps_per_hour > 1
+            watts = repeat(watts, inner=time_steps_per_hour)
         end
         return watts
     catch e
