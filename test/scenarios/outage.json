@@ -30,7 +30,7 @@
     "ElectricTariff": {
         "urdb_label": "5e611fec5457a3665e019406"
     },
-    "Storage": {
+    "ElectricStorage": {
         "can_grid_charge": false,
         "total_itc_pct": 0.26,
         "macrs_option_years": 5
