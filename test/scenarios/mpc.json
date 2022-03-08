@@ -28,7 +28,7 @@
             0.0
         ]
     },
-    "Storage": {
+    "ElectricStorage": {
         "size_kw": 30.0,
         "size_kwh": 60.0,
         "can_grid_charge": true
