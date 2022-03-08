@@ -158,9 +158,9 @@ REopt.MPCElectricTariff(d::Dict)
 REopt.MPCElectricLoad
 ```
 
-## MPCElecStorage
+## MPCElectricStorage
 ```@docs
-REopt.MPCElecStorage
+REopt.MPCElectricStorage
 ```
 
 ## MPCFinancial
