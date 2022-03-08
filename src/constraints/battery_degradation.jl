@@ -41,7 +41,7 @@ function add_degradation_variables(m, p)
 end
 
 
-function constrain_degradation_variables(m, p; b=:elec)
+function constrain_degradation_variables(m, p; b="ElectricStorage")
     days = 1:365*p.s.financial.analysis_years
     ts_per_day = 24 / p.hours_per_timestep
     ts_per_year = ts_per_day * 365
@@ -80,13 +80,10 @@ end
 
 """
 
-Assumptions:
-- effectively normalizing average SOC, EFC, and DODmax by the battery capacity from a REopt solution w/o degradation
-    - TODO what if no battey in w/o degradation results?
-    - NOTE the average SOC, EFC, and DODmax variables are in absolute units making the SOH variable start at the 
-        battery capacity w/o degradation
+NOTE the average SOC, EFC, and DODmax variables are in absolute units making the SOH variable start at the 
+    battery capacity w/o degradation
 """
-function add_degradation(m, p, Qo::Float64, k_cal::Float64, k_cyc::Float64, k_dod::Float64; time_exponent=0.5, b=:elec)
+function add_degradation(m, p, Qo::Float64, k_cal::Float64, k_cyc::Float64, k_dod::Float64; time_exponent=0.5, b="ElectricStorage")
     days = 1:365*p.s.financial.analysis_years
     @variable(m, SOH[days])
 
@@ -134,7 +131,7 @@ function add_degradation(m, p, Qo::Float64, k_cal::Float64, k_cyc::Float64, k_do
     # TODO scale battery replacement cost
     # NOTE adding to Costs expression does not modify the objective function
     @objective(m, Min, 
-        m[:Costs] + p.s.storage.installed_cost_per_kwh[:elec]/5 * (SOH[1] - SOH[end])
+        m[:Costs] + p.s.storage.installed_cost_per_kwh["ElectricStorage"]/5 * (SOH[1] - SOH[end])
     )
     set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
     # TODO increase threads?
