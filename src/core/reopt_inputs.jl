@@ -35,6 +35,7 @@ The data structure for all the inputs necessary to construct the JuMP model.
 struct REoptInputs <: AbstractInputs
     s::AbstractScenario
     techs::Techs
+    storage::Storage
     min_sizes::Dict{String, Float64}  # (techs)
     max_sizes::Dict{String, Float64}  # (techs)
     existing_sizes::Dict{String, Float64}  # (techs)
@@ -69,14 +70,15 @@ struct REoptInputs <: AbstractInputs
 end
 ```
 """
-struct REoptInputs <: AbstractInputs
-    s::AbstractScenario
+struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
+    s::ScenarioType
     techs::Techs
     min_sizes::Dict{String, Float64}  # (techs)
     max_sizes::Dict{String, Float64}  # (techs)
     existing_sizes::Dict{String, Float64}  # (techs)
     cap_cost_slope::Dict{String, Any}  # (techs)
     om_cost_per_kw::Dict{String, Float64}  # (techs)
+    cop::Dict{String, Float64}  # (techs.cooling)
     time_steps::UnitRange
     time_steps_with_grid::Array{Int, 1}
     time_steps_without_grid::Array{Int, 1}
@@ -136,8 +138,8 @@ function REoptInputs(s::AbstractScenario)
     hours_per_timestep = 1 / s.settings.time_steps_per_hour
     techs, pv_to_location, maxsize_pv_locations, pvlocations, 
         production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
-        seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency = 
-        setup_tech_inputs(s)
+        seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
+        cop = setup_tech_inputs(s)
 
     pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
 
@@ -165,6 +167,7 @@ function REoptInputs(s::AbstractScenario)
         existing_sizes,
         cap_cost_slope,
         om_cost_per_kw,
+        cop,
         time_steps,
         time_steps_with_grid,
         time_steps_without_grid,
@@ -214,16 +217,17 @@ function setup_tech_inputs(s::AbstractScenario)
     existing_sizes = Dict(t => 0.0 for t in techs.all)
     cap_cost_slope = Dict{String, Any}()
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
+    cop = Dict(t => 0.0 for t in techs.cooling)
 
     # export related inputs
-    techs_by_exportbin = Dict(k => [] for k in s.electric_tariff.export_bins)
+    techs_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in s.electric_tariff.export_bins)
     export_bins_by_tech = Dict{String, Array{Symbol, 1}}()
 
     # REoptInputs indexed on techs.segmented
     n_segs_by_tech = Dict{String, Int}()
-    seg_min_size = Dict{String, Any}()
-    seg_max_size = Dict{String, Any}()
-    seg_yint = Dict{String, Any}()
+    seg_min_size = Dict{String, Dict{Int, Float64}}()
+    seg_max_size = Dict{String, Dict{Int, Float64}}()
+    seg_yint = Dict{String, Dict{Int, Float64}}()
 
     # PV specific arrays
     pvlocations = [:roof, :ground, :both]
@@ -258,6 +262,10 @@ function setup_tech_inputs(s::AbstractScenario)
             seg_yint, techs.no_curtail)  
     end
 
+    if "ExistingChiller" in techs.all
+        setup_existing_chiller_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cop)
+    end
+
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
     for t in techs.elec
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
@@ -265,7 +273,8 @@ function setup_tech_inputs(s::AbstractScenario)
 
     return techs, pv_to_location, maxsize_pv_locations, pvlocations, 
     production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
-    seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency
+    seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
+    cop
 end
 
 
@@ -355,7 +364,8 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
     roof_max_kw, land_max_kw = 1.0e5, 1.0e5
 
     for pv in s.pvs
-        production_factor[pv.name, :] = prodfactor(pv, s.site.latitude, s.site.longitude)
+        production_factor[pv.name, :] = prodfactor(pv, s.site.latitude, s.site.longitude; 
+            time_steps_per_hour=s.settings.time_steps_per_hour)
         for location in pvlocations
             if pv.location == location
                 pv_to_location[pv.name][location] = 1
@@ -469,6 +479,17 @@ function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes,
     cap_cost_slope["ExistingBoiler"] = 0.0
     boiler_efficiency["ExistingBoiler"] = s.existing_boiler.efficiency
     # om_cost_per_kw["ExistingBoiler"] = 0.0
+    return nothing
+end
+
+
+function setup_existing_chiller_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cop)
+    max_sizes["ExistingChiller"] = s.existing_chiller.max_kw
+    min_sizes["ExistingChiller"] = 0.0
+    existing_sizes["ExistingChiller"] = 0.0
+    cap_cost_slope["ExistingChiller"] = 0.0
+    cop["ExistingChiller"] = s.existing_chiller.cop
+    # om_cost_per_kw["ExistingChiller"] = 0.0
     return nothing
 end
 

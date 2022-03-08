@@ -1,5 +1,6 @@
 # This file is machine-generated - editing it directly is not advised
 
+julia_version = "1.7.2"
 manifest_format = "2.0"
 
 [[deps.ArgTools]]
@@ -577,6 +578,12 @@ uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 [[deps.Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[[deps.TestEnv]]
+deps = ["Pkg"]
+git-tree-sha1 = "ef092f327a954f1d56ac34c4276bce74d12c0ea8"
+uuid = "1e6cf692-eddd-4d53-88a5-2d735e33781b"
+version = "1.7.2"
 
 [[deps.TranscodingStreams]]
 deps = ["Random", "Test"]

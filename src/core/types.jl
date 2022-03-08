@@ -29,12 +29,14 @@
 # *********************************************************************************
 abstract type AbstractTech end
 abstract type AbstractStorage end
+abstract type AbstractThermalStorage <: AbstractStorage end
+abstract type AbstractElectricStorage <: AbstractStorage end
 abstract type AbstractGenerator <: AbstractTech end
 abstract type AbstractScenario end
 abstract type AbstractInputs end
 abstract type AbstractThermalTech <: AbstractGenerator end
 abstract type AbstractCHP <: AbstractTech end
-
+abstract type AbstractThermalStorageDefaults end
 """
     Techs
 
@@ -68,6 +70,7 @@ mutable struct Techs
     no_turndown::Vector{String}
     segmented::Vector{String}
     heating::Vector{String}
+    cooling::Vector{String}
     boiler::Vector{String}
     fuel_burning::Vector{String}
     thermal::Vector{String}
