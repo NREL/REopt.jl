@@ -586,7 +586,7 @@ end
         3) [TODO The Cold and Hot TES efficiency (charge loss and thermal decay) are being tracked properly]
 
     """
-    data_sizing = JSON.parsefile("./heat_cool_energy_balance_inputs.json")
+    data_sizing = JSON.parsefile("./scenarios/heat_cool_energy_balance_inputs.json")
     s = Scenario(data_sizing)
     inputs = REoptInputs(s)
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
