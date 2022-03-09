@@ -37,9 +37,21 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     d = Dict{String, Any}()
     # TODO determine whether other results specific to electrical or thermal storage
     # systems warrant separate functions
-    for b in p.s.storage.types.all
-        if p.s.storage.attr[b].max_kw > 0 && p.s.storage.attr[b].max_kwh > 0
-            add_storage_results(m, p, d, b; _n)
+    for b in p.s.storage.types.elec
+        if p.s.storage.attr[b].size_kwh > 0
+            add_electric_storage_results(m, p, d, b; _n)
+        end
+    end
+
+    for b in p.s.storage.types.hot
+        if p.s.storage.attr[b].size_kwh > 0
+            add_hot_storage_results(m, p, d, b; _n)
+        end
+    end
+
+    for b in p.s.storage.types.cold
+        if p.s.storage.attr[b].size_kwh > 0
+            add_cold_storage_results(m, p, d, b; _n)
         end
     end
 
