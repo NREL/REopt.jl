@@ -106,18 +106,19 @@ struct Generator <: AbstractGenerator
     production_incentive_max_kw
 
     function Generator(;
+        off_grid_flag::Bool = false,
         existing_kw::Real=0,
         min_kw::Real=0,
         max_kw::Real=1.0e6,
         installed_cost_per_kw::Real=500.0,
-        om_cost_per_kw::Real=10.0,
+        om_cost_per_kw::Real= off_grid_flag ? 20.0 : 10.0,
         om_cost_per_kwh::Float64=0.0,
         fuel_cost_per_gallon::Float64 = 3.0,
         fuel_slope_gal_per_kwh::Float64 = 0.076,
         fuel_intercept_gal_per_hr::Float64 = 0.0,
-        fuel_avail_gal::Float64 = 660.0,
-        min_turn_down_pct::Float64 = 0.0,
-        only_runs_during_grid_outage::Bool = true,
+        fuel_avail_gal::Float64 = off_grid_flag ? 1.0e9 : 660.0,
+        min_turn_down_pct::Float64 = off_grid_flag ? 0.15 : 0.0,
+        only_runs_during_grid_outage::Bool = true, ## TODO check if this needs to be false in off-grid?
         sells_energy_back_to_grid::Bool = false,
         can_net_meter::Bool = false,
         can_wholesale::Bool = false,
