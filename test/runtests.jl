@@ -96,8 +96,8 @@ else  # run Cbc tests
 
         @test r["PV"]["size_kw"] ≈ 216.6667 atol=0.01
         @test r["Financial"]["lcc"] ≈ 1.240037e7 rtol=1e-5
-        @test r["Storage"]["size_kw"] ≈ 55.9 atol=0.1
-        @test r["Storage"]["size_kwh"] ≈ 78.9 atol=0.1
+        @test r["ElectricStorage"]["size_kw"] ≈ 55.9 atol=0.1
+        @test r["ElectricStorage"]["size_kwh"] ≈ 78.9 atol=0.1
     end
 
     @testset "Outage with Generator" begin
