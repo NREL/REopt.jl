@@ -100,7 +100,7 @@ function add_outage_results(m, p, d::Dict)
 			end
 			r[string("mg_", t, "_upgrade_cost")] = round(value(m[:dvMGTechUpgradeCost][t]), digits=2)
 
-			if !isempty(p.s.storage.types)
+			if !isempty(p.s.storage.types.elec)
 				PVtoBatt = (m[:dvMGProductionToStorage][t, s, tz, ts] for 
 					s in p.s.electric_utility.scenarios,
 					tz in p.s.electric_utility.outage_start_timesteps,
@@ -143,7 +143,7 @@ function add_outage_results(m, p, d::Dict)
 			r[string("mg_", t, "_fuel_used")] = value.(m[:dvMGFuelUsed][t, :, :]).data
 			r[string("mg_", t, "_upgrade_cost")] = round(value(m[:dvMGTechUpgradeCost][t]), digits=2)
 
-			if !isempty(p.s.storage.types)
+			if !isempty(p.s.storage.types.elec)
 				GenToBatt = (m[:dvMGProductionToStorage][t, s, tz, ts] for 
 					s in p.s.electric_utility.scenarios,
 					tz in p.s.electric_utility.outage_start_timesteps,

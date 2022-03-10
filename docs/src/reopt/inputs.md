@@ -86,9 +86,19 @@ REopt.ElectricUtility
 REopt.PV
 ```
 
-## Storage
+## ElectricStorage
 ```@docs
-REopt.ElecStorage
+REopt.ElectricStorage
+```
+
+## HotStorage
+```@docs
+REopt.HotStorage
+```
+
+## ColdStorage
+```@docs
+REopt.ColdStorage
 ```
 
 ## Wind
@@ -124,4 +134,11 @@ REopt.CHP
 ## Settings
 ```@docs
 REopt.Settings
+```
+
+## FlexibleHVAC
+```@docs
+REopt.FlexibleHVAC
+REopt.FlexibleHVAC()
+REopt.FlexibleHVAC(::Dict)
 ```
