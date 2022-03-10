@@ -76,6 +76,7 @@ struct Financial
     macrs_seven_year::Array{Float64,1}
 
     function Financial(;
+        off_grid_flag::Bool = false,
         om_cost_escalation_pct::Float64 = 0.025,
         elec_cost_escalation_pct::Float64 = 0.023,
         boiler_fuel_cost_escalation_pct::Float64 = 0.034,
@@ -87,10 +88,15 @@ struct Financial
         owner_discount_pct::Float64 = 0.083,
         analysis_years::Int = 25,
         value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00,
-        microgrid_upgrade_cost_pct::Float64 = 0.3,
+        microgrid_upgrade_cost_pct::Float64 = off_grid_flag ? 0.0 : 0.3,
         macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
         macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446]
     )
+        
+        if off_grid_flag && !(microgrid_upgrade_cost_pct == 0.0)
+            @error "microgrid_upgrade_cost_pct is not applied when off_grid_flag is true. Set microgrid_upgrade_cost_pct to 0.0."
+        end
+
         if !third_party_ownership
             owner_tax_pct = offtaker_tax_pct
             owner_discount_pct = offtaker_discount_pct
