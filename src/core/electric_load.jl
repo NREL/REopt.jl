@@ -126,8 +126,12 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             @error "ElectricLoad critical_load_pct must be 1.0 (100%) for off-grid scenarios."
         end
 
-        if !(off_grid_flag) && !(operating_reserve_required_pct == 0.0)
-            @error "ElectricLoad operating_reserve_required_pct must be 0 for on-grid scenarios. Operating reserve requirements apply to off-grid scenarios only."
+        if !(off_grid_flag)
+            if !(operating_reserve_required_pct == 0.0)
+                @error "ElectricLoad operating_reserve_required_pct must be 0 for on-grid scenarios. Operating reserve requirements apply to off-grid scenarios only."
+            elseif !(min_load_met_annual_pct == 1.0)
+                @error "ElectricLoad min_load_met_annual_pct must be 1.0 for on-grid scenarios. This input applies to off-grid scenarios only."
+            end
         end
 
         if length(loads_kw) > 0
