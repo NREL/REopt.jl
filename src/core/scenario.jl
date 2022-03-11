@@ -89,20 +89,20 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 if !(haskey(pv, "name"))
                     pv["name"] = string("PV", i)
                 end
-                push!(pvs, PV(;dictkeys_tosymbols(pv)...))
+                push!(pvs, PV(;dictkeys_tosymbols(pv)..., off_grid_flag = settings.off_grid_flag))
             end
         elseif typeof(d["PV"]) <: AbstractDict
             check_pv_tilt!(d["PV"], site)
-            push!(pvs, PV(;dictkeys_tosymbols(d["PV"])...))
+            push!(pvs, PV(;dictkeys_tosymbols(d["PV"])..., off_grid_flag = settings.off_grid_flag))
         else
             error("PV input must be Dict or Dict[].")
         end
     end
 
     if haskey(d, "Financial")
-        financial = Financial(; dictkeys_tosymbols(d["Financial"])...)
+        financial = Financial(; dictkeys_tosymbols(d["Financial"])..., off_grid_flag = settings.off_grid_flag )
     else
-        financial = Financial()
+        financial = Financial(; off_grid_flag = settings.off_grid_flag)
     end
 
     if haskey(d, "ElectricUtility")
@@ -114,8 +114,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     storage_structs = Dict{String, AbstractStorage}()
     if haskey(d,  "ElectricStorage")
         storage_dict = dictkeys_tosymbols(d["ElectricStorage"])
+        storage_dict[:off_grid_flag] = settings.off_grid_flag
     else
-        storage_dict = Dict(:max_kw => 0.0)
+        storage_dict = Dict(:max_kw => 0.0) # TODO: do we want to change to the off-grid inputs even if not modeling storage? 
     end
     storage_structs["ElectricStorage"] = ElectricStorage(storage_dict, financial)
     # TODO stop building ElectricStorage when it is not modeled by user 
@@ -132,7 +133,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
                                    latitude=site.latitude, longitude=site.longitude, 
-                                   time_steps_per_hour=settings.time_steps_per_hour
+                                   time_steps_per_hour=settings.time_steps_per_hour,
+                                   off_grid_flag = settings.off_grid_flag
                                 )
 
     electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 
@@ -149,7 +151,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
 
     if haskey(d, "Generator")
-        generator = Generator(; dictkeys_tosymbols(d["Generator"])...)
+        generator = Generator(; dictkeys_tosymbols(d["Generator"])..., off_grid_flag = settings.off_grid_flag)
     else
         generator = Generator(; max_kw=0)
     end
