@@ -42,8 +42,8 @@ Base.@kwdef struct ElectricStorageDefaults
     inverter_efficiency_pct::Float64 = 0.96
     rectifier_efficiency_pct::Float64 = 0.96
     soc_min_pct::Float64 = 0.2
-    soc_init_pct::Float64 = 0.5
-    can_grid_charge::Bool = true
+    soc_init_pct::Float64 = off_grid_flag ? 1.0 : 0.5
+    can_grid_charge::Bool = off_grid_flag ? false : true
     installed_cost_per_kw::Float64 = 840.0
     installed_cost_per_kwh::Float64 = 420.0
     replace_cost_per_kw::Float64 = 410.0

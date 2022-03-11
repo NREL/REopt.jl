@@ -70,9 +70,10 @@ function PV(;
     production_incentive_max_benefit::Float64 = 1.0e9,
     production_incentive_years::Int = 1,
     production_incentive_max_kw::Float64 = 1.0e9
-    can_net_meter::Bool = true,
-    can_wholesale::Bool = true,
-    can_export_beyond_nem_limit::Bool = true,
+    can_net_meter::Bool = off_grid_flag ? false : true,
+    can_wholesale::Bool = off_grid_flag ? false : true,
+    can_export_beyond_nem_limit::Bool = off_grid_flag ? false : true,
+    can_curtail::Bool = true,
     operating_reserve_required_pct::Real = off_grid_flag ? 0.25 : 0.0
 )
 ```
