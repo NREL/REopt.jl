@@ -80,6 +80,16 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
     
     site = Site(;dictkeys_tosymbols(d["Site"])...)
+
+    # Check that only PV, storage, and generator are modeled for off-grid
+    keys_to_check = ["HotThermalStorage", "ColdThermalStorage", "Wind", "FlexibleHVAC", "ExistingBoiler", "ExistingChiller", "CHP"]
+    if settings.off_grid_flag
+        for key in keys_to_check
+            if haskey(d, key)
+                @error "Currently, only PV, ElectricStorage, and Generator can be modeled when off_grid_flag is true. Cannot model $key."
+            end
+        end
+    end
     
     pvs = PV[]
     if haskey(d, "PV")
@@ -105,10 +115,15 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         financial = Financial(; off_grid_flag = settings.off_grid_flag)
     end
 
-    if haskey(d, "ElectricUtility")
+    if haskey(d, "ElectricUtility") && !(settings.off_grid_flag)
         electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...)
-    else
+    elseif !(settings.off_grid_flag)
         electric_utility = ElectricUtility()
+    elseif settings.off_grid_flag 
+        if haskey(d, "ElectricUtility")
+            @warn "When off_grid_flag is true, a year-long outage will always be modeled. Any other inputs in ElectricUtility will be overridden."
+        end
+        electric_utility = ElectricUtility(; outage_start_time_step = 1, outage_end_time_step = settings.time_steps_per_hour * 8760) # This should error with =0
     end
 
     storage_structs = Dict{String, AbstractStorage}()
@@ -137,11 +152,22 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                    off_grid_flag = settings.off_grid_flag
                                 )
 
-    electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 
-                                       year=electric_load.year,
-                                       NEM=electric_utility.net_metering_limit_kw > 0, 
-                                       time_steps_per_hour=settings.time_steps_per_hour
-                                    )
+    if !(settings.off_grid_flag) # ElectricTariff only required for on-grid                            
+        electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 
+                                        year=electric_load.year,
+                                        NEM=electric_utility.net_metering_limit_kw > 0, 
+                                        time_steps_per_hour=settings.time_steps_per_hour
+                                        )
+    else # ElectricTariff inputs supplied for off-grid, but will never be applied. 
+        if haskey(d, "ElectricTariff")
+            @warn "ElectricTariff inputs are not applicable when off_grid_flag is true."
+        end
+        electric_tariff = ElectricTariff(;  blended_annual_energy_rate = 0.0, 
+                                            blended_annual_demand_rate = 0.0,
+                                            year=electric_load.year,
+                                            time_steps_per_hour=settings.time_steps_per_hour
+        )
+    end
 
     if haskey(d, "Wind")
         wind = Wind(; dictkeys_tosymbols(d["Wind"])..., 
