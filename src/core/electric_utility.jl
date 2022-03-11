@@ -43,6 +43,10 @@
         scenarios::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:length(outage_durations)
     end
 
+    NOTE: Outage indexing begins at 1 (not 0) and the outage end time step inputs are inclusive. 
+    For instance, to model a 3-hour outage from 12AM to 3AM on Jan 1, outage_start_time_step = 1 and outage_end_time_step = 3.
+    To model a 1-hour outage from 6AM to 7AM on Jan 1, outage_start_time_step = 7 and outage_end_time_step = 7.
+
 """
 Base.@kwdef struct ElectricUtility
     outage_start_time_step::Int=0  # for modeling a single outage, with critical load spliced into the baseline load ...
