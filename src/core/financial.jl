@@ -76,6 +76,8 @@ struct Financial
     microgrid_upgrade_cost_pct::Float64
     macrs_five_year::Array{Float64,1}
     macrs_seven_year::Array{Float64,1}
+    other_capital_costs::Float64
+    other_annual_costs::Float64
 
     function Financial(;
         off_grid_flag::Bool = false,
