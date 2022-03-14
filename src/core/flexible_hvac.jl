@@ -149,16 +149,24 @@ end
 
 """
 function FlexibleHVAC(
-        dict_from_json::Dict
+        dict_from_json::Dict,
+        latitude::Float64,
+        longitude::Float64,
+        buildingrefname::String
     )
+
+    city = find_ashrae_zone_city(latitude,longitude)
+    fp = string("./../test/data/",buildingrefname,"_",city,"_rcmodel.json")
+    rcmodel = JSON.parse(fp)
+
     #=
     When loading in JSON list of lists we get a Vector{Any}, containing more Vector{Any}
     Convert the Vector of Vectors to a Matrix with:
     Matrix(hcat(Vector{Float64}.(<VectorOfVectors-from-JSON>)...))
     =#
-    A = Matrix(hcat(Vector{Float64}.(dict_from_json["system_matrix"])...))
-    B = Matrix(hcat(Vector{Float64}.(dict_from_json["input_matrix"])...))
-    u = Matrix(hcat(Vector{Float64}.(dict_from_json["exogenous_inputs"])...))'
+    A = Matrix(hcat(Vector{Float64}.(rcmodel["system_matrix"])...))
+    B = Matrix(hcat(Vector{Float64}.(rcmodel["input_matrix"])...))
+    u = Matrix(hcat(Vector{Float64}.(rcmodel["exogenous_inputs"])...))'
    
     bau_hvac = make_bau_hvac(A, B, u, 
         dict_from_json["control_node"], 
