@@ -182,7 +182,7 @@ function get_existing_chiller_cop(max_thermal_factor_on_peak_load; loads_kw=noth
     if !isnothing(loads_kw_thermal)
         max_cooling_load_tons = maximum(loads_kw_thermal) / TONHOUR_TO_KWH_THERMAL
     elseif !isnothing(loads_kw)
-        max_cooling_load_tons = maximum(loads_kw) / TONHOUR_TO_KWH_THERMAL * 4.55
+        max_cooling_load_tons = maximum(loads_kw) / TONHOUR_TO_KWH_THERMAL * EXISTING_CHILLER_COP
     end
     estimated_max_chiller_thermal_capacity_tons = max_cooling_load_tons * max_thermal_factor_on_peak_load
     if estimated_max_chiller_thermal_capacity_tons < 100.0
@@ -202,9 +202,9 @@ end
         blended_doe_reference_percents::Array{<:Real,1} = Real[],
         annual_tonhour::Union{Real, Nothing} = nothing,
         monthly_tonhour::Array{<:Real,1} = Real[],
-        fuel_loads_ton_per_hour::Array{<:Real,1} = Real[],
+        thermal_loads_ton::Array{<:Real,1} = Real[],
         annual_fraction::Union{Real, Nothing} = nothing,
-        monthly_fraction::Union{Real, Nothing} = nothing,
+        monthly_fraction::Array{<:Real,1} = Real[],
         loads_fraction::Array{<:Real,1} = Real[],
         existing_chiller_cop::Real = EXISTING_CHILLER_COP
     )
@@ -212,7 +212,7 @@ end
 
 
 There are many ways to define a `CoolingLoad`:
-1. a time-series via the `fuel_loads_ton_per_hour`,
+1. a time-series via the `thermal_loads_ton`,
 2. scaling a DoE Commercial Reference Building (CRB) profile or a blend of CRB profiles to either the `annual_fraction` or `monthly_fraction` values;
 3. or using the `doe_reference_name` or `blended_doe_reference_names` from the `ElectricLoad`.
 
@@ -239,9 +239,9 @@ struct CoolingLoad
         blended_doe_reference_percents::Array{<:Real,1} = Real[],
         annual_tonhour::Union{Real, Nothing} = nothing,
         monthly_tonhour::Array{<:Real,1} = Real[],
-        fuel_loads_ton_per_hour::Array{<:Real,1} = Real[],
+        thermal_loads_ton::Array{<:Real,1} = Real[],
         annual_fraction::Union{Real, Nothing} = nothing,
-        monthly_fraction::Union{Real, Nothing} = nothing,
+        monthly_fraction::Array{<:Real,1} = Real[],
         loads_fraction::Array{<:Real,1} = Real[],
         existing_chiller_cop::Real = EXISTING_CHILLER_COP,
         site_electric_load_profile = Real[],
@@ -253,32 +253,44 @@ struct CoolingLoad
         # determine the timeseries of loads_kw_thermal
         loads_kw_thermal = nothing
         loads_kw = nothing
-        if length(fuel_loads_ton_per_hour) > 0
+        if length(thermal_loads_ton) > 0
 
-            if !(length(fuel_loads_ton_per_hour) / time_steps_per_hour ≈ 8760)
+            if !(length(thermal_loads_ton) / time_steps_per_hour ≈ 8760)
                 @error "Provided cooling load does not match the time_steps_per_hour."
             end
 
-            loads_kw_thermal = fuel_loads_ton_per_hour .* TONHOUR_TO_KWH_THERMAL
+            loads_kw_thermal = thermal_loads_ton .* TONHOUR_TO_KWH_THERMAL
 
         elseif !isempty(doe_reference_name)
-            loads_kw = BuiltInCoolingLoad(city, doe_reference_name, latitude, longitude, 2017, 
+            if annual_tonhour === nothing && isempty(monthly_tonhour)
+                loads_kw = get_default_fraction_of_total_electric(city, doe_reference_name, latitude, longitude, 2017) .* site_electric_load_profile
+            else
+                loads_kw = BuiltInCoolingLoad(city, doe_reference_name, latitude, longitude, 2017, 
                                           annual_tonhour, monthly_tonhour)
-
+            end
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
-            loads_kw = blend_and_scale_doe_profiles(BuiltInCoolingLoad, latitude, longitude, 2017, 
-                                                    blended_doe_reference_names, 
-                                                    blended_doe_reference_percents, city, 
-                                                    annual_tonhour, monthly_tonhour)
+            if annual_tonhour === nothing && isempty(monthly_tonhour)
+                for (i, building) in enumerate(blended_doe_reference_names)
+                    default_fraction = get_default_fraction_of_total_electric(city, building, latitude, longitude, 2017)
+                    modified_fraction = default_fraction .* blended_doe_reference_percents[i]/100.0
+                    loads_kw += site_electric_load_profile .* modified_fraction
+                end
+            else            
+                loads_kw = blend_and_scale_doe_profiles(BuiltInCoolingLoad, latitude, longitude, 2017, 
+                                                        blended_doe_reference_names, 
+                                                        blended_doe_reference_percents, city, 
+                                                        annual_tonhour, monthly_tonhour)
+            end
         
-        elseif !isnothing(loads_fraction) && (length(site_electric_load_profile) / time_steps_per_hour ≈ 8760)
+        elseif !isempty(loads_fraction) && (length(site_electric_load_profile) / time_steps_per_hour ≈ 8760)
+            println("loads_fraction = ", loads_fraction)
             if !(length(loads_fraction) / time_steps_per_hour ≈ 8760)
                 @error "Provided cooling loads_fraction array does not match the time_steps_per_hour."
             end
             loads_kw = loads_fraction .* site_electric_load_profile
         
-        elseif !isnothing(monthly_fraction) && (length(site_electric_load_profile) / time_steps_per_hour ≈ 8760)
+        elseif !isempty(monthly_fraction) && (length(site_electric_load_profile) / time_steps_per_hour ≈ 8760)
             if !(length(monthly_fraction) ≈ 12)
                 @error "Provided cooling monthly_fraction array does not have 12 values."
             end
@@ -291,7 +303,7 @@ struct CoolingLoad
             loads_kw = annual_fraction * site_electric_load_profile
         
         else
-            error("Cannot construct BuiltInCoolingLoad. You must provide either [fuel_loads_ton_per_hour], 
+            error("Cannot construct BuiltInCoolingLoad. You must provide either [thermal_loads_ton], 
                 [doe_reference_name, city], [blended_doe_reference_names, blended_doe_reference_percents, city],
                 or the site_electric_load_profile along with one of [loads_fraction, monthly_fraction, annual_fraction].")
         end
@@ -317,7 +329,16 @@ struct CoolingLoad
             existing_chiller_cop
         )
     end
+end
 
+function get_default_fraction_of_total_electric(city, doe_reference_name, latitude, longitude, year)
+    crb_total_elec_loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, year)
+
+    crb_cooling_elec_loads_kw = BuiltInCoolingLoad(city, doe_reference_name, latitude, longitude, year)
+    
+    default_fraction_of_total_electric_profile = crb_cooling_elec_loads_kw ./
+                                                    max(crb_total_elec_loads_kw, repeat([1.0E-6], length(crb_total_elec_loads_kw)))
+    return default_fraction_of_total_electric_profile
 end
 
 
@@ -644,6 +665,9 @@ function BuiltInDomesticHotWaterLoad(
     end
     if isnothing(annual_mmbtu)
         annual_mmbtu = dhw_annual_mmbtu[city][buildingtype]
+    end
+    if length(monthly_mmbtu) == 12
+        monthly_mmbtu = convert(Vector{Real}, monthly_mmbtu)
     end
     built_in_load("domestic_hot_water", city, buildingtype, year, annual_mmbtu, monthly_mmbtu)
 end
@@ -973,6 +997,9 @@ function BuiltInSpaceHeatingLoad(
     if isnothing(annual_mmbtu)
         annual_mmbtu = spaceheating_annual_mmbtu[city][buildingtype]
     end
+    if length(monthly_mmbtu) == 12
+        monthly_mmbtu = convert(Vector{Real}, monthly_mmbtu)
+    end
     built_in_load("space_heating", city, buildingtype, year, annual_mmbtu, monthly_mmbtu)
 end
 
@@ -1301,11 +1328,11 @@ function BuiltInCoolingLoad(
     if isnothing(annual_tonhour)
         annual_kwh = cooling_annual_kwh[city][buildingtype]
     else
-        annual_kwh = annual_tonhour * TONHOUR_TO_KWH_THERMAL
+        annual_kwh = annual_tonhour * TONHOUR_TO_KWH_THERMAL / EXISTING_CHILLER_COP
     end
     monthly_kwh = Real[]
     if length(monthly_tonhour) == 12
-        monthly_kwh = monthly_tonhour * TONHOUR_TO_KWH_THERMAL
+        monthly_kwh = monthly_tonhour * TONHOUR_TO_KWH_THERMAL / EXISTING_CHILLER_COP
     end
     built_in_load("cooling", city, buildingtype, year, annual_kwh, monthly_kwh)
 end
