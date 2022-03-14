@@ -263,7 +263,8 @@ struct CoolingLoad
 
         elseif !isempty(doe_reference_name)
             if annual_tonhour === nothing && isempty(monthly_tonhour)
-                loads_kw = get_default_fraction_of_total_electric(city, doe_reference_name, latitude, longitude, 2017) .* site_electric_load_profile
+                loads_kw = get_default_fraction_of_total_electric(city, doe_reference_name, 
+                                                                    latitude, longitude, 2017) .* site_electric_load_profile
             else
                 loads_kw = BuiltInCoolingLoad(city, doe_reference_name, latitude, longitude, 2017, 
                                           annual_tonhour, monthly_tonhour)
@@ -271,11 +272,17 @@ struct CoolingLoad
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
             if annual_tonhour === nothing && isempty(monthly_tonhour)
+                loads_kw = zeros(Int(8760/time_steps_per_hour))
                 for (i, building) in enumerate(blended_doe_reference_names)
                     default_fraction = get_default_fraction_of_total_electric(city, building, latitude, longitude, 2017)
-                    modified_fraction = default_fraction .* blended_doe_reference_percents[i]/100.0
+                    modified_fraction = default_fraction * blended_doe_reference_percents[i]
+                    if length(site_electric_load_profile) > 8784
+                        modified_fraction = repeat(modified_fraction, inner=time_steps_per_hour / (length(site_electric_load_profile)/8760))
+                        @info "Repeating cooling electric load in each hour to match the time_steps_per_hour."
+                    end
                     loads_kw += site_electric_load_profile .* modified_fraction
                 end
+                println("Total cooling fraction = ", sum(loads_kw) / sum(site_electric_load_profile))
             else            
                 loads_kw = blend_and_scale_doe_profiles(BuiltInCoolingLoad, latitude, longitude, 2017, 
                                                         blended_doe_reference_names, 
@@ -284,7 +291,6 @@ struct CoolingLoad
             end
         
         elseif !isempty(loads_fraction) && (length(site_electric_load_profile) / time_steps_per_hour ≈ 8760)
-            println("loads_fraction = ", loads_fraction)
             if !(length(loads_fraction) / time_steps_per_hour ≈ 8760)
                 @error "Provided cooling loads_fraction array does not match the time_steps_per_hour."
             end
