@@ -574,7 +574,7 @@ end
     @test roof_east["average_annual_energy_produced_kwh"] ≈ 6482.37 atol=0.1
 end
 
-@testset "test_heat_cool_energy_balance" begin
+@testset "Heat and cool energy balance" begin
     """
 
     This is an "energy balance" type of test which tests the model formulation/math as opposed
@@ -653,7 +653,7 @@ end
     #self.assertAlmostEqual(absorpchl_cop, 0.8*0.7, places=3)
 end
 
-@testset "test_heating_cooling_inputs" begin
+@testset "Heating and cooling inputs" begin
     """
 
     This tests the various ways to input heating and cooling loads to make sure they are processed correctly.
@@ -716,6 +716,98 @@ end
                                     sum(inputs.s.dhw_load.loads_kw)) / REopt.EXISTING_BOILER_EFFICIENCY / REopt.MMBTU_TO_KWH
     @test round(total_heating_fuel_load_mmbtu, digits=0) ≈ 8760 atol=0.1
     @test round(sum(inputs.s.cooling_load.loads_kw_thermal) / inputs.s.cooling_load.existing_chiller_cop, digits=0) ≈ 77528.0 atol=1.0
+end
+
+@testset "Hybrid/blended heating and cooling loads" begin
+    """
+
+    This tests the hybrid/campus loads for heating and cooling, where a blended_doe_reference_names
+        and blended_doe_reference_percents are given and blended to create an aggregate load profile
+
+    """
+    input_data = JSON.parsefile("./scenarios/hybrid_loads_heating_cooling_inputs.json")
+
+    hospital_pct = 0.75
+    hotel_pct = 1.0 - hospital_pct
+
+    # Hospital only
+    input_data["ElectricLoad"]["annual_kwh"] = hospital_pct * 100
+    input_data["ElectricLoad"]["doe_reference_name"] = "Hospital"
+    input_data["SpaceHeatingLoad"]["annual_mmbtu"] = hospital_pct * 100
+    input_data["SpaceHeatingLoad"]["doe_reference_name"] = "Hospital"
+    input_data["DomesticHotWaterLoad"]["annual_mmbtu"] = hospital_pct * 100
+    input_data["DomesticHotWaterLoad"]["doe_reference_name"] = "Hospital"    
+    input_data["CoolingLoad"]["doe_reference_name"] = "Hospital"
+
+    s = Scenario(input_data)
+    inputs = REoptInputs(s)
+
+    elec_hospital = inputs.s.electric_load.loads_kw
+    space_hospital = inputs.s.space_heating_load.loads_kw  # thermal
+    dhw_hospital = inputs.s.dhw_load.loads_kw  # thermal
+    cooling_hospital = inputs.s.cooling_load.loads_kw_thermal  # thermal
+    cooling_elec_frac_of_total_hospital = cooling_hospital / inputs.s.cooling_load.existing_chiller_cop ./ elec_hospital
+
+    # Hotel only
+    input_data["ElectricLoad"]["annual_kwh"] = hotel_pct * 100
+    input_data["ElectricLoad"]["doe_reference_name"] = "LargeHotel"
+    input_data["SpaceHeatingLoad"]["annual_mmbtu"] = hotel_pct * 100
+    input_data["SpaceHeatingLoad"]["doe_reference_name"] = "LargeHotel"
+    input_data["DomesticHotWaterLoad"]["annual_mmbtu"] = hotel_pct * 100
+    input_data["DomesticHotWaterLoad"]["doe_reference_name"] = "LargeHotel"    
+    input_data["CoolingLoad"]["doe_reference_name"] = "LargeHotel"
+
+    s = Scenario(input_data)
+    inputs = REoptInputs(s)
+
+    elec_hotel = inputs.s.electric_load.loads_kw
+    space_hotel = inputs.s.space_heating_load.loads_kw  # thermal
+    dhw_hotel = inputs.s.dhw_load.loads_kw  # thermal
+    cooling_hotel = inputs.s.cooling_load.loads_kw_thermal  # thermal
+    cooling_elec_frac_of_total_hotel = cooling_hotel / inputs.s.cooling_load.existing_chiller_cop ./ elec_hotel
+
+    # Hybrid mix of hospital and hotel
+    # Remove previous assignment of doe_reference_name
+    for load in ["ElectricLoad", "SpaceHeatingLoad", "DomesticHotWaterLoad", "CoolingLoad"]
+        delete!(input_data[load], "doe_reference_name")
+    end
+    annual_energy = (hospital_pct + hotel_pct) * 100
+    building_list = ["Hospital", "LargeHotel"]
+    percent_share_list = [hospital_pct, hotel_pct]
+    input_data["ElectricLoad"]["annual_kwh"] = annual_energy
+    input_data["ElectricLoad"]["blended_doe_reference_names"] = building_list
+    input_data["ElectricLoad"]["blended_doe_reference_percents"] = percent_share_list
+
+    input_data["SpaceHeatingLoad"]["annual_mmbtu"] = annual_energy
+    input_data["SpaceHeatingLoad"]["blended_doe_reference_names"] = building_list
+    input_data["SpaceHeatingLoad"]["blended_doe_reference_percents"] = percent_share_list
+    input_data["DomesticHotWaterLoad"]["annual_mmbtu"] = annual_energy
+    input_data["DomesticHotWaterLoad"]["blended_doe_reference_names"] = building_list
+    input_data["DomesticHotWaterLoad"]["blended_doe_reference_percents"] = percent_share_list    
+
+    # CoolingLoad now use a weighted fraction of total electric profile if no annual_tonhour is provided
+    input_data["CoolingLoad"]["blended_doe_reference_names"] = building_list
+    input_data["CoolingLoad"]["blended_doe_reference_percents"] = percent_share_list    
+
+    s = Scenario(input_data)
+    inputs = REoptInputs(s)
+
+    elec_hybrid = inputs.s.electric_load.loads_kw
+    space_hybrid = inputs.s.space_heating_load.loads_kw  # thermal
+    dhw_hybrid = inputs.s.dhw_load.loads_kw  # thermal
+    cooling_hybrid = inputs.s.cooling_load.loads_kw_thermal   # thermal
+    cooling_elec_hybrid = cooling_hybrid / inputs.s.cooling_load.existing_chiller_cop  # electric
+    cooling_elec_frac_of_total_hybrid = cooling_hybrid / inputs.s.cooling_load.existing_chiller_cop ./ elec_hybrid
+
+    # Check that the combined/hybrid load is the same as the sum of the individual loads in each timestep
+
+    @test round(sum(elec_hybrid .- (elec_hospital .+ elec_hotel)), digits=1) ≈ 0.0 atol=0.1
+    @test round(sum(space_hybrid .- (space_hospital .+ space_hotel)), digits=1) ≈ 0.0 atol=0.1
+    @test round(sum(dhw_hybrid .- (dhw_hospital .+ dhw_hotel)), digits=1) ≈ 0.0 atol=0.1
+    # Check that the cooling load is the weighted average of the default CRB fraction of total electric profiles
+    cooling_electric_hybrid_expected = elec_hybrid .* (cooling_elec_frac_of_total_hospital * hospital_pct  .+ 
+                                            cooling_elec_frac_of_total_hotel * hotel_pct)
+    @test round(sum(cooling_electric_hybrid_expected .- cooling_elec_hybrid), digits=1) ≈ 0.0 atol=0.1
 end
 
 ## equivalent REopt API Post for test 2:
