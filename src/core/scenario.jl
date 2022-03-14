@@ -185,7 +185,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d, "FlexibleHVAC")
         # TODO how to handle Matrix from JSON (to Dict) ?
         if flex_hvac_from_json
-            flexible_hvac = FlexibleHVAC(d["FlexibleHVAC"])
+            flexible_hvac = FlexibleHVAC(d["FlexibleHVAC"], latitude=site.latitude, 
+                                        longitude=site.longitude, d["ElectricLoad"]["doe_reference_name"])
         else
             flexible_hvac = FlexibleHVAC(; dictkeys_tosymbols(d["FlexibleHVAC"])...)
         end
