@@ -94,7 +94,9 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
     critical_loads_kw::Array{Real,1}
     loads_kw_is_net::Bool
     critical_loads_kw_is_net::Bool
-    city::String
+    city::String  
+    #= NOTE we reuse the city for other DoE CRB reference values s.t. we do not have to make multiple 
+    find_ashrae_zone_city calls =#
     
     function ElectricLoad(;
         loads_kw::Array{<:Real,1} = Real[],
@@ -139,11 +141,11 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
                 @warn "Changing load profile year to 2017 because DOE reference profiles start on a Sunday."
             end
             year = 2017
-            loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, year, annual_kwh, monthly_totals_kwh)
+            loads_kw, city = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, year, annual_kwh, monthly_totals_kwh)
 
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
-            loads_kw = blend_and_scale_doe_profiles(BuiltInElectricLoad, latitude, longitude, year, 
+            loads_kw, city = blend_and_scale_doe_profiles(BuiltInElectricLoad, latitude, longitude, year, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_kwh, monthly_totals_kwh)
         else
@@ -166,7 +168,8 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             year,
             critical_loads_kw,
             loads_kw_is_net,
-            critical_loads_kw_is_net
+            critical_loads_kw_is_net,
+            city
         )
     end
 end
@@ -481,5 +484,5 @@ function BuiltInElectricLoad(
         annual_kwh = annual_loads[city][lowercase(buildingtype)]
     end
 
-    built_in_load("electric", city, buildingtype, year, annual_kwh, monthly_totals_kwh)
+    built_in_load("electric", city, buildingtype, year, annual_kwh, monthly_totals_kwh), city
 end
