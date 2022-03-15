@@ -183,8 +183,6 @@ Given `blended_doe_reference_names` and `blended_doe_reference_percents` use the
 """
 function blend_and_scale_doe_profiles(
     constructor,
-    latitude::Real,
-    longitude::Real,
     year::Int,
     blended_doe_reference_names::Array{String, 1},
     blended_doe_reference_percents::Array{<:Real,1},
@@ -198,12 +196,9 @@ function blend_and_scale_doe_profiles(
         @warn "Changing ElectricLoad.year to 2017 because DOE reference profiles start on a Sunday."
     end
     year = 2017
-    if isempty(city)
-        city = find_ashrae_zone_city(latitude, longitude)  # avoid redundant look-ups
-    end
     profiles = Array[]  # collect the built in profiles
     for name in blended_doe_reference_names
-        push!(profiles, constructor(city, name, latitude, longitude, year, annual_energy, monthly_energies))
+        push!(profiles, constructor(city, name, year, annual_energy, monthly_energies))
     end
     if isnothing(annual_energy) # then annual_energy should be the sum of all the profiles' annual kwhs
         # we have to rescale the built in profiles to the total_kwh by normalizing them with their
