@@ -183,10 +183,16 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     existing_chiller = nothing
 
     if haskey(d, "FlexibleHVAC")
-        # TODO how to handle Matrix from JSON (to Dict) ?
-        if flex_hvac_from_json
-            flexible_hvac = FlexibleHVAC(d["FlexibleHVAC"], latitude=site.latitude, 
-                                        longitude=site.longitude, d["ElectricLoad"]["doe_reference_name"])
+        if haskey(d["FlexibleHVAC"], "doe_reference_name")
+            flexible_hvac = FlexibleHVAC(
+                d["FlexibleHVAC"]["doe_reference_name"],
+                get(d["FlexibleHVAC"], "city", electric_load.city),
+                d["FlexibleHVAC"]["installed_cost"],
+                get(d["FlexibleHVAC"], "temperature_upper_bound_degC", nothing),
+                get(d["FlexibleHVAC"], "temperature_lower_bound_degC", nothing),
+            )
+        elseif flex_hvac_from_json  # then have to convert vector of vectors to matrix
+            flexible_hvac = FlexibleHVAC(d["FlexibleHVAC"])
         else
             flexible_hvac = FlexibleHVAC(; dictkeys_tosymbols(d["FlexibleHVAC"])...)
         end
