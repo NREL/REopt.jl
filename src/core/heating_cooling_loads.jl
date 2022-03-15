@@ -75,11 +75,17 @@ struct DomesticHotWaterLoad
             loads_kw = fuel_loads_mmbtu_per_hour .* (MMBTU_TO_KWH * EXISTING_BOILER_EFFICIENCY)
 
         elseif !isempty(doe_reference_name)
-            loads_kw = BuiltInDomesticHotWaterLoad(city, doe_reference_name, latitude, longitude, 2017, annual_mmbtu, monthly_mmbtu)
+            if isempty(city)
+                city = find_ashrae_zone_city(latitude, longitude)
+            end
+            loads_kw = BuiltInDomesticHotWaterLoad(city, doe_reference_name, 2017, annual_mmbtu, monthly_mmbtu)
 
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
-            loads_kw = blend_and_scale_doe_profiles(BuiltInDomesticHotWaterLoad, latitude, longitude, 2017, 
+            if isempty(city)
+                city = find_ashrae_zone_city(latitude, longitude)
+            end
+            loads_kw = blend_and_scale_doe_profiles(BuiltInDomesticHotWaterLoad, 2017, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_mmbtu, monthly_mmbtu)
         else
@@ -153,11 +159,17 @@ struct SpaceHeatingLoad
             loads_kw = fuel_loads_mmbtu_per_hour .* (MMBTU_TO_KWH * EXISTING_BOILER_EFFICIENCY)
 
         elseif !isempty(doe_reference_name)
-            loads_kw = BuiltInSpaceHeatingLoad(city, doe_reference_name, latitude, longitude, 2017, annual_mmbtu, monthly_mmbtu)
+            if isempty(city)
+                city = find_ashrae_zone_city(latitude, longitude)
+            end
+            loads_kw = BuiltInSpaceHeatingLoad(city, doe_reference_name, 2017, annual_mmbtu, monthly_mmbtu)
 
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
-            loads_kw = blend_and_scale_doe_profiles(BuiltInSpaceHeatingLoad, latitude, longitude, 2017, 
+            if isempty(city)
+                city = find_ashrae_zone_city(latitude, longitude)
+            end
+            loads_kw = blend_and_scale_doe_profiles(BuiltInSpaceHeatingLoad, 2017, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_mmbtu, monthly_mmbtu)
         else
@@ -262,12 +274,18 @@ struct CoolingLoad
             loads_kw_thermal = fuel_loads_ton_per_hour .* TONHOUR_TO_KWH_THERMAL
 
         elseif !isempty(doe_reference_name)
-            loads_kw = BuiltInCoolingLoad(city, doe_reference_name, latitude, longitude, 2017, 
+            if isempty(city)
+                city = find_ashrae_zone_city(latitude, longitude)
+            end
+            loads_kw = BuiltInCoolingLoad(city, doe_reference_name, 2017, 
                                           annual_tonhour, monthly_tonhour)
 
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
-            loads_kw = blend_and_scale_doe_profiles(BuiltInCoolingLoad, latitude, longitude, 2017, 
+            if isempty(city)
+                city = find_ashrae_zone_city(latitude, longitude)
+            end
+            loads_kw = blend_and_scale_doe_profiles(BuiltInCoolingLoad, 2017, 
                                                     blended_doe_reference_names, 
                                                     blended_doe_reference_percents, city, 
                                                     annual_tonhour, monthly_tonhour)
@@ -324,8 +342,6 @@ end
 function BuiltInDomesticHotWaterLoad(
     city::String,
     buildingtype::String,
-    latitude::Real,
-    longitude::Real,
     year::Int,
     annual_mmbtu::Union{<:Real, Nothing}=nothing,
     monthly_mmbtu::Vector{<:Real}=Real[]
@@ -636,9 +652,6 @@ function BuiltInDomesticHotWaterLoad(
             "FlatLoad" => 830.07826
         )
     )
-    if isempty(city)
-        city = find_ashrae_zone_city(latitude, longitude)
-    end
     if !(buildingtype in default_buildings)
         error("buildingtype $(buildingtype) not in $(default_buildings).")
     end
@@ -652,8 +665,6 @@ end
 function BuiltInSpaceHeatingLoad(
     city::String,
     buildingtype::String,
-    latitude::Real,
-    longitude::Real,
     year::Int,
     annual_mmbtu::Union{<:Real, Nothing}=nothing,
     monthly_mmbtu::Vector{<:Real}=Real[],
@@ -964,9 +975,6 @@ function BuiltInSpaceHeatingLoad(
             "FlatLoad" => 7851.508208
         )
     )
-    if isempty(city)
-        city = find_ashrae_zone_city(latitude, longitude)
-    end
     if !(buildingtype in default_buildings)
         error("buildingtype $(buildingtype) not in $(default_buildings).")
     end
@@ -980,8 +988,6 @@ end
 function BuiltInCoolingLoad(
     city::String,
     buildingtype::String,
-    latitude::Float64,
-    longitude::Float64,
     year::Int,
     annual_tonhour::Union{<:Real, Nothing}=nothing,
     monthly_tonhour::Vector{<:Real}=Real[],
@@ -1292,9 +1298,6 @@ function BuiltInCoolingLoad(
             "MediumOffice" => 337147
         )
     )
-    if isempty(city)
-        city = find_ashrae_zone_city(latitude, longitude)
-    end
     if !(buildingtype in default_buildings)
         error("buildingtype $(buildingtype) not in $(default_buildings).")
     end
