@@ -50,9 +50,13 @@ be paid.
 There are two construction methods for `FlexibleHVAC`, which depend on whether or not the data was 
 loaded in from a JSON file. The issue with data from JSON is that the vector-of-vectors from the JSON 
 file must be appropriately converted to Julia Matrices. When loading in a Scenario from JSON that 
-includes a `FlexibleHVAC` model if you include the `flex_hvac_from_json` argument to the `Scenario` 
-constructor then the conversion to Matrices will be done appropriately. For example:
+includes a `FlexibleHVAC` model if you pass `flex_hvac_from_json=true` to the `Scenario` 
+constructor then the conversion to Matrices will be done appropriately.
 
+When using a built-in FlexibleHVAC model the `doe_reference_name` argument must be provided. The 
+climate zone / city will be inferred from the `ElectricLoad` if a `doe_reference_name` is also 
+provided in the `ElectricLoad` inputs. Otherwise the `city` argument must be provided. See the 
+[ElectricLoad](@ref) docs for the list of possible `doe_reference_name` and `city` values.
 
 
 !!! note
@@ -97,7 +101,7 @@ The cost of the energy necessary to heat/cool the building is determined by eith
 2. the `ExistingBoiler.fuel_cost_per_mmbtu` for heating
 """
 function make_bau_hvac(A, B, u, control_node, initial_temperatures, T_hi, T_lo)
-    J, T = size(u)
+    T = size(u, 2)
     N = size(A, 1)
 
     temperatures = zeros(N, T)
@@ -144,29 +148,50 @@ end
 
 
 """
-    FlexibleHVAC(dict_from_json::Dict)
+    FlexibleHVAC(
+        doe_reference_name::String,
+        city::String,
+        installed_cost::Float64,
+        temperature_upper_bound_degC::Float64,
+        temperature_lower_bound_degC::Float64
+    )
+
+Constructor for `FlexibleHVAC` when using an RC model that has been fit to a DoE Commercial 
+Reference Building.
+"""
+function FlexibleHVAC(
+        doe_reference_name::String,
+        city::String,
+        installed_cost::R,
+        temperature_upper_bound_degC::R,
+        temperature_lower_bound_degC::R
+    ) where {R <: Real}
+
+    lib_path = joinpath(dirname(@__FILE__), "..", "..", "data", "rcmodels")
+    json_path = joinpath(lib_path, string(city * "_" * doe_reference_name * ".json"))
+    rc_dict = JSON.parsefile(json_path)
+    rc_dict["installed_cost"] = installed_cost
+    rc_dict["temperature_upper_bound_degC"] = temperature_upper_bound_degC
+    rc_dict["temperature_lower_bound_degC"] = temperature_lower_bound_degC
+
+    FlexibleHVAC(rc_dict)
+end
 
 
 """
-function FlexibleHVAC(
-        dict_from_json::Dict,
-        latitude::Float64,
-        longitude::Float64,
-        buildingrefname::String
-    )
+    FlexibleHVAC(dict_from_json::Dict)
 
-    city = find_ashrae_zone_city(latitude,longitude)
-    fp = string("./../test/data/",buildingrefname,"_",city,"_rcmodel.json")
-    rcmodel = JSON.parse(fp)
-
+Constructor for `FlexibleHVAC` when the inputs have been loaded from a JSON file.
+"""
+function FlexibleHVAC(dict_from_json::Dict)
     #=
     When loading in JSON list of lists we get a Vector{Any}, containing more Vector{Any}
     Convert the Vector of Vectors to a Matrix with:
     Matrix(hcat(Vector{Float64}.(<VectorOfVectors-from-JSON>)...))
     =#
-    A = Matrix(hcat(Vector{Float64}.(rcmodel["system_matrix"])...))
-    B = Matrix(hcat(Vector{Float64}.(rcmodel["input_matrix"])...))
-    u = Matrix(hcat(Vector{Float64}.(rcmodel["exogenous_inputs"])...))'
+    A = Matrix(hcat(Vector{Float64}.(dict_from_json["system_matrix"])...))
+    B = Matrix(hcat(Vector{Float64}.(dict_from_json["input_matrix"])...))
+    u = Matrix(hcat(Vector{Float64}.(dict_from_json["exogenous_inputs"])...))'
    
     bau_hvac = make_bau_hvac(A, B, u, 
         dict_from_json["control_node"], 
@@ -188,6 +213,7 @@ function FlexibleHVAC(
     )
 end
 
+
 """
     function FlexibleHVAC(;
         system_matrix::AbstractMatrix,
@@ -200,7 +226,9 @@ end
         installed_cost::Float64
     )
 
-When the A, B, and u values are in Matrix format (note u is normally a vector but in our case it has a time index in the second dimension)
+Constructor for `FlexibleHVAC` when the `system_matrix`, `input_matrix`, and `exogenous_inputs` values 
+are in Matrix format. Note that `exogenous_inputs` is normally a vector but in our case it has a time 
+index in the second dimension.
 """
 function FlexibleHVAC(;
         system_matrix::AbstractMatrix,
