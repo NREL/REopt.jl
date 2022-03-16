@@ -330,3 +330,14 @@ struct MPCGenerator <: AbstractGenerator
         )
     end
 end
+
+"""
+    MPCCoolingLoad
+
+    Base.@kwdef struct MPCCoolingLoad
+        loads_kw_thermal::Array{Real,1}
+    end
+"""
+Base.@kwdef struct MPCCoolingLoad
+    loads_kw_thermal::Array{Real,1}
+end
