@@ -42,8 +42,10 @@ function Site(;
     mg_tech_sizes_equal_grid_sizes::Bool = true,
     co2_emissions_reduction_min_pct::Float64 = 0.0,
     co2_emissions_reduction_max_pct::Float64 = 1.0,
-    include_exported_renewable_electricity_in_total::Bool = True,
+    renewable_electricity_min_pct::Float64 = 0.0,
+    renewable_electricity_max_pct::Float64 = 1.0,
     include_exported_elec_emissions_in_total::Bool = True,
+    include_exported_renewable_electricity_in_total::Bool = True,
     node::Int = 1, 
     )
 ```
@@ -59,8 +61,10 @@ struct Site
     mg_tech_sizes_equal_grid_sizes
     co2_emissions_reduction_min_pct
     co2_emissions_reduction_max_pct
-    include_exported_renewable_electricity_in_total
+    renewable_electricity_min_pct
+    renewable_electricity_max_pct
     include_exported_elec_emissions_in_total
+    include_exported_renewable_electricity_in_total
     node  # TODO validate that multinode Sites do not share node numbers? Or just raise warning
     function Site(;
         latitude::Real, 
@@ -71,8 +75,10 @@ struct Site
         mg_tech_sizes_equal_grid_sizes::Bool = true,
         co2_emissions_reduction_min_pct::Float64 = 0.0,
         co2_emissions_reduction_max_pct::Float64 = 1.0,
-        include_exported_renewable_electricity_in_total::Bool = True,
+        renewable_electricity_min_pct::Float64 = 0.0,
+        renewable_electricity_max_pct::Float64 = 1.0,
         include_exported_elec_emissions_in_total::Bool = True,
+        include_exported_renewable_electricity_in_total::Bool = True,
         node::Int = 1, 
         )
         invalid_args = String[]
@@ -87,7 +93,8 @@ struct Site
         end
         new(latitude, longitude, land_acres, roof_squarefeet, min_resil_timesteps, 
             mg_tech_sizes_equal_grid_sizes, co2_emissions_reduction_min_pct, 
-            co2_emissions_reduction_max_pct, include_exported_renewable_electricity_in_total, 
-            include_exported_elec_emissions_in_total, node)
+            co2_emissions_reduction_max_pct, renewable_electricity_min_pct,
+            renewable_electricity_max_pct, include_exported_elec_emissions_in_total,
+            include_exported_renewable_electricity_in_total, node)
     end
 end
