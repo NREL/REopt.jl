@@ -254,16 +254,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     max_cooling_demand_kw = 0
     if haskey(d, "CoolingLoad") && !haskey(d, "FlexibleHVAC")
-        assign_elec_doe_reference_name = true
-        cooling_keys_exceptions = ["annual_fraction", "monthly_fraction", "loads_fraction"]
-        for k in cooling_keys_exceptions
-            if haskey(d["CoolingLoad"], k)
-                assign_elec_doe_reference_name = false
-            end
-        end
-        if assign_elec_doe_reference_name
-            add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["CoolingLoad"])
-        end
+        # Note, if thermal_loads_ton or one of the "...fraction(s)_of_electric_load" inputs is used for CoolingLoad, doe_reference_name is ignored 
+        add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["CoolingLoad"])
         d["CoolingLoad"]["site_electric_load_profile"] = electric_load.loads_kw
         if haskey(d, "ExistingChiller") && haskey(d["ExistingChiller"], "cop")
             # TODO warn if replacing CoolingLoad.existing_chiller_cop ? Or remove this if block ?
