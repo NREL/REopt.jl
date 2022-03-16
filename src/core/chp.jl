@@ -87,6 +87,7 @@ can_net_meter::Bool = false
 can_wholesale::Bool = false
 can_export_beyond_nem_limit::Bool = false
 can_curtail::Bool = false
+fuel_renewable_energy_pct::Float64 = 0.0
 emissions_factor_lb_CO2_per_mmbtu::Union{Missing,Float64} = missing
 emissions_factor_lb_NOX_per_mmbtu::Union{Missing,Float64} = missing
 emissions_factor_lb_SO2_per_mmbtu::Union{Missing,Float64} = missing
@@ -146,7 +147,7 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     can_wholesale::Bool = false
     can_export_beyond_nem_limit::Bool = false
     can_curtail::Bool = false
-    
+    fuel_renewable_energy_pct::Float64 = 0.0
     emissions_factor_lb_CO2_per_mmbtu::Union{Missing,Float64} = missing
     emissions_factor_lb_NOX_per_mmbtu::Union{Missing,Float64} = missing
     emissions_factor_lb_SO2_per_mmbtu::Union{Missing,Float64} = missing
