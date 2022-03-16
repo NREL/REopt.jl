@@ -36,6 +36,7 @@ struct MPCScenario <: AbstractScenario
     electric_utility::ElectricUtility
     financial::MPCFinancial
     generator::MPCGenerator
+    cooling_load::MPCCoolingLoad
 end
 
 
@@ -117,6 +118,9 @@ function MPCScenario(d::Dict)
         generator = MPCGenerator(; size_kw=0)
     end
 
+    # Placeholder/dummy cooling load set to zeros
+    cooling_load = MPCCoolingLoad(; loads_kw_thermal = zeros(length(electric_load.loads_kw)))
+
     return MPCScenario(
         settings,
         pvs, 
@@ -125,6 +129,7 @@ function MPCScenario(d::Dict)
         electric_load, 
         electric_utility, 
         financial,
-        generator
+        generator,
+        cooling_load
     )
 end
