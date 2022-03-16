@@ -28,13 +28,26 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 
+const MMBTU_TO_KWH = 293.07107
+const GAL_DIESEL_TO_KWH = 40.7
+const TONNES_TO_LBS = 2204.62
+
 function annuity(years::Int, rate_escalation::Float64, rate_discount::Float64)
     """
         this formulation assumes cost growth in first period
         i.e. it is a geometric sum of (1+rate_escalation)^n / (1+rate_discount)^n
         for n = 1, ..., years
     """
-    x = (1 + rate_escalation) / (1 + rate_discount)
+    return annuity_two_escalation_rates(years, rate_escalation, 0, rate_discount)
+end
+
+function annuity_two_escalation_rates(years::Int, rate_escalation1::Float64, rate_escalation2::Float64, rate_discount::Float64)
+    """
+        this formulation assumes cost growth in first period
+        i.e. it is a geometric sum of (1+rate_escalation)^n / (1+rate_discount)^n
+        for n = 1,..., analysis_period
+    """
+    x = (1 + rate_escalation1 + rate_escalation2 + rate_escalation1 * rate_escalation2) / (1 + rate_discount)
     if x != 1
         pwf = round(x * (1 - x^years) / (1 - x), digits=5)
     else
@@ -42,7 +55,6 @@ function annuity(years::Int, rate_escalation::Float64, rate_discount::Float64)
     end
     return pwf
 end
-
 
 function annuity_escalation(analysis_period::Int, rate_escalation::Float64, rate_discount::Float64)
     """
