@@ -136,6 +136,8 @@ function BAUInputs(p::REoptInputs)
         p.pwf_e,
         p.pwf_om,
         p.pwf_fuel,
+        p.pwf_emissions_cost,
+        p.pwf_grid_emissions_lbs,
         p.third_party_factor,
         p.pvlocations,
         p.maxsize_pv_locations,
