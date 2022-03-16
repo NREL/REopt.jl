@@ -681,20 +681,20 @@ end
 
     delete!(input_data, "SpaceHeatingLoad")
     delete!(input_data, "DomesticHotWaterLoad")
-    annual_fraction_input = 0.5
-    input_data["CoolingLoad"] = Dict{Any, Any}("annual_fraction" => annual_fraction_input)
+    annual_fraction_of_electric_load_input = 0.5
+    input_data["CoolingLoad"] = Dict{Any, Any}("annual_fraction_of_electric_load" => annual_fraction_of_electric_load_input)
 
     s = Scenario(input_data)
     inputs = REoptInputs(s)
 
-    expected_cooling_electricity = sum(inputs.s.electric_load.loads_kw) * annual_fraction_input
+    expected_cooling_electricity = sum(inputs.s.electric_load.loads_kw) * annual_fraction_of_electric_load_input
     total_chiller_electric_consumption = sum(inputs.s.cooling_load.loads_kw_thermal) / inputs.s.cooling_load.existing_chiller_cop
     @test round(total_chiller_electric_consumption, digits=0) ≈ round(expected_cooling_electricity) atol=1.0
     @test round(total_chiller_electric_consumption, digits=0) ≈ 3876410 atol=1.0
 
     input_data["SpaceHeatingLoad"] = Dict{Any, Any}("monthly_mmbtu" => repeat([500.0], 12))
     input_data["DomesticHotWaterLoad"] = Dict{Any, Any}("monthly_mmbtu" => repeat([500.0], 12))
-    input_data["CoolingLoad"] = Dict{Any, Any}("monthly_fraction" => repeat([0.1], 12))
+    input_data["CoolingLoad"] = Dict{Any, Any}("monthly_fractions_of_electric_load" => repeat([0.1], 12))
 
     s = Scenario(input_data)
     inputs = REoptInputs(s)
@@ -707,7 +707,7 @@ end
 
     input_data["SpaceHeatingLoad"] = Dict{Any, Any}("fuel_loads_mmbtu_per_hour" => repeat([0.5], 8760))
     input_data["DomesticHotWaterLoad"] = Dict{Any, Any}("fuel_loads_mmbtu_per_hour" => repeat([0.5], 8760))
-    input_data["CoolingLoad"] = Dict{Any, Any}("loads_fraction" => repeat([0.01], 8760))
+    input_data["CoolingLoad"] = Dict{Any, Any}("per_time_step_fractions_of_electric_load" => repeat([0.01], 8760))
 
     s = Scenario(input_data)
     inputs = REoptInputs(s)

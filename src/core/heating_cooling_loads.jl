@@ -203,9 +203,9 @@ end
         annual_tonhour::Union{Real, Nothing} = nothing,
         monthly_tonhour::Array{<:Real,1} = Real[],
         thermal_loads_ton::Array{<:Real,1} = Real[],
-        annual_fraction::Union{Real, Nothing} = nothing,
-        monthly_fraction::Array{<:Real,1} = Real[],
-        loads_fraction::Array{<:Real,1} = Real[],
+        annual_fraction_of_electric_load::Union{Real, Nothing} = nothing,
+        monthly_fractions_of_electric_load::Array{<:Real,1} = Real[],
+        per_time_step_fractions_of_electric_load::Array{<:Real,1} = Real[],
         existing_chiller_cop::Real = EXISTING_CHILLER_COP
     )
 
@@ -213,8 +213,12 @@ end
 
 There are many ways to define a `CoolingLoad`:
 1. a time-series via the `thermal_loads_ton`,
-2. scaling a DoE Commercial Reference Building (CRB) profile or a blend of CRB profiles to either the `annual_fraction` or `monthly_fraction` values;
-3. or using the `doe_reference_name` or `blended_doe_reference_names` from the `ElectricLoad`.
+2. DoE Commercial Reference Building (CRB) profile or a blend of CRB profiles which uses the buildings' fraction of total electric for cooling profile applied to the `ElectricLoad`
+3. scaling a DoE Commercial Reference Building (CRB) profile or a blend of CRB profiles using `annual_tonhour` or `monthly_tonhour`
+4. the `annual_fraction_of_electric_load` or `monthly_fractions_of_electric_load` values which gets applied to the `ElectricLoad` to determine the cooling electric load;
+5. or using the `doe_reference_name` or `blended_doe_reference_names` from the `ElectricLoad`.
+
+The electric-based `loads_kw` of the `CoolingLoad` is a _subset_ of the total electric load `ElectricLoad`, so `CoolingLoad.loads_kw` for the BAU/conventional electric consumption of the `existing_chiller` is subtracted from the `ElectricLoad` for the non-cooling electric load balance constraint in the model. 
 
 When using an `ElectricLoad` defined from a `doe_reference_name` or `blended_doe_reference_names` 
 one only needs to provide an empty Dict in the scenario JSON to add a `CoolingLoad` to a 
@@ -240,9 +244,9 @@ struct CoolingLoad
         annual_tonhour::Union{Real, Nothing} = nothing,
         monthly_tonhour::Array{<:Real,1} = Real[],
         thermal_loads_ton::Array{<:Real,1} = Real[],
-        annual_fraction::Union{Real, Nothing} = nothing,
-        monthly_fraction::Array{<:Real,1} = Real[],
-        loads_fraction::Array{<:Real,1} = Real[],
+        annual_fraction_of_electric_load::Union{Real, Nothing} = nothing,
+        monthly_fractions_of_electric_load::Array{<:Real,1} = Real[],
+        per_time_step_fractions_of_electric_load::Array{<:Real,1} = Real[],
         existing_chiller_cop::Real = EXISTING_CHILLER_COP,
         site_electric_load_profile = Real[],
         time_steps_per_hour::Int = 1,
@@ -254,13 +258,29 @@ struct CoolingLoad
         loads_kw_thermal = nothing
         loads_kw = nothing
         if length(thermal_loads_ton) > 0
-
             if !(length(thermal_loads_ton) / time_steps_per_hour ≈ 8760)
                 @error "Provided cooling load does not match the time_steps_per_hour."
             end
-
             loads_kw_thermal = thermal_loads_ton .* TONHOUR_TO_KWH_THERMAL
-
+        
+        elseif !isempty(per_time_step_fractions_of_electric_load) && (length(site_electric_load_profile) / time_steps_per_hour ≈ 8760)
+            if !(length(per_time_step_fractions_of_electric_load) / time_steps_per_hour ≈ 8760)
+                @error "Provided cooling per_time_step_fractions_of_electric_load array does not match the time_steps_per_hour."
+            end
+            loads_kw = per_time_step_fractions_of_electric_load .* site_electric_load_profile
+        
+        elseif !isempty(monthly_fractions_of_electric_load) && (length(site_electric_load_profile) / time_steps_per_hour ≈ 8760)
+            if !(length(monthly_fractions_of_electric_load) ≈ 12)
+                @error "Provided cooling monthly_fractions_of_electric_load array does not have 12 values."
+            end
+            timeseries = collect(DateTime(2017,1,1) : Minute(60/time_steps_per_hour) : 
+                                 DateTime(2017,1,1) + Minute(8760*60 - 60/time_steps_per_hour))
+            loads_kw = [monthly_fractions_of_electric_load[month(dt)] * site_electric_load_profile[ts] for (ts, dt) 
+                        in enumerate(timeseries)]
+        
+        elseif !isnothing(annual_fraction_of_electric_load) && (length(site_electric_load_profile) / time_steps_per_hour ≈ 8760)
+            loads_kw = annual_fraction_of_electric_load * site_electric_load_profile
+        
         elseif !isempty(doe_reference_name)
             if annual_tonhour === nothing && isempty(monthly_tonhour)
                 loads_kw = get_default_fraction_of_total_electric(city, doe_reference_name, 
@@ -269,6 +289,7 @@ struct CoolingLoad
                 loads_kw = BuiltInCoolingLoad(city, doe_reference_name, latitude, longitude, 2017, 
                                           annual_tonhour, monthly_tonhour)
             end
+        
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
             if annual_tonhour === nothing && isempty(monthly_tonhour)
@@ -282,7 +303,6 @@ struct CoolingLoad
                     end
                     loads_kw += site_electric_load_profile .* modified_fraction
                 end
-                println("Total cooling fraction = ", sum(loads_kw) / sum(site_electric_load_profile))
             else            
                 loads_kw = blend_and_scale_doe_profiles(BuiltInCoolingLoad, latitude, longitude, 2017, 
                                                         blended_doe_reference_names, 
@@ -290,28 +310,10 @@ struct CoolingLoad
                                                         annual_tonhour, monthly_tonhour)
             end
         
-        elseif !isempty(loads_fraction) && (length(site_electric_load_profile) / time_steps_per_hour ≈ 8760)
-            if !(length(loads_fraction) / time_steps_per_hour ≈ 8760)
-                @error "Provided cooling loads_fraction array does not match the time_steps_per_hour."
-            end
-            loads_kw = loads_fraction .* site_electric_load_profile
-        
-        elseif !isempty(monthly_fraction) && (length(site_electric_load_profile) / time_steps_per_hour ≈ 8760)
-            if !(length(monthly_fraction) ≈ 12)
-                @error "Provided cooling monthly_fraction array does not have 12 values."
-            end
-            timeseries = collect(DateTime(2017,1,1) : Minute(60/time_steps_per_hour) : 
-                                 DateTime(2017,1,1) + Minute(8760*60 - 60/time_steps_per_hour))
-            loads_kw = [monthly_fraction[month(dt)] * site_electric_load_profile[ts] for (ts, dt) 
-                        in enumerate(timeseries)]
-
-        elseif !isnothing(annual_fraction) && (length(site_electric_load_profile) / time_steps_per_hour ≈ 8760)
-            loads_kw = annual_fraction * site_electric_load_profile
-        
         else
             error("Cannot construct BuiltInCoolingLoad. You must provide either [thermal_loads_ton], 
                 [doe_reference_name, city], [blended_doe_reference_names, blended_doe_reference_percents, city],
-                or the site_electric_load_profile along with one of [loads_fraction, monthly_fraction, annual_fraction].")
+                or the site_electric_load_profile along with one of [per_time_step_fractions_of_electric_load, monthly_fractions_of_electric_load, annual_fraction_of_electric_load].")
         end
 
         # TODO wbecker delete the following if EXISTING_CHILLER_COP = 4.55 is okay to replace look up get_existing_chiller_cop
@@ -343,7 +345,7 @@ function get_default_fraction_of_total_electric(city, doe_reference_name, latitu
     crb_cooling_elec_loads_kw = BuiltInCoolingLoad(city, doe_reference_name, latitude, longitude, year)
     
     default_fraction_of_total_electric_profile = crb_cooling_elec_loads_kw ./
-                                                    max(crb_total_elec_loads_kw, repeat([1.0E-6], length(crb_total_elec_loads_kw)))
+                                                    max.(crb_total_elec_loads_kw, repeat([1.0E-6], length(crb_total_elec_loads_kw)))
     return default_fraction_of_total_electric_profile
 end
 
