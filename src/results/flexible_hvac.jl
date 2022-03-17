@@ -29,7 +29,7 @@
 # *********************************************************************************
 function add_flexible_hvac_results(m::JuMP.AbstractModel, p::REoptInputs{Scenario}, d::Dict; _n="")
     r = Dict{String, Any}()
-    binFlexHVAC = value(m[:binFlexHVAC])
+    binFlexHVAC = round(value(m[:binFlexHVAC]), digits=0)
     r["purchased"] = string(Bool(binFlexHVAC))
     r["temperatures_degC_node_by_time"] = value.(m[Symbol("dvTemperature"*_n)]).data
     r["upgrade_cost"] = Int(binFlexHVAC) * p.s.flexible_hvac.installed_cost
