@@ -89,9 +89,11 @@ Each `city` and `doe_reference_name` combination has a default `annual_kwh`, or 
 own `annual_kwh` or `monthly_totals_kwh` and the reference profile will be scaled appropriately.
 """
 mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off of (critical_)loads_kw_is_net
-    loads_kw::Array{Real,1}
+    native_loads_kw::Array{Real,1}
+    net_loads_kw::Array{Real,1}
     year::Int  # used in ElectricTariff to align rate schedule with weekdays/weekends
-    critical_loads_kw::Array{Real,1}
+    native_critical_loads_kw::Array{Real,1}
+    net_critical_loads_kw::Array{Real,1}
     loads_kw_is_net::Bool
     critical_loads_kw_is_net::Bool
     city::String
@@ -161,10 +163,27 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             critical_loads_kw = critical_load_pct * loads_kw
         end
 
+        if loads_kw_is_net
+            native_loads_kw = []
+            net_loads_kw = loads_kw
+        else
+            native_loads_kw = loads_kw
+            net_loads_kw = []
+        end
+        if critical_loads_kw_is_net
+            native_critical_loads_kw = []
+            net_critical_loads_kw = loads_kw
+        else
+            native_critical_loads_kw = loads_kw
+            net_critical_loads_kw = []
+        end
+            
         new(
-            loads_kw,
+            native_loads_kw,
+            net_loads_kw,
             year,
-            critical_loads_kw,
+            native_critical_loads_kw,
+            net_critical_loads_kw,
             loads_kw_is_net,
             critical_loads_kw_is_net
         )
