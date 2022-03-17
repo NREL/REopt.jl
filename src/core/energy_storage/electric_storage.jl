@@ -92,7 +92,7 @@ end
 
 
 """
-    function ElecStorage(d::Dict, f::Financial, settings::Settings)
+    function ElectricStorage(d::Dict, f::Financial, settings::Settings)
 
 Construct ElectricStorage struct from Dict with keys-val pairs from the 
 REopt ElectricStorage and Financial inputs.
