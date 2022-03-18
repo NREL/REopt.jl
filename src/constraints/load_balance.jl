@@ -41,7 +41,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
             + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec)
             + sum(m[Symbol("dvThermalProduction"*_n)][t, ts] / p.cop[t] for t in p.techs.cooling)
             + p.s.electric_load.loads_kw[ts]
-            - p.s.cooling_load.loads_kw_thermal[ts] / EXISTING_CHILLER_COP
+            - p.s.cooling_load.loads_kw_thermal[ts] / p.cop["ExistingChiller"]
         )
     else
         conrefs = @constraint(m, [ts in p.time_steps_with_grid],
@@ -55,7 +55,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
             + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec)
             + sum(m[Symbol("dvThermalProduction"*_n)][t, ts] / p.cop[t] for t in p.techs.cooling)
             + p.s.electric_load.loads_kw[ts]
-            - p.s.cooling_load.loads_kw_thermal[ts] / EXISTING_CHILLER_COP
+            - p.s.cooling_load.loads_kw_thermal[ts] / p.cop["ExistingChiller"]
         )
     end
 
@@ -157,7 +157,6 @@ function add_thermal_load_constraints(m, p; _n="")
         # end
         end
         
-        # TODO do we need production_factor for chillers?
         if !isempty(p.techs.cooling)
             @constraint(m, [ts in p.time_steps_with_grid],
                 sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.cooling) ==

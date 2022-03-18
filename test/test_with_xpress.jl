@@ -592,9 +592,9 @@ end
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
     results = run_reopt(m, inputs)
 
-    # Annual cooling **thermal** energy load of CRB is based on annual cooling electric energy (from CRB models) and assumed const REopt.EXISTING_CHILLER_COP
+    # Annual cooling **thermal** energy load of CRB is based on annual cooling electric energy (from CRB models) and assumed const REopt.CRB_COOLING_CONVERSION_COP
     # When the user specifies inputs["ExistingChiller"]["cop"], this changes the **electric** consumption of the chiller to meet that cooling thermal load
-    cooling_thermal_load_ton_hr_total = 1427329.0 * REopt.EXISTING_CHILLER_COP / REopt.TONHOUR_TO_KWH_THERMAL  # From CRB models, in heating_cooling_loads.jl, BuiltInCoolingLoad data for location (SanFrancisco Hospital)
+    cooling_thermal_load_ton_hr_total = 1427329.0 * REopt.CRB_COOLING_CONVERSION_COP / REopt.TONHOUR_TO_KWH_THERMAL  # From CRB models, in heating_cooling_loads.jl, BuiltInCoolingLoad data for location (SanFrancisco Hospital)
     cooling_electric_load_total_mod_cop = cooling_thermal_load_ton_hr_total / inputs.s.existing_chiller.cop
 
     # Annual heating **thermal** energy load of CRB is based on annual boiler fuel energy (from CRB models) and assumed const EXISTING_BOILER_EFFICIENCY
@@ -675,8 +675,7 @@ end
     @test round(total_boiler_heating_fuel_load_mmbtu, digits=0) ≈ 2904 * REopt.EXISTING_BOILER_EFFICIENCY / inputs.s.existing_boiler.efficiency atol=1.0
     # The expected cooling load is based on the default **fraction of total electric** profile for the doe_reference_name when annual_tonhour is NOT input
     #    the 320540.0 kWh number is from the default LargeOffice fraction of total electric profile applied to the Hospital default total electric profile
-    total_chiller_electric_consumption = sum(inputs.s.cooling_load.loads_kw_thermal) / inputs.s.cooling_load.existing_chiller_cop
-    # API used COP of 4.55 in this case as well because no annual_tonhour or monthly_tonhour were not given in this test (otherwise would use either 4.4 or 4.69 depending on max ton)
+    total_chiller_electric_consumption = sum(inputs.s.cooling_load.loads_kw_thermal) / inputs.s.existing_chiller.cop
     @test round(total_chiller_electric_consumption, digits=0) ≈ 320544.0 atol=1.0  # loads_kw is **electric**, loads_kw_thermal is **thermal**
 
     delete!(input_data, "SpaceHeatingLoad")

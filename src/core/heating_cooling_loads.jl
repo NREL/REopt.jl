@@ -177,23 +177,35 @@ struct SpaceHeatingLoad
     end
 end
 
-# TODO wbecker delete get_existing_chiller_cop if EXISTING_CHILLER_COP = 4.55 is okay
-function get_existing_chiller_cop(max_thermal_factor_on_peak_load; loads_kw=nothing, loads_kw_thermal=nothing)
+"""
+function get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_on_peak_load=nothing, 
+                                            loads_kw=nothing, 
+                                            loads_kw_thermal=nothing)
+This function returns the default value for ExistingChiller.cop based on:
+    1. No information about load, returns average of lower and higher cop default values (`cop_unknown_thermal`)
+    2. If the cooling electric `loads_kw` is known, we first guess the thermal load profile using `cop_unknown_thermal`,
+        and then we use the default logic to determine the `existing_chiller_cop` based on the peak thermal load with a thermal factor multiplier.
+    3. If the cooling thermal `loads_kw_thermal` is known, same as 2. but we don't have to guess the cop to convert electric to thermal load first.
+"""
+function get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_on_peak_load=nothing, loads_kw=nothing, loads_kw_thermal=nothing)
+    cop_less_than_100_ton = 4.40
+    cop_more_than_100_ton = 4.69
+    cop_unknown_thermal = (cop_less_than_100_ton + cop_more_than_100_ton) / 2.0
+    max_cooling_load_ton = nothing
     if !isnothing(loads_kw_thermal)
-        max_cooling_load_tons = maximum(loads_kw_thermal) / TONHOUR_TO_KWH_THERMAL
+        max_cooling_load_ton = maximum(loads_kw_thermal) / TONHOUR_TO_KWH_THERMAL
     elseif !isnothing(loads_kw)
-        max_cooling_load_tons = maximum(loads_kw) / TONHOUR_TO_KWH_THERMAL * EXISTING_CHILLER_COP
+        max_cooling_load_ton = maximum(loads_kw) / TONHOUR_TO_KWH_THERMAL * cop_unknown_thermal
     end
-    estimated_max_chiller_thermal_capacity_tons = max_cooling_load_tons * max_thermal_factor_on_peak_load
-    if estimated_max_chiller_thermal_capacity_tons < 100.0
-        return 4.40
+    if isnothing(max_cooling_load_ton) || isnothing(existing_chiller_max_thermal_factor_on_peak_load)
+        return cop_unknown_thermal
+    elseif max_cooling_load_ton * existing_chiller_max_thermal_factor_on_peak_load < 100.0
+        return cop_less_than_100_ton
     else
-        return 4.69
+        return cop_more_than_100_ton
     end
 end
 
-
-# TODO? Zero out cooling load for outage hours
 """
     function CoolingLoad(;
         doe_reference_name::String = "",
@@ -206,9 +218,9 @@ end
         annual_fraction_of_electric_load::Union{Real, Nothing} = nothing,
         monthly_fractions_of_electric_load::Array{<:Real,1} = Real[],
         per_time_step_fractions_of_electric_load::Array{<:Real,1} = Real[],
-        existing_chiller_cop::Real = EXISTING_CHILLER_COP
+        existing_chiller_cop::Real = nothing,
+        existing_chiller_max_thermal_factor_on_peak_load::Real= nothing
     )
-
 
 
 There are many ways to define a `CoolingLoad`:
@@ -232,6 +244,7 @@ one only needs to provide an empty Dict in the scenario JSON to add a `CoolingLo
 In this case the values provided for `doe_reference_name`, or  `blended_doe_reference_names` and 
 `blended_doe_reference_percents` are copied from the `ElectricLoad` to the `CoolingLoad`.
 """
+
 struct CoolingLoad
     loads_kw_thermal::Array{Real, 1}
     existing_chiller_cop::Real
@@ -247,16 +260,20 @@ struct CoolingLoad
         annual_fraction_of_electric_load::Union{Real, Nothing} = nothing,
         monthly_fractions_of_electric_load::Array{<:Real,1} = Real[],
         per_time_step_fractions_of_electric_load::Array{<:Real,1} = Real[],
-        existing_chiller_cop::Real = EXISTING_CHILLER_COP,
         site_electric_load_profile = Real[],
         time_steps_per_hour::Int = 1,
         latitude::Float64=0.0,
         longitude::Float64=0.0,
-        max_thermal_factor_on_peak_load::Real=1.25 # TODO wbecker delete the max_thermal_factor_on_peak_load if EXISTING_CHILLER_COP = 4.55 is okay to replace look up get_existing_chiller_cop
+        existing_chiller_cop::Union{Real, Nothing} = nothing,
+        existing_chiller_max_thermal_factor_on_peak_load::Union{Real, Nothing}= nothing
     )
         # determine the timeseries of loads_kw_thermal
         loads_kw_thermal = nothing
         loads_kw = nothing
+        # Set initial existing_chiller_cop to "cop_unknown_thermal" if not passed in; we will update existing_chiller_cop once the load profile is determined
+        if isnothing(existing_chiller_cop)
+            existing_chiller_cop = get_existing_chiller_default_cop()
+        end
         if length(thermal_loads_ton) > 0
             if !(length(thermal_loads_ton) / time_steps_per_hour ≈ 8760)
                 @error "Provided cooling load does not match the time_steps_per_hour."
@@ -282,20 +299,20 @@ struct CoolingLoad
             loads_kw = annual_fraction_of_electric_load * site_electric_load_profile
         
         elseif !isempty(doe_reference_name)
-            if annual_tonhour === nothing && isempty(monthly_tonhour)
+            if isnothing(annual_tonhour) && isempty(monthly_tonhour)
                 loads_kw = get_default_fraction_of_total_electric(city, doe_reference_name, 
-                                                                    latitude, longitude, 2017) .* site_electric_load_profile
+                                            latitude, longitude, 2017, existing_chiller_cop) .* site_electric_load_profile
             else
                 loads_kw = BuiltInCoolingLoad(city, doe_reference_name, latitude, longitude, 2017, 
-                                          annual_tonhour, monthly_tonhour)
+                                          annual_tonhour, monthly_tonhour, existing_chiller_cop)
             end
         
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
-            if annual_tonhour === nothing && isempty(monthly_tonhour)
+            if isnothing(annual_tonhour) && isempty(monthly_tonhour)
                 loads_kw = zeros(Int(8760/time_steps_per_hour))
                 for (i, building) in enumerate(blended_doe_reference_names)
-                    default_fraction = get_default_fraction_of_total_electric(city, building, latitude, longitude, 2017)
+                    default_fraction = get_default_fraction_of_total_electric(city, building, latitude, longitude, 2017, existing_chiller_cop)
                     modified_fraction = default_fraction * blended_doe_reference_percents[i]
                     if length(site_electric_load_profile) > 8784
                         modified_fraction = repeat(modified_fraction, inner=time_steps_per_hour / (length(site_electric_load_profile)/8760))
@@ -316,14 +333,14 @@ struct CoolingLoad
                 or the site_electric_load_profile along with one of [per_time_step_fractions_of_electric_load, monthly_fractions_of_electric_load, annual_fraction_of_electric_load].")
         end
 
-        # TODO wbecker delete the following if EXISTING_CHILLER_COP = 4.55 is okay to replace look up get_existing_chiller_cop
-        # if isnothing(existing_chiller_cop)
-        #     existing_chiller_cop = get_existing_chiller_cop(max_thermal_factor_on_peak_load;
-        #                         loads_kw=loads_kw, loads_kw_thermal=loads_kw_thermal)
-        # end
+        # Now that either the cooling electric loads_kw or the cooling thermal loads_kw_thermal is known, update existing_chiller_cop if it was not input
+        if isnothing(existing_chiller_cop)
+            existing_chiller_cop = get_existing_chiller_default_cop(;existing_chiller_max_thermal_factor_on_peak_load=existing_chiller_max_thermal_factor_on_peak_load,
+                                loads_kw=loads_kw, loads_kw_thermal=loads_kw_thermal)
+        end
 
         if isnothing(loads_kw_thermal)  # have to convert electric loads_kw to thermal load
-            loads_kw_thermal = EXISTING_CHILLER_COP * loads_kw
+            loads_kw_thermal = existing_chiller_cop * loads_kw
         end
 
         if length(loads_kw_thermal) < 8760*time_steps_per_hour
@@ -339,10 +356,10 @@ struct CoolingLoad
     end
 end
 
-function get_default_fraction_of_total_electric(city, doe_reference_name, latitude, longitude, year)
+function get_default_fraction_of_total_electric(city, doe_reference_name, latitude, longitude, year, existing_chiller_cop)
     crb_total_elec_loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, year)
 
-    crb_cooling_elec_loads_kw = BuiltInCoolingLoad(city, doe_reference_name, latitude, longitude, year)
+    crb_cooling_elec_loads_kw = BuiltInCoolingLoad(city, doe_reference_name, latitude, longitude, year, nothing, Real[], existing_chiller_cop)
     
     default_fraction_of_total_electric_profile = crb_cooling_elec_loads_kw ./
                                                     max.(crb_total_elec_loads_kw, repeat([1.0E-6], length(crb_total_elec_loads_kw)))
@@ -1020,6 +1037,7 @@ function BuiltInCoolingLoad(
     year::Int,
     annual_tonhour::Union{<:Real, Nothing}=nothing,
     monthly_tonhour::Vector{<:Real}=Real[],
+    existing_chiller_cop::Union{<:Real, Nothing}=nothing
     )
     cooling_annual_kwh = Dict(
         "Albuquerque" => Dict(
@@ -1336,11 +1354,11 @@ function BuiltInCoolingLoad(
     if isnothing(annual_tonhour)
         annual_kwh = cooling_annual_kwh[city][buildingtype]
     else
-        annual_kwh = annual_tonhour * TONHOUR_TO_KWH_THERMAL / EXISTING_CHILLER_COP
+        annual_kwh = annual_tonhour * TONHOUR_TO_KWH_THERMAL / existing_chiller_cop
     end
     monthly_kwh = Real[]
     if length(monthly_tonhour) == 12
-        monthly_kwh = monthly_tonhour * TONHOUR_TO_KWH_THERMAL / EXISTING_CHILLER_COP
+        monthly_kwh = monthly_tonhour * TONHOUR_TO_KWH_THERMAL / existing_chiller_cop
     end
     built_in_load("cooling", city, buildingtype, year, annual_kwh, monthly_kwh)
 end
