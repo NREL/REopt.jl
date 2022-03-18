@@ -47,6 +47,14 @@ function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
         sum(r["load_series_kw"]) / p.s.settings.time_steps_per_hour, digits=2
     )
     
+    if p.s.settings.off_grid_flag
+        @expression(m, LoadMet[ts in p.time_steps_without_grid], p.s.electric_load.critical_loads_kw[ts] * m[Symbol("dvOffgridLoadServedFraction"*_n)][ts])
+        r["offgrid_load_met_series_kw"] =  round.(value.(LoadMet).data, digits=6)
+        @expression(m, LoadMetPct, sum(p.s.electric_load.critical_loads_kw[ts] * m[Symbol("dvOffgridLoadServedFraction"*_n)][ts] for ts in p.time_steps_without_grid) /
+                sum(p.s.electric_load.critical_loads_kw))
+        r["offgrid_load_met_pct"] = round(value(LoadMetPct), digits=6)
+    end
+    
     d["ElectricLoad"] = r
     nothing
 end

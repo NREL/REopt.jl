@@ -443,8 +443,8 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvStorageEnergy[p.s.storage.types.all] >= 0   # Energy capacity of storage system b [kWh]
 		dvPeakDemandTOU[p.ratchets, 1:p.s.electric_tariff.n_tou_demand_tiers] >= 0  # Peak electrical power demand during ratchet r [kW]
 		dvPeakDemandMonth[p.months, 1:p.s.electric_tariff.n_monthly_demand_tiers] >= 0  # Peak electrical power demand during month m [kW]
-		dvOffgridLoadServedFraction[p.time_steps] >= 0 # Critical load served in each timestep. Applied in off-grid scenarios only. [fraction]
 		MinChargeAdder >= 0
+		1 >= dvOffgridLoadServedFraction[p.time_steps_without_grid] >= 0 # Critical load served in each timestep. Applied in off-grid scenarios only. [fraction]
 	end
 
 	if !isempty(p.techs.gen)  # Problem becomes a MILP
