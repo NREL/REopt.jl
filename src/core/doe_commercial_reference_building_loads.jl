@@ -50,7 +50,6 @@ const default_buildings = [
 const MMBTU_TO_KWH = 293.07107
 const TONHOUR_TO_KWH_THERMAL = 3.51685
 const EXISTING_BOILER_EFFICIENCY = 0.8
-const EXISTING_CHILLER_COP = 4.55  # [kWt/kWe]
 
 
 function find_ashrae_zone_city(lat, lon)::String
@@ -182,6 +181,7 @@ Given `blended_doe_reference_names` and `blended_doe_reference_percents` use the
     - BuiltInElectricLoad
     - BuiltInDomesticHotWaterLoad
     - BuiltInSpaceHeatingLoad
+    - BuiltInCoolingLoad
 """
 function blend_and_scale_doe_profiles(
     constructor,
