@@ -1022,9 +1022,6 @@ function BuiltInSpaceHeatingLoad(
     if isnothing(annual_mmbtu)
         annual_mmbtu = spaceheating_annual_mmbtu[city][buildingtype]
     end
-    if length(monthly_mmbtu) == 12
-        monthly_mmbtu = convert(Vector{Real}, monthly_mmbtu)
-    end
     built_in_load("space_heating", city, buildingtype, year, annual_mmbtu, monthly_mmbtu)
 end
 
