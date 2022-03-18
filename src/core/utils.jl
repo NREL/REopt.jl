@@ -164,7 +164,7 @@ function dictkeys_tosymbols(d::Dict)
             "prod_factor_series", 
             "monthly_energy_rates", "monthly_demand_rates",
             "wholesale_rate", "blended_doe_reference_percents",
-            "coincident_peak_load_charge_per_kw", "fuel_cost_per_mmbtu"
+            "coincident_peak_load_charge_per_kw", "fuel_cost_per_mmbtu", "monthly_mmbtu"
             ] && !isnothing(v)
             try
                 v = convert(Array{Real, 1}, v)
