@@ -592,9 +592,10 @@ end
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
     results = run_reopt(m, inputs)
 
-    # Annual cooling **thermal** energy load of CRB is based on annual cooling electric energy (from CRB models) and assumed const REopt.CRB_COOLING_CONVERSION_COP
+    # Annual cooling **thermal** energy load of CRB is based on annual cooling electric energy (from CRB models) and a conditional COP depending on the peak cooling thermal load
     # When the user specifies inputs["ExistingChiller"]["cop"], this changes the **electric** consumption of the chiller to meet that cooling thermal load
-    cooling_thermal_load_ton_hr_total = 1427329.0 * REopt.CRB_COOLING_CONVERSION_COP / REopt.TONHOUR_TO_KWH_THERMAL  # From CRB models, in heating_cooling_loads.jl, BuiltInCoolingLoad data for location (SanFrancisco Hospital)
+    #TODO add CoolingLoad for doe_reference_name to find the max_ton to feed into get_existing_chiller_default_cop
+    cooling_thermal_load_ton_hr_total = 1427329.0 * REopt.get_existing_chiller_default_cop() / REopt.TONHOUR_TO_KWH_THERMAL  # From CRB models, in heating_cooling_loads.jl, BuiltInCoolingLoad data for location (SanFrancisco Hospital)
     cooling_electric_load_total_mod_cop = cooling_thermal_load_ton_hr_total / inputs.s.existing_chiller.cop
 
     # Annual heating **thermal** energy load of CRB is based on annual boiler fuel energy (from CRB models) and assumed const EXISTING_BOILER_EFFICIENCY
@@ -715,6 +716,18 @@ end
                                     sum(inputs.s.dhw_load.loads_kw)) / REopt.EXISTING_BOILER_EFFICIENCY / REopt.MMBTU_TO_KWH
     @test round(total_heating_fuel_load_mmbtu, digits=0) ≈ 8760 atol=0.1
     @test round(sum(inputs.s.cooling_load.loads_kw_thermal) / inputs.s.cooling_load.existing_chiller_cop, digits=0) ≈ 77528.0 atol=1.0
+
+    # Make sure annual_tonhour is preserved with conditional existing_chiller_default logic, where guess-and-correct method is applied
+    input_data["SpaceHeatingLoad"] = Dict{Any, Any}()
+    input_data["DomesticHotWaterLoad"] = Dict{Any, Any}()
+    annual_tonhour = 25000.0
+    input_data["CoolingLoad"] = Dict{Any, Any}("doe_reference_name" => "Hospital",
+                                                "annual_tonhour" => annual_tonhour)
+    
+    s = Scenario(input_data)
+    inputs = REoptInputs(s)
+    
+    @test round(sum(inputs.s.cooling_load.loads_kw_thermal) / REopt.TONHOUR_TO_KWH_THERMAL, digits=0) ≈ annual_tonhour atol=1.0 
 end
 
 @testset "Hybrid/blended heating and cooling loads" begin

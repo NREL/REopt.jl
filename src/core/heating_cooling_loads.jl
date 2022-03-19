@@ -270,10 +270,6 @@ struct CoolingLoad
         # determine the timeseries of loads_kw_thermal
         loads_kw_thermal = nothing
         loads_kw = nothing
-        # Set initial existing_chiller_cop to "cop_unknown_thermal" if not passed in; we will update existing_chiller_cop once the load profile is determined
-        if isnothing(existing_chiller_cop)
-            existing_chiller_cop = get_existing_chiller_default_cop()
-        end
         if length(thermal_loads_ton) > 0
             if !(length(thermal_loads_ton) / time_steps_per_hour ≈ 8760)
                 @error "Provided cooling load does not match the time_steps_per_hour."
@@ -301,7 +297,7 @@ struct CoolingLoad
         elseif !isempty(doe_reference_name)
             if isnothing(annual_tonhour) && isempty(monthly_tonhour)
                 loads_kw = get_default_fraction_of_total_electric(city, doe_reference_name, 
-                                            latitude, longitude, 2017, existing_chiller_cop) .* site_electric_load_profile
+                                            latitude, longitude, 2017) .* site_electric_load_profile
             else
                 loads_kw = BuiltInCoolingLoad(city, doe_reference_name, latitude, longitude, 2017, 
                                           annual_tonhour, monthly_tonhour, existing_chiller_cop)
@@ -312,7 +308,7 @@ struct CoolingLoad
             if isnothing(annual_tonhour) && isempty(monthly_tonhour)
                 loads_kw = zeros(Int(8760/time_steps_per_hour))
                 for (i, building) in enumerate(blended_doe_reference_names)
-                    default_fraction = get_default_fraction_of_total_electric(city, building, latitude, longitude, 2017, existing_chiller_cop)
+                    default_fraction = get_default_fraction_of_total_electric(city, building, latitude, longitude, 2017)
                     modified_fraction = default_fraction * blended_doe_reference_percents[i]
                     if length(site_electric_load_profile) > 8784
                         modified_fraction = repeat(modified_fraction, inner=time_steps_per_hour / (length(site_electric_load_profile)/8760))
@@ -340,7 +336,14 @@ struct CoolingLoad
         end
 
         if isnothing(loads_kw_thermal)  # have to convert electric loads_kw to thermal load
-            loads_kw_thermal = existing_chiller_cop * loads_kw
+            if !isnothing(annual_tonhour) || !isempty(monthly_tonhour)
+                # cop_unknown_thermal (4.55) was used to convert thermal to electric in BuiltInCoolingLoad, so need to use the same here to convert back
+                #  in order to preserve the input tonhour amounts - however, the updated/actual existing_chiller_cop is still assigned based on user input or actual max ton load conditional defaults
+                chiller_cop = get_existing_chiller_default_cop()
+            else
+                chiller_cop = existing_chiller_cop
+            end
+            loads_kw_thermal = chiller_cop * loads_kw
         end
 
         if length(loads_kw_thermal) < 8760*time_steps_per_hour
@@ -356,10 +359,10 @@ struct CoolingLoad
     end
 end
 
-function get_default_fraction_of_total_electric(city, doe_reference_name, latitude, longitude, year, existing_chiller_cop)
+function get_default_fraction_of_total_electric(city, doe_reference_name, latitude, longitude, year)
     crb_total_elec_loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, year)
 
-    crb_cooling_elec_loads_kw = BuiltInCoolingLoad(city, doe_reference_name, latitude, longitude, year, nothing, Real[], existing_chiller_cop)
+    crb_cooling_elec_loads_kw = BuiltInCoolingLoad(city, doe_reference_name, latitude, longitude, year, nothing, Real[], nothing)
     
     default_fraction_of_total_electric_profile = crb_cooling_elec_loads_kw ./
                                                     max.(crb_total_elec_loads_kw, repeat([1.0E-6], length(crb_total_elec_loads_kw)))
@@ -1347,6 +1350,10 @@ function BuiltInCoolingLoad(
     end
     if !(buildingtype in default_buildings)
         error("buildingtype $(buildingtype) not in $(default_buildings).")
+    end
+    # Set initial existing_chiller_cop to "cop_unknown_thermal" if not passed in; we will update existing_chiller_cop once the load profile is determined
+    if isnothing(existing_chiller_cop)
+        existing_chiller_cop = get_existing_chiller_default_cop()
     end
     if isnothing(annual_tonhour)
         annual_kwh = cooling_annual_kwh[city][buildingtype]
