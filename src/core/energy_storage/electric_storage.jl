@@ -172,6 +172,18 @@ struct ElectricStorage <: AbstractElectricStorage
         else
             degr = Degradation()
         end
+
+        # copy the replace_costs in case we need to change them
+        replace_cost_per_kw = s.replace_cost_per_kw 
+        replace_cost_per_kwh = s.replace_cost_per_kwh
+        if s.model_degradation
+            if haskey(d, :replace_cost_per_kw) && d[:replace_cost_per_kw] != 0.0 || 
+                haskey(d, :replace_cost_per_kwh) && d[:replace_cost_per_kwh] != 0.0
+                @warn "Setting ElectricStorage replacment costs to zero. \nUsing degradation.maintenance_cost_per_kwh instead."
+            end
+            replace_cost_per_kw = 0.0
+            replace_cost_per_kwh = 0.0
+        end
     
         return new(
             s.min_kw,
@@ -186,8 +198,8 @@ struct ElectricStorage <: AbstractElectricStorage
             s.can_grid_charge,
             s.installed_cost_per_kw,
             s.installed_cost_per_kwh,
-            s.replace_cost_per_kw,
-            s.replace_cost_per_kwh,
+            replace_cost_per_kw,
+            replace_cost_per_kwh,
             s.inverter_replacement_year,
             s.battery_replacement_year,
             s.macrs_option_years,
