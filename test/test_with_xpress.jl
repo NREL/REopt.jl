@@ -31,122 +31,6 @@ using Xpress
 using Random
 Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tests
 
-# @testset "Battery degradation" begin
-#     kcal_A = 1.09E-03
-#     kcyc_A = 3.33E-05
-#     kdod_A = 0.0
-    
-#     kcal_B = 1.29E-03
-#     kcyc_B = 1.31E-05
-#     kdod_B = 0.0
-    
-#     kcal_C = 1.32E-03
-#     kcyc_C = 9.13E-05
-#     kdod_C = 0.0
-    
-#     kcal_D = 3.02E-03
-#     kcyc_D = 3.48E-05
-#     kdod_D = 0.0
-    
-#     kcal_E = 2.46E-03
-#     kcyc_E = 7.82E-05
-#     kdod_E = 0.0
-
-#     # scenarios with SCE tariff, no degradation
-#     data = JSON.parsefile("scenarios/pv_storage.json");
-#     data["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
-#     p1 = REoptInputs(Scenario(data));
-#     m1 = Model(Xpress.Optimizer)
-#     d1 = run_reopt(m1,p1);
-#     @info("avg soc = $(sum(d1["Storage"]["year_one_soc_series_pct"]) / 8760)")
-#     # 0.6113
-    
-#     open("results_no_degradation_SCE.json","w") do f
-#         JSON.print(f, d1)
-#     end
-
-#     # remove replacement cost for scenario with degradation
-#     data["Storage"]["replace_cost_per_kw"] = 0.0
-#     data["Storage"]["replace_cost_per_kwh"] = 0.0
-#     p = REoptInputs(Scenario(data));
-
-#     # loop through sets of coefficients
-#     for ltr in ["_A", "_B", "_C", "_D", "_E"]
-
-#         m = Model(Xpress.Optimizer)
-#         build_reopt!(m, p);
-#         REopt.add_degradation(m, p, d1["Storage"]["size_kwh"],
-#             eval(Meta.parse("kcal"*ltr)), 
-#             eval(Meta.parse("kcyc"*ltr)), 
-#             eval(Meta.parse("kdod"*ltr))
-#         );
-#         optimize!(m)
-#         d = REopt.reopt_results(m, p)
-        
-#         @info("avg soc = $(sum(d["Storage"]["year_one_soc_series_pct"]) / 8760)")
-    
-#         d["Storage"]["SOH"] = value.(m[:SOH]) / value.(m[:dvStorageEnergy])["ElectricStorage"];
-#         d["Storage"]["EFC"] = value.(m[:EFC]) / value.(m[:dvStorageEnergy])["ElectricStorage"];
-#         d["Storage"]["DODmax"] = value.(m[:DODmax]) / value.(m[:dvStorageEnergy])["ElectricStorage"];
-#         d["Storage"]["Eavg"] = value.(m[:Eavg]);
-#         # d["Storage"]["d_0p8"] = value(m[:d_0p8])
-#         # d["Storage"]["N_batt_replacements"] = value(m[:N_batt_replacements])
-#         @info("SOH[end] = $(d["Storage"]["SOH"][end])")
-        
-#         open("results_degr_SCE"*ltr*".json","w") do f
-#             JSON.print(f, d)
-#         end
-
-#     end
-#     #=
-#     buying bigger battery than w/o degradation (? to get same savings w/o replacement ?)
-#     =#
-
-
-#     # PGE rate 
-#     data = JSON.parsefile("scenarios/pv_storage.json");
-#     data["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
-#     data["ElectricTariff"]["urdb_label"] = "5e1676e95457a3f87673e3b0"  
-
-#     # base case
-#     p1 = REoptInputs(Scenario(data));
-#     m1 = Model(Xpress.Optimizer)
-#     d1 = run_reopt(m1,p1);
-#     @info("avg soc = $(sum(d1["Storage"]["year_one_soc_series_pct"]) / 8760)")
-    
-#     open("results_no_degradation_PGE.json","w") do f
-#         JSON.print(f, d1)
-#     end
-
-#     data["Storage"]["replace_cost_per_kw"] = 0.0
-#     data["Storage"]["replace_cost_per_kwh"] = 0.0
-#     p = REoptInputs(Scenario(data));
-
-#     for ltr in ["_A", "_B", "_C", "_D", "_E"]
-#         m = Model(Xpress.Optimizer)
-#         build_reopt!(m, p);
-#         REopt.add_degradation(m, p, d1["Storage"]["size_kwh"], 
-#             eval(Meta.parse("kcal"*ltr)), 
-#             eval(Meta.parse("kcyc"*ltr)), 
-#             eval(Meta.parse("kdod"*ltr)), 
-#         );
-#         optimize!(m)
-#         d = REopt.reopt_results(m, p)
-
-#         d["Storage"]["SOH"] = value.(m[:SOH]) / value.(m[:dvStorageEnergy])["ElectricStorage"];
-#         d["Storage"]["EFC"] = value.(m[:EFC]) / value.(m[:dvStorageEnergy])["ElectricStorage"];
-#         d["Storage"]["DODmax"] = value.(m[:DODmax]) / value.(m[:dvStorageEnergy])["ElectricStorage"];
-#         d["Storage"]["Eavg"] = value.(m[:Eavg]);
-#         # d["Storage"]["d_0p8"] = value(m[:d_0p8])
-#         # d["Storage"]["N_batt_replacements"] = value(m[:N_batt_replacements])
-#         # @info("N_batt_replacements = $(d["Storage"]["N_batt_replacements"])")
-#         @info("SOH[end] = $(d["Storage"]["SOH"][end])")
-        
-#         open("results_degr_PGE"*ltr*".json","w") do f
-#             JSON.print(f, d)
-#         end
-#     end
-# end
 
 @testset "Thermal loads" begin
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
@@ -165,7 +49,6 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
     @test round(results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"], digits=0) ≈ 8760
     # TODO chiller tests
 end
-
 
 @testset "CHP" begin
     @testset "CHP Sizing" begin
@@ -335,7 +218,6 @@ end
         @test results["ElectricTariff"]["lifecycle_demand_cost"] ≈ 5212.7 rtol=1e-5
     end
 end
-
 
 @testset "FlexibleHVAC" begin
 
@@ -519,10 +401,12 @@ check to make sure that PV does NOT export unless the site load is met first for
               if results["PV"]["year_one_to_grid_series_kw"][i] > 0)
 end
 
-@testset "Solar and Storage w/BAU" begin
+@testset "Solar and ElectricStorage w/BAU and degradation" begin
     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt([m1,m2], "./scenarios/pv_storage.json")
+    d = JSON.parsefile("scenarios/pv_storage.json");
+    d["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
+    results = run_reopt([m1,m2], d)
 
     @test results["PV"]["size_kw"] ≈ 216.6667 atol=0.01
     @test results["PV"]["lcoe_per_kwh"] ≈ 0.0483 atol = 0.001
@@ -533,6 +417,13 @@ end
     proforma_npv = REopt.npv(results["Financial"]["offtaker_annual_free_cashflows"] - 
         results["Financial"]["offtaker_annual_free_cashflows_bau"], 0.081)
     @test results["Financial"]["npv"] ≈ proforma_npv rtol=0.0001
+
+    avg_soc_no_degr = sum(results["ElectricStorage"]["year_one_soc_series_pct"]) / 8760
+    d["ElectricStorage"]["model_degradation"] = true
+    m = Model(Xpress.Optimizer)
+    r_degr = run_reopt(m, d)
+    avg_soc_degr = sum(r_degr["ElectricStorage"]["year_one_soc_series_pct"]) / 8760
+    @test avg_soc_no_degr > avg_soc_degr
 end
 
 @testset "Outage with Generator, outate simulator, BAU critical load outputs" begin
