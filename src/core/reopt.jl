@@ -362,6 +362,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		sum(m[:dvStoredEnergy][b, ts] for b in p.s.storage.types.elec, ts in p.time_steps) /
 			(8760. / p.hours_per_timestep)
 		)
+	
+	end
+
+	# TODO should add_soc_incentive ever be done with degradation?
+	for b in p.s.storage.types.elec
+		if p.s.storage.attr[b].model_degradation
+			add_degradation(m, p; b=b)
+		end
 	end
     
 	nothing
