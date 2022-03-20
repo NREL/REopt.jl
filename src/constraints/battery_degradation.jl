@@ -34,10 +34,7 @@ function add_degradation_variables(m, p)
     @variable(m, Eavg[days] >= 0)
     @variable(m, Eplus_sum[days] >= 0)
     @variable(m, Eminus_sum[days] >= 0)
-    @variable(m, Emax[days] >= 0)
-    @variable(m, Emin[days] >= 0)
     @variable(m, EFC[days] >= 0)
-    @variable(m, DODmax[days] >= 0)
 end
 
 
@@ -54,12 +51,6 @@ function constrain_degradation_variables(m, p; b="ElectricStorage")
         @constraint(m, 
             m[:Eavg][d] == 1/ts_per_day * sum(m[:dvStoredEnergy][b, ts] for ts in ts0:tsF)
         )
-        @constraint(m, [ts = ts0:tsF],
-            m[:Emax][d] >= m[:dvStoredEnergy][b, ts]
-        )
-        @constraint(m, [ts = ts0:tsF],
-            m[:Emin][d] <= m[:dvStoredEnergy][b, ts]
-        )
         @constraint(m,
             m[:Eplus_sum][d] == 
                 sum(m[:dvProductionToStorage][b, t, ts] for t in p.techs.elec, ts in ts0:tsF) 
@@ -71,20 +62,35 @@ function constrain_degradation_variables(m, p; b="ElectricStorage")
         @constraint(m,
             m[:EFC][d] == (m[:Eplus_sum][d] + m[:Eminus_sum][d]) / 2
         )
-        @constraint(m,
-            m[:DODmax][d] == m[:Emax][d] - m[:Emin][d]
-        )
     end
 end
 
 
 """
 
-NOTE the average SOC, EFC, and DODmax variables are in absolute units making the SOH variable start at the 
-    battery capacity w/o degradation
+NOTE the average SOC and EFC variables are in absolute units. For example, the SOH variable starts 
+    at the battery capacity in kWh.
 """
-function add_degradation(m, p, Qo::Float64, k_cal::Float64, k_cyc::Float64, k_dod::Float64; time_exponent=0.5, b="ElectricStorage")
+function add_degradation(m, p; 
+        time_exponent=0.5, 
+        b="ElectricStorage"
+    )
     days = 1:365*p.s.financial.analysis_years
+
+    if isempty(p.s.storage.attr[b].degradation.maintenance_cost_per_kwh)
+        function pwf(day::Int)
+            (1+p.s.storage.attr[b].degradation.installed_cost_per_kwh_declination_rate)^(day/365) / 
+            (1+p.s.financial.owner_discount_pct)^(day/365)
+        end
+        p.s.storage.attr[b].degradation.maintenance_cost_per_kwh = [
+            p.s.storage.attr[b].installed_cost_per_kwh * pwf(d) for d in days[1:end-1]
+        ]
+    end
+
+    @assert(length(p.s.storage.attr[b].degradation.maintenance_cost_per_kwh) == length(days) - 1,
+        "The degradation maintenance_cost_per_kwh must have a length of $(length(days)-1)."
+    )
+
     @variable(m, SOH[days])
 
     add_degradation_variables(m, p)
@@ -92,9 +98,9 @@ function add_degradation(m, p, Qo::Float64, k_cal::Float64, k_cyc::Float64, k_do
 
     @constraint(m, [d in 2:days[end]],
         SOH[d] == SOH[d-1] - p.hours_per_timestep * (
-            k_cal * time_exponent * m[:Eavg][d-1] * d^(time_exponent-1) 
-            + k_cyc * m[:EFC][d-1]
-            + k_dod * m[:DODmax][d-1]
+            p.s.storage.attr[b].degradation.calendar_fade_coefficient * time_exponent * 
+            m[:Eavg][d-1] * d^(time_exponent-1) + 
+            p.s.storage.attr[b].degradation.cycle_fade_coefficient * m[:EFC][d-1]
         )
     )
     # NOTE SOH can be negative
@@ -102,38 +108,59 @@ function add_degradation(m, p, Qo::Float64, k_cal::Float64, k_cyc::Float64, k_do
     @constraint(m, SOH[1] == m[:dvStorageEnergy][b])
     # NOTE SOH is _not_ normalized, and has units of kWh
 
-    @variable(m, soh_indicator[days], Bin)
+    strategy = p.s.storage.attr[b].degradation.maintenance_strategy
+    if strategy == :replacement
+        @error("cannot make replacment strategy fit MILP format")
+        @variable(m, soh_indicator[days], Bin)
 
-    # @constraint(m, [d in days],
-    #     soh_indicator[d] => {SOH[d] >= 0.8*Qo}
-    # )
-    # @expression(m, d_0p8, sum(soh_indicator[d] for d in days))
+        @constraint(m, [d in days],
+            soh_indicator[d] => {SOH[d] >= 0.8*m[:dvStorageEnergy][b]}
+        )
+        @expression(m, d_0p8, sum(soh_indicator[d] for d in days))
 
-    # # build piecewise linear approximation of Ndays / d_0p8 - 1
-    # Ndays = days[end]
-    # points = (
-    #     (0, 20),
-    #     (Ndays/5, 4),
-    #     (Ndays/4, 3),
-    #     (Ndays/3, 2),
-    #     (Ndays/2, 1),
-    #     (3*Ndays/4, 1/3),
-    #     (Ndays, 0.0)
-    # )
-    # point_pairs = ((pt1, pt2) for (pt1, pt2) in zip(points[1:end-1], points[2:end]))
-    # @variable(m, N_batt_replacements >= 0)
-    # for pair in point_pairs
-    #     @constraint(m, 
-    #         N_batt_replacements >= (pair[2][2] - pair[1][2]) / (pair[2][1] - pair[1][1]) * (d_0p8 - pair[1][1]) + pair[1][2]
-    #     )
-    # end
+        # build piecewise linear approximation of Ndays / d_0p8 - 1
+        Ndays = days[end]
+        points = (
+            (0, 20),
+            (Ndays/5, 4),
+            (Ndays/4, 3),
+            (Ndays/3, 2),
+            (Ndays/2, 1),
+            (3*Ndays/4, 1/3),
+            (Ndays, 0.0)
+        )
+        point_pairs = ((pt1, pt2) for (pt1, pt2) in zip(points[1:end-1], points[2:end]))
+        @variable(m, N_batt_replacements >= 0)
+        for pair in point_pairs
+            @constraint(m, 
+                N_batt_replacements >= (pair[2][2] - pair[1][2]) / (pair[2][1] - pair[1][1]) * (d_0p8 - pair[1][1]) + pair[1][2]
+            )
+        end
+
+        # add replacment cost to objective
+        @expression(m, degr_cost,
+            p.s.storage.attr[b].degradation.maintenance_cost_per_kwh[d_0p8] * diff(SOH) ### will not work!? bilinear
+        )
+
+    elseif strategy == :augmentation
+
+        @expression(m, degr_cost,
+            sum(
+                p.s.storage.attr[b].degradation.maintenance_cost_per_kwh[d-1] * (SOH[d-1] - SOH[d])
+                for d in days[2:end]
+            )
+        )
+        # add augmentation cost to objective
+        # maintenance_cost_per_kwh must have length == length(days) - 1, i.e. starts on day 2
+    else
+        @error "Battery maintenance strategy $strategy is not supported. Choose from augmentation and replacement."
+    end
+
+    @objective(m, Min, m[:Costs] + m[:degr_cost])
     
     # TODO scale battery replacement cost
     # NOTE adding to Costs expression does not modify the objective function
-    @objective(m, Min, 
-        m[:Costs] + p.s.storage.installed_cost_per_kwh["ElectricStorage"]/5 * (SOH[1] - SOH[end])
-    )
-    set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
+    # set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
     # TODO increase threads?
 end
 # TODO raise error for multisite with degradation
