@@ -27,6 +27,15 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+Base.@kwdef mutable struct Degradation
+    calendar_fade_coefficient::Float64 = 2.46E-03
+    cycle_fade_coefficient::Float64 = 7.82E-05
+    installed_cost_per_kwh_declination_rate::Float64 = 0.05
+    maintenance_strategy::Symbol = :augmentation  # one of [:augmentation, :replacement]
+    maintenance_cost_per_kwh::Vector{<:Real} = Real[]
+end
+
+
 """
     ElectricStorageDefaults
 
@@ -89,12 +98,6 @@ Base.@kwdef struct ElectricStorageDefaults
     discharge_efficiency::Float64 = inverter_efficiency_pct * internal_efficiency_pct^0.5
     grid_charge_efficiency::Float64 = can_grid_charge ? charge_efficiency : 0.0
     model_degradation::Bool = false
-    degradation_values::Dict = Dict(
-        "calendar_fade_coefficient" => 2.46E-03,
-        "cycle_fade_coefficient" => 7.82E-05,
-        "installed_cost_per_kwh_declination_rate" => 0.05,
-        "maintenance_strategy" => "augmentation"  # one of ["augmentation", "replacement"]
-    )
 end
 
 
@@ -133,7 +136,7 @@ struct ElectricStorage <: AbstractElectricStorage
     net_present_cost_per_kw::Float64
     net_present_cost_per_kwh::Float64
     model_degradation::Bool
-    degradation_values::Dict
+    degradation::Degradation
 
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
@@ -163,6 +166,12 @@ struct ElectricStorage <: AbstractElectricStorage
         )
 
         net_present_cost_per_kwh -= s.total_rebate_per_kwh
+
+        if haskey(d, "degradation")
+            degr = Degradation(;dictkeys_tosymbols(d["degradation"])...)
+        else
+            degr = Degradation()
+        end
     
         return new(
             s.min_kw,
@@ -193,7 +202,7 @@ struct ElectricStorage <: AbstractElectricStorage
             net_present_cost_per_kw,
             net_present_cost_per_kwh,
             s.model_degradation,
-            s.degradation_values
+            degr
         )
     end
 end
