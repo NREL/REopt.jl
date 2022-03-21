@@ -157,8 +157,15 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 
 	add_elec_load_balance_constraints(m, p)
 
+	if !isempty(p.s.limits.grid_draw_limit_kw_by_time_step)
+		add_grid_draw_limits(m, p)
+	end
+
 	if !isempty(p.s.electric_tariff.export_bins)
 		add_export_constraints(m, p)
+		if !isempty(p.s.limits.export_limit_kw_by_time_step)
+			add_export_limits(m, p)
+		end
 	end
 
 	if !isempty(p.s.electric_tariff.monthly_demand_rates)
