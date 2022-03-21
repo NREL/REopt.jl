@@ -119,7 +119,7 @@ function MPCScenario(d::Dict)
     end
 
     # Placeholder/dummy cooling load set to zeros
-    cooling_load = MPCCoolingLoad(; loads_kw_thermal = zeros(length(electric_load.loads_kw)))
+    cooling_load = MPCCoolingLoad(; loads_kw_thermal = zeros(length(electric_load.loads_kw)), cop=1.0)
 
     return MPCScenario(
         settings,

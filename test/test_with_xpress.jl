@@ -594,8 +594,7 @@ end
 
     # Annual cooling **thermal** energy load of CRB is based on annual cooling electric energy (from CRB models) and a conditional COP depending on the peak cooling thermal load
     # When the user specifies inputs["ExistingChiller"]["cop"], this changes the **electric** consumption of the chiller to meet that cooling thermal load
-    #TODO add CoolingLoad for doe_reference_name to find the max_ton to feed into get_existing_chiller_default_cop
-    cooling_thermal_load_ton_hr_total = 1427329.0 * REopt.get_existing_chiller_default_cop() / REopt.TONHOUR_TO_KWH_THERMAL  # From CRB models, in heating_cooling_loads.jl, BuiltInCoolingLoad data for location (SanFrancisco Hospital)
+    cooling_thermal_load_ton_hr_total = 1427329.0 * inputs.s.cooling_load.existing_chiller_cop / REopt.TONHOUR_TO_KWH_THERMAL  # From CRB models, in heating_cooling_loads.jl, BuiltInCoolingLoad data for location (SanFrancisco Hospital)
     cooling_electric_load_total_mod_cop = cooling_thermal_load_ton_hr_total / inputs.s.existing_chiller.cop
 
     # Annual heating **thermal** energy load of CRB is based on annual boiler fuel energy (from CRB models) and assumed const EXISTING_BOILER_EFFICIENCY
@@ -723,7 +722,8 @@ end
     annual_tonhour = 25000.0
     input_data["CoolingLoad"] = Dict{Any, Any}("doe_reference_name" => "Hospital",
                                                 "annual_tonhour" => annual_tonhour)
-    
+    input_data["ExistingChiller"] = Dict{Any, Any}()
+
     s = Scenario(input_data)
     inputs = REoptInputs(s)
     

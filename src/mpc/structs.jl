@@ -340,4 +340,5 @@ end
 """
 Base.@kwdef struct MPCCoolingLoad
     loads_kw_thermal::Array{Real,1}
+    cop::Union{Real, Nothing}
 end

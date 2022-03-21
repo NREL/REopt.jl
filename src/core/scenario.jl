@@ -210,10 +210,19 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
             if sum(flexible_hvac.bau_hvac.existing_chiller_kw_thermal) > 0
                 chiller_inputs = Dict{Symbol, Any}()
-                chiller_inputs[:loads_kw_thermal] = flexible_hvac.bau_hvac.existing_chiller_kw_thermal
+                chiller_inputs[:loads_kw_thermal] = flexible_hvac.bau_hvac.existing_chiller_kw_thermal                                 
                 if haskey(d, "ExistingChiller")
+                    if !haskey(d["ExistingChiller"], "cop")
+                        d["ExistingChiller"]["cop"] = get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_on_peak_load=1.25, 
+                                                                                        loads_kw=nothing, 
+                                                                                        loads_kw_thermal=chiller_inputs[:loads_kw_thermal])
+                    end 
                     chiller_inputs = merge(chiller_inputs, dictkeys_tosymbols(d["ExistingChiller"]))
-                end
+                else
+                    chiller_inputs[:cop] = get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_on_peak_load=1.25, 
+                                                                                loads_kw=nothing, 
+                                                                                loads_kw_thermal=chiller_inputs[:loads_kw_thermal])
+                end              
                 existing_chiller = ExistingChiller(; chiller_inputs...)
             end
 
