@@ -228,7 +228,7 @@ end
         d["FlexibleHVAC"] = Dict(
             "installed_cost" => 300,
             "doe_reference_name" => "LargeOffice",
-            "city" => "Miami",
+            "city" => "LosAngeles",
             "temperature_upper_bound_degC" => 20,
             "temperature_lower_bound_degC" => 18,
         )
