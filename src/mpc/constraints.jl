@@ -43,3 +43,21 @@ function add_previous_tou_peak_constraint(m::JuMP.AbstractModel, p::MPCInputs; _
 end
 
 
+function add_grid_draw_limits(m::JuMP.AbstractModel, p::MPCInputs; _n="")
+    @constraint(m, [ts in p.time_steps],
+        sum(
+            m[Symbol("dvGridPurchase"*_n)][ts, tier] 
+            for tier in 1:p.s.electric_tariff.n_energy_tiers
+        ) <= p.s.limits.grid_draw_limit_kw_by_time_step[ts]
+    )
+end
+
+
+function add_export_limits(m::JuMP.AbstractModel, p::MPCInputs; _n="")
+    @constraint(m, [ts in p.time_steps],
+        sum(
+            sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for u in p.export_bins_by_tech[t])
+            for t in p.techs.elec
+        ) <= p.s.limits.export_limit_kw_by_time_step[ts]
+    )
+end
