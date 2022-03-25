@@ -243,7 +243,7 @@ end
         d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = rand(Float64, (8760))*(50-25).+25;
         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        r = run_reopt([m1,m2], REoptInputs(Scenario(d; flex_hvac_from_json=true)))
+        r = run_reopt([m1,m2], REoptInputs(Scenario(d)))
         # all of the savings are from the ExistingBoiler fuel costs
         @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === true
         fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost"]
@@ -272,7 +272,7 @@ end
         d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + elec_cost_savings + 100
         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        r = run_reopt([m1,m2], REoptInputs(Scenario(d; flex_hvac_from_json=true)))
+        r = run_reopt([m1,m2], REoptInputs(Scenario(d)))
         @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
         @test r["Financial"]["npv"] == 0
     end
