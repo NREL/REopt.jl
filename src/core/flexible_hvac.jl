@@ -116,27 +116,25 @@ function make_bau_hvac(A, B, u, control_node, input_node, initial_temperatures, 
     )
     
     for ts in 2:T
-        temperatures[:, ts] = temperatures[:, ts-1] + 
-            A * temperatures[:, ts-1] +
-            B * u[:, ts-1]
+        temperatures[:, ts] = A * temperatures[:, ts-1] + B * u[:, ts-1]
 
         if !isnothing(T_hi) && temperatures[control_node, ts] > T_hi
             deltaT = temperatures[control_node, ts] - T_hi
             thermal_kw["ExistingChiller"][ts] = deltaT / B[control_node, input_node]
 
-            temperatures[:, ts] = temperatures[:, ts-1] + 
+            temperatures[:, ts] = 
                 A * temperatures[:, ts-1] +
                 B * u[:, ts-1] -
-                input_vec .* B[:, input_node] * thermal_kw["ExistingChiller"][ts]
+                B[:, input_node] * thermal_kw["ExistingChiller"][ts]
 
         elseif !isnothing(T_lo) && temperatures[control_node, ts] < T_lo
             deltaT = T_lo - temperatures[control_node, ts]
             thermal_kw["ExistingBoiler"][ts] = deltaT / B[control_node, input_node] 
 
-            temperatures[:, ts] = temperatures[:, ts-1] + 
+            temperatures[:, ts] = 
                 A * temperatures[:, ts-1] +
                 B * u[:, ts-1] +
-                input_vec .* B[:, input_node] * thermal_kw["ExistingBoiler"][ts]
+                B[:, input_node] * thermal_kw["ExistingBoiler"][ts]
         end
     end
 
@@ -163,11 +161,11 @@ Reference Building.
 function FlexibleHVAC(
         doe_reference_name::String,
         city::String,
-        installed_cost::R,
-        temperature_upper_bound_degC::R,
-        temperature_lower_bound_degC::R
-    ) where {R <: Real}
-
+        installed_cost::Real,
+        temperature_upper_bound_degC::Real,
+        temperature_lower_bound_degC::Real
+    )
+    
     lib_path = joinpath(dirname(@__FILE__), "..", "..", "data", "rcmodels")
     json_path = joinpath(lib_path, string(city * "_" * doe_reference_name * ".json"))
     rc_dict = JSON.parsefile(json_path)
