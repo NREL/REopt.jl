@@ -141,4 +141,5 @@ REopt.Settings
 REopt.FlexibleHVAC
 REopt.FlexibleHVAC()
 REopt.FlexibleHVAC(::Dict)
+REopt.make_bau_hvac
 ```
