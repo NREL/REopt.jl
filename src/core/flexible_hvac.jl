@@ -40,34 +40,41 @@ end
 """
     FlexibleHVAC
 
-Every model with `FlexibleHVAC` includes a preprocessing step to calculate the business-as-usual (BAU)
-cost of meeting the thermal loads using a dead-band controller. The BAU cost is then used in the 
-binary decision for purchasing the `FlexibleHVAC` system: if the `FlexibleHVAC` system is purchased then
-the heating and cooling costs are determined by the HVAC dispatch that minimizes the lifecycle cost
-of energy. If the `FlexibleHVAC` system is not purchased then the BAU heating and cooling costs must
-be paid.
+The `FlexibleHVAC` system is modeled via a discrete state-space system:
 
-There are two construction methods for `FlexibleHVAC`, which depend on whether or not the data was 
-loaded in from a JSON file. The issue with data from JSON is that the vector-of-vectors from the JSON 
-file must be appropriately converted to Julia Matrices. When loading in a Scenario from JSON that 
-includes a `FlexibleHVAC` model if you pass `flex_hvac_from_json=true` to the `Scenario` 
-constructor then the conversion to Matrices will be done appropriately.
+``\\boldsymbol{x}[t+1] = \\boldsymbol{A x}[t] + \\boldsymbol{B u}[t]``
 
+where
+- ``\\boldsymbol{A}`` is the `system_matrix`;
+- ``\\boldsymbol{B}`` is the `input_matrix`;
+- ``\\boldsymbol{u}`` is the `exogenous_inputs`;
+- ``\\boldsymbol{x}`` is the state vector, which includes the space temperature; and
+- ``t`` is the integer hour (only hourly models available currently).
+
+When providing your own `FlexibleHVAC` model, in addition to the above values one must also provide:
+- `space_temperature_node` an integer for the index in ``\\boldsymbol{x}`` that must obey the comfort limits
+- `hvac_input_node` an integer for the index in ``\\boldsymbol{u}`` that REopt can choose to inject or extract heat
+- `temperature_upper_bound_degC` and/or `temperature_lower_bound_degC`
+- `initial_temperatures` a vector of values for ``\\boldsymbol{x}[1]``
+See construction methods below for more.
+
+The simplest way to evaluate the FlexibleHVAC option is to use a built-in state-space model for one
+of the DoE Commercial Reference Buildings. For example, assuming that `d` is a Dict for defining 
+your REopt Scenario:
+```julia
+d["FlexibleHVAC"] = Dict(
+    "installed_cost" => 1000.0,
+    "doe_reference_name" => "LargeOffice",
+    "city" => "LosAngeles",
+    "temperature_upper_bound_degC" => 22,
+    "temperature_lower_bound_degC" => 18.0,
+)
+```
 When using a built-in FlexibleHVAC model the `doe_reference_name` argument must be provided. The 
 climate zone / city will be inferred from the `ElectricLoad` if a `doe_reference_name` is also 
 provided in the `ElectricLoad` inputs. Otherwise the `city` argument must be provided. See the 
 [ElectricLoad](@ref) docs for the list of possible `doe_reference_name` and `city` values.
 
-
-!!! note
-    At least one of the inputs for `temperature_upper_bound_degC` or `temperature_lower_bound_degC`
-    must be provided to evaluate the `FlexibleHVAC` option. For example, if only `temperature_lower_bound_degC`
-    is provided then only a heating system will be evaluated. Also, the heating system will only be
-    used (or purchased) if the `exogenous_inputs` lead to the temperature at the `space_temperature_node` going
-    below the `temperature_lower_bound_degC`.
-
-!!! note
-    The `ExistingChiller` is electric and so its operating cost is determined by the `ElectricTariff`.
 
 !!! note
     The `ExistingBoiler` default operating cost is zero. Please provide the `fuel_cost_per_mmbtu` field
@@ -94,12 +101,19 @@ end
 Determine the business-as-usual (BAU) energy cost for keeping the building temperature within the
 bounds using a discrete-time simulation. The simulation assumes a dead band control by calculating 
 what the temperature would be due to the `exogenous_inputs` alone. Then, if the temperature is outside
-of the bounds the energy necessary to make the temperature 0.5 deg C within the bounds is determined.
+of the bounds then the energy necessary to make the temperature eqaul to the comfort limit is 
+determined and used as the energy consumed in the BAU scenario.
 
-TODO? either calculate an approximate BAU cost or enforce dvThermalProduction for !binFlexHVAC in model.
-The cost of the energy necessary to heat/cool the building is determined by either:
-1. The `ElectricTariff` for cooling using the `ExistingChiller`; or 
-2. the `ExistingBoiler.fuel_cost_per_mmbtu` for heating
+Every model with `FlexibleHVAC` includes a preprocessing step to calculate the business-as-usual (BAU)
+cost of meeting the thermal loads using a dead-band controller. The BAU cost is then used in the 
+binary decision for purchasing the `FlexibleHVAC` system: if the `FlexibleHVAC` system is purchased then
+the heating and cooling costs are determined by the HVAC dispatch that minimizes the lifecycle cost
+of energy. If the `FlexibleHVAC` system is not purchased then the BAU heating and cooling costs must
+be paid.
+
+The cost of the energy necessary to heat/cool the building is determined by:
+1. The `ElectricTariff` for cooling using the `ExistingChiller`; and/or 
+2. the `ExistingBoiler.fuel_cost_per_mmbtu` for heating.
 """
 function make_bau_hvac(A, B, u, space_temperature_node, hvac_input_node, initial_temperatures, T_hi, T_lo)
     T = size(u, 2)
@@ -153,8 +167,21 @@ end
         temperature_lower_bound_degC::Float64
     )
 
-Constructor for `FlexibleHVAC` when using an RC model that has been fit to a DoE Commercial 
+Constructor for `FlexibleHVAC` when using a built-in RC model that has been fit to a DoE Commercial 
 Reference Building.
+
+The `city` value is optional and if not provided its value is inferred from the `Site.latitude` and
+`Site.longitude` to determine the representative city for the climate zone. 
+See the [ElectricLoad](@ref) docs for `city` options.
+
+
+!!! note
+    At least one of the inputs for `temperature_upper_bound_degC` or `temperature_lower_bound_degC`
+    must be provided to evaluate the `FlexibleHVAC` option. For example, if only `temperature_lower_bound_degC`
+    is provided then only a heating system will be evaluated. Also, the heating system will only be
+    used (or purchased) if the `exogenous_inputs` lead to the temperature at the `space_temperature_node` going
+    below the `temperature_lower_bound_degC`.
+
 """
 function FlexibleHVAC(
         doe_reference_name::String,
@@ -179,6 +206,23 @@ end
     FlexibleHVAC(dict_from_json::Dict)
 
 Constructor for `FlexibleHVAC` when the inputs have been loaded from a JSON file.
+
+The `dict_from_json` must have all of these keys:
+- `system_matrix`
+- `input_matrix`
+- `exogenous_inputs`
+- `space_temperature_node`
+- `hvac_input_node`
+- `initial_temperatures`
+- `temperature_upper_bound_degC`
+- `temperature_lower_bound_degC`
+- `installed_cost`
+
+It is assumed that the `system_matrix` and `input_matrix` are each a list-of-lists with inner lists
+corresponding to rows of the matrices.
+
+The `exogenous_inputs` is also assumed to be a list-of-lists with inner lists for each input, i.e. the 
+second index is the time index.
 """
 function FlexibleHVAC(dict_from_json::Dict)
     #=
@@ -228,7 +272,7 @@ end
 
 Constructor for `FlexibleHVAC` when the `system_matrix`, `input_matrix`, and `exogenous_inputs` values 
 are in Matrix format. Note that `exogenous_inputs` is normally a vector but in our case it has a time 
-index in the second dimension.
+index in the second dimension, which makes it a Matrix as well.
 """
 function FlexibleHVAC(;
         system_matrix::AbstractMatrix,
