@@ -63,7 +63,7 @@ provided in the `ElectricLoad` inputs. Otherwise the `city` argument must be pro
     At least one of the inputs for `temperature_upper_bound_degC` or `temperature_lower_bound_degC`
     must be provided to evaluate the `FlexibleHVAC` option. For example, if only `temperature_lower_bound_degC`
     is provided then only a heating system will be evaluated. Also, the heating system will only be
-    used (or purchased) if the `exogenous_inputs` lead to the temperature at the `control_node` going
+    used (or purchased) if the `exogenous_inputs` lead to the temperature at the `space_temperature_node` going
     below the `temperature_lower_bound_degC`.
 
 !!! note
@@ -78,8 +78,8 @@ struct FlexibleHVAC
     system_matrix::AbstractMatrix{Float64}  # N x N, with N states (temperatures in RC network)
     input_matrix::AbstractMatrix{Float64}  # N x M, with M inputs
     exogenous_inputs::AbstractMatrix{Float64}  # M x T, with T time steps
-    control_node::Int64
-    input_node::Int64
+    space_temperature_node::Int64
+    hvac_input_node::Int64
     initial_temperatures::AbstractVector{Float64}
     temperature_upper_bound_degC::Union{Real, Nothing}
     temperature_lower_bound_degC::Union{Real, Nothing}
@@ -89,7 +89,7 @@ end
 
 
 """
-    make_bau_hvac(A, B, u, control_node, input_node, initial_temperatures, T_hi, T_lo)
+    make_bau_hvac(A, B, u, space_temperature_node, hvac_input_node, initial_temperatures, T_hi, T_lo)
 
 Determine the business-as-usual (BAU) energy cost for keeping the building temperature within the
 bounds using a discrete-time simulation. The simulation assumes a dead band control by calculating 
@@ -101,14 +101,12 @@ The cost of the energy necessary to heat/cool the building is determined by eith
 1. The `ElectricTariff` for cooling using the `ExistingChiller`; or 
 2. the `ExistingBoiler.fuel_cost_per_mmbtu` for heating
 """
-function make_bau_hvac(A, B, u, control_node, input_node, initial_temperatures, T_hi, T_lo)
+function make_bau_hvac(A, B, u, space_temperature_node, hvac_input_node, initial_temperatures, T_hi, T_lo)
     T = size(u, 2)
     N = size(A, 1)
 
     temperatures = zeros(N, T)
     temperatures[:, 1] .= initial_temperatures
-    input_vec = zeros(N)
-    input_vec[control_node] = 1
 
     thermal_kw = Dict(
         "ExistingChiller" => zeros(T),
@@ -118,23 +116,23 @@ function make_bau_hvac(A, B, u, control_node, input_node, initial_temperatures, 
     for ts in 2:T
         temperatures[:, ts] = A * temperatures[:, ts-1] + B * u[:, ts-1]
 
-        if !isnothing(T_hi) && temperatures[control_node, ts] > T_hi
-            deltaT = temperatures[control_node, ts] - T_hi
-            thermal_kw["ExistingChiller"][ts] = deltaT / B[control_node, input_node]
+        if !isnothing(T_hi) && temperatures[space_temperature_node, ts] > T_hi
+            deltaT = temperatures[space_temperature_node, ts] - T_hi
+            thermal_kw["ExistingChiller"][ts] = deltaT / B[space_temperature_node, hvac_input_node]
 
             temperatures[:, ts] = 
                 A * temperatures[:, ts-1] +
                 B * u[:, ts-1] -
-                B[:, input_node] * thermal_kw["ExistingChiller"][ts]
+                B[:, hvac_input_node] * thermal_kw["ExistingChiller"][ts]
 
-        elseif !isnothing(T_lo) && temperatures[control_node, ts] < T_lo
-            deltaT = T_lo - temperatures[control_node, ts]
-            thermal_kw["ExistingBoiler"][ts] = deltaT / B[control_node, input_node] 
+        elseif !isnothing(T_lo) && temperatures[space_temperature_node, ts] < T_lo
+            deltaT = T_lo - temperatures[space_temperature_node, ts]
+            thermal_kw["ExistingBoiler"][ts] = deltaT / B[space_temperature_node, hvac_input_node] 
 
             temperatures[:, ts] = 
                 A * temperatures[:, ts-1] +
                 B * u[:, ts-1] +
-                B[:, input_node] * thermal_kw["ExistingBoiler"][ts]
+                B[:, hvac_input_node] * thermal_kw["ExistingBoiler"][ts]
         end
     end
 
@@ -165,7 +163,7 @@ function FlexibleHVAC(
         temperature_upper_bound_degC::Real,
         temperature_lower_bound_degC::Real
     )
-    
+
     lib_path = joinpath(dirname(@__FILE__), "..", "..", "data", "rcmodels")
     json_path = joinpath(lib_path, string(city * "_" * doe_reference_name * ".json"))
     rc_dict = JSON.parsefile(json_path)
@@ -193,8 +191,8 @@ function FlexibleHVAC(dict_from_json::Dict)
     u = Matrix(hcat(Vector{Float64}.(dict_from_json["exogenous_inputs"])...))
    
     bau_hvac = make_bau_hvac(A, B, u, 
-        dict_from_json["control_node"], 
-        dict_from_json["input_node"], 
+        dict_from_json["space_temperature_node"], 
+        dict_from_json["hvac_input_node"], 
         dict_from_json["initial_temperatures"], 
         dict_from_json["temperature_upper_bound_degC"], 
         dict_from_json["temperature_lower_bound_degC"]
@@ -204,8 +202,8 @@ function FlexibleHVAC(dict_from_json::Dict)
         A,
         B,
         u,
-        dict_from_json["control_node"],
-        dict_from_json["input_node"],
+        dict_from_json["space_temperature_node"],
+        dict_from_json["hvac_input_node"],
         dict_from_json["initial_temperatures"],
         dict_from_json["temperature_upper_bound_degC"],
         dict_from_json["temperature_lower_bound_degC"],
@@ -220,8 +218,8 @@ end
         system_matrix::AbstractMatrix,
         input_matrix::AbstractMatrix,
         exogenous_inputs::AbstractMatrix,
-        control_node::Int64,
-        input_node::Int64,
+        space_temperature_node::Int64,
+        hvac_input_node::Int64,
         initial_temperatures::AbstractVector,
         temperature_upper_bound_degC::Union{Real, Nothing} = nothing,
         temperature_lower_bound_degC::Union{Real, Nothing} = nothing,
@@ -236,23 +234,23 @@ function FlexibleHVAC(;
         system_matrix::AbstractMatrix,
         input_matrix::AbstractMatrix,
         exogenous_inputs::AbstractMatrix,
-        control_node::Int64,
-        input_node::Int64,
+        space_temperature_node::Int64,
+        hvac_input_node::Int64,
         initial_temperatures::AbstractVector,
         temperature_upper_bound_degC::Union{Real, Nothing} = nothing,
         temperature_lower_bound_degC::Union{Real, Nothing} = nothing,
         installed_cost::Float64
     )
 
-    bau_hvac = make_bau_hvac(system_matrix, input_matrix, exogenous_inputs, control_node, input_node,
+    bau_hvac = make_bau_hvac(system_matrix, input_matrix, exogenous_inputs, space_temperature_node, hvac_input_node,
         initial_temperatures, temperature_upper_bound_degC, temperature_lower_bound_degC)
     
     FlexibleHVAC(
         system_matrix,
         input_matrix,
         exogenous_inputs,
-        control_node,
-        input_node,
+        space_temperature_node,
+        hvac_input_node,
         initial_temperatures,
         temperature_upper_bound_degC,
         temperature_lower_bound_degC,
