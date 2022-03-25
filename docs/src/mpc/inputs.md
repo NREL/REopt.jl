@@ -13,7 +13,6 @@ Just like [REopt Inputs](@ref), inputs to `run_mpc` can be provided in one of th
 3. using the `MPCInputs` struct
 
 The accepted keys for the JSON file or `Dict` are:
-
 - ElectricLoad
 - ElectricTariff
 - PV
@@ -179,4 +178,10 @@ REopt.MPCGenerator
 ```
 
 ## MPCSettings
-The MPCSetting is the same as the [Settings](@ref).
+The MPCSettings is the same as the [Settings](@ref).
+
+
+## MPCLimits
+```@docs
+REopt.MPCLimits
+```

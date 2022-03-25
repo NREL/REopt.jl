@@ -36,6 +36,7 @@ struct MPCScenario <: AbstractScenario
     electric_utility::ElectricUtility
     financial::MPCFinancial
     generator::MPCGenerator
+    limits::MPCLimits
 end
 
 
@@ -43,6 +44,7 @@ end
     MPCScenario(d::Dict)
 
 Method for creating the MPCScenario struct:
+```julia
     struct MPCScenario <: AbstractScenario
         settings::Settings
         pvs::Array{MPCPV, 1}
@@ -52,10 +54,14 @@ Method for creating the MPCScenario struct:
         electric_utility::ElectricUtility
         financial::MPCFinancial
         generator::MPCGenerator
+        limits::MPCLimits
     end
+```
+
 The Dict `d` must have at a minimum the keys:
     - "ElectricLoad"
     - "ElectricTariff"
+
 Other options include:
     - "PV", which can contain a Dict or Dict[]
     - "ElectricStorage"
@@ -63,6 +69,7 @@ Other options include:
     - "ElectricUtility"
     - "Settings"
     - "Financial"
+    - "Limits"
 """
 function MPCScenario(d::Dict)
     if haskey(d, "Settings")
@@ -117,6 +124,12 @@ function MPCScenario(d::Dict)
         generator = MPCGenerator(; size_kw=0)
     end
 
+    if haskey(d, "Limits")
+        limits = MPCLimits(; dictkeys_tosymbols(d["Limits"])...)
+    else
+        limits = MPCLimits()
+    end
+
     return MPCScenario(
         settings,
         pvs, 
@@ -125,6 +138,7 @@ function MPCScenario(d::Dict)
         electric_load, 
         electric_utility, 
         financial,
-        generator
+        generator,
+        limits
     )
 end

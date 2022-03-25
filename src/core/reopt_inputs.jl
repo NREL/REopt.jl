@@ -578,7 +578,7 @@ and critical_loads_kw respectively.
 """
 function setup_electric_utility_inputs(s::AbstractScenario)
     if s.electric_utility.outage_end_time_step > 0 &&
-            s.electric_utility.outage_end_time_step > s.electric_utility.outage_start_time_step
+            s.electric_utility.outage_end_time_step >= s.electric_utility.outage_start_time_step
         time_steps_without_grid = Int[i for i in range(s.electric_utility.outage_start_time_step,
                                                     stop=s.electric_utility.outage_end_time_step)]
         if s.electric_utility.outage_start_time_step > 1

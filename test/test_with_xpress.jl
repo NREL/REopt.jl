@@ -483,6 +483,10 @@ end
     @test maximum(r["ElectricUtility"]["to_load_series_kw"][1:15]) <= 98.0 
     @test maximum(r["ElectricUtility"]["to_load_series_kw"][16:24]) <= 97.0
     @test sum(r["PV"]["to_grid_series_kw"]) ≈ 0
+    grid_draw = r["ElectricUtility"]["to_load_series_kw"] .+ r["ElectricUtility"]["to_battery_series_kw"]
+    # the grid draw limit in the 10th time step is set to 90
+    # without the 90 limit the grid draw is 98 in the 10th time step
+    @test grid_draw[10] <= 90
 end
 
 @testset "Complex Incentives" begin
