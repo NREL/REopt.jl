@@ -39,8 +39,6 @@ function add_flexible_hvac_constraints(m, p::REoptInputs; _n="")
     @constraint(m, dvTemperature[:, 1] .== p.s.flexible_hvac.initial_temperatures)
 
     # TODO time scaling for dt?
-    input_vec = zeros(N)
-    input_vec[p.s.flexible_hvac.control_node] = 1
 
     if !isempty(p.techs.heating) && !isempty(p.techs.cooling)
         # space temperature evolution based on state-space model
@@ -48,17 +46,17 @@ function add_flexible_hvac_constraints(m, p::REoptInputs; _n="")
             binFlexHVAC => { dvTemperature[n, ts] == 
                 sum(p.s.flexible_hvac.system_matrix[n, i] * dvTemperature[i, ts-1] for i=1:N) + 
                 sum(p.s.flexible_hvac.input_matrix[n, j] * p.s.flexible_hvac.exogenous_inputs[j, ts-1] for j=1:J) + 
-                input_vec[n] * p.s.flexible_hvac.input_matrix[n, p.s.flexible_hvac.control_node] * (
+                 p.s.flexible_hvac.input_matrix[n, p.s.flexible_hvac.hvac_input_node] * (
                     sum(m[Symbol("dvThermalProduction"*_n)][t, ts-1] for t in p.techs.heating) -
                     sum(m[Symbol("dvThermalProduction"*_n)][t, ts-1] for t in p.techs.cooling) 
                 )}
         )
         @constraint(m, [ts in p.time_steps], 
             p.s.flexible_hvac.temperature_lower_bound_degC - lower_comfort_slack[ts] <= 
-            dvTemperature[p.s.flexible_hvac.control_node, ts]
+            dvTemperature[p.s.flexible_hvac.space_temperature_node, ts]
         )
         @constraint(m, [ts in p.time_steps],
-            dvTemperature[p.s.flexible_hvac.control_node, ts] <= 
+            dvTemperature[p.s.flexible_hvac.space_temperature_node, ts] <= 
             p.s.flexible_hvac.temperature_upper_bound_degC + upper_comfort_slack[ts]
         )
 
@@ -68,18 +66,18 @@ function add_flexible_hvac_constraints(m, p::REoptInputs; _n="")
             binFlexHVAC => { dvTemperature[n, ts] == 
             sum(p.s.flexible_hvac.system_matrix[n, i] * dvTemperature[i, ts-1] for i=1:N) + 
             sum(p.s.flexible_hvac.input_matrix[n, j] * p.s.flexible_hvac.exogenous_inputs[j, ts-1] for j=1:J) + 
-            input_vec[n] * p.s.flexible_hvac.input_matrix[n, p.s.flexible_hvac.control_node] * (
+             p.s.flexible_hvac.input_matrix[n, p.s.flexible_hvac.hvac_input_node] * (
                 sum(m[Symbol("dvThermalProduction"*_n)][t, ts-1] for t in p.techs.heating)
             )}
         )
         @constraint(m, [ts in p.time_steps], 
             p.s.flexible_hvac.temperature_lower_bound_degC - lower_comfort_slack[ts] <= 
-            dvTemperature[p.s.flexible_hvac.control_node, ts]
+            dvTemperature[p.s.flexible_hvac.space_temperature_node, ts]
         )
         # when only heating the upper temperature limit is the highest temperature seen naturally
         @constraint(m, [ts in p.time_steps],
-            dvTemperature[p.s.flexible_hvac.control_node, ts] <= 
-            maximum(p.s.flexible_hvac.bau_hvac.temperatures[p.s.flexible_hvac.control_node, :]) + 
+            dvTemperature[p.s.flexible_hvac.space_temperature_node, ts] <= 
+            maximum(p.s.flexible_hvac.bau_hvac.temperatures[p.s.flexible_hvac.space_temperature_node, :]) + 
             upper_comfort_slack[ts]
         )
 
@@ -89,18 +87,18 @@ function add_flexible_hvac_constraints(m, p::REoptInputs; _n="")
             binFlexHVAC => { dvTemperature[n, ts] == 
             sum(p.s.flexible_hvac.system_matrix[n, i] * dvTemperature[i, ts-1] for i=1:N) + 
             sum(p.s.flexible_hvac.input_matrix[n, j] * p.s.flexible_hvac.exogenous_inputs[j, ts-1] for j=1:J) -
-            input_vec[n] * p.s.flexible_hvac.input_matrix[n, p.s.flexible_hvac.control_node] * (
+             p.s.flexible_hvac.input_matrix[n, p.s.flexible_hvac.hvac_input_node] * (
                 sum(m[Symbol("dvThermalProduction"*_n)][t, ts-1] for t in p.techs.cooling) 
             )}
         )
         # when only cooling the lower temperature limit is the lowest temperature seen naturally
         @constraint(m, [ts in p.time_steps], 
-            minimum(p.s.flexible_hvac.bau_hvac.temperatures[p.s.flexible_hvac.control_node, :]) - 
+            minimum(p.s.flexible_hvac.bau_hvac.temperatures[p.s.flexible_hvac.space_temperature_node, :]) - 
             lower_comfort_slack[ts] <= 
-            dvTemperature[p.s.flexible_hvac.control_node, ts]
+            dvTemperature[p.s.flexible_hvac.space_temperature_node, ts]
         )
         @constraint(m, [ts in p.time_steps],
-            dvTemperature[p.s.flexible_hvac.control_node, ts] <= 
+            dvTemperature[p.s.flexible_hvac.space_temperature_node, ts] <= 
             p.s.flexible_hvac.temperature_upper_bound_degC + upper_comfort_slack[ts]
         )
     end
