@@ -118,21 +118,21 @@ function make_bau_hvac(A, B, u, space_temperature_node, hvac_input_node, initial
 
         if !isnothing(T_hi) && temperatures[space_temperature_node, ts] > T_hi
             deltaT = temperatures[space_temperature_node, ts] - T_hi
-            thermal_kw["ExistingChiller"][ts] = deltaT / B[space_temperature_node, hvac_input_node]
+            thermal_kw["ExistingChiller"][ts-1] = deltaT / B[space_temperature_node, hvac_input_node]
 
             temperatures[:, ts] = 
                 A * temperatures[:, ts-1] +
                 B * u[:, ts-1] -
-                B[:, hvac_input_node] * thermal_kw["ExistingChiller"][ts]
+                B[:, hvac_input_node] * thermal_kw["ExistingChiller"][ts-1]
 
         elseif !isnothing(T_lo) && temperatures[space_temperature_node, ts] < T_lo
             deltaT = T_lo - temperatures[space_temperature_node, ts]
-            thermal_kw["ExistingBoiler"][ts] = deltaT / B[space_temperature_node, hvac_input_node] 
+            thermal_kw["ExistingBoiler"][ts-1] = deltaT / B[space_temperature_node, hvac_input_node] 
 
             temperatures[:, ts] = 
                 A * temperatures[:, ts-1] +
                 B * u[:, ts-1] +
-                B[:, hvac_input_node] * thermal_kw["ExistingBoiler"][ts]
+                B[:, hvac_input_node] * thermal_kw["ExistingBoiler"][ts-1]
         end
     end
 
