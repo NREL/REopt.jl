@@ -143,7 +143,6 @@ end
         R = 0.00025  # K/kW
         C = 1e5   # kJ/K
         # the starting scenario has flat fuel and electricty costs
-        d = JSON.parsefile("./scenarios/thermal_load.json");
         A = reshape([-1/(R*C)], 1,1)
         B = [1/(R*C) 1/C]
         C = [1]
@@ -162,6 +161,7 @@ end
         tamb = REopt.get_ambient_temperature(30.2672, -97.7431);
 
         u = [tamb zeros(8760)]';
+        d = JSON.parsefile("./scenarios/thermal_load.json");
         d["FlexibleHVAC"] = Dict(
             "control_node" => 1,
             "input_node" => 1,
