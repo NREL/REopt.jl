@@ -106,17 +106,13 @@ function add_flexible_hvac_constraints(m, p::REoptInputs; _n="")
     dvComfortLimitViolationCost = @expression(m,  
         1e9 * sum(lower_comfort_slack[ts] + upper_comfort_slack[ts] for ts in p.time_steps)
     )
-    # TODO convert dvThermalProduction units? to ? shouldn't the conversion be in input_matrix coef? COP in Xiang's test is 4-5, fan_power_ratio = 0, hp prod factor generally between 1 and 2
-    ## TODO check eigen values / stability of system matrix?
-
 
     @variable(m, dvFlexHVACcost >= 0)
     @constraint(m, binFlexHVAC => { dvFlexHVACcost >= p.s.flexible_hvac.installed_cost})
     m[:TotalTechCapCosts] += dvFlexHVACcost
 
     # If not buying FlexibleHVAC then the BAU (deadband) thermal loads must be met
-    # TODO account for different tech efficiencies in following?
-
+    # NOTE indicator constraints cannot have line breaks (fails silently)
     if !isempty(p.techs.heating)
         @constraint(m, [ts in p.time_steps],
             !binFlexHVAC => { sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.heating) == p.s.flexible_hvac.bau_hvac.existing_boiler_kw_thermal[ts]
