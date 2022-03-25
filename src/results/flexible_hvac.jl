@@ -31,13 +31,18 @@ function add_flexible_hvac_results(m::JuMP.AbstractModel, p::REoptInputs{Scenari
     r = Dict{String, Any}()
     binFlexHVAC = round(value(m[:binFlexHVAC]), digits=0)
     r["purchased"] = string(Bool(binFlexHVAC))
-    r["temperatures_degC_node_by_time"] = value.(m[Symbol("dvTemperature"*_n)]).data
+    # TODO if not purchased then don't provide temperature data? require BAU run with FlexHVAC and output BAU temperature?
+    # WHY IS THE OPTIMAL RUN DIFFERENT FROM BAU ???
+    
     r["upgrade_cost"] = Int(binFlexHVAC) * p.s.flexible_hvac.installed_cost
 
     if binFlexHVAC ≈ 1.0
         if any(value.(m[:lower_comfort_slack]) .>= 1.0) || any(value.(m[:upper_comfort_slack]) .>= 1.0)
             @warn "The comfort limits were violated by at least one degree Celcius to keep the problem feasible."
         end
+        r["temperatures_degC_node_by_time"] = value.(m[Symbol("dvTemperature"*_n)]).data
+    else
+        r["temperatures_degC_node_by_time"] = p.s.flexible_hvac.bau_hvac.temperatures
     end
 
     d["FlexibleHVAC"] = r
