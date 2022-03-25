@@ -131,25 +131,40 @@ end
         1 state/control node
         2 inputs: Ta and Qheat
         A = [1/(RC)], B = [1/(RC) 1/C], u = [Ta; Q]
-        NOTE exogenous_inputs (u) allows for parasitic heat, but it is input as zeros here
+        NOTE `exogenous_inputs` (u) allows for parasitic heat, infiltration, etc; but it is input as 
+            zeros here.
 
         We start with no technologies except ExistingBoiler and ExistingChiller. 
         FlexibleHVAC is only worth purchasing if its cost is neglible (i.e. below the lcc_bau * MIPTOL) 
-        or if there is a time-varying fuel and/or electricity cost 
+        or if there is a time-varying fuel and/or electricity cost
         (and the FlexibleHVAC installed_cost is less than the achievable savings).
-        =#
-
-        # Austin, TX -> existing_chiller and existing_boiler added with FlexibleHVAC
-        tamb = REopt.get_ambient_temperature(30.2672, -97.7431);
+        
+        The continuous time system is converted to a discrete system:
         R = 0.00025  # K/kW
         C = 1e5   # kJ/K
         # the starting scenario has flat fuel and electricty costs
         d = JSON.parsefile("./scenarios/thermal_load.json");
         A = reshape([-1/(R*C)], 1,1)
         B = [1/(R*C) 1/C]
+        C = [1]
+        discrete_sys = ControlSystems.c2d(ControlSystems.ss(A,B,C,[0 0]), 1.0)
+            StateSpace{Discrete{Float64}, Float64}
+            A = 
+            0.9607894391523234
+            B = 
+            0.0392105608476768  9.8026402119192e-6
+            ...
+        =#
+        A = reshape([0.960789], 1,1)
+        B = [0.039210  9.802640e-6]
+
+        # Austin, TX -> existing_chiller and existing_boiler added with FlexibleHVAC
+        tamb = REopt.get_ambient_temperature(30.2672, -97.7431);
+
         u = [tamb zeros(8760)]';
         d["FlexibleHVAC"] = Dict(
             "control_node" => 1,
+            "input_node" => 1,
             "initial_temperatures" => [21],
             "temperature_upper_bound_degC" => 22.0,
             "temperature_lower_bound_degC" => 19.8,
@@ -218,21 +233,22 @@ end
     #=
     using Plots
     plotlyjs()
-    plot(r["FlexibleHVAC"]["temperatures_degC_node_by_time_bau"][1,:], label="bau")
-    plot!(r["FlexibleHVAC"]["temperatures_degC_node_by_time"][1,:], line=(:dot))
+    plot(r["FlexibleHVAC"]["temperatures_degC_node_by_time_bau"][3,:], label="bau")
+    plot!(r["FlexibleHVAC"]["temperatures_degC_node_by_time"][3,:], line=(:dot))
     =#
 
     @testset "placeholder 5 param RC model" begin
         # these tests pass locally but not on Actions ???
         d = JSON.parsefile("./scenarios/thermal_load.json");
         d["FlexibleHVAC"] = Dict(
-            "installed_cost" => 300,
+            "installed_cost" => 0,
             "doe_reference_name" => "LargeOffice",
             "city" => "LosAngeles",
-            "temperature_upper_bound_degC" => 20,
-            "temperature_lower_bound_degC" => 18,
+            "temperature_upper_bound_degC" => 19,
+            "temperature_lower_bound_degC" => 17.0,
         )
-        s = Scenario(d);
+
+        # s = Scenario(d);
 
         #= TODO outputs from RC fitting process need name adjustments:
             - missing control_node
