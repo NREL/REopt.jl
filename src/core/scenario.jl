@@ -123,7 +123,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         if haskey(d, "ElectricUtility")
             @warn "When off_grid_flag is true, a year-long outage will always be modeled. Any other inputs in ElectricUtility will be overridden."
         end
-        electric_utility = ElectricUtility(; outage_start_time_step = 1, outage_end_time_step = settings.time_steps_per_hour * 8760) # This should error with =0
+        electric_utility = ElectricUtility(; outage_start_time_step = 1, outage_end_time_step = settings.time_steps_per_hour * 8760) 
     end
 
     storage_structs = Dict{String, AbstractStorage}()

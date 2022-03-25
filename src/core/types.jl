@@ -53,10 +53,13 @@ mutable struct Techs
     no_turndown::Vector{String}
     segmented::Vector{String}
     heating::Vector{String}
+    cooling::Vector{String}
     boiler::Vector{String}
     fuel_burning::Vector{String}
     thermal::Vector{String}
     chp::Vector{String}
+    techs_requiring_oper_res::Vector{String}
+    techs_providing_oper_res::Vector{String}
 end
 ```
 """
@@ -75,4 +78,6 @@ mutable struct Techs
     fuel_burning::Vector{String}
     thermal::Vector{String}
     chp::Vector{String}
+    techs_requiring_oper_res::Vector{String}
+    techs_providing_oper_res::Vector{String}
 end

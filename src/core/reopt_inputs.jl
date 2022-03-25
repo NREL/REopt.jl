@@ -67,6 +67,7 @@ struct REoptInputs <: AbstractInputs
     pbi_max_kw::Dict{String, Any}  # (pbi_techs)
     pbi_benefit_per_kwh::Dict{String, Any}  # (pbi_techs)
     boiler_efficiency::Dict{String, Float64}
+    techs_operating_reserve_req_pct::Dict{String, Float64} # (techs.all)
 end
 ```
 """
@@ -106,6 +107,7 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     pbi_max_kw::Dict{String, Any}  # (pbi_techs)
     pbi_benefit_per_kwh::Dict{String, Any}  # (pbi_techs)
     boiler_efficiency::Dict{String, Float64}
+    techs_operating_reserve_req_pct::Dict{String, Float64} # (techs.all)
 end
 
 
@@ -139,7 +141,7 @@ function REoptInputs(s::AbstractScenario)
     techs, pv_to_location, maxsize_pv_locations, pvlocations, 
         production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
         seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
-        cop = setup_tech_inputs(s)
+        cop, techs_operating_reserve_req_pct = setup_tech_inputs(s)
 
     pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
 
@@ -194,7 +196,8 @@ function REoptInputs(s::AbstractScenario)
         pbi_max_benefit, 
         pbi_max_kw, 
         pbi_benefit_per_kwh,
-        boiler_efficiency
+        boiler_efficiency,
+        techs_operating_reserve_req_pct 
     )
 end
 
@@ -208,6 +211,8 @@ function setup_tech_inputs(s::AbstractScenario)
 
     techs = Techs(s)
 
+    print("techs.all: ", techs.all)
+
     boiler_efficiency = Dict{String, Float64}()
     production_factor = DenseAxisArray{Float64}(undef, techs.all, 1:length(s.electric_load.loads_kw))
 
@@ -218,6 +223,7 @@ function setup_tech_inputs(s::AbstractScenario)
     cap_cost_slope = Dict{String, Any}()
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
     cop = Dict(t => 0.0 for t in techs.cooling)
+    techs_operating_reserve_req_pct = Dict(t => 0.0 for t in techs.all)
 
     # export related inputs
     techs_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in s.electric_tariff.export_bins)
@@ -271,10 +277,14 @@ function setup_tech_inputs(s::AbstractScenario)
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
     end
 
+    if s.settings.off_grid_flag
+        setup_operating_reserve_pct(s, techs_operating_reserve_req_pct)
+    end
+
     return techs, pv_to_location, maxsize_pv_locations, pvlocations, 
     production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
     seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
-    cop
+    cop, techs_operating_reserve_req_pct
 end
 
 
@@ -660,4 +670,15 @@ function fillin_techs_by_exportbin(techs_by_exportbin::Dict, tech::AbstractTech,
         push!(techs_by_exportbin[:WHL], tech_name)
     end
     return nothing
+end
+
+function setup_operating_reserve_pct(s::AbstractScenario, techs_operating_reserve_req_pct)
+    # techs = Techs(s)
+
+    for pv in s.pvs # currently only PV requires operating reserves
+        techs_operating_reserve_req_pct[pv.name] = pv.operating_reserve_required_pct
+    end
+
+    return nothing
+
 end

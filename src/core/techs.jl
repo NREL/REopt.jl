@@ -46,6 +46,8 @@ function Techs(p::REoptInputs, s::BAUScenario)
     cooling_techs = String[]
     boiler_techs = String[]
     chp_techs = String[]
+    techs_requiring_oper_res = String[]  
+    techs_providing_oper_res = String[]
 
     if p.s.generator.existing_kw > 0
         push!(all_techs, "Generator")
@@ -81,7 +83,9 @@ function Techs(p::REoptInputs, s::BAUScenario)
         boiler_techs,
         fuel_burning_techs,
         thermal_techs,
-        chp_techs
+        chp_techs,
+        techs_requiring_oper_res,
+        techs_providing_oper_res
     )
 end
 
@@ -108,6 +112,9 @@ function Techs(s::Scenario)
     cooling_techs = String[]
     boiler_techs = String[]
     chp_techs = String[]
+    techs_requiring_oper_res = String[] 
+    techs_providing_oper_res = String[]
+
     if s.wind.max_kw > 0
         push!(all_techs, "Wind")
         push!(elec, "Wind")
@@ -139,8 +146,15 @@ function Techs(s::Scenario)
         push!(cooling_techs, "ExistingChiller")
     end
 
+    if s.settings.off_grid_flag
+        techs_requiring_oper_res = copy(pvtechs) # Currently, only PV requires operating reserves.
+        techs_providing_oper_res = union(pvtechs, gentechs) # Currently, only PV and generator (and storage) provide operating reserves.
+        print("techs_providing_oper_res", techs_providing_oper_res)
+    end
+
     thermal_techs = union(heating_techs, boiler_techs, chp_techs, cooling_techs)
     fuel_burning_techs = union(gentechs, boiler_techs, chp_techs)
+    print("all_techs", all_techs)
 
     Techs(
         all_techs,
@@ -156,7 +170,9 @@ function Techs(s::Scenario)
         boiler_techs,
         fuel_burning_techs,
         thermal_techs,
-        chp_techs
+        chp_techs,
+        techs_requiring_oper_res, 
+        techs_providing_oper_res 
     )
 end
 
@@ -188,6 +204,8 @@ function Techs(s::MPCScenario)
         String[],
         String[],
         techs_no_turndown,
+        String[],
+        String[],
         String[],
         String[],
         String[],
