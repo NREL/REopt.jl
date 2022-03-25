@@ -266,6 +266,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 	add_elec_load_balance_constraints(m, p)
 
+	if p.s.settings.off_grid_flag
+		add_operating_reserve_constraints(m, p)
+	end
+
 	if !isempty(p.s.electric_tariff.export_bins)
 		add_export_constraints(m, p)
 	end
@@ -504,6 +508,13 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 			binMGStorageUsed, Bin # 1 if MG storage battery used, 0 otherwise
 			binMGTechUsed[p.techs.elec], Bin # 1 if MG tech used, 0 otherwise
 			binMGGenIsOnInTS[S, tZeros, outage_timesteps], Bin
+		end
+	end
+
+	if p.s.settings.off_grid_flag
+		@variables m begin
+			dvOpResFromBatt[p.s.storage.types.elec, p.time_steps_without_grid] >= 0 # Operating reserves provided by the electric storage [kW]
+			dvOpResFromTechs[p.techs.techs_providing_oper_res, p.time_steps_without_grid] >= 0 # Operating reserves provided by techs [kW]
 		end
 	end
 end
