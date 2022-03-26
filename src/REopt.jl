@@ -63,7 +63,6 @@ using Shapefile
 using PolygonInbounds
 using Roots: fzero  # for IRR
 global hdl = nothing
-import PlotlyJS
 
 const EXISTING_CHILLER_COP = 4.55
 
