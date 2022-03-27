@@ -418,12 +418,23 @@ end
         results["Financial"]["offtaker_annual_free_cashflows_bau"], 0.081)
     @test results["Financial"]["npv"] ≈ proforma_npv rtol=0.0001
 
+    # compare avg soc with and without degradation, 
+    # using default augmentation battery maintenance strategy
     avg_soc_no_degr = sum(results["ElectricStorage"]["year_one_soc_series_pct"]) / 8760
     d["ElectricStorage"]["model_degradation"] = true
     m = Model(Xpress.Optimizer)
     r_degr = run_reopt(m, d)
     avg_soc_degr = sum(r_degr["ElectricStorage"]["year_one_soc_series_pct"]) / 8760
     @test avg_soc_no_degr > avg_soc_degr
+
+    # test the replacement strategy
+    d["ElectricStorage"]["degradation"] = Dict("maintenance_strategy" => "replacement")
+    m = Model(Xpress.Optimizer)    
+    set_optimizer_attribute(m, "MIPRELSTOP", 0.01)  # TODO? warning for replacment strategy
+    r = run_reopt(m, d)
+    @test sum(value.(m[:bmth_BkWh])) ≈ r["ElectricStorage"]["size_kwh"] atol=0.1
+    @test r["ElectricStorage"]["maintenance_cost"] ≈ 7733.67 atol=0.01 
+
 end
 
 @testset "Outage with Generator, outate simulator, BAU critical load outputs" begin
