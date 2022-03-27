@@ -433,7 +433,7 @@ end
     set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
     r = run_reopt(m, d)
     @test sum(value.(m[:bmth_BkWh])) ≈ r["ElectricStorage"]["size_kwh"] atol=0.1
-    @test r["ElectricStorage"]["maintenance_cost"] ≈ 7733.67 atol=0.01 
+    @test r["ElectricStorage"]["maintenance_cost"] ≈ 2972.66 atol=0.01 
 
 end
 
