@@ -76,13 +76,17 @@ function add_degradation(m, p;
         b="ElectricStorage"
     )
     days = 1:365*p.s.financial.analysis_years
+    strategy = p.s.storage.attr[b].degradation.maintenance_strategy
 
     if isempty(p.s.storage.attr[b].degradation.maintenance_cost_per_kwh)
         function pwf(day::Int)
             (1+p.s.storage.attr[b].degradation.installed_cost_per_kwh_declination_rate)^(day/365) / 
             (1+p.s.financial.owner_discount_pct)^(day/365)
         end
-        p.s.storage.attr[b].degradation.maintenance_cost_per_kwh = [
+        # for the augmentation strategy the maintenance cost curve (function of time) starts at 
+        # 80% of the installed cost since we are not replacing the entire battery
+        f = strategy == :augmentation ? 0.8 : 1.0
+        p.s.storage.attr[b].degradation.maintenance_cost_per_kwh = [ f * 
             p.s.storage.attr[b].installed_cost_per_kwh * pwf(d) for d in days[1:end-1]
         ]
     end
@@ -108,7 +112,6 @@ function add_degradation(m, p;
     @constraint(m, SOH[1] == m[:dvStorageEnergy][b])
     # NOTE SOH is _not_ normalized, and has units of kWh
 
-    strategy = p.s.storage.attr[b].degradation.maintenance_strategy
     if strategy == :replacement
         @error("cannot make replacment strategy fit MILP format")
         @variable(m, soh_indicator[days], Bin)
