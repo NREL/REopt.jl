@@ -31,7 +31,7 @@ Base.@kwdef mutable struct Degradation
     calendar_fade_coefficient::Float64 = 2.46E-03
     cycle_fade_coefficient::Float64 = 7.82E-05
     installed_cost_per_kwh_declination_rate::Float64 = 0.05
-    maintenance_strategy::Symbol = :augmentation  # one of [:augmentation, :replacement]
+    maintenance_strategy::String = "augmentation"  # one of [augmentation, :replacement]
     maintenance_cost_per_kwh::Vector{<:Real} = Real[]
 end
 
@@ -98,6 +98,7 @@ Base.@kwdef struct ElectricStorageDefaults
     discharge_efficiency::Float64 = inverter_efficiency_pct * internal_efficiency_pct^0.5
     grid_charge_efficiency::Float64 = can_grid_charge ? charge_efficiency : 0.0
     model_degradation::Bool = false
+    degradation::Dict = Dict()
 end
 
 
@@ -140,7 +141,7 @@ struct ElectricStorage <: AbstractElectricStorage
 
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
-        
+
         net_present_cost_per_kw = effective_cost(;
             itc_basis = s.installed_cost_per_kw,
             replacement_cost = s.replace_cost_per_kw,
@@ -167,8 +168,8 @@ struct ElectricStorage <: AbstractElectricStorage
 
         net_present_cost_per_kwh -= s.total_rebate_per_kwh
 
-        if haskey(d, "degradation")
-            degr = Degradation(;dictkeys_tosymbols(d["degradation"])...)
+        if haskey(d, :degradation)
+            degr = Degradation(;dictkeys_tosymbols(d[:degradation])...)
         else
             degr = Degradation()
         end
