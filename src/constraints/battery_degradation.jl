@@ -67,7 +67,8 @@ end
 
 
 """
-
+    add_degradation(m, p; time_exponent=0.5, b="ElectricStorage")
+    
 NOTE the average SOC and EFC variables are in absolute units. For example, the SOH variable starts 
     at the battery capacity in kWh.
 """
@@ -85,7 +86,7 @@ function add_degradation(m, p;
         end
         # for the augmentation strategy the maintenance cost curve (function of time) starts at 
         # 80% of the installed cost since we are not replacing the entire battery
-        f = strategy == :augmentation ? 0.8 : 1.0
+        f = strategy == "augmentation" ? 0.8 : 1.0
         p.s.storage.attr[b].degradation.maintenance_cost_per_kwh = [ f * 
             p.s.storage.attr[b].installed_cost_per_kwh * pwf(d) for d in days[1:end-1]
         ]
@@ -112,40 +113,77 @@ function add_degradation(m, p;
     @constraint(m, SOH[1] == m[:dvStorageEnergy][b])
     # NOTE SOH is _not_ normalized, and has units of kWh
 
-    if strategy == :replacement
-        @error("cannot make replacment strategy fit MILP format")
-        @variable(m, soh_indicator[days], Bin)
+    if strategy == "replacement"
+        #=
+        When the battery degrades to 80% of purchased capacity it is replaced.
+        Multiple replacements could be necessary within the analysis period.
+        (The SOH is calculated for the analysis period, but not for multiple batteries.)
+        So we construct a cost as a function of months that accounts for the number of replacements.
+        (We use months instead of days to reduce the number of integer variables required).
 
+        The replacment cost in a given month is:
+        1. the maintenance_cost_per_kwh in (approximately) the 15th day of the month multiplied with
+        2. the number of replacements required given the first month that the battery must be replaced.
+        The number of months is analysis_years * 12.
+        The first month that the battery is replaced is determined by d_0p8, which is the integer 
+        number of days that the SOH is at least 80% of the purchased capacity.
+        We define a binary for each month and only allow one month to be chosen.
+        =#
+        
+        # define d_0p8
+        @variable(m, soh_indicator[days], Bin)
         @constraint(m, [d in days],
             soh_indicator[d] => {SOH[d] >= 0.8*m[:dvStorageEnergy][b]}
         )
         @expression(m, d_0p8, sum(soh_indicator[d] for d in days))
 
-        # build piecewise linear approximation of Ndays / d_0p8 - 1
-        Ndays = days[end]
-        points = (
-            (0, 20),
-            (Ndays/5, 4),
-            (Ndays/4, 3),
-            (Ndays/3, 2),
-            (Ndays/2, 1),
-            (3*Ndays/4, 1/3),
-            (Ndays, 0.0)
-        )
-        point_pairs = ((pt1, pt2) for (pt1, pt2) in zip(points[1:end-1], points[2:end]))
-        @variable(m, N_batt_replacements >= 0)
-        for pair in point_pairs
-            @constraint(m, 
-                N_batt_replacements >= (pair[2][2] - pair[1][2]) / (pair[2][1] - pair[1][1]) * (d_0p8 - pair[1][1]) + pair[1][2]
-            )
+        # define binaries for the finding the month that battery must be replaced
+        months = 1:p.s.financial.analysis_years*12
+        @variable(m, bmth[months], Bin)
+        # can only pick one month
+        @constraint(m, sum(bmth[mth] for mth in months) == 1)
+        # the month picked is at most the month in which the SOH hits 80%
+        @constraint(m, sum(mth*bmth[mth] for mth in months) <= d_0p8 / 30.42)
+        # 30.42 is the average number of days in month
+
+        #=
+        number of replacments as function of d_0p8
+         ^
+         |
+        4-    ------
+         |
+        3-          -------
+         |
+        2-                 -----
+         |
+        1-                      -------------------
+         |
+         ------|----|------|----|-----------------|->  d_0p8
+              N/5  N/4    N/3  N/2                N = 365*analysis_years
+        
+        The above curve is multiplied by the maintenance_cost_per_kwh to create the cost coefficients
+        =#
+        c = zeros(length(months))  # initialize cost coefficients
+        N = 365*p.s.financial.analysis_years
+        for mth in months
+            day = Int(round((mth-1)*30.42 + 15, digits=0))
+            c[mth] = p.s.storage.attr[b].degradation.maintenance_cost_per_kwh[day] *
+                ceil(N/day - 1)
         end
+
+        # linearize the product of bmth & m[:dvStorageEnergy][b]
+        M = p.s.storage.attr[b].max_kwh  # the big M
+        @variable(m, 0 <= bmth_BkWh[months])
+        @constraint(m, [mth in months], bmth_BkWh[mth] <= m[:dvStorageEnergy][b])
+        @constraint(m, [mth in months], bmth_BkWh[mth] <= M * bmth[mth])
+        @constraint(m, [mth in months], bmth_BkWh[mth] >= m[:dvStorageEnergy][b] - M*(1-bmth[mth]))
 
         # add replacment cost to objective
         @expression(m, degr_cost,
-            p.s.storage.attr[b].degradation.maintenance_cost_per_kwh[d_0p8] * diff(SOH) ### will not work!? bilinear
+            sum(c[mth] * bmth_BkWh[mth] for mth in months)
         )
 
-    elseif strategy == :augmentation
+    elseif strategy == "augmentation"
 
         @expression(m, degr_cost,
             sum(
@@ -163,7 +201,6 @@ function add_degradation(m, p;
     
     # TODO scale battery replacement cost
     # NOTE adding to Costs expression does not modify the objective function
-    # set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
     # TODO increase threads?
 end
 # TODO raise error for multisite with degradation
