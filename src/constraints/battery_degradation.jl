@@ -68,7 +68,7 @@ end
 
 """
     add_degradation(m, p; time_exponent=0.5, b="ElectricStorage")
-    
+
 NOTE the average SOC and EFC variables are in absolute units. For example, the SOH variable starts 
     at the battery capacity in kWh.
 """
@@ -131,6 +131,9 @@ function add_degradation(m, p;
         =#
         
         # define d_0p8
+        @warn "Adding binary and indicator constraints for 
+         ElectricStorage.degradation.maintenance_strategy = \"replacement\". 
+         Not all solvers support indicators and some are slow with integers."
         @variable(m, soh_indicator[days], Bin)
         @constraint(m, [d in days],
             soh_indicator[d] => {SOH[d] >= 0.8*m[:dvStorageEnergy][b]}

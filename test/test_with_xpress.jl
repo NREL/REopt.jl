@@ -430,7 +430,7 @@ end
     # test the replacement strategy
     d["ElectricStorage"]["degradation"] = Dict("maintenance_strategy" => "replacement")
     m = Model(Xpress.Optimizer)    
-    set_optimizer_attribute(m, "MIPRELSTOP", 0.01)  # TODO? warning for replacment strategy
+    set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
     r = run_reopt(m, d)
     @test sum(value.(m[:bmth_BkWh])) ≈ r["ElectricStorage"]["size_kwh"] atol=0.1
     @test r["ElectricStorage"]["maintenance_cost"] ≈ 7733.67 atol=0.01 
