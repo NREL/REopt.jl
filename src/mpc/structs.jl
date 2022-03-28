@@ -128,7 +128,7 @@ Keys for `d` include:
   - `energy_rates`
 
     - REQUIRED
-    - must have length equal to `ElectricLoad.loads_kw`
+    - must have length equal to `ElectricLoad.net_loads_kw` or `ElectricLoad.native_loads_kw`, whichever is not empty
 
   - `monthly_demand_rates`
 

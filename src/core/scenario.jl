@@ -142,8 +142,15 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                     )
 
     if haskey(d, "Wind")
+        # TODO: Ideally, would use native load here. Challenge is that to do that add_net_or_native_load_profile()
+        # would need to be called before this point, but with the current set up the scenario needs to be created 
+        # before calculating prod factors and prod factors are needed in add_net_or_native_load_profile().
+        # For now, maintaining current behavior of using whichever load profile is provided.
+        avg_elec_load = electric_load.loads_kw_is_net ? 
+                        (sum(electric_load.net_loads_kw) / length(electric_load.net_loads_kw)) : 
+                        (sum(electric_load.native_loads_kw) / length(electric_load.native_loads_kw))
         wind = Wind(; dictkeys_tosymbols(d["Wind"])..., 
-                    average_elec_load=sum(electric_load.loads_kw) / length(electric_load.loads_kw))
+                    average_elec_load=avg_elec_load)
     else
         wind = Wind(; max_kw=0)
     end
@@ -255,7 +262,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     max_cooling_demand_kw = 0
     if haskey(d, "CoolingLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["CoolingLoad"])
-        d["CoolingLoad"]["site_electric_load_profile"] = electric_load.loads_kw
+        # TODO: Ideally, would use native load here. Challenge is that to do that add_net_or_native_load_profile()
+        # would need to be called before this point, but with the current set up the scenario needs to be created 
+        # before calculating prod factors and prod factors are needed in add_net_or_native_load_profile().
+        # For now, maintaining current behavior of using whichever load profile is provided.
+        d["CoolingLoad"]["site_electric_load_profile"] = electric_load.loads_kw_is_net ? electric_load.net_loads_kw : electric_load.native_loads_kw
         if haskey(d, "ExistingChiller") && haskey(d["ExistingChiller"], "cop")
             # TODO warn if replacing CoolingLoad.existing_chiller_cop ? Or remove this if block ?
             d["CoolingLoad"]["existing_chiller_cop"] = d["ExistingChiller"]["cop"]

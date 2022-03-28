@@ -40,7 +40,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
                 + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.elec)
             + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec)
             + sum(m[Symbol("dvThermalProduction"*_n)][t, ts] / p.cop[t] for t in p.techs.cooling)
-            + p.s.electric_load.loads_kw[ts]
+            + p.s.electric_load.native_loads_kw[ts]
         )
     else
         conrefs = @constraint(m, [ts in p.time_steps_with_grid],
@@ -52,7 +52,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
                 + m[Symbol("dvCurtail"*_n)][t, ts] 
             for t in p.techs.elec)
             + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec)
-            + p.s.electric_load.loads_kw[ts]
+            + p.s.electric_load.native_loads_kw[ts]
         )
     end
 
@@ -66,7 +66,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
 		sum( m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.elec )  ==
         sum( sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) + 
         m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.elec) +
-        p.s.electric_load.critical_loads_kw[ts]
+        p.s.electric_load.native_critical_loads_kw[ts]
 	)
 end
 

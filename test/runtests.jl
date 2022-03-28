@@ -61,7 +61,7 @@ else  # run Cbc tests
                 latitude                       = 35.2468, 
                 longitude                      = -91.7337
             )
-            @test sum(electric_load.loads_kw) ≈ 50000.0
+            @test sum(electric_load.net_loads_kw) ≈ 50000.0
         end
     end
     @testset "January Export Rates" begin

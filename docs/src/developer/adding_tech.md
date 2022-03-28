@@ -69,7 +69,7 @@ sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedPro
 ```
 which implies that we need to define a `production_factor` for all `techs.elec` in every time step `ts`. To create the `production_factor` array the [REoptInputs](@ref) constructor first creates an empty array like so:
 ```julia
-production_factor = DenseAxisArray{Float64}(undef, techs.all, 1:length(s.electric_load.loads_kw))
+production_factor = DenseAxisArray{Float64}(undef, techs.all, 1:length(s.electric_load.native_loads_kw))
 ```
 and then passes that array to technology specific functions that add their production factors to the `production_factor` array. For example, for `PV` within the `setup_pv_inputs` method we have:
 ```julia

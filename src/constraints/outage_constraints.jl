@@ -30,7 +30,7 @@
 function add_dv_UnservedLoad_constraints(m,p)
     # effective load balance (with slack in dvUnservedLoad)
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_timesteps, ts in p.s.electric_utility.outage_timesteps],
-        m[:dvUnservedLoad][s, tz, ts] >= p.s.electric_load.critical_loads_kw[tz+ts]
+        m[:dvUnservedLoad][s, tz, ts] >= p.s.electric_load.native_critical_loads_kw[tz+ts]
         - sum(  m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts] * p.levelization_factor[t]
               - m[:dvMGProductionToStorage][t, s, tz, ts] - m[:dvMGCurtail][t, s, tz, ts]
             for t in p.techs.elec

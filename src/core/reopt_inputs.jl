@@ -134,7 +134,7 @@ Constructor for REoptInputs. Translates the `Scenario` into all the data necessa
 """
 function REoptInputs(s::AbstractScenario)
 
-    time_steps = 1:length(s.electric_load.loads_kw)
+    time_steps = 1:length(s.electric_load.native_loads_kw)
     hours_per_timestep = 1 / s.settings.time_steps_per_hour
     techs, pv_to_location, maxsize_pv_locations, pvlocations, 
         production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
@@ -156,7 +156,7 @@ function REoptInputs(s::AbstractScenario)
     time_steps_with_grid, time_steps_without_grid, = setup_electric_utility_inputs(s)
     
     if any(pv.existing_kw > 0 for pv in s.pvs)
-        adjust_load_profile(s, production_factor)
+        add_net_or_native_load_profile(s, production_factor)
     end
 
     REoptInputs(
@@ -209,7 +209,7 @@ function setup_tech_inputs(s::AbstractScenario)
     techs = Techs(s)
 
     boiler_efficiency = Dict{String, Float64}()
-    production_factor = DenseAxisArray{Float64}(undef, techs.all, 1:length(s.electric_load.loads_kw))
+    production_factor = DenseAxisArray{Float64}(undef, techs.all, 1:length(s.electric_load.native_loads_kw))
 
     # REoptInputs indexed on techs:
     max_sizes = Dict(t => 0.0 for t in techs.all)
@@ -585,35 +585,48 @@ function setup_electric_utility_inputs(s::AbstractScenario)
             time_steps_with_grid = append!(
                 Int[i for i in range(1, stop=s.electric_utility.outage_start_time_step - 1)],
                 Int[i for i in range(s.electric_utility.outage_end_time_step + 1,
-                                     stop=length(s.electric_load.loads_kw))]
+                                     stop=length(s.electric_load.native_loads_kw))]
             )
         else
             time_steps_with_grid = Int[i for i in range(s.electric_utility.outage_end_time_step + 1,
-                                       stop=length(s.electric_load.loads_kw))]
+                                       stop=length(s.electric_load.native_loads_kw))]
         end
     else
         time_steps_without_grid = Int[]
-        time_steps_with_grid = Int[i for i in range(1, stop=length(s.electric_load.loads_kw))]
+        time_steps_with_grid = Int[i for i in range(1, stop=length(s.electric_load.native_loads_kw))]
     end
     return time_steps_with_grid, time_steps_without_grid
 end
 
-
+#TODO: call this before wind struct created (scenario ln 145)
+#might need to rework function to work at that point
 """
-    adjust_load_profile(s::AbstractScenario, production_factor::DenseAxisArray)
+    add_net_or_native_load_profile(s::AbstractScenario, production_factor::DenseAxisArray)
 
-Adjust the (critical_)loads_kw based off of (critical_)loads_kw_is_net
+Create native_(critical_)loads_kw from net_(critical_)loads_kw if (critical_)loads_kw_is_net is true, or visa versa if false
 """
-function adjust_load_profile(s::AbstractScenario, production_factor::DenseAxisArray)
+function add_net_or_native_load_profile(s::AbstractScenario, production_factor::DenseAxisArray)
     if s.electric_load.loads_kw_is_net
+        s.electric_load.native_loads_kw = s.electric_load.net_loads_kw
         for pv in s.pvs if pv.existing_kw > 0
-            s.electric_load.loads_kw .+= pv.existing_kw * production_factor[pv.name, :].data
+            s.electric_load.native_loads_kw .+= pv.existing_kw * production_factor[pv.name, :].data
+        end end
+    else
+        s.electric_load.net_loads_kw = s.electric_load.native_loads_kw
+        for pv in s.pvs if pv.existing_kw > 0
+            s.electric_load.net_loads_kw .-= pv.existing_kw * production_factor[pv.name, :].data
         end end
     end
     
     if s.electric_load.critical_loads_kw_is_net
+        s.electric_load.native_critical_loads_kw = s.electric_load.net_critical_loads_kw
         for pv in s.pvs if pv.existing_kw > 0
-            s.electric_load.critical_loads_kw .+= pv.existing_kw * production_factor[pv.name, :].data
+            s.electric_load.native_critical_loads_kw .+= pv.existing_kw * production_factor[pv.name, :].data
+        end end
+    else
+        s.electric_load.net_critical_loads_kw = s.electric_load.native_critical_loads_kw
+        for pv in s.pvs if pv.existing_kw > 0
+            s.electric_load.net_critical_loads_kw .-= pv.existing_kw * production_factor[pv.name, :].data
         end end
     end
 end

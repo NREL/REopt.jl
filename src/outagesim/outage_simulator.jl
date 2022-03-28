@@ -111,7 +111,7 @@ end
 
 
 """
-    simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[], critical_loads_kw=[], 
+    simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[], native_critical_loads_kw=[], 
         wind_kw_ac_hourly=[], batt_roundtrip_efficiency=0.829, diesel_kw=0, fuel_available=0, b=0, m=0, 
         diesel_min_turndown=0.3
     )
@@ -124,7 +124,7 @@ critical load can be met in every outage, which in turn is used to determine pro
 - `batt_kw`: float, battery inverter capacity
 - `pv_kw_ac_hourly`: list of floats, AC production of PV system
 - `init_soc`: list of floats between 0 and 1 inclusive, initial state-of-charge
-- `critical_loads_kw`: list of floats
+- `native_critical_loads_kw`: list of floats
 - `wind_kw_ac_hourly`: list of floats, AC production of wind turbine
 - `batt_roundtrip_efficiency`: roundtrip battery efficiency
 - `diesel_kw`: float, diesel generator capacity
@@ -146,10 +146,10 @@ Returns a dict
 }
 ```
 """
-function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[], critical_loads_kw=[], wind_kw_ac_hourly=[],
+function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[], native_critical_loads_kw=[], wind_kw_ac_hourly=[],
                      batt_roundtrip_efficiency=0.829, diesel_kw=0, fuel_available=0, b=0, m=0, diesel_min_turndown=0.3,
                      )
-    n_timesteps = length(critical_loads_kw)
+    n_timesteps = length(native_critical_loads_kw)
     n_steps_per_hour = Int(n_timesteps / 8760)
     r = repeat([0], n_timesteps)
 
@@ -175,7 +175,7 @@ function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[
     if isempty(wind_kw_ac_hourly)
         wind_kw_ac_hourly = repeat([0], n_timesteps)
     end
-    load_minus_der = [ld - pv - wd for (pv, wd, ld) in zip(pv_kw_ac_hourly, wind_kw_ac_hourly, critical_loads_kw)]
+    load_minus_der = [ld - pv - wd for (pv, wd, ld) in zip(pv_kw_ac_hourly, wind_kw_ac_hourly, native_critical_loads_kw)]
     """
     Simulation starts here
     """
@@ -296,7 +296,7 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
         batt_kw = batt_kw, 
         pv_kw_ac_hourly = pv_kw_ac_hourly,
         init_soc = init_soc, 
-        critical_loads_kw = p.s.electric_load.critical_loads_kw, 
+        native_critical_loads_kw = p.s.electric_load.native_critical_loads_kw, 
         wind_kw_ac_hourly = [],
         batt_roundtrip_efficiency = batt_roundtrip_efficiency,
         diesel_kw = diesel_kw, 

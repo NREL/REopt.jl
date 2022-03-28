@@ -57,7 +57,7 @@ end
 
 function MPCInputs(s::MPCScenario)
 
-    time_steps = 1:length(s.electric_load.loads_kw)
+    time_steps = s.electric_load.loads_kw_is_net ? (1:length(s.electric_load.net_loads_kw)) : (1:length(s.electric_load.native_loads_kw))
     hours_per_timestep = 1 / s.settings.time_steps_per_hour
     techs, production_factor, existing_sizes = setup_tech_inputs(s)
     months = 1:length(s.electric_tariff.monthly_demand_rates)
@@ -108,7 +108,7 @@ function setup_tech_inputs(s::MPCScenario)
 
     techs = Techs(s)
 
-    time_steps = 1:length(s.electric_load.loads_kw)
+    time_steps = 1:length(s.electric_load.native_loads_kw)
 
     # REoptInputs indexed on techs:
     existing_sizes = DenseAxisArray{Float64}(undef, techs.all)
@@ -137,6 +137,6 @@ end
 
 function setup_gen_inputs(s::MPCScenario, existing_sizes, production_factor)
     existing_sizes["Generator"] = s.generator.size_kw
-    production_factor["Generator", :] = ones(length(s.electric_load.loads_kw))
+    production_factor["Generator", :] = ones(length(s.electric_load.native_loads_kw))
     return nothing
 end

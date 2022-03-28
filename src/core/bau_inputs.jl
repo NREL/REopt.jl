@@ -111,12 +111,12 @@ function BAUInputs(p::REoptInputs)
 
     t0, tf = p.s.electric_utility.outage_start_time_step, p.s.electric_utility.outage_end_time_step
     if tf > t0 && t0 > 0
-        original_crit_lds = copy(p.s.electric_load.critical_loads_kw)
+        original_crit_lds = copy(p.s.electric_load.native_critical_loads_kw)
         update_bau_outage_outputs(bau_scenario, original_crit_lds, t0, tf, production_factor)
 
         if bau_scenario.outage_outputs.bau_critical_load_met_time_steps > 0  
         # include critical load in bau load for the time that it can be met
-            bau_scenario.electric_load.critical_loads_kw[
+            bau_scenario.electric_load.native_critical_loads_kw[
                 t0 : t0 + bau_scenario.outage_outputs.bau_critical_load_met_time_steps
                 ] = original_crit_lds[t0 : t0 + bau_scenario.outage_outputs.bau_critical_load_met_time_steps]
         end
@@ -163,11 +163,11 @@ end
 
 
 """
-    update_bau_outage_outputs(s::BAUScenario, crit_load, t0, tf, production_factors)
+    update_bau_outage_outputs(s::BAUScenario, native_crit_load, t0, tf, production_factors)
 
 Update the `bau_critical_load_met` and `bau_critical_load_met_time_steps`  values.
 """
-function update_bau_outage_outputs(s::BAUScenario, crit_load, t0, tf, production_factors)
+function update_bau_outage_outputs(s::BAUScenario, native_crit_load, t0, tf, production_factors)
 
     pv_kw_series = Float64[]  # actual output (not normalized)
 
@@ -184,13 +184,13 @@ function update_bau_outage_outputs(s::BAUScenario, crit_load, t0, tf, production
     end
 
     s.outage_outputs.bau_critical_load_met, s.outage_outputs.bau_critical_load_met_time_steps = 
-        bau_outage_check(crit_load[t0:tf], pv_kw_series, s.generator, s.settings.time_steps_per_hour)
+        bau_outage_check(native_crit_load[t0:tf], pv_kw_series, s.generator, s.settings.time_steps_per_hour)
     nothing
 end
 
 
 """
-    bau_outage_check(critical_loads_kw::AbstractArray, pv_kw_series::AbstractArray, gen::Generator, 
+    bau_outage_check(native_critical_loads_kw::AbstractArray, pv_kw_series::AbstractArray, gen::Generator, 
         time_steps_per_hour::Int)
 
 Determine if existing generator and/or PV can meet critical load and for how long.
@@ -198,7 +198,7 @@ Determine if existing generator and/or PV can meet critical load and for how lon
 return: (Bool, Int) boolean for if the entire critical load is met and Int for number of time steps the existing 
     generator and PV can meet the critical load
 """
-function bau_outage_check(critical_loads_kw::AbstractArray, pv_kw_series::AbstractArray, gen::Generator, 
+function bau_outage_check(native_critical_loads_kw::AbstractArray, pv_kw_series::AbstractArray, gen::Generator, 
     time_steps_per_hour::Int)
     
     fuel_gal = copy(gen.fuel_avail_gal)
@@ -208,10 +208,10 @@ function bau_outage_check(critical_loads_kw::AbstractArray, pv_kw_series::Abstra
 
     if gen.existing_kw > 0
         if length(pv_kw_series) == 0
-            pv_kw_series = zeros(length(critical_loads_kw))
+            pv_kw_series = zeros(length(native_critical_loads_kw))
         end
 
-        for (i, (load, pv)) in enumerate(zip(critical_loads_kw, pv_kw_series))
+        for (i, (load, pv)) in enumerate(zip(native_critical_loads_kw, pv_kw_series))
             unmet = load - pv
             if unmet > 0
                 fuel_kwh = (fuel_gal - gen.fuel_intercept_gal_per_hr) / gen.fuel_slope_gal_per_kwh
@@ -227,7 +227,7 @@ function bau_outage_check(critical_loads_kw::AbstractArray, pv_kw_series::Abstra
         end
 
     else  # gen.existing_kw = 0 and pv.existing_kw > 0
-        for (i, (load, pv)) in enumerate(zip(critical_loads_kw, pv_kw_series))
+        for (i, (load, pv)) in enumerate(zip(native_critical_loads_kw, pv_kw_series))
             unmet = load - pv
             if unmet > 0
                 return false, i-1
