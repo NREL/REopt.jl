@@ -43,17 +43,18 @@ function BAUInputs(p::REoptInputs)
     existing_sizes = Dict(t => 0.0 for t in techs.all)
     cap_cost_slope = Dict{String, Any}()
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
+    cop = Dict(t => 0.0 for t in techs.cooling)
     production_factor = DenseAxisArray{Float64}(undef, techs.all, p.time_steps)
 
     # export related inputs
-    techs_by_exportbin = Dict(k => [] for k in p.s.electric_tariff.export_bins)
+    techs_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in p.s.electric_tariff.export_bins)
     export_bins_by_tech = Dict{String, Array{Symbol, 1}}()
 
     # REoptInputs indexed on techs.segmented
     n_segs_by_tech = Dict{String, Int}()
-    seg_min_size = Dict{String, Any}()
-    seg_max_size = Dict{String, Any}()
-    seg_yint = Dict{String, Any}()
+    seg_min_size = Dict{String, Dict{Int, Float64}}()
+    seg_max_size = Dict{String, Dict{Int, Float64}}()
+    seg_yint = Dict{String, Dict{Int, Float64}}()
 
     # PV specific arrays
     pv_to_location = Dict(t => Dict{Symbol, Int}() for t in techs.pv)
@@ -99,6 +100,10 @@ function BAUInputs(p::REoptInputs)
         setup_existing_boiler_inputs(bau_scenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency)
     end
 
+    if "ExistingChiller" in techs.all
+        setup_existing_chiller_inputs(bau_scenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cop)
+    end
+
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
     for t in techs.elec
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
@@ -125,6 +130,7 @@ function BAUInputs(p::REoptInputs)
         existing_sizes,
         cap_cost_slope,
         om_cost_per_kw,
+        cop,
         p.time_steps,
         p.time_steps_with_grid,
         p.time_steps_without_grid,
