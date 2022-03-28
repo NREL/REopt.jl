@@ -101,27 +101,32 @@ end
 
 
 """
-    SpaceHeatingLoad
+    function SpaceHeatingLoad(;
+        doe_reference_name::String = "",
+        city::String = "",
+        blended_doe_reference_names::Array{String, 1} = String[],
+        blended_doe_reference_percents::Array{<:Real,1} = Real[],
+        annual_mmbtu::Union{Real, Nothing} = nothing,
+        monthly_mmbtu::Array{<:Real,1} = Real[],
+        fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[]
+    )
 
-There are many ways in which a SpaceHeatingLoad can be defined:
-1. When using either `doe_reference_name` or `blended_doe_reference_names` in an `ElectricLoad` one only needs to provide the input key "SpaceHeatingLoad" in the `Scenario` (JSON or Dict). In this case the values from DoE reference names from the `ElectricLoad` will be used to define the `SpaceHeatingLoad`.
-2. One can provide the `doe_reference_name` or `blended_doe_reference_names` directly in the `SpaceHeatingLoad` key within the `Scenario`. These values can be combined with the `annual_mmbtu` or `monthly_mmbtu` inputs to scale the DoE reference profile(s).
-3. One can provide the `fuel_loads_mmbtu_per_hour` value in the `SpaceHeatingLoad` key within the `Scenario`.
+There are many ways to define a `SpaceHeatingLoad`:
+1. a time-series via the `fuel_loads_mmbtu_per_hour`,
+2. scaling a DoE Commercial Reference Building (CRB) profile or a blend of CRB profiles to either the `annual_mmbtu` or `monthly_mmbtu` values;
+3. or using the `doe_reference_name` or `blended_doe_reference_names` from the `ElectricLoad`.
 
-```julia
-function SpaceHeatingLoad(;
-    doe_reference_name::String = "",
-    city::String = "",
-    blended_doe_reference_names::Array{String, 1} = String[],
-    blended_doe_reference_percents::Array{<:Real,1} = Real[],
-    annual_mmbtu::Union{Real, Nothing} = nothing,
-    monthly_mmbtu::Array{<:Real,1} = Real[],
-    fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
-    time_steps_per_hour::Int = 1,
-    latitude::Real=0.0,
-    longitude::Real=0.0
-)
+When using an `ElectricLoad` defined from a `doe_reference_name` or `blended_doe_reference_names` 
+one only needs to provide an empty Dict in the scenario JSON to add a `SpaceHeatingLoad` to a 
+`Scenario`, i.e.:
+```json
+...
+"ElectricLoad": {"doe_reference_name": "MidriseApartment"},
+"SpaceHeatingLoad" : {},
+...
 ```
+In this case the values provided for `doe_reference_name`, or  `blended_doe_reference_names` and 
+`blended_doe_reference_percents` are copied from the `ElectricLoad` to the `SpaceHeatingLoad`.
 """
 struct SpaceHeatingLoad
     loads_kw::Array{Real, 1}
@@ -172,6 +177,149 @@ struct SpaceHeatingLoad
     end
 end
 
+# TODO wbecker delete get_existing_chiller_cop if EXISTING_CHILLER_COP = 4.55 is okay
+function get_existing_chiller_cop(max_thermal_factor_on_peak_load; loads_kw=nothing, loads_kw_thermal=nothing)
+    if !isnothing(loads_kw_thermal)
+        max_cooling_load_tons = maximum(loads_kw_thermal) / TONHOUR_TO_KWH_THERMAL
+    elseif !isnothing(loads_kw)
+        max_cooling_load_tons = maximum(loads_kw) / TONHOUR_TO_KWH_THERMAL * 4.55
+    end
+    estimated_max_chiller_thermal_capacity_tons = max_cooling_load_tons * max_thermal_factor_on_peak_load
+    if estimated_max_chiller_thermal_capacity_tons < 100.0
+        return 4.40
+    else
+        return 4.69
+    end
+end
+
+
+# TODO? Zero out cooling load for outage hours
+"""
+    function CoolingLoad(;
+        doe_reference_name::String = "",
+        city::String = "",
+        blended_doe_reference_names::Array{String, 1} = String[],
+        blended_doe_reference_percents::Array{<:Real,1} = Real[],
+        annual_tonhour::Union{Real, Nothing} = nothing,
+        monthly_tonhour::Array{<:Real,1} = Real[],
+        fuel_loads_ton_per_hour::Array{<:Real,1} = Real[],
+        annual_fraction::Union{Real, Nothing} = nothing,
+        monthly_fraction::Union{Real, Nothing} = nothing,
+        loads_fraction::Array{<:Real,1} = Real[],
+        existing_chiller_cop::Real = EXISTING_CHILLER_COP
+    )
+
+
+
+There are many ways to define a `CoolingLoad`:
+1. a time-series via the `fuel_loads_ton_per_hour`,
+2. scaling a DoE Commercial Reference Building (CRB) profile or a blend of CRB profiles to either the `annual_fraction` or `monthly_fraction` values;
+3. or using the `doe_reference_name` or `blended_doe_reference_names` from the `ElectricLoad`.
+
+When using an `ElectricLoad` defined from a `doe_reference_name` or `blended_doe_reference_names` 
+one only needs to provide an empty Dict in the scenario JSON to add a `CoolingLoad` to a 
+`Scenario`, i.e.:
+```json
+...
+"ElectricLoad": {"doe_reference_name": "MidriseApartment"},
+"CoolingLoad" : {},
+...
+```
+In this case the values provided for `doe_reference_name`, or  `blended_doe_reference_names` and 
+`blended_doe_reference_percents` are copied from the `ElectricLoad` to the `CoolingLoad`.
+"""
+struct CoolingLoad
+    loads_kw_thermal::Array{Real, 1}
+    existing_chiller_cop::Real
+
+    function CoolingLoad(;
+        doe_reference_name::String = "",
+        city::String = "",
+        blended_doe_reference_names::Array{String, 1} = String[],
+        blended_doe_reference_percents::Array{<:Real,1} = Real[],
+        annual_tonhour::Union{Real, Nothing} = nothing,
+        monthly_tonhour::Array{<:Real,1} = Real[],
+        fuel_loads_ton_per_hour::Array{<:Real,1} = Real[],
+        annual_fraction::Union{Real, Nothing} = nothing,
+        monthly_fraction::Union{Real, Nothing} = nothing,
+        loads_fraction::Array{<:Real,1} = Real[],
+        existing_chiller_cop::Real = EXISTING_CHILLER_COP,
+        site_electric_load_profile = Real[],
+        time_steps_per_hour::Int = 1,
+        latitude::Float64=0.0,
+        longitude::Float64=0.0,
+        max_thermal_factor_on_peak_load::Real=1.25 # TODO wbecker delete the max_thermal_factor_on_peak_load if EXISTING_CHILLER_COP = 4.55 is okay to replace look up get_existing_chiller_cop
+    )
+        # determine the timeseries of loads_kw_thermal
+        loads_kw_thermal = nothing
+        loads_kw = nothing
+        if length(fuel_loads_ton_per_hour) > 0
+
+            if !(length(fuel_loads_ton_per_hour) / time_steps_per_hour ≈ 8760)
+                @error "Provided space heating load does not match the time_steps_per_hour."
+            end
+
+            loads_kw_thermal = fuel_loads_ton_per_hour .* TONHOUR_TO_KWH_THERMAL
+
+        elseif !isempty(doe_reference_name)
+            loads_kw = BuiltInCoolingLoad(city, doe_reference_name, latitude, longitude, 2017, 
+                                          annual_tonhour, monthly_tonhour)
+
+        elseif length(blended_doe_reference_names) > 1 && 
+            length(blended_doe_reference_names) == length(blended_doe_reference_percents)
+            loads_kw = blend_and_scale_doe_profiles(BuiltInCoolingLoad, latitude, longitude, 2017, 
+                                                    blended_doe_reference_names, 
+                                                    blended_doe_reference_percents, city, 
+                                                    annual_tonhour, monthly_tonhour)
+        
+        elseif !isnothing(loads_fraction) && (length(site_electric_load_profile) / time_steps_per_hour ≈ 8760)
+            if !(length(loads_fraction) / time_steps_per_hour ≈ 8760)
+                @error "Provided cooling loads_fraction array does not match the time_steps_per_hour."
+            end
+            loads_kw = loads_fraction .* site_electric_load_profile
+        
+        elseif !isnothing(monthly_fraction) && (length(site_electric_load_profile) / time_steps_per_hour ≈ 8760)
+            if !(length(monthly_fraction) ≈ 12)
+                @error "Provided cooling monthly_fraction array does not have 12 values."
+            end
+            timeseries = collect(DateTime(2017,1,1) : Minute(60/time_steps_per_hour) : 
+                                 DateTime(2017,1,1) + Minute(8760*60 - 60/time_steps_per_hour))
+            loads_kw = [monthly_fraction[month(dt)] * site_electric_load_profile[ts] for (ts, dt) 
+                        in enumerate(timeseries)]
+
+        elseif !isnothing(annual_fraction) && (length(site_electric_load_profile) / time_steps_per_hour ≈ 8760)
+            loads_kw = annual_fraction * site_electric_load_profile
+        
+        else
+            error("Cannot construct BuiltInCoolingLoad. You must provide either [fuel_loads_ton_per_hour], 
+                [doe_reference_name, city], [blended_doe_reference_names, blended_doe_reference_percents, city],
+                or the site_electric_load_profile along with one of [loads_fraction, monthly_fraction, annual_fraction].")
+        end
+
+        # TODO wbecker delete the following if EXISTING_CHILLER_COP = 4.55 is okay to replace look up get_existing_chiller_cop
+        # if isnothing(existing_chiller_cop)
+        #     existing_chiller_cop = get_existing_chiller_cop(max_thermal_factor_on_peak_load;
+        #                         loads_kw=loads_kw, loads_kw_thermal=loads_kw_thermal)
+        # end
+
+        if isnothing(loads_kw_thermal)  # have to convert electric loads_kw to thermal load
+            loads_kw_thermal = existing_chiller_cop * loads_kw
+        end
+
+        if length(loads_kw_thermal) < 8760*time_steps_per_hour
+            loads_kw_thermal = repeat(loads_kw_thermal, inner=Int(time_steps_per_hour / 
+                               (length(loads_kw_thermal)/8760)))
+            @info "Repeating cooling loads in each hour to match the time_steps_per_hour."
+        end
+
+        new(
+            loads_kw_thermal,
+            existing_chiller_cop
+        )
+    end
+
+end
+
 
 function BuiltInDomesticHotWaterLoad(
     city::String,
@@ -180,7 +328,7 @@ function BuiltInDomesticHotWaterLoad(
     longitude::Real,
     year::Int,
     annual_mmbtu::Union{<:Real, Nothing}=nothing,
-    monthly_mmbtu::Union{Vector{<:Real}, Nothing}=nothing
+    monthly_mmbtu::Vector{<:Real}=Real[]
     )
     dhw_annual_mmbtu = Dict(
         "Miami" => Dict(
@@ -199,7 +347,7 @@ function BuiltInDomesticHotWaterLoad(
             "SmallOffice" => 9.891779415,
             "StripMall" => 0.0,
             "Supermarket" => 17.94985187,
-            "warehouse" => 0.0,
+            "Warehouse" => 0.0,
             "FlatLoad" => 333.0450133
         ),
         "Houston" => Dict(
@@ -218,7 +366,7 @@ function BuiltInDomesticHotWaterLoad(
             "SmallOffice" => 10.27839347,
             "StripMall" => 0.0,
             "Supermarket" => 19.86608717,
-            "warehouse" => 0.0,
+            "Warehouse" => 0.0,
             "FlatLoad" => 415.6076756
         ),
         "Phoenix" => Dict(
@@ -237,7 +385,7 @@ function BuiltInDomesticHotWaterLoad(
             "SmallOffice" => 10.05557471,
             "StripMall" => 0.0,
             "Supermarket" => 18.7637822,
-            "warehouse" => 0.0,
+            "Warehouse" => 0.0,
             "FlatLoad" => 368.7653325
         ),
         "Atlanta" => Dict(
@@ -256,7 +404,7 @@ function BuiltInDomesticHotWaterLoad(
             "SmallOffice" => 10.65138846,
             "StripMall" => 0.0,
             "Supermarket" => 21.71038069,
-            "warehouse" => 0.0,
+            "Warehouse" => 0.0,
             "FlatLoad" => 494.7735263
         ),
         "LasVegas" => Dict(
@@ -275,7 +423,7 @@ function BuiltInDomesticHotWaterLoad(
             "SmallOffice" => 10.32392915,
             "StripMall" => 0.0,
             "Supermarket" => 20.08676069,
-            "warehouse" => 0.0,
+            "Warehouse" => 0.0,
             "FlatLoad" => 425.7275876
         ),
         "LosAngeles" => Dict(
@@ -294,7 +442,7 @@ function BuiltInDomesticHotWaterLoad(
             "SmallOffice" => 10.58011717,
             "StripMall" => 0.0,
             "Supermarket" => 21.35337379,
-            "warehouse" => 0.0,
+            "Warehouse" => 0.0,
             "FlatLoad" => 478.7476251
         ),
         "SanFrancisco" => Dict(
@@ -313,7 +461,7 @@ function BuiltInDomesticHotWaterLoad(
             "SmallOffice" => 10.90004379,
             "StripMall" => 0.0,
             "Supermarket" => 22.9292287,
-            "warehouse" => 0.0,
+            "Warehouse" => 0.0,
             "FlatLoad" => 546.4574286
         ),
         "Baltimore" => Dict(
@@ -332,7 +480,7 @@ function BuiltInDomesticHotWaterLoad(
             "SmallOffice" => 10.94554028,
             "StripMall" => 0.0,
             "Supermarket" => 23.15795696,
-            "warehouse" => 0.0,
+            "Warehouse" => 0.0,
             "FlatLoad" => 557.0507802
         ),
         "Albuquerque" => Dict(
@@ -351,7 +499,7 @@ function BuiltInDomesticHotWaterLoad(
             "SmallOffice" => 10.88949351,
             "StripMall" => 0.0,
             "Supermarket" => 22.88525618,
-            "warehouse" => 0.0,
+            "Warehouse" => 0.0,
             "FlatLoad" => 545.235078
         ),
         "Seattle" => Dict(
@@ -370,7 +518,7 @@ function BuiltInDomesticHotWaterLoad(
             "SmallOffice" => 11.09863592,
             "StripMall" => 0.0,
             "Supermarket" => 23.91178737,
-            "warehouse" => 0.0,
+            "Warehouse" => 0.0,
             "FlatLoad" => 588.8601433
         ),
         "Chicago" => Dict(
@@ -389,7 +537,7 @@ function BuiltInDomesticHotWaterLoad(
             "SmallOffice" => 11.2033023,
             "StripMall" => 0.0,
             "Supermarket" => 24.4292392,
-            "warehouse" => 0.0,
+            "Warehouse" => 0.0,
             "FlatLoad" => 611.6276445
         ),
         "Boulder" => Dict(
@@ -408,7 +556,7 @@ function BuiltInDomesticHotWaterLoad(
             "SmallOffice" => 11.18970855,
             "StripMall" => 0.0,
             "Supermarket" => 24.36505320,
-            "warehouse" => 0.0,
+            "Warehouse" => 0.0,
             "FlatLoad" => 608.6556221
         ),
         "Minneapolis" => Dict(
@@ -427,7 +575,7 @@ function BuiltInDomesticHotWaterLoad(
             "SmallOffice" => 11.42620649,
             "StripMall" => 0.0,
             "Supermarket" => 25.53218144,
-            "warehouse" => 0.0,
+            "Warehouse" => 0.0,
             "FlatLoad" => 658.8635839
         ),
         "Helena" => Dict(
@@ -446,7 +594,7 @@ function BuiltInDomesticHotWaterLoad(
             "SmallOffice" => 11.46564268,
             "StripMall" => 0.0,
             "Supermarket" => 25.72866824,
-            "warehouse" => 0.0,
+            "Warehouse" => 0.0,
             "FlatLoad" => 667.2021224
         ),
         "Duluth" => Dict(
@@ -465,7 +613,7 @@ function BuiltInDomesticHotWaterLoad(
             "SmallOffice" => 11.79316054,
             "StripMall" => 0.0,
             "Supermarket" => 27.3451629,
-            "warehouse" => 0.0,
+            "Warehouse" => 0.0,
             "FlatLoad" => 736.3678114
         ),
         "Fairbanks" => Dict(
@@ -484,7 +632,7 @@ function BuiltInDomesticHotWaterLoad(
             "SmallOffice" => 12.23744003,
             "StripMall" => 0.0,
             "Supermarket" => 29.53958045,
-            "warehouse" => 0.0,
+            "Warehouse" => 0.0,
             "FlatLoad" => 830.07826
         )
     )
@@ -508,7 +656,7 @@ function BuiltInSpaceHeatingLoad(
     longitude::Real,
     year::Int,
     annual_mmbtu::Union{<:Real, Nothing}=nothing,
-    monthly_mmbtu::Union{Vector{<:Real}, Nothing}=nothing,
+    monthly_mmbtu::Vector{<:Real}=Real[],
     )
     spaceheating_annual_mmbtu = Dict(
         "Miami" => Dict(
@@ -527,7 +675,7 @@ function BuiltInSpaceHeatingLoad(
             "SmallOffice" => 0.312524873,
             "StripMall" => 20.73216748,
             "Supermarket" => 101.2785324,
-            "warehouse" => 56.0796017,
+            "Warehouse" => 56.0796017,
             "FlatLoad" => 605.2352137
         ),
         "Houston" => Dict(
@@ -546,7 +694,7 @@ function BuiltInSpaceHeatingLoad(
             "SmallOffice" => 19.55157672,
             "StripMall" => 292.23235389999996,
             "Supermarket" => 984.7374347000001,
-            "warehouse" => 475.9377273,
+            "Warehouse" => 475.9377273,
             "FlatLoad" => 1277.307359
         ),
         "Phoenix" => Dict(
@@ -565,7 +713,7 @@ function BuiltInSpaceHeatingLoad(
             "SmallOffice" => 9.988210938,
             "StripMall" => 230.16060699999997,
             "Supermarket" => 972.3008295,
-            "warehouse" => 362.42249280000004,
+            "Warehouse" => 362.42249280000004,
             "FlatLoad" => 1188.188154
         ),
         "Atlanta" => Dict(
@@ -584,7 +732,7 @@ function BuiltInSpaceHeatingLoad(
             "SmallOffice" => 42.74797302,
             "StripMall" => 615.2240506,
             "Supermarket" => 1880.5304489999999,
-            "warehouse" => 930.9449202,
+            "Warehouse" => 930.9449202,
             "FlatLoad" => 1888.856302
         ),
         "LasVegas" => Dict(
@@ -603,7 +751,7 @@ function BuiltInSpaceHeatingLoad(
             "SmallOffice" => 19.16330622,
             "StripMall" => 389.30494280000005,
             "Supermarket" => 1479.302604,
-            "warehouse" => 579.7671637999999,
+            "Warehouse" => 579.7671637999999,
             "FlatLoad" => 1413.3882199999998
         ),
         "LosAngeles" => Dict(
@@ -622,7 +770,7 @@ function BuiltInSpaceHeatingLoad(
             "SmallOffice" => 5.898878347,
             "StripMall" => 193.18730269999998,
             "Supermarket" => 1040.273464,
-            "warehouse" => 323.96697819999997,
+            "Warehouse" => 323.96697819999997,
             "FlatLoad" => 1228.8385369999999
         ),
         "SanFrancisco" => Dict(
@@ -641,7 +789,7 @@ function BuiltInSpaceHeatingLoad(
             "SmallOffice" => 27.53039453,
             "StripMall" => 526.2320428,
             "Supermarket" => 2301.616069,
-            "warehouse" => 675.6758453,
+            "Warehouse" => 675.6758453,
             "FlatLoad" => 1808.604729
         ),
         "Baltimore" => Dict(
@@ -660,7 +808,7 @@ function BuiltInSpaceHeatingLoad(
             "SmallOffice" => 63.29818348,
             "StripMall" => 1075.39546,
             "Supermarket" => 2929.182261,
-            "warehouse" => 1568.722061,
+            "Warehouse" => 1568.722061,
             "FlatLoad" => 2539.2645399999997
         ),
         "Albuquerque" => Dict(
@@ -679,7 +827,7 @@ function BuiltInSpaceHeatingLoad(
             "SmallOffice" => 43.25360481,
             "StripMall" => 760.0982018,
             "Supermarket" => 2302.228741,
-            "warehouse" => 1151.250885,
+            "Warehouse" => 1151.250885,
             "FlatLoad" => 1854.437216
         ),
         "Seattle" => Dict(
@@ -698,7 +846,7 @@ function BuiltInSpaceHeatingLoad(
             "SmallOffice" => 49.34878545,
             "StripMall" => 969.1074739000001,
             "Supermarket" => 3004.1844929999997,
-            "warehouse" => 1137.398514,
+            "Warehouse" => 1137.398514,
             "FlatLoad" => 2506.1340600000003
         ),
         "Chicago" => Dict(
@@ -717,7 +865,7 @@ function BuiltInSpaceHeatingLoad(
             "SmallOffice" => 94.19308949,
             "StripMall" => 1497.556168,
             "Supermarket" => 3696.2112950000005,
-            "warehouse" => 2256.477231,
+            "Warehouse" => 2256.477231,
             "FlatLoad" => 3258.766323
         ),
         "Boulder" => Dict(
@@ -736,7 +884,7 @@ function BuiltInSpaceHeatingLoad(
             "SmallOffice" => 65.95714912,
             "StripMall" => 1093.093638,
             "Supermarket" => 2966.790122,
-            "warehouse" => 1704.8648210000001,
+            "Warehouse" => 1704.8648210000001,
             "FlatLoad" => 2394.8859239999997
         ),
         "Minneapolis" => Dict(
@@ -755,7 +903,7 @@ function BuiltInSpaceHeatingLoad(
             "SmallOffice" => 128.12525349999999,
             "StripMall" => 1952.731917,
             "Supermarket" => 4529.776664,
-            "warehouse" => 3231.223746,
+            "Warehouse" => 3231.223746,
             "FlatLoad" => 4004.001148
         ),
         "Helena" => Dict(
@@ -774,7 +922,7 @@ function BuiltInSpaceHeatingLoad(
             "SmallOffice" => 98.85818175,
             "StripMall" => 1604.0043970000002,
             "Supermarket" => 3948.5338049999996,
-            "warehouse" => 2504.784991,
+            "Warehouse" => 2504.784991,
             "FlatLoad" => 3252.362248
         ),
         "Duluth" => Dict(
@@ -793,7 +941,7 @@ function BuiltInSpaceHeatingLoad(
             "SmallOffice" => 155.8350887,
             "StripMall" => 2411.847491,
             "Supermarket" => 5587.977185,
-            "warehouse" => 3962.122014,
+            "Warehouse" => 3962.122014,
             "FlatLoad" => 4741.886326
         ),
         "Fairbanks" => Dict(
@@ -812,7 +960,7 @@ function BuiltInSpaceHeatingLoad(
             "SmallOffice" => 297.08593010000004,
             "StripMall" => 3934.89178,
             "Supermarket" => 8515.422039000001,
-            "warehouse" => 6882.6512680000005,
+            "Warehouse" => 6882.6512680000005,
             "FlatLoad" => 7851.508208
         )
     )
@@ -826,4 +974,338 @@ function BuiltInSpaceHeatingLoad(
         annual_mmbtu = spaceheating_annual_mmbtu[city][buildingtype]
     end
     built_in_load("space_heating", city, buildingtype, year, annual_mmbtu, monthly_mmbtu)
+end
+
+
+function BuiltInCoolingLoad(
+    city::String,
+    buildingtype::String,
+    latitude::Float64,
+    longitude::Float64,
+    year::Int,
+    annual_tonhour::Union{<:Real, Nothing}=nothing,
+    monthly_tonhour::Vector{<:Real}=Real[],
+    )
+    cooling_annual_kwh = Dict(
+        "Albuquerque" => Dict(
+            "MidriseApartment" => 34088,
+            "FastFoodRest" => 8466,
+            "LargeOffice" => 442687,
+            "Outpatient" => 357615,
+            "PrimarySchool" => 99496,
+            "SmallHotel" => 109982,
+            "Supermarket" => 40883,
+            "SmallOffice" => 8266,
+            "StripMall" => 36498,
+            "MediumOffice" => 103240,
+            "LargeHotel" => 475348,
+            "Warehouse" => 5831,
+            "SecondarySchool" => 355818,
+            "Hospital" => 1382003,
+            "RetailStore" => 37955,
+            "FullServiceRest" => 25534,
+            "FlatLoad" => 220232.0
+        ),
+        "Helena" => Dict(
+            "StripMall" => 13260,
+            "RetailStore" => 13952,
+            "Outpatient" => 233034,
+            "FullServiceRest" => 8420,
+            "SmallHotel" => 63978,
+            "MediumOffice" => 44528,
+            "Hospital" => 1075876,
+            "LargeHotel" => 318965,
+            "PrimarySchool" => 34468,
+            "Supermarket" => 14879,
+            "SmallOffice" => 3442,
+            "SecondarySchool" => 132887,
+            "FastFoodRest" => 2919,
+            "MidriseApartment" => 11101,
+            "LargeOffice" => 226066,
+            "Warehouse" => 1566,
+            "FlatLoad" => 137459.0
+        ),
+        "LosAngeles" => Dict(
+            "MidriseApartment" => 22912,
+            "Hospital" => 1987427,
+            "Outpatient" => 435175,
+            "RetailStore" => 22663,
+            "SmallHotel" => 116966,
+            "StripMall" => 26514,
+            "FastFoodRest" => 3452,
+            "LargeHotel" => 526169,
+            "Supermarket" => 13630,
+            "SmallOffice" => 8351,
+            "Warehouse" => 673,
+            "PrimarySchool" => 126130,
+            "FullServiceRest" => 11456,
+            "SecondarySchool" => 351337,
+            "MediumOffice" => 121320,
+            "LargeOffice" => 707617,
+            "FlatLoad" => 280112.0
+        ),
+        "Boulder" => Dict(
+            "Warehouse" => 3574,
+            "Hospital" => 1223116,
+            "PrimarySchool" => 57692,
+            "SmallOffice" => 5097,
+            "Supermarket" => 24684,
+            "LargeHotel" => 384065,
+            "LargeOffice" => 316540,
+            "MidriseApartment" => 18535,
+            "MediumOffice" => 68389,
+            "RetailStore" => 23580,
+            "FullServiceRest" => 14957,
+            "SecondarySchool" => 220472,
+            "Outpatient" => 291603,
+            "FastFoodRest" => 5270,
+            "StripMall" => 23350,
+            "SmallHotel" => 84804,
+            "FlatLoad" => 172858.0
+        ),
+        "Chicago" => Dict(
+            "Hospital" => 1721142,
+            "SmallHotel" => 97554,
+            "SecondarySchool" => 336986,
+            "SmallOffice" => 6365,
+            "Supermarket" => 30785,
+            "StripMall" => 32544,
+            "FastFoodRest" => 6320,
+            "Outpatient" => 328675,
+            "LargeOffice" => 533117,
+            "MidriseApartment" => 25663,
+            "RetailStore" => 31774,
+            "LargeHotel" => 469484,
+            "MediumOffice" => 85839,
+            "Warehouse" => 4370,
+            "PrimarySchool" => 82619,
+            "FullServiceRest" => 17222,
+            "FlatLoad" => 238154.0
+        ),
+        "Houston" => Dict(
+            "PrimarySchool" => 282346,
+            "LargeHotel" => 1095441,
+            "Hospital" => 2942336,
+            "RetailStore" => 115410,
+            "StripMall" => 111025,
+            "FastFoodRest" => 24525,
+            "LargeOffice" => 1471054,
+            "Warehouse" => 17665,
+            "MidriseApartment" => 97156,
+            "SecondarySchool" => 1151985,
+            "Outpatient" => 630778,
+            "FullServiceRest" => 63610,
+            "Supermarket" => 125580,
+            "SmallOffice" => 19375,
+            "SmallHotel" => 220470,
+            "MediumOffice" => 239477,
+            "FlatLoad" => 538015.0
+        ),
+        "Phoenix" => Dict(
+            "SecondarySchool" => 1204514,
+            "StripMall" => 122803,
+            "PrimarySchool" => 302372,
+            "LargeOffice" => 1124585,
+            "SmallOffice" => 23720,
+            "Supermarket" => 145706,
+            "Outpatient" => 640137,
+            "SmallHotel" => 233842,
+            "MediumOffice" => 271151,
+            "Hospital" => 2288973,
+            "FullServiceRest" => 69402,
+            "LargeHotel" => 1024137,
+            "MidriseApartment" => 135120,
+            "RetailStore" => 123508,
+            "Warehouse" => 38561,
+            "FastFoodRest" => 29956,
+            "FlatLoad" => 486155.0
+        ),
+        "Fairbanks" => Dict(
+            "Warehouse" => 97,
+            "LargeOffice" => 147867,
+            "Hospital" => 753420,
+            "MidriseApartment" => 5035,
+            "MediumOffice" => 24183,
+            "LargeHotel" => 234082,
+            "FullServiceRest" => 2025,
+            "SmallOffice" => 1877,
+            "Supermarket" => 2500,
+            "PrimarySchool" => 15166,
+            "RetailStore" => 3289,
+            "SecondarySchool" => 53222,
+            "Outpatient" => 143322,
+            "FastFoodRest" => 656,
+            "StripMall" => 3592,
+            "SmallHotel" => 48066,
+            "FlatLoad" => 89900.0
+        ),
+        "Seattle" => Dict(
+            "StripMall" => 7664,
+            "SmallHotel" => 60651,
+            "SmallOffice" => 2503,
+            "Supermarket" => 4882,
+            "Outpatient" => 266075,
+            "SecondarySchool" => 89468,
+            "MediumOffice" => 38713,
+            "MidriseApartment" => 6380,
+            "LargeOffice" => 249231,
+            "FullServiceRest" => 4144,
+            "PrimarySchool" => 28984,
+            "Hospital" => 1432385,
+            "RetailStore" => 6223,
+            "LargeHotel" => 292028,
+            "FastFoodRest" => 1245,
+            "Warehouse" => 329,
+            "FlatLoad" => 155682.0
+        ),
+        "Duluth" => Dict(
+            "Hospital" => 1149799,
+            "StripMall" => 8809,
+            "MediumOffice" => 37547,
+            "RetailStore" => 8489,
+            "LargeHotel" => 300364,
+            "SecondarySchool" => 99148,
+            "PrimarySchool" => 25136,
+            "LargeOffice" => 249416,
+            "MidriseApartment" => 8181,
+            "FullServiceRest" => 4919,
+            "Warehouse" => 889,
+            "SmallHotel" => 61101,
+            "FastFoodRest" => 1709,
+            "Supermarket" => 9788,
+            "SmallOffice" => 2563,
+            "Outpatient" => 198121,
+            "FlatLoad" => 135374.0
+        ),
+        "Minneapolis" => Dict(
+            "Warehouse" => 2923,
+            "SmallHotel" => 91962,
+            "LargeOffice" => 475102,
+            "Outpatient" => 289706,
+            "Hospital" => 1516644,
+            "SmallOffice" => 5452,
+            "Supermarket" => 25962,
+            "MediumOffice" => 74813,
+            "PrimarySchool" => 62017,
+            "FullServiceRest" => 14996,
+            "LargeHotel" => 445049,
+            "SecondarySchool" => 262353,
+            "FastFoodRest" => 5429,
+            "MidriseApartment" => 22491,
+            "RetailStore" => 26859,
+            "StripMall" => 26489,
+            "FlatLoad" => 209265.0
+        ),
+        "Baltimore" => Dict(
+            "SmallHotel" => 119859,
+            "Outpatient" => 406989,
+            "RetailStore" => 44703,
+            "FullServiceRest" => 25140,
+            "SecondarySchool" => 469545,
+            "PrimarySchool" => 114110,
+            "StripMall" => 43896,
+            "MediumOffice" => 124064,
+            "MidriseApartment" => 36890,
+            "LargeOffice" => 822177,
+            "Warehouse" => 7156,
+            "LargeHotel" => 594327,
+            "Hospital" => 2085465,
+            "Supermarket" => 48913,
+            "SmallOffice" => 8083,
+            "FastFoodRest" => 9287,
+            "FlatLoad" => 310038.0
+        ),
+        "LasVegas" => Dict(
+            "RetailStore" => 89484,
+            "LargeHotel" => 798740,
+            "MediumOffice" => 207085,
+            "StripMall" => 84138,
+            "PrimarySchool" => 218688,
+            "Warehouse" => 28928,
+            "SmallOffice" => 16824,
+            "Supermarket" => 114543,
+            "MidriseApartment" => 92778,
+            "FullServiceRest" => 53259,
+            "Outpatient" => 513377,
+            "FastFoodRest" => 22811,
+            "SmallHotel" => 175011,
+            "LargeOffice" => 792463,
+            "SecondarySchool" => 858081,
+            "Hospital" => 1831966,
+            "FlatLoad" => 368636.0
+        ),
+        "Atlanta" => Dict(
+            "LargeOffice" => 968973,
+            "LargeHotel" => 704148,
+            "Supermarket" => 69686,
+            "StripMall" => 62530,
+            "SmallOffice" => 11259,
+            "MediumOffice" => 155865,
+            "Hospital" => 2328054,
+            "FullServiceRest" => 33832,
+            "SmallHotel" => 149237,
+            "SecondarySchool" => 608831,
+            "Warehouse" => 8214,
+            "Outpatient" => 489234,
+            "FlatLoad" => 367407.0,
+            "FastFoodRest" => 12565,
+            "PrimarySchool" => 160138,
+            "MidriseApartment" => 50907,
+            "RetailStore" => 65044
+        ),
+        "SanFrancisco" => Dict(
+            "SecondarySchool" => 121914,
+            "LargeOffice" => 297494,
+            "StripMall" => 6626,
+            "Supermarket" => 3252,
+            "SmallOffice" => 2539,
+            "Hospital" => 1427329,
+            "PrimarySchool" => 48323,
+            "LargeHotel" => 296230,
+            "MediumOffice" => 43956,
+            "MidriseApartment" => 4484,
+            "FullServiceRest" => 3062,
+            "Warehouse" => 365,
+            "FlatLoad" => 164036.0,
+            "SmallHotel" => 71414,
+            "RetailStore" => 4515,
+            "FastFoodRest" => 838,
+            "Outpatient" => 292238
+        ),
+        "Miami" => Dict(
+            "LargeHotel" => 1467216,
+            "SmallOffice" => 28235,
+            "FastFoodRest" => 36779,
+            "FlatLoad" => 700779.0,
+            "Supermarket" => 150368,
+            "FullServiceRest" => 101567,
+            "PrimarySchool" => 434031,
+            "Warehouse" => 20108,
+            "LargeOffice" => 1878642,
+            "SmallHotel" => 318595,
+            "MidriseApartment" => 176446,
+            "RetailStore" => 163290,
+            "Outpatient" => 811571,
+            "Hospital" => 3371923,
+            "StripMall" => 180645,
+            "SecondarySchool" => 1735906,
+            "MediumOffice" => 337147
+        )
+    )
+    if isempty(city)
+        city = find_ashrae_zone_city(latitude, longitude)
+    end
+    if !(buildingtype in default_buildings)
+        error("buildingtype $(buildingtype) not in $(default_buildings).")
+    end
+    if isnothing(annual_tonhour)
+        annual_kwh = cooling_annual_kwh[city][buildingtype]
+    else
+        annual_kwh = annual_tonhour * TONHOUR_TO_KWH_THERMAL
+    end
+    monthly_kwh = Real[]
+    if length(monthly_tonhour) == 12
+        monthly_kwh = monthly_tonhour * TONHOUR_TO_KWH_THERMAL
+    end
+    built_in_load("cooling", city, buildingtype, year, annual_kwh, monthly_kwh)
 end

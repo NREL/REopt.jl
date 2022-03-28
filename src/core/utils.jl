@@ -164,7 +164,8 @@ function dictkeys_tosymbols(d::Dict)
             "prod_factor_series", 
             "monthly_energy_rates", "monthly_demand_rates",
             "wholesale_rate", "blended_doe_reference_percents",
-            "coincident_peak_load_charge_per_kw", "fuel_cost_per_mmbtu"
+            "coincident_peak_load_charge_per_kw", "fuel_cost_per_mmbtu",
+            "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step"
             ] && !isnothing(v)
             try
                 v = convert(Array{Real, 1}, v)
@@ -360,4 +361,20 @@ function get_pvwatts_prodfactor(latitude::Real, longitude::Real; timeframe="hour
     catch e
         @error "Error occurred when calling PVWatts: $e"
     end
+end
+
+
+"""
+    Convert gallons of stored liquid (e.g. water, water/glycol) to kWh of stored energy in a stratefied tank
+    :param delta_T_degF: temperature difference between the hot/warm side and the cold side
+    :param rho_kg_per_m3: density of the liquid
+    :param cp_kj_per_kgK: heat capacity of the liquid
+    :return gal_to_kwh: stored energy, in kWh
+"""
+function convert_gal_to_kwh(delta_T_degF::Real, rho_kg_per_m3::Real, cp_kj_per_kgK::Real)
+    delta_T_K = delta_T_degF * 5.0 / 9.0  # [K]
+    kj_per_m3 = rho_kg_per_m3 * cp_kj_per_kgK * delta_T_K  # [kJ/m^3]
+    kj_per_gal = kj_per_m3 / 264.172   # divide by gal/m^3 to get: [kJ/gal]
+    kwh_per_gal = kj_per_gal / 3600.0  # divide by kJ/kWh, i.e., sec/hr, to get: [kWh/gal]
+    return kwh_per_gal
 end

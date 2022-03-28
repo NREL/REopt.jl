@@ -30,8 +30,8 @@
 function mpc_results(m::JuMP.AbstractModel, p::MPCInputs; _n="")
 	tstart = time()
     d = Dict{String, Any}()
-    for b in p.s.storage.types
-        if p.s.storage.size_kwh[b] > 0
+    for b in p.s.storage.types.all
+        if p.s.storage.attr[b].size_kwh > 0
             add_storage_results(m, p, d, b; _n)
         end
     end
