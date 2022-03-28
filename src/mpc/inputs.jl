@@ -108,7 +108,7 @@ function setup_tech_inputs(s::MPCScenario)
 
     techs = Techs(s)
 
-    time_steps = 1:length(s.electric_load.native_loads_kw)
+    time_steps = s.electric_load.loads_kw_is_net ? (1:length(s.electric_load.net_loads_kw)) : (1:length(s.electric_load.native_loads_kw))
 
     # REoptInputs indexed on techs:
     existing_sizes = DenseAxisArray{Float64}(undef, techs.all)

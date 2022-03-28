@@ -134,7 +134,7 @@ Constructor for REoptInputs. Translates the `Scenario` into all the data necessa
 """
 function REoptInputs(s::AbstractScenario)
 
-    time_steps = 1:length(s.electric_load.native_loads_kw)
+    time_steps = s.electric_load.loads_kw_is_net ? (1:length(s.electric_load.net_loads_kw)) : (1:length(s.electric_load.native_loads_kw))
     hours_per_timestep = 1 / s.settings.time_steps_per_hour
     techs, pv_to_location, maxsize_pv_locations, pvlocations, 
         production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
@@ -209,7 +209,8 @@ function setup_tech_inputs(s::AbstractScenario)
     techs = Techs(s)
 
     boiler_efficiency = Dict{String, Float64}()
-    production_factor = DenseAxisArray{Float64}(undef, techs.all, 1:length(s.electric_load.native_loads_kw))
+    time_steps = s.electric_load.loads_kw_is_net ? (1:length(s.electric_load.net_loads_kw)) : (1:length(s.electric_load.native_loads_kw))
+    production_factor = DenseAxisArray{Float64}(undef, techs.all, time_steps)
 
     # REoptInputs indexed on techs:
     max_sizes = Dict(t => 0.0 for t in techs.all)
