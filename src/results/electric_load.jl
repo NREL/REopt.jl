@@ -41,8 +41,8 @@ ElectricLoad results:
 function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 
-    r["load_series_kw"] = p.s.electric_load.loads_kw
-    r["critical_load_series_kw"] = p.s.electric_load.critical_loads_kw
+    r["load_series_kw"] = p.s.electric_load.native_loads_kw
+    r["critical_load_series_kw"] = p.s.electric_load.native_critical_loads_kw
     r["annual_calculated_kwh"] = round(
         sum(r["load_series_kw"]) / p.s.settings.time_steps_per_hour, digits=2
     )
