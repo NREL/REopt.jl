@@ -202,8 +202,6 @@ function add_degradation(m, p;
 
     @objective(m, Min, m[:Costs] + m[:degr_cost])
     
-    # TODO scale battery replacement cost
     # NOTE adding to Costs expression does not modify the objective function
-    # TODO increase threads?
-end
+ end
 # TODO raise error for multisite with degradation
