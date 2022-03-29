@@ -367,7 +367,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		# Total Fuel Costs, tax deductible for offtaker
         m[:TotalFuelCosts] * (1 - p.s.financial.offtaker_tax_pct) +
 
-		#CHP Standby Charges
+		# CHP Standby Charges
 		m[:TotalCHPStandbyCharges] * (1 - p.s.financial.offtaker_tax_pct) +
 
 		# Utility Bill, tax deductible for offtaker
@@ -376,7 +376,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         # Subtract Incentives, which are taxable
 		m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_pct) +
 
-		m[:dvComfortLimitViolationCost]
+		m[:dvComfortLimitViolationCost] + 
+
+		# Additional annual costs, tax deductible for owner
+		p.s.financial.other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct) +
+
+		# Additional capital costs (TODO: apply depreciation)
+		p.s.financial.other_capital_costs
+
 	);
 	if !isempty(p.s.electric_utility.outage_durations)
 		add_to_expression!(Costs, m[:ExpectedOutageCost] + m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost] + m[:ExpectedMGFuelCost])
