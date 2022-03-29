@@ -1,5 +1,9 @@
 # REopt Changelog
 
+## develop
+- update default values from v2 of API
+
+
 ## v0.13.0
 - fix bugs for time_steps_per_hour != 1
 - add FlexibleHVAC model (still testing)
