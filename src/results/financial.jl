@@ -37,6 +37,8 @@ Financial results:
 - `lcc` Optimal lifecycle cost
 - `lifecycle_capital_costs_plus_om` Capital cost for all technologies plus present value of operations and maintenance over anlaysis period
 - `lifecycle_capital_costs` Net capital costs for all technologies, in present value, including replacement costs and incentives.
+- `lifecycle_offgrid_other_annual_costs_after_tax` Present value of offgrid_other_annual_costs over the analysis period, including tax deductions for owner. 
+- `lifecycle_offgrid_other_capital_costs` Equal to offgrid_other_capital_costs 
 """
 function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
@@ -65,6 +67,9 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     if !isempty(p.techs.fuel_burning)
         r["lifecycle_fuel_costs_after_tax"] = value(m[:TotalFuelCosts]) * (1 - p.s.financial.offtaker_tax_pct)
     end
+
+    r["lifecycle_offgrid_other_annual_costs_after_tax"] = p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct)
+    r["lifecycle_offgrid_other_capital_costs"] = p.s.financial.offgrid_other_capital_costs # (TODO: apply depreciation)
 
     d["Financial"] = Dict(k => round(v, digits=2) for (k,v) in r)
     nothing
