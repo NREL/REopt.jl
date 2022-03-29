@@ -37,6 +37,10 @@ ElectricLoad results:
 - `load_series_kw` vector of site load in every time step
 - `critical_load_series_kw` vector of site critical load in every time step
 - `annual_calculated_kwh` sum of the `load_series_kw`
+- `offgrid_load_met_series_kw` vector of electric load met by generation techs, for off-grid scenarios only
+- `offgrid_load_met_pct` percentage of total electric load met on an annual basis, for off-grid scenarios only
+- `offgrid_annual_oper_res_required_series_kwh` , total operating reserves required on an annual basis, for off-grid scenarios only
+- `offgrid_annual_oper_res_provided_series_kwh` , total operating reserves provided on an annual basis, for off-grid scenarios only
 """
 function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
@@ -53,6 +57,9 @@ function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
         @expression(m, LoadMetPct, sum(p.s.electric_load.critical_loads_kw[ts] * m[Symbol("dvOffgridLoadServedFraction"*_n)][ts] for ts in p.time_steps_without_grid) /
                 sum(p.s.electric_load.critical_loads_kw))
         r["offgrid_load_met_pct"] = round(value(LoadMetPct), digits=6)
+        
+        r["offgrid_annual_oper_res_required_series_kwh"] = round.(value.(m[:OpResRequired][ts] for ts in p.time_steps_without_grid), digits=3)
+        r["offgrid_annual_oper_res_provided_series_kwh"] = round.(value.(m[:OpResProvided][ts] for ts in p.time_steps_without_grid), digits=3)
     end
     
     d["ElectricLoad"] = r
