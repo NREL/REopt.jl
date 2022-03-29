@@ -378,11 +378,11 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 		m[:dvComfortLimitViolationCost] + 
 
-		# Additional annual costs, tax deductible for owner
-		p.s.financial.other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct) +
+		# Additional annual costs, tax deductible for owner (only applies when off_grid_flag is true)
+		p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct) +
 
-		# Additional capital costs (TODO: apply depreciation)
-		p.s.financial.other_capital_costs
+		# Additional capital costs (TODO: apply depreciation) (only applies when off_grid_flag is true)
+		p.s.financial.offgrid_other_capital_costs
 
 	);
 	if !isempty(p.s.electric_utility.outage_durations)
