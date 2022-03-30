@@ -140,7 +140,7 @@ struct ThermalStorage <: AbstractThermalStorage
     net_present_cost_per_kwh::Float64
     om_cost_per_kwh::Float64
 
-    function ThermalStorage(s::AbstractThermalStorageDefaults, d::Dict, f::Financial, time_steps_per_hour::Int)
+    function ThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
          
         delta_T_degF = s.hot_water_temp_degF - s.cool_water_temp_degF
         avg_cp_kj_per_kgK = 998.2 
@@ -156,7 +156,7 @@ struct ThermalStorage <: AbstractThermalStorage
         discharge_efficiency = s.internal_efficiency_pct^0.5
       
         net_present_cost_per_kwh = effective_cost(;
-            itc_basis = s.installed_cost_per_gal * d[:kwh_per_gal],
+            itc_basis = s.installed_cost_per_gal * kwh_per_gal,
             replacement_cost = 0.0,
             replacement_year = 100,
             discount_rate = f.owner_discount_pct,
