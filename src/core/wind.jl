@@ -36,7 +36,7 @@ function Wind(;
     min_kw = 0.0,
     max_kw = 1.0e9,
     installed_cost_per_kw = 0.0,
-    om_cost_per_kw = 40.0,
+    om_cost_per_kw = 35.0,
     prod_factor_series = missing,
     size_class = "",
     wind_meters_per_sec = [],
@@ -136,7 +136,7 @@ struct Wind <: AbstractTech
         min_kw = 0.0,
         max_kw = 1.0e9,
         installed_cost_per_kw = 0.0,
-        om_cost_per_kw = 40.0,
+        om_cost_per_kw = 35.0,
         prod_factor_series = missing,
         size_class = "",
         wind_meters_per_sec = [],
@@ -173,10 +173,10 @@ struct Wind <: AbstractTech
             "large"=> 80
         )
         size_class_to_installed_cost = Dict(
-            "residential"=> 11950.0,
-            "commercial"=> 7390.0,
-            "medium"=> 4440.0,
-            "large"=> 3450.0
+            "residential"=> 5675.0,
+            "commercial"=> 4300.0,
+            "medium"=> 2766.0,
+            "large"=> 2239.0
         )
 
         size_class_to_itc_incentives = Dict(
