@@ -68,6 +68,8 @@ Base.@kwdef struct ColdThermalStorageDefaults <: AbstractThermalStorageDefaults
     om_cost_per_gal::Float64 = 0.0
     macrs_option_years::Int = 0
     macrs_bonus_pct::Float64 = 0.0
+    macrs_itc_reduction::Float64 = 0.0
+    total_itc_pct::Float64 = 0.0
     total_rebate_per_kwh::Float64 = 0.0
 end
 
@@ -89,6 +91,8 @@ Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults
     om_cost_per_gal::Float64 = 0.0
     macrs_option_years::Int = 0
     macrs_bonus_pct::Float64 = 0.0
+    macrs_itc_reduction::Float64 = 0.0
+    total_itc_pct::Float64 = 0.0
     total_rebate_per_kwh::Float64 = 0.0
 end
 ```
@@ -106,6 +110,8 @@ Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults
     om_cost_per_gal::Float64 = 0.0
     macrs_option_years::Int = 0
     macrs_bonus_pct::Float64 = 0.0
+    macrs_itc_reduction::Float64 = 0.0
+    total_itc_pct::Float64 = 0.0
     total_rebate_per_kwh::Float64 = 0.0
 end
 
