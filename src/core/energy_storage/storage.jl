@@ -77,15 +77,17 @@ mutable struct StorageTypes
                 push!(all_storage, k)
 
                 if typeof(v) <: AbstractElectricStorage
-                    push!(elec_storage, "ElectricStorage")
+                    push!(elec_storage, k)
 
-                elseif typeof(v) == HotThermalStorage
-                    push!(all_storage, "HotThermalStorage")
-                    push!(hot_storage, "HotThermalStorage")
-
-                elseif typeof(v) == ColdThermalStorage
-                    push!(all_storage, "ColdThermalStorage")
-                    push!(cold_storage, "ColdThermalStorage")
+                elseif typeof(v) <: ThermalStorage
+                    push!(all_storage, k)
+                    if occursin("Hot", k)
+                        push!(hot_storage, k)
+                    elseif occursin("Cold", k)
+                        push!(cold_storage, k)
+                    else
+                        @warn "Thermal Storage not labeled as Hot or Cold."
+                    end
                 end
             end
         end
