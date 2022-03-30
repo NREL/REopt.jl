@@ -51,7 +51,9 @@ struct REoptInputs <: AbstractInputs
     value_of_lost_load_per_kwh::Array{R, 1} where R<:Real #default set to 1 US dollar per kwh
     pwf_e::Float64
     pwf_om::Float64
-    third_party_factor::Float64
+    pwf_offtaker::Float64 
+    pwf_owner::Float64
+    third_party_factor::Float64 # equals 1 if third_party_ownership is false
     pvlocations::Array{Symbol, 1}
     maxsize_pv_locations::DenseAxisArray{Float64, 1}  # indexed on pvlocations
     pv_to_location::Dict{String, Dict{Symbol, Int64}}  # (techs.pv, pvlocations)
@@ -91,6 +93,8 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     pwf_e::Float64
     pwf_om::Float64
     pwf_fuel::Dict{String, Float64}
+    pwf_offtaker::Float64 
+    pwf_owner::Float64
     third_party_factor::Float64
     pvlocations::Array{Symbol, 1}
     maxsize_pv_locations::DenseAxisArray{Float64, 1}  # indexed on pvlocations
@@ -147,7 +151,7 @@ function REoptInputs(s::AbstractScenario)
 
     months = 1:12
 
-    levelization_factor, pwf_e, pwf_om, pwf_fuel, third_party_factor = setup_present_worth_factors(s, techs)
+    levelization_factor, pwf_e, pwf_om, pwf_fuel, third_party_factor, pwf_offtaker, pwf_owner = setup_present_worth_factors(s, techs)
     # the following hardcoded values for levelization_factor matches the public REopt API value
     # and makes the test values match.
     # the REopt code herein uses the Desktop method for levelization_factor, which is more accurate
@@ -181,6 +185,8 @@ function REoptInputs(s::AbstractScenario)
         pwf_e,
         pwf_om,
         pwf_fuel,
+        pwf_offtaker, 
+        pwf_owner,
         third_party_factor,
         pvlocations,
         maxsize_pv_locations,
@@ -564,16 +570,16 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
         end        
     end
 
+    pwf_offtaker = annuity(s.financial.analysis_years, 0.0, s.financial.offtaker_discount_pct)
+    pwf_owner = annuity(s.financial.analysis_years, 0.0, s.financial.owner_discount_pct)
     if s.financial.third_party_ownership
-        pwf_offtaker = annuity(s.financial.analysis_years, 0.0, s.financial.offtaker_discount_pct)
-        pwf_owner = annuity(s.financial.analysis_years, 0.0, s.financial.owner_discount_pct)
         third_party_factor = (pwf_offtaker * (1 - s.financial.offtaker_tax_pct)) /
                            (pwf_owner * (1 - s.financial.owner_tax_pct))
     else
         third_party_factor = 1.0
     end
 
-    return lvl_factor, pwf_e, pwf_om, pwf_fuel, third_party_factor
+    return lvl_factor, pwf_e, pwf_om, pwf_fuel, third_party_factor, pwf_offtaker, pwf_owner
 end
 
 

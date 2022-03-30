@@ -68,8 +68,18 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
         r["lifecycle_fuel_costs_after_tax"] = value(m[:TotalFuelCosts]) * (1 - p.s.financial.offtaker_tax_pct)
     end
 
-    r["lifecycle_offgrid_other_annual_costs_after_tax"] = p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct)
-    r["lifecycle_offgrid_other_capital_costs"] = p.s.financial.offgrid_other_capital_costs # (TODO: apply depreciation)
+    if p.s.settings.off_grid_flag
+        r["lifecycle_offgrid_other_annual_costs_after_tax"] = p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct)
+        r["lifecycle_offgrid_other_capital_costs"] = p.s.financial.offgrid_other_capital_costs # (TODO: apply depreciation)
+        
+        if p.third_party_factor == 1 # ==1 with Direct ownership (when third_party_ownership is False)
+            pwf = p.pwf_offtaker
+        else
+            pwf = p.pwf_owner
+        end
+        LoadMet = @expression(m, sum(p.s.electric_load.critical_loads_kw[ts] * m[Symbol("dvOffgridLoadServedFraction"*_n)][ts] for ts in p.time_steps_without_grid ))
+        r["offgrid_microgrid_lcoe_dollars_per_kwh"] = round(r["lcc"] / pwf / value(LoadMet), digits=4)
+    end
 
     d["Financial"] = Dict(k => round(v, digits=2) for (k,v) in r)
     nothing
