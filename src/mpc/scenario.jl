@@ -36,6 +36,7 @@ struct MPCScenario <: AbstractScenario
     electric_utility::ElectricUtility
     financial::MPCFinancial
     generator::MPCGenerator
+    cooling_load::MPCCoolingLoad
     limits::MPCLimits
 end
 
@@ -124,6 +125,8 @@ function MPCScenario(d::Dict)
         generator = MPCGenerator(; size_kw=0)
     end
 
+    # Placeholder/dummy cooling load set to zeros
+    cooling_load = MPCCoolingLoad(; loads_kw_thermal = zeros(length(electric_load.loads_kw)), cop=1.0)
     if haskey(d, "Limits")
         limits = MPCLimits(; dictkeys_tosymbols(d["Limits"])...)
     else
@@ -139,6 +142,7 @@ function MPCScenario(d::Dict)
         electric_utility, 
         financial,
         generator,
+        cooling_load,
         limits
     )
 end
