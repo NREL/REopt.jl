@@ -32,18 +32,21 @@ function add_existing_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
 
     # TODO all of these time series assume hourly time steps
     # TODO we convert MMBTU_TO_KWH from user inputs to the model, and then back to mmbtu in outputs: why not stay in mmbtu?
-	r["year_one_boiler_fuel_consumption_mmbtu_per_hr"] = 
+	r["year_one_fuel_consumption_mmbtu_per_hr"] = 
         round.(value.(m[:dvFuelUsage]["ExistingBoiler", ts] for ts in p.time_steps) / MMBTU_TO_KWH, digits=3)
-    r["year_one_boiler_fuel_consumption_mmbtu"] = round(sum(r["year_one_boiler_fuel_consumption_mmbtu_per_hr"]), digits=3)
+    r["year_one_fuel_consumption_mmbtu"] = round(sum(r["year_one_fuel_consumption_mmbtu_per_hr"]), digits=3)
 
-	r["year_one_boiler_thermal_production_mmbtu_per_hr"] = 
+	r["year_one_thermal_production_mmbtu_per_hr"] = 
         round.(value.(m[:dvThermalProduction]["ExistingBoiler", ts] for ts in p.time_steps) / MMBTU_TO_KWH, digits=3)
-	r["year_one_boiler_thermal_production_mmbtu"] = round(sum(r["year_one_boiler_thermal_production_mmbtu_per_hr"]), digits=3)
+	r["year_one_thermal_production_mmbtu"] = round(sum(r["year_one_thermal_production_mmbtu_per_hr"]), digits=3)
 
-	# @expression(m, BoilerToHotTES[ts in p.time_steps],
-	# 	m[:dvProductionToStorage]["HotTES","ExistingBoiler",ts])
-
-	# r["boiler_thermal_to_tes_series"] = round.(value.(BoilerToHotTES), digits=3)
+	if !isempty(p.s.storage.types.hot)
+        @expression(m, BoilerToHotTES[ts in p.time_steps],
+		    m[:dvProductionToStorage]["HotTES","ExistingBoiler",ts])
+    else
+        BoilerToHotTES = zeros(length(p.time_steps))
+    end
+	r["boiler_thermal_to_tes_series"] = round.(value.(BoilerToHotTES), digits=3)
 
     # if !isempty(p.SteamTurbineTechs)
     #     @expression(m, BoilerToSteamTurbine[ts in p.time_steps], m[:dvThermalToSteamTurbine]["ExistingBoiler",ts])
@@ -53,17 +56,13 @@ function add_existing_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     #     r["boiler_thermal_to_steamturbine_series"] = round.(BoilerToSteamTurbine, digits=3)
     # end
 
-	# @expression(m, BoilerToLoad[ts in p.time_steps],
-	# 	m[:dvThermalProduction]["ExistingBoiler",ts] - BoilerToHotTES[ts] - BoilerToSteamTurbine[ts])
-	# r["boiler_thermal_to_load_series"] = round.(value.(BoilerToLoad), digits=3)
-
-	@expression(m, TotalBoilerFuelCharges,
-		p.pwf_fuel["ExistingBoiler"] * sum(
-            p.s.existing_boiler.fuel_cost_series[ts] * m[:dvFuelUsage]["ExistingBoiler", ts] for ts in p.time_steps
-        )
+	@expression(m, BoilerToLoad[ts in p.time_steps],
+		m[:dvThermalProduction]["ExistingBoiler",ts] - BoilerToHotTES[ts] #- BoilerToSteamTurbine[ts]
     )
-	r["total_boiler_fuel_cost"] = round(value(TotalBoilerFuelCharges) * (1 - p.s.financial.offtaker_tax_pct), digits=3)
-	r["year_one_boiler_fuel_cost"] = round(value(TotalBoilerFuelCharges) / p.pwf_fuel["ExistingBoiler"], digits=3)
+	r["boiler_thermal_to_load_series"] = round.(value.(BoilerToLoad), digits=3)
+
+	r["lifecycle_fuel_cost"] = round(value(m[:TotalExistingBoilerFuelCosts]) * (1 - p.s.financial.offtaker_tax_pct), digits=3)
+	r["year_one_fuel_cost"] = round(value(m[:TotalExistingBoilerFuelCosts]) / p.pwf_fuel["ExistingBoiler"], digits=3)
 
     d["ExistingBoiler"] = r
 	nothing

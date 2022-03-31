@@ -30,12 +30,13 @@
 struct MPCScenario <: AbstractScenario
     settings::Settings
     pvs::Array{MPCPV, 1}
-    storage::MPCStorage
+    storage::Storage
     electric_tariff::MPCElectricTariff
     electric_load::MPCElectricLoad
     electric_utility::ElectricUtility
     financial::MPCFinancial
     generator::MPCGenerator
+    limits::MPCLimits
 end
 
 
@@ -43,26 +44,32 @@ end
     MPCScenario(d::Dict)
 
 Method for creating the MPCScenario struct:
+```julia
     struct MPCScenario <: AbstractScenario
         settings::Settings
         pvs::Array{MPCPV, 1}
-        storage::MPCStorage
+        storage::Storage
         electric_tariff::MPCElectricTariff
         electric_load::MPCElectricLoad
         electric_utility::ElectricUtility
         financial::MPCFinancial
         generator::MPCGenerator
+        limits::MPCLimits
     end
+```
+
 The Dict `d` must have at a minimum the keys:
     - "ElectricLoad"
     - "ElectricTariff"
+
 Other options include:
     - "PV", which can contain a Dict or Dict[]
-    - "Storage"
+    - "ElectricStorage"
     - "Generator"
     - "ElectricUtility"
     - "Settings"
     - "Financial"
+    - "Limits"
 """
 function MPCScenario(d::Dict)
     if haskey(d, "Settings")
@@ -99,14 +106,13 @@ function MPCScenario(d::Dict)
         electric_utility = ElectricUtility()
     end
 
-    if haskey(d, "Storage")
+    if haskey(d, "ElectricStorage")
         # only modeling electrochemical storage so far
-        storage_dict = Dict(dictkeys_tosymbols(d["Storage"]))
-        storage = MPCStorage(storage_dict)
+        storage_dict = Dict(dictkeys_tosymbols(d["ElectricStorage"]))
     else
         storage_dict = Dict(:size_kw => 0.0, :size_kwh => 0.0)
-        storage = MPCStorage(storage_dict)
     end
+    storage = Storage(Dict{String, AbstractStorage}("ElectricStorage" => MPCElectricStorage(; storage_dict...)))
 
     electric_load = MPCElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...)
 
@@ -118,6 +124,12 @@ function MPCScenario(d::Dict)
         generator = MPCGenerator(; size_kw=0)
     end
 
+    if haskey(d, "Limits")
+        limits = MPCLimits(; dictkeys_tosymbols(d["Limits"])...)
+    else
+        limits = MPCLimits()
+    end
+
     return MPCScenario(
         settings,
         pvs, 
@@ -126,6 +138,7 @@ function MPCScenario(d::Dict)
         electric_load, 
         electric_utility, 
         financial,
-        generator
+        generator,
+        limits
     )
 end

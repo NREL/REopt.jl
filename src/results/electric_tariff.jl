@@ -42,7 +42,7 @@ ElectricTariff results:
 - `year_one_fixed_cost` fixed cost over the first year
 - `lifecycle_min_charge_adder` lifecycle minimum charge in present value, after tax
 - `year_one_min_charge_adder` minimum charge over the first year
-- `year_one_bill` sum of `year_one_energy_cost`, `year_one_demand_cost`, `year_one_fixed_cost`, and `year_one_min_charge_adder`
+- `year_one_bill` sum of `year_one_energy_cost`, `year_one_demand_cost`, `year_one_fixed_cost`, `year_one_min_charge_adder`, and `year_one_coincident_peak_cost`
 - `lifecycle_export_benefit` lifecycle export credits in present value, after tax
 - `year_one_export_benefit` export credits over the first year
 - `lifecycle_coincident_peak_cost` lifecycle coincident peak charge in present value
@@ -64,9 +64,6 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
 
     r["lifecycle_min_charge_adder"] = round(value(m[Symbol("MinChargeAdder"*_n)]) * (1 - p.s.financial.offtaker_tax_pct), digits=2)
     r["year_one_min_charge_adder"] = round(value(m[Symbol("MinChargeAdder"*_n)]) / p.pwf_e, digits=2)
-
-    r["year_one_bill"] = r["year_one_energy_cost"] + r["year_one_demand_cost"] +
-                                    r["year_one_fixed_cost"]  + r["year_one_min_charge_adder"]
                                 
     r["lifecycle_export_benefit"] = -1 * round(value(m[Symbol("TotalExportBenefit"*_n)]) * (1 - p.s.financial.offtaker_tax_pct), digits=2)
     r["year_one_export_benefit"] = -1 * round(value(m[Symbol("TotalExportBenefit"*_n)]) / p.pwf_e, digits=0)
@@ -74,6 +71,9 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     r["lifecycle_coincident_peak_cost"] = round(value(m[Symbol("TotalCPCharges"*_n)]), digits=2)
     r["year_one_coincident_peak_cost"] = round(r["lifecycle_coincident_peak_cost"] / p.pwf_e, digits=2)
     
+    r["year_one_bill"] = r["year_one_energy_cost"] + r["year_one_demand_cost"] +
+                                    r["year_one_fixed_cost"]  + r["year_one_min_charge_adder"] + r["year_one_coincident_peak_cost"]
+
     d["ElectricTariff"] = r
     nothing
 end
