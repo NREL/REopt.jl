@@ -115,14 +115,14 @@ function add_thermal_load_constraints(m, p; _n="")
         
         # if !isempty(p.SteamTurbineTechs)
         #     @constraint(m, HotThermalLoadCon[ts in p.time_steps],
-        #             # sum(m[Symbol("dvThermalProduction"*_n)][t,ts] - m[:dvThermalToSteamTurbine][t,ts] for t in p.CHPTechs) +
+        #             # sum(m[Symbol("dvThermalProduction"*_n)][t,ts] - m[:dvThermalToSteamTurbine][t,ts] for t in p.techs.chp) +
         #             # sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.SteamTurbineTechs) +
         #             sum(p.production_factor[t,ts] * (m[Symbol("dvThermalProduction"*_n)][t,ts] - m[:dvThermalToSteamTurbine][t,ts]) for t in p.techs.boiler)
         #             # + sum(p.GHPHeatingThermalServed[g,ts] * m[:binGHP][g] for g in p.GHPOptions)
         #             # + sum(m[:dvDischargeFromStorage][b,ts] for b in p.s.storage.types.hot) 
         #             ==
         #             p.HeatingLoad[ts] * p.s.existing_boiler.efficiency
-        #             # + sum(m[:dvProductionToWaste][t,ts] for t in p.CHPTechs) +
+        #             # + sum(m[:dvProductionToWaste][t,ts] for t in p.techs.chp) +
         #             # sum(m[:dvProductionToStorage][b,t,ts] for b in p.s.storage.types.hot, t in p.techs.heating) +
         #             # sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.AbsorptionChillers) / p.AbsorptionChillerCOP
         #     )
