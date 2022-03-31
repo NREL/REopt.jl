@@ -57,6 +57,7 @@ struct BAUScenario <: AbstractScenario
     existing_chiller::Union{ExistingChiller, Nothing}
     outage_outputs::OutageOutputs
     flexible_hvac::Union{BAU_HVAC, Nothing}
+    cooling_load::CoolingLoad
 end
 
 
@@ -151,6 +152,7 @@ function BAUScenario(s::Scenario)
         s.existing_boiler,
         s.existing_chiller,
         outage_outputs,
-        flexible_hvac
+        flexible_hvac,
+        s.cooling_load
     )
 end

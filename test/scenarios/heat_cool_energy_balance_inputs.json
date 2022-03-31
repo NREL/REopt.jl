@@ -1,0 +1,69 @@
+{
+    "Site": {
+        "latitude": 37.78, 
+        "longitude": -122.45
+    },
+    "ElectricLoad": {
+        "doe_reference_name": "Hospital"
+    },
+    "ElectricTariff": {
+        "urdb_label": "5e1676e95457a3f87673e3b0"
+    },
+    "SpaceHeatingLoad": {
+        "doe_reference_name": "Hospital"
+    },
+    "DomesticHotWaterLoad": {
+        "doe_reference_name": "Hospital"
+    },
+    "CoolingLoad": {
+        "doe_reference_name": "Hospital"
+    },
+    "ExistingBoiler": {
+        "production_type": "hot_water" ,
+        "efficiency": 0.78,
+        "fuel_cost_per_mmbtu": [
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0
+            ]         
+    },
+    "ExistingChiller": {
+        "cop": 3.4
+    },
+    "CHP": {
+        "prime_mover": "recip_engine" ,
+        "min_kw": 300.0 ,
+        "max_kw": 300.0 ,
+        "cooling_thermal_factor": 0.8,
+        "fuel_cost_per_mmbtu": [
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0
+          ]
+    },
+    "PV": {
+        "max_kw": 0.0
+      },
+    "ElectricStorage": {
+        "max_kw": 0.0,
+        "max_kwh": 0.0
+    }    
+}
