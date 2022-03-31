@@ -233,8 +233,8 @@ end
         d = JSON.parsefile("./scenarios/thermal_load.json");
         d["FlexibleHVAC"] = Dict(
             "installed_cost" => 1000.0,
-            "doe_reference_name" => "LargeOffice",
-            "city" => "LosAngeles",
+            "doe_reference_name" => "MediumOffice",
+            "city" => "Boulder",
             "temperature_upper_bound_degC" => 22,
             "temperature_lower_bound_degC" => 18.0,
         )
@@ -247,7 +247,7 @@ end
         # all of the savings are from the ExistingBoiler fuel costs
         @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === true
         fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost"]
-        @test fuel_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
+        @test fuel_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] rtol=1e-3
 
         # add TOU ElectricTariff and expect to benefit from using ExistingChiller intelligently
         d["ElectricTariff"] = Dict("tou_energy_rates_per_kwh" => repeat(
