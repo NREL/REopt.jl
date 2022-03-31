@@ -29,14 +29,14 @@
 # *********************************************************************************
 struct ExistingChiller <: AbstractThermalTech
     max_kw::Real
-    cop::Real
+    cop::Union{Real, Nothing}
     max_thermal_factor_on_peak_load::Real
 end
 
 
 function ExistingChiller(;
         loads_kw_thermal::Vector{<:Real},
-        cop::Real = EXISTING_CHILLER_COP,
+        cop::Union{Real, Nothing} = nothing,
         max_thermal_factor_on_peak_load::Real=1.25
     )
     max_kw = maximum(loads_kw_thermal) * max_thermal_factor_on_peak_load

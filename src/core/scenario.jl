@@ -210,10 +210,19 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
             if sum(flexible_hvac.bau_hvac.existing_chiller_kw_thermal) > 0
                 chiller_inputs = Dict{Symbol, Any}()
-                chiller_inputs[:loads_kw_thermal] = flexible_hvac.bau_hvac.existing_chiller_kw_thermal
+                chiller_inputs[:loads_kw_thermal] = flexible_hvac.bau_hvac.existing_chiller_kw_thermal                                 
                 if haskey(d, "ExistingChiller")
+                    if !haskey(d["ExistingChiller"], "cop")
+                        d["ExistingChiller"]["cop"] = get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_on_peak_load=1.25, 
+                                                                                        loads_kw=nothing, 
+                                                                                        loads_kw_thermal=chiller_inputs[:loads_kw_thermal])
+                    end 
                     chiller_inputs = merge(chiller_inputs, dictkeys_tosymbols(d["ExistingChiller"]))
-                end
+                else
+                    chiller_inputs[:cop] = get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_on_peak_load=1.25, 
+                                                                                loads_kw=nothing, 
+                                                                                loads_kw_thermal=chiller_inputs[:loads_kw_thermal])
+                end              
                 existing_chiller = ExistingChiller(; chiller_inputs...)
             end
 
@@ -254,11 +263,22 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     max_cooling_demand_kw = 0
     if haskey(d, "CoolingLoad") && !haskey(d, "FlexibleHVAC")
+        # Note, if thermal_loads_ton or one of the "...fraction(s)_of_electric_load" inputs is used for CoolingLoad, doe_reference_name is ignored 
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["CoolingLoad"])
         d["CoolingLoad"]["site_electric_load_profile"] = electric_load.loads_kw
-        if haskey(d, "ExistingChiller") && haskey(d["ExistingChiller"], "cop")
-            # TODO warn if replacing CoolingLoad.existing_chiller_cop ? Or remove this if block ?
-            d["CoolingLoad"]["existing_chiller_cop"] = d["ExistingChiller"]["cop"]
+        # Pass ExistingChiller inputs which are used in CoolingLoad processing, if they exist
+        ec_empty = ExistingChiller(;loads_kw_thermal=zeros(8760))
+        if !haskey(d, "ExistingChiller")
+            d["CoolingLoad"]["existing_chiller_max_thermal_factor_on_peak_load"] = ec_empty.max_thermal_factor_on_peak_load
+        else
+            if haskey(d["ExistingChiller"], "cop")
+                d["CoolingLoad"]["existing_chiller_cop"] = d["ExistingChiller"]["cop"]
+            end
+            if haskey(d["ExistingChiller"], "max_thermal_factor_on_peak_load")
+                d["CoolingLoad"]["existing_chiller_max_thermal_factor_on_peak_load"] = d["ExistingChiller"]["max_thermal_factor_on_peak_load"]
+            else
+                d["CoolingLoad"]["existing_chiller_max_thermal_factor_on_peak_load"] = ec_empty.max_thermal_factor_on_peak_load
+            end
         end
         cooling_load = CoolingLoad(; dictkeys_tosymbols(d["CoolingLoad"])...,
                                     latitude=site.latitude, longitude=site.longitude, 
@@ -266,14 +286,19 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                     )
         max_cooling_demand_kw = maximum(cooling_load.loads_kw_thermal)
     else
-        cooling_load = CoolingLoad(; fuel_loads_ton_per_hour=repeat([0.0], 8760))
+        cooling_load = CoolingLoad(; thermal_loads_ton=repeat([0.0], 8760))
     end
 
     if max_cooling_demand_kw > 0 && !haskey(d, "FlexibleHVAC")  # create ExistingChiller
         chiller_inputs = Dict{Symbol, Any}()
         chiller_inputs[:loads_kw_thermal] = cooling_load.loads_kw_thermal
         if haskey(d, "ExistingChiller")
+            if !haskey(d["ExistingChiller"], "cop")
+                d["ExistingChiller"]["cop"] = cooling_load.existing_chiller_cop
+            end
             chiller_inputs = merge(chiller_inputs, dictkeys_tosymbols(d["ExistingChiller"]))
+        else
+            chiller_inputs[:cop] = 1.0
         end
         existing_chiller = ExistingChiller(; chiller_inputs...)
     end
