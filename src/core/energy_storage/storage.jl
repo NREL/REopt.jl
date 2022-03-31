@@ -80,7 +80,6 @@ mutable struct StorageTypes
                     push!(elec_storage, k)
 
                 elseif typeof(v) <: ThermalStorage
-                    push!(all_storage, k)
                     if occursin("Hot", k)
                         push!(hot_storage, k)
                     elseif occursin("Cold", k)
