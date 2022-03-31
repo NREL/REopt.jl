@@ -117,8 +117,8 @@ function BAUInputs(p::REoptInputs)
         if bau_scenario.outage_outputs.bau_critical_load_met_time_steps > 0  
         # include critical load in bau load for the time that it can be met
             bau_scenario.electric_load.critical_loads_kw[
-                t0 : t0 + bau_scenario.outage_outputs.bau_critical_load_met_time_steps
-                ] = original_crit_lds[t0 : t0 + bau_scenario.outage_outputs.bau_critical_load_met_time_steps]
+                t0 : t0 + bau_scenario.outage_outputs.bau_critical_load_met_time_steps - 1
+                ] = original_crit_lds[t0 : t0 + bau_scenario.outage_outputs.bau_critical_load_met_time_steps - 1]
         end
     end
 
