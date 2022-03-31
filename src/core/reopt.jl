@@ -112,8 +112,8 @@ Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) m
 """
 function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractModel
     s = Scenario(d)
-    if !s.settings.run_bau
-        @warn "Only using first Model and not running BAU case because Settings.run_bau == false."
+    if s.settings.off_grid_flag
+        @warn "Only using first Model and not running BAU case because Settings.off_grid_flag == true. The BAU scenario is not relevant for off-grid microgrids."
 	    results = run_reopt(ms[1], s)
         return results
     end
