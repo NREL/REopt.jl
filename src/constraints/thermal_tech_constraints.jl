@@ -49,7 +49,7 @@ function add_boiler_tech_constraints(m, p; _n="")
     #     )
     # else
         @constraint(m, [b in p.s.storage.types.hot, t in p.techs.boiler, ts in p.time_steps],
-            m[:dvProductionToStorage][b,t,ts] <= p.production_factor[t,ts] * m[Symbol("dvThermalProduction"*_n)][t,ts]
+            m[:dvProductionToStorage][b,t,ts] <= m[Symbol("dvThermalProduction"*_n)][t,ts]
         )
     # end
 
