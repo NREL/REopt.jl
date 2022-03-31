@@ -331,6 +331,7 @@ struct MPCGenerator <: AbstractGenerator
     end
 end
 
+
 """
     MPCCoolingLoad
 
@@ -341,4 +342,23 @@ end
 Base.@kwdef struct MPCCoolingLoad
     loads_kw_thermal::Array{Real,1}
     cop::Union{Real, Nothing}
+end
+
+
+"""
+    MPCLimits
+
+struct for MPC specific input parameters:
+- `grid_draw_limit_kw_by_time_step::Vector{<:Real}` limits for grid power consumption in each time step; length must be same as `length(loads_kw)`.
+- `export_limit_kw_by_time_step::Vector{<:Real}` limits for grid power export in each time step; length must be same as `length(loads_kw)`.
+
+!!! warn 
+    `grid_draw_limit_kw_by_time_step` and `export_limit_kw_by_time_step` values can lead to 
+    infeasible problems. For example, there is a constraint that the electric load must be met in 
+    each time step and by limiting the amount of power from the grid the load balance constraint 
+    could be infeasible.
+"""
+Base.@kwdef struct MPCLimits
+    grid_draw_limit_kw_by_time_step::Vector{<:Real} = Real[]
+    export_limit_kw_by_time_step::Vector{<:Real} =  Real[]
 end
