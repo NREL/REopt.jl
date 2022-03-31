@@ -141,6 +141,7 @@ struct ThermalStorage <: AbstractThermalStorage
     max_kw::Float64
     min_kwh::Float64
     max_kwh::Float64
+    installed_cost_per_kwh::Float64
     charge_efficiency::Float64
     discharge_efficiency::Float64
     net_present_cost_per_kwh::Float64
@@ -160,9 +161,10 @@ struct ThermalStorage <: AbstractThermalStorage
     
         charge_efficiency = s.internal_efficiency_pct^0.5
         discharge_efficiency = s.internal_efficiency_pct^0.5
+        installed_cost_per_kwh = s.installed_cost_per_gal * kwh_per_gal
       
         net_present_cost_per_kwh = effective_cost(;
-            itc_basis = s.installed_cost_per_gal * kwh_per_gal,
+            itc_basis = installed_cost_per_kwh,
             replacement_cost = 0.0,
             replacement_year = 100,
             discount_rate = f.owner_discount_pct,
@@ -191,6 +193,7 @@ struct ThermalStorage <: AbstractThermalStorage
             max_kw,
             min_kwh,
             max_kwh,
+            installed_cost_per_kwh,
             charge_efficiency,
             discharge_efficiency,
             net_present_cost_per_kwh,
