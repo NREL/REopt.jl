@@ -49,6 +49,7 @@ const default_buildings = [
 
 const MMBTU_TO_KWH = 293.07107
 const TONHOUR_TO_KWH_THERMAL = 3.51685
+const EXISTING_BOILER_EFFICIENCY = 0.8
 
 
 function find_ashrae_zone_city(lat, lon)::String
@@ -114,8 +115,8 @@ end
 Scale a normalized Commercial Reference Building according to inputs provided and return the 8760.
 """
 function built_in_load(type::String, city::String, buildingtype::String, 
-    year::Int, annual_energy::Real, monthly_energies::AbstractArray{Real,1}
-    )
+    year::Int, annual_energy::R, monthly_energies::AbstractArray{<:Real,1}
+    ) where {R <: Real}
 
     @assert type in ["electric", "domestic_hot_water", "space_heating", "cooling"]
     monthly_scalers = ones(12)
@@ -180,6 +181,7 @@ Given `blended_doe_reference_names` and `blended_doe_reference_percents` use the
     - BuiltInElectricLoad
     - BuiltInDomesticHotWaterLoad
     - BuiltInSpaceHeatingLoad
+    - BuiltInCoolingLoad
 """
 function blend_and_scale_doe_profiles(
     constructor,
