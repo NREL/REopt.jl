@@ -1,5 +1,19 @@
 # REopt Changelog
 
+## develop
+- update default values from v2 of API
+
+
+## v0.13.0
+- fix bugs for time_steps_per_hour != 1
+- add FlexibleHVAC model (still testing)
+- start thermal energy storage modeling
+- refactor `Storage` as `ElectricStorage`
+- add `ExistingBoiler` and `ExistingChiller`
+- add `MPCLimits` inputs:
+    - `grid_draw_limit_kw_by_time_step`
+    - `export_limit_kw_by_time_step`
+
 ## v0.12.4
 - rm "Lite" from docs
 - prioritize `urdb_response` over `urdb_label` in `ElectricTariff`

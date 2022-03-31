@@ -39,6 +39,12 @@ end
 """
     ExistingBoiler
 
+!!! note
+    The `ExistingBoiler` default operating cost is zero. Please provide the `fuel_cost_per_mmbtu` field
+    for the `ExistingBoiler` if you want non-zero BAU heating costs. The `fuel_cost_per_mmbtu` can be
+    a scalar, a list of 12 monthly values, or a time series of values for every time step.
+    ExistingBoiler
+
 ```julia
 function ExistingBoiler(;
     max_heat_demand_kw::Real=0,
@@ -64,6 +70,10 @@ function ExistingBoiler(;
     # emissions_factor_lb_CO2_per_mmbtu::Real,
 )
     @assert production_type in ["steam", "hot_water"]
+
+    if sum(fuel_cost_per_mmbtu) ≈ 0.0
+        @warn "The ExistingBoiler.fuel_cost_per_mmbtu sums to zero. No fuel costs will be accounted for."
+    end
 
     production_type_by_chp_prime_mover = Dict(
         "recip_engine" => "hot_water",
