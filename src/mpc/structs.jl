@@ -333,6 +333,19 @@ end
 
 
 """
+    MPCCoolingLoad
+
+    Base.@kwdef struct MPCCoolingLoad
+        loads_kw_thermal::Array{Real,1}
+    end
+"""
+Base.@kwdef struct MPCCoolingLoad
+    loads_kw_thermal::Array{Real,1}
+    cop::Union{Real, Nothing}
+end
+
+
+"""
     MPCLimits
 
 struct for MPC specific input parameters:

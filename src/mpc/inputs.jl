@@ -46,6 +46,7 @@ struct MPCInputs <: AbstractInputs
     ratchets::UnitRange
     techs_by_exportbin::DenseAxisArray{Array{String,1}}  # indexed on [:NEM, :WHL]
     export_bins_by_tech::Dict{String, Array{Symbol, 1}}
+    cop::Dict{String, Float64}  # (techs.cooling)
 end
 
 
@@ -78,6 +79,9 @@ function MPCInputs(s::MPCScenario)
     end
     # TODO implement export bins by tech (rather than assuming that all techs share the export_bins)
  
+    #Placeholder COP because the REopt model expects it
+    cop = Dict("ExistingChiller" => s.cooling_load.cop)
+
     MPCInputs(
         s,
         techs,
@@ -96,7 +100,8 @@ function MPCInputs(s::MPCScenario)
         # maxsize_pv_locations,
         1:length(s.electric_tariff.tou_demand_ratchet_timesteps),  # ratchets
         techs_by_exportbin,
-        export_bins_by_tech
+        export_bins_by_tech,
+        cop
         # s.site.min_resil_timesteps,
         # s.site.mg_tech_sizes_equal_grid_sizes,
         # s.site.node

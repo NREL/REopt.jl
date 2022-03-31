@@ -65,7 +65,8 @@ using PolygonInbounds
 using Roots: fzero  # for IRR
 global hdl = nothing
 
-const EXISTING_CHILLER_COP = 4.55
+const M3_TO_GAL = 264.172  # [gal/m^3]
+const GAL_DIESEL_TO_KWH = 40.7  # [kWh/gal_diesel]
 
 include("keys.jl")
 include("core/types.jl")
