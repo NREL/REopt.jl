@@ -115,7 +115,7 @@ end
 Scale a normalized Commercial Reference Building according to inputs provided and return the 8760.
 """
 function built_in_load(type::String, city::String, buildingtype::String, 
-    year::Int, annual_energy<:R, monthly_energies::AbstractArray{<:Real,1}
+    year::Int, annual_energy::R, monthly_energies::AbstractArray{<:Real,1}
     ) where {R <: Real}
 
     @assert type in ["electric", "domestic_hot_water", "space_heating", "cooling"]
