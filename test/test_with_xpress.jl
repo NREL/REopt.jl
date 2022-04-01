@@ -578,6 +578,37 @@ end
     @test roof_east["average_annual_energy_produced_kwh"] ≈ 6482.37 atol=0.1
 end
 
+@testset "Thermal Energy Storage" begin
+    model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
+    data = JSON.parsefile("./test/scenarios/thermal_storage.json")
+    s = Scenario(data)
+    p = REoptInputs(s)
+    #Make every other hour zero fuel and electric cost; storage should charge and discharge in each period
+    for ts in p.time_steps
+        #heating and cooling loads only
+        p.s.electric_load.loads_kw[ts] = 0
+        p.s.dhw_load.loads_kw[ts] = 5
+        p.s.space_heating_load.loads_kw[ts] = 5
+        #p.s.cooling_load.loads_kw[ts] = 10
+        if ts % 2 == 0
+            p.s.existing_boiler.fuel_cost_series[ts] = 10
+            for tier in 1:p.s.electric_tariff.n_energy_tiers
+                p.s.electric_tariff.energy_rates[ts, tier] = 10
+            end
+        else
+            p.s.existing_boiler.fuel_cost_series[ts] = 0
+            for tier in 1:p.s.electric_tariff.n_energy_tiers
+                p.s.electric_tariff.energy_rates[ts, tier] = 0
+            end
+        end
+    end
+
+    r = run_reopt(model, p)
+
+    @test sum(r["HotThermalStorage"]["year_one_to_load_series_kw"]) ≈ 43800.0 atol=0.1
+    @test r["HotThermalStorage"]["size_gal"] ≈ 227.89 atol=0.1
+end
+
 ## equivalent REopt API Post for test 2:
 #   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
 # {"Scenario": {
