@@ -580,7 +580,7 @@ end
 
 @testset "Thermal Energy Storage" begin
     model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
-    data = JSON.parsefile("./test/scenarios/thermal_storage.json")
+    data = JSON.parsefile("./scenarios/thermal_storage.json")
     s = Scenario(data)
     p = REoptInputs(s)
     #Make every other hour zero fuel and electric cost; storage should charge and discharge in each period
@@ -605,7 +605,9 @@ end
 
     r = run_reopt(model, p)
 
+    #dispatch to load should be 10kW every other period = 4,380 * 10
     @test sum(r["HotThermalStorage"]["year_one_to_load_series_kw"]) ≈ 43800.0 atol=0.1
+    #size should be 10kW in gallons
     @test r["HotThermalStorage"]["size_gal"] ≈ 227.89 atol=0.1
 end
 
