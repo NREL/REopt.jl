@@ -35,7 +35,6 @@ The data structure for all the inputs necessary to construct the JuMP model.
 struct REoptInputs <: AbstractInputs
     s::AbstractScenario
     techs::Techs
-    storage::Storage
     min_sizes::Dict{String, Float64}  # (techs)
     max_sizes::Dict{String, Float64}  # (techs)
     existing_sizes::Dict{String, Float64}  # (techs)

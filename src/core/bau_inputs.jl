@@ -144,6 +144,8 @@ function BAUInputs(p::REoptInputs)
         p.pwf_e,
         p.pwf_om,
         p.pwf_fuel,
+        p.pwf_offtaker,
+        p.pwf_owner,
         p.third_party_factor,
         p.pvlocations,
         p.maxsize_pv_locations,
@@ -159,7 +161,8 @@ function BAUInputs(p::REoptInputs)
         p.pbi_max_benefit, 
         p.pbi_max_kw, 
         p.pbi_benefit_per_kwh,
-        boiler_efficiency
+        boiler_efficiency,
+        p.techs_operating_reserve_req_pct
     )
 end
 
