@@ -47,13 +47,13 @@ function Financial(;
     microgrid_upgrade_cost_pct::Float64 = 0.3,
     macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
     macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
-    co2_cost_us_dollars_per_tonne::Union{Missing,Float64} = missing,
-    nox_cost_us_dollars_per_tonne_grid::Union{Missing,Float64} = missing,
-    so2_cost_us_dollars_per_tonne::Union{Missing,Float64} = missing,
-    pm25_cost_us_dollars_per_tonne::Union{Missing,Float64} = missing,
-    nox_cost_us_dollars_per_tonne_onsite_fuelburn::Union{Missing,Float64} = missing,
-    so2_cost_us_dollars_per_tonne_onsite_fuelburn::Union{Missing,Float64} = missing,
-    pm25_cost_us_dollars_per_tonne_onsite_fuelburn::Union{Missing,Float64} = missing,
+    co2_cost_per_tonne::Union{Missing,Float64} = missing,
+    nox_grid_cost_per_tonne::Union{Missing,Float64} = missing,
+    so2_grid_cost_per_tonne::Union{Missing,Float64} = missing,
+    pm25_grid_cost_per_tonne::Union{Missing,Float64} = missing,
+    nox_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
+    so2_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
+    pm25_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
     co2_cost_escalation_pct::Union{Missing,Float64} = missing,
     nox_cost_escalation_pct::Union{Missing,Float64} = missing,
     so2_cost_escalation_pct::Union{Missing,Float64} = missing,
@@ -85,13 +85,13 @@ struct Financial
     microgrid_upgrade_cost_pct::Float64
     macrs_five_year::Array{Float64,1}
     macrs_seven_year::Array{Float64,1}
-    co2_cost_us_dollars_per_tonne::Union{Missing,Float64}
-    nox_cost_us_dollars_per_tonne_grid::Union{Missing,Float64}
-    so2_cost_us_dollars_per_tonne::Union{Missing,Float64}
-    pm25_cost_us_dollars_per_tonne::Union{Missing,Float64}
-    nox_cost_us_dollars_per_tonne_onsite_fuelburn::Union{Missing,Float64}
-    so2_cost_us_dollars_per_tonne_onsite_fuelburn::Union{Missing,Float64}
-    pm25_cost_us_dollars_per_tonne_onsite_fuelburn::Union{Missing,Float64}
+    co2_cost_per_tonne::Union{Missing,Float64}
+    nox_grid_cost_per_tonne::Union{Missing,Float64}
+    so2_grid_cost_per_tonne::Union{Missing,Float64}
+    pm25_grid_cost_per_tonne::Union{Missing,Float64}
+    nox_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64}
+    so2_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64}
+    pm25_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64}
     co2_cost_escalation_pct::Union{Missing,Float64}
     nox_cost_escalation_pct::Union{Missing,Float64}
     so2_cost_escalation_pct::Union{Missing,Float64}
@@ -112,13 +112,13 @@ struct Financial
         microgrid_upgrade_cost_pct::Float64 = 0.3,
         macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
         macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
-        co2_cost_us_dollars_per_tonne::Union{Missing,Float64} = missing,
-        nox_cost_us_dollars_per_tonne_grid::Union{Missing,Float64} = missing,
-        so2_cost_us_dollars_per_tonne::Union{Missing,Float64} = missing,
-        pm25_cost_us_dollars_per_tonne::Union{Missing,Float64} = missing,
-        nox_cost_us_dollars_per_tonne_onsite_fuelburn::Union{Missing,Float64} = missing,
-        so2_cost_us_dollars_per_tonne_onsite_fuelburn::Union{Missing,Float64} = missing,
-        pm25_cost_us_dollars_per_tonne_onsite_fuelburn::Union{Missing,Float64} = missing,
+        co2_cost_per_tonne::Union{Missing,Float64} = missing,
+        nox_grid_cost_per_tonne::Union{Missing,Float64} = missing,
+        so2_grid_cost_per_tonne::Union{Missing,Float64} = missing,
+        pm25_grid_cost_per_tonne::Union{Missing,Float64} = missing,
+        nox_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
+        so2_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
+        pm25_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
         co2_cost_escalation_pct::Union{Missing,Float64} = missing,
         nox_cost_escalation_pct::Union{Missing,Float64} = missing,
         so2_cost_escalation_pct::Union{Missing,Float64} = missing,
@@ -146,13 +146,13 @@ struct Financial
             microgrid_upgrade_cost_pct,
             macrs_five_year,
             macrs_seven_year,
-            co2_cost_us_dollars_per_tonne,
-            nox_cost_us_dollars_per_tonne_grid,
-            so2_cost_us_dollars_per_tonne,
-            pm25_cost_us_dollars_per_tonne,
-            nox_cost_us_dollars_per_tonne_onsite_fuelburn,
-            so2_cost_us_dollars_per_tonne_onsite_fuelburn,
-            pm25_cost_us_dollars_per_tonne_onsite_fuelburn,
+            co2_cost_per_tonne,
+            nox_grid_cost_per_tonne,
+            so2_grid_cost_per_tonne,
+            pm25_grid_cost_per_tonne,
+            nox_onsite_fuelburn_cost_per_tonne,
+            so2_onsite_fuelburn_cost_per_tonne,
+            pm25_onsite_fuelburn_cost_per_tonne,
             nox_cost_escalation_pct,
             so2_cost_escalation_pct,
             pm25_cost_escalation_pct
