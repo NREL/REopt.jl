@@ -52,6 +52,7 @@ function DomesticHotWaterLoad(;
 """
 struct DomesticHotWaterLoad
     loads_kw::Array{Real, 1}
+    annual_mmbtu::Real
 
     function DomesticHotWaterLoad(;
         doe_reference_name::String = "",
@@ -94,7 +95,8 @@ struct DomesticHotWaterLoad
         end
 
         new(
-            loads_kw
+            loads_kw,
+            (sum(loads_kw)/time_steps_per_hour)/MMBTU_TO_KWH
         )
     end
 end
@@ -125,6 +127,7 @@ function SpaceHeatingLoad(;
 """
 struct SpaceHeatingLoad
     loads_kw::Array{Real, 1}
+    annual_mmbtu::Real
 
     function SpaceHeatingLoad(;
         doe_reference_name::String = "",
@@ -167,7 +170,8 @@ struct SpaceHeatingLoad
         end
 
         new(
-            loads_kw
+            loads_kw,
+            (sum(loads_kw)/time_steps_per_hour)/MMBTU_TO_KWH
         )
     end
 end
