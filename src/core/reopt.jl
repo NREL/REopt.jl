@@ -55,6 +55,9 @@ end
 Solve the model using a `Scenario` or `BAUScenario`.
 """
 function run_reopt(m::JuMP.AbstractModel, s::AbstractScenario)
+	if s.site.co2_emissions_reduction_min_pct > 0.0 || s.site.co2_emissions_reduction_max_pct < 1.0
+		@error "To constrain CO2 emissions reduction min or max percentages, the optimal and business as usual scenarios must be run in parallel. Use a version of run_reopt() that takes an array of two models."
+	end
 	run_reopt(m, REoptInputs(s))
 end
 
@@ -310,6 +313,13 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 	end
 
+	# Note: renewable heat calculations are currently added in post-optimization
+	add_re_elec_calcs(m,p)
+	add_re_elec_constraints(m,p)
+	add_yr1_emissions_calcs(m,p)
+	add_lifecycle_emissions_calcs(m,p)
+	add_emissions_constraints(m,p)
+
 	#################################  Objective Function   ########################################
 	@expression(m, Costs,
 		# Capital Costs
@@ -335,6 +345,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	);
 	if !isempty(p.s.electric_utility.outage_durations)
 		add_to_expression!(Costs, m[:ExpectedOutageCost] + m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost] + m[:ExpectedMGFuelCost])
+	end
+	# Add climate costs
+	if p.settings.include_climate_in_objective # if user selects to include climate in objective
+		add_to_expression!(Costs, m[:Lifecycle_Emissions_Cost_CO2]) 
+	end
+	# Add Health costs (NOx, SO2, PM2.5)
+	if p.settings.include_health_in_objective
+		add_to_expression!(Costs, m[:Lifecycle_Emissions_Cost_Health])
 	end
     
 	nothing
