@@ -37,6 +37,14 @@ ElectricUtility results:
 - `year_one_energy_supplied_kwh` Total energy supplied from the grid in year one.
 - `year_one_to_load_series_kw` Vector of powers drawn from the grid to serve load in year one.
 - `year_one_to_battery_series_kw` Vector of powers drawn from the grid to charge the battery in year one.
+- `year_one_emissions_tCO2`
+- `year_one_emissions_tNOx`
+- `year_one_emissions_tSO2`
+- `year_one_emissions_tPM25`
+- `lifecycle_emissions_tCO2`
+- `lifecycle_emissions_tNOx`
+- `lifecycle_emissions_tSO2`
+- `lifecycle_emissions_tPM25`
 """
 function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, d::Dict; _n="")
     r = Dict{String, Any}()
@@ -54,7 +62,17 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
 				  for ts in p.time_steps)
     r["year_one_to_battery_series_kw"] = round.(value.(GridToBatt), digits=3)
 
+	r["year_one_emissions_tCO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2]/TONNES_TO_LBS), digits=2)
+	r["year_one_emissions_tNOx"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx]/TONNES_TO_LBS), digits=2)
+	r["year_one_emissions_tSO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2]/TONNES_TO_LBS), digits=2)
+	r["year_one_emissions_tPM25"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25]/TONNES_TO_LBS), digits=2)
+	r["lifecycle_emissions_tCO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2]/TONNES_TO_LBS*p.pwf_grid_emissions["CO2"]), digits=2)
+	r["lifecycle_emissions_tNOx"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx]/TONNES_TO_LBS*p.pwf_grid_emissions["NOx"]), digits=2)
+	r["lifecycle_emissions_tSO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2]/TONNES_TO_LBS*p.pwf_grid_emissions["SO2"]), digits=2)
+	r["lifecycle_emissions_tPM25"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25]/TONNES_TO_LBS*p.pwf_grid_emissions["PM25"]), digits=2)
+
     d["ElectricUtility"] = r
+
     nothing
 end
 
@@ -80,6 +98,15 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::MPCInputs, d::Di
         GridToBatt[ts]
     )
     r["to_load_series_kw"] = round.(value.(GridToLoad), digits=3).data
+
+	r["year_one_emissions_tCO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2]/TONNES_TO_LBS), digits=2)
+	r["year_one_emissions_tNOx"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx]/TONNES_TO_LBS), digits=2)
+	r["year_one_emissions_tSO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2]/TONNES_TO_LBS), digits=2)
+	r["year_one_emissions_tPM25"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25]/TONNES_TO_LBS), digits=2)
+	r["lifecycle_emissions_tCO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2]/TONNES_TO_LBS*p.pwf_grid_emissions["CO2"]), digits=2)
+	r["lifecycle_emissions_tNOx"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx]/TONNES_TO_LBS*p.pwf_grid_emissions["NOx"]), digits=2)
+	r["lifecycle_emissions_tSO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2]/TONNES_TO_LBS*p.pwf_grid_emissions["SO2"]), digits=2)
+	r["lifecycle_emissions_tPM25"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25]/TONNES_TO_LBS*p.pwf_grid_emissions["PM25"]), digits=2)
 
     d["ElectricUtility"] = r
     nothing
