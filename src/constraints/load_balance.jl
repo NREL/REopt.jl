@@ -150,20 +150,20 @@ function add_thermal_load_constraints(m, p; _n="")
         if !isempty(p.techs.cooling)
             
             ##Constraint (5a): Cold thermal loads
-            # if !isempty(p.CoolingTechs)
-            # 	@constraint(m, ColdThermalLoadCon[ts in p.time_steps],
-            # 			sum(p.production_factor[t,ts] * m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.CoolingTechs) +
-            # 			sum(m[:dvDischargeFromStorage][b,ts] for b in p.s.storage.types.cold) ==
-            # 			p.CoolingLoad[ts] -
-            # 			sum(p.GHPCoolingThermalServed[g,ts] * m[:binGHP][g] for g in p.GHPOptions) +
-            # 			sum(m[:dvProductionToStorage][b,t,ts] for b in p.s.storage.types.cold, t in p.CoolingTechs)
-            # 	)
-            # end
+            if !isempty(p.CoolingTechs)
+            	@constraint(m, [ts in p.time_steps_with_grid],
+            			m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.techs.cooling) +
+            			sum(m[:dvDischargeFromStorage][b,ts] for b in p.s.storage.types.cold) ==
+            			p.s.cooling_load.loads_kw_thermal[ts] -
+            			# sum(p.GHPCoolingThermalServed[g,ts] * m[:binGHP][g] for g in p.GHPOptions) +
+            			sum(m[Symbol("dvProductionToStorage")][b,t,ts] for b in p.s.storage.types.cold, t in p.CoolingTechs)
+            	)
+            end
 
-            @constraint(m, [ts in p.time_steps_with_grid],
-                sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.cooling) ==
-                p.s.cooling_load.loads_kw_thermal[ts]
-            )
+            # @constraint(m, [ts in p.time_steps_with_grid],
+            #     sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.cooling) ==
+            #     p.s.cooling_load.loads_kw_thermal[ts]
+            # )
         end
     end
 end
