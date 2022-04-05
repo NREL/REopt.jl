@@ -17,11 +17,16 @@
     "DomesticHotWaterLoad": {
         "doe_reference_name": "Hospital"
     },
-    "CoolingLoad": {},
+    "CoolingLoad": {
+        "doe_reference_name": "Hospital"
+    },
     "ExistingBoiler": {
         "fuel_cost_per_mmbtu": 10.0
     },
     "HotThermalStorage":{
+        "max_gal":2500
+    },
+    "ColdThermalStorage":{
         "max_gal":2500
     },
     "ElectricTariff": {
