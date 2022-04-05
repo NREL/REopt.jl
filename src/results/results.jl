@@ -79,6 +79,8 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         add_existing_boiler_results(m, p, d)
     end
 
+    add_site_results(m, p, d)
+
 	return d
 end
 
@@ -116,8 +118,9 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("Generator", "year_one_fuel_cost"),
         ("Generator", "year_one_variable_om_cost"),
         ("Generator", "year_one_fixed_om_cost"),
-        ("Site", "annual_renewable_electricity_pct"),
         ("Site", "annual_renewable_electricity_kwh"),
+        ("Site", "renewable_electricity_pct"),
+        ("Site", "total_renewable_energy_pct"),
         ("Site", "year_one_emissions_tCO2"),
         ("Site", "year_one_emissions_tNOx"),
         ("Site", "year_one_emissions_tSO2"),
@@ -126,8 +129,12 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("Site", "year_one_emissions_from_fuelburn_tNOx"),
         ("Site", "year_one_emissions_from_fuelburn_tSO2"),
         ("Site", "year_one_emissions_from_fuelburn_tPM25"),
+        ("Site", "year_one_emissions_from_elec_grid_tCO2"),
+        ("Site", "year_one_emissions_from_elec_grid_tNOx"),
+        ("Site", "year_one_emissions_from_elec_grid_tSO2"),
+        ("Site", "year_one_emissions_from_elec_grid_tPM25"),
         ("Site", "lifecycle_emissions_cost_CO2"),
-        ("Site", "lifecycle_emissions_cost_Health"),
+        ("Site", "lifecycle_emissions_cost_health"),
         ("Site", "lifecycle_emissions_tCO2"),
         ("Site", "lifecycle_emissions_tNOx"),
         ("Site", "lifecycle_emissions_tSO2"),
@@ -136,6 +143,10 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("Site", "lifecycle_emissions_from_fuelburn_tNOx"),
         ("Site", "lifecycle_emissions_from_fuelburn_tSO2"),
         ("Site", "lifecycle_emissions_from_fuelburn_tPM25"),
+        ("Site", "lifecycle_emissions_from_elec_grid_tCO2"),
+        ("Site", "lifecycle_emissions_from_elec_grid_tNOx"),
+        ("Site", "lifecycle_emissions_from_elec_grid_tSO2"),
+        ("Site", "lifecycle_emissions_from_elec_grid_tPM25"),
     )
 
     for t in bau_outputs
@@ -159,5 +170,33 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
     opt["ElectricLoad"]["bau_critical_load_met"] = bau_scenario.outage_outputs.bau_critical_load_met
     opt["ElectricLoad"]["bau_critical_load_met_time_steps"] = bau_scenario.outage_outputs.bau_critical_load_met_time_steps
 
+    # emissions reductions
+    opt["Site"]["lifecycle_emissions_reduction_CO2_pct"] = (
+        bau["Site"]["lifecycle_emissions_tCO2"] - opt["Site"]["lifecycle_emissions_tCO2"]
+    ) / bau["Site"]["lifecycle_emissions_tCO2"]
+
+    # breakeven cost of CO2 (to make NPV = 0)
+    # first, remove climate costs from the output NPV, if they were previously included in LCC/NPV calcs:
+    npv_without_modeled_climate_costs = opt["Financial"]["npv"]
+    if p.s.settings.include_climate_in_objective == true
+        npv_without_modeled_climate_costs -= (bau["Site"]["lifecycle_emissions_cost_CO2"] - opt["Site"]["lifecycle_emissions_cost_CO2"])
+    end
+    # we want to calculate the breakeven year 1 cost of CO2 (usd per tonne) that would yield an npv of 0, holding all other inputs constant
+    # (back-calculating using the equation for m[:Lifecycle_Emissions_Cost_CO2] in "add_lifecycle_emissions_calcs" in reopt_model.jl)
+    if npv_without_modeled_climate_costs >= 0 # if the system is cost effective (NPV >= 0) without considering any cost of CO2, no breakeven value is reported 
+        opt["Site"]["breakeven_cost_of_emissions_reduction_us_dollars_per_tCO2"] = nothing
+    else
+        breakeven_cost_denominator = p.pwf_emissions_cost["CO2_grid"] * (
+            bau["ElectricUtility"]["year_one_emissions_tCO2"] - opt["ElectricUtility"]["year_one_emissions_tCO2"]
+        ) + p.pwf_emissions_cost["CO2_onsite"] * (
+            bau["Site"]["year_one_emissions_from_fuelburn_tCO2"] - opt["Site"]["year_one_emissions_from_fuelburn_tCO2"] 
+        )
+        if breakeven_cost_denominator != 0.0
+            opt["Site"]["breakeven_cost_of_emissions_reduction_us_dollars_per_tCO2"] = -1 * npv_without_modeled_climate_costs / breakeven_cost_denominator
+        else
+            opt["Site"]["breakeven_cost_of_emissions_reduction_us_dollars_per_tCO2"] = nothing
+        end
+    end
+        
     return opt
 end
