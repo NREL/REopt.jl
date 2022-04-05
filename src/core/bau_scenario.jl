@@ -74,6 +74,8 @@ function bau_site(site::Site)
         roof_squarefeet=site.roof_squarefeet,
         min_resil_timesteps=0,
         mg_tech_sizes_equal_grid_sizes=site.mg_tech_sizes_equal_grid_sizes,
+        include_exported_elec_emissions_in_total=site.include_exported_elec_emissions_in_total,
+        include_exported_renewable_electricity_in_total=site.include_exported_renewable_electricity_in_total,
         node=site.node,
     )
 end
