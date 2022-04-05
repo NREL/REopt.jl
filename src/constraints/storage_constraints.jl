@@ -202,7 +202,7 @@ function add_cold_thermal_storage_dispatch_constraints(m, p, b; _n="")
 
     #Constraint (4n)-2: Dispatch to and from thermal storage is no greater than power capacity
     @constraint(m, [b in p.s.storage.types.cold, ts in p.time_steps],
-        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("vDischargeFromStorage"*_n)][b,ts] + 
+        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b,ts] + 
         sum(m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.cooling)
     )
 end
