@@ -31,11 +31,15 @@
     Degradation
 
 Inputs used when `ElectricStorage.model_degradation` is `true`:
-- `calendar_fade_coefficient::Float64 = 2.46E-03`
-- `cycle_fade_coefficient::Float64 = 7.82E-05`
-- `installed_cost_per_kwh_declination_rate::loat64 = 0.05`
-- `maintenance_strategy::String = "augmentation"  # one of ["augmentation", "replacement"]`
-- `maintenance_cost_per_kwh::Vector{<:Real} = Real[]`
+```julia
+Base.@kwdef mutable struct Degradation
+    calendar_fade_coefficient::Float64 = 2.46E-03
+    cycle_fade_coefficient::Float64 = 7.82E-05
+    installed_cost_per_kwh_declination_rate::Float64 = 0.05
+    maintenance_strategy::String = "augmentation"  # one of ["augmentation", "replacement"]
+    maintenance_cost_per_kwh::Vector{<:Real} = Real[]
+end
+```
 
 None of the above values are required. If `ElectricStorage.model_degradation` is `true` then the 
 defaults above are used.
@@ -100,8 +104,8 @@ where
 The ``C_{\\text{aug}}`` is added to the objective function to be minimized with all other costs.
 
 # Replacement Maintenance Strategy
-Modeling the replacment maintenance strategy is more complex than the augmentation strategy.
-Effectively the replacment strategy says that the battery has to be replaced once the `SOH` hits 80%
+Modeling the replacement maintenance strategy is more complex than the augmentation strategy.
+Effectively the replacement strategy says that the battery has to be replaced once the `SOH` hits 80%
 of the optimal, purchased capacity. It is possible that multiple replacements could be required under
 this strategy.
 
@@ -123,20 +127,26 @@ where:
 The ``C_{\\text{repl}}`` is added to the objective function to be minimized with all other costs.
 
 # Example of inputs
+The following shows how one would use the degradation model in REopt via the [Scenario](@ref) inputs:
 ```javascript
 {
     ...
     "ElectricStorage": {
+        "installed_cost_per_kwh": 390,
         ...
         "model_degradation": true,
         "degradation": {
-            "maintenance_strategy": "replacment",
+            "calendar_fade_coefficient": 2.86E-03,
+            "cycle_fade_coefficient": 6.22E-05,
+            "installed_cost_per_kwh_declination_rate": 0.06,
+            "maintenance_strategy": "replacement",
             ...
         }
     },
     ...
 }
 ```
+Note that not all of the above inputs are necessary. When not providing `calendar_fade_coefficient` for example the default value will be used.
 """
 Base.@kwdef mutable struct Degradation
     calendar_fade_coefficient::Float64 = 2.46E-03
@@ -293,7 +303,7 @@ struct ElectricStorage <: AbstractElectricStorage
         if s.model_degradation
             if haskey(d, :replace_cost_per_kw) && d[:replace_cost_per_kw] != 0.0 || 
                 haskey(d, :replace_cost_per_kwh) && d[:replace_cost_per_kwh] != 0.0
-                @warn "Setting ElectricStorage replacment costs to zero. \nUsing degradation.maintenance_cost_per_kwh instead."
+                @warn "Setting ElectricStorage replacement costs to zero. \nUsing degradation.maintenance_cost_per_kwh instead."
             end
             replace_cost_per_kw = 0.0
             replace_cost_per_kwh = 0.0
