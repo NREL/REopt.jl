@@ -264,6 +264,8 @@ function setup_tech_inputs(s::AbstractScenario)
 
     if "ExistingChiller" in techs.all
         setup_existing_chiller_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cop)
+    else
+        cop["ExistingChiller"] = 1.0
     end
 
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
