@@ -58,3 +58,5 @@ Base.@kwdef struct ElectricUtility
     net_metering_limit_kw::Real = 0
     interconnection_limit_kw::Real = 1.0e9
 end
+
+# TODO @warn when outage_start/end_timesteps not empty and outage_start/end_timestep is provided
