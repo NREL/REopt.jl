@@ -609,7 +609,7 @@ end
     r = run_reopt(model, p)
 
     #dispatch to load should be 10kW every other period = 4,380 * 10
-    hot_tes_total_test = 43800.0 / MMBTU_TO_KWH_THERMAL
+    hot_tes_total_test = 43800.0 / MMBTU_TO_KWH
     cold_tes_total_test = 43800.0 / TONHOUR_TO_KWH_THERMAL
     @test sum(r["HotThermalStorage"]["year_one_to_load_series_mmbtu_per_hr"]) ≈ hot_tes_total_test atol=0.1
     @test sum(r["ColdThermalStorage"]["year_one_to_load_series_ton"]) ≈ cold_tes_total_test atol=0.1
