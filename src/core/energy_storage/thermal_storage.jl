@@ -150,18 +150,18 @@ struct ThermalStorage <: AbstractThermalStorage
     function ThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
          
         delta_T_degF = s.hot_water_temp_degF - s.cool_water_temp_degF
-        avg_cp_kj_per_kgK = 998.2 
-        avg_rho_kg_per_m3 = 4.184 #TODO: add CoolProp reference or perform analogous calculations for water and build lookup tables
+        avg_rho_kg_per_m3 = 998.2 
+        avg_cp_kj_per_kgK = 4.184 #TODO: add CoolProp reference or perform analogous calculations for water and build lookup tables
         kwh_per_gal = convert_gal_to_kwh(delta_T_degF, avg_rho_kg_per_m3, avg_cp_kj_per_kgK)
         min_kwh = s.min_gal * kwh_per_gal
         max_kwh = s.max_gal * kwh_per_gal
         min_kw = min_kwh * time_steps_per_hour
         max_kw = max_kwh * time_steps_per_hour
-        om_cost_per_kwh = s.om_cost_per_gal * kwh_per_gal
+        om_cost_per_kwh = s.om_cost_per_gal / kwh_per_gal
     
         charge_efficiency = s.internal_efficiency_pct^0.5
         discharge_efficiency = s.internal_efficiency_pct^0.5
-        installed_cost_per_kwh = s.installed_cost_per_gal * kwh_per_gal
+        installed_cost_per_kwh = s.installed_cost_per_gal / kwh_per_gal
       
         net_present_cost_per_kwh = effective_cost(;
             itc_basis = installed_cost_per_kwh,
