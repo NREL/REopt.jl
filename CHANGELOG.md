@@ -2,6 +2,7 @@
 
 ## develop
 - update default values from v2 of API
+- complete thermal energy storage modeling
 
 
 ## v0.13.0
