@@ -53,7 +53,7 @@ function add_hot_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict,
         r["year_one_soc_series_pct"] = round.(value.(soc) ./ size_kwh, digits=3)
 
         discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
-        r["year_one_to_load_series_mmbtu_per_hr"] = round.(value.(discharge) / MMBTU_TO_KWH, digits=3)
+        r["year_one_to_load_series_mmbtu_per_hr"] = round.(value.(discharge) / MMBTU_TO_KWH, digits=7)
     else
         r["year_one_soc_series_pct"] = []
         r["year_one_to_load_series_mmbtu_per_hr"] = []
@@ -89,7 +89,7 @@ function add_cold_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict
         r["year_one_soc_series_pct"] = round.(value.(soc) ./ size_kwh, digits=3)
 
         discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
-        r["year_one_to_load_series_ton"] = round.(value.(discharge) / TONHOUR_TO_KWH_THERMAL, digits=3)
+        r["year_one_to_load_series_ton"] = round.(value.(discharge) / TONHOUR_TO_KWH_THERMAL, digits=7)
     else
         r["year_one_soc_series_pct"] = []
         r["year_one_to_load_series_ton"] = []
