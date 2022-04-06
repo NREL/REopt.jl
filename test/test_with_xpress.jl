@@ -615,7 +615,7 @@ end
     @test sum(r["ColdThermalStorage"]["year_one_to_load_series_ton"]) ≈ cold_tes_total_test atol=0.1
     #size should be just over 10kW in gallons, accounting for efficiency losses and min SOC
     @test r["HotThermalStorage"]["size_gal"] ≈ 227.89 atol=0.1
-    @test r["ColdThermalStorage"]["size_gal"] ≈ 1522.69 atol=0.1
+    @test r["ColdThermalStorage"]["size_gal"] ≈ 379.82 atol=0.1
 end
 
 @testset "Heat and cool energy balance" begin
