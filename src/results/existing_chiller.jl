@@ -47,13 +47,13 @@ function add_existing_chiller_results(m::JuMP.AbstractModel, p::REoptInputs, d::
 	r["existing_chiller_consumption_series"] = round.(value.(ELECCHLElecConsumptionSeries).data, digits=3)
 
 	@expression(m, Year1ELECCHLElecConsumption,
-		p.hours_per_timestep * sum(m[:dvThermalProduction]["ExistingChiller", ts] / p.cop["ExistingChiller"]
+		p.hours_per_time_step * sum(m[:dvThermalProduction]["ExistingChiller", ts] / p.cop["ExistingChiller"]
 			for ts in p.time_steps)
     )
 	r["year_one_existing_chiller_electric_kwh"] = round(value(Year1ELECCHLElecConsumption), digits=3)
 
 	@expression(m, Year1ELECCHLThermalProd,
-		p.hours_per_timestep * sum(m[:dvThermalProduction]["ExistingChiller", ts]
+		p.hours_per_time_step * sum(m[:dvThermalProduction]["ExistingChiller", ts]
 			for ts in p.time_steps)
     )
 	r["year_one_existing_chiller_thermal_kwh"] = round(value(Year1ELECCHLThermalProd), digits=3)

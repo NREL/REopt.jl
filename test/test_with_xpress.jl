@@ -309,7 +309,7 @@ end
     
     # Specify the CHP.min_turn_down_pct which is NOT used during an outage
     data["CHP"]["min_turn_down_pct"] = 0.5
-    # Specify outage period; outage timesteps are 1-indexed
+    # Specify outage period; outage time_steps are 1-indexed
     outage_start = unavail_1_start
     data["ElectricUtility"]["outage_start_time_step"] = outage_start
     outage_end = unavail_1_end
@@ -440,7 +440,7 @@ end
     @test results["Financial"]["lcc"] ≈ 7.3879557e7 atol=5e4
     
     #=
-    Scenario with $0/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_timesteps = 168
+    Scenario with $0/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
     - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
     =#
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
@@ -814,7 +814,7 @@ end
     cooling_elec_hybrid = cooling_hybrid / inputs.s.cooling_load.existing_chiller_cop  # electric
     cooling_elec_frac_of_total_hybrid = cooling_hybrid / inputs.s.cooling_load.existing_chiller_cop ./ elec_hybrid
 
-    # Check that the combined/hybrid load is the same as the sum of the individual loads in each timestep
+    # Check that the combined/hybrid load is the same as the sum of the individual loads in each time_step
 
     @test round(sum(elec_hybrid .- (elec_hospital .+ elec_hotel)), digits=1) ≈ 0.0 atol=0.1
     @test round(sum(space_hybrid .- (space_hospital .+ space_hotel)), digits=1) ≈ 0.0 atol=0.1

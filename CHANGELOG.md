@@ -40,7 +40,7 @@
 - add ElectricLoad.blended_doe_reference_names & blended_doe_reference_percents
 - add ElectricLoad.monthly_totals_kwh builtin profile scaling
 - add ElectricTariff inputs: `add_monthly_rates_to_urdb_rate`, `tou_energy_rates_per_kwh`, 
-    `add_tou_energy_rates_to_urdb_rate`, `coincident_peak_load_charge_per_kw`, `coincident_peak_load_active_timesteps`
+    `add_tou_energy_rates_to_urdb_rate`, `coincident_peak_load_charge_per_kw`, `coincident_peak_load_active_time_steps`
 - handle multiple PV outputs
 
 ## v0.10.0
@@ -52,7 +52,7 @@
 - add option to run Business As Usual scenario in parallel with optimal scenario (default is `true`)
 - add incentives (and cost curves) to `Wind` and `Generator`
 - fixed bug in URDB fixed charges
-- renamed `outage_start(end)_timestep` to `outage_start(end)_time_step`
+- renamed `outage_start(end)_time_step` to `outage_start(end)_time_step`
 
 ## v0.9.0
 - `ElectricTariff.NEM` boolean is now determined by `ElectricUtility.net_metering_limit_kw` (true if limit > 0)
@@ -157,7 +157,7 @@
 #### bug fixes
 - allow non-integer `outage_probabilities`
 - correct `total_unserved_load` output
-- don't `add_min_hours_crit_ld_met_constraint` unless `min_resil_timesteps <= length(elecutil.outage_timesteps)`
+- don't `add_min_hours_crit_ld_met_constraint` unless `min_resil_time_steps <= length(elecutil.outage_time_steps)`
 
 ## v0.2.0
 #### Improvements
@@ -166,7 +166,7 @@
     - previously only had to pay to upgrade new capacity
 - implement ElectricLoad `loads_kw_is_net` and `critical_loads_kw_is_net`
     - add existing PV production to raw load profile if `true`
-- add `min_resil_timesteps` input and optional constraint for minimum timesteps that critical load must be met in every outage
+- add `min_resil_time_steps` input and optional constraint for minimum time_steps that critical load must be met in every outage
 #### bug fixes
 - enforce storage cannot grid charge
 

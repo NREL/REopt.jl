@@ -55,11 +55,11 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	@expression(m, CHPFuelUsedKWH, sum(m[Symbol("dvFuelUsage"*_n)][t, ts] for t in p.techs.chp, ts in p.time_steps))
 	r["year_one_fuel_used_mmbtu"] = round(value(CHPFuelUsedKWH) / MMBTU_TO_KWH, digits=3)
 	@expression(m, Year1CHPElecProd,
-		p.hours_per_timestep * sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts]
+		p.hours_per_time_step * sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts]
 			for t in p.techs.chp, ts in p.time_steps))
 	r["year_one_electric_energy_produced_kwh"] = round(value(Year1CHPElecProd), digits=3)
 	@expression(m, Year1CHPThermalProdKWH,
-		p.hours_per_timestep * sum(m[Symbol("dvThermalProduction"*_n)][t,ts] + 
+		p.hours_per_time_step * sum(m[Symbol("dvThermalProduction"*_n)][t,ts] + 
         m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] - 
         m[Symbol("dvProductionToWaste"*_n)][t,ts] 
             for t in p.techs.chp, ts in p.time_steps))
@@ -93,7 +93,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     #     @expression(m, CHPToSteamTurbine[ts in p.time_steps], sum(m[Symbol("dvThermalToSteamTurbine"*_n)][t,ts] for t in p.techs.chp))
     #     r["year_one_thermal_to_steamturbine_series_mmbtu_per_hour"] = round.(value.(CHPToSteamTurbine), digits=3)
     # else
-    #     CHPToSteamTurbine = zeros(p.TimeStepCount)
+    #     CHPToSteamTurbine = zeros(p.time_stepCount)
     #     r["year_one_thermal_to_steamturbine_series_mmbtu_per_hour"] = round.(CHPToSteamTurbine, digits=3)
     # end
 	@expression(m, CHPThermalToWasteKWH[ts in p.time_steps],

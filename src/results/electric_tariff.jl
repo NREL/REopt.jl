@@ -50,7 +50,7 @@ ElectricTariff results:
 """
 function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
-    m[Symbol("Year1UtilityEnergy"*_n)] = p.hours_per_timestep * 
+    m[Symbol("Year1UtilityEnergy"*_n)] = p.hours_per_time_step * 
         sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers)
 
     r["lifecycle_energy_cost"] = round(value(m[Symbol("TotalEnergyChargesUtil"*_n)]) * (1 - p.s.financial.offtaker_tax_pct), digits=2)
@@ -81,7 +81,7 @@ end
 
 function add_electric_tariff_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     r = Dict{String, Any}()
-    m[Symbol("energy_purchased"*_n)] = p.hours_per_timestep * 
+    m[Symbol("energy_purchased"*_n)] = p.hours_per_time_step * 
         sum(m[Symbol("dvGridPurchase"*_n)][ts] for ts in p.time_steps)
 
     r["energy_cost"] = round(value(m[Symbol("TotalEnergyChargesUtil"*_n)]), digits=2)

@@ -43,7 +43,7 @@ struct REoptInputs <: AbstractInputs
     time_steps::UnitRange
     time_steps_with_grid::Array{Int, 1}
     time_steps_without_grid::Array{Int, 1}
-    hours_per_timestep::Float64
+    hours_per_time_step::Float64
     months::UnitRange
     production_factor::DenseAxisArray{Float64, 2}  # (techs, time_steps)
     levelization_factor::Dict{String, Float64}  # (techs)
@@ -84,7 +84,7 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     time_steps::UnitRange
     time_steps_with_grid::Array{Int, 1}
     time_steps_without_grid::Array{Int, 1}
-    hours_per_timestep::Float64
+    hours_per_time_step::Float64
     months::UnitRange
     production_factor::DenseAxisArray{Float64, 2}  # (techs, time_steps)
     levelization_factor::Dict{String, Float64}  # (techs)
@@ -140,7 +140,7 @@ Constructor for REoptInputs. Translates the `Scenario` into all the data necessa
 function REoptInputs(s::AbstractScenario)
 
     time_steps = 1:length(s.electric_load.loads_kw)
-    hours_per_timestep = 1 / s.settings.time_steps_per_hour
+    hours_per_time_step = 1 / s.settings.time_steps_per_hour
     techs, pv_to_location, maxsize_pv_locations, pvlocations, 
         production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
         seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
@@ -176,7 +176,7 @@ function REoptInputs(s::AbstractScenario)
         time_steps,
         time_steps_with_grid,
         time_steps_without_grid,
-        hours_per_timestep,
+        hours_per_time_step,
         months,
         production_factor,
         levelization_factor,
@@ -190,7 +190,7 @@ function REoptInputs(s::AbstractScenario)
         pvlocations,
         maxsize_pv_locations,
         pv_to_location,
-        1:length(s.electric_tariff.tou_demand_ratchet_timesteps),  # ratchets
+        1:length(s.electric_tariff.tou_demand_ratchet_time_steps),  # ratchets
         techs_by_exportbin,
         export_bins_by_tech,
         n_segs_by_tech,
