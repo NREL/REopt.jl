@@ -585,7 +585,7 @@ end
     #Make every other hour zero fuel and electric cost; storage should charge and discharge in each period
     for ts in p.time_steps
         #heating and cooling loads only
-        if ts % 2 == 0  #in even periods, there is a nonzero load and cost, and storage should discharge
+        if ts % 2 == 0  #in even periods, there is a nonzero load and energy is higher cost, and storage should discharge
             p.s.electric_load.loads_kw[ts] = 10
             p.s.dhw_load.loads_kw[ts] = 5
             p.s.space_heating_load.loads_kw[ts] = 5
@@ -594,14 +594,14 @@ end
             for tier in 1:p.s.electric_tariff.n_energy_tiers
                 p.s.electric_tariff.energy_rates[ts, tier] = 10
             end
-        else #in odd periods, there is no load and energy is free - storage should charge 
+        else #in odd periods, there is no load and energy is cheaper - storage should charge 
             p.s.electric_load.loads_kw[ts] = 0
             p.s.dhw_load.loads_kw[ts] = 0
             p.s.space_heating_load.loads_kw[ts] = 0
             p.s.cooling_load.loads_kw_thermal[ts] = 0
-            p.s.existing_boiler.fuel_cost_series[ts] = 0
+            p.s.existing_boiler.fuel_cost_series[ts] = 1
             for tier in 1:p.s.electric_tariff.n_energy_tiers
-                p.s.electric_tariff.energy_rates[ts, tier] = 0
+                p.s.electric_tariff.energy_rates[ts, tier] = 1
             end
         end
     end
