@@ -585,16 +585,20 @@ end
     #Make every other hour zero fuel and electric cost; storage should charge and discharge in each period
     for ts in p.time_steps
         #heating and cooling loads only
-        p.s.electric_load.loads_kw[ts] = 0
-        p.s.dhw_load.loads_kw[ts] = 5
-        p.s.space_heating_load.loads_kw[ts] = 5
-        #p.s.cooling_load.loads_kw[ts] = 10
-        if ts % 2 == 0
+        if ts % 2 == 0  #in even periods, there is a nonzero load and cost, and storage should discharge
+            p.s.electric_load.loads_kw[ts] = 10
+            p.s.dhw_load.loads_kw[ts] = 5
+            p.s.space_heating_load.loads_kw[ts] = 5
+            p.s.cooling_load.loads_kw_thermal[ts] = 10
             p.s.existing_boiler.fuel_cost_series[ts] = 10
             for tier in 1:p.s.electric_tariff.n_energy_tiers
                 p.s.electric_tariff.energy_rates[ts, tier] = 10
             end
-        else
+        else #in odd periods, there is no load and energy is free - storage should charge 
+            p.s.electric_load.loads_kw[ts] = 0
+            p.s.dhw_load.loads_kw[ts] = 0
+            p.s.space_heating_load.loads_kw[ts] = 0
+            p.s.cooling_load.loads_kw_thermal[ts] = 0
             p.s.existing_boiler.fuel_cost_series[ts] = 0
             for tier in 1:p.s.electric_tariff.n_energy_tiers
                 p.s.electric_tariff.energy_rates[ts, tier] = 0
@@ -605,9 +609,13 @@ end
     r = run_reopt(model, p)
 
     #dispatch to load should be 10kW every other period = 4,380 * 10
-    @test sum(r["HotThermalStorage"]["year_one_to_load_series_kw"]) ≈ 43800.0 atol=0.1
-    #size should be 10kW in gallons
+    hot_tes_total_test = 43800.0 / MMBTU_TO_KWH_THERMAL
+    cold_tes_total_test = 43800.0 / TONHOUR_TO_KWH_THERMAL
+    @test sum(r["HotThermalStorage"]["year_one_to_load_series_mmbtu_per_hr"]) ≈ hot_tes_total_test atol=0.1
+    @test sum(r["ColdThermalStorage"]["year_one_to_load_series_ton"]) ≈ cold_tes_total_test atol=0.1
+    #size should be just over 10kW in gallons, accounting for efficiency losses and min SOC
     @test r["HotThermalStorage"]["size_gal"] ≈ 227.89 atol=0.1
+    @test r["ColdThermalStorage"]["size_gal"] ≈ 1522.69 atol=0.1
 
 @testset "Heat and cool energy balance" begin
     """
