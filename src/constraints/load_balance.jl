@@ -64,24 +64,28 @@ function add_elec_load_balance_constraints(m, p; _n="")
 	end
 	
 	##Constraint (8b): Electrical Load Balancing without Grid
-	@constraint(m, [ts in p.time_steps_without_grid],
-		sum(p.production_factor[t,ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.elec) +  
-		sum( m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.elec )  ==
-        sum( sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) + 
-        m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.elec) +
-        (p.s.electric_load.critical_loads_kw[ts] * m[Symbol("dvOffgridLoadServedFraction"*_n)][ts] )
-	)
-
-    ##Constraint : For off-grid scenarios, annual load served must be >= minimum percent specified  
-    if !p.s.settings.off_grid_flag # fix dvOffgridLoadServedFraction to 100% for "on-grid" analyses
-		for ts in p.time_steps_without_grid
-			fix(m[Symbol("dvOffgridLoadServedFraction"*_n)][ts], 1.0, force=true) ## TODO: Check if this messes with the dvUnservedLoad outage constraints
-		end
-	else
-		@constraint(m, sum(m[Symbol("dvOffgridLoadServedFraction"*_n)][ts] * p.s.electric_load.critical_loads_kw[ts] for ts in p.time_steps_without_grid) >=
+	if !p.s.settings.off_grid_flag # load balancing constraint for grid-connected runs
+        @constraint(m, [ts in p.time_steps_without_grid],
+            sum(p.production_factor[t,ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.elec) +  
+            sum( m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.elec )  ==
+            sum( sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) + 
+            m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.elec) +
+            (p.s.electric_load.critical_loads_kw[ts] )
+        )
+    else # load balancing constraint for off-grid runs 
+        @constraint(m, [ts in p.time_steps_without_grid],
+            sum(p.production_factor[t,ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.elec) +  
+            sum( m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.elec )  ==
+            sum( sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) + 
+            m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.elec) +
+            (p.s.electric_load.critical_loads_kw[ts] * m[Symbol("dvOffgridLoadServedFraction"*_n)][ts] )
+        )
+        ##Constraint : For off-grid scenarios, annual load served must be >= minimum percent specified
+        @constraint(m, sum(m[Symbol("dvOffgridLoadServedFraction"*_n)][ts] * p.s.electric_load.critical_loads_kw[ts] for ts in p.time_steps_without_grid) >=
 			sum(p.s.electric_load.critical_loads_kw) * p.s.electric_load.min_load_met_annual_pct 
 		)
-	end
+    end
+
 end
 
 
