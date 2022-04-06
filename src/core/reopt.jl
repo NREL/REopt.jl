@@ -113,7 +113,7 @@ Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) m
 function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractModel
     s = Scenario(d)
     if s.settings.off_grid_flag
-        @warn "Only using first Model and not running BAU case because Settings.off_grid_flag == true. The BAU scenario is not relevant for off-grid microgrids."
+        @warn "Only using first Model and not running BAU case because Settings.off_grid_flag == true. The BAU scenario is not applicable in off-grid microgrids."
 	    results = run_reopt(ms[1], s)
         return results
     end
@@ -455,7 +455,6 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvPeakDemandTOU[p.ratchets, 1:p.s.electric_tariff.n_tou_demand_tiers] >= 0  # Peak electrical power demand during ratchet r [kW]
 		dvPeakDemandMonth[p.months, 1:p.s.electric_tariff.n_monthly_demand_tiers] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0
-		1 >= dvOffgridLoadServedFraction[p.time_steps_without_grid] >= 0 # Critical load served in each timestep. Applied in off-grid scenarios only. [fraction]
 	end
 
 	if !isempty(p.techs.gen)  # Problem becomes a MILP
@@ -522,6 +521,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		@variables m begin
 			dvOpResFromBatt[p.s.storage.types.elec, p.time_steps_without_grid] >= 0 # Operating reserves provided by the electric storage [kW]
 			dvOpResFromTechs[p.techs.techs_providing_oper_res, p.time_steps_without_grid] >= 0 # Operating reserves provided by techs [kW]
+			1 >= dvOffgridLoadServedFraction[p.time_steps_without_grid] >= 0 # Critical load served in each timestep. Applied in off-grid scenarios only. [fraction]
 		end
 	end
 end
