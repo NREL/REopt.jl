@@ -183,7 +183,7 @@ function dictkeys_tosymbols(d::Dict)
             end
         end
         if k in [
-            "coincident_peak_load_active_timesteps"
+            "coincident_peak_load_active_time_steps"
         ]
             try
                 v = convert(Vector{Vector{Int64}}, v)
@@ -257,13 +257,13 @@ end
 """
     generate_year_profile_hourly(year::Int64, consecutive_periods::AbstractVector{Dict})
 
-This function creates a year-specific hourly (8760) profile with 1.0 value for timesteps which are defined in `consecutive_periods` based on
+This function creates a year-specific hourly (8760) profile with 1.0 value for time_steps which are defined in `consecutive_periods` based on
     relative (non-year specific) datetime metrics. All other values are 0.0. This functions uses the `Dates` package.
 
 - `year` applies the relative calendar-based `consecutive_periods` to the year's calendar and handles leap years by truncating the last day
 - `consecutive_periods` is a list of dictionaries where each dict defines a consecutive period of time which gets a value of 1.0
 -- keys for each dict must include "month", "start_week_of_month", "start_day_of_week", "start_hour", "duration_hours
-- Returns the `year_profile_hourly` which is an 8760 profile with 1.0 for timesteps defined in consecutive_periods, and 0.0 for all other hours.
+- Returns the `year_profile_hourly` which is an 8760 profile with 1.0 for time_steps defined in consecutive_periods, and 0.0 for all other hours.
 """
 function generate_year_profile_hourly(year::Int64, consecutive_periods::AbstractVector{Dict})
     # Create datetime series of the year, remove last day of the year if leap year

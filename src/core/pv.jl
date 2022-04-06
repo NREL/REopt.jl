@@ -167,7 +167,7 @@ struct PV <: AbstractTech
         can_wholesale::Bool = off_grid_flag ? false : true,
         can_export_beyond_nem_limit::Bool = off_grid_flag ? false : true,
         can_curtail::Bool = true,
-        operating_reserve_required_pct::Real = off_grid_flag ? 0.25 : 0.0, # if off grid, 25%, else 0%. Applied to each timestep as a % of PV generation.
+        operating_reserve_required_pct::Real = off_grid_flag ? 0.25 : 0.0, # if off grid, 25%, else 0%. Applied to each time_step as a % of PV generation.
         )
 
         if !(off_grid_flag) && !(operating_reserve_required_pct == 0.0)

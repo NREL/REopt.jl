@@ -136,7 +136,7 @@ function BAUInputs(p::REoptInputs)
         p.time_steps,
         p.time_steps_with_grid,
         p.time_steps_without_grid,
-        p.hours_per_timestep,
+        p.hours_per_time_step,
         p.months,
         production_factor,
         levelization_factor,

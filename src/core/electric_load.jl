@@ -119,7 +119,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         longitude::Real,
         time_steps_per_hour::Int = 1,
         operating_reserve_required_pct::Real = off_grid_flag ? 0.1 : 0.0, # if off grid, 10%, else 0%
-        min_load_met_annual_pct::Real = off_grid_flag ? 0.99999 : 1.0 # if off grid, 99.999%, else 100%. Applied to each timestep as a % of electric load.
+        min_load_met_annual_pct::Real = off_grid_flag ? 0.99999 : 1.0 # if off grid, 99.999%, else 100%. Applied to each time_step as a % of electric load.
         )
         
         if off_grid_flag  && !(critical_load_pct == 1.0)

@@ -30,7 +30,7 @@
 
 
 function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diesel_min_turndown, batt_kwh, batt_kw,
-                    batt_roundtrip_efficiency, n_timesteps, n_steps_per_hour, batt_soc_kwh, crit_load)
+                    batt_roundtrip_efficiency, n_time_steps, n_steps_per_hour, batt_soc_kwh, crit_load)
     """
     Determine how long the critical load can be met with gas generator and energy storage.
     :param init_time_step: Int, initial time step
@@ -43,13 +43,13 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
     :param batt_kw: float, battery inverter capacity (AC rating)
     :param batt_roundtrip_efficiency:
     :param batt_soc_kwh: float, battery state of charge in kWh
-    :param n_timesteps: Int, number of time steps in a year
+    :param n_time_steps: Int, number of time steps in a year
     :param n_steps_per_hour: Int, number of time steps per hour
     :param crit_load: list of float, load after DER (PV, Wind, ...)
     :return: float, number of hours that the critical load can be met using load following
     """
-    for i in 0:n_timesteps-1
-        t = (init_time_step - 1 + i) % n_timesteps + 1  # for wrapping around end of year
+    for i in 0:n_time_steps-1
+        t = (init_time_step - 1 + i) % n_time_steps + 1  # for wrapping around end of year
         load_kw = crit_load[t]
 
         if load_kw < 0  # load is met
@@ -106,7 +106,7 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
         end
     end
 
-    return n_timesteps / n_steps_per_hour  # met the critical load for all time steps
+    return n_time_steps / n_steps_per_hour  # met the critical load for all time steps
 end
 
 
@@ -135,10 +135,10 @@ critical load can be met in every outage, which in turn is used to determine pro
 
 Returns a dict
 ```
-    "resilience_by_timestep": vector of time steps that critical load is met for outage starting in every time step,
-    "resilience_hours_min": minimum of "resilience_by_timestep",
-    "resilience_hours_max": maximum of "resilience_by_timestep",
-    "resilience_hours_avg": average of "resilience_by_timestep",
+    "resilience_by_time_step": vector of time steps that critical load is met for outage starting in every time step,
+    "resilience_hours_min": minimum of "resilience_by_time_step",
+    "resilience_hours_max": maximum of "resilience_by_time_step",
+    "resilience_hours_avg": average of "resilience_by_time_step",
     "outage_durations": vector of integers for outage durations with non zero probability of survival,
     "probs_of_surviving": vector of probabilities corresponding to the "outage_durations",
     "probs_of_surviving_by_month": vector of probabilities calculated on a monthly basis,
@@ -149,17 +149,17 @@ Returns a dict
 function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[], critical_loads_kw=[], wind_kw_ac_hourly=[],
                      batt_roundtrip_efficiency=0.829, diesel_kw=0, fuel_available=0, b=0, m=0, diesel_min_turndown=0.3,
                      )
-    n_timesteps = length(critical_loads_kw)
-    n_steps_per_hour = Int(n_timesteps / 8760)
-    r = repeat([0], n_timesteps)
+    n_time_steps = length(critical_loads_kw)
+    n_steps_per_hour = Int(n_time_steps / 8760)
+    r = repeat([0], n_time_steps)
 
     if batt_kw == 0 || batt_kwh == 0
-        init_soc = repeat([0], n_timesteps)  # default is 0
+        init_soc = repeat([0], n_time_steps)  # default is 0
 
         if (isempty(pv_kw_ac_hourly) || (sum(pv_kw_ac_hourly) == 0)) && diesel_kw == 0
             # no pv, generator, nor battery --> no resilience
             return Dict(
-                "resilience_by_timestep" => r,
+                "resilience_by_time_step" => r,
                 "resilience_hours_min" => 0,
                 "resilience_hours_max" => 0,
                 "resilience_hours_avg" => 0,
@@ -170,10 +170,10 @@ function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[
     end
 
     if isempty(pv_kw_ac_hourly)
-        pv_kw_ac_hourly = repeat([0], n_timesteps)
+        pv_kw_ac_hourly = repeat([0], n_time_steps)
     end
     if isempty(wind_kw_ac_hourly)
-        wind_kw_ac_hourly = repeat([0], n_timesteps)
+        wind_kw_ac_hourly = repeat([0], n_time_steps)
     end
     load_minus_der = [ld - pv - wd for (pv, wd, ld) in zip(pv_kw_ac_hourly, wind_kw_ac_hourly, critical_loads_kw)]
     """
@@ -181,7 +181,7 @@ function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[
     """
     # outer loop: do simulation starting at each time step
     
-    for time_step in 1:n_timesteps
+    for time_step in 1:n_time_steps
         r[time_step] = simulate_outage(;
             init_time_step = time_step,
             diesel_kw = diesel_kw,
@@ -191,18 +191,18 @@ function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[
             batt_kwh = batt_kwh,
             batt_kw = batt_kw,
             batt_roundtrip_efficiency = batt_roundtrip_efficiency,
-            n_timesteps = n_timesteps,
+            n_time_steps = n_time_steps,
             n_steps_per_hour = n_steps_per_hour,
             batt_soc_kwh = init_soc[time_step] * batt_kwh,
             crit_load = load_minus_der
         )
     end
-    results = process_results(r, n_timesteps)
+    results = process_results(r, n_time_steps)
     return results
 end
 
 
-function process_results(r, n_timesteps)
+function process_results(r, n_time_steps)
 
     r_min = minimum(r)
     r_max = maximum(r)
@@ -212,11 +212,11 @@ function process_results(r, n_timesteps)
     y_vals = Array{Float64, 1}()
 
     for hrs in x_vals
-        push!(y_vals, round(sum([h >= hrs ? 1 : 0 for h in r]) / n_timesteps, 
+        push!(y_vals, round(sum([h >= hrs ? 1 : 0 for h in r]) / n_time_steps, 
                             digits=4))
     end
     return Dict(
-        "resilience_by_timestep" => r,
+        "resilience_by_time_step" => r,
         "resilience_hours_min" => r_min,
         "resilience_hours_max" => r_max,
         "resilience_hours_avg" => r_avg,
@@ -240,10 +240,10 @@ critical load can be met in every outage, which in turn is used to determine pro
 Returns a dict
 ```julia
 {
-    "resilience_by_timestep": vector of time steps that critical load is met for outage starting in every time step,
-    "resilience_hours_min": minimum of "resilience_by_timestep",
-    "resilience_hours_max": maximum of "resilience_by_timestep",
-    "resilience_hours_avg": average of "resilience_by_timestep",
+    "resilience_by_time_step": vector of time steps that critical load is met for outage starting in every time step,
+    "resilience_hours_min": minimum of "resilience_by_time_step",
+    "resilience_hours_max": maximum of "resilience_by_time_step",
+    "resilience_hours_avg": average of "resilience_by_time_step",
     "outage_durations": vector of integers for outage durations with non zero probability of survival,
     "probs_of_surviving": vector of probabilities corresponding to the "outage_durations",
     "probs_of_surviving_by_month": vector of probabilities calculated on a monthly basis,

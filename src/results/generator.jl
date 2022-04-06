@@ -53,7 +53,7 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 
 	GenPerUnitSizeOMCosts = @expression(m, p.third_party_factor * p.pwf_om * sum(m[:dvSize][t] * p.om_cost_per_kw[t] for t in p.techs.gen))
 
-	GenPerUnitProdOMCosts = @expression(m, p.third_party_factor * p.pwf_om * p.hours_per_timestep *
+	GenPerUnitProdOMCosts = @expression(m, p.third_party_factor * p.pwf_om * p.hours_per_time_step *
 		sum(m[:dvRatedProduction][t, ts] * p.production_factor[t, ts] * p.s.generator.om_cost_per_kwh
 			for t in p.techs.gen, ts in p.time_steps)
 	)
@@ -89,12 +89,12 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 	r["fuel_used_gal"] = round(value(GeneratorFuelUsed), digits=2)
 
 	Year1GenProd = @expression(m,
-		p.hours_per_timestep * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts]
+		p.hours_per_time_step * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts]
 			for t in p.techs.gen, ts in p.time_steps)
 	)
 	r["year_one_energy_produced_kwh"] = round(value(Year1GenProd), digits=0)
 	AverageGenProd = @expression(m,
-		p.hours_per_timestep * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts] *
+		p.hours_per_time_step * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts] *
 		p.levelization_factor[t]
 			for t in p.techs.gen, ts in p.time_steps)
 	)
@@ -135,7 +135,7 @@ function add_generator_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n=
 	r["fuel_used_gal"] = round(value(GeneratorFuelUsed), digits=2)
 
 	Year1GenProd = @expression(m,
-		p.hours_per_timestep * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts]
+		p.hours_per_time_step * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts]
 			for t in p.techs.gen, ts in p.time_steps)
 	)
 	r["energy_produced_kwh"] = round(value(Year1GenProd), digits=0)

@@ -77,7 +77,7 @@ end
     @test results["Financial"]["lcc"] ≈ 7.3879557e7 atol=5e4
     
     #=
-    Scenario with $0/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_timesteps = 168
+    Scenario with $0/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
     - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
     =#
     m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
@@ -125,7 +125,7 @@ end
         v0 = 1.00,
         v_uplim = 1.05,
         v_lolim = 0.95,
-        Ntimesteps = 8760
+        Ntime_steps = 8760
     );
     build_reopt!(m, ps)
     LinDistFlow.build_ldf!(m, ldf_inputs, ps)

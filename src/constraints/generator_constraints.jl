@@ -30,8 +30,8 @@
 function add_fuel_burn_constraints(m,p)
   	@constraint(m, [t in p.techs.gen, ts in p.time_steps],
 		m[:dvFuelUsage][t, ts] == p.s.generator.fuel_slope_gal_per_kwh *
-		p.production_factor[t, ts] * p.hours_per_timestep * m[:dvRatedProduction][t, ts] +
-		p.s.generator.fuel_intercept_gal_per_hr * p.hours_per_timestep * m[:binGenIsOnInTS][t, ts]
+		p.production_factor[t, ts] * p.hours_per_time_step * m[:dvRatedProduction][t, ts] +
+		p.s.generator.fuel_intercept_gal_per_hr * p.hours_per_time_step * m[:binGenIsOnInTS][t, ts]
 	)
 	@constraint(m,
 		sum(m[:dvFuelUsage][t, ts] for t in p.techs.gen, ts in p.time_steps) <=
@@ -95,7 +95,7 @@ function add_gen_constraints(m, p)
     add_gen_rated_prod_constraint(m,p)
 
     m[:TotalGenPerUnitProdOMCosts] = @expression(m, p.third_party_factor * p.pwf_om *
-        sum(p.s.generator.om_cost_per_kwh * p.hours_per_timestep *
+        sum(p.s.generator.om_cost_per_kwh * p.hours_per_time_step *
         m[:dvRatedProduction][t, ts] for t in p.techs.gen, ts in p.time_steps)
     )
     m[:TotalGenFuelCosts] = @expression(m, p.pwf_e *
