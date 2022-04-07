@@ -46,6 +46,8 @@ function Techs(p::REoptInputs, s::BAUScenario)
     cooling_techs = String[]
     boiler_techs = String[]
     chp_techs = String[]
+    electric_chillers = String[]
+    absorption_chillers = String[]
 
     if p.s.generator.existing_kw > 0
         push!(all_techs, "Generator")
@@ -61,9 +63,10 @@ function Techs(p::REoptInputs, s::BAUScenario)
 
     if !isnothing(s.existing_chiller)
         push!(all_techs, "ExistingChiller")
-        push!(cooling_techs, "ExistingChiller")
+        push!(electric_chillers, "ExistingChiller")
     end
 
+    cooling_techs = union(electric_chillers, absorption_chillers)
     fuel_burning_techs = union(gentechs, boiler_techs, chp_techs)
     thermal_techs = union(heating_techs, boiler_techs, cooling_techs)
 
@@ -81,7 +84,9 @@ function Techs(p::REoptInputs, s::BAUScenario)
         boiler_techs,
         fuel_burning_techs,
         thermal_techs,
-        chp_techs
+        chp_techs,
+        electric_chillers,
+        absorption_chillers
     )
 end
 
@@ -108,10 +113,14 @@ function Techs(s::Scenario)
     cooling_techs = String[]
     boiler_techs = String[]
     chp_techs = String[]
+    electric_chillers = String[]
+    absorption_chillers = String[]
+
     if s.wind.max_kw > 0
         push!(all_techs, "Wind")
         push!(elec, "Wind")
     end
+
     if s.generator.max_kw > 0
         push!(all_techs, "Generator")
         push!(gentechs, "Generator")
@@ -136,9 +145,15 @@ function Techs(s::Scenario)
 
     if !isnothing(s.existing_chiller)
         push!(all_techs, "ExistingChiller")
-        push!(cooling_techs, "ExistingChiller")
+        push!(electric_chillers, "ExistingChiller")
     end
 
+    if !isnothing(s.absorption_chiller)
+        push!(all_techs, "AbsorptionChiller")
+        push!(absorption_chillers, "AbsorptionChiller")
+    end
+
+    cooling_techs = union(electric_chillers, absorption_chillers)
     thermal_techs = union(heating_techs, boiler_techs, chp_techs, cooling_techs)
     fuel_burning_techs = union(gentechs, boiler_techs, chp_techs)
 
@@ -156,7 +171,9 @@ function Techs(s::Scenario)
         boiler_techs,
         fuel_burning_techs,
         thermal_techs,
-        chp_techs
+        chp_techs,
+        electric_chillers,
+        absorption_chillers
     )
 end
 

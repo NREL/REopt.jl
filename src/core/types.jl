@@ -57,6 +57,8 @@ mutable struct Techs
     fuel_burning::Vector{String}
     thermal::Vector{String}
     chp::Vector{String}
+    electric_chiller::Vector{String}
+    absorption_chiller::Vector{String}
 end
 ```
 """
@@ -75,4 +77,6 @@ mutable struct Techs
     fuel_burning::Vector{String}
     thermal::Vector{String}
     chp::Vector{String}
+    electric_chiller::Vector{String}
+    absorption_chiller::Vector{String}
 end
