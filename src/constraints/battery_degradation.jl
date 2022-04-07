@@ -53,11 +53,13 @@ function constrain_degradation_variables(m, p; b="ElectricStorage")
         )
         @constraint(m,
             m[:Eplus_sum][d] == 
-                sum(m[:dvProductionToStorage][b, t, ts] for t in p.techs.elec, ts in ts0:tsF) 
-                + sum(m[:dvGridToStorage][b, ts] for ts in ts0:tsF)
+                p.hours_per_timestep * (
+                    sum(m[:dvProductionToStorage][b, t, ts] for t in p.techs.elec, ts in ts0:tsF) 
+                    + sum(m[:dvGridToStorage][b, ts] for ts in ts0:tsF)
+                )
         )
         @constraint(m,
-            m[:Eminus_sum][d] == sum(m[:dvDischargeFromStorage][b, ts] for ts in ts0:tsF)
+            m[:Eminus_sum][d] == p.hours_per_timestep * sum(m[:dvDischargeFromStorage][b, ts] for ts in ts0:tsF)
         )
         @constraint(m,
             m[:EFC][d] == (m[:Eplus_sum][d] + m[:Eminus_sum][d]) / 2
