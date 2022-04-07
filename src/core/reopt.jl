@@ -369,6 +369,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	for b in p.s.storage.types.elec
 		if p.s.storage.attr[b].model_degradation
 			add_degradation(m, p; b=b)
+			if p.s.settings.add_soc_incentive
+				@warn "Adding a battery SOC incentive may conflict with the battery degradation
+					model and fail to provide a solution with an elevated SOC."
+			end
 		end
 	end
     
