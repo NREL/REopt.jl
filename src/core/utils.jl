@@ -191,6 +191,15 @@ function dictkeys_tosymbols(d::Dict)
                 @warn "Unable to convert $k to a Vector{Vector{Int64}}"
             end
         end
+        if k in [
+            "outage_start_time_steps", "outage_durations"
+        ]
+            try
+                v = convert(Array{Int64, 1}, v)
+            catch
+                @warn "Unable to convert $k to a Array{Int64, 1}"
+            end
+        end
         d2[Symbol(k)] = v
     end
     return d2
