@@ -53,7 +53,8 @@ f(day) = \\frac{ (1-r_g)^\\frac{day}{365} } { (1+r_d)^\\frac{day}{365} }
 
 where ``r_g`` = `installed_cost_per_kwh_declination_rate` and ``r_d`` = `p.s.financial.owner_discount_pct`.
 
-The present worth factor is used in two different ways, depending on the `maintenance_strategy`, 
+Note this daily recalculation is different from the annually updated discount rate for other net-present value 
+calculations in REopt.  The present worth factor is used in two different ways, depending on the `maintenance_strategy`, 
 which is described below.
 
 !!! warn
@@ -65,7 +66,7 @@ which is described below.
     The are replaced by the `maintenance_cost_per_kwh` vector.
 
 !!! note
-    When providing the `maintenance_cost_per_kwh` it must have a lenght equal to `Financial.analysis_years*365`.
+    When providing the `maintenance_cost_per_kwh` it must have a length equal to `Financial.analysis_years*365`.
 
 
 # Battery State Of Health
