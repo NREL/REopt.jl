@@ -177,7 +177,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
 
     if haskey(d, "Generator")
-        generator = Generator(; dictkeys_tosymbols(d["Generator"])..., off_grid_flag = settings.off_grid_flag)
+        generator = Generator(; dictkeys_tosymbols(d["Generator"])..., off_grid_flag=settings.off_grid_flag, analysis_years=financial.analysis_years)
     else
         generator = Generator(; max_kw=0)
     end

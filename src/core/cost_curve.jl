@@ -364,18 +364,38 @@ function cost_curve(tech::AbstractTech, financial::Financial)
         if tech.macrs_option_years == 7
             macrs_schedule = financial.macrs_seven_year
         end
-        updated_slope = effective_cost(;
-            itc_basis=itc_unit_basis,  # input tech cost with incentives, but no ITC
-            replacement_cost=0.0,
-            replacement_year=financial.analysis_years,
-            discount_rate=financial.owner_discount_pct,
-            tax_rate=financial.owner_tax_pct,
-            itc=itc,
-            macrs_schedule = macrs_schedule,
-            macrs_bonus_pct=macrs_bonus_pct,
-            macrs_itc_reduction = macrs_itc_reduction,
-            rebate_per_kw = rebate_federal
-        )
+        if nameof(T) in [:Generator]  # Generator is currently only tech with replacement year and cost
+            if tech.replacement_year >= financial.analysis_years # assume no replacement in final year of project
+                replacement_cost = 0.0
+            else
+                replacement_cost = tech.replacement_cost_per_kw
+            end
+            updated_slope = effective_cost(;
+                itc_basis=itc_unit_basis,  # input tech cost with incentives, but no ITC
+                replacement_cost=replacement_cost,
+                replacement_year=tech.replacement_year,
+                discount_rate=financial.owner_discount_pct,
+                tax_rate=financial.owner_tax_pct,
+                itc=itc,
+                macrs_schedule = macrs_schedule,
+                macrs_bonus_pct=macrs_bonus_pct,
+                macrs_itc_reduction = macrs_itc_reduction,
+                rebate_per_kw = rebate_federal
+            )
+        else
+            updated_slope = effective_cost(;
+                itc_basis=itc_unit_basis,  # input tech cost with incentives, but no ITC
+                replacement_cost=0.0,
+                replacement_year=financial.analysis_years,
+                discount_rate=financial.owner_discount_pct,
+                tax_rate=financial.owner_tax_pct,
+                itc=itc,
+                macrs_schedule = macrs_schedule,
+                macrs_bonus_pct=macrs_bonus_pct,
+                macrs_itc_reduction = macrs_itc_reduction,
+                rebate_per_kw = rebate_federal
+            )
+        end
         # The way REopt incentives currently work, the federal rebate is the only incentive that doesn't reduce ITC basis
         push!(updated_cap_cost_slope, updated_slope)
     end
