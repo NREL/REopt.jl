@@ -435,6 +435,7 @@ end
     # @test r["ElectricStorage"]["maintenance_cost"] ≈ 2972.66 atol=0.01 
     # the maintenance_cost comes out to 3004.39 on Actions ? So we test the LCC since it should match
     @test r["Financial"]["lcc"] ≈ 1.240096e7  rtol=0.01
+    @test last(value.(m[:SOH])) ≈ 63.129  rtol=0.01
 end
 
 @testset "Outage with Generator, outate simulator, BAU critical load outputs" begin
