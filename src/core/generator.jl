@@ -66,6 +66,8 @@ function Generator(;
     production_incentive_max_benefit::Float64 = 1.0e9,
     production_incentive_years::Int = 0,
     production_incentive_max_kw::Float64 = 1.0e9,
+    replacement_year::Int = off_grid_flag ? 10 : analysis_years, 
+    replacement_cost_per_kw::Float64 = installed_cost_per_kw
 )
 ```
 """
@@ -104,9 +106,12 @@ struct Generator <: AbstractGenerator
     production_incentive_max_benefit
     production_incentive_years
     production_incentive_max_kw
+    replacement_year
+    replacement_cost_per_kw
 
     function Generator(;
         off_grid_flag::Bool = false,
+        analysis_years::Int = 25, 
         existing_kw::Real = 0,
         min_kw::Real = 0,
         max_kw::Real = 1.0e6,
@@ -141,6 +146,8 @@ struct Generator <: AbstractGenerator
         production_incentive_max_benefit::Float64 = 1.0e9,
         production_incentive_years::Int = 0,
         production_incentive_max_kw::Float64 = 1.0e9,
+        replacement_year::Int = off_grid_flag ? 10 : analysis_years, 
+        replacement_cost_per_kw::Float64 = installed_cost_per_kw
         )
 
         new(
@@ -177,7 +184,9 @@ struct Generator <: AbstractGenerator
             production_incentive_per_kwh,
             production_incentive_max_benefit,
             production_incentive_years,
-            production_incentive_max_kw
+            production_incentive_max_kw,
+            replacement_year,
+            replacement_cost_per_kw
         )
     end
 end
