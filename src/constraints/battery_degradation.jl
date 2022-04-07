@@ -146,7 +146,7 @@ function add_degradation(m, p;
         months = 1:p.s.financial.analysis_years*12
         @variable(m, bmth[months], Bin)
         # can only pick one month
-        @constraint(m, sum(bmth[mth] for mth in months) == 1)
+        @constraint(m, sum(bmth[mth] for mth in months) == soh_indicator[length(days)])
         # the month picked is at most the month in which the SOH hits 80%
         @constraint(m, sum(mth*bmth[mth] for mth in months) <= d_0p8 / 30.42)
         # 30.42 is the average number of days in month
