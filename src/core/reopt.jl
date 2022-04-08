@@ -355,12 +355,25 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_to_expression!(Costs, m[:ExpectedOutageCost] + m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost] + m[:ExpectedMGFuelCost])
 	end
 
-	if !p.s.settings.add_soc_incentive
-		@objective(m, Min, m[:Costs])
-	else  # Keep SOC high
-		@objective(m, Min, m[:Costs] - sum(m[:dvStoredEnergy][b, ts] for b in p.s.storage.types.elec, ts in p.time_steps) /
-									   (8760. / p.hours_per_timestep)
+	@objective(m, Min, m[:Costs])
+	
+	if !(isempty(p.s.storage.types.elec)) && p.s.settings.add_soc_incentive # Keep SOC high
+		@objective(m, Min, m[:Costs] - 
+		sum(m[:dvStoredEnergy][b, ts] for b in p.s.storage.types.elec, ts in p.time_steps) /
+			(8760. / p.hours_per_timestep)
 		)
+	
+	end
+
+	# TODO should add_soc_incentive ever be done with degradation?
+	for b in p.s.storage.types.elec
+		if p.s.storage.attr[b].model_degradation
+			add_degradation(m, p; b=b)
+			if p.s.settings.add_soc_incentive
+				@warn "Adding a battery SOC incentive may conflict with the battery degradation
+					model and fail to provide a solution with an elevated SOC."
+			end
+		end
 	end
     
 	nothing
