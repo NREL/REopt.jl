@@ -88,7 +88,8 @@ REopt.PV
 
 ## ElectricStorage
 ```@docs
-REopt.ElectricStorage
+REopt.ElectricStorageDefaults
+REopt.Degradation
 ```
 
 ## HotStorage
