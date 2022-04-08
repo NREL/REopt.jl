@@ -228,12 +228,6 @@ function add_tou_peak_constraint(m, p; _n="")
             b[r, tier] * p.s.electric_tariff.tou_demand_tier_limits[tier-1] 
             <= m[Symbol("dvPeakDemandTOU"*_n)][r, tier-1]
         )
-
-        # Ratchet peak demand is >= demand at each hour in the ratchet
-        @constraint(m, [r in p.ratchets, ts in p.s.electric_tariff.tou_demand_ratchet_timesteps[r]],
-            sum(m[Symbol("dvPeakDemandTOU"*_n)][r, tier] for tier in 1:ntiers) 
-            >= sum( m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers )
-        )
     end
     # TODO implement NewMaxDemandInTier
 end
@@ -376,8 +370,8 @@ function add_elec_utility_expressions(m, p; _n="")
 
     if !isempty(p.s.electric_tariff.tou_demand_rates)
         m[Symbol("DemandTOUCharges"*_n)] = @expression(m, 
-            p.pwf_e * sum( p.s.electric_tariff.tou_demand_rates[r] * m[Symbol("dvPeakDemandTOU"*_n)][r, tier] 
-            for r in p.ratchets, tier in p.s.electric_tariff.n_tou_demand_tiers)
+            p.pwf_e * sum( p.s.electric_tariff.tou_demand_rates[r, tier] * m[Symbol("dvPeakDemandTOU"*_n)][r, tier] 
+            for r in p.ratchets, tier in 1:p.s.electric_tariff.n_tou_demand_tiers)
         )
     else
         m[Symbol("DemandTOUCharges"*_n)] = 0
