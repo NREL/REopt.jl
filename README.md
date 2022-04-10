@@ -1,4 +1,4 @@
-# REoptLite Julia package
+# REoptLite Julia package [DEPRECATED. PLEASE USE [REopt.jl](https://github.com/nrel/reopt.jl)]
 This package is currently under development and only has a subset of capabilities of the REopt Lite model used in the [REopt Lite API](https://github.com/NREL/REopt_Lite_API). For example, the CHP model and thermal loads are not yet modeled in this code. However this code is easier to use than the API (only dependencies are Julia and a solver) and has a novel model for uncertain outages.
 
 Note: this package has been tested with Julia 1.4, 1.5, and 1.6 and may not be compatible with older versions.
