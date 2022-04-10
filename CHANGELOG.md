@@ -3,6 +3,7 @@
 ## develop
 - update default values from v2 of API
 - fix bug for tiered, time-of-use demand rates
+- fix bug in results with tiered elec. energy costs
 
 
 ## v0.13.0
