@@ -555,16 +555,19 @@ end
     parse_urdb_lookback_charges(d::Dict)
 
 URDB lookback fields:
-- lookbackMonths
+- `lookbackMonths`
     - Type: array
-    - Array of 12 booleans, true or false, indicating months in which lookbackPercent applies.
-        If any of these is true, lookbackRange should be zero.
-- lookbackPercent
+    - Array of 12 booleans, true or false, indicating months in which `lookbackPercent` applies.
+        If any of these is true, `lookbackRange` should be zero.
+- `lookbackPercent`
     - Type: decimal
-    - Lookback percentage. Applies to either lookbackMonths with value=1, or a lookbackRange.
-- lookbackRange
+    - Lookback percentage. Applies to either `lookbackMonths` with value=1, or a `lookbackRange`.
+- `lookbackRange`
     - Type: integer
-    - Number of months for which lookbackPercent applies. If not 0, lookbackMonths values should all be 0.
+    - Number of months for which `lookbackPercent` applies. If not 0, `lookbackMonths` values should all be 0.
+
+!!! note
+    The lookback charges are determined by the `flatdemandstructure` (and `flatdemandmonths` which are indexed zero to eleven in URDB).
 """
 function parse_urdb_lookback_charges(d::Dict)
     lookback_months = get(d, "lookbackMonths", Int[])
