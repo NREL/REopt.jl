@@ -34,6 +34,7 @@ Electric storage system defaults. Overridden by user inputs.
 
 ```julia
 Base.@kwdef struct ElectricStorageDefaults
+    off_grid_flag::Bool = false # TODO: Should this go here in the help text? 
     min_kw::Float64 = 0.0
     max_kw::Float64 = 1.0e4
     min_kwh::Float64 = 0.0
@@ -129,6 +130,17 @@ struct ElectricStorage <: AbstractElectricStorage
 
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
+
+        if s.inverter_replacement_year >= f.analysis_years
+            s.replace_cost_per_kw = 0.0
+            @warn "Assuming electric storage replace_cost_per_kw = 0.0 because inverter_replacement_year >= analysis_years."
+        end
+
+        if s.battery_replacement_year >= f.analysis_years
+            s.replace_cost_per_kwh = 0.0
+            @warn "Assuming electric storage replace_cost_per_kwh = 0.0 because battery_replacement_year >= analysis_years."
+        end
+
         
         net_present_cost_per_kw = effective_cost(;
             itc_basis = s.installed_cost_per_kw,

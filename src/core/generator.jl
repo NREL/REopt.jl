@@ -67,7 +67,7 @@ function Generator(;
     production_incentive_years::Int = 0,
     production_incentive_max_kw::Float64 = 1.0e9,
     replacement_year::Int = off_grid_flag ? 10 : analysis_years, 
-    replacement_cost_per_kw::Float64 = installed_cost_per_kw
+    replace_cost_per_kw::Float64 = installed_cost_per_kw
 )
 ```
 """
@@ -107,7 +107,7 @@ struct Generator <: AbstractGenerator
     production_incentive_years
     production_incentive_max_kw
     replacement_year
-    replacement_cost_per_kw
+    replace_cost_per_kw
 
     function Generator(;
         off_grid_flag::Bool = false,
@@ -147,8 +147,13 @@ struct Generator <: AbstractGenerator
         production_incentive_years::Int = 0,
         production_incentive_max_kw::Float64 = 1.0e9,
         replacement_year::Int = off_grid_flag ? 10 : analysis_years, 
-        replacement_cost_per_kw::Float64 = installed_cost_per_kw
+        replace_cost_per_kw::Float64 = off_grid_flag ? installed_cost_per_kw : 0.0
         )
+
+        if (replacement_year >= analysis_years) && !(replace_cost_per_kw == 0.0)
+            replace_cost_per_kw = 0.0
+            @warn "Assuming generator replace_cost_per_kw = 0.0 because replacement_year >= analysis_years."
+        end
 
         new(
             existing_kw,
@@ -186,7 +191,7 @@ struct Generator <: AbstractGenerator
             production_incentive_years,
             production_incentive_max_kw,
             replacement_year,
-            replacement_cost_per_kw
+            replace_cost_per_kw
         )
     end
 end
