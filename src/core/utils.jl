@@ -201,6 +201,15 @@ function dictkeys_tosymbols(d::Dict)
                 @warn "Unable to convert $k to a Array{Int64, 1}"
             end
         end
+        if k in [
+            "installed_cost_per_kw", "replace_cost_per_kw"
+        ]
+            try
+                v = convert(Float64, v)
+            catch
+                @warn "Unable to convert $k to a Float64"
+            end
+        end
         d2[Symbol(k)] = v
     end
     return d2

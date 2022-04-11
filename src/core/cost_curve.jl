@@ -368,7 +368,7 @@ function cost_curve(tech::AbstractTech, financial::Financial)
             if tech.replacement_year >= financial.analysis_years # assume no replacement in final year of project
                 replacement_cost = 0.0
             else
-                replacement_cost = tech.replacement_cost_per_kw
+                replacement_cost = tech.replace_cost_per_kw
             end
             updated_slope = effective_cost(;
                 itc_basis=itc_unit_basis,  # input tech cost with incentives, but no ITC

@@ -69,34 +69,21 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
         r["lifecycle_fuel_costs_after_tax"] = value(m[:TotalFuelCosts]) * (1 - p.s.financial.offtaker_tax_pct)
     end
 
-    # # TODO Add LCC breakdown:
-    # # Tech capital costs (including replacements)
-    # r["lcc_pct_tech_capital_cost"] = value(m[Symbol("TotalTechCapCosts"*_n)])
-    # # Storage capital costs (including replacements)
-    # r["lcc_pct_storage_capital_cost"] = value(m[Symbol("TotalStorageCapCosts"*_n)])
-    # # Fixed & Variable O&M 
-    # r["lcc_pct_om_cost"] = r["lifecycle_om_costs_after_tax"]
-    # # Fuel costs
-    # r["lcc_pct_fuel_cost"] = r["lifecycle_fuel_costs_after_tax"]
-    # # CHP standby
-    # r["lcc_pct_chp_standby_cost"] = value(m[:TotalCHPStandbyCharges] * (1 - p.s.financial.offtaker_tax_pct))
-    # # Utility bill 
-    # r["lcc_pct_elecbill_cost"] = value(m[:TotalElecBill] * (1 - p.s.financial.offtaker_tax_pct))
-    # # Production incentives 
-    # r["lcc_pct_pbi"] = value(m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_pct))
-    # # Addtl Annual costs
-    # r["lcc_pct_addtl_annual_cost"] = p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct)
-    # # Addtl capital costs
-    # r["lcc_pct_addtl_capital_cost"] = p.s.financial.offgrid_other_capital_costs # (TODO: apply depreciation)
-    # # Outage costs
-    # if !isempty(p.s.electric_utility.outage_durations)
-    #     r["lcc_pct_outage_cost"] = value(m[:ExpectedOutageCost] + m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost] + m[:ExpectedMGFuelCost])
-	# else
-    #     r["lcc_pct_outage_cost"] = 0.0
-    # end
-    # r["lcc_test"] = r["lcc_pct_tech_capital_cost"] + r["lcc_pct_storage_capital_cost"] + r["lcc_pct_om_cost"] +
-    #     r["lcc_pct_fuel_cost"] + r["lcc_pct_chp_standby_cost"] + r["lcc_pct_elecbill_cost"] + r["lcc_pct_pbi"] +
-    #     r["lcc_pct_addtl_annual_cost"] + r["lcc_pct_addtl_capital_cost"] + r["lcc_pct_outage_cost"]
+    # LCC breakdown:
+    r["lcc_fraction_tech_capital_cost"] = value(m[Symbol("TotalTechCapCosts"*_n)]) / r["lcc"] # Tech capital costs (including replacements)
+    r["lcc_fraction_storage_capital_cost"] = value(m[Symbol("TotalStorageCapCosts"*_n)]) / r["lcc"]   # Storage capital costs (including replacements)
+    r["lcc_fraction_om_cost"] = r["lifecycle_om_costs_after_tax"] /  r["lcc"]  # Fixed & Variable O&M 
+    r["lcc_fraction_fuel_cost"] = r["lifecycle_fuel_costs_after_tax"] / r["lcc"]  # Fuel costs
+    r["lcc_fraction_chp_standby_cost"] = value(m[:TotalCHPStandbyCharges] * (1 - p.s.financial.offtaker_tax_pct)) / r["lcc"] # CHP standby
+    r["lcc_fraction_elecbill_cost"] = value(m[:TotalElecBill] * (1 - p.s.financial.offtaker_tax_pct)) / r["lcc"]  # Utility bill 
+    r["lcc_fraction_pbi"] = value(-1 * m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_pct)) / r["lcc"]  # Production incentives 
+    r["lcc_fraction_addtl_annual_cost"] = (p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct)) / r["lcc"] # Addtl Annual costs
+    r["lcc_fraction_addtl_capital_cost"] = (p.s.financial.offgrid_other_capital_costs) / r["lcc"]  # (TODO: apply depreciation) # Addtl capital costs
+    if !isempty(p.s.electric_utility.outage_durations)  # Outage costs
+        r["lcc_fraction_outage_cost"] = value(m[:ExpectedOutageCost] + m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost] + m[:ExpectedMGFuelCost]) / r["lcc"] 
+	else
+        r["lcc_fraction_outage_cost"] = 0.0
+    end
 
     if p.s.settings.off_grid_flag
         r["lifecycle_offgrid_other_annual_costs_after_tax"] = p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct)
@@ -109,7 +96,6 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
         end
         LoadMet = @expression(m, sum(p.s.electric_load.critical_loads_kw[ts] * m[Symbol("dvOffgridLoadServedFraction"*_n)][ts] for ts in p.time_steps_without_grid ))
         r["offgrid_microgrid_lcoe_dollars_per_kwh"] = round(r["lcc"] / pwf / value(LoadMet), digits=4)
-        # TODO add LCOE breakdown (use LCC breakdown)
     end
 
     d["Financial"] = Dict(k => round(v, digits=2) for (k,v) in r)
