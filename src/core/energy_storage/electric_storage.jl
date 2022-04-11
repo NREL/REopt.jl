@@ -132,19 +132,17 @@ struct ElectricStorage <: AbstractElectricStorage
         s = ElectricStorageDefaults(;d...)
 
         if s.inverter_replacement_year >= f.analysis_years
-            s.replace_cost_per_kw = 0.0
-            @warn "Assuming electric storage replace_cost_per_kw = 0.0 because inverter_replacement_year >= analysis_years."
+            @warn "Battery inverter replacement costs (per_kw) will not be considered because inverter_replacement_year >= analysis_years."
         end
 
         if s.battery_replacement_year >= f.analysis_years
-            s.replace_cost_per_kwh = 0.0
-            @warn "Assuming electric storage replace_cost_per_kwh = 0.0 because battery_replacement_year >= analysis_years."
+            @warn "Battery replacement costs (per_kwh) will not be considered because battery_replacement_year >= analysis_years."
         end
 
         
         net_present_cost_per_kw = effective_cost(;
             itc_basis = s.installed_cost_per_kw,
-            replacement_cost = s.replace_cost_per_kw,
+            replacement_cost = s.inverter_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_per_kw,
             replacement_year = s.inverter_replacement_year,
             discount_rate = f.owner_discount_pct,
             tax_rate = f.owner_tax_pct,
@@ -156,7 +154,7 @@ struct ElectricStorage <: AbstractElectricStorage
         )
         net_present_cost_per_kwh = effective_cost(;
             itc_basis = s.installed_cost_per_kwh,
-            replacement_cost = s.replace_cost_per_kwh,
+            replacement_cost = s.battery_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_per_kwh,
             replacement_year = s.battery_replacement_year,
             discount_rate = f.owner_discount_pct,
             tax_rate = f.owner_tax_pct,
