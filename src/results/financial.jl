@@ -47,7 +47,7 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     end
     r["lcc"] = value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)]) - value(m[Symbol("dvComfortLimitViolationCost"*_n)])
     r["lifecycle_om_costs_before_tax"] = value(m[Symbol("TotalPerUnitSizeOMCosts"*_n)] + 
-                                           m[Symbol("TotalPerUnitProdOMCosts"*_n)])
+                                           m[Symbol("TotalPerUnitProdOMCosts"*_n)] + m[Symbol("TotalPerUnitHourOMCosts"*_n)])
     r["year_one_om_costs_before_tax"] = r["lifecycle_om_costs_before_tax"] / (p.pwf_om * p.third_party_factor)
     r["lifecycle_om_costs_after_tax"] = r["lifecycle_om_costs_before_tax"] * (1 - p.s.financial.owner_tax_pct)
     r["year_one_om_costs_after_tax"] = r["lifecycle_om_costs_after_tax"] / (p.pwf_om * p.third_party_factor)
@@ -69,6 +69,35 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
         r["lifecycle_fuel_costs_after_tax"] = value(m[:TotalFuelCosts]) * (1 - p.s.financial.offtaker_tax_pct)
     end
 
+    # # TODO Add LCC breakdown:
+    # # Tech capital costs (including replacements)
+    # r["lcc_pct_tech_capital_cost"] = value(m[Symbol("TotalTechCapCosts"*_n)])
+    # # Storage capital costs (including replacements)
+    # r["lcc_pct_storage_capital_cost"] = value(m[Symbol("TotalStorageCapCosts"*_n)])
+    # # Fixed & Variable O&M 
+    # r["lcc_pct_om_cost"] = r["lifecycle_om_costs_after_tax"]
+    # # Fuel costs
+    # r["lcc_pct_fuel_cost"] = r["lifecycle_fuel_costs_after_tax"]
+    # # CHP standby
+    # r["lcc_pct_chp_standby_cost"] = value(m[:TotalCHPStandbyCharges] * (1 - p.s.financial.offtaker_tax_pct))
+    # # Utility bill 
+    # r["lcc_pct_elecbill_cost"] = value(m[:TotalElecBill] * (1 - p.s.financial.offtaker_tax_pct))
+    # # Production incentives 
+    # r["lcc_pct_pbi"] = value(m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_pct))
+    # # Addtl Annual costs
+    # r["lcc_pct_addtl_annual_cost"] = p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct)
+    # # Addtl capital costs
+    # r["lcc_pct_addtl_capital_cost"] = p.s.financial.offgrid_other_capital_costs # (TODO: apply depreciation)
+    # # Outage costs
+    # if !isempty(p.s.electric_utility.outage_durations)
+    #     r["lcc_pct_outage_cost"] = value(m[:ExpectedOutageCost] + m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost] + m[:ExpectedMGFuelCost])
+	# else
+    #     r["lcc_pct_outage_cost"] = 0.0
+    # end
+    # r["lcc_test"] = r["lcc_pct_tech_capital_cost"] + r["lcc_pct_storage_capital_cost"] + r["lcc_pct_om_cost"] +
+    #     r["lcc_pct_fuel_cost"] + r["lcc_pct_chp_standby_cost"] + r["lcc_pct_elecbill_cost"] + r["lcc_pct_pbi"] +
+    #     r["lcc_pct_addtl_annual_cost"] + r["lcc_pct_addtl_capital_cost"] + r["lcc_pct_outage_cost"]
+
     if p.s.settings.off_grid_flag
         r["lifecycle_offgrid_other_annual_costs_after_tax"] = p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct)
         r["lifecycle_offgrid_other_capital_costs"] = p.s.financial.offgrid_other_capital_costs # (TODO: apply depreciation)
@@ -80,7 +109,7 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
         end
         LoadMet = @expression(m, sum(p.s.electric_load.critical_loads_kw[ts] * m[Symbol("dvOffgridLoadServedFraction"*_n)][ts] for ts in p.time_steps_without_grid ))
         r["offgrid_microgrid_lcoe_dollars_per_kwh"] = round(r["lcc"] / pwf / value(LoadMet), digits=4)
-        # TODO add LCOE breakdown
+        # TODO add LCOE breakdown (use LCC breakdown)
     end
 
     d["Financial"] = Dict(k => round(v, digits=2) for (k,v) in r)
@@ -192,18 +221,26 @@ end
 
 returns two values: the future and present costs of replacing all storage systems
 """
-function replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInputs; _n="") # TODO: need to account for generator replacement here. 
+function replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     future_cost = 0
     present_cost = 0
 
-    # Storage replacement
-    for b in p.s.storage.types.all
+    for b in p.s.storage.types.all # Storage replacement
 
         if !(:inverter_replacement_year in fieldnames(typeof(p.s.storage.attr[b])))
             continue
         end
-        future_cost_inverter = p.s.storage.attr[b].replace_cost_per_kw * value.(m[Symbol("dvStoragePower"*_n)])[b]
-        future_cost_storage = p.s.storage.attr[b].replace_cost_per_kwh * value.(m[Symbol("dvStorageEnergy"*_n)])[b]
+
+        if p.s.storage.attr[b].inverter_replacement_year >= p.s.financial.analysis_years
+            future_cost_inverter = 0
+        else
+            future_cost_inverter = p.s.storage.attr[b].replace_cost_per_kw * value.(m[Symbol("dvStoragePower"*_n)])[b]
+        end
+        if p.s.storage.attr[b].battery_replacement_year >= p.s.financial.analysis_years
+            future_cost_storage = 0
+        else
+            future_cost_storage = p.s.storage.attr[b].replace_cost_per_kwh * value.(m[Symbol("dvStorageEnergy"*_n)])[b]
+        end
         future_cost += future_cost_inverter + future_cost_storage
 
         present_cost += future_cost_inverter * (1 - p.s.financial.owner_tax_pct) / 
@@ -212,9 +249,12 @@ function replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInp
             ((1 + p.s.financial.owner_discount_pct)^p.s.storage.attr[b].battery_replacement_year)
     end
 
-    # Generator replacement 
-    if !isempty(p.techs.gen) 
-        future_cost_generator = p.s.generator.replace_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Generator"]
+    if !isempty(p.techs.gen) # Generator replacement 
+        if p.s.generator.replacement_year >= p.s.financial.analysis_years 
+            future_cost_generator = 0.0
+        else 
+            future_cost_generator = p.s.generator.replace_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Generator"]
+        end
         future_cost += future_cost_generator
         present_cost += future_cost_generator * (1 - p.s.financial.owner_tax_pct) / 
             ((1 + p.s.financial.owner_discount_pct)^p.s.generator.replacement_year)

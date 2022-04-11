@@ -52,7 +52,7 @@ end
 
 Constructor for Scenario struct, where `d` has upper-case keys:
 - [Site](@ref) (required)
-- [ElectricTariff](@ref) (required)
+- [ElectricTariff](@ref) (required when off_grid_flag is False)
 - [ElectricLoad](@ref) (required)
 - [PV](@ref) (optional, can be Array)
 - [Wind](@ref) (optional)

@@ -376,6 +376,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         # Subtract Incentives, which are taxable
 		m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_pct) +
 
+		# Comfort limit violation costs
 		m[:dvComfortLimitViolationCost] + 
 
 		# Additional annual costs, tax deductible for owner (only applies when off_grid_flag is true)

@@ -151,8 +151,7 @@ struct Generator <: AbstractGenerator
         )
 
         if (replacement_year >= analysis_years) && !(replace_cost_per_kw == 0.0)
-            replace_cost_per_kw = 0.0
-            @warn "Assuming generator replace_cost_per_kw = 0.0 because replacement_year >= analysis_years."
+            @warn "Generator replacement costs will not be considered because replacement_year >= analysis_years."
         end
 
         new(
