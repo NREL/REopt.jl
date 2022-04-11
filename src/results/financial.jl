@@ -59,7 +59,8 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     r["initial_capital_costs_after_incentives"] = initial_capex_after_incentives(m, p, r["lifecycle_capital_costs"]; _n=_n)
 
     future_replacement_cost, present_replacement_cost = replacement_costs_future_and_present(m, p; _n=_n)
-    r["replacement_costs"] = future_replacement_cost
+    r["replacements_future_cost"] = future_replacement_cost 
+    r["replacements_present_cost"] = present_replacement_cost 
     r["om_and_replacement_present_cost_after_tax"] = present_replacement_cost + r["lifecycle_om_costs_after_tax"]
     r["developer_om_and_replacement_present_cost_after_tax"] = r["om_and_replacement_present_cost_after_tax"] / 
         p.third_party_factor
@@ -79,6 +80,7 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
         end
         LoadMet = @expression(m, sum(p.s.electric_load.critical_loads_kw[ts] * m[Symbol("dvOffgridLoadServedFraction"*_n)][ts] for ts in p.time_steps_without_grid ))
         r["offgrid_microgrid_lcoe_dollars_per_kwh"] = round(r["lcc"] / pwf / value(LoadMet), digits=4)
+        # TODO add LCOE breakdown
     end
 
     d["Financial"] = Dict(k => round(v, digits=2) for (k,v) in r)
@@ -190,9 +192,11 @@ end
 
 returns two values: the future and present costs of replacing all storage systems
 """
-function replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInputs; _n="")
+function replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInputs; _n="") # TODO: need to account for generator replacement here. 
     future_cost = 0
     present_cost = 0
+
+    # Storage replacement
     for b in p.s.storage.types.all
 
         if !(:inverter_replacement_year in fieldnames(typeof(p.s.storage.attr[b])))
@@ -207,6 +211,15 @@ function replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInp
         present_cost += future_cost_storage * (1 - p.s.financial.owner_tax_pct) / 
             ((1 + p.s.financial.owner_discount_pct)^p.s.storage.attr[b].battery_replacement_year)
     end
+
+    # Generator replacement 
+    if !isempty(p.techs.gen) 
+        future_cost_generator = p.s.generator.replace_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Generator"]
+        future_cost += future_cost_generator
+        present_cost += future_cost_generator * (1 - p.s.financial.owner_tax_pct) / 
+            ((1 + p.s.financial.owner_discount_pct)^p.s.generator.replacement_year)
+    end
+
     return future_cost, present_cost
 end
 
@@ -215,7 +228,7 @@ end
     calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
 
 The Levelized Cost of Energy (LCOE) is calculated as annualized costs (capital and O+M translated to current value) 
-divided by annuale energy output.
+divided by annual energy output. This tech-specific LCOE is distinct from the off-grid microgrid LCOE.
 """
 function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
     existing_kw = :existing_kw in fieldnames(typeof(tech)) ? tech.existing_kw : 0.0

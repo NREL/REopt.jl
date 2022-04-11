@@ -47,8 +47,8 @@ function Financial(;
     microgrid_upgrade_cost_pct::Float64 = off_grid_flag ? 0.0 : 0.3,
     macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
     macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
-    other_capital_costs::Float64 = 0.0,
-    other_annual_costs::Float64 = 0.0
+    other_capital_costs::Float64 = 0.0, # only applicable when off_grid_flag is true
+    other_annual_costs::Float64 = 0.0 # only applicable when off_grid_flag is true
 )
 ```
 
@@ -95,15 +95,15 @@ struct Financial
         microgrid_upgrade_cost_pct::Float64 = off_grid_flag ? 0.0 : 0.3,
         macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
         macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
-        offgrid_other_capital_costs::Float64 = 0.0, # TODO: potentially constrain so that cannot be non-zero for on-grid runs. 
-        offgrid_other_annual_costs::Float64 = 0.0
+        offgrid_other_capital_costs::Float64 = 0.0, # only applicable when off_grid_flag is true
+        offgrid_other_annual_costs::Float64 = 0.0 # only applicable when off_grid_flag is true
     )
         
         if off_grid_flag && !(microgrid_upgrade_cost_pct == 0.0)
             @error "microgrid_upgrade_cost_pct is not applied when off_grid_flag is true. Set microgrid_upgrade_cost_pct to 0.0."
         end
 
-        if !off_grid_flag && (offgrid_other_capital_costs != 0.0 || offgrid_other_annual_costs != 0)
+        if !off_grid_flag && (offgrid_other_capital_costs != 0.0 || offgrid_other_annual_costs != 0.0)
             @error "offgrid_other_capital_costs and offgrid_other_annual_costs are only applied when off_grid_flag is true. Set these inputs to 0.0 for grid-connected analyses."
         end
 
