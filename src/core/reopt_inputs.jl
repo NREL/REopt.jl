@@ -50,6 +50,9 @@ struct REoptInputs <: AbstractInputs
     value_of_lost_load_per_kwh::Array{R, 1} where R<:Real #default set to 1 US dollar per kwh
     pwf_e::Float64
     pwf_om::Float64
+    pwf_fuel::Dict{String, Float64}
+    pwf_emissions_cost::Dict{String, Any}
+    pwf_grid_emissions::Dict{String, Any}
     third_party_factor::Float64
     pvlocations::Array{Symbol, 1}
     maxsize_pv_locations::DenseAxisArray{Float64, 1}  # indexed on pvlocations
@@ -88,6 +91,8 @@ struct REoptInputs <: AbstractInputs
     pwf_e::Float64
     pwf_om::Float64
     pwf_fuel::Dict{String, Float64}
+    pwf_emissions_cost::Dict{String, Any} # Cost of emissions present worth factors for grid and onsite fuelburn emissions [unitless]
+    pwf_grid_emissions::Dict{String, Any} # Emissions [lbs] present worth factors for grid emissions [unitless]
     third_party_factor::Float64
     pvlocations::Array{Symbol, 1}
     maxsize_pv_locations::DenseAxisArray{Float64, 1}  # indexed on pvlocations
@@ -143,7 +148,7 @@ function REoptInputs(s::AbstractScenario)
 
     months = 1:12
 
-    levelization_factor, pwf_e, pwf_om, pwf_fuel, third_party_factor = setup_present_worth_factors(s, techs)
+    levelization_factor, pwf_e, pwf_om, pwf_fuel, pwf_emissions_cost, pwf_grid_emissions, third_party_factor = setup_present_worth_factors(s, techs)
     # the following hardcoded values for levelization_factor matches the public REopt API value
     # and makes the test values match.
     # the REopt code herein uses the Desktop method for levelization_factor, which is more accurate
@@ -176,6 +181,8 @@ function REoptInputs(s::AbstractScenario)
         pwf_e,
         pwf_om,
         pwf_fuel,
+        pwf_emissions_cost,
+        pwf_grid_emissions,
         third_party_factor,
         pvlocations,
         maxsize_pv_locations,
@@ -255,7 +262,7 @@ function setup_tech_inputs(s::AbstractScenario)
     if "CHP" in techs.all
         setup_chp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, 
             production_factor, techs_by_exportbin, techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, 
-            seg_yint, techs.no_curtail)  
+            seg_yint, techs.no_curtail)
     end
 
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
@@ -533,6 +540,51 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
         end        
     end
 
+    # Emissions pwfs
+    pwf_emissions_cost = Dict{String, Float64}()
+    pwf_grid_emissions = Dict{String, Float64}() # used to calculate total grid CO2 lbs
+    for emissions_type in ["CO2", "NOx", "SO2", "PM25"]
+        merge!(pwf_emissions_cost, 
+                Dict(emissions_type*"_grid"=>annuity_two_escalation_rates(
+                            s.financial.analysis_years, 
+                            eval("s.financial."*emissions_type*"_cost_escalation_pct"), 
+                            -1 * eval("s.electric_utility.emissions_factor_"*emissions_type*"_decrease_pct"), 
+                            s.financial.offtaker_discount_pct)
+                )
+        )
+        merge!(pwf_emissions_cost, 
+                Dict(emissions_type*"_onsite"=>annuity(
+                            s.financial.analysis_years, 
+                            eval("s.financial."*emissions_type*"_cost_escalation_pct"), 
+                            s.financial.offtaker_discount_pct)
+                )
+        )
+        merge!(pwf_grid_emissions_lbs, 
+                Dict(emissions_type=>annuity(
+                            s.financial.analysis_years, 
+                            -1 * eval("s.electric_utility.emissions_factor_"*emissions_type*"_decrease_pct"), 
+                            0.0)
+                )
+        )
+    # TODO: delete below if above code works
+    # pwf_emissions_cost = [
+    #     "CO2_grid" => annuity_two_escalation_rates(sf.analysis_years, sf.co2_cost_escalation_pct, -1 * self.elec_tariff.emissions_factor_CO2_pct_decrease, sf.offtaker_discount_pct),
+    #     "CO2_onsite" => annuity(sf.analysis_years, sf.co2_cost_escalation_pct, sf.offtaker_discount_pct),
+    #     "NOx_grid" => annuity_two_escalation_rates(sf.analysis_years, sf.nox_cost_escalation_pct, -1 * self.elec_tariff.emissions_factor_NOx_pct_decrease, sf.offtaker_discount_pct),
+    #     "NOx_onsite" => annuity(sf.analysis_years, sf.nox_cost_escalation_pct, sf.offtaker_discount_pct),
+    #     "SO2_grid" => annuity_two_escalation_rates(sf.analysis_years, sf.so2_cost_escalation_pct, -1 * self.elec_tariff.emissions_factor_SO2_pct_decrease, sf.offtaker_discount_pct),
+    #     "SO2_onsite" => annuity(sf.analysis_years, sf.so2_cost_escalation_pct, sf.offtaker_discount_pct),
+    #     "PM25_grid" => annuity_two_escalation_rates(sf.analysis_years, sf.pm25_cost_escalation_pct, -1 * self.elec_tariff.emissions_factor_PM25_pct_decrease, sf.offtaker_discount_pct),
+    #     "PM25_onsite" => annuity(sf.analysis_years, sf.pm25_cost_escalation_pct, sf.offtaker_discount_pct)
+    # ]
+
+    # pwf_grid_emissions_lbs = [
+    #     "CO2" => annuity(sf.analysis_years, -1 * self.elec_tariff.emissions_factor_CO2_pct_decrease, 0.0), # used to calculate total grid CO2 lbs
+    #     "NOx" => annuity(sf.analysis_years, -1 * self.elec_tariff.emissions_factor_NOx_pct_decrease, 0.0),
+    #     "SO2" => annuity(sf.analysis_years, -1 * self.elec_tariff.emissions_factor_SO2_pct_decrease, 0.0),
+    #     "PM25" => annuity(sf.analysis_years, -1 * self.elec_tariff.emissions_factor_PM25_pct_decrease, 0.0),
+    # ]
+
     if s.financial.third_party_ownership
         pwf_offtaker = annuity(s.financial.analysis_years, 0.0, s.financial.offtaker_discount_pct)
         pwf_owner = annuity(s.financial.analysis_years, 0.0, s.financial.owner_discount_pct)
@@ -542,7 +594,7 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
         third_party_factor = 1.0
     end
 
-    return lvl_factor, pwf_e, pwf_om, pwf_fuel, third_party_factor
+    return lvl_factor, pwf_e, pwf_om, pwf_fuel, pwf_emissions_cost, pwf_grid_emissions, third_party_factor
 end
 
 
