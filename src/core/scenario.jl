@@ -110,13 +110,18 @@ function Scenario(d::Dict)
     end
 
     if haskey(d, "Financial")
-        financial = Financial(; dictkeys_tosymbols(d["Financial"])...)
+        financial = Financial(; dictkeys_tosymbols(d["Financial"])...,
+                                latitude=site.latitude, longitude=site.longitude
+                            )
     else
         financial = Financial()
     end
 
     if haskey(d, "ElectricUtility")
-        electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...)
+        electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...,
+                                            latitude=site.latitude, longitude=site.longitude, 
+                                            time_steps_per_hour=settings.time_steps_per_hour
+                                        )
     else
         electric_utility = ElectricUtility()
     end
