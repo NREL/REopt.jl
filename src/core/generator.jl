@@ -67,10 +67,10 @@ function Generator(;
     production_incentive_years::Int = 0,
     production_incentive_max_kw::Float64 = 1.0e9,
     fuel_renewable_energy_pct::Float64 = 0.0,
-    emissions_factor_lb_CO2_per_gal::Union{Missing,Float64} = missing,
-    emissions_factor_lb_NOX_per_gal::Union{Missing,Float64} = missing,
-    emissions_factor_lb_SO2_per_gal::Union{Missing,Float64} = missing,
-    emissions_factor_lb_PM25_per_gal::Union{Missing,Float64} = missing
+    emissions_factor_lb_CO2_per_gal::Union{Missing,Float64} = 22.51,
+    emissions_factor_lb_NOX_per_gal::Union{Missing,Float64} = 0.0775544,
+    emissions_factor_lb_SO2_per_gal::Union{Missing,Float64} = 0.040020476,
+    emissions_factor_lb_PM25_per_gal::Union{Missing,Float64} = 0.0
 )
 ```
 """
@@ -151,10 +151,10 @@ struct Generator <: AbstractGenerator
         production_incentive_years::Int = 0,
         production_incentive_max_kw::Float64 = 1.0e9,
         fuel_renewable_energy_pct::Float64 = 0.0,
-        emissions_factor_lb_CO2_per_gal::Union{Missing,Float64} = missing,
-        emissions_factor_lb_NOX_per_gal::Union{Missing,Float64} = missing,
-        emissions_factor_lb_SO2_per_gal::Union{Missing,Float64} = missing,
-        emissions_factor_lb_PM25_per_gal::Union{Missing,Float64} = missing
+        emissions_factor_lb_CO2_per_gal::Union{Missing,Float64} = 22.51,
+        emissions_factor_lb_NOX_per_gal::Union{Missing,Float64} = 0.0775544,
+        emissions_factor_lb_SO2_per_gal::Union{Missing,Float64} = 0.040020476,
+        emissions_factor_lb_PM25_per_gal::Union{Missing,Float64} = 0.0
         )
 
         new(
