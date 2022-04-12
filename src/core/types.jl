@@ -29,11 +29,12 @@
 # *********************************************************************************
 abstract type AbstractTech end
 abstract type AbstractStorage end
-abstract type AbstractGenerator <: AbstractTech end
+abstract type AbstractFuelBurningTech <: AbstractTech end
+abstract type AbstractGenerator <: AbstractFuelBurningTech end
 abstract type AbstractScenario end
 abstract type AbstractInputs end
 abstract type AbstractThermalTech <: AbstractGenerator end
-abstract type AbstractCHP <: AbstractTech end
+abstract type AbstractCHP <: AbstractFuelBurningTech end
 
 """
     Techs
