@@ -53,6 +53,7 @@ unavailability_periods::AbstractVector{Dict} = Dict[]
 size_class::Int = 1
 min_kw::Float64 = 0.0
 fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
+fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
 om_cost_per_kw::Float64 = 0.0
 om_cost_per_hr_per_kw_rated::Float64 = 0.0
 supplementary_firing_capital_cost_per_kw::Float64 = 150.0
@@ -87,7 +88,7 @@ can_net_meter::Bool = false
 can_wholesale::Bool = false
 can_export_beyond_nem_limit::Bool = false
 can_curtail::Bool = false
-fuel_renewable_energy_pct::Float64 = 0.0
+fuel_renewable_energy_pct::Union{Missing,Float64} = missing
 emissions_factor_lb_CO2_per_mmbtu::Union{Missing,Float64} = missing
 emissions_factor_lb_NOX_per_mmbtu::Union{Missing,Float64} = missing
 emissions_factor_lb_SO2_per_mmbtu::Union{Missing,Float64} = missing
@@ -113,6 +114,7 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     size_class::Int = 1
     min_kw::Float64 = 0.0
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0
+    fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     om_cost_per_kw::Float64 = 0.0
     om_cost_per_hr_per_kw_rated::Float64 = 0.0
     supplementary_firing_capital_cost_per_kw::Float64 = 150.0
@@ -147,7 +149,7 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     can_wholesale::Bool = false
     can_export_beyond_nem_limit::Bool = false
     can_curtail::Bool = false
-    fuel_renewable_energy_pct::Float64 = 0.0
+    fuel_renewable_energy_pct::Union{Missing,Float64} = missing
     emissions_factor_lb_CO2_per_mmbtu::Union{Missing,Float64} = missing
     emissions_factor_lb_NOX_per_mmbtu::Union{Missing,Float64} = missing
     emissions_factor_lb_SO2_per_mmbtu::Union{Missing,Float64} = missing
@@ -219,7 +221,7 @@ function CHP(d::Dict)
         if isempty(chp.unavailability_periods)
             chp.unavailability_periods = defaults["unavailability_periods"]
         end
-    end                                                   
+    end
 
     return chp
 end
