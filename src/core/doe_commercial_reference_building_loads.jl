@@ -49,7 +49,7 @@ const default_buildings = [
 
 
 function find_ashrae_zone_city(lat, lon)::String
-    file_path = joinpath(dirname(@__FILE__), "..", "..", "data", "climate_cities.shp")
+    file_path = joinpath(@__DIR__, "..", "..", "data", "climate_cities.shp")
     table = Shapefile.Table(file_path)
     geoms = Shapefile.shapes(table)
     # TODO following for loop is relatively slow
@@ -69,7 +69,7 @@ function find_ashrae_zone_city(lat, lon)::String
         end
         GC.gc()
     end
-    @info "Could not find latitude/longitude in U.S. Using geometrically nearest city."
+    @info "Could not find latitude/longitude in U.S. Using geometrically nearest city." 
     cities = [
         (city="Miami", lat=25.761680, lon=-80.191790),
         (city="Houston", lat=29.760427, lon=-95.369803),
