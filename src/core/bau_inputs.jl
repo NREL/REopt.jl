@@ -44,6 +44,12 @@ function BAUInputs(p::REoptInputs)
     cap_cost_slope = Dict{String, Any}()
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
     production_factor = DenseAxisArray{Float64}(undef, techs.all, p.time_steps)
+    tech_renewable_energy_pct = Dict(t => p.tech_renewable_energy_pct[t] for t in techs.all)
+    # !!! note: tech_emissions_factors in lb / kWh (gets multiplied by kWh of fuel burned, not kWh electricity consumption, ergo the use of the HHV instead of fuel slope)
+    tech_emissions_factors_CO2 = Dict(t => p.tech_emissions_factors_CO2[t] for t in techs.all)
+    tech_emissions_factors_NOx = Dict(t => p.tech_emissions_factors_NOx[t] for t in techs.all)
+    tech_emissions_factors_SO2 = Dict(t => p.tech_emissions_factors_SO2[t] for t in techs.all)
+    tech_emissions_factors_PM25 = Dict(t => p.tech_emissions_factors_PM25[t] for t in techs.all)
 
     # export related inputs
     techs_by_exportbin = Dict(k => [] for k in p.s.electric_tariff.export_bins)
@@ -153,7 +159,12 @@ function BAUInputs(p::REoptInputs)
         p.pbi_max_benefit, 
         p.pbi_max_kw, 
         p.pbi_benefit_per_kwh,
-        boiler_efficiency
+        boiler_efficiency,
+        tech_renewable_energy_pct, 
+        tech_emissions_factors_CO2, 
+        tech_emissions_factors_NOx, 
+        tech_emissions_factors_SO2, 
+        tech_emissions_factors_PM25
     )
 end
 
