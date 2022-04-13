@@ -153,7 +153,7 @@ end
         
         # Specify the CHP.min_turn_down_pct which is NOT used during an outage
         data["CHP"]["min_turn_down_pct"] = 0.5
-        # Specify outage period; outage timesteps are 1-indexed
+        # Specify outage period; outage time_steps are 1-indexed
         outage_start = unavail_1_start
         data["ElectricUtility"]["outage_start_time_step"] = outage_start
         outage_end = unavail_1_end

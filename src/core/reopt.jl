@@ -395,7 +395,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	if !(isempty(p.s.storage.types.elec)) && p.s.settings.add_soc_incentive # Keep SOC high
 		@objective(m, Min, m[:Costs] - 
 		sum(m[:dvStoredEnergy][b, ts] for b in p.s.storage.types.elec, ts in p.time_steps) /
-			(8760. / p.hours_per_timestep)
+			(8760. / p.hours_per_time_step)
 		)
 	
 	end
