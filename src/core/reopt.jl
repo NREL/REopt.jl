@@ -400,13 +400,11 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	
 	end
 
-	# TODO should add_soc_incentive ever be done with degradation?
 	for b in p.s.storage.types.elec
 		if p.s.storage.attr[b].model_degradation
 			add_degradation(m, p; b=b)
 			if p.s.settings.add_soc_incentive
-				@warn "Adding a battery SOC incentive may conflict with the battery degradation
-					model and fail to provide a solution with an elevated SOC."
+				@warn "Settings.add_soc_incentive is set to true but no incentive will be added because it conflicts with the battery degradation model."
 			end
 		end
 	end
