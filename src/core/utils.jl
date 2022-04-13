@@ -202,7 +202,8 @@ function dictkeys_tosymbols(d::Dict)
             end
         end
         if k in [
-            "installed_cost_per_kw", "replace_cost_per_kw"
+            "installed_cost_per_kw", "replace_cost_per_kw",
+            "offgrid_other_capital_costs", "offgrid_other_annual_costs"
         ]
             try
                 v = convert(Float64, v)
@@ -396,4 +397,17 @@ function convert_gal_to_kwh(delta_T_degF::Real, rho_kg_per_m3::Real, cp_kj_per_k
     kj_per_gal = kj_per_m3 / 264.172   # divide by gal/m^3 to get: [kJ/gal]
     kwh_per_gal = kj_per_gal / 3600.0  # divide by kJ/kWh, i.e., sec/hr, to get: [kWh/gal]
     return kwh_per_gal
+end
+
+"""
+    The input offgrid_other_capital_costs is considered to be for depreciable assets. 
+    Straight line depreciation is applied, and the depreciation expense is assumed to reduce the owner's taxable income
+    TODO: should the savings array start at [0] or [1] ??
+    :return npv_other_capex: present value of tax savings from depreciation of assets included in `offgrid_other_capital_costs`
+"""
+function get_offgrid_other_capex_depreciation_savings(offgrid_other_capital_costs::Real, discount_rate::Float64, 
+    analysis_years::Int, tax_rate::Real)
+    tax_savings_array = repeat([offgrid_other_capital_costs/analysis_years*tax_rate], analysis_years) # TODO: start savings at [0] or [1]?
+    npv_other_capex = npv(discount_rate, tax_savings_array)
+    return npv_other_capex
 end
