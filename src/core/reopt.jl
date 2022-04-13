@@ -221,6 +221,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     m[:TotalProductionIncentive] = 0
 	m[:dvComfortLimitViolationCost] = 0.0
 	m[:TotalCHPStandbyCharges] = 0
+	m[:OffgridOtherCapexAfterDepr] = 0.0
 
 	if !isempty(p.techs.all)
 		add_tech_size_constraints(m, p)
@@ -353,6 +354,16 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 	end
 
+	if p.s.settings.off_grid_flag
+		offgrid_other_capex_depr_savings = get_offgrid_other_capex_depreciation_savings(p.s.financial.offgrid_other_capital_costs, 
+			p.s.financial.owner_discount_pct, p.s.financial.analysis_years, p.s.financial.owner_tax_pct)
+		
+		print(p.s.financial.offgrid_other_capital_costs, p.s.financial.owner_discount_pct, p.s.financial.analysis_years, p.s.financial.owner_tax_pct)
+		print("offgrid_other_capex_depr_savings: ", offgrid_other_capex_depr_savings)
+
+		m[:OffgridOtherCapexAfterDepr] = p.s.financial.offgrid_other_capital_costs - offgrid_other_capex_depr_savings 
+	end
+
 	#################################  Objective Function   ########################################
 	@expression(m, Costs,
 		# Capital Costs
@@ -382,8 +393,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		# Additional annual costs, tax deductible for owner (only applies when off_grid_flag is true)
 		p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct) +
 
-		# Additional capital costs (TODO: apply depreciation) (only applies when off_grid_flag is true)
-		p.s.financial.offgrid_other_capital_costs
+		# Additional capital costs, depreciable (only applies when off_grid_flag is true)
+		m[:OffgridOtherCapexAfterDepr]
 
 	);
 	if !isempty(p.s.electric_utility.outage_durations)

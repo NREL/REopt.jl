@@ -680,7 +680,6 @@ function fillin_techs_by_exportbin(techs_by_exportbin::Dict, tech::AbstractTech,
 end
 
 function setup_operating_reserve_pct(s::AbstractScenario, techs_operating_reserve_req_pct)
-    # techs = Techs(s)
 
     for pv in s.pvs # currently only PV requires operating reserves
         techs_operating_reserve_req_pct[pv.name] = pv.operating_reserve_required_pct
