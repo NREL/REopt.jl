@@ -1,8 +1,9 @@
 # REopt Changelog
 
-## develop
-- update default values from v2 of API
-
+## v0.14.0
+- update default values from v2 of API [breaking]
+- add ElectricStorage degradation accounting and maintenance strategies
+- finish cooling loads
 
 ## v0.13.0
 - fix bugs for time_steps_per_hour != 1
