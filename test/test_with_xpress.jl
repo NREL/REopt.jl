@@ -639,7 +639,7 @@ end
     #dispatch to load should be 10kW every other period = 4,380 * 10
     hot_tes_total_test = 43800.0 / REopt.MMBTU_TO_KWH
     cold_tes_total_test = 43800.0 / REopt.TONHOUR_TO_KWH_THERMAL
-    @test sum(r["HotThermalStorage"]["year_one_to_load_series_mmbtu_per_hr"]) ≈ hot_tes_total_test atol=0.1
+    @test sum(r["HotThermalStorage"]["year_one_to_load_series_mmbtu_per_hour"]) ≈ hot_tes_total_test atol=0.1
     @test sum(r["ColdThermalStorage"]["year_one_to_load_series_ton"]) ≈ cold_tes_total_test atol=0.1
     #size should be just over 10kW in gallons, accounting for efficiency losses and min SOC
     @test r["HotThermalStorage"]["size_gal"] ≈ 227.89 atol=0.1
@@ -700,16 +700,16 @@ end
 
     # Heating outputs
     boiler_fuel_consumption_calculated = results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"]
-    boiler_thermal_series = results["ExistingBoiler"]["year_one_thermal_production_mmbtu_per_hr"]
+    boiler_thermal_series = results["ExistingBoiler"]["year_one_thermal_production_mmbtu_per_hour"]
     #boiler_thermal_to_tes_series = results["ExistingBoiler"]["year_one_thermal_to_tes_series_mmbtu_per_hour"]
     chp_thermal_to_load_series = results["CHP"]["year_one_thermal_to_load_series_mmbtu_per_hour"]
     #chp_thermal_to_tes_series = results["CHP"]["year_one_thermal_to_tes_series_mmbtu_per_hour"]
     chp_thermal_to_waste_series = results["CHP"]["year_one_thermal_to_waste_series_mmbtu_per_hour"]
-    # absorpchl_thermal_series = results["AbsorptionChiller"]["year_one_absorp_chl_thermal_consumption_series_mmbtu_per_hr"]
-    #hot_tes_mmbtu_per_hr_to_load_series = results["HotStorage"]["year_one_thermal_from_hot_tes_series_mmbtu_per_hr"]
+    # absorpchl_thermal_series = results["AbsorptionChiller"]["year_one_absorp_chl_thermal_consumption_series_mmbtu_per_hour"]
+    #hot_tes_mmbtu_per_hour_to_load_series = results["HotStorage"]["year_one_thermal_from_hot_tes_series_mmbtu_per_hour"]
     #tes_inflows = sum(chp_thermal_to_tes_series) + sum(boiler_thermal_to_tes_series)
     total_chp_production = sum(chp_thermal_to_load_series) + sum(chp_thermal_to_waste_series) #+ sum(chp_thermal_to_tes_series)
-    #tes_outflows = sum(hot_tes_mmbtu_per_hr_to_load_series)
+    #tes_outflows = sum(hot_tes_mmbtu_per_hour_to_load_series)
     total_thermal_expected = boiler_thermal_load_mmbtu_total + sum(chp_thermal_to_waste_series) #+ tes_inflows + sum(absorpchl_thermal_series)
     boiler_fuel_expected = (total_thermal_expected - total_chp_production) / inputs.s.existing_boiler.efficiency# / - tes_outflows) / inputs.s.existing_boiler.efficiency
     total_thermal_mmbtu_calculated = sum(boiler_thermal_series) + total_chp_production #+ tes_outflows
