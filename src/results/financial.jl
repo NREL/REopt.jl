@@ -67,6 +67,8 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 
     if !isempty(p.techs.fuel_burning)
         r["lifecycle_fuel_costs_after_tax"] = value(m[:TotalFuelCosts]) * (1 - p.s.financial.offtaker_tax_pct)
+    else
+        r["lifecycle_fuel_costs_after_tax"] = 0.0
     end
 
     # LCC breakdown:
