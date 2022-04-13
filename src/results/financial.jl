@@ -76,9 +76,9 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     r["lcc_fraction_storage_capital_cost"] = value(m[Symbol("TotalStorageCapCosts"*_n)]) / r["lcc"]   # Storage capital costs (including replacements)
     r["lcc_fraction_om_cost"] = r["lifecycle_om_costs_after_tax"] /  r["lcc"]  # Fixed & Variable O&M 
     r["lcc_fraction_fuel_cost"] = r["lifecycle_fuel_costs_after_tax"] / r["lcc"]  # Fuel costs
-    r["lcc_fraction_chp_standby_cost"] = value(m[:TotalCHPStandbyCharges] * (1 - p.s.financial.offtaker_tax_pct)) / r["lcc"] # CHP standby
-    r["lcc_fraction_elecbill_cost"] = value(m[:TotalElecBill] * (1 - p.s.financial.offtaker_tax_pct)) / r["lcc"]  # Utility bill 
-    r["lcc_fraction_pbi"] = value(-1 * m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_pct)) / r["lcc"]  # Production incentives 
+    r["lcc_fraction_chp_standby_cost"] = value(m[Symbol("TotalCHPStandbyCharges"*_n)]) * (1 - p.s.financial.offtaker_tax_pct) / r["lcc"] # CHP standby
+    r["lcc_fraction_elecbill_cost"] =value(m[Symbol("TotalElecBill"*_n)]) * (1 - p.s.financial.offtaker_tax_pct) / r["lcc"]  # Utility bill 
+    r["lcc_fraction_pbi"] = -1 * value(m[Symbol("TotalProductionIncentive"*_n)])  * (1 - p.s.financial.owner_tax_pct) / r["lcc"]  # Production incentives 
     r["lcc_fraction_addtl_annual_cost"] = (p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct)) / r["lcc"] # Addtl Annual costs
     r["lcc_fraction_addtl_capital_cost"] = (p.s.financial.offgrid_other_capital_costs) / r["lcc"]  # (TODO: apply depreciation) # Addtl capital costs
     if !isempty(p.s.electric_utility.outage_durations)  # Outage costs
