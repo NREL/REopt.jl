@@ -65,5 +65,17 @@
     "ElectricStorage": {
         "max_kw": 0.0,
         "max_kwh": 0.0
+    },
+    "HotThermalStorage":{
+        "min_gal": 30000.0,
+        "max_gal": 30000.0,
+        "internal_efficiency_pct": 0.97,
+        "thermal_decay_rate_fraction": 0.004
+    },
+    "ColdThermalStorage":{
+        "min_gal": 20000.0,
+        "max_gal": 20000.0,
+        "internal_efficiency_pct": 0.97,
+        "thermal_decay_rate_fraction": 0.004
     }    
 }
