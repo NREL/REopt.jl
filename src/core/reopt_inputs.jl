@@ -218,6 +218,7 @@ function setup_tech_inputs(s::AbstractScenario)
     cap_cost_slope = Dict{String, Any}()
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
     cop = Dict(t => 0.0 for t in techs.cooling)
+    thermal_cop = Dict(t => 0.0 for t in techs.absorption_chillers)
 
     # export related inputs
     techs_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in s.electric_tariff.export_bins)
@@ -266,6 +267,14 @@ function setup_tech_inputs(s::AbstractScenario)
         setup_existing_chiller_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cop)
     else
         cop["ExistingChiller"] = 1.0
+    end
+
+    if "AbsorptionChiller" in techs.all
+        setup_absorption_chiller_inputs(s, max_sizes, min_sizes, cap_cost_slope, segmented_techs, n_segs_by_tech,
+        seg_min_size, seg_max_size, seg_yint, cop, thermal_cop, om_cost_per_kw)
+    else
+        cop["AbsorptionChiller"] = 1.0
+        thermal_cop["AbsorptionChiller"] = 1.0
     end
 
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
@@ -494,6 +503,22 @@ function setup_existing_chiller_inputs(s::AbstractScenario, max_sizes, min_sizes
     # om_cost_per_kw["ExistingChiller"] = 0.0
     return nothing
 end
+
+
+function setup_absorption_chiller_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, 
+    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, cop, thermal_cop, om_cost_per_kw
+    )
+    max_sizes["AbsorptionChiller"] = s.absorption_chiller.max_kw
+    min_sizes["AbsorptionChiller"] = s.absorption_chiller.min_kw
+    update_cost_curve!(s.absorption_chiller, "AbsorptionChiller", s.financial,
+        cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+    )
+    cop["AbsorptionChiller"] = s.absorption_chiller.chiller_elec_cop
+    thermal_cop["AbsorptionChiller"] = s.absorption_chiller.chiller_cop
+    om_cost_per_kw["AbsorptionChiller"] = s.absorption_chiller.om_cost_per_kw
+    return nothing
+end
+
 
 function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw,  
     production_factor, techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint,
