@@ -38,8 +38,8 @@ function AbsorptionChiller(;
     max_ton::Real = 0.0,
     chiller_cop::Real,
     chiller_elec_cop::Real = 14.1,
-    installed_cost_us_dollars_per_ton::Real,
-    om_cost_us_dollars_per_ton::Real,
+    installed_cost_per_ton::Real,
+    om_cost_per_ton::Real,
     macrs_option_years::Real = 0,
     macrs_bonus_pct::Real = 0,
 )
@@ -56,37 +56,37 @@ struct AbsorptionChiller <: AbstractThermalTech
     macrs_bonus_pct::Real
     min_kw::Real
     max_kw::Real
-    installed_cost_us_dollars_per_kw::Real
-    om_cost_us_dollars_per_kw::Real
+    installed_cost_per_kw::Real
+    om_cost_per_kw::Real
     function AbsorptionChiller(;
         min_ton::Real = 0.0,
         max_ton::Real = 0.0,
         chiller_cop::Real,
         chiller_elec_cop::Real = 14.1,
-        installed_cost_us_dollars_per_ton::Real,
-        om_cost_us_dollars_per_ton::Real,
+        installed_cost_per_ton::Real,
+        om_cost_per_ton::Real,
         macrs_option_years::Real = 0,
         macrs_bonus_pct::Real = 0,
         )
-        
+
         min_kw = min_ton * TONHOUR_TO_KWH_THERMAL
         max_kw = max_ton * TONHOUR_TO_KWH_THERMAL
-        installed_cost_us_dollars_per_kw = installed_cost_us_dollars_per_ton / TONHOUR_TO_KWH_THERMAL
-        om_cost_us_dollars_per_kw = om_cost_us_dollars_per_ton / TONHOUR_TO_KWH_THERMAL
+        installed_cost_per_kw = installed_cost_per_ton / TONHOUR_TO_KWH_THERMAL
+        om_cost_per_kw = om_cost_per_ton / TONHOUR_TO_KWH_THERMAL
 
         new(
             min_ton,
             max_ton,
             chiller_cop,
             chiller_elec_cop,
-            installed_cost_us_dollars_per_ton,
-            om_cost_us_dollars_per_ton,
+            installed_cost_per_ton,
+            om_cost_per_ton,
             macrs_option_years,
             macrs_bonus_pct,
             min_kw,
             max_kw,
-            installed_cost_us_dollars_per_kw,
-            om_cost_us_dollars_per_kw
+            installed_cost_per_kw,
+            om_cost_per_kw
         )
     end
 end
