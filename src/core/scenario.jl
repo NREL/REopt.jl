@@ -42,6 +42,7 @@ struct Scenario <: AbstractScenario
     space_heating_load::SpaceHeatingLoad
     cooling_load::CoolingLoad
     existing_boiler::Union{ExistingBoiler, Nothing}
+    boiler::Union{Boiler, Nothing}
     chp::Union{CHP, Nothing}  # use nothing for more items when they are not modeled?
     flexible_hvac::Union{FlexibleHVAC, Nothing}
     existing_chiller::Union{ExistingChiller, Nothing}
@@ -180,6 +181,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     flexible_hvac = nothing
     existing_boiler = nothing
+    boiler = nothing
     existing_chiller = nothing
 
     if haskey(d, "FlexibleHVAC")
@@ -204,8 +206,13 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     boiler_inputs = merge(boiler_inputs, dictkeys_tosymbols(d["ExistingBoiler"]))
                 end
                 existing_boiler = ExistingBoiler(; boiler_inputs...)
-                # TODO automatically add CHP or other heating techs?
+
+                if haskey(d, "Boiler")
+                    boiler = Boiler(; dictkeys_tosymbols(d["Boiler"])...)
+                end
                 # TODO increase max_thermal_factor_on_peak_load to allow more heating flexibility?
+            elseif haskey(d, "Boiler")
+                @warn("Not creating Boiler because there is no heating load.") 
             end
 
             if sum(flexible_hvac.bau_hvac.existing_chiller_kw_thermal) > 0
@@ -240,7 +247,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         end
     end
 
-    if max_heat_demand_kw > 0 && !haskey(d, "FlexibleHVAC")  # create ExistingBoler
+    if max_heat_demand_kw > 0 && !haskey(d, "FlexibleHVAC")  # create ExistingBoiler
         boiler_inputs = Dict{Symbol, Any}()
         boiler_inputs[:max_heat_demand_kw] = max_heat_demand_kw
         boiler_inputs[:time_steps_per_hour] = settings.time_steps_per_hour
@@ -255,6 +262,16 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         end
         existing_boiler = ExistingBoiler(; boiler_inputs...)
     end
+
+    if haskey(d, "Boiler")
+        if max_heat_demand_kw > 0 && !haskey(d, "FlexibleHVAC")
+            boiler = Boiler(; dictkeys_tosymbols(d["Boiler"])...)
+        end
+        if !(max_heat_demand_kw > 0) && !haskey(d, "FlexibleHVAC")
+            @warn("Not creating Boiler because there is no heating load.")
+        end
+    end
+
 
     chp = nothing
     if haskey(d, "CHP")
@@ -318,6 +335,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         space_heating_load,
         cooling_load,
         existing_boiler,
+        boiler,
         chp,
         flexible_hvac,
         existing_chiller
