@@ -306,7 +306,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         existing_chiller = ExistingChiller(; chiller_inputs...)
 
         if haskey(d, "AbsorptionChiller")
-            absorption_chiller = AbsorptionChiller(; dictkeys_tosymbols(d["AbsorptionChiller"]))
+            absorption_chiller = AbsorptionChiller(; dictkeys_tosymbols(d["AbsorptionChiller"])...)
         end
     end
 
