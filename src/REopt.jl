@@ -66,6 +66,9 @@ global hdl = nothing
 
 const M3_TO_GAL = 264.172  # [gal/m^3]
 const GAL_DIESEL_TO_KWH = 40.7  # [kWh/gal_diesel]
+const MMBTU_TO_KWH = 293.07107
+const TONHOUR_TO_KWH_THERMAL = 3.51685
+const EXISTING_BOILER_EFFICIENCY = 0.8
 
 include("keys.jl")
 include("core/types.jl")
