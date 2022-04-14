@@ -1,5 +1,9 @@
 # REopt Changelog
 
+## dev
+- fix bug for scalar `ElectricTariff.wholesale_rate`
+- add `Boiler` tech (known as NewBoiler in API)
+
 ## v0.14.0
 - update default values from v2 of API [breaking]
 - add ElectricStorage degradation accounting and maintenance strategies
