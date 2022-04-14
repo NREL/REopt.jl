@@ -441,7 +441,7 @@ end
     @test r["ElectricStorage"]["size_kwh"] ≈ 78.91  rtol=0.01
 end
 
-@testset "Outage with Generator, outate simulator, BAU critical load outputs" begin
+@testset "Outage with Generator, outage simulator, BAU critical load outputs" begin
     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     p = REoptInputs("./scenarios/generator.json")
