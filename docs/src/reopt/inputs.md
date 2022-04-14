@@ -94,6 +94,7 @@ REopt.Wind
 ## ElectricStorage
 ```@docs
 REopt.ElectricStorageDefaults
+REopt.Degradation
 ```
 
 ## Generator
