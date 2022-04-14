@@ -29,11 +29,12 @@
 # *********************************************************************************
 
 function add_boiler_tech_constraints(m, p; _n="")
-    m[:TotalExistingBoilerFuelCosts] = @expression(m, p.pwf_fuel["ExistingBoiler"] *
-    sum(m[:dvFuelUsage]["ExistingBoiler", ts] * p.s.existing_boiler.fuel_cost_series[ts] for ts in p.time_steps)
-)
-    m[:TotalFuelCosts] += m[:TotalExistingBoilerFuelCosts]
     
+    m[:TotalBoilerFuelCosts] = @expression(m, sum(p.pwf_fuel[t] *
+        sum(m[:dvFuelUsage][t, ts] * p.s.existing_boiler.fuel_cost_series[ts] for ts in p.time_steps)
+        for t in p.techs.boiler)
+    )
+
     # Constraint (1e): Total Fuel burn for Boiler
     @constraint(m, [t in p.techs.boiler, ts in p.time_steps],
         m[:dvFuelUsage][t,ts] == p.hours_per_timestep * (
@@ -57,4 +58,12 @@ function add_boiler_tech_constraints(m, p; _n="")
     @constraint(m, [t in p.techs.boiler, ts in p.time_steps],
         m[Symbol("dvThermalProduction"*_n)][t,ts] <= m[Symbol("dvSize"*_n)][t]
     )
+
+    m[:TotalBoilerPerUnitProdOMCosts] = 0.0
+    if "Boiler" in p.techs.boiler  # ExistingBoiler does not have om_cost_per_kwh
+        m[:TotalBoilerPerUnitProdOMCosts] = @expression(m, p.third_party_factor * p.pwf_om *
+            sum(p.s.boiler.om_cost_per_kwh * p.hours_per_timestep *
+            m[:dvRatedProduction]["Boiler", ts] for ts in p.time_steps)
+        )
+    end
 end

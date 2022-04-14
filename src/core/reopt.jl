@@ -229,6 +229,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
         if !isempty(p.techs.boiler)
             add_boiler_tech_constraints(m, p)
+			m[:TotalPerUnitProdOMCosts] += m[:TotalBoilerPerUnitProdOMCosts]
+			m[:TotalFuelCosts] += m[:TotalBoilerFuelCosts]
         end
     
         if !isempty(p.techs.thermal)

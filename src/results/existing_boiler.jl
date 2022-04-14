@@ -61,6 +61,9 @@ function add_existing_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     )
 	r["boiler_thermal_to_load_series"] = round.(value.(BoilerToLoad), digits=3)
 
+    m[:TotalExistingBoilerFuelCosts] = @expression(m, p.pwf_fuel["ExistingBoiler"] *
+        sum(m[:dvFuelUsage]["ExistingBoiler", ts] * p.s.existing_boiler.fuel_cost_series[ts] for ts in p.time_steps)
+    )
 	r["lifecycle_fuel_cost"] = round(value(m[:TotalExistingBoilerFuelCosts]) * (1 - p.s.financial.offtaker_tax_pct), digits=3)
 	r["year_one_fuel_cost"] = round(value(m[:TotalExistingBoilerFuelCosts]) / p.pwf_fuel["ExistingBoiler"], digits=3)
 
