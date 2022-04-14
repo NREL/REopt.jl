@@ -896,6 +896,27 @@ end
     @test round(sum(cooling_electric_hybrid_expected .- cooling_elec_hybrid), digits=1) ≈ 0.0 atol=0.1
 end
 
+@testset "Boiler and Steam Turbine" begin
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt([m1,m2], "./scenarios/boiler_steam_turbine.json")
+
+    # below copied from API test (TODO why so many unused values? only one test?)
+    # # BAU boiler loads
+    # load_boiler_fuel = d["outputs"]["Scenario"]["Site"]["LoadProfileBoilerFuel"]["year_one_boiler_fuel_load_series_mmbtu_per_hr"]
+    # load_boiler_thermal = d["outputs"]["Scenario"]["Site"]["LoadProfileBoilerFuel"]["year_one_boiler_thermal_load_series_mmbtu_per_hr"]
+
+    # # Fuel/thermal **consumption**
+    # boiler_fuel = d["outputs"]["Scenario"]["Site"]["Boiler"]["year_one_boiler_fuel_consumption_series_mmbtu_per_hr"]
+    # newboiler_fuel = d["outputs"]["Scenario"]["Site"]["NewBoiler"]["year_one_boiler_fuel_consumption_series_mmbtu_per_hr"]
+    # steamturbine_thermal_in = d["outputs"]["Scenario"]["Site"]["SteamTurbine"]["year_one_thermal_consumption_series_mmbtu_per_hr"]
+
+    # # Check the electric_out/thermal_in efficiency/ratio of the steam turbine with a pre-calculated expected value 
+    # steamturbine_electric = d["outputs"]["Scenario"]["Site"]["SteamTurbine"]["year_one_electric_production_series_kw"] 
+    # net_electric_efficiency = sum(steamturbine_electric) / (sum(newboiler_fuel) * MMBTU_TO_KWH)
+    # self.assertAlmostEqual(net_electric_efficiency, 0.185, delta=0.02)  # Expected value from spreadsheet
+end
+
 ## equivalent REopt API Post for test 2:
 #   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
 # {"Scenario": {
