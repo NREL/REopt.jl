@@ -62,6 +62,7 @@ function Financial(;
 struct Financial
     om_cost_escalation_pct::Float64
     elec_cost_escalation_pct::Float64
+    existing_boiler_fuel_cost_escalation_pct::Float64
     boiler_fuel_cost_escalation_pct::Float64
     chp_fuel_cost_escalation_pct::Float64
     offtaker_tax_pct::Float64
@@ -78,6 +79,7 @@ struct Financial
     function Financial(;
         om_cost_escalation_pct::Float64 = 0.025,
         elec_cost_escalation_pct::Float64 = 0.019,
+        existing_boiler_fuel_cost_escalation_pct::Float64 = 0.034,
         boiler_fuel_cost_escalation_pct::Float64 = 0.034,
         chp_fuel_cost_escalation_pct::Float64 = 0.034,
         offtaker_tax_pct::Float64 = 0.26,
@@ -99,6 +101,7 @@ struct Financial
         return new(
             om_cost_escalation_pct,
             elec_cost_escalation_pct,
+            existing_boiler_fuel_cost_escalation_pct,
             boiler_fuel_cost_escalation_pct,
             chp_fuel_cost_escalation_pct,
             offtaker_tax_pct,
