@@ -63,6 +63,8 @@ using Shapefile
 using PolygonInbounds
 using Roots: fzero  # for IRR
 global hdl = nothing
+using HDF5, JLD
+using CSV, DataFrames
 
 include("keys.jl")
 include("core/types.jl")
