@@ -91,6 +91,9 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 
     if !isempty(p.techs.boiler)
         add_existing_boiler_results(m, p, d)
+        if "Boiler" in p.techs.boiler
+            add_boiler_results(m, p, d)
+        end
     end
 
     if !isnothing(p.s.existing_chiller)
