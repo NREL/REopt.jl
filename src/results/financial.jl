@@ -45,6 +45,9 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     if !(Symbol("dvComfortLimitViolationCost"*_n) in keys(m.obj_dict))
         m[Symbol("dvComfortLimitViolationCost"*_n)] = 0.0
     end
+    if !(Symbol("TotalProductionIncentive"*_n) in keys(m.obj_dict)) # not currently included in multi-node modeling b/c these constraints require binary vars.
+        m[Symbol("TotalProductionIncentive"*_n)] = 0.0
+    end
     r["lcc"] = value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)]) - value(m[Symbol("dvComfortLimitViolationCost"*_n)])
     r["lifecycle_om_costs_before_tax"] = value(m[Symbol("TotalPerUnitSizeOMCosts"*_n)] + 
                                            m[Symbol("TotalPerUnitProdOMCosts"*_n)] + m[Symbol("TotalPerUnitHourOMCosts"*_n)])
