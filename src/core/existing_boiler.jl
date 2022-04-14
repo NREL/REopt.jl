@@ -32,6 +32,8 @@ struct ExistingBoiler <: AbstractThermalTech  # useful to create AbstractHeating
     max_kw::Real
     efficiency::Real
     fuel_cost_series::AbstractVector{<:Real}
+    fuel_type::String
+    can_supply_steam_turbine::Bool
 end
 
 
@@ -63,9 +65,9 @@ function ExistingBoiler(;
     max_thermal_factor_on_peak_load::Real = 1.25,
     efficiency::Real = 0.0,
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
-    time_steps_per_hour::Int = 1
-    # fuel_type::String = "natural_gas"  # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"],
-    # can_supply_steam_turbine::Bool,
+    time_steps_per_hour::Int = 1,
+    fuel_type::String = "natural_gas",  # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"],
+    can_supply_steam_turbine::Bool = false,
     # emissions_factor_lb_CO2_per_mmbtu::Real,
 )
     @assert production_type in ["steam", "hot_water"]
@@ -102,6 +104,8 @@ function ExistingBoiler(;
     ExistingBoiler(
         max_kw,
         efficiency,
-        fuel_cost_series
+        fuel_cost_series,
+        fuel_type,
+        can_supply_steam_turbine,
     )
 end
