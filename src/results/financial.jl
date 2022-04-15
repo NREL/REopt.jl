@@ -84,7 +84,7 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     r["lcc_fraction_pbi"] = -1 * value(m[Symbol("TotalProductionIncentive"*_n)])  * (1 - p.s.financial.owner_tax_pct) / r["lcc"]  # Production incentives 
     if p.s.settings.off_grid_flag
         r["lcc_fraction_addtl_annual_cost"] = (p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct)) / r["lcc"] # Addtl Annual costs
-        r["lcc_fraction_addtl_capital_cost"] = m[:OffgridOtherCapexAfterDepr]
+        r["lcc_fraction_addtl_capital_cost"] = m[:OffgridOtherCapexAfterDepr] / r["lcc"]
     else
         r["lcc_fraction_addtl_annual_cost"] = 0.0
         r["lcc_fraction_addtl_capital_cost"] = 0.0
