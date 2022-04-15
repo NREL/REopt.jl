@@ -82,8 +82,13 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     r["lcc_fraction_chp_standby_cost"] = value(m[Symbol("TotalCHPStandbyCharges"*_n)]) * (1 - p.s.financial.offtaker_tax_pct) / r["lcc"] # CHP standby
     r["lcc_fraction_elecbill_cost"] =value(m[Symbol("TotalElecBill"*_n)]) * (1 - p.s.financial.offtaker_tax_pct) / r["lcc"]  # Utility bill 
     r["lcc_fraction_pbi"] = -1 * value(m[Symbol("TotalProductionIncentive"*_n)])  * (1 - p.s.financial.owner_tax_pct) / r["lcc"]  # Production incentives 
-    r["lcc_fraction_addtl_annual_cost"] = (p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct)) / r["lcc"] # Addtl Annual costs
-    r["lcc_fraction_addtl_capital_cost"] = (p.s.financial.offgrid_other_capital_costs) / r["lcc"]  # (TODO: apply depreciation) # Addtl capital costs
+    if p.s.settings.off_grid_flag
+        r["lcc_fraction_addtl_annual_cost"] = (p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct)) / r["lcc"] # Addtl Annual costs
+        r["lcc_fraction_addtl_capital_cost"] = m[:OffgridOtherCapexAfterDepr]
+    else
+        r["lcc_fraction_addtl_annual_cost"] = 0.0
+        r["lcc_fraction_addtl_capital_cost"] = 0.0
+    end 
     if !isempty(p.s.electric_utility.outage_durations)  # Outage costs
         r["lcc_fraction_outage_cost"] = value(m[:ExpectedOutageCost] + m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost] + m[:ExpectedMGFuelCost]) / r["lcc"] 
 	else
@@ -92,7 +97,7 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 
     if p.s.settings.off_grid_flag
         r["lifecycle_offgrid_other_annual_costs_after_tax"] = p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct)
-        r["lifecycle_offgrid_other_capital_costs"] = p.s.financial.offgrid_other_capital_costs # (TODO: apply depreciation)
+        r["lifecycle_offgrid_other_capital_costs"] = m[:OffgridOtherCapexAfterDepr]
         
         if p.third_party_factor == 1 # ==1 with Direct ownership (when third_party_ownership is False)
             pwf = p.pwf_offtaker
