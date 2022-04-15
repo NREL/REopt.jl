@@ -149,12 +149,10 @@ function Techs(s::Scenario)
     if s.settings.off_grid_flag
         techs_requiring_oper_res = copy(pvtechs) # Currently, only PV requires operating reserves.
         techs_providing_oper_res = union(pvtechs, gentechs) # Currently, only PV and generator (and storage) provide operating reserves.
-        print("techs_providing_oper_res", techs_providing_oper_res)
     end
 
     thermal_techs = union(heating_techs, boiler_techs, chp_techs, cooling_techs)
     fuel_burning_techs = union(gentechs, boiler_techs, chp_techs)
-    print("all_techs", all_techs)
 
     Techs(
         all_techs,

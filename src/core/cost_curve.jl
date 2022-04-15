@@ -369,6 +369,7 @@ function cost_curve(tech::AbstractTech, financial::Financial)
                 replacement_cost = 0.0
             else
                 replacement_cost = tech.replace_cost_per_kw
+                print(replacement_cost)
             end
             updated_slope = effective_cost(;
                 itc_basis=itc_unit_basis,  # input tech cost with incentives, but no ITC

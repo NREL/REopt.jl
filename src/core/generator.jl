@@ -67,7 +67,7 @@ function Generator(;
     production_incentive_years::Int = 0,
     production_incentive_max_kw::Float64 = 1.0e9,
     replacement_year::Int = off_grid_flag ? 10 : analysis_years, 
-    replace_cost_per_kw::Float64 = installed_cost_per_kw
+    replace_cost_per_kw::Float64 = off_grid_flag ? installed_cost_per_kw : 0.0
 )
 ```
 """
