@@ -949,3 +949,35 @@ end
 #         "om_cost_escalation_pct": 0.025
 #     }
 # }}}
+
+@testset "OffGrid" begin
+    # Solar, Storage, Fixed Generator
+    post_name = "off_grid.json" 
+    post = JSON.parsefile("$post_name")
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    r = run_reopt(m, post)
+    scen, inputs = get_inputs(post)
+    
+    # Test default values 
+    @test scen.electric_utility.outage_start_time_step ≈ 1
+    @test scen.electric_utility.outage_end_time_step ≈ 8760 * scen.settings.time_steps_per_hour
+    @test scen.storage.attr["ElectricStorage"].soc_init_pct ≈ 1
+    @test scen.storage.attr["ElectricStorage"].can_grid_charge ≈ false
+    @test scen.generator.fuel_avail_gal ≈ 1.0e9
+    @test scen.generator.min_turn_down_pct ≈ 0.15
+    @test sum(scen.electric_load.loads_kw) - sum(scen.electric_load.critical_loads_kw) ≈ 0 # critical loads should equal loads_kw
+    @test scen.financial.microgrid_upgrade_cost_pct ≈ 0
+
+    # Test outputs
+    @test r["ElectricUtility"]["year_one_energy_supplied_kwh"] ≈ 0 # no interaction with grid
+    @test r["Financial"]["lifecycle_offgrid_other_capital_costs"] ≈ 2586.46 # Check straight line depreciation calc
+    @test r["ElectricLoad"]["offgrid_annual_oper_res_provided_series_kwh"] >= r["ElectricLoad"]["offgrid_annual_oper_res_required_series_kwh"]
+    @test r["ElectricLoad"]["offgrid_load_met_pct"] >= scen.electric_load.min_load_met_annual_pct
+    f = r["Financial"]
+    # TODO: test these (currently adding to 0.99)
+    # @test f["lcc_fraction_tech_capital_cost"] + f["lcc_fraction_storage_capital_cost"] + f["lcc_fraction_om_cost"] +
+    #          f["lcc_fraction_fuel_cost"] + f["lcc_fraction_chp_standby_cost"] + f["lcc_fraction_elecbill_cost"] + f["lcc_fraction_pbi"] +
+    #          f["lcc_fraction_addtl_annual_cost"] + f["lcc_fraction_addtl_capital_cost"] + f["lcc_fraction_outage_cost"] ≈ 1
+
+end
+
