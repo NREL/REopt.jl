@@ -138,7 +138,7 @@ function add_thermal_load_constraints(m, p; _n="")
             #             # sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.SteamTurbineTechs) +
             #             sum(p.production_factor[t,ts] * (m[Symbol("dvThermalProduction"*_n)][t,ts] - m[:dvThermalToSteamTurbine][t,ts]) for t in p.techs.boiler)
             #             # + sum(p.GHPHeatingThermalServed[g,ts] * m[:binGHP][g] for g in p.GHPOptions)
-            #             # + sum(m[:dvDischargeFromStorage][b,ts] for b in p.s.storage.types.hot) 
+            #             # + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.hot) 
             #             ==
             #             p.HeatingLoad[ts] * p.s.existing_boiler.efficiency
             #             # + sum(m[:dvProductionToWaste][t,ts] for t in p.CHPTechs) +
@@ -147,36 +147,35 @@ function add_thermal_load_constraints(m, p; _n="")
             #     )
             # else
                 @constraint(m, [ts in p.time_steps],
-                        sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.techs.chp) +
-                        sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.boiler)
+                        sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in union(p.techs.boiler, p.techs.chp)) +
                         # TODO do all thermal techs have production_factor = 1 ? get rid of it if so
-                        + sum(m[:dvDischargeFromStorage][b,ts] for b in p.s.storage.types.hot)
+                        + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.hot)
                         # + sum(p.GHPHeatingThermalServed[g,ts] * m[:binGHP][g] for g in p.GHPOptions)
                         ==
                         (p.s.dhw_load.loads_kw[ts] + p.s.space_heating_load.loads_kw[ts])
                         + sum(m[Symbol("dvProductionToWaste"*_n)][t,ts] for t in p.techs.chp) +
-                        sum(m[:dvProductionToStorage][b,t,ts] for b in p.s.storage.types.hot, t in p.techs.heating)  #+
+                        sum(m[:dvProductionToStorage][b,t,ts] for b in p.s.storage.types.hot, t in union(p.techs.boiler, p.techs.chp))  #+
                         # sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.AbsorptionChillers) / p.AbsorptionChillerCOP
                 )
             # end
 
-        ##Constraint (5a): Cold thermal loads
-        # if !isempty(p.CoolingTechs)
-        # 	@constraint(m, ColdThermalLoadCon[ts in p.time_steps],
-        # 			sum(p.production_factor[t,ts] * m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.CoolingTechs) +
-        # 			sum(m[:dvDischargeFromStorage][b,ts] for b in p.s.storage.types.cold) ==
-        # 			p.CoolingLoad[ts] -
-        # 			sum(p.GHPCoolingThermalServed[g,ts] * m[:binGHP][g] for g in p.GHPOptions) +
-        # 			sum(m[:dvProductionToStorage][b,t,ts] for b in p.s.storage.types.cold, t in p.CoolingTechs)
-        # 	)
-        # end
         end
-        
+
         if !isempty(p.techs.cooling)
+            
+            ##Constraint (5a): Cold thermal loads
             @constraint(m, [ts in p.time_steps_with_grid],
-                sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.cooling) ==
-                p.s.cooling_load.loads_kw_thermal[ts]
+                    sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.techs.cooling) +
+                    sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.cold) ==
+                    p.s.cooling_load.loads_kw_thermal[ts] +
+                    sum(m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for b in p.s.storage.types.cold, t in p.techs.cooling) #- 
+                    # sum(p.GHPCoolingThermalServed[g,ts] * m[:binGHP][g] for g in p.GHPOptions) +
             )
+
+            # @constraint(m, [ts in p.time_steps_with_grid],
+            #     sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.cooling) ==
+            #     p.s.cooling_load.loads_kw_thermal[ts]
+            # )
         end
     end
 end
