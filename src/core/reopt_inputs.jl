@@ -218,7 +218,7 @@ function setup_tech_inputs(s::AbstractScenario)
     cap_cost_slope = Dict{String, Any}()
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
     cop = Dict(t => 0.0 for t in techs.cooling)
-    thermal_cop = Dict(t => 0.0 for t in techs.absorption_chillers)
+    thermal_cop = Dict(t => 0.0 for t in techs.absorption_chiller)
 
     # export related inputs
     techs_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in s.electric_tariff.export_bins)
