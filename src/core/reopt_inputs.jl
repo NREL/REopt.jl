@@ -79,6 +79,7 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     cap_cost_slope::Dict{String, Any}  # (techs)
     om_cost_per_kw::Dict{String, Float64}  # (techs)
     cop::Dict{String, Float64}  # (techs.cooling)
+    thermal_cop::Dict{String, Float64}  # (techs.absorption_chiller)
     time_steps::UnitRange
     time_steps_with_grid::Array{Int, 1}
     time_steps_without_grid::Array{Int, 1}
@@ -139,7 +140,7 @@ function REoptInputs(s::AbstractScenario)
     techs, pv_to_location, maxsize_pv_locations, pvlocations, 
         production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
         seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
-        cop = setup_tech_inputs(s)
+        cop, thermal_cop = setup_tech_inputs(s)
 
     pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
 
@@ -168,6 +169,7 @@ function REoptInputs(s::AbstractScenario)
         cap_cost_slope,
         om_cost_per_kw,
         cop,
+        thermal_cop,
         time_steps,
         time_steps_with_grid,
         time_steps_without_grid,
@@ -270,7 +272,7 @@ function setup_tech_inputs(s::AbstractScenario)
     end
 
     if "AbsorptionChiller" in techs.all
-        setup_absorption_chiller_inputs(s, max_sizes, min_sizes, cap_cost_slope, segmented_techs, n_segs_by_tech,
+        setup_absorption_chiller_inputs(s, max_sizes, min_sizes, cap_cost_slope, techs.segmented, n_segs_by_tech,
         seg_min_size, seg_max_size, seg_yint, cop, thermal_cop, om_cost_per_kw)
     else
         cop["AbsorptionChiller"] = 1.0
@@ -285,7 +287,7 @@ function setup_tech_inputs(s::AbstractScenario)
     return techs, pv_to_location, maxsize_pv_locations, pvlocations, 
     production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
     seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
-    cop
+    cop, thermal_cop
 end
 
 
