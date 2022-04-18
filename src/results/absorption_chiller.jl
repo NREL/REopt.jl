@@ -36,6 +36,7 @@ function add_absorption_chiller_results(m::JuMP.AbstractModel, p::REoptInputs, d
 	# r["existing_chiller_to_tes_series"] = round.(value.(ELECCHLtoTES), digits=3)
 
 	r["absorpchl_kw"] = value(sum(m[:dvSize][t] for t in p.techs.absorption_chiller))
+	r["size_ton"] = r["absorpchl_kw"] / TONHOUR_TO_KWH_THERMAL
 	@expression(m, ABSORPCHLtoTES[ts in p.time_steps],
 		sum(m[:dvProductionToStorage][b,t,ts] for b in p.s.storage.types.cold, t in p.techs.absorption_chiller))
 	r["absorption_chiller_to_tes_series"] = round.(value.(ABSORPCHLtoTES), digits=3)
@@ -62,6 +63,6 @@ function add_absorption_chiller_results(m::JuMP.AbstractModel, p::REoptInputs, d
             for t in p.techs.absorption_chiller, ts in p.time_steps))
     r["year_one_absorp_chiller_electric_consumption_kwh"] = round(value(Year1ABSORPCHLElectricConsumption), digits=3)
     
-	d["absorption_chiller"] = r
+	d["AbsorptionChiller"] = r
 	nothing
 end
