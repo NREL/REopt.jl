@@ -41,9 +41,11 @@ function AbsorptionChiller(;
     installed_cost_per_ton::Real,
     om_cost_per_ton::Real,
     macrs_option_years::Real = 0,
-    macrs_bonus_pct::Real = 0,
+    macrs_bonus_pct::Real = 0
 )
 ```
+note that many elements of the struct have zero values that are passed through to the 
+cost curve calculation.
 """
 struct AbsorptionChiller <: AbstractThermalTech
     min_ton::Real
@@ -58,6 +60,17 @@ struct AbsorptionChiller <: AbstractThermalTech
     max_kw::Real
     installed_cost_per_kw::Real
     om_cost_per_kw::Real
+    federal_itc_pct::Real
+    federal_rebate_per_kw::Real
+    state_ibi_pct::Real
+    state_ibi_max::Real
+    state_rebate_per_kw::Real
+    state_rebate_max::Real
+    utility_ibi_pct::Real
+    utility_ibi_max::Real
+    utility_rebate_per_kw::Real
+    utility_rebate_max::Real
+    macrs_itc_reduction::Real
     function AbsorptionChiller(;
         min_ton::Real = 0.0,
         max_ton::Real = 0.0,
@@ -86,7 +99,18 @@ struct AbsorptionChiller <: AbstractThermalTech
             min_kw,
             max_kw,
             installed_cost_per_kw,
-            om_cost_per_kw
+            om_cost_per_kw,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
         )
     end
 end
