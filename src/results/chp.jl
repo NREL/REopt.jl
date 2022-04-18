@@ -88,7 +88,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	else 
 		CHPtoHotTES = zeros(length(p.time_steps))
 	end
-	r["year_one_thermal_to_tes_series_mmbtu_per_hour"] = round.(value.(CHPtoHotTES), digits=5)
+	r["year_one_thermal_to_tes_series_mmbtu_per_hour"] = round.(value.(CHPtoHotTES / MMBTU_TO_KWH), digits=5)
     # if !isempty(p.SteamTurbineTechs)
     #     @expression(m, CHPToSteamTurbine[ts in p.time_steps], sum(m[Symbol("dvThermalToSteamTurbine"*_n)][t,ts] for t in p.techs.chp))
     #     r["year_one_thermal_to_steamturbine_series_mmbtu_per_hour"] = round.(value.(CHPToSteamTurbine), digits=3)
@@ -96,16 +96,16 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     #     CHPToSteamTurbine = zeros(p.TimeStepCount)
     #     r["year_one_thermal_to_steamturbine_series_mmbtu_per_hour"] = round.(CHPToSteamTurbine, digits=3)
     # end
-	@expression(m, CHPThermalToWasteKWH[ts in p.time_steps],
+	@expression(m, CHPThermalToWasteKW[ts in p.time_steps],
 		sum(m[Symbol("dvProductionToWaste"*_n)][t,ts] for t in p.techs.chp))
-	r["year_one_thermal_to_waste_series_mmbtu_per_hour"] = round.(value.(CHPThermalToWasteKWH) / MMBTU_TO_KWH, digits=5)
+	r["year_one_thermal_to_waste_series_mmbtu_per_hour"] = round.(value.(CHPThermalToWasteKW) / MMBTU_TO_KWH, digits=5)
 	# @expression(m, CHPThermalToLoad[ts in p.time_steps],
 	# 	sum(m[Symbol("dvThermalProduction"*_n)][t,ts] + m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
 	# 		for t in p.techs.chp) - CHPtoHotTES[ts] - CHPToSteamTurbine[ts] - CHPThermalToWaste[ts])
-    @expression(m, CHPThermalToLoadKWH[ts in p.time_steps],
+    @expression(m, CHPThermalToLoadKW[ts in p.time_steps],
         sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.techs.chp) - 
-        CHPtoHotTES[ts] - CHPThermalToWasteKWH[ts])
-	r["year_one_thermal_to_load_series_mmbtu_per_hour"] = round.(value.(CHPThermalToLoadKWH) / MMBTU_TO_KWH, digits=5)
+        CHPtoHotTES[ts] - CHPThermalToWasteKW[ts])
+	r["year_one_thermal_to_load_series_mmbtu_per_hour"] = round.(value.(CHPThermalToLoadKW) / MMBTU_TO_KWH, digits=5)
     r["year_one_chp_fuel_cost"] = round(value(m[:TotalCHPFuelCosts] / p.pwf_fuel["CHP"]), digits=3)                
 	r["lifecycle_chp_fuel_cost"] = round(value(m[:TotalCHPFuelCosts]) * p.s.financial.offtaker_tax_pct, digits=3)
 	#Standby charges and hourly O&M
