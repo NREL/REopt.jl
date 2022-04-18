@@ -215,11 +215,11 @@ function region_abbreviation(latitude, longitude)
     end
 
     """
-    If region abbreviation from above is nothing then perform the following:
+    If region abbreviation from above is nothing then are our lat/lon coords near any avert zone?:
     """
     if abbr === nothing
         
-        shpfile = ArchGDAL.read(joinpath("avert","avert_102008.shp"))
+        shpfile = ArchGDAL.read(joinpath(dirname(@__FILE__), "..", "..", "data", "avert","avert_102008.shp"))
         avert_102008 = ArchGDAL.getlayer(shpfile, 0)
         
         point = ArchGDAL.createpoint(latitude, longitude)
@@ -227,6 +227,7 @@ function region_abbreviation(latitude, longitude)
         try
             # EPSG 4326 is WGS 84 -- WGS84 - World Geodetic System 1984, used in GPS
             fromProj = ArchGDAL.importEPSG(4326)
+            # Got below from https://epsg.io/102008
             toProj = ArchGDAL.importPROJ4("+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs")
             ArchGDAL.createcoordtrans(fromProj, toProj) do transform
                 # println("Before: $(ArchGDAL.toWKT(point))")
@@ -254,6 +255,7 @@ function region_abbreviation(latitude, longitude)
         
         if meters_to_region > 8046
             @warn "Your site location (", latitude,",",longitude,") is more than 5 miles from the nearest emission region. Cannot calculate emissions."
+            return nothing, nothing
         end
         return region_abbr, meters_to_region
     end;
