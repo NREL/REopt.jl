@@ -218,46 +218,45 @@ function region_abbreviation(latitude, longitude)
     If region abbreviation from above is nothing then perform the following:
     """
     if abbr === nothing
-        shpfile = ArchGDAL.read(joinpath("..","..","data","avert","avert_102008.shp"))
+        
+        shpfile = ArchGDAL.read(joinpath("avert","avert_102008.shp"))
         avert_102008 = ArchGDAL.getlayer(shpfile, 0)
+        
+        point = ArchGDAL.createpoint(latitude, longitude)
         
         try
             # EPSG 4326 is WGS 84 -- WGS84 - World Geodetic System 1984, used in GPS
             fromProj = ArchGDAL.importEPSG(4326)
             toProj = ArchGDAL.importPROJ4("+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs")
             ArchGDAL.createcoordtrans(fromProj, toProj) do transform
-                point = ArchGDAL.createpoint(latitude, longitude)
                 # println("Before: $(ArchGDAL.toWKT(point))")
                 ArchGDAL.transform!(point, transform)
                 # println("After: $(ArchGDAL.toWKT(point))")
             end
         catch
-            @warn "Could not look up AVERT emissions region from point ("+latitude+","+longitude+"). Location is
+            @warn "Could not look up AVERT emissions region from point (",latitude,",",longitude,"). Location is
             likely invalid or well outside continental US, AK and HI"
             return nothing, nothing
         end
 
-        # For each item, get geometry and append distance to a vector.
+        # For each item, get geometry and append distance between point and geometry to vector.
         distances = []
-        for i in 0:ArchGDAL.nfeature(avert_102008)-1
-            fs = ArchGDAL.getfeature(avert_102008,i) do f
-                ArchGDAL.getgeom(f)
+        for i in 1:ArchGDAL.nfeature(avert_102008)
+            ArchGDAL.getfeature(avert_102008,i-1) do f # 0 indexed
+                push!(distances, ArchGDAL.distance(ArchGDAL.getgeom(f), point))
             end
-            println(fs)
-            push!(distances, ArchGDAL.distance(fs, point))
         end
         
-        ArchGDAL.getfeature(avert_102008,argmin(distances)) do feature
+        ArchGDAL.getfeature(avert_102008,argmin(distances)-1) do feature	# 0 indexed
             region_abbr = ArchGDAL.getfield(feature,1)
+            meters_to_region = distances[argmin(distances)]
         end
         
-        meters_to_region = distances[argmin(distances)-1]
-        #TODO: avert_102008 stuff and if successful:
         if meters_to_region > 8046
-            @warn "Your site location ("+latitude+","+longitude+") is more than 5 miles from the nearest emission region. Cannot calculate emissions."
+            @warn "Your site location (", latitude,",",longitude,") is more than 5 miles from the nearest emission region. Cannot calculate emissions."
         end
         return region_abbr, meters_to_region
-    end
+    end;
 
     """
     #     gdf_query = gdf[gdf.geometry.intersects(g.Point(self.longitude, self.latitude))]
