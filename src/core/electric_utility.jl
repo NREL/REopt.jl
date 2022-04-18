@@ -188,6 +188,12 @@ function region_abbreviation(latitude, longitude)
 
     table = Shapefile.Table(file_path)
     geoms = Shapefile.shapes(table)
+
+    # Set defaults
+    abbr = nothing
+    meters_to_region = nothing
+
+    ## Check if coordinates are in any of the AVERT zones for given shapefile.
     # TODO following for loop is relatively slow, and maybe incorrect because of longitude curving?
     for (row, geo) in enumerate(geoms)
         g = length(geo.points)
@@ -207,16 +213,53 @@ function region_abbreviation(latitude, longitude)
         end
         GC.gc()
     end
-    #TODO: avert_102008 stuff and if successful:
-    if meters_to_region > 8046
-        @warn "Your site location ("+latitude+","+longitude+") is more than 5 miles from the nearest emission region. Cannot calculate emissions."
-    end
-    return abbr, meters_to_region
-    #else
-    @warn "Could not look up AVERT emissions region from point ("+latitude+","+longitude+"). Location is
-            likely invalid or well outside continental US, AK and HI"
-    return nothing, nothing
 
+    """
+    If region abbreviation from above is nothing then perform the following:
+    """
+    if abbr === nothing
+        shpfile = ArchGDAL.read(joinpath("..","..","data","avert","avert_102008.shp"))
+        avert_102008 = ArchGDAL.getlayer(shpfile, 0)
+        
+        try
+            # EPSG 4326 is WGS 84 -- WGS84 - World Geodetic System 1984, used in GPS
+            fromProj = ArchGDAL.importEPSG(4326)
+            toProj = ArchGDAL.importPROJ4("+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs")
+            ArchGDAL.createcoordtrans(fromProj, toProj) do transform
+                point = ArchGDAL.createpoint(latitude, longitude)
+                # println("Before: $(ArchGDAL.toWKT(point))")
+                ArchGDAL.transform!(point, transform)
+                # println("After: $(ArchGDAL.toWKT(point))")
+            end
+        catch
+            @warn "Could not look up AVERT emissions region from point ("+latitude+","+longitude+"). Location is
+            likely invalid or well outside continental US, AK and HI"
+            return nothing, nothing
+        end
+
+        # For each item, get geometry and append distance to a vector.
+        distances = []
+        for i in 0:ArchGDAL.nfeature(avert_102008)-1
+            fs = ArchGDAL.getfeature(avert_102008,i) do f
+                ArchGDAL.getgeom(f)
+            end
+            println(fs)
+            push!(distances, ArchGDAL.distance(fs, point))
+        end
+        
+        ArchGDAL.getfeature(avert_102008,argmin(distances)) do feature
+            region_abbr = ArchGDAL.getfield(feature,1)
+        end
+        
+        meters_to_region = distances[argmin(distances)-1]
+        #TODO: avert_102008 stuff and if successful:
+        if meters_to_region > 8046
+            @warn "Your site location ("+latitude+","+longitude+") is more than 5 miles from the nearest emission region. Cannot calculate emissions."
+        end
+        return region_abbr, meters_to_region
+    end
+
+    """
     #     gdf_query = gdf[gdf.geometry.intersects(g.Point(self.longitude, self.latitude))]
     #     if not gdf_query.empty:
     #         self.meters_to_region = 0
@@ -225,6 +268,7 @@ function region_abbreviation(latitude, longitude)
     #     if self._region_abbr is None:
     #         gdf = gpd.read_file(os.path.join(self.library_path,'avert_102008.shp'))
     #         try:
+                Shapefly transform shapely.ops.transform(func, geom)
     #             lookup = transform(self.project4326_to_102008, g.Point(self.latitude, self.longitude)) # switched lat and long here
     #         except:
     #             raise AttributeError("Could not look up AVERT emissions region from point ({},{}). Location is\
@@ -242,6 +286,13 @@ function region_abbreviation(latitude, longitude)
     # shape_data = gmtread("pts.shp")
     # shape_data.ds_bbox #global bounding box
     # shape_data. bbox #segment bounding box
+
+    with proj4.jl
+    From https://epsg.io/102008 proj4 text for 102008: 
+    trans = Proj4.Transformation("EPSG:4326", "+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs")
+    trans([55, 12]) => results in SVector{2, Float64}(691875.632, 6098907.825)
+    SVector is from StatisArrays.jl which is a dependency for DiffResults, so it should already be precompiled?
+    """
 end
 
 function emissions_series(pollutant, region_abbr, time_steps_per_hour=1)
