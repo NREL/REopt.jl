@@ -23,6 +23,15 @@
     "ExistingBoiler": {
         "fuel_cost_per_mmbtu": 10.0
     },
+    "AbsorptionChiller": {
+        "min_ton": 0.0,
+        "max_ton": 1000.0,
+        "chiller_cop": 0.7,
+        "installed_cost_per_ton": 500.0,
+        "om_cost_per_ton": 0.5,
+        "macrs_option_years": 0,
+        "macrs_bonus_pct": 0.0
+    },
     "HotThermalStorage":{
         "max_gal":2500
     },
