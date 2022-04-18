@@ -605,7 +605,7 @@ end
     @test roof_east["average_annual_energy_produced_kwh"] ≈ 6482.37 atol=0.1
 end
 
-@testset "Thermal Energy Storage" begin
+@testset "Thermal Energy Storage and Absorption Chiller" begin
     model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
     data = JSON.parsefile("./scenarios/thermal_storage.json")
     s = Scenario(data)
@@ -620,7 +620,7 @@ end
             p.s.cooling_load.loads_kw_thermal[ts] = 10
             p.s.existing_boiler.fuel_cost_series[ts] = 10
             for tier in 1:p.s.electric_tariff.n_energy_tiers
-                p.s.electric_tariff.energy_rates[ts, tier] = 10
+                p.s.electric_tariff.energy_rates[ts, tier] = 100
             end
         else #in odd periods, there is no load and energy is cheaper - storage should charge 
             p.s.electric_load.loads_kw[ts] = 0
@@ -629,7 +629,7 @@ end
             p.s.cooling_load.loads_kw_thermal[ts] = 0
             p.s.existing_boiler.fuel_cost_series[ts] = 1
             for tier in 1:p.s.electric_tariff.n_energy_tiers
-                p.s.electric_tariff.energy_rates[ts, tier] = 1
+                p.s.electric_tariff.energy_rates[ts, tier] = 100
             end
         end
     end
@@ -639,11 +639,16 @@ end
     #dispatch to load should be 10kW every other period = 4,380 * 10
     hot_tes_total_test = 43800.0 / REopt.MMBTU_TO_KWH
     cold_tes_total_test = 43800.0 / REopt.TONHOUR_TO_KWH_THERMAL
+    
     @test sum(r["HotThermalStorage"]["year_one_to_load_series_mmbtu_per_hr"]) ≈ hot_tes_total_test atol=0.1
     @test sum(r["ColdThermalStorage"]["year_one_to_load_series_ton"]) ≈ cold_tes_total_test atol=0.1
     #size should be just over 10kW in gallons, accounting for efficiency losses and min SOC
     @test r["HotThermalStorage"]["size_gal"] ≈ 227.89 atol=0.1
     @test r["ColdThermalStorage"]["size_gal"] ≈ 379.82 atol=0.1
+    #No production from existing chiller, only absorption chiller
+    @test r["ExistingChiller"]["year_one_existing_chiller_thermal_kwh"] ≈ 0.0 atol=0.1
+    @test r["AbsorptionChiller"]["year_one_absorp_chiller_thermal_consumption_kwh"] ≈ 62629.78 atol=0.1
+    @test r["AbsorptionChiller"]["size_ton"] ≈ 2.85 atol=0.1
 end
 
 @testset "Heat and cool energy balance" begin
