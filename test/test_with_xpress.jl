@@ -953,7 +953,7 @@ end
 @testset "OffGrid" begin
     # Solar, Storage, Fixed Generator
     post_name = "off_grid.json" 
-    post = JSON.parsefile("$post_name")
+    post = JSON.parsefile("./scenarios/$post_name")
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     r = run_reopt(m, post)
     scen, inputs = get_inputs(post)
