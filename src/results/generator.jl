@@ -41,7 +41,7 @@ Generator results:
 - `year_one_variable_om_cost` variable operations and maintenance cost over the first year
 - `lifecycle_fuel_cost` Lifecycle fuel cost in present value, after tax
 - `year_one_fuel_cost` Fuel cost over the first year
-- `fuel_used_gal` Gallons of fuel used in each year
+- `average_annual_fuel_used_gal` Gallons of fuel used in each year
 - `year_one_to_battery_series_kw` Vector of power sent to battery in year one
 - `year_one_to_grid_series_kw` Vector of power sent to grid in year one
 - `year_one_to_load_series_kw` Vector of power sent to load in year one
@@ -86,7 +86,7 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 	r["year_one_to_load_series_kw"] = round.(value.(generatorToLoad), digits=3)
 
     GeneratorFuelUsed = @expression(m, sum(m[:dvFuelUsage][t, ts] for t in p.techs.gen, ts in p.time_steps))
-	r["fuel_used_gal"] = round(value(GeneratorFuelUsed), digits=2)
+	r["average_annual_fuel_used_gal"] = round(value(GeneratorFuelUsed), digits=2)
 
 	Year1GenProd = @expression(m,
 		p.hours_per_time_step * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts]
@@ -132,7 +132,7 @@ function add_generator_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n=
 	r["to_load_series_kw"] = round.(value.(generatorToLoad), digits=3).data
 
     GeneratorFuelUsed = @expression(m, sum(m[:dvFuelUsage][t, ts] for t in p.techs.gen, ts in p.time_steps))
-	r["fuel_used_gal"] = round(value(GeneratorFuelUsed), digits=2)
+	r["average_annual_fuel_used_gal"] = round(value(GeneratorFuelUsed), digits=2)
 
 	Year1GenProd = @expression(m,
 		p.hours_per_time_step * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts]
