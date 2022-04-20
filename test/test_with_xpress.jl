@@ -618,7 +618,7 @@ end
             p.s.dhw_load.loads_kw[ts] = 5
             p.s.space_heating_load.loads_kw[ts] = 5
             p.s.cooling_load.loads_kw_thermal[ts] = 10
-            p.s.existing_boiler.fuel_cost_series[ts] = 10
+            p.s.existing_boiler.fuel_cost_series[ts] = 100
             for tier in 1:p.s.electric_tariff.n_energy_tiers
                 p.s.electric_tariff.energy_rates[ts, tier] = 100
             end
