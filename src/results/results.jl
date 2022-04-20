@@ -131,7 +131,7 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("PV", "average_annual_energy_produced_kwh"),
         ("PV", "year_one_energy_produced_kwh"),
         ("PV", "lifecycle_om_cost"),
-        ("Generator", "fuel_used_gal"),
+        ("Generator", "average_annual_fuel_used_gal"),
         ("Generator", "lifecycle_fixed_om_cost"),
         ("Generator", "lifecycle_variable_om_cost"),
         ("Generator", "lifecycle_fuel_cost"),
