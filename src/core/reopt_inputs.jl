@@ -216,8 +216,6 @@ function setup_tech_inputs(s::AbstractScenario)
 
     techs = Techs(s)
 
-    print("techs.all: ", techs.all)
-
     boiler_efficiency = Dict{String, Float64}()
     production_factor = DenseAxisArray{Float64}(undef, techs.all, 1:length(s.electric_load.loads_kw))
 
@@ -568,7 +566,14 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
                 s.financial.chp_fuel_cost_escalation_pct,
                 s.financial.offtaker_discount_pct
             )
-        end        
+        end
+        if t =="Generator" 
+            pwf_fuel["Generator"] = annuity(
+                s.financial.analysis_years,
+                s.financial.generator_fuel_cost_escalation_pct,
+                s.financial.offtaker_discount_pct
+            )
+        end     
     end
 
     pwf_offtaker = annuity(s.financial.analysis_years, 0.0, s.financial.offtaker_discount_pct)
