@@ -951,9 +951,9 @@ end
 # }}}
 
 @testset "OffGrid" begin
-    # Solar, Storage, Fixed Generator
+    ## Scenario 1: Solar, Storage, Fixed Generator
     post_name = "off_grid.json" 
-    post = JSON.parsefile("./scenarios/$post_name")
+    post = JSON.parsefile("$post_name")
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     r = run_reopt(m, post)
     scen, inputs = get_inputs(post)
@@ -970,14 +970,30 @@ end
 
     # Test outputs
     @test r["ElectricUtility"]["year_one_energy_supplied_kwh"] ≈ 0 # no interaction with grid
-    @test r["Financial"]["lifecycle_offgrid_other_capital_costs"] ≈ 2586.46 # Check straight line depreciation calc
-    @test r["ElectricLoad"]["offgrid_annual_oper_res_provided_series_kwh"] >= r["ElectricLoad"]["offgrid_annual_oper_res_required_series_kwh"]
+    @test r["Financial"]["lifecycle_offgrid_other_capital_costs"] ≈ 2586.4596 # Check straight line depreciation calc
+    @test sum(r["ElectricLoad"]["offgrid_annual_oper_res_provided_series_kwh"]) >= sum(r["ElectricLoad"]["offgrid_annual_oper_res_required_series_kwh"])
     @test r["ElectricLoad"]["offgrid_load_met_pct"] >= scen.electric_load.min_load_met_annual_pct
+    @test r["PV"]["size_kw"] ≈ 5050.0
     f = r["Financial"]
-    # TODO: test these (currently adding to 0.99)
-    # @test f["lcc_fraction_tech_capital_cost"] + f["lcc_fraction_storage_capital_cost"] + f["lcc_fraction_om_cost"] +
-    #          f["lcc_fraction_fuel_cost"] + f["lcc_fraction_chp_standby_cost"] + f["lcc_fraction_elecbill_cost"] + f["lcc_fraction_pbi"] +
-    #          f["lcc_fraction_addtl_annual_cost"] + f["lcc_fraction_addtl_capital_cost"] + f["lcc_fraction_outage_cost"] ≈ 1
+    @test f["lcc_fraction_tech_capital_cost"] + f["lcc_fraction_storage_capital_cost"] + f["lcc_fraction_om_cost"] +
+             f["lcc_fraction_fuel_cost"] + f["lcc_fraction_chp_standby_cost"] + f["lcc_fraction_elecbill_cost"] + f["lcc_fraction_pbi"] +
+             f["lcc_fraction_addtl_annual_cost"] + f["lcc_fraction_addtl_capital_cost"] + f["lcc_fraction_outage_cost"] ≈ 1
+
+    
+    ## Scenario 2: Fixed Generator only
+    post["ElectricLoad"]["annual_kwh"] = 100.0
+    post["PV"]["max_kw"] = 0.0
+    post["ElectricStorage"]["max_kw"] = 0.0
+    post["Generator"]["min_turn_down_pct"] = 0.0
+
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    r = run_reopt(m, post)
+
+    # Test generator outputs
+    @test r["Generator"]["average_annual_fuel_used_gal"] ≈ 47.7  
+    @test r["Generator"]["average_annual_energy_produced_kwh"] ≈ 99.0
+    @test r["Generator"]["year_one_fuel_cost"] ≈ 143.09 
+    @test r["Generator"]["lifecycle_fuel_cost"] ≈ 1301.75
 
 end
 
