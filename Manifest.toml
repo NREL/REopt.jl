@@ -480,11 +480,6 @@ version = "2.2.4"
 deps = ["Artifacts", "Dates", "Downloads", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
-[[deps.PolygonInbounds]]
-git-tree-sha1 = "8d50c96f4ba5e1e2fd524116b4ef97b29d5f77da"
-uuid = "e4521ec6-8c1d-418e-9da2-b3bc4ae105d6"
-version = "0.2.0"
-
 [[deps.Preferences]]
 deps = ["TOML"]
 git-tree-sha1 = "d3538e7f8a790dc8903519090857ef8e1283eecd"
