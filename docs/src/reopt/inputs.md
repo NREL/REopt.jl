@@ -112,6 +112,11 @@ REopt.Settings
 REopt.ExistingBoiler
 ```
 
+## Boiler
+```@docs
+REopt.Boiler
+```
+
 ## CHP
 ```@docs
 REopt.CHP

@@ -52,7 +52,19 @@ key then the optimal scenario has the option to purchase this new `Boiler` to me
 in addition to using the `ExistingBoiler` to meet the heating load. 
 
 ```julia
-
+function Boiler(;
+    min_mmbtu_per_hour::Real = 0.0,
+    max_mmbtu_per_hour::Real = 0.0,
+    efficiency::Real = 0.8,
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
+    macrs_option_years::Int = 0,
+    macrs_bonus_pct::Real = 0.0,
+    installed_cost_per_mmbtu_per_hour::Real = 293000.0,
+    om_cost_per_mmbtu_per_hour::Real = 2930.0,
+    om_cost_per_mmbtu::Real = 0.0,
+    fuel_type::String = "natural_gas",  # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil", "uranium"]
+    can_supply_steam_turbine::Bool = true,
+)
 ```
 """
 function Boiler(;
@@ -60,7 +72,7 @@ function Boiler(;
         max_mmbtu_per_hour::Real = 0.0,
         efficiency::Real = 0.8,
         fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
-        time_steps_per_hour::Int = 1,
+        time_steps_per_hour::Int = 1,  # passed from Settings
         macrs_option_years::Int = 0,
         macrs_bonus_pct::Real = 0.0,
         installed_cost_per_mmbtu_per_hour::Real = 293000.0,
