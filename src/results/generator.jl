@@ -61,7 +61,7 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 	r["lifecycle_fixed_om_cost"] = round(value(GenPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_pct), digits=0)
 	r["lifecycle_variable_om_cost"] = round(value(m[:TotalPerUnitProdOMCosts]) * (1 - p.s.financial.owner_tax_pct), digits=0)
 	r["lifecycle_fuel_cost"] = round(value(m[:TotalGenFuelCosts]) * (1 - p.s.financial.offtaker_tax_pct), digits=2)
-	r["year_one_fuel_cost"] = round(value(m[:TotalGenFuelCosts]) / p.pwf_e, digits=2)
+	r["year_one_fuel_cost"] = round(value(m[:TotalGenFuelCosts]) / p.pwf_fuel["Generator"], digits=2)
 	r["year_one_variable_om_cost"] = round(value(GenPerUnitProdOMCosts) / (p.pwf_om * p.third_party_factor), digits=0)
 	r["year_one_fixed_om_cost"] = round(value(GenPerUnitSizeOMCosts) / (p.pwf_om * p.third_party_factor), digits=0)
 

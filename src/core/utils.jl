@@ -206,7 +206,8 @@ function dictkeys_tosymbols(d::Dict)
             "offgrid_other_capital_costs", "offgrid_other_annual_costs",
             "land_acres", "roof_squarefeet", "federal_rebate_per_kw",
             "offtaker_tax_pct", "owner_tax_pct", "offtaker_discount_pct",
-            "owner_discount_pct", "om_cost_escalation_pct"
+            "owner_discount_pct", "om_cost_escalation_pct", "generator_fuel_cost_escalation_pct",
+            "elec_cost_escalation_pct", "boiler_fuel_cost_escalation_pct", "chp_fuel_cost_escalation_pct"
         ]
             try
                 v = convert(Float64, v)
