@@ -234,8 +234,8 @@ end
             "installed_cost" => 1000.0,
             "doe_reference_name" => "MediumOffice",
             "city" => "Boulder",
-            "temperature_upper_bound_degC" => 22,
-            "temperature_lower_bound_degC" => 18.0,
+            "temperature_upper_bound_degC_heating" => 22,
+            "temperature_lower_bound_degC_heating" => 18.0,
         )
         #= put in a time varying fuel cost, which should make purchasing the FlexibleHVAC system economical
         with flat ElectricTariff the ExistingChiller does not benefit from FlexibleHVAC =#
@@ -243,6 +243,7 @@ end
         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         r = run_reopt([m1,m2], REoptInputs(Scenario(d)))
+
         # all of the savings are from the ExistingBoiler fuel costs
         @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === true
         fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost"]
@@ -253,6 +254,16 @@ end
             vcat(repeat([0.1], 16), repeat([0.3], 4), repeat([0.1], 4)),
             365
         ))
+
+        d["FlexibleHVAC"] = Dict(
+            "installed_cost" => 1000.0,
+            "doe_reference_name" => "MediumOffice",
+            "city" => "Boulder",
+            "temperature_upper_bound_degC_heating" => 22,
+            "temperature_lower_bound_degC_heating" => 18.0,
+            "temperature_upper_bound_degC_cooling" => 23,
+            "temperature_lower_bound_degC_cooling" => 19.0,
+        )
         # d["FlexibleHVAC"]["installed_cost"] = 300
         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
