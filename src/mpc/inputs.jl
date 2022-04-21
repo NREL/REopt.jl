@@ -42,6 +42,7 @@ struct MPCInputs <: AbstractInputs
     value_of_lost_load_per_kwh::Array{R, 1} where R<:Real #default set to 1 US dollar per kwh
     pwf_e::Float64
     pwf_om::Float64
+    pwf_fuel::Dict{String, Float64}
     third_party_factor::Float64
     ratchets::UnitRange
     techs_by_exportbin::DenseAxisArray{Array{String,1}}  # indexed on [:NEM, :WHL]
@@ -69,6 +70,7 @@ function MPCInputs(s::MPCScenario)
     levelization_factor = Dict(t => 1.0 for t in techs.all)
     pwf_e = 1.0
     pwf_om = 1.0
+    pwf_fuel["Generator"] = 1.0 # TODO: update; currently only a placeholder.
     third_party_factor = 1.0
 
     time_steps_with_grid, time_steps_without_grid, = setup_electric_utility_inputs(s)
@@ -96,6 +98,7 @@ function MPCInputs(s::MPCScenario)
         typeof(s.financial.value_of_lost_load_per_kwh) <: Array{<:Real, 1} ? s.financial.value_of_lost_load_per_kwh : fill(s.financial.value_of_lost_load_per_kwh, length(time_steps)),
         pwf_e,
         pwf_om,
+        pwf_fuel,
         third_party_factor,
         # maxsize_pv_locations,
         1:length(s.electric_tariff.tou_demand_ratchet_time_steps),  # ratchets
