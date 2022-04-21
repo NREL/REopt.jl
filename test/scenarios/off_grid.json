@@ -14,21 +14,25 @@
         "macrs_bonus_pct": 0.4,
         "installed_cost_per_kw": 2000,
         "tilt": 34.579,
-        "federal_rebate_per_kw": 350
+        "federal_rebate_per_kw": 350,
+        "operating_reserve_required_pct": 0.25
     },
     "Generator": {
         "installed_cost_per_kw": 700,
         "min_kw": 500,
         "max_kw": 500,
         "replacement_year": 10,
-        "replace_cost_per_kw": 700
+        "replace_cost_per_kw": 700,
+        "fuel_intercept_gal_per_hr": 0.0048,
+        "fuel_slope_gal_per_kwh": 0.076
     },
     "ElectricLoad": {
         "doe_reference_name": "RetailStore",
         "annual_kwh": 10000000.0,
         "city": "LosAngeles",
         "year": 2017,
-        "min_load_met_annual_pct": 0.99
+        "min_load_met_annual_pct": 0.99,
+        "operating_reserve_required_pct": 0.1
     },
     "ElectricStorage": {
         "macrs_option_years": 5,
@@ -41,11 +45,12 @@
     },
     "Financial": {
         "elec_cost_escalation_pct": 0.026,
+        "generator_fuel_cost_escalation_pct": 0.027,
         "offtaker_discount_pct": 0.08,
         "owner_discount_pct": 0.15,
         "analysis_years": 20,
         "offtaker_tax_pct": 0.26,
-        "owner_tax_pct": 0.26,
+        "owner_tax_pct": 0.4,
         "om_cost_escalation_pct": 0.025,
         "offgrid_other_capital_costs": 3000,
         "offgrid_other_annual_costs": 600,
