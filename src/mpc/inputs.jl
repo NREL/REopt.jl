@@ -70,6 +70,7 @@ function MPCInputs(s::MPCScenario)
     levelization_factor = Dict(t => 1.0 for t in techs.all)
     pwf_e = 1.0
     pwf_om = 1.0
+    pwf_fuel = Dict{String, Float64}()
     pwf_fuel["Generator"] = 1.0 # TODO: update; currently only a placeholder.
     third_party_factor = 1.0
 
