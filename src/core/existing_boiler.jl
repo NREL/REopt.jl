@@ -52,9 +52,24 @@ function ExistingBoiler(;
     production_type::String = "hot_water",
     chp_prime_mover::String = "",
     max_thermal_factor_on_peak_load::Real = 1.25,
-    efficiency::Real = 0.0,
+    efficiency::Real = 0.0,  # if 
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
     time_steps_per_hour::Int = 1
+)
+```
+
+If the `efficiency` is not provided then it is determined by the `production_type`:
+
+- "hot_water" -> `efficiency=0.8`
+- "steam" -> `efficiency=0.75`
+
+If `chp_prime_mover` is provided then the `production_type` is determined as:
+```julia
+production_type_by_chp_prime_mover = Dict(
+    "recip_engine" => "hot_water",
+    "micro_turbine" => "hot_water",
+    "combustion_turbine" => "steam",
+    "fuel_cell" => "hot_water"
 )
 ```
 """
