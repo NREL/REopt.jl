@@ -57,7 +57,8 @@ function find_ashrae_zone_city(lat, lon)::String
     shpfile = ArchGDAL.read(file_path)
 	cities_layer = ArchGDAL.getlayer(shpfile, 0)
 
-	# From https://yeesian.com/ArchGDAL.jl/latest/projections/#:~:text=transform%0A%20%20%20%20point%20%3D%20ArchGDAL.-,fromWKT,-(%22POINT%20(1120351.57%20741921.42 and https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry
+	# From https://yeesian.com/ArchGDAL.jl/latest/projections/#:~:text=transform%0A%20%20%20%20point%20%3D%20ArchGDAL.-,fromWKT,-(%22POINT%20(1120351.57%20741921.42
+    # From https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry
 	point = ArchGDAL.fromWKT(string("POINT (",lon," ",lat,")"))
 	
 	# No transformation needed
