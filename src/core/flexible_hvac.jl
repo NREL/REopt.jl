@@ -88,8 +88,10 @@ struct FlexibleHVAC
     space_temperature_node::Int64
     hvac_input_node::Int64
     initial_temperatures::AbstractVector{Float64}
-    temperature_upper_bound_degC::Union{Real, Nothing}
-    temperature_lower_bound_degC::Union{Real, Nothing}
+    temperature_upper_bound_degC_heating::Union{Real, Nothing}
+    temperature_lower_bound_degC_heating::Union{Real, Nothing}
+    temperature_upper_bound_degC_cooling::Union{Real, Nothing}
+    temperature_lower_bound_degC_cooling::Union{Real, Nothing}
     installed_cost::Float64
     bau_hvac::BAU_HVAC
 end
@@ -163,8 +165,10 @@ end
         doe_reference_name::String,
         city::String,
         installed_cost::Float64,
-        temperature_upper_bound_degC::Float64,
-        temperature_lower_bound_degC::Float64
+        temperature_upper_bound_degC_heating::Real,
+        temperature_lower_bound_degC_heating::Real,
+        temperature_upper_bound_degC_cooling::Real,
+        temperature_lower_bound_degC_cooling::Real,
     )
 
 Constructor for `FlexibleHVAC` when using a built-in RC model that has been fit to a DoE Commercial 
@@ -187,16 +191,20 @@ function FlexibleHVAC(
         doe_reference_name::String,
         city::String,
         installed_cost::Real,
-        temperature_upper_bound_degC::Real,
-        temperature_lower_bound_degC::Real
+        temperature_upper_bound_degC_heating::Union{Real, Nothing},
+        temperature_lower_bound_degC_heating::Union{Real, Nothing},
+        temperature_upper_bound_degC_cooling::Union{Real, Nothing},
+        temperature_lower_bound_degC_cooling::Union{Real, Nothing},
     )
 
     lib_path = joinpath(dirname(@__FILE__), "..", "..", "data", "rcmodels")
     json_path = joinpath(lib_path, string(city * "_" * doe_reference_name * ".json"))
     rc_dict = JSON.parsefile(json_path)
     rc_dict["installed_cost"] = installed_cost
-    rc_dict["temperature_upper_bound_degC"] = temperature_upper_bound_degC
-    rc_dict["temperature_lower_bound_degC"] = temperature_lower_bound_degC
+    rc_dict["temperature_upper_bound_degC_heating"] = temperature_upper_bound_degC_heating
+    rc_dict["temperature_lower_bound_degC_heating"] = temperature_lower_bound_degC_heating
+    rc_dict["temperature_upper_bound_degC_cooling"] = temperature_upper_bound_degC_cooling
+    rc_dict["temperature_lower_bound_degC_cooling"] = temperature_lower_bound_degC_cooling
 
     FlexibleHVAC(rc_dict)
 end
@@ -214,8 +222,10 @@ The `dict_from_json` must have all of these keys:
 - `space_temperature_node`
 - `hvac_input_node`
 - `initial_temperatures`
-- `temperature_upper_bound_degC`
-- `temperature_lower_bound_degC`
+- `temperature_upper_bound_degC_heating`
+- `temperature_lower_bound_degC_heating`
+- `temperature_upper_bound_degC_cooling`
+- `temperature_lower_bound_degC_cooling`
 - `installed_cost`
 
 It is assumed that the `system_matrix` and `input_matrix` are each a list-of-lists with inner lists
@@ -238,8 +248,8 @@ function FlexibleHVAC(dict_from_json::Dict)
         dict_from_json["space_temperature_node"], 
         dict_from_json["hvac_input_node"], 
         dict_from_json["initial_temperatures"], 
-        dict_from_json["temperature_upper_bound_degC"], 
-        dict_from_json["temperature_lower_bound_degC"]
+        dict_from_json["temperature_upper_bound_degC_cooling"], 
+        dict_from_json["temperature_lower_bound_degC_heating"]
     )
 
     FlexibleHVAC(
@@ -249,8 +259,10 @@ function FlexibleHVAC(dict_from_json::Dict)
         dict_from_json["space_temperature_node"],
         dict_from_json["hvac_input_node"],
         dict_from_json["initial_temperatures"],
-        dict_from_json["temperature_upper_bound_degC"],
-        dict_from_json["temperature_lower_bound_degC"],
+        dict_from_json["temperature_upper_bound_degC_heating"],
+        dict_from_json["temperature_lower_bound_degC_heating"],
+        dict_from_json["temperature_upper_bound_degC_cooling"],
+        dict_from_json["temperature_lower_bound_degC_cooling"],
         dict_from_json["installed_cost"],
         bau_hvac
     )
@@ -267,6 +279,8 @@ end
         initial_temperatures::AbstractVector,
         temperature_upper_bound_degC::Union{Real, Nothing} = nothing,
         temperature_lower_bound_degC::Union{Real, Nothing} = nothing,
+        temperature_upper_bound_degC_cooling::Union{Real, Nothing} = nothing,
+        temperature_lower_bound_degC_cooling::Union{Real, Nothing} = nothing,
         installed_cost::Float64
     )
 
@@ -281,13 +295,15 @@ function FlexibleHVAC(;
         space_temperature_node::Int64,
         hvac_input_node::Int64,
         initial_temperatures::AbstractVector,
-        temperature_upper_bound_degC::Union{Real, Nothing} = nothing,
-        temperature_lower_bound_degC::Union{Real, Nothing} = nothing,
+        temperature_upper_bound_degC_heating::Union{Real, Nothing} = nothing,
+        temperature_lower_bound_degC_heating::Union{Real, Nothing} = nothing,
+        temperature_upper_bound_degC_cooling::Union{Real, Nothing} = nothing,
+        temperature_lower_bound_degC_cooling::Union{Real, Nothing} = nothing,
         installed_cost::Float64
     )
 
     bau_hvac = make_bau_hvac(system_matrix, input_matrix, exogenous_inputs, space_temperature_node, hvac_input_node,
-        initial_temperatures, temperature_upper_bound_degC, temperature_lower_bound_degC)
+        initial_temperatures, temperature_upper_bound_degC_cooling, temperature_lower_bound_degC_heating)
     
     FlexibleHVAC(
         system_matrix,
@@ -296,8 +312,10 @@ function FlexibleHVAC(;
         space_temperature_node,
         hvac_input_node,
         initial_temperatures,
-        temperature_upper_bound_degC,
-        temperature_lower_bound_degC,
+        temperature_upper_bound_degC_heating,
+        temperature_lower_bound_degC_heating,
+        temperature_upper_bound_degC_cooling,
+        temperature_lower_bound_degC_cooling,
         installed_cost,
         bau_hvac
     )

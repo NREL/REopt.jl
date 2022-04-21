@@ -41,6 +41,20 @@ function add_flexible_hvac_constraints(m, p::REoptInputs; _n="")
     # TODO time scaling for dt?
 
     if !isempty(p.techs.heating) && !isempty(p.techs.cooling)
+        #=
+        add binaries for seasonal comfort bounds
+        =#
+        if p.s.flexible_hvac.temperature_lower_bound_degC_heating != p.s.flexible_hvac.temperature_lower_bound_degC_cooling ||
+            p.s.flexible_hvac.temperature_upper_bound_degC_heating != p.s.flexible_hvac.temperature_upper_bound_degC_cooling
+            @warn "Adding binary variables for seasonal comfort limits in FlexibleHVAC model."
+            @variable(m, binHeating[p.time_steps], Bin)
+            @constraint(m, [t in p.techs.heating, ts in p.time_steps],
+                m[Symbol("dvThermalProduction"*_n)][t, ts] <= binHeating[ts] * p.max_sizes[t]
+            )
+            @constraint(m, [t in p.techs.cooling, ts in p.time_steps],
+                m[Symbol("dvThermalProduction"*_n)][t, ts] <= (1 - binHeating[ts]) * p.max_sizes[t]
+            )
+        end
         # space temperature evolution based on state-space model
         @constraint(m, [n in 1:N, ts in 2:p.time_steps[end]],
             binFlexHVAC => {dvTemperature[n, ts] == 
@@ -51,17 +65,44 @@ function add_flexible_hvac_constraints(m, p::REoptInputs; _n="")
                 sum(m[Symbol("dvThermalProduction"*_n)][t, ts-1] for t in p.techs.cooling) 
             )}
         )
-        # comfort limits. not applied to initial_temperatures
-        @constraint(m, [ts in 2:p.time_steps[end]], 
-            p.s.flexible_hvac.temperature_lower_bound_degC - lower_comfort_slack[ts] <= 
-            dvTemperature[p.s.flexible_hvac.space_temperature_node, ts]
-        )
-        @constraint(m, [ts in 2:p.time_steps[end]],
-            dvTemperature[p.s.flexible_hvac.space_temperature_node, ts] <= 
-            p.s.flexible_hvac.temperature_upper_bound_degC + upper_comfort_slack[ts]
-        )
+
+        if p.s.flexible_hvac.temperature_lower_bound_degC_heating != p.s.flexible_hvac.temperature_lower_bound_degC_cooling
+            # comfort limits. not applied to initial_temperatures
+            @constraint(m, [ts in 2:p.time_steps[end]], 
+                binHeating[ts] * p.s.flexible_hvac.temperature_lower_bound_degC_heating + 
+                (1 - binHeating[ts]) * p.s.flexible_hvac.temperature_lower_bound_degC_cooling - 
+                lower_comfort_slack[ts] <= 
+                dvTemperature[p.s.flexible_hvac.space_temperature_node, ts]
+            )
+        else
+            @constraint(m, [ts in 2:p.time_steps[end]], 
+                p.s.flexible_hvac.temperature_lower_bound_degC_heating - 
+                lower_comfort_slack[ts] <= 
+                dvTemperature[p.s.flexible_hvac.space_temperature_node, ts]
+            )
+        end
+
+        if p.s.flexible_hvac.temperature_upper_bound_degC_heating != p.s.flexible_hvac.temperature_upper_bound_degC_cooling
+            @constraint(m, [ts in 2:p.time_steps[end]],
+                dvTemperature[p.s.flexible_hvac.space_temperature_node, ts] <= 
+                binHeating[ts] * p.s.flexible_hvac.temperature_upper_bound_degC_heating + 
+                (1 - binHeating[ts]) * p.s.flexible_hvac.temperature_upper_bound_degC_cooling + 
+                upper_comfort_slack[ts]
+            )
+        else
+            @constraint(m, [ts in 2:p.time_steps[end]],
+                dvTemperature[p.s.flexible_hvac.space_temperature_node, ts] <= 
+                p.s.flexible_hvac.temperature_upper_bound_degC_heating + 
+                upper_comfort_slack[ts]
+            )
+        end
 
     elseif !isempty(p.techs.heating)
+        @warn "Adding binary variables for seasonal comfort limits in FlexibleHVAC model."
+        @variable(m, binHeating[p.time_steps], Bin)
+        @constraint(m, [t in p.techs.heating, ts in p.time_steps],
+            m[Symbol("dvThermalProduction"*_n)][t, ts] <= binHeating[ts] * p.max_sizes[t]
+        )
 
         @constraint(m, [n in 1:N, ts in 2:p.time_steps[end]],
             binFlexHVAC => {dvTemperature[n, ts] == 
@@ -71,18 +112,29 @@ function add_flexible_hvac_constraints(m, p::REoptInputs; _n="")
                 sum(m[Symbol("dvThermalProduction"*_n)][t, ts-1] for t in p.techs.heating)
             )}
         )
+        # min space temperature 
         @constraint(m, [ts in 2:p.time_steps[end]], 
-            p.s.flexible_hvac.temperature_lower_bound_degC - lower_comfort_slack[ts] <= 
+            p.s.flexible_hvac.temperature_lower_bound_degC_heating - lower_comfort_slack[ts] <= 
             dvTemperature[p.s.flexible_hvac.space_temperature_node, ts]
         )
-        # when only heating the upper temperature limit is the highest temperature seen naturally
+        
+        # max space temperature, conditionally limited when heating
+        max_natural_T = maximum(
+            p.s.flexible_hvac.bau_hvac.temperatures[p.s.flexible_hvac.space_temperature_node, :]
+        )
         @constraint(m, [ts in 2:p.time_steps[end]],
             dvTemperature[p.s.flexible_hvac.space_temperature_node, ts] <= 
-            maximum(p.s.flexible_hvac.bau_hvac.temperatures[p.s.flexible_hvac.space_temperature_node, :]) + 
+            binHeating[ts] * p.s.flexible_hvac.temperature_upper_bound_degC_heating + 
+            (1 - binHeating[ts]) * max_natural_T +
             upper_comfort_slack[ts]
         )
 
     elseif !isempty(p.techs.cooling)
+        @warn "Adding binary variables for seasonal comfort limits in FlexibleHVAC model."
+        @variable(m, binCooling[p.time_steps], Bin)
+        @constraint(m, [t in p.techs.cooling, ts in p.time_steps],
+            m[Symbol("dvThermalProduction"*_n)][t, ts] <= binCooling[ts] * p.max_sizes[t]
+        )
 
         @constraint(m, [n in 1:N, ts in 2:p.time_steps[end]],
             binFlexHVAC => {dvTemperature[n, ts] == 
@@ -92,15 +144,23 @@ function add_flexible_hvac_constraints(m, p::REoptInputs; _n="")
                 sum(m[Symbol("dvThermalProduction"*_n)][t, ts-1] for t in p.techs.cooling) 
             )}
         )
-        # when only cooling the lower temperature limit is the lowest temperature seen naturally
-        @constraint(m, [ts in 2:p.time_steps[end]], 
-            minimum(p.s.flexible_hvac.bau_hvac.temperatures[p.s.flexible_hvac.space_temperature_node, :]) - 
+
+        # min space temperature, conditionally limited when cooling
+        min_natural_T = minimum(
+            p.s.flexible_hvac.bau_hvac.temperatures[p.s.flexible_hvac.space_temperature_node, :]
+        )
+        @constraint(m, [ts in 2:p.time_steps[end]],
+            (1 - binCooling[ts]) * min_natural_T +
+            binCooling[ts] * p.s.flexible_hvac.temperature_lower_bound_degC_cooling - 
             lower_comfort_slack[ts] <= 
             dvTemperature[p.s.flexible_hvac.space_temperature_node, ts]
         )
+
+        # max space temperature
         @constraint(m, [ts in 2:p.time_steps[end]],
             dvTemperature[p.s.flexible_hvac.space_temperature_node, ts] <= 
-            p.s.flexible_hvac.temperature_upper_bound_degC + upper_comfort_slack[ts]
+            p.s.flexible_hvac.temperature_upper_bound_degC_cooling + 
+            upper_comfort_slack[ts]
         )
     end
 
