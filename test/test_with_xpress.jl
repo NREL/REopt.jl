@@ -165,8 +165,10 @@ end
             "space_temperature_node" => 1,
             "hvac_input_node" => 1,
             "initial_temperatures" => [21],
-            "temperature_upper_bound_degC" => 22.0,
-            "temperature_lower_bound_degC" => 19.8,
+            "temperature_upper_bound_degC_heating" => 22.0,
+            "temperature_lower_bound_degC_heating" => 19.8,
+            "temperature_upper_bound_degC_cooling" => 22.0,
+            "temperature_lower_bound_degC_cooling" => 19.8,
             "installed_cost" => 300.0, # NOTE cost must be more then the MIPTOL * LCC 5e-5 * 5.79661e6 ≈ 290 to make FlexibleHVAC not worth it
             "system_matrix" => A,
             "input_matrix" => B,
