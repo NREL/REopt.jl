@@ -44,6 +44,7 @@ function BAUInputs(p::REoptInputs)
     cap_cost_slope = Dict{String, Any}()
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
     cop = Dict(t => 0.0 for t in techs.cooling)
+    thermal_cop = Dict(t => 0.0 for t in techs.absorption_chiller)
     production_factor = DenseAxisArray{Float64}(undef, techs.all, p.time_steps)
 
     # export related inputs
@@ -133,6 +134,7 @@ function BAUInputs(p::REoptInputs)
         cap_cost_slope,
         om_cost_per_kw,
         cop,
+        thermal_cop,
         p.time_steps,
         p.time_steps_with_grid,
         p.time_steps_without_grid,
