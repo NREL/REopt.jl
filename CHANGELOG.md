@@ -1,5 +1,8 @@
 # REopt Changelog
 
+## develop
+- add absorption chiller
+
 ## v0.14.0
 - update default values from v2 of API [breaking]
 - add ElectricStorage degradation accounting and maintenance strategies
