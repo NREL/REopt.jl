@@ -39,7 +39,8 @@
         "max_gal":2500
     },
     "ElectricTariff": {
-        "urdb_label": "5ed6c1a15457a3367add15ae"
+        "monthly_energy_rates": [100,100,100,100,100,100,100,100,100,100,100,100],
+        "monthly_demand_rates": [100,100,100,100,100,100,100,100,100,100,100,100]
     },
     "Financial": {
         "elec_cost_escalation_pct": 0.026,

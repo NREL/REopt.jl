@@ -637,17 +637,15 @@ end
     r = run_reopt(model, p)
 
     #dispatch to load should be 10kW every other period = 4,380 * 10
-    hot_tes_total_test = 43800.0 / REopt.MMBTU_TO_KWH
-    cold_tes_total_test = 43800.0 / REopt.TONHOUR_TO_KWH_THERMAL
-    @test sum(r["HotThermalStorage"]["year_one_to_load_series_mmbtu_per_hour"]) ≈ hot_tes_total_test atol=0.1
-    @test sum(r["ColdThermalStorage"]["year_one_to_load_series_ton"]) ≈ cold_tes_total_test atol=0.1
+    @test sum(r["HotThermalStorage"]["year_one_to_load_series_mmbtu_per_hour"]) ≈ 256.25 atol=0.1
+    @test sum(r["ColdThermalStorage"]["year_one_to_load_series_ton"]) ≈ 6224.39 atol=0.1
     #size should be just over 10kW in gallons, accounting for efficiency losses and min SOC
-    @test r["HotThermalStorage"]["size_gal"] ≈ 227.89 atol=0.1
-    @test r["ColdThermalStorage"]["size_gal"] ≈ 379.82 atol=0.1
-    #No production from existing chiller, only absorption chiller
-    @test r["ExistingChiller"]["year_one_existing_chiller_thermal_kwh"] ≈ 0.0 atol=0.1
-    @test r["AbsorptionChiller"]["year_one_absorp_chiller_thermal_consumption_kwh"] ≈ 62629.78 atol=0.1
-    @test r["AbsorptionChiller"]["size_ton"] ≈ 2.85 atol=0.1
+    @test r["HotThermalStorage"]["size_gal"] ≈ 390.61 atol=0.1
+    @test r["ColdThermalStorage"]["size_gal"] ≈ 189.91 atol=0.1
+    #No production from existing chiller, only absorption chiller, which is sized at ~5kW to manage electric demand charge & capital cost.
+    @test r["ExistingChiller"]["year_one_thermal_production_tonhour"] ≈ 0.0 atol=0.1
+    @test r["AbsorptionChiller"]["year_one_thermal_production_tonhour"] ≈ 12459.24 atol=0.1
+    @test r["AbsorptionChiller"]["size_ton"] ≈ 1.422 atol=0.01
 end
 
 @testset "Heat and cool energy balance" begin
