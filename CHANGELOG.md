@@ -1,8 +1,9 @@
 # REopt Changelog
 
-## v0.14.1
+## v0.15.0
 - bug fix in outage_simulator
 - allow Real Generator inputs (not just Float64)
+- add "_series" to "Outages" outputs that are arrays [breaking]
 
 ## v0.14.0
 - update default values from v2 of API [breaking]
