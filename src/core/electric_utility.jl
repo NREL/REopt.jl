@@ -139,6 +139,7 @@ struct ElectricUtility
             else
                 @error "Provided "+field_name+" does not match the time_steps_per_hour."
             end
+        end
 
         new(
             emissions_region,
@@ -160,26 +161,28 @@ struct ElectricUtility
             scenarios,
             net_metering_limit_kw,
             interconnection_limit_kw)
+    end
 end
 
 function region(region_abbr::String)
-    lookup = {  "AK":"Alaska",
-                "CA":"California",
-                "EMW":"Great Lakes / Atlantic",
-                "NE": "Northeast",
-                "NW":"Northwest",
-                "RM":"Rocky Mountains",
-                "SC":"Lower Midwest",
-                "SE": "Southeast",
-                "SW":"Southwest",
-                "TX":"Texas",
-                "WMW":"Upper Midwest",
-                "HI":"Hawaii (except Oahu)",
-                "HI-Oahu":"Hawaii (Oahu)" }
+    lookup = [  "AK" => "Alaska",
+                "CA" => "California",
+                "EMW" => "Great Lakes / Atlantic",
+                "NE" => "Northeast",
+                "NW" => "Northwest",
+                "RM" => "Rocky Mountains",
+                "SC" => "Lower Midwest",
+                "SE" => "Southeast",
+                "SW" => "Southwest",
+                "TX" => "Texas",
+                "WMW" => "Upper Midwest",
+                "HI" => "Hawaii (except Oahu)",
+                "HI-Oahu" => "Hawaii (Oahu)" ]
     try
         return lookup[region_abbr]
     catch
         return "None"
+    end
 end
 
 function region_abbreviation(latitude, longitude)
@@ -260,7 +263,7 @@ function region_abbreviation(latitude, longitude)
         return region_abbr, meters_to_region
     end;
 
-    """
+    
     #     gdf_query = gdf[gdf.geometry.intersects(g.Point(self.longitude, self.latitude))]
     #     if not gdf_query.empty:
     #         self.meters_to_region = 0
@@ -269,7 +272,7 @@ function region_abbreviation(latitude, longitude)
     #     if self._region_abbr is None:
     #         gdf = gpd.read_file(os.path.join(self.library_path,'avert_102008.shp'))
     #         try:
-                Shapefly transform shapely.ops.transform(func, geom)
+    #             Shapefly transform shapely.ops.transform(func, geom)
     #             lookup = transform(self.project4326_to_102008, g.Point(self.latitude, self.longitude)) # switched lat and long here
     #         except:
     #             raise AttributeError("Could not look up AVERT emissions region from point ({},{}). Location is\
@@ -288,12 +291,11 @@ function region_abbreviation(latitude, longitude)
     # shape_data.ds_bbox #global bounding box
     # shape_data. bbox #segment bounding box
 
-    with proj4.jl
-    From https://epsg.io/102008 proj4 text for 102008: 
-    trans = Proj4.Transformation("EPSG:4326", "+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs")
-    trans([55, 12]) => results in SVector{2, Float64}(691875.632, 6098907.825)
-    SVector is from StatisArrays.jl which is a dependency for DiffResults, so it should already be precompiled?
-    """
+    # with proj4.jl
+    # From https://epsg.io/102008 proj4 text for 102008: 
+    # trans = Proj4.Transformation("EPSG:4326", "+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs")
+    # trans([55, 12]) => results in SVector{2, Float64}(691875.632, 6098907.825)
+    # SVector is from StatisArrays.jl which is a dependency for DiffResults, so it should already be precompiled?
 end
 
 function emissions_series(pollutant, region_abbr, time_steps_per_hour=1)
@@ -305,7 +307,7 @@ function emissions_series(pollutant, region_abbr, time_steps_per_hour=1)
         end
         return emmissions_profile
     else
-        @warn "Emissions error. Cannnot find hourly emmissions for region "+region_abbr"."
+        @warn "Emissions error. Cannnot find hourly emmissions for region "+region_abbr+"."
         return zeros(8760*time_steps_per_hour)
     end
 

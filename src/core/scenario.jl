@@ -264,36 +264,36 @@ Populate emission factors in tech based on its fuel_type field.
 """
 function set_missing_emissions_factors_to_fuel_defaults(tech::AbstractFuelBurningTech)
     @assert tech.fuel_type in ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
-    fuel_renergy_energy_pct = {
+    fuel_renergy_energy_pct = [
         "natural_gas"=>0.0,
         "landfill_bio_gas"=>1.0,
         "propane"=>0.0,
         "diesel_oil"=>0.0
-    }
-    fuel_emissions_lb_CO2_per_mmbtu = {
+    ]
+    fuel_emissions_lb_CO2_per_mmbtu = [
         "natural_gas"=>116.9,
         "landfill_bio_gas"=>114.8,
         "propane"=>138.6,
         "diesel_oil"=>163.1
-    }
-    fuel_emissions_lb_NOx_per_mmbtu = {
+    ]
+    fuel_emissions_lb_NOx_per_mmbtu = [
         "natural_gas"=>0.09139,
         "landfill_bio_gas"=>0.14,
         "propane"=>0.15309,
         "diesel_oil"=>0.56
-    }
-    fuel_emissions_lb_SO2_per_mmbtu = {
+    ]
+    fuel_emissions_lb_SO2_per_mmbtu = [
         "natural_gas"=>0.000578592,
         "landfill_bio_gas"=>0.045,
         "propane"=>0.0,
         "diesel_oil"=>0.28897737
-    }
-    fuel_emissions_lb_PM25_per_mmbtu = {
+    ]
+    fuel_emissions_lb_PM25_per_mmbtu = [
         "natural_gas"=>0.007328833,
         "landfill_bio_gas"=>0.02484,
         "propane"=>0.009906836,
         "diesel_oil"=>0.0
-    }
+    ]
     if ismissing(tech.fuel_renewable_energy_pct)
         tech.fuel_renewable_energy_pct = fuel_renergy_energy_pct[tech.fuel_type]
     end

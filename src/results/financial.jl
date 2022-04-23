@@ -37,6 +37,9 @@ Financial results:
 - `lcc` Optimal lifecycle cost
 - `lifecycle_capital_costs_plus_om` Capital cost for all technologies plus present value of operations and maintenance over anlaysis period
 - `lifecycle_capital_costs` Net capital costs for all technologies, in present value, including replacement costs and incentives.
+
+calculated in combine_results function if BAU scenario is run:
+    - `breakeven_cost_of_emissions_reduction_per_tCO2`
 """
 function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
