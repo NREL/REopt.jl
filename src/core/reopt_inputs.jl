@@ -629,6 +629,7 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
                             0.0)
                 )
         )
+    end
     # TODO: delete below if above code works
     # pwf_emissions_cost = [
     #     "CO2_grid" => annuity_two_escalation_rates(sf.analysis_years, sf.co2_cost_escalation_pct, -1 * self.elec_tariff.emissions_factor_CO2_pct_decrease, sf.offtaker_discount_pct),

@@ -53,7 +53,7 @@ unavailability_periods::AbstractVector{Dict} = Dict[]
 size_class::Int = 1
 min_kw::Float64 = 0.0
 fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
-fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
+fuel_type::String = "natural_gas" # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
 om_cost_per_kw::Float64 = 0.0
 om_cost_per_hr_per_kw_rated::Float64 = 0.0
 supplementary_firing_capital_cost_per_kw::Float64 = 150.0
@@ -114,7 +114,7 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     size_class::Int = 1
     min_kw::Float64 = 0.0
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0
-    fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
+    fuel_type::String = "natural_gas" # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     om_cost_per_kw::Float64 = 0.0
     om_cost_per_hr_per_kw_rated::Float64 = 0.0
     supplementary_firing_capital_cost_per_kw::Float64 = 150.0
