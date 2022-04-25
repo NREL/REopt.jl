@@ -188,7 +188,6 @@ function region(region_abbr::String)
     end
 end
 
-using ArchGDAL
 
 function region_abbreviation(latitude, longitude)
     
