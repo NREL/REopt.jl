@@ -606,7 +606,7 @@ end
 end
 
 @testset "Thermal Energy Storage" begin
-    model = Model(optimizer_with_attributes(Xpress.Optimizer, "logLevel"=>0))
+    model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG"=>0))
     data = JSON.parsefile("./scenarios/thermal_storage.json")
     s = Scenario(data)
     p = REoptInputs(s)
