@@ -37,9 +37,21 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     d = Dict{String, Any}()
     # TODO determine whether other results specific to electrical or thermal storage
     # systems warrant separate functions
-    for b in p.s.storage.types.all
-        if p.s.storage.attr[b].max_kw > 0 && p.s.storage.attr[b].max_kwh > 0
-            add_storage_results(m, p, d, b; _n)
+    for b in p.s.storage.types.elec
+        if p.s.storage.attr[b].max_kwh > 0
+            add_electric_storage_results(m, p, d, b; _n)
+        end
+    end
+
+    for b in p.s.storage.types.hot
+        if p.s.storage.attr[b].max_kwh > 0
+            add_hot_storage_results(m, p, d, b; _n)
+        end
+    end
+
+    for b in p.s.storage.types.cold
+        if p.s.storage.attr[b].max_kwh > 0
+            add_cold_storage_results(m, p, d, b; _n)
         end
     end
 
@@ -61,20 +73,20 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     end
 	
 	time_elapsed = time() - tstart
-	@info "Base results processing took $(round(time_elapsed, digits=3)) seconds."
+	@debug "Base results processing took $(round(time_elapsed, digits=3)) seconds."
 	
 	if !isempty(p.techs.gen) && isempty(_n)  # generators not included in multinode model
         tstart = time()
 		add_generator_results(m, p, d)
         time_elapsed = time() - tstart
-        @info "Generator results processing took $(round(time_elapsed, digits=3)) seconds."
+        @debug "Generator results processing took $(round(time_elapsed, digits=3)) seconds."
 	end
 	
 	if !isempty(p.s.electric_utility.outage_durations) && isempty(_n)  # outages not included in multinode model
         tstart = time()
 		add_outage_results(m, p, d)
         time_elapsed = time() - tstart
-        @info "Outage results processing took $(round(time_elapsed, digits=3)) seconds."
+        @debug "Outage results processing took $(round(time_elapsed, digits=3)) seconds."
 	end
 
     if !isempty(p.techs.boiler)

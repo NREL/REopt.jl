@@ -1,10 +1,18 @@
 # REopt Changelog
 
 ## develop
-- update default values from v2 of API
 - fix bug for tiered, time-of-use demand rates
-- fix bug in results with tiered elec. energy costs
+- fix bug in results with tiered electrical energy costs
 
+## v0.15.0
+- bug fix in outage_simulator
+- allow Real Generator inputs (not just Float64)
+- add "_series" to "Outages" outputs that are arrays [breaking]
+
+## v0.14.0
+- update default values from v2 of API [breaking]
+- add ElectricStorage degradation accounting and maintenance strategies
+- finish cooling loads
 
 ## v0.13.0
 - fix bugs for time_steps_per_hour != 1
