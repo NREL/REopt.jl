@@ -139,6 +139,7 @@ struct ElectricUtility
             else
                 @error "Provided "+field_name+" does not match the time_steps_per_hour."
             end
+        end
 
         new(
             emissions_region,
@@ -159,27 +160,32 @@ struct ElectricUtility
             outage_timesteps,
             scenarios,
             net_metering_limit_kw,
-            interconnection_limit_kw)
+            interconnection_limit_kw
+        )
+    end
 end
 
 function region(region_abbr::String)
-    lookup = {  "AK":"Alaska",
-                "CA":"California",
-                "EMW":"Great Lakes / Atlantic",
-                "NE": "Northeast",
-                "NW":"Northwest",
-                "RM":"Rocky Mountains",
-                "SC":"Lower Midwest",
-                "SE": "Southeast",
-                "SW":"Southwest",
-                "TX":"Texas",
-                "WMW":"Upper Midwest",
-                "HI":"Hawaii (except Oahu)",
-                "HI-Oahu":"Hawaii (Oahu)" }
+    lookup = Dict(
+        "AK" => "Alaska",
+        "CA" => "California",
+        "EMW" => "Great Lakes / Atlantic",
+        "NE" =>  "Northeast",
+        "NW" => "Northwest",
+        "RM" => "Rocky Mountains",
+        "SC" => "Lower Midwest",
+        "SE" =>  "Southeast",
+        "SW" => "Southwest",
+        "TX" => "Texas",
+        "WMW" => "Upper Midwest",
+        "HI" => "Hawaii (except Oahu)",
+        "HI-Oahu" => "Hawaii (Oahu)" 
+    )
     try
         return lookup[region_abbr]
     catch
         return "None"
+    end
 end
 
 function region_abbreviation(latitude, longitude)
@@ -305,7 +311,7 @@ function emissions_series(pollutant, region_abbr, time_steps_per_hour=1)
         end
         return emmissions_profile
     else
-        @warn "Emissions error. Cannnot find hourly emmissions for region "+region_abbr"."
+        @warn "Emissions error. Cannnot find hourly emmissions for region $(region_abbr)."
         return zeros(8760*time_steps_per_hour)
     end
 
@@ -318,3 +324,4 @@ function emissions_series(pollutant, region_abbr, time_steps_per_hour=1)
         #     raise AttributeError("Emissions error. Cannnot find hourly emmissions for region {} ({},{}) \
         #         ".format(self.region, self.latitude,self.longitude)) 
 end
+# TODO @warn when outage_start/end_timesteps not empty and outage_start/end_timestep is provided

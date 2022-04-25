@@ -53,8 +53,11 @@ struct BAUScenario <: AbstractScenario
     generator::Generator
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
-    existing_boiler::ExistingBoiler
+    existing_boiler::Union{ExistingBoiler, Nothing}
+    existing_chiller::Union{ExistingChiller, Nothing}
     outage_outputs::OutageOutputs
+    flexible_hvac::Union{BAU_HVAC, Nothing}
+    cooling_load::CoolingLoad
 end
 
 
@@ -105,7 +108,7 @@ function BAUScenario(s::Scenario)
     wind = Wind(; max_kw=0)
 
     # no existing storage
-    storage = Storage(Dict(:elec => Dict(:max_kw => 0)), s.financial)
+    storage = Storage()
     
     t0, tf = s.electric_utility.outage_start_time_step, s.electric_utility.outage_end_time_step
     #=
@@ -124,6 +127,10 @@ function BAUScenario(s::Scenario)
     end
     outage_outputs = OutageOutputs()
 
+    flexible_hvac = nothing
+    if !isnothing(s.flexible_hvac)
+        flexible_hvac = s.flexible_hvac.bau_hvac
+    end
     #=
     For random or uncertain outages there is no need to zero out the critical load but we do have to
     set the Site.min_resil_timesteps to zero s.t. the model is not forced to meet any critical load
@@ -145,6 +152,9 @@ function BAUScenario(s::Scenario)
         s.dhw_load,
         s.space_heating_load,
         s.existing_boiler,
-        outage_outputs
+        s.existing_chiller,
+        outage_outputs,
+        flexible_hvac,
+        s.cooling_load
     )
 end

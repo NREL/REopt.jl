@@ -1,5 +1,29 @@
 # REopt Changelog
 
+## v0.15.0
+- bug fix in outage_simulator
+- allow Real Generator inputs (not just Float64)
+- add "_series" to "Outages" outputs that are arrays [breaking]
+
+## v0.14.0
+- update default values from v2 of API [breaking]
+- add ElectricStorage degradation accounting and maintenance strategies
+- finish cooling loads
+
+## v0.13.0
+- fix bugs for time_steps_per_hour != 1
+- add FlexibleHVAC model (still testing)
+- start thermal energy storage modeling
+- refactor `Storage` as `ElectricStorage`
+- add `ExistingBoiler` and `ExistingChiller`
+- add `MPCLimits` inputs:
+    - `grid_draw_limit_kw_by_time_step`
+    - `export_limit_kw_by_time_step`
+
+## v0.12.4
+- rm "Lite" from docs
+- prioritize `urdb_response` over `urdb_label` in `ElectricTariff`
+
 ## v0.12.3
 - add utils for PVwatts: `get_ambient_temperature` and `get_pvwatts_prodfactor`
 

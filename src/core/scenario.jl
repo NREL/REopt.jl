@@ -40,12 +40,15 @@ struct Scenario <: AbstractScenario
     generator::Generator
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
-    existing_boiler::ExistingBoiler
+    cooling_load::CoolingLoad
+    existing_boiler::Union{ExistingBoiler, Nothing}
     chp::Union{CHP, Nothing}  # use nothing for more items when they are not modeled?
+    flexible_hvac::Union{FlexibleHVAC, Nothing}
+    existing_chiller::Union{ExistingChiller, Nothing}
 end
 
 """
-    Scenario(d::Dict)
+    Scenario(d::Dict; flex_hvac_from_json=false)
 
 Constructor for Scenario struct, where `d` has upper-case keys:
 - [Site](@ref) (required)
@@ -53,7 +56,7 @@ Constructor for Scenario struct, where `d` has upper-case keys:
 - [ElectricLoad](@ref) (required)
 - [PV](@ref) (optional, can be Array)
 - [Wind](@ref) (optional)
-- [Storage](@ref) (optional)
+- [ElectricStorage](@ref) (optional)
 - [ElectricUtility](@ref) (optional)
 - [Financial](@ref) (optional)
 - [Generator](@ref) (optional)
@@ -61,28 +64,15 @@ Constructor for Scenario struct, where `d` has upper-case keys:
 - [SpaceHeatingLoad](@ref) (optional)
 - [ExistingBoiler](@ref) (optional)
 - [CHP](@ref) (optional)
+- FlexibleHVAC (optional)
+- ExistingChiller (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV`, which can be either a `Dict` or `Dict[]`.
-```
-struct Scenario
-    settings::Settings
-    site::Site
-    pvs::Array{PV, 1}
-    wind::Wind
-    storage::Storage
-    electric_tariff::ElectricTariff
-    electric_load::ElectricLoad
-    electric_utility::ElectricUtility
-    financial::Financial
-    generator::Generator
-    dhw_load::DomesticHotWaterLoad
-    space_heating_load::SpaceHeatingLoad
-    existing_boiler::ExistingBoiler
-    chp::CHP
-end
-```
+
+Set `flex_hvac_from_json=true` if `FlexibleHVAC` values were loaded in from JSON (necessary to 
+handle conversion of Vector of Vectors from JSON to a Matrix in Julia).
 """
-function Scenario(d::Dict)
+function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d, "Settings")
         settings = Settings(;dictkeys_tosymbols(d["Settings"])...)
     else
@@ -126,14 +116,24 @@ function Scenario(d::Dict)
         electric_utility = ElectricUtility()
     end
 
-    if haskey(d, "Storage")
-        # only modeling electrochemical storage so far
-        storage_dict = Dict(:elec => dictkeys_tosymbols(d["Storage"]))
-        storage = Storage(storage_dict, financial)
+    storage_structs = Dict{String, AbstractStorage}()
+    if haskey(d,  "ElectricStorage")
+        storage_dict = dictkeys_tosymbols(d["ElectricStorage"])
     else
-        storage_dict = Dict(:elec => Dict(:max_kw => 0))
-        storage = Storage(storage_dict, financial)
+        storage_dict = Dict(:max_kw => 0.0)
     end
+    storage_structs["ElectricStorage"] = ElectricStorage(storage_dict, financial)
+    # TODO stop building ElectricStorage when it is not modeled by user 
+    #       (requires significant changes to constraints, variables)
+    if haskey(d, "HotThermalStorage")
+        params = HotThermalStorageDefaults(; dictkeys_tosymbols(d["HotThermalStorage"])...)
+        storage_structs["HotThermalStorage"] = ThermalStorage(params, financial, settings.time_steps_per_hour)
+    end
+    if haskey(d, "ColdThermalStorage")
+        params = ColdThermalStorageDefaults(; dictkeys_tosymbols(d["ColdThermalStorage"])...)
+        storage_structs["ColdThermalStorage"] = ThermalStorage(params, financial, settings.time_steps_per_hour)
+    end
+    storage = Storage(storage_structs)
 
     electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
                                    latitude=site.latitude, longitude=site.longitude, 
@@ -160,7 +160,7 @@ function Scenario(d::Dict)
     end
 
     max_heat_demand_kw = 0.0
-    if haskey(d, "DomesticHotWaterLoad")
+    if haskey(d, "DomesticHotWaterLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["DomesticHotWaterLoad"])
         dhw_load = DomesticHotWaterLoad(; dictkeys_tosymbols(d["DomesticHotWaterLoad"])...,
                                           latitude=site.latitude, longitude=site.longitude, 
@@ -171,7 +171,7 @@ function Scenario(d::Dict)
         dhw_load = DomesticHotWaterLoad(; fuel_loads_mmbtu_per_hour=repeat([0.0], 8760))
     end
                                     
-    if haskey(d, "SpaceHeatingLoad")
+    if haskey(d, "SpaceHeatingLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["SpaceHeatingLoad"])
         space_heating_load = SpaceHeatingLoad(; dictkeys_tosymbols(d["SpaceHeatingLoad"])...,
                                                 latitude=site.latitude, longitude=site.longitude, 
@@ -183,7 +183,69 @@ function Scenario(d::Dict)
         space_heating_load = SpaceHeatingLoad(; fuel_loads_mmbtu_per_hour=repeat([0.0], 8760))
     end
 
-    if max_heat_demand_kw > 0
+    flexible_hvac = nothing
+    existing_boiler = nothing
+    existing_chiller = nothing
+
+    if haskey(d, "FlexibleHVAC")
+        # TODO how to handle Matrix from JSON (to Dict) ?
+        if flex_hvac_from_json
+            flexible_hvac = FlexibleHVAC(d["FlexibleHVAC"])
+        else
+            flexible_hvac = FlexibleHVAC(; dictkeys_tosymbols(d["FlexibleHVAC"])...)
+        end
+
+        if sum(flexible_hvac.bau_hvac.existing_boiler_kw_thermal) ≈ 0.0 && 
+            sum(flexible_hvac.bau_hvac.existing_chiller_kw_thermal) ≈ 0.0
+            @warn "The FlexibleHVAC inputs indicate that no heating nor cooling is required. Not creating FlexibleHVAC model."
+            flexible_hvac = nothing
+        else
+            # ExistingChiller and/or ExistingBoiler are added based on BAU_HVAC energy required to keep temperature within bounds
+            if sum(flexible_hvac.bau_hvac.existing_boiler_kw_thermal) > 0
+                boiler_inputs = Dict{Symbol, Any}()
+                boiler_inputs[:max_heat_demand_kw] = maximum(flexible_hvac.bau_hvac.existing_boiler_kw_thermal)
+                boiler_inputs[:time_steps_per_hour] = settings.time_steps_per_hour
+                if haskey(d, "ExistingBoiler")
+                    boiler_inputs = merge(boiler_inputs, dictkeys_tosymbols(d["ExistingBoiler"]))
+                end
+                existing_boiler = ExistingBoiler(; boiler_inputs...)
+                # TODO automatically add CHP or other heating techs?
+                # TODO increase max_thermal_factor_on_peak_load to allow more heating flexibility?
+            end
+
+            if sum(flexible_hvac.bau_hvac.existing_chiller_kw_thermal) > 0
+                chiller_inputs = Dict{Symbol, Any}()
+                chiller_inputs[:loads_kw_thermal] = flexible_hvac.bau_hvac.existing_chiller_kw_thermal                                 
+                if haskey(d, "ExistingChiller")
+                    if !haskey(d["ExistingChiller"], "cop")
+                        d["ExistingChiller"]["cop"] = get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_on_peak_load=1.25, 
+                                                                                        loads_kw=nothing, 
+                                                                                        loads_kw_thermal=chiller_inputs[:loads_kw_thermal])
+                    end 
+                    chiller_inputs = merge(chiller_inputs, dictkeys_tosymbols(d["ExistingChiller"]))
+                else
+                    chiller_inputs[:cop] = get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_on_peak_load=1.25, 
+                                                                                loads_kw=nothing, 
+                                                                                loads_kw_thermal=chiller_inputs[:loads_kw_thermal])
+                end              
+                existing_chiller = ExistingChiller(; chiller_inputs...)
+            end
+
+            if haskey(d, "SpaceHeatingLoad")
+                @warn "Not using SpaceHeatingLoad because FlexibleHVAC was provided."
+            end
+
+            if haskey(d, "DomesticHotWaterLoad")
+                @warn "Not using DomesticHotWaterLoad because FlexibleHVAC was provided."
+            end
+
+            if haskey(d, "CoolingLoad")
+                @warn "Not using CoolingLoad because FlexibleHVAC was provided."
+            end
+        end
+    end
+
+    if max_heat_demand_kw > 0 && !haskey(d, "FlexibleHVAC")  # create ExistingBoler
         boiler_inputs = Dict{Symbol, Any}()
         boiler_inputs[:max_heat_demand_kw] = max_heat_demand_kw
         boiler_inputs[:time_steps_per_hour] = settings.time_steps_per_hour
@@ -208,12 +270,54 @@ function Scenario(d::Dict)
         set_missing_emissions_factors_to_fuel_defaults(chp)
     end
 
+    max_cooling_demand_kw = 0
+    if haskey(d, "CoolingLoad") && !haskey(d, "FlexibleHVAC")
+        # Note, if thermal_loads_ton or one of the "...fraction(s)_of_electric_load" inputs is used for CoolingLoad, doe_reference_name is ignored 
+        add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["CoolingLoad"])
+        d["CoolingLoad"]["site_electric_load_profile"] = electric_load.loads_kw
+        # Pass ExistingChiller inputs which are used in CoolingLoad processing, if they exist
+        ec_empty = ExistingChiller(;loads_kw_thermal=zeros(8760))
+        if !haskey(d, "ExistingChiller")
+            d["CoolingLoad"]["existing_chiller_max_thermal_factor_on_peak_load"] = ec_empty.max_thermal_factor_on_peak_load
+        else
+            if haskey(d["ExistingChiller"], "cop")
+                d["CoolingLoad"]["existing_chiller_cop"] = d["ExistingChiller"]["cop"]
+            end
+            if haskey(d["ExistingChiller"], "max_thermal_factor_on_peak_load")
+                d["CoolingLoad"]["existing_chiller_max_thermal_factor_on_peak_load"] = d["ExistingChiller"]["max_thermal_factor_on_peak_load"]
+            else
+                d["CoolingLoad"]["existing_chiller_max_thermal_factor_on_peak_load"] = ec_empty.max_thermal_factor_on_peak_load
+            end
+        end
+        cooling_load = CoolingLoad(; dictkeys_tosymbols(d["CoolingLoad"])...,
+                                    latitude=site.latitude, longitude=site.longitude, 
+                                    time_steps_per_hour=settings.time_steps_per_hour
+                                    )
+        max_cooling_demand_kw = maximum(cooling_load.loads_kw_thermal)
+    else
+        cooling_load = CoolingLoad(; thermal_loads_ton=repeat([0.0], 8760))
+    end
+
+    if max_cooling_demand_kw > 0 && !haskey(d, "FlexibleHVAC")  # create ExistingChiller
+        chiller_inputs = Dict{Symbol, Any}()
+        chiller_inputs[:loads_kw_thermal] = cooling_load.loads_kw_thermal
+        if haskey(d, "ExistingChiller")
+            if !haskey(d["ExistingChiller"], "cop")
+                d["ExistingChiller"]["cop"] = cooling_load.existing_chiller_cop
+            end
+            chiller_inputs = merge(chiller_inputs, dictkeys_tosymbols(d["ExistingChiller"]))
+        else
+            chiller_inputs[:cop] = 1.0
+        end
+        existing_chiller = ExistingChiller(; chiller_inputs...)
+    end
+
     return Scenario(
         settings,
         site, 
         pvs, 
         wind,
-        storage, 
+        storage,
         electric_tariff, 
         electric_load, 
         electric_utility, 
@@ -221,8 +325,11 @@ function Scenario(d::Dict)
         generator,
         dhw_load,
         space_heating_load,
+        cooling_load,
         existing_boiler,
-        chp
+        chp,
+        flexible_hvac,
+        existing_chiller
     )
 end
 
@@ -233,7 +340,7 @@ end
 Consruct Scenario from filepath `fp` to JSON with keys aligned with the `Scenario(d::Dict)` method.
 """
 function Scenario(fp::String)
-    Scenario(JSON.parsefile(fp))
+    Scenario(JSON.parsefile(fp); flex_hvac_from_json=true)
 end
 
 
@@ -251,8 +358,10 @@ function add_doe_reference_names_from_elec_to_thermal_loads(elec::Dict, thermal:
         "blended_doe_reference_percents",
     ]
     for k in string_keys
-        if !(k in keys(thermal)) && k in keys(elec)
-            thermal[k] = elec[k]
+        if k in keys(elec) 
+            if !(k in keys(thermal)) || isempty(thermal[k])
+                thermal[k] = elec[k]
+            end
         end
     end
 end
@@ -264,36 +373,36 @@ Populate emission factors in tech based on its fuel_type field.
 """
 function set_missing_emissions_factors_to_fuel_defaults(tech::AbstractFuelBurningTech)
     @assert tech.fuel_type in ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
-    fuel_renergy_energy_pct = {
+    fuel_renergy_energy_pct = Dict(
         "natural_gas"=>0.0,
         "landfill_bio_gas"=>1.0,
         "propane"=>0.0,
         "diesel_oil"=>0.0
-    }
-    fuel_emissions_lb_CO2_per_mmbtu = {
+    )
+    fuel_emissions_lb_CO2_per_mmbtu = Dict(
         "natural_gas"=>116.9,
         "landfill_bio_gas"=>114.8,
         "propane"=>138.6,
         "diesel_oil"=>163.1
-    }
-    fuel_emissions_lb_NOx_per_mmbtu = {
+    )
+    fuel_emissions_lb_NOx_per_mmbtu = Dict(
         "natural_gas"=>0.09139,
         "landfill_bio_gas"=>0.14,
         "propane"=>0.15309,
         "diesel_oil"=>0.56
-    }
-    fuel_emissions_lb_SO2_per_mmbtu = {
+    )
+    fuel_emissions_lb_SO2_per_mmbtu = Dict(
         "natural_gas"=>0.000578592,
         "landfill_bio_gas"=>0.045,
         "propane"=>0.0,
         "diesel_oil"=>0.28897737
-    }
-    fuel_emissions_lb_PM25_per_mmbtu = {
+    )
+    fuel_emissions_lb_PM25_per_mmbtu = Dict(
         "natural_gas"=>0.007328833,
         "landfill_bio_gas"=>0.02484,
         "propane"=>0.009906836,
         "diesel_oil"=>0.0
-    }
+    )
     if ismissing(tech.fuel_renewable_energy_pct)
         tech.fuel_renewable_energy_pct = fuel_renergy_energy_pct[tech.fuel_type]
     end
