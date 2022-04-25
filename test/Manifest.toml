@@ -3,12 +3,6 @@
 julia_version = "1.7.2"
 manifest_format = "2.0"
 
-[[deps.ASL_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "6252039f98492252f9e47c312c8ffda0e3b9e78d"
-uuid = "ae81ac8f-d209-56e5-92de-9978fef736f9"
-version = "0.1.3+0"
-
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
 
@@ -36,24 +30,6 @@ git-tree-sha1 = "f641eb0a4f00c343bbc32346e1217b86f3ce9dad"
 uuid = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
 version = "0.5.1"
 
-[[deps.Cbc]]
-deps = ["Cbc_jll", "MathOptInterface", "SparseArrays"]
-git-tree-sha1 = "d2034f8e01a3f1f0c4ae9fdc0d94809c61d66574"
-uuid = "9961bab8-2fa3-5c5a-9d89-47fab24efd76"
-version = "1.0.0"
-
-[[deps.Cbc_jll]]
-deps = ["ASL_jll", "Artifacts", "Cgl_jll", "Clp_jll", "CoinUtils_jll", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "OpenBLAS32_jll", "Osi_jll", "Pkg"]
-git-tree-sha1 = "a3c5986d7713bce4260d9826deead060a17c8e2d"
-uuid = "38041ee0-ae04-5750-a4d2-bb4d0d83d27d"
-version = "200.1000.501+0"
-
-[[deps.Cgl_jll]]
-deps = ["Artifacts", "Clp_jll", "CoinUtils_jll", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Osi_jll", "Pkg"]
-git-tree-sha1 = "11eb7b7688925e9751b5d7a187aaa4291eae2664"
-uuid = "3830e938-1dd0-5f3e-8b8e-b3ee43226782"
-version = "0.6000.300+0"
-
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
 git-tree-sha1 = "9950387274246d08af38f6eef8cb5480862a435f"
@@ -66,12 +42,6 @@ git-tree-sha1 = "bf98fa45a0a4cee295de98d4c1462be26345b9a1"
 uuid = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
 version = "0.1.2"
 
-[[deps.Clp_jll]]
-deps = ["Artifacts", "CoinUtils_jll", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "METIS_jll", "MUMPS_seq_jll", "OpenBLAS32_jll", "Osi_jll", "Pkg"]
-git-tree-sha1 = "b1031dcfbb44553194c9e650feb5ab65e372504f"
-uuid = "06985876-5285-5a41-9fcb-8948a742cc53"
-version = "100.1700.601+0"
-
 [[deps.CodecBzip2]]
 deps = ["Bzip2_jll", "Libdl", "TranscodingStreams"]
 git-tree-sha1 = "2e62a725210ce3c3c2e1a3080190e7ca491f18d7"
@@ -83,12 +53,6 @@ deps = ["TranscodingStreams", "Zlib_jll"]
 git-tree-sha1 = "ded953804d019afa9a3f98981d99b33e3db7b6da"
 uuid = "944b1d66-785c-5afd-91f1-9de20f533193"
 version = "0.7.0"
-
-[[deps.CoinUtils_jll]]
-deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "OpenBLAS32_jll", "Pkg"]
-git-tree-sha1 = "44173e61256f32918c6c132fc41f772bab1fb6d1"
-uuid = "be027038-0da8-5614-b30d-e42594cb92df"
-version = "200.1100.400+0"
 
 [[deps.CommonSubexpressions]]
 deps = ["MacroTools", "Test"]
@@ -151,6 +115,18 @@ deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "LinearAlgebra", "Lo
 git-tree-sha1 = "40d1546a45abd63490569695a86a2d93c2021e54"
 uuid = "f6369f11-7733-5829-9624-2563aa707210"
 version = "0.10.26"
+
+[[deps.HiGHS]]
+deps = ["HiGHS_jll", "MathOptInterface", "SparseArrays"]
+git-tree-sha1 = "bb6b049c06370af5319d86d977429a01dd09e6d6"
+uuid = "87dc4568-4c63-4d18-b0c0-bb2238e4078b"
+version = "1.1.3"
+
+[[deps.HiGHS_jll]]
+deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "b0bf110765a077880aab84876f9f0b8de0407561"
+uuid = "8fd58aa0-07eb-5a78-9b36-339c94fd15ea"
+version = "1.2.2+0"
 
 [[deps.InteractiveUtils]]
 deps = ["Markdown"]
@@ -217,18 +193,6 @@ version = "0.3.12"
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
-[[deps.METIS_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "1d31872bb9c5e7ec1f618e8c4a56c8b0d9bddc7e"
-uuid = "d00139f3-1899-568f-a2f0-47f597d42d70"
-version = "5.1.1+0"
-
-[[deps.MUMPS_seq_jll]]
-deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "METIS_jll", "OpenBLAS32_jll", "Pkg"]
-git-tree-sha1 = "29de2841fa5aefe615dea179fcde48bb87b58f57"
-uuid = "d7ed1dd3-d0ae-5e8e-bfb4-87a502085b8d"
-version = "5.4.1+0"
-
 [[deps.MacroTools]]
 deps = ["Markdown", "Random"]
 git-tree-sha1 = "3d3e902b31198a27340d0bf00d6ac452866021cf"
@@ -269,12 +233,6 @@ version = "1.0.0"
 [[deps.NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
 
-[[deps.OpenBLAS32_jll]]
-deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "9c6c2ed4b7acd2137b878eb96c68e63b76199d0f"
-uuid = "656ef2d0-ae68-5445-9ca0-591084a874a2"
-version = "0.3.17+0"
-
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
@@ -293,12 +251,6 @@ version = "0.5.5+0"
 git-tree-sha1 = "85f8e6578bf1f9ee0d11e7bb1b1456435479d47c"
 uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 version = "1.4.1"
-
-[[deps.Osi_jll]]
-deps = ["Artifacts", "CoinUtils_jll", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "OpenBLAS32_jll", "Pkg"]
-git-tree-sha1 = "28e0ddebd069f605ab1988ab396f239a3ac9b561"
-uuid = "7da25872-d9ce-5375-a4d3-7a845f58efdd"
-version = "0.10800.600+0"
 
 [[deps.Parsers]]
 deps = ["Dates"]
