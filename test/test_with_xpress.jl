@@ -605,8 +605,8 @@ end
     @test roof_east["average_annual_energy_produced_kwh"] ≈ 6482.37 atol=0.1
 end
 
-@testset "Thermal Energy Storage and Absorption Chiller" begin
-    model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
+@testset "Thermal Energy Storage" begin
+    model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG"=>0))
     data = JSON.parsefile("./scenarios/thermal_storage.json")
     s = Scenario(data)
     p = REoptInputs(s)
