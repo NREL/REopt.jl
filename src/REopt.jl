@@ -61,7 +61,6 @@ import DelimitedFiles: readdlm
 const MOI = MathOptInterface
 using Shapefile
 using ArchGDAL
-using PolygonInbounds
 using Roots: fzero  # for IRR
 global hdl = nothing
 using HDF5, JLD
