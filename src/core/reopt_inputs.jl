@@ -35,6 +35,7 @@ The data structure for all the inputs necessary to construct the JuMP model.
 struct REoptInputs <: AbstractInputs
     s::AbstractScenario
     techs::Techs
+    storage::Storage
     min_sizes::Dict{String, Float64}  # (techs)
     max_sizes::Dict{String, Float64}  # (techs)
     existing_sizes::Dict{String, Float64}  # (techs)
@@ -77,14 +78,15 @@ struct REoptInputs <: AbstractInputs
 end
 ```
 """
-struct REoptInputs <: AbstractInputs
-    s::AbstractScenario
+struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
+    s::ScenarioType
     techs::Techs
     min_sizes::Dict{String, Float64}  # (techs)
     max_sizes::Dict{String, Float64}  # (techs)
     existing_sizes::Dict{String, Float64}  # (techs)
     cap_cost_slope::Dict{String, Any}  # (techs)
     om_cost_per_kw::Dict{String, Float64}  # (techs)
+    cop::Dict{String, Float64}  # (techs.cooling)
     time_steps::UnitRange
     time_steps_with_grid::Array{Int, 1}
     time_steps_without_grid::Array{Int, 1}
@@ -154,6 +156,7 @@ function REoptInputs(s::AbstractScenario)
         seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
         tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25 = 
         setup_tech_inputs(s)
+        cop = setup_tech_inputs(s)
 
     pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
 
@@ -181,6 +184,7 @@ function REoptInputs(s::AbstractScenario)
         existing_sizes,
         cap_cost_slope,
         om_cost_per_kw,
+        cop,
         time_steps,
         time_steps_with_grid,
         time_steps_without_grid,
@@ -245,16 +249,17 @@ function setup_tech_inputs(s::AbstractScenario)
     tech_emissions_factors_NOx = Dict(t => 0.0 for t in techs.all)
     tech_emissions_factors_SO2 = Dict(t => 0.0 for t in techs.all)
     tech_emissions_factors_PM25 = Dict(t => 0.0 for t in techs.all)
+    cop = Dict(t => 0.0 for t in techs.cooling)
 
     # export related inputs
-    techs_by_exportbin = Dict(k => [] for k in s.electric_tariff.export_bins)
+    techs_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in s.electric_tariff.export_bins)
     export_bins_by_tech = Dict{String, Array{Symbol, 1}}()
 
     # REoptInputs indexed on techs.segmented
     n_segs_by_tech = Dict{String, Int}()
-    seg_min_size = Dict{String, Any}()
-    seg_max_size = Dict{String, Any}()
-    seg_yint = Dict{String, Any}()
+    seg_min_size = Dict{String, Dict{Int, Float64}}()
+    seg_max_size = Dict{String, Dict{Int, Float64}}()
+    seg_yint = Dict{String, Dict{Int, Float64}}()
 
     # PV specific arrays
     pvlocations = [:roof, :ground, :both]
@@ -292,6 +297,12 @@ function setup_tech_inputs(s::AbstractScenario)
             tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25)
     end
 
+    if "ExistingChiller" in techs.all
+        setup_existing_chiller_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cop)
+    else
+        cop["ExistingChiller"] = 1.0
+    end
+
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
     for t in techs.elec
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
@@ -301,6 +312,7 @@ function setup_tech_inputs(s::AbstractScenario)
     production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
     seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
     tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25
+    cop
 end
 
 
@@ -391,7 +403,8 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
     roof_max_kw, land_max_kw = 1.0e5, 1.0e5
 
     for pv in s.pvs
-        production_factor[pv.name, :] = prodfactor(pv, s.site.latitude, s.site.longitude)
+        production_factor[pv.name, :] = prodfactor(pv, s.site.latitude, s.site.longitude; 
+            time_steps_per_hour=s.settings.time_steps_per_hour)
         for location in pvlocations
             if pv.location == location
                 pv_to_location[pv.name][location] = 1
@@ -535,6 +548,16 @@ function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes,
     tech_emissions_factors_NOx["ExistingBoiler"] = s.existing_boiler.emissions_factor_lb_NOx_per_mmbtu / MMBTU_TO_KWH
     tech_emissions_factors_SO2["ExistingBoiler"] = s.existing_boiler.emissions_factor_lb_SO2_per_mmbtu / MMBTU_TO_KWH
     tech_emissions_factors_PM25["ExistingBoiler"] = s.existing_boiler.emissions_factor_lb_PM25_per_mmbtu / MMBTU_TO_KWH 
+end
+
+
+function setup_existing_chiller_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cop)
+    max_sizes["ExistingChiller"] = s.existing_chiller.max_kw
+    min_sizes["ExistingChiller"] = 0.0
+    existing_sizes["ExistingChiller"] = 0.0
+    cap_cost_slope["ExistingChiller"] = 0.0
+    cop["ExistingChiller"] = s.existing_chiller.cop
+    # om_cost_per_kw["ExistingChiller"] = 0.0
     return nothing
 end
 
@@ -629,6 +652,7 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
                             0.0)
                 )
         )
+    end
     # TODO: delete below if above code works
     # pwf_emissions_cost = [
     #     "CO2_grid" => annuity_two_escalation_rates(sf.analysis_years, sf.co2_cost_escalation_pct, -1 * self.elec_tariff.emissions_factor_CO2_pct_decrease, sf.offtaker_discount_pct),

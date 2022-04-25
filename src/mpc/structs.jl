@@ -243,62 +243,32 @@ end
 
 
 """
-    MPCElecStorage
+    MPCElectricStorage
+
 ```julia
-Base.@kwdef struct MPCElecStorage
+Base.@kwdef struct MPCElectricStorage < AbstractElectricStorage
     size_kw::Float64
     size_kwh::Float64
-    charge_efficiency::Float64
-    discharge_efficiency::Float64
-    soc_min_pct::Float64
-    soc_init_pct::Float64
+    charge_efficiency::Float64 =  0.96 * 0.975^2
+    discharge_efficiency::Float64 =  0.96 * 0.975^2
+    soc_min_pct::Float64 = 0.2
+    soc_init_pct::Float64 = 0.5
     can_grid_charge::Bool = true
-    grid_charge_efficiency::Float64
+    grid_charge_efficiency::Float64 = 0.96 * 0.975^2
 end
 ```
 """
-Base.@kwdef struct MPCElecStorage
+Base.@kwdef struct MPCElectricStorage <: AbstractElectricStorage
     size_kw::Float64
     size_kwh::Float64
-    charge_efficiency::Float64
-    discharge_efficiency::Float64
-    soc_min_pct::Float64
-    soc_init_pct::Float64
+    charge_efficiency::Float64 = 0.96 * 0.975^2
+    discharge_efficiency::Float64 = 0.96 * 0.975^2
+    soc_min_pct::Float64 = 0.2
+    soc_init_pct::Float64 = 0.5
     can_grid_charge::Bool = true
-    grid_charge_efficiency::Float64
-end
-
-
-Base.@kwdef struct MPCStorage
-    types::Array{Symbol,1} = [:elec]
-    size_kw::Dict{Symbol, Float64}
-    size_kwh::Dict{Symbol, Float64}
-    charge_efficiency::Dict{Symbol, Float64} = Dict(:elec => 0.96 * 0.975^2)
-    discharge_efficiency::Dict{Symbol, Float64} = Dict(:elec => 0.96 * 0.975^2)
-    soc_min_pct::Dict{Symbol, Float64} = Dict(:elec => 0.2)
-    soc_init_pct::Dict{Symbol, Float64} = Dict(:elec => 0.5)
-    can_grid_charge::Array{Symbol,1} = [:elec]
-    grid_charge_efficiency::Dict{Symbol, Float64} = Dict(:elec => 0.96 * 0.975^2)
-end
-
-
-"""
-
-NOTE: d must have symbolic keys
-"""
-function MPCStorage(d::Dict)
-    d2 = Dict()
-    d2[:can_grid_charge] = get(d, :can_grid_charge, false) ? [:elec] : Symbol[]
-    if haskey(d, :can_grid_charge)
-        pop!(d, :can_grid_charge)
-    end
-    # have to convert to all d values to DenseAxisArray's with storage type as Axis
-    # (only modeling elec storage in MPC for now)
-    for (k,v) in d
-        d2[k] = Dict(:elec => convert(Float64, v))
-    end
-
-    return MPCStorage(; d2...)
+    grid_charge_efficiency::Float64 = 0.96 * 0.975^2
+    max_kw::Float64 = size_kw
+    max_kwh::Float64 = size_kwh
 end
 
 
@@ -359,4 +329,36 @@ struct MPCGenerator <: AbstractGenerator
             om_cost_per_kwh,
         )
     end
+end
+
+
+"""
+    MPCCoolingLoad
+
+    Base.@kwdef struct MPCCoolingLoad
+        loads_kw_thermal::Array{Real,1}
+    end
+"""
+Base.@kwdef struct MPCCoolingLoad
+    loads_kw_thermal::Array{Real,1}
+    cop::Union{Real, Nothing}
+end
+
+
+"""
+    MPCLimits
+
+struct for MPC specific input parameters:
+- `grid_draw_limit_kw_by_time_step::Vector{<:Real}` limits for grid power consumption in each time step; length must be same as `length(loads_kw)`.
+- `export_limit_kw_by_time_step::Vector{<:Real}` limits for grid power export in each time step; length must be same as `length(loads_kw)`.
+
+!!! warn 
+    `grid_draw_limit_kw_by_time_step` and `export_limit_kw_by_time_step` values can lead to 
+    infeasible problems. For example, there is a constraint that the electric load must be met in 
+    each time step and by limiting the amount of power from the grid the load balance constraint 
+    could be infeasible.
+"""
+Base.@kwdef struct MPCLimits
+    grid_draw_limit_kw_by_time_step::Vector{<:Real} = Real[]
+    export_limit_kw_by_time_step::Vector{<:Real} =  Real[]
 end
