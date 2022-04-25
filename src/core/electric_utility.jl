@@ -139,6 +139,7 @@ struct ElectricUtility
             else
                 @error "Provided "+field_name+" does not match the time_steps_per_hour."
             end
+        end
 
         new(
             emissions_region,
@@ -159,142 +160,111 @@ struct ElectricUtility
             outage_timesteps,
             scenarios,
             net_metering_limit_kw,
-            interconnection_limit_kw)
+            interconnection_limit_kw
+        )
+    end
 end
 
 function region(region_abbr::String)
-    lookup = {  "AK":"Alaska",
-                "CA":"California",
-                "EMW":"Great Lakes / Atlantic",
-                "NE": "Northeast",
-                "NW":"Northwest",
-                "RM":"Rocky Mountains",
-                "SC":"Lower Midwest",
-                "SE": "Southeast",
-                "SW":"Southwest",
-                "TX":"Texas",
-                "WMW":"Upper Midwest",
-                "HI":"Hawaii (except Oahu)",
-                "HI-Oahu":"Hawaii (Oahu)" }
+    lookup = Dict(
+        "AK"=>"Alaska",
+        "CA"=>"California",
+        "EMW"=>"Great Lakes / Atlantic",
+        "NE"=>"Northeast",
+        "NW"=>"Northwest",
+        "RM"=>"Rocky Mountains",
+        "SC"=>"Lower Midwest",
+        "SE"=> "Southeast",
+        "SW"=>"Southwest",
+        "TX"=>"Texas",
+        "WMW"=>"Upper Midwest",
+        "HI"=>"Hawaii (except Oahu)",
+        "HI-Oahu"=>"Hawaii (Oahu)"
+    )
     try
         return lookup[region_abbr]
     catch
         return "None"
+    end
 end
+
+using ArchGDAL
 
 function region_abbreviation(latitude, longitude)
     
-    file_path = joinpath(@__DIR__, "..", "..", "data", "AVERT_Data", "avert_4326.shp")
-
-    table = Shapefile.Table(file_path)
-    geoms = Shapefile.shapes(table)
+    file_path = joinpath(@__DIR__, "..", "..", "data", "avert", "avert_4326.shp")
 
     # Set defaults
     abbr = nothing
     meters_to_region = nothing
 
-    ## Check if coordinates are in any of the AVERT zones for given shapefile.
-    # TODO following for loop is relatively slow, and maybe incorrect because of longitude curving?
-    for (row, geo) in enumerate(geoms)
-        g = length(geo.points)
-        nodes = zeros(g, 2)
-        edges = zeros(g, 2)
-        for (i,p) in enumerate(geo.points)
-            nodes[i,:] = [p.x, p.y]
-            edges[i,:] = [i, i+1]
+    shpfile = ArchGDAL.read(file_path)
+	avert_layer = ArchGDAL.getlayer(shpfile, 0)
+
+	# From https://yeesian.com/ArchGDAL.jl/latest/projections/#:~:text=transform%0A%20%20%20%20point%20%3D%20ArchGDAL.-,fromWKT,-(%22POINT%20(1120351.57%20741921.42
+    # From https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry
+	point = ArchGDAL.fromWKT(string("POINT (",longitude," ",latitude,")"))
+	
+	# No transformation needed
+    
+    # if lon,lat pair is in a polygon, return that AVERT region.
+	for i in 1:ArchGDAL.nfeature(avert_layer)
+		ArchGDAL.getfeature(avert_layer,i-1) do feature # 0 indexed
+			if ArchGDAL.contains(ArchGDAL.getgeom(feature), point)
+				abbr = ArchGDAL.getfield(feature,"AVERT")
+                meters_to_region = 0.0;
+			end
+		end
+	end
+    if isnothing(abbr)
+        @info "Could not find AVERT zone for site latitude/longitude. Checking site proximity to AVERT regions."
+    else
+        return abbr, meters_to_region
+    end
+    
+    # If region abbreviation from above is nothing then are our lat/lon coords near any avert zone?:
+
+    shpfile = ArchGDAL.read(joinpath(@__DIR__, "..", "..", "data", "avert","avert_102008.shp"))
+    avert_102008 = ArchGDAL.getlayer(shpfile, 0)
+
+    pt = ArchGDAL.createpoint(latitude, longitude)
+
+    try
+        # EPSG 4326 is WGS 84 -- WGS84 - World Geodetic System 1984, used in GPS
+        fromProj = ArchGDAL.importEPSG(4326)
+        # Got below from https://epsg.io/102008
+        toProj = ArchGDAL.importPROJ4("+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs")
+        ArchGDAL.createcoordtrans(fromProj, toProj) do transform
+            # println("Before: $(ArchGDAL.toWKT(point))")
+            ArchGDAL.transform!(pt, transform)
+            # println("After: $(ArchGDAL.toWKT(point))")
         end
-        edges[g, :] = [g, 1]
-        edges = convert(Array{Int64,2}, edges)
-        # shapefiles have longitude as x, latitude as y  
-        if inpoly2([lon, lat], nodes, edges)[1]
-            abbr = table.AVERT[row]
-            meters_to_region = 0
-            return abbr, meters_to_region
-        end
-        GC.gc()
+    catch
+        @warn "Could not look up AVERT emissions region from point (",latitude,",",longitude,"). Location is
+        likely invalid or well outside continental US, AK and HI"
+        return nothing, nothing
     end
 
-    """
-    If region abbreviation from above is nothing then are our lat/lon coords near any avert zone?:
-    """
-    if abbr === nothing
-        
-        shpfile = ArchGDAL.read(joinpath(dirname(@__FILE__), "..", "..", "data", "avert","avert_102008.shp"))
-        avert_102008 = ArchGDAL.getlayer(shpfile, 0)
-        
-        point = ArchGDAL.createpoint(latitude, longitude)
-        
-        try
-            # EPSG 4326 is WGS 84 -- WGS84 - World Geodetic System 1984, used in GPS
-            fromProj = ArchGDAL.importEPSG(4326)
-            # Got below from https://epsg.io/102008
-            toProj = ArchGDAL.importPROJ4("+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs")
-            ArchGDAL.createcoordtrans(fromProj, toProj) do transform
-                # println("Before: $(ArchGDAL.toWKT(point))")
-                ArchGDAL.transform!(point, transform)
-                # println("After: $(ArchGDAL.toWKT(point))")
-            end
-        catch
-            @warn "Could not look up AVERT emissions region from point (",latitude,",",longitude,"). Location is
-            likely invalid or well outside continental US, AK and HI"
-            return nothing, nothing
+    # For each item, get geometry and append distance between point and geometry to vector.
+    distances = []
+    for i in 1:ArchGDAL.nfeature(avert_102008)
+        ArchGDAL.getfeature(avert_102008,i-1) do f # 0 indexed
+            push!(distances, ArchGDAL.distance(ArchGDAL.getgeom(f), pt))
         end
+    end
+    
+    ArchGDAL.getfeature(avert_102008,argmin(distances)-1) do feature	# 0 indexed
+        abbr = ArchGDAL.getfield(feature,1)
+        meters_to_region = distances[argmin(distances)]
+    end
 
-        # For each item, get geometry and append distance between point and geometry to vector.
-        distances = []
-        for i in 1:ArchGDAL.nfeature(avert_102008)
-            ArchGDAL.getfeature(avert_102008,i-1) do f # 0 indexed
-                push!(distances, ArchGDAL.distance(ArchGDAL.getgeom(f), point))
-            end
-        end
-        
-        ArchGDAL.getfeature(avert_102008,argmin(distances)-1) do feature	# 0 indexed
-            region_abbr = ArchGDAL.getfield(feature,1)
-            meters_to_region = distances[argmin(distances)]
-        end
-        
-        if meters_to_region > 8046
-            @warn "Your site location (", latitude,",",longitude,") is more than 5 miles from the nearest emission region. Cannot calculate emissions."
-            return nothing, nothing
-        end
-        return region_abbr, meters_to_region
-    end;
-
-    """
-    #     gdf_query = gdf[gdf.geometry.intersects(g.Point(self.longitude, self.latitude))]
-    #     if not gdf_query.empty:
-    #         self.meters_to_region = 0
-    #         self._region_abbr = gdf_query.AVERT.values[0]
-            
-    #     if self._region_abbr is None:
-    #         gdf = gpd.read_file(os.path.join(self.library_path,'avert_102008.shp'))
-    #         try:
-                Shapefly transform shapely.ops.transform(func, geom)
-    #             lookup = transform(self.project4326_to_102008, g.Point(self.latitude, self.longitude)) # switched lat and long here
-    #         except:
-    #             raise AttributeError("Could not look up AVERT emissions region from point ({},{}). Location is\
-    #                 likely invalid or well outside continental US, AK and HI".format(self.longitude, self.latitude))
-    #         distances_meter = gdf.geometry.apply(lambda x : x.distance(lookup)).values
-    #         min_idx = list(distances_meter).index(min(distances_meter))
-    #         self._region_abbr = gdf.loc[min_idx,'AVERT']
-    #         self.meters_to_region = int(round(min(distances_meter)))
-    #         if self.meters_to_region > 8046:
-    #             raise AttributeError('Your site location ({},{}) is more than 5 miles from the '
-    #                 'nearest emission region. Cannot calculate emissions.'.format(self.longitude, self.latitude))
-    # return self._region_abbr
-
-    #with GMT.jl ?
-    # shape_data = gmtread("pts.shp")
-    # shape_data.ds_bbox #global bounding box
-    # shape_data. bbox #segment bounding box
-
-    with proj4.jl
-    From https://epsg.io/102008 proj4 text for 102008: 
-    trans = Proj4.Transformation("EPSG:4326", "+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs")
-    trans([55, 12]) => results in SVector{2, Float64}(691875.632, 6098907.825)
-    SVector is from StatisArrays.jl which is a dependency for DiffResults, so it should already be precompiled?
-    """
-end
+    if meters_to_region > 8046
+        println(meters_to_region)
+        @warn "Your site location (", latitude,",",longitude,") is more than 5 miles from the nearest emission region. Cannot calculate emissions."
+        return nothing, nothing
+    end
+    return abbr, meters_to_region
+end;
 
 function emissions_series(pollutant, region_abbr, time_steps_per_hour=1)
     avert_df = CSV.read(joinpath(@__DIR__, "..", "..", "data", "AVERT_Data", "AVERT_hourly_emissions_"+pollutant+".csv"))
@@ -305,7 +275,7 @@ function emissions_series(pollutant, region_abbr, time_steps_per_hour=1)
         end
         return emmissions_profile
     else
-        @warn "Emissions error. Cannnot find hourly emmissions for region "+region_abbr"."
+        @warn "Emissions error. Cannnot find hourly emmissions for region ", region_abbr, "."
         return zeros(8760*time_steps_per_hour)
     end
 
