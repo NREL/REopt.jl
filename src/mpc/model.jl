@@ -90,7 +90,7 @@ function run_mpc(m::JuMP.AbstractModel, p::MPCInputs)
 	tstart = time()
 	results = mpc_results(m, p)
 	time_elapsed = time() - tstart
-	@info "Total results processing took $(round(time_elapsed, digits=3)) seconds."
+	@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status
 	results["solver_seconds"] = opt_time
 	return results

@@ -62,15 +62,19 @@ function find_ashrae_zone_city(lat, lon)::String
 	point = ArchGDAL.fromWKT(string("POINT (",lon," ",lat,")"))
 	
 	# No transformation needed
-	
+	archgdal_city = nothing
 	for i in 1:ArchGDAL.nfeature(cities_layer)
 		ArchGDAL.getfeature(cities_layer,i-1) do feature # 0 indexed
 			if ArchGDAL.contains(ArchGDAL.getgeom(feature), point)
-				return ArchGDAL.getfield(feature,"city")
+				archgdal_city = ArchGDAL.getfield(feature,"city")
 			end
 		end
 	end
-    @info "Could not find latitude/longitude in U.S. Using geometrically nearest city."
+    if isnothing(archgdal_city)
+        @info "Could not find latitude/longitude in U.S. Using geometrically nearest city."
+    else
+        return archgdal_city
+    end
     cities = [
         (city="Miami", lat=25.761680, lon=-80.191790),
         (city="Houston", lat=29.760427, lon=-95.369803),
