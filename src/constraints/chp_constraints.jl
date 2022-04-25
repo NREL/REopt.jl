@@ -76,9 +76,6 @@ function add_chp_thermal_production_constraints(m, p; _n="")
     thermal_prod_half_load = 0.5 / p.s.chp.elec_effic_half_load * p.s.chp.thermal_effic_half_load   # [kWt/kWe]
     thermal_prod_slope = (thermal_prod_full_load - thermal_prod_half_load) / (1.0 - 0.5)  # [kWt/kWe]
     thermal_prod_intercept = thermal_prod_full_load - thermal_prod_slope * 1.0  # [kWt/kWe_rated
-    
-    dv = "dvProductionToWaste"*_n
-    m[Symbol(dv)] = @variable(m, [p.techs.chp, p.time_steps], base_name=dv, lower_bound=0)
 
     # Conditionally add dvThermalProductionYIntercept if coefficient p.s.chpThermalProdIntercept is greater than ~zero
     if thermal_prod_intercept > 1.0E-7

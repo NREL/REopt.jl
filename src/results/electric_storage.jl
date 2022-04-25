@@ -28,7 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    add_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+    add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 
 Adds the Storage results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
 Note: the node number is an empty string if evaluating a single `Site`.
@@ -40,7 +40,7 @@ Storage results:
 - `year_one_to_load_series_kw` Vector of power used to meet load over the first year
 - `year_one_to_grid_series_kw` Vector of power exported to the grid over the first year
 """
-function add_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::String; _n="")
+function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::String; _n="")
     r = Dict{String, Any}()
     r["size_kwh"] = round(value(m[Symbol("dvStorageEnergy"*_n)][b]), digits=2)
     r["size_kw"] = round(value(m[Symbol("dvStoragePower"*_n)][b]), digits=2)
@@ -51,6 +51,14 @@ function add_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::
 
         discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
         r["year_one_to_load_series_kw"] = round.(value.(discharge), digits=3)
+
+        r["initial_capital_cost"] = r["size_kwh"] * p.s.storage.attr[b].installed_cost_per_kwh +
+            r["size_kw"] * p.s.storage.attr[b].installed_cost_per_kw
+
+        if p.s.storage.attr[b].model_degradation
+            r["state_of_health"] = value.(m[:SOH]).data / value.(m[:dvStorageEnergy])["ElectricStorage"];
+            r["maintenance_cost"] = value(m[:degr_cost])
+         end
     else
         r["year_one_soc_series_pct"] = []
         r["year_one_to_load_series_kw"] = []
@@ -61,7 +69,7 @@ function add_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::
 end
 
 
-function add_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b::String; _n="")
+function add_electric_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b::String; _n="")
     r = Dict{String, Any}()
 
     soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)

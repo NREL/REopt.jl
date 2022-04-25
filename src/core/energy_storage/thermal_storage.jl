@@ -68,6 +68,8 @@ Base.@kwdef struct ColdThermalStorageDefaults <: AbstractThermalStorageDefaults
     om_cost_per_gal::Float64 = 0.0
     macrs_option_years::Int = 0
     macrs_bonus_pct::Float64 = 0.0
+    macrs_itc_reduction::Float64 = 0.0
+    total_itc_pct::Float64 = 0.0
     total_rebate_per_kwh::Float64 = 0.0
 end
 
@@ -89,6 +91,8 @@ Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults
     om_cost_per_gal::Float64 = 0.0
     macrs_option_years::Int = 0
     macrs_bonus_pct::Float64 = 0.0
+    macrs_itc_reduction::Float64 = 0.0
+    total_itc_pct::Float64 = 0.0
     total_rebate_per_kwh::Float64 = 0.0
 end
 ```
@@ -106,6 +110,8 @@ Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults
     om_cost_per_gal::Float64 = 0.0
     macrs_option_years::Int = 0
     macrs_bonus_pct::Float64 = 0.0
+    macrs_itc_reduction::Float64 = 0.0
+    total_itc_pct::Float64 = 0.0
     total_rebate_per_kwh::Float64 = 0.0
 end
 
@@ -135,28 +141,30 @@ struct ThermalStorage <: AbstractThermalStorage
     max_kw::Float64
     min_kwh::Float64
     max_kwh::Float64
+    installed_cost_per_kwh::Float64
     charge_efficiency::Float64
     discharge_efficiency::Float64
     net_present_cost_per_kwh::Float64
     om_cost_per_kwh::Float64
 
-    function ThermalStorage(s::AbstractThermalStorageDefaults, d::Dict, f::Financial, time_steps_per_hour::Int)
+    function ThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
          
         delta_T_degF = s.hot_water_temp_degF - s.cool_water_temp_degF
-        avg_cp_kj_per_kgK = 998.2 
-        avg_rho_kg_per_m3 = 4.184 #TODO: add CoolProp reference or perform analogous calculations for water and build lookup tables
+        avg_rho_kg_per_m3 = 998.2 
+        avg_cp_kj_per_kgK = 4.184 #TODO: add CoolProp reference or perform analogous calculations for water and build lookup tables
         kwh_per_gal = convert_gal_to_kwh(delta_T_degF, avg_rho_kg_per_m3, avg_cp_kj_per_kgK)
         min_kwh = s.min_gal * kwh_per_gal
         max_kwh = s.max_gal * kwh_per_gal
         min_kw = min_kwh * time_steps_per_hour
         max_kw = max_kwh * time_steps_per_hour
-        om_cost_per_kwh = s.om_cost_per_gal * kwh_per_gal
+        om_cost_per_kwh = s.om_cost_per_gal / kwh_per_gal
     
         charge_efficiency = s.internal_efficiency_pct^0.5
         discharge_efficiency = s.internal_efficiency_pct^0.5
+        installed_cost_per_kwh = s.installed_cost_per_gal / kwh_per_gal
       
         net_present_cost_per_kwh = effective_cost(;
-            itc_basis = s.installed_cost_per_gal * d[:kwh_per_gal],
+            itc_basis = installed_cost_per_kwh,
             replacement_cost = 0.0,
             replacement_year = 100,
             discount_rate = f.owner_discount_pct,
@@ -185,6 +193,7 @@ struct ThermalStorage <: AbstractThermalStorage
             max_kw,
             min_kwh,
             max_kwh,
+            installed_cost_per_kwh,
             charge_efficiency,
             discharge_efficiency,
             net_present_cost_per_kwh,
