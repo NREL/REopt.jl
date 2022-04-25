@@ -180,7 +180,6 @@ function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[
     Simulation starts here
     """
     # outer loop: do simulation starting at each time step
-    
     for time_step in 1:n_timesteps
         r[time_step] = simulate_outage(;
             init_time_step = time_step,
@@ -271,16 +270,16 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
 
     batt_kwh = 0
     batt_kw = 0
-    init_soc = []
+    init_soc = zeros(length(p.time_steps))
     if "ElectricStorage" in keys(d)
         batt_kwh = get(d["ElectricStorage"], "size_kwh", 0)
         batt_kw = get(d["ElectricStorage"], "size_kw", 0)
-        init_soc = get(d["ElectricStorage"], "year_one_soc_series_pct", [])
+        init_soc = get(d["ElectricStorage"], "year_one_soc_series_pct", zeros(length(p.time_steps)))
     end
     if microgrid_only && !Bool(get(d, "storage_upgraded", false))
         batt_kwh = 0
         batt_kw = 0
-        init_soc = []
+        init_soc = zeros(length(p.time_steps))
     end
 
     diesel_kw = 0
