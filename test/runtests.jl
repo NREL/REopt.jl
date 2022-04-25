@@ -141,7 +141,11 @@ else  # run HiGHS tests
         @test results["Financial"]["lcc"] ≈ 1.094596365e7 atol=1e4  
     end
 
-    rm("Highs.log", force=true)
+    try
+        rm("Highs.log", force=true)
+    catch
+        @warn "Could not delete test/Highs.log"
+    end
 
     # removed Wind test for two reasons
     # 1. reduce WindToolKit calls in tests
