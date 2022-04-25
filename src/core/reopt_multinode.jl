@@ -287,7 +287,7 @@ function run_reopt(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) wh
 	tstart = time()
 	results = reopt_results(m, ps)
 	time_elapsed = time() - tstart
-	@info "Total results processing took $(round(time_elapsed, digits=3)) seconds."
+	@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status
 	results["solver_seconds"] = opt_time
 	return results
