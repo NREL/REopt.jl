@@ -205,11 +205,11 @@ function easiur_costs(latitude::Float64, longitude::Float64, grid_or_onsite::Str
     y = int(round(coords[2]))
 
     try
-        costs_per_tonne = {
+        costs_per_tonne = Dict(
             "NOx" => EASIUR_data["NOX_Annual"][x - 1, y - 1] .* USD_2010_to_2020,
             "SO2" => EASIUR_data["SO2_Annual"][x - 1, y - 1] .* USD_2010_to_2020,
             "PM25" => EASIUR_data["PEC_Annual"][x - 1, y - 1] .* USD_2010_to_2020
-        }
+        )
         return costs_per_tonne
     catch
         @error "Could not look up EASIUR health costs from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid."
@@ -227,11 +227,11 @@ function easiur_escalation_rates(latitude::Float64, longitude::Float64, inflatio
 
     try
         # nominal compound annual growth rate (real + inflation)
-        escalation_rates = { 
+        escalation_rates = Dict( 
             "NOx" => ((EASIUR_150m_yr2024["NOX_Annual"][x - 1, y - 1]/EASIUR_150m_yr2020["NOX_Annual"][x - 1, y - 1])^(1/4)-1) + inflation,
             "SO2" => ((EASIUR_150m_yr2024["SO2_Annual"][x - 1, y - 1]/EASIUR_150m_yr2020["SO2_Annual"][x - 1, y - 1])^(1/4)-1) + inflation,
             "PM25" => ((EASIUR_150m_yr2024["PEC_Annual"][x - 1, y - 1]/EASIUR_150m_yr2020["PEC_Annual"][x - 1, y - 1])^(1/4)-1) + inflation
-        }
+        )
         return escalation_rates
     catch
         @error "Could not look up EASIUR health costs from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid"
@@ -474,77 +474,77 @@ Returns EASIUR for a given `stack` height in a dict.
 function get_EASIUR2005(stack::String, pop_year::Int64=2005, income_year::Int64=2005, dollar_year::Int64=2010)
     EASIUR_data_lib = joinpath(@__DIR__,"..","..","data","EASIUR_Data")
     # Income Growth Adjustment factors from BenMAP
-    MorIncomeGrowthAdj = {
-        1990: 1.000000,
-        1991: 0.992025,
-        1992: 0.998182,
-        1993: 1.003087,
-        1994: 1.012843,
-        1995: 1.016989,
-        1996: 1.024362,
-        1997: 1.034171,
-        1998: 1.038842,
-        1999: 1.042804,
-        2000: 1.038542,
-        2001: 1.043834,
-        2002: 1.049992,
-        2003: 1.056232,
-        2004: 1.062572,
-        2005: 1.068587,
-        2006: 1.074681,
-        2007: 1.080843,
-        2008: 1.087068,
-        2009: 1.093349,
-        2010: 1.099688,
-        2011: 1.111515,
-        2012: 1.122895,
-        2013: 1.133857,
-        2014: 1.144425,
-        2015: 1.154627,
-        2016: 1.164482,
-        2017: 1.174010,
-        2018: 1.183233,
-        2019: 1.192168,
-        2020: 1.200834,
-        2021: 1.209226,
-        2022: 1.217341,
-        2023: 1.225191,
-        2024: 1.232790,
-    }
+    MorIncomeGrowthAdj = Dict(
+        1990=> 1.000000,
+        1991=> 0.992025,
+        1992=> 0.998182,
+        1993=> 1.003087,
+        1994=> 1.012843,
+        1995=> 1.016989,
+        1996=> 1.024362,
+        1997=> 1.034171,
+        1998=> 1.038842,
+        1999=> 1.042804,
+        2000=> 1.038542,
+        2001=> 1.043834,
+        2002=> 1.049992,
+        2003=> 1.056232,
+        2004=> 1.062572,
+        2005=> 1.068587,
+        2006=> 1.074681,
+        2007=> 1.080843,
+        2008=> 1.087068,
+        2009=> 1.093349,
+        2010=> 1.099688,
+        2011=> 1.111515,
+        2012=> 1.122895,
+        2013=> 1.133857,
+        2014=> 1.144425,
+        2015=> 1.154627,
+        2016=> 1.164482,
+        2017=> 1.174010,
+        2018=> 1.183233,
+        2019=> 1.192168,
+        2020=> 1.200834,
+        2021=> 1.209226,
+        2022=> 1.217341,
+        2023=> 1.225191,
+        2024=> 1.232790,
+    )
     # GDP deflator from BenMAP
-    GDP_deflator = {
-        1980: 0.478513,
-        1981: 0.527875,
-        1982: 0.560395,
-        1983: 0.578397,
-        1984: 0.603368,
-        1985: 0.624855,
-        1986: 0.636469,
-        1987: 0.659698,
-        1988: 0.686992,
-        1989: 0.720093,
-        1990: 0.759001,
-        1991: 0.790941,
-        1992: 0.814750,
-        1993: 0.839141,
-        1994: 0.860627,
-        1995: 0.885017,
-        1996: 0.911150,
-        1997: 0.932056,
-        1998: 0.946574,
-        1999: 0.967480,
-        2000: 1.000000,
-        2001: 1.028455,
-        2002: 1.044715,
-        2003: 1.068525,
-        2004: 1.096980,
-        2005: 1.134146,
-        2006: 1.170732,
-        2007: 1.204077,
-        2008: 1.250308,
-        2009: 1.245860,
-        2010: 1.266295,
-    }
+    GDP_deflator = Dict(
+        1980 => 0.478513,
+        1981 => 0.527875,
+        1982 => 0.560395,
+        1983 => 0.578397,
+        1984 => 0.603368,
+        1985 => 0.624855,
+        1986 => 0.636469,
+        1987 => 0.659698,
+        1988 => 0.686992,
+        1989 => 0.720093,
+        1990 => 0.759001,
+        1991 => 0.790941,
+        1992 => 0.814750,
+        1993 => 0.839141,
+        1994 => 0.860627,
+        1995 => 0.885017,
+        1996 => 0.911150,
+        1997 => 0.932056,
+        1998 => 0.946574,
+        1999 => 0.967480,
+        2000 => 1.000000,
+        2001 => 1.028455,
+        2002 => 1.044715,
+        2003 => 1.068525,
+        2004 => 1.096980,
+        2005 => 1.134146,
+        2006 => 1.170732,
+        2007 => 1.204077,
+        2008 => 1.250308,
+        2009 => 1.245860,
+        2010 => 1.266295,
+    )
 
     if !(stack in ["area", "p150", "p300"])
         @warn "stack should be one of 'area', 'p150', 'p300'"
@@ -637,8 +637,9 @@ function l2g(x::Float64, y::Float64, inverse::Bool=false, datum::String="NAD83")
 
     if datum == "NAD83"
         datum = DATUM_NAD83
-    elseif datum == "WGS84":
+    elseif datum == "WGS84"
         datum = DATUM_WGS84
+    end
 
     if inverse
         return (transform(datum, LCP_US, [x y]) ./ 36000.0) + [1 1]
