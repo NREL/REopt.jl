@@ -180,7 +180,6 @@ function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[
     Simulation starts here
     """
     # outer loop: do simulation starting at each time step
-    
     for time_step in 1:n_timesteps
         r[time_step] = simulate_outage(;
             init_time_step = time_step,

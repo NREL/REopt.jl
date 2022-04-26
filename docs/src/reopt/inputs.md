@@ -112,6 +112,11 @@ REopt.Settings
 REopt.ExistingBoiler
 ```
 
+## AbsorptionChiller
+```@docs
+REopt.AbsorptionChiller
+```
+
 ## CHP
 ```@docs
 REopt.CHP
