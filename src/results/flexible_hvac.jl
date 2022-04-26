@@ -29,7 +29,7 @@
 # *********************************************************************************
 function add_flexible_hvac_results(m::JuMP.AbstractModel, p::REoptInputs{Scenario}, d::Dict; _n="")
     r = Dict{String, Any}()
-    binFlexHVAC = round(value(m[:binFlexHVAC]), digits=0)
+    binFlexHVAC = value(m[:binFlexHVAC]) > 0.5 ? 1.0 : 0.0
     r["purchased"] = string(Bool(binFlexHVAC))
     # TODO if not purchased then don't provide temperature data? require BAU run with FlexHVAC and output BAU temperature?
     # WHY IS THE OPTIMAL RUN DIFFERENT FROM BAU ???

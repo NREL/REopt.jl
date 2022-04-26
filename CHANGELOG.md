@@ -3,6 +3,7 @@
 ## develop
 - fix bug for tiered, time-of-use demand rates
 - fix bug in results with tiered electrical energy costs
+- add absorption chiller
 
 ## v0.15.0
 - bug fix in outage_simulator
