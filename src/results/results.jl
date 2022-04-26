@@ -97,7 +97,7 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         add_existing_chiller_results(m, p, d)
     end
 
-    if !isnothing(p.s.absorption_chiller)
+    if !isempty(p.techs.absorption_chiller)
         add_absorption_chiller_results(m, p, d)
     end
 

@@ -44,8 +44,6 @@ function AbsorptionChiller(;
     macrs_bonus_pct::Real = 0
 )
 ```
-note that many elements of the struct have zero values that are passed through to the 
-cost curve calculation.
 """
 struct AbsorptionChiller <: AbstractThermalTech
     min_ton::Real

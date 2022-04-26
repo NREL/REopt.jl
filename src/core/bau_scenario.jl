@@ -55,7 +55,6 @@ struct BAUScenario <: AbstractScenario
     space_heating_load::SpaceHeatingLoad
     existing_boiler::Union{ExistingBoiler, Nothing}
     existing_chiller::Union{ExistingChiller, Nothing}
-    absorption_chiller::Union{AbsorptionChiller, Nothing}
     outage_outputs::OutageOutputs
     flexible_hvac::Union{BAU_HVAC, Nothing}
     cooling_load::CoolingLoad
@@ -152,7 +151,6 @@ function BAUScenario(s::Scenario)
         s.space_heating_load,
         s.existing_boiler,
         s.existing_chiller,
-        s.absorption_chiller,
         outage_outputs,
         flexible_hvac,
         s.cooling_load
