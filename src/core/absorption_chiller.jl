@@ -60,17 +60,6 @@ struct AbsorptionChiller <: AbstractThermalTech
     max_kw::Real
     installed_cost_per_kw::Real
     om_cost_per_kw::Real
-    federal_itc_pct::Real
-    federal_rebate_per_kw::Real
-    state_ibi_pct::Real
-    state_ibi_max::Real
-    state_rebate_per_kw::Real
-    state_rebate_max::Real
-    utility_ibi_pct::Real
-    utility_ibi_max::Real
-    utility_rebate_per_kw::Real
-    utility_rebate_max::Real
-    macrs_itc_reduction::Real
     function AbsorptionChiller(;
         min_ton::Real = 0.0,
         max_ton::Real = 0.0,
@@ -99,18 +88,7 @@ struct AbsorptionChiller <: AbstractThermalTech
             min_kw,
             max_kw,
             installed_cost_per_kw,
-            om_cost_per_kw,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0
+            om_cost_per_kw
         )
     end
 end
