@@ -272,8 +272,7 @@ function setup_tech_inputs(s::AbstractScenario)
     end
 
     if "AbsorptionChiller" in techs.all
-        setup_absorption_chiller_inputs(s, max_sizes, min_sizes, cap_cost_slope, techs.segmented, n_segs_by_tech,
-        seg_min_size, seg_max_size, seg_yint, cop, thermal_cop, om_cost_per_kw)
+        setup_absorption_chiller_inputs(s, max_sizes, min_sizes, cap_cost_slope, cop, thermal_cop, om_cost_per_kw)
     else
         cop["AbsorptionChiller"] = 1.0
         thermal_cop["AbsorptionChiller"] = 1.0
@@ -508,13 +507,31 @@ end
 
 
 function setup_absorption_chiller_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, 
-    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, cop, thermal_cop, om_cost_per_kw
+    cop, thermal_cop, om_cost_per_kw
     )
     max_sizes["AbsorptionChiller"] = s.absorption_chiller.max_kw
     min_sizes["AbsorptionChiller"] = s.absorption_chiller.min_kw
-    update_cost_curve!(s.absorption_chiller, "AbsorptionChiller", s.financial,
-        cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
-    )
+    
+    # The AbsorptionChiller only has a MACRS benefit, no ITC etc.
+    if s.absorption_chiller.macrs_option_years in [5, 7]
+
+        cap_cost_slope["AbsorptionChiller"] = effective_cost(;
+            itc_basis = s.absorption_chiller.installed_cost_per_kw,
+            replacement_cost = 0.0,
+            replacement_year = s.financial.analysis_years,
+            discount_rate = s.financial.owner_discount_pct,
+            tax_rate = s.financial.owner_tax_pct,
+            itc = 0.0,
+            macrs_schedule = s.absorption_chiller.macrs_option_years == 5 ? s.financial.macrs_five_year : s.financial.macrs_seven_year,
+            macrs_bonus_pct = s.absorption_chiller.macrs_bonus_pct,
+            macrs_itc_reduction = 0.0,
+            rebate_per_kw = 0.0
+        )
+
+    else
+        cap_cost_slope["AbsorptionChiller"] = s.absorption_chiller.installed_cost_per_kw
+    end
+
     cop["AbsorptionChiller"] = s.absorption_chiller.chiller_elec_cop
     thermal_cop["AbsorptionChiller"] = s.absorption_chiller.chiller_cop
     om_cost_per_kw["AbsorptionChiller"] = s.absorption_chiller.om_cost_per_kw
