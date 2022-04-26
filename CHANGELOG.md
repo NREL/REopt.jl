@@ -1,5 +1,8 @@
 # REopt Changelog
 
+## develop
+- add absorption chiller
+
 ## v0.15.0
 - bug fix in outage_simulator
 - allow Real Generator inputs (not just Float64)
