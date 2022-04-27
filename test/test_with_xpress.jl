@@ -970,7 +970,7 @@ end
 
     # Test outputs
     @test r["ElectricUtility"]["year_one_energy_supplied_kwh"] ≈ 0 # no interaction with grid
-    @test r["Financial"]["lifecycle_offgrid_other_capital_costs"] ≈ 2586.4596 # Check straight line depreciation calc
+    @test r["Financial"]["lifecycle_offgrid_other_capital_costs"] ≈ 2586.4596 # Check straight line depreciation calc (manually calculated)
     @test sum(r["ElectricLoad"]["offgrid_annual_oper_res_provided_series_kwh"]) >= sum(r["ElectricLoad"]["offgrid_annual_oper_res_required_series_kwh"])
     @test r["ElectricLoad"]["offgrid_load_met_pct"] >= scen.electric_load.min_load_met_annual_pct
     @test r["PV"]["size_kw"] ≈ 5050.0
