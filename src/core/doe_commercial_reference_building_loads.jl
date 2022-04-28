@@ -47,29 +47,34 @@ const default_buildings = [
     "FlatLoad",
 ]
 
+const MMBTU_TO_KWH = 293.07107
+const TONHOUR_TO_KWH_THERMAL = 3.51685
+const EXISTING_BOILER_EFFICIENCY = 0.8
+
 
 function find_ashrae_zone_city(lat, lon)::String
-    file_path = joinpath(@__DIR__, "..", "..", "data", "climate_cities.shp")
-    table = Shapefile.Table(file_path)
-    geoms = Shapefile.shapes(table)
-    # TODO following for loop is relatively slow
-    for (row, geo) in enumerate(geoms)
-        g = length(geo.points)
-        nodes = zeros(g, 2)
-        edges = zeros(g, 2)
-        for (i,p) in enumerate(geo.points)
-            nodes[i,:] = [p.x, p.y]
-            edges[i,:] = [i, i+1]
-        end
-        edges[g, :] = [g, 1]
-        edges = convert(Array{Int64,2}, edges)
-        # shapefiles have longitude as x, latitude as y  
-        if inpoly2([lon, lat], nodes, edges)[1]
-            return table.city[row]
-        end
-        GC.gc()
+    file_path = joinpath(dirname(@__FILE__), "..", "..", "data", "climate_cities.shp")
+    shpfile = ArchGDAL.read(file_path)
+	cities_layer = ArchGDAL.getlayer(shpfile, 0)
+
+	# From https://yeesian.com/ArchGDAL.jl/latest/projections/#:~:text=transform%0A%20%20%20%20point%20%3D%20ArchGDAL.-,fromWKT,-(%22POINT%20(1120351.57%20741921.42
+    # From https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry
+	point = ArchGDAL.fromWKT(string("POINT (",lon," ",lat,")"))
+	
+	# No transformation needed
+	archgdal_city = nothing
+	for i in 1:ArchGDAL.nfeature(cities_layer)
+		ArchGDAL.getfeature(cities_layer,i-1) do feature # 0 indexed
+			if ArchGDAL.contains(ArchGDAL.getgeom(feature), point)
+				archgdal_city = ArchGDAL.getfield(feature,"city")
+			end
+		end
+	end
+    if isnothing(archgdal_city)
+        @info "Could not find latitude/longitude in U.S. Using geometrically nearest city."
+    else
+        return archgdal_city
     end
-    @info "Could not find latitude/longitude in U.S. Using geometrically nearest city." 
     cities = [
         (city="Miami", lat=25.761680, lon=-80.191790),
         (city="Houston", lat=29.760427, lon=-95.369803),
@@ -111,10 +116,10 @@ end
 Scale a normalized Commercial Reference Building according to inputs provided and return the 8760.
 """
 function built_in_load(type::String, city::String, buildingtype::String, 
-    year::Int, annual_energy::Real, monthly_energies::AbstractArray{Real,1}
-    )
+    year::Int, annual_energy::R, monthly_energies::AbstractArray{<:Real,1}
+    ) where {R <: Real}
 
-    @assert type in ["electric", "domestic_hot_water", "space_heating"]
+    @assert type in ["electric", "domestic_hot_water", "space_heating", "cooling"]
     monthly_scalers = ones(12)
     lib_path = joinpath(dirname(@__FILE__), "..", "..", "data", "load_profiles", type)
 
@@ -177,6 +182,7 @@ Given `blended_doe_reference_names` and `blended_doe_reference_percents` use the
     - BuiltInElectricLoad
     - BuiltInDomesticHotWaterLoad
     - BuiltInSpaceHeatingLoad
+    - BuiltInCoolingLoad
 """
 function blend_and_scale_doe_profiles(
     constructor,

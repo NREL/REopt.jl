@@ -40,7 +40,7 @@
     "PV": {
         "max_kw": 0.0
       },
-    "Storage": {
+    "ElectricStorage": {
         "max_kw": 0.0,
         "max_kwh": 0.0
     }    

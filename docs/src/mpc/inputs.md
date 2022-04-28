@@ -13,11 +13,10 @@ Just like [REopt Inputs](@ref), inputs to `run_mpc` can be provided in one of th
 3. using the `MPCInputs` struct
 
 The accepted keys for the JSON file or `Dict` are:
-
 - ElectricLoad
 - ElectricTariff
 - PV
-- Storage
+- ElectricStorage
 - Financial
 - Generator
 - ElectricUtility
@@ -70,7 +69,7 @@ Here is a more complex `MPCScenario`, which is used in [MPC Examples](@ref):
             0.0
         ]
     },
-    "Storage": {
+    "ElectricStorage": {
         "size_kw": 30.0,
         "size_kwh": 60.0,
         "can_grid_charge": true
@@ -158,9 +157,9 @@ REopt.MPCElectricTariff(d::Dict)
 REopt.MPCElectricLoad
 ```
 
-## MPCElecStorage
+## MPCElectricStorage
 ```@docs
-REopt.MPCElecStorage
+REopt.MPCElectricStorage
 ```
 
 ## MPCFinancial
@@ -179,4 +178,10 @@ REopt.MPCGenerator
 ```
 
 ## MPCSettings
-The MPCSetting is the same as the [Settings](@ref).
+The MPCSettings is the same as the [Settings](@ref).
+
+
+## MPCLimits
+```@docs
+REopt.MPCLimits
+```

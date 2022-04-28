@@ -66,7 +66,7 @@ function run_mpc(m::JuMP.AbstractModel, p::MPCInputs)
     if !p.s.settings.add_soc_incentive
 		@objective(m, Min, m[:Costs])
 	else # Keep SOC high
-		@objective(m, Min, m[:Costs] - sum(m[:dvStoredEnergy][:elec, ts] for ts in p.time_steps) /
+		@objective(m, Min, m[:Costs] - sum(m[:dvStoredEnergy]["ElectricStorage", ts] for ts in p.time_steps) /
 									   (8760. / p.hours_per_timestep)
 		)
 	end
@@ -90,7 +90,7 @@ function run_mpc(m::JuMP.AbstractModel, p::MPCInputs)
 	tstart = time()
 	results = mpc_results(m, p)
 	time_elapsed = time() - tstart
-	@info "Total results processing took $(round(time_elapsed, digits=3)) seconds."
+	@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status
 	results["solver_seconds"] = opt_time
 	return results
@@ -111,7 +111,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 
 		fix(m[:dvGridPurchase][ts], 0.0, force=true)
 
-		for t in p.s.storage.types
+		for t in p.s.storage.types.elec
 			fix(m[:dvGridToStorage][t, ts], 0.0, force=true)
 		end
 
@@ -120,19 +120,30 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		end
 	end
 
-	for b in p.s.storage.types
-		if p.s.storage.size_kw[b] == 0 || p.s.storage.size_kwh[b] == 0
+	for b in p.s.storage.types.all
+		if p.s.storage.attr[b].size_kw == 0 || p.s.storage.attr[b].size_kwh == 0
 			@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
 			@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
 						m[:dvProductionToStorage][b, t, ts] == 0)
 			@constraint(m, [ts in p.time_steps], m[:dvDischargeFromStorage][b, ts] == 0)
-			@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
+			if b in p.s.storage.types.elec
+				@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
+			end
 		else
-			add_storage_dispatch_constraints(m, p, b)
+			add_general_storage_dispatch_constraints(m, p, b)
+			if b in p.s.storage.types.elec
+				add_elec_storage_dispatch_constraints(m, p, b)
+			elseif b in p.s.storage.types.hot
+				add_hot_thermal_storage_dispatch_constraints(m, p, b)
+			elseif b in p.s.storage.types.cold
+				add_cold_thermal_storage_dispatch_constraints(m, p, b)
+			else
+				@error("Invalid storage does not fall in a thermal or electrical set")
+			end
 		end
 	end
 
-	if any(size_kw->size_kw > 0, (p.s.storage.size_kw[b] for b in p.s.storage.types))
+	if any(size_kw->size_kw > 0, (p.s.storage.attr[b].size_kw for b in p.s.storage.types.all))
 		add_storage_sum_constraints(m, p)
 	end
 
@@ -146,8 +157,15 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 
 	add_elec_load_balance_constraints(m, p)
 
+	if !isempty(p.s.limits.grid_draw_limit_kw_by_time_step)
+		add_grid_draw_limits(m, p)
+	end
+
 	if !isempty(p.s.electric_tariff.export_bins)
 		add_export_constraints(m, p)
+		if !isempty(p.s.limits.export_limit_kw_by_time_step)
+			add_export_limits(m, p)
+		end
 	end
 
 	if !isempty(p.s.electric_tariff.monthly_demand_rates)
@@ -186,7 +204,11 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		add_dv_UnservedLoad_constraints(m,p)
 		add_outage_cost_constraints(m,p)
 		add_MG_production_constraints(m,p)
-		add_MG_storage_dispatch_constraints(m,p)
+		if !isempty(p.s.storage.types.elec)	
+			add_MG_storage_dispatch_constraints(m,p)
+		else
+			fix_MG_storage_variables(m,p)
+		end
 		add_cannot_have_MG_with_only_PVwind_constraints(m,p)
 		add_MG_size_constraints(m,p)
 		
@@ -235,12 +257,13 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 		dvGridPurchase[p.time_steps] >= 0  # Power from grid dispatched to meet electrical load [kW]
 		dvRatedProduction[p.techs.all, p.time_steps] >= 0  # Rated production of technology t [kW]
 		dvCurtail[p.techs.all, p.time_steps] >= 0  # [kW]
-		dvProductionToStorage[p.s.storage.types, p.techs.all, p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
-		dvDischargeFromStorage[p.s.storage.types, p.time_steps] >= 0 # Power discharged from storage system b [kW]
-		dvGridToStorage[p.s.storage.types, p.time_steps] >= 0 # Electrical power delivered to storage by the grid [kW]
-		dvStoredEnergy[p.s.storage.types, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
-		# dvStoragePower[p.s.storage.types] >= 0   # Power capacity of storage system b [kW]
-		# dvStorageEnergy[p.s.storage.types] >= 0   # Energy capacity of storage system b [kWh]
+		dvProductionToStorage[p.s.storage.types.all, p.techs.all, p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
+		dvDischargeFromStorage[p.s.storage.types.all, p.time_steps] >= 0 # Power discharged from storage system b [kW]
+		dvGridToStorage[p.s.storage.types.elec, p.time_steps] >= 0 # Electrical power delivered to storage by the grid [kW]
+		dvStoredEnergy[p.s.storage.types.all, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
+		dvStoragePower[p.s.storage.types.all] >= 0   # Power capacity of storage system b [kW]
+		dvStorageEnergy[p.s.storage.types.all] >= 0   # Energy capacity of storage system b [kWh]
+		# TODO rm dvStoragePower/Energy dv's
 		dvPeakDemandTOU[p.ratchets, 1:1] >= 0  # Peak electrical power demand during ratchet r [kW]
 		dvPeakDemandMonth[p.months] >= 0  # Peak electrical power demand during month m [kW]
 		# MinChargeAdder >= 0
@@ -253,9 +276,12 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 
     m[:dvSize] = p.existing_sizes
 
-    m[:dvStoragePower] = p.s.storage.size_kw
-    m[:dvStorageEnergy] = p.s.storage.size_kwh
-    # not modeling min charges since control does not affect them
+	for b in p.s.storage.types.all
+		fix(m[:dvStoragePower][b], p.s.storage.attr["ElectricStorage"].size_kw, force=true)
+		fix(m[:dvStorageEnergy][b], p.s.storage.attr["ElectricStorage"].size_kwh, force=true)
+	end
+
+	# not modeling min charges since control does not affect them
     m[:MinChargeAdder] = 0
 
 	if !isempty(p.techs.gen)  # Problem becomes a MILP

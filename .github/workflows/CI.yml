@@ -3,11 +3,11 @@ name: Run tests
 on: [push, pull_request]
 
 jobs:
-  cbctests:
+  highstests:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        julia-version: ['1.6']
+        julia-version: ['1.7']
         julia-arch: [x64]
         os: [ubuntu-latest, windows-latest, macOS-latest]
 
@@ -18,10 +18,11 @@ jobs:
           version: ${{ matrix.julia-version }}
       - uses: julia-actions/julia-buildpkg@latest
       # - uses: mxschmitt/action-tmate@v3  # for interactive debugging
-      - uses: julia-actions/julia-runtest@latest
+      - run: julia --project=. -e 'using TestEnv; TestEnv.activate(); cd("test"); include("runtests.jl")'
+        shell: bash
 
   xpresstests:
-      runs-on: ubuntu-18.04
+      runs-on: ubuntu-latest
 
       steps:
         - uses: actions/checkout@v2

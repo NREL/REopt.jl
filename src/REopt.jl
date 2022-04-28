@@ -61,12 +61,14 @@ import DelimitedFiles: readdlm
 const MOI = MathOptInterface
 using Shapefile
 using ArchGDAL
-using PolygonInbounds
 using Roots: fzero  # for IRR
 global hdl = nothing
 using HDF5, JLD
 using CSV, DataFrames
 using Proj4
+
+const M3_TO_GAL = 264.172  # [gal/m^3]
+const GAL_DIESEL_TO_KWH = 40.7  # [kWh/gal_diesel]
 
 include("keys.jl")
 include("core/types.jl")
@@ -77,12 +79,16 @@ include("core/site.jl")
 include("core/financial.jl")
 include("core/pv.jl")
 include("core/wind.jl")
-include("core/storage.jl")
+include("core/energy_storage/storage.jl")
+include("core/energy_storage/electric_storage.jl")
+include("core/energy_storage/thermal_storage.jl")
 include("core/generator.jl")
 include("core/doe_commercial_reference_building_loads.jl")
 include("core/electric_load.jl")
 include("core/existing_boiler.jl")
-include("core/heating_loads.jl")
+include("core/existing_chiller.jl")
+include("core/flexible_hvac.jl")
+include("core/heating_cooling_loads.jl")
 include("core/electric_utility.jl")
 include("core/prodfactor.jl")
 include("core/urdb.jl")
@@ -96,6 +102,7 @@ include("core/cost_curve.jl")
 
 include("constraints/outage_constraints.jl")
 include("constraints/storage_constraints.jl")
+include("constraints/flexible_hvac.jl")
 include("constraints/load_balance.jl")
 include("constraints/tech_constraints.jl")
 include("constraints/electric_utility_constraints.jl")
@@ -104,6 +111,7 @@ include("constraints/cost_curve_constraints.jl")
 include("constraints/production_incentive_constraints.jl")
 include("constraints/thermal_tech_constraints.jl")
 include("constraints/chp_constraints.jl")
+include("constraints/battery_degradation.jl")
 
 include("mpc/structs.jl")
 include("mpc/scenario.jl")
@@ -119,12 +127,15 @@ include("results/proforma.jl")
 include("results/financial.jl")
 include("results/generator.jl")
 include("results/pv.jl")
-include("results/storage.jl")
+include("results/electric_storage.jl")
+include("results/thermal_storage.jl")
 include("results/outages.jl")
 include("results/wind.jl")
 include("results/electric_load.jl")
 include("results/existing_boiler.jl")
+include("results/existing_chiller.jl")
 include("results/chp.jl")
+include("results/flexible_hvac.jl")
 
 include("core/reopt.jl")
 include("core/reopt_multinode.jl")

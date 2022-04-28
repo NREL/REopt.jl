@@ -34,14 +34,14 @@ Financial data struct with inner constructor:
 ```julia
 function Financial(;
     om_cost_escalation_pct::Float64 = 0.025,
-    elec_cost_escalation_pct::Float64 = 0.023,
-    boiler_fuel_cost_escalation_pct::Float64
-    chp_fuel_cost_escalation_pct::Float64    
+    elec_cost_escalation_pct::Float64 = 0.019,
+    boiler_fuel_cost_escalation_pct::Float64 = 0.034,
+    chp_fuel_cost_escalation_pct::Float64 = 0.034,
     offtaker_tax_pct::Float64 = 0.26,
-    offtaker_discount_pct = 0.083,
+    offtaker_discount_pct = 0.0564,
     third_party_ownership::Bool = false,
     owner_tax_pct::Float64 = 0.26,
-    owner_discount_pct::Float64 = 0.083,
+    owner_discount_pct::Float64 = 0.0564,
     analysis_years::Int = 25,
     value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00,
     microgrid_upgrade_cost_pct::Float64 = 0.3,
@@ -101,14 +101,14 @@ struct Financial
 
     function Financial(;
         om_cost_escalation_pct::Float64 = 0.025,
-        elec_cost_escalation_pct::Float64 = 0.023,
+        elec_cost_escalation_pct::Float64 = 0.019,
         boiler_fuel_cost_escalation_pct::Float64 = 0.034,
         chp_fuel_cost_escalation_pct::Float64 = 0.034,
         offtaker_tax_pct::Float64 = 0.26,
-        offtaker_discount_pct = 0.083,
+        offtaker_discount_pct = 0.0564,
         third_party_ownership::Bool = false,
         owner_tax_pct::Float64 = 0.26,
-        owner_discount_pct::Float64 = 0.083,
+        owner_discount_pct::Float64 = 0.0564,
         analysis_years::Int = 25,
         value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00,
         microgrid_upgrade_cost_pct::Float64 = 0.3,

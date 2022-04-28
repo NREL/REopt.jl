@@ -28,7 +28,8 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 
-function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly")
+function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly", 
+    time_steps_per_hour::Int=1)
 
     if !(ismissing(pv.prod_factor_series))
         return pv.prod_factor_series
@@ -53,6 +54,9 @@ function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly")
         watts = collect(get(response["outputs"], "ac", []) / 1000)  # scale to 1 kW system (* 1 kW / 1000 W)
         if length(watts) != 8760
             @error "PVWatts did not return a valid production factor. Got $watts"
+        end
+        if time_steps_per_hour > 1
+            watts = repeat(watts, inner=time_steps_per_hour)
         end
         return watts
     catch e
@@ -322,7 +326,7 @@ function prodfactor(chp::AbstractCHP, year::Int=2017, outage_start_time_step::In
     prod_factor = [1.0 - unavailability_hourly[i] for i in 1:8760 for _ in 1:ts_per_hour]
 
     # Ignore unavailability in timestep if it intersects with an outage interval
-    if outage_end_time_step - outage_start_time_step >= 1
+    if outage_start_time_step != 0 && outage_end_time_step != 0
         prod_factor[outage_start_time_step:outage_end_time_step] .= ones(outage_end_time_step - outage_start_time_step + 1)
     end
 

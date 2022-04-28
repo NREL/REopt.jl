@@ -100,7 +100,8 @@ function URDBrate(urdb_response::Dict, year::Int=2019; time_steps_per_hour=1)
       n_tou_demand_tiers, tou_demand_tier_limits, tou_demand_rates, tou_demand_ratchet_timesteps =
       parse_demand_rates(urdb_response, year)
 
-    energy_rates, energy_tier_limits, n_energy_tiers, sell_rates = parse_urdb_energy_costs(urdb_response, year)
+    energy_rates, energy_tier_limits, n_energy_tiers, sell_rates = 
+        parse_urdb_energy_costs(urdb_response, year; time_steps_per_hour=time_steps_per_hour)
 
     fixed_monthly_charge, annual_min_charge, min_monthly_charge = parse_urdb_fixed_charges(urdb_response)
 

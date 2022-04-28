@@ -29,7 +29,7 @@
 # *********************************************************************************
 using Test
 using JuMP
-using Cbc
+using HiGHS
 using JSON
 using REopt
 
@@ -44,12 +44,8 @@ elseif "CPLEX" in ARGS
         include("test_with_cplex.jl")
     end
 
-else  # run Cbc tests
-    #=
-    Cbc can be very slow with integers: if ElectricUtility.allow_simultaneous_export_import == false for example (a 
-        test with Xpress and CPLEX) the problem does not solve in under five hours.
-    So, we test some simple cases with Cbc to stay aware of solve times with a free solver.
-    =#
+else  # run HiGHS tests
+
     @testset "Inputs" begin
         @testset "hybrid profile" begin
             electric_load = REopt.ElectricLoad(; 
@@ -64,8 +60,11 @@ else  # run Cbc tests
             @test sum(electric_load.loads_kw) ≈ 50000.0
         end
     end
+
     @testset "January Export Rates" begin
-        model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+            "output_flag" => false, "log_to_console" => false)
+        )
         data = JSON.parsefile("./scenarios/monthly_rate.json")
 
         # create wholesale_rate with compensation in January > retail rate
@@ -84,24 +83,30 @@ else  # run Cbc tests
     end
 
     @testset "Blended tariff" begin
-        model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+            "output_flag" => false, "log_to_console" => false)
+        )
         results = run_reopt(model, "./scenarios/no_techs.json")
         @test results["ElectricTariff"]["year_one_energy_cost"] ≈ 1000.0
         @test results["ElectricTariff"]["year_one_demand_cost"] ≈ 136.99
     end
 
     @testset "Solar and Storage" begin
-        model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+            "output_flag" => false, "log_to_console" => false)
+        )
         r = run_reopt(model, "./scenarios/pv_storage.json")
 
         @test r["PV"]["size_kw"] ≈ 216.6667 atol=0.01
         @test r["Financial"]["lcc"] ≈ 1.240037e7 rtol=1e-5
-        @test r["Storage"]["size_kw"] ≈ 55.9 atol=0.1
-        @test r["Storage"]["size_kwh"] ≈ 78.9 atol=0.1
+        @test r["ElectricStorage"]["size_kw"] ≈ 55.9 atol=0.1
+        @test r["ElectricStorage"]["size_kwh"] ≈ 78.9 atol=0.1
     end
 
     @testset "Outage with Generator" begin
-        model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+            "output_flag" => false, "log_to_console" => false)
+        )
         results = run_reopt(model, "./scenarios/generator.json")
         @test results["Generator"]["size_kw"] ≈ 8.13 atol=0.01
         @test (sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 1:9) + 
@@ -113,7 +118,9 @@ else  # run Cbc tests
 
     # TODO test MPC with outages
     @testset "MPC" begin
-        model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+            "output_flag" => false, "log_to_console" => false)
+        )
         r = run_mpc(model, "./scenarios/mpc.json")
         @test maximum(r["ElectricUtility"]["to_load_series_kw"][1:15]) <= 98.0 
         @test maximum(r["ElectricUtility"]["to_load_series_kw"][16:24]) <= 97.0
@@ -127,43 +134,22 @@ else  # run Cbc tests
         when using the hardcoded levelization_factor in this package's REoptInputs function.
         The two LCC's matched within 0.00005%. (The Julia pkg LCC is 1.0971991e7)
         """
-        model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+            "output_flag" => false, "log_to_console" => false)
+        )
         results = run_reopt(model, "./scenarios/incentives.json")
         @test results["Financial"]["lcc"] ≈ 1.094596365e7 atol=1e4  
     end
 
-    @testset "Wind" begin
-        model = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
-        results = run_reopt(model, "./scenarios/wind.json")
-        @test results["Wind"]["size_kw"] ≈ 3752 atol=0.1
-        @test results["Financial"]["lcc"] ≈ 8.591017e6 rtol=1e-5
-        #= 
-        0.5% higher LCC in this package as compared to API ? 8,591,017 vs 8,551,172
-        - both have zero curtailment
-        - same energy to grid: 5,839,317 vs 5,839,322
-        - same energy to load: 4,160,683 vs 4,160,677
-        - same city: Boulder
-        - same total wind prod factor
-        
-        REopt.jl has:
-        - bigger turbine: 3752 vs 3735
-        - net_capital_costs_plus_om: 8,576,590 vs. 8,537,480
-
-        TODO: will these discrepancies be addressed once NMIL binaries are added?
-        =#
+    try
+        rm("Highs.log", force=true)
+    catch
+        @warn "Could not delete test/Highs.log"
     end
 
+    # removed Wind test for two reasons
+    # 1. reduce WindToolKit calls in tests
+    # 2. HiGHS does not support SOS or indicator constraints, which are needed for export constraints
 
-    ## much too slow with Cbc (killed after 8 hours)
-    # @testset "Minimize Unserved Load" begin
-    #     m = Model(optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0))
-    #     results = run_reopt(m, "./scenarios/outage.json")
-
-    #     @test results["expected_outage_cost"] ≈ 0
-    #     @test results["total_unserved_load"] ≈ 0
-    #     @test value(m[:binMGTechUsed]["Generator"]) == 1
-    #     @test value(m[:binMGTechUsed]["PV"]) == 0
-    #     @test value(m[:binMGStorageUsed]) == 1
-    #     @test results["lcc"] ≈ 1.5291695e7
-    # end
+    # @testset "Minimize Unserved Load" is too slow with Cbc (killed after 8 hours)
 end

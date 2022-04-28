@@ -148,13 +148,13 @@ function ElectricTariff(;
     time_steps_monthly = get_monthly_timesteps(year, time_steps_per_hour=time_steps_per_hour)
 
     u = nothing
-    if !isempty(urdb_label)
-
-        u = URDBrate(urdb_label, year, time_steps_per_hour=time_steps_per_hour)
-
-    elseif !isempty(urdb_response)
+    if !isempty(urdb_response)
 
         u = URDBrate(urdb_response, year, time_steps_per_hour=time_steps_per_hour)
+
+    elseif !isempty(urdb_label)
+
+        u = URDBrate(urdb_label, year, time_steps_per_hour=time_steps_per_hour)
 
     elseif !isempty(urdb_utility_name) && !isempty(urdb_rate_name)
 
@@ -228,7 +228,7 @@ function ElectricTariff(;
         end
 
     else
-        error("Creating ElectricTariff requires at least urdb_label, urdb_response, monthly rates, or annual rates.")
+        error("Creating ElectricTariff requires at least urdb_label, urdb_response, monthly rates, annual rates, or tou_energy_rates_per_kwh.")
     end
 
     if !isnothing(u)  # use URDBrate

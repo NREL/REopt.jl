@@ -30,9 +30,19 @@ REopt.add_pv_results
 REopt.add_wind_results
 ```
 
-## Storage outputs
+## ElectricStorage outputs
 ```@docs
-REopt.add_storage_results
+REopt.add_electric_storage_results
+```
+
+## HotThermalStorage outputs
+```@docs
+REopt.add_hot_storage_results
+```
+
+## ColdThermalStorage outputs
+```@docs
+REopt.add_cold_storage_results
 ```
 
 ## Generator outputs
