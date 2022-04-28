@@ -265,10 +265,10 @@ function setup_bau_emissions_inputs(s::Scenario, s_bau::BAUScenario, production_
     ## Boiler emissions
     if "ExistingBoiler" in s.techs.all
         for heat_type in ["space_heating", "dhw"] #TODO: are these heating types the same? can we get them from s?
-            bau_emissions_lb_CO2_per_year += eval("s."+heat_type+"_load.annual_mmbtu") * s.existing_boiler.emissions_factor_lb_CO2_per_mmbtu
-            bau_emissions_lb_NOx_per_year += eval("s."+heat_type+"_load.annual_mmbtu") * s.existing_boiler.emissions_factor_lb_NOx_per_mmbtu
-            bau_emissions_lb_SO2_per_year += eval("s."+heat_type+"_load.annual_mmbtu") * s.existing_boiler.emissions_factor_lb_SO2_per_mmbtu
-            bau_emissions_lb_PM25_per_year += eval("s."+heat_type+"_load.annual_mmbtu") * s.existing_boiler.emissions_factor_lb_PM25_per_mmbtu
+            bau_emissions_lb_CO2_per_year += eval("s.$(heat_type)_load.annual_mmbtu") * s.existing_boiler.emissions_factor_lb_CO2_per_mmbtu
+            bau_emissions_lb_NOx_per_year += eval("s.$(heat_type)_load.annual_mmbtu") * s.existing_boiler.emissions_factor_lb_NOx_per_mmbtu
+            bau_emissions_lb_SO2_per_year += eval("s.$(heat_type)_load.annual_mmbtu") * s.existing_boiler.emissions_factor_lb_SO2_per_mmbtu
+            bau_emissions_lb_PM25_per_year += eval("s.$(heat_type)_load.annual_mmbtu") * s.existing_boiler.emissions_factor_lb_PM25_per_mmbtu
         end
     end
 

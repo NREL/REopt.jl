@@ -121,7 +121,7 @@ function Storage(d::Dict, f::Financial)  # nested dict
 
         push!(types, storage_type)
         struct_name = string(titlecase(string(storage_type)) * "Storage")  # eg. ElecStorage
-        storage_instance = eval(Meta.parse(struct_name * "(;$input_dict...)"))
+        storage_instance = eval(Meta.parse("$(struct_name)(;$input_dict...)"))
 
         if storage_instance.can_grid_charge
             push!(can_grid_charge, storage_type)
