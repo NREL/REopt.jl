@@ -540,7 +540,7 @@ end
     @testset "Coincident Peak Charges" begin
         model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         results = run_reopt(model, "./scenarios/coincident_peak.json")
-        @test results["ElectricTariff"]["year_one_coincident_peak_cost"] ≈ 15.0
+        @test results["ElectricTariff"]["year_one_coincident_peak_cost"] ≈ 11.1
     end
 
     @testset "URDB sell rate" begin
