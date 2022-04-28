@@ -33,10 +33,10 @@
 ```julia
 function ElectricUtility(;
     emissions_region::String = "",
-    emissions_factor_series_lb_CO2_per_kwh::Union{Float64,Array{Float64}} = [],
-    emissions_factor_series_lb_NOx_per_kwh::Union{Float64,Array{Float64}} = [],
-    emissions_factor_series_lb_SO2_per_kwh::Union{Float64,Array{Float64}} = [],
-    emissions_factor_series_lb_PM25_per_kwh::Union{Float64,Array{Float64}} = [],
+    emissions_factor_series_lb_CO2_per_kwh::Union{Float64,Array{<:Real,1}} = Float64[],
+    emissions_factor_series_lb_NOx_per_kwh::Union{Float64,Array{<:Real,1}} = Float64[],
+    emissions_factor_series_lb_SO2_per_kwh::Union{Float64,Array{<:Real,1}} = Float64[],
+    emissions_factor_series_lb_PM25_per_kwh::Union{Float64,Array{<:Real,1}} = Float64[],
     emissions_factor_CO2_decrease_pct::Float64 = 0.01174,
     emissions_factor_NOX_decrease_pct::Float64 = 0.01174,
     emissions_factor_SO2_decrease_pct::Float64 = 0.01174,
@@ -48,7 +48,7 @@ function ElectricUtility(;
     # with max taken over outage start time, expectation taken over outage duration
     outage_start_timesteps::Array{Int,1}=Int[]  # we minimize the maximum outage cost over outage start times
     outage_durations::Array{Int,1}=Int[]  # one-to-one with outage_probabilities, outage_durations can be a random variable
-    outage_probabilities::Array{Real,1}=[1.0]
+    outage_probabilities::Array{<:Real,1}=[1.0]
     outage_timesteps::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:maximum(outage_durations)
     scenarios::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:length(outage_durations)
     net_metering_limit_kw::Real = 0,
@@ -84,10 +84,10 @@ struct ElectricUtility
     interconnection_limit_kw
 
     function ElectricUtility(;
-        emissions_factor_series_lb_CO2_per_kwh::Union{Float64,Array{Float64}} = [],
-        emissions_factor_series_lb_NOx_per_kwh::Union{Float64,Array{Float64}} = [],
-        emissions_factor_series_lb_SO2_per_kwh::Union{Float64,Array{Float64}} = [],
-        emissions_factor_series_lb_PM25_per_kwh::Union{Float64,Array{Float64}} = [],
+        emissions_factor_series_lb_CO2_per_kwh::Union{Float64,Array{<:Real,1}} = Float64[],
+        emissions_factor_series_lb_NOx_per_kwh::Union{Float64,Array{<:Real,1}} = Float64[],
+        emissions_factor_series_lb_SO2_per_kwh::Union{Float64,Array{<:Real,1}} = Float64[],
+        emissions_factor_series_lb_PM25_per_kwh::Union{Float64,Array{<:Real,1}} = Float64[],
         emissions_factor_CO2_decrease_pct::Float64 = 0.01174,
         emissions_factor_NOX_decrease_pct::Float64 = 0.01174,
         emissions_factor_SO2_decrease_pct::Float64 = 0.01174,
@@ -99,7 +99,7 @@ struct ElectricUtility
         # with max taken over outage start time, expectation taken over outage duration
         outage_start_timesteps::Array{Int,1}=Int[],  # we minimize the maximum outage cost over outage start times
         outage_durations::Array{Int,1}=Int[],  # one-to-one with outage_probabilities, outage_durations can be a random variable
-        outage_probabilities::Array{Real,1}=[1.0],
+        outage_probabilities::Array{<:Real,1}=[1.0],
         outage_timesteps::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:maximum(outage_durations),
         scenarios::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:length(outage_durations),
         net_metering_limit_kw::Real = 0,
@@ -109,44 +109,91 @@ struct ElectricUtility
         time_steps_per_hour::Int = 1
         )
 
-        region_abbr = region_abbreviation(latitude, longitude)
+        region_abbr, meters_to_region = region_abbreviation(latitude, longitude)
         emissions_region = region(region_abbr)
-        emissions_series = Dict{String,Array{Float64}}()
-        for pollutant in ["CO2", "NOx", "SO2", "PM25"]
-            field_name = "emissions_factor_series_lb_"+pollutant+"_per_kwh"
-            # If user supplies single emissions rate
-            if typeof(eval(field_name)) == Float64
-                emissions_series[pollutant] = repeat([eval(field_name)], 8760*time_steps_per_hour)
-            elseif length(eval(field_name)) == 1
-                emissions_series[pollutant] = repeat(eval(field_name), 8760*time_steps_per_hour)
-            elseif length(eval(field_name)) / time_steps_per_hour ≈ 8760
-                emissions_series[pollutant] = eval(field_name)
-            elseif length(eval(field_name)) == 0
-                emissions_series[pollutant] = emissions_series(pollutant, region_abbr, time_steps_per_hour=time_steps_per_hour)
-                
-                #TODO deal with emissions warnings and errors appropriately
-                #above are set to nothing if failed, then (when creating reopt inputs?) check if settings have include __ in objective, and if so @error
-                # # Emissions warning is a specific type of warning that we check for and display to the users when it occurs
-                # # If emissions are not required to do a run it tells the user why we could not get an emission series 
-                # # and sets emissions factors to zero 
-                # self.emission_warning = str(e.args[0])
-                # emissions_series = [0.0]*(8760*ts_per_hour) # Set emissions to 0 and return error
-                # emissions_region = 'None'
-                # if must_include_CO2 and pollutant=='CO2':
-                #     self.input_data_errors.append('To include climate emissions in the optimization model, you must either: enter a custom emissions_factor_series_lb_CO2_per_kwh or a site location within the continental U.S.')
-                # if must_include_health and (pollutant=='NOx' or pollutant=='SO2' or pollutant=='PM25'):
-                #     self.input_data_errors.append('To include health emissions in the optimization model, you must either: enter a custom emissions_factor_series for health emissions or a site location within the continental U.S.')
-            else
-                @error "Provided "+field_name+" does not match the time_steps_per_hour."
-            end
+        emissions_series_dict = Dict{String,Array{Float64}}()
+
+        if typeof(emissions_factor_series_lb_CO2_per_kwh) == Float64
+            emissions_series_dict["CO2"] = repeat([emissions_factor_series_lb_CO2_per_kwh], 8760*time_steps_per_hour)
+        elseif length(emissions_factor_series_lb_CO2_per_kwh) == 1
+            emissions_series_dict["CO2"] = repeat(emissions_factor_series_lb_CO2_per_kwh, 8760*time_steps_per_hour)
+        elseif length(emissions_factor_series_lb_CO2_per_kwh) / time_steps_per_hour ≈ 8760
+            emissions_series_dict["CO2"] = emissions_factor_series_lb_CO2_per_kwh
+        elseif isempty(emissions_factor_series_lb_CO2_per_kwh)
+            emissions_series_dict["CO2"] = emissions_series("CO2", region_abbr, time_steps_per_hour=time_steps_per_hour)
+        else
+            @error "Provided emissions_factor_series_lb_CO2_per_kwh does not match the time_steps_per_hour."
         end
+        if typeof(emissions_factor_series_lb_NOx_per_kwh) == Float64
+            emissions_series_dict["NOx"] = repeat([emissions_factor_series_lb_NOx_per_kwh], 8760*time_steps_per_hour)
+        elseif length(emissions_factor_series_lb_NOx_per_kwh) == 1
+            emissions_series_dict["NOx"] = repeat(emissions_factor_series_lb_NOx_per_kwh, 8760*time_steps_per_hour)
+        elseif length(emissions_factor_series_lb_NOx_per_kwh) / time_steps_per_hour ≈ 8760
+            emissions_series_dict["NOx"] = emissions_factor_series_lb_NOx_per_kwh
+        elseif isempty(emissions_factor_series_lb_NOx_per_kwh)
+            emissions_series_dict["NOx"] = emissions_series("NOx", region_abbr, time_steps_per_hour=time_steps_per_hour)
+        else
+            @error "Provided emissions_factor_series_lb_NOx_per_kwh does not match the time_steps_per_hour."
+        end
+        if typeof(emissions_factor_series_lb_SO2_per_kwh) == Float64
+            emissions_series_dict["SO2"] = repeat([emissions_factor_series_lb_SO2_per_kwh], 8760*time_steps_per_hour)
+        elseif length(emissions_factor_series_lb_SO2_per_kwh) == 1
+            emissions_series_dict["SO2"] = repeat(emissions_factor_series_lb_SO2_per_kwh, 8760*time_steps_per_hour)
+        elseif length(emissions_factor_series_lb_SO2_per_kwh) / time_steps_per_hour ≈ 8760
+            emissions_series_dict["SO2"] = emissions_factor_series_lb_SO2_per_kwh
+        elseif isempty(emissions_factor_series_lb_SO2_per_kwh)
+            emissions_series_dict["SO2"] = emissions_series("SO2", region_abbr, time_steps_per_hour=time_steps_per_hour)
+        else
+            @error "Provided emissions_factor_series_lb_SO2_per_kwh does not match the time_steps_per_hour."
+        end
+        if typeof(emissions_factor_series_lb_PM25_per_kwh) == Float64
+            emissions_series_dict["PM25"] = repeat([emissions_factor_series_lb_PM25_per_kwh], 8760*time_steps_per_hour)
+        elseif length(emissions_factor_series_lb_PM25_per_kwh) == 1
+            emissions_series_dict["PM25"] = repeat(emissions_factor_series_lb_PM25_per_kwh, 8760*time_steps_per_hour)
+        elseif length(emissions_factor_series_lb_PM25_per_kwh) / time_steps_per_hour ≈ 8760
+            emissions_series_dict["PM25"] = emissions_factor_series_lb_PM25_per_kwh
+        elseif isempty(emissions_factor_series_lb_PM25_per_kwh)
+            emissions_series_dict["PM25"] = emissions_series("PM25", region_abbr, time_steps_per_hour=time_steps_per_hour)
+        else
+            @error "Provided emissions_factor_series_lb_PM25_per_kwh does not match the time_steps_per_hour."
+        end
+
+        #TODO factor above code by pollutant (attempt below gave UndefVarError on eval() calls)
+        # for pollutant in ["CO2", "NOx", "SO2", "PM25"]
+        #     field_name = "emissions_factor_series_lb_$(pollutant)_per_kwh"
+        #     # If user supplies single emissions rate
+        #     if typeof(eval(Meta.parse(field_name))) == Float64
+        #         emissions_series_dict[pollutant] = repeat([eval(Meta.parse(field_name))], 8760*time_steps_per_hour)
+        #     elseif length(eval(Meta.parse(field_name))) == 1
+        #         emissions_series_dict[pollutant] = repeat(eval(Meta.parse(field_name)), 8760*time_steps_per_hour)
+        #     elseif length(eval(Meta.parse(field_name))) / time_steps_per_hour ≈ 8760
+        #         emissions_series_dict[pollutant] = eval(Meta.parse(field_name))
+        #     elseif isempty(eval(Meta.parse(field_name)))
+        #         emissions_series_dict[pollutant] = emissions_series(pollutant, region_abbr, time_steps_per_hour=time_steps_per_hour)
+                
+        #         #TODO deal with emissions warnings and errors appropriately
+        #         #above are set to nothing if failed, then (when creating reopt inputs?) check if settings have include __ in objective, and if so @error
+        #         # # Emissions warning is a specific type of warning that we check for and display to the users when it occurs
+        #         # # If emissions are not required to do a run it tells the user why we could not get an emission series 
+        #         # # and sets emissions factors to zero 
+        #         # self.emission_warning = str(e.args[0])
+        #         # emissions_series = [0.0]*(8760*ts_per_hour) # Set emissions to 0 and return error
+        #         # emissions_region = 'None'
+        #         # if must_include_CO2 and pollutant=='CO2':
+        #         #     self.input_data_errors.append('To include climate emissions in the optimization model, you must either: enter a custom emissions_factor_series_lb_CO2_per_kwh or a site location within the continental U.S.')
+        #         # if must_include_health and (pollutant=='NOx' or pollutant=='SO2' or pollutant=='PM25'):
+        #         #     self.input_data_errors.append('To include health emissions in the optimization model, you must either: enter a custom emissions_factor_series for health emissions or a site location within the continental U.S.')
+        #     else
+        #         @error "Provided $(field_name) does not match the time_steps_per_hour."
+        #     end
+        # end
 
         new(
             emissions_region,
-            emissions_series["CO2"],
-            emissions_series["NOx"],
-            emissions_series["SO2"],
-            emissions_series["PM25"],
+            emissions_series_dict["CO2"],
+            emissions_series_dict["NOx"],
+            emissions_series_dict["SO2"],
+            emissions_series_dict["PM25"],
             emissions_factor_CO2_decrease_pct,
             emissions_factor_NOX_decrease_pct,
             emissions_factor_SO2_decrease_pct,
@@ -165,19 +212,21 @@ struct ElectricUtility
 end
 
 function region(region_abbr::String)
-    lookup = [  "AK" => "Alaska",
-                "CA" => "California",
-                "EMW" => "Great Lakes / Atlantic",
-                "NE" => "Northeast",
-                "NW" => "Northwest",
-                "RM" => "Rocky Mountains",
-                "SC" => "Lower Midwest",
-                "SE" => "Southeast",
-                "SW" => "Southwest",
-                "TX" => "Texas",
-                "WMW" => "Upper Midwest",
-                "HI" => "Hawaii (except Oahu)",
-                "HI-Oahu" => "Hawaii (Oahu)" ]
+    lookup = Dict(
+        "AK" => "Alaska",
+        "CA" => "California",
+        "EMW" => "Great Lakes / Atlantic",
+        "NE" => "Northeast",
+        "NW" => "Northwest",
+        "RM" => "Rocky Mountains",
+        "SC" => "Lower Midwest",
+        "SE" => "Southeast",
+        "SW" => "Southwest",
+        "TX" => "Texas",
+        "WMW" => "Upper Midwest",
+        "HI" => "Hawaii (except Oahu)",
+        "HI-Oahu" => "Hawaii (Oahu)"
+    )
     try
         return lookup[region_abbr]
     catch
@@ -187,7 +236,7 @@ end
 
 function region_abbreviation(latitude, longitude)
     
-    file_path = joinpath(@__DIR__, "..", "..", "data", "AVERT_Data", "avert_4326.shp")
+    file_path = joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "avert_4326.shp")
 
     table = Shapefile.Table(file_path)
     geoms = Shapefile.shapes(table)
@@ -209,7 +258,7 @@ function region_abbreviation(latitude, longitude)
         edges[g, :] = [g, 1]
         edges = convert(Array{Int64,2}, edges)
         # shapefiles have longitude as x, latitude as y  
-        if inpoly2([lon, lat], nodes, edges)[1]
+        if inpoly2([longitude, latitude], nodes, edges)[1]
             abbr = table.AVERT[row]
             meters_to_region = 0
             return abbr, meters_to_region
@@ -298,16 +347,16 @@ function region_abbreviation(latitude, longitude)
     # SVector is from StatisArrays.jl which is a dependency for DiffResults, so it should already be precompiled?
 end
 
-function emissions_series(pollutant, region_abbr, time_steps_per_hour=1)
-    avert_df = CSV.read(joinpath(@__DIR__, "..", "..", "data", "AVERT_Data", "AVERT_hourly_emissions_"+pollutant+".csv"))
-    if region_abbr in avert_df.names
-        emmissions_profile = round.(eval("avert_df."+region_abbr),digits=6)
+function emissions_series(pollutant, region_abbr; time_steps_per_hour=1)
+    avert_df = DataFrame(CSV.File(joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "AVERT_hourly_emissions_$(pollutant).csv")))
+    if region_abbr in names(avert_df)
+        emmissions_profile = round.(avert_df[!,region_abbr],digits=6)
         if time_steps_per_hour > 1
             emmissions_profile = repeat(emmissions_profile,inner=time_steps_per_hour)
         end
         return emmissions_profile
     else
-        @warn "Emissions error. Cannnot find hourly emmissions for region "+region_abbr+"."
+        @warn "Emissions error. Cannnot find hourly emmissions for region $(region_abbr)."
         return zeros(8760*time_steps_per_hour)
     end
 
