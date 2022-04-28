@@ -57,7 +57,6 @@ Site results:
 
 calculated in combine_results function if BAU scenario is run:
 - `lifecycle_emissions_reduction_CO2_pct`
-- `breakeven_cost_of_emissions_reduction_us_dollars_per_tCO2`
 
 """
 function add_site_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
