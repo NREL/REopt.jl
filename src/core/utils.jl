@@ -175,7 +175,7 @@ function dictkeys_tosymbols(d::Dict)
             "monthly_totals_kwh",
             "prod_factor_series", 
             "monthly_energy_rates", "monthly_demand_rates",
-            "wholesale_rate", "blended_doe_reference_percents",
+            "blended_doe_reference_percents",
             "coincident_peak_load_charge_per_kw", "fuel_cost_per_mmbtu"
             ] && !isnothing(v)
             try
