@@ -30,7 +30,7 @@
 
 function add_operating_reserve_constraints(m, p; _n="")
     # Calculate operating reserves (OR) required 
-	# 1. Production going to load from techs_providing_oper_res # TODO: may have to add ProductionToLoadOR to dvs in reopt.jl? 
+	# 1. Production going to load from techs_providing_oper_res 
 	m[:ProductionToLoadOR] = @expression(m, [t in p.techs.techs_providing_oper_res, ts in p.time_steps_without_grid],
         p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] -
         sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) -

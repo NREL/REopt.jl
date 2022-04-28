@@ -35,7 +35,7 @@ Note: the node number is an empty string if evaluating a single `Site`.
 
 Wind results:
 - `size_kw` Optimal Wind capacity
-- `lifecycle_om_cost` Lifecycle operations and maintenance cost in present value, after tax
+- `lifecycle_om_cost_after_tax` Lifecycle operations and maintenance cost in present value, after tax
 - `year_one_om_cost` Operations and maintenance cost in the first year
 - `year_one_to_battery_series_kw` Vector of power used to charge the battery over the first year
 - `year_one_to_grid_series_kw` Vector of power exported to the grid over the first year
@@ -52,7 +52,7 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	per_unit_size_om = @expression(m, p.third_party_factor * p.pwf_om * m[:dvSize][t] * p.om_cost_per_kw[t])
 
 	r["size_kw"] = round(value(m[:dvSize][t]), digits=2)
-	r["lifecycle_om_cost"] = round(value(per_unit_size_om) * (1 - p.s.financial.owner_tax_pct), digits=0)
+	r["lifecycle_om_cost_after_tax"] = round(value(per_unit_size_om) * (1 - p.s.financial.owner_tax_pct), digits=0)
 	r["year_one_om_cost"] = round(value(per_unit_size_om) / (p.pwf_om * p.third_party_factor), digits=0)
 
 	if !isempty(p.s.storage.types.elec)

@@ -37,7 +37,7 @@ function Financial(;
     elec_cost_escalation_pct::Float64 = 0.019,
     boiler_fuel_cost_escalation_pct::Float64 = 0.034,
     chp_fuel_cost_escalation_pct::Float64 = 0.034,
-    generator_fuel_cost_escalation_pct::Float64,
+    generator_fuel_cost_escalation_pct::Float64 = 0.027,
     offtaker_tax_pct::Float64 = 0.26,
     offtaker_discount_pct = 0.0564,
     third_party_ownership::Bool = false,
