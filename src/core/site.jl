@@ -51,9 +51,9 @@ function Site(;
     bau_grid_emissions_lb_SO2_per_year::Union{Float64, Nothing} = nothing,
     bau_grid_emissions_lb_PM25_per_year::Union{Float64, Nothing} = nothing,
     renewable_electricity_min_pct::Float64 = 0.0,
-    renewable_electricity_max_pct::Float64 = nothing,
-    include_exported_elec_emissions_in_total::Bool = True,
-    include_exported_renewable_electricity_in_total::Bool = True,
+    renewable_electricity_max_pct::Union{Float64, Nothing} = nothing,
+    include_exported_elec_emissions_in_total::Bool = true,
+    include_exported_renewable_electricity_in_total::Bool = true,
     node::Int = 1, 
     )
 ```
@@ -100,9 +100,9 @@ mutable struct Site
         bau_grid_emissions_lb_SO2_per_year::Union{Float64, Nothing} = nothing,
         bau_grid_emissions_lb_PM25_per_year::Union{Float64, Nothing} = nothing,
         renewable_electricity_min_pct::Float64 = 0.0,
-        renewable_electricity_max_pct::Float64 = nothing,
-        include_exported_elec_emissions_in_total::Bool = True,
-        include_exported_renewable_electricity_in_total::Bool = True,
+        renewable_electricity_max_pct::Union{Float64, Nothing} = nothing,
+        include_exported_elec_emissions_in_total::Bool = true,
+        include_exported_renewable_electricity_in_total::Bool = true,
         node::Int = 1, 
         )
         invalid_args = String[]
