@@ -35,10 +35,22 @@ Note: the node number is an empty string if evaluating a single `Site`.
 
 Financial results:
 - `lcc` Optimal lifecycle cost
+- `lifecycle_om_costs_before_tax`
+- `year_one_om_costs_before_tax`
+- `lifecycle_om_costs_after_tax`
+- `year_one_om_costs_after_tax`
 - `lifecycle_capital_costs_plus_om` Capital cost for all technologies plus present value of operations and maintenance over anlaysis period
 - `lifecycle_capital_costs` Net capital costs for all technologies, in present value, including replacement costs and incentives.
+- `initial_capital_costs`
+- `initial_capital_costs_after_incentives`
+- `replacements_future_cost`
+- `replacements_present_cost`
+- `om_and_replacement_present_cost_after_tax`
+- `developer_om_and_replacement_present_cost_after_tax`
+- `lifecycle_fuel_costs_after_tax`
 - `lifecycle_offgrid_other_annual_costs_after_tax` Present value of offgrid_other_annual_costs over the analysis period, including tax deductions for owner. 
 - `lifecycle_offgrid_other_capital_costs` Equal to offgrid_other_capital_costs 
+- `offgrid_microgrid_lcoe_dollars_per_kwh`
 """
 function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()

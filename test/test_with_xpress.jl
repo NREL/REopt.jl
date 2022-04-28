@@ -203,7 +203,7 @@ end
         @test results["CHP"]["size_supplemental_firing_kw"] == 0
         @test results["CHP"]["year_one_electric_energy_produced_kwh"] ≈ 800*8760 rtol=1e-5
         @test results["CHP"]["year_one_thermal_energy_produced_mmbtu"] ≈ 800*(0.4418/0.3573)*8760/293.07107 rtol=1e-5
-        @test results["ElectricTariff"]["lifecycle_demand_cost"] == 0
+        @test results["ElectricTariff"]["lifecycle_demand_cost_after_tax"] == 0
     
         #part 2: supplementary firing used when more efficient than the boiler and low-cost; demand charges not reduced by CHP
         data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10
@@ -215,7 +215,7 @@ end
         results = run_reopt(m2, inputs)
         @test results["CHP"]["size_supplemental_firing_kw"] ≈ 278.73 atol=0.1
         @test results["CHP"]["year_one_thermal_energy_produced_mmbtu"] ≈ 138624 rtol=1e-5
-        @test results["ElectricTariff"]["lifecycle_demand_cost"] ≈ 5212.7 rtol=1e-5
+        @test results["ElectricTariff"]["lifecycle_demand_cost_after_tax"] ≈ 5212.7 rtol=1e-5
     end
 end
 
@@ -269,7 +269,7 @@ end
         r = run_reopt([m1,m2], d)
         # all of the savings are from the ExistingBoiler fuel costs
         @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === true
-        fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost"]
+        fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax"]
         @test fuel_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
 
         # now increase the FlexibleHVAC installed_cost to the fuel costs savings + 100 and expect that the FlexibleHVAC is not purchased
@@ -287,12 +287,12 @@ end
         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         r = run_reopt([m1,m2], d)
 
-        elec_cost_savings = r["ElectricTariff"]["lifecycle_demand_cost_bau"] + 
-                            r["ElectricTariff"]["lifecycle_energy_cost_bau"] - 
-                            r["ElectricTariff"]["lifecycle_demand_cost"] - 
-                            r["ElectricTariff"]["lifecycle_energy_cost"]
+        elec_cost_savings = r["ElectricTariff"]["lifecycle_demand_cost_after_tax_bau"] + 
+                            r["ElectricTariff"]["lifecycle_energy_cost_after_tax_bau"] - 
+                            r["ElectricTariff"]["lifecycle_demand_cost_after_tax"] - 
+                            r["ElectricTariff"]["lifecycle_energy_cost_after_tax"]
 
-        fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost"]
+        fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax"]
         @test fuel_cost_savings + elec_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
 
         # now increase the FlexibleHVAC installed_cost to the fuel costs savings + elec_cost_savings 
@@ -596,8 +596,8 @@ end
     @test ground_pv["size_kw"] ≈ 15 atol=0.1
     @test roof_west["size_kw"] ≈ 7 atol=0.1
     @test roof_east["size_kw"] ≈ 4 atol=0.1
-    @test ground_pv["lifecycle_om_cost_bau"] ≈ 782.0 atol=0.1
-    @test roof_west["lifecycle_om_cost_bau"] ≈ 782.0 atol=0.1
+    @test ground_pv["lifecycle_om_cost_after_tax_bau"] ≈ 782.0 atol=0.1
+    @test roof_west["lifecycle_om_cost_after_tax_bau"] ≈ 782.0 atol=0.1
     @test ground_pv["average_annual_energy_produced_kwh_bau"] ≈ 8844.19 atol=0.1
     @test roof_west["average_annual_energy_produced_kwh_bau"] ≈ 7440.1 atol=0.1
     @test ground_pv["average_annual_energy_produced_kwh"] ≈ 26533.54 atol=0.1
@@ -993,7 +993,7 @@ end
     @test r["Generator"]["average_annual_fuel_used_gal"] ≈ 47.7  
     @test r["Generator"]["average_annual_energy_produced_kwh"] ≈ 99.0
     @test r["Generator"]["year_one_fuel_cost"] ≈ 143.09 
-    @test r["Generator"]["lifecycle_fuel_cost"] ≈ 1301.75
+    @test r["Generator"]["lifecycle_fuel_cost_after_tax"] ≈ 1301.75
 
 end
 

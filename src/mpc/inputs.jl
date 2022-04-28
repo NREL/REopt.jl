@@ -71,7 +71,7 @@ function MPCInputs(s::MPCScenario)
     pwf_e = 1.0
     pwf_om = 1.0
     pwf_fuel = Dict{String, Float64}()
-    pwf_fuel["Generator"] = 1.0 # TODO: update; currently only a placeholder.
+    pwf_fuel["Generator"] = 1.0 
     third_party_factor = 1.0
 
     time_steps_with_grid, time_steps_without_grid, = setup_electric_utility_inputs(s)
