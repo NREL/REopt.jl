@@ -1,0 +1,58 @@
+{
+  "Settings": {
+    "time_steps_per_hour": 1,
+    "include_climate_in_objective": true,
+    "include_health_in_objective": true,
+    "add_soc_incentive": true
+  },
+  "Site": {
+    "longitude": -97.7431,
+    "latitude": 30.2672
+  },
+  "PV": {
+    "min_kw": 0.0,
+    "max_kw": 1.0e9
+  },
+  "Generator": {
+    "existing_kw": 0.0,
+    "min_kw": 0.0,
+    "max_kw": 1.0e9
+  },
+  "Storage": {
+    "min_kw": 0.0,
+    "max_kw": 1.0e9,
+    "min_kwh": 0.0,
+    "max_kwh": 1000000.0
+  },
+  "ElectricLoad": {
+    "critical_loads_kw_is_net": false,
+    "year": 2020,
+    "loads_kw_is_net": true,
+    "doe_reference_name": "FlatLoad",
+    "annual_kwh": 8760.0
+  },
+  "ElectricTariff": {
+    "add_monthly_rates_to_urdb_rate": false,
+    "wholesale_rate_per_kwh": 0.0,
+    "wholesale_rate_above_site_load_per_kwh": 0.0,
+    "urdb_rate_name": "custom",
+    "blended_monthly_rates_per_kwh": [0.15, 0.2, 0.21, 0.23, 0.27, 0.19, 0.22, 0.17, 0.24, 0.26, 0.18, 0.2],
+    "blended_monthly_demand_charges_per_kw": [0.08, 0.11, 0, 0, 0.15, 0.14, 0.09, 0.06, 0, 0, 0.05, 0]
+  },
+  "ElectricUtility": {
+    "emissions_factor_CO2_pct_decrease": 0.01174, 
+    "net_metering_limit_kw": 0.0,
+    "interconnection_limit_kw": 100000000.0
+  },
+  "Financial": {
+    "escalation_pct": 0.026,
+    "offtaker_discount_pct": 0.083,
+    "value_of_lost_load_per_kwh": 0.0,
+    "analysis_years": 25,
+    "microgrid_upgrade_cost_pct": 0.0,
+    "offtaker_tax_pct": 0.26,
+    "om_cost_escalation_pct": 0.025,
+    "co2_cost_per_tonne": 51.0,
+    "co2_cost_escalation_pct": 0.017173
+  }
+}

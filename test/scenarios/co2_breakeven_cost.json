@@ -1,0 +1,41 @@
+{
+  "Settings": {
+    "time_steps_per_hour": 1,
+    "include_climate_in_objective": false,
+    "include_health_in_objective": false,
+    "add_soc_incentive": true
+  },
+  "Site": {
+    "longitude": -75.51491279999999,
+    "latitude": 40.1303822,
+    "co2_emissions_reduction_min_pct": 0.250,
+    "co2_emissions_reduction_max_pct": 0.250
+  },
+  "PV": {
+    "min_kw": 0.0,
+    "max_kw": 1000000,
+    "can_curtail": true
+  },
+  "Generator": {
+    "existing_kw": 0.0,
+    "min_kw": 0.0,
+    "max_kw": 0.0
+  },
+  "Storage": {
+    "min_kw": 0.0,
+    "max_kw": 0,
+    "min_kwh": 0.0,
+    "max_kwh": 0.0 
+  },
+  "ElectricLoad": {
+    "year": 2020,
+    "doe_reference_name": "Supermarket",
+    "annual_kwh": 2018760
+  },
+  "ElectricTariff": {
+    "net_metering_limit_kw": 0.0,
+    "interconnection_limit_kw": 100000000.0,
+    "urdb_label": "5a8330175457a3ef3c914215"
+  },
+  "Financial": {}
+}
