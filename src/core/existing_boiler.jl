@@ -27,7 +27,6 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-const EXISTING_BOILER_EFFICIENCY = 0.8
 
 struct ExistingBoiler <: AbstractThermalTech  # useful to create AbstractHeatingTech or AbstractThermalTech?
     max_kw::Real
@@ -43,6 +42,12 @@ end
 
 
 """
+    ExistingBoiler
+
+!!! note
+    The `ExistingBoiler` default operating cost is zero. Please provide the `fuel_cost_per_mmbtu` field
+    for the `ExistingBoiler` if you want non-zero BAU heating costs. The `fuel_cost_per_mmbtu` can be
+    a scalar, a list of 12 monthly values, or a time series of values for every time step.
     ExistingBoiler
 
 ```julia
@@ -80,6 +85,10 @@ function ExistingBoiler(;
     time_steps_per_hour::Int = 1
 )
     @assert production_type in ["steam", "hot_water"]
+
+    if sum(fuel_cost_per_mmbtu) ≈ 0.0
+        @warn "The ExistingBoiler.fuel_cost_per_mmbtu sums to zero. No fuel costs will be accounted for."
+    end
 
     production_type_by_chp_prime_mover = Dict(
         "recip_engine" => "hot_water",

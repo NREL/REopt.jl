@@ -30,9 +30,21 @@
 function mpc_results(m::JuMP.AbstractModel, p::MPCInputs; _n="")
 	tstart = time()
     d = Dict{String, Any}()
-    for b in p.s.storage.types
-        if p.s.storage.size_kwh[b] > 0
-            add_storage_results(m, p, d, b; _n)
+    for b in p.s.storage.types.elec
+        if p.s.storage.attr[b].size_kwh > 0
+            add_electric_storage_results(m, p, d, b; _n)
+        end
+    end
+
+    for b in p.s.storage.types.hot
+        if p.s.storage.attr[b].size_kwh > 0
+            add_hot_storage_results(m, p, d, b; _n)
+        end
+    end
+
+    for b in p.s.storage.types.cold
+        if p.s.storage.attr[b].size_kwh > 0
+            add_cold_storage_results(m, p, d, b; _n)
         end
     end
 

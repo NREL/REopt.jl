@@ -1,7 +1,7 @@
 
 
 
-function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
+function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) where T <: AbstractScenario
 	
 	dvs_idx_on_techs = String[
 		"dvSize",
@@ -16,8 +16,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 		"dvStorageEnergy",
 	]
 	dvs_idx_on_storagetypes_timesteps = String[
-		"dvDischargeFromStorage",
-		"dvGridToStorage",
+		"dvDischargeFromStorage"
 	]
 	for p in ps
 		_n = string("_", p.s.site.node)
@@ -33,13 +32,16 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 
 		for dv in dvs_idx_on_storagetypes
 			x = dv*_n
-			m[Symbol(x)] = @variable(m, [p.s.storage.types], base_name=x, lower_bound=0)
+			m[Symbol(x)] = @variable(m, [p.s.storage.types.elec], base_name=x, lower_bound=0)
 		end
 
 		for dv in dvs_idx_on_storagetypes_timesteps
 			x = dv*_n
-			m[Symbol(x)] = @variable(m, [p.s.storage.types, p.time_steps], base_name=x, lower_bound=0)
+			m[Symbol(x)] = @variable(m, [p.s.storage.types.all, p.time_steps], base_name=x, lower_bound=0)
 		end
+
+		dv = "dvGridToStorage"*_n
+		m[Symbol(dv)] = @variable(m, [p.s.storage.types.elec, p.time_steps], base_name=dv, lower_bound=0)
 
 		dv = "dvGridPurchase"*_n
 		m[Symbol(dv)] = @variable(m, [p.time_steps], base_name=dv, lower_bound=0)
@@ -51,10 +53,10 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 		m[Symbol(dv)] = @variable(m, [p.months, 1], base_name=dv, lower_bound=0)
 
 		dv = "dvProductionToStorage"*_n
-		m[Symbol(dv)] = @variable(m, [p.s.storage.types, p.techs.all, p.time_steps], base_name=dv, lower_bound=0)
+		m[Symbol(dv)] = @variable(m, [p.s.storage.types.all, p.techs.all, p.time_steps], base_name=dv, lower_bound=0)
 
 		dv = "dvStoredEnergy"*_n
-		m[Symbol(dv)] = @variable(m, [p.s.storage.types, 0:p.time_steps[end]], base_name=dv, lower_bound=0)
+		m[Symbol(dv)] = @variable(m, [p.s.storage.types.all, 0:p.time_steps[end]], base_name=dv, lower_bound=0)
 
 		dv = "MinChargeAdder"*_n
 		m[Symbol(dv)] = @variable(m, base_name=dv, lower_bound=0)
@@ -71,8 +73,8 @@ function add_variables!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 
 		ex_name = "TotalStorageCapCosts"*_n
 		m[Symbol(ex_name)] = @expression(m, p.third_party_factor * 
-			sum(  p.s.storage.installed_cost_per_kw[b] * m[Symbol("dvStoragePower"*_n)][b] 
-				+ p.s.storage.installed_cost_per_kwh[b] * m[Symbol("dvStorageEnergy"*_n)][b] for b in p.s.storage.types )
+			sum(p.s.storage.attr[b].net_present_cost_per_kw * m[Symbol("dvStoragePower"*_n)][b] for b in p.s.storage.types.elec)
+			+ sum(p.s.storage.attr[b].net_present_cost_per_kwh * m[Symbol("dvStorageEnergy"*_n)][b] for b in p.s.storage.types.all)
 		)
 
 		ex_name = "TotalPerUnitSizeOMCosts"*_n
@@ -104,7 +106,7 @@ end
 """
 add non-negative bounds to decision variables
 """
-function add_bounds(m::JuMP.AbstractModel, ps::Array{REoptInputs})
+function add_bounds(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) where T <: AbstractScenario
 	
 	dvs_idx_on_techs = String[
 		"dvSize",
@@ -139,14 +141,14 @@ function add_bounds(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 
 		for dv in dvs_idx_on_storagetypes
 			x = dv*_n
-            @constraint(m, [b in p.s.storage.types], 
+            @constraint(m, [b in p.s.storage.types.elec], 
                 -m[Symbol(x)][b] ≤ 0
             )
 		end
 
 		for dv in dvs_idx_on_storagetypes_timesteps
 			x = dv*_n
-            @constraint(m, [b in p.s.storage.types, ts in p.time_steps], 
+            @constraint(m, [b in p.s.storage.types.elec, ts in p.time_steps], 
                 -m[Symbol(x)][b, ts] ≤ 0
             )
 		end
@@ -161,12 +163,12 @@ function add_bounds(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 		@constraint(m, [mth in p.months], -m[Symbol(dv)][mth, 1] ≤ 0)
 
 		dv = "dvProductionToStorage"*_n
-        @constraint(m, [b in p.s.storage.types, tech in p.techs.all, ts in p.time_steps], 
+        @constraint(m, [b in p.s.storage.types.elec, tech in p.techs.all, ts in p.time_steps], 
             -m[Symbol(dv)][b, tech, ts] ≤ 0
         )
 
 		dv = "dvStoredEnergy"*_n
-        @constraint(m, [b in p.s.storage.types, ts in 0:p.time_steps[end]], 
+        @constraint(m, [b in p.s.storage.types.elec, ts in 0:p.time_steps[end]], 
             -m[Symbol(dv)][b, ts] ≤ 0
         )
 
@@ -176,15 +178,15 @@ function add_bounds(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 end
 
 
-function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
+function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) where T <: AbstractScenario
     add_variables!(m, ps)
     @warn "Outages are not currently modeled in multinode mode."
     @warn "Diesel generators are not currently modeled in multinode mode."
     for p in ps
         _n = string("_", p.s.site.node)
 
-        for b in p.s.storage.types
-            if p.s.storage.max_kw[b] == 0 || p.s.storage.max_kwh[b] == 0
+        for b in p.s.storage.types.all
+            if p.s.storage.attr[b].max_kw == 0 || p.s.storage.attr[b].max_kwh == 0
                 @constraint(m, [ts in p.time_steps], m[Symbol("dvStoredEnergy"*_n)][b, ts] == 0)
                 @constraint(m, m[Symbol("dvStorageEnergy"*_n)][b] == 0)
                 @constraint(m, m[Symbol("dvStoragePower"*_n)][b] == 0)
@@ -194,11 +196,18 @@ function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
                 @constraint(m, [ts in p.time_steps], m[Symbol("dvGridToStorage"*_n)][b, ts] == 0)
             else
                 add_storage_size_constraints(m, p, b; _n=_n)
-                add_storage_dispatch_constraints(m, p, b; _n=_n)
+                add_general_storage_dispatch_constraints(m, p, b; _n=_n)
+				if b in p.s.storage.types.elec
+					add_elec_storage_dispatch_constraints(m, p, b; _n=_n)
+				elseif b in p.s.storage.types.hot
+					add_hot_thermal_storage_dispatch_constraints(m, p, b; _n=_n)
+				elseif b in p.s.storage.types.cold
+					add_cold_thermal_storage_dispatch_constraints(m, p, b; _n=_n)
+				end
             end
         end
 
-        if any(max_kw->max_kw > 0, (p.s.storage.max_kw[b] for b in p.s.storage.types))
+        if any(max_kw->max_kw > 0, (p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec))
             add_storage_sum_constraints(m, p; _n=_n)
         end
     
@@ -241,19 +250,19 @@ function build_reopt!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 end
 
 
-function add_objective!(m::JuMP.AbstractModel, ps::Array{REoptInputs})
+function add_objective!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) where T <: AbstractScenario
 	if !(any(p.s.settings.add_soc_incentive for p in ps))
 		@objective(m, Min, sum(m[Symbol(string("Costs_", p.s.site.node))] for p in ps))
 	else # Keep SOC high
 		@objective(m, Min, sum(m[Symbol(string("Costs_", p.s.site.node))] for p in ps)
-        - sum(sum(m[Symbol(string("dvStoredEnergy_", p.s.site.node))][:elec, ts] 
-            for ts in p.time_steps) for p in ps) / (8760. / ps[1].hours_per_timestep))
+        - sum(sum(sum(m[Symbol(string("dvStoredEnergy_", p.s.site.node))][b, ts] 
+            for ts in p.time_steps) for b in p.s.storage.types.elec) for p in ps) / (8760. / ps[1].hours_per_timestep))
 	end  # TODO need to handle different hours_per_timestep?
 	nothing
 end
 
 
-function run_reopt(m::JuMP.AbstractModel, ps::Array{REoptInputs})
+function run_reopt(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) where T <: AbstractScenario
 
 	build_reopt!(m, ps)
 
@@ -278,14 +287,14 @@ function run_reopt(m::JuMP.AbstractModel, ps::Array{REoptInputs})
 	tstart = time()
 	results = reopt_results(m, ps)
 	time_elapsed = time() - tstart
-	@info "Total results processing took $(round(time_elapsed, digits=3)) seconds."
+	@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status
 	results["solver_seconds"] = opt_time
 	return results
 end
 
 
-function reopt_results(m::JuMP.AbstractModel, ps::Array{REoptInputs})
+function reopt_results(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) where T <: AbstractScenario
 	# TODO address Warning: The addition operator has been used on JuMP expressions a large number of times.
 	results = Dict{Union{Int, String}, Any}()
 	for p in ps

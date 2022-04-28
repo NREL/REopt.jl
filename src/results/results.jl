@@ -35,9 +35,23 @@ Create a dictionary of results with string keys for each Scenario structure mode
 function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 	tstart = time()
     d = Dict{String, Any}()
-    for b in p.s.storage.types
-        if p.s.storage.max_kw[b] > 0
-            add_storage_results(m, p, d, b; _n)
+    # TODO determine whether other results specific to electrical or thermal storage
+    # systems warrant separate functions
+    for b in p.s.storage.types.elec
+        if p.s.storage.attr[b].max_kwh > 0
+            add_electric_storage_results(m, p, d, b; _n)
+        end
+    end
+
+    for b in p.s.storage.types.hot
+        if p.s.storage.attr[b].max_kwh > 0
+            add_hot_storage_results(m, p, d, b; _n)
+        end
+    end
+
+    for b in p.s.storage.types.cold
+        if p.s.storage.attr[b].max_kwh > 0
+            add_cold_storage_results(m, p, d, b; _n)
         end
     end
 
@@ -59,20 +73,20 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     end
 	
 	time_elapsed = time() - tstart
-	@info "Base results processing took $(round(time_elapsed, digits=3)) seconds."
+	@debug "Base results processing took $(round(time_elapsed, digits=3)) seconds."
 	
 	if !isempty(p.techs.gen) && isempty(_n)  # generators not included in multinode model
         tstart = time()
 		add_generator_results(m, p, d)
         time_elapsed = time() - tstart
-        @info "Generator results processing took $(round(time_elapsed, digits=3)) seconds."
+        @debug "Generator results processing took $(round(time_elapsed, digits=3)) seconds."
 	end
 	
 	if !isempty(p.s.electric_utility.outage_durations) && isempty(_n)  # outages not included in multinode model
         tstart = time()
 		add_outage_results(m, p, d)
         time_elapsed = time() - tstart
-        @info "Outage results processing took $(round(time_elapsed, digits=3)) seconds."
+        @debug "Outage results processing took $(round(time_elapsed, digits=3)) seconds."
 	end
 
     if !isempty(p.techs.boiler)
@@ -80,6 +94,14 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     end
 
     add_site_results(m, p, d)
+
+    if !isnothing(p.s.existing_chiller)
+        add_existing_chiller_results(m, p, d)
+    end
+
+    if !isnothing(p.s.flexible_hvac)
+        add_flexible_hvac_results(m, p, d)
+    end
 
 	return d
 end
@@ -147,6 +169,8 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("Site", "lifecycle_emissions_from_elec_grid_tNOx"),
         ("Site", "lifecycle_emissions_from_elec_grid_tSO2"),
         ("Site", "lifecycle_emissions_from_elec_grid_tPM25"),
+        ("FlexibleHVAC", "temperatures_degC_node_by_time"),
+        ("ExistingBoiler", "lifecycle_fuel_cost" )
     )
 
     for t in bau_outputs
@@ -198,5 +222,7 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         end
     end
         
+    # TODO add FlexibleHVAC opex savings
+
     return opt
 end

@@ -29,9 +29,10 @@
 # *********************************************************************************
 
 function add_boiler_tech_constraints(m, p; _n="")
-    m[:TotalFuelCosts] += @expression(m, p.pwf_fuel["ExistingBoiler"] *
-        sum(m[:dvFuelUsage]["ExistingBoiler", ts] * p.s.existing_boiler.fuel_cost_series[ts] for ts in p.time_steps)
-    )
+    m[:TotalExistingBoilerFuelCosts] = @expression(m, p.pwf_fuel["ExistingBoiler"] *
+    sum(m[:dvFuelUsage]["ExistingBoiler", ts] * p.s.existing_boiler.fuel_cost_series[ts] for ts in p.time_steps)
+)
+    m[:TotalFuelCosts] += m[:TotalExistingBoilerFuelCosts]
     
     # Constraint (1e): Total Fuel burn for Boiler
     @constraint(m, [t in p.techs.boiler, ts in p.time_steps],
@@ -42,7 +43,7 @@ function add_boiler_tech_constraints(m, p; _n="")
 
     # Constraint (4f)-1: (Hot) Thermal production sent to storage must be less than technology's rated production
     # if !isempty(p.steam_techs)
-    #     @constraint(m, [b in p.HotTES, t in p.techs.boiler, ts in p.time_steps],
+    #     @constraint(m, [b in p.s.storage.types.hot, t in p.techs.boiler, ts in p.time_steps],
     #         m[:dvProductionToStorage][b,t,ts] + m[:dvThermalToSteamTurbine][t,ts] <=
     #         p.production_factor[t,ts] * m[Symbol("dvThermalProduction"*_n)][t,ts]
     #     )
@@ -51,8 +52,8 @@ function add_boiler_tech_constraints(m, p; _n="")
     #         p.production_factor[t,ts] * m[Symbol("dvThermalProduction"*_n)][t,ts]
     #     )
     # else
-    #     @constraint(m, [b in p.HotTES, t in p.techs.boiler, ts in p.time_steps],
-    #         m[:dvProductionToStorage][b,t,ts] <= p.production_factor[t,ts] * m[Symbol("dvThermalProduction"*_n)][t,ts]
+    #     @constraint(m, [b in p.s.storage.types.hot, t in p.techs.boiler, ts in p.time_steps],
+    #         m[:dvProductionToStorage][b,t,ts] <= m[Symbol("dvThermalProduction"*_n)][t,ts]
     #     )
     # end
 

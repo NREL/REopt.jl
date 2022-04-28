@@ -41,7 +41,7 @@
         "inv_eff": 0.96, 
         "azimuth": 180.0
     },
-    "Storage": {
+    "ElectricStorage": {
         "rectifier_efficiency_pct": 0.96, 
         "total_itc_pct": 0.0, 
         "replace_cost_per_kw": 460.0, 
