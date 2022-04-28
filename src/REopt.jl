@@ -66,6 +66,7 @@ using Roots: fzero  # for IRR
 global hdl = nothing
 using HDF5, JLD
 using CSV, DataFrames
+using Proj4
 
 include("keys.jl")
 include("core/types.jl")
