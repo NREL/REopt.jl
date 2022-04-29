@@ -172,7 +172,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         end
 
         if length(loads_kw) < 8760*time_steps_per_hour
-            loads_kw = repeat(loads_kw, inner=time_steps_per_hour / (length(loads_kw)/8760))
+            loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw)/8760)))
             @info "Repeating electric loads in each hour to match the time_steps_per_hour."
         end
 
