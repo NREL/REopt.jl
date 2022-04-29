@@ -140,7 +140,7 @@ git-tree-sha1 = "f74e9d5388b8620b4cee35d4c5a618dd4dc547f4"
 uuid = "187b0558-2788-49d3-abe0-74a17ed4e7c9"
 version = "1.3.0"
 
-[[CoordinateTransformations]]
+[[deps.CoordinateTransformations]]
 deps = ["LinearAlgebra", "StaticArrays"]
 git-tree-sha1 = "681ea870b918e7cff7111da58791d7f718067a19"
 uuid = "150eb455-5306-5404-9cee-2592286d6298"
@@ -319,12 +319,6 @@ uuid = "cd3eb016-35fb-5094-929b-558a96fad6f3"
 version = "0.9.17"
 
 [[deps.ImageCore]]
-deps = ["AbstractFFTs", "ColorVectorSpace", "Colors", "FixedPointNumbers", "Graphics", "MappedArrays", "MosaicViews", "OffsetArrays", "PaddedViews", "Reexport"]
-git-tree-sha1 = "9a5c62f231e5bba35695a20988fc7cd6de7eeb5a"
-uuid = "a09fc81d-aa75-5fe9-8630-4744c3626534"
-version = "0.9.3"
-
-[[ImageCore]]
 deps = ["AbstractFFTs", "ColorVectorSpace", "Colors", "FixedPointNumbers", "Graphics", "MappedArrays", "MosaicViews", "OffsetArrays", "PaddedViews", "Reexport"]
 git-tree-sha1 = "9a5c62f231e5bba35695a20988fc7cd6de7eeb5a"
 uuid = "a09fc81d-aa75-5fe9-8630-4744c3626534"
@@ -617,7 +611,7 @@ uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 deps = ["Printf"]
 uuid = "9abbd945-dff8-562f-b5e8-e1ebf5ef1b79"
 
-[[Proj4]]
+[[deps.Proj4]]
 deps = ["CEnum", "CoordinateTransformations", "PROJ_jll", "StaticArrays"]
 git-tree-sha1 = "5f15f1c647b563e49f655fbbfd4e2ade24bd3c64"
 uuid = "9a7e659c-8ee8-5706-894e-f68f43bc57ea"
