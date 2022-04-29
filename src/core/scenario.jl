@@ -123,7 +123,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         electric_utility = ElectricUtility()
     elseif settings.off_grid_flag 
         if haskey(d, "ElectricUtility")
-            @warn "When off_grid_flag is true, a year-long outage will always be modeled. Any other inputs in ElectricUtility will be overridden."
+            @warn "ElectricUtility inputs are not applicable when off_grid_flag is true and any ElectricUtility inputs will be ignored. For off-grid scenarios, a year-long outage will always be modeled."
         end
         electric_utility = ElectricUtility(; outage_start_time_step = 1, outage_end_time_step = settings.time_steps_per_hour * 8760) 
     end
@@ -162,7 +162,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                         )
     else # ElectricTariff inputs supplied for off-grid, but will never be applied. 
         if haskey(d, "ElectricTariff")
-            @warn "ElectricTariff inputs are not applicable when off_grid_flag is true."
+            @warn "ElectricTariff inputs are not applicable when off_grid_flag is true, and will be ignored."
         end
         electric_tariff = ElectricTariff(;  blended_annual_energy_rate = 0.0, 
                                             blended_annual_demand_rate = 0.0,
