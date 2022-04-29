@@ -198,7 +198,7 @@ function blend_and_scale_doe_profiles(
 
     @assert sum(blended_doe_reference_percents) ≈ 1 "The sum of the blended_doe_reference_percents must equal 1"
     if year != 2017
-        @warn "Changing ElectricLoad.year to 2017 because DOE reference profiles start on a Sunday."
+        @debug "Changing ElectricLoad.year to 2017 because DOE reference profiles start on a Sunday."
     end
     year = 2017
     if isempty(city)

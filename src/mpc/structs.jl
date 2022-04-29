@@ -269,6 +269,7 @@ Base.@kwdef struct MPCElectricStorage <: AbstractElectricStorage
     grid_charge_efficiency::Float64 = 0.96 * 0.975^2
     max_kw::Float64 = size_kw
     max_kwh::Float64 = size_kwh
+    minimum_avg_soc_fraction::Float64 = 0.0
 end
 
 
