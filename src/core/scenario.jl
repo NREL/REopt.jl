@@ -45,6 +45,7 @@ struct Scenario <: AbstractScenario
     chp::Union{CHP, Nothing}  # use nothing for more items when they are not modeled?
     flexible_hvac::Union{FlexibleHVAC, Nothing}
     existing_chiller::Union{ExistingChiller, Nothing}
+    absorption_chiller::Union{AbsorptionChiller, Nothing}
 end
 
 """
@@ -66,6 +67,7 @@ Constructor for Scenario struct, where `d` has upper-case keys:
 - [CHP](@ref) (optional)
 - FlexibleHVAC (optional)
 - ExistingChiller (optional)
+- AbsorptionChiller (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV`, which can be either a `Dict` or `Dict[]`.
 
@@ -317,6 +319,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         cooling_load = CoolingLoad(; thermal_loads_ton=repeat([0.0], 8760))
     end
 
+    absorption_chiller = nothing
     if max_cooling_demand_kw > 0 && !haskey(d, "FlexibleHVAC")  # create ExistingChiller
         chiller_inputs = Dict{Symbol, Any}()
         chiller_inputs[:loads_kw_thermal] = cooling_load.loads_kw_thermal
@@ -329,6 +332,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             chiller_inputs[:cop] = 1.0
         end
         existing_chiller = ExistingChiller(; chiller_inputs...)
+
+        if haskey(d, "AbsorptionChiller")
+            absorption_chiller = AbsorptionChiller(; dictkeys_tosymbols(d["AbsorptionChiller"])...)
+        end
     end
 
     return Scenario(
@@ -348,7 +355,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         existing_boiler,
         chp,
         flexible_hvac,
-        existing_chiller
+        existing_chiller,
+        absorption_chiller
     )
 end
 
