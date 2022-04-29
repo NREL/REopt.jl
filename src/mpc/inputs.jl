@@ -48,6 +48,7 @@ struct MPCInputs <: AbstractInputs
     techs_by_exportbin::DenseAxisArray{Array{String,1}}  # indexed on [:NEM, :WHL]
     export_bins_by_tech::Dict{String, Array{Symbol, 1}}
     cop::Dict{String, Float64}  # (techs.cooling)
+    thermal_cop::Dict{String, Float64}  # (techs.absorption_chiller)
 end
 
 
@@ -84,6 +85,7 @@ function MPCInputs(s::MPCScenario)
  
     #Placeholder COP because the REopt model expects it
     cop = Dict("ExistingChiller" => s.cooling_load.cop)
+    thermal_cop = Dict{String, Float64}()
 
     MPCInputs(
         s,
@@ -105,7 +107,8 @@ function MPCInputs(s::MPCScenario)
         1:length(s.electric_tariff.tou_demand_ratchet_time_steps),  # ratchets
         techs_by_exportbin,
         export_bins_by_tech,
-        cop
+        cop,
+        thermal_cop
         # s.site.min_resil_time_steps,
         # s.site.mg_tech_sizes_equal_grid_sizes,
         # s.site.node

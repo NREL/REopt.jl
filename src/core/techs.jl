@@ -48,6 +48,8 @@ function Techs(p::REoptInputs, s::BAUScenario)
     chp_techs = String[]
     techs_requiring_oper_res = String[]  
     techs_providing_oper_res = String[]
+    electric_chillers = String[]
+    absorption_chillers = String[]
 
     if p.s.generator.existing_kw > 0
         push!(all_techs, "Generator")
@@ -63,9 +65,10 @@ function Techs(p::REoptInputs, s::BAUScenario)
 
     if !isnothing(s.existing_chiller)
         push!(all_techs, "ExistingChiller")
-        push!(cooling_techs, "ExistingChiller")
+        push!(electric_chillers, "ExistingChiller")
     end
 
+    cooling_techs = union(electric_chillers, absorption_chillers)
     fuel_burning_techs = union(gentechs, boiler_techs, chp_techs)
     thermal_techs = union(heating_techs, boiler_techs, cooling_techs)
 
@@ -85,7 +88,9 @@ function Techs(p::REoptInputs, s::BAUScenario)
         thermal_techs,
         chp_techs,
         techs_requiring_oper_res,
-        techs_providing_oper_res
+        techs_providing_oper_res,
+        electric_chillers,
+        absorption_chillers
     )
 end
 
@@ -114,11 +119,14 @@ function Techs(s::Scenario)
     chp_techs = String[]
     techs_requiring_oper_res = String[] 
     techs_providing_oper_res = String[]
+    electric_chillers = String[]
+    absorption_chillers = String[]
 
     if s.wind.max_kw > 0
         push!(all_techs, "Wind")
         push!(elec, "Wind")
     end
+
     if s.generator.max_kw > 0
         push!(all_techs, "Generator")
         push!(gentechs, "Generator")
@@ -143,7 +151,12 @@ function Techs(s::Scenario)
 
     if !isnothing(s.existing_chiller)
         push!(all_techs, "ExistingChiller")
-        push!(cooling_techs, "ExistingChiller")
+        push!(electric_chillers, "ExistingChiller")
+    end
+
+    if !isnothing(s.absorption_chiller)
+        push!(all_techs, "AbsorptionChiller")
+        push!(absorption_chillers, "AbsorptionChiller")
     end
 
     if s.settings.off_grid_flag
@@ -151,6 +164,7 @@ function Techs(s::Scenario)
         techs_providing_oper_res = union(pvtechs, gentechs) # Currently, only PV and generator (and storage) provide operating reserves.
     end
 
+    cooling_techs = union(electric_chillers, absorption_chillers)
     thermal_techs = union(heating_techs, boiler_techs, chp_techs, cooling_techs)
     fuel_burning_techs = union(gentechs, boiler_techs, chp_techs)
 
@@ -170,7 +184,9 @@ function Techs(s::Scenario)
         thermal_techs,
         chp_techs,
         techs_requiring_oper_res, 
-        techs_providing_oper_res 
+        techs_providing_oper_res, 
+        electric_chillers,
+        absorption_chillers
     )
 end
 
