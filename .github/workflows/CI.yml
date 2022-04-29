@@ -18,7 +18,7 @@ jobs:
           version: ${{ matrix.julia-version }}
       - uses: julia-actions/julia-buildpkg@latest
       # - uses: mxschmitt/action-tmate@v3  # for interactive debugging
-      - run: julia --project=. -e 'using TestEnv; TestEnv.activate(); cd("test"); include("runtests.jl")'
+      - run: julia --project=. -e 'using TestEnv; TestEnv.activate(); Pkg.rm("Xpress"); cd("test"); include("runtests.jl")'
         shell: bash
 
   xpresstests:
