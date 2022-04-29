@@ -35,22 +35,22 @@ Note: the node number is an empty string if evaluating a single `Site`.
 
 Financial results:
 - `lcc` Optimal lifecycle cost
-- `lifecycle_om_costs_before_tax`
-- `year_one_om_costs_before_tax`
-- `lifecycle_om_costs_after_tax`
-- `year_one_om_costs_after_tax`
-- `lifecycle_capital_costs_plus_om` Capital cost for all technologies plus present value of operations and maintenance over anlaysis period
-- `lifecycle_capital_costs` Net capital costs for all technologies, in present value, including replacement costs and incentives.
-- `initial_capital_costs`
-- `initial_capital_costs_after_incentives`
-- `replacements_future_cost`
-- `replacements_present_cost`
-- `om_and_replacement_present_cost_after_tax`
-- `developer_om_and_replacement_present_cost_after_tax`
-- `lifecycle_fuel_costs_after_tax`
+- `lifecycle_om_costs_before_tax` Present value of all O&M costs, before tax.
+- `year_one_om_costs_before_tax` Year one O&M costs, before tax.
+- `lifecycle_om_costs_after_tax` Present value of all O&M costs, after tax.
+- `year_one_om_costs_after_tax` Year one O&M costs, after tax.
+- `lifecycle_capital_costs_plus_om` Capital cost for all technologies plus present value of operations and maintenance over anlaysis period. This value does not include offgrid_other_capital_costs.
+- `lifecycle_capital_costs` Net capital costs for all technologies, in present value, including replacement costs and incentives. This value does not include offgrid_other_capital_costs.
+- `initial_capital_costs` Up-front capital costs for all technologies, in present value, excluding replacement costs and incentives. This value does not include offgrid_other_capital_costs.
+- `initial_capital_costs_after_incentives` Up-front capital costs for all technologies, in present value, excluding replacement costs, and accounting for incentives. This value does not include offgrid_other_capital_costs.
+- `replacements_future_cost` Future cost of replacing storage and/or generator systems, after tax.
+- `replacements_present_cost` Present value cost of replacing storage and/or generator systems, after tax.
+- `om_and_replacement_present_cost_after_tax` Present value of all O&M and replacement costs, after tax.
+- `developer_om_and_replacement_present_cost_after_tax` Present value of all O&M and replacement costs incurred by developer, after tax.
+- `lifecycle_fuel_costs_after_tax` Present value of all fuel costs over the analysis period, after tax.
 - `lifecycle_offgrid_other_annual_costs_after_tax` Present value of offgrid_other_annual_costs over the analysis period, including tax deductions for owner. 
-- `lifecycle_offgrid_other_capital_costs` Equal to offgrid_other_capital_costs 
-- `offgrid_microgrid_lcoe_dollars_per_kwh`
+- `lifecycle_offgrid_other_capital_costs` Equal to offgrid_other_capital_costs with straight line depreciation applied over analysis period. The depreciation expense is assumed to reduce the owner's taxable income.
+- `offgrid_microgrid_lcoe_dollars_per_kwh` Levelized cost of electricity for modeled off-grid system.
 """
 function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
@@ -71,9 +71,9 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
         r["lifecycle_om_costs_after_tax"]
     r["lifecycle_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)])
     r["initial_capital_costs"] = initial_capex(m, p; _n=_n)
-    r["initial_capital_costs_after_incentives"] = initial_capex_after_incentives(m, p, r["lifecycle_capital_costs"]; _n=_n)
-
     future_replacement_cost, present_replacement_cost = replacement_costs_future_and_present(m, p; _n=_n)
+    r["initial_capital_costs_after_incentives"] = r["lifecycle_capital_costs"] / p.third_party_factor - present_replacement_cost
+
     r["replacements_future_cost"] = future_replacement_cost 
     r["replacements_present_cost"] = present_replacement_cost 
     r["om_and_replacement_present_cost_after_tax"] = present_replacement_cost + r["lifecycle_om_costs_after_tax"]
@@ -196,44 +196,14 @@ end
 
 
 """
-    initial_capex_after_incentives(m::JuMP.AbstractModel, p::REoptInputs, lifecycle_capital_costs::Float64; _n="")
-
-The lifecycle_capital_costs output is the initial capex after incentives, except it includes the battery
-replacement cost in present value. So we calculate the initial_capex_after_incentives as lifecycle_capital_costs
-minus the battery replacement cost in present value.
-Note that the owner_discount_pct and owner_tax_pct are set to the offtaker_discount_pct and offtaker_tax_pct
-respectively when third_party_ownership is False.
-"""
-function initial_capex_after_incentives(m::JuMP.AbstractModel, p::REoptInputs, lifecycle_capital_costs::Float64; _n="")
-    initial_capex_after_incentives = lifecycle_capital_costs / p.third_party_factor
-
-    for b in p.s.storage.types.all
-
-        if !(:inverter_replacement_year in fieldnames(typeof(p.s.storage.attr[b])))
-            continue
-        end
-
-        pwf_inverter = 1 / ((1 + p.s.financial.owner_discount_pct)^p.s.storage.attr[b].inverter_replacement_year)
-
-        pwf_storage  = 1 / ((1 + p.s.financial.owner_discount_pct)^p.s.storage.attr[b].battery_replacement_year)
-
-        inverter_future_cost = p.s.storage.attr[b].replace_cost_per_kw * value.(m[Symbol("dvStoragePower"*_n)])[b]
-
-        storage_future_cost = p.s.storage.attr[b].replace_cost_per_kwh * value.(m[Symbol("dvStorageEnergy"*_n)])[b]
-
-        # NOTE these initial costs include the tax benefit available to commercial entities
-        initial_capex_after_incentives -= inverter_future_cost * pwf_inverter * (1 - p.s.financial.owner_tax_pct)
-        initial_capex_after_incentives -= storage_future_cost  * pwf_storage  * (1 - p.s.financial.owner_tax_pct)
-    end
-
-    return initial_capex_after_incentives
-end
-
-
-"""
     replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 
-returns two values: the future and present costs of replacing all storage systems
+Replacement costs for storage and generator are not considered if the replacement year is >= the analysis period.
+NOTE the owner_discount_pct and owner_tax_pct are set to the offtaker_discount_pct and offtaker_tax_pct 
+ respectively when third_party_ownership is False.
+NOTE these replacement costs include the tax benefit available to commercial entities (i.e., assume replacement costs are tax deductible)
+
+returns two values: the future and present costs of replacing all storage and generator systems
 """
 function replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     future_cost = 0
