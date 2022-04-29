@@ -89,6 +89,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         for key in keys_to_check
             if haskey(d, key)
                 @error "Currently, only PV, ElectricStorage, and Generator can be modeled when off_grid_flag is true. Cannot model $key."
+                return nothing 
             end
         end
     end

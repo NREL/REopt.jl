@@ -15,15 +15,16 @@
         "installed_cost_per_kw": 2000,
         "tilt": 34.579,
         "federal_rebate_per_kw": 350,
-        "operating_reserve_required_pct": 0.25
+        "operating_reserve_required_pct": 0.25,
+        "production_incentive_per_kwh": 0.05
     },
     "Generator": {
         "installed_cost_per_kw": 700,
-        "min_kw": 500,
-        "max_kw": 500,
+        "min_kw": 100,
+        "max_kw": 100,
         "replacement_year": 10,
         "replace_cost_per_kw": 700,
-        "fuel_intercept_gal_per_hr": 0.0048,
+        "fuel_intercept_gal_per_hr": 0.0,
         "fuel_slope_gal_per_kwh": 0.076
     },
     "ElectricLoad": {
