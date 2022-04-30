@@ -38,7 +38,7 @@ function ElectricUtility(;
     emissions_factor_series_lb_SO2_per_kwh::Union{Float64,Array{<:Real,1}} = Float64[],
     emissions_factor_series_lb_PM25_per_kwh::Union{Float64,Array{<:Real,1}} = Float64[],
     emissions_factor_CO2_decrease_pct::Float64 = 0.01174,
-    emissions_factor_NOX_decrease_pct::Float64 = 0.01174,
+    emissions_factor_NOx_decrease_pct::Float64 = 0.01174,
     emissions_factor_SO2_decrease_pct::Float64 = 0.01174,
     emissions_factor_PM25_decrease_pct::Float64 = 0.01174,
     outage_start_time_step::Int=0  # for modeling a single outage, with critical load spliced into the baseline load ...
@@ -67,7 +67,7 @@ struct ElectricUtility
     emissions_factor_series_lb_SO2_per_kwh
     emissions_factor_series_lb_PM25_per_kwh
     emissions_factor_CO2_decrease_pct
-    emissions_factor_NOX_decrease_pct
+    emissions_factor_NOx_decrease_pct
     emissions_factor_SO2_decrease_pct
     emissions_factor_PM25_decrease_pct
     outage_start_time_step
@@ -89,7 +89,7 @@ struct ElectricUtility
         emissions_factor_series_lb_SO2_per_kwh::Union{Float64,Array{<:Real,1}} = Float64[],
         emissions_factor_series_lb_PM25_per_kwh::Union{Float64,Array{<:Real,1}} = Float64[],
         emissions_factor_CO2_decrease_pct::Float64 = 0.01174,
-        emissions_factor_NOX_decrease_pct::Float64 = 0.01174,
+        emissions_factor_NOx_decrease_pct::Float64 = 0.01174,
         emissions_factor_SO2_decrease_pct::Float64 = 0.01174,
         emissions_factor_PM25_decrease_pct::Float64 = 0.01174,
         outage_start_time_step::Int=0,  # for modeling a single outage, with critical load spliced into the baseline load ...
@@ -195,7 +195,7 @@ struct ElectricUtility
             emissions_series_dict["SO2"],
             emissions_series_dict["PM25"],
             emissions_factor_CO2_decrease_pct,
-            emissions_factor_NOX_decrease_pct,
+            emissions_factor_NOx_decrease_pct,
             emissions_factor_SO2_decrease_pct,
             emissions_factor_PM25_decrease_pct,
             outage_start_time_step,

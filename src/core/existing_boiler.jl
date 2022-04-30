@@ -35,7 +35,7 @@ struct ExistingBoiler <: AbstractThermalTech  # useful to create AbstractHeating
     fuel_type::String
     fuel_renewable_energy_pct::Union{Missing,Float64}
     emissions_factor_lb_CO2_per_mmbtu::Union{Missing,Float64}
-    emissions_factor_lb_NOX_per_mmbtu::Union{Missing,Float64}
+    emissions_factor_lb_NOx_per_mmbtu::Union{Missing,Float64}
     emissions_factor_lb_SO2_per_mmbtu::Union{Missing,Float64}
     emissions_factor_lb_PM25_per_mmbtu::Union{Missing,Float64}
 end
@@ -61,7 +61,7 @@ function ExistingBoiler(;
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     fuel_renewable_energy_pct::Union{Missing,Float64} = missing,
     emissions_factor_lb_CO2_per_mmbtu::Union{Missing,Float64} = missing,
-    emissions_factor_lb_NOX_per_mmbtu::Union{Missing,Float64} = missing,
+    emissions_factor_lb_NOx_per_mmbtu::Union{Missing,Float64} = missing,
     emissions_factor_lb_SO2_per_mmbtu::Union{Missing,Float64} = missing,
     emissions_factor_lb_PM25_per_mmbtu::Union{Missing,Float64} = missing,
     time_steps_per_hour::Int = 1
@@ -79,7 +79,7 @@ function ExistingBoiler(;
     # can_supply_steam_turbine::Bool,
     fuel_renewable_energy_pct::Union{Missing,Float64} = missing,
     emissions_factor_lb_CO2_per_mmbtu::Union{Missing,Float64} = missing,
-    emissions_factor_lb_NOX_per_mmbtu::Union{Missing,Float64} = missing,
+    emissions_factor_lb_NOx_per_mmbtu::Union{Missing,Float64} = missing,
     emissions_factor_lb_SO2_per_mmbtu::Union{Missing,Float64} = missing,
     emissions_factor_lb_PM25_per_mmbtu::Union{Missing,Float64} = missing,
     time_steps_per_hour::Int = 1
@@ -122,7 +122,7 @@ function ExistingBoiler(;
         fuel_type,
         fuel_renewable_energy_pct,
         emissions_factor_lb_CO2_per_mmbtu,
-        emissions_factor_lb_NOX_per_mmbtu,
+        emissions_factor_lb_NOx_per_mmbtu,
         emissions_factor_lb_SO2_per_mmbtu,
         emissions_factor_lb_PM25_per_mmbtu
     )
