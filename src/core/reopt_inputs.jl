@@ -634,7 +634,7 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
                 Dict(emissions_type*"_grid"=>annuity_two_escalation_rates(
                             s.financial.analysis_years, 
                             eval(Meta.parse("s.financial.$(emissions_type)_cost_escalation_pct")), 
-                            -1 * eval(Meta.parse("s.electric_utility.emissions_factor_$(emissions_type)_decrease_pct")), 
+                            -1.0 * eval(Meta.parse("s.electric_utility.emissions_factor_$(emissions_type)_decrease_pct")), 
                             s.financial.offtaker_discount_pct)
                 )
         )
