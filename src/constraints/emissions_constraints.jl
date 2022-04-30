@@ -29,11 +29,11 @@
 # *********************************************************************************
 
 function add_emissions_constraints(m,p)
-	if !isnothing(p.co2_emissions_reduction_min_pct)
-		@constraint(m, MinEmissionsReductionCon, m[:Lifecycle_Emissions_Lbs_CO2] <= (1-p.s.site.co2_emissions_reduction_min_pct)*m[:Lifecycle_Emissions_Lbs_CO2_BAU])
+	if !isnothing(p.CO2_emissions_reduction_min_pct)
+		@constraint(m, MinEmissionsReductionCon, m[:Lifecycle_Emissions_Lbs_CO2] <= (1-p.s.site.CO2_emissions_reduction_min_pct)*m[:Lifecycle_Emissions_Lbs_CO2_BAU])
 	end
-	if !isnothing(p.s.site.co2_emissions_reduction_max_pct)
-		@constraint(m, MaxEmissionsReductionCon, m[:Lifecycle_Emissions_Lbs_CO2] >= (1-p.s.site.co2_emissions_reduction_max_pct)*m[:Lifecycle_Emissions_Lbs_CO2_BAU])
+	if !isnothing(p.s.site.CO2_emissions_reduction_max_pct)
+		@constraint(m, MaxEmissionsReductionCon, m[:Lifecycle_Emissions_Lbs_CO2] >= (1-p.s.site.CO2_emissions_reduction_max_pct)*m[:Lifecycle_Emissions_Lbs_CO2_BAU])
 	end
 end
 
@@ -143,10 +143,10 @@ function add_lifecycle_emissions_calcs(m,p)
 	m[:Lifecycle_Emissions_Lbs_PM25] = m[:Lifecycle_Emissions_Lbs_PM25_grid_net_if_selected] + m[:Lifecycle_Emissions_Lbs_PM25_fuelburn]
 
 	# Emissions costs
-	m[:Lifecycle_Emissions_Cost_CO2] = p.s.financial.co2_cost_per_tonne / TONNES_TO_LBS * ( p.pwf_emissions_cost["CO2_grid"] * m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2] + p.pwf_emissions_cost["CO2_onsite"] * m[:yr1_emissions_onsite_fuel_lbs_CO2])
-	m[:Lifecycle_Emissions_Cost_NOx] = (p.pwf_emissions_cost["NOx_grid"] * p.s.financial.nox_grid_cost_per_tonne * m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx] + p.pwf_emissions_cost["NOx_onsite"] * p.s.financial.nox_onsite_fuelburn_cost_per_tonne * m[:yr1_emissions_onsite_fuel_lbs_NOx]) / TONNES_TO_LBS
-	m[:Lifecycle_Emissions_Cost_SO2] = (p.pwf_emissions_cost["SO2_grid"] * p.s.financial.so2_grid_cost_per_tonne * m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2] + p.pwf_emissions_cost["SO2_onsite"] * p.s.financial.so2_onsite_fuelburn_cost_per_tonne * m[:yr1_emissions_onsite_fuel_lbs_SO2]) / TONNES_TO_LBS
-	m[:Lifecycle_Emissions_Cost_PM25] =  (p.pwf_emissions_cost["PM25_grid"] * p.s.financial.pm25_grid_cost_per_tonne * m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25] + p.pwf_emissions_cost["PM25_onsite"] * p.s.financial.pm25_onsite_fuelburn_cost_per_tonne * m[:yr1_emissions_onsite_fuel_lbs_PM25]) / TONNES_TO_LBS
+	m[:Lifecycle_Emissions_Cost_CO2] = p.s.financial.CO2_cost_per_tonne / TONNES_TO_LBS * ( p.pwf_emissions_cost["CO2_grid"] * m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2] + p.pwf_emissions_cost["CO2_onsite"] * m[:yr1_emissions_onsite_fuel_lbs_CO2])
+	m[:Lifecycle_Emissions_Cost_NOx] = (p.pwf_emissions_cost["NOx_grid"] * p.s.financial.NOx_grid_cost_per_tonne * m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx] + p.pwf_emissions_cost["NOx_onsite"] * p.s.financial.NOx_onsite_fuelburn_cost_per_tonne * m[:yr1_emissions_onsite_fuel_lbs_NOx]) / TONNES_TO_LBS
+	m[:Lifecycle_Emissions_Cost_SO2] = (p.pwf_emissions_cost["SO2_grid"] * p.s.financial.SO2_grid_cost_per_tonne * m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2] + p.pwf_emissions_cost["SO2_onsite"] * p.s.financial.SO2_onsite_fuelburn_cost_per_tonne * m[:yr1_emissions_onsite_fuel_lbs_SO2]) / TONNES_TO_LBS
+	m[:Lifecycle_Emissions_Cost_PM25] =  (p.pwf_emissions_cost["PM25_grid"] * p.s.financial.PM25_grid_cost_per_tonne * m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25] + p.pwf_emissions_cost["PM25_onsite"] * p.s.financial.PM25_onsite_fuelburn_cost_per_tonne * m[:yr1_emissions_onsite_fuel_lbs_PM25]) / TONNES_TO_LBS
 	m[:Lifecycle_Emissions_Cost_Health] = m[:Lifecycle_Emissions_Cost_NOx] + m[:Lifecycle_Emissions_Cost_SO2] + m[:Lifecycle_Emissions_Cost_PM25]
 
 end
