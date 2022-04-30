@@ -663,21 +663,41 @@ end
 Convert LCP (x, y) in CAMx 148x112 grid to Geodetic (lon, lat)
 """
 function l2g(x::Float64, y::Float64; inverse::Bool=false, datum::String="NAD83")
-    LCP_US = "+proj=lcc +no_defs +a=6370000.0 +b=6370000.0 +lon_0=97w +lat_0=40n +lat_1=33n +lat_2=45n +x_0=2736000.0 +y_0=2088000.0 +to_wgs=0,0,0 +units=m"
+    # LCP_US = "+proj=lcc +no_defs +a=6370000.0 +b=6370000.0 +lon_0=97w +lat_0=40n +lat_1=33n +lat_2=45n +x_0=2736000.0 +y_0=2088000.0 +to_wgs=0,0,0 +units=m"
+    # if datum == "NAD83"
+    #     datum = "+proj=longlat +ellps=GRS80 +datum=NAD83 +no_defs +towgs84=0,0,0"
+    #     # datum = "epsg:4269 +proj=longlat +ellps=GRS80 +datum=NAD83 +no_defs +towgs84=0,0,0"
+    # elseif datum == "WGS84"
+    #     datum = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0"
+    #     # datum = "epsg:4326 +proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0"
+    # end
+    # if inverse
+    #     trans = Proj4.Transformation(datum, LCP_US, always_xy=true)
+    #     return (trans([x y]) ./ 36000.0) .+ [1 1]
+    # else
+    #     trans = Proj4.Transformation(LCP_US, datum, always_xy=true)
+    #     return trans([(x-1)*36e3 (y-1)*36e3])
+    # end
+
+    LCP_US = ArchGDAL.importPROJ4("+proj=lcc +no_defs +a=6370000.0 +b=6370000.0 +lon_0=97w +lat_0=40n +lat_1=33n +lat_2=45n +x_0=2736000.0 +y_0=2088000.0 +to_wgs=0,0,0 +units=m")
     if datum == "NAD83"
-        datum = "+proj=longlat +ellps=GRS80 +datum=NAD83 +no_defs +towgs84=0,0,0"
-        # datum = "epsg:4269 +proj=longlat +ellps=GRS80 +datum=NAD83 +no_defs +towgs84=0,0,0"
+        datum = ArchGDAL.importEPSG(4269)
     elseif datum == "WGS84"
-        datum = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0"
-        # datum = "epsg:4326 +proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0"
+        datum = ArchGDAL.importEPSG(4326)
     end
     if inverse
-        trans = Proj4.Transformation(datum, LCP_US, always_xy=true)
-        return (trans([x y]) ./ 36000.0) .+ [1 1]
+        point = ArchGDAL.createpoint(y, x)
+        ArchGDAL.createcoordtrans(datum, LCP_US) do transform
+            ArchGDAL.transform!(point, transform)
+        end
+        point = ArchGDAL.createpoint(ArchGDAL.gety(point, 0) / 36000.0 + 1, ArchGDAL.getx(point, 0) / 36000.0 + 1)
     else
-        trans = Proj4.Transformation(LCP_US, datum, always_xy=true)
-        return trans([(x-1)*36e3 (y-1)*36e3])
+        point = ArchGDAL.createpoint((y-1)*36e3, (x-1)*36e3)
+        ArchGDAL.createcoordtrans(LCP_US, datum) do transform
+            ArchGDAL.transform!(point, transform)
+        end
     end
+    return [ArchGDAL.getx(point, 0) ArchGDAL.gety(point, 0)]
 end
 
 """
