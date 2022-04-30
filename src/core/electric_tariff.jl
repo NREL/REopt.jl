@@ -232,10 +232,9 @@ function ElectricTariff(;
     end
 
     if !isnothing(u)  # use URDBrate
-
         if NEM
             t = get_tier_with_lowest_energy_rate(u)
-            nem_rate = [-0.999 * x for x in u.energy_rates[t,:]]
+            nem_rate = [-0.999 * x for x in u.energy_rates[:,t]]
         end
 
         energy_rates = u.energy_rates
@@ -447,7 +446,7 @@ function remove_tiers_from_urdb_rate(u::URDBrate)
     if length(u.energy_tier_limits) > 1
         @warn "Energy rate contains tiers. Using the first tier!"
     end
-    elec_rates = vec(u.energy_rates[1,:])
+    elec_rates = vec(u.energy_rates[:,1])
 
     if u.n_monthly_demand_tiers > 1
         @warn "Monthly demand rate contains tiers. Using the last tier!"
