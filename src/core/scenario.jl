@@ -261,7 +261,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         existing_boiler = ExistingBoiler(; boiler_inputs...)
         set_missing_emissions_factors_to_fuel_defaults(existing_boiler)
     else
-        existing_boiler = ExistingBoiler()
+        existing_boiler = nothing
     end
 
     chp = nothing
@@ -403,6 +403,7 @@ function set_missing_emissions_factors_to_fuel_defaults(tech::AbstractFuelBurnin
         "propane"=>0.009906836,
         "diesel_oil"=>0.0
     )
+    @info tech.fuel_renewable_energy_pct
     if ismissing(tech.fuel_renewable_energy_pct)
         tech.fuel_renewable_energy_pct = fuel_renewable_energy_pct[tech.fuel_type]
     end
