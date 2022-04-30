@@ -48,10 +48,7 @@
     "critical_loads_kw_is_net": false,
     "critical_load_pct": 0.8,
     "loads_kw_is_net": false,
-    "loads_kw": [],
-    "monthly_totals_kwh": [],
     "year": 2017,
-    "critical_loads_kw": [],
     "doe_reference_name": "MidriseApartment",
     "annual_kwh": 100000
   },
@@ -1431,9 +1428,7 @@
           }
         ]
       ]
-    },
-    "blended_annual_demand_rate": 0.0,
-    "blended_annual_energy_rate": 0.0
+    }
   },
   "Financial": {
     "elec_cost_escalation_pct": 0.026,
