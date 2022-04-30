@@ -113,6 +113,7 @@ include("constraints/thermal_tech_constraints.jl")
 include("constraints/chp_constraints.jl")
 include("constraints/battery_degradation.jl")
 include("constraints/renewable_energy_constraints.jl")
+include("constraints/emissions_constraints.jl")
 
 include("mpc/structs.jl")
 include("mpc/scenario.jl")
