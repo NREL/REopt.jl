@@ -633,44 +633,26 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
         merge!(pwf_emissions_cost, 
                 Dict(emissions_type*"_grid"=>annuity_two_escalation_rates(
                             s.financial.analysis_years, 
-                            eval(Meta.parse("s.financial.$(emissions_type)_cost_escalation_pct")), 
-                            -1.0 * eval(Meta.parse("s.electric_utility.emissions_factor_$(emissions_type)_decrease_pct")), 
+                            getproperty(s.financial, Symbol("$(emissions_type)_cost_escalation_pct")),  
+                            -1.0 * getproperty(s.electric_utility, Symbol("emissions_factor_$(emissions_type)_decrease_pct")),
                             s.financial.offtaker_discount_pct)
                 )
         )
         merge!(pwf_emissions_cost, 
                 Dict(emissions_type*"_onsite"=>annuity(
                             s.financial.analysis_years, 
-                            eval(Meta.parse("s.financial.$(emissions_type)_cost_escalation_pct")), 
+                            getproperty(s.financial, Symbol("$(emissions_type)_cost_escalation_pct")), 
                             s.financial.offtaker_discount_pct)
                 )
         )
         merge!(pwf_grid_emissions_lbs, 
                 Dict(emissions_type=>annuity(
                             s.financial.analysis_years, 
-                            -1 * eval("s.electric_utility.emissions_factor_$(emissions_type)_decrease_pct"), 
+                            -1.0 * getproperty(s.electric_utility, Symbol("emissions_factor_$(emissions_type)_decrease_pct")),
                             0.0)
                 )
         )
     end
-    # TODO: delete below if above code works
-    # pwf_emissions_cost = [
-    #     "CO2_grid" => annuity_two_escalation_rates(sf.analysis_years, sf.co2_cost_escalation_pct, -1 * self.elec_tariff.emissions_factor_CO2_pct_decrease, sf.offtaker_discount_pct),
-    #     "CO2_onsite" => annuity(sf.analysis_years, sf.co2_cost_escalation_pct, sf.offtaker_discount_pct),
-    #     "NOx_grid" => annuity_two_escalation_rates(sf.analysis_years, sf.nox_cost_escalation_pct, -1 * self.elec_tariff.emissions_factor_NOx_pct_decrease, sf.offtaker_discount_pct),
-    #     "NOx_onsite" => annuity(sf.analysis_years, sf.nox_cost_escalation_pct, sf.offtaker_discount_pct),
-    #     "SO2_grid" => annuity_two_escalation_rates(sf.analysis_years, sf.so2_cost_escalation_pct, -1 * self.elec_tariff.emissions_factor_SO2_pct_decrease, sf.offtaker_discount_pct),
-    #     "SO2_onsite" => annuity(sf.analysis_years, sf.so2_cost_escalation_pct, sf.offtaker_discount_pct),
-    #     "PM25_grid" => annuity_two_escalation_rates(sf.analysis_years, sf.pm25_cost_escalation_pct, -1 * self.elec_tariff.emissions_factor_PM25_pct_decrease, sf.offtaker_discount_pct),
-    #     "PM25_onsite" => annuity(sf.analysis_years, sf.pm25_cost_escalation_pct, sf.offtaker_discount_pct)
-    # ]
-
-    # pwf_grid_emissions_lbs = [
-    #     "CO2" => annuity(sf.analysis_years, -1 * self.elec_tariff.emissions_factor_CO2_pct_decrease, 0.0), # used to calculate total grid CO2 lbs
-    #     "NOx" => annuity(sf.analysis_years, -1 * self.elec_tariff.emissions_factor_NOx_pct_decrease, 0.0),
-    #     "SO2" => annuity(sf.analysis_years, -1 * self.elec_tariff.emissions_factor_SO2_pct_decrease, 0.0),
-    #     "PM25" => annuity(sf.analysis_years, -1 * self.elec_tariff.emissions_factor_PM25_pct_decrease, 0.0),
-    # ]
 
     if s.financial.third_party_ownership
         pwf_offtaker = annuity(s.financial.analysis_years, 0.0, s.financial.offtaker_discount_pct)
