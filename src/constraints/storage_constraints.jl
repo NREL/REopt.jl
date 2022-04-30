@@ -122,7 +122,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
 
     if p.s.storage.attr[b].minimum_avg_soc_fraction > 0
         avg_soc = sum(m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps) /
-                   (8760. / p.hours_per_timestep)
+                   (8760. / p.hours_per_time_step)
         @constraint(m, avg_soc >= p.s.storage.attr[b].minimum_avg_soc_fraction * 
             sum(m[Symbol("dvStorageEnergy"*_n)][b])
         )
