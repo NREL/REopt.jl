@@ -40,8 +40,8 @@ function Site(;
     roof_squarefeet::Union{Float64, Nothing} = nothing,
     min_resil_timesteps::Int=0,
     mg_tech_sizes_equal_grid_sizes::Bool = true,
-    co2_emissions_reduction_min_pct::Float64 = 0.0,
-    co2_emissions_reduction_max_pct::Float64 = 1.0,
+    CO2_emissions_reduction_min_pct::Float64 = 0.0,
+    CO2_emissions_reduction_max_pct::Float64 = 1.0,
     bau_emissions_lb_CO2_per_year::Union{Float64, Nothing} = nothing,
     bau_emissions_lb_NOx_per_year::Union{Float64, Nothing} = nothing,
     bau_emissions_lb_SO2_per_year::Union{Float64, Nothing} = nothing,
@@ -67,8 +67,8 @@ mutable struct Site
     roof_squarefeet
     min_resil_timesteps
     mg_tech_sizes_equal_grid_sizes
-    co2_emissions_reduction_min_pct
-    co2_emissions_reduction_max_pct
+    CO2_emissions_reduction_min_pct
+    CO2_emissions_reduction_max_pct
     bau_emissions_lb_CO2_per_year
     bau_emissions_lb_NOx_per_year
     bau_emissions_lb_SO2_per_year
@@ -89,8 +89,8 @@ mutable struct Site
         roof_squarefeet::Union{Float64, Nothing} = nothing,
         min_resil_timesteps::Int=0,
         mg_tech_sizes_equal_grid_sizes::Bool = true,
-        co2_emissions_reduction_min_pct::Float64 = 0.0,
-        co2_emissions_reduction_max_pct::Float64 = 1.0,
+        CO2_emissions_reduction_min_pct::Float64 = 0.0,
+        CO2_emissions_reduction_max_pct::Float64 = 1.0,
         bau_emissions_lb_CO2_per_year::Union{Float64, Nothing} = nothing,
         bau_emissions_lb_NOx_per_year::Union{Float64, Nothing} = nothing,
         bau_emissions_lb_SO2_per_year::Union{Float64, Nothing} = nothing,
@@ -119,8 +119,8 @@ mutable struct Site
             error("renewable_electricity_min_pct must be less than renewable_electricity_max_pct")
         end
         new(latitude, longitude, land_acres, roof_squarefeet, min_resil_timesteps, 
-            mg_tech_sizes_equal_grid_sizes, co2_emissions_reduction_min_pct, 
-            co2_emissions_reduction_max_pct, bau_emissions_lb_CO2_per_year,
+            mg_tech_sizes_equal_grid_sizes, CO2_emissions_reduction_min_pct, 
+            CO2_emissions_reduction_max_pct, bau_emissions_lb_CO2_per_year,
             bau_emissions_lb_NOx_per_year, bau_emissions_lb_SO2_per_year,
             bau_emissions_lb_PM25_per_year, bau_grid_emissions_lb_CO2_per_year, 
             bau_grid_emissions_lb_NOx_per_year, bau_grid_emissions_lb_SO2_per_year, 

@@ -47,17 +47,17 @@ function Financial(;
     microgrid_upgrade_cost_pct::Float64 = 0.3,
     macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
     macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
-    co2_cost_per_tonne::Union{Missing,Float64} = 51.0,
-    co2_cost_escalation_pct::Union{Missing,Float64} = 0.042173,
-    nox_grid_cost_per_tonne::Union{Missing,Float64} = missing,
-    so2_grid_cost_per_tonne::Union{Missing,Float64} = missing,
-    pm25_grid_cost_per_tonne::Union{Missing,Float64} = missing,
-    nox_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
-    so2_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
-    pm25_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
-    nox_cost_escalation_pct::Union{Missing,Float64} = missing,
-    so2_cost_escalation_pct::Union{Missing,Float64} = missing,
-    pm25_cost_escalation_pct::Union{Missing,Float64} = missing,
+    CO2_cost_per_tonne::Union{Missing,Float64} = 51.0,
+    CO2_cost_escalation_pct::Union{Missing,Float64} = 0.042173,
+    NOx_grid_cost_per_tonne::Union{Missing,Float64} = missing,
+    SO2_grid_cost_per_tonne::Union{Missing,Float64} = missing,
+    PM25_grid_cost_per_tonne::Union{Missing,Float64} = missing,
+    NOx_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
+    SO2_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
+    PM25_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
+    NOx_cost_escalation_pct::Union{Missing,Float64} = missing,
+    SO2_cost_escalation_pct::Union{Missing,Float64} = missing,
+    PM25_cost_escalation_pct::Union{Missing,Float64} = missing,
     latitude::Real,
     longitude::Real
 )
@@ -87,17 +87,17 @@ struct Financial
     microgrid_upgrade_cost_pct::Float64
     macrs_five_year::Array{Float64,1}
     macrs_seven_year::Array{Float64,1}
-    co2_cost_per_tonne::Union{Missing,Float64}
-    co2_cost_escalation_pct::Union{Missing,Float64}
-    nox_grid_cost_per_tonne::Union{Missing,Float64}
-    so2_grid_cost_per_tonne::Union{Missing,Float64}
-    pm25_grid_cost_per_tonne::Union{Missing,Float64}
-    nox_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64}
-    so2_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64}
-    pm25_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64}
-    nox_cost_escalation_pct::Union{Missing,Float64}
-    so2_cost_escalation_pct::Union{Missing,Float64}
-    pm25_cost_escalation_pct::Union{Missing,Float64}
+    CO2_cost_per_tonne::Union{Missing,Float64}
+    CO2_cost_escalation_pct::Union{Missing,Float64}
+    NOx_grid_cost_per_tonne::Union{Missing,Float64}
+    SO2_grid_cost_per_tonne::Union{Missing,Float64}
+    PM25_grid_cost_per_tonne::Union{Missing,Float64}
+    NOx_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64}
+    SO2_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64}
+    PM25_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64}
+    NOx_cost_escalation_pct::Union{Missing,Float64}
+    SO2_cost_escalation_pct::Union{Missing,Float64}
+    PM25_cost_escalation_pct::Union{Missing,Float64}
 
     function Financial(;
         om_cost_escalation_pct::Float64 = 0.025,
@@ -114,17 +114,17 @@ struct Financial
         microgrid_upgrade_cost_pct::Float64 = 0.3,
         macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
         macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
-        co2_cost_per_tonne::Float64 = 51.0,
-        co2_cost_escalation_pct::Float64 = 0.042173,
-        nox_grid_cost_per_tonne::Union{Missing,Float64} = missing,
-        so2_grid_cost_per_tonne::Union{Missing,Float64} = missing,
-        pm25_grid_cost_per_tonne::Union{Missing,Float64} = missing,
-        nox_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
-        so2_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
-        pm25_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
-        nox_cost_escalation_pct::Union{Missing,Float64} = missing,
-        so2_cost_escalation_pct::Union{Missing,Float64} = missing,
-        pm25_cost_escalation_pct::Union{Missing,Float64} = missing,
+        CO2_cost_per_tonne::Float64 = 51.0,
+        CO2_cost_escalation_pct::Float64 = 0.042173,
+        NOx_grid_cost_per_tonne::Union{Missing,Float64} = missing,
+        SO2_grid_cost_per_tonne::Union{Missing,Float64} = missing,
+        PM25_grid_cost_per_tonne::Union{Missing,Float64} = missing,
+        NOx_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
+        SO2_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
+        PM25_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
+        NOx_cost_escalation_pct::Union{Missing,Float64} = missing,
+        SO2_cost_escalation_pct::Union{Missing,Float64} = missing,
+        PM25_cost_escalation_pct::Union{Missing,Float64} = missing,
         latitude::Real,
         longitude::Real
     )
@@ -136,47 +136,47 @@ struct Financial
         grid_costs = easiur_costs(latitude, longitude, "grid")
         onsite_costs = easiur_costs(latitude, longitude, "onsite")
         escalation_rates = easiur_escalation_rates(latitude, longitude, om_cost_escalation_pct)
-        if isnothing(nox_grid_cost_per_tonne)
-            nox_grid_cost_per_tonne = grid_costs["NOx"]
+        if isnothing(NOx_grid_cost_per_tonne)
+            NOx_grid_cost_per_tonne = grid_costs["NOx"]
         end
-        if isnothing(so2_grid_cost_per_tonne)
-            so2_grid_cost_per_tonne = grid_costs["SO2"]
+        if isnothing(SO2_grid_cost_per_tonne)
+            SO2_grid_cost_per_tonne = grid_costs["SO2"]
         end
-        if isnothing(pm25_grid_cost_per_tonne)
-            pm25_grid_cost_per_tonne = grid_costs["PM25"]
+        if isnothing(PM25_grid_cost_per_tonne)
+            PM25_grid_cost_per_tonne = grid_costs["PM25"]
         end
-        if isnothing(nox_onsite_fuelburn_cost_per_tonne)
-            nox_onsite_fuelburn_cost_per_tonne = onsite_costs["NOx"]
+        if isnothing(NOx_onsite_fuelburn_cost_per_tonne)
+            NOx_onsite_fuelburn_cost_per_tonne = onsite_costs["NOx"]
         end
-        if isnothing(so2_onsite_fuelburn_cost_per_tonne)
-            so2_onsite_fuelburn_cost_per_tonne = onsite_costs["SO2"]
+        if isnothing(SO2_onsite_fuelburn_cost_per_tonne)
+            SO2_onsite_fuelburn_cost_per_tonne = onsite_costs["SO2"]
         end
-        if isnothing(pm25_onsite_fuelburn_cost_per_tonne)
-            pm25_onsite_fuelburn_cost_per_tonne = onsite_costs["PM25"]
+        if isnothing(PM25_onsite_fuelburn_cost_per_tonne)
+            PM25_onsite_fuelburn_cost_per_tonne = onsite_costs["PM25"]
         end
-        if isnothing(nox_cost_escalation_pct)
-            nox_cost_escalation_pct = escalation_rates["NOx"]
+        if isnothing(NOx_cost_escalation_pct)
+            NOx_cost_escalation_pct = escalation_rates["NOx"]
         end
-        if isnothing(so2_cost_escalation_pct)
-            so2_cost_escalation_pct = escalation_rates["SO2"]
+        if isnothing(SO2_cost_escalation_pct)
+            SO2_cost_escalation_pct = escalation_rates["SO2"]
         end
-        if isnothing(pm25_cost_escalation_pct)
-            pm25_cost_escalation_pct = escalation_rates["PM25"]
+        if isnothing(PM25_cost_escalation_pct)
+            PM25_cost_escalation_pct = escalation_rates["PM25"]
         end
         #TODO factor above code by pollutant (attempt below gave UndefVarError on eval() calls)
         # for pollutant in ["NOx", "SO2", "PM25"]
-        #     grid_field_name = "$(lowercase(pollutant))_grid_cost_per_tonne"
+        #     grid_field_name = "$(pollutant)_grid_cost_per_tonne"
         #     if isnothing(Symbol(grid_field_name))
         #         Symbol(grid_field_name) = grid_costs[pollutant]
         #     end
         #     # if eval(Meta.parse("isnothing($(grid_field_name))"))
         #     #     eval(Meta.parse("$(grid_field_name) = grid_costs[pollutant]"))
         #     # end
-        #     onsite_field_name = "$(lowercase(pollutant))_onsite_fuelburn_cost_per_tonne"
+        #     onsite_field_name = "$(pollutant)_onsite_fuelburn_cost_per_tonne"
         #     if eval(Meta.parse("isnothing($(onsite_field_name))"))
         #         eval(Meta.parse("$(onsite_field_name) = onsite_costs[pollutant]"))
         #     end
-        #     escalation_field_name = "$(lowercase(pollutant))_cost_escalation_pct"
+        #     escalation_field_name = "$(pollutant)_cost_escalation_pct"
         #     if eval(Meta.parse("isnothing($(escalation_field_name))"))
         #         eval(Meta.parse("$(escalation_field_name) = escalation_rates[pollutant]"))
         #     end
@@ -197,17 +197,17 @@ struct Financial
             microgrid_upgrade_cost_pct,
             macrs_five_year,
             macrs_seven_year,
-            co2_cost_per_tonne,
-            co2_cost_escalation_pct,
-            nox_grid_cost_per_tonne,
-            so2_grid_cost_per_tonne,
-            pm25_grid_cost_per_tonne,
-            nox_onsite_fuelburn_cost_per_tonne,
-            so2_onsite_fuelburn_cost_per_tonne,
-            pm25_onsite_fuelburn_cost_per_tonne,
-            nox_cost_escalation_pct,
-            so2_cost_escalation_pct,
-            pm25_cost_escalation_pct
+            CO2_cost_per_tonne,
+            CO2_cost_escalation_pct,
+            NOx_grid_cost_per_tonne,
+            SO2_grid_cost_per_tonne,
+            PM25_grid_cost_per_tonne,
+            NOx_onsite_fuelburn_cost_per_tonne,
+            SO2_onsite_fuelburn_cost_per_tonne,
+            PM25_onsite_fuelburn_cost_per_tonne,
+            NOx_cost_escalation_pct,
+            SO2_cost_escalation_pct,
+            PM25_cost_escalation_pct
         )
     end
 end

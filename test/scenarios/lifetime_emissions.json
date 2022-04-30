@@ -52,7 +52,7 @@
     "microgrid_upgrade_cost_pct": 0.0,
     "offtaker_tax_pct": 0.26,
     "om_cost_escalation_pct": 0.025,
-    "co2_cost_per_tonne": 51.0,
-    "co2_cost_escalation_pct": 0.017173
+    "CO2_cost_per_tonne": 51.0,
+    "CO2_cost_escalation_pct": 0.017173
   }
 }

@@ -8,8 +8,8 @@
   "Site": {
     "longitude": -75.51491279999999,
     "latitude": 40.1303822,
-    "co2_emissions_reduction_min_pct": 0.250,
-    "co2_emissions_reduction_max_pct": 0.250
+    "CO2_emissions_reduction_min_pct": 0.250,
+    "CO2_emissions_reduction_max_pct": 0.250
   },
   "PV": {
     "min_kw": 0.0,
