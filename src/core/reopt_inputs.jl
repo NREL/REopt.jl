@@ -52,8 +52,8 @@ struct REoptInputs <: AbstractInputs
     pwf_e::Float64
     pwf_om::Float64
     pwf_fuel::Dict{String, Float64}
-    pwf_emissions_cost::Dict{String, Any}
-    pwf_grid_emissions::Dict{String, Any}
+    pwf_emissions_cost::Dict{String, Float64}
+    pwf_grid_emissions::Dict{String, Float64}
     third_party_factor::Float64
     pvlocations::Array{Symbol, 1}
     maxsize_pv_locations::DenseAxisArray{Float64, 1}  # indexed on pvlocations
@@ -98,8 +98,8 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     pwf_e::Float64
     pwf_om::Float64
     pwf_fuel::Dict{String, Float64}
-    pwf_emissions_cost::Dict{String, Any} # Cost of emissions present worth factors for grid and onsite fuelburn emissions [unitless]
-    pwf_grid_emissions::Dict{String, Any} # Emissions [lbs] present worth factors for grid emissions [unitless]
+    pwf_emissions_cost::Dict{String, Float64} # Cost of emissions present worth factors for grid and onsite fuelburn emissions [unitless]
+    pwf_grid_emissions::Dict{String, Float64} # Emissions [lbs] present worth factors for grid emissions [unitless]
     third_party_factor::Float64
     pvlocations::Array{Symbol, 1}
     maxsize_pv_locations::DenseAxisArray{Float64, 1}  # indexed on pvlocations
@@ -154,8 +154,8 @@ function REoptInputs(s::AbstractScenario)
     techs, pv_to_location, maxsize_pv_locations, pvlocations, 
         production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
         seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
-        tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25 = 
-        setup_tech_inputs(s)
+        tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
+        tech_emissions_factors_PM25 = setup_tech_inputs(s)
         cop = setup_tech_inputs(s)
 
     pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
@@ -243,12 +243,12 @@ function setup_tech_inputs(s::AbstractScenario)
     cap_cost_slope = Dict{String, Any}()
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
     production_factor = DenseAxisArray{Float64}(undef, techs.all, 1:length(s.electric_load.loads_kw))
-    tech_renewable_energy_pct = Dict(t => 1.0 for t in techs.all)
+    tech_renewable_energy_pct = DenseAxisArray([1.0 for _ in 1:length(techs.all)], techs.all)#Dict(t => 1.0 for t in techs.all)
     # !!! note: tech_emissions_factors in lb / kWh (gets multiplied by kWh of fuel burned, not kWh electricity consumption, ergo the use of the HHV instead of fuel slope)
-    tech_emissions_factors_CO2 = Dict(t => 0.0 for t in techs.all)
-    tech_emissions_factors_NOx = Dict(t => 0.0 for t in techs.all)
-    tech_emissions_factors_SO2 = Dict(t => 0.0 for t in techs.all)
-    tech_emissions_factors_PM25 = Dict(t => 0.0 for t in techs.all)
+    tech_emissions_factors_CO2 = DenseAxisArray([0.0 for _ in 1:length(techs.all)], techs.all)#Dict(t => 0.0 for t in techs.all)
+    tech_emissions_factors_NOx = DenseAxisArray([0.0 for _ in 1:length(techs.all)], techs.all)#Dict(t => 0.0 for t in techs.all)
+    tech_emissions_factors_SO2 = DenseAxisArray([0.0 for _ in 1:length(techs.all)], techs.all)#Dict(t => 0.0 for t in techs.all)
+    tech_emissions_factors_PM25 = DenseAxisArray([0.0 for _ in 1:length(techs.all)], techs.all)#Dict(t => 0.0 for t in techs.all)
     cop = Dict(t => 0.0 for t in techs.cooling)
 
     # export related inputs
@@ -311,8 +311,8 @@ function setup_tech_inputs(s::AbstractScenario)
     return techs, pv_to_location, maxsize_pv_locations, pvlocations, 
     production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
     seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
-    tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25
-    cop
+    tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
+    tech_emissions_factors_PM25, cop
 end
 
 
@@ -645,7 +645,7 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
                             s.financial.offtaker_discount_pct)
                 )
         )
-        merge!(pwf_grid_emissions_lbs, 
+        merge!(pwf_grid_emissions, 
                 Dict(emissions_type=>annuity(
                             s.financial.analysis_years, 
                             -1.0 * getproperty(s.electric_utility, Symbol("emissions_factor_$(emissions_type)_decrease_pct")),
