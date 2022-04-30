@@ -373,7 +373,7 @@ Populate emission factors in tech based on its fuel_type field.
 """
 function set_missing_emissions_factors_to_fuel_defaults(tech::AbstractFuelBurningTech)
     @assert tech.fuel_type in ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
-    fuel_renergy_energy_pct = Dict(
+    fuel_renewable_energy_pct = Dict(
         "natural_gas"=>0.0,
         "landfill_bio_gas"=>1.0,
         "propane"=>0.0,
@@ -404,7 +404,7 @@ function set_missing_emissions_factors_to_fuel_defaults(tech::AbstractFuelBurnin
         "diesel_oil"=>0.0
     )
     if ismissing(tech.fuel_renewable_energy_pct)
-        tech.fuel_renewable_energy_pct = fuel_renergy_energy_pct[tech.fuel_type]
+        tech.fuel_renewable_energy_pct = fuel_renewable_energy_pct[tech.fuel_type]
     end
     if ismissing(tech.emissions_factor_lb_CO2_per_mmbtu)
         tech.emissions_factor_lb_CO2_per_mmbtu = fuel_emissions_lb_CO2_per_mmbtu[tech.fuel_type]
