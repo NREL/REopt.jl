@@ -123,6 +123,7 @@ include("mpc/constraints.jl")
 include("core/techs.jl")
 
 include("results/results.jl")
+include("results/site.jl")
 include("results/electric_tariff.jl")
 include("results/electric_utility.jl")
 include("results/proforma.jl")
