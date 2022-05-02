@@ -128,9 +128,8 @@ function BAUInputs(p::REoptInputs)
                 t0 : t0 + bau_scenario.outage_outputs.bau_critical_load_met_time_steps
                 ] = original_crit_lds[t0 : t0 + bau_scenario.outage_outputs.bau_critical_load_met_time_steps]
         end
-
-        setup_bau_emissions_inputs(p.s, bau_scenario, production_factor, levelization_factor, generator_fuel_use_gal)
     end
+    setup_bau_emissions_inputs(p.s, bau_scenario, production_factor, levelization_factor, generator_fuel_use_gal)
 
     REoptInputs(
         bau_scenario,
