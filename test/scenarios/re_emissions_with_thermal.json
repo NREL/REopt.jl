@@ -96,13 +96,13 @@
     "min_kw": 10.0,
     "max_kw": 10.0
   },
-  "Storage": {
+  "ElectricStorage": {
     "min_kw": 0.0,
     "max_kw": 0.0,
     "min_kwh": 0.0,
     "max_kwh": 0.0
   },
-  "ColdTES": {
+  "ColdThermalStorage": {
     "min_gal": 30000.0 ,
     "max_gal": 30000.0 ,
     "internal_efficiency_pct": 0.97 ,
@@ -133,7 +133,7 @@
     "max_kw": 200.0,
     "can_supply_steam_turbine": true
   },
-  "HotTES": {
+  "HotThermalStorage": {
     "min_gal": 50000.0,
     "max_gal": 50000.0
   }
