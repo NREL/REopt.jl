@@ -71,7 +71,7 @@ function add_site_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["total_renewable_energy_pct"] = round(value(m[:AnnualRETotkWh])/value(m[:AnnualTotkWh]), digits=6)
 	
 	# pass through for breakeven cost of CO2 calculation:
-	r["include_climate_in_objective"] = p.settings.include_climate_in_objective
+	r["include_climate_in_objective"] = p.s.settings.include_climate_in_objective
 	r["pwf_emissions_cost_CO2_grid"] = p.pwf_emissions_cost["CO2_grid"]
 	r["pwf_emissions_cost_CO2_onsite"] = p.pwf_emissions_cost["CO2_onsite"]
 
@@ -87,7 +87,9 @@ function add_site_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["year_one_emissions_from_fuelburn_tPM25"] = round(value(m[:yr1_emissions_onsite_fuel_lbs_PM25]/TONNES_TO_LBS), digits=2)
 
 	# Lifecycle emissions results at Site level
-	r["lifecycle_emissions_reduction_CO2_pct"] = round(value(1-m[:Lifecycle_Emissions_Lbs_CO2]/m[:Lifecycle_Emissions_Lbs_CO2_BAU]), digits=6)
+	if !isnothing(p.s.site.bau_grid_emissions_lb_CO2_per_year)
+		r["lifecycle_emissions_reduction_CO2_pct"] = round(value(1-m[:Lifecycle_Emissions_Lbs_CO2]/m[:Lifecycle_Emissions_Lbs_CO2_BAU]), digits=6)
+	end
 	r["lifecycle_emissions_cost_CO2"] = round(value(m[:Lifecycle_Emissions_Cost_CO2]), digits=2)
 	r["lifecycle_emissions_cost_health"] = round(value(m[:Lifecycle_Emissions_Cost_Health]), digits=2)
 
