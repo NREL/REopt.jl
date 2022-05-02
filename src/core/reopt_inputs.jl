@@ -496,7 +496,7 @@ function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_si
     segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_no_curtail,
     tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25
     )
-    max_sizes["Generator"] = s.generator.max_kw
+    max_sizes["Generator"] = s.generator.existing_kw + s.generator.max_kw
     min_sizes["Generator"] = s.generator.existing_kw + s.generator.min_kw
     existing_sizes["Generator"] = s.generator.existing_kw
     update_cost_curve!(s.generator, "Generator", s.financial,
@@ -567,6 +567,7 @@ function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_sl
     )
     max_sizes["CHP"] = s.chp.max_kw
     min_sizes["CHP"] = s.chp.min_kw
+    existing_sizes["CHP"] = 0.0
     update_cost_curve!(s.chp, "CHP", s.financial,
         cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
     )
