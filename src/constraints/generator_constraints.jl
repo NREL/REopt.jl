@@ -42,11 +42,11 @@ end
 
 function add_binGenIsOnInTS_constraints(m,p)
 	@constraint(m, [t in p.techs.gen, ts in p.time_steps],
-		m[:dvRatedProduction][t, ts] <= p.s.generator.max_kw * m[:binGenIsOnInTS][t, ts]
+		m[:dvRatedProduction][t, ts] <= p.max_sizes["Generator"] * m[:binGenIsOnInTS][t, ts]
 	)
 	@constraint(m, [t in p.techs.gen, ts in p.time_steps],
 		p.s.generator.min_turn_down_pct * m[:dvSize][t] - m[:dvRatedProduction][t, ts] <=
-		p.s.generator.max_kw * (1 - m[:binGenIsOnInTS][t, ts])
+		p.max_sizes["Generator"] * (1 - m[:binGenIsOnInTS][t, ts])
 	)
 end
 
