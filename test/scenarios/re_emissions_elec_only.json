@@ -52,7 +52,7 @@
     "doe_reference_name": "MidriseApartment",
     "annual_kwh": 100000
   },
-  "Storage": {
+  "ElectricStorage": {
     "max_kwh": 100000.0,
     "rectifier_efficiency_pct": 0.96,
     "total_itc_pct": 0.0,
