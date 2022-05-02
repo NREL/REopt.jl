@@ -29,7 +29,7 @@
 # *********************************************************************************
 
 function add_emissions_constraints(m,p)
-	if !isnothing(p.CO2_emissions_reduction_min_pct)
+	if !isnothing(p.s.site.CO2_emissions_reduction_min_pct)
 		@constraint(m, MinEmissionsReductionCon, m[:Lifecycle_Emissions_Lbs_CO2] <= (1-p.s.site.CO2_emissions_reduction_min_pct)*m[:Lifecycle_Emissions_Lbs_CO2_BAU])
 	end
 	if !isnothing(p.s.site.CO2_emissions_reduction_max_pct)
@@ -124,7 +124,9 @@ end
 function add_lifecycle_emissions_calcs(m,p)
 
 	# BAU Lifecycle lbs CO2
-	m[:Lifecycle_Emissions_Lbs_CO2_BAU] = p.s.site.bau_grid_emissions_lb_CO2_per_year * p.pwf_grid_emissions["CO2"] + p.analysis_years * (p.s.site.bau_emissions_lb_CO2_per_year - p.s.site.bau_grid_emissions_lb_CO2_per_year) # no annual decrease for on-site fuel burn
+	if !isnothing(p.s.site.bau_grid_emissions_lb_CO2_per_year)
+		m[:Lifecycle_Emissions_Lbs_CO2_BAU] = p.s.site.bau_grid_emissions_lb_CO2_per_year * p.pwf_grid_emissions["CO2"] + p.analysis_years * (p.s.site.bau_emissions_lb_CO2_per_year - p.s.site.bau_grid_emissions_lb_CO2_per_year) # no annual decrease for on-site fuel burn
+	end
 
 	# Lifecycle lbs CO2
 	m[:Lifecycle_Emissions_Lbs_CO2_grid_net_if_selected] = p.pwf_grid_emissions["CO2"] * m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2]
@@ -132,10 +134,10 @@ function add_lifecycle_emissions_calcs(m,p)
 	m[:Lifecycle_Emissions_Lbs_SO2_grid_net_if_selected] = p.pwf_grid_emissions["SO2"] * m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2]
 	m[:Lifecycle_Emissions_Lbs_PM25_grid_net_if_selected] = p.pwf_grid_emissions["PM25"] * m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25]
 
-	m[:Lifecycle_Emissions_Lbs_CO2_fuelburn] = p.analysis_years *  m[:yr1_emissions_onsite_fuel_lbs_CO2] # not assuming an annual decrease in on-site fuel burn emissions
-	m[:Lifecycle_Emissions_Lbs_NOx_fuelburn] = p.analysis_years *  m[:yr1_emissions_onsite_fuel_lbs_NOx] # not assuming an annual decrease in on-site fuel burn emissions
-	m[:Lifecycle_Emissions_Lbs_SO2_fuelburn] = p.analysis_years *  m[:yr1_emissions_onsite_fuel_lbs_SO2] # not assuming an annual decrease in on-site fuel burn emissions
-	m[:Lifecycle_Emissions_Lbs_PM25_fuelburn] = p.analysis_years *  m[:yr1_emissions_onsite_fuel_lbs_PM25] # not assuming an annual decrease in on-site fuel burn emissions
+	m[:Lifecycle_Emissions_Lbs_CO2_fuelburn] = p.s.financial.analysis_years *  m[:yr1_emissions_onsite_fuel_lbs_CO2] # not assuming an annual decrease in on-site fuel burn emissions
+	m[:Lifecycle_Emissions_Lbs_NOx_fuelburn] = p.s.financial.analysis_years *  m[:yr1_emissions_onsite_fuel_lbs_NOx] # not assuming an annual decrease in on-site fuel burn emissions
+	m[:Lifecycle_Emissions_Lbs_SO2_fuelburn] = p.s.financial.analysis_years *  m[:yr1_emissions_onsite_fuel_lbs_SO2] # not assuming an annual decrease in on-site fuel burn emissions
+	m[:Lifecycle_Emissions_Lbs_PM25_fuelburn] = p.s.financial.analysis_years *  m[:yr1_emissions_onsite_fuel_lbs_PM25] # not assuming an annual decrease in on-site fuel burn emissions
 
 	m[:Lifecycle_Emissions_Lbs_CO2] = m[:Lifecycle_Emissions_Lbs_CO2_grid_net_if_selected] + m[:Lifecycle_Emissions_Lbs_CO2_fuelburn]
 	m[:Lifecycle_Emissions_Lbs_NOx] = m[:Lifecycle_Emissions_Lbs_NOx_grid_net_if_selected] + m[:Lifecycle_Emissions_Lbs_NOx_fuelburn]
