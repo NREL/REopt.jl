@@ -84,8 +84,8 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
         inputs["Site"]["include_exported_elec_emissions_in_total"] = include_exported_ER_in_total[i]
         inputs["Site"]["renewable_electricity_min_pct"] = if isnothing(RE_target[i]) 0.0 else RE_target[i] end
         inputs["Site"]["renewable_electricity_max_pct"] = RE_target[i]
-        inputs["Site"]["CO2_emissions_reduction_min_pct"] = if isnothing(ER_target[i]) 0.0 else ER_target[i] end
-        inputs["Site"]["CO2_emissions_reduction_max_pct"] = if isnothing(ER_target[i]) 1.0 else ER_target[i] end
+        inputs["Site"]["CO2_emissions_reduction_min_pct"] = ER_target[i]#if isnothing(ER_target[i]) 0.0 else ER_target[i] end
+        inputs["Site"]["CO2_emissions_reduction_max_pct"] = ER_target[i]#if isnothing(ER_target[i]) 1.0 else ER_target[i] end
         if with_outage[i]
             outage_start_hour = 4032
             outage_duration = 2000 #hrs
