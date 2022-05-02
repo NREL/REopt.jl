@@ -365,11 +365,11 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_to_expression!(Costs, m[:ExpectedOutageCost] + m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost] + m[:ExpectedMGFuelCost])
 	end
 	# Add climate costs
-	if p.settings.include_climate_in_objective # if user selects to include climate in objective
+	if p.s.settings.include_climate_in_objective # if user selects to include climate in objective
 		add_to_expression!(Costs, m[:Lifecycle_Emissions_Cost_CO2]) 
 	end
 	# Add Health costs (NOx, SO2, PM2.5)
-	if p.settings.include_health_in_objective
+	if p.s.settings.include_health_in_objective
 		add_to_expression!(Costs, m[:Lifecycle_Emissions_Cost_Health])
 	end
 	
