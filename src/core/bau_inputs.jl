@@ -237,8 +237,8 @@ function setup_bau_emissions_inputs(s::Scenario, s_bau::BAUScenario, production_
     end end
 
     #No grid emissions, or pv exporting to grid, during an outage
-    if s.electric_load.outage_start_time_step != 0 && s.electric_load.outage_end_time_step != 0
-        for i in range(s.electric_load.outage_start_time_step, stop=s.electric_load.outage_end_time_step)
+    if s.electric_utility.outage_start_time_step != 0 && s.electric_utility.outage_end_time_step != 0
+        for i in range(s.electric_utility.outage_start_time_step, stop=s.electric_utility.outage_end_time_step)
             bau_grid_to_load[i] = 0
         end
     end
