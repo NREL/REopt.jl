@@ -58,6 +58,11 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
         if p.s.storage.attr[b].model_degradation
             r["state_of_health"] = value.(m[:SOH]).data / value.(m[:dvStorageEnergy])["ElectricStorage"];
             r["maintenance_cost"] = value(m[:degr_cost])
+            if p.s.storage.attr[b].degradation.maintenance_strategy == "replacement"
+                r["replacement_month"] = Int(value(
+                    sum(mth * m[:bmth][mth] for mth in 1:p.s.financial.analysis_years*12)
+                ))
+            end
          end
     else
         r["year_one_soc_series_pct"] = []

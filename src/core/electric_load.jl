@@ -136,7 +136,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         elseif !isempty(doe_reference_name)
             # NOTE: must use year that starts on Sunday with DOE reference doe_ref_profiles
             if year != 2017
-                @warn "Changing load profile year to 2017 because DOE reference profiles start on a Sunday."
+                @debug "Changing load profile year to 2017 because DOE reference profiles start on a Sunday."
             end
             year = 2017
             loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, year, annual_kwh, monthly_totals_kwh)
