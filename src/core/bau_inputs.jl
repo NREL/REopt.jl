@@ -128,8 +128,10 @@ function BAUInputs(p::REoptInputs)
                 t0 : t0 + bau_scenario.outage_outputs.bau_critical_load_met_time_steps
                 ] = original_crit_lds[t0 : t0 + bau_scenario.outage_outputs.bau_critical_load_met_time_steps]
         end
+    else
+        generator_fuel_use_gal = 0.0
     end
-    setup_bau_emissions_inputs(p.s, bau_scenario, production_factor, levelization_factor, generator_fuel_use_gal)
+    setup_bau_emissions_inputs(p, bau_scenario, generator_fuel_use_gal)
 
     REoptInputs(
         bau_scenario,
@@ -201,7 +203,7 @@ function update_bau_emissions_inputs(s::AbstractScenario, bau_emissions_lb_CO2_p
 end
 
 """
-    setup_bau_emissions_inputs(s::Scenario, s_bau::BAUScenario, production_factor::DenseAxisArray, levelization_factor::Dict{String, Float64}, generator_fuel_use_gal::Float64)
+    setup_bau_emissions_inputs(p::REoptInputs, s_bau::BAUScenario, generator_fuel_use_gal::Float64)
 
 Pre-processing of the BAU emissions to use in determining emissions reductions in the optimal case
 Include BAU grid emissions, existing backup generator emissions, boiler emissions
@@ -210,7 +212,7 @@ Update the `bau_(grid_)emissions_` values in s.site and s_bau.site
 Note if existing generation does not sustain a simulated outage, the BAU load and therefore emissions
 are 0 during unsurvived outage hours
 """
-function setup_bau_emissions_inputs(s::Scenario, s_bau::BAUScenario, production_factor::DenseAxisArray, levelization_factor::Dict{String, Float64}, generator_fuel_use_gal::Float64)
+function setup_bau_emissions_inputs(p::REoptInputs, s_bau::BAUScenario, generator_fuel_use_gal::Float64)
     
     bau_emissions_lb_CO2_per_year = 0
     bau_emissions_lb_NOx_per_year = 0
@@ -226,60 +228,60 @@ function setup_bau_emissions_inputs(s::Scenario, s_bau::BAUScenario, production_
     # Must account for levelization factor to align with how PV is modeled in REopt:
     # Because we only model one year, we multiply the "year 1" PV production by a levelization_factor
     # that accounts for the PV capacity degradation over the analysis_years. In other words, by
-    # multiplying the pv.prod_factor by the levelization_factor we are modeling the average pv production.
-    bau_grid_to_load = s_bau.electric_load.loads_kw
-    bau_grid_to_load_critical = s_bau.electric_load.critical_loads_kw
-    for pv in s.pvs if pv.existing_kw > 0
-        bau_grid_to_load .-= levelization_factor[pv.name] * pv.existing_kw * production_factor[pv.name, :].data
+    # multiplying the pv production_factor by the levelization_factor we are modeling the average pv production.
+    bau_grid_to_load = copy(s_bau.electric_load.loads_kw)
+    bau_grid_to_load_critical = copy(s_bau.electric_load.critical_loads_kw)
+    for pv in p.s.pvs if pv.existing_kw > 0
+        bau_grid_to_load .-= p.levelization_factor[pv.name] * pv.existing_kw * p.production_factor[pv.name, :].data
     end end
-    for pv in s.pvs if pv.existing_kw > 0
-        bau_grid_to_load_critical .-= levelization_factor[pv.name] * pv.existing_kw * production_factor[pv.name, :].data
+    for pv in p.s.pvs if pv.existing_kw > 0
+        bau_grid_to_load_critical .-= p.levelization_factor[pv.name] * pv.existing_kw * p.production_factor[pv.name, :].data
     end end
 
     #No grid emissions, or pv exporting to grid, during an outage
-    if s.electric_utility.outage_start_time_step != 0 && s.electric_utility.outage_end_time_step != 0
-        for i in range(s.electric_utility.outage_start_time_step, stop=s.electric_utility.outage_end_time_step)
+    if p.s.electric_utility.outage_start_time_step != 0 && p.s.electric_utility.outage_end_time_step != 0
+        for i in range(p.s.electric_utility.outage_start_time_step, stop=p.s.electric_utility.outage_end_time_step)
             bau_grid_to_load[i] = 0
         end
     end
 
     #If no net emissions accounting, no credit for RE grid exports:
-    if !s.site.include_exported_elec_emissions_in_total
+    if !p.s.site.include_exported_elec_emissions_in_total
         bau_grid_to_load = [max(i,0) for i in bau_grid_to_load]
     end
 
-    steplength = 8760.0 / s.settings.time_steps_per_hour
-    bau_grid_emissions_lb_CO2_per_year = steplength*sum(s.electric_utility.emissions_factor_series_lb_CO2_per_kwh .* bau_grid_to_load)
+    steplength = 8760.0 / p.s.settings.time_steps_per_hour
+    bau_grid_emissions_lb_CO2_per_year = steplength*sum(p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh .* bau_grid_to_load)
     bau_emissions_lb_CO2_per_year += bau_grid_emissions_lb_CO2_per_year
 
-    bau_grid_emissions_lb_NOx_per_year = steplength*sum(s.electric_utility.emissions_factor_series_lb_NOx_per_kwh .* bau_grid_to_load)
+    bau_grid_emissions_lb_NOx_per_year = steplength*sum(p.s.electric_utility.emissions_factor_series_lb_NOx_per_kwh .* bau_grid_to_load)
     bau_emissions_lb_NOx_per_year += bau_grid_emissions_lb_NOx_per_year
 
-    bau_grid_emissions_lb_SO2_per_year = steplength*sum(s.electric_utility.emissions_factor_series_lb_SO2_per_kwh .* bau_grid_to_load)
+    bau_grid_emissions_lb_SO2_per_year = steplength*sum(p.s.electric_utility.emissions_factor_series_lb_SO2_per_kwh .* bau_grid_to_load)
     bau_emissions_lb_SO2_per_year += bau_grid_emissions_lb_SO2_per_year
 
-    bau_grid_emissions_lb_PM25_per_year = steplength*sum(s.electric_utility.emissions_factor_series_lb_PM25_per_kwh .* bau_grid_to_load)
+    bau_grid_emissions_lb_PM25_per_year = steplength*sum(p.s.electric_utility.emissions_factor_series_lb_PM25_per_kwh .* bau_grid_to_load)
     bau_emissions_lb_PM25_per_year += bau_grid_emissions_lb_PM25_per_year
 
     ## Generator emissions (during outages)
-    if "Generator" in s.techs.all
-        bau_emissions_lb_CO2_per_year += generator_fuel_use_gal * s.generator.emissions_factor_lb_CO2_per_gal
-        bau_emissions_lb_NOx_per_year += generator_fuel_use_gal * s.generator.emissions_factor_lb_NOx_per_gal
-        bau_emissions_lb_SO2_per_year += generator_fuel_use_gal * s.generator.emissions_factor_lb_SO2_per_gal
-        bau_emissions_lb_PM25_per_year += generator_fuel_use_gal * s.generator.emissions_factor_lb_PM25_per_gal
+    if "Generator" in p.techs.all
+        bau_emissions_lb_CO2_per_year += generator_fuel_use_gal * p.s.generator.emissions_factor_lb_CO2_per_gal
+        bau_emissions_lb_NOx_per_year += generator_fuel_use_gal * p.s.generator.emissions_factor_lb_NOx_per_gal
+        bau_emissions_lb_SO2_per_year += generator_fuel_use_gal * p.s.generator.emissions_factor_lb_SO2_per_gal
+        bau_emissions_lb_PM25_per_year += generator_fuel_use_gal * p.s.generator.emissions_factor_lb_PM25_per_gal
     end
 
     ## Boiler emissions
-    if "ExistingBoiler" in s.techs.all
+    if "ExistingBoiler" in p.techs.all
         for heat_type in ["space_heating", "dhw"] #TODO: are these heating types the same? can we get them from s?
-            bau_emissions_lb_CO2_per_year += eval("s.$(heat_type)_load.annual_mmbtu") * s.existing_boiler.emissions_factor_lb_CO2_per_mmbtu
-            bau_emissions_lb_NOx_per_year += eval("s.$(heat_type)_load.annual_mmbtu") * s.existing_boiler.emissions_factor_lb_NOx_per_mmbtu
-            bau_emissions_lb_SO2_per_year += eval("s.$(heat_type)_load.annual_mmbtu") * s.existing_boiler.emissions_factor_lb_SO2_per_mmbtu
-            bau_emissions_lb_PM25_per_year += eval("s.$(heat_type)_load.annual_mmbtu") * s.existing_boiler.emissions_factor_lb_PM25_per_mmbtu
+            bau_emissions_lb_CO2_per_year += eval("s.$(heat_type)_load.annual_mmbtu") * p.s.existing_boiler.emissions_factor_lb_CO2_per_mmbtu
+            bau_emissions_lb_NOx_per_year += eval("s.$(heat_type)_load.annual_mmbtu") * p.s.existing_boiler.emissions_factor_lb_NOx_per_mmbtu
+            bau_emissions_lb_SO2_per_year += eval("s.$(heat_type)_load.annual_mmbtu") * p.s.existing_boiler.emissions_factor_lb_SO2_per_mmbtu
+            bau_emissions_lb_PM25_per_year += eval("s.$(heat_type)_load.annual_mmbtu") * p.s.existing_boiler.emissions_factor_lb_PM25_per_mmbtu
         end
     end
 
-    update_bau_emissions_inputs(s, bau_emissions_lb_CO2_per_year, bau_emissions_lb_NOx_per_year, 
+    update_bau_emissions_inputs(p.s, bau_emissions_lb_CO2_per_year, bau_emissions_lb_NOx_per_year, 
                                 bau_emissions_lb_SO2_per_year, bau_emissions_lb_PM25_per_year, 
                                 bau_grid_emissions_lb_CO2_per_year, bau_grid_emissions_lb_NOx_per_year, 
                                 bau_grid_emissions_lb_SO2_per_year, bau_grid_emissions_lb_PM25_per_year)
