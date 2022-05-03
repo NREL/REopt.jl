@@ -611,7 +611,7 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
                 s.financial.offtaker_discount_pct
             )
         end
-        if t =="Generator" 
+        if t == "Generator" 
             pwf_fuel["Generator"] = annuity(
                 s.financial.analysis_years,
                 s.financial.generator_fuel_cost_escalation_pct,
