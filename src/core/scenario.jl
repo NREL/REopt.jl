@@ -84,9 +84,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     site = Site(;dictkeys_tosymbols(d["Site"])...)
 
     # Check that only PV, storage, and generator are modeled for off-grid
-    keys_to_check = ["HotThermalStorage", "ColdThermalStorage", "Wind", "FlexibleHVAC", "ExistingBoiler", "ExistingChiller", "CHP"]
     if settings.off_grid_flag
-        for key in keys_to_check
+        for key in ["HotThermalStorage", "ColdThermalStorage", "Wind", "FlexibleHVAC", 
+                    "ExistingBoiler", "ExistingChiller", "CHP"]
             if haskey(d, key)
                 @error "Currently, only PV, ElectricStorage, and Generator can be modeled when off_grid_flag is true. Cannot model $key."
                 return nothing 
