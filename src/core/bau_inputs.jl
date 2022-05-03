@@ -249,16 +249,16 @@ function setup_bau_emissions_inputs(s::Scenario, s_bau::BAUScenario, production_
     end
 
     steplength = 8760.0 / s.settings.time_steps_per_hour
-    bau_grid_emissions_lb_CO2_per_year = steplength*sum(s.electric_tariff.emissions_factor_series_lb_CO2_per_kwh .* bau_grid_to_load)
+    bau_grid_emissions_lb_CO2_per_year = steplength*sum(s.electric_utility.emissions_factor_series_lb_CO2_per_kwh .* bau_grid_to_load)
     bau_emissions_lb_CO2_per_year += bau_grid_emissions_lb_CO2_per_year
 
-    bau_grid_emissions_lb_NOx_per_year = steplength*sum(s.electric_tariff.emissions_factor_series_lb_NOx_per_kwh .* bau_grid_to_load)
+    bau_grid_emissions_lb_NOx_per_year = steplength*sum(s.electric_utility.emissions_factor_series_lb_NOx_per_kwh .* bau_grid_to_load)
     bau_emissions_lb_NOx_per_year += bau_grid_emissions_lb_NOx_per_year
 
-    bau_grid_emissions_lb_SO2_per_year = steplength*sum(s.electric_tariff.emissions_factor_series_lb_SO2_per_kwh .* bau_grid_to_load)
+    bau_grid_emissions_lb_SO2_per_year = steplength*sum(s.electric_utility.emissions_factor_series_lb_SO2_per_kwh .* bau_grid_to_load)
     bau_emissions_lb_SO2_per_year += bau_grid_emissions_lb_SO2_per_year
 
-    bau_grid_emissions_lb_PM25_per_year = steplength*sum(s.electric_tariff.emissions_factor_series_lb_PM25_per_kwh .* bau_grid_to_load)
+    bau_grid_emissions_lb_PM25_per_year = steplength*sum(s.electric_utility.emissions_factor_series_lb_PM25_per_kwh .* bau_grid_to_load)
     bau_emissions_lb_PM25_per_year += bau_grid_emissions_lb_PM25_per_year
 
     ## Generator emissions (during outages)
