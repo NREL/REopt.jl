@@ -125,7 +125,7 @@ function add_lifecycle_emissions_calcs(m,p)
 
 	# BAU Lifecycle lbs CO2
 	if !isnothing(p.s.site.bau_grid_emissions_lb_CO2_per_year)
-		m[:Lifecycle_Emissions_Lbs_CO2_BAU] = p.s.site.bau_grid_emissions_lb_CO2_per_year * p.pwf_grid_emissions["CO2"] + p.analysis_years * (p.s.site.bau_emissions_lb_CO2_per_year - p.s.site.bau_grid_emissions_lb_CO2_per_year) # no annual decrease for on-site fuel burn
+		m[:Lifecycle_Emissions_Lbs_CO2_BAU] = p.s.site.bau_grid_emissions_lb_CO2_per_year * p.pwf_grid_emissions["CO2"] + p.s.financial.analysis_years * (p.s.site.bau_emissions_lb_CO2_per_year - p.s.site.bau_grid_emissions_lb_CO2_per_year) # no annual decrease for on-site fuel burn
 	end
 
 	# Lifecycle lbs CO2
