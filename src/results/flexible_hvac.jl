@@ -27,6 +27,17 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+    add_flexible_hvac_results(m::JuMP.AbstractModel, p::REoptInputs{Scenario}, d::Dict; _n="")
+
+Add the FlexibleHVAC results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+Note: the node number is an empty string if evaluating a single `Site`.
+
+FlexibleHVAC results:
+- `purchased` "true" or "false", indicating if it is optimal to purchase the FlexibleHVAC system
+- `upgrade_cost` Amount paid to install the FlexibleHVAC system 
+- `temperatures_degC_node_by_time` An array of temperature time-series for each node in the RC model
+"""
 function add_flexible_hvac_results(m::JuMP.AbstractModel, p::REoptInputs{Scenario}, d::Dict; _n="")
     r = Dict{String, Any}()
     binFlexHVAC = value(m[:binFlexHVAC]) > 0.5 ? 1.0 : 0.0
