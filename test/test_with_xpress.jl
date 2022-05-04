@@ -430,14 +430,14 @@ end
     # using default augmentation battery maintenance strategy
     avg_soc_no_degr = sum(results["ElectricStorage"]["year_one_soc_series_pct"]) / 8760
     d["ElectricStorage"]["model_degradation"] = true
-    m = Model(Xpress.Optimizer)
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     r_degr = run_reopt(m, d)
     avg_soc_degr = sum(r_degr["ElectricStorage"]["year_one_soc_series_pct"]) / 8760
     @test avg_soc_no_degr > avg_soc_degr
 
     # test the replacement strategy
     d["ElectricStorage"]["degradation"] = Dict("maintenance_strategy" => "replacement")
-    m = Model(Xpress.Optimizer)    
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
     r = run_reopt(m, d)
     #optimal SOH at end of horizon is 80\% to prevent any replacement
@@ -448,6 +448,13 @@ end
     @test r["Financial"]["lcc"] ≈ 1.240096e7  rtol=0.01
     @test last(value.(m[:SOH])) ≈ 63.129  rtol=0.01
     @test r["ElectricStorage"]["size_kwh"] ≈ 78.91  rtol=0.01
+
+    # test minimum_avg_soc_fraction
+    d["ElectricStorage"]["minimum_avg_soc_fraction"] = 0.72
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
+    r = run_reopt(m, d)
+    @test sum(r["ElectricStorage"]["year_one_soc_series_pct"]) / 8760 >= 0.72
 end
 
 @testset "Outage with Generator, outate simulator, BAU critical load outputs" begin
