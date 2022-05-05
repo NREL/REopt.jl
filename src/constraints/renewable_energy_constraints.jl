@@ -74,13 +74,15 @@ function add_re_elec_calcs(m,p)
 			- (1-include_exported_re_elec_in_total)*sum(m[:dvProductionToGrid][t,u,ts]*p.tech_renewable_energy_pct[t] for t in p.techs.elec,  u in p.export_bins_by_tech[t], ts in p.time_steps) # minus exported RE, if RE accounting method = 0.
 		)
 		# + SteamTurbineAnnualREEleckWh  # SteamTurbine RE Elec, already adjusted for p.hours_per_timestep
-	)
-		
+	)		
     # Note: if battery ends up being allowed to discharge to grid, need to make sure only RE that is being consumed onsite is counted so battery doesn't become a back door for RE to grid.
 	# Note: calculations currently do not ascribe any renewable energy attribute to grid-purchased electricity
 
 	m[:AnnualEleckWh] = @expression(m,p.hours_per_timestep*(
-			sum(p.s.electric_load.loads_kw[ts] for ts in p.time_steps) # input elec load
+		 	# input electric load
+			sum(p.s.electric_load.loads_kw[ts] for ts in p.time_steps_with_grid) 
+			+ sum(p.s.electric_load.critical_loads_kw[ts] for ts in p.time_steps_without_grid)
+			# tech electric loads
 			# + sum(m[:dvThermalProduction][t,ts] for t in p.ElectricChillers, ts in p.time_steps )/ p.ElectricChillerCOP # electric chiller elec load
 			# + sum(m[:dvThermalProduction][t,ts] for t in p.AbsorptionChillers, ts in p.time_steps )/ p.AbsorptionChillerElecCOP # absorportion chiller elec load
 			# + sum(p.GHPElectricConsumed[g,ts] * m[:binGHP][g] for g in p.GHPOptions, ts in p.time_steps) # GHP elec load
