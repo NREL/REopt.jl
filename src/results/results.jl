@@ -73,20 +73,20 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     end
 	
 	time_elapsed = time() - tstart
-	@info "Base results processing took $(round(time_elapsed, digits=3)) seconds."
+	@debug "Base results processing took $(round(time_elapsed, digits=3)) seconds."
 	
 	if !isempty(p.techs.gen) && isempty(_n)  # generators not included in multinode model
         tstart = time()
 		add_generator_results(m, p, d)
         time_elapsed = time() - tstart
-        @info "Generator results processing took $(round(time_elapsed, digits=3)) seconds."
+        @debug "Generator results processing took $(round(time_elapsed, digits=3)) seconds."
 	end
 	
 	if !isempty(p.s.electric_utility.outage_durations) && isempty(_n)  # outages not included in multinode model
         tstart = time()
 		add_outage_results(m, p, d)
         time_elapsed = time() - tstart
-        @info "Outage results processing took $(round(time_elapsed, digits=3)) seconds."
+        @debug "Outage results processing took $(round(time_elapsed, digits=3)) seconds."
 	end
 
     if !isempty(p.techs.boiler)
@@ -98,6 +98,10 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 
     if !isnothing(p.s.existing_chiller)
         add_existing_chiller_results(m, p, d)
+    end
+
+    if !isempty(p.techs.absorption_chiller)
+        add_absorption_chiller_results(m, p, d)
     end
 
     if !isnothing(p.s.flexible_hvac)

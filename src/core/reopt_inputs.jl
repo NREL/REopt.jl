@@ -79,6 +79,7 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     cap_cost_slope::Dict{String, Any}  # (techs)
     om_cost_per_kw::Dict{String, Float64}  # (techs)
     cop::Dict{String, Float64}  # (techs.cooling)
+    thermal_cop::Dict{String, Float64}  # (techs.absorption_chiller)
     time_steps::UnitRange
     time_steps_with_grid::Array{Int, 1}
     time_steps_without_grid::Array{Int, 1}
@@ -139,7 +140,7 @@ function REoptInputs(s::AbstractScenario)
     techs, pv_to_location, maxsize_pv_locations, pvlocations, 
         production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
         seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
-        cop = setup_tech_inputs(s)
+        cop, thermal_cop = setup_tech_inputs(s)
 
     pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
 
@@ -168,6 +169,7 @@ function REoptInputs(s::AbstractScenario)
         cap_cost_slope,
         om_cost_per_kw,
         cop,
+        thermal_cop,
         time_steps,
         time_steps_with_grid,
         time_steps_without_grid,
@@ -218,6 +220,7 @@ function setup_tech_inputs(s::AbstractScenario)
     cap_cost_slope = Dict{String, Any}()
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
     cop = Dict(t => 0.0 for t in techs.cooling)
+    thermal_cop = Dict(t => 0.0 for t in techs.absorption_chiller)
 
     # export related inputs
     techs_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in s.electric_tariff.export_bins)
@@ -274,6 +277,13 @@ function setup_tech_inputs(s::AbstractScenario)
         cop["ExistingChiller"] = 1.0
     end
 
+    if "AbsorptionChiller" in techs.all
+        setup_absorption_chiller_inputs(s, max_sizes, min_sizes, cap_cost_slope, cop, thermal_cop, om_cost_per_kw)
+    else
+        cop["AbsorptionChiller"] = 1.0
+        thermal_cop["AbsorptionChiller"] = 1.0
+    end
+
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
     for t in techs.elec
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
@@ -282,7 +292,7 @@ function setup_tech_inputs(s::AbstractScenario)
     return techs, pv_to_location, maxsize_pv_locations, pvlocations, 
     production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
     seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
-    cop
+    cop, thermal_cop
 end
 
 
@@ -532,6 +542,40 @@ function setup_existing_chiller_inputs(s::AbstractScenario, max_sizes, min_sizes
     # om_cost_per_kw["ExistingChiller"] = 0.0
     return nothing
 end
+
+
+function setup_absorption_chiller_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, 
+    cop, thermal_cop, om_cost_per_kw
+    )
+    max_sizes["AbsorptionChiller"] = s.absorption_chiller.max_kw
+    min_sizes["AbsorptionChiller"] = s.absorption_chiller.min_kw
+    
+    # The AbsorptionChiller only has a MACRS benefit, no ITC etc.
+    if s.absorption_chiller.macrs_option_years in [5, 7]
+
+        cap_cost_slope["AbsorptionChiller"] = effective_cost(;
+            itc_basis = s.absorption_chiller.installed_cost_per_kw,
+            replacement_cost = 0.0,
+            replacement_year = s.financial.analysis_years,
+            discount_rate = s.financial.owner_discount_pct,
+            tax_rate = s.financial.owner_tax_pct,
+            itc = 0.0,
+            macrs_schedule = s.absorption_chiller.macrs_option_years == 5 ? s.financial.macrs_five_year : s.financial.macrs_seven_year,
+            macrs_bonus_pct = s.absorption_chiller.macrs_bonus_pct,
+            macrs_itc_reduction = 0.0,
+            rebate_per_kw = 0.0
+        )
+
+    else
+        cap_cost_slope["AbsorptionChiller"] = s.absorption_chiller.installed_cost_per_kw
+    end
+
+    cop["AbsorptionChiller"] = s.absorption_chiller.chiller_elec_cop
+    thermal_cop["AbsorptionChiller"] = s.absorption_chiller.chiller_cop
+    om_cost_per_kw["AbsorptionChiller"] = s.absorption_chiller.om_cost_per_kw
+    return nothing
+end
+
 
 function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw,  
     production_factor, techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint,

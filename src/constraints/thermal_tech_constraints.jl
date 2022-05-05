@@ -67,3 +67,10 @@ function add_boiler_tech_constraints(m, p; _n="")
         )
     end
 end
+
+function add_cooling_tech_constraints(m, p; _n="")
+    # Constraint (7_cooling_prod_size): Production limit based on size for boiler
+    @constraint(m, [t in p.techs.cooling, ts in p.time_steps],
+        m[Symbol("dvThermalProduction"*_n)][t,ts] <= m[Symbol("dvSize"*_n)][t]
+    )
+end
