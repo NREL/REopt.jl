@@ -4,6 +4,15 @@
 - fix bug for scalar `ElectricTariff.wholesale_rate`
 - add `Boiler` tech (known as NewBoiler in API)
 
+## v0.15.1
+- add `AbsorptionChiller` technology
+- add `ElectricStorage.minimum_avg_soc_fraction` input and constraint
+
+## v0.15.0
+- bug fix in outage_simulator
+- allow Real Generator inputs (not just Float64)
+- add "_series" to "Outages" outputs that are arrays [breaking]
+
 ## v0.14.0
 - update default values from v2 of API [breaking]
 - add ElectricStorage degradation accounting and maintenance strategies

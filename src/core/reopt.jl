@@ -232,6 +232,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			m[:TotalPerUnitProdOMCosts] += m[:TotalBoilerPerUnitProdOMCosts]
 			m[:TotalFuelCosts] += m[:TotalBoilerFuelCosts]
         end
+
+		if !isempty(p.techs.cooling)
+            add_cooling_tech_constraints(m, p)
+        end
     
         if !isempty(p.techs.thermal)
             add_thermal_load_constraints(m, p)  # split into heating and cooling constraints?
@@ -403,7 +407,7 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 	tstart = time()
 	results = reopt_results(m, p)
 	time_elapsed = time() - tstart
-	@info "Total results processing took $(round(time_elapsed, digits=3)) seconds."
+	@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status
 	results["solver_seconds"] = opt_time
     if organize_pvs && !isempty(p.techs.pv)  # do not want to organize_pvs when running BAU case in parallel b/c then proform code fails

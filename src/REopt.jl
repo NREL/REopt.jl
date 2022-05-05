@@ -60,7 +60,7 @@ import Dates: daysinmonth, Date, isleapyear
 import DelimitedFiles: readdlm
 const MOI = MathOptInterface
 using Shapefile
-using PolygonInbounds
+using ArchGDAL
 using Roots: fzero  # for IRR
 global hdl = nothing
 
@@ -88,6 +88,7 @@ include("core/electric_load.jl")
 include("core/existing_boiler.jl")
 include("core/boiler.jl")
 include("core/existing_chiller.jl")
+include("core/absorption_chiller.jl")
 include("core/flexible_hvac.jl")
 include("core/heating_cooling_loads.jl")
 include("core/electric_utility.jl")
@@ -136,6 +137,7 @@ include("results/electric_load.jl")
 include("results/existing_boiler.jl")
 include("results/boiler.jl")
 include("results/existing_chiller.jl")
+include("results/absorption_chiller.jl")
 include("results/chp.jl")
 include("results/flexible_hvac.jl")
 
