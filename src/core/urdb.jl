@@ -525,25 +525,32 @@ function parse_urdb_fixed_charges(d::Dict)
     min_monthly = 0.0
 
     # first try $/month, then check if $/day exists, as of 1/28/2020 there were only $/day and $month entries in the URDB
-    if get(d, "fixedchargeunits", "") == "\$/month" 
-        fixed_monthly = Float64(get(d, "fixedchargefirstmeter", 0.0))
-    end
-    if get(d, "fixedchargeunits", "") == "\$/day"
-        fixed_monthly = Float64(get(d, "fixedchargefirstmeter", 0.0) * 30.4375)
-        # scalar intended to approximate annual charges over 12 month period, derived from 365.25/12
+    fixed_monthly = get(d, "fixedmonthlycharge", nothing)
+    if !isnothing(fixed_monthly)
+        fixed_monthly = Float64(fixed_monthly)
+    else
+        if get(d, "fixedchargeunits", "") == "\$/month" 
+            fixed_monthly = Float64(get(d, "fixedchargefirstmeter", 0.0))
+        elseif get(d, "fixedchargeunits", "") == "\$/day"
+            fixed_monthly = Float64(get(d, "fixedchargefirstmeter", 0.0) * 30.4375)
+            # scalar intended to approximate annual charges over 12 month period, derived from 365.25/12
+        elseif get(d, "fixedchargeunits", "") == "\$/year"
+            fixed_monthly = Float64(get(d, "fixedchargefirstmeter", 0.0) / 12)
+        elseif !isnothing(get(d, "fixedchargefirstmeter",  nothing))
+            @warn "A valid value for fixedchargeunits (\$/month, \$/day, or \$/year) was not provided in urdb_response so the value provided for fixedchargefirstmeter will be ignored."
+        end
     end
 
     if get(d, "minchargeunits", "") == "\$/month"
         min_monthly = Float64(get(d, "mincharge", 0.0))
         # first try $/month, then check if $/day or $/year exists, as of 1/28/2020 these were the only unit types in the urdb
-    end
-    if get(d, "minchargeunits", "") == "\$/day"
+    elseif get(d, "minchargeunits", "") == "\$/day"
         min_monthly = Float64(get(d, "mincharge", 0.0) * 30.4375 )
         # scalar intended to approximate annual charges over 12 month period, derived from 365.25/12
-    end
-
-    if get(d, "minchargeunits", "") == "\$/year"
+    elseif get(d, "minchargeunits", "") == "\$/year"
         annual_min = Float64(get(d, "mincharge", 0.0))
+    elseif !isnothing(get(d, "minchargeunits",  nothing))
+        @warn "A valid value for minchargeunits (\$/month, \$/day, or \$/year) was not provided in urdb_response so the value provided for mincharge will be ignored."
     end
     
     return fixed_monthly, annual_min, min_monthly
