@@ -138,7 +138,7 @@ else  # run HiGHS tests
             "output_flag" => false, "log_to_console" => false)
         )
         results = run_reopt(model, "./scenarios/incentives.json")
-        @test results["Financial"]["lcc"] ≈ 1.094596365e7 atol=1e4  
+        @test results["Financial"]["lcc"] ≈ 1.096852612e7 atol=1e4  
     end
 
     try
