@@ -525,10 +525,8 @@ function parse_urdb_fixed_charges(d::Dict)
     min_monthly = 0.0
 
     # first try $/month, then check if $/day exists, as of 1/28/2020 there were only $/day and $month entries in the URDB
-    fixed_monthly = get(d, "fixedmonthlycharge", nothing)
-    if !isnothing(fixed_monthly)
-        fixed_monthly = Float64(fixed_monthly)
-    else
+    fixed_monthly = Float64(get(d, "fixedmonthlycharge", 0.0))
+    if fixed_monthly == 0.0
         if get(d, "fixedchargeunits", "") == "\$/month" 
             fixed_monthly = Float64(get(d, "fixedchargefirstmeter", 0.0))
         elseif get(d, "fixedchargeunits", "") == "\$/day"
