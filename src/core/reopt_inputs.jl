@@ -468,7 +468,7 @@ function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_si
     cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin,
     segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_no_curtail
     )
-    max_sizes["Generator"] = s.generator.max_kw
+    max_sizes["Generator"] = s.generator.existing_kw + s.generator.max_kw
     min_sizes["Generator"] = s.generator.existing_kw + s.generator.min_kw
     existing_sizes["Generator"] = s.generator.existing_kw
     update_cost_curve!(s.generator, "Generator", s.financial,
