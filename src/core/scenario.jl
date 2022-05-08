@@ -165,7 +165,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                         )
         max_heat_demand_kw = maximum(dhw_load.loads_kw)
     else
-        dhw_load = DomesticHotWaterLoad(; fuel_loads_mmbtu_per_hour=repeat([0.0], 8760))
+        dhw_load = DomesticHotWaterLoad(; 
+            fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
+            time_steps_per_hour=settings.time_steps_per_hour
+        )
     end
                                     
     if haskey(d, "SpaceHeatingLoad") && !haskey(d, "FlexibleHVAC")
@@ -177,7 +180,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         
         max_heat_demand_kw = maximum(space_heating_load.loads_kw .+ max_heat_demand_kw)
     else
-        space_heating_load = SpaceHeatingLoad(; fuel_loads_mmbtu_per_hour=repeat([0.0], 8760))
+        space_heating_load = SpaceHeatingLoad(; 
+            fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
+            time_steps_per_hour=settings.time_steps_per_hour
+        )
     end
 
     flexible_hvac = nothing
@@ -269,7 +275,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["CoolingLoad"])
         d["CoolingLoad"]["site_electric_load_profile"] = electric_load.loads_kw
         # Pass ExistingChiller inputs which are used in CoolingLoad processing, if they exist
-        ec_empty = ExistingChiller(;loads_kw_thermal=zeros(8760))
+        ec_empty = ExistingChiller(; loads_kw_thermal=zeros(8760*settings.time_steps_per_hour))
         if !haskey(d, "ExistingChiller")
             d["CoolingLoad"]["existing_chiller_max_thermal_factor_on_peak_load"] = ec_empty.max_thermal_factor_on_peak_load
         else
@@ -288,7 +294,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                     )
         max_cooling_demand_kw = maximum(cooling_load.loads_kw_thermal)
     else
-        cooling_load = CoolingLoad(; thermal_loads_ton=repeat([0.0], 8760))
+        cooling_load = CoolingLoad(; 
+            thermal_loads_ton=zeros(8760*settings.time_steps_per_hour),
+            time_steps_per_hour=settings.time_steps_per_hour
+        )
     end
 
     absorption_chiller = nothing
