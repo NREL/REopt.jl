@@ -141,6 +141,17 @@ else  # run HiGHS tests
         @test results["Financial"]["lcc"] ≈ 1.094596365e7 atol=1e4  
     end
 
+    @testset "Fifteen minute load" begin
+        d = JSON.parsefile("scenarios/no_techs.json")
+        d["ElectricLoad"] = Dict("loads_kw" => repeat([1.0], 35040))
+        d["Settings"] = Dict("time_steps_per_hour" => 4)
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+            "output_flag" => false, "log_to_console" => false)
+        )
+        results = run_reopt(model, d)
+        @test results["ElectricLoad"]["annual_calculated_kwh"] ≈ 8760
+    end
+
     try
         rm("Highs.log", force=true)
     catch

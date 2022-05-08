@@ -69,7 +69,7 @@ struct DomesticHotWaterLoad
         if length(fuel_loads_mmbtu_per_hour) > 0
 
             if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
-                @error "Provided domestic hot water load does not match the time_steps_per_hour."
+                throw(@error "Provided domestic hot water load does not match the time_steps_per_hour.")
             end
 
             loads_kw = fuel_loads_mmbtu_per_hour .* (MMBTU_TO_KWH * EXISTING_BOILER_EFFICIENCY)
@@ -147,7 +147,7 @@ struct SpaceHeatingLoad
         if length(fuel_loads_mmbtu_per_hour) > 0
 
             if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
-                @error "Provided space heating load does not match the time_steps_per_hour."
+                throw(@error "Provided space heating load does not match the time_steps_per_hour.")
             end
 
             loads_kw = fuel_loads_mmbtu_per_hour .* (MMBTU_TO_KWH * EXISTING_BOILER_EFFICIENCY)
@@ -272,7 +272,7 @@ struct CoolingLoad
         loads_kw = nothing
         if length(thermal_loads_ton) > 0
             if !(length(thermal_loads_ton) / time_steps_per_hour ≈ 8760)
-                @error "Provided cooling load does not match the time_steps_per_hour."
+                throw(@error "Provided cooling load does not match the time_steps_per_hour.")
             end
             loads_kw_thermal = thermal_loads_ton .* TONHOUR_TO_KWH_THERMAL
         
