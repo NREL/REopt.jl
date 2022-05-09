@@ -675,7 +675,7 @@ end
 
     # Annual cooling **thermal** energy load of CRB is based on annual cooling electric energy (from CRB models) and a conditional COP depending on the peak cooling thermal load
     # When the user specifies inputs["ExistingChiller"]["cop"], this changes the **electric** consumption of the chiller to meet that cooling thermal load
-    cooling_thermal_load_ton_hr_total = 1427329.0 * inputs.s.cooling_load.existing_chiller_cop / REopt.TONHOUR_TO_KWH_THERMAL  # From CRB models, in heating_cooling_loads.jl, BuiltInCoolingLoad data for location (SanFrancisco Hospital)
+    cooling_thermal_load_ton_hr_total = 1427329.0 * inputs.s.cooling_load.existing_chiller_cop / REopt.KWH_THERMAL_PER_TONHOUR  # From CRB models, in heating_cooling_loads.jl, BuiltInCoolingLoad data for location (SanFrancisco Hospital)
     cooling_electric_load_total_mod_cop = cooling_thermal_load_ton_hr_total / inputs.s.existing_chiller.cop
 
     # Annual heating **thermal** energy load of CRB is based on annual boiler fuel energy (from CRB models) and assumed const EXISTING_BOILER_EFFICIENCY
@@ -706,7 +706,7 @@ end
     @test tes_effic_with_decay < 0.97
     println("tes_effic_with_decay = ", tes_effic_with_decay)
     @test round(cooling_total_prod_from_techs, digits=0) ≈ cooling_load_plus_tes_losses atol=5.0
-    #self.assertAlmostEqual(absorpchl_total_cooling_produced_ton_hour * REopt.TONHOUR_TO_KWH_THERMAL / absorpchl_cop_elec, absorpchl_electric_consumption_total_kwh, places=1)
+    #self.assertAlmostEqual(absorpchl_total_cooling_produced_ton_hour * REopt.KWH_THERMAL_PER_TONHOUR / absorpchl_cop_elec, absorpchl_electric_consumption_total_kwh, places=1)
 
     # Heating outputs
     boiler_fuel_consumption_calculated = results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"]
@@ -730,7 +730,7 @@ end
 
     # Test CHP.cooling_thermal_factor = 0.8, AbsorptionChiller.chiller_cop = 0.7 (from test_cold_POST.json)
     # absorpchl_heat_in_kwh = results["AbsorptionChiller"]["year_one_absorp_chl_thermal_consumption_mmbtu"] * 1.0E6 / 3412.0
-    # absorpchl_cool_out_kwh = results["AbsorptionChiller"]["year_one_absorp_chl_thermal_production_tonhr"] * REopt.TONHOUR_TO_KWH_THERMAL
+    # absorpchl_cool_out_kwh = results["AbsorptionChiller"]["year_one_absorp_chl_thermal_production_tonhr"] * REopt.KWH_THERMAL_PER_TONHOUR
     #absorpchl_cop = absorpchl_cool_out_kwh / absorpchl_heat_in_kwh
 
     #self.assertAlmostEqual(absorpchl_cop, 0.8*0.7, places=3)
@@ -752,7 +752,7 @@ end
     # Heating load data from CRB models is **fuel**; we convert fuel to thermal using a constant/fixed REopt.EXISTING_BOILER_EFFICIENCY,
     #   so the thermal load is always the same for a standard CRB
     # The **fuel** consumption to serve that thermal load may change if the user inputs a different ExistingBoiler["efficiency"]
-    total_boiler_heating_thermal_load_mmbtu = (sum(inputs.s.space_heating_load.loads_kw) + sum(inputs.s.dhw_load.loads_kw)) / REopt.MMBTU_TO_KWH
+    total_boiler_heating_thermal_load_mmbtu = (sum(inputs.s.space_heating_load.loads_kw) + sum(inputs.s.dhw_load.loads_kw)) / REopt.KWH_PER_MMBTU
     @test round(total_boiler_heating_thermal_load_mmbtu, digits=0) ≈ 2904 * REopt.EXISTING_BOILER_EFFICIENCY atol=1.0  # The input load is **fuel**, not thermal
     total_boiler_heating_fuel_load_mmbtu = total_boiler_heating_thermal_load_mmbtu / inputs.s.existing_boiler.efficiency
     @test round(total_boiler_heating_fuel_load_mmbtu, digits=0) ≈ 2904 * REopt.EXISTING_BOILER_EFFICIENCY / inputs.s.existing_boiler.efficiency atol=1.0
@@ -782,7 +782,7 @@ end
     inputs = REoptInputs(s)
 
     total_heating_fuel_load_mmbtu = (sum(inputs.s.space_heating_load.loads_kw) + 
-                                    sum(inputs.s.dhw_load.loads_kw)) / REopt.EXISTING_BOILER_EFFICIENCY / REopt.MMBTU_TO_KWH
+                                    sum(inputs.s.dhw_load.loads_kw)) / REopt.EXISTING_BOILER_EFFICIENCY / REopt.KWH_PER_MMBTU
     @test round(total_heating_fuel_load_mmbtu, digits=0) ≈ 12000 atol=1.0
     total_chiller_electric_consumption = sum(inputs.s.cooling_load.loads_kw_thermal) / inputs.s.cooling_load.existing_chiller_cop
     @test round(total_chiller_electric_consumption, digits=0) ≈ 775282 atol=1.0
@@ -795,7 +795,7 @@ end
     inputs = REoptInputs(s)
 
     total_heating_fuel_load_mmbtu = (sum(inputs.s.space_heating_load.loads_kw) + 
-                                    sum(inputs.s.dhw_load.loads_kw)) / REopt.EXISTING_BOILER_EFFICIENCY / REopt.MMBTU_TO_KWH
+                                    sum(inputs.s.dhw_load.loads_kw)) / REopt.EXISTING_BOILER_EFFICIENCY / REopt.KWH_PER_MMBTU
     @test round(total_heating_fuel_load_mmbtu, digits=0) ≈ 8760 atol=0.1
     @test round(sum(inputs.s.cooling_load.loads_kw_thermal) / inputs.s.cooling_load.existing_chiller_cop, digits=0) ≈ 77528.0 atol=1.0
 
@@ -810,7 +810,7 @@ end
     s = Scenario(input_data)
     inputs = REoptInputs(s)
     
-    @test round(sum(inputs.s.cooling_load.loads_kw_thermal) / REopt.TONHOUR_TO_KWH_THERMAL, digits=0) ≈ annual_tonhour atol=1.0 
+    @test round(sum(inputs.s.cooling_load.loads_kw_thermal) / REopt.KWH_THERMAL_PER_TONHOUR, digits=0) ≈ annual_tonhour atol=1.0 
 end
 
 @testset "Hybrid/blended heating and cooling loads" begin
