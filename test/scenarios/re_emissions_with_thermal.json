@@ -8,32 +8,26 @@
   },
   "ExistingBoiler": {
     "existing_boiler_production_type_steam_or_hw": "steam",
-    "boiler_efficiency": 0.8,
+    "efficiency": 0.8,
     "emissions_factor_lb_CO2_per_mmbtu": null,
-    "can_supply_steam_turbine": false
+    "can_supply_steam_turbine": false,
+    "fuel_type": "natural_gas",
+    "fuel_cost_per_mmbtu": 10.0
   },
   "Boiler": {
     "min_mmbtu_per_hr": 0.0,
     "max_mmbtu_per_hr": 1.0E9,
-    "boiler_efficiency": 0.8,
+    "efficiency": 0.8,
     "can_supply_steam_turbine": true,
     "installed_cost_per_mmbtu_per_hr": 1.0,
     "om_cost_per_mmbtu_per_hr": 0.1,
     "om_cost_per_mmbtu": 0.1,                  
-    "emissions_factor_lb_CO2_per_mmbtu": null
+    "emissions_factor_lb_CO2_per_mmbtu": null,
+    "fuel_type": "uranium",
+    "fuel_renewable_energy_pct": 0.5,
+    "fuel_cost_per_mmbtu": 0.5
   },
-  "FuelTariff": {
-    "existing_boiler_fuel_type": "natural_gas",
-    "boiler_fuel_blended_annual_rates_per_mmbtu": 10.0,
-    "boiler_fuel_percent_RE": 0.0,
-    "newboiler_fuel_type": "uranium",
-    "newboiler_fuel_blended_annual_rates_per_mmbtu": 0.5,
-    "newboiler_fuel_percent_RE": 0.50,
-    "chp_fuel_type": "natural_gas",
-    "chp_fuel_blended_annual_rates_per_mmbtu": 8.0,
-    "chp_fuel_percent_RE": 0.3
-  },
-  "LoadProfileChillerThermal": {
+  "CoolingLoad": {
     "doe_reference_name": "Hospital" ,
     "chiller_cop": 3.4
   },
@@ -60,8 +54,7 @@
   "Financial": {
     "om_cost_escalation_pct": 0.025,
     "elec_cost_escalation_pct": 0.023,
-    "boiler_fuel_escalation_pct": 0.034,
-    "newboiler_fuel_escalation_pct": 0.034,
+    "boiler_fuel_cost_escalation_pct": 0.034,
     "offtaker_tax_pct": 0.26,
     "offtaker_discount_pct": 0.083,
     "third_party_ownership": false,
@@ -91,7 +84,7 @@
     "interconnection_limit_kw": 100000000.0
   },
   "PV": {
-    "pv_name": "",
+    "name": "",
     "existing_kw": 10.0,
     "min_kw": 10.0,
     "max_kw": 10.0
@@ -113,8 +106,7 @@
     "om_cost_per_gal": 0.0 ,
     "macrs_option_years": 0 ,
     "macrs_bonus_pct": 0.0
-  } ,
-  "ElectricChiller": {},
+  },
   "AbsorptionChiller": {
     "min_ton": 400.0 ,
     "max_ton": 400.0 ,
@@ -131,7 +123,10 @@
     "min_kw": 200.0,
     "min_allowable_kw":0.0,
     "max_kw": 200.0,
-    "can_supply_steam_turbine": true
+    "can_supply_steam_turbine": true,
+    "fuel_type": "natural_gas",
+    "fuel_cost_per_mmbtu": 8.0,
+    "fuel_renewable_energy_pct": 0.3
   },
   "HotThermalStorage": {
     "min_gal": 50000.0,
