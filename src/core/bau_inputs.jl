@@ -44,6 +44,7 @@ function BAUInputs(p::REoptInputs)
     cap_cost_slope = Dict{String, Any}()
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
     cop = Dict(t => 0.0 for t in techs.cooling)
+    thermal_cop = Dict{String, Float64}()
     production_factor = DenseAxisArray{Float64}(undef, techs.all, p.time_steps)
     tech_renewable_energy_pct = DenseAxisArray([p.tech_renewable_energy_pct[t] for t in techs.all], techs.all)
     # !!! note: tech_emissions_factors in lb / kWh (gets multiplied by kWh of fuel burned, not kWh electricity consumption, ergo the use of the HHV instead of fuel slope)
@@ -142,6 +143,7 @@ function BAUInputs(p::REoptInputs)
         cap_cost_slope,
         om_cost_per_kw,
         cop,
+        thermal_cop,
         p.time_steps,
         p.time_steps_with_grid,
         p.time_steps_without_grid,
