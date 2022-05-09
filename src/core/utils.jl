@@ -28,13 +28,6 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 
-const M3_TO_GAL = 264.172  # [gal/m^3]
-const GAL_DIESEL_TO_KWH = 40.7  # [kWh/gal_diesel]
-const MMBTU_TO_KWH = 293.07107  # [kWh/mmbtu]
-const TONHOUR_TO_KWH_THERMAL = 3.51685
-const EXISTING_BOILER_EFFICIENCY = 0.8
-const TONNES_TO_LBS = 2204.62  # [lb/tonne]
-
 function annuity(years::Int, rate_escalation::Float64, rate_discount::Float64)
     """
         this formulation assumes cost growth in first period
