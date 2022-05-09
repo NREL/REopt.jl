@@ -85,7 +85,7 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 	)
 	r["year_one_to_load_series_kw"] = round.(value.(generatorToLoad), digits=3)
 
-    GeneratorFuelUsed = @expression(m, sum(m[:dvFuelUsage][t, ts] for t in p.techs.gen, ts in p.time_steps))
+    GeneratorFuelUsed = @expression(m, sum(m[:dvFuelUsage][t, ts] for t in p.techs.gen, ts in p.time_steps) / GAL_DIESEL_TO_KWH)
 	r["fuel_used_gal"] = round(value(GeneratorFuelUsed), digits=2)
 
 	Year1GenProd = @expression(m,
@@ -131,7 +131,7 @@ function add_generator_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n=
 	)
 	r["to_load_series_kw"] = round.(value.(generatorToLoad), digits=3).data
 
-    GeneratorFuelUsed = @expression(m, sum(m[:dvFuelUsage][t, ts] for t in p.techs.gen, ts in p.time_steps))
+    GeneratorFuelUsed = @expression(m, sum(m[:dvFuelUsage][t, ts] for t in p.techs.gen, ts in p.time_steps) / GAL_DIESEL_TO_KWH)
 	r["fuel_used_gal"] = round(value(GeneratorFuelUsed), digits=2)
 
 	Year1GenProd = @expression(m,
