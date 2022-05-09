@@ -29,13 +29,13 @@
 # *********************************************************************************
 function add_fuel_burn_constraints(m,p)
   	@constraint(m, [t in p.techs.gen, ts in p.time_steps],
-		m[:dvFuelUsage][t, ts] == p.s.generator.fuel_slope_gal_per_kwh *
-		p.production_factor[t, ts] * p.hours_per_timestep * m[:dvRatedProduction][t, ts] +
-		p.s.generator.fuel_intercept_gal_per_hr * p.hours_per_timestep * m[:binGenIsOnInTS][t, ts]
+		(m[:dvFuelUsage][t, ts] == p.s.generator.fuel_slope_gal_per_kwh * GAL_DIESEL_TO_KWH *
+		p.production_factor[t, ts] * p.hours_per_timestep * m[:dvRatedProduction][t, ts])
+		+ (p.s.generator.fuel_intercept_gal_per_hr * GAL_DIESEL_TO_KWH * p.hours_per_timestep * m[:binGenIsOnInTS][t, ts])
 	)
 	@constraint(m,
 		sum(m[:dvFuelUsage][t, ts] for t in p.techs.gen, ts in p.time_steps) <=
-		p.s.generator.fuel_avail_gal
+		p.s.generator.fuel_avail_gal * GAL_DIESEL_TO_KWH
 	)
 end
 
@@ -89,6 +89,6 @@ function add_gen_constraints(m, p)
         m[:dvRatedProduction][t, ts] for t in p.techs.gen, ts in p.time_steps)
     )
     m[:TotalGenFuelCosts] = @expression(m, p.pwf_e *
-        sum(m[:dvFuelUsage][t,ts] * p.s.generator.fuel_cost_per_gallon for t in p.techs.gen, ts in p.time_steps)
+        sum(m[:dvFuelUsage][t,ts] * p.s.generator.fuel_cost_per_gallon / GAL_DIESEL_TO_KWH for t in p.techs.gen, ts in p.time_steps)
     )
 end
