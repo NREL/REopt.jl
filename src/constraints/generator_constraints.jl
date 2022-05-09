@@ -29,7 +29,7 @@
 # *********************************************************************************
 function add_fuel_burn_constraints(m,p)
   	@constraint(m, [t in p.techs.gen, ts in p.time_steps],
-		(m[:dvFuelUsage][t, ts] == p.s.generator.fuel_slope_gal_per_kwh * GAL_DIESEL_TO_KWH *
+		m[:dvFuelUsage][t, ts] == (p.s.generator.fuel_slope_gal_per_kwh * GAL_DIESEL_TO_KWH *
 		p.production_factor[t, ts] * p.hours_per_timestep * m[:dvRatedProduction][t, ts]) +
 		(p.s.generator.fuel_intercept_gal_per_hr * GAL_DIESEL_TO_KWH * p.hours_per_timestep * m[:binGenIsOnInTS][t, ts])
 	)
