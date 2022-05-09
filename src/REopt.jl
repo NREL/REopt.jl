@@ -64,9 +64,6 @@ using ArchGDAL
 using Roots: fzero  # for IRR
 global hdl = nothing
 
-const M3_TO_GAL = 264.172  # [gal/m^3]
-const GAL_DIESEL_TO_KWH = 40.7  # [kWh/gal_diesel]
-
 include("keys.jl")
 include("core/types.jl")
 include("core/utils.jl")
