@@ -27,59 +27,66 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-abstract type AbstractTech end
-abstract type AbstractStorage end
-abstract type AbstractFuelBurningTech <: AbstractTech end
-abstract type AbstractGenerator <: AbstractFuelBurningTech end
-abstract type AbstractScenario end
-abstract type AbstractInputs end
-abstract type AbstractThermalTech <: AbstractGenerator end
-abstract type AbstractCHP <: AbstractFuelBurningTech end
-abstract type AbstractThermalStorage <: AbstractStorage end
-abstract type AbstractElectricStorage <: AbstractStorage end
-abstract type AbstractThermalStorageDefaults end
-
 
 """
-    Techs
+    AbsorptionChiller
 
-`Techs` contains the index sets that are used to define the model constraints and decision variables.
-
+struct with inner constructor:
 ```julia
-mutable struct Techs
-    all::Vector{String}
-    elec::Vector{String}
-    pv::Vector{String}
-    gen::Vector{String}
-    pbi::Vector{String}
-    no_curtail::Vector{String}
-    no_turndown::Vector{String}
-    segmented::Vector{String}
-    heating::Vector{String}
-    boiler::Vector{String}
-    fuel_burning::Vector{String}
-    thermal::Vector{String}
-    chp::Vector{String}
-    electric_chiller::Vector{String}
-    absorption_chiller::Vector{String}
-end
+function AbsorptionChiller(;
+    min_ton::Real = 0.0,
+    max_ton::Real = 0.0,
+    chiller_cop::Real,
+    chiller_elec_cop::Real = 14.1,
+    installed_cost_per_ton::Real,
+    om_cost_per_ton::Real,
+    macrs_option_years::Real = 0,
+    macrs_bonus_pct::Real = 0
+)
 ```
 """
-mutable struct Techs
-    all::Vector{String}
-    elec::Vector{String}
-    pv::Vector{String}
-    gen::Vector{String}
-    pbi::Vector{String}
-    no_curtail::Vector{String}
-    no_turndown::Vector{String}
-    segmented::Vector{String}
-    heating::Vector{String}
-    cooling::Vector{String}
-    boiler::Vector{String}
-    fuel_burning::Vector{String}
-    thermal::Vector{String}
-    chp::Vector{String}
-    electric_chiller::Vector{String}
-    absorption_chiller::Vector{String}
+struct AbsorptionChiller <: AbstractThermalTech
+    min_ton::Real
+    max_ton::Real
+    chiller_cop::Real
+    chiller_elec_cop::Real
+    installed_cost_us_dollars_per_ton::Real
+    om_cost_us_dollars_per_ton::Real
+    macrs_option_years::Real
+    macrs_bonus_pct::Real
+    min_kw::Real
+    max_kw::Real
+    installed_cost_per_kw::Real
+    om_cost_per_kw::Real
+    function AbsorptionChiller(;
+        min_ton::Real = 0.0,
+        max_ton::Real = 0.0,
+        chiller_cop::Real,
+        chiller_elec_cop::Real = 14.1,
+        installed_cost_per_ton::Real,
+        om_cost_per_ton::Real,
+        macrs_option_years::Real = 0,
+        macrs_bonus_pct::Real = 0,
+        )
+
+        min_kw = min_ton * TONHOUR_TO_KWH_THERMAL
+        max_kw = max_ton * TONHOUR_TO_KWH_THERMAL
+        installed_cost_per_kw = installed_cost_per_ton / TONHOUR_TO_KWH_THERMAL
+        om_cost_per_kw = om_cost_per_ton / TONHOUR_TO_KWH_THERMAL
+
+        new(
+            min_ton,
+            max_ton,
+            chiller_cop,
+            chiller_elec_cop,
+            installed_cost_per_ton,
+            om_cost_per_ton,
+            macrs_option_years,
+            macrs_bonus_pct,
+            min_kw,
+            max_kw,
+            installed_cost_per_kw,
+            om_cost_per_kw
+        )
+    end
 end
