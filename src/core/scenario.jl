@@ -115,7 +115,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             time_steps_per_hour=settings.time_steps_per_hour
                                         )
     else
-        electric_utility = ElectricUtility()
+        electric_utility = ElectricUtility(; latitude=site.latitude, longitude=site.longitude)
     end
 
     storage_structs = Dict{String, AbstractStorage}()
