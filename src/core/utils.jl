@@ -28,10 +28,6 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 
-const MMBTU_TO_KWH = 293.07107
-const GAL_DIESEL_TO_KWH = 40.7
-const TONNES_TO_LBS = 2204.62
-
 function annuity(years::Int, rate_escalation::Float64, rate_discount::Float64)
     """
         this formulation assumes cost growth in first period
