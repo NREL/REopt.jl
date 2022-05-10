@@ -235,25 +235,31 @@ function region(region_abbr::String)
     end
 end
 
+"""
+Determine the region abberviation for a given lat/lon pair.
+    1. Checks to see if given point is in an AVERT region
+    2. If 1 doesnt work, check to see if our point is near any AVERT regions.
+        1. Transform point from NAD83 CRS to EPSG 102008 (NA focused conic projection)
+        2. Get distance between point and AVERT zones, store in a vector
+        3. If distance from a region < 5 miles, return that region along with distance.
 
+Helpful links:
+# https://yeesian.com/ArchGDAL.jl/latest/projections/#:~:text=transform%0A%20%20%20%20point%20%3D%20ArchGDAL.-,fromWKT,-(%22POINT%20(1120351.57%20741921.42
+# https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry
+# https://epsg.io/102008
+"""
 function region_abbreviation(latitude, longitude)
     
     file_path = joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "avert_4326.shp")
 
-    # Set defaults
     abbr = nothing
     meters_to_region = nothing
 
     shpfile = ArchGDAL.read(file_path)
 	avert_layer = ArchGDAL.getlayer(shpfile, 0)
 
-	# From https://yeesian.com/ArchGDAL.jl/latest/projections/#:~:text=transform%0A%20%20%20%20point%20%3D%20ArchGDAL.-,fromWKT,-(%22POINT%20(1120351.57%20741921.42
-    # From https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry
 	point = ArchGDAL.fromWKT(string("POINT (",longitude," ",latitude,")"))
-	
-	# No transformation needed
     
-    # if lon,lat pair is in a polygon, return that AVERT region.
 	for i in 1:ArchGDAL.nfeature(avert_layer)
 		ArchGDAL.getfeature(avert_layer,i-1) do feature # 0 indexed
 			if ArchGDAL.contains(ArchGDAL.getgeom(feature), point)
@@ -267,19 +273,14 @@ function region_abbreviation(latitude, longitude)
     else
         return abbr, meters_to_region
     end
-    
-    # If region abbreviation from above is nothing then are our lat/lon coords near any avert zone?:
 
     shpfile = ArchGDAL.read(joinpath(@__DIR__, "..", "..", "data", "avert","avert_102008.shp"))
     avert_102008 = ArchGDAL.getlayer(shpfile, 0)
 
     pt = ArchGDAL.createpoint(latitude, longitude)
 
-    
     try
-        # EPSG 4326 is WGS 84 -- WGS84 - World Geodetic System 1984, used in GPS
         fromProj = ArchGDAL.importEPSG(4326)
-        # Got below from https://epsg.io/102008
         toProj = ArchGDAL.importPROJ4("+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs")
         ArchGDAL.createcoordtrans(fromProj, toProj) do transform
             # println("Before: $(ArchGDAL.toWKT(point))")
@@ -289,10 +290,9 @@ function region_abbreviation(latitude, longitude)
     catch
         @warn "Could not look up AVERT emissions region from point (",latitude,",",longitude,"). Location is
         likely invalid or well outside continental US, AK and HI"
-        return nothing, nothing
+        return abbr, meters_to_region
     end
 
-    # For each item, get geometry and append distance between point and geometry to vector.
     distances = []
     for i in 1:ArchGDAL.nfeature(avert_102008)
         ArchGDAL.getfeature(avert_102008,i-1) do f # 0 indexed
@@ -301,14 +301,13 @@ function region_abbreviation(latitude, longitude)
     end
     
     ArchGDAL.getfeature(avert_102008,argmin(distances)-1) do feature	# 0 indexed
-        abbr = ArchGDAL.getfield(feature,1)
         meters_to_region = distances[argmin(distances)]
-    end
 
-    if meters_to_region > 8046
-        println(meters_to_region)
-        @warn "Your site location (", latitude,",",longitude,") is more than 5 miles from the nearest emission region. Cannot calculate emissions."
-        return nothing, nothing
+        if meters_to_region > 8046
+            @warn "Your site location (", latitude,",",longitude,") is more than 5 miles from the nearest emission region. Cannot calculate emissions."
+        else
+            abbr = ArchGDAL.getfield(feature,1)
+        end
     end
     return abbr, meters_to_region
 end
