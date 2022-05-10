@@ -1,7 +1,13 @@
 # REopt Changelog
 
-## develop
-- add absorption chiller
+## v0.15.2
+- bug fix for 15 & 30 minute electric, heating, and cooling loads
+- bug fix for URDB fixed charges
+- bug fix for default `Wind` `installed_cost_per_kw` and `federal_itc_pct`
+
+## v0.15.1
+- add `AbsorptionChiller` technology
+- add `ElectricStorage.minimum_avg_soc_fraction` input and constraint
 
 ## v0.15.0
 - bug fix in outage_simulator
