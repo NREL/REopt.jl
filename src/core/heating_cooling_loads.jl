@@ -96,7 +96,7 @@ struct DomesticHotWaterLoad
 
         new(
             loads_kw,
-            (sum(loads_kw)/time_steps_per_hour)/MMBTU_TO_KWH
+            (sum(loads_kw)/time_steps_per_hour)/KWH_PER_MMBTU
         )
     end
 end
@@ -176,7 +176,7 @@ struct SpaceHeatingLoad
 
         new(
             loads_kw,
-            (sum(loads_kw)/time_steps_per_hour)/MMBTU_TO_KWH
+            (sum(loads_kw)/time_steps_per_hour)/KWH_PER_MMBTU
         )
     end
 end
