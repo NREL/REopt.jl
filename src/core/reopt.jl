@@ -469,7 +469,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
     if !isempty(p.techs.fuel_burning)
-		@variable(m, dvFuelUsage[p.techs.fuel_burning, p.time_steps] >= 0) # Fuel burned by technology t in each time step
+		@variable(m, dvFuelUsage[p.techs.fuel_burning, p.time_steps] >= 0) # Fuel burned by technology t in each time step [kWh]
     end
 
     if !isempty(p.s.electric_tariff.export_bins)
