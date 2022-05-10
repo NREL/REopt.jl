@@ -158,6 +158,30 @@ else  # run HiGHS tests
         @warn "Could not delete test/Highs.log"
     end
 
+    @testset "AVERT region abberviations" begin
+        """
+        This test checks 4 scenarios (in order)
+        1. Coordinate pair inside an AVERT polygon
+        2. Coordinate pair near a US border
+        3. Coordinate pair < 5 miles from US border
+        4. Coordinate pair > 5 miles from US border
+        5. Coordinate pair >> 5 miles from US border
+        """
+        (r, d) = REopt.region_abbreviation(39.86357200140234, -104.67953917092028)
+        @test r == "RM"
+        (r, d) = REopt.region_abbreviation(47.44285093638291, -69.24169587285499)
+        @test r == "NE"
+        @test round(d, digits = 2) == 51.94
+        (r, d) = REopt.region_abbreviation(47.49137892652077, -69.3240287592685)
+        @test r == "NE"
+        @test round(d, digits = 2) == 8031.25
+        (r, d) = REopt.region_abbreviation(47.49153421708515, -69.3241666522892)
+        @test r === nothing
+        @test round(d, digits = 2) == 8049.6
+        (r, d) = REopt.region_abbreviation(55.860334445251354, -4.286554357755312)
+        @test r === nothing
+    end
+
     # removed Wind test for two reasons
     # 1. reduce WindToolKit calls in tests
     # 2. HiGHS does not support SOS or indicator constraints, which are needed for export constraints
