@@ -29,25 +29,13 @@
 # *********************************************************************************
 
 """
-	get_inputs(m::JuMP.AbstractModel, fp::String)
+    REoptInputs(d::Dict)
 
-Return Scenario and REoptInputs(s) where s is the `Scenario` defined in JSON file stored at the file path `fp`.
+Return REoptInputs(s) where s in `Scenario` defined in dict `d`.
 """
-function get_inputs(fp::String)
-	s = Scenario(JSON.parsefile(fp))
-	inputs = REoptInputs(s)
-	return s, inputs
-end
 
-"""
-	get_inputs(m::JuMP.AbstractModel, d::Dict)
-
-Return Scenario and REoptInputs(s) where s is the `Scenario` is defined in dict `d`.
-"""
-function get_inputs(d::Dict)
-	s = Scenario(d)
-	inputs = REoptInputs(s)
-	return s, inputs
+function REoptInputs(d::Dict)
+    REoptInputs(Scenario(d))
 end
 
 """

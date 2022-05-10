@@ -965,7 +965,7 @@ end
     post = JSON.parsefile("./scenarios/$post_name")
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     r = run_reopt(m, post)
-    scen, inputs = get_inputs(post)
+    scen = Scenario(post)
     
     # Test default values 
     @test scen.electric_utility.outage_start_time_step ≈ 1
