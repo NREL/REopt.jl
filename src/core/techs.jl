@@ -46,8 +46,8 @@ function Techs(p::REoptInputs, s::BAUScenario)
     cooling_techs = String[]
     boiler_techs = String[]
     chp_techs = String[]
-    techs_requiring_oper_res = String[]  
-    techs_providing_oper_res = String[]
+    requiring_oper_res = String[]  
+    providing_oper_res = String[]
     electric_chillers = String[]
     absorption_chillers = String[]
 
@@ -87,8 +87,8 @@ function Techs(p::REoptInputs, s::BAUScenario)
         fuel_burning_techs,
         thermal_techs,
         chp_techs,
-        techs_requiring_oper_res,
-        techs_providing_oper_res,
+        requiring_oper_res,
+        providing_oper_res,
         electric_chillers,
         absorption_chillers
     )
@@ -117,8 +117,8 @@ function Techs(s::Scenario)
     cooling_techs = String[]
     boiler_techs = String[]
     chp_techs = String[]
-    techs_requiring_oper_res = String[] 
-    techs_providing_oper_res = String[]
+    requiring_oper_res = String[] 
+    providing_oper_res = String[]
     electric_chillers = String[]
     absorption_chillers = String[]
 
@@ -160,8 +160,8 @@ function Techs(s::Scenario)
     end
 
     if s.settings.off_grid_flag
-        techs_requiring_oper_res = copy(pvtechs) # Currently, only PV requires operating reserves.
-        techs_providing_oper_res = union(pvtechs, gentechs) # Currently, only PV and generator (and storage) provide operating reserves.
+        requiring_oper_res = copy(pvtechs) # Currently, only PV requires operating reserves.
+        providing_oper_res = union(pvtechs, gentechs) # Currently, only PV and generator (and storage) provide operating reserves.
     end
 
     cooling_techs = union(electric_chillers, absorption_chillers)
@@ -183,8 +183,8 @@ function Techs(s::Scenario)
         fuel_burning_techs,
         thermal_techs,
         chp_techs,
-        techs_requiring_oper_res, 
-        techs_providing_oper_res, 
+        requiring_oper_res, 
+        providing_oper_res, 
         electric_chillers,
         absorption_chillers
     )

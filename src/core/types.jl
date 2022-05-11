@@ -58,8 +58,8 @@ mutable struct Techs
     fuel_burning::Vector{String}
     thermal::Vector{String}
     chp::Vector{String}
-    techs_requiring_oper_res::Vector{String}
-    techs_providing_oper_res::Vector{String}
+    requiring_oper_res::Vector{String}
+    providing_oper_res::Vector{String}
     electric_chiller::Vector{String}
     absorption_chiller::Vector{String}
 end
@@ -80,8 +80,8 @@ mutable struct Techs
     fuel_burning::Vector{String}
     thermal::Vector{String}
     chp::Vector{String}
-    techs_requiring_oper_res::Vector{String}
-    techs_providing_oper_res::Vector{String}
+    requiring_oper_res::Vector{String}
+    providing_oper_res::Vector{String}
     electric_chiller::Vector{String}
     absorption_chiller::Vector{String}
 end
