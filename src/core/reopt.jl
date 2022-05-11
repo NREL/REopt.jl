@@ -534,7 +534,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 	if p.s.settings.off_grid_flag
 		@variables m begin
 			dvOpResFromBatt[p.s.storage.types.elec, p.time_steps_without_grid] >= 0 # Operating reserves provided by the electric storage [kW]
-			dvOpResFromTechs[p.techs.techs_providing_oper_res, p.time_steps_without_grid] >= 0 # Operating reserves provided by techs [kW]
+			dvOpResFromTechs[p.techs.providing_oper_res, p.time_steps_without_grid] >= 0 # Operating reserves provided by techs [kW]
 			1 >= dvOffgridLoadServedFraction[p.time_steps_without_grid] >= 0 # Critical load served in each time_step. Applied in off-grid scenarios only. [fraction]
 		end
 	end
