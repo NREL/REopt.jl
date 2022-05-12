@@ -201,20 +201,6 @@ function dictkeys_tosymbols(d::Dict)
                 @warn "Unable to convert $k to a Array{Int64, 1}"
             end
         end
-        # if k in [
-        #     "installed_cost_per_kw", 
-        #     "offgrid_other_capital_costs", "offgrid_other_annual_costs",
-        #     "land_acres", "roof_squarefeet", "federal_rebate_per_kw",
-        #     "offtaker_tax_pct", "owner_tax_pct", "offtaker_discount_pct",
-        #     "owner_discount_pct", "om_cost_escalation_pct", "generator_fuel_cost_escalation_pct",
-        #     "elec_cost_escalation_pct", "boiler_fuel_cost_escalation_pct", "chp_fuel_cost_escalation_pct"
-        # ]
-        #     try
-        #         v = convert(Float64, v)
-        #     catch
-        #         @warn "Unable to convert $k to a Float64"
-        #     end
-        # end
         d2[Symbol(k)] = v
     end
     return d2
