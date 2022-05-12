@@ -36,8 +36,8 @@ Inputs related to the physical location:
 function Site(;
     latitude::Real, 
     longitude::Real, 
-    land_acres::Union{Float64, Nothing} = nothing, 
-    roof_squarefeet::Union{Float64, Nothing} = nothing,
+    land_acres::Union{Real, Nothing} = nothing, 
+    roof_squarefeet::Union{Real, Nothing} = nothing,
     min_resil_time_steps::Int=0,
     mg_tech_sizes_equal_grid_sizes::Bool = true,
     node::Int = 1, 
@@ -57,8 +57,8 @@ struct Site
     function Site(;
         latitude::Real, 
         longitude::Real, 
-        land_acres::Union{Float64, Nothing} = nothing, 
-        roof_squarefeet::Union{Float64, Nothing} = nothing,
+        land_acres::Union{Real, Nothing} = nothing, 
+        roof_squarefeet::Union{Real, Nothing} = nothing,
         min_resil_time_steps::Int=0,
         mg_tech_sizes_equal_grid_sizes::Bool = true,
         node::Int = 1, 

@@ -53,9 +53,9 @@ function BAUInputs(p::REoptInputs)
 
     # REoptInputs indexed on techs.segmented
     n_segs_by_tech = Dict{String, Int}()
-    seg_min_size = Dict{String, Dict{Int, Float64}}()
-    seg_max_size = Dict{String, Dict{Int, Float64}}()
-    seg_yint = Dict{String, Dict{Int, Float64}}()
+    seg_min_size = Dict{String, Dict{Int, Real}}()
+    seg_max_size = Dict{String, Dict{Int, Real}}()
+    seg_yint = Dict{String, Dict{Int, Real}}()
 
     # PV specific arrays
     pv_to_location = Dict(t => Dict{Symbol, Int}() for t in techs.pv)
