@@ -35,9 +35,19 @@ Note: the node number is an empty string if evaluating a single `Site`.
 
 Financial results:
 - `lcc` Optimal lifecycle cost
+- `lifecycle_generation_tech_capital_costs` LCC component. Net capital costs for all generation technologies, in present value, including replacement costs and incentives. This value does not include offgrid_other_capital_costs.
+- `lifecycle_storage_capital_costs` LCC component. Net capital costs for all storage technologies, in present value, including replacement costs and incentives. This value does not include offgrid_other_capital_costs.
+- `lifecycle_om_costs_after_tax` LCC component. Present value of all O&M costs, after tax.
+- `lifecycle_fuel_costs_after_tax` LCC component. Present value of all fuel costs over the analysis period, after tax.
+- `lifecycle_chp_standby_cost_after_tax` LCC component. Present value of all CHP standby charges, after tax.
+- `lifecycle_elecbill_after_tax` LCC component. Present value of all electric utility charges, after tax. 
+- `lifecycle_production_incentive_after_tax` LCC component. Present value of all production-based incentives, after tax.
+- `lifecycle_offgrid_other_annual_costs_after_tax` LCC component. Present value of offgrid_other_annual_costs over the analysis period, after tax. 
+- `lifecycle_offgrid_other_capital_costs` LCC component. Equal to offgrid_other_capital_costs with straight line depreciation applied over analysis period. The depreciation expense is assumed to reduce the owner's taxable income.
+- `lifecycle_outage_cost` LCC component. Expected outage cost. 
+- `lifecycle_MG_upgrade_and_fuel_cost` LCC component. Cost to upgrade generation and storage technologies to be included in microgrid, plus present value of microgrid fuel costs.
 - `lifecycle_om_costs_before_tax` Present value of all O&M costs, before tax.
 - `year_one_om_costs_before_tax` Year one O&M costs, before tax.
-- `lifecycle_om_costs_after_tax` Present value of all O&M costs, after tax.
 - `year_one_om_costs_after_tax` Year one O&M costs, after tax.
 - `lifecycle_capital_costs_plus_om` Capital cost for all technologies plus present value of operations and maintenance over anlaysis period. This value does not include offgrid_other_capital_costs.
 - `lifecycle_capital_costs` Net capital costs for all technologies, in present value, including replacement costs and incentives. This value does not include offgrid_other_capital_costs.
@@ -47,9 +57,6 @@ Financial results:
 - `replacements_present_cost` Present value cost of replacing storage and/or generator systems, after tax.
 - `om_and_replacement_present_cost_after_tax` Present value of all O&M and replacement costs, after tax.
 - `developer_om_and_replacement_present_cost_after_tax` Present value of all O&M and replacement costs incurred by developer, after tax.
-- `lifecycle_fuel_costs_after_tax` Present value of all fuel costs over the analysis period, after tax.
-- `lifecycle_offgrid_other_annual_costs_after_tax` Present value of offgrid_other_annual_costs over the analysis period, including tax deductions for owner. 
-- `lifecycle_offgrid_other_capital_costs` Equal to offgrid_other_capital_costs with straight line depreciation applied over analysis period. The depreciation expense is assumed to reduce the owner's taxable income.
 - `offgrid_microgrid_lcoe_dollars_per_kwh` Levelized cost of electricity for modeled off-grid system.
 """
 function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
@@ -65,7 +72,7 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
                                            m[Symbol("TotalPerUnitProdOMCosts"*_n)] + m[Symbol("TotalPerUnitHourOMCosts"*_n)])
     
     ## LCC breakdown: ##
-    r["lifecycle_tech_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)]) # Tech capital costs (including replacements)
+    r["lifecycle_generation_tech_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)]) # Tech capital costs (including replacements)
     r["lifecycle_storage_capital_costs"] = value(m[Symbol("TotalStorageCapCosts"*_n)]) # Storage capital costs (including replacements)
     r["lifecycle_om_costs_after_tax"] = r["lifecycle_om_costs_before_tax"] * (1 - p.s.financial.owner_tax_pct)  # Fixed & Variable O&M 
     if !isempty(p.techs.fuel_burning)
