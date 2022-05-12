@@ -60,9 +60,9 @@ struct REoptInputs <: AbstractInputs
     techs_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL, :CUR]
     export_bins_by_tech::Dict
     n_segs_by_tech::Dict{String, Int}
-    seg_min_size::Dict{String, Dict{Int, Float64}}
-    seg_max_size::Dict{String, Dict{Int, Float64}}
-    seg_yint::Dict{String, Dict{Int, Float64}}
+    seg_min_size::Dict{String, Dict{Int, Real}}
+    seg_max_size::Dict{String, Dict{Int, Real}}
+    seg_yint::Dict{String, Dict{Int, Real}}
     pbi_pwf::Dict{String, Any}  # (pbi_techs)
     pbi_max_benefit::Dict{String, Any}  # (pbi_techs)
     pbi_max_kw::Dict{String, Any}  # (pbi_techs)
@@ -103,9 +103,9 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     techs_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL, :CUR]
     export_bins_by_tech::Dict
     n_segs_by_tech::Dict{String, Int}
-    seg_min_size::Dict{String, Dict{Int, Float64}}
-    seg_max_size::Dict{String, Dict{Int, Float64}}
-    seg_yint::Dict{String, Dict{Int, Float64}}
+    seg_min_size::Dict{String, Dict{Int, Real}}
+    seg_max_size::Dict{String, Dict{Int, Real}}
+    seg_yint::Dict{String, Dict{Int, Real}}
     pbi_pwf::Dict{String, Any}  # (pbi_techs)
     pbi_max_benefit::Dict{String, Any}  # (pbi_techs)
     pbi_max_kw::Dict{String, Any}  # (pbi_techs)
@@ -237,9 +237,9 @@ function setup_tech_inputs(s::AbstractScenario)
 
     # REoptInputs indexed on techs.segmented
     n_segs_by_tech = Dict{String, Int}()
-    seg_min_size = Dict{String, Dict{Int, Float64}}()
-    seg_max_size = Dict{String, Dict{Int, Float64}}()
-    seg_yint = Dict{String, Dict{Int, Float64}}()
+    seg_min_size = Dict{String, Dict{Int, Real}}()
+    seg_max_size = Dict{String, Dict{Int, Real}}()
+    seg_yint = Dict{String, Dict{Int, Real}}()
 
     # PV specific arrays
     pvlocations = [:roof, :ground, :both]

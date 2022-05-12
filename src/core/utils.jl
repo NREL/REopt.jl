@@ -28,7 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 
-function annuity(years::Int, rate_escalation::Float64, rate_discount::Float64)
+function annuity(years::Int, rate_escalation::Real, rate_discount::Real)
     """
         this formulation assumes cost growth in first period
         i.e. it is a geometric sum of (1+rate_escalation)^n / (1+rate_discount)^n
@@ -44,7 +44,7 @@ function annuity(years::Int, rate_escalation::Float64, rate_discount::Float64)
 end
 
 
-function annuity_escalation(analysis_period::Int, rate_escalation::Float64, rate_discount::Float64)
+function annuity_escalation(analysis_period::Int, rate_escalation::Real, rate_discount::Real)
     """
     :param analysis_period: years
     :param rate_escalation: escalation rate
@@ -60,8 +60,8 @@ function annuity_escalation(analysis_period::Int, rate_escalation::Float64, rate
 end
 
 
-function levelization_factor(years::Int, rate_escalation::Float64, rate_discount::Float64, 
-    rate_degradation::Float64)
+function levelization_factor(years::Int, rate_escalation::Real, rate_discount::Real, 
+    rate_degradation::Real)
     #=
     NOTE: levelization_factor for an electricity producing tech is the ratio of:
     - an annuity with an escalation rate equal to the electricity cost escalation rate, starting year 1,
@@ -91,16 +91,16 @@ end
 
 
 function effective_cost(;
-    itc_basis::Float64, 
-    replacement_cost::Float64, 
+    itc_basis::Real, 
+    replacement_cost::Real, 
     replacement_year::Int,
-    discount_rate::Float64, 
-    tax_rate::Float64, 
-    itc::Float64,
+    discount_rate::Real, 
+    tax_rate::Real, 
+    itc::Real,
     macrs_schedule::Array{Float64,1}, 
-    macrs_bonus_pct::Float64, 
-    macrs_itc_reduction::Float64,
-    rebate_per_kw::Float64=0.0,
+    macrs_bonus_pct::Real, 
+    macrs_itc_reduction::Real,
+    rebate_per_kw::Real=0.0,
     )
 
     """ effective PV and battery prices with ITC and depreciation
@@ -201,20 +201,20 @@ function dictkeys_tosymbols(d::Dict)
                 @warn "Unable to convert $k to a Array{Int64, 1}"
             end
         end
-        if k in [
-            "installed_cost_per_kw", "replace_cost_per_kw",
-            "offgrid_other_capital_costs", "offgrid_other_annual_costs",
-            "land_acres", "roof_squarefeet", "federal_rebate_per_kw",
-            "offtaker_tax_pct", "owner_tax_pct", "offtaker_discount_pct",
-            "owner_discount_pct", "om_cost_escalation_pct", "generator_fuel_cost_escalation_pct",
-            "elec_cost_escalation_pct", "boiler_fuel_cost_escalation_pct", "chp_fuel_cost_escalation_pct"
-        ]
-            try
-                v = convert(Float64, v)
-            catch
-                @warn "Unable to convert $k to a Float64"
-            end
-        end
+        # if k in [
+        #     "installed_cost_per_kw", 
+        #     "offgrid_other_capital_costs", "offgrid_other_annual_costs",
+        #     "land_acres", "roof_squarefeet", "federal_rebate_per_kw",
+        #     "offtaker_tax_pct", "owner_tax_pct", "offtaker_discount_pct",
+        #     "owner_discount_pct", "om_cost_escalation_pct", "generator_fuel_cost_escalation_pct",
+        #     "elec_cost_escalation_pct", "boiler_fuel_cost_escalation_pct", "chp_fuel_cost_escalation_pct"
+        # ]
+        #     try
+        #         v = convert(Float64, v)
+        #     catch
+        #         @warn "Unable to convert $k to a Float64"
+        #     end
+        # end
         d2[Symbol(k)] = v
     end
     return d2
@@ -235,7 +235,7 @@ function filter_dict_to_match_struct_field_names(d::Dict, s::DataType)
 end
 
 
-function npv(rate::Float64, cash_flows::Array)
+function npv(rate::Real, cash_flows::Array)
     npv = cash_flows[1]
     for (y, c) in enumerate(cash_flows[2:end])
         npv += c/(1+rate)^y
@@ -409,7 +409,7 @@ end
     TODO: should the savings array start at [0] or [1] ??
     :return npv_other_capex: present value of tax savings from depreciation of assets included in `offgrid_other_capital_costs`
 """
-function get_offgrid_other_capex_depreciation_savings(offgrid_other_capital_costs::Real, discount_rate::Float64, 
+function get_offgrid_other_capex_depreciation_savings(offgrid_other_capital_costs::Real, discount_rate::Real, 
     analysis_years::Int, tax_rate::Real)
     tax_savings_array = repeat([offgrid_other_capital_costs/analysis_years*tax_rate], analysis_years) # TODO: start savings at [0] or [1]?
     npv_other_capex = npv(discount_rate, tax_savings_array)
