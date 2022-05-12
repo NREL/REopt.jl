@@ -46,8 +46,8 @@ Financial results:
 - `lifecycle_offgrid_other_capital_costs` LCC component. Equal to offgrid_other_capital_costs with straight line depreciation applied over analysis period. The depreciation expense is assumed to reduce the owner's taxable income.
 - `lifecycle_outage_cost` LCC component. Expected outage cost. 
 - `lifecycle_MG_upgrade_and_fuel_cost` LCC component. Cost to upgrade generation and storage technologies to be included in microgrid, plus present value of microgrid fuel costs.
-- `lifecycle_om_costs_before_tax` Present value of all O&M costs, before tax.
-- `year_one_om_costs_before_tax` Year one O&M costs, before tax.
+- `lifecycle_om_costs` Present value of all O&M costs, before tax.
+- `year_one_om_costs` Year one O&M costs, before tax.
 - `year_one_om_costs_after_tax` Year one O&M costs, after tax.
 - `lifecycle_capital_costs_plus_om` Capital cost for all technologies plus present value of operations and maintenance over anlaysis period. This value does not include offgrid_other_capital_costs.
 - `lifecycle_capital_costs` Net capital costs for all technologies, in present value, including replacement costs and incentives. This value does not include offgrid_other_capital_costs.
@@ -68,13 +68,13 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
         m[Symbol("TotalProductionIncentive"*_n)] = 0.0
     end
     r["lcc"] = value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)]) - value(m[Symbol("dvComfortLimitViolationCost"*_n)])
-    r["lifecycle_om_costs_before_tax"] = value(m[Symbol("TotalPerUnitSizeOMCosts"*_n)] + 
+    r["lifecycle_om_costs"] = value(m[Symbol("TotalPerUnitSizeOMCosts"*_n)] + 
                                            m[Symbol("TotalPerUnitProdOMCosts"*_n)] + m[Symbol("TotalPerUnitHourOMCosts"*_n)])
     
     ## LCC breakdown: ##
     r["lifecycle_generation_tech_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)]) # Tech capital costs (including replacements)
     r["lifecycle_storage_capital_costs"] = value(m[Symbol("TotalStorageCapCosts"*_n)]) # Storage capital costs (including replacements)
-    r["lifecycle_om_costs_after_tax"] = r["lifecycle_om_costs_before_tax"] * (1 - p.s.financial.owner_tax_pct)  # Fixed & Variable O&M 
+    r["lifecycle_om_costs_after_tax"] = r["lifecycle_om_costs"] * (1 - p.s.financial.owner_tax_pct)  # Fixed & Variable O&M 
     if !isempty(p.techs.fuel_burning)
         r["lifecycle_fuel_costs_after_tax"] = value(m[:TotalFuelCosts]) * (1 - p.s.financial.offtaker_tax_pct)
     else
@@ -99,7 +99,7 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     end
     ## End LCC breakdown ## 
 
-    r["year_one_om_costs_before_tax"] = r["lifecycle_om_costs_before_tax"] / (p.pwf_om * p.third_party_factor)
+    r["year_one_om_costs"] = r["lifecycle_om_costs"] / (p.pwf_om * p.third_party_factor)
     r["year_one_om_costs_after_tax"] = r["lifecycle_om_costs_after_tax"] / (p.pwf_om * p.third_party_factor)
 
     r["lifecycle_capital_costs_plus_om"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)]) +

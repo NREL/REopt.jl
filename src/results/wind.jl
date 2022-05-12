@@ -36,7 +36,7 @@ Note: the node number is an empty string if evaluating a single `Site`.
 Wind results:
 - `size_kw` Optimal Wind capacity
 - `lifecycle_om_cost_after_tax` Lifecycle operations and maintenance cost in present value, after tax
-- `year_one_om_cost` Operations and maintenance cost in the first year
+- `year_one_om_cost` Operations and maintenance cost in the first year, before tax benefits
 - `year_one_to_battery_series_kw` Vector of power used to charge the battery over the first year
 - `year_one_to_grid_series_kw` Vector of power exported to the grid over the first year
 - `average_annual_energy_exported_kwh` Average annual energy exported to the grid

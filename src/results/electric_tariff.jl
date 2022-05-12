@@ -35,16 +35,16 @@ Note: the node number is an empty string if evaluating a single `Site`.
 
 ElectricTariff results:
 - `lifecycle_energy_cost_after_tax` lifecycle cost of energy from the grid in present value, after tax
-- `year_one_energy_cost` cost of energy from the grid over the first year, not considering tax benefits
+- `year_one_energy_cost` cost of energy from the grid over the first year, before considering tax benefits
 - `lifecycle_demand_cost_after_tax` lifecycle cost of power from the grid in present value, after tax
-- `year_one_demand_cost` cost of power from the grid over the first year, not considering tax benefits
+- `year_one_demand_cost` cost of power from the grid over the first year, before considering tax benefits
 - `lifecycle_fixed_cost_after_tax` lifecycle fixed cost in present value, after tax
-- `year_one_fixed_cost` fixed cost over the first year, not considering tax benefits
+- `year_one_fixed_cost` fixed cost over the first year, before considering tax benefits
 - `lifecycle_min_charge_adder_after_tax` lifecycle minimum charge in present value, after tax
-- `year_one_min_charge_adder` minimum charge over the first year, not considering tax benefits
+- `year_one_min_charge_adder` minimum charge over the first year, before considering tax benefits
 - `year_one_bill` sum of `year_one_energy_cost`, `year_one_demand_cost`, `year_one_fixed_cost`, `year_one_min_charge_adder`, and `year_one_coincident_peak_cost`
 - `lifecycle_export_benefit_after_tax` lifecycle export credits in present value, after tax
-- `year_one_export_benefit` export credits over the first year, not considering tax benefits
+- `year_one_export_benefit` export credits over the first year, before considering tax benefits
 - `lifecycle_coincident_peak_cost_after_tax` lifecycle coincident peak charge in present value, after tax
 - `year_one_coincident_peak_cost` coincident peak charge over the first year
 """

@@ -36,11 +36,11 @@ Note: the node number is an empty string if evaluating a single `Site`.
 Generator results:
 - `size_kw` Optimal generator capacity
 - `lifecycle_fixed_om_cost_after_tax` Lifecycle fixed operations and maintenance cost in present value, after tax
-- `year_one_fixed_om_cost_after_tax` fixed operations and maintenance cost over the first year, not considering tax benefits
+- `year_one_fixed_om_cost_after_tax` fixed operations and maintenance cost over the first year, before considering tax benefits
 - `lifecycle_variable_om_cost_after_tax` Lifecycle variable operations and maintenance cost in present value, after tax
-- `year_one_variable_om_cost` variable operations and maintenance cost over the first year, not considering tax benefits
+- `year_one_variable_om_cost` variable operations and maintenance cost over the first year, before considering tax benefits
 - `lifecycle_fuel_cost_after_tax` Lifecycle fuel cost in present value, after tax
-- `year_one_fuel_cost` Fuel cost over the first year, not considering tax benefits
+- `year_one_fuel_cost` Fuel cost over the first year, before considering tax benefits
 - `average_annual_fuel_used_gal` Gallons of fuel used in each year
 - `year_one_to_battery_series_kw` Vector of power sent to battery in year one
 - `year_one_to_grid_series_kw` Vector of power sent to grid in year one
