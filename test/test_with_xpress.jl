@@ -984,10 +984,11 @@ end
     @test r["ElectricLoad"]["offgrid_load_met_pct"] >= scen.electric_load.min_load_met_annual_pct
     @test r["PV"]["size_kw"] ≈ 5050.0
     f = r["Financial"]
-    @test f["lcc_fraction_tech_capital_cost"] + f["lcc_fraction_storage_capital_cost"] + f["lcc_fraction_om_cost"] +
-             f["lcc_fraction_fuel_cost"] + f["lcc_fraction_chp_standby_cost"] + f["lcc_fraction_elecbill_cost"] + f["lcc_fraction_pbi"] +
-             f["lcc_fraction_addtl_annual_cost"] + f["lcc_fraction_addtl_capital_cost"] + f["lcc_fraction_outage_cost"] ≈ 1 atol=0.001
-
+    @test f["lifecycle_tech_capital_costs"] + f["lifecycle_storage_capital_costs"] + f["lifecycle_om_costs_after_tax"] +
+             f["lifecycle_fuel_costs_after_tax"] + f["lifecycle_chp_standby_cost_after_tax"] + f["lifecycle_elecbill_after_tax"] + 
+             f["lifecycle_offgrid_other_annual_costs_after_tax"] + f["lifecycle_offgrid_other_capital_costs"] + 
+             f["lifecycle_outage_cost"] + f["lifecycle_MG_upgrade_and_fuel_cost"] - 
+             f["lifecycle_production_incentive_after_tax"] ≈ f["lcc"] atol=1.0
     
     ## Scenario 2: Fixed Generator only
     post["ElectricLoad"]["annual_kwh"] = 100.0

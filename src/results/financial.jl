@@ -63,8 +63,36 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     r["lcc"] = value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)]) - value(m[Symbol("dvComfortLimitViolationCost"*_n)])
     r["lifecycle_om_costs_before_tax"] = value(m[Symbol("TotalPerUnitSizeOMCosts"*_n)] + 
                                            m[Symbol("TotalPerUnitProdOMCosts"*_n)] + m[Symbol("TotalPerUnitHourOMCosts"*_n)])
+    
+    ## LCC breakdown: ##
+    r["lifecycle_tech_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)]) # Tech capital costs (including replacements)
+    r["lifecycle_storage_capital_costs"] = value(m[Symbol("TotalStorageCapCosts"*_n)]) # Storage capital costs (including replacements)
+    r["lifecycle_om_costs_after_tax"] = r["lifecycle_om_costs_before_tax"] * (1 - p.s.financial.owner_tax_pct)  # Fixed & Variable O&M 
+    if !isempty(p.techs.fuel_burning)
+        r["lifecycle_fuel_costs_after_tax"] = value(m[:TotalFuelCosts]) * (1 - p.s.financial.offtaker_tax_pct)
+    else
+        r["lifecycle_fuel_costs_after_tax"] = 0.0
+    end
+    r["lifecycle_chp_standby_cost_after_tax"] = value(m[Symbol("TotalCHPStandbyCharges"*_n)]) * (1 - p.s.financial.offtaker_tax_pct) # CHP standby
+    r["lifecycle_elecbill_after_tax"] = value(m[Symbol("TotalElecBill"*_n)]) * (1 - p.s.financial.offtaker_tax_pct)  # Total utility bill 
+    r["lifecycle_production_incentive_after_tax"] = value(m[Symbol("TotalProductionIncentive"*_n)])  * (1 - p.s.financial.owner_tax_pct)  # Production incentives
+    if p.s.settings.off_grid_flag # Offgrid other annual and capital costs
+        r["lifecycle_offgrid_other_annual_costs_after_tax"] = p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct)
+        r["lifecycle_offgrid_other_capital_costs"] = m[:OffgridOtherCapexAfterDepr]
+    else
+        r["lifecycle_offgrid_other_annual_costs_after_tax"] = 0.0
+        r["lifecycle_offgrid_other_capital_costs"] = 0.0
+    end
+    if !isempty(p.s.electric_utility.outage_durations)  # Outage and MG upgrade & fuel costs
+        r["lifecycle_outage_cost"] = value(m[:ExpectedOutageCost])
+        r["lifecycle_MG_upgrade_and_fuel_cost"] = value(m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost] + m[:ExpectedMGFuelCost]) 
+	else
+        r["lifecycle_outage_cost"] = 0.0
+        r["lifecycle_MG_upgrade_and_fuel_cost"] = 0.0
+    end
+    ## End LCC breakdown ## 
+
     r["year_one_om_costs_before_tax"] = r["lifecycle_om_costs_before_tax"] / (p.pwf_om * p.third_party_factor)
-    r["lifecycle_om_costs_after_tax"] = r["lifecycle_om_costs_before_tax"] * (1 - p.s.financial.owner_tax_pct)
     r["year_one_om_costs_after_tax"] = r["lifecycle_om_costs_after_tax"] / (p.pwf_om * p.third_party_factor)
 
     r["lifecycle_capital_costs_plus_om"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)]) +
@@ -80,37 +108,9 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     r["developer_om_and_replacement_present_cost_after_tax"] = r["om_and_replacement_present_cost_after_tax"] / 
         p.third_party_factor
 
-    if !isempty(p.techs.fuel_burning)
-        r["lifecycle_fuel_costs_after_tax"] = value(m[:TotalFuelCosts]) * (1 - p.s.financial.offtaker_tax_pct)
-    else
-        r["lifecycle_fuel_costs_after_tax"] = 0.0
-    end
+    
 
-    # LCC breakdown:
-    r["lcc_fraction_tech_capital_cost"] = value(m[Symbol("TotalTechCapCosts"*_n)]) / r["lcc"] # Tech capital costs (including replacements)
-    r["lcc_fraction_storage_capital_cost"] = value(m[Symbol("TotalStorageCapCosts"*_n)]) / r["lcc"]   # Storage capital costs (including replacements)
-    r["lcc_fraction_om_cost"] = r["lifecycle_om_costs_after_tax"] /  r["lcc"]  # Fixed & Variable O&M 
-    r["lcc_fraction_fuel_cost"] = r["lifecycle_fuel_costs_after_tax"] / r["lcc"]  # Fuel costs
-    r["lcc_fraction_chp_standby_cost"] = value(m[Symbol("TotalCHPStandbyCharges"*_n)]) * (1 - p.s.financial.offtaker_tax_pct) / r["lcc"] # CHP standby
-    r["lcc_fraction_elecbill_cost"] =value(m[Symbol("TotalElecBill"*_n)]) * (1 - p.s.financial.offtaker_tax_pct) / r["lcc"]  # Utility bill 
-    r["lcc_fraction_pbi"] = -1 * value(m[Symbol("TotalProductionIncentive"*_n)])  * (1 - p.s.financial.owner_tax_pct) / r["lcc"]  # Production incentives 
-    if p.s.settings.off_grid_flag
-        r["lcc_fraction_addtl_annual_cost"] = (p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct)) / r["lcc"] # Addtl Annual costs
-        r["lcc_fraction_addtl_capital_cost"] = m[:OffgridOtherCapexAfterDepr] / r["lcc"]
-    else
-        r["lcc_fraction_addtl_annual_cost"] = 0.0
-        r["lcc_fraction_addtl_capital_cost"] = 0.0
-    end 
-    if !isempty(p.s.electric_utility.outage_durations)  # Outage costs
-        r["lcc_fraction_outage_cost"] = value(m[:ExpectedOutageCost] + m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost] + m[:ExpectedMGFuelCost]) / r["lcc"] 
-	else
-        r["lcc_fraction_outage_cost"] = 0.0
-    end
-
-    if p.s.settings.off_grid_flag
-        r["lifecycle_offgrid_other_annual_costs_after_tax"] = p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct)
-        r["lifecycle_offgrid_other_capital_costs"] = m[:OffgridOtherCapexAfterDepr]
-        
+    if p.s.settings.off_grid_flag        
         if p.third_party_factor == 1 # ==1 with Direct ownership (when third_party_ownership is False)
             pwf = p.pwf_offtaker
         else
