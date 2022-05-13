@@ -171,11 +171,15 @@ struct PV <: AbstractTech
         )
 
         if !(off_grid_flag) && !(operating_reserve_required_pct == 0.0)
-            @error "PV operating_reserve_required_pct must be 0 for on-grid scenarios. Operating reserve requirements apply to off-grid scenarios only."
+            @warn "PV operating_reserve_required_pct apply only when off_grid_flag is True. Setting operating_reserve_required_pct to 0.0 for this on-grid analysis."
+            operating_reserve_required_pct = 0.0
         end
 
         if off_grid_flag && (can_net_meter || can_wholesale || can_export_beyond_nem_limit)
-            @error "Net metering, wholesale, and grid exports are not possible for off-grid scenarios."
+            @warn "Net metering, wholesale, and grid exports are not possible for off-grid scenarios. Setting can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False."
+            can_net_meter = false
+            can_wholesale = false
+            can_export_beyond_nem_limit = false
         end
 
         # validate inputs
