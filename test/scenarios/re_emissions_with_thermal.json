@@ -24,6 +24,26 @@
     "fuel_renewable_energy_pct": 0.5,
     "fuel_cost_per_mmbtu": 0.5
   },
+  "SteamTurbine": {
+    "min_kw": 30.0,
+    "max_kw": 2500.0,
+    "is_condensing": true,
+    "inlet_steam_pressure_psig": 1000.0,
+    "inlet_steam_temperature_degF": null,
+    "inlet_steam_superheat_degF": 10.0,
+    "outlet_steam_pressure_psig": -12.7,
+    "outlet_steam_min_vapor_fraction": 0.7,                         
+    "isentropic_efficiency": 0.7,
+    "gearbox_generator_efficiency": 0.96,
+    "net_to_gross_electric_ratio": 0.98,
+    "installed_cost_per_kw": 4000.0,
+    "om_cost_per_kw": 80.0,
+    "om_cost_per_kwh": 0.0,
+    "can_net_meter": false,
+    "can_wholesale": true,
+    "can_export_beyond_site_load": true,
+    "can_curtail": false        
+  },
   "CoolingLoad": {
     "doe_reference_name": "Hospital" ,
     "chiller_cop": 3.4
