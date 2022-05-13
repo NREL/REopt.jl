@@ -144,7 +144,7 @@ end
     expected_year_one_energy_cost = 2342.88
     m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
     results = run_reopt(m, "./scenarios/tiered_rate.json")
-    @test results["ElectricTariff"]["year_one_energy_cost"] ≈ 2342.88
+    @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ 2342.88
 
     urdb_label = "59bc22705457a3372642da67"  # tiered monthly demand rate
 end

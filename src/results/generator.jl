@@ -36,11 +36,11 @@ Note: the node number is an empty string if evaluating a single `Site`.
 Generator results:
 - `size_kw` Optimal generator capacity
 - `lifecycle_fixed_om_cost_after_tax` Lifecycle fixed operations and maintenance cost in present value, after tax
-- `year_one_fixed_om_cost_after_tax` fixed operations and maintenance cost over the first year, before considering tax benefits
+- `year_one_fixed_om_cost__before_tax` fixed operations and maintenance cost over the first year, before considering tax benefits
 - `lifecycle_variable_om_cost_after_tax` Lifecycle variable operations and maintenance cost in present value, after tax
-- `year_one_variable_om_cost` variable operations and maintenance cost over the first year, before considering tax benefits
+- `year_one_variable_om_cost_before_tax` variable operations and maintenance cost over the first year, before considering tax benefits
 - `lifecycle_fuel_cost_after_tax` Lifecycle fuel cost in present value, after tax
-- `year_one_fuel_cost` Fuel cost over the first year, before considering tax benefits
+- `year_one_fuel_cost_before_tax` Fuel cost over the first year, before considering tax benefits
 - `average_annual_fuel_used_gal` Gallons of fuel used in each year
 - `year_one_to_battery_series_kw` Vector of power sent to battery in year one
 - `year_one_to_grid_series_kw` Vector of power sent to grid in year one
@@ -61,9 +61,9 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 	r["lifecycle_fixed_om_cost_after_tax"] = round(value(GenPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_pct), digits=0)
 	r["lifecycle_variable_om_cost_after_tax"] = round(value(m[:TotalPerUnitProdOMCosts]) * (1 - p.s.financial.owner_tax_pct), digits=0)
 	r["lifecycle_fuel_cost_after_tax"] = round(value(m[:TotalGenFuelCosts]) * (1 - p.s.financial.offtaker_tax_pct), digits=2)
-	r["year_one_fuel_cost"] = round(value(m[:TotalGenFuelCosts]) / p.pwf_fuel["Generator"], digits=2)
-	r["year_one_variable_om_cost"] = round(value(GenPerUnitProdOMCosts) / (p.pwf_om * p.third_party_factor), digits=0)
-	r["year_one_fixed_om_cost"] = round(value(GenPerUnitSizeOMCosts) / (p.pwf_om * p.third_party_factor), digits=0)
+	r["year_one_fuel_cost_before_tax"] = round(value(m[:TotalGenFuelCosts]) / p.pwf_fuel["Generator"], digits=2)
+	r["year_one_variable_om_cost_before_tax"] = round(value(GenPerUnitProdOMCosts) / (p.pwf_om * p.third_party_factor), digits=0)
+	r["year_one_fixed_om_cost_before_tax"] = round(value(GenPerUnitSizeOMCosts) / (p.pwf_om * p.third_party_factor), digits=0)
 
 	if !isempty(p.s.storage.types.elec)
 	generatorToBatt = @expression(m, [ts in p.time_steps],

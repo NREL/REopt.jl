@@ -528,26 +528,26 @@ end
     @testset "Tiered Energy" begin
         m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         results = run_reopt(m, "./scenarios/tiered_rate.json")
-        @test results["ElectricTariff"]["year_one_energy_cost"] ≈ 2342.88
+        @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ 2342.88
     end
 
     @testset "Lookback Demand Charges" begin
         m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         results = run_reopt(m, "./scenarios/lookback_rate.json")
-        @test results["ElectricTariff"]["year_one_demand_cost"] ≈ 721.99
+        @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ 721.99
     end
 
     @testset "Blended tariff" begin
         model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         results = run_reopt(model, "./scenarios/no_techs.json")
-        @test results["ElectricTariff"]["year_one_energy_cost"] ≈ 1000.0
-        @test results["ElectricTariff"]["year_one_demand_cost"] ≈ 136.99
+        @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ 1000.0
+        @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ 136.99
     end
 
     @testset "Coincident Peak Charges" begin
         model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         results = run_reopt(model, "./scenarios/coincident_peak.json")
-        @test results["ElectricTariff"]["year_one_coincident_peak_cost"] ≈ 11.1
+        @test results["ElectricTariff"]["year_one_coincident_peak_cost_before_tax"] ≈ 11.1
     end
 
     @testset "URDB sell rate" begin
@@ -1002,13 +1002,13 @@ end
     # Test generator outputs
     @test r["Generator"]["average_annual_fuel_used_gal"] ≈ 7.52 # 99 kWh * 0.076 gal/kWh
     @test r["Generator"]["average_annual_energy_produced_kwh"] ≈ 99.0
-    @test r["Generator"]["year_one_fuel_cost"] ≈ 22.57
+    @test r["Generator"]["year_one_fuel_cost_before_tax"] ≈ 22.57
     @test r["Generator"]["lifecycle_fuel_cost_after_tax"] ≈ 205.35 
     @test r["Financial"]["initial_capital_costs"] ≈ 100*(700) 
     @test r["Financial"]["lifecycle_capital_costs"] ≈ 100*(700+324.235442*(1-0.26)) atol=0.1 # replacement in yr 10 is considered tax deductible
     @test r["Financial"]["initial_capital_costs_after_incentives"] ≈ 700*100 atol=0.1
-    @test r["Financial"]["replacements_future_cost"] ≈ 700*100
-    @test r["Financial"]["replacements_present_cost"] ≈ 100*(324.235442*(1-0.26)) atol=0.1 
+    @test r["Financial"]["replacements_future_cost_after_tax"] ≈ 700*100
+    @test r["Financial"]["replacements_present_cost_after_tax"] ≈ 100*(324.235442*(1-0.26)) atol=0.1 
 
     ## Scenario 3: Fixed Generator that can meet load, but cannot meet load operating reserve requirement
     ## This test ensures the load operating reserve requirement is being enforced
