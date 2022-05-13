@@ -103,11 +103,14 @@ struct Financial
     )
         
         if off_grid_flag && !(microgrid_upgrade_cost_pct == 0.0)
-            @error "microgrid_upgrade_cost_pct is not applied when off_grid_flag is true. Set microgrid_upgrade_cost_pct to 0.0."
+            @warn "microgrid_upgrade_cost_pct is not applied when off_grid_flag is true. Setting microgrid_upgrade_cost_pct to 0.0."
+            microgrid_upgrade_cost_pct = 0.0
         end
 
         if !off_grid_flag && (offgrid_other_capital_costs != 0.0 || offgrid_other_annual_costs != 0.0)
-            @error "offgrid_other_capital_costs and offgrid_other_annual_costs are only applied when off_grid_flag is true. Set these inputs to 0.0 for grid-connected analyses."
+            @warn "offgrid_other_capital_costs and offgrid_other_annual_costs are only applied when off_grid_flag is true. Setting these inputs to 0.0 for this grid-connected analysis."
+            offgrid_other_capital_costs = 0.0
+            offgrid_other_annual_costs = 0.0
         end
 
         if !third_party_ownership
