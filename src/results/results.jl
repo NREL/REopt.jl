@@ -117,18 +117,18 @@ Combine two results dictionaries into one using BAU and optimal scenario results
 function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAUScenario)
     bau_outputs = (
         ("Financial", "lcc"),
-        ("ElectricTariff", "year_one_energy_cost"),
-        ("ElectricTariff", "year_one_demand_cost"),
-        ("ElectricTariff", "year_one_fixed_cost"),
-        ("ElectricTariff", "year_one_min_charge_adder"),
+        ("ElectricTariff", "year_one_energy_cost_before_tax"),
+        ("ElectricTariff", "year_one_demand_cost_before_tax"),
+        ("ElectricTariff", "year_one_fixed_cost_before_tax"),
+        ("ElectricTariff", "year_one_min_charge_adder_before_tax"),
         ("ElectricTariff", "lifecycle_energy_cost_after_tax"),
         ("ElectricTariff", "lifecycle_demand_cost_after_tax"),
         ("ElectricTariff", "lifecycle_fixed_cost_after_tax"),
         ("ElectricTariff", "lifecycle_min_charge_adder_after_tax"),
         ("ElectricTariff", "lifecycle_export_benefit_after_tax"),
-        ("ElectricTariff", "year_one_bill"),
-        ("ElectricTariff", "year_one_export_benefit"),
-        ("ElectricTariff", "year_one_coincident_peak_cost"),
+        ("ElectricTariff", "year_one_bill_before_tax"),
+        ("ElectricTariff", "year_one_export_benefit_before_tax"),
+        ("ElectricTariff", "year_one_coincident_peak_cost_before_tax"),
         ("ElectricTariff", "lifecycle_coincident_peak_cost_after_tax"),
         ("ElectricUtility", "year_one_to_load_series_kw"),  
         ("ElectricUtility", "year_one_energy_supplied_kwh"),
@@ -139,9 +139,9 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("Generator", "lifecycle_fixed_om_cost_after_tax"),
         ("Generator", "lifecycle_variable_om_cost_after_tax"),
         ("Generator", "lifecycle_fuel_cost_after_tax"),
-        ("Generator", "year_one_fuel_cost"),
-        ("Generator", "year_one_variable_om_cost"),
-        ("Generator", "year_one_fixed_om_cost"),
+        ("Generator", "year_one_fuel_cost_before_tax"),
+        ("Generator", "year_one_variable_om_cost_before_tax"),
+        ("Generator", "year_one_fixed_om_cost_before_tax"),
         ("FlexibleHVAC", "temperatures_degC_node_by_time"),
         ("ExistingBoiler", "lifecycle_fuel_cost_after_tax" )
     )
@@ -161,7 +161,7 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
             end
         end
     end
-    opt["Financial"]["lifecycle_om_costs_bau"] = bau["Financial"]["lifecycle_om_costs_after_tax"]
+    opt["Financial"]["lifecycle_om_costs_before_tax_bau"] = bau["Financial"]["lifecycle_om_costs_after_tax"]
     opt["Financial"]["npv"] = round(opt["Financial"]["lcc_bau"] - opt["Financial"]["lcc"], digits=2)
 
     opt["ElectricLoad"]["bau_critical_load_met"] = bau_scenario.outage_outputs.bau_critical_load_met

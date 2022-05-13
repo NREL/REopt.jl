@@ -46,9 +46,9 @@ CHP results:
 - `year_one_thermal_to_tes_series_mmbtu_per_hour` Thermal power to TES time-series array [MMBtu/hr]
 - `year_one_thermal_to_waste_series_mmbtu_per_hour` Thermal power wasted/unused/vented time-series array [MMBtu/hr]
 - `year_one_thermal_to_load_series_mmbtu_per_hour` Thermal power to serve the heating load time-series array [MMBtu/hr]
-- `year_one_chp_fuel_cost` Fuel cost from fuel consumed by the CHP system [\$]
+- `year_one_chp_fuel_cost_before_tax` Fuel cost from fuel consumed by the CHP system [\$]
 - `lifecycle_chp_fuel_cost_after_tax` Fuel cost from fuel consumed by the CHP system, after tax [\$]
-- `year_one_chp_standby_cost_us_dollars` CHP standby charges in year one [\$] 
+- `year_one_chp_standby_cost_before_tax` CHP standby charges in year one [\$] 
 """
 function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
@@ -108,10 +108,10 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
         sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.techs.chp) - 
         CHPtoHotTES[ts] - CHPThermalToWasteKW[ts])
 	r["year_one_thermal_to_load_series_mmbtu_per_hour"] = round.(value.(CHPThermalToLoadKW) / KWH_PER_MMBTU, digits=5)
-    r["year_one_chp_fuel_cost"] = round(value(m[:TotalCHPFuelCosts] / p.pwf_fuel["CHP"]), digits=3)                
+    r["year_one_chp_fuel_cost_before_tax"] = round(value(m[:TotalCHPFuelCosts] / p.pwf_fuel["CHP"]), digits=3)                
 	r["lifecycle_chp_fuel_cost_after_tax"] = round(value(m[:TotalCHPFuelCosts]) * p.s.financial.offtaker_tax_pct, digits=3)
 	#Standby charges and hourly O&M
-	r["year_one_chp_standby_cost_us_dollars"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) / p.pwf_e, digits=0)
+	r["year_one_chp_standby_cost_before_tax"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) / p.pwf_e, digits=0)
 	
 
     d["CHP"] = r
