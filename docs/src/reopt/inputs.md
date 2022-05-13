@@ -86,30 +86,50 @@ REopt.ElectricUtility
 REopt.PV
 ```
 
+## Wind
+```@docs
+REopt.Wind
+```
+
 ## ElectricStorage
 ```@docs
 REopt.ElectricStorageDefaults
 REopt.Degradation
 ```
 
+## Generator
+```@docs
+REopt.Generator
+```
+
+## Settings
+```@docs
+REopt.Settings
+```
+
+## ExistingBoiler
+```@docs
+REopt.ExistingBoiler
+```
+
+## AbsorptionChiller
+```@docs
+REopt.AbsorptionChiller
+```
+
+## CHP
+```@docs
+REopt.CHP
+```
+
 ## HotStorage
 ```@docs
-REopt.HotStorage
+REopt.HotThermalStorageDefaults
 ```
 
 ## ColdStorage
 ```@docs
-REopt.ColdStorage
-```
-
-## Wind
-```@docs
-REopt.Wind
-```
-
-## Generator
-```@docs
-REopt.Generator
+REopt.ColdThermalStorageDefaults
 ```
 
 ## DomesticHotWaterLoad
@@ -120,21 +140,6 @@ REopt.DomesticHotWaterLoad
 ## SpaceHeatingLoad
 ```@docs
 REopt.SpaceHeatingLoad
-```
-
-## ExistingBoiler
-```@docs
-REopt.ExistingBoiler
-```
-
-## CHP
-```@docs
-REopt.CHP
-```
-
-## Settings
-```@docs
-REopt.Settings
 ```
 
 ## FlexibleHVAC

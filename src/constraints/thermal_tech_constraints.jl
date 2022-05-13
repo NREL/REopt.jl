@@ -48,13 +48,20 @@ function add_boiler_tech_constraints(m, p; _n="")
     #         p.production_factor[t,ts] * m[Symbol("dvThermalProduction"*_n)][t,ts]
     #     )
     # else
-        @constraint(m, [b in p.s.storage.types.hot, t in p.techs.boiler, ts in p.time_steps],
-            m[:dvProductionToStorage][b,t,ts] <= p.production_factor[t,ts] * m[Symbol("dvThermalProduction"*_n)][t,ts]
-        )
+    #     @constraint(m, [b in p.s.storage.types.hot, t in p.techs.boiler, ts in p.time_steps],
+    #         m[:dvProductionToStorage][b,t,ts] <= m[Symbol("dvThermalProduction"*_n)][t,ts]
+    #     )
     # end
 
     # Constraint (7_heating_prod_size): Production limit based on size for boiler
     @constraint(m, [t in p.techs.boiler, ts in p.time_steps],
+        m[Symbol("dvThermalProduction"*_n)][t,ts] <= m[Symbol("dvSize"*_n)][t]
+    )
+end
+
+function add_cooling_tech_constraints(m, p; _n="")
+    # Constraint (7_cooling_prod_size): Production limit based on size for boiler
+    @constraint(m, [t in p.techs.cooling, ts in p.time_steps],
         m[Symbol("dvThermalProduction"*_n)][t,ts] <= m[Symbol("dvSize"*_n)][t]
     )
 end

@@ -60,12 +60,17 @@ import Dates: daysinmonth, Date, isleapyear
 import DelimitedFiles: readdlm
 const MOI = MathOptInterface
 using Shapefile
-using PolygonInbounds
+using ArchGDAL
 using Roots: fzero  # for IRR
 global hdl = nothing
 
-const M3_TO_GAL = 264.172  # [gal/m^3]
-const GAL_DIESEL_TO_KWH = 40.7  # [kWh/gal_diesel]
+const EXISTING_BOILER_EFFICIENCY = 0.8
+
+const GAL_PER_M3 = 264.172  # [gal/m^3]
+const KWH_PER_GAL_DIESEL = 40.7  # [kWh/gal_diesel]
+const KWH_PER_MMBTU = 293.07107  # [kWh/mmbtu]
+const KWH_THERMAL_PER_TONHOUR = 3.51685
+const TONNE_PER_LB = 1/2204.62  # [tonne/lb]
 
 include("keys.jl")
 include("core/types.jl")
@@ -84,6 +89,7 @@ include("core/doe_commercial_reference_building_loads.jl")
 include("core/electric_load.jl")
 include("core/existing_boiler.jl")
 include("core/existing_chiller.jl")
+include("core/absorption_chiller.jl")
 include("core/flexible_hvac.jl")
 include("core/heating_cooling_loads.jl")
 include("core/electric_utility.jl")
@@ -124,12 +130,14 @@ include("results/proforma.jl")
 include("results/financial.jl")
 include("results/generator.jl")
 include("results/pv.jl")
-include("results/storage.jl")
+include("results/electric_storage.jl")
+include("results/thermal_storage.jl")
 include("results/outages.jl")
 include("results/wind.jl")
 include("results/electric_load.jl")
 include("results/existing_boiler.jl")
 include("results/existing_chiller.jl")
+include("results/absorption_chiller.jl")
 include("results/chp.jl")
 include("results/flexible_hvac.jl")
 

@@ -230,6 +230,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         if !isempty(p.techs.boiler)
             add_boiler_tech_constraints(m, p)
         end
+
+		if !isempty(p.techs.cooling)
+            add_cooling_tech_constraints(m, p)
+        end
     
         if !isempty(p.techs.thermal)
             add_thermal_load_constraints(m, p)  # split into heating and cooling constraints?
@@ -365,13 +369,11 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	
 	end
 
-	# TODO should add_soc_incentive ever be done with degradation?
 	for b in p.s.storage.types.elec
 		if p.s.storage.attr[b].model_degradation
 			add_degradation(m, p; b=b)
 			if p.s.settings.add_soc_incentive
-				@warn "Adding a battery SOC incentive may conflict with the battery degradation
-					model and fail to provide a solution with an elevated SOC."
+				@warn "Settings.add_soc_incentive is set to true but no incentive will be added because it conflicts with the battery degradation model."
 			end
 		end
 	end
@@ -403,7 +405,7 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 	tstart = time()
 	results = reopt_results(m, p)
 	time_elapsed = time() - tstart
-	@info "Total results processing took $(round(time_elapsed, digits=3)) seconds."
+	@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status
 	results["solver_seconds"] = opt_time
     if organize_pvs && !isempty(p.techs.pv)  # do not want to organize_pvs when running BAU case in parallel b/c then proform code fails
@@ -445,7 +447,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
     if !isempty(p.techs.fuel_burning)
-		@variable(m, dvFuelUsage[p.techs.fuel_burning, p.time_steps] >= 0) # Fuel burned by technology t in each time step
+		@variable(m, dvFuelUsage[p.techs.fuel_burning, p.time_steps] >= 0) # Fuel burned by technology t in each time step [kWh]
     end
 
     if !isempty(p.s.electric_tariff.export_bins)
@@ -464,6 +466,9 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 			dvSupplementaryThermalProduction[p.techs.chp, p.time_steps] >= 0
 			dvSupplementaryFiringSize[p.techs.chp] >= 0  #X^{\sigma db}_{t}: System size of CHP with supplementary firing [kW]
 		end
+        if !isempty(p.techs.chp)
+            @variable(m, dvProductionToWaste[p.techs.chp, p.time_steps] >= 0)
+        end
     end
 
 	if !isempty(p.s.electric_utility.outage_durations) # add dvUnserved Load if there is at least one outage

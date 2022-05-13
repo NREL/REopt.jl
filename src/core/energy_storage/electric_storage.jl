@@ -53,9 +53,9 @@ f(day) = \\frac{ (1-r_g)^\\frac{day}{365} } { (1+r_d)^\\frac{day}{365} }
 
 where ``r_g`` = `installed_cost_per_kwh_declination_rate` and ``r_d`` = `p.s.financial.owner_discount_pct`.
 
-Note this daily recalculation is different from the annually updated discount rate for other net-present value 
-calculations in REopt.  The present worth factor is used in two different ways, depending on the `maintenance_strategy`, 
-which is described below.
+Note this day-specific calculation of the present-worth factor accumulates differently from the annually updated discount
+rate for other net-present value calculations in REopt, and has a higher effective discount rate as a result.  The present 
+worth factor is used in two different ways, depending on the `maintenance_strategy`, which is described below.
 
 !!! warn
     When modeling degradation the following ElectricStorage inputs are not used:
@@ -161,7 +161,7 @@ end
 """
     ElectricStorageDefaults
 
-Electric storage system defaults. Overridden by user inputs.
+Electric storage system defaults. Overridden by user inputs provided in `ElectricStorage`.
 
 ```julia
 Base.@kwdef struct ElectricStorageDefaults
@@ -192,6 +192,7 @@ Base.@kwdef struct ElectricStorageDefaults
     grid_charge_efficiency::Float64 = can_grid_charge ? charge_efficiency : 0.0
     model_degradation::Bool = false
     degradation::Dict = Dict()
+    minimum_avg_soc_fraction::Float64 = 0.0
 end
 ```
 """
@@ -223,6 +224,7 @@ Base.@kwdef struct ElectricStorageDefaults
     grid_charge_efficiency::Float64 = can_grid_charge ? charge_efficiency : 0.0
     model_degradation::Bool = false
     degradation::Dict = Dict()
+    minimum_avg_soc_fraction::Float64 = 0.0
 end
 
 
@@ -262,6 +264,7 @@ struct ElectricStorage <: AbstractElectricStorage
     net_present_cost_per_kwh::Float64
     model_degradation::Bool
     degradation::Degradation
+    minimum_avg_soc_fraction::Float64
 
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
@@ -339,7 +342,8 @@ struct ElectricStorage <: AbstractElectricStorage
             net_present_cost_per_kw,
             net_present_cost_per_kwh,
             s.model_degradation,
-            degr
+            degr,
+            s.minimum_avg_soc_fraction
         )
     end
 end

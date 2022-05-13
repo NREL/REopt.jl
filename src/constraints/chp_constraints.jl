@@ -35,7 +35,7 @@ function add_chp_fuel_burn_constraints(m, p; _n="")
     fuel_burn_intercept = fuel_burn_full_load - fuel_burn_slope * 1.0  # [kWt/kWe_rated]
 
     # Fuel cost
-    fuel_cost_per_kwh = p.s.chp.fuel_cost_per_mmbtu / MMBTU_TO_KWH
+    fuel_cost_per_kwh = p.s.chp.fuel_cost_per_mmbtu / KWH_PER_MMBTU
     fuel_cost_series = per_hour_value_to_time_series(fuel_cost_per_kwh, p.s.settings.time_steps_per_hour, 
                                                      "CHP.fuel_cost_per_mmbtu")
     m[:TotalCHPFuelCosts] = @expression(m, p.pwf_fuel["CHP"] *
@@ -76,9 +76,6 @@ function add_chp_thermal_production_constraints(m, p; _n="")
     thermal_prod_half_load = 0.5 / p.s.chp.elec_effic_half_load * p.s.chp.thermal_effic_half_load   # [kWt/kWe]
     thermal_prod_slope = (thermal_prod_full_load - thermal_prod_half_load) / (1.0 - 0.5)  # [kWt/kWe]
     thermal_prod_intercept = thermal_prod_full_load - thermal_prod_slope * 1.0  # [kWt/kWe_rated
-    
-    dv = "dvProductionToWaste"*_n
-    m[Symbol(dv)] = @variable(m, [p.techs.chp, p.time_steps], base_name=dv, lower_bound=0)
 
     # Conditionally add dvThermalProductionYIntercept if coefficient p.s.chpThermalProdIntercept is greater than ~zero
     if thermal_prod_intercept > 1.0E-7
