@@ -123,7 +123,8 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         )
         
         if off_grid_flag  && !(critical_load_pct == 1.0)
-            @error "ElectricLoad critical_load_pct must be 1.0 (100%) for off-grid scenarios."
+            @warn "ElectricLoad critical_load_pct must be 1.0 (100%) for off-grid scenarios. Any other value will be overriden when off_grid_flag is True. If you wish to alter the load profile or load met, adjust the loads_kw or min_load_met_annual_pct."
+            critical_load_pct = 1.0
         end
 
         if !(off_grid_flag)
