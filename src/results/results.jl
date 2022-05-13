@@ -218,7 +218,7 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         npv_without_modeled_climate_costs -= (bau["Site"]["lifecycle_emissions_cost_CO2"] - opt["Site"]["lifecycle_emissions_cost_CO2"])
     end
     # we want to calculate the breakeven year 1 cost of CO2 (usd per tonne) that would yield an npv of 0, holding all other inputs constant
-    # (back-calculating using the equation for m[:Lifecycle_Emissions_Cost_CO2] in "add_lifecycle_emissions_calcs" in reopt_model.jl)
+    # (back-calculating using the equation for m[:Lifecycle_Emissions_Cost_CO2] in "add_lifecycle_emissions_calcs" in emissions_constraints.jl)
     if npv_without_modeled_climate_costs >= 0 # if the system is cost effective (NPV >= 0) without considering any cost of CO2, no breakeven value is reported 
         opt["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] = nothing
     else
