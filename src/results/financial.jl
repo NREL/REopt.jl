@@ -35,7 +35,8 @@ Note: the node number is an empty string if evaluating a single `Site`.
 
 Financial results:
 - `lcc` Optimal lifecycle cost
-- `lifecycle_capital_costs` LCC component. Net capital costs for all technologies, in present value, including replacement costs and incentives. This value does not include offgrid_other_capital_costs.
+- `lifecycle_generation_tech_capital_costs` LCC component. Net capital costs for all generation technologies, in present value, including replacement costs and incentives. This value does not include offgrid_other_capital_costs.
+- `lifecycle_storage_capital_costs` LCC component. Net capital costs for all storage technologies, in present value, including replacement costs and incentives. This value does not include offgrid_other_capital_costs.
 - `lifecycle_om_costs_after_tax` LCC component. Present value of all O&M costs, after tax.
 - `lifecycle_fuel_costs_after_tax` LCC component. Present value of all fuel costs over the analysis period, after tax.
 - `lifecycle_chp_standby_cost_after_tax` LCC component. Present value of all CHP standby charges, after tax.
@@ -49,6 +50,7 @@ Financial results:
 - `year_one_om_costs_before_tax` Year one O&M costs, before tax.
 - `year_one_om_costs_after_tax` Year one O&M costs, after tax.
 - `lifecycle_capital_costs_plus_om_after_tax` Capital cost for all technologies plus present value of operations and maintenance over anlaysis period. This value does not include offgrid_other_capital_costs.
+- `lifecycle_capital_costs` Net capital costs for all technologies, in present value, including replacement costs and incentives. This value does not include offgrid_other_capital_costs.
 - `initial_capital_costs` Up-front capital costs for all technologies, in present value, excluding replacement costs and incentives. This value does not include offgrid_other_capital_costs.
 - `initial_capital_costs_after_incentives` Up-front capital costs for all technologies, in present value, excluding replacement costs, and accounting for incentives. This value does not include offgrid_other_capital_costs.
 - `replacements_future_cost_after_tax` Future cost of replacing storage and/or generator systems, after tax.
@@ -70,7 +72,8 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
                                            m[Symbol("TotalPerUnitProdOMCosts"*_n)] + m[Symbol("TotalPerUnitHourOMCosts"*_n)])
     
     ## LCC breakdown: ##
-    r["lifecycle_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)]) # Total capital costs (including replacements)
+    r["lifecycle_generation_tech_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)]) # Tech capital costs (including replacements)
+    r["lifecycle_storage_capital_costs"] = value(m[Symbol("TotalStorageCapCosts"*_n)]) # Storage capital costs (including replacements)
     r["lifecycle_om_costs_after_tax"] = r["lifecycle_om_costs_before_tax"] * (1 - p.s.financial.owner_tax_pct)  # Fixed & Variable O&M 
     if !isempty(p.techs.fuel_burning)
         r["lifecycle_fuel_costs_after_tax"] = value(m[:TotalFuelCosts]) * (1 - p.s.financial.offtaker_tax_pct)
@@ -101,7 +104,7 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 
     r["lifecycle_capital_costs_plus_om_after_tax"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)]) +
         r["lifecycle_om_costs_after_tax"]
-    
+    r["lifecycle_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)])
     r["initial_capital_costs"] = initial_capex(m, p; _n=_n)
     future_replacement_cost, present_replacement_cost = replacement_costs_future_and_present(m, p; _n=_n)
     r["initial_capital_costs_after_incentives"] = r["lifecycle_capital_costs"] / p.third_party_factor - present_replacement_cost
