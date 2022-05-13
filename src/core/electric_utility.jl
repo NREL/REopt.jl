@@ -82,9 +82,9 @@ function ElectricUtility(;
         interconnection_limit_kw::Real = 1.0e9
     )
 
-        # Error if outage_start/end_time_step is provided and outage_starttime_steps not empty
+        # Error if outage_start/end_time_step is provided and outage_start_time_steps not empty
         if (outage_start_time_step != 0 || outage_end_time_step !=0) && outage_start_time_steps != [] 
-            @error "Cannot supply singular outage_start(or end)_time_step and multiple outage_start_time_steps."
+            throw(@error "Cannot supply singular outage_start(or end)_time_step and multiple outage_start_time_steps. Please use one or the other.")
         end
 
         return new(
