@@ -420,20 +420,19 @@ function set_missing_emissions_factors_to_fuel_defaults(tech::AbstractFuelBurnin
         "propane"=>0.009906836,
         "diesel_oil"=>0.0
     )
-    @info tech.fuel_renewable_energy_pct
     if ismissing(tech.fuel_renewable_energy_pct)
         tech.fuel_renewable_energy_pct = fuel_renewable_energy_pct[tech.fuel_type]
     end
     if ismissing(tech.emissions_factor_lb_CO2_per_mmbtu)
         tech.emissions_factor_lb_CO2_per_mmbtu = fuel_emissions_lb_CO2_per_mmbtu[tech.fuel_type]
     end
-    if ismissing(tech.emissions_factor_lb_CO2_per_mmbtu)
+    if ismissing(tech.emissions_factor_lb_NOx_per_mmbtu)
         tech.emissions_factor_lb_NOx_per_mmbtu = fuel_emissions_lb_NOx_per_mmbtu[tech.fuel_type]
     end
-    if ismissing(tech.emissions_factor_lb_CO2_per_mmbtu)
+    if ismissing(tech.emissions_factor_lb_SO2_per_mmbtu)
         tech.emissions_factor_lb_SO2_per_mmbtu = fuel_emissions_lb_SO2_per_mmbtu[tech.fuel_type]
     end
-    if ismissing(tech.emissions_factor_lb_CO2_per_mmbtu)
+    if ismissing(tech.emissions_factor_lb_PM25_per_mmbtu)
         tech.emissions_factor_lb_PM25_per_mmbtu = fuel_emissions_lb_PM25_per_mmbtu[tech.fuel_type]
     end
 end
