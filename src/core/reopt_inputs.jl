@@ -611,7 +611,6 @@ function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_sl
     )
     max_sizes["CHP"] = s.chp.max_kw
     min_sizes["CHP"] = s.chp.min_kw
-    existing_sizes["CHP"] = 0.0
     update_cost_curve!(s.chp, "CHP", s.financial,
         cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
     )
