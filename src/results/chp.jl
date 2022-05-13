@@ -43,10 +43,12 @@ CHP results:
 - `year_one_to_grid_series_kw` Electric power exported time-series array [kW]
 - `year_one_to_battery_series_kw` Electric power to charge the battery storage time-series array [kW]
 - `year_one_to_load_series_kw` Electric power to serve the electric load time-series array [kW]
+- `year_one_thermal_to_tes_series_mmbtu_per_hour` Thermal power to TES time-series array [MMBtu/hr]
 - `year_one_thermal_to_waste_series_mmbtu_per_hour` Thermal power wasted/unused/vented time-series array [MMBtu/hr]
 - `year_one_thermal_to_load_series_mmbtu_per_hour` Thermal power to serve the heating load time-series array [MMBtu/hr]
 - `year_one_chp_fuel_cost` Fuel cost from fuel consumed by the CHP system [\$]
 - `lifecycle_chp_fuel_cost_after_tax` Fuel cost from fuel consumed by the CHP system, after tax [\$]
+- `year_one_chp_standby_cost_us_dollars` CHP standby charges in year one [\$] 
 """
 function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
