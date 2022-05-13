@@ -90,7 +90,7 @@ function run_mpc(m::JuMP.AbstractModel, p::MPCInputs)
 	tstart = time()
 	results = mpc_results(m, p)
 	time_elapsed = time() - tstart
-	@info "Total results processing took $(round(time_elapsed, digits=3)) seconds."
+	@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status
 	results["solver_seconds"] = opt_time
 	return results
@@ -288,7 +288,7 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 		@warn """Adding binary variable to model gas generator. 
 				 Some solvers are very slow with integer variables"""
 		@variables m begin
-			dvFuelUsage[p.techs.gen, p.time_steps] >= 0 # Fuel burned by technology t in each time step
+			dvFuelUsage[p.techs.gen, p.time_steps] >= 0 # Fuel burned by technology t in each time step [kWh]
 			binGenIsOnInTS[p.techs.gen, p.time_steps], Bin  # 1 If technology t is operating in time step h; 0 otherwise
 		end
 	end

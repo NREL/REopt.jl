@@ -145,11 +145,11 @@ function add_degradation(m, p;
         # define binaries for the finding the month that battery must be replaced
         months = 1:p.s.financial.analysis_years*12
         @variable(m, bmth[months], Bin)
-        # can only pick one month
+        # can only pick one month (or no month if SOH is >= 80% in last day)
         @constraint(m, sum(bmth[mth] for mth in months) == 1-soh_indicator[length(days)])
         # the month picked is at most the month in which the SOH hits 80%
         @constraint(m, sum(mth*bmth[mth] for mth in months) <= d_0p8 / 30.42)
-        # 30.42 is the average number of days in month
+        # 30.42 is the average number of days in a month
 
         #=
         number of replacments as function of d_0p8

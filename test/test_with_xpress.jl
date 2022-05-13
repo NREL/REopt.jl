@@ -421,14 +421,14 @@ end
     # using default augmentation battery maintenance strategy
     avg_soc_no_degr = sum(results["ElectricStorage"]["year_one_soc_series_pct"]) / 8760
     d["ElectricStorage"]["model_degradation"] = true
-    m = Model(Xpress.Optimizer)
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     r_degr = run_reopt(m, d)
     avg_soc_degr = sum(r_degr["ElectricStorage"]["year_one_soc_series_pct"]) / 8760
     @test avg_soc_no_degr > avg_soc_degr
 
     # test the replacement strategy
     d["ElectricStorage"]["degradation"] = Dict("maintenance_strategy" => "replacement")
-    m = Model(Xpress.Optimizer)    
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
     r = run_reopt(m, d)
     #optimal SOH at end of horizon is 80\% to prevent any replacement
@@ -439,6 +439,13 @@ end
     @test r["Financial"]["lcc"] ≈ 1.240096e7  rtol=0.01
     @test last(value.(m[:SOH])) ≈ 63.129  rtol=0.01
     @test r["ElectricStorage"]["size_kwh"] ≈ 78.91  rtol=0.01
+
+    # test minimum_avg_soc_fraction
+    d["ElectricStorage"]["minimum_avg_soc_fraction"] = 0.72
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
+    r = run_reopt(m, d)
+    @test sum(r["ElectricStorage"]["year_one_soc_series_pct"]) / 8760 >= 0.72
 end
 
 @testset "Outage with Generator, outate simulator, BAU critical load outputs" begin
@@ -461,7 +468,7 @@ end
     results = run_reopt(m, "./scenarios/outage.json")
 
     @test results["Outages"]["expected_outage_cost"] ≈ 0
-    @test sum(results["Outages"]["unserved_load_per_outage"]) ≈ 0
+    @test sum(results["Outages"]["unserved_load_per_outage_series"]) ≈ 0
     @test value(m[:binMGTechUsed]["Generator"]) == 1
     @test value(m[:binMGTechUsed]["PV"]) == 0
     @test value(m[:binMGStorageUsed]) == 1
@@ -473,12 +480,12 @@ end
     =#
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/nogridcost_minresilhours.json")
-    @test sum(results["Outages"]["unserved_load_per_outage"]) ≈ 12
+    @test sum(results["Outages"]["unserved_load_per_outage_series"]) ≈ 12
     
     # testing dvUnserved load, which would output 100 kWh for this scenario before output fix
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/nogridcost_multiscenario.json")
-    @test sum(results["Outages"]["unserved_load_per_outage"]) ≈ 60
+    @test sum(results["Outages"]["unserved_load_per_outage_series"]) ≈ 60
     
 end
 
@@ -605,6 +612,49 @@ end
     @test roof_east["average_annual_energy_produced_kwh"] ≈ 6482.37 atol=0.1
 end
 
+@testset "Thermal Energy Storage" begin
+    model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG"=>0))
+    data = JSON.parsefile("./scenarios/thermal_storage.json")
+    s = Scenario(data)
+    p = REoptInputs(s)
+    #Make every other hour zero fuel and electric cost; storage should charge and discharge in each period
+    for ts in p.time_steps
+        #heating and cooling loads only
+        if ts % 2 == 0  #in even periods, there is a nonzero load and energy is higher cost, and storage should discharge
+            p.s.electric_load.loads_kw[ts] = 10
+            p.s.dhw_load.loads_kw[ts] = 5
+            p.s.space_heating_load.loads_kw[ts] = 5
+            p.s.cooling_load.loads_kw_thermal[ts] = 10
+            p.s.existing_boiler.fuel_cost_series[ts] = 100
+            for tier in 1:p.s.electric_tariff.n_energy_tiers
+                p.s.electric_tariff.energy_rates[ts, tier] = 100
+            end
+        else #in odd periods, there is no load and energy is cheaper - storage should charge 
+            p.s.electric_load.loads_kw[ts] = 0
+            p.s.dhw_load.loads_kw[ts] = 0
+            p.s.space_heating_load.loads_kw[ts] = 0
+            p.s.cooling_load.loads_kw_thermal[ts] = 0
+            p.s.existing_boiler.fuel_cost_series[ts] = 1
+            for tier in 1:p.s.electric_tariff.n_energy_tiers
+                p.s.electric_tariff.energy_rates[ts, tier] = 100
+            end
+        end
+    end
+
+    r = run_reopt(model, p)
+
+    #dispatch to load should be 10kW every other period = 4,380 * 10
+    @test sum(r["HotThermalStorage"]["year_one_to_load_series_mmbtu_per_hour"]) ≈ 256.25 atol=0.1
+    @test sum(r["ColdThermalStorage"]["year_one_to_load_series_ton"]) ≈ 6224.39 atol=0.1
+    #size should be just over 10kW in gallons, accounting for efficiency losses and min SOC
+    @test r["HotThermalStorage"]["size_gal"] ≈ 390.61 atol=0.1
+    @test r["ColdThermalStorage"]["size_gal"] ≈ 189.91 atol=0.1
+    #No production from existing chiller, only absorption chiller, which is sized at ~5kW to manage electric demand charge & capital cost.
+    @test r["ExistingChiller"]["year_one_thermal_production_tonhour"] ≈ 0.0 atol=0.1
+    @test r["AbsorptionChiller"]["year_one_thermal_production_tonhour"] ≈ 12459.24 atol=0.1
+    @test r["AbsorptionChiller"]["size_ton"] ≈ 1.422 atol=0.01
+end
+
 @testset "Heat and cool energy balance" begin
     """
 
@@ -614,7 +664,7 @@ end
     Validation to ensure that:
         1) The electric chiller [TODO and absorption chiller] are supplying 100% of the cooling thermal load
         2) The boiler is supplying the boiler heating load [TODO plus additional absorption chiller thermal load]
-        3) [TODO The Cold and Hot TES efficiency (charge loss and thermal decay) are being tracked properly]
+        3) The Cold and Hot TES efficiency (charge loss and thermal decay) are being tracked properly
 
     """
     input_data = JSON.parsefile("./scenarios/heat_cool_energy_balance_inputs.json")
@@ -625,7 +675,7 @@ end
 
     # Annual cooling **thermal** energy load of CRB is based on annual cooling electric energy (from CRB models) and a conditional COP depending on the peak cooling thermal load
     # When the user specifies inputs["ExistingChiller"]["cop"], this changes the **electric** consumption of the chiller to meet that cooling thermal load
-    cooling_thermal_load_ton_hr_total = 1427329.0 * inputs.s.cooling_load.existing_chiller_cop / REopt.TONHOUR_TO_KWH_THERMAL  # From CRB models, in heating_cooling_loads.jl, BuiltInCoolingLoad data for location (SanFrancisco Hospital)
+    cooling_thermal_load_ton_hr_total = 1427329.0 * inputs.s.cooling_load.existing_chiller_cop / REopt.KWH_THERMAL_PER_TONHOUR  # From CRB models, in heating_cooling_loads.jl, BuiltInCoolingLoad data for location (SanFrancisco Hospital)
     cooling_electric_load_total_mod_cop = cooling_thermal_load_ton_hr_total / inputs.s.existing_chiller.cop
 
     # Annual heating **thermal** energy load of CRB is based on annual boiler fuel energy (from CRB models) and assumed const EXISTING_BOILER_EFFICIENCY
@@ -634,17 +684,17 @@ end
     boiler_fuel_consumption_total_mod_efficiency = boiler_thermal_load_mmbtu_total / inputs.s.existing_boiler.efficiency
 
     # Cooling outputs
-    cooling_elecchl_tons_to_load_series = results["ExistingChiller"]["existing_chiller_to_load_series"] / REopt.TONHOUR_TO_KWH_THERMAL
-    #cooling_elecchl_tons_to_tes_series = results["ExistingChiller"]["year_one_electric_chiller_thermal_to_tes_series_ton"]
+    cooling_elecchl_tons_to_load_series = results["ExistingChiller"]["year_one_to_load_series_ton"]
+    cooling_elecchl_tons_to_tes_series = results["ExistingChiller"]["year_one_to_tes_series_ton"]
     #cooling_absorpchl_tons_to_load_series = results["AbsorptionChiller"]["year_one_absorp_chl_thermal_to_load_series_ton"]
     #cooling_absorpchl_tons_to_tes_series = results["AbsorptionChiller"]["year_one_absorp_chl_thermal_to_tes_series_ton"]
     cooling_ton_hr_to_load_tech_total = sum(cooling_elecchl_tons_to_load_series) #+ sum(cooling_absorpchl_tons_to_load_series)
-    #cooling_ton_hr_to_tes_total = sum(cooling_elecchl_tons_to_tes_series) #+ sum(cooling_absorpchl_tons_to_tes_series)
-    #cooling_tes_tons_to_load_series = results["ColdStorage"]["year_one_thermal_from_cold_tes_series_ton"]
-    #cooling_extra_from_tes_losses = cooling_ton_hr_to_tes_total - sum(cooling_tes_tons_to_load_series)
-    #tes_effic_with_decay = sum(cooling_tes_tons_to_load_series) / cooling_ton_hr_to_tes_total
-    cooling_total_prod_from_techs = cooling_ton_hr_to_load_tech_total #+ cooling_ton_hr_to_tes_total
-    cooling_load_plus_tes_losses = cooling_thermal_load_ton_hr_total #+ cooling_extra_from_tes_losses
+    cooling_ton_hr_to_tes_total = sum(cooling_elecchl_tons_to_tes_series) #+ sum(cooling_absorpchl_tons_to_tes_series)
+    cooling_tes_tons_to_load_series = results["ColdThermalStorage"]["year_one_to_load_series_ton"]
+    cooling_extra_from_tes_losses = cooling_ton_hr_to_tes_total - sum(cooling_tes_tons_to_load_series)
+    tes_effic_with_decay = sum(cooling_tes_tons_to_load_series) / cooling_ton_hr_to_tes_total
+    cooling_total_prod_from_techs = cooling_ton_hr_to_load_tech_total + cooling_ton_hr_to_tes_total
+    cooling_load_plus_tes_losses = cooling_thermal_load_ton_hr_total + cooling_extra_from_tes_losses
 
     # Absorption Chiller electric consumption addition
     # absorpchl_total_cooling_produced_series_ton = [cooling_absorpchl_tons_to_load_series[i] + cooling_absorpchl_tons_to_tes_series[i] for i in range(8760)] 
@@ -653,32 +703,34 @@ end
     # absorpchl_cop_elec = inputs["AbsorptionChiller"]["chiller_elec_cop"]
 
     # Check if sum of electric and absorption chillers equals cooling thermal total
-    #self.assertGreater(1.0, tes_effic_with_decay)
+    @test tes_effic_with_decay < 0.97
+    println("tes_effic_with_decay = ", tes_effic_with_decay)
     @test round(cooling_total_prod_from_techs, digits=0) ≈ cooling_load_plus_tes_losses atol=5.0
-    #self.assertAlmostEqual(absorpchl_total_cooling_produced_ton_hour * REopt.TONHOUR_TO_KWH_THERMAL / absorpchl_cop_elec, absorpchl_electric_consumption_total_kwh, places=1)
+    #self.assertAlmostEqual(absorpchl_total_cooling_produced_ton_hour * REopt.KWH_THERMAL_PER_TONHOUR / absorpchl_cop_elec, absorpchl_electric_consumption_total_kwh, places=1)
 
     # Heating outputs
     boiler_fuel_consumption_calculated = results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"]
-    boiler_thermal_series = results["ExistingBoiler"]["year_one_thermal_production_mmbtu_per_hr"]
-    #boiler_thermal_to_tes_series = results["ExistingBoiler"]["year_one_thermal_to_tes_series_mmbtu_per_hour"]
+    boiler_thermal_series = results["ExistingBoiler"]["year_one_thermal_production_mmbtu_per_hour"]
+    boiler_to_load_series = results["ExistingBoiler"]["year_one_thermal_to_load_series_mmbtu_per_hour"]
+    boiler_thermal_to_tes_series = results["ExistingBoiler"]["thermal_to_tes_series_mmbtu_per_hour"]
     chp_thermal_to_load_series = results["CHP"]["year_one_thermal_to_load_series_mmbtu_per_hour"]
-    #chp_thermal_to_tes_series = results["CHP"]["year_one_thermal_to_tes_series_mmbtu_per_hour"]
+    chp_thermal_to_tes_series = results["CHP"]["year_one_thermal_to_tes_series_mmbtu_per_hour"]
     chp_thermal_to_waste_series = results["CHP"]["year_one_thermal_to_waste_series_mmbtu_per_hour"]
-    # absorpchl_thermal_series = results["AbsorptionChiller"]["year_one_absorp_chl_thermal_consumption_series_mmbtu_per_hr"]
-    #hot_tes_mmbtu_per_hr_to_load_series = results["HotStorage"]["year_one_thermal_from_hot_tes_series_mmbtu_per_hr"]
-    #tes_inflows = sum(chp_thermal_to_tes_series) + sum(boiler_thermal_to_tes_series)
-    total_chp_production = sum(chp_thermal_to_load_series) + sum(chp_thermal_to_waste_series) #+ sum(chp_thermal_to_tes_series)
-    #tes_outflows = sum(hot_tes_mmbtu_per_hr_to_load_series)
-    total_thermal_expected = boiler_thermal_load_mmbtu_total + sum(chp_thermal_to_waste_series) #+ tes_inflows + sum(absorpchl_thermal_series)
-    boiler_fuel_expected = (total_thermal_expected - total_chp_production) / inputs.s.existing_boiler.efficiency# / - tes_outflows) / inputs.s.existing_boiler.efficiency
-    total_thermal_mmbtu_calculated = sum(boiler_thermal_series) + total_chp_production #+ tes_outflows
+    # absorpchl_thermal_series = results["AbsorptionChiller"]["year_one_absorp_chl_thermal_consumption_series_mmbtu_per_hour"]
+    hot_tes_mmbtu_per_hour_to_load_series = results["HotThermalStorage"]["year_one_to_load_series_mmbtu_per_hour"]
+    tes_inflows = sum(chp_thermal_to_tes_series) + sum(boiler_thermal_to_tes_series)
+    total_chp_production = sum(chp_thermal_to_load_series) + sum(chp_thermal_to_waste_series) + sum(chp_thermal_to_tes_series)
+    tes_outflows = sum(hot_tes_mmbtu_per_hour_to_load_series)
+    total_thermal_expected = boiler_thermal_load_mmbtu_total + sum(chp_thermal_to_waste_series) + tes_inflows # + sum(absorpchl_thermal_series)
+    boiler_fuel_expected = (total_thermal_expected - total_chp_production - tes_outflows) / inputs.s.existing_boiler.efficiency
+    total_thermal_mmbtu_calculated = sum(boiler_thermal_series) + total_chp_production + tes_outflows
 
     @test round(boiler_fuel_consumption_calculated, digits=0) ≈ boiler_fuel_expected atol=8.0
     @test round(total_thermal_mmbtu_calculated, digits=0) ≈ total_thermal_expected atol=8.0  
 
     # Test CHP.cooling_thermal_factor = 0.8, AbsorptionChiller.chiller_cop = 0.7 (from test_cold_POST.json)
     # absorpchl_heat_in_kwh = results["AbsorptionChiller"]["year_one_absorp_chl_thermal_consumption_mmbtu"] * 1.0E6 / 3412.0
-    # absorpchl_cool_out_kwh = results["AbsorptionChiller"]["year_one_absorp_chl_thermal_production_tonhr"] * REopt.TONHOUR_TO_KWH_THERMAL
+    # absorpchl_cool_out_kwh = results["AbsorptionChiller"]["year_one_absorp_chl_thermal_production_tonhr"] * REopt.KWH_THERMAL_PER_TONHOUR
     #absorpchl_cop = absorpchl_cool_out_kwh / absorpchl_heat_in_kwh
 
     #self.assertAlmostEqual(absorpchl_cop, 0.8*0.7, places=3)
@@ -700,7 +752,7 @@ end
     # Heating load data from CRB models is **fuel**; we convert fuel to thermal using a constant/fixed REopt.EXISTING_BOILER_EFFICIENCY,
     #   so the thermal load is always the same for a standard CRB
     # The **fuel** consumption to serve that thermal load may change if the user inputs a different ExistingBoiler["efficiency"]
-    total_boiler_heating_thermal_load_mmbtu = (sum(inputs.s.space_heating_load.loads_kw) + sum(inputs.s.dhw_load.loads_kw)) / REopt.MMBTU_TO_KWH
+    total_boiler_heating_thermal_load_mmbtu = (sum(inputs.s.space_heating_load.loads_kw) + sum(inputs.s.dhw_load.loads_kw)) / REopt.KWH_PER_MMBTU
     @test round(total_boiler_heating_thermal_load_mmbtu, digits=0) ≈ 2904 * REopt.EXISTING_BOILER_EFFICIENCY atol=1.0  # The input load is **fuel**, not thermal
     total_boiler_heating_fuel_load_mmbtu = total_boiler_heating_thermal_load_mmbtu / inputs.s.existing_boiler.efficiency
     @test round(total_boiler_heating_fuel_load_mmbtu, digits=0) ≈ 2904 * REopt.EXISTING_BOILER_EFFICIENCY / inputs.s.existing_boiler.efficiency atol=1.0
@@ -730,7 +782,7 @@ end
     inputs = REoptInputs(s)
 
     total_heating_fuel_load_mmbtu = (sum(inputs.s.space_heating_load.loads_kw) + 
-                                    sum(inputs.s.dhw_load.loads_kw)) / REopt.EXISTING_BOILER_EFFICIENCY / REopt.MMBTU_TO_KWH
+                                    sum(inputs.s.dhw_load.loads_kw)) / REopt.EXISTING_BOILER_EFFICIENCY / REopt.KWH_PER_MMBTU
     @test round(total_heating_fuel_load_mmbtu, digits=0) ≈ 12000 atol=1.0
     total_chiller_electric_consumption = sum(inputs.s.cooling_load.loads_kw_thermal) / inputs.s.cooling_load.existing_chiller_cop
     @test round(total_chiller_electric_consumption, digits=0) ≈ 775282 atol=1.0
@@ -743,7 +795,7 @@ end
     inputs = REoptInputs(s)
 
     total_heating_fuel_load_mmbtu = (sum(inputs.s.space_heating_load.loads_kw) + 
-                                    sum(inputs.s.dhw_load.loads_kw)) / REopt.EXISTING_BOILER_EFFICIENCY / REopt.MMBTU_TO_KWH
+                                    sum(inputs.s.dhw_load.loads_kw)) / REopt.EXISTING_BOILER_EFFICIENCY / REopt.KWH_PER_MMBTU
     @test round(total_heating_fuel_load_mmbtu, digits=0) ≈ 8760 atol=0.1
     @test round(sum(inputs.s.cooling_load.loads_kw_thermal) / inputs.s.cooling_load.existing_chiller_cop, digits=0) ≈ 77528.0 atol=1.0
 
@@ -758,7 +810,7 @@ end
     s = Scenario(input_data)
     inputs = REoptInputs(s)
     
-    @test round(sum(inputs.s.cooling_load.loads_kw_thermal) / REopt.TONHOUR_TO_KWH_THERMAL, digits=0) ≈ annual_tonhour atol=1.0 
+    @test round(sum(inputs.s.cooling_load.loads_kw_thermal) / REopt.KWH_THERMAL_PER_TONHOUR, digits=0) ≈ annual_tonhour atol=1.0 
 end
 
 @testset "Hybrid/blended heating and cooling loads" begin
