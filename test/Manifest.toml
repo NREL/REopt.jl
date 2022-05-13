@@ -163,13 +163,6 @@ git-tree-sha1 = "1bd6fc0c344fc0cbee1f42f8d2e7ec8253dda2d2"
 uuid = "f6369f11-7733-5829-9624-2563aa707210"
 version = "0.10.25"
 
-[[deps.GHPGHX]]
-git-tree-sha1 = "146cfd539e874eac83cc03d98a79e642c3cddb9a"
-repo-rev = "main"
-repo-url = "C:\\GitHub\\GHPGHX.jl"
-uuid = "7ce85f02-24a8-4d69-a3f0-14b5daa7d30c"
-version = "0.1.0"
-
 [[deps.HTTP]]
 deps = ["Base64", "Dates", "IniFile", "Logging", "MbedTLS", "NetworkOptions", "Sockets", "URIs"]
 git-tree-sha1 = "0fa77022fe4b511826b39c894c90daf5fce3334a"
