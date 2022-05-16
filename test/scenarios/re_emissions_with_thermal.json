@@ -45,8 +45,7 @@
     "can_curtail": false        
   },
   "CoolingLoad": {
-    "doe_reference_name": "Hospital" ,
-    "chiller_cop": 3.4
+    "doe_reference_name": "Hospital" 
   },
   "Financial": {
     "om_cost_escalation_pct": 0.025,
@@ -85,16 +84,21 @@
     "interconnection_limit_kw": 100000000.0
   },
   "PV": {
-    "name": "",
     "existing_kw": 10.0,
     "min_kw": 10.0,
-    "max_kw": 10.0
+    "max_kw": 10.0,
+    "om_cost_per_kw": 16.0,
+    "installed_cost_per_kw": 1600.0
   },
   "ElectricStorage": {
     "min_kw": 0.0,
     "max_kw": 0.0,
     "min_kwh": 0.0,
-    "max_kwh": 0.0
+    "max_kwh": 0.0,
+    "installed_cost_per_kw": 840.0,
+    "installed_cost_per_kwh": 420.0,
+    "replace_cost_per_kw": 410.0,
+    "replace_cost_per_kwh": 200.0
   },
   "ColdThermalStorage": {
     "min_gal": 30000.0 ,
@@ -115,19 +119,19 @@
     "installed_cost_per_ton": 500.0 ,
     "om_cost_per_ton": 0.5 ,
     "macrs_option_years": 0 ,
-    "macrs_bonus_pct": 0.0 ,
-    "macrs_itc_reduction": 0.0
+    "macrs_bonus_pct": 0.0
   },
   "CHP": {
     "prime_mover": "recip_engine",
-    "size_class": 2,
+    "size_class": 3,
     "min_kw": 200.0,
     "min_allowable_kw":0.0,
     "max_kw": 200.0,
     "can_supply_steam_turbine": true,
     "fuel_type": "natural_gas",
     "fuel_cost_per_mmbtu": 8.0,
-    "fuel_renewable_energy_pct": 0.3
+    "fuel_renewable_energy_pct": 0.3,
+    "derate_start_temp_degF": 95
   },
   "HotThermalStorage": {
     "min_gal": 50000.0,
