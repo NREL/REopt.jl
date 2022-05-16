@@ -56,7 +56,7 @@ function ExistingBoiler(;
     production_type::String = "hot_water",
     chp_prime_mover::String = "",
     max_thermal_factor_on_peak_load::Real = 1.25,
-    efficiency::Real = 0.0,
+    efficiency::Union{Missing,<:Real} = missing,
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     fuel_renewable_energy_pct::Union{Missing,Float64} = missing,
@@ -73,7 +73,7 @@ function ExistingBoiler(;
     production_type::String = "hot_water",
     chp_prime_mover::String = "",
     max_thermal_factor_on_peak_load::Real = 1.25,
-    efficiency::Real = 0.0,
+    efficiency::Union{Missing,<:Real} = missing,
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     # can_supply_steam_turbine::Bool,
@@ -106,7 +106,7 @@ function ExistingBoiler(;
         "steam" => 0.75
     )
 
-    if efficiency == 0.0
+    if ismissing(efficiency)
         if !isempty(chp_prime_mover)
             production_type = production_type_by_chp_prime_mover[chp_prime_mover]
         end
