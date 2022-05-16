@@ -42,7 +42,7 @@ calculated in combine_results function if BAU scenario is run:
     - `breakeven_cost_of_emissions_reduction_per_tCO2`
 """
 function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
-    r = Dict{String, Any}()
+    r = Dict{String, Float64}()
     if !(Symbol("dvComfortLimitViolationCost"*_n) in keys(m.obj_dict))
         m[Symbol("dvComfortLimitViolationCost"*_n)] = 0.0
     end
@@ -69,7 +69,7 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
         r["lifecycle_fuel_costs_after_tax"] = value(m[:TotalFuelCosts]) * (1 - p.s.financial.offtaker_tax_pct)
     end
 
-    d["Financial"] = Dict(k => round(v, digits=2) for (k,v) in r)
+    d["Financial"] = Dict{String, Union{Nothing,Float64}}(k => round(v, digits=2) for (k,v) in r)
     nothing
 end
 
