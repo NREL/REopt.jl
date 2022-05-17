@@ -33,40 +33,6 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
 
 
 @testset "Emissions" begin
-    # # CO2 break-even cost
-    # m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    # m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    # inputs = JSON.parsefile("./scenarios/CO2_breakeven_cost.json")
-    # results = run_reopt([m1, m2], inputs)
-    # @info results["Financial"]["npv"]
-    # @info results["ElectricStorage"]["size_kw"]
-    # inputs["PV"]["min_kw"] = results["PV"]["size_kw"]
-    # inputs["PV"]["max_kw"] = results["PV"]["size_kw"]
-    # inputs["ElectricStorage"]["min_kw"] = results["ElectricStorage"]["size_kw"]
-    # inputs["ElectricStorage"]["max_kw"] = results["ElectricStorage"]["size_kw"]
-    # inputs["ElectricStorage"]["min_kwh"] = results["ElectricStorage"]["size_kwh"]
-    # inputs["ElectricStorage"]["max_kwh"] = results["ElectricStorage"]["size_kwh"]
-    # inputs["Wind"]["min_kw"] = results["Wind"]["size_kw"]
-    # inputs["Wind"]["max_kw"] = results["Wind"]["size_kw"]
-    # inputs["Financial"]["CO2_cost_per_tonne"] = results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"]
-    # inputs["Settings"]["include_climate_in_objective"] = true
-    # m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    # m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    # results = run_reopt([m1, m2], inputs)
-    # @test results["Financial"]["npv"] ≈ 0.0 atol=1
-
-    #lifetime emissions
-    # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    # results = run_reopt(m, "./scenarios/lifetime_emissiions.json")
-    # @test results["PV"]["size_kw"] ≈ 4.0064
-    # @test results["Site"]["lifecycle_emissions_cost_CO2"] ≈ 1245.53
-    # @test results["Site"]["lifecycle_emissions_cost_health"] ≈ 337.2
-    # @test results["ElectricTariff"]["emissions_region"] == "Texas"
-    # @test round(results["Financial"]["NOx_cost_per_tonne_grid"], digits=3) == 4534.032
-    # @test round(results["Financial"]["PM25_cost_per_tonne_grid"], digits=3) == 126293.111
-    # @test round(results["Financial"]["NOx_cost_per_tonne_onsite_fuelburn"], digits=3) == 5965.835
-    # @test round(results["Financial"]["PM25_cost_per_tonne_onsite_fuelburn"], digits=3) == 240382.502
-
     #renewable energy and emissions reduction targets
     include_exported_RE_in_total = [true,false,true]
     include_exported_ER_in_total = [true,false,true]
@@ -84,8 +50,8 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
         inputs["Site"]["include_exported_elec_emissions_in_total"] = include_exported_ER_in_total[i]
         inputs["Site"]["renewable_electricity_min_pct"] = if isnothing(RE_target[i]) 0.0 else RE_target[i] end
         inputs["Site"]["renewable_electricity_max_pct"] = RE_target[i]
-        inputs["Site"]["CO2_emissions_reduction_min_pct"] = ER_target[i]#if isnothing(ER_target[i]) 0.0 else ER_target[i] end
-        inputs["Site"]["CO2_emissions_reduction_max_pct"] = ER_target[i]#if isnothing(ER_target[i]) 1.0 else ER_target[i] end
+        inputs["Site"]["CO2_emissions_reduction_min_pct"] = ER_target[i]
+        inputs["Site"]["CO2_emissions_reduction_max_pct"] = ER_target[i]
         if with_outage[i]
             outage_start_hour = 4032
             outage_duration = 2000 #hrs
@@ -101,10 +67,6 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
         results = run_reopt([m1, m2], inputs)
 
         if typeof(results) <: Dict
-            open("test_results.json", "w") do f
-                write(f, JSON.json(results))
-            end
-
             if !isnothing(ER_target[i])
                 ER_pct_out = results["Site"]["lifecycle_emissions_reduction_CO2_pct"]
                 @test ER_target[i] ≈ ER_pct_out atol=1e-3
@@ -122,9 +84,6 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
             if !isnothing(results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"])
                 @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] >= 0.0
             end
-            # if !isnothing(ER_target[i])
-            #     @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] >=0.0
-            # end
             
             if i == 1
                 @test results["PV"]["size_kw"] ≈ 46.3 atol=1e-1
@@ -141,15 +100,15 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
                 @test results["Site"]["total_renewable_energy_pct_bau"] ≈ 0.1464 atol=1e-4
                 @test results["Site"]["lifecycle_emissions_reduction_CO2_pct"] ≈ 0.660022 atol=1e-4
                 @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] ≈ 301.237 atol=1
-                @test results["Site"]["year_one_emissions_tCO2"] ≈ 12.79 # X
+                @test results["Site"]["year_one_emissions_tCO2"] ≈ 12.79
                 @test results["Site"]["year_one_emissions_tCO2_bau"] ≈ 40.54 atol=1e-2
-                @test results["Site"]["year_one_emissions_from_fuelburn_tCO2"] ≈ 7.65 # X
+                @test results["Site"]["year_one_emissions_from_fuelburn_tCO2"] ≈ 7.65
                 @test results["Site"]["year_one_emissions_from_fuelburn_tCO2_bau"] ≈ 0.0
                 @test results["Site"]["lifecycle_emissions_cost_CO2"] ≈ 8713.36 atol=1
                 @test results["Site"]["lifecycle_emissions_cost_CO2_bau"] ≈ 25856.9 atol=1e-1
-                @test results["Site"]["lifecycle_emissions_tCO2"] ≈ 244.06 # X
+                @test results["Site"]["lifecycle_emissions_tCO2"] ≈ 244.06
                 @test results["Site"]["lifecycle_emissions_tCO2_bau"] ≈ 717.86
-                @test results["Site"]["lifecycle_emissions_from_fuelburn_tCO2"] ≈ 152.97 # X
+                @test results["Site"]["lifecycle_emissions_from_fuelburn_tCO2"] ≈ 152.97
                 @test results["Site"]["lifecycle_emissions_from_fuelburn_tCO2_bau"] ≈ 0.0
                 @test results["ElectricUtility"]["year_one_emissions_tCO2"] ≈ 5.14
                 @test results["ElectricUtility"]["year_one_emissions_tCO2_bau"] ≈ 40.54
@@ -205,9 +164,6 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
                 m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
                 m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
                 results = run_reopt([m1, m2], inputs)
-                open("test_results2.json", "w") do f
-                    write(f, JSON.json(results))
-                end
                 @test results["Financial"]["npv"] ≈ 0 atol=10
                 @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] ≈ inputs["Financial"]["CO2_cost_per_tonne"] atol=1e-1
             elseif i == 3
