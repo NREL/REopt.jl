@@ -41,11 +41,10 @@ end
 function add_yr1_emissions_calcs(m,p)
 	# Components:
 	yr1_emissions_from_fuelburningtechs_lbs_CO2, yr1_emissions_from_fuelburningtechs_lbs_NOx, yr1_emissions_from_fuelburningtechs_lbs_SO2, yr1_emissions_from_fuelburningtechs_lbs_PM25 = calc_yr1_emissions_from_onsite_fuel(m,p; tech_array=p.techs.fuel_burning)
-	yr1_emissions_from_boilertechs_lbs_CO2, yr1_emissions_from_boilertechs_lbs_NOx, yr1_emissions_from_boilertechs_lbs_SO2, yr1_emissions_from_boilertechs_lbs_PM25 = calc_yr1_emissions_from_onsite_fuel(m,p; tech_array=p.techs.boiler)
-	m[:yr1_emissions_onsite_fuel_lbs_CO2] = yr1_emissions_from_fuelburningtechs_lbs_CO2 + yr1_emissions_from_boilertechs_lbs_CO2
-	m[:yr1_emissions_onsite_fuel_lbs_NOx] = yr1_emissions_from_fuelburningtechs_lbs_NOx + yr1_emissions_from_boilertechs_lbs_NOx
-	m[:yr1_emissions_onsite_fuel_lbs_SO2] = yr1_emissions_from_fuelburningtechs_lbs_SO2 + yr1_emissions_from_boilertechs_lbs_SO2
-	m[:yr1_emissions_onsite_fuel_lbs_PM25] = yr1_emissions_from_fuelburningtechs_lbs_PM25 + yr1_emissions_from_boilertechs_lbs_PM25
+	m[:yr1_emissions_onsite_fuel_lbs_CO2] = yr1_emissions_from_fuelburningtechs_lbs_CO2
+	m[:yr1_emissions_onsite_fuel_lbs_NOx] = yr1_emissions_from_fuelburningtechs_lbs_NOx
+	m[:yr1_emissions_onsite_fuel_lbs_SO2] = yr1_emissions_from_fuelburningtechs_lbs_SO2
+	m[:yr1_emissions_onsite_fuel_lbs_PM25] = yr1_emissions_from_fuelburningtechs_lbs_PM25
 
 	m[:yr1_emissions_from_elec_grid_lbs_CO2], m[:yr1_emissions_from_elec_grid_lbs_NOx], m[:yr1_emissions_from_elec_grid_lbs_SO2], m[:yr1_emissions_from_elec_grid_lbs_PM25]  = calc_yr1_emissions_from_elec_grid_purchase(m,p)
 	m[:yr1_emissions_offset_from_elec_exports_lbs_CO2], m[:yr1_emissions_offset_from_elec_exports_lbs_NOx], m[:yr1_emissions_offset_from_elec_exports_lbs_SO2], m[:yr1_emissions_offset_from_elec_exports_lbs_PM25] = calc_yr1_emissions_offset_from_elec_exports(m,p;tech_array=p.techs.elec)
