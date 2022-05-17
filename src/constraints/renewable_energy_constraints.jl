@@ -121,7 +121,6 @@ function add_re_tot_calcs(m,p)
 		# end
 
 		# Renewable heat (RE steam/hot water heat that is not being used to generate electricity)
-		@info "p.tech_renewable_energy_pct = $(p.tech_renewable_energy_pct)"
 		AnnualREHeatkWh = @expression(m,p.hours_per_timestep*(
 				sum(m[:dvThermalProduction][t,ts] * p.tech_renewable_energy_pct[t] for t in union(p.techs.heating, p.techs.chp), ts in p.time_steps) #total RE heat generation (excl steam turbine, GHP)
 				- sum(m[:dvProductionToWaste][t,ts]* p.tech_renewable_energy_pct[t] for t in p.techs.chp, ts in p.time_steps) #minus CHP waste heat
