@@ -33,23 +33,27 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
 
 
 @testset "Emissions" begin
-    # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    # results = run_reopt(m, "./scenarios/emissiions.json")
-    # @test round(results["Site"]["analysis_period_emissions_reduction_CO2_pct"]) ≈ 0.5
-
-    #CO2 break-even cost
+    # # CO2 break-even cost
     # m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     # m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     # inputs = JSON.parsefile("./scenarios/CO2_breakeven_cost.json")
     # results = run_reopt([m1, m2], inputs)
+    # @info results["Financial"]["npv"]
+    # @info results["ElectricStorage"]["size_kw"]
     # inputs["PV"]["min_kw"] = results["PV"]["size_kw"]
     # inputs["PV"]["max_kw"] = results["PV"]["size_kw"]
+    # inputs["ElectricStorage"]["min_kw"] = results["ElectricStorage"]["size_kw"]
+    # inputs["ElectricStorage"]["max_kw"] = results["ElectricStorage"]["size_kw"]
+    # inputs["ElectricStorage"]["min_kwh"] = results["ElectricStorage"]["size_kwh"]
+    # inputs["ElectricStorage"]["max_kwh"] = results["ElectricStorage"]["size_kwh"]
+    # inputs["Wind"]["min_kw"] = results["Wind"]["size_kw"]
+    # inputs["Wind"]["max_kw"] = results["Wind"]["size_kw"]
     # inputs["Financial"]["CO2_cost_per_tonne"] = results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"]
     # inputs["Settings"]["include_climate_in_objective"] = true
     # m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     # m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     # results = run_reopt([m1, m2], inputs)
-    # @test results["Financial"]["npv"] ≈ 0.0
+    # @test results["Financial"]["npv"] ≈ 0.0 atol=1
 
     #lifetime emissions
     # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
@@ -68,13 +72,9 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
     include_exported_ER_in_total = [true,false,true]
     RE_target = [0.8,nothing,nothing]
     ER_target = [nothing,0.8,nothing]
-    with_outage = [true,false,true]
+    with_outage = [true,false,false]
 
-    # d_expected = [,
-    #             ,
-    #             ]
-
-    for i in range(1, stop=1)
+    for i in range(1, stop=3)
         if i == 3
             inputs = JSON.parsefile("./scenarios/re_emissions_with_thermal.json")
         else
@@ -96,68 +96,57 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
             inputs["Generator"]["fuel_avail_gal"] = 1000 
         end
 
-        # inputs["PV"]["min_kw"] = 36.2923
-        # inputs["PV"]["max_kw"] = 36.2923
-        # inputs["Wind"]["max_kw"] = 10.0
-
         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MAXIIS" => -1))
         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MAXIIS" => -1))
         results = run_reopt([m1, m2], inputs)
-        open("test_results.json", "w") do f
-            write(f, JSON.json(results))
-        end
 
         if typeof(results) <: Dict
-
-            # @info keys(results["Site"])
-            # @info keys(results["Financial"])
-            # @info keys(results["ElectricTariff"])
-            # @info keys(results["ElectricUtility"])
-            # @info keys(results["PV"])
-            # @info keys(results["Wind"])
-            # @info keys(results["Generator"])
-            # @info keys(results["ElectricStorage"])
+            open("test_results.json", "w") do f
+                write(f, JSON.json(results))
+            end
 
             if !isnothing(ER_target[i])
                 ER_pct_out = results["Site"]["lifecycle_emissions_reduction_CO2_pct"]
-                @test round(ER_target[i], digits=3) == round(ER_pct_out, digits=3)
+                @test ER_target[i] ≈ ER_pct_out atol=1e-3
                 lifecycle_emissions_tCO2_out = results["Site"]["lifecycle_emissions_tCO2"]
                 lifecycle_emissions_bau_tCO2_out = results["Site"]["lifecycle_emissions_tCO2_bau"]
                 ER_pct_calced_out = (lifecycle_emissions_bau_tCO2_out-lifecycle_emissions_tCO2_out)/lifecycle_emissions_bau_tCO2_out
                 ER_pct_diff = abs(ER_pct_calced_out-ER_pct_out)
-                @test round(ER_pct_diff, digits=2) == round(0.0, digits=2)
+                @test ER_pct_diff ≈ 0.0 atol=1e-2
             end
             year_one_emissions_tCO2_out = results["Site"]["year_one_emissions_tCO2"]
             yr1_fuel_emissions_tCO2_out = results["Site"]["year_one_emissions_from_fuelburn_tCO2"]
             yr1_grid_emissions_tCO2_out = results["ElectricUtility"]["year_one_emissions_tCO2"]
             yr1_total_emissions_calced_tCO2 = yr1_fuel_emissions_tCO2_out + yr1_grid_emissions_tCO2_out 
-            @test round(year_one_emissions_tCO2_out, digits=-1) == round(yr1_total_emissions_calced_tCO2, digits=-1)
-            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] >=0.0
+            @test year_one_emissions_tCO2_out ≈ yr1_total_emissions_calced_tCO2 atol=1e-1
+            if !isnothing(results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"])
+                @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] >= 0.0
+            end
             # if !isnothing(ER_target[i])
             #     @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] >=0.0
             # end
             
             if i == 1
-                @test round(results["PV"]["size_kw"], digits=1) ≈ 46.3
+                @test results["PV"]["size_kw"] ≈ 46.3 atol=1e-1
                 @test results["Wind"]["size_kw"] ≈ 10.0
                 @test results["ElectricStorage"]["size_kw"] ≈ 2.43
                 @test results["ElectricStorage"]["size_kwh"] ≈ 6.06
                 @test results["Generator"]["size_kw"] ≈ 22.0
                 @info results["Financial"]["npv"]
-                @test round((-101278.0 - results["Financial"]["npv"])/-101278.0, digits=2) ≈ 0.0 # close
+                @test (-101278.0 - results["Financial"]["npv"])/-101278.0 ≈ 0.0 atol=1e-2
                 @test results["Site"]["annual_renewable_electricity_kwh"] ≈ 75140.37
                 @test results["Site"]["renewable_electricity_pct"] ≈ 0.8
-                @test round(results["Site"]["renewable_electricity_pct_bau"], digits=4) ≈ 0.1464
+                @test results["Site"]["renewable_electricity_pct_bau"] ≈ 0.1464 atol=1e-4
                 @test results["Site"]["total_renewable_energy_pct"] ≈ 0.8
-                @test rround(esults["Site"]["total_renewable_energy_pct_bau"], digits=4) ≈ 0.1464
-                # @test results["Site"]["lifecycle_emissions_reduction_CO2_pct"] ≈ 0.660022
-                @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] ≈ 301.237 # X
+                @test results["Site"]["total_renewable_energy_pct_bau"] ≈ 0.1464 atol=1e-4
+                @test results["Site"]["lifecycle_emissions_reduction_CO2_pct"] ≈ 0.660022 atol=1e-4
+                @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] ≈ 301.237 atol=1
                 @test results["Site"]["year_one_emissions_tCO2"] ≈ 12.79 # X
-                @test round(results["Site"]["year_one_emissions_tCO2_bau"], digits=2) ≈ 40.54
+                @test results["Site"]["year_one_emissions_tCO2_bau"] ≈ 40.54 atol=1e-2
                 @test results["Site"]["year_one_emissions_from_fuelburn_tCO2"] ≈ 7.65 # X
                 @test results["Site"]["year_one_emissions_from_fuelburn_tCO2_bau"] ≈ 0.0
-                @test results["Site"]["lifecycle_emissions_cost_CO2"] ≈ 8713.36 # X
-                @test round(results["Site"]["lifecycle_emissions_cost_CO2_bau"], digits=1) ≈ 25856.9
+                @test results["Site"]["lifecycle_emissions_cost_CO2"] ≈ 8713.36 atol=1
+                @test results["Site"]["lifecycle_emissions_cost_CO2_bau"] ≈ 25856.9 atol=1e-1
                 @test results["Site"]["lifecycle_emissions_tCO2"] ≈ 244.06 # X
                 @test results["Site"]["lifecycle_emissions_tCO2_bau"] ≈ 717.86
                 @test results["Site"]["lifecycle_emissions_from_fuelburn_tCO2"] ≈ 152.97 # X
@@ -168,15 +157,85 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
                 @test results["ElectricUtility"]["lifecycle_emissions_tCO2_bau"] ≈ 717.86
             
             elseif i == 2
+                @test results["PV"]["size_kw"] ≈ 59.19 atol=1
+                @test results["Wind"]["size_kw"] ≈ 23.05 atol=1
+                @test results["ElectricStorage"]["size_kw"] ≈ 12.53 atol=1
+                @test results["ElectricStorage"]["size_kwh"] ≈ 80.82 atol=1
+                @test !haskey(results, "Generator")
+                # NPV
+                npv = results["Financial"]["npv"]
+                npv_diff_pct = (-198934.0 - npv)/-198934.0
+                @test npv_diff_pct ≈ 0.0 atol=1e-3
+                # Renewable energy
+                @test results["Site"]["renewable_electricity_pct"] ≈ 0.78984 atol=1e-3
+                @test results["Site"]["annual_renewable_electricity_kwh"] ≈ 78984.01 atol=10
+                @test results["Site"]["renewable_electricity_pct_bau"] ≈ 0.135426 atol=1e-3
+                @test results["Site"]["annual_renewable_electricity_kwh_bau"] ≈ 13542.62 atol=10
+                @test results["Site"]["total_renewable_energy_pct"] ≈ 0.78984 atol=1e-3
+                @test results["Site"]["total_renewable_energy_pct_bau"] ≈ 0.135426 atol=1e-3
+                # CO2 emissions - totals ≈  from grid, from fuelburn, ER, $/tCO2 breakeven
+                @test results["Site"]["lifecycle_emissions_reduction_CO2_pct"] ≈ 0.8 atol=1e-3
+                @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] ≈ 342.947 atol=1e-1
+                @test results["Site"]["year_one_emissions_tCO2"] ≈ 11.59 atol=1
+                @test results["Site"]["year_one_emissions_tCO2_bau"] ≈ 57.97 atol=1
+                @test results["Site"]["year_one_emissions_from_fuelburn_tCO2"] ≈ 0.0 atol=1
+                @test results["Site"]["year_one_emissions_from_fuelburn_tCO2_bau"] ≈ 0.0 atol=1
+                @test results["Site"]["lifecycle_emissions_cost_CO2"] ≈ 7395.84 atol=1
+                @test results["Site"]["lifecycle_emissions_cost_CO2_bau"] ≈ 36979.2 atol=1
+                @test results["Site"]["lifecycle_emissions_tCO2"] ≈ 205.33 atol=1
+                @test results["Site"]["lifecycle_emissions_tCO2_bau"] ≈ 1026.65 atol=1
+                @test results["Site"]["lifecycle_emissions_from_fuelburn_tCO2"] ≈ 0.0 atol=1
+                @test results["Site"]["lifecycle_emissions_from_fuelburn_tCO2_bau"] ≈ 0.0 atol=1
+                @test results["ElectricUtility"]["year_one_emissions_tCO2"] ≈ 11.59 atol=1
+                @test results["ElectricUtility"]["year_one_emissions_tCO2_bau"] ≈ 57.97 atol=1
+                @test results["ElectricUtility"]["lifecycle_emissions_tCO2"] ≈ 205.33 atol=1
+                @test results["ElectricUtility"]["lifecycle_emissions_tCO2_bau"] ≈ 1026.65 atol=1
+
                 #also test CO2 breakeven cost
-                inputs["PV"]["min_kw"] = results["PV"]["size_kw"]
-                inputs["PV"]["max_kw"] = results["PV"]["size_kw"]
+                inputs["PV"]["min_kw"] = results["PV"]["size_kw"] - inputs["PV"]["existing_kw"]
+                inputs["PV"]["max_kw"] = results["PV"]["size_kw"] - inputs["PV"]["existing_kw"]
+                inputs["Wind"]["min_kw"] = results["Wind"]["size_kw"]
+                inputs["Wind"]["max_kw"] = results["Wind"]["size_kw"]
+                inputs["ElectricStorage"]["min_kw"] = results["ElectricStorage"]["size_kw"]
+                inputs["ElectricStorage"]["max_kw"] = results["ElectricStorage"]["size_kw"]
+                inputs["ElectricStorage"]["min_kwh"] = results["ElectricStorage"]["size_kwh"]
+                inputs["ElectricStorage"]["max_kwh"] = results["ElectricStorage"]["size_kwh"]
                 inputs["Financial"]["CO2_cost_per_tonne"] = results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"]
                 inputs["Settings"]["include_climate_in_objective"] = true
                 m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
                 m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
                 results = run_reopt([m1, m2], inputs)
-                @test results["Financial"]["npv"] ≈ 0.0
+                open("test_results2.json", "w") do f
+                    write(f, JSON.json(results))
+                end
+                @test results["Financial"]["npv"] ≈ 0 atol=10
+                @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] ≈ inputs["Financial"]["CO2_cost_per_tonne"] atol=1e-1
+            elseif i == 3
+                @test results["PV"]["size_kw"] ≈ 20.0 atol=1e-1
+                @test !haskey(results, "Wind")
+                @test !haskey(results, "ElectricStorage")
+                @test !haskey(results, "Generator")
+                @test results["CHP"]["size_kw"] ≈ 200.0 atol=1e-1
+                @test results["AbsorptionChiller"]["size_ton"] ≈ 400.0 atol=1e-1
+                @test results["HotThermalStorage"]["size_gal"] ≈ 50000 atol=1e1
+                @test results["ColdThermalStorage"]["size_gal"] ≈ 30000 atol=1e1
+                yr1_nat_gas_mmbtu = results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"] + results["CHP"]["year_one_fuel_used_mmbtu"]
+                nat_gas_emissions_lb_per_mmbtu = Dict("CO2"=>116.9, "NOx"=>0.09139, "SO2"=>0.000578592, "PM25"=>0.007328833)
+                TONNE_PER_LB = 1/2204.62
+                @test results["Site"]["year_one_emissions_from_fuelburn_tCO2"] ≈ nat_gas_emissions_lb_per_mmbtu["CO2"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1
+                @test results["Site"]["year_one_emissions_from_fuelburn_tNOx"] ≈ nat_gas_emissions_lb_per_mmbtu["NOx"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
+                @test results["Site"]["year_one_emissions_from_fuelburn_tSO2"] ≈ nat_gas_emissions_lb_per_mmbtu["SO2"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
+                @test results["Site"]["year_one_emissions_from_fuelburn_tPM25"] ≈ nat_gas_emissions_lb_per_mmbtu["PM25"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
+                @test results["Site"]["lifecycle_emissions_tCO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tCO2"] + results["ElectricUtility"]["lifecycle_emissions_tCO2"] atol=1
+                @test results["Site"]["lifecycle_emissions_tNOx"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tNOx"] + results["ElectricUtility"]["lifecycle_emissions_tNOx"] atol=1e-2
+                @test results["Site"]["lifecycle_emissions_tSO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tSO2"] + results["ElectricUtility"]["lifecycle_emissions_tSO2"] atol=1e-2
+                @test results["Site"]["lifecycle_emissions_tPM25"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tPM25"] + results["ElectricUtility"]["lifecycle_emissions_tPM25"] atol=1e-2
+                @test results["Site"]["annual_renewable_electricity_kwh"] ≈ results["PV"]["average_annual_energy_produced_kwh"] + inputs["CHP"]["fuel_renewable_energy_pct"] * results["CHP"]["year_one_electric_energy_produced_kwh"] atol=1
+                @test results["Site"]["renewable_electricity_pct"] ≈ results["Site"]["annual_renewable_electricity_kwh"] / results["ElectricLoad"]["annual_calculated_kwh"] atol=1e-6#0.044285 atol=1e-4
+                KWH_PER_MMBTU = 293.07107
+                annual_RE_kwh = inputs["CHP"]["fuel_renewable_energy_pct"] * results["CHP"]["year_one_thermal_energy_produced_mmbtu"] * KWH_PER_MMBTU + results["Site"]["annual_renewable_electricity_kwh"]
+                annual_heat_kwh = (results["CHP"]["year_one_thermal_energy_produced_mmbtu"] + results["ExistingBoiler"]["year_one_thermal_production_mmbtu"]) * KWH_PER_MMBTU
+                @test results["Site"]["total_renewable_energy_pct"] ≈ annual_RE_kwh / (annual_heat_kwh + results["ElectricLoad"]["annual_calculated_kwh"]) atol=1e-6
             end
         else
             for r in results
