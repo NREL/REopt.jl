@@ -87,9 +87,6 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 
 		ex_name = "TotalPerUnitHourOMCosts"*_n
 		m[Symbol(ex_name)] = 0 # TODO: Is this correct? 
-
-		ex_name = "TotalCHPStandbyCharges"*_n
-		m[Symbol(ex_name)] = 0 # TODO: Is this correct? 
 	
 		add_elec_utility_expressions(m, p; _n=_n)
 	
