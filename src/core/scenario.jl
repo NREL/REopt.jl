@@ -83,14 +83,13 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     
     site = Site(;dictkeys_tosymbols(d["Site"])...)
 
-    # Check that only PV, storage, and generator are modeled for off-grid
+    # Check that only PV, electric storage, and generator are modeled for off-grid
     if settings.off_grid_flag
-        for key in ["HotThermalStorage", "ColdThermalStorage", "Wind", "FlexibleHVAC", 
-                    "ExistingBoiler", "ExistingChiller", "CHP"]
-            if haskey(d, key)
-                @error "Currently, only PV, ElectricStorage, and Generator can be modeled when off_grid_flag is true. Cannot model $key."
-                return nothing 
-            end
+        offgrid_allowed_keys = ["PV", "ElectricStorage", "Generator", "Settings", "Site", "Financial", "ElectricLoad", "ElectricTariff", "ElectricUtility"]
+        unallowed_keys = setdiff(keys(d), offgrid_allowed_keys) 
+        print(unallowed_keys)
+        if !isempty(unallowed_keys)
+            throw(@error "Currently, only PV, ElectricStorage, and Generator can be modeled when off_grid_flag is true. Cannot model $unallowed_keys.")
         end
     end
     
@@ -134,7 +133,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         storage_dict = dictkeys_tosymbols(d["ElectricStorage"])
         storage_dict[:off_grid_flag] = settings.off_grid_flag
     else
-        storage_dict = Dict(:max_kw => 0.0) # TODO: do we want to change to the off-grid inputs even if not modeling storage? 
+        storage_dict = Dict(:max_kw => 0.0) 
     end
     storage_structs["ElectricStorage"] = ElectricStorage(storage_dict, financial)
     # TODO stop building ElectricStorage when it is not modeled by user 
@@ -161,7 +160,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                         NEM=electric_utility.net_metering_limit_kw > 0, 
                                         time_steps_per_hour=settings.time_steps_per_hour
                                         )
-    else # ElectricTariff inputs supplied for off-grid, but will never be applied. 
+    else # if ElectricTariff inputs supplied for off-grid, will not be applied. 
         if haskey(d, "ElectricTariff")
             @warn "ElectricTariff inputs are not applicable when off_grid_flag is true, and will be ignored."
         end
