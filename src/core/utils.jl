@@ -392,12 +392,13 @@ end
 """
     The input offgrid_other_capital_costs is considered to be for depreciable assets. 
     Straight line depreciation is applied, and the depreciation expense is assumed to reduce the owner's taxable income
-    TODO: should the savings array start at [0] or [1] ??
+    Depreciation savings are taken at the end of year 1 and are assumed to accumulate for a period equal to analysis_years.
     :return npv_other_capex: present value of tax savings from depreciation of assets included in `offgrid_other_capital_costs`
 """
 function get_offgrid_other_capex_depreciation_savings(offgrid_other_capital_costs::Real, discount_rate::Real, 
     analysis_years::Int, tax_rate::Real)
-    tax_savings_array = repeat([offgrid_other_capital_costs/analysis_years*tax_rate], analysis_years) # TODO: start savings at [0] or [1]?
+    tax_savings_array = repeat([offgrid_other_capital_costs/analysis_years*tax_rate], analysis_years) 
+    prepend!(tax_savings_array, 0.0) # savings taken at end of year 1
     npv_other_capex = npv(discount_rate, tax_savings_array)
     return npv_other_capex
 end
