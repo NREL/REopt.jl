@@ -80,6 +80,9 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     else
         r["lifecycle_fuel_costs_after_tax"] = 0.0
     end
+    if !(Symbol("TotalCHPStandbyCharges"*_n) in keys(m.obj_dict)) # CHP standby charges not currently included in multi-node modeling
+        m[Symbol("TotalCHPStandbyCharges"*_n)] = 0.0
+    end
     r["lifecycle_chp_standby_cost_after_tax"] = value(m[Symbol("TotalCHPStandbyCharges"*_n)]) * (1 - p.s.financial.offtaker_tax_pct) # CHP standby
     r["lifecycle_elecbill_after_tax"] = value(m[Symbol("TotalElecBill"*_n)]) * (1 - p.s.financial.offtaker_tax_pct)  # Total utility bill 
     r["lifecycle_production_incentive_after_tax"] = value(m[Symbol("TotalProductionIncentive"*_n)])  * (1 - p.s.financial.owner_tax_pct)  # Production incentives
