@@ -87,7 +87,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     if settings.off_grid_flag
         offgrid_allowed_keys = ["PV", "ElectricStorage", "Generator", "Settings", "Site", "Financial", "ElectricLoad", "ElectricTariff", "ElectricUtility"]
         unallowed_keys = setdiff(keys(d), offgrid_allowed_keys) 
-        print(unallowed_keys)
         if !isempty(unallowed_keys)
             throw(@error "Currently, only PV, ElectricStorage, and Generator can be modeled when off_grid_flag is true. Cannot model $unallowed_keys.")
         end
