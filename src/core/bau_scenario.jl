@@ -75,7 +75,7 @@ function bau_site(site::Site)
         longitude=site.longitude,
         land_acres=site.land_acres,
         roof_squarefeet=site.roof_squarefeet,
-        min_resil_timesteps=0,
+        min_resil_time_steps=0,
         mg_tech_sizes_equal_grid_sizes=site.mg_tech_sizes_equal_grid_sizes,
         node=site.node,
     )
@@ -131,7 +131,7 @@ function BAUScenario(s::Scenario)
     end
     #=
     For random or uncertain outages there is no need to zero out the critical load but we do have to
-    set the Site.min_resil_timesteps to zero s.t. the model is not forced to meet any critical load
+    set the Site.min_resil_time_steps to zero s.t. the model is not forced to meet any critical load
     in the BAUScenario
     =#
     site = bau_site(s.site)
