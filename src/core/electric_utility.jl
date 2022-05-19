@@ -297,14 +297,5 @@ function emissions_series(pollutant, region_abbr; time_steps_per_hour=1)
         @warn "Emissions error. Cannnot find hourly emmissions for region $(region_abbr)."
         return zeros(8760*time_steps_per_hour)
     end
-
-        # df = pd.read_csv(os.path.join(self.library_path,'AVERT_hourly_emissions_{}.csv'.format(self.pollutant)), dtype='float64', float_precision='high')
-        # if region_abbr in df.columns:
-        #     self._emmissions_profile = list(df[self.region_abbr].round(6).values)
-        #     if self.time_steps_per_hour > 1:
-        #         self._emmissions_profile = list(np.concatenate([[i] * self.time_steps_per_hour for i in self._emmissions_profile]))
-        # else:
-        #     raise AttributeError("Emissions error. Cannnot find hourly emmissions for region {} ({},{}) \
-        #         ".format(self.region, self.latitude,self.longitude)) 
 end
 # TODO @warn when outage_start/end_timesteps not empty and outage_start/end_timestep is provided
