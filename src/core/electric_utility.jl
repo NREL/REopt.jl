@@ -113,6 +113,9 @@ struct ElectricUtility
         emissions_region = region(region_abbr)
         emissions_series_dict = Dict{String,Array{Float64}}()
 
+        #TODO: can this section be refactored by emissions_type by using Symbol("") technique?
+        #eval(Meta.parse("emissions_factor_series_lb_$(pollutant)_per_kwh")) does not work because
+        #eval is in global scope and doesn't have access to function arguments
         if typeof(emissions_factor_series_lb_CO2_per_kwh) == Float64
             emissions_series_dict["CO2"] = repeat([emissions_factor_series_lb_CO2_per_kwh], 8760*time_steps_per_hour)
         elseif length(emissions_factor_series_lb_CO2_per_kwh) == 1
@@ -157,36 +160,6 @@ struct ElectricUtility
         else
             @error "Provided emissions_factor_series_lb_PM25_per_kwh does not match the time_steps_per_hour."
         end
-
-        #TODO factor above code by pollutant (attempt below gave UndefVarError on eval() calls)
-        # for pollutant in ["CO2", "NOx", "SO2", "PM25"]
-        #     field_name = "emissions_factor_series_lb_$(pollutant)_per_kwh"
-        #     # If user supplies single emissions rate
-        #     if typeof(eval(Meta.parse(field_name))) == Float64
-        #         emissions_series_dict[pollutant] = repeat([eval(Meta.parse(field_name))], 8760*time_steps_per_hour)
-        #     elseif length(eval(Meta.parse(field_name))) == 1
-        #         emissions_series_dict[pollutant] = repeat(eval(Meta.parse(field_name)), 8760*time_steps_per_hour)
-        #     elseif length(eval(Meta.parse(field_name))) / time_steps_per_hour ≈ 8760
-        #         emissions_series_dict[pollutant] = eval(Meta.parse(field_name))
-        #     elseif isempty(eval(Meta.parse(field_name)))
-        #         emissions_series_dict[pollutant] = emissions_series(pollutant, region_abbr, time_steps_per_hour=time_steps_per_hour)
-                
-        #         #TODO deal with emissions warnings and errors appropriately
-        #         #above are set to nothing if failed, then (when creating reopt inputs?) check if settings have include __ in objective, and if so @error
-        #         # # Emissions warning is a specific type of warning that we check for and display to the users when it occurs
-        #         # # If emissions are not required to do a run it tells the user why we could not get an emission series 
-        #         # # and sets emissions factors to zero 
-        #         # self.emission_warning = str(e.args[0])
-        #         # emissions_series = [0.0]*(8760*ts_per_hour) # Set emissions to 0 and return error
-        #         # emissions_region = 'None'
-        #         # if must_include_CO2 and pollutant=='CO2':
-        #         #     self.input_data_errors.append('To include climate emissions in the optimization model, you must either: enter a custom emissions_factor_series_lb_CO2_per_kwh or a site location within the continental U.S.')
-        #         # if must_include_health and (pollutant=='NOx' or pollutant=='SO2' or pollutant=='PM25'):
-        #         #     self.input_data_errors.append('To include health emissions in the optimization model, you must either: enter a custom emissions_factor_series for health emissions or a site location within the continental U.S.')
-        #     else
-        #         @error "Provided $(field_name) does not match the time_steps_per_hour."
-        #     end
-        # end
 
         new(
             emissions_region,
