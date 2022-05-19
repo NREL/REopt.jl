@@ -1,9 +1,9 @@
 # REopt Changelog
 
-## offgrid2 PR #24
+## v0.16.0
 Allows users to model "off-grid" systems as a year-long outage: 
 - add flag to "turn on" off-grid modeling `Settings.off_grid_flag` 
-- when `off_grid_flag` is True, adjust default values in core/ `electric_storage`, `electric_load`, `financial`, `generator`, `pv` 
+- when `off_grid_flag` is "true", adjust default values in core/ `electric_storage`, `electric_load`, `financial`, `generator`, `pv` 
 - add operating reserve requirement inputs, outputs, and constraints based on load and PV generation 
 - add minimum load met percent input and constraint
 - add generator replacement year and cost (for off-grid and on-grid) 
@@ -16,6 +16,7 @@ Name changes:
 Other changes:
 - report previously missing lcc breakdown components, all reported in `results/financial.jl`  
 - change variable types from Float to Real to allow users to enter Ints (where applicable)
+- `year_one_coincident_peak_cost_after_tax` is now correctly multiplied by `(1 - p.s.financial.offtaker_tax_pct)`
 
 ## v0.15.2
 - bug fix for 15 & 30 minute electric, heating, and cooling loads
