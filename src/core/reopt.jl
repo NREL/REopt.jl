@@ -27,6 +27,17 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+
+"""
+    REoptInputs(d::Dict)
+
+Return REoptInputs(s) where s in `Scenario` defined in dict `d`.
+"""
+
+function REoptInputs(d::Dict)
+    REoptInputs(Scenario(d))
+end
+
 """
 	run_reopt(m::JuMP.AbstractModel, fp::String)
 
@@ -89,8 +100,8 @@ Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) m
 """
 function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractModel
     s = Scenario(d)
-    if !s.settings.run_bau
-        @warn "Only using first Model and not running BAU case because Settings.run_bau == false."
+    if s.settings.off_grid_flag
+        @warn "Only using first Model and not running BAU case because Settings.off_grid_flag == true. The BAU scenario is not applicable for off-grid microgrids."
 	    results = run_reopt(ms[1], s)
         return results
     end
@@ -198,6 +209,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     m[:TotalProductionIncentive] = 0
 	m[:dvComfortLimitViolationCost] = 0.0
 	m[:TotalCHPStandbyCharges] = 0
+	m[:OffgridOtherCapexAfterDepr] = 0.0
 
 	if !isempty(p.techs.all)
 		add_tech_size_constraints(m, p)
@@ -247,6 +259,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 	add_elec_load_balance_constraints(m, p)
 
+	if p.s.settings.off_grid_flag
+		add_operating_reserve_constraints(m, p)
+	end
+
 	if !isempty(p.s.electric_tariff.export_bins)
 		add_export_constraints(m, p)
 	end
@@ -255,7 +271,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_monthly_peak_constraint(m, p)
 	end
 
-	if !isempty(p.s.electric_tariff.tou_demand_ratchet_timesteps)
+	if !isempty(p.s.electric_tariff.tou_demand_ratchet_time_steps)
 		add_tou_peak_constraint(m, p)
 	end
 
@@ -320,14 +336,20 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		else
 			m[:ExpectedMGFuelUsed] = 0
 			m[:ExpectedMGFuelCost] = 0
-			@constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_timesteps, ts in p.s.electric_utility.outage_timesteps],
+			@constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
 				m[:binMGGenIsOnInTS][s, tz, ts] == 0
 			)
 		end
 		
-		if p.s.site.min_resil_timesteps > 0
+		if p.s.site.min_resil_time_steps > 0
 			add_min_hours_crit_ld_met_constraint(m,p)
 		end
+	end
+
+	if p.s.settings.off_grid_flag
+		offgrid_other_capex_depr_savings = get_offgrid_other_capex_depreciation_savings(p.s.financial.offgrid_other_capital_costs, 
+			p.s.financial.owner_discount_pct, p.s.financial.analysis_years, p.s.financial.owner_tax_pct)
+		m[:OffgridOtherCapexAfterDepr] = p.s.financial.offgrid_other_capital_costs - offgrid_other_capex_depr_savings 
 	end
 
 	#################################  Objective Function   ########################################
@@ -344,7 +366,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		# Total Fuel Costs, tax deductible for offtaker
         m[:TotalFuelCosts] * (1 - p.s.financial.offtaker_tax_pct) +
 
-		#CHP Standby Charges
+		# CHP Standby Charges
 		m[:TotalCHPStandbyCharges] * (1 - p.s.financial.offtaker_tax_pct) +
 
 		# Utility Bill, tax deductible for offtaker
@@ -353,7 +375,15 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         # Subtract Incentives, which are taxable
 		m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_pct) +
 
-		m[:dvComfortLimitViolationCost]
+		# Comfort limit violation costs
+		m[:dvComfortLimitViolationCost] + 
+
+		# Additional annual costs, tax deductible for owner (only applies when off_grid_flag is true)
+		p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct) +
+
+		# Additional capital costs, depreciable (only applies when off_grid_flag is true)
+		m[:OffgridOtherCapexAfterDepr]
+
 	);
 	if !isempty(p.s.electric_utility.outage_durations)
 		add_to_expression!(Costs, m[:ExpectedOutageCost] + m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost] + m[:ExpectedMGFuelCost])
@@ -364,7 +394,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	if !(isempty(p.s.storage.types.elec)) && p.s.settings.add_soc_incentive # Keep SOC high
 		@objective(m, Min, m[:Costs] - 
 		sum(m[:dvStoredEnergy][b, ts] for b in p.s.storage.types.elec, ts in p.time_steps) /
-			(8760. / p.hours_per_timestep)
+			(8760. / p.hours_per_time_step)
 		)
 	
 	end
@@ -475,15 +505,15 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		@warn """Adding binary variable to model outages. 
 				 Some solvers are very slow with integer variables"""
 		max_outage_duration = maximum(p.s.electric_utility.outage_durations)
-		outage_timesteps = p.s.electric_utility.outage_timesteps
-		tZeros = p.s.electric_utility.outage_start_timesteps
+		outage_time_steps = p.s.electric_utility.outage_time_steps
+		tZeros = p.s.electric_utility.outage_start_time_steps
 		S = p.s.electric_utility.scenarios
 		# TODO: currently defining more decision variables than necessary b/c using rectangular arrays, could use dicts of decision variables instead
 		@variables m begin # if there is more than one specified outage, there can be more othan one outage start time
-			dvUnservedLoad[S, tZeros, outage_timesteps] >= 0 # unserved load not met by system
-			dvMGProductionToStorage[p.techs.elec, S, tZeros, outage_timesteps] >= 0 # Electricity going to the storage system during each timestep
-			dvMGDischargeFromStorage[S, tZeros, outage_timesteps] >= 0 # Electricity coming from the storage system during each timestep
-			dvMGRatedProduction[p.techs.elec, S, tZeros, outage_timesteps]  # MG Rated Production at every timestep.  Multiply by ProdFactor to get actual energy
+			dvUnservedLoad[S, tZeros, outage_time_steps] >= 0 # unserved load not met by system
+			dvMGProductionToStorage[p.techs.elec, S, tZeros, outage_time_steps] >= 0 # Electricity going to the storage system during each time_step
+			dvMGDischargeFromStorage[S, tZeros, outage_time_steps] >= 0 # Electricity coming from the storage system during each time_step
+			dvMGRatedProduction[p.techs.elec, S, tZeros, outage_time_steps]  # MG Rated Production at every time_step.  Multiply by ProdFactor to get actual energy
 			dvMGStoredEnergy[S, tZeros, 0:max_outage_duration] >= 0 # State of charge of the MG storage system
 			dvMaxOutageCost[S] >= 0 # maximum outage cost dependent on number of outage durations
 			dvMGTechUpgradeCost[p.techs.elec] >= 0
@@ -493,11 +523,19 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 			dvMGFuelUsed[p.techs.elec, S, tZeros] >= 0
 			dvMGMaxFuelUsage[S] >= 0
 			dvMGMaxFuelCost[S] >= 0
-			dvMGCurtail[p.techs.elec, S, tZeros, outage_timesteps] >= 0
+			dvMGCurtail[p.techs.elec, S, tZeros, outage_time_steps] >= 0
 
 			binMGStorageUsed, Bin # 1 if MG storage battery used, 0 otherwise
 			binMGTechUsed[p.techs.elec], Bin # 1 if MG tech used, 0 otherwise
-			binMGGenIsOnInTS[S, tZeros, outage_timesteps], Bin
+			binMGGenIsOnInTS[S, tZeros, outage_time_steps], Bin
+		end
+	end
+
+	if p.s.settings.off_grid_flag
+		@variables m begin
+			dvOpResFromBatt[p.s.storage.types.elec, p.time_steps_without_grid] >= 0 # Operating reserves provided by the electric storage [kW]
+			dvOpResFromTechs[p.techs.providing_oper_res, p.time_steps_without_grid] >= 0 # Operating reserves provided by techs [kW]
+			1 >= dvOffgridLoadServedFraction[p.time_steps_without_grid] >= 0 # Critical load served in each time_step. Applied in off-grid scenarios only. [fraction]
 		end
 	end
 end

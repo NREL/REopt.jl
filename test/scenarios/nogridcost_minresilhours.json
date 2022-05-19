@@ -3,7 +3,7 @@
     "outage_durations": [
       169
     ],
-    "outage_start_timesteps": [
+    "outage_start_time_steps": [
       1,
       2,
       3,
@@ -50,7 +50,7 @@
   },
   "Site": {
     "latitude": 39.7407,
-    "min_resil_timesteps": 168,
+    "min_resil_time_steps": 168,
     "longitude": -105.1686
   },
   "ElectricLoad": {
