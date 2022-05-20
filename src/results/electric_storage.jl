@@ -39,6 +39,7 @@ Storage results:
 - `year_one_soc_series_pct` Vector of normalized (0-1) state of charge values over the first year
 - `year_one_to_load_series_kw` Vector of power used to meet load over the first year
 - `year_one_to_grid_series_kw` Vector of power exported to the grid over the first year
+- `initial_capital_cost` Upfront capital cost for storage and inverter.
 """
 function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::String; _n="")
     r = Dict{String, Any}()

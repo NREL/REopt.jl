@@ -73,7 +73,7 @@ function add_outage_results(m, p, d::Dict)
 	r["max_outage_cost_per_outage_duration_series"] = value.(m[:dvMaxOutageCost]).data
 	r["unserved_load_series"] = value.(m[:dvUnservedLoad]).data
 	S = length(p.s.electric_utility.scenarios)
-	T = length(p.s.electric_utility.outage_start_timesteps)
+	T = length(p.s.electric_utility.outage_start_time_steps)
 	unserved_load_per_outage = Array{Float64}(undef, S, T)
 	for s in 1:S, t in 1:T
 		unserved_load_per_outage[s, t] = sum(r["unserved_load_series"][s, t, ts] for 
@@ -104,8 +104,8 @@ function add_outage_results(m, p, d::Dict)
 			if !isempty(p.s.storage.types.elec)
 				PVtoBatt = (m[:dvMGProductionToStorage][t, s, tz, ts] for 
 					s in p.s.electric_utility.scenarios,
-					tz in p.s.electric_utility.outage_start_timesteps,
-					ts in p.s.electric_utility.outage_timesteps)
+					tz in p.s.electric_utility.outage_start_time_steps,
+					ts in p.s.electric_utility.outage_time_steps)
 			else
 				PVtoBatt = []
 			end
@@ -113,8 +113,8 @@ function add_outage_results(m, p, d::Dict)
 
 			PVtoCUR = (m[:dvMGCurtail][t, s, tz, ts] for 
 				s in p.s.electric_utility.scenarios,
-				tz in p.s.electric_utility.outage_start_timesteps,
-				ts in p.s.electric_utility.outage_timesteps)
+				tz in p.s.electric_utility.outage_start_time_steps,
+				ts in p.s.electric_utility.outage_time_steps)
 			r[string("mg", t, "_curtailed_series")] = round.(value.(PVtoCUR), digits=3)
 
 			PVtoLoad = (
@@ -123,8 +123,8 @@ function add_outage_results(m, p, d::Dict)
 				- m[:dvMGCurtail][t, s, tz, ts]
 				- m[:dvMGProductionToStorage][t, s, tz, ts] for 
 					s in p.s.electric_utility.scenarios,
-					tz in p.s.electric_utility.outage_start_timesteps,
-					ts in p.s.electric_utility.outage_timesteps
+					tz in p.s.electric_utility.outage_start_time_steps,
+					ts in p.s.electric_utility.outage_time_steps
 			)
 			r[string("mg", t, "_to_load_series")] = round.(value.(PVtoLoad), digits=3)
 		end
@@ -147,8 +147,8 @@ function add_outage_results(m, p, d::Dict)
 			if !isempty(p.s.storage.types.elec)
 				GenToBatt = (m[:dvMGProductionToStorage][t, s, tz, ts] for 
 					s in p.s.electric_utility.scenarios,
-					tz in p.s.electric_utility.outage_start_timesteps,
-					ts in p.s.electric_utility.outage_timesteps)
+					tz in p.s.electric_utility.outage_start_time_steps,
+					ts in p.s.electric_utility.outage_time_steps)
 			else
 				GenToBatt = []
 			end
@@ -156,8 +156,8 @@ function add_outage_results(m, p, d::Dict)
 
 			GENtoCUR = (m[:dvMGCurtail][t, s, tz, ts] for 
 				s in p.s.electric_utility.scenarios,
-				tz in p.s.electric_utility.outage_start_timesteps,
-				ts in p.s.electric_utility.outage_timesteps)
+				tz in p.s.electric_utility.outage_start_time_steps,
+				ts in p.s.electric_utility.outage_time_steps)
 			r[string("mg", t, "_curtailed_series")] = round.(value.(GENtoCUR), digits=3)
 
 			GENtoLoad = (
@@ -166,8 +166,8 @@ function add_outage_results(m, p, d::Dict)
 				- m[:dvMGCurtail][t, s, tz, ts]
 				- m[:dvMGProductionToStorage][t, s, tz, ts] for 
 					s in p.s.electric_utility.scenarios,
-					tz in p.s.electric_utility.outage_start_timesteps,
-					ts in p.s.electric_utility.outage_timesteps
+					tz in p.s.electric_utility.outage_start_time_steps,
+					ts in p.s.electric_utility.outage_time_steps
 			)
 			r[string("mg", t, "_to_load_series")] = round.(value.(GENtoLoad), digits=3)
 		end

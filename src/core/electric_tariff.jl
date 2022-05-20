@@ -45,7 +45,7 @@ struct ElectricTariff
     n_monthly_demand_tiers::Int
 
     tou_demand_rates::AbstractArray{Float64, 2} # gets a second dim with tiers
-    tou_demand_ratchet_timesteps::AbstractArray{AbstractArray{Int64,1},1}  # length = n_tou_demand_ratchets
+    tou_demand_ratchet_time_steps::AbstractArray{AbstractArray{Int64,1},1}  # length = n_tou_demand_ratchets
     tou_demand_tier_limits::AbstractArray{Float64,1}
     n_tou_demand_tiers::Int
 
@@ -60,7 +60,7 @@ struct ElectricTariff
     export_rates::Dict{Symbol, AbstractArray}
     export_bins::AbstractArray{Symbol,1}
 
-    coincident_peak_load_active_timesteps::AbstractVector{AbstractVector{Int64}}
+    coincident_peak_load_active_time_steps::AbstractVector{AbstractVector{Int64}}
     coincident_peak_load_charge_per_kw::AbstractVector{Float64}
     coincpeak_periods::AbstractVector{Int64}
 end
@@ -92,7 +92,7 @@ function ElectricTariff(;
     demand_lookback_months::AbstractArray{Int64, 1}=Int64[],
     demand_lookback_percent::Float64=0.0,
     demand_lookback_range::Int=0,
-    coincident_peak_load_active_timesteps::Vector{Vector{Int64}}=[Int64[]],
+    coincident_peak_load_active_time_steps::Vector{Vector{Int64}}=[Int64[]],
     coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[]
     ) where {
         T1 <: Union{Nothing, Int, Float64, Array}, 
@@ -128,7 +128,7 @@ function ElectricTariff(;
     demand_lookback_months::AbstractArray{Int64, 1}=Int64[],
     demand_lookback_percent::Float64=0.0,
     demand_lookback_range::Int=0,
-    coincident_peak_load_active_timesteps::Vector{Vector{Int64}}=[Int64[]],
+    coincident_peak_load_active_time_steps::Vector{Vector{Int64}}=[Int64[]],
     coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[]
     ) where {
         T1 <: Union{Nothing, Int, Float64, Array}, 
@@ -145,7 +145,7 @@ function ElectricTariff(;
     n_monthly_demand_tiers = 1
     tou_demand_tier_limits = Float64[]
     n_tou_demand_tiers = 1
-    time_steps_monthly = get_monthly_timesteps(year, time_steps_per_hour=time_steps_per_hour)
+    time_steps_monthly = get_monthly_time_steps(year, time_steps_per_hour=time_steps_per_hour)
 
     u = nothing
     if !isempty(urdb_response)
@@ -163,7 +163,7 @@ function ElectricTariff(;
     elseif !isempty(tou_energy_rates_per_kwh) && length(tou_energy_rates_per_kwh) == 8760*time_steps_per_hour
 
         tou_demand_rates = Float64[]
-        tou_demand_ratchet_timesteps = []
+        tou_demand_ratchet_time_steps = []
         energy_rates = tou_energy_rates_per_kwh
         monthly_demand_rates = convert(Array{Float64}, monthly_demand_rates)
 
@@ -193,7 +193,7 @@ function ElectricTariff(;
         end
 
         tou_demand_rates = Float64[]
-        tou_demand_ratchet_timesteps = []
+        tou_demand_ratchet_time_steps = []
         energy_rates = Real[]
         for m in 1:12
             append!(energy_rates, [monthly_energy_rates[m] for ts in time_steps_monthly[m]])
@@ -210,7 +210,7 @@ function ElectricTariff(;
     elseif !isnothing(blended_annual_energy_rate)
 
         tou_demand_rates = Float64[]
-        tou_demand_ratchet_timesteps = []
+        tou_demand_ratchet_time_steps = []
         energy_rates = repeat(Real[blended_annual_energy_rate], 8760 * time_steps_per_hour)
         if !isnothing(blended_annual_demand_rate)
             monthly_demand_rates = repeat(Real[blended_annual_demand_rate], 12)
@@ -256,7 +256,7 @@ function ElectricTariff(;
             n_energy_tiers, n_monthly_demand_tiers, n_tou_demand_tiers = 1, 1, 1
         end
 
-        tou_demand_ratchet_timesteps = u.tou_demand_ratchet_timesteps
+        tou_demand_ratchet_time_steps = u.tou_demand_ratchet_time_steps
         demand_lookback_months = u.demand_lookback_months
         demand_lookback_percent = u.demand_lookback_percent
         demand_lookback_range = u.demand_lookback_range
@@ -303,7 +303,7 @@ function ElectricTariff(;
     The Excess tier is not available with the Wholesale tier.
 
     - if NEM then set ExportRate[:Nem, :] to energy_rate[tier_with_lowest_energy_rate, :]
-    - user can provide either scalar wholesale rate or vector of timesteps, 
+    - user can provide either scalar wholesale rate or vector of time_steps, 
     =#
     whl_rate = create_export_rate(wholesale_rate, length(energy_rates), time_steps_per_hour)
     if !isnothing(u) && sum(u.sell_rates) < 0
@@ -347,7 +347,7 @@ function ElectricTariff(;
         monthly_demand_tier_limits,
         n_monthly_demand_tiers,
         tou_demand_rates,
-        tou_demand_ratchet_timesteps,
+        tou_demand_ratchet_time_steps,
         tou_demand_tier_limits,
         n_tou_demand_tiers,
         demand_lookback_months,
@@ -358,7 +358,7 @@ function ElectricTariff(;
         min_monthly_charge,
         export_rates,
         export_bins,
-        coincident_peak_load_active_timesteps,
+        coincident_peak_load_active_time_steps,
         coincident_peak_load_charge_per_kw,
         coincpeak_periods
     )
@@ -394,7 +394,7 @@ end
 
 """
     function create_export_rate(e::T, N::Int, ts_per_hour::Int=1) where T<:Real
-Case for scaler export rate provided -> convert to array of timesteps
+Case for scaler export rate provided -> convert to array of time_steps
 """
 function create_export_rate(e::T, N::Int, ts_per_hour::Int=1) where T<:Real
     repeat(float(-1*e), N * ts_per_hour)
@@ -421,11 +421,11 @@ end
 
 
 """
-    get_monthly_timesteps(year::Int; time_steps_per_hour=1)
+    get_monthly_time_steps(year::Int; time_steps_per_hour=1)
 
 return Array{Array{Int64,1},1}, size = (12,)
 """
-function get_monthly_timesteps(year::Int; time_steps_per_hour=1)
+function get_monthly_time_steps(year::Int; time_steps_per_hour=1)
     a = Array[]
     i = 1
     for m in range(1, stop=12)
