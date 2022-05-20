@@ -60,7 +60,7 @@ function ElectricUtility(;
 ```
 
 """
-struct ElectricUtility
+mutable struct ElectricUtility
     emissions_region
     distance_to_emissions_region_meters
     emissions_factor_series_lb_CO2_per_kwh
@@ -288,6 +288,9 @@ function region_abbreviation(latitude, longitude)
 end
 
 function emissions_series(pollutant, region_abbr; time_steps_per_hour=1)
+    if isnothing(region_abbr)
+        return nothing
+    end
     avert_df = DataFrame(CSV.File(joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "AVERT_hourly_emissions_$(pollutant).csv")))
     if region_abbr in names(avert_df)
         emmissions_profile = round.(avert_df[!,region_abbr],digits=6)
@@ -296,8 +299,8 @@ function emissions_series(pollutant, region_abbr; time_steps_per_hour=1)
         end
         return emmissions_profile
     else
-        @warn "Emissions error. Cannnot find hourly emmissions for region $(region_abbr)."
-        return zeros(8760*time_steps_per_hour)
+        @warn "Emissions error. Cannnot find hourly $(pollutant) emmissions for region $(region_abbr)."
+        return nothing
     end
 end
 # TODO @warn when outage_start/end_timesteps not empty and outage_start/end_timestep is provided

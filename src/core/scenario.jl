@@ -118,6 +118,47 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         electric_utility = ElectricUtility(; latitude=site.latitude, longitude=site.longitude)
     end
 
+    #Handle missing emissions inputs (due to failed lookup and not provided by user)
+    #TODO: condition below code on: if site.off_grid == false
+    if isnothing(electric_utility.emissions_factor_series_lb_CO2_per_kwh)
+        if (!isnothing(site.CO2_emissions_reduction_min_pct) || 
+            !isnothing(site.CO2_emissions_reduction_max_pct) || 
+            settings.include_climate_in_objective)
+            throw(@error "To include CO2 costs in the objective function or enforce emissions reduction constraints, you must either enter custom health emissions factors or a site location within the continental U.S.")
+        else
+            electric_utility.emissions_factor_series_lb_CO2_per_kwh = zeros(8760*settings.time_steps_per_hour)
+        end
+    end
+    for emissions_type in ["NOx", "SO2", "PM25"]
+        if isnothing(getproperty(electric_utility, Symbol("emissions_factor_series_lb_$(emissions_type)_per_kwh")))
+            if settings.include_health_in_objective
+                throw(@error "To include health costs in the objective function, you must either enter custom health emissions factors or a site location within the continental U.S.")
+            else
+                setproperty!(electric_utility, 
+                    Symbol("emissions_factor_series_lb_$(emissions_type)_per_kwh"), 
+                    zeros(8760*settings.time_steps_per_hour)
+                )
+            end
+        end
+    end
+    #TODO: allow grid costs to be missing if site.off_grid == true
+    missing_health_inputs = false
+    for emissions_type in ["NOx", "SO2", "PM25"]
+        for health_input in [
+            "$(emissions_type)_grid_cost_per_tonne",
+            "$(emissions_type)_onsite_fuelburn_cost_per_tonne",
+            "$(emissions_type)_cost_escalation_pct"
+        ]
+            if ismissing(getproperty(financial, Symbol(health_input)))
+                missing_health_inputs = true
+                setproperty!(financial, Symbol(health_input), 0)
+            end
+        end
+    end
+    if missing_health_inputs && settings.include_health_in_objective
+        throw(@error "To include health costs in the objective function, you must either enter custom emissions costs and escalation rates or a site location within the CAMx grid.")
+    end
+        
     storage_structs = Dict{String, AbstractStorage}()
     if haskey(d,  "ElectricStorage")
         storage_dict = dictkeys_tosymbols(d["ElectricStorage"])
