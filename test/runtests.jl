@@ -87,8 +87,8 @@ else  # run HiGHS tests
             "output_flag" => false, "log_to_console" => false)
         )
         results = run_reopt(model, "./scenarios/no_techs.json")
-        @test results["ElectricTariff"]["year_one_energy_cost"] ≈ 1000.0
-        @test results["ElectricTariff"]["year_one_demand_cost"] ≈ 136.99
+        @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ 1000.0
+        @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ 136.99
     end
 
     @testset "Solar and Storage" begin

@@ -38,7 +38,7 @@ Note: the node number is an empty string if evaluating a single `Site`.
 
 PV results:
 - `size_kw` Optimal PV capacity
-- `lifecycle_om_cost` Lifecycle operations and maintenance cost in present value, after tax
+- `lifecycle_om_cost_after_tax` Lifecycle operations and maintenance cost in present value, after tax
 - `year_one_energy_produced_kwh` Energy produced over the first year
 - `average_annual_energy_produced_kwh` Average annual energy produced when accounting for degradation
 - `lcoe_per_kwh` Levelized Cost of Energy produced by the PV system
@@ -69,7 +69,7 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
             r["year_one_to_grid_series_kw"] = round.(value.(PVtoGrid), digits=3).data
 
             r["average_annual_energy_exported_kwh"] = round(
-                sum(r["year_one_to_grid_series_kw"]) * p.hours_per_timestep, digits=0)
+                sum(r["year_one_to_grid_series_kw"]) * p.hours_per_time_step, digits=0)
         end
 
 		PVtoCUR = (m[Symbol("dvCurtail"*_n)][t, ts] for ts in p.time_steps)
@@ -80,11 +80,11 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 					- r["year_one_to_battery_series_kw"][ts] for ts in p.time_steps
 		)
 		r["year_one_to_load_series_kw"] = round.(value.(PVtoLoad), digits=3)
-		Year1PvProd = (sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] for ts in p.time_steps) * p.hours_per_timestep)
+		Year1PvProd = (sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] for ts in p.time_steps) * p.hours_per_time_step)
 		r["year_one_energy_produced_kwh"] = round(value(Year1PvProd), digits=0)
         r["average_annual_energy_produced_kwh"] = round(r["year_one_energy_produced_kwh"] * p.levelization_factor[t], digits=2)
 		PVPerUnitSizeOMCosts = p.om_cost_per_kw[t] * p.pwf_om * m[Symbol("dvSize"*_n)][t]
-		r["lifecycle_om_cost"] = round(value(PVPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_pct), digits=0)
+		r["lifecycle_om_cost_after_tax"] = round(value(PVPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_pct), digits=0)
         r["lcoe_per_kwh"] = calculate_lcoe(p, r, get_pv_by_name(t, p.s.pvs))
         d[t] = r
 	end
@@ -120,7 +120,7 @@ function add_pv_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
 					- PVtoBatt[ts] for ts in p.time_steps
 		)
 		r["to_load_series_kw"] = round.(value.(PVtoLoad), digits=3)
-		Year1PvProd = (sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] for ts in p.time_steps) * p.hours_per_timestep)
+		Year1PvProd = (sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] for ts in p.time_steps) * p.hours_per_time_step)
 		r["energy_produced_kwh"] = round(value(Year1PvProd), digits=0)
         d[t] = r
 	end

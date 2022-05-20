@@ -40,7 +40,7 @@ end
 
 function constrain_degradation_variables(m, p; b="ElectricStorage")
     days = 1:365*p.s.financial.analysis_years
-    ts_per_day = 24 / p.hours_per_timestep
+    ts_per_day = 24 / p.hours_per_time_step
     ts_per_year = ts_per_day * 365
     for d in days
         ts0 = Int((ts_per_day * (d - 1) + 1) % ts_per_year)
@@ -53,13 +53,13 @@ function constrain_degradation_variables(m, p; b="ElectricStorage")
         )
         @constraint(m,
             m[:Eplus_sum][d] == 
-                p.hours_per_timestep * (
+                p.hours_per_time_step * (
                     sum(m[:dvProductionToStorage][b, t, ts] for t in p.techs.elec, ts in ts0:tsF) 
                     + sum(m[:dvGridToStorage][b, ts] for ts in ts0:tsF)
                 )
         )
         @constraint(m,
-            m[:Eminus_sum][d] == p.hours_per_timestep * sum(m[:dvDischargeFromStorage][b, ts] for ts in ts0:tsF)
+            m[:Eminus_sum][d] == p.hours_per_time_step * sum(m[:dvDischargeFromStorage][b, ts] for ts in ts0:tsF)
         )
         @constraint(m,
             m[:EFC][d] == (m[:Eplus_sum][d] + m[:Eminus_sum][d]) / 2
@@ -104,7 +104,7 @@ function add_degradation(m, p;
     constrain_degradation_variables(m, p, b=b)
 
     @constraint(m, [d in 2:days[end]],
-        SOH[d] == SOH[d-1] - p.hours_per_timestep * (
+        SOH[d] == SOH[d-1] - p.hours_per_time_step * (
             p.s.storage.attr[b].degradation.calendar_fade_coefficient * time_exponent * 
             m[:Eavg][d-1] * d^(time_exponent-1) + 
             p.s.storage.attr[b].degradation.cycle_fade_coefficient * m[:EFC][d-1]

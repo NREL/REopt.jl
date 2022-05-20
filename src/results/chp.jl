@@ -43,10 +43,12 @@ CHP results:
 - `year_one_to_grid_series_kw` Electric power exported time-series array [kW]
 - `year_one_to_battery_series_kw` Electric power to charge the battery storage time-series array [kW]
 - `year_one_to_load_series_kw` Electric power to serve the electric load time-series array [kW]
+- `year_one_thermal_to_tes_series_mmbtu_per_hour` Thermal power to TES time-series array [MMBtu/hr]
 - `year_one_thermal_to_waste_series_mmbtu_per_hour` Thermal power wasted/unused/vented time-series array [MMBtu/hr]
 - `year_one_thermal_to_load_series_mmbtu_per_hour` Thermal power to serve the heating load time-series array [MMBtu/hr]
-- `year_one_chp_fuel_cost` Fuel cost from fuel consumed by the CHP system [\$]
-- `lifecycle_chp_fuel_cost` Fuel cost from fuel consumed by the CHP system [\$]
+- `year_one_chp_fuel_cost_before_tax` Fuel cost from fuel consumed by the CHP system [\$]
+- `lifecycle_chp_fuel_cost_after_tax` Fuel cost from fuel consumed by the CHP system, after tax [\$]
+- `year_one_chp_standby_cost_before_tax` CHP standby charges in year one [\$] 
 """
 function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
@@ -55,11 +57,11 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	@expression(m, CHPFuelUsedKWH, sum(m[Symbol("dvFuelUsage"*_n)][t, ts] for t in p.techs.chp, ts in p.time_steps))
 	r["year_one_fuel_used_mmbtu"] = round(value(CHPFuelUsedKWH) / KWH_PER_MMBTU, digits=3)
 	@expression(m, Year1CHPElecProd,
-		p.hours_per_timestep * sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts]
+		p.hours_per_time_step * sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts]
 			for t in p.techs.chp, ts in p.time_steps))
 	r["year_one_electric_energy_produced_kwh"] = round(value(Year1CHPElecProd), digits=3)
 	@expression(m, Year1CHPThermalProdKWH,
-		p.hours_per_timestep * sum(m[Symbol("dvThermalProduction"*_n)][t,ts] + 
+		p.hours_per_time_step * sum(m[Symbol("dvThermalProduction"*_n)][t,ts] + 
         m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] - 
         m[Symbol("dvProductionToWaste"*_n)][t,ts] 
             for t in p.techs.chp, ts in p.time_steps))
@@ -93,7 +95,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     #     @expression(m, CHPToSteamTurbine[ts in p.time_steps], sum(m[Symbol("dvThermalToSteamTurbine"*_n)][t,ts] for t in p.techs.chp))
     #     r["year_one_thermal_to_steamturbine_series_mmbtu_per_hour"] = round.(value.(CHPToSteamTurbine), digits=3)
     # else
-    #     CHPToSteamTurbine = zeros(p.TimeStepCount)
+    #     CHPToSteamTurbine = zeros(p.time_stepCount)
     #     r["year_one_thermal_to_steamturbine_series_mmbtu_per_hour"] = round.(CHPToSteamTurbine, digits=3)
     # end
 	@expression(m, CHPThermalToWasteKW[ts in p.time_steps],
@@ -106,11 +108,11 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
         sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.techs.chp) - 
         CHPtoHotTES[ts] - CHPThermalToWasteKW[ts])
 	r["year_one_thermal_to_load_series_mmbtu_per_hour"] = round.(value.(CHPThermalToLoadKW) / KWH_PER_MMBTU, digits=5)
-    r["year_one_chp_fuel_cost"] = round(value(m[:TotalCHPFuelCosts] / p.pwf_fuel["CHP"]), digits=3)                
-	r["lifecycle_chp_fuel_cost"] = round(value(m[:TotalCHPFuelCosts]) * p.s.financial.offtaker_tax_pct, digits=3)
+    r["year_one_chp_fuel_cost_before_tax"] = round(value(m[:TotalCHPFuelCosts] / p.pwf_fuel["CHP"]), digits=3)                
+	r["lifecycle_chp_fuel_cost_after_tax"] = round(value(m[:TotalCHPFuelCosts]) * p.s.financial.offtaker_tax_pct, digits=3)
 	#Standby charges and hourly O&M
 	r["lifecycle_chp_standby_cost"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) * p.s.financial.offtaker_tax_pct, digits=0)
-	r["year_one_chp_standby_cost"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) / p.pwf_e, digits=0)
+	r["year_one_chp_standby_cost_before_tax"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) / p.pwf_e, digits=0)
 	
 
     d["CHP"] = r

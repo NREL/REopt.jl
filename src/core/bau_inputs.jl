@@ -59,9 +59,9 @@ function BAUInputs(p::REoptInputs)
 
     # REoptInputs indexed on techs.segmented
     n_segs_by_tech = Dict{String, Int}()
-    seg_min_size = Dict{String, Dict{Int, Float64}}()
-    seg_max_size = Dict{String, Dict{Int, Float64}}()
-    seg_yint = Dict{String, Dict{Int, Float64}}()
+    seg_min_size = Dict{String, Dict{Int, Real}}()
+    seg_max_size = Dict{String, Dict{Int, Real}}()
+    seg_yint = Dict{String, Dict{Int, Real}}()
 
     # PV specific arrays
     pv_to_location = Dict(t => Dict{Symbol, Int}() for t in techs.pv)
@@ -147,7 +147,7 @@ function BAUInputs(p::REoptInputs)
         p.time_steps,
         p.time_steps_with_grid,
         p.time_steps_without_grid,
-        p.hours_per_timestep,
+        p.hours_per_time_step,
         p.months,
         production_factor,
         levelization_factor,
@@ -157,6 +157,8 @@ function BAUInputs(p::REoptInputs)
         p.pwf_fuel,
         p.pwf_emissions_cost,
         p.pwf_grid_emissions,
+        p.pwf_offtaker,
+        p.pwf_owner,
         p.third_party_factor,
         p.pvlocations,
         p.maxsize_pv_locations,
@@ -177,7 +179,8 @@ function BAUInputs(p::REoptInputs)
         tech_emissions_factors_CO2, 
         tech_emissions_factors_NOx, 
         tech_emissions_factors_SO2, 
-        tech_emissions_factors_PM25
+        tech_emissions_factors_PM25,
+        p.techs_operating_reserve_req_pct
     )
 end
 
