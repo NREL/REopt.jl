@@ -317,7 +317,7 @@ end
         
         # Specify the CHP.min_turn_down_pct which is NOT used during an outage
         data["CHP"]["min_turn_down_pct"] = 0.5
-        # Specify outage period; outage timesteps are 1-indexed
+        # Specify outage period; outage time_steps are 1-indexed
         outage_start = unavail_1_start
         data["ElectricUtility"]["outage_start_time_step"] = outage_start
         outage_end = unavail_1_end
@@ -367,7 +367,7 @@ end
         @test results["CHP"]["size_supplemental_firing_kw"] == 0
         @test results["CHP"]["year_one_electric_energy_produced_kwh"] ≈ 800*8760 rtol=1e-5
         @test results["CHP"]["year_one_thermal_energy_produced_mmbtu"] ≈ 800*(0.4418/0.3573)*8760/293.07107 rtol=1e-5
-        @test results["ElectricTariff"]["lifecycle_demand_cost"] == 0
+        @test results["ElectricTariff"]["lifecycle_demand_cost_after_tax"] == 0
     
         #part 2: supplementary firing used when more efficient than the boiler and low-cost; demand charges not reduced by CHP
         data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10
@@ -379,7 +379,7 @@ end
         results = run_reopt(m2, inputs)
         @test results["CHP"]["size_supplemental_firing_kw"] ≈ 278.73 atol=0.1
         @test results["CHP"]["year_one_thermal_energy_produced_mmbtu"] ≈ 138624 rtol=1e-5
-        @test results["ElectricTariff"]["lifecycle_demand_cost"] ≈ 5212.7 rtol=1e-5
+        @test results["ElectricTariff"]["lifecycle_demand_cost_after_tax"] ≈ 5212.7 rtol=1e-5
     end
 end
 
@@ -433,7 +433,7 @@ end
         r = run_reopt([m1,m2], d)
         # all of the savings are from the ExistingBoiler fuel costs
         @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === true
-        fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost"]
+        fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax"]
         @test fuel_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
 
         # now increase the FlexibleHVAC installed_cost to the fuel costs savings + 100 and expect that the FlexibleHVAC is not purchased
@@ -451,12 +451,12 @@ end
         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         r = run_reopt([m1,m2], d)
 
-        elec_cost_savings = r["ElectricTariff"]["lifecycle_demand_cost_bau"] + 
-                            r["ElectricTariff"]["lifecycle_energy_cost_bau"] - 
-                            r["ElectricTariff"]["lifecycle_demand_cost"] - 
-                            r["ElectricTariff"]["lifecycle_energy_cost"]
+        elec_cost_savings = r["ElectricTariff"]["lifecycle_demand_cost_after_tax_bau"] + 
+                            r["ElectricTariff"]["lifecycle_energy_cost_after_tax_bau"] - 
+                            r["ElectricTariff"]["lifecycle_demand_cost_after_tax"] - 
+                            r["ElectricTariff"]["lifecycle_energy_cost_after_tax"]
 
-        fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost"]
+        fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax"]
         @test fuel_cost_savings + elec_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
 
         # now increase the FlexibleHVAC installed_cost to the fuel costs savings + elec_cost_savings 
@@ -639,7 +639,7 @@ end
     @test results["Financial"]["lcc"] ≈ 7.3879557e7 atol=5e4
     
     #=
-    Scenario with $0/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_timesteps = 168
+    Scenario with $0/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
     - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
     =#
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
@@ -692,26 +692,26 @@ end
     @testset "Tiered Energy" begin
         m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         results = run_reopt(m, "./scenarios/tiered_rate.json")
-        @test results["ElectricTariff"]["year_one_energy_cost"] ≈ 2342.88
+        @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ 2342.88
     end
 
     @testset "Lookback Demand Charges" begin
         m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         results = run_reopt(m, "./scenarios/lookback_rate.json")
-        @test results["ElectricTariff"]["year_one_demand_cost"] ≈ 721.99
+        @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ 721.99
     end
 
     @testset "Blended tariff" begin
         model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         results = run_reopt(model, "./scenarios/no_techs.json")
-        @test results["ElectricTariff"]["year_one_energy_cost"] ≈ 1000.0
-        @test results["ElectricTariff"]["year_one_demand_cost"] ≈ 136.99
+        @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ 1000.0
+        @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ 136.99
     end
 
     @testset "Coincident Peak Charges" begin
         model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         results = run_reopt(model, "./scenarios/coincident_peak.json")
-        @test results["ElectricTariff"]["year_one_coincident_peak_cost"] ≈ 15.0
+        @test results["ElectricTariff"]["year_one_coincident_peak_cost_before_tax"] ≈ 11.1
     end
 
     @testset "URDB sell rate" begin
@@ -767,8 +767,8 @@ end
     @test ground_pv["size_kw"] ≈ 15 atol=0.1
     @test roof_west["size_kw"] ≈ 7 atol=0.1
     @test roof_east["size_kw"] ≈ 4 atol=0.1
-    @test ground_pv["lifecycle_om_cost_bau"] ≈ 782.0 atol=0.1
-    @test roof_west["lifecycle_om_cost_bau"] ≈ 782.0 atol=0.1
+    @test ground_pv["lifecycle_om_cost_after_tax_bau"] ≈ 782.0 atol=0.1
+    @test roof_west["lifecycle_om_cost_after_tax_bau"] ≈ 782.0 atol=0.1
     @test ground_pv["average_annual_energy_produced_kwh_bau"] ≈ 8844.19 atol=0.1
     @test roof_west["average_annual_energy_produced_kwh_bau"] ≈ 7440.1 atol=0.1
     @test ground_pv["average_annual_energy_produced_kwh"] ≈ 26533.54 atol=0.1
@@ -1058,7 +1058,7 @@ end
     cooling_elec_hybrid = cooling_hybrid / inputs.s.cooling_load.existing_chiller_cop  # electric
     cooling_elec_frac_of_total_hybrid = cooling_hybrid / inputs.s.cooling_load.existing_chiller_cop ./ elec_hybrid
 
-    # Check that the combined/hybrid load is the same as the sum of the individual loads in each timestep
+    # Check that the combined/hybrid load is the same as the sum of the individual loads in each time_step
 
     @test round(sum(elec_hybrid .- (elec_hospital .+ elec_hotel)), digits=1) ≈ 0.0 atol=0.1
     @test round(sum(space_hybrid .- (space_hospital .+ space_hotel)), digits=1) ≈ 0.0 atol=0.1
@@ -1122,3 +1122,72 @@ end
 #         "om_cost_escalation_pct": 0.025
 #     }
 # }}}
+
+@testset "OffGrid" begin
+    ## Scenario 1: Solar, Storage, Fixed Generator
+    post_name = "off_grid.json" 
+    post = JSON.parsefile("./scenarios/$post_name")
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    r = run_reopt(m, post)
+    scen = Scenario(post)
+    
+    # Test default values 
+    @test scen.electric_utility.outage_start_time_step ≈ 1
+    @test scen.electric_utility.outage_end_time_step ≈ 8760 * scen.settings.time_steps_per_hour
+    @test scen.storage.attr["ElectricStorage"].soc_init_pct ≈ 1
+    @test scen.storage.attr["ElectricStorage"].can_grid_charge ≈ false
+    @test scen.generator.fuel_avail_gal ≈ 1.0e9
+    @test scen.generator.min_turn_down_pct ≈ 0.15
+    @test sum(scen.electric_load.loads_kw) - sum(scen.electric_load.critical_loads_kw) ≈ 0 # critical loads should equal loads_kw
+    @test scen.financial.microgrid_upgrade_cost_pct ≈ 0
+
+    # Test outputs
+    @test r["ElectricUtility"]["year_one_energy_supplied_kwh"] ≈ 0 # no interaction with grid
+    @test r["Financial"]["lifecycle_offgrid_other_capital_costs"] ≈ 2617.092 atol=0.01 # Check straight line depreciation calc
+    @test sum(r["ElectricLoad"]["offgrid_annual_oper_res_provided_series_kwh"]) >= sum(r["ElectricLoad"]["offgrid_annual_oper_res_required_series_kwh"]) # OR provided >= required
+    @test r["ElectricLoad"]["offgrid_load_met_pct"] >= scen.electric_load.min_load_met_annual_pct
+    @test r["PV"]["size_kw"] ≈ 5050.0
+    f = r["Financial"]
+    @test f["lifecycle_generation_tech_capital_costs"] + f["lifecycle_storage_capital_costs"] + f["lifecycle_om_costs_after_tax"] +
+             f["lifecycle_fuel_costs_after_tax"] + f["lifecycle_chp_standby_cost_after_tax"] + f["lifecycle_elecbill_after_tax"] + 
+             f["lifecycle_offgrid_other_annual_costs_after_tax"] + f["lifecycle_offgrid_other_capital_costs"] + 
+             f["lifecycle_outage_cost"] + f["lifecycle_MG_upgrade_and_fuel_cost"] - 
+             f["lifecycle_production_incentive_after_tax"] ≈ f["lcc"] atol=1.0
+    
+    ## Scenario 2: Fixed Generator only
+    post["ElectricLoad"]["annual_kwh"] = 100.0
+    post["PV"]["max_kw"] = 0.0
+    post["ElectricStorage"]["max_kw"] = 0.0
+    post["Generator"]["min_turn_down_pct"] = 0.0
+
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    r = run_reopt(m, post)
+
+    # Test generator outputs
+    @test r["Generator"]["average_annual_fuel_used_gal"] ≈ 7.52 # 99 kWh * 0.076 gal/kWh
+    @test r["Generator"]["average_annual_energy_produced_kwh"] ≈ 99.0
+    @test r["Generator"]["year_one_fuel_cost_before_tax"] ≈ 22.57
+    @test r["Generator"]["lifecycle_fuel_cost_after_tax"] ≈ 205.35 
+    @test r["Financial"]["initial_capital_costs"] ≈ 100*(700) 
+    @test r["Financial"]["lifecycle_capital_costs"] ≈ 100*(700+324.235442*(1-0.26)) atol=0.1 # replacement in yr 10 is considered tax deductible
+    @test r["Financial"]["initial_capital_costs_after_incentives"] ≈ 700*100 atol=0.1
+    @test r["Financial"]["replacements_future_cost_after_tax"] ≈ 700*100
+    @test r["Financial"]["replacements_present_cost_after_tax"] ≈ 100*(324.235442*(1-0.26)) atol=0.1 
+
+    ## Scenario 3: Fixed Generator that can meet load, but cannot meet load operating reserve requirement
+    ## This test ensures the load operating reserve requirement is being enforced
+    post["ElectricLoad"]["doe_reference_name"] = "FlatLoad"
+    post["ElectricLoad"]["annual_kwh"] = 876000.0 # requires 100 kW gen
+    post["ElectricLoad"]["min_load_met_annual_pct"] = 1.0 # requires additional generator capacity
+    post["PV"]["max_kw"] = 0.0
+    post["ElectricStorage"]["max_kw"] = 0.0
+    post["Generator"]["min_turn_down_pct"] = 0.0
+
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    r = run_reopt(m, post)
+
+    # Test generator outputs
+    @test typeof(r) == Model # this is true when the model is infeasible
+
+end
+

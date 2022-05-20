@@ -29,7 +29,8 @@
 # *********************************************************************************
 """
     ElectricUtility
-
+ElectricUtility data struct with inner constructor:     
+        
 ```julia
 function ElectricUtility(;
     emissions_region::String = "",
@@ -46,11 +47,11 @@ function ElectricUtility(;
     allow_simultaneous_export_import::Bool=true  # if true the site has two meters (in effect)
     # next 5 variables below used for minimax the expected outage cost,
     # with max taken over outage start time, expectation taken over outage duration
-    outage_start_timesteps::Array{Int,1}=Int[]  # we minimize the maximum outage cost over outage start times
-    outage_durations::Array{Int,1}=Int[]  # one-to-one with outage_probabilities, outage_durations can be a random variable
-    outage_probabilities::Array{<:Real,1}=[1.0]
-    outage_timesteps::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:maximum(outage_durations)
-    scenarios::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:length(outage_durations)
+    outage_start_time_steps::Array{Int,1}=Int[],  # we minimize the maximum outage cost over outage start times
+    outage_durations::Array{Int,1}=Int[],  # one-to-one with outage_probabilities, outage_durations can be a random variable
+    outage_probabilities::Array{R,1} where R<:Real = [1.0],
+    outage_time_steps::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:maximum(outage_durations),
+    scenarios::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:length(outage_durations),
     net_metering_limit_kw::Real = 0,
     interconnection_limit_kw::Real = 1.0e9,
     latitude::Real,
@@ -58,31 +59,35 @@ function ElectricUtility(;
     time_steps_per_hour::Int = 1
     )
 ```
+!!! note Outage indexing begins at 1 (not 0) and the outage is inclusive of the outage end time step. 
+    For instance, to model a 3-hour outage from 12AM to 3AM on Jan 1, outage_start_time_step = 1 and outage_end_time_step = 3.
+    To model a 1-hour outage from 6AM to 7AM on Jan 1, outage_start_time_step = 7 and outage_end_time_step = 7.
 
 """
 mutable struct ElectricUtility
-    emissions_region
-    distance_to_emissions_region_meters
-    emissions_factor_series_lb_CO2_per_kwh
-    emissions_factor_series_lb_NOx_per_kwh
-    emissions_factor_series_lb_SO2_per_kwh
-    emissions_factor_series_lb_PM25_per_kwh
-    emissions_factor_CO2_decrease_pct
-    emissions_factor_NOx_decrease_pct
-    emissions_factor_SO2_decrease_pct
-    emissions_factor_PM25_decrease_pct
-    outage_start_time_step
-    outage_end_time_step
-    allow_simultaneous_export_import
+    emissions_region::String
+    distance_to_emissions_region_meters::Real
+    emissions_factor_series_lb_CO2_per_kwh::Union{Nothing,Array{<:Real,1}}
+    emissions_factor_series_lb_NOx_per_kwh::Union{Nothing,Array{<:Real,1}}
+    emissions_factor_series_lb_SO2_per_kwh::Union{Nothing,Array{<:Real,1}}
+    emissions_factor_series_lb_PM25_per_kwh::Union{Nothing,Array{<:Real,1}}
+    emissions_factor_CO2_decrease_pct::Float64
+    emissions_factor_NOx_decrease_pct::Float64
+    emissions_factor_SO2_decrease_pct::Float64
+    emissions_factor_PM25_decrease_pct::Float64
+    outage_start_time_step::Int  # for modeling a single outage, with critical load spliced into the baseline load ...
+    outage_end_time_step::Int  # ... utiltity production_factor = 0 during the outage
+    allow_simultaneous_export_import::Bool  # if true the site has two meters (in effect)
     # next 5 variables below used for minimax the expected outage cost,
     # with max taken over outage start time, expectation taken over outage duration
-    outage_start_timesteps
-    outage_durations
-    outage_probabilities
-    outage_timesteps
-    scenarios
-    net_metering_limit_kw
-    interconnection_limit_kw
+    outage_start_time_steps::Array{Int,1}  # we minimize the maximum outage cost over outage start times
+    outage_durations::Array{Int,1}  # one-to-one with outage_probabilities, outage_durations can be a random variable
+    outage_probabilities::Array{R,1} where R<:Real 
+    outage_time_steps::Union{Missing, UnitRange} 
+    scenarios::Union{Missing, UnitRange} 
+    net_metering_limit_kw::Real 
+    interconnection_limit_kw::Real 
+
 
     function ElectricUtility(;
         emissions_factor_series_lb_CO2_per_kwh::Union{Float64,Array{<:Real,1}} = Float64[],
@@ -98,10 +103,10 @@ mutable struct ElectricUtility
         allow_simultaneous_export_import::Bool=true,  # if true the site has two meters (in effect)
         # next 5 variables below used for minimax the expected outage cost,
         # with max taken over outage start time, expectation taken over outage duration
-        outage_start_timesteps::Array{Int,1}=Int[],  # we minimize the maximum outage cost over outage start times
+        outage_start_time_steps::Array{Int,1}=Int[],  # we minimize the maximum outage cost over outage start times
         outage_durations::Array{Int,1}=Int[],  # one-to-one with outage_probabilities, outage_durations can be a random variable
         outage_probabilities::Array{<:Real,1}=[1.0],
-        outage_timesteps::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:maximum(outage_durations),
+        outage_time_steps::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:maximum(outage_durations),
         scenarios::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:length(outage_durations),
         net_metering_limit_kw::Real = 0,
         interconnection_limit_kw::Real = 1.0e9,
@@ -162,6 +167,11 @@ mutable struct ElectricUtility
             @error "Provided emissions_factor_series_lb_PM25_per_kwh does not match the time_steps_per_hour."
         end
 
+        # Error if outage_start/end_time_step is provided and outage_start_time_steps not empty
+        if (outage_start_time_step != 0 || outage_end_time_step !=0) && outage_start_time_steps != [] 
+            throw(@error "Cannot supply singular outage_start(or end)_time_step and multiple outage_start_time_steps. Please use one or the other.")
+        end
+
         new(
             emissions_region,
             meters_to_region,
@@ -176,10 +186,10 @@ mutable struct ElectricUtility
             outage_start_time_step,
             outage_end_time_step,
             allow_simultaneous_export_import,
-            outage_start_timesteps,
+            outage_start_time_steps,
             outage_durations,
             outage_probabilities,
-            outage_timesteps,
+            outage_time_steps,
             scenarios,
             net_metering_limit_kw,
             interconnection_limit_kw
@@ -303,4 +313,4 @@ function emissions_series(pollutant, region_abbr; time_steps_per_hour=1)
         return nothing
     end
 end
-# TODO @warn when outage_start/end_timesteps not empty and outage_start/end_timestep is provided
+# TODO @warn when outage_start/end_time_steps not empty and outage_start/end_time_step is provided

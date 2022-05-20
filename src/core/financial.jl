@@ -33,18 +33,19 @@
 Financial data struct with inner constructor:
 ```julia
 function Financial(;
-    om_cost_escalation_pct::Float64 = 0.025,
-    elec_cost_escalation_pct::Float64 = 0.019,
-    boiler_fuel_cost_escalation_pct::Float64 = 0.034,
-    chp_fuel_cost_escalation_pct::Float64 = 0.034,
-    offtaker_tax_pct::Float64 = 0.26,
-    offtaker_discount_pct = 0.0564,
+    om_cost_escalation_pct::Real = 0.025,
+    elec_cost_escalation_pct::Real = 0.019,
+    boiler_fuel_cost_escalation_pct::Real = 0.034,
+    chp_fuel_cost_escalation_pct::Real = 0.034,
+    generator_fuel_cost_escalation_pct::Real = 0.027,
+    offtaker_tax_pct::Real = 0.26,
+    offtaker_discount_pct::Real = 0.0564,
     third_party_ownership::Bool = false,
-    owner_tax_pct::Float64 = 0.26,
-    owner_discount_pct::Float64 = 0.0564,
+    owner_tax_pct::Real = 0.26,
+    owner_discount_pct::Real = 0.0564,
     analysis_years::Int = 25,
     value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00,
-    microgrid_upgrade_cost_pct::Float64 = 0.3,
+    microgrid_upgrade_cost_pct::Real = off_grid_flag ? 0.0 : 0.3,
     macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
     macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
     CO2_cost_per_tonne::Float64 = 51.0,
@@ -58,6 +59,8 @@ function Financial(;
     NOx_cost_escalation_pct::Union{Missing,Float64} = missing,
     SO2_cost_escalation_pct::Union{Missing,Float64} = missing,
     PM25_cost_escalation_pct::Union{Missing,Float64} = missing,
+    offgrid_other_capital_costs::Real = 0.0, # only applicable when off_grid_flag is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
+    offgrid_other_annual_costs::Real = 0.0, # only applicable when off_grid_flag is true. Considered tax deductible for owner. Costs are per year. 
     latitude::Real,
     longitude::Real
 )
@@ -73,18 +76,19 @@ function Financial(;
     ```
 """
 mutable struct Financial
-    om_cost_escalation_pct::Float64
-    elec_cost_escalation_pct::Float64
-    boiler_fuel_cost_escalation_pct::Float64
-    chp_fuel_cost_escalation_pct::Float64
-    offtaker_tax_pct::Float64
-    offtaker_discount_pct
+    om_cost_escalation_pct::Real
+    elec_cost_escalation_pct::Real
+    boiler_fuel_cost_escalation_pct::Real
+    chp_fuel_cost_escalation_pct::Real
+    generator_fuel_cost_escalation_pct::Real
+    offtaker_tax_pct::Real
+    offtaker_discount_pct::Real
     third_party_ownership::Bool
-    owner_tax_pct::Float64
-    owner_discount_pct::Float64
+    owner_tax_pct::Real
+    owner_discount_pct::Real
     analysis_years::Int
     value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real
-    microgrid_upgrade_cost_pct::Float64
+    microgrid_upgrade_cost_pct::Real
     macrs_five_year::Array{Float64,1}
     macrs_seven_year::Array{Float64,1}
     CO2_cost_per_tonne::Float64
@@ -98,20 +102,24 @@ mutable struct Financial
     NOx_cost_escalation_pct::Union{Missing,Float64}
     SO2_cost_escalation_pct::Union{Missing,Float64}
     PM25_cost_escalation_pct::Union{Missing,Float64}
+    offgrid_other_capital_costs::Real
+    offgrid_other_annual_costs::Real
 
     function Financial(;
-        om_cost_escalation_pct::Float64 = 0.025,
-        elec_cost_escalation_pct::Float64 = 0.019,
-        boiler_fuel_cost_escalation_pct::Float64 = 0.034,
-        chp_fuel_cost_escalation_pct::Float64 = 0.034,
-        offtaker_tax_pct::Float64 = 0.26,
-        offtaker_discount_pct = 0.0564,
+        off_grid_flag::Bool = false,
+        om_cost_escalation_pct::Real = 0.025,
+        elec_cost_escalation_pct::Real = 0.019,
+        boiler_fuel_cost_escalation_pct::Real = 0.034,
+        chp_fuel_cost_escalation_pct::Real = 0.034,
+        generator_fuel_cost_escalation_pct::Real = 0.027,
+        offtaker_tax_pct::Real = 0.26,
+        offtaker_discount_pct::Real = 0.0564,
         third_party_ownership::Bool = false,
-        owner_tax_pct::Float64 = 0.26,
-        owner_discount_pct::Float64 = 0.0564,
+        owner_tax_pct::Real = 0.26,
+        owner_discount_pct::Real = 0.0564,
         analysis_years::Int = 25,
         value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00,
-        microgrid_upgrade_cost_pct::Float64 = 0.3,
+        microgrid_upgrade_cost_pct::Real = off_grid_flag ? 0.0 : 0.3,
         macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
         macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
         CO2_cost_per_tonne::Float64 = 51.0,
@@ -125,9 +133,23 @@ mutable struct Financial
         NOx_cost_escalation_pct::Union{Missing,Float64} = missing,
         SO2_cost_escalation_pct::Union{Missing,Float64} = missing,
         PM25_cost_escalation_pct::Union{Missing,Float64} = missing,
+        offgrid_other_capital_costs::Real = 0.0, # only applicable when off_grid_flag is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
+        offgrid_other_annual_costs::Real = 0.0, # only applicable when off_grid_flag is true. Considered tax deductible for owner.
         latitude::Real,
         longitude::Real
     )
+        
+        if off_grid_flag && !(microgrid_upgrade_cost_pct == 0.0)
+            @warn "microgrid_upgrade_cost_pct is not applied when off_grid_flag is true. Setting microgrid_upgrade_cost_pct to 0.0."
+            microgrid_upgrade_cost_pct = 0.0
+        end
+
+        if !off_grid_flag && (offgrid_other_capital_costs != 0.0 || offgrid_other_annual_costs != 0.0)
+            @warn "offgrid_other_capital_costs and offgrid_other_annual_costs are only applied when off_grid_flag is true. Setting these inputs to 0.0 for this grid-connected analysis."
+            offgrid_other_capital_costs = 0.0
+            offgrid_other_annual_costs = 0.0
+        end
+
         if !third_party_ownership
             owner_tax_pct = offtaker_tax_pct
             owner_discount_pct = offtaker_discount_pct
@@ -175,6 +197,7 @@ mutable struct Financial
             elec_cost_escalation_pct,
             boiler_fuel_cost_escalation_pct,
             chp_fuel_cost_escalation_pct,
+            generator_fuel_cost_escalation_pct,
             offtaker_tax_pct,
             offtaker_discount_pct,
             third_party_ownership,
@@ -195,7 +218,9 @@ mutable struct Financial
             PM25_onsite_fuelburn_cost_per_tonne,
             NOx_cost_escalation_pct,
             SO2_cost_escalation_pct,
-            PM25_cost_escalation_pct
+            PM25_cost_escalation_pct,
+            offgrid_other_capital_costs,
+            offgrid_other_annual_costs
         )
     end
 end

@@ -36,9 +36,9 @@ Inputs related to the physical location:
 function Site(;
     latitude::Real, 
     longitude::Real, 
-    land_acres::Union{Float64, Nothing} = nothing, 
-    roof_squarefeet::Union{Float64, Nothing} = nothing,
-    min_resil_timesteps::Int=0,
+    land_acres::Union{Real, Nothing} = nothing, 
+    roof_squarefeet::Union{Real, Nothing} = nothing,
+    min_resil_time_steps::Int=0,
     mg_tech_sizes_equal_grid_sizes::Bool = true,
     CO2_emissions_reduction_min_pct::Union{Float64, Nothing} = nothing,
     CO2_emissions_reduction_max_pct::Union{Float64, Nothing} = nothing,
@@ -65,7 +65,7 @@ mutable struct Site
     longitude
     land_acres
     roof_squarefeet
-    min_resil_timesteps
+    min_resil_time_steps
     mg_tech_sizes_equal_grid_sizes
     CO2_emissions_reduction_min_pct
     CO2_emissions_reduction_max_pct
@@ -85,9 +85,9 @@ mutable struct Site
     function Site(;
         latitude::Real, 
         longitude::Real, 
-        land_acres::Union{Float64, Nothing} = nothing, 
-        roof_squarefeet::Union{Float64, Nothing} = nothing,
-        min_resil_timesteps::Int=0,
+        land_acres::Union{Real, Nothing} = nothing, 
+        roof_squarefeet::Union{Real, Nothing} = nothing,
+        min_resil_time_steps::Int=0,
         mg_tech_sizes_equal_grid_sizes::Bool = true,
         CO2_emissions_reduction_min_pct::Union{Float64, Nothing} = nothing,
         CO2_emissions_reduction_max_pct::Union{Float64, Nothing} = nothing,
@@ -118,7 +118,7 @@ mutable struct Site
         if !isnothing(renewable_electricity_max_pct) && (renewable_electricity_min_pct > renewable_electricity_max_pct)
             error("renewable_electricity_min_pct must be less than renewable_electricity_max_pct")
         end
-        new(latitude, longitude, land_acres, roof_squarefeet, min_resil_timesteps, 
+        new(latitude, longitude, land_acres, roof_squarefeet, min_resil_time_steps, 
             mg_tech_sizes_equal_grid_sizes, CO2_emissions_reduction_min_pct, 
             CO2_emissions_reduction_max_pct, bau_emissions_lb_CO2_per_year,
             bau_emissions_lb_NOx_per_year, bau_emissions_lb_SO2_per_year,
