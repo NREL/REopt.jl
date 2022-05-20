@@ -263,7 +263,7 @@ function region_abbreviation(latitude, longitude)
             # println("After: $(ArchGDAL.toWKT(point))")
         end
     catch
-        @warn "Could not look up AVERT region closest to point (",latitude,",",longitude,"). Location is
+        @warn "Could not look up AVERT region closest to point ($(latitude), $(longitude)). Location is
         likely invalid or well outside continental US, AK and HI"
         return abbr, meters_to_region #nothing, nothing
     end
@@ -279,7 +279,7 @@ function region_abbreviation(latitude, longitude)
         meters_to_region = distances[argmin(distances)]
 
         if meters_to_region > 8046
-            @warn "Your site location (", latitude,",",longitude,") is more than 5 miles from the nearest AVERT region. Cannot calculate emissions."
+            @warn "Your site location ($(latitude), $(longitude)) is more than 5 miles from the nearest AVERT region. Cannot calculate emissions."
             return abbr, meters_to_region #nothing, #
         else
             return ArchGDAL.getfield(feature,1), meters_to_region
