@@ -62,6 +62,7 @@ function ElectricUtility(;
 """
 struct ElectricUtility
     emissions_region
+    distance_to_emissions_region_meters
     emissions_factor_series_lb_CO2_per_kwh
     emissions_factor_series_lb_NOx_per_kwh
     emissions_factor_series_lb_SO2_per_kwh
@@ -163,6 +164,7 @@ struct ElectricUtility
 
         new(
             emissions_region,
+            meters_to_region,
             emissions_series_dict["CO2"],
             emissions_series_dict["NOx"],
             emissions_series_dict["SO2"],
@@ -242,7 +244,7 @@ function region_abbreviation(latitude, longitude)
 		end
 	end
     if isnothing(abbr)
-        @info "Could not find AVERT zone for site latitude/longitude. Checking site proximity to AVERT regions."
+        @info "Could not find AVERT region containing site latitude/longitude. Checking site proximity to AVERT regions."
     else
         return abbr, meters_to_region
     end
@@ -261,9 +263,9 @@ function region_abbreviation(latitude, longitude)
             # println("After: $(ArchGDAL.toWKT(point))")
         end
     catch
-        @warn "Could not look up AVERT emissions region from point (",latitude,",",longitude,"). Location is
+        @warn "Could not look up AVERT region closest to point (",latitude,",",longitude,"). Location is
         likely invalid or well outside continental US, AK and HI"
-        return abbr, meters_to_region
+        return abbr, meters_to_region #nothing, nothing
     end
 
     distances = []
@@ -277,12 +279,12 @@ function region_abbreviation(latitude, longitude)
         meters_to_region = distances[argmin(distances)]
 
         if meters_to_region > 8046
-            @warn "Your site location (", latitude,",",longitude,") is more than 5 miles from the nearest emission region. Cannot calculate emissions."
+            @warn "Your site location (", latitude,",",longitude,") is more than 5 miles from the nearest AVERT region. Cannot calculate emissions."
+            return abbr, meters_to_region #nothing, #
         else
-            abbr = ArchGDAL.getfield(feature,1)
+            return ArchGDAL.getfield(feature,1), meters_to_region
         end
     end
-    return abbr, meters_to_region
 end
 
 function emissions_series(pollutant, region_abbr; time_steps_per_hour=1)
