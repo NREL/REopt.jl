@@ -33,7 +33,7 @@ struct MPCScenario <: AbstractScenario
     storage::Storage
     electric_tariff::MPCElectricTariff
     electric_load::MPCElectricLoad
-    electric_utility::ElectricUtility
+    electric_utility::MPCElectricUtility
     financial::MPCFinancial
     generator::MPCGenerator
     cooling_load::MPCCoolingLoad
@@ -52,7 +52,7 @@ Method for creating the MPCScenario struct:
         storage::Storage
         electric_tariff::MPCElectricTariff
         electric_load::MPCElectricLoad
-        electric_utility::ElectricUtility
+        electric_utility::MPCElectricUtility
         financial::MPCFinancial
         generator::MPCGenerator
         limits::MPCLimits
@@ -102,9 +102,9 @@ function MPCScenario(d::Dict)
     end
 
     if haskey(d, "ElectricUtility")
-        electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...)
+        electric_utility = MPCElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...)
     else
-        electric_utility = ElectricUtility()
+        electric_utility = MPCElectricUtility()
     end
 
     if haskey(d, "ElectricStorage")
