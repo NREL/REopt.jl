@@ -72,7 +72,7 @@ function Financial(;
         end
     ```
 """
-struct Financial
+mutable struct Financial
     om_cost_escalation_pct::Float64
     elec_cost_escalation_pct::Float64
     boiler_fuel_cost_escalation_pct::Float64
@@ -136,51 +136,39 @@ struct Financial
         grid_costs = easiur_costs(latitude, longitude, "grid")
         onsite_costs = easiur_costs(latitude, longitude, "onsite")
         escalation_rates = easiur_escalation_rates(latitude, longitude, om_cost_escalation_pct)
-        if ismissing(NOx_grid_cost_per_tonne)
-            NOx_grid_cost_per_tonne = grid_costs["NOx"]
+        if !isnothing(grid_costs)
+            if ismissing(NOx_grid_cost_per_tonne)
+                NOx_grid_cost_per_tonne = grid_costs["NOx"]
+            end
+            if ismissing(SO2_grid_cost_per_tonne)
+                SO2_grid_cost_per_tonne = grid_costs["SO2"]
+            end
+            if ismissing(PM25_grid_cost_per_tonne)
+                PM25_grid_cost_per_tonne = grid_costs["PM25"]
+            end
         end
-        if ismissing(SO2_grid_cost_per_tonne)
-            SO2_grid_cost_per_tonne = grid_costs["SO2"]
+        if !isnothing(onsite_costs)
+            if ismissing(NOx_onsite_fuelburn_cost_per_tonne)
+                NOx_onsite_fuelburn_cost_per_tonne = onsite_costs["NOx"]
+            end
+            if ismissing(SO2_onsite_fuelburn_cost_per_tonne)
+                SO2_onsite_fuelburn_cost_per_tonne = onsite_costs["SO2"]
+            end
+            if ismissing(PM25_onsite_fuelburn_cost_per_tonne)
+                PM25_onsite_fuelburn_cost_per_tonne = onsite_costs["PM25"]
+            end
         end
-        if ismissing(PM25_grid_cost_per_tonne)
-            PM25_grid_cost_per_tonne = grid_costs["PM25"]
+        if !isnothing(escalation_rates)
+            if ismissing(NOx_cost_escalation_pct)
+                NOx_cost_escalation_pct = escalation_rates["NOx"]
+            end
+            if ismissing(SO2_cost_escalation_pct)
+                SO2_cost_escalation_pct = escalation_rates["SO2"]
+            end
+            if ismissing(PM25_cost_escalation_pct)
+                PM25_cost_escalation_pct = escalation_rates["PM25"]
+            end
         end
-        if ismissing(NOx_onsite_fuelburn_cost_per_tonne)
-            NOx_onsite_fuelburn_cost_per_tonne = onsite_costs["NOx"]
-        end
-        if ismissing(SO2_onsite_fuelburn_cost_per_tonne)
-            SO2_onsite_fuelburn_cost_per_tonne = onsite_costs["SO2"]
-        end
-        if ismissing(PM25_onsite_fuelburn_cost_per_tonne)
-            PM25_onsite_fuelburn_cost_per_tonne = onsite_costs["PM25"]
-        end
-        if ismissing(NOx_cost_escalation_pct)
-            NOx_cost_escalation_pct = escalation_rates["NOx"]
-        end
-        if ismissing(SO2_cost_escalation_pct)
-            SO2_cost_escalation_pct = escalation_rates["SO2"]
-        end
-        if ismissing(PM25_cost_escalation_pct)
-            PM25_cost_escalation_pct = escalation_rates["PM25"]
-        end
-        #TODO factor above code by pollutant (attempt below gave UndefVarError on eval() calls)
-        # for pollutant in ["NOx", "SO2", "PM25"]
-        #     grid_field_name = "$(pollutant)_grid_cost_per_tonne"
-        #     if ismissing(Symbol(grid_field_name))
-        #         Symbol(grid_field_name) = grid_costs[pollutant]
-        #     end
-        #     # if eval(Meta.parse("ismissing($(grid_field_name))"))
-        #     #     eval(Meta.parse("$(grid_field_name) = grid_costs[pollutant]"))
-        #     # end
-        #     onsite_field_name = "$(pollutant)_onsite_fuelburn_cost_per_tonne"
-        #     if eval(Meta.parse("ismissing($(onsite_field_name))"))
-        #         eval(Meta.parse("$(onsite_field_name) = onsite_costs[pollutant]"))
-        #     end
-        #     escalation_field_name = "$(pollutant)_cost_escalation_pct"
-        #     if eval(Meta.parse("ismissing($(escalation_field_name))"))
-        #         eval(Meta.parse("$(escalation_field_name) = escalation_rates[pollutant]"))
-        #     end
-        # end
 
         return new(
             om_cost_escalation_pct,
@@ -224,7 +212,8 @@ function easiur_costs(latitude::Float64, longitude::Float64, grid_or_onsite::Str
     elseif grid_or_onsite=="onsite"
         type = "area"
     else
-        @error "Error in easiur_costs: grid_or_onsite must equal either 'grid' or 'onsite'"
+        @warn "Error in easiur_costs: grid_or_onsite must equal either 'grid' or 'onsite'"
+        return nothing
     end
     EASIUR_data = get_EASIUR2005(type, pop_year=2020, income_year=2020, dollar_year=2010)
 
@@ -243,7 +232,8 @@ function easiur_costs(latitude::Float64, longitude::Float64, grid_or_onsite::Str
         )
         return costs_per_tonne
     catch
-        @error "Could not look up EASIUR health costs from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid."
+        @warn "Could not look up EASIUR health costs from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid."
+        return nothing
     end
 end
 
@@ -265,7 +255,8 @@ function easiur_escalation_rates(latitude::Float64, longitude::Float64, inflatio
         )
         return escalation_rates
     catch
-        @error "Could not look up EASIUR health costs from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid"
+        @warn "Could not look up EASIUR health cost escalation rates from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid"
+        return nothing
     end
 end
 
