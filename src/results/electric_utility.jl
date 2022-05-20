@@ -70,17 +70,19 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
     r["year_one_to_load_series_kw"] = round.(value.(GridToLoad), digits=3)
     r["year_one_to_battery_series_kw"] = round.(value.(GridToBatt), digits=3)
 
-	r["year_one_emissions_tCO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2]*TONNE_PER_LB), digits=2)
-	r["year_one_emissions_tNOx"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx]*TONNE_PER_LB), digits=2)
-	r["year_one_emissions_tSO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2]*TONNE_PER_LB), digits=2)
-	r["year_one_emissions_tPM25"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25]*TONNE_PER_LB), digits=2)
-	r["lifecycle_emissions_tCO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2]*TONNE_PER_LB*p.pwf_grid_emissions["CO2"]), digits=2)
-	r["lifecycle_emissions_tNOx"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx]*TONNE_PER_LB*p.pwf_grid_emissions["NOx"]), digits=2)
-	r["lifecycle_emissions_tSO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2]*TONNE_PER_LB*p.pwf_grid_emissions["SO2"]), digits=2)
-	r["lifecycle_emissions_tPM25"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25]*TONNE_PER_LB*p.pwf_grid_emissions["PM25"]), digits=2)
-	
-    r["emissions_region"] = p.s.electric_utility.emissions_region
-	r["distance_to_emissions_region_meters"] = p.s.electric_utility.distance_to_emissions_region_meters
+    if _n=="" #only output emissions results if not a multinode model
+        r["year_one_emissions_tCO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2]*TONNE_PER_LB), digits=2)
+        r["year_one_emissions_tNOx"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx]*TONNE_PER_LB), digits=2)
+        r["year_one_emissions_tSO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2]*TONNE_PER_LB), digits=2)
+        r["year_one_emissions_tPM25"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25]*TONNE_PER_LB), digits=2)
+        r["lifecycle_emissions_tCO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2]*TONNE_PER_LB*p.pwf_grid_emissions["CO2"]), digits=2)
+        r["lifecycle_emissions_tNOx"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx]*TONNE_PER_LB*p.pwf_grid_emissions["NOx"]), digits=2)
+        r["lifecycle_emissions_tSO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2]*TONNE_PER_LB*p.pwf_grid_emissions["SO2"]), digits=2)
+        r["lifecycle_emissions_tPM25"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25]*TONNE_PER_LB*p.pwf_grid_emissions["PM25"]), digits=2)
+        
+        r["emissions_region"] = p.s.electric_utility.emissions_region
+        r["distance_to_emissions_region_meters"] = p.s.electric_utility.distance_to_emissions_region_meters
+    end
 
     d["ElectricUtility"] = r
 
