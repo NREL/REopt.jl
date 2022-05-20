@@ -37,7 +37,7 @@
         "year": 2017
     },
     "ElectricUtility": {
-        "outage_start_timesteps": [5100],
+        "outage_start_time_steps": [5100],
         "outage_durations": [10]
     },
     "Generator": {
