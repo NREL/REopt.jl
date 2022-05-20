@@ -35,7 +35,6 @@ The data structure for all the inputs necessary to construct the JuMP model.
 struct REoptInputs <: AbstractInputs
     s::AbstractScenario
     techs::Techs
-    storage::Storage
     min_sizes::Dict{String, Float64}  # (techs)
     max_sizes::Dict{String, Float64}  # (techs)
     existing_sizes::Dict{String, Float64}  # (techs)
@@ -44,14 +43,16 @@ struct REoptInputs <: AbstractInputs
     time_steps::UnitRange
     time_steps_with_grid::Array{Int, 1}
     time_steps_without_grid::Array{Int, 1}
-    hours_per_timestep::Float64
+    hours_per_time_step::Float64
     months::UnitRange
     production_factor::DenseAxisArray{Float64, 2}  # (techs, time_steps)
     levelization_factor::Dict{String, Float64}  # (techs)
     value_of_lost_load_per_kwh::Array{R, 1} where R<:Real #default set to 1 US dollar per kwh
     pwf_e::Float64
     pwf_om::Float64
-    third_party_factor::Float64
+    pwf_offtaker::Float64 
+    pwf_owner::Float64
+    third_party_factor::Float64 # equals 1 if third_party_ownership is false
     pvlocations::Array{Symbol, 1}
     maxsize_pv_locations::DenseAxisArray{Float64, 1}  # indexed on pvlocations
     pv_to_location::Dict{String, Dict{Symbol, Int64}}  # (techs.pv, pvlocations)
@@ -59,14 +60,15 @@ struct REoptInputs <: AbstractInputs
     techs_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL, :CUR]
     export_bins_by_tech::Dict
     n_segs_by_tech::Dict{String, Int}
-    seg_min_size::Dict{String, Dict{Int, Float64}}
-    seg_max_size::Dict{String, Dict{Int, Float64}}
-    seg_yint::Dict{String, Dict{Int, Float64}}
+    seg_min_size::Dict{String, Dict{Int, Real}}
+    seg_max_size::Dict{String, Dict{Int, Real}}
+    seg_yint::Dict{String, Dict{Int, Real}}
     pbi_pwf::Dict{String, Any}  # (pbi_techs)
     pbi_max_benefit::Dict{String, Any}  # (pbi_techs)
     pbi_max_kw::Dict{String, Any}  # (pbi_techs)
     pbi_benefit_per_kwh::Dict{String, Any}  # (pbi_techs)
     boiler_efficiency::Dict{String, Float64}
+    techs_operating_reserve_req_pct::Dict{String, Float64} # (techs.all)
 end
 ```
 """
@@ -83,7 +85,7 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     time_steps::UnitRange
     time_steps_with_grid::Array{Int, 1}
     time_steps_without_grid::Array{Int, 1}
-    hours_per_timestep::Float64
+    hours_per_time_step::Float64
     months::UnitRange
     production_factor::DenseAxisArray{Float64, 2}  # (techs, time_steps)
     levelization_factor::Dict{String, Float64}  # (techs)
@@ -91,6 +93,8 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     pwf_e::Float64
     pwf_om::Float64
     pwf_fuel::Dict{String, Float64}
+    pwf_offtaker::Float64 
+    pwf_owner::Float64
     third_party_factor::Float64
     pvlocations::Array{Symbol, 1}
     maxsize_pv_locations::DenseAxisArray{Float64, 1}  # indexed on pvlocations
@@ -99,14 +103,15 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     techs_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL, :CUR]
     export_bins_by_tech::Dict
     n_segs_by_tech::Dict{String, Int}
-    seg_min_size::Dict{String, Dict{Int, Float64}}
-    seg_max_size::Dict{String, Dict{Int, Float64}}
-    seg_yint::Dict{String, Dict{Int, Float64}}
+    seg_min_size::Dict{String, Dict{Int, Real}}
+    seg_max_size::Dict{String, Dict{Int, Real}}
+    seg_yint::Dict{String, Dict{Int, Real}}
     pbi_pwf::Dict{String, Any}  # (pbi_techs)
     pbi_max_benefit::Dict{String, Any}  # (pbi_techs)
     pbi_max_kw::Dict{String, Any}  # (pbi_techs)
     pbi_benefit_per_kwh::Dict{String, Any}  # (pbi_techs)
     boiler_efficiency::Dict{String, Float64}
+    techs_operating_reserve_req_pct::Dict{String, Float64} # (techs.all)
 end
 
 
@@ -136,17 +141,17 @@ Constructor for REoptInputs. Translates the `Scenario` into all the data necessa
 function REoptInputs(s::AbstractScenario)
 
     time_steps = 1:length(s.electric_load.loads_kw)
-    hours_per_timestep = 1 / s.settings.time_steps_per_hour
+    hours_per_time_step = 1 / s.settings.time_steps_per_hour
     techs, pv_to_location, maxsize_pv_locations, pvlocations, 
         production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
         seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
-        cop, thermal_cop = setup_tech_inputs(s)
+        cop, techs_operating_reserve_req_pct, thermal_cop = setup_tech_inputs(s)
 
     pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
 
     months = 1:12
 
-    levelization_factor, pwf_e, pwf_om, pwf_fuel, third_party_factor = setup_present_worth_factors(s, techs)
+    levelization_factor, pwf_e, pwf_om, pwf_fuel, third_party_factor, pwf_offtaker, pwf_owner = setup_present_worth_factors(s, techs)
     # the following hardcoded values for levelization_factor matches the public REopt API value
     # and makes the test values match.
     # the REopt code herein uses the Desktop method for levelization_factor, which is more accurate
@@ -173,7 +178,7 @@ function REoptInputs(s::AbstractScenario)
         time_steps,
         time_steps_with_grid,
         time_steps_without_grid,
-        hours_per_timestep,
+        hours_per_time_step,
         months,
         production_factor,
         levelization_factor,
@@ -181,11 +186,13 @@ function REoptInputs(s::AbstractScenario)
         pwf_e,
         pwf_om,
         pwf_fuel,
+        pwf_offtaker, 
+        pwf_owner,
         third_party_factor,
         pvlocations,
         maxsize_pv_locations,
         pv_to_location,
-        1:length(s.electric_tariff.tou_demand_ratchet_timesteps),  # ratchets
+        1:length(s.electric_tariff.tou_demand_ratchet_time_steps),  # ratchets
         techs_by_exportbin,
         export_bins_by_tech,
         n_segs_by_tech,
@@ -196,7 +203,8 @@ function REoptInputs(s::AbstractScenario)
         pbi_max_benefit, 
         pbi_max_kw, 
         pbi_benefit_per_kwh,
-        boiler_efficiency
+        boiler_efficiency,
+        techs_operating_reserve_req_pct 
     )
 end
 
@@ -220,6 +228,7 @@ function setup_tech_inputs(s::AbstractScenario)
     cap_cost_slope = Dict{String, Any}()
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
     cop = Dict(t => 0.0 for t in techs.cooling)
+    techs_operating_reserve_req_pct = Dict(t => 0.0 for t in techs.all)
     thermal_cop = Dict(t => 0.0 for t in techs.absorption_chiller)
 
     # export related inputs
@@ -228,9 +237,9 @@ function setup_tech_inputs(s::AbstractScenario)
 
     # REoptInputs indexed on techs.segmented
     n_segs_by_tech = Dict{String, Int}()
-    seg_min_size = Dict{String, Dict{Int, Float64}}()
-    seg_max_size = Dict{String, Dict{Int, Float64}}()
-    seg_yint = Dict{String, Dict{Int, Float64}}()
+    seg_min_size = Dict{String, Dict{Int, Real}}()
+    seg_max_size = Dict{String, Dict{Int, Real}}()
+    seg_yint = Dict{String, Dict{Int, Real}}()
 
     # PV specific arrays
     pvlocations = [:roof, :ground, :both]
@@ -283,10 +292,14 @@ function setup_tech_inputs(s::AbstractScenario)
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
     end
 
+    if s.settings.off_grid_flag
+        setup_operating_reserve_pct(s, techs_operating_reserve_req_pct)
+    end
+
     return techs, pv_to_location, maxsize_pv_locations, pvlocations, 
     production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
     seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
-    cop, thermal_cop
+    cop, techs_operating_reserve_req_pct, thermal_cop
 end
 
 
@@ -597,19 +610,26 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
                 s.financial.chp_fuel_cost_escalation_pct,
                 s.financial.offtaker_discount_pct
             )
-        end        
+        end
+        if t == "Generator" 
+            pwf_fuel["Generator"] = annuity(
+                s.financial.analysis_years,
+                s.financial.generator_fuel_cost_escalation_pct,
+                s.financial.offtaker_discount_pct
+            )
+        end     
     end
 
+    pwf_offtaker = annuity(s.financial.analysis_years, 0.0, s.financial.offtaker_discount_pct)
+    pwf_owner = annuity(s.financial.analysis_years, 0.0, s.financial.owner_discount_pct)
     if s.financial.third_party_ownership
-        pwf_offtaker = annuity(s.financial.analysis_years, 0.0, s.financial.offtaker_discount_pct)
-        pwf_owner = annuity(s.financial.analysis_years, 0.0, s.financial.owner_discount_pct)
         third_party_factor = (pwf_offtaker * (1 - s.financial.offtaker_tax_pct)) /
                            (pwf_owner * (1 - s.financial.owner_tax_pct))
     else
         third_party_factor = 1.0
     end
 
-    return lvl_factor, pwf_e, pwf_om, pwf_fuel, third_party_factor
+    return lvl_factor, pwf_e, pwf_om, pwf_fuel, third_party_factor, pwf_offtaker, pwf_owner
 end
 
 
@@ -706,4 +726,14 @@ function fillin_techs_by_exportbin(techs_by_exportbin::Dict, tech::AbstractTech,
         push!(techs_by_exportbin[:WHL], tech_name)
     end
     return nothing
+end
+
+function setup_operating_reserve_pct(s::AbstractScenario, techs_operating_reserve_req_pct)
+
+    for pv in s.pvs # currently only PV requires operating reserves
+        techs_operating_reserve_req_pct[pv.name] = pv.operating_reserve_required_pct
+    end
+
+    return nothing
+
 end

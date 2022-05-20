@@ -18,7 +18,7 @@ The `max_kw` input value for any technology is considered to be the maximum _add
 The `min_kw` input value for any technology sets the lower bound on the capacity. If `min_kw` is non-zero then the model will be forced to choose at least that system size. The `min_kw` value is set equal to the `existing_kw` value in the Business As Usual scenario.
 
 # Business As Usual Scenario
-In order to calculate the Net Present Value of the optimal solution, as well as other baseline metrics, one can optionally run the Business As Usual (BAU) scenario. The option for running the BAU scenario in addition to the optimal scenario is in the [Settings](@ref). The default value for `Settings.run_bau` is `true` so that when an array of `JuMP.Model`s is provided to `run_reopt` the BAU scenario is also run. For example:
+In order to calculate the Net Present Value of the optimal solution, as well as other baseline metrics, one can optionally run the Business As Usual (BAU) scenario. When an array of `JuMP.Model`s is provided to `run_reopt` the BAU scenario is also run. For example:
 ```julia
 m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
 m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))

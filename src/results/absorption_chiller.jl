@@ -36,30 +36,30 @@ function add_absorption_chiller_results(m::JuMP.AbstractModel, p::REoptInputs, d
 	# r["existing_chiller_to_tes_series"] = round.(value.(ELECCHLtoTES), digits=3)
 
 	r["size_kw"] = value(sum(m[:dvSize][t] for t in p.techs.absorption_chiller))
-	r["size_ton"] = r["size_kw"] / TONHOUR_TO_KWH_THERMAL
+	r["size_ton"] = r["size_kw"] / KWH_THERMAL_PER_TONHOUR
 	@expression(m, ABSORPCHLtoTES[ts in p.time_steps],
 		sum(m[:dvProductionToStorage][b,t,ts] for b in p.s.storage.types.cold, t in p.techs.absorption_chiller))
-	r["year_one_to_tes_series_ton"] = round.(value.(ABSORPCHLtoTES / TONHOUR_TO_KWH_THERMAL), digits=3)
+	r["year_one_to_tes_series_ton"] = round.(value.(ABSORPCHLtoTES / KWH_THERMAL_PER_TONHOUR), digits=3)
 	@expression(m, ABSORPCHLtoLoad[ts in p.time_steps],
 		sum(m[:dvThermalProduction][t,ts] for t in p.techs.absorption_chiller)
 			- ABSORPCHLtoTES[ts]) 
-	r["year_one_to_load_series_ton"] = round.(value.(ABSORPCHLtoLoad / TONHOUR_TO_KWH_THERMAL), digits=3)
+	r["year_one_to_load_series_ton"] = round.(value.(ABSORPCHLtoLoad / KWH_THERMAL_PER_TONHOUR), digits=3)
 	@expression(m, ABSORPCHLThermalConsumptionSeries[ts in p.time_steps],
-		sum(m[:dvThermalProduction][t,ts] / p.thermal_cop[t] for t in p.techs.absorption_chiller) / TONHOUR_TO_KWH_THERMAL)
+		sum(m[:dvThermalProduction][t,ts] / p.thermal_cop[t] for t in p.techs.absorption_chiller) / KWH_THERMAL_PER_TONHOUR)
 	r["year_one_thermal_consumption_series"] = round.(value.(ABSORPCHLThermalConsumptionSeries), digits=3)
 	@expression(m, Year1ABSORPCHLThermalConsumption,
-		p.hours_per_timestep * sum(m[:dvThermalProduction][t,ts] / p.thermal_cop[t]
+		p.hours_per_time_step * sum(m[:dvThermalProduction][t,ts] / p.thermal_cop[t]
 			for t in p.techs.absorption_chiller, ts in p.time_steps))
 	r["year_one_thermal_consumption_kwh"] = round(value(Year1ABSORPCHLThermalConsumption), digits=3)
 	@expression(m, Year1ABSORPCHLThermalProd,
-		p.hours_per_timestep * sum(m[:dvThermalProduction][t, ts]
+		p.hours_per_time_step * sum(m[:dvThermalProduction][t, ts]
 			for t in p.techs.absorption_chiller, ts in p.time_steps))
-	r["year_one_thermal_production_tonhour"] = round(value(Year1ABSORPCHLThermalProd / TONHOUR_TO_KWH_THERMAL), digits=3)
+	r["year_one_thermal_production_tonhour"] = round(value(Year1ABSORPCHLThermalProd / KWH_THERMAL_PER_TONHOUR), digits=3)
     @expression(m, ABSORPCHLElectricConsumptionSeries[ts in p.time_steps],
         sum(m[:dvThermalProduction][t,ts] / p.cop[t] for t in p.techs.absorption_chiller) )
     r["year_one_electric_consumption_series"] = round.(value.(ABSORPCHLElectricConsumptionSeries), digits=3)
     @expression(m, Year1ABSORPCHLElectricConsumption,
-        p.hours_per_timestep * sum(m[:dvThermalProduction][t,ts] / p.cop[t] 
+        p.hours_per_time_step * sum(m[:dvThermalProduction][t,ts] / p.cop[t] 
             for t in p.techs.absorption_chiller, ts in p.time_steps))
     r["year_one_electric_consumption_kwh"] = round(value(Year1ABSORPCHLElectricConsumption), digits=3)
     
