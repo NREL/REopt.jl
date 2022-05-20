@@ -106,7 +106,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                 latitude=site.latitude, longitude=site.longitude
                             )
     else
-        financial = Financial()
+        financial = Financial(; latitude=site.latitude, longitude=site.longitude)
     end
 
     if haskey(d, "ElectricUtility")
