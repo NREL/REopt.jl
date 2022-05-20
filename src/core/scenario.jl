@@ -115,7 +115,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             time_steps_per_hour=settings.time_steps_per_hour
                                         )
     else
-        electric_utility = ElectricUtility(; latitude=site.latitude, longitude=site.longitude)
+        electric_utility = ElectricUtility(; latitude=site.latitude, longitude=site.longitude, 
+                                            time_steps_per_hour=settings.time_steps_per_hour)
     end
 
     #Handle missing emissions inputs (due to failed lookup and not provided by user)
