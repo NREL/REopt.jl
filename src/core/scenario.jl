@@ -345,8 +345,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         end
         existing_boiler = ExistingBoiler(; boiler_inputs...)
         set_missing_emissions_factors_to_fuel_defaults(existing_boiler)
-    else
-        existing_boiler = nothing
     end
 
     chp = nothing
