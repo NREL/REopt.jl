@@ -294,6 +294,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     boiler_inputs = merge(boiler_inputs, dictkeys_tosymbols(d["ExistingBoiler"]))
                 end
                 existing_boiler = ExistingBoiler(; boiler_inputs...)
+                set_missing_emissions_factors_to_fuel_defaults(existing_boiler)
                 # TODO automatically add CHP or other heating techs?
                 # TODO increase max_thermal_factor_on_peak_load to allow more heating flexibility?
             end
