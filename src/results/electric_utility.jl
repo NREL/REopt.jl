@@ -41,8 +41,8 @@ ElectricUtility results:
 function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 
-    Year1UtilityEnergy = p.hours_per_timestep * sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] 
-        for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers)
+    Year1UtilityEnergy = p.hours_per_time_step * sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] 
+        for ts in p.time_steps, tier in p.s.electric_tariff.n_energy_tiers)
     r["year_one_energy_supplied_kwh"] = round(value(Year1UtilityEnergy), digits=2)
     
     if !isempty(p.s.storage.types.elec)
@@ -68,7 +68,7 @@ end
 function add_electric_utility_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 
-    Year1UtilityEnergy = p.hours_per_timestep * 
+    Year1UtilityEnergy = p.hours_per_time_step * 
         sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for ts in p.time_steps, 
                                                          tier in p.s.electric_tariff.n_energy_tiers)
     r["energy_supplied_kwh"] = round(value(Year1UtilityEnergy), digits=2)

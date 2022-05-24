@@ -4,7 +4,7 @@
       1,
       5
     ],
-    "outage_start_timesteps": [
+    "outage_start_time_steps": [
       10
     ],
     "outage_probabilities": [
