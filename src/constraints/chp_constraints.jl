@@ -35,7 +35,7 @@ function add_chp_fuel_burn_constraints(m, p; _n="")
     fuel_burn_intercept = fuel_burn_full_load - fuel_burn_slope * 1.0  # [kWt/kWe_rated]
 
     # Fuel cost
-    fuel_cost_per_kwh = p.s.chp.fuel_cost_per_mmbtu / MMBTU_TO_KWH
+    fuel_cost_per_kwh = p.s.chp.fuel_cost_per_mmbtu / KWH_PER_MMBTU
     fuel_cost_series = per_hour_value_to_time_series(fuel_cost_per_kwh, p.s.settings.time_steps_per_hour, 
                                                      "CHP.fuel_cost_per_mmbtu")
     m[:TotalCHPFuelCosts] = @expression(m, p.pwf_fuel["CHP"] *
@@ -48,7 +48,7 @@ function add_chp_fuel_burn_constraints(m, p; _n="")
 
         #Constraint (1c1): Total Fuel burn for CHP **with** y-intercept fuel burn and supplementary firing
         @constraint(m, CHPFuelBurnCon[t in p.techs.chp, ts in p.time_steps],
-            m[Symbol("dvFuelUsage"*_n)][t,ts]  == p.hours_per_timestep * (
+            m[Symbol("dvFuelUsage"*_n)][t,ts]  == p.hours_per_time_step * (
                 m[Symbol("dvFuelBurnYIntercept"*_n)][t,ts] +
                 p.production_factor[t,ts] * fuel_burn_slope * m[Symbol("dvRatedProduction"*_n)][t,ts] +
                 m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] / p.s.chp.supplementary_firing_efficiency
@@ -62,7 +62,7 @@ function add_chp_fuel_burn_constraints(m, p; _n="")
     else
         #Constraint (1c2): Total Fuel burn for CHP **without** y-intercept fuel burn
         @constraint(m, CHPFuelBurnConLinear[t in p.techs.chp, ts in p.time_steps],
-            m[Symbol("dvFuelUsage"*_n)][t,ts]  == p.hours_per_timestep * (
+            m[Symbol("dvFuelUsage"*_n)][t,ts]  == p.hours_per_time_step * (
                 p.production_factor[t,ts] * fuel_burn_slope * m[Symbol("dvRatedProduction"*_n)][t,ts] +
                 m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] / p.s.chp.supplementary_firing_efficiency
             )
@@ -184,7 +184,7 @@ function add_chp_hourly_om_charges(m, p; _n="")
     )
     
     m[:TotalHourlyCHPOMCosts] = @expression(m, p.third_party_factor * p.pwf_om * 
-    sum(m[Symbol(dv)][t, ts] * p.hours_per_timestep for t in p.techs.chp, ts in p.time_steps))
+    sum(m[Symbol(dv)][t, ts] * p.hours_per_time_step for t in p.techs.chp, ts in p.time_steps))
     nothing
 end
 
@@ -206,7 +206,7 @@ function add_chp_constraints(m, p; _n="")
     m[:TotalHourlyCHPOMCosts] = 0
     m[:TotalCHPFuelCosts] = 0
     m[:TotalCHPPerUnitProdOMCosts] = @expression(m, p.third_party_factor * p.pwf_om *
-        sum(p.s.chp.om_cost_per_kwh * p.hours_per_timestep *
+        sum(p.s.chp.om_cost_per_kwh * p.hours_per_time_step *
         m[:dvRatedProduction][t, ts] for t in p.techs.chp, ts in p.time_steps)
     )
 

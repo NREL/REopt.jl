@@ -64,8 +64,13 @@ using ArchGDAL
 using Roots: fzero  # for IRR
 global hdl = nothing
 
-const M3_TO_GAL = 264.172  # [gal/m^3]
-const GAL_DIESEL_TO_KWH = 40.7  # [kWh/gal_diesel]
+const EXISTING_BOILER_EFFICIENCY = 0.8
+
+const GAL_PER_M3 = 264.172  # [gal/m^3]
+const KWH_PER_GAL_DIESEL = 40.7  # [kWh/gal_diesel]
+const KWH_PER_MMBTU = 293.07107  # [kWh/mmbtu]
+const KWH_THERMAL_PER_TONHOUR = 3.51685
+const TONNE_PER_LB = 1/2204.62  # [tonne/lb]
 
 include("keys.jl")
 include("core/types.jl")
@@ -109,6 +114,7 @@ include("constraints/cost_curve_constraints.jl")
 include("constraints/production_incentive_constraints.jl")
 include("constraints/thermal_tech_constraints.jl")
 include("constraints/chp_constraints.jl")
+include("constraints/operating_reserve_constraints.jl")
 include("constraints/battery_degradation.jl")
 
 include("mpc/structs.jl")

@@ -69,10 +69,10 @@ struct DomesticHotWaterLoad
         if length(fuel_loads_mmbtu_per_hour) > 0
 
             if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
-                @error "Provided domestic hot water load does not match the time_steps_per_hour."
+                throw(@error "Provided domestic hot water load does not match the time_steps_per_hour.")
             end
 
-            loads_kw = fuel_loads_mmbtu_per_hour .* (MMBTU_TO_KWH * EXISTING_BOILER_EFFICIENCY)
+            loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY)
 
         elseif !isempty(doe_reference_name)
             if isempty(city)
@@ -153,10 +153,10 @@ struct SpaceHeatingLoad
         if length(fuel_loads_mmbtu_per_hour) > 0
 
             if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
-                @error "Provided space heating load does not match the time_steps_per_hour."
+                throw(@error "Provided space heating load does not match the time_steps_per_hour.")
             end
 
-            loads_kw = fuel_loads_mmbtu_per_hour .* (MMBTU_TO_KWH * EXISTING_BOILER_EFFICIENCY)
+            loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY)
 
         elseif !isempty(doe_reference_name)
             if isempty(city)
@@ -205,9 +205,9 @@ function get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_
     cop_unknown_thermal = (cop_less_than_100_ton + cop_more_than_100_ton) / 2.0
     max_cooling_load_ton = nothing
     if !isnothing(loads_kw_thermal)
-        max_cooling_load_ton = maximum(loads_kw_thermal) / TONHOUR_TO_KWH_THERMAL
+        max_cooling_load_ton = maximum(loads_kw_thermal) / KWH_THERMAL_PER_TONHOUR
     elseif !isnothing(loads_kw)
-        max_cooling_load_ton = maximum(loads_kw) / TONHOUR_TO_KWH_THERMAL * cop_unknown_thermal
+        max_cooling_load_ton = maximum(loads_kw) / KWH_THERMAL_PER_TONHOUR * cop_unknown_thermal
     end
     if isnothing(max_cooling_load_ton) || isnothing(existing_chiller_max_thermal_factor_on_peak_load)
         return cop_unknown_thermal
@@ -284,9 +284,9 @@ struct CoolingLoad
         loads_kw = nothing
         if length(thermal_loads_ton) > 0
             if !(length(thermal_loads_ton) / time_steps_per_hour ≈ 8760)
-                @error "Provided cooling load does not match the time_steps_per_hour."
+                throw(@error "Provided cooling load does not match the time_steps_per_hour.")
             end
-            loads_kw_thermal = thermal_loads_ton .* TONHOUR_TO_KWH_THERMAL
+            loads_kw_thermal = thermal_loads_ton .* KWH_THERMAL_PER_TONHOUR
         
         elseif !isempty(per_time_step_fractions_of_electric_load) && (length(site_electric_load_profile) / time_steps_per_hour ≈ 8760)
             if !(length(per_time_step_fractions_of_electric_load) / time_steps_per_hour ≈ 8760)
@@ -1363,11 +1363,11 @@ function BuiltInCoolingLoad(
     if isnothing(annual_tonhour)
         annual_kwh = cooling_annual_kwh[city][buildingtype]
     else
-        annual_kwh = annual_tonhour * TONHOUR_TO_KWH_THERMAL / existing_chiller_cop
+        annual_kwh = annual_tonhour * KWH_THERMAL_PER_TONHOUR / existing_chiller_cop
     end
     monthly_kwh = Real[]
     if length(monthly_tonhour) == 12
-        monthly_kwh = monthly_tonhour * TONHOUR_TO_KWH_THERMAL / existing_chiller_cop
+        monthly_kwh = monthly_tonhour * KWH_THERMAL_PER_TONHOUR / existing_chiller_cop
     end
     built_in_load("cooling", city, buildingtype, year, annual_kwh, monthly_kwh)
 end

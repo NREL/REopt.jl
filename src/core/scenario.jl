@@ -53,7 +53,7 @@ end
 
 Constructor for Scenario struct, where `d` has upper-case keys:
 - [Site](@ref) (required)
-- [ElectricTariff](@ref) (required)
+- [ElectricTariff](@ref) (required when off_grid_flag is False)
 - [ElectricLoad](@ref) (required)
 - [PV](@ref) (optional, can be Array)
 - [Wind](@ref) (optional)
@@ -82,6 +82,15 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
     
     site = Site(;dictkeys_tosymbols(d["Site"])...)
+
+    # Check that only PV, electric storage, and generator are modeled for off-grid
+    if settings.off_grid_flag
+        offgrid_allowed_keys = ["PV", "ElectricStorage", "Generator", "Settings", "Site", "Financial", "ElectricLoad", "ElectricTariff", "ElectricUtility"]
+        unallowed_keys = setdiff(keys(d), offgrid_allowed_keys) 
+        if !isempty(unallowed_keys)
+            throw(@error "Currently, only PV, ElectricStorage, and Generator can be modeled when off_grid_flag is true. Cannot model $unallowed_keys.")
+        end
+    end
     
     pvs = PV[]
     if haskey(d, "PV")
@@ -91,33 +100,39 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 if !(haskey(pv, "name"))
                     pv["name"] = string("PV", i)
                 end
-                push!(pvs, PV(;dictkeys_tosymbols(pv)...))
+                push!(pvs, PV(;dictkeys_tosymbols(pv)..., off_grid_flag = settings.off_grid_flag))
             end
         elseif typeof(d["PV"]) <: AbstractDict
             check_pv_tilt!(d["PV"], site)
-            push!(pvs, PV(;dictkeys_tosymbols(d["PV"])...))
+            push!(pvs, PV(;dictkeys_tosymbols(d["PV"])..., off_grid_flag = settings.off_grid_flag))
         else
             error("PV input must be Dict or Dict[].")
         end
     end
 
     if haskey(d, "Financial")
-        financial = Financial(; dictkeys_tosymbols(d["Financial"])...)
+        financial = Financial(; dictkeys_tosymbols(d["Financial"])..., off_grid_flag = settings.off_grid_flag )
     else
-        financial = Financial()
+        financial = Financial(; off_grid_flag = settings.off_grid_flag)
     end
 
-    if haskey(d, "ElectricUtility")
+    if haskey(d, "ElectricUtility") && !(settings.off_grid_flag)
         electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...)
-    else
+    elseif !(settings.off_grid_flag)
         electric_utility = ElectricUtility()
+    elseif settings.off_grid_flag 
+        if haskey(d, "ElectricUtility")
+            @warn "ElectricUtility inputs are not applicable when off_grid_flag is true and any ElectricUtility inputs will be ignored. For off-grid scenarios, a year-long outage will always be modeled."
+        end
+        electric_utility = ElectricUtility(; outage_start_time_step = 1, outage_end_time_step = settings.time_steps_per_hour * 8760) 
     end
 
     storage_structs = Dict{String, AbstractStorage}()
     if haskey(d,  "ElectricStorage")
         storage_dict = dictkeys_tosymbols(d["ElectricStorage"])
+        storage_dict[:off_grid_flag] = settings.off_grid_flag
     else
-        storage_dict = Dict(:max_kw => 0.0)
+        storage_dict = Dict(:max_kw => 0.0) 
     end
     storage_structs["ElectricStorage"] = ElectricStorage(storage_dict, financial)
     # TODO stop building ElectricStorage when it is not modeled by user 
@@ -134,14 +149,26 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
                                    latitude=site.latitude, longitude=site.longitude, 
-                                   time_steps_per_hour=settings.time_steps_per_hour
+                                   time_steps_per_hour=settings.time_steps_per_hour,
+                                   off_grid_flag = settings.off_grid_flag
                                 )
 
-    electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 
-                                       year=electric_load.year,
-                                       NEM=electric_utility.net_metering_limit_kw > 0, 
-                                       time_steps_per_hour=settings.time_steps_per_hour
-                                    )
+    if !(settings.off_grid_flag) # ElectricTariff only required for on-grid                            
+        electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 
+                                        year=electric_load.year,
+                                        NEM=electric_utility.net_metering_limit_kw > 0, 
+                                        time_steps_per_hour=settings.time_steps_per_hour
+                                        )
+    else # if ElectricTariff inputs supplied for off-grid, will not be applied. 
+        if haskey(d, "ElectricTariff")
+            @warn "ElectricTariff inputs are not applicable when off_grid_flag is true, and will be ignored."
+        end
+        electric_tariff = ElectricTariff(;  blended_annual_energy_rate = 0.0, 
+                                            blended_annual_demand_rate = 0.0,
+                                            year=electric_load.year,
+                                            time_steps_per_hour=settings.time_steps_per_hour
+        )
+    end
 
     if haskey(d, "Wind")
         wind = Wind(; dictkeys_tosymbols(d["Wind"])..., 
@@ -151,7 +178,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
 
     if haskey(d, "Generator")
-        generator = Generator(; dictkeys_tosymbols(d["Generator"])...)
+        generator = Generator(; dictkeys_tosymbols(d["Generator"])..., off_grid_flag=settings.off_grid_flag, analysis_years=financial.analysis_years)
     else
         generator = Generator(; max_kw=0)
     end
@@ -165,7 +192,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                         )
         max_heat_demand_kw = maximum(dhw_load.loads_kw)
     else
-        dhw_load = DomesticHotWaterLoad(; fuel_loads_mmbtu_per_hour=repeat([0.0], 8760))
+        dhw_load = DomesticHotWaterLoad(; 
+            fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
+            time_steps_per_hour=settings.time_steps_per_hour
+        )
     end
                                     
     if haskey(d, "SpaceHeatingLoad") && !haskey(d, "FlexibleHVAC")
@@ -177,7 +207,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         
         max_heat_demand_kw = maximum(space_heating_load.loads_kw .+ max_heat_demand_kw)
     else
-        space_heating_load = SpaceHeatingLoad(; fuel_loads_mmbtu_per_hour=repeat([0.0], 8760))
+        space_heating_load = SpaceHeatingLoad(; 
+            fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
+            time_steps_per_hour=settings.time_steps_per_hour
+        )
     end
 
     flexible_hvac = nothing
@@ -216,7 +249,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["CoolingLoad"])
         d["CoolingLoad"]["site_electric_load_profile"] = electric_load.loads_kw
         # Pass ExistingChiller inputs which are used in CoolingLoad processing, if they exist
-        ec_empty = ExistingChiller(;loads_kw_thermal=zeros(8760))
+        ec_empty = ExistingChiller(; loads_kw_thermal=zeros(8760*settings.time_steps_per_hour))
         if !haskey(d, "ExistingChiller")
             d["CoolingLoad"]["existing_chiller_max_thermal_factor_on_peak_load"] = ec_empty.max_thermal_factor_on_peak_load
         else
@@ -235,7 +268,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                     )
         max_cooling_demand_kw = maximum(cooling_load.loads_kw_thermal)
     else
-        cooling_load = CoolingLoad(; thermal_loads_ton=repeat([0.0], 8760))
+        cooling_load = CoolingLoad(; 
+            thermal_loads_ton=zeros(8760*settings.time_steps_per_hour),
+            time_steps_per_hour=settings.time_steps_per_hour
+        )
     end
 
     absorption_chiller = nothing
