@@ -395,8 +395,7 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
             for (k, v) in ret_map
                 setindex!(ret_map, v .* adj, k)
             end
-        catch e
-            @error e
+        catch
             @warn "income year is $(income_year) but must be between 1990 to 2024"
             return false
         end
