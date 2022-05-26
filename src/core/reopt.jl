@@ -536,8 +536,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 	end
 
-	# Comment out for continuous thermosyphon dv
-	if p.s.thermosyphon.active_cooling_rate_mmbtu_per_hour > 0
+	if !isnothing(p.s.thermosyphon)
 		@warn """Adding binary variable to model thermosyphon. 
 			Some solvers are very slow with integer variables"""
 		@variable(m, binThermosyphonIsActiveInTS[ts in p.time_steps], Bin)
