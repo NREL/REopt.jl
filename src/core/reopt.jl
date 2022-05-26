@@ -258,9 +258,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
 	add_thermosyphon_expressions(m,p)
-	if p.s.thermosyphon.active_cooling_rate_mmbtu_per_hour > 0
-		add_thermosyphon_annual_active_cooling_constraint(m, p)
-	end
+	add_thermosyphon_annual_active_cooling_constraint(m, p)
 
 	add_elec_load_balance_constraints(m, p)
 

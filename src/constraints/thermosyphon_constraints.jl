@@ -29,7 +29,7 @@
 # *********************************************************************************
 function add_thermosyphon_expressions(m,p)
 	#TODO: uncomment for using binary dv
-	if p.s.thermosyphon.active_cooling_rate_mmbtu_per_hour > 0
+	if !isnothing(p.s.thermosyphon)#p.s.thermosyphon.active_cooling_rate_mmbtu_per_hour > 0
 		@expression(m, ThermosyphonActiveCooling[ts in p.time_steps], m[:binThermosyphonIsActiveInTS][ts] * p.s.thermosyphon.active_cooling_rate_mmbtu_per_hour)
 		@expression(m, ThermosyphonElectricConsumption[ts in p.time_steps], m[:binThermosyphonIsActiveInTS][ts] * p.s.thermosyphon.active_cooling_rate_mmbtu_per_hour / p.s.thermosyphon.coefficient_of_performance_series_mmbtu_per_kwh[ts] )
 	else
@@ -52,16 +52,18 @@ end
 
 function add_thermosyphon_annual_active_cooling_constraint(m,p)
 	# @expression(m, ThermosyphonActiveCooling[ts in p.time_steps], m[:binThermosyphonIsActiveInTS][ts] * p.s.thermosyphon.active_cooling_rate_mmbtu_per_hour)
-	@constraint(m, ThermosyphonAnnualActiveCoolingCon,
-		p.s.thermosyphon.min_annual_active_cooling_mmbtu <=
-		sum( m[:ThermosyphonActiveCooling] )
-		<= p.s.thermosyphon.min_annual_active_cooling_mmbtu + p.s.thermosyphon.active_cooling_rate_mmbtu_per_hour
-	)
-	@constraint(m, ThermosyphonMonthlyActiveCoolingCon[mth in p.months],
-		p.s.thermosyphon.min_monthly_active_cooling_mmbtu[mth] <=
-		sum( m[:ThermosyphonActiveCooling][ts] for ts in p.s.electric_tariff.time_steps_monthly[mth])
-		<= p.s.thermosyphon.min_annual_active_cooling_mmbtu/2
-	)
+	if !isnothing(p.s.thermosyphon)
+		@constraint(m, ThermosyphonAnnualActiveCoolingCon,
+			p.s.thermosyphon.min_annual_active_cooling_mmbtu <=
+			sum( m[:ThermosyphonActiveCooling] )
+			<= p.s.thermosyphon.min_annual_active_cooling_mmbtu + p.s.thermosyphon.active_cooling_rate_mmbtu_per_hour
+		)
+		@constraint(m, ThermosyphonMonthlyActiveCoolingCon[mth in p.months],
+			p.s.thermosyphon.min_monthly_active_cooling_mmbtu[mth] <=
+			sum( m[:ThermosyphonActiveCooling][ts] for ts in p.s.electric_tariff.time_steps_monthly[mth])
+			<= p.s.thermosyphon.min_annual_active_cooling_mmbtu/2
+		)
+	end
 end
 
 

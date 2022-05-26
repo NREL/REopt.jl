@@ -351,7 +351,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d, "Thermosyphon")
         thermosyphon = Thermosyphon(; dictkeys_tosymbols(d["Thermosyphon"])..., latitude=site.latitude, longitude=site.longitude)
     else
-        thermosyphon = Thermosyphon(; fixed_active_cooling_rate_kw=0, latitude=site.latitude, longitude=site.longitude)
+        thermosyphon = nothing
     end
 
     return Scenario(
