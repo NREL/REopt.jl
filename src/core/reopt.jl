@@ -257,6 +257,11 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         end
 	end
 
+	add_thermosyphon_expressions(m,p)
+	if p.s.thermosyphon.active_cooling_rate_mmbtu_per_hour > 0
+		add_thermosyphon_annual_active_cooling_constraint(m, p)
+	end
+
 	add_elec_load_balance_constraints(m, p)
 
 	if p.s.settings.off_grid_flag
@@ -438,6 +443,8 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 	@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status
 	results["solver_seconds"] = opt_time
+	results["optimality_gap"] = relative_gap(m)
+	@info "Relative optimality gap is $(round(relative_gap(m), digits=3))."
     if organize_pvs && !isempty(p.techs.pv)  # do not want to organize_pvs when running BAU case in parallel b/c then proform code fails
         organize_multiple_pv_results(p, results)
     end
@@ -529,6 +536,15 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 			binMGTechUsed[p.techs.elec], Bin # 1 if MG tech used, 0 otherwise
 			binMGGenIsOnInTS[S, tZeros, outage_time_steps], Bin
 		end
+	end
+
+	# Comment out for continuous thermosyphon dv
+	if p.s.thermosyphon.active_cooling_rate_mmbtu_per_hour > 0
+		@warn """Adding binary variable to model thermosyphon. 
+			Some solvers are very slow with integer variables"""
+		@variable(m, binThermosyphonIsActiveInTS[ts in p.time_steps], Bin)
+		@constraint(m, [ts in p.s.thermosyphon.time_steps_passively_cooling],
+			m[:binThermosyphonIsActiveInTS][ts] == 0.0)
 	end
 
 	if p.s.settings.off_grid_flag
