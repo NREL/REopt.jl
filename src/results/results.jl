@@ -104,6 +104,10 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     if !isnothing(p.s.flexible_hvac)
         add_flexible_hvac_results(m, p, d)
     end
+    
+    if p.s.thermosyphon.active_cooling_rate_mmbtu_per_hour > 0
+        add_thermosyphon_results(m, p, d)
+    end
 
 	return d
 end
