@@ -46,6 +46,7 @@ struct Scenario <: AbstractScenario
     flexible_hvac::Union{FlexibleHVAC, Nothing}
     existing_chiller::Union{ExistingChiller, Nothing}
     absorption_chiller::Union{AbsorptionChiller, Nothing}
+    thermosyphon::Union{Thermosyphon, Nothing}
 end
 
 """
@@ -68,6 +69,7 @@ Constructor for Scenario struct, where `d` has upper-case keys:
 - FlexibleHVAC (optional)
 - ExistingChiller (optional)
 - AbsorptionChiller (optional)
+- Thermosyphon (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV`, which can be either a `Dict` or `Dict[]`.
 
@@ -346,6 +348,12 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         end
     end
 
+    if haskey(d, "Thermosyphon")
+        thermosyphon = Thermosyphon(; dictkeys_tosymbols(d["Thermosyphon"])..., latitude=site.latitude, longitude=site.longitude)
+    else
+        thermosyphon = Thermosyphon(; fixed_active_cooling_rate_kw=0, latitude=site.latitude, longitude=site.longitude)
+    end
+
     return Scenario(
         settings,
         site, 
@@ -364,7 +372,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         chp,
         flexible_hvac,
         existing_chiller,
-        absorption_chiller
+        absorption_chiller,
+        thermosyphon
     )
 end
 
