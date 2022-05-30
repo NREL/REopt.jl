@@ -105,6 +105,10 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         add_flexible_hvac_results(m, p, d)
     end
 
+    if !isnothing(p.s.backup_reliability)
+        add_backup_reliability_results(m, p, d)
+    end
+
 	return d
 end
 

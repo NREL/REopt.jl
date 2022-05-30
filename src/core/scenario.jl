@@ -46,6 +46,7 @@ struct Scenario <: AbstractScenario
     flexible_hvac::Union{FlexibleHVAC, Nothing}
     existing_chiller::Union{ExistingChiller, Nothing}
     absorption_chiller::Union{AbsorptionChiller, Nothing}
+    backup_reliability::BackupReliability
 end
 
 """
@@ -346,6 +347,14 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         end
     end
 
+    if haskey(d, "BackupReliability")
+        backup_reliability = BackupReliability(; dictkeys_tosymbols(d["BackupReliability"])...)
+    else
+        #CHECK IF nothing works here
+        # backup_reliability = BackupReliability()
+        backup_reliability = nothing
+    end
+
     return Scenario(
         settings,
         site, 
@@ -364,7 +373,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         chp,
         flexible_hvac,
         existing_chiller,
-        absorption_chiller
+        absorption_chiller,
+        backup_reliability
     )
 end
 
