@@ -351,8 +351,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         backup_reliability = BackupReliability(; dictkeys_tosymbols(d["BackupReliability"])...)
     else
         #CHECK IF nothing works here
-        # backup_reliability = BackupReliability()
-        backup_reliability = nothing
+        backup_reliability = BackupReliability()
     end
 
     return Scenario(
