@@ -367,10 +367,10 @@ end
         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         r = run_reopt([m1,m2], REoptInputs(Scenario(d)))
 
-        elec_cost_savings = r["ElectricTariff"]["lifecycle_demand_cost_bau"] + 
-                            r["ElectricTariff"]["lifecycle_energy_cost_bau"] - 
-                            r["ElectricTariff"]["lifecycle_demand_cost"] - 
-                            r["ElectricTariff"]["lifecycle_energy_cost"]
+        elec_cost_savings = r["ElectricTariff"]["lifecycle_demand_cost_after_tax_bau"] + 
+                            r["ElectricTariff"]["lifecycle_energy_cost_after_tax_bau"] - 
+                            r["ElectricTariff"]["lifecycle_demand_cost_after_tax"] - 
+                            r["ElectricTariff"]["lifecycle_energy_cost_after_tax"]
 
         fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax"]
         @test fuel_cost_savings + elec_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
