@@ -344,7 +344,7 @@ end
 
         # all of the savings are from the ExistingBoiler fuel costs
         @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === true
-        fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost"]
+        fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax"]
         @test fuel_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] rtol=1e-3
 
         # add TOU ElectricTariff and expect to benefit from using ExistingChiller intelligently
@@ -372,7 +372,7 @@ end
                             r["ElectricTariff"]["lifecycle_demand_cost"] - 
                             r["ElectricTariff"]["lifecycle_energy_cost"]
 
-        fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost"]
+        fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax"]
         @test fuel_cost_savings + elec_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
 
         # now increase the FlexibleHVAC installed_cost to the fuel costs savings + elec_cost_savings 
