@@ -48,11 +48,12 @@ struct REoptInputs <: AbstractInputs
     production_factor::DenseAxisArray{Float64, 2}  # (techs, time_steps)
     levelization_factor::Dict{String, Float64}  # (techs)
     value_of_lost_load_per_kwh::Array{R, 1} where R<:Real #default set to 1 US dollar per kwh
-    pwf_e::Float64
-    pwf_om::Float64
-    pwf_offtaker::Float64 
-    pwf_owner::Float64
-    third_party_factor::Float64 # equals 1 if third_party_ownership is false
+    pwf_e::Real
+    pwf_om::Real
+    pwf_fuel::Dict{String, Float64}
+    pwf_offtaker::Real 
+    pwf_owner::Real
+    third_party_factor::Real # equals 1 if third_party_ownership is false
     pvlocations::Array{Symbol, 1}
     maxsize_pv_locations::DenseAxisArray{Float64, 1}  # indexed on pvlocations
     pv_to_location::Dict{String, Dict{Symbol, Int64}}  # (techs.pv, pvlocations)
@@ -90,12 +91,12 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     production_factor::DenseAxisArray{Float64, 2}  # (techs, time_steps)
     levelization_factor::Dict{String, Float64}  # (techs)
     value_of_lost_load_per_kwh::Array{R, 1} where R<:Real #default set to 1 US dollar per kwh
-    pwf_e::Float64
-    pwf_om::Float64
-    pwf_fuel::Dict{String, Float64}
-    pwf_offtaker::Float64 
-    pwf_owner::Float64
-    third_party_factor::Float64
+    pwf_e::Real
+    pwf_om::Real
+    pwf_fuel::Dict{String, Real}
+    pwf_offtaker::Real 
+    pwf_owner::Real
+    third_party_factor::Real
     pvlocations::Array{Symbol, 1}
     maxsize_pv_locations::DenseAxisArray{Float64, 1}  # indexed on pvlocations
     pv_to_location::Dict{String, Dict{Symbol, Int64}}  # (techs.pv, pvlocations)
