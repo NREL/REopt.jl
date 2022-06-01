@@ -117,10 +117,6 @@ end
 
 function add_thermal_load_constraints(m, p; _n="")
 
-    m[Symbol("binFlexHVAC"*_n)] = 0
-    m[Symbol("dvTemperature"*_n)] = 0
-    m[Symbol("dvComfortLimitViolationCost"*_n)] = 0
-
     if !isnothing(p.s.flexible_hvac)
         #= FlexibleHVAC does not require equality constraints for thermal loads. The thermal loads
         are instead a function of the energy required to keep the space temperature within the 
