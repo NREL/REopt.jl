@@ -301,7 +301,7 @@ function emissions_series(pollutant, region_abbr; time_steps_per_hour=1)
     if isnothing(region_abbr)
         return nothing
     end
-    avert_df = DataFrame(CSV.File(joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "AVERT_hourly_emissions_$(pollutant).csv")))
+    avert_df = DataFrame(CSV.File(joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "AVERT_marg_emissions_lb$(pollutant)_per_kwh.csv")))
     if region_abbr in names(avert_df)
         emmissions_profile = round.(avert_df[!,region_abbr],digits=6)
         if time_steps_per_hour > 1
