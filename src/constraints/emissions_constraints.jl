@@ -58,7 +58,7 @@ function add_yr1_emissions_calcs(m,p)
 	else
 		include_exported_elec_emissions_in_total = 0
 	end
-	#"net" indicates net of what is getting counted, based on user selection of whether or not to include
+	# "net_if_selected" indicates that emissions totals will be net of (subtract) exports IF the user sets "site.include_exported_elec_emissions_in_total" to true
 	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2] = m[:yr1_emissions_from_elec_grid_lbs_CO2] - include_exported_elec_emissions_in_total*m[:yr1_emissions_offset_from_elec_exports_lbs_CO2]
 	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx] = m[:yr1_emissions_from_elec_grid_lbs_NOx] - include_exported_elec_emissions_in_total*m[:yr1_emissions_offset_from_elec_exports_lbs_NOx]
 	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2] = m[:yr1_emissions_from_elec_grid_lbs_SO2] - include_exported_elec_emissions_in_total*m[:yr1_emissions_offset_from_elec_exports_lbs_SO2]
