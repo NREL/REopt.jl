@@ -65,8 +65,8 @@ function ElectricUtility(;
 
 """
 mutable struct ElectricUtility
-    emissions_region::String
-    distance_to_emissions_region_meters::Real
+    emissions_region::String # AVERT emissions region
+    distance_to_emissions_region_meters::Real  
     emissions_factor_series_lb_CO2_per_kwh::Union{Nothing,Array{<:Real,1}}
     emissions_factor_series_lb_NOx_per_kwh::Union{Nothing,Array{<:Real,1}}
     emissions_factor_series_lb_SO2_per_kwh::Union{Nothing,Array{<:Real,1}}
@@ -313,4 +313,3 @@ function emissions_series(pollutant, region_abbr; time_steps_per_hour=1)
         return nothing
     end
 end
-# TODO @warn when outage_start/end_time_steps not empty and outage_start/end_time_step is provided
