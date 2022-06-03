@@ -441,8 +441,12 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 	@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status
 	results["solver_seconds"] = opt_time
-	results["optimality_gap"] = relative_gap(m)
-	@info "Relative optimality gap is $(round(relative_gap(m), digits=3))."
+	try
+		results["optimality_gap"] = round(relative_gap(m), digits4)
+		@info "Relative optimality gap is $(round(relative_gap(m), digits=3))."
+	catch
+		results["optimality_gap"] = "not supported by solver"
+	end
     if organize_pvs && !isempty(p.techs.pv)  # do not want to organize_pvs when running BAU case in parallel b/c then proform code fails
         organize_multiple_pv_results(p, results)
     end
