@@ -28,6 +28,15 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 
+"""
+	add_re_elec_constraints(m,p)
+
+Function to add minimum and/or maximum renewable electricity (as percentage of load) constraints, if specified by user.
+
+!!! note
+    When a single outage is modeled (using outage_start_time_step), renewable electricity calculations account for operations during this outage (e.g., the critical load is used during time_steps_without_grid)
+	On the contrary, when multiple outages are modeled (using outage_start_time_steps), renewable electricity calculations reflect normal operations, and do not account for expected operations during modeled outages (time_steps_without_grid is empty)
+"""
 #Renewable electricity constraints
 function add_re_elec_constraints(m,p)
 	if !isnothing(p.s.site.renewable_electricity_min_pct)
@@ -38,6 +47,15 @@ function add_re_elec_constraints(m,p)
 	end
 end
 
+"""
+	add_re_elec_calcs(m,p)
+
+Function to calculate annual electricity demand derived from renewable energy.
+
+!!! note
+    When a single outage is modeled (using outage_start_time_step), renewable electricity calculations account for operations during this outage (e.g., the critical load is used during time_steps_without_grid)
+	On the contrary, when multiple outages are modeled (using outage_start_time_steps), renewable electricity calculations reflect normal operations, and do not account for expected operations during modeled outages (time_steps_without_grid is empty)
+"""
 # Renewable electricity calculation
 function add_re_elec_calcs(m,p)
 	
@@ -91,6 +109,15 @@ function add_re_elec_calcs(m,p)
 
 end
 
+"""
+	add_re_tot_calcs(m,p)
+
+Function to calculate annual electricity and heat demand derived from renewable energy.
+
+!!! note
+    When a single outage is modeled (using outage_start_time_step), renewable electricity calculations account for operations during this outage (e.g., the critical load is used during time_steps_without_grid)
+	On the contrary, when multiple outages are modeled (using outage_start_time_steps), renewable electricity calculations reflect normal operations, and do not account for expected operations during modeled outages (time_steps_without_grid is empty)
+"""
 #Renewable heat calculations and totalling heat/electric emissions
 function add_re_tot_calcs(m,p)
  
