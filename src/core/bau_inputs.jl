@@ -47,7 +47,7 @@ function BAUInputs(p::REoptInputs)
     thermal_cop = Dict{String, Float64}()
     production_factor = DenseAxisArray{Float64}(undef, techs.all, p.time_steps)
     tech_renewable_energy_pct = DenseAxisArray([p.tech_renewable_energy_pct[t] for t in techs.all], techs.all)
-    # !!! note: tech_emissions_factors in lb / kWh (gets multiplied by kWh of fuel burned, not kWh electricity consumption, ergo the use of the HHV instead of fuel slope)
+    # !!! note: tech_emissions_factors are in lb / kWh of fuel burned (gets multiplied by kWh of fuel burned, not kWh electricity consumption, ergo the use of the HHV instead of fuel slope)
     tech_emissions_factors_CO2 = DenseAxisArray([p.tech_emissions_factors_CO2[t] for t in techs.all], techs.all)
     tech_emissions_factors_NOx = DenseAxisArray([p.tech_emissions_factors_NOx[t] for t in techs.all], techs.all)
     tech_emissions_factors_SO2 = DenseAxisArray([p.tech_emissions_factors_SO2[t] for t in techs.all], techs.all)
@@ -299,7 +299,7 @@ end
 """
     update_bau_outage_outputs(s::BAUScenario, crit_load, t0, tf, production_factors)
 
-Update the `bau_critical_load_met` and `bau_critical_load_met_time_steps`  values.
+Update the `bau_critical_load_met` and `bau_critical_load_met_time_steps` values.
 
 return: Float for the gallons of fuel used trying to meet critical load
 
