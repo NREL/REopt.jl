@@ -47,12 +47,12 @@ struct REoptInputs <: AbstractInputs
     months::UnitRange
     production_factor::DenseAxisArray{Float64, 2}  # (techs, time_steps)
     levelization_factor::Dict{String, Float64}  # (techs)
-    value_of_lost_load_per_kwh::Array{R, 1} where R<:Real #default set to 1 US dollar per kwh
-    pwf_e::Float64
-    pwf_om::Float64
-    pwf_fuel::Dict{String, Float64}
-    pwf_emissions_cost::Dict{String, Float64}
-    pwf_grid_emissions::Dict{String, Float64}
+    value_of_lost_load_per_kwh::Array{R, 1} where R<:Real # default set to 1 US dollar per kwh
+    pwf_e::Float64 # present worth factor for electricity costs
+    pwf_om::Float64 # present worth factor for O&M costs
+    pwf_fuel::Dict{String, Float64} # (ExistingBoiler, CHP, Generator)
+    pwf_emissions_cost::Dict{String, Float64} # Cost of emissions present worth factors for grid and onsite fuelburn emissions [unitless]
+    pwf_grid_emissions::Dict{String, Float64} # Emissions [lbs] present worth factors for grid emissions [unitless]
     pwf_offtaker::Float64 
     pwf_owner::Float64
     third_party_factor::Float64 # equals 1 if third_party_ownership is false
@@ -97,10 +97,10 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     months::UnitRange
     production_factor::DenseAxisArray{Float64, 2}  # (techs, time_steps)
     levelization_factor::Dict{String, Float64}  # (techs)
-    value_of_lost_load_per_kwh::Array{R, 1} where R<:Real #default set to 1 US dollar per kwh
-    pwf_e::Float64
-    pwf_om::Float64
-    pwf_fuel::Dict{String, Float64}
+    value_of_lost_load_per_kwh::Array{R, 1} where R<:Real # default set to 1 US dollar per kwh
+    pwf_e::Float64 # present worth factor for electricity costs
+    pwf_om::Float64 # present worth factor for O&M costs
+    pwf_fuel::Dict{String, Float64} # (ExistingBoiler, CHP, Generator)
     pwf_emissions_cost::Dict{String, Float64} # Cost of emissions present worth factors for grid and onsite fuelburn emissions [unitless]
     pwf_grid_emissions::Dict{String, Float64} # Emissions [lbs] present worth factors for grid emissions [unitless]
     pwf_offtaker::Float64 
@@ -254,7 +254,7 @@ function setup_tech_inputs(s::AbstractScenario)
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
     production_factor = DenseAxisArray{Float64}(undef, techs.all, 1:length(s.electric_load.loads_kw))
     tech_renewable_energy_pct = DenseAxisArray([1.0 for _ in 1:length(techs.all)], techs.all)#Dict(t => 1.0 for t in techs.all)
-    # !!! note: tech_emissions_factors in lb / kWh (gets multiplied by kWh of fuel burned, not kWh electricity consumption, ergo the use of the HHV instead of fuel slope)
+    # !!! note: tech_emissions_factors are in lb / kWh of fuel burned (gets multiplied by kWh of fuel burned, not kWh electricity consumption, ergo the use of the HHV instead of fuel slope)
     tech_emissions_factors_CO2 = DenseAxisArray([0.0 for _ in 1:length(techs.all)], techs.all)#Dict(t => 0.0 for t in techs.all)
     tech_emissions_factors_NOx = DenseAxisArray([0.0 for _ in 1:length(techs.all)], techs.all)#Dict(t => 0.0 for t in techs.all)
     tech_emissions_factors_SO2 = DenseAxisArray([0.0 for _ in 1:length(techs.all)], techs.all)#Dict(t => 0.0 for t in techs.all)
