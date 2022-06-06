@@ -1,5 +1,8 @@
 # REopt Changelog
 
+## v0.16.1
+- bug fix for outage simulator when `microgrid_only=true`
+
 ## v0.16.0
 Allows users to model "off-grid" systems as a year-long outage: 
 - add flag to "turn on" off-grid modeling `Settings.off_grid_flag` 
