@@ -87,7 +87,7 @@ function add_outage_results(m, p, d::Dict)
 	for t in p.techs.all
 		r[t * "_upgraded"] = round(value(m[:binMGTechUsed][t]), digits=0)
 	end
-	r["storage_upgraded"] = value(m[:binMGStorageUsed])
+	r["storage_upgraded"] = round(value(m[:binMGStorageUsed]), digits=0)
 
 	if !isempty(p.techs.pv)
 		for t in p.techs.pv
