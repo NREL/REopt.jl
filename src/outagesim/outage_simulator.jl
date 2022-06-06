@@ -265,7 +265,7 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
           + get(d["PV"], "year_one_to_grid_series_kw", zeros(length(p.time_steps)))
         )
     end
-    if microgrid_only && !Bool(get(d, "PV_upgraded", false))
+    if microgrid_only && !Bool(get(d["Outages"], "PV_upgraded", false))
         pv_kw_ac_hourly = zeros(length(p.time_steps))
     end
 
@@ -277,7 +277,7 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
         batt_kw = get(d["ElectricStorage"], "size_kw", 0)
         init_soc = get(d["ElectricStorage"], "year_one_soc_series_pct", zeros(length(p.time_steps)))
     end
-    if microgrid_only && !Bool(get(d, "storage_upgraded", false))
+    if microgrid_only && !Bool(get(d["Outages"], "storage_upgraded", false))
         batt_kwh = 0
         batt_kw = 0
         init_soc = zeros(length(p.time_steps))
@@ -288,7 +288,7 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
         diesel_kw = get(d["Generator"], "size_kw", 0)
     end
     if microgrid_only
-        diesel_kw = get(d, "Generator_mg_kw", 0)
+        diesel_kw = get(d["Outages"], "Generator_mg_kw", 0)
     end
 
     simulate_outages(;
