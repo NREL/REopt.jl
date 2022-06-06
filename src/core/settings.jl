@@ -35,14 +35,16 @@ Captures inputs that do not logically fall under any of the other data structs.
 
     Base.@kwdef struct Settings
         time_steps_per_hour::Int = 1
-        add_soc_incentive::Bool = true
-        off_grid_flag::Bool = false
+        add_soc_incentive::Bool = true # when true, an incentive is added to the model's objective function to keep the ElectricStorage SOC high
+        include_climate_in_objective::Bool = false # true if climate costs of emissions should be included in the model's objective function
+        include_health_in_objective::Bool = false # true if health costs of emissions should be included in the model's objective function
+        off_grid_flag::Bool = false # true if modeling an off-grid system, not connected to bulk power system
     end
 """
 Base.@kwdef struct Settings
     time_steps_per_hour::Int = 1
-    add_soc_incentive::Bool = true
-    include_climate_in_objective::Bool = false
-    include_health_in_objective::Bool = false
-    off_grid_flag::Bool = false
+    add_soc_incentive::Bool = true # when true, an incentive is added to the model's objective function to keep the ElectricStorage SOC high
+    include_climate_in_objective::Bool = false # true if climate costs of emissions should be included in the model's objective function
+    include_health_in_objective::Bool = false # true if health costs of emissions should be included in the model's objective function
+    off_grid_flag::Bool = false # true if modeling an off-grid system, not connected to bulk power system
 end
