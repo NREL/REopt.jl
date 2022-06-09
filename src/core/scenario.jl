@@ -96,15 +96,15 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d, "PV")
         if typeof(d["PV"]) <: AbstractArray
             for (i, pv) in enumerate(d["PV"])
-                check_pv_tilt!(pv, site)
                 if !(haskey(pv, "name"))
                     pv["name"] = string("PV", i)
                 end
-                push!(pvs, PV(;dictkeys_tosymbols(pv)..., off_grid_flag = settings.off_grid_flag))
+                push!(pvs, PV(;dictkeys_tosymbols(pv)..., off_grid_flag = settings.off_grid_flag, 
+                            latitude=site.latitude, longitude=site.longitude))
             end
         elseif typeof(d["PV"]) <: AbstractDict
-            check_pv_tilt!(d["PV"], site)
-            push!(pvs, PV(;dictkeys_tosymbols(d["PV"])..., off_grid_flag = settings.off_grid_flag))
+            push!(pvs, PV(;dictkeys_tosymbols(d["PV"])..., off_grid_flag = settings.off_grid_flag, 
+                        latitude=site.latitude, longitude=site.longitude))
         else
             error("PV input must be Dict or Dict[].")
         end
@@ -376,13 +376,6 @@ Consruct Scenario from filepath `fp` to JSON with keys aligned with the `Scenari
 """
 function Scenario(fp::String)
     Scenario(JSON.parsefile(fp); flex_hvac_from_json=true)
-end
-
-
-function check_pv_tilt!(pv::Dict, site::Site)
-    if !(haskey(pv, "tilt"))
-        pv["tilt"] = site.latitude
-    end
 end
 
 
