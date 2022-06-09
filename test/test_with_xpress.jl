@@ -1027,3 +1027,34 @@ end
 
 end
 
+@testset "PVspecs" begin
+    ## Scenario 1: Palmdale, CA; array-type = 0 (Ground-mount)
+    post_name = "pv.json" 
+    post = JSON.parsefile("$post_name")
+    scen = Scenario(post)
+    
+    print("\nlatitude: ", post["Site"]["latitude"])
+    print("\narray type: ", scen.pvs[1].array_type) # 0: Ground Mount Fixed (Open Rack); 1: Rooftop, Fixed
+    print("\ntilt: ", scen.pvs[1].tilt)
+    print("\nazimuth: ", scen.pvs[1].azimuth)
+ 
+    @test scen.pvs[1].tilt ≈ post["Site"]["latitude"] 
+    @test scen.pvs[1].azimuth ≈ 180
+
+    ## Scenario 2: Palmdale, CA; array-type = 1 (roof)
+    post["PV"]["array_type"] = 1 
+    scen = Scenario(post)
+
+    @test scen.pvs[1].tilt ≈ 10
+
+    ## Scenario 3:Cape Town; array-type = 0 (ground)
+    post["Site"]["latitude"] = -33.974732
+    post["Site"]["longitude"] = 19.130050
+    post["PV"]["array_type"] = 0 
+    scen = Scenario(post)
+
+    @test scen.pvs[1].tilt ≈ abs(post["Site"]["latitude"])
+    @test scen.pvs[1].azimuth ≈ 0
+ 
+end
+
