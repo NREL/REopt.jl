@@ -152,7 +152,7 @@ end
 @testset "PVspecs" begin
     ## Scenario 1: Palmdale, CA; array-type = 0 (Ground-mount)
     post_name = "pv.json" 
-    post = JSON.parsefile("$post_name")
+    post = JSON.parsefile("./scenarios/$post_name")
     scen = Scenario(post)
     
     print("\nlatitude: ", post["Site"]["latitude"])
