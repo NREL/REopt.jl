@@ -160,7 +160,7 @@ else  # run HiGHS tests
 
     @testset "AVERT region abberviations" begin
         """
-        This test checks 4 scenarios (in order)
+        This test checks 5 scenarios (in order)
         1. Coordinate pair inside an AVERT polygon
         2. Coordinate pair near a US border
         3. Coordinate pair < 5 miles from US border
@@ -169,15 +169,16 @@ else  # run HiGHS tests
         """
         (r, d) = REopt.region_abbreviation(39.86357200140234, -104.67953917092028)
         @test r == "RM"
+        @test d ≈ 0.0
         (r, d) = REopt.region_abbreviation(47.44285093638291, -69.24169587285499)
         @test r == "NE"
-        @test round(d, digits = 2) == 51.94
+        @test round(d, digits = 2) ≈ 51.94
         (r, d) = REopt.region_abbreviation(47.49137892652077, -69.3240287592685)
         @test r == "NE"
-        @test round(d, digits = 2) == 8031.25
+        @test round(d, digits = 2) ≈ 8031.25
         (r, d) = REopt.region_abbreviation(47.49153421708515, -69.3241666522892)
         @test r === nothing
-        @test round(d, digits = 2) == 8049.6
+        @test round(d, digits = 2) ≈ 8049.6
         (r, d) = REopt.region_abbreviation(55.860334445251354, -4.286554357755312)
         @test r === nothing
     end
