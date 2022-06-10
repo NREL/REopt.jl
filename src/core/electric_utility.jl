@@ -301,14 +301,17 @@ function emissions_series(pollutant, region_abbr; time_steps_per_hour=1)
     if isnothing(region_abbr)
         return nothing
     end
-    avert_df = DataFrame(CSV.File(joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "AVERT_marg_emissions_lb$(pollutant)_per_kwh.csv")))
-    if region_abbr in names(avert_df)
-        emmissions_profile = round.(avert_df[!,region_abbr],digits=6)
+    # Columns 1 and 2 do not contain AVERT region information, so skip them
+    avert_df = readdlm(joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "AVERT_marg_emissions_lb$(pollutant)_per_kwh.csv"), ',')[:, 3:end]
+
+    try
+        # Find col index for region, and then row 1 does not contain AVERT data so skip that.
+        emissions_profile = round.(avert_df[2:end,findfirst(x -> x == region_abbr, avert_df[1,:])], digits=6)
         if time_steps_per_hour > 1
-            emmissions_profile = repeat(emmissions_profile,inner=time_steps_per_hour)
+            emissions_profile = repeat(emissions_profile,inner=time_steps_per_hour)
         end
-        return emmissions_profile
-    else
+        return emissions_profile
+    catch
         @warn "Emissions error. Cannnot find hourly $(pollutant) emmissions for region $(region_abbr)."
         return nothing
     end
