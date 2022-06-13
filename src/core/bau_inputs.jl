@@ -275,7 +275,7 @@ function setup_bau_emissions_inputs(p::REoptInputs, s_bau::BAUScenario, generato
 
     ## Boiler emissions
     if "ExistingBoiler" in p.techs.all
-        for heat_type in ["space_heating", "dhw"] #TODO: are these heating types the same? can we get them from s?
+        for heat_type in ["space_heating", "dhw"]
             bau_emissions_lb_CO2_per_year += getproperty(p.s,Symbol("$(heat_type)_load")).annual_mmbtu * p.s.existing_boiler.emissions_factor_lb_CO2_per_mmbtu
             bau_emissions_lb_NOx_per_year += getproperty(p.s,Symbol("$(heat_type)_load")).annual_mmbtu * p.s.existing_boiler.emissions_factor_lb_NOx_per_mmbtu
             bau_emissions_lb_SO2_per_year += getproperty(p.s,Symbol("$(heat_type)_load")).annual_mmbtu * p.s.existing_boiler.emissions_factor_lb_SO2_per_mmbtu
