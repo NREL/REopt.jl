@@ -567,6 +567,8 @@ function process_reliability_results(results, n_timeseteps, max_outage_duration)
     )
 end
 
+
+#TODO allow for multiple generator types
 # function backup_reliability(d::Dict, p::REoptInputs)
 #     results = return_backup_reliability(d::Dict, p::REoptInputs)
 #     return process_reliability_results(results, length(p.time_steps), p.s.backup_reliability.max_outage_duration)
