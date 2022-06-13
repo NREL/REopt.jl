@@ -181,6 +181,11 @@ else  # run HiGHS tests
     
         @test scen.pvs[1].tilt ≈ abs(post["Site"]["latitude"])
         @test scen.pvs[1].azimuth ≈ 0
+
+        ## Scenario 4:Cape Town; array-type = 0 (ground); user-provided tilt (should not get overwritten)
+        post["PV"]["tilt"] = 17
+        scen = Scenario(post)
+        @test scen.pvs[1].tilt ≈ 17
      
     end
 
