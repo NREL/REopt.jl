@@ -1,5 +1,8 @@
 # REopt Changelog
 
+## Develop
+- Update PV defaults to tilt=10 for rooftop, tilt = abs(lat) for ground mount, azimuth = 180 for northern lats, azimuth = 0 for southern lats.
+-  bug fix for Generator inputs to allow for time_steps_per_hour > 1
 ## v0.16.1
 - bug fix for outage simulator when `microgrid_only=true`
 
