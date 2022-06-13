@@ -30,17 +30,12 @@
 function add_thermosyphon_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict)
     r = Dict{String, Any}()
     r["min_annual_active_cooling_mmbtu"] = p.s.thermosyphon.min_annual_active_cooling_mmbtu
-    r["min_monthly_active_cooling_mmbtu"] = p.s.thermosyphon.min_monthly_active_cooling_mmbtu
     r["active_cooling_series_btu_per_hour"] = round.(value.(m[:ThermosyphonActiveCooling]) .* 1000000, digits=6)
     r["annual_active_cooling_mmbtu"] = round(value(sum(m[:ThermosyphonActiveCooling])/p.s.settings.time_steps_per_hour), digits=6)
-    r["monthly_active_cooling_mmbtu"] = round.(value.([sum(m[:ThermosyphonActiveCooling][ts] for ts in p.s.electric_tariff.time_steps_monthly[mth])/p.s.settings.time_steps_per_hour for mth in p.months]), digits=6)
     r["electric_consumption_series_kw"] = round.(value.(m[:ThermosyphonElectricConsumption]),digits=4)
     r["annual_electric_consumption_kwh"] = round(value(sum(m[:ThermosyphonElectricConsumption])/p.s.settings.time_steps_per_hour), digits=6)
-    r["coefficient_of_performance_series_mmbtu_per_kwh"] = round.(p.s.thermosyphon.coefficient_of_performance_series_mmbtu_per_kwh, digits=4)
-    r["annual_average_coefficient_of_performance_mmbtu_per_kwh"] = r["annual_active_cooling_mmbtu"] .* 1000000 ./ r["annual_electric_consumption_kwh"]
-    # r["active_cooling_rate_mmbtu_per_hour"] = p.s.thermosyphon.active_cooling_rate_mmbtu_per_hour
-    # r["time_steps_can_actively_cool"] = p.s.thermosyphon.time_steps_can_actively_cool
-    # r["time_steps_passively_cooling"] = p.s.thermosyphon.time_steps_passively_cooling
+    r["COP_series_mmbtu_per_kwh"] = round.(p.s.thermosyphon.coefficient_of_performance_series_mmbtu_per_kwh, digits=4)
+    r["average_COP_mmbtu_per_kwh"] = r["annual_active_cooling_mmbtu"] .* 1000000 ./ r["annual_electric_consumption_kwh"]
 
     d["Thermosyphon"] = r
     nothing
