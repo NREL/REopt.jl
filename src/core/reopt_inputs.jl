@@ -488,7 +488,7 @@ function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_si
         cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
     )
     om_cost_per_kw["Generator"] = s.generator.om_cost_per_kw
-    production_factor["Generator", :] = prodfactor(s.generator)
+    production_factor["Generator", :] = prodfactor(s.generator; s.settings.time_steps_per_hour)
     fillin_techs_by_exportbin(techs_by_exportbin, s.generator, "Generator")
     if !s.generator.can_curtail
         push!(techs_no_curtail, "Generator")

@@ -158,6 +158,37 @@ else  # run HiGHS tests
         @warn "Could not delete test/Highs.log"
     end
 
+    @testset "PVspecs" begin
+        ## Scenario 1: Palmdale, CA; array-type = 0 (Ground-mount)
+        post_name = "pv.json" 
+        post = JSON.parsefile("./scenarios/$post_name")
+        scen = Scenario(post)
+     
+        @test scen.pvs[1].tilt ≈ post["Site"]["latitude"] 
+        @test scen.pvs[1].azimuth ≈ 180
+    
+        ## Scenario 2: Palmdale, CA; array-type = 1 (roof)
+        post["PV"]["array_type"] = 1 
+        scen = Scenario(post)
+    
+        @test scen.pvs[1].tilt ≈ 10
+    
+        ## Scenario 3:Cape Town; array-type = 0 (ground)
+        post["Site"]["latitude"] = -33.974732
+        post["Site"]["longitude"] = 19.130050
+        post["PV"]["array_type"] = 0 
+        scen = Scenario(post)
+    
+        @test scen.pvs[1].tilt ≈ abs(post["Site"]["latitude"])
+        @test scen.pvs[1].azimuth ≈ 0
+
+        ## Scenario 4:Cape Town; array-type = 0 (ground); user-provided tilt (should not get overwritten)
+        post["PV"]["tilt"] = 17
+        scen = Scenario(post)
+        @test scen.pvs[1].tilt ≈ 17
+     
+    end
+
     # removed Wind test for two reasons
     # 1. reduce WindToolKit calls in tests
     # 2. HiGHS does not support SOS or indicator constraints, which are needed for export constraints
