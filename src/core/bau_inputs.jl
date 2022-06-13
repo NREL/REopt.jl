@@ -238,8 +238,6 @@ function setup_bau_emissions_inputs(p::REoptInputs, s_bau::BAUScenario, generato
     bau_grid_to_load_critical = copy(s_bau.electric_load.critical_loads_kw)
     for pv in p.s.pvs if pv.existing_kw > 0
         bau_grid_to_load .-= p.levelization_factor[pv.name] * pv.existing_kw * p.production_factor[pv.name, :].data
-    end end
-    for pv in p.s.pvs if pv.existing_kw > 0
         bau_grid_to_load_critical .-= p.levelization_factor[pv.name] * pv.existing_kw * p.production_factor[pv.name, :].data
     end end
 
