@@ -65,7 +65,6 @@ function set_min_max_kw_to_existing(tech::AbstractTech, site::Site)
     techdict = Dict(fn => getfield(tech, fn) for fn in fieldnames(typeof(tech)))
     if nameof(typeof(tech)) in [:PV]
         techdict[:latitude] = site.latitude
-        techdict[:longitude] = site.longitude
     end
     techdict[:min_kw] = techdict[:existing_kw]
     techdict[:max_kw] = techdict[:existing_kw]

@@ -100,11 +100,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     pv["name"] = string("PV", i)
                 end
                 push!(pvs, PV(;dictkeys_tosymbols(pv)..., off_grid_flag = settings.off_grid_flag, 
-                            latitude=site.latitude, longitude=site.longitude))
+                            latitude=site.latitude))
             end
         elseif typeof(d["PV"]) <: AbstractDict
             push!(pvs, PV(;dictkeys_tosymbols(d["PV"])..., off_grid_flag = settings.off_grid_flag, 
-                        latitude=site.latitude, longitude=site.longitude))
+                        latitude=site.latitude))
         else
             error("PV input must be Dict or Dict[].")
         end
