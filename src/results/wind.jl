@@ -63,40 +63,36 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	end
 	r["year_one_to_battery_series_kw"] = round.(value.(WindToStorage), digits=3)
 
-    r["year_one_to_grid_series_kw"] = zeros(size(r["year_one_to_battery_series_kw"]))
     r["average_annual_energy_exported_kwh"] = 0.0
     if !isempty(p.s.electric_tariff.export_bins)
         WindToGrid = @expression(m, [ts in p.time_steps],
                 sum(m[:dvProductionToGrid][t, u, ts] for u in p.export_bins_by_tech[t]))
         r["year_one_to_grid_series_kw"] = round.(value.(WindToGrid), digits=3).data
-
         r["average_annual_energy_exported_kwh"] = round(
             sum(r["year_one_to_grid_series_kw"]) * p.hours_per_time_step, digits=0)
-    end
+	else
+		WindToGrid = zeros(length(p.time_steps))
+	end
+	r["year_one_to_grid_series_kw"] = round.(value.(WindToGrid), digits=3)
 	
 	WindToCUR = (m[Symbol("dvCurtail"*_n)][t, ts] for ts in p.time_steps)
     r["year_one_curtailed_production_series_kw"] = round.(value.(WindToCUR), digits=3)
 	
-	WindToLoad = @expression(m, [ts in p.time_steps],
-		    m[:dvRatedProduction][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t] -
-			WindToStorage[ts] - WindToGrid[ts] - WindToCUR[ts]
+	WindToLoad =(m[:dvRatedProduction][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t] 
+			- r["year_one_to_battery_series_kw"][ts] 
+			- r["year_one_to_grid_series_kw"][ts] 
+			- r["year_one_curtailed_production_series_kw"][ts] for ts in p.time_steps
 	)
 	r["year_one_to_load_series_kw"] = round.(value.(WindToLoad), digits=3)
 
-	Year1GenProd = @expression(m,
-		p.hours_per_time_step * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts]
-			for ts in p.time_steps)
-	)
-	r["year_one_energy_produced_kwh"] = round(value(Year1GenProd), digits=0)
+	Year1WindProd = (sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] for ts in p.time_steps) * p.hours_per_time_step)
+	r["year_one_energy_produced_kwh"] = round(value(Year1WindProd), digits=0)
 	AverageGenProd = @expression(m,
 		p.hours_per_time_step * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts] *
 		p.levelization_factor[t] for ts in p.time_steps)
 	)
 	r["average_annual_energy_produced_kwh"] = round(value(AverageGenProd), digits=0)
-
-    
     r["lcoe_per_kwh"] = calculate_lcoe(p, r, p.s.wind)
-
-	d["Wind"] = r
+	d[t] = r
     nothing
 end
