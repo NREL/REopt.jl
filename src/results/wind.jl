@@ -74,14 +74,9 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
             sum(r["year_one_to_grid_series_kw"]) * p.hours_per_time_step, digits=0)
     end
 
-	generatorToGrid = @expression(m, [ts in p.time_steps],
-		sum(m[:dvProductionToGrid][t, u, ts] for u in p.export_bins_by_tech[t])
-	)
-	r["year_one_to_grid_series_kw"] = round.(value.(generatorToGrid), digits=3)
-
 	prod_to_load = @expression(m, [ts in p.time_steps],
 		    m[:dvRatedProduction][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t] -
-			prod_to_storage[ts] - generatorToGrid[ts]
+			prod_to_storage[ts] - wind_to_grid[ts]
 	)
 	r["year_one_to_load_series_kw"] = round.(value.(prod_to_load), digits=3)
 
