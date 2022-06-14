@@ -178,7 +178,7 @@ struct PV <: AbstractTech
         end
 
         if off_grid_flag && (can_net_meter || can_wholesale || can_export_beyond_nem_limit)
-            @warn "Net metering, wholesale, and grid exports are not possible for off-grid scenarios. Setting can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False."
+            @warn "Net metering, wholesale, and grid exports are not possible for off-grid scenarios. Setting PV can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False."
             can_net_meter = false
             can_wholesale = false
             can_export_beyond_nem_limit = false

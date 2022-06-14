@@ -125,12 +125,19 @@ function Techs(s::Scenario)
     if s.wind.max_kw > 0
         push!(all_techs, "Wind")
         push!(elec, "Wind")
+        if s.settings.off_grid_flag
+            push!(requiring_oper_res, "Wind")
+            push!(providing_oper_res, "Wind")
+        end
     end
 
     if s.generator.max_kw > 0
         push!(all_techs, "Generator")
         push!(gentechs, "Generator")
         push!(elec, "Generator")
+        if s.settings.off_grid_flag
+            push!(providing_oper_res, "Generator")
+        end
     end
 
     if !isnothing(s.existing_boiler)
@@ -140,7 +147,7 @@ function Techs(s::Scenario)
     end
 
     if "Wind" in all_techs
-        append!(techs_no_turndown, ["Wind"])
+        append!(techs_no_turndown, ["Wind"]) # TODO: can this get moved to the if s.wind.max_kw > 0 statement?
     end
     
     if !isnothing(s.chp)
@@ -160,9 +167,12 @@ function Techs(s::Scenario)
     end
 
     if s.settings.off_grid_flag
-        requiring_oper_res = copy(pvtechs) # Currently, only PV requires operating reserves.
-        providing_oper_res = union(pvtechs, gentechs) # Currently, only PV and generator (and storage) provide operating reserves.
+        append!(requiring_oper_res, pvtechs)
+        append!(providing_oper_res, pvtechs)
     end
+
+    print("\ntechs requiring op res: ", requiring_oper_res)
+    print("\ntechs providing op res: ", providing_oper_res)
 
     cooling_techs = union(electric_chillers, absorption_chillers)
     thermal_techs = union(heating_techs, boiler_techs, chp_techs, cooling_techs)
