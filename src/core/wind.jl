@@ -214,7 +214,7 @@ struct Wind <: AbstractTech
         hub_height = size_class_to_hub_height[size_class]
 
         if !(off_grid_flag) && !(operating_reserve_required_pct == 0.0)
-            @warn "Wind operating_reserve_required_pct apply only when off_grid_flag is True. Setting operating_reserve_required_pct to 0.0 for this on-grid analysis."
+            @warn "Wind operating_reserve_required_pct applies only when off_grid_flag is True. Setting operating_reserve_required_pct to 0.0 for this on-grid analysis."
             operating_reserve_required_pct = 0.0
         end
 

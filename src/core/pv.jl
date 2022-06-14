@@ -173,7 +173,7 @@ struct PV <: AbstractTech
         )
 
         if !(off_grid_flag) && !(operating_reserve_required_pct == 0.0)
-            @warn "PV operating_reserve_required_pct apply only when off_grid_flag is True. Setting operating_reserve_required_pct to 0.0 for this on-grid analysis."
+            @warn "PV operating_reserve_required_pct applies only when off_grid_flag is True. Setting operating_reserve_required_pct to 0.0 for this on-grid analysis."
             operating_reserve_required_pct = 0.0
         end
 
