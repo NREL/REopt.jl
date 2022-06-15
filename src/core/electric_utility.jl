@@ -33,7 +33,6 @@ ElectricUtility data struct with inner constructor:
         
 ```julia
 function ElectricUtility(;
-    emissions_region::String = "",
     emissions_factor_series_lb_CO2_per_kwh::Union{Float64,Array{<:Real,1}} = Float64[],
     emissions_factor_series_lb_NOx_per_kwh::Union{Float64,Array{<:Real,1}} = Float64[],
     emissions_factor_series_lb_SO2_per_kwh::Union{Float64,Array{<:Real,1}} = Float64[],
