@@ -50,7 +50,7 @@ end
 """
 	add_re_elec_calcs(m,p)
 
-Function to calculate annual electricity demand derived from renewable energy.
+Function to calculate annual electricity demand and annual electricity demand derived from renewable energy.
 
 !!! note
     When a single outage is modeled (using outage_start_time_step), renewable electricity calculations account for operations during this outage (e.g., the critical load is used during time_steps_without_grid)
@@ -105,7 +105,7 @@ end
 """
 	add_re_tot_calcs(m,p)
 
-Function to calculate annual electricity and heat demand derived from renewable energy.
+Function to calculate annual energy (electricity plus heat) demand and annual energy demand derived from renewable energy.
 
 !!! note
     When a single outage is modeled (using outage_start_time_step), renewable electricity calculations account for operations during this outage (e.g., the critical load is used during time_steps_without_grid)
