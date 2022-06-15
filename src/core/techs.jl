@@ -171,9 +171,6 @@ function Techs(s::Scenario)
         append!(providing_oper_res, pvtechs)
     end
 
-    print("\ntechs requiring op res: ", requiring_oper_res)
-    print("\ntechs providing op res: ", providing_oper_res)
-
     cooling_techs = union(electric_chillers, absorption_chillers)
     thermal_techs = union(heating_techs, boiler_techs, chp_techs, cooling_techs)
     fuel_burning_techs = union(gentechs, boiler_techs, chp_techs)
