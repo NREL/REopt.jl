@@ -435,9 +435,8 @@ end
     r = run_reopt(m, d)
     #optimal SOH at end of horizon is 80\% to prevent any replacement
     @test sum(value.(m[:bmth_BkWh])) ≈ 0 atol=0.1
-    # TODO add another test in which the battery is replaced?
     # @test r["ElectricStorage"]["maintenance_cost"] ≈ 2972.66 atol=0.01 
-    # the maintenance_cost comes out to 3004.39 on Actions ? So we test the LCC since it should match
+    # the maintenance_cost comes out to 3004.39 on Actions, so we test the LCC since it should match
     @test r["Financial"]["lcc"] ≈ 1.240096e7  rtol=0.01
     @test last(value.(m[:SOH])) ≈ 63.129  rtol=0.01
     @test r["ElectricStorage"]["size_kwh"] ≈ 78.91  rtol=0.01
@@ -447,7 +446,7 @@ end
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
     r = run_reopt(m, d)
-    @test sum(r["ElectricStorage"]["year_one_soc_series_pct"]) / 8760 >= 0.72
+    @test round(sum(r["ElectricStorage"]["year_one_soc_series_pct"]), digits=2) / 8760 >= 0.72
 end
 
 @testset "Outage with Generator, outate simulator, BAU critical load outputs" begin
