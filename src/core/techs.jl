@@ -125,6 +125,7 @@ function Techs(s::Scenario)
     if s.wind.max_kw > 0
         push!(all_techs, "Wind")
         push!(elec, "Wind")
+        append!(techs_no_turndown, ["Wind"])
         if s.settings.off_grid_flag
             push!(requiring_oper_res, "Wind")
             push!(providing_oper_res, "Wind")
@@ -144,10 +145,6 @@ function Techs(s::Scenario)
         push!(all_techs, "ExistingBoiler")
         push!(heating_techs, "ExistingBoiler")
         push!(boiler_techs, "ExistingBoiler")
-    end
-
-    if "Wind" in all_techs
-        append!(techs_no_turndown, ["Wind"]) # TODO: can this get moved to the if s.wind.max_kw > 0 statement?
     end
     
     if !isnothing(s.chp)
