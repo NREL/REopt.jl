@@ -29,6 +29,7 @@
 # *********************************************************************************
 using Xpress
 using Random
+using CSV
 Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tests
 
 
