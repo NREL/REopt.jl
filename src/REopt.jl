@@ -43,7 +43,8 @@ export
     MPCScenario,
     MPCInputs,
     run_mpc,
-    build_mpc!
+    build_mpc!, 
+    backup_reliability
 
 import HTTP
 import JSON
@@ -61,8 +62,6 @@ import DelimitedFiles: readdlm
 const MOI = MathOptInterface
 using Shapefile
 using ArchGDAL
-#See if these are needed
-using LinearAlgebra
 using Statistics
 using Roots: fzero  # for IRR
 global hdl = nothing
@@ -99,7 +98,6 @@ include("core/electric_utility.jl")
 include("core/prodfactor.jl")
 include("core/urdb.jl")
 include("core/electric_tariff.jl")
-include("core/backup_reliability.jl")
 include("core/chp.jl")
 include("core/scenario.jl")
 include("core/bau_scenario.jl")
@@ -127,7 +125,6 @@ include("mpc/inputs.jl")
 include("mpc/constraints.jl")
 
 include("core/techs.jl")
-
 include("results/results.jl")
 include("results/electric_tariff.jl")
 include("results/electric_utility.jl")
@@ -145,14 +142,10 @@ include("results/existing_chiller.jl")
 include("results/absorption_chiller.jl")
 include("results/chp.jl")
 include("results/flexible_hvac.jl")
-include("results/backup_reliability.jl")
-
 include("core/reopt.jl")
 include("core/reopt_multinode.jl")
-
 include("outagesim/outage_simulator.jl")
 include("outagesim/backup_reliability.jl")
-
 
 include("lindistflow/extend.jl")
 
