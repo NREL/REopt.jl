@@ -1031,8 +1031,7 @@ end
     post = JSON.parsefile("./scenarios/$post_name")
     post["ElectricLoad"]["loads_kw"] = [10.0 for i in range(1,8760)]
     scen = Scenario(post)
-    df = CSV.read("./data/example_wind_prod_factor_kw.csv", skipto=2, DataFrame)
-    post["Wind"]["prod_factor_series"] = df[!, "kWac per kW installed"]
+    post["Wind"]["prod_factor_series"] =  reduce(vcat, readdlm("./data/example_wind_prod_factor_kw.csv", '\n', header=true)[1])
 
     results = run_reopt(m, post)
 
