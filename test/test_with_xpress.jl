@@ -218,163 +218,163 @@ end
     end
 end
 
-# @testset "FlexibleHVAC" begin
+@testset "FlexibleHVAC" begin
 
-#     @testset "Single RC Model heating only" begin
-#         #=
-#         Single RC model:
-#         1 state/control node
-#         2 inputs: Ta and Qheat
-#         A = [1/(RC)], B = [1/(RC) 1/C], u = [Ta; Q]
-#         NOTE exogenous_inputs (u) allows for parasitic heat, but it is input as zeros here
+    @testset "Single RC Model heating only" begin
+        #=
+        Single RC model:
+        1 state/control node
+        2 inputs: Ta and Qheat
+        A = [1/(RC)], B = [1/(RC) 1/C], u = [Ta; Q]
+        NOTE exogenous_inputs (u) allows for parasitic heat, but it is input as zeros here
 
-#         We start with no technologies except ExistingBoiler and ExistingChiller. 
-#         FlexibleHVAC is only worth purchasing if its cost is neglible (i.e. below the lcc_bau * MIPTOL) 
-#         or if there is a time-varying fuel and/or electricity cost 
-#         (and the FlexibleHVAC installed_cost is less than the achievable savings).
-#         =#
+        We start with no technologies except ExistingBoiler and ExistingChiller. 
+        FlexibleHVAC is only worth purchasing if its cost is neglible (i.e. below the lcc_bau * MIPTOL) 
+        or if there is a time-varying fuel and/or electricity cost 
+        (and the FlexibleHVAC installed_cost is less than the achievable savings).
+        =#
 
-#         # Austin, TX -> existing_chiller and existing_boiler added with FlexibleHVAC
-#         tamb = REopt.get_ambient_temperature(30.2672, -97.7431);
-#         R = 0.00025  # K/kW
-#         C = 1e5   # kJ/K
-#         # the starting scenario has flat fuel and electricty costs
-#         d = JSON.parsefile("./scenarios/thermal_load.json");
-#         A = reshape([-1/(R*C)], 1,1)
-#         B = [1/(R*C) 1/C]
-#         u = [tamb zeros(8760)]';
-#         d["FlexibleHVAC"] = Dict(
-#             "control_node" => 1,
-#             "initial_temperatures" => [21],
-#             "temperature_upper_bound_degC" => 22.0,
-#             "temperature_lower_bound_degC" => 19.8,
-#             "installed_cost" => 300.0, # NOTE cost must be more then the MIPTOL * LCC 5e-5 * 5.79661e6 ≈ 290 to make FlexibleHVAC not worth it
-#             "system_matrix" => A,
-#             "input_matrix" => B,
-#             "exogenous_inputs" => u
-#         )
+        # Austin, TX -> existing_chiller and existing_boiler added with FlexibleHVAC
+        tamb = REopt.get_ambient_temperature(30.2672, -97.7431);
+        R = 0.00025  # K/kW
+        C = 1e5   # kJ/K
+        # the starting scenario has flat fuel and electricty costs
+        d = JSON.parsefile("./scenarios/thermal_load.json");
+        A = reshape([-1/(R*C)], 1,1)
+        B = [1/(R*C) 1/C]
+        u = [tamb zeros(8760)]';
+        d["FlexibleHVAC"] = Dict(
+            "control_node" => 1,
+            "initial_temperatures" => [21],
+            "temperature_upper_bound_degC" => 22.0,
+            "temperature_lower_bound_degC" => 19.8,
+            "installed_cost" => 300.0, # NOTE cost must be more then the MIPTOL * LCC 5e-5 * 5.79661e6 ≈ 290 to make FlexibleHVAC not worth it
+            "system_matrix" => A,
+            "input_matrix" => B,
+            "exogenous_inputs" => u
+        )
 
-#         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#         r = run_reopt([m1,m2], d)
-#         @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
-#         @test r["Financial"]["npv"] == 0
+        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        r = run_reopt([m1,m2], d)
+        @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
+        @test r["Financial"]["npv"] == 0
 
-#         # put in a time varying fuel cost, which should make purchasing the FlexibleHVAC system economical
-#         # with flat ElectricTariff the ExistingChiller does not benefit from FlexibleHVAC
-#         d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = rand(Float64, (8760))*(50-5).+5;
-#         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#         r = run_reopt([m1,m2], d)
-#         # all of the savings are from the ExistingBoiler fuel costs
-#         @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === true
-#         fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax"]
-#         @test fuel_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
+        # put in a time varying fuel cost, which should make purchasing the FlexibleHVAC system economical
+        # with flat ElectricTariff the ExistingChiller does not benefit from FlexibleHVAC
+        d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = rand(Float64, (8760))*(50-5).+5;
+        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        r = run_reopt([m1,m2], d)
+        # all of the savings are from the ExistingBoiler fuel costs
+        @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === true
+        fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax"]
+        @test fuel_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
 
-#         # now increase the FlexibleHVAC installed_cost to the fuel costs savings + 100 and expect that the FlexibleHVAC is not purchased
-#         d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + 100
-#         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#         r = run_reopt([m1,m2], d)
-#         @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
-#         @test r["Financial"]["npv"] == 0
+        # now increase the FlexibleHVAC installed_cost to the fuel costs savings + 100 and expect that the FlexibleHVAC is not purchased
+        d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + 100
+        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        r = run_reopt([m1,m2], d)
+        @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
+        @test r["Financial"]["npv"] == 0
 
-#         # add TOU ElectricTariff and expect to benefit from using ExistingChiller intelligently
-#         d["ElectricTariff"] = Dict("urdb_label" => "5ed6c1a15457a3367add15ae")
+        # add TOU ElectricTariff and expect to benefit from using ExistingChiller intelligently
+        d["ElectricTariff"] = Dict("urdb_label" => "5ed6c1a15457a3367add15ae")
 
-#         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#         r = run_reopt([m1,m2], d)
+        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        r = run_reopt([m1,m2], d)
 
-#         elec_cost_savings = r["ElectricTariff"]["lifecycle_demand_cost_after_tax_bau"] + 
-#                             r["ElectricTariff"]["lifecycle_energy_cost_after_tax_bau"] - 
-#                             r["ElectricTariff"]["lifecycle_demand_cost_after_tax"] - 
-#                             r["ElectricTariff"]["lifecycle_energy_cost_after_tax"]
+        elec_cost_savings = r["ElectricTariff"]["lifecycle_demand_cost_after_tax_bau"] + 
+                            r["ElectricTariff"]["lifecycle_energy_cost_after_tax_bau"] - 
+                            r["ElectricTariff"]["lifecycle_demand_cost_after_tax"] - 
+                            r["ElectricTariff"]["lifecycle_energy_cost_after_tax"]
 
-#         fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax"]
-#         @test fuel_cost_savings + elec_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
+        fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax"]
+        @test fuel_cost_savings + elec_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
 
-#         # now increase the FlexibleHVAC installed_cost to the fuel costs savings + elec_cost_savings 
-#         # + 100 and expect that the FlexibleHVAC is not purchased
-#         d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + elec_cost_savings + 100
-#         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#         r = run_reopt([m1,m2], d)
-#         @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
-#         @test r["Financial"]["npv"] == 0
+        # now increase the FlexibleHVAC installed_cost to the fuel costs savings + elec_cost_savings 
+        # + 100 and expect that the FlexibleHVAC is not purchased
+        d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + elec_cost_savings + 100
+        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        r = run_reopt([m1,m2], d)
+        @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
+        @test r["Financial"]["npv"] == 0
 
-#     end
+    end
 
-#     # TODO test with hot/cold TES
-#     # TODO test with PV and Storage?
+    # TODO test with hot/cold TES
+    # TODO test with PV and Storage?
 
-#     # TODO plot deadband (BAU_HVAC) temperatures vs. optimal flexed temperatures
-#     #=
-#     using Plots
-#     plotlyjs()
-#     plot(r["FlexibleHVAC"]["temperatures_degC_node_by_time_bau"][1,:], label="bau")
-#     plot!(r["FlexibleHVAC"]["temperatures_degC_node_by_time"][1,:], line=(:dot))
-#     =#
+    # TODO plot deadband (BAU_HVAC) temperatures vs. optimal flexed temperatures
+    #=
+    using Plots
+    plotlyjs()
+    plot(r["FlexibleHVAC"]["temperatures_degC_node_by_time_bau"][1,:], label="bau")
+    plot!(r["FlexibleHVAC"]["temperatures_degC_node_by_time"][1,:], line=(:dot))
+    =#
 
-#     # @testset "placeholder 5 param RC model" begin
-#     #     # these tests pass locally but not on Actions ???
-#     #     d = JSON.parsefile("./scenarios/thermal_load.json");
-#     #     d["FlexibleHVAC"] = JSON.parsefile("./scenarios/placeholderFlexibleHVAC.json")["FlexibleHVAC"]
-#     #     s = Scenario(d; flex_hvac_from_json=true);
-#     #     p = REoptInputs(s);
+    # @testset "placeholder 5 param RC model" begin
+    #     # these tests pass locally but not on Actions ???
+    #     d = JSON.parsefile("./scenarios/thermal_load.json");
+    #     d["FlexibleHVAC"] = JSON.parsefile("./scenarios/placeholderFlexibleHVAC.json")["FlexibleHVAC"]
+    #     s = Scenario(d; flex_hvac_from_json=true);
+    #     p = REoptInputs(s);
 
-#     #     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     #     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    #     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    #     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
 
-#     #     r = run_reopt([m1,m2], p)
-#     #     @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
-#     #     @test r["Financial"]["npv"] == 0
+    #     r = run_reopt([m1,m2], p)
+    #     @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
+    #     @test r["Financial"]["npv"] == 0
 
-#     #     #= put in a time varying fuel cost, which should make purchasing the FlexibleHVAC system economical
-#     #        with flat ElectricTariff the ExistingChiller does not benefit from FlexibleHVAC =#
-#     #     d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = rand(Float64, (8760))*(50-25).+25;
-#     #     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     #     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     #     r = run_reopt([m1,m2], REoptInputs(Scenario(d; flex_hvac_from_json=true)))
-#     #     # all of the savings are from the ExistingBoiler fuel costs
-#     #     @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === true
-#     #     fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost"]
-#     #     @test fuel_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
+    #     #= put in a time varying fuel cost, which should make purchasing the FlexibleHVAC system economical
+    #        with flat ElectricTariff the ExistingChiller does not benefit from FlexibleHVAC =#
+    #     d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = rand(Float64, (8760))*(50-25).+25;
+    #     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    #     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    #     r = run_reopt([m1,m2], REoptInputs(Scenario(d; flex_hvac_from_json=true)))
+    #     # all of the savings are from the ExistingBoiler fuel costs
+    #     @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === true
+    #     fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost"]
+    #     @test fuel_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
        
-#     #     # now increase the FlexibleHVAC installed_cost to the fuel costs savings + 100 and expect that the FlexibleHVAC is not purchased
-#     #     d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + 100
-#     #     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     #     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     #     r = run_reopt([m1,m2], REoptInputs(Scenario(d; flex_hvac_from_json=true)))
-#     #     @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
-#     #     @test r["Financial"]["npv"] == 0
+    #     # now increase the FlexibleHVAC installed_cost to the fuel costs savings + 100 and expect that the FlexibleHVAC is not purchased
+    #     d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + 100
+    #     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    #     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    #     r = run_reopt([m1,m2], REoptInputs(Scenario(d; flex_hvac_from_json=true)))
+    #     @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
+    #     @test r["Financial"]["npv"] == 0
 
-#     #     # add TOU ElectricTariff and expect to benefit from using ExistingChiller intelligently
-#     #     d["ElectricTariff"] = Dict("tou_energy_rates_per_kwh" => rand(Float64, (8760))*(0.80-0.45).+0.45)
-#     #     d["FlexibleHVAC"]["temperature_upper_bound_degC"] = 18.0  # lower the upper bound to give Chiller more cost savings opportunity
-#     #     d["FlexibleHVAC"]["installed_cost"] = 300
-#     #     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     #     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     #     r = run_reopt([m1,m2], REoptInputs(Scenario(d; flex_hvac_from_json=true)))
+    #     # add TOU ElectricTariff and expect to benefit from using ExistingChiller intelligently
+    #     d["ElectricTariff"] = Dict("tou_energy_rates_per_kwh" => rand(Float64, (8760))*(0.80-0.45).+0.45)
+    #     d["FlexibleHVAC"]["temperature_upper_bound_degC"] = 18.0  # lower the upper bound to give Chiller more cost savings opportunity
+    #     d["FlexibleHVAC"]["installed_cost"] = 300
+    #     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    #     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    #     r = run_reopt([m1,m2], REoptInputs(Scenario(d; flex_hvac_from_json=true)))
 
-#     #     elec_cost_savings = r["ElectricTariff"]["lifecycle_demand_cost_bau"] + 
-#     #                         r["ElectricTariff"]["lifecycle_energy_cost_bau"] - 
-#     #                         r["ElectricTariff"]["lifecycle_demand_cost"] - 
-#     #                         r["ElectricTariff"]["lifecycle_energy_cost"]
+    #     elec_cost_savings = r["ElectricTariff"]["lifecycle_demand_cost_bau"] + 
+    #                         r["ElectricTariff"]["lifecycle_energy_cost_bau"] - 
+    #                         r["ElectricTariff"]["lifecycle_demand_cost"] - 
+    #                         r["ElectricTariff"]["lifecycle_energy_cost"]
 
-#     #     fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost"]
-#     #     @test fuel_cost_savings + elec_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
+    #     fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost"]
+    #     @test fuel_cost_savings + elec_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
 
-#     #     # now increase the FlexibleHVAC installed_cost to the fuel costs savings + elec_cost_savings 
-#     #     # + 100 and expect that the FlexibleHVAC is not purchased
-#     #     d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + elec_cost_savings + 100
-#     #     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     #     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     #     r = run_reopt([m1,m2], REoptInputs(Scenario(d; flex_hvac_from_json=true)))
-#     #     @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
-#     #     @test r["Financial"]["npv"] == 0
-#     # end
-# end
+    #     # now increase the FlexibleHVAC installed_cost to the fuel costs savings + elec_cost_savings 
+    #     # + 100 and expect that the FlexibleHVAC is not purchased
+    #     d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + elec_cost_savings + 100
+    #     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    #     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    #     r = run_reopt([m1,m2], REoptInputs(Scenario(d; flex_hvac_from_json=true)))
+    #     @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
+    #     @test r["Financial"]["npv"] == 0
+    # end
+end
 
 # #=
 # add a time-of-export rate that is greater than retail rate for the month of January,
