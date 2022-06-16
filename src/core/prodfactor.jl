@@ -65,8 +65,8 @@ function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly",
 end
 
 
-function prodfactor(g::AbstractGenerator; ts_per_hour::Int=1)
-    return ones(8760 * ts_per_hour)
+function prodfactor(g::AbstractGenerator; time_steps_per_hour::Int=1)
+    return ones(8760 * time_steps_per_hour)
 end
 
 

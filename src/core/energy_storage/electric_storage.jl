@@ -33,8 +33,9 @@
 Inputs used when `ElectricStorage.model_degradation` is `true`:
 ```julia
 Base.@kwdef mutable struct Degradation
-    calendar_fade_coefficient::Float64 = 2.46E-03
-    cycle_fade_coefficient::Float64 = 7.82E-05
+    calendar_fade_coefficient::Real = 2.46E-03
+    cycle_fade_coefficient::Real = 7.82E-05
+    time_exponent::Real = 0.5
     installed_cost_per_kwh_declination_rate::Float64 = 0.05
     maintenance_strategy::String = "augmentation"  # one of ["augmentation", "replacement"]
     maintenance_cost_per_kwh::Vector{<:Real} = Real[]
@@ -150,9 +151,10 @@ The following shows how one would use the degradation model in REopt via the [Sc
 Note that not all of the above inputs are necessary. When not providing `calendar_fade_coefficient` for example the default value will be used.
 """
 Base.@kwdef mutable struct Degradation
-    calendar_fade_coefficient::Float64 = 2.46E-03
-    cycle_fade_coefficient::Float64 = 7.82E-05
-    installed_cost_per_kwh_declination_rate::Float64 = 0.05
+    calendar_fade_coefficient::Real = 2.46E-03
+    cycle_fade_coefficient::Real = 7.82E-05
+    time_exponent::Real = 0.5
+    installed_cost_per_kwh_declination_rate::Real = 0.05
     maintenance_strategy::String = "augmentation"  # one of ["augmentation", "replacement"]
     maintenance_cost_per_kwh::Vector{<:Real} = Real[]
 end

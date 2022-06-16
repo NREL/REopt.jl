@@ -33,81 +33,83 @@
 The data structure for all the inputs necessary to construct the JuMP model.
 ```julia
 struct REoptInputs <: AbstractInputs
-    s::AbstractScenario
+    s::ScenarioType
     techs::Techs
-    min_sizes::Dict{String, Float64}  # (techs)
-    max_sizes::Dict{String, Float64}  # (techs)
-    existing_sizes::Dict{String, Float64}  # (techs)
+    min_sizes::Dict{String, <:Real}  # (techs)
+    max_sizes::Dict{String, <:Real}  # (techs)
+    existing_sizes::Dict{String, <:Real}  # (techs)
     cap_cost_slope::Dict{String, Any}  # (techs)
-    om_cost_per_kw::Dict{String, Float64}  # (techs)
+    om_cost_per_kw::Dict{String, <:Real}  # (techs)
+    cop::Dict{String, <:Real}  # (techs.cooling)
+    thermal_cop::Dict{String, <:Real}  # (techs.absorption_chiller)
     time_steps::UnitRange
     time_steps_with_grid::Array{Int, 1}
     time_steps_without_grid::Array{Int, 1}
-    hours_per_time_step::Float64
+    hours_per_time_step::Real
     months::UnitRange
-    production_factor::DenseAxisArray{Float64, 2}  # (techs, time_steps)
-    levelization_factor::Dict{String, Float64}  # (techs)
-    value_of_lost_load_per_kwh::Array{R, 1} where R<:Real # default set to 1 US dollar per kwh
-    pwf_e::Float64 # present worth factor for electricity costs
-    pwf_om::Float64 # present worth factor for O&M costs
-    pwf_fuel::Dict{String, Float64} # (ExistingBoiler, CHP, Generator)
+    production_factor::DenseAxisArray{<:Real, 2}  # (techs, time_steps)
+    levelization_factor::Dict{String, <:Real,}  # (techs)
+    value_of_lost_load_per_kwh::Array{<:Real, 1}
+    pwf_e::Real
+    pwf_om::Real
+    pwf_fuel::Dict{String, <:Real}
     pwf_emissions_cost::Dict{String, Float64} # Cost of emissions present worth factors for grid and onsite fuelburn emissions [unitless]
     pwf_grid_emissions::Dict{String, Float64} # Emissions [lbs] present worth factors for grid emissions [unitless]
-    pwf_offtaker::Float64 
-    pwf_owner::Float64
-    third_party_factor::Float64 # equals 1 if third_party_ownership is false
+    pwf_offtaker::Real 
+    pwf_owner::Real
+    third_party_factor::Real
     pvlocations::Array{Symbol, 1}
-    maxsize_pv_locations::DenseAxisArray{Float64, 1}  # indexed on pvlocations
+    maxsize_pv_locations::DenseAxisArray{<:Real, 1}  # indexed on pvlocations
     pv_to_location::Dict{String, Dict{Symbol, Int64}}  # (techs.pv, pvlocations)
     ratchets::UnitRange
     techs_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL, :CUR]
     export_bins_by_tech::Dict
     n_segs_by_tech::Dict{String, Int}
-    seg_min_size::Dict{String, Dict{Int, Real}}
-    seg_max_size::Dict{String, Dict{Int, Real}}
-    seg_yint::Dict{String, Dict{Int, Real}}
+    seg_min_size::Dict{String, Dict{Int, <:Real}}
+    seg_max_size::Dict{String, Dict{Int, <:Real}}
+    seg_yint::Dict{String, Dict{Int, <:Real}}
     pbi_pwf::Dict{String, Any}  # (pbi_techs)
     pbi_max_benefit::Dict{String, Any}  # (pbi_techs)
     pbi_max_kw::Dict{String, Any}  # (pbi_techs)
     pbi_benefit_per_kwh::Dict{String, Any}  # (pbi_techs)
-    boiler_efficiency::Dict{String, Float64}
+    boiler_efficiency::Dict{String, <:Real}
     tech_renewable_energy_pct::DenseAxisArray{Float64, 1} # (techs)
     tech_emissions_factors_CO2::DenseAxisArray{Float64, 1} # (techs)
     tech_emissions_factors_NOx::DenseAxisArray{Float64, 1} # (techs)
     tech_emissions_factors_SO2::DenseAxisArray{Float64, 1} # (techs)
     tech_emissions_factors_PM25::DenseAxisArray{Float64, 1} # (techs)
-    techs_operating_reserve_req_pct::Dict{String, Float64} # (techs.all)
+    techs_operating_reserve_req_pct::Dict{String, <:Real} # (techs.all)
 end
 ```
 """
 struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     s::ScenarioType
     techs::Techs
-    min_sizes::Dict{String, Float64}  # (techs)
-    max_sizes::Dict{String, Float64}  # (techs)
-    existing_sizes::Dict{String, Float64}  # (techs)
+    min_sizes::Dict{String, <:Real}  # (techs)
+    max_sizes::Dict{String, <:Real}  # (techs)
+    existing_sizes::Dict{String, <:Real}  # (techs)
     cap_cost_slope::Dict{String, Any}  # (techs)
-    om_cost_per_kw::Dict{String, Float64}  # (techs)
-    cop::Dict{String, Float64}  # (techs.cooling)
-    thermal_cop::Dict{String, Float64}  # (techs.absorption_chiller)
+    om_cost_per_kw::Dict{String, <:Real}  # (techs)
+    cop::Dict{String, <:Real}  # (techs.cooling)
+    thermal_cop::Dict{String, <:Real}  # (techs.absorption_chiller)
     time_steps::UnitRange
     time_steps_with_grid::Array{Int, 1}
     time_steps_without_grid::Array{Int, 1}
-    hours_per_time_step::Float64
+    hours_per_time_step::Real
     months::UnitRange
-    production_factor::DenseAxisArray{Float64, 2}  # (techs, time_steps)
-    levelization_factor::Dict{String, Float64}  # (techs)
-    value_of_lost_load_per_kwh::Array{R, 1} where R<:Real # default set to 1 US dollar per kwh
-    pwf_e::Float64 # present worth factor for electricity costs
-    pwf_om::Float64 # present worth factor for O&M costs
-    pwf_fuel::Dict{String, Float64} # (ExistingBoiler, CHP, Generator)
+    production_factor::DenseAxisArray{<:Real, 2}  # (techs, time_steps)
+    levelization_factor::Dict{String, <:Real}  # (techs)
+    value_of_lost_load_per_kwh::Array{<:Real, 1}
+    pwf_e::Real
+    pwf_om::Real
+    pwf_fuel::Dict{String, <:Real}
     pwf_emissions_cost::Dict{String, Float64} # Cost of emissions present worth factors for grid and onsite fuelburn emissions [unitless]
     pwf_grid_emissions::Dict{String, Float64} # Emissions [lbs] present worth factors for grid emissions [unitless]
-    pwf_offtaker::Float64 
-    pwf_owner::Float64
-    third_party_factor::Float64
+    pwf_offtaker::Real 
+    pwf_owner::Real
+    third_party_factor::Real
     pvlocations::Array{Symbol, 1}
-    maxsize_pv_locations::DenseAxisArray{Float64, 1}  # indexed on pvlocations
+    maxsize_pv_locations::DenseAxisArray{<:Real, 1}  # indexed on pvlocations
     pv_to_location::Dict{String, Dict{Symbol, Int64}}  # (techs.pv, pvlocations)
     ratchets::UnitRange
     techs_by_exportbin::Dict{Symbol, AbstractArray}  # keys can include [:NEM, :WHL, :CUR]
@@ -120,13 +122,13 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     pbi_max_benefit::Dict{String, Any}  # (pbi_techs)
     pbi_max_kw::Dict{String, Any}  # (pbi_techs)
     pbi_benefit_per_kwh::Dict{String, Any}  # (pbi_techs)
-    boiler_efficiency::Dict{String, Float64}
+    boiler_efficiency::Dict{String, <:Real}
     tech_renewable_energy_pct::DenseAxisArray{Float64, 1} # (techs)
     tech_emissions_factors_CO2::DenseAxisArray{Float64, 1} # (techs)
     tech_emissions_factors_NOx::DenseAxisArray{Float64, 1} # (techs)
     tech_emissions_factors_SO2::DenseAxisArray{Float64, 1} # (techs)
     tech_emissions_factors_PM25::DenseAxisArray{Float64, 1} # (techs)
-    techs_operating_reserve_req_pct::Dict{String, Float64} # (techs.all)
+    techs_operating_reserve_req_pct::Dict{String, <:Real} # (techs.all)
 end
 
 
@@ -526,7 +528,7 @@ function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_si
         cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
     )
     om_cost_per_kw["Generator"] = s.generator.om_cost_per_kw
-    production_factor["Generator", :] = prodfactor(s.generator)
+    production_factor["Generator", :] = prodfactor(s.generator; s.settings.time_steps_per_hour)
     fillin_techs_by_exportbin(techs_by_exportbin, s.generator, "Generator")
     if !s.generator.can_curtail
         push!(techs_no_curtail, "Generator")
