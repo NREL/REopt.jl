@@ -131,7 +131,7 @@ mutable struct ElectricUtility
         )
         
         region_abbr, meters_to_region = region_abbreviation(latitude, longitude)
-        emissions_region = get(region_lookup, region_abbr, "None")
+        emissions_region = get(region_lookup, region_abbr, nothing)
         emissions_series_dict = Dict{String, Array{<:Real,1}}()
 
         #TODO: can this section be refactored by emissions_type by using Symbol("") technique?
