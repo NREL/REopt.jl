@@ -226,9 +226,6 @@ mutable struct Financial
 end
 
 
-# Convert from 2010$ to 2020$ (source: https://www.in2013dollars.com/us/inflation/2010?amount=100)
-const USD_2010_to_2020 = 1.246
-
 function easiur_costs(latitude::Float64, longitude::Float64, grid_or_onsite::String)
     # Assumption: grid emissions occur at site at 150m above ground
     # and on-site fuelburn emissions occur at site at 0m above ground
@@ -248,7 +245,8 @@ function easiur_costs(latitude::Float64, longitude::Float64, grid_or_onsite::Str
     coords = g2l(longitude, latitude, datum="NAD83")
     x = Int(round(coords[1]))
     y = Int(round(coords[2]))
-
+    # Convert from 2010$ to 2020$ (source: https://www.in2013dollars.com/us/inflation/2010?amount=100)
+    USD_2010_to_2020 = 1.246
     try
         costs_per_tonne = Dict(
             "NOx" => EASIUR_data["NOX_Annual"][x - 1, y - 1] .* USD_2010_to_2020,
