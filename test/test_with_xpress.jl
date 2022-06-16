@@ -904,73 +904,73 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
 #     @test round(sum(cooling_electric_hybrid_expected .- cooling_elec_hybrid), digits=1) ≈ 0.0 atol=0.1
 # end
 
-# @testset "OffGrid" begin
-#     ## Scenario 1: Solar, Storage, Fixed Generator
-#     post_name = "off_grid.json" 
-#     post = JSON.parsefile("./scenarios/$post_name")
-#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     r = run_reopt(m, post)
-#     scen = Scenario(post)
+@testset "OffGrid" begin
+    ## Scenario 1: Solar, Storage, Fixed Generator
+    post_name = "off_grid.json" 
+    post = JSON.parsefile("./scenarios/$post_name")
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    r = run_reopt(m, post)
+    scen = Scenario(post)
     
-#     # Test default values 
-#     @test scen.electric_utility.outage_start_time_step ≈ 1
-#     @test scen.electric_utility.outage_end_time_step ≈ 8760 * scen.settings.time_steps_per_hour
-#     @test scen.storage.attr["ElectricStorage"].soc_init_pct ≈ 1
-#     @test scen.storage.attr["ElectricStorage"].can_grid_charge ≈ false
-#     @test scen.generator.fuel_avail_gal ≈ 1.0e9
-#     @test scen.generator.min_turn_down_pct ≈ 0.15
-#     @test sum(scen.electric_load.loads_kw) - sum(scen.electric_load.critical_loads_kw) ≈ 0 # critical loads should equal loads_kw
-#     @test scen.financial.microgrid_upgrade_cost_pct ≈ 0
+    # Test default values 
+    @test scen.electric_utility.outage_start_time_step ≈ 1
+    @test scen.electric_utility.outage_end_time_step ≈ 8760 * scen.settings.time_steps_per_hour
+    @test scen.storage.attr["ElectricStorage"].soc_init_pct ≈ 1
+    @test scen.storage.attr["ElectricStorage"].can_grid_charge ≈ false
+    @test scen.generator.fuel_avail_gal ≈ 1.0e9
+    @test scen.generator.min_turn_down_pct ≈ 0.15
+    @test sum(scen.electric_load.loads_kw) - sum(scen.electric_load.critical_loads_kw) ≈ 0 # critical loads should equal loads_kw
+    @test scen.financial.microgrid_upgrade_cost_pct ≈ 0
 
-#     # Test outputs
-#     @test r["ElectricUtility"]["year_one_energy_supplied_kwh"] ≈ 0 # no interaction with grid
-#     @test r["Financial"]["lifecycle_offgrid_other_capital_costs"] ≈ 2617.092 atol=0.01 # Check straight line depreciation calc
-#     @test sum(r["ElectricLoad"]["offgrid_annual_oper_res_provided_series_kwh"]) >= sum(r["ElectricLoad"]["offgrid_annual_oper_res_required_series_kwh"]) # OR provided >= required
-#     @test r["ElectricLoad"]["offgrid_load_met_pct"] >= scen.electric_load.min_load_met_annual_pct
-#     @test r["PV"]["size_kw"] ≈ 5050.0
-#     f = r["Financial"]
-#     @test f["lifecycle_generation_tech_capital_costs"] + f["lifecycle_storage_capital_costs"] + f["lifecycle_om_costs_after_tax"] +
-#              f["lifecycle_fuel_costs_after_tax"] + f["lifecycle_chp_standby_cost_after_tax"] + f["lifecycle_elecbill_after_tax"] + 
-#              f["lifecycle_offgrid_other_annual_costs_after_tax"] + f["lifecycle_offgrid_other_capital_costs"] + 
-#              f["lifecycle_outage_cost"] + f["lifecycle_MG_upgrade_and_fuel_cost"] - 
-#              f["lifecycle_production_incentive_after_tax"] ≈ f["lcc"] atol=1.0
+    # Test outputs
+    @test r["ElectricUtility"]["year_one_energy_supplied_kwh"] ≈ 0 # no interaction with grid
+    @test r["Financial"]["lifecycle_offgrid_other_capital_costs"] ≈ 2617.092 atol=0.01 # Check straight line depreciation calc
+    @test sum(r["ElectricLoad"]["offgrid_annual_oper_res_provided_series_kwh"]) >= sum(r["ElectricLoad"]["offgrid_annual_oper_res_required_series_kwh"]) # OR provided >= required
+    @test r["ElectricLoad"]["offgrid_load_met_pct"] >= scen.electric_load.min_load_met_annual_pct
+    @test r["PV"]["size_kw"] ≈ 5050.0
+    f = r["Financial"]
+    @test f["lifecycle_generation_tech_capital_costs"] + f["lifecycle_storage_capital_costs"] + f["lifecycle_om_costs_after_tax"] +
+             f["lifecycle_fuel_costs_after_tax"] + f["lifecycle_chp_standby_cost_after_tax"] + f["lifecycle_elecbill_after_tax"] + 
+             f["lifecycle_offgrid_other_annual_costs_after_tax"] + f["lifecycle_offgrid_other_capital_costs"] + 
+             f["lifecycle_outage_cost"] + f["lifecycle_MG_upgrade_and_fuel_cost"] - 
+             f["lifecycle_production_incentive_after_tax"] ≈ f["lcc"] atol=1.0
     
-#     ## Scenario 2: Fixed Generator only
-#     post["ElectricLoad"]["annual_kwh"] = 100.0
-#     post["PV"]["max_kw"] = 0.0
-#     post["ElectricStorage"]["max_kw"] = 0.0
-#     post["Generator"]["min_turn_down_pct"] = 0.0
+    ## Scenario 2: Fixed Generator only
+    post["ElectricLoad"]["annual_kwh"] = 100.0
+    post["PV"]["max_kw"] = 0.0
+    post["ElectricStorage"]["max_kw"] = 0.0
+    post["Generator"]["min_turn_down_pct"] = 0.0
 
-#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     r = run_reopt(m, post)
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    r = run_reopt(m, post)
 
-#     # Test generator outputs
-#     @test r["Generator"]["average_annual_fuel_used_gal"] ≈ 7.52 # 99 kWh * 0.076 gal/kWh
-#     @test r["Generator"]["average_annual_energy_produced_kwh"] ≈ 99.0
-#     @test r["Generator"]["year_one_fuel_cost_before_tax"] ≈ 22.57
-#     @test r["Generator"]["lifecycle_fuel_cost_after_tax"] ≈ 205.35 
-#     @test r["Financial"]["initial_capital_costs"] ≈ 100*(700) 
-#     @test r["Financial"]["lifecycle_capital_costs"] ≈ 100*(700+324.235442*(1-0.26)) atol=0.1 # replacement in yr 10 is considered tax deductible
-#     @test r["Financial"]["initial_capital_costs_after_incentives"] ≈ 700*100 atol=0.1
-#     @test r["Financial"]["replacements_future_cost_after_tax"] ≈ 700*100
-#     @test r["Financial"]["replacements_present_cost_after_tax"] ≈ 100*(324.235442*(1-0.26)) atol=0.1 
+    # Test generator outputs
+    @test r["Generator"]["average_annual_fuel_used_gal"] ≈ 7.52 # 99 kWh * 0.076 gal/kWh
+    @test r["Generator"]["average_annual_energy_produced_kwh"] ≈ 99.0
+    @test r["Generator"]["year_one_fuel_cost_before_tax"] ≈ 22.57
+    @test r["Generator"]["lifecycle_fuel_cost_after_tax"] ≈ 205.35 
+    @test r["Financial"]["initial_capital_costs"] ≈ 100*(700) 
+    @test r["Financial"]["lifecycle_capital_costs"] ≈ 100*(700+324.235442*(1-0.26)) atol=0.1 # replacement in yr 10 is considered tax deductible
+    @test r["Financial"]["initial_capital_costs_after_incentives"] ≈ 700*100 atol=0.1
+    @test r["Financial"]["replacements_future_cost_after_tax"] ≈ 700*100
+    @test r["Financial"]["replacements_present_cost_after_tax"] ≈ 100*(324.235442*(1-0.26)) atol=0.1 
 
-#     ## Scenario 3: Fixed Generator that can meet load, but cannot meet load operating reserve requirement
-#     ## This test ensures the load operating reserve requirement is being enforced
-#     post["ElectricLoad"]["doe_reference_name"] = "FlatLoad"
-#     post["ElectricLoad"]["annual_kwh"] = 876000.0 # requires 100 kW gen
-#     post["ElectricLoad"]["min_load_met_annual_pct"] = 1.0 # requires additional generator capacity
-#     post["PV"]["max_kw"] = 0.0
-#     post["ElectricStorage"]["max_kw"] = 0.0
-#     post["Generator"]["min_turn_down_pct"] = 0.0
+    ## Scenario 3: Fixed Generator that can meet load, but cannot meet load operating reserve requirement
+    ## This test ensures the load operating reserve requirement is being enforced
+    post["ElectricLoad"]["doe_reference_name"] = "FlatLoad"
+    post["ElectricLoad"]["annual_kwh"] = 876000.0 # requires 100 kW gen
+    post["ElectricLoad"]["min_load_met_annual_pct"] = 1.0 # requires additional generator capacity
+    post["PV"]["max_kw"] = 0.0
+    post["ElectricStorage"]["max_kw"] = 0.0
+    post["Generator"]["min_turn_down_pct"] = 0.0
 
-#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     r = run_reopt(m, post)
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    r = run_reopt(m, post)
 
-#     # Test generator outputs
-#     @test typeof(r) == Model # this is true when the model is infeasible
+    # Test generator outputs
+    @test typeof(r) == Model # this is true when the model is infeasible
 
-# end
+end
 
 @testset "Emissions" begin
     #renewable energy and emissions reduction targets
