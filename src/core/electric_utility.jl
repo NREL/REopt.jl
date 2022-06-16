@@ -137,7 +137,7 @@ mutable struct ElectricUtility
         #TODO: can this section be refactored by emissions_type by using Symbol("") technique?
         #eval(Meta.parse("emissions_factor_series_lb_$(pollutant)_per_kwh")) does not work because
         #eval is in global scope and doesn't have access to function arguments
-        for (ekey, eseries) in [
+        for (eseries, ekey) in [
             (emissions_factor_series_lb_CO2_per_kwh, "CO2"),
             (emissions_factor_series_lb_NOx_per_kwh, "NOx"),
             (emissions_factor_series_lb_SO2_per_kwh, "SO2"),
@@ -152,7 +152,7 @@ mutable struct ElectricUtility
             elseif isempty(eseries)
                 emissions_series_dict[ekey] = emissions_series(ekey, region_abbr, time_steps_per_hour=time_steps_per_hour)
             else
-                @error "Provided $(@argname(eseries)) does not match the time_steps_per_hour."
+                throw(@error "Provided ElectricUtility emissions factor series for $(ekey) does not match the time_steps_per_hour.")
             end
         end
 
