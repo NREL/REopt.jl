@@ -376,28 +376,28 @@ end
     # end
 end
 
-# #=
-# add a time-of-export rate that is greater than retail rate for the month of January,
-# check to make sure that PV does NOT export unless the site load is met first for the month of January.
-# =#
-# @testset "Do not allow_simultaneous_export_import" begin
-#     model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     data = JSON.parsefile("./scenarios/monthly_rate.json")
+#=
+add a time-of-export rate that is greater than retail rate for the month of January,
+check to make sure that PV does NOT export unless the site load is met first for the month of January.
+=#
+@testset "Do not allow_simultaneous_export_import" begin
+    model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    data = JSON.parsefile("./scenarios/monthly_rate.json")
 
-#     # create wholesale_rate with compensation in January > retail rate
-#     jan_rate = data["ElectricTariff"]["monthly_energy_rates"][1]
-#     data["ElectricTariff"]["wholesale_rate"] =
-#         append!(repeat([jan_rate + 0.1], 31 * 24), repeat([0.0], 8760 - 31*24))
-#     data["ElectricTariff"]["monthly_demand_rates"] = repeat([0], 12)
-#     data["ElectricUtility"] = Dict("allow_simultaneous_export_import" => false)
+    # create wholesale_rate with compensation in January > retail rate
+    jan_rate = data["ElectricTariff"]["monthly_energy_rates"][1]
+    data["ElectricTariff"]["wholesale_rate"] =
+        append!(repeat([jan_rate + 0.1], 31 * 24), repeat([0.0], 8760 - 31*24))
+    data["ElectricTariff"]["monthly_demand_rates"] = repeat([0], 12)
+    data["ElectricUtility"] = Dict("allow_simultaneous_export_import" => false)
 
-#     s = Scenario(data)
-#     inputs = REoptInputs(s)
-#     results = run_reopt(model, inputs)
+    s = Scenario(data)
+    inputs = REoptInputs(s)
+    results = run_reopt(model, inputs)
 
-#     @test all(x == 0.0 for (i,x) in enumerate(results["ElectricUtility"]["year_one_to_load_series_kw"][1:744]) 
-#               if results["PV"]["year_one_to_grid_series_kw"][i] > 0)
-# end
+    @test all(x == 0.0 for (i,x) in enumerate(results["ElectricUtility"]["year_one_to_load_series_kw"][1:744]) 
+              if results["PV"]["year_one_to_grid_series_kw"][i] > 0)
+end
 
 # @testset "Solar and ElectricStorage w/BAU and degradation" begin
 #     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
@@ -447,20 +447,20 @@ end
 #     @test sum(r["ElectricStorage"]["year_one_soc_series_pct"]) / 8760 >= 0.72
 # end
 
-# @testset "Outage with Generator, outate simulator, BAU critical load outputs" begin
-#     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     p = REoptInputs("./scenarios/generator.json")
-#     results = run_reopt([m1,m2], p)
-#     @test results["Generator"]["size_kw"] ≈ 8.13 atol=0.01
-#     @test (sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 1:9) + 
-#            sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 13:8760)) == 0
-#     @test results["ElectricLoad"]["bau_critical_load_met"] == false
-#     @test results["ElectricLoad"]["bau_critical_load_met_time_steps"] == 0
+@testset "Outage with Generator, outate simulator, BAU critical load outputs" begin
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    p = REoptInputs("./scenarios/generator.json")
+    results = run_reopt([m1,m2], p)
+    @test results["Generator"]["size_kw"] ≈ 8.13 atol=0.01
+    @test (sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 1:9) + 
+           sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 13:8760)) == 0
+    @test results["ElectricLoad"]["bau_critical_load_met"] == false
+    @test results["ElectricLoad"]["bau_critical_load_met_time_steps"] == 0
     
-#     simresults = simulate_outages(results, p)
-#     @test simresults["resilience_hours_max"] == 11
-# end
+    simresults = simulate_outages(results, p)
+    @test simresults["resilience_hours_max"] == 11
+end
 
 # @testset "Minimize Unserved Load" begin
 #     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
