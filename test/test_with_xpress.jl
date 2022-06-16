@@ -488,128 +488,128 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
     
 # end
 
-@testset "Multiple Sites" begin
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    ps = [
-        REoptInputs("./scenarios/pv_storage.json"),
-        REoptInputs("./scenarios/monthly_rate.json"),
-    ];
-    results = run_reopt(m, ps)
-    @test results[3]["Financial"]["lcc"] + results[10]["Financial"]["lcc"] ≈ 1.240037e7 + 437169.0 rtol=1e-5
-end
-
-@testset "MPC" begin
-    model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    r = run_mpc(model, "./scenarios/mpc.json")
-    @test maximum(r["ElectricUtility"]["to_load_series_kw"][1:15]) <= 98.0 
-    @test maximum(r["ElectricUtility"]["to_load_series_kw"][16:24]) <= 97.0
-    @test sum(r["PV"]["to_grid_series_kw"]) ≈ 0
-    grid_draw = r["ElectricUtility"]["to_load_series_kw"] .+ r["ElectricUtility"]["to_battery_series_kw"]
-    # the grid draw limit in the 10th time step is set to 90
-    # without the 90 limit the grid draw is 98 in the 10th time step
-    @test grid_draw[10] <= 90
-end
-
-@testset "Complex Incentives" begin
-    """
-    This test was compared against the API test:
-        reo.tests.test_reopt_url.EntryResourceTest.test_complex_incentives
-    when using the hardcoded levelization_factor in this package's REoptInputs function.
-    The two LCC's matched within 0.00005%. (The Julia pkg LCC is  1.0971991e7)
-    """
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt(m, "./scenarios/incentives.json")
-    @test results["Financial"]["lcc"] ≈ 1.094596365e7 atol=5e4  
-end
-
-# @testset verbose = true "Rate Structures" begin
-
-#     @testset "Tiered Energy" begin
-#         m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#         results = run_reopt(m, "./scenarios/tiered_rate.json")
-#         @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ 2342.88
-#     end
-
-#     @testset "Lookback Demand Charges" begin
-#         m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#         results = run_reopt(m, "./scenarios/lookback_rate.json")
-#         @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ 721.99
-#     end
-
-#     @testset "Blended tariff" begin
-#         model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#         results = run_reopt(model, "./scenarios/no_techs.json")
-#         @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ 1000.0
-#         @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ 136.99
-#     end
-
-#     @testset "Coincident Peak Charges" begin
-#         model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#         results = run_reopt(model, "./scenarios/coincident_peak.json")
-#         @test results["ElectricTariff"]["year_one_coincident_peak_cost_before_tax"] ≈ 11.1
-#     end
-
-#     @testset "URDB sell rate" begin
-#         #= The URDB contains at least one "Customer generation" tariff that only has a "sell" key in the energyratestructure (the tariff tested here)
-#         =#
-#         model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#         p = REoptInputs("./scenarios/URDB_customer_generation.json")
-#         results = run_reopt(model, p)
-#         @test results["PV"]["size_kw"] ≈ p.max_sizes["PV"]
-#     end
-
-#     # # tiered monthly demand rate  TODO: expected results?
-#     # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     # data = JSON.parsefile("./scenarios/tiered_rate.json")
-#     # data["ElectricTariff"]["urdb_label"] = "59bc22705457a3372642da67"
-#     # s = Scenario(data)
-#     # inputs = REoptInputs(s)
-#     # results = run_reopt(m, inputs)
-
-#     # TODO test for tiered TOU demand rates
-# end
-
-# @testset "Wind" begin
+# @testset "Multiple Sites" begin
 #     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     results = run_reopt(m, "./scenarios/wind.json")
-#     @test results["Wind"]["size_kw"] ≈ 3752 atol=0.1
-#     @test results["Financial"]["lcc"] ≈ 8.591017e6 rtol=1e-5
-#     #= 
-#     0.5% higher LCC in this package as compared to API ? 8,591,017 vs 8,551,172
-#     - both have zero curtailment
-#     - same energy to grid: 5,839,317 vs 5,839,322
-#     - same energy to load: 4,160,683 vs 4,160,677
-#     - same city: Boulder
-#     - same total wind prod factor
+#     ps = [
+#         REoptInputs("./scenarios/pv_storage.json"),
+#         REoptInputs("./scenarios/monthly_rate.json"),
+#     ];
+#     results = run_reopt(m, ps)
+#     @test results[3]["Financial"]["lcc"] + results[10]["Financial"]["lcc"] ≈ 1.240037e7 + 437169.0 rtol=1e-5
+# end
+
+# @testset "MPC" begin
+#     model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     r = run_mpc(model, "./scenarios/mpc.json")
+#     @test maximum(r["ElectricUtility"]["to_load_series_kw"][1:15]) <= 98.0 
+#     @test maximum(r["ElectricUtility"]["to_load_series_kw"][16:24]) <= 97.0
+#     @test sum(r["PV"]["to_grid_series_kw"]) ≈ 0
+#     grid_draw = r["ElectricUtility"]["to_load_series_kw"] .+ r["ElectricUtility"]["to_battery_series_kw"]
+#     # the grid draw limit in the 10th time step is set to 90
+#     # without the 90 limit the grid draw is 98 in the 10th time step
+#     @test grid_draw[10] <= 90
+# end
+
+# @testset "Complex Incentives" begin
+#     """
+#     This test was compared against the API test:
+#         reo.tests.test_reopt_url.EntryResourceTest.test_complex_incentives
+#     when using the hardcoded levelization_factor in this package's REoptInputs function.
+#     The two LCC's matched within 0.00005%. (The Julia pkg LCC is  1.0971991e7)
+#     """
+#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     results = run_reopt(m, "./scenarios/incentives.json")
+#     @test results["Financial"]["lcc"] ≈ 1.094596365e7 atol=5e4  
+# end
+
+@testset verbose = true "Rate Structures" begin
+
+    @testset "Tiered Energy" begin
+        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        results = run_reopt(m, "./scenarios/tiered_rate.json")
+        @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ 2342.88
+    end
+
+    @testset "Lookback Demand Charges" begin
+        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        results = run_reopt(m, "./scenarios/lookback_rate.json")
+        @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ 721.99
+    end
+
+    @testset "Blended tariff" begin
+        model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        results = run_reopt(model, "./scenarios/no_techs.json")
+        @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ 1000.0
+        @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ 136.99
+    end
+
+    @testset "Coincident Peak Charges" begin
+        model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        results = run_reopt(model, "./scenarios/coincident_peak.json")
+        @test results["ElectricTariff"]["year_one_coincident_peak_cost_before_tax"] ≈ 11.1
+    end
+
+    @testset "URDB sell rate" begin
+        #= The URDB contains at least one "Customer generation" tariff that only has a "sell" key in the energyratestructure (the tariff tested here)
+        =#
+        model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        p = REoptInputs("./scenarios/URDB_customer_generation.json")
+        results = run_reopt(model, p)
+        @test results["PV"]["size_kw"] ≈ p.max_sizes["PV"]
+    end
+
+    # # tiered monthly demand rate  TODO: expected results?
+    # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    # data = JSON.parsefile("./scenarios/tiered_rate.json")
+    # data["ElectricTariff"]["urdb_label"] = "59bc22705457a3372642da67"
+    # s = Scenario(data)
+    # inputs = REoptInputs(s)
+    # results = run_reopt(m, inputs)
+
+    # TODO test for tiered TOU demand rates
+end
+
+@testset "Wind" begin
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, "./scenarios/wind.json")
+    @test results["Wind"]["size_kw"] ≈ 3752 atol=0.1
+    @test results["Financial"]["lcc"] ≈ 8.591017e6 rtol=1e-5
+    #= 
+    0.5% higher LCC in this package as compared to API ? 8,591,017 vs 8,551,172
+    - both have zero curtailment
+    - same energy to grid: 5,839,317 vs 5,839,322
+    - same energy to load: 4,160,683 vs 4,160,677
+    - same city: Boulder
+    - same total wind prod factor
     
-#     REopt.jl has:
-#     - bigger turbine: 3752 vs 3735
-#     - net_capital_costs_plus_om: 8,576,590 vs. 8,537,480
+    REopt.jl has:
+    - bigger turbine: 3752 vs 3735
+    - net_capital_costs_plus_om: 8,576,590 vs. 8,537,480
 
-#     TODO: will these discrepancies be addressed once NMIL binaries are added?
-#     =#
-# end
+    TODO: will these discrepancies be addressed once NMIL binaries are added?
+    =#
+end
 
-# @testset "Multiple PVs" begin
-#     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     results = run_reopt([m1,m2], "./scenarios/multiple_pvs.json")
+@testset "Multiple PVs" begin
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt([m1,m2], "./scenarios/multiple_pvs.json")
 
-#     ground_pv = results["PV"][findfirst(pv -> pv["name"] == "ground", results["PV"])]
-#     roof_west = results["PV"][findfirst(pv -> pv["name"] == "roof_west", results["PV"])]
-#     roof_east = results["PV"][findfirst(pv -> pv["name"] == "roof_east", results["PV"])]
+    ground_pv = results["PV"][findfirst(pv -> pv["name"] == "ground", results["PV"])]
+    roof_west = results["PV"][findfirst(pv -> pv["name"] == "roof_west", results["PV"])]
+    roof_east = results["PV"][findfirst(pv -> pv["name"] == "roof_east", results["PV"])]
 
-#     @test ground_pv["size_kw"] ≈ 15 atol=0.1
-#     @test roof_west["size_kw"] ≈ 7 atol=0.1
-#     @test roof_east["size_kw"] ≈ 4 atol=0.1
-#     @test ground_pv["lifecycle_om_cost_after_tax_bau"] ≈ 782.0 atol=0.1
-#     @test roof_west["lifecycle_om_cost_after_tax_bau"] ≈ 782.0 atol=0.1
-#     @test ground_pv["average_annual_energy_produced_kwh_bau"] ≈ 8844.19 atol=0.1
-#     @test roof_west["average_annual_energy_produced_kwh_bau"] ≈ 7440.1 atol=0.1
-#     @test ground_pv["average_annual_energy_produced_kwh"] ≈ 26533.54 atol=0.1
-#     @test roof_west["average_annual_energy_produced_kwh"] ≈ 10416.52 atol=0.1
-#     @test roof_east["average_annual_energy_produced_kwh"] ≈ 6482.37 atol=0.1
-# end
+    @test ground_pv["size_kw"] ≈ 15 atol=0.1
+    @test roof_west["size_kw"] ≈ 7 atol=0.1
+    @test roof_east["size_kw"] ≈ 4 atol=0.1
+    @test ground_pv["lifecycle_om_cost_after_tax_bau"] ≈ 782.0 atol=0.1
+    @test roof_west["lifecycle_om_cost_after_tax_bau"] ≈ 782.0 atol=0.1
+    @test ground_pv["average_annual_energy_produced_kwh_bau"] ≈ 8844.19 atol=0.1
+    @test roof_west["average_annual_energy_produced_kwh_bau"] ≈ 7440.1 atol=0.1
+    @test ground_pv["average_annual_energy_produced_kwh"] ≈ 26533.54 atol=0.1
+    @test roof_west["average_annual_energy_produced_kwh"] ≈ 10416.52 atol=0.1
+    @test roof_east["average_annual_energy_produced_kwh"] ≈ 6482.37 atol=0.1
+end
 
 # @testset "Thermal Energy Storage" begin
 #     model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG"=>0))
