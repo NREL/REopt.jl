@@ -399,53 +399,53 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
 #               if results["PV"]["year_one_to_grid_series_kw"][i] > 0)
 # end
 
-@testset "Solar and ElectricStorage w/BAU and degradation" begin
-    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    d = JSON.parsefile("scenarios/pv_storage.json");
-    d["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
-    results = run_reopt([m1,m2], d)
+# @testset "Solar and ElectricStorage w/BAU and degradation" begin
+#     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     d = JSON.parsefile("scenarios/pv_storage.json");
+#     d["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
+#     results = run_reopt([m1,m2], d)
 
-    @test results["PV"]["size_kw"] ≈ 216.6667 atol=0.01
-    @test results["PV"]["lcoe_per_kwh"] ≈ 0.0483 atol = 0.001
-    @test results["Financial"]["lcc"] ≈ 1.240037e7 rtol=1e-5
-    @test results["Financial"]["lcc_bau"] ≈ 12766397 rtol=1e-5
-    @test results["ElectricStorage"]["size_kw"] ≈ 55.9 atol=0.1
-    @test results["ElectricStorage"]["size_kwh"] ≈ 78.9 atol=0.1
-    proforma_npv = REopt.npv(results["Financial"]["offtaker_annual_free_cashflows"] - 
-        results["Financial"]["offtaker_annual_free_cashflows_bau"], 0.081)
-    @test results["Financial"]["npv"] ≈ proforma_npv rtol=0.0001
+#     @test results["PV"]["size_kw"] ≈ 216.6667 atol=0.01
+#     @test results["PV"]["lcoe_per_kwh"] ≈ 0.0483 atol = 0.001
+#     @test results["Financial"]["lcc"] ≈ 1.240037e7 rtol=1e-5
+#     @test results["Financial"]["lcc_bau"] ≈ 12766397 rtol=1e-5
+#     @test results["ElectricStorage"]["size_kw"] ≈ 55.9 atol=0.1
+#     @test results["ElectricStorage"]["size_kwh"] ≈ 78.9 atol=0.1
+#     proforma_npv = REopt.npv(results["Financial"]["offtaker_annual_free_cashflows"] - 
+#         results["Financial"]["offtaker_annual_free_cashflows_bau"], 0.081)
+#     @test results["Financial"]["npv"] ≈ proforma_npv rtol=0.0001
 
-    # compare avg soc with and without degradation, 
-    # using default augmentation battery maintenance strategy
-    avg_soc_no_degr = sum(results["ElectricStorage"]["year_one_soc_series_pct"]) / 8760
-    d["ElectricStorage"]["model_degradation"] = true
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    r_degr = run_reopt(m, d)
-    avg_soc_degr = sum(r_degr["ElectricStorage"]["year_one_soc_series_pct"]) / 8760
-    @test avg_soc_no_degr > avg_soc_degr
+#     # compare avg soc with and without degradation, 
+#     # using default augmentation battery maintenance strategy
+#     avg_soc_no_degr = sum(results["ElectricStorage"]["year_one_soc_series_pct"]) / 8760
+#     d["ElectricStorage"]["model_degradation"] = true
+#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     r_degr = run_reopt(m, d)
+#     avg_soc_degr = sum(r_degr["ElectricStorage"]["year_one_soc_series_pct"]) / 8760
+#     @test avg_soc_no_degr > avg_soc_degr
 
-    # test the replacement strategy
-    d["ElectricStorage"]["degradation"] = Dict("maintenance_strategy" => "replacement")
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
-    r = run_reopt(m, d)
-    #optimal SOH at end of horizon is 80\% to prevent any replacement
-    @test sum(value.(m[:bmth_BkWh])) ≈ 0 atol=0.1
-    # TODO add another test in which the battery is replaced?
-    # @test r["ElectricStorage"]["maintenance_cost"] ≈ 2972.66 atol=0.01 
-    # the maintenance_cost comes out to 3004.39 on Actions ? So we test the LCC since it should match
-    @test r["Financial"]["lcc"] ≈ 1.240096e7  rtol=0.01
-    @test last(value.(m[:SOH])) ≈ 63.129  rtol=0.01
-    @test r["ElectricStorage"]["size_kwh"] ≈ 78.91  rtol=0.01
+#     # test the replacement strategy
+#     d["ElectricStorage"]["degradation"] = Dict("maintenance_strategy" => "replacement")
+#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
+#     r = run_reopt(m, d)
+#     #optimal SOH at end of horizon is 80\% to prevent any replacement
+#     @test sum(value.(m[:bmth_BkWh])) ≈ 0 atol=0.1
+#     # TODO add another test in which the battery is replaced?
+#     # @test r["ElectricStorage"]["maintenance_cost"] ≈ 2972.66 atol=0.01 
+#     # the maintenance_cost comes out to 3004.39 on Actions ? So we test the LCC since it should match
+#     @test r["Financial"]["lcc"] ≈ 1.240096e7  rtol=0.01
+#     @test last(value.(m[:SOH])) ≈ 63.129  rtol=0.01
+#     @test r["ElectricStorage"]["size_kwh"] ≈ 78.91  rtol=0.01
 
-    # test minimum_avg_soc_fraction
-    d["ElectricStorage"]["minimum_avg_soc_fraction"] = 0.72
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
-    r = run_reopt(m, d)
-    @test sum(r["ElectricStorage"]["year_one_soc_series_pct"]) / 8760 >= 0.72
-end
+#     # test minimum_avg_soc_fraction
+#     d["ElectricStorage"]["minimum_avg_soc_fraction"] = 0.72
+#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
+#     r = run_reopt(m, d)
+#     @test sum(r["ElectricStorage"]["year_one_soc_series_pct"]) / 8760 >= 0.72
+# end
 
 #**** @testset "Outage with Generator, outate simulator, BAU critical load outputs" begin
 #     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 1))
@@ -462,31 +462,31 @@ end
 #     @test simresults["resilience_hours_max"] == 11
 # end
 
-# @testset "Minimize Unserved Load" begin
-#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     results = run_reopt(m, "./scenarios/outage.json")
+@testset "Minimize Unserved Load" begin
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, "./scenarios/outage.json")
 
-#     @test results["Outages"]["expected_outage_cost"] ≈ 0
-#     @test sum(results["Outages"]["unserved_load_per_outage_series"]) ≈ 0
-#     @test value(m[:binMGTechUsed]["Generator"]) == 1
-#     @test value(m[:binMGTechUsed]["PV"]) == 0
-#     @test value(m[:binMGStorageUsed]) == 1
-#     @test results["Financial"]["lcc"] ≈ 7.3879557e7 atol=5e4
+    @test results["Outages"]["expected_outage_cost"] ≈ 0
+    @test sum(results["Outages"]["unserved_load_per_outage_series"]) ≈ 0
+    @test value(m[:binMGTechUsed]["Generator"]) == 1
+    @test value(m[:binMGTechUsed]["PV"]) == 0
+    @test value(m[:binMGStorageUsed]) == 1
+    @test results["Financial"]["lcc"] ≈ 7.3879557e7 atol=5e4
     
-#     #=
-#     Scenario with $0/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
-#     - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
-#     =#
-#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     results = run_reopt(m, "./scenarios/nogridcost_minresilhours.json")
-#     @test sum(results["Outages"]["unserved_load_per_outage_series"]) ≈ 12
+    #=
+    Scenario with $0/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
+    - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
+    =#
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, "./scenarios/nogridcost_minresilhours.json")
+    @test sum(results["Outages"]["unserved_load_per_outage_series"]) ≈ 12
     
-#     # testing dvUnserved load, which would output 100 kWh for this scenario before output fix
-#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     results = run_reopt(m, "./scenarios/nogridcost_multiscenario.json")
-#     @test sum(results["Outages"]["unserved_load_per_outage_series"]) ≈ 60
+    # testing dvUnserved load, which would output 100 kWh for this scenario before output fix
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, "./scenarios/nogridcost_multiscenario.json")
+    @test sum(results["Outages"]["unserved_load_per_outage_series"]) ≈ 60
     
-# end
+end
 
 # @testset "Multiple Sites" begin
 #     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
