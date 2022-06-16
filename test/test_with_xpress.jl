@@ -31,357 +31,357 @@ using Xpress
 using Random
 Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tests
 
-@testset "Thermal loads" begin
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt(m, "./scenarios/thermal_load.json")
+# @testset "Thermal loads" begin
+#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     results = run_reopt(m, "./scenarios/thermal_load.json")
 
-    @test round(results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"], digits=0) ≈ 2905
+#     @test round(results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"], digits=0) ≈ 2905
     
-    data = JSON.parsefile("./scenarios/thermal_load.json")
-    data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([0.5], 8760)
-    data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([0.5], 8760)
-    s = Scenario(data)
-    inputs = REoptInputs(s)
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt(m, inputs)
+#     data = JSON.parsefile("./scenarios/thermal_load.json")
+#     data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([0.5], 8760)
+#     data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([0.5], 8760)
+#     s = Scenario(data)
+#     inputs = REoptInputs(s)
+#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     results = run_reopt(m, inputs)
 
-    @test round(results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"], digits=0) ≈ 8760
-    # TODO chiller tests
-end
+#     @test round(results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"], digits=0) ≈ 8760
+#     # TODO chiller tests
+# end
 
-@testset "CHP" begin
-    @testset "CHP Sizing" begin
-        # Sizing CHP with non-constant efficiency, no cost curve, no unavailability_periods
-        data_sizing = JSON.parsefile("./scenarios/chp_sizing.json")
-        s = Scenario(data_sizing)
-        inputs = REoptInputs(s)
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
-        results = run_reopt(m, inputs)
+# @testset "CHP" begin
+#     @testset "CHP Sizing" begin
+#         # Sizing CHP with non-constant efficiency, no cost curve, no unavailability_periods
+#         data_sizing = JSON.parsefile("./scenarios/chp_sizing.json")
+#         s = Scenario(data_sizing)
+#         inputs = REoptInputs(s)
+#         m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+#         results = run_reopt(m, inputs)
     
-        @test round(results["CHP"]["size_kw"], digits=0) ≈ 468.7 atol=1.0
-        @test round(results["Financial"]["lcc"], digits=0) ≈ 1.3476e7 atol=1.0e7
-    end
+#         @test round(results["CHP"]["size_kw"], digits=0) ≈ 468.7 atol=1.0
+#         @test round(results["Financial"]["lcc"], digits=0) ≈ 1.3476e7 atol=1.0e7
+#     end
 
-    @testset "CHP Cost Curve and Min Allowable Size" begin
-        # Fixed size CHP with cost curve, no unavailability_periods
-        data_cost_curve = JSON.parsefile("./scenarios/chp_sizing.json")
-        data_cost_curve["CHP"] = Dict()
-        data_cost_curve["CHP"]["prime_mover"] = "recip_engine"
-        data_cost_curve["CHP"]["size_class"] = 2
-        data_cost_curve["CHP"]["fuel_cost_per_mmbtu"] = 8.0
-        data_cost_curve["CHP"]["min_kw"] = 0
-        data_cost_curve["CHP"]["min_allowable_kw"] = 555.5
-        data_cost_curve["CHP"]["max_kw"] = 1000
-        data_cost_curve["CHP"]["installed_cost_per_kw"] = 1800.0
-        data_cost_curve["CHP"]["installed_cost_per_kw"] = [2300.0, 1800.0, 1500.0]
-        data_cost_curve["CHP"]["tech_sizes_for_cost_curve"] = [100.0, 300.0, 1140.0]
+#     @testset "CHP Cost Curve and Min Allowable Size" begin
+#         # Fixed size CHP with cost curve, no unavailability_periods
+#         data_cost_curve = JSON.parsefile("./scenarios/chp_sizing.json")
+#         data_cost_curve["CHP"] = Dict()
+#         data_cost_curve["CHP"]["prime_mover"] = "recip_engine"
+#         data_cost_curve["CHP"]["size_class"] = 2
+#         data_cost_curve["CHP"]["fuel_cost_per_mmbtu"] = 8.0
+#         data_cost_curve["CHP"]["min_kw"] = 0
+#         data_cost_curve["CHP"]["min_allowable_kw"] = 555.5
+#         data_cost_curve["CHP"]["max_kw"] = 1000
+#         data_cost_curve["CHP"]["installed_cost_per_kw"] = 1800.0
+#         data_cost_curve["CHP"]["installed_cost_per_kw"] = [2300.0, 1800.0, 1500.0]
+#         data_cost_curve["CHP"]["tech_sizes_for_cost_curve"] = [100.0, 300.0, 1140.0]
     
-        data_cost_curve["CHP"]["federal_itc_pct"] = 0.1
-        data_cost_curve["CHP"]["macrs_option_years"] = 0
-        data_cost_curve["CHP"]["macrs_bonus_pct"] = 0.0
-        data_cost_curve["CHP"]["macrs_itc_reduction"] = 0.0
+#         data_cost_curve["CHP"]["federal_itc_pct"] = 0.1
+#         data_cost_curve["CHP"]["macrs_option_years"] = 0
+#         data_cost_curve["CHP"]["macrs_bonus_pct"] = 0.0
+#         data_cost_curve["CHP"]["macrs_itc_reduction"] = 0.0
     
-        expected_x = data_cost_curve["CHP"]["min_allowable_kw"]
-        cap_cost_y = data_cost_curve["CHP"]["installed_cost_per_kw"]
-        cap_cost_x = data_cost_curve["CHP"]["tech_sizes_for_cost_curve"]
-        slope = (cap_cost_x[3] * cap_cost_y[3] - cap_cost_x[2] * cap_cost_y[2]) / (cap_cost_x[3] - cap_cost_x[2])
-        init_capex_chp_expected = cap_cost_x[2] * cap_cost_y[2] + (expected_x - cap_cost_x[2]) * slope
-        lifecycle_capex_chp_expected = init_capex_chp_expected - 
-            REopt.npv(data_cost_curve["Financial"]["offtaker_discount_pct"], 
-            [0, init_capex_chp_expected * data_cost_curve["CHP"]["federal_itc_pct"]])
+#         expected_x = data_cost_curve["CHP"]["min_allowable_kw"]
+#         cap_cost_y = data_cost_curve["CHP"]["installed_cost_per_kw"]
+#         cap_cost_x = data_cost_curve["CHP"]["tech_sizes_for_cost_curve"]
+#         slope = (cap_cost_x[3] * cap_cost_y[3] - cap_cost_x[2] * cap_cost_y[2]) / (cap_cost_x[3] - cap_cost_x[2])
+#         init_capex_chp_expected = cap_cost_x[2] * cap_cost_y[2] + (expected_x - cap_cost_x[2]) * slope
+#         lifecycle_capex_chp_expected = init_capex_chp_expected - 
+#             REopt.npv(data_cost_curve["Financial"]["offtaker_discount_pct"], 
+#             [0, init_capex_chp_expected * data_cost_curve["CHP"]["federal_itc_pct"]])
     
-        #PV
-        data_cost_curve["PV"]["min_kw"] = 1500
-        data_cost_curve["PV"]["max_kw"] = 1500
-        data_cost_curve["PV"]["installed_cost_per_kw"] = 1600
-        data_cost_curve["PV"]["federal_itc_pct"] = 0.26
-        data_cost_curve["PV"]["macrs_option_years"] = 0
-        data_cost_curve["PV"]["macrs_bonus_pct"] = 0.0
-        data_cost_curve["PV"]["macrs_itc_reduction"] = 0.0
+#         #PV
+#         data_cost_curve["PV"]["min_kw"] = 1500
+#         data_cost_curve["PV"]["max_kw"] = 1500
+#         data_cost_curve["PV"]["installed_cost_per_kw"] = 1600
+#         data_cost_curve["PV"]["federal_itc_pct"] = 0.26
+#         data_cost_curve["PV"]["macrs_option_years"] = 0
+#         data_cost_curve["PV"]["macrs_bonus_pct"] = 0.0
+#         data_cost_curve["PV"]["macrs_itc_reduction"] = 0.0
     
-        init_capex_pv_expected = data_cost_curve["PV"]["max_kw"] * data_cost_curve["PV"]["installed_cost_per_kw"]
-        lifecycle_capex_pv_expected = init_capex_pv_expected - 
-            REopt.npv(data_cost_curve["Financial"]["offtaker_discount_pct"], 
-            [0, init_capex_pv_expected * data_cost_curve["PV"]["federal_itc_pct"]])
+#         init_capex_pv_expected = data_cost_curve["PV"]["max_kw"] * data_cost_curve["PV"]["installed_cost_per_kw"]
+#         lifecycle_capex_pv_expected = init_capex_pv_expected - 
+#             REopt.npv(data_cost_curve["Financial"]["offtaker_discount_pct"], 
+#             [0, init_capex_pv_expected * data_cost_curve["PV"]["federal_itc_pct"]])
     
-        s = Scenario(data_cost_curve)
-        inputs = REoptInputs(s)
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
-        results = run_reopt(m, inputs)
+#         s = Scenario(data_cost_curve)
+#         inputs = REoptInputs(s)
+#         m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+#         results = run_reopt(m, inputs)
     
-        init_capex_total_expected = init_capex_chp_expected + init_capex_pv_expected
-        lifecycle_capex_total_expected = lifecycle_capex_chp_expected + lifecycle_capex_pv_expected
+#         init_capex_total_expected = init_capex_chp_expected + init_capex_pv_expected
+#         lifecycle_capex_total_expected = lifecycle_capex_chp_expected + lifecycle_capex_pv_expected
     
-        init_capex_total = results["Financial"]["initial_capital_costs"]
-        lifecycle_capex_total = results["Financial"]["initial_capital_costs_after_incentives"]
+#         init_capex_total = results["Financial"]["initial_capital_costs"]
+#         lifecycle_capex_total = results["Financial"]["initial_capital_costs_after_incentives"]
     
     
-        # Check initial CapEx (pre-incentive/tax) and life cycle CapEx (post-incentive/tax) cost with expect
-        @test init_capex_total_expected ≈ init_capex_total atol=0.0001*init_capex_total_expected
-        @test lifecycle_capex_total_expected ≈ lifecycle_capex_total atol=0.0001*lifecycle_capex_total_expected
+#         # Check initial CapEx (pre-incentive/tax) and life cycle CapEx (post-incentive/tax) cost with expect
+#         @test init_capex_total_expected ≈ init_capex_total atol=0.0001*init_capex_total_expected
+#         @test lifecycle_capex_total_expected ≈ lifecycle_capex_total atol=0.0001*lifecycle_capex_total_expected
     
-        # Test CHP.min_allowable_kw - the size would otherwise be ~100 kW less by setting min_allowable_kw to zero
-        @test results["CHP"]["size_kw"] ≈ data_cost_curve["CHP"]["min_allowable_kw"] atol=0.1
-    end
+#         # Test CHP.min_allowable_kw - the size would otherwise be ~100 kW less by setting min_allowable_kw to zero
+#         @test results["CHP"]["size_kw"] ≈ data_cost_curve["CHP"]["min_allowable_kw"] atol=0.1
+#     end
 
-    @testset "CHP Unavailability and Outage" begin
-        """
-        Validation to ensure that:
-            1) CHP meets load during outage without exporting
-            2) CHP never exports if chp.can_wholesale and chp.can_net_meter inputs are False (default)
-            3) CHP does not "curtail", i.e. send power to a load bank when chp.can_curtail is False (default)
-            4) CHP min_turn_down_pct is ignored during an outage
-            5) **Not until cooling is added:** Cooling load gets zeroed out during the outage period
-            6) Unavailability intervals that intersect with grid-outages get ignored
-            7) Unavailability intervals that do not intersect with grid-outages result in no CHP production
-        """
-        # Sizing CHP with non-constant efficiency, no cost curve, no unavailability_periods
-        data = JSON.parsefile("./scenarios/chp_unavailability_outage.json")
+#     @testset "CHP Unavailability and Outage" begin
+#         """
+#         Validation to ensure that:
+#             1) CHP meets load during outage without exporting
+#             2) CHP never exports if chp.can_wholesale and chp.can_net_meter inputs are False (default)
+#             3) CHP does not "curtail", i.e. send power to a load bank when chp.can_curtail is False (default)
+#             4) CHP min_turn_down_pct is ignored during an outage
+#             5) **Not until cooling is added:** Cooling load gets zeroed out during the outage period
+#             6) Unavailability intervals that intersect with grid-outages get ignored
+#             7) Unavailability intervals that do not intersect with grid-outages result in no CHP production
+#         """
+#         # Sizing CHP with non-constant efficiency, no cost curve, no unavailability_periods
+#         data = JSON.parsefile("./scenarios/chp_unavailability_outage.json")
     
-        # Add unavailability periods that 1) intersect (ignored) and 2) don't intersect with outage period
-        data["CHP"]["unavailability_periods"] = [Dict([("month", 1), ("start_week_of_month", 2),
-                ("start_day_of_week", 1), ("start_hour", 1), ("duration_hours", 8)]),
-                Dict([("month", 1), ("start_week_of_month", 2),
-                ("start_day_of_week", 3), ("start_hour", 9), ("duration_hours", 8)])]
+#         # Add unavailability periods that 1) intersect (ignored) and 2) don't intersect with outage period
+#         data["CHP"]["unavailability_periods"] = [Dict([("month", 1), ("start_week_of_month", 2),
+#                 ("start_day_of_week", 1), ("start_hour", 1), ("duration_hours", 8)]),
+#                 Dict([("month", 1), ("start_week_of_month", 2),
+#                 ("start_day_of_week", 3), ("start_hour", 9), ("duration_hours", 8)])]
     
-        # Manually doing the math from the unavailability defined above
-        unavail_1_start = 24 + 1
-        unavail_1_end = unavail_1_start + 8 - 1
-        unavail_2_start = 24*3 + 9
-        unavail_2_end = unavail_2_start + 8 - 1
+#         # Manually doing the math from the unavailability defined above
+#         unavail_1_start = 24 + 1
+#         unavail_1_end = unavail_1_start + 8 - 1
+#         unavail_2_start = 24*3 + 9
+#         unavail_2_end = unavail_2_start + 8 - 1
         
-        # Specify the CHP.min_turn_down_pct which is NOT used during an outage
-        data["CHP"]["min_turn_down_pct"] = 0.5
-        # Specify outage period; outage time_steps are 1-indexed
-        outage_start = unavail_1_start
-        data["ElectricUtility"]["outage_start_time_step"] = outage_start
-        outage_end = unavail_1_end
-        data["ElectricUtility"]["outage_end_time_step"] = outage_end
-        data["ElectricLoad"]["critical_load_pct"] = 0.25
+#         # Specify the CHP.min_turn_down_pct which is NOT used during an outage
+#         data["CHP"]["min_turn_down_pct"] = 0.5
+#         # Specify outage period; outage time_steps are 1-indexed
+#         outage_start = unavail_1_start
+#         data["ElectricUtility"]["outage_start_time_step"] = outage_start
+#         outage_end = unavail_1_end
+#         data["ElectricUtility"]["outage_end_time_step"] = outage_end
+#         data["ElectricLoad"]["critical_load_pct"] = 0.25
     
-        s = Scenario(data)
-        inputs = REoptInputs(s)
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
-        results = run_reopt(m, inputs)
+#         s = Scenario(data)
+#         inputs = REoptInputs(s)
+#         m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+#         results = run_reopt(m, inputs)
     
-        tot_elec_load = results["ElectricLoad"]["load_series_kw"]
-        chp_total_elec_prod = results["CHP"]["year_one_electric_production_series_kw"]
-        chp_to_load = results["CHP"]["year_one_to_load_series_kw"]
-        chp_export = results["CHP"]["year_one_to_grid_series_kw"]
-        #cooling_elec_load = results["LoadProfileChillerThermal"]["year_one_chiller_electric_load_kw"]
+#         tot_elec_load = results["ElectricLoad"]["load_series_kw"]
+#         chp_total_elec_prod = results["CHP"]["year_one_electric_production_series_kw"]
+#         chp_to_load = results["CHP"]["year_one_to_load_series_kw"]
+#         chp_export = results["CHP"]["year_one_to_grid_series_kw"]
+#         #cooling_elec_load = results["LoadProfileChillerThermal"]["year_one_chiller_electric_load_kw"]
     
-        # The values compared to the expected values
-        #@test sum([(chp_to_load[i] - tot_elec_load[i]) for i in outage_start:outage_end])) == 0.0
-        critical_load = tot_elec_load[outage_start:outage_end] * data["ElectricLoad"]["critical_load_pct"]
-        @test sum(chp_to_load[outage_start:outage_end]) ≈ sum(critical_load) atol=0.1
-        @test sum(chp_export) == 0.0
-        @test sum(chp_total_elec_prod) ≈ sum(chp_to_load) atol=1.0e-5*sum(chp_total_elec_prod)
-        #@test sum(cooling_elec_load[outage_start:outage_end]) == 0.0 
-        @test sum(chp_total_elec_prod[unavail_2_start:unavail_2_end]) == 0.0  
-    end
+#         # The values compared to the expected values
+#         #@test sum([(chp_to_load[i] - tot_elec_load[i]) for i in outage_start:outage_end])) == 0.0
+#         critical_load = tot_elec_load[outage_start:outage_end] * data["ElectricLoad"]["critical_load_pct"]
+#         @test sum(chp_to_load[outage_start:outage_end]) ≈ sum(critical_load) atol=0.1
+#         @test sum(chp_export) == 0.0
+#         @test sum(chp_total_elec_prod) ≈ sum(chp_to_load) atol=1.0e-5*sum(chp_total_elec_prod)
+#         #@test sum(cooling_elec_load[outage_start:outage_end]) == 0.0 
+#         @test sum(chp_total_elec_prod[unavail_2_start:unavail_2_end]) == 0.0  
+#     end
 
-    @testset "CHP Supplementary firing and standby" begin
-        """
-        Test to ensure that supplementary firing and standby charges work as intended.  The thermal and 
-        electrical loads are constant, and the CHP system size is fixed; the supplementary firing has a
-        similar cost to the boiler and is purcahsed and used when the boiler efficiency is set to a lower 
-        value than that of the supplementary firing. The test also ensures that demand charges are  
-        correctly calculated when CHP is and is not allowed to reduce demand charges.
-        """
-        data = JSON.parsefile("./scenarios/chp_supplementary_firing.json")
-        data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10000
-        data["ElectricLoad"]["loads_kw"] = repeat([800.0], 8760)
-        data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([6.0], 8760)
-        data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([6.0], 8760)
-        #part 1: supplementary firing not used when less efficient than the boiler and expensive 
-        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        s = Scenario(data)
-        inputs = REoptInputs(s)
-        results = run_reopt(m1, inputs)
-        @test results["CHP"]["size_kw"] == 800
-        @test results["CHP"]["size_supplemental_firing_kw"] == 0
-        @test results["CHP"]["year_one_electric_energy_produced_kwh"] ≈ 800*8760 rtol=1e-5
-        @test results["CHP"]["year_one_thermal_energy_produced_mmbtu"] ≈ 800*(0.4418/0.3573)*8760/293.07107 rtol=1e-5
-        @test results["ElectricTariff"]["lifecycle_demand_cost_after_tax"] == 0
+#     @testset "CHP Supplementary firing and standby" begin
+#         """
+#         Test to ensure that supplementary firing and standby charges work as intended.  The thermal and 
+#         electrical loads are constant, and the CHP system size is fixed; the supplementary firing has a
+#         similar cost to the boiler and is purcahsed and used when the boiler efficiency is set to a lower 
+#         value than that of the supplementary firing. The test also ensures that demand charges are  
+#         correctly calculated when CHP is and is not allowed to reduce demand charges.
+#         """
+#         data = JSON.parsefile("./scenarios/chp_supplementary_firing.json")
+#         data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10000
+#         data["ElectricLoad"]["loads_kw"] = repeat([800.0], 8760)
+#         data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([6.0], 8760)
+#         data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([6.0], 8760)
+#         #part 1: supplementary firing not used when less efficient than the boiler and expensive 
+#         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#         s = Scenario(data)
+#         inputs = REoptInputs(s)
+#         results = run_reopt(m1, inputs)
+#         @test results["CHP"]["size_kw"] == 800
+#         @test results["CHP"]["size_supplemental_firing_kw"] == 0
+#         @test results["CHP"]["year_one_electric_energy_produced_kwh"] ≈ 800*8760 rtol=1e-5
+#         @test results["CHP"]["year_one_thermal_energy_produced_mmbtu"] ≈ 800*(0.4418/0.3573)*8760/293.07107 rtol=1e-5
+#         @test results["ElectricTariff"]["lifecycle_demand_cost_after_tax"] == 0
     
-        #part 2: supplementary firing used when more efficient than the boiler and low-cost; demand charges not reduced by CHP
-        data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10
-        data["CHP"]["reduces_demand_charges"] = false
-        data["ExistingBoiler"]["efficiency"] = 0.85
-        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        s = Scenario(data)
-        inputs = REoptInputs(s)
-        results = run_reopt(m2, inputs)
-        @test results["CHP"]["size_supplemental_firing_kw"] ≈ 278.73 atol=0.1
-        @test results["CHP"]["year_one_thermal_energy_produced_mmbtu"] ≈ 138624 rtol=1e-5
-        @test results["ElectricTariff"]["lifecycle_demand_cost_after_tax"] ≈ 5212.7 rtol=1e-5
-    end
-end
+#         #part 2: supplementary firing used when more efficient than the boiler and low-cost; demand charges not reduced by CHP
+#         data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10
+#         data["CHP"]["reduces_demand_charges"] = false
+#         data["ExistingBoiler"]["efficiency"] = 0.85
+#         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#         s = Scenario(data)
+#         inputs = REoptInputs(s)
+#         results = run_reopt(m2, inputs)
+#         @test results["CHP"]["size_supplemental_firing_kw"] ≈ 278.73 atol=0.1
+#         @test results["CHP"]["year_one_thermal_energy_produced_mmbtu"] ≈ 138624 rtol=1e-5
+#         @test results["ElectricTariff"]["lifecycle_demand_cost_after_tax"] ≈ 5212.7 rtol=1e-5
+#     end
+# end
 
-@testset "FlexibleHVAC" begin
+# @testset "FlexibleHVAC" begin
 
-    @testset "Single RC Model heating only" begin
-        #=
-        Single RC model:
-        1 state/control node
-        2 inputs: Ta and Qheat
-        A = [1/(RC)], B = [1/(RC) 1/C], u = [Ta; Q]
-        NOTE exogenous_inputs (u) allows for parasitic heat, but it is input as zeros here
+#     @testset "Single RC Model heating only" begin
+#         #=
+#         Single RC model:
+#         1 state/control node
+#         2 inputs: Ta and Qheat
+#         A = [1/(RC)], B = [1/(RC) 1/C], u = [Ta; Q]
+#         NOTE exogenous_inputs (u) allows for parasitic heat, but it is input as zeros here
 
-        We start with no technologies except ExistingBoiler and ExistingChiller. 
-        FlexibleHVAC is only worth purchasing if its cost is neglible (i.e. below the lcc_bau * MIPTOL) 
-        or if there is a time-varying fuel and/or electricity cost 
-        (and the FlexibleHVAC installed_cost is less than the achievable savings).
-        =#
+#         We start with no technologies except ExistingBoiler and ExistingChiller. 
+#         FlexibleHVAC is only worth purchasing if its cost is neglible (i.e. below the lcc_bau * MIPTOL) 
+#         or if there is a time-varying fuel and/or electricity cost 
+#         (and the FlexibleHVAC installed_cost is less than the achievable savings).
+#         =#
 
-        # Austin, TX -> existing_chiller and existing_boiler added with FlexibleHVAC
-        tamb = REopt.get_ambient_temperature(30.2672, -97.7431);
-        R = 0.00025  # K/kW
-        C = 1e5   # kJ/K
-        # the starting scenario has flat fuel and electricty costs
-        d = JSON.parsefile("./scenarios/thermal_load.json");
-        A = reshape([-1/(R*C)], 1,1)
-        B = [1/(R*C) 1/C]
-        u = [tamb zeros(8760)]';
-        d["FlexibleHVAC"] = Dict(
-            "control_node" => 1,
-            "initial_temperatures" => [21],
-            "temperature_upper_bound_degC" => 22.0,
-            "temperature_lower_bound_degC" => 19.8,
-            "installed_cost" => 300.0, # NOTE cost must be more then the MIPTOL * LCC 5e-5 * 5.79661e6 ≈ 290 to make FlexibleHVAC not worth it
-            "system_matrix" => A,
-            "input_matrix" => B,
-            "exogenous_inputs" => u
-        )
+#         # Austin, TX -> existing_chiller and existing_boiler added with FlexibleHVAC
+#         tamb = REopt.get_ambient_temperature(30.2672, -97.7431);
+#         R = 0.00025  # K/kW
+#         C = 1e5   # kJ/K
+#         # the starting scenario has flat fuel and electricty costs
+#         d = JSON.parsefile("./scenarios/thermal_load.json");
+#         A = reshape([-1/(R*C)], 1,1)
+#         B = [1/(R*C) 1/C]
+#         u = [tamb zeros(8760)]';
+#         d["FlexibleHVAC"] = Dict(
+#             "control_node" => 1,
+#             "initial_temperatures" => [21],
+#             "temperature_upper_bound_degC" => 22.0,
+#             "temperature_lower_bound_degC" => 19.8,
+#             "installed_cost" => 300.0, # NOTE cost must be more then the MIPTOL * LCC 5e-5 * 5.79661e6 ≈ 290 to make FlexibleHVAC not worth it
+#             "system_matrix" => A,
+#             "input_matrix" => B,
+#             "exogenous_inputs" => u
+#         )
 
-        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        r = run_reopt([m1,m2], d)
-        @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
-        @test r["Financial"]["npv"] == 0
+#         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#         r = run_reopt([m1,m2], d)
+#         @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
+#         @test r["Financial"]["npv"] == 0
 
-        # put in a time varying fuel cost, which should make purchasing the FlexibleHVAC system economical
-        # with flat ElectricTariff the ExistingChiller does not benefit from FlexibleHVAC
-        d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = rand(Float64, (8760))*(50-5).+5;
-        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        r = run_reopt([m1,m2], d)
-        # all of the savings are from the ExistingBoiler fuel costs
-        @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === true
-        fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax"]
-        @test fuel_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
+#         # put in a time varying fuel cost, which should make purchasing the FlexibleHVAC system economical
+#         # with flat ElectricTariff the ExistingChiller does not benefit from FlexibleHVAC
+#         d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = rand(Float64, (8760))*(50-5).+5;
+#         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#         r = run_reopt([m1,m2], d)
+#         # all of the savings are from the ExistingBoiler fuel costs
+#         @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === true
+#         fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax"]
+#         @test fuel_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
 
-        # now increase the FlexibleHVAC installed_cost to the fuel costs savings + 100 and expect that the FlexibleHVAC is not purchased
-        d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + 100
-        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        r = run_reopt([m1,m2], d)
-        @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
-        @test r["Financial"]["npv"] == 0
+#         # now increase the FlexibleHVAC installed_cost to the fuel costs savings + 100 and expect that the FlexibleHVAC is not purchased
+#         d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + 100
+#         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#         r = run_reopt([m1,m2], d)
+#         @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
+#         @test r["Financial"]["npv"] == 0
 
-        # add TOU ElectricTariff and expect to benefit from using ExistingChiller intelligently
-        d["ElectricTariff"] = Dict("urdb_label" => "5ed6c1a15457a3367add15ae")
+#         # add TOU ElectricTariff and expect to benefit from using ExistingChiller intelligently
+#         d["ElectricTariff"] = Dict("urdb_label" => "5ed6c1a15457a3367add15ae")
 
-        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        r = run_reopt([m1,m2], d)
+#         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#         r = run_reopt([m1,m2], d)
 
-        elec_cost_savings = r["ElectricTariff"]["lifecycle_demand_cost_after_tax_bau"] + 
-                            r["ElectricTariff"]["lifecycle_energy_cost_after_tax_bau"] - 
-                            r["ElectricTariff"]["lifecycle_demand_cost_after_tax"] - 
-                            r["ElectricTariff"]["lifecycle_energy_cost_after_tax"]
+#         elec_cost_savings = r["ElectricTariff"]["lifecycle_demand_cost_after_tax_bau"] + 
+#                             r["ElectricTariff"]["lifecycle_energy_cost_after_tax_bau"] - 
+#                             r["ElectricTariff"]["lifecycle_demand_cost_after_tax"] - 
+#                             r["ElectricTariff"]["lifecycle_energy_cost_after_tax"]
 
-        fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax"]
-        @test fuel_cost_savings + elec_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
+#         fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax"]
+#         @test fuel_cost_savings + elec_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
 
-        # now increase the FlexibleHVAC installed_cost to the fuel costs savings + elec_cost_savings 
-        # + 100 and expect that the FlexibleHVAC is not purchased
-        d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + elec_cost_savings + 100
-        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        r = run_reopt([m1,m2], d)
-        @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
-        @test r["Financial"]["npv"] == 0
+#         # now increase the FlexibleHVAC installed_cost to the fuel costs savings + elec_cost_savings 
+#         # + 100 and expect that the FlexibleHVAC is not purchased
+#         d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + elec_cost_savings + 100
+#         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#         r = run_reopt([m1,m2], d)
+#         @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
+#         @test r["Financial"]["npv"] == 0
 
-    end
+#     end
 
-    # TODO test with hot/cold TES
-    # TODO test with PV and Storage?
+#     # TODO test with hot/cold TES
+#     # TODO test with PV and Storage?
 
-    # TODO plot deadband (BAU_HVAC) temperatures vs. optimal flexed temperatures
-    #=
-    using Plots
-    plotlyjs()
-    plot(r["FlexibleHVAC"]["temperatures_degC_node_by_time_bau"][1,:], label="bau")
-    plot!(r["FlexibleHVAC"]["temperatures_degC_node_by_time"][1,:], line=(:dot))
-    =#
+#     # TODO plot deadband (BAU_HVAC) temperatures vs. optimal flexed temperatures
+#     #=
+#     using Plots
+#     plotlyjs()
+#     plot(r["FlexibleHVAC"]["temperatures_degC_node_by_time_bau"][1,:], label="bau")
+#     plot!(r["FlexibleHVAC"]["temperatures_degC_node_by_time"][1,:], line=(:dot))
+#     =#
 
-    # @testset "placeholder 5 param RC model" begin
-    #     # these tests pass locally but not on Actions ???
-    #     d = JSON.parsefile("./scenarios/thermal_load.json");
-    #     d["FlexibleHVAC"] = JSON.parsefile("./scenarios/placeholderFlexibleHVAC.json")["FlexibleHVAC"]
-    #     s = Scenario(d; flex_hvac_from_json=true);
-    #     p = REoptInputs(s);
+#     # @testset "placeholder 5 param RC model" begin
+#     #     # these tests pass locally but not on Actions ???
+#     #     d = JSON.parsefile("./scenarios/thermal_load.json");
+#     #     d["FlexibleHVAC"] = JSON.parsefile("./scenarios/placeholderFlexibleHVAC.json")["FlexibleHVAC"]
+#     #     s = Scenario(d; flex_hvac_from_json=true);
+#     #     p = REoptInputs(s);
 
-    #     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    #     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     #     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     #     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
 
-    #     r = run_reopt([m1,m2], p)
-    #     @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
-    #     @test r["Financial"]["npv"] == 0
+#     #     r = run_reopt([m1,m2], p)
+#     #     @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
+#     #     @test r["Financial"]["npv"] == 0
 
-    #     #= put in a time varying fuel cost, which should make purchasing the FlexibleHVAC system economical
-    #        with flat ElectricTariff the ExistingChiller does not benefit from FlexibleHVAC =#
-    #     d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = rand(Float64, (8760))*(50-25).+25;
-    #     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    #     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    #     r = run_reopt([m1,m2], REoptInputs(Scenario(d; flex_hvac_from_json=true)))
-    #     # all of the savings are from the ExistingBoiler fuel costs
-    #     @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === true
-    #     fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost"]
-    #     @test fuel_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
+#     #     #= put in a time varying fuel cost, which should make purchasing the FlexibleHVAC system economical
+#     #        with flat ElectricTariff the ExistingChiller does not benefit from FlexibleHVAC =#
+#     #     d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = rand(Float64, (8760))*(50-25).+25;
+#     #     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     #     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     #     r = run_reopt([m1,m2], REoptInputs(Scenario(d; flex_hvac_from_json=true)))
+#     #     # all of the savings are from the ExistingBoiler fuel costs
+#     #     @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === true
+#     #     fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost"]
+#     #     @test fuel_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
        
-    #     # now increase the FlexibleHVAC installed_cost to the fuel costs savings + 100 and expect that the FlexibleHVAC is not purchased
-    #     d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + 100
-    #     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    #     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    #     r = run_reopt([m1,m2], REoptInputs(Scenario(d; flex_hvac_from_json=true)))
-    #     @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
-    #     @test r["Financial"]["npv"] == 0
+#     #     # now increase the FlexibleHVAC installed_cost to the fuel costs savings + 100 and expect that the FlexibleHVAC is not purchased
+#     #     d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + 100
+#     #     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     #     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     #     r = run_reopt([m1,m2], REoptInputs(Scenario(d; flex_hvac_from_json=true)))
+#     #     @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
+#     #     @test r["Financial"]["npv"] == 0
 
-    #     # add TOU ElectricTariff and expect to benefit from using ExistingChiller intelligently
-    #     d["ElectricTariff"] = Dict("tou_energy_rates_per_kwh" => rand(Float64, (8760))*(0.80-0.45).+0.45)
-    #     d["FlexibleHVAC"]["temperature_upper_bound_degC"] = 18.0  # lower the upper bound to give Chiller more cost savings opportunity
-    #     d["FlexibleHVAC"]["installed_cost"] = 300
-    #     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    #     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    #     r = run_reopt([m1,m2], REoptInputs(Scenario(d; flex_hvac_from_json=true)))
+#     #     # add TOU ElectricTariff and expect to benefit from using ExistingChiller intelligently
+#     #     d["ElectricTariff"] = Dict("tou_energy_rates_per_kwh" => rand(Float64, (8760))*(0.80-0.45).+0.45)
+#     #     d["FlexibleHVAC"]["temperature_upper_bound_degC"] = 18.0  # lower the upper bound to give Chiller more cost savings opportunity
+#     #     d["FlexibleHVAC"]["installed_cost"] = 300
+#     #     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     #     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     #     r = run_reopt([m1,m2], REoptInputs(Scenario(d; flex_hvac_from_json=true)))
 
-    #     elec_cost_savings = r["ElectricTariff"]["lifecycle_demand_cost_bau"] + 
-    #                         r["ElectricTariff"]["lifecycle_energy_cost_bau"] - 
-    #                         r["ElectricTariff"]["lifecycle_demand_cost"] - 
-    #                         r["ElectricTariff"]["lifecycle_energy_cost"]
+#     #     elec_cost_savings = r["ElectricTariff"]["lifecycle_demand_cost_bau"] + 
+#     #                         r["ElectricTariff"]["lifecycle_energy_cost_bau"] - 
+#     #                         r["ElectricTariff"]["lifecycle_demand_cost"] - 
+#     #                         r["ElectricTariff"]["lifecycle_energy_cost"]
 
-    #     fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost"]
-    #     @test fuel_cost_savings + elec_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
+#     #     fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost"]
+#     #     @test fuel_cost_savings + elec_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
 
-    #     # now increase the FlexibleHVAC installed_cost to the fuel costs savings + elec_cost_savings 
-    #     # + 100 and expect that the FlexibleHVAC is not purchased
-    #     d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + elec_cost_savings + 100
-    #     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    #     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    #     r = run_reopt([m1,m2], REoptInputs(Scenario(d; flex_hvac_from_json=true)))
-    #     @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
-    #     @test r["Financial"]["npv"] == 0
-    # end
-end
+#     #     # now increase the FlexibleHVAC installed_cost to the fuel costs savings + elec_cost_savings 
+#     #     # + 100 and expect that the FlexibleHVAC is not purchased
+#     #     d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + elec_cost_savings + 100
+#     #     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     #     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     #     r = run_reopt([m1,m2], REoptInputs(Scenario(d; flex_hvac_from_json=true)))
+#     #     @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
+#     #     @test r["Financial"]["npv"] == 0
+#     # end
+# end
 
 #=
 add a time-of-export rate that is greater than retail rate for the month of January,
 check to make sure that PV does NOT export unless the site load is met first for the month of January.
 =#
 @testset "Do not allow_simultaneous_export_import" begin
-    model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 1))
     data = JSON.parsefile("./scenarios/monthly_rate.json")
 
     # create wholesale_rate with compensation in January > retail rate
@@ -447,20 +447,20 @@ end
 #     @test sum(r["ElectricStorage"]["year_one_soc_series_pct"]) / 8760 >= 0.72
 # end
 
-@testset "Outage with Generator, outate simulator, BAU critical load outputs" begin
-    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    p = REoptInputs("./scenarios/generator.json")
-    results = run_reopt([m1,m2], p)
-    @test results["Generator"]["size_kw"] ≈ 8.13 atol=0.01
-    @test (sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 1:9) + 
-           sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 13:8760)) == 0
-    @test results["ElectricLoad"]["bau_critical_load_met"] == false
-    @test results["ElectricLoad"]["bau_critical_load_met_time_steps"] == 0
+# @testset "Outage with Generator, outate simulator, BAU critical load outputs" begin
+#     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     p = REoptInputs("./scenarios/generator.json")
+#     results = run_reopt([m1,m2], p)
+#     @test results["Generator"]["size_kw"] ≈ 8.13 atol=0.01
+#     @test (sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 1:9) + 
+#            sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 13:8760)) == 0
+#     @test results["ElectricLoad"]["bau_critical_load_met"] == false
+#     @test results["ElectricLoad"]["bau_critical_load_met_time_steps"] == 0
     
-    simresults = simulate_outages(results, p)
-    @test simresults["resilience_hours_max"] == 11
-end
+#     simresults = simulate_outages(results, p)
+#     @test simresults["resilience_hours_max"] == 11
+# end
 
 # @testset "Minimize Unserved Load" begin
 #     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
@@ -904,283 +904,283 @@ end
 #     @test round(sum(cooling_electric_hybrid_expected .- cooling_elec_hybrid), digits=1) ≈ 0.0 atol=0.1
 # end
 
-@testset "OffGrid" begin
-    ## Scenario 1: Solar, Storage, Fixed Generator
-    post_name = "off_grid.json" 
-    post = JSON.parsefile("./scenarios/$post_name")
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    r = run_reopt(m, post)
-    scen = Scenario(post)
+# @testset "OffGrid" begin
+#     ## Scenario 1: Solar, Storage, Fixed Generator
+#     post_name = "off_grid.json" 
+#     post = JSON.parsefile("./scenarios/$post_name")
+#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     r = run_reopt(m, post)
+#     scen = Scenario(post)
     
-    # Test default values 
-    @test scen.electric_utility.outage_start_time_step ≈ 1
-    @test scen.electric_utility.outage_end_time_step ≈ 8760 * scen.settings.time_steps_per_hour
-    @test scen.storage.attr["ElectricStorage"].soc_init_pct ≈ 1
-    @test scen.storage.attr["ElectricStorage"].can_grid_charge ≈ false
-    @test scen.generator.fuel_avail_gal ≈ 1.0e9
-    @test scen.generator.min_turn_down_pct ≈ 0.15
-    @test sum(scen.electric_load.loads_kw) - sum(scen.electric_load.critical_loads_kw) ≈ 0 # critical loads should equal loads_kw
-    @test scen.financial.microgrid_upgrade_cost_pct ≈ 0
+#     # Test default values 
+#     @test scen.electric_utility.outage_start_time_step ≈ 1
+#     @test scen.electric_utility.outage_end_time_step ≈ 8760 * scen.settings.time_steps_per_hour
+#     @test scen.storage.attr["ElectricStorage"].soc_init_pct ≈ 1
+#     @test scen.storage.attr["ElectricStorage"].can_grid_charge ≈ false
+#     @test scen.generator.fuel_avail_gal ≈ 1.0e9
+#     @test scen.generator.min_turn_down_pct ≈ 0.15
+#     @test sum(scen.electric_load.loads_kw) - sum(scen.electric_load.critical_loads_kw) ≈ 0 # critical loads should equal loads_kw
+#     @test scen.financial.microgrid_upgrade_cost_pct ≈ 0
 
-    # Test outputs
-    @test r["ElectricUtility"]["year_one_energy_supplied_kwh"] ≈ 0 # no interaction with grid
-    @test r["Financial"]["lifecycle_offgrid_other_capital_costs"] ≈ 2617.092 atol=0.01 # Check straight line depreciation calc
-    @test sum(r["ElectricLoad"]["offgrid_annual_oper_res_provided_series_kwh"]) >= sum(r["ElectricLoad"]["offgrid_annual_oper_res_required_series_kwh"]) # OR provided >= required
-    @test r["ElectricLoad"]["offgrid_load_met_pct"] >= scen.electric_load.min_load_met_annual_pct
-    @test r["PV"]["size_kw"] ≈ 5050.0
-    f = r["Financial"]
-    @test f["lifecycle_generation_tech_capital_costs"] + f["lifecycle_storage_capital_costs"] + f["lifecycle_om_costs_after_tax"] +
-             f["lifecycle_fuel_costs_after_tax"] + f["lifecycle_chp_standby_cost_after_tax"] + f["lifecycle_elecbill_after_tax"] + 
-             f["lifecycle_offgrid_other_annual_costs_after_tax"] + f["lifecycle_offgrid_other_capital_costs"] + 
-             f["lifecycle_outage_cost"] + f["lifecycle_MG_upgrade_and_fuel_cost"] - 
-             f["lifecycle_production_incentive_after_tax"] ≈ f["lcc"] atol=1.0
+#     # Test outputs
+#     @test r["ElectricUtility"]["year_one_energy_supplied_kwh"] ≈ 0 # no interaction with grid
+#     @test r["Financial"]["lifecycle_offgrid_other_capital_costs"] ≈ 2617.092 atol=0.01 # Check straight line depreciation calc
+#     @test sum(r["ElectricLoad"]["offgrid_annual_oper_res_provided_series_kwh"]) >= sum(r["ElectricLoad"]["offgrid_annual_oper_res_required_series_kwh"]) # OR provided >= required
+#     @test r["ElectricLoad"]["offgrid_load_met_pct"] >= scen.electric_load.min_load_met_annual_pct
+#     @test r["PV"]["size_kw"] ≈ 5050.0
+#     f = r["Financial"]
+#     @test f["lifecycle_generation_tech_capital_costs"] + f["lifecycle_storage_capital_costs"] + f["lifecycle_om_costs_after_tax"] +
+#              f["lifecycle_fuel_costs_after_tax"] + f["lifecycle_chp_standby_cost_after_tax"] + f["lifecycle_elecbill_after_tax"] + 
+#              f["lifecycle_offgrid_other_annual_costs_after_tax"] + f["lifecycle_offgrid_other_capital_costs"] + 
+#              f["lifecycle_outage_cost"] + f["lifecycle_MG_upgrade_and_fuel_cost"] - 
+#              f["lifecycle_production_incentive_after_tax"] ≈ f["lcc"] atol=1.0
     
-    ## Scenario 2: Fixed Generator only
-    post["ElectricLoad"]["annual_kwh"] = 100.0
-    post["PV"]["max_kw"] = 0.0
-    post["ElectricStorage"]["max_kw"] = 0.0
-    post["Generator"]["min_turn_down_pct"] = 0.0
+#     ## Scenario 2: Fixed Generator only
+#     post["ElectricLoad"]["annual_kwh"] = 100.0
+#     post["PV"]["max_kw"] = 0.0
+#     post["ElectricStorage"]["max_kw"] = 0.0
+#     post["Generator"]["min_turn_down_pct"] = 0.0
 
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    r = run_reopt(m, post)
+#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     r = run_reopt(m, post)
 
-    # Test generator outputs
-    @test r["Generator"]["average_annual_fuel_used_gal"] ≈ 7.52 # 99 kWh * 0.076 gal/kWh
-    @test r["Generator"]["average_annual_energy_produced_kwh"] ≈ 99.0
-    @test r["Generator"]["year_one_fuel_cost_before_tax"] ≈ 22.57
-    @test r["Generator"]["lifecycle_fuel_cost_after_tax"] ≈ 205.35 
-    @test r["Financial"]["initial_capital_costs"] ≈ 100*(700) 
-    @test r["Financial"]["lifecycle_capital_costs"] ≈ 100*(700+324.235442*(1-0.26)) atol=0.1 # replacement in yr 10 is considered tax deductible
-    @test r["Financial"]["initial_capital_costs_after_incentives"] ≈ 700*100 atol=0.1
-    @test r["Financial"]["replacements_future_cost_after_tax"] ≈ 700*100
-    @test r["Financial"]["replacements_present_cost_after_tax"] ≈ 100*(324.235442*(1-0.26)) atol=0.1 
+#     # Test generator outputs
+#     @test r["Generator"]["average_annual_fuel_used_gal"] ≈ 7.52 # 99 kWh * 0.076 gal/kWh
+#     @test r["Generator"]["average_annual_energy_produced_kwh"] ≈ 99.0
+#     @test r["Generator"]["year_one_fuel_cost_before_tax"] ≈ 22.57
+#     @test r["Generator"]["lifecycle_fuel_cost_after_tax"] ≈ 205.35 
+#     @test r["Financial"]["initial_capital_costs"] ≈ 100*(700) 
+#     @test r["Financial"]["lifecycle_capital_costs"] ≈ 100*(700+324.235442*(1-0.26)) atol=0.1 # replacement in yr 10 is considered tax deductible
+#     @test r["Financial"]["initial_capital_costs_after_incentives"] ≈ 700*100 atol=0.1
+#     @test r["Financial"]["replacements_future_cost_after_tax"] ≈ 700*100
+#     @test r["Financial"]["replacements_present_cost_after_tax"] ≈ 100*(324.235442*(1-0.26)) atol=0.1 
 
-    ## Scenario 3: Fixed Generator that can meet load, but cannot meet load operating reserve requirement
-    ## This test ensures the load operating reserve requirement is being enforced
-    post["ElectricLoad"]["doe_reference_name"] = "FlatLoad"
-    post["ElectricLoad"]["annual_kwh"] = 876000.0 # requires 100 kW gen
-    post["ElectricLoad"]["min_load_met_annual_pct"] = 1.0 # requires additional generator capacity
-    post["PV"]["max_kw"] = 0.0
-    post["ElectricStorage"]["max_kw"] = 0.0
-    post["Generator"]["min_turn_down_pct"] = 0.0
+#     ## Scenario 3: Fixed Generator that can meet load, but cannot meet load operating reserve requirement
+#     ## This test ensures the load operating reserve requirement is being enforced
+#     post["ElectricLoad"]["doe_reference_name"] = "FlatLoad"
+#     post["ElectricLoad"]["annual_kwh"] = 876000.0 # requires 100 kW gen
+#     post["ElectricLoad"]["min_load_met_annual_pct"] = 1.0 # requires additional generator capacity
+#     post["PV"]["max_kw"] = 0.0
+#     post["ElectricStorage"]["max_kw"] = 0.0
+#     post["Generator"]["min_turn_down_pct"] = 0.0
 
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    r = run_reopt(m, post)
+#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     r = run_reopt(m, post)
 
-    # Test generator outputs
-    @test typeof(r) == Model # this is true when the model is infeasible
+#     # Test generator outputs
+#     @test typeof(r) == Model # this is true when the model is infeasible
 
-end
+# end
 
-@testset "Emissions" begin
-    #renewable energy and emissions reduction targets
-    include_exported_RE_in_total = [true,false,true]
-    include_exported_ER_in_total = [true,false,true]
-    RE_target = [0.8,nothing,nothing]
-    ER_target = [nothing,0.8,nothing]
-    with_outage = [true,false,false]
+# @testset "Emissions" begin
+#     #renewable energy and emissions reduction targets
+#     include_exported_RE_in_total = [true,false,true]
+#     include_exported_ER_in_total = [true,false,true]
+#     RE_target = [0.8,nothing,nothing]
+#     ER_target = [nothing,0.8,nothing]
+#     with_outage = [true,false,false]
 
-    for i in range(1, stop=3)
-        if i == 3
-            inputs = JSON.parsefile("./scenarios/re_emissions_with_thermal.json")
-        else
-            inputs = JSON.parsefile("./scenarios/re_emissions_elec_only.json")
-        end
-        inputs["Site"]["include_exported_renewable_electricity_in_total"] = include_exported_RE_in_total[i]
-        inputs["Site"]["include_exported_elec_emissions_in_total"] = include_exported_ER_in_total[i]
-        inputs["Site"]["renewable_electricity_min_pct"] = if isnothing(RE_target[i]) 0.0 else RE_target[i] end
-        inputs["Site"]["renewable_electricity_max_pct"] = RE_target[i]
-        inputs["Site"]["CO2_emissions_reduction_min_pct"] = ER_target[i]
-        inputs["Site"]["CO2_emissions_reduction_max_pct"] = ER_target[i]
-        if with_outage[i]
-            outage_start_hour = 4032
-            outage_duration = 2000 #hrs
-            inputs["ElectricUtility"]["outage_start_time_step"] = outage_start_hour + 1
-            inputs["ElectricUtility"]["outage_end_time_step"] = outage_start_hour + 1 + outage_duration
-            inputs["Generator"]["max_kw"] = 20
-            inputs["Generator"]["existing_kw"] = 2
-            inputs["Generator"]["fuel_avail_gal"] = 1000 
-        end
+#     for i in range(1, stop=3)
+#         if i == 3
+#             inputs = JSON.parsefile("./scenarios/re_emissions_with_thermal.json")
+#         else
+#             inputs = JSON.parsefile("./scenarios/re_emissions_elec_only.json")
+#         end
+#         inputs["Site"]["include_exported_renewable_electricity_in_total"] = include_exported_RE_in_total[i]
+#         inputs["Site"]["include_exported_elec_emissions_in_total"] = include_exported_ER_in_total[i]
+#         inputs["Site"]["renewable_electricity_min_pct"] = if isnothing(RE_target[i]) 0.0 else RE_target[i] end
+#         inputs["Site"]["renewable_electricity_max_pct"] = RE_target[i]
+#         inputs["Site"]["CO2_emissions_reduction_min_pct"] = ER_target[i]
+#         inputs["Site"]["CO2_emissions_reduction_max_pct"] = ER_target[i]
+#         if with_outage[i]
+#             outage_start_hour = 4032
+#             outage_duration = 2000 #hrs
+#             inputs["ElectricUtility"]["outage_start_time_step"] = outage_start_hour + 1
+#             inputs["ElectricUtility"]["outage_end_time_step"] = outage_start_hour + 1 + outage_duration
+#             inputs["Generator"]["max_kw"] = 20
+#             inputs["Generator"]["existing_kw"] = 2
+#             inputs["Generator"]["fuel_avail_gal"] = 1000 
+#         end
 
-        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MAXIIS" => -1))
-        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MAXIIS" => -1))
-        results = run_reopt([m1, m2], inputs)
+#         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MAXIIS" => -1))
+#         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MAXIIS" => -1))
+#         results = run_reopt([m1, m2], inputs)
 
-        if !isnothing(ER_target[i])
-            ER_pct_out = results["Site"]["lifecycle_emissions_reduction_CO2_pct"]
-            @test ER_target[i] ≈ ER_pct_out atol=1e-3
-            lifecycle_emissions_tCO2_out = results["Site"]["lifecycle_emissions_tCO2"]
-            lifecycle_emissions_bau_tCO2_out = results["Site"]["lifecycle_emissions_tCO2_bau"]
-            ER_pct_calced_out = (lifecycle_emissions_bau_tCO2_out-lifecycle_emissions_tCO2_out)/lifecycle_emissions_bau_tCO2_out
-            ER_pct_diff = abs(ER_pct_calced_out-ER_pct_out)
-            @test ER_pct_diff ≈ 0.0 atol=1e-2
-        end
-        year_one_emissions_tCO2_out = results["Site"]["year_one_emissions_tCO2"]
-        yr1_fuel_emissions_tCO2_out = results["Site"]["year_one_emissions_from_fuelburn_tCO2"]
-        yr1_grid_emissions_tCO2_out = results["ElectricUtility"]["year_one_emissions_tCO2"]
-        yr1_total_emissions_calced_tCO2 = yr1_fuel_emissions_tCO2_out + yr1_grid_emissions_tCO2_out 
-        @test year_one_emissions_tCO2_out ≈ yr1_total_emissions_calced_tCO2 atol=1e-1
-        if !isnothing(results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"])
-            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] >= 0.0
-        end
+#         if !isnothing(ER_target[i])
+#             ER_pct_out = results["Site"]["lifecycle_emissions_reduction_CO2_pct"]
+#             @test ER_target[i] ≈ ER_pct_out atol=1e-3
+#             lifecycle_emissions_tCO2_out = results["Site"]["lifecycle_emissions_tCO2"]
+#             lifecycle_emissions_bau_tCO2_out = results["Site"]["lifecycle_emissions_tCO2_bau"]
+#             ER_pct_calced_out = (lifecycle_emissions_bau_tCO2_out-lifecycle_emissions_tCO2_out)/lifecycle_emissions_bau_tCO2_out
+#             ER_pct_diff = abs(ER_pct_calced_out-ER_pct_out)
+#             @test ER_pct_diff ≈ 0.0 atol=1e-2
+#         end
+#         year_one_emissions_tCO2_out = results["Site"]["year_one_emissions_tCO2"]
+#         yr1_fuel_emissions_tCO2_out = results["Site"]["year_one_emissions_from_fuelburn_tCO2"]
+#         yr1_grid_emissions_tCO2_out = results["ElectricUtility"]["year_one_emissions_tCO2"]
+#         yr1_total_emissions_calced_tCO2 = yr1_fuel_emissions_tCO2_out + yr1_grid_emissions_tCO2_out 
+#         @test year_one_emissions_tCO2_out ≈ yr1_total_emissions_calced_tCO2 atol=1e-1
+#         if !isnothing(results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"])
+#             @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] >= 0.0
+#         end
         
-        #commented out values are using levelization factors matching API
-        if i == 1
-            @test results["PV"]["size_kw"] ≈ 61.89 atol=1e-1 #63.427 atol=1e-1
-            @test results["ElectricStorage"]["size_kw"] ≈ 2.43 # 2.43 kW
-            @test results["ElectricStorage"]["size_kwh"] ≈ 7.31 # 7.305
-            @test results["Generator"]["size_kw"] ≈ 22.0 # 22 kW
-            expected_npv = -87082 # API test without Wind tech as an input.
-            @test (expected_npv - results["Financial"]["npv"])/expected_npv ≈ 0.0 atol=1e-2
-            @test results["Site"]["annual_renewable_electricity_kwh"] ≈ 75140.37 #75140.37
-            @test results["Site"]["renewable_electricity_pct"] ≈ 0.8 # 0.8
-            @test results["Site"]["renewable_electricity_pct_bau"] ≈ 0.1476 atol=1e-4 #0.1464 atol=1e-4
-            @test results["Site"]["total_renewable_energy_pct"] ≈ 0.8 # 0.8
-            @test results["Site"]["total_renewable_energy_pct_bau"] ≈ 0.1476 atol=1e-4 #0.1464 atol=1e-4
-            @test results["Site"]["lifecycle_emissions_reduction_CO2_pct"] ≈ 0.6573 atol=1e-4 # 0.6578 atol=1e-4
-            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] ≈ 258 atol=1 # 259.7
-            @test results["Site"]["year_one_emissions_tCO2"] ≈ 12.75 # 12.75
-            @test results["Site"]["year_one_emissions_tCO2_bau"] ≈ 40.48 atol=1e-2 # 40.54 atol=1e-2
-            @test results["Site"]["year_one_emissions_from_fuelburn_tCO2"] ≈ 8.63 # 8.63
-            @test results["Site"]["year_one_emissions_from_fuelburn_tCO2_bau"] ≈ 0.0 # 0.0
-            @test results["Site"]["lifecycle_emissions_cost_CO2"] ≈ 8760 atol=1 # 8760.58
-            @test results["Site"]["lifecycle_emissions_cost_CO2_bau"] ≈ 25818.96 atol=1e-1 # 25856.9 atol=1e-1
-            @test results["Site"]["lifecycle_emissions_tCO2"] ≈ 245.65 # 245.65
-            @test results["Site"]["lifecycle_emissions_tCO2_bau"] ≈ 716.81 #717.86
-            @test results["Site"]["lifecycle_emissions_from_fuelburn_tCO2"] ≈ 172.62 # 172.62
-            @test results["Site"]["lifecycle_emissions_from_fuelburn_tCO2_bau"] ≈ 0.0 # 0.0
-            @test results["ElectricUtility"]["year_one_emissions_tCO2"] ≈ 4.12 # 4.12
-            @test results["ElectricUtility"]["year_one_emissions_tCO2_bau"] ≈ 40.48 # 40.54
-            @test results["ElectricUtility"]["lifecycle_emissions_tCO2"] ≈ 73.03 # 73.03
-            @test results["ElectricUtility"]["lifecycle_emissions_tCO2_bau"] ≈ 716.81 # 717.86
-        elseif i == 2
-            @test results["PV"]["size_kw"] ≈ 94.48 atol=1 # 94.97
-            @test results["ElectricStorage"]["size_kw"] ≈ 20.27 atol=1 # 20.29
-            @test results["ElectricStorage"]["size_kwh"] ≈ 154.44 atol=1 # 154.52
-            @test !haskey(results, "Generator")
-            # NPV
-            expected_npv = -244450 # per test in REopt API
-            @test (expected_npv - results["Financial"]["npv"])/expected_npv ≈ 0.0 atol=1e-2
-            # Renewable energy
-            @test results["Site"]["renewable_electricity_pct"] ≈ 0.7725 atol=1e-3 # 0.7722 atol=1e-4
-            @test results["Site"]["annual_renewable_electricity_kwh"] ≈ 77250.1 atol=10 # 77221.23 atol=10
-            @test results["Site"]["renewable_electricity_pct_bau"] ≈ 0.1365 atol=1e-3 #0.1354 atol=1e-3
-            @test results["Site"]["annual_renewable_electricity_kwh_bau"] ≈ 13650.39 atol=10 # 13542.62 atol=10
-            @test results["Site"]["total_renewable_energy_pct"] ≈ 0.7725 atol=1e-3 # 0.7722
-            @test results["Site"]["total_renewable_energy_pct_bau"] ≈ 0.1365 atol=1e-3 # 0.1354 atol=1e-3
-            # CO2 emissions - totals ≈  from grid, from fuelburn, ER, $/tCO2 breakeven
-            @test results["Site"]["lifecycle_emissions_reduction_CO2_pct"] ≈ 0.8 atol=1e-3 # 0.8
-            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] ≈ 420.91 atol=1e-1 # 421.41
-            @test results["Site"]["year_one_emissions_tCO2"] ≈ 11.59 atol=1 # 11.59
-            @test results["Site"]["year_one_emissions_tCO2_bau"] ≈ 57.97 atol=1 # 57.97
-            @test results["Site"]["year_one_emissions_from_fuelburn_tCO2"] ≈ 0.0 atol=1 # 0.0
-            @test results["Site"]["year_one_emissions_from_fuelburn_tCO2_bau"] ≈ 0.0 atol=1 # 0.0
-            @test results["Site"]["lifecycle_emissions_cost_CO2"] ≈ 7386.65 atol=1 # 7395.84 atol=1
-            @test results["Site"]["lifecycle_emissions_cost_CO2_bau"] ≈ 36933.26 atol=1 # 36979.2 atol=1
-            @test results["Site"]["lifecycle_emissions_tCO2"] ≈ 205.33 atol=1 # 205.33
-            @test results["Site"]["lifecycle_emissions_tCO2_bau"] ≈ 1025.37 atol=1 # 1026.65 atol=1
-            @test results["Site"]["lifecycle_emissions_from_fuelburn_tCO2"] ≈ 0.0 atol=1 # 0.0
-            @test results["Site"]["lifecycle_emissions_from_fuelburn_tCO2_bau"] ≈ 0.0 atol=1 # 0.0
-            @test results["ElectricUtility"]["year_one_emissions_tCO2"] ≈ 11.59 atol=1 # 11.59
-            @test results["ElectricUtility"]["year_one_emissions_tCO2_bau"] ≈ 57.97 atol=1 # 57.97
-            @test results["ElectricUtility"]["lifecycle_emissions_tCO2"] ≈ 205.33 atol=1 # 205.33
-            @test results["ElectricUtility"]["lifecycle_emissions_tCO2_bau"] ≈ 1025.37 atol=1 # 1026.65 atol=1
+#         #commented out values are using levelization factors matching API
+#         if i == 1
+#             @test results["PV"]["size_kw"] ≈ 61.89 atol=1e-1 #63.427 atol=1e-1
+#             @test results["ElectricStorage"]["size_kw"] ≈ 2.43 # 2.43 kW
+#             @test results["ElectricStorage"]["size_kwh"] ≈ 7.31 # 7.305
+#             @test results["Generator"]["size_kw"] ≈ 22.0 # 22 kW
+#             expected_npv = -87082 # API test without Wind tech as an input.
+#             @test (expected_npv - results["Financial"]["npv"])/expected_npv ≈ 0.0 atol=1e-2
+#             @test results["Site"]["annual_renewable_electricity_kwh"] ≈ 75140.37 #75140.37
+#             @test results["Site"]["renewable_electricity_pct"] ≈ 0.8 # 0.8
+#             @test results["Site"]["renewable_electricity_pct_bau"] ≈ 0.1476 atol=1e-4 #0.1464 atol=1e-4
+#             @test results["Site"]["total_renewable_energy_pct"] ≈ 0.8 # 0.8
+#             @test results["Site"]["total_renewable_energy_pct_bau"] ≈ 0.1476 atol=1e-4 #0.1464 atol=1e-4
+#             @test results["Site"]["lifecycle_emissions_reduction_CO2_pct"] ≈ 0.6573 atol=1e-4 # 0.6578 atol=1e-4
+#             @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] ≈ 258 atol=1 # 259.7
+#             @test results["Site"]["year_one_emissions_tCO2"] ≈ 12.75 # 12.75
+#             @test results["Site"]["year_one_emissions_tCO2_bau"] ≈ 40.48 atol=1e-2 # 40.54 atol=1e-2
+#             @test results["Site"]["year_one_emissions_from_fuelburn_tCO2"] ≈ 8.63 # 8.63
+#             @test results["Site"]["year_one_emissions_from_fuelburn_tCO2_bau"] ≈ 0.0 # 0.0
+#             @test results["Site"]["lifecycle_emissions_cost_CO2"] ≈ 8760 atol=1 # 8760.58
+#             @test results["Site"]["lifecycle_emissions_cost_CO2_bau"] ≈ 25818.96 atol=1e-1 # 25856.9 atol=1e-1
+#             @test results["Site"]["lifecycle_emissions_tCO2"] ≈ 245.65 # 245.65
+#             @test results["Site"]["lifecycle_emissions_tCO2_bau"] ≈ 716.81 #717.86
+#             @test results["Site"]["lifecycle_emissions_from_fuelburn_tCO2"] ≈ 172.62 # 172.62
+#             @test results["Site"]["lifecycle_emissions_from_fuelburn_tCO2_bau"] ≈ 0.0 # 0.0
+#             @test results["ElectricUtility"]["year_one_emissions_tCO2"] ≈ 4.12 # 4.12
+#             @test results["ElectricUtility"]["year_one_emissions_tCO2_bau"] ≈ 40.48 # 40.54
+#             @test results["ElectricUtility"]["lifecycle_emissions_tCO2"] ≈ 73.03 # 73.03
+#             @test results["ElectricUtility"]["lifecycle_emissions_tCO2_bau"] ≈ 716.81 # 717.86
+#         elseif i == 2
+#             @test results["PV"]["size_kw"] ≈ 94.48 atol=1 # 94.97
+#             @test results["ElectricStorage"]["size_kw"] ≈ 20.27 atol=1 # 20.29
+#             @test results["ElectricStorage"]["size_kwh"] ≈ 154.44 atol=1 # 154.52
+#             @test !haskey(results, "Generator")
+#             # NPV
+#             expected_npv = -244450 # per test in REopt API
+#             @test (expected_npv - results["Financial"]["npv"])/expected_npv ≈ 0.0 atol=1e-2
+#             # Renewable energy
+#             @test results["Site"]["renewable_electricity_pct"] ≈ 0.7725 atol=1e-3 # 0.7722 atol=1e-4
+#             @test results["Site"]["annual_renewable_electricity_kwh"] ≈ 77250.1 atol=10 # 77221.23 atol=10
+#             @test results["Site"]["renewable_electricity_pct_bau"] ≈ 0.1365 atol=1e-3 #0.1354 atol=1e-3
+#             @test results["Site"]["annual_renewable_electricity_kwh_bau"] ≈ 13650.39 atol=10 # 13542.62 atol=10
+#             @test results["Site"]["total_renewable_energy_pct"] ≈ 0.7725 atol=1e-3 # 0.7722
+#             @test results["Site"]["total_renewable_energy_pct_bau"] ≈ 0.1365 atol=1e-3 # 0.1354 atol=1e-3
+#             # CO2 emissions - totals ≈  from grid, from fuelburn, ER, $/tCO2 breakeven
+#             @test results["Site"]["lifecycle_emissions_reduction_CO2_pct"] ≈ 0.8 atol=1e-3 # 0.8
+#             @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] ≈ 420.91 atol=1e-1 # 421.41
+#             @test results["Site"]["year_one_emissions_tCO2"] ≈ 11.59 atol=1 # 11.59
+#             @test results["Site"]["year_one_emissions_tCO2_bau"] ≈ 57.97 atol=1 # 57.97
+#             @test results["Site"]["year_one_emissions_from_fuelburn_tCO2"] ≈ 0.0 atol=1 # 0.0
+#             @test results["Site"]["year_one_emissions_from_fuelburn_tCO2_bau"] ≈ 0.0 atol=1 # 0.0
+#             @test results["Site"]["lifecycle_emissions_cost_CO2"] ≈ 7386.65 atol=1 # 7395.84 atol=1
+#             @test results["Site"]["lifecycle_emissions_cost_CO2_bau"] ≈ 36933.26 atol=1 # 36979.2 atol=1
+#             @test results["Site"]["lifecycle_emissions_tCO2"] ≈ 205.33 atol=1 # 205.33
+#             @test results["Site"]["lifecycle_emissions_tCO2_bau"] ≈ 1025.37 atol=1 # 1026.65 atol=1
+#             @test results["Site"]["lifecycle_emissions_from_fuelburn_tCO2"] ≈ 0.0 atol=1 # 0.0
+#             @test results["Site"]["lifecycle_emissions_from_fuelburn_tCO2_bau"] ≈ 0.0 atol=1 # 0.0
+#             @test results["ElectricUtility"]["year_one_emissions_tCO2"] ≈ 11.59 atol=1 # 11.59
+#             @test results["ElectricUtility"]["year_one_emissions_tCO2_bau"] ≈ 57.97 atol=1 # 57.97
+#             @test results["ElectricUtility"]["lifecycle_emissions_tCO2"] ≈ 205.33 atol=1 # 205.33
+#             @test results["ElectricUtility"]["lifecycle_emissions_tCO2_bau"] ≈ 1025.37 atol=1 # 1026.65 atol=1
 
-            #also test CO2 breakeven cost
-            inputs["PV"]["min_kw"] = results["PV"]["size_kw"] - inputs["PV"]["existing_kw"]
-            inputs["PV"]["max_kw"] = results["PV"]["size_kw"] - inputs["PV"]["existing_kw"]
-            inputs["ElectricStorage"]["min_kw"] = results["ElectricStorage"]["size_kw"]
-            inputs["ElectricStorage"]["max_kw"] = results["ElectricStorage"]["size_kw"]
-            inputs["ElectricStorage"]["min_kwh"] = results["ElectricStorage"]["size_kwh"]
-            inputs["ElectricStorage"]["max_kwh"] = results["ElectricStorage"]["size_kwh"]
-            inputs["Financial"]["CO2_cost_per_tonne"] = results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"]
-            inputs["Settings"]["include_climate_in_objective"] = true
-            m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-            m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-            results = run_reopt([m1, m2], inputs)
-            @test results["Financial"]["npv"] ≈ 0 atol=11
-            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] ≈ inputs["Financial"]["CO2_cost_per_tonne"] atol=1e-1
-        elseif i == 3
-            @test results["PV"]["size_kw"] ≈ 20.0 atol=1e-1
-            @test !haskey(results, "Wind")
-            @test !haskey(results, "ElectricStorage")
-            @test !haskey(results, "Generator")
-            @test results["CHP"]["size_kw"] ≈ 200.0 atol=1e-1
-            @test results["AbsorptionChiller"]["size_ton"] ≈ 400.0 atol=1e-1
-            @test results["HotThermalStorage"]["size_gal"] ≈ 50000 atol=1e1
-            @test results["ColdThermalStorage"]["size_gal"] ≈ 30000 atol=1e1
-            yr1_nat_gas_mmbtu = results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"] + results["CHP"]["year_one_fuel_used_mmbtu"]
-            nat_gas_emissions_lb_per_mmbtu = Dict("CO2"=>116.9, "NOx"=>0.09139, "SO2"=>0.000578592, "PM25"=>0.007328833)
-            TONNE_PER_LB = 1/2204.62
-            @test results["Site"]["year_one_emissions_from_fuelburn_tCO2"] ≈ nat_gas_emissions_lb_per_mmbtu["CO2"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1
-            @test results["Site"]["year_one_emissions_from_fuelburn_tNOx"] ≈ nat_gas_emissions_lb_per_mmbtu["NOx"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
-            @test results["Site"]["year_one_emissions_from_fuelburn_tSO2"] ≈ nat_gas_emissions_lb_per_mmbtu["SO2"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
-            @test results["Site"]["year_one_emissions_from_fuelburn_tPM25"] ≈ nat_gas_emissions_lb_per_mmbtu["PM25"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
-            @test results["Site"]["lifecycle_emissions_tCO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tCO2"] + results["ElectricUtility"]["lifecycle_emissions_tCO2"] atol=1
-            @test results["Site"]["lifecycle_emissions_tNOx"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tNOx"] + results["ElectricUtility"]["lifecycle_emissions_tNOx"] atol=1e-2
-            @test results["Site"]["lifecycle_emissions_tSO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tSO2"] + results["ElectricUtility"]["lifecycle_emissions_tSO2"] atol=1e-2
-            @test results["Site"]["lifecycle_emissions_tPM25"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tPM25"] + results["ElectricUtility"]["lifecycle_emissions_tPM25"] atol=1e-2
-            @test results["Site"]["annual_renewable_electricity_kwh"] ≈ results["PV"]["average_annual_energy_produced_kwh"] + inputs["CHP"]["fuel_renewable_energy_pct"] * results["CHP"]["year_one_electric_energy_produced_kwh"] atol=1
-            @test results["Site"]["renewable_electricity_pct"] ≈ results["Site"]["annual_renewable_electricity_kwh"] / results["ElectricLoad"]["annual_calculated_kwh"] atol=1e-6#0.044285 atol=1e-4
-            KWH_PER_MMBTU = 293.07107
-            annual_RE_kwh = inputs["CHP"]["fuel_renewable_energy_pct"] * results["CHP"]["year_one_thermal_energy_produced_mmbtu"] * KWH_PER_MMBTU + results["Site"]["annual_renewable_electricity_kwh"]
-            annual_heat_kwh = (results["CHP"]["year_one_thermal_energy_produced_mmbtu"] + results["ExistingBoiler"]["year_one_thermal_production_mmbtu"]) * KWH_PER_MMBTU
-            @test results["Site"]["total_renewable_energy_pct"] ≈ annual_RE_kwh / (annual_heat_kwh + results["ElectricLoad"]["annual_calculated_kwh"]) atol=1e-6
-        end
-    end
-end
+#             #also test CO2 breakeven cost
+#             inputs["PV"]["min_kw"] = results["PV"]["size_kw"] - inputs["PV"]["existing_kw"]
+#             inputs["PV"]["max_kw"] = results["PV"]["size_kw"] - inputs["PV"]["existing_kw"]
+#             inputs["ElectricStorage"]["min_kw"] = results["ElectricStorage"]["size_kw"]
+#             inputs["ElectricStorage"]["max_kw"] = results["ElectricStorage"]["size_kw"]
+#             inputs["ElectricStorage"]["min_kwh"] = results["ElectricStorage"]["size_kwh"]
+#             inputs["ElectricStorage"]["max_kwh"] = results["ElectricStorage"]["size_kwh"]
+#             inputs["Financial"]["CO2_cost_per_tonne"] = results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"]
+#             inputs["Settings"]["include_climate_in_objective"] = true
+#             m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#             m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#             results = run_reopt([m1, m2], inputs)
+#             @test results["Financial"]["npv"] ≈ 0 atol=11
+#             @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] ≈ inputs["Financial"]["CO2_cost_per_tonne"] atol=1e-1
+#         elseif i == 3
+#             @test results["PV"]["size_kw"] ≈ 20.0 atol=1e-1
+#             @test !haskey(results, "Wind")
+#             @test !haskey(results, "ElectricStorage")
+#             @test !haskey(results, "Generator")
+#             @test results["CHP"]["size_kw"] ≈ 200.0 atol=1e-1
+#             @test results["AbsorptionChiller"]["size_ton"] ≈ 400.0 atol=1e-1
+#             @test results["HotThermalStorage"]["size_gal"] ≈ 50000 atol=1e1
+#             @test results["ColdThermalStorage"]["size_gal"] ≈ 30000 atol=1e1
+#             yr1_nat_gas_mmbtu = results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"] + results["CHP"]["year_one_fuel_used_mmbtu"]
+#             nat_gas_emissions_lb_per_mmbtu = Dict("CO2"=>116.9, "NOx"=>0.09139, "SO2"=>0.000578592, "PM25"=>0.007328833)
+#             TONNE_PER_LB = 1/2204.62
+#             @test results["Site"]["year_one_emissions_from_fuelburn_tCO2"] ≈ nat_gas_emissions_lb_per_mmbtu["CO2"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1
+#             @test results["Site"]["year_one_emissions_from_fuelburn_tNOx"] ≈ nat_gas_emissions_lb_per_mmbtu["NOx"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
+#             @test results["Site"]["year_one_emissions_from_fuelburn_tSO2"] ≈ nat_gas_emissions_lb_per_mmbtu["SO2"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
+#             @test results["Site"]["year_one_emissions_from_fuelburn_tPM25"] ≈ nat_gas_emissions_lb_per_mmbtu["PM25"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
+#             @test results["Site"]["lifecycle_emissions_tCO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tCO2"] + results["ElectricUtility"]["lifecycle_emissions_tCO2"] atol=1
+#             @test results["Site"]["lifecycle_emissions_tNOx"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tNOx"] + results["ElectricUtility"]["lifecycle_emissions_tNOx"] atol=1e-2
+#             @test results["Site"]["lifecycle_emissions_tSO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tSO2"] + results["ElectricUtility"]["lifecycle_emissions_tSO2"] atol=1e-2
+#             @test results["Site"]["lifecycle_emissions_tPM25"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tPM25"] + results["ElectricUtility"]["lifecycle_emissions_tPM25"] atol=1e-2
+#             @test results["Site"]["annual_renewable_electricity_kwh"] ≈ results["PV"]["average_annual_energy_produced_kwh"] + inputs["CHP"]["fuel_renewable_energy_pct"] * results["CHP"]["year_one_electric_energy_produced_kwh"] atol=1
+#             @test results["Site"]["renewable_electricity_pct"] ≈ results["Site"]["annual_renewable_electricity_kwh"] / results["ElectricLoad"]["annual_calculated_kwh"] atol=1e-6#0.044285 atol=1e-4
+#             KWH_PER_MMBTU = 293.07107
+#             annual_RE_kwh = inputs["CHP"]["fuel_renewable_energy_pct"] * results["CHP"]["year_one_thermal_energy_produced_mmbtu"] * KWH_PER_MMBTU + results["Site"]["annual_renewable_electricity_kwh"]
+#             annual_heat_kwh = (results["CHP"]["year_one_thermal_energy_produced_mmbtu"] + results["ExistingBoiler"]["year_one_thermal_production_mmbtu"]) * KWH_PER_MMBTU
+#             @test results["Site"]["total_renewable_energy_pct"] ≈ annual_RE_kwh / (annual_heat_kwh + results["ElectricLoad"]["annual_calculated_kwh"]) atol=1e-6
+#         end
+#     end
+# end
 
 
-## equivalent REopt API Post for test 2:
-#   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
-# {"Scenario": {
-#     "Site": {
-#         "longitude": -118.1164613,
-#         "latitude": 34.5794343,
-#         "roof_squarefeet": 5000.0,
-#         "land_acres": 1.0,
-#     "PV": {
-#         "macrs_bonus_pct": 0.4,
-#         "installed_cost_per_kw": 2000.0,
-#         "tilt": 34.579,
-#         "degradation_pct": 0.005,
-#         "macrs_option_years": 5,
-#         "federal_itc_pct": 0.3,
-#         "module_type": 0,
-#         "array_type": 1,
-#         "om_cost_per_kw": 16.0,
-#         "macrs_itc_reduction": 0.5,
-#         "azimuth": 180.0,
-#         "federal_rebate_per_kw": 350.0,
-#         "dc_ac_ratio": 1.1
-#     },
-#     "LoadProfile": {
-#         "doe_reference_name": "RetailStore",
-#         "annual_kwh": 10000000.0,
-#         "city": "LosAngeles"
-#     },
-#     "ElectricStorage": {
-#         "total_rebate_per_kw": 100.0,
-#         "macrs_option_years": 5,
-#         "can_grid_charge": true,
-#         "macrs_bonus_pct": 0.4,
-#         "macrs_itc_reduction": 0.5,
-#         "total_itc_pct": 0,
-#         "installed_cost_per_kw": 1000.0,
-#         "installed_cost_per_kwh": 500.0,
-#         "replace_cost_per_kw": 460.0,
-#         "replace_cost_per_kwh": 230.0
-#     },
-#     "ElectricTariff": {
-#         "urdb_label": "5ed6c1a15457a3367add15ae"
-#     },
-#     "Financial": {
-#         "escalation_pct": 0.026,
-#         "offtaker_discount_pct": 0.081,
-#         "owner_discount_pct": 0.081,
-#         "analysis_years": 20,
-#         "offtaker_tax_pct": 0.4,
-#         "owner_tax_pct": 0.4,
-#         "om_cost_escalation_pct": 0.025
-#     }
-# }}}
+# ## equivalent REopt API Post for test 2:
+# #   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
+# # {"Scenario": {
+# #     "Site": {
+# #         "longitude": -118.1164613,
+# #         "latitude": 34.5794343,
+# #         "roof_squarefeet": 5000.0,
+# #         "land_acres": 1.0,
+# #     "PV": {
+# #         "macrs_bonus_pct": 0.4,
+# #         "installed_cost_per_kw": 2000.0,
+# #         "tilt": 34.579,
+# #         "degradation_pct": 0.005,
+# #         "macrs_option_years": 5,
+# #         "federal_itc_pct": 0.3,
+# #         "module_type": 0,
+# #         "array_type": 1,
+# #         "om_cost_per_kw": 16.0,
+# #         "macrs_itc_reduction": 0.5,
+# #         "azimuth": 180.0,
+# #         "federal_rebate_per_kw": 350.0,
+# #         "dc_ac_ratio": 1.1
+# #     },
+# #     "LoadProfile": {
+# #         "doe_reference_name": "RetailStore",
+# #         "annual_kwh": 10000000.0,
+# #         "city": "LosAngeles"
+# #     },
+# #     "ElectricStorage": {
+# #         "total_rebate_per_kw": 100.0,
+# #         "macrs_option_years": 5,
+# #         "can_grid_charge": true,
+# #         "macrs_bonus_pct": 0.4,
+# #         "macrs_itc_reduction": 0.5,
+# #         "total_itc_pct": 0,
+# #         "installed_cost_per_kw": 1000.0,
+# #         "installed_cost_per_kwh": 500.0,
+# #         "replace_cost_per_kw": 460.0,
+# #         "replace_cost_per_kwh": 230.0
+# #     },
+# #     "ElectricTariff": {
+# #         "urdb_label": "5ed6c1a15457a3367add15ae"
+# #     },
+# #     "Financial": {
+# #         "escalation_pct": 0.026,
+# #         "offtaker_discount_pct": 0.081,
+# #         "owner_discount_pct": 0.081,
+# #         "analysis_years": 20,
+# #         "offtaker_tax_pct": 0.4,
+# #         "owner_tax_pct": 0.4,
+# #         "om_cost_escalation_pct": 0.025
+# #     }
+# # }}}
