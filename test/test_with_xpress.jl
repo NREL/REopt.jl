@@ -31,23 +31,23 @@ using Xpress
 using Random
 Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tests
 
-# @testset "Thermal loads" begin
-#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     results = run_reopt(m, "./scenarios/thermal_load.json")
+@testset "Thermal loads" begin
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, "./scenarios/thermal_load.json")
 
-#     @test round(results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"], digits=0) ≈ 2905
+    @test round(results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"], digits=0) ≈ 2905
     
-#     data = JSON.parsefile("./scenarios/thermal_load.json")
-#     data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([0.5], 8760)
-#     data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([0.5], 8760)
-#     s = Scenario(data)
-#     inputs = REoptInputs(s)
-#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     results = run_reopt(m, inputs)
+    data = JSON.parsefile("./scenarios/thermal_load.json")
+    data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([0.5], 8760)
+    data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([0.5], 8760)
+    s = Scenario(data)
+    inputs = REoptInputs(s)
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, inputs)
 
-#     @test round(results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"], digits=0) ≈ 8760
-#     # TODO chiller tests
-# end
+    @test round(results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"], digits=0) ≈ 8760
+    # TODO chiller tests
+end
 
 # @testset "CHP" begin
 #     @testset "CHP Sizing" begin
