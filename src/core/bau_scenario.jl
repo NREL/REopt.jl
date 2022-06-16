@@ -61,8 +61,11 @@ struct BAUScenario <: AbstractScenario
 end
 
 
-function set_min_max_kw_to_existing(tech::AbstractTech)
+function set_min_max_kw_to_existing(tech::AbstractTech, site::Site)
     techdict = Dict(fn => getfield(tech, fn) for fn in fieldnames(typeof(tech)))
+    if nameof(typeof(tech)) in [:PV]
+        techdict[:latitude] = site.latitude
+    end
     techdict[:min_kw] = techdict[:existing_kw]
     techdict[:max_kw] = techdict[:existing_kw]
     eval(Meta.parse(string(typeof(tech)) * "(; $techdict...)"))
@@ -97,12 +100,12 @@ function BAUScenario(s::Scenario)
     pvs = PV[]
     for pv in s.pvs
         if pv.existing_kw > 0
-            push!(pvs, set_min_max_kw_to_existing(pv))
+            push!(pvs, set_min_max_kw_to_existing(pv, s.site))
         end
     end
 
     # set Generator.max_kw to existing_kw
-    generator = set_min_max_kw_to_existing(s.generator)
+    generator = set_min_max_kw_to_existing(s.generator, s.site)
 
     # no existing wind
     wind = Wind(; max_kw=0)
