@@ -114,8 +114,24 @@ mutable struct ElectricUtility
         time_steps_per_hour::Int = 1
         )
 
+        region_lookup = Dict(
+            "AK" => "Alaska",
+            "CA" => "California",
+            "EMW" => "Great Lakes / Atlantic",
+            "NE" => "Northeast",
+            "NW" => "Northwest",
+            "RM" => "Rocky Mountains",
+            "SC" => "Lower Midwest",
+            "SE" => "Southeast",
+            "SW" => "Southwest",
+            "TX" => "Texas",
+            "WMW" => "Upper Midwest",
+            "HI" => "Hawaii (except Oahu)",
+            "HI-Oahu" => "Hawaii (Oahu)"
+        )
+        
         region_abbr, meters_to_region = region_abbreviation(latitude, longitude)
-        emissions_region = region(region_abbr)
+        emissions_region = get(region_lookup, region_abbr, "None")
         emissions_series_dict = Dict{String, Array{<:Real,1}}()
 
         #TODO: can this section be refactored by emissions_type by using Symbol("") technique?
@@ -170,28 +186,7 @@ mutable struct ElectricUtility
     end
 end
 
-function region(region_abbr::String)
-    lookup = Dict(
-        "AK" => "Alaska",
-        "CA" => "California",
-        "EMW" => "Great Lakes / Atlantic",
-        "NE" => "Northeast",
-        "NW" => "Northwest",
-        "RM" => "Rocky Mountains",
-        "SC" => "Lower Midwest",
-        "SE" => "Southeast",
-        "SW" => "Southwest",
-        "TX" => "Texas",
-        "WMW" => "Upper Midwest",
-        "HI" => "Hawaii (except Oahu)",
-        "HI-Oahu" => "Hawaii (Oahu)"
-    )
-    try
-        return lookup[region_abbr]
-    catch
-        return "None"
-    end
-end
+
 
 """
 Determine the region abberviation for a given lat/lon pair.
