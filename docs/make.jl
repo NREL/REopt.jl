@@ -19,7 +19,8 @@ makedocs(
             "developer/concept.md",
             "developer/organization.md",
             "developer/inputs.md",
-            "developer/adding_tech.md"
+            "developer/adding_tech.md",
+            "developer/documentation.md"
         ]
     ],
     workdir = joinpath(@__DIR__, "..")
