@@ -462,65 +462,65 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
 #     @test simresults["resilience_hours_max"] == 11
 # end
 
-@testset "Minimize Unserved Load" begin
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt(m, "./scenarios/outage.json")
+# @testset "Minimize Unserved Load" begin
+#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     results = run_reopt(m, "./scenarios/outage.json")
 
-    @test results["Outages"]["expected_outage_cost"] ≈ 0
-    @test sum(results["Outages"]["unserved_load_per_outage_series"]) ≈ 0
-    @test value(m[:binMGTechUsed]["Generator"]) == 1
-    @test value(m[:binMGTechUsed]["PV"]) == 0
-    @test value(m[:binMGStorageUsed]) == 1
-    @test results["Financial"]["lcc"] ≈ 7.3879557e7 atol=5e4
+#     @test results["Outages"]["expected_outage_cost"] ≈ 0
+#     @test sum(results["Outages"]["unserved_load_per_outage_series"]) ≈ 0
+#     @test value(m[:binMGTechUsed]["Generator"]) == 1
+#     @test value(m[:binMGTechUsed]["PV"]) == 0
+#     @test value(m[:binMGStorageUsed]) == 1
+#     @test results["Financial"]["lcc"] ≈ 7.3879557e7 atol=5e4
     
-    #=
-    Scenario with $0/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
-    - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
-    =#
+#     #=
+#     Scenario with $0/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
+#     - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
+#     =#
+#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     results = run_reopt(m, "./scenarios/nogridcost_minresilhours.json")
+#     @test sum(results["Outages"]["unserved_load_per_outage_series"]) ≈ 12
+    
+#     # testing dvUnserved load, which would output 100 kWh for this scenario before output fix
+#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+#     results = run_reopt(m, "./scenarios/nogridcost_multiscenario.json")
+#     @test sum(results["Outages"]["unserved_load_per_outage_series"]) ≈ 60
+    
+# end
+
+@testset "Multiple Sites" begin
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt(m, "./scenarios/nogridcost_minresilhours.json")
-    @test sum(results["Outages"]["unserved_load_per_outage_series"]) ≈ 12
-    
-    # testing dvUnserved load, which would output 100 kWh for this scenario before output fix
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt(m, "./scenarios/nogridcost_multiscenario.json")
-    @test sum(results["Outages"]["unserved_load_per_outage_series"]) ≈ 60
-    
+    ps = [
+        REoptInputs("./scenarios/pv_storage.json"),
+        REoptInputs("./scenarios/monthly_rate.json"),
+    ];
+    results = run_reopt(m, ps)
+    @test results[3]["Financial"]["lcc"] + results[10]["Financial"]["lcc"] ≈ 1.240037e7 + 437169.0 rtol=1e-5
 end
 
-# @testset "Multiple Sites" begin
-#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     ps = [
-#         REoptInputs("./scenarios/pv_storage.json"),
-#         REoptInputs("./scenarios/monthly_rate.json"),
-#     ];
-#     results = run_reopt(m, ps)
-#     @test results[3]["Financial"]["lcc"] + results[10]["Financial"]["lcc"] ≈ 1.240037e7 + 437169.0 rtol=1e-5
-# end
+@testset "MPC" begin
+    model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    r = run_mpc(model, "./scenarios/mpc.json")
+    @test maximum(r["ElectricUtility"]["to_load_series_kw"][1:15]) <= 98.0 
+    @test maximum(r["ElectricUtility"]["to_load_series_kw"][16:24]) <= 97.0
+    @test sum(r["PV"]["to_grid_series_kw"]) ≈ 0
+    grid_draw = r["ElectricUtility"]["to_load_series_kw"] .+ r["ElectricUtility"]["to_battery_series_kw"]
+    # the grid draw limit in the 10th time step is set to 90
+    # without the 90 limit the grid draw is 98 in the 10th time step
+    @test grid_draw[10] <= 90
+end
 
-# @testset "MPC" begin
-#     model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     r = run_mpc(model, "./scenarios/mpc.json")
-#     @test maximum(r["ElectricUtility"]["to_load_series_kw"][1:15]) <= 98.0 
-#     @test maximum(r["ElectricUtility"]["to_load_series_kw"][16:24]) <= 97.0
-#     @test sum(r["PV"]["to_grid_series_kw"]) ≈ 0
-#     grid_draw = r["ElectricUtility"]["to_load_series_kw"] .+ r["ElectricUtility"]["to_battery_series_kw"]
-#     # the grid draw limit in the 10th time step is set to 90
-#     # without the 90 limit the grid draw is 98 in the 10th time step
-#     @test grid_draw[10] <= 90
-# end
-
-# @testset "Complex Incentives" begin
-#     """
-#     This test was compared against the API test:
-#         reo.tests.test_reopt_url.EntryResourceTest.test_complex_incentives
-#     when using the hardcoded levelization_factor in this package's REoptInputs function.
-#     The two LCC's matched within 0.00005%. (The Julia pkg LCC is  1.0971991e7)
-#     """
-#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     results = run_reopt(m, "./scenarios/incentives.json")
-#     @test results["Financial"]["lcc"] ≈ 1.094596365e7 atol=5e4  
-# end
+@testset "Complex Incentives" begin
+    """
+    This test was compared against the API test:
+        reo.tests.test_reopt_url.EntryResourceTest.test_complex_incentives
+    when using the hardcoded levelization_factor in this package's REoptInputs function.
+    The two LCC's matched within 0.00005%. (The Julia pkg LCC is  1.0971991e7)
+    """
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, "./scenarios/incentives.json")
+    @test results["Financial"]["lcc"] ≈ 1.094596365e7 atol=5e4  
+end
 
 # @testset verbose = true "Rate Structures" begin
 
