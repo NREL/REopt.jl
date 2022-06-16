@@ -89,7 +89,8 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
 
     if all(length(a) > 0 for a in [wind.temperature_celsius, wind.pressure_atmospheres, wind.wind_direction_degrees,
                                    wind.wind_meters_per_sec])
-        push!(resources, hcat(wind.temperature_celsius, wind.pressure_atmospheres, wind.wind_meters_per_sec, wind.wind_direction_degrees))
+        push!(resources, hcat([wind.temperature_celsius, wind.pressure_atmospheres, wind.wind_meters_per_sec, wind.wind_direction_degrees]...))
+        resources = hcat(resources...)
     else  # download resource data from WindToolKit
 
         # Allowed hub heights in meters for the Wind Toolkit
@@ -208,10 +209,6 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
         fields = convert(Array{Float64}, fields)
         @ccall hdl.ssc_data_set_array(wind_resource::Ptr{Cvoid}, "fields"::Cstring, 
             fields::Ptr{Cdouble}, length(fields)::Cint)::Cvoid
-
-        if size(resources)[1] == 1
-            resources = resources[1]
-        end
 
         nrows, ncols = size(resources)
         t = [row for row in eachrow(resources)];
