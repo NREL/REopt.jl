@@ -89,14 +89,14 @@ mutable struct ElectricUtility
 
 
     function ElectricUtility(;
-        emissions_factor_series_lb_CO2_per_kwh::Union{Float64,Array{<:Real,1}} = Float64[],
-        emissions_factor_series_lb_NOx_per_kwh::Union{Float64,Array{<:Real,1}} = Float64[],
-        emissions_factor_series_lb_SO2_per_kwh::Union{Float64,Array{<:Real,1}} = Float64[],
-        emissions_factor_series_lb_PM25_per_kwh::Union{Float64,Array{<:Real,1}} = Float64[],
-        emissions_factor_CO2_decrease_pct::Float64 = 0.01174,
-        emissions_factor_NOx_decrease_pct::Float64 = 0.01174,
-        emissions_factor_SO2_decrease_pct::Float64 = 0.01174,
-        emissions_factor_PM25_decrease_pct::Float64 = 0.01174,
+        emissions_factor_series_lb_CO2_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
+        emissions_factor_series_lb_NOx_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
+        emissions_factor_series_lb_SO2_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
+        emissions_factor_series_lb_PM25_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
+        emissions_factor_CO2_decrease_pct::Real = 0.01174,
+        emissions_factor_NOx_decrease_pct::Real = 0.01174,
+        emissions_factor_SO2_decrease_pct::Real = 0.01174,
+        emissions_factor_PM25_decrease_pct::Real = 0.01174,
         outage_start_time_step::Int=0,  # for modeling a single outage, with critical load spliced into the baseline load ...
         outage_end_time_step::Int=0,  # ... utiltity production_factor = 0 during the outage
         allow_simultaneous_export_import::Bool=true,  # if true the site has two meters (in effect)
@@ -116,54 +116,28 @@ mutable struct ElectricUtility
 
         region_abbr, meters_to_region = region_abbreviation(latitude, longitude)
         emissions_region = region(region_abbr)
-        emissions_series_dict = Dict{String,Array{Float64}}()
+        emissions_series_dict = Dict{String, Array{<:Real,1}}()
 
         #TODO: can this section be refactored by emissions_type by using Symbol("") technique?
         #eval(Meta.parse("emissions_factor_series_lb_$(pollutant)_per_kwh")) does not work because
         #eval is in global scope and doesn't have access to function arguments
-        if typeof(emissions_factor_series_lb_CO2_per_kwh) == Float64
-            emissions_series_dict["CO2"] = repeat([emissions_factor_series_lb_CO2_per_kwh], 8760*time_steps_per_hour)
-        elseif length(emissions_factor_series_lb_CO2_per_kwh) == 1
-            emissions_series_dict["CO2"] = repeat(emissions_factor_series_lb_CO2_per_kwh, 8760*time_steps_per_hour)
-        elseif length(emissions_factor_series_lb_CO2_per_kwh) / time_steps_per_hour ≈ 8760
-            emissions_series_dict["CO2"] = emissions_factor_series_lb_CO2_per_kwh
-        elseif isempty(emissions_factor_series_lb_CO2_per_kwh)
-            emissions_series_dict["CO2"] = emissions_series("CO2", region_abbr, time_steps_per_hour=time_steps_per_hour)
-        else
-            @error "Provided emissions_factor_series_lb_CO2_per_kwh does not match the time_steps_per_hour."
-        end
-        if typeof(emissions_factor_series_lb_NOx_per_kwh) == Float64
-            emissions_series_dict["NOx"] = repeat([emissions_factor_series_lb_NOx_per_kwh], 8760*time_steps_per_hour)
-        elseif length(emissions_factor_series_lb_NOx_per_kwh) == 1
-            emissions_series_dict["NOx"] = repeat(emissions_factor_series_lb_NOx_per_kwh, 8760*time_steps_per_hour)
-        elseif length(emissions_factor_series_lb_NOx_per_kwh) / time_steps_per_hour ≈ 8760
-            emissions_series_dict["NOx"] = emissions_factor_series_lb_NOx_per_kwh
-        elseif isempty(emissions_factor_series_lb_NOx_per_kwh)
-            emissions_series_dict["NOx"] = emissions_series("NOx", region_abbr, time_steps_per_hour=time_steps_per_hour)
-        else
-            @error "Provided emissions_factor_series_lb_NOx_per_kwh does not match the time_steps_per_hour."
-        end
-        if typeof(emissions_factor_series_lb_SO2_per_kwh) == Float64
-            emissions_series_dict["SO2"] = repeat([emissions_factor_series_lb_SO2_per_kwh], 8760*time_steps_per_hour)
-        elseif length(emissions_factor_series_lb_SO2_per_kwh) == 1
-            emissions_series_dict["SO2"] = repeat(emissions_factor_series_lb_SO2_per_kwh, 8760*time_steps_per_hour)
-        elseif length(emissions_factor_series_lb_SO2_per_kwh) / time_steps_per_hour ≈ 8760
-            emissions_series_dict["SO2"] = emissions_factor_series_lb_SO2_per_kwh
-        elseif isempty(emissions_factor_series_lb_SO2_per_kwh)
-            emissions_series_dict["SO2"] = emissions_series("SO2", region_abbr, time_steps_per_hour=time_steps_per_hour)
-        else
-            @error "Provided emissions_factor_series_lb_SO2_per_kwh does not match the time_steps_per_hour."
-        end
-        if typeof(emissions_factor_series_lb_PM25_per_kwh) == Float64
-            emissions_series_dict["PM25"] = repeat([emissions_factor_series_lb_PM25_per_kwh], 8760*time_steps_per_hour)
-        elseif length(emissions_factor_series_lb_PM25_per_kwh) == 1
-            emissions_series_dict["PM25"] = repeat(emissions_factor_series_lb_PM25_per_kwh, 8760*time_steps_per_hour)
-        elseif length(emissions_factor_series_lb_PM25_per_kwh) / time_steps_per_hour ≈ 8760
-            emissions_series_dict["PM25"] = emissions_factor_series_lb_PM25_per_kwh
-        elseif isempty(emissions_factor_series_lb_PM25_per_kwh)
-            emissions_series_dict["PM25"] = emissions_series("PM25", region_abbr, time_steps_per_hour=time_steps_per_hour)
-        else
-            @error "Provided emissions_factor_series_lb_PM25_per_kwh does not match the time_steps_per_hour."
+        for (ekey, eseries) in [
+            (emissions_factor_series_lb_CO2_per_kwh, "CO2"),
+            (emissions_factor_series_lb_NOx_per_kwh, "NOx"),
+            (emissions_factor_series_lb_SO2_per_kwh, "SO2"),
+            (emissions_factor_series_lb_PM25_per_kwh, "PM25")
+        ]
+            if typeof(eseries) <: Real
+                emissions_series_dict[ekey] = repeat([eseries], 8760*time_steps_per_hour)
+            elseif length(eseries) == 1
+                emissions_series_dict[ekey] = repeat(eseries, 8760*time_steps_per_hour)
+            elseif length(eseries) / time_steps_per_hour ≈ 8760
+                emissions_series_dict[ekey] = eseries
+            elseif isempty(eseries)
+                emissions_series_dict[ekey] = emissions_series(ekey, region_abbr, time_steps_per_hour=time_steps_per_hour)
+            else
+                @error "Provided $(@argname(eseries)) does not match the time_steps_per_hour."
+            end
         end
 
         # Error if outage_start/end_time_step is provided and outage_start_time_steps not empty

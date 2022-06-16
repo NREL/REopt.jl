@@ -411,3 +411,7 @@ function get_offgrid_other_capex_depreciation_savings(offgrid_other_capital_cost
     npv_other_capex = npv(discount_rate, tax_savings_array)
     return npv_other_capex
 end
+
+macro argname(arg)
+    string(arg)
+end
