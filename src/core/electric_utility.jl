@@ -58,12 +58,14 @@ function ElectricUtility(;
     time_steps_per_hour::Int = 1
     )
 ```
-!!! note Outage indexing begins at 1 (not 0) and the outage is inclusive of the outage end time step. 
+
+!!! note 
+    Outage indexing begins at 1 (not 0) and the outage is inclusive of the outage end time step. 
     For instance, to model a 3-hour outage from 12AM to 3AM on Jan 1, outage_start_time_step = 1 and outage_end_time_step = 3.
     To model a 1-hour outage from 6AM to 7AM on Jan 1, outage_start_time_step = 7 and outage_end_time_step = 7.
 
 """
-mutable struct ElectricUtility
+struct ElectricUtility
     emissions_region::String # AVERT emissions region
     distance_to_emissions_region_meters::Real  
     emissions_factor_series_lb_CO2_per_kwh::Union{Nothing,Array{<:Real,1}}
@@ -143,16 +145,16 @@ mutable struct ElectricUtility
             (emissions_factor_series_lb_SO2_per_kwh, "SO2"),
             (emissions_factor_series_lb_PM25_per_kwh, "PM25")
         ]
-            if typeof(eseries) <: Real
+            if typeof(eseries) <: Real  # user provided scaler value
                 emissions_series_dict[ekey] = repeat([eseries], 8760*time_steps_per_hour)
-            elseif length(eseries) == 1
+            elseif length(eseries) == 1  # user provided array of one value
                 emissions_series_dict[ekey] = repeat(eseries, 8760*time_steps_per_hour)
-            elseif length(eseries) / time_steps_per_hour ≈ 8760
+            elseif length(eseries) / time_steps_per_hour ≈ 8760  # user provided array with correct length
                 emissions_series_dict[ekey] = eseries
-            elseif isempty(eseries)
-                emissions_series_dict[ekey] = emissions_series(ekey, region_abbr, time_steps_per_hour=time_steps_per_hour)
-            else
+            elseif length(eseries) > 1 && !(length(eseries) / time_steps_per_hour ≈ 8760)  # user provided array with incorrect length
                 throw(@error "Provided ElectricUtility emissions factor series for $(ekey) does not match the time_steps_per_hour.")
+            else  # default action, can be set to zeros without region_abbr
+                emissions_series_dict[ekey] = emissions_series(ekey, region_abbr, time_steps_per_hour=time_steps_per_hour)
             end
         end
 
@@ -267,6 +269,7 @@ end
 
 function emissions_series(pollutant, region_abbr; time_steps_per_hour=1)
     if isnothing(region_abbr)
+        @warn "Cannnot find hourly $(pollutant) emmissions for region $(region_abbr). Setting emissions to zero."
         return zeros(8760*time_steps_per_hour)
     end
     # Columns 1 and 2 do not contain AVERT region information, so skip them
@@ -280,7 +283,7 @@ function emissions_series(pollutant, region_abbr; time_steps_per_hour=1)
         end
         return emissions_profile
     catch
-        @warn "Emissions error. Cannnot find hourly $(pollutant) emmissions for region $(region_abbr)."
-        return nothing
+        @warn "Cannnot find hourly $(pollutant) emmissions for region $(region_abbr). Setting emissions to zero."
+        return zeros(8760*time_steps_per_hour)
     end
 end
