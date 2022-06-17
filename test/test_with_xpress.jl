@@ -1116,7 +1116,7 @@ end
             @test results["Site"]["year_one_emissions_from_fuelburn_tSO2"] ≈ nat_gas_emissions_lb_per_mmbtu["SO2"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
             @test results["Site"]["year_one_emissions_from_fuelburn_tPM25"] ≈ nat_gas_emissions_lb_per_mmbtu["PM25"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
             @test results["Site"]["lifecycle_emissions_tCO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tCO2"] + results["ElectricUtility"]["lifecycle_emissions_tCO2"] atol=1
-            @test results["Site"]["lifecycle_emissions_tNOx"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tNOx"] + results["ElectricUtility"]["lifecycle_emissions_tNOx"] atol=1e-2
+            @test results["Site"]["lifecycle_emissions_tNOx"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tNOx"] + results["ElectricUtility"]["lifecycle_emissions_tNOx"] atol=0.1
             @test results["Site"]["lifecycle_emissions_tSO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tSO2"] + results["ElectricUtility"]["lifecycle_emissions_tSO2"] atol=1e-2
             @test results["Site"]["lifecycle_emissions_tPM25"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tPM25"] + results["ElectricUtility"]["lifecycle_emissions_tPM25"] atol=1e-2
             @test results["Site"]["annual_renewable_electricity_kwh"] ≈ results["PV"]["average_annual_energy_produced_kwh"] + inputs["CHP"]["fuel_renewable_energy_pct"] * results["CHP"]["year_one_electric_energy_produced_kwh"] atol=1
