@@ -50,15 +50,15 @@ function Financial(;
     macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
     CO2_cost_per_tonne::Float64 = 51.0,
     CO2_cost_escalation_pct::Float64 = 0.042173,
-    NOx_grid_cost_per_tonne::Union{Missing,Float64} = missing,
-    SO2_grid_cost_per_tonne::Union{Missing,Float64} = missing,
-    PM25_grid_cost_per_tonne::Union{Missing,Float64} = missing,
-    NOx_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
-    SO2_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
-    PM25_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
-    NOx_cost_escalation_pct::Union{Missing,Float64} = missing,
-    SO2_cost_escalation_pct::Union{Missing,Float64} = missing,
-    PM25_cost_escalation_pct::Union{Missing,Float64} = missing,
+    NOx_grid_cost_per_tonne::Real = 0.0,
+    SO2_grid_cost_per_tonne::Real = 0.0,
+    PM25_grid_cost_per_tonne::Real = 0.0,
+    NOx_onsite_fuelburn_cost_per_tonne::Real = 0.0,
+    SO2_onsite_fuelburn_cost_per_tonne::Real = 0.0,
+    PM25_onsite_fuelburn_cost_per_tonne::Real = 0.0,
+    NOx_cost_escalation_pct::Real = 0.0,
+    SO2_cost_escalation_pct::Real = 0.0,
+    PM25_cost_escalation_pct::Real = 0.0,
     offgrid_other_capital_costs::Real = 0.0, # only applicable when off_grid_flag is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
     offgrid_other_annual_costs::Real = 0.0, # only applicable when off_grid_flag is true. Considered tax deductible for owner. Costs are per year. 
     latitude::Real,
@@ -75,7 +75,7 @@ function Financial(;
         end
     ```
 """
-mutable struct Financial
+struct Financial
     om_cost_escalation_pct::Real
     elec_cost_escalation_pct::Real
     boiler_fuel_cost_escalation_pct::Real
@@ -93,15 +93,15 @@ mutable struct Financial
     macrs_seven_year::Array{Float64,1}
     CO2_cost_per_tonne::Float64
     CO2_cost_escalation_pct::Float64
-    NOx_grid_cost_per_tonne::Union{Missing,Float64}
-    SO2_grid_cost_per_tonne::Union{Missing,Float64}
-    PM25_grid_cost_per_tonne::Union{Missing,Float64}
-    NOx_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64}
-    SO2_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64}
-    PM25_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64}
-    NOx_cost_escalation_pct::Union{Missing,Float64}
-    SO2_cost_escalation_pct::Union{Missing,Float64}
-    PM25_cost_escalation_pct::Union{Missing,Float64}
+    NOx_grid_cost_per_tonne::Real
+    SO2_grid_cost_per_tonne::Real
+    PM25_grid_cost_per_tonne::Real
+    NOx_onsite_fuelburn_cost_per_tonne::Real
+    SO2_onsite_fuelburn_cost_per_tonne::Real
+    PM25_onsite_fuelburn_cost_per_tonne::Real
+    NOx_cost_escalation_pct::Real
+    SO2_cost_escalation_pct::Real
+    PM25_cost_escalation_pct::Real
     offgrid_other_capital_costs::Real
     offgrid_other_annual_costs::Real
 
@@ -124,15 +124,15 @@ mutable struct Financial
         macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
         CO2_cost_per_tonne::Float64 = 51.0,
         CO2_cost_escalation_pct::Float64 = 0.042173,
-        NOx_grid_cost_per_tonne::Union{Missing,Float64} = missing,
-        SO2_grid_cost_per_tonne::Union{Missing,Float64} = missing,
-        PM25_grid_cost_per_tonne::Union{Missing,Float64} = missing,
-        NOx_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
-        SO2_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
-        PM25_onsite_fuelburn_cost_per_tonne::Union{Missing,Float64} = missing,
-        NOx_cost_escalation_pct::Union{Missing,Float64} = missing,
-        SO2_cost_escalation_pct::Union{Missing,Float64} = missing,
-        PM25_cost_escalation_pct::Union{Missing,Float64} = missing,
+        NOx_grid_cost_per_tonne::Real = 0.0,
+        SO2_grid_cost_per_tonne::Real = 0.0,
+        PM25_grid_cost_per_tonne::Real = 0.0,
+        NOx_onsite_fuelburn_cost_per_tonne::Real = 0.0,
+        SO2_onsite_fuelburn_cost_per_tonne::Real = 0.0,
+        PM25_onsite_fuelburn_cost_per_tonne::Real = 0.0,
+        NOx_cost_escalation_pct::Real = 0.0,
+        SO2_cost_escalation_pct::Real = 0.0,
+        PM25_cost_escalation_pct::Real = 0.0,
         offgrid_other_capital_costs::Real = 0.0, # only applicable when off_grid_flag is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
         offgrid_other_annual_costs::Real = 0.0, # only applicable when off_grid_flag is true. Considered tax deductible for owner.
         latitude::Real,
@@ -159,35 +159,35 @@ mutable struct Financial
         onsite_costs = easiur_costs(latitude, longitude, "onsite")
         escalation_rates = easiur_escalation_rates(latitude, longitude, om_cost_escalation_pct)
         if !isnothing(grid_costs)
-            if ismissing(NOx_grid_cost_per_tonne)
+            if NOx_grid_cost_per_tonne == 0.0
                 NOx_grid_cost_per_tonne = grid_costs["NOx"]
             end
-            if ismissing(SO2_grid_cost_per_tonne)
+            if SO2_grid_cost_per_tonne == 0.0
                 SO2_grid_cost_per_tonne = grid_costs["SO2"]
             end
-            if ismissing(PM25_grid_cost_per_tonne)
+            if PM25_grid_cost_per_tonne == 0.0
                 PM25_grid_cost_per_tonne = grid_costs["PM25"]
             end
         end
         if !isnothing(onsite_costs)
-            if ismissing(NOx_onsite_fuelburn_cost_per_tonne)
+            if NOx_onsite_fuelburn_cost_per_tonne == 0.0
                 NOx_onsite_fuelburn_cost_per_tonne = onsite_costs["NOx"]
             end
-            if ismissing(SO2_onsite_fuelburn_cost_per_tonne)
+            if SO2_onsite_fuelburn_cost_per_tonne == 0.0
                 SO2_onsite_fuelburn_cost_per_tonne = onsite_costs["SO2"]
             end
-            if ismissing(PM25_onsite_fuelburn_cost_per_tonne)
+            if PM25_onsite_fuelburn_cost_per_tonne == 0.0
                 PM25_onsite_fuelburn_cost_per_tonne = onsite_costs["PM25"]
             end
         end
         if !isnothing(escalation_rates)
-            if ismissing(NOx_cost_escalation_pct)
+            if NOx_cost_escalation_pct == 0.0
                 NOx_cost_escalation_pct = escalation_rates["NOx"]
             end
-            if ismissing(SO2_cost_escalation_pct)
+            if SO2_cost_escalation_pct == 0.0
                 SO2_cost_escalation_pct = escalation_rates["SO2"]
             end
-            if ismissing(PM25_cost_escalation_pct)
+            if PM25_cost_escalation_pct == 0.0
                 PM25_cost_escalation_pct = escalation_rates["PM25"]
             end
         end
