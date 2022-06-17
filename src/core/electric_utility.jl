@@ -267,7 +267,7 @@ end
 
 function emissions_series(pollutant, region_abbr; time_steps_per_hour=1)
     if isnothing(region_abbr)
-        return nothing
+        return zeros(8760*time_steps_per_hour)
     end
     # Columns 1 and 2 do not contain AVERT region information, so skip them
     avert_df = readdlm(joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "AVERT_marg_emissions_lb$(pollutant)_per_kwh.csv"), ',')[:, 3:end]
