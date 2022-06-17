@@ -136,7 +136,8 @@ struct Financial
         offgrid_other_capital_costs::Real = 0.0, # only applicable when off_grid_flag is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
         offgrid_other_annual_costs::Real = 0.0, # only applicable when off_grid_flag is true. Considered tax deductible for owner.
         latitude::Real,
-        longitude::Real
+        longitude::Real,
+        model_health_obj::Bool = false
     )
         
         if off_grid_flag && !(microgrid_upgrade_cost_pct == 0.0)
@@ -158,6 +159,9 @@ struct Financial
         grid_costs = easiur_costs(latitude, longitude, "grid")
         onsite_costs = easiur_costs(latitude, longitude, "onsite")
         escalation_rates = easiur_escalation_rates(latitude, longitude, om_cost_escalation_pct)
+
+        missing_health_inputs = false
+
         if !isnothing(grid_costs)
             if NOx_grid_cost_per_tonne == 0.0
                 NOx_grid_cost_per_tonne = grid_costs["NOx"]
@@ -168,7 +172,10 @@ struct Financial
             if PM25_grid_cost_per_tonne == 0.0
                 PM25_grid_cost_per_tonne = grid_costs["PM25"]
             end
+        else
+            missing_health_inputs = true
         end
+
         if !isnothing(onsite_costs)
             if NOx_onsite_fuelburn_cost_per_tonne == 0.0
                 NOx_onsite_fuelburn_cost_per_tonne = onsite_costs["NOx"]
@@ -179,7 +186,10 @@ struct Financial
             if PM25_onsite_fuelburn_cost_per_tonne == 0.0
                 PM25_onsite_fuelburn_cost_per_tonne = onsite_costs["PM25"]
             end
+        else
+            missing_health_inputs = true
         end
+
         if !isnothing(escalation_rates)
             if NOx_cost_escalation_pct == 0.0
                 NOx_cost_escalation_pct = escalation_rates["NOx"]
@@ -190,7 +200,29 @@ struct Financial
             if PM25_cost_escalation_pct == 0.0
                 PM25_cost_escalation_pct = escalation_rates["PM25"]
             end
+        else
+            missing_health_inputs = true
         end
+
+        if missing_health_inputs && model_health_obj
+            throw(@error "To include health costs in the objective function, you must either enter custom emissions costs and escalation rates or a site location within the CAMx grid.")
+        end
+
+        #     #TODO: allow grid costs to be missing if site.off_grid == true
+        # missing_health_inputs = false
+        # for emissions_type in ["NOx", "SO2", "PM25"]
+        #     for health_input in [
+        #         "$(emissions_type)_grid_cost_per_tonne",
+        #         "$(emissions_type)_onsite_fuelburn_cost_per_tonne",
+        #         "$(emissions_type)_cost_escalation_pct"
+        #     ]
+        #         if ismissing(getproperty(financial, Symbol(health_input)))
+        #             missing_health_inputs = true
+        #             setproperty!(financial, Symbol(health_input), 0)
+        #         end
+        #     end
+        # end
+    
 
         return new(
             om_cost_escalation_pct,
