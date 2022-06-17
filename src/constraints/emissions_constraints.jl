@@ -30,10 +30,16 @@
 
 function add_emissions_constraints(m,p)
 	if !isnothing(p.s.site.CO2_emissions_reduction_min_pct)
-		@constraint(m, MinEmissionsReductionCon, m[:Lifecycle_Emissions_Lbs_CO2] <= (1-p.s.site.CO2_emissions_reduction_min_pct)*m[:Lifecycle_Emissions_Lbs_CO2_BAU])
+		@constraint(m, MinEmissionsReductionCon, 
+			m[:Lifecycle_Emissions_Lbs_CO2] <= 
+			(1-p.s.site.CO2_emissions_reduction_min_pct) * m[:Lifecycle_Emissions_Lbs_CO2_BAU]
+		)
 	end
 	if !isnothing(p.s.site.CO2_emissions_reduction_max_pct)
-		@constraint(m, MaxEmissionsReductionCon, m[:Lifecycle_Emissions_Lbs_CO2] >= (1-p.s.site.CO2_emissions_reduction_max_pct)*m[:Lifecycle_Emissions_Lbs_CO2_BAU])
+		@constraint(m, MaxEmissionsReductionCon, 
+			m[:Lifecycle_Emissions_Lbs_CO2] >= 
+			(1-p.s.site.CO2_emissions_reduction_max_pct) * m[:Lifecycle_Emissions_Lbs_CO2_BAU]
+		)
 	end
 end
 
