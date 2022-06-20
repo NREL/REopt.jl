@@ -40,6 +40,19 @@ end
 """
     FlexibleHVAC
 
+`FlexibleHVAC` is an option REopt input with the following keys: 
+```julia
+    system_matrix::AbstractMatrix{Float64}  # N x N, with N states (temperatures in RC network)
+    input_matrix::AbstractMatrix{Float64}  # N x M, with M inputs
+    exogenous_inputs::AbstractMatrix{Float64}  # M x T, with T time steps
+    control_node::Int64
+    initial_temperatures::AbstractVector{Float64}
+    temperature_upper_bound_degC::Union{Real, Nothing}
+    temperature_lower_bound_degC::Union{Real, Nothing}
+    installed_cost::Float64
+    bau_hvac::BAU_HVAC
+```julia
+
 Every model with `FlexibleHVAC` includes a preprocessing step to calculate the business-as-usual (BAU)
 cost of meeting the thermal loads using a dead-band controller. The BAU cost is then used in the 
 binary decision for purchasing the `FlexibleHVAC` system: if the `FlexibleHVAC` system is purchased then
@@ -50,10 +63,8 @@ be paid.
 There are two construction methods for `FlexibleHVAC`, which depend on whether or not the data was 
 loaded in from a JSON file. The issue with data from JSON is that the vector-of-vectors from the JSON 
 file must be appropriately converted to Julia Matrices. When loading in a Scenario from JSON that 
-includes a `FlexibleHVAC` model if you include the `flex_hvac_from_json` argument to the `Scenario` 
+includes a `FlexibleHVAC` model, if you include the `flex_hvac_from_json` argument to the `Scenario` 
 constructor then the conversion to Matrices will be done appropriately. For example:
-
-
 
 !!! note
     At least one of the inputs for `temperature_upper_bound_degC` or `temperature_lower_bound_degC`

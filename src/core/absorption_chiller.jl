@@ -31,7 +31,7 @@
 """
     AbsorptionChiller
 
-AbsorptionChiller is an optional REopt input with the following keys:
+`AbsorptionChiller` is an optional REopt input with the following keys:
 ```julia
     min_ton::Real = 0.0,
     max_ton::Real = 0.0,

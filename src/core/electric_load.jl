@@ -30,8 +30,7 @@
 """
     ElectricLoad 
 
-    ElectricLoad is a required REopt input with the following keys:
-
+`ElectricLoad` is a required REopt input with the following keys:
     ```julia
         loads_kw::Array{<:Real,1} = Real[],
         path_to_csv::String = "",
