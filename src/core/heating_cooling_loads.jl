@@ -30,13 +30,8 @@
 """
     DomesticHotWaterLoad
 
-There are many ways in which a DomesticHotWaterLoad can be defined:
-1. When using either `doe_reference_name` or `blended_doe_reference_names` in an `ElectricLoad` one only needs to provide the input key "DomesticHotWaterLoad" in the `Scenario` (JSON or Dict). In this case the values from DoE reference names from the `ElectricLoad` will be used to define the `DomesticHotWaterLoad`.
-2. One can provide the `doe_reference_name` or `blended_doe_reference_names` directly in the `DomesticHotWaterLoad` key within the `Scenario`. These values can be combined with the `annual_mmbtu` or `monthly_mmbtu` inputs to scale the DoE reference profile(s).
-3. One can provide the `fuel_loads_mmbtu_per_hour` value in the `DomesticHotWaterLoad` key within the `Scenario`.
-
+`DomesticHotWaterLoad` is an optional REopt input with the following keys:
 ```julia
-function DomesticHotWaterLoad(;
     doe_reference_name::String = "",
     city::String = "",
     blended_doe_reference_names::Array{String, 1} = String[],
@@ -47,8 +42,13 @@ function DomesticHotWaterLoad(;
     time_steps_per_hour::Int = 1,
     latitude::Real=0.0,
     longitude::Real=0.0
-)
 ```
+
+There are many ways in which a DomesticHotWaterLoad can be defined:
+1. When using either `doe_reference_name` or `blended_doe_reference_names` in an `ElectricLoad` one only needs to provide the input key "DomesticHotWaterLoad" in the `Scenario` (JSON or Dict). In this case the values from DoE reference names from the `ElectricLoad` will be used to define the `DomesticHotWaterLoad`.
+2. One can provide the `doe_reference_name` or `blended_doe_reference_names` directly in the `DomesticHotWaterLoad` key within the `Scenario`. These values can be combined with the `annual_mmbtu` or `monthly_mmbtu` inputs to scale the DoE reference profile(s).
+3. One can provide the `fuel_loads_mmbtu_per_hour` value in the `DomesticHotWaterLoad` key within the `Scenario`.
+
 """
 struct DomesticHotWaterLoad
     loads_kw::Array{Real, 1}
