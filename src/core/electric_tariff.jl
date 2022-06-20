@@ -69,9 +69,8 @@ end
 """
     ElectricTariff
 
-ElectricTariff constructor
+ElectricTariff is a required REopt input for on-grid scenarios only (it cannot be supplied when `Settings.off_grid_flag` is true) with the following keys:
 ```julia
-function ElectricTariff(;
     urdb_label::String="",
     urdb_response::Dict=Dict(),
     urdb_utility_name::String="",
