@@ -101,7 +101,7 @@ ElectricTariff is a required REopt input for on-grid scenarios only (it cannot b
     }
 ```
 
-!!! note
+!!! note "NEM input"
     The `NEM` boolean is determined by the ElectricUtility.net_metering_limit_kw. There is no need to pass in a `NEM`
     value.
     
