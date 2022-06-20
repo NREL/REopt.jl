@@ -30,7 +30,7 @@
 """
     ElectricUtility
 
-ElectricUtility is a required REopt input for on-grid scenarios only (it cannot be supplied when `Settings.off_grid_flag` is true) with the following keys:
+`ElectricUtility` is an optional REopt input with the following keys:
 ```julia
     outage_start_time_step::Int=0,  # for modeling a single outage, with critical load spliced into the baseline load ...
     outage_end_time_step::Int=0,  # ... utiltity production_factor = 0 during the outage
