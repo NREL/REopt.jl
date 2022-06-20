@@ -32,16 +32,15 @@
 
 Inputs related to the physical location:
 
+`Site` is a required REopt input with the following keys:
 ```julia
-function Site(;
     latitude::Real, 
     longitude::Real, 
     land_acres::Union{Real, Nothing} = nothing, 
     roof_squarefeet::Union{Real, Nothing} = nothing,
     min_resil_time_steps::Int=0,
     mg_tech_sizes_equal_grid_sizes::Bool = true,
-    node::Int = 1, 
-    )
+    node::Int = 1
 ```
 """
 struct Site

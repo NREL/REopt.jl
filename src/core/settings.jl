@@ -30,17 +30,17 @@
 """
     Settings
 
-Data struct for top-level Scenario settings.
-Captures inputs that do not logically fall under any of the other data structs.
+Captures high-level inputs affecting the optimization.
 
-    Base.@kwdef struct Settings
-        time_steps_per_hour::Int = 1
-        add_soc_incentive::Bool = true
-        off_grid_flag::Bool = false
-    end
+`Settings` is an optional REopt input with the following keys:
+```julia
+    time_steps_per_hour::Int = 1
+    add_soc_incentive::Bool = true
+    off_grid_flag::Bool = false # Set to true to model off-grid microgrids
+```
 """
 Base.@kwdef struct Settings
     time_steps_per_hour::Int = 1
     add_soc_incentive::Bool = true
-    off_grid_flag::Bool = false
+    off_grid_flag::Bool = false # Set to true to model off-grid microgrids
 end

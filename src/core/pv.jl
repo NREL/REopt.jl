@@ -30,11 +30,8 @@
 """
     PV
 
-struct with inner constructor:
+`PV` is an optional REopt input with the following keys:
 ```julia
-function PV(;
-    off_grid_flag::Bool = false,
-    latitude::Real,
     array_type::Int=1, # PV Watts array type (0: Ground Mount Fixed (Open Rack); 1: Rooftop, Fixed; 2: Ground Mount 1-Axis Tracking; 3 : 1-Axis Backtracking; 4: Ground Mount, 2-Axis Tracking)
     tilt::Real= array_type == 1 ? 10 : abs(latitude), # tilt = 10 deg for rooftop systems, abs(lat) for ground-mount
     module_type::Int=0, # PV module type (0: Standard; 1: Premium; 2: Thin Film)
@@ -77,8 +74,14 @@ function PV(;
     can_export_beyond_nem_limit::Bool = off_grid_flag ? false : true,
     can_curtail::Bool = true,
     operating_reserve_required_pct::Real = off_grid_flag ? 0.25 : 0.0, # if off grid, 25%, else 0%. Applied to each time_step as a % of PV generation.
-)
 ```
+
+!!! note "Multiple PV types" 
+    Multiple PV types can be considered by providing an array of PV inputs. See example in `src/test/scenarios/multiple_pvs.json`
+
+!!! note "PV tilt and aziumth"
+    If `tilt` is not provided, then it is set to the absolute value of `Site.latitude` for ground-mount systems and is set to 10 degrees for rooftop systems.
+    If `azimuth` is not provided, then it is set to 180 if the site is in the northern hemisphere and 0 if in the southern hemisphere.
 
 """
 struct PV <: AbstractTech
