@@ -73,10 +73,10 @@ constructor then the conversion to Matrices will be done appropriately. For exam
     used (or purchased) if the `exogenous_inputs` lead to the temperature at the `control_node` going
     below the `temperature_lower_bound_degC`.
 
-!!! note
+!!! note # TODO: move? 
     The `ExistingChiller` is electric and so its operating cost is determined by the `ElectricTariff`.
 
-!!! note
+!!! note # TODO: move? 
     The `ExistingBoiler` default operating cost is zero. Please provide the `fuel_cost_per_mmbtu` field
     for the `ExistingBoiler` if you want non-zero BAU heating costs. The `fuel_cost_per_mmbtu` can be
     a scalar, a list of 12 monthly values, or a time series of values for every time step.
@@ -90,7 +90,7 @@ struct FlexibleHVAC
     temperature_upper_bound_degC::Union{Real, Nothing}
     temperature_lower_bound_degC::Union{Real, Nothing}
     installed_cost::Float64
-    bau_hvac::BAU_HVAC
+    bau_hvac::BAU_HVAC # TODO: describe? 
 end
 
 
