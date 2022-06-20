@@ -50,7 +50,6 @@ end
     temperature_upper_bound_degC::Union{Real, Nothing}
     temperature_lower_bound_degC::Union{Real, Nothing}
     installed_cost::Float64
-    bau_hvac::BAU_HVAC
 ```julia
 
 Every model with `FlexibleHVAC` includes a preprocessing step to calculate the business-as-usual (BAU)
@@ -90,7 +89,7 @@ struct FlexibleHVAC
     temperature_upper_bound_degC::Union{Real, Nothing}
     temperature_lower_bound_degC::Union{Real, Nothing}
     installed_cost::Float64
-    bau_hvac::BAU_HVAC # TODO: describe? 
+    bau_hvac::BAU_HVAC
 end
 
 
