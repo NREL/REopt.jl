@@ -39,7 +39,7 @@
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
     fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
-    time_steps_per_hour::Int = 1,
+    time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
     latitude::Real=0.0,
     longitude::Real=0.0
 ```
@@ -62,7 +62,7 @@ struct DomesticHotWaterLoad
         monthly_mmbtu::Array{<:Real,1} = Real[],
         # addressable_load_fraction,  # TODO
         fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],  # TODO shouldn't this be per_time_step?
-        time_steps_per_hour::Int = 1,
+        time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
         latitude::Real=0.0,
         longitude::Real=0.0
     )
@@ -101,15 +101,21 @@ end
 
 
 """
-    function SpaceHeatingLoad(;
-        doe_reference_name::String = "",
-        city::String = "",
-        blended_doe_reference_names::Array{String, 1} = String[],
-        blended_doe_reference_percents::Array{<:Real,1} = Real[],
-        annual_mmbtu::Union{Real, Nothing} = nothing,
-        monthly_mmbtu::Array{<:Real,1} = Real[],
-        fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[]
-    )
+SpaceHeatingLoad
+
+`SpaceHeatingLoad` is an optional REopt input with the following keys:
+```julia
+    doe_reference_name::String = "",
+    city::String = "",
+    blended_doe_reference_names::Array{String, 1} = String[],
+    blended_doe_reference_percents::Array{<:Real,1} = Real[],
+    annual_mmbtu::Union{Real, Nothing} = nothing,
+    monthly_mmbtu::Array{<:Real,1} = Real[],
+    fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[], 
+    time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
+    latitude::Real=0.0,
+    longitude::Real=0.0
+```
 
 There are many ways to define a `SpaceHeatingLoad`:
 1. a time-series via the `fuel_loads_mmbtu_per_hour`,
@@ -139,8 +145,8 @@ struct SpaceHeatingLoad
         annual_mmbtu::Union{Real, Nothing} = nothing,
         monthly_mmbtu::Array{<:Real,1} = Real[],
         # addressable_load_fraction,  # TODO
-        fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
-        time_steps_per_hour::Int = 1,
+        fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[], # TODO: shouldn't this be per time_step? 
+        time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
         latitude::Real=0.0,
         longitude::Real=0.0
     )
