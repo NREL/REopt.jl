@@ -33,10 +33,11 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
 """
     CHP
 
-struct with outer constructor:
+CHP is an optional REopt input with the following keys:
 ```julia
 prime_mover::String = ""
-# following must be provided by user if not providing prime_mover
+
+# Required "custom inputs" if not providing prime_mover:
 installed_cost_per_kw::Union{Float64, AbstractVector{Float64}} = NaN
 tech_sizes_for_cost_curve::Union{Float64, AbstractVector{Float64}} = NaN
 om_cost_per_kwh::Float64 = NaN
@@ -50,6 +51,7 @@ max_kw::Float64 = NaN
 cooling_thermal_factor::Float64 = NaN  # only needed with cooling load
 unavailability_periods::AbstractVector{Dict} = Dict[]
 
+# Optional inputs:
 size_class::Int = 1
 min_kw::Float64 = 0.0
 fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
@@ -89,6 +91,13 @@ can_export_beyond_nem_limit::Bool = false
 can_curtail::Bool = false
 # emissions_factor_lb_CO2_per_mmbtu::Float64
 ```
+
+!!! note
+    To model CHP, you must provide at least `prime_mover` from $(prime_movers) or all of the "custom inputs" defined below.
+    If prime_mover is provided, any missing value from the "custom inputs" will be populated from data/chp/chp_default_data.json, 
+    based on the prime_mover, boiler_type, and size_class. boiler_type is "steam" if `prime_mover` is "combustion_turbine" 
+    and is "hot_water" for all other `prime_mover` types.
+
 """
 Base.@kwdef mutable struct CHP <: AbstractCHP
     prime_mover::String = ""
@@ -106,6 +115,7 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     cooling_thermal_factor::Float64 = NaN  # only needed with cooling load
     unavailability_periods::AbstractVector{Dict} = Dict[]
 
+    # Optional inputs:
     size_class::Int = 1
     min_kw::Float64 = 0.0
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0
@@ -174,7 +184,7 @@ function CHP(d::Dict)
             @warn "Ignoring `chp.tech_sizes_for_cost_curve` input because `chp.installed_cost_per_kw` is a scalar"
         end
     elseif !isempty(chp.installed_cost_per_kw) && isempty(chp.tech_sizes_for_cost_curve)
-        @error "To model CHP cost curve, you must provide `chp.tech_sizes_for_cost` vector of equal length to `chp.installed_cost_per_kw`"
+        @error "To model CHP cost curve, you must provide `chp.tech_sizes_for_cost_curve` vector of equal length to `chp.installed_cost_per_kw`"
     elseif isempty(chp.tech_sizes_for_cost_curve)
         update_installed_cost_params = true
     elseif isempty(chp.prime_mover)
