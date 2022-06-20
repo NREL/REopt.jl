@@ -30,9 +30,8 @@
 """
     ElectricUtility
 
-ElectricUtility data struct with inner constructor:     
+ElectricUtility is a required REopt input for on-grid scenarios only (it cannot be supplied when `Settings.off_grid_flag` is true) with the following keys:
 ```julia
-function ElectricUtility(;
     outage_start_time_step::Int=0,  # for modeling a single outage, with critical load spliced into the baseline load ...
     outage_end_time_step::Int=0,  # ... utiltity production_factor = 0 during the outage
     allow_simultaneous_export_import::Bool = true,  # if true the site has two meters (in effect)
@@ -45,12 +44,14 @@ function ElectricUtility(;
     scenarios::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:length(outage_durations),
     net_metering_limit_kw::Real = 0,
     interconnection_limit_kw::Real = 1.0e9
-)
 ```julia
 
-!!! note Outage indexing begins at 1 (not 0) and the outage is inclusive of the outage end time step. 
+!!! note "Outage modeling"
+    Outage indexing begins at 1 (not 0) and the outage is inclusive of the outage end time step. 
     For instance, to model a 3-hour outage from 12AM to 3AM on Jan 1, outage_start_time_step = 1 and outage_end_time_step = 3.
     To model a 1-hour outage from 6AM to 7AM on Jan 1, outage_start_time_step = 7 and outage_end_time_step = 7.
+
+    Cannot supply singular outage_start(or end)_time_step and multiple outage_start_time_steps. Must use one or the other.
 
 """
  struct ElectricUtility

@@ -38,14 +38,8 @@ end
 """
     ExistingBoiler
 
-!!! note
-    The `ExistingBoiler` default operating cost is zero. Please provide the `fuel_cost_per_mmbtu` field
-    for the `ExistingBoiler` if you want non-zero BAU heating costs. The `fuel_cost_per_mmbtu` can be
-    a scalar, a list of 12 monthly values, or a time series of values for every time step.
-    ExistingBoiler
-
+ExistingBoiler is an optional REopt input with the following keys:
 ```julia
-function ExistingBoiler(;
     max_heat_demand_kw::Real=0,
     production_type::String = "hot_water",
     chp_prime_mover::String = "",
@@ -53,8 +47,31 @@ function ExistingBoiler(;
     efficiency::Real = 0.0,
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
     time_steps_per_hour::Int = 1
-)
 ```
+
+!!! note "ExistingBoiler operating costs" 
+    The `ExistingBoiler` default operating cost is zero. Please provide the `fuel_cost_per_mmbtu` field
+    for the `ExistingBoiler` if you want non-zero BAU heating costs. The `fuel_cost_per_mmbtu` can be
+    a scalar, a list of 12 monthly values, or a time series of values for every time step.
+
+!!! note "Determining `efficiency`" 
+    Must supply either: `efficiency`, `chp_prime_mover`, or `production_type`.
+    
+    If `efficiency` is not supplied (or if set to 0.0), the `production_type` and `efficiency` will be determined based on the 
+    `chp_prime_mover` (one of ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cell"]) as follows:
+    ```julia    
+    production_type_by_chp_prime_mover = Dict(
+            "recip_engine" => "hot_water",
+            "micro_turbine" => "hot_water",
+            "combustion_turbine" => "steam",
+            "fuel_cell" => "hot_water"
+    )
+    efficiency_defaults = Dict(
+        "hot_water" => 0.8,
+        "steam" => 0.75
+    )
+    ```
+
 """
 function ExistingBoiler(;
     max_heat_demand_kw::Real=0,

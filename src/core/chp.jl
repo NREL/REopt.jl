@@ -92,7 +92,7 @@ can_curtail::Bool = false
 # emissions_factor_lb_CO2_per_mmbtu::Float64
 ```
 
-!!! note
+!!! note "Required inputs"
     To model CHP, you must provide at least `prime_mover` from $(prime_movers) or all of the "custom inputs" defined below.
     If prime_mover is provided, any missing value from the "custom inputs" will be populated from data/chp/chp_default_data.json, 
     based on the prime_mover, boiler_type, and size_class. boiler_type is "steam" if `prime_mover` is "combustion_turbine" 
