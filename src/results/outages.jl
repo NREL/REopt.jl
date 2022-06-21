@@ -28,18 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-	add_outage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict)
-
-Adds the Outages results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs`.
-Only added to results when multiple outages are modeled via the `ElectricUtility.outage_durations` input.
-
-!!! note
-	When modeling PV the name of the PV system is used for the output keys to allow for modeling multiple PV systems. The default PV name is `PV`.
-
-!!! warn
-	The Outage results can be very large when many outages are modeled and can take a long time to generate.
-
-Outages results:
+`Outages` results keys:
 - `expected_outage_cost` The expected outage cost over the random outages modeled.
 - `max_outage_cost_per_outage_duration_series` The maximum outage cost in every outage duration modeled.
 - `unserved_load_series` The amount of unserved load in each outage and each time step.
@@ -61,6 +50,22 @@ Outages results:
 
 !!! warn
 	The output keys for "Outages" are subject to change.
+
+!!! note 
+	`Outage` results only added to results when multiple outages are modeled via the `ElectricUtility.outage_durations` input.
+
+!!! note
+	When modeling PV the name of the PV system is used for the output keys to allow for modeling multiple PV systems. The default PV name is `PV`.
+	
+!!! warn
+	The Outage results can be very large when many outages are modeled and can take a long time to generate.
+"""
+
+"""
+	add_outage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict)
+
+Adds the `Outages` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs`.
+Only added to results when multiple outages are modeled via the `ElectricUtility.outage_durations` input.
 """
 function add_outage_results(m, p, d::Dict)
 	# TODO with many outages the dispatch arrays are so large that it can take hours to create them

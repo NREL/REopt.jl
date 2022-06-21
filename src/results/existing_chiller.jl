@@ -27,6 +27,15 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+`ExistingChiller` results keys:
+- `year_one_to_tes_series_ton` 
+- `year_one_to_load_series_ton`
+- `year_one_electric_consumption_series`
+- `year_one_electric_consumption_kwh`
+- `year_one_thermal_production_tonhour`
+"""
+
 function add_existing_chiller_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 
