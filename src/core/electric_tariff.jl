@@ -90,15 +90,15 @@ function ElectricTariff(;
     add_tou_energy_rates_to_urdb_rate::Bool=false,
     remove_tiers::Bool=false,
     demand_lookback_months::AbstractArray{Int64, 1}=Int64[],
-    demand_lookback_percent::Float64=0.0,
+    demand_lookback_percent::Real=0.0,
     demand_lookback_range::Int=0,
     coincident_peak_load_active_time_steps::Vector{Vector{Int64}}=[Int64[]],
     coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[]
     ) where {
-        T1 <: Union{Nothing, Int, Float64, Array}, 
-        T2 <: Union{Nothing, Int, Float64, Array}, 
-        S <: Union{Nothing, Int, Float64}, 
-        R <: Union{Nothing, Int, Float64}
+        T1 <: Union{Nothing, Real, Array{<:Real}}, 
+        T2 <: Union{Nothing, Real, Array{<:Real}}, 
+        S <: Union{Nothing, Real}, 
+        R <: Union{Nothing, Real}
     }
 ```
 
@@ -126,15 +126,15 @@ function ElectricTariff(;
     add_tou_energy_rates_to_urdb_rate::Bool=false,
     remove_tiers::Bool=false,
     demand_lookback_months::AbstractArray{Int64, 1}=Int64[],
-    demand_lookback_percent::Float64=0.0,
+    demand_lookback_percent::Real=0.0,
     demand_lookback_range::Int=0,
     coincident_peak_load_active_time_steps::Vector{Vector{Int64}}=[Int64[]],
     coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[]
     ) where {
-        T1 <: Union{Nothing, Int, Float64, Array}, 
-        T2 <: Union{Nothing, Int, Float64, Array}, 
-        S <: Union{Nothing, Int, Float64}, 
-        R <: Union{Nothing, Int, Float64}
+        T1 <: Union{Nothing, Real, Array{<:Real}}, 
+        T2 <: Union{Nothing, Real, Array{<:Real}}, 
+        S <: Union{Nothing, Real}, 
+        R <: Union{Nothing, Real}
     }
     # TODO remove_tiers for multinode models
     nem_rate = Float64[]

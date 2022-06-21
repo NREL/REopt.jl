@@ -316,14 +316,14 @@ struct with inner constructor:
 ```julia
 function MPCGenerator(;
     size_kw::Real,
-    fuel_cost_per_gallon::Float64 = 3.0,
-    fuel_slope_gal_per_kwh::Float64 = 0.076,
-    fuel_intercept_gal_per_hr::Float64 = 0.0,
-    fuel_avail_gal::Float64 = 660.0,
-    min_turn_down_pct::Float64 = 0.0,  # TODO change this to non-zero value
+    fuel_cost_per_gallon::Real = 3.0,
+    fuel_slope_gal_per_kwh::Real = 0.076,
+    fuel_intercept_gal_per_hr::Real = 0.0,
+    fuel_avail_gal::Real = 660.0,
+    min_turn_down_pct::Real = 0.0,  # TODO change this to non-zero value
     only_runs_during_grid_outage::Bool = true,
     sells_energy_back_to_grid::Bool = false,
-    om_cost_per_kwh::Float64=0.0,
+    om_cost_per_kwh::Real=0.0,
     )
 ```
 """
@@ -341,14 +341,14 @@ struct MPCGenerator <: AbstractGenerator
 
     function MPCGenerator(;
         size_kw::Real,
-        fuel_cost_per_gallon::Float64 = 3.0,
-        fuel_slope_gal_per_kwh::Float64 = 0.076,
-        fuel_intercept_gal_per_hr::Float64 = 0.0,
-        fuel_avail_gal::Float64 = 660.0,
-        min_turn_down_pct::Float64 = 0.0,  # TODO change this to non-zero value
+        fuel_cost_per_gallon::Real = 3.0,
+        fuel_slope_gal_per_kwh::Real = 0.076,
+        fuel_intercept_gal_per_hr::Real = 0.0,
+        fuel_avail_gal::Real = 660.0,
+        min_turn_down_pct::Real = 0.0,  # TODO change this to non-zero value
         only_runs_during_grid_outage::Bool = true,
         sells_energy_back_to_grid::Bool = false,
-        om_cost_per_kwh::Float64=0.0,
+        om_cost_per_kwh::Real=0.0,
         )
 
         max_kw = size_kw
