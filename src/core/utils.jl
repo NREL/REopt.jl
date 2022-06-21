@@ -37,7 +37,7 @@ function annuity(years::Int, rate_escalation::Real, rate_discount::Real)
     return annuity_two_escalation_rates(years, rate_escalation, 0.0, rate_discount)
 end
 
-function annuity_two_escalation_rates(years::Int, rate_escalation1::Float64, rate_escalation2::Float64, rate_discount::Float64)
+function annuity_two_escalation_rates(years::Int, rate_escalation1::Real, rate_escalation2::Real, rate_discount::Real)
     """
         this formulation assumes cost growth in first period
         i.e. it is a geometric sum of (1+rate_escalation)^n / (1+rate_discount)^n

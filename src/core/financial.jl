@@ -48,8 +48,8 @@ function Financial(;
     microgrid_upgrade_cost_pct::Real = off_grid_flag ? 0.0 : 0.3,
     macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
     macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
-    CO2_cost_per_tonne::Float64 = 51.0,
-    CO2_cost_escalation_pct::Float64 = 0.042173,
+    CO2_cost_per_tonne::Real = 51.0,
+    CO2_cost_escalation_pct::Real = 0.042173,
     NOx_grid_cost_per_tonne::Real = 0.0,
     SO2_grid_cost_per_tonne::Real = 0.0,
     PM25_grid_cost_per_tonne::Real = 0.0,
@@ -76,34 +76,34 @@ function Financial(;
     ```
 """
 struct Financial
-    om_cost_escalation_pct::Real
-    elec_cost_escalation_pct::Real
-    boiler_fuel_cost_escalation_pct::Real
-    chp_fuel_cost_escalation_pct::Real
-    generator_fuel_cost_escalation_pct::Real
-    offtaker_tax_pct::Real
-    offtaker_discount_pct::Real
+    om_cost_escalation_pct::Float64
+    elec_cost_escalation_pct::Float64
+    boiler_fuel_cost_escalation_pct::Float64
+    chp_fuel_cost_escalation_pct::Float64
+    generator_fuel_cost_escalation_pct::Float64
+    offtaker_tax_pct::Float64
+    offtaker_discount_pct::Float64
     third_party_ownership::Bool
-    owner_tax_pct::Real
-    owner_discount_pct::Real
+    owner_tax_pct::Float64
+    owner_discount_pct::Float64
     analysis_years::Int
-    value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real
-    microgrid_upgrade_cost_pct::Real
+    value_of_lost_load_per_kwh::Union{Array{Float64,1}, Float64}
+    microgrid_upgrade_cost_pct::Float64
     macrs_five_year::Array{Float64,1}
     macrs_seven_year::Array{Float64,1}
     CO2_cost_per_tonne::Float64
     CO2_cost_escalation_pct::Float64
-    NOx_grid_cost_per_tonne::Real
-    SO2_grid_cost_per_tonne::Real
-    PM25_grid_cost_per_tonne::Real
-    NOx_onsite_fuelburn_cost_per_tonne::Real
-    SO2_onsite_fuelburn_cost_per_tonne::Real
-    PM25_onsite_fuelburn_cost_per_tonne::Real
-    NOx_cost_escalation_pct::Real
-    SO2_cost_escalation_pct::Real
-    PM25_cost_escalation_pct::Real
-    offgrid_other_capital_costs::Real
-    offgrid_other_annual_costs::Real
+    NOx_grid_cost_per_tonne::Float64
+    SO2_grid_cost_per_tonne::Float64
+    PM25_grid_cost_per_tonne::Float64
+    NOx_onsite_fuelburn_cost_per_tonne::Float64
+    SO2_onsite_fuelburn_cost_per_tonne::Float64
+    PM25_onsite_fuelburn_cost_per_tonne::Float64
+    NOx_cost_escalation_pct::Float64
+    SO2_cost_escalation_pct::Float64
+    PM25_cost_escalation_pct::Float64
+    offgrid_other_capital_costs::Float64
+    offgrid_other_annual_costs::Float64
 
     function Financial(;
         off_grid_flag::Bool = false,
@@ -118,12 +118,12 @@ struct Financial
         owner_tax_pct::Real = 0.26,
         owner_discount_pct::Real = 0.0564,
         analysis_years::Int = 25,
-        value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00,
+        value_of_lost_load_per_kwh::Union{Array{<:Real,1}, Real} = 1.00,
         microgrid_upgrade_cost_pct::Real = off_grid_flag ? 0.0 : 0.3,
-        macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
-        macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
-        CO2_cost_per_tonne::Float64 = 51.0,
-        CO2_cost_escalation_pct::Float64 = 0.042173,
+        macrs_five_year::Array{<:Real,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
+        macrs_seven_year::Array{<:Real,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
+        CO2_cost_per_tonne::Real = 51.0,
+        CO2_cost_escalation_pct::Real = 0.042173,
         NOx_grid_cost_per_tonne::Real = 0.0,
         SO2_grid_cost_per_tonne::Real = 0.0,
         PM25_grid_cost_per_tonne::Real = 0.0,
@@ -258,7 +258,7 @@ struct Financial
 end
 
 
-function easiur_costs(latitude::Float64, longitude::Float64, grid_or_onsite::String)
+function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
     # Assumption: grid emissions occur at site at 150m above ground
     # and on-site fuelburn emissions occur at site at 0m above ground
     if grid_or_onsite=="grid"
@@ -292,7 +292,7 @@ function easiur_costs(latitude::Float64, longitude::Float64, grid_or_onsite::Str
     end
 end
 
-function easiur_escalation_rates(latitude::Float64, longitude::Float64, inflation::Float64)
+function easiur_escalation_rates(latitude::Real, longitude::Real, inflation::Real)
     EASIUR_150m_yr2020 = get_EASIUR2005("p150", pop_year=2020, income_year=2020, dollar_year=2010) 
     EASIUR_150m_yr2024 = get_EASIUR2005("p150", pop_year=2024, income_year=2024, dollar_year=2010) 
 
@@ -446,11 +446,13 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
 end
 
 """
-    l2g(x::Float64, y::Float64, inverse::Bool=false, datum::String="NAD83")
+    l2g(x::Real, y::Real, inverse::Bool=false, datum::String="NAD83")
 
 Convert LCP (x, y) in CAMx 148x112 grid to Geodetic (lon, lat)
 """
-function l2g(x::Float64, y::Float64; inverse::Bool=false, datum::String="NAD83")
+function l2g(x::Real, y::Real; inverse::Bool=false, datum::String="NAD83")
+    x = Float64(x)
+    y = Float64(y)
     LCP_US = ArchGDAL.importPROJ4("+proj=lcc +no_defs +a=6370000.0 +b=6370000.0 +lon_0=97w +lat_0=40n +lat_1=33n +lat_2=45n +x_0=2736000.0 +y_0=2088000.0 +to_wgs=0,0,0 +units=m")
     if datum == "NAD83"
         datum = ArchGDAL.importEPSG(4269)
@@ -473,10 +475,10 @@ function l2g(x::Float64, y::Float64; inverse::Bool=false, datum::String="NAD83")
 end
 
 """
-    g2l(lon::Float64, lat::Float64, datum::String="NAD83")
+    g2l(lon::Real, lat::Real, datum::String="NAD83")
 
 Convert Geodetic (lon, lat) to LCP (x, y) in CAMx 148x112 grid
 """
-function g2l(lon::Float64, lat::Float64; datum::String="NAD83")
+function g2l(lon::Real, lat::Real; datum::String="NAD83")
     return l2g(lon, lat, inverse=true, datum=datum)
 end

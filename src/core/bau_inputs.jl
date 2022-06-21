@@ -208,7 +208,7 @@ function update_bau_emissions_inputs(s::AbstractScenario, bau_emissions_lb_CO2_p
 end
 
 """
-    setup_bau_emissions_inputs(p::REoptInputs, s_bau::BAUScenario, generator_fuel_use_gal::Float64)
+    setup_bau_emissions_inputs(p::REoptInputs, s_bau::BAUScenario, generator_fuel_use_gal::Real)
 
 Pre-processing of the BAU emissions to use in determining emissions reductions in the optimal case
 Include BAU grid emissions, existing backup generator emissions, boiler emissions
@@ -217,7 +217,7 @@ Update the `bau_(grid_)emissions_` values in s.site and s_bau.site
 Note if existing generation does not sustain a simulated outage, the BAU load and therefore emissions
 are 0 during unsurvived outage hours
 """
-function setup_bau_emissions_inputs(p::REoptInputs, s_bau::BAUScenario, generator_fuel_use_gal::Float64)
+function setup_bau_emissions_inputs(p::REoptInputs, s_bau::BAUScenario, generator_fuel_use_gal::Real)
     
     bau_emissions_lb_CO2_per_year = 0
     bau_emissions_lb_NOx_per_year = 0
