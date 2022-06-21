@@ -35,9 +35,9 @@ struct with inner constructor:
 function Wind(;
     min_kw = 0.0,
     max_kw = 1.0e9,
-    installed_cost_per_kw = missing,
+    installed_cost_per_kw = nothing,
     om_cost_per_kw = 35.0,
-    prod_factor_series = missing,
+    prod_factor_series = nothing,
     size_class = "",
     wind_meters_per_sec = [],
     wind_direction_degrees = [],
@@ -46,7 +46,7 @@ function Wind(;
     macrs_option_years = 5,
     macrs_bonus_pct = 0.0,
     macrs_itc_reduction = 0.5,
-    federal_itc_pct = missing,
+    federal_itc_pct = nothing,
     federal_rebate_per_kw = 0.0,
     state_ibi_pct = 0.0,
     state_ibi_max = 1.0e10,
@@ -101,9 +101,9 @@ These values are passed to SAM to get the turbine production factor.
 struct Wind <: AbstractTech
     min_kw::Real
     max_kw::Real
-    installed_cost_per_kw::Union{Missing, Real}
+    installed_cost_per_kw::Union{Nothing, Real}
     om_cost_per_kw::Real
-    prod_factor_series::Union{Missing, Array{Real,1}}
+    prod_factor_series::Union{Nothing, Array{Real,1}}
     size_class::String
     hub_height::T where T <: Real
     wind_meters_per_sec::AbstractArray{Float64,1}
@@ -113,7 +113,7 @@ struct Wind <: AbstractTech
     macrs_option_years::Int
     macrs_bonus_pct::Real
     macrs_itc_reduction::Real
-    federal_itc_pct::Union{Missing, Real}
+    federal_itc_pct::Union{Nothing, Real}
     federal_rebate_per_kw::Real
     state_ibi_pct::Real
     state_ibi_max::Real
@@ -135,9 +135,9 @@ struct Wind <: AbstractTech
     function Wind(;
         min_kw = 0.0,
         max_kw = 1.0e9,
-        installed_cost_per_kw = missing,
+        installed_cost_per_kw = nothing,
         om_cost_per_kw = 35.0,
-        prod_factor_series = missing,
+        prod_factor_series = nothing,
         size_class = "",
         wind_meters_per_sec = [],
         wind_direction_degrees = [],
@@ -146,7 +146,7 @@ struct Wind <: AbstractTech
         macrs_option_years = 5,
         macrs_bonus_pct = 0.0,
         macrs_itc_reduction = 0.5,
-        federal_itc_pct = missing,
+        federal_itc_pct = nothing,
         federal_rebate_per_kw = 0.0,
         state_ibi_pct = 0.0,
         state_ibi_max = 1.0e10,
@@ -200,11 +200,11 @@ struct Wind <: AbstractTech
             @error "Wind.size_class must be one of $(keys(size_class_to_hub_height))"
         end
 
-        if ismissing(installed_cost_per_kw)
+        if isnothing(installed_cost_per_kw)
             installed_cost_per_kw = size_class_to_installed_cost[size_class]
         end
 
-        if ismissing(federal_itc_pct)
+        if isnothing(federal_itc_pct)
             federal_itc_pct = size_class_to_itc_incentives[size_class]
         end
 

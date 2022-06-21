@@ -32,12 +32,12 @@
 
     Base.@kwdef struct MPCElectricLoad
         loads_kw::Array{Real,1}
-        critical_loads_kw::Union{Missing, Array{Real,1}} = missing
+        critical_loads_kw::Union{Nothing, Array{Real,1}} = nothing
     end
 """
 Base.@kwdef struct MPCElectricLoad
     loads_kw::Array{Real,1}
-    critical_loads_kw::Union{Missing, Array{Real,1}} = missing
+    critical_loads_kw::Union{Nothing, Array{Real,1}} = nothing
 end
 
 
@@ -59,14 +59,14 @@ end
 Base.@kwdef struct MPCPV
     name::String="PV"
     size_kw::Real = 0
-    prod_factor_series::Union{Missing, Array{Real,1}} = missing
+    prod_factor_series::Union{Nothing, Array{Real,1}} = nothing
 end
 ```
 """
 Base.@kwdef struct MPCPV
     name::String="PV"
     size_kw::Real = 0
-    prod_factor_series::Union{Missing, Array{Real,1}} = missing
+    prod_factor_series::Union{Nothing, Array{Real,1}} = nothing
 end
 
 
@@ -255,8 +255,8 @@ Base.@kwdef struct MPCElectricUtility
     outage_start_time_steps::Array{Int,1}=Int[]  # we minimize the maximum outage cost over outage start times
     outage_durations::Array{Int,1}=Int[]  # one-to-one with outage_probabilities, outage_durations can be a random variable
     outage_probabilities::Array{<:Real,1}=[1.0]
-    outage_time_steps::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:maximum(outage_durations)
-    scenarios::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:length(outage_durations)
+    outage_time_steps::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:maximum(outage_durations)
+    scenarios::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:length(outage_durations)
     net_metering_limit_kw::Real = 0
     interconnection_limit_kw::Real = 1.0e9
 end
@@ -271,8 +271,8 @@ Base.@kwdef struct MPCElectricUtility
     outage_start_time_steps::Array{Int,1}=Int[]  # we minimize the maximum outage cost over outage start times
     outage_durations::Array{Int,1}=Int[]  # one-to-one with outage_probabilities, outage_durations can be a random variable
     outage_probabilities::Array{<:Real,1}=[1.0]
-    outage_time_steps::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:maximum(outage_durations)
-    scenarios::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:length(outage_durations)
+    outage_time_steps::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:maximum(outage_durations)
+    scenarios::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:length(outage_durations)
     net_metering_limit_kw::Real = 0
     interconnection_limit_kw::Real = 1.0e9
 end

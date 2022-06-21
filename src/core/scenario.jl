@@ -142,7 +142,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                         ) 
     end
 
-    # #TODO: allow grid costs to be missing if site.off_grid == true
+    # #TODO: allow grid costs to be nothing if site.off_grid == true
     # missing_health_inputs = false
     # for emissions_type in ["NOx", "SO2", "PM25"]
     #     for health_input in [
@@ -150,7 +150,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     #         "$(emissions_type)_onsite_fuelburn_cost_per_tonne",
     #         "$(emissions_type)_cost_escalation_pct"
     #     ]
-    #         if ismissing(getproperty(financial, Symbol(health_input)))
+    #         if isnothing(getproperty(financial, Symbol(health_input)))
     #             missing_health_inputs = true
     #             setproperty!(financial, Symbol(health_input), 0)
     #         end
@@ -467,19 +467,19 @@ function set_missing_emissions_factors_to_fuel_defaults(tech::AbstractFuelBurnin
         "propane"=>0.009906836,
         "diesel_oil"=>0.0
     )
-    if ismissing(tech.fuel_renewable_energy_pct)
+    if isnothing(tech.fuel_renewable_energy_pct)
         tech.fuel_renewable_energy_pct = fuel_renewable_energy_pct[tech.fuel_type]
     end
-    if ismissing(tech.emissions_factor_lb_CO2_per_mmbtu)
+    if isnothing(tech.emissions_factor_lb_CO2_per_mmbtu)
         tech.emissions_factor_lb_CO2_per_mmbtu = fuel_emissions_lb_CO2_per_mmbtu[tech.fuel_type]
     end
-    if ismissing(tech.emissions_factor_lb_NOx_per_mmbtu)
+    if isnothing(tech.emissions_factor_lb_NOx_per_mmbtu)
         tech.emissions_factor_lb_NOx_per_mmbtu = fuel_emissions_lb_NOx_per_mmbtu[tech.fuel_type]
     end
-    if ismissing(tech.emissions_factor_lb_SO2_per_mmbtu)
+    if isnothing(tech.emissions_factor_lb_SO2_per_mmbtu)
         tech.emissions_factor_lb_SO2_per_mmbtu = fuel_emissions_lb_SO2_per_mmbtu[tech.fuel_type]
     end
-    if ismissing(tech.emissions_factor_lb_PM25_per_mmbtu)
+    if isnothing(tech.emissions_factor_lb_PM25_per_mmbtu)
         tech.emissions_factor_lb_PM25_per_mmbtu = fuel_emissions_lb_PM25_per_mmbtu[tech.fuel_type]
     end
 end

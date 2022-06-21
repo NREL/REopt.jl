@@ -88,11 +88,11 @@ can_net_meter::Bool = false
 can_wholesale::Bool = false
 can_export_beyond_nem_limit::Bool = false
 can_curtail::Bool = false
-fuel_renewable_energy_pct::Union{Missing,Float64} = missing
-emissions_factor_lb_CO2_per_mmbtu::Union{Missing,Float64} = missing
-emissions_factor_lb_NOx_per_mmbtu::Union{Missing,Float64} = missing
-emissions_factor_lb_SO2_per_mmbtu::Union{Missing,Float64} = missing
-emissions_factor_lb_PM25_per_mmbtu::Union{Missing,Float64} = missing
+fuel_renewable_energy_pct::Union{Nothing,Float64} = nothing
+emissions_factor_lb_CO2_per_mmbtu::Union{Nothing,Float64} = nothing
+emissions_factor_lb_NOx_per_mmbtu::Union{Nothing,Float64} = nothing
+emissions_factor_lb_SO2_per_mmbtu::Union{Nothing,Float64} = nothing
+emissions_factor_lb_PM25_per_mmbtu::Union{Nothing,Float64} = nothing
 ```
 """
 Base.@kwdef mutable struct CHP <: AbstractCHP
@@ -149,11 +149,11 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     can_wholesale::Bool = false
     can_export_beyond_nem_limit::Bool = false
     can_curtail::Bool = false
-    fuel_renewable_energy_pct::Union{Missing,Float64} = missing
-    emissions_factor_lb_CO2_per_mmbtu::Union{Missing,Float64} = missing
-    emissions_factor_lb_NOx_per_mmbtu::Union{Missing,Float64} = missing
-    emissions_factor_lb_SO2_per_mmbtu::Union{Missing,Float64} = missing
-    emissions_factor_lb_PM25_per_mmbtu::Union{Missing,Float64} = missing
+    fuel_renewable_energy_pct::Union{Nothing,Float64} = nothing
+    emissions_factor_lb_CO2_per_mmbtu::Union{Nothing,Float64} = nothing
+    emissions_factor_lb_NOx_per_mmbtu::Union{Nothing,Float64} = nothing
+    emissions_factor_lb_SO2_per_mmbtu::Union{Nothing,Float64} = nothing
+    emissions_factor_lb_PM25_per_mmbtu::Union{Nothing,Float64} = nothing
 end
 
 

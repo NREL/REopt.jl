@@ -49,8 +49,8 @@ function ElectricUtility(;
     outage_start_time_steps::Array{Int,1}=Int[],  # we minimize the maximum outage cost over outage start times
     outage_durations::Array{Int,1}=Int[],  # one-to-one with outage_probabilities, outage_durations can be a random variable
     outage_probabilities::Array{R,1} where R<:Real = [1.0],
-    outage_time_steps::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:maximum(outage_durations),
-    scenarios::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:length(outage_durations),
+    outage_time_steps::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:maximum(outage_durations),
+    scenarios::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:length(outage_durations),
     net_metering_limit_kw::Real = 0,
     interconnection_limit_kw::Real = 1.0e9,
     latitude::Real,
@@ -84,8 +84,8 @@ struct ElectricUtility
     outage_start_time_steps::Array{Int,1}  # we minimize the maximum outage cost over outage start times
     outage_durations::Array{Int,1}  # one-to-one with outage_probabilities, outage_durations can be a random variable
     outage_probabilities::Array{R,1} where R<:Real 
-    outage_time_steps::Union{Missing, UnitRange} 
-    scenarios::Union{Missing, UnitRange} 
+    outage_time_steps::Union{Nothing, UnitRange} 
+    scenarios::Union{Nothing, UnitRange} 
     net_metering_limit_kw::Real 
     interconnection_limit_kw::Real 
 
@@ -107,8 +107,8 @@ struct ElectricUtility
         outage_start_time_steps::Array{Int,1}=Int[],  # we minimize the maximum outage cost over outage start times
         outage_durations::Array{Int,1}=Int[],  # one-to-one with outage_probabilities, outage_durations can be a random variable
         outage_probabilities::Array{<:Real,1}=[1.0],
-        outage_time_steps::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:maximum(outage_durations),
-        scenarios::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:length(outage_durations),
+        outage_time_steps::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:maximum(outage_durations),
+        scenarios::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:length(outage_durations),
         net_metering_limit_kw::Real = 0,
         interconnection_limit_kw::Real = 1.0e9,
         latitude::Real,

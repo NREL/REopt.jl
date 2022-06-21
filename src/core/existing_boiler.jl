@@ -33,11 +33,11 @@ mutable struct ExistingBoiler <: AbstractThermalTech  # useful to create Abstrac
     efficiency::Real
     fuel_cost_series::AbstractVector{<:Real}
     fuel_type::String
-    fuel_renewable_energy_pct::Union{Missing,Float64}
-    emissions_factor_lb_CO2_per_mmbtu::Union{Missing,Float64}
-    emissions_factor_lb_NOx_per_mmbtu::Union{Missing,Float64}
-    emissions_factor_lb_SO2_per_mmbtu::Union{Missing,Float64}
-    emissions_factor_lb_PM25_per_mmbtu::Union{Missing,Float64}
+    fuel_renewable_energy_pct::Union{Nothing,Float64}
+    emissions_factor_lb_CO2_per_mmbtu::Union{Nothing,Float64}
+    emissions_factor_lb_NOx_per_mmbtu::Union{Nothing,Float64}
+    emissions_factor_lb_SO2_per_mmbtu::Union{Nothing,Float64}
+    emissions_factor_lb_PM25_per_mmbtu::Union{Nothing,Float64}
 end
 
 
@@ -56,14 +56,14 @@ function ExistingBoiler(;
     production_type::String = "hot_water",
     chp_prime_mover::String = "",
     max_thermal_factor_on_peak_load::Real = 1.25,
-    efficiency::Union{Missing,<:Real} = missing,
+    efficiency::Union{Nothing,<:Real} = nothing,
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
-    fuel_renewable_energy_pct::Union{Missing,Float64} = missing,
-    emissions_factor_lb_CO2_per_mmbtu::Union{Missing,Float64} = missing,
-    emissions_factor_lb_NOx_per_mmbtu::Union{Missing,Float64} = missing,
-    emissions_factor_lb_SO2_per_mmbtu::Union{Missing,Float64} = missing,
-    emissions_factor_lb_PM25_per_mmbtu::Union{Missing,Float64} = missing,
+    fuel_renewable_energy_pct::Union{Nothing,Float64} = nothing,
+    emissions_factor_lb_CO2_per_mmbtu::Union{Nothing,Float64} = nothing,
+    emissions_factor_lb_NOx_per_mmbtu::Union{Nothing,Float64} = nothing,
+    emissions_factor_lb_SO2_per_mmbtu::Union{Nothing,Float64} = nothing,
+    emissions_factor_lb_PM25_per_mmbtu::Union{Nothing,Float64} = nothing,
     time_steps_per_hour::Int = 1
 )
 ```
@@ -73,15 +73,15 @@ function ExistingBoiler(;
     production_type::String = "hot_water",
     chp_prime_mover::String = "",
     max_thermal_factor_on_peak_load::Real = 1.25,
-    efficiency::Union{Missing,<:Real} = missing,
+    efficiency::Union{Nothing,<:Real} = nothing,
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     # can_supply_steam_turbine::Bool,
-    fuel_renewable_energy_pct::Union{Missing,Float64} = missing,
-    emissions_factor_lb_CO2_per_mmbtu::Union{Missing,Float64} = missing,
-    emissions_factor_lb_NOx_per_mmbtu::Union{Missing,Float64} = missing,
-    emissions_factor_lb_SO2_per_mmbtu::Union{Missing,Float64} = missing,
-    emissions_factor_lb_PM25_per_mmbtu::Union{Missing,Float64} = missing,
+    fuel_renewable_energy_pct::Union{Nothing,Float64} = nothing,
+    emissions_factor_lb_CO2_per_mmbtu::Union{Nothing,Float64} = nothing,
+    emissions_factor_lb_NOx_per_mmbtu::Union{Nothing,Float64} = nothing,
+    emissions_factor_lb_SO2_per_mmbtu::Union{Nothing,Float64} = nothing,
+    emissions_factor_lb_PM25_per_mmbtu::Union{Nothing,Float64} = nothing,
     time_steps_per_hour::Int = 1
 )
     @assert production_type in ["steam", "hot_water"]
@@ -106,7 +106,7 @@ function ExistingBoiler(;
         "steam" => 0.75
     )
 
-    if ismissing(efficiency)
+    if isnothing(efficiency)
         if !isempty(chp_prime_mover)
             production_type = production_type_by_chp_prime_mover[chp_prime_mover]
         end
