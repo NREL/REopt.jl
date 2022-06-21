@@ -27,6 +27,24 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+`AbsorptionChiller` results keys:
+- `size_kw` Power capacity size of the absorption chiller system [kW]
+- `size_ton`
+- `year_one_to_tes_series_ton`
+- `year_one_thermal_consumption_series`
+- `year_one_thermal_consumption_kwh`
+- `year_one_thermal_production_tonhour`
+- `year_one_electric_consumption_series`
+- `year_one_electric_consumption_kwh`
+"""
+
+"""
+	add_absorption_chiller_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+
+Adds the `AbsorptionChiller` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+Note: the node number is an empty string if evaluating a single `Site`.
+"""
 function add_absorption_chiller_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 
