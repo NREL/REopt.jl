@@ -28,12 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
-
-Adds the ElectricTariff results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
-Note: the node number is an empty string if evaluating a single `Site`.
-
-ElectricTariff results:
+`ElectricTariff` results keys:
 - `lifecycle_energy_cost_after_tax` lifecycle cost of energy from the grid in present value, after tax
 - `year_one_energy_cost_before_tax` cost of energy from the grid over the first year, before considering tax benefits
 - `lifecycle_demand_cost_after_tax` lifecycle cost of power from the grid in present value, after tax
@@ -47,6 +42,18 @@ ElectricTariff results:
 - `year_one_export_benefit_before_tax` export credits over the first year, before considering tax benefits
 - `lifecycle_coincident_peak_cost_after_tax` lifecycle coincident peak charge in present value, after tax
 - `year_one_coincident_peak_cost_before_tax` coincident peak charge over the first year
+# The following are reported for mpc scenarios: 
+- `energy_cost`
+- `demand_cost`
+- `export_benefit`
+"""
+
+"""
+    add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+
+Adds the `ElectricTariff` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+Note: the node number is an empty string if evaluating a single `Site`.
+
 """
 function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
