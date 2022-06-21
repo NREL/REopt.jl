@@ -163,6 +163,30 @@ struct ElectricUtility
             throw(@error "Cannot supply singular outage_start(or end)_time_step and multiple outage_start_time_steps. Please use one or the other.")
         end
 
+        # #Handle missing emissions inputs (due to failed lookup and not provided by user)
+        # #TODO: condition below code on: if site.off_grid == false
+        # if isnothing(electric_utility.emissions_factor_series_lb_CO2_per_kwh)
+        #     if (!isnothing(site.CO2_emissions_reduction_min_pct) || 
+        #         !isnothing(site.CO2_emissions_reduction_max_pct) || 
+        #         settings.include_climate_in_objective)
+        #         throw(@error "To include CO2 costs in the objective function or enforce emissions reduction constraints, you must either enter custom health emissions factors or a site location within the continental U.S.")
+        #     else
+        #         electric_utility.emissions_factor_series_lb_CO2_per_kwh = zeros(8760*settings.time_steps_per_hour)
+        #     end
+        # end
+        # for emissions_type in ["NOx", "SO2", "PM25"]
+        #     if isnothing(getproperty(electric_utility, Symbol("emissions_factor_series_lb_$(emissions_type)_per_kwh")))
+        #         if settings.include_health_in_objective
+        #             throw(@error "To include health costs in the objective function, you must either enter custom health emissions factors or a site location within the continental U.S.")
+        #         else
+        #             setproperty!(electric_utility, 
+        #                 Symbol("emissions_factor_series_lb_$(emissions_type)_per_kwh"), 
+        #                 zeros(8760*settings.time_steps_per_hour)
+        #             )
+        #         end
+        #     end
+        # end
+
         new(
             emissions_region,
             meters_to_region,
