@@ -28,10 +28,15 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-`HotStorage` results:
+`HotStorage` results keys:
 - `size_gal` Optimal TES capacity, by volume [gal]
 - `year_one_soc_series_pct` Vector of normalized (0-1) state of charge values over the first year [-]
 - `year_one_to_load_series_mmbtu_per_hour` Vector of power used to meet load over the first year [MMBTU/hr]
+
+`ColdStorage` results keys:
+- `size_gal` Optimal TES capacity, by volume [gal]
+- `year_one_soc_series_pct` Vector of normalized (0-1) state of charge values over the first year [-]
+- `year_one_to_load_series_ton` Vector of power used to meet load over the first year [ton]
 """
 
 """
@@ -69,13 +74,9 @@ end
 """
     add_cold_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 
-Adds the Storage results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+Adds the `ColdStorage` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
 Note: the node number is an empty string if evaluating a single `Site`.
 
-Storage results:
-- `size_gal` Optimal TES capacity, by volume [gal]
-- `year_one_soc_series_pct` Vector of normalized (0-1) state of charge values over the first year [-]
-- `year_one_to_load_series_ton` Vector of power used to meet load over the first year [ton]
 """
 function add_cold_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::String; _n="")
     delta_T_degF = p.s.storage.attr["ColdThermalStorage"].hot_water_temp_degF - p.s.storage.attr["ColdThermalStorage"].cool_water_temp_degF
