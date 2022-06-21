@@ -255,7 +255,7 @@ function easiur_costs(latitude::Float64, longitude::Float64, grid_or_onsite::Str
         )
         return costs_per_tonne
     catch
-        @warn "Could not look up EASIUR health costs from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid."
+        @error "Could not look up EASIUR health costs from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid."
         return nothing
     end
 end
@@ -278,7 +278,7 @@ function easiur_escalation_rates(latitude::Float64, longitude::Float64, inflatio
         )
         return escalation_rates
     catch
-        @warn "Could not look up EASIUR health cost escalation rates from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid"
+        @error "Could not look up EASIUR health cost escalation rates from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid"
         return nothing
     end
 end
@@ -296,7 +296,7 @@ Adapted to Julia from example Python code for EASIUR found at https://barney.ce.
         dollar_year::Int64=2010 # dollar year (1980 to 2010)
     )
 
-Returns EASIUR for a given `stack` height in a dict.
+Returns EASIUR for a given `stack` height in a dict, or nothing if arguments are invalid.
 """
 function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=2005, dollar_year::Int64=2010)
     EASIUR_data_lib = joinpath(@__DIR__,"..","..","data","emissions","EASIUR_Data")
@@ -374,8 +374,8 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
     )
 
     if !(stack in ["area", "p150", "p300"])
-        @warn "stack should be one of 'area', 'p150', 'p300'"
-        return false
+        @error "stack should be one of 'area', 'p150', 'p300'"
+        return nothing
     end
 
     fn_2005 = joinpath(EASIUR_data_lib,"sc_8.6MVSL_$(stack)_pop2005.hdf5")
@@ -394,8 +394,8 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
                 setindex!(ret_map, v .* adj, k)
             end
         catch
-            @warn "income year is $(income_year) but must be between 1990 to 2024"
-            return false
+            @error "income year is $(income_year) but must be between 1990 to 2024"
+            return nothing
         end
     end
     if dollar_year != 2010
@@ -405,8 +405,8 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
                 setindex!(ret_map, v .* adj, k)
             end
         catch e
-            @warn "Dollar year must be between 1980 to 2010"
-            return false
+            @error "Dollar year must be between 1980 to 2010"
+            return nothing
         end
     end
 
