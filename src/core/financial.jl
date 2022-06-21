@@ -208,7 +208,7 @@ struct Financial
             throw(@error "To include health costs in the objective function, you must either enter custom emissions costs and escalation rates or a site location within the CAMx grid.")
         end
 
-        #     #TODO: allow grid costs to be missing if site.off_grid == true
+        #     #TODO: allow grid costs to be nothing if site.off_grid == true
         # missing_health_inputs = false
         # for emissions_type in ["NOx", "SO2", "PM25"]
         #     for health_input in [
@@ -216,7 +216,7 @@ struct Financial
         #         "$(emissions_type)_onsite_fuelburn_cost_per_tonne",
         #         "$(emissions_type)_cost_escalation_pct"
         #     ]
-        #         if ismissing(getproperty(financial, Symbol(health_input)))
+        #         if isnothing(getproperty(financial, Symbol(health_input)))
         #             missing_health_inputs = true
         #             setproperty!(financial, Symbol(health_input), 0)
         #         end
