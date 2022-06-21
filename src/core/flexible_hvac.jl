@@ -63,7 +63,7 @@ There are two construction methods for `FlexibleHVAC`, which depend on whether o
 loaded in from a JSON file. The issue with data from JSON is that the vector-of-vectors from the JSON 
 file must be appropriately converted to Julia Matrices. When loading in a Scenario from JSON that 
 includes a `FlexibleHVAC` model, if you include the `flex_hvac_from_json` argument to the `Scenario` 
-constructor then the conversion to Matrices will be done appropriately. For example:
+constructor then the conversion to Matrices will be done appropriately. 
 
 !!! note
     At least one of the inputs for `temperature_upper_bound_degC` or `temperature_lower_bound_degC`
@@ -72,10 +72,10 @@ constructor then the conversion to Matrices will be done appropriately. For exam
     used (or purchased) if the `exogenous_inputs` lead to the temperature at the `control_node` going
     below the `temperature_lower_bound_degC`.
 
-!!! note # TODO: move? 
+!!! note  
     The `ExistingChiller` is electric and so its operating cost is determined by the `ElectricTariff`.
 
-!!! note # TODO: move? 
+!!! note 
     The `ExistingBoiler` default operating cost is zero. Please provide the `fuel_cost_per_mmbtu` field
     for the `ExistingBoiler` if you want non-zero BAU heating costs. The `fuel_cost_per_mmbtu` can be
     a scalar, a list of 12 monthly values, or a time series of values for every time step.
