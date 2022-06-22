@@ -67,7 +67,7 @@ function ElectricUtility(;
 """
 struct ElectricUtility
     emissions_region::String # AVERT emissions region
-    distance_to_emissions_region_meters::Real  
+    distance_to_emissions_region_meters::Union{Nothing, Real}
     emissions_factor_series_lb_CO2_per_kwh::Array{<:Real,1}
     emissions_factor_series_lb_NOx_per_kwh::Array{<:Real,1}
     emissions_factor_series_lb_SO2_per_kwh::Array{<:Real,1}
