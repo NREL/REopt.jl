@@ -27,7 +27,6 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-
 function annuity(years::Int, rate_escalation::Real, rate_discount::Real)
     """
         this formulation assumes cost growth in first period
@@ -37,11 +36,12 @@ function annuity(years::Int, rate_escalation::Real, rate_discount::Real)
     return annuity_two_escalation_rates(years, rate_escalation, 0.0, rate_discount)
 end
 
+
 function annuity_two_escalation_rates(years::Int, rate_escalation1::Real, rate_escalation2::Real, rate_discount::Real)
     """
         this formulation assumes cost growth in first period
-        i.e. it is a geometric sum of (1+rate_escalation)^n / (1+rate_discount)^n
-        for n = 1,..., analysis_period
+        i.e. it is a geometric sum of (1+rate_escalation1)^n * (1+rate_escalation2)^n / (1+rate_discount)^n
+        for n = 1, ..., years
     """
     x = (1 + rate_escalation1 + rate_escalation2 + rate_escalation1 * rate_escalation2) / (1 + rate_discount)
     if x != 1
