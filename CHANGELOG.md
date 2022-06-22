@@ -5,9 +5,12 @@
 - Add `operating_reserve_required_pct` to Wind struct and incorporate wind into operating reserve constraints
 - Bug fix to constrain dvCurtail in `time_steps_without_grid`
 - Bug fix to report accurate wind ["year_one_to_load_series_kw"] in results/wind.jl (was previously not accounting for curtailed wind)
-## Develop
+
+## v0.16.2
 - Update PV defaults to tilt=10 for rooftop, tilt = abs(lat) for ground mount, azimuth = 180 for northern lats, azimuth = 0 for southern lats.
--  bug fix for Generator inputs to allow for time_steps_per_hour > 1
+- bug fix for Generator inputs to allow for time_steps_per_hour > 1
+- change various `Float64` types to `Real` to allow integers too
+
 ## v0.16.1
 - bug fix for outage simulator when `microgrid_only=true`
 
