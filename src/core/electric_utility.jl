@@ -270,9 +270,7 @@ function region_abbreviation(latitude, longitude)
         fromProj = ArchGDAL.importEPSG(4326)
         toProj = ArchGDAL.importPROJ4("+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs")
         ArchGDAL.createcoordtrans(fromProj, toProj) do transform
-            # println("Before: $(ArchGDAL.toWKT(point))")
             ArchGDAL.transform!(pt, transform)
-            # println("After: $(ArchGDAL.toWKT(point))")
         end
     catch
         @warn "Could not look up AVERT region closest to point ($(latitude), $(longitude)). Location is
