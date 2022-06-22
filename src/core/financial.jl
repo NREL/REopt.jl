@@ -50,15 +50,15 @@ function Financial(;
     macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
     CO2_cost_per_tonne::Real = 51.0,
     CO2_cost_escalation_pct::Real = 0.042173,
-    NOx_grid_cost_per_tonne::Real = 0.0,
-    SO2_grid_cost_per_tonne::Real = 0.0,
-    PM25_grid_cost_per_tonne::Real = 0.0,
-    NOx_onsite_fuelburn_cost_per_tonne::Real = 0.0,
-    SO2_onsite_fuelburn_cost_per_tonne::Real = 0.0,
-    PM25_onsite_fuelburn_cost_per_tonne::Real = 0.0,
-    NOx_cost_escalation_pct::Real = 0.0,
-    SO2_cost_escalation_pct::Real = 0.0,
-    PM25_cost_escalation_pct::Real = 0.0,
+    NOx_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
+    SO2_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
+    PM25_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
+    NOx_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
+    SO2_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
+    PM25_onsite_fuelburn_cost_per_tonne::Real = nothing,
+    NOx_cost_escalation_pct::Union{Nothing,Real} = nothing,
+    SO2_cost_escalation_pct::Union{Nothing,Real} = nothing,
+    PM25_cost_escalation_pct::Union{Nothing,Real} = nothing,
     offgrid_other_capital_costs::Real = 0.0, # only applicable when off_grid_flag is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
     offgrid_other_annual_costs::Real = 0.0, # only applicable when off_grid_flag is true. Considered tax deductible for owner. Costs are per year. 
     latitude::Real,
@@ -124,15 +124,15 @@ struct Financial
         macrs_seven_year::Array{<:Real,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
         CO2_cost_per_tonne::Real = 51.0,
         CO2_cost_escalation_pct::Real = 0.042173,
-        NOx_grid_cost_per_tonne::Real = 0.0,
-        SO2_grid_cost_per_tonne::Real = 0.0,
-        PM25_grid_cost_per_tonne::Real = 0.0,
-        NOx_onsite_fuelburn_cost_per_tonne::Real = 0.0,
-        SO2_onsite_fuelburn_cost_per_tonne::Real = 0.0,
-        PM25_onsite_fuelburn_cost_per_tonne::Real = 0.0,
-        NOx_cost_escalation_pct::Real = 0.0,
-        SO2_cost_escalation_pct::Real = 0.0,
-        PM25_cost_escalation_pct::Real = 0.0,
+        NOx_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
+        SO2_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
+        PM25_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
+        NOx_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
+        SO2_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
+        PM25_onsite_fuelburn_cost_per_tonne::Real = nothing,
+        NOx_cost_escalation_pct::Union{Nothing,Real} = nothing,
+        SO2_cost_escalation_pct::Union{Nothing,Real} = nothing,
+        PM25_cost_escalation_pct::Union{Nothing,Real} = nothing,
         offgrid_other_capital_costs::Real = 0.0, # only applicable when off_grid_flag is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
         offgrid_other_annual_costs::Real = 0.0, # only applicable when off_grid_flag is true. Considered tax deductible for owner.
         latitude::Real,
@@ -163,13 +163,13 @@ struct Financial
         missing_health_inputs = false
 
         if !isnothing(grid_costs)
-            if NOx_grid_cost_per_tonne == 0.0
+            if isnothing(NOx_grid_cost_per_tonne)
                 NOx_grid_cost_per_tonne = grid_costs["NOx"]
             end
-            if SO2_grid_cost_per_tonne == 0.0
+            if isnothing(SO2_grid_cost_per_tonne)
                 SO2_grid_cost_per_tonne = grid_costs["SO2"]
             end
-            if PM25_grid_cost_per_tonne == 0.0
+            if isnothing(PM25_grid_cost_per_tonne)
                 PM25_grid_cost_per_tonne = grid_costs["PM25"]
             end
         else
@@ -177,13 +177,13 @@ struct Financial
         end
 
         if !isnothing(onsite_costs)
-            if NOx_onsite_fuelburn_cost_per_tonne == 0.0
+            if isnothing(NOx_onsite_fuelburn_cost_per_tonne)
                 NOx_onsite_fuelburn_cost_per_tonne = onsite_costs["NOx"]
             end
-            if SO2_onsite_fuelburn_cost_per_tonne == 0.0
+            if isnothing(SO2_onsite_fuelburn_cost_per_tonne)
                 SO2_onsite_fuelburn_cost_per_tonne = onsite_costs["SO2"]
             end
-            if PM25_onsite_fuelburn_cost_per_tonne == 0.0
+            if isnothing(PM25_onsite_fuelburn_cost_per_tonne)
                 PM25_onsite_fuelburn_cost_per_tonne = onsite_costs["PM25"]
             end
         else
