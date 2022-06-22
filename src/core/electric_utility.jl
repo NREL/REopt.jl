@@ -106,7 +106,7 @@ struct ElectricUtility
         # with max taken over outage start time, expectation taken over outage duration
         outage_start_time_steps::Array{Int,1}=Int[],  # we minimize the maximum outage cost over outage start times
         outage_durations::Array{Int,1}=Int[],  # one-to-one with outage_probabilities, outage_durations can be a random variable
-        outage_probabilities::Array{<:Real,1}=[1.0],
+        outage_probabilities::Array{<:Real,1} = isempty(outage_durations) ? Float64[] : [1/length(outage_durations) for 1:length(outage_durations)],
         outage_time_steps::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:maximum(outage_durations),
         scenarios::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:length(outage_durations),
         net_metering_limit_kw::Real = 0,
@@ -151,16 +151,24 @@ struct ElectricUtility
                 emissions_series_dict[ekey] = repeat(eseries, 8760*time_steps_per_hour)
             elseif length(eseries) / time_steps_per_hour ≈ 8760  # user provided array with correct length
                 emissions_series_dict[ekey] = eseries
-            elseif length(eseries) > 1 && !(length(eseries) / time_steps_per_hour ≈ 8760)  # user provided array with incorrect length
-                throw(@error "Provided ElectricUtility emissions factor series for $(ekey) does not match the time_steps_per_hour.")
-            else  # default action, can be set to zeros without region_abbr
+            else
+                if length(eseries) > 1 && !(length(eseries) / time_steps_per_hour ≈ 8760)  # user provided array with incorrect length
+                    @warn "Provided ElectricUtility emissions factor series for $(ekey) will be ignored because it does not match the time_steps_per_hour. AVERT emissions data will be used."
+                end
+                # default action, can be set to zeros without region_abbr
                 emissions_series_dict[ekey] = emissions_series(ekey, region_abbr, time_steps_per_hour=time_steps_per_hour)
             end
         end
 
-        # Error if outage_start/end_time_step is provided and outage_start_time_steps not empty
-        if (outage_start_time_step != 0 || outage_end_time_step !=0) && outage_start_time_steps != [] 
-            throw(@error "Cannot supply singular outage_start(or end)_time_step and multiple outage_start_time_steps. Please use one or the other.")
+        if (!isempty(outage_start_time_steps) && isempty(outage_durations)) || (isempty(outage_start_time_steps) && !isempty(outage_durations))
+            throw(@error "ElectricUtility inputs outage_start_time_steps and outage_durations must both be provided to model multiple outages")
+        end
+        if (outage_start_time_step == 0 && outage_end_time_step != 0) || (outage_start_time_step != 0 && outage_end_time_step == 0)
+            throw(@error "ElectricUtility inputs outage_start_time_step and outage_end_time_step must both be provided to model an outage")
+        end
+        # Warn if outage_start/end_time_step is provided and outage_start_time_steps not empty
+        if outage_start_time_step != 0 && outage_end_time_step !=0 && !isempty(outage_start_time_steps)
+            @warn "Inputs for multiple outages (outage_start_time_steps, outage_durations, outage_probabilities) will be ignored because singular outage_start(and end)_time_step were provided."
         end
 
         # #Handle missing emissions inputs (due to failed lookup and not provided by user)
