@@ -159,69 +159,56 @@ struct Financial
         grid_costs = easiur_costs(latitude, longitude, "grid")
         onsite_costs = easiur_costs(latitude, longitude, "onsite")
         escalation_rates = easiur_escalation_rates(latitude, longitude, om_cost_escalation_pct)
-
+       
+        #TODO: allow grid costs to be nothing if site.off_grid == true
         missing_health_inputs = false
-
-        if !isnothing(grid_costs)
-            if isnothing(NOx_grid_cost_per_tonne)
-                NOx_grid_cost_per_tonne = grid_costs["NOx"]
-            end
-            if isnothing(SO2_grid_cost_per_tonne)
-                SO2_grid_cost_per_tonne = grid_costs["SO2"]
-            end
-            if isnothing(PM25_grid_cost_per_tonne)
-                PM25_grid_cost_per_tonne = grid_costs["PM25"]
-            end
-        else
-            missing_health_inputs = true
+        
+        # use EASIUR data for missing grid costs
+        if isnothing(NOx_grid_cost_per_tonne)
+            NOx_grid_cost_per_tonne = isnothing(grid_costs) ? 0.0 : grid_costs["NOx"]
+            missing_health_inputs = isnothing(grid_costs) ? true : missing_health_inputs
         end
+        if isnothing(SO2_grid_cost_per_tonne)
+            SO2_grid_cost_per_tonne = isnothing(grid_costs) ? 0.0 : grid_costs["SO2"]
+            missing_health_inputs = isnothing(grid_costs) ? true : missing_health_inputs
 
-        if !isnothing(onsite_costs)
-            if isnothing(NOx_onsite_fuelburn_cost_per_tonne)
-                NOx_onsite_fuelburn_cost_per_tonne = onsite_costs["NOx"]
-            end
-            if isnothing(SO2_onsite_fuelburn_cost_per_tonne)
-                SO2_onsite_fuelburn_cost_per_tonne = onsite_costs["SO2"]
-            end
-            if isnothing(PM25_onsite_fuelburn_cost_per_tonne)
-                PM25_onsite_fuelburn_cost_per_tonne = onsite_costs["PM25"]
-            end
-        else
-            missing_health_inputs = true
         end
+        if isnothing(PM25_grid_cost_per_tonne)
+            PM25_grid_cost_per_tonne = isnothing(grid_costs) ? 0.0 : grid_costs["PM25"]
+            missing_health_inputs = isnothing(grid_costs) ? true : missing_health_inputs
+        end
+        # use EASIUR data for missing fuelburn costs
+        if isnothing(NOx_onsite_fuelburn_cost_per_tonne)
+            NOx_onsite_fuelburn_cost_per_tonne = isnothing(onsite_costs) ? 0.0 : onsite_costs["NOx"]
+            missing_health_inputs = isnothing(onsite_costs) ? true : missing_health_inputs
+        end
+        if isnothing(SO2_onsite_fuelburn_cost_per_tonne)
+            SO2_onsite_fuelburn_cost_per_tonne = isnothing(onsite_costs) ? 0.0 : onsite_costs["SO2"]
+            missing_health_inputs = isnothing(onsite_costs) ? true : missing_health_inputs
 
-        if !isnothing(escalation_rates)
-            if NOx_cost_escalation_pct == 0.0
-                NOx_cost_escalation_pct = escalation_rates["NOx"]
-            end
-            if SO2_cost_escalation_pct == 0.0
-                SO2_cost_escalation_pct = escalation_rates["SO2"]
-            end
-            if PM25_cost_escalation_pct == 0.0
-                PM25_cost_escalation_pct = escalation_rates["PM25"]
-            end
-        else
-            missing_health_inputs = true
+        end
+        if isnothing(PM25_onsite_fuelburn_cost_per_tonne)
+            PM25_onsite_fuelburn_cost_per_tonne = isnothing(onsite_costs) ? 0.0 : onsite_costs["PM25"]
+            missing_health_inputs = isnothing(onsite_costs) ? true : missing_health_inputs
+        end
+        # use EASIUR data for missing escalation rates
+        if isnothing(NOx_cost_escalation_pct)
+            NOx_cost_escalation_pct = isnothing(escalation_rates) ? 0.0 : escalation_rates["NOx"]
+            missing_health_inputs = isnothing(escalation_rates) ? true : missing_health_inputs
+        end
+        if isnothing(SO2_cost_escalation_pct)
+            SO2_cost_escalation_pct = isnothing(escalation_rates) ? 0.0 : escalation_rates["SO2"]
+            missing_health_inputs = isnothing(escalation_rates) ? true : missing_health_inputs
+
+        end
+        if isnothing(PM25_cost_escalation_pct)
+            PM25_cost_escalation_pct = isnothing(escalation_rates) ? 0.0 : escalation_rates["PM25"]
+            missing_health_inputs = isnothing(escalation_rates) ? true : missing_health_inputs
         end
 
         if missing_health_inputs && model_health_obj
             throw(@error "To include health costs in the objective function, you must either enter custom emissions costs and escalation rates or a site location within the CAMx grid.")
         end
-
-        #     #TODO: allow grid costs to be nothing if site.off_grid == true
-        # missing_health_inputs = false
-        # for emissions_type in ["NOx", "SO2", "PM25"]
-        #     for health_input in [
-        #         "$(emissions_type)_grid_cost_per_tonne",
-        #         "$(emissions_type)_onsite_fuelburn_cost_per_tonne",
-        #         "$(emissions_type)_cost_escalation_pct"
-        #     ]
-        #         if isnothing(getproperty(financial, Symbol(health_input)))
-        #             missing_health_inputs = true
-        #             setproperty!(financial, Symbol(health_input), 0)
-        #         end
-        #     end
-        # end
     
 
         return new(
