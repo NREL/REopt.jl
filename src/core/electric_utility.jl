@@ -106,7 +106,7 @@ struct ElectricUtility
         # with max taken over outage start time, expectation taken over outage duration
         outage_start_time_steps::Array{Int,1}=Int[],  # we minimize the maximum outage cost over outage start times
         outage_durations::Array{Int,1}=Int[],  # one-to-one with outage_probabilities, outage_durations can be a random variable
-        outage_probabilities::Array{<:Real,1} = isempty(outage_durations) ? Float64[] : [1/length(outage_durations) for 1:length(outage_durations)],
+        outage_probabilities::Array{<:Real,1} = isempty(outage_durations) ? Float64[] : [1/length(outage_durations) for p_i in 1:length(outage_durations)],
         outage_time_steps::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:maximum(outage_durations),
         scenarios::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:length(outage_durations),
         net_metering_limit_kw::Real = 0,
