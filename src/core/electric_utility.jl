@@ -273,7 +273,7 @@ function region_abbreviation(latitude, longitude)
             ArchGDAL.transform!(pt, transform)
         end
     catch
-        @warn "Could not look up AVERT region closest to point ($(latitude), $(longitude)). Location is
+        @warn "Could not look up AVERT emissions region closest to point ($(latitude), $(longitude)). Location is
         likely invalid or well outside continental US, AK and HI"
         return abbr, meters_to_region #nothing, nothing
     end
@@ -299,7 +299,7 @@ end
 
 function emissions_series(pollutant, region_abbr; time_steps_per_hour=1)
     if isnothing(region_abbr)
-        @warn "Cannnot find hourly $(pollutant) emmissions for region $(region_abbr). Setting emissions to zero."
+        @warn "Cannnot find hourly $(pollutant) emissions for region $(region_abbr). Setting emissions to zero."
         return zeros(8760*time_steps_per_hour)
     end
     # Columns 1 and 2 do not contain AVERT region information, so skip them
