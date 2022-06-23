@@ -33,11 +33,13 @@
 struct with inner constructor:
 ```julia
 function PV(;
-    tilt::Real,
-    array_type::Int=1,
-    module_type::Int=0,
+    off_grid_flag::Bool = false,
+    latitude::Real,
+    array_type::Int=1, # PV Watts array type (0: Ground Mount Fixed (Open Rack); 1: Rooftop, Fixed; 2: Ground Mount 1-Axis Tracking; 3 : 1-Axis Backtracking; 4: Ground Mount, 2-Axis Tracking)
+    tilt::Real= array_type == 1 ? 10 : abs(latitude), # tilt = 10 deg for rooftop systems, abs(lat) for ground-mount
+    module_type::Int=0, # PV module type (0: Standard; 1: Premium; 2: Thin Film)
     losses::Real=0.14,
-    azimuth::Real=180,
+    azimuth::Real = latitude≥0 ? 180 : 0, # set azimuth to zero for southern hemisphere
     gcr::Real=0.4,
     radius::Int=0,
     name::String="PV",
@@ -49,34 +51,35 @@ function PV(;
     om_cost_per_kw::Real=17.0,
     degradation_pct::Real=0.005,
     macrs_option_years::Int = 5,
-    macrs_bonus_pct::Float64 = 1.0,
-    macrs_itc_reduction::Float64 = 0.5,
+    macrs_bonus_pct::Real = 1.0,
+    macrs_itc_reduction::Real = 0.5,
     kw_per_square_foot::Float64=0.01,
     acres_per_kw::Float64=6e-3,
     inv_eff::Float64=0.96,
-    dc_ac_ratio::Float64=1.2,
+    dc_ac_ratio::Real=1.2,
     prod_factor_series::Union{Missing, Array{Real,1}} = missing,
-    federal_itc_pct::Float64 = 0.26,
-    federal_rebate_per_kw::Float64 = 0.0,
-    state_ibi_pct::Float64 = 0.0,
-    state_ibi_max::Float64 = 1.0e10,
-    state_rebate_per_kw::Float64 = 0.0,
-    state_rebate_max::Float64 = 1.0e10,
-    utility_ibi_pct::Float64 = 0.0,
-    utility_ibi_max::Float64 = 1.0e10,
-    utility_rebate_per_kw::Float64 = 0.0,
-    utility_rebate_max::Float64 = 1.0e10,
-    production_incentive_per_kwh::Float64 = 0.0,
-    production_incentive_max_benefit::Float64 = 1.0e9,
+    federal_itc_pct::Real = 0.26,
+    federal_rebate_per_kw::Real = 0.0,
+    state_ibi_pct::Real = 0.0,
+    state_ibi_max::Real = 1.0e10,
+    state_rebate_per_kw::Real = 0.0,
+    state_rebate_max::Real = 1.0e10,
+    utility_ibi_pct::Real = 0.0,
+    utility_ibi_max::Real = 1.0e10,
+    utility_rebate_per_kw::Real = 0.0,
+    utility_rebate_max::Real = 1.0e10,
+    production_incentive_per_kwh::Real = 0.0,
+    production_incentive_max_benefit::Real = 1.0e9,
     production_incentive_years::Int = 1,
-    production_incentive_max_kw::Float64 = 1.0e9
-    can_net_meter::Bool = true,
-    can_wholesale::Bool = true,
-    can_export_beyond_nem_limit::Bool = true
+    production_incentive_max_kw::Real = 1.0e9,
+    can_net_meter::Bool = off_grid_flag ? false : true,
+    can_wholesale::Bool = off_grid_flag ? false : true,
+    can_export_beyond_nem_limit::Bool = off_grid_flag ? false : true,
+    can_curtail::Bool = true,
+    operating_reserve_required_pct::Real = off_grid_flag ? 0.25 : 0.0, # if off grid, 25%, else 0%. Applied to each time_step as a % of PV generation.
 )
 ```
-!!! note
-    If `tilt` is not provided then it is set to the `Site.latitude`. (Which is handled in the `Scenario` struct.)
+
 """
 struct PV <: AbstractTech
     tilt
@@ -120,13 +123,16 @@ struct PV <: AbstractTech
     can_wholesale
     can_export_beyond_nem_limit
     can_curtail
+    operating_reserve_required_pct
 
     function PV(;
-        tilt::Real,
-        array_type::Int=1,
-        module_type::Int=0,
+        off_grid_flag::Bool = false,
+        latitude::Real,
+        array_type::Int=1, # PV Watts array type (0: Ground Mount Fixed (Open Rack); 1: Rooftop, Fixed; 2: Ground Mount 1-Axis Tracking; 3 : 1-Axis Backtracking; 4: Ground Mount, 2-Axis Tracking)
+        tilt::Real= array_type == 1 ? 10 : abs(latitude), # tilt = 10 deg for rooftop systems, abs(lat) for ground-mount
+        module_type::Int=0, # PV module type (0: Standard; 1: Premium; 2: Thin Film)
         losses::Real=0.14,
-        azimuth::Real=180,
+        azimuth::Real = latitude≥0 ? 180 : 0, # set azimuth to zero for southern hemisphere
         gcr::Real=0.4,
         radius::Int=0,
         name::String="PV",
@@ -138,32 +144,45 @@ struct PV <: AbstractTech
         om_cost_per_kw::Real=17.0,
         degradation_pct::Real=0.005,
         macrs_option_years::Int = 5,
-        macrs_bonus_pct::Float64 = 1.0,
-        macrs_itc_reduction::Float64 = 0.5,
+        macrs_bonus_pct::Real = 1.0,
+        macrs_itc_reduction::Real = 0.5,
         kw_per_square_foot::Float64=0.01,
         acres_per_kw::Float64=6e-3,
         inv_eff::Float64=0.96,
-        dc_ac_ratio::Float64=1.2,
+        dc_ac_ratio::Real=1.2,
         prod_factor_series::Union{Missing, Array{Real,1}} = missing,
-        federal_itc_pct::Float64 = 0.26,
-        federal_rebate_per_kw::Float64 = 0.0,
-        state_ibi_pct::Float64 = 0.0,
-        state_ibi_max::Float64 = 1.0e10,
-        state_rebate_per_kw::Float64 = 0.0,
-        state_rebate_max::Float64 = 1.0e10,
-        utility_ibi_pct::Float64 = 0.0,
-        utility_ibi_max::Float64 = 1.0e10,
-        utility_rebate_per_kw::Float64 = 0.0,
-        utility_rebate_max::Float64 = 1.0e10,
-        production_incentive_per_kwh::Float64 = 0.0,
-        production_incentive_max_benefit::Float64 = 1.0e9,
+        federal_itc_pct::Real = 0.26,
+        federal_rebate_per_kw::Real = 0.0,
+        state_ibi_pct::Real = 0.0,
+        state_ibi_max::Real = 1.0e10,
+        state_rebate_per_kw::Real = 0.0,
+        state_rebate_max::Real = 1.0e10,
+        utility_ibi_pct::Real = 0.0,
+        utility_ibi_max::Real = 1.0e10,
+        utility_rebate_per_kw::Real = 0.0,
+        utility_rebate_max::Real = 1.0e10,
+        production_incentive_per_kwh::Real = 0.0,
+        production_incentive_max_benefit::Real = 1.0e9,
         production_incentive_years::Int = 1,
-        production_incentive_max_kw::Float64 = 1.0e9,
-        can_net_meter::Bool = true,
-        can_wholesale::Bool = true,
-        can_export_beyond_nem_limit::Bool = true,
+        production_incentive_max_kw::Real = 1.0e9,
+        can_net_meter::Bool = off_grid_flag ? false : true,
+        can_wholesale::Bool = off_grid_flag ? false : true,
+        can_export_beyond_nem_limit::Bool = off_grid_flag ? false : true,
         can_curtail::Bool = true,
+        operating_reserve_required_pct::Real = off_grid_flag ? 0.25 : 0.0, # if off grid, 25%, else 0%. Applied to each time_step as a % of PV generation.
         )
+
+        if !(off_grid_flag) && !(operating_reserve_required_pct == 0.0)
+            @warn "PV operating_reserve_required_pct apply only when off_grid_flag is True. Setting operating_reserve_required_pct to 0.0 for this on-grid analysis."
+            operating_reserve_required_pct = 0.0
+        end
+
+        if off_grid_flag && (can_net_meter || can_wholesale || can_export_beyond_nem_limit)
+            @warn "Net metering, wholesale, and grid exports are not possible for off-grid scenarios. Setting can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False."
+            can_net_meter = false
+            can_wholesale = false
+            can_export_beyond_nem_limit = false
+        end
 
         # validate inputs
         invalid_args = String[]
@@ -192,7 +211,7 @@ struct PV <: AbstractTech
             push!(invalid_args, "inv_eff must satisfy 0 <= inv_eff <= 1, got $(inv_eff)")
         end
         if !(0.0 <= dc_ac_ratio <= 2.0)
-            push!(invalid_args, "dc_ac_ratio must satisfy 0 <= dc_ac_ratio <= 1, got $(dc_ac_ratio)")
+            push!(invalid_args, "dc_ac_ratio must satisfy 0 <= dc_ac_ratio <= 2, got $(dc_ac_ratio)")
         end
         # TODO validate additional args
         if length(invalid_args) > 0
@@ -240,7 +259,8 @@ struct PV <: AbstractTech
             can_net_meter,
             can_wholesale,
             can_export_beyond_nem_limit,
-            can_curtail
+            can_curtail,
+            operating_reserve_required_pct
         )
     end
 end

@@ -28,7 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 
-function annuity(years::Int, rate_escalation::Float64, rate_discount::Float64)
+function annuity(years::Int, rate_escalation::Real, rate_discount::Real)
     """
         this formulation assumes cost growth in first period
         i.e. it is a geometric sum of (1+rate_escalation)^n / (1+rate_discount)^n
@@ -44,7 +44,7 @@ function annuity(years::Int, rate_escalation::Float64, rate_discount::Float64)
 end
 
 
-function annuity_escalation(analysis_period::Int, rate_escalation::Float64, rate_discount::Float64)
+function annuity_escalation(analysis_period::Int, rate_escalation::Real, rate_discount::Real)
     """
     :param analysis_period: years
     :param rate_escalation: escalation rate
@@ -60,8 +60,8 @@ function annuity_escalation(analysis_period::Int, rate_escalation::Float64, rate
 end
 
 
-function levelization_factor(years::Int, rate_escalation::Float64, rate_discount::Float64, 
-    rate_degradation::Float64)
+function levelization_factor(years::Int, rate_escalation::Real, rate_discount::Real, 
+    rate_degradation::Real)
     #=
     NOTE: levelization_factor for an electricity producing tech is the ratio of:
     - an annuity with an escalation rate equal to the electricity cost escalation rate, starting year 1,
@@ -91,22 +91,22 @@ end
 
 
 function effective_cost(;
-    itc_basis::Float64, 
-    replacement_cost::Float64, 
+    itc_basis::Real, 
+    replacement_cost::Real, 
     replacement_year::Int,
-    discount_rate::Float64, 
-    tax_rate::Float64, 
-    itc::Float64,
+    discount_rate::Real, 
+    tax_rate::Real, 
+    itc::Real,
     macrs_schedule::Array{Float64,1}, 
-    macrs_bonus_pct::Float64, 
-    macrs_itc_reduction::Float64,
-    rebate_per_kw::Float64=0.0,
+    macrs_bonus_pct::Real, 
+    macrs_itc_reduction::Real,
+    rebate_per_kw::Real=0.0,
     )
 
     """ effective PV and battery prices with ITC and depreciation
         (i) depreciation tax shields are inherently nominal --> no need to account for inflation
         (ii) ITC and bonus depreciation are taken at end of year 1
-        (iii) battery replacement cost: one time capex in user defined year discounted back to t=0 with r_owner
+        (iii) battery & generator replacement cost: one time capex in user defined year discounted back to t=0 with r_owner
         (iv) Assume that cash incentives reduce ITC basis
         (v) Assume cash incentives are not taxable, (don't affect tax savings from MACRS)
         (vi) Cash incentives should be applied before this function into "itc_basis".
@@ -165,7 +165,8 @@ function dictkeys_tosymbols(d::Dict)
             "monthly_energy_rates", "monthly_demand_rates",
             "wholesale_rate", "blended_doe_reference_percents",
             "coincident_peak_load_charge_per_kw", "fuel_cost_per_mmbtu",
-            "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step"
+            "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
+            "outage_probabilities"
             ] && !isnothing(v)
             try
                 v = convert(Array{Real, 1}, v)
@@ -183,12 +184,21 @@ function dictkeys_tosymbols(d::Dict)
             end
         end
         if k in [
-            "coincident_peak_load_active_timesteps"
+            "coincident_peak_load_active_time_steps"
         ]
             try
                 v = convert(Vector{Vector{Int64}}, v)
             catch
                 @warn "Unable to convert $k to a Vector{Vector{Int64}}"
+            end
+        end
+        if k in [
+            "outage_start_time_steps", "outage_durations"
+        ]
+            try
+                v = convert(Array{Int64, 1}, v)
+            catch
+                @warn "Unable to convert $k to a Array{Int64, 1}"
             end
         end
         d2[Symbol(k)] = v
@@ -211,7 +221,7 @@ function filter_dict_to_match_struct_field_names(d::Dict, s::DataType)
 end
 
 
-function npv(rate::Float64, cash_flows::Array)
+function npv(rate::Real, cash_flows::Array)
     npv = cash_flows[1]
     for (y, c) in enumerate(cash_flows[2:end])
         npv += c/(1+rate)^y
@@ -257,13 +267,13 @@ end
 """
     generate_year_profile_hourly(year::Int64, consecutive_periods::AbstractVector{Dict})
 
-This function creates a year-specific hourly (8760) profile with 1.0 value for timesteps which are defined in `consecutive_periods` based on
+This function creates a year-specific hourly (8760) profile with 1.0 value for time_steps which are defined in `consecutive_periods` based on
     relative (non-year specific) datetime metrics. All other values are 0.0. This functions uses the `Dates` package.
 
 - `year` applies the relative calendar-based `consecutive_periods` to the year's calendar and handles leap years by truncating the last day
 - `consecutive_periods` is a list of dictionaries where each dict defines a consecutive period of time which gets a value of 1.0
 -- keys for each dict must include "month", "start_week_of_month", "start_day_of_week", "start_hour", "duration_hours
-- Returns the `year_profile_hourly` which is an 8760 profile with 1.0 for timesteps defined in consecutive_periods, and 0.0 for all other hours.
+- Returns the `year_profile_hourly` which is an 8760 profile with 1.0 for time_steps defined in consecutive_periods, and 0.0 for all other hours.
 """
 function generate_year_profile_hourly(year::Int64, consecutive_periods::AbstractVector{Dict})
     # Create datetime series of the year, remove last day of the year if leap year
@@ -377,4 +387,18 @@ function convert_gal_to_kwh(delta_T_degF::Real, rho_kg_per_m3::Real, cp_kj_per_k
     kj_per_gal = kj_per_m3 / 264.172   # divide by gal/m^3 to get: [kJ/gal]
     kwh_per_gal = kj_per_gal / 3600.0  # divide by kJ/kWh, i.e., sec/hr, to get: [kWh/gal]
     return kwh_per_gal
+end
+
+"""
+    The input offgrid_other_capital_costs is considered to be for depreciable assets. 
+    Straight line depreciation is applied, and the depreciation expense is assumed to reduce the owner's taxable income
+    Depreciation savings are taken at the end of year 1 and are assumed to accumulate for a period equal to analysis_years.
+    :return npv_other_capex: present value of tax savings from depreciation of assets included in `offgrid_other_capital_costs`
+"""
+function get_offgrid_other_capex_depreciation_savings(offgrid_other_capital_costs::Real, discount_rate::Real, 
+    analysis_years::Int, tax_rate::Real)
+    tax_savings_array = repeat([offgrid_other_capital_costs/analysis_years*tax_rate], analysis_years) 
+    prepend!(tax_savings_array, 0.0) # savings taken at end of year 1
+    npv_other_capex = npv(discount_rate, tax_savings_array)
+    return npv_other_capex
 end

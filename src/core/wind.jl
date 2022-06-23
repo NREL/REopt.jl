@@ -99,10 +99,10 @@ These values are passed to SAM to get the turbine production factor.
 
 """
 struct Wind <: AbstractTech
-    min_kw::Float64
-    max_kw::Float64
-    installed_cost_per_kw::Union{Missing, Float64}
-    om_cost_per_kw::Float64
+    min_kw::Real
+    max_kw::Real
+    installed_cost_per_kw::Union{Missing, Real}
+    om_cost_per_kw::Real
     prod_factor_series::Union{Missing, Array{Real,1}}
     size_class::String
     hub_height::T where T <: Real
@@ -111,22 +111,22 @@ struct Wind <: AbstractTech
     temperature_celsius::AbstractArray{Float64,1}
     pressure_atmospheres::AbstractArray{Float64,1}
     macrs_option_years::Int
-    macrs_bonus_pct::Float64
-    macrs_itc_reduction::Float64
-    federal_itc_pct::Union{Missing, Float64}
-    federal_rebate_per_kw::Float64
-    state_ibi_pct::Float64
-    state_ibi_max::Float64
-    state_rebate_per_kw::Float64
-    state_rebate_max::Float64
-    utility_ibi_pct::Float64
-    utility_ibi_max::Float64
-    utility_rebate_per_kw::Float64
-    utility_rebate_max::Float64
-    production_incentive_per_kwh::Float64
-    production_incentive_max_benefit::Float64
+    macrs_bonus_pct::Real
+    macrs_itc_reduction::Real
+    federal_itc_pct::Union{Missing, Real}
+    federal_rebate_per_kw::Real
+    state_ibi_pct::Real
+    state_ibi_max::Real
+    state_rebate_per_kw::Real
+    state_rebate_max::Real
+    utility_ibi_pct::Real
+    utility_ibi_max::Real
+    utility_rebate_per_kw::Real
+    utility_rebate_max::Real
+    production_incentive_per_kwh::Real
+    production_incentive_max_benefit::Real
     production_incentive_years::Int
-    production_incentive_max_kw::Float64
+    production_incentive_max_kw::Real
     can_net_meter::Bool
     can_wholesale::Bool
     can_export_beyond_nem_limit::Bool

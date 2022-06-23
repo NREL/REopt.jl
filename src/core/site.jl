@@ -36,9 +36,9 @@ Inputs related to the physical location:
 function Site(;
     latitude::Real, 
     longitude::Real, 
-    land_acres::Union{Float64, Nothing} = nothing, 
-    roof_squarefeet::Union{Float64, Nothing} = nothing,
-    min_resil_timesteps::Int=0,
+    land_acres::Union{Real, Nothing} = nothing, 
+    roof_squarefeet::Union{Real, Nothing} = nothing,
+    min_resil_time_steps::Int=0,
     mg_tech_sizes_equal_grid_sizes::Bool = true,
     node::Int = 1, 
     )
@@ -51,15 +51,15 @@ struct Site
     longitude
     land_acres
     roof_squarefeet
-    min_resil_timesteps
+    min_resil_time_steps
     mg_tech_sizes_equal_grid_sizes
     node  # TODO validate that multinode Sites do not share node numbers? Or just raise warning
     function Site(;
         latitude::Real, 
         longitude::Real, 
-        land_acres::Union{Float64, Nothing} = nothing, 
-        roof_squarefeet::Union{Float64, Nothing} = nothing,
-        min_resil_timesteps::Int=0,
+        land_acres::Union{Real, Nothing} = nothing, 
+        roof_squarefeet::Union{Real, Nothing} = nothing,
+        min_resil_time_steps::Int=0,
         mg_tech_sizes_equal_grid_sizes::Bool = true,
         node::Int = 1, 
         )
@@ -73,7 +73,7 @@ struct Site
         if length(invalid_args) > 0
             error("Invalid argument values: $(invalid_args)")
         end
-        new(latitude, longitude, land_acres, roof_squarefeet, min_resil_timesteps, 
+        new(latitude, longitude, land_acres, roof_squarefeet, min_resil_time_steps, 
             mg_tech_sizes_equal_grid_sizes, node)
     end
 end
