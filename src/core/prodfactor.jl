@@ -65,8 +65,8 @@ function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly",
 end
 
 
-function prodfactor(g::AbstractGenerator; ts_per_hour::Int=1)
-    return ones(8760 * ts_per_hour)
+function prodfactor(g::AbstractGenerator; time_steps_per_hour::Int=1)
+    return ones(8760 * time_steps_per_hour)
 end
 
 
@@ -325,7 +325,7 @@ function prodfactor(chp::AbstractCHP, year::Int=2017, outage_start_time_step::In
 
     prod_factor = [1.0 - unavailability_hourly[i] for i in 1:8760 for _ in 1:ts_per_hour]
 
-    # Ignore unavailability in timestep if it intersects with an outage interval
+    # Ignore unavailability in time_step if it intersects with an outage interval
     if outage_start_time_step != 0 && outage_end_time_step != 0
         prod_factor[outage_start_time_step:outage_end_time_step] .= ones(outage_end_time_step - outage_start_time_step + 1)
     end

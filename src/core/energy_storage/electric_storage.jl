@@ -33,8 +33,9 @@
 Inputs used when `ElectricStorage.model_degradation` is `true`:
 ```julia
 Base.@kwdef mutable struct Degradation
-    calendar_fade_coefficient::Float64 = 2.46E-03
-    cycle_fade_coefficient::Float64 = 7.82E-05
+    calendar_fade_coefficient::Real = 2.46E-03
+    cycle_fade_coefficient::Real = 7.82E-05
+    time_exponent::Real = 0.5
     installed_cost_per_kwh_declination_rate::Float64 = 0.05
     maintenance_strategy::String = "augmentation"  # one of ["augmentation", "replacement"]
     maintenance_cost_per_kwh::Vector{<:Real} = Real[]
@@ -150,9 +151,10 @@ The following shows how one would use the degradation model in REopt via the [Sc
 Note that not all of the above inputs are necessary. When not providing `calendar_fade_coefficient` for example the default value will be used.
 """
 Base.@kwdef mutable struct Degradation
-    calendar_fade_coefficient::Float64 = 2.46E-03
-    cycle_fade_coefficient::Float64 = 7.82E-05
-    installed_cost_per_kwh_declination_rate::Float64 = 0.05
+    calendar_fade_coefficient::Real = 2.46E-03
+    cycle_fade_coefficient::Real = 7.82E-05
+    time_exponent::Real = 0.5
+    installed_cost_per_kwh_declination_rate::Real = 0.05
     maintenance_strategy::String = "augmentation"  # one of ["augmentation", "replacement"]
     maintenance_cost_per_kwh::Vector{<:Real} = Real[]
 end
@@ -165,28 +167,29 @@ Electric storage system defaults. Overridden by user inputs provided in `Electri
 
 ```julia
 Base.@kwdef struct ElectricStorageDefaults
-    min_kw::Float64 = 0.0
-    max_kw::Float64 = 1.0e4
-    min_kwh::Float64 = 0.0
-    max_kwh::Float64 = 1.0e6
+    off_grid_flag::Bool = false  
+    min_kw::Real = 0.0
+    max_kw::Real = 1.0e4
+    min_kwh::Real = 0.0
+    max_kwh::Real = 1.0e6
     internal_efficiency_pct::Float64 = 0.975
     inverter_efficiency_pct::Float64 = 0.96
     rectifier_efficiency_pct::Float64 = 0.96
     soc_min_pct::Float64 = 0.2
-    soc_init_pct::Float64 = 0.5
-    can_grid_charge::Bool = true
-    installed_cost_per_kw::Float64 = 775.0
-    installed_cost_per_kwh::Float64 = 388.0
-    replace_cost_per_kw::Float64 = 440.0
-    replace_cost_per_kwh::Float64 = 220.0
+    soc_init_pct::Float64 = off_grid_flag ? 1.0 : 0.5
+    can_grid_charge::Bool = off_grid_flag ? false : true
+    installed_cost_per_kw::Real = 775.0
+    installed_cost_per_kwh::Real = 388.0
+    replace_cost_per_kw::Real = 440.0
+    replace_cost_per_kwh::Real = 220.0
     inverter_replacement_year::Int = 10
     battery_replacement_year::Int = 10
     macrs_option_years::Int = 7
     macrs_bonus_pct::Float64 = 1.0
     macrs_itc_reduction::Float64 = 0.5
     total_itc_pct::Float64 = 0.0
-    total_rebate_per_kw::Float64 = 0.0
-    total_rebate_per_kwh::Float64 = 0.0
+    total_rebate_per_kw::Real = 0.0
+    total_rebate_per_kwh::Real = 0.0
     charge_efficiency::Float64 = rectifier_efficiency_pct * internal_efficiency_pct^0.5
     discharge_efficiency::Float64 = inverter_efficiency_pct * internal_efficiency_pct^0.5
     grid_charge_efficiency::Float64 = can_grid_charge ? charge_efficiency : 0.0
@@ -197,28 +200,29 @@ end
 ```
 """
 Base.@kwdef struct ElectricStorageDefaults
-    min_kw::Float64 = 0.0
-    max_kw::Float64 = 1.0e4
-    min_kwh::Float64 = 0.0
-    max_kwh::Float64 = 1.0e6
+    off_grid_flag::Bool = false
+    min_kw::Real = 0.0
+    max_kw::Real = 1.0e4
+    min_kwh::Real = 0.0
+    max_kwh::Real = 1.0e6
     internal_efficiency_pct::Float64 = 0.975
     inverter_efficiency_pct::Float64 = 0.96
     rectifier_efficiency_pct::Float64 = 0.96
     soc_min_pct::Float64 = 0.2
-    soc_init_pct::Float64 = 0.5
-    can_grid_charge::Bool = true
-    installed_cost_per_kw::Float64 = 775.0
-    installed_cost_per_kwh::Float64 = 388.0
-    replace_cost_per_kw::Float64 = 440.0
-    replace_cost_per_kwh::Float64 = 220.0
+    soc_init_pct::Float64 = off_grid_flag ? 1.0 : 0.5
+    can_grid_charge::Bool = off_grid_flag ? false : true
+    installed_cost_per_kw::Real = 775.0
+    installed_cost_per_kwh::Real = 388.0
+    replace_cost_per_kw::Real = 440.0
+    replace_cost_per_kwh::Real = 220.0
     inverter_replacement_year::Int = 10
     battery_replacement_year::Int = 10
     macrs_option_years::Int = 7
     macrs_bonus_pct::Float64 = 1.0
     macrs_itc_reduction::Float64 = 0.5
     total_itc_pct::Float64 = 0.0
-    total_rebate_per_kw::Float64 = 0.0
-    total_rebate_per_kwh::Float64 = 0.0
+    total_rebate_per_kw::Real = 0.0
+    total_rebate_per_kwh::Real = 0.0
     charge_efficiency::Float64 = rectifier_efficiency_pct * internal_efficiency_pct^0.5
     discharge_efficiency::Float64 = inverter_efficiency_pct * internal_efficiency_pct^0.5
     grid_charge_efficiency::Float64 = can_grid_charge ? charge_efficiency : 0.0
@@ -235,33 +239,33 @@ Construct ElectricStorage struct from Dict with keys-val pairs from the
 REopt ElectricStorage and Financial inputs.
 """
 struct ElectricStorage <: AbstractElectricStorage
-    min_kw::Float64
-    max_kw::Float64
-    min_kwh::Float64
-    max_kwh::Float64
+    min_kw::Real
+    max_kw::Real
+    min_kwh::Real
+    max_kwh::Real
     internal_efficiency_pct::Float64
     inverter_efficiency_pct::Float64
     rectifier_efficiency_pct::Float64
     soc_min_pct::Float64
     soc_init_pct::Float64
     can_grid_charge::Bool
-    installed_cost_per_kw::Float64
-    installed_cost_per_kwh::Float64
-    replace_cost_per_kw::Float64
-    replace_cost_per_kwh::Float64
+    installed_cost_per_kw::Real
+    installed_cost_per_kwh::Real
+    replace_cost_per_kw::Real
+    replace_cost_per_kwh::Real
     inverter_replacement_year::Int
     battery_replacement_year::Int
     macrs_option_years::Int
     macrs_bonus_pct::Float64
     macrs_itc_reduction::Float64
     total_itc_pct::Float64
-    total_rebate_per_kw::Float64
-    total_rebate_per_kwh::Float64
+    total_rebate_per_kw::Real
+    total_rebate_per_kwh::Real
     charge_efficiency::Float64
     discharge_efficiency::Float64
     grid_charge_efficiency::Float64
-    net_present_cost_per_kw::Float64
-    net_present_cost_per_kwh::Float64
+    net_present_cost_per_kw::Real
+    net_present_cost_per_kwh::Real
     model_degradation::Bool
     degradation::Degradation
     minimum_avg_soc_fraction::Float64
@@ -269,9 +273,17 @@ struct ElectricStorage <: AbstractElectricStorage
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
 
+        if s.inverter_replacement_year >= f.analysis_years
+            @warn "Battery inverter replacement costs (per_kw) will not be considered because inverter_replacement_year >= analysis_years."
+        end
+
+        if s.battery_replacement_year >= f.analysis_years
+            @warn "Battery replacement costs (per_kwh) will not be considered because battery_replacement_year >= analysis_years."
+        end
+
         net_present_cost_per_kw = effective_cost(;
             itc_basis = s.installed_cost_per_kw,
-            replacement_cost = s.replace_cost_per_kw,
+            replacement_cost = s.inverter_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_per_kw,
             replacement_year = s.inverter_replacement_year,
             discount_rate = f.owner_discount_pct,
             tax_rate = f.owner_tax_pct,
@@ -283,7 +295,7 @@ struct ElectricStorage <: AbstractElectricStorage
         )
         net_present_cost_per_kwh = effective_cost(;
             itc_basis = s.installed_cost_per_kwh,
-            replacement_cost = s.replace_cost_per_kwh,
+            replacement_cost = s.battery_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_per_kwh,
             replacement_year = s.battery_replacement_year,
             discount_rate = f.owner_discount_pct,
             tax_rate = f.owner_tax_pct,

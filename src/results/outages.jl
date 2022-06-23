@@ -73,7 +73,7 @@ function add_outage_results(m, p, d::Dict)
 	r["max_outage_cost_per_outage_duration_series"] = value.(m[:dvMaxOutageCost]).data
 	r["unserved_load_series"] = value.(m[:dvUnservedLoad]).data
 	S = length(p.s.electric_utility.scenarios)
-	T = length(p.s.electric_utility.outage_start_timesteps)
+	T = length(p.s.electric_utility.outage_start_time_steps)
 	unserved_load_per_outage = Array{Float64}(undef, S, T)
 	for s in 1:S, t in 1:T
 		unserved_load_per_outage[s, t] = sum(r["unserved_load_series"][s, t, ts] for 
@@ -85,16 +85,16 @@ function add_outage_results(m, p, d::Dict)
 	r["discharge_from_storage_series"] = value.(m[:dvMGDischargeFromStorage]).data
 
 	for t in p.techs.all
-		r[t * "_upgraded"] = value(m[:binMGTechUsed][t])
+		r[t * "_upgraded"] = round(value(m[:binMGTechUsed][t]), digits=0)
 	end
-	r["storage_upgraded"] = value(m[:binMGStorageUsed])
+	r["storage_upgraded"] = round(value(m[:binMGStorageUsed]), digits=0)
 
 	if !isempty(p.techs.pv)
 		for t in p.techs.pv
 
 			# need the following logic b/c can have non-zero mg capacity when not using the capacity
 			# due to the constraint for setting the mg capacities equal to the grid connected capacities
-			if Bool(round(r[t * "_upgraded"], digits=1))
+			if Bool(r[t * "_upgraded"])
 				r[string(t, "mg_kw")] = round(value(m[:dvMGsize][t]), digits=4)
 			else
 				r[string(t, "mg_kw")] = 0
@@ -104,8 +104,8 @@ function add_outage_results(m, p, d::Dict)
 			if !isempty(p.s.storage.types.elec)
 				PVtoBatt = (m[:dvMGProductionToStorage][t, s, tz, ts] for 
 					s in p.s.electric_utility.scenarios,
-					tz in p.s.electric_utility.outage_start_timesteps,
-					ts in p.s.electric_utility.outage_timesteps)
+					tz in p.s.electric_utility.outage_start_time_steps,
+					ts in p.s.electric_utility.outage_time_steps)
 			else
 				PVtoBatt = []
 			end
@@ -113,8 +113,8 @@ function add_outage_results(m, p, d::Dict)
 
 			PVtoCUR = (m[:dvMGCurtail][t, s, tz, ts] for 
 				s in p.s.electric_utility.scenarios,
-				tz in p.s.electric_utility.outage_start_timesteps,
-				ts in p.s.electric_utility.outage_timesteps)
+				tz in p.s.electric_utility.outage_start_time_steps,
+				ts in p.s.electric_utility.outage_time_steps)
 			r[string("mg", t, "_curtailed_series")] = round.(value.(PVtoCUR), digits=3)
 
 			PVtoLoad = (
@@ -123,8 +123,8 @@ function add_outage_results(m, p, d::Dict)
 				- m[:dvMGCurtail][t, s, tz, ts]
 				- m[:dvMGProductionToStorage][t, s, tz, ts] for 
 					s in p.s.electric_utility.scenarios,
-					tz in p.s.electric_utility.outage_start_timesteps,
-					ts in p.s.electric_utility.outage_timesteps
+					tz in p.s.electric_utility.outage_start_time_steps,
+					ts in p.s.electric_utility.outage_time_steps
 			)
 			r[string("mg", t, "_to_load_series")] = round.(value.(PVtoLoad), digits=3)
 		end
@@ -135,7 +135,7 @@ function add_outage_results(m, p, d::Dict)
 
 			# need the following logic b/c can have non-zero mg capacity when not using the capacity
 			# due to the constraint for setting the mg capacities equal to the grid connected capacities
-			if Bool(round(r[t * "_upgraded"], digits=1))
+			if Bool(r[t * "_upgraded"])
 				r[string(t, "_mg_kw")] = round(value(m[:dvMGsize][t]), digits=4)
 			else
 				r[string(t, "mg_kw")] = 0
@@ -147,8 +147,8 @@ function add_outage_results(m, p, d::Dict)
 			if !isempty(p.s.storage.types.elec)
 				GenToBatt = (m[:dvMGProductionToStorage][t, s, tz, ts] for 
 					s in p.s.electric_utility.scenarios,
-					tz in p.s.electric_utility.outage_start_timesteps,
-					ts in p.s.electric_utility.outage_timesteps)
+					tz in p.s.electric_utility.outage_start_time_steps,
+					ts in p.s.electric_utility.outage_time_steps)
 			else
 				GenToBatt = []
 			end
@@ -156,8 +156,8 @@ function add_outage_results(m, p, d::Dict)
 
 			GENtoCUR = (m[:dvMGCurtail][t, s, tz, ts] for 
 				s in p.s.electric_utility.scenarios,
-				tz in p.s.electric_utility.outage_start_timesteps,
-				ts in p.s.electric_utility.outage_timesteps)
+				tz in p.s.electric_utility.outage_start_time_steps,
+				ts in p.s.electric_utility.outage_time_steps)
 			r[string("mg", t, "_curtailed_series")] = round.(value.(GENtoCUR), digits=3)
 
 			GENtoLoad = (
@@ -166,8 +166,8 @@ function add_outage_results(m, p, d::Dict)
 				- m[:dvMGCurtail][t, s, tz, ts]
 				- m[:dvMGProductionToStorage][t, s, tz, ts] for 
 					s in p.s.electric_utility.scenarios,
-					tz in p.s.electric_utility.outage_start_timesteps,
-					ts in p.s.electric_utility.outage_timesteps
+					tz in p.s.electric_utility.outage_start_time_steps,
+					ts in p.s.electric_utility.outage_time_steps
 			)
 			r[string("mg", t, "_to_load_series")] = round.(value.(GENtoLoad), digits=3)
 		end

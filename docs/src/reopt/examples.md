@@ -20,9 +20,6 @@ results = run_reopt([m1,m2], "./scenarios/pv_storage.json")
 ```
 With the [BAUScenario](@ref) results we can calculate the net present value of the optimal system.
 
-!!! note
-    The `Settings.run_bau` is `true` by default and so there is no need to change the `run_bau` value in general since it is ignored when only one `JuMP.Model` is passed to the `run_reopt` method. We include the `run_bau` option to align with the REopt API Settings.
-
 ## Advanced
 
 ### Modifying the mathematical model
