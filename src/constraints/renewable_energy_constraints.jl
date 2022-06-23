@@ -47,6 +47,7 @@ function add_re_elec_constraints(m,p)
 	end
 end
 
+
 """
 	add_re_elec_calcs(m,p)
 
@@ -99,8 +100,9 @@ function add_re_elec_calcs(m,p)
 			# + sum(p.GHPElectricConsumed[g,ts] * m[:binGHP][g] for g in p.GHPOptions, ts in p.time_steps) # GHP elec load
 		)
 	)
-
+	nothing
 end
+
 
 """
 	add_re_tot_calcs(m,p)
@@ -166,5 +168,5 @@ function add_re_tot_calcs(m,p)
 	end 
 	m[:AnnualRETotkWh] = @expression(m,m[:AnnualREEleckWh] + AnnualREHeatkWh)
 	m[:AnnualTotkWh] = @expression(m,m[:AnnualEleckWh] + AnnualHeatkWh)
-	
+	nothing
 end
