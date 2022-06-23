@@ -37,6 +37,7 @@ abstract type AbstractInputs end
 abstract type AbstractThermalTech <: AbstractGenerator end
 abstract type AbstractCHP <: AbstractTech end
 abstract type AbstractThermalStorageDefaults end
+abstract type AbstractGHP <: AbstractTech end
 """
     Techs
 
