@@ -43,7 +43,7 @@ function add_emissions_constraints(m,p)
 	end
 end
 
-### Year 1 Emissions Calculations
+
 function add_yr1_emissions_calcs(m,p)
 	# Components:
 	m[:yr1_emissions_onsite_fuel_lbs_CO2], m[:yr1_emissions_onsite_fuel_lbs_NOx], 
@@ -60,7 +60,6 @@ function add_yr1_emissions_calcs(m,p)
 	yr1_emissions_offset_from_elec_exports_lbs_PM25 = 
 		calc_yr1_emissions_offset_from_elec_exports(m, p)
 	
-	# "net_if_selected" indicates that emissions totals will be net of (subtract) exports IF the user sets "site.include_exported_elec_emissions_in_total" to true
 	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2] = m[:yr1_emissions_from_elec_grid_lbs_CO2] - 
 		yr1_emissions_offset_from_elec_exports_lbs_CO2
 	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx] = m[:yr1_emissions_from_elec_grid_lbs_NOx] - 
@@ -91,7 +90,10 @@ function calc_yr1_emissions_from_onsite_fuel(m,p; tech_array=p.techs.fuel_burnin
 	yr1_emissions_onsite_fuel_lbs_PM25 = @expression(m,p.hours_per_time_step*
 		sum(m[:dvFuelUsage][t,ts]*p.tech_emissions_factors_PM25[t] for t in tech_array, ts in p.time_steps))
 
-	return yr1_emissions_onsite_fuel_lbs_CO2, yr1_emissions_onsite_fuel_lbs_NOx, yr1_emissions_onsite_fuel_lbs_SO2, yr1_emissions_onsite_fuel_lbs_PM25
+	return yr1_emissions_onsite_fuel_lbs_CO2, 
+		   yr1_emissions_onsite_fuel_lbs_NOx, 
+		   yr1_emissions_onsite_fuel_lbs_SO2, 
+		   yr1_emissions_onsite_fuel_lbs_PM25
 end
 
 
@@ -108,7 +110,10 @@ function calc_yr1_emissions_from_elec_grid_purchase(m,p)
 	yr1_emissions_from_elec_grid_lbs_PM25 = @expression(m,p.hours_per_time_step*
 		sum(m[:dvGridPurchase][ts, tier]*p.s.electric_utility.emissions_factor_series_lb_PM25_per_kwh[ts] for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers))
 
-	return yr1_emissions_from_elec_grid_lbs_CO2, yr1_emissions_from_elec_grid_lbs_NOx, yr1_emissions_from_elec_grid_lbs_SO2, yr1_emissions_from_elec_grid_lbs_PM25
+	return yr1_emissions_from_elec_grid_lbs_CO2, 
+		   yr1_emissions_from_elec_grid_lbs_NOx, 
+		   yr1_emissions_from_elec_grid_lbs_SO2, 
+		   yr1_emissions_from_elec_grid_lbs_PM25
 end
 
 
@@ -116,24 +121,31 @@ function calc_yr1_emissions_offset_from_elec_exports(m, p)
 	if !(p.s.site.include_exported_elec_emissions_in_total)
 		return 0.0, 0.0, 0.0, 0.0
 	end
-	yr1_emissions_offset_from_elec_exports_lbs_CO2 = @expression(m,p.hours_per_time_step*
-		sum(m[:dvProductionToGrid][t,u,ts]  * (p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh[ts])
-		for t in p.techs.elec, ts in p.time_steps, u in p.export_bins_by_tech[t]))
+	yr1_emissions_offset_from_elec_exports_lbs_CO2 = @expression(m, p.hours_per_time_step *
+		sum(m[:dvProductionToGrid][t,u,ts] * (p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh[ts])
+		for t in p.techs.elec, ts in p.time_steps, u in p.export_bins_by_tech[t])
+	)
 		# if battery ends up being able to discharge to grid, need to incorporate here- might require complex tracking of what's charging battery
 
-	yr1_emissions_offset_from_elec_exports_lbs_NOx = @expression(m,p.hours_per_time_step*
-		sum(m[:dvProductionToGrid][t,u,ts]  * (p.s.electric_utility.emissions_factor_series_lb_NOx_per_kwh[ts])
-		for t in p.techs.elec, ts in p.time_steps, u in p.export_bins_by_tech[t]))
+	yr1_emissions_offset_from_elec_exports_lbs_NOx = @expression(m, p.hours_per_time_step *
+		sum(m[:dvProductionToGrid][t,u,ts] * (p.s.electric_utility.emissions_factor_series_lb_NOx_per_kwh[ts])
+		for t in p.techs.elec, ts in p.time_steps, u in p.export_bins_by_tech[t])
+	)
 
-	yr1_emissions_offset_from_elec_exports_lbs_SO2 = @expression(m,p.hours_per_time_step*
-		sum(m[:dvProductionToGrid][t,u,ts]  * (p.s.electric_utility.emissions_factor_series_lb_SO2_per_kwh[ts])
-		for t in p.techs.elec, ts in p.time_steps, u in p.export_bins_by_tech[t]))
+	yr1_emissions_offset_from_elec_exports_lbs_SO2 = @expression(m, p.hours_per_time_step *
+		sum(m[:dvProductionToGrid][t,u,ts] * (p.s.electric_utility.emissions_factor_series_lb_SO2_per_kwh[ts])
+		for t in p.techs.elec, ts in p.time_steps, u in p.export_bins_by_tech[t])
+	)
 
-	yr1_emissions_offset_from_elec_exports_lbs_PM25 = @expression(m,p.hours_per_time_step*
-		sum(m[:dvProductionToGrid][t,u,ts]  * (p.s.electric_utility.emissions_factor_series_lb_PM25_per_kwh[ts])
-		for t in p.techs.elec, ts in p.time_steps, u in p.export_bins_by_tech[t]))
+	yr1_emissions_offset_from_elec_exports_lbs_PM25 = @expression(m, p.hours_per_time_step *
+		sum(m[:dvProductionToGrid][t,u,ts] * (p.s.electric_utility.emissions_factor_series_lb_PM25_per_kwh[ts])
+		for t in p.techs.elec, ts in p.time_steps, u in p.export_bins_by_tech[t])
+	)
 
-	return yr1_emissions_offset_from_elec_exports_lbs_CO2, yr1_emissions_offset_from_elec_exports_lbs_NOx, yr1_emissions_offset_from_elec_exports_lbs_SO2, yr1_emissions_offset_from_elec_exports_lbs_PM25
+	return yr1_emissions_offset_from_elec_exports_lbs_CO2, 
+		   yr1_emissions_offset_from_elec_exports_lbs_NOx, 
+		   yr1_emissions_offset_from_elec_exports_lbs_SO2, 
+		   yr1_emissions_offset_from_elec_exports_lbs_PM25
 end
 
 
@@ -161,10 +173,23 @@ function add_lifecycle_emissions_calcs(m,p)
 	m[:Lifecycle_Emissions_Lbs_PM25] = m[:Lifecycle_Emissions_Lbs_PM25_grid_net_if_selected] + m[:Lifecycle_Emissions_Lbs_PM25_fuelburn]
 
 	# Emissions costs
-	m[:Lifecycle_Emissions_Cost_CO2] = p.s.financial.CO2_cost_per_tonne * TONNE_PER_LB * ( p.pwf_emissions_cost["CO2_grid"] * m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2] + p.pwf_emissions_cost["CO2_onsite"] * m[:yr1_emissions_onsite_fuel_lbs_CO2])
-	m[:Lifecycle_Emissions_Cost_NOx] = (p.pwf_emissions_cost["NOx_grid"] * p.s.financial.NOx_grid_cost_per_tonne * m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx] + p.pwf_emissions_cost["NOx_onsite"] * p.s.financial.NOx_onsite_fuelburn_cost_per_tonne * m[:yr1_emissions_onsite_fuel_lbs_NOx]) * TONNE_PER_LB
-	m[:Lifecycle_Emissions_Cost_SO2] = (p.pwf_emissions_cost["SO2_grid"] * p.s.financial.SO2_grid_cost_per_tonne * m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2] + p.pwf_emissions_cost["SO2_onsite"] * p.s.financial.SO2_onsite_fuelburn_cost_per_tonne * m[:yr1_emissions_onsite_fuel_lbs_SO2]) * TONNE_PER_LB
-	m[:Lifecycle_Emissions_Cost_PM25] =  (p.pwf_emissions_cost["PM25_grid"] * p.s.financial.PM25_grid_cost_per_tonne * m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25] + p.pwf_emissions_cost["PM25_onsite"] * p.s.financial.PM25_onsite_fuelburn_cost_per_tonne * m[:yr1_emissions_onsite_fuel_lbs_PM25]) * TONNE_PER_LB
+	m[:Lifecycle_Emissions_Cost_CO2] = p.s.financial.CO2_cost_per_tonne * TONNE_PER_LB * ( 
+		p.pwf_emissions_cost["CO2_grid"] * m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2] + 
+		p.pwf_emissions_cost["CO2_onsite"] * m[:yr1_emissions_onsite_fuel_lbs_CO2]
+	)
+	m[:Lifecycle_Emissions_Cost_NOx] = TONNE_PER_LB * (p.pwf_emissions_cost["NOx_grid"] * 
+		p.s.financial.NOx_grid_cost_per_tonne * m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx] + 
+		p.pwf_emissions_cost["NOx_onsite"] * p.s.financial.NOx_onsite_fuelburn_cost_per_tonne * m[:yr1_emissions_onsite_fuel_lbs_NOx]
+	) 
+	m[:Lifecycle_Emissions_Cost_SO2] = TONNE_PER_LB * (p.pwf_emissions_cost["SO2_grid"] * 
+		p.s.financial.SO2_grid_cost_per_tonne * m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2] + 
+		p.pwf_emissions_cost["SO2_onsite"] * p.s.financial.SO2_onsite_fuelburn_cost_per_tonne * m[:yr1_emissions_onsite_fuel_lbs_SO2]
+	)
+	m[:Lifecycle_Emissions_Cost_PM25] = TONNE_PER_LB * (p.pwf_emissions_cost["PM25_grid"] * 
+		p.s.financial.PM25_grid_cost_per_tonne * m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25] + 
+		p.pwf_emissions_cost["PM25_onsite"] * p.s.financial.PM25_onsite_fuelburn_cost_per_tonne * m[:yr1_emissions_onsite_fuel_lbs_PM25]
+	)
 	m[:Lifecycle_Emissions_Cost_Health] = m[:Lifecycle_Emissions_Cost_NOx] + m[:Lifecycle_Emissions_Cost_SO2] + m[:Lifecycle_Emissions_Cost_PM25]
 
+	nothing
 end
