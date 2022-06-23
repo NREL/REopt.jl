@@ -42,40 +42,21 @@ end
 
 function add_binGenIsOnInTS_constraints(m,p)
 	# Generator must be on for nonnegative output
-	if hasproperty(p, Symbol("max_sizes")) #regular REopt model, use p.max_sizes because it includes existing_kw
-		@constraint(m, [t in p.techs.gen, ts in p.time_steps],
-			m[:dvRatedProduction][t, ts] <= p.max_sizes[t] * m[:binGenIsOnInTS][t, ts]
+	@constraint(m, [t in p.techs.gen, ts in p.time_steps],
+		m[:dvRatedProduction][t, ts] <= p.max_sizes[t] * m[:binGenIsOnInTS][t, ts]
+	)
+	# Note: min_turn_down_pct is only enforced when off_grid_flag is true and in p.time_steps_with_grid, but not for grid outages for on-grid analyses
+	if p.s.settings.off_grid_flag 
+		@constraint(m, [t in p.techs.gen, ts in p.time_steps_without_grid],
+			p.s.generator.min_turn_down_pct * m[:dvSize][t] - m[:dvRatedProduction][t, ts] <=
+			p.max_sizes[t] * (1 - m[:binGenIsOnInTS][t, ts])
 		)
-		# Note: min_turn_down_pct is only enforced when off_grid_flag is true and in p.time_steps_with_grid, but not for grid outages for on-grid analyses
-		if p.s.settings.off_grid_flag 
-			@constraint(m, [t in p.techs.gen, ts in p.time_steps_without_grid],
-				p.s.generator.min_turn_down_pct * m[:dvSize][t] - m[:dvRatedProduction][t, ts] <=
-				p.max_sizes[t] * (1 - m[:binGenIsOnInTS][t, ts])
-			)
-		else 
-			@constraint(m, [t in p.techs.gen, ts in p.time_steps_with_grid],
-				p.s.generator.min_turn_down_pct * m[:dvSize][t] - m[:dvRatedProduction][t, ts] <=
-				p.max_sizes[t] * (1 - m[:binGenIsOnInTS][t, ts])
-			)
-		end 
-	else # MPC model, p.max_sizes doesn't exist
-		@constraint(m, [t in p.techs.gen, ts in p.time_steps],
-			m[:dvRatedProduction][t, ts] <= p.s.generator.max_kw * m[:binGenIsOnInTS][t, ts]
+	else 
+		@constraint(m, [t in p.techs.gen, ts in p.time_steps_with_grid],
+			p.s.generator.min_turn_down_pct * m[:dvSize][t] - m[:dvRatedProduction][t, ts] <=
+			p.max_sizes[t] * (1 - m[:binGenIsOnInTS][t, ts])
 		)
-		# Note: min_turn_down_pct is only enforced when off_grid_flag is true and in p.time_steps_with_grid, but not for grid outages for on-grid analyses
-		if p.s.settings.off_grid_flag 
-			@constraint(m, [t in p.techs.gen, ts in p.time_steps_without_grid],
-				p.s.generator.min_turn_down_pct * m[:dvSize][t] - m[:dvRatedProduction][t, ts] <=
-				p.s.generator.max_kw * (1 - m[:binGenIsOnInTS][t, ts])
-			)
-		else 
-			@constraint(m, [t in p.techs.gen, ts in p.time_steps_with_grid],
-				p.s.generator.min_turn_down_pct * m[:dvSize][t] - m[:dvRatedProduction][t, ts] <=
-				p.s.generator.max_kw * (1 - m[:binGenIsOnInTS][t, ts])
-			)
-		end
-	end
-	
+	end 
 end
 
 
