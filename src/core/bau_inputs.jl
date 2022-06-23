@@ -28,6 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
+    BAUInputs(p::REoptInputs)
 
 Create a REoptInputs for the Business As Usual scenario.
 """
