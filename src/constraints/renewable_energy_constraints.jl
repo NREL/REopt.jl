@@ -27,7 +27,6 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-
 """
 	add_re_elec_constraints(m,p)
 
@@ -79,18 +78,26 @@ function add_re_elec_calcs(m,p)
 	# 	))
 	# end
 
-	m[:AnnualREEleckWh] = @expression(m,p.hours_per_time_step* (
-			sum(p.production_factor[t,ts] * p.levelization_factor[t] * m[:dvRatedProduction][t,ts] * p.tech_renewable_energy_pct[t] for t in p.techs.elec, ts in p.time_steps) #total RE elec generation, excl steam turbine
-			- sum(m[:dvProductionToStorage][b,t,ts]*p.tech_renewable_energy_pct[t]*(1-p.s.storage.attr[b].charge_efficiency*p.s.storage.attr[b].discharge_efficiency) for t in p.techs.elec, b in p.s.storage.types.elec, ts in p.time_steps) #minus battery efficiency losses
-			- sum(m[:dvCurtail][t,ts]*p.tech_renewable_energy_pct[t] for t in p.techs.elec, ts in p.time_steps) # minus curtailment.
-			- (1-p.s.site.include_exported_renewable_electricity_in_total)*sum(m[:dvProductionToGrid][t,u,ts]*p.tech_renewable_energy_pct[t] for t in p.techs.elec,  u in p.export_bins_by_tech[t], ts in p.time_steps) # minus exported RE, if RE accounting method = 0.
+	m[:AnnualREEleckWh] = @expression(m,p.hours_per_time_step * (
+			sum(p.production_factor[t,ts] * p.levelization_factor[t] * m[:dvRatedProduction][t,ts] * 
+				p.tech_renewable_energy_pct[t] for t in p.techs.elec, ts in p.time_steps
+			) - #total RE elec generation, excl steam turbine
+			sum(m[:dvProductionToStorage][b,t,ts]*p.tech_renewable_energy_pct[t]*(
+				1-p.s.storage.attr[b].charge_efficiency*p.s.storage.attr[b].discharge_efficiency) 
+				for t in p.techs.elec, b in p.s.storage.types.elec, ts in p.time_steps
+			) - #minus battery efficiency losses
+			sum(m[:dvCurtail][t,ts]*p.tech_renewable_energy_pct[t] for t in p.techs.elec, ts in p.time_steps) - # minus curtailment.
+			(1 - p.s.site.include_exported_renewable_electricity_in_total) *
+			sum(m[:dvProductionToGrid][t,u,ts]*p.tech_renewable_energy_pct[t] 
+				for t in p.techs.elec,  u in p.export_bins_by_tech[t], ts in p.time_steps
+			) # minus exported RE, if RE accounting method = 0.
 		)
 		# + SteamTurbineAnnualREEleckWh  # SteamTurbine RE Elec, already adjusted for p.hours_per_time_step
 	)		
     # Note: if battery ends up being allowed to discharge to grid, need to make sure only RE that is being consumed onsite is counted so battery doesn't become a back door for RE to grid.
 	# Note: calculations currently do not ascribe any renewable energy attribute to grid-purchased electricity
 
-	m[:AnnualEleckWh] = @expression(m,p.hours_per_time_step*(
+	m[:AnnualEleckWh] = @expression(m,p.hours_per_time_step * (
 		 	# input electric load
 			sum(p.s.electric_load.loads_kw[ts] for ts in p.time_steps_with_grid) 
 			+ sum(p.s.electric_load.critical_loads_kw[ts] for ts in p.time_steps_without_grid)
@@ -116,6 +123,8 @@ Function to calculate annual energy (electricity plus heat) demand and annual en
 #Renewable heat calculations and totalling heat/electric emissions
 function add_re_tot_calcs(m,p)
  
+	AnnualREHeatkWh = 0 
+	AnnualHeatkWh = 0
 	if !isempty(union(p.techs.heating, p.techs.chp))
 		# TODO: When steam turbine implemented, uncomment code below, replacing p.TechCanSupplySteamTurbine, p.STElecOutToThermInRatio, p.STThermOutToThermInRatio with new names
 		# # Steam turbine RE heat calculations
@@ -162,11 +171,8 @@ function add_re_tot_calcs(m,p)
 			)
 			# - AnnualSteamToSteamTurbine # minus steam going to SteamTurbine; already adjusted by p.hours_per_time_step
 		)
-	else
-		AnnualREHeatkWh = 0 
-		AnnualHeatkWh = 0
 	end 
-	m[:AnnualRETotkWh] = @expression(m,m[:AnnualREEleckWh] + AnnualREHeatkWh)
-	m[:AnnualTotkWh] = @expression(m,m[:AnnualEleckWh] + AnnualHeatkWh)
+	m[:AnnualRETotkWh] = @expression(m, m[:AnnualREEleckWh] + AnnualREHeatkWh)
+	m[:AnnualTotkWh] = @expression(m, m[:AnnualEleckWh] + AnnualHeatkWh)
 	nothing
 end
