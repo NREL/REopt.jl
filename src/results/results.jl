@@ -105,7 +105,11 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         add_flexible_hvac_results(m, p, d)
     end
 
-	return d
+    if !isempty(p.ghp_options)
+        add_ghp_results(m, p, d)
+	end
+    
+    return d
 end
 
 
