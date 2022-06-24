@@ -272,7 +272,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     boiler_inputs = merge(boiler_inputs, dictkeys_tosymbols(d["ExistingBoiler"]))
                 end
                 existing_boiler = ExistingBoiler(; boiler_inputs...)
-                set_missing_emissions_factors_to_fuel_defaults(existing_boiler)
                 # TODO automatically add CHP or other heating techs?
                 # TODO increase max_thermal_factor_on_peak_load to allow more heating flexibility?
             end
@@ -323,13 +322,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             boiler_inputs = merge(boiler_inputs, dictkeys_tosymbols(d["ExistingBoiler"]))
         end
         existing_boiler = ExistingBoiler(; boiler_inputs...)
-        set_missing_emissions_factors_to_fuel_defaults(existing_boiler)
     end
 
     chp = nothing
     if haskey(d, "CHP")
         chp = CHP(d["CHP"])
-        set_missing_emissions_factors_to_fuel_defaults(chp)
     end
 
     max_cooling_demand_kw = 0
@@ -430,56 +427,3 @@ function add_doe_reference_names_from_elec_to_thermal_loads(elec::Dict, thermal:
     end
 end
 
-"""
-    function set_missing_emissions_factors_to_fuel_defaults(tech::AbstractFuelBurningTech)
-
-Populate emission factors in tech based on its fuel_type field.
-"""
-function set_missing_emissions_factors_to_fuel_defaults(tech::AbstractFuelBurningTech)
-    @assert tech.fuel_type in ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
-    fuel_renewable_energy_pct = Dict(
-        "natural_gas"=>0.0,
-        "landfill_bio_gas"=>1.0,
-        "propane"=>0.0,
-        "diesel_oil"=>0.0
-    )
-    fuel_emissions_lb_CO2_per_mmbtu = Dict(
-        "natural_gas"=>116.9,
-        "landfill_bio_gas"=>114.8,
-        "propane"=>138.6,
-        "diesel_oil"=>163.1
-    )
-    fuel_emissions_lb_NOx_per_mmbtu = Dict(
-        "natural_gas"=>0.09139,
-        "landfill_bio_gas"=>0.14,
-        "propane"=>0.15309,
-        "diesel_oil"=>0.56
-    )
-    fuel_emissions_lb_SO2_per_mmbtu = Dict(
-        "natural_gas"=>0.000578592,
-        "landfill_bio_gas"=>0.045,
-        "propane"=>0.0,
-        "diesel_oil"=>0.28897737
-    )
-    fuel_emissions_lb_PM25_per_mmbtu = Dict(
-        "natural_gas"=>0.007328833,
-        "landfill_bio_gas"=>0.02484,
-        "propane"=>0.009906836,
-        "diesel_oil"=>0.0
-    )
-    if isnothing(tech.fuel_renewable_energy_pct)
-        tech.fuel_renewable_energy_pct = fuel_renewable_energy_pct[tech.fuel_type]
-    end
-    if isnothing(tech.emissions_factor_lb_CO2_per_mmbtu)
-        tech.emissions_factor_lb_CO2_per_mmbtu = fuel_emissions_lb_CO2_per_mmbtu[tech.fuel_type]
-    end
-    if isnothing(tech.emissions_factor_lb_NOx_per_mmbtu)
-        tech.emissions_factor_lb_NOx_per_mmbtu = fuel_emissions_lb_NOx_per_mmbtu[tech.fuel_type]
-    end
-    if isnothing(tech.emissions_factor_lb_SO2_per_mmbtu)
-        tech.emissions_factor_lb_SO2_per_mmbtu = fuel_emissions_lb_SO2_per_mmbtu[tech.fuel_type]
-    end
-    if isnothing(tech.emissions_factor_lb_PM25_per_mmbtu)
-        tech.emissions_factor_lb_PM25_per_mmbtu = fuel_emissions_lb_PM25_per_mmbtu[tech.fuel_type]
-    end
-end
