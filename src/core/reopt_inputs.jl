@@ -764,7 +764,7 @@ function fillin_techs_by_exportbin(techs_by_exportbin::Dict, tech::AbstractTech,
     return nothing
 end
 
-function setup_ghp_inputs(s::Scenario, time_steps, time_steps_without_grid)
+function setup_ghp_inputs(s::AbstractScenario, time_steps, time_steps_without_grid)
     # GHP parameters for REopt model
     num = length(s.ghp_option_list)
     ghp_options = 1:num
