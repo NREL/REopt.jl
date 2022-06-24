@@ -258,8 +258,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             # add_ghp_heating_elec = 0.0
             m[:GHPCapCosts] = @expression(m, 0.0)
             m[:GHPOMCosts] = @expression(m, 0.0)
-            # Needed? or does this binary dV get added only when !isempty(p.ghp_options)?
-            fix(sum(m[:binGHP][g] for g in p.ghp_options), 0, force=true)
         end
 
         if !isempty(p.techs.pbi)
