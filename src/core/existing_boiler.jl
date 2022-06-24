@@ -56,8 +56,8 @@ function ExistingBoiler(;
     production_type::String = "hot_water",
     chp_prime_mover::String = "",
     max_thermal_factor_on_peak_load::Real = 1.25,
-    efficiency::Union{Nothing,<:Real} = nothing,
-    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
+    efficiency::Union{Nothing,Real} = nothing,
+    fuel_cost_per_mmbtu::Union{Real, AbstractVector{<:Real}} = 0.0,
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     fuel_renewable_energy_pct::Real = FUEL_DEFAULTS["fuel_renewable_energy_pct"][fuel_type],
     emissions_factor_lb_CO2_per_mmbtu::Real = FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"][fuel_type],
@@ -73,8 +73,8 @@ function ExistingBoiler(;
     production_type::String = "hot_water",
     chp_prime_mover::String = "",
     max_thermal_factor_on_peak_load::Real = 1.25,
-    efficiency::Union{Nothing,<:Real} = nothing,
-    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
+    efficiency::Union{Nothing,Real} = nothing,
+    fuel_cost_per_mmbtu::Union{Real, AbstractVector{<:Real}} = 0.0,
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     # can_supply_steam_turbine::Bool,
     fuel_renewable_energy_pct::Real = FUEL_DEFAULTS["fuel_renewable_energy_pct"][fuel_type],

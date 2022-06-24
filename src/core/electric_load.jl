@@ -203,7 +203,7 @@ function BuiltInElectricLoad(
     latitude::Real,
     longitude::Real,
     year::Int,
-    annual_kwh::Union{<:Real, Nothing}=nothing,
+    annual_kwh::Union{Real, Nothing}=nothing,
     monthly_totals_kwh::Vector{<:Real}=Real[],
     )
     
