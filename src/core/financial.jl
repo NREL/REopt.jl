@@ -55,7 +55,7 @@ function Financial(;
     PM25_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
     NOx_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
     SO2_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
-    PM25_onsite_fuelburn_cost_per_tonne::Real = nothing,
+    PM25_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
     NOx_cost_escalation_pct::Union{Nothing,Real} = nothing,
     SO2_cost_escalation_pct::Union{Nothing,Real} = nothing,
     PM25_cost_escalation_pct::Union{Nothing,Real} = nothing,
@@ -129,7 +129,7 @@ struct Financial
         PM25_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
         NOx_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
         SO2_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
-        PM25_onsite_fuelburn_cost_per_tonne::Real = nothing,
+        PM25_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
         NOx_cost_escalation_pct::Union{Nothing,Real} = nothing,
         SO2_cost_escalation_pct::Union{Nothing,Real} = nothing,
         PM25_cost_escalation_pct::Union{Nothing,Real} = nothing,
@@ -162,7 +162,7 @@ struct Financial
        
         #TODO: allow grid costs to be nothing if site.off_grid == true
         missing_health_inputs = false
-        
+
         # use EASIUR data for missing grid costs
         if isnothing(NOx_grid_cost_per_tonne)
             NOx_grid_cost_per_tonne = isnothing(grid_costs) ? 0.0 : grid_costs["NOx"]

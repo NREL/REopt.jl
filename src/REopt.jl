@@ -71,6 +71,38 @@ const KWH_PER_GAL_DIESEL = 40.7  # [kWh/gal_diesel]
 const KWH_PER_MMBTU = 293.07107  # [kWh/mmbtu]
 const KWH_THERMAL_PER_TONHOUR = 3.51685
 const TONNE_PER_LB = 1/2204.62  # [tonne/lb]
+const FUEL_DEFAULTS = Dict(
+    "fuel_renewable_energy_pct" => Dict(
+        "natural_gas"=>0.0,
+        "landfill_bio_gas"=>1.0,
+        "propane"=>0.0,
+        "diesel_oil"=>0.0
+    ),
+    "emissions_factor_lb_CO2_per_mmbtu" => Dict(
+        "natural_gas"=>116.9,
+        "landfill_bio_gas"=>114.8,
+        "propane"=>138.6,
+        "diesel_oil"=>163.1
+    ),
+    "emissions_factor_lb_NOx_per_mmbtu" => Dict(
+        "natural_gas"=>0.09139,
+        "landfill_bio_gas"=>0.14,
+        "propane"=>0.15309,
+        "diesel_oil"=>0.56
+    ),
+    "emissions_factor_lb_SO2_per_mmbtu" => Dict(
+        "natural_gas"=>0.000578592,
+        "landfill_bio_gas"=>0.045,
+        "propane"=>0.0,
+        "diesel_oil"=>0.28897737
+    ),
+    "emissions_factor_lb_PM25_per_mmbtu" => Dict(
+        "natural_gas"=>0.007328833,
+        "landfill_bio_gas"=>0.02484,
+        "propane"=>0.009906836,
+        "diesel_oil"=>0.0
+    )
+)
 
 include("keys.jl")
 include("core/types.jl")
