@@ -78,6 +78,7 @@ function BAUInputs(p::REoptInputs)
         om_cost_per_kw[pvname] = p.om_cost_per_kw[pvname]
         levelization_factor[pvname] = p.levelization_factor[pvname]
         cap_cost_slope[pvname] = 0.0
+        tech_renewable_energy_pct[pvname] = 1.0
         if pvname in p.techs.pbi
             push!(pbi_techs, pvname)
         end
