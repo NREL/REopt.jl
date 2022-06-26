@@ -99,7 +99,7 @@ mutable struct Site
         bau_grid_emissions_lb_NOx_per_year::Union{Float64, Nothing} = nothing,
         bau_grid_emissions_lb_SO2_per_year::Union{Float64, Nothing} = nothing,
         bau_grid_emissions_lb_PM25_per_year::Union{Float64, Nothing} = nothing,
-        renewable_electricity_min_pct::Real = 0.0,
+        renewable_electricity_min_pct::Union{Float64, Nothing} = nothing,
         renewable_electricity_max_pct::Union{Float64, Nothing} = nothing,
         include_exported_elec_emissions_in_total::Bool = true,
         include_exported_renewable_electricity_in_total::Bool = true,
@@ -112,12 +112,15 @@ mutable struct Site
         if !(-180 <= longitude < 180)
             push!(invalid_args, "longitude must satisfy -180 <= longitude < 180, got $(longitude)")
         end
+        if !isnothing(renewable_electricity_max_pct) && !isnothing(renewable_electricity_min_pct)
+            if (renewable_electricity_min_pct > renewable_electricity_max_pct)
+                push!(invalid_args, "renewable_electricity_min_pct must be less than renewable_electricity_max_pct")
+            end
+        end
         if length(invalid_args) > 0
             error("Invalid argument values: $(invalid_args)")
         end
-        if !isnothing(renewable_electricity_max_pct) && (renewable_electricity_min_pct > renewable_electricity_max_pct)
-            error("renewable_electricity_min_pct must be less than renewable_electricity_max_pct")
-        end
+
         new(latitude, longitude, land_acres, roof_squarefeet, min_resil_time_steps, 
             mg_tech_sizes_equal_grid_sizes, CO2_emissions_reduction_min_pct, 
             CO2_emissions_reduction_max_pct, bau_emissions_lb_CO2_per_year,
