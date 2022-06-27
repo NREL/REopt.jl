@@ -343,9 +343,52 @@ end
 
 
 """
-    make_flex_hvac(d::Dict, flex_hvac_from_json::Bool, settings::Settings, electric_load::MPCElectricLoad)
+    MPCFlexibleHVAC
 
-FlexibleHVAC constructor for MPCScenario
+
+The `FlexibleHVAC` system is modeled via a discrete state-space system:
+
+``\\boldsymbol{x}[t+1] = \\boldsymbol{A x}[t] + \\boldsymbol{B u}[t]``
+
+where
+- ``\\boldsymbol{A}`` is the `system_matrix`;
+- ``\\boldsymbol{B}`` is the `input_matrix`;
+- ``\\boldsymbol{u}`` is the `exogenous_inputs`;
+- ``\\boldsymbol{x}`` is the state vector, which includes the space temperature; and
+- ``t`` is the integer hour (only hourly models available currently).
+
+When providing your own `FlexibleHVAC` model, in addition to the above values one must also provide:
+- `space_temperature_node` an integer for the index in ``\\boldsymbol{x}`` that must obey the comfort limits
+- `hvac_input_node` an integer for the index in ``\\boldsymbol{u}`` that REopt can choose to inject or extract heat
+- `temperature_upper_bound_degC` and/or `temperature_lower_bound_degC`
+- `initial_temperatures` a vector of values for ``\\boldsymbol{x}[1]``
+
+For example
+```julia
+A = reshape([0.960789], 1,1)
+B = [0.039210  9.802640e-6]
+
+ambient_temperature = REopt.get_ambient_temperature(30.2672, -97.7431)[5840:5840+23];
+
+u = [ambient_temperature zeros(24)]';
+d = JSON.parsefile("./scenarios/mpc.json");  # in REopt.jl test directory
+
+d["FlexibleHVAC"] = Dict(
+    "space_temperature_node" => 1,
+    "hvac_input_node" => 1,
+    "initial_temperatures" => [21],
+    "temperature_upper_bound_degC_heating" => 22.0,
+    "temperature_lower_bound_degC_heating" => 19.8,
+    "temperature_upper_bound_degC_cooling" => 22.0,
+    "temperature_lower_bound_degC_cooling" => 19.8,
+    "system_matrix" => A,
+    "input_matrix" => B,
+    "exogenous_inputs" => u
+)
+
+model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+r = run_mpc(model, d)
+```
 """
 function make_flex_hvac(d::Dict, flex_hvac_from_json::Bool, settings::Settings)
     make_flex_hvac(d, flex_hvac_from_json, settings, "")

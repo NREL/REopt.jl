@@ -21,9 +21,10 @@ The accepted keys for the JSON file or `Dict` are:
 - Generator
 - ElectricUtility
 - Settings
+- FlexibleHVAC
 
 
-The simplest scenario does not have any dispatch optimization and is essentially a cost "calculator:
+The simplest scenario does not have any dispatch optimization and is essentially a cost calculator:
 ```javascript
 {
     "ElectricLoad": {
@@ -35,7 +36,7 @@ The simplest scenario does not have any dispatch optimization and is essentially
 }
 ```
 !!! note
-    The `ElectricLoad.loads_kw` can have an arbitrary length, but its length must be the same lengths as many other inputs such as the `MPCElectricTariff.energy_rates` and the `PV.prod_factor_series`.
+    The `ElectricLoad.loads_kw` can have an arbitrary length, but its length must be the same lengths as many other inputs such as the `MPCElectricTariff.energy_rates`, `FlexibleHVAC.exogenous_inputs`, and the `PV.prod_factor_series`.
 
 Here is a more complex `MPCScenario`, which is used in [MPC Examples](@ref):
 ```javascript
@@ -184,4 +185,9 @@ The MPCSettings is the same as the [Settings](@ref).
 ## MPCLimits
 ```@docs
 REopt.MPCLimits
+```
+
+## MPCFlexibleHVAC
+```@docs
+REopt.make_flex_hvac(::Dict, ::Bool, ::REopt.Settings)
 ```
