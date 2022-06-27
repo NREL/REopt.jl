@@ -228,6 +228,11 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		end
 	end
 
+	if !isnothing(p.s.flexible_hvac)
+        add_flexible_hvac_constraints(m, p)
+		JuMP.fix(m[:binFlexHVAC], 1.0)
+	end
+
 	#################################  Objective Function   ########################################
 	@expression(m, Costs,
 
@@ -328,4 +333,10 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 			binMGGenIsOnInTS[S, tZeros, outage_time_steps], Bin
 		end
 	end
+
+	if !isempty(p.techs.thermal)
+        @variables m begin
+			dvThermalProduction[p.techs.thermal, p.time_steps] >= 0
+		end
+    end
 end
