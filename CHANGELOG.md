@@ -3,6 +3,15 @@
 ## develop
 - fix bug for tiered, time-of-use demand rates
 - fix bug in results with tiered electrical energy costs
+
+## v0.16.2
+- Update PV defaults to tilt=10 for rooftop, tilt = abs(lat) for ground mount, azimuth = 180 for northern lats, azimuth = 0 for southern lats.
+- bug fix for Generator inputs to allow for time_steps_per_hour > 1
+- change various `Float64` types to `Real` to allow integers too
+
+## v0.16.1
+- bug fix for outage simulator when `microgrid_only=true`
+
 ## v0.16.0
 Allows users to model "off-grid" systems as a year-long outage: 
 - add flag to "turn on" off-grid modeling `Settings.off_grid_flag` 
