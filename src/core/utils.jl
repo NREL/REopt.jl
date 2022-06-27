@@ -42,8 +42,9 @@ function annuity_two_escalation_rates(years::Int, rate_escalation1::Real, rate_e
         this formulation assumes cost growth in first period
         i.e. it is a geometric sum of (1+rate_escalation1)^n * (1+rate_escalation2)^n / (1+rate_discount)^n
         for n = 1, ..., years
+        which is refactored using (1+a)^n*(1+b)^n/(1+c)^n = ((1+a+b+a*b)/(1+c))^n
     """
-    x = (1 + rate_escalation1 + rate_escalation2 + rate_escalation1 * rate_escalation2) / (1 + rate_discount) #(1+a)*(1+b)=1+a+b+a*b
+    x = (1 + rate_escalation1 + rate_escalation2 + rate_escalation1 * rate_escalation2) / (1 + rate_discount)
     if x != 1
         pwf = round(x * (1 - x^years) / (1 - x), digits=5)
     else
