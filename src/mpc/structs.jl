@@ -243,42 +243,6 @@ end
 
 
 """
-MPCElectricUtility
-
-```julia
-Base.@kwdef struct MPCElectricUtility
-    outage_start_time_step::Int=0  # for modeling a single outage, with critical load spliced into the baseline load ...
-    outage_end_time_step::Int=0  # ... utiltity production_factor = 0 during the outage
-    allow_simultaneous_export_import::Bool=true  # if true the site has two meters (in effect)
-    # next 5 variables below used for minimax the expected outage cost,
-    # with max taken over outage start time, expectation taken over outage duration
-    outage_start_time_steps::Array{Int,1}=Int[]  # we minimize the maximum outage cost over outage start times
-    outage_durations::Array{Int,1}=Int[]  # one-to-one with outage_probabilities, outage_durations can be a random variable
-    outage_probabilities::Array{<:Real,1}=[1.0]
-    outage_time_steps::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:maximum(outage_durations)
-    scenarios::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:length(outage_durations)
-    net_metering_limit_kw::Real = 0
-    interconnection_limit_kw::Real = 1.0e9
-end
-```
-"""
-Base.@kwdef struct MPCElectricUtility
-    outage_start_time_step::Int=0  # for modeling a single outage, with critical load spliced into the baseline load ...
-    outage_end_time_step::Int=0  # ... utiltity production_factor = 0 during the outage
-    allow_simultaneous_export_import::Bool=true  # if true the site has two meters (in effect)
-    # next 5 variables below used for minimax the expected outage cost,
-    # with max taken over outage start time, expectation taken over outage duration
-    outage_start_time_steps::Array{Int,1}=Int[]  # we minimize the maximum outage cost over outage start times
-    outage_durations::Array{Int,1}=Int[]  # one-to-one with outage_probabilities, outage_durations can be a random variable
-    outage_probabilities::Array{<:Real,1}=[1.0]
-    outage_time_steps::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:maximum(outage_durations)
-    scenarios::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:length(outage_durations)
-    net_metering_limit_kw::Real = 0
-    interconnection_limit_kw::Real = 1.0e9
-end
-
-
-"""
     MPCElectricStorage
 
 ```julia
