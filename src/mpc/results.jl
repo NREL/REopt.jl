@@ -58,6 +58,10 @@ function mpc_results(m::JuMP.AbstractModel, p::MPCInputs; _n="")
 	if !isempty(p.techs.gen)
         add_generator_results(m, p, d; _n)
 	end
+    
+    if !isnothing(p.s.flexible_hvac)
+        add_flexible_hvac_results(m, p, d)
+    end
 	
 	time_elapsed = time() - tstart
 	@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
