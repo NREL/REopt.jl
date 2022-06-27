@@ -214,6 +214,7 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
     ) / bau["Site"]["lifecycle_emissions_tCO2"]
 
     # breakeven cost of CO2 (to make NPV = 0)
+    opt["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] = 0.0
     # first, remove climate costs from the output NPV, if they were previously included in LCC/NPV calcs:
     npv_without_modeled_climate_costs = opt["Financial"]["npv"]
     if p.s.settings.include_climate_in_objective == true
@@ -221,9 +222,7 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
     end
     # we want to calculate the breakeven year 1 cost of CO2 (usd per tonne) that would yield an npv of 0, holding all other inputs constant
     # (back-calculating using the equation for m[:Lifecycle_Emissions_Cost_CO2] in "add_lifecycle_emissions_calcs" in emissions_constraints.jl)
-    if npv_without_modeled_climate_costs >= 0 # if the system is cost effective (NPV >= 0) without considering any cost of CO2, no breakeven value is reported 
-        opt["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] = 0.0
-    else
+    if npv_without_modeled_climate_costs < 0 # if the system is not cost effective (NPV < 0) without considering any cost of CO2
         breakeven_cost_denominator = p.pwf_emissions_cost["CO2_grid"] * (
             bau["ElectricUtility"]["year_one_emissions_tCO2"] - opt["ElectricUtility"]["year_one_emissions_tCO2"]
         ) + p.pwf_emissions_cost["CO2_onsite"] * (
@@ -231,8 +230,6 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         )
         if breakeven_cost_denominator != 0.0
             opt["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] = -1 * npv_without_modeled_climate_costs / breakeven_cost_denominator
-        else
-            opt["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] = 0.0
         end
     end
         
