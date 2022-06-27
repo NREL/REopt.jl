@@ -76,7 +76,7 @@ Other options include:
     - "Financial"
     - "Limits"
 """
-function MPCScenario(d::Dict)
+function MPCScenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d, "Settings")
         settings = Settings(;dictkeys_tosymbols(d["Settings"])...)
     else
@@ -143,7 +143,7 @@ function MPCScenario(d::Dict)
 
     if haskey(d, "FlexibleHVAC")
         flexible_hvac, existing_boiler, existing_chiller = 
-            make_flex_hvac(d, flex_hvac_from_json, settings, electric_load)
+            make_flex_hvac(d, flex_hvac_from_json, settings)
     end
 
     return MPCScenario(

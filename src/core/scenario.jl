@@ -219,10 +219,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     if haskey(d, "FlexibleHVAC")
         flexible_hvac, existing_boiler, existing_chiller = 
-            make_flex_hvac(d, flex_hvac_from_json, settings, electric_load)
+            make_flex_hvac(d, flex_hvac_from_json, settings, electric_load.city)
     end
 
-    if max_heat_demand_kw > 0 && !haskey(d, "FlexibleHVAC")  # create ExistingBoler
+    if max_heat_demand_kw > 0 && !haskey(d, "FlexibleHVAC")  # create ExistingBoiler
         boiler_inputs = Dict{Symbol, Any}()
         boiler_inputs[:max_heat_demand_kw] = max_heat_demand_kw
         boiler_inputs[:time_steps_per_hour] = settings.time_steps_per_hour
@@ -342,14 +342,28 @@ function add_doe_reference_names_from_elec_to_thermal_loads(elec::Dict, thermal:
 end
 
 
-function make_flex_hvac(d::Dict, flex_hvac_from_json::Bool, settings::Settings, electric_load::ElectricLoad)
+"""
+    make_flex_hvac(d::Dict, flex_hvac_from_json::Bool, settings::Settings, electric_load::MPCElectricLoad)
+
+FlexibleHVAC constructor for MPCScenario
+"""
+function make_flex_hvac(d::Dict, flex_hvac_from_json::Bool, settings::Settings)
+    # have to provide city to make FlexibleHVAC
+    if !(haskey(d["FlexibleHVAC"], "city"))
+        throw(@error("You must provide the ASHRAE zone city for the FlexibleHVAC model. See the `ElectricLoad` docs for `city` options."))
+    end
+    make_flex_hvac(d, flex_hvac_from_json, settings, "")
+end
+
+
+function make_flex_hvac(d::Dict, flex_hvac_from_json::Bool, settings::Settings, city::String)
     flexible_hvac = nothing
     existing_boiler = nothing
     existing_chiller = nothing
     if haskey(d["FlexibleHVAC"], "doe_reference_name")
         flexible_hvac = FlexibleHVAC(
             d["FlexibleHVAC"]["doe_reference_name"],
-            get(d["FlexibleHVAC"], "city", electric_load.city),
+            get(d["FlexibleHVAC"], "city", city),
             d["FlexibleHVAC"]["installed_cost"],
             get(d["FlexibleHVAC"], "temperature_upper_bound_degC_heating", nothing),
             get(d["FlexibleHVAC"], "temperature_lower_bound_degC_heating", nothing),
