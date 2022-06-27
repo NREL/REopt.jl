@@ -214,7 +214,6 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
     ) / bau["Site"]["lifecycle_emissions_tCO2"]
 
     # breakeven cost of CO2 (to make NPV = 0)
-    opt["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] = 0.0
     # first, remove climate costs from the output NPV, if they were previously included in LCC/NPV calcs:
     npv_without_modeled_climate_costs = opt["Financial"]["npv"]
     if p.s.settings.include_climate_in_objective == true
