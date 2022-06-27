@@ -33,11 +33,13 @@
 struct with inner constructor:
 ```julia
 function PV(;
-    tilt::Real,
-    array_type::Int=1,
-    module_type::Int=0,
+    off_grid_flag::Bool = false,
+    latitude::Real,
+    array_type::Int=1, # PV Watts array type (0: Ground Mount Fixed (Open Rack); 1: Rooftop, Fixed; 2: Ground Mount 1-Axis Tracking; 3 : 1-Axis Backtracking; 4: Ground Mount, 2-Axis Tracking)
+    tilt::Real= array_type == 1 ? 10 : abs(latitude), # tilt = 10 deg for rooftop systems, abs(lat) for ground-mount
+    module_type::Int=0, # PV module type (0: Standard; 1: Premium; 2: Thin Film)
     losses::Real=0.14,
-    azimuth::Real=180,
+    azimuth::Real = latitude≥0 ? 180 : 0, # set azimuth to zero for southern hemisphere
     gcr::Real=0.4,
     radius::Int=0,
     name::String="PV",
@@ -69,16 +71,15 @@ function PV(;
     production_incentive_per_kwh::Real = 0.0,
     production_incentive_max_benefit::Real = 1.0e9,
     production_incentive_years::Int = 1,
-    production_incentive_max_kw::Real = 1.0e9
+    production_incentive_max_kw::Real = 1.0e9,
     can_net_meter::Bool = off_grid_flag ? false : true,
     can_wholesale::Bool = off_grid_flag ? false : true,
     can_export_beyond_nem_limit::Bool = off_grid_flag ? false : true,
     can_curtail::Bool = true,
-    operating_reserve_required_pct::Real = off_grid_flag ? 0.25 : 0.0
+    operating_reserve_required_pct::Real = off_grid_flag ? 0.25 : 0.0, # if off grid, 25%, else 0%. Applied to each time_step as a % of PV generation.
 )
 ```
-!!! note
-    If `tilt` is not provided then it is set to the `Site.latitude`. (Which is handled in the `Scenario` struct.)
+
 """
 struct PV <: AbstractTech
     tilt
@@ -126,11 +127,12 @@ struct PV <: AbstractTech
 
     function PV(;
         off_grid_flag::Bool = false,
-        tilt::Real,
-        array_type::Int=1,
-        module_type::Int=0,
+        latitude::Real,
+        array_type::Int=1, # PV Watts array type (0: Ground Mount Fixed (Open Rack); 1: Rooftop, Fixed; 2: Ground Mount 1-Axis Tracking; 3 : 1-Axis Backtracking; 4: Ground Mount, 2-Axis Tracking)
+        tilt::Real= array_type == 1 ? 10 : abs(latitude), # tilt = 10 deg for rooftop systems, abs(lat) for ground-mount
+        module_type::Int=0, # PV module type (0: Standard; 1: Premium; 2: Thin Film)
         losses::Real=0.14,
-        azimuth::Real=180,
+        azimuth::Real = latitude≥0 ? 180 : 0, # set azimuth to zero for southern hemisphere
         gcr::Real=0.4,
         radius::Int=0,
         name::String="PV",
@@ -209,7 +211,7 @@ struct PV <: AbstractTech
             push!(invalid_args, "inv_eff must satisfy 0 <= inv_eff <= 1, got $(inv_eff)")
         end
         if !(0.0 <= dc_ac_ratio <= 2.0)
-            push!(invalid_args, "dc_ac_ratio must satisfy 0 <= dc_ac_ratio <= 1, got $(dc_ac_ratio)")
+            push!(invalid_args, "dc_ac_ratio must satisfy 0 <= dc_ac_ratio <= 2, got $(dc_ac_ratio)")
         end
         # TODO validate additional args
         if length(invalid_args) > 0
