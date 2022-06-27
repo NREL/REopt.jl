@@ -348,10 +348,6 @@ end
 FlexibleHVAC constructor for MPCScenario
 """
 function make_flex_hvac(d::Dict, flex_hvac_from_json::Bool, settings::Settings)
-    # have to provide city to make FlexibleHVAC
-    if !(haskey(d["FlexibleHVAC"], "city"))
-        throw(@error("You must provide the ASHRAE zone city for the FlexibleHVAC model. See the `ElectricLoad` docs for `city` options."))
-    end
     make_flex_hvac(d, flex_hvac_from_json, settings, "")
 end
 
@@ -364,7 +360,7 @@ function make_flex_hvac(d::Dict, flex_hvac_from_json::Bool, settings::Settings, 
         flexible_hvac = FlexibleHVAC(
             d["FlexibleHVAC"]["doe_reference_name"],
             get(d["FlexibleHVAC"], "city", city),
-            d["FlexibleHVAC"]["installed_cost"],
+            get(d["FlexibleHVAC"], "installed_cost", 0.0),
             get(d["FlexibleHVAC"], "temperature_upper_bound_degC_heating", nothing),
             get(d["FlexibleHVAC"], "temperature_lower_bound_degC_heating", nothing),
             get(d["FlexibleHVAC"], "temperature_upper_bound_degC_cooling", nothing),
