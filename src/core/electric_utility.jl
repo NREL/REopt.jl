@@ -53,8 +53,8 @@ function ElectricUtility(;
     scenarios::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:length(outage_durations),
     net_metering_limit_kw::Real = 0,
     interconnection_limit_kw::Real = 1.0e9,
-    latitude::Real,
-    longitude::Real,
+    latitude::Union{Nothing,Real} = nothing,
+    longitude::Union{Nothing,Real} = nothing,
     time_steps_per_hour::Int = 1
     )
 ```
@@ -63,7 +63,9 @@ function ElectricUtility(;
     Outage indexing begins at 1 (not 0) and the outage is inclusive of the outage end time step. 
     For instance, to model a 3-hour outage from 12AM to 3AM on Jan 1, outage_start_time_step = 1 and outage_end_time_step = 3.
     To model a 1-hour outage from 6AM to 7AM on Jan 1, outage_start_time_step = 7 and outage_end_time_step = 7.
-
+!!! note
+    Constructor is intended to be used with latitude/longitude arguments provided for
+    the non-MPC case and without latitude/longitude arguments provided for the MPC case
 """
 struct ElectricUtility
     emissions_region::String # AVERT emissions region
@@ -111,65 +113,69 @@ struct ElectricUtility
         scenarios::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:length(outage_durations),
         net_metering_limit_kw::Real = 0,
         interconnection_limit_kw::Real = 1.0e9,
-        latitude::Real,
-        longitude::Real,
+        latitude::Union{Nothing,Real} = nothing,
+        longitude::Union{Nothing,Real} = nothing,
         time_steps_per_hour::Int = 1
         )
 
-        region_lookup = Dict(
-            "AK" => "Alaska",
-            "CA" => "California",
-            "EMW" => "Great Lakes / Atlantic",
-            "NE" => "Northeast",
-            "NW" => "Northwest",
-            "RM" => "Rocky Mountains",
-            "SC" => "Lower Midwest",
-            "SE" => "Southeast",
-            "SW" => "Southwest",
-            "TX" => "Texas",
-            "WMW" => "Upper Midwest",
-            "HI" => "Hawaii (except Oahu)",
-            "HI-Oahu" => "Hawaii (Oahu)"
-        )
-        
-        region_abbr, meters_to_region = region_abbreviation(latitude, longitude)
-        emissions_region = get(region_lookup, region_abbr, "")
-        emissions_series_dict = Dict{String, Array{<:Real,1}}()
+        is_MPC = isnothing(latitude) || isnothing(longitude)
+        if !is_MPC
+            region_lookup = Dict(
+                "AK" => "Alaska",
+                "CA" => "California",
+                "EMW" => "Great Lakes / Atlantic",
+                "NE" => "Northeast",
+                "NW" => "Northwest",
+                "RM" => "Rocky Mountains",
+                "SC" => "Lower Midwest",
+                "SE" => "Southeast",
+                "SW" => "Southwest",
+                "TX" => "Texas",
+                "WMW" => "Upper Midwest",
+                "HI" => "Hawaii (except Oahu)",
+                "HI-Oahu" => "Hawaii (Oahu)"
+            )
+            
+            region_abbr, meters_to_region = region_abbreviation(latitude, longitude)
+            emissions_region = get(region_lookup, region_abbr, "")
+            emissions_series_dict = Dict{String, Array{<:Real,1}}()
 
-        #TODO: can this section be refactored by emissions_type by using Symbol("") technique?
-        #eval(Meta.parse("emissions_factor_series_lb_$(pollutant)_per_kwh")) does not work because
-        #eval is in global scope and doesn't have access to function arguments
-        for (eseries, ekey) in [
-            (emissions_factor_series_lb_CO2_per_kwh, "CO2"),
-            (emissions_factor_series_lb_NOx_per_kwh, "NOx"),
-            (emissions_factor_series_lb_SO2_per_kwh, "SO2"),
-            (emissions_factor_series_lb_PM25_per_kwh, "PM25")
-        ]
-            if typeof(eseries) <: Real  # user provided scaler value
-                emissions_series_dict[ekey] = repeat([eseries], 8760*time_steps_per_hour)
-            elseif length(eseries) == 1  # user provided array of one value
-                emissions_series_dict[ekey] = repeat(eseries, 8760*time_steps_per_hour)
-            elseif length(eseries) / time_steps_per_hour ≈ 8760  # user provided array with correct length
-                emissions_series_dict[ekey] = eseries
-            else
-                if length(eseries) > 1 && !(length(eseries) / time_steps_per_hour ≈ 8760)  # user provided array with incorrect length
-                    @warn "Provided ElectricUtility emissions factor series for $(ekey) will be ignored because it does not match the time_steps_per_hour. AVERT emissions data will be used."
+            #TODO: can this section be refactored by emissions_type by using Symbol("") technique?
+            #eval(Meta.parse("emissions_factor_series_lb_$(pollutant)_per_kwh")) does not work because
+            #eval is in global scope and doesn't have access to function arguments
+            for (eseries, ekey) in [
+                (emissions_factor_series_lb_CO2_per_kwh, "CO2"),
+                (emissions_factor_series_lb_NOx_per_kwh, "NOx"),
+                (emissions_factor_series_lb_SO2_per_kwh, "SO2"),
+                (emissions_factor_series_lb_PM25_per_kwh, "PM25")
+            ]
+                if typeof(eseries) <: Real  # user provided scaler value
+                    emissions_series_dict[ekey] = repeat([eseries], 8760*time_steps_per_hour)
+                elseif length(eseries) == 1  # user provided array of one value
+                    emissions_series_dict[ekey] = repeat(eseries, 8760*time_steps_per_hour)
+                elseif length(eseries) / time_steps_per_hour ≈ 8760  # user provided array with correct length
+                    emissions_series_dict[ekey] = eseries
+                else
+                    if length(eseries) > 1 && !(length(eseries) / time_steps_per_hour ≈ 8760)  # user provided array with incorrect length
+                        @warn "Provided ElectricUtility emissions factor series for $(ekey) will be ignored because it does not match the time_steps_per_hour. AVERT emissions data will be used."
+                    end
+                    # default action, can be set to zeros without region_abbr
+                    emissions_series_dict[ekey] = emissions_series(ekey, region_abbr, time_steps_per_hour=time_steps_per_hour)
                 end
-                # default action, can be set to zeros without region_abbr
-                emissions_series_dict[ekey] = emissions_series(ekey, region_abbr, time_steps_per_hour=time_steps_per_hour)
+            end
+
+            if (!isempty(outage_start_time_steps) && isempty(outage_durations)) || (isempty(outage_start_time_steps) && !isempty(outage_durations))
+                throw(@error "ElectricUtility inputs outage_start_time_steps and outage_durations must both be provided to model multiple outages")
+            end
+            if (outage_start_time_step == 0 && outage_end_time_step != 0) || (outage_start_time_step != 0 && outage_end_time_step == 0)
+                throw(@error "ElectricUtility inputs outage_start_time_step and outage_end_time_step must both be provided to model an outage")
+            end
+            # Warn if outage_start/end_time_step is provided and outage_start_time_steps not empty
+            if outage_start_time_step != 0 && outage_end_time_step !=0 && !isempty(outage_start_time_steps)
+                @warn "Inputs for multiple outages (outage_start_time_steps, outage_durations, outage_probabilities) will be ignored because singular outage_start(and end)_time_step were provided."
             end
         end
 
-        if (!isempty(outage_start_time_steps) && isempty(outage_durations)) || (isempty(outage_start_time_steps) && !isempty(outage_durations))
-            throw(@error "ElectricUtility inputs outage_start_time_steps and outage_durations must both be provided to model multiple outages")
-        end
-        if (outage_start_time_step == 0 && outage_end_time_step != 0) || (outage_start_time_step != 0 && outage_end_time_step == 0)
-            throw(@error "ElectricUtility inputs outage_start_time_step and outage_end_time_step must both be provided to model an outage")
-        end
-        # Warn if outage_start/end_time_step is provided and outage_start_time_steps not empty
-        if outage_start_time_step != 0 && outage_end_time_step !=0 && !isempty(outage_start_time_steps)
-            @warn "Inputs for multiple outages (outage_start_time_steps, outage_durations, outage_probabilities) will be ignored because singular outage_start(and end)_time_step were provided."
-        end
 
         # #Handle missing emissions inputs (due to failed lookup and not provided by user)
         # #TODO: condition below code on: if site.off_grid == false
@@ -196,12 +202,12 @@ struct ElectricUtility
         # end
 
         new(
-            emissions_region,
-            meters_to_region,
-            emissions_series_dict["CO2"],
-            emissions_series_dict["NOx"],
-            emissions_series_dict["SO2"],
-            emissions_series_dict["PM25"],
+            is_MPC ? "" : emissions_region,
+            is_MPC ? nothing : meters_to_region,
+            is_MPC ? Float64[] : emissions_series_dict["CO2"],
+            is_MPC ? Float64[] : emissions_series_dict["NOx"],
+            is_MPC ? Float64[] : emissions_series_dict["SO2"],
+            is_MPC ? Float64[] : emissions_series_dict["PM25"],
             emissions_factor_CO2_decrease_pct,
             emissions_factor_NOx_decrease_pct,
             emissions_factor_SO2_decrease_pct,
