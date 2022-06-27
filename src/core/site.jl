@@ -114,7 +114,7 @@ mutable struct Site
         end
         if !isnothing(renewable_electricity_max_pct) && !isnothing(renewable_electricity_min_pct)
             if (renewable_electricity_min_pct > renewable_electricity_max_pct)
-                push!(invalid_args, "renewable_electricity_min_pct must be less than renewable_electricity_max_pct")
+                push!(invalid_args, "renewable_electricity_min_pct must be less than or equal to renewable_electricity_max_pct")
             end
         end
         if length(invalid_args) > 0
