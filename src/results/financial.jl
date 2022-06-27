@@ -136,7 +136,7 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
         r["offgrid_microgrid_lcoe_dollars_per_kwh"] = round(r["lcc"] / pwf / value(LoadMet), digits=4)
     end
 
-    d["Financial"] = Dict{String, Union{Nothing,Float64}}(k => round(v, digits=4) for (k,v) in r)
+    d["Financial"] = Dict{String, Real}(k => round(v, digits=4) for (k,v) in r)
     nothing
 end
 
