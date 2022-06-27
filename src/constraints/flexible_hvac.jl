@@ -27,7 +27,7 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-function add_flexible_hvac_constraints(m, p::REoptInputs; _n="") 
+function add_flexible_hvac_constraints(m, p::AbstractInputs; _n="") 
 
     binFlexHVAC = @variable(m, binary = true)
     (N, J) = size(p.s.flexible_hvac.input_matrix)
@@ -170,7 +170,9 @@ function add_flexible_hvac_constraints(m, p::REoptInputs; _n="")
 
     @variable(m, dvFlexHVACcost >= 0)
     @constraint(m, binFlexHVAC => { dvFlexHVACcost >= p.s.flexible_hvac.installed_cost})
-    m[:TotalTechCapCosts] += dvFlexHVACcost
+    if :TotalTechCapCosts in keys(m.obj_dict)
+        m[:TotalTechCapCosts] += dvFlexHVACcost
+    end
 
     # If not buying FlexibleHVAC then the BAU (deadband) thermal loads must be met
     # NOTE indicator constraints cannot have line breaks (fails silently)
