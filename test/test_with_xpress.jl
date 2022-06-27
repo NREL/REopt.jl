@@ -517,6 +517,36 @@ end
     # the grid draw limit in the 10th time step is set to 90
     # without the 90 limit the grid draw is 98 in the 10th time step
     @test grid_draw[10] <= 90
+
+    @testset "FlexibleHVAC in MPC" begin
+
+        A = reshape([0.960789], 1,1)
+        B = [0.039210  9.802640e-6]
+
+        # Austin, TX -> existing_chiller and existing_boiler added with FlexibleHVAC
+        tamb = REopt.get_ambient_temperature(30.2672, -97.7431)[5840:5840+23];
+
+        u = [tamb zeros(24)]';
+        d = JSON.parsefile("./scenarios/mpc.json");
+
+        d["FlexibleHVAC"] = Dict(
+            "space_temperature_node" => 1,
+            "hvac_input_node" => 1,
+            "initial_temperatures" => [21],
+            "temperature_upper_bound_degC_heating" => 22.0,
+            "temperature_lower_bound_degC_heating" => 19.8,
+            "temperature_upper_bound_degC_cooling" => 22.0,
+            "temperature_lower_bound_degC_cooling" => 19.8,
+            "system_matrix" => A,
+            "input_matrix" => B,
+            "exogenous_inputs" => u
+        )
+
+        model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        r = run_mpc(model, d)
+        @test length(r["ElectricStorage"]["soc_series_pct"]) == 24
+        @test length(r["FlexibleHVAC"]["temperatures_degC_node_by_time"]) == 24
+    end
 end
 
 @testset "Complex Incentives" begin
