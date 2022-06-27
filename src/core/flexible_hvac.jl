@@ -281,7 +281,7 @@ end
         temperature_lower_bound_degC::Union{Real, Nothing} = nothing,
         temperature_upper_bound_degC_cooling::Union{Real, Nothing} = nothing,
         temperature_lower_bound_degC_cooling::Union{Real, Nothing} = nothing,
-        installed_cost::Float64
+        installed_cost::Float64 = 0.0
     )
 
 Constructor for `FlexibleHVAC` when the `system_matrix`, `input_matrix`, and `exogenous_inputs` values 
@@ -299,7 +299,7 @@ function FlexibleHVAC(;
         temperature_lower_bound_degC_heating::Union{Real, Nothing} = nothing,
         temperature_upper_bound_degC_cooling::Union{Real, Nothing} = nothing,
         temperature_lower_bound_degC_cooling::Union{Real, Nothing} = nothing,
-        installed_cost::Float64
+        installed_cost::Float64 = 0.0
     )
 
     bau_hvac = make_bau_hvac(system_matrix, input_matrix, exogenous_inputs, space_temperature_node, hvac_input_node,
