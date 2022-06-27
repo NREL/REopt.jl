@@ -38,6 +38,9 @@ struct MPCScenario <: AbstractScenario
     generator::MPCGenerator
     cooling_load::MPCCoolingLoad
     limits::MPCLimits
+    flexible_hvac::Union{FlexibleHVAC, Nothing}
+    existing_boiler::Union{ExistingBoiler, Nothing}
+    existing_chiller::Union{ExistingChiller, Nothing}
 end
 
 
@@ -56,6 +59,7 @@ Method for creating the MPCScenario struct:
         financial::MPCFinancial
         generator::MPCGenerator
         limits::MPCLimits
+        flexible_hvac::Union{FlexibleHVAC, Nothing}
     end
 ```
 
@@ -133,6 +137,15 @@ function MPCScenario(d::Dict)
         limits = MPCLimits()
     end
 
+    flexible_hvac = nothing
+    existing_boiler = nothing
+    existing_chiller = nothing
+
+    if haskey(d, "FlexibleHVAC")
+        flexible_hvac, existing_boiler, existing_chiller = 
+            make_flex_hvac(d, flex_hvac_from_json, settings, electric_load)
+    end
+
     return MPCScenario(
         settings,
         pvs, 
@@ -143,6 +156,9 @@ function MPCScenario(d::Dict)
         financial,
         generator,
         cooling_load,
-        limits
+        limits,
+        flexible_hvac,
+        existing_boiler,
+        existing_chiller
     )
 end
