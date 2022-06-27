@@ -3,6 +3,7 @@
 ## develop
 - fix bug for tiered, time-of-use demand rates
 - fix bug in results with tiered electrical energy costs
+- add `FlexibleHVAC` to MPC module
 
 ## v0.16.2
 - Update PV defaults to tilt=10 for rooftop, tilt = abs(lat) for ground mount, azimuth = 180 for northern lats, azimuth = 0 for southern lats.
