@@ -59,3 +59,13 @@ REopt.add_chp_results
 ```@docs
 REopt.add_outage_results
 ```
+
+## AbsorptionChiller outputs
+```@docs
+REopt.add_absorption_chiller_results
+```
+
+## FlexibleHVAC outputs
+```@docs
+REopt.add_flexible_hvac_results
+```
