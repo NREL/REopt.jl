@@ -29,7 +29,7 @@
 # *********************************************************************************
 """
 
-Create a `BAUInputs` (REoptInputs for the Business As Usual scenario) based on the `BAUScenario`.
+The`BAUInputs` (REoptInputs for the Business As Usual scenario) are created based on the `BAUScenario`, which is in turn created based on the optimized-case `Scenario`.
 
 The following assumptions are made for the BAU Inputs: 
 * `PV` and `Generator` `min_kw` and `max_kw` set to the `existing_kw` values
