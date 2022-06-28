@@ -38,14 +38,10 @@
 - `year_one_electric_consumption_series`
 - `year_one_electric_consumption_kwh`
 """
-
-"""
-	add_absorption_chiller_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
-
-Adds the `AbsorptionChiller` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
-Note: the node number is an empty string if evaluating a single `Site`.
-"""
 function add_absorption_chiller_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+	# Adds the `AbsorptionChiller` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+	# Note: the node number is an empty string if evaluating a single `Site`.	
+
     r = Dict{String, Any}()
 
 	# @expression(m, ELECCHLtoTES[ts in p.time_steps],

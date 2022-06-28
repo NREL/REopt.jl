@@ -38,17 +38,11 @@
 - `state_of_health`
 - `maintenance_cost`
 - `replacement_month`
-# The following are reported for mpc scenarios:
-- `soc_series_pct`
-"""
-
-"""
-    add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
-
-Adds the `Storage` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
-Note: the node number is an empty string if evaluating a single `Site`.
 """
 function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::String; _n="")
+    # Adds the `Storage` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+    # Note: the node number is an empty string if evaluating a single `Site`.
+
     r = Dict{String, Any}()
     r["size_kwh"] = round(value(m[Symbol("dvStorageEnergy"*_n)][b]), digits=2)
     r["size_kw"] = round(value(m[Symbol("dvStoragePower"*_n)][b]), digits=2)

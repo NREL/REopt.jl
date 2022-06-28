@@ -38,7 +38,6 @@
 - `lifecycle_fuel_cost_after_tax`
 - `year_one_fuel_cost_before_tax`
 """
-
 function add_existing_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 

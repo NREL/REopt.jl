@@ -35,7 +35,6 @@
 - `year_one_electric_consumption_kwh`
 - `year_one_thermal_production_tonhour`
 """
-
 function add_existing_chiller_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 

@@ -44,14 +44,10 @@
     The key(s) used to access PV outputs in the results dictionary is determined by the `PV.name` value to allow for modeling multiple PV options. (The default `PV.name` is "PV".)
 
 """
-
-"""
-    add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
-
-Adds the `PV` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
-Note: the node number is an empty string if evaluating a single `Site`.
-"""
 function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+    # Adds the `PV` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+    # Note: the node number is an empty string if evaluating a single `Site`.
+
     for t in p.techs.pv
         r = Dict{String, Any}()
 		r["size_kw"] = round(value(m[Symbol("dvSize"*_n)][t]), digits=4)

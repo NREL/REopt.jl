@@ -60,14 +60,10 @@
 !!! warn
 	The Outage results can be very large when many outages are modeled and can take a long time to generate.
 """
-
-"""
-	add_outage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict)
-
-Adds the `Outages` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs`.
-Only added to results when multiple outages are modeled via the `ElectricUtility.outage_durations` input.
-"""
 function add_outage_results(m, p, d::Dict)
+	# Adds the `Outages` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs`.
+	# Only added to results when multiple outages are modeled via the `ElectricUtility.outage_durations` input.
+
 	# TODO with many outages the dispatch arrays are so large that it can take hours to create them
 	# (eg. 8760 * 12 hour outages with PV, storage and diesel makes 7*12*8760 = 735,840 values)
 	# For now the outage dispatch outputs are not created (commented out below). Perhaps make a new
