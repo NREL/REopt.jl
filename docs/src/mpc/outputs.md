@@ -20,7 +20,7 @@ REopt.add_cold_storage_results(::JuMP.AbstractModel, ::MPCInputs, ::Dict, ::Stri
 
 ## MPC ElectricTariff outputs
 ```@docs
-REopt.add_electric_tariff_results(::JuMP.AbstractModel ::MPCInputs, ::Dict)
+REopt.add_electric_tariff_results(::JuMP.AbstractModel, ::MPCInputs, ::Dict)
 ```
 
 ## MPC ElectricUtility outputs
