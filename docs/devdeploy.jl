@@ -1,7 +1,7 @@
 using LiveServer
 
 """
-Run this script to locally host 
+Run this script to locally host the REopt.jl documentation.
 NOTE you have to dev REopt in the `docs` environment to get local changes. 
 
 e.g. 
