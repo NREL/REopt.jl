@@ -48,7 +48,7 @@ function add_yr1_emissions_calcs(m,p)
 	# Components:
 	m[:yr1_emissions_onsite_fuel_lbs_CO2], m[:yr1_emissions_onsite_fuel_lbs_NOx], 
 	m[:yr1_emissions_onsite_fuel_lbs_SO2], m[:yr1_emissions_onsite_fuel_lbs_PM25] = 
-	calc_yr1_emissions_from_onsite_fuel(m,p; tech_array=p.techs.fuel_burning)
+		calc_yr1_emissions_from_onsite_fuel(m,p; tech_array=p.techs.fuel_burning)
 
 	m[:yr1_emissions_from_elec_grid_lbs_CO2], m[:yr1_emissions_from_elec_grid_lbs_NOx], 
 	m[:yr1_emissions_from_elec_grid_lbs_SO2], m[:yr1_emissions_from_elec_grid_lbs_PM25] = 
@@ -76,7 +76,18 @@ function add_yr1_emissions_calcs(m,p)
 	nothing
 end
 
+"""
+	calc_yr1_emissions_from_onsite_fuel(m,p; tech_array=p.techs.fuel_burning)
 
+Function to calculate annual emissions from onsite fuel consumption.
+
+!!! note
+    When a single outage is modeled (using outage_start_time_step), emissions calculations 
+    account for operations during this outage (e.g., the critical load is used during 
+    time_steps_without_grid). On the contrary, when multiple outages are modeled (using 
+    outage_start_time_steps), emissions calculations reflect normal operations, and do not 
+	account for expected operations during modeled outages (time_steps_without_grid is empty)
+"""
 function calc_yr1_emissions_from_onsite_fuel(m,p; tech_array=p.techs.fuel_burning) # also run this with p.techs.boiler
 	yr1_emissions_onsite_fuel_lbs_CO2 = @expression(m,p.hours_per_time_step*
 		sum(m[:dvFuelUsage][t,ts]*p.tech_emissions_factors_CO2[t] for t in tech_array, ts in p.time_steps))
@@ -96,7 +107,18 @@ function calc_yr1_emissions_from_onsite_fuel(m,p; tech_array=p.techs.fuel_burnin
 		   yr1_emissions_onsite_fuel_lbs_PM25
 end
 
+"""
+	calc_yr1_emissions_from_elec_grid_purchase(m,p)
 
+Function to calculate annual emissions from grid electricity consumption.
+
+!!! note
+    When a single outage is modeled (using outage_start_time_step), emissions calculations 
+    account for operations during this outage (e.g., the critical load is used during 
+    time_steps_without_grid). On the contrary, when multiple outages are modeled (using 
+    outage_start_time_steps), emissions calculations reflect normal operations, and do not 
+	account for expected operations during modeled outages (time_steps_without_grid is empty)
+"""
 function calc_yr1_emissions_from_elec_grid_purchase(m,p)
 	yr1_emissions_from_elec_grid_lbs_CO2 = @expression(m,p.hours_per_time_step*
 		sum(m[:dvGridPurchase][ts, tier]*p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh[ts] for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers))
