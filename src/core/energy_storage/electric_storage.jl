@@ -161,7 +161,7 @@ end
 
 
 """
-`ElectricStorage` is an optional optional REopt input with the following keys:
+`ElectricStorage` is an optional optional REopt input with the following keys and default values:
 
 ```julia
     off_grid_flag::Bool = false  

@@ -28,7 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-`Generator` is an optional REopt input with the following keys:
+`Generator` is an optional REopt input with the following keys and default values:
 ```julia
     existing_kw::Real = 0,
     min_kw::Real = 0,

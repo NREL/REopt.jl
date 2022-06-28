@@ -73,7 +73,6 @@ REopt.ElectricLoad
 
 ## ElectricTariff
 ```@docs
-REopt.ElectricTariff
 REopt.ElectricTariff()
 ```
 

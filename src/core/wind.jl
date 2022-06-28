@@ -28,7 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-`Wind` is an optional REopt input with the following keys:
+`Wind` is an optional REopt input with the following keys and default values:
 ```julia
     min_kw = 0.0,
     max_kw = 1.0e9,

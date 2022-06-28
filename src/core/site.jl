@@ -30,7 +30,7 @@
 """
 Inputs related to the physical location:
 
-`Site` is a required REopt input with the following keys:
+`Site` is a required REopt input with the following keys and default values:
 ```julia
     latitude::Real, 
     longitude::Real, 
