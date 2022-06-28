@@ -28,7 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-`ElectricLoad` is a required REopt input with the following keys:
+`ElectricLoad` is a required REopt input with the following keys and default values:
 ```julia
     loads_kw::Array{<:Real,1} = Real[],
     path_to_csv::String = "",

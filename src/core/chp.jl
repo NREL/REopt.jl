@@ -31,7 +31,7 @@
 prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cell"]
 
 """
-`CHP` is an optional REopt input with the following keys:
+`CHP` is an optional REopt input with the following keys and default values:
 ```julia
     prime_mover::String = ""
 

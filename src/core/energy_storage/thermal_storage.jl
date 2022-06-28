@@ -32,7 +32,7 @@
 """
 Cold thermal energy storage sytem; specifically, a chilled water system used to meet thermal cooling loads.
 
-`ColdThermalStorage` is an optional REopt input with the following keys:
+`ColdThermalStorage` is an optional REopt input with the following keys and default values:
 
 ```julia
     min_gal::Float64 = 0.0
@@ -72,7 +72,7 @@ end
 
 
 """
-`HotThermalStorage` is an optional REopt input with the following keys:
+`HotThermalStorage` is an optional REopt input with the following keys and default values:
 
 ```julia
     min_gal::Float64 = 0.0

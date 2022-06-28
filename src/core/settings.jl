@@ -30,7 +30,7 @@
 """
 Captures high-level inputs affecting the optimization.
 
-`Settings` is an optional REopt input with the following keys:
+`Settings` is an optional REopt input with the following keys and default values:
 ```julia
     time_steps_per_hour::Int = 1
     add_soc_incentive::Bool = true

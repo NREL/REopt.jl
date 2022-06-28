@@ -28,7 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-`DomesticHotWaterLoad` is an optional REopt input with the following keys:
+`DomesticHotWaterLoad` is an optional REopt input with the following keys and default values:
 ```julia
     doe_reference_name::String = "",
     blended_doe_reference_names::Array{String, 1} = String[],
@@ -96,7 +96,7 @@ end
 
 
 """
-`SpaceHeatingLoad` is an optional REopt input with the following keys:
+`SpaceHeatingLoad` is an optional REopt input with the following keys and default values:
 ```julia
     doe_reference_name::String = "",
     blended_doe_reference_names::Array{String, 1} = String[],
