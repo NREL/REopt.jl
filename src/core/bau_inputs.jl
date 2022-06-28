@@ -216,8 +216,15 @@ Pre-processing of the BAU emissions to use in determining emissions reductions i
 Include BAU grid emissions, existing backup generator emissions, boiler emissions
 Update the `bau_(grid_)emissions_` values in s.site and s_bau.site
 
-Note if existing generation does not sustain a simulated outage, the BAU load and therefore emissions
-are 0 during unsurvived outage hours
+!!! note
+    If existing generation does not sustain a simulated deterministic outage, the BAU load and 
+    therefore emissions are 0 during unsurvived outage hours
+!!! note
+    When a single outage is modeled (using outage_start_time_step), emissions calculations 
+    account for operations during this outage (e.g., the critical load is used during 
+    time_steps_without_grid). On the contrary, when multiple outages are modeled (using 
+    outage_start_time_steps), renewable electricity calculations reflect normal operations, 
+    and do not account for expected operations during modeled outages (time_steps_without_grid is empty)
 """
 function setup_bau_emissions_inputs(p::REoptInputs, s_bau::BAUScenario, generator_fuel_use_gal::Real)
     
