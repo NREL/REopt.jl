@@ -134,7 +134,7 @@ struct PV <: AbstractTech
         losses::Real=0.14,
         azimuth::Real = latitude≥0 ? 180 : 0, # set azimuth to zero for southern hemisphere
         gcr::Real=0.4,
-        radius::Int=0,
+        radius::Int=0, # Radius, in miles, to use when searching for the closest climate data station. Use zero to use the closest station regardless of the distance
         name::String="PV",
         location::String="both",
         existing_kw::Real=0,
