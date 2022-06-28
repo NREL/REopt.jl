@@ -7,7 +7,7 @@ REopt.add_financial_results
 
 ## ElectricTariff outputs
 ```@docs
-REopt.add_electric_tariff_results(::JuMP.AbstractModel ::REoptInputs, ::Dict)
+REopt.add_electric_tariff_results(::JuMP.AbstractModel, ::REoptInputs, ::Dict)
 ```
 
 ## ElectricLoad outputs

@@ -53,7 +53,7 @@ Scenario
 ## BAUScenario
 The Business-as-usual (BAU) inputs are automatically created based on the `BAUScenario` struct when a user supplies two `JuMP.Model`s to `run_reopt()` (as shown in [Examples](@ref)). The results of the BAU scenario are used to calculate comparative results such as the `Financial` net present value (`npv`).
 ```@docs
-BAUInputs
+REopt.BAUInputs
 ```
 
 ## Site
