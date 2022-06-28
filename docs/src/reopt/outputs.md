@@ -17,7 +17,7 @@ REopt.add_electric_load_results
 
 ## ElectricUtility outputs
 ```@docs
-REopt.add_electric_utility_results(::JuMP.AbstractModel, ::AbstractInputs, ::Dict)
+REopt.add_electric_utility_results(::JuMP.AbstractModel, ::REoptInputs, ::Dict)
 ```
 
 ## PV outputs

@@ -28,8 +28,6 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    Settings
-
 Captures high-level inputs affecting the optimization.
 
 `Settings` is an optional REopt input with the following keys:

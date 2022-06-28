@@ -36,8 +36,6 @@ end
 
 
 """
-    ExistingBoiler
-
 `ExistingBoiler` is an optional REopt input with the following keys:
 ```julia
     max_heat_demand_kw::Real=0,

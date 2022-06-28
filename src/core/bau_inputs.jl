@@ -32,12 +32,12 @@
 Create a `BAUInputs` (REoptInputs for the Business As Usual scenario) based on the `BAUScenario`.
 
 The following assumptions are made for the BAU Inputs: 
-    - `PV` and `Generator` `min_kw` and `max_kw` set to the `existing_kw` values
-    - `ExistingBoiler` and `ExistingChiller`  # TODO
-    - All other generation and storage tech sizes set to zero 
-    - Capital costs are assumed to be zero for existing `PV` and `Generator`
-    - O&M costs and all other tech inputs are assumed to be the same for existing `PV` and `Generator` as those specified for the optimized case
-    - Outage assumptions for deterministic vs stochastic # TODO 
+* `PV` and `Generator` `min_kw` and `max_kw` set to the `existing_kw` values
+* `ExistingBoiler` and `ExistingChiller`  # TODO
+* All other generation and storage tech sizes set to zero 
+* Capital costs are assumed to be zero for existing `PV` and `Generator`
+* O&M costs and all other tech inputs are assumed to be the same for existing `PV` and `Generator` as those specified for the optimized case
+* Outage assumptions for deterministic vs stochastic # TODO 
 """
 function BAUInputs(p::REoptInputs)
     bau_scenario = BAUScenario(p.s)

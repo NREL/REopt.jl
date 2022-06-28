@@ -28,8 +28,6 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    ExistingChiller 
-
 `ExistingChiller` is an optional REopt input with the following keys:
 ```julia
     loads_kw_thermal::Vector{<:Real},

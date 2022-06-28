@@ -28,8 +28,6 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    DomesticHotWaterLoad
-
 `DomesticHotWaterLoad` is an optional REopt input with the following keys:
 ```julia
     doe_reference_name::String = "",
@@ -98,8 +96,6 @@ end
 
 
 """
-SpaceHeatingLoad
-
 `SpaceHeatingLoad` is an optional REopt input with the following keys:
 ```julia
     doe_reference_name::String = "",

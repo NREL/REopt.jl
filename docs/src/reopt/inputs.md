@@ -56,6 +56,11 @@ The Business-as-usual (BAU) inputs are automatically created based on the `BAUSc
 REopt.BAUInputs
 ```
 
+## Settings
+```@docs
+REopt.Settings
+```
+
 ## Site
 ```@docs
 REopt.Site
@@ -103,11 +108,6 @@ REopt.Degradation
 REopt.Generator
 ```
 
-## Settings
-```@docs
-REopt.Settings
-```
-
 ## ExistingBoiler
 ```@docs
 REopt.ExistingBoiler
@@ -123,12 +123,12 @@ REopt.AbsorptionChiller
 REopt.CHP
 ```
 
-## HotStorage
+## HotThermalStorage
 ```@docs
 REopt.HotThermalStorageDefaults
 ```
 
-## ColdStorage
+## ColdThermalStorage
 ```@docs
 REopt.ColdThermalStorageDefaults
 ```

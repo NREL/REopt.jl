@@ -28,27 +28,25 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    ElectricLoad 
-
 `ElectricLoad` is a required REopt input with the following keys:
-    ```julia
-        loads_kw::Array{<:Real,1} = Real[],
-        path_to_csv::String = "",
-        year::Int = 2020, # used in ElectricTariff to align rate schedule with weekdays/weekends
-        doe_reference_name::String = "",
-        blended_doe_reference_names::Array{String, 1} = String[],
-        blended_doe_reference_percents::Array{<:Real,1} = Real[],
-        city::String = "",
-        annual_kwh::Union{Real, Nothing} = nothing,
-        monthly_totals_kwh::Array{<:Real,1} = Real[],
-        critical_loads_kw::Union{Missing, Array{Real,1}} = missing,
-        loads_kw_is_net::Bool = true,
-        critical_loads_kw_is_net::Bool = false,
-        critical_load_pct::Real = off_grid_flag ? 1.0 : 0.5, # if off grid must be 1.0, else 0.5
-        time_steps_per_hour::Int = 1,
-        operating_reserve_required_pct::Real = off_grid_flag ? 0.1 : 0.0, # if off grid, 10%, else must be 0%. Applied to each time_step as a % of electric load.
-        min_load_met_annual_pct::Real = off_grid_flag ? 0.99999 : 1.0 # if off grid, 99.999%, else must be 100%. Applied to each time_step as a % of electric load.
-    ```
+```julia
+    loads_kw::Array{<:Real,1} = Real[],
+    path_to_csv::String = "",
+    year::Int = 2020, # used in ElectricTariff to align rate schedule with weekdays/weekends
+    doe_reference_name::String = "",
+    blended_doe_reference_names::Array{String, 1} = String[],
+    blended_doe_reference_percents::Array{<:Real,1} = Real[],
+    city::String = "",
+    annual_kwh::Union{Real, Nothing} = nothing,
+    monthly_totals_kwh::Array{<:Real,1} = Real[],
+    critical_loads_kw::Union{Missing, Array{Real,1}} = missing,
+    loads_kw_is_net::Bool = true,
+    critical_loads_kw_is_net::Bool = false,
+    critical_load_pct::Real = off_grid_flag ? 1.0 : 0.5, # if off grid must be 1.0, else 0.5
+    time_steps_per_hour::Int = 1,
+    operating_reserve_required_pct::Real = off_grid_flag ? 0.1 : 0.0, # if off grid, 10%, else must be 0%. Applied to each time_step as a % of electric load.
+    min_load_met_annual_pct::Real = off_grid_flag ? 0.99999 : 1.0 # if off grid, 99.999%, else must be 100%. Applied to each time_step as a % of electric load.
+```
 
 !!! note "Required inputs"
     Must provide either `loads_kw` or `path_to_csv` or [`doe_reference_name` and `city`] or `doe_reference_name` or [`blended_doe_reference_names` and `blended_doe_reference_percents`]. 

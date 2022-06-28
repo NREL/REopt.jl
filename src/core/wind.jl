@@ -28,8 +28,6 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    Wind
-
 `Wind` is an optional REopt input with the following keys:
 ```julia
     min_kw = 0.0,

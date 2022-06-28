@@ -28,8 +28,6 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    ElectricUtility
-
 `ElectricUtility` is an optional REopt input with the following keys:
 ```julia
     outage_start_time_step::Int=0,  # for modeling a single outage, with critical load spliced into the baseline load ...
