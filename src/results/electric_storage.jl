@@ -28,7 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-`Storage` results keys:
+`ElectricStorage` results keys:
 - `size_kw` Optimal inverter capacity
 - `size_kwh` Optimal storage capacity
 - `year_one_soc_series_pct` Vector of normalized (0-1) state of charge values over the first year
@@ -75,7 +75,10 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
     nothing
 end
 
-
+"""
+MPC `ElectricStorage` results keys:
+- `soc_series_pct` Vector of normalized (0-1) state of charge values over time horizon
+"""
 function add_electric_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b::String; _n="")
     r = Dict{String, Any}()
 

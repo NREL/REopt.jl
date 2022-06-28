@@ -76,7 +76,12 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     nothing
 end
 
-
+"""
+MPC `ElectricTariff` results keys:
+- `energy_cost`
+- `demand_cost`
+- `export_benefit`
+"""
 function add_electric_tariff_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     r = Dict{String, Any}()
     m[Symbol("energy_purchased"*_n)] = p.hours_per_time_step * 
