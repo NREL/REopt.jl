@@ -343,9 +343,6 @@ end
 
 
 """
-    MPCFlexibleHVAC
-
-
 The `FlexibleHVAC` system is modeled via a discrete state-space system:
 
 ``\\boldsymbol{x}[t+1] = \\boldsymbol{A x}[t] + \\boldsymbol{B u}[t]``
@@ -368,7 +365,7 @@ For example
 A = reshape([0.960789], 1,1)
 B = [0.039210  9.802640e-6]
 
-ambient_temperature = REopt.get_ambient_temperature(30.2672, -97.7431)[5840:5840+23];
+ambient_temperature = REopt.get_ambient_temperature(30.2672, -97.7431)[5840:5840+23]; # only need 24 time steps
 
 u = [ambient_temperature zeros(24)]';
 d = JSON.parsefile("./scenarios/mpc.json");  # in REopt.jl test directory
