@@ -64,6 +64,11 @@ function ElectricUtility(;
     For instance, to model a 3-hour outage from 12AM to 3AM on Jan 1, outage_start_time_step = 1 and outage_end_time_step = 3.
     To model a 1-hour outage from 6AM to 7AM on Jan 1, outage_start_time_step = 7 and outage_end_time_step = 7.
 !!! note
+    If a single deterministic outage is modeled using outage_start_time_step and outage_end_time_step,
+    emissions and renewable energy percentage calculations and constraints factor in this outage.
+    If stochastic outage modeling is used outage_start_time_steps, outage_durations, and outage_probabilities,
+    emissions and renewable energy percentage calculations and constraints do not consider outages.
+!!! note
     This constructor is intended to be used with latitude/longitude arguments provided for
     the non-MPC case and without latitude/longitude arguments provided for the MPC case
 """
