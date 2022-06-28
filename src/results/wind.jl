@@ -41,15 +41,10 @@
 - `lcoe_per_kwh` Levelized Cost of Energy produced by the PV system
 - `year_one_curtailed_production_series_kw` Vector of power curtailed over the first year
 """
-
-"""
-	add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
-
-Adds the `Wind` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
-Note: the node number is an empty string if evaluating a single `Site`.
-
-"""
 function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+	# Adds the `Wind` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+	# Note: the node number is an empty string if evaluating a single `Site`.
+
     r = Dict{String, Any}()
     t = "Wind"
 	per_unit_size_om = @expression(m, p.third_party_factor * p.pwf_om * m[:dvSize][t] * p.om_cost_per_kw[t])

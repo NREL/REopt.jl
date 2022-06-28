@@ -43,14 +43,10 @@
 - `year_one_energy_produced_kwh` Total energy produced in year one
 - `average_annual_energy_produced_kwh` Average annual energy produced over analysis period
 """
-
-"""
-	add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
-
-Adds the `Generator` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
-Note: the node number is an empty string if evaluating a single `Site`.
-"""
 function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+	# Adds the `Generator` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+	# Note: the node number is an empty string if evaluating a single `Site`.
+
     r = Dict{String, Any}()
 
 	GenPerUnitSizeOMCosts = @expression(m, p.third_party_factor * p.pwf_om * sum(m[:dvSize][t] * p.om_cost_per_kw[t] for t in p.techs.gen))

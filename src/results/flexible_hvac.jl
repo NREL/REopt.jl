@@ -33,7 +33,6 @@
 - `temperatures_degC_node_by_time`
 - `upgrade_cost`
 """
-
 function add_flexible_hvac_results(m::JuMP.AbstractModel, p::REoptInputs{Scenario}, d::Dict; _n="")
     r = Dict{String, Any}()
     binFlexHVAC = value(m[:binFlexHVAC]) > 0.5 ? 1.0 : 0.0

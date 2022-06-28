@@ -33,14 +33,10 @@
 - `year_one_to_load_series_kw` Vector of power drawn from the grid to serve load in year one.
 - `year_one_to_battery_series_kw` Vector of power drawn from the grid to charge the battery in year one.
 """
-
-"""
-    add_electric_utility_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
-
-Adds the `ElectricUtility` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
-Note: the node number is an empty string if evaluating a single `Site`.
-"""
 function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, d::Dict; _n="")
+    # Adds the `ElectricUtility` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+    # Note: the node number is an empty string if evaluating a single `Site`.
+
     r = Dict{String, Any}()
 
     Year1UtilityEnergy = p.hours_per_time_step * sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] 
