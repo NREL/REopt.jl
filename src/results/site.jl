@@ -112,8 +112,8 @@ end
 Function to calculate annual energy (electricity plus heat) demand and annual energy demand derived from renewable energy.
 
 !!! note
-    When a single outage is modeled (using outage_start_time_step), renewable electricity calculations account for operations during this outage (e.g., the critical load is used during time_steps_without_grid)
-	On the contrary, when multiple outages are modeled (using outage_start_time_steps), renewable electricity calculations reflect normal operations, and do not account for expected operations during modeled outages (time_steps_without_grid is empty)
+    When a single outage is modeled (using outage_start(/end)_time_step), renewable electricity calculations account for operations during this outage (e.g., the critical load is used during time_steps_without_grid)
+	On the contrary, when multiple outages are modeled (using outage_start_time_steps, etc.), renewable electricity calculations reflect normal operations, and do not account for expected operations during modeled outages (time_steps_without_grid is empty)
 """
 #Renewable heat calculations and totalling heat/electric emissions
 function add_re_tot_calcs(m::JuMP.AbstractModel, p::REoptInputs)
