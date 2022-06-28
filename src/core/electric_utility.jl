@@ -178,8 +178,8 @@ struct ElectricUtility
             if !isempty(outage_start_time_steps)
                 if outage_start_time_step != 0 && outage_end_time_step !=0
                     # Warn if outage_start/end_time_step is provided and outage_start_time_steps not empty
-                    @warn ("Inputs for stochastic outage modeling (i.e. outage_start_time_steps, outage_durations, outage_probabilities) 
-                        will be ignored because singular outage_start(and end)_time_step were provided.")
+                    error("Cannot supply both outage_start(/end)_time_step for deterministic outage modeling and 
+                        multiple outage_start_time_steps for stochastic outage modeling. Please use one or the other.")
                 else
                     @warn ("When using stochastic outage modeling (i.e. outage_start_time_steps, outage_durations, outage_probabilities), 
                         emissions and renewable energy percentage calculations and constraints do not consider outages.")
