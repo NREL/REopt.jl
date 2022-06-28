@@ -64,7 +64,7 @@ function ElectricUtility(;
     For instance, to model a 3-hour outage from 12AM to 3AM on Jan 1, outage_start_time_step = 1 and outage_end_time_step = 3.
     To model a 1-hour outage from 6AM to 7AM on Jan 1, outage_start_time_step = 7 and outage_end_time_step = 7.
 !!! note
-    Constructor is intended to be used with latitude/longitude arguments provided for
+    This constructor is intended to be used with latitude/longitude arguments provided for
     the non-MPC case and without latitude/longitude arguments provided for the MPC case
 """
 struct ElectricUtility
@@ -165,10 +165,10 @@ struct ElectricUtility
             end
 
             if (!isempty(outage_start_time_steps) && isempty(outage_durations)) || (isempty(outage_start_time_steps) && !isempty(outage_durations))
-                throw(@error "ElectricUtility inputs outage_start_time_steps and outage_durations must both be provided to model multiple outages")
+                error("ElectricUtility inputs outage_start_time_steps and outage_durations must both be provided to model multiple outages")
             end
             if (outage_start_time_step == 0 && outage_end_time_step != 0) || (outage_start_time_step != 0 && outage_end_time_step == 0)
-                throw(@error "ElectricUtility inputs outage_start_time_step and outage_end_time_step must both be provided to model an outage")
+                error("ElectricUtility inputs outage_start_time_step and outage_end_time_step must both be provided to model an outage")
             end
             # Warn if outage_start/end_time_step is provided and outage_start_time_steps not empty
             if outage_start_time_step != 0 && outage_end_time_step !=0 && !isempty(outage_start_time_steps)
@@ -183,7 +183,7 @@ struct ElectricUtility
         #     if (!isnothing(site.CO2_emissions_reduction_min_pct) || 
         #         !isnothing(site.CO2_emissions_reduction_max_pct) || 
         #         settings.include_climate_in_objective)
-        #         throw(@error "To include CO2 costs in the objective function or enforce emissions reduction constraints, you must either enter custom health emissions factors or a site location within the continental U.S.")
+        #         error("To include CO2 costs in the objective function or enforce emissions reduction constraints, you must either enter custom health emissions factors or a site location within the continental U.S.")
         #     else
         #         electric_utility.emissions_factor_series_lb_CO2_per_kwh = zeros(8760*settings.time_steps_per_hour)
         #     end
@@ -191,7 +191,7 @@ struct ElectricUtility
         # for emissions_type in ["NOx", "SO2", "PM25"]
         #     if isnothing(getproperty(electric_utility, Symbol("emissions_factor_series_lb_$(emissions_type)_per_kwh")))
         #         if settings.include_health_in_objective
-        #             throw(@error "To include health costs in the objective function, you must either enter custom health emissions factors or a site location within the continental U.S.")
+        #             error("To include health costs in the objective function, you must either enter custom health emissions factors or a site location within the continental U.S.")
         #         else
         #             setproperty!(electric_utility, 
         #                 Symbol("emissions_factor_series_lb_$(emissions_type)_per_kwh"), 

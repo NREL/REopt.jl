@@ -88,7 +88,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         offgrid_allowed_keys = ["PV", "ElectricStorage", "Generator", "Settings", "Site", "Financial", "ElectricLoad", "ElectricTariff", "ElectricUtility"]
         unallowed_keys = setdiff(keys(d), offgrid_allowed_keys) 
         if !isempty(unallowed_keys)
-            throw(@error "Currently, only PV, ElectricStorage, and Generator can be modeled when off_grid_flag is true. Cannot model $unallowed_keys.")
+            error("Currently, only PV, ElectricStorage, and Generator can be modeled when off_grid_flag is true. Cannot model $unallowed_keys.")
         end
     end
     
@@ -157,7 +157,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     #     end
     # end
     # if missing_health_inputs && settings.include_health_in_objective
-    #     throw(@error "To include health costs in the objective function, you must either enter custom emissions costs and escalation rates or a site location within the CAMx grid.")
+    #     error("To include health costs in the objective function, you must either enter custom emissions costs and escalation rates or a site location within the CAMx grid.")
     # end
         
     storage_structs = Dict{String, AbstractStorage}()
