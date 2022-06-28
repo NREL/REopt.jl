@@ -28,8 +28,6 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    Site
-
 Inputs related to the physical location:
 
 `Site` is a required REopt input with the following keys:

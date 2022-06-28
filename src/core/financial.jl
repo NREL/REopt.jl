@@ -28,8 +28,6 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    Financial
-
 `Financial` is an optional REopt input with the following keys:
 ```julia
     om_cost_escalation_pct::Real = 0.025,

@@ -38,8 +38,6 @@ end
 
 
 """
-    FlexibleHVAC
-
 `FlexibleHVAC` is an optional REopt input with the following keys: 
 ```julia
     system_matrix::AbstractMatrix{Float64}  # N x N, with N states (temperatures in RC network)

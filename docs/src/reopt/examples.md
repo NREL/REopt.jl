@@ -2,6 +2,7 @@
 To use REopt you will need to have a solver installed. REopt.jl has been tested with Xpress, Cbc, and CPLEX solvers, but it should work with other Linear Progam solvers (for PV and Storage scenarios) or Mixed Integer Linear Program solvers (for scenarios with outages and/or Generators).
 
 ## Basic
+A REopt optimization can be run with three lines: 
 ```julia
 using REopt, JuMP, Cbc
 
@@ -9,7 +10,7 @@ m = Model(Cbc.Optimizer)
 results = run_reopt(m, "test/scenarios/pv_storage.json")
 ```
 
-For more on the `scenario.json` see the [REopt Inputs](@ref) section. For examples of `scenario.json` see [test/scenarios](https://github.com/NREL/REopt/blob/master/test/scenarios). For more examples of how to run REopt, see [`test_with_cplex.jl`](https://github.com/NREL/REopt/blob/master/test/test_with_cplex.jl) and [`test_with_xpress.jl`](https://github.com/NREL/REopt/blob/master/test/test_with_xpress.jl)
+The `scenario.json` contains a `Dict` of inputs. For more on the `scenario.json` see the [REopt Inputs](@ref) section and find examples at [test/scenarios](https://github.com/NREL/REopt/blob/master/test/scenarios). For more examples of how to run REopt, see [`test_with_cplex.jl`](https://github.com/NREL/REopt/blob/master/test/test_with_cplex.jl) and [`test_with_xpress.jl`](https://github.com/NREL/REopt/blob/master/test/test_with_xpress.jl)
 
 To compare the optimized case to a "Business-as-usual" case (with existing techs or no techs), you can run the [BAUScenario](@ref) scenario in parallel by providing two `JuMP.Model`s like so:
 ```julia
@@ -20,7 +21,7 @@ results = run_reopt([m1,m2], "./scenarios/pv_storage.json")
 When the [BAUScenario](@ref) is included as shown above, the outputs will include comparative results such as the net present value and emissions reductions of the optimal system as compared to the BAU Scenario.
 
 !!! note "BAU Scenario" 
-    Note that while two JuMP models are created, only a single input dict is used to run the `BAU` and optimized cases in parallel. The [BAUScenario](@ref) will be automatically created based on the input dict. 
+    Note that while two JuMP models are needed to run the `BAU` and optimized cases in parallel, only a single input dict is used. The [BAUScenario](@ref) will be automatically created based on the input dict. 
 
 
 ## Advanced

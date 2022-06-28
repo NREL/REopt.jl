@@ -31,65 +31,63 @@
 prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cell"]
 
 """
-    CHP
-
 `CHP` is an optional REopt input with the following keys:
 ```julia
-prime_mover::String = ""
+    prime_mover::String = ""
 
-# Required "custom inputs" if not providing prime_mover:
-installed_cost_per_kw::Union{Float64, AbstractVector{Float64}} = NaN
-tech_sizes_for_cost_curve::Union{Float64, AbstractVector{Float64}} = NaN
-om_cost_per_kwh::Float64 = NaN
-elec_effic_half_load = NaN
-elec_effic_full_load::Float64 = NaN
-min_turn_down_pct::Float64 = NaN
-thermal_effic_full_load::Float64 = NaN
-thermal_effic_half_load::Float64 = NaN
-min_allowable_kw::Float64 = NaN
-max_kw::Float64 = NaN
-cooling_thermal_factor::Float64 = NaN  # only needed with cooling load
-unavailability_periods::AbstractVector{Dict} = Dict[]
+    # Required "custom inputs" if not providing prime_mover:
+    installed_cost_per_kw::Union{Float64, AbstractVector{Float64}} = NaN
+    tech_sizes_for_cost_curve::Union{Float64, AbstractVector{Float64}} = NaN
+    om_cost_per_kwh::Float64 = NaN
+    elec_effic_half_load = NaN
+    elec_effic_full_load::Float64 = NaN
+    min_turn_down_pct::Float64 = NaN
+    thermal_effic_full_load::Float64 = NaN
+    thermal_effic_half_load::Float64 = NaN
+    min_allowable_kw::Float64 = NaN
+    max_kw::Float64 = NaN
+    cooling_thermal_factor::Float64 = NaN  # only needed with cooling load
+    unavailability_periods::AbstractVector{Dict} = Dict[]
 
-# Optional inputs:
-size_class::Int = 1
-min_kw::Float64 = 0.0
-fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
-om_cost_per_kw::Float64 = 0.0
-om_cost_per_hr_per_kw_rated::Float64 = 0.0
-supplementary_firing_capital_cost_per_kw::Float64 = 150.0
-supplementary_firing_max_steam_ratio::Float64 = 1.0
-supplementary_firing_efficiency::Float64 = 0.92
-standby_rate_us_dollars_per_kw_per_month = 0.0
-reduces_demand_charges = true
-use_default_derate::Bool = true
-max_derate_factor::Float64 = 1.0
-derate_start_temp_degF::Float64 = 0.0
-derate_slope_pct_per_degF::Float64 = 0.0
-can_supply_steam_turbine::Bool=false
+    # Optional inputs:
+    size_class::Int = 1
+    min_kw::Float64 = 0.0
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
+    om_cost_per_kw::Float64 = 0.0
+    om_cost_per_hr_per_kw_rated::Float64 = 0.0
+    supplementary_firing_capital_cost_per_kw::Float64 = 150.0
+    supplementary_firing_max_steam_ratio::Float64 = 1.0
+    supplementary_firing_efficiency::Float64 = 0.92
+    standby_rate_us_dollars_per_kw_per_month = 0.0
+    reduces_demand_charges = true
+    use_default_derate::Bool = true
+    max_derate_factor::Float64 = 1.0
+    derate_start_temp_degF::Float64 = 0.0
+    derate_slope_pct_per_degF::Float64 = 0.0
+    can_supply_steam_turbine::Bool=false
 
-macrs_option_years::Int = 5
-macrs_bonus_pct::Float64 = 1.0
-macrs_itc_reduction::Float64 = 0.5
-federal_itc_pct::Float64 = 0.1
-federal_rebate_per_kw::Float64 = 0.0
-state_ibi_pct::Float64 = 0.0
-state_ibi_max::Float64 = 1.0e10
-state_rebate_per_kw::Float64 = 0.0
-state_rebate_max::Float64 = 1.0e10
-utility_ibi_pct::Float64 = 0.0
-utility_ibi_max::Float64 = 1.0e10
-utility_rebate_per_kw::Float64 = 0.0
-utility_rebate_max::Float64 = 1.0e10
-production_incentive_per_kwh::Float64 = 0.0
-production_incentive_max_benefit::Float64 = 1.0e9
-production_incentive_years::Int = 0
-production_incentive_max_kw::Float64 = 1.0e9
-can_net_meter::Bool = false
-can_wholesale::Bool = false
-can_export_beyond_nem_limit::Bool = false
-can_curtail::Bool = false
-# emissions_factor_lb_CO2_per_mmbtu::Float64
+    macrs_option_years::Int = 5
+    macrs_bonus_pct::Float64 = 1.0
+    macrs_itc_reduction::Float64 = 0.5
+    federal_itc_pct::Float64 = 0.1
+    federal_rebate_per_kw::Float64 = 0.0
+    state_ibi_pct::Float64 = 0.0
+    state_ibi_max::Float64 = 1.0e10
+    state_rebate_per_kw::Float64 = 0.0
+    state_rebate_max::Float64 = 1.0e10
+    utility_ibi_pct::Float64 = 0.0
+    utility_ibi_max::Float64 = 1.0e10
+    utility_rebate_per_kw::Float64 = 0.0
+    utility_rebate_max::Float64 = 1.0e10
+    production_incentive_per_kwh::Float64 = 0.0
+    production_incentive_max_benefit::Float64 = 1.0e9
+    production_incentive_years::Int = 0
+    production_incentive_max_kw::Float64 = 1.0e9
+    can_net_meter::Bool = false
+    can_wholesale::Bool = false
+    can_export_beyond_nem_limit::Bool = false
+    can_curtail::Bool = false
+    # emissions_factor_lb_CO2_per_mmbtu::Float64
 ```
 
 !!! note "Required inputs"
