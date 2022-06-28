@@ -136,6 +136,10 @@ function setup_tech_inputs(s::MPCScenario)
         setup_gen_inputs(s, existing_sizes, production_factor)
     end
 
+    if "ExistingChiller" in techs.all
+        existing_sizes["ExistingChiller"] = s.existing_chiller.max_kw
+    end
+
     return techs, production_factor, existing_sizes
 end
 
