@@ -88,9 +88,11 @@ end
 """
     BAUScenario(s::Scenario)
 
-Constructor for BAUScenario (BAU = Business As Usual) struct.
-- sets the PV and Generator max_kw values to the existing_kw values
-- sets wind and storage max_kw values to zero
+Constructs the BAUScenario (used to create the Business-as-usual inputs) based on the Scenario for the optimized case.
+
+The following assumptions are made for the BAU scenario: 
+- sets the `PV` and `Generator` min_kw and max_kw values to the existing_kw values
+- sets wind and storage max_kw values to zero (existing wind and storage cannot be modeled)
 """
 function BAUScenario(s::Scenario)
 

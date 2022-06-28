@@ -49,6 +49,12 @@ end
     time_steps_per_hour::Int = 1
 ```
 
+!!! note "Max ExistingBoiler size" 
+    The maximum size [kW] of the `ExistingBoiler` will be set based on the peak heat demand as follows:
+    ```julia 
+    max_kw = max_heat_demand_kw * max_thermal_factor_on_peak_load
+    ```
+
 !!! note "ExistingBoiler operating costs" 
     The `ExistingBoiler` default operating cost is zero. Please provide the `fuel_cost_per_mmbtu` field
     for the `ExistingBoiler` if you want non-zero BAU heating costs. The `fuel_cost_per_mmbtu` can be
