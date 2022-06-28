@@ -8,17 +8,20 @@ using REopt, JuMP, Cbc
 m = Model(Cbc.Optimizer)
 results = run_reopt(m, "test/scenarios/pv_storage.json")
 ```
-See [pv_storage.json](https://github.com/NREL/REopt/blob/master/test/scenarios/pv_storage.json) for details on the Scenario.
 
-For more on the `scenario.json` see the [REopt Inputs](@ref) section.
+For more on the `scenario.json` see the [REopt Inputs](@ref) section. For examples of `scenario.json` see [test/scenarios](https://github.com/NREL/REopt/blob/master/test/scenarios). For more examples of how to run REopt, see [`test_with_cplex.jl`](https://github.com/NREL/REopt/blob/master/test/test_with_cplex.jl) and [`test_with_xpress.jl`](https://github.com/NREL/REopt/blob/master/test/test_with_xpress.jl)
 
-In order to calculate additional result metrics you can run the [BAUScenario](@ref) scenario in parallel by providing two `JuMP.Model`s like so:
+To compare the optimized case to a "Business-as-usual" case (with existing techs or no techs), you can run the [BAUScenario](@ref) scenario in parallel by providing two `JuMP.Model`s like so:
 ```julia
 m1 = Model(Cbc.Optimizer)
 m2 = Model(Cbc.Optimizer)
 results = run_reopt([m1,m2], "./scenarios/pv_storage.json")
 ```
-With the [BAUScenario](@ref) results we can calculate the net present value of the optimal system.
+When the [BAUScenario](@ref) is included as shown above, the outputs will include comparative results such as the net present value and emissions reductions of the optimal system as compared to the BAU Scenario.
+
+!!! note "BAU Scenario" 
+    Note that while two JuMP models are created, only a single input dict is used to run the `BAU` and optimized cases in parallel. The [BAUScenario](@ref) will be automatically created based on the input dict. 
+
 
 ## Advanced
 
