@@ -62,7 +62,12 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
     nothing
 end
 
-
+"""
+MPC `ElectricUtility` results keys:
+- `energy_supplied_kwh` 
+- `to_battery_series_kw`
+- `to_load_series_kw`
+"""
 function add_electric_utility_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 

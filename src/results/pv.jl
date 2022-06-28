@@ -90,7 +90,14 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     nothing
 end
 
-
+"""
+MPC `PV` results keys:
+- `to_battery_series_kw`
+- `to_grid_series_kw`
+- `curtailed_production_series_kw`
+- `to_load_series_kw`
+- `energy_produced_kwh`
+"""
 function add_pv_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     for t in p.techs.pv
         r = Dict{String, Any}()

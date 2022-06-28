@@ -102,7 +102,16 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     nothing
 end
 
-
+"""
+MPC `Generator` results keys:
+- `variable_om_cost`
+- `fuel_cost`
+- `to_battery_series_kw`
+- `to_grid_series_kw`
+- `to_load_series_kw`
+- `average_annual_fuel_used_gal`
+- `energy_produced_kwh`
+"""
 function add_generator_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 
