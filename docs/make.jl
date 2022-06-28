@@ -13,6 +13,7 @@ makedocs(
         "Model Predictive Control" => Any[
             "mpc/examples.md",
             "mpc/inputs.md",
+            "mpc/outputs.md"
             "mpc/methods.md",
         ],
         "Developer" => Any[
