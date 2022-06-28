@@ -175,9 +175,15 @@ struct ElectricUtility
             if (outage_start_time_step == 0 && outage_end_time_step != 0) || (outage_start_time_step != 0 && outage_end_time_step == 0)
                 error("ElectricUtility inputs outage_start_time_step and outage_end_time_step must both be provided to model an outage")
             end
-            # Warn if outage_start/end_time_step is provided and outage_start_time_steps not empty
-            if outage_start_time_step != 0 && outage_end_time_step !=0 && !isempty(outage_start_time_steps)
-                @warn "Inputs for multiple outages (outage_start_time_steps, outage_durations, outage_probabilities) will be ignored because singular outage_start(and end)_time_step were provided."
+            if !isempty(outage_start_time_steps)
+                if outage_start_time_step != 0 && outage_end_time_step !=0
+                    # Warn if outage_start/end_time_step is provided and outage_start_time_steps not empty
+                    @warn ("Inputs for stochastic outage modeling (i.e. outage_start_time_steps, outage_durations, outage_probabilities) 
+                        will be ignored because singular outage_start(and end)_time_step were provided.")
+                else
+                    @warn ("When using stochastic outage modeling (i.e. outage_start_time_steps, outage_durations, outage_probabilities), 
+                        emissions and renewable energy percentage calculations and constraints do not consider outages.")
+                end
             end
         end
 
