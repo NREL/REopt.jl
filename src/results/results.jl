@@ -136,14 +136,14 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("ElectricTariff", "lifecycle_coincident_peak_cost_after_tax"),
         ("ElectricUtility", "year_one_to_load_series_kw"),  
         ("ElectricUtility", "year_one_energy_supplied_kwh"),
-        ("ElectricUtility", "year_one_emissions_tCO2"),
-        ("ElectricUtility", "year_one_emissions_tNOx"),
-        ("ElectricUtility", "year_one_emissions_tNOx"),
-        ("ElectricUtility", "year_one_emissions_tPM25"),
-        ("ElectricUtility", "lifecycle_emissions_tCO2"),
-        ("ElectricUtility", "lifecycle_emissions_tNOx"),
-        ("ElectricUtility", "lifecycle_emissions_tSO2"),
-        ("ElectricUtility", "lifecycle_emissions_tPM25"),
+        ("ElectricUtility", "year_one_emissions_tonnes_CO2"),
+        ("ElectricUtility", "year_one_emissions_tonnes_NOx"),
+        ("ElectricUtility", "year_one_emissions_tonnes_NOx"),
+        ("ElectricUtility", "year_one_emissions_tonnes_PM25"),
+        ("ElectricUtility", "lifecycle_emissions_tonnes_CO2"),
+        ("ElectricUtility", "lifecycle_emissions_tonnes_NOx"),
+        ("ElectricUtility", "lifecycle_emissions_tonnes_SO2"),
+        ("ElectricUtility", "lifecycle_emissions_tonnes_PM25"),
         ("PV", "average_annual_energy_produced_kwh"),
         ("PV", "year_one_energy_produced_kwh"),
         ("PV", "lifecycle_om_cost_after_tax"),
@@ -159,32 +159,32 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("Site", "annual_renewable_electricity_kwh"),
         ("Site", "renewable_electricity_pct"),
         ("Site", "total_renewable_energy_pct"),
-        ("Site", "year_one_emissions_tCO2"),
-        ("Site", "year_one_emissions_tNOx"),
-        ("Site", "year_one_emissions_tSO2"),
-        ("Site", "year_one_emissions_tPM25"),
-        ("Site", "year_one_emissions_from_fuelburn_tCO2"),
-        ("Site", "year_one_emissions_from_fuelburn_tNOx"),
-        ("Site", "year_one_emissions_from_fuelburn_tSO2"),
-        ("Site", "year_one_emissions_from_fuelburn_tPM25"),
-        ("Site", "year_one_emissions_from_elec_grid_tCO2"),
-        ("Site", "year_one_emissions_from_elec_grid_tNOx"),
-        ("Site", "year_one_emissions_from_elec_grid_tSO2"),
-        ("Site", "year_one_emissions_from_elec_grid_tPM25"),
+        ("Site", "year_one_emissions_tonnes_CO2"),
+        ("Site", "year_one_emissions_tonnes_NOx"),
+        ("Site", "year_one_emissions_tonnes_SO2"),
+        ("Site", "year_one_emissions_tonnes_PM25"),
+        ("Site", "year_one_emissions_from_fuelburn_tonnes_CO2"),
+        ("Site", "year_one_emissions_from_fuelburn_tonnes_NOx"),
+        ("Site", "year_one_emissions_from_fuelburn_tonnes_SO2"),
+        ("Site", "year_one_emissions_from_fuelburn_tonnes_PM25"),
+        ("Site", "year_one_emissions_from_elec_grid_tonnes_CO2"),
+        ("Site", "year_one_emissions_from_elec_grid_tonnes_NOx"),
+        ("Site", "year_one_emissions_from_elec_grid_tonnes_SO2"),
+        ("Site", "year_one_emissions_from_elec_grid_tonnes_PM25"),
         ("Site", "lifecycle_emissions_cost_CO2"),
         ("Site", "lifecycle_emissions_cost_health"),
-        ("Site", "lifecycle_emissions_tCO2"),
-        ("Site", "lifecycle_emissions_tNOx"),
-        ("Site", "lifecycle_emissions_tSO2"),
-        ("Site", "lifecycle_emissions_tPM25"),
-        ("Site", "lifecycle_emissions_from_fuelburn_tCO2"),
-        ("Site", "lifecycle_emissions_from_fuelburn_tNOx"),
-        ("Site", "lifecycle_emissions_from_fuelburn_tSO2"),
-        ("Site", "lifecycle_emissions_from_fuelburn_tPM25"),
-        ("Site", "lifecycle_emissions_from_elec_grid_tCO2"),
-        ("Site", "lifecycle_emissions_from_elec_grid_tNOx"),
-        ("Site", "lifecycle_emissions_from_elec_grid_tSO2"),
-        ("Site", "lifecycle_emissions_from_elec_grid_tPM25")
+        ("Site", "lifecycle_emissions_tonnes_CO2"),
+        ("Site", "lifecycle_emissions_tonnes_NOx"),
+        ("Site", "lifecycle_emissions_tonnes_SO2"),
+        ("Site", "lifecycle_emissions_tonnes_PM25"),
+        ("Site", "lifecycle_emissions_from_fuelburn_tonnes_CO2"),
+        ("Site", "lifecycle_emissions_from_fuelburn_tonnes_NOx"),
+        ("Site", "lifecycle_emissions_from_fuelburn_tonnes_SO2"),
+        ("Site", "lifecycle_emissions_from_fuelburn_tonnes_PM25"),
+        ("Site", "lifecycle_emissions_from_elec_grid_tonnes_CO2"),
+        ("Site", "lifecycle_emissions_from_elec_grid_tonnes_NOx"),
+        ("Site", "lifecycle_emissions_from_elec_grid_tonnes_SO2"),
+        ("Site", "lifecycle_emissions_from_elec_grid_tonnes_PM25")
     )
 
     for t in bau_outputs
@@ -210,8 +210,8 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
 
     # emissions reductions
     opt["Site"]["lifecycle_emissions_reduction_CO2_pct"] = (
-        bau["Site"]["lifecycle_emissions_tCO2"] - opt["Site"]["lifecycle_emissions_tCO2"]
-    ) / bau["Site"]["lifecycle_emissions_tCO2"]
+        bau["Site"]["lifecycle_emissions_tonnes_CO2"] - opt["Site"]["lifecycle_emissions_tonnes_CO2"]
+    ) / bau["Site"]["lifecycle_emissions_tonnes_CO2"]
 
     # breakeven cost of CO2 (to make NPV = 0)
     # first, remove climate costs from the output NPV, if they were previously included in LCC/NPV calcs:
@@ -223,12 +223,12 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
     # (back-calculating using the equation for m[:Lifecycle_Emissions_Cost_CO2] in "add_lifecycle_emissions_calcs" in emissions_constraints.jl)
     if npv_without_modeled_climate_costs < 0 # if the system is not cost effective (NPV < 0) without considering any cost of CO2
         breakeven_cost_denominator = p.pwf_emissions_cost["CO2_grid"] * (
-            bau["ElectricUtility"]["year_one_emissions_tCO2"] - opt["ElectricUtility"]["year_one_emissions_tCO2"]
+            bau["ElectricUtility"]["year_one_emissions_tonnes_CO2"] - opt["ElectricUtility"]["year_one_emissions_tonnes_CO2"]
         ) + p.pwf_emissions_cost["CO2_onsite"] * (
-            bau["Site"]["year_one_emissions_from_fuelburn_tCO2"] - opt["Site"]["year_one_emissions_from_fuelburn_tCO2"] 
+            bau["Site"]["year_one_emissions_from_fuelburn_tonnes_CO2"] - opt["Site"]["year_one_emissions_from_fuelburn_tonnes_CO2"] 
         )
         if breakeven_cost_denominator != 0.0
-            opt["Financial"]["breakeven_cost_of_emissions_reduction_per_tCO2"] = -1 * npv_without_modeled_climate_costs / breakeven_cost_denominator
+            opt["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"] = -1 * npv_without_modeled_climate_costs / breakeven_cost_denominator
         end
     end
         

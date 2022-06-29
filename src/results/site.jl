@@ -36,24 +36,24 @@ Site results:
 - `annual_renewable_electricity_kwh`
 - `renewable_electricity_pct`
 - `total_renewable_energy_pct`
-- `year_one_emissions_tCO2`
-- `year_one_emissions_tNOx`
-- `year_one_emissions_tSO2`
-- `year_one_emissions_tPM25`
-- `year_one_emissions_from_fuelburn_tCO2`
-- `year_one_emissions_from_fuelburn_tNOx`
-- `year_one_emissions_from_fuelburn_tSO2`
-- `year_one_emissions_from_fuelburn_tPM25`
+- `year_one_emissions_tonnes_CO2`
+- `year_one_emissions_tonnes_NOx`
+- `year_one_emissions_tonnes_SO2`
+- `year_one_emissions_tonnes_PM25`
+- `year_one_emissions_from_fuelburn_tonnes_CO2`
+- `year_one_emissions_from_fuelburn_tonnes_NOx`
+- `year_one_emissions_from_fuelburn_tonnes_SO2`
+- `year_one_emissions_from_fuelburn_tonnes_PM25`
 - `lifecycle_emissions_cost_CO2`
 - `lifecycle_emissions_cost_health`
-- `lifecycle_emissions_tCO2`
-- `lifecycle_emissions_tNOx`
-- `lifecycle_emissions_tSO2`
-- `lifecycle_emissions_tPM25`
-- `lifecycle_emissions_from_fuelburn_tCO2`
-- `lifecycle_emissions_from_fuelburn_tNOx`
-- `lifecycle_emissions_from_fuelburn_tSO2`
-- `lifecycle_emissions_from_fuelburn_tPM25`
+- `lifecycle_emissions_tonnes_CO2`
+- `lifecycle_emissions_tonnes_NOx`
+- `lifecycle_emissions_tonnes_SO2`
+- `lifecycle_emissions_tonnes_PM25`
+- `lifecycle_emissions_from_fuelburn_tonnes_CO2`
+- `lifecycle_emissions_from_fuelburn_tonnes_NOx`
+- `lifecycle_emissions_from_fuelburn_tonnes_SO2`
+- `lifecycle_emissions_from_fuelburn_tonnes_PM25`
 
 calculated in combine_results function if BAU scenario is run:
 - `lifecycle_emissions_reduction_CO2_pct`
@@ -76,15 +76,15 @@ function add_site_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["pwf_emissions_cost_CO2_onsite"] = p.pwf_emissions_cost["CO2_onsite"]
 
 	# Year 1 Emissions results at Site level
-	r["year_one_emissions_tCO2"] = round(value(m[:EmissionsYr1_Total_LbsCO2] * TONNE_PER_LB), digits=2)
-	r["year_one_emissions_tNOx"] = round(value(m[:EmissionsYr1_Total_LbsNOx] * TONNE_PER_LB), digits=2)
-	r["year_one_emissions_tSO2"] = round(value(m[:EmissionsYr1_Total_LbsSO2] * TONNE_PER_LB), digits=2)
-	r["year_one_emissions_tPM25"] = round(value(m[:EmissionsYr1_Total_LbsPM25] * TONNE_PER_LB), digits=2)
+	r["year_one_emissions_tonnes_CO2"] = round(value(m[:EmissionsYr1_Total_LbsCO2] * TONNE_PER_LB), digits=2)
+	r["year_one_emissions_tonnes_NOx"] = round(value(m[:EmissionsYr1_Total_LbsNOx] * TONNE_PER_LB), digits=2)
+	r["year_one_emissions_tonnes_SO2"] = round(value(m[:EmissionsYr1_Total_LbsSO2] * TONNE_PER_LB), digits=2)
+	r["year_one_emissions_tonnes_PM25"] = round(value(m[:EmissionsYr1_Total_LbsPM25] * TONNE_PER_LB), digits=2)
 
-	r["year_one_emissions_from_fuelburn_tCO2"] = round(value(m[:yr1_emissions_onsite_fuel_lbs_CO2] * TONNE_PER_LB), digits=2)
-	r["year_one_emissions_from_fuelburn_tNOx"] = round(value(m[:yr1_emissions_onsite_fuel_lbs_NOx] * TONNE_PER_LB), digits=2)
-	r["year_one_emissions_from_fuelburn_tSO2"] = round(value(m[:yr1_emissions_onsite_fuel_lbs_SO2] * TONNE_PER_LB), digits=2)
-	r["year_one_emissions_from_fuelburn_tPM25"] = round(value(m[:yr1_emissions_onsite_fuel_lbs_PM25] * TONNE_PER_LB), digits=2)
+	r["year_one_emissions_from_fuelburn_tonnes_CO2"] = round(value(m[:yr1_emissions_onsite_fuel_lbs_CO2] * TONNE_PER_LB), digits=2)
+	r["year_one_emissions_from_fuelburn_tonnes_NOx"] = round(value(m[:yr1_emissions_onsite_fuel_lbs_NOx] * TONNE_PER_LB), digits=2)
+	r["year_one_emissions_from_fuelburn_tonnes_SO2"] = round(value(m[:yr1_emissions_onsite_fuel_lbs_SO2] * TONNE_PER_LB), digits=2)
+	r["year_one_emissions_from_fuelburn_tonnes_PM25"] = round(value(m[:yr1_emissions_onsite_fuel_lbs_PM25] * TONNE_PER_LB), digits=2)
 
 	# Lifecycle emissions results at Site level
 	if !isnothing(p.s.site.bau_emissions_lb_CO2_per_year)
@@ -93,15 +93,15 @@ function add_site_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["lifecycle_emissions_cost_CO2"] = round(value(m[:Lifecycle_Emissions_Cost_CO2]), digits=2)
 	r["lifecycle_emissions_cost_health"] = round(value(m[:Lifecycle_Emissions_Cost_Health]), digits=2)
 
-	r["lifecycle_emissions_tCO2"] = round(value(m[:Lifecycle_Emissions_Lbs_CO2]*TONNE_PER_LB), digits=2)
-	r["lifecycle_emissions_tNOx"] = round(value(m[:Lifecycle_Emissions_Lbs_NOx]*TONNE_PER_LB), digits=2)
-	r["lifecycle_emissions_tSO2"] = round(value(m[:Lifecycle_Emissions_Lbs_SO2]*TONNE_PER_LB), digits=2)
-	r["lifecycle_emissions_tPM25"] = round(value(m[:Lifecycle_Emissions_Lbs_PM25]*TONNE_PER_LB), digits=2)
+	r["lifecycle_emissions_tonnes_CO2"] = round(value(m[:Lifecycle_Emissions_Lbs_CO2]*TONNE_PER_LB), digits=2)
+	r["lifecycle_emissions_tonnes_NOx"] = round(value(m[:Lifecycle_Emissions_Lbs_NOx]*TONNE_PER_LB), digits=2)
+	r["lifecycle_emissions_tonnes_SO2"] = round(value(m[:Lifecycle_Emissions_Lbs_SO2]*TONNE_PER_LB), digits=2)
+	r["lifecycle_emissions_tonnes_PM25"] = round(value(m[:Lifecycle_Emissions_Lbs_PM25]*TONNE_PER_LB), digits=2)
 
-	r["lifecycle_emissions_from_fuelburn_tCO2"] = round(value(m[:Lifecycle_Emissions_Lbs_CO2_fuelburn]*TONNE_PER_LB), digits=2)
-	r["lifecycle_emissions_from_fuelburn_tNOx"] = round(value(m[:Lifecycle_Emissions_Lbs_NOx_fuelburn]*TONNE_PER_LB), digits=2)
-	r["lifecycle_emissions_from_fuelburn_tSO2"] = round(value(m[:Lifecycle_Emissions_Lbs_SO2_fuelburn]*TONNE_PER_LB), digits=2)
-	r["lifecycle_emissions_from_fuelburn_tPM25"] = round(value(m[:Lifecycle_Emissions_Lbs_PM25_fuelburn]*TONNE_PER_LB), digits=2)
+	r["lifecycle_emissions_from_fuelburn_tonnes_CO2"] = round(value(m[:Lifecycle_Emissions_Lbs_CO2_fuelburn]*TONNE_PER_LB), digits=2)
+	r["lifecycle_emissions_from_fuelburn_tonnes_NOx"] = round(value(m[:Lifecycle_Emissions_Lbs_NOx_fuelburn]*TONNE_PER_LB), digits=2)
+	r["lifecycle_emissions_from_fuelburn_tonnes_SO2"] = round(value(m[:Lifecycle_Emissions_Lbs_SO2_fuelburn]*TONNE_PER_LB), digits=2)
+	r["lifecycle_emissions_from_fuelburn_tonnes_PM25"] = round(value(m[:Lifecycle_Emissions_Lbs_PM25_fuelburn]*TONNE_PER_LB), digits=2)
 
 	d["Site"] = r
 end
