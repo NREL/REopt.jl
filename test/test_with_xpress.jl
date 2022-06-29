@@ -29,6 +29,7 @@
 # *********************************************************************************
 using Xpress
 using Random
+using DelimitedFiles
 Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tests
 
 
@@ -1023,6 +1024,28 @@ end
 
     # Test generator outputs
     @test typeof(r) == Model # this is true when the model is infeasible
+
+    ### Scenario 3: Indonesia. Wind (custom prod) and Generator only
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+    post_name = "wind_intl_offgrid.json" 
+    post = JSON.parsefile("./scenarios/$post_name")
+    post["ElectricLoad"]["loads_kw"] = [10.0 for i in range(1,8760)]
+    scen = Scenario(post)
+    post["Wind"]["prod_factor_series"] =  reduce(vcat, readdlm("./data/example_wind_prod_factor_kw.csv", '\n', header=true)[1])
+
+    results = run_reopt(m, post)
+
+    @test results["ElectricLoad"]["offgrid_load_met_pct"] >= scen.electric_load.min_load_met_annual_pct
+    f = results["Financial"]
+    @test f["lifecycle_generation_tech_capital_costs"] + f["lifecycle_storage_capital_costs"] + f["lifecycle_om_costs_after_tax"] +
+             f["lifecycle_fuel_costs_after_tax"] + f["lifecycle_chp_standby_cost_after_tax"] + f["lifecycle_elecbill_after_tax"] + 
+             f["lifecycle_offgrid_other_annual_costs_after_tax"] + f["lifecycle_offgrid_other_capital_costs"] + 
+             f["lifecycle_outage_cost"] + f["lifecycle_MG_upgrade_and_fuel_cost"] - 
+             f["lifecycle_production_incentive_after_tax"] ≈ f["lcc"] atol=1.0
+
+    windOR = sum(results["Wind"]["year_one_to_load_series_kw"]  * post["Wind"]["operating_reserve_required_pct"])
+    loadOR = sum(post["ElectricLoad"]["loads_kw"] * scen.electric_load.operating_reserve_required_pct)
+    @test sum(results["ElectricLoad"]["offgrid_annual_oper_res_required_series_kwh"]) ≈ loadOR  + windOR atol=1.0
 
 end
 

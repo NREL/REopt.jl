@@ -125,22 +125,26 @@ function Techs(s::Scenario)
     if s.wind.max_kw > 0
         push!(all_techs, "Wind")
         push!(elec, "Wind")
+        append!(techs_no_turndown, ["Wind"])
+        if s.settings.off_grid_flag
+            push!(requiring_oper_res, "Wind")
+            push!(providing_oper_res, "Wind")
+        end
     end
 
     if s.generator.max_kw > 0
         push!(all_techs, "Generator")
         push!(gentechs, "Generator")
         push!(elec, "Generator")
+        if s.settings.off_grid_flag
+            push!(providing_oper_res, "Generator")
+        end
     end
 
     if !isnothing(s.existing_boiler)
         push!(all_techs, "ExistingBoiler")
         push!(heating_techs, "ExistingBoiler")
         push!(boiler_techs, "ExistingBoiler")
-    end
-
-    if "Wind" in all_techs
-        append!(techs_no_turndown, ["Wind"])
     end
     
     if !isnothing(s.chp)
@@ -160,8 +164,8 @@ function Techs(s::Scenario)
     end
 
     if s.settings.off_grid_flag
-        requiring_oper_res = copy(pvtechs) # Currently, only PV requires operating reserves.
-        providing_oper_res = union(pvtechs, gentechs) # Currently, only PV and generator (and storage) provide operating reserves.
+        append!(requiring_oper_res, pvtechs)
+        append!(providing_oper_res, pvtechs)
     end
 
     cooling_techs = union(electric_chillers, absorption_chillers)
