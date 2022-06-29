@@ -85,7 +85,7 @@ end
 """
     add_cold_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 
-Adds the Storage results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+Adds the HotThermalStorage results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
 Note: the node number is an empty string if evaluating a single `Site`.
 
 Storage results:
@@ -121,7 +121,7 @@ end
 """
     add_cold_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
 
-Adds the Storage results to the dictionary passed back from `run_mpc` using the solved model `m` and the `MPCInputs` for node `_n`.
+Adds the ColdThermalStorage results to the dictionary passed back from `run_mpc` using the solved model `m` and the `MPCInputs` for node `_n`.
 Note: the node number is an empty string if evaluating a single `Site`.
 
 Storage results:
