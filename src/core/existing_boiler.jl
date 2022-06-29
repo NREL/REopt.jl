@@ -59,11 +59,11 @@ function ExistingBoiler(;
     efficiency::Union{Nothing,Real} = nothing,
     fuel_cost_per_mmbtu::Union{Real, AbstractVector{<:Real}} = 0.0,
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
-    fuel_renewable_energy_pct::Real = FUEL_DEFAULTS["fuel_renewable_energy_pct"][fuel_type],
-    emissions_factor_lb_CO2_per_mmbtu::Real = FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"][fuel_type],
-    emissions_factor_lb_NOx_per_mmbtu::Real = FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"][fuel_type],
-    emissions_factor_lb_SO2_per_mmbtu::Real = FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"][fuel_type],
-    emissions_factor_lb_PM25_per_mmbtu::Real = FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"][fuel_type],
+    fuel_renewable_energy_pct::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_pct"],fuel_type,0),
+    emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0),
+    emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0),
+    emissions_factor_lb_SO2_per_mmbtu::Real = Fget(UEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0),
+    emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0),
     time_steps_per_hour::Int = 1
 )
 ```
@@ -77,13 +77,14 @@ function ExistingBoiler(;
     fuel_cost_per_mmbtu::Union{Real, AbstractVector{<:Real}} = 0.0,
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     # can_supply_steam_turbine::Bool,
-    fuel_renewable_energy_pct::Real = FUEL_DEFAULTS["fuel_renewable_energy_pct"][fuel_type],
-    emissions_factor_lb_CO2_per_mmbtu::Real = FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"][fuel_type],
-    emissions_factor_lb_NOx_per_mmbtu::Real = FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"][fuel_type],
-    emissions_factor_lb_SO2_per_mmbtu::Real = FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"][fuel_type],
-    emissions_factor_lb_PM25_per_mmbtu::Real = FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"][fuel_type],
+    fuel_renewable_energy_pct::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_pct"],fuel_type,0),
+    emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0),
+    emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0),
+    emissions_factor_lb_SO2_per_mmbtu::Real = Fget(UEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0),
+    emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0),
     time_steps_per_hour::Int = 1
 )
+    @assert fuel_type in FUEL_TYPES
     @assert production_type in ["steam", "hot_water"]
 
     if sum(fuel_cost_per_mmbtu) ≈ 0.0

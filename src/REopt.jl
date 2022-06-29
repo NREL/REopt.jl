@@ -71,6 +71,7 @@ const KWH_PER_GAL_DIESEL = 40.7  # [kWh/gal_diesel]
 const KWH_PER_MMBTU = 293.07107  # [kWh/mmbtu]
 const KWH_THERMAL_PER_TONHOUR = 3.51685
 const TONNE_PER_LB = 1/2204.62  # [tonne/lb]
+const FUEL_TYPES = ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
 const FUEL_DEFAULTS = Dict(
     "fuel_renewable_energy_pct" => Dict(
         "natural_gas"=>0.0,
