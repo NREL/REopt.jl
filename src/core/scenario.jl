@@ -86,10 +86,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     # Check that only PV, electric storage, and generator are modeled for off-grid
     if settings.off_grid_flag
-        offgrid_allowed_keys = ["PV", "ElectricStorage", "Generator", "Settings", "Site", "Financial", "ElectricLoad", "ElectricTariff", "ElectricUtility"]
+        offgrid_allowed_keys = ["PV", "Wind", "ElectricStorage", "Generator", "Settings", "Site", "Financial", "ElectricLoad", "ElectricTariff", "ElectricUtility"]
         unallowed_keys = setdiff(keys(d), offgrid_allowed_keys) 
         if !isempty(unallowed_keys)
-            throw(@error "Currently, only PV, ElectricStorage, and Generator can be modeled when off_grid_flag is true. Cannot model $unallowed_keys.")
+            throw(@error "Currently, only PV, Wind, ElectricStorage, and Generator can be modeled when off_grid_flag is true. Cannot model $unallowed_keys.")
         end
     end
     
@@ -172,7 +172,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
 
     if haskey(d, "Wind")
-        wind = Wind(; dictkeys_tosymbols(d["Wind"])..., 
+        wind = Wind(; dictkeys_tosymbols(d["Wind"])..., off_grid_flag=settings.off_grid_flag,
                     average_elec_load=sum(electric_load.loads_kw) / length(electric_load.loads_kw))
     else
         wind = Wind(; max_kw=0)
