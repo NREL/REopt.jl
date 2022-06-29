@@ -341,7 +341,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             end
             chiller_inputs = merge(chiller_inputs, dictkeys_tosymbols(d["ExistingChiller"]))
         else
-            chiller_inputs[:cop] = 1.0
+            chiller_inputs[:cop] = cooling_load.existing_chiller_cop
         end
         existing_chiller = ExistingChiller(; chiller_inputs...)
 
@@ -438,10 +438,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             ghpghx_response = Dict([("inputs", ghpghx_inputs), ("outputs", ghpghx_results)])
             @info "GhpGhx.jl model solved" #with status $(results["status"])."
             append!(ghp_option_list, [GHP(ghpghx_response, d["GHP"])])
-            # The API created a response with inputs and outputs (in make_response), but we currently only have outputs/results
-            # open("ghpghx_response.json","w") do f
-            #     JSON.print(f, ghpghx_response)
-            # end
+            # Print out ghpghx_response for loading into a future run without running GhpGhx.jl again
+            open("scenarios/ghpghx_response.json","w") do f
+                JSON.print(f, ghpghx_response)
+            end
         end
     # If ghpghx_responses is included in inputs, do NOT run GhpGhx.jl model and use already-run ghpghx result as input to REopt
     elseif eval_ghp && get_ghpghx_from_input
