@@ -54,9 +54,8 @@ end
     ```
 
 !!! note "ExistingBoiler operating costs" 
-    The `ExistingBoiler` default operating cost is zero. Please provide the `fuel_cost_per_mmbtu` field
-    for the `ExistingBoiler` if you want non-zero BAU heating costs. The `fuel_cost_per_mmbtu` can be
-    a scalar, a list of 12 monthly values, or a time series of values for every time step.
+    The `ExistingBoiler`'s `fuel_cost_per_mmbtu` field is a required input.
+    The `fuel_cost_per_mmbtu` can be a scalar, a list of 12 monthly values, or a time series of values for every time step.
 
 !!! note "Determining `efficiency`" 
     Must supply either: `efficiency`, `chp_prime_mover`, or `production_type`.
@@ -82,8 +81,8 @@ function ExistingBoiler(;
     production_type::String = "hot_water",
     chp_prime_mover::String = "",
     max_thermal_factor_on_peak_load::Real = 1.25,
-    efficiency::Real = 0.0,
-    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
+    efficiency::Real = NaN,
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = NaN,
     time_steps_per_hour::Int = 1
     # fuel_type::String = "natural_gas"  # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"],
     # can_supply_steam_turbine::Bool,
@@ -91,8 +90,8 @@ function ExistingBoiler(;
 )
     @assert production_type in ["steam", "hot_water"]
 
-    if sum(fuel_cost_per_mmbtu) ≈ 0.0
-        @warn "The ExistingBoiler.fuel_cost_per_mmbtu sums to zero. No fuel costs will be accounted for."
+    if isnan(fuel_cost_per_mmbtu)
+        throw(@error "The ExistingBoiler.fuel_cost_per_mmbtu is a required input when modeling a heating load which is served by the Existing Boiler in the BAU case")
     end
 
     production_type_by_chp_prime_mover = Dict(
@@ -111,8 +110,8 @@ function ExistingBoiler(;
         "steam" => 0.75
     )
 
-    if efficiency == 0.0
-        if !isempty(chp_prime_mover)
+    if isnan(efficiency)
+        if !isempty(chp_prime_mover) && isempty(production_type)
             production_type = production_type_by_chp_prime_mover[chp_prime_mover]
         end
         efficiency = efficiency_defaults[production_type]
