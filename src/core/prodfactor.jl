@@ -99,8 +99,8 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
 
     if all(length(a) > 0 for a in [wind.temperature_celsius, wind.pressure_atmospheres, wind.wind_direction_degrees,
                                    wind.wind_meters_per_sec])
-        push!(resources, [wind.temperature_celsius, wind.pressure_atmospheres, wind.wind_direction_degrees,
-                          wind.wind_meters_per_sec])
+        push!(resources, [wind.temperature_celsius, wind.pressure_atmospheres, wind.wind_meters_per_sec, wind.wind_direction_degrees]...)
+        resources = hcat(resources...)
     else  # download resource data from WindToolKit
 
         # Allowed hub heights in meters for the Wind Toolkit

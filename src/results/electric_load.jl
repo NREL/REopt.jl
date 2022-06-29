@@ -34,7 +34,7 @@
 - `annual_calculated_kwh` sum of the `load_series_kw`
 - `offgrid_load_met_series_kw` vector of electric load met by generation techs, for off-grid scenarios only
 - `offgrid_load_met_pct` percentage of total electric load met on an annual basis, for off-grid scenarios only
-- `offgrid_annual_oper_res_required_series_kwh` , total operating reserves required on an annual basis, for off-grid scenarios only
+- `offgrid_annual_oper_res_required_series_kwh` , total operating reserves required (for load and techs) on an annual basis, for off-grid scenarios only
 - `offgrid_annual_oper_res_provided_series_kwh` , total operating reserves provided on an annual basis, for off-grid scenarios only
 """
 function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")

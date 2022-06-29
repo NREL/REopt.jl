@@ -127,8 +127,10 @@ struct Wind <: AbstractTech
     can_wholesale::Bool
     can_export_beyond_nem_limit::Bool
     can_curtail::Bool
+    operating_reserve_required_pct::Real
 
     function Wind(;
+        off_grid_flag::Bool = false,
         min_kw = 0.0,
         max_kw = 1.0e9,
         installed_cost_per_kw = missing,
@@ -156,11 +158,12 @@ struct Wind <: AbstractTech
         production_incentive_max_benefit = 1.0e9,
         production_incentive_years = 1,
         production_incentive_max_kw = 1.0e9,
-        can_net_meter = true,
-        can_wholesale = true,
-        can_export_beyond_nem_limit = true,
+        can_net_meter = off_grid_flag ? false : true,
+        can_wholesale = off_grid_flag ? false : true,
+        can_export_beyond_nem_limit = off_grid_flag ? false : true,
         can_curtail= true,
-        average_elec_load = 0.0
+        average_elec_load = 0.0,
+        operating_reserve_required_pct::Real = off_grid_flag ? 0.10 : 0.0, # TODO determine appropriate value. if off grid, 10%, else 0%. Applied to each time_step as a % of wind generation.
         )
         size_class_to_hub_height = Dict(
             "residential"=> 20,
@@ -206,6 +209,18 @@ struct Wind <: AbstractTech
 
         hub_height = size_class_to_hub_height[size_class]
 
+        if !(off_grid_flag) && !(operating_reserve_required_pct == 0.0)
+            @warn "Wind operating_reserve_required_pct applies only when off_grid_flag is True. Setting operating_reserve_required_pct to 0.0 for this on-grid analysis."
+            operating_reserve_required_pct = 0.0
+        end
+
+        if off_grid_flag && (can_net_meter || can_wholesale || can_export_beyond_nem_limit)
+            @warn "Net metering, wholesale, and grid exports are not possible for off-grid scenarios. Setting Wind can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False."
+            can_net_meter = false
+            can_wholesale = false
+            can_export_beyond_nem_limit = false
+        end
+
         new(
             min_kw,
             max_kw,
@@ -238,7 +253,8 @@ struct Wind <: AbstractTech
             can_net_meter,
             can_wholesale,
             can_export_beyond_nem_limit,
-            can_curtail
+            can_curtail,
+            operating_reserve_required_pct
         )
     end
 end
