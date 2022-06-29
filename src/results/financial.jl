@@ -60,7 +60,7 @@ Financial results:
 - `offgrid_microgrid_lcoe_dollars_per_kwh` Levelized cost of electricity for modeled off-grid system.
 
 calculated in combine_results function if BAU scenario is run:
-    - `breakeven_cost_of_emissions_reduction_per_tCO2`
+    - `breakeven_cost_of_emissions_reduction_per_tonnes_CO2`
 """
 function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Float64}()
