@@ -253,8 +253,8 @@ function setup_bau_emissions_inputs(p::REoptInputs, s_bau::BAUScenario, generato
 
     p.s.site.bau_emissions_lb_CO2_per_year = bau_emissions_lb_CO2_per_year
     p.s.site.bau_grid_emissions_lb_CO2_per_year = bau_grid_emissions_lb_CO2_per_year
-    p.s_bau.site.bau_emissions_lb_CO2_per_year = bau_emissions_lb_CO2_per_year
-    p.s_bau.site.bau_grid_emissions_lb_CO2_per_year = bau_grid_emissions_lb_CO2_per_year
+    s_bau.site.bau_emissions_lb_CO2_per_year = bau_emissions_lb_CO2_per_year
+    s_bau.site.bau_grid_emissions_lb_CO2_per_year = bau_grid_emissions_lb_CO2_per_year
 end
 
 
