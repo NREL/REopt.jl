@@ -43,13 +43,7 @@ function Site(;
     CO2_emissions_reduction_min_pct::Union{Float64, Nothing} = nothing,
     CO2_emissions_reduction_max_pct::Union{Float64, Nothing} = nothing,
     bau_emissions_lb_CO2_per_year::Union{Float64, Nothing} = nothing,
-    bau_emissions_lb_NOx_per_year::Union{Float64, Nothing} = nothing,
-    bau_emissions_lb_SO2_per_year::Union{Float64, Nothing} = nothing,
-    bau_emissions_lb_PM25_per_year::Union{Float64, Nothing} = nothing,
     bau_grid_emissions_lb_CO2_per_year::Union{Float64, Nothing} = nothing,
-    bau_grid_emissions_lb_NOx_per_year::Union{Float64, Nothing} = nothing,
-    bau_grid_emissions_lb_SO2_per_year::Union{Float64, Nothing} = nothing,
-    bau_grid_emissions_lb_PM25_per_year::Union{Float64, Nothing} = nothing,
     renewable_electricity_min_pct::Real = 0.0,
     renewable_electricity_max_pct::Union{Float64, Nothing} = nothing,
     include_exported_elec_emissions_in_total::Bool = true,
@@ -70,13 +64,7 @@ mutable struct Site
     CO2_emissions_reduction_min_pct
     CO2_emissions_reduction_max_pct
     bau_emissions_lb_CO2_per_year
-    bau_emissions_lb_NOx_per_year
-    bau_emissions_lb_SO2_per_year
-    bau_emissions_lb_PM25_per_year
     bau_grid_emissions_lb_CO2_per_year
-    bau_grid_emissions_lb_NOx_per_year
-    bau_grid_emissions_lb_SO2_per_year
-    bau_grid_emissions_lb_PM25_per_year
     renewable_electricity_min_pct
     renewable_electricity_max_pct
     include_exported_elec_emissions_in_total
@@ -92,13 +80,7 @@ mutable struct Site
         CO2_emissions_reduction_min_pct::Union{Float64, Nothing} = nothing,
         CO2_emissions_reduction_max_pct::Union{Float64, Nothing} = nothing,
         bau_emissions_lb_CO2_per_year::Union{Float64, Nothing} = nothing,
-        bau_emissions_lb_NOx_per_year::Union{Float64, Nothing} = nothing,
-        bau_emissions_lb_SO2_per_year::Union{Float64, Nothing} = nothing,
-        bau_emissions_lb_PM25_per_year::Union{Float64, Nothing} = nothing,
         bau_grid_emissions_lb_CO2_per_year::Union{Float64, Nothing} = nothing,
-        bau_grid_emissions_lb_NOx_per_year::Union{Float64, Nothing} = nothing,
-        bau_grid_emissions_lb_SO2_per_year::Union{Float64, Nothing} = nothing,
-        bau_grid_emissions_lb_PM25_per_year::Union{Float64, Nothing} = nothing,
         renewable_electricity_min_pct::Union{Float64, Nothing} = nothing,
         renewable_electricity_max_pct::Union{Float64, Nothing} = nothing,
         include_exported_elec_emissions_in_total::Bool = true,
@@ -124,10 +106,7 @@ mutable struct Site
         new(latitude, longitude, land_acres, roof_squarefeet, min_resil_time_steps, 
             mg_tech_sizes_equal_grid_sizes, CO2_emissions_reduction_min_pct, 
             CO2_emissions_reduction_max_pct, bau_emissions_lb_CO2_per_year,
-            bau_emissions_lb_NOx_per_year, bau_emissions_lb_SO2_per_year,
-            bau_emissions_lb_PM25_per_year, bau_grid_emissions_lb_CO2_per_year, 
-            bau_grid_emissions_lb_NOx_per_year, bau_grid_emissions_lb_SO2_per_year, 
-            bau_grid_emissions_lb_PM25_per_year, renewable_electricity_min_pct,
+            bau_grid_emissions_lb_CO2_per_year, renewable_electricity_min_pct,
             renewable_electricity_max_pct, include_exported_elec_emissions_in_total,
             include_exported_renewable_electricity_in_total, node)
     end
