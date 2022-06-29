@@ -186,29 +186,6 @@ function BAUInputs(p::REoptInputs)
     )
 end
 
-
-"""
-    update_bau_emissions_inputs(s::AbstractScenario, bau_emissions_lb_CO2_per_year, bau_emissions_lb_NOx_per_year, 
-        bau_emissions_lb_SO2_per_year, bau_emissions_lb_PM25_per_year, bau_grid_emissions_lb_CO2_per_year, 
-        bau_grid_emissions_lb_NOx_per_year, bau_grid_emissions_lb_SO2_per_year, bau_grid_emissions_lb_PM25_per_year)
-
-Update the `bau_(grid_)emissions_` values in s.site
-"""
-function update_bau_emissions_inputs(s::AbstractScenario, bau_emissions_lb_CO2_per_year, bau_emissions_lb_NOx_per_year, 
-            bau_emissions_lb_SO2_per_year, bau_emissions_lb_PM25_per_year, bau_grid_emissions_lb_CO2_per_year, 
-            bau_grid_emissions_lb_NOx_per_year, bau_grid_emissions_lb_SO2_per_year, bau_grid_emissions_lb_PM25_per_year)
-    
-    s.site.bau_emissions_lb_CO2_per_year = bau_emissions_lb_CO2_per_year
-    s.site.bau_emissions_lb_NOx_per_year = bau_emissions_lb_NOx_per_year
-    s.site.bau_emissions_lb_SO2_per_year = bau_emissions_lb_SO2_per_year
-    s.site.bau_emissions_lb_PM25_per_year = bau_emissions_lb_PM25_per_year
-
-    s.site.bau_grid_emissions_lb_CO2_per_year = bau_grid_emissions_lb_CO2_per_year
-    s.site.bau_grid_emissions_lb_NOx_per_year = bau_grid_emissions_lb_NOx_per_year
-    s.site.bau_grid_emissions_lb_SO2_per_year = bau_grid_emissions_lb_SO2_per_year
-    s.site.bau_grid_emissions_lb_PM25_per_year = bau_grid_emissions_lb_PM25_per_year
-end
-
 """
     setup_bau_emissions_inputs(p::REoptInputs, s_bau::BAUScenario, generator_fuel_use_gal::Real)
 
@@ -229,9 +206,6 @@ Update the `bau_(grid_)emissions_` values in s.site and s_bau.site
 function setup_bau_emissions_inputs(p::REoptInputs, s_bau::BAUScenario, generator_fuel_use_gal::Real)
     
     bau_emissions_lb_CO2_per_year = 0
-    bau_emissions_lb_NOx_per_year = 0
-    bau_emissions_lb_SO2_per_year = 0
-    bau_emissions_lb_PM25_per_year = 0
 
     ## Grid emissions
 
@@ -265,41 +239,22 @@ function setup_bau_emissions_inputs(p::REoptInputs, s_bau::BAUScenario, generato
     bau_grid_emissions_lb_CO2_per_year = sum(p.s.electric_utility.emissions_factor_series_lb_CO2_per_kwh .* bau_grid_to_load) / p.s.settings.time_steps_per_hour
     bau_emissions_lb_CO2_per_year += bau_grid_emissions_lb_CO2_per_year
 
-    bau_grid_emissions_lb_NOx_per_year = sum(p.s.electric_utility.emissions_factor_series_lb_NOx_per_kwh .* bau_grid_to_load) / p.s.settings.time_steps_per_hour
-    bau_emissions_lb_NOx_per_year += bau_grid_emissions_lb_NOx_per_year
-
-    bau_grid_emissions_lb_SO2_per_year = sum(p.s.electric_utility.emissions_factor_series_lb_SO2_per_kwh .* bau_grid_to_load) / p.s.settings.time_steps_per_hour
-    bau_emissions_lb_SO2_per_year += bau_grid_emissions_lb_SO2_per_year
-
-    bau_grid_emissions_lb_PM25_per_year = sum(p.s.electric_utility.emissions_factor_series_lb_PM25_per_kwh .* bau_grid_to_load) / p.s.settings.time_steps_per_hour
-    bau_emissions_lb_PM25_per_year += bau_grid_emissions_lb_PM25_per_year
-
     ## Generator emissions (during outages)
     if "Generator" in p.techs.all
         bau_emissions_lb_CO2_per_year += generator_fuel_use_gal * p.s.generator.emissions_factor_lb_CO2_per_gal
-        bau_emissions_lb_NOx_per_year += generator_fuel_use_gal * p.s.generator.emissions_factor_lb_NOx_per_gal
-        bau_emissions_lb_SO2_per_year += generator_fuel_use_gal * p.s.generator.emissions_factor_lb_SO2_per_gal
-        bau_emissions_lb_PM25_per_year += generator_fuel_use_gal * p.s.generator.emissions_factor_lb_PM25_per_gal
     end
 
     ## Boiler emissions
     if "ExistingBoiler" in p.techs.all
         for heat_type in ["space_heating", "dhw"]
             bau_emissions_lb_CO2_per_year += getproperty(p.s,Symbol("$(heat_type)_load")).annual_mmbtu * p.s.existing_boiler.emissions_factor_lb_CO2_per_mmbtu
-            bau_emissions_lb_NOx_per_year += getproperty(p.s,Symbol("$(heat_type)_load")).annual_mmbtu * p.s.existing_boiler.emissions_factor_lb_NOx_per_mmbtu
-            bau_emissions_lb_SO2_per_year += getproperty(p.s,Symbol("$(heat_type)_load")).annual_mmbtu * p.s.existing_boiler.emissions_factor_lb_SO2_per_mmbtu
-            bau_emissions_lb_PM25_per_year += getproperty(p.s,Symbol("$(heat_type)_load")).annual_mmbtu * p.s.existing_boiler.emissions_factor_lb_PM25_per_mmbtu
         end
     end
 
-    update_bau_emissions_inputs(p.s, bau_emissions_lb_CO2_per_year, bau_emissions_lb_NOx_per_year, 
-                                bau_emissions_lb_SO2_per_year, bau_emissions_lb_PM25_per_year, 
-                                bau_grid_emissions_lb_CO2_per_year, bau_grid_emissions_lb_NOx_per_year, 
-                                bau_grid_emissions_lb_SO2_per_year, bau_grid_emissions_lb_PM25_per_year)
-    update_bau_emissions_inputs(s_bau, bau_emissions_lb_CO2_per_year, bau_emissions_lb_NOx_per_year, 
-                                bau_emissions_lb_SO2_per_year, bau_emissions_lb_PM25_per_year, 
-                                bau_grid_emissions_lb_CO2_per_year, bau_grid_emissions_lb_NOx_per_year, 
-                                bau_grid_emissions_lb_SO2_per_year, bau_grid_emissions_lb_PM25_per_year)
+    p.s.site.bau_emissions_lb_CO2_per_year = bau_emissions_lb_CO2_per_year
+    p.s.site.bau_grid_emissions_lb_CO2_per_year = bau_grid_emissions_lb_CO2_per_year
+    p.s_bau.site.bau_emissions_lb_CO2_per_year = bau_emissions_lb_CO2_per_year
+    p.s_bau.site.bau_grid_emissions_lb_CO2_per_year = bau_grid_emissions_lb_CO2_per_year
 end
 
 
