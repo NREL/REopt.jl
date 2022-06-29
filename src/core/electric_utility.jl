@@ -74,7 +74,7 @@ function ElectricUtility(;
 """
 struct ElectricUtility
     emissions_region::String # AVERT emissions region
-    distance_to_emissions_region_meters::Union{Nothing, Real}
+    distance_to_emissions_region_meters::Real
     emissions_factor_series_lb_CO2_per_kwh::Array{<:Real,1}
     emissions_factor_series_lb_NOx_per_kwh::Array{<:Real,1}
     emissions_factor_series_lb_SO2_per_kwh::Array{<:Real,1}
@@ -214,7 +214,7 @@ struct ElectricUtility
 
         new(
             is_MPC ? "" : emissions_region,
-            is_MPC ? nothing : meters_to_region,
+            is_MPC || isnothing(meters_to_region) ? typemax(Int64) : meters_to_region,
             is_MPC ? Float64[] : emissions_series_dict["CO2"],
             is_MPC ? Float64[] : emissions_series_dict["NOx"],
             is_MPC ? Float64[] : emissions_series_dict["SO2"],
