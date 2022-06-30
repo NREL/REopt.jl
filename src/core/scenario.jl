@@ -129,6 +129,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             CO2_emissions_reduction_max_pct=site.CO2_emissions_reduction_max_pct,
                                             include_climate_in_objective=settings.include_climate_in_objective,
                                             include_health_in_objective=settings.include_health_in_objective,
+                                            off_grid_flag=settings.off_grid_flag,
                                             time_steps_per_hour=settings.time_steps_per_hour
                                         )
     elseif !(settings.off_grid_flag)
