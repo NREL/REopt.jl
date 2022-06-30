@@ -137,7 +137,7 @@ struct Financial
         offgrid_other_annual_costs::Real = 0.0, # only applicable when off_grid_flag is true. Considered tax deductible for owner.
         latitude::Real,
         longitude::Real,
-        model_health_obj::Bool = false
+        include_health_in_objective::Bool = false
     )
         
         if off_grid_flag && !(microgrid_upgrade_cost_pct == 0.0)
@@ -206,7 +206,7 @@ struct Financial
             missing_health_inputs = isnothing(escalation_rates) ? true : missing_health_inputs
         end
 
-        if missing_health_inputs && model_health_obj
+        if missing_health_inputs && include_health_in_objective
             error("To include health costs in the objective function, you must either enter custom emissions costs and escalation rates or a site location within the CAMx grid.")
         end
     
