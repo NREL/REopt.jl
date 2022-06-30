@@ -168,22 +168,22 @@ struct ElectricUtility
                     emissions_series_dict[ekey] = emissions_series(ekey, region_abbr, time_steps_per_hour=time_steps_per_hour)
                 end
             end
-
-            if (!isempty(outage_start_time_steps) && isempty(outage_durations)) || (isempty(outage_start_time_steps) && !isempty(outage_durations))
-                error("ElectricUtility inputs outage_start_time_steps and outage_durations must both be provided to model multiple outages")
-            end
-            if (outage_start_time_step == 0 && outage_end_time_step != 0) || (outage_start_time_step != 0 && outage_end_time_step == 0)
-                error("ElectricUtility inputs outage_start_time_step and outage_end_time_step must both be provided to model an outage")
-            end
-            if !isempty(outage_start_time_steps)
-                if outage_start_time_step != 0 && outage_end_time_step !=0
-                    # Warn if outage_start/end_time_step is provided and outage_start_time_steps not empty
-                    error("Cannot supply both outage_start(/end)_time_step for deterministic outage modeling and 
-                        multiple outage_start_time_steps for stochastic outage modeling. Please use one or the other.")
-                else
-                    @warn ("When using stochastic outage modeling (i.e. outage_start_time_steps, outage_durations, outage_probabilities), 
-                        emissions and renewable energy percentage calculations and constraints do not consider outages.")
-                end
+        end
+        
+        if (!isempty(outage_start_time_steps) && isempty(outage_durations)) || (isempty(outage_start_time_steps) && !isempty(outage_durations))
+            error("ElectricUtility inputs outage_start_time_steps and outage_durations must both be provided to model multiple outages")
+        end
+        if (outage_start_time_step == 0 && outage_end_time_step != 0) || (outage_start_time_step != 0 && outage_end_time_step == 0)
+            error("ElectricUtility inputs outage_start_time_step and outage_end_time_step must both be provided to model an outage")
+        end
+        if !isempty(outage_start_time_steps)
+            if outage_start_time_step != 0 && outage_end_time_step !=0
+                # Warn if outage_start/end_time_step is provided and outage_start_time_steps not empty
+                error("Cannot supply both outage_start(/end)_time_step for deterministic outage modeling and 
+                    multiple outage_start_time_steps for stochastic outage modeling. Please use one or the other.")
+            else
+                @warn ("When using stochastic outage modeling (i.e. outage_start_time_steps, outage_durations, outage_probabilities), 
+                    emissions and renewable energy percentage calculations and constraints do not consider outages.")
             end
         end
 
