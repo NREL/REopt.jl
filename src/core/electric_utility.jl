@@ -120,6 +120,10 @@ struct ElectricUtility
         interconnection_limit_kw::Real = 1.0e9,
         latitude::Union{Nothing,Real} = nothing,
         longitude::Union{Nothing,Real} = nothing,
+        CO2_emissions_reduction_min_pct::Union{Real, Nothing} = nothing,
+        CO2_emissions_reduction_max_pct::Union{Real, Nothing} = nothing,
+        include_climate_in_objective::Bool = false,
+        include_health_in_objective::Bool = false,
         time_steps_per_hour::Int = 1
         )
 
