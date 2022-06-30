@@ -164,7 +164,7 @@ struct Financial
         missing_health_inputs = false
 
         # use EASIUR data for missing grid costs
-        missing_health_inputs = isnothing(grid_costs) ? true : missing_health_inputs
+        missing_health_inputs = isnothing(grid_costs) && !off_grid_flag ? true : missing_health_inputs
         if isnothing(NOx_grid_cost_per_tonne)
             NOx_grid_cost_per_tonne = isnothing(grid_costs) ? 0.0 : grid_costs["NOx"]
         end
