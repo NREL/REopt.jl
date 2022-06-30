@@ -145,9 +145,6 @@ struct ElectricUtility
             emissions_region = get(region_lookup, region_abbr, "")
             emissions_series_dict = Dict{String, Array{<:Real,1}}()
 
-            #TODO: can this section be refactored by emissions_type by using Symbol("") technique?
-            #eval(Meta.parse("emissions_factor_series_lb_$(pollutant)_per_kwh")) does not work because
-            #eval is in global scope and doesn't have access to function arguments
             for (eseries, ekey) in [
                 (emissions_factor_series_lb_CO2_per_kwh, "CO2"),
                 (emissions_factor_series_lb_NOx_per_kwh, "NOx"),
