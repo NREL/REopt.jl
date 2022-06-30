@@ -34,7 +34,7 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
 `CHP` is an optional REopt input with the following keys and default values:
 ```julia
     prime_mover::String = ""
-    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = NaN  # REQUIRED
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = []  # REQUIRED
 
     # Required "custom inputs" if not providing prime_mover:
     installed_cost_per_kw::Union{Float64, AbstractVector{Float64}} = NaN
@@ -101,7 +101,7 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
 """
 Base.@kwdef mutable struct CHP <: AbstractCHP
     prime_mover::String = ""
-    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = NaN    
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = []    
     # following must be provided by user if not providing prime_mover
     installed_cost_per_kw::Union{Float64, AbstractVector{Float64}} = Float64[]
     tech_sizes_for_cost_curve::AbstractVector{Float64} = Float64[]
@@ -160,7 +160,7 @@ end
 function CHP(d::Dict)
     chp = CHP(; dictkeys_tosymbols(d)...)
 
-    if isnan(chp.fuel_cost_per_mmbtu)
+    if isempty(chp.fuel_cost_per_mmbtu)
         throw(@error "The CHP.fuel_cost_per_mmbtu is a required input when modeling CHP")
     end    
 

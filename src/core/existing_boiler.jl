@@ -43,7 +43,7 @@ end
     chp_prime_mover::String = "",
     max_thermal_factor_on_peak_load::Real = 1.25,
     efficiency::Real = 0.0,
-    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [],
     time_steps_per_hour::Int = 1
 ```
 
@@ -82,7 +82,7 @@ function ExistingBoiler(;
     chp_prime_mover::String = "",
     max_thermal_factor_on_peak_load::Real = 1.25,
     efficiency::Real = NaN,
-    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = NaN,
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [],
     time_steps_per_hour::Int = 1
     # fuel_type::String = "natural_gas"  # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"],
     # can_supply_steam_turbine::Bool,
@@ -90,7 +90,7 @@ function ExistingBoiler(;
 )
     @assert production_type in ["steam", "hot_water"]
 
-    if isnan(fuel_cost_per_mmbtu)
+    if isempty(fuel_cost_per_mmbtu)
         throw(@error "The ExistingBoiler.fuel_cost_per_mmbtu is a required input when modeling a heating load which is served by the Existing Boiler in the BAU case")
     end
 
