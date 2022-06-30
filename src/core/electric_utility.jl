@@ -164,8 +164,22 @@ struct ElectricUtility
                     if length(eseries) > 1 && !(length(eseries) / time_steps_per_hour ≈ 8760)  # user provided array with incorrect length
                         @warn "Provided ElectricUtility emissions factor series for $(ekey) will be ignored because it does not match the time_steps_per_hour. AVERT emissions data will be used."
                     end
-                    # default action, can be set to zeros without region_abbr
                     emissions_series_dict[ekey] = emissions_series(ekey, region_abbr, time_steps_per_hour=time_steps_per_hour)
+                    #Handle missing emissions inputs (due to failed lookup and not provided by user)
+                    #TODO: condition below code on: if site.off_grid == false
+                    if isnothing(emissions_series_dict[ekey])
+                        @warn "Cannot find hourly $(ekey) emissions for region $(region_abbr). Setting emissions to zero."
+                        if ekey == "CO2" && (!isnothing(CO2_emissions_reduction_min_pct) || 
+                                            !isnothing(CO2_emissions_reduction_max_pct) || 
+                                            include_climate_in_objective)
+                            error("To include CO2 costs in the objective function or enforce emissions reduction constraints, 
+                                you must either enter custom health emissions factors or a site location within the continental U.S.")
+                        elseif ekey in ["NOx", "SO2", "PM25"] && include_health_in_objective
+                            error("To include health costs in the objective function, you must either enter custom health 
+                                emissions factors or a site location within the continental U.S.")
+                        end
+                        emissions_series_dict[ekey] = zeros(8760*time_steps_per_hour)
+                    end
                 end
             end
         end
@@ -186,31 +200,6 @@ struct ElectricUtility
                     emissions and renewable energy percentage calculations and constraints do not consider outages.")
             end
         end
-
-
-        # #Handle missing emissions inputs (due to failed lookup and not provided by user)
-        # #TODO: condition below code on: if site.off_grid == false
-        # if isnothing(electric_utility.emissions_factor_series_lb_CO2_per_kwh)
-        #     if (!isnothing(site.CO2_emissions_reduction_min_pct) || 
-        #         !isnothing(site.CO2_emissions_reduction_max_pct) || 
-        #         settings.include_climate_in_objective)
-        #         error("To include CO2 costs in the objective function or enforce emissions reduction constraints, you must either enter custom health emissions factors or a site location within the continental U.S.")
-        #     else
-        #         electric_utility.emissions_factor_series_lb_CO2_per_kwh = zeros(8760*settings.time_steps_per_hour)
-        #     end
-        # end
-        # for emissions_type in ["NOx", "SO2", "PM25"]
-        #     if isnothing(getproperty(electric_utility, Symbol("emissions_factor_series_lb_$(emissions_type)_per_kwh")))
-        #         if settings.include_health_in_objective
-        #             error("To include health costs in the objective function, you must either enter custom health emissions factors or a site location within the continental U.S.")
-        #         else
-        #             setproperty!(electric_utility, 
-        #                 Symbol("emissions_factor_series_lb_$(emissions_type)_per_kwh"), 
-        #                 zeros(8760*settings.time_steps_per_hour)
-        #             )
-        #         end
-        #     end
-        # end
 
         new(
             is_MPC ? "" : emissions_region,
@@ -316,8 +305,7 @@ end
 
 function emissions_series(pollutant, region_abbr; time_steps_per_hour=1)
     if isnothing(region_abbr)
-        @warn "Cannnot find hourly $(pollutant) emissions for region $(region_abbr). Setting emissions to zero."
-        return zeros(8760*time_steps_per_hour)
+        return nothing
     end
     # Columns 1 and 2 do not contain AVERT region information, so skip them
     avert_df = readdlm(joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "AVERT_marg_emissions_lb$(pollutant)_per_kwh.csv"), ',')[:, 3:end]
@@ -330,7 +318,6 @@ function emissions_series(pollutant, region_abbr; time_steps_per_hour=1)
         end
         return emissions_profile
     catch
-        @warn "Cannnot find hourly $(pollutant) emmissions for region $(region_abbr). Setting emissions to zero."
-        return zeros(8760*time_steps_per_hour)
+        return nothing
     end
 end
