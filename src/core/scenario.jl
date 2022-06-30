@@ -114,7 +114,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         financial = Financial(; dictkeys_tosymbols(d["Financial"])...,
                                 latitude=site.latitude, longitude=site.longitude, 
                                 off_grid_flag = settings.off_grid_flag,
-                                model_health_obj = settings.include_health_in_objective
+                                include_health_in_objective = settings.include_health_in_objective
                             )
     else
         financial = Financial(; latitude=site.latitude, longitude=site.longitude,
