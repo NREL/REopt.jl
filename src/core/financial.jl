@@ -156,7 +156,7 @@ struct Financial
             owner_discount_pct = offtaker_discount_pct
         end
 
-        grid_costs = easiur_costs(latitude, longitude, "grid")
+        grid_costs = off_grid_flag ? nothing : easiur_costs(latitude, longitude, "grid")
         onsite_costs = easiur_costs(latitude, longitude, "onsite")
         escalation_rates = easiur_escalation_rates(latitude, longitude, om_cost_escalation_pct)
        
