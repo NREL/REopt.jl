@@ -1019,7 +1019,7 @@ end
         yr1_grid_emissions_tonnes_CO2_out = results["ElectricUtility"]["year_one_emissions_tonnes_CO2"]
         yr1_total_emissions_calced_tonnes_CO2 = yr1_fuel_emissions_tonnes_CO2_out + yr1_grid_emissions_tonnes_CO2_out 
         @test year_one_emissions_tonnes_CO2_out ≈ yr1_total_emissions_calced_tonnes_CO2 atol=1e-1
-        if !isnothing(results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"])
+        if haskey(results["Financial"],"breakeven_cost_of_emissions_reduction_per_tonnes_CO2")
             @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"] >= 0.0
         end
         
