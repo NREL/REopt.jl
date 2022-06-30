@@ -124,6 +124,7 @@ struct ElectricUtility
         CO2_emissions_reduction_max_pct::Union{Real, Nothing} = nothing,
         include_climate_in_objective::Bool = false,
         include_health_in_objective::Bool = false,
+        off_grid_flag::Bool = false,
         time_steps_per_hour::Int = 1
         )
 
