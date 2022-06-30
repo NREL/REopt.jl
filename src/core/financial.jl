@@ -164,46 +164,37 @@ struct Financial
         missing_health_inputs = false
 
         # use EASIUR data for missing grid costs
+        missing_health_inputs = isnothing(grid_costs) ? true : missing_health_inputs
         if isnothing(NOx_grid_cost_per_tonne)
             NOx_grid_cost_per_tonne = isnothing(grid_costs) ? 0.0 : grid_costs["NOx"]
-            missing_health_inputs = isnothing(grid_costs) ? true : missing_health_inputs
         end
         if isnothing(SO2_grid_cost_per_tonne)
             SO2_grid_cost_per_tonne = isnothing(grid_costs) ? 0.0 : grid_costs["SO2"]
-            missing_health_inputs = isnothing(grid_costs) ? true : missing_health_inputs
-
         end
         if isnothing(PM25_grid_cost_per_tonne)
             PM25_grid_cost_per_tonne = isnothing(grid_costs) ? 0.0 : grid_costs["PM25"]
-            missing_health_inputs = isnothing(grid_costs) ? true : missing_health_inputs
         end
         # use EASIUR data for missing fuelburn costs
+        missing_health_inputs = isnothing(onsite_costs) ? true : missing_health_inputs
         if isnothing(NOx_onsite_fuelburn_cost_per_tonne)
             NOx_onsite_fuelburn_cost_per_tonne = isnothing(onsite_costs) ? 0.0 : onsite_costs["NOx"]
-            missing_health_inputs = isnothing(onsite_costs) ? true : missing_health_inputs
         end
         if isnothing(SO2_onsite_fuelburn_cost_per_tonne)
             SO2_onsite_fuelburn_cost_per_tonne = isnothing(onsite_costs) ? 0.0 : onsite_costs["SO2"]
-            missing_health_inputs = isnothing(onsite_costs) ? true : missing_health_inputs
-
         end
         if isnothing(PM25_onsite_fuelburn_cost_per_tonne)
             PM25_onsite_fuelburn_cost_per_tonne = isnothing(onsite_costs) ? 0.0 : onsite_costs["PM25"]
-            missing_health_inputs = isnothing(onsite_costs) ? true : missing_health_inputs
         end
         # use EASIUR data for missing escalation rates
+        missing_health_inputs = isnothing(escalation_rates) ? true : missing_health_inputs
         if isnothing(NOx_cost_escalation_pct)
             NOx_cost_escalation_pct = isnothing(escalation_rates) ? 0.0 : escalation_rates["NOx"]
-            missing_health_inputs = isnothing(escalation_rates) ? true : missing_health_inputs
         end
         if isnothing(SO2_cost_escalation_pct)
             SO2_cost_escalation_pct = isnothing(escalation_rates) ? 0.0 : escalation_rates["SO2"]
-            missing_health_inputs = isnothing(escalation_rates) ? true : missing_health_inputs
-
         end
         if isnothing(PM25_cost_escalation_pct)
             PM25_cost_escalation_pct = isnothing(escalation_rates) ? 0.0 : escalation_rates["PM25"]
-            missing_health_inputs = isnothing(escalation_rates) ? true : missing_health_inputs
         end
 
         if missing_health_inputs && include_health_in_objective
