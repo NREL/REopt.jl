@@ -148,7 +148,7 @@ struct ElectricUtility
             
             region_abbr, meters_to_region = region_abbreviation(latitude, longitude)
             emissions_region = get(region_lookup, region_abbr, "")
-            emissions_series_dict = Dict{String, Array{<:Real,1}}()
+            emissions_series_dict = Dict{String, Union{Nothing,Array{<:Real,1}}}()
 
             for (eseries, ekey) in [
                 (emissions_factor_series_lb_CO2_per_kwh, "CO2"),
