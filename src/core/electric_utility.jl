@@ -168,17 +168,17 @@ struct ElectricUtility
                     end
                     emissions_series_dict[ekey] = emissions_series(ekey, region_abbr, time_steps_per_hour=time_steps_per_hour)
                     #Handle missing emissions inputs (due to failed lookup and not provided by user)
-                    #TODO: condition below code on: if site.off_grid == false
                     if isnothing(emissions_series_dict[ekey])
                         @warn "Cannot find hourly $(ekey) emissions for region $(region_abbr). Setting emissions to zero."
-                        if ekey == "CO2" && (!isnothing(CO2_emissions_reduction_min_pct) || 
+                        if ekey == "CO2" && !off_grid_flag && 
+                                            (!isnothing(CO2_emissions_reduction_min_pct) || 
                                             !isnothing(CO2_emissions_reduction_max_pct) || 
                                             include_climate_in_objective)
                             error("To include CO2 costs in the objective function or enforce emissions reduction constraints, 
-                                you must either enter custom health emissions factors or a site location within the continental U.S.")
-                        elseif ekey in ["NOx", "SO2", "PM25"] && include_health_in_objective
+                                you must either enter custom CO2 grid emissions factors or a site location within the continental U.S.")
+                        elseif ekey in ["NOx", "SO2", "PM25"] && !off_grid_flag && include_health_in_objective
                             error("To include health costs in the objective function, you must either enter custom health 
-                                emissions factors or a site location within the continental U.S.")
+                                grid emissions factors or a site location within the continental U.S.")
                         end
                         emissions_series_dict[ekey] = zeros(8760*time_steps_per_hour)
                     end
