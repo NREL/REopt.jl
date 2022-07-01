@@ -43,8 +43,7 @@ end
     chp_prime_mover::String = "",
     max_thermal_factor_on_peak_load::Real = 1.25,
     efficiency::Real = 0.0,
-    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [],
-    time_steps_per_hour::Int = 1
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [], # can be a scalar, a list of 12 monthly values, or a time series of values for every time step
 ```
 
 !!! note "Max ExistingBoiler size" 
