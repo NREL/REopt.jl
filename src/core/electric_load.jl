@@ -140,7 +140,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         if length(loads_kw) > 0
 
             if !(length(loads_kw) / time_steps_per_hour ≈ 8760)
-                @error "Provided electric load does not match the time_steps_per_hour."
+                throw(@error "Provided electric load does not match the time_steps_per_hour.")
             end
 
         elseif !isempty(path_to_csv)
@@ -152,7 +152,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             end
 
             if !(length(loads_kw) / time_steps_per_hour ≈ 8760)
-                @error "Provided electric load does not match the time_steps_per_hour."
+                throw(@error "Provided electric load does not match the time_steps_per_hour.")
             end
     
         elseif !isempty(doe_reference_name)
