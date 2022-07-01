@@ -33,6 +33,8 @@
 struct with inner constructor:
 ```julia
 function Generator(;
+    off_grid_flag::Bool = false,
+    analysis_years::Int = 25, 
     existing_kw::Real = 0,
     min_kw::Real = 0,
     max_kw::Real = 1.0e6,

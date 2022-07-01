@@ -33,6 +33,7 @@
 Financial data struct with inner constructor:
 ```julia
 function Financial(;
+    off_grid_flag::Bool = false,
     om_cost_escalation_pct::Real = 0.025,
     elec_cost_escalation_pct::Real = 0.019,
     boiler_fuel_cost_escalation_pct::Real = 0.034,
@@ -62,7 +63,8 @@ function Financial(;
     offgrid_other_capital_costs::Real = 0.0, # only applicable when off_grid_flag is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
     offgrid_other_annual_costs::Real = 0.0, # only applicable when off_grid_flag is true. Considered tax deductible for owner. Costs are per year. 
     latitude::Real,
-    longitude::Real
+    longitude::Real,
+    include_health_in_objective::Bool = false
 )
 ```
 
@@ -159,7 +161,7 @@ struct Financial
         grid_costs = off_grid_flag ? nothing : easiur_costs(latitude, longitude, "grid")
         onsite_costs = easiur_costs(latitude, longitude, "onsite")
         escalation_rates = easiur_escalation_rates(latitude, longitude, om_cost_escalation_pct)
-       
+        
         #TODO: allow grid costs to be nothing if site.off_grid == true
         missing_health_inputs = false
 
