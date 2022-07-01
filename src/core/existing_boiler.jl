@@ -54,14 +54,14 @@ end
     ```
 
 !!! note "ExistingBoiler operating costs" 
-    The `ExistingBoiler`'s `fuel_cost_per_mmbtu` field is a required input.
-    The `fuel_cost_per_mmbtu` can be a scalar, a list of 12 monthly values, or a time series of values for every time step.
+    The `ExistingBoiler`'s `fuel_cost_per_mmbtu` field is a required input. The `fuel_cost_per_mmbtu` can be a scalar, a list of 12 monthly values, or a time series of values for every time step.
 
 !!! note "Determining `efficiency`" 
     Must supply either: `efficiency`, `chp_prime_mover`, or `production_type`.
     
-    If `efficiency` is not supplied (or if set to 0.0), the `production_type` and `efficiency` will be determined based on the 
-    `chp_prime_mover` (one of ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cell"]) as follows:
+    If `efficiency` is not supplied, the `efficiency` will be determined based on the `production_type`. 
+    If `production_type` is not supplied, the `production_type` will be determined based on the `chp_prime_mover` (one of ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cell"]).
+    The following defaults are used:
     ```julia    
     production_type_by_chp_prime_mover = Dict(
             "recip_engine" => "hot_water",
