@@ -35,11 +35,21 @@ function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly",
         return pv.prod_factor_series
     end
 
+    # Check if site is beyond the bounds of the NRSDB dataset. If so, use the international dataset.
+    dataset = "nsrdb"
+    if longitude < -179.5 || longitude > -21.0 || latitude < -21.5 || latitude > 60.0
+        if longitude < 81.5 || longitude > 179.5 || latitude < -43.8 || latitude > 60.0 
+            if longitude < 67.0 || longitude > 81.5 || latitude < -43.8 || latitude > 38.0
+                dataset = "intl"
+            end
+        end
+    end
+
     url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
         "&lat=", latitude , "&lon=", longitude, "&tilt=", pv.tilt,
         "&system_capacity=1", "&azimuth=", pv.azimuth, "&module_type=", pv.module_type,
         "&array_type=", pv.array_type, "&losses=", round(pv.losses*100, digits=3), "&dc_ac_ratio=", pv.dc_ac_ratio,
-        "&gcr=", pv.gcr, "&inv_eff=", pv.inv_eff*100, "&timeframe=", timeframe, "&dataset=nsrdb",
+        "&gcr=", pv.gcr, "&inv_eff=", pv.inv_eff*100, "&timeframe=", timeframe, "&dataset=", dataset,
         "&radius=", pv.radius
     )
 
@@ -89,8 +99,8 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
 
     if all(length(a) > 0 for a in [wind.temperature_celsius, wind.pressure_atmospheres, wind.wind_direction_degrees,
                                    wind.wind_meters_per_sec])
-        push!(resources, [wind.temperature_celsius, wind.pressure_atmospheres, wind.wind_direction_degrees,
-                          wind.wind_meters_per_sec])
+        push!(resources, [wind.temperature_celsius, wind.pressure_atmospheres, wind.wind_meters_per_sec, wind.wind_direction_degrees]...)
+        resources = hcat(resources...)
     else  # download resource data from WindToolKit
 
         # Allowed hub heights in meters for the Wind Toolkit

@@ -134,7 +134,7 @@ struct PV <: AbstractTech
         losses::Real=0.14,
         azimuth::Real = latitude≥0 ? 180 : 0, # set azimuth to zero for southern hemisphere
         gcr::Real=0.4,
-        radius::Int=0,
+        radius::Int=0, # Radius, in miles, to use when searching for the closest climate data station. Use zero to use the closest station regardless of the distance
         name::String="PV",
         location::String="both",
         existing_kw::Real=0,
@@ -173,12 +173,12 @@ struct PV <: AbstractTech
         )
 
         if !(off_grid_flag) && !(operating_reserve_required_pct == 0.0)
-            @warn "PV operating_reserve_required_pct apply only when off_grid_flag is True. Setting operating_reserve_required_pct to 0.0 for this on-grid analysis."
+            @warn "PV operating_reserve_required_pct applies only when off_grid_flag is True. Setting operating_reserve_required_pct to 0.0 for this on-grid analysis."
             operating_reserve_required_pct = 0.0
         end
 
         if off_grid_flag && (can_net_meter || can_wholesale || can_export_beyond_nem_limit)
-            @warn "Net metering, wholesale, and grid exports are not possible for off-grid scenarios. Setting can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False."
+            @warn "Net metering, wholesale, and grid exports are not possible for off-grid scenarios. Setting PV can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False."
             can_net_meter = false
             can_wholesale = false
             can_export_beyond_nem_limit = false
