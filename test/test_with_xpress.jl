@@ -40,8 +40,8 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
     @test round(results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"], digits=0) ≈ 2905
     
     data = JSON.parsefile("./scenarios/thermal_load.json")
-    data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([0.5], 8760)
-    data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([0.5], 8760)
+    data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_time_step"] = repeat([0.5], 8760)
+    data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_time_step"] = repeat([0.5], 8760)
     s = Scenario(data)
     inputs = REoptInputs(s)
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
@@ -193,8 +193,8 @@ end
         data = JSON.parsefile("./scenarios/chp_supplementary_firing.json")
         data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10000
         data["ElectricLoad"]["loads_kw"] = repeat([800.0], 8760)
-        data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([6.0], 8760)
-        data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([6.0], 8760)
+        data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_time_step"] = repeat([6.0], 8760)
+        data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_time_step"] = repeat([6.0], 8760)
         #part 1: supplementary firing not used when less efficient than the boiler and expensive 
         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         s = Scenario(data)
@@ -787,8 +787,8 @@ end
     total_chiller_electric_consumption = sum(inputs.s.cooling_load.loads_kw_thermal) / inputs.s.cooling_load.existing_chiller_cop
     @test round(total_chiller_electric_consumption, digits=0) ≈ 775282 atol=1.0
 
-    input_data["SpaceHeatingLoad"] = Dict{Any, Any}("fuel_loads_mmbtu_per_hour" => repeat([0.5], 8760))
-    input_data["DomesticHotWaterLoad"] = Dict{Any, Any}("fuel_loads_mmbtu_per_hour" => repeat([0.5], 8760))
+    input_data["SpaceHeatingLoad"] = Dict{Any, Any}("fuel_loads_mmbtu_per_time_step" => repeat([0.5], 8760))
+    input_data["DomesticHotWaterLoad"] = Dict{Any, Any}("fuel_loads_mmbtu_per_time_step" => repeat([0.5], 8760))
     input_data["CoolingLoad"] = Dict{Any, Any}("per_time_step_fractions_of_electric_load" => repeat([0.01], 8760))
 
     s = Scenario(input_data)

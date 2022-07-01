@@ -194,7 +194,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         max_heat_demand_kw = maximum(dhw_load.loads_kw)
     else
         dhw_load = DomesticHotWaterLoad(; 
-            fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
+            fuel_loads_mmbtu_per_time_step=zeros(8760*settings.time_steps_per_hour),
             time_steps_per_hour=settings.time_steps_per_hour
         )
     end
@@ -209,7 +209,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         max_heat_demand_kw = maximum(space_heating_load.loads_kw .+ max_heat_demand_kw)
     else
         space_heating_load = SpaceHeatingLoad(; 
-            fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
+            fuel_loads_mmbtu_per_time_step=zeros(8760*settings.time_steps_per_hour),
             time_steps_per_hour=settings.time_steps_per_hour
         )
     end
