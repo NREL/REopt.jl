@@ -58,9 +58,12 @@ Financial results:
 - `om_and_replacement_present_cost_after_tax` Present value of all O&M and replacement costs, after tax.
 - `developer_om_and_replacement_present_cost_after_tax` Present value of all O&M and replacement costs incurred by developer, after tax.
 - `offgrid_microgrid_lcoe_dollars_per_kwh` Levelized cost of electricity for modeled off-grid system.
+
+calculated in combine_results function if BAU scenario is run:
+    - `breakeven_cost_of_emissions_reduction_per_tonnes_CO2`
 """
 function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
-    r = Dict{String, Any}()
+    r = Dict{String, Float64}()
     if !(Symbol("dvComfortLimitViolationCost"*_n) in keys(m.obj_dict))
         m[Symbol("dvComfortLimitViolationCost"*_n)] = 0.0
     end
@@ -133,7 +136,7 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
         r["offgrid_microgrid_lcoe_dollars_per_kwh"] = round(r["lcc"] / pwf / value(LoadMet), digits=4)
     end
 
-    d["Financial"] = Dict(k => round(v, digits=4) for (k,v) in r)
+    d["Financial"] = Dict{String,Float64}(k => round(v, digits=4) for (k,v) in r)
     nothing
 end
 

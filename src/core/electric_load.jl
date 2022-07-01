@@ -29,6 +29,7 @@
 # *********************************************************************************
 """
     ElectricLoad(;
+        off_grid_flag::Bool = false,
         loads_kw::Array{<:Real,1} = Real[],
         path_to_csv::String = "",
         year::Int = 2020,
@@ -38,7 +39,7 @@
         city::String = "",
         annual_kwh::Union{Real, Nothing} = nothing,
         monthly_totals_kwh::Array{<:Real,1} = Real[],
-        critical_loads_kw::Union{Missing, Array{Real,1}} = missing,
+        critical_loads_kw::Union{Nothing, Array{Real,1}} = nothing,
         loads_kw_is_net::Bool = true,
         critical_loads_kw_is_net::Bool = false,
         critical_load_pct::Real = off_grid_flag ? 1.0 : 0.5, # if off grid, 1.0, else 0.5
@@ -111,7 +112,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         city::String = "",
         annual_kwh::Union{Real, Nothing} = nothing,
         monthly_totals_kwh::Array{<:Real,1} = Real[],
-        critical_loads_kw::Union{Missing, Array{Real,1}} = missing,
+        critical_loads_kw::Union{Nothing, Array{Real,1}} = nothing,
         loads_kw_is_net::Bool = true,
         critical_loads_kw_is_net::Bool = false,
         critical_load_pct::Real = off_grid_flag ? 1.0 : 0.5, # if off grid, 1.0, else 0.5
@@ -179,7 +180,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             @info "Repeating electric loads in each hour to match the time_steps_per_hour."
         end
 
-        if ismissing(critical_loads_kw)
+        if isnothing(critical_loads_kw)
             critical_loads_kw = critical_load_pct * loads_kw
         end
 
@@ -203,7 +204,7 @@ function BuiltInElectricLoad(
     latitude::Real,
     longitude::Real,
     year::Int,
-    annual_kwh::Union{<:Real, Nothing}=nothing,
+    annual_kwh::Union{Real, Nothing}=nothing,
     monthly_totals_kwh::Vector{<:Real}=Real[],
     )
     

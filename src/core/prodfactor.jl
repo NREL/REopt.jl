@@ -31,7 +31,7 @@
 function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly", 
     time_steps_per_hour::Int=1)
 
-    if !(ismissing(pv.prod_factor_series))
+    if !(isnothing(pv.prod_factor_series))
         return pv.prod_factor_series
     end
 
@@ -90,7 +90,7 @@ Wind Toolkit.
 """
 function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_hour::Int)
 
-    if !(ismissing(wind.prod_factor_series))
+    if !(isnothing(wind.prod_factor_series))
         return wind.prod_factor_series
     end
 

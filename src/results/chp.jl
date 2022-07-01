@@ -112,7 +112,8 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["lifecycle_chp_fuel_cost_after_tax"] = round(value(m[:TotalCHPFuelCosts]) * p.s.financial.offtaker_tax_pct, digits=3)
 	#Standby charges and hourly O&M
 	r["year_one_chp_standby_cost_before_tax"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) / p.pwf_e, digits=0)
-	
+	r["lifecycle_chp_standby_cost_after_tax"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) * p.s.financial.offtaker_tax_pct, digits=0)
+
 
     d["CHP"] = r
     nothing

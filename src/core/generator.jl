@@ -33,12 +33,14 @@
 struct with inner constructor:
 ```julia
 function Generator(;
-    existing_kw::Real=0,
-    min_kw::Real=0,
-    max_kw::Real=1.0e6,
+    off_grid_flag::Bool = false,
+    analysis_years::Int = 25, 
+    existing_kw::Real = 0,
+    min_kw::Real = 0,
+    max_kw::Real = 1.0e6,
     installed_cost_per_kw::Real = 500.0,
-    om_cost_per_kw::Real= off_grid_flag ? 20.0 : 10.0,
-    om_cost_per_kwh::Real=0.0,
+    om_cost_per_kw::Real = off_grid_flag ? 20.0 : 10.0,
+    om_cost_per_kwh::Real = 0.0,
     fuel_cost_per_gallon::Real = 3.0,
     fuel_slope_gal_per_kwh::Real = 0.076,
     fuel_intercept_gal_per_hr::Real = 0.0,
@@ -66,6 +68,11 @@ function Generator(;
     production_incentive_max_benefit::Real = 1.0e9,
     production_incentive_years::Int = 0,
     production_incentive_max_kw::Real = 1.0e9,
+    fuel_renewable_energy_pct::Real = 0.0,
+    emissions_factor_lb_CO2_per_gal::Real = 22.51,
+    emissions_factor_lb_NOx_per_gal::Real = 0.0775544,
+    emissions_factor_lb_SO2_per_gal::Real = 0.040020476,
+    emissions_factor_lb_PM25_per_gal::Real = 0.0,
     replacement_year::Int = off_grid_flag ? 10 : analysis_years, 
     replace_cost_per_kw::Real = off_grid_flag ? installed_cost_per_kw : 0.0
 )
@@ -106,6 +113,11 @@ struct Generator <: AbstractGenerator
     production_incentive_max_benefit
     production_incentive_years
     production_incentive_max_kw
+    fuel_renewable_energy_pct
+    emissions_factor_lb_CO2_per_gal
+    emissions_factor_lb_NOx_per_gal
+    emissions_factor_lb_SO2_per_gal
+    emissions_factor_lb_PM25_per_gal
     replacement_year
     replace_cost_per_kw
 
@@ -146,9 +158,14 @@ struct Generator <: AbstractGenerator
         production_incentive_max_benefit::Real = 1.0e9,
         production_incentive_years::Int = 0,
         production_incentive_max_kw::Real = 1.0e9,
+        fuel_renewable_energy_pct::Real = 0.0,
+        emissions_factor_lb_CO2_per_gal::Real = 22.51,
+        emissions_factor_lb_NOx_per_gal::Real = 0.0775544,
+        emissions_factor_lb_SO2_per_gal::Real = 0.040020476,
+        emissions_factor_lb_PM25_per_gal::Real = 0.0,
         replacement_year::Int = off_grid_flag ? 10 : analysis_years, 
         replace_cost_per_kw::Real = off_grid_flag ? installed_cost_per_kw : 0.0
-        )
+    )
 
         if (replacement_year >= analysis_years) && !(replace_cost_per_kw == 0.0)
             @warn "Generator replacement costs will not be considered because replacement_year >= analysis_years."
@@ -189,6 +206,11 @@ struct Generator <: AbstractGenerator
             production_incentive_max_benefit,
             production_incentive_years,
             production_incentive_max_kw,
+            fuel_renewable_energy_pct,
+            emissions_factor_lb_CO2_per_gal,
+            emissions_factor_lb_NOx_per_gal,
+            emissions_factor_lb_SO2_per_gal,
+            emissions_factor_lb_PM25_per_gal,
             replacement_year,
             replace_cost_per_kw
         )
