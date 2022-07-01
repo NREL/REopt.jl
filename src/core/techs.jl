@@ -132,7 +132,7 @@ function Techs(s::Scenario)
         end
     end
 
-    if s.generator.max_kw > 0
+    if s.generator.existing_kw + s.generator.max_kw > 0
         push!(all_techs, "Generator")
         push!(gentechs, "Generator")
         push!(elec, "Generator")

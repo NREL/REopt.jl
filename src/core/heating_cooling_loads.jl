@@ -52,6 +52,7 @@ function DomesticHotWaterLoad(;
 """
 struct DomesticHotWaterLoad
     loads_kw::Array{Real, 1}
+    annual_mmbtu::Real
 
     function DomesticHotWaterLoad(;
         doe_reference_name::String = "",
@@ -61,7 +62,7 @@ struct DomesticHotWaterLoad
         annual_mmbtu::Union{Real, Nothing} = nothing,
         monthly_mmbtu::Array{<:Real,1} = Real[],
         # addressable_load_fraction,  # TODO
-        fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],  # TODO shouldn't this be per_time_step?
+        fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],  # TODO this should be per_time_step, issue created
         time_steps_per_hour::Int = 1,
         latitude::Real=0.0,
         longitude::Real=0.0
@@ -69,15 +70,21 @@ struct DomesticHotWaterLoad
         if length(fuel_loads_mmbtu_per_hour) > 0
 
             if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
-                throw(@error "Provided domestic hot water load does not match the time_steps_per_hour.")
+                error("Provided domestic hot water load does not match the time_steps_per_hour.")
             end
 
             loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY)
 
+            if !isempty(doe_reference_name) || length(blended_doe_reference_names) > 0
+                @warn "DomesticHotWaterLoad fuel_loads_mmbtu_per_hour was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
+            end
+
         elseif !isempty(doe_reference_name)
             loads_kw = BuiltInDomesticHotWaterLoad(city, doe_reference_name, latitude, longitude, 2017, annual_mmbtu, monthly_mmbtu)
-
-        elseif length(blended_doe_reference_names) > 1 && 
+            if length(blended_doe_reference_names) > 0
+                @warn "DomesticHotWaterLoad doe_reference_name was provided, so blended_doe_reference_names will be ignored."
+            end
+        elseif length(blended_doe_reference_names) > 0 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
             loads_kw = blend_and_scale_doe_profiles(BuiltInDomesticHotWaterLoad, latitude, longitude, 2017, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
@@ -94,7 +101,8 @@ struct DomesticHotWaterLoad
         end
 
         new(
-            loads_kw
+            loads_kw,
+            (sum(loads_kw)/time_steps_per_hour)/KWH_PER_MMBTU
         )
     end
 end
@@ -130,6 +138,7 @@ In this case the values provided for `doe_reference_name`, or  `blended_doe_refe
 """
 struct SpaceHeatingLoad
     loads_kw::Array{Real, 1}
+    annual_mmbtu::Real
 
     function SpaceHeatingLoad(;
         doe_reference_name::String = "",
@@ -147,15 +156,21 @@ struct SpaceHeatingLoad
         if length(fuel_loads_mmbtu_per_hour) > 0
 
             if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
-                throw(@error "Provided space heating load does not match the time_steps_per_hour.")
+                error("Provided space heating load does not match the time_steps_per_hour.")
             end
 
             loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY)
+            
+            if !isempty(doe_reference_name) || length(blended_doe_reference_names) > 0
+                @warn "SpaceHeatingLoad fuel_loads_mmbtu_per_hour was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
+            end
 
         elseif !isempty(doe_reference_name)
             loads_kw = BuiltInSpaceHeatingLoad(city, doe_reference_name, latitude, longitude, 2017, annual_mmbtu, monthly_mmbtu)
-
-        elseif length(blended_doe_reference_names) > 1 && 
+            if length(blended_doe_reference_names) > 0
+                @warn "SpaceHeatingLoad doe_reference_name was provided, so blended_doe_reference_names will be ignored."
+            end
+        elseif length(blended_doe_reference_names) > 0 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
             loads_kw = blend_and_scale_doe_profiles(BuiltInSpaceHeatingLoad, latitude, longitude, 2017, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
@@ -172,7 +187,8 @@ struct SpaceHeatingLoad
         end
 
         new(
-            loads_kw
+            loads_kw,
+            (sum(loads_kw)/time_steps_per_hour)/KWH_PER_MMBTU
         )
     end
 end
@@ -272,7 +288,7 @@ struct CoolingLoad
         loads_kw = nothing
         if length(thermal_loads_ton) > 0
             if !(length(thermal_loads_ton) / time_steps_per_hour ≈ 8760)
-                throw(@error "Provided cooling load does not match the time_steps_per_hour.")
+                error("Provided cooling load does not match the time_steps_per_hour.")
             end
             loads_kw_thermal = thermal_loads_ton .* KWH_THERMAL_PER_TONHOUR
         
@@ -376,7 +392,7 @@ function BuiltInDomesticHotWaterLoad(
     latitude::Real,
     longitude::Real,
     year::Int,
-    annual_mmbtu::Union{<:Real, Nothing}=nothing,
+    annual_mmbtu::Union{Real, Nothing}=nothing,
     monthly_mmbtu::Vector{<:Real}=Real[]
     )
     dhw_annual_mmbtu = Dict(
@@ -707,7 +723,7 @@ function BuiltInSpaceHeatingLoad(
     latitude::Real,
     longitude::Real,
     year::Int,
-    annual_mmbtu::Union{<:Real, Nothing}=nothing,
+    annual_mmbtu::Union{Real, Nothing}=nothing,
     monthly_mmbtu::Vector{<:Real}=Real[],
     )
     spaceheating_annual_mmbtu = Dict(
@@ -1035,9 +1051,9 @@ function BuiltInCoolingLoad(
     latitude::Float64,
     longitude::Float64,
     year::Int,
-    annual_tonhour::Union{<:Real, Nothing}=nothing,
+    annual_tonhour::Union{Real, Nothing}=nothing,
     monthly_tonhour::Vector{<:Real}=Real[],
-    existing_chiller_cop::Union{<:Real, Nothing}=nothing
+    existing_chiller_cop::Union{Real, Nothing}=nothing
     )
     cooling_annual_kwh = Dict(
         "Albuquerque" => Dict(
