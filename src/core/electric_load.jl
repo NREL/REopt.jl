@@ -29,6 +29,7 @@
 # *********************************************************************************
 """
     ElectricLoad(;
+        off_grid_flag::Bool = false,
         loads_kw::Array{<:Real,1} = Real[],
         path_to_csv::String = "",
         year::Int = 2020,
