@@ -32,13 +32,13 @@ Captures high-level inputs affecting the optimization.
 
 `Settings` is an optional REopt input with the following keys and default values:
 ```julia
-    time_steps_per_hour::Int = 1
-    add_soc_incentive::Bool = true
+    time_steps_per_hour::Int = 1 # Corresponds to the time steps per hour for user-provided time series (e.g., `ElectricLoad.loads_kw` and `DomesticHotWaterLoad.fuel_loads_mmbtu_per_time_step`) 
+    add_soc_incentive::Bool = true # Adds a small cost to the objective function in order to keep the ElectricStorage state of charge high
     off_grid_flag::Bool = false # Set to true to model off-grid microgrids
 ```
 """
 Base.@kwdef struct Settings
-    time_steps_per_hour::Int = 1
-    add_soc_incentive::Bool = true
+    time_steps_per_hour::Int = 1 # Corresponds to the time steps per hour for user-provided time series (e.g., `ElectricLoad.loads_kw` and `DomesticHotWaterLoad.fuel_loads_mmbtu_per_time_step`) 
+    add_soc_incentive::Bool = true # Adds a small cost to the objective function in order to keep the ElectricStorage state of charge high
     off_grid_flag::Bool = false # Set to true to model off-grid microgrids
 end

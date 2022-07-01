@@ -35,8 +35,7 @@
     blended_doe_reference_percents::Array{<:Real,1} = Real[],
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
-    fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
-    time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
+    fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[]
 ```
 
 There are many ways in which a DomesticHotWaterLoad can be defined:
@@ -103,8 +102,7 @@ end
     blended_doe_reference_percents::Array{<:Real,1} = Real[],
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
-    fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[], 
-    time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
+    fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[]
 ```
 
 There are many ways to define a `SpaceHeatingLoad`:

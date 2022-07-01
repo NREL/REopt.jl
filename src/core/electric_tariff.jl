@@ -74,7 +74,6 @@ end
     urdb_utility_name::String="",
     urdb_rate_name::String="",
     year::Int=2020,
-    time_steps_per_hour::Int=1,
     NEM::Bool=false,
     wholesale_rate::T1=nothing,
     export_rate_beyond_net_metering_limit::T2=nothing,
