@@ -35,13 +35,13 @@
     blended_doe_reference_percents::Array{<:Real,1} = Real[],
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
-    fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[]
+    fuel_loads_mmbtu_per_time_step::Array{<:Real,1} = Real[] # Vector of hot water fuel loads. Length must equal 8760 * `Settings.time_steps_per_hour`
 ```
 
 There are many ways in which a DomesticHotWaterLoad can be defined:
 1. When using either `doe_reference_name` or `blended_doe_reference_names` in an `ElectricLoad` one only needs to provide the input key "DomesticHotWaterLoad" in the `Scenario` (JSON or Dict). In this case the values from DoE reference names from the `ElectricLoad` will be used to define the `DomesticHotWaterLoad`.
 2. One can provide the `doe_reference_name` or `blended_doe_reference_names` directly in the `DomesticHotWaterLoad` key within the `Scenario`. These values can be combined with the `annual_mmbtu` or `monthly_mmbtu` inputs to scale the DoE reference profile(s).
-3. One can provide the `fuel_loads_mmbtu_per_hour` value in the `DomesticHotWaterLoad` key within the `Scenario`.
+3. One can provide the `fuel_loads_mmbtu_per_time_step` value in the `DomesticHotWaterLoad` key within the `Scenario`.
 
 """
 struct DomesticHotWaterLoad
@@ -55,18 +55,18 @@ struct DomesticHotWaterLoad
         annual_mmbtu::Union{Real, Nothing} = nothing,
         monthly_mmbtu::Array{<:Real,1} = Real[],
         # addressable_load_fraction,  # TODO
-        fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],  # TODO shouldn't this be per_time_step?
-        time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
+        fuel_loads_mmbtu_per_time_step::Array{<:Real,1} = Real[],
+        time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_time_step`
         latitude::Real=0.0,
         longitude::Real=0.0
     )
-        if length(fuel_loads_mmbtu_per_hour) > 0
+        if length(fuel_loads_mmbtu_per_time_step) > 0
 
-            if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
+            if !(length(fuel_loads_mmbtu_per_time_step) / time_steps_per_hour ≈ 8760)
                 throw(@error "Provided domestic hot water load does not match the time_steps_per_hour.")
             end
 
-            loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY)
+            loads_kw = fuel_loads_mmbtu_per_time_step .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY * time_steps_per_hour)
 
         elseif !isempty(doe_reference_name)
             loads_kw = BuiltInDomesticHotWaterLoad(city, doe_reference_name, latitude, longitude, 2017, annual_mmbtu, monthly_mmbtu)
@@ -77,7 +77,7 @@ struct DomesticHotWaterLoad
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_mmbtu, monthly_mmbtu)
         else
-            error("Cannot construct DomesticHotWaterLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
+            error("Cannot construct DomesticHotWaterLoad. You must provide either [fuel_loads_mmbtu_per_time_step], 
                 [doe_reference_name, city],
                 or [blended_doe_reference_names, blended_doe_reference_percents, city].")
         end
@@ -102,11 +102,11 @@ end
     blended_doe_reference_percents::Array{<:Real,1} = Real[],
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
-    fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[]
+    fuel_loads_mmbtu_per_time_step::Array{<:Real,1} = Real[]
 ```
 
 There are many ways to define a `SpaceHeatingLoad`:
-1. a time-series via the `fuel_loads_mmbtu_per_hour`,
+1. a time-series via the `fuel_loads_mmbtu_per_time_step`,
 2. scaling a DoE Commercial Reference Building (CRB) profile or a blend of CRB profiles to either the `annual_mmbtu` or `monthly_mmbtu` values;
 3. or using the `doe_reference_name` or `blended_doe_reference_names` from the `ElectricLoad`.
 
@@ -133,18 +133,18 @@ struct SpaceHeatingLoad
         annual_mmbtu::Union{Real, Nothing} = nothing,
         monthly_mmbtu::Array{<:Real,1} = Real[],
         # addressable_load_fraction,  # TODO
-        fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[], # TODO: shouldn't this be per time_step? 
-        time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
+        fuel_loads_mmbtu_per_time_step::Array{<:Real,1} = Real[],
+        time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_time_step`
         latitude::Real=0.0,
         longitude::Real=0.0
     )
-        if length(fuel_loads_mmbtu_per_hour) > 0
+        if length(fuel_loads_mmbtu_per_time_step) > 0
 
-            if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
+            if !(length(fuel_loads_mmbtu_per_time_step) / time_steps_per_hour ≈ 8760)
                 throw(@error "Provided space heating load does not match the time_steps_per_hour.")
             end
 
-            loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY)
+            loads_kw = fuel_loads_mmbtu_per_time_step .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY * time_steps_per_hour)
 
         elseif !isempty(doe_reference_name)
             loads_kw = BuiltInSpaceHeatingLoad(city, doe_reference_name, latitude, longitude, 2017, annual_mmbtu, monthly_mmbtu)
@@ -155,7 +155,7 @@ struct SpaceHeatingLoad
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_mmbtu, monthly_mmbtu)
         else
-            error("Cannot construct BuiltInSpaceHeatingLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
+            error("Cannot construct BuiltInSpaceHeatingLoad. You must provide either [fuel_loads_mmbtu_per_time_step], 
                 [doe_reference_name, city], 
                 or [blended_doe_reference_names, blended_doe_reference_percents, city].")
         end
