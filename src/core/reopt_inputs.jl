@@ -833,10 +833,12 @@ function fillin_techs_by_exportbin(techs_by_exportbin::Dict, tech::AbstractTech,
 end
 
 function setup_operating_reserve_pct(s::AbstractScenario, techs_operating_reserve_req_pct)
-
-    for pv in s.pvs # currently only PV requires operating reserves
+    # currently only PV and Wind require operating reserves
+    for pv in s.pvs 
         techs_operating_reserve_req_pct[pv.name] = pv.operating_reserve_required_pct
     end
+
+    techs_operating_reserve_req_pct["Wind"] = s.wind.operating_reserve_required_pct
 
     return nothing
 
