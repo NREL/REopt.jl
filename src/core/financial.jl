@@ -161,10 +161,8 @@ struct Financial
         grid_costs = off_grid_flag ? nothing : easiur_costs(latitude, longitude, "grid")
         onsite_costs = easiur_costs(latitude, longitude, "onsite")
         escalation_rates = easiur_escalation_rates(latitude, longitude, om_cost_escalation_pct)
-        
-        #TODO: allow grid costs to be nothing if site.off_grid == true
-        missing_health_inputs = false
 
+        missing_health_inputs = false
         # use EASIUR data for missing grid costs
         missing_health_inputs = isnothing(grid_costs) && !off_grid_flag ? true : missing_health_inputs
         if isnothing(NOx_grid_cost_per_tonne)
