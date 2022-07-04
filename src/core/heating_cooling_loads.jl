@@ -46,6 +46,7 @@ There are many ways in which a DomesticHotWaterLoad can be defined:
 """
 struct DomesticHotWaterLoad
     loads_kw::Array{Real, 1}
+    annual_mmbtu::Real
 
     function DomesticHotWaterLoad(;
         doe_reference_name::String = "",
@@ -68,10 +69,16 @@ struct DomesticHotWaterLoad
 
             loads_kw = fuel_loads_mmbtu_per_time_step .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY * time_steps_per_hour)
 
+            if !isempty(doe_reference_name) || length(blended_doe_reference_names) > 0
+                @warn "DomesticHotWaterLoad fuel_loads_mmbtu_per_hour was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
+            end
+
         elseif !isempty(doe_reference_name)
             loads_kw = BuiltInDomesticHotWaterLoad(city, doe_reference_name, latitude, longitude, 2017, annual_mmbtu, monthly_mmbtu)
-
-        elseif length(blended_doe_reference_names) > 1 && 
+            if length(blended_doe_reference_names) > 0
+                @warn "DomesticHotWaterLoad doe_reference_name was provided, so blended_doe_reference_names will be ignored."
+            end
+        elseif length(blended_doe_reference_names) > 0 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
             loads_kw = blend_and_scale_doe_profiles(BuiltInDomesticHotWaterLoad, latitude, longitude, 2017, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
@@ -88,7 +95,8 @@ struct DomesticHotWaterLoad
         end
 
         new(
-            loads_kw
+            loads_kw,
+            (sum(loads_kw)/time_steps_per_hour)/KWH_PER_MMBTU
         )
     end
 end
@@ -102,7 +110,7 @@ end
     blended_doe_reference_percents::Array{<:Real,1} = Real[],
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
-    fuel_loads_mmbtu_per_time_step::Array{<:Real,1} = Real[]
+    fuel_loads_mmbtu_per_time_step::Array{<:Real,1} = Real[] # Vector of space heating fuel loads. Length must equal 8760 * `Settings.time_steps_per_hour`
 ```
 
 There are many ways to define a `SpaceHeatingLoad`:
@@ -124,6 +132,7 @@ In this case the values provided for `doe_reference_name`, or  `blended_doe_refe
 """
 struct SpaceHeatingLoad
     loads_kw::Array{Real, 1}
+    annual_mmbtu::Real
 
     function SpaceHeatingLoad(;
         doe_reference_name::String = "",
@@ -146,10 +155,16 @@ struct SpaceHeatingLoad
 
             loads_kw = fuel_loads_mmbtu_per_time_step .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY * time_steps_per_hour)
 
+            if !isempty(doe_reference_name) || length(blended_doe_reference_names) > 0
+                @warn "SpaceHeatingLoad fuel_loads_mmbtu_per_hour was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
+            end
+
         elseif !isempty(doe_reference_name)
             loads_kw = BuiltInSpaceHeatingLoad(city, doe_reference_name, latitude, longitude, 2017, annual_mmbtu, monthly_mmbtu)
-
-        elseif length(blended_doe_reference_names) > 1 && 
+            if length(blended_doe_reference_names) > 0
+                @warn "SpaceHeatingLoad doe_reference_name was provided, so blended_doe_reference_names will be ignored."
+            end
+        elseif length(blended_doe_reference_names) > 0 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
             loads_kw = blend_and_scale_doe_profiles(BuiltInSpaceHeatingLoad, latitude, longitude, 2017, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
@@ -166,7 +181,8 @@ struct SpaceHeatingLoad
         end
 
         new(
-            loads_kw
+            loads_kw,
+            (sum(loads_kw)/time_steps_per_hour)/KWH_PER_MMBTU
         )
     end
 end
@@ -208,8 +224,8 @@ end
         blended_doe_reference_percents::Array{<:Real,1} = Real[],
         annual_tonhour::Union{Real, Nothing} = nothing,
         monthly_tonhour::Array{<:Real,1} = Real[],
-        thermal_loads_ton::Array{<:Real,1} = Real[],
-        annual_fraction_of_electric_load::Union{Real, Nothing} = nothing,
+        thermal_loads_tonhours_per_time_step::Array{<:Real,1} = Real[], # Vector of cooling thermal loads [tonhours/time_step]. Length must equal 8760 * `Settings.time_steps_per_hour`
+        annual_fraction_of_electric_load::Union{Real, Nothing} = nothing, # Fraction of total electric load that is used for cooling 
         monthly_fractions_of_electric_load::Array{<:Real,1} = Real[],
         per_time_step_fractions_of_electric_load::Array{<:Real,1} = Real[],
         existing_chiller_cop::Real = nothing,
@@ -218,10 +234,10 @@ end
 
 
 There are many ways to define a `CoolingLoad`:
-1. a time-series via the `thermal_loads_ton`,
+1. a time-series via the `thermal_loads_tonhours_per_time_step`,
 2. DoE Commercial Reference Building (CRB) profile or a blend of CRB profiles which uses the buildings' fraction of total electric for cooling profile applied to the `ElectricLoad`
 3. scaling a DoE Commercial Reference Building (CRB) profile or a blend of CRB profiles using `annual_tonhour` or `monthly_tonhour`
-4. the `annual_fraction_of_electric_load` or `monthly_fractions_of_electric_load` values which gets applied to the `ElectricLoad` to determine the cooling electric load;
+4. the `annual_fraction_of_electric_load`, `monthly_fractions_of_electric_load`, or `per_time_step_fractions_of_electric_load` values, which get applied to the `ElectricLoad` to determine the cooling electric load;
 5. or using the `doe_reference_name` or `blended_doe_reference_names` from the `ElectricLoad`.
 
 The electric-based `loads_kw` of the `CoolingLoad` is a _subset_ of the total electric load `ElectricLoad`, so `CoolingLoad.loads_kw` for the BAU/conventional electric consumption of the `existing_chiller` is subtracted from the `ElectricLoad` for the non-cooling electric load balance constraint in the model. 
@@ -250,8 +266,8 @@ struct CoolingLoad
         blended_doe_reference_percents::Array{<:Real,1} = Real[],
         annual_tonhour::Union{Real, Nothing} = nothing,
         monthly_tonhour::Array{<:Real,1} = Real[],
-        thermal_loads_ton::Array{<:Real,1} = Real[],
-        annual_fraction_of_electric_load::Union{Real, Nothing} = nothing,
+        thermal_loads_tonhours_per_time_step::Array{<:Real,1} = Real[], # Vector of cooling thermal loads [tonhours/time_step]. Length must equal 8760 * `Settings.time_steps_per_hour`
+        annual_fraction_of_electric_load::Union{Real, Nothing} = nothing, # Fraction of total electric load that is used for cooling
         monthly_fractions_of_electric_load::Array{<:Real,1} = Real[],
         per_time_step_fractions_of_electric_load::Array{<:Real,1} = Real[],
         site_electric_load_profile = Real[],
@@ -264,11 +280,11 @@ struct CoolingLoad
         # determine the timeseries of loads_kw_thermal
         loads_kw_thermal = nothing
         loads_kw = nothing
-        if length(thermal_loads_ton) > 0
-            if !(length(thermal_loads_ton) / time_steps_per_hour ≈ 8760)
-                throw(@error "Provided cooling load does not match the time_steps_per_hour.")
+        if length(thermal_loads_tonhours_per_time_step) > 0
+            if !(length(thermal_loads_tonhours_per_time_step) / time_steps_per_hour ≈ 8760)
+                error("Provided cooling load does not match the time_steps_per_hour.")
             end
-            loads_kw_thermal = thermal_loads_ton .* KWH_THERMAL_PER_TONHOUR
+            loads_kw_thermal = thermal_loads_tonhours_per_time_step .* (KWH_THERMAL_PER_TONHOUR * time_steps_per_hour)
         
         elseif !isempty(per_time_step_fractions_of_electric_load) && (length(site_electric_load_profile) / time_steps_per_hour ≈ 8760)
             if !(length(per_time_step_fractions_of_electric_load) / time_steps_per_hour ≈ 8760)
@@ -318,7 +334,7 @@ struct CoolingLoad
             end
         
         else
-            error("Cannot construct BuiltInCoolingLoad. You must provide either [thermal_loads_ton], 
+            error("Cannot construct BuiltInCoolingLoad. You must provide either [thermal_loads_tonhours_per_time_step], 
                 [doe_reference_name, city], [blended_doe_reference_names, blended_doe_reference_percents, city],
                 or the site_electric_load_profile along with one of [per_time_step_fractions_of_electric_load, monthly_fractions_of_electric_load, annual_fraction_of_electric_load].")
         end
@@ -370,7 +386,7 @@ function BuiltInDomesticHotWaterLoad(
     latitude::Real,
     longitude::Real,
     year::Int,
-    annual_mmbtu::Union{<:Real, Nothing}=nothing,
+    annual_mmbtu::Union{Real, Nothing}=nothing,
     monthly_mmbtu::Vector{<:Real}=Real[]
     )
     dhw_annual_mmbtu = Dict(
@@ -701,7 +717,7 @@ function BuiltInSpaceHeatingLoad(
     latitude::Real,
     longitude::Real,
     year::Int,
-    annual_mmbtu::Union{<:Real, Nothing}=nothing,
+    annual_mmbtu::Union{Real, Nothing}=nothing,
     monthly_mmbtu::Vector{<:Real}=Real[],
     )
     spaceheating_annual_mmbtu = Dict(
@@ -1029,9 +1045,9 @@ function BuiltInCoolingLoad(
     latitude::Float64,
     longitude::Float64,
     year::Int,
-    annual_tonhour::Union{<:Real, Nothing}=nothing,
+    annual_tonhour::Union{Real, Nothing}=nothing,
     monthly_tonhour::Vector{<:Real}=Real[],
-    existing_chiller_cop::Union{<:Real, Nothing}=nothing
+    existing_chiller_cop::Union{Real, Nothing}=nothing
     )
     cooling_annual_kwh = Dict(
         "Albuquerque" => Dict(

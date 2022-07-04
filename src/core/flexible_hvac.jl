@@ -197,7 +197,7 @@ end
         initial_temperatures::AbstractVector,
         temperature_upper_bound_degC::Union{Real, Nothing} = nothing,
         temperature_lower_bound_degC::Union{Real, Nothing} = nothing,
-        installed_cost::Float64
+        installed_cost::Real
     )
 
 When the A, B, and u values are in Matrix format (note u is normally a vector but in our case it has a time index in the second dimension)
@@ -210,7 +210,7 @@ function FlexibleHVAC(;
         initial_temperatures::AbstractVector,
         temperature_upper_bound_degC::Union{Real, Nothing} = nothing,
         temperature_lower_bound_degC::Union{Real, Nothing} = nothing,
-        installed_cost::Float64
+        installed_cost::Real
     )
 
     bau_hvac = make_bau_hvac(system_matrix, input_matrix, exogenous_inputs, control_node, 

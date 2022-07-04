@@ -30,18 +30,27 @@
 """
 `ElectricUtility` is an optional REopt input with the following keys and default values:
 ```julia
+    net_metering_limit_kw::Real = 0,
+    interconnection_limit_kw::Real = 1.0e9,
     outage_start_time_step::Int=0,  # for modeling a single outage, with critical load spliced into the baseline load ...
     outage_end_time_step::Int=0,  # ... utiltity production_factor = 0 during the outage
     allow_simultaneous_export_import::Bool = true,  # if true the site has two meters (in effect)
-    # variables below used for minimax the expected outage cost,
+    # next 5 variables below used for minimax the expected outage cost,
     # with max taken over outage start time, expectation taken over outage duration
     outage_start_time_steps::Array{Int,1}=Int[],  # we minimize the maximum outage cost over outage start times
     outage_durations::Array{Int,1}=Int[],  # one-to-one with outage_probabilities, outage_durations can be a random variable
     outage_probabilities::Array{R,1} where R<:Real = [1.0],
-    outage_time_steps::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:maximum(outage_durations),
-    scenarios::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:length(outage_durations),
-    net_metering_limit_kw::Real = 0,
-    interconnection_limit_kw::Real = 1.0e9
+    outage_time_steps::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:maximum(outage_durations),
+    scenarios::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:length(outage_durations),
+    # Emissions and renewable energy inputs:
+    emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[],
+    emissions_factor_series_lb_NOx_per_kwh::Union{Real,Array{<:Real,1}} = Float64[],
+    emissions_factor_series_lb_SO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[],
+    emissions_factor_series_lb_PM25_per_kwh::Union{Real,Array{<:Real,1}} = Float64[],
+    emissions_factor_CO2_decrease_pct::Real = 0.01174,
+    emissions_factor_NOx_decrease_pct::Real = 0.01174,
+    emissions_factor_SO2_decrease_pct::Real = 0.01174,
+    emissions_factor_PM25_decrease_pct::Real = 0.01174
 ```julia
 
 !!! note "Outage modeling"
@@ -51,42 +60,160 @@
 
     Cannot supply singular outage_start(or end)_time_step and multiple outage_start_time_steps. Must use one or the other.
 
+!!! note "Outages, Emissions, and Renewable Energy Calculations"
+    If a single deterministic outage is modeled using outage_start_time_step and outage_end_time_step,
+    emissions and renewable energy percentage calculations and constraints will factor in this outage.
+    If stochastic outages are modeled using outage_start_time_steps, outage_durations, and outage_probabilities,
+    emissions and renewable energy percentage calculations and constraints will not consider outages.
+    
+!!! note "MPC vs. Non-MPC"
+    This constructor is intended to be used with latitude/longitude arguments provided for
+    the non-MPC case and without latitude/longitude arguments provided for the MPC case.
+
 """
- struct ElectricUtility
+struct ElectricUtility
+    emissions_region::String # AVERT emissions region
+    distance_to_emissions_region_meters::Real
+    emissions_factor_series_lb_CO2_per_kwh::Array{<:Real,1}
+    emissions_factor_series_lb_NOx_per_kwh::Array{<:Real,1}
+    emissions_factor_series_lb_SO2_per_kwh::Array{<:Real,1}
+    emissions_factor_series_lb_PM25_per_kwh::Array{<:Real,1}
+    emissions_factor_CO2_decrease_pct::Real
+    emissions_factor_NOx_decrease_pct::Real
+    emissions_factor_SO2_decrease_pct::Real
+    emissions_factor_PM25_decrease_pct::Real
     outage_start_time_step::Int  # for modeling a single outage, with critical load spliced into the baseline load ...
     outage_end_time_step::Int  # ... utiltity production_factor = 0 during the outage
     allow_simultaneous_export_import::Bool  # if true the site has two meters (in effect)
-    # variables below used for minimax the expected outage cost,
+    # next 5 variables below used for minimax the expected outage cost,
     # with max taken over outage start time, expectation taken over outage duration
     outage_start_time_steps::Array{Int,1}  # we minimize the maximum outage cost over outage start times
     outage_durations::Array{Int,1}  # one-to-one with outage_probabilities, outage_durations can be a random variable
     outage_probabilities::Array{R,1} where R<:Real 
-    outage_time_steps::Union{Missing, UnitRange} 
-    scenarios::Union{Missing, UnitRange} 
+    outage_time_steps::Union{Nothing, UnitRange} 
+    scenarios::Union{Nothing, UnitRange} 
     net_metering_limit_kw::Real 
     interconnection_limit_kw::Real 
 
+
     function ElectricUtility(;
+        latitude::Union{Nothing,Real} = nothing,
+        longitude::Union{Nothing,Real} = nothing,
+        off_grid_flag::Bool = false,
+        time_steps_per_hour::Int = 1
+        net_metering_limit_kw::Real = 0,
+        interconnection_limit_kw::Real = 1.0e9,
         outage_start_time_step::Int=0,  # for modeling a single outage, with critical load spliced into the baseline load ...
         outage_end_time_step::Int=0,  # ... utiltity production_factor = 0 during the outage
-        allow_simultaneous_export_import::Bool = true,  # if true the site has two meters (in effect)
-        # variables below used for minimax the expected outage cost,
+        allow_simultaneous_export_import::Bool=true,  # if true the site has two meters (in effect)
+        # next 5 variables below used for minimax the expected outage cost,
         # with max taken over outage start time, expectation taken over outage duration
         outage_start_time_steps::Array{Int,1}=Int[],  # we minimize the maximum outage cost over outage start times
         outage_durations::Array{Int,1}=Int[],  # one-to-one with outage_probabilities, outage_durations can be a random variable
-        outage_probabilities::Array{R,1} where R<:Real = [1.0],
-        outage_time_steps::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:maximum(outage_durations),
-        scenarios::Union{Missing, UnitRange} = isempty(outage_durations) ? missing : 1:length(outage_durations),
-        net_metering_limit_kw::Real = 0,
-        interconnection_limit_kw::Real = 1.0e9
-    )
+        outage_probabilities::Array{<:Real,1} = isempty(outage_durations) ? Float64[] : [1/length(outage_durations) for p_i in 1:length(outage_durations)],
+        outage_time_steps::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:maximum(outage_durations),
+        scenarios::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:length(outage_durations),
+        # Emissions and renewable energy inputs:
+        emissions_factor_series_lb_CO2_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
+        emissions_factor_series_lb_NOx_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
+        emissions_factor_series_lb_SO2_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
+        emissions_factor_series_lb_PM25_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
+        emissions_factor_CO2_decrease_pct::Real = 0.01174,
+        emissions_factor_NOx_decrease_pct::Real = 0.01174,
+        emissions_factor_SO2_decrease_pct::Real = 0.01174,
+        emissions_factor_PM25_decrease_pct::Real = 0.01174,
+        CO2_emissions_reduction_min_pct::Union{Real, Nothing} = nothing, # passed from Site
+        CO2_emissions_reduction_max_pct::Union{Real, Nothing} = nothing, # passed from Site
+        include_climate_in_objective::Bool = false, # passed from Settings
+        include_health_in_objective::Bool = false # passed from Settings
+        )
 
-        # Error if outage_start/end_time_step is provided and outage_start_time_steps not empty
-        if (outage_start_time_step != 0 || outage_end_time_step !=0) && outage_start_time_steps != [] 
-            throw(@error "Cannot supply singular outage_start(or end)_time_step and multiple outage_start_time_steps. Please use one or the other.")
+        is_MPC = isnothing(latitude) || isnothing(longitude)
+        if !is_MPC
+            region_lookup = Dict(
+                "AK" => "Alaska",
+                "CA" => "California",
+                "EMW" => "Great Lakes / Atlantic",
+                "NE" => "Northeast",
+                "NW" => "Northwest",
+                "RM" => "Rocky Mountains",
+                "SC" => "Lower Midwest",
+                "SE" => "Southeast",
+                "SW" => "Southwest",
+                "TX" => "Texas",
+                "WMW" => "Upper Midwest",
+                "HI" => "Hawaii (except Oahu)",
+                "HI-Oahu" => "Hawaii (Oahu)"
+            )
+            
+            region_abbr, meters_to_region = region_abbreviation(latitude, longitude)
+            emissions_region = get(region_lookup, region_abbr, "")
+            emissions_series_dict = Dict{String, Union{Nothing,Array{<:Real,1}}}()
+
+            for (eseries, ekey) in [
+                (emissions_factor_series_lb_CO2_per_kwh, "CO2"),
+                (emissions_factor_series_lb_NOx_per_kwh, "NOx"),
+                (emissions_factor_series_lb_SO2_per_kwh, "SO2"),
+                (emissions_factor_series_lb_PM25_per_kwh, "PM25")
+            ]
+                if typeof(eseries) <: Real  # user provided scaler value
+                    emissions_series_dict[ekey] = repeat([eseries], 8760*time_steps_per_hour)
+                elseif length(eseries) == 1  # user provided array of one value
+                    emissions_series_dict[ekey] = repeat(eseries, 8760*time_steps_per_hour)
+                elseif length(eseries) / time_steps_per_hour ≈ 8760  # user provided array with correct length
+                    emissions_series_dict[ekey] = eseries
+                else
+                    if length(eseries) > 1 && !(length(eseries) / time_steps_per_hour ≈ 8760)  # user provided array with incorrect length
+                        @warn "Provided ElectricUtility emissions factor series for $(ekey) will be ignored because it does not match the time_steps_per_hour. AVERT emissions data will be used."
+                    end
+                    emissions_series_dict[ekey] = emissions_series(ekey, region_abbr, time_steps_per_hour=time_steps_per_hour)
+                    #Handle missing emissions inputs (due to failed lookup and not provided by user)
+                    if isnothing(emissions_series_dict[ekey])
+                        @warn "Cannot find hourly $(ekey) emissions for region $(region_abbr). Setting emissions to zero."
+                        if ekey == "CO2" && !off_grid_flag && 
+                                            (!isnothing(CO2_emissions_reduction_min_pct) || 
+                                            !isnothing(CO2_emissions_reduction_max_pct) || 
+                                            include_climate_in_objective)
+                            error("To include CO2 costs in the objective function or enforce emissions reduction constraints, 
+                                you must either enter custom CO2 grid emissions factors or a site location within the continental U.S.")
+                        elseif ekey in ["NOx", "SO2", "PM25"] && !off_grid_flag && include_health_in_objective
+                            error("To include health costs in the objective function, you must either enter custom health 
+                                grid emissions factors or a site location within the continental U.S.")
+                        end
+                        emissions_series_dict[ekey] = zeros(8760*time_steps_per_hour)
+                    end
+                end
+            end
+        end
+        
+        if (!isempty(outage_start_time_steps) && isempty(outage_durations)) || (isempty(outage_start_time_steps) && !isempty(outage_durations))
+            error("ElectricUtility inputs outage_start_time_steps and outage_durations must both be provided to model multiple outages")
+        end
+        if (outage_start_time_step == 0 && outage_end_time_step != 0) || (outage_start_time_step != 0 && outage_end_time_step == 0)
+            error("ElectricUtility inputs outage_start_time_step and outage_end_time_step must both be provided to model an outage")
+        end
+        if !isempty(outage_start_time_steps)
+            if outage_start_time_step != 0 && outage_end_time_step !=0
+                # Warn if outage_start/end_time_step is provided and outage_start_time_steps not empty
+                error("Cannot supply both outage_start(/end)_time_step for deterministic outage modeling and 
+                    multiple outage_start_time_steps for stochastic outage modeling. Please use one or the other.")
+            else
+                @warn ("When using stochastic outage modeling (i.e. outage_start_time_steps, outage_durations, outage_probabilities), 
+                    emissions and renewable energy percentage calculations and constraints do not consider outages.")
+            end
         end
 
-        return new(
+        new(
+            is_MPC ? "" : emissions_region,
+            is_MPC || isnothing(meters_to_region) ? typemax(Int64) : meters_to_region,
+            is_MPC ? Float64[] : emissions_series_dict["CO2"],
+            is_MPC ? Float64[] : emissions_series_dict["NOx"],
+            is_MPC ? Float64[] : emissions_series_dict["SO2"],
+            is_MPC ? Float64[] : emissions_series_dict["PM25"],
+            emissions_factor_CO2_decrease_pct,
+            emissions_factor_NOx_decrease_pct,
+            emissions_factor_SO2_decrease_pct,
+            emissions_factor_PM25_decrease_pct,
             outage_start_time_step,
             outage_end_time_step,
             allow_simultaneous_export_import,
@@ -98,5 +225,101 @@
             net_metering_limit_kw,
             interconnection_limit_kw
         )
+    end
+end
+
+
+
+"""
+Determine the region abberviation for a given lat/lon pair.
+    1. Checks to see if given point is in an AVERT region
+    2. If 1 doesnt work, check to see if our point is near any AVERT regions.
+        1. Transform point from NAD83 CRS to EPSG 102008 (NA focused conic projection)
+        2. Get distance between point and AVERT zones, store in a vector
+        3. If distance from a region < 5 miles, return that region along with distance.
+
+Helpful links:
+# https://yeesian.com/ArchGDAL.jl/latest/projections/#:~:text=transform%0A%20%20%20%20point%20%3D%20ArchGDAL.-,fromWKT,-(%22POINT%20(1120351.57%20741921.42
+# https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry
+# https://epsg.io/102008
+"""
+function region_abbreviation(latitude, longitude)
+    
+    file_path = joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "avert_4326.shp")
+
+    abbr = nothing
+    meters_to_region = nothing
+
+    shpfile = ArchGDAL.read(file_path)
+	avert_layer = ArchGDAL.getlayer(shpfile, 0)
+
+	point = ArchGDAL.fromWKT(string("POINT (",longitude," ",latitude,")"))
+    
+	for i in 1:ArchGDAL.nfeature(avert_layer)
+		ArchGDAL.getfeature(avert_layer,i-1) do feature # 0 indexed
+			if ArchGDAL.contains(ArchGDAL.getgeom(feature), point)
+				abbr = ArchGDAL.getfield(feature,"AVERT")
+                meters_to_region = 0.0;
+			end
+		end
+	end
+    if isnothing(abbr)
+        @info "Could not find AVERT region containing site latitude/longitude. Checking site proximity to AVERT regions."
+    else
+        return abbr, meters_to_region
+    end
+
+    shpfile = ArchGDAL.read(joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "avert_102008.shp"))
+    avert_102008 = ArchGDAL.getlayer(shpfile, 0)
+
+    pt = ArchGDAL.createpoint(latitude, longitude)
+
+    try
+        fromProj = ArchGDAL.importEPSG(4326)
+        toProj = ArchGDAL.importPROJ4("+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs")
+        ArchGDAL.createcoordtrans(fromProj, toProj) do transform
+            ArchGDAL.transform!(pt, transform)
+        end
+    catch
+        @warn "Could not look up AVERT emissions region closest to point ($(latitude), $(longitude)). Location is
+        likely invalid or well outside continental US, AK and HI"
+        return abbr, meters_to_region #nothing, nothing
+    end
+
+    distances = []
+    for i in 1:ArchGDAL.nfeature(avert_102008)
+        ArchGDAL.getfeature(avert_102008,i-1) do f # 0 indexed
+            push!(distances, ArchGDAL.distance(ArchGDAL.getgeom(f), pt))
+        end
+    end
+    
+    ArchGDAL.getfeature(avert_102008,argmin(distances)-1) do feature	# 0 indexed
+        meters_to_region = distances[argmin(distances)]
+
+        if meters_to_region > 8046
+            @warn "Your site location ($(latitude), $(longitude)) is more than 5 miles from the nearest AVERT region. Cannot calculate emissions."
+            return abbr, meters_to_region #nothing, #
+        else
+            return ArchGDAL.getfield(feature,1), meters_to_region
+        end
+    end
+end
+
+function emissions_series(pollutant, region_abbr; time_steps_per_hour=1)
+    if isnothing(region_abbr)
+        return nothing
+    end
+    # Columns 1 and 2 do not contain AVERT region information, so skip them
+    avert_df = readdlm(joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "AVERT_marg_emissions_lb$(pollutant)_per_kwh.csv"), ',')[:, 3:end]
+
+    try
+        # Find col index for region, and then row 1 does not contain AVERT data so skip that.
+        emissions_profile = round.(avert_df[2:end,findfirst(x -> x == region_abbr, avert_df[1,:])], digits=6)
+        if time_steps_per_hour > 1
+            emissions_profile = repeat(emissions_profile,inner=time_steps_per_hour)
+        end
+        return emissions_profile
+    catch
+        return nothing
     end
 end

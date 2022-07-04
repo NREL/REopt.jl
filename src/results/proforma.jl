@@ -219,8 +219,12 @@ function proforma_results(p::REoptInputs, d::Dict)
         annual_income_from_host_series = repeat([-1 * r["annualized_payment_to_third_party"]], years)
 
         if "Generator" in keys(d) && d["Generator"]["size_kw"] > 0
-            existing_genertor_fuel_cost_series = escalate_om(-1 * d["Generator"]["year_one_fuel_cost_before_tax_bau"])
             generator_fuel_cost_series = escalate_om(-1 * d["Generator"]["year_one_fuel_cost_before_tax"])
+            if p.s.generator.existing_kw > 0
+                existing_genertor_fuel_cost_series = escalate_om(-1 * d["Generator"]["year_one_fuel_cost_before_tax_bau"])
+            else
+                existing_genertor_fuel_cost_series = zeros(years)
+            end
         else
             existing_genertor_fuel_cost_series = zeros(years)
             generator_fuel_cost_series = zeros(years)
@@ -383,13 +387,13 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
 end
 
 
-function npv(cashflows::AbstractArray{Float64, 1}, rate::Float64)
+function npv(cashflows::AbstractArray{<:Real, 1}, rate::Real)
     years = collect(0:length(cashflows)-1)
     return sum( cashflows ./ (1+rate).^years)
 end
 
 
-function irr(cashflows::AbstractArray{Float64, 1})
+function irr(cashflows::AbstractArray{<:Real, 1})
     if npv(cashflows, 0.0) < 0
         return 0.0
     end
