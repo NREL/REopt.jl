@@ -100,7 +100,7 @@ struct ElectricUtility
         latitude::Union{Nothing,Real} = nothing,
         longitude::Union{Nothing,Real} = nothing,
         off_grid_flag::Bool = false,
-        time_steps_per_hour::Int = 1
+        time_steps_per_hour::Int = 1,
         net_metering_limit_kw::Real = 0,
         interconnection_limit_kw::Real = 1.0e9,
         outage_start_time_step::Int=0,  # for modeling a single outage, with critical load spliced into the baseline load ...
