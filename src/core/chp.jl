@@ -53,12 +53,14 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
     # Optional inputs:
     size_class::Int = 1
     min_kw::Float64 = 0.0
+    fuel_cost_per_mmbtu::Union{Real, AbstractVector{<:Real}} = 0.0,
+    fuel_type::String = "natural_gas" # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     om_cost_per_kw::Float64 = 0.0
     om_cost_per_hr_per_kw_rated::Float64 = 0.0
     supplementary_firing_capital_cost_per_kw::Float64 = 150.0
     supplementary_firing_max_steam_ratio::Float64 = 1.0
     supplementary_firing_efficiency::Float64 = 0.92
-    standby_rate_us_dollars_per_kw_per_month::Float64 = 0.0
+    standby_rate_per_kw_per_month::Float64 = 0.0
     reduces_demand_charges::Bool = true
     use_default_derate::Bool = true
     max_derate_factor::Float64 = 1.0
@@ -87,7 +89,11 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
     can_wholesale::Bool = false
     can_export_beyond_nem_limit::Bool = false
     can_curtail::Bool = false
-    # emissions_factor_lb_CO2_per_mmbtu::Float64
+    fuel_renewable_energy_pct::Float64 = FUEL_DEFAULTS["fuel_renewable_energy_pct"][fuel_type]
+    emissions_factor_lb_CO2_per_mmbtu::Float64 = FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"][fuel_type]
+    emissions_factor_lb_NOx_per_mmbtu::Float64 = FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"][fuel_type]
+    emissions_factor_lb_SO2_per_mmbtu::Float64 = FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"][fuel_type]
+    emissions_factor_lb_PM25_per_mmbtu::Float64 = FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"][fuel_type]
 ```
 
 !!! note "Required inputs"
@@ -119,12 +125,14 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     # Optional inputs:
     size_class::Int = 1
     min_kw::Float64 = 0.0
+    fuel_cost_per_mmbtu::Union{Real, AbstractVector{<:Real}} = 0.0
+    fuel_type::String = "natural_gas" # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     om_cost_per_kw::Float64 = 0.0
     om_cost_per_hr_per_kw_rated::Float64 = 0.0
     supplementary_firing_capital_cost_per_kw::Float64 = 150.0
     supplementary_firing_max_steam_ratio::Float64 = 1.0
     supplementary_firing_efficiency::Float64 = 0.92
-    standby_rate_us_dollars_per_kw_per_month::Float64 = 0.0
+    standby_rate_per_kw_per_month::Float64 = 0.0
     reduces_demand_charges::Bool = true
     use_default_derate::Bool = true
     max_derate_factor::Float64 = 1.0
@@ -153,16 +161,18 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     can_wholesale::Bool = false
     can_export_beyond_nem_limit::Bool = false
     can_curtail::Bool = false
-    # emissions_factor_lb_CO2_per_mmbtu::Float64
+    fuel_renewable_energy_pct::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_pct"],fuel_type,0)
+    emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0)
+    emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0)
+    emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0)
+    emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0)
 end
 
 
 function CHP(d::Dict)
     chp = CHP(; dictkeys_tosymbols(d)...)
 
-    if isempty(chp.fuel_cost_per_mmbtu)
-        throw(@error "The CHP.fuel_cost_per_mmbtu is a required input when modeling CHP")
-    end    
+    @assert chp.fuel_type in FUEL_TYPES
 
     # Must provide prime_mover or all of custom_chp_inputs
     custom_chp_inputs = Dict{Symbol, Any}(
@@ -225,7 +235,7 @@ function CHP(d::Dict)
         if isempty(chp.unavailability_periods)
             chp.unavailability_periods = defaults["unavailability_periods"]
         end
-    end                                                   
+    end
 
     return chp
 end
