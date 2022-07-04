@@ -319,7 +319,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     max_cooling_demand_kw = 0
     if haskey(d, "CoolingLoad") && !haskey(d, "FlexibleHVAC")
-        # Note, if thermal_loads_ton or one of the "...fraction(s)_of_electric_load" inputs is used for CoolingLoad, doe_reference_name is ignored 
+        # Note, if thermal_loads_tonhours_per_time_step or one of the "...fraction(s)_of_electric_load" inputs is used for CoolingLoad, doe_reference_name is ignored 
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["CoolingLoad"])
         d["CoolingLoad"]["site_electric_load_profile"] = electric_load.loads_kw
         # Pass ExistingChiller inputs which are used in CoolingLoad processing, if they exist
@@ -343,7 +343,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         max_cooling_demand_kw = maximum(cooling_load.loads_kw_thermal)
     else
         cooling_load = CoolingLoad(; 
-            thermal_loads_ton=zeros(8760*settings.time_steps_per_hour),
+            thermal_loads_tonhours_per_time_step=zeros(8760*settings.time_steps_per_hour),
             time_steps_per_hour=settings.time_steps_per_hour
         )
     end
