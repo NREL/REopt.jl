@@ -28,22 +28,13 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    ElectricUtility
-ElectricUtility data struct with inner constructor:     
-        
+`ElectricUtility` is an optional REopt input with the following keys and default values:
 ```julia
-function ElectricUtility(;
-    emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[],
-    emissions_factor_series_lb_NOx_per_kwh::Union{Real,Array{<:Real,1}} = Float64[],
-    emissions_factor_series_lb_SO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[],
-    emissions_factor_series_lb_PM25_per_kwh::Union{Real,Array{<:Real,1}} = Float64[],
-    emissions_factor_CO2_decrease_pct::Real = 0.01174,
-    emissions_factor_NOx_decrease_pct::Real = 0.01174,
-    emissions_factor_SO2_decrease_pct::Real = 0.01174,
-    emissions_factor_PM25_decrease_pct::Real = 0.01174,
-    outage_start_time_step::Int=0  # for modeling a single outage, with critical load spliced into the baseline load ...
-    outage_end_time_step::Int=0  # ... utiltity production_factor = 0 during the outage
-    allow_simultaneous_export_import::Bool=true  # if true the site has two meters (in effect)
+    net_metering_limit_kw::Real = 0,
+    interconnection_limit_kw::Real = 1.0e9,
+    outage_start_time_step::Int=0,  # for modeling a single outage, with critical load spliced into the baseline load ...
+    outage_end_time_step::Int=0,  # ... utiltity production_factor = 0 during the outage
+    allow_simultaneous_export_import::Bool = true,  # if true the site has two meters (in effect)
     # next 5 variables below used for minimax the expected outage cost,
     # with max taken over outage start time, expectation taken over outage duration
     outage_start_time_steps::Array{Int,1}=Int[],  # we minimize the maximum outage cost over outage start times
@@ -51,31 +42,34 @@ function ElectricUtility(;
     outage_probabilities::Array{R,1} where R<:Real = [1.0],
     outage_time_steps::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:maximum(outage_durations),
     scenarios::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:length(outage_durations),
-    net_metering_limit_kw::Real = 0,
-    interconnection_limit_kw::Real = 1.0e9,
-    latitude::Union{Nothing,Real} = nothing,
-    longitude::Union{Nothing,Real} = nothing,
-    CO2_emissions_reduction_min_pct::Union{Real, Nothing} = nothing,
-    CO2_emissions_reduction_max_pct::Union{Real, Nothing} = nothing,
-    include_climate_in_objective::Bool = false,
-    include_health_in_objective::Bool = false,
-    off_grid_flag::Bool = false,
-    time_steps_per_hour::Int = 1
-    )
-```
+    # Emissions and renewable energy inputs:
+    emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[],
+    emissions_factor_series_lb_NOx_per_kwh::Union{Real,Array{<:Real,1}} = Float64[],
+    emissions_factor_series_lb_SO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[],
+    emissions_factor_series_lb_PM25_per_kwh::Union{Real,Array{<:Real,1}} = Float64[],
+    emissions_factor_CO2_decrease_pct::Real = 0.01174,
+    emissions_factor_NOx_decrease_pct::Real = 0.01174,
+    emissions_factor_SO2_decrease_pct::Real = 0.01174,
+    emissions_factor_PM25_decrease_pct::Real = 0.01174
+```julia
 
-!!! note 
+!!! note "Outage modeling"
     Outage indexing begins at 1 (not 0) and the outage is inclusive of the outage end time step. 
     For instance, to model a 3-hour outage from 12AM to 3AM on Jan 1, outage_start_time_step = 1 and outage_end_time_step = 3.
     To model a 1-hour outage from 6AM to 7AM on Jan 1, outage_start_time_step = 7 and outage_end_time_step = 7.
-!!! note
+
+    Cannot supply singular outage_start(or end)_time_step and multiple outage_start_time_steps. Must use one or the other.
+
+!!! note "Outages, Emissions, and Renewable Energy Calculations"
     If a single deterministic outage is modeled using outage_start_time_step and outage_end_time_step,
-    emissions and renewable energy percentage calculations and constraints factor in this outage.
-    If stochastic outage modeling is used outage_start_time_steps, outage_durations, and outage_probabilities,
-    emissions and renewable energy percentage calculations and constraints do not consider outages.
-!!! note
+    emissions and renewable energy percentage calculations and constraints will factor in this outage.
+    If stochastic outages are modeled using outage_start_time_steps, outage_durations, and outage_probabilities,
+    emissions and renewable energy percentage calculations and constraints will not consider outages.
+    
+!!! note "MPC vs. Non-MPC"
     This constructor is intended to be used with latitude/longitude arguments provided for
-    the non-MPC case and without latitude/longitude arguments provided for the MPC case
+    the non-MPC case and without latitude/longitude arguments provided for the MPC case.
+
 """
 struct ElectricUtility
     emissions_region::String # AVERT emissions region
@@ -103,14 +97,12 @@ struct ElectricUtility
 
 
     function ElectricUtility(;
-        emissions_factor_series_lb_CO2_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
-        emissions_factor_series_lb_NOx_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
-        emissions_factor_series_lb_SO2_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
-        emissions_factor_series_lb_PM25_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
-        emissions_factor_CO2_decrease_pct::Real = 0.01174,
-        emissions_factor_NOx_decrease_pct::Real = 0.01174,
-        emissions_factor_SO2_decrease_pct::Real = 0.01174,
-        emissions_factor_PM25_decrease_pct::Real = 0.01174,
+        latitude::Union{Nothing,Real} = nothing,
+        longitude::Union{Nothing,Real} = nothing,
+        off_grid_flag::Bool = false,
+        time_steps_per_hour::Int = 1,
+        net_metering_limit_kw::Real = 0,
+        interconnection_limit_kw::Real = 1.0e9,
         outage_start_time_step::Int=0,  # for modeling a single outage, with critical load spliced into the baseline load ...
         outage_end_time_step::Int=0,  # ... utiltity production_factor = 0 during the outage
         allow_simultaneous_export_import::Bool=true,  # if true the site has two meters (in effect)
@@ -121,16 +113,19 @@ struct ElectricUtility
         outage_probabilities::Array{<:Real,1} = isempty(outage_durations) ? Float64[] : [1/length(outage_durations) for p_i in 1:length(outage_durations)],
         outage_time_steps::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:maximum(outage_durations),
         scenarios::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:length(outage_durations),
-        net_metering_limit_kw::Real = 0,
-        interconnection_limit_kw::Real = 1.0e9,
-        latitude::Union{Nothing,Real} = nothing,
-        longitude::Union{Nothing,Real} = nothing,
-        CO2_emissions_reduction_min_pct::Union{Real, Nothing} = nothing,
-        CO2_emissions_reduction_max_pct::Union{Real, Nothing} = nothing,
-        include_climate_in_objective::Bool = false,
-        include_health_in_objective::Bool = false,
-        off_grid_flag::Bool = false,
-        time_steps_per_hour::Int = 1
+        # Emissions and renewable energy inputs:
+        emissions_factor_series_lb_CO2_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
+        emissions_factor_series_lb_NOx_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
+        emissions_factor_series_lb_SO2_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
+        emissions_factor_series_lb_PM25_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
+        emissions_factor_CO2_decrease_pct::Real = 0.01174,
+        emissions_factor_NOx_decrease_pct::Real = 0.01174,
+        emissions_factor_SO2_decrease_pct::Real = 0.01174,
+        emissions_factor_PM25_decrease_pct::Real = 0.01174,
+        CO2_emissions_reduction_min_pct::Union{Real, Nothing} = nothing, # passed from Site
+        CO2_emissions_reduction_max_pct::Union{Real, Nothing} = nothing, # passed from Site
+        include_climate_in_objective::Bool = false, # passed from Settings
+        include_health_in_objective::Bool = false # passed from Settings
         )
 
         is_MPC = isnothing(latitude) || isnothing(longitude)

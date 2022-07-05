@@ -28,13 +28,8 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    Generator
-
-struct with inner constructor:
+`Generator` is an optional REopt input with the following keys and default values:
 ```julia
-function Generator(;
-    off_grid_flag::Bool = false,
-    analysis_years::Int = 25, 
     existing_kw::Real = 0,
     min_kw::Real = 0,
     max_kw::Real = 1.0e6,
@@ -51,6 +46,7 @@ function Generator(;
     can_net_meter::Bool = false,
     can_wholesale::Bool = false,
     can_export_beyond_nem_limit = false,
+    can_curtail::Bool = false,
     macrs_option_years::Int = 0,
     macrs_bonus_pct::Real = 1.0,
     macrs_itc_reduction::Real = 0.0,
@@ -75,8 +71,11 @@ function Generator(;
     emissions_factor_lb_PM25_per_gal::Real = 0.0,
     replacement_year::Int = off_grid_flag ? 10 : analysis_years, 
     replace_cost_per_kw::Real = off_grid_flag ? installed_cost_per_kw : 0.0
-)
 ```
+
+!!! note "Replacement costs" 
+    Generator replacement costs will not be considered if `Generator.replacement_year` >= `Financial.analysis_years`.
+
 """
 struct Generator <: AbstractGenerator
     existing_kw

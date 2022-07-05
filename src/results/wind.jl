@@ -28,12 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-	add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
-
-Adds the Wind results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
-Note: the node number is an empty string if evaluating a single `Site`.
-
-Wind results:
+`Wind` results keys:
 - `size_kw` Optimal Wind capacity
 - `lifecycle_om_cost_after_tax` Lifecycle operations and maintenance cost in present value, after tax
 - `year_one_om_cost_before_tax` Operations and maintenance cost in the first year, before tax benefits
@@ -47,6 +42,9 @@ Wind results:
 - `year_one_curtailed_production_series_kw` Vector of power curtailed over the first year
 """
 function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+	# Adds the `Wind` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+	# Note: the node number is an empty string if evaluating a single `Site`.
+
     r = Dict{String, Any}()
     t = "Wind"
 	per_unit_size_om = @expression(m, p.third_party_factor * p.pwf_om * m[:dvSize][t] * p.om_cost_per_kw[t])
