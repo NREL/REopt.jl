@@ -28,12 +28,8 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    Financial
-
-Financial data struct with inner constructor:
+`Financial` is an optional REopt input with the following keys and default values:
 ```julia
-function Financial(;
-    off_grid_flag::Bool = false,
     om_cost_escalation_pct::Real = 0.025,
     elec_cost_escalation_pct::Real = 0.019,
     boiler_fuel_cost_escalation_pct::Real = 0.034,
@@ -46,9 +42,12 @@ function Financial(;
     owner_discount_pct::Real = 0.0564,
     analysis_years::Int = 25,
     value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00,
-    microgrid_upgrade_cost_pct::Real = off_grid_flag ? 0.0 : 0.3,
+    microgrid_upgrade_cost_pct::Real = off_grid_flag ? 0.0 : 0.3, # not applicable when off_grid_flag is true
     macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
     macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
+    offgrid_other_capital_costs::Real = 0.0, # only applicable when off_grid_flag is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
+    offgrid_other_annual_costs::Real = 0.0 # only applicable when off_grid_flag is true. Considered tax deductible for owner. Costs are per year. 
+    # Emissions cost inputs
     CO2_cost_per_tonne::Real = 51.0,
     CO2_cost_escalation_pct::Real = 0.042173,
     NOx_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
@@ -60,15 +59,9 @@ function Financial(;
     NOx_cost_escalation_pct::Union{Nothing,Real} = nothing,
     SO2_cost_escalation_pct::Union{Nothing,Real} = nothing,
     PM25_cost_escalation_pct::Union{Nothing,Real} = nothing,
-    offgrid_other_capital_costs::Real = 0.0, # only applicable when off_grid_flag is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
-    offgrid_other_annual_costs::Real = 0.0, # only applicable when off_grid_flag is true. Considered tax deductible for owner. Costs are per year. 
-    latitude::Real,
-    longitude::Real,
-    include_health_in_objective::Bool = false
-)
 ```
 
-!!! note
+!!! note "Third party financing"
     When `third_party_ownership` is `false` the offtaker's discount and tax percentages are used throughout the model:
     ```julia
         if !third_party_ownership
@@ -121,9 +114,12 @@ struct Financial
         owner_discount_pct::Real = 0.0564,
         analysis_years::Int = 25,
         value_of_lost_load_per_kwh::Union{Array{<:Real,1}, Real} = 1.00,
-        microgrid_upgrade_cost_pct::Real = off_grid_flag ? 0.0 : 0.3,
+        microgrid_upgrade_cost_pct::Real = off_grid_flag ? 0.0 : 0.3, # not applicable when off_grid_flag is true
         macrs_five_year::Array{<:Real,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
         macrs_seven_year::Array{<:Real,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
+        offgrid_other_capital_costs::Real = 0.0, # only applicable when off_grid_flag is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
+        offgrid_other_annual_costs::Real = 0.0, # only applicable when off_grid_flag is true. Considered tax deductible for owner.
+        # Emissions cost inputs
         CO2_cost_per_tonne::Real = 51.0,
         CO2_cost_escalation_pct::Real = 0.042173,
         NOx_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
@@ -135,11 +131,9 @@ struct Financial
         NOx_cost_escalation_pct::Union{Nothing,Real} = nothing,
         SO2_cost_escalation_pct::Union{Nothing,Real} = nothing,
         PM25_cost_escalation_pct::Union{Nothing,Real} = nothing,
-        offgrid_other_capital_costs::Real = 0.0, # only applicable when off_grid_flag is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
-        offgrid_other_annual_costs::Real = 0.0, # only applicable when off_grid_flag is true. Considered tax deductible for owner.
-        latitude::Real,
-        longitude::Real,
-        include_health_in_objective::Bool = false
+        latitude::Real, # Passed from Site
+        longitude::Real, # Passed from Site
+        include_health_in_objective::Bool = false # Passed from Settings
     )
         
         if off_grid_flag && !(microgrid_upgrade_cost_pct == 0.0)

@@ -42,39 +42,58 @@ end
 
 
 """
-    ExistingBoiler
-
-!!! note
-    The `ExistingBoiler` default operating cost is zero. Please provide the `fuel_cost_per_mmbtu` field
-    for the `ExistingBoiler` if you want non-zero BAU heating costs. The `fuel_cost_per_mmbtu` can be
-    a scalar, a list of 12 monthly values, or a time series of values for every time step.
-    ExistingBoiler
-
+`ExistingBoiler` is an optional REopt input with the following keys and default values:
 ```julia
-function ExistingBoiler(;
     max_heat_demand_kw::Real=0,
     production_type::String = "hot_water",
     chp_prime_mover::String = "",
     max_thermal_factor_on_peak_load::Real = 1.25,
-    efficiency::Union{Nothing,Real} = nothing,
-    fuel_cost_per_mmbtu::Union{Real, AbstractVector{<:Real}} = 0.0,
+    efficiency::Real = NaN,
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [],
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     fuel_renewable_energy_pct::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_pct"],fuel_type,0),
     emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0),
     emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0),
     emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0),
-    emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0),
-    time_steps_per_hour::Int = 1
-)
+    emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0)
 ```
+
+!!! note "Max ExistingBoiler size" 
+    The maximum size [kW] of the `ExistingBoiler` will be set based on the peak heat demand as follows:
+    ```julia 
+    max_kw = max_heat_demand_kw * max_thermal_factor_on_peak_load
+    ```
+
+!!! note "ExistingBoiler operating costs" 
+    The `ExistingBoiler`'s `fuel_cost_per_mmbtu` field is a required input. The `fuel_cost_per_mmbtu` can be a scalar, a list of 12 monthly values, or a time series of values for every time step.
+
+!!! note "Determining `efficiency`" 
+    Must supply either: `efficiency`, `chp_prime_mover`, or `production_type`.
+    
+    If `efficiency` is not supplied, the `efficiency` will be determined based on the `production_type`. 
+    If `production_type` is not supplied, the `production_type` will be determined based on the `chp_prime_mover` (one of ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cell"]).
+    The following defaults are used:
+    ```julia    
+    production_type_by_chp_prime_mover = Dict(
+            "recip_engine" => "hot_water",
+            "micro_turbine" => "hot_water",
+            "combustion_turbine" => "steam",
+            "fuel_cell" => "hot_water"
+    )
+    efficiency_defaults = Dict(
+        "hot_water" => 0.8,
+        "steam" => 0.75
+    )
+    ```
+
 """
 function ExistingBoiler(;
     max_heat_demand_kw::Real=0,
     production_type::String = "hot_water",
     chp_prime_mover::String = "",
     max_thermal_factor_on_peak_load::Real = 1.25,
-    efficiency::Union{Nothing,Real} = nothing,
-    fuel_cost_per_mmbtu::Union{Real, AbstractVector{<:Real}} = 0.0,
+    efficiency::Real = NaN,
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [],
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     # can_supply_steam_turbine::Bool,
     fuel_renewable_energy_pct::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_pct"],fuel_type,0),
@@ -87,8 +106,8 @@ function ExistingBoiler(;
     @assert fuel_type in FUEL_TYPES
     @assert production_type in ["steam", "hot_water"]
 
-    if sum(fuel_cost_per_mmbtu) ≈ 0.0
-        @warn "The ExistingBoiler.fuel_cost_per_mmbtu sums to zero. No fuel costs will be accounted for."
+    if isempty(fuel_cost_per_mmbtu)
+        throw(@error "The ExistingBoiler.fuel_cost_per_mmbtu is a required input when modeling a heating load which is served by the Existing Boiler in the BAU case")
     end
 
     production_type_by_chp_prime_mover = Dict(
@@ -107,8 +126,8 @@ function ExistingBoiler(;
         "steam" => 0.75
     )
 
-    if isnothing(efficiency)
-        if !isempty(chp_prime_mover)
+    if isnan(efficiency)
+        if !isempty(chp_prime_mover) && isempty(production_type)
             production_type = production_type_by_chp_prime_mover[chp_prime_mover]
         end
         efficiency = efficiency_defaults[production_type]

@@ -7,7 +7,7 @@ REopt.add_financial_results
 
 ## ElectricTariff outputs
 ```@docs
-REopt.add_electric_tariff_results
+REopt.add_electric_tariff_results(::JuMP.AbstractModel, ::REoptInputs, ::Dict)
 ```
 
 ## ElectricLoad outputs
@@ -17,12 +17,12 @@ REopt.add_electric_load_results
 
 ## ElectricUtility outputs
 ```@docs
-REopt.add_electric_utility_results
+REopt.add_electric_utility_results(::JuMP.AbstractModel, ::REoptInputs, ::Dict)
 ```
 
 ## PV outputs
 ```@docs
-REopt.add_pv_results
+REopt.add_pv_results(::JuMP.AbstractModel, ::REoptInputs, ::Dict)
 ```
 
 ## Wind outputs
@@ -32,22 +32,22 @@ REopt.add_wind_results
 
 ## ElectricStorage outputs
 ```@docs
-REopt.add_electric_storage_results
+REopt.add_electric_storage_results(::JuMP.AbstractModel, ::REoptInputs, ::Dict, ::String)
 ```
 
 ## HotThermalStorage outputs
 ```@docs
-REopt.add_hot_storage_results
+REopt.add_hot_storage_results(::JuMP.AbstractModel, ::REoptInputs, ::Dict, ::String)
 ```
 
 ## ColdThermalStorage outputs
 ```@docs
-REopt.add_cold_storage_results
+REopt.add_cold_storage_results(::JuMP.AbstractModel, ::REoptInputs, ::Dict, ::String)
 ```
 
 ## Generator outputs
 ```@docs
-REopt.add_generator_results
+REopt.add_generator_results(::JuMP.AbstractModel, ::REoptInputs, ::Dict)
 ```
 
 ## CHP outputs
@@ -58,4 +58,14 @@ REopt.add_chp_results
 ## Uncertain Outages outputs
 ```@docs
 REopt.add_outage_results
+```
+
+## AbsorptionChiller outputs
+```@docs
+REopt.add_absorption_chiller_results
+```
+
+## FlexibleHVAC outputs
+```@docs
+REopt.add_flexible_hvac_results
 ```
