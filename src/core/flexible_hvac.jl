@@ -38,7 +38,17 @@ end
 
 
 """
-    FlexibleHVAC
+`FlexibleHVAC` is an optional REopt input with the following keys and default values: 
+```julia
+    system_matrix::AbstractMatrix{Float64}  # N x N, with N states (temperatures in RC network)
+    input_matrix::AbstractMatrix{Float64}  # N x M, with M inputs
+    exogenous_inputs::AbstractMatrix{Float64}  # M x T, with T time steps
+    control_node::Int64
+    initial_temperatures::AbstractVector{Float64}
+    temperature_upper_bound_degC::Union{Real, Nothing}
+    temperature_lower_bound_degC::Union{Real, Nothing}
+    installed_cost::Float64
+```julia
 
 The `FlexibleHVAC` system is modeled via a discrete state-space system:
 
@@ -58,6 +68,12 @@ When providing your own `FlexibleHVAC` model, in addition to the above values on
 - `initial_temperatures` a vector of values for ``\\boldsymbol{x}[1]``
 See construction methods below for more.
 
+There are two construction methods for `FlexibleHVAC`, which depend on whether or not the data was 
+loaded in from a JSON file. The issue with data from JSON is that the vector-of-vectors from the JSON 
+file must be appropriately converted to Julia Matrices. When loading in a Scenario from JSON that 
+includes a `FlexibleHVAC` model, if you include the `flex_hvac_from_json` argument to the `Scenario` 
+constructor then the conversion to Matrices will be done appropriately. 
+
 The simplest way to evaluate the FlexibleHVAC option is to use a built-in state-space model for one
 of the DoE Commercial Reference Buildings. For example, assuming that `d` is a Dict for defining 
 your REopt Scenario:
@@ -75,8 +91,10 @@ climate zone / city will be inferred from the `ElectricLoad` if a `doe_reference
 provided in the `ElectricLoad` inputs. Otherwise the `city` argument must be provided. See the 
 [ElectricLoad](@ref) docs for the list of possible `doe_reference_name` and `city` values.
 
+!!! note  
+    The `ExistingChiller` is electric and so its operating cost is determined by the `ElectricTariff`.
 
-!!! note
+!!! note 
     The `ExistingBoiler` default operating cost is zero. Please provide the `fuel_cost_per_mmbtu` field
     for the `ExistingBoiler` if you want non-zero BAU heating costs. The `fuel_cost_per_mmbtu` can be
     a scalar, a list of 12 monthly values, or a time series of values for every time step.

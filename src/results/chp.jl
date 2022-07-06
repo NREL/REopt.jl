@@ -28,12 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
-
-Adds the `CHP` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
-Note: the node number is an empty string if evaluating a single `Site`.
-
-CHP results:
+`CHP` results keys:
 - `size_kw` Power capacity size of the CHP system [kW]
 - `size_supplemental_firing_kw` Power capacity of CHP supplementary firing system [kW]
 - `year_one_fuel_used_mmbtu` Fuel consumed in year one [MMBtu]
@@ -51,6 +46,8 @@ CHP results:
 - `year_one_chp_standby_cost_before_tax` CHP standby charges in year one [\$] 
 """
 function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+	# Adds the `CHP` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+	# Note: the node number is an empty string if evaluating a single `Site`.
     r = Dict{String, Any}()
 	r["size_kw"] = value(sum(m[Symbol("dvSize"*_n)][t] for t in p.techs.chp))
     r["size_supplemental_firing_kw"] = value(sum(m[Symbol("dvSupplementaryFiringSize"*_n)][t] for t in p.techs.chp))
@@ -112,7 +109,8 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["lifecycle_chp_fuel_cost_after_tax"] = round(value(m[:TotalCHPFuelCosts]) * p.s.financial.offtaker_tax_pct, digits=3)
 	#Standby charges and hourly O&M
 	r["year_one_chp_standby_cost_before_tax"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) / p.pwf_e, digits=0)
-	
+	r["lifecycle_chp_standby_cost_after_tax"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) * p.s.financial.offtaker_tax_pct, digits=0)
+
 
     d["CHP"] = r
     nothing

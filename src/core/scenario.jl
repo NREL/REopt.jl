@@ -51,28 +51,29 @@ end
 """
     Scenario(d::Dict; flex_hvac_from_json=false)
 
-Constructor for Scenario struct, where `d` has upper-case keys:
+A Scenario struct can contain the following keys:
 - [Site](@ref) (required)
-- [ElectricTariff](@ref) (required when off_grid_flag is False)
+- [Financial](@ref) (optional)
+- [ElectricTariff](@ref) (required when `off_grid_flag=false`)
 - [ElectricLoad](@ref) (required)
 - [PV](@ref) (optional, can be Array)
 - [Wind](@ref) (optional)
 - [ElectricStorage](@ref) (optional)
 - [ElectricUtility](@ref) (optional)
-- [Financial](@ref) (optional)
 - [Generator](@ref) (optional)
 - [DomesticHotWaterLoad](@ref) (optional)
 - [SpaceHeatingLoad](@ref) (optional)
 - [ExistingBoiler](@ref) (optional)
 - [CHP](@ref) (optional)
-- FlexibleHVAC (optional)
-- ExistingChiller (optional)
-- AbsorptionChiller (optional)
+- [FlexibleHVAC](@ref) (optional)
+- [ExistingChiller](@ref) (optional)
+- [AbsorptionChiller](@ref) (optional)
 
-All values of `d` are expected to be `Dicts` except for `PV`, which can be either a `Dict` or `Dict[]`.
+All values of `d` are expected to be `Dicts` except for `PV`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays).
 
-Set `flex_hvac_from_json=true` if `FlexibleHVAC` values were loaded in from JSON (necessary to 
-handle conversion of Vector of Vectors from JSON to a Matrix in Julia).
+!!! note 
+    Set `flex_hvac_from_json=true` if `FlexibleHVAC` values were loaded in from JSON (necessary to 
+    handle conversion of Vector of Vectors from JSON to a Matrix in Julia).
 """
 function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d, "Settings")
@@ -85,10 +86,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     # Check that only PV, electric storage, and generator are modeled for off-grid
     if settings.off_grid_flag
-        offgrid_allowed_keys = ["PV", "ElectricStorage", "Generator", "Settings", "Site", "Financial", "ElectricLoad", "ElectricTariff", "ElectricUtility"]
+        offgrid_allowed_keys = ["PV", "Wind", "ElectricStorage", "Generator", "Settings", "Site", "Financial", "ElectricLoad", "ElectricTariff", "ElectricUtility"]
         unallowed_keys = setdiff(keys(d), offgrid_allowed_keys) 
         if !isempty(unallowed_keys)
-            throw(@error "Currently, only PV, ElectricStorage, and Generator can be modeled when off_grid_flag is true. Cannot model $unallowed_keys.")
+            error("Currently, only PV, ElectricStorage, and Generator can be modeled when off_grid_flag is true. Cannot model $unallowed_keys.")
         end
     end
     
@@ -111,22 +112,42 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
 
     if haskey(d, "Financial")
-        financial = Financial(; dictkeys_tosymbols(d["Financial"])..., off_grid_flag = settings.off_grid_flag )
+        financial = Financial(; dictkeys_tosymbols(d["Financial"])...,
+                                latitude=site.latitude, longitude=site.longitude, 
+                                off_grid_flag = settings.off_grid_flag,
+                                include_health_in_objective = settings.include_health_in_objective
+                            )
     else
-        financial = Financial(; off_grid_flag = settings.off_grid_flag)
+        financial = Financial(; latitude=site.latitude, longitude=site.longitude,
+                                off_grid_flag = settings.off_grid_flag
+                            )
     end
 
     if haskey(d, "ElectricUtility") && !(settings.off_grid_flag)
-        electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...)
+        electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...,
+                                            latitude=site.latitude, longitude=site.longitude, 
+                                            CO2_emissions_reduction_min_pct=site.CO2_emissions_reduction_min_pct,
+                                            CO2_emissions_reduction_max_pct=site.CO2_emissions_reduction_max_pct,
+                                            include_climate_in_objective=settings.include_climate_in_objective,
+                                            include_health_in_objective=settings.include_health_in_objective,
+                                            off_grid_flag=settings.off_grid_flag,
+                                            time_steps_per_hour=settings.time_steps_per_hour
+                                        )
     elseif !(settings.off_grid_flag)
-        electric_utility = ElectricUtility()
+        electric_utility = ElectricUtility(; latitude=site.latitude, longitude=site.longitude, 
+                                            time_steps_per_hour=settings.time_steps_per_hour
+                                        )
     elseif settings.off_grid_flag 
         if haskey(d, "ElectricUtility")
             @warn "ElectricUtility inputs are not applicable when off_grid_flag is true and any ElectricUtility inputs will be ignored. For off-grid scenarios, a year-long outage will always be modeled."
         end
-        electric_utility = ElectricUtility(; outage_start_time_step = 1, outage_end_time_step = settings.time_steps_per_hour * 8760) 
+        electric_utility = ElectricUtility(; outage_start_time_step = 1, 
+                                            outage_end_time_step = settings.time_steps_per_hour * 8760, 
+                                            latitude=site.latitude, longitude=site.longitude, 
+                                            time_steps_per_hour=settings.time_steps_per_hour
+                                        ) 
     end
-
+        
     storage_structs = Dict{String, AbstractStorage}()
     if haskey(d,  "ElectricStorage")
         storage_dict = dictkeys_tosymbols(d["ElectricStorage"])
@@ -171,7 +192,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
 
     if haskey(d, "Wind")
-        wind = Wind(; dictkeys_tosymbols(d["Wind"])..., 
+        wind = Wind(; dictkeys_tosymbols(d["Wind"])..., off_grid_flag=settings.off_grid_flag,
                     average_elec_load=sum(electric_load.loads_kw) / length(electric_load.loads_kw))
     else
         wind = Wind(; max_kw=0)
