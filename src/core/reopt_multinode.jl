@@ -182,6 +182,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
     add_variables!(m, ps)
     @warn "Outages are not currently modeled in multinode mode."
     @warn "Diesel generators are not currently modeled in multinode mode."
+	@warn "Emissions and renewable energy fractions are not currently modeling in multinode mode."
     for p in ps
         _n = string("_", p.s.site.node)
 

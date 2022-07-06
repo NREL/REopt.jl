@@ -4,6 +4,17 @@
 - fix bug for tiered, time-of-use demand rates
 - fix bug in results with tiered electrical energy costs
 
+## Develop
+- Allow Wind tech to be included when `off_grid_flag` is true
+- Add `operating_reserve_required_pct` to Wind struct and incorporate wind into operating reserve constraints
+- Bug fix to constrain dvCurtail in `time_steps_without_grid`
+- Bug fix to report accurate wind ["year_one_to_load_series_kw"] in results/wind.jl (was previously not accounting for curtailed wind)
+- Add hot, cold TES results for MPC model
+- Update documentation and add `docs/devdeploy.jl` to locally host the REopt.jl documentation 
+- Make `ExistingBoiler` `fuel_cost_per_mmbtu` a required input
+
+## Develop
+In `prodfactor.jl`, include lat-long coordinates if-statement to determine whether the "nsrdb" dataset should be used in call to PVWatts. Accounts for recent updates to NSRDB data used by PVWatts (v6). If outside of NSRDB range, use "intl" (international) dataset. 
 ## v0.16.2
 - Update PV defaults to tilt=10 for rooftop, tilt = abs(lat) for ground mount, azimuth = 180 for northern lats, azimuth = 0 for southern lats.
 - bug fix for Generator inputs to allow for time_steps_per_hour > 1
