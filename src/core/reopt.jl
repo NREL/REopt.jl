@@ -210,6 +210,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	m[:dvComfortLimitViolationCost] = 0.0
 	m[:TotalCHPStandbyCharges] = 0
 	m[:OffgridOtherCapexAfterDepr] = 0.0
+    m[:GHPCapCosts] = 0.0
+    m[:GHPOMCosts] = 0.0   
 
 	if !isempty(p.techs.all)
 		add_tech_size_constraints(m, p)
@@ -253,18 +255,13 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
         if !isempty(p.ghp_options)
             add_ghp_constraints(m, p)
-        else
-            # add_ghp_heating_elec was used in API's reopt_model.jl for "NewMaxSize" values, but these are not in REopt.jl currently
-            # add_ghp_heating_elec = 0.0
-            m[:GHPCapCosts] = @expression(m, 0.0)
-            m[:GHPOMCosts] = @expression(m, 0.0)
         end
 
         if !isempty(p.techs.pbi)
             @warn "adding binary variable(s) to model production based incentives"
             add_prod_incent_vars_and_constraints(m, p)
         end
-	end
+    end
 
 	add_elec_load_balance_constraints(m, p)
 
