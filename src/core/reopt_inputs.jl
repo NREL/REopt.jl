@@ -797,21 +797,13 @@ function setup_ghp_inputs(s::AbstractScenario, time_steps, time_steps_without_gr
             end
             ghp_installed_cost[i] = ghp_cap_cost_yint[seg-1] + ghp_size_ton * ghp_cap_cost_slope[seg-1]
             ghp_om_cost_year_one[i] = option.om_cost_year_one
-            # TODO check if GHP can serve DHW too?
-            if !isnothing(s.existing_boiler)
-                heating_thermal_load = (s.space_heating_load.loads_kw + s.dhw_load.loads_kw) * s.existing_boiler.efficiency
-            else
-                heating_thermal_load = (s.space_heating_load.loads_kw + s.dhw_load.loads_kw) * 0.8
-                boiler_efficiency["ExistingBoiler"] = 0.8
-            end
+            heating_thermal_load = s.space_heating_load.loads_kw + s.dhw_load.loads_kw
             # Using minimum of thermal load and ghp-serving load to avoid small negative net loads
             for j in time_steps
                 heating_thermal_load_reduction_with_ghp_kw[i,j] = min(s.heating_thermal_load_reduction_with_ghp_kw[j], heating_thermal_load[j])
                 cooling_thermal_load_reduction_with_ghp_kw[i,j] = min(s.cooling_thermal_load_reduction_with_ghp_kw[j], s.cooling_load.loads_kw_thermal[j])
-                ghp_heating_thermal_load_served_kw[i,j] = min(option.heating_thermal_kw[j], 
-                                                            heating_thermal_load[j] - heating_thermal_load_reduction_with_ghp_kw[i,j])
-                ghp_cooling_thermal_load_served_kw[i,j] = min(option.cooling_thermal_kw[j], 
-                                                                s.cooling_load.loads_kw_thermal[j] - cooling_thermal_load_reduction_with_ghp_kw[i,j])
+                ghp_heating_thermal_load_served_kw[i,j] = min(option.heating_thermal_kw[j], heating_thermal_load[j] - heating_thermal_load_reduction_with_ghp_kw[i,j])
+                ghp_cooling_thermal_load_served_kw[i,j] = min(option.cooling_thermal_kw[j], s.cooling_load.loads_kw_thermal[j] - cooling_thermal_load_reduction_with_ghp_kw[i,j])
                 ghp_electric_consumption_kw[i,j] = option.yearly_electric_consumption_kw[j]
             end
 
