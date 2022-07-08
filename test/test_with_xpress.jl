@@ -29,8 +29,8 @@
 # *********************************************************************************
 using Xpress
 using Random
+using DelimitedFiles
 Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tests
-
 
 @testset "Thermal loads" begin
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
@@ -904,60 +904,6 @@ end
     @test round(sum(cooling_electric_hybrid_expected .- cooling_elec_hybrid), digits=1) ≈ 0.0 atol=0.1
 end
 
-## equivalent REopt API Post for test 2:
-#   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
-# {"Scenario": {
-#     "Site": {
-#         "longitude": -118.1164613,
-#         "latitude": 34.5794343,
-#         "roof_squarefeet": 5000.0,
-#         "land_acres": 1.0,
-#     "PV": {
-#         "macrs_bonus_pct": 0.4,
-#         "installed_cost_per_kw": 2000.0,
-#         "tilt": 34.579,
-#         "degradation_pct": 0.005,
-#         "macrs_option_years": 5,
-#         "federal_itc_pct": 0.3,
-#         "module_type": 0,
-#         "array_type": 1,
-#         "om_cost_per_kw": 16.0,
-#         "macrs_itc_reduction": 0.5,
-#         "azimuth": 180.0,
-#         "federal_rebate_per_kw": 350.0,
-#         "dc_ac_ratio": 1.1
-#     },
-#     "LoadProfile": {
-#         "doe_reference_name": "RetailStore",
-#         "annual_kwh": 10000000.0,
-#         "city": "LosAngeles"
-#     },
-#     "ElectricStorage": {
-#         "total_rebate_per_kw": 100.0,
-#         "macrs_option_years": 5,
-#         "can_grid_charge": true,
-#         "macrs_bonus_pct": 0.4,
-#         "macrs_itc_reduction": 0.5,
-#         "total_itc_pct": 0,
-#         "installed_cost_per_kw": 1000.0,
-#         "installed_cost_per_kwh": 500.0,
-#         "replace_cost_per_kw": 460.0,
-#         "replace_cost_per_kwh": 230.0
-#     },
-#     "ElectricTariff": {
-#         "urdb_label": "5ed6c1a15457a3367add15ae"
-#     },
-#     "Financial": {
-#         "escalation_pct": 0.026,
-#         "offtaker_discount_pct": 0.081,
-#         "owner_discount_pct": 0.081,
-#         "analysis_years": 20,
-#         "offtaker_tax_pct": 0.4,
-#         "owner_tax_pct": 0.4,
-#         "om_cost_escalation_pct": 0.025
-#     }
-# }}}
-
 @testset "OffGrid" begin
     ## Scenario 1: Solar, Storage, Fixed Generator
     post_name = "off_grid.json" 
@@ -1024,6 +970,239 @@ end
     # Test generator outputs
     @test typeof(r) == Model # this is true when the model is infeasible
 
+    ### Scenario 3: Indonesia. Wind (custom prod) and Generator only
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+    post_name = "wind_intl_offgrid.json" 
+    post = JSON.parsefile("./scenarios/$post_name")
+    post["ElectricLoad"]["loads_kw"] = [10.0 for i in range(1,8760)]
+    scen = Scenario(post)
+    post["Wind"]["prod_factor_series"] =  reduce(vcat, readdlm("./data/example_wind_prod_factor_kw.csv", '\n', header=true)[1])
+
+    results = run_reopt(m, post)
+
+    @test results["ElectricLoad"]["offgrid_load_met_pct"] >= scen.electric_load.min_load_met_annual_pct
+    f = results["Financial"]
+    @test f["lifecycle_generation_tech_capital_costs"] + f["lifecycle_storage_capital_costs"] + f["lifecycle_om_costs_after_tax"] +
+             f["lifecycle_fuel_costs_after_tax"] + f["lifecycle_chp_standby_cost_after_tax"] + f["lifecycle_elecbill_after_tax"] + 
+             f["lifecycle_offgrid_other_annual_costs_after_tax"] + f["lifecycle_offgrid_other_capital_costs"] + 
+             f["lifecycle_outage_cost"] + f["lifecycle_MG_upgrade_and_fuel_cost"] - 
+             f["lifecycle_production_incentive_after_tax"] ≈ f["lcc"] atol=1.0
+
+    windOR = sum(results["Wind"]["year_one_to_load_series_kw"]  * post["Wind"]["operating_reserve_required_pct"])
+    loadOR = sum(post["ElectricLoad"]["loads_kw"] * scen.electric_load.operating_reserve_required_pct)
+    @test sum(results["ElectricLoad"]["offgrid_annual_oper_res_required_series_kwh"]) ≈ loadOR  + windOR atol=1.0
+
+end
+
+@testset "Emissions and Renewable Energy Percent" begin
+    #renewable energy and emissions reduction targets
+    include_exported_RE_in_total = [true,false,true]
+    include_exported_ER_in_total = [true,false,true]
+    RE_target = [0.8,nothing,nothing]
+    ER_target = [nothing,0.8,nothing]
+    with_outage = [true,false,false]
+
+    for i in range(1, stop=3)
+        if i == 3
+            inputs = JSON.parsefile("./scenarios/re_emissions_with_thermal.json")
+        else
+            inputs = JSON.parsefile("./scenarios/re_emissions_elec_only.json")
+        end
+        inputs["Site"]["include_exported_renewable_electricity_in_total"] = include_exported_RE_in_total[i]
+        inputs["Site"]["include_exported_elec_emissions_in_total"] = include_exported_ER_in_total[i]
+        inputs["Site"]["renewable_electricity_min_pct"] = if isnothing(RE_target[i]) 0.0 else RE_target[i] end
+        inputs["Site"]["renewable_electricity_max_pct"] = RE_target[i]
+        inputs["Site"]["CO2_emissions_reduction_min_pct"] = ER_target[i]
+        inputs["Site"]["CO2_emissions_reduction_max_pct"] = ER_target[i]
+        if with_outage[i]
+            outage_start_hour = 4032
+            outage_duration = 2000 #hrs
+            inputs["ElectricUtility"]["outage_start_time_step"] = outage_start_hour + 1
+            inputs["ElectricUtility"]["outage_end_time_step"] = outage_start_hour + 1 + outage_duration
+            inputs["Generator"]["max_kw"] = 20
+            inputs["Generator"]["existing_kw"] = 2
+            inputs["Generator"]["fuel_avail_gal"] = 1000 
+        end
+
+        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        results = run_reopt([m1, m2], inputs)
+
+        if !isnothing(ER_target[i])
+            ER_pct_out = results["Site"]["lifecycle_emissions_reduction_CO2_pct"]
+            @test ER_target[i] ≈ ER_pct_out atol=1e-3
+            lifecycle_emissions_tonnes_CO2_out = results["Site"]["lifecycle_emissions_tonnes_CO2"]
+            lifecycle_emissions_bau_tonnes_CO2_out = results["Site"]["lifecycle_emissions_tonnes_CO2_bau"]
+            ER_pct_calced_out = (lifecycle_emissions_bau_tonnes_CO2_out-lifecycle_emissions_tonnes_CO2_out)/lifecycle_emissions_bau_tonnes_CO2_out
+            ER_pct_diff = abs(ER_pct_calced_out-ER_pct_out)
+            @test ER_pct_diff ≈ 0.0 atol=1e-2
+        end
+        year_one_emissions_tonnes_CO2_out = results["Site"]["year_one_emissions_tonnes_CO2"]
+        yr1_fuel_emissions_tonnes_CO2_out = results["Site"]["year_one_emissions_from_fuelburn_tonnes_CO2"]
+        yr1_grid_emissions_tonnes_CO2_out = results["ElectricUtility"]["year_one_emissions_tonnes_CO2"]
+        yr1_total_emissions_calced_tonnes_CO2 = yr1_fuel_emissions_tonnes_CO2_out + yr1_grid_emissions_tonnes_CO2_out 
+        @test year_one_emissions_tonnes_CO2_out ≈ yr1_total_emissions_calced_tonnes_CO2 atol=1e-1
+        if haskey(results["Financial"],"breakeven_cost_of_emissions_reduction_per_tonnes_CO2")
+            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"] >= 0.0
+        end
+        
+        #commented out values are using levelization factors matching API
+        if i == 1
+            @test results["PV"]["size_kw"] ≈ 61.89 atol=1e-1 #63.427 atol=1e-1
+            @test results["ElectricStorage"]["size_kw"] ≈ 2.43 # 2.43 kW
+            @test results["ElectricStorage"]["size_kwh"] ≈ 7.31 # 7.305
+            @test results["Generator"]["size_kw"] ≈ 22.0 # 22 kW
+            expected_npv = -87082 # API test without Wind tech as an input.
+            @test (expected_npv - results["Financial"]["npv"])/expected_npv ≈ 0.0 atol=1e-2
+            @test results["Site"]["annual_renewable_electricity_kwh"] ≈ 75140.37 #75140.37
+            @test results["Site"]["renewable_electricity_pct"] ≈ 0.8 # 0.8
+            @test results["Site"]["renewable_electricity_pct_bau"] ≈ 0.1476 atol=1e-4 #0.1464 atol=1e-4
+            @test results["Site"]["total_renewable_energy_pct"] ≈ 0.8 # 0.8
+            @test results["Site"]["total_renewable_energy_pct_bau"] ≈ 0.1476 atol=1e-4 #0.1464 atol=1e-4
+            @test results["Site"]["lifecycle_emissions_reduction_CO2_pct"] ≈ 0.6573 atol=1e-4 # 0.6578 atol=1e-4
+            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"] ≈ 258 atol=1 # 259.7
+            @test results["Site"]["year_one_emissions_tonnes_CO2"] ≈ 12.75 # 12.75
+            @test results["Site"]["year_one_emissions_tonnes_CO2_bau"] ≈ 40.48 atol=1e-2 # 40.54 atol=1e-2
+            @test results["Site"]["year_one_emissions_from_fuelburn_tonnes_CO2"] ≈ 8.63 # 8.63
+            @test results["Site"]["year_one_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0 # 0.0
+            @test results["Site"]["lifecycle_emissions_cost_CO2"] ≈ 8760 atol=1 # 8760.58
+            @test results["Site"]["lifecycle_emissions_cost_CO2_bau"] ≈ 25818.96 atol=1e-1 # 25856.9 atol=1e-1
+            @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 245.65 # 245.65
+            @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 716.81 #717.86
+            @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 172.62 # 172.62
+            @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0 # 0.0
+            @test results["ElectricUtility"]["year_one_emissions_tonnes_CO2"] ≈ 4.12 # 4.12
+            @test results["ElectricUtility"]["year_one_emissions_tonnes_CO2_bau"] ≈ 40.48 # 40.54
+            @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] ≈ 73.03 # 73.03
+            @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 716.81 # 717.86
+        elseif i == 2
+            @test results["PV"]["size_kw"] ≈ 94.48 atol=1 # 94.97
+            @test results["ElectricStorage"]["size_kw"] ≈ 20.27 atol=1 # 20.29
+            @test results["ElectricStorage"]["size_kwh"] ≈ 154.44 atol=1 # 154.52
+            @test !haskey(results, "Generator")
+            # NPV
+            expected_npv = -244450 # per test in REopt API
+            @test (expected_npv - results["Financial"]["npv"])/expected_npv ≈ 0.0 atol=1e-2
+            # Renewable energy
+            @test results["Site"]["renewable_electricity_pct"] ≈ 0.7725 atol=1e-3 # 0.7722 atol=1e-4
+            @test results["Site"]["annual_renewable_electricity_kwh"] ≈ 77250.1 atol=10 # 77221.23 atol=10
+            @test results["Site"]["renewable_electricity_pct_bau"] ≈ 0.1365 atol=1e-3 #0.1354 atol=1e-3
+            @test results["Site"]["annual_renewable_electricity_kwh_bau"] ≈ 13650.39 atol=10 # 13542.62 atol=10
+            @test results["Site"]["total_renewable_energy_pct"] ≈ 0.7725 atol=1e-3 # 0.7722
+            @test results["Site"]["total_renewable_energy_pct_bau"] ≈ 0.1365 atol=1e-3 # 0.1354 atol=1e-3
+            # CO2 emissions - totals ≈  from grid, from fuelburn, ER, $/tCO2 breakeven
+            @test results["Site"]["lifecycle_emissions_reduction_CO2_pct"] ≈ 0.8 atol=1e-3 # 0.8
+            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"] ≈ 420.91 atol=1e-1 # 421.41
+            @test results["Site"]["year_one_emissions_tonnes_CO2"] ≈ 11.59 atol=1 # 11.59
+            @test results["Site"]["year_one_emissions_tonnes_CO2_bau"] ≈ 57.97 atol=1 # 57.97
+            @test results["Site"]["year_one_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
+            @test results["Site"]["year_one_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0 atol=1 # 0.0
+            @test results["Site"]["lifecycle_emissions_cost_CO2"] ≈ 7386.65 atol=1 # 7395.84 atol=1
+            @test results["Site"]["lifecycle_emissions_cost_CO2_bau"] ≈ 36933.26 atol=1 # 36979.2 atol=1
+            @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 205.33 atol=1 # 205.33
+            @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 1025.37 atol=1 # 1026.65 atol=1
+            @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
+            @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0 atol=1 # 0.0
+            @test results["ElectricUtility"]["year_one_emissions_tonnes_CO2"] ≈ 11.59 atol=1 # 11.59
+            @test results["ElectricUtility"]["year_one_emissions_tonnes_CO2_bau"] ≈ 57.97 atol=1 # 57.97
+            @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] ≈ 205.33 atol=1 # 205.33
+            @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 1025.37 atol=1 # 1026.65 atol=1
+
+            #also test CO2 breakeven cost
+            inputs["PV"]["min_kw"] = results["PV"]["size_kw"] - inputs["PV"]["existing_kw"]
+            inputs["PV"]["max_kw"] = results["PV"]["size_kw"] - inputs["PV"]["existing_kw"]
+            inputs["ElectricStorage"]["min_kw"] = results["ElectricStorage"]["size_kw"]
+            inputs["ElectricStorage"]["max_kw"] = results["ElectricStorage"]["size_kw"]
+            inputs["ElectricStorage"]["min_kwh"] = results["ElectricStorage"]["size_kwh"]
+            inputs["ElectricStorage"]["max_kwh"] = results["ElectricStorage"]["size_kwh"]
+            inputs["Financial"]["CO2_cost_per_tonne"] = results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"]
+            inputs["Settings"]["include_climate_in_objective"] = true
+            m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+            m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+            results = run_reopt([m1, m2], inputs)
+            @test results["Financial"]["npv"] ≈ 0 atol=11
+            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"] ≈ inputs["Financial"]["CO2_cost_per_tonne"] atol=1e-1
+        elseif i == 3
+            @test results["PV"]["size_kw"] ≈ 20.0 atol=1e-1
+            @test !haskey(results, "Wind")
+            @test !haskey(results, "ElectricStorage")
+            @test !haskey(results, "Generator")
+            @test results["CHP"]["size_kw"] ≈ 200.0 atol=1e-1
+            @test results["AbsorptionChiller"]["size_ton"] ≈ 400.0 atol=1e-1
+            @test results["HotThermalStorage"]["size_gal"] ≈ 50000 atol=1e1
+            @test results["ColdThermalStorage"]["size_gal"] ≈ 30000 atol=1e1
+            yr1_nat_gas_mmbtu = results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"] + results["CHP"]["year_one_fuel_used_mmbtu"]
+            nat_gas_emissions_lb_per_mmbtu = Dict("CO2"=>116.9, "NOx"=>0.09139, "SO2"=>0.000578592, "PM25"=>0.007328833)
+            TONNE_PER_LB = 1/2204.62
+            @test results["Site"]["year_one_emissions_from_fuelburn_tonnes_CO2"] ≈ nat_gas_emissions_lb_per_mmbtu["CO2"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1
+            @test results["Site"]["year_one_emissions_from_fuelburn_tonnes_NOx"] ≈ nat_gas_emissions_lb_per_mmbtu["NOx"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
+            @test results["Site"]["year_one_emissions_from_fuelburn_tonnes_SO2"] ≈ nat_gas_emissions_lb_per_mmbtu["SO2"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
+            @test results["Site"]["year_one_emissions_from_fuelburn_tonnes_PM25"] ≈ nat_gas_emissions_lb_per_mmbtu["PM25"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
+            @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] atol=1
+            @test results["Site"]["lifecycle_emissions_tonnes_NOx"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_NOx"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_NOx"] atol=0.1
+            @test results["Site"]["lifecycle_emissions_tonnes_SO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_SO2"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_SO2"] atol=1e-2
+            @test results["Site"]["lifecycle_emissions_tonnes_PM25"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_PM25"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_PM25"] atol=1e-2
+            @test results["Site"]["annual_renewable_electricity_kwh"] ≈ results["PV"]["average_annual_energy_produced_kwh"] + inputs["CHP"]["fuel_renewable_energy_pct"] * results["CHP"]["year_one_electric_energy_produced_kwh"] atol=1
+            @test results["Site"]["renewable_electricity_pct"] ≈ results["Site"]["annual_renewable_electricity_kwh"] / results["ElectricLoad"]["annual_calculated_kwh"] atol=1e-6#0.044285 atol=1e-4
+            KWH_PER_MMBTU = 293.07107
+            annual_RE_kwh = inputs["CHP"]["fuel_renewable_energy_pct"] * results["CHP"]["year_one_thermal_energy_produced_mmbtu"] * KWH_PER_MMBTU + results["Site"]["annual_renewable_electricity_kwh"]
+            annual_heat_kwh = (results["CHP"]["year_one_thermal_energy_produced_mmbtu"] + results["ExistingBoiler"]["year_one_thermal_production_mmbtu"]) * KWH_PER_MMBTU
+            @test results["Site"]["total_renewable_energy_pct"] ≈ annual_RE_kwh / (annual_heat_kwh + results["ElectricLoad"]["annual_calculated_kwh"]) atol=1e-6
+        end
+    end
 end
 
 
+## equivalent REopt API Post for test 2:
+#   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
+# {"Scenario": {
+#     "Site": {
+#         "longitude": -118.1164613,
+#         "latitude": 34.5794343,
+#         "roof_squarefeet": 5000.0,
+#         "land_acres": 1.0,
+#     "PV": {
+#         "macrs_bonus_pct": 0.4,
+#         "installed_cost_per_kw": 2000.0,
+#         "tilt": 34.579,
+#         "degradation_pct": 0.005,
+#         "macrs_option_years": 5,
+#         "federal_itc_pct": 0.3,
+#         "module_type": 0,
+#         "array_type": 1,
+#         "om_cost_per_kw": 16.0,
+#         "macrs_itc_reduction": 0.5,
+#         "azimuth": 180.0,
+#         "federal_rebate_per_kw": 350.0,
+#         "dc_ac_ratio": 1.1
+#     },
+#     "LoadProfile": {
+#         "doe_reference_name": "RetailStore",
+#         "annual_kwh": 10000000.0,
+#         "city": "LosAngeles"
+#     },
+#     "ElectricStorage": {
+#         "total_rebate_per_kw": 100.0,
+#         "macrs_option_years": 5,
+#         "can_grid_charge": true,
+#         "macrs_bonus_pct": 0.4,
+#         "macrs_itc_reduction": 0.5,
+#         "total_itc_pct": 0,
+#         "installed_cost_per_kw": 1000.0,
+#         "installed_cost_per_kwh": 500.0,
+#         "replace_cost_per_kw": 460.0,
+#         "replace_cost_per_kwh": 230.0
+#     },
+#     "ElectricTariff": {
+#         "urdb_label": "5ed6c1a15457a3367add15ae"
+#     },
+#     "Financial": {
+#         "escalation_pct": 0.026,
+#         "offtaker_discount_pct": 0.081,
+#         "owner_discount_pct": 0.081,
+#         "analysis_years": 20,
+#         "offtaker_tax_pct": 0.4,
+#         "owner_tax_pct": 0.4,
+#         "om_cost_escalation_pct": 0.025
+#     }
+# }}}

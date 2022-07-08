@@ -28,17 +28,25 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    add_electric_utility_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
-
-Adds the ElectricUtility results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
-Note: the node number is an empty string if evaluating a single `Site`.
-
-ElectricUtility results:
+`ElectricUtility` results keys:
 - `year_one_energy_supplied_kwh` Total energy supplied from the grid in year one.
-- `year_one_to_load_series_kw` Vector of powers drawn from the grid to serve load in year one.
-- `year_one_to_battery_series_kw` Vector of powers drawn from the grid to charge the battery in year one.
+- `year_one_to_load_series_kw` Vector of power drawn from the grid to serve load in year one.
+- `year_one_to_battery_series_kw` Vector of power drawn from the grid to charge the battery in year one.
+- `year_one_emissions_tonnes_CO2`
+- `year_one_emissions_tonnes_NOx`
+- `year_one_emissions_tonnes_SO2`
+- `year_one_emissions_tonnes_PM25`
+- `lifecycle_emissions_tonnes_CO2`
+- `lifecycle_emissions_tonnes_NOx`
+- `lifecycle_emissions_tonnes_SO2`
+- `lifecycle_emissions_tonnes_PM25`
+- `emissions_region`
+- `distance_to_emissions_region_meters`
 """
 function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, d::Dict; _n="")
+    # Adds the `ElectricUtility` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+    # Note: the node number is an empty string if evaluating a single `Site`.
+
     r = Dict{String, Any}()
 
     Year1UtilityEnergy = p.hours_per_time_step * sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] 
@@ -60,11 +68,31 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
     r["year_one_to_load_series_kw"] = round.(value.(GridToLoad), digits=3)
     r["year_one_to_battery_series_kw"] = round.(value.(GridToBatt), digits=3)
 
+    if _n=="" #only output emissions results if not a multinode model
+        r["year_one_emissions_tonnes_CO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2]*TONNE_PER_LB), digits=2)
+        r["year_one_emissions_tonnes_NOx"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx]*TONNE_PER_LB), digits=2)
+        r["year_one_emissions_tonnes_SO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2]*TONNE_PER_LB), digits=2)
+        r["year_one_emissions_tonnes_PM25"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25]*TONNE_PER_LB), digits=2)
+        r["lifecycle_emissions_tonnes_CO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2]*TONNE_PER_LB*p.pwf_grid_emissions["CO2"]), digits=2)
+        r["lifecycle_emissions_tonnes_NOx"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx]*TONNE_PER_LB*p.pwf_grid_emissions["NOx"]), digits=2)
+        r["lifecycle_emissions_tonnes_SO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2]*TONNE_PER_LB*p.pwf_grid_emissions["SO2"]), digits=2)
+        r["lifecycle_emissions_tonnes_PM25"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25]*TONNE_PER_LB*p.pwf_grid_emissions["PM25"]), digits=2)
+        
+        r["emissions_region"] = p.s.electric_utility.emissions_region
+        r["distance_to_emissions_region_meters"] = p.s.electric_utility.distance_to_emissions_region_meters
+    end
+
     d["ElectricUtility"] = r
+
     nothing
 end
 
-
+"""
+MPC `ElectricUtility` results keys:
+- `energy_supplied_kwh` 
+- `to_battery_series_kw`
+- `to_load_series_kw`
+"""
 function add_electric_utility_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 

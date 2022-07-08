@@ -27,14 +27,24 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-
 function annuity(years::Int, rate_escalation::Real, rate_discount::Real)
     """
         this formulation assumes cost growth in first period
         i.e. it is a geometric sum of (1+rate_escalation)^n / (1+rate_discount)^n
         for n = 1, ..., years
     """
-    x = (1 + rate_escalation) / (1 + rate_discount)
+    return annuity_two_escalation_rates(years, rate_escalation, 0.0, rate_discount)
+end
+
+
+function annuity_two_escalation_rates(years::Int, rate_escalation1::Real, rate_escalation2::Real, rate_discount::Real)
+    """
+        this formulation assumes cost growth in first period
+        i.e. it is a geometric sum of (1+rate_escalation1)^n * (1+rate_escalation2)^n / (1+rate_discount)^n
+        for n = 1, ..., years
+        which is refactored using (1+a)^n*(1+b)^n/(1+c)^n = ((1+a+b+a*b)/(1+c))^n
+    """
+    x = (1 + rate_escalation1 + rate_escalation2 + rate_escalation1 * rate_escalation2) / (1 + rate_discount)
     if x != 1
         pwf = round(x * (1 - x^years) / (1 - x), digits=5)
     else
@@ -163,7 +173,7 @@ function dictkeys_tosymbols(d::Dict)
             "monthly_totals_kwh",
             "prod_factor_series", 
             "monthly_energy_rates", "monthly_demand_rates",
-            "wholesale_rate", "blended_doe_reference_percents",
+            "blended_doe_reference_percents",
             "coincident_peak_load_charge_per_kw", "fuel_cost_per_mmbtu",
             "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
             "outage_probabilities"
@@ -401,4 +411,8 @@ function get_offgrid_other_capex_depreciation_savings(offgrid_other_capital_cost
     prepend!(tax_savings_array, 0.0) # savings taken at end of year 1
     npv_other_capex = npv(discount_rate, tax_savings_array)
     return npv_other_capex
+end
+
+macro argname(arg)
+    string(arg)
 end
