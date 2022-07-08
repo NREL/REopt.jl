@@ -32,6 +32,8 @@ using JuMP
 using HiGHS
 using JSON
 using REopt
+using CSV
+using DataFrames
 
 
 if "Xpress" in ARGS
