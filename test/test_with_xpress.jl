@@ -994,7 +994,7 @@ end
 
 end
 
-@testset "Emissions" begin
+@testset "Emissions and Renewable Energy Percent" begin
     #renewable energy and emissions reduction targets
     include_exported_RE_in_total = [true,false,true]
     include_exported_ER_in_total = [true,false,true]
