@@ -28,67 +28,67 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    ElectricLoad(;
-        loads_kw::Array{<:Real,1} = Real[],
-        path_to_csv::String = "",
-        year::Int = 2020,
-        doe_reference_name::String = "",
-        blended_doe_reference_names::Array{String, 1} = String[],
-        blended_doe_reference_percents::Array{<:Real,1} = Real[],
-        city::String = "",
-        annual_kwh::Union{Real, Nothing} = nothing,
-        monthly_totals_kwh::Array{<:Real,1} = Real[],
-        critical_loads_kw::Union{Missing, Array{Real,1}} = missing,
-        loads_kw_is_net::Bool = true,
-        critical_loads_kw_is_net::Bool = false,
-        critical_load_pct::Real = off_grid_flag ? 1.0 : 0.5, # if off grid, 1.0, else 0.5
-        time_steps_per_hour::Int = 1,
-        operating_reserve_required_pct::Real = off_grid_flag ? 0.1 : 0.0, # if off grid, 10%, else 0%
-        min_load_met_annual_pct::Real = off_grid_flag ? 0.99999 : 1.0 # if off grid, 99.999%, else 100%
-    )
+`ElectricLoad` is a required REopt input with the following keys and default values:
+```julia
+    loads_kw::Array{<:Real,1} = Real[],
+    path_to_csv::String = "", # for csv containing loads_kw
+    year::Int = 2020, # used in ElectricTariff to align rate schedule with weekdays/weekends
+    doe_reference_name::String = "",
+    blended_doe_reference_names::Array{String, 1} = String[],
+    blended_doe_reference_percents::Array{<:Real,1} = Real[],
+    city::String = "",
+    annual_kwh::Union{Real, Nothing} = nothing,
+    monthly_totals_kwh::Array{<:Real,1} = Real[],
+    critical_loads_kw::Union{Nothing, Array{Real,1}} = nothing,
+    loads_kw_is_net::Bool = true,
+    critical_loads_kw_is_net::Bool = false,
+    critical_load_pct::Real = off_grid_flag ? 1.0 : 0.5, # if off grid must be 1.0, else 0.5
+    operating_reserve_required_pct::Real = off_grid_flag ? 0.1 : 0.0, # if off grid, 10%, else must be 0%. Applied to each time_step as a % of electric load.
+    min_load_met_annual_pct::Real = off_grid_flag ? 0.99999 : 1.0 # if off grid, 99.999%, else must be 100%. Applied to each time_step as a % of electric load.
+```
 
-Must provide either `loads_kw` or `path_to_csv` or [`doe_reference_name` and `city`] or `doe_reference_name` or [`blended_doe_reference_names` and `blended_doe_reference_percents`]. 
+!!! note "Required inputs"
+    Must provide either `loads_kw` or `path_to_csv` or [`doe_reference_name` and `city`] or `doe_reference_name` or [`blended_doe_reference_names` and `blended_doe_reference_percents`]. 
 
-When only `doe_reference_name` is provided the `Site.latitude` and `Site.longitude` are used to look up the ASHRAE climate zone, which determines the appropriate DoE Commercial Reference Building profile.
+    When only `doe_reference_name` is provided the `Site.latitude` and `Site.longitude` are used to look up the ASHRAE climate zone, which determines the appropriate DoE Commercial Reference Building profile.
 
-When using the [`doe_reference_name` and `city`] option, choose `city` from one of the 
-cities used to represent the ASHRAE climate zones:
-- Albuquerque
-- Atlanta
-- Baltimore
-- Boulder
-- Chicago
-- Duluth
-- Fairbanks
-- Helena
-- Houston
-- LosAngeles
-- Miami
-- Minneapolis
-- Phoenix
-- SanFrancisco
-- Seattle
-and `doe_reference_name` from:
-- FastFoodRest
-- FullServiceRest
-- Hospital
-- LargeHotel
-- LargeOffice
-- MediumOffice
-- MidriseApartment
-- Outpatient
-- PrimarySchool
-- RetailStore
-- SecondarySchool
-- SmallHotel
-- SmallOffice
-- StripMall
-- Supermarket
-- Warehouse
-- FlatLoad
+    When using the [`doe_reference_name` and `city`] option, choose `city` from one of the cities used to represent the ASHRAE climate zones:
+    - Albuquerque
+    - Atlanta
+    - Baltimore
+    - Boulder
+    - Chicago
+    - Duluth
+    - Fairbanks
+    - Helena
+    - Houston
+    - LosAngeles
+    - Miami
+    - Minneapolis
+    - Phoenix
+    - SanFrancisco
+    - Seattle
+    and `doe_reference_name` from:
+    - FastFoodRest
+    - FullServiceRest
+    - Hospital
+    - LargeHotel
+    - LargeOffice
+    - MediumOffice
+    - MidriseApartment
+    - Outpatient
+    - PrimarySchool
+    - RetailStore
+    - SecondarySchool
+    - SmallHotel
+    - SmallOffice
+    - StripMall
+    - Supermarket
+    - Warehouse
+    - FlatLoad
 
-Each `city` and `doe_reference_name` combination has a default `annual_kwh`, or you can provide your
-own `annual_kwh` or `monthly_totals_kwh` and the reference profile will be scaled appropriately.
+    Each `city` and `doe_reference_name` combination has a default `annual_kwh`, or you can provide your
+    own `annual_kwh` or `monthly_totals_kwh` and the reference profile will be scaled appropriately.
 """
 mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off of (critical_)loads_kw_is_net
     loads_kw::Array{Real,1}
@@ -104,22 +104,22 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         off_grid_flag::Bool = false,
         loads_kw::Array{<:Real,1} = Real[],
         path_to_csv::String = "",
-        year::Int = 2020,
+        year::Int = 2020, # used in ElectricTariff to align rate schedule with weekdays/weekends
         doe_reference_name::String = "",
         blended_doe_reference_names::Array{String, 1} = String[],
         blended_doe_reference_percents::Array{<:Real,1} = Real[],
         city::String = "",
         annual_kwh::Union{Real, Nothing} = nothing,
         monthly_totals_kwh::Array{<:Real,1} = Real[],
-        critical_loads_kw::Union{Missing, Array{Real,1}} = missing,
+        critical_loads_kw::Union{Nothing, Array{Real,1}} = nothing,
         loads_kw_is_net::Bool = true,
         critical_loads_kw_is_net::Bool = false,
-        critical_load_pct::Real = off_grid_flag ? 1.0 : 0.5, # if off grid, 1.0, else 0.5
+        critical_load_pct::Real = off_grid_flag ? 1.0 : 0.5, # if off grid, must be 1.0, else 0.5
         latitude::Real,
         longitude::Real,
         time_steps_per_hour::Int = 1,
-        operating_reserve_required_pct::Real = off_grid_flag ? 0.1 : 0.0, # if off grid, 10%, else 0%
-        min_load_met_annual_pct::Real = off_grid_flag ? 0.99999 : 1.0 # if off grid, 99.999%, else 100%. Applied to each time_step as a % of electric load.
+        operating_reserve_required_pct::Real = off_grid_flag ? 0.1 : 0.0, # if off grid, 10%, else must be 0%
+        min_load_met_annual_pct::Real = off_grid_flag ? 0.99999 : 1.0 # if off grid, 99.999%, else must be 100%. Applied to each time_step as a % of electric load.
         )
         
         if off_grid_flag  && !(critical_load_pct == 1.0)
@@ -140,7 +140,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         if length(loads_kw) > 0
 
             if !(length(loads_kw) / time_steps_per_hour ≈ 8760)
-                @error "Provided electric load does not match the time_steps_per_hour."
+                throw(@error "Provided electric load does not match the time_steps_per_hour.")
             end
 
         elseif !isempty(path_to_csv)
@@ -152,7 +152,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             end
 
             if !(length(loads_kw) / time_steps_per_hour ≈ 8760)
-                @error "Provided electric load does not match the time_steps_per_hour."
+                throw(@error "Provided electric load does not match the time_steps_per_hour.")
             end
     
         elseif !isempty(doe_reference_name)
@@ -179,7 +179,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             @info "Repeating electric loads in each hour to match the time_steps_per_hour."
         end
 
-        if ismissing(critical_loads_kw)
+        if isnothing(critical_loads_kw)
             critical_loads_kw = critical_load_pct * loads_kw
         end
 
@@ -203,7 +203,7 @@ function BuiltInElectricLoad(
     latitude::Real,
     longitude::Real,
     year::Int,
-    annual_kwh::Union{<:Real, Nothing}=nothing,
+    annual_kwh::Union{Real, Nothing}=nothing,
     monthly_totals_kwh::Vector{<:Real}=Real[],
     )
     

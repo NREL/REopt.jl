@@ -29,11 +29,8 @@
 # *********************************************************************************
 
 """
-    AbsorptionChiller
-
-struct with inner constructor:
+`AbsorptionChiller` is an optional REopt input with the following keys and default values and default values and default values:
 ```julia
-function AbsorptionChiller(;
     min_ton::Real = 0.0,
     max_ton::Real = 0.0,
     chiller_cop::Real,
@@ -42,7 +39,6 @@ function AbsorptionChiller(;
     om_cost_per_ton::Real,
     macrs_option_years::Real = 0,
     macrs_bonus_pct::Real = 0
-)
 ```
 """
 struct AbsorptionChiller <: AbstractThermalTech
