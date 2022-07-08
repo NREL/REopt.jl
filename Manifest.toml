@@ -1,6 +1,6 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.7.1"
+julia_version = "1.7.2"
 manifest_format = "2.0"
 
 [[deps.AbstractFFTs]]
@@ -253,6 +253,13 @@ deps = ["GeoInterface", "RecipesBase"]
 git-tree-sha1 = "29e1ec25cfb6762f503a19495aec347acf867a9e"
 uuid = "0329782f-3d07-4b52-b9f6-d3137cf03c7a"
 version = "1.0.0"
+
+[[deps.GhpGhx]]
+git-tree-sha1 = "693c07ca5c8e6402efbd56b675ed8e9bc75325f1"
+repo-rev = "main"
+repo-url = "https://github.com/NREL/GhpGhx.jl.git"
+uuid = "7ce85f02-24a8-4d69-a3f0-14b5daa7d30c"
+version = "0.1.0"
 
 [[deps.Graphics]]
 deps = ["Colors", "LinearAlgebra", "NaNMath"]
