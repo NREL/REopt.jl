@@ -108,10 +108,11 @@ function add_production_constraints(m, p; _n="")
         )
     end
 
-	# Constraint (4e): Electrical production sent to storage or grid must be less than technology's rated production - no grid
+	# Constraint (4e): Electrical production sent to storage or curtailed must be less than technology's rated production - no grid
 	@constraint(m, [t in p.techs.elec, ts in p.time_steps_without_grid],
-		sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec)  <= 
-		p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t, ts]
+		  sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec)
+        + m[Symbol("dvCurtail"*_n)][t, ts]  
+        <= p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t, ts]
 	)
 
 end

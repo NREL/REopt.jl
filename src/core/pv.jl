@@ -28,13 +28,8 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    PV
-
-struct with inner constructor:
+`PV` is an optional REopt input with the following keys and default values:
 ```julia
-function PV(;
-    off_grid_flag::Bool = false,
-    latitude::Real,
     array_type::Int=1, # PV Watts array type (0: Ground Mount Fixed (Open Rack); 1: Rooftop, Fixed; 2: Ground Mount 1-Axis Tracking; 3 : 1-Axis Backtracking; 4: Ground Mount, 2-Axis Tracking)
     tilt::Real= array_type == 1 ? 10 : abs(latitude), # tilt = 10 deg for rooftop systems, abs(lat) for ground-mount
     module_type::Int=0, # PV module type (0: Standard; 1: Premium; 2: Thin Film)
@@ -53,11 +48,11 @@ function PV(;
     macrs_option_years::Int = 5,
     macrs_bonus_pct::Real = 1.0,
     macrs_itc_reduction::Real = 0.5,
-    kw_per_square_foot::Float64=0.01,
-    acres_per_kw::Float64=6e-3,
-    inv_eff::Float64=0.96,
+    kw_per_square_foot::Real=0.01,
+    acres_per_kw::Real=6e-3,
+    inv_eff::Real=0.96,
     dc_ac_ratio::Real=1.2,
-    prod_factor_series::Union{Missing, Array{Real,1}} = missing,
+    prod_factor_series::Union{Nothing, Array{<:Real,1}} = nothing,
     federal_itc_pct::Real = 0.26,
     federal_rebate_per_kw::Real = 0.0,
     state_ibi_pct::Real = 0.0,
@@ -77,8 +72,14 @@ function PV(;
     can_export_beyond_nem_limit::Bool = off_grid_flag ? false : true,
     can_curtail::Bool = true,
     operating_reserve_required_pct::Real = off_grid_flag ? 0.25 : 0.0, # if off grid, 25%, else 0%. Applied to each time_step as a % of PV generation.
-)
 ```
+
+!!! note "Multiple PV types" 
+    Multiple PV types can be considered by providing an array of PV inputs. See example in `src/test/scenarios/multiple_pvs.json`
+
+!!! note "PV tilt and aziumth"
+    If `tilt` is not provided, then it is set to the absolute value of `Site.latitude` for ground-mount systems and is set to 10 degrees for rooftop systems.
+    If `azimuth` is not provided, then it is set to 180 if the site is in the northern hemisphere and 0 if in the southern hemisphere.
 
 """
 struct PV <: AbstractTech
@@ -134,7 +135,7 @@ struct PV <: AbstractTech
         losses::Real=0.14,
         azimuth::Real = latitude≥0 ? 180 : 0, # set azimuth to zero for southern hemisphere
         gcr::Real=0.4,
-        radius::Int=0,
+        radius::Int=0, # Radius, in miles, to use when searching for the closest climate data station. Use zero to use the closest station regardless of the distance
         name::String="PV",
         location::String="both",
         existing_kw::Real=0,
@@ -146,11 +147,11 @@ struct PV <: AbstractTech
         macrs_option_years::Int = 5,
         macrs_bonus_pct::Real = 1.0,
         macrs_itc_reduction::Real = 0.5,
-        kw_per_square_foot::Float64=0.01,
-        acres_per_kw::Float64=6e-3,
-        inv_eff::Float64=0.96,
+        kw_per_square_foot::Real=0.01,
+        acres_per_kw::Real=6e-3,
+        inv_eff::Real=0.96,
         dc_ac_ratio::Real=1.2,
-        prod_factor_series::Union{Missing, Array{Real,1}} = missing,
+        prod_factor_series::Union{Nothing, Array{Real,1}} = nothing,
         federal_itc_pct::Real = 0.26,
         federal_rebate_per_kw::Real = 0.0,
         state_ibi_pct::Real = 0.0,
@@ -173,12 +174,12 @@ struct PV <: AbstractTech
         )
 
         if !(off_grid_flag) && !(operating_reserve_required_pct == 0.0)
-            @warn "PV operating_reserve_required_pct apply only when off_grid_flag is True. Setting operating_reserve_required_pct to 0.0 for this on-grid analysis."
+            @warn "PV operating_reserve_required_pct applies only when off_grid_flag is True. Setting operating_reserve_required_pct to 0.0 for this on-grid analysis."
             operating_reserve_required_pct = 0.0
         end
 
         if off_grid_flag && (can_net_meter || can_wholesale || can_export_beyond_nem_limit)
-            @warn "Net metering, wholesale, and grid exports are not possible for off-grid scenarios. Setting can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False."
+            @warn "Net metering, wholesale, and grid exports are not possible for off-grid scenarios. Setting PV can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False."
             can_net_meter = false
             can_wholesale = false
             can_export_beyond_nem_limit = false

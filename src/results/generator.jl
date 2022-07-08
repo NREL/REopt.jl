@@ -28,12 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-	add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
-
-Adds the Generator results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
-Note: the node number is an empty string if evaluating a single `Site`.
-
-Generator results:
+`Generator` results keys:
 - `size_kw` Optimal generator capacity
 - `lifecycle_fixed_om_cost_after_tax` Lifecycle fixed operations and maintenance cost in present value, after tax
 - `year_one_fixed_om_cost__before_tax` fixed operations and maintenance cost over the first year, before considering tax benefits
@@ -49,6 +44,9 @@ Generator results:
 - `average_annual_energy_produced_kwh` Average annual energy produced over analysis period
 """
 function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+	# Adds the `Generator` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+	# Note: the node number is an empty string if evaluating a single `Site`.
+
     r = Dict{String, Any}()
 
 	GenPerUnitSizeOMCosts = @expression(m, p.third_party_factor * p.pwf_om * sum(m[:dvSize][t] * p.om_cost_per_kw[t] for t in p.techs.gen))
@@ -104,7 +102,16 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     nothing
 end
 
-
+"""
+MPC `Generator` results keys:
+- `variable_om_cost`
+- `fuel_cost`
+- `to_battery_series_kw`
+- `to_grid_series_kw`
+- `to_load_series_kw`
+- `average_annual_fuel_used_gal`
+- `energy_produced_kwh`
+"""
 function add_generator_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 

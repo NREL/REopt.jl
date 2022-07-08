@@ -66,6 +66,9 @@ end
 Solve the model using a `Scenario` or `BAUScenario`.
 """
 function run_reopt(m::JuMP.AbstractModel, s::AbstractScenario)
+	if s.site.CO2_emissions_reduction_min_pct > 0.0 || s.site.CO2_emissions_reduction_max_pct < 1.0
+		error("To constrain CO2 emissions reduction min or max percentages, the optimal and business as usual scenarios must be run in parallel. Use a version of run_reopt() that takes an array of two models.")
+	end
 	run_reopt(m, REoptInputs(s))
 end
 
@@ -122,13 +125,17 @@ function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.Abst
     Threads.@threads for i = 1:2
         rs[i] = run_reopt(inputs[i])
     end
-    # TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
-    results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
-    results_dict["Financial"] = merge(results_dict["Financial"], proforma_results(p, results_dict))
-    if !isempty(p.techs.pv)
-        organize_multiple_pv_results(p, results_dict)
-    end
-    return results_dict
+	if typeof(rs[1]) <: Dict && typeof(rs[2]) <: Dict
+		# TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
+		results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
+		results_dict["Financial"] = merge(results_dict["Financial"], proforma_results(p, results_dict))
+		if !isempty(p.techs.pv)
+			organize_multiple_pv_results(p, results_dict)
+		end
+		return results_dict
+	else
+		return rs
+	end
 end
 
 
@@ -232,8 +239,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             m[:TotalFuelCosts] += m[:TotalCHPFuelCosts]        
             m[:TotalPerUnitHourOMCosts] += m[:TotalHourlyCHPOMCosts]
 
-			if p.s.chp.standby_rate_us_dollars_per_kw_per_month > 1.0e-7
-				m[:TotalCHPStandbyCharges] += sum(p.s.financial.pwf_e * 12 * p.s.chp.standby_rate_us_dollars_per_kw_per_month * m[:dvSize][t] for t in p.techs.chp)
+			if p.s.chp.standby_rate_per_kw_per_month > 1.0e-7
+				m[:TotalCHPStandbyCharges] += sum(p.s.financial.pwf_e * 12 * p.s.chp.standby_rate_per_kw_per_month * m[:dvSize][t] for t in p.techs.chp)
 			end
 
 			if !isempty(p.techs.thermal)
@@ -352,6 +359,13 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 	end
 
+	# Note: renewable heat calculations are currently added in post-optimization
+	add_re_elec_calcs(m,p)
+	add_re_elec_constraints(m,p)
+	add_yr1_emissions_calcs(m,p)
+	add_lifecycle_emissions_calcs(m,p)
+	add_emissions_constraints(m,p)
+	
 	if p.s.settings.off_grid_flag
 		offgrid_other_capex_depr_savings = get_offgrid_other_capex_depreciation_savings(p.s.financial.offgrid_other_capital_costs, 
 			p.s.financial.owner_discount_pct, p.s.financial.analysis_years, p.s.financial.owner_tax_pct)
@@ -394,7 +408,15 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	if !isempty(p.s.electric_utility.outage_durations)
 		add_to_expression!(Costs, m[:ExpectedOutageCost] + m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost] + m[:ExpectedMGFuelCost])
 	end
-
+	# Add climate costs
+	if p.s.settings.include_climate_in_objective # if user selects to include climate in objective
+		add_to_expression!(Costs, m[:Lifecycle_Emissions_Cost_CO2]) 
+	end
+	# Add Health costs (NOx, SO2, PM2.5)
+	if p.s.settings.include_health_in_objective
+		add_to_expression!(Costs, m[:Lifecycle_Emissions_Cost_Health])
+	end
+	
 	@objective(m, Min, m[:Costs])
 	
 	if !(isempty(p.s.storage.types.elec)) && p.s.settings.add_soc_incentive # Keep SOC high

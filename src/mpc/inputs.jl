@@ -31,7 +31,8 @@
 struct MPCInputs <: AbstractInputs
     s::MPCScenario
     techs::Techs
-    existing_sizes::DenseAxisArray{Float64, 1}  # (techs.all)
+    existing_sizes::Dict{String, <:Real}  # (techs.all)
+    max_sizes::Dict{String, <:Real}  # (techs.all)  max_sizes is same as existing_sizes (added so that we can re-use generator_constraints)
     time_steps::UnitRange
     time_steps_with_grid::Array{Int, 1}
     time_steps_without_grid::Array{Int, 1}
@@ -93,6 +94,7 @@ function MPCInputs(s::MPCScenario)
         s,
         techs,
         existing_sizes,
+        existing_sizes,
         time_steps,
         time_steps_with_grid,
         time_steps_without_grid,
@@ -126,7 +128,7 @@ function setup_tech_inputs(s::MPCScenario)
     time_steps = 1:length(s.electric_load.loads_kw)
 
     # REoptInputs indexed on techs:
-    existing_sizes = DenseAxisArray{Float64}(undef, techs.all)
+    existing_sizes = Dict(t => 0.0 for t in techs.all)
     production_factor = DenseAxisArray{Float64}(undef, techs.all, time_steps)
 
     if !isempty(techs.pv)
