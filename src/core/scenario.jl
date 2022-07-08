@@ -461,7 +461,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             @info "Starting GhpGhx.jl" #with timeout of $(timeout) seconds..."
             results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
             # Create a dictionary of the results data needed for REopt
-            ghpghx_results = GhpGhx.get_GhpGhx_results_for_reopt(results, inputs_params)
+            ghpghx_results = GhpGhx.get_results_for_reopt(results, inputs_params)
             ghpghx_response = Dict([("inputs", ghpghx_inputs), ("outputs", ghpghx_results)])
             @info "GhpGhx.jl model solved" #with status $(results["status"])."
             append!(ghp_option_list, [GHP(ghpghx_response, d["GHP"])])
