@@ -1,16 +1,8 @@
 [deps]
-<<<<<<< HEAD
-CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
-DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-GhpGhx = "7ce85f02-24a8-4d69-a3f0-14b5daa7d30c"
-=======
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
->>>>>>> develop
 HiGHS = "87dc4568-4c63-4d18-b0c0-bb2238e4078b"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
-REopt = "d36ad4e8-d74a-4f7a-ace1-eaea049febf6"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Xpress = "9e70acf3-d6c9-5be6-b5bd-4e2c73e3e054"
