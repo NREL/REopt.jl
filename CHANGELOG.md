@@ -1,6 +1,6 @@
 # REopt Changelog
 
-## Develop
+## v0.17.0
 ### Added
 - Emissions
     - add emissions factors for CO2, NOx, SO2, and PM25 to inputs of all fuel burning technologies
