@@ -36,7 +36,7 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/thermal_load.json")
 
-    @test round(results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"], digits=0) ≈ 2905
+    @test round(results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"], digits=0) ≈ 2904
     
     data = JSON.parsefile("./scenarios/thermal_load.json")
     data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([0.5], 8760)
