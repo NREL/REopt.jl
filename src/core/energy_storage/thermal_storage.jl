@@ -30,13 +30,11 @@
 
 
 """
-    ColdThermalStorageDefaults
+Cold thermal energy storage sytem; specifically, a chilled water system used to meet thermal cooling loads.
 
-    Cold thermal energy storage sytem; specifically, a chilled water system used to 
-    meet thermal cooling loads.
+`ColdThermalStorage` is an optional REopt input with the following keys and default values:
 
 ```julia
-Base.@kwdef struct ColdThermalStorageDefaults <: AbstractThermalStorageDefaults
     min_gal::Float64 = 0.0
     max_gal::Float64 = 0.0
     hot_water_temp_degF::Float64 = 56.0
@@ -52,7 +50,6 @@ Base.@kwdef struct ColdThermalStorageDefaults <: AbstractThermalStorageDefaults
     macrs_itc_reduction::Float64 = 0.0
     total_itc_pct::Float64 = 0.0
     total_rebate_per_kwh::Float64 = 0.0
-end
 ```
 """
 Base.@kwdef struct ColdThermalStorageDefaults <: AbstractThermalStorageDefaults
@@ -75,10 +72,9 @@ end
 
 
 """
-    HotThermalStorageDefaults
+`HotThermalStorage` is an optional REopt input with the following keys and default values:
 
 ```julia
-Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults
     min_gal::Float64 = 0.0
     max_gal::Float64 = 0.0
     hot_water_temp_degF::Float64 = 180.0
@@ -94,7 +90,6 @@ Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults
     macrs_itc_reduction::Float64 = 0.0
     total_itc_pct::Float64 = 0.0
     total_rebate_per_kwh::Float64 = 0.0
-end
 ```
 """
 Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults

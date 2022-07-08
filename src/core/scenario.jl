@@ -51,28 +51,29 @@ end
 """
     Scenario(d::Dict; flex_hvac_from_json=false)
 
-Constructor for Scenario struct, where `d` has upper-case keys:
+A Scenario struct can contain the following keys:
 - [Site](@ref) (required)
-- [ElectricTariff](@ref) (required when off_grid_flag is False)
+- [Financial](@ref) (optional)
+- [ElectricTariff](@ref) (required when `off_grid_flag=false`)
 - [ElectricLoad](@ref) (required)
 - [PV](@ref) (optional, can be Array)
 - [Wind](@ref) (optional)
 - [ElectricStorage](@ref) (optional)
 - [ElectricUtility](@ref) (optional)
-- [Financial](@ref) (optional)
 - [Generator](@ref) (optional)
 - [DomesticHotWaterLoad](@ref) (optional)
 - [SpaceHeatingLoad](@ref) (optional)
 - [ExistingBoiler](@ref) (optional)
 - [CHP](@ref) (optional)
-- FlexibleHVAC (optional)
-- ExistingChiller (optional)
-- AbsorptionChiller (optional)
+- [FlexibleHVAC](@ref) (optional)
+- [ExistingChiller](@ref) (optional)
+- [AbsorptionChiller](@ref) (optional)
 
-All values of `d` are expected to be `Dicts` except for `PV`, which can be either a `Dict` or `Dict[]`.
+All values of `d` are expected to be `Dicts` except for `PV`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays).
 
-Set `flex_hvac_from_json=true` if `FlexibleHVAC` values were loaded in from JSON (necessary to 
-handle conversion of Vector of Vectors from JSON to a Matrix in Julia).
+!!! note 
+    Set `flex_hvac_from_json=true` if `FlexibleHVAC` values were loaded in from JSON (necessary to 
+    handle conversion of Vector of Vectors from JSON to a Matrix in Julia).
 """
 function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d, "Settings")

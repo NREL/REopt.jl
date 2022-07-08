@@ -67,17 +67,13 @@ end
 
 
 """
-    ElectricTariff
-
-ElectricTariff constructor
+`ElectricTariff` is a required REopt input for on-grid scenarios only (it cannot be supplied when `Settings.off_grid_flag` is true) with the following keys and default values:
 ```julia
-function ElectricTariff(;
     urdb_label::String="",
     urdb_response::Dict=Dict(),
     urdb_utility_name::String="",
     urdb_rate_name::String="",
     year::Int=2020,
-    time_steps_per_hour::Int=1,
     NEM::Bool=false,
     wholesale_rate::T1=nothing,
     export_rate_beyond_net_metering_limit::T2=nothing,
@@ -102,8 +98,8 @@ function ElectricTariff(;
     }
 ```
 
-!!! note
-    The `NEM` boolean is determined by the ElectricUtility.net_metering_limit_kw. There is no need to pass in a `NEM`
+!!! note "NEM input"
+    The `NEM` boolean is determined by the `ElectricUtility.net_metering_limit_kw`. There is no need to pass in a `NEM`
     value.
     
 """

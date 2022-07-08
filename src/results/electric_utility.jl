@@ -28,15 +28,10 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    add_electric_utility_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
-
-Adds the ElectricUtility results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
-Note: the node number is an empty string if evaluating a single `Site`.
-
-ElectricUtility results:
+`ElectricUtility` results keys:
 - `year_one_energy_supplied_kwh` Total energy supplied from the grid in year one.
-- `year_one_to_load_series_kw` Vector of powers drawn from the grid to serve load in year one.
-- `year_one_to_battery_series_kw` Vector of powers drawn from the grid to charge the battery in year one.
+- `year_one_to_load_series_kw` Vector of power drawn from the grid to serve load in year one.
+- `year_one_to_battery_series_kw` Vector of power drawn from the grid to charge the battery in year one.
 - `year_one_emissions_tonnes_CO2`
 - `year_one_emissions_tonnes_NOx`
 - `year_one_emissions_tonnes_SO2`
@@ -49,6 +44,9 @@ ElectricUtility results:
 - `distance_to_emissions_region_meters`
 """
 function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, d::Dict; _n="")
+    # Adds the `ElectricUtility` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+    # Note: the node number is an empty string if evaluating a single `Site`.
+
     r = Dict{String, Any}()
 
     Year1UtilityEnergy = p.hours_per_time_step * sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] 
@@ -89,7 +87,12 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
     nothing
 end
 
-
+"""
+MPC `ElectricUtility` results keys:
+- `energy_supplied_kwh` 
+- `to_battery_series_kw`
+- `to_load_series_kw`
+"""
 function add_electric_utility_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 

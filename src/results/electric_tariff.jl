@@ -28,12 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
-
-Adds the ElectricTariff results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
-Note: the node number is an empty string if evaluating a single `Site`.
-
-ElectricTariff results:
+`ElectricTariff` results keys:
 - `lifecycle_energy_cost_after_tax` lifecycle cost of energy from the grid in present value, after tax
 - `year_one_energy_cost_before_tax` cost of energy from the grid over the first year, before considering tax benefits
 - `lifecycle_demand_cost_after_tax` lifecycle cost of power from the grid in present value, after tax
@@ -49,6 +44,9 @@ ElectricTariff results:
 - `year_one_coincident_peak_cost_before_tax` coincident peak charge over the first year
 """
 function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+    # Adds the `ElectricTariff` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+    # Note: the node number is an empty string if evaluating a single `Site`.
+
     r = Dict{String, Any}()
     m[Symbol("Year1UtilityEnergy"*_n)] = p.hours_per_time_step * 
         sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers)
@@ -78,7 +76,12 @@ function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     nothing
 end
 
-
+"""
+MPC `ElectricTariff` results keys:
+- `energy_cost`
+- `demand_cost`
+- `export_benefit`
+"""
 function add_electric_tariff_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     r = Dict{String, Any}()
     m[Symbol("energy_purchased"*_n)] = p.hours_per_time_step * 
