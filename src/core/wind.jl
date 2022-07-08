@@ -28,11 +28,8 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    Wind
-
-struct with inner constructor:
+`Wind` is an optional REopt input with the following keys and default values:
 ```julia
-function Wind(;
     min_kw = 0.0,
     max_kw = 1.0e9,
     installed_cost_per_kw = nothing,
@@ -63,7 +60,6 @@ function Wind(;
     can_net_meter = true,
     can_wholesale = true,
     can_export_beyond_nem_limit = true
-)
 ```
 
 `size_class` must be one of ["residential", "commercial", "medium", "large"]. If `size_class` is not provided then it is determined based on the average electric load.

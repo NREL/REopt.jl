@@ -28,18 +28,17 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    Site
-
 Inputs related to the physical location:
 
+`Site` is a required REopt input with the following keys and default values:
 ```julia
-function Site(;
     latitude::Real, 
     longitude::Real, 
     land_acres::Union{Real, Nothing} = nothing, 
     roof_squarefeet::Union{Real, Nothing} = nothing,
     min_resil_time_steps::Int=0,
     mg_tech_sizes_equal_grid_sizes::Bool = true,
+    node::Int = 1,
     CO2_emissions_reduction_min_pct::Union{Float64, Nothing} = nothing,
     CO2_emissions_reduction_max_pct::Union{Float64, Nothing} = nothing,
     bau_emissions_lb_CO2_per_year::Union{Float64, Nothing} = nothing,
@@ -48,8 +47,6 @@ function Site(;
     renewable_electricity_max_pct::Union{Float64, Nothing} = nothing,
     include_exported_elec_emissions_in_total::Bool = true,
     include_exported_renewable_electricity_in_total::Bool = true,
-    node::Int = 1, 
-    )
 ```
 """
 mutable struct Site

@@ -27,6 +27,17 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+`ExistingBoiler` results keys:
+- `year_one_fuel_consumption_mmbtu_per_hour` 
+- `year_one_fuel_consumption_mmbtu`
+- `year_one_thermal_production_mmbtu_per_hour`
+- `year_one_thermal_production_mmbtu`
+- `thermal_to_tes_series_mmbtu_per_hour`
+- `year_one_thermal_to_load_series_mmbtu_per_hour`
+- `lifecycle_fuel_cost_after_tax`
+- `year_one_fuel_cost_before_tax`
+"""
 function add_existing_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 
