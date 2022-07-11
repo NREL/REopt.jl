@@ -1065,8 +1065,8 @@ end
             @test results["Site"]["year_one_emissions_tonnes_CO2_bau"] ≈ 40.48 atol=1e-2 # 40.54 atol=1e-2
             @test results["Site"]["year_one_emissions_from_fuelburn_tonnes_CO2"] ≈ 8.63 # 8.63
             @test results["Site"]["year_one_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0 # 0.0
-            @test results["Site"]["lifecycle_emissions_cost_CO2"] ≈ 8760 atol=1 # 8760.58
-            @test results["Site"]["lifecycle_emissions_cost_CO2_bau"] ≈ 25818.96 atol=1e-1 # 25856.9 atol=1e-1
+            @test results["Site"]["lifecycle_emissions_climate_cost"] ≈ 8760 atol=1 # 8760.58
+            @test results["Site"]["lifecycle_emissions_climate_cost_bau"] ≈ 25818.96 atol=1e-1 # 25856.9 atol=1e-1
             @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 245.65 # 245.65
             @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 716.81 #717.86
             @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 172.62 # 172.62
@@ -1097,8 +1097,8 @@ end
             @test results["Site"]["year_one_emissions_tonnes_CO2_bau"] ≈ 57.97 atol=1 # 57.97
             @test results["Site"]["year_one_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
             @test results["Site"]["year_one_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0 atol=1 # 0.0
-            @test results["Site"]["lifecycle_emissions_cost_CO2"] ≈ 7386.65 atol=1 # 7395.84 atol=1
-            @test results["Site"]["lifecycle_emissions_cost_CO2_bau"] ≈ 36933.26 atol=1 # 36979.2 atol=1
+            @test results["Site"]["lifecycle_emissions_climate_cost"] ≈ 7386.65 atol=1 # 7395.84 atol=1
+            @test results["Site"]["lifecycle_emissions_climate_cost_bau"] ≈ 36933.26 atol=1 # 36979.2 atol=1
             @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 205.33 atol=1 # 205.33
             @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 1025.37 atol=1 # 1026.65 atol=1
             @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
