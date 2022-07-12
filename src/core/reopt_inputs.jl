@@ -912,8 +912,11 @@ function setup_ghp_inputs(s::AbstractScenario, time_steps, time_steps_without_gr
             # So here we also have to zero out heating and cooling thermal production from GHP during an outage
             if !isempty(time_steps_without_grid)
                 for outage_time_step in time_steps_without_grid
+                    heating_thermal_load_reduction_with_ghp_kw[i,outage_time_step] = 0.0
+                    cooling_thermal_load_reduction_with_ghp_kw[i,outage_time_step] = 0.0
                     ghp_heating_thermal_load_served_kw[i,outage_time_step] = 0.0
                     ghp_cooling_thermal_load_served_kw[i,outage_time_step] = 0.0
+                    ghp_electric_consumption_kw[i,outage_time_step] = 0.0
                 end
             end
         end
