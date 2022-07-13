@@ -83,16 +83,16 @@ function Boiler(;
         # emissions_factor_lb_CO2_per_mmbtu::Real,
     )
 
-    fuel_cost_per_kwh = fuel_cost_per_mmbtu / MMBTU_TO_KWH
+    fuel_cost_per_kwh = fuel_cost_per_mmbtu / KWH_PER_MMBTU
     fuel_cost_series = per_hour_value_to_time_series(fuel_cost_per_kwh, time_steps_per_hour, 
                                                      "Boiler.fuel_cost_per_mmbtu")
-    min_kw = min_mmbtu_per_hour * MMBTU_TO_KWH
-    max_kw = max_mmbtu_per_hour * MMBTU_TO_KWH
+    min_kw = min_mmbtu_per_hour * KWH_PER_MMBTU
+    max_kw = max_mmbtu_per_hour * KWH_PER_MMBTU
 
     # Convert cost basis of mmbtu/mmbtu_per_hour to kwh/kw
-    installed_cost_per_kw = installed_cost_per_mmbtu_per_hour / MMBTU_TO_KWH
-    om_cost_per_kw = om_cost_per_mmbtu_per_hour / MMBTU_TO_KWH
-    om_cost_per_kwh = om_cost_per_mmbtu / MMBTU_TO_KWH
+    installed_cost_per_kw = installed_cost_per_mmbtu_per_hour / KWH_PER_MMBTU
+    om_cost_per_kw = om_cost_per_mmbtu_per_hour / KWH_PER_MMBTU
+    om_cost_per_kwh = om_cost_per_mmbtu / KWH_PER_MMBTU
 
     Boiler(
         min_kw,
