@@ -43,7 +43,8 @@ export
     MPCScenario,
     MPCInputs,
     run_mpc,
-    build_mpc!
+    build_mpc!, 
+    backup_reliability
 
 import HTTP
 import JSON
@@ -59,16 +60,51 @@ import MathOptInterface
 import Dates: daysinmonth, Date, isleapyear
 import DelimitedFiles: readdlm
 const MOI = MathOptInterface
-using Shapefile
 using ArchGDAL
+using Statistics
 using Roots: fzero  # for IRR
 global hdl = nothing
+using JLD
 
-const M3_TO_GAL = 264.172  # [gal/m^3]
-const GAL_DIESEL_TO_KWH = 40.7  # [kWh/gal_diesel]
-const MMBTU_TO_KWH = 293.07107
-const TONHOUR_TO_KWH_THERMAL = 3.51685
 const EXISTING_BOILER_EFFICIENCY = 0.8
+const GAL_PER_M3 = 264.172  # [gal/m^3]
+const KWH_PER_GAL_DIESEL = 40.7  # [kWh/gal_diesel]
+const KWH_PER_MMBTU = 293.07107  # [kWh/mmbtu]
+const KWH_THERMAL_PER_TONHOUR = 3.51685
+const TONNE_PER_LB = 1/2204.62  # [tonne/lb]
+const FUEL_TYPES = ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
+const FUEL_DEFAULTS = Dict(
+    "fuel_renewable_energy_pct" => Dict(
+        "natural_gas"=>0.0,
+        "landfill_bio_gas"=>1.0,
+        "propane"=>0.0,
+        "diesel_oil"=>0.0
+    ),
+    "emissions_factor_lb_CO2_per_mmbtu" => Dict(
+        "natural_gas"=>116.9,
+        "landfill_bio_gas"=>114.8,
+        "propane"=>138.6,
+        "diesel_oil"=>163.1
+    ),
+    "emissions_factor_lb_NOx_per_mmbtu" => Dict(
+        "natural_gas"=>0.09139,
+        "landfill_bio_gas"=>0.14,
+        "propane"=>0.15309,
+        "diesel_oil"=>0.56
+    ),
+    "emissions_factor_lb_SO2_per_mmbtu" => Dict(
+        "natural_gas"=>0.000578592,
+        "landfill_bio_gas"=>0.045,
+        "propane"=>0.0,
+        "diesel_oil"=>0.28897737
+    ),
+    "emissions_factor_lb_PM25_per_mmbtu" => Dict(
+        "natural_gas"=>0.007328833,
+        "landfill_bio_gas"=>0.02484,
+        "propane"=>0.009906836,
+        "diesel_oil"=>0.0
+    )
+)
 
 include("keys.jl")
 include("core/types.jl")
@@ -113,7 +149,10 @@ include("constraints/cost_curve_constraints.jl")
 include("constraints/production_incentive_constraints.jl")
 include("constraints/thermal_tech_constraints.jl")
 include("constraints/chp_constraints.jl")
+include("constraints/operating_reserve_constraints.jl")
 include("constraints/battery_degradation.jl")
+include("constraints/renewable_energy_constraints.jl")
+include("constraints/emissions_constraints.jl")
 
 include("mpc/structs.jl")
 include("mpc/scenario.jl")
@@ -121,8 +160,8 @@ include("mpc/inputs.jl")
 include("mpc/constraints.jl")
 
 include("core/techs.jl")
-
 include("results/results.jl")
+include("results/site.jl")
 include("results/electric_tariff.jl")
 include("results/electric_utility.jl")
 include("results/proforma.jl")
@@ -140,11 +179,10 @@ include("results/existing_chiller.jl")
 include("results/absorption_chiller.jl")
 include("results/chp.jl")
 include("results/flexible_hvac.jl")
-
 include("core/reopt.jl")
 include("core/reopt_multinode.jl")
-
 include("outagesim/outage_simulator.jl")
+include("outagesim/backup_reliability.jl")
 
 include("lindistflow/extend.jl")
 

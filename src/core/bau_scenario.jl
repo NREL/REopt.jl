@@ -61,8 +61,11 @@ struct BAUScenario <: AbstractScenario
 end
 
 
-function set_min_max_kw_to_existing(tech::AbstractTech)
+function set_min_max_kw_to_existing(tech::AbstractTech, site::Site)
     techdict = Dict(fn => getfield(tech, fn) for fn in fieldnames(typeof(tech)))
+    if nameof(typeof(tech)) in [:PV]
+        techdict[:latitude] = site.latitude
+    end
     techdict[:min_kw] = techdict[:existing_kw]
     techdict[:max_kw] = techdict[:existing_kw]
     eval(Meta.parse(string(typeof(tech)) * "(; $techdict...)"))
@@ -75,8 +78,10 @@ function bau_site(site::Site)
         longitude=site.longitude,
         land_acres=site.land_acres,
         roof_squarefeet=site.roof_squarefeet,
-        min_resil_timesteps=0,
+        min_resil_time_steps=0,
         mg_tech_sizes_equal_grid_sizes=site.mg_tech_sizes_equal_grid_sizes,
+        include_exported_elec_emissions_in_total=site.include_exported_elec_emissions_in_total,
+        include_exported_renewable_electricity_in_total=site.include_exported_renewable_electricity_in_total,
         node=site.node,
     )
 end
@@ -85,9 +90,11 @@ end
 """
     BAUScenario(s::Scenario)
 
-Constructor for BAUScenario (BAU = Business As Usual) struct.
-- sets the PV and Generator max_kw values to the existing_kw values
-- sets wind and storage max_kw values to zero
+Constructs the BAUScenario (used to create the Business-as-usual inputs) based on the Scenario for the optimized case.
+
+The following assumptions are made for the BAU scenario: 
+- sets the `PV` and `Generator` min_kw and max_kw values to the existing_kw values
+- sets wind and storage max_kw values to zero (existing wind and storage cannot be modeled)
 """
 function BAUScenario(s::Scenario)
 
@@ -95,12 +102,12 @@ function BAUScenario(s::Scenario)
     pvs = PV[]
     for pv in s.pvs
         if pv.existing_kw > 0
-            push!(pvs, set_min_max_kw_to_existing(pv))
+            push!(pvs, set_min_max_kw_to_existing(pv, s.site))
         end
     end
 
     # set Generator.max_kw to existing_kw
-    generator = set_min_max_kw_to_existing(s.generator)
+    generator = set_min_max_kw_to_existing(s.generator, s.site)
 
     # no existing wind
     wind = Wind(; max_kw=0)
@@ -131,7 +138,7 @@ function BAUScenario(s::Scenario)
     end
     #=
     For random or uncertain outages there is no need to zero out the critical load but we do have to
-    set the Site.min_resil_timesteps to zero s.t. the model is not forced to meet any critical load
+    set the Site.min_resil_time_steps to zero s.t. the model is not forced to meet any critical load
     in the BAUScenario
     =#
     site = bau_site(s.site)

@@ -46,6 +46,8 @@ function Techs(p::REoptInputs, s::BAUScenario)
     cooling_techs = String[]
     boiler_techs = String[]
     chp_techs = String[]
+    requiring_oper_res = String[]  
+    providing_oper_res = String[]
     electric_chillers = String[]
     absorption_chillers = String[]
 
@@ -85,6 +87,8 @@ function Techs(p::REoptInputs, s::BAUScenario)
         fuel_burning_techs,
         thermal_techs,
         chp_techs,
+        requiring_oper_res,
+        providing_oper_res,
         electric_chillers,
         absorption_chillers
     )
@@ -113,18 +117,28 @@ function Techs(s::Scenario)
     cooling_techs = String[]
     boiler_techs = String[]
     chp_techs = String[]
+    requiring_oper_res = String[] 
+    providing_oper_res = String[]
     electric_chillers = String[]
     absorption_chillers = String[]
 
     if s.wind.max_kw > 0
         push!(all_techs, "Wind")
         push!(elec, "Wind")
+        append!(techs_no_turndown, ["Wind"])
+        if s.settings.off_grid_flag
+            push!(requiring_oper_res, "Wind")
+            push!(providing_oper_res, "Wind")
+        end
     end
 
-    if s.generator.max_kw > 0
+    if s.generator.existing_kw + s.generator.max_kw > 0
         push!(all_techs, "Generator")
         push!(gentechs, "Generator")
         push!(elec, "Generator")
+        if s.settings.off_grid_flag
+            push!(providing_oper_res, "Generator")
+        end
     end
 
     if !isnothing(s.existing_boiler)
@@ -159,6 +173,11 @@ function Techs(s::Scenario)
         push!(absorption_chillers, "AbsorptionChiller")
     end
 
+    if s.settings.off_grid_flag
+        append!(requiring_oper_res, pvtechs)
+        append!(providing_oper_res, pvtechs)
+    end
+
     cooling_techs = union(electric_chillers, absorption_chillers)
     thermal_techs = union(heating_techs, boiler_techs, chp_techs, cooling_techs)
     fuel_burning_techs = union(gentechs, boiler_techs, chp_techs)
@@ -178,6 +197,8 @@ function Techs(s::Scenario)
         fuel_burning_techs,
         thermal_techs,
         chp_techs,
+        requiring_oper_res, 
+        providing_oper_res, 
         electric_chillers,
         absorption_chillers
     )
@@ -211,6 +232,8 @@ function Techs(s::MPCScenario)
         String[],
         String[],
         techs_no_turndown,
+        String[],
+        String[],
         String[],
         String[],
         String[],

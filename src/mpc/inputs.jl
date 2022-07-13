@@ -31,17 +31,19 @@
 struct MPCInputs <: AbstractInputs
     s::MPCScenario
     techs::Techs
-    existing_sizes::DenseAxisArray{Float64, 1}  # (techs.all)
+    existing_sizes::Dict{String, <:Real}  # (techs.all)
+    max_sizes::Dict{String, <:Real}  # (techs.all)  max_sizes is same as existing_sizes (added so that we can re-use generator_constraints)
     time_steps::UnitRange
     time_steps_with_grid::Array{Int, 1}
     time_steps_without_grid::Array{Int, 1}
-    hours_per_timestep::Float64
+    hours_per_time_step::Float64
     months::UnitRange
     production_factor::DenseAxisArray{Float64, 2}  # (techs.all, time_steps)
     levelization_factor::Dict{String, Float64}  # (techs.all)
     value_of_lost_load_per_kwh::Array{R, 1} where R<:Real #default set to 1 US dollar per kwh
     pwf_e::Float64
     pwf_om::Float64
+    pwf_fuel::Dict{String, Float64}
     third_party_factor::Float64
     ratchets::UnitRange
     techs_by_exportbin::DenseAxisArray{Array{String,1}}  # indexed on [:NEM, :WHL]
@@ -60,7 +62,7 @@ end
 function MPCInputs(s::MPCScenario)
 
     time_steps = 1:length(s.electric_load.loads_kw)
-    hours_per_timestep = 1 / s.settings.time_steps_per_hour
+    hours_per_time_step = 1 / s.settings.time_steps_per_hour
     techs, production_factor, existing_sizes = setup_tech_inputs(s)
     months = 1:length(s.electric_tariff.monthly_demand_rates)
 
@@ -70,6 +72,8 @@ function MPCInputs(s::MPCScenario)
     levelization_factor = Dict(t => 1.0 for t in techs.all)
     pwf_e = 1.0
     pwf_om = 1.0
+    pwf_fuel = Dict{String, Float64}()
+    pwf_fuel["Generator"] = 1.0 
     third_party_factor = 1.0
 
     time_steps_with_grid, time_steps_without_grid, = setup_electric_utility_inputs(s)
@@ -88,24 +92,26 @@ function MPCInputs(s::MPCScenario)
         s,
         techs,
         existing_sizes,
+        existing_sizes,
         time_steps,
         time_steps_with_grid,
         time_steps_without_grid,
-        hours_per_timestep,
+        hours_per_time_step,
         months,
         production_factor,
         levelization_factor,  # TODO need this?
         typeof(s.financial.value_of_lost_load_per_kwh) <: Array{<:Real, 1} ? s.financial.value_of_lost_load_per_kwh : fill(s.financial.value_of_lost_load_per_kwh, length(time_steps)),
         pwf_e,
         pwf_om,
+        pwf_fuel,
         third_party_factor,
         # maxsize_pv_locations,
-        1:length(s.electric_tariff.tou_demand_ratchet_timesteps),  # ratchets
+        1:length(s.electric_tariff.tou_demand_ratchet_time_steps),  # ratchets
         techs_by_exportbin,
         export_bins_by_tech,
         cop,
         thermal_cop
-        # s.site.min_resil_timesteps,
+        # s.site.min_resil_time_steps,
         # s.site.mg_tech_sizes_equal_grid_sizes,
         # s.site.node
     )
@@ -119,7 +125,7 @@ function setup_tech_inputs(s::MPCScenario)
     time_steps = 1:length(s.electric_load.loads_kw)
 
     # REoptInputs indexed on techs:
-    existing_sizes = DenseAxisArray{Float64}(undef, techs.all)
+    existing_sizes = Dict(t => 0.0 for t in techs.all)
     production_factor = DenseAxisArray{Float64}(undef, techs.all, time_steps)
 
     if !isempty(techs.pv)
