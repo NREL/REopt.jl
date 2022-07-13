@@ -48,7 +48,7 @@ struct URDBrate
     n_tou_demand_tiers::Int
     tou_demand_tier_limits::Array{Real,1}
     tou_demand_rates::Array{Float64,2}  # ratchet X tier
-    tou_demand_ratchet_timesteps::Array{Array{Int64,1},1}  # length = n_tou_demand_ratchets
+    tou_demand_ratchet_time_steps::Array{Array{Int64,1},1}  # length = n_tou_demand_ratchets
 
     demand_lookback_months::AbstractArray{Int,1}
     demand_lookback_percent::Float64
@@ -97,7 +97,7 @@ function URDBrate(urdb_response::Dict, year::Int=2019; time_steps_per_hour=1)
     demand_min = get(urdb_response, "peakkwcapacitymin", 0.0)  # TODO add check for site min demand against tariff?
 
     n_monthly_demand_tiers, monthly_demand_tier_limits, monthly_demand_rates,
-      n_tou_demand_tiers, tou_demand_tier_limits, tou_demand_rates, tou_demand_ratchet_timesteps =
+      n_tou_demand_tiers, tou_demand_tier_limits, tou_demand_rates, tou_demand_ratchet_time_steps =
       parse_demand_rates(urdb_response, year)
 
     energy_rates, energy_tier_limits, n_energy_tiers, sell_rates = 
@@ -120,7 +120,7 @@ function URDBrate(urdb_response::Dict, year::Int=2019; time_steps_per_hour=1)
         n_tou_demand_tiers,
         tou_demand_tier_limits,
         tou_demand_rates,
-        tou_demand_ratchet_timesteps,
+        tou_demand_ratchet_time_steps,
 
         demand_lookback_months,
         demand_lookback_percent,
@@ -335,16 +335,16 @@ function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8)
         scrub_urdb_demand_tiers!(d["demandratestructure"])
         tou_demand_tier_limits = parse_urdb_demand_tiers(d["demandratestructure"])
         n_tou_demand_tiers = length(tou_demand_tier_limits)
-        ratchet_timesteps, tou_demand_rates = parse_urdb_tou_demand(d, year=year, n_tiers=n_tou_demand_tiers)
+        ratchet_time_steps, tou_demand_rates = parse_urdb_tou_demand(d, year=year, n_tiers=n_tou_demand_tiers)
     else
         tou_demand_tier_limits = []
         n_tou_demand_tiers = 0
-        ratchet_timesteps = []
+        ratchet_time_steps = []
         tou_demand_rates = Array{Float64,2}(undef, 0, 0)
     end
 
     return n_monthly_demand_tiers, monthly_demand_tier_limits, monthly_demand_rates,
-           n_tou_demand_tiers, tou_demand_tier_limits, tou_demand_rates, ratchet_timesteps
+           n_tou_demand_tiers, tou_demand_tier_limits, tou_demand_rates, ratchet_time_steps
 
 end
 
@@ -450,7 +450,7 @@ function parse_urdb_tou_demand(d::Dict; year::Int, n_tiers::Int)
         return [], []
     end
     n_periods = length(d["demandratestructure"])
-    ratchet_timesteps = Array[]
+    ratchet_time_steps = Array[]
     rates_vec = Float64[]  # array(ratchet_num, tier), reshape later
     n_ratchets = 0  # counter
 
@@ -459,7 +459,7 @@ function parse_urdb_tou_demand(d::Dict; year::Int, n_tiers::Int)
             time_steps = get_tou_demand_steps(d, year=year, month=month, period=period-1)
             if length(time_steps) > 0  # can be zero! not every month contains same number of periods
                 n_ratchets += 1
-                append!(ratchet_timesteps, [time_steps])
+                append!(ratchet_time_steps, [time_steps])
                 for (t, tier) in enumerate(d["demandratestructure"][period])
                     append!(rates_vec, round(get(tier, "rate", 0.0) + get(tier, "adj", 0.0), digits=6))
                 end
@@ -467,15 +467,15 @@ function parse_urdb_tou_demand(d::Dict; year::Int, n_tiers::Int)
         end
     end
     rates = reshape(rates_vec, (:, n_tiers))  # Array{Float64,2}
-    ratchet_timesteps = convert(Array{Array{Int64,1},1}, ratchet_timesteps)
-    return ratchet_timesteps, rates
+    ratchet_time_steps = convert(Array{Array{Int64,1},1}, ratchet_time_steps)
+    return ratchet_time_steps, rates
 end
 
 
 """
     get_tou_demand_steps(d::Dict; year::Int, month::Int, period::Int, time_steps_per_hour=1)
 
-return Array{Int, 1} for timesteps in ratchet (aka period)
+return Array{Int, 1} for time_steps in ratchet (aka period)
 """
 function get_tou_demand_steps(d::Dict; year::Int, month::Int, period::Int, time_steps_per_hour=1)
     step_array = Int[]
@@ -525,25 +525,30 @@ function parse_urdb_fixed_charges(d::Dict)
     min_monthly = 0.0
 
     # first try $/month, then check if $/day exists, as of 1/28/2020 there were only $/day and $month entries in the URDB
-    if get(d, "fixedchargeunits", "") == "\$/month" 
-        fixed_monthly = Float64(get(d, "fixedchargefirstmeter", 0.0))
-    end
-    if get(d, "fixedchargeunits", "") == "\$/day"
-        fixed_monthly = Float64(get(d, "fixedchargefirstmeter", 0.0) * 30.4375)
-        # scalar intended to approximate annual charges over 12 month period, derived from 365.25/12
+    fixed_monthly = Float64(get(d, "fixedmonthlycharge", 0.0))
+    if fixed_monthly == 0.0
+        if get(d, "fixedchargeunits", "") == "\$/month" 
+            fixed_monthly = Float64(get(d, "fixedchargefirstmeter", 0.0))
+        elseif get(d, "fixedchargeunits", "") == "\$/day"
+            fixed_monthly = Float64(get(d, "fixedchargefirstmeter", 0.0) * 30.4375)
+            # scalar intended to approximate annual charges over 12 month period, derived from 365.25/12
+        elseif get(d, "fixedchargeunits", "") == "\$/year"
+            fixed_monthly = Float64(get(d, "fixedchargefirstmeter", 0.0) / 12)
+        elseif !isnothing(get(d, "fixedchargefirstmeter",  nothing))
+            @warn "A valid value for fixedchargeunits (\$/month, \$/day, or \$/year) was not provided in urdb_response so the value provided for fixedchargefirstmeter will be ignored."
+        end
     end
 
     if get(d, "minchargeunits", "") == "\$/month"
         min_monthly = Float64(get(d, "mincharge", 0.0))
         # first try $/month, then check if $/day or $/year exists, as of 1/28/2020 these were the only unit types in the urdb
-    end
-    if get(d, "minchargeunits", "") == "\$/day"
+    elseif get(d, "minchargeunits", "") == "\$/day"
         min_monthly = Float64(get(d, "mincharge", 0.0) * 30.4375 )
         # scalar intended to approximate annual charges over 12 month period, derived from 365.25/12
-    end
-
-    if get(d, "minchargeunits", "") == "\$/year"
+    elseif get(d, "minchargeunits", "") == "\$/year"
         annual_min = Float64(get(d, "mincharge", 0.0))
+    elseif !isnothing(get(d, "minchargeunits",  nothing))
+        @warn "A valid value for minchargeunits (\$/month, \$/day, or \$/year) was not provided in urdb_response so the value provided for mincharge will be ignored."
     end
     
     return fixed_monthly, annual_min, min_monthly

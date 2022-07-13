@@ -67,7 +67,7 @@ function run_mpc(m::JuMP.AbstractModel, p::MPCInputs)
 		@objective(m, Min, m[:Costs])
 	else # Keep SOC high
 		@objective(m, Min, m[:Costs] - sum(m[:dvStoredEnergy]["ElectricStorage", ts] for ts in p.time_steps) /
-									   (8760. / p.hours_per_timestep)
+									   (8760. / p.hours_per_time_step)
 		)
 	end
 
@@ -101,7 +101,7 @@ end
     build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 
 Add variables and constraints for model predictive control model. 
-Similar to a REopt model but with any length of horizon (instead of one calendar year,
+Similar to a REopt model but with any length of horizon (instead of one calendar year),
 and the DER sizes must be provided.
 """
 function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
@@ -172,7 +172,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		add_monthly_peak_constraint(m, p)
 	end
 
-	if !isempty(p.s.electric_tariff.tou_demand_ratchet_timesteps)
+	if !isempty(p.s.electric_tariff.tou_demand_ratchet_time_steps)
 		add_tou_peak_constraint(m, p)
 	end
 
@@ -186,7 +186,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
     if !isempty(p.techs.gen)
         add_gen_constraints(m, p)
 		m[:TotalPerUnitProdOMCosts] += @expression(m, 
-			sum(p.s.generator.om_cost_per_kwh * p.hours_per_timestep *
+			sum(p.s.generator.om_cost_per_kwh * p.hours_per_time_step *
 			m[:dvRatedProduction][t, ts] for t in p.techs.gen, ts in p.time_steps)
 		)
         m[:TotalGenFuelCosts] = @expression(m,
@@ -218,12 +218,12 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		else
 			m[:ExpectedMGFuelUsed] = 0
 			m[:ExpectedMGFuelCost] = 0
-			@constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_timesteps, ts in p.s.electric_utility.outage_timesteps],
+			@constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
 				m[:binMGGenIsOnInTS][s, tz, ts] == 0
 			)
 		end
 		
-		if p.s.site.min_resil_timesteps > 0
+		if p.s.site.min_resil_time_steps > 0
 			add_min_hours_crit_ld_met_constraint(m,p)
 		end
 	end
@@ -288,7 +288,7 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 		@warn """Adding binary variable to model gas generator. 
 				 Some solvers are very slow with integer variables"""
 		@variables m begin
-			dvFuelUsage[p.techs.gen, p.time_steps] >= 0 # Fuel burned by technology t in each time step
+			dvFuelUsage[p.techs.gen, p.time_steps] >= 0 # Fuel burned by technology t in each time step [kWh]
 			binGenIsOnInTS[p.techs.gen, p.time_steps], Bin  # 1 If technology t is operating in time step h; 0 otherwise
 		end
 	end
@@ -303,15 +303,15 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 		@warn """Adding binary variable to model outages. 
 				 Some solvers are very slow with integer variables"""
 		max_outage_duration = maximum(p.s.electric_utility.outage_durations)
-		outage_timesteps = p.s.electric_utility.outage_timesteps
-		tZeros = p.s.electric_utility.outage_start_timesteps
+		outage_time_steps = p.s.electric_utility.outage_time_steps
+		tZeros = p.s.electric_utility.outage_start_time_steps
 		S = p.s.electric_utility.scenarios
 		# TODO: currently defining more decision variables than necessary b/c using rectangular arrays, could use dicts of decision variables instead
 		@variables m begin # if there is more than one specified outage, there can be more othan one outage start time
-			dvUnservedLoad[S, tZeros, outage_timesteps] >= 0 # unserved load not met by system
-			dvMGProductionToStorage[p.techs.all, S, tZeros, outage_timesteps] >= 0 # Electricity going to the storage system during each timestep
-			dvMGDischargeFromStorage[S, tZeros, outage_timesteps] >= 0 # Electricity coming from the storage system during each timestep
-			dvMGRatedProduction[p.techs.all, S, tZeros, outage_timesteps]  # MG Rated Production at every timestep.  Multiply by ProdFactor to get actual energy
+			dvUnservedLoad[S, tZeros, outage_time_steps] >= 0 # unserved load not met by system
+			dvMGProductionToStorage[p.techs.all, S, tZeros, outage_time_steps] >= 0 # Electricity going to the storage system during each time_step
+			dvMGDischargeFromStorage[S, tZeros, outage_time_steps] >= 0 # Electricity coming from the storage system during each time_step
+			dvMGRatedProduction[p.techs.all, S, tZeros, outage_time_steps]  # MG Rated Production at every time_step.  Multiply by ProdFactor to get actual energy
 			dvMGStoredEnergy[S, tZeros, 0:max_outage_duration] >= 0 # State of charge of the MG storage system
 			dvMaxOutageCost[S] >= 0 # maximum outage cost dependent on number of outage durations
 			# dvMGTechUpgradeCost[p.techs.all] >= 0
@@ -321,11 +321,11 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 			dvMGFuelUsed[p.techs.all, S, tZeros] >= 0
 			dvMGMaxFuelUsage[S] >= 0
 			dvMGMaxFuelCost[S] >= 0
-			dvMGCurtail[p.techs.all, S, tZeros, outage_timesteps] >= 0
+			dvMGCurtail[p.techs.all, S, tZeros, outage_time_steps] >= 0
 
 			# binMGStorageUsed, Bin # 1 if MG storage battery used, 0 otherwise
 			# binMGTechUsed[p.techs.all], Bin # 1 if MG tech used, 0 otherwise
-			binMGGenIsOnInTS[S, tZeros, outage_timesteps], Bin
+			binMGGenIsOnInTS[S, tZeros, outage_time_steps], Bin
 		end
 	end
 end

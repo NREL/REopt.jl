@@ -51,7 +51,7 @@ techs_by_exportbin = Dict(
 ```
 A use-case example for the `techs_by_exportbin` map is defining the net metering benefit:
 ```julia
-NEM_benefit = @expression(m, p.pwf_e * p.hours_per_timestep *
+NEM_benefit = @expression(m, p.pwf_e * p.hours_per_time_step *
     sum( sum(p.s.electric_tariff.export_rates[:NEM][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
         for t in p.techs_by_exportbin[:NEM]) for ts in p.time_steps)
 )

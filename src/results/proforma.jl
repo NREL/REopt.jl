@@ -139,16 +139,16 @@ function proforma_results(p::REoptInputs, d::Dict)
         # In the two party case the developer does not include the fuel cost in their costs
         # It is assumed that the offtaker will pay for this at a rate that is not marked up
         # to cover developer profits
-        fixed_and_var_om = d["Generator"]["year_one_fixed_om_cost"] + d["Generator"]["year_one_variable_om_cost"]
+        fixed_and_var_om = d["Generator"]["year_one_fixed_om_cost_before_tax"] + d["Generator"]["year_one_variable_om_cost_before_tax"]
         fixed_and_var_om_bau = 0.0
         year_one_fuel_cost_bau = 0.0
         if p.s.generator.existing_kw > 0
-            fixed_and_var_om_bau = d["Generator"]["year_one_fixed_om_cost_bau"] + 
-                                   d["Generator"]["year_one_variable_om_cost_bau"]
-            year_one_fuel_cost_bau = d["Generator"]["year_one_fuel_cost_bau"]
+            fixed_and_var_om_bau = d["Generator"]["year_one_fixed_om_cost_before_tax_bau"] + 
+                                   d["Generator"]["year_one_variable_om_cost_before_tax_bau"]
+            year_one_fuel_cost_bau = d["Generator"]["year_one_fuel_cost_before_tax_bau"]
         end
         if !third_party
-            annual_om = -1 * (fixed_and_var_om + d["Generator"]["year_one_fuel_cost"])
+            annual_om = -1 * (fixed_and_var_om + d["Generator"]["year_one_fuel_cost_before_tax"])
 
             annual_om_bau = -1 * (fixed_and_var_om_bau + year_one_fuel_cost_bau)
         else
@@ -162,8 +162,8 @@ function proforma_results(p::REoptInputs, d::Dict)
     end
 
     # Optimal Case calculations
-    electricity_bill_series = escalate_elec(d["ElectricTariff"]["year_one_bill"])
-    export_credit_series = escalate_elec(d["ElectricTariff"]["year_one_export_benefit"])
+    electricity_bill_series = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax"])
+    export_credit_series = escalate_elec(d["ElectricTariff"]["year_one_export_benefit_before_tax"])
 
     # In the two party case the electricity and export credits are incurred by the offtaker not the developer
     if third_party
@@ -210,17 +210,21 @@ function proforma_results(p::REoptInputs, d::Dict)
         net_free_cashflow = r["developer_annual_free_cashflows"]
         r["developer_annual_free_cashflows"] = round.(r["developer_annual_free_cashflows"], digits=2)
 
-        electricity_bill_series = escalate_elec(d["ElectricTariff"]["year_one_bill"])
-        electricity_bill_series_bau = escalate_elec(d["ElectricTariff"]["year_one_bill_bau"])
+        electricity_bill_series = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax"])
+        electricity_bill_series_bau = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax_bau"])
 
-        export_credit_series = escalate_elec(-d["ElectricTariff"]["lifecycle_export_benefit"])
-        export_credit_series_bau = escalate_elec(-d["ElectricTariff"]["lifecycle_export_benefit_bau"])
+        export_credit_series = escalate_elec(-d["ElectricTariff"]["lifecycle_export_benefit_after_tax"])
+        export_credit_series_bau = escalate_elec(-d["ElectricTariff"]["lifecycle_export_benefit_after_tax_bau"])
 
         annual_income_from_host_series = repeat([-1 * r["annualized_payment_to_third_party"]], years)
 
         if "Generator" in keys(d) && d["Generator"]["size_kw"] > 0
-            existing_genertor_fuel_cost_series = escalate_om(-1 * d["Generator"]["year_one_fuel_cost_bau"])
-            generator_fuel_cost_series = escalate_om(-1 * d["Generator"]["year_one_fuel_cost"])
+            generator_fuel_cost_series = escalate_om(-1 * d["Generator"]["year_one_fuel_cost_before_tax"])
+            if p.s.generator.existing_kw > 0
+                existing_genertor_fuel_cost_series = escalate_om(-1 * d["Generator"]["year_one_fuel_cost_before_tax_bau"])
+            else
+                existing_genertor_fuel_cost_series = zeros(years)
+            end
         else
             existing_genertor_fuel_cost_series = zeros(years)
             generator_fuel_cost_series = zeros(years)
@@ -243,8 +247,8 @@ function proforma_results(p::REoptInputs, d::Dict)
             )
 
     else  # get cumulative cashflow for offtaker
-        electricity_bill_series_bau = escalate_elec(d["ElectricTariff"]["year_one_bill_bau"])
-        export_credit_series_bau = escalate_elec(-d["ElectricTariff"]["lifecycle_export_benefit_bau"])
+        electricity_bill_series_bau = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax_bau"])
+        export_credit_series_bau = escalate_elec(-d["ElectricTariff"]["lifecycle_export_benefit_after_tax_bau"])
         total_operating_expenses_bau = electricity_bill_series_bau + export_credit_series_bau + m.om_series_bau
         total_cash_incentives_bau = m.total_pbi_bau * (1 - p.s.financial.offtaker_tax_pct)
 
@@ -383,13 +387,13 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
 end
 
 
-function npv(cashflows::AbstractArray{Float64, 1}, rate::Float64)
+function npv(cashflows::AbstractArray{<:Real, 1}, rate::Real)
     years = collect(0:length(cashflows)-1)
     return sum( cashflows ./ (1+rate).^years)
 end
 
 
-function irr(cashflows::AbstractArray{Float64, 1})
+function irr(cashflows::AbstractArray{<:Real, 1})
     if npv(cashflows, 0.0) < 0
         return 0.0
     end

@@ -29,11 +29,8 @@
 # *********************************************************************************
 
 """
-    AbsorptionChiller
-
-struct with inner constructor:
+`AbsorptionChiller` is an optional REopt input with the following keys and default values and default values and default values:
 ```julia
-function AbsorptionChiller(;
     min_ton::Real = 0.0,
     max_ton::Real = 0.0,
     chiller_cop::Real,
@@ -42,7 +39,6 @@ function AbsorptionChiller(;
     om_cost_per_ton::Real,
     macrs_option_years::Real = 0,
     macrs_bonus_pct::Real = 0
-)
 ```
 """
 struct AbsorptionChiller <: AbstractThermalTech
@@ -69,10 +65,10 @@ struct AbsorptionChiller <: AbstractThermalTech
         macrs_bonus_pct::Real = 0,
         )
 
-        min_kw = min_ton * TONHOUR_TO_KWH_THERMAL
-        max_kw = max_ton * TONHOUR_TO_KWH_THERMAL
-        installed_cost_per_kw = installed_cost_per_ton / TONHOUR_TO_KWH_THERMAL
-        om_cost_per_kw = om_cost_per_ton / TONHOUR_TO_KWH_THERMAL
+        min_kw = min_ton * KWH_THERMAL_PER_TONHOUR
+        max_kw = max_ton * KWH_THERMAL_PER_TONHOUR
+        installed_cost_per_kw = installed_cost_per_ton / KWH_THERMAL_PER_TONHOUR
+        om_cost_per_kw = om_cost_per_ton / KWH_THERMAL_PER_TONHOUR
 
         new(
             min_ton,

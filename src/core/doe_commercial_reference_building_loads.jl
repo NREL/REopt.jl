@@ -107,7 +107,7 @@ end
 
 """
     built_in_load(type::String, city::String, buildingtype::String, 
-        year::Int, annual_energy::Real, monthly_energies::AbstractArray{Real,1}
+        year::Int, annual_energy::Real, monthly_energies::AbstractArray{<:Real,1}
     )
 Scale a normalized Commercial Reference Building according to inputs provided and return the 8760.
 """
@@ -147,7 +147,7 @@ function built_in_load(type::String, city::String, buildingtype::String,
         # CRB thermal "loads" are in terms of energy input required (boiler fuel), not the actual energy demand.
         # So we multiply the fuel energy by the boiler_efficiency to get the actual energy demand.
         boiler_efficiency = EXISTING_BOILER_EFFICIENCY
-        mmbtu_to_kwh = MMBTU_TO_KWH  # do convert thermal loads
+        mmbtu_to_kwh = KWH_PER_MMBTU  # do convert thermal loads
     end
     datetime = DateTime(year, 1, 1, 1)
     for ld in normalized_profile

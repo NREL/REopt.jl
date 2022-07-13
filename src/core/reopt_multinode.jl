@@ -7,7 +7,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 		"dvSize",
 		"dvPurchaseSize",
 	]
-	dvs_idx_on_techs_timesteps = String[
+	dvs_idx_on_techs_time_steps = String[
         "dvCurtail",
 		"dvRatedProduction",
 	]
@@ -15,7 +15,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 		"dvStoragePower",
 		"dvStorageEnergy",
 	]
-	dvs_idx_on_storagetypes_timesteps = String[
+	dvs_idx_on_storagetypes_time_steps = String[
 		"dvDischargeFromStorage"
 	]
 	for p in ps
@@ -25,7 +25,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 			m[Symbol(x)] = @variable(m, [p.techs.all], base_name=x, lower_bound=0)
 		end
 
-		for dv in dvs_idx_on_techs_timesteps
+		for dv in dvs_idx_on_techs_time_steps
 			x = dv*_n
 			m[Symbol(x)] = @variable(m, [p.techs.all, p.time_steps], base_name=x, lower_bound=0)
 		end
@@ -35,7 +35,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 			m[Symbol(x)] = @variable(m, [p.s.storage.types.elec], base_name=x, lower_bound=0)
 		end
 
-		for dv in dvs_idx_on_storagetypes_timesteps
+		for dv in dvs_idx_on_storagetypes_time_steps
 			x = dv*_n
 			m[Symbol(x)] = @variable(m, [p.s.storage.types.all, p.time_steps], base_name=x, lower_bound=0)
 		end
@@ -112,7 +112,7 @@ function add_bounds(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) w
 		"dvSize",
 		"dvPurchaseSize",
 	]
-	dvs_idx_on_techs_timesteps = String[
+	dvs_idx_on_techs_time_steps = String[
         "dvCurtail",
 		"dvRatedProduction",
 	]
@@ -120,7 +120,7 @@ function add_bounds(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) w
 		"dvStoragePower",
 		"dvStorageEnergy",
 	]
-	dvs_idx_on_storagetypes_timesteps = String[
+	dvs_idx_on_storagetypes_time_steps = String[
 		"dvDischargeFromStorage",
 		"dvGridToStorage",
 	]
@@ -132,7 +132,7 @@ function add_bounds(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) w
 			@constraint(m, [tech in p.techs.all], -m[Symbol(x)][tech] ≤ 0 )
 		end
 
-		for dv in dvs_idx_on_techs_timesteps
+		for dv in dvs_idx_on_techs_time_steps
 			x = dv*_n
             @constraint(m, [tech in p.techs.all, ts in p.time_steps], 
                 -m[Symbol(x)][tech, ts] ≤ 0
@@ -146,7 +146,7 @@ function add_bounds(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) w
             )
 		end
 
-		for dv in dvs_idx_on_storagetypes_timesteps
+		for dv in dvs_idx_on_storagetypes_time_steps
 			x = dv*_n
             @constraint(m, [b in p.s.storage.types.elec, ts in p.time_steps], 
                 -m[Symbol(x)][b, ts] ≤ 0
@@ -182,6 +182,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
     add_variables!(m, ps)
     @warn "Outages are not currently modeled in multinode mode."
     @warn "Diesel generators are not currently modeled in multinode mode."
+	@warn "Emissions and renewable energy fractions are not currently modeling in multinode mode."
     for p in ps
         _n = string("_", p.s.site.node)
 
@@ -230,7 +231,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
             add_monthly_peak_constraint(m, p; _n=_n)
         end
     
-        if !isempty(p.s.electric_tariff.tou_demand_ratchet_timesteps)
+        if !isempty(p.s.electric_tariff.tou_demand_ratchet_time_steps)
             add_tou_peak_constraint(m, p; _n=_n)
         end
 
@@ -256,8 +257,8 @@ function add_objective!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 	else # Keep SOC high
 		@objective(m, Min, sum(m[Symbol(string("Costs_", p.s.site.node))] for p in ps)
         - sum(sum(sum(m[Symbol(string("dvStoredEnergy_", p.s.site.node))][b, ts] 
-            for ts in p.time_steps) for b in p.s.storage.types.elec) for p in ps) / (8760. / ps[1].hours_per_timestep))
-	end  # TODO need to handle different hours_per_timestep?
+            for ts in p.time_steps) for b in p.s.storage.types.elec) for p in ps) / (8760. / ps[1].hours_per_time_step))
+	end  # TODO need to handle different hours_per_time_step?
 	nothing
 end
 

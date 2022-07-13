@@ -4,6 +4,64 @@
 - fix bug for scalar `ElectricTariff.wholesale_rate`
 - add `Boiler` tech (known as NewBoiler in API)
 
+## v0.17.0
+### Added
+- Emissions
+    - add emissions factors for CO2, NOx, SO2, and PM25 to inputs of all fuel burning technologies
+    - add emissions factor series for CO2, NOx, SO2, and PM25 to `ElectricUtility` inputs and use AVERT data if not provided
+    - add `include_climate_in_objective` and `include_health_in_objective` to `Settings` inputs
+    - constrain CO2 emissions based on `CO2_emissions_reduction_min_pct`, `CO2_emissions_reduction_max_pct`, and `include_exported_elec_emissions_in_total` added to `Site` inputs
+    - add emissions costs to `Financial` inputs and use EASIUR data for NOx, SO2, and PM25 if not provided
+    - report emissions and their cost in `Site` (on-site and total) and `ElectricUtility` (grid) results
+    - calculate `breakeven_cost_of_emissions_reduction_per_tonnes_CO2` for `Financial` results
+- Renewable energy percentage
+    - calculate renewable energy percentage (electric only and total) and add to `Site` results
+    - add `renewable_electricity_min_pct`, `renewable_electricity_max_pct`, and `include_exported_renewable_electricity_in_total` to `Site` inputs
+    - add `fuel_renewable_energy_pct` input for all fuel burning technologies
+    - constrain renewable electricity percentage based on user inputs
+- Add "Emissions and Renewable Energy Percent" testset
+### Changed
+- Allow Wind tech to be included when `off_grid_flag` is true
+- Add `operating_reserve_required_pct` to Wind struct and incorporate wind into operating reserve constraints
+- Add hot, cold TES results for MPC model
+- Update documentation and add `docs/devdeploy.jl` to locally host the REopt.jl documentation 
+- Make `ExistingBoiler` `fuel_cost_per_mmbtu` a required input
+- In `prodfactor.jl`, include lat-long coordinates if-statement to determine whether the "nsrdb" dataset should be used in call to PVWatts. Accounts for recent updates to NSRDB data used by PVWatts (v6). If outside of NSRDB range, use "intl" (international) dataset.
+### Fixed
+- Bug fix to constrain dvCurtail in `time_steps_without_grid`
+- Bug fix to report accurate wind ["year_one_to_load_series_kw"] in results/wind.jl (was previously not accounting for curtailed wind)
+
+## v0.16.2
+- Update PV defaults to tilt=10 for rooftop, tilt = abs(lat) for ground mount, azimuth = 180 for northern lats, azimuth = 0 for southern lats.
+- bug fix for Generator inputs to allow for time_steps_per_hour > 1
+- change various `Float64` types to `Real` to allow integers too
+
+## v0.16.1
+- bug fix for outage simulator when `microgrid_only=true`
+
+## v0.16.0
+Allows users to model "off-grid" systems as a year-long outage: 
+- add flag to "turn on" off-grid modeling `Settings.off_grid_flag` 
+- when `off_grid_flag` is "true", adjust default values in core/ `electric_storage`, `electric_load`, `financial`, `generator`, `pv` 
+- add operating reserve requirement inputs, outputs, and constraints based on load and PV generation 
+- add minimum load met percent input and constraint
+- add generator replacement year and cost (for off-grid and on-grid) 
+- add off-grid additional annual costs (tax deductible) and upfront capital costs (depreciable via straight line depreciation)
+
+Name changes: 
+- consistently append `_before_tax` and `_after_tax` to results names 
+- change all instances of `timestep` to `time_step` and `timesteps` to `time_steps`
+
+Other changes:
+- report previously missing lcc breakdown components, all reported in `results/financial.jl`  
+- change variable types from Float to Real to allow users to enter Ints (where applicable)
+- `year_one_coincident_peak_cost_after_tax` is now correctly multiplied by `(1 - p.s.financial.offtaker_tax_pct)`
+
+## v0.15.2
+- bug fix for 15 & 30 minute electric, heating, and cooling loads
+- bug fix for URDB fixed charges
+- bug fix for default `Wind` `installed_cost_per_kw` and `federal_itc_pct`
+
 ## v0.15.1
 - add `AbsorptionChiller` technology
 - add `ElectricStorage.minimum_avg_soc_fraction` input and constraint
@@ -54,7 +112,7 @@
 - add ElectricLoad.blended_doe_reference_names & blended_doe_reference_percents
 - add ElectricLoad.monthly_totals_kwh builtin profile scaling
 - add ElectricTariff inputs: `add_monthly_rates_to_urdb_rate`, `tou_energy_rates_per_kwh`, 
-    `add_tou_energy_rates_to_urdb_rate`, `coincident_peak_load_charge_per_kw`, `coincident_peak_load_active_timesteps`
+    `add_tou_energy_rates_to_urdb_rate`, `coincident_peak_load_charge_per_kw`, `coincident_peak_load_active_time_steps`
 - handle multiple PV outputs
 
 ## v0.10.0
@@ -66,7 +124,7 @@
 - add option to run Business As Usual scenario in parallel with optimal scenario (default is `true`)
 - add incentives (and cost curves) to `Wind` and `Generator`
 - fixed bug in URDB fixed charges
-- renamed `outage_start(end)_timestep` to `outage_start(end)_time_step`
+- renamed `outage_start(end)_time_step` to `outage_start(end)_time_step`
 
 ## v0.9.0
 - `ElectricTariff.NEM` boolean is now determined by `ElectricUtility.net_metering_limit_kw` (true if limit > 0)
@@ -171,7 +229,7 @@
 #### bug fixes
 - allow non-integer `outage_probabilities`
 - correct `total_unserved_load` output
-- don't `add_min_hours_crit_ld_met_constraint` unless `min_resil_timesteps <= length(elecutil.outage_timesteps)`
+- don't `add_min_hours_crit_ld_met_constraint` unless `min_resil_time_steps <= length(elecutil.outage_time_steps)`
 
 ## v0.2.0
 #### Improvements
@@ -180,7 +238,7 @@
     - previously only had to pay to upgrade new capacity
 - implement ElectricLoad `loads_kw_is_net` and `critical_loads_kw_is_net`
     - add existing PV production to raw load profile if `true`
-- add `min_resil_timesteps` input and optional constraint for minimum timesteps that critical load must be met in every outage
+- add `min_resil_time_steps` input and optional constraint for minimum time_steps that critical load must be met in every outage
 #### bug fixes
 - enforce storage cannot grid charge
 
