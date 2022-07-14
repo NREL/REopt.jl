@@ -148,7 +148,6 @@ struct ElectricUtility
                 "AKGD" => "Alaska",
                 "HIMS" => "Hawaii (except Oahu)",
                 "HIOA" => "Hawaii (Oahu)"
-
             )
             
             region_abbr, meters_to_region = region_abbreviation(latitude, longitude)
@@ -305,7 +304,7 @@ function region_abbreviation(latitude, longitude)
             @warn "Your site location ($(latitude), $(longitude)) is more than 5 miles from the nearest AVERT region. Cannot calculate emissions."
             return abbr, meters_to_region #nothing, #
         else
-            return ArchGDAL.getfield(feature,1), meters_to_region
+            return ArchGDAL.getfield(feature,"AVERT"), meters_to_region
         end
     end
 end
