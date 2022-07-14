@@ -32,6 +32,7 @@
 ```julia
     om_cost_escalation_pct::Real = 0.025,
     elec_cost_escalation_pct::Real = 0.019,
+    existing_boiler_fuel_cost_escalation_pct::Float64 = 0.034, 
     boiler_fuel_cost_escalation_pct::Real = 0.034,
     chp_fuel_cost_escalation_pct::Real = 0.034,
     generator_fuel_cost_escalation_pct::Real = 0.027,
