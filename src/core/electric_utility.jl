@@ -245,7 +245,7 @@ Helpful links:
 """
 function region_abbreviation(latitude, longitude)
     
-    file_path = joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "avert_2021_4326.shp")
+    file_path = joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "avert_4326.shp")
 
     abbr = nothing
     meters_to_region = nothing
@@ -269,7 +269,7 @@ function region_abbreviation(latitude, longitude)
         return abbr, meters_to_region
     end
 
-    shpfile = ArchGDAL.read(joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "avert_2021_102008.shp"))
+    shpfile = ArchGDAL.read(joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "avert_102008.shp"))
     avert_102008 = ArchGDAL.getlayer(shpfile, 0)
 
     pt = ArchGDAL.createpoint(latitude, longitude)
