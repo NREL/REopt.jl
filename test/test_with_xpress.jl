@@ -1065,8 +1065,8 @@ end
             @test results["Site"]["year_one_emissions_tonnes_CO2_bau"] ≈ 49.45 atol=1e-2 # 40.54 atol=1e-2
             @test results["Site"]["year_one_emissions_from_fuelburn_tonnes_CO2"] ≈ 8.63 # 8.63
             @test results["Site"]["year_one_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0 # 0.0
-            @test results["Site"]["lifecycle_emissions_climate_cost"] ≈ 9381.16 atol=1
-            @test results["Site"]["lifecycle_emissions_climate_cost_bau"] ≈ 31539.05 atol=1e-1
+            @test results["Site"]["lifecycle_emissions_cost_climate"] ≈ 9381.16 atol=1
+            @test results["Site"]["lifecycle_emissions_cost_climate_bau"] ≈ 31539.05 atol=1e-1
             @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 262.87
             @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 875.61
             @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 172.62 # 172.62
@@ -1098,8 +1098,8 @@ end
             @test results["Site"]["year_one_emissions_tonnes_CO2_bau"] ≈ 70.99 atol=1
             @test results["Site"]["year_one_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
             @test results["Site"]["year_one_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0 atol=1 # 0.0
-            @test results["Site"]["lifecycle_emissions_climate_cost"] ≈ 9056.43 atol=1
-            @test results["Site"]["lifecycle_emissions_climate_cost_bau"] ≈ 45282.17 atol=1
+            @test results["Site"]["lifecycle_emissions_cost_climate"] ≈ 9056.43 atol=1
+            @test results["Site"]["lifecycle_emissions_cost_climate_bau"] ≈ 45282.17 atol=1
             @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 251.43 atol=1
             @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 1257.16 atol=1
             @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
