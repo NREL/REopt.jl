@@ -30,7 +30,6 @@
 """
 `Financial` is an optional REopt input with the following keys and default values:
 ```julia
-    off_grid_flag::Bool = false,
     om_cost_escalation_pct::Real = 0.025,
     elec_cost_escalation_pct::Real = 0.019,
     boiler_fuel_cost_escalation_pct::Real = 0.034,
@@ -72,7 +71,6 @@
     ```
 """
 struct Financial
-    off_grid_flag::Bool
     om_cost_escalation_pct::Float64
     elec_cost_escalation_pct::Float64
     existing_boiler_fuel_cost_escalation_pct::Float64
@@ -200,7 +198,7 @@ struct Financial
         end
     
 
-        return new(
+        return new(    
             om_cost_escalation_pct,
             elec_cost_escalation_pct,
             existing_boiler_fuel_cost_escalation_pct,
