@@ -315,7 +315,7 @@ function emissions_series(pollutant, region_abbr; time_steps_per_hour=1)
         return nothing
     end
     # Columns 1 and 2 do not contain AVERT region information, so skip them
-    avert_df = readdlm(joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "AVERT_$(pollutant)_lb_per_kwh.csv"), ',')[:, 3:end]
+    avert_df = readdlm(joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "AVERT_2021_$(pollutant)_lb_per_kwh.csv"), ',')[:, 3:end]
 
     try
         # Find col index for region, and then row 1 does not contain AVERT data so skip that.
