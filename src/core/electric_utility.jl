@@ -131,19 +131,24 @@ struct ElectricUtility
         is_MPC = isnothing(latitude) || isnothing(longitude)
         if !is_MPC
             region_lookup = Dict(
-                "AK" => "Alaska",
                 "CA" => "California",
-                "EMW" => "Great Lakes / Atlantic",
-                "NE" => "Northeast",
+                "CENT" => "Central",
+                "FL" => "Florida",
+                "MIDA" => "Mid-Atlantic",
+                "MIDW" => "Midwest",
+                "NCSC" => "Carolinas",
+                "NE" => "New England",
                 "NW" => "Northwest",
+                "NY" => "New York",
                 "RM" => "Rocky Mountains",
-                "SC" => "Lower Midwest",
                 "SE" => "Southeast",
                 "SW" => "Southwest",
-                "TX" => "Texas",
-                "WMW" => "Upper Midwest",
-                "HI" => "Hawaii (except Oahu)",
-                "HI-Oahu" => "Hawaii (Oahu)"
+                "TN" => "Tennessee",
+                "TE" => "Texas",
+                "AKGD" => "Alaska",
+                "HIMS" => "Hawaii (except Oahu)",
+                "HIOA" => "Hawaii (Oahu)"
+
             )
             
             region_abbr, meters_to_region = region_abbreviation(latitude, longitude)
