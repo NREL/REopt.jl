@@ -131,8 +131,10 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
         r["offgrid_microgrid_lcoe_dollars_per_kwh"] = round(r["lcc"] / pwf / value(LoadMet), digits=4)
     end
 
-	r["lifecycle_emissions_cost_climate"] = round(value(m[:Lifecycle_Emissions_Cost_CO2]), digits=2)
-	r["lifecycle_emissions_cost_health"] = round(value(m[:Lifecycle_Emissions_Cost_Health]), digits=2)
+    if _n==""
+        r["lifecycle_emissions_cost_climate"] = round(value(m[:Lifecycle_Emissions_Cost_CO2]), digits=2)
+        r["lifecycle_emissions_cost_health"] = round(value(m[:Lifecycle_Emissions_Cost_Health]), digits=2)
+    end
 
     d["Financial"] = Dict{String,Float64}(k => round(v, digits=4) for (k,v) in r)
     nothing
