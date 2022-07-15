@@ -50,7 +50,12 @@
     emissions_factor_CO2_decrease_pct::Real = 0.01174,
     emissions_factor_NOx_decrease_pct::Real = 0.01174,
     emissions_factor_SO2_decrease_pct::Real = 0.01174,
-    emissions_factor_PM25_decrease_pct::Real = 0.01174
+    emissions_factor_PM25_decrease_pct::Real = 0.01174,
+    # fields from other models needed for validation
+    CO2_emissions_reduction_min_pct::Union{Real, Nothing} = nothing, # passed from Site
+    CO2_emissions_reduction_max_pct::Union{Real, Nothing} = nothing, # passed from Site
+    include_climate_in_objective::Bool = false, # passed from Settings
+    include_health_in_objective::Bool = false # passed from Settings
 ```julia
 
 !!! note "Outage modeling"
@@ -122,6 +127,7 @@ struct ElectricUtility
         emissions_factor_NOx_decrease_pct::Real = 0.01174,
         emissions_factor_SO2_decrease_pct::Real = 0.01174,
         emissions_factor_PM25_decrease_pct::Real = 0.01174,
+        # fields from other models needed for validation
         CO2_emissions_reduction_min_pct::Union{Real, Nothing} = nothing, # passed from Site
         CO2_emissions_reduction_max_pct::Union{Real, Nothing} = nothing, # passed from Site
         include_climate_in_objective::Bool = false, # passed from Settings
