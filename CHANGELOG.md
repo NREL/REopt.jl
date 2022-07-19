@@ -4,7 +4,7 @@
 ### Added
 - Emissions
     - add emissions factors for CO2, NOx, SO2, and PM25 to inputs of all fuel burning technologies
-    - add emissions factor series for CO2, NOx, SO2, and PM25 to `ElectricUtility` inputs and use AVERT data if not provided
+    - add emissions factor series for CO2, NOx, SO2, and PM25 to `ElectricUtility` inputs and use [AVERT v3.2](https://www.epa.gov/avert/download-avert) (2021 data) if not provided
     - add `include_climate_in_objective` and `include_health_in_objective` to `Settings` inputs
     - constrain CO2 emissions based on `CO2_emissions_reduction_min_pct`, `CO2_emissions_reduction_max_pct`, and `include_exported_elec_emissions_in_total` added to `Site` inputs
     - add emissions costs to `Financial` inputs and use EASIUR data for NOx, SO2, and PM25 if not provided
