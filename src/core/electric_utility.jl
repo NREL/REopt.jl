@@ -50,7 +50,12 @@
     emissions_factor_CO2_decrease_pct::Real = 0.01174,
     emissions_factor_NOx_decrease_pct::Real = 0.01174,
     emissions_factor_SO2_decrease_pct::Real = 0.01174,
-    emissions_factor_PM25_decrease_pct::Real = 0.01174
+    emissions_factor_PM25_decrease_pct::Real = 0.01174,
+    # fields from other models needed for validation
+    CO2_emissions_reduction_min_pct::Union{Real, Nothing} = nothing, # passed from Site
+    CO2_emissions_reduction_max_pct::Union{Real, Nothing} = nothing, # passed from Site
+    include_climate_in_objective::Bool = false, # passed from Settings
+    include_health_in_objective::Bool = false # passed from Settings
 ```julia
 
 !!! note "Outage modeling"
@@ -122,6 +127,7 @@ struct ElectricUtility
         emissions_factor_NOx_decrease_pct::Real = 0.01174,
         emissions_factor_SO2_decrease_pct::Real = 0.01174,
         emissions_factor_PM25_decrease_pct::Real = 0.01174,
+        # fields from other models needed for validation
         CO2_emissions_reduction_min_pct::Union{Real, Nothing} = nothing, # passed from Site
         CO2_emissions_reduction_max_pct::Union{Real, Nothing} = nothing, # passed from Site
         include_climate_in_objective::Bool = false, # passed from Settings
@@ -131,19 +137,23 @@ struct ElectricUtility
         is_MPC = isnothing(latitude) || isnothing(longitude)
         if !is_MPC
             region_lookup = Dict(
-                "AK" => "Alaska",
                 "CA" => "California",
-                "EMW" => "Great Lakes / Atlantic",
-                "NE" => "Northeast",
+                "CENT" => "Central",
+                "FL" => "Florida",
+                "MIDA" => "Mid-Atlantic",
+                "MIDW" => "Midwest",
+                "NCSC" => "Carolinas",
+                "NE" => "New England",
                 "NW" => "Northwest",
+                "NY" => "New York",
                 "RM" => "Rocky Mountains",
-                "SC" => "Lower Midwest",
                 "SE" => "Southeast",
                 "SW" => "Southwest",
-                "TX" => "Texas",
-                "WMW" => "Upper Midwest",
-                "HI" => "Hawaii (except Oahu)",
-                "HI-Oahu" => "Hawaii (Oahu)"
+                "TN" => "Tennessee",
+                "TE" => "Texas",
+                "AKGD" => "Alaska",
+                "HIMS" => "Hawaii (except Oahu)",
+                "HIOA" => "Hawaii (Oahu)"
             )
             
             region_abbr, meters_to_region = region_abbreviation(latitude, longitude)
@@ -300,7 +310,7 @@ function region_abbreviation(latitude, longitude)
             @warn "Your site location ($(latitude), $(longitude)) is more than 5 miles from the nearest AVERT region. Cannot calculate emissions."
             return abbr, meters_to_region #nothing, #
         else
-            return ArchGDAL.getfield(feature,1), meters_to_region
+            return ArchGDAL.getfield(feature,"AVERT"), meters_to_region
         end
     end
 end
@@ -310,7 +320,7 @@ function emissions_series(pollutant, region_abbr; time_steps_per_hour=1)
         return nothing
     end
     # Columns 1 and 2 do not contain AVERT region information, so skip them
-    avert_df = readdlm(joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "AVERT_marg_emissions_lb$(pollutant)_per_kwh.csv"), ',')[:, 3:end]
+    avert_df = readdlm(joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "AVERT_2021_$(pollutant)_lb_per_kwh.csv"), ',')[:, 3:end]
 
     try
         # Find col index for region, and then row 1 does not contain AVERT data so skip that.
