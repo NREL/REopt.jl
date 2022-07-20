@@ -191,13 +191,13 @@ else  # run HiGHS tests
 
     @testset "Backup Generator Reliability" begin
         p = REoptInputs("./scenarios/backup_reliability_inputs.json")
-        results = JSON.parsefile("./scenarios/backup_reliability_reopt_results.json")
+        reopt_results = JSON.parsefile("./scenarios/backup_reliability_reopt_results.json")
         reliability_inputs = Dict("gen_operational_availability" => 0.9998, "gen_failure_to_start" => 0.0066, "gen_failure_to_run" => 0.00157, "num_gen" => 2,
         "gen_capacity_kw" => 200.0, "num_battery_bins" => 101, "max_outage_duration" => 96)
 
-        reliability_results = simulate_outages(results, p)
+        reliability_results = backup_reliability(reopt_results, p, reliability_inputs)
         @test reliability_results["cumulative_duration_means"][96] ≈ 0.741 atol=0.01
-    end
+    end                            cumulative_duration_means
 
     # removed Wind test for two reasons
     # 1. reduce WindToolKit calls in tests
