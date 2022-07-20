@@ -24,7 +24,7 @@
     "PV": {
         "can_net_meter": false,
         "min_kw": 2552.0,
-        "max_kw": 2552.0,
+        "max_kw": 2552.0
     },
     "ElectricLoad": {
         "doe_reference_name": "Hospital",
