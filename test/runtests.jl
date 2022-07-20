@@ -197,7 +197,7 @@ else  # run HiGHS tests
 
         reliability_results = backup_reliability(reopt_results, p, reliability_inputs)
         @test reliability_results["cumulative_duration_means"][96] ≈ 0.741 atol=0.01
-    end                            cumulative_duration_means
+    end                            
 
     # removed Wind test for two reasons
     # 1. reduce WindToolKit calls in tests
