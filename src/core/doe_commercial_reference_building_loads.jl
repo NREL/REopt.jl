@@ -49,7 +49,7 @@ const default_buildings = [
 
 
 function find_ashrae_zone_city(lat, lon)::String
-    file_path = joinpath(dirname(@__FILE__), "..", "..", "data", "climate_cities.shp")
+    file_path = joinpath(@__DIR__, "..", "..", "data", "climate_cities.shp")
     shpfile = ArchGDAL.read(file_path)
 	cities_layer = ArchGDAL.getlayer(shpfile, 0)
 
@@ -117,7 +117,7 @@ function built_in_load(type::String, city::String, buildingtype::String,
 
     @assert type in ["electric", "domestic_hot_water", "space_heating", "cooling"]
     monthly_scalers = ones(12)
-    lib_path = joinpath(dirname(@__FILE__), "..", "..", "data", "load_profiles", type)
+    lib_path = joinpath(@__DIR__, "..", "..", "data", "load_profiles", type)
 
     profile_path = joinpath(lib_path, string("crb8760_norm_" * city * "_" * buildingtype * ".dat"))
     normalized_profile = vec(readdlm(profile_path, '\n', Float64, '\n'))

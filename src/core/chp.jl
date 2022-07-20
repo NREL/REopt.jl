@@ -252,7 +252,7 @@ custom_chp_inputs, i.e.
 - "unavailability_periods"
 """
 function get_prime_mover_defaults(prime_mover::String, boiler_type::String, size_class::Int)
-    pmds = JSON.parsefile(joinpath(dirname(@__FILE__), "..", "..", "data", "chp", "chp_defaults.json"))
+    pmds = JSON.parsefile(joinpath(@__DIR__, "..", "..", "data", "chp", "chp_defaults.json"))
     prime_mover_defaults = Dict{String, Any}()
 
     for key in keys(pmds[prime_mover])
