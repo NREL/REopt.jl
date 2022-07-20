@@ -1,0 +1,36 @@
+{
+    "Site": {
+        "longitude": -122.4194155,
+        "latitude": 37.7749295
+},
+    "ElectricUtility": {
+    },
+    "Generator": {
+        "fuel_avail_gal": 660.0,
+        "min_turn_down_pct": 0.0,
+        "fuel_slope_gal_per_kwh": 0.0656,
+        "only_runs_during_grid_outage": true,
+        "sells_energy_back_to_grid": false,
+        "min_kw": 232.0,
+        "max_kw": 232.0
+    },
+    "Storage": {
+        "can_grid_charge": true,
+        "min_kw":506.0,
+        "max_kw":506.0,
+        "max_kwh":2306.0,
+        "max_kwh":2306.0
+    },
+    "PV": {
+        "can_net_meter": false,
+        "min_kw": 2552.0,
+        "max_kw": 2552.0,
+    },
+    "ElectricLoad": {
+        "doe_reference_name": "Hospital",
+        "annual_kwh": 3876408.5
+    },
+    "ElectricTariff": {
+        "urdb_label": "5e17b77e5457a33c5873e3b0"
+    }
+}
