@@ -206,12 +206,9 @@ function CHP(d::Dict)
     if isempty(chp.prime_mover)
         if !pass_all_params_error
             if any(isnan(v) for v in values(custom_chp_inputs)) || isempty(chp.unavailability_periods)
-                pass_all_params_error = true
+                error("To model CHP you must provide at least `prime_mover` from $(prime_movers) or all of $([string(k) for k in keys(custom_chp_inputs)]) and unavailability_periods.")
             end
-        end
-        if pass_all_params_error
-            @error "To model CHP you must provide at least `prime_mover` from $(prime_movers) or all of $([string(k) for k in keys(custom_chp_inputs)]) and unavailability_periods."
-        end        
+        end  
     elseif !(isempty(chp.prime_mover))
         @assert chp.prime_mover in prime_movers
         if chp.prime_mover == "combustion_turbine"
