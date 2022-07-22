@@ -1,4 +1,8 @@
 # REopt Changelog
+## Develop
+### Changed
+- Don't trigger GitHub 'Run test' workflow on a push that only changes README.md and/or CHANGELOG.md
+- Avoid triggering duplicate GitHub workflows. When pushing to a branch that's in a PR, only trigger tests on the push not on the PR sync also.
 
 ## v0.17.0
 ### Added
