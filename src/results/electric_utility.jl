@@ -54,13 +54,13 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
     r["year_one_energy_supplied_kwh"] = round(value(Year1UtilityEnergy), digits=2)
     
     if !isempty(p.s.storage.types.elec)
-        GridToLoad = (sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in p.s.electric_tariff.n_energy_tiers) 
+        GridToLoad = (sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) 
                   - sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec) 
                   for ts in p.time_steps)
         GridToBatt = (sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec) 
                 for ts in p.time_steps)
     else
-        GridToLoad = (sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in p.s.electric_tariff.n_energy_tiers) 
+        GridToLoad = (sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) 
                   for ts in p.time_steps)
         GridToBatt = zeros(length(p.time_steps))
     end

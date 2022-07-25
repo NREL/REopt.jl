@@ -254,6 +254,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             add_cooling_tech_constraints(m, p)
         end
     
+		m[Symbol("binFlexHVAC")] = 0
+		m[Symbol("dvTemperature")] = 0
+		m[Symbol("dvComfortLimitViolationCost")] = 0
+
         if !isempty(p.techs.thermal)
             add_thermal_load_constraints(m, p)  # split into heating and cooling constraints?
         end

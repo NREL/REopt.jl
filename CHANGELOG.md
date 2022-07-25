@@ -1,4 +1,9 @@
 # REopt Changelog
+
+## develop
+- fix bug for tiered, time-of-use demand rates
+- fix bug in results with tiered electrical energy costs
+
 ## Develop
 ### Changed
 - Don't trigger GitHub 'Run test' workflow on a push that only changes README.md and/or CHANGELOG.md
