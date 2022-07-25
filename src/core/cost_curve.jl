@@ -100,14 +100,6 @@ function cost_curve(tech::AbstractTech, financial::Financial)
     big_number = 1.0e10
     T = typeof(tech)
 
-    if nameof(T) in [:Boiler, :Elecchl]  # zero cost technologies
-        cap_cost_slope = [0.0]
-        cap_cost_yint = [0.0]
-        cost_curve_bp_x = [0.0, big_number]
-        n_segments = 1
-        return cap_cost_slope, cost_curve_bp_x, cap_cost_yint, n_segments
-    end
-
     regions = ["utility", "state", "federal", "combined"]
     cap_cost_slope = Real[]
     cost_curve_bp_x = [0.0]

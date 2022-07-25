@@ -67,7 +67,6 @@ global hdl = nothing
 using JLD
 
 const EXISTING_BOILER_EFFICIENCY = 0.8
-
 const GAL_PER_M3 = 264.172  # [gal/m^3]
 const KWH_PER_GAL_DIESEL = 40.7  # [kWh/gal_diesel]
 const KWH_PER_MMBTU = 293.07107  # [kWh/mmbtu]
@@ -123,6 +122,7 @@ include("core/generator.jl")
 include("core/doe_commercial_reference_building_loads.jl")
 include("core/electric_load.jl")
 include("core/existing_boiler.jl")
+include("core/boiler.jl")
 include("core/existing_chiller.jl")
 include("core/absorption_chiller.jl")
 include("core/flexible_hvac.jl")
@@ -174,6 +174,7 @@ include("results/outages.jl")
 include("results/wind.jl")
 include("results/electric_load.jl")
 include("results/existing_boiler.jl")
+include("results/boiler.jl")
 include("results/existing_chiller.jl")
 include("results/absorption_chiller.jl")
 include("results/chp.jl")

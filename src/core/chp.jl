@@ -65,7 +65,7 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
     max_derate_factor::Float64 = 1.0
     derate_start_temp_degF::Float64 = 0.0
     derate_slope_pct_per_degF::Float64 = 0.0
-    can_supply_steam_turbine::Bool=false
+    #can_supply_steam_turbine::Bool=false  # TODO
 
     macrs_option_years::Int = 5
     macrs_bonus_pct::Float64 = 1.0
@@ -136,7 +136,7 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     max_derate_factor::Float64 = 1.0
     derate_start_temp_degF::Float64 = 0.0
     derate_slope_pct_per_degF::Float64 = 0.0
-    can_supply_steam_turbine::Bool=false
+    #can_supply_steam_turbine::Bool=false  # TODO
 
     macrs_option_years::Int = 5
     macrs_bonus_pct::Float64 = 1.0

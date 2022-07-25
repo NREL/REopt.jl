@@ -33,6 +33,7 @@ struct ExistingBoiler <: AbstractThermalTech  # useful to create AbstractHeating
     efficiency::Real
     fuel_cost_series::AbstractVector{<:Real}
     fuel_type::String
+    #can_supply_steam_turbine::Bool
     fuel_renewable_energy_pct::Real
     emissions_factor_lb_CO2_per_mmbtu::Real
     emissions_factor_lb_NOx_per_mmbtu::Real
@@ -51,6 +52,7 @@ end
     efficiency::Real = NaN,
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [],
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
+    #can_supply_steam_turbine::Bool = false,  # TODO
     fuel_renewable_energy_pct::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_pct"],fuel_type,0),
     emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0),
     emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0),
@@ -95,7 +97,7 @@ function ExistingBoiler(;
     efficiency::Real = NaN,
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [],
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
-    # can_supply_steam_turbine::Bool,
+    #can_supply_steam_turbine::Bool = false,
     fuel_renewable_energy_pct::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_pct"],fuel_type,0),
     emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0),
     emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0),
@@ -140,6 +142,7 @@ function ExistingBoiler(;
         efficiency,
         fuel_cost_series,
         fuel_type,
+        #can_supply_steam_turbine,
         fuel_renewable_energy_pct,
         emissions_factor_lb_CO2_per_mmbtu,
         emissions_factor_lb_NOx_per_mmbtu,

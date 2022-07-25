@@ -301,7 +301,12 @@ function setup_tech_inputs(s::AbstractScenario)
 
     if "ExistingBoiler" in techs.all
         setup_existing_boiler_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
-        tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25)
+            tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25)
+    end
+
+    if "Boiler" in techs.all
+        setup_boiler_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, 
+            boiler_efficiency, production_factor)
     end
 
     if "CHP" in techs.all
@@ -542,36 +547,65 @@ function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_si
 end
 
 """
-    function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency)
+    function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
+        tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25)
 
 Update tech-indexed data arrays necessary to build the JuMP model with the values for existing boiler.
 This version of this function, used in BAUInputs(), doesn't update renewable energy and emissions arrays.
 """
-function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency)
+
+function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
+    tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25)
     max_sizes["ExistingBoiler"] = s.existing_boiler.max_kw
     min_sizes["ExistingBoiler"] = 0.0
     existing_sizes["ExistingBoiler"] = 0.0
     cap_cost_slope["ExistingBoiler"] = 0.0
     boiler_efficiency["ExistingBoiler"] = s.existing_boiler.efficiency
     # om_cost_per_kw["ExistingBoiler"] = 0.0
-    return nothing
-end
-
-"""
-    function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
-        tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25)
-
-Update tech-indexed data arrays necessary to build the JuMP model with the values for existing boiler.
-This version of this function, used in setup_tech_inputs(), does update renewable energy and emissions arrays.
-"""
-function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
-    tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25)
-    setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency)
     tech_renewable_energy_pct["ExistingBoiler"] = s.existing_boiler.fuel_renewable_energy_pct
     tech_emissions_factors_CO2["ExistingBoiler"] = s.existing_boiler.emissions_factor_lb_CO2_per_mmbtu / KWH_PER_MMBTU  # lb/mmtbu * mmtbu/kWh
     tech_emissions_factors_NOx["ExistingBoiler"] = s.existing_boiler.emissions_factor_lb_NOx_per_mmbtu / KWH_PER_MMBTU
     tech_emissions_factors_SO2["ExistingBoiler"] = s.existing_boiler.emissions_factor_lb_SO2_per_mmbtu / KWH_PER_MMBTU
     tech_emissions_factors_PM25["ExistingBoiler"] = s.existing_boiler.emissions_factor_lb_PM25_per_mmbtu / KWH_PER_MMBTU 
+    return nothing
+end
+
+"""
+    function setup_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
+        production_factor)
+
+Update tech-indexed data arrays necessary to build the JuMP model with the values for existing boiler.
+This version of this function, used in BAUInputs(), doesn't update renewable energy and emissions arrays.
+"""
+function setup_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, boiler_efficiency, production_factor)
+    max_sizes["Boiler"] = s.boiler.max_kw
+    min_sizes["Boiler"] = s.boiler.min_kw
+    boiler_efficiency["Boiler"] = s.boiler.efficiency
+    
+    # The Boiler only has a MACRS benefit, no ITC etc.
+    if s.boiler.macrs_option_years in [5, 7]
+
+        cap_cost_slope["Boiler"] = effective_cost(;
+            itc_basis = s.boiler.installed_cost_per_kw,
+            replacement_cost = 0.0,
+            replacement_year = s.financial.analysis_years,
+            discount_rate = s.financial.owner_discount_pct,
+            tax_rate = s.financial.owner_tax_pct,
+            itc = 0.0,
+            macrs_schedule = s.boiler.macrs_option_years == 5 ? s.financial.macrs_five_year : s.financial.macrs_seven_year,
+            macrs_bonus_pct = s.boiler.macrs_bonus_pct,
+            macrs_itc_reduction = 0.0,
+            rebate_per_kw = 0.0
+        )
+
+    else
+        cap_cost_slope["Boiler"] = s.boiler.installed_cost_per_kw
+    end
+
+    om_cost_per_kw["Boiler"] = s.boiler.om_cost_per_kw
+    production_factor["Boiler", :] = prodfactor(s.boiler)
+
+    return nothing
 end
 
 
@@ -675,6 +709,13 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
     for t in techs.fuel_burning
         if t == "ExistingBoiler"
             pwf_fuel["ExistingBoiler"] = annuity(
+                s.financial.analysis_years,
+                s.financial.existing_boiler_fuel_cost_escalation_pct,
+                s.financial.offtaker_discount_pct
+            )
+        end
+        if t == "Boiler"
+            pwf_fuel["Boiler"] = annuity(
                 s.financial.analysis_years,
                 s.financial.boiler_fuel_cost_escalation_pct,
                 s.financial.offtaker_discount_pct

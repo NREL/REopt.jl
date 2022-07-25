@@ -112,6 +112,11 @@ REopt.Generator
 REopt.ExistingBoiler
 ```
 
+## Boiler
+```@docs
+REopt.Boiler
+```
+
 ## AbsorptionChiller
 ```@docs
 REopt.AbsorptionChiller

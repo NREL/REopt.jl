@@ -95,7 +95,6 @@
     "min_kw": 200.0,
     "min_allowable_kw":0.0,
     "max_kw": 200.0,
-    "can_supply_steam_turbine": true,
     "fuel_type": "natural_gas",
     "fuel_cost_per_mmbtu": 8.0,
     "fuel_renewable_energy_pct": 0.3,
