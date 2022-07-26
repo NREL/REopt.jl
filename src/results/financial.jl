@@ -28,12 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
-
-Adds the Financial results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
-Note: the node number is an empty string if evaluating a single `Site`.
-
-Financial results:
+`Financial` results keys:
 - `lcc` Optimal lifecycle cost
 - `lifecycle_generation_tech_capital_costs` LCC component. Net capital costs for all generation technologies, in present value, including replacement costs and incentives. This value does not include offgrid_other_capital_costs.
 - `lifecycle_storage_capital_costs` LCC component. Net capital costs for all storage technologies, in present value, including replacement costs and incentives. This value does not include offgrid_other_capital_costs.
@@ -58,9 +53,14 @@ Financial results:
 - `om_and_replacement_present_cost_after_tax` Present value of all O&M and replacement costs, after tax.
 - `developer_om_and_replacement_present_cost_after_tax` Present value of all O&M and replacement costs incurred by developer, after tax.
 - `offgrid_microgrid_lcoe_dollars_per_kwh` Levelized cost of electricity for modeled off-grid system.
+- `lifecycle_emissions_cost_climate` LCC component if Settings input include_climate_in_objective is true. Present value of CO2 emissions cost over the analysis period.
+- `lifecycle_emissions_cost_health` LCC component if Settings input include_health_in_objective is true. Present value of NOx, SO2, and PM2.5 emissions cost over the analysis period.
+
+calculated in combine_results function if BAU scenario is run:
+    - `breakeven_cost_of_emissions_reduction_per_tonnes_CO2`
 """
 function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
-    r = Dict{String, Any}()
+    r = Dict{String, Float64}()
     if !(Symbol("dvComfortLimitViolationCost"*_n) in keys(m.obj_dict))
         m[Symbol("dvComfortLimitViolationCost"*_n)] = 0.0
     end
@@ -121,8 +121,6 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     r["developer_om_and_replacement_present_cost_after_tax"] = r["om_and_replacement_present_cost_after_tax"] / 
         p.third_party_factor
 
-    
-
     if p.s.settings.off_grid_flag        
         if p.third_party_factor == 1 # ==1 with Direct ownership (when third_party_ownership is False)
             pwf = p.pwf_offtaker
@@ -133,7 +131,12 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
         r["offgrid_microgrid_lcoe_dollars_per_kwh"] = round(r["lcc"] / pwf / value(LoadMet), digits=4)
     end
 
-    d["Financial"] = Dict(k => round(v, digits=4) for (k,v) in r)
+    if _n==""
+        r["lifecycle_emissions_cost_climate"] = round(value(m[:Lifecycle_Emissions_Cost_CO2]), digits=2)
+        r["lifecycle_emissions_cost_health"] = round(value(m[:Lifecycle_Emissions_Cost_Health]), digits=2)
+    end
+
+    d["Financial"] = Dict{String,Float64}(k => round(v, digits=4) for (k,v) in r)
     nothing
 end
 

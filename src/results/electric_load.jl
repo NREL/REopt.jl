@@ -28,21 +28,19 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
-
-Adds the ElectricLoad results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
-Note: the node number is an empty string if evaluating a single `Site`.
-
-ElectricLoad results:
+`ElectricLoad` results keys:
 - `load_series_kw` vector of site load in every time step
 - `critical_load_series_kw` vector of site critical load in every time step
 - `annual_calculated_kwh` sum of the `load_series_kw`
 - `offgrid_load_met_series_kw` vector of electric load met by generation techs, for off-grid scenarios only
 - `offgrid_load_met_pct` percentage of total electric load met on an annual basis, for off-grid scenarios only
-- `offgrid_annual_oper_res_required_series_kwh` , total operating reserves required on an annual basis, for off-grid scenarios only
+- `offgrid_annual_oper_res_required_series_kwh` , total operating reserves required (for load and techs) on an annual basis, for off-grid scenarios only
 - `offgrid_annual_oper_res_provided_series_kwh` , total operating reserves provided on an annual basis, for off-grid scenarios only
 """
 function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+    # Adds the `ElectricLoad` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+    # Note: the node number is an empty string if evaluating a single `Site`.
+
     r = Dict{String, Any}()
 
     r["load_series_kw"] = p.s.electric_load.loads_kw

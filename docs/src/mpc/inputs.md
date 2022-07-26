@@ -24,7 +24,7 @@ The accepted keys for the JSON file or `Dict` are:
 - FlexibleHVAC
 
 
-The simplest scenario does not have any dispatch optimization and is essentially a cost calculator:
+The simplest scenario does not have any dispatch optimization and is essentially a cost "calculator":
 ```javascript
 {
     "ElectricLoad": {
