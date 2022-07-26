@@ -27,6 +27,16 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+MPC Scenarios will return a results Dict with the following keys: 
+- `ElectricStorage`
+- `HotThermalStorage`
+- `ColdThermalStorage` 
+- `ElectricTariff`
+- `ElectricUtility`
+- `PV`
+- `Generator`
+"""
 function mpc_results(m::JuMP.AbstractModel, p::MPCInputs; _n="")
 	tstart = time()
     d = Dict{String, Any}()
