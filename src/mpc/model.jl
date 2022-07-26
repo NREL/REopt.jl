@@ -228,6 +228,12 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		end
 	end
 
+	m[:dvComfortLimitViolationCost] = 0.0
+	if !isnothing(p.s.flexible_hvac)
+        add_flexible_hvac_constraints(m, p)
+		JuMP.fix(m[:binFlexHVAC], 1.0)
+	end
+
 	#################################  Objective Function   ########################################
 	@expression(m, Costs,
 
@@ -238,7 +244,10 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
         m[:TotalFuelCosts] +
 
 		# Utility Bill
-		m[:TotalElecBill]
+		m[:TotalElecBill] +
+
+		# Comfort limit violation costs
+		m[:dvComfortLimitViolationCost]
 	);
 	if !isempty(p.s.electric_utility.outage_durations)
 		add_to_expression!(Costs, m[:ExpectedOutageCost] + m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost] + m[:ExpectedMGFuelCost])
@@ -328,4 +337,10 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 			binMGGenIsOnInTS[S, tZeros, outage_time_steps], Bin
 		end
 	end
+
+	if !isempty(p.techs.thermal)
+        @variables m begin
+			dvThermalProduction[p.techs.thermal, p.time_steps] >= 0
+		end
+    end
 end

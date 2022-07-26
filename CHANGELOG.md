@@ -31,6 +31,11 @@
 - Bug fix to constrain dvCurtail in `time_steps_without_grid`
 - Bug fix to report accurate wind ["year_one_to_load_series_kw"] in results/wind.jl (was previously not accounting for curtailed wind)
 
+## develop
+- fix bug for tiered, time-of-use demand rates
+- fix bug in results with tiered electrical energy costs
+- add `FlexibleHVAC` to MPC module
+
 ## v0.16.2
 - Update PV defaults to tilt=10 for rooftop, tilt = abs(lat) for ground mount, azimuth = 180 for northern lats, azimuth = 0 for southern lats.
 - bug fix for Generator inputs to allow for time_steps_per_hour > 1

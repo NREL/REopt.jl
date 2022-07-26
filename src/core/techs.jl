@@ -207,31 +207,52 @@ function Techs(s::MPCScenario)
     end
 
     all_techs = copy(pvtechs)
+    elec = copy(pvtechs)
     techs_no_turndown = copy(pvtechs)
     gentechs = String[]
+    electric_chillers = String[]
+    heating_techs = String[]
+    boiler_techs = String[]
+
     if s.generator.size_kw > 0
         push!(all_techs, "Generator")
         push!(gentechs, "Generator")
+        push!(elec, "Generator")
     end
+
+    if !isnothing(s.existing_boiler)
+        push!(all_techs, "ExistingBoiler")
+        push!(heating_techs, "ExistingBoiler")
+        push!(boiler_techs, "ExistingBoiler")
+    end
+
+    if !isnothing(s.existing_chiller)
+        push!(all_techs, "ExistingChiller")
+        push!(electric_chillers, "ExistingChiller")
+    end
+
+    cooling_techs = electric_chillers
+    thermal_techs = union(heating_techs, boiler_techs, cooling_techs)
+    fuel_burning_techs = union(gentechs, boiler_techs)
 
     Techs(
         all_techs,
-        all_techs,
+        elec,
         pvtechs,
         gentechs,
         String[],
         String[],
         techs_no_turndown,
         String[],
+        heating_techs,
+        cooling_techs,
+        boiler_techs,
+        fuel_burning_techs,
+        thermal_techs,
         String[],
         String[],
         String[],
-        String[],
-        String[],
-        String[],
-        String[],
-        String[],
-        String[],
+        electric_chillers,
         String[]
     )
 end

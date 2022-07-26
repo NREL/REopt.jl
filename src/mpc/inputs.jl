@@ -66,7 +66,7 @@ function MPCInputs(s::MPCScenario)
     techs, production_factor, existing_sizes = setup_tech_inputs(s)
     months = 1:length(s.electric_tariff.monthly_demand_rates)
 
-    techs_by_exportbin = DenseAxisArray([ techs.all, techs.all, techs.all], s.electric_tariff.export_bins)
+    techs_by_exportbin = DenseAxisArray([ techs.elec, techs.elec, techs.elec], s.electric_tariff.export_bins)
     # TODO account for which techs have access to export bins (when we add more techs than PV)
 
     levelization_factor = Dict(t => 1.0 for t in techs.all)
@@ -134,6 +134,10 @@ function setup_tech_inputs(s::MPCScenario)
 
     if "Generator" in techs.all
         setup_gen_inputs(s, existing_sizes, production_factor)
+    end
+
+    if "ExistingChiller" in techs.all
+        existing_sizes["ExistingChiller"] = s.existing_chiller.max_kw
     end
 
     return techs, production_factor, existing_sizes
