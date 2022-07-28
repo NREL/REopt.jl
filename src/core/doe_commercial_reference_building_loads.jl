@@ -48,7 +48,7 @@ const default_buildings = [
 ]
 
 
-function find_ashrae_zone_city(lat, lon)::String
+function find_ashrae_zone_city(lat, lon; get_zone=false)
     file_path = joinpath(dirname(@__FILE__), "..", "..", "data", "climate_cities.shp")
     shpfile = ArchGDAL.read(file_path)
 	cities_layer = ArchGDAL.getlayer(shpfile, 0)
@@ -68,26 +68,26 @@ function find_ashrae_zone_city(lat, lon)::String
 	end
     if isnothing(archgdal_city)
         @info "Could not find latitude/longitude in U.S. Using geometrically nearest city."
-    else
+    elseif !get_zone
         return archgdal_city
     end
     cities = [
-        (city="Miami", lat=25.761680, lon=-80.191790),
-        (city="Houston", lat=29.760427, lon=-95.369803),
-        (city="Phoenix", lat=33.448377, lon=-112.074037),
-        (city="Atlanta", lat=33.748995, lon=-84.387982),
-        (city="LasVegas", lat=36.1699, lon=-115.1398),
-        (city="LosAngeles", lat=34.052234, lon=-118.243685),
-        (city="SanFrancisco", lat=37.3382, lon=-121.8863),
-        (city="Baltimore", lat=39.290385, lon=-76.612189),
-        (city="Albuquerque", lat=35.085334, lon=-106.605553),
-        (city="Seattle", lat=47.606209, lon=-122.332071),
-        (city="Chicago", lat=41.878114, lon=-87.629798),
-        (city="Boulder", lat=40.014986, lon=-105.270546),
-        (city="Minneapolis", lat=44.977753, lon=-93.265011),
-        (city="Helena", lat=46.588371, lon=-112.024505,),
-        (city="Duluth", lat=46.786672, lon=-92.100485),
-        (city="Fairbanks", lat=59.0397, lon=-158.4575),
+        (city="Miami", lat=25.761680, lon=-80.191790, zone="1A"),
+        (city="Houston", lat=29.760427, lon=-95.369803, zone="2A"),
+        (city="Phoenix", lat=33.448377, lon=-112.074037, zone="2B"),
+        (city="Atlanta", lat=33.748995, lon=-84.387982, zone="3A"),
+        (city="LasVegas", lat=36.1699, lon=-115.1398, zone="3B"),
+        (city="LosAngeles", lat=34.052234, lon=-118.243685, zone="3B"),
+        (city="SanFrancisco", lat=37.3382, lon=-121.8863, zone="3C"),
+        (city="Baltimore", lat=39.290385, lon=-76.612189, zone="4A"),
+        (city="Albuquerque", lat=35.085334, lon=-106.605553, zone="4B"),
+        (city="Seattle", lat=47.606209, lon=-122.332071, zone="4C"),
+        (city="Chicago", lat=41.878114, lon=-87.629798, zone="5A"),
+        (city="Boulder", lat=40.014986, lon=-105.270546, zone="5B"),
+        (city="Minneapolis", lat=44.977753, lon=-93.265011, zone="6A"),
+        (city="Helena", lat=46.588371, lon=-112.024505, zone="6B"),
+        (city="Duluth", lat=46.786672, lon=-92.100485, zone="7"),
+        (city="Fairbanks", lat=59.0397, lon=-158.4575, zone="8"),
     ]
     min_distance = 0.0
     nearest_city = ""
@@ -101,7 +101,22 @@ function find_ashrae_zone_city(lat, lon)::String
             nearest_city = c.city
         end
     end
-    return nearest_city
+    
+    # Optionally return both city and zone
+    if get_zone
+        ashrae_zone = ""
+        for i in cities
+            if nearest_city  == i.city
+                ashrae_zone = i.zone
+            end
+        end
+        if !isnothing(archgdal_city)
+            nearest_city = archgdal_city
+        end
+        return nearest_city, ashrae_zone
+    else
+        return nearest_city
+    end
 end
 
 

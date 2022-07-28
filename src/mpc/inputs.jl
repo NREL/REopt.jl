@@ -50,6 +50,7 @@ struct MPCInputs <: AbstractInputs
     export_bins_by_tech::Dict{String, Array{Symbol, 1}}
     cop::Dict{String, Float64}  # (techs.cooling)
     thermal_cop::Dict{String, Float64}  # (techs.absorption_chiller)
+    ghp_options::UnitRange{Int64}  # Range of the number of GHP options
 end
 
 
@@ -87,6 +88,7 @@ function MPCInputs(s::MPCScenario)
     #Placeholder COP because the REopt model expects it
     cop = Dict("ExistingChiller" => s.cooling_load.cop)
     thermal_cop = Dict{String, Float64}()
+    ghp_options = 1:0
 
     MPCInputs(
         s,
@@ -110,10 +112,11 @@ function MPCInputs(s::MPCScenario)
         techs_by_exportbin,
         export_bins_by_tech,
         cop,
-        thermal_cop
+        thermal_cop,
+        ghp_options
         # s.site.min_resil_time_steps,
         # s.site.mg_tech_sizes_equal_grid_sizes,
-        # s.site.node
+        # s.site.node,
     )
 end
 

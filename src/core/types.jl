@@ -38,6 +38,7 @@ abstract type AbstractCHP <: AbstractFuelBurningTech end
 abstract type AbstractThermalStorage <: AbstractStorage end
 abstract type AbstractElectricStorage <: AbstractStorage end
 abstract type AbstractThermalStorageDefaults end
+abstract type AbstractGHP <: AbstractTech end
 
 
 """
