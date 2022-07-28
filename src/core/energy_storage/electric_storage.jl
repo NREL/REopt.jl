@@ -151,9 +151,9 @@ The following shows how one would use the degradation model in REopt via the [Sc
 Note that not all of the above inputs are necessary. When not providing `calendar_fade_coefficient` for example the default value will be used.
 """
 Base.@kwdef mutable struct Degradation
-    calendar_fade_coefficient::Real = 2.46E-03
-    cycle_fade_coefficient::Real = 7.82E-05
-    time_exponent::Real = 0.5
+    calendar_fade_coefficient::Real = 2.55E-03
+    cycle_fade_coefficient::Real = 9.83E-05
+    time_exponent::Real = 0.42
     installed_cost_per_kwh_declination_rate::Real = 0.05
     maintenance_strategy::String = "augmentation"  # one of ["augmentation", "replacement"]
     maintenance_cost_per_kwh::Vector{<:Real} = Real[]
