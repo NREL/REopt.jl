@@ -41,9 +41,10 @@
 - `year_one_thermal_to_tes_series_mmbtu_per_hour` Thermal power to TES time-series array [MMBtu/hr]
 - `year_one_thermal_to_waste_series_mmbtu_per_hour` Thermal power wasted/unused/vented time-series array [MMBtu/hr]
 - `year_one_thermal_to_load_series_mmbtu_per_hour` Thermal power to serve the heating load time-series array [MMBtu/hr]
-- `year_one_chp_fuel_cost_before_tax` Fuel cost from fuel consumed by the CHP system [\$]
-- `lifecycle_chp_fuel_cost_after_tax` Fuel cost from fuel consumed by the CHP system, after tax [\$]
+- `year_one_chp_fuel_cost_before_tax` Cost of fuel consumed by the CHP system in year one [\$]
+- `lifecycle_chp_fuel_cost_after_tax` Present value of cost of fuel consumed by the CHP system, after tax [\$]
 - `year_one_chp_standby_cost_before_tax` CHP standby charges in year one [\$] 
+- `lifecycle_chp_standby_cost_after_tax` Present value of all CHP standby charges, after tax.
 """
 function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	# Adds the `CHP` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
