@@ -132,7 +132,7 @@ end
             2) CHP never exports if chp.can_wholesale and chp.can_net_meter inputs are False (default)
             3) CHP does not "curtail", i.e. send power to a load bank when chp.can_curtail is False (default)
             4) CHP min_turn_down_pct is ignored during an outage
-            5) **Not until cooling is added:** Cooling load gets zeroed out during the outage period
+            5) Cooling tech production gets zeroed out during the outage period because we ignore the cooling load balance for outage
             6) Unavailability intervals that intersect with grid-outages get ignored
             7) Unavailability intervals that do not intersect with grid-outages result in no CHP production
         """
@@ -169,15 +169,15 @@ end
         chp_total_elec_prod = results["CHP"]["year_one_electric_production_series_kw"]
         chp_to_load = results["CHP"]["year_one_to_load_series_kw"]
         chp_export = results["CHP"]["year_one_to_grid_series_kw"]
-        #cooling_elec_load = results["LoadProfileChillerThermal"]["year_one_chiller_electric_load_kw"]
+        cooling_elec_consumption = results["ExistingChiller"]["year_one_electric_consumption_series"]
     
         # The values compared to the expected values
-        #@test sum([(chp_to_load[i] - tot_elec_load[i]) for i in outage_start:outage_end])) == 0.0
+        @test sum([(chp_to_load[i] - tot_elec_load[i]*data["ElectricLoad"]["critical_load_pct"]) for i in outage_start:outage_end]) ≈ 0.0 atol=0.001
         critical_load = tot_elec_load[outage_start:outage_end] * data["ElectricLoad"]["critical_load_pct"]
         @test sum(chp_to_load[outage_start:outage_end]) ≈ sum(critical_load) atol=0.1
         @test sum(chp_export) == 0.0
         @test sum(chp_total_elec_prod) ≈ sum(chp_to_load) atol=1.0e-5*sum(chp_total_elec_prod)
-        #@test sum(cooling_elec_load[outage_start:outage_end]) == 0.0 
+        @test sum(cooling_elec_consumption[outage_start:outage_end]) == 0.0
         @test sum(chp_total_elec_prod[unavail_2_start:unavail_2_end]) == 0.0  
     end
 

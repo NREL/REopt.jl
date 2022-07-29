@@ -27,6 +27,9 @@
     "DomesticHotWaterLoad": {
         "doe_reference_name": "Hospital"
     },
+    "CoolingLoad": {
+        "doe_reference_name": "Hospital"
+    },
     "ExistingBoiler": {
         "fuel_cost_per_mmbtu": 5.0
     },
