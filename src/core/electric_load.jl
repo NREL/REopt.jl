@@ -86,6 +86,11 @@
     - Supermarket
     - Warehouse
     - FlatLoad
+    - FlatLoad_24_5
+    - FlatLoad_16_7
+    - FlatLoad_16_5
+    - FlatLoad_8_7
+    - FlatLoad_8_5   
 
     Each `city` and `doe_reference_name` combination has a default `annual_kwh`, or you can provide your
     own `annual_kwh` or `monthly_totals_kwh` and the reference profile will be scaled appropriately.
@@ -503,7 +508,12 @@ function BuiltInElectricLoad(
     end
 
     if isnothing(annual_kwh)
-        annual_kwh = annual_loads[city][lowercase(buildingtype)]
+        # Use FlatLoad annual_kwh from data for all types of FlatLoads because we don't have separate data for e.g. FlatLoad_16_7
+        if occursin("FlatLoad", buildingtype)
+            annual_kwh = annual_loads[city][lowercase("FlatLoad")]
+        else
+            annual_kwh = annual_loads[city][lowercase(buildingtype)]
+        end
     end
 
     built_in_load("electric", city, buildingtype, year, annual_kwh, monthly_totals_kwh)

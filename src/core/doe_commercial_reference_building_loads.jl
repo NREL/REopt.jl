@@ -45,6 +45,11 @@ const default_buildings = [
     "Supermarket",
     "Warehouse",
     "FlatLoad",
+    "FlatLoad_24_5",
+    "FlatLoad_16_7",
+    "FlatLoad_16_5",
+    "FlatLoad_8_7",
+    "FlatLoad_8_5"    
 ]
 
 
@@ -120,8 +125,12 @@ function built_in_load(type::String, city::String, buildingtype::String,
     lib_path = joinpath(dirname(@__FILE__), "..", "..", "data", "load_profiles", type)
 
     profile_path = joinpath(lib_path, string("crb8760_norm_" * city * "_" * buildingtype * ".dat"))
-    normalized_profile = vec(readdlm(profile_path, '\n', Float64, '\n'))
-    
+    if occursin("FlatLoad", buildingtype)
+        normalized_profile = custom_normalized_flatload(buildingtype, year)
+    else 
+        normalized_profile = vec(readdlm(profile_path, '\n', Float64, '\n'))
+    end
+
     if length(monthly_energies) == 12
         annual_energy = 1.0  # do not scale based on annual_energy
         t0 = 1
@@ -222,3 +231,60 @@ function blend_and_scale_doe_profiles(
     end
     sum(profiles)
 end
+
+function custom_normalized_flatload(doe_reference_name, year)
+    # built in profiles are assumed to be hourly
+    periods = 8760
+    # get datetimes of all hours 
+    if Dates.isleapyear(year)
+        end_year_datetime = DateTime(string(year)*"-12-30T23:00:00")
+    else
+        end_year_datetime = DateTime(string(year)*"-12-31T23:00:00")
+    end
+    dt_hourly = collect(DateTime(string(year)*"-01-01T00:00:00"):Hour(1):end_year_datetime)
+
+    # create boolean masks for weekday and hour of day filters
+    weekday_mask = convert(Vector{Int}, ones(periods))
+    hour_mask = convert(Vector{Int}, ones(periods))
+    weekends = [6,7]
+    hour_range_16 = 6:21  # DateTime hours are 0-indexed, so this is 6am (7th hour of the day) to 10pm (end of 21st hour)
+    hour_range_8 = 9:16  # This is 9am (10th hour of the day) to 5pm (end of 16th hour)
+    if !(doe_reference_name == "FlatLoad")
+        for (i,dt) in enumerate(dt_hourly)
+            # Zero out no-weekend operation
+            if doe_reference_name in ["FlatLoad_24_5","FlatLoad_16_5","FlatLoad_8_5"]
+                if Dates.dayofweek(dt) in weekends
+                    weekday_mask[i] = 0
+                end
+            end
+            # Assign 1's for 16 or 8 hour shift profiles
+            if doe_reference_name in ["FlatLoad_16_5","FlatLoad_16_7"]
+                if !(Dates.hour(dt) in hour_range_16)
+                    hour_mask[i] = 0
+                end
+            elseif doe_reference_name in ["FlatLoad_8_5","FlatLoad_8_7"]
+                if !(Dates.hour(dt) in hour_range_8)
+                    hour_mask[i] = 0
+                end
+            end
+        end
+    end
+    # combine masks to a dt_hourly where 1 is on and 0 is off
+    dt_hourly_binary = weekday_mask .* hour_mask
+    # convert combined masks to a normalized profile
+    sum_dt_hourly_binary = sum(dt_hourly_binary)
+    normalized_profile = [i/sum_dt_hourly_binary for i in dt_hourly_binary]
+    return normalized_profile
+end
+
+using Dates
+yr = 2017
+dt_hourly = collect(DateTime(string(yr)*"-01-01T00:00:00"):Hour(1):DateTime(string(yr)*"-12-30T23:00:00"))
+weekday_mask = zeros(8760)
+hour_mask = zeros(8760)
+for (i,dt) in enumerate(dt_hourly)
+    if !(Dates.dayofweek(dt) in [6,7])
+        weekday_mask[i] = 1
+    end
+end
+
