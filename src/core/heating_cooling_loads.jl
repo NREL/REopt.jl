@@ -702,7 +702,12 @@ function BuiltInDomesticHotWaterLoad(
         error("buildingtype $(buildingtype) not in $(default_buildings).")
     end
     if isnothing(annual_mmbtu)
-        annual_mmbtu = dhw_annual_mmbtu[city][buildingtype]
+        # Use FlatLoad annual_mmbtu from data for all types of FlatLoads because we don't have separate data for e.g. FlatLoad_16_7
+        if occursin("FlatLoad", buildingtype)
+            annual_mmbtu = dhw_annual_mmbtu[city]["FlatLoad"]
+        else        
+            annual_mmbtu = dhw_annual_mmbtu[city][buildingtype]
+        end
     end
     if length(monthly_mmbtu) == 12
         monthly_mmbtu = convert(Vector{Real}, monthly_mmbtu)
@@ -1033,7 +1038,12 @@ function BuiltInSpaceHeatingLoad(
         error("buildingtype $(buildingtype) not in $(default_buildings).")
     end
     if isnothing(annual_mmbtu)
-        annual_mmbtu = spaceheating_annual_mmbtu[city][buildingtype]
+        # Use FlatLoad annual_mmbtu from data for all types of FlatLoads because we don't have separate data for e.g. FlatLoad_16_7
+        if occursin("FlatLoad", buildingtype)
+            annual_mmbtu = spaceheating_annual_mmbtu[city]["FlatLoad"]
+        else
+            annual_mmbtu = spaceheating_annual_mmbtu[city][buildingtype]
+        end
     end
     built_in_load("space_heating", city, buildingtype, year, annual_mmbtu, monthly_mmbtu)
 end
@@ -1366,7 +1376,12 @@ function BuiltInCoolingLoad(
         existing_chiller_cop = get_existing_chiller_default_cop()
     end
     if isnothing(annual_tonhour)
-        annual_kwh = cooling_annual_kwh[city][buildingtype]
+        # Use FlatLoad annual_kwh from data for all types of FlatLoads because we don't have separate data for e.g. FlatLoad_16_7
+        if occursin("FlatLoad", buildingtype)
+            annual_kwh = cooling_annual_kwh[city]["FlatLoad"]
+        else
+            annual_kwh = cooling_annual_kwh[city][buildingtype]
+        end
     else
         annual_kwh = annual_tonhour * KWH_THERMAL_PER_TONHOUR / existing_chiller_cop
     end
