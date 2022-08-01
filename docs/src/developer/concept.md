@@ -15,7 +15,7 @@ The REopt Model is built via the [build_reopt!](@ref) method. However, the [run_
 The `max_kw` input value for any technology is considered to be the maximum _additional_ capacity that may be installed beyond the `existing_kw`. Note also that the `Site` space constraints (`roof_squarefeet` and `land_acres`) for `PV` technologies can be less than the provided `max_kw` value.
 
 ### Lower size limits
-The `min_kw` input value for any technology sets the lower bound on the capacity. If `min_kw` is non-zero then the model will be forced to choose at least that system size. The `min_kw` value is set equal to the `existing_kw` value in the Business As Usual scenario.
+The `min_kw` input value for any technology sets the lower bound on the _additional_ capacity that may be installed beyond the `existing_kw`. If `min_kw` is non-zero then the model will be forced to choose at least that system size. The `min_kw` value is set equal to the `existing_kw` value in the Business As Usual scenario.
 
 # Business As Usual Scenario
 In order to calculate the Net Present Value of the optimal solution, as well as other baseline metrics, one can optionally run the Business As Usual (BAU) scenario. When an array of `JuMP.Model`s is provided to `run_reopt` the BAU scenario is also run. For example:
