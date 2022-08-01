@@ -277,14 +277,3 @@ function custom_normalized_flatload(doe_reference_name, year)
     return normalized_profile
 end
 
-using Dates
-yr = 2017
-dt_hourly = collect(DateTime(string(yr)*"-01-01T00:00:00"):Hour(1):DateTime(string(yr)*"-12-30T23:00:00"))
-weekday_mask = zeros(8760)
-hour_mask = zeros(8760)
-for (i,dt) in enumerate(dt_hourly)
-    if !(Dates.dayofweek(dt) in [6,7])
-        weekday_mask[i] = 1
-    end
-end
-

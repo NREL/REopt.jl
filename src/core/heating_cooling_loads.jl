@@ -36,6 +36,7 @@
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
     fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[] # Vector of hot water fuel loads [mmbtu/hour]. Length must equal 8760 * `Settings.time_steps_per_hour`
+    addressable_load_fraction::Union{Real, Real[]} = 1.0  # Fraction of input fuel load which is addressable by heating technologies
 ```
 
 There are many ways in which a DomesticHotWaterLoad can be defined:
@@ -55,11 +56,11 @@ struct DomesticHotWaterLoad
         blended_doe_reference_percents::Array{<:Real,1} = Real[],
         annual_mmbtu::Union{Real, Nothing} = nothing,
         monthly_mmbtu::Array{<:Real,1} = Real[],
-        # addressable_load_fraction,  # TODO
+        addressable_load_fraction::Union{Real, Real[]} = 1.0,
         fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
         time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
-        latitude::Real=0.0,
-        longitude::Real=0.0
+        latitude::Real = 0.0,
+        longitude::Real = 0.0
     )
         if length(fuel_loads_mmbtu_per_hour) > 0
 
@@ -67,19 +68,20 @@ struct DomesticHotWaterLoad
                 throw(@error "Provided domestic hot water load does not match the time_steps_per_hour.")
             end
 
-            loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY)
+            loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY) .* addressable_load_fraction
 
             if !isempty(doe_reference_name) || length(blended_doe_reference_names) > 0
                 @warn "DomesticHotWaterLoad fuel_loads_mmbtu_per_hour was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
             end
 
         elseif !isempty(doe_reference_name)
-            loads_kw = BuiltInDomesticHotWaterLoad(city, doe_reference_name, latitude, longitude, 2017, annual_mmbtu, monthly_mmbtu)
+            loads_kw = BuiltInDomesticHotWaterLoad(city, doe_reference_name, latitude, longitude, 2017, annual_mmbtu, monthly_mmbtu, addressable_load_fraction)
             if length(blended_doe_reference_names) > 0
                 @warn "DomesticHotWaterLoad doe_reference_name was provided, so blended_doe_reference_names will be ignored."
             end
         elseif length(blended_doe_reference_names) > 0 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
+            # TODO addressable_load_fraction does not apply with blended_doe_reference_names
             loads_kw = blend_and_scale_doe_profiles(BuiltInDomesticHotWaterLoad, latitude, longitude, 2017, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_mmbtu, monthly_mmbtu)
@@ -111,6 +113,7 @@ end
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
     fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[] # Vector of space heating fuel loads [mmbtu/hr]. Length must equal 8760 * `Settings.time_steps_per_hour`
+    addressable_load_fraction::Union{Real, Real[]} = 1.0  # Fraction of input fuel load which is addressable by heating technologies
 ```
 
 There are many ways to define a `SpaceHeatingLoad`:
@@ -141,11 +144,11 @@ struct SpaceHeatingLoad
         blended_doe_reference_percents::Array{<:Real,1} = Real[],
         annual_mmbtu::Union{Real, Nothing} = nothing,
         monthly_mmbtu::Array{<:Real,1} = Real[],
-        # addressable_load_fraction,  # TODO
+        addressable_load_fraction::Union{Real, Real[]} = 1.0,
         fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
         time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
-        latitude::Real=0.0,
-        longitude::Real=0.0
+        latitude::Real = 0.0,
+        longitude::Real = 0.0
     )
         if length(fuel_loads_mmbtu_per_hour) > 0
 
@@ -153,19 +156,20 @@ struct SpaceHeatingLoad
                 throw(@error "Provided space heating load does not match the time_steps_per_hour.")
             end
 
-            loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY)
+            loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY) .* addressable_load_fraction
 
             if !isempty(doe_reference_name) || length(blended_doe_reference_names) > 0
                 @warn "SpaceHeatingLoad fuel_loads_mmbtu_per_hour was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
             end
 
         elseif !isempty(doe_reference_name)
-            loads_kw = BuiltInSpaceHeatingLoad(city, doe_reference_name, latitude, longitude, 2017, annual_mmbtu, monthly_mmbtu)
+            loads_kw = BuiltInSpaceHeatingLoad(city, doe_reference_name, latitude, longitude, 2017, annual_mmbtu, monthly_mmbtu, addressable_load_fraction)
             if length(blended_doe_reference_names) > 0
                 @warn "SpaceHeatingLoad doe_reference_name was provided, so blended_doe_reference_names will be ignored."
             end
         elseif length(blended_doe_reference_names) > 0 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
+            # TODO addressable_load_fraction does not apply with blended_doe_reference_names
             loads_kw = blend_and_scale_doe_profiles(BuiltInSpaceHeatingLoad, latitude, longitude, 2017, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_mmbtu, monthly_mmbtu)
@@ -387,7 +391,8 @@ function BuiltInDomesticHotWaterLoad(
     longitude::Real,
     year::Int,
     annual_mmbtu::Union{Real, Nothing}=nothing,
-    monthly_mmbtu::Vector{<:Real}=Real[]
+    monthly_mmbtu::Vector{<:Real}=Real[],
+    addressable_load_fraction::Union{Real, Real[]}
     )
     dhw_annual_mmbtu = Dict(
         "Miami" => Dict(
@@ -708,9 +713,11 @@ function BuiltInDomesticHotWaterLoad(
         else        
             annual_mmbtu = dhw_annual_mmbtu[city][buildingtype]
         end
+    else
+        annual_mmbtu .*= addressable_load_fraction    
     end
     if length(monthly_mmbtu) == 12
-        monthly_mmbtu = convert(Vector{Real}, monthly_mmbtu)
+        monthly_mmbtu = convert(Vector{Real}, monthly_mmbtu) .* addressable_load_fraction
     end
     built_in_load("domestic_hot_water", city, buildingtype, year, annual_mmbtu, monthly_mmbtu)
 end
@@ -724,6 +731,7 @@ function BuiltInSpaceHeatingLoad(
     year::Int,
     annual_mmbtu::Union{Real, Nothing}=nothing,
     monthly_mmbtu::Vector{<:Real}=Real[],
+    addressable_load_fraction::Union{Real, Real[]} = 1.0
     )
     spaceheating_annual_mmbtu = Dict(
         "Miami" => Dict(
@@ -1044,6 +1052,11 @@ function BuiltInSpaceHeatingLoad(
         else
             annual_mmbtu = spaceheating_annual_mmbtu[city][buildingtype]
         end
+    else
+        annual_mmbtu .*= addressable_load_fraction
+    end
+    if length(monthly_mmbtu) == 12
+        monthly_mmbtu = convert(Vector{Real}, monthly_mmbtu) .* addressable_load_fraction
     end
     built_in_load("space_heating", city, buildingtype, year, annual_mmbtu, monthly_mmbtu)
 end
