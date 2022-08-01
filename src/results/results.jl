@@ -125,6 +125,8 @@ Combine two results dictionaries into one using BAU and optimal scenario results
 function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAUScenario)
     bau_outputs = (
         ("Financial", "lcc"),
+        ("Financial", "lifecycle_emissions_cost_climate"),
+        ("Financial", "lifecycle_emissions_cost_health"),
         ("ElectricTariff", "year_one_energy_cost_before_tax"),
         ("ElectricTariff", "year_one_demand_cost_before_tax"),
         ("ElectricTariff", "year_one_fixed_cost_before_tax"),
@@ -175,8 +177,6 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("Site", "year_one_emissions_from_elec_grid_tonnes_NOx"),
         ("Site", "year_one_emissions_from_elec_grid_tonnes_SO2"),
         ("Site", "year_one_emissions_from_elec_grid_tonnes_PM25"),
-        ("Site", "lifecycle_emissions_cost_CO2"),
-        ("Site", "lifecycle_emissions_cost_health"),
         ("Site", "lifecycle_emissions_tonnes_CO2"),
         ("Site", "lifecycle_emissions_tonnes_NOx"),
         ("Site", "lifecycle_emissions_tonnes_SO2"),
@@ -221,7 +221,7 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
     # first, remove climate costs from the output NPV, if they were previously included in LCC/NPV calcs:
     npv_without_modeled_climate_costs = opt["Financial"]["npv"]
     if p.s.settings.include_climate_in_objective == true
-        npv_without_modeled_climate_costs -= (bau["Site"]["lifecycle_emissions_cost_CO2"] - opt["Site"]["lifecycle_emissions_cost_CO2"])
+        npv_without_modeled_climate_costs -= (bau["Financial"]["lifecycle_emissions_cost_climate"] - opt["Financial"]["lifecycle_emissions_cost_climate"])
     end
     # we want to calculate the breakeven year 1 cost of CO2 (usd per tonne) that would yield an npv of 0, holding all other inputs constant
     # (back-calculating using the equation for m[:Lifecycle_Emissions_Cost_CO2] in "add_lifecycle_emissions_calcs" in emissions_constraints.jl)
