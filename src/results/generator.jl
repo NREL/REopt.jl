@@ -31,7 +31,7 @@
 `Generator` results keys:
 - `size_kw` Optimal generator capacity
 - `lifecycle_fixed_om_cost_after_tax` Lifecycle fixed operations and maintenance cost in present value, after tax
-- `year_one_fixed_om_cost__before_tax` fixed operations and maintenance cost over the first year, before considering tax benefits
+- `year_one_fixed_om_cost_before_tax` fixed operations and maintenance cost over the first year, before considering tax benefits
 - `lifecycle_variable_om_cost_after_tax` Lifecycle variable operations and maintenance cost in present value, after tax
 - `year_one_variable_om_cost_before_tax` variable operations and maintenance cost over the first year, before considering tax benefits
 - `lifecycle_fuel_cost_after_tax` Lifecycle fuel cost in present value, after tax
