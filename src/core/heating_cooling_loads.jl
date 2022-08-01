@@ -713,7 +713,7 @@ function BuiltInDomesticHotWaterLoad(
             annual_mmbtu = dhw_annual_mmbtu[city][buildingtype]
         end
     else
-        annual_mmbtu .*= addressable_load_fraction    
+        annual_mmbtu *= addressable_load_fraction    
     end
     if length(monthly_mmbtu) == 12
         monthly_mmbtu = convert(Vector{Real}, monthly_mmbtu) .* addressable_load_fraction
@@ -1052,7 +1052,7 @@ function BuiltInSpaceHeatingLoad(
             annual_mmbtu = spaceheating_annual_mmbtu[city][buildingtype]
         end
     else
-        annual_mmbtu .*= addressable_load_fraction
+        annual_mmbtu *= addressable_load_fraction
     end
     if length(monthly_mmbtu) == 12
         monthly_mmbtu = convert(Vector{Real}, monthly_mmbtu) .* addressable_load_fraction
