@@ -199,6 +199,7 @@ function blend_and_scale_doe_profiles(
     city::String = "",
     annual_energy::Union{Real, Nothing} = nothing,
     monthly_energies::Array{<:Real,1} = Real[],
+    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}} = 1.0
     )
 
     @assert sum(blended_doe_reference_percents) ≈ 1 "The sum of the blended_doe_reference_percents must equal 1"
@@ -210,8 +211,14 @@ function blend_and_scale_doe_profiles(
         city = find_ashrae_zone_city(latitude, longitude)  # avoid redundant look-ups
     end
     profiles = Array[]  # collect the built in profiles
-    for name in blended_doe_reference_names
-        push!(profiles, constructor(city, name, latitude, longitude, year, annual_energy, monthly_energies))
+    if constructor in [BuiltInSpaceHeatingLoad, BuiltInDomesticHotWaterLoad]
+        for name in blended_doe_reference_names
+            push!(profiles, constructor(city, name, latitude, longitude, year, addressable_load_fraction, annual_energy, monthly_energies))
+        end
+    else
+        for name in blended_doe_reference_names
+            push!(profiles, constructor(city, name, latitude, longitude, year, annual_energy, monthly_energies))
+        end
     end
     if isnothing(annual_energy) # then annual_energy should be the sum of all the profiles' annual kwhs
         # we have to rescale the built in profiles to the total_kwh by normalizing them with their
