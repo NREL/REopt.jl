@@ -1,4 +1,9 @@
 # REopt Changelog
+
+## Develop
+### Changed
+- Change default value for `wind.jl` `operating_reserve_required_pct` from 0.1 to 0.5 (only applicable when off_grid_flag=True.)
+
 ## Develop
 ### Changed
 - Don't trigger GitHub 'Run test' workflow on a push that only changes README.md and/or CHANGELOG.md
