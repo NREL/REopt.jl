@@ -1006,7 +1006,7 @@ end
     
     """
     # Load base inputs
-    input_data = JSON.parsefile("scenarios/test_ghp_inputs.json")
+    input_data = JSON.parsefile("scenarios/ghp_inputs.json")
     
     # Modify ["GHP"]["ghpghx_inputs"] for running GhpGhx.jl
     # Heat pump performance maps
@@ -1039,14 +1039,14 @@ end
     
     ghp_option_chosen = results["GHP"]["ghp_option_chosen"]
     
-    # Test GHP serving addressable fraction of space heating with VAV efficiency thermal knockdown
+    # Test GHP serving space heating with VAV thermal efficiency improvements
     heating_served_mmbtu = sum(s.ghp_option_list[ghp_option_chosen].heating_thermal_kw / REopt.KWH_PER_MMBTU)
     expected_heating_served_mmbtu = 12000 * 0.8 * 0.85  # (fuel_mmbtu * boiler_effic * space_heating_efficiency_thermal_factor)
     @test round(heating_served_mmbtu, digits=1) ≈ expected_heating_served_mmbtu atol=1.0
     
     # Boiler serves all of the DHW load, no DHW thermal reduction due to GHP retrofit
     boiler_served_mmbtu = sum(results["ExistingBoiler"]["year_one_thermal_production_mmbtu_per_hour"])
-    expected_boiler_served_mmbtu = 3000 * 0.8 #* 0.9 (fuel_mmbtu * boiler_effic)
+    expected_boiler_served_mmbtu = 3000 * 0.8 # (fuel_mmbtu * boiler_effic)
     @test round(boiler_served_mmbtu, digits=1) ≈ expected_boiler_served_mmbtu atol=1.0
     
     # LoadProfileChillerThermal cooling thermal is 1/cooling_efficiency_thermal_factor of GHP cooling thermal production
@@ -1056,8 +1056,8 @@ end
     
     # Custom heat pump COP map is used properly
     ghp_option_chosen = results["GHP"]["ghp_option_chosen"]
-    heating_cop_avg = s.ghp_option_list[ghp_option_chosen].ghpghx_responses[ghp_option_chosen]["outputs"]["heating_cop_avg"]
-    cooling_cop_avg = s.ghp_option_list[ghp_option_chosen].ghpghx_responses[ghp_option_chosen]["outputs"]["cooling_cop_avg"]
+    heating_cop_avg = s.ghp_option_list[ghp_option_chosen].ghpghx_response["outputs"]["heating_cop_avg"]
+    cooling_cop_avg = s.ghp_option_list[ghp_option_chosen].ghpghx_response["outputs"]["cooling_cop_avg"]
     # Average COP which includes pump power should be lower than Heat Pump only COP specified by the map
     @test heating_cop_avg <= 4.0
     @test cooling_cop_avg <= 8.0
