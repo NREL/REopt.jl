@@ -389,8 +389,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             get_ghpghx_from_input = true
         end        
     elseif haskey(d, "GHP") && !haskey(d["GHP"],"building_sqft")
-        @error("If evaluating GHP you must enter a building_sqft")
-    end            
+        error("If evaluating GHP you must enter a building_sqft")
+    end
     # Modify Heating and Cooling loads for GHP retrofit to account for HVAC VAV efficiency gains
     if eval_ghp
         # Assign efficiency_thermal_factors if not specified (and if applicable to building type and climate zone)
@@ -466,14 +466,16 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             @info "GhpGhx.jl model solved" #with status $(results["status"])."
             append!(ghp_option_list, [GHP(ghpghx_response, d["GHP"])])
             # Print out ghpghx_response for loading into a future run without running GhpGhx.jl again
-            open("scenarios/ghpghx_response.json","w") do f
-                JSON.print(f, ghpghx_response)
-            end
+            # open("scenarios/ghpghx_response.json","w") do f
+            #     JSON.print(f, ghpghx_response)
+            # end
         end
     # If ghpghx_responses is included in inputs, do NOT run GhpGhx.jl model and use already-run ghpghx result as input to REopt
     elseif eval_ghp && get_ghpghx_from_input
+        ghp_inputs_removed_ghpghx_responses = deepcopy(d["GHP"])
+        pop!(ghp_inputs_removed_ghpghx_responses, "ghpghx_responses")
         for ghpghx_response in get(d["GHP"], "ghpghx_responses", [])
-            append!(ghp_option_list, [GHP(ghpghx_response, d["GHP"])])
+            append!(ghp_option_list, [GHP(ghpghx_response, ghp_inputs_removed_ghpghx_responses)])
         end
     end
 

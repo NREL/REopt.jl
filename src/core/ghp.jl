@@ -91,7 +91,7 @@ Base.@kwdef mutable struct GHP <: AbstractGHP
     space_heating_efficiency_thermal_factor::Float64 = NaN  # Default depends on building and location
     cooling_efficiency_thermal_factor::Float64 = NaN # Default depends on building and location
     ghpghx_inputs::AbstractVector{Dict} = Dict[]
-    ghpghx_responses::AbstractVector{Dict} = Dict[]
+    ghpghx_response::Dict = Dict()
     can_serve_dhw::Bool = false
 
     macrs_option_years::Int = 5
@@ -128,7 +128,7 @@ end
 
 
 function GHP(response::Dict, d::Dict)
-    ghp = GHP(; dictkeys_tosymbols(d)...)
+    ghp = GHP(; ghpghx_response = response, dictkeys_tosymbols(d)...)
     # Inputs of GhpGhx.jl, which are still needed in REopt
     ghp.heating_thermal_kw = response["inputs"]["heating_thermal_load_mmbtu_per_hr"] * KWH_PER_MMBTU
     ghp.cooling_thermal_kw = response["inputs"]["cooling_thermal_load_ton"] * KWH_THERMAL_PER_TONHOUR
