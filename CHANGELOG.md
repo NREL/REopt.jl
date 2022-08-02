@@ -1,5 +1,30 @@
-# REopt Changelog
+# Changelog
+All notable changes to this project will be documented in this file.
 
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## Guidelines
+- When making a Pull Request into `develop` start a new double-hash header for "Develop - YYYY-MM-DD"
+- When making a Pull Request into `master` change "Develop" to the next version number
+
+### Formatting
+- Use **bold** markup for field and model names (i.e. **outage_start_time_step**)
+- Use `code` markup for  REopt-specific file names, classes and endpoints (e.g. `src/REopt.jl`)
+- Use _italic_ for code terms (i.e. _list_)
+- Prepend change with tag(s) directing where it is in the repository:  
+`src`,`constraints`,`*.jl`
+
+Classify the change according to the following categories:
+    
+    ### Major Updates
+    ### Minor Updates
+    ##### Added
+    ##### Changed
+    ##### Fixed
+    ##### Deprecated
+    ##### Removed
+    ### Patches
 ## Develop
 ### Changed
 - Change default value for `wind.jl` `operating_reserve_required_pct` from 0.1 to 0.5 (only applicable when off_grid_flag=True.)
