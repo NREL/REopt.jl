@@ -46,6 +46,9 @@ struct Scenario <: AbstractScenario
     flexible_hvac::Union{FlexibleHVAC, Nothing}
     existing_chiller::Union{ExistingChiller, Nothing}
     absorption_chiller::Union{AbsorptionChiller, Nothing}
+    ghp_option_list::Array{Union{GHP, Nothing}, 1}  # List of GHP objects (often just 1 element, but can be more)
+    heating_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
+    cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
 end
 
 """
@@ -68,8 +71,9 @@ A Scenario struct can contain the following keys:
 - [FlexibleHVAC](@ref) (optional)
 - [ExistingChiller](@ref) (optional)
 - [AbsorptionChiller](@ref) (optional)
+- [GHP](@ref) (optional, can be Array)
 
-All values of `d` are expected to be `Dicts` except for `PV`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays).
+All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
 
 !!! note 
     Set `flex_hvac_from_json=true` if `FlexibleHVAC` values were loaded in from JSON (necessary to 
@@ -371,12 +375,114 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             end
             chiller_inputs = merge(chiller_inputs, dictkeys_tosymbols(d["ExistingChiller"]))
         else
-            chiller_inputs[:cop] = 1.0
+            chiller_inputs[:cop] = cooling_load.existing_chiller_cop
         end
         existing_chiller = ExistingChiller(; chiller_inputs...)
 
         if haskey(d, "AbsorptionChiller")
             absorption_chiller = AbsorptionChiller(; dictkeys_tosymbols(d["AbsorptionChiller"])...)
+        end
+    end
+
+    # GHP
+    ghp_option_list = []
+    heating_thermal_load_reduction_with_ghp_kw = zeros(8760 * settings.time_steps_per_hour)
+    cooling_thermal_load_reduction_with_ghp_kw = zeros(8760 * settings.time_steps_per_hour)
+    eval_ghp = false
+    get_ghpghx_from_input = false    
+    if haskey(d, "GHP") && haskey(d["GHP"],"building_sqft")
+        eval_ghp = true
+        if haskey(d["GHP"], "ghpghx_responses") && !isempty(d["GHP"]["ghpghx_responses"])
+            get_ghpghx_from_input = true
+        end        
+    elseif haskey(d, "GHP") && !haskey(d["GHP"],"building_sqft")
+        error("If evaluating GHP you must enter a building_sqft")
+    end
+    # Modify Heating and Cooling loads for GHP retrofit to account for HVAC VAV efficiency gains
+    if eval_ghp
+        # Assign efficiency_thermal_factors if not specified (and if applicable to building type and climate zone)
+        for factor in [("space_heating_efficiency_thermal_factor", "heating"), ("cooling_efficiency_thermal_factor", "cooling")]
+            if isnan(d["GHP"][factor[1]])
+                assign_thermal_factor!(d, factor[2])
+            end
+        end
+        heating_thermal_load_reduction_with_ghp_kw = space_heating_load.loads_kw * (1.0 - d["GHP"]["space_heating_efficiency_thermal_factor"])
+        cooling_thermal_load_reduction_with_ghp_kw = cooling_load.loads_kw_thermal * (1.0 - d["GHP"]["cooling_efficiency_thermal_factor"])
+    end
+    # Call GhpGhx.jl module if only ghpghx_inputs is given, otherwise use ghpghx_responses
+    if eval_ghp && !(get_ghpghx_from_input)
+        if d["GHP"]["ghpghx_inputs"] in [nothing, []]
+            number_of_ghpghx = 1
+            d["GHP"]["ghpghx_inputs"] = [Dict()]
+        else
+            number_of_ghpghx = length(d["GHP"]["ghpghx_inputs"])
+        end
+        # Call PVWatts for hourly dry-bulb outdoor air temperature
+        ambient_temperature_f = []
+        if !haskey(d["GHP"]["ghpghx_inputs"][1], "ambient_temperature_f") || isempty(d["GHP"]["ghpghx_inputs"][1]["ambient_temperature_f"])
+            url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
+                    "&lat=", d["Site"]["latitude"] , "&lon=", d["Site"]["longitude"], "&tilt=", d["Site"]["latitude"],
+                    "&system_capacity=1", "&azimuth=", 180, "&module_type=", 0,
+                    "&array_type=", 0, "&losses=", 0.14, "&dc_ac_ratio=", 1.1,
+                    "&gcr=", 0.4, "&inv_eff=", 99, "&timeframe=", "hourly", "&dataset=nsrdb",
+                    "&radius=", 100)
+            try
+                @info "Querying PVWatts for ambient temperature"
+                r = HTTP.get(url)
+                response = JSON.parse(String(r.body))
+                if r.status != 200
+                    error("Bad response from PVWatts: $(response["errors"])")
+                end
+                @info "PVWatts success."
+                temp_c = get(response["outputs"], "tamb", [])
+                if length(temp_c) != 8760 || isempty(temp_c)
+                    @error "PVWatts did not return a valid temperature profile. Got $temp_c"
+                end
+                ambient_temperature_f = temp_c * 1.8 .+ 32.0
+            catch e
+                @error "Error occurred when calling PVWatts: $e"
+            end
+        end
+        
+        for i in 1:number_of_ghpghx
+            ghpghx_inputs = d["GHP"]["ghpghx_inputs"][i]
+            d["GHP"]["ghpghx_inputs"][i]["ambient_temperature_f"] = ambient_temperature_f
+            # Only SpaceHeating portion of Heating Load gets served by GHP, unless allowed by can_serve_dhw
+            if get(ghpghx_inputs, "heating_thermal_load_mmbtu_per_hr", []) in [nothing, []]
+                if d["GHP"]["can_serve_dhw"]
+                    ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = (space_heating_load.loads_kw + dhw_load.loads_kw - heating_thermal_load_reduction_with_ghp_kw)  / KWH_PER_MMBTU
+                else
+                    ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = (space_heating_load.loads_kw - heating_thermal_load_reduction_with_ghp_kw) / KWH_PER_MMBTU
+                end
+            end
+            if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
+                ghpghx_inputs["cooling_thermal_load_ton"] = (cooling_load.loads_kw_thermal - cooling_thermal_load_reduction_with_ghp_kw)  / KWH_THERMAL_PER_TONHOUR
+            end
+            # Update ground thermal conductivity based on climate zone if not user-input
+            if isnothing(get(ghpghx_inputs, "ground_thermal_conductivity_btu_per_hr_ft_f", nothing))
+                k_by_zone = deepcopy(GhpGhx.ground_k_by_climate_zone)
+                nearest_city, climate_zone = find_ashrae_zone_city(d["Site"]["latitude"], d["Site"]["longitude"]; get_zone=true)
+                ghpghx_inputs["ground_thermal_conductivity_btu_per_hr_ft_f"] = k_by_zone[climate_zone]
+            end
+            # Call GhpGhx.jl to size GHP and GHX
+            @info "Starting GhpGhx.jl" #with timeout of $(timeout) seconds..."
+            results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
+            # Create a dictionary of the results data needed for REopt
+            ghpghx_results = GhpGhx.get_results_for_reopt(results, inputs_params)
+            ghpghx_response = Dict([("inputs", ghpghx_inputs), ("outputs", ghpghx_results)])
+            @info "GhpGhx.jl model solved" #with status $(results["status"])."
+            append!(ghp_option_list, [GHP(ghpghx_response, d["GHP"])])
+            # Print out ghpghx_response for loading into a future run without running GhpGhx.jl again
+            # open("scenarios/ghpghx_response.json","w") do f
+            #     JSON.print(f, ghpghx_response)
+            # end
+        end
+    # If ghpghx_responses is included in inputs, do NOT run GhpGhx.jl model and use already-run ghpghx result as input to REopt
+    elseif eval_ghp && get_ghpghx_from_input
+        ghp_inputs_removed_ghpghx_responses = deepcopy(d["GHP"])
+        pop!(ghp_inputs_removed_ghpghx_responses, "ghpghx_responses")
+        for ghpghx_response in get(d["GHP"], "ghpghx_responses", [])
+            append!(ghp_option_list, [GHP(ghpghx_response, ghp_inputs_removed_ghpghx_responses)])
         end
     end
 
@@ -398,7 +504,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         chp,
         flexible_hvac,
         existing_chiller,
-        absorption_chiller
+        absorption_chiller,
+        ghp_option_list,
+        heating_thermal_load_reduction_with_ghp_kw,
+        cooling_thermal_load_reduction_with_ghp_kw
     )
 end
 

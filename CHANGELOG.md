@@ -7,6 +7,9 @@
 - Add schedule-based `FlatLoad`s which take the annual or monthly energy input and create a load profile based on the specified type of schedule. The load is "flat" (the same) for all hours within the chosen schedule.
 - Add `addressable_load_fraction` inputs for `SpaceHeatingLoad` and `DomesticHotWaterLoad` which effectively ignores a portion of the entered loads. These inputs can be scalars (applied to all time steps of the year), monthly (applied to the timesteps of each month), or of length 8760 * `time_steps_per_hour`.
 - Add a validation error for cooling in the case that the cooling electric load is greater than the total electric load.
+- Add geothermal heat pump (`GHP`), also known as ground-source heat pump (GSHP), to the REopt model for serving heating and cooling loads
+    - The unregistered `GhpGhx.jl` package (https://github.com/NREL/GhpGhx.jl) is now a dependency of REopt.jl, and this package sizes the ground heat exchanger (GHE) and gets the hourly electric consumption of the `GHP` for the specified heating and cooling loads that it serves.
+    - The `GHP` size and dispatch of the different `GHP` options is pre-determined by the `GhpGhx.jl` package, so the REopt model just chooses one or none of the GHP options with a binary decision variable.
 
 ## v0.17.0
 ### Added
