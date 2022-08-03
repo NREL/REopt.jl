@@ -320,7 +320,7 @@ function emissions_series(pollutant, region_abbr; time_steps_per_hour=1)
     end
 end
 
-function region_abbr_to_name(region_abbr::String)
+function region_abbr_to_name(region_abbr)
     lookup = Dict(
         "CA" => "California",
         "CENT" => "Central",
@@ -343,7 +343,7 @@ function region_abbr_to_name(region_abbr::String)
     return get(lookup, region_abbr, "")
 end
 
-function region_name_to_abbr(region_name::String)
+function region_name_to_abbr(region_name)
     lookup = Dict(
         "California" => "CA",
         "Central" => "CENT",
