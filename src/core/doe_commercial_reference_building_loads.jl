@@ -91,25 +91,22 @@ function find_ashrae_zone_city(lat, lon; get_zone=false)
     ]
     min_distance = 0.0
     nearest_city = ""
+    ashrae_zone = ""    
     for (i, c) in enumerate(cities)
         distance = sqrt((lat - c.lat)^2 + (lon - c.lon)^2)
         if i == 1
             min_distance = distance
             nearest_city = c.city
+            ashrae_zone = c.zone
         elseif distance < min_distance
             min_distance = distance
             nearest_city = c.city
+            ashrae_zone = c.zone
         end
     end
     
     # Optionally return both city and zone
     if get_zone
-        ashrae_zone = ""
-        for i in cities
-            if nearest_city  == i.city
-                ashrae_zone = i.zone
-            end
-        end
         if !isnothing(archgdal_city)
             nearest_city = archgdal_city
         end
