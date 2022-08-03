@@ -3,6 +3,10 @@
 ### Changed
 - Don't trigger GitHub 'Run test' workflow on a push that only changes README.md and/or CHANGELOG.md
 - Avoid triggering duplicate GitHub workflows. When pushing to a branch that's in a PR, only trigger tests on the push not on the PR sync also.
+### Added
+- Add schedule-based `FlatLoad`s which take the annual or monthly energy input and create a load profile based on the specified type of schedule. The load is "flat" (the same) for all hours within the chosen schedule.
+- Add `addressable_load_fraction` inputs for `SpaceHeatingLoad` and `DomesticHotWaterLoad` which effectively ignores a portion of the entered loads. These inputs can be scalars (applied to all time steps of the year), monthly (applied to the timesteps of each month), or of length 8760 * `time_steps_per_hour`.
+- Add a validation error for cooling in the case that the cooling electric load is greater than the total electric load.
 
 ## v0.17.0
 ### Added
