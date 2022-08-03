@@ -217,6 +217,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	m[:dvComfortLimitViolationCost] = 0.0
 	m[:TotalCHPStandbyCharges] = 0
 	m[:OffgridOtherCapexAfterDepr] = 0.0
+    m[:GHPCapCosts] = 0.0
+    m[:GHPOMCosts] = 0.0   
 
 	if !isempty(p.techs.all)
 		add_tech_size_constraints(m, p)
@@ -258,11 +260,15 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             add_thermal_load_constraints(m, p)  # split into heating and cooling constraints?
         end
 
+        if !isempty(p.ghp_options)
+            add_ghp_constraints(m, p)
+        end
+
         if !isempty(p.techs.pbi)
             @warn "adding binary variable(s) to model production based incentives"
             add_prod_incent_vars_and_constraints(m, p)
         end
-	end
+    end
 
 	add_elec_load_balance_constraints(m, p)
 
@@ -369,10 +375,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	#################################  Objective Function   ########################################
 	@expression(m, Costs,
 		# Capital Costs
-		m[:TotalTechCapCosts] + TotalStorageCapCosts +
+		m[:TotalTechCapCosts] + TotalStorageCapCosts + m[:GHPCapCosts] +
 
 		# Fixed O&M, tax deductible for owner
-		TotalPerUnitSizeOMCosts * (1 - p.s.financial.owner_tax_pct) +
+		(TotalPerUnitSizeOMCosts + m[:GHPOMCosts]) * (1 - p.s.financial.owner_tax_pct) +
 
 		# Variable O&M, tax deductible for owner
 		(m[:TotalPerUnitProdOMCosts] + m[:TotalPerUnitHourOMCosts]) * (1 - p.s.financial.owner_tax_pct) +
@@ -488,6 +494,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvPeakDemandTOU[p.ratchets, 1:p.s.electric_tariff.n_tou_demand_tiers] >= 0  # Peak electrical power demand during ratchet r [kW]
 		dvPeakDemandMonth[p.months, 1:p.s.electric_tariff.n_monthly_demand_tiers] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0
+        binGHP[p.ghp_options], Bin  # Can be <= 1 if require_ghp_purchase=0, and is ==1 if require_ghp_purchase=1
 	end
 
 	if !isempty(p.techs.gen)  # Problem becomes a MILP

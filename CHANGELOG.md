@@ -3,6 +3,10 @@
 ### Changed
 - Don't trigger GitHub 'Run test' workflow on a push that only changes README.md and/or CHANGELOG.md
 - Avoid triggering duplicate GitHub workflows. When pushing to a branch that's in a PR, only trigger tests on the push not on the PR sync also.
+### Added
+- Add geothermal heat pump (`GHP`), also known as ground-source heat pump (GSHP), to the REopt model for serving heating and cooling loads
+    - The unregistered `GhpGhx.jl` package (https://github.com/NREL/GhpGhx.jl) is now a dependency of REopt.jl, and this package sizes the ground heat exchanger (GHE) and gets the hourly electric consumption of the `GHP` for the specified heating and cooling loads that it serves.
+    - The `GHP` size and dispatch of the different `GHP` options is pre-determined by the `GhpGhx.jl` package, so the REopt model just chooses one or none of the GHP options with a binary decision variable.
 
 ## v0.17.0
 ### Added
