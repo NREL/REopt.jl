@@ -68,16 +68,10 @@ A Scenario struct can contain the following keys:
 - [SpaceHeatingLoad](@ref) (optional)
 - [ExistingBoiler](@ref) (optional)
 - [CHP](@ref) (optional)
-<<<<<<< HEAD
-- FlexibleHVAC (optional)
-- ExistingChiller (optional)
-- AbsorptionChiller (optional)
-- GHP (optional)
-=======
 - [FlexibleHVAC](@ref) (optional)
 - [ExistingChiller](@ref) (optional)
 - [AbsorptionChiller](@ref) (optional)
->>>>>>> develop
+- [GHP](@ref) (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays).
 
