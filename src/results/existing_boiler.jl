@@ -44,11 +44,11 @@ function add_existing_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     # TODO all of these time series assume hourly time steps
     # TODO we convert KWH_PER_MMBTU from user inputs to the model, and then back to mmbtu in outputs: why not stay in mmbtu?
 	r["year_one_fuel_consumption_mmbtu_per_hour"] = 
-        round.(value.(m[:dvFuelUsage]["ExistingBoiler", ts] for ts in p.time_steps) / KWH_PER_MMBTU, digits=3)
+        round.(value.(m[:dvFuelUsage]["ExistingBoiler", ts] for ts in p.time_steps) / KWH_PER_MMBTU, digits=5)
     r["year_one_fuel_consumption_mmbtu"] = round(sum(r["year_one_fuel_consumption_mmbtu_per_hour"]), digits=3)
 
 	r["year_one_thermal_production_mmbtu_per_hour"] = 
-        round.(value.(m[:dvThermalProduction]["ExistingBoiler", ts] for ts in p.time_steps) / KWH_PER_MMBTU, digits=3)
+        round.(value.(m[:dvThermalProduction]["ExistingBoiler", ts] for ts in p.time_steps) / KWH_PER_MMBTU, digits=5)
 	r["year_one_thermal_production_mmbtu"] = round(sum(r["year_one_thermal_production_mmbtu_per_hour"]), digits=3)
 
 	if !isempty(p.s.storage.types.hot)
@@ -71,7 +71,7 @@ function add_existing_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
 	BoilerToLoad = @expression(m, [ts in p.time_steps],
 		m[:dvThermalProduction]["ExistingBoiler",ts] - BoilerToHotTESKW[ts] #- BoilerToSteamTurbine[ts]
     )
-	r["year_one_thermal_to_load_series_mmbtu_per_hour"] = round.(value.(BoilerToLoad / KWH_PER_MMBTU), digits=3)
+	r["year_one_thermal_to_load_series_mmbtu_per_hour"] = round.(value.(BoilerToLoad / KWH_PER_MMBTU), digits=5)
 
     m[:TotalExistingBoilerFuelCosts] = @expression(m, p.pwf_fuel["ExistingBoiler"] *
         sum(m[:dvFuelUsage]["ExistingBoiler", ts] * p.s.existing_boiler.fuel_cost_series[ts] for ts in p.time_steps)

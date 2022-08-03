@@ -60,6 +60,10 @@
     NOx_cost_escalation_pct::Union{Nothing,Real} = nothing,
     SO2_cost_escalation_pct::Union{Nothing,Real} = nothing,
     PM25_cost_escalation_pct::Union{Nothing,Real} = nothing,
+    # fields from other models needed for validation
+    latitude::Real, # Passed from Site
+    longitude::Real, # Passed from Site
+    include_health_in_objective::Bool = false # Passed from Settings
 ```
 
 !!! note "Third party financing"
@@ -88,6 +92,8 @@ struct Financial
     microgrid_upgrade_cost_pct::Float64
     macrs_five_year::Array{Float64,1}
     macrs_seven_year::Array{Float64,1}
+    offgrid_other_capital_costs::Float64
+    offgrid_other_annual_costs::Float64
     CO2_cost_per_tonne::Float64
     CO2_cost_escalation_pct::Float64
     NOx_grid_cost_per_tonne::Float64
@@ -99,8 +105,6 @@ struct Financial
     NOx_cost_escalation_pct::Float64
     SO2_cost_escalation_pct::Float64
     PM25_cost_escalation_pct::Float64
-    offgrid_other_capital_costs::Float64
-    offgrid_other_annual_costs::Float64
 
     function Financial(;
         off_grid_flag::Bool = false,
@@ -134,6 +138,7 @@ struct Financial
         NOx_cost_escalation_pct::Union{Nothing,Real} = nothing,
         SO2_cost_escalation_pct::Union{Nothing,Real} = nothing,
         PM25_cost_escalation_pct::Union{Nothing,Real} = nothing,
+        # fields from other models needed for validation
         latitude::Real, # Passed from Site
         longitude::Real, # Passed from Site
         include_health_in_objective::Bool = false # Passed from Settings
@@ -216,6 +221,8 @@ struct Financial
             microgrid_upgrade_cost_pct,
             macrs_five_year,
             macrs_seven_year,
+            offgrid_other_capital_costs,
+            offgrid_other_annual_costs,
             CO2_cost_per_tonne,
             CO2_cost_escalation_pct,
             NOx_grid_cost_per_tonne,
@@ -226,9 +233,7 @@ struct Financial
             PM25_onsite_fuelburn_cost_per_tonne,
             NOx_cost_escalation_pct,
             SO2_cost_escalation_pct,
-            PM25_cost_escalation_pct,
-            offgrid_other_capital_costs,
-            offgrid_other_annual_costs
+            PM25_cost_escalation_pct
         )
     end
 end

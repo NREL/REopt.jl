@@ -124,6 +124,12 @@ function BAUInputs(p::REoptInputs)
         cop["ExistingChiller"] = 1.0
     end
 
+    # Assign null GHP parameters for REoptInputs
+    ghp_options, require_ghp_purchase, ghp_heating_thermal_load_served_kw, 
+        ghp_cooling_thermal_load_served_kw, heating_thermal_load_reduction_with_ghp_kw, 
+        cooling_thermal_load_reduction_with_ghp_kw, ghp_electric_consumption_kw, 
+        ghp_installed_cost, ghp_om_cost_year_one = setup_ghp_inputs(bau_scenario, p.time_steps, p.time_steps_without_grid)    
+
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
     for t in techs.elec
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
@@ -186,6 +192,15 @@ function BAUInputs(p::REoptInputs)
         p.pbi_max_kw, 
         p.pbi_benefit_per_kwh,
         boiler_efficiency,
+        ghp_options,
+        require_ghp_purchase,
+        ghp_heating_thermal_load_served_kw,
+        ghp_cooling_thermal_load_served_kw,
+        heating_thermal_load_reduction_with_ghp_kw,
+        cooling_thermal_load_reduction_with_ghp_kw,
+        ghp_electric_consumption_kw,
+        ghp_installed_cost,
+        ghp_om_cost_year_one,        
         tech_renewable_energy_pct, 
         tech_emissions_factors_CO2, 
         tech_emissions_factors_NOx, 

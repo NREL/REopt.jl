@@ -167,18 +167,21 @@ else  # run HiGHS tests
         4. Coordinate pair > 5 miles from US border
         5. Coordinate pair >> 5 miles from US border
         """
+        (r, d) = REopt.region_abbreviation(65.27661752129738, -149.59278391820223)
+        @test r == "AKGD"
+        (r, d) = REopt.region_abbreviation(21.45440792261567, -157.93648793163402)
+        @test r == "HIOA"
+        (r, d) = REopt.region_abbreviation(19.686877556659436, -155.4223641905743)
+        @test r == "HIMS"
         (r, d) = REopt.region_abbreviation(39.86357200140234, -104.67953917092028)
         @test r == "RM"
-        @test d ≈ 0.0
-        (r, d) = REopt.region_abbreviation(47.44285093638291, -69.24169587285499)
-        @test r == "NE"
-        @test round(d, digits = 2) ≈ 51.94
+        @test d ≈ 0.0 atol=1
         (r, d) = REopt.region_abbreviation(47.49137892652077, -69.3240287592685)
         @test r == "NE"
-        @test round(d, digits = 2) ≈ 8031.25
-        (r, d) = REopt.region_abbreviation(47.49153421708515, -69.3241666522892)
+        @test d ≈ 7986 atol=1
+        (r, d) = REopt.region_abbreviation(47.50448307102053, -69.34882434376593)
         @test r === nothing
-        @test round(d, digits = 2) ≈ 8049.6
+        @test d ≈ 10297 atol=1
         (r, d) = REopt.region_abbreviation(55.860334445251354, -4.286554357755312)
         @test r === nothing
     end

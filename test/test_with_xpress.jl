@@ -36,7 +36,7 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/thermal_load.json")
 
-    @test round(results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"], digits=0) ≈ 2905
+    @test round(results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"], digits=0) ≈ 2904
     
     data = JSON.parsefile("./scenarios/thermal_load.json")
     data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([0.5], 8760)
@@ -643,15 +643,15 @@ end
     r = run_reopt(model, p)
 
     #dispatch to load should be 10kW every other period = 4,380 * 10
-    @test sum(r["HotThermalStorage"]["year_one_to_load_series_mmbtu_per_hour"]) ≈ 256.25 atol=0.1
-    @test sum(r["ColdThermalStorage"]["year_one_to_load_series_ton"]) ≈ 6224.39 atol=0.1
+    @test sum(r["HotThermalStorage"]["year_one_to_load_series_mmbtu_per_hour"]) ≈ 149.45 atol=0.1
+    @test sum(r["ColdThermalStorage"]["year_one_to_load_series_ton"]) ≈ 12454.33 atol=0.1
     #size should be just over 10kW in gallons, accounting for efficiency losses and min SOC
-    @test r["HotThermalStorage"]["size_gal"] ≈ 390.61 atol=0.1
-    @test r["ColdThermalStorage"]["size_gal"] ≈ 189.91 atol=0.1
+    @test r["HotThermalStorage"]["size_gal"] ≈ 227.89 atol=0.1
+    @test r["ColdThermalStorage"]["size_gal"] ≈ 379.82 atol=0.1
     #No production from existing chiller, only absorption chiller, which is sized at ~5kW to manage electric demand charge & capital cost.
     @test r["ExistingChiller"]["year_one_thermal_production_tonhour"] ≈ 0.0 atol=0.1
-    @test r["AbsorptionChiller"]["year_one_thermal_production_tonhour"] ≈ 12459.24 atol=0.1
-    @test r["AbsorptionChiller"]["size_ton"] ≈ 1.422 atol=0.01
+    @test r["AbsorptionChiller"]["year_one_thermal_production_tonhour"] ≈ 12464.15 atol=0.1
+    @test r["AbsorptionChiller"]["size_ton"] ≈ 2.846 atol=0.01
 end
 
 @testset "Heat and cool energy balance" begin
@@ -1015,6 +1015,75 @@ end
 
 end
 
+@testset "GHP" begin
+    """
+
+    This tests multiple unique aspects of GHP:
+    1. REopt.jl calls GhpGhx.jl n times from within scenario.jl and creates a list of n GHP structs
+    2. GHP with heating and cooling "..efficiency_thermal_factors" reduces the net thermal load
+    3. GHP serves only the SpaceHeatingLoad by default unless it is allowed to serve DHW
+    4. GHP serves all the Cooling load
+    5. Input of a custom COP map for GHP and check the GHP performance to make sure it's using it correctly
+    
+    """
+    # Load base inputs
+    input_data = JSON.parsefile("scenarios/ghp_inputs.json")
+    
+    # Modify ["GHP"]["ghpghx_inputs"] for running GhpGhx.jl
+    # Heat pump performance maps
+    cop_map_mat_header = readdlm("scenarios/ghp_cop_map_custom.csv", ',', header=true)
+    data = cop_map_mat_header[1]
+    headers = cop_map_mat_header[2]
+    # Generate a "records" style dictionary from the 
+    cop_map_list = []
+    for i in 1:length(data[:,1])
+        dict_record = Dict(name=>data[i, col] for (col, name) in enumerate(headers))
+        push!(cop_map_list, dict_record)
+    end
+    input_data["GHP"]["ghpghx_inputs"][1]["cop_map_eft_heating_cooling"] = cop_map_list
+    
+    # Could also load in a "ghpghx_responses" which is combined ghpghx_inputs (but processed to populate all), and ghpghx_results
+    #input_data["GHP"]["ghpghx_responses"] = [JSON.parsefile("scenarios/ghpghx_response.json")]
+    
+    # Heating load
+    input_data["SpaceHeatingLoad"]["doe_reference_name"] = "Hospital"
+    input_data["SpaceHeatingLoad"]["monthly_mmbtu"] = fill(1000.0, 12)
+    input_data["SpaceHeatingLoad"]["monthly_mmbtu"][1] = 500.0
+    input_data["SpaceHeatingLoad"]["monthly_mmbtu"][end] = 1500.0
+    
+    # Call REopt
+    s = Scenario(input_data)
+    inputs = REoptInputs(s)
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    results = run_reopt([m1,m2], inputs)
+    
+    ghp_option_chosen = results["GHP"]["ghp_option_chosen"]
+    
+    # Test GHP serving space heating with VAV thermal efficiency improvements
+    heating_served_mmbtu = sum(s.ghp_option_list[ghp_option_chosen].heating_thermal_kw / REopt.KWH_PER_MMBTU)
+    expected_heating_served_mmbtu = 12000 * 0.8 * 0.85  # (fuel_mmbtu * boiler_effic * space_heating_efficiency_thermal_factor)
+    @test round(heating_served_mmbtu, digits=1) ≈ expected_heating_served_mmbtu atol=1.0
+    
+    # Boiler serves all of the DHW load, no DHW thermal reduction due to GHP retrofit
+    boiler_served_mmbtu = sum(results["ExistingBoiler"]["year_one_thermal_production_mmbtu_per_hour"])
+    expected_boiler_served_mmbtu = 3000 * 0.8 # (fuel_mmbtu * boiler_effic)
+    @test round(boiler_served_mmbtu, digits=1) ≈ expected_boiler_served_mmbtu atol=1.0
+    
+    # LoadProfileChillerThermal cooling thermal is 1/cooling_efficiency_thermal_factor of GHP cooling thermal production
+    bau_chiller_thermal_tonhour = sum(s.cooling_load.loads_kw_thermal / REopt.KWH_THERMAL_PER_TONHOUR)
+    ghp_cooling_thermal_tonhour = sum(inputs.ghp_cooling_thermal_load_served_kw[1,:] / REopt.KWH_THERMAL_PER_TONHOUR)
+    @test round(bau_chiller_thermal_tonhour) ≈ ghp_cooling_thermal_tonhour/0.6 atol=1.0
+    
+    # Custom heat pump COP map is used properly
+    ghp_option_chosen = results["GHP"]["ghp_option_chosen"]
+    heating_cop_avg = s.ghp_option_list[ghp_option_chosen].ghpghx_response["outputs"]["heating_cop_avg"]
+    cooling_cop_avg = s.ghp_option_list[ghp_option_chosen].ghpghx_response["outputs"]["cooling_cop_avg"]
+    # Average COP which includes pump power should be lower than Heat Pump only COP specified by the map
+    @test heating_cop_avg <= 4.0
+    @test cooling_cop_avg <= 8.0
+end
+
 @testset "Emissions and Renewable Energy Percent" begin
     #renewable energy and emissions reduction targets
     include_exported_RE_in_total = [true,false,true]
@@ -1080,54 +1149,55 @@ end
             @test results["Site"]["renewable_electricity_pct_bau"] ≈ 0.1476 atol=1e-4 #0.1464 atol=1e-4
             @test results["Site"]["total_renewable_energy_pct"] ≈ 0.8 # 0.8
             @test results["Site"]["total_renewable_energy_pct_bau"] ≈ 0.1476 atol=1e-4 #0.1464 atol=1e-4
-            @test results["Site"]["lifecycle_emissions_reduction_CO2_pct"] ≈ 0.6573 atol=1e-4 # 0.6578 atol=1e-4
-            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"] ≈ 258 atol=1 # 259.7
-            @test results["Site"]["year_one_emissions_tonnes_CO2"] ≈ 12.75 # 12.75
-            @test results["Site"]["year_one_emissions_tonnes_CO2_bau"] ≈ 40.48 atol=1e-2 # 40.54 atol=1e-2
+            @test results["Site"]["lifecycle_emissions_reduction_CO2_pct"] ≈ 0.6998 atol=1e-4
+            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"] ≈ 199 atol=1
+            @test results["Site"]["year_one_emissions_tonnes_CO2"] ≈ 13.73 atol=1e-2
+            @test results["Site"]["year_one_emissions_tonnes_CO2_bau"] ≈ 49.45 atol=1e-2 # 40.54 atol=1e-2
             @test results["Site"]["year_one_emissions_from_fuelburn_tonnes_CO2"] ≈ 8.63 # 8.63
             @test results["Site"]["year_one_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0 # 0.0
-            @test results["Site"]["lifecycle_emissions_cost_CO2"] ≈ 8760 atol=1 # 8760.58
-            @test results["Site"]["lifecycle_emissions_cost_CO2_bau"] ≈ 25818.96 atol=1e-1 # 25856.9 atol=1e-1
-            @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 245.65 # 245.65
-            @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 716.81 #717.86
+            @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 9381.16 atol=1
+            @test results["Financial"]["lifecycle_emissions_cost_climate_bau"] ≈ 31539.05 atol=1e-1
+            @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 262.87
+            @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 875.61
             @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 172.62 # 172.62
             @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0 # 0.0
-            @test results["ElectricUtility"]["year_one_emissions_tonnes_CO2"] ≈ 4.12 # 4.12
-            @test results["ElectricUtility"]["year_one_emissions_tonnes_CO2_bau"] ≈ 40.48 # 40.54
-            @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] ≈ 73.03 # 73.03
-            @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 716.81 # 717.86
+            @test results["ElectricUtility"]["year_one_emissions_tonnes_CO2"] ≈ 5.1
+            @test results["ElectricUtility"]["year_one_emissions_tonnes_CO2_bau"] ≈ 49.45
+            @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] ≈ 90.26
+            @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 875.61
         elseif i == 2
-            @test results["PV"]["size_kw"] ≈ 94.48 atol=1 # 94.97
+            @test results["PV"]["size_kw"] ≈ 97.52 atol=1
             @test results["ElectricStorage"]["size_kw"] ≈ 20.27 atol=1 # 20.29
-            @test results["ElectricStorage"]["size_kwh"] ≈ 154.44 atol=1 # 154.52
+            @test results["ElectricStorage"]["size_kwh"] ≈ 159.05 atol=1
             @test !haskey(results, "Generator")
             # NPV
-            expected_npv = -244450 # per test in REopt API
-            @test (expected_npv - results["Financial"]["npv"])/expected_npv ≈ 0.0 atol=1e-2
+            @info results["Financial"]["npv"]
+            expected_npv = -249474.49
+            @test (expected_npv - results["Financial"]["npv"])/expected_npv ≈ 0.0 atol=1e-3
             # Renewable energy
-            @test results["Site"]["renewable_electricity_pct"] ≈ 0.7725 atol=1e-3 # 0.7722 atol=1e-4
-            @test results["Site"]["annual_renewable_electricity_kwh"] ≈ 77250.1 atol=10 # 77221.23 atol=10
+            @test results["Site"]["renewable_electricity_pct"] ≈ 0.786193 atol=1e-3
+            @test results["Site"]["annual_renewable_electricity_kwh"] ≈ 78619.3 atol=10
             @test results["Site"]["renewable_electricity_pct_bau"] ≈ 0.1365 atol=1e-3 #0.1354 atol=1e-3
             @test results["Site"]["annual_renewable_electricity_kwh_bau"] ≈ 13650.39 atol=10 # 13542.62 atol=10
-            @test results["Site"]["total_renewable_energy_pct"] ≈ 0.7725 atol=1e-3 # 0.7722
+            @test results["Site"]["total_renewable_energy_pct"] ≈ 0.786193 atol=1e-3
             @test results["Site"]["total_renewable_energy_pct_bau"] ≈ 0.1365 atol=1e-3 # 0.1354 atol=1e-3
             # CO2 emissions - totals ≈  from grid, from fuelburn, ER, $/tCO2 breakeven
             @test results["Site"]["lifecycle_emissions_reduction_CO2_pct"] ≈ 0.8 atol=1e-3 # 0.8
-            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"] ≈ 420.91 atol=1e-1 # 421.41
-            @test results["Site"]["year_one_emissions_tonnes_CO2"] ≈ 11.59 atol=1 # 11.59
-            @test results["Site"]["year_one_emissions_tonnes_CO2_bau"] ≈ 57.97 atol=1 # 57.97
+            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"] ≈ 351.24 atol=1e-1
+            @test results["Site"]["year_one_emissions_tonnes_CO2"] ≈ 14.2 atol=1
+            @test results["Site"]["year_one_emissions_tonnes_CO2_bau"] ≈ 70.99 atol=1
             @test results["Site"]["year_one_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
             @test results["Site"]["year_one_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0 atol=1 # 0.0
-            @test results["Site"]["lifecycle_emissions_cost_CO2"] ≈ 7386.65 atol=1 # 7395.84 atol=1
-            @test results["Site"]["lifecycle_emissions_cost_CO2_bau"] ≈ 36933.26 atol=1 # 36979.2 atol=1
-            @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 205.33 atol=1 # 205.33
-            @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 1025.37 atol=1 # 1026.65 atol=1
+            @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 9056.43 atol=1
+            @test results["Financial"]["lifecycle_emissions_cost_climate_bau"] ≈ 45282.17 atol=1
+            @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 251.43 atol=1
+            @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 1257.16 atol=1
             @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
             @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0 atol=1 # 0.0
-            @test results["ElectricUtility"]["year_one_emissions_tonnes_CO2"] ≈ 11.59 atol=1 # 11.59
-            @test results["ElectricUtility"]["year_one_emissions_tonnes_CO2_bau"] ≈ 57.97 atol=1 # 57.97
-            @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] ≈ 205.33 atol=1 # 205.33
-            @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 1025.37 atol=1 # 1026.65 atol=1
+            @test results["ElectricUtility"]["year_one_emissions_tonnes_CO2"] ≈ 14.2 atol=1
+            @test results["ElectricUtility"]["year_one_emissions_tonnes_CO2_bau"] ≈ 70.99 atol=1
+            @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] ≈ 251.43 atol=1
+            @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 1257.16 atol=1
 
             #also test CO2 breakeven cost
             inputs["PV"]["min_kw"] = results["PV"]["size_kw"] - inputs["PV"]["existing_kw"]
@@ -1141,7 +1211,7 @@ end
             m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
             m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
             results = run_reopt([m1, m2], inputs)
-            @test results["Financial"]["npv"] ≈ 0 atol=11
+            @test results["Financial"]["npv"]/expected_npv ≈ 0 atol=1e-3
             @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"] ≈ inputs["Financial"]["CO2_cost_per_tonne"] atol=1e-1
         elseif i == 3
             @test results["PV"]["size_kw"] ≈ 20.0 atol=1e-1

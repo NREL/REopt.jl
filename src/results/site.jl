@@ -44,8 +44,6 @@ Site results:
 - `year_one_emissions_from_fuelburn_tonnes_NOx`
 - `year_one_emissions_from_fuelburn_tonnes_SO2`
 - `year_one_emissions_from_fuelburn_tonnes_PM25`
-- `lifecycle_emissions_cost_CO2`
-- `lifecycle_emissions_cost_health`
 - `lifecycle_emissions_tonnes_CO2`
 - `lifecycle_emissions_tonnes_NOx`
 - `lifecycle_emissions_tonnes_SO2`
@@ -90,8 +88,6 @@ function add_site_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	if !isnothing(p.s.site.bau_emissions_lb_CO2_per_year)
 		r["lifecycle_emissions_reduction_CO2_pct"] = round(value(1-m[:Lifecycle_Emissions_Lbs_CO2]/m[:Lifecycle_Emissions_Lbs_CO2_BAU]), digits=6)
 	end
-	r["lifecycle_emissions_cost_CO2"] = round(value(m[:Lifecycle_Emissions_Cost_CO2]), digits=2)
-	r["lifecycle_emissions_cost_health"] = round(value(m[:Lifecycle_Emissions_Cost_Health]), digits=2)
 
 	r["lifecycle_emissions_tonnes_CO2"] = round(value(m[:Lifecycle_Emissions_Lbs_CO2]*TONNE_PER_LB), digits=2)
 	r["lifecycle_emissions_tonnes_NOx"] = round(value(m[:Lifecycle_Emissions_Lbs_NOx]*TONNE_PER_LB), digits=2)
