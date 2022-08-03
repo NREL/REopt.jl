@@ -343,9 +343,9 @@ function region_abbr_to_name(region_abbr::String)
     return get(lookup, region_abbr, "")
 end
 
-function region_name_to_abbr(region_abbr::String)
+function region_name_to_abbr(region_name::String)
     lookup = Dict(
-        "California" "CA",
+        "California" => "CA",
         "Central" => "CENT",
         "Florida" => "FL",
         "Mid-Atlantic" => "MIDA",
@@ -363,5 +363,5 @@ function region_name_to_abbr(region_abbr::String)
         "Hawaii (except Oahu)" => "HIMS",
         "Hawaii (Oahu)" => "HIOA"
     )
-    return get(lookup, region_abbr, "")
+    return get(lookup, region_name, "")
 end
