@@ -2,8 +2,6 @@
 ## Develop
 ### Changed
 - allow user to specify emissions_region in ElectricUtility, which is used instead of lat/long to look up AVERT data if emissions factors aren't provided by the user
-- Don't trigger GitHub 'Run test' workflow on a push that only changes README.md and/or CHANGELOG.md
-- Avoid triggering duplicate GitHub workflows. When pushing to a branch that's in a PR, only trigger tests on the push not on the PR sync also.
 
 ## v0.17.0
 ### Added
@@ -28,6 +26,8 @@
 - Update documentation and add `docs/devdeploy.jl` to locally host the REopt.jl documentation 
 - Make `ExistingBoiler` `fuel_cost_per_mmbtu` a required input
 - In `prodfactor.jl`, include lat-long coordinates if-statement to determine whether the "nsrdb" dataset should be used in call to PVWatts. Accounts for recent updates to NSRDB data used by PVWatts (v6). If outside of NSRDB range, use "intl" (international) dataset.
+- Don't trigger GitHub 'Run test' workflow on a push that only changes README.md and/or CHANGELOG.md
+- Avoid triggering duplicate GitHub workflows. When pushing to a branch that's in a PR, only trigger tests on the push not on the PR sync also.
 ### Fixed
 - Bug fix to constrain dvCurtail in `time_steps_without_grid`
 - Bug fix to report accurate wind ["year_one_to_load_series_kw"] in results/wind.jl (was previously not accounting for curtailed wind)
