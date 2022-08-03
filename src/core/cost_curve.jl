@@ -156,7 +156,9 @@ function cost_curve(tech::AbstractTech, financial::Financial)
                     push!(xp_array_incent["utility"], 0)
                 end
                 push!(xp_array_incent["utility"], tech.tech_sizes_for_cost_curve...)  # [$]  # Append list of sizes for cost curve [kW]
-                push!(xp_array_incent["utility"], big_number)  # Append big number size to assume same cost as last input point
+                if tech.tech_sizes_for_cost_curve[end] <= (big_number - 1.0)  # Avoid redundant append of a big number if the last size is basically big_number
+                    push!(xp_array_incent["utility"], big_number)  # Append big number size to assume same cost as last input point
+                end
 
                 if tech.tech_sizes_for_cost_curve[1] == 0
                     yp_array_incent["utility"] = [tech.installed_cost_per_kw[1], tech.tech_sizes_for_cost_curve[2:end] .* tech.installed_cost_per_kw[2:end]...]  # [$]

@@ -72,6 +72,16 @@ struct REoptInputs <: AbstractInputs
     pbi_max_benefit::Dict{String, Any}  # (pbi_techs)
     pbi_max_kw::Dict{String, Any}  # (pbi_techs)
     pbi_benefit_per_kwh::Dict{String, Any}  # (pbi_techs)
+    boiler_efficiency::Dict{String, Float64}
+    ghp_options::UnitRange{Int64}  # Range of the number of GHP options
+    require_ghp_purchase::Int64  # 0/1 binary if GHP purchase is forced/required
+    ghp_heating_thermal_load_served_kw::Array{Float64,2}  # Array of heating load (thermal!) profiles served by GHP
+    ghp_cooling_thermal_load_served_kw::Array{Float64,2}  # Array of cooling load profiles served by GHP
+    heating_thermal_load_reduction_with_ghp_kw::Array{Float64,2}  # Array of heating load reduction (thermal!) profile from GHP retrofit
+    cooling_thermal_load_reduction_with_ghp_kw::Array{Float64,2}  # Array of cooling load reduction (thermal!) profile from GHP retrofit
+    ghp_electric_consumption_kw::Array{Float64,2}  # Array of electric load profiles consumed by GHP
+    ghp_installed_cost::Array{Float64,1}  # Array of installed cost for GHP options
+    ghp_om_cost_year_one::Array{Float64,1}  # Array of O&M cost for GHP options    
     boiler_efficiency::Dict{String, <:Real}
     tech_renewable_energy_pct::Dict{String, <:Real} # (techs)
     tech_emissions_factors_CO2::Dict{String, <:Real} # (techs)
@@ -123,6 +133,15 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     pbi_max_kw::Dict{String, Any}  # (pbi_techs)
     pbi_benefit_per_kwh::Dict{String, Any}  # (pbi_techs)
     boiler_efficiency::Dict{String, <:Real}
+    ghp_options::UnitRange{Int64}  # Range of the number of GHP options
+    require_ghp_purchase::Int64  # 0/1 binary if GHP purchase is forced/required
+    ghp_heating_thermal_load_served_kw::Array{Float64,2}  # Array of heating load (thermal!) profiles served by GHP
+    ghp_cooling_thermal_load_served_kw::Array{Float64,2}  # Array of cooling load profiles served by GHP
+    heating_thermal_load_reduction_with_ghp_kw::Array{Float64,2}  # Array of heating load reduction (thermal!) profile from GHP retrofit
+    cooling_thermal_load_reduction_with_ghp_kw::Array{Float64,2}  # Array of cooling load reduction (thermal!) profile from GHP retrofit
+    ghp_electric_consumption_kw::Array{Float64,2}  # Array of electric load profiles consumed by GHP
+    ghp_installed_cost::Array{Float64,1}  # Array of installed cost for GHP options
+    ghp_om_cost_year_one::Array{Float64,1}  # Array of O&M cost for GHP options
     tech_renewable_energy_pct::Dict{String, <:Real} # (techs)
     tech_emissions_factors_CO2::Dict{String, <:Real} # (techs)
     tech_emissions_factors_NOx::Dict{String, <:Real} # (techs)
@@ -180,6 +199,11 @@ function REoptInputs(s::AbstractScenario)
     # levelization_factor["Generator"] = 1.0
     time_steps_with_grid, time_steps_without_grid, = setup_electric_utility_inputs(s)
     
+    ghp_options, require_ghp_purchase, ghp_heating_thermal_load_served_kw, 
+        ghp_cooling_thermal_load_served_kw, heating_thermal_load_reduction_with_ghp_kw, 
+        cooling_thermal_load_reduction_with_ghp_kw, ghp_electric_consumption_kw, 
+        ghp_installed_cost, ghp_om_cost_year_one = setup_ghp_inputs(s, time_steps, time_steps_without_grid)
+
     if any(pv.existing_kw > 0 for pv in s.pvs)
         adjust_load_profile(s, production_factor)
     end
@@ -225,6 +249,15 @@ function REoptInputs(s::AbstractScenario)
         pbi_max_kw, 
         pbi_benefit_per_kwh,
         boiler_efficiency,
+        ghp_options,
+        require_ghp_purchase,
+        ghp_heating_thermal_load_served_kw,
+        ghp_cooling_thermal_load_served_kw,
+        heating_thermal_load_reduction_with_ghp_kw,
+        cooling_thermal_load_reduction_with_ghp_kw,
+        ghp_electric_consumption_kw,
+        ghp_installed_cost,
+        ghp_om_cost_year_one,
         tech_renewable_energy_pct, 
         tech_emissions_factors_CO2, 
         tech_emissions_factors_NOx, 
@@ -873,6 +906,69 @@ function fillin_techs_by_exportbin(techs_by_exportbin::Dict, tech::AbstractTech,
     return nothing
 end
 
+function setup_ghp_inputs(s::AbstractScenario, time_steps, time_steps_without_grid)
+    # GHP parameters for REopt model
+    num = length(s.ghp_option_list)
+    ghp_options = 1:num
+    require_ghp_purchase = 0
+    ghp_installed_cost = Vector{Float64}(undef, num)
+    ghp_om_cost_year_one = Vector{Float64}(undef, num)
+    ghp_heating_thermal_load_served_kw = zeros(num, length(time_steps))
+    ghp_cooling_thermal_load_served_kw = zeros(num, length(time_steps))
+    heating_thermal_load_reduction_with_ghp_kw = zeros(num, length(time_steps))
+    cooling_thermal_load_reduction_with_ghp_kw = zeros(num, length(time_steps))
+    ghp_cooling_thermal_load_served_kw = zeros(num, length(time_steps))        
+    ghp_electric_consumption_kw = zeros(num, length(time_steps))
+    if num > 0
+        require_ghp_purchase = s.ghp_option_list[1].require_ghp_purchase  # This does not change with the number of options
+        for (i, option) in enumerate(s.ghp_option_list)
+            ghp_cap_cost_slope, ghp_cap_cost_x, ghp_cap_cost_yint, ghp_n_segments = cost_curve(option, s.financial)
+            ghp_size_ton = option.heatpump_capacity_ton
+            seg = 0
+            if ghp_size_ton <= ghp_cap_cost_x[1]
+                seg = 1
+            elseif ghp_size_ton > ghp_cap_cost_x[end]
+                seg = ghp_n_segments
+            else
+                for n in 2:(ghp_n_segments+1)
+                    if (ghp_size_ton > ghp_cap_cost_x[n-1]) && (ghp_size_ton <= ghp_cap_cost_x[n])
+                        seg = n
+                        break
+                    end
+                end
+            end
+            ghp_installed_cost[i] = ghp_cap_cost_yint[seg-1] + ghp_size_ton * ghp_cap_cost_slope[seg-1]
+            ghp_om_cost_year_one[i] = option.om_cost_year_one
+            heating_thermal_load = s.space_heating_load.loads_kw + s.dhw_load.loads_kw
+            # Using minimum of thermal load and ghp-serving load to avoid small negative net loads
+            for j in time_steps
+                heating_thermal_load_reduction_with_ghp_kw[i,j] = min(s.heating_thermal_load_reduction_with_ghp_kw[j], heating_thermal_load[j])
+                cooling_thermal_load_reduction_with_ghp_kw[i,j] = min(s.cooling_thermal_load_reduction_with_ghp_kw[j], s.cooling_load.loads_kw_thermal[j])
+                ghp_heating_thermal_load_served_kw[i,j] = min(option.heating_thermal_kw[j], heating_thermal_load[j] - heating_thermal_load_reduction_with_ghp_kw[i,j])
+                ghp_cooling_thermal_load_served_kw[i,j] = min(option.cooling_thermal_kw[j], s.cooling_load.loads_kw_thermal[j] - cooling_thermal_load_reduction_with_ghp_kw[i,j])
+                ghp_electric_consumption_kw[i,j] = option.yearly_electric_consumption_kw[j]
+            end
+
+            # GHP electric consumption is omitted from the electric load balance during an outage
+            # So here we also have to zero out heating and cooling thermal production from GHP during an outage
+            if !isempty(time_steps_without_grid)
+                for outage_time_step in time_steps_without_grid
+                    heating_thermal_load_reduction_with_ghp_kw[i,outage_time_step] = 0.0
+                    cooling_thermal_load_reduction_with_ghp_kw[i,outage_time_step] = 0.0
+                    ghp_heating_thermal_load_served_kw[i,outage_time_step] = 0.0
+                    ghp_cooling_thermal_load_served_kw[i,outage_time_step] = 0.0
+                    ghp_electric_consumption_kw[i,outage_time_step] = 0.0
+                end
+            end
+        end
+    end
+
+    return ghp_options, require_ghp_purchase, ghp_heating_thermal_load_served_kw, 
+    ghp_cooling_thermal_load_served_kw, heating_thermal_load_reduction_with_ghp_kw, 
+    cooling_thermal_load_reduction_with_ghp_kw, ghp_electric_consumption_kw, 
+    ghp_installed_cost, ghp_om_cost_year_one
+end
+
 function setup_operating_reserve_pct(s::AbstractScenario, techs_operating_reserve_req_pct)
     # currently only PV and Wind require operating reserves
     for pv in s.pvs 
@@ -882,5 +978,4 @@ function setup_operating_reserve_pct(s::AbstractScenario, techs_operating_reserv
     techs_operating_reserve_req_pct["Wind"] = s.wind.operating_reserve_required_pct
 
     return nothing
-
 end
