@@ -38,3 +38,17 @@ jobs:
           run: docker-compose up -d
         - name: Execute tests in container
           run: docker exec jul julia --project=. -e 'import Pkg; Pkg.test("REopt"; test_args=["Xpress"])'
+
+  ghptests:
+      runs-on: ubuntu-latest
+
+      steps:
+        - uses: actions/checkout@v2
+        - name: Decrypt
+          env:
+            TRANSCRYPT_PASSWORD: ${{ secrets.TRANSCRYPT_PASSWORD }}
+          run: ./.github/scripts/decrypt.sh 
+        - name: Build containers
+          run: docker-compose up -d
+        - name: Execute tests in container
+          run: docker exec jul julia --project=. -e 'import Pkg; Pkg.add(url="https://github.com/NREL/GhpGhx.jl.git"); Pkg.test("REopt"; test_args=["GHP"])'
