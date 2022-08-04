@@ -43,10 +43,6 @@ elseif "CPLEX" in ARGS
     @testset "test_with_cplex" begin
         include("test_with_cplex.jl")
     end
-elseif "GHP" in ARGS
-    @testset "test_ghp" begin
-        include("test_ghp.jl")
-    end
 else  # run HiGHS tests
 
     @testset "Inputs" begin
