@@ -3,7 +3,6 @@ using Xpress
 using JSON
 using REopt
 using DelimitedFiles
-using GhpGhx
 
 @testset "GHP" begin
     """
