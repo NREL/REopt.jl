@@ -9,3 +9,10 @@
 using Pkg
 Pkg.add("REopt")
 ```
+
+### Additional package loading for GHP
+GHP evaluations must load in the [`GhpGhx.jl`](https://github.com/NREL/GhpGhx.jl) package separately because it has a more [restrictive license](https://github.com/NREL/GhpGhx.jl/blob/main/LICENSE.md) and is not a registered Julia package.
+```julia
+Pkg.add("https://github.com/NREL/GhpGhx.jl")
+using GhpGhx
+```

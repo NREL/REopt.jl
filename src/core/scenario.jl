@@ -462,24 +462,30 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
                 ghpghx_inputs["cooling_thermal_load_ton"] = (cooling_load.loads_kw_thermal - cooling_thermal_load_reduction_with_ghp_kw)  / KWH_THERMAL_PER_TONHOUR
             end
-            # Update ground thermal conductivity based on climate zone if not user-input
-            if isnothing(get(ghpghx_inputs, "ground_thermal_conductivity_btu_per_hr_ft_f", nothing))
-                k_by_zone = deepcopy(GhpGhx.ground_k_by_climate_zone)
-                nearest_city, climate_zone = find_ashrae_zone_city(d["Site"]["latitude"], d["Site"]["longitude"]; get_zone=true)
-                ghpghx_inputs["ground_thermal_conductivity_btu_per_hr_ft_f"] = k_by_zone[climate_zone]
-            end
-            # Call GhpGhx.jl to size GHP and GHX
-            @info "Starting GhpGhx.jl" #with timeout of $(timeout) seconds..."
-            results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
-            # Create a dictionary of the results data needed for REopt
-            ghpghx_results = GhpGhx.get_results_for_reopt(results, inputs_params)
-            ghpghx_response = Dict([("inputs", ghpghx_inputs), ("outputs", ghpghx_results)])
-            @info "GhpGhx.jl model solved" #with status $(results["status"])."
-            append!(ghp_option_list, [GHP(ghpghx_response, d["GHP"])])
-            # Print out ghpghx_response for loading into a future run without running GhpGhx.jl again
-            # open("scenarios/ghpghx_response.json","w") do f
-            #     JSON.print(f, ghpghx_response)
-            # end
+            # This code call GhpGhx.jl module functions and is only available if we load in the GhpGhx package
+            try            
+                # Update ground thermal conductivity based on climate zone if not user-input
+                if isnothing(get(ghpghx_inputs, "ground_thermal_conductivity_btu_per_hr_ft_f", nothing))
+                    k_by_zone = deepcopy(GhpGhx.ground_k_by_climate_zone)
+                    nearest_city, climate_zone = find_ashrae_zone_city(d["Site"]["latitude"], d["Site"]["longitude"]; get_zone=true)
+                    ghpghx_inputs["ground_thermal_conductivity_btu_per_hr_ft_f"] = k_by_zone[climate_zone]
+                end
+                # Call GhpGhx.jl to size GHP and GHX
+                @info "Starting GhpGhx.jl" #with timeout of $(timeout) seconds..."
+                results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
+                # Create a dictionary of the results data needed for REopt
+                ghpghx_results = GhpGhx.get_results_for_reopt(results, inputs_params)
+                ghpghx_response = Dict([("inputs", ghpghx_inputs), ("outputs", ghpghx_results)])
+                @info "GhpGhx.jl model solved" #with status $(results["status"])."
+                append!(ghp_option_list, [GHP(ghpghx_response, d["GHP"])])
+                # Print out ghpghx_response for loading into a future run without running GhpGhx.jl again
+                open("scenarios/ghpghx_response.json","w") do f
+                    JSON.print(f, ghpghx_response)
+                end
+            catch
+                error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
+                    loaded (using GhpGhx) to the active Julia environment")
+            end                
         end
     # If ghpghx_responses is included in inputs, do NOT run GhpGhx.jl model and use already-run ghpghx result as input to REopt
     elseif eval_ghp && get_ghpghx_from_input
