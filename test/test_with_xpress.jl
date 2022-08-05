@@ -1019,7 +1019,7 @@ end
     """
 
     This tests multiple unique aspects of GHP:
-    1. REopt.jl calls GhpGhx.jl n times from within scenario.jl and creates a list of n GHP structs
+    1. REopt takes the output data of GhpGhx, creates multiple GHP options, and chooses the expected one
     2. GHP with heating and cooling "..efficiency_thermal_factors" reduces the net thermal load
     3. GHP serves only the SpaceHeatingLoad by default unless it is allowed to serve DHW
     4. GHP serves all the Cooling load
@@ -1042,8 +1042,15 @@ end
     end
     input_data["GHP"]["ghpghx_inputs"][1]["cop_map_eft_heating_cooling"] = cop_map_list
     
-    # Could also load in a "ghpghx_responses" which is combined ghpghx_inputs (but processed to populate all), and ghpghx_results
-    #input_data["GHP"]["ghpghx_responses"] = [JSON.parsefile("scenarios/ghpghx_response.json")]
+    # Due to GhpGhx not being a registered package (no OSI-approved license), 
+    # the registered REopt package cannot have GhpGhx as a "normal" dependency;
+    # Therefore, we only use a "ghpghx_response" (the output of GhpGhx) as an 
+    # input to REopt to avoid GhpGhx module calls
+    response_1 = JSON.parsefile("scenarios/ghpghx_response.json")
+    response_2 = deepcopy(response_1)
+    # Reduce the electric consumption of response 2 which should then be the chosen system
+    response_2["outputs"]["yearly_total_electric_consumption_series_kw"] *= 0.5 
+    input_data["GHP"]["ghpghx_responses"] = [response_1, response_2]
     
     # Heating load
     input_data["SpaceHeatingLoad"]["doe_reference_name"] = "Hospital"
@@ -1059,6 +1066,7 @@ end
     results = run_reopt([m1,m2], inputs)
     
     ghp_option_chosen = results["GHP"]["ghp_option_chosen"]
+    @test ghp_option_chosen == 2
     
     # Test GHP serving space heating with VAV thermal efficiency improvements
     heating_served_mmbtu = sum(s.ghp_option_list[ghp_option_chosen].heating_thermal_kw / REopt.KWH_PER_MMBTU)
