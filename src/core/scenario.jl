@@ -467,7 +467,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 end
             catch
                 error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
-                    loaded (Using GhpGhx) to the active Julia environment")
+                    loaded (using GhpGhx) to the active Julia environment")
             end                
         end
     # If ghpghx_responses is included in inputs, do NOT run GhpGhx.jl model and use already-run ghpghx result as input to REopt
