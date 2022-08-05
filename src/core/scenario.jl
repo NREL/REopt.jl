@@ -476,6 +476,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     elseif eval_ghp && get_ghpghx_from_input
         ghp_inputs_removed_ghpghx_responses = deepcopy(d["GHP"])
         pop!(ghp_inputs_removed_ghpghx_responses, "ghpghx_responses")
+        if haskey(d["GHP"], "ghpghx_inputs")    
+            pop!(ghp_inputs_removed_ghpghx_responses, "ghpghx_inputs")
+        end
         for ghpghx_response in get(d["GHP"], "ghpghx_responses", [])
             append!(ghp_option_list, [GHP(ghpghx_response, ghp_inputs_removed_ghpghx_responses)])
         end
