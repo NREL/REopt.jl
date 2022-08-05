@@ -460,7 +460,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 ghpghx_results = GhpGhx.get_results_for_reopt(results, inputs_params)
                 ghpghx_response = Dict([("inputs", ghpghx_inputs), ("outputs", ghpghx_results)])
                 @info "GhpGhx.jl model solved" #with status $(results["status"])."
-                append!(ghp_option_list, [GHP(ghpghx_response, d["GHP"])])
+                ghp_inputs_removed_ghpghx_inputs = deepcopy(d["GHP"])
+                pop!(ghp_inputs_removed_ghpghx_inputs, "ghpghx_inputs")                
+                append!(ghp_option_list, [GHP(ghpghx_response, ghp_inputs_removed_ghpghx_inputs)])
                 # Print out ghpghx_response for loading into a future run without running GhpGhx.jl again
                 open("scenarios/ghpghx_response.json","w") do f
                     JSON.print(f, ghpghx_response)
