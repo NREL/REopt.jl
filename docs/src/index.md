@@ -5,6 +5,7 @@
     This package is currently under development and not necessarily stable. It contains a subset of the [REopt API](https://github.com/NREL/REopt_API) capabilities.
 
 ## Installing
+REopt evaluations for all system types **except GHP** can be performed using the following installation instructions from the Julia REPL:
 ```julia
 using Pkg
 Pkg.add("REopt")
