@@ -48,8 +48,7 @@ struct with outer constructor:
     building_sqft::Float64 # Required input
     space_heating_efficiency_thermal_factor::Float64 = NaN  # Default depends on building and location
     cooling_efficiency_thermal_factor::Float64 = NaN # Default depends on building and location
-    ghpghx_inputs::AbstractVector{Dict} = Dict[]
-    ghpghx_response::AbstractVector{Dict} = Dict[]
+    ghpghx_response::Dict = Dict()
     can_serve_dhw::Bool = false
 
     macrs_option_years::Int = 5
@@ -95,7 +94,6 @@ Base.@kwdef mutable struct GHP <: AbstractGHP
     building_sqft::Float64 # Required input
     space_heating_efficiency_thermal_factor::Float64 = NaN  # Default depends on building and location
     cooling_efficiency_thermal_factor::Float64 = NaN # Default depends on building and location
-    ghpghx_inputs::AbstractVector{Dict} = Dict[]
     ghpghx_response::Dict = Dict()
     can_serve_dhw::Bool = false
 
