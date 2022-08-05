@@ -51,4 +51,4 @@ jobs:
         - name: Build containers
           run: docker-compose up -d
         - name: Execute tests in container
-          run: docker exec jul julia --project=. -e 'import Pkg; Pkg.add(url="https://github.com/NREL/GhpGhx.jl.git"); include("test/test_ghp.jl")'
+          run: docker exec jul julia --project=. -e 'import Pkg; Pkg.add(url="https://github.com/NREL/GhpGhx.jl.git");  Pkg.test("REopt"; test_args=["GHP"])'
