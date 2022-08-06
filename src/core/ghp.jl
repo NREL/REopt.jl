@@ -30,6 +30,11 @@
 
 
 """
+GHP evaluations typically require the `GhpGhx.jl` package to be loaded unless the `GhpGhx.jl` package 
+was already used externally to create `inputs_dict["GHP"]["ghpghx_responses"]`. See the Home page under 
+"Additional package loading for GHP" for instructions. This `GHP` struct uses the response from `GhpGhx.jl`
+to process input parameters for REopt including additional cost parameters for `GHP`.
+
     GHP
 
 struct with outer constructor:
@@ -43,8 +48,7 @@ struct with outer constructor:
     building_sqft::Float64 # Required input
     space_heating_efficiency_thermal_factor::Float64 = NaN  # Default depends on building and location
     cooling_efficiency_thermal_factor::Float64 = NaN # Default depends on building and location
-    ghpghx_inputs::AbstractVector{Dict} = Dict[]
-    ghpghx_responses::AbstractVector{Dict} = Dict[]
+    ghpghx_response::Dict = Dict()
     can_serve_dhw::Bool = false
 
     macrs_option_years::Int = 5
@@ -90,7 +94,6 @@ Base.@kwdef mutable struct GHP <: AbstractGHP
     building_sqft::Float64 # Required input
     space_heating_efficiency_thermal_factor::Float64 = NaN  # Default depends on building and location
     cooling_efficiency_thermal_factor::Float64 = NaN # Default depends on building and location
-    ghpghx_inputs::AbstractVector{Dict} = Dict[]
     ghpghx_response::Dict = Dict()
     can_serve_dhw::Bool = false
 

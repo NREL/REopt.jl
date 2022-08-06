@@ -22,4 +22,4 @@ results = run_reopt(m, "path/to/scenario.json")
 ```
 See the `test/scenarios` directory for examples of `scenario.json`.
 
-For more details see the [documentation](https://nrel.github.io/REopt.jl/dev).
+For more details, including installation instructions, see the [documentation](https://nrel.github.io/REopt.jl/dev).

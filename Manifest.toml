@@ -254,13 +254,6 @@ git-tree-sha1 = "29e1ec25cfb6762f503a19495aec347acf867a9e"
 uuid = "0329782f-3d07-4b52-b9f6-d3137cf03c7a"
 version = "1.0.0"
 
-[[deps.GhpGhx]]
-git-tree-sha1 = "b23764c8a8a97d373966fcba407f4f0b1b2700c0"
-repo-rev = "main"
-repo-url = "https://github.com/NREL/GhpGhx.jl.git"
-uuid = "7ce85f02-24a8-4d69-a3f0-14b5daa7d30c"
-version = "0.1.0"
-
 [[deps.Graphics]]
 deps = ["Colors", "LinearAlgebra", "NaNMath"]
 git-tree-sha1 = "d61890399bc535850c4bf08e4e0d3a7ad0f21cbd"
