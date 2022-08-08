@@ -56,7 +56,7 @@
     CO2_emissions_reduction_max_pct::Union{Real, Nothing} = nothing, # passed from Site
     include_climate_in_objective::Bool = false, # passed from Settings
     include_health_in_objective::Bool = false # passed from Settings
-```julia
+```
 
 !!! note "Outage modeling"
     Outage indexing begins at 1 (not 0) and the outage is inclusive of the outage end time step. 
