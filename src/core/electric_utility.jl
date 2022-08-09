@@ -208,8 +208,8 @@ struct ElectricUtility
                 error("Cannot supply both outage_start(/end)_time_step for deterministic outage modeling and 
                     multiple outage_start_time_steps for stochastic outage modeling. Please use one or the other.")
             else
-                @warn ("When using stochastic outage modeling (i.e. outage_start_time_steps, outage_durations, outage_probabilities), 
-                    emissions and renewable energy percentage calculations and constraints do not consider outages.")
+                @warn "When using stochastic outage modeling (i.e. outage_start_time_steps, outage_durations, outage_probabilities), 
+                    emissions and renewable energy percentage calculations and constraints do not consider outages."
             end
         end
 
@@ -274,7 +274,7 @@ function region_abbreviation(latitude, longitude)
 		end
 	end
     if isnothing(abbr)
-        @info "Could not find AVERT region containing site latitude/longitude. Checking site proximity to AVERT regions."
+        @warn "Could not find AVERT region containing site latitude/longitude. Checking site proximity to AVERT regions."
     else
         return abbr, meters_to_region
     end

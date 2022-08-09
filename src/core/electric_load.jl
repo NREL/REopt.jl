@@ -140,25 +140,24 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         if length(loads_kw) > 0
 
             if !(length(loads_kw) / time_steps_per_hour ≈ 8760)
-                throw(@error "Provided electric load does not match the time_steps_per_hour.")
+                error("Provided electric load does not match the time_steps_per_hour.")
             end
 
         elseif !isempty(path_to_csv)
             try
                 loads_kw = vec(readdlm(path_to_csv, ',', Float64, '\n'))
             catch e
-                @error "Unable to read in electric load profile from $path_to_csv. Please provide a valid path to a csv with no header."
-                throw(e) 
+                error("Unable to read in electric load profile from $path_to_csv. Please provide a valid path to a csv with no header.")
             end
 
             if !(length(loads_kw) / time_steps_per_hour ≈ 8760)
-                throw(@error "Provided electric load does not match the time_steps_per_hour.")
+                error("Provided electric load does not match the time_steps_per_hour.")
             end
     
         elseif !isempty(doe_reference_name)
             # NOTE: must use year that starts on Sunday with DOE reference doe_ref_profiles
             if year != 2017
-                @debug "Changing load profile year to 2017 because DOE reference profiles start on a Sunday."
+                @warn "Changing load profile year to 2017 because DOE reference profiles start on a Sunday."
             end
             year = 2017
             loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, year, annual_kwh, monthly_totals_kwh)
@@ -176,7 +175,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
 
         if length(loads_kw) < 8760*time_steps_per_hour
             loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw)/8760)))
-            @info "Repeating electric loads in each hour to match the time_steps_per_hour."
+            @warn "Repeating electric loads in each hour to match the time_steps_per_hour."
         end
 
         if isnothing(critical_loads_kw)
