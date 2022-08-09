@@ -53,7 +53,8 @@ import LinDistFlow
 const LDF = LinDistFlow
 using JuMP
 using JuMP.Containers: DenseAxisArray
-using Logging, LoggingExtras
+using Logging
+using LoggingExtras
 using DelimitedFiles
 using Dates
 import MathOptInterface
