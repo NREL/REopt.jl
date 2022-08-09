@@ -168,6 +168,9 @@ function dictkeys_tosymbols(d::Dict)
     d2 = Dict()
     for (k, v) in d
         # handling some type conversions for API inputs and JSON
+        if k == "emissions_factor_series_lb_NOx_per_kwh"
+            error("test")
+        end
         if k in [
             "loads_kw", "critical_loads_kw",
             "monthly_totals_kwh",
