@@ -466,6 +466,11 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 	@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status
 	results["solver_seconds"] = opt_time
+	
+	log_file = "../logfile.log" 
+	messages = [chop(line, head = 2) for (i, line) in enumerate(eachline(log_file)) if i % 2 == 1]
+	results["messages"] = length(messages) > 0 ? messages : nothing #  save as nothing or don't include at all if empty?
+
     if organize_pvs && !isempty(p.techs.pv)  # do not want to organize_pvs when running BAU case in parallel b/c then proform code fails
         organize_multiple_pv_results(p, results)
     end

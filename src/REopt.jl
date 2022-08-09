@@ -53,7 +53,7 @@ import LinDistFlow
 const LDF = LinDistFlow
 using JuMP
 using JuMP.Containers: DenseAxisArray
-using Logging
+using Logging, LoggingExtras
 using DelimitedFiles
 using Dates
 import MathOptInterface
@@ -69,6 +69,16 @@ using Requires
 
 function __init__()
     @require GhpGhx="7ce85f02-24a8-4d69-a3f0-14b5daa7d30c" println("using GhpGhx module in REopt")
+
+    log_file = "../logfile.log" # if path is changed, change in reopt.jl as well 
+    logger = TeeLogger(
+            global_logger(),  # Current global logger (stderr)
+            MinLevelLogger(   # Save any messages with level >= Warn
+                FileLogger(log_file),
+                Logging.Warn # TODO: format to remove source line? maybe using FormatLogger https://julialogging.github.io/reference/loggingextras/ 
+            )
+    )
+    global_logger(logger)
 end
 
 const EXISTING_BOILER_EFFICIENCY = 0.8
