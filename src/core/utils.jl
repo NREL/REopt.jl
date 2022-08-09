@@ -184,7 +184,7 @@ function dictkeys_tosymbols(d::Dict)
             try
                 v = convert(Array{Real, 1}, v)
             catch
-                @warn "Unable to convert $k to an Array{Real, 1}"
+                error("Unable to convert $k to an Array{Real, 1}")
             end
         end
         if k in [
