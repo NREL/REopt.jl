@@ -404,7 +404,7 @@ Check length of e and upsample if length(e) != N
 function create_export_rate(e::AbstractArray{<:Real, 1}, N::Int, ts_per_hour::Int=1)
     Ne = length(e)
     if Ne != Int(N/ts_per_hour) || Ne != N
-        @error "Export rates do not have correct number of entries. Must be $(N) or $(Int(N/ts_per_hour))."
+        error("Export rates do not have correct number of entries. Must be $(N) or $(Int(N/ts_per_hour)).")
     end
     if Ne != N  # upsample
         export_rates = [-1*x for x in e for ts in 1:ts_per_hour]

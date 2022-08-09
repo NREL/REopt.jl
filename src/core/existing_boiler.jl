@@ -107,7 +107,7 @@ function ExistingBoiler(;
     @assert production_type in ["steam", "hot_water"]
 
     if isempty(fuel_cost_per_mmbtu)
-        throw(@error "The ExistingBoiler.fuel_cost_per_mmbtu is a required input when modeling a heating load which is served by the Existing Boiler in the BAU case")
+        error("The ExistingBoiler.fuel_cost_per_mmbtu is a required input when modeling a heating load which is served by the Existing Boiler in the BAU case")
     end
 
     production_type_by_chp_prime_mover = Dict(
