@@ -232,7 +232,7 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
     end
     energy_tier_set = Set(energy_tiers)
     if length(energy_tier_set) > 1
-        @warn "energy periods contain different numbers of tiers, using limits of period with most tiers"
+        @warn "Energy periods contain different numbers of tiers, using limits of period with most tiers."
     end
     period_with_max_tiers = findall(energy_tiers .== maximum(energy_tiers))[1]
     n_energy_tiers = Int(maximum(energy_tier_set))
@@ -363,8 +363,7 @@ function scrub_urdb_demand_tiers!(A::Array)
     n_tiers = maximum(len_tiers_set)
 
     if length(len_tiers_set) > 1
-        @warn """Demand rate structure has varying number of tiers in periods.
-                 Making the number of tiers the same across all periods by repeating the last tier."""
+        @warn "Demand rate structure has varying number of tiers in periods. Making the number of tiers the same across all periods by repeating the last tier."
         for (i, rate) in enumerate(A)
             n_tiers_in_period = length(rate)
             if n_tiers_in_period != n_tiers

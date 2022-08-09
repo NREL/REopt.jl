@@ -93,7 +93,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         offgrid_allowed_keys = ["PV", "Wind", "ElectricStorage", "Generator", "Settings", "Site", "Financial", "ElectricLoad", "ElectricTariff", "ElectricUtility"]
         unallowed_keys = setdiff(keys(d), offgrid_allowed_keys) 
         if !isempty(unallowed_keys)
-            error("Currently, only PV, ElectricStorage, and Generator can be modeled when off_grid_flag is true. Cannot model $unallowed_keys.")
+            error("The following key(s) are not permitted when off_grid_flag=true: $unallowed_keys.")
         end
     end
     
@@ -143,7 +143,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                         )
     elseif settings.off_grid_flag 
         if haskey(d, "ElectricUtility")
-            @warn "ElectricUtility inputs are not applicable when off_grid_flag is true and any ElectricUtility inputs will be ignored. For off-grid scenarios, a year-long outage will always be modeled."
+            @warn "ElectricUtility inputs are not applicable when off_grid_flag=true and will be ignored. For off-grid scenarios, a year-long outage will always be modeled."
         end
         electric_utility = ElectricUtility(; outage_start_time_step = 1, 
                                             outage_end_time_step = settings.time_steps_per_hour * 8760, 
@@ -186,7 +186,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                         )
     else # if ElectricTariff inputs supplied for off-grid, will not be applied. 
         if haskey(d, "ElectricTariff")
-            @warn "ElectricTariff inputs are not applicable when off_grid_flag is true, and will be ignored."
+            @warn "ElectricTariff inputs are not applicable when off_grid_flag=true, and will be ignored."
         end
         electric_tariff = ElectricTariff(;  blended_annual_energy_rate = 0.0, 
                                             blended_annual_demand_rate = 0.0,
@@ -383,7 +383,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             get_ghpghx_from_input = true
         end        
     elseif haskey(d, "GHP") && !haskey(d["GHP"],"building_sqft")
-        error("If evaluating GHP you must enter a building_sqft")
+        error("If evaluating GHP you must enter a building_sqft.")
     end
     # Modify Heating and Cooling loads for GHP retrofit to account for HVAC VAV efficiency gains
     if eval_ghp
@@ -423,11 +423,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 @info "PVWatts success."
                 temp_c = get(response["outputs"], "tamb", [])
                 if length(temp_c) != 8760 || isempty(temp_c)
-                    @error "PVWatts did not return a valid temperature profile. Got $temp_c"
+                    error("PVWatts did not return a valid temperature profile. Got $temp_c")
                 end
                 ambient_temperature_f = temp_c * 1.8 .+ 32.0
             catch e
-                @error "Error occurred when calling PVWatts: $e"
+                error("Error occurred when calling PVWatts: $e")
             end
         end
         

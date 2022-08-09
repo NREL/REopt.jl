@@ -197,8 +197,7 @@ cost expressions.
 """
 function add_chp_constraints(m, p; _n="")
     # TODO if chp.min_turn_down_pct is 0.0, and there is no fuel burn or thermal y-intercept, we don't need the binary below
-    @warn """Adding binary variable to model CHP. 
-                Some solvers are very slow with integer variables"""
+    @warn "Adding binary variable to model CHP. Some solvers are very slow with integer variables"
     @variables m begin
         binCHPIsOnInTS[p.techs.chp, p.time_steps], Bin  # 1 If technology t is operating in time step; 0 otherwise
     end    

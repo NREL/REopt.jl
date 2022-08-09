@@ -63,14 +63,14 @@ function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly",
         @info "PVWatts success."
         watts = collect(get(response["outputs"], "ac", []) / 1000)  # scale to 1 kW system (* 1 kW / 1000 W)
         if length(watts) != 8760
-            @error "PVWatts did not return a valid production factor. Got $watts"
+            error("PVWatts did not return a valid production factor. Got $watts")
         end
         if time_steps_per_hour > 1
             watts = repeat(watts, inner=time_steps_per_hour)
         end
         return watts
     catch e
-        @error "Error occurred when calling PVWatts: $e"
+        error("Error occurred when calling PVWatts: $e")
     end
 end
 
@@ -139,10 +139,10 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
                 resource = readdlm(IOBuffer(String(r.body)), ',', Float64, '\n'; skipstart=5);
                 # columns: Temperature, Pressure, Speed, Direction (C, atm, m/s, Degrees)
                 if size(resource) != (8760, 4)
-                    @error "Wind Toolkit did not return valid resource data. Got an array with size $(size(resource))"
+                    error("Wind Toolkit did not return valid resource data. Got an array with size $(size(resource))")
                 end
             catch e
-                @error "Error occurred when calling Wind Toolkit: $e"
+                error("Error occurred when calling Wind Toolkit: $e")
             end
             push!(resources, resource)
         end
@@ -192,8 +192,8 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
         elseif Sys.iswindows()
             libfile = "ssc.dll"
         else
-            @error """Unsupported platform for using the SAM Wind module. 
-                      You can alternatively provide the Wind.prod_factor_series"""
+            error("Unsupported platform for using the SAM Wind module. 
+                      You can alternatively provide the Wind.prod_factor_series")
         end
 
         global hdl = joinpath(dirname(@__FILE__), "..", "sam", libfile)
@@ -290,7 +290,7 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
             try
                 msg = unsafe_string(msg_ptr)
             finally
-                @error("SAM Wind simulation error: $msg")
+                error("SAM Wind simulation error: $msg")
             end
         end
 
@@ -304,12 +304,12 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
         @ccall hdl.ssc_data_free(data::Ptr{Cvoid})::Cvoid
 
     catch e
-        @error "Problem calling SAM C library!"
+        error("Problem calling SAM C library!")
         showerror(stdout, e)
     end
 
     if !(length(sam_prodfactor) == 8760)
-        @error "Wind production factor from SAM has length $(length(sam_prodfactor)) (should be 8760)."
+        error("Wind production factor from SAM has length $(length(sam_prodfactor)) (should be 8760).")
     end
 
     @assert !(nothing in sam_prodfactor) "Did not get complete Wind production factor from SAM."

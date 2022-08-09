@@ -104,7 +104,7 @@ Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) m
 function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractModel
     s = Scenario(d)
     if s.settings.off_grid_flag
-        @warn "Only using first Model and not running BAU case because Settings.off_grid_flag == true. The BAU scenario is not applicable for off-grid microgrids."
+        @warn "Only using first Model and not running BAU case because Settings.off_grid_flag=true. The BAU scenario is not applicable for off-grid microgrids."
 	    results = run_reopt(ms[1], s)
         return results
     end
@@ -198,7 +198,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			elseif b in p.s.storage.types.cold
 				add_cold_thermal_storage_dispatch_constraints(m, p, b)
 			else
-				@error("Invalid storage does not fall in a thermal or electrical set")
+				error("Invalid storage does not fall in a thermal or electrical set")
 			end
 		end
 	end
@@ -265,7 +265,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         end
 
         if !isempty(p.techs.pbi)
-            @warn "adding binary variable(s) to model production based incentives"
+            @warn "Adding binary variable(s) to model production based incentives"
             add_prod_incent_vars_and_constraints(m, p)
         end
     end
@@ -310,7 +310,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     end
 
     if !isempty(p.techs.segmented)
-        @warn "adding binary variable(s) to model cost curves"
+        @warn "Adding binary variable(s) to model cost curves"
         add_cost_curve_vars_and_constraints(m, p)
         for t in p.techs.segmented  # cannot have this for statement in sum( ... for t in ...) ???
             m[:TotalTechCapCosts] += p.third_party_factor * (
@@ -466,7 +466,7 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 	@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status
 	results["solver_seconds"] = opt_time
-	
+
 	log_file = "../logfile.log" 
 	messages = [chop(line, head = 2) for (i, line) in enumerate(eachline(log_file)) if i % 2 == 1]
 	results["messages"] = length(messages) > 0 ? messages : nothing #  save as nothing or don't include at all if empty?
@@ -503,8 +503,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
 	if !isempty(p.techs.gen)  # Problem becomes a MILP
-		@warn """Adding binary variable to model gas generator. 
-				 Some solvers are very slow with integer variables"""
+		@warn "Adding binary variable to model gas generator. Some solvers are very slow with integer variables."
 		@variables m begin
 			binGenIsOnInTS[p.techs.gen, p.time_steps], Bin  # 1 If technology t is operating in time step h; 0 otherwise
 		end
@@ -519,8 +518,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
     end
 
 	if !(p.s.electric_utility.allow_simultaneous_export_import) & !isempty(p.s.electric_tariff.export_bins)
-		@warn """Adding binary variable to prevent simultaneous grid import/export. 
-				 Some solvers are very slow with integer variables"""
+		@warn "Adding binary variable to prevent simultaneous grid import/export. Some solvers are very slow with integer variables"
 		@variable(m, binNoGridPurchases[p.time_steps], Bin)
 	end
 
@@ -536,8 +534,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
     end
 
 	if !isempty(p.s.electric_utility.outage_durations) # add dvUnserved Load if there is at least one outage
-		@warn """Adding binary variable to model outages. 
-				 Some solvers are very slow with integer variables"""
+		@warn "Adding binary variable to model outages. Some solvers are very slow with integer variables"
 		max_outage_duration = maximum(p.s.electric_utility.outage_durations)
 		outage_time_steps = p.s.electric_utility.outage_time_steps
 		tZeros = p.s.electric_utility.outage_start_time_steps

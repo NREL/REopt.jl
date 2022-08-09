@@ -181,7 +181,7 @@ function dictkeys_tosymbols(d::Dict)
             try
                 v = convert(Array{Real, 1}, v)
             catch
-                @warn "Unable to convert $k to an Array{Real, 1}"
+                error("Unable to convert $k to an Array{Real, 1}")
             end
         end
         if k in [
@@ -190,7 +190,7 @@ function dictkeys_tosymbols(d::Dict)
             try
                 v = convert(Array{String, 1}, v)
             catch
-                @warn "Unable to convert $k to an Array{String, 1}"
+                error("Unable to convert $k to an Array{String, 1}")
             end
         end
         if k in [
@@ -199,7 +199,7 @@ function dictkeys_tosymbols(d::Dict)
             try
                 v = convert(Vector{Vector{Int64}}, v)
             catch
-                @warn "Unable to convert $k to a Vector{Vector{Int64}}"
+                error("Unable to convert $k to a Vector{Vector{Int64}}")
             end
         end
         if k in [
@@ -208,7 +208,7 @@ function dictkeys_tosymbols(d::Dict)
             try
                 v = convert(Array{Int64, 1}, v)
             catch
-                @warn "Unable to convert $k to a Array{Int64, 1}"
+                error("Unable to convert $k to a Array{Int64, 1}")
             end
         end
         d2[Symbol(k)] = v
@@ -271,7 +271,7 @@ function per_hour_value_to_time_series(x::AbstractVector{<:Real}, time_steps_per
         end
         return vals
     end
-    @error "Cannot convert $name to appropriate length time series."
+    error("Cannot convert $name to appropriate length time series.")
 end
 
 """
@@ -312,11 +312,11 @@ function generate_year_profile_hourly(year::Int64, consecutive_periods::Abstract
             start_date = Dates.firstdayofweek(start_date_of_month_year) + Dates.Week(start_week_of_month - 1) + Dates.Day(start_day_of_week - 1)
             # Throw an error if start_date is in the previous month when start_week_of_month=1 and there is no start_day_of_week in the first week of the month.
             if Dates.month(start_date) != start_month
-                @error "For $(error_start_text), there is no day $(start_day_of_week) ($(day_of_week_name[start_day_of_week])) in the first week of month $(start_month) ($(Dates.monthname(start_date))), $(year)"
+                error("For $(error_start_text), there is no day $(start_day_of_week) ($(day_of_week_name[start_day_of_week])) in the first week of month $(start_month) ($(Dates.monthname(start_date))), $(year)")
             end
             start_datetime = Dates.DateTime(start_date) + Dates.Hour(start_hour - 1)
             if Dates.year(start_datetime + Dates.Hour(duration_hours)) > year
-                @error "For $(error_start_text), the start day/time and duration_hours exceeds the end of the year. Please specify two separate unavailability periods: one for the beginning of the year and one for up to the end of the year."
+                error("For $(error_start_text), the start day/time and duration_hours exceeds the end of the year. Please specify two separate unavailability periods: one for the beginning of the year and one for up to the end of the year.")
             else
                 #end_datetime is the last hour that is 1.0 (e.g. that is still unavailable), not the first hour that is 0.0 after the period
                 end_datetime = start_datetime + Dates.Hour(duration_hours - 1)
@@ -348,11 +348,11 @@ function get_ambient_temperature(latitude::Real, longitude::Real; timeframe="hou
         @info "PVWatts success."
         tamb = collect(get(response["outputs"], "tamb", []))  # Celcius
         if length(tamb) != 8760
-            @error "PVWatts did not return a valid temperature. Got $tamb"
+            error("PVWatts did not return a valid temperature. Got $tamb")
         end
         return tamb
     catch e
-        @error "Error occurred when calling PVWatts: $e"
+        error("Error occurred when calling PVWatts: $e")
     end
 end
 
@@ -375,11 +375,11 @@ function get_pvwatts_prodfactor(latitude::Real, longitude::Real; timeframe="hour
         @info "PVWatts success."
         watts = collect(get(response["outputs"], "ac", []) / 1000)  # scale to 1 kW system (* 1 kW / 1000 W)
         if length(watts) != 8760
-            @error "PVWatts did not return a valid prodfactor. Got $watts"
+            error("PVWatts did not return a valid prodfactor. Got $watts")
         end
         return watts
     catch e
-        @error "Error occurred when calling PVWatts: $e"
+        error("Error occurred when calling PVWatts: $e")
     end
 end
 
