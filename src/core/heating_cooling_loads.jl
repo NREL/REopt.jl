@@ -64,7 +64,7 @@ struct DomesticHotWaterLoad
         if length(fuel_loads_mmbtu_per_hour) > 0
 
             if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
-                throw(@error "Provided domestic hot water load does not match the time_steps_per_hour.")
+                error("Provided domestic hot water load does not match the time_steps_per_hour.")
             end
 
             loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY)
@@ -85,13 +85,12 @@ struct DomesticHotWaterLoad
                                                     annual_mmbtu, monthly_mmbtu)
         else
             error("Cannot construct DomesticHotWaterLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
-                [doe_reference_name, city],
-                or [blended_doe_reference_names, blended_doe_reference_percents, city].")
+                [doe_reference_name, city], or [blended_doe_reference_names, blended_doe_reference_percents, city].")
         end
 
         if length(loads_kw) < 8760*time_steps_per_hour
             loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw)/8760)))
-            @info "Repeating domestic hot water loads in each hour to match the time_steps_per_hour."
+            @warn "Repeating domestic hot water loads in each hour to match the time_steps_per_hour."
         end
 
         new(
@@ -150,7 +149,7 @@ struct SpaceHeatingLoad
         if length(fuel_loads_mmbtu_per_hour) > 0
 
             if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
-                throw(@error "Provided space heating load does not match the time_steps_per_hour.")
+                error("Provided space heating load does not match the time_steps_per_hour.")
             end
 
             loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY)
@@ -171,13 +170,12 @@ struct SpaceHeatingLoad
                                                     annual_mmbtu, monthly_mmbtu)
         else
             error("Cannot construct BuiltInSpaceHeatingLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
-                [doe_reference_name, city], 
-                or [blended_doe_reference_names, blended_doe_reference_percents, city].")
+                [doe_reference_name, city], or [blended_doe_reference_names, blended_doe_reference_percents, city].")
         end
 
         if length(loads_kw) < 8760*time_steps_per_hour
             loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw)/8760)))
-            @info "Repeating space heating loads in each hour to match the time_steps_per_hour."
+            @warn "Repeating space heating loads in each hour to match the time_steps_per_hour."
         end
 
         new(

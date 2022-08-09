@@ -210,12 +210,12 @@ struct Wind <: AbstractTech
         hub_height = size_class_to_hub_height[size_class]
 
         if !(off_grid_flag) && !(operating_reserve_required_pct == 0.0)
-            @warn "Wind operating_reserve_required_pct applies only when off_grid_flag is True. Setting operating_reserve_required_pct to 0.0 for this on-grid analysis."
+            @warn "Setting Wind operating_reserve_required_pct to 0.0. operating_reserve_required_pct applies only when off_grid_flag=True."
             operating_reserve_required_pct = 0.0
         end
 
         if off_grid_flag && (can_net_meter || can_wholesale || can_export_beyond_nem_limit)
-            @warn "Net metering, wholesale, and grid exports are not possible for off-grid scenarios. Setting Wind can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False."
+            @warn "Setting Wind can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False because off_grid_flag=True."
             can_net_meter = false
             can_wholesale = false
             can_export_beyond_nem_limit = false
