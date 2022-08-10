@@ -174,7 +174,7 @@ function dictkeys_tosymbols(d::Dict)
             "prod_factor_series", 
             "monthly_energy_rates", "monthly_demand_rates",
             "blended_doe_reference_percents",
-            "coincident_peak_load_charge_per_kw", "fuel_cost_per_mmbtu",
+            "coincident_peak_load_charge_per_kw",
             "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
             "outage_probabilities"
             ] && !isnothing(v)
