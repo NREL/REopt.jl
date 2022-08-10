@@ -101,7 +101,7 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
     based on the prime_mover, boiler_type, and size_class. boiler_type is "steam" if `prime_mover` is "combustion_turbine" 
     and is "hot_water" for all other `prime_mover` types.
 
-    `fuel_cost_per_mmbtu` is always required
+    `fuel_cost_per_mmbtu` is always required and can be a scalar, a list of 12 monthly values, or a time series of values for every time step
 
 """
 Base.@kwdef mutable struct CHP <: AbstractCHP
