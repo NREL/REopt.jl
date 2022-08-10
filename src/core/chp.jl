@@ -34,7 +34,7 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
 `CHP` is an optional REopt input with the following keys and default values:
 ```julia
     prime_mover::String = ""
-    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = []  # REQUIRED
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = []  # REQUIRED. Can be a scalar, a list of 12 monthly values, or a time series of values for every time step
 
     # Required "custom inputs" if not providing prime_mover:
     installed_cost_per_kw::Union{Float64, AbstractVector{Float64}} = NaN
@@ -106,7 +106,7 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
 """
 Base.@kwdef mutable struct CHP <: AbstractCHP
     prime_mover::String = ""
-    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = []    
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = []  # REQUIRED. Can be a scalar, a list of 12 monthly values, or a time series of values for every time step
     # following must be provided by user if not providing prime_mover
     installed_cost_per_kw::Union{Float64, AbstractVector{Float64}} = Float64[]
     tech_sizes_for_cost_curve::AbstractVector{Float64} = Float64[]
