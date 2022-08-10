@@ -177,7 +177,7 @@ function dictkeys_tosymbols(d::Dict)
             "coincident_peak_load_charge_per_kw",
             "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
             "outage_probabilities"
-            ] && !isnothing(v)
+            ] && !isnothing(v) || (k in ["fuel_cost_per_mmbtu"] &&  length(v) > 1) # inputs that can be Union{<:Real, AbstractVector{<:Real}}
             try
                 v = convert(Array{Real, 1}, v)
             catch
