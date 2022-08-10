@@ -264,7 +264,7 @@ function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
         )
         return costs_per_tonne
     catch
-        @error "Could not look up EASIUR health costs from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid."
+        @warn "Could not look up EASIUR health costs from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid."
         return nothing
     end
 end
@@ -287,7 +287,7 @@ function easiur_escalation_rates(latitude::Real, longitude::Real, inflation::Rea
         )
         return escalation_rates
     catch
-        @error "Could not look up EASIUR health cost escalation rates from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid"
+        @warn "Could not look up EASIUR health cost escalation rates from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid"
         return nothing
     end
 end
