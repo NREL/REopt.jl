@@ -208,4 +208,6 @@ include("lindistflow/extend.jl")
 include("mpc/results.jl")
 include("mpc/model.jl")
 
+# TODO: close(logfile)
+
 end

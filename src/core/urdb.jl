@@ -146,20 +146,20 @@ function download_urdb(urdb_label::String; version::Int=8)
         r = HTTP.get(url, require_ssl_verification=false)  # cannot verify on NREL VPN
         response = JSON.parse(String(r.body))
         if r.status != 200
-            error("Bad response from URDB: $(response["errors"])")  # TODO URDB has "errors"?
+            throw(@error("Bad response from URDB: $(response["errors"])"))  # TODO URDB has "errors"?
         end
     catch e
-        error("Error occurred :$(e)")
+        throw(@error("Error occurred :$(e)"))
     end
 
     rates = response["items"]  # response['items'] contains a vector of dicts
     if length(rates) == 0
-        error("Could not find $(urdb_label) in URDB.")
+        throw(@error("Could not find $(urdb_label) in URDB."))
     end
     if rates[1]["label"] == urdb_label
         return rates[1]
     else
-        error("Could not find $(urdb_label) in URDB.")
+        throw(@error("Could not find $(urdb_label) in URDB."))
     end
 end
 
@@ -175,15 +175,15 @@ function download_urdb(util_name::String, rate_name::String; version::Int=8)
         r = HTTP.get(url, require_ssl_verification=false)  # cannot verify on NREL VPN
         response = JSON.parse(String(r.body))
         if r.status != 200
-            error("Bad response from URDB: $(response["errors"])")  # TODO URDB has "errors"?
+            throw(@error("Bad response from URDB: $(response["errors"])"))  # TODO URDB has "errors"?
         end
     catch e
-        error("Error occurred :$(e)")
+        throw(@error("Error occurred :$(e)"))
     end
 
     rates = response["items"]  # response['items'] contains a vector of dicts
     if length(rates) == 0
-        error("Could not find $(rate_name) in URDB.")
+        throw(@error("Could not find $(rate_name) in URDB."))
     end
 
     matched_rates = []
@@ -205,7 +205,7 @@ function download_urdb(util_name::String, rate_name::String; version::Int=8)
     end
     
     if length(matched_rates) == 0
-        error("Could not find $(rate_name) in URDB.")
+        throw(@error("Could not find $(rate_name) in URDB."))
     end
 
     return matched_rates[newest_index]
@@ -223,7 +223,7 @@ use URDB dict to return rates, energy_cost_vector, energy_tier_limits_kwh where:
 """
 function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM = 1.0e8)
     if length(d["energyratestructure"]) == 0
-        error("No energyratestructure in URDB response.")
+        throw(@error("No energyratestructure in URDB response."))
     end
     # TODO check bigM (in multiple functions)
     energy_tiers = Float64[]

@@ -216,7 +216,7 @@ struct PV <: AbstractTech
         end
         # TODO validate additional args
         if length(invalid_args) > 0
-            error("Invalid argument values: $(invalid_args)")
+            throw(@error("Invalid argument values: $(invalid_args)"))
         end
 
         new(

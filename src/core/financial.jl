@@ -197,7 +197,7 @@ struct Financial
         end
 
         if missing_health_inputs && include_health_in_objective
-            error("To include health costs in the objective function, you must either enter custom emissions costs and escalation rates or a site location within the CAMx grid.")
+            throw(@error("To include health costs in the objective function, you must either enter custom emissions costs and escalation rates or a site location within the CAMx grid."))
         end
     
 

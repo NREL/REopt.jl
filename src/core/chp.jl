@@ -196,7 +196,7 @@ function CHP(d::Dict)
             @warn "Ignoring `chp.tech_sizes_for_cost_curve` input because `chp.installed_cost_per_kw` is a scalar"
         end
     elseif !isempty(chp.installed_cost_per_kw) && isempty(chp.tech_sizes_for_cost_curve)
-        error("To model CHP cost curve, you must provide `chp.tech_sizes_for_cost_curve` vector of equal length to `chp.installed_cost_per_kw`")
+        throw(@error("To model CHP cost curve, you must provide `chp.tech_sizes_for_cost_curve` vector of equal length to `chp.installed_cost_per_kw`"))
     elseif isempty(chp.tech_sizes_for_cost_curve)
         update_installed_cost_params = true
     elseif isempty(chp.prime_mover)
@@ -210,7 +210,7 @@ function CHP(d::Dict)
             end
         end
         if pass_all_params_error
-            error("To model CHP you must provide at least `prime_mover` from $(prime_movers) or all of $([string(k) for k in keys(custom_chp_inputs)]) and unavailability_periods.")
+            throw(@error("To model CHP you must provide at least `prime_mover` from $(prime_movers) or all of $([string(k) for k in keys(custom_chp_inputs)]) and unavailability_periods."))
         end        
     elseif !(isempty(chp.prime_mover))
         @assert chp.prime_mover in prime_movers
