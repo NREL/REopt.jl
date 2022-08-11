@@ -43,10 +43,11 @@
     outage_time_steps::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:maximum(outage_durations),
     scenarios::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:length(outage_durations),
     # Emissions and renewable energy inputs:
-    emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[],
-    emissions_factor_series_lb_NOx_per_kwh::Union{Real,Array{<:Real,1}} = Float64[],
-    emissions_factor_series_lb_SO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[],
-    emissions_factor_series_lb_PM25_per_kwh::Union{Real,Array{<:Real,1}} = Float64[],
+    emissions_region::String = "", # AVERT emissions region. Default is based on location, or can be overriden by providing region here.
+    emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
+    emissions_factor_series_lb_NOx_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
+    emissions_factor_series_lb_SO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
+    emissions_factor_series_lb_PM25_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
     emissions_factor_CO2_decrease_pct::Real = 0.01174,
     emissions_factor_NOx_decrease_pct::Real = 0.01174,
     emissions_factor_SO2_decrease_pct::Real = 0.01174,
@@ -74,6 +75,14 @@
 !!! note "MPC vs. Non-MPC"
     This constructor is intended to be used with latitude/longitude arguments provided for
     the non-MPC case and without latitude/longitude arguments provided for the MPC case.
+
+!!! note "Emissions Region"
+    The default `emissions_region` input is determined by the site's latitude and longitude. 
+    Alternatively, you may input the desired AVERT `emissions_region`, which must be one of: 
+    ["California", "Central", "Florida", "Mid-Atlantic", "Midwest", "Carolinas", "New England",
+     "Northwest", "New York", "Rocky Mountains", "Southeast", "Southwest", "Tennessee", "Texas",
+     "Alaska", "Hawaii (except Oahu)", "Hawaii (Oahu)"]
+
 
 """
 struct ElectricUtility
