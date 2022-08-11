@@ -28,9 +28,6 @@ Classify the change according to the following categories:
 ## Develop
 ### Changed
 - Change default value for `wind.jl` `operating_reserve_required_pct` from 0.1 to 0.5 (only applicable when off_grid_flag=True.)
-
-## Develop
-### Changed
 - allow user to specify emissions_region in ElectricUtility, which is used instead of lat/long to look up AVERT data if emissions factors aren't provided by the user
 ### Added
 - Add geothermal heat pump (`GHP`), also known as ground-source heat pump (GSHP), to the REopt model for serving heating and cooling loads (typically the benefits include electrifying the heating load and improving the efficiency of cooling).
