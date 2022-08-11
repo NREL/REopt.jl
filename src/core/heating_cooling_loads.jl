@@ -64,7 +64,7 @@ struct DomesticHotWaterLoad
         if length(fuel_loads_mmbtu_per_hour) > 0
 
             if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
-                error("Provided domestic hot water load does not match the time_steps_per_hour.")
+                throw(@error("Provided domestic hot water load does not match the time_steps_per_hour."))
             end
 
             loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY)
@@ -84,8 +84,8 @@ struct DomesticHotWaterLoad
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_mmbtu, monthly_mmbtu)
         else
-            error("Cannot construct DomesticHotWaterLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
-                [doe_reference_name, city], or [blended_doe_reference_names, blended_doe_reference_percents, city].")
+            throw(@error("Cannot construct DomesticHotWaterLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
+                [doe_reference_name, city], or [blended_doe_reference_names, blended_doe_reference_percents, city]."))
         end
 
         if length(loads_kw) < 8760*time_steps_per_hour
@@ -149,7 +149,7 @@ struct SpaceHeatingLoad
         if length(fuel_loads_mmbtu_per_hour) > 0
 
             if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
-                error("Provided space heating load does not match the time_steps_per_hour.")
+                throw(@error("Provided space heating load does not match the time_steps_per_hour."))
             end
 
             loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY)
@@ -169,8 +169,8 @@ struct SpaceHeatingLoad
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_mmbtu, monthly_mmbtu)
         else
-            error("Cannot construct BuiltInSpaceHeatingLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
-                [doe_reference_name, city], or [blended_doe_reference_names, blended_doe_reference_percents, city].")
+            throw(@error("Cannot construct BuiltInSpaceHeatingLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
+                [doe_reference_name, city], or [blended_doe_reference_names, blended_doe_reference_percents, city]."))
         end
 
         if length(loads_kw) < 8760*time_steps_per_hour
@@ -280,7 +280,7 @@ struct CoolingLoad
         loads_kw = nothing
         if length(thermal_loads_ton) > 0
             if !(length(thermal_loads_ton) / time_steps_per_hour ≈ 8760)
-                error("Provided cooling load does not match the time_steps_per_hour.")
+                throw(@error("Provided cooling load does not match the time_steps_per_hour."))
             end
             loads_kw_thermal = thermal_loads_ton .* (KWH_THERMAL_PER_TONHOUR)
         
@@ -332,9 +332,9 @@ struct CoolingLoad
             end
         
         else
-            error("Cannot construct BuiltInCoolingLoad. You must provide either [thermal_loads_ton], 
+            throw(@error("Cannot construct BuiltInCoolingLoad. You must provide either [thermal_loads_ton], 
                 [doe_reference_name, city], [blended_doe_reference_names, blended_doe_reference_percents, city],
-                or the site_electric_load_profile along with one of [per_time_step_fractions_of_electric_load, monthly_fractions_of_electric_load, annual_fraction_of_electric_load].")
+                or the site_electric_load_profile along with one of [per_time_step_fractions_of_electric_load, monthly_fractions_of_electric_load, annual_fraction_of_electric_load]."))
         end
 
         # Now that either the cooling electric loads_kw or the cooling thermal loads_kw_thermal is known, update existing_chiller_cop if it was not input
@@ -697,7 +697,7 @@ function BuiltInDomesticHotWaterLoad(
         city = find_ashrae_zone_city(latitude, longitude)
     end
     if !(buildingtype in default_buildings)
-        error("buildingtype $(buildingtype) not in $(default_buildings).")
+        throw(@error("buildingtype $(buildingtype) not in $(default_buildings)."))
     end
     if isnothing(annual_mmbtu)
         annual_mmbtu = dhw_annual_mmbtu[city][buildingtype]
@@ -1028,7 +1028,7 @@ function BuiltInSpaceHeatingLoad(
         city = find_ashrae_zone_city(latitude, longitude)
     end
     if !(buildingtype in default_buildings)
-        error("buildingtype $(buildingtype) not in $(default_buildings).")
+        throw(@error("buildingtype $(buildingtype) not in $(default_buildings)."))
     end
     if isnothing(annual_mmbtu)
         annual_mmbtu = spaceheating_annual_mmbtu[city][buildingtype]
@@ -1357,7 +1357,7 @@ function BuiltInCoolingLoad(
         city = find_ashrae_zone_city(latitude, longitude)
     end
     if !(buildingtype in default_buildings)
-        error("buildingtype $(buildingtype) not in $(default_buildings).")
+        throw(@error("buildingtype $(buildingtype) not in $(default_buildings)."))
     end
     # Set initial existing_chiller_cop to "cop_unknown_thermal" if not passed in; we will update existing_chiller_cop once the load profile is determined
     if isnothing(existing_chiller_cop)

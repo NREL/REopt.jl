@@ -140,18 +140,18 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         if length(loads_kw) > 0
 
             if !(length(loads_kw) / time_steps_per_hour ≈ 8760)
-                error("Provided electric load does not match the time_steps_per_hour.")
+                throw(@error("Provided electric load does not match the time_steps_per_hour."))
             end
 
         elseif !isempty(path_to_csv)
             try
                 loads_kw = vec(readdlm(path_to_csv, ',', Float64, '\n'))
             catch e
-                error("Unable to read in electric load profile from $path_to_csv. Please provide a valid path to a csv with no header.")
+                throw(@error("Unable to read in electric load profile from $path_to_csv. Please provide a valid path to a csv with no header."))
             end
 
             if !(length(loads_kw) / time_steps_per_hour ≈ 8760)
-                error("Provided electric load does not match the time_steps_per_hour.")
+                throw(@error("Provided electric load does not match the time_steps_per_hour."))
             end
     
         elseif !isempty(doe_reference_name)
@@ -168,9 +168,9 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_kwh, monthly_totals_kwh)
         else
-            error("Cannot construct ElectricLoad. You must provide either [loads_kw], [doe_reference_name, city], 
+            throw(@error("Cannot construct ElectricLoad. You must provide either [loads_kw], [doe_reference_name, city], 
                   [doe_reference_name, latitude, longitude], 
-                  or [blended_doe_reference_names, blended_doe_reference_percents] with city or latitude and longitude.")
+                  or [blended_doe_reference_names, blended_doe_reference_percents] with city or latitude and longitude."))
         end
 
         if length(loads_kw) < 8760*time_steps_per_hour
@@ -494,7 +494,7 @@ function BuiltInElectricLoad(
         ),
     )
     if !(buildingtype in default_buildings)
-        error("buildingtype $(buildingtype) not in $(default_buildings).")
+        throw(@error("buildingtype $(buildingtype) not in $(default_buildings)."))
     end
 
     if isempty(city)
