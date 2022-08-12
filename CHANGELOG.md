@@ -28,11 +28,7 @@ Classify the change according to the following categories:
 ## Develop
 ### Changed
 - Change default value for `wind.jl` `operating_reserve_required_pct` from 0.1 to 0.5 (only applicable when off_grid_flag=True.)
-
-## Develop
-### Changed
-- Don't trigger GitHub 'Run test' workflow on a push that only changes README.md and/or CHANGELOG.md
-- Avoid triggering duplicate GitHub workflows. When pushing to a branch that's in a PR, only trigger tests on the push not on the PR sync also.
+- allow user to specify emissions_region in ElectricUtility, which is used instead of lat/long to look up AVERT data if emissions factors aren't provided by the user
 ### Added
 - Add geothermal heat pump (`GHP`), also known as ground-source heat pump (GSHP), to the REopt model for serving heating and cooling loads (typically the benefits include electrifying the heating load and improving the efficiency of cooling).
     - The unregistered `GhpGhx` package (https://github.com/NREL/GhpGhx.jl) is a "conditional" dependency of REopt by using the Requires.jl package, and this package sizes the ground heat exchanger (GHE) and gets the hourly electric consumption of the `GHP` for the specified heating and cooling loads that it serves.
@@ -62,6 +58,8 @@ Classify the change according to the following categories:
 - Update documentation and add `docs/devdeploy.jl` to locally host the REopt.jl documentation 
 - Make `ExistingBoiler` `fuel_cost_per_mmbtu` a required input
 - In `prodfactor.jl`, include lat-long coordinates if-statement to determine whether the "nsrdb" dataset should be used in call to PVWatts. Accounts for recent updates to NSRDB data used by PVWatts (v6). If outside of NSRDB range, use "intl" (international) dataset.
+- Don't trigger GitHub 'Run test' workflow on a push that only changes README.md and/or CHANGELOG.md
+- Avoid triggering duplicate GitHub workflows. When pushing to a branch that's in a PR, only trigger tests on the push not on the PR sync also.
 ### Fixed
 - Bug fix to constrain dvCurtail in `time_steps_without_grid`
 - Bug fix to report accurate wind ["year_one_to_load_series_kw"] in results/wind.jl (was previously not accounting for curtailed wind)
