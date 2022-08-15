@@ -1,8 +1,42 @@
-# REopt Changelog
-## Develop
+# Changelog
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## Guidelines
+- When making a Pull Request into `develop` start a new double-hash header for "Develop - YYYY-MM-DD"
+- When making a Pull Request into `master` change "Develop" to the next version number
+
+### Formatting
+- Use **bold** markup for field and model names (i.e. **outage_start_time_step**)
+- Use `code` markup for  REopt-specific file names, classes and endpoints (e.g. `src/REopt.jl`)
+- Use _italic_ for code terms (i.e. _list_)
+- Prepend change with tag(s) directing where it is in the repository:  
+`src`,`constraints`,`*.jl`
+
+Classify the change according to the following categories:
+    
+    ### Major Updates
+    ### Minor Updates
+    ##### Added
+    ##### Changed
+    ##### Fixed
+    ##### Deprecated
+    ##### Removed
+    ### Patches
+
+## v0.18.0
+### Added
+- Add geothermal heat pump (`GHP`), also known as ground-source heat pump (GSHP), to the REopt model for serving heating and cooling loads (typically the benefits include electrifying the heating load and improving the efficiency of cooling).
+    - The unregistered `GhpGhx` package (https://github.com/NREL/GhpGhx.jl) is a "conditional" dependency of REopt by using the Requires.jl package, and this package sizes the ground heat exchanger (GHE) and gets the hourly electric consumption of the `GHP` for the specified heating and cooling loads that it serves.
+    - The `GhpGhx` module calls for sizing the GHE can only be done if you first "add https://github.com/NREL/GhpGhx.jl" to the environment and then load the package by "using GhpGhx" before running REopt with `GHP`.
+    - The `GHP` size and dispatch of the different `GHP` options is pre-determined by the `GhpGhx` package, so the REopt model just chooses one or none of the `GHP` options with a binary decision variable.
 ### Changed
-- Don't trigger GitHub 'Run test' workflow on a push that only changes README.md and/or CHANGELOG.md
-- Avoid triggering duplicate GitHub workflows. When pushing to a branch that's in a PR, only trigger tests on the push not on the PR sync also.
+- Change default value for `wind.jl` **operating_reserve_required_pct** from 0.1 to 0.5 (only applicable when **off_grid_flag**=_True_.)
+- allow user to specify emissions_region in ElectricUtility, which is used instead of lat/long to look up AVERT data if emissions factors aren't provided by the user
+### Fixed
+- Add **wholesale_rate** and **emissions_factor_series_lb_\<pollutant\>_per_kwh** inputs to the list of inputs that `dictkeys_tosymbols()` tries to convert to type _Array{Real}_. Due to serialization, when list inputs come from the API, they are of type _Array{Any}_ so must be converted to match type required by the constructors they are passed to.
 
 ## v0.17.0
 ### Added
@@ -27,6 +61,8 @@
 - Update documentation and add `docs/devdeploy.jl` to locally host the REopt.jl documentation 
 - Make `ExistingBoiler` `fuel_cost_per_mmbtu` a required input
 - In `prodfactor.jl`, include lat-long coordinates if-statement to determine whether the "nsrdb" dataset should be used in call to PVWatts. Accounts for recent updates to NSRDB data used by PVWatts (v6). If outside of NSRDB range, use "intl" (international) dataset.
+- Don't trigger GitHub 'Run test' workflow on a push that only changes README.md and/or CHANGELOG.md
+- Avoid triggering duplicate GitHub workflows. When pushing to a branch that's in a PR, only trigger tests on the push not on the PR sync also.
 ### Fixed
 - Bug fix to constrain dvCurtail in `time_steps_without_grid`
 - Bug fix to report accurate wind ["year_one_to_load_series_kw"] in results/wind.jl (was previously not accounting for curtailed wind)

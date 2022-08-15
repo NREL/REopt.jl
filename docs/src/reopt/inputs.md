@@ -151,3 +151,8 @@ REopt.FlexibleHVAC
 ```@docs
 REopt.ExistingChiller
 ```
+
+## GHP
+```@docs
+REopt.GHP
+```
