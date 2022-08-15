@@ -176,7 +176,8 @@ function dictkeys_tosymbols(d::Dict)
             "blended_doe_reference_percents",
             "coincident_peak_load_charge_per_kw", "fuel_cost_per_mmbtu",
             "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
-            "outage_probabilities", "emissions_factor_series_lb_CO2_per_kwh",
+            "outage_probabilities", "wholesale_rate",
+            "emissions_factor_series_lb_CO2_per_kwh",
             "emissions_factor_series_lb_NOx_per_kwh", 
             "emissions_factor_series_lb_SO2_per_kwh",
             "emissions_factor_series_lb_PM25_per_kwh"
