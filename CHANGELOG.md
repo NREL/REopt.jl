@@ -33,7 +33,7 @@ Classify the change according to the following categories:
     - The `GhpGhx` module calls for sizing the GHE can only be done if you first "add https://github.com/NREL/GhpGhx.jl" to the environment and then load the package by "using GhpGhx" before running REopt with `GHP`.
     - The `GHP` size and dispatch of the different `GHP` options is pre-determined by the `GhpGhx` package, so the REopt model just chooses one or none of the `GHP` options with a binary decision variable.
 ### Changed
-- Change default value for `wind.jl` `operating_reserve_required_pct` from 0.1 to 0.5 (only applicable when off_grid_flag=True.)
+- Change default value for `wind.jl` **operating_reserve_required_pct** from 0.1 to 0.5 (only applicable when **off_grid_flag**=_True_.)
 - allow user to specify emissions_region in ElectricUtility, which is used instead of lat/long to look up AVERT data if emissions factors aren't provided by the user
 ### Fixed
 - Add **wholesale_rate** and **emissions_factor_series_lb_\<pollutant\>_per_kwh** inputs to the list of inputs that `dictkeys_tosymbols()` tries to convert to type _Array{Real}_. Due to serialization, when list inputs come from the API, they are of type _Array{Any}_ so must be converted to match type required by the constructors they are passed to.
