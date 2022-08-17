@@ -35,11 +35,8 @@ function add_chp_fuel_burn_constraints(m, p; _n="")
     fuel_burn_intercept = fuel_burn_full_load - fuel_burn_slope * 1.0  # [kWt/kWe_rated]
 
     # Fuel cost
-    fuel_cost_per_kwh = p.s.chp.fuel_cost_per_mmbtu / KWH_PER_MMBTU
-    fuel_cost_series = per_hour_value_to_time_series(fuel_cost_per_kwh, p.s.settings.time_steps_per_hour, 
-                                                     "CHP.fuel_cost_per_mmbtu")
-    m[:TotalCHPFuelCosts] = @expression(m, p.pwf_fuel["CHP"] *
-        sum(m[:dvFuelUsage]["CHP", ts] * fuel_cost_series[ts] for ts in p.time_steps)
+    m[:TotalCHPFuelCosts] = @expression(m, p.pwf_fuel[t] *
+        sum(m[:dvFuelUsage][t, ts] * fuel_cost_per_kwh[t, ts] for t in p.techs.chp, ts in p.time_steps)
     )      
     # Conditionally add dvFuelBurnYIntercept if coefficient p.FuelBurnYIntRate is greater than ~zero
     if fuel_burn_intercept > 1.0E-7

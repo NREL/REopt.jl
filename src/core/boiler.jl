@@ -32,7 +32,7 @@ struct Boiler <: AbstractThermalTech
     min_kw::Real
     max_kw::Real
     efficiency::Real
-    fuel_cost_series::AbstractVector{<:Real}
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}}
     installed_cost_per_kw::Real
     om_cost_per_kw::Real
     om_cost_per_kwh::Real
@@ -83,9 +83,6 @@ function Boiler(;
         # emissions_factor_lb_CO2_per_mmbtu::Real,
     )
 
-    fuel_cost_per_kwh = fuel_cost_per_mmbtu / KWH_PER_MMBTU
-    fuel_cost_series = per_hour_value_to_time_series(fuel_cost_per_kwh, time_steps_per_hour, 
-                                                     "Boiler.fuel_cost_per_mmbtu")
     min_kw = min_mmbtu_per_hour * KWH_PER_MMBTU
     max_kw = max_mmbtu_per_hour * KWH_PER_MMBTU
 
@@ -98,7 +95,7 @@ function Boiler(;
         min_kw,
         max_kw,
         efficiency,
-        fuel_cost_series,
+        fuel_cost_per_mmbtu,
         installed_cost_per_kw,
         om_cost_per_kw,
         om_cost_per_kwh,

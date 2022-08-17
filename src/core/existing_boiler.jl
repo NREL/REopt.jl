@@ -31,7 +31,7 @@
 struct ExistingBoiler <: AbstractThermalTech  # useful to create AbstractHeatingTech or AbstractThermalTech?
     max_kw::Real
     efficiency::Real
-    fuel_cost_series::AbstractVector{<:Real}
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}}
     fuel_type::String
     #can_supply_steam_turbine::Bool
     fuel_renewable_energy_pct::Real
@@ -119,10 +119,6 @@ function ExistingBoiler(;
         "fuel_cell" => "hot_water"
     )
 
-    fuel_cost_per_kwh = fuel_cost_per_mmbtu / KWH_PER_MMBTU
-    fuel_cost_series = per_hour_value_to_time_series(fuel_cost_per_kwh, time_steps_per_hour, 
-                                                     "ExistingBoiler.fuel_cost_per_mmbtu")
-
     efficiency_defaults = Dict(
         "hot_water" => 0.8,
         "steam" => 0.75
@@ -140,7 +136,7 @@ function ExistingBoiler(;
     ExistingBoiler(
         max_kw,
         efficiency,
-        fuel_cost_series,
+        fuel_cost_per_mmbtu,
         fuel_type,
         #can_supply_steam_turbine,
         fuel_renewable_energy_pct,
