@@ -68,6 +68,7 @@ A Scenario struct can contain the following keys:
 - [DomesticHotWaterLoad](@ref) (optional)
 - [SpaceHeatingLoad](@ref) (optional)
 - [ExistingBoiler](@ref) (optional)
+- [Boiler](@ref) (optional)
 - [CHP](@ref) (optional)
 - [FlexibleHVAC](@ref) (optional)
 - [ExistingChiller](@ref) (optional)

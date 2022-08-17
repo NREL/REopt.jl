@@ -45,6 +45,7 @@ function BAUInputs(p::REoptInputs)
     techs = Techs(p, bau_scenario)
 
     boiler_efficiency = Dict{String, Float64}()
+    fuel_cost_per_kwh = Dict{String, AbstractArray}()
 
     # REoptInputs indexed on techs.all:
     max_sizes = Dict(t => 0.0 for t in techs.all)
@@ -115,7 +116,7 @@ function BAUInputs(p::REoptInputs)
 
     if "ExistingBoiler" in techs.all
         setup_existing_boiler_inputs(bau_scenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
-            tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25)
+            tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh)
     end
 
     if "ExistingChiller" in techs.all
@@ -192,6 +193,7 @@ function BAUInputs(p::REoptInputs)
         p.pbi_max_kw, 
         p.pbi_benefit_per_kwh,
         boiler_efficiency,
+        fuel_cost_per_kwh,
         ghp_options,
         require_ghp_purchase,
         ghp_heating_thermal_load_served_kw,

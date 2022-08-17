@@ -624,7 +624,7 @@ end
             p.s.dhw_load.loads_kw[ts] = 5
             p.s.space_heating_load.loads_kw[ts] = 5
             p.s.cooling_load.loads_kw_thermal[ts] = 10
-            p.s.existing_boiler.fuel_cost_series[ts] = 100
+            p.fuel_cost_per_kwh["ExistingBoiler"][ts] = 100
             for tier in 1:p.s.electric_tariff.n_energy_tiers
                 p.s.electric_tariff.energy_rates[ts, tier] = 100
             end
@@ -633,7 +633,7 @@ end
             p.s.dhw_load.loads_kw[ts] = 0
             p.s.space_heating_load.loads_kw[ts] = 0
             p.s.cooling_load.loads_kw_thermal[ts] = 0
-            p.s.existing_boiler.fuel_cost_series[ts] = 1
+            p.fuel_cost_per_kwh["ExistingBoiler"][ts] = 1
             for tier in 1:p.s.electric_tariff.n_energy_tiers
                 p.s.electric_tariff.energy_rates[ts, tier] = 100
             end
@@ -904,25 +904,26 @@ end
     @test round(sum(cooling_electric_hybrid_expected .- cooling_elec_hybrid), digits=1) ≈ 0.0 atol=0.1
 end
 
-@testset "Boiler and Steam Turbine" begin
+@testset "Boiler (new) test" begin
+    input_data = JSON.parsefile("scenarios/boiler_new_inputs.json")
+    #TODO use "FlatLoad" once cooling-flatload PR is merged (FlatLoad not working for heating loads right now)
+    input_data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"] = fill(0.5, 8760)
+    input_data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = fill(0.5, 8760)
+    s = Scenario(input_data)
+    inputs = REoptInputs(s)
     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt([m1,m2], "./scenarios/boiler_steam_turbine.json")
-
-    # below copied from API test (TODO why so many unused values? only one test?)
+    results = run_reopt([m1,m2], inputs)
+    
     # # BAU boiler loads
-    # load_boiler_fuel = d["outputs"]["Scenario"]["Site"]["LoadProfileBoilerFuel"]["year_one_boiler_fuel_load_series_mmbtu_per_hr"]
-    # load_boiler_thermal = d["outputs"]["Scenario"]["Site"]["LoadProfileBoilerFuel"]["year_one_boiler_thermal_load_series_mmbtu_per_hr"]
-
-    # # Fuel/thermal **consumption**
-    # boiler_fuel = d["outputs"]["Scenario"]["Site"]["Boiler"]["year_one_boiler_fuel_consumption_series_mmbtu_per_hr"]
-    # newboiler_fuel = d["outputs"]["Scenario"]["Site"]["NewBoiler"]["year_one_boiler_fuel_consumption_series_mmbtu_per_hr"]
-    # steamturbine_thermal_in = d["outputs"]["Scenario"]["Site"]["SteamTurbine"]["year_one_thermal_consumption_series_mmbtu_per_hr"]
-
-    # # Check the electric_out/thermal_in efficiency/ratio of the steam turbine with a pre-calculated expected value 
-    # steamturbine_electric = d["outputs"]["Scenario"]["Site"]["SteamTurbine"]["year_one_electric_production_series_kw"] 
-    # net_electric_efficiency = sum(steamturbine_electric) / (sum(newboiler_fuel) * KWH_PER_MMBTU)
-    # self.assertAlmostEqual(net_electric_efficiency, 0.185, delta=0.02)  # Expected value from spreadsheet
+    load_thermal_mmbtu_bau = sum(s.space_heating_load.loads_kw + s.dhw_load.loads_kw) / REopt.KWH_PER_MMBTU
+    existing_boiler_mmbtu = sum(results["ExistingBoiler"]["year_one_thermal_production_mmbtu_per_hour"])
+    boiler_thermal_mmbtu = sum(results["Boiler"]["year_one_thermal_production_mmbtu_per_hour"])
+    
+    # Used monthly fuel cost for ExistingBoiler and Boiler, where ExistingBoiler has lower fuel cost only
+    # in February (28 days), so expect ExistingBoiler to serve the flat/constant load 28 days of the year
+    @test existing_boiler_mmbtu ≈ load_thermal_mmbtu_bau * 28 / 365 atol=0.00001
+    @test boiler_thermal_mmbtu ≈ load_thermal_mmbtu_bau - existing_boiler_mmbtu atol=0.00001
 end
 
 @testset "OffGrid" begin

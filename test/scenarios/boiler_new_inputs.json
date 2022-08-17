@@ -13,7 +13,7 @@
         "min_mmbtu_per_hour": 0.0,
         "max_mmbtu_per_hour": 1.0E9,
         "efficiency": 0.8,
-        "installed_cost_per_mmbtu_per_hour": 1.0,
+        "installed_cost_per_mmbtu_per_hour": 0.001,
         "om_cost_per_mmbtu_per_hour": 0.0,
         "om_cost_per_mmbtu": 0.0,                  
         "fuel_type": "natural_gas",
@@ -52,13 +52,13 @@
         "analysis_years": 25
     },
     "ElectricLoad": {
-        "doe_reference_name": "Hospital",
+        "doe_reference_name": "FlatLoad",
         "annual_kwh": 8760000.0
     },
     "SpaceHeatingLoad": {
-        "doe_reference_name": "Hospital",
-        "annual_mmbtu": 10000.0
     },
+    "DomesticHotWaterLoad": {
+    },    
     "ElectricTariff": {
         "urdb_utility_name": "Pacific Gas & Electric Co",
         "urdb_rate_name": "E-20 Maximum demand of (1000 KW or more) (Secondary)",

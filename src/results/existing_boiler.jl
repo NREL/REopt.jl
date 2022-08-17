@@ -41,8 +41,6 @@
 function add_existing_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 
-    # TODO all of these time series assume hourly time steps
-    # TODO we convert KWH_PER_MMBTU from user inputs to the model, and then back to mmbtu in outputs: why not stay in mmbtu?
 	r["year_one_fuel_consumption_mmbtu_per_hour"] = 
         round.(value.(m[:dvFuelUsage]["ExistingBoiler", ts] for ts in p.time_steps) / KWH_PER_MMBTU, digits=5)
     r["year_one_fuel_consumption_mmbtu"] = round(sum(r["year_one_fuel_consumption_mmbtu_per_hour"]), digits=3)
@@ -74,7 +72,7 @@ function add_existing_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
 	r["year_one_thermal_to_load_series_mmbtu_per_hour"] = round.(value.(BoilerToLoad / KWH_PER_MMBTU), digits=5)
 
     m[:TotalExistingBoilerFuelCosts] = @expression(m, p.pwf_fuel["ExistingBoiler"] *
-        sum(m[:dvFuelUsage]["ExistingBoiler", ts] * p.s.existing_boiler.fuel_cost_series[ts] for ts in p.time_steps)
+        sum(m[:dvFuelUsage]["ExistingBoiler", ts] * p.fuel_cost_per_kwh["ExistingBoiler"][ts] for ts in p.time_steps)
     )
 	r["lifecycle_fuel_cost_after_tax"] = round(value(m[:TotalExistingBoilerFuelCosts]) * (1 - p.s.financial.offtaker_tax_pct), digits=3)
 	r["year_one_fuel_cost_before_tax"] = round(value(m[:TotalExistingBoilerFuelCosts]) / p.pwf_fuel["ExistingBoiler"], digits=3)
