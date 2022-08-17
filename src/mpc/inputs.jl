@@ -51,6 +51,7 @@ struct MPCInputs <: AbstractInputs
     cop::Dict{String, Float64}  # (techs.cooling)
     thermal_cop::Dict{String, Float64}  # (techs.absorption_chiller)
     ghp_options::UnitRange{Int64}  # Range of the number of GHP options
+    fuel_cost_per_kwh::Dict{String, AbstractArray}  # Fuel cost array for all time_steps
 end
 
 
@@ -89,6 +90,7 @@ function MPCInputs(s::MPCScenario)
     cop = Dict("ExistingChiller" => s.cooling_load.cop)
     thermal_cop = Dict{String, Float64}()
     ghp_options = 1:0
+    fuel_cost_per_kwh = Dict{String, AbstractArray}()
 
     MPCInputs(
         s,
@@ -113,10 +115,11 @@ function MPCInputs(s::MPCScenario)
         export_bins_by_tech,
         cop,
         thermal_cop,
-        ghp_options
+        ghp_options,
         # s.site.min_resil_time_steps,
         # s.site.mg_tech_sizes_equal_grid_sizes,
         # s.site.node,
+        fuel_cost_per_kwh
     )
 end
 
@@ -136,7 +139,7 @@ function setup_tech_inputs(s::MPCScenario)
     end
 
     if "Generator" in techs.all
-        setup_gen_inputs(s, existing_sizes, production_factor)
+        setup_gen_inputs(s, existing_sizes, production_factor, fuel_cost_per_kwh)
     end
 
     return techs, production_factor, existing_sizes
@@ -152,8 +155,10 @@ function setup_pv_inputs(s::MPCScenario, existing_sizes, production_factor)
 end
 
 
-function setup_gen_inputs(s::MPCScenario, existing_sizes, production_factor)
+function setup_gen_inputs(s::MPCScenario, existing_sizes, production_factor, fuel_cost_per_kwh)
     existing_sizes["Generator"] = s.generator.size_kw
     production_factor["Generator", :] = ones(length(s.electric_load.loads_kw))
+    generator_fuel_cost_per_kwh = s.generator.fuel_cost_per_gallon / KWH_PER_GAL_DIESEL
+    fuel_cost_per_kwh["Generator"] = per_hour_value_to_time_series(generator_fuel_cost_per_kwh, s.settings.time_steps_per_hour, "Generator")
     return nothing
 end
