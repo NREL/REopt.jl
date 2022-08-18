@@ -65,7 +65,7 @@ function MPCInputs(s::MPCScenario)
 
     time_steps = 1:length(s.electric_load.loads_kw)
     hours_per_time_step = 1 / s.settings.time_steps_per_hour
-    techs, production_factor, existing_sizes = setup_tech_inputs(s)
+    techs, production_factor, existing_sizes, fuel_cost_per_kwh = setup_tech_inputs(s)
     months = 1:length(s.electric_tariff.monthly_demand_rates)
 
     techs_by_exportbin = DenseAxisArray([ techs.all, techs.all, techs.all], s.electric_tariff.export_bins)
@@ -90,7 +90,6 @@ function MPCInputs(s::MPCScenario)
     cop = Dict("ExistingChiller" => s.cooling_load.cop)
     thermal_cop = Dict{String, Float64}()
     ghp_options = 1:0
-    fuel_cost_per_kwh = Dict{String, AbstractArray}()
 
     MPCInputs(
         s,
@@ -133,6 +132,7 @@ function setup_tech_inputs(s::MPCScenario)
     # REoptInputs indexed on techs:
     existing_sizes = Dict(t => 0.0 for t in techs.all)
     production_factor = DenseAxisArray{Float64}(undef, techs.all, time_steps)
+    fuel_cost_per_kwh = Dict{String, AbstractArray}()
 
     if !isempty(techs.pv)
         setup_pv_inputs(s, existing_sizes, production_factor)
@@ -142,7 +142,7 @@ function setup_tech_inputs(s::MPCScenario)
         setup_gen_inputs(s, existing_sizes, production_factor, fuel_cost_per_kwh)
     end
 
-    return techs, production_factor, existing_sizes
+    return techs, production_factor, existing_sizes, fuel_cost_per_kwh
 end
 
 
