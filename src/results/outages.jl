@@ -79,7 +79,8 @@ function add_outage_results(m, p, d::Dict)
 	for s in 1:S, t in 1:T
 		unserved_load_per_outage[s, t] = sum(r["unserved_load_series"][s, t, ts] for 
 											 ts in 1:p.s.electric_utility.outage_durations[s]) 
-	# need the ts in 1:p.s.electric_utility.outage_durations[s] b/c dvUnservedLoad has unused values in third dimension
+		# need to sum over ts in 1:p.s.electric_utility.outage_durations[s] 
+		# instead of all ts b/c dvUnservedLoad has unused values in third dimension
 	end
 	r["unserved_load_per_outage_series"] = round.(unserved_load_per_outage, digits=2)
 	r["mg_storage_upgrade_cost"] = value(m[:dvMGStorageUpgradeCost])
