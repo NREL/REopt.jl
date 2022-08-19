@@ -25,7 +25,7 @@ Classify the change according to the following categories:
 
 ## v0.18.1
 ### Removed
-- **include_climate_in_objective**, **pwf_emissions_cost_CO2_grid**, **pwf_emissions_cost_CO2_onsite** unecessarily included in Site results
+- **include_climate_in_objective**, **pwf_emissions_cost_CO2_grid**, and **pwf_emissions_cost_CO2_onsite** unnecessarily included in Site results
 
 ## v0.18.0
 ### Added
