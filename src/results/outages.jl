@@ -76,8 +76,12 @@ function add_outage_results(m, p, d::Dict)
 	r["unserved_load_series"] = value.(m[:dvUnservedLoad]).data
 	S = length(p.s.electric_utility.scenarios)
 	T = length(p.s.electric_utility.outage_start_time_steps)
+	TS = length(p.s.electric_utility.outage_time_steps)
 	unserved_load_per_outage = Array{Float64}(undef, S, T)
 	for s in 1:S, t in 1:T
+		if p.s.electric_utility.outage_durations[s] < TS
+			r["unserved_load_series"][s,t,p.s.electric_utility.outage_durations[s]+1:] = 0
+		end
 		unserved_load_per_outage[s, t] = sum(r["unserved_load_series"][s, t, ts] for 
 											 ts in 1:p.s.electric_utility.outage_durations[s]) 
 		# need to sum over ts in 1:p.s.electric_utility.outage_durations[s] 
