@@ -112,6 +112,7 @@ function BAUInputs(p::REoptInputs)
         if !p.s.generator.can_curtail
             push!(techs.no_curtail, "Generator")
         end
+        fuel_cost_per_kwh["Generator"] = p.fuel_cost_per_kwh["Generator"]        
     end
 
     if "ExistingBoiler" in techs.all
