@@ -17,14 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Classify the change according to the following categories:
     
-    ### Major Updates
-    ### Minor Updates
-    ##### Added
-    ##### Changed
-    ##### Fixed
-    ##### Deprecated
-    ##### Removed
-    ### Patches
+    ### Added
+    ### Changed
+    ### Fixed
+    ### Deprecated
+    ### Removed
+
+## v0.18.1
+### Removed
+- **include_climate_in_objective**, **pwf_emissions_cost_CO2_grid**, and **pwf_emissions_cost_CO2_onsite** unnecessarily included in Site results
 
 ## v0.18.0
 ### Added
