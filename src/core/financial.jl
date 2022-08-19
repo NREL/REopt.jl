@@ -41,7 +41,7 @@
     owner_tax_pct::Real = 0.26,
     owner_discount_pct::Real = 0.0564,
     analysis_years::Int = 25,
-    value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00,
+    value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00, #only applies to multiple outage modeling
     microgrid_upgrade_cost_pct::Real = off_grid_flag ? 0.0 : 0.3, # not applicable when off_grid_flag is true
     macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
     macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
