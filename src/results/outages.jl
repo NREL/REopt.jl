@@ -82,7 +82,7 @@ function add_outage_results(m, p, d::Dict)
 	unserved_load_per_outage = Array{Float64}(undef, S, T)
 	for s in 1:S, t in 1:T
 		if p.s.electric_utility.outage_durations[s] < TS
-			r["unserved_load_series"][s,t,p.s.electric_utility.outage_durations[s]+1:] = 0
+			r["unserved_load_series"][s,t,p.s.electric_utility.outage_durations[s]+1:end] = 0
 		end
 		unserved_load_per_outage[s, t] = sum(r["unserved_load_series"][s, t, ts] for 
 											 ts in 1:p.s.electric_utility.outage_durations[s]) 
