@@ -152,10 +152,6 @@ function Techs(s::Scenario)
         push!(heating_techs, "Boiler")
         push!(boiler_techs, "Boiler")
     end
-
-    if "Wind" in all_techs
-        append!(techs_no_turndown, ["Wind"])
-    end
     
     if !isnothing(s.chp)
         push!(all_techs, "CHP")
