@@ -30,8 +30,9 @@
 """
     transition_prob(start_gen::Vector{Int}, end_gen::Vector{Int}, fail_prob::Real)
 
-Return the probability of going from i to j generators given a failure rate of 
-``fail_prob`` for each i,j pair in vectors ``start_gen`` and ``end_gen``.
+Return a vector of the probability of ``y`` generators working at the end of the period given ``x`` generators are working at the start of the period
+and given a failure rate of ``fail_prob``. ``x`` = ``start_gen[i]`` and ``y`` = ``end_gen[i]`` for each i in the length of start gen. 
+Start gen and end gen need to be the same length.
 
 Function used to create transition probabilities in Markov matrix.
 
@@ -85,9 +86,10 @@ end
 """
     markov_matrix(num_gen::Int, fail_prob::Real)
 
-Return an ``num_gen``+1 by ``num_gen``+1 matrix of transition probabilities of going from n (row) to n' (column) given probability ``fail_prob``
+Return a ``num_gen``+1 by ``num_gen``+1 matrix of transition probabilities of going from n (row) to n' (column) given probability ``fail_prob``
 
 Row n denotes starting with n-1 generators, with the first row denoting zero working generators. Column n' denots ending with n'-1 generators.
+
 
 # Examples
 ```repl-julia
@@ -112,7 +114,19 @@ end
 Markov Matrix for multiple generator types. 
 Return an prod(``num_gen_vec``.+1) by prod(``num_gen``.+1) matrix of transition probabilities of going from n (row) to n' (column) given probability ``fail_prob``
 
-Rows denote starting generators and columns denote ending generators. Function iterates over first to last generator type in list.
+Rows denote starting generators and columns denote ending generators. Function iterates over first to last generator type in list. 
+For example, if `num_gen_vec` = [2, 1], then the rows of the matrix denote the number of working generators by type as follows:
+row    working generators
+1           (0, 0) 
+2           (1, 0)
+3           (2, 0)
+4           (0, 1)
+5           (1, 1)
+6           (2, 1)
+
+# Arguments
+- `num_gen_vec::Vec{Int}`: Vector of the number of generators of each type 
+- `fail_prob_vec::Vec{Real}`: vector of probability of failure of each generator type
 
 # Examples
 ```repl-julia
@@ -137,7 +151,6 @@ function markov_matrix(num_gen_vec::Vector{Int}, fail_prob_vec::Vector{<:Real}):
     replace!(M, NaN => 0)
     return M
 end
-
 """
     starting_probabilities(num_gen::Int, gen_operational_availability::Real, gen_failure_to_start::Real)
 
@@ -798,7 +811,7 @@ end
 
 
 """
-	backup_reliability(p::REoptInputs, d::Dict)
+	backup_reliability(d::Dict, p::REoptInputs, r::Dict)
 
 Return dictionary of backup reliability results.
 
