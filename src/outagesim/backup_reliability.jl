@@ -152,7 +152,7 @@ function markov_matrix(num_gen_vec::Vector{Int}, fail_prob_vec::Vector{<:Real}):
     return M
 end
 """
-    starting_probabilities(num_gen::Int, gen_operational_availability::Real, gen_failure_to_start::Real)
+    starting_probabilities(num_gen::Int, gen_operational_availability::Real, gen_failure_to_start::Real)::Matrix{Float64}
 
 Return a 1 by ``num_gen`` + 1 matrix (row vector) of probabilities of number of generators 
 operationally available ``gen_operational_availability`` and avoiding
@@ -187,6 +187,14 @@ operationally available ``gen_operational_availability`` and avoiding
 a Failure to Start (``failure_to_start``) by generator type
 
 Generators are iterated starting with the leftmost to rightmost type in vector
+if `num_gen_vec` = [2, 1], then the rows of the matrix denote the number of working generators by type as follows:
+row    working generators
+1           (0, 0) 
+2           (1, 0)
+3           (2, 0)
+4           (0, 1)
+5           (1, 1)
+6           (2, 1)
 
 # Arguments
 - `num_gen_vec::Vec{Int}`: the number of generators of each type 
@@ -208,7 +216,7 @@ function starting_probabilities(num_gen_vec::Vector{Int}, gen_operational_availa
 end
 
 """
-    bin_battery_charge(batt_soc_kwh::Vector, num_bins::Int, batt_kwh::Real)
+    bin_battery_charge(batt_soc_kwh::Vector, num_bins::Int, batt_kwh::Real)::Vector{Int}
 
 Return a vector equal to the length of ``batt_soc_kwh`` of discritized battery charge bins
 
@@ -234,9 +242,18 @@ function bin_battery_charge(batt_soc_kwh::Vector, num_bins::Int, batt_kwh::Real)
 end
 
 """
-    generator_output(num_generators::Int, gen_capacity_kw::Real)
+    generator_output(num_generators::Int, gen_capacity_kw::Real)::Vector{Float64} 
 
 Return a vector equal to the length of ``num_generators``+1 of mazimized generator capacity given 0 to ``num_generators`` are available
+# Examples
+```repl-julia
+julia>  generator_output(num_generators::3, gen_capacity_kw::250)
+6-element Vector{Int64}:
+0
+250
+500
+750
+```
 """
 function generator_output(num_generators::Int, gen_capacity_kw::Real)::Vector{Float64} 
     #Returns vector of maximum generator output
@@ -248,8 +265,18 @@ end
 
 Generator output for multiple generator types
 Return a vector equal to the length of prod(``num_generators`` .+ 1) of mazimized generator capacity given 0 to ``num_generators`` of each type are available
+#Examples
+```repl-julia
+generator_output([2,1], [250, 300])
+6-element Vector{Float64}:
+   0.0
+ 250.0
+ 500.0
+ 300.0
+ 550.0
+ 800.0
+```
 """
-
 function generator_output(num_generators_vec::Vector{Int}, gen_capacity_kw_vec::Vector{<:Real})::Vector{Float64} 
     gens_working = (0:g for g in num_generators_vec)
     num_gen_working = reshape(collect(Iterators.product(gens_working...)), :, 1)
@@ -340,7 +367,7 @@ function get_maximum_generation(batt_kw::Real, gen_capacity_kw_vec::Vector{<:Rea
     return generator_prod .+ max_battery_discharge
 end
 """
-    battery_bin_shift(excess_generation_kw::Vector, bin_size::Real, batt_kw::Real, batt_charge_efficiency::Real, batt_discharge_efficiency::Real)
+    battery_bin_shift(excess_generation_kw::Vector, bin_size::Real, batt_kw::Real, batt_charge_efficiency::Real, batt_discharge_efficiency::Real)::Vector{Int} 
 
 Return a vector of number of bins battery is shifted by
 
@@ -351,6 +378,22 @@ Return a vector of number of bins battery is shifted by
 - `batt_charge_efficiency::Real`: batt_charge_efficiency = increase_in_soc_kwh / grid_input_kwh 
 - `batt_discharge_efficiency::Real`: batt_discharge_efficiency = battery_discharge / battery_reduction_in_soc
 
+#Examples
+```repl-julia
+julia>
+excess_generation_kw = [-500, -120, 0, 50, 175, 400]
+bin_size = 100
+batt_kw = 300
+battery_bin_shift(excess_generation_kw, bin_size, batt_kw, 1, 1)
+7-element Vector{Int64}:
+ -3
+ -1
+  0
+  0
+  0
+  2
+  3
+  ```
 """
 function battery_bin_shift(excess_generation_kw::Vector{<:Real}, bin_size::Real, batt_kw::Real,
                                 batt_charge_efficiency::Real, batt_discharge_efficiency::Real)::Vector{Int} 
@@ -375,6 +418,22 @@ end
 Updates ``gen_battery_prob_matrix`` in place to account for change in battery state of charge bin
 
 shifts probabiilities in column i by ``shift_vector``[i] positions, accounting for accumulation at 0 or full soc   
+
+#Examples
+```repl-julia
+gen_battery_prob_matrix = [0.6 0.3;
+                           0.2 0.3;
+                           0.1 0.2;
+                           0.1 0.2]
+shift_vector = [-1, 2]
+shift_gen_battery_prob_matrix!(gen_battery_prob_matrix, shift_vector)
+gen_battery_prob_matrix
+4×2 Matrix{Float64}:
+ 0.8  0.0
+ 0.1  0.0
+ 0.1  0.3
+ 0.0  0.7
+```
 """
 function shift_gen_battery_prob_matrix!(gen_battery_prob_matrix::Matrix, shift_vector::Vector{Int})
     M = size(gen_battery_prob_matrix, 1)
@@ -383,8 +442,8 @@ function shift_gen_battery_prob_matrix!(gen_battery_prob_matrix::Matrix, shift_v
         s = shift_vector[i]
         if s < 0 
             gen_battery_prob_matrix[:, i] = circshift(view(gen_battery_prob_matrix, :, i), s)
-            gen_battery_prob_matrix[1, i] += sum(view(gen_battery_prob_matrix, max(2,M+s):M, i))
-            gen_battery_prob_matrix[max(2,M+s):M, i] .= 0
+            gen_battery_prob_matrix[1, i] += sum(view(gen_battery_prob_matrix, max(2,M+s+1):M, i))
+            gen_battery_prob_matrix[max(2,M+s+1):M, i] .= 0
         elseif s > 0
             gen_battery_prob_matrix[:, i] = circshift(view(gen_battery_prob_matrix, :, i), s)
             gen_battery_prob_matrix[end, i] += sum(view(gen_battery_prob_matrix, 1:min(s,M-1), i))
@@ -404,7 +463,6 @@ If ``marginal_survival`` = true then result is chance of surviving in given outa
 if ``marginal_survival`` = false then result is chance of surviving up to and including given outage hour.
 
 # Arguments
-
 - `critical_load_kw::Vector`: 8760 vector of system critical loads. 
 - `gen_operational_availability::Union{Real, Vector{<:Real}}`: Operational Availability of backup generators.
 - `failure_to_start::Union{Real, Vector{<:Real}}`: probability of generator Failure to Start and support load. 
@@ -732,11 +790,11 @@ Return an array of backup reliability calculations. Inputs can be unpacked from 
 -gen_failure_to_run::Union{Real, Vector{<:Real}}                = 0.00157       Chance of generator failing in each hour of outage
 -num_gen::Union{Int, Vector{Int}}                               = 1             Number of generators
 -gen_capacity_kw::Union{Real, Vector{<:Real}}                   = 0.0           Backup generator capacity
--num_battery_bins::Int = 100                    Internal value for modeling battery
--max_outage_duration::Int = 96                  Maximum outage hour modeled
--batt_kw::Real = 0.0                            Battery kW of power capacity
--batt_kwh::Real = 0.0                           Battery kWh of energy capacity
--batt_charge_efficiency::Real = 0.948           Efficiency of charging battery
+-num_battery_bins::Int           = 100          Internal value for modeling battery
+-max_outage_duration::Int        = 96           Maximum outage hour modeled
+-batt_kw::Real                   = 0.0          Battery kW of power capacity
+-batt_kwh::Real                  = 0.0          Battery kWh of energy capacity
+-batt_charge_efficiency::Real    = 0.948        Efficiency of charging battery
 -batt_discharge_efficiency::Real = 0.948        Efficiency of discharging battery
 ```
 """
@@ -779,8 +837,15 @@ function return_backup_reliability(;
     end
 end
 
+"""
+process_reliability_results(results::Array)::Dict
 
-function process_reliability_results(results)
+Return dictionary of processed backup reliability results.
+
+# Arguments
+- `results::Array`: results from function return_backup_reliability. 
+"""
+function process_reliability_results(results::Array)::Dict
     if results == []
         marginal_duration_means = []
         marginal_duration_mins = []
