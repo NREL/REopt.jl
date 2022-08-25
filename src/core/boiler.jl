@@ -38,7 +38,7 @@ struct Boiler <: AbstractThermalTech
     om_cost_per_kwh::Real
     macrs_option_years::Int
     macrs_bonus_pct::Real
-    # can_supply_steam_turbine::Bool
+    can_supply_steam_turbine::Bool
     fuel_type::String
 end
 
@@ -79,7 +79,7 @@ function Boiler(;
         om_cost_per_mmbtu_per_hour::Real = 2930.0,
         om_cost_per_mmbtu::Real = 0.0,
         fuel_type::String = "natural_gas",  # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil", "uranium"]
-        #can_supply_steam_turbine::Bool = true, #TODO
+        can_supply_steam_turbine::Bool = true
         # emissions_factor_lb_CO2_per_mmbtu::Real,
     )
 
@@ -101,7 +101,7 @@ function Boiler(;
         om_cost_per_kwh,
         macrs_option_years,
         macrs_bonus_pct,
-        #can_supply_steam_turbine,
+        can_supply_steam_turbine,
         fuel_type
     )
 end
