@@ -19,26 +19,6 @@
         "fuel_type": "natural_gas",
         "fuel_cost_per_mmbtu": [5,10,5,5,5,5,5,5,5,5,5,5]
     },
-    "SteamTurbine": {
-        "min_kw": 0.0,
-        "max_kw": 20000.0,
-        "is_condensing": true,
-        "inlet_steam_pressure_psig": 1000.0,
-        "inlet_steam_temperature_degF": null,
-        "inlet_steam_superheat_degF": 10.0,
-        "outlet_steam_pressure_psig": -12.7,
-        "outlet_steam_min_vapor_fraction": 0.7,                         
-        "isentropic_efficiency": 0.7,
-        "gearbox_generator_efficiency": 0.96,
-        "net_to_gross_electric_ratio": 0.98,
-        "installed_cost_per_kw": 4000.0,
-        "om_cost_per_kw": 80.0,
-        "om_cost_per_kwh": 0.0,
-        "can_net_meter": false,
-        "can_wholesale": true,
-        "can_export_beyond_site_load": true,
-        "can_curtail": false        
-    },
     "Financial": {
         "om_cost_escalation_pct": 0.025,
         "elec_cost_escalation_pct": 0.023,
@@ -56,8 +36,10 @@
         "annual_kwh": 8760000.0
     },
     "SpaceHeatingLoad": {
+        "doe_reference_name": "FlatLoad"
     },
     "DomesticHotWaterLoad": {
+        "doe_reference_name": "FlatLoad"
     },    
     "ElectricTariff": {
         "urdb_utility_name": "Pacific Gas & Electric Co",
