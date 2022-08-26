@@ -31,7 +31,7 @@
 function steam_turbine_thermal_input(m, p; _n="")
     # Force thermal production to steam turbine to zero if not applicable
     for t in setdiff(p.techs.all_for_steam_turbine, p.techs.can_supply_steam_turbine)
-        for ts in p.TimeStep
+        for ts in p.time_steps
             fix(m[Symbol("dvThermalToSteamTurbine"*_n)][t,ts], 0.0, force=true)
         end
     end
@@ -40,13 +40,13 @@ end
 
 function steam_turbine_production_constraints(m, p; _n="")
     # Constraint Steam Turbine Thermal Production
-    @constraint(m, SteamTurbineThermalProductionCon[t in p.techs.steam_turbine, ts in p.TimeStep],
-                m[Symbol("dvThermalProduction"*_n)][t,ts] == p.s.steam_turbine.thermal_produced_to_thermal_consumed_ratio * sum(m[Symbol("dvThermalToSteamTurbine"*_n)][tst,ts] for tst in p.techs_can_supply_steam_turbine)
+    @constraint(m, SteamTurbineThermalProductionCon[t in p.techs.steam_turbine, ts in p.time_steps],
+                m[Symbol("dvThermalProduction"*_n)][t,ts] == p.s.steam_turbine.thermal_produced_to_thermal_consumed_ratio * sum(m[Symbol("dvThermalToSteamTurbine"*_n)][tst,ts] for tst in p.techs.can_supply_steam_turbine)
                 )
     # Constraint Steam Turbine Electric Production
-    @constraint(m, SteamTurbineElectricProductionCon[t in p.techs.steam_turbine, ts in p.TimeStep],
+    @constraint(m, SteamTurbineElectricProductionCon[t in p.techs.steam_turbine, ts in p.time_steps],
                 m[Symbol("dvRatedProduction"*_n)][t,ts] ==
-                p.electric_produced_to_thermal_consumed_ratio * sum(m[Symbol("dvThermalToSteamTurbine"*_n)][tst,ts] for tst in p.techs_can_supply_steam_turbine)
+                p.s.steam_turbine.electric_produced_to_thermal_consumed_ratio * sum(m[Symbol("dvThermalToSteamTurbine"*_n)][tst,ts] for tst in p.techs.can_supply_steam_turbine)
                 )
 end
 
