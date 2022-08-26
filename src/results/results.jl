@@ -115,6 +115,10 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     if !isempty(p.ghp_options)
         add_ghp_results(m, p, d)
 	end
+
+    if "SteamTurbine" in p.techs.all
+        add_steam_turbine_results(m, p, d; _n)
+    end
     
     return d
 end
