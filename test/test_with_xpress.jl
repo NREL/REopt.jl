@@ -186,7 +186,7 @@ end
         chp_total_elec_prod = results["CHP"]["year_one_electric_production_series_kw"]
         chp_to_load = results["CHP"]["year_one_to_load_series_kw"]
         chp_export = results["CHP"]["year_one_to_grid_series_kw"]
-        cooling_elec_consumption = results["ExistingChiller"]["year_one_electric_consumption_series"]
+        cooling_elec_consumption = results["ExistingChiller"]["year_one_electric_consumption_series_kw"]
     
         # The values compared to the expected values
         @test sum([(chp_to_load[i] - tot_elec_load[i]*data["ElectricLoad"]["critical_load_pct"]) for i in outage_start:outage_end]) ≈ 0.0 atol=0.001
@@ -726,7 +726,7 @@ end
 
     # Heating outputs
     boiler_fuel_consumption_calculated = results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"]
-    boiler_thermal_series = results["ExistingBoiler"]["year_one_thermal_production_mmbtu_per_hour"]
+    boiler_thermal_series = results["ExistingBoiler"]["year_one_thermal_production_series_mmbtu_per_hour"]
     boiler_to_load_series = results["ExistingBoiler"]["year_one_thermal_to_load_series_mmbtu_per_hour"]
     boiler_thermal_to_tes_series = results["ExistingBoiler"]["thermal_to_tes_series_mmbtu_per_hour"]
     chp_thermal_to_load_series = results["CHP"]["year_one_thermal_to_load_series_mmbtu_per_hour"]
@@ -933,8 +933,8 @@ end
     
     # BAU boiler loads
     load_thermal_mmbtu_bau = sum(s.space_heating_load.loads_kw + s.dhw_load.loads_kw) / REopt.KWH_PER_MMBTU
-    existing_boiler_mmbtu = sum(results["ExistingBoiler"]["year_one_thermal_production_mmbtu_per_hour"])
-    boiler_thermal_mmbtu = sum(results["Boiler"]["year_one_thermal_production_mmbtu_per_hour"])
+    existing_boiler_mmbtu = sum(results["ExistingBoiler"]["year_one_thermal_production_series_mmbtu_per_hour"])
+    boiler_thermal_mmbtu = sum(results["Boiler"]["year_one_thermal_production_series_mmbtu_per_hour"])
     
     # Used monthly fuel cost for ExistingBoiler and Boiler, where ExistingBoiler has lower fuel cost only
     # in February (28 days), so expect ExistingBoiler to serve the flat/constant load 28 days of the year
