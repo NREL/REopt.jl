@@ -923,16 +923,15 @@ end
 
 @testset "Boiler (new) test" begin
     input_data = JSON.parsefile("scenarios/boiler_new_inputs.json")
-    #TODO use "FlatLoad" once cooling-flatload PR is merged (FlatLoad not working for heating loads right now)
-    input_data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"] = fill(0.5, 8760)
-    input_data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = fill(0.5, 8760)
+    input_data["SpaceHeatingLoad"]["annual_mmbtu"] = 0.5 * 8760
+    input_data["DomesticHotWaterLoad"]["annual_mmbtu"] = 0.5 * 8760
     s = Scenario(input_data)
     inputs = REoptInputs(s)
     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt([m1,m2], inputs)
     
-    # # BAU boiler loads
+    # BAU boiler loads
     load_thermal_mmbtu_bau = sum(s.space_heating_load.loads_kw + s.dhw_load.loads_kw) / REopt.KWH_PER_MMBTU
     existing_boiler_mmbtu = sum(results["ExistingBoiler"]["year_one_thermal_production_mmbtu_per_hour"])
     boiler_thermal_mmbtu = sum(results["Boiler"]["year_one_thermal_production_mmbtu_per_hour"])
