@@ -266,6 +266,11 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             add_ghp_constraints(m, p)
         end
 
+        if !isempty(p.techs.steam_turbine)
+            add_steam_turbine_constraints(m, p)
+            m[:TotalPerUnitProdOMCosts] += m[:TotalSteamTurbinePerUnitProdOMCosts]
+        end
+
         if !isempty(p.techs.pbi)
             @warn "adding binary variable(s) to model production based incentives"
             add_prod_incent_vars_and_constraints(m, p)
@@ -530,6 +535,10 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
         if !isempty(p.techs.chp)
             @variable(m, dvProductionToWaste[p.techs.chp, p.time_steps] >= 0)
         end
+    end
+
+    if !isempty(p.techs.steam_turbine)
+        @variable(m, dvThermalToSteamTurbine[p.techs.all_for_steam_turbine, p.time_steps] >= 0)
     end
 
 	if !isempty(p.s.electric_utility.outage_durations) # add dvUnserved Load if there is at least one outage
