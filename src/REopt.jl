@@ -66,6 +66,7 @@ using Roots: fzero  # for IRR
 global hdl = nothing
 using JLD
 using Requires
+using CoolProp
 
 function __init__()
     @require GhpGhx="7ce85f02-24a8-4d69-a3f0-14b5daa7d30c" println("using GhpGhx module in REopt")
@@ -138,6 +139,7 @@ include("core/urdb.jl")
 include("core/electric_tariff.jl")
 include("core/chp.jl")
 include("core/ghp.jl")
+include("core/steam_turbine.jl")
 include("core/scenario.jl")
 include("core/bau_scenario.jl")
 include("core/reopt_inputs.jl")
@@ -158,6 +160,7 @@ include("constraints/chp_constraints.jl")
 include("constraints/operating_reserve_constraints.jl")
 include("constraints/battery_degradation.jl")
 include("constraints/ghp_constraints.jl")
+include("constraints/steam_turbine_constraints.jl")
 include("constraints/renewable_energy_constraints.jl")
 include("constraints/emissions_constraints.jl")
 
