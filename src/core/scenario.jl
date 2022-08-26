@@ -50,6 +50,7 @@ struct Scenario <: AbstractScenario
     ghp_option_list::Array{Union{GHP, Nothing}, 1}  # List of GHP objects (often just 1 element, but can be more)
     heating_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
+    steam_turbine::SteamTurbine
 end
 
 """
@@ -74,6 +75,7 @@ A Scenario struct can contain the following keys:
 - [ExistingChiller](@ref) (optional)
 - [AbsorptionChiller](@ref) (optional)
 - [GHP](@ref) (optional, can be Array)
+- [SteamTurbine](@ref) (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
 
@@ -510,6 +512,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         end
     end
 
+    steam_turbine = nothing
+    if haskey(d, "SteamTurbine") && d["SteamTurbine"]["max_kw"] > 0.0
+        steam_turbine = SteamTurbine(d["SteamTurbine"])
+    end
+
     return Scenario(
         settings,
         site, 
@@ -532,7 +539,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         absorption_chiller,
         ghp_option_list,
         heating_thermal_load_reduction_with_ghp_kw,
-        cooling_thermal_load_reduction_with_ghp_kw
+        cooling_thermal_load_reduction_with_ghp_kw,
+        steam_turbine
     )
 end
 
