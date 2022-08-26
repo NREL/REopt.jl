@@ -276,8 +276,7 @@ end
 Create data arrays associated with techs necessary to build the JuMP model.
 """
 function setup_tech_inputs(s::AbstractScenario)
-    #TODO: steam turbine
-    #TODO: create om_cost_per_kwh in here as well as om_cost_per_kw?
+    #TODO: create om_cost_per_kwh in here as well as om_cost_per_kw? (Generator, CHP, SteamTurbine, and Boiler have this)
 
     techs = Techs(s)
 
@@ -365,6 +364,10 @@ function setup_tech_inputs(s::AbstractScenario)
         cop["AbsorptionChiller"] = 1.0
         thermal_cop["AbsorptionChiller"] = 1.0
     end
+
+    if "SteamTurbine" in techs.all
+        setup_steam_turbine_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw)
+    end    
 
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
     for t in techs.elec
@@ -732,6 +735,39 @@ function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_sl
     fuel_cost_per_kwh["CHP"] = per_hour_value_to_time_series(chp_fuel_cost_per_kwh, s.settings.time_steps_per_hour, "CHP")    
     return nothing
 end
+
+function setup_steam_turbine_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, 
+    om_cost_per_kw
+    )
+
+    max_sizes["SteamTurbine"] = s.steam_turbine.max_kw
+    min_sizes["SteamTurbine"] = s.steam_turbine.min_kw
+    
+    # The AbsorptionChiller only has a MACRS benefit, no ITC etc.
+    if s.steam_turbine.macrs_option_years in [5, 7]
+
+        cap_cost_slope["SteamTurbine"] = effective_cost(;
+            itc_basis = s.steam_turbine.installed_cost_per_kw,
+            replacement_cost = 0.0,
+            replacement_year = s.financial.analysis_years,
+            discount_rate = s.financial.owner_discount_pct,
+            tax_rate = s.financial.owner_tax_pct,
+            itc = 0.0,
+            macrs_schedule = s.steam_turbine.macrs_option_years == 5 ? s.financial.macrs_five_year : s.financial.macrs_seven_year,
+            macrs_bonus_pct = s.steam_turbine.macrs_bonus_pct,
+            macrs_itc_reduction = 0.0,
+            rebate_per_kw = 0.0
+        )
+
+    else
+        cap_cost_slope["SteamTurbine"] = s.steam_turbine.installed_cost_per_kw
+    end
+
+    om_cost_per_kw["SteamTurbine"] = s.steam_turbine.om_cost_per_kw
+
+    return nothing
+end
+
 
 function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
 
