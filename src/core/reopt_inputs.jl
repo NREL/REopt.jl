@@ -319,18 +319,18 @@ function setup_tech_inputs(s::AbstractScenario)
     if !isempty(techs.pv)
         setup_pv_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
                         pvlocations, pv_to_location, maxsize_pv_locations, techs.segmented, n_segs_by_tech, 
-                        seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, techs.no_curtail)
+                        seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, techs)
     end
 
     if "Wind" in techs.all
         setup_wind_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor, 
-            techs_by_exportbin, techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs.no_curtail)
+            techs_by_exportbin, techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs)
     end
 
     if "Generator" in techs.all
         setup_gen_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor, 
             techs_by_exportbin, techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, 
-            seg_yint, techs.no_curtail,
+            seg_yint, techs,
             tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, 
             fuel_cost_per_kwh)
     end
@@ -366,7 +366,7 @@ function setup_tech_inputs(s::AbstractScenario)
     end
 
     if "SteamTurbine" in techs.all
-        setup_steam_turbine_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw)
+        setup_steam_turbine_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin, techs)
     end    
 
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
@@ -466,7 +466,7 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
     existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
     pvlocations, pv_to_location, maxsize_pv_locations, 
     segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, 
-    techs_by_exportbin, techs_no_curtail)
+    techs_by_exportbin, techs)
 
     pv_roof_limited, pv_ground_limited, pv_space_limited = false, false, false
     roof_existing_pv_kw, ground_existing_pv_kw, both_existing_pv_kw = 0.0, 0.0, 0.0
@@ -523,7 +523,7 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
         fillin_techs_by_exportbin(techs_by_exportbin, pv, pv.name)
 
         if !pv.can_curtail
-            push!(techs_no_curtail, pv.name)
+            push!(techs.no_curtail, pv.name)
         end
     end
 
@@ -543,7 +543,7 @@ end
 
 function setup_wind_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes,
     cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin,
-    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_no_curtail
+    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs
     )
     max_sizes["Wind"] = s.wind.max_kw
     min_sizes["Wind"] = s.wind.min_kw
@@ -555,7 +555,7 @@ function setup_wind_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_s
     production_factor["Wind", :] = prodfactor(s.wind, s.site.latitude, s.site.longitude, s.settings.time_steps_per_hour)
     fillin_techs_by_exportbin(techs_by_exportbin, s.wind, "Wind")
     if !s.wind.can_curtail
-        push!(techs_no_curtail, "Wind")
+        push!(techs.no_curtail, "Wind")
     end
     return nothing
 end
@@ -563,7 +563,7 @@ end
 
 function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes,
     cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin,
-    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_no_curtail,
+    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs,
     tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh
     )
     max_sizes["Generator"] = s.generator.existing_kw + s.generator.max_kw
@@ -576,7 +576,7 @@ function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_si
     production_factor["Generator", :] = prodfactor(s.generator; s.settings.time_steps_per_hour)
     fillin_techs_by_exportbin(techs_by_exportbin, s.generator, "Generator")
     if !s.generator.can_curtail
-        push!(techs_no_curtail, "Generator")
+        push!(techs.no_curtail, "Generator")
     end
     tech_renewable_energy_pct["Generator"] = s.generator.fuel_renewable_energy_pct
     tech_emissions_factors_CO2["Generator"] = s.generator.emissions_factor_lb_CO2_per_gal / KWH_PER_GAL_DIESEL  # lb/gal * gal/kWh
@@ -704,14 +704,14 @@ end
 
 """
     function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw,  
-        production_factor, techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_no_curtail,
+        production_factor, techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs.no_curtail,
         tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh
         )
 
 Update tech-indexed data arrays necessary to build the JuMP model with the values for CHP.
 """
 function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw,  
-    production_factor, techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_no_curtail,
+    production_factor, techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs,
     tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh
     )
     max_sizes["CHP"] = s.chp.max_kw
@@ -724,7 +724,7 @@ function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_sl
         s.electric_utility.outage_end_time_step, s.settings.time_steps_per_hour)
     fillin_techs_by_exportbin(techs_by_exportbin, s.chp, "CHP")
     if !s.chp.can_curtail
-        push!(techs_no_curtail, "CHP")
+        push!(techs.no_curtail, "CHP")
     end  
     tech_renewable_energy_pct["CHP"] = s.chp.fuel_renewable_energy_pct
     tech_emissions_factors_CO2["CHP"] = s.chp.emissions_factor_lb_CO2_per_mmbtu / KWH_PER_MMBTU  # lb/mmtbu * mmtbu/kWh
@@ -737,7 +737,7 @@ function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_sl
 end
 
 function setup_steam_turbine_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, 
-    om_cost_per_kw
+    om_cost_per_kw, production_factor, techs_by_exportbin, techs
     )
 
     max_sizes["SteamTurbine"] = s.steam_turbine.max_kw
@@ -745,7 +745,6 @@ function setup_steam_turbine_inputs(s::AbstractScenario, max_sizes, min_sizes, c
     
     # The AbsorptionChiller only has a MACRS benefit, no ITC etc.
     if s.steam_turbine.macrs_option_years in [5, 7]
-
         cap_cost_slope["SteamTurbine"] = effective_cost(;
             itc_basis = s.steam_turbine.installed_cost_per_kw,
             replacement_cost = 0.0,
@@ -758,12 +757,19 @@ function setup_steam_turbine_inputs(s::AbstractScenario, max_sizes, min_sizes, c
             macrs_itc_reduction = 0.0,
             rebate_per_kw = 0.0
         )
-
     else
         cap_cost_slope["SteamTurbine"] = s.steam_turbine.installed_cost_per_kw
     end
 
     om_cost_per_kw["SteamTurbine"] = s.steam_turbine.om_cost_per_kw
+    
+    production_factor["SteamTurbine", :] = prodfactor(s.steam_turbine; s.settings.time_steps_per_hour)
+    
+    fillin_techs_by_exportbin(techs_by_exportbin, s.steam_turbine, "SteamTurbine")
+    
+    if !s.steam_turbine.can_curtail
+        push!(techs.no_curtail, "SteamTurbine")
+    end
 
     return nothing
 end
