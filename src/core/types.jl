@@ -93,6 +93,6 @@ mutable struct Techs
     electric_chiller::Vector{String}
     absorption_chiller::Vector{String}
     steam_turbine::Vector{String}
-    all_techs_for_steam_turbine::Vector{String}
+    all_for_steam_turbine::Vector{String}
     can_supply_steam_turbine::Vector{String}
 end

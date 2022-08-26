@@ -107,7 +107,7 @@ function SteamTurbine(d::Dict)
     defaults = get_steam_turbine_defaults(st.size_class)
     for (k, v) in custom_st_inputs
         if isnan(v)
-            if !(k == inlet_steam_temperature_degF && !isnan(st.inlet_steam_superheat_degF))
+            if !(k == :inlet_steam_temperature_degF && !isnan(st.inlet_steam_superheat_degF))
                 setproperty!(st, k, defaults[string(k)])
             else
                 @warn("Steam turbine inlet temperature will be calculated from inlet pressure and specified superheat")
@@ -165,12 +165,12 @@ function assign_st_elec_and_therm_prod_ratios!(st::SteamTurbine)
     # Convert input steam conditions to SI (absolute pressures, not gauge)
     # ST Inlet
     p_in_pa = (st.inlet_steam_pressure_psig / 14.5038 + 1.01325) * 1.0E5
-    if isnan(inlet_steam_temperature_degF)
+    if isnan(st.inlet_steam_temperature_degF)
         t_in_sat_k = PropsSI("T","P",p_in_pa,"Q",1.0,"Water")
-        t_superheat_in_k = (s.inlet_steam_superheat_degF - 32.0) * 5.0 / 9.0 + 273.15
+        t_superheat_in_k = (st.inlet_steam_superheat_degF - 32.0) * 5.0 / 9.0 + 273.15
         t_in_k = t_in_sat_k + t_superheat_in_k
     else
-        t_in_k = (inlet_steam_temperature_degF - 32.0) * 5.0 / 9.0 + 273.15
+        t_in_k = (st.inlet_steam_temperature_degF - 32.0) * 5.0 / 9.0 + 273.15
     end
     h_in_j_per_kg = PropsSI("H","P",p_in_pa,"T",t_in_k,"Water")
     s_in_j_per_kgK = PropsSI("S","P",p_in_pa,"T",t_in_k,"Water")
@@ -202,7 +202,7 @@ function assign_st_elec_and_therm_prod_ratios!(st::SteamTurbine)
         st.electric_produced_to_thermal_consumed_ratio = st_net_elec_power_kwh_per_kg / boiler_therm_power_kwh_per_kg
     end
 
-    if isnan(thermal_produced_to_thermal_consumed_ratio)
+    if isnan(st.thermal_produced_to_thermal_consumed_ratio)
         st.thermal_produced_to_thermal_consumed_ratio = heat_recovered_kwh_per_kg / boiler_therm_power_kwh_per_kg
     end
 
