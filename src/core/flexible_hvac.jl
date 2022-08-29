@@ -48,7 +48,7 @@ end
     temperature_upper_bound_degC::Union{Real, Nothing}
     temperature_lower_bound_degC::Union{Real, Nothing}
     installed_cost::Float64
-```julia
+```
 
 Every model with `FlexibleHVAC` includes a preprocessing step to calculate the business-as-usual (BAU)
 cost of meeting the thermal loads using a dead-band controller. The BAU cost is then used in the 
