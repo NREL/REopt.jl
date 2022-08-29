@@ -85,7 +85,7 @@
     - StripMall
     - Supermarket
     - Warehouse
-    - FlatLoad # constant load yearround
+    - FlatLoad # constant load year-round
     - FlatLoad_24_5 # constant load all hours of the weekdays
     - FlatLoad_16_7 # two 8-hour shifts for all days of the year; 6-10 a.m.
     - FlatLoad_16_5 # two 8-hour shifts for the weekdays; 6-10 a.m.
