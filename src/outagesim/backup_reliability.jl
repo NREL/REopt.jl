@@ -114,7 +114,8 @@ end
 Markov Matrix for multiple generator types. 
 Return an prod(``num_gen_vec``.+1) by prod(``num_gen``.+1) matrix of transition probabilities of going from n (row) to n' (column) given probability ``fail_prob``
 
-Rows denote starting generators and columns denote ending generators. Function iterates over first to last generator type in list. 
+Rows denote starting generators and columns denote ending generators. 
+Generator combinations are iterated by incrementing number of generators starting with the leftmost generator type.
 For example, if `num_gen_vec` = [2, 1], then the rows of the matrix denote the number of working generators by type as follows:
 row    working generators
 1           (0, 0) 
@@ -154,9 +155,9 @@ end
 """
     starting_probabilities(num_gen::Int, gen_operational_availability::Real, gen_failure_to_start::Real)::Matrix{Float64}
 
-Return a 1 by ``num_gen`` + 1 matrix (row vector) of probabilities of number of generators 
-operationally available ``gen_operational_availability`` and avoiding
-a Failure to Start (``failure_to_start``)
+Return a 1 by ``num_gen`` + 1 matrix (row vector) of the probability that each number of generators
+is both operationally available (``gen_operational_availability``) and avoids a Failure to Start (``failure_to_start``) 
+in an inital time step
 
 The first element denotes no generators successfully starts and element n denotes n-1 generators start
 
@@ -174,7 +175,7 @@ julia> starting_probabilities(2, 0.99, 0.05)
 """
 function starting_probabilities(num_gen::Int, gen_operational_availability::Real, gen_failure_to_start::Real)::Matrix{Float64} 
     M = markov_matrix(num_gen, (1-gen_operational_availability) + gen_failure_to_start*gen_operational_availability) 
-    G = hcat(zeros(1, num_gen), 1)
+    G = hcat(zeros(1, num_gen), 1) # get last row of M
     return G * M
 end
 
@@ -182,11 +183,11 @@ end
     starting_probabilities(num_gen_vec::Vector{Int}, gen_operational_availability_vec::Vector{<:Real}, gen_failure_to_start_vec::Vector{<:Real})::Matrix{Float64}
 
 Starting Probabilities for multiple generator types. 
-Return a 1 by prod(``num_gen`` .+ 1) matrix (row vector) of probabilities of number of generators 
-operationally available ``gen_operational_availability`` and avoiding
-a Failure to Start (``failure_to_start``) by generator type
+Return a 1 by prod(``num_gen`` .+ 1) matrix (row vector) of the probability that each number of generators 
+(differentiated by generator type) is both operationally available (``gen_operational_availability``) 
+and avoids a Failure to Start (``failure_to_start``) in an inital time step
 
-Generators are iterated starting with the leftmost to rightmost type in vector
+Generator combinations are iterated by incrementing number of generators starting with the leftmost generator type
 if `num_gen_vec` = [2, 1], then the rows of the matrix denote the number of working generators by type as follows:
 row    working generators
 1           (0, 0) 
@@ -218,7 +219,7 @@ end
 """
     bin_battery_charge(batt_soc_kwh::Vector, num_bins::Int, batt_kwh::Real)::Vector{Int}
 
-Return a vector equal to the length of ``batt_soc_kwh`` of discritized battery charge bins
+Return a vector the same length as ``batt_soc_kwh`` of discritized battery charge bins
 
 The first bin denotes zero battery charge, and each additional bin has size of ``batt_kwh``/(``num_bins``-1)
 Values are rounded to nearest bin.
@@ -244,7 +245,7 @@ end
 """
     generator_output(num_generators::Int, gen_capacity_kw::Real)::Vector{Float64} 
 
-Return a vector equal to the length of ``num_generators``+1 of mazimized generator capacity given 0 to ``num_generators`` are available
+Return a vector with length ``num_generators``+1 of maximum generator capacity given 0 to ``num_generators`` are available
 # Examples
 ```repl-julia
 julia>  generator_output(num_generators::3, gen_capacity_kw::250)
