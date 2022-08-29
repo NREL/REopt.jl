@@ -33,7 +33,7 @@
     doe_reference_name::String = "",
     blended_doe_reference_names::Array{String, 1} = String[],
     blended_doe_reference_percents::Array{<:Real,1} = Real[],
-    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}} = 1.0,  # Fraction of input fuel load which is addressable by heating technologies
+    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}} = 1.0,  # Fraction of input fuel load which is addressable by heating technologies. Length should align with use of annual_mmbtu, monthly_mmbtu, or fuel_loads_mmbtu_per_hour
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
     fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[] # Vector of hot water fuel loads [mmbtu/hour]. Length must equal 8760 * `Settings.time_steps_per_hour`
@@ -109,7 +109,7 @@ end
     doe_reference_name::String = "",
     blended_doe_reference_names::Array{String, 1} = String[],
     blended_doe_reference_percents::Array{<:Real,1} = Real[],
-    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}} = 1.0,  # Fraction of input fuel load which is addressable by heating technologies
+    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}} = 1.0,  # Fraction of input fuel load which is addressable by heating technologies. Length should align with use of annual_mmbtu, monthly_mmbtu, or fuel_loads_mmbtu_per_hour
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
     fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[] # Vector of space heating fuel loads [mmbtu/hr]. Length must equal 8760 * `Settings.time_steps_per_hour`
@@ -713,7 +713,7 @@ function BuiltInDomesticHotWaterLoad(
             annual_mmbtu = dhw_annual_mmbtu[city][buildingtype]
         end
     else
-        annual_mmbtu *= addressable_load_fraction    
+        annual_mmbtu *= addressable_load_fraction     
     end
     if length(monthly_mmbtu) == 12
         monthly_mmbtu = convert(Vector{Real}, monthly_mmbtu) .* addressable_load_fraction
