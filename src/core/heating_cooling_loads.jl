@@ -44,6 +44,10 @@ There are many ways in which a DomesticHotWaterLoad can be defined:
 2. One can provide the `doe_reference_name` or `blended_doe_reference_names` directly in the `DomesticHotWaterLoad` key within the `Scenario`. These values can be combined with the `annual_mmbtu` or `monthly_mmbtu` inputs to scale the DoE reference profile(s).
 3. One can provide the `fuel_loads_mmbtu_per_hour` value in the `DomesticHotWaterLoad` key within the `Scenario`.
 
+!!! note "Hot water loads"
+    Hot water and space heating thermal "load" inputs are in terms of energy input required (boiler fuel), not the actual energy demand.
+    The fuel energy is multiplied by the boiler_efficiency to get the actual energy demand.
+
 """
 struct DomesticHotWaterLoad
     loads_kw::Array{Real, 1}
@@ -131,6 +135,10 @@ one only needs to provide an empty Dict in the scenario JSON to add a `SpaceHeat
 ```
 In this case the values provided for `doe_reference_name`, or  `blended_doe_reference_names` and 
 `blended_doe_reference_percents` are copied from the `ElectricLoad` to the `SpaceHeatingLoad`.
+
+!!! note "Space heating loads"
+    Hot water and space heating thermal "load" inputs are in terms of energy input required (boiler fuel), not the actual energy demand.
+    The fuel energy is multiplied by the boiler_efficiency to get the actual energy demand.
 """
 struct SpaceHeatingLoad
     loads_kw::Array{Real, 1}
