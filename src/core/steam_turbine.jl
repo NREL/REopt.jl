@@ -31,7 +31,7 @@
 """
 `SteamTurbine` is an optional REopt input with the following keys and default values:
 ```julia
-    size_class::Int64 = NaN
+    size_class::Int64 = 1
     min_kw::Float64 = 0.0
     max_kw::Float64 = 0.0
     electric_produced_to_thermal_consumed_ratio::Float64 = NaN
@@ -39,16 +39,16 @@
     is_condensing::Bool = false
     inlet_steam_pressure_psig::Float64 = NaN
     inlet_steam_temperature_degF::Float64 = NaN
-    inlet_steam_superheat_degF::Float64 = NaN
+    inlet_steam_superheat_degF::Float64 = 0.0
     outlet_steam_pressure_psig::Float64 = NaN
-    outlet_steam_min_vapor_fraction::Float64 = NaN
+    outlet_steam_min_vapor_fraction::Float64 = 0.8
     isentropic_efficiency::Float64 = NaN
     gearbox_generator_efficiency::Float64 = NaN
     net_to_gross_electric_ratio::Float64 = NaN
     installed_cost_per_kw::Float64 = NaN
     om_cost_per_kw::Float64 = 0.0
     om_cost_per_kwh::Float64 = NaN
-    
+
     can_net_meter::Bool = false
     can_wholesale::Bool = false
     can_export_beyond_nem_limit::Bool = false
