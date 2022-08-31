@@ -1268,6 +1268,79 @@ end
     end
 end
 
+@testset "Back pressure steam turbine" begin
+    """
+    Validation to ensure that:
+        1) ExistingBoiler provides the thermal energy (steam) to a backpressure SteamTurbine for CHP application
+        2) SteamTurbine serves the heating load with the condensing steam
+
+    """
+    # Setup inputs, make heating load large to entice SteamTurbine
+    input_data = JSON.parsefile("scenarios/backpressure_steamturbine_inputs.json")
+    latitude = input_data["Site"]["latitude"]
+    longitude = input_data["Site"]["longitude"]
+    building = "Hospital"
+    elec_load_multiplier = 5.0
+    heat_load_multiplier = 100.0
+    input_data["ElectricLoad"]["doe_reference_name"] = building
+    input_data["SpaceHeatingLoad"]["doe_reference_name"] = building
+    input_data["DomesticHotWaterLoad"]["doe_reference_name"] = building
+    elec_load = REopt.ElectricLoad(latitude=latitude, longitude=longitude, doe_reference_name=building)
+    input_data["ElectricLoad"]["annual_kwh"] = elec_load_multiplier * sum(elec_load.loads_kw)
+    space_load = REopt.SpaceHeatingLoad(latitude=latitude, longitude=longitude, doe_reference_name=building)
+    input_data["SpaceHeatingLoad"]["annual_mmbtu"] = heat_load_multiplier * space_load.annual_mmbtu / input_data["ExistingBoiler"]["efficiency"]
+    dhw_load = REopt.DomesticHotWaterLoad(latitude=latitude, longitude=longitude, doe_reference_name=building)
+    input_data["DomesticHotWaterLoad"]["annual_mmbtu"] = heat_load_multiplier * dhw_load.annual_mmbtu / input_data["ExistingBoiler"]["efficiency"]
+    s = Scenario(input_data)
+    inputs = REoptInputs(s)
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt([m1,m2], inputs)
+
+    # The values compared to the expected values may change if optimization parameters were changed
+    lcc_expect = 189359280.0
+    npv_expect = 8085233.0
+    st_size_kw_expect = 2616.418
+    st_yearly_thermal_consumption_mmbtu_expect = 1000557.6
+    st_yearly_electric_energy_produced_kwh_expect = 18970374.6
+    st_yearly_thermal_energy_produced_mmbtu_expect = 924045.1
+
+    @test results["Financial"]["lcc"] ≈ lcc_expect atol=0.001*lcc_expect
+    @test results["Financial"]["npv"] ≈ npv_expect atol=0.01*npv_expect
+    @test results["SteamTurbine"]["size_kw"] ≈ st_size_kw_expect atol=1
+    @test results["SteamTurbine"]["year_one_thermal_consumption_mmbtu"] ≈ st_yearly_thermal_consumption_mmbtu_expect atol=0.001*st_yearly_thermal_consumption_mmbtu_expect
+    @test results["SteamTurbine"]["year_one_electric_energy_produced_kwh"] ≈ st_yearly_electric_energy_produced_kwh_expect atol=0.001*st_yearly_electric_energy_produced_kwh_expect
+    @test results["SteamTurbine"]["year_one_thermal_energy_produced_mmbtu"] ≈ st_yearly_thermal_energy_produced_mmbtu_expect atol=0.001*st_yearly_thermal_energy_produced_mmbtu_expect
+
+    # BAU boiler loads
+    load_boiler_fuel = (s.space_heating_load.loads_kw + s.dhw_load.loads_kw) ./ REopt.KWH_PER_MMBTU ./ s.existing_boiler.efficiency
+    load_boiler_thermal = load_boiler_fuel * s.existing_boiler.efficiency
+
+    # ExistingBoiler and SteamTurbine production
+    boiler_to_load = results["ExistingBoiler"]["year_one_thermal_to_load_series_mmbtu_per_hour"]
+    boiler_to_st = results["ExistingBoiler"]["year_one_thermal_to_steamturbine_series_mmbtu_per_hour"]
+    boiler_total = boiler_to_load + boiler_to_st
+    st_to_load = results["SteamTurbine"]["year_one_thermal_to_load_series_mmbtu_per_hour"]
+
+    # Fuel/thermal **consumption**
+    boiler_fuel = results["ExistingBoiler"]["year_one_fuel_consumption_series_mmbtu_per_hour"]
+    steamturbine_thermal_in = results["SteamTurbine"]["year_one_thermal_consumption_series_mmbtu_per_hour"]
+
+    # Check that all thermal supply to load meets the BAU load
+    thermal_to_load = sum(boiler_to_load) + sum(st_to_load)
+    @test thermal_to_load ≈ sum(load_boiler_thermal) atol=1.0
+
+    # Check the net electric efficiency of Boiler->SteamTurbine (electric out/fuel in) with the expected value from the Fact Sheet 
+    steamturbine_electric = results["SteamTurbine"]["year_one_electric_production_series_kw"] 
+    net_electric_efficiency = sum(steamturbine_electric) / (sum(boiler_fuel) * REopt.KWH_PER_MMBTU)
+    @test net_electric_efficiency ≈ 0.052 atol=0.005
+
+    # Check that the max production of the boiler is still less than peak heating load times thermal factor
+    factor = input_data["ExistingBoiler"]["max_thermal_factor_on_peak_load"]
+    boiler_capacity = maximum(load_boiler_thermal) * factor
+    @test maximum(boiler_total) <= boiler_capacity
+end
+
 
 ## equivalent REopt API Post for test 2:
 #   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
