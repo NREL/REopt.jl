@@ -112,9 +112,9 @@ REopt.Generator
 REopt.ExistingBoiler
 ```
 
-## Boiler
+## CHP
 ```@docs
-REopt.Boiler
+REopt.CHP
 ```
 
 ## AbsorptionChiller
@@ -122,9 +122,9 @@ REopt.Boiler
 REopt.AbsorptionChiller
 ```
 
-## CHP
+## Boiler
 ```@docs
-REopt.CHP
+REopt.Boiler
 ```
 
 ## HotThermalStorage
@@ -160,4 +160,9 @@ REopt.ExistingChiller
 ## GHP
 ```@docs
 REopt.GHP
+```
+
+## SteamTurbine
+```@docs
+REopt.SteamTurbine
 ```

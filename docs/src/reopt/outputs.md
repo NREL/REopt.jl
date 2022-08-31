@@ -50,9 +50,19 @@ REopt.add_cold_storage_results(::JuMP.AbstractModel, ::REoptInputs, ::Dict, ::St
 REopt.add_generator_results(::JuMP.AbstractModel, ::REoptInputs, ::Dict)
 ```
 
+## ExistingBoiler outputs
+```@docs
+REopt.add_existing_boiler_results
+```
+
 ## CHP outputs
 ```@docs
 REopt.add_chp_results
+```
+
+## Boiler outputs
+```@docs
+REopt.add_boiler_results
 ```
 
 ## Uncertain Outages outputs
@@ -68,4 +78,9 @@ REopt.add_absorption_chiller_results
 ## FlexibleHVAC outputs
 ```@docs
 REopt.add_flexible_hvac_results
+```
+
+## SteamTurbine outputs
+```@docs
+REopt.add_steam_turbine_results
 ```
