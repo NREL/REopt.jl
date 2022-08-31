@@ -36,6 +36,13 @@ function steam_turbine_thermal_input(m, p; _n="")
         end
     end
 
+    # This constraint is already included in storage_constraints.jl if HotThermalStorage and SteamTurbine are considered that also includes dvProductionToStorage["HotThermalStorage"] in LHS
+    if isempty(p.s.storage.types.hot)
+        @constraint(m, SupplySteamTurbineProductionLimit[t in p.techs.can_supply_steam_turbine, ts in p.time_steps],
+                    m[Symbol("dvThermalToSteamTurbine"*_n)][t,ts] <=
+                    m[Symbol("dvThermalProduction"*_n)][t,ts]
+        )
+    end
 end
 
 function steam_turbine_production_constraints(m, p; _n="")
