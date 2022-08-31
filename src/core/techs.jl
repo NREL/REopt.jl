@@ -192,9 +192,9 @@ function Techs(s::Scenario)
 
     if !isnothing(s.steam_turbine)
         push!(all_techs, "SteamTurbine")
+        push!(elec, "SteamTurbine")
         push!(heating_techs, "SteamTurbine")
         push!(steam_turbines, "SteamTurbine")
-        push!(techs_no_turndown, "SteamTurbine")
     end    
 
     if s.settings.off_grid_flag

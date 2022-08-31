@@ -181,6 +181,10 @@ function assign_st_elec_and_therm_prod_ratios!(st::SteamTurbine)
     h_out_j_per_kg = h_in_j_per_kg - st.isentropic_efficiency * (h_in_j_per_kg - h_out_ideal_j_per_kg)
     x_out = PropsSI("Q","P",p_out_pa,"H",h_out_j_per_kg,"Water")
 
+    if x_out != -1.0 && x_out < st.outlet_steam_min_vapor_fraction
+        error("The calculated steam outlet vapor fraction of $x_out is lower than the minimum allowable value of $(st.outlet_steam_min_vapor_fraction)")
+    end
+
     # ST Power
     st_shaft_power_kwh_per_kg = (h_in_j_per_kg - h_out_j_per_kg) / 1000.0 / 3600.0
     st_net_elec_power_kwh_per_kg = st_shaft_power_kwh_per_kg * st.gearbox_generator_efficiency * st.net_to_gross_electric_ratio
