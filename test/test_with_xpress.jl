@@ -1091,7 +1091,7 @@ end
     @test round(heating_served_mmbtu, digits=1) ≈ expected_heating_served_mmbtu atol=1.0
     
     # Boiler serves all of the DHW load, no DHW thermal reduction due to GHP retrofit
-    boiler_served_mmbtu = sum(results["ExistingBoiler"]["year_one_thermal_production_mmbtu_per_hour"])
+    boiler_served_mmbtu = sum(results["ExistingBoiler"]["year_one_thermal_production_series_mmbtu_per_hour"])
     expected_boiler_served_mmbtu = 3000 * 0.8 # (fuel_mmbtu * boiler_effic)
     @test round(boiler_served_mmbtu, digits=1) ≈ expected_boiler_served_mmbtu atol=1.0
     
