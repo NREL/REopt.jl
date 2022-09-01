@@ -728,7 +728,7 @@ end
     boiler_fuel_consumption_calculated = results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"]
     boiler_thermal_series = results["ExistingBoiler"]["year_one_thermal_production_series_mmbtu_per_hour"]
     boiler_to_load_series = results["ExistingBoiler"]["year_one_thermal_to_load_series_mmbtu_per_hour"]
-    boiler_thermal_to_tes_series = results["ExistingBoiler"]["thermal_to_tes_series_mmbtu_per_hour"]
+    boiler_thermal_to_tes_series = results["ExistingBoiler"]["year_one_thermal_to_tes_series_mmbtu_per_hour"]
     chp_thermal_to_load_series = results["CHP"]["year_one_thermal_to_load_series_mmbtu_per_hour"]
     chp_thermal_to_tes_series = results["CHP"]["year_one_thermal_to_tes_series_mmbtu_per_hour"]
     chp_thermal_to_waste_series = results["CHP"]["year_one_thermal_to_waste_series_mmbtu_per_hour"]
@@ -1302,20 +1302,13 @@ end
     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt([m1,m2], inputs)
 
-    # The values compared to the expected values may change if optimization parameters were changed
-    lcc_expect = 189359280.0
-    npv_expect = 8085233.0
-    st_size_kw_expect = 2616.418
-    st_yearly_thermal_consumption_mmbtu_expect = 1000557.6
-    st_yearly_electric_energy_produced_kwh_expect = 18970374.6
-    st_yearly_thermal_energy_produced_mmbtu_expect = 924045.1
-
-    @test results["Financial"]["lcc"] ≈ lcc_expect atol=0.001*lcc_expect
-    @test results["Financial"]["npv"] ≈ npv_expect atol=0.01*npv_expect
-    @test results["SteamTurbine"]["size_kw"] ≈ st_size_kw_expect atol=1
-    @test results["SteamTurbine"]["year_one_thermal_consumption_mmbtu"] ≈ st_yearly_thermal_consumption_mmbtu_expect atol=0.001*st_yearly_thermal_consumption_mmbtu_expect
-    @test results["SteamTurbine"]["year_one_electric_energy_produced_kwh"] ≈ st_yearly_electric_energy_produced_kwh_expect atol=0.001*st_yearly_electric_energy_produced_kwh_expect
-    @test results["SteamTurbine"]["year_one_thermal_energy_produced_mmbtu"] ≈ st_yearly_thermal_energy_produced_mmbtu_expect atol=0.001*st_yearly_thermal_energy_produced_mmbtu_expect
+    # The expected values below were directly copied from the REopt_API V2 expected values
+    @test results["Financial"]["lcc"] ≈ 189359280.0 rtol=0.001
+    @test results["Financial"]["npv"] ≈ 8085233.0 rtol=0.01
+    @test results["SteamTurbine"]["size_kw"] ≈ 2616.418 atol=1.0
+    @test results["SteamTurbine"]["year_one_thermal_consumption_mmbtu"] ≈ 1000557.6 rtol=0.001
+    @test results["SteamTurbine"]["year_one_electric_energy_produced_kwh"] ≈ 18970374.6 rtol=0.001
+    @test results["SteamTurbine"]["year_one_thermal_energy_produced_mmbtu"] ≈ 924045.1 rtol=0.001
 
     # BAU boiler loads
     load_boiler_fuel = (s.space_heating_load.loads_kw + s.dhw_load.loads_kw) ./ REopt.KWH_PER_MMBTU ./ s.existing_boiler.efficiency
