@@ -57,11 +57,10 @@
     production_incentive_max_benefit = 1.0e9,
     production_incentive_years = 1,
     production_incentive_max_kw = 1.0e9,
-    can_net_meter = off_grid_flag ? false : true,
-    can_wholesale = off_grid_flag ? false : true,
-    can_export_beyond_nem_limit = off_grid_flag ? false : true,
-    can_curtail= true,
-    operating_reserve_required_pct::Real = off_grid_flag ? 0.10 : 0.0, # If off grid, 10%, else 0%. Required OR applied to each time_step as a % of wind generation serving load.
+    can_net_meter = true,
+    can_wholesale = true,
+    can_export_beyond_nem_limit = true
+    operating_reserve_required_pct::Real = off_grid_flag ? 0.50 : 0.0, # Only applicable when off_grid_flag is True. Applied to each time_step as a % of wind generation serving load.
 ```
 
 `size_class` must be one of ["residential", "commercial", "medium", "large"]. If `size_class` is not provided then it is determined based on the average electric load.
@@ -165,7 +164,7 @@ struct Wind <: AbstractTech
         can_export_beyond_nem_limit = off_grid_flag ? false : true,
         can_curtail= true,
         average_elec_load = 0.0,
-        operating_reserve_required_pct::Real = off_grid_flag ? 0.10 : 0.0, # TODO determine appropriate value. if off grid, 10%, else 0%. Required OR applied to each time_step as a % of wind generation serving load.
+        operating_reserve_required_pct::Real = off_grid_flag ? 0.50 : 0.0, # Only applicable when off_grid_flag is True. Applied to each time_step as a % of wind generation serving load.
         )
         size_class_to_hub_height = Dict(
             "residential"=> 20,
