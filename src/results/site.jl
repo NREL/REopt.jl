@@ -68,11 +68,6 @@ function add_site_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	add_re_tot_calcs(m,p)
 	r["total_renewable_energy_pct"] = round(value(m[:AnnualRETotkWh])/value(m[:AnnualTotkWh]), digits=6)
 	
-	# pass through for breakeven cost of CO2 calculation:
-	r["include_climate_in_objective"] = p.s.settings.include_climate_in_objective
-	r["pwf_emissions_cost_CO2_grid"] = p.pwf_emissions_cost["CO2_grid"]
-	r["pwf_emissions_cost_CO2_onsite"] = p.pwf_emissions_cost["CO2_onsite"]
-
 	# Year 1 Emissions results at Site level
 	r["year_one_emissions_tonnes_CO2"] = round(value(m[:EmissionsYr1_Total_LbsCO2] * TONNE_PER_LB), digits=2)
 	r["year_one_emissions_tonnes_NOx"] = round(value(m[:EmissionsYr1_Total_LbsNOx] * TONNE_PER_LB), digits=2)
