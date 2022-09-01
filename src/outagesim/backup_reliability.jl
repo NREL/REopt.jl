@@ -117,8 +117,8 @@ Markov Matrix for multiple generator types.
 Return an prod(``num_gen``.+1) by prod(``num_gen``.+1) matrix of transition probabilities of going from n (row) to n' (column) given probability ``fail_prob``
 
 Rows denote starting generators and columns denote ending generators. 
-Generator combinations are iterated by incrementing number of generators starting with the leftmost generator type.
-For example, if `num_gen` = [2, 1], then the rows of the matrix denote the number of working generators by type as follows:
+Generator availability scenarios are ordered such that the number of the leftmost generator type increments fastest.
+For example, if `num_gen` = [2, 1], then the rows of the returned matrix correspond to the number of working generators by type as follows:
 row    working generators
 1           (0, 0) 
 2           (1, 0)
@@ -189,9 +189,9 @@ Return a 1 by prod(``num_gen`` .+ 1) matrix (row vector) of the probability that
 (differentiated by generator type) is both operationally available (``gen_operational_availability``) 
 and avoids a Failure to Start (``failure_to_start``) in an inital time step
 
-Generator combinations are iterated by incrementing number of generators starting with the leftmost generator type
-if `num_gen` = [2, 1], then the rows of the matrix denote the number of working generators by type as follows:
-row    working generators
+Generator availability scenarios are ordered such that the number of the leftmost generator type increments fastest.
+For example, if `num_gen` = [2, 1], then the columns of the returned matrix correspond to the number of working generators by type as follows:
+col    working generators
 1           (0, 0) 
 2           (1, 0)
 3           (2, 0)
@@ -247,7 +247,7 @@ end
 """
     generator_output(;num_generators::Int, gen_capacity_kw::Real)::Vector{Float64} 
 
-Return a vector with length ``num_generators``+1 of maximum generator capacity given 0 to ``num_generators`` are available
+Return a ``num_generators``+1 length vector of maximum generator capacity given 0 to ``num_generators`` are available
 # Examples
 ```repl-julia
 julia>  generator_output(num_generators=3, gen_capacity_kw=250)
@@ -267,7 +267,18 @@ end
     generator_output(;num_generators::Vector{Int}, gen_capacity_kw::Vector{<:Real})::Vector{Float64} 
 
 Generator output for multiple generator types
-Return a vector equal to the length of prod(``num_generators`` .+ 1) of mazimized generator capacity given 0 to ``num_generators`` of each type are available
+Return a prod(``num_generators`` .+ 1) length vector of maximum generator capacity given 0 to ``num_generators`` of each type are available
+
+Generator availability scenarios are ordered such that the number of the leftmost generator type increments fastest.
+For example, if `num_gen` = [2, 1], then the elements of the returned vector correspond to the number of working generators by type as follows:
+index    working generators
+1           (0, 0) 
+2           (1, 0)
+3           (2, 0)
+4           (0, 1)
+5           (1, 1)
+6           (2, 1)
+
 #Examples
 ```repl-julia
 generator_output(num_generators=[2,1], gen_capacity_kw=[250, 300])
