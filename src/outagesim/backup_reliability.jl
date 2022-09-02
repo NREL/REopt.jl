@@ -330,14 +330,11 @@ function get_maximum_generation(batt_kw::Real, gen_capacity_kw::Real, bin_size::
     #Returns a matrix of maximum hourly generation (rows denote number of generators starting at 0, columns denote battery bin)
     N = num_generators + 1
     M = num_bins
-    max_battery_discharge = zeros(M, N) 
-    generator_prod = zeros(M, N)
+    max_system_output = zeros(M, N) 
     for i in 1:M
-       max_battery_discharge[i, :] = fill(min(batt_kw, (i-1)*bin_size*batt_discharge_efficiency), N)
-       generator_prod[i, :] = generator_output(num_generators, gen_capacity_kw)
+       max_system_output[i, :] = generator_output(num_generators, gen_capacity_kw) .+ min(batt_kw, (i-1)*bin_size*batt_discharge_efficiency)
     end
-    
-    return generator_prod .+ max_battery_discharge
+    return max_system_output
 end
 
 """
@@ -371,15 +368,13 @@ function get_maximum_generation(batt_kw::Real, gen_capacity_kw::Vector{<:Real}, 
     #Returns a matrix of maximum hourly generation (rows denote number of generators starting at 0, columns denote battery bin)
     N = prod(num_generators .+ 1)
     M = num_bins
-    max_battery_discharge = zeros(M, N) 
-    generator_prod = zeros(M, N)
+    max_system_output = zeros(M, N)
     for i in 1:M
-        max_battery_discharge[i, :] = fill(min(batt_kw, (i-1)*bin_size*batt_discharge_efficiency), N)
-        generator_prod[i, :] = generator_output(num_generators, gen_capacity_kw)
+        max_system_output[i, :] = generator_output(num_generators, gen_capacity_kw) .+ min(batt_kw, (i-1)*bin_size*batt_discharge_efficiency)
     end
-
-    return generator_prod .+ max_battery_discharge
+    return max_system_output
 end
+
 """
     battery_bin_shift(excess_generation_kw::Vector, bin_size::Real, batt_kw::Real, batt_charge_efficiency::Real, batt_discharge_efficiency::Real)::Vector{Int} 
 
@@ -470,11 +465,11 @@ end
     survival_over_time_gen_only(;critical_load::Vector, gen_operational_availability::Real, failure_to_start::Real, failure_to_run::Real, num_generators::Int,
                                 gen_capacity_kw::Real, max_duration::Int, marginal_survival = true)::Matrix{Float64}
 
-Return a matrix of probability of survival with rows denoting outage start and columns denoting outage duration
+Return a matrix of probability of survival with rows denoting outage start timestep and columns denoting outage duration
 
 Solves for probability of survival given only backup generators (no battery backup). 
-If ``marginal_survival`` = true then result is chance of surviving in given outage hour, 
-if ``marginal_survival`` = false then result is chance of surviving up to and including given outage hour.
+If ``marginal_survival`` = true then result is chance of surviving in given outage timestep, 
+if ``marginal_survival`` = false then result is chance of surviving up to and including given outage timestep.
 
 # Arguments
 - `critical_load_kw::Vector`: 8760 vector of system critical loads. 
