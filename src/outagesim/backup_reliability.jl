@@ -462,7 +462,7 @@ function shift_gen_battery_prob_matrix!(gen_battery_prob_matrix::Matrix, shift_v
 end
 
 """
-    survival_over_time_gen_only(;critical_load::Vector, gen_operational_availability::Real, failure_to_start::Real, failure_to_run::Real, num_generators::Int,
+    survival_gen_only(;critical_load::Vector, gen_operational_availability::Real, failure_to_start::Real, failure_to_run::Real, num_generators::Int,
                                 gen_capacity_kw::Real, max_duration::Int, marginal_survival = true)::Matrix{Float64}
 
 Return a matrix of probability of survival with rows denoting outage start timestep and columns denoting outage duration
@@ -487,7 +487,7 @@ Chance of 2 generators failing is 0.04 in hour 1, 0.1296 by hour 1, and 0.238144
 ```repl-julia
 julia> critical_load_kw = [1,2,1,1]; gen_operational_availability = 1; failure_to_start = 0.0; failure_to_run = 0.2; num_generators = 2; gen_capacity_kw = 1; max_duration = 3;
 
-julia> survival_over_time_gen_only(critical_load=critical_load_kw, gen_operational_availability=gen_operational_availability, 
+julia> survival_gen_only(critical_load=critical_load_kw, gen_operational_availability=gen_operational_availability, 
                                 failure_to_start=failure_to_start, failure_to_run=failure_to_run, num_generators=num_generators, 
                                 gen_capacity_kw=gen_capacity_kw, max_duration=max_duration, marginal_survival = true)
 4×3 Matrix{Float64}:
@@ -496,7 +496,7 @@ julia> survival_over_time_gen_only(critical_load=critical_load_kw, gen_operation
  0.96  0.8704  0.761856
  0.96  0.8704  0.262144
 
-julia> survival_over_time_gen_only(critical_load=critical_load_kw, gen_operational_availability=gen_operational_availability, 
+julia> survival_gen_only(critical_load=critical_load_kw, gen_operational_availability=gen_operational_availability, 
                                 failure_to_start=failure_to_start, failure_to_run=failure_to_run, num_generators=num_generators, 
                                 gen_capacity_kw=gen_capacity_kw, max_duration=max_duration, marginal_survival = false)
 4×3 Matrix{Float64}:
@@ -506,7 +506,7 @@ julia> survival_over_time_gen_only(critical_load=critical_load_kw, gen_operation
  0.96  0.8704  0.262144
 ```
 """
-function survival_over_time_gen_only(;
+function survival_gen_only(;
     critical_load_kw::Vector, 
     gen_operational_availability::Union{Real, Vector{<:Real}}, 
     failure_to_start::Union{Real, Vector{<:Real}}, 
@@ -538,15 +538,14 @@ function survival_over_time_gen_only(;
             survival[net_gen .< 0] .= 0
 
             gen_probs *= generator_markov_matrix #Update to account for generator failures
-            survival_val = gen_probs .* survival
+            survival_chance = gen_probs .* survival #Elementwise, probability that i gens is available * probability of surviving if i gens is available
             
             if marginal_survival == false
-                gen_probs = gen_probs .* survival
+                gen_probs = survival_chance
             end
             
-            #update expected lost load for given outage start time and outage duration
-            survival_probability_matrix[t, d] = sum(survival_val)
-            #Update generation battery probability matrix to account for battery shifting
+            #update total probability of survival for given outage start time and outage duration
+            survival_probability_matrix[t, d] = sum(survival_chance)
         end
     end
     return survival_probability_matrix
@@ -651,7 +650,6 @@ function survival_with_battery(;
     starting_gens = starting_probabilities(num_generators, gen_operational_availability, failure_to_start) 
 
     #loop through outage time
-    tme = time()
     for t = 1:t_max
         gen_battery_prob_matrix = zeros(M, N)
         gen_battery_prob_matrix[starting_battery_bins[t], :] = starting_gens
@@ -668,17 +666,17 @@ function survival_with_battery(;
             survival[max_net_generation .< 0, ] .= 0
 
             #Update probabilities to account for generator failures
-            # time_vals["generator_shift"] += @elapsed account_for_generator_failures!(gen_battery_prob_matrix, generator_markov_matrix)
             gen_battery_prob_matrix *= generator_markov_matrix 
-            # account_for_generator_failures!(gen_battery_prob_matrix, generator_markov_matrix)
 
             #Update survival probabilities
-            survival_chance = gen_battery_prob_matrix .* survival
+            #Elementwise, probability that i gens is available * probability of surviving if i gens is available
+            survival_chance = gen_battery_prob_matrix .* survival 
 
             #If marginal survival is false then remove probabilities which did not meet load
             if marginal_survival == false
-                gen_battery_prob_matrix = gen_battery_prob_matrix .* survival
+                gen_battery_prob_matrix = survival_chance
             end
+            
             #update expected lost load for given outage start time and outage duration
             survival_probability_matrix[t, d] = sum(survival_chance)
             #Update generation battery probability matrix to account for battery shifting
@@ -788,7 +786,7 @@ function backup_reliability_inputs(;d::Dict, p::REoptInputs, r::Dict = Dict())::
     else
         nt = length(num_gen)
         if length(gen_capacity_kw) != nt
-            gen_capacity_kw = [diesel_kw / sum(num_gen) for i in 1:nt]
+            gen_capacity_kw = [diesel_kw / sum(num_gen) for _ in 1:nt]
         end
     end
 
@@ -834,23 +832,16 @@ function return_backup_reliability(;
     batt_charge_efficiency::Real = 0.948, 
     batt_discharge_efficiency::Real = 0.948)::Array
  
-    if length(gen_capacity_kw) > 1
-        total_gen_cap = sum(gen_capacity_kw)
-    else
-        total_gen_cap = gen_capacity_kw
-    end
+    total_gen_cap = sum(gen_capacity_kw)
     #No reliability calculations if no generators
-    if max_outage_duration == 0
-        return []
-        
-    elseif total_gen_cap < 0.1
+    if max_outage_duration == 0 || total_gen_cap < 0.1
         return []
     
     elseif batt_kw < 0.1
-        return [survival_over_time_gen_only(critical_load_kw=critical_loads_kw, gen_operational_availability=gen_operational_availability, 
+        return [survival_gen_only(critical_load_kw=critical_loads_kw, gen_operational_availability=gen_operational_availability, 
                                             failure_to_start=gen_failure_to_start, failure_to_run=gen_failure_to_run, num_generators=num_gen, 
                                             gen_capacity_kw=gen_capacity_kw, max_duration=max_outage_duration, marginal_survival = true),
-                survival_over_time_gen_only(critical_load_kw=critical_loads_kw, gen_operational_availability=gen_operational_availability, 
+                survival_gen_only(critical_load_kw=critical_loads_kw, gen_operational_availability=gen_operational_availability, 
                                             failure_to_start=gen_failure_to_start, failure_to_run=gen_failure_to_run, num_generators=num_gen, 
                                             gen_capacity_kw=gen_capacity_kw, max_duration=max_outage_duration, marginal_survival = false)]
 
