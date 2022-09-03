@@ -676,7 +676,7 @@ function survival_with_battery(;
             if marginal_survival == false
                 gen_battery_prob_matrix = survival_chance
             end
-            
+
             #update expected lost load for given outage start time and outage duration
             survival_probability_matrix[t, d] = sum(survival_chance)
             #Update generation battery probability matrix to account for battery shifting
@@ -901,7 +901,7 @@ end
 
 
 """
-	backup_reliability(;d::Dict, p::REoptInputs, r::Dict)
+	backup_reliability(d::Dict, p::REoptInputs, r::Dict)
 
 Return dictionary of backup reliability results.
 
@@ -919,7 +919,7 @@ Return dictionary of backup reliability results.
     -microgrid_only::Bool = false (determines how generator, PV, and battery act during islanded mode)
 
 """
-function backup_reliability(;d::Dict, p::REoptInputs, r::Dict)
+function backup_reliability(d::Dict, p::REoptInputs, r::Dict)
     reliability_inputs = backup_reliability_inputs(d=d, p=p, r=r)
 	results = return_backup_reliability(; reliability_inputs... )
 	process_reliability_results(results)
