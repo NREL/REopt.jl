@@ -1092,10 +1092,10 @@ end
         end
         inputs["Site"]["include_exported_renewable_electricity_in_total"] = include_exported_RE_in_total[i]
         inputs["Site"]["include_exported_elec_emissions_in_total"] = include_exported_ER_in_total[i]
-        inputs["Site"]["renewable_electricity_min_pct"] = if isnothing(RE_target[i]) 0.0 else RE_target[i] end
-        inputs["Site"]["renewable_electricity_max_pct"] = RE_target[i]
-        inputs["Site"]["CO2_emissions_reduction_min_pct"] = ER_target[i]
-        inputs["Site"]["CO2_emissions_reduction_max_pct"] = ER_target[i]
+        inputs["Site"]["renewable_electricity_min_fraction"] = if isnothing(RE_target[i]) 0.0 else RE_target[i] end
+        inputs["Site"]["renewable_electricity_max_fraction"] = RE_target[i]
+        inputs["Site"]["CO2_emissions_reduction_min_fraction"] = ER_target[i]
+        inputs["Site"]["CO2_emissions_reduction_max_fraction"] = ER_target[i]
         if with_outage[i]
             outage_start_hour = 4032
             outage_duration = 2000 #hrs

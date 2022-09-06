@@ -43,7 +43,7 @@ function add_operating_reserve_constraints(m, p; _n="")
     )
     # 3. Operating reserve provided - battery  
     @constraint(m, [b in p.s.storage.types.elec, ts in p.time_steps_without_grid],
-        m[Symbol("dvOpResFromBatt"*_n)][b,ts] <= (m[Symbol("dvStoredEnergy"*_n)][b, ts-1] - p.s.storage.attr[b].soc_min_pct * m[Symbol("dvStorageEnergy"*_n)][b]) / p.hours_per_time_step 
+        m[Symbol("dvOpResFromBatt"*_n)][b,ts] <= (m[Symbol("dvStoredEnergy"*_n)][b, ts-1] - p.s.storage.attr[b].soc_min_fraction * m[Symbol("dvStorageEnergy"*_n)][b]) / p.hours_per_time_step 
         - (m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.s.storage.attr[b].discharge_efficiency)
     )
     @constraint(m, [b in p.s.storage.types.elec, ts in p.time_steps_without_grid],

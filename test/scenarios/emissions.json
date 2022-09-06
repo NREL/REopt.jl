@@ -4,8 +4,8 @@
         "latitude": 34.5794343,
         "roof_squarefeet": 5000.0,
         "land_acres": 1.0,
-        "CO2_emissions_reduction_min_pct": 0.50,
-        "CO2_emissions_reduction_max_pct": 0.75
+        "CO2_emissions_reduction_min_fraction": 0.50,
+        "CO2_emissions_reduction_max_fraction": 0.75
     },
     "PV": {
         "max_kw": 500,

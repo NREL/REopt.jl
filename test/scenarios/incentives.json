@@ -56,7 +56,7 @@
         "battery_replacement_year": 10, 
         "macrs_option_years": 5, 
         "internal_efficiency_pct": 0.975, 
-        "soc_min_pct": 0.2, 
+        "soc_min_fraction": 0.2, 
         "soc_init_pct": 0.5, 
         "inverter_replacement_year": 10
     }, 
