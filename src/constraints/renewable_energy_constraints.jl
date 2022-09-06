@@ -38,11 +38,11 @@ Function to add minimum and/or maximum renewable electricity (as percentage of l
 """
 #Renewable electricity constraints
 function add_re_elec_constraints(m,p)
-	if !isnothing(p.s.site.renewable_electricity_min_pct)
-		@constraint(m, MinREElecCon, m[:AnnualREEleckWh] >= p.s.site.renewable_electricity_min_pct*m[:AnnualEleckWh])
+	if !isnothing(p.s.site.renewable_electricity_min_fraction)
+		@constraint(m, MinREElecCon, m[:AnnualREEleckWh] >= p.s.site.renewable_electricity_min_fraction*m[:AnnualEleckWh])
 	end
-	if !isnothing(p.s.site.renewable_electricity_max_pct)
-		@constraint(m, MaxREElecCon, m[:AnnualREEleckWh] <= p.s.site.renewable_electricity_max_pct*m[:AnnualEleckWh])
+	if !isnothing(p.s.site.renewable_electricity_max_fraction)
+		@constraint(m, MaxREElecCon, m[:AnnualREEleckWh] <= p.s.site.renewable_electricity_max_fraction*m[:AnnualEleckWh])
 	end
 end
 

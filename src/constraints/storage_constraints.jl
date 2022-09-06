@@ -65,7 +65,7 @@ function add_general_storage_dispatch_constraints(m, p, b; _n="")
 
     # Constraint (4j): Minimum state of charge
 	@constraint(m, [ts in p.time_steps],
-        m[Symbol("dvStoredEnergy"*_n)][b, ts] >= p.s.storage.attr[b].soc_min_pct * m[Symbol("dvStorageEnergy"*_n)][b]
+        m[Symbol("dvStoredEnergy"*_n)][b, ts] >= p.s.storage.attr[b].soc_min_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
     )
 
     #Constraint (4j): Dispatch from storage is no greater than power capacity

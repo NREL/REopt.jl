@@ -72,7 +72,7 @@
     "min_gal": 30000.0 ,
     "max_gal": 30000.0 ,
     "internal_efficiency_pct": 0.97 ,
-    "soc_min_pct": 0.1 ,
+    "soc_min_fraction": 0.1 ,
     "soc_init_pct": 0.5 ,
     "installed_cost_per_gal": 3.0 ,
     "thermal_decay_rate_fraction": 0.004 ,

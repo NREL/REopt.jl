@@ -40,7 +40,7 @@ Cold thermal energy storage sytem; specifically, a chilled water system used to 
     hot_water_temp_degF::Float64 = 56.0
     cool_water_temp_degF::Float64 = 44.0
     internal_efficiency_pct::Float64 = 0.999999
-    soc_min_pct::Float64 = 0.1
+    soc_min_fraction::Float64 = 0.1
     soc_init_pct::Float64 = 0.5
     installed_cost_per_gal::Float64 = 1.50
     thermal_decay_rate_fraction::Float64 = 0.0004
@@ -58,7 +58,7 @@ Base.@kwdef struct ColdThermalStorageDefaults <: AbstractThermalStorageDefaults
     hot_water_temp_degF::Float64 = 56.0
     cool_water_temp_degF::Float64 = 44.0
     internal_efficiency_pct::Float64 = 0.999999
-    soc_min_pct::Float64 = 0.1
+    soc_min_fraction::Float64 = 0.1
     soc_init_pct::Float64 = 0.5
     installed_cost_per_gal::Float64 = 1.50
     thermal_decay_rate_fraction::Float64 = 0.0004
@@ -80,7 +80,7 @@ end
     hot_water_temp_degF::Float64 = 180.0
     cool_water_temp_degF::Float64 = 160.0
     internal_efficiency_pct::Float64 = 0.999999
-    soc_min_pct::Float64 = 0.1
+    soc_min_fraction::Float64 = 0.1
     soc_init_pct::Float64 = 0.5
     installed_cost_per_gal::Float64 = 1.50
     thermal_decay_rate_fraction::Float64 = 0.0004
@@ -98,7 +98,7 @@ Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults
     hot_water_temp_degF::Float64 = 180.0
     cool_water_temp_degF::Float64 = 160.0
     internal_efficiency_pct::Float64 = 0.999999
-    soc_min_pct::Float64 = 0.1
+    soc_min_fraction::Float64 = 0.1
     soc_init_pct::Float64 = 0.5
     installed_cost_per_gal::Float64 = 1.50
     thermal_decay_rate_fraction::Float64 = 0.0004
@@ -124,7 +124,7 @@ struct ThermalStorage <: AbstractThermalStorage
     hot_water_temp_degF::Float64
     cool_water_temp_degF::Float64
     internal_efficiency_pct::Float64
-    soc_min_pct::Float64
+    soc_min_fraction::Float64
     soc_init_pct::Float64
     installed_cost_per_gal::Float64
     thermal_decay_rate_fraction::Float64
@@ -176,7 +176,7 @@ struct ThermalStorage <: AbstractThermalStorage
             s.hot_water_temp_degF,
             s.cool_water_temp_degF,
             s.internal_efficiency_pct,
-            s.soc_min_pct,
+            s.soc_min_fraction,
             s.soc_init_pct,
             s.installed_cost_per_gal,
             s.thermal_decay_rate_fraction,

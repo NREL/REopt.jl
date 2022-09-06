@@ -66,7 +66,7 @@ end
 Solve the model using a `Scenario` or `BAUScenario`.
 """
 function run_reopt(m::JuMP.AbstractModel, s::AbstractScenario)
-	if s.site.CO2_emissions_reduction_min_pct > 0.0 || s.site.CO2_emissions_reduction_max_pct < 1.0
+	if s.site.CO2_emissions_reduction_min_fraction > 0.0 || s.site.CO2_emissions_reduction_max_fraction < 1.0
 		error("To constrain CO2 emissions reduction min or max percentages, the optimal and business as usual scenarios must be run in parallel. Use a version of run_reopt() that takes an array of two models.")
 	end
 	run_reopt(m, REoptInputs(s))

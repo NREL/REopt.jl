@@ -53,8 +53,8 @@
     emissions_factor_SO2_decrease_pct::Real = 0.01174,
     emissions_factor_PM25_decrease_pct::Real = 0.01174,
     # fields from other models needed for validation
-    CO2_emissions_reduction_min_pct::Union{Real, Nothing} = nothing, # passed from Site
-    CO2_emissions_reduction_max_pct::Union{Real, Nothing} = nothing, # passed from Site
+    CO2_emissions_reduction_min_fraction::Union{Real, Nothing} = nothing, # passed from Site
+    CO2_emissions_reduction_max_fraction::Union{Real, Nothing} = nothing, # passed from Site
     include_climate_in_objective::Bool = false, # passed from Settings
     include_health_in_objective::Bool = false # passed from Settings
 ```
@@ -138,8 +138,8 @@ struct ElectricUtility
         emissions_factor_SO2_decrease_pct::Real = 0.01174,
         emissions_factor_PM25_decrease_pct::Real = 0.01174,
         # fields from other models needed for validation
-        CO2_emissions_reduction_min_pct::Union{Real, Nothing} = nothing, # passed from Site
-        CO2_emissions_reduction_max_pct::Union{Real, Nothing} = nothing, # passed from Site
+        CO2_emissions_reduction_min_fraction::Union{Real, Nothing} = nothing, # passed from Site
+        CO2_emissions_reduction_max_fraction::Union{Real, Nothing} = nothing, # passed from Site
         include_climate_in_objective::Bool = false, # passed from Settings
         include_health_in_objective::Bool = false # passed from Settings
         )
@@ -176,8 +176,8 @@ struct ElectricUtility
                     if isnothing(emissions_series_dict[ekey])
                         @warn "Cannot find hourly $(ekey) emissions for region $(region_abbr). Setting emissions to zero."
                         if ekey == "CO2" && !off_grid_flag && 
-                                            (!isnothing(CO2_emissions_reduction_min_pct) || 
-                                            !isnothing(CO2_emissions_reduction_max_pct) || 
+                                            (!isnothing(CO2_emissions_reduction_min_fraction) || 
+                                            !isnothing(CO2_emissions_reduction_max_fraction) || 
                                             include_climate_in_objective)
                             error("To include CO2 costs in the objective function or enforce emissions reduction constraints, 
                                 you must either enter custom CO2 grid emissions factors or a site location within the continental U.S.")
