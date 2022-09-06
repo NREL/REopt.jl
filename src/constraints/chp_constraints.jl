@@ -138,12 +138,12 @@ function add_chp_supplementary_firing_constraints(m, p; _n="")
 end
 
 function add_binCHPIsOnInTS_constraints(m, p; _n="")
-    # Note, min_turn_down_pct for CHP is only enforced in p.time_steps_with_grid
+    # Note, min_turn_down_fraction for CHP is only enforced in p.time_steps_with_grid
     @constraint(m, [t in p.techs.chp, ts in p.time_steps_with_grid],
         m[Symbol("dvRatedProduction"*_n)][t, ts] <= p.s.chp.max_kw * m[Symbol("binCHPIsOnInTS"*_n)][t, ts]
     )
     @constraint(m, [t in p.techs.chp, ts in p.time_steps_with_grid],
-        p.s.chp.min_turn_down_pct * m[Symbol("dvSize"*_n)][t] - m[Symbol("dvRatedProduction"*_n)][t, ts] <=
+        p.s.chp.min_turn_down_fraction * m[Symbol("dvSize"*_n)][t] - m[Symbol("dvRatedProduction"*_n)][t, ts] <=
         p.s.chp.max_kw * (1 - m[Symbol("binCHPIsOnInTS"*_n)][t, ts])
     )
 end
@@ -196,7 +196,7 @@ Used in src/reopt.jl to add_chp_constraints if !isempty(p.techs.chp) to add CHP 
 cost expressions.
 """
 function add_chp_constraints(m, p; _n="")
-    # TODO if chp.min_turn_down_pct is 0.0, and there is no fuel burn or thermal y-intercept, we don't need the binary below
+    # TODO if chp.min_turn_down_fraction is 0.0, and there is no fuel burn or thermal y-intercept, we don't need the binary below
     @warn """Adding binary variable to model CHP. 
                 Some solvers are very slow with integer variables"""
     @variables m begin

@@ -108,7 +108,7 @@ function effective_cost(;
     tax_rate::Real, 
     itc::Real,
     macrs_schedule::Array{Float64,1}, 
-    macrs_bonus_pct::Real, 
+    macrs_bonus_fraction::Real, 
     macrs_itc_reduction::Real,
     rebate_per_kw::Real=0.0,
     )
@@ -127,7 +127,7 @@ function effective_cost(;
     depr_basis = itc_basis * (1 - macrs_itc_reduction * itc)
 
     # Bonus depreciation taken from tech cost after itc reduction ($/kW)
-    bonus_depreciation = depr_basis * macrs_bonus_pct
+    bonus_depreciation = depr_basis * macrs_bonus_fraction
 
     # Assume the ITC and bonus depreciation reduce the depreciable basis ($/kW)
     depr_basis -= bonus_depreciation

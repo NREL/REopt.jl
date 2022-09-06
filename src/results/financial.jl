@@ -295,9 +295,9 @@ function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
     npv_om = sum([om * (1.0/(1.0+discount_rate_fraction))^yr for (yr, om) in enumerate(om_series)])
 
     #Incentives as calculated in the spreadsheet, note utility incentives are applied before state incentives
-    utility_ibi = min(capital_costs * tech.utility_ibi_pct, tech.utility_ibi_max)
+    utility_ibi = min(capital_costs * tech.utility_ibi_fraction, tech.utility_ibi_max)
     utility_cbi = min(new_kw * tech.utility_rebate_per_kw, tech.utility_rebate_max)
-    state_ibi = min((capital_costs - utility_ibi - utility_cbi) * tech.state_ibi_pct, tech.state_ibi_max)
+    state_ibi = min((capital_costs - utility_ibi - utility_cbi) * tech.state_ibi_fraction, tech.state_ibi_max)
     state_cbi = min(new_kw * tech.state_rebate_per_kw, tech.state_rebate_max)
     federal_cbi = new_kw * tech.federal_rebate_per_kw
     ibi = utility_ibi + state_ibi  #total investment-based incentives
@@ -309,14 +309,14 @@ function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
     #calculate the value of the production-based incentive stream
     npv_pbi = 0
     year_one_energy_produced = get(tech_results, "year_one_energy_produced_kwh", 0)
-    degradation_pct = :degradation_pct in fieldnames(typeof(tech)) ? tech.degradation_pct : 0.0
+    degradation_fraction = :degradation_fraction in fieldnames(typeof(tech)) ? tech.degradation_fraction : 0.0
     if tech.production_incentive_max_benefit > 0
         for yr in 1:years
             if yr < tech.production_incentive_years
-                degredation_pct = (1- degradation_pct)^yr
+                degredation_fraction = (1- degradation_fraction)^yr
                 base_pbi = minimum([tech.production_incentive_per_kwh * 
-                    (year_one_energy_produced - existing_energy_bau) * degredation_pct,  
-                    tech.production_incentive_max_benefit * degredation_pct 
+                    (year_one_energy_produced - existing_energy_bau) * degredation_fraction,  
+                    tech.production_incentive_max_benefit * degredation_fraction 
                 ])
                 npv_pbi += base_pbi * (1.0/(1.0+discount_rate_fraction))^(yr+1)
             end
@@ -325,7 +325,7 @@ function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
 
     npv_federal_itc = 0
     federal_itc_basis = capital_costs - state_ibi - utility_ibi - state_cbi - utility_cbi - federal_cbi
-    federal_itc_amount = tech.federal_itc_pct * federal_itc_basis
+    federal_itc_amount = tech.federal_itc_fraction * federal_itc_basis
     npv_federal_itc = federal_itc_amount * (1.0/(1.0+discount_rate_fraction))
 
     depreciation_schedule = zeros(years)
@@ -335,14 +335,14 @@ function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
         elseif tech.macrs_option_years == 7
             schedule = p.s.financial.macrs_seven_year
         end
-        macrs_bonus_basis = federal_itc_basis - (federal_itc_basis * tech.federal_itc_pct * tech.macrs_itc_reduction)
-        macrs_basis = macrs_bonus_basis * (1 - tech.macrs_bonus_pct)
+        macrs_bonus_basis = federal_itc_basis - (federal_itc_basis * tech.federal_itc_fraction * tech.macrs_itc_reduction)
+        macrs_basis = macrs_bonus_basis * (1 - tech.macrs_bonus_fraction)
         for (i,r) in enumerate(schedule)
             if i-1 < length(depreciation_schedule)
                 depreciation_schedule[i] = macrs_basis * r
             end
         end
-        depreciation_schedule[1] += tech.macrs_bonus_pct * macrs_bonus_basis
+        depreciation_schedule[1] += tech.macrs_bonus_fraction * macrs_bonus_basis
     end
 
     tax_deductions = (om_series + depreciation_schedule) * federal_tax_rate_fraction
@@ -351,7 +351,7 @@ function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
     #we only care about the energy produced by new capacity in LCOE calcs
     annual_energy = year_one_energy_produced - existing_energy_bau
     npv_annual_energy = sum([annual_energy * (1.0/(1.0+discount_rate_fraction))^yr * 
-        (1- degradation_pct)^(yr-1) for yr in 1:years])
+        (1- degradation_fraction)^(yr-1) for yr in 1:years])
 
     #LCOE is calculated as annualized costs divided by annualized energy
     lcoe = (capital_costs + npv_om - npv_pbi - cbi - ibi - npv_federal_itc - npv_tax_deductions ) / npv_annual_energy
