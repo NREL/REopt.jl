@@ -77,20 +77,20 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     ## LCC breakdown: ##
     r["lifecycle_generation_tech_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)]) # Tech capital costs (including replacements)
     r["lifecycle_storage_capital_costs"] = value(m[Symbol("TotalStorageCapCosts"*_n)]) # Storage capital costs (including replacements)
-    r["lifecycle_om_costs_after_tax"] = r["lifecycle_om_costs_before_tax"] * (1 - p.s.financial.owner_tax_pct)  # Fixed & Variable O&M 
+    r["lifecycle_om_costs_after_tax"] = r["lifecycle_om_costs_before_tax"] * (1 - p.s.financial.owner_tax_rate_fraction)  # Fixed & Variable O&M 
     if !isempty(p.techs.fuel_burning)
-        r["lifecycle_fuel_costs_after_tax"] = value(m[:TotalFuelCosts]) * (1 - p.s.financial.offtaker_tax_pct)
+        r["lifecycle_fuel_costs_after_tax"] = value(m[:TotalFuelCosts]) * (1 - p.s.financial.offtaker_tax_rate_fraction)
     else
         r["lifecycle_fuel_costs_after_tax"] = 0.0
     end
     if !(Symbol("TotalCHPStandbyCharges"*_n) in keys(m.obj_dict)) # CHP standby charges not currently included in multi-node modeling
         m[Symbol("TotalCHPStandbyCharges"*_n)] = 0.0
     end
-    r["lifecycle_chp_standby_cost_after_tax"] = value(m[Symbol("TotalCHPStandbyCharges"*_n)]) * (1 - p.s.financial.offtaker_tax_pct) # CHP standby
-    r["lifecycle_elecbill_after_tax"] = value(m[Symbol("TotalElecBill"*_n)]) * (1 - p.s.financial.offtaker_tax_pct)  # Total utility bill 
-    r["lifecycle_production_incentive_after_tax"] = value(m[Symbol("TotalProductionIncentive"*_n)])  * (1 - p.s.financial.owner_tax_pct)  # Production incentives
+    r["lifecycle_chp_standby_cost_after_tax"] = value(m[Symbol("TotalCHPStandbyCharges"*_n)]) * (1 - p.s.financial.offtaker_tax_rate_fraction) # CHP standby
+    r["lifecycle_elecbill_after_tax"] = value(m[Symbol("TotalElecBill"*_n)]) * (1 - p.s.financial.offtaker_tax_rate_fraction)  # Total utility bill 
+    r["lifecycle_production_incentive_after_tax"] = value(m[Symbol("TotalProductionIncentive"*_n)])  * (1 - p.s.financial.owner_tax_rate_fraction)  # Production incentives
     if p.s.settings.off_grid_flag # Offgrid other annual and capital costs
-        r["lifecycle_offgrid_other_annual_costs_after_tax"] = p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct)
+        r["lifecycle_offgrid_other_annual_costs_after_tax"] = p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_rate_fraction)
         r["lifecycle_offgrid_other_capital_costs"] = m[:OffgridOtherCapexAfterDepr]
     else
         r["lifecycle_offgrid_other_annual_costs_after_tax"] = 0.0
@@ -215,7 +215,7 @@ end
     replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 
 Replacement costs for storage and generator are not considered if the replacement year is >= the analysis period.
-NOTE the owner_discount_rate_fraction and owner_tax_pct are set to the offtaker_discount_rate_fraction and offtaker_tax_pct 
+NOTE the owner_discount_rate_fraction and owner_tax_rate_fraction are set to the offtaker_discount_rate_fraction and offtaker_tax_rate_fraction 
  respectively when third_party_ownership is False.
 NOTE these replacement costs include the tax benefit available to commercial entities (i.e., assume replacement costs are tax deductible)
 
@@ -243,9 +243,9 @@ function replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInp
         end
         future_cost += future_cost_inverter + future_cost_storage
 
-        present_cost += future_cost_inverter * (1 - p.s.financial.owner_tax_pct) / 
+        present_cost += future_cost_inverter * (1 - p.s.financial.owner_tax_rate_fraction) / 
             ((1 + p.s.financial.owner_discount_rate_fraction)^p.s.storage.attr[b].inverter_replacement_year)
-        present_cost += future_cost_storage * (1 - p.s.financial.owner_tax_pct) / 
+        present_cost += future_cost_storage * (1 - p.s.financial.owner_tax_rate_fraction) / 
             ((1 + p.s.financial.owner_discount_rate_fraction)^p.s.storage.attr[b].battery_replacement_year)
     end
 
@@ -256,7 +256,7 @@ function replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInp
             future_cost_generator = p.s.generator.replace_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Generator"]
         end
         future_cost += future_cost_generator
-        present_cost += future_cost_generator * (1 - p.s.financial.owner_tax_pct) / 
+        present_cost += future_cost_generator * (1 - p.s.financial.owner_tax_rate_fraction) / 
             ((1 + p.s.financial.owner_discount_rate_fraction)^p.s.generator.replacement_year)
     end
 
@@ -281,10 +281,10 @@ function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
     # TODO is most of this calculated in proforma metrics?
     if p.s.financial.third_party_ownership
         discount_rate_fraction = p.s.financial.owner_discount_rate_fraction
-        federal_tax_pct = p.s.financial.owner_tax_pct
+        federal_tax_rate_fraction = p.s.financial.owner_tax_rate_fraction
     else
         discount_rate_fraction = p.s.financial.offtaker_discount_rate_fraction
-        federal_tax_pct = p.s.financial.offtaker_tax_pct
+        federal_tax_rate_fraction = p.s.financial.offtaker_tax_rate_fraction
     end
 
     capital_costs = new_kw * tech.installed_cost_per_kw # pre-incentive capital costs
@@ -345,7 +345,7 @@ function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
         depreciation_schedule[1] += tech.macrs_bonus_pct * macrs_bonus_basis
     end
 
-    tax_deductions = (om_series + depreciation_schedule) * federal_tax_pct
+    tax_deductions = (om_series + depreciation_schedule) * federal_tax_rate_fraction
     npv_tax_deductions = sum([i* (1.0/(1.0+discount_rate_fraction))^yr for (yr,i) in enumerate(tax_deductions)])
 
     #we only care about the energy produced by new capacity in LCOE calcs

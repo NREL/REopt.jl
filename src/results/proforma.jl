@@ -168,23 +168,23 @@ function proforma_results(p::REoptInputs, d::Dict)
     # In the two party case the electricity and export credits are incurred by the offtaker not the developer
     if third_party
         total_operating_expenses = m.om_series
-        tax_pct = p.s.financial.owner_tax_pct
+        tax_rate_fraction = p.s.financial.owner_tax_rate_fraction
     else
         total_operating_expenses = electricity_bill_series + export_credit_series + m.om_series
-        tax_pct = p.s.financial.offtaker_tax_pct
+        tax_rate_fraction = p.s.financial.offtaker_tax_rate_fraction
     end
 
     # Apply taxes to operating expenses
-    if tax_pct > 0
+    if tax_rate_fraction > 0
         deductable_operating_expenses_series = copy(total_operating_expenses)
     else
         deductable_operating_expenses_series = zeros(years)
     end
 
     operating_expenses_after_tax = (total_operating_expenses - deductable_operating_expenses_series) + 
-                                    deductable_operating_expenses_series * (1 - tax_pct)
-    total_cash_incentives = m.total_pbi * (1 - tax_pct)
-    free_cashflow_without_year_zero = m.total_depreciation * tax_pct + total_cash_incentives + operating_expenses_after_tax
+                                    deductable_operating_expenses_series * (1 - tax_rate_fraction)
+    total_cash_incentives = m.total_pbi * (1 - tax_rate_fraction)
+    free_cashflow_without_year_zero = m.total_depreciation * tax_rate_fraction + total_cash_incentives + operating_expenses_after_tax
     free_cashflow_without_year_zero[1] += m.federal_itc
     free_cashflow = append!([(-1 * d["Financial"]["initial_capital_costs"]) + m.total_ibi_and_cbi], free_cashflow_without_year_zero)
 
@@ -197,13 +197,13 @@ function proforma_results(p::REoptInputs, d::Dict)
 
         if p.s.financial.owner_discount_rate_fraction != 0
             capital_recovery_factor = (p.s.financial.owner_discount_rate_fraction * (1 + p.s.financial.owner_discount_rate_fraction)^years) / 
-                                      ((1 + p.s.financial.owner_discount_rate_fraction)^years - 1) / (1 - tax_pct)
+                                      ((1 + p.s.financial.owner_discount_rate_fraction)^years - 1) / (1 - tax_rate_fraction)
         else
-            capital_recovery_factor = (1 / years) / (1 - tax_pct)
+            capital_recovery_factor = (1 / years) / (1 - tax_rate_fraction)
         end
 
         r["annualized_payment_to_third_party"] = r["net_present_cost"] * capital_recovery_factor
-        annual_income_from_host = -1 * sum(discounted_developer_cashflow) * capital_recovery_factor * (1 - tax_pct)
+        annual_income_from_host = -1 * sum(discounted_developer_cashflow) * capital_recovery_factor * (1 - tax_rate_fraction)
         r["developer_annual_free_cashflows"][2:end] .+= annual_income_from_host
         r["internal_rate_of_return"] = irr(r["developer_annual_free_cashflows"])
         cumulative_cashflow = cumsum(r["developer_annual_free_cashflows"])
@@ -233,7 +233,7 @@ function proforma_results(p::REoptInputs, d::Dict)
                            export_credit_series + annual_income_from_host_series - existing_genertor_fuel_cost_series + 
                            generator_fuel_cost_series
 
-        if p.s.financial.owner_tax_pct > 0
+        if p.s.financial.owner_tax_rate_fraction > 0
             deductable_net_energy_costs = copy(net_energy_costs)
         else
             deductable_net_energy_costs = zeros(years)
@@ -250,16 +250,16 @@ function proforma_results(p::REoptInputs, d::Dict)
         electricity_bill_series_bau = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax_bau"])
         export_credit_series_bau = escalate_elec(-d["ElectricTariff"]["lifecycle_export_benefit_after_tax_bau"])
         total_operating_expenses_bau = electricity_bill_series_bau + export_credit_series_bau + m.om_series_bau
-        total_cash_incentives_bau = m.total_pbi_bau * (1 - p.s.financial.offtaker_tax_pct)
+        total_cash_incentives_bau = m.total_pbi_bau * (1 - p.s.financial.offtaker_tax_rate_fraction)
 
-        if p.s.financial.offtaker_tax_pct > 0
+        if p.s.financial.offtaker_tax_rate_fraction > 0
             deductable_operating_expenses_series_bau = copy(total_operating_expenses_bau)
         else
             deductable_operating_expenses_series_bau = zeros(years)
         end
 
         operating_expenses_after_tax_bau = total_operating_expenses_bau - deductable_operating_expenses_series_bau + 
-                    deductable_operating_expenses_series_bau * (1 - p.s.financial.offtaker_tax_pct)
+                    deductable_operating_expenses_series_bau * (1 - p.s.financial.offtaker_tax_rate_fraction)
         free_cashflow_bau = operating_expenses_after_tax_bau + total_cash_incentives_bau
         free_cashflow_bau = append!([0.0], free_cashflow_bau)
         r["offtaker_annual_free_cashflows"] = round.(free_cashflow, digits=2)

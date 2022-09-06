@@ -638,7 +638,7 @@ function setup_absorption_chiller_inputs(s::AbstractScenario, max_sizes, min_siz
             replacement_cost = 0.0,
             replacement_year = s.financial.analysis_years,
             discount_rate = s.financial.owner_discount_rate_fraction,
-            tax_rate = s.financial.owner_tax_pct,
+            tax_rate = s.financial.owner_tax_rate_fraction,
             itc = 0.0,
             macrs_schedule = s.absorption_chiller.macrs_option_years == 5 ? s.financial.macrs_five_year : s.financial.macrs_seven_year,
             macrs_bonus_pct = s.absorption_chiller.macrs_bonus_pct,
@@ -760,8 +760,8 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
     pwf_offtaker = annuity(s.financial.analysis_years, 0.0, s.financial.offtaker_discount_rate_fraction)
     pwf_owner = annuity(s.financial.analysis_years, 0.0, s.financial.owner_discount_rate_fraction)
     if s.financial.third_party_ownership
-        third_party_factor = (pwf_offtaker * (1 - s.financial.offtaker_tax_pct)) /
-                           (pwf_owner * (1 - s.financial.owner_tax_pct))
+        third_party_factor = (pwf_offtaker * (1 - s.financial.offtaker_tax_rate_fraction)) /
+                           (pwf_owner * (1 - s.financial.owner_tax_rate_fraction))
     else
         third_party_factor = 1.0
     end

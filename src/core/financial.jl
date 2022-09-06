@@ -35,10 +35,10 @@
     boiler_fuel_cost_escalation_rate_fraction::Real = 0.034,
     chp_fuel_cost_escalation_rate_fraction::Real = 0.034,
     generator_fuel_cost_escalation_rate_fraction::Real = 0.027,
-    offtaker_tax_pct::Real = 0.26,
+    offtaker_tax_rate_fraction::Real = 0.26,
     offtaker_discount_rate_fraction::Real = 0.0564,
     third_party_ownership::Bool = false,
-    owner_tax_pct::Real = 0.26,
+    owner_tax_rate_fraction::Real = 0.26,
     owner_discount_rate_fraction::Real = 0.0564,
     analysis_years::Int = 25,
     value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00,
@@ -69,7 +69,7 @@
     When `third_party_ownership` is `false` the offtaker's discount and tax percentages are used throughout the model:
     ```julia
         if !third_party_ownership
-            owner_tax_pct = offtaker_tax_pct
+            owner_tax_rate_fraction = offtaker_tax_rate_fraction
             owner_discount_rate_fraction = offtaker_discount_rate_fraction
         end
     ```
@@ -80,10 +80,10 @@ struct Financial
     boiler_fuel_cost_escalation_rate_fraction::Float64
     chp_fuel_cost_escalation_rate_fraction::Float64
     generator_fuel_cost_escalation_rate_fraction::Float64
-    offtaker_tax_pct::Float64
+    offtaker_tax_rate_fraction::Float64
     offtaker_discount_rate_fraction::Float64
     third_party_ownership::Bool
-    owner_tax_pct::Float64
+    owner_tax_rate_fraction::Float64
     owner_discount_rate_fraction::Float64
     analysis_years::Int
     value_of_lost_load_per_kwh::Union{Array{Float64,1}, Float64}
@@ -111,10 +111,10 @@ struct Financial
         boiler_fuel_cost_escalation_rate_fraction::Real = 0.034,
         chp_fuel_cost_escalation_rate_fraction::Real = 0.034,
         generator_fuel_cost_escalation_rate_fraction::Real = 0.027,
-        offtaker_tax_pct::Real = 0.26,
+        offtaker_tax_rate_fraction::Real = 0.26,
         offtaker_discount_rate_fraction::Real = 0.0564,
         third_party_ownership::Bool = false,
-        owner_tax_pct::Real = 0.26,
+        owner_tax_rate_fraction::Real = 0.26,
         owner_discount_rate_fraction::Real = 0.0564,
         analysis_years::Int = 25,
         value_of_lost_load_per_kwh::Union{Array{<:Real,1}, Real} = 1.00,
@@ -153,7 +153,7 @@ struct Financial
         end
 
         if !third_party_ownership
-            owner_tax_pct = offtaker_tax_pct
+            owner_tax_rate_fraction = offtaker_tax_rate_fraction
             owner_discount_rate_fraction = offtaker_discount_rate_fraction
         end
 
@@ -207,10 +207,10 @@ struct Financial
             boiler_fuel_cost_escalation_rate_fraction,
             chp_fuel_cost_escalation_rate_fraction,
             generator_fuel_cost_escalation_rate_fraction,
-            offtaker_tax_pct,
+            offtaker_tax_rate_fraction,
             offtaker_discount_rate_fraction,
             third_party_ownership,
-            owner_tax_pct,
+            owner_tax_rate_fraction,
             owner_discount_rate_fraction,
             analysis_years,
             value_of_lost_load_per_kwh,
