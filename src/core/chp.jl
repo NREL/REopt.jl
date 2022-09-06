@@ -42,7 +42,7 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
     om_cost_per_kwh::Float64 = NaN
     elec_effic_half_load = NaN
     elec_effic_full_load::Float64 = NaN
-    min_turn_down_pct::Float64 = NaN
+    min_turn_down_fraction::Float64 = NaN
     thermal_effic_full_load::Float64 = NaN
     thermal_effic_half_load::Float64 = NaN
     min_allowable_kw::Float64 = NaN
@@ -64,19 +64,19 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
     use_default_derate::Bool = true
     max_derate_factor::Float64 = 1.0
     derate_start_temp_degF::Float64 = 0.0
-    derate_slope_pct_per_degF::Float64 = 0.0
+    derate_slope_fraction_per_degF::Float64 = 0.0
     can_supply_steam_turbine::Bool=false
 
     macrs_option_years::Int = 5
-    macrs_bonus_pct::Float64 = 1.0
+    macrs_bonus_fraction::Float64 = 1.0
     macrs_itc_reduction::Float64 = 0.5
-    federal_itc_pct::Float64 = 0.1
+    federal_itc_fraction::Float64 = 0.1
     federal_rebate_per_kw::Float64 = 0.0
-    state_ibi_pct::Float64 = 0.0
+    state_ibi_fraction::Float64 = 0.0
     state_ibi_max::Float64 = 1.0e10
     state_rebate_per_kw::Float64 = 0.0
     state_rebate_max::Float64 = 1.0e10
-    utility_ibi_pct::Float64 = 0.0
+    utility_ibi_fraction::Float64 = 0.0
     utility_ibi_max::Float64 = 1.0e10
     utility_rebate_per_kw::Float64 = 0.0
     utility_rebate_max::Float64 = 1.0e10
@@ -88,7 +88,7 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
     can_wholesale::Bool = false
     can_export_beyond_nem_limit::Bool = false
     can_curtail::Bool = false
-    fuel_renewable_energy_pct::Float64 = FUEL_DEFAULTS["fuel_renewable_energy_pct"][fuel_type]
+    fuel_renewable_energy_fraction::Float64 = FUEL_DEFAULTS["fuel_renewable_energy_fraction"][fuel_type]
     emissions_factor_lb_CO2_per_mmbtu::Float64 = FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"][fuel_type]
     emissions_factor_lb_NOx_per_mmbtu::Float64 = FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"][fuel_type]
     emissions_factor_lb_SO2_per_mmbtu::Float64 = FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"][fuel_type]
@@ -113,7 +113,7 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     om_cost_per_kwh::Float64 = NaN
     elec_effic_half_load = NaN
     elec_effic_full_load::Float64 = NaN
-    min_turn_down_pct::Float64 = NaN
+    min_turn_down_fraction::Float64 = NaN
     thermal_effic_full_load::Float64 = NaN
     thermal_effic_half_load::Float64 = NaN
     min_allowable_kw::Float64 = NaN
@@ -135,19 +135,19 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     use_default_derate::Bool = true
     max_derate_factor::Float64 = 1.0
     derate_start_temp_degF::Float64 = 0.0
-    derate_slope_pct_per_degF::Float64 = 0.0
+    derate_slope_fraction_per_degF::Float64 = 0.0
     can_supply_steam_turbine::Bool=false
 
     macrs_option_years::Int = 5
-    macrs_bonus_pct::Float64 = 1.0
+    macrs_bonus_fraction::Float64 = 1.0
     macrs_itc_reduction::Float64 = 0.5
-    federal_itc_pct::Float64 = 0.1
+    federal_itc_fraction::Float64 = 0.1
     federal_rebate_per_kw::Float64 = 0.0
-    state_ibi_pct::Float64 = 0.0
+    state_ibi_fraction::Float64 = 0.0
     state_ibi_max::Float64 = 1.0e10
     state_rebate_per_kw::Float64 = 0.0
     state_rebate_max::Float64 = 1.0e10
-    utility_ibi_pct::Float64 = 0.0
+    utility_ibi_fraction::Float64 = 0.0
     utility_ibi_max::Float64 = 1.0e10
     utility_rebate_per_kw::Float64 = 0.0
     utility_rebate_max::Float64 = 1.0e10
@@ -159,7 +159,7 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     can_wholesale::Bool = false
     can_export_beyond_nem_limit::Bool = false
     can_curtail::Bool = false
-    fuel_renewable_energy_pct::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_pct"],fuel_type,0)
+    fuel_renewable_energy_fraction::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_fraction"],fuel_type,0)
     emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0)
     emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0)
     emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0)
@@ -179,7 +179,7 @@ function CHP(d::Dict)
         :om_cost_per_kwh => chp.om_cost_per_kwh, 
         :elec_effic_full_load => chp.elec_effic_full_load, 
         :elec_effic_half_load => chp.elec_effic_half_load, 
-        :min_turn_down_pct => chp.min_turn_down_pct, 
+        :min_turn_down_fraction => chp.min_turn_down_fraction, 
         :thermal_effic_full_load => chp.thermal_effic_full_load, 
         :thermal_effic_half_load => chp.thermal_effic_half_load,
         :min_allowable_kw => chp.min_allowable_kw, 
@@ -249,7 +249,7 @@ custom_chp_inputs, i.e.
 - "tech_sizes_for_cost_curve"
 - "om_cost_per_kwh"
 - "elec_effic_full_load"
-- "min_turn_down_pct",
+- "min_turn_down_fraction",
 - "thermal_effic_full_load"
 - "thermal_effic_half_load"
 - "unavailability_periods"

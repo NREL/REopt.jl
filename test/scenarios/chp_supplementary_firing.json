@@ -40,13 +40,13 @@
         "om_cost_per_hr_per_kw_rated": 0.0,
         "elec_effic_full_load": 0.3573,
         "elec_effic_half_load": 0.3216,
-        "min_turn_down_pct": 0.5,
+        "min_turn_down_fraction": 0.5,
         "thermal_effic_full_load": 0.4418,
         "thermal_effic_half_load": 0.4664,
         "macrs_option_years": 0,
-        "macrs_bonus_pct": 0.0,
+        "macrs_bonus_fraction": 0.0,
         "macrs_itc_reduction": 0.0,
-        "federal_itc_pct": 0.0,
+        "federal_itc_fraction": 0.0,
         "unavailability_periods": [
             {
                 "month": 1,

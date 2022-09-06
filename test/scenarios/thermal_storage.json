@@ -30,7 +30,7 @@
         "installed_cost_per_ton": 500.0,
         "om_cost_per_ton": 0.5,
         "macrs_option_years": 0,
-        "macrs_bonus_pct": 0.0
+        "macrs_bonus_fraction": 0.0
     },
     "HotThermalStorage":{
         "max_gal":2500

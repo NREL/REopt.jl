@@ -164,7 +164,7 @@
       10000,
       10000
     ],
-    "min_turn_down_pct": [
+    "min_turn_down_fraction": [
       0.5,
       0.5,
       0.5,
@@ -188,7 +188,7 @@
       95,
       95
     ],
-    "derate_slope_pct_per_degF": [
+    "derate_slope_fraction_per_degF": [
       0.0,
       0.0,
       0.0,
@@ -406,7 +406,7 @@
       1500,
       1500
     ],
-    "min_turn_down_pct": [
+    "min_turn_down_fraction": [
       0.3,
       0.3,
       0.3,
@@ -427,7 +427,7 @@
       59,
       59
     ],
-    "derate_slope_pct_per_degF": [
+    "derate_slope_fraction_per_degF": [
       0.0,
       0.0,
       0.0,
@@ -651,7 +651,7 @@
       20000,
       20000
     ],
-    "min_turn_down_pct": [
+    "min_turn_down_fraction": [
       0.5,
       0.5,
       0.5,
@@ -678,7 +678,7 @@
       59,
       59
     ],
-    "derate_slope_pct_per_degF": [
+    "derate_slope_fraction_per_degF": [
       0.0,
       0.0,
       0.0,
@@ -820,7 +820,7 @@
       10000,
       10000
     ],
-    "min_turn_down_pct": [
+    "min_turn_down_fraction": [
       0.3,
       0.3,
       0.3
@@ -835,7 +835,7 @@
       59,
       59
     ],
-    "derate_slope_pct_per_degF": [
+    "derate_slope_fraction_per_degF": [
       0.0,
       0.0,
       0.0

@@ -109,7 +109,7 @@ function proforma_results(p::REoptInputs, d::Dict)
 
         # ITC
         federal_itc_basis = capital_cost  # bug in v1 subtracted cbi from capital_cost here
-        federal_itc_amount = storage.total_itc_pct * federal_itc_basis
+        federal_itc_amount = storage.total_itc_fraction * federal_itc_basis
         m.federal_itc += federal_itc_amount
 
         # Depreciation
@@ -120,8 +120,8 @@ function proforma_results(p::REoptInputs, d::Dict)
             elseif storage.macrs_option_years == 7
                 schedule = p.s.financial.macrs_seven_year
             end
-            macrs_bonus_basis = federal_itc_basis * (1 - storage.total_itc_pct * storage.macrs_itc_reduction)
-            macrs_basis = macrs_bonus_basis * (1 - storage.macrs_bonus_pct)
+            macrs_bonus_basis = federal_itc_basis * (1 - storage.total_itc_fraction * storage.macrs_itc_reduction)
+            macrs_basis = macrs_bonus_basis * (1 - storage.macrs_bonus_fraction)
 
             depreciation_schedule = zeros(years)
             for (i, r) in enumerate(schedule)
@@ -129,7 +129,7 @@ function proforma_results(p::REoptInputs, d::Dict)
                     depreciation_schedule[i] = macrs_basis * r
                 end
             end
-            depreciation_schedule[1] += storage.macrs_bonus_pct * macrs_bonus_basis
+            depreciation_schedule[1] += storage.macrs_bonus_fraction * macrs_bonus_basis
             m.total_depreciation += depreciation_schedule
         end
     end
@@ -321,9 +321,9 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
     m.om_series_bau += escalate_om(-1 * existing_kw * tech.om_cost_per_kw)
 
     # incentive calculations, in the spreadsheet utility incentives are applied first
-    utility_ibi = minimum([capital_cost * tech.utility_ibi_pct, tech.utility_ibi_max])
+    utility_ibi = minimum([capital_cost * tech.utility_ibi_fraction, tech.utility_ibi_max])
     utility_cbi = minimum([new_kw * tech.utility_rebate_per_kw, tech.utility_rebate_max])
-    state_ibi = minimum([(capital_cost - utility_ibi - utility_cbi) * tech.state_ibi_pct, tech.state_ibi_max])
+    state_ibi = minimum([(capital_cost - utility_ibi - utility_cbi) * tech.state_ibi_fraction, tech.state_ibi_max])
     state_cbi = minimum([new_kw * tech.state_rebate_per_kw, tech.state_rebate_max])
     federal_cbi = new_kw * tech.federal_rebate_per_kw
     ibi = utility_ibi + state_ibi
@@ -336,14 +336,14 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
     existing_energy_bau = third_party ? get(results[tech_name], "year_one_energy_produced_kwh_bau", 0) : 0
     for yr in range(0, stop=years-1)
         if yr < tech.production_incentive_years
-            degredation_pct = :degradation_pct in fieldnames(typeof(tech)) ? (1 - tech.degradation_pct)^yr : 1.0
+            degredation_fraction = :degradation_fraction in fieldnames(typeof(tech)) ? (1 - tech.degradation_fraction)^yr : 1.0
             base_pbi = minimum([
-                tech.production_incentive_per_kwh * (results[tech_name]["year_one_energy_produced_kwh"] - existing_energy_bau) * degredation_pct,  
-                tech.production_incentive_max_benefit * degredation_pct
+                tech.production_incentive_per_kwh * (results[tech_name]["year_one_energy_produced_kwh"] - existing_energy_bau) * degredation_fraction,  
+                tech.production_incentive_max_benefit * degredation_fraction
             ])
             base_pbi_bau = minimum([
-                tech.production_incentive_per_kwh * get(results[tech_name], "year_one_energy_produced_kwh_bau", 0) * degredation_pct,  
-                tech.production_incentive_max_benefit * degredation_pct 
+                tech.production_incentive_per_kwh * get(results[tech_name], "year_one_energy_produced_kwh_bau", 0) * degredation_fraction,  
+                tech.production_incentive_max_benefit * degredation_fraction 
             ])
             push!(pbi_series, base_pbi)
             push!(pbi_series_bau, base_pbi_bau)
@@ -359,7 +359,7 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
     # NOTE: bug in v1 has the ITC within the `if tech.macrs_option_years in [5 ,7]` block.
     # NOTE: bug in v1 reduces the federal_itc_basis with the federal_cbi, which is incorrect
     federal_itc_basis = capital_cost - state_ibi - utility_ibi - state_cbi - utility_cbi
-    federal_itc_amount = tech.federal_itc_pct * federal_itc_basis
+    federal_itc_amount = tech.federal_itc_fraction * federal_itc_basis
     m.federal_itc += federal_itc_amount
 
     # Depreciation
@@ -371,8 +371,8 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
             schedule = p.s.financial.macrs_seven_year
         end
 
-        macrs_bonus_basis = federal_itc_basis - federal_itc_basis * tech.federal_itc_pct * tech.macrs_itc_reduction
-        macrs_basis = macrs_bonus_basis * (1 - tech.macrs_bonus_pct)
+        macrs_bonus_basis = federal_itc_basis - federal_itc_basis * tech.federal_itc_fraction * tech.macrs_itc_reduction
+        macrs_basis = macrs_bonus_basis * (1 - tech.macrs_bonus_fraction)
 
         depreciation_schedule = zeros(years)
         for (i, r) in enumerate(schedule)
@@ -380,7 +380,7 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
                 depreciation_schedule[i] = macrs_basis * r
             end
         end
-        depreciation_schedule[1] += (tech.macrs_bonus_pct * macrs_bonus_basis)
+        depreciation_schedule[1] += (tech.macrs_bonus_fraction * macrs_bonus_basis)
         m.total_depreciation += depreciation_schedule
     end
     nothing
