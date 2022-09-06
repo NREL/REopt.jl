@@ -191,13 +191,13 @@ function proforma_results(p::REoptInputs, d::Dict)
     # At this point the logic branches based on third-party ownership or not - see comments    
     if third_party  # get cumulative cashflow for developer
         r["developer_annual_free_cashflows"] = copy(free_cashflow)
-        discounted_developer_cashflow = [v / ((1 + p.s.financial.owner_discount_pct)^(yr-1)) for (yr, v) in
+        discounted_developer_cashflow = [v / ((1 + p.s.financial.owner_discount_rate_fraction)^(yr-1)) for (yr, v) in
                                          enumerate(r["developer_annual_free_cashflows"])]
         r["net_present_cost"] = sum(discounted_developer_cashflow) * -1
 
-        if p.s.financial.owner_discount_pct != 0
-            capital_recovery_factor = (p.s.financial.owner_discount_pct * (1 + p.s.financial.owner_discount_pct)^years) / 
-                                      ((1 + p.s.financial.owner_discount_pct)^years - 1) / (1 - tax_pct)
+        if p.s.financial.owner_discount_rate_fraction != 0
+            capital_recovery_factor = (p.s.financial.owner_discount_rate_fraction * (1 + p.s.financial.owner_discount_rate_fraction)^years) / 
+                                      ((1 + p.s.financial.owner_discount_rate_fraction)^years - 1) / (1 - tax_pct)
         else
             capital_recovery_factor = (1 / years) / (1 - tax_pct)
         end
@@ -264,11 +264,11 @@ function proforma_results(p::REoptInputs, d::Dict)
         free_cashflow_bau = append!([0.0], free_cashflow_bau)
         r["offtaker_annual_free_cashflows"] = round.(free_cashflow, digits=2)
         r["offtaker_discounted_annual_free_cashflows"] = [round(
-            v / ((1 + p.s.financial.offtaker_discount_pct)^(yr-1)), 
+            v / ((1 + p.s.financial.offtaker_discount_rate_fraction)^(yr-1)), 
             digits=2) for (yr, v) in enumerate(r["offtaker_annual_free_cashflows"])]
         r["offtaker_annual_free_cashflows_bau"] = round.(free_cashflow_bau, digits=2)
         r["offtaker_discounted_annual_free_cashflows_bau"] = [round(
-            v / ((1 + p.s.financial.offtaker_discount_pct)^(yr-1)), 
+            v / ((1 + p.s.financial.offtaker_discount_rate_fraction)^(yr-1)), 
             digits=2) for (yr, v) in enumerate(free_cashflow_bau)]
         # difference optimal and BAU
         net_free_cashflow = free_cashflow - free_cashflow_bau

@@ -381,7 +381,7 @@ function cost_curve(tech::AbstractTech, financial::Financial)
             itc_basis = itc_unit_basis,  # input tech cost with incentives, but no ITC
             replacement_cost = replacement_cost,
             replacement_year = replacement_year,
-            discount_rate = financial.owner_discount_pct,
+            discount_rate = financial.owner_discount_rate_fraction,
             tax_rate = financial.owner_tax_pct,
             itc = itc,
             macrs_schedule = macrs_schedule,

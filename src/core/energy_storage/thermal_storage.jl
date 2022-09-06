@@ -162,7 +162,7 @@ struct ThermalStorage <: AbstractThermalStorage
             itc_basis = installed_cost_per_kwh,
             replacement_cost = 0.0,
             replacement_year = 100,
-            discount_rate = f.owner_discount_pct,
+            discount_rate = f.owner_discount_rate_fraction,
             tax_rate = f.owner_tax_pct,
             itc = s.total_itc_pct,
             macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year,
