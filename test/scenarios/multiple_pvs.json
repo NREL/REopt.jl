@@ -9,7 +9,7 @@
       "om_cost_escalation_rate_fraction": 0.025,
       "elec_cost_escalation_rate_fraction": 0.023,
       "offtaker_tax_pct": 0.26,
-      "offtaker_discount_pct": 0.083,
+      "offtaker_discount_rate_fraction": 0.083,
       "analysis_years": 25
     },
     "ElectricLoad": {

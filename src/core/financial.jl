@@ -36,10 +36,10 @@
     chp_fuel_cost_escalation_rate_fraction::Real = 0.034,
     generator_fuel_cost_escalation_rate_fraction::Real = 0.027,
     offtaker_tax_pct::Real = 0.26,
-    offtaker_discount_pct::Real = 0.0564,
+    offtaker_discount_rate_fraction::Real = 0.0564,
     third_party_ownership::Bool = false,
     owner_tax_pct::Real = 0.26,
-    owner_discount_pct::Real = 0.0564,
+    owner_discount_rate_fraction::Real = 0.0564,
     analysis_years::Int = 25,
     value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00,
     microgrid_upgrade_cost_pct::Real = off_grid_flag ? 0.0 : 0.3, # not applicable when off_grid_flag is true
@@ -70,7 +70,7 @@
     ```julia
         if !third_party_ownership
             owner_tax_pct = offtaker_tax_pct
-            owner_discount_pct = offtaker_discount_pct
+            owner_discount_rate_fraction = offtaker_discount_rate_fraction
         end
     ```
 """
@@ -81,10 +81,10 @@ struct Financial
     chp_fuel_cost_escalation_rate_fraction::Float64
     generator_fuel_cost_escalation_rate_fraction::Float64
     offtaker_tax_pct::Float64
-    offtaker_discount_pct::Float64
+    offtaker_discount_rate_fraction::Float64
     third_party_ownership::Bool
     owner_tax_pct::Float64
-    owner_discount_pct::Float64
+    owner_discount_rate_fraction::Float64
     analysis_years::Int
     value_of_lost_load_per_kwh::Union{Array{Float64,1}, Float64}
     microgrid_upgrade_cost_pct::Float64
@@ -112,10 +112,10 @@ struct Financial
         chp_fuel_cost_escalation_rate_fraction::Real = 0.034,
         generator_fuel_cost_escalation_rate_fraction::Real = 0.027,
         offtaker_tax_pct::Real = 0.26,
-        offtaker_discount_pct::Real = 0.0564,
+        offtaker_discount_rate_fraction::Real = 0.0564,
         third_party_ownership::Bool = false,
         owner_tax_pct::Real = 0.26,
-        owner_discount_pct::Real = 0.0564,
+        owner_discount_rate_fraction::Real = 0.0564,
         analysis_years::Int = 25,
         value_of_lost_load_per_kwh::Union{Array{<:Real,1}, Real} = 1.00,
         microgrid_upgrade_cost_pct::Real = off_grid_flag ? 0.0 : 0.3, # not applicable when off_grid_flag is true
@@ -154,7 +154,7 @@ struct Financial
 
         if !third_party_ownership
             owner_tax_pct = offtaker_tax_pct
-            owner_discount_pct = offtaker_discount_pct
+            owner_discount_rate_fraction = offtaker_discount_rate_fraction
         end
 
         grid_costs = off_grid_flag ? nothing : easiur_costs(latitude, longitude, "grid")
@@ -208,10 +208,10 @@ struct Financial
             chp_fuel_cost_escalation_rate_fraction,
             generator_fuel_cost_escalation_rate_fraction,
             offtaker_tax_pct,
-            offtaker_discount_pct,
+            offtaker_discount_rate_fraction,
             third_party_ownership,
             owner_tax_pct,
-            owner_discount_pct,
+            owner_discount_rate_fraction,
             analysis_years,
             value_of_lost_load_per_kwh,
             microgrid_upgrade_cost_pct,

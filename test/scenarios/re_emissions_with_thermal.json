@@ -20,10 +20,10 @@
     "elec_cost_escalation_rate_fraction": 0.023,
     "boiler_fuel_cost_escalation_rate_fraction": 0.034,
     "offtaker_tax_pct": 0.26,
-    "offtaker_discount_pct": 0.083,
+    "offtaker_discount_rate_fraction": 0.083,
     "third_party_ownership": false,
     "owner_tax_pct": 0.26,
-    "owner_discount_pct": 0.083,
+    "owner_discount_rate_fraction": 0.083,
     "analysis_years": 25,
     "value_of_lost_load_per_kwh": 100.0,
     "microgrid_upgrade_cost_pct": 0.0

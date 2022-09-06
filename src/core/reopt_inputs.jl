@@ -637,7 +637,7 @@ function setup_absorption_chiller_inputs(s::AbstractScenario, max_sizes, min_siz
             itc_basis = s.absorption_chiller.installed_cost_per_kw,
             replacement_cost = 0.0,
             replacement_year = s.financial.analysis_years,
-            discount_rate = s.financial.owner_discount_pct,
+            discount_rate = s.financial.owner_discount_rate_fraction,
             tax_rate = s.financial.owner_tax_pct,
             itc = 0.0,
             macrs_schedule = s.absorption_chiller.macrs_option_years == 5 ? s.financial.macrs_five_year : s.financial.macrs_seven_year,
@@ -688,7 +688,7 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
         lvl_factor[tech] = levelization_factor(
             s.financial.analysis_years,
             s.financial.elec_cost_escalation_rate_fraction,
-            s.financial.offtaker_discount_pct,
+            s.financial.offtaker_discount_rate_fraction,
             s.pvs[i].degradation_pct  # TODO generalize for any tech (not just pvs)
         )
     end
@@ -696,13 +696,13 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
     pwf_e = annuity(
         s.financial.analysis_years,
         s.financial.elec_cost_escalation_rate_fraction,
-        s.financial.offtaker_discount_pct
+        s.financial.offtaker_discount_rate_fraction
     )
 
     pwf_om = annuity(
         s.financial.analysis_years,
         s.financial.om_cost_escalation_rate_fraction,
-        s.financial.owner_discount_pct
+        s.financial.owner_discount_rate_fraction
     )
     pwf_fuel = Dict{String, Float64}()
     for t in techs.fuel_burning
@@ -710,21 +710,21 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
             pwf_fuel["ExistingBoiler"] = annuity(
                 s.financial.analysis_years,
                 s.financial.boiler_fuel_cost_escalation_rate_fraction,
-                s.financial.offtaker_discount_pct
+                s.financial.offtaker_discount_rate_fraction
             )
         end
         if t == "CHP"
             pwf_fuel["CHP"] = annuity(
                 s.financial.analysis_years,
                 s.financial.chp_fuel_cost_escalation_rate_fraction,
-                s.financial.offtaker_discount_pct
+                s.financial.offtaker_discount_rate_fraction
             )
         end
         if t == "Generator" 
             pwf_fuel["Generator"] = annuity(
                 s.financial.analysis_years,
                 s.financial.generator_fuel_cost_escalation_rate_fraction,
-                s.financial.offtaker_discount_pct
+                s.financial.offtaker_discount_rate_fraction
             )
         end     
     end
@@ -738,14 +738,14 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
                             s.financial.analysis_years, 
                             getproperty(s.financial, Symbol("$(emissions_type)_cost_escalation_rate_fraction")),  
                             -1.0 * getproperty(s.electric_utility, Symbol("emissions_factor_$(emissions_type)_decrease_pct")),
-                            s.financial.offtaker_discount_pct)
+                            s.financial.offtaker_discount_rate_fraction)
                 )
         )
         merge!(pwf_emissions_cost, 
                 Dict(emissions_type*"_onsite"=>annuity(
                             s.financial.analysis_years, 
                             getproperty(s.financial, Symbol("$(emissions_type)_cost_escalation_rate_fraction")), 
-                            s.financial.offtaker_discount_pct)
+                            s.financial.offtaker_discount_rate_fraction)
                 )
         )
         merge!(pwf_grid_emissions, 
@@ -757,8 +757,8 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
         )
     end
 
-    pwf_offtaker = annuity(s.financial.analysis_years, 0.0, s.financial.offtaker_discount_pct)
-    pwf_owner = annuity(s.financial.analysis_years, 0.0, s.financial.owner_discount_pct)
+    pwf_offtaker = annuity(s.financial.analysis_years, 0.0, s.financial.offtaker_discount_rate_fraction)
+    pwf_owner = annuity(s.financial.analysis_years, 0.0, s.financial.owner_discount_rate_fraction)
     if s.financial.third_party_ownership
         third_party_factor = (pwf_offtaker * (1 - s.financial.offtaker_tax_pct)) /
                            (pwf_owner * (1 - s.financial.owner_tax_pct))
@@ -837,10 +837,10 @@ function production_incentives(tech::AbstractTech, financial::Financial)
     if !(nameof(T) in [:Generator, :Boiler, :Elecchl, :Absorpchl])
         if :degradation_pct in fieldnames(T)  # PV has degradation
             pwf_prod_incent = annuity_escalation(tech.production_incentive_years, -1*tech.degradation_pct,
-                                                 financial.owner_discount_pct)
+                                                 financial.owner_discount_rate_fraction)
         else
             # prod incentives have zero escalation rate
-            pwf_prod_incent = annuity(tech.production_incentive_years, 0, financial.owner_discount_pct)
+            pwf_prod_incent = annuity(tech.production_incentive_years, 0, financial.owner_discount_rate_fraction)
         end
         max_prod_incent = tech.production_incentive_max_benefit
         max_size_for_prod_incent = tech.production_incentive_max_kw

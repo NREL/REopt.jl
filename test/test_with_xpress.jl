@@ -88,7 +88,7 @@ end
         slope = (cap_cost_x[3] * cap_cost_y[3] - cap_cost_x[2] * cap_cost_y[2]) / (cap_cost_x[3] - cap_cost_x[2])
         init_capex_chp_expected = cap_cost_x[2] * cap_cost_y[2] + (expected_x - cap_cost_x[2]) * slope
         lifecycle_capex_chp_expected = init_capex_chp_expected - 
-            REopt.npv(data_cost_curve["Financial"]["offtaker_discount_pct"], 
+            REopt.npv(data_cost_curve["Financial"]["offtaker_discount_rate_fraction"], 
             [0, init_capex_chp_expected * data_cost_curve["CHP"]["federal_itc_pct"]])
     
         #PV
@@ -102,7 +102,7 @@ end
     
         init_capex_pv_expected = data_cost_curve["PV"]["max_kw"] * data_cost_curve["PV"]["installed_cost_per_kw"]
         lifecycle_capex_pv_expected = init_capex_pv_expected - 
-            REopt.npv(data_cost_curve["Financial"]["offtaker_discount_pct"], 
+            REopt.npv(data_cost_curve["Financial"]["offtaker_discount_rate_fraction"], 
             [0, init_capex_pv_expected * data_cost_curve["PV"]["federal_itc_pct"]])
     
         s = Scenario(data_cost_curve)
@@ -1281,8 +1281,8 @@ end
 #     },
 #     "Financial": {
 #         "escalation_rate_fraction": 0.026,
-#         "offtaker_discount_pct": 0.081,
-#         "owner_discount_pct": 0.081,
+#         "offtaker_discount_rate_fraction": 0.081,
+#         "owner_discount_rate_fraction": 0.081,
 #         "analysis_years": 20,
 #         "offtaker_tax_pct": 0.4,
 #         "owner_tax_pct": 0.4,

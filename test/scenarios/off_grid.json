@@ -47,8 +47,8 @@
     "Financial": {
         "elec_cost_escalation_rate_fraction": 0.026,
         "generator_fuel_cost_escalation_rate_fraction": 0.027,
-        "offtaker_discount_pct": 0.08,
-        "owner_discount_pct": 0.15,
+        "offtaker_discount_rate_fraction": 0.08,
+        "owner_discount_rate_fraction": 0.15,
         "analysis_years": 20,
         "offtaker_tax_pct": 0.26,
         "owner_tax_pct": 0.4,

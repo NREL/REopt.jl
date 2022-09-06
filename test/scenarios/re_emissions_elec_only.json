@@ -1465,7 +1465,7 @@
   },
   "Financial": {
     "elec_cost_escalation_rate_fraction": 0.026,
-    "offtaker_discount_pct": 0.081,
+    "offtaker_discount_rate_fraction": 0.081,
     "value_of_lost_load_per_kwh": 100.0,
     "analysis_years": 20,
     "microgrid_upgrade_cost_pct": 0.0,

@@ -52,7 +52,7 @@ of buying a battery in the future. The present worth factor for each day is:
 f(day) = \\frac{ (1-r_g)^\\frac{day}{365} } { (1+r_d)^\\frac{day}{365} }
 ``
 
-where ``r_g`` = `installed_cost_per_kwh_declination_rate` and ``r_d`` = `p.s.financial.owner_discount_pct`.
+where ``r_g`` = `installed_cost_per_kwh_declination_rate` and ``r_d`` = `p.s.financial.owner_discount_rate_fraction`.
 
 Note this day-specific calculation of the present-worth factor accumulates differently from the annually updated discount
 rate for other net-present value calculations in REopt, and has a higher effective discount rate as a result.  The present 
@@ -281,7 +281,7 @@ struct ElectricStorage <: AbstractElectricStorage
             itc_basis = s.installed_cost_per_kw,
             replacement_cost = s.inverter_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_per_kw,
             replacement_year = s.inverter_replacement_year,
-            discount_rate = f.owner_discount_pct,
+            discount_rate = f.owner_discount_rate_fraction,
             tax_rate = f.owner_tax_pct,
             itc = s.total_itc_pct,
             macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year,
@@ -293,7 +293,7 @@ struct ElectricStorage <: AbstractElectricStorage
             itc_basis = s.installed_cost_per_kwh,
             replacement_cost = s.battery_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_per_kwh,
             replacement_year = s.battery_replacement_year,
-            discount_rate = f.owner_discount_pct,
+            discount_rate = f.owner_discount_rate_fraction,
             tax_rate = f.owner_tax_pct,
             itc = s.total_itc_pct,
             macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year,
