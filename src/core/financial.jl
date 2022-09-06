@@ -30,11 +30,11 @@
 """
 `Financial` is an optional REopt input with the following keys and default values:
 ```julia
-    om_cost_escalation_pct::Real = 0.025,
-    elec_cost_escalation_pct::Real = 0.019,
-    boiler_fuel_cost_escalation_pct::Real = 0.034,
-    chp_fuel_cost_escalation_pct::Real = 0.034,
-    generator_fuel_cost_escalation_pct::Real = 0.027,
+    om_cost_escalation_rate_fraction::Real = 0.025,
+    elec_cost_escalation_rate_fraction::Real = 0.019,
+    boiler_fuel_cost_escalation_rate_fraction::Real = 0.034,
+    chp_fuel_cost_escalation_rate_fraction::Real = 0.034,
+    generator_fuel_cost_escalation_rate_fraction::Real = 0.027,
     offtaker_tax_pct::Real = 0.26,
     offtaker_discount_pct::Real = 0.0564,
     third_party_ownership::Bool = false,
@@ -49,16 +49,16 @@
     offgrid_other_annual_costs::Real = 0.0 # only applicable when off_grid_flag is true. Considered tax deductible for owner. Costs are per year. 
     # Emissions cost inputs
     CO2_cost_per_tonne::Real = 51.0,
-    CO2_cost_escalation_pct::Real = 0.042173,
+    CO2_cost_escalation_rate_fraction::Real = 0.042173,
     NOx_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
     SO2_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
     PM25_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
     NOx_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
     SO2_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
     PM25_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
-    NOx_cost_escalation_pct::Union{Nothing,Real} = nothing,
-    SO2_cost_escalation_pct::Union{Nothing,Real} = nothing,
-    PM25_cost_escalation_pct::Union{Nothing,Real} = nothing,
+    NOx_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
+    SO2_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
+    PM25_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
     # fields from other models needed for validation
     latitude::Real, # Passed from Site
     longitude::Real, # Passed from Site
@@ -75,11 +75,11 @@
     ```
 """
 struct Financial
-    om_cost_escalation_pct::Float64
-    elec_cost_escalation_pct::Float64
-    boiler_fuel_cost_escalation_pct::Float64
-    chp_fuel_cost_escalation_pct::Float64
-    generator_fuel_cost_escalation_pct::Float64
+    om_cost_escalation_rate_fraction::Float64
+    elec_cost_escalation_rate_fraction::Float64
+    boiler_fuel_cost_escalation_rate_fraction::Float64
+    chp_fuel_cost_escalation_rate_fraction::Float64
+    generator_fuel_cost_escalation_rate_fraction::Float64
     offtaker_tax_pct::Float64
     offtaker_discount_pct::Float64
     third_party_ownership::Bool
@@ -93,24 +93,24 @@ struct Financial
     offgrid_other_capital_costs::Float64
     offgrid_other_annual_costs::Float64
     CO2_cost_per_tonne::Float64
-    CO2_cost_escalation_pct::Float64
+    CO2_cost_escalation_rate_fraction::Float64
     NOx_grid_cost_per_tonne::Float64
     SO2_grid_cost_per_tonne::Float64
     PM25_grid_cost_per_tonne::Float64
     NOx_onsite_fuelburn_cost_per_tonne::Float64
     SO2_onsite_fuelburn_cost_per_tonne::Float64
     PM25_onsite_fuelburn_cost_per_tonne::Float64
-    NOx_cost_escalation_pct::Float64
-    SO2_cost_escalation_pct::Float64
-    PM25_cost_escalation_pct::Float64
+    NOx_cost_escalation_rate_fraction::Float64
+    SO2_cost_escalation_rate_fraction::Float64
+    PM25_cost_escalation_rate_fraction::Float64
 
     function Financial(;
         off_grid_flag::Bool = false,
-        om_cost_escalation_pct::Real = 0.025,
-        elec_cost_escalation_pct::Real = 0.019,
-        boiler_fuel_cost_escalation_pct::Real = 0.034,
-        chp_fuel_cost_escalation_pct::Real = 0.034,
-        generator_fuel_cost_escalation_pct::Real = 0.027,
+        om_cost_escalation_rate_fraction::Real = 0.025,
+        elec_cost_escalation_rate_fraction::Real = 0.019,
+        boiler_fuel_cost_escalation_rate_fraction::Real = 0.034,
+        chp_fuel_cost_escalation_rate_fraction::Real = 0.034,
+        generator_fuel_cost_escalation_rate_fraction::Real = 0.027,
         offtaker_tax_pct::Real = 0.26,
         offtaker_discount_pct::Real = 0.0564,
         third_party_ownership::Bool = false,
@@ -125,16 +125,16 @@ struct Financial
         offgrid_other_annual_costs::Real = 0.0, # only applicable when off_grid_flag is true. Considered tax deductible for owner.
         # Emissions cost inputs
         CO2_cost_per_tonne::Real = 51.0,
-        CO2_cost_escalation_pct::Real = 0.042173,
+        CO2_cost_escalation_rate_fraction::Real = 0.042173,
         NOx_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
         SO2_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
         PM25_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
         NOx_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
         SO2_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
         PM25_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
-        NOx_cost_escalation_pct::Union{Nothing,Real} = nothing,
-        SO2_cost_escalation_pct::Union{Nothing,Real} = nothing,
-        PM25_cost_escalation_pct::Union{Nothing,Real} = nothing,
+        NOx_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
+        SO2_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
+        PM25_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
         # fields from other models needed for validation
         latitude::Real, # Passed from Site
         longitude::Real, # Passed from Site
@@ -159,7 +159,7 @@ struct Financial
 
         grid_costs = off_grid_flag ? nothing : easiur_costs(latitude, longitude, "grid")
         onsite_costs = easiur_costs(latitude, longitude, "onsite")
-        escalation_rates = easiur_escalation_rates(latitude, longitude, om_cost_escalation_pct)
+        escalation_rates = easiur_escalation_rates(latitude, longitude, om_cost_escalation_rate_fraction)
 
         missing_health_inputs = false
         # use EASIUR data for missing grid costs
@@ -186,14 +186,14 @@ struct Financial
         end
         # use EASIUR data for missing escalation rates
         missing_health_inputs = isnothing(escalation_rates) ? true : missing_health_inputs
-        if isnothing(NOx_cost_escalation_pct)
-            NOx_cost_escalation_pct = isnothing(escalation_rates) ? 0.0 : escalation_rates["NOx"]
+        if isnothing(NOx_cost_escalation_rate_fraction)
+            NOx_cost_escalation_rate_fraction = isnothing(escalation_rates) ? 0.0 : escalation_rates["NOx"]
         end
-        if isnothing(SO2_cost_escalation_pct)
-            SO2_cost_escalation_pct = isnothing(escalation_rates) ? 0.0 : escalation_rates["SO2"]
+        if isnothing(SO2_cost_escalation_rate_fraction)
+            SO2_cost_escalation_rate_fraction = isnothing(escalation_rates) ? 0.0 : escalation_rates["SO2"]
         end
-        if isnothing(PM25_cost_escalation_pct)
-            PM25_cost_escalation_pct = isnothing(escalation_rates) ? 0.0 : escalation_rates["PM25"]
+        if isnothing(PM25_cost_escalation_rate_fraction)
+            PM25_cost_escalation_rate_fraction = isnothing(escalation_rates) ? 0.0 : escalation_rates["PM25"]
         end
 
         if missing_health_inputs && include_health_in_objective
@@ -202,11 +202,11 @@ struct Financial
     
 
         return new(
-            om_cost_escalation_pct,
-            elec_cost_escalation_pct,
-            boiler_fuel_cost_escalation_pct,
-            chp_fuel_cost_escalation_pct,
-            generator_fuel_cost_escalation_pct,
+            om_cost_escalation_rate_fraction,
+            elec_cost_escalation_rate_fraction,
+            boiler_fuel_cost_escalation_rate_fraction,
+            chp_fuel_cost_escalation_rate_fraction,
+            generator_fuel_cost_escalation_rate_fraction,
             offtaker_tax_pct,
             offtaker_discount_pct,
             third_party_ownership,
@@ -220,16 +220,16 @@ struct Financial
             offgrid_other_capital_costs,
             offgrid_other_annual_costs,
             CO2_cost_per_tonne,
-            CO2_cost_escalation_pct,
+            CO2_cost_escalation_rate_fraction,
             NOx_grid_cost_per_tonne,
             SO2_grid_cost_per_tonne,
             PM25_grid_cost_per_tonne,
             NOx_onsite_fuelburn_cost_per_tonne,
             SO2_onsite_fuelburn_cost_per_tonne,
             PM25_onsite_fuelburn_cost_per_tonne,
-            NOx_cost_escalation_pct,
-            SO2_cost_escalation_pct,
-            PM25_cost_escalation_pct
+            NOx_cost_escalation_rate_fraction,
+            SO2_cost_escalation_rate_fraction,
+            PM25_cost_escalation_rate_fraction
         )
     end
 end
