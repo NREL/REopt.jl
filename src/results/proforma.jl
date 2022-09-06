@@ -74,8 +74,8 @@ function proforma_results(p::REoptInputs, d::Dict)
         "developer_annual_free_cashflows" => Float64[]
     )
     years = p.s.financial.analysis_years
-    escalate_elec(val) = [-1 * val * (1 + p.s.financial.elec_cost_escalation_pct)^yr for yr in 1:years]
-    escalate_om(val) = [val * (1 + p.s.financial.om_cost_escalation_pct)^yr for yr in 1:years]
+    escalate_elec(val) = [-1 * val * (1 + p.s.financial.elec_cost_escalation_rate_fraction)^yr for yr in 1:years]
+    escalate_om(val) = [val * (1 + p.s.financial.om_cost_escalation_rate_fraction)^yr for yr in 1:years]
     third_party = p.s.financial.third_party_ownership
     
     # Create placeholder variables to store summed totals across all relevant techs
@@ -316,7 +316,7 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
         annual_om = -1 * total_kw * tech.om_cost_per_kw
     end
     years = p.s.financial.analysis_years
-    escalate_om(val) = [val * (1 + p.s.financial.om_cost_escalation_pct)^yr for yr in 1:years]
+    escalate_om(val) = [val * (1 + p.s.financial.om_cost_escalation_rate_fraction)^yr for yr in 1:years]
     m.om_series += escalate_om(annual_om)
     m.om_series_bau += escalate_om(-1 * existing_kw * tech.om_cost_per_kw)
 

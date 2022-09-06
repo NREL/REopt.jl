@@ -687,7 +687,7 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
     for (i, tech) in enumerate(techs.pv)  # replace 1.0 with actual PV levelization_factor (only tech with degradation)
         lvl_factor[tech] = levelization_factor(
             s.financial.analysis_years,
-            s.financial.elec_cost_escalation_pct,
+            s.financial.elec_cost_escalation_rate_fraction,
             s.financial.offtaker_discount_pct,
             s.pvs[i].degradation_pct  # TODO generalize for any tech (not just pvs)
         )
@@ -695,13 +695,13 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
 
     pwf_e = annuity(
         s.financial.analysis_years,
-        s.financial.elec_cost_escalation_pct,
+        s.financial.elec_cost_escalation_rate_fraction,
         s.financial.offtaker_discount_pct
     )
 
     pwf_om = annuity(
         s.financial.analysis_years,
-        s.financial.om_cost_escalation_pct,
+        s.financial.om_cost_escalation_rate_fraction,
         s.financial.owner_discount_pct
     )
     pwf_fuel = Dict{String, Float64}()
@@ -709,21 +709,21 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
         if t == "ExistingBoiler"
             pwf_fuel["ExistingBoiler"] = annuity(
                 s.financial.analysis_years,
-                s.financial.boiler_fuel_cost_escalation_pct,
+                s.financial.boiler_fuel_cost_escalation_rate_fraction,
                 s.financial.offtaker_discount_pct
             )
         end
         if t == "CHP"
             pwf_fuel["CHP"] = annuity(
                 s.financial.analysis_years,
-                s.financial.chp_fuel_cost_escalation_pct,
+                s.financial.chp_fuel_cost_escalation_rate_fraction,
                 s.financial.offtaker_discount_pct
             )
         end
         if t == "Generator" 
             pwf_fuel["Generator"] = annuity(
                 s.financial.analysis_years,
-                s.financial.generator_fuel_cost_escalation_pct,
+                s.financial.generator_fuel_cost_escalation_rate_fraction,
                 s.financial.offtaker_discount_pct
             )
         end     
@@ -736,7 +736,7 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
         merge!(pwf_emissions_cost, 
                 Dict(emissions_type*"_grid"=>annuity_two_escalation_rates(
                             s.financial.analysis_years, 
-                            getproperty(s.financial, Symbol("$(emissions_type)_cost_escalation_pct")),  
+                            getproperty(s.financial, Symbol("$(emissions_type)_cost_escalation_rate_fraction")),  
                             -1.0 * getproperty(s.electric_utility, Symbol("emissions_factor_$(emissions_type)_decrease_pct")),
                             s.financial.offtaker_discount_pct)
                 )
@@ -744,7 +744,7 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
         merge!(pwf_emissions_cost, 
                 Dict(emissions_type*"_onsite"=>annuity(
                             s.financial.analysis_years, 
-                            getproperty(s.financial, Symbol("$(emissions_type)_cost_escalation_pct")), 
+                            getproperty(s.financial, Symbol("$(emissions_type)_cost_escalation_rate_fraction")), 
                             s.financial.offtaker_discount_pct)
                 )
         )

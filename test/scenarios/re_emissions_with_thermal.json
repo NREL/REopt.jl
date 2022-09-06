@@ -16,9 +16,9 @@
     "doe_reference_name": "Hospital" 
   },
   "Financial": {
-    "om_cost_escalation_pct": 0.025,
-    "elec_cost_escalation_pct": 0.023,
-    "boiler_fuel_cost_escalation_pct": 0.034,
+    "om_cost_escalation_rate_fraction": 0.025,
+    "elec_cost_escalation_rate_fraction": 0.023,
+    "boiler_fuel_cost_escalation_rate_fraction": 0.034,
     "offtaker_tax_pct": 0.26,
     "offtaker_discount_pct": 0.083,
     "third_party_ownership": false,

@@ -291,7 +291,7 @@ function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
 
     annual_om = new_kw * tech.om_cost_per_kw # NPV of O&M charges escalated over financial life
 
-    om_series = [annual_om * (1+p.s.financial.om_cost_escalation_pct)^yr for yr in 1:years]
+    om_series = [annual_om * (1+p.s.financial.om_cost_escalation_rate_fraction)^yr for yr in 1:years]
     npv_om = sum([om * (1.0/(1.0+discount_pct))^yr for (yr, om) in enumerate(om_series)])
 
     #Incentives as calculated in the spreadsheet, note utility incentives are applied before state incentives

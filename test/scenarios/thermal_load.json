@@ -4,8 +4,8 @@
         "longitude": -122.45
     },
     "Financial": {
-        "om_cost_escalation_pct": 0.01,
-        "elec_cost_escalation_pct": 0.006,
+        "om_cost_escalation_rate_fraction": 0.01,
+        "elec_cost_escalation_rate_fraction": 0.006,
         "offtaker_discount_pct": 0.07,
         "analysis_years": 25,
         "offtaker_tax_pct": 0.0
