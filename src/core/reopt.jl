@@ -368,7 +368,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	
 	if p.s.settings.off_grid_flag
 		offgrid_other_capex_depr_savings = get_offgrid_other_capex_depreciation_savings(p.s.financial.offgrid_other_capital_costs, 
-			p.s.financial.owner_discount_rate_fraction, p.s.financial.analysis_years, p.s.financial.owner_tax_pct)
+			p.s.financial.owner_discount_rate_fraction, p.s.financial.analysis_years, p.s.financial.owner_tax_rate_fraction)
 		m[:OffgridOtherCapexAfterDepr] = p.s.financial.offgrid_other_capital_costs - offgrid_other_capex_depr_savings 
 	end
 
@@ -378,28 +378,28 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:TotalTechCapCosts] + TotalStorageCapCosts + m[:GHPCapCosts] +
 
 		# Fixed O&M, tax deductible for owner
-		(TotalPerUnitSizeOMCosts + m[:GHPOMCosts]) * (1 - p.s.financial.owner_tax_pct) +
+		(TotalPerUnitSizeOMCosts + m[:GHPOMCosts]) * (1 - p.s.financial.owner_tax_rate_fraction) +
 
 		# Variable O&M, tax deductible for owner
-		(m[:TotalPerUnitProdOMCosts] + m[:TotalPerUnitHourOMCosts]) * (1 - p.s.financial.owner_tax_pct) +
+		(m[:TotalPerUnitProdOMCosts] + m[:TotalPerUnitHourOMCosts]) * (1 - p.s.financial.owner_tax_rate_fraction) +
 
 		# Total Fuel Costs, tax deductible for offtaker
-        m[:TotalFuelCosts] * (1 - p.s.financial.offtaker_tax_pct) +
+        m[:TotalFuelCosts] * (1 - p.s.financial.offtaker_tax_rate_fraction) +
 
 		# CHP Standby Charges
-		m[:TotalCHPStandbyCharges] * (1 - p.s.financial.offtaker_tax_pct) +
+		m[:TotalCHPStandbyCharges] * (1 - p.s.financial.offtaker_tax_rate_fraction) +
 
 		# Utility Bill, tax deductible for offtaker
-		m[:TotalElecBill] * (1 - p.s.financial.offtaker_tax_pct) -
+		m[:TotalElecBill] * (1 - p.s.financial.offtaker_tax_rate_fraction) -
 
         # Subtract Incentives, which are taxable
-		m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_pct) +
+		m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_rate_fraction) +
 
 		# Comfort limit violation costs
 		m[:dvComfortLimitViolationCost] + 
 
 		# Additional annual costs, tax deductible for owner (only applies when off_grid_flag is true)
-		p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct) +
+		p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_rate_fraction) +
 
 		# Additional capital costs, depreciable (only applies when off_grid_flag is true)
 		m[:OffgridOtherCapexAfterDepr]

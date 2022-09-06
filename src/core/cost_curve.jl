@@ -382,7 +382,7 @@ function cost_curve(tech::AbstractTech, financial::Financial)
             replacement_cost = replacement_cost,
             replacement_year = replacement_year,
             discount_rate = financial.owner_discount_rate_fraction,
-            tax_rate = financial.owner_tax_pct,
+            tax_rate = financial.owner_tax_rate_fraction,
             itc = itc,
             macrs_schedule = macrs_schedule,
             macrs_bonus_pct = macrs_bonus_pct,

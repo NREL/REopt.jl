@@ -1469,7 +1469,7 @@
     "value_of_lost_load_per_kwh": 100.0,
     "analysis_years": 20,
     "microgrid_upgrade_cost_pct": 0.0,
-    "offtaker_tax_pct": 0.4,
+    "offtaker_tax_rate_fraction": 0.4,
     "om_cost_escalation_rate_fraction": 0.025
   }
 }
