@@ -23,6 +23,11 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop
+### Changed
+The following name changes were made: 
+- Change "pct" to "rate_fraction" for "discount", "escalation", names containing "tax_pct" (financial terms)
+- Change "pct" to "fraction" for all other variable names (e.g., "min_soc", "min_turndown_")
 ## v0.18.1
 ### Removed
 - **include_climate_in_objective**, **pwf_emissions_cost_CO2_grid**, and **pwf_emissions_cost_CO2_onsite** unnecessarily included in Site results
