@@ -751,7 +751,7 @@ function backup_reliability_inputs(;d::Dict, p::REoptInputs, r::Dict = Dict())::
 
         starting_batt_soc_kwh = init_soc .* batt_kwh
 
-        #Only adds PV generation if there is also a battery
+        #Only subtracts PV generation if there is also a battery
         critical_loads_kw .-= pv_kw_ac_hourly
         r2[:starting_batt_soc_kwh] = starting_batt_soc_kwh
 
