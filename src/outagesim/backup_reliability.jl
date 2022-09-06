@@ -887,6 +887,7 @@ function process_reliability_results(results::Array)::Dict
         cumulative_duration_means = mean(cumulative_results, dims = 1)
         cumulative_duration_mins = minimum(cumulative_results, dims = 1)
         cumulative_final_resilience = cumulative_results[:, end]
+        cumulative_final_resilience_mean = mean(cumulative_final_resilience)
     end
 
     return Dict(
@@ -895,7 +896,8 @@ function process_reliability_results(results::Array)::Dict
         "marginal_outage_survival_probability" => marginal_final_resilience,
         "mean_cumulative_duration_survival_probability" => cumulative_duration_means,
         "min_cumulative_duration_survival_probability" => cumulative_duration_mins,
-        "cumulative_outage_survival_probability" => cumulative_final_resilience
+        "cumulative_outage_survival_probability" => cumulative_final_resilience,
+        "mean_cumulative_outage_survival_probability" => cumulative_final_resilience_mean
     )
 end
 
