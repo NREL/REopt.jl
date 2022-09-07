@@ -372,6 +372,15 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:OffgridOtherCapexAfterDepr] = p.s.financial.offgrid_other_capital_costs - offgrid_other_capex_depr_savings 
 	end
 
+	for b in p.s.storage.types.elec
+		if p.s.storage.attr[b].model_degradation
+			add_degradation(m, p; b=b)
+			if p.s.settings.add_soc_incentive
+				@warn "Settings.add_soc_incentive is set to true but no incentive will be added because it conflicts with the battery degradation model."
+			end
+		end
+	end
+
 	#################################  Objective Function   ########################################
 	@expression(m, Costs,
 		# Capital Costs
@@ -416,6 +425,22 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	if p.s.settings.include_health_in_objective
 		add_to_expression!(Costs, m[:Lifecycle_Emissions_Cost_Health])
 	end
+
+	if p.s.settings.include_health_in_objective
+		add_to_expression!(Costs, m[:Lifecycle_Emissions_Cost_Health])
+	end
+
+	for b in p.s.storage.types.elec
+		if p.s.storage.attr[b].model_degradation
+			if p.s.storage.attr[b].degradation.maintenance_strategy == "replacement"
+				add_to_expression!(Costs, m[:degr_cost]) # add salvage value to objective in future?
+			elseif p.s.storage.attr[b].degradation.maintenance_strategy == "augmentation"
+				add_to_expression!(Costs, m[:degr_cost])
+			else
+				@error "Battery maintenance strategy $strategy is not supported. Choose from augmentation and replacement."
+			end
+		end
+	end
 	
 	@objective(m, Min, m[:Costs])
 	
@@ -425,15 +450,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			(8760. / p.hours_per_time_step)
 		)
 	
-	end
-
-	for b in p.s.storage.types.elec
-		if p.s.storage.attr[b].model_degradation
-			add_degradation(m, p; b=b)
-			if p.s.settings.add_soc_incentive
-				@warn "Settings.add_soc_incentive is set to true but no incentive will be added because it conflicts with the battery degradation model."
-			end
-		end
 	end
     
 	nothing

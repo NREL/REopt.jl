@@ -174,7 +174,7 @@ function add_degradation(m, p; b="ElectricStorage")
         # create salvage value expression for objective
         @expression(m, salv_value, sum(s[mth] * bmth_BkWh[mth] for mth in months))
 
-        add_to_expression!(m[:TotalStorageCapCosts], p.third_party_factor*(m[:degr_cost] + m[:salv_value]))
+        # add_to_expression!(m[:TotalStorageCapCosts], p.third_party_factor*(m[:degr_cost] + m[:salv_value]))
 
     elseif strategy == "augmentation"
 
@@ -187,7 +187,7 @@ function add_degradation(m, p; b="ElectricStorage")
         # add augmentation cost to objective
         # maintenance_cost_per_kwh must have length == length(days) - 1, i.e. starts on day 2
 
-        add_to_expression!(m[:TotalStorageCapCosts], p.third_party_factor*(m[:degr_cost]))
+        # add_to_expression!(m[:TotalStorageCapCosts], p.third_party_factor*(m[:degr_cost]))
 
     else
         @error "Battery maintenance strategy $strategy is not supported. Choose from augmentation and replacement."
