@@ -400,53 +400,42 @@ check to make sure that PV does NOT export unless the site load is met first for
               if results["PV"]["year_one_to_grid_series_kw"][i] > 0)
 end
 
-# @testset "Battery degradation strategies" begin
+@testset "Battery degradation replacement strategy" begin
 
-#     # Replacement
-#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-#     d = JSON.parsefile("scenarios/batt_degradation.json");
+    # Replacement
+    d = JSON.parsefile("scenarios/batt_degradation.json");
 
-#     d["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
-#     results = run_reopt(m, d)
+    d["ElectricStorage"]["macrs_option_years"] = 0
+    d["ElectricStorage"]["macrs_bonus_pct"] = 0.0
+    d["ElectricStorage"]["macrs_itc_reduction"] = 0.0
+    d["ElectricStorage"]["total_itc_pct"] = 0.0
+    d["ElectricStorage"]["replace_cost_per_kwh"] = 0.0
+    d["ElectricStorage"]["replace_cost_per_kw"] = 0.0
+    d["Financial"] = Dict(
+        "offtaker_tax_pct" => 0.0,
+        "owner_tax_pct" => 0.0
+    )
+    d["ElectricStorage"]["degradation"]["installed_cost_per_kwh_declination_rate"] = 0.2
 
-#     @test results["ElectricStorage"]["size_kw"] ≈ 88.91 atol=0.01
-#     @test results["ElectricStorage"]["size_kwh"] ≈ 207.74 atol=0.01
-#     @test results["ElectricStorage"]["replacement_month"] = 113
-#     @test results["ElectricStorage"]["initial_capital_cost"] ≈ 1.49508e5
-#     @test results["ElectricStorage"]["maintenance_cost"] ≈ 40604.5 atol=0.1
-#     @test results["ElectricStorage"]["residual_value"] ≈ 1958.17 atol=0.01
-#     soc_avg_repl = sum(r1["ElectricStorage"]["year_one_soc_series_pct"]) / 8760
-#     # should equal 0.8485690639269406
+    d["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
 
-#     # Augmentation
-#     d["ElectricStorage"]["degradation"]["maintenance_strategy"] = "augmentation"
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    set_optimizer_attribute(m, "MIPRELSTOP", 0.0008)
+    results = run_reopt(m, d)
 
-#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    @test results["ElectricStorage"]["size_kw"] ≈ 152.82 atol=0.01
+    @test results["ElectricStorage"]["size_kwh"] ≈ 543.22 atol=0.01
+    @test results["ElectricStorage"]["replacement_month"] ≈ 182
+    @test results["ElectricStorage"]["initial_capital_cost"] ≈ 3.2920486e5 atol=0.01
+    @test results["ElectricStorage"]["maintenance_cost"] ≈ 3146.62 atol=0.1
+    @test results["ElectricStorage"]["residual_value"] ≈ 71.0861 atol=0.01
 
-#     d["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
-#     results = run_reopt(m, d)
-
-#     @test results["ElectricStorage"]["size_kw"] ≈ 88.91 atol=0.01
-#     @test results["ElectricStorage"]["size_kwh"] ≈ 207.74 atol=0.01
-#     @test results["ElectricStorage"]["initial_capital_cost"] ≈ 1.49508e5
-#     @test results["ElectricStorage"]["maintenance_cost"] ≈ 15463.5 atol=0.1
-#     soc_avg_aug = soc_avg = sum(r1["ElectricStorage"]["year_one_soc_series_pct"]) / 8760
-#     # should equal 0.93459
-
-#     # No degradation
-#     d["ElectricStorage"] = Dict()
-#     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-
-#     d["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
-#     results = run_reopt(m, d)
-
-#     @test results["ElectricStorage"]["size_kw"] ≈ 88.91 atol=0.01
-#     @test results["ElectricStorage"]["size_kwh"] ≈ 207.74 atol=0.01
-#     @test results["ElectricStorage"]["initial_capital_cost"] ≈ 1.49508e5
-#     soc_avg_default = soc_avg = sum(r1["ElectricStorage"]["year_one_soc_series_pct"]) / 8760
-#     # should equal 0.93459
-
-# end
+    replace_month = Int(value.(m[:m_0p8]))+1
+    @test replace_month ≈ results["ElectricStorage"]["replacement_month"]
+    @test sum(value.(m[:soh_indicator])[replace_month:end]) ≈ 0.0
+    @test sum(value.(m[:bmth])) ≈ value.(m[:bmth])[replace_month] ≈ 1.0
+    @test value.(m[:soh_indicator])[end] ≈ 0.0
+end
 
 @testset "Solar and ElectricStorage w/BAU and degradation" begin
     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
@@ -480,19 +469,20 @@ end
     set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
     r = run_reopt(m, d)
     #optimal SOH at end of horizon is 80\% to prevent any replacement
-    @test sum(value.(m[:bmth_BkWh])) ≈ 0 atol=0.1
-    # @test r["ElectricStorage"]["maintenance_cost"] ≈ 2972.66 atol=0.01 
+    @test sum(value.(m[:bmth_BkWh])) ≈ 77.5 atol=0.1
+    @test r["ElectricStorage"]["maintenance_cost"] ≈ 2941.27 atol=0.01
     # the maintenance_cost comes out to 3004.39 on Actions, so we test the LCC since it should match
-    @test r["Financial"]["lcc"] ≈ 1.240096e7  rtol=0.01
-    @test last(value.(m[:SOH])) ≈ 63.129  rtol=0.01
-    @test r["ElectricStorage"]["size_kwh"] ≈ 78.91  rtol=0.01
+    @test r["Financial"]["lcc"] ≈ 1.24043719781e7  rtol=0.01
+    @test last(value.(m[:SOH])) ≈ 61.87 rtol=0.01
+    @test r["ElectricStorage"]["size_kwh"] ≈ 77.5  rtol=0.01
+    @test r["ElectricStorage"]["residual_value"] ≈ 2926.73  rtol=0.01
 
     # test minimum_avg_soc_fraction
     d["ElectricStorage"]["minimum_avg_soc_fraction"] = 0.72
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
     r = run_reopt(m, d)
-    @test round(sum(r["ElectricStorage"]["year_one_soc_series_pct"]), digits=2) / 8760 >= 0.72
+    @test round(sum(r["ElectricStorage"]["year_one_soc_series_pct"])/8760, digits=2) >= 0.72
 end
 
 @testset "Outage with Generator, outate simulator, BAU critical load outputs" begin
