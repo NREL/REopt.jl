@@ -210,7 +210,7 @@ Base.@kwdef struct ElectricStorageDefaults
     installed_cost_per_kw::Real = 775.0
     installed_cost_per_kwh::Real = 388.0
     replace_cost_per_kw::Real = 440.0
-    replace_cost_per_kwh::Real = 220.0
+    replace_cost_per_kwh::Real = model_degradation ? 0.0 : 220.0
     inverter_replacement_year::Int = 10
     battery_replacement_year::Int = 10
     macrs_option_years::Int = 7
@@ -277,9 +277,20 @@ struct ElectricStorage <: AbstractElectricStorage
             @warn "Battery replacement costs (per_kwh) will not be considered because battery_replacement_year >= analysis_years."
         end
 
+        # copy the replace_costs in case we need to change them
+        replace_cost_per_kw = s.replace_cost_per_kw 
+        replace_cost_per_kwh = s.replace_cost_per_kwh
+        if s.model_degradation
+            if haskey(d, :replace_cost_per_kw) && d[:replace_cost_per_kw] != 0.0 || 
+                haskey(d, :replace_cost_per_kwh) && d[:replace_cost_per_kwh] != 0.0
+                @warn "Setting ElectricStorage replacement costs to zero. \nUsing degradation.maintenance_cost_per_kwh instead."
+            end
+            replace_cost_per_kwh = 0.0 # modeled using maintenance_cost vector.
+        end
+
         net_present_cost_per_kw = effective_cost(;
             itc_basis = s.installed_cost_per_kw,
-            replacement_cost = s.inverter_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_per_kw,
+            replacement_cost = s.inverter_replacement_year >= f.analysis_years ? 0.0 : replace_cost_per_kw,
             replacement_year = s.inverter_replacement_year,
             discount_rate = f.owner_discount_pct,
             tax_rate = f.owner_tax_pct,
@@ -291,7 +302,7 @@ struct ElectricStorage <: AbstractElectricStorage
         )
         net_present_cost_per_kwh = effective_cost(;
             itc_basis = s.installed_cost_per_kwh,
-            replacement_cost = s.battery_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_per_kwh,
+            replacement_cost = s.battery_replacement_year >= f.analysis_years ? 0.0 : replace_cost_per_kwh,
             replacement_year = s.battery_replacement_year,
             discount_rate = f.owner_discount_pct,
             tax_rate = f.owner_tax_pct,
@@ -307,18 +318,6 @@ struct ElectricStorage <: AbstractElectricStorage
             degr = Degradation(;dictkeys_tosymbols(d[:degradation])...)
         else
             degr = Degradation()
-        end
-
-        # copy the replace_costs in case we need to change them
-        replace_cost_per_kw = s.replace_cost_per_kw 
-        replace_cost_per_kwh = s.replace_cost_per_kwh
-        if s.model_degradation
-            if haskey(d, :replace_cost_per_kw) && d[:replace_cost_per_kw] != 0.0 || 
-                haskey(d, :replace_cost_per_kwh) && d[:replace_cost_per_kwh] != 0.0
-                @warn "Setting ElectricStorage replacement costs to zero. \nUsing degradation.maintenance_cost_per_kwh instead."
-            end
-            replace_cost_per_kw = 0.0
-            replace_cost_per_kwh = 0.0
         end
     
         return new(
