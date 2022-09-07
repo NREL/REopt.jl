@@ -127,7 +127,13 @@ function add_degradation(m, p; b="ElectricStorage")
         @variable(m, bmth[months], Bin) # track which month SOH indicator drops to < 80%
         @variable(m, 0 <= bmth_BkWh[months]) # track the kwh replacement value
 
-        M = 10*maximum(p.s.electric_load.loads_kw)  # the big M
+        # the big M
+        if p.s.storage.attr[b].max_kwh == 1.0e6 || p.s.storage.attr[b].max_kwh == 0
+            M = 24*maximum(p.s.electric_load.loads_kw)
+        else
+            M = max(24*maximum(p.s.electric_load.loads_kw), p.s.storage.attr[b].max_kwh)
+        end
+
         # Healthy: if SOH indicator is 1, then SOH >= 80% else soh_indicator is 0 and SOH >= very negative number
         @constraint(m, [mth in months], SOH[Int(round(30.4167*mth))] >= 0.8*m[:dvStorageEnergy][b] - M * (1-soh_indicator[mth]))
         # Unhealthy: if SOH indicator is 1, then SOH <= large number else soh_indicator is 0 and SOH <= 80%

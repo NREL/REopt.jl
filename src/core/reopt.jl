@@ -375,9 +375,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	for b in p.s.storage.types.elec
 		if p.s.storage.attr[b].model_degradation
 			add_degradation(m, p; b=b)
-			if p.s.settings.add_soc_incentive
-				@warn "Settings.add_soc_incentive is set to true but no incentive will be added because it conflicts with the battery degradation model."
-			end
 		end
 	end
 
@@ -430,26 +427,25 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_to_expression!(Costs, m[:Lifecycle_Emissions_Cost_Health])
 	end
 
+	has_degr = false
 	for b in p.s.storage.types.elec
 		if p.s.storage.attr[b].model_degradation
-			if p.s.storage.attr[b].degradation.maintenance_strategy == "replacement"
-				add_to_expression!(Costs, m[:degr_cost]) # add salvage value to objective in future?
-			elseif p.s.storage.attr[b].degradation.maintenance_strategy == "augmentation"
-				add_to_expression!(Costs, m[:degr_cost])
-			else
-				@error "Battery maintenance strategy $strategy is not supported. Choose from augmentation and replacement."
-			end
+			has_degr = true
+			add_to_expression!(Costs, m[:degr_cost]) # add salvage value to objective in future?
 		end
 	end
 	
 	@objective(m, Min, m[:Costs])
 	
-	if !(isempty(p.s.storage.types.elec)) && p.s.settings.add_soc_incentive # Keep SOC high
+	if !(isempty(p.s.storage.types.elec)) && p.s.settings.add_soc_incentive && !has_degr # Keep SOC high
 		@objective(m, Min, m[:Costs] - 
 		sum(m[:dvStoredEnergy][b, ts] for b in p.s.storage.types.elec, ts in p.time_steps) /
 			(8760. / p.hours_per_time_step)
 		)
-	
+	else
+		if p.s.settings.add_soc_incentive
+			@warn "Settings.add_soc_incentive is set to true but no incentive will be added because it conflicts with the battery degradation model."
+		end
 	end
     
 	nothing
