@@ -210,7 +210,7 @@ Base.@kwdef struct ElectricStorageDefaults
     installed_cost_per_kw::Real = 775.0
     installed_cost_per_kwh::Real = 388.0
     replace_cost_per_kw::Real = 440.0
-    replace_cost_per_kwh::Real = model_degradation ? 0.0 : 220.0
+    replace_cost_per_kwh::Real = 220.0
     inverter_replacement_year::Int = 10
     battery_replacement_year::Int = 10
     macrs_option_years::Int = 7
