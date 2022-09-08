@@ -176,9 +176,8 @@ julia> starting_probabilities(2, 0.99, 0.05)
 ```
 """
 function starting_probabilities(num_genenerators::Int, generator_operational_availability::Real, generator_failure_to_start::Real)::Matrix{Float64} 
-    M = markov_matrix(num_genenerators, (1-generator_operational_availability) + generator_failure_to_start*generator_operational_availability) 
-    G = hcat(zeros(1, num_genenerators), 1) # get last row of M
-    return G * M
+    starting_vec = markov_matrix(num_genenerators, (1-generator_operational_availability) + generator_failure_to_start*generator_operational_availability)[end, :] 
+    return reshape(starting_vec, 1, length(starting_vec))
 end
 
 """
@@ -207,15 +206,13 @@ col    working generators
 # Examples
 ```repl-julia
 julia> starting_probabilities([2, 1], [0.99,0.95], [0.05, 0.1])
-1×3 Matrix{Float64}:
-    0.11192  0.000513336  0.128258  0.0  0.00302691  0.756282
+1×6 Matrix{Float64}:
+    0.000513336  0.0162283  0.128258  0.00302691  0.0956912  0.756282
 ```
 """
 function starting_probabilities(num_genenerators::Vector{Int}, generator_operational_availability::Vector{<:Real}, generator_failure_to_start::Vector{<:Real})::Matrix{Float64} 
-    M = markov_matrix(num_genenerators, (1 .- generator_operational_availability) + generator_failure_to_start .* generator_operational_availability) 
-    G = zeros(1, prod(num_genenerators .+ 1))
-    G[end] = 1
-    return G * M
+    starting_vec = markov_matrix(num_genenerators, (1 .- generator_operational_availability) + generator_failure_to_start .* generator_operational_availability)[end, :] 
+    return reshape(starting_vec, 1, length(starting_vec))
 end
 
 """
@@ -417,7 +414,6 @@ function battery_bin_shift(excess_generation_kw::Vector{<:Real}, bin_size::Real,
     excess_generation_kw[excess_generation_kw .> battery_size_kw] .= battery_size_kw
     excess_generation_kw[excess_generation_kw .< -battery_size_kw] .= -battery_size_kw
     shift = round.(excess_generation_kw ./ bin_size)
-    # shift[is.nan(shift)] = 0
     return shift
 end
 
@@ -517,7 +513,7 @@ function survival_gen_only(;
     marginal_survival = true)::Matrix{Float64} 
 
     t_max = length(critical_load_kw)
-    #
+    
     generator_production = generator_output(num_geneneratorserators, generator_size_kw) 
     #Initialize lost load matrix
     survival_probability_matrix = zeros(t_max, max_duration)
@@ -529,7 +525,7 @@ function survival_gen_only(;
 
     for t  = 1:t_max
         gen_probs = starting_gens
-        #
+        
         for d in 1:max_duration
             survival = ones(1, length(generator_production))
             
@@ -789,7 +785,6 @@ function backup_reliability_inputs(;d::Dict, p::REoptInputs, r::Dict = Dict())::
             generator_size_kw = [diesel_kw / sum(num_genenerators) for _ in 1:nt]
         end
     end
-
 
     r2[:generator_size_kw] = generator_size_kw
     r2[:num_genenerators] = num_genenerators
