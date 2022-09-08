@@ -428,7 +428,7 @@ end
     @test results["ElectricStorage"]["size_kwh"] > 500
     @test results["ElectricStorage"]["replacement_month"] > 150
     @test results["ElectricStorage"]["initial_capital_cost"] > 300000
-    @test results["ElectricStorage"]["maintenance_cost"] > 3000
+    @test results["ElectricStorage"]["maintenance_cost"] > 1000
     @test results["ElectricStorage"]["residual_value"] > 50
 
     replace_month = Int(value.(m[:m_0p8]))+1
