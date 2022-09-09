@@ -54,7 +54,6 @@ const LDF = LinDistFlow
 using JuMP
 using JuMP.Containers: DenseAxisArray
 using Logging
-using LoggingExtras
 using DelimitedFiles
 using Dates
 import MathOptInterface
@@ -70,16 +69,6 @@ using Requires
 
 function __init__()
     @require GhpGhx="7ce85f02-24a8-4d69-a3f0-14b5daa7d30c" println("using GhpGhx module in REopt")
-
-    log_file = "../logfile.log" # if path is changed, change in reopt.jl as well 
-    logger = TeeLogger(
-            global_logger(),  # Current global logger (stderr)
-            MinLevelLogger(   # Save any messages with level >= Warn
-                FileLogger(log_file),
-                Logging.Warn # TODO: format to remove source line? maybe using FormatLogger https://julialogging.github.io/reference/loggingextras/ 
-            )
-    )
-    global_logger(logger)
 end
 
 const EXISTING_BOILER_EFFICIENCY = 0.8
@@ -122,6 +111,8 @@ const FUEL_DEFAULTS = Dict(
         "diesel_oil"=>0.0
     )
 )
+
+include("logging.jl")
 
 include("keys.jl")
 include("core/types.jl")
@@ -207,7 +198,5 @@ include("lindistflow/extend.jl")
 
 include("mpc/results.jl")
 include("mpc/model.jl")
-
-# TODO: close(logfile)
 
 end
