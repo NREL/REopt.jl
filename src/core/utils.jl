@@ -176,8 +176,12 @@ function dictkeys_tosymbols(d::Dict)
             "blended_doe_reference_percents",
             "coincident_peak_load_charge_per_kw",
             "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
-            "outage_probabilities"
-            ] && !isnothing(v) || (k in ["fuel_cost_per_mmbtu"] &&  length(v) > 1) # inputs that can be Union{<:Real, AbstractVector{<:Real}}
+            "outage_probabilities", "wholesale_rate",
+            "emissions_factor_series_lb_CO2_per_kwh",
+            "emissions_factor_series_lb_NOx_per_kwh", 
+            "emissions_factor_series_lb_SO2_per_kwh",
+            "emissions_factor_series_lb_PM25_per_kwh"
+            ] && !isnothing(v)
             try
                 v = convert(Array{Real, 1}, v)
             catch
