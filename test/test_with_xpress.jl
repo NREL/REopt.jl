@@ -699,7 +699,7 @@ end
     # absorpchl_total_cooling_produced_series_ton = [cooling_absorpchl_tons_to_load_series[i] + cooling_absorpchl_tons_to_tes_series[i] for i in range(8760)] 
     # absorpchl_total_cooling_produced_ton_hour = sum(absorpchl_total_cooling_produced_series_ton)
     # absorpchl_electric_consumption_total_kwh = results["AbsorptionChiller"]["year_one_absorp_chl_electric_consumption_kwh"]
-    # absorpchl_cop_elec = inputs["AbsorptionChiller"]["chiller_elec_cop"]
+    # absorpchl_cop_elec = inputs["AbsorptionChiller"]["cop_electric"]
 
     # Check if sum of electric and absorption chillers equals cooling thermal total
     @test tes_effic_with_decay < 0.97
