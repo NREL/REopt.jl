@@ -674,8 +674,11 @@ end
 
     # Annual cooling **thermal** energy load of CRB is based on annual cooling electric energy (from CRB models) and a conditional COP depending on the peak cooling thermal load
     # When the user specifies inputs["ExistingChiller"]["cop"], this changes the **electric** consumption of the chiller to meet that cooling thermal load
-    cooling_thermal_load_ton_hr_total = 1427329.0 * inputs.s.cooling_load.existing_chiller_cop / REopt.KWH_THERMAL_PER_TONHOUR  # From CRB models, in heating_cooling_loads.jl, BuiltInCoolingLoad data for location (SanFrancisco Hospital)
-    cooling_electric_load_total_mod_cop = cooling_thermal_load_ton_hr_total / inputs.s.existing_chiller.cop
+    crb_cop = REopt.get_existing_chiller_default_cop(;
+                                                    existing_chiller_max_thermal_factor_on_peak_load=s.existing_chiller.max_thermal_factor_on_peak_load,
+                                                    loads_kw_thermal=s.cooling_load.loads_kw_thermal)
+    cooling_thermal_load_tonhour_total = 1427329.0 * crb_cop / REopt.KWH_THERMAL_PER_TONHOUR  # From CRB models, in heating_cooling_loads.jl, BuiltInCoolingLoad data for location (SanFrancisco Hospital)
+    cooling_electric_load_total_mod_cop_kwh = cooling_thermal_load_tonhour_total / inputs.s.existing_chiller.cop * REopt.KWH_THERMAL_PER_TONHOUR
 
     # Annual heating **thermal** energy load of CRB is based on annual boiler fuel energy (from CRB models) and assumed const EXISTING_BOILER_EFFICIENCY
     # When the user specifies inputs["ExistingBoiler"]["efficiency"], this changes the **fuel** consumption of the boiler to meet that heating thermal load
@@ -685,54 +688,53 @@ end
     # Cooling outputs
     cooling_elecchl_tons_to_load_series = results["ExistingChiller"]["year_one_to_load_series_ton"]
     cooling_elecchl_tons_to_tes_series = results["ExistingChiller"]["year_one_to_tes_series_ton"]
-    #cooling_absorpchl_tons_to_load_series = results["AbsorptionChiller"]["year_one_absorp_chl_thermal_to_load_series_ton"]
-    #cooling_absorpchl_tons_to_tes_series = results["AbsorptionChiller"]["year_one_absorp_chl_thermal_to_tes_series_ton"]
-    cooling_ton_hr_to_load_tech_total = sum(cooling_elecchl_tons_to_load_series) #+ sum(cooling_absorpchl_tons_to_load_series)
-    cooling_ton_hr_to_tes_total = sum(cooling_elecchl_tons_to_tes_series) #+ sum(cooling_absorpchl_tons_to_tes_series)
+    cooling_absorpchl_tons_to_load_series = results["AbsorptionChiller"]["year_one_to_load_series_ton"]
+    cooling_absorpchl_tons_to_tes_series = results["AbsorptionChiller"]["year_one_to_tes_series_ton"]
+    cooling_tonhour_to_load_tech_total = sum(cooling_elecchl_tons_to_load_series) + sum(cooling_absorpchl_tons_to_load_series)
+    cooling_tonhour_to_tes_total = sum(cooling_elecchl_tons_to_tes_series) + sum(cooling_absorpchl_tons_to_tes_series)
     cooling_tes_tons_to_load_series = results["ColdThermalStorage"]["year_one_to_load_series_ton"]
-    cooling_extra_from_tes_losses = cooling_ton_hr_to_tes_total - sum(cooling_tes_tons_to_load_series)
-    tes_effic_with_decay = sum(cooling_tes_tons_to_load_series) / cooling_ton_hr_to_tes_total
-    cooling_total_prod_from_techs = cooling_ton_hr_to_load_tech_total + cooling_ton_hr_to_tes_total
-    cooling_load_plus_tes_losses = cooling_thermal_load_ton_hr_total + cooling_extra_from_tes_losses
+    cooling_extra_from_tes_losses = cooling_tonhour_to_tes_total - sum(cooling_tes_tons_to_load_series)
+    tes_effic_with_decay = sum(cooling_tes_tons_to_load_series) / cooling_tonhour_to_tes_total
+    cooling_total_prod_from_techs = cooling_tonhour_to_load_tech_total + cooling_tonhour_to_tes_total
+    cooling_load_plus_tes_losses = cooling_thermal_load_tonhour_total + cooling_extra_from_tes_losses
 
     # Absorption Chiller electric consumption addition
-    # absorpchl_total_cooling_produced_series_ton = [cooling_absorpchl_tons_to_load_series[i] + cooling_absorpchl_tons_to_tes_series[i] for i in range(8760)] 
-    # absorpchl_total_cooling_produced_ton_hour = sum(absorpchl_total_cooling_produced_series_ton)
-    # absorpchl_electric_consumption_total_kwh = results["AbsorptionChiller"]["year_one_absorp_chl_electric_consumption_kwh"]
-    # absorpchl_cop_elec = inputs["AbsorptionChiller"]["cop_electric"]
+    absorpchl_total_cooling_produced_series_ton = cooling_absorpchl_tons_to_load_series .+ cooling_absorpchl_tons_to_tes_series 
+    absorpchl_total_cooling_produced_ton_hour = sum(absorpchl_total_cooling_produced_series_ton)
+    absorpchl_electric_consumption_total_kwh = results["AbsorptionChiller"]["year_one_electric_consumption_kwh"]
+    absorpchl_cop_elec = s.absorption_chiller.cop_electric
 
     # Check if sum of electric and absorption chillers equals cooling thermal total
     @test tes_effic_with_decay < 0.97
-    println("tes_effic_with_decay = ", tes_effic_with_decay)
     @test round(cooling_total_prod_from_techs, digits=0) ≈ cooling_load_plus_tes_losses atol=5.0
-    #self.assertAlmostEqual(absorpchl_total_cooling_produced_ton_hour * REopt.KWH_THERMAL_PER_TONHOUR / absorpchl_cop_elec, absorpchl_electric_consumption_total_kwh, places=1)
+    @test round(absorpchl_electric_consumption_total_kwh, digits=0) ≈ absorpchl_total_cooling_produced_ton_hour * REopt.KWH_THERMAL_PER_TONHOUR / absorpchl_cop_elec atol=1.0
 
     # Heating outputs
     boiler_fuel_consumption_calculated = results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"]
-    boiler_thermal_series = results["ExistingBoiler"]["year_one_thermal_production_mmbtu_per_hour"]
+    boiler_thermal_series = results["ExistingBoiler"]["year_one_thermal_production_series_mmbtu_per_hour"]
     boiler_to_load_series = results["ExistingBoiler"]["year_one_thermal_to_load_series_mmbtu_per_hour"]
-    boiler_thermal_to_tes_series = results["ExistingBoiler"]["thermal_to_tes_series_mmbtu_per_hour"]
+    boiler_thermal_to_tes_series = results["ExistingBoiler"]["year_one_thermal_to_tes_series_mmbtu_per_hour"]
     chp_thermal_to_load_series = results["CHP"]["year_one_thermal_to_load_series_mmbtu_per_hour"]
     chp_thermal_to_tes_series = results["CHP"]["year_one_thermal_to_tes_series_mmbtu_per_hour"]
     chp_thermal_to_waste_series = results["CHP"]["year_one_thermal_to_waste_series_mmbtu_per_hour"]
-    # absorpchl_thermal_series = results["AbsorptionChiller"]["year_one_absorp_chl_thermal_consumption_series_mmbtu_per_hour"]
+    absorpchl_thermal_series = results["AbsorptionChiller"]["year_one_thermal_consumption_series_mmbtu_per_hour"]
     hot_tes_mmbtu_per_hour_to_load_series = results["HotThermalStorage"]["year_one_to_load_series_mmbtu_per_hour"]
     tes_inflows = sum(chp_thermal_to_tes_series) + sum(boiler_thermal_to_tes_series)
     total_chp_production = sum(chp_thermal_to_load_series) + sum(chp_thermal_to_waste_series) + sum(chp_thermal_to_tes_series)
     tes_outflows = sum(hot_tes_mmbtu_per_hour_to_load_series)
-    total_thermal_expected = boiler_thermal_load_mmbtu_total + sum(chp_thermal_to_waste_series) + tes_inflows # + sum(absorpchl_thermal_series)
+    total_thermal_expected = boiler_thermal_load_mmbtu_total + sum(chp_thermal_to_waste_series) + tes_inflows + sum(absorpchl_thermal_series)
     boiler_fuel_expected = (total_thermal_expected - total_chp_production - tes_outflows) / inputs.s.existing_boiler.efficiency
     total_thermal_mmbtu_calculated = sum(boiler_thermal_series) + total_chp_production + tes_outflows
 
     @test round(boiler_fuel_consumption_calculated, digits=0) ≈ boiler_fuel_expected atol=8.0
     @test round(total_thermal_mmbtu_calculated, digits=0) ≈ total_thermal_expected atol=8.0  
 
-    # Test CHP.cooling_thermal_factor = 0.8, AbsorptionChiller.chiller_cop = 0.7 (from test_cold_POST.json)
-    # absorpchl_heat_in_kwh = results["AbsorptionChiller"]["year_one_absorp_chl_thermal_consumption_mmbtu"] * 1.0E6 / 3412.0
-    # absorpchl_cool_out_kwh = results["AbsorptionChiller"]["year_one_absorp_chl_thermal_production_tonhr"] * REopt.KWH_THERMAL_PER_TONHOUR
-    #absorpchl_cop = absorpchl_cool_out_kwh / absorpchl_heat_in_kwh
+    # Test CHP["cooling_thermal_factor"] = 0.8, AbsorptionChiller["cop_thermal"] = 0.7 (from inputs .json)
+    absorpchl_heat_in_kwh = results["AbsorptionChiller"]["year_one_thermal_consumption_mmbtu"] * REopt.KWH_PER_MMBTU
+    absorpchl_cool_out_kwh = results["AbsorptionChiller"]["year_one_thermal_production_tonhour"] * REopt.KWH_THERMAL_PER_TONHOUR
+    absorpchl_cop = absorpchl_cool_out_kwh / absorpchl_heat_in_kwh
 
-    #self.assertAlmostEqual(absorpchl_cop, 0.8*0.7, places=3)
+    @test round(absorpchl_cop, digits=5) ≈ 0.8*0.7 rtol=1e-4
 end
 
 @testset "Heating and cooling inputs" begin
