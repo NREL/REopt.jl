@@ -651,6 +651,11 @@ function setup_absorption_chiller_inputs(s::AbstractScenario, max_sizes, min_siz
     end
 
     cop["AbsorptionChiller"] = s.absorption_chiller.cop_electric
+    if isnothing(s.chp)
+        thermal_factor = 1.0
+    else
+        thermal_factor = s.chp.cooling_thermal_factor
+    end    
     thermal_cop["AbsorptionChiller"] = s.absorption_chiller.cop_thermal * thermal_factor
     om_cost_per_kw["AbsorptionChiller"] = s.absorption_chiller.om_cost_per_kw
     return nothing
