@@ -658,11 +658,11 @@ end
     """
 
     This is an "energy balance" type of test which tests the model formulation/math as opposed
-        to a specific scenario. This test is robust to changes in the model "MIPRELSTOP" or "MAXTIME" setting
+    to a specific scenario. This test is robust to changes in the model "MIPRELSTOP" or "MAXTIME" setting
 
     Validation to ensure that:
-        1) The electric chiller [TODO and absorption chiller] are supplying 100% of the cooling thermal load
-        2) The boiler is supplying the boiler heating load [TODO plus additional absorption chiller thermal load]
+        1) The electric and absorption chillers are supplying 100% of the cooling thermal load plus losses from ColdThermalStorage
+        2) The boiler and CHP are supplying the heating load plus additional absorption chiller thermal load
         3) The Cold and Hot TES efficiency (charge loss and thermal decay) are being tracked properly
 
     """
