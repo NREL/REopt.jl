@@ -190,11 +190,7 @@ else  # run HiGHS tests
     end
 
     @testset "Backup Generator Reliability" begin
-        p = REoptInputs("./scenarios/backup_reliability_inputs.json")
-        reopt_results = JSON.parsefile("./scenarios/backup_reliability_reopt_results.json")
-        reliability_inputs = Dict("gen_operational_availability" => 0.9998, "gen_failure_to_start" => 0.0066, "gen_failure_to_run" => 0.00157, "num_gen" => 2,
-        "gen_capacity_kw" => 200.0, "num_battery_bins" => 101, "max_outage_duration" => 96)
-
+        reliability_inputs = JSON.parsefile("./scenarios/backup_reliability_inputs.json")
         reliability_results = backup_reliability(reopt_results, p, reliability_inputs)
         @test reliability_results["cumulative_duration_means"][96] ≈ 0.741 atol=0.01
     end                            
