@@ -23,6 +23,12 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2022-08-29
+### Added
+- Add schedule-based `FlatLoad`s which take the annual or monthly energy input and create a load profile based on the specified type of schedule. The load is "flat" (the same) for all hours within the chosen schedule.
+- Add `addressable_load_fraction` inputs for `SpaceHeatingLoad` and `DomesticHotWaterLoad` which effectively ignores a portion of the entered loads. These inputs can be scalars (applied to all time steps of the year), monthly (applied to the timesteps of each month), or of length 8760 * `time_steps_per_hour`.
+- Add a validation error for cooling in the case that the cooling electric load is greater than the total electric load.
+  
 ## v0.18.1
 ### Removed
 - **include_climate_in_objective**, **pwf_emissions_cost_CO2_grid**, and **pwf_emissions_cost_CO2_onsite** unnecessarily included in Site results

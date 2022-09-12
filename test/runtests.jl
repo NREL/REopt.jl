@@ -216,6 +216,19 @@ else  # run HiGHS tests
         @test scen.pvs[1].tilt ≈ 17
     end
 
+    @testset "AlternativeFlatLoads" begin
+        input_data = JSON.parsefile("./scenarios/flatloads.json")
+        s = Scenario(input_data)
+        inputs = REoptInputs(s)
+
+        # FlatLoad_8_5 => 8 hrs/day, 5 days/week, 52 weeks/year
+        active_hours_8_5 = 8 * 5 * 52
+        @test count(x->x>0, s.space_heating_load.loads_kw, dims=1)[1] == active_hours_8_5
+        # FlatLoad_16_7 => only hours 6-22 should be >0, and each day is the same portion of the total year
+        @test sum(s.electric_load.loads_kw[1:5]) + sum(s.electric_load.loads_kw[23:24]) == 0.0
+        @test sum(s.electric_load.loads_kw[6:22]) / sum(s.electric_load.loads_kw) - 1/365 ≈ 0.0 atol=0.000001
+    end
+
     # removed Wind test for two reasons
     # 1. reduce WindToolKit calls in tests
     # 2. HiGHS does not support SOS or indicator constraints, which are needed for export constraints

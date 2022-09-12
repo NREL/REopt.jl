@@ -65,7 +65,13 @@ end
 
 function add_cooling_tech_constraints(m, p; _n="")
     # Constraint (7_cooling_prod_size): Production limit based on size for boiler
-    @constraint(m, [t in p.techs.cooling, ts in p.time_steps],
+    @constraint(m, [t in p.techs.cooling, ts in p.time_steps_with_grid],
         m[Symbol("dvThermalProduction"*_n)][t,ts] <= m[Symbol("dvSize"*_n)][t]
     )
+    # The load balance for cooling is only applied to time_steps_with_grid, so make sure we don't arbitrarily show cooling production for time_steps_without_grid
+    for t in p.techs.cooling
+        for ts in p.time_steps_without_grid
+            fix(m[Symbol("dvThermalProduction"*_n)][t, ts], 0.0, force=true)
+        end
+    end
 end

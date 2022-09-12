@@ -32,22 +32,39 @@ using Random
 using DelimitedFiles
 Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tests
 
-@testset "Thermal loads" begin
+@testset "Heating loads and addressable load fraction" begin
+    # Default LargeOffice CRB with SpaceHeatingLoad and DomesticHotWaterLoad are served by ExistingBoiler
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/thermal_load.json")
 
     @test round(results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"], digits=0) ≈ 2904
     
+    # Hourly fuel load inputs with addressable_load_fraction are served as expected
     data = JSON.parsefile("./scenarios/thermal_load.json")
     data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([0.5], 8760)
+    data["DomesticHotWaterLoad"]["addressable_load_fraction"] = 0.6
     data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([0.5], 8760)
+    data["SpaceHeatingLoad"]["addressable_load_fraction"] = 0.8
     s = Scenario(data)
     inputs = REoptInputs(s)
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, inputs)
+    @test round(results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"], digits=0) ≈ 8760 * (0.5 * 0.6 + 0.5 * 0.8)
+    
+    # Monthly fuel load input with addressable_load_fraction is processed to expected thermal load
+    data = JSON.parsefile("./scenarios/thermal_load.json")
+    data["DomesticHotWaterLoad"]["monthly_mmbtu"] = repeat([100], 12)
+    data["DomesticHotWaterLoad"]["addressable_load_fraction"] = repeat([0.6], 12)
+    data["SpaceHeatingLoad"]["monthly_mmbtu"] = repeat([200], 12)
+    data["SpaceHeatingLoad"]["addressable_load_fraction"] = repeat([0.8], 12)
 
-    @test round(results["ExistingBoiler"]["year_one_fuel_consumption_mmbtu"], digits=0) ≈ 8760
-    # TODO chiller tests
+    s = Scenario(data)
+    inputs = REoptInputs(s)
+
+    dhw_thermal_load_expected = sum(data["DomesticHotWaterLoad"]["monthly_mmbtu"] .* data["DomesticHotWaterLoad"]["addressable_load_fraction"]) .* s.existing_boiler.efficiency
+    space_thermal_load_expected = sum(data["SpaceHeatingLoad"]["monthly_mmbtu"] .* data["SpaceHeatingLoad"]["addressable_load_fraction"]) .* s.existing_boiler.efficiency
+    @test round(sum(s.dhw_load.loads_kw) / REopt.KWH_PER_MMBTU) ≈ sum(dhw_thermal_load_expected)
+    @test round(sum(s.space_heating_load.loads_kw) / REopt.KWH_PER_MMBTU) ≈ sum(space_thermal_load_expected)
 end
 
 @testset "CHP" begin
@@ -132,7 +149,7 @@ end
             2) CHP never exports if chp.can_wholesale and chp.can_net_meter inputs are False (default)
             3) CHP does not "curtail", i.e. send power to a load bank when chp.can_curtail is False (default)
             4) CHP min_turn_down_pct is ignored during an outage
-            5) **Not until cooling is added:** Cooling load gets zeroed out during the outage period
+            5) Cooling tech production gets zeroed out during the outage period because we ignore the cooling load balance for outage
             6) Unavailability intervals that intersect with grid-outages get ignored
             7) Unavailability intervals that do not intersect with grid-outages result in no CHP production
         """
@@ -169,15 +186,15 @@ end
         chp_total_elec_prod = results["CHP"]["year_one_electric_production_series_kw"]
         chp_to_load = results["CHP"]["year_one_to_load_series_kw"]
         chp_export = results["CHP"]["year_one_to_grid_series_kw"]
-        #cooling_elec_load = results["LoadProfileChillerThermal"]["year_one_chiller_electric_load_kw"]
+        cooling_elec_consumption = results["ExistingChiller"]["year_one_electric_consumption_series"]
     
         # The values compared to the expected values
-        #@test sum([(chp_to_load[i] - tot_elec_load[i]) for i in outage_start:outage_end])) == 0.0
+        @test sum([(chp_to_load[i] - tot_elec_load[i]*data["ElectricLoad"]["critical_load_pct"]) for i in outage_start:outage_end]) ≈ 0.0 atol=0.001
         critical_load = tot_elec_load[outage_start:outage_end] * data["ElectricLoad"]["critical_load_pct"]
         @test sum(chp_to_load[outage_start:outage_end]) ≈ sum(critical_load) atol=0.1
         @test sum(chp_export) == 0.0
         @test sum(chp_total_elec_prod) ≈ sum(chp_to_load) atol=1.0e-5*sum(chp_total_elec_prod)
-        #@test sum(cooling_elec_load[outage_start:outage_end]) == 0.0 
+        @test sum(cooling_elec_consumption[outage_start:outage_end]) == 0.0
         @test sum(chp_total_elec_prod[unavail_2_start:unavail_2_end]) == 0.0  
     end
 
