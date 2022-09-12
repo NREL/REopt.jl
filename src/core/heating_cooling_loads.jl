@@ -78,7 +78,19 @@ struct DomesticHotWaterLoad
                 @warn "DomesticHotWaterLoad fuel_loads_mmbtu_per_hour was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
             end
 
+            if length(addressable_load_fraction) > 1
+                if length(addressable_load_fraction) != length(fuel_loads_mmbtu_per_hour)
+                    error("`addressable_load_fraction`` must be a scalar or an array of length `fuel_loads_mmbtu_per_hour`")
+                end
+            end
+
         elseif !isempty(doe_reference_name)
+            if length(addressable_load_fraction) > 1
+                if !isempty(monthly_mmbtu) && length(addressable_load_fraction) != 12
+                    error("`addressable_load_fraction`` must be a scalar or an array of length 12 if `monthly_mmbtu` is input")
+                end
+            end
+            
             loads_kw = BuiltInDomesticHotWaterLoad(city, doe_reference_name, latitude, longitude, 2017, addressable_load_fraction, annual_mmbtu, monthly_mmbtu)
             if length(blended_doe_reference_names) > 0
                 @warn "DomesticHotWaterLoad doe_reference_name was provided, so blended_doe_reference_names will be ignored."
@@ -176,7 +188,6 @@ struct SpaceHeatingLoad
             end
         elseif length(blended_doe_reference_names) > 0 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
-            # TODO addressable_load_fraction does not apply with blended_doe_reference_names
             loads_kw = blend_and_scale_doe_profiles(BuiltInSpaceHeatingLoad, latitude, longitude, 2017, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_mmbtu, monthly_mmbtu, addressable_load_fraction)
