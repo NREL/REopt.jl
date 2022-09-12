@@ -29,11 +29,11 @@
 # *********************************************************************************
 """
 `ExistingBoiler` results keys:
-- `year_one_fuel_consumption_mmbtu_per_hour` 
+- `year_one_fuel_consumption_series_mmbtu_per_hour` 
 - `year_one_fuel_consumption_mmbtu`
 - `year_one_thermal_production_series_mmbtu_per_hour`
 - `year_one_thermal_production_mmbtu`
-- `thermal_to_tes_series_mmbtu_per_hour`
+- `year_one_thermal_to_tes_series_mmbtu_per_hour`
 - `year_one_thermal_to_load_series_mmbtu_per_hour`
 - `lifecycle_fuel_cost_after_tax`
 - `year_one_fuel_cost_before_tax`
@@ -56,7 +56,7 @@ function add_existing_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     else
         BoilerToHotTESKW = zeros(length(p.time_steps))
     end
-	r["year_one_thermal_to_tes_series_mmbtu_per_hour"] = round.(value.(BoilerToHotTESKW ./ KWH_PER_MMBTU), digits=5)
+	r["thermal_to_tes_series_mmbtu_per_hour"] = round.(value.(BoilerToHotTESKW / KWH_PER_MMBTU), digits=3)
 
     if !isempty(p.techs.steam_turbine)
         @expression(m, BoilerToSteamTurbineKW[ts in p.time_steps], m[:dvThermalToSteamTurbine]["ExistingBoiler",ts])

@@ -342,21 +342,25 @@ struct CoolingLoad
                 or the site_electric_load_profile along with one of [per_time_step_fractions_of_electric_load, monthly_fractions_of_electric_load, annual_fraction_of_electric_load].")
         end
 
-        # Now that either the cooling electric loads_kw or the cooling thermal loads_kw_thermal is known, update existing_chiller_cop if it was not input
-        if isnothing(existing_chiller_cop)
-            existing_chiller_cop = get_existing_chiller_default_cop(;existing_chiller_max_thermal_factor_on_peak_load=existing_chiller_max_thermal_factor_on_peak_load,
-                                loads_kw=loads_kw, loads_kw_thermal=loads_kw_thermal)
-        end
-
         if isnothing(loads_kw_thermal)  # have to convert electric loads_kw to thermal load
-            if !isnothing(annual_tonhour) || !isempty(monthly_tonhour)
+            if (!isnothing(annual_tonhour) || !isempty(monthly_tonhour)) && isnothing(existing_chiller_cop)
                 # cop_unknown_thermal (4.55) was used to convert thermal to electric in BuiltInCoolingLoad, so need to use the same here to convert back
                 #  in order to preserve the input tonhour amounts - however, the updated/actual existing_chiller_cop is still assigned based on user input or actual max ton load conditional defaults
                 chiller_cop = get_existing_chiller_default_cop()
+            elseif (!isempty(doe_reference_name) || !isempty(blended_doe_reference_names)) || isnothing(existing_chiller_cop)
+                # Generated loads_kw (electric) above based on the building's default fraction of electric profile
+                chiller_cop = get_existing_chiller_default_cop(;existing_chiller_max_thermal_factor_on_peak_load=existing_chiller_max_thermal_factor_on_peak_load, 
+                                        loads_kw=loads_kw)
             else
                 chiller_cop = existing_chiller_cop
             end
             loads_kw_thermal = chiller_cop * loads_kw
+        end
+
+        # Now that cooling thermal loads_kw_thermal is known, update existing_chiller_cop if it was not input
+        if isnothing(existing_chiller_cop)
+            existing_chiller_cop = get_existing_chiller_default_cop(;existing_chiller_max_thermal_factor_on_peak_load=existing_chiller_max_thermal_factor_on_peak_load, 
+                                        loads_kw_thermal=loads_kw_thermal)
         end
 
         if length(loads_kw_thermal) < 8760*time_steps_per_hour
