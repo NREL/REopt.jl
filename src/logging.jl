@@ -17,7 +17,7 @@ function Logging.handle_message(logger::REoptLogger, lvl, msg, _mod, group, id, 
 
     msglines = split(chomp(convert(String, string(msg))::String), '\n')
     msg1, rest = Iterators.peel(msglines)
-    println(logger.io, "┌ ", lvl, ": ", msg1)
+    println(logger.io, "┌ ", _mod, " | ", lvl, ": ", msg1)
     for msg in rest
         println(logger.io, "│ ", msg)
     end
@@ -27,17 +27,24 @@ function Logging.handle_message(logger::REoptLogger, lvl, msg, _mod, group, id, 
     end
     println(logger.io, "└ @ ", _mod, " ", file, ":", line)
 
-    # Ensure info, warn and error keys exist
-    if string(lvl) in keys(logger.d)
-        # Ensure a key exists for all file names with errors
-        if string(file) in keys(logger.d[string(lvl)])
-            nothing
+    if string(lvl) ∉  ["Warn","Error"]
+        nothing
+    else
+        if string(lvl) ∉ keys(logger.d) # key doesnt exists
+            logger.d[string(lvl)] = Dict()
         else
-            logger.d[string(lvl)][join(split(file, '\\')[end-2:end], "_")] = []
+            nothing #exists
         end
+
+        # Does the key for file exist?
+        filename = join(split(file, '\\')[end-2:end], "_")
+
+        if filename ∉ keys(logger.d[string(lvl)]) #file name doesnt exists
+            logger.d[string(lvl)][filename] = Any[]
         else
-            logger.d[string(lvl)]=Dict()
-            logger.d[string(lvl)][join(split(file, '\\')[end-2:end], "_")] = []
+            nothing
+        end
+
+        push!(logger.d[string(lvl)][filename], msg)
     end
-    push!(logger.d[string(lvl)][join(split(file, '\\')[end-2:end], "_")], msglines)
 end
