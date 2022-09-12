@@ -85,7 +85,12 @@
     - StripMall
     - Supermarket
     - Warehouse
-    - FlatLoad
+    - FlatLoad # constant load year-round
+    - FlatLoad_24_5 # constant load all hours of the weekdays
+    - FlatLoad_16_7 # two 8-hour shifts for all days of the year; 6-10 a.m.
+    - FlatLoad_16_5 # two 8-hour shifts for the weekdays; 6-10 a.m.
+    - FlatLoad_8_7 # one 8-hour shift for all days of the year; 9 a.m.-5 p.m.
+    - FlatLoad_8_5 # one 8-hour shift for the weekdays; 9 a.m.-5 p.m.
 
     Each `city` and `doe_reference_name` combination has a default `annual_kwh`, or you can provide your
     own `annual_kwh` or `monthly_totals_kwh` and the reference profile will be scaled appropriately.
@@ -503,7 +508,12 @@ function BuiltInElectricLoad(
     end
 
     if isnothing(annual_kwh)
-        annual_kwh = annual_loads[city][lowercase(buildingtype)]
+        # Use FlatLoad annual_kwh from data for all types of FlatLoads because we don't have separate data for e.g. FlatLoad_16_7
+        if occursin("FlatLoad", buildingtype)
+            annual_kwh = annual_loads[city][lowercase("FlatLoad")]
+        else
+            annual_kwh = annual_loads[city][lowercase(buildingtype)]
+        end
     end
 
     built_in_load("electric", city, buildingtype, year, annual_kwh, monthly_totals_kwh)
