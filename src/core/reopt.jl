@@ -44,8 +44,15 @@ end
 Solve the model using the `Scenario` defined in JSON file stored at the file path `fp`.
 """
 function run_reopt(m::JuMP.AbstractModel, fp::String)
-	s = Scenario(JSON.parsefile(fp))
-	run_reopt(m, REoptInputs(s))
+	try
+		s = Scenario(JSON.parsefile(fp))
+		run_reopt(m, REoptInputs(s))
+	catch
+		results = Dict(
+			"Messages" => logREopt.d
+		)
+		return results
+	end
 end
 
 
@@ -55,8 +62,15 @@ end
 Solve the model using the `Scenario` defined in dict `d`.
 """
 function run_reopt(m::JuMP.AbstractModel, d::Dict)
-	s = Scenario(d)
-	run_reopt(m, REoptInputs(s))
+	try
+		s = Scenario(d)
+		run_reopt(m, REoptInputs(s))
+	catch
+		results = Dict(
+			"Messages" => logREopt.d
+		)
+		return results
+	end
 end
 
 
@@ -66,10 +80,17 @@ end
 Solve the model using a `Scenario` or `BAUScenario`.
 """
 function run_reopt(m::JuMP.AbstractModel, s::AbstractScenario)
-	if s.site.CO2_emissions_reduction_min_pct > 0.0 || s.site.CO2_emissions_reduction_max_pct < 1.0
-		throw(@error("To constrain CO2 emissions reduction min or max percentages, the optimal and business as usual scenarios must be run in parallel. Use a version of run_reopt() that takes an array of two models."))
+	try
+		if s.site.CO2_emissions_reduction_min_pct > 0.0 || s.site.CO2_emissions_reduction_max_pct < 1.0
+			throw(@error("To constrain CO2 emissions reduction min or max percentages, the optimal and business as usual scenarios must be run in parallel. Use a version of run_reopt() that takes an array of two models."))
+		end
+		run_reopt(m, REoptInputs(s))
+	catch
+		results = Dict(
+			"Messages" => logREopt.d
+		)
+		return results
 	end
-	run_reopt(m, REoptInputs(s))
 end
 
 
@@ -79,8 +100,15 @@ end
 Method for use with Threads when running BAU in parallel with optimal scenario.
 """
 function run_reopt(t::Tuple{JuMP.AbstractModel, AbstractInputs})
-	run_reopt(t[1], t[2]; organize_pvs=false)
-    # must organize_pvs after adding proforma results
+	try
+		run_reopt(t[1], t[2]; organize_pvs=false)
+		# must organize_pvs after adding proforma results
+	catch
+		results = Dict(
+			"Messages" => logREopt.d
+		)
+		return results
+	end
 end
 
 
@@ -91,8 +119,15 @@ Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) m
 JSON file at the filepath `fp`.
 """
 function run_reopt(ms::AbstractArray{T, 1}, fp::String) where T <: JuMP.AbstractModel
-    d = JSON.parsefile(fp)
-    run_reopt(ms, d)
+    try
+		d = JSON.parsefile(fp)
+    	run_reopt(ms, d)
+	catch
+		results = Dict(
+			"Messages" => logREopt.d
+		)
+		return results
+	end
 end
 
 
@@ -102,14 +137,22 @@ end
 Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) models in `ms` and inputs from `d`.
 """
 function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractModel
-    s = Scenario(d)
-    if s.settings.off_grid_flag
-        @warn "Only using first Model and not running BAU case because Settings.off_grid_flag=true. The BAU scenario is not applicable for off-grid microgrids."
-	    results = run_reopt(ms[1], s)
-        return results
-    end
+	try
+		s = Scenario(d)
+		if s.settings.off_grid_flag
+			@warn "Only using first Model and not running BAU case because Settings.off_grid_flag=true. The BAU scenario is not applicable for off-grid microgrids."
+			results = run_reopt(ms[1], s)
+			return results
+		end
+	
+		run_reopt(ms, REoptInputs(s))		
+	catch
+		results = Dict(
+			"Messages" => logREopt.d
+		)
+		return results
+	end
 
-    run_reopt(ms, REoptInputs(s))
 end
 
 
@@ -442,9 +485,6 @@ end
 
 function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 
-	logREopt = REoptLogger()
-	global_logger(logREopt)
-
 	build_reopt!(m, p)
 
 	@info "Model built. Optimizing..."
@@ -469,7 +509,7 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 	@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
 	results["status"] = status
 	results["solver_seconds"] = opt_time
-	
+
 	results["Messages"] = logREopt.d
 
 	# log_file = "../logfile.log" 
