@@ -84,6 +84,7 @@ All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which ca
     handle conversion of Vector of Vectors from JSON to a Matrix in Julia).
 """
 function Scenario(d::Dict; flex_hvac_from_json=false)
+    d = deepcopy(d)
     if haskey(d, "Settings")
         settings = Settings(;dictkeys_tosymbols(d["Settings"])...)
     else
