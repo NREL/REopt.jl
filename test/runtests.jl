@@ -191,7 +191,7 @@ else  # run HiGHS tests
 
     @testset "Backup Generator Reliability" begin
         reliability_inputs = JSON.parsefile("./scenarios/backup_reliability_inputs.json")
-        reliability_results = backup_reliability(reopt_results)
+        reliability_results = backup_reliability(reliability_inputs)
         @test reliability_results["cumulative_duration_means"][96] ≈ 0.741 atol=0.01
     end                            
 
