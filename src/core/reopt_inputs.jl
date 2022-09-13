@@ -699,6 +699,9 @@ function setup_absorption_chiller_inputs(s::AbstractScenario, max_sizes, min_siz
     cop["AbsorptionChiller"] = s.absorption_chiller.cop_electric
     if isnothing(s.chp)
         thermal_factor = 1.0
+    elseif s.chp.cooling_thermal_factor == 0.0
+        error("The CHP cooling_thermal_factor is 0.0 which implies that CHP cannot serve AbsorptionChiller. If you
+            want to model CHP and AbsorptionChiller, you must specify a cooling_thermal_factor greater than 0.0")
     else
         thermal_factor = s.chp.cooling_thermal_factor
     end    
