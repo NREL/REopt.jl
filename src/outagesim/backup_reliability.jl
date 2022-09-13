@@ -694,7 +694,7 @@ Return a dictionary of inputs required for backup reliability calculations.
     -generator_failure_to_run::Real = 0.00157               Chance of generator failing in each hour of outage
     -num_generators::Int = 1                                Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
     -generator_size_kw::Real = 0.0                          Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
-    -num_battery_bins::Int = 101                            Internal value for modeling battery
+    -num_battery_bins::Int = 101                            Internal value for discretely modeling battery state of charge
     -max_outage_duration::Int = 96                          Maximum outage hour modeled
     -microgrid_only::Bool = false                           Boolean to specify if only microgrid upgraded technologies run during grid outage 
 ```
@@ -817,7 +817,7 @@ Return a dictionary of inputs required for backup reliability calculations.
     -generator_failure_to_run::Real = 0.00157                 Chance of generator failing in each hour of outage
     -num_generators::Int = 1                                  Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
     -generator_size_kw::Real = 0.0                           Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
-    -num_battery_bins::Int = 101                        Internal value for modeling battery
+    -num_battery_bins::Int = 101                        Internal value for discretely modeling battery state of charge
     -max_outage_duration::Int = 96                      Maximum outage hour modeled
 ```
 """
@@ -947,7 +947,7 @@ function return_backup_reliability(;
                 battery_charge_efficiency=battery_charge_efficiency,
                 battery_discharge_efficiency=battery_discharge_efficiency,
                 marginal_survival = true
-                ),
+            ),
             survival_with_battery(
                 net_critical_loads_kw=net_critical_loads_kw,
                 starting_battery_soc_kwh=starting_battery_soc_kwh, 
@@ -963,7 +963,7 @@ function return_backup_reliability(;
                 battery_charge_efficiency=battery_charge_efficiency,
                 battery_discharge_efficiency=battery_discharge_efficiency,
                 marginal_survival = false
-                )]
+            )]
 
     end
 end
@@ -1022,7 +1022,7 @@ Return dictionary of backup reliability results.
     -generator_failure_to_run::Real = 0.00157 (Chance of generator failing in each hour of outage)
     -num_generators::Int = 1  (Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1)
     -generator_size_kw::Real = 0.0 (Backup generator capacity. Will be determined by REopt optimization if set less than 0.1)
-    -num_battery_bins::Int = 100 (Internal value for modeling battery)
+    -num_battery_bins::Int = 100 (Internal value for discretely modeling battery state of charge)
     -max_outage_duration::Int = 96 (Maximum outage hour modeled)
     -microgrid_only::Bool = false (determines how generator, PV, and battery act during islanded mode)
 
@@ -1059,7 +1059,7 @@ battery_year_one_soc_series_pct
 -generator_failure_to_run::Real = 0.00157                 Chance of generator failing in each hour of outage
 -num_generators::Int = 1                                  Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
 -generator_size_kw::Real = 0.0                           Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
--num_battery_bins::Int = 100                        Internal value for modeling battery
+-num_battery_bins::Int = 100                        Internal value for discretely modeling battery state of charge
 -max_outage_duration::Int = 96                      Maximum outage hour modeled
 
 """
