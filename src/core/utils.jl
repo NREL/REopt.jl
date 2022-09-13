@@ -294,7 +294,7 @@ function generate_year_profile_hourly(year::Int64, consecutive_periods::Abstract
     if Dates.isleapyear(year)
         end_year_datetime = DateTime(string(year)*"-12-30T23:00:00")
     else
-        end_year_datetime = DateTime(string(year+1)*"-12-31T23:00:00")
+        end_year_datetime = DateTime(string(year)*"-12-31T23:00:00")
     end
 
     dt_hourly = collect(DateTime(string(year)*"-01-01T00:00:00"):Hour(1):end_year_datetime)

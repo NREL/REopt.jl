@@ -345,6 +345,19 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                     time_steps_per_hour=settings.time_steps_per_hour
                                     )
         max_cooling_demand_kw = maximum(cooling_load.loads_kw_thermal)
+    
+        # Check if cooling electric load is greater than total electric load in any hour, and throw error if true with the violating time time_steps
+        cooling_elec = cooling_load.loads_kw_thermal / cooling_load.existing_chiller_cop
+        cooling_elec_too_high_timesteps = findall(cooling_elec .> electric_load.loads_kw)
+        if length(cooling_elec_too_high_timesteps) > 0
+            cooling_elec_too_high_kw = cooling_elec[cooling_elec_too_high_timesteps]
+            total_elec_when_cooling_elec_too_high = electric_load.loads_kw[cooling_elec_too_high_timesteps]
+            error("Cooling electric consumption cannot be more than the total electric load at any time step. At time steps 
+                $cooling_elec_too_high_timesteps the cooling electric consumption is $cooling_elec_too_high_kw (kW) and
+                the total electric load is $total_elec_when_cooling_elec_too_high (kW). Note you may consider adjusting 
+                cooling load input versus the total electric load if you provided inputs in units of cooling tons, or 
+                check the electric chiller COP input value.")
+        end
     else
         cooling_load = CoolingLoad(; 
             thermal_loads_ton=zeros(8760*settings.time_steps_per_hour),
