@@ -1341,6 +1341,104 @@ end
     @test maximum(boiler_total) <= boiler_capacity
 end
 
+@testset "All heating supply/demand/storage energy balance" begin
+    """
+    Validation to ensure that:
+        1) Heat balance is correct with SteamTurbine (backpressure), CHP, HotTES, and AbsorptionChiller included
+        2) The sum of a all thermal from techs supplying SteamTurbine is equal to SteamTurbine thermal consumption
+        3) Techs are not supplying SteamTurbine with thermal if can_supply_steam_turbine = False
+    
+    :return:
+    """
+    
+    # Start with steam turbine inputs, but adding a bunch below
+    input_data = JSON.parsefile("scenarios/backpressure_steamturbine_inputs.json")
+    input_data["ElectricLoad"]["doe_reference_name"] = "Hospital"
+    # Add SpaceHeatingLoad building for heating loads, ignore DomesticHotWaterLoad for simplicity of energy balance checks
+    input_data["SpaceHeatingLoad"]["doe_reference_name"] = "Hospital"
+    delete!(input_data, "DomesticHotWaterLoad")
+    
+    # Fix size of SteamTurbine, even if smaller than practical, because we're just looking at energy balances
+    input_data["SteamTurbine"]["min_kw"] = 30.0
+    input_data["SteamTurbine"]["max_kw"] = 30.0
+    
+    # Add CHP 
+    input_data["CHP"] = Dict{Any, Any}([
+                        ("prime_mover", "recip_engine"),
+                        ("size_class", 2),
+                        ("min_kw", 250.0),
+                        ("min_allowable_kw", 0.0),
+                        ("max_kw", 250.0),
+                        ("can_supply_steam_turbine", false),
+                        ("fuel_cost_per_mmbtu", 8.0),
+                        ("cooling_thermal_factor", 1.0)
+                        ])
+    
+    input_data["Financial"]["chp_fuel_cost_escalation_pct"] = 0.034
+    
+    # Add CoolingLoad and AbsorptionChiller so we can test the energy balance on AbsorptionChiller too (thermal consumption)
+    input_data["CoolingLoad"] = Dict{Any, Any}("doe_reference_name" => "Hospital")
+    input_data["AbsorptionChiller"] = Dict{Any, Any}([
+                                        ("min_ton", 600.0),
+                                        ("max_ton", 600.0),
+                                        ("cop_thermal", 0.7),
+                                        ("installed_cost_per_ton", 500.0),
+                                        ("om_cost_per_ton", 0.5)
+                                        ])
+    
+    # Add Hot TES
+    input_data["HotThermalStorage"] = Dict{Any, Any}([
+                            ("min_gal", 50000.0),
+                            ("max_gal", 50000.0)
+                            ])
+    
+    s = Scenario(input_data)
+    inputs = REoptInputs(s)
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+    results = run_reopt(m, inputs)
+    
+    thermal_techs = ["ExistingBoiler", "CHP", "SteamTurbine"]
+    thermal_loads = ["load", "tes", "steamturbine", "waste"]  # We don't track AbsorptionChiller thermal consumption by tech
+    tech_to_thermal_load = Dict{Any, Any}()
+    for tech in thermal_techs
+        tech_to_thermal_load[tech] = Dict{Any, Any}()
+        for load in thermal_loads
+            if (tech == "SteamTurbine" && load == "steamturbine") || (load == "waste" && tech != "CHP")
+                tech_to_thermal_load[tech][load] = [0.0] * 8760
+            else
+                tech_to_thermal_load[tech][load] = results[tech]["year_one_thermal_to_"*load*"_series_mmbtu_per_hour"]
+            end
+        end
+    end
+    # Hot TES is the other thermal supply
+    hottes_to_load = results["HotThermalStorage"]["year_one_to_load_series_mmbtu_per_hour"]
+    
+    # BAU boiler loads
+    load_boiler_fuel = s.space_heating_load.loads_kw / input_data["ExistingBoiler"]["efficiency"] ./ REopt.KWH_PER_MMBTU
+    load_boiler_thermal = load_boiler_fuel .* REopt.EXISTING_BOILER_EFFICIENCY
+    
+    # Fuel/thermal **consumption**
+    boiler_fuel = results["ExistingBoiler"]["year_one_fuel_consumption_series_mmbtu_per_hour"]
+    chp_fuel_total = results["CHP"]["year_one_fuel_used_mmbtu"]
+    steamturbine_thermal_in = results["SteamTurbine"]["year_one_thermal_consumption_series_mmbtu_per_hour"]
+    absorptionchiller_thermal_in = results["AbsorptionChiller"]["year_one_thermal_consumption_series_mmbtu_per_hour"]
+    
+    # Check that all thermal supply to load meets the BAU load plus AbsorptionChiller load which is not explicitly tracked
+    alltechs_thermal_to_load_total = sum([sum(tech_to_thermal_load[tech]["load"]) for tech in thermal_techs]) + sum(hottes_to_load)
+    thermal_load_total = sum(load_boiler_thermal) + sum(absorptionchiller_thermal_in)
+    @test alltechs_thermal_to_load_total ≈ thermal_load_total atol=0.01
+    
+    # Check that all thermal to steam turbine is equal to steam turbine thermal consumption
+    alltechs_thermal_to_steamturbine_total = sum([sum(tech_to_thermal_load[tech]["steamturbine"]) for tech in ["ExistingBoiler", "CHP"]])
+    @test alltechs_thermal_to_steamturbine_total ≈ sum(steamturbine_thermal_in) atol=3
+    
+    # Check that "thermal_to_steamturbine" is zero for each tech which has input of can_supply_steam_turbine as False
+    for tech in ["ExistingBoiler", "CHP"]
+        if !(tech in inputs.techs.can_supply_steam_turbine)
+            @test sum(tech_to_thermal_load[tech]["steamturbine"]) == 0.0
+        end
+    end
+end
 
 ## equivalent REopt API Post for test 2:
 #   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
