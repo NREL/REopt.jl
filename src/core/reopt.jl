@@ -66,7 +66,7 @@ function run_reopt(m::JuMP.AbstractModel, d::Dict)
 	try
 		s = Scenario(d)
 		run_reopt(m, REoptInputs(s))
-	catch
+	catch e
 		results = Dict(
 			"Messages" => logREopt.d,
 			"Error" => e
@@ -87,7 +87,7 @@ function run_reopt(m::JuMP.AbstractModel, s::AbstractScenario)
 			throw(@error("To constrain CO2 emissions reduction min or max percentages, the optimal and business as usual scenarios must be run in parallel. Use a version of run_reopt() that takes an array of two models."))
 		end
 		run_reopt(m, REoptInputs(s))
-	catch
+	catch e
 		results = Dict(
 			"Messages" => logREopt.d,
 			"Error" => e
@@ -106,7 +106,7 @@ function run_reopt(t::Tuple{JuMP.AbstractModel, AbstractInputs})
 	try
 		run_reopt(t[1], t[2]; organize_pvs=false)
 		# must organize_pvs after adding proforma results
-	catch
+	catch e
 		results = Dict(
 			"Messages" => logREopt.d,
 			"Error" => e
@@ -126,7 +126,7 @@ function run_reopt(ms::AbstractArray{T, 1}, fp::String) where T <: JuMP.Abstract
     try
 		d = JSON.parsefile(fp)
     	run_reopt(ms, d)
-	catch
+	catch e
 		results = Dict(
 			"Messages" => logREopt.d,
 			"Error" => e
@@ -151,7 +151,7 @@ function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractMod
 		end
 	
 		run_reopt(ms, REoptInputs(s))		
-	catch
+	catch e
 		results = Dict(
 			"Messages" => logREopt.d,
 			"Error" => e

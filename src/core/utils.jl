@@ -222,8 +222,10 @@ function dictkeys_tosymbols(d::Dict)
                 v = convert(Array{Real, 1}, v)
             elseif typeof(v) <: Real
                 v = convert(Real, v)
-            else
+            elseif typeof(v) <: String
                 throw(@error("Unable to convert $k to a Array{Real, 1} or Real"))
+            else
+                nothing #is already int or float
             end
         end
         d2[Symbol(k)] = v
