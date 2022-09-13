@@ -1028,7 +1028,7 @@ Return dictionary of backup reliability results.
 
 """
 function backup_reliability(d::Dict, p::REoptInputs, r::Dict)
-    reliability_inputs = backup_reliability_inputs(d=d, p=p, r=r)
+    reliability_inputs = backup_reliability_reopt_inputs(d=d, p=p, r=r)
 	results = return_backup_reliability(; reliability_inputs... )
 	process_reliability_results(results)
 end
