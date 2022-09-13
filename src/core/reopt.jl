@@ -47,9 +47,10 @@ function run_reopt(m::JuMP.AbstractModel, fp::String)
 	try
 		s = Scenario(JSON.parsefile(fp))
 		run_reopt(m, REoptInputs(s))
-	catch
+	catch e
 		results = Dict(
-			"Messages" => logREopt.d
+			"Messages" => logREopt.d,
+			"Error" => e
 		)
 		return results
 	end
@@ -67,7 +68,8 @@ function run_reopt(m::JuMP.AbstractModel, d::Dict)
 		run_reopt(m, REoptInputs(s))
 	catch
 		results = Dict(
-			"Messages" => logREopt.d
+			"Messages" => logREopt.d,
+			"Error" => e
 		)
 		return results
 	end
@@ -87,7 +89,8 @@ function run_reopt(m::JuMP.AbstractModel, s::AbstractScenario)
 		run_reopt(m, REoptInputs(s))
 	catch
 		results = Dict(
-			"Messages" => logREopt.d
+			"Messages" => logREopt.d,
+			"Error" => e
 		)
 		return results
 	end
@@ -105,7 +108,8 @@ function run_reopt(t::Tuple{JuMP.AbstractModel, AbstractInputs})
 		# must organize_pvs after adding proforma results
 	catch
 		results = Dict(
-			"Messages" => logREopt.d
+			"Messages" => logREopt.d,
+			"Error" => e
 		)
 		return results
 	end
@@ -124,7 +128,8 @@ function run_reopt(ms::AbstractArray{T, 1}, fp::String) where T <: JuMP.Abstract
     	run_reopt(ms, d)
 	catch
 		results = Dict(
-			"Messages" => logREopt.d
+			"Messages" => logREopt.d,
+			"Error" => e
 		)
 		return results
 	end
@@ -148,7 +153,8 @@ function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractMod
 		run_reopt(ms, REoptInputs(s))		
 	catch
 		results = Dict(
-			"Messages" => logREopt.d
+			"Messages" => logREopt.d,
+			"Error" => e
 		)
 		return results
 	end

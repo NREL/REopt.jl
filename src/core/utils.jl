@@ -176,7 +176,7 @@ function dictkeys_tosymbols(d::Dict)
             "blended_doe_reference_percents",
             "coincident_peak_load_charge_per_kw",
             "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
-            "outage_probabilities", "wholesale_rate",
+            "outage_probabilities",
             "emissions_factor_series_lb_CO2_per_kwh",
             "emissions_factor_series_lb_NOx_per_kwh", 
             "emissions_factor_series_lb_SO2_per_kwh",
@@ -213,6 +213,17 @@ function dictkeys_tosymbols(d::Dict)
                 v = convert(Array{Int64, 1}, v)
             catch
                 throw(@error("Unable to convert $k to a Array{Int64, 1}"))
+            end
+        end
+        if k in [
+            "fuel_cost_per_mmbtu", "wholesale_rate"
+            ] && !isnothing(v)
+            if typeof(v) == Vector{Any}
+                v = convert(Array{Real, 1}, v)
+            elseif typeof(v) <: Real
+                v = convert(Real, v)
+            else
+                throw(@error("Unable to convert $k to a Array{Real, 1} or Real"))
             end
         end
         d2[Symbol(k)] = v

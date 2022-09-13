@@ -17,7 +17,20 @@ function Logging.handle_message(logger::REoptLogger, lvl, msg, _mod, group, id, 
 
     msglines = split(chomp(convert(String, string(msg))::String), '\n')
     msg1, rest = Iterators.peel(msglines)
-    println(logger.io, "┌ ", _mod, " | ", lvl, ": ", msg1)
+
+    col = nothing
+    if lvl=="Error"
+        col = :red
+    elseif lvl=="Warn"
+        col = :light_yellow
+    elseif lvl=="Info"
+        col = :cyan
+    else
+        col = :default
+    end
+
+    printstyled(logger.io, "┌ ", _mod, " | ", lvl, ": "; bold=true, color=col)
+    printstyled(logger.io, msg1, "\n")
     for msg in rest
         println(logger.io, "│ ", msg)
     end
@@ -37,14 +50,21 @@ function Logging.handle_message(logger::REoptLogger, lvl, msg, _mod, group, id, 
         end
 
         # Does the key for file exist?
-        filename = join(split(file, '\\')[end-2:end], "_")
+        if occursin("\\", file) #windows
+            splitter = "\\"
+        else # unix/mac
+            splitter = "/"
+        end
+        
+        splt = split(file, splitter)
+        f = join([splt[end-1], splt[end], line], "_")
 
-        if filename ∉ keys(logger.d[string(lvl)]) #file name doesnt exists
-            logger.d[string(lvl)][filename] = Any[]
+        if f ∉ keys(logger.d[string(lvl)]) #file name doesnt exists
+            logger.d[string(lvl)][f] = Any[]
         else
             nothing
         end
 
-        push!(logger.d[string(lvl)][filename], msg)
+        push!(logger.d[string(lvl)][f], msg)
     end
 end
