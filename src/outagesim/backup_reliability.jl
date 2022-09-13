@@ -843,7 +843,7 @@ function backup_reliability_inputs(;r::Dict)::Dict
 
     pv_kw_ac_hourly = zero_array
     if "pv_size_kw" in keys(r)
-        pv_kw_ac_hourly = r["pv_size_kw"] .* r["pv_prod_factor"]
+        pv_kw_ac_hourly = r["pv_size_kw"] .* r["pv_production_factor_series"]
     end
     if microgrid_only && !Bool(get(r, "pv_migrogrid_upgraded", false))
         pv_kw_ac_hourly = zero_array
