@@ -368,8 +368,8 @@ function get_tier_with_lowest_energy_rate(u::URDBrate)
     tier_with_lowest_energy_cost = 1
     if length(u.energy_tier_limits) > 1
         annual_energy_charge_sums = Float64[]
-        for etier in u.energy_rates
-            push!(annual_energy_charge_sums, sum(etier))
+        for etier in range(1, stop=length(u.energy_tier_limits)) 
+            push!(annual_energy_charge_sums, sum(u.energy_rates[:,etier]))
         end
         tier_with_lowest_energy_cost = 
             findall(annual_energy_charge_sums .== minimum(annual_energy_charge_sums))[1]
