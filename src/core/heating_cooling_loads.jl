@@ -33,7 +33,7 @@
     doe_reference_name::String = "",
     blended_doe_reference_names::Array{String, 1} = String[],
     blended_doe_reference_percents::Array{<:Real,1} = Real[],
-    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}} = 1.0,  # Fraction of input fuel load which is addressable by heating technologies
+    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}} = 1.0,  # Fraction of input fuel load which is addressable by heating technologies. Can be a scalar or vector with length aligned with use of monthly_mmbtu or fuel_loads_mmbtu_per_hour.
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
     fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[] # Vector of hot water fuel loads [mmbtu/hour]. Length must equal 8760 * `Settings.time_steps_per_hour`
@@ -43,6 +43,10 @@ There are many ways in which a DomesticHotWaterLoad can be defined:
 1. When using either `doe_reference_name` or `blended_doe_reference_names` in an `ElectricLoad` one only needs to provide the input key "DomesticHotWaterLoad" in the `Scenario` (JSON or Dict). In this case the values from DoE reference names from the `ElectricLoad` will be used to define the `DomesticHotWaterLoad`.
 2. One can provide the `doe_reference_name` or `blended_doe_reference_names` directly in the `DomesticHotWaterLoad` key within the `Scenario`. These values can be combined with the `annual_mmbtu` or `monthly_mmbtu` inputs to scale the DoE reference profile(s).
 3. One can provide the `fuel_loads_mmbtu_per_hour` value in the `DomesticHotWaterLoad` key within the `Scenario`.
+
+!!! note "Hot water loads"
+    Hot water and space heating thermal "load" inputs are in terms of energy input required (boiler fuel), not the actual energy demand.
+    The fuel energy is multiplied by the boiler_efficiency to get the actual energy demand.
 
 """
 struct DomesticHotWaterLoad
@@ -74,7 +78,19 @@ struct DomesticHotWaterLoad
                 @warn "DomesticHotWaterLoad fuel_loads_mmbtu_per_hour was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
             end
 
+            if length(addressable_load_fraction) > 1
+                if length(addressable_load_fraction) != length(fuel_loads_mmbtu_per_hour)
+                    error("`addressable_load_fraction`` must be a scalar or an array of length `fuel_loads_mmbtu_per_hour`")
+                end
+            end
+
         elseif !isempty(doe_reference_name)
+            if length(addressable_load_fraction) > 1
+                if !isempty(monthly_mmbtu) && length(addressable_load_fraction) != 12
+                    error("`addressable_load_fraction`` must be a scalar or an array of length 12 if `monthly_mmbtu` is input")
+                end
+            end
+            
             loads_kw = BuiltInDomesticHotWaterLoad(city, doe_reference_name, latitude, longitude, 2017, addressable_load_fraction, annual_mmbtu, monthly_mmbtu)
             if length(blended_doe_reference_names) > 0
                 @warn "DomesticHotWaterLoad doe_reference_name was provided, so blended_doe_reference_names will be ignored."
@@ -109,7 +125,7 @@ end
     doe_reference_name::String = "",
     blended_doe_reference_names::Array{String, 1} = String[],
     blended_doe_reference_percents::Array{<:Real,1} = Real[],
-    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}} = 1.0,  # Fraction of input fuel load which is addressable by heating technologies
+    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}} = 1.0,  # Fraction of input fuel load which is addressable by heating technologies. Can be a scalar or vector with length aligned with use of monthly_mmbtu or fuel_loads_mmbtu_per_hour.
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
     fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[] # Vector of space heating fuel loads [mmbtu/hr]. Length must equal 8760 * `Settings.time_steps_per_hour`
@@ -131,6 +147,10 @@ one only needs to provide an empty Dict in the scenario JSON to add a `SpaceHeat
 ```
 In this case the values provided for `doe_reference_name`, or  `blended_doe_reference_names` and 
 `blended_doe_reference_percents` are copied from the `ElectricLoad` to the `SpaceHeatingLoad`.
+
+!!! note "Space heating loads"
+    Hot water and space heating thermal "load" inputs are in terms of energy input required (boiler fuel), not the actual energy demand.
+    The fuel energy is multiplied by the boiler_efficiency to get the actual energy demand.
 """
 struct SpaceHeatingLoad
     loads_kw::Array{Real, 1}
@@ -168,7 +188,6 @@ struct SpaceHeatingLoad
             end
         elseif length(blended_doe_reference_names) > 0 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
-            # TODO addressable_load_fraction does not apply with blended_doe_reference_names
             loads_kw = blend_and_scale_doe_profiles(BuiltInSpaceHeatingLoad, latitude, longitude, 2017, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_mmbtu, monthly_mmbtu, addressable_load_fraction)
@@ -717,7 +736,7 @@ function BuiltInDomesticHotWaterLoad(
             annual_mmbtu = dhw_annual_mmbtu[city][buildingtype]
         end
     else
-        annual_mmbtu *= addressable_load_fraction    
+        annual_mmbtu *= addressable_load_fraction     
     end
     if length(monthly_mmbtu) == 12
         monthly_mmbtu = convert(Vector{Real}, monthly_mmbtu) .* addressable_load_fraction
