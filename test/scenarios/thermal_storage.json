@@ -26,7 +26,7 @@
     "AbsorptionChiller": {
         "min_ton": 0.0,
         "max_ton": 1000.0,
-        "chiller_cop": 0.7,
+        "cop_thermal": 0.7,
         "installed_cost_per_ton": 500.0,
         "om_cost_per_ton": 0.5,
         "macrs_option_years": 0,
