@@ -716,16 +716,18 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
     microgrid_only = get(r, "microgrid_only", false)
 
     pv_kw_ac_hourly = zero_array
-    if "PV" in keys(d)
+    if !(
+            microgrid_only && 
+            !Bool(get(d, "PV_upgraded", false))
+        ) && 
+        "PV" in keys(d)
+
         pv_kw_ac_hourly = (
             get(d["PV"], "year_one_to_battery_series_kw", zero_array)
             + get(d["PV"], "year_one_curtailed_production_series_kw", zero_array)
             + get(d["PV"], "year_one_to_load_series_kw", zero_array)
             + get(d["PV"], "year_one_to_grid_series_kw", zero_array)
         )
-    end
-    if microgrid_only && !Bool(get(d, "PV_upgraded", false))
-        pv_kw_ac_hourly = zero_array
     end
 
     battery_size_kwh = 0
