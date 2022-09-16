@@ -52,7 +52,7 @@
     acres_per_kw::Real=6e-3,
     inv_eff::Real=0.96,
     dc_ac_ratio::Real=1.2,
-    prod_factor_series::Union{Nothing, Array{<:Real,1}} = nothing,
+    production_factor_series::Union{Nothing, Array{<:Real,1}} = nothing,
     federal_itc_fraction::Real = 0.26,
     federal_rebate_per_kw::Real = 0.0,
     state_ibi_fraction::Real = 0.0,
@@ -105,7 +105,7 @@ struct PV <: AbstractTech
     acres_per_kw
     inv_eff
     dc_ac_ratio
-    prod_factor_series
+    production_factor_series
     federal_itc_fraction
     federal_rebate_per_kw
     state_ibi_fraction
@@ -151,7 +151,7 @@ struct PV <: AbstractTech
         acres_per_kw::Real=6e-3,
         inv_eff::Real=0.96,
         dc_ac_ratio::Real=1.2,
-        prod_factor_series::Union{Nothing, Array{Real,1}} = nothing,
+        production_factor_series::Union{Nothing, Array{Real,1}} = nothing,
         federal_itc_fraction::Real = 0.26,
         federal_rebate_per_kw::Real = 0.0,
         state_ibi_fraction::Real = 0.0,
@@ -242,7 +242,7 @@ struct PV <: AbstractTech
             acres_per_kw,
             inv_eff,
             dc_ac_ratio,
-            prod_factor_series,
+            production_factor_series,
             federal_itc_fraction,
             federal_rebate_per_kw,
             state_ibi_fraction,

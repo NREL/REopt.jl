@@ -145,7 +145,7 @@ end
 
 function setup_pv_inputs(s::MPCScenario, existing_sizes, production_factor)
     for pv in s.pvs
-        production_factor[pv.name, :] = pv.prod_factor_series
+        production_factor[pv.name, :] = pv.production_factor_series
         existing_sizes[pv.name] = pv.size_kw
     end
     return nothing
