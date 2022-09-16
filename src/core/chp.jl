@@ -61,10 +61,6 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
     supplementary_firing_efficiency::Float64 = 0.92
     standby_rate_per_kw_per_month::Float64 = 0.0
     reduces_demand_charges::Bool = true
-    use_default_derate::Bool = true
-    max_derate_factor::Float64 = 1.0
-    derate_start_temp_degF::Float64 = 0.0
-    derate_slope_fraction_per_degF::Float64 = 0.0
     can_supply_steam_turbine::Bool=false
 
     macrs_option_years::Int = 5
@@ -132,10 +128,6 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     supplementary_firing_efficiency::Float64 = 0.92
     standby_rate_per_kw_per_month::Float64 = 0.0
     reduces_demand_charges::Bool = true
-    use_default_derate::Bool = true
-    max_derate_factor::Float64 = 1.0
-    derate_start_temp_degF::Float64 = 0.0
-    derate_slope_fraction_per_degF::Float64 = 0.0
     can_supply_steam_turbine::Bool=false
 
     macrs_option_years::Int = 5
