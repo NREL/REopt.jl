@@ -34,7 +34,7 @@
     max_kw = 1.0e9,
     installed_cost_per_kw = nothing,
     om_cost_per_kw = 35.0,
-    prod_factor_series = nothing,
+    production_factor_series = nothing,
     size_class = "",
     wind_meters_per_sec = [],
     wind_direction_degrees = [],
@@ -85,7 +85,7 @@ size_class_to_itc_incentives = Dict(
 )
 ```
 
-If the `prod_factor_series` is not provided then NREL's System Advisor Model (SAM) is used to get the wind turbine 
+If the `production_factor_series` is not provided then NREL's System Advisor Model (SAM) is used to get the wind turbine 
 production factor.
 
 Wind resource values are optional, i.e.
@@ -100,7 +100,7 @@ struct Wind <: AbstractTech
     max_kw::Real
     installed_cost_per_kw::Union{Nothing, Real}
     om_cost_per_kw::Real
-    prod_factor_series::Union{Nothing, Array{Real,1}}
+    production_factor_series::Union{Nothing, Array{Real,1}}
     size_class::String
     hub_height::T where T <: Real
     wind_meters_per_sec::AbstractArray{Float64,1}
@@ -136,7 +136,7 @@ struct Wind <: AbstractTech
         max_kw = 1.0e9,
         installed_cost_per_kw = nothing,
         om_cost_per_kw = 35.0,
-        prod_factor_series = nothing,
+        production_factor_series = nothing,
         size_class = "",
         wind_meters_per_sec = [],
         wind_direction_degrees = [],
@@ -227,7 +227,7 @@ struct Wind <: AbstractTech
             max_kw,
             installed_cost_per_kw,
             om_cost_per_kw,
-            prod_factor_series,
+            production_factor_series,
             size_class,
             hub_height,
             wind_meters_per_sec,

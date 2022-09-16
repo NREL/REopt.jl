@@ -171,7 +171,7 @@ function dictkeys_tosymbols(d::Dict)
         if k in [
             "loads_kw", "critical_loads_kw",
             "monthly_totals_kwh",
-            "prod_factor_series", 
+            "production_factor_series", 
             "monthly_energy_rates", "monthly_demand_rates",
             "blended_doe_reference_percents",
             "coincident_peak_load_charge_per_kw", "fuel_cost_per_mmbtu",
@@ -379,7 +379,7 @@ function get_pvwatts_prodfactor(latitude::Real, longitude::Real; timeframe="hour
         @info "PVWatts success."
         watts = collect(get(response["outputs"], "ac", []) / 1000)  # scale to 1 kW system (* 1 kW / 1000 W)
         if length(watts) != 8760
-            @error "PVWatts did not return a valid prodfactor. Got $watts"
+            @error "PVWatts did not return a valid production_factor. Got $watts"
         end
         return watts
     catch e
