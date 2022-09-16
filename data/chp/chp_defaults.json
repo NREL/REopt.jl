@@ -172,30 +172,6 @@
       0.5,
       0.5
     ],
-    "max_derate_factor": [
-      1.0,
-      1.0,
-      1.0,
-      1.0,
-      1.0,
-      1.0
-    ],
-    "derate_start_temp_degF": [
-      95,
-      95,
-      95,
-      95,
-      95,
-      95
-    ],
-    "derate_slope_fraction_per_degF": [
-      0.0,
-      0.0,
-      0.0,
-      0.0,
-      0.0,
-      0.0
-    ],
     "unavailability_periods": [
       {
         "month": 1,
@@ -412,27 +388,6 @@
       0.3,
       0.3,
       0.3
-    ],
-    "max_derate_factor": [
-      1.0,
-      1.0,
-      1.0,
-      1.0,
-      1.0
-    ],
-    "derate_start_temp_degF": [
-      59,
-      59,
-      59,
-      59,
-      59
-    ],
-    "derate_slope_fraction_per_degF": [
-      0.0,
-      0.0,
-      0.0,
-      0.0,
-      0.0
     ],
     "unavailability_periods": [
       {
@@ -660,33 +615,6 @@
       0.5,
       0.5
     ],
-    "max_derate_factor": [
-      1.0,
-      1.0,
-      1.0,
-      1.0,
-      1.0,
-      1.0,
-      1.0
-    ],
-    "derate_start_temp_degF": [
-      59,
-      59,
-      59,
-      59,
-      59,
-      59,
-      59
-    ],
-    "derate_slope_fraction_per_degF": [
-      0.0,
-      0.0,
-      0.0,
-      0.0,
-      0.0,
-      0.0,
-      0.0
-    ],
     "unavailability_periods": [
       {
         "month": 2,
@@ -824,21 +752,6 @@
       0.3,
       0.3,
       0.3
-    ],
-    "max_derate_factor": [
-      1.0,
-      1.0,
-      1.0
-    ],
-    "derate_start_temp_degF": [
-      59,
-      59,
-      59
-    ],
-    "derate_slope_fraction_per_degF": [
-      0.0,
-      0.0,
-      0.0
     ],
     "unavailability_periods": [
       {
