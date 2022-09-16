@@ -74,7 +74,7 @@ production_factor = DenseAxisArray{Float64}(undef, techs.all, 1:length(s.electri
 and then passes that array to technology specific functions that add their production factors to the `production_factor` array. For example, for `PV` within the `setup_pv_inputs` method we have:
 ```julia
 for pv in s.pvs
-    production_factor[pv.name, :] = production_factor(pv, s.site.latitude, s.site.longitude)
+    production_factor[pv.name, :] = get_production_factor(pv, s.site.latitude, s.site.longitude)
     ...
 end
 ```
