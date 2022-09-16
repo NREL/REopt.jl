@@ -461,7 +461,7 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
     roof_max_kw, land_max_kw = 1.0e5, 1.0e5
 
     for pv in s.pvs
-        production_factor[pv.name, :] = production_factor(pv, s.site.latitude, s.site.longitude; 
+        production_factor[pv.name, :] = get_production_factor(pv, s.site.latitude, s.site.longitude; 
             time_steps_per_hour=s.settings.time_steps_per_hour)
         for location in pvlocations
             if pv.location == location
@@ -540,7 +540,7 @@ function setup_wind_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_s
         cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
     )
     om_cost_per_kw["Wind"] = s.wind.om_cost_per_kw
-    production_factor["Wind", :] = production_factor(s.wind, s.site.latitude, s.site.longitude, s.settings.time_steps_per_hour)
+    production_factor["Wind", :] = get_production_factor(s.wind, s.site.latitude, s.site.longitude, s.settings.time_steps_per_hour)
     fillin_techs_by_exportbin(techs_by_exportbin, s.wind, "Wind")
     if !s.wind.can_curtail
         push!(techs_no_curtail, "Wind")
@@ -561,7 +561,7 @@ function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_si
         cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
     )
     om_cost_per_kw["Generator"] = s.generator.om_cost_per_kw
-    production_factor["Generator", :] = production_factor(s.generator; s.settings.time_steps_per_hour)
+    production_factor["Generator", :] = get_production_factor(s.generator; s.settings.time_steps_per_hour)
     fillin_techs_by_exportbin(techs_by_exportbin, s.generator, "Generator")
     if !s.generator.can_curtail
         push!(techs_no_curtail, "Generator")
@@ -675,7 +675,7 @@ function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_sl
         cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
     )
     om_cost_per_kw["CHP"] = s.chp.om_cost_per_kw
-    production_factor["CHP", :] = production_factor(s.chp, s.electric_load.year, s.electric_utility.outage_start_time_step, 
+    production_factor["CHP", :] = get_production_factor(s.chp, s.electric_load.year, s.electric_utility.outage_start_time_step, 
         s.electric_utility.outage_end_time_step, s.settings.time_steps_per_hour)
     fillin_techs_by_exportbin(techs_by_exportbin, s.chp, "CHP")
     if !s.chp.can_curtail
