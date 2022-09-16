@@ -11,11 +11,11 @@
         "roof_squarefeet": 5000
     },
     "PV": {
-        "macrs_bonus_pct": 0.4,
+        "macrs_bonus_fraction": 0.4,
         "installed_cost_per_kw": 2000,
         "tilt": 34.579,
         "federal_rebate_per_kw": 350,
-        "operating_reserve_required_pct": 0.25,
+        "operating_reserve_required_fraction": 0.25,
         "production_incentive_per_kwh": 0.05
     },
     "Generator": {
@@ -32,27 +32,27 @@
         "annual_kwh": 10000000.0,
         "city": "LosAngeles",
         "year": 2017,
-        "min_load_met_annual_pct": 0.99,
-        "operating_reserve_required_pct": 0.1
+        "min_load_met_annual_fraction": 0.99,
+        "operating_reserve_required_fraction": 0.1
     },
     "ElectricStorage": {
         "macrs_option_years": 5,
-        "macrs_bonus_pct": 0.4,
+        "macrs_bonus_fraction": 0.4,
         "installed_cost_per_kw": 1000.0,
         "installed_cost_per_kwh": 500.0,
         "replace_cost_per_kw": 460.0,
         "replace_cost_per_kwh": 230.0,
-        "total_itc_pct": 0.0
+        "total_itc_fraction": 0.0
     },
     "Financial": {
-        "elec_cost_escalation_pct": 0.026,
-        "generator_fuel_cost_escalation_pct": 0.027,
-        "offtaker_discount_pct": 0.08,
-        "owner_discount_pct": 0.15,
+        "elec_cost_escalation_rate_fraction": 0.026,
+        "generator_fuel_cost_escalation_rate_fraction": 0.027,
+        "offtaker_discount_rate_fraction": 0.08,
+        "owner_discount_rate_fraction": 0.15,
         "analysis_years": 20,
-        "offtaker_tax_pct": 0.26,
-        "owner_tax_pct": 0.4,
-        "om_cost_escalation_pct": 0.025,
+        "offtaker_tax_rate_fraction": 0.26,
+        "owner_tax_rate_fraction": 0.4,
+        "om_cost_escalation_rate_fraction": 0.025,
         "offgrid_other_capital_costs": 3000,
         "offgrid_other_annual_costs": 600,
         "third_party_ownership": false
