@@ -33,8 +33,8 @@
 ```julia
     min_ton::Real = 0.0,
     max_ton::Real = 0.0,
-    chiller_cop::Real,
-    chiller_elec_cop::Real = 14.1,
+    cop_thermal::Real,
+    cop_electric::Real = 14.1,
     installed_cost_per_ton::Real,
     om_cost_per_ton::Real,
     macrs_option_years::Real = 0,
@@ -44,8 +44,8 @@
 struct AbsorptionChiller <: AbstractThermalTech
     min_ton::Real
     max_ton::Real
-    chiller_cop::Real
-    chiller_elec_cop::Real
+    cop_thermal::Real
+    cop_electric::Real
     installed_cost_us_dollars_per_ton::Real
     om_cost_us_dollars_per_ton::Real
     macrs_option_years::Real
@@ -57,8 +57,8 @@ struct AbsorptionChiller <: AbstractThermalTech
     function AbsorptionChiller(;
         min_ton::Real = 0.0,
         max_ton::Real = 0.0,
-        chiller_cop::Real,
-        chiller_elec_cop::Real = 14.1,
+        cop_thermal::Real,
+        cop_electric::Real = 14.1,
         installed_cost_per_ton::Real,
         om_cost_per_ton::Real,
         macrs_option_years::Real = 0,
@@ -73,8 +73,8 @@ struct AbsorptionChiller <: AbstractThermalTech
         new(
             min_ton,
             max_ton,
-            chiller_cop,
-            chiller_elec_cop,
+            cop_thermal,
+            cop_electric,
             installed_cost_per_ton,
             om_cost_per_ton,
             macrs_option_years,
