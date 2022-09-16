@@ -28,6 +28,7 @@ Classify the change according to the following categories:
 The following name changes were made: 
 - Change "pct" to "rate_fraction" for "discount", "escalation", names containing "tax_pct" (financial terms)
 - Change "pct" to "fraction" for all other variable names (e.g., "min_soc", "min_turndown_")
+- Change `prod_factor_series` to `production_factor_series` and rename some internal methods and variables to match
 - Change four (4) CHP input field names to spell out `electric` (from `elec`) and `efficiency` (from `effic`) for electric and thermal efficiencies
 ### Added
 - Add schedule-based `FlatLoad`s which take the annual or monthly energy input and create a load profile based on the specified type of schedule. The load is "flat" (the same) for all hours within the chosen schedule.
