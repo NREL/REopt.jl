@@ -98,8 +98,7 @@
     "can_supply_steam_turbine": true,
     "fuel_type": "natural_gas",
     "fuel_cost_per_mmbtu": 8.0,
-    "fuel_renewable_energy_fraction": 0.3,
-    "derate_start_temp_degF": 95
+    "fuel_renewable_energy_fraction": 0.3
   },
   "HotThermalStorage": {
     "min_gal": 50000.0,
