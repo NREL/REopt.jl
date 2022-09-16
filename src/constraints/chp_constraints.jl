@@ -29,8 +29,8 @@
 # *********************************************************************************
 function add_chp_fuel_burn_constraints(m, p; _n="")
     # Fuel burn slope and intercept
-    fuel_burn_full_load = 1.0 / p.s.chp.elec_effic_full_load  # [kWt/kWe]
-    fuel_burn_half_load = 0.5 / p.s.chp.elec_effic_half_load  # [kWt/kWe]
+    fuel_burn_full_load = 1.0 / p.s.chp.electric_efficiency_full_load  # [kWt/kWe]
+    fuel_burn_half_load = 0.5 / p.s.chp.electric_efficiency_half_load  # [kWt/kWe]
     fuel_burn_slope = (fuel_burn_full_load - fuel_burn_half_load) / (1.0 - 0.5)  # [kWt/kWe]
     fuel_burn_intercept = fuel_burn_full_load - fuel_burn_slope * 1.0  # [kWt/kWe_rated]
 
@@ -72,8 +72,8 @@ end
 
 function add_chp_thermal_production_constraints(m, p; _n="")
     # Thermal production slope and intercept
-    thermal_prod_full_load = 1.0 / p.s.chp.elec_effic_full_load * p.s.chp.thermal_effic_full_load  # [kWt/kWe]
-    thermal_prod_half_load = 0.5 / p.s.chp.elec_effic_half_load * p.s.chp.thermal_effic_half_load   # [kWt/kWe]
+    thermal_prod_full_load = 1.0 / p.s.chp.electric_efficiency_full_load * p.s.chp.thermal_efficiency_full_load  # [kWt/kWe]
+    thermal_prod_half_load = 0.5 / p.s.chp.electric_efficiency_half_load * p.s.chp.thermal_efficiency_half_load   # [kWt/kWe]
     thermal_prod_slope = (thermal_prod_full_load - thermal_prod_half_load) / (1.0 - 0.5)  # [kWt/kWe]
     thermal_prod_intercept = thermal_prod_full_load - thermal_prod_slope * 1.0  # [kWt/kWe_rated
 
@@ -122,8 +122,8 @@ Used by add_chp_constraints to add supplementary firing constraints if
     Else, the supplementary firing dispatch and size decision variables are set to zero.
 """
 function add_chp_supplementary_firing_constraints(m, p; _n="")
-    thermal_prod_full_load = 1.0 / p.s.chp.elec_effic_full_load * p.s.chp.thermal_effic_full_load  # [kWt/kWe]
-    thermal_prod_half_load = 0.5 / p.s.chp.elec_effic_half_load * p.s.chp.thermal_effic_half_load   # [kWt/kWe]
+    thermal_prod_full_load = 1.0 / p.s.chp.electric_efficiency_full_load * p.s.chp.thermal_efficiency_full_load  # [kWt/kWe]
+    thermal_prod_half_load = 0.5 / p.s.chp.electric_efficiency_half_load * p.s.chp.thermal_efficiency_half_load   # [kWt/kWe]
     thermal_prod_slope = (thermal_prod_full_load - thermal_prod_half_load) / (1.0 - 0.5)  # [kWt/kWe]
 
     # Constrain upper limit of dvSupplementaryThermalProduction, using auxiliary variable for (size * useSupplementaryFiring)
