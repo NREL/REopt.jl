@@ -23,7 +23,7 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop
+## v0.19.0
 ### Changed
 The following name changes were made: 
 - Change "pct" to "rate_fraction" for "discount", "escalation", names containing "tax_pct" (financial terms)
