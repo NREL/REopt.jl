@@ -28,7 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 
-function production_factor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly", 
+function get_production_factor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly", 
     time_steps_per_hour::Int=1)
 
     if !(isnothing(pv.production_factor_series))
@@ -75,20 +75,20 @@ function production_factor(pv::PV, latitude::Real, longitude::Real; timeframe="h
 end
 
 
-function production_factor(g::AbstractGenerator; time_steps_per_hour::Int=1)
+function get_production_factor(g::AbstractGenerator; time_steps_per_hour::Int=1)
     return ones(8760 * time_steps_per_hour)
 end
 
 
 """
-    production_factor(wind::Wind, latitude::Real, longitude::Real)
+    get_production_factor(wind::Wind, latitude::Real, longitude::Real)
 
 If the user does not provide their own production_factor_series for the Wind turbine, then this method creates
 a production factor time-series using resource data and the System Advisor Model Wind module.
 If the user does not provide the resource data, the latitude and longitude are used to get the resource data from the
 Wind Toolkit.
 """
-function production_factor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_hour::Int)
+function get_production_factor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_hour::Int)
 
     if !(isnothing(wind.production_factor_series))
         return wind.production_factor_series
@@ -324,13 +324,13 @@ function production_factor(wind::Wind, latitude::Real, longitude::Real, time_ste
 end
 
 """
-    production_factor(chp::AbstractCHP, year::Int=2017, outage_start_time_step::Int=0, outage_end_time_step::Int=0, ts_per_hour::Int=1)
+    get_production_factor(chp::AbstractCHP, year::Int=2017, outage_start_time_step::Int=0, outage_end_time_step::Int=0, ts_per_hour::Int=1)
 
 production_factor for CHP accounts for unavailability (`unavailability_periods`) of CHP due to 
 scheduled (mostly off-peak) and "unscheduled" (on-peak) maintenance. 
 Note: this same prod_factor should be applied to electric and thermal production
 """
-function production_factor(chp::AbstractCHP, year::Int=2017, outage_start_time_step::Int=0, outage_end_time_step::Int=0, ts_per_hour::Int=1)
+function get_production_factor(chp::AbstractCHP, year::Int=2017, outage_start_time_step::Int=0, outage_end_time_step::Int=0, ts_per_hour::Int=1)
     unavailability_hourly = generate_year_profile_hourly(year, chp.unavailability_periods)
 
     prod_factor = [1.0 - unavailability_hourly[i] for i in 1:8760 for _ in 1:ts_per_hour]
