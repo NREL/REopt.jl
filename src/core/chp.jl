@@ -40,11 +40,11 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
     installed_cost_per_kw::Union{Float64, AbstractVector{Float64}} = NaN
     tech_sizes_for_cost_curve::Union{Float64, AbstractVector{Float64}} = NaN
     om_cost_per_kwh::Float64 = NaN
-    elec_effic_half_load = NaN
-    elec_effic_full_load::Float64 = NaN
+    electric_efficiency_half_load = NaN
+    electric_efficiency_full_load::Float64 = NaN
     min_turn_down_fraction::Float64 = NaN
-    thermal_effic_full_load::Float64 = NaN
-    thermal_effic_half_load::Float64 = NaN
+    thermal_efficiency_full_load::Float64 = NaN
+    thermal_efficiency_half_load::Float64 = NaN
     min_allowable_kw::Float64 = NaN
     max_kw::Float64 = NaN
     cooling_thermal_factor::Float64 = NaN  # only needed with cooling load
@@ -107,11 +107,11 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     installed_cost_per_kw::Union{Float64, AbstractVector{Float64}} = Float64[]
     tech_sizes_for_cost_curve::AbstractVector{Float64} = Float64[]
     om_cost_per_kwh::Float64 = NaN
-    elec_effic_half_load = NaN
-    elec_effic_full_load::Float64 = NaN
+    electric_efficiency_half_load = NaN
+    electric_efficiency_full_load::Float64 = NaN
     min_turn_down_fraction::Float64 = NaN
-    thermal_effic_full_load::Float64 = NaN
-    thermal_effic_half_load::Float64 = NaN
+    thermal_efficiency_full_load::Float64 = NaN
+    thermal_efficiency_half_load::Float64 = NaN
     min_allowable_kw::Float64 = NaN
     max_kw::Float64 = NaN
     cooling_thermal_factor::Float64 = NaN  # only needed with cooling load
@@ -169,11 +169,11 @@ function CHP(d::Dict)
         :installed_cost_per_kw => chp.installed_cost_per_kw, 
         :tech_sizes_for_cost_curve => chp.tech_sizes_for_cost_curve, 
         :om_cost_per_kwh => chp.om_cost_per_kwh, 
-        :elec_effic_full_load => chp.elec_effic_full_load, 
-        :elec_effic_half_load => chp.elec_effic_half_load, 
+        :electric_efficiency_full_load => chp.electric_efficiency_full_load, 
+        :electric_efficiency_half_load => chp.electric_efficiency_half_load, 
         :min_turn_down_fraction => chp.min_turn_down_fraction, 
-        :thermal_effic_full_load => chp.thermal_effic_full_load, 
-        :thermal_effic_half_load => chp.thermal_effic_half_load,
+        :thermal_efficiency_full_load => chp.thermal_efficiency_full_load, 
+        :thermal_efficiency_half_load => chp.thermal_efficiency_half_load,
         :min_allowable_kw => chp.min_allowable_kw, 
         :max_kw => chp.max_kw, 
         :cooling_thermal_factor => chp.cooling_thermal_factor
@@ -240,10 +240,10 @@ custom_chp_inputs, i.e.
 - "installed_cost_per_kw"
 - "tech_sizes_for_cost_curve"
 - "om_cost_per_kwh"
-- "elec_effic_full_load"
+- "electric_efficiency_full_load"
 - "min_turn_down_fraction",
-- "thermal_effic_full_load"
-- "thermal_effic_half_load"
+- "thermal_efficiency_full_load"
+- "thermal_efficiency_half_load"
 - "unavailability_periods"
 """
 function get_prime_mover_defaults(prime_mover::String, boiler_type::String, size_class::Int)
@@ -251,7 +251,7 @@ function get_prime_mover_defaults(prime_mover::String, boiler_type::String, size
     prime_mover_defaults = Dict{String, Any}()
 
     for key in keys(pmds[prime_mover])
-        if key in ["thermal_effic_full_load", "thermal_effic_half_load"]
+        if key in ["thermal_efficiency_full_load", "thermal_efficiency_half_load"]
             prime_mover_defaults[key] = pmds[prime_mover][key][boiler_type][size_class]
         elseif key == "unavailability_periods"
             prime_mover_defaults[key] = convert(Vector{Dict}, pmds[prime_mover][key])
