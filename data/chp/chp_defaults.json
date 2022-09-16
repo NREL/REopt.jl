@@ -76,7 +76,7 @@
       0,
       0
     ],
-    "elec_effic_full_load": [
+    "electric_efficiency_full_load": [
       0.35633333333333334,
       0.2965,
       0.32099999999999995,
@@ -84,7 +84,7 @@
       0.39,
       0.4145
     ],
-    "elec_effic_half_load": [
+    "electric_efficiency_half_load": [
       0.35633333333333334,
       0.2965,
       0.32099999999999995,
@@ -92,7 +92,7 @@
       0.39,
       0.4145
     ],
-    "thermal_effic_full_load": {
+    "thermal_efficiency_full_load": {
         "hot_water":
             [
             0.4418333333333333,
@@ -112,7 +112,7 @@
             0.1275
             ]
     },
-    "thermal_effic_half_load": {
+    "thermal_efficiency_half_load": {
         "hot_water":
             [
                 0.4418333333333333,
@@ -164,37 +164,13 @@
       10000,
       10000
     ],
-    "min_turn_down_pct": [
+    "min_turn_down_fraction": [
       0.5,
       0.5,
       0.5,
       0.5,
       0.5,
       0.5
-    ],
-    "max_derate_factor": [
-      1.0,
-      1.0,
-      1.0,
-      1.0,
-      1.0,
-      1.0
-    ],
-    "derate_start_temp_degF": [
-      95,
-      95,
-      95,
-      95,
-      95,
-      95
-    ],
-    "derate_slope_pct_per_degF": [
-      0.0,
-      0.0,
-      0.0,
-      0.0,
-      0.0,
-      0.0
     ],
     "unavailability_periods": [
       {
@@ -328,21 +304,21 @@
       0,
       0
     ],
-    "elec_effic_full_load": [
+    "electric_efficiency_full_load": [
       0.27116666666666667,
       0.24,
       0.2635,
       0.2846666666666667,
       0.2885
     ],
-    "elec_effic_half_load": [
+    "electric_efficiency_half_load": [
       0.27116666666666667,
       0.24,
       0.2635,
       0.2846666666666667,
       0.2885
     ],
-    "thermal_effic_full_load": {
+    "thermal_efficiency_full_load": {
         "hot_water": 
             [
             0.4116666666666666,
@@ -360,7 +336,7 @@
             0.0
             ]
     },
-    "thermal_effic_half_load": {
+    "thermal_efficiency_half_load": {
         "hot_water": 
             [
             0.4116666666666666,
@@ -406,33 +382,12 @@
       1500,
       1500
     ],
-    "min_turn_down_pct": [
+    "min_turn_down_fraction": [
       0.3,
       0.3,
       0.3,
       0.3,
       0.3
-    ],
-    "max_derate_factor": [
-      1.0,
-      1.0,
-      1.0,
-      1.0,
-      1.0
-    ],
-    "derate_start_temp_degF": [
-      59,
-      59,
-      59,
-      59,
-      59
-    ],
-    "derate_slope_pct_per_degF": [
-      0.0,
-      0.0,
-      0.0,
-      0.0,
-      0.0
     ],
     "unavailability_periods": [
       {
@@ -553,7 +508,7 @@
       0,
       0
     ],
-    "elec_effic_full_load": [
+    "electric_efficiency_full_load": [
       0.26657142857142857,
       0.218,
       0.23149999999999998,
@@ -562,7 +517,7 @@
       0.296,
       0.3155
     ],
-    "elec_effic_half_load": [
+    "electric_efficiency_half_load": [
       0.26657142857142857,
       0.218,
       0.23149999999999998,
@@ -571,7 +526,7 @@
       0.296,
       0.3155
     ],
-    "thermal_effic_full_load": {
+    "thermal_efficiency_full_load": {
         "hot_water":
         [
             0.4652857142857143,
@@ -593,7 +548,7 @@
             0.38450000000000006
         ]
     },
-    "thermal_effic_half_load": {
+    "thermal_efficiency_half_load": {
         "hot_water":
             [
                 0.4652857142857143,
@@ -651,7 +606,7 @@
       20000,
       20000
     ],
-    "min_turn_down_pct": [
+    "min_turn_down_fraction": [
       0.5,
       0.5,
       0.5,
@@ -659,33 +614,6 @@
       0.5,
       0.5,
       0.5
-    ],
-    "max_derate_factor": [
-      1.0,
-      1.0,
-      1.0,
-      1.0,
-      1.0,
-      1.0,
-      1.0
-    ],
-    "derate_start_temp_degF": [
-      59,
-      59,
-      59,
-      59,
-      59,
-      59,
-      59
-    ],
-    "derate_slope_pct_per_degF": [
-      0.0,
-      0.0,
-      0.0,
-      0.0,
-      0.0,
-      0.0,
-      0.0
     ],
     "unavailability_periods": [
       {
@@ -762,17 +690,17 @@
       0,
       0
     ],
-    "elec_effic_full_load": [
+    "electric_efficiency_full_load": [
       0.399,
       0.386,
       0.413
     ],
-    "elec_effic_half_load": [
+    "electric_efficiency_half_load": [
       0.399,
       0.386,
       0.413
     ],
-    "thermal_effic_full_load": {
+    "thermal_efficiency_full_load": {
         "hot_water":
         [
             0.235,
@@ -786,7 +714,7 @@
             0.197
         ]
     },
-    "thermal_effic_half_load": {
+    "thermal_efficiency_half_load": {
         "hot_water":
         [
             0.235,
@@ -820,25 +748,10 @@
       10000,
       10000
     ],
-    "min_turn_down_pct": [
+    "min_turn_down_fraction": [
       0.3,
       0.3,
       0.3
-    ],
-    "max_derate_factor": [
-      1.0,
-      1.0,
-      1.0
-    ],
-    "derate_start_temp_degF": [
-      59,
-      59,
-      59
-    ],
-    "derate_slope_pct_per_degF": [
-      0.0,
-      0.0,
-      0.0
     ],
     "unavailability_periods": [
       {
