@@ -47,8 +47,10 @@ Classify the change according to the following categories:
 ### Changed
 - Change default value for `wind.jl` **operating_reserve_required_pct** from 0.1 to 0.5 (only applicable when **off_grid_flag**=_True_.)
 - allow user to specify emissions_region in ElectricUtility, which is used instead of lat/long to look up AVERT data if emissions factors aren't provided by the user
+- Updated results keys in `results/absorption_chiller.jl`
 ### Fixed
 - Add **wholesale_rate** and **emissions_factor_series_lb_\<pollutant\>_per_kwh** inputs to the list of inputs that `dictkeys_tosymbols()` tries to convert to type _Array{Real}_. Due to serialization, when list inputs come from the API, they are of type _Array{Any}_ so must be converted to match type required by the constructors they are passed to.
+- Fixed bug in calcuation of power delivered to cold thermal storage by the electric chiller in `results/existing_chiller.jl`.
 
 ## v0.17.0
 ### Added
