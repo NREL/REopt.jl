@@ -80,7 +80,7 @@ const KWH_THERMAL_PER_TONHOUR = 3.51685
 const TONNE_PER_LB = 1/2204.62  # [tonne/lb]
 const FUEL_TYPES = ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
 const FUEL_DEFAULTS = Dict(
-    "fuel_renewable_energy_pct" => Dict(
+    "fuel_renewable_energy_fraction" => Dict(
         "natural_gas"=>0.0,
         "landfill_bio_gas"=>1.0,
         "propane"=>0.0,
@@ -133,7 +133,7 @@ include("core/absorption_chiller.jl")
 include("core/flexible_hvac.jl")
 include("core/heating_cooling_loads.jl")
 include("core/electric_utility.jl")
-include("core/prodfactor.jl")
+include("core/production_factor.jl")
 include("core/urdb.jl")
 include("core/electric_tariff.jl")
 include("core/chp.jl")

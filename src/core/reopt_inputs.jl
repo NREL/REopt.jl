@@ -83,12 +83,12 @@ struct REoptInputs <: AbstractInputs
     ghp_installed_cost::Array{Float64,1}  # Array of installed cost for GHP options
     ghp_om_cost_year_one::Array{Float64,1}  # Array of O&M cost for GHP options    
     boiler_efficiency::Dict{String, <:Real}
-    tech_renewable_energy_pct::Dict{String, <:Real} # (techs)
+    tech_renewable_energy_fraction::Dict{String, <:Real} # (techs)
     tech_emissions_factors_CO2::Dict{String, <:Real} # (techs)
     tech_emissions_factors_NOx::Dict{String, <:Real} # (techs)
     tech_emissions_factors_SO2::Dict{String, <:Real} # (techs)
     tech_emissions_factors_PM25::Dict{String, <:Real} # (techs)
-    techs_operating_reserve_req_pct::Dict{String, <:Real} # (techs.all)
+    techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
 end
 ```
 """
@@ -142,12 +142,12 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     ghp_electric_consumption_kw::Array{Float64,2}  # Array of electric load profiles consumed by GHP
     ghp_installed_cost::Array{Float64,1}  # Array of installed cost for GHP options
     ghp_om_cost_year_one::Array{Float64,1}  # Array of O&M cost for GHP options
-    tech_renewable_energy_pct::Dict{String, <:Real} # (techs)
+    tech_renewable_energy_fraction::Dict{String, <:Real} # (techs)
     tech_emissions_factors_CO2::Dict{String, <:Real} # (techs)
     tech_emissions_factors_NOx::Dict{String, <:Real} # (techs)
     tech_emissions_factors_SO2::Dict{String, <:Real} # (techs)
     tech_emissions_factors_PM25::Dict{String, <:Real} # (techs)
-    techs_operating_reserve_req_pct::Dict{String, <:Real} # (techs.all)
+    techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
 end
 
 
@@ -181,8 +181,8 @@ function REoptInputs(s::AbstractScenario)
     techs, pv_to_location, maxsize_pv_locations, pvlocations, 
         production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
         seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
-        tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
-        tech_emissions_factors_PM25, cop, techs_operating_reserve_req_pct, thermal_cop = setup_tech_inputs(s)
+        tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
+        tech_emissions_factors_PM25, cop, techs_operating_reserve_req_fraction, thermal_cop = setup_tech_inputs(s)
 
     pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
 
@@ -258,12 +258,12 @@ function REoptInputs(s::AbstractScenario)
         ghp_electric_consumption_kw,
         ghp_installed_cost,
         ghp_om_cost_year_one,
-        tech_renewable_energy_pct, 
+        tech_renewable_energy_fraction, 
         tech_emissions_factors_CO2, 
         tech_emissions_factors_NOx, 
         tech_emissions_factors_SO2, 
         tech_emissions_factors_PM25,
-        techs_operating_reserve_req_pct 
+        techs_operating_reserve_req_fraction 
     )
 end
 
@@ -288,14 +288,14 @@ function setup_tech_inputs(s::AbstractScenario)
     cap_cost_slope = Dict{String, Any}()
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
     production_factor = DenseAxisArray{Float64}(undef, techs.all, 1:length(s.electric_load.loads_kw))
-    tech_renewable_energy_pct = Dict(t => 1.0 for t in techs.all)
+    tech_renewable_energy_fraction = Dict(t => 1.0 for t in techs.all)
     # !!! note: tech_emissions_factors are in lb / kWh of fuel burned (gets multiplied by kWh of fuel burned, not kWh electricity consumption, ergo the use of the HHV instead of fuel slope)
     tech_emissions_factors_CO2 = Dict(t => 0.0 for t in techs.all)
     tech_emissions_factors_NOx = Dict(t => 0.0 for t in techs.all)
     tech_emissions_factors_SO2 = Dict(t => 0.0 for t in techs.all)
     tech_emissions_factors_PM25 = Dict(t => 0.0 for t in techs.all)
     cop = Dict(t => 0.0 for t in techs.cooling)
-    techs_operating_reserve_req_pct = Dict(t => 0.0 for t in techs.all)
+    techs_operating_reserve_req_fraction = Dict(t => 0.0 for t in techs.all)
     thermal_cop = Dict(t => 0.0 for t in techs.absorption_chiller)
 
     # export related inputs
@@ -329,19 +329,19 @@ function setup_tech_inputs(s::AbstractScenario)
         setup_gen_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor, 
             techs_by_exportbin, techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, 
             seg_yint, techs.no_curtail,
-            tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25)
+            tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25)
     end
 
     if "ExistingBoiler" in techs.all
         setup_existing_boiler_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
-        tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25)
+        tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25)
     end
 
     if "CHP" in techs.all
         setup_chp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, 
             production_factor, techs_by_exportbin, techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, 
             seg_yint, techs.no_curtail,
-            tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25)
+            tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25)
     end
 
     if "ExistingChiller" in techs.all
@@ -363,14 +363,14 @@ function setup_tech_inputs(s::AbstractScenario)
     end
 
     if s.settings.off_grid_flag
-        setup_operating_reserve_pct(s, techs_operating_reserve_req_pct)
+        setup_operating_reserve_fraction(s, techs_operating_reserve_req_fraction)
     end
 
     return techs, pv_to_location, maxsize_pv_locations, pvlocations, 
     production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
     seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
-    tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
-    tech_emissions_factors_PM25, cop, techs_operating_reserve_req_pct, thermal_cop
+    tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
+    tech_emissions_factors_PM25, cop, techs_operating_reserve_req_fraction, thermal_cop
 end
 
 
@@ -461,7 +461,7 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
     roof_max_kw, land_max_kw = 1.0e5, 1.0e5
 
     for pv in s.pvs
-        production_factor[pv.name, :] = prodfactor(pv, s.site.latitude, s.site.longitude; 
+        production_factor[pv.name, :] = get_production_factor(pv, s.site.latitude, s.site.longitude; 
             time_steps_per_hour=s.settings.time_steps_per_hour)
         for location in pvlocations
             if pv.location == location
@@ -540,7 +540,7 @@ function setup_wind_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_s
         cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
     )
     om_cost_per_kw["Wind"] = s.wind.om_cost_per_kw
-    production_factor["Wind", :] = prodfactor(s.wind, s.site.latitude, s.site.longitude, s.settings.time_steps_per_hour)
+    production_factor["Wind", :] = get_production_factor(s.wind, s.site.latitude, s.site.longitude, s.settings.time_steps_per_hour)
     fillin_techs_by_exportbin(techs_by_exportbin, s.wind, "Wind")
     if !s.wind.can_curtail
         push!(techs_no_curtail, "Wind")
@@ -552,7 +552,7 @@ end
 function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes,
     cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin,
     segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_no_curtail,
-    tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25
+    tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25
     )
     max_sizes["Generator"] = s.generator.existing_kw + s.generator.max_kw
     min_sizes["Generator"] = s.generator.existing_kw + s.generator.min_kw
@@ -561,12 +561,12 @@ function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_si
         cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
     )
     om_cost_per_kw["Generator"] = s.generator.om_cost_per_kw
-    production_factor["Generator", :] = prodfactor(s.generator; s.settings.time_steps_per_hour)
+    production_factor["Generator", :] = get_production_factor(s.generator; s.settings.time_steps_per_hour)
     fillin_techs_by_exportbin(techs_by_exportbin, s.generator, "Generator")
     if !s.generator.can_curtail
         push!(techs_no_curtail, "Generator")
     end
-    tech_renewable_energy_pct["Generator"] = s.generator.fuel_renewable_energy_pct
+    tech_renewable_energy_fraction["Generator"] = s.generator.fuel_renewable_energy_fraction
     tech_emissions_factors_CO2["Generator"] = s.generator.emissions_factor_lb_CO2_per_gal / KWH_PER_GAL_DIESEL  # lb/gal * gal/kWh
     tech_emissions_factors_NOx["Generator"] = s.generator.emissions_factor_lb_NOx_per_gal / KWH_PER_GAL_DIESEL
     tech_emissions_factors_SO2["Generator"] = s.generator.emissions_factor_lb_SO2_per_gal / KWH_PER_GAL_DIESEL
@@ -592,15 +592,15 @@ end
 
 """
     function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
-        tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25)
+        tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25)
 
 Update tech-indexed data arrays necessary to build the JuMP model with the values for existing boiler.
 This version of this function, used in setup_tech_inputs(), does update renewable energy and emissions arrays.
 """
 function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
-    tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25)
+    tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25)
     setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency)
-    tech_renewable_energy_pct["ExistingBoiler"] = s.existing_boiler.fuel_renewable_energy_pct
+    tech_renewable_energy_fraction["ExistingBoiler"] = s.existing_boiler.fuel_renewable_energy_fraction
     tech_emissions_factors_CO2["ExistingBoiler"] = s.existing_boiler.emissions_factor_lb_CO2_per_mmbtu / KWH_PER_MMBTU  # lb/mmtbu * mmtbu/kWh
     tech_emissions_factors_NOx["ExistingBoiler"] = s.existing_boiler.emissions_factor_lb_NOx_per_mmbtu / KWH_PER_MMBTU
     tech_emissions_factors_SO2["ExistingBoiler"] = s.existing_boiler.emissions_factor_lb_SO2_per_mmbtu / KWH_PER_MMBTU
@@ -637,11 +637,11 @@ function setup_absorption_chiller_inputs(s::AbstractScenario, max_sizes, min_siz
             itc_basis = s.absorption_chiller.installed_cost_per_kw,
             replacement_cost = 0.0,
             replacement_year = s.financial.analysis_years,
-            discount_rate = s.financial.owner_discount_pct,
-            tax_rate = s.financial.owner_tax_pct,
+            discount_rate = s.financial.owner_discount_rate_fraction,
+            tax_rate = s.financial.owner_tax_rate_fraction,
             itc = 0.0,
             macrs_schedule = s.absorption_chiller.macrs_option_years == 5 ? s.financial.macrs_five_year : s.financial.macrs_seven_year,
-            macrs_bonus_pct = s.absorption_chiller.macrs_bonus_pct,
+            macrs_bonus_fraction = s.absorption_chiller.macrs_bonus_fraction,
             macrs_itc_reduction = 0.0,
             rebate_per_kw = 0.0
         )
@@ -650,8 +650,16 @@ function setup_absorption_chiller_inputs(s::AbstractScenario, max_sizes, min_siz
         cap_cost_slope["AbsorptionChiller"] = s.absorption_chiller.installed_cost_per_kw
     end
 
-    cop["AbsorptionChiller"] = s.absorption_chiller.chiller_elec_cop
-    thermal_cop["AbsorptionChiller"] = s.absorption_chiller.chiller_cop
+    cop["AbsorptionChiller"] = s.absorption_chiller.cop_electric
+    if isnothing(s.chp)
+        thermal_factor = 1.0
+    elseif s.chp.cooling_thermal_factor == 0.0
+        error("The CHP cooling_thermal_factor is 0.0 which implies that CHP cannot serve AbsorptionChiller. If you
+            want to model CHP and AbsorptionChiller, you must specify a cooling_thermal_factor greater than 0.0")
+    else
+        thermal_factor = s.chp.cooling_thermal_factor
+    end    
+    thermal_cop["AbsorptionChiller"] = s.absorption_chiller.cop_thermal * thermal_factor
     om_cost_per_kw["AbsorptionChiller"] = s.absorption_chiller.om_cost_per_kw
     return nothing
 end
@@ -659,7 +667,7 @@ end
 
 function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw,  
     production_factor, techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs_no_curtail,
-    tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25
+    tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25
     )
     max_sizes["CHP"] = s.chp.max_kw
     min_sizes["CHP"] = s.chp.min_kw
@@ -667,13 +675,13 @@ function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_sl
         cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
     )
     om_cost_per_kw["CHP"] = s.chp.om_cost_per_kw
-    production_factor["CHP", :] = prodfactor(s.chp, s.electric_load.year, s.electric_utility.outage_start_time_step, 
+    production_factor["CHP", :] = get_production_factor(s.chp, s.electric_load.year, s.electric_utility.outage_start_time_step, 
         s.electric_utility.outage_end_time_step, s.settings.time_steps_per_hour)
     fillin_techs_by_exportbin(techs_by_exportbin, s.chp, "CHP")
     if !s.chp.can_curtail
         push!(techs_no_curtail, "CHP")
     end  
-    tech_renewable_energy_pct["CHP"] = s.chp.fuel_renewable_energy_pct
+    tech_renewable_energy_fraction["CHP"] = s.chp.fuel_renewable_energy_fraction
     tech_emissions_factors_CO2["CHP"] = s.chp.emissions_factor_lb_CO2_per_mmbtu / KWH_PER_MMBTU  # lb/mmtbu * mmtbu/kWh
     tech_emissions_factors_NOx["CHP"] = s.chp.emissions_factor_lb_NOx_per_mmbtu / KWH_PER_MMBTU
     tech_emissions_factors_SO2["CHP"] = s.chp.emissions_factor_lb_SO2_per_mmbtu / KWH_PER_MMBTU
@@ -687,44 +695,44 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
     for (i, tech) in enumerate(techs.pv)  # replace 1.0 with actual PV levelization_factor (only tech with degradation)
         lvl_factor[tech] = levelization_factor(
             s.financial.analysis_years,
-            s.financial.elec_cost_escalation_pct,
-            s.financial.offtaker_discount_pct,
-            s.pvs[i].degradation_pct  # TODO generalize for any tech (not just pvs)
+            s.financial.elec_cost_escalation_rate_fraction,
+            s.financial.offtaker_discount_rate_fraction,
+            s.pvs[i].degradation_fraction  # TODO generalize for any tech (not just pvs)
         )
     end
 
     pwf_e = annuity(
         s.financial.analysis_years,
-        s.financial.elec_cost_escalation_pct,
-        s.financial.offtaker_discount_pct
+        s.financial.elec_cost_escalation_rate_fraction,
+        s.financial.offtaker_discount_rate_fraction
     )
 
     pwf_om = annuity(
         s.financial.analysis_years,
-        s.financial.om_cost_escalation_pct,
-        s.financial.owner_discount_pct
+        s.financial.om_cost_escalation_rate_fraction,
+        s.financial.owner_discount_rate_fraction
     )
     pwf_fuel = Dict{String, Float64}()
     for t in techs.fuel_burning
         if t == "ExistingBoiler"
             pwf_fuel["ExistingBoiler"] = annuity(
                 s.financial.analysis_years,
-                s.financial.boiler_fuel_cost_escalation_pct,
-                s.financial.offtaker_discount_pct
+                s.financial.boiler_fuel_cost_escalation_rate_fraction,
+                s.financial.offtaker_discount_rate_fraction
             )
         end
         if t == "CHP"
             pwf_fuel["CHP"] = annuity(
                 s.financial.analysis_years,
-                s.financial.chp_fuel_cost_escalation_pct,
-                s.financial.offtaker_discount_pct
+                s.financial.chp_fuel_cost_escalation_rate_fraction,
+                s.financial.offtaker_discount_rate_fraction
             )
         end
         if t == "Generator" 
             pwf_fuel["Generator"] = annuity(
                 s.financial.analysis_years,
-                s.financial.generator_fuel_cost_escalation_pct,
-                s.financial.offtaker_discount_pct
+                s.financial.generator_fuel_cost_escalation_rate_fraction,
+                s.financial.offtaker_discount_rate_fraction
             )
         end     
     end
@@ -736,32 +744,32 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
         merge!(pwf_emissions_cost, 
                 Dict(emissions_type*"_grid"=>annuity_two_escalation_rates(
                             s.financial.analysis_years, 
-                            getproperty(s.financial, Symbol("$(emissions_type)_cost_escalation_pct")),  
-                            -1.0 * getproperty(s.electric_utility, Symbol("emissions_factor_$(emissions_type)_decrease_pct")),
-                            s.financial.offtaker_discount_pct)
+                            getproperty(s.financial, Symbol("$(emissions_type)_cost_escalation_rate_fraction")),  
+                            -1.0 * getproperty(s.electric_utility, Symbol("emissions_factor_$(emissions_type)_decrease_fraction")),
+                            s.financial.offtaker_discount_rate_fraction)
                 )
         )
         merge!(pwf_emissions_cost, 
                 Dict(emissions_type*"_onsite"=>annuity(
                             s.financial.analysis_years, 
-                            getproperty(s.financial, Symbol("$(emissions_type)_cost_escalation_pct")), 
-                            s.financial.offtaker_discount_pct)
+                            getproperty(s.financial, Symbol("$(emissions_type)_cost_escalation_rate_fraction")), 
+                            s.financial.offtaker_discount_rate_fraction)
                 )
         )
         merge!(pwf_grid_emissions, 
                 Dict(emissions_type=>annuity(
                             s.financial.analysis_years, 
-                            -1.0 * getproperty(s.electric_utility, Symbol("emissions_factor_$(emissions_type)_decrease_pct")),
+                            -1.0 * getproperty(s.electric_utility, Symbol("emissions_factor_$(emissions_type)_decrease_fraction")),
                             0.0)
                 )
         )
     end
 
-    pwf_offtaker = annuity(s.financial.analysis_years, 0.0, s.financial.offtaker_discount_pct)
-    pwf_owner = annuity(s.financial.analysis_years, 0.0, s.financial.owner_discount_pct)
+    pwf_offtaker = annuity(s.financial.analysis_years, 0.0, s.financial.offtaker_discount_rate_fraction)
+    pwf_owner = annuity(s.financial.analysis_years, 0.0, s.financial.owner_discount_rate_fraction)
     if s.financial.third_party_ownership
-        third_party_factor = (pwf_offtaker * (1 - s.financial.offtaker_tax_pct)) /
-                           (pwf_owner * (1 - s.financial.owner_tax_pct))
+        third_party_factor = (pwf_offtaker * (1 - s.financial.offtaker_tax_rate_fraction)) /
+                           (pwf_owner * (1 - s.financial.owner_tax_rate_fraction))
     else
         third_party_factor = 1.0
     end
@@ -835,12 +843,12 @@ function production_incentives(tech::AbstractTech, financial::Financial)
     T = typeof(tech)
     # TODO should Generator be excluded? (v1 has the PBI inputs for Generator)
     if !(nameof(T) in [:Generator, :Boiler, :Elecchl, :Absorpchl])
-        if :degradation_pct in fieldnames(T)  # PV has degradation
-            pwf_prod_incent = annuity_escalation(tech.production_incentive_years, -1*tech.degradation_pct,
-                                                 financial.owner_discount_pct)
+        if :degradation_fraction in fieldnames(T)  # PV has degradation
+            pwf_prod_incent = annuity_escalation(tech.production_incentive_years, -1*tech.degradation_fraction,
+                                                 financial.owner_discount_rate_fraction)
         else
             # prod incentives have zero escalation rate
-            pwf_prod_incent = annuity(tech.production_incentive_years, 0, financial.owner_discount_pct)
+            pwf_prod_incent = annuity(tech.production_incentive_years, 0, financial.owner_discount_rate_fraction)
         end
         max_prod_incent = tech.production_incentive_max_benefit
         max_size_for_prod_incent = tech.production_incentive_max_kw
@@ -928,13 +936,13 @@ function setup_ghp_inputs(s::AbstractScenario, time_steps, time_steps_without_gr
     ghp_installed_cost, ghp_om_cost_year_one
 end
 
-function setup_operating_reserve_pct(s::AbstractScenario, techs_operating_reserve_req_pct)
+function setup_operating_reserve_fraction(s::AbstractScenario, techs_operating_reserve_req_fraction)
     # currently only PV and Wind require operating reserves
     for pv in s.pvs 
-        techs_operating_reserve_req_pct[pv.name] = pv.operating_reserve_required_pct
+        techs_operating_reserve_req_fraction[pv.name] = pv.operating_reserve_required_fraction
     end
 
-    techs_operating_reserve_req_pct["Wind"] = s.wind.operating_reserve_required_pct
+    techs_operating_reserve_req_fraction["Wind"] = s.wind.operating_reserve_required_fraction
 
     return nothing
 end

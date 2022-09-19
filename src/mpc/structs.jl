@@ -59,14 +59,14 @@ end
 Base.@kwdef struct MPCPV
     name::String="PV"
     size_kw::Real = 0
-    prod_factor_series::Union{Nothing, Array{Real,1}} = nothing
+    production_factor_series::Union{Nothing, Array{Real,1}} = nothing
 end
 ```
 """
 Base.@kwdef struct MPCPV
     name::String="PV"
     size_kw::Real = 0
-    prod_factor_series::Union{Nothing, Array{Real,1}} = nothing
+    production_factor_series::Union{Nothing, Array{Real,1}} = nothing
 end
 
 
@@ -251,8 +251,8 @@ Base.@kwdef struct MPCElectricStorage < AbstractElectricStorage
     size_kwh::Float64
     charge_efficiency::Float64 =  0.96 * 0.975^2
     discharge_efficiency::Float64 =  0.96 * 0.975^2
-    soc_min_pct::Float64 = 0.2
-    soc_init_pct::Float64 = 0.5
+    soc_min_fraction::Float64 = 0.2
+    soc_init_fraction::Float64 = 0.5
     can_grid_charge::Bool = true
     grid_charge_efficiency::Float64 = 0.96 * 0.975^2
 end
@@ -263,8 +263,8 @@ Base.@kwdef struct MPCElectricStorage <: AbstractElectricStorage
     size_kwh::Float64
     charge_efficiency::Float64 = 0.96 * 0.975^2
     discharge_efficiency::Float64 = 0.96 * 0.975^2
-    soc_min_pct::Float64 = 0.2
-    soc_init_pct::Float64 = 0.5
+    soc_min_fraction::Float64 = 0.2
+    soc_init_fraction::Float64 = 0.5
     can_grid_charge::Bool = true
     grid_charge_efficiency::Float64 = 0.96 * 0.975^2
     max_kw::Float64 = size_kw
@@ -284,7 +284,7 @@ function MPCGenerator(;
     fuel_slope_gal_per_kwh::Real = 0.076,
     fuel_intercept_gal_per_hr::Real = 0.0,
     fuel_avail_gal::Real = 660.0,
-    min_turn_down_pct::Real = 0.0,  # TODO change this to non-zero value
+    min_turn_down_fraction::Real = 0.0,  # TODO change this to non-zero value
     only_runs_during_grid_outage::Bool = true,
     sells_energy_back_to_grid::Bool = false,
     om_cost_per_kwh::Real=0.0,
@@ -298,7 +298,7 @@ struct MPCGenerator <: AbstractGenerator
     fuel_slope_gal_per_kwh
     fuel_intercept_gal_per_hr
     fuel_avail_gal
-    min_turn_down_pct
+    min_turn_down_fraction
     only_runs_during_grid_outage
     sells_energy_back_to_grid
     om_cost_per_kwh
@@ -309,7 +309,7 @@ struct MPCGenerator <: AbstractGenerator
         fuel_slope_gal_per_kwh::Real = 0.076,
         fuel_intercept_gal_per_hr::Real = 0.0,
         fuel_avail_gal::Real = 660.0,
-        min_turn_down_pct::Real = 0.0,  # TODO change this to non-zero value
+        min_turn_down_fraction::Real = 0.0,  # TODO change this to non-zero value
         only_runs_during_grid_outage::Bool = true,
         sells_energy_back_to_grid::Bool = false,
         om_cost_per_kwh::Real=0.0,
@@ -324,7 +324,7 @@ struct MPCGenerator <: AbstractGenerator
             fuel_slope_gal_per_kwh,
             fuel_intercept_gal_per_hr,
             fuel_avail_gal,
-            min_turn_down_pct,
+            min_turn_down_fraction,
             only_runs_during_grid_outage,
             sells_energy_back_to_grid,
             om_cost_per_kwh,

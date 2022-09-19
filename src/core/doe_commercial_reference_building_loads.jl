@@ -45,6 +45,11 @@ const default_buildings = [
     "Supermarket",
     "Warehouse",
     "FlatLoad",
+    "FlatLoad_24_5",
+    "FlatLoad_16_7",
+    "FlatLoad_16_5",
+    "FlatLoad_8_7",
+    "FlatLoad_8_5"    
 ]
 
 
@@ -132,8 +137,12 @@ function built_in_load(type::String, city::String, buildingtype::String,
     lib_path = joinpath(dirname(@__FILE__), "..", "..", "data", "load_profiles", type)
 
     profile_path = joinpath(lib_path, string("crb8760_norm_" * city * "_" * buildingtype * ".dat"))
-    normalized_profile = vec(readdlm(profile_path, '\n', Float64, '\n'))
-    
+    if occursin("FlatLoad", buildingtype)
+        normalized_profile = custom_normalized_flatload(buildingtype, year)
+    else 
+        normalized_profile = vec(readdlm(profile_path, '\n', Float64, '\n'))
+    end
+
     if length(monthly_energies) == 12
         annual_energy = 1.0  # do not scale based on annual_energy
         t0 = 1
@@ -202,6 +211,7 @@ function blend_and_scale_doe_profiles(
     city::String = "",
     annual_energy::Union{Real, Nothing} = nothing,
     monthly_energies::Array{<:Real,1} = Real[],
+    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}} = 1.0
     )
 
     @assert sum(blended_doe_reference_percents) ≈ 1 "The sum of the blended_doe_reference_percents must equal 1"
@@ -213,8 +223,14 @@ function blend_and_scale_doe_profiles(
         city = find_ashrae_zone_city(latitude, longitude)  # avoid redundant look-ups
     end
     profiles = Array[]  # collect the built in profiles
-    for name in blended_doe_reference_names
-        push!(profiles, constructor(city, name, latitude, longitude, year, annual_energy, monthly_energies))
+    if constructor in [BuiltInSpaceHeatingLoad, BuiltInDomesticHotWaterLoad]
+        for name in blended_doe_reference_names
+            push!(profiles, constructor(city, name, latitude, longitude, year, addressable_load_fraction, annual_energy, monthly_energies))
+        end
+    else
+        for name in blended_doe_reference_names
+            push!(profiles, constructor(city, name, latitude, longitude, year, annual_energy, monthly_energies))
+        end
     end
     if isnothing(annual_energy) # then annual_energy should be the sum of all the profiles' annual kwhs
         # we have to rescale the built in profiles to the total_kwh by normalizing them with their
@@ -234,3 +250,49 @@ function blend_and_scale_doe_profiles(
     end
     sum(profiles)
 end
+
+function custom_normalized_flatload(doe_reference_name, year)
+    # built in profiles are assumed to be hourly
+    periods = 8760
+    # get datetimes of all hours 
+    if Dates.isleapyear(year)
+        end_year_datetime = DateTime(string(year)*"-12-30T23:00:00")
+    else
+        end_year_datetime = DateTime(string(year)*"-12-31T23:00:00")
+    end
+    dt_hourly = collect(DateTime(string(year)*"-01-01T00:00:00"):Hour(1):end_year_datetime)
+
+    # create boolean masks for weekday and hour of day filters
+    weekday_mask = convert(Vector{Int}, ones(periods))
+    hour_mask = convert(Vector{Int}, ones(periods))
+    weekends = [6,7]
+    hour_range_16 = 6:21  # DateTime hours are 0-indexed, so this is 6am (7th hour of the day) to 10pm (end of 21st hour)
+    hour_range_8 = 9:16  # This is 9am (10th hour of the day) to 5pm (end of 16th hour)
+    if !(doe_reference_name == "FlatLoad")
+        for (i,dt) in enumerate(dt_hourly)
+            # Zero out no-weekend operation
+            if doe_reference_name in ["FlatLoad_24_5","FlatLoad_16_5","FlatLoad_8_5"]
+                if Dates.dayofweek(dt) in weekends
+                    weekday_mask[i] = 0
+                end
+            end
+            # Assign 1's for 16 or 8 hour shift profiles
+            if doe_reference_name in ["FlatLoad_16_5","FlatLoad_16_7"]
+                if !(Dates.hour(dt) in hour_range_16)
+                    hour_mask[i] = 0
+                end
+            elseif doe_reference_name in ["FlatLoad_8_5","FlatLoad_8_7"]
+                if !(Dates.hour(dt) in hour_range_8)
+                    hour_mask[i] = 0
+                end
+            end
+        end
+    end
+    # combine masks to a dt_hourly where 1 is on and 0 is off
+    dt_hourly_binary = weekday_mask .* hour_mask
+    # convert combined masks to a normalized profile
+    sum_dt_hourly_binary = sum(dt_hourly_binary)
+    normalized_profile = [i/sum_dt_hourly_binary for i in dt_hourly_binary]
+    return normalized_profile
+end
+
