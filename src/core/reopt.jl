@@ -431,7 +431,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	for b in p.s.storage.types.elec
 		if p.s.storage.attr[b].model_degradation
 			has_degr = true
-			add_to_expression!(Costs, m[:degr_cost]) # add salvage value to objective in future?
+			add_to_expression!(Costs, m[:degr_cost] - m[:salv_value]) # add salvage value to objective in future?
 		end
 	end
 	
@@ -444,7 +444,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		)
 	else
 		if p.s.settings.add_soc_incentive
-			@warn "Settings.add_soc_incentive is set to true but no incentive will be added because it conflicts with the battery degradation model."
+			@warn "Settings.add_soc_incentive is set to true but no incentive will be added because it either conflicts with the battery degradation model or no electric storage was included in analysis."
 		end
 	end
     

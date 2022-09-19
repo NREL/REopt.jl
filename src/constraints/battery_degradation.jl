@@ -188,7 +188,7 @@ function add_degradation(m, p; b="ElectricStorage")
                 for d in days[2:end]
             )
         )
-        # add augmentation cost to objective
+        @expression(m, salv_value, 0.0) # no lifetime based salvage value for augmentation strategy
 
     else
         @error "Battery maintenance strategy $strategy is not supported. Choose from augmentation and replacement."
