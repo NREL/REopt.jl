@@ -108,7 +108,7 @@ function effective_cost(;
     tax_rate::Real, 
     itc::Real,
     macrs_schedule::Array{Float64,1}, 
-    macrs_bonus_pct::Real, 
+    macrs_bonus_fraction::Real, 
     macrs_itc_reduction::Real,
     rebate_per_kw::Real=0.0,
     )
@@ -127,7 +127,7 @@ function effective_cost(;
     depr_basis = itc_basis * (1 - macrs_itc_reduction * itc)
 
     # Bonus depreciation taken from tech cost after itc reduction ($/kW)
-    bonus_depreciation = depr_basis * macrs_bonus_pct
+    bonus_depreciation = depr_basis * macrs_bonus_fraction
 
     # Assume the ITC and bonus depreciation reduce the depreciable basis ($/kW)
     depr_basis -= bonus_depreciation
@@ -171,7 +171,7 @@ function dictkeys_tosymbols(d::Dict)
         if k in [
             "loads_kw", "critical_loads_kw",
             "monthly_totals_kwh",
-            "prod_factor_series", 
+            "production_factor_series", 
             "monthly_energy_rates", "monthly_demand_rates",
             "blended_doe_reference_percents",
             "coincident_peak_load_charge_per_kw", "fuel_cost_per_mmbtu",
@@ -294,7 +294,7 @@ function generate_year_profile_hourly(year::Int64, consecutive_periods::Abstract
     if Dates.isleapyear(year)
         end_year_datetime = DateTime(string(year)*"-12-30T23:00:00")
     else
-        end_year_datetime = DateTime(string(year+1)*"-12-31T23:00:00")
+        end_year_datetime = DateTime(string(year)*"-12-31T23:00:00")
     end
 
     dt_hourly = collect(DateTime(string(year)*"-01-01T00:00:00"):Hour(1):end_year_datetime)
@@ -379,7 +379,7 @@ function get_pvwatts_prodfactor(latitude::Real, longitude::Real; timeframe="hour
         @info "PVWatts success."
         watts = collect(get(response["outputs"], "ac", []) / 1000)  # scale to 1 kW system (* 1 kW / 1000 W)
         if length(watts) != 8760
-            @error "PVWatts did not return a valid prodfactor. Got $watts"
+            @error "PVWatts did not return a valid production_factor. Got $watts"
         end
         return watts
     catch e

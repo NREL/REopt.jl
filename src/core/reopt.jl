@@ -66,7 +66,7 @@ end
 Solve the model using a `Scenario` or `BAUScenario`.
 """
 function run_reopt(m::JuMP.AbstractModel, s::AbstractScenario)
-	if s.site.CO2_emissions_reduction_min_pct > 0.0 || s.site.CO2_emissions_reduction_max_pct < 1.0
+	if s.site.CO2_emissions_reduction_min_fraction > 0.0 || s.site.CO2_emissions_reduction_max_fraction < 1.0
 		error("To constrain CO2 emissions reduction min or max percentages, the optimal and business as usual scenarios must be run in parallel. Use a version of run_reopt() that takes an array of two models.")
 	end
 	run_reopt(m, REoptInputs(s))
@@ -368,7 +368,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	
 	if p.s.settings.off_grid_flag
 		offgrid_other_capex_depr_savings = get_offgrid_other_capex_depreciation_savings(p.s.financial.offgrid_other_capital_costs, 
-			p.s.financial.owner_discount_pct, p.s.financial.analysis_years, p.s.financial.owner_tax_pct)
+			p.s.financial.owner_discount_rate_fraction, p.s.financial.analysis_years, p.s.financial.owner_tax_rate_fraction)
 		m[:OffgridOtherCapexAfterDepr] = p.s.financial.offgrid_other_capital_costs - offgrid_other_capex_depr_savings 
 	end
 
@@ -378,28 +378,28 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:TotalTechCapCosts] + TotalStorageCapCosts + m[:GHPCapCosts] +
 
 		# Fixed O&M, tax deductible for owner
-		(TotalPerUnitSizeOMCosts + m[:GHPOMCosts]) * (1 - p.s.financial.owner_tax_pct) +
+		(TotalPerUnitSizeOMCosts + m[:GHPOMCosts]) * (1 - p.s.financial.owner_tax_rate_fraction) +
 
 		# Variable O&M, tax deductible for owner
-		(m[:TotalPerUnitProdOMCosts] + m[:TotalPerUnitHourOMCosts]) * (1 - p.s.financial.owner_tax_pct) +
+		(m[:TotalPerUnitProdOMCosts] + m[:TotalPerUnitHourOMCosts]) * (1 - p.s.financial.owner_tax_rate_fraction) +
 
 		# Total Fuel Costs, tax deductible for offtaker
-        m[:TotalFuelCosts] * (1 - p.s.financial.offtaker_tax_pct) +
+        m[:TotalFuelCosts] * (1 - p.s.financial.offtaker_tax_rate_fraction) +
 
 		# CHP Standby Charges
-		m[:TotalCHPStandbyCharges] * (1 - p.s.financial.offtaker_tax_pct) +
+		m[:TotalCHPStandbyCharges] * (1 - p.s.financial.offtaker_tax_rate_fraction) +
 
 		# Utility Bill, tax deductible for offtaker
-		m[:TotalElecBill] * (1 - p.s.financial.offtaker_tax_pct) -
+		m[:TotalElecBill] * (1 - p.s.financial.offtaker_tax_rate_fraction) -
 
         # Subtract Incentives, which are taxable
-		m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_pct) +
+		m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_rate_fraction) +
 
 		# Comfort limit violation costs
 		m[:dvComfortLimitViolationCost] + 
 
 		# Additional annual costs, tax deductible for owner (only applies when off_grid_flag is true)
-		p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct) +
+		p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_rate_fraction) +
 
 		# Additional capital costs, depreciable (only applies when off_grid_flag is true)
 		m[:OffgridOtherCapexAfterDepr]
@@ -542,7 +542,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 			dvUnservedLoad[S, tZeros, outage_time_steps] >= 0 # unserved load not met by system
 			dvMGProductionToStorage[p.techs.elec, S, tZeros, outage_time_steps] >= 0 # Electricity going to the storage system during each time_step
 			dvMGDischargeFromStorage[S, tZeros, outage_time_steps] >= 0 # Electricity coming from the storage system during each time_step
-			dvMGRatedProduction[p.techs.elec, S, tZeros, outage_time_steps]  # MG Rated Production at every time_step.  Multiply by ProdFactor to get actual energy
+			dvMGRatedProduction[p.techs.elec, S, tZeros, outage_time_steps]  # MG Rated Production at every time_step.  Multiply by production_factor to get actual energy
 			dvMGStoredEnergy[S, tZeros, 0:max_outage_duration] >= 0 # State of charge of the MG storage system
 			dvMaxOutageCost[S] >= 0 # maximum outage cost dependent on number of outage durations
 			dvMGTechUpgradeCost[p.techs.elec] >= 0

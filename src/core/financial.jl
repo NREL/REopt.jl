@@ -30,35 +30,35 @@
 """
 `Financial` is an optional REopt input with the following keys and default values:
 ```julia
-    om_cost_escalation_pct::Real = 0.025,
-    elec_cost_escalation_pct::Real = 0.019,
-    boiler_fuel_cost_escalation_pct::Real = 0.034,
-    chp_fuel_cost_escalation_pct::Real = 0.034,
-    generator_fuel_cost_escalation_pct::Real = 0.027,
-    offtaker_tax_pct::Real = 0.26,
-    offtaker_discount_pct::Real = 0.0564,
+    om_cost_escalation_rate_fraction::Real = 0.025,
+    elec_cost_escalation_rate_fraction::Real = 0.019,
+    boiler_fuel_cost_escalation_rate_fraction::Real = 0.034,
+    chp_fuel_cost_escalation_rate_fraction::Real = 0.034,
+    generator_fuel_cost_escalation_rate_fraction::Real = 0.027,
+    offtaker_tax_rate_fraction::Real = 0.26,
+    offtaker_discount_rate_fraction::Real = 0.0564,
     third_party_ownership::Bool = false,
-    owner_tax_pct::Real = 0.26,
-    owner_discount_pct::Real = 0.0564,
+    owner_tax_rate_fraction::Real = 0.26,
+    owner_discount_rate_fraction::Real = 0.0564,
     analysis_years::Int = 25,
     value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00,
-    microgrid_upgrade_cost_pct::Real = off_grid_flag ? 0.0 : 0.3, # not applicable when off_grid_flag is true
+    microgrid_upgrade_cost_fraction::Real = off_grid_flag ? 0.0 : 0.3, # not applicable when off_grid_flag is true
     macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
     macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
     offgrid_other_capital_costs::Real = 0.0, # only applicable when off_grid_flag is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
     offgrid_other_annual_costs::Real = 0.0 # only applicable when off_grid_flag is true. Considered tax deductible for owner. Costs are per year. 
     # Emissions cost inputs
     CO2_cost_per_tonne::Real = 51.0,
-    CO2_cost_escalation_pct::Real = 0.042173,
+    CO2_cost_escalation_rate_fraction::Real = 0.042173,
     NOx_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
     SO2_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
     PM25_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
     NOx_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
     SO2_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
     PM25_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
-    NOx_cost_escalation_pct::Union{Nothing,Real} = nothing,
-    SO2_cost_escalation_pct::Union{Nothing,Real} = nothing,
-    PM25_cost_escalation_pct::Union{Nothing,Real} = nothing,
+    NOx_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
+    SO2_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
+    PM25_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
     # fields from other models needed for validation
     latitude::Real, # Passed from Site
     longitude::Real, # Passed from Site
@@ -69,81 +69,81 @@
     When `third_party_ownership` is `false` the offtaker's discount and tax percentages are used throughout the model:
     ```julia
         if !third_party_ownership
-            owner_tax_pct = offtaker_tax_pct
-            owner_discount_pct = offtaker_discount_pct
+            owner_tax_rate_fraction = offtaker_tax_rate_fraction
+            owner_discount_rate_fraction = offtaker_discount_rate_fraction
         end
     ```
 """
 struct Financial
-    om_cost_escalation_pct::Float64
-    elec_cost_escalation_pct::Float64
-    boiler_fuel_cost_escalation_pct::Float64
-    chp_fuel_cost_escalation_pct::Float64
-    generator_fuel_cost_escalation_pct::Float64
-    offtaker_tax_pct::Float64
-    offtaker_discount_pct::Float64
+    om_cost_escalation_rate_fraction::Float64
+    elec_cost_escalation_rate_fraction::Float64
+    boiler_fuel_cost_escalation_rate_fraction::Float64
+    chp_fuel_cost_escalation_rate_fraction::Float64
+    generator_fuel_cost_escalation_rate_fraction::Float64
+    offtaker_tax_rate_fraction::Float64
+    offtaker_discount_rate_fraction::Float64
     third_party_ownership::Bool
-    owner_tax_pct::Float64
-    owner_discount_pct::Float64
+    owner_tax_rate_fraction::Float64
+    owner_discount_rate_fraction::Float64
     analysis_years::Int
     value_of_lost_load_per_kwh::Union{Array{Float64,1}, Float64}
-    microgrid_upgrade_cost_pct::Float64
+    microgrid_upgrade_cost_fraction::Float64
     macrs_five_year::Array{Float64,1}
     macrs_seven_year::Array{Float64,1}
     offgrid_other_capital_costs::Float64
     offgrid_other_annual_costs::Float64
     CO2_cost_per_tonne::Float64
-    CO2_cost_escalation_pct::Float64
+    CO2_cost_escalation_rate_fraction::Float64
     NOx_grid_cost_per_tonne::Float64
     SO2_grid_cost_per_tonne::Float64
     PM25_grid_cost_per_tonne::Float64
     NOx_onsite_fuelburn_cost_per_tonne::Float64
     SO2_onsite_fuelburn_cost_per_tonne::Float64
     PM25_onsite_fuelburn_cost_per_tonne::Float64
-    NOx_cost_escalation_pct::Float64
-    SO2_cost_escalation_pct::Float64
-    PM25_cost_escalation_pct::Float64
+    NOx_cost_escalation_rate_fraction::Float64
+    SO2_cost_escalation_rate_fraction::Float64
+    PM25_cost_escalation_rate_fraction::Float64
 
     function Financial(;
         off_grid_flag::Bool = false,
-        om_cost_escalation_pct::Real = 0.025,
-        elec_cost_escalation_pct::Real = 0.019,
-        boiler_fuel_cost_escalation_pct::Real = 0.034,
-        chp_fuel_cost_escalation_pct::Real = 0.034,
-        generator_fuel_cost_escalation_pct::Real = 0.027,
-        offtaker_tax_pct::Real = 0.26,
-        offtaker_discount_pct::Real = 0.0564,
+        om_cost_escalation_rate_fraction::Real = 0.025,
+        elec_cost_escalation_rate_fraction::Real = 0.019,
+        boiler_fuel_cost_escalation_rate_fraction::Real = 0.034,
+        chp_fuel_cost_escalation_rate_fraction::Real = 0.034,
+        generator_fuel_cost_escalation_rate_fraction::Real = 0.027,
+        offtaker_tax_rate_fraction::Real = 0.26,
+        offtaker_discount_rate_fraction::Real = 0.0564,
         third_party_ownership::Bool = false,
-        owner_tax_pct::Real = 0.26,
-        owner_discount_pct::Real = 0.0564,
+        owner_tax_rate_fraction::Real = 0.26,
+        owner_discount_rate_fraction::Real = 0.0564,
         analysis_years::Int = 25,
         value_of_lost_load_per_kwh::Union{Array{<:Real,1}, Real} = 1.00,
-        microgrid_upgrade_cost_pct::Real = off_grid_flag ? 0.0 : 0.3, # not applicable when off_grid_flag is true
+        microgrid_upgrade_cost_fraction::Real = off_grid_flag ? 0.0 : 0.3, # not applicable when off_grid_flag is true
         macrs_five_year::Array{<:Real,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
         macrs_seven_year::Array{<:Real,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
         offgrid_other_capital_costs::Real = 0.0, # only applicable when off_grid_flag is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
         offgrid_other_annual_costs::Real = 0.0, # only applicable when off_grid_flag is true. Considered tax deductible for owner.
         # Emissions cost inputs
         CO2_cost_per_tonne::Real = 51.0,
-        CO2_cost_escalation_pct::Real = 0.042173,
+        CO2_cost_escalation_rate_fraction::Real = 0.042173,
         NOx_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
         SO2_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
         PM25_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
         NOx_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
         SO2_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
         PM25_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
-        NOx_cost_escalation_pct::Union{Nothing,Real} = nothing,
-        SO2_cost_escalation_pct::Union{Nothing,Real} = nothing,
-        PM25_cost_escalation_pct::Union{Nothing,Real} = nothing,
+        NOx_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
+        SO2_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
+        PM25_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
         # fields from other models needed for validation
         latitude::Real, # Passed from Site
         longitude::Real, # Passed from Site
         include_health_in_objective::Bool = false # Passed from Settings
     )
         
-        if off_grid_flag && !(microgrid_upgrade_cost_pct == 0.0)
-            @warn "microgrid_upgrade_cost_pct is not applied when off_grid_flag is true. Setting microgrid_upgrade_cost_pct to 0.0."
-            microgrid_upgrade_cost_pct = 0.0
+        if off_grid_flag && !(microgrid_upgrade_cost_fraction == 0.0)
+            @warn "microgrid_upgrade_cost_fraction is not applied when off_grid_flag is true. Setting microgrid_upgrade_cost_fraction to 0.0."
+            microgrid_upgrade_cost_fraction = 0.0
         end
 
         if !off_grid_flag && (offgrid_other_capital_costs != 0.0 || offgrid_other_annual_costs != 0.0)
@@ -153,13 +153,13 @@ struct Financial
         end
 
         if !third_party_ownership
-            owner_tax_pct = offtaker_tax_pct
-            owner_discount_pct = offtaker_discount_pct
+            owner_tax_rate_fraction = offtaker_tax_rate_fraction
+            owner_discount_rate_fraction = offtaker_discount_rate_fraction
         end
 
         grid_costs = off_grid_flag ? nothing : easiur_costs(latitude, longitude, "grid")
         onsite_costs = easiur_costs(latitude, longitude, "onsite")
-        escalation_rates = easiur_escalation_rates(latitude, longitude, om_cost_escalation_pct)
+        escalation_rates = easiur_escalation_rates(latitude, longitude, om_cost_escalation_rate_fraction)
 
         missing_health_inputs = false
         # use EASIUR data for missing grid costs
@@ -186,14 +186,14 @@ struct Financial
         end
         # use EASIUR data for missing escalation rates
         missing_health_inputs = isnothing(escalation_rates) ? true : missing_health_inputs
-        if isnothing(NOx_cost_escalation_pct)
-            NOx_cost_escalation_pct = isnothing(escalation_rates) ? 0.0 : escalation_rates["NOx"]
+        if isnothing(NOx_cost_escalation_rate_fraction)
+            NOx_cost_escalation_rate_fraction = isnothing(escalation_rates) ? 0.0 : escalation_rates["NOx"]
         end
-        if isnothing(SO2_cost_escalation_pct)
-            SO2_cost_escalation_pct = isnothing(escalation_rates) ? 0.0 : escalation_rates["SO2"]
+        if isnothing(SO2_cost_escalation_rate_fraction)
+            SO2_cost_escalation_rate_fraction = isnothing(escalation_rates) ? 0.0 : escalation_rates["SO2"]
         end
-        if isnothing(PM25_cost_escalation_pct)
-            PM25_cost_escalation_pct = isnothing(escalation_rates) ? 0.0 : escalation_rates["PM25"]
+        if isnothing(PM25_cost_escalation_rate_fraction)
+            PM25_cost_escalation_rate_fraction = isnothing(escalation_rates) ? 0.0 : escalation_rates["PM25"]
         end
 
         if missing_health_inputs && include_health_in_objective
@@ -202,34 +202,34 @@ struct Financial
     
 
         return new(
-            om_cost_escalation_pct,
-            elec_cost_escalation_pct,
-            boiler_fuel_cost_escalation_pct,
-            chp_fuel_cost_escalation_pct,
-            generator_fuel_cost_escalation_pct,
-            offtaker_tax_pct,
-            offtaker_discount_pct,
+            om_cost_escalation_rate_fraction,
+            elec_cost_escalation_rate_fraction,
+            boiler_fuel_cost_escalation_rate_fraction,
+            chp_fuel_cost_escalation_rate_fraction,
+            generator_fuel_cost_escalation_rate_fraction,
+            offtaker_tax_rate_fraction,
+            offtaker_discount_rate_fraction,
             third_party_ownership,
-            owner_tax_pct,
-            owner_discount_pct,
+            owner_tax_rate_fraction,
+            owner_discount_rate_fraction,
             analysis_years,
             value_of_lost_load_per_kwh,
-            microgrid_upgrade_cost_pct,
+            microgrid_upgrade_cost_fraction,
             macrs_five_year,
             macrs_seven_year,
             offgrid_other_capital_costs,
             offgrid_other_annual_costs,
             CO2_cost_per_tonne,
-            CO2_cost_escalation_pct,
+            CO2_cost_escalation_rate_fraction,
             NOx_grid_cost_per_tonne,
             SO2_grid_cost_per_tonne,
             PM25_grid_cost_per_tonne,
             NOx_onsite_fuelburn_cost_per_tonne,
             SO2_onsite_fuelburn_cost_per_tonne,
             PM25_onsite_fuelburn_cost_per_tonne,
-            NOx_cost_escalation_pct,
-            SO2_cost_escalation_pct,
-            PM25_cost_escalation_pct
+            NOx_cost_escalation_rate_fraction,
+            SO2_cost_escalation_rate_fraction,
+            PM25_cost_escalation_rate_fraction
         )
     end
 end
