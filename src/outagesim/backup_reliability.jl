@@ -825,49 +825,43 @@ Return a dictionary of inputs required for backup reliability calculations.
 """
 function backup_reliability_inputs(;r::Dict)::Dict
     
-    
     #TODO: invalid input handling, e.g.:
     # - if batt size provided then soc must be also
     # - gen inputs must be all scalars (for single gen type) or all vectors (for multiple)
 
-    r2 = Dict()
-    r2[:generator_operational_availability] = get(r, "generator_operational_availability", 0.9998)
-    r2[:generator_failure_to_start] = get(r, "generator_failure_to_start", 0.0066)
-    r2[:generator_failure_to_run] = get(r, "generator_failure_to_run", 0.00157)
-    r2[:num_generators] = get(r, "num_generators", 1)
-    r2[:generator_size_kw] = get(r, "generator_size_kw", 0.0)
-    r2[:max_outage_duration] = get(r, "max_outage_duration", 96)
+    r2 = dictkeys_tosymbols(r)
 
-    
-    net_critical_loads_kw = r["critical_loads_kw"]
+    if length(r2[:num_generators]) == 1
+        r2[:num_generators] = r2[:num_generators][0]
+    end
+
+    net_critical_loads_kw = r2[:critical_loads_kw]
     zero_array = zeros(length(net_critical_loads_kw))
 
-    if "chp_capacity" in keys(r)
-        net_critical_loads_kw .-= r["chp_capacity"]
+    if :chp_capacity in keys(r2)
+        net_critical_loads_kw .-= r[:chp_capacity]
     end
 
-    microgrid_only = get(r, "microgrid_only", false)
+    microgrid_only = get(r2, :microgrid_only, false)
 
     pv_kw_ac_hourly = zero_array
-    if "pv_size_kw" in keys(r)
-        pv_kw_ac_hourly = r["pv_size_kw"] .* r["pv_production_factor_series"]
+    if :pv_size_kw in keys(r2)
+        pv_kw_ac_hourly = r2[:pv_size_kw] .* r2[:pv_production_factor_series]
     end
-    if microgrid_only && !Bool(get(r, "pv_migrogrid_upgraded", false))
+    if microgrid_only && !Bool(get(r2, :pv_migrogrid_upgraded, false))
         pv_kw_ac_hourly = zero_array
     end
 
-    if "battery_size_kw" in keys(r)
+    if :battery_size_kw in keys(r)
         
-        if microgrid_only && !Bool(get(r, "storage_microgrid_upgraded", false))
+        if microgrid_only && !Bool(get(r2, :storage_microgrid_upgraded, false))
             
         else
-            r2[:num_battery_bins] = get(r, "num_battery_bins", 101)
-            init_soc = get(r, "battery_year_one_soc_series_pct", ones(length(net_critical_loads_kw)))
-            battery_size_kwh = r["battery_size_kwh"]
-            starting_battery_soc_kwh = init_soc .* battery_size_kwh
+            init_soc = get(r2, :battery_year_one_soc_series_pct, ones(length(net_critical_loads_kw)))
+            r2[:starting_battery_soc_kwh] = init_soc .* r2[:battery_size_kwh]
             #Only subtracts PV generation if there is also a battery
+            #TODO: put this assumption in documentation
             net_critical_loads_kw .-= pv_kw_ac_hourly
-            r2[:starting_battery_soc_kwh] = starting_battery_soc_kwh
         end
     end
 
