@@ -166,7 +166,8 @@ function dictkeys_tosymbols(d::Dict)
             "wholesale_rate", "blended_doe_reference_percents",
             "coincident_peak_load_charge_per_kw", "fuel_cost_per_mmbtu",
             "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
-            "outage_probabilities"
+            "outage_probabilities",
+            "pv_production_factor", "battery_year_one_soc_series_pct" #for ERP
             ] && !isnothing(v)
             try
                 v = convert(Array{Real, 1}, v)
@@ -193,7 +194,8 @@ function dictkeys_tosymbols(d::Dict)
             end
         end
         if k in [
-            "outage_start_time_steps", "outage_durations"
+            "outage_start_time_steps", "outage_durations", 
+            "num_generators" #for ERP
         ]
             try
                 v = convert(Array{Int64, 1}, v)
