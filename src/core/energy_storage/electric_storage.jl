@@ -281,11 +281,10 @@ struct ElectricStorage <: AbstractElectricStorage
         replace_cost_per_kw = s.replace_cost_per_kw 
         replace_cost_per_kwh = s.replace_cost_per_kwh
         if s.model_degradation
-            if haskey(d, :replace_cost_per_kw) && d[:replace_cost_per_kw] != 0.0 || 
-                haskey(d, :replace_cost_per_kwh) && d[:replace_cost_per_kwh] != 0.0
+            if haskey(d, :replace_cost_per_kwh) && d[:replace_cost_per_kwh] != 0.0
                 @warn "Setting ElectricStorage replacement costs to zero. \nUsing degradation.maintenance_cost_per_kwh instead."
             end
-            replace_cost_per_kwh = 0.0 # modeled using maintenance_cost vector.
+            replace_cost_per_kwh = 0.0 # modeled using maintenance_cost_vector in degradation always.
         end
 
         net_present_cost_per_kw = effective_cost(;
