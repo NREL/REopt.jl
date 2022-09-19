@@ -826,6 +826,10 @@ Return a dictionary of inputs required for backup reliability calculations.
 function backup_reliability_inputs(;r::Dict)::Dict
     
     
+    #TODO: invalid input handling, e.g.:
+    # - if batt size provided then soc must be also
+    # - gen inputs must be all scalars (for single gen type) or all vectors (for multiple)
+
     r2 = Dict()
     r2[:generator_operational_availability] = get(r, "generator_operational_availability", 0.9998)
     r2[:generator_failure_to_start] = get(r, "generator_failure_to_start", 0.0066)
