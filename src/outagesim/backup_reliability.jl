@@ -853,10 +853,7 @@ function backup_reliability_inputs(;r::Dict)::Dict
     end
 
     if :battery_size_kw in keys(r)
-        
-        if microgrid_only && !Bool(get(r2, :storage_microgrid_upgraded, false))
-            
-        else
+        if !microgrid_only || Bool(get(r, :storage_microgrid_upgraded, false))
             init_soc = get(r2, :battery_year_one_soc_series_pct, ones(length(net_critical_loads_kw)))
             r2[:starting_battery_soc_kwh] = init_soc .* r2[:battery_size_kwh]
             #Only subtracts PV generation if there is also a battery
