@@ -424,12 +424,12 @@ end
     results = run_reopt(m, d)
 
     # Results vary on Github actions => relax the tests
-    @test results["ElectricStorage"]["size_kw"] > 150
-    @test results["ElectricStorage"]["size_kwh"] > 500
-    @test results["ElectricStorage"]["replacement_month"] > 150
-    @test results["ElectricStorage"]["initial_capital_cost"] > 300000
-    @test results["ElectricStorage"]["maintenance_cost"] > 1000
-    @test results["ElectricStorage"]["residual_value"] > 50
+    @test 150 < results["ElectricStorage"]["size_kw"] < 155
+    @test 500 < results["ElectricStorage"]["size_kwh"] < 550
+    @test 220 < results["ElectricStorage"]["replacement_month"] < 230
+    @test 300000 < results["ElectricStorage"]["initial_capital_cost"] < 325000
+    @test 750 < results["ElectricStorage"]["maintenance_cost"] < 1000
+    @test 100 < results["ElectricStorage"]["residual_value"] < 150
 
     replace_month = Int(value.(m[:m_0p8]))+1
     @test replace_month ≈ results["ElectricStorage"]["replacement_month"]
@@ -474,12 +474,12 @@ end
     set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
     r = run_reopt(m, d)
     #optimal SOH at end of horizon is 80\% to prevent any replacement
-    @test sum(value.(m[:bmth_BkWh])) ≈ 49.12 atol=0.01
+    @test sum(value.(m[:bmth_BkWh])) ≈ 68.48 atol=0.01
     # @test r["ElectricStorage"]["maintenance_cost"] ≈ 2972.66 atol=0.01 
     # the maintenance_cost comes out to 3004.39 on Actions, so we test the LCC since it should match
     @test r["Financial"]["lcc"] ≈ 1.240096e7  rtol=0.01
-    @test last(value.(m[:SOH])) ≈ 30.79  rtol=0.01
-    @test r["ElectricStorage"]["size_kwh"] ≈ 49.12  rtol=0.01
+    @test last(value.(m[:SOH])) ≈ 42.95  rtol=0.01
+    @test r["ElectricStorage"]["size_kwh"] ≈ 68.48  rtol=0.01
 
     # test minimum_avg_soc_fraction
     d["ElectricStorage"]["minimum_avg_soc_fraction"] = 0.72
