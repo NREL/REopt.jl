@@ -48,11 +48,7 @@ function run_reopt(m::JuMP.AbstractModel, fp::String)
 		s = Scenario(JSON.parsefile(fp))
 		run_reopt(m, REoptInputs(s))
 	catch e
-		results = Dict(
-			"Messages" => logREopt.d,
-			"Error" => e
-		)
-		return results
+		handle_errors(e)
 	end
 end
 
@@ -67,11 +63,7 @@ function run_reopt(m::JuMP.AbstractModel, d::Dict)
 		s = Scenario(d)
 		run_reopt(m, REoptInputs(s))
 	catch e
-		results = Dict(
-			"Messages" => logREopt.d,
-			"Error" => e
-		)
-		return results
+		handle_errors(e)
 	end
 end
 
@@ -88,11 +80,7 @@ function run_reopt(m::JuMP.AbstractModel, s::AbstractScenario)
 		end
 		run_reopt(m, REoptInputs(s))
 	catch e
-		results = Dict(
-			"Messages" => logREopt.d,
-			"Error" => e
-		)
-		return results
+		handle_errors(e)
 	end
 end
 
@@ -107,11 +95,7 @@ function run_reopt(t::Tuple{JuMP.AbstractModel, AbstractInputs})
 		run_reopt(t[1], t[2]; organize_pvs=false)
 		# must organize_pvs after adding proforma results
 	catch e
-		results = Dict(
-			"Messages" => logREopt.d,
-			"Error" => e
-		)
-		return results
+		handle_errors(e)
 	end
 end
 
@@ -127,11 +111,7 @@ function run_reopt(ms::AbstractArray{T, 1}, fp::String) where T <: JuMP.Abstract
 		d = JSON.parsefile(fp)
     	run_reopt(ms, d)
 	catch e
-		results = Dict(
-			"Messages" => logREopt.d,
-			"Error" => e
-		)
-		return results
+		handle_errors(e)
 	end
 end
 
@@ -152,15 +132,28 @@ function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractMod
 	
 		run_reopt(ms, REoptInputs(s))		
 	catch e
-		results = Dict(
-			"Messages" => logREopt.d,
-			"Error" => e
-		)
-		return results
+		handle_errors(e)
 	end
 
 end
 
+"""
+    handle_errors(e::E) where E <: Exception
+
+Creates a results dictionary in case of an error from REopt.jl with Warnings and Errors from logREopt.d. This new dictionary is then returned to the user.
+"""
+function handle_errors(e::E) where E <: Exception
+
+	results = Dict(
+		"Warnings" => logREopt.d["Warn"],
+		"Errors" => []
+	)
+	push!(results["Errors"], e)
+	if "Error" in keys(logREopt.d)
+		push!(results["Errors"], logREopt.d["Error"])
+	end
+	return results
+end
 
 """
     run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.AbstractModel
@@ -516,15 +509,19 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 	results["status"] = status
 	results["solver_seconds"] = opt_time
 
-	results["Messages"] = logREopt.d
-
-	# log_file = "../logfile.log" 
-	# messages = [chop(line, head = 2) for (i, line) in enumerate(eachline(log_file)) if i % 2 == 1]
-	# results["messages"] = length(messages) > 0 ? messages : nothing #  save as nothing or don't include at all if empty?
-
     if organize_pvs && !isempty(p.techs.pv)  # do not want to organize_pvs when running BAU case in parallel b/c then proform code fails
         organize_multiple_pv_results(p, results)
     end
+
+	results["Warnings"] = []
+	results["Errors"] = []
+	if "Warn" in keys(logREopt.d)
+		results["Warnings"] = logREopt.d["Warn"]
+	end
+	if "Error" in keys(logREopt.d)
+		results["Errors"] = logREopt.d["Error"]
+	end
+
 	return results
 end
 
