@@ -832,7 +832,8 @@ function backup_reliability_inputs(;r::Dict)::Dict
     r2[:generator_failure_to_run] = get(r, "generator_failure_to_run", 0.00157)
     r2[:num_generators] = get(r, "num_generators", 1)
     r2[:generator_size_kw] = get(r, "generator_size_kw", 0.0)
-    r2[:max_outage_duration] = get(r, "num_battery_bins", 96)
+    r2[:max_outage_duration] = get(r, "max_outage_duration", 96)
+
     
     net_critical_loads_kw = r["critical_loads_kw"]
     zero_array = zeros(length(net_critical_loads_kw))
