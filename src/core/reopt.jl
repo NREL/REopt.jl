@@ -48,7 +48,7 @@ function run_reopt(m::JuMP.AbstractModel, fp::String)
 		s = Scenario(JSON.parsefile(fp))
 		run_reopt(m, REoptInputs(s))
 	catch e
-		handle_errors(e)
+		handle_errors(e, stacktrace(backtrace()))
 	end
 end
 
@@ -63,7 +63,7 @@ function run_reopt(m::JuMP.AbstractModel, d::Dict)
 		s = Scenario(d)
 		run_reopt(m, REoptInputs(s))
 	catch e
-		handle_errors(e)
+		handle_errors(e, stacktrace(catch_backtrace()))
 	end
 end
 
@@ -80,7 +80,7 @@ function run_reopt(m::JuMP.AbstractModel, s::AbstractScenario)
 		end
 		run_reopt(m, REoptInputs(s))
 	catch e
-		handle_errors(e)
+		handle_errors(e, stacktrace(backtrace()))
 	end
 end
 
@@ -95,7 +95,7 @@ function run_reopt(t::Tuple{JuMP.AbstractModel, AbstractInputs})
 		run_reopt(t[1], t[2]; organize_pvs=false)
 		# must organize_pvs after adding proforma results
 	catch e
-		handle_errors(e)
+		handle_errors(e, stacktrace(backtrace()))
 	end
 end
 
@@ -111,7 +111,7 @@ function run_reopt(ms::AbstractArray{T, 1}, fp::String) where T <: JuMP.Abstract
 		d = JSON.parsefile(fp)
     	run_reopt(ms, d)
 	catch e
-		handle_errors(e)
+		handle_errors(e, stacktrace(backtrace()))
 	end
 end
 
@@ -132,7 +132,7 @@ function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractMod
 	
 		run_reopt(ms, REoptInputs(s))		
 	catch e
-		handle_errors(e)
+		handle_errors(e, stacktrace(backtrace()))
 	end
 
 end
@@ -142,16 +142,26 @@ end
 
 Creates a results dictionary in case of an error from REopt.jl with Warnings and Errors from logREopt.d. This new dictionary is then returned to the user.
 """
-function handle_errors(e::E) where E <: Exception
+function handle_errors(e::E, stacktrace::V) where {
+	E <: Exception,
+	V <: Vector
+	}
 
-	results = Dict(
-		"Warnings" => logREopt.d["Warn"],
-		"Errors" => []
-	)
-	push!(results["Errors"], e)
-	if "Error" in keys(logREopt.d)
-		push!(results["Errors"], logREopt.d["Error"])
+	results = Dict()
+
+	if "Warn" in keys(logREopt.d)
+		results["Warnings"] = logREopt.d["Warn"]
+	else
+		results["Warnings"] = []
 	end
+
+	if "Error" in keys(logREopt.d)
+		results["Errors"] = logREopt.d["Error"]
+	else
+		results["Errors"] = []
+	end
+
+	push!(results["Errors"], (e,stacktrace))
 	return results
 end
 
@@ -516,10 +526,14 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 	results["Warnings"] = []
 	results["Errors"] = []
 	if "Warn" in keys(logREopt.d)
-		results["Warnings"] = logREopt.d["Warn"]
+		for (key, value) in logREopt.d["Warn"]
+    		push!(results["Warnings"], (key, value))
+		end
 	end
 	if "Error" in keys(logREopt.d)
-		results["Errors"] = logREopt.d["Error"]
+		for (key, value) in logREopt.d["Error"]
+    		push!(results["Errors"], (key, value))
+		end
 	end
 
 	return results

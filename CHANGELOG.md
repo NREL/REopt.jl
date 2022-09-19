@@ -23,6 +23,16 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2022-09-19
+### Added
+- Add **REoptLogger** type of global logger with a standard out to the console and to a dictionary
+    - Instantiate `logREopt` as the global logger in `__init()__` function call as a global variable
+    - Handle Warn or Error logs to save them along with information on where they occurred
+    - Add Warnings and Errors from `logREopt` to results dictionary in `core/reopt.jl -> run_reopt()`
+- Add `handle_errors()` to `core/reopt.jl` to gracefully handle scenarios where REopt fails during data processing/optimization
+### Changed
+- `core/reopt.jl` added try-catch statements to gracefully catch a REopt error and return it to user along with where the error happened.
+
 ## v0.18.1
 ### Removed
 - **include_climate_in_objective**, **pwf_emissions_cost_CO2_grid**, and **pwf_emissions_cost_CO2_onsite** unnecessarily included in Site results
