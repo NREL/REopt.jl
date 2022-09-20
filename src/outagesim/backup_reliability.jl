@@ -835,11 +835,11 @@ function backup_reliability_inputs(;r::Dict)::Dict
         r2[:num_generators] = r2[:num_generators][1]
     end
 
-    net_critical_loads_kw = r2[:critical_loads_kw]
-    zero_array = zeros(length(net_critical_loads_kw))
+    r2[:net_critical_loads_kw] = r2[:critical_loads_kw]
+    zero_array = zeros(length(r2[:net_critical_loads_kw]))
 
     if :chp_capacity in keys(r2)
-        net_critical_loads_kw .-= r2[:chp_capacity]
+        r2[:net_critical_loads_kw] .-= r2[:chp_capacity]
     end
 
     microgrid_only = get(r2, :microgrid_only, false)
@@ -854,15 +854,13 @@ function backup_reliability_inputs(;r::Dict)::Dict
 
     if :battery_size_kw in keys(r2)
         if !microgrid_only || Bool(get(r2, :storage_microgrid_upgraded, false))
-            init_soc = get(r2, :battery_year_one_soc_series_pct, ones(length(net_critical_loads_kw)))
+            init_soc = get(r2, :battery_year_one_soc_series_pct, ones(length(r2[:net_critical_loads_kw])))
             r2[:starting_battery_soc_kwh] = init_soc .* r2[:battery_size_kwh]
             #Only subtracts PV generation if there is also a battery
             #TODO: put this assumption in documentation
-            net_critical_loads_kw .-= pv_kw_ac_hourly
+            r2[:net_critical_loads_kw] .-= pv_kw_ac_hourly
         end
     end
-
-    r2[:net_critical_loads_kw] = net_critical_loads_kw
 
     # remove inputs not needed for next steps of reliability calculations
     delete!(r2, :critical_loads_kw)
