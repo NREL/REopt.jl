@@ -29,13 +29,18 @@
 # *********************************************************************************
 """
 `SteamTurbine` results keys:
-- `size_kw` Power capacity size of the SteamTurbine [kW]
-- `year_one_to_tes_series_ton`
-- `year_one_thermal_consumption_series`
-- `year_one_thermal_consumption_kwh`
-- `year_one_thermal_production_tonhour`
-- `year_one_electric_consumption_series`
-- `year_one_electric_consumption_kwh`
+- `size_kw` Power capacity size [kW]
+- `year_one_thermal_consumption_mmbtu` Thermal (steam) consumption [MMBtu]
+- `year_one_electric_energy_produced_kwh` Electric energy produced in a year [kWh]
+- `year_one_thermal_energy_produced_mmbtu` Thermal energy produced in a year [MMBtu]
+- `year_one_thermal_consumption_series_mmbtu_per_hour` Thermal (steam) energy consumption series [MMBtu/hr]
+- `year_one_electric_production_series_kw` Electric power production series [kW]
+- `year_one_electric_to_grid_series_kw` Electric power exported to grid series [kW]
+- `year_one_electric_to_battery_series_kw` Electric power to charge the battery series [kW]
+- `year_one_electric_to_load_series_kw` Electric power to serve load series [kW]
+- `year_one_thermal_to_tes_series_mmbtu_per_hour` Thermal production to charge the HotThermalStorage series [MMBtu/hr]
+- `year_one_thermal_to_load_series_mmbtu_per_hour` Thermal production to serve the heating load SERVICES [MMBtu/hr]
+
 """
 function add_steam_turbine_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	# Adds the `SteamTurbine` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
