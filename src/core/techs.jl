@@ -51,7 +51,6 @@ function Techs(p::REoptInputs, s::BAUScenario)
     electric_chillers = String[]
     absorption_chillers = String[]
     steam_turbines = String[]
-    all_techs_for_steam_turbine = String[]
     techs_can_supply_steam_turbine = String[]
 
     if p.s.generator.existing_kw > 0
@@ -95,7 +94,6 @@ function Techs(p::REoptInputs, s::BAUScenario)
         electric_chillers,
         absorption_chillers,
         steam_turbines,
-        all_techs_for_steam_turbine,
         techs_can_supply_steam_turbine        
     )
 end
@@ -128,7 +126,6 @@ function Techs(s::Scenario)
     electric_chillers = String[]
     absorption_chillers = String[]
     steam_turbines = String[]
-    all_techs_for_steam_turbine = String[]
     techs_can_supply_steam_turbine = String[]    
 
     if s.wind.max_kw > 0
@@ -154,7 +151,6 @@ function Techs(s::Scenario)
         push!(all_techs, "ExistingBoiler")
         push!(heating_techs, "ExistingBoiler")
         push!(boiler_techs, "ExistingBoiler")
-        push!(all_techs_for_steam_turbine, "ExistingBoiler")
         if s.existing_boiler.can_supply_steam_turbine
             push!(techs_can_supply_steam_turbine, "ExistingBoiler")
         end           
@@ -164,7 +160,6 @@ function Techs(s::Scenario)
         push!(all_techs, "Boiler")
         push!(heating_techs, "Boiler")
         push!(boiler_techs, "Boiler")
-        push!(all_techs_for_steam_turbine, "Boiler")
         if s.boiler.can_supply_steam_turbine
             push!(techs_can_supply_steam_turbine, "Boiler")
         end        
@@ -174,7 +169,6 @@ function Techs(s::Scenario)
         push!(all_techs, "CHP")
         push!(elec, "CHP")
         push!(chp_techs, "CHP")
-        push!(all_techs_for_steam_turbine, "CHP")
         if s.chp.can_supply_steam_turbine
             push!(techs_can_supply_steam_turbine, "CHP")
         end
@@ -226,7 +220,6 @@ function Techs(s::Scenario)
         electric_chillers,
         absorption_chillers,
         steam_turbines,
-        all_techs_for_steam_turbine,
         techs_can_supply_steam_turbine
     )
 end
@@ -259,7 +252,6 @@ function Techs(s::MPCScenario)
         String[],
         String[],
         techs_no_turndown,
-        String[],
         String[],
         String[],
         String[],

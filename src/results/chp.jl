@@ -96,7 +96,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	@expression(m, CHPThermalToWasteKW[ts in p.time_steps],
 		sum(m[Symbol("dvProductionToWaste"*_n)][t,ts] for t in p.techs.chp))
 	r["year_one_thermal_to_waste_series_mmbtu_per_hour"] = round.(value.(CHPThermalToWasteKW) / KWH_PER_MMBTU, digits=5)
-    if !isempty(p.techs.steam_turbine)
+    if !isempty(p.techs.steam_turbine) && p.s.chp.can_supply_steam_turbine
         @expression(m, CHPToSteamTurbineKW[ts in p.time_steps], sum(m[Symbol("dvThermalToSteamTurbine"*_n)][t,ts] for t in p.techs.chp))
     else
         CHPToSteamTurbineKW = zeros(length(p.time_steps))

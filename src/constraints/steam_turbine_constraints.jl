@@ -29,12 +29,6 @@
 # *********************************************************************************
 
 function steam_turbine_thermal_input(m, p; _n="")
-    # Force thermal production to steam turbine to zero if not applicable
-    for t in setdiff(p.techs.all_for_steam_turbine, p.techs.can_supply_steam_turbine)
-        for ts in p.time_steps
-            fix(m[Symbol("dvThermalToSteamTurbine"*_n)][t,ts], 0.0, force=true)
-        end
-    end
 
     # This constraint is already included in storage_constraints.jl if HotThermalStorage and SteamTurbine are considered that also includes dvProductionToStorage["HotThermalStorage"] in LHS
     if isempty(p.s.storage.types.hot)
