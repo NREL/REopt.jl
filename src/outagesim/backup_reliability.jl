@@ -832,7 +832,7 @@ function backup_reliability_inputs(;r::Dict)::Dict
     r2 = dictkeys_tosymbols(r)
 
     if length(r2[:num_generators]) == 1
-        r2[:num_generators] = r2[:num_generators][0]
+        r2[:num_generators] = r2[:num_generators][1]
     end
 
     net_critical_loads_kw = r2[:critical_loads_kw]
