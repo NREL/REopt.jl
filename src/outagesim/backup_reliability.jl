@@ -804,23 +804,23 @@ Return a dictionary of inputs required for backup reliability calculations.
 # Arguments
 - `r::Dict`: Dictionary of inputs for reliability calculations.
     inputs of r:
-    -critical_loads_kw::Array                  Critical loads per time step. (Required input)
-    -microgrid_only::Bool = false              Boolean to specify if only microgrid upgraded technologies run during grid outage 
-    -chp_capacity::Real                        CHP capacity. 
-    -pv_size_kw::Real                          Size of PV System
-    -pv_production_factor_series::Array        PV production factor per time step (required if pv_size_kw in dictionary)
-    -pv_migrogrid_upgraded::Bool               If true then PV runs during outage if microgrid_only = TRUE (defaults to false)
-    -battery_size_kw::Real                     Battery capacity. If no battery installed then PV disconnects from system during outage
-    -battery_size_kwh::Real                    Battery energy storage capacity
-    -charge_efficiency::Real                   Battery charge efficiency
-    -discharge_efficiency::Real                Battery discharge efficiency
-    -battery_year_one_soc_series_pct           Battery state of charge in each hour (if not input then defaults to battery size)
-    -generator_failure_to_start::Real = 0.0066                Chance of generator starting given outage
-    -generator_failure_to_run::Real = 0.00157                 Chance of generator failing in each hour of outage
-    -num_generators::Int = 1                                  Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
-    -generator_size_kw::Real = 0.0                           Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
-    -num_battery_bins::Int = 101                        Internal value for discretely modeling battery state of charge
-    -max_outage_duration::Int = 96                      Maximum outage hour modeled
+    -critical_loads_kw::Array                   Critical loads per time step. (Required input)
+    -microgrid_only::Bool = false               Boolean to specify if only microgrid upgraded technologies run during grid outage 
+    -chp_capacity::Real                         CHP capacity. 
+    -pv_size_kw::Real                           Size of PV System
+    -pv_production_factor_series::Array         PV production factor per time step (required if pv_size_kw in dictionary)
+    -pv_migrogrid_upgraded::Bool                If true then PV runs during outage if microgrid_only = TRUE (defaults to false)
+    -battery_size_kw::Real                      Battery capacity. If no battery installed then PV disconnects from system during outage
+    -battery_size_kwh::Real                     Battery energy storage capacity
+    -charge_efficiency::Real                    Battery charge efficiency
+    -discharge_efficiency::Real                 Battery discharge efficiency
+    -battery_year_one_soc_series_pct            Battery state of charge in each hour (if not input then defaults to battery size)
+    -generator_failure_to_start::Real = 0.0066  Chance of generator starting given outage
+    -generator_failure_to_run::Real = 0.00157   Chance of generator failing in each hour of outage
+    -num_generators::Int = 1                    Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
+    -generator_size_kw::Real = 0.0              Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
+    -num_battery_bins::Int = 101                Internal value for discretely modeling battery state of charge
+    -max_outage_duration::Int = 96              Maximum outage hour modeled
 ```
 """
 function backup_reliability_inputs(;r::Dict)::Dict
@@ -1047,25 +1047,23 @@ Return dictionary of backup reliability results.
 # Arguments
 - `r::Dict`: Dictionary of inputs for reliability calculations. If r not included then uses all defaults. values read from dictionary:
 inputs of r:
--critical_loads_kw::Array                  Critical loads per time step. (Required input)
--microgrid_only::Bool                      Boolean to check if only microgrid runs during grid outage (defaults to false)
--chp_capacity::Real                        CHP capacity. 
--pv_size_kw::Real                          Size of PV System
--pv_production_factor_series::Array        PV production factor per time step (required if pv_size_kw in dictionary)
--pv_migrogrid_upgraded::Bool               If true then PV runs during outage if microgrid_only = TRUE (defaults to false)
--battery_size_kw::Real                     Battery capacity. If no battery installed then PV disconnects from system during outage
--battery_size_kwh::Real                    Battery energy storage capacity
--charge_efficiency::Real                   Battery charge efficiency
--discharge_efficiency::Real                Battery discharge efficiency
-battery_year_one_soc_series_pct
-#diesel_size_kw
-#diesel_size_mg_kw
--generator_failure_to_start::Real = 0.0066                Chance of generator starting given outage
--generator_failure_to_run::Real = 0.00157                 Chance of generator failing in each hour of outage
--num_generators::Int = 1                                  Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
--generator_size_kw::Real = 0.0                           Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
--num_battery_bins::Int = 100                        Internal value for discretely modeling battery state of charge
--max_outage_duration::Int = 96                      Maximum outage hour modeled
+-critical_loads_kw::Array                   Critical loads per time step. (Required input)
+-microgrid_only::Bool                       Boolean to check if only microgrid runs during grid outage (defaults to false)
+-chp_capacity::Real                         CHP capacity. 
+-pv_size_kw::Real                           Size of PV System
+-pv_production_factor_series::Array         PV production factor per time step (required if pv_size_kw in dictionary)
+-pv_migrogrid_upgraded::Bool                If true then PV runs during outage if microgrid_only = TRUE (defaults to false)
+-battery_size_kw::Real                      Battery capacity. If no battery installed then PV disconnects from system during outage
+-battery_size_kwh::Real                     Battery energy storage capacity
+-charge_efficiency::Real                    Battery charge efficiency
+-discharge_efficiency::Real                 Battery discharge efficiency
+-battery_year_one_soc_series_pct::Array     Battery percent state of charge time series during normal grid-connected usage
+-generator_failure_to_start::Real = 0.0066  Chance of generator starting given outage
+-generator_failure_to_run::Real = 0.00157   Chance of generator failing in each hour of outage
+-num_generators::Int = 1                    Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
+-generator_size_kw::Real = 0.0              Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
+-num_battery_bins::Int = 100                Internal value for discretely modeling battery state of charge
+-max_outage_duration::Int = 96              Maximum outage hour modeled
 
 """
 function backup_reliability(r::Dict)
