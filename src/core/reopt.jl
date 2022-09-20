@@ -147,21 +147,23 @@ function handle_errors(e::E, stacktrace::V) where {
 	V <: Vector
 	}
 
-	results = Dict()
+	results = Dict(
+		"Messages"=>Dict()
+	)
 
 	if "Warn" in keys(logREopt.d)
-		results["Warnings"] = logREopt.d["Warn"]
+		results["Messages"]["warnings"] = logREopt.d["Warn"]
 	else
-		results["Warnings"] = []
+		results["Messages"]["warnings"] = []
 	end
 
 	if "Error" in keys(logREopt.d)
-		results["Errors"] = logREopt.d["Error"]
+		results["Messages"]["errors"] = logREopt.d["Error"]
 	else
-		results["Errors"] = []
+		results["Messages"]["errors"] = []
 	end
 
-	push!(results["Errors"], (e,stacktrace))
+	push!(results["Messages"]["errors"], (e,stacktrace))
 	return results
 end
 
@@ -523,16 +525,17 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
         organize_multiple_pv_results(p, results)
     end
 
-	results["Warnings"] = []
-	results["Errors"] = []
+	results["Messages"] = Dict()
+	results["Messages"]["warnings"] = []
+	results["Messages"]["errors"] = []
 	if "Warn" in keys(logREopt.d)
 		for (key, value) in logREopt.d["Warn"]
-    		push!(results["Warnings"], (key, value))
+    		push!(results["Messages"]["warnings"], (key, value))
 		end
 	end
 	if "Error" in keys(logREopt.d)
 		for (key, value) in logREopt.d["Error"]
-    		push!(results["Errors"], (key, value))
+    		push!(results["Messages"]["errors"], (key, value))
 		end
 	end
 
