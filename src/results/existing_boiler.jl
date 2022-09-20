@@ -58,7 +58,7 @@ function add_existing_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     end
 	r["year_one_thermal_to_tes_series_mmbtu_per_hour"] = round.(value.(BoilerToHotTESKW / KWH_PER_MMBTU), digits=3)
 
-    if !isempty(p.techs.steam_turbine)
+    if !isempty(p.techs.steam_turbine) && p.s.existing_boiler.can_supply_steam_turbine
         @expression(m, BoilerToSteamTurbineKW[ts in p.time_steps], m[:dvThermalToSteamTurbine]["ExistingBoiler",ts])
     else
         @expression(m, BoilerToSteamTurbineKW[ts in p.time_steps], 0.0)
