@@ -27,17 +27,30 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+`Boiler` results keys:
+- `size_mmbtu_per_hour` Thermal production capacity size of the Boiler [MMBtu/hr]
+- `year_one_fuel_consumption_series_mmbtu_per_hour` Fuel consumption series [MMBtu]
+- `year_one_fuel_consumption_mmbtu` Fuel consumed in a year [MMBtu]
+- `year_one_thermal_production_series_mmbtu_per_hour` Thermal energy production series [MMBtu/hr]
+- `year_one_thermal_production_mmbtu` Thermal energy produced in a year [MMBtu]
+- `year_one_thermal_to_tes_series_mmbtu_per_hour` Thermal power production to HotThermalStorage series [MMBtu/hr]
+- `year_one_thermal_to_steamturbine_series_mmbtu_per_hour` Thermal power production to SteamTurbine series [MMBtu/hr]
+- `year_one_thermal_to_load_series_mmbtu_per_hour` Thermal power production to serve the heating load series [MMBtu/hr]
+- `lifecycle_fuel_cost` Life cycle fuel cost [$]
+- `year_one_fuel_cost` Year one fuel cost [$]
+- `lifecycle_per_unit_prod_om_costs` Life cycle production-based O&M cost [$]
+"""
+
 function add_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
-
-    # TODO all of these time series assume hourly time steps
-    # TODO we convert KWH_PER_MMBTU from user inputs to the model, and then back to mmbtu in outputs: why not stay in mmbtu?
+    r["size_mmbtu_per_hour"] = round(value(m[Symbol("dvSize"*_n)]["Boiler"]) / KWH_PER_MMBTU, digits=3)
 	r["year_one_fuel_consumption_series_mmbtu_per_hour"] = 
         round.(value.(m[:dvFuelUsage]["Boiler", ts] for ts in p.time_steps) / KWH_PER_MMBTU, digits=3)
     r["year_one_fuel_consumption_mmbtu"] = round(sum(r["year_one_fuel_consumption_series_mmbtu_per_hour"]), digits=3)
 
 	r["year_one_thermal_production_series_mmbtu_per_hour"] = 
-        round.(value.(m[:dvThermalProduction]["Boiler", ts] for ts in p.time_steps) / KWH_PER_MMBTU, digits=3)
+        round.(value.(m[:dvThermalProduction]["Boiler", ts] for ts in p.time_steps) / KWH_PER_MMBTU, digits=5)
 	r["year_one_thermal_production_mmbtu"] = round(sum(r["year_one_thermal_production_series_mmbtu_per_hour"]), digits=3)
 
 	if !isempty(p.s.storage.types.hot)
@@ -47,7 +60,7 @@ function add_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="
     else
         BoilerToHotTESKW = zeros(length(p.time_steps))
     end
-	r["thermal_to_tes_series_mmbtu_per_hour"] = round.(value.(BoilerToHotTESKW / KWH_PER_MMBTU), digits=3)
+	r["year_one_thermal_to_tes_series_mmbtu_per_hour"] = round.(value.(BoilerToHotTESKW / KWH_PER_MMBTU), digits=3)
 
     if !isempty(p.techs.steam_turbine) && p.s.boiler.can_supply_steam_turbine
         @expression(m, BoilerToSteamTurbine[ts in p.time_steps], m[:dvThermalToSteamTurbine]["Boiler",ts])
