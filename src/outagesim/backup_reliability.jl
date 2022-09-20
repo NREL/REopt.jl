@@ -839,7 +839,7 @@ function backup_reliability_inputs(;r::Dict)::Dict
     zero_array = zeros(length(net_critical_loads_kw))
 
     if :chp_capacity in keys(r2)
-        net_critical_loads_kw .-= r[:chp_capacity]
+        net_critical_loads_kw .-= r2[:chp_capacity]
     end
 
     microgrid_only = get(r2, :microgrid_only, false)
@@ -852,8 +852,8 @@ function backup_reliability_inputs(;r::Dict)::Dict
         pv_kw_ac_hourly = zero_array
     end
 
-    if :battery_size_kw in keys(r)
-        if !microgrid_only || Bool(get(r, :storage_microgrid_upgraded, false))
+    if :battery_size_kw in keys(r2)
+        if !microgrid_only || Bool(get(r2, :storage_microgrid_upgraded, false))
             init_soc = get(r2, :battery_year_one_soc_series_pct, ones(length(net_critical_loads_kw)))
             r2[:starting_battery_soc_kwh] = init_soc .* r2[:battery_size_kwh]
             #Only subtracts PV generation if there is also a battery
