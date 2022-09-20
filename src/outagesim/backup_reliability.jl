@@ -484,7 +484,7 @@ Chance of 2 generators failing is 0.04 in hour 1, 0.1296 by hour 1, and 0.238144
 julia> critical_loads_kw = [1,2,1,1]; generator_operational_availability = 1; failure_to_start = 0.0; failure_to_run = 0.2; num_generators = 2; generator_size_kw = 1; max_duration = 3;
 
 julia> survival_gen_only(critical_load=critical_loads_kw, generator_operational_availability=generator_operational_availability, 
-                                failure_to_start=failure_to_start, failure_to_run=failure_to_run, num_generators=num_generators, 
+                                generator_failure_to_start=failure_to_start, generator_failure_to_run=failure_to_run, num_generators=num_generators, 
                                 generator_size_kw=generator_size_kw, max_duration=max_duration, marginal_survival = true)
 4×3 Matrix{Float64}:
  0.96  0.4096  0.761856
@@ -493,7 +493,7 @@ julia> survival_gen_only(critical_load=critical_loads_kw, generator_operational_
  0.96  0.8704  0.262144
 
 julia> survival_gen_only(critical_load=critical_loads_kw, generator_operational_availability=generator_operational_availability, 
-                                failure_to_start=failure_to_start, failure_to_run=failure_to_run, num_generators=num_generators, 
+                                generator_failure_to_start=failure_to_start, generator_failure_to_run=failure_to_run, num_generators=num_generators, 
                                 generator_size_kw=generator_size_kw, max_duration=max_duration, marginal_survival = false)
 4×3 Matrix{Float64}:
  0.96  0.4096  0.393216
@@ -583,8 +583,8 @@ julia> num_generators = 2; generator_size_kw = 1; generator_operational_availabi
 julia> num_battery_bins = 3; battery_size_kwh = 2; battery_size_kw = 1;  battery_charge_efficiency = 1; battery_discharge_efficiency = 1;
 
 julia> survival_with_battery(net_critical_loads_kw=net_critical_loads_kw, starting_battery_soc_kwh=starting_battery_soc_kwh, 
-                            generator_operational_availability=generator_operational_availability, failure_to_start=failure_to_start, 
-                            failure_to_run=failure_to_run, num_generators=num_generators, generator_size_kw=generator_size_kw, 
+                            generator_operational_availability=generator_operational_availability, generator_failure_to_start=failure_to_start, 
+                            generator_failure_to_run=failure_to_run, num_generators=num_generators, generator_size_kw=generator_size_kw, 
                             battery_size_kwh=battery_size_kwh, num_battery_bins=num_battery_bins, max_outage_duration=max_outage_duration, 
                             battery_charge_efficiency=battery_charge_efficiency, battery_discharge_efficiency=battery_discharge_efficiency,
                             marginal_survival = true)
@@ -595,8 +595,8 @@ julia> survival_with_battery(net_critical_loads_kw=net_critical_loads_kw, starti
 1.0   0.96    0.761856
 
 julia> survival_with_battery(net_critical_loads_kw=net_critical_loads_kw, starting_battery_soc_kwh=starting_battery_soc_kwh, 
-                            generator_operational_availability=generator_operational_availability, failure_to_start=failure_to_start, 
-                            failure_to_run=failure_to_run, num_generators=num_generators, generator_size_kw=generator_size_kw, 
+                            generator_operational_availability=generator_operational_availability, generator_failure_to_start=failure_to_start, 
+                            generator_failure_to_run=failure_to_run, num_generators=num_generators, generator_size_kw=generator_size_kw, 
                             battery_size_kwh=battery_size_kwh, num_battery_bins=num_battery_bins, max_outage_duration=max_outage_duration, 
                             battery_charge_efficiency=battery_charge_efficiency, battery_discharge_efficiency=battery_discharge_efficiency,
                             marginal_survival = false)
@@ -883,7 +883,7 @@ Return an array of backup reliability calculations. Inputs can be unpacked from 
 # Arguments
 -net_critical_loads_kw::Vector                                                      vector of net critical loads                     
 -generator_operational_availability::Union{Real, Vector{<:Real}}      = 0.9998        Fraction of year generators not down for maintenance
--failure_to_start::Union{Real, Vector{<:Real}}                        = 0.0066        Chance of generator starting given outage
+-generator_failure_to_start::Union{Real, Vector{<:Real}}                        = 0.0066        Chance of generator starting given outage
 -generator_failure_to_run::Union{Real, Vector{<:Real}}                = 0.00157       Chance of generator failing in each hour of outage
 -num_generators::Union{Int, Vector{Int}}                            = 1             Number of generators
 -generator_size_kw::Union{Real, Vector{<:Real}}                       = 0.0           Backup generator capacity
