@@ -1000,10 +1000,6 @@ function process_reliability_results(results::Array)::Dict
         cumulative_final_resilience = cumulative_results[:, end]
         cumulative_final_resilience_mean = mean(cumulative_final_resilience)
     end
-    @info typeof(marginal_duration_means)
-    @info size(marginal_duration_means)
-    @info typeof(cumulative_final_resilience)
-    @info size(cumulative_final_resilience)
 
     return Dict(
         "mean_marginal_duration_survival_probability" => marginal_duration_means,
