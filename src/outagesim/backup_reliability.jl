@@ -806,7 +806,7 @@ Return a dictionary of inputs required for backup reliability calculations.
     inputs of r:
     -critical_loads_kw::Array                   Critical loads per time step. (Required input)
     -microgrid_only::Bool = false               Boolean to specify if only microgrid upgraded technologies run during grid outage 
-    -chp_capacity::Real                         CHP capacity. 
+    -chp_size_kw::Real                          CHP capacity. 
     -pv_size_kw::Real                           Size of PV System
     -pv_production_factor_series::Array         PV production factor per time step (required if pv_size_kw in dictionary)
     -pv_migrogrid_upgraded::Bool                If true then PV runs during outage if microgrid_only = TRUE (defaults to false)
@@ -838,8 +838,8 @@ function backup_reliability_inputs(;r::Dict)::Dict
     r2[:net_critical_loads_kw] = r2[:critical_loads_kw]
     zero_array = zeros(length(r2[:net_critical_loads_kw]))
 
-    if :chp_capacity in keys(r2)
-        r2[:net_critical_loads_kw] .-= r2[:chp_capacity]
+    if :chp_size_kw in keys(r2)
+        r2[:net_critical_loads_kw] .-= r2[:chp_size_kw]
     end
 
     microgrid_only = get(r2, :microgrid_only, false)
@@ -865,7 +865,7 @@ function backup_reliability_inputs(;r::Dict)::Dict
     # remove inputs not needed for next steps of reliability calculations
     delete!(r2, :critical_loads_kw)
     delete!(r2, :battery_year_one_soc_series_pct)
-    delete!(r2, :chp_capacity)
+    delete!(r2, :chp_size_kw)
     delete!(r2, :pv_size_kw)
     delete!(r2, :pv_production_factor_series)
     delete!(r2, :pv_migrogrid_upgraded)
@@ -1049,7 +1049,7 @@ Return dictionary of backup reliability results.
 inputs of r:
 -critical_loads_kw::Array                   Critical loads per time step. (Required input)
 -microgrid_only::Bool                       Boolean to check if only microgrid runs during grid outage (defaults to false)
--chp_capacity::Real                         CHP capacity. 
+-chp_size_kw::Real                         CHP capacity. 
 -pv_size_kw::Real                           Size of PV System
 -pv_production_factor_series::Array         PV production factor per time step (required if pv_size_kw in dictionary)
 -pv_migrogrid_upgraded::Bool                If true then PV runs during outage if microgrid_only = TRUE (defaults to false)
