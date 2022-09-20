@@ -48,7 +48,11 @@ function run_reopt(m::JuMP.AbstractModel, fp::String)
 		s = Scenario(JSON.parsefile(fp))
 		run_reopt(m, REoptInputs(s))
 	catch e
-		handle_errors(e, stacktrace(backtrace()))
+		if isnothing(e) # Error thrown by REopt
+			handle_errors()
+		else
+			handle_errors(e, stacktrace(catch_backtrace()))
+		end
 	end
 end
 
@@ -63,7 +67,11 @@ function run_reopt(m::JuMP.AbstractModel, d::Dict)
 		s = Scenario(d)
 		run_reopt(m, REoptInputs(s))
 	catch e
-		handle_errors(e, stacktrace(catch_backtrace()))
+		if isnothing(e) # Error thrown by REopt
+			handle_errors()
+		else
+			handle_errors(e, stacktrace(catch_backtrace()))
+		end
 	end
 end
 
@@ -80,7 +88,11 @@ function run_reopt(m::JuMP.AbstractModel, s::AbstractScenario)
 		end
 		run_reopt(m, REoptInputs(s))
 	catch e
-		handle_errors(e, stacktrace(backtrace()))
+		if isnothing(e) # Error thrown by REopt
+			handle_errors()
+		else
+			handle_errors(e, stacktrace(catch_backtrace()))
+		end
 	end
 end
 
@@ -95,7 +107,11 @@ function run_reopt(t::Tuple{JuMP.AbstractModel, AbstractInputs})
 		run_reopt(t[1], t[2]; organize_pvs=false)
 		# must organize_pvs after adding proforma results
 	catch e
-		handle_errors(e, stacktrace(backtrace()))
+		if isnothing(e) # Error thrown by REopt
+			handle_errors()
+		else
+			handle_errors(e, stacktrace(catch_backtrace()))
+		end
 	end
 end
 
@@ -111,7 +127,11 @@ function run_reopt(ms::AbstractArray{T, 1}, fp::String) where T <: JuMP.Abstract
 		d = JSON.parsefile(fp)
     	run_reopt(ms, d)
 	catch e
-		handle_errors(e, stacktrace(backtrace()))
+		if isnothing(e) # Error thrown by REopt
+			handle_errors()
+		else
+			handle_errors(e, stacktrace(catch_backtrace()))
+		end
 	end
 end
 
@@ -132,7 +152,11 @@ function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractMod
 	
 		run_reopt(ms, REoptInputs(s))		
 	catch e
-		handle_errors(e, stacktrace(backtrace()))
+		if isnothing(e) # Error thrown by REopt
+			handle_errors()
+		else
+			handle_errors(e, stacktrace(catch_backtrace()))
+		end
 	end
 
 end
@@ -151,19 +175,46 @@ function handle_errors(e::E, stacktrace::V) where {
 		"Messages"=>Dict()
 	)
 
+	results["Messages"]["warnings"] = []
+	results["Messages"]["errors"] = []
+
 	if "Warn" in keys(logREopt.d)
-		results["Messages"]["warnings"] = logREopt.d["Warn"]
-	else
-		results["Messages"]["warnings"] = []
+		for (keys,values) in logREopt.d["Warn"]
+			push!(results["Messages"]["warnings"], (keys, values))
+		end
 	end
 
 	if "Error" in keys(logREopt.d)
-		results["Messages"]["errors"] = logREopt.d["Error"]
-	else
-		results["Messages"]["errors"] = []
+		for (keys,values) in logREopt.d["Error"]
+			push!(results["Messages"]["errors"], (keys, values))
+		end
 	end
 
 	push!(results["Messages"]["errors"], (e,stacktrace))
+	return results
+end
+
+function handle_errors()
+
+	results = Dict(
+		"Messages"=>Dict()
+	)
+
+	results["Messages"]["warnings"] = []
+	results["Messages"]["errors"] = []
+
+	if "Warn" in keys(logREopt.d)
+		for (keys,values) in logREopt.d["Warn"]
+			push!(results["Messages"]["warnings"], (keys, values))
+		end
+	end
+
+	if "Error" in keys(logREopt.d)
+		for (keys,values) in logREopt.d["Error"]
+			push!(results["Messages"]["errors"], (keys, values))
+		end
+	end
+
 	return results
 end
 
