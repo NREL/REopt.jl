@@ -864,6 +864,15 @@ function backup_reliability_inputs(;r::Dict)::Dict
 
     r2[:net_critical_loads_kw] = net_critical_loads_kw
 
+    # remove inputs not needed for next steps of reliability calculations
+    delete!(r2, :critical_loads_kw)
+    delete!(r2, :battery_year_one_soc_series_pct)
+    delete!(r2, :chp_capacity)
+    delete!(r2, :pv_size_kw)
+    delete!(r2, :pv_production_factor_series)
+    delete!(r2, :pv_migrogrid_upgraded)
+    delete!(r2, :microgrid_only)
+
     return r2
 end
 
