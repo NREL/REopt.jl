@@ -808,7 +808,7 @@ Return a dictionary of inputs required for backup reliability calculations.
     -microgrid_only::Bool = false              Boolean to specify if only microgrid upgraded technologies run during grid outage 
     -chp_capacity::Real                        CHP capacity. 
     -pv_size_kw::Real                          Size of PV System
-    -pv_production_factor::Array               PV production factor per time step (required if pv_size_kw in dictionary)
+    -pv_production_factor_series::Array        PV production factor per time step (required if pv_size_kw in dictionary)
     -pv_migrogrid_upgraded::Bool               If true then PV runs during outage if microgrid_only = TRUE (defaults to false)
     -battery_size_kw::Real                     Battery capacity. If no battery installed then PV disconnects from system during outage
     -battery_size_kwh::Real                    Battery energy storage capacity
