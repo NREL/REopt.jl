@@ -603,7 +603,7 @@ function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes,
     cap_cost_slope["ExistingBoiler"] = 0.0
     boiler_efficiency["ExistingBoiler"] = s.existing_boiler.efficiency
     # om_cost_per_kw["ExistingBoiler"] = 0.0
-    tech_renewable_energy_pct["ExistingBoiler"] = s.existing_boiler.fuel_renewable_energy_pct
+    tech_renewable_energy_fraction["ExistingBoiler"] = s.existing_boiler.fuel_renewable_energy_fraction
     tech_emissions_factors_CO2["ExistingBoiler"] = s.existing_boiler.emissions_factor_lb_CO2_per_mmbtu / KWH_PER_MMBTU  # lb/mmtbu * mmtbu/kWh
     tech_emissions_factors_NOx["ExistingBoiler"] = s.existing_boiler.emissions_factor_lb_NOx_per_mmbtu / KWH_PER_MMBTU
     tech_emissions_factors_SO2["ExistingBoiler"] = s.existing_boiler.emissions_factor_lb_SO2_per_mmbtu / KWH_PER_MMBTU
@@ -712,7 +712,7 @@ end
 """
     function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw,  
         production_factor, techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs,
-        tech_renewable_energy_pct, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh
+        tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh
         )
 
 Update tech-indexed data arrays necessary to build the JuMP model with the values for CHP.
@@ -756,11 +756,11 @@ function setup_steam_turbine_inputs(s::AbstractScenario, max_sizes, min_sizes, c
             itc_basis = s.steam_turbine.installed_cost_per_kw,
             replacement_cost = 0.0,
             replacement_year = s.financial.analysis_years,
-            discount_rate = s.financial.owner_discount_pct,
-            tax_rate = s.financial.owner_tax_pct,
+            discount_rate = s.financial.owner_discount_rate_fraction,
+            tax_rate = s.financial.owner_tax_rate_fraction,
             itc = 0.0,
             macrs_schedule = s.steam_turbine.macrs_option_years == 5 ? s.financial.macrs_five_year : s.financial.macrs_seven_year,
-            macrs_bonus_pct = s.steam_turbine.macrs_bonus_pct,
+            macrs_bonus_fraction = s.steam_turbine.macrs_bonus_fraction,
             macrs_itc_reduction = 0.0,
             rebate_per_kw = 0.0
         )

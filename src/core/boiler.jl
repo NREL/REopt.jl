@@ -37,7 +37,7 @@ struct Boiler <: AbstractThermalTech
     om_cost_per_kw::Real
     om_cost_per_kwh::Real
     macrs_option_years::Int
-    macrs_bonus_pct::Real
+    macrs_bonus_fraction::Real
     fuel_type::String
     can_supply_steam_turbine::Bool
 end
@@ -58,7 +58,7 @@ function Boiler(;
     efficiency::Real = 0.8,
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
     macrs_option_years::Int = 0,
-    macrs_bonus_pct::Real = 0.0,
+    macrs_bonus_fraction::Real = 0.0,
     installed_cost_per_mmbtu_per_hour::Real = 293000.0,
     om_cost_per_mmbtu_per_hour::Real = 2930.0,
     om_cost_per_mmbtu::Real = 0.0,
@@ -74,7 +74,7 @@ function Boiler(;
         fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
         time_steps_per_hour::Int = 1,  # passed from Settings
         macrs_option_years::Int = 0,
-        macrs_bonus_pct::Real = 0.0,
+        macrs_bonus_fraction::Real = 0.0,
         installed_cost_per_mmbtu_per_hour::Real = 293000.0,
         om_cost_per_mmbtu_per_hour::Real = 2930.0,
         om_cost_per_mmbtu::Real = 0.0,
@@ -100,7 +100,7 @@ function Boiler(;
         om_cost_per_kw,
         om_cost_per_kwh,
         macrs_option_years,
-        macrs_bonus_pct,
+        macrs_bonus_fraction,
         fuel_type,
         can_supply_steam_turbine
     )

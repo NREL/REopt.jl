@@ -20,15 +20,15 @@
         "fuel_cost_per_mmbtu": [5,10,5,5,5,5,5,5,5,5,5,5]
     },
     "Financial": {
-        "om_cost_escalation_pct": 0.025,
-        "elec_cost_escalation_pct": 0.023,
-        "existing_boiler_fuel_cost_escalation_pct": 0.034,
-        "boiler_fuel_cost_escalation_pct": 0.034,
-        "offtaker_tax_pct": 0.26,
-        "offtaker_discount_pct": 0.083,
+        "om_cost_escalation_rate_fraction": 0.025,
+        "elec_cost_escalation_rate_fraction": 0.023,
+        "existing_boiler_fuel_cost_escalation_rate_fraction": 0.034,
+        "boiler_fuel_cost_escalation_rate_fraction": 0.034,
+        "offtaker_tax_rate_fraction": 0.26,
+        "offtaker_discount_rate_fraction": 0.083,
         "third_party_ownership": false,
-        "owner_tax_pct": 0.26,
-        "owner_discount_pct": 0.083,
+        "owner_tax_rate_fraction": 0.26,
+        "owner_discount_rate_fraction": 0.083,
         "analysis_years": 25
     },
     "ElectricLoad": {

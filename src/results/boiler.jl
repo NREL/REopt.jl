@@ -77,7 +77,7 @@ function add_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="
     lifecycle_fuel_cost = p.pwf_fuel["Boiler"] * value(
         sum(m[:dvFuelUsage]["Boiler", ts] * p.fuel_cost_per_kwh["Boiler"][ts] for ts in p.time_steps)
     )
-	r["lifecycle_fuel_cost"] = round(lifecycle_fuel_cost * (1 - p.s.financial.offtaker_tax_pct), digits=3)
+	r["lifecycle_fuel_cost"] = round(lifecycle_fuel_cost * (1 - p.s.financial.offtaker_tax_fraction), digits=3)
 	r["year_one_fuel_cost"] = round(lifecycle_fuel_cost / p.pwf_fuel["Boiler"], digits=3)
 
     r["lifecycle_per_unit_prod_om_costs"] = round(value(m[:TotalBoilerPerUnitProdOMCosts]), digits=3)
