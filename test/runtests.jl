@@ -203,7 +203,7 @@ else  # run HiGHS tests
             "battery_size_kw" => 1,
             "battery_charge_efficiency" => 1,
             "battery_discharge_efficiency" => 1)
-        backup_reliability(input_dict)["marginal_outage_survival_probability"][1] ≈ 0.557056
+        @test backup_reliability(input_dict)["marginal_outage_survival_final_hour"][1] ≈ 0.557056
 
         #Test multiple generator types
         input_dict = Dict(
@@ -221,7 +221,7 @@ else  # run HiGHS tests
             "battery_charge_efficiency" => 1,
             "battery_discharge_efficiency" => 1)
 
-        backup_reliability(input_dict)["marginal_outage_survival_probability"][1] ≈ 0.557056
+        @test backup_reliability(input_dict)["marginal_outage_survival_final_hour"][1] ≈ 0.557056
 
         #8760 of flat load. Battery can survive 4 hours. 
         #Survival after 24 hours should be chance of generator surviving 20 or more hours
@@ -240,12 +240,11 @@ else  # run HiGHS tests
             "battery_discharge_efficiency" => 1)
 
         reliability_results = backup_reliability(input_dict)
-        reliability_results["mean_marginal_duration_survival_probability"][24] ≈ 0.99.^(20)*(0.9*0.98)
+        @test reliability_results["mean_marginal_survival_by_duration"][24] ≈ (0.99^20)*(0.9*0.98)
 
         #More realistic case of hospital load with 2 generators, PV, and battery
         reliability_inputs = JSON.parsefile("./scenarios/backup_reliability_inputs.json")
-        reliability_results = backup_reliability(reliability_inputs)
-        @test reliability_results["mean_cumulative_duration_survival_probability"][96] ≈ 0.990784 atol=0.01
+        @test backup_reliability(reliability_inputs)["mean_final_cumulative_outage_survival"] ≈ 0.990784 atol=0.01
     end                            
 
     # removed Wind test for two reasons
