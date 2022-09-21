@@ -1289,3 +1289,48 @@ end
 #         "om_cost_escalation_pct": 0.025
 #     }
 # }}}
+
+@testset "logREopt" begin
+    
+    # Create minimal test case
+    req = Dict()
+    req["Site"] = Dict(
+        "longitude" => -155.8394336,
+        "latitude" => 65.0
+    )
+    req["ElectricLoad"] = Dict(
+        "doe_reference_name" => "MidriseApartment",
+        "annual_kwh" => 100000.0
+    )
+    req["ElectricTariff"] = Dict(
+        "urdb_label" => "5ed6c1a15457a3367add15ae"
+    )
+
+    # No Errors, only warnings
+    m = Model(Xpress.Optimizer)
+    r = run_reopt(m,req)
+
+    @test r["status"] == "optimal"
+    @test "Messages" ∈ keys(r)
+    @test "errors" ∈ keys(r["Messages"])
+    @test "warnings" ∈ keys(r["Messages"])
+
+    # Throw an unhandled error: Bad URDB rate -> stack gets returned for debugging
+    req["ElectricTariff"]["urdb_label"] = "62c70a6c40a0c425535d387b"
+    m = Model(Xpress.Optimizer)
+    r = run_reopt(m,req)
+
+    @test "Messages" ∈ keys(r)
+    @test "errors" ∈ keys(r["Messages"])
+    @test "warnings" ∈ keys(r["Messages"])
+    @test typeof(r["Messages"]["errors"][1][2]) <: Array{Base.StackTraces.StackFrame, 1}
+
+    # Throw a handled error
+    req["PV"] = "String"
+    m = Model(Xpress.Optimizer)
+    r = run_reopt(m,req)
+    @test "Messages" ∈ keys(r)
+    @test "errors" ∈ keys(r["Messages"])
+    @test "warnings" ∈ keys(r["Messages"])
+    @test typeof(r["Messages"]["errors"][1][2]) <: Vector{Any}
+end
