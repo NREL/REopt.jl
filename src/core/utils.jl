@@ -157,42 +157,27 @@ end
 function dictkeys_tosymbols(d::Dict)
     d2 = Dict()
     for (k, v) in d
-        # handling some type conversions for API inputs and JSON
-        if k in [
-            "loads_kw", "critical_loads_kw",
-            "monthly_totals_kwh",
-            "prod_factor_series", 
-            "monthly_energy_rates", "monthly_demand_rates",
-            "wholesale_rate", "blended_doe_reference_percents",
-            "coincident_peak_load_charge_per_kw", "fuel_cost_per_mmbtu",
-            "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
-            "outage_probabilities",
-            "pv_production_factor", "battery_year_one_soc_series_pct"
-            ] && !isnothing(v)
-            try
-                v = convert(Array{Real, 1}, v)
-            catch
-                @warn "Unable to convert $k to an Array{Real, 1}"
-            end
-        end
-        if k in [
-        "generator_size_kw", "generator_operational_availability",
-        "generator_failure_to_start", "generator_failure_to_run"
-        ] && !isnothing(v)
-            if isa(v, Array)
+        # handling array type conversions for API inputs and JSON
+        if typeof(v) <: Array
+            if k in [
+                "loads_kw", "critical_loads_kw",
+                "monthly_totals_kwh",
+                "prod_factor_series", 
+                "monthly_energy_rates", "monthly_demand_rates",
+                "wholesale_rate", "blended_doe_reference_percents",
+                "coincident_peak_load_charge_per_kw", "fuel_cost_per_mmbtu",
+                "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
+                "outage_probabilities",
+                "pv_production_factor", "battery_year_one_soc_series_pct", #for ERP
+                "generator_size_kw", "generator_operational_availability",
+                "generator_failure_to_start", "generator_failure_to_run"
+                ] && !isnothing(v)
                 try
                     v = convert(Array{Real, 1}, v)
                 catch
                     @warn "Unable to convert $k to an Array{Real, 1}"
                 end
-            else
-                try
-                    v = convert(Real, v)
-                catch
-                    @warn "Unable to convert $k to a Real number"
-                end
-            end  
-
+            end
             if k in [
                 "blended_doe_reference_names"
             ]
@@ -202,39 +187,25 @@ function dictkeys_tosymbols(d::Dict)
                     @warn "Unable to convert $k to an Array{String, 1}"
                 end
             end
-        end
-        if k in [
-            "coincident_peak_load_active_time_steps"
-        ]
-            try
-                v = convert(Vector{Vector{Int64}}, v)
-            catch
-                @warn "Unable to convert $k to a Vector{Vector{Int64}}"
+            if k in [
+                "coincident_peak_load_active_time_steps"
+            ]
+                try
+                    v = convert(Vector{Vector{Int64}}, v)
+                catch
+                    @warn "Unable to convert $k to a Vector{Vector{Int64}}"
+                end
             end
-        end
-        if k in [
-            "outage_start_time_steps", "outage_durations" 
-        ]
-            try
-                v = convert(Array{Int64, 1}, v)
-            catch
-                @warn "Unable to convert $k to a Array{Int64, 1}"
-            end
-        end
-        if k in ["num_generators"] #for ERP
-            if isa(v, Array)
+            if k in [
+                "outage_start_time_steps", "outage_durations", 
+                "num_generators" #for ERP
+            ]
                 try
                     v = convert(Array{Int64, 1}, v)
                 catch
-                    @warn "Unable to convert $k to an Array{Int64, 1}"
+                    @warn "Unable to convert $k to a Array{Int64, 1}"
                 end
-            else
-                try
-                    v = convert(Int64, v)
-                catch
-                    @warn "Unable to convert $k to a Integer"
-                end
-            end  
+            end
         end
         d2[Symbol(k)] = v
     end
