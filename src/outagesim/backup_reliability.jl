@@ -468,7 +468,7 @@ If ``marginal_survival`` = true then result is chance of surviving in given outa
 if ``marginal_survival`` = false then result is chance of surviving up to and including given outage timestep.
 
 # Arguments
-- `critical_loads_kw::Vector`: 8760 vector of system critical loads. 
+- `net_critical_loads_kw::Vector`: 8760 vector of system critical loads. 
 - `generator_operational_availability::Union{Real, Vector{<:Real}}`: Operational Availability of backup generators.
 - `generator_failure_to_start::Union{Real, Vector{<:Real}}`: probability of generator Failure to Start and support load. 
 - `generator_failure_to_run::Union{Real, Vector{<:Real}}`: hourly Failure to Run probability. failure_to_run is 1/MTTF (mean time to failure). 
@@ -481,14 +481,13 @@ if ``marginal_survival`` = false then result is chance of surviving up to and in
 Given failure_to_run = 0.2, the chance of no generators failing in 0.64 in hour 1, 0.4096 in hour 2, and 0.262144 in hour 3
 Chance of 2 generators failing is 0.04 in hour 1, 0.1296 by hour 1, and 0.238144 by hour 3   
 ```repl-julia
-julia> critical_loads_kw = [1,2,1,1]; generator_operational_availability = 1; failure_to_start = 0.0; failure_to_run = 0.2; num_generators = 2; generator_size_kw = 1; max_duration = 3;
-
-julia> survival_gen_only(critical_load=critical_loads_kw, generator_operational_availability=generator_operational_availability, 
+julia> net_critical_loads_kw = [1,2,2,1]; generator_operational_availability = 1; failure_to_start = 0.0; failure_to_run = 0.2; num_generators = 2; generator_size_kw = 1; max_duration = 3;
+julia> survival_gen_only(net_critical_loads_kw=net_critical_loads_kw, generator_operational_availability=generator_operational_availability, 
                                 generator_failure_to_start=failure_to_start, generator_failure_to_run=failure_to_run, num_generators=num_generators, 
                                 generator_size_kw=generator_size_kw, max_duration=max_duration, marginal_survival = true)
 4×3 Matrix{Float64}:
- 0.96  0.4096  0.761856
- 0.64  0.8704  0.761856
+ 0.96  0.4096  0.262144
+ 0.64  0.4096  0.761856
  0.96  0.8704  0.761856
  0.96  0.8704  0.262144
 
@@ -496,9 +495,9 @@ julia> survival_gen_only(critical_load=critical_loads_kw, generator_operational_
                                 generator_failure_to_start=failure_to_start, generator_failure_to_run=failure_to_run, num_generators=num_generators, 
                                 generator_size_kw=generator_size_kw, max_duration=max_duration, marginal_survival = false)
 4×3 Matrix{Float64}:
- 0.96  0.4096  0.393216
+ 0.96  0.4096  0.262144
+ 0.64  0.4096  0.393216
  0.64  0.6144  0.557056
- 0.96  0.8704  0.761856
  0.96  0.8704  0.262144
 ```
 """
@@ -576,7 +575,7 @@ if ``marginal_survival`` = false then result is chance of surviving up to and in
 
 # Examples
 Given failure_to_run = 0.2, the chance of no generators failing in 0.64 in hour 1, 0.4096 in hour 2, and 0.262144 in hour 3
-Chance of 2 generators failing is 0.04 in hour 1, 0.1296 by hour 1, and 0.238144 by hour 3   
+Chance of 2 generators failing is 0.04 in hour 1, 0.1296 by hour 2, and 0.238144 by hour 3   
 ```repl-julia
 julia> net_critical_loads_kw = [1,2,2,1]; starting_battery_soc_kwh = [1,1,1,1];  max_outage_duration = 3;
 julia> num_generators = 2; generator_size_kw = 1; generator_operational_availability = 1; failure_to_start = 0.0; failure_to_run = 0.2;
@@ -589,7 +588,7 @@ julia> survival_with_battery(net_critical_loads_kw=net_critical_loads_kw, starti
                             max_outage_duration=max_outage_duration, battery_charge_efficiency=battery_charge_efficiency, 
                             battery_discharge_efficiency=battery_discharge_efficiency, marginal_survival = true)
 4×3 Matrix{Float64}:
-1.0   0.8704  0.393216
+1.0   0.8704  0.557056
 0.96  0.6144  0.77824
 0.96  0.896   0.8192
 1.0   0.96    0.761856
@@ -601,7 +600,7 @@ julia> survival_with_battery(net_critical_loads_kw=net_critical_loads_kw, starti
                             max_outage_duration=max_outage_duration, battery_charge_efficiency=battery_charge_efficiency, 
                             battery_discharge_efficiency=battery_discharge_efficiency, marginal_survival = false)
 4×3 Matrix{Float64}:
-1.0   0.8704  0.393216
+1.0   0.8704  0.557056
 0.96  0.6144  0.57344
 0.96  0.896   0.8192
 1.0   0.96    0.761856
@@ -635,7 +634,7 @@ function survival_with_battery(;
     if length(num_generators) == 1
         N = num_generators + 1
     else
-        N = prod(num_genrators .+ 1)
+        N = prod(num_generators .+ 1)
     end
     #Initialize lost load matrix
     survival_probability_matrix = zeros(t_max, max_outage_duration) 
@@ -658,7 +657,7 @@ function survival_with_battery(;
             excess_generation_kw = gen_prod .- net_critical_loads_kw[h]
             max_net_generation = maximum_generation .- net_critical_loads_kw[h]
 
-            #System fails if net generation is always negative (cannot meet load)
+            #System fails if net generation is negative (cannot meet load)
             survival[max_net_generation .< 0, ] .= 0
 
             #Update probabilities to account for generator failures
