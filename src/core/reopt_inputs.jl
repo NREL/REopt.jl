@@ -633,7 +633,7 @@ function setup_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost
             replacement_cost = 0.0,
             replacement_year = s.financial.analysis_years,
             discount_rate = s.financial.owner_discount_rate_fraction,
-            tax_rate = s.financial.owner_tax_fraction,
+            tax_rate = s.financial.owner_tax_rate_fraction,
             itc = 0.0,
             macrs_schedule = s.boiler.macrs_option_years == 5 ? s.financial.macrs_five_year : s.financial.macrs_seven_year,
             macrs_bonus_fraction = s.boiler.macrs_bonus_fraction,
@@ -646,7 +646,7 @@ function setup_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost
     end
 
     om_cost_per_kw["Boiler"] = s.boiler.om_cost_per_kw
-    production_factor["Boiler", :] = prodfactor(s.boiler)
+    production_factor["Boiler", :] = get_production_factor(s.boiler)
     boiler_fuel_cost_per_kwh = s.boiler.fuel_cost_per_mmbtu ./ KWH_PER_MMBTU
     fuel_cost_per_kwh["Boiler"] = per_hour_value_to_time_series(boiler_fuel_cost_per_kwh, s.settings.time_steps_per_hour, "Boiler")
     return nothing
@@ -770,7 +770,7 @@ function setup_steam_turbine_inputs(s::AbstractScenario, max_sizes, min_sizes, c
 
     om_cost_per_kw["SteamTurbine"] = s.steam_turbine.om_cost_per_kw
     
-    production_factor["SteamTurbine", :] = prodfactor(s.steam_turbine; s.settings.time_steps_per_hour)
+    production_factor["SteamTurbine", :] = get_production_factor(s.steam_turbine; s.settings.time_steps_per_hour)
     
     fillin_techs_by_exportbin(techs_by_exportbin, s.steam_turbine, "SteamTurbine")
     

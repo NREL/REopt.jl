@@ -343,7 +343,7 @@ function get_production_factor(chp::AbstractCHP, year::Int=2017, outage_start_ti
     return prod_factor
 end
 
-function prodfactor(st::AbstractSteamTurbine; time_steps_per_hour::Int=1)
+function get_production_factor(st::AbstractSteamTurbine; time_steps_per_hour::Int=1)
     return ones(8760 * time_steps_per_hour)
 end
 
