@@ -41,13 +41,13 @@
     inlet_steam_temperature_degF::Float64 = NaN
     inlet_steam_superheat_degF::Float64 = 0.0
     outlet_steam_pressure_psig::Float64 = NaN
-    outlet_steam_min_vapor_fraction::Float64 = 0.8
+    outlet_steam_min_vapor_fraction::Float64 = 0.8  # Minimum practical vapor fraction of steam at the exit of the steam turbine
     isentropic_efficiency::Float64 = NaN
-    gearbox_generator_efficiency::Float64 = NaN
-    net_to_gross_electric_ratio::Float64 = NaN
-    installed_cost_per_kw::Float64 = NaN
-    om_cost_per_kw::Float64 = 0.0
-    om_cost_per_kwh::Float64 = NaN
+    gearbox_generator_efficiency::Float64 = NaN  # Combined gearbox (if applicable) and electric motor/generator efficiency
+    net_to_gross_electric_ratio::Float64 = NaN  # Efficiency factor to account for auxiliary loads such as pumps, controls, lights, etc
+    installed_cost_per_kw::Float64 = NaN   # Installed cost based on electric power capacity
+    om_cost_per_kw::Float64 = 0.0  # Fixed O&M cost based on electric power capacity
+    om_cost_per_kwh::Float64 = NaN  # Variable O&M based on electric energy produced
 
     can_net_meter::Bool = false
     can_wholesale::Bool = false
@@ -129,14 +129,14 @@ end
 return a Dict{String, Float64} by selecting the appropriate values from 
 data/steam_turbine/steam_turbine_default_data.json, which contains values based on size_class for the 
 custom_st_inputs, i.e.
-- "installed_cost_per_kw"
-- "om_cost_per_kwh"
-- "inlet_steam_pressure_psig"
-- "inlet_steam_temperature_degF"
-- "outlet_steam_pressure_psig",
-- "isentropic_efficiency"
-- "gearbox_generator_efficiency"
-- "net_to_gross_electric_ratio"
+- `installed_cost_per_kw`
+- `om_cost_per_kwh`
+- `inlet_steam_pressure_psig`
+- `inlet_steam_temperature_degF`
+- `outlet_steam_pressure_psig`
+- `isentropic_efficiency`
+- `gearbox_generator_efficiency`
+- `net_to_gross_electric_ratio`
 """
 function get_steam_turbine_defaults(size_class::Int)
     defaults = JSON.parsefile(joinpath(dirname(@__FILE__), "..", "..", "data", "steam_turbine", "steam_turbine_default_data.json"))
@@ -154,7 +154,7 @@ end
     assign_st_elec_and_therm_prod_ratios!(st::SteamTurbine) 
 
 Calculate steam turbine (ST) electric output to thermal input ratio based on inlet and outlet steam conditions and ST performance.
-This function uses the CoolProp package to calculate steam properties.
+This function uses the CoolProp package to calculate steam properties, and does standard thermodynamics textbook isentropic efficiency calculations.
     Units of [kWe_net / kWt_in]
 :return: st_elec_out_to_therm_in_ratio, st_therm_out_to_therm_in_ratio
 
@@ -163,7 +163,7 @@ function assign_st_elec_and_therm_prod_ratios!(st::SteamTurbine)
 
 
     # Convert input steam conditions to SI (absolute pressures, not gauge)
-    # ST Inlet
+    # Steam turbine inlet steam conditions and calculated properties
     p_in_pa = (st.inlet_steam_pressure_psig / 14.5038 + 1.01325) * 1.0E5
     if isnan(st.inlet_steam_temperature_degF)
         t_in_sat_k = PropsSI("T","P",p_in_pa,"Q",1.0,"Water")
@@ -175,21 +175,22 @@ function assign_st_elec_and_therm_prod_ratios!(st::SteamTurbine)
     h_in_j_per_kg = PropsSI("H","P",p_in_pa,"T",t_in_k,"Water")
     s_in_j_per_kgK = PropsSI("S","P",p_in_pa,"T",t_in_k,"Water")
 
-    # ST Outlet
+    # Steam turbine outlet steam conditions and calculated properties
     p_out_pa = (st.outlet_steam_pressure_psig / 14.5038 + 1.01325) * 1.0E5
     h_out_ideal_j_per_kg = PropsSI("H","P",p_out_pa,"S",s_in_j_per_kgK,"Water")
     h_out_j_per_kg = h_in_j_per_kg - st.isentropic_efficiency * (h_in_j_per_kg - h_out_ideal_j_per_kg)
     x_out = PropsSI("Q","P",p_out_pa,"H",h_out_j_per_kg,"Water")
 
+    # Check if the outlet steam vapor fraction is lower than the lowest allowable (-1 means superheated so no problem)
     if x_out != -1.0 && x_out < st.outlet_steam_min_vapor_fraction
         error("The calculated steam outlet vapor fraction of $x_out is lower than the minimum allowable value of $(st.outlet_steam_min_vapor_fraction)")
     end
 
-    # ST Power
+    # Steam turbine shaft power calculations from enthalpy difference at inlet and outlet, and net power with efficiencies
     st_shaft_power_kwh_per_kg = (h_in_j_per_kg - h_out_j_per_kg) / 1000.0 / 3600.0
     st_net_elec_power_kwh_per_kg = st_shaft_power_kwh_per_kg * st.gearbox_generator_efficiency * st.net_to_gross_electric_ratio
 
-    # Condenser heat rejection or heat recovery if ST is back-pressure
+    # Condenser heat rejection or heat recovery if steam turbine is back-pressure (is_condensing = false)
     if st.is_condensing
         heat_recovered_kwh_per_kg = 0.0
     else
@@ -197,11 +198,11 @@ function assign_st_elec_and_therm_prod_ratios!(st::SteamTurbine)
         heat_recovered_kwh_per_kg = (h_out_j_per_kg - h_out_sat_liq_j_per_kg) / 1000.0 / 3600.0
     end
 
-    # Boiler Thermal Power - assume enthalpy at saturated liquid condition (ignore delta H of pump)
+    # Boiler thermal Power - assume enthalpy at saturated liquid condition (ignore delta H of pump)
     h_boiler_in_j_per_kg = PropsSI("H","P",p_out_pa,"Q",0.0,"Water")
     boiler_therm_power_kwh_per_kg = (h_in_j_per_kg - h_boiler_in_j_per_kg) / 1000.0 / 3600.0
 
-    # Calculate output ratios
+    # Calculate output ratios to be used in the REopt optimization model
     if isnan(st.electric_produced_to_thermal_consumed_ratio)
         st.electric_produced_to_thermal_consumed_ratio = st_net_elec_power_kwh_per_kg / boiler_therm_power_kwh_per_kg
     end
