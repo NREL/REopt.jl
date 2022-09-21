@@ -1374,7 +1374,7 @@ end
                         ("cooling_thermal_factor", 1.0)
                         ])
     
-    input_data["Financial"]["chp_fuel_cost_escalation_pct"] = 0.034
+    input_data["Financial"]["chp_fuel_cost_escalation_rate_fraction"] = 0.034
     
     # Add CoolingLoad and AbsorptionChiller so we can test the energy balance on AbsorptionChiller too (thermal consumption)
     input_data["CoolingLoad"] = Dict{Any, Any}("doe_reference_name" => "Hospital")
