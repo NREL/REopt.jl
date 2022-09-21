@@ -1028,9 +1028,9 @@ function process_reliability_results(results::Array)::Dict
         "min_marginal_survival_by_duration"     => marginal_duration_mins,
         "mean_cumulative_survival_by_duration"  => cumulative_duration_means,
         "min_cumulative_survival_by_duration"   => cumulative_duration_mins,
-        "marginal_outage_survival_final_hour"   => marginal_final_resilience,
-        "cumulative_outage_survival_final_hour" => cumulative_final_resilience,
-        "mean_cumulative_outage_survival_final_hour" => cumulative_final_resilience_mean
+        "marginal_outage_survival_final_time_step"   => marginal_final_resilience,
+        "cumulative_outage_survival_final_time_step" => cumulative_final_resilience,
+        "mean_cumulative_outage_survival_final_time_step" => cumulative_final_resilience_mean
     )
 end
 
