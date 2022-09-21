@@ -23,7 +23,13 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop - 2022-08-29
+## v0.19.0
+### Changed
+The following name changes were made: 
+- Change "pct" to "rate_fraction" for "discount", "escalation", names containing "tax_pct" (financial terms)
+- Change "pct" to "fraction" for all other variable names (e.g., "min_soc", "min_turndown_")
+- Change `prod_factor_series` to `production_factor_series` and rename some internal methods and variables to match
+- Change four (4) CHP input field names to spell out `electric` (from `elec`) and `efficiency` (from `effic`) for electric and thermal efficiencies
 ### Added
 - Add `Boiler` tech, from the REopt_API (known as NewBoiler in API)
 - Add `SteamTurbine` tech, from the REopt_API
@@ -74,7 +80,7 @@ Classify the change according to the following categories:
 - Add hot, cold TES results for MPC model
 - Update documentation and add `docs/devdeploy.jl` to locally host the REopt.jl documentation 
 - Make `ExistingBoiler` `fuel_cost_per_mmbtu` a required input
-- In `prodfactor.jl`, include lat-long coordinates if-statement to determine whether the "nsrdb" dataset should be used in call to PVWatts. Accounts for recent updates to NSRDB data used by PVWatts (v6). If outside of NSRDB range, use "intl" (international) dataset.
+- In `production_factor.jl`, include lat-long coordinates if-statement to determine whether the "nsrdb" dataset should be used in call to PVWatts. Accounts for recent updates to NSRDB data used by PVWatts (v6). If outside of NSRDB range, use "intl" (international) dataset.
 - Don't trigger GitHub 'Run test' workflow on a push that only changes README.md and/or CHANGELOG.md
 - Avoid triggering duplicate GitHub workflows. When pushing to a branch that's in a PR, only trigger tests on the push not on the PR sync also.
 ### Fixed
@@ -204,7 +210,7 @@ Other changes:
 
 ## v0.7.2
 #### Improvements
-- add PV.prod_factor_series input (can skip PVWatts call)
+- add PV.production_factor_series input (can skip PVWatts call)
 - add `run_mpc` capability, which dispatches DER for minimum energy cost over an arbitrary time horizon
 
 ## v0.7.1

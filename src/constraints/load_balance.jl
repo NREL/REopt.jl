@@ -89,7 +89,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
         @constraint(m, 
             sum(m[Symbol("dvOffgridLoadServedFraction"*_n)][ts] * p.s.electric_load.critical_loads_kw[ts] for ts in p.time_steps_without_grid)
             >=
-			sum(p.s.electric_load.critical_loads_kw) * p.s.electric_load.min_load_met_annual_pct 
+			sum(p.s.electric_load.critical_loads_kw) * p.s.electric_load.min_load_met_annual_fraction 
 		)
     end
 

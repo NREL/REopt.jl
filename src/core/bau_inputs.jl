@@ -56,7 +56,7 @@ function BAUInputs(p::REoptInputs)
     cop = Dict(t => 0.0 for t in techs.cooling)
     thermal_cop = Dict{String, Float64}()
     production_factor = DenseAxisArray{Float64}(undef, techs.all, p.time_steps)
-    tech_renewable_energy_pct = Dict(t => 0.0 for t in techs.all)
+    tech_renewable_energy_fraction = Dict(t => 0.0 for t in techs.all)
     # !!! note: tech_emissions_factors are in lb / kWh of fuel burned (gets multiplied by kWh of fuel burned, not kWh electricity consumption, ergo the use of the HHV instead of fuel slope)
     tech_emissions_factors_CO2 = Dict(t => 0.0 for t in techs.all)
     tech_emissions_factors_NOx = Dict(t => 0.0 for t in techs.all)
@@ -87,7 +87,7 @@ function BAUInputs(p::REoptInputs)
         om_cost_per_kw[pvname] = p.om_cost_per_kw[pvname]
         levelization_factor[pvname] = p.levelization_factor[pvname]
         cap_cost_slope[pvname] = 0.0
-        tech_renewable_energy_pct[pvname] = 1.0
+        tech_renewable_energy_fraction[pvname] = 1.0
         if pvname in p.techs.pbi
             push!(pbi_techs, pvname)
         end
@@ -204,12 +204,12 @@ function BAUInputs(p::REoptInputs)
         ghp_electric_consumption_kw,
         ghp_installed_cost,
         ghp_om_cost_year_one,        
-        tech_renewable_energy_pct, 
+        tech_renewable_energy_fraction, 
         tech_emissions_factors_CO2, 
         tech_emissions_factors_NOx, 
         tech_emissions_factors_SO2, 
         tech_emissions_factors_PM25,
-        p.techs_operating_reserve_req_pct
+        p.techs_operating_reserve_req_fraction
     )
 end
 
@@ -345,7 +345,7 @@ function bau_outage_check(critical_loads_kw::AbstractArray, pv_kw_series::Abstra
                 fuel_kwh = (fuel_gal - gen.fuel_intercept_gal_per_hr) / gen.fuel_slope_gal_per_kwh
                 gen_avail = minimum([fuel_kwh, gen.existing_kw * (1.0 / time_steps_per_hour)])
                 # output = the greater of either the unmet load or available generation based on fuel and the min loading
-                gen_output = maximum([minimum([unmet, gen_avail]), gen.min_turn_down_pct * gen.existing_kw])
+                gen_output = maximum([minimum([unmet, gen_avail]), gen.min_turn_down_fraction * gen.existing_kw])
                 fuel_needed = gen.fuel_intercept_gal_per_hr + gen.fuel_slope_gal_per_kwh * gen_output
                 fuel_gal -= fuel_needed
                 generator_fuel_use_gal += fuel_needed # previous logic: max(min(fuel_needed,fuel_gal), 0)
