@@ -172,7 +172,8 @@ function handle_errors(e::E, stacktrace::V) where {
 	}
 
 	results = Dict(
-		"Messages"=>Dict()
+		"Messages"=>Dict(),
+		"status"=>"error"
 	)
 
 	results["Messages"]["warnings"] = []
@@ -190,7 +191,7 @@ function handle_errors(e::E, stacktrace::V) where {
 		end
 	end
 
-	push!(results["Messages"]["errors"], (e,stacktrace))
+	push!(results["Messages"]["errors"], (string(e),string.(stacktrace)))
 	return results
 end
 
