@@ -32,7 +32,7 @@
 ```julia
     om_cost_escalation_rate_fraction::Real = 0.025,
     elec_cost_escalation_rate_fraction::Real = 0.019,
-    existing_boiler_fuel_cost_escalation_fraction::Float64 = 0.034, 
+    existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.034, 
     boiler_fuel_cost_escalation_rate_fraction::Real = 0.034,
     chp_fuel_cost_escalation_rate_fraction::Real = 0.034,
     generator_fuel_cost_escalation_rate_fraction::Real = 0.027,
@@ -78,7 +78,7 @@
 struct Financial
     om_cost_escalation_rate_fraction::Float64
     elec_cost_escalation_rate_fraction::Float64
-    existing_boiler_fuel_cost_escalation_fraction::Float64
+    existing_boiler_fuel_cost_escalation_rate_fraction::Float64
     boiler_fuel_cost_escalation_rate_fraction::Float64
     chp_fuel_cost_escalation_rate_fraction::Float64
     generator_fuel_cost_escalation_rate_fraction::Float64
@@ -110,7 +110,7 @@ struct Financial
         off_grid_flag::Bool = false,
         om_cost_escalation_rate_fraction::Real = 0.025,
         elec_cost_escalation_rate_fraction::Real = 0.019,
-        existing_boiler_fuel_cost_escalation_fraction::Float64 = 0.034,
+        existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.034,
         boiler_fuel_cost_escalation_rate_fraction::Real = 0.034,
         chp_fuel_cost_escalation_rate_fraction::Real = 0.034,
         generator_fuel_cost_escalation_rate_fraction::Real = 0.027,
@@ -207,7 +207,7 @@ struct Financial
         return new(    
             om_cost_escalation_rate_fraction,
             elec_cost_escalation_rate_fraction,
-            existing_boiler_fuel_cost_escalation_fraction,
+            existing_boiler_fuel_cost_escalation_rate_fraction,
             boiler_fuel_cost_escalation_rate_fraction,
             chp_fuel_cost_escalation_rate_fraction,
             generator_fuel_cost_escalation_rate_fraction,

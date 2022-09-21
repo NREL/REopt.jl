@@ -632,7 +632,7 @@ function setup_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost
             itc_basis = s.boiler.installed_cost_per_kw,
             replacement_cost = 0.0,
             replacement_year = s.financial.analysis_years,
-            discount_rate = s.financial.owner_discount_fraction,
+            discount_rate = s.financial.owner_discount_rate_fraction,
             tax_rate = s.financial.owner_tax_fraction,
             itc = 0.0,
             macrs_schedule = s.boiler.macrs_option_years == 5 ? s.financial.macrs_five_year : s.financial.macrs_seven_year,
@@ -810,8 +810,8 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
         if t == "ExistingBoiler"
             pwf_fuel["ExistingBoiler"] = annuity(
                 s.financial.analysis_years,
-                s.financial.existing_boiler_fuel_cost_escalation_fraction,
-                s.financial.offtaker_discount_fraction
+                s.financial.existing_boiler_fuel_cost_escalation_rate_fraction,
+                s.financial.offtaker_discount_rate_fraction
             )
         end
         if t == "Boiler"
