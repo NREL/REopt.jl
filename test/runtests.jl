@@ -244,7 +244,7 @@ else  # run HiGHS tests
 
         #More realistic case of hospital load with 2 generators, PV, and battery
         reliability_inputs = JSON.parsefile("./scenarios/backup_reliability_inputs.json")
-        @test backup_reliability(reliability_inputs)["mean_final_cumulative_outage_survival"] ≈ 0.990784 atol=0.01
+        @test backup_reliability(reliability_inputs)["mean_cumulative_outage_survival_final_hour"] ≈ 0.990784 atol=0.01
     end                            
 
     # removed Wind test for two reasons
