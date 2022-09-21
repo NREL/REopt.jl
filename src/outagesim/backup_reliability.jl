@@ -585,9 +585,9 @@ julia> num_battery_bins = 3; battery_size_kwh = 2; battery_size_kw = 1;  battery
 julia> survival_with_battery(net_critical_loads_kw=net_critical_loads_kw, starting_battery_soc_kwh=starting_battery_soc_kwh, 
                             generator_operational_availability=generator_operational_availability, generator_failure_to_start=failure_to_start, 
                             generator_failure_to_run=failure_to_run, num_generators=num_generators, generator_size_kw=generator_size_kw, 
-                            battery_size_kwh=battery_size_kwh, num_battery_bins=num_battery_bins, max_outage_duration=max_outage_duration, 
-                            battery_charge_efficiency=battery_charge_efficiency, battery_discharge_efficiency=battery_discharge_efficiency,
-                            marginal_survival = true)
+                            battery_size_kwh=battery_size_kwh, battery_size_kw = battery_size_kw, num_battery_bins=num_battery_bins, 
+                            max_outage_duration=max_outage_duration, battery_charge_efficiency=battery_charge_efficiency, 
+                            battery_discharge_efficiency=battery_discharge_efficiency, marginal_survival = true)
 4×3 Matrix{Float64}:
 1.0   0.8704  0.393216
 0.96  0.6144  0.77824
@@ -597,9 +597,9 @@ julia> survival_with_battery(net_critical_loads_kw=net_critical_loads_kw, starti
 julia> survival_with_battery(net_critical_loads_kw=net_critical_loads_kw, starting_battery_soc_kwh=starting_battery_soc_kwh, 
                             generator_operational_availability=generator_operational_availability, generator_failure_to_start=failure_to_start, 
                             generator_failure_to_run=failure_to_run, num_generators=num_generators, generator_size_kw=generator_size_kw, 
-                            battery_size_kwh=battery_size_kwh, num_battery_bins=num_battery_bins, max_outage_duration=max_outage_duration, 
-                            battery_charge_efficiency=battery_charge_efficiency, battery_discharge_efficiency=battery_discharge_efficiency,
-                            marginal_survival = false)
+                            battery_size_kwh=battery_size_kwh, battery_size_kw = battery_size_kw, num_battery_bins=num_battery_bins, 
+                            max_outage_duration=max_outage_duration, battery_charge_efficiency=battery_charge_efficiency, 
+                            battery_discharge_efficiency=battery_discharge_efficiency, marginal_survival = false)
 4×3 Matrix{Float64}:
 1.0   0.8704  0.393216
 0.96  0.6144  0.57344
@@ -701,12 +701,10 @@ Return a dictionary of inputs required for backup reliability calculations.
 """
 function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dict())::Dict
     zero_array = zeros(length(p.time_steps))
-
+    net_critical_loads_kw = p.s.electric_load.critical_loads_kw
 
     r2 = dictkeys_tosymbols(r)
     
-    net_critical_loads_kw = p.s.electric_load.critical_loads_kw
-
     #TODO Change CHP to meet capacity not load
     if "CHP" in keys(d)
         chp_generation =  get(d["CHP"], "size_kw", 0)
@@ -824,17 +822,15 @@ Return a dictionary of inputs required for backup reliability calculations.
 ```
 """
 function backup_reliability_inputs(;r::Dict)::Dict
-    
     #TODO: invalid input handling, e.g.:
     # - if batt size provided then soc must be also
     # - gen inputs must be all scalars (for single gen type) or all vectors (for multiple)
-
     r2 = dictkeys_tosymbols(r)
 
     if length(r2[:num_generators]) == 1
         r2[:num_generators] = r2[:num_generators][1]
     end
-
+    
     r2[:net_critical_loads_kw] = r2[:critical_loads_kw]
     zero_array = zeros(length(r2[:net_critical_loads_kw]))
 
@@ -861,15 +857,6 @@ function backup_reliability_inputs(;r::Dict)::Dict
             r2[:net_critical_loads_kw] .-= pv_kw_ac_hourly
         end
     end
-
-    # remove inputs not needed for next steps of reliability calculations
-    delete!(r2, :critical_loads_kw)
-    delete!(r2, :battery_year_one_soc_series_pct)
-    delete!(r2, :chp_size_kw)
-    delete!(r2, :pv_size_kw)
-    delete!(r2, :pv_production_factor_series)
-    delete!(r2, :pv_migrogrid_upgraded)
-    delete!(r2, :microgrid_only)
 
     return r2
 end
@@ -908,7 +895,8 @@ function return_backup_reliability(;
     battery_size_kw::Real = 0.0,
     battery_size_kwh::Real = 0.0,
     battery_charge_efficiency::Real = 0.948, 
-    battery_discharge_efficiency::Real = 0.948)::Array
+    battery_discharge_efficiency::Real = 0.948,
+    kwargs...)::Array
  
     total_gen_cap = sum(generator_size_kw)
     #No reliability calculations if no generators
