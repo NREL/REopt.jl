@@ -29,17 +29,17 @@
 # *********************************************************************************
 """
 `Boiler` results keys:
-- `size_mmbtu_per_hour` Thermal production capacity size of the Boiler [MMBtu/hr]
-- `year_one_fuel_consumption_series_mmbtu_per_hour` Fuel consumption series [MMBtu]
-- `year_one_fuel_consumption_mmbtu` Fuel consumed in a year [MMBtu]
-- `year_one_thermal_production_series_mmbtu_per_hour` Thermal energy production series [MMBtu/hr]
-- `year_one_thermal_production_mmbtu` Thermal energy produced in a year [MMBtu]
-- `year_one_thermal_to_tes_series_mmbtu_per_hour` Thermal power production to HotThermalStorage series [MMBtu/hr]
-- `year_one_thermal_to_steamturbine_series_mmbtu_per_hour` Thermal power production to SteamTurbine series [MMBtu/hr]
-- `year_one_thermal_to_load_series_mmbtu_per_hour` Thermal power production to serve the heating load series [MMBtu/hr]
-- `lifecycle_fuel_cost` Life cycle fuel cost [$]
-- `year_one_fuel_cost` Year one fuel cost [$]
-- `lifecycle_per_unit_prod_om_costs` Life cycle production-based O&M cost [$]
+- `size_mmbtu_per_hour`  # Thermal production capacity size of the Boiler [MMBtu/hr]
+- `year_one_fuel_consumption_series_mmbtu_per_hour`  # Fuel consumption series [MMBtu]
+- `year_one_fuel_consumption_mmbtu`  # Fuel consumed in a year [MMBtu]
+- `year_one_thermal_production_series_mmbtu_per_hour`  # Thermal energy production series [MMBtu/hr]
+- `year_one_thermal_production_mmbtu`  # Thermal energy produced in a year [MMBtu]
+- `year_one_thermal_to_tes_series_mmbtu_per_hour`  # Thermal power production to HotThermalStorage series [MMBtu/hr]
+- `year_one_thermal_to_steamturbine_series_mmbtu_per_hour`  # Thermal power production to SteamTurbine series [MMBtu/hr]
+- `year_one_thermal_to_load_series_mmbtu_per_hour`  # Thermal power production to serve the heating load series [MMBtu/hr]
+- `lifecycle_fuel_cost`  # Life cycle fuel cost [\$]
+- `year_one_fuel_cost`  # Year one fuel cost [\$]
+- `lifecycle_per_unit_prod_om_costs`  # Life cycle production-based O&M cost [\$]
 """
 
 function add_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
