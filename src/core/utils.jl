@@ -167,9 +167,7 @@ function dictkeys_tosymbols(d::Dict)
             "coincident_peak_load_charge_per_kw", "fuel_cost_per_mmbtu",
             "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
             "outage_probabilities",
-            "pv_production_factor", "battery_year_one_soc_series_pct", #for ERP
-            "generator_size_kw", "generator_operational_availability",
-            "generator_failure_to_start", "generator_failure_to_run"
+            "pv_production_factor", "battery_year_one_soc_series_pct"
             ] && !isnothing(v)
             try
                 v = convert(Array{Real, 1}, v)
@@ -178,12 +176,31 @@ function dictkeys_tosymbols(d::Dict)
             end
         end
         if k in [
-            "blended_doe_reference_names"
-        ]
-            try
-                v = convert(Array{String, 1}, v)
-            catch
-                @warn "Unable to convert $k to an Array{String, 1}"
+        "generator_size_kw", "generator_operational_availability",
+        "generator_failure_to_start", "generator_failure_to_run"
+        ] && !isnothing(v)
+            if isa(v, Array)
+                try
+                    v = convert(Array{Real, 1}, v)
+                catch
+                    @warn "Unable to convert $k to an Array{Real, 1}"
+                end
+            else
+                try
+                    v = convert(Real, v)
+                catch
+                    @warn "Unable to convert $k to a Real number"
+                end
+            end  
+
+            if k in [
+                "blended_doe_reference_names"
+            ]
+                try
+                    v = convert(Array{String, 1}, v)
+                catch
+                    @warn "Unable to convert $k to an Array{String, 1}"
+                end
             end
         end
         if k in [
@@ -196,14 +213,28 @@ function dictkeys_tosymbols(d::Dict)
             end
         end
         if k in [
-            "outage_start_time_steps", "outage_durations", 
-            "num_generators" #for ERP
+            "outage_start_time_steps", "outage_durations" 
         ]
             try
                 v = convert(Array{Int64, 1}, v)
             catch
                 @warn "Unable to convert $k to a Array{Int64, 1}"
             end
+        end
+        if k in ["num_generators"] #for ERP
+            if isa(v, Array)
+                try
+                    v = convert(Array{Int64, 1}, v)
+                catch
+                    @warn "Unable to convert $k to an Array{Int64, 1}"
+                end
+            else
+                try
+                    v = convert(Int64, v)
+                catch
+                    @warn "Unable to convert $k to a Integer"
+                end
+            end  
         end
         d2[Symbol(k)] = v
     end

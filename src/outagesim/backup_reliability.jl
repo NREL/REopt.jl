@@ -697,7 +697,6 @@ Return a dictionary of inputs required for backup reliability calculations.
     -num_battery_bins::Int = 101                            Internal value for discretely modeling battery state of charge
     -max_outage_duration::Int = 96                          Maximum outage hour modeled
     -microgrid_only::Bool = false                           Boolean to specify if only microgrid upgraded technologies run during grid outage 
-```
 """
 function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dict())::Dict
     zero_array = zeros(length(p.time_steps))
@@ -798,6 +797,7 @@ end
     backup_reliability_inputs(;r::Dict)::Dict
 
 Return a dictionary of inputs required for backup reliability calculations. 
+***NOTE*** PV production only added if battery storage is also available to manage variability
 
 # Arguments
 - `r::Dict`: Dictionary of inputs for reliability calculations.
@@ -813,22 +813,43 @@ Return a dictionary of inputs required for backup reliability calculations.
     -charge_efficiency::Real                    Battery charge efficiency
     -discharge_efficiency::Real                 Battery discharge efficiency
     -battery_year_one_soc_series_pct            Battery state of charge in each hour (if not input then defaults to battery size)
+    -generator_operational_availability= 0.9998 Likelihood generator being available in given hour
     -generator_failure_to_start::Real = 0.0066  Chance of generator starting given outage
     -generator_failure_to_run::Real = 0.00157   Chance of generator failing in each hour of outage
     -num_generators::Int = 1                    Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
     -generator_size_kw::Real = 0.0              Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
     -num_battery_bins::Int = 101                Internal value for discretely modeling battery state of charge
     -max_outage_duration::Int = 96              Maximum outage hour modeled
+
+#Examples
+```repl-julia
+julia> r = Dict("critical_loads_kw" => [1,2,1,1], "generator_operational_availability" => 1, "generator_failure_to_start" => 0.0,
+                "generator_failure_to_run" => 0.2, "num_generators" => 2, "generator_size_kw" => 1, 
+                "max_outage_duration" => 3, "battery_size_kw" =>2, "battery_size_kwh" => 4)
+julia>    backup_reliability_inputs(r = r)
+Dict{Any, Any} with 11 entries:
+  :num_generators                     => 2
+  :starting_battery_soc_kwh           => [4.0, 4.0, 4.0, 4.0]
+  :max_outage_duration                => 3
+  :generator_size_kw                  => 1
+  :generator_failure_to_start         => 0.0
+  :battery_size_kwh                   => 4
+  :battery_size_kw                    => 2
+  :net_critical_loads_kw              => Real[1.0, 2.0, 1.0, 1.0]
+  :generator_failure_to_run           => 0.2
+  :generator_operational_availability => 1
+  :critical_loads_kw                  => Real[1.0, 2.0, 1.0, 1.0]
 ```
 """
 function backup_reliability_inputs(;r::Dict)::Dict
-    #TODO: invalid input handling, e.g.:
-    # - if batt size provided then soc must be also
-    # - gen inputs must be all scalars (for single gen type) or all vectors (for multiple)
+    invalid_args = String[]
     r2 = dictkeys_tosymbols(r)
 
-    if length(r2[:num_generators]) == 1
-        r2[:num_generators] = r2[:num_generators][1]
+    generator_inputs = [:generator_operational_availability, :generator_failure_to_start, :generator_failure_to_run, :num_generators, :generator_size_kw]
+    for g in generator_inputs
+        if g in keys(r2) && isa(r2[g], Array) && length(r2[g]) == 1
+        r2[g] = r2[g][1]
+        end
     end
     
     r2[:net_critical_loads_kw] = r2[:critical_loads_kw]
@@ -842,7 +863,11 @@ function backup_reliability_inputs(;r::Dict)::Dict
 
     pv_kw_ac_hourly = zero_array
     if :pv_size_kw in keys(r2)
-        pv_kw_ac_hourly = r2[:pv_size_kw] .* r2[:pv_production_factor_series]
+        if :pv_production_factor_series in keys(r2)
+            pv_kw_ac_hourly = r2[:pv_size_kw] .* r2[:pv_production_factor_series]
+        else
+            push!(invalid_args, "pv_size_kw added to reliability inputs put not pv_production_factor_series provided")
+        end
     end
     if microgrid_only && !Bool(get(r2, :pv_migrogrid_upgraded, false))
         pv_kw_ac_hourly = zero_array
@@ -850,17 +875,27 @@ function backup_reliability_inputs(;r::Dict)::Dict
 
     if :battery_size_kw in keys(r2)
         if !microgrid_only || Bool(get(r2, :storage_microgrid_upgraded, false))
-            init_soc = get(r2, :battery_year_one_soc_series_pct, ones(length(r2[:net_critical_loads_kw])))
+            if :battery_year_one_soc_series_pct in keys(r2)
+                init_soc = r2[:battery_year_one_soc_series_pct]
+            else
+                @warn("No battery soc series provided to reliability inputs. Assuming battery fully charged at start of outage.")
+                init_soc = ones(length(r2[:net_critical_loads_kw]))
+            end
             r2[:starting_battery_soc_kwh] = init_soc .* r2[:battery_size_kwh]
             #Only subtracts PV generation if there is also a battery
-            #TODO: put this assumption in documentation
             r2[:net_critical_loads_kw] .-= pv_kw_ac_hourly
+            if !haskey(r2, :battery_size_kwh)
+                push!(invalid_args, "Battery kW provided to reliability inputs but no kWh provided.")
+            end
         end
+    end
+
+    if length(invalid_args) > 0
+        error("Invalid argument values: $(invalid_args)")
     end
 
     return r2
 end
-
 """
     return_backup_reliability(; critical_loads_kw::Vector, generator_operational_availability::Real = 0.9998, generator_failure_to_start::Real = 0.0066, 
         generator_failure_to_run::Real = 0.00157, num_generators::Int = 1, generator_size_kw::Real = 0.0, num_battery_bins::Int = 100, max_outage_duration::Int = 96,
