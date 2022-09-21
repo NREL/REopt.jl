@@ -135,8 +135,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d, "ElectricUtility") && !(settings.off_grid_flag)
         electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...,
                                             latitude=site.latitude, longitude=site.longitude, 
-                                            CO2_emissions_reduction_min_pct=site.CO2_emissions_reduction_min_pct,
-                                            CO2_emissions_reduction_max_pct=site.CO2_emissions_reduction_max_pct,
+                                            CO2_emissions_reduction_min_fraction=site.CO2_emissions_reduction_min_fraction,
+                                            CO2_emissions_reduction_max_fraction=site.CO2_emissions_reduction_max_fraction,
                                             include_climate_in_objective=settings.include_climate_in_objective,
                                             include_health_in_objective=settings.include_health_in_objective,
                                             off_grid_flag=settings.off_grid_flag,
