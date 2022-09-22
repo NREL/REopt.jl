@@ -1307,7 +1307,7 @@ end
     )
 
     # No Errors, only warnings
-    m = Model(Xpress.Optimizer)
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     r = run_reopt(m,req)
 
     @test r["status"] == "optimal"
@@ -1323,7 +1323,7 @@ end
     @test "Messages" ∈ keys(r)
     @test "errors" ∈ keys(r["Messages"])
     @test "warnings" ∈ keys(r["Messages"])
-    @test typeof(r["Messages"]["errors"][1][2]) <: Array{Base.StackTraces.StackFrame, 1}
+    @test typeof(r["Messages"]["errors"][1][2]) <: Array{String}
 
     # Throw a handled error
     req["PV"] = "String"
