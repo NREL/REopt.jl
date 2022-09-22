@@ -185,7 +185,7 @@ function dictkeys_tosymbols(d::Dict)
             try
                 v = convert(Array{Real, 1}, v)
             catch
-                @warn "Unable to convert $k to an Array{Real, 1}"
+                @debug "Unable to convert $k to an Array{Real, 1}"
             end
         end
         if k in [
@@ -203,7 +203,7 @@ function dictkeys_tosymbols(d::Dict)
             try
                 v = convert(Vector{Vector{Int64}}, v)
             catch
-                @warn "Unable to convert $k to a Vector{Vector{Int64}}"
+                @debug "Unable to convert $k to a Vector{Vector{Int64}}"
             end
         end
         if k in [
@@ -228,7 +228,7 @@ function filter_dict_to_match_struct_field_names(d::Dict, s::DataType)
         if haskey(d, k)
             d2[k] = d[k]
         else
-            @warn "dict is missing struct field $k"
+            @debug "dict is missing struct field $k"
         end
     end
     return d2
