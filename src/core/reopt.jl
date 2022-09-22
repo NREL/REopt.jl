@@ -162,9 +162,12 @@ function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractMod
 end
 
 """
-    handle_errors(e::E) where E <: Exception
+    handle_errors(e::E, stacktrace::V) where {
+		E <: Exception,
+		V <: Vector
+	}
 
-Creates a results dictionary in case of an error from REopt.jl with Warnings and Errors from logREopt.d. This new dictionary is then returned to the user.
+Creates a results dictionary in case of an error from REopt.jl with Warnings and Errors from logREopt.d. The unhandled error+stacktrace is returned to the user.
 """
 function handle_errors(e::E, stacktrace::V) where {
 	E <: Exception,
@@ -195,6 +198,11 @@ function handle_errors(e::E, stacktrace::V) where {
 	return results
 end
 
+"""
+    handle_errors()
+
+Creates a results dictionary in case of a handled error from REopt.jl with Warnings and Errors from logREopt.d, which is returned to the user.
+"""
 function handle_errors()
 
 	results = Dict(
