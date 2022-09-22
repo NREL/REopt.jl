@@ -23,6 +23,16 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.20.0
+### Added
+- `Boiler` tech from the REopt_API (known as NewBoiler in API)
+- `SteamTurbine` tech from the REopt_API
+### Changed
+- Made some modifications to thermal tech results to be consistent with naming conventions of REopt.jl
+### Fixed
+- Bug for scalar `ElectricTariff.wholesale_rate`
+- Bug in which CHP could not charge Hot TES
+
 ## v0.19.0
 ### Changed
 The following name changes were made: 
