@@ -44,6 +44,7 @@ The following name changes were made:
 
 ### Fixed
 - Bug for scalar `ElectricTariff.wholesale_rate`
+- Bug in which CHP could not charge Hot TES
   
 ## v0.18.1
 ### Removed
