@@ -42,6 +42,7 @@ struct Scenario <: AbstractScenario
     space_heating_load::SpaceHeatingLoad
     cooling_load::CoolingLoad
     existing_boiler::Union{ExistingBoiler, Nothing}
+    boiler::Union{Boiler, Nothing}
     chp::Union{CHP, Nothing}  # use nothing for more items when they are not modeled?
     flexible_hvac::Union{FlexibleHVAC, Nothing}
     existing_chiller::Union{ExistingChiller, Nothing}
@@ -49,6 +50,7 @@ struct Scenario <: AbstractScenario
     ghp_option_list::Array{Union{GHP, Nothing}, 1}  # List of GHP objects (often just 1 element, but can be more)
     heating_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
+    steam_turbine::Union{SteamTurbine, Nothing}
 end
 
 """
@@ -67,11 +69,13 @@ A Scenario struct can contain the following keys:
 - [DomesticHotWaterLoad](@ref) (optional)
 - [SpaceHeatingLoad](@ref) (optional)
 - [ExistingBoiler](@ref) (optional)
+- [Boiler](@ref) (optional)
 - [CHP](@ref) (optional)
 - [FlexibleHVAC](@ref) (optional)
 - [ExistingChiller](@ref) (optional)
 - [AbsorptionChiller](@ref) (optional)
 - [GHP](@ref) (optional, can be Array)
+- [SteamTurbine](@ref) (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
 
@@ -241,6 +245,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     flexible_hvac = nothing
     existing_boiler = nothing
+    boiler = nothing
     existing_chiller = nothing
 
     if haskey(d, "FlexibleHVAC")
@@ -265,8 +270,13 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     boiler_inputs = merge(boiler_inputs, dictkeys_tosymbols(d["ExistingBoiler"]))
                 end
                 existing_boiler = ExistingBoiler(; boiler_inputs...)
-                # TODO automatically add CHP or other heating techs?
+
+                if haskey(d, "Boiler")
+                    boiler = Boiler(; dictkeys_tosymbols(d["Boiler"])...)
+                end
                 # TODO increase max_thermal_factor_on_peak_load to allow more heating flexibility?
+            elseif haskey(d, "Boiler")
+                @warn("Not creating Boiler because there is no heating load.") 
             end
 
             if sum(flexible_hvac.bau_hvac.existing_chiller_kw_thermal) > 0
@@ -301,7 +311,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         end
     end
 
-    if max_heat_demand_kw > 0 && !haskey(d, "FlexibleHVAC")  # create ExistingBoler
+    if max_heat_demand_kw > 0 && !haskey(d, "FlexibleHVAC")  # create ExistingBoiler
         boiler_inputs = Dict{Symbol, Any}()
         boiler_inputs[:max_heat_demand_kw] = max_heat_demand_kw
         boiler_inputs[:time_steps_per_hour] = settings.time_steps_per_hour
@@ -316,6 +326,16 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         end
         existing_boiler = ExistingBoiler(; boiler_inputs...)
     end
+
+    if haskey(d, "Boiler")
+        if max_heat_demand_kw > 0 && !haskey(d, "FlexibleHVAC")
+            boiler = Boiler(; dictkeys_tosymbols(d["Boiler"])...)
+        end
+        if !(max_heat_demand_kw > 0) && !haskey(d, "FlexibleHVAC")
+            @warn("Not creating Boiler because there is no heating load.")
+        end
+    end
+
 
     chp = nothing
     if haskey(d, "CHP")
@@ -498,6 +518,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         end
     end
 
+    steam_turbine = nothing
+    if haskey(d, "SteamTurbine") && d["SteamTurbine"]["max_kw"] > 0.0
+        steam_turbine = SteamTurbine(d["SteamTurbine"])
+    end
+
     return Scenario(
         settings,
         site, 
@@ -513,13 +538,15 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         space_heating_load,
         cooling_load,
         existing_boiler,
+        boiler,
         chp,
         flexible_hvac,
         existing_chiller,
         absorption_chiller,
         ghp_option_list,
         heating_thermal_load_reduction_with_ghp_kw,
-        cooling_thermal_load_reduction_with_ghp_kw
+        cooling_thermal_load_reduction_with_ghp_kw,
+        steam_turbine
     )
 end
 
