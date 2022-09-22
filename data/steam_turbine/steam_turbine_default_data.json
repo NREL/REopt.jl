@@ -1,11 +1,11 @@
 {
-    "installed_cost_us_dollars_per_kw": [
+    "installed_cost_per_kw": [
         828.0,
         1136.0,
         682.0,
         666.0
     ],
-    "om_cost_us_dollars_per_kwh": [
+    "om_cost_per_kwh": [
         0.0083,
         0.01,
         0.009,
