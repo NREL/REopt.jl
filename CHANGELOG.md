@@ -23,10 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop
+## v0.20.0
 ### Added
-- Add `Boiler` tech from the REopt_API (known as NewBoiler in API)
-- Add `SteamTurbine` tech from the REopt_API
+- `Boiler` tech from the REopt_API (known as NewBoiler in API)
+- `SteamTurbine` tech from the REopt_API
 ### Changed
 - Made some modifications to thermal tech results to be consistent with naming conventions of REopt.jl
 ### Fixed
