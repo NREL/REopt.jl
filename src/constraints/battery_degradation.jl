@@ -81,7 +81,7 @@ function add_degradation(m, p; b="ElectricStorage")
     if isempty(p.s.storage.attr[b].degradation.maintenance_cost_per_kwh)
         function pwf(day::Int)
             (1-p.s.storage.attr[b].degradation.installed_cost_per_kwh_declination_rate)^(day/365) / 
-            (1+p.s.financial.owner_discount_pct)^(day/365)
+            (1+p.s.financial.owner_discount_rate_fraction)^(day/365)
         end
         # for the augmentation strategy the maintenance cost curve (function of time) starts at 
         # 80% of the installed cost since we are not replacing the entire battery

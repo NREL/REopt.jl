@@ -51,6 +51,7 @@ struct MPCInputs <: AbstractInputs
     cop::Dict{String, Float64}  # (techs.cooling)
     thermal_cop::Dict{String, Float64}  # (techs.absorption_chiller)
     ghp_options::UnitRange{Int64}  # Range of the number of GHP options
+    fuel_cost_per_kwh::Dict{String, AbstractArray}  # Fuel cost array for all time_steps
 end
 
 
@@ -64,7 +65,7 @@ function MPCInputs(s::MPCScenario)
 
     time_steps = 1:length(s.electric_load.loads_kw)
     hours_per_time_step = 1 / s.settings.time_steps_per_hour
-    techs, production_factor, existing_sizes = setup_tech_inputs(s)
+    techs, production_factor, existing_sizes, fuel_cost_per_kwh = setup_tech_inputs(s)
     months = 1:length(s.electric_tariff.monthly_demand_rates)
 
     techs_by_exportbin = DenseAxisArray([ techs.all, techs.all, techs.all], s.electric_tariff.export_bins)
@@ -113,10 +114,11 @@ function MPCInputs(s::MPCScenario)
         export_bins_by_tech,
         cop,
         thermal_cop,
-        ghp_options
+        ghp_options,
         # s.site.min_resil_time_steps,
         # s.site.mg_tech_sizes_equal_grid_sizes,
         # s.site.node,
+        fuel_cost_per_kwh
     )
 end
 
@@ -130,30 +132,33 @@ function setup_tech_inputs(s::MPCScenario)
     # REoptInputs indexed on techs:
     existing_sizes = Dict(t => 0.0 for t in techs.all)
     production_factor = DenseAxisArray{Float64}(undef, techs.all, time_steps)
+    fuel_cost_per_kwh = Dict{String, AbstractArray}()
 
     if !isempty(techs.pv)
         setup_pv_inputs(s, existing_sizes, production_factor)
     end
 
     if "Generator" in techs.all
-        setup_gen_inputs(s, existing_sizes, production_factor)
+        setup_gen_inputs(s, existing_sizes, production_factor, fuel_cost_per_kwh)
     end
 
-    return techs, production_factor, existing_sizes
+    return techs, production_factor, existing_sizes, fuel_cost_per_kwh
 end
 
 
 function setup_pv_inputs(s::MPCScenario, existing_sizes, production_factor)
     for pv in s.pvs
-        production_factor[pv.name, :] = pv.prod_factor_series
+        production_factor[pv.name, :] = pv.production_factor_series
         existing_sizes[pv.name] = pv.size_kw
     end
     return nothing
 end
 
 
-function setup_gen_inputs(s::MPCScenario, existing_sizes, production_factor)
+function setup_gen_inputs(s::MPCScenario, existing_sizes, production_factor, fuel_cost_per_kwh)
     existing_sizes["Generator"] = s.generator.size_kw
     production_factor["Generator", :] = ones(length(s.electric_load.loads_kw))
+    generator_fuel_cost_per_kwh = s.generator.fuel_cost_per_gallon / KWH_PER_GAL_DIESEL
+    fuel_cost_per_kwh["Generator"] = per_hour_value_to_time_series(generator_fuel_cost_per_kwh, s.settings.time_steps_per_hour, "Generator")
     return nothing
 end
