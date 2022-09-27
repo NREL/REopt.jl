@@ -1011,16 +1011,17 @@ function process_reliability_results(results::Array)::Dict
         cumulative_duration_means = []
         cumulative_duration_mins = []
         cumulative_final_resilience = []
+        cumulative_final_resilience_mean = nothing
     else
-        marginal_results = results[1]
-        cumulative_results = results[2]
-        marginal_duration_means = vec(mean(marginal_results, dims = 1))
-        marginal_duration_mins = vec(minimum(marginal_results, dims = 1))
-        marginal_final_resilience = marginal_results[:, end]
-        cumulative_duration_means = vec(mean(cumulative_results, dims = 1))
-        cumulative_duration_mins = vec(minimum(cumulative_results, dims = 1))
-        cumulative_final_resilience = cumulative_results[:, end]
-        cumulative_final_resilience_mean = mean(cumulative_final_resilience)
+        marginal_results = round.(results[1], digits=6)
+        cumulative_results = round.(results[2], digits=6)
+        marginal_duration_means = round.(vec(mean(marginal_results, dims = 1)), digits=6)
+        marginal_duration_mins = round.(vec(minimum(marginal_results, dims = 1)), digits=6)
+        marginal_final_resilience = round.(marginal_results[:, end], digits=6)
+        cumulative_duration_means = round.(vec(mean(cumulative_results, dims = 1)), digits=6)
+        cumulative_duration_mins = round.(vec(minimum(cumulative_results, dims = 1)), digits=6)
+        cumulative_final_resilience = round.(cumulative_results[:, end], digits=6)
+        cumulative_final_resilience_mean = round(mean(cumulative_final_resilience), digits=6)
     end
 
     return Dict(
