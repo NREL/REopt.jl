@@ -547,7 +547,7 @@ function survival_gen_only(;
 end
 
 """
-    survival_with_battery(;net_critical_loads_kw::Vector, starting_battery_soc_kwh::Vector, generator_operational_availability::Real, generator_failure_to_start::Real, 
+    survival_with_battery(;net_critical_loads_kw::Vector, battery_starting_soc_kwh::Vector, generator_operational_availability::Real, generator_failure_to_start::Real, 
                         generator_failure_to_run::Real, num_generators::Int, generator_size_kw::Real, battery_size_kwh::Real, battery_size_kw::Real, num_bins::Int, 
                         max_outage_duration::Int, battery_charge_efficiency::Real, battery_discharge_efficiency::Real, marginal_survival = true)::Matrix{Float64} 
 
@@ -559,7 +559,7 @@ if ``marginal_survival`` = false then result is chance of surviving up to and in
 
 # Arguments
 - `net_critical_loads_kw::Vector`: 8760 vector of system critical loads minus solar generation.
-- `starting_battery_soc_kwh::Vector`: 8760 vector of battery charge (kwh) for each hour of year. 
+- `battery_starting_soc_kwh::Vector`: 8760 vector of battery charge (kwh) for each hour of year. 
 - `generator_operational_availability::Real`: Operational Availability of backup generators.
 - `generator_failure_to_start::Real`: probability of generator Failure to Start and support load. 
 - `generator_failure_to_run::Real`: hourly Failure to Run probability. failure_to_run is 1/MTTF (mean time to failure). 
@@ -577,11 +577,11 @@ if ``marginal_survival`` = false then result is chance of surviving up to and in
 Given failure_to_run = 0.2, the chance of no generators failing in 0.64 in hour 1, 0.4096 in hour 2, and 0.262144 in hour 3
 Chance of 2 generators failing is 0.04 in hour 1, 0.1296 by hour 2, and 0.238144 by hour 3   
 ```repl-julia
-julia> net_critical_loads_kw = [1,2,2,1]; starting_battery_soc_kwh = [1,1,1,1];  max_outage_duration = 3;
+julia> net_critical_loads_kw = [1,2,2,1]; battery_starting_soc_kwh = [1,1,1,1];  max_outage_duration = 3;
 julia> num_generators = 2; generator_size_kw = 1; generator_operational_availability = 1; failure_to_start = 0.0; failure_to_run = 0.2;
 julia> num_battery_bins = 3; battery_size_kwh = 2; battery_size_kw = 1;  battery_charge_efficiency = 1; battery_discharge_efficiency = 1;
 
-julia> survival_with_battery(net_critical_loads_kw=net_critical_loads_kw, starting_battery_soc_kwh=starting_battery_soc_kwh, 
+julia> survival_with_battery(net_critical_loads_kw=net_critical_loads_kw, battery_starting_soc_kwh=battery_starting_soc_kwh, 
                             generator_operational_availability=generator_operational_availability, generator_failure_to_start=failure_to_start, 
                             generator_failure_to_run=failure_to_run, num_generators=num_generators, generator_size_kw=generator_size_kw, 
                             battery_size_kwh=battery_size_kwh, battery_size_kw = battery_size_kw, num_battery_bins=num_battery_bins, 
@@ -593,7 +593,7 @@ julia> survival_with_battery(net_critical_loads_kw=net_critical_loads_kw, starti
 0.96  0.896   0.8192
 1.0   0.96    0.761856
 
-julia> survival_with_battery(net_critical_loads_kw=net_critical_loads_kw, starting_battery_soc_kwh=starting_battery_soc_kwh, 
+julia> survival_with_battery(net_critical_loads_kw=net_critical_loads_kw, battery_starting_soc_kwh=battery_starting_soc_kwh, 
                             generator_operational_availability=generator_operational_availability, generator_failure_to_start=failure_to_start, 
                             generator_failure_to_run=failure_to_run, num_generators=num_generators, generator_size_kw=generator_size_kw, 
                             battery_size_kwh=battery_size_kwh, battery_size_kw = battery_size_kw, num_battery_bins=num_battery_bins, 
@@ -608,7 +608,7 @@ julia> survival_with_battery(net_critical_loads_kw=net_critical_loads_kw, starti
 """
 function survival_with_battery(;
     net_critical_loads_kw::Vector, 
-    starting_battery_soc_kwh::Vector, 
+    battery_starting_soc_kwh::Vector, 
     generator_operational_availability::Union{Real, Vector{<:Real}}, 
     generator_failure_to_start::Union{Real, Vector{<:Real}},
     generator_failure_to_run::Union{Real, Vector{<:Real}},
@@ -628,7 +628,7 @@ function survival_with_battery(;
     bin_size = battery_size_kwh / (num_battery_bins-1)
      
     #bin initial battery 
-    starting_battery_bins = bin_battery_charge(starting_battery_soc_kwh, num_battery_bins, battery_size_kwh) 
+    starting_battery_bins = bin_battery_charge(battery_starting_soc_kwh, num_battery_bins, battery_size_kwh) 
     #For easier indice reading
     M = num_battery_bins
     if length(num_generators) == 1
@@ -745,11 +745,11 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
             init_soc = []
         end
 
-        starting_battery_soc_kwh = init_soc .* battery_size_kwh
+        battery_starting_soc_kwh = init_soc .* battery_size_kwh
 
         #Only subtracts PV generation if there is also a battery
         net_critical_loads_kw .-= pv_kw_ac_hourly
-        r2[:starting_battery_soc_kwh] = starting_battery_soc_kwh
+        r2[:battery_starting_soc_kwh] = battery_starting_soc_kwh
 
     end
 
@@ -828,7 +828,7 @@ julia> r = Dict("critical_loads_kw" => [1,2,1,1], "generator_operational_availab
 julia>    backup_reliability_inputs(r = r)
 Dict{Any, Any} with 11 entries:
   :num_generators                     => 2
-  :starting_battery_soc_kwh           => [4.0, 4.0, 4.0, 4.0]
+  :battery_starting_soc_kwh           => [4.0, 4.0, 4.0, 4.0]
   :max_outage_duration                => 3
   :generator_size_kw                  => 1
   :generator_failure_to_start         => 0.0
@@ -880,7 +880,7 @@ function backup_reliability_inputs(;r::Dict)::Dict
                 @warn("No battery soc series provided to reliability inputs. Assuming battery fully charged at start of outage.")
                 init_soc = ones(length(r2[:net_critical_loads_kw]))
             end
-            r2[:starting_battery_soc_kwh] = init_soc .* r2[:battery_size_kwh]
+            r2[:battery_starting_soc_kwh] = init_soc .* r2[:battery_size_kwh]
             #Only subtracts PV generation if there is also a battery
             r2[:net_critical_loads_kw] .-= pv_kw_ac_hourly
             if !haskey(r2, :battery_size_kwh)
@@ -918,7 +918,7 @@ Return an array of backup reliability calculations. Inputs can be unpacked from 
 """
 function return_backup_reliability(; 
     net_critical_loads_kw::Vector, 
-    starting_battery_soc_kwh::Array,  
+    battery_starting_soc_kwh::Array,  
     generator_operational_availability::Union{Real, Vector{<:Real}} = 0.9998, 
     generator_failure_to_start::Union{Real, Vector{<:Real}}  = 0.0066, 
     generator_failure_to_run::Union{Real, Vector{<:Real}}  = 0.00157, 
@@ -961,7 +961,7 @@ function return_backup_reliability(;
         return [
             survival_with_battery(
                 net_critical_loads_kw=net_critical_loads_kw, 
-                starting_battery_soc_kwh=starting_battery_soc_kwh, 
+                battery_starting_soc_kwh=battery_starting_soc_kwh, 
                 generator_operational_availability=generator_operational_availability,
                 generator_failure_to_start=generator_failure_to_start, 
                 generator_failure_to_run=generator_failure_to_run,
@@ -977,7 +977,7 @@ function return_backup_reliability(;
             ),
             survival_with_battery(
                 net_critical_loads_kw=net_critical_loads_kw,
-                starting_battery_soc_kwh=starting_battery_soc_kwh, 
+                battery_starting_soc_kwh=battery_starting_soc_kwh, 
                 generator_operational_availability=generator_operational_availability, 
                 generator_failure_to_start=generator_failure_to_start, 
                 generator_failure_to_run=generator_failure_to_run,
