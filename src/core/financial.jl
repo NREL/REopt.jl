@@ -387,7 +387,7 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
     )
 
     if !(stack in ["area", "p150", "p300"])
-        @error "stack should be one of 'area', 'p150', 'p300'"
+        throw(@error("stack should be one of 'area', 'p150', 'p300'"))
         return nothing
     end
 
@@ -407,7 +407,7 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
                 setindex!(ret_map, v .* adj, k)
             end
         catch
-            @error "income year is $(income_year) but must be between 1990 to 2024"
+            throw(@error("income year is $(income_year) but must be between 1990 to 2024"))
             return nothing
         end
     end
@@ -418,7 +418,7 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
                 setindex!(ret_map, v .* adj, k)
             end
         catch e
-            @error "Dollar year must be between 1980 to 2010"
+            throw(@error("Dollar year must be between 1980 to 2010"))
             return nothing
         end
     end

@@ -80,14 +80,14 @@ struct DomesticHotWaterLoad
 
             if length(addressable_load_fraction) > 1
                 if length(addressable_load_fraction) != length(fuel_loads_mmbtu_per_hour)
-                    error("`addressable_load_fraction`` must be a scalar or an array of length `fuel_loads_mmbtu_per_hour`")
+                    throw(@error("`addressable_load_fraction`` must be a scalar or an array of length `fuel_loads_mmbtu_per_hour`"))
                 end
             end
 
         elseif !isempty(doe_reference_name)
             if length(addressable_load_fraction) > 1
                 if !isempty(monthly_mmbtu) && length(addressable_load_fraction) != 12
-                    error("`addressable_load_fraction`` must be a scalar or an array of length 12 if `monthly_mmbtu` is input")
+                    throw(@error("`addressable_load_fraction`` must be a scalar or an array of length 12 if `monthly_mmbtu` is input"))
                 end
             end
             
@@ -308,13 +308,13 @@ struct CoolingLoad
         
         elseif !isempty(per_time_step_fractions_of_electric_load) && (length(site_electric_load_profile) / time_steps_per_hour ≈ 8760)
             if !(length(per_time_step_fractions_of_electric_load) / time_steps_per_hour ≈ 8760)
-                @error "Provided cooling per_time_step_fractions_of_electric_load array does not match the time_steps_per_hour."
+                throw(@error("Provided cooling per_time_step_fractions_of_electric_load array does not match the time_steps_per_hour."))
             end
             loads_kw = per_time_step_fractions_of_electric_load .* site_electric_load_profile
         
         elseif !isempty(monthly_fractions_of_electric_load) && (length(site_electric_load_profile) / time_steps_per_hour ≈ 8760)
             if !(length(monthly_fractions_of_electric_load) ≈ 12)
-                @error "Provided cooling monthly_fractions_of_electric_load array does not have 12 values."
+                throw(@error("Provided cooling monthly_fractions_of_electric_load array does not have 12 values."))
             end
             timeseries = collect(DateTime(2017,1,1) : Minute(60/time_steps_per_hour) : 
                                  DateTime(2017,1,1) + Minute(8760*60 - 60/time_steps_per_hour))

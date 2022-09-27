@@ -183,7 +183,7 @@ function assign_st_elec_and_therm_prod_ratios!(st::SteamTurbine)
 
     # Check if the outlet steam vapor fraction is lower than the lowest allowable (-1 means superheated so no problem)
     if x_out != -1.0 && x_out < st.outlet_steam_min_vapor_fraction
-        error("The calculated steam outlet vapor fraction of $x_out is lower than the minimum allowable value of $(st.outlet_steam_min_vapor_fraction)")
+        throw(@error("The calculated steam outlet vapor fraction of $x_out is lower than the minimum allowable value of $(st.outlet_steam_min_vapor_fraction)"))
     end
 
     # Steam turbine shaft power calculations from enthalpy difference at inlet and outlet, and net power with efficiencies

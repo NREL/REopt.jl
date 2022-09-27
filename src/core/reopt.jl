@@ -206,7 +206,8 @@ Creates a results dictionary in case of a handled error from REopt.jl with Warni
 function handle_errors()
 
 	results = Dict(
-		"Messages"=>Dict()
+		"Messages"=>Dict(),
+		"status"=>"error"
 	)
 
 	results["Messages"]["warnings"] = []
