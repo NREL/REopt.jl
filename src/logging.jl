@@ -5,7 +5,7 @@ end
 
 REoptLogger() = REoptLogger(Dict(), stderr)
 
-Logging.min_enabled_level(logger::REoptLogger) = Logging.BelowMinLevel
+Logging.min_enabled_level(logger::REoptLogger) = Logging.Info
 
 function Logging.shouldlog(logger::REoptLogger, level, _module, group, id)
     return true
@@ -19,11 +19,11 @@ function Logging.handle_message(logger::REoptLogger, lvl, msg, _mod, group, id, 
     msg1, rest = Iterators.peel(msglines)
 
     col = nothing
-    if lvl=="Error"
+    if string(lvl)=="Error"
         col = :red
-    elseif lvl=="Warn"
+    elseif string(lvl)=="Warn"
         col = :light_yellow
-    elseif lvl=="Info"
+    elseif string(lvl)=="Info"
         col = :cyan
     else
         col = :default
