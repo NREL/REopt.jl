@@ -265,7 +265,7 @@ else  # run HiGHS tests
             "battery_discharge_efficiency" => 1)
 
         reliability_results = backup_reliability(input_dict)
-        @test reliability_results["mean_marginal_survival_by_duration"][24] ≈ (0.99^20)*(0.9*0.98)
+        @test reliability_results["mean_marginal_survival_by_duration"][24] ≈ (0.99^20)*(0.9*0.98) atol=0.00001
 
         #More realistic case of hospital load with 2 generators, PV, and battery
         reliability_inputs = JSON.parsefile("./scenarios/backup_reliability_inputs.json")
