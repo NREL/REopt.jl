@@ -203,6 +203,31 @@ else  # run HiGHS tests
             "battery_size_kw" => 1,
             "battery_charge_efficiency" => 1,
             "battery_discharge_efficiency" => 1)
+        
+
+
+        #Given outage starts in time period 1
+        #____________________________________
+        #Outage hour 1:
+        #2 generators:         Prob = 0.64,     Battery = 2, Survived
+        #1 generator:          Prob = 0.32,     Battery = 1, Survived
+        #0 generator:          Prob = 0.04,     Battery = 0, Survived
+        #Survival Probability 1.0
+
+        #Outage hour 2:
+        #2 generators:         Prob = 0.4096,   Battery = 2, Survived
+        #2 gen -> 1 gen:       Prob = 0.2048,   Battery = 1, Survived
+        #1 gen -> 1 gen:       Prob = 0.256,    Battery = 0, Survived
+        #0 generators:         Prob = 0.1296,   Battery = -1, Failed
+        #Survival Probability: 0.8704
+
+        #Outage hour 3:
+        #2 generators:         Prob = 0.262144, Battery = 0, Survived
+        #2 gen -> 2 -> 1       Prob = 0.131072, Battery = 1, Survived
+        #2 gen -> 1 -> 1       Prob = 0.16384,  Battery = 0, Survived
+        #1 gen -> 1 -> 1       Prob = 0.2048,   Battery = -1, Failed
+        #0 generators          Prob = 0.238144, Battery = -1, Failed
+        #Survival Probability: 0.557056        
         @test backup_reliability(input_dict)["marginal_outage_survival_final_time_step"][1] ≈ 0.557056
 
         #Test multiple generator types
