@@ -737,7 +737,7 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
             
         battery_size_kwh = get(d["Storage"], "size_kwh", 0)
         battery_size_kw = get(d["Storage"], "size_kw", 0)
-        init_soc = get(d["Storage"], "year_one_soc_series_pct", [])
+        init_soc = get(d["Storage"], "year_one_soc_series_fraction", [])
 
         if microgrid_only && !Bool(get(d, "storage_upgraded", false))
             battery_size_kwh = 0
@@ -811,7 +811,7 @@ Return a dictionary of inputs required for backup reliability calculations.
     -battery_size_kwh::Real                     Battery energy storage capacity
     -charge_efficiency::Real                    Battery charge efficiency
     -discharge_efficiency::Real                 Battery discharge efficiency
-    -battery_year_one_soc_series_pct            Battery state of charge in each hour (if not input then defaults to battery size)
+    -battery_year_one_soc_series_fraction            Battery state of charge in each hour (if not input then defaults to battery size)
     -generator_operational_availability= 0.9998 Likelihood generator being available in given hour
     -generator_failure_to_start::Real = 0.0066  Chance of generator starting given outage
     -generator_failure_to_run::Real = 0.00157   Chance of generator failing in each hour of outage
@@ -874,8 +874,8 @@ function backup_reliability_inputs(;r::Dict)::Dict
 
     if :battery_size_kw in keys(r2)
         if !microgrid_only || Bool(get(r2, :storage_microgrid_upgraded, false))
-            if :battery_year_one_soc_series_pct in keys(r2)
-                init_soc = r2[:battery_year_one_soc_series_pct]
+            if :battery_year_one_soc_series_fraction in keys(r2)
+                init_soc = r2[:battery_year_one_soc_series_fraction]
             else
                 @warn("No battery soc series provided to reliability inputs. Assuming battery fully charged at start of outage.")
                 init_soc = ones(length(r2[:net_critical_loads_kw]))
@@ -1073,7 +1073,7 @@ inputs of r:
 -battery_size_kwh::Real                     Battery energy storage capacity
 -charge_efficiency::Real                    Battery charge efficiency
 -discharge_efficiency::Real                 Battery discharge efficiency
--battery_year_one_soc_series_pct::Array     Battery percent state of charge time series during normal grid-connected usage
+-battery_year_one_soc_series_fraction::Array     Battery percent state of charge time series during normal grid-connected usage
 -generator_failure_to_start::Real = 0.0066  Chance of generator starting given outage
 -generator_failure_to_run::Real = 0.00157   Chance of generator failing in each hour of outage
 -num_generators::Int = 1                    Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
