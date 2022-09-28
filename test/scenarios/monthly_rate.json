@@ -5,13 +5,13 @@
         "node": 10
     },
     "PV": {
-        "macrs_bonus_pct": 0.0,
+        "macrs_bonus_fraction": 0.0,
         "max_kw": 200.0,
         "installed_cost_per_kw": 2000.0,
         "tilt": 10.0,
-        "degradation_pct": 0.005,
+        "degradation_fraction": 0.005,
         "macrs_option_years": 5,
-        "federal_itc_pct": 0.3,
+        "federal_itc_fraction": 0.3,
         "module_type": 0,
         "array_type": 1,
         "om_cost_per_kw": 16.0,
@@ -34,12 +34,12 @@
         "monthly_demand_rates": [0.08, 0.11, 0, 0, 0.15, 0.14, 0.09, 0.06, 0, 0, 0.05, 0]
     },
     "Financial": {
-        "elec_cost_escalation_pct": 0.026,
-        "offtaker_discount_pct": 0.081,
-        "owner_discount_pct": 0.081,
+        "elec_cost_escalation_rate_fraction": 0.026,
+        "offtaker_discount_rate_fraction": 0.081,
+        "owner_discount_rate_fraction": 0.081,
         "analysis_years": 20,
-        "offtaker_tax_pct": 0.26,
-        "owner_tax_pct": 0.26,
-        "om_cost_escalation_pct": 0.025
+        "offtaker_tax_rate_fraction": 0.26,
+        "owner_tax_rate_fraction": 0.26,
+        "om_cost_escalation_rate_fraction": 0.025
     }
 }

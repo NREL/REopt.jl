@@ -69,22 +69,19 @@ end
 
 
 """
-    add_degradation(m, p; time_exponent=0.5, b="ElectricStorage")
+    add_degradation(m, p; b="ElectricStorage")
 
 NOTE the average SOC and EFC variables are in absolute units. For example, the SOH variable starts 
     at the battery capacity in kWh.
 """
-function add_degradation(m, p; 
-        time_exponent=0.5, 
-        b="ElectricStorage"
-    )
+function add_degradation(m, p; b="ElectricStorage")
     days = 1:365*p.s.financial.analysis_years
     strategy = p.s.storage.attr[b].degradation.maintenance_strategy
 
     if isempty(p.s.storage.attr[b].degradation.maintenance_cost_per_kwh)
         function pwf(day::Int)
             (1-p.s.storage.attr[b].degradation.installed_cost_per_kwh_declination_rate)^(day/365) / 
-            (1+p.s.financial.owner_discount_pct)^(day/365)
+            (1+p.s.financial.owner_discount_rate_fraction)^(day/365)
         end
         # for the augmentation strategy the maintenance cost curve (function of time) starts at 
         # 80% of the installed cost since we are not replacing the entire battery
@@ -105,8 +102,9 @@ function add_degradation(m, p;
 
     @constraint(m, [d in 2:days[end]],
         SOH[d] == SOH[d-1] - p.hours_per_time_step * (
-            p.s.storage.attr[b].degradation.calendar_fade_coefficient * time_exponent * 
-            m[:Eavg][d-1] * d^(time_exponent-1) + 
+            p.s.storage.attr[b].degradation.calendar_fade_coefficient * 
+            p.s.storage.attr[b].degradation.time_exponent * 
+            m[:Eavg][d-1] * d^(p.s.storage.attr[b].degradation.time_exponent-1) + 
             p.s.storage.attr[b].degradation.cycle_fade_coefficient * m[:EFC][d-1]
         )
     )

@@ -1,9 +1,106 @@
-# REopt Changelog
+# Changelog
+All notable changes to this project will be documented in this file.
 
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## Guidelines
+- When making a Pull Request into `develop` start a new double-hash header for "Develop - YYYY-MM-DD"
+- When making a Pull Request into `master` change "Develop" to the next version number
+
+### Formatting
+- Use **bold** markup for field and model names (i.e. **outage_start_time_step**)
+- Use `code` markup for  REopt-specific file names, classes and endpoints (e.g. `src/REopt.jl`)
+- Use _italic_ for code terms (i.e. _list_)
+- Prepend change with tag(s) directing where it is in the repository:  
+`src`,`constraints`,`*.jl`
+
+Classify the change according to the following categories:
+    
+    ### Added
+    ### Changed
+    ### Fixed
+    ### Deprecated
+    ### Removed
+    
 ## Develop
+### Added
+- capability to model limited reliability of backup generators and calculate survival probability metrics during power outages
+
+## v0.20.0
+### Added
+- `Boiler` tech from the REopt_API (known as NewBoiler in API)
+- `SteamTurbine` tech from the REopt_API
+### Changed
+- Made some modifications to thermal tech results to be consistent with naming conventions of REopt.jl
+### Fixed
+- Bug for scalar `ElectricTariff.wholesale_rate`
+- Bug in which CHP could not charge Hot TES
+
+## v0.19.0
+### Changed
+The following name changes were made: 
+- Change "pct" to "rate_fraction" for "discount", "escalation", names containing "tax_pct" (financial terms)
+- Change "pct" to "fraction" for all other variable names (e.g., "min_soc", "min_turndown_")
+- Change `prod_factor_series` to `production_factor_series` and rename some internal methods and variables to match
+- Change four (4) CHP input field names to spell out `electric` (from `elec`) and `efficiency` (from `effic`) for electric and thermal efficiencies
+### Added
+- Add schedule-based `FlatLoad`s which take the annual or monthly energy input and create a load profile based on the specified type of schedule. The load is "flat" (the same) for all hours within the chosen schedule.
+- Add `addressable_load_fraction` inputs for `SpaceHeatingLoad` and `DomesticHotWaterLoad` which effectively ignores a portion of the entered loads. These inputs can be scalars (applied to all time steps of the year), monthly (applied to the timesteps of each month), or of length 8760 * `time_steps_per_hour`.
+- Add a validation error for cooling in the case that the cooling electric load is greater than the total electric load.
+  
+## v0.18.1
+### Removed
+- **include_climate_in_objective**, **pwf_emissions_cost_CO2_grid**, and **pwf_emissions_cost_CO2_onsite** unnecessarily included in Site results
+
+## v0.18.0
+### Added
+- Add geothermal heat pump (`GHP`), also known as ground-source heat pump (GSHP), to the REopt model for serving heating and cooling loads (typically the benefits include electrifying the heating load and improving the efficiency of cooling).
+    - The unregistered `GhpGhx` package (https://github.com/NREL/GhpGhx.jl) is a "conditional" dependency of REopt by using the Requires.jl package, and this package sizes the ground heat exchanger (GHE) and gets the hourly electric consumption of the `GHP` for the specified heating and cooling loads that it serves.
+    - The `GhpGhx` module calls for sizing the GHE can only be done if you first "add https://github.com/NREL/GhpGhx.jl" to the environment and then load the package by "using GhpGhx" before running REopt with `GHP`.
+    - The `GHP` size and dispatch of the different `GHP` options is pre-determined by the `GhpGhx` package, so the REopt model just chooses one or none of the `GHP` options with a binary decision variable.
+### Changed
+- Change default value for `wind.jl` **operating_reserve_required_pct** from 0.1 to 0.5 (only applicable when **off_grid_flag**=_True_.)
+- allow user to specify emissions_region in ElectricUtility, which is used instead of lat/long to look up AVERT data if emissions factors aren't provided by the user
+- Updated results keys in `results/absorption_chiller.jl`
+### Fixed
+- Add **wholesale_rate** and **emissions_factor_series_lb_\<pollutant\>_per_kwh** inputs to the list of inputs that `dictkeys_tosymbols()` tries to convert to type _Array{Real}_. Due to serialization, when list inputs come from the API, they are of type _Array{Any}_ so must be converted to match type required by the constructors they are passed to.
+- Fixed bug in calcuation of power delivered to cold thermal storage by the electric chiller in `results/existing_chiller.jl`.
+
+## v0.17.0
+### Added
+- Emissions
+    - add emissions factors for CO2, NOx, SO2, and PM25 to inputs of all fuel burning technologies
+    - add emissions factor series for CO2, NOx, SO2, and PM25 to `ElectricUtility` inputs and use [AVERT v3.2](https://www.epa.gov/avert/download-avert) (2021 data) if not provided
+    - add `include_climate_in_objective` and `include_health_in_objective` to `Settings` inputs
+    - constrain CO2 emissions based on `CO2_emissions_reduction_min_pct`, `CO2_emissions_reduction_max_pct`, and `include_exported_elec_emissions_in_total` added to `Site` inputs
+    - add emissions costs to `Financial` inputs and use EASIUR data for NOx, SO2, and PM25 if not provided
+    - report emissions and their cost in `Site` (on-site and total) and `ElectricUtility` (grid) results
+    - calculate `breakeven_cost_of_emissions_reduction_per_tonnes_CO2` for `Financial` results
+- Renewable energy percentage
+    - calculate renewable energy percentage (electric only and total) and add to `Site` results
+    - add `renewable_electricity_min_pct`, `renewable_electricity_max_pct`, and `include_exported_renewable_electricity_in_total` to `Site` inputs
+    - add `fuel_renewable_energy_pct` input for all fuel burning technologies
+    - constrain renewable electricity percentage based on user inputs
+- Add "Emissions and Renewable Energy Percent" testset
+### Changed
+- Allow Wind tech to be included when `off_grid_flag` is true
+- Add `operating_reserve_required_pct` to Wind struct and incorporate wind into operating reserve constraints
+- Add hot, cold TES results for MPC model
+- Update documentation and add `docs/devdeploy.jl` to locally host the REopt.jl documentation 
+- Make `ExistingBoiler` `fuel_cost_per_mmbtu` a required input
+- In `production_factor.jl`, include lat-long coordinates if-statement to determine whether the "nsrdb" dataset should be used in call to PVWatts. Accounts for recent updates to NSRDB data used by PVWatts (v6). If outside of NSRDB range, use "intl" (international) dataset.
+- Don't trigger GitHub 'Run test' workflow on a push that only changes README.md and/or CHANGELOG.md
+- Avoid triggering duplicate GitHub workflows. When pushing to a branch that's in a PR, only trigger tests on the push not on the PR sync also.
+### Fixed
+- Bug fix to constrain dvCurtail in `time_steps_without_grid`
+- Bug fix to report accurate wind ["year_one_to_load_series_kw"] in results/wind.jl (was previously not accounting for curtailed wind)
+
+## v0.16.2
 - Update PV defaults to tilt=10 for rooftop, tilt = abs(lat) for ground mount, azimuth = 180 for northern lats, azimuth = 0 for southern lats.
--  bug fix for Generator inputs to allow for time_steps_per_hour > 1
-- add capability to model limited reliability of backup generators and calculate survival metrics during power outages
+- bug fix for Generator inputs to allow for time_steps_per_hour > 1
+- change various `Float64` types to `Real` to allow integers too
+
 ## v0.16.1
 - bug fix for outage simulator when `microgrid_only=true`
 
@@ -122,7 +219,7 @@ Other changes:
 
 ## v0.7.2
 #### Improvements
-- add PV.prod_factor_series input (can skip PVWatts call)
+- add PV.production_factor_series input (can skip PVWatts call)
 - add `run_mpc` capability, which dispatches DER for minimum energy cost over an arbitrary time horizon
 
 ## v0.7.1

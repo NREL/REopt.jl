@@ -29,31 +29,27 @@
 # *********************************************************************************
 
 """
-    AbsorptionChiller
-
-struct with inner constructor:
+`AbsorptionChiller` is an optional REopt input with the following keys and default values and default values and default values:
 ```julia
-function AbsorptionChiller(;
     min_ton::Real = 0.0,
     max_ton::Real = 0.0,
-    chiller_cop::Real,
-    chiller_elec_cop::Real = 14.1,
+    cop_thermal::Real,
+    cop_electric::Real = 14.1,
     installed_cost_per_ton::Real,
     om_cost_per_ton::Real,
     macrs_option_years::Real = 0,
-    macrs_bonus_pct::Real = 0
-)
+    macrs_bonus_fraction::Real = 0
 ```
 """
 struct AbsorptionChiller <: AbstractThermalTech
     min_ton::Real
     max_ton::Real
-    chiller_cop::Real
-    chiller_elec_cop::Real
+    cop_thermal::Real
+    cop_electric::Real
     installed_cost_us_dollars_per_ton::Real
     om_cost_us_dollars_per_ton::Real
     macrs_option_years::Real
-    macrs_bonus_pct::Real
+    macrs_bonus_fraction::Real
     min_kw::Real
     max_kw::Real
     installed_cost_per_kw::Real
@@ -61,12 +57,12 @@ struct AbsorptionChiller <: AbstractThermalTech
     function AbsorptionChiller(;
         min_ton::Real = 0.0,
         max_ton::Real = 0.0,
-        chiller_cop::Real,
-        chiller_elec_cop::Real = 14.1,
+        cop_thermal::Real,
+        cop_electric::Real = 14.1,
         installed_cost_per_ton::Real,
         om_cost_per_ton::Real,
         macrs_option_years::Real = 0,
-        macrs_bonus_pct::Real = 0,
+        macrs_bonus_fraction::Real = 0,
         )
 
         min_kw = min_ton * KWH_THERMAL_PER_TONHOUR
@@ -77,12 +73,12 @@ struct AbsorptionChiller <: AbstractThermalTech
         new(
             min_ton,
             max_ton,
-            chiller_cop,
-            chiller_elec_cop,
+            cop_thermal,
+            cop_electric,
             installed_cost_per_ton,
             om_cost_per_ton,
             macrs_option_years,
-            macrs_bonus_pct,
+            macrs_bonus_fraction,
             min_kw,
             max_kw,
             installed_cost_per_kw,

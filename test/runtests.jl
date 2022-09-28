@@ -158,6 +158,34 @@ else  # run HiGHS tests
         @warn "Could not delete test/Highs.log"
     end
 
+    @testset "AVERT region abberviations" begin
+        """
+        This test checks 5 scenarios (in order)
+        1. Coordinate pair inside an AVERT polygon
+        2. Coordinate pair near a US border
+        3. Coordinate pair < 5 miles from US border
+        4. Coordinate pair > 5 miles from US border
+        5. Coordinate pair >> 5 miles from US border
+        """
+        (r, d) = REopt.region_abbreviation(65.27661752129738, -149.59278391820223)
+        @test r == "AKGD"
+        (r, d) = REopt.region_abbreviation(21.45440792261567, -157.93648793163402)
+        @test r == "HIOA"
+        (r, d) = REopt.region_abbreviation(19.686877556659436, -155.4223641905743)
+        @test r == "HIMS"
+        (r, d) = REopt.region_abbreviation(39.86357200140234, -104.67953917092028)
+        @test r == "RM"
+        @test d ≈ 0.0 atol=1
+        (r, d) = REopt.region_abbreviation(47.49137892652077, -69.3240287592685)
+        @test r == "NE"
+        @test d ≈ 7986 atol=1
+        (r, d) = REopt.region_abbreviation(47.50448307102053, -69.34882434376593)
+        @test r === nothing
+        @test d ≈ 10297 atol=1
+        (r, d) = REopt.region_abbreviation(55.860334445251354, -4.286554357755312)
+        @test r === nothing
+    end
+
     @testset "PVspecs" begin
         ## Scenario 1: Palmdale, CA; array-type = 0 (Ground-mount)
         post_name = "pv.json" 
@@ -186,7 +214,19 @@ else  # run HiGHS tests
         post["PV"]["tilt"] = 17
         scen = Scenario(post)
         @test scen.pvs[1].tilt ≈ 17
-     
+    end
+
+    @testset "AlternativeFlatLoads" begin
+        input_data = JSON.parsefile("./scenarios/flatloads.json")
+        s = Scenario(input_data)
+        inputs = REoptInputs(s)
+
+        # FlatLoad_8_5 => 8 hrs/day, 5 days/week, 52 weeks/year
+        active_hours_8_5 = 8 * 5 * 52
+        @test count(x->x>0, s.space_heating_load.loads_kw, dims=1)[1] == active_hours_8_5
+        # FlatLoad_16_7 => only hours 6-22 should be >0, and each day is the same portion of the total year
+        @test sum(s.electric_load.loads_kw[1:5]) + sum(s.electric_load.loads_kw[23:24]) == 0.0
+        @test sum(s.electric_load.loads_kw[6:22]) / sum(s.electric_load.loads_kw) - 1/365 ≈ 0.0 atol=0.000001
     end
 
     @testset "Backup Generator Reliability" begin

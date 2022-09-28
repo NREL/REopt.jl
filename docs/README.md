@@ -26,28 +26,18 @@ nlaws-> python3 -m http.server --bind localhost
 Serving HTTP on ::1 port 8000 (http://[::1]:8000/) ...
 ```
 
-Alternatively, you can use `LiveServer.jl` to host the documentation locally:
+Alternatively, you can use `LiveServer.jl` to host the documentation locally by running `docs/src/devdeploy.jl`; e.g.: 
 ```julia
 [~/.julia/dev/REopt/docs]
-nlaws-> julia --project=.
-               _
-   _       _ _(_)_     |  Documentation: https://docs.julialang.org
-  (_)     | (_) (_)    |
-   _ _   _| |_  __ _   |  Type "?" for help, "]?" for Pkg help.
-  | | | | | | |/ _` |  |
-  | | |_| | | | (_| |  |  Version 1.6.1 (2021-04-23)
- _/ |\__'_|_|_|\__'_|  |  Official https://julialang.org/ release
-|__/                   |
-
-julia> using LiveServer
-[ Info: Precompiling LiveServer [16fef848-5104-11e9-1b77-fb7a48bbb589]
-
-julia> cd("build/")
-
-julia> serve()
+(REopt) pkg> activate .
+(REopt) pkg> dev REopt
+julia> include("devdeploy.jl")
+[ Info: Precompiling REopt [d36ad4e8-d74a-4f7a-ace1-eaea049febf6]
+...
 ✓ LiveServer listening on http://localhost:8000/ ...
   (use CTRL+C to shut down)
 ```
+
 
 ## Fixing a broken docs build or updating docs without creating a new release
 From the Documenter.jl documentation:

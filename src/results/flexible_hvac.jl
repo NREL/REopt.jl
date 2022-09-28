@@ -27,6 +27,12 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+`FlexibleHVAC` results keys:
+- `purchased` 
+- `temperatures_degC_node_by_time`
+- `upgrade_cost`
+"""
 function add_flexible_hvac_results(m::JuMP.AbstractModel, p::REoptInputs{Scenario}, d::Dict; _n="")
     r = Dict{String, Any}()
     binFlexHVAC = value(m[:binFlexHVAC]) > 0.5 ? 1.0 : 0.0

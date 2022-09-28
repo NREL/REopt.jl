@@ -28,15 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
-
-Adds the PV results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
-Note: the node number is an empty string if evaluating a single `Site`.
-
-!!! warn
-    The key(s) used to access PV outputs in the results dictionary is determined by the `PV.name` value to allow for modeling multiple PV options. (The default `PV.name` is "PV".)
-
-PV results:
+`PV` results keys:
 - `size_kw` Optimal PV capacity
 - `lifecycle_om_cost_after_tax` Lifecycle operations and maintenance cost in present value, after tax
 - `year_one_energy_produced_kwh` Energy produced over the first year
@@ -47,8 +39,15 @@ PV results:
 - `year_one_to_grid_series_kw` Vector of power exported to the grid over the first year
 - `year_one_curtailed_production_series_kw` Vector of power curtailed over the first year
 - `average_annual_energy_exported_kwh` Average annual energy exported to the grid
+
+!!! warn
+    The key(s) used to access PV outputs in the results dictionary is determined by the `PV.name` value to allow for modeling multiple PV options. (The default `PV.name` is "PV".)
+
 """
 function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+    # Adds the `PV` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+    # Note: the node number is an empty string if evaluating a single `Site`.
+
     for t in p.techs.pv
         r = Dict{String, Any}()
 		r["size_kw"] = round(value(m[Symbol("dvSize"*_n)][t]), digits=4)
@@ -84,14 +83,21 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 		r["year_one_energy_produced_kwh"] = round(value(Year1PvProd), digits=0)
         r["average_annual_energy_produced_kwh"] = round(r["year_one_energy_produced_kwh"] * p.levelization_factor[t], digits=2)
 		PVPerUnitSizeOMCosts = p.om_cost_per_kw[t] * p.pwf_om * m[Symbol("dvSize"*_n)][t]
-		r["lifecycle_om_cost_after_tax"] = round(value(PVPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_pct), digits=0)
+		r["lifecycle_om_cost_after_tax"] = round(value(PVPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_rate_fraction), digits=0)
         r["lcoe_per_kwh"] = calculate_lcoe(p, r, get_pv_by_name(t, p.s.pvs))
         d[t] = r
 	end
     nothing
 end
 
-
+"""
+MPC `PV` results keys:
+- `to_battery_series_kw`
+- `to_grid_series_kw`
+- `curtailed_production_series_kw`
+- `to_load_series_kw`
+- `energy_produced_kwh`
+"""
 function add_pv_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     for t in p.techs.pv
         r = Dict{String, Any}()
