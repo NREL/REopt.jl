@@ -38,7 +38,17 @@ end
 
 
 """
-    FlexibleHVAC
+`FlexibleHVAC` is an optional REopt input with the following keys and default values: 
+```julia
+    system_matrix::AbstractMatrix{Float64}  # N x N, with N states (temperatures in RC network)
+    input_matrix::AbstractMatrix{Float64}  # N x M, with M inputs
+    exogenous_inputs::AbstractMatrix{Float64}  # M x T, with T time steps
+    control_node::Int64
+    initial_temperatures::AbstractVector{Float64}
+    temperature_upper_bound_degC::Union{Real, Nothing}
+    temperature_lower_bound_degC::Union{Real, Nothing}
+    installed_cost::Float64
+```
 
 Every model with `FlexibleHVAC` includes a preprocessing step to calculate the business-as-usual (BAU)
 cost of meeting the thermal loads using a dead-band controller. The BAU cost is then used in the 
@@ -50,10 +60,8 @@ be paid.
 There are two construction methods for `FlexibleHVAC`, which depend on whether or not the data was 
 loaded in from a JSON file. The issue with data from JSON is that the vector-of-vectors from the JSON 
 file must be appropriately converted to Julia Matrices. When loading in a Scenario from JSON that 
-includes a `FlexibleHVAC` model if you include the `flex_hvac_from_json` argument to the `Scenario` 
-constructor then the conversion to Matrices will be done appropriately. For example:
-
-
+includes a `FlexibleHVAC` model, if you include the `flex_hvac_from_json` argument to the `Scenario` 
+constructor then the conversion to Matrices will be done appropriately. 
 
 !!! note
     At least one of the inputs for `temperature_upper_bound_degC` or `temperature_lower_bound_degC`
@@ -62,10 +70,10 @@ constructor then the conversion to Matrices will be done appropriately. For exam
     used (or purchased) if the `exogenous_inputs` lead to the temperature at the `control_node` going
     below the `temperature_lower_bound_degC`.
 
-!!! note
+!!! note  
     The `ExistingChiller` is electric and so its operating cost is determined by the `ElectricTariff`.
 
-!!! note
+!!! note 
     The `ExistingBoiler` default operating cost is zero. Please provide the `fuel_cost_per_mmbtu` field
     for the `ExistingBoiler` if you want non-zero BAU heating costs. The `fuel_cost_per_mmbtu` can be
     a scalar, a list of 12 monthly values, or a time series of values for every time step.
@@ -189,7 +197,7 @@ end
         initial_temperatures::AbstractVector,
         temperature_upper_bound_degC::Union{Real, Nothing} = nothing,
         temperature_lower_bound_degC::Union{Real, Nothing} = nothing,
-        installed_cost::Float64
+        installed_cost::Real
     )
 
 When the A, B, and u values are in Matrix format (note u is normally a vector but in our case it has a time index in the second dimension)
@@ -202,7 +210,7 @@ function FlexibleHVAC(;
         initial_temperatures::AbstractVector,
         temperature_upper_bound_degC::Union{Real, Nothing} = nothing,
         temperature_lower_bound_degC::Union{Real, Nothing} = nothing,
-        installed_cost::Float64
+        installed_cost::Real
     )
 
     bau_hvac = make_bau_hvac(system_matrix, input_matrix, exogenous_inputs, control_node, 

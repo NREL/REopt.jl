@@ -58,6 +58,9 @@ struct BAUScenario <: AbstractScenario
     outage_outputs::OutageOutputs
     flexible_hvac::Union{BAU_HVAC, Nothing}
     cooling_load::CoolingLoad
+    ghp_option_list::Array{Union{GHP, Nothing}, 1}  # List of GHP objects (often just 1 element, but can be more)
+    heating_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
+    cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}    
 end
 
 
@@ -80,6 +83,8 @@ function bau_site(site::Site)
         roof_squarefeet=site.roof_squarefeet,
         min_resil_time_steps=0,
         mg_tech_sizes_equal_grid_sizes=site.mg_tech_sizes_equal_grid_sizes,
+        include_exported_elec_emissions_in_total=site.include_exported_elec_emissions_in_total,
+        include_exported_renewable_electricity_in_total=site.include_exported_renewable_electricity_in_total,
         node=site.node,
     )
 end
@@ -88,9 +93,11 @@ end
 """
     BAUScenario(s::Scenario)
 
-Constructor for BAUScenario (BAU = Business As Usual) struct.
-- sets the PV and Generator max_kw values to the existing_kw values
-- sets wind and storage max_kw values to zero
+Constructs the BAUScenario (used to create the Business-as-usual inputs) based on the Scenario for the optimized case.
+
+The following assumptions are made for the BAU scenario: 
+- sets the `PV` and `Generator` min_kw and max_kw values to the existing_kw values
+- sets wind and storage max_kw values to zero (existing wind and storage cannot be modeled)
 """
 function BAUScenario(s::Scenario)
 
@@ -110,6 +117,11 @@ function BAUScenario(s::Scenario)
 
     # no existing storage
     storage = Storage()
+
+    # no existing GHP
+    ghp_option_list = []
+    heating_thermal_load_reduction_with_ghp_kw = zeros(8760 * s.settings.time_steps_per_hour)
+    cooling_thermal_load_reduction_with_ghp_kw = zeros(8760 * s.settings.time_steps_per_hour)
     
     t0, tf = s.electric_utility.outage_start_time_step, s.electric_utility.outage_end_time_step
     #=
@@ -120,7 +132,7 @@ function BAUScenario(s::Scenario)
     In the simplest case we set the BAU critical_loads_kw to zero during the outage. 
     However, if the BAU scenario has existing Generator and/or PV we calculate how many time steps the critical load can 
     be met and make the critical load non-zero for those time steps in order to show the most realistic dispatch results.
-    This calculation requires the PV prod_factor_series and so it is done in BAUInputs.
+    This calculation requires the PV production_factor_series and so it is done in BAUInputs.
     =#
     elec_load = deepcopy(s.electric_load)
     if tf > t0 && t0 > 0
@@ -156,6 +168,9 @@ function BAUScenario(s::Scenario)
         s.existing_chiller,
         outage_outputs,
         flexible_hvac,
-        s.cooling_load
+        s.cooling_load,
+        ghp_option_list,
+        heating_thermal_load_reduction_with_ghp_kw,
+        cooling_thermal_load_reduction_with_ghp_kw
     )
 end
