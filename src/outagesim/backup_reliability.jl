@@ -1009,14 +1009,21 @@ function process_reliability_results(results::Array)::Dict
     else
         marginal_results = round.(results[1], digits=6)
         cumulative_results = round.(results[2], digits=6)
+        marginal_duration_means = round.(vec(mean(marginal_results, dims = 1)), digits=6)
+        marginal_duration_mins = round.(vec(minimum(marginal_results, dims = 1)), digits=6)
+        marginal_final_resilience = round.(marginal_results[:, end], digits=6)
+        cumulative_duration_means = round.(vec(mean(cumulative_results, dims = 1)), digits=6)
+        cumulative_duration_mins = round.(vec(minimum(cumulative_results, dims = 1)), digits=6)
+        cumulative_final_resilience = round.(cumulative_results[:, end], digits=6)
+        cumulative_final_resilience_mean = round(mean(cumulative_final_resilience), digits=6)
         return Dict(
-            "mean_marginal_survival_by_duration"    => round.(vec(mean(marginal_results, dims = 1)), digits=6),
-            "min_marginal_survival_by_duration"     => round.(vec(minimum(marginal_results, dims = 1)), digits=6),
-            "mean_cumulative_survival_by_duration"  => round.(vec(mean(cumulative_results, dims = 1)), digits=6),
-            "min_cumulative_survival_by_duration"   => round.(vec(minimum(cumulative_results, dims = 1)), digits=6),
-            "marginal_outage_survival_final_time_step"   => round.(marginal_results[:, end], digits=6),
-            "cumulative_outage_survival_final_time_step" => round.(cumulative_results[:, end], digits=6),
-            "mean_cumulative_outage_survival_final_time_step" => round(mean(cumulative_final_resilience), digits=6)
+            "mean_marginal_survival_by_duration"    => marginal_duration_means,
+            "min_marginal_survival_by_duration"     => marginal_duration_mins,
+            "marginal_outage_survival_final_time_step"   => marginal_final_resilience,
+            "mean_cumulative_survival_by_duration"  => cumulative_duration_means,
+            "min_cumulative_survival_by_duration"   => cumulative_duration_mins,
+            "cumulative_outage_survival_final_time_step" => cumulative_final_resilience,
+            "mean_cumulative_outage_survival_final_time_step" => cumulative_final_resilience_mean
         )
     end
 end
