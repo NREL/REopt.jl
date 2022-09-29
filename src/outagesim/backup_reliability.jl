@@ -728,16 +728,16 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
 
     battery_size_kwh = 0
     battery_size_kw = 0
-    if "Storage" in keys(d)
+    if "ElectricStorage" in keys(d)
         #TODO change to throw error if multiple storage types
         for b in p.s.storage.types.elec
             battery_charge_efficiency = p.s.storage.attr[b].charge_efficiency
             battery_discharge_efficiency = p.s.storage.attr[b].discharge_efficiency
         end
             
-        battery_size_kwh = get(d["Storage"], "size_kwh", 0)
-        battery_size_kw = get(d["Storage"], "size_kw", 0)
-        init_soc = get(d["Storage"], "year_one_soc_series_fraction", [])
+        battery_size_kwh = get(d["ElectricStorage"], "size_kwh", 0)
+        battery_size_kw = get(d["ElectricStorage"], "size_kw", 0)
+        init_soc = get(d["ElectricStorage"], "year_one_soc_series_fraction", [])
 
         if microgrid_only && !Bool(get(d, "storage_upgraded", false))
             battery_size_kwh = 0
@@ -865,7 +865,7 @@ function backup_reliability_inputs(;r::Dict)::Dict
         if :pv_production_factor_series in keys(r2)
             pv_kw_ac_hourly = r2[:pv_size_kw] .* r2[:pv_production_factor_series]
         else
-            push!(invalid_args, "pv_size_kw added to reliability inputs put not pv_production_factor_series provided")
+            push!(invalid_args, "pv_size_kw added to reliability inputs but no pv_production_factor_series provided")
         end
     end
     if microgrid_only && !Bool(get(r2, :pv_migrogrid_upgraded, false))
