@@ -737,6 +737,8 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
             battery_charge_efficiency = p.s.storage.attr[b].charge_efficiency
             battery_discharge_efficiency = p.s.storage.attr[b].discharge_efficiency
         end
+        r2[:battery_charge_efficiency] = battery_charge_efficiency
+        r2[:battery_discharge_efficiency] = battery_discharge_efficiency
             
         battery_size_kwh = get(d["ElectricStorage"], "size_kwh", 0)
         battery_size_kw = get(d["ElectricStorage"], "size_kw", 0)
