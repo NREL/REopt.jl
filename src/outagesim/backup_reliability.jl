@@ -47,7 +47,7 @@ julia> transition_prob([1, 2, 3, 4], [0, 1, 2, 3], fail_prob=0.5)
 ```
 """
 function transition_prob(start_gen::Vector{Int}, end_gen::Vector{Int}, fail_prob_vec::Real)::Vector{Float64} 
-    return binomial.(start_gen, end_gen).*(1-fail_prob).^(end_gen).*(fail_prob).^(start_gen-end_gen)
+    return binomial.(start_gen, end_gen).*(1-fail_prob_vec).^(end_gen).*(fail_prob_vec).^(start_gen-end_gen)
 end
 
 """
