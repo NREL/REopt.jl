@@ -232,7 +232,7 @@ else  # run HiGHS tests
     @testset "Backup Generator Reliability" begin
         input_dict = Dict(
             "critical_loads_kw" => [1,2,2,1],
-            "battery_year_one_soc_series_fraction" => [0.5,0.5,0.5,0.5],
+            "battery_starting_soc_series_fraction" => [0.5,0.5,0.5,0.5],
             "max_outage_duration" => 3,
             "num_generators" => 2, "generator_size_kw" => 1,
             "generator_operational_availability" => 1,
@@ -273,7 +273,7 @@ else  # run HiGHS tests
         #Test multiple generator types
         input_dict = Dict(
             "critical_loads_kw" => [1,2,2,1], 
-            "battery_year_one_soc_series_fraction" => [0.5,0.5,0.5,0.5],
+            "battery_starting_soc_series_fraction" => [0.5,0.5,0.5,0.5],
             "max_outage_duration" => 3,
             "num_generators" => [1,1],
             "generator_size_kw" => [1,1],
@@ -309,7 +309,25 @@ else  # run HiGHS tests
 
         #More realistic case of hospital load with 2 generators, PV, and battery
         reliability_inputs = JSON.parsefile("./scenarios/backup_reliability_inputs.json")
-        @test backup_reliability(reliability_inputs)["mean_cumulative_outage_survival_final_time_step"] ≈ 0.990784 atol=0.01
+        @test backup_reliability(reliability_inputs)["mean_cumulative_outage_survival_final_time_step"] ≈ 0.904242 atol=0.0001
+        
+        for input_key in [
+                    "generator_size_kw",
+                    "battery_size_kw",
+                    "battery_size_kwh",
+                    "pv_size_kw",
+                    "critical_loads_kw",
+                    "pv_production_factor_series"
+                ]
+            delete!(reliability_inputs, input_key)
+        end
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+            "output_flag" => false, "log_to_console" => false)
+        )
+        p = REoptInputs("./scenarios/backup_reliability_reopt_inputs.json")
+        results = run_reopt(model, p)
+        reliability = backup_reliability(results, p, reliability_inputs)
+        @test reliability["mean_cumulative_outage_survival_final_time_step"] ≈ 0.817088 atol=0.0001
     end                            
 
     # removed Wind test for two reasons
