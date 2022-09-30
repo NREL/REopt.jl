@@ -906,6 +906,7 @@ end
 Return an array of backup reliability calculations. Inputs can be unpacked from backup_reliability_inputs() dictionary
 # Arguments
 -net_critical_loads_kw::Vector                                                      vector of net critical loads                     
+-battery_starting_soc_kwh::Vector   = []            Battery kWh state of charge time series during normal grid-connected usage
 -generator_operational_availability::Union{Real, Vector{<:Real}}      = 0.9998        Fraction of year generators not down for maintenance
 -generator_failure_to_start::Union{Real, Vector{<:Real}}                        = 0.0066        Chance of generator starting given outage
 -generator_failure_to_run::Union{Real, Vector{<:Real}}                = 0.00157       Chance of generator failing in each hour of outage
