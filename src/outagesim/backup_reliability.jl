@@ -746,6 +746,8 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         battery_size_kw = get(d["ElectricStorage"], "size_kw", 0)
         init_soc = get(d["ElectricStorage"], "year_one_soc_series_fraction", [])
 
+        #TODO handle battery minimum SOC conversion to effective kWh capacity
+
         if microgrid_only && !Bool(get(d, "storage_upgraded", false))
             battery_size_kwh = 0
             battery_size_kw = 0
@@ -881,6 +883,7 @@ function backup_reliability_inputs(;r::Dict)::Dict
 
     if :battery_size_kw in keys(r2)
         if !microgrid_only || Bool(get(r2, :storage_microgrid_upgraded, false))
+            #check if minimum state of charge added. If so, then change battery size to effective size, and reduce starting SOC accordingly
             if :battery_starting_soc_series_fraction in keys(r2)
                 init_soc = r2[:battery_starting_soc_series_fraction]
             else
@@ -888,6 +891,16 @@ function backup_reliability_inputs(;r::Dict)::Dict
                 init_soc = ones(length(r2[:net_critical_loads_kw]))
             end
             r2[:battery_starting_soc_kwh] = init_soc .* r2[:battery_size_kwh]
+            
+            if :battery_minimum_soc in keys(r2)
+                battery_kwh_below_minimum_soc = r2[:battery_size_kwh] * r2[:battery_minimum_soc]
+                r2[:battery_size_kwh] -= battery_kwh_below_minimum_soc
+                if minimum(r2[:battery_starting_soc_kwh]) < battery_kwh_below_minimum_soc
+                    @warn("Some battery starting states of charge are less than the provided minimum state of charge.")
+                end
+                r2[:battery_starting_soc_kwh] -= battery_kwh_below_minimum_soc
+            end
+            
             #Only subtracts PV generation if there is also a battery
             r2[:net_critical_loads_kw] .-= pv_kw_ac_time_series
             if !haskey(r2, :battery_size_kwh)
