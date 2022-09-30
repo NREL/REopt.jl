@@ -821,6 +821,7 @@ Return a dictionary of inputs required for backup reliability calculations.
     -charge_efficiency::Real                    Battery charge efficiency
     -discharge_efficiency::Real                 Battery discharge efficiency
     -battery_starting_soc_series_fraction       Battery state of charge in each time step (if not input then defaults to battery size)
+    -battery_minimum_soc                        fraction of battery unavailable. If provided then reduces battery_size_kwh and battery_starting_soc_kwh to effective values. Defaults to 0
     -generator_operational_availability= 0.9998 Likelihood generator being available in given time step
     -generator_failure_to_start::Real = 0.0066  Chance of generator starting given outage
     -generator_failure_to_run::Real = 0.00157   Chance of generator failing in each time step of outage
