@@ -182,7 +182,7 @@ function dictkeys_tosymbols(d::Dict)
                 "emissions_factor_series_lb_NOx_per_kwh", 
                 "emissions_factor_series_lb_SO2_per_kwh",
                 "emissions_factor_series_lb_PM25_per_kwh",
-                "pv_production_factor", "battery_year_one_soc_series_fraction", #for ERP
+                "pv_production_factor", "battery_starting_soc_series_fraction", #for ERP
                 "generator_size_kw", "generator_operational_availability",
                 "generator_failure_to_start", "generator_failure_to_run"
                 ] && !isnothing(v)
