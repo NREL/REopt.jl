@@ -933,8 +933,8 @@ function return_backup_reliability(;
     kwargs...)::Array
  
     total_gen_cap = sum(generator_size_kw)
-    #No reliability calculations if no generators
-    if max_outage_duration == 0 || total_gen_cap < 0.1
+    #No reliability calculations if no outage duration
+    if max_outage_duration == 0
         return []
     
     elseif battery_size_kw < 0.1
