@@ -46,27 +46,29 @@ julia> transition_prob([1, 2, 3, 4], [0, 1, 2, 3], fail_prob=0.5)
  0.25
 ```
 """
-function transition_prob(start_gen::Vector{Int}, end_gen::Vector{Int}, fail_prob::Real)::Vector{Float64} 
+function transition_prob(start_gen::Vector{Int}, end_gen::Vector{Int}, fail_prob_vec::Real)::Vector{Float64} 
     return binomial.(start_gen, end_gen).*(1-fail_prob).^(end_gen).*(fail_prob).^(start_gen-end_gen)
 end
 
 """
-transition_prob(start_gen::Vector{Vector{Int}}, end_gen::Vector{Vector{Int}}, fail_prob::Vector{<:Real})::Vector{Float64}
+transition_prob(start_gen::Vector{Int}, end_gen::Vector{Int}, fail_prob_vec::Vector{<:Real})::Vector{Float64}
 
 Transition probability for multiple generator types. 
-Return the probability of going from i_t to j_t generators for each of generator type t given a failure rate of 
-``fail_prob`` for each i,j,t in vector of vectors ``start_gen`` and ``end_gen``.
+Return the probability of having ``end_gen`` working generators at the end of a period given ``start_gen`` generators are working at the start of the period and
+given generators have a failure probability of ``fail_prob_vec``. 
+
+``start_gen``, ``end_gen``, and fail_prob_vec are vectors of the form [x_1, ..., x_t] given there are t generator types.  
 
 Function used to create transition probabilities in Markov matrix.
 
 # Examples
 ```repl-julia
-fail_prob = [0.2, 0.5]; num_generators = [1,1]
+fail_prob_vec = [0.2, 0.5]; num_generators = [1,1]
 num_generators_working = reshape(collect(Iterators.product((0:g for g in num_generators)...)), :, 1)
 starting_gens = vec(repeat(num_generators_working, outer = prod(num_generators .+ 1)))
 ending_gens = repeat(vec(num_generators_working), inner = prod(num_generators .+ 1))
 
-julia> transition_prob(starting_gens, ending_gens, fail_prob)
+julia> transition_prob(starting_gens, ending_gens, fail_prob_vec)
 16-element Vector{Float64}:
  1.0
  0.2
@@ -74,11 +76,11 @@ julia> transition_prob(starting_gens, ending_gens, fail_prob)
  0.4
 ```
 """
-function transition_prob(start_gen::Vector, end_gen::Vector, fail_prob::Vector{<:Real})::Vector{Float64} 
+function transition_prob(start_gen::Vector, end_gen::Vector, fail_prob_vec::Vector{<:Real})::Vector{Float64} 
     start_gen_matrix = hcat(collect.(start_gen)...)
     end_gen_matrix = hcat(collect.(end_gen)...)
 
-    transitions =  [binomial.(start_gen_matrix[i, :], end_gen_matrix[i, :]).*(1-fail_prob[i]).^(end_gen_matrix[i, :]).*(fail_prob[i]).^(start_gen_matrix[i, :].-end_gen_matrix[i, :]) for i in 1:length(fail_prob)]
+    transitions =  [binomial.(start_gen_matrix[i, :], end_gen_matrix[i, :]).*(1-fail_prob[i]).^(end_gen_matrix[i, :]).*(fail_prob_vec[i]).^(start_gen_matrix[i, :].-end_gen_matrix[i, :]) for i in 1:length(fail_prob_Vec)]
     return .*(transitions...)
 end
 
@@ -111,10 +113,10 @@ function markov_matrix(num_generators::Int, fail_prob::Real)::Matrix{Float64}
 end
 
 """
-    markov_matrix(num_generators::Vector{Int}, fail_prob::Vector{<:Real})::Matrix{Float64} 
+    markov_matrix(num_generators::Vector{Int}, fail_prob_vec::Vector{<:Real})::Matrix{Float64} 
 
 Markov Matrix for multiple generator types. 
-Return an prod(``num_generators``.+1) by prod(``num_generators``.+1) matrix of transition probabilities of going from n (row) to n' (column) given probability ``fail_prob``
+Return an prod(``num_generators``.+1) by prod(``num_generators``.+1) matrix of transition probabilities of going from n (row) to n' (column) given probability ``fail_prob_vec``
 
 Rows denote starting generators and columns denote ending generators. 
 Generator availability scenarios are ordered such that the number of the leftmost generator type increments fastest.
@@ -143,14 +145,14 @@ julia> markov_matrix([2, 1], [0.1, 0.25])
  0.18  0.0025  0.2025  0.0  0.0075  0.6075
 ```
 """
-function markov_matrix(num_generators::Vector{Int}, fail_prob::Vector{<:Real})::Matrix{Float64} 
+function markov_matrix(num_generators::Vector{Int}, fail_prob_vec::Vector{<:Real})::Matrix{Float64} 
     # num_generators_working is a vector of tuples, each tuple indicating a number of each gen type that is working
     num_generators_working = reshape(collect(Iterators.product((0:g for g in num_generators)...)), :, 1)
     starting_gens = vec(repeat(num_generators_working, outer = prod(num_generators .+ 1)))
     ending_gens = repeat(vec(num_generators_working), inner = prod(num_generators .+ 1))
 
     #Creates Markov matrix for generator transition probabilities
-    M = reshape(transition_prob(starting_gens, ending_gens, fail_prob), prod(num_generators.+1), prod(num_generators .+1))
+    M = reshape(transition_prob(starting_gens, ending_gens, fail_prob_vec), prod(num_generators.+1), prod(num_generators .+1))
     replace!(M, NaN => 0)
     return M
 end
@@ -739,7 +741,7 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         end
         r2[:battery_charge_efficiency] = battery_charge_efficiency
         r2[:battery_discharge_efficiency] = battery_discharge_efficiency
-            
+
         battery_size_kwh = get(d["ElectricStorage"], "size_kwh", 0)
         battery_size_kw = get(d["ElectricStorage"], "size_kw", 0)
         init_soc = get(d["ElectricStorage"], "year_one_soc_series_fraction", [])
