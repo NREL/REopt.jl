@@ -144,7 +144,7 @@ julia> markov_matrix([2, 1], [0.1, 0.25])
 ```
 """
 function markov_matrix(num_generators::Vector{Int}, fail_prob::Vector{<:Real})::Matrix{Float64} 
-
+    # num_generators_working is a vector of tuples, each tuple indicating a number of each gen type that is working
     num_generators_working = reshape(collect(Iterators.product((0:g for g in num_generators)...)), :, 1)
     starting_gens = vec(repeat(num_generators_working, outer = prod(num_generators .+ 1)))
     ending_gens = repeat(vec(num_generators_working), inner = prod(num_generators .+ 1))
