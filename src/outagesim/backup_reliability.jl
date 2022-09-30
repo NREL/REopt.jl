@@ -921,7 +921,7 @@ Return an array of backup reliability calculations. Inputs can be unpacked from 
 """
 function return_backup_reliability(; 
     net_critical_loads_kw::Vector, 
-    battery_starting_soc_kwh::Array = [],  
+    battery_starting_soc_kwh::Vector = [],  
     generator_operational_availability::Union{Real, Vector{<:Real}} = 0.9998, 
     generator_failure_to_start::Union{Real, Vector{<:Real}}  = 0.0066, 
     generator_failure_to_run::Union{Real, Vector{<:Real}}  = 0.00157, 
