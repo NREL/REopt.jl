@@ -377,6 +377,9 @@ end
 
 Return a vector of number of bins battery is shifted by
 
+Bins are the discritized battery sizes, with the first bin denoting zero charge and the last bin denoting full charge. Thus, if there are 101 bins, then each bin denotes 
+a one percent difference in battery charge. The battery will attempt to dispatch to meet critical loads not met by other generation sources, and will charge from excess generation. 
+
 # Arguments
 - `excess_generation_kw::Vector`: maximum generator output minus net critical load for each number of working generators
 - `bin_size::Real`: size of battery bin
@@ -918,7 +921,7 @@ Return an array of backup reliability calculations. Inputs can be unpacked from 
 """
 function return_backup_reliability(; 
     net_critical_loads_kw::Vector, 
-    battery_starting_soc_kwh::Array,  
+    battery_starting_soc_kwh::Array = [],  
     generator_operational_availability::Union{Real, Vector{<:Real}} = 0.9998, 
     generator_failure_to_start::Union{Real, Vector{<:Real}}  = 0.0066, 
     generator_failure_to_run::Union{Real, Vector{<:Real}}  = 0.00157, 
@@ -933,8 +936,8 @@ function return_backup_reliability(;
     kwargs...)::Array
  
     total_gen_cap = sum(generator_size_kw)
-    #No reliability calculations if no generators
-    if max_outage_duration == 0 || total_gen_cap < 0.1
+    #No reliability calculations if no outage duration
+    if max_outage_duration == 0
         return []
     
     elseif battery_size_kw < 0.1
