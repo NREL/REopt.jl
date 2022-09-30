@@ -471,7 +471,7 @@ If ``marginal_survival`` = true then result is chance of surviving in given outa
 if ``marginal_survival`` = false then result is chance of surviving up to and including given outage timestep.
 
 # Arguments
-- `net_critical_loads_kw::Vector`: 8760 vector of system critical loads. 
+- `net_critical_loads_kw::Vector`: Vector of system critical loads. 
 - `generator_operational_availability::Union{Real, Vector{<:Real}}`: Operational Availability of backup generators.
 - `generator_failure_to_start::Union{Real, Vector{<:Real}}`: probability of generator Failure to Start and support load. 
 - `generator_failure_to_run::Union{Real, Vector{<:Real}}`: Failure to Run probability for each timestep. failure_to_run is 1/MTTF (mean time to failure). 
