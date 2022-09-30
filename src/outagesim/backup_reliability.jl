@@ -377,6 +377,9 @@ end
 
 Return a vector of number of bins battery is shifted by
 
+Bins are the discritized battery sizes, with the first bin denoting zero charge and the last bin denoting full charge. Thus, if there are 101 bins, then each bin denotes 
+a one percent difference in battery charge. The battery will attempt to dispatch to meet critical loads not met by other generation sources, and will charge from excess generation. 
+
 # Arguments
 - `excess_generation_kw::Vector`: maximum generator output minus net critical load for each number of working generators
 - `bin_size::Real`: size of battery bin
