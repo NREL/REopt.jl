@@ -324,7 +324,7 @@ julia>  get_maximum_generation(1000, 750, 250, 5, 3, 1.0)
 """
 function get_maximum_generation(battery_size_kw::Real, generator_size_kw::Real, bin_size::Real, 
                    num_bins::Int, num_generators::Int, battery_discharge_efficiency::Real)::Matrix{Float64}
-    #Returns a matrix of maximum hourly generation (rows denote number of generators starting at 0, columns denote battery bin)
+    #Returns a matrix of maximum generation (rows denote number of generators starting at 0, columns denote battery bin)
     N = num_generators + 1
     M = num_bins
     max_system_output = zeros(M, N) 
@@ -362,7 +362,7 @@ julia>  get_maximum_generation(200, [50, 125], 100, 3, [2, 1], 0.98)
 """
 function get_maximum_generation(battery_size_kw::Real, generator_size_kw::Vector{<:Real}, bin_size::Real, 
     num_bins::Int, num_generators::Vector{Int}, battery_discharge_efficiency::Real)::Matrix{Float64}
-    #Returns a matrix of maximum hourly generation (rows denote number of generators starting at 0, columns denote battery bin)
+    #Returns a matrix of maximum generation (rows denote number of generators starting at 0, columns denote battery bin)
     N = prod(num_generators .+ 1)
     M = num_bins
     max_system_output = zeros(M, N)
@@ -375,7 +375,7 @@ end
 """
     battery_bin_shift(excess_generation_kw::Vector, bin_size::Real, battery_size_kw::Real, battery_charge_efficiency::Real, battery_discharge_efficiency::Real)::Vector{Int} 
 
-Return a vector of number of bins battery is shifted by
+Return a vector of number of bins battery is shifted by, where each element of the vector corresponds to the number of working generators
 
 Bins are the discritized battery sizes, with the first bin denoting zero charge and the last bin denoting full charge. Thus, if there are 101 bins, then each bin denotes 
 a one percent difference in battery charge. The battery will attempt to dispatch to meet critical loads not met by other generation sources, and will charge from excess generation. 
@@ -474,15 +474,15 @@ if ``marginal_survival`` = false then result is chance of surviving up to and in
 - `net_critical_loads_kw::Vector`: 8760 vector of system critical loads. 
 - `generator_operational_availability::Union{Real, Vector{<:Real}}`: Operational Availability of backup generators.
 - `generator_failure_to_start::Union{Real, Vector{<:Real}}`: probability of generator Failure to Start and support load. 
-- `generator_failure_to_run::Union{Real, Vector{<:Real}}`: hourly Failure to Run probability. failure_to_run is 1/MTTF (mean time to failure). 
+- `generator_failure_to_run::Union{Real, Vector{<:Real}}`: Failure to Run probability for each timestep. failure_to_run is 1/MTTF (mean time to failure). 
 - `num_generators::Union{Int, Vector{Int}}`: number of generators in microgrid.
 - `generator_size_kw::Union{Real, Vector{<:Real}}`: size of generator.
 - `max_duration::Int`: maximum outage duration in timesteps.
-- `marginal_survival::Bool`: indicates whether results are probability of survival in given outage hour or probability of surviving up to and including hour.
+- `marginal_survival::Bool`: indicates whether results are probability of survival in given outage duration timestep or probability of surviving up to and including the given timestep.
 
 # Examples
-Given failure_to_run = 0.2, the chance of no generators failing in 0.64 in hour 1, 0.4096 in hour 2, and 0.262144 in hour 3
-Chance of 2 generators failing is 0.04 in hour 1, 0.1296 by hour 1, and 0.238144 by hour 3   
+Given failure_to_run = 0.2, the chance of no generators failing in 0.64 in time step 1, 0.4096 in time step 2, and 0.262144 in time step 3
+Chance of 2 generators failing is 0.04 in time step 1, 0.1296 by time step 1, and 0.238144 by time step 3   
 ```repl-julia
 julia> net_critical_loads_kw = [1,2,2,1]; generator_operational_availability = 1; failure_to_start = 0.0; failure_to_run = 0.2; num_generators = 2; generator_size_kw = 1; max_duration = 3;
 julia> survival_gen_only(net_critical_loads_kw=net_critical_loads_kw, generator_operational_availability=generator_operational_availability, 
@@ -519,7 +519,7 @@ function survival_gen_only(;
     generator_production = generator_output(num_generators, generator_size_kw) 
     #Initialize lost load matrix
     survival_probability_matrix = zeros(t_max, max_duration)
-    #initialize amount of extra generation for each critical load hour and each amount of generators
+    #initialize amount of extra generation for each critical load time step and each amount of generators
     generator_markov_matrix = markov_matrix(num_generators, generator_failure_to_run)
   
     #Get starting generator vector
@@ -557,28 +557,28 @@ end
 Return a matrix of probability of survival with rows denoting outage start and columns denoting outage duration
 
 Solves for probability of survival given both networked generators and battery backup. 
-If ``marginal_survival`` = true then result is chance of surviving in given outage hour, 
-if ``marginal_survival`` = false then result is chance of surviving up to and including given outage hour.
+If ``marginal_survival`` = true then result is chance of surviving in given outage time step, 
+if ``marginal_survival`` = false then result is chance of surviving up to and including given outage time step.
 
 # Arguments
-- `net_critical_loads_kw::Vector`: 8760 vector of system critical loads minus solar generation.
-- `battery_starting_soc_kwh::Vector`: 8760 vector of battery charge (kwh) for each hour of year. 
+- `net_critical_loads_kw::Vector`: Vector of system critical loads minus solar generation.
+- `battery_starting_soc_kwh::Vector`: Vector of battery charge (kwh) for each time step of year. 
 - `generator_operational_availability::Real`: Operational Availability of backup generators.
-- `generator_failure_to_start::Real`: probability of generator Failure to Start and support load. 
-- `generator_failure_to_run::Real`: hourly Failure to Run probability. failure_to_run is 1/MTTF (mean time to failure). 
+- `generator_failure_to_start::Real`: Probability of generator Failure to Start and support load. 
+- `generator_failure_to_run::Real`: Failure to Run probability. failure_to_run is 1/MTTF (mean time to failure). 
 - `num_generators::Int`: number of generators in microgrid.
 - `generator_size_kw::Real`: size of generator.
 - `battery_size_kwh::Real`: energy capacity of battery system.
 - `battery_size_kw::Real`: battery system inverter size.
 - `num_battery_bins::Int`: number of battery bins. 
-- `max_outage_duration::Int`: maximum outage duration in hours.
+- `max_outage_duration::Int`: maximum outage duration in time steps (time step is generally hourly but could be other values such as 15 minutes).
 - `battery_charge_efficiency::Real`: battery_charge_efficiency = increase_in_soc_kwh / grid_input_kwh 
 - `battery_discharge_efficiency::Real`: battery_discharge_efficiency = battery_discharge / battery_reduction_in_soc
-- `marginal_survival::Bool`: indicates whether results are probability of survival in given outage hour or probability of surviving up to and including hour.
+- `marginal_survival::Bool`: indicates whether results are probability of survival in given outage time step or probability of surviving up to and including time step.
 
 # Examples
-Given failure_to_run = 0.2, the chance of no generators failing in 0.64 in hour 1, 0.4096 in hour 2, and 0.262144 in hour 3
-Chance of 2 generators failing is 0.04 in hour 1, 0.1296 by hour 2, and 0.238144 by hour 3   
+Given failure_to_run = 0.2, the chance of no generators failing in 0.64 in time step 1, 0.4096 in time step 2, and 0.262144 in time step 3
+Chance of 2 generators failing is 0.04 in time step 1, 0.1296 by time step 2, and 0.238144 by time step 3   
 ```repl-julia
 julia> net_critical_loads_kw = [1,2,2,1]; battery_starting_soc_kwh = [1,1,1,1];  max_outage_duration = 3;
 julia> num_generators = 2; generator_size_kw = 1; generator_operational_availability = 1; failure_to_start = 0.0; failure_to_run = 0.2;
@@ -693,11 +693,11 @@ Return a dictionary of inputs required for backup reliability calculations.
 - `r::Dict`: Dictionary of inputs for reliability calculations. If r not included then uses all defaults. values read from dictionary:
     -generator_operational_availability::Real = 0.9998      Fraction of year generators not down for maintenance
     -generator_failure_to_start::Real = 0.0066              Chance of generator starting given outage
-    -generator_failure_to_run::Real = 0.00157               Chance of generator failing in each hour of outage
+    -generator_failure_to_run::Real = 0.00157               Chance of generator failing in each time step of outage
     -num_generators::Int = 1                                Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
     -generator_size_kw::Real = 0.0                          Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
     -num_battery_bins::Int = 101                            Internal value for discretely modeling battery state of charge
-    -max_outage_duration::Int = 96                          Maximum outage hour modeled
+    -max_outage_duration::Int = 96                          Maximum outage time step modeled
     -microgrid_only::Bool = false                           Boolean to specify if only microgrid upgraded technologies run during grid outage 
 """
 function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dict())::Dict
@@ -714,14 +714,14 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
 
     microgrid_only = get(r, "microgrid_only", false)
 
-    pv_kw_ac_hourly = zero_array
+    pv_kw_ac_time_series = zero_array
     if !(
             microgrid_only && 
             !Bool(get(d, "PV_upgraded", false))
         ) && 
         "PV" in keys(d)
 
-        pv_kw_ac_hourly = (
+        pv_kw_ac_time_series = (
             get(d["PV"], "year_one_to_battery_series_kw", zero_array)
             + get(d["PV"], "year_one_curtailed_production_series_kw", zero_array)
             + get(d["PV"], "year_one_to_load_series_kw", zero_array)
@@ -751,7 +751,7 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         battery_starting_soc_kwh = init_soc .* battery_size_kwh
 
         #Only subtracts PV generation if there is also a battery
-        net_critical_loads_kw .-= pv_kw_ac_hourly
+        net_critical_loads_kw .-= pv_kw_ac_time_series
         r2[:battery_starting_soc_kwh] = battery_starting_soc_kwh
 
     end
@@ -814,14 +814,14 @@ Return a dictionary of inputs required for backup reliability calculations.
     -battery_size_kwh::Real                     Battery energy storage capacity
     -charge_efficiency::Real                    Battery charge efficiency
     -discharge_efficiency::Real                 Battery discharge efficiency
-    -battery_starting_soc_series_fraction            Battery state of charge in each hour (if not input then defaults to battery size)
-    -generator_operational_availability= 0.9998 Likelihood generator being available in given hour
+    -battery_starting_soc_series_fraction       Battery state of charge in each time step (if not input then defaults to battery size)
+    -generator_operational_availability= 0.9998 Likelihood generator being available in given time step
     -generator_failure_to_start::Real = 0.0066  Chance of generator starting given outage
-    -generator_failure_to_run::Real = 0.00157   Chance of generator failing in each hour of outage
+    -generator_failure_to_run::Real = 0.00157   Chance of generator failing in each time step of outage
     -num_generators::Int = 1                    Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
     -generator_size_kw::Real = 0.0              Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
     -num_battery_bins::Int = 101                Internal value for discretely modeling battery state of charge
-    -max_outage_duration::Int = 96              Maximum outage hour modeled
+    -max_outage_duration::Int = 96              Maximum outage duration modeled
 
 #Examples
 ```repl-julia
@@ -863,16 +863,16 @@ function backup_reliability_inputs(;r::Dict)::Dict
 
     microgrid_only = get(r2, :microgrid_only, false)
 
-    pv_kw_ac_hourly = zero_array
+    pv_kw_ac_time_series = zero_array
     if :pv_size_kw in keys(r2)
         if :pv_production_factor_series in keys(r2)
-            pv_kw_ac_hourly = r2[:pv_size_kw] .* r2[:pv_production_factor_series]
+            pv_kw_ac_time_series = r2[:pv_size_kw] .* r2[:pv_production_factor_series]
         else
             push!(invalid_args, "pv_size_kw added to reliability inputs but no pv_production_factor_series provided")
         end
     end
     if microgrid_only && !Bool(get(r2, :pv_migrogrid_upgraded, false))
-        pv_kw_ac_hourly = zero_array
+        pv_kw_ac_time_series = zero_array
     end
 
     if :battery_size_kw in keys(r2)
@@ -885,7 +885,7 @@ function backup_reliability_inputs(;r::Dict)::Dict
             end
             r2[:battery_starting_soc_kwh] = init_soc .* r2[:battery_size_kwh]
             #Only subtracts PV generation if there is also a battery
-            r2[:net_critical_loads_kw] .-= pv_kw_ac_hourly
+            r2[:net_critical_loads_kw] .-= pv_kw_ac_time_series
             if !haskey(r2, :battery_size_kwh)
                 push!(invalid_args, "Battery kW provided to reliability inputs but no kWh provided.")
             end
@@ -909,11 +909,11 @@ Return an array of backup reliability calculations. Inputs can be unpacked from 
 -battery_starting_soc_kwh::Vector   = []            Battery kWh state of charge time series during normal grid-connected usage
 -generator_operational_availability::Union{Real, Vector{<:Real}}      = 0.9998        Fraction of year generators not down for maintenance
 -generator_failure_to_start::Union{Real, Vector{<:Real}}                        = 0.0066        Chance of generator starting given outage
--generator_failure_to_run::Union{Real, Vector{<:Real}}                = 0.00157       Chance of generator failing in each hour of outage
+-generator_failure_to_run::Union{Real, Vector{<:Real}}                = 0.00157       Chance of generator failing in each time step of outage
 -num_generators::Union{Int, Vector{Int}}                            = 1             Number of generators
 -generator_size_kw::Union{Real, Vector{<:Real}}                       = 0.0           Backup generator capacity
 -num_battery_bins::Int              = 100          Internal value for modeling battery
--max_outage_duration::Int           = 96           Maximum outage hour modeled
+-max_outage_duration::Int           = 96           Maximum outage duration modeled
 -battery_size_kw::Real              = 0.0          Battery kW of power capacity
 -battery_size_kwh::Real             = 0.0          Battery kWh of energy capacity
 -battery_charge_efficiency::Real    = 0.948        Efficiency of charging battery
@@ -1044,11 +1044,11 @@ Return dictionary of backup reliability results.
 - `r::Dict`: Dictionary of inputs for reliability calculations. If r not included then uses all defaults. values read from dictionary:
     -generator_operational_availability::Real = 0.9998 (Fraction of year generators not down for maintenance)
     -generator_failure_to_start::Real = 0.0066 (Chance of generator starting given outage)
-    -generator_failure_to_run::Real = 0.00157 (Chance of generator failing in each hour of outage)
+    -generator_failure_to_run::Real = 0.00157 (Chance of generator failing in each time step of outage)
     -num_generators::Int = 1  (Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1)
     -generator_size_kw::Real = 0.0 (Backup generator capacity. Will be determined by REopt optimization if set less than 0.1)
     -num_battery_bins::Int = 100 (Internal value for discretely modeling battery state of charge)
-    -max_outage_duration::Int = 96 (Maximum outage hour modeled)
+    -max_outage_duration::Int = 96 (Maximum outage duration modeled)
     -microgrid_only::Bool = false (determines how generator, PV, and battery act during islanded mode)
 
 """
@@ -1079,11 +1079,11 @@ inputs of r:
 -discharge_efficiency::Real                 Battery discharge efficiency
 -battery_starting_soc_series_fraction::Array     Battery percent state of charge time series during normal grid-connected usage
 -generator_failure_to_start::Real = 0.0066  Chance of generator starting given outage
--generator_failure_to_run::Real = 0.00157   Chance of generator failing in each hour of outage
+-generator_failure_to_run::Real = 0.00157   Chance of generator failing in each time step of outage
 -num_generators::Int = 1                    Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
 -generator_size_kw::Real = 0.0              Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
 -num_battery_bins::Int = 100                Internal value for discretely modeling battery state of charge
--max_outage_duration::Int = 96              Maximum outage hour modeled
+-max_outage_duration::Int = 96              Maximum outage duration modeled
 
 """
 function backup_reliability(r::Dict)
