@@ -935,7 +935,6 @@ function return_backup_reliability(;
     battery_discharge_efficiency::Real = 0.948,
     kwargs...)::Array
  
-    total_gen_cap = sum(generator_size_kw)
     #No reliability calculations if no outage duration
     if max_outage_duration == 0
         return []
