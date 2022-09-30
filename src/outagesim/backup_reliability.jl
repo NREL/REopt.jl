@@ -736,11 +736,9 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
     if "ElectricStorage" in keys(d)
         #TODO change to throw error if multiple storage types
         for b in p.s.storage.types.elec
-            battery_charge_efficiency = p.s.storage.attr[b].charge_efficiency
-            battery_discharge_efficiency = p.s.storage.attr[b].discharge_efficiency
+            r2[:battery_charge_efficiency] = p.s.storage.attr[b].charge_efficiency
+            r2[:battery_discharge_efficiency] = p.s.storage.attr[b].discharge_efficiency
         end
-        r2[:battery_charge_efficiency] = battery_charge_efficiency
-        r2[:battery_discharge_efficiency] = battery_discharge_efficiency
 
         battery_size_kwh = get(d["ElectricStorage"], "size_kwh", 0)
         battery_size_kw = get(d["ElectricStorage"], "size_kw", 0)
@@ -899,7 +897,7 @@ function backup_reliability_inputs(;r::Dict)::Dict
                 if minimum(r2[:battery_starting_soc_kwh]) < battery_kwh_below_minimum_soc
                     @warn("Some battery starting states of charge are less than the provided minimum state of charge.")
                 end
-                r2[:battery_starting_soc_kwh] -= battery_kwh_below_minimum_soc
+                r2[:battery_starting_soc_kwh] .-= battery_kwh_below_minimum_soc
             end
             
             #Only subtracts PV generation if there is also a battery
