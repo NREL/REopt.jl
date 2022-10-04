@@ -64,8 +64,8 @@ function add_heating_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict
 
     r = Dict{String, Any}()
 
-    dhw_load_series_kw = p.s.dhw_load.loads_kw_thermal
-    space_heating_load_series_kw = p.s.space_heating_load.loads_kw_thermal
+    dhw_load_series_kw = p.s.dhw_load.loads_kw
+    space_heating_load_series_kw = p.s.space_heating_load.loads_kw
 
     r["dhw_load_series_mmbtu"] = dhw_load_series_kw ./ KWH_PER_MMBTU
     r["space_heating_load_series_mmbtu"] = space_heating_load_series_kw ./ KWH_PER_MMBTU
