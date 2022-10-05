@@ -60,43 +60,43 @@ function LDF.constrain_loads(m::JuMP.AbstractModel, p::LDF.Inputs, ps::Array{REo
     for j in p.busses
         if j in keys(p.Pload)
             if parse(Int, j) in reopt_nodes
-                @constraint(m, [t in 1:p.Ntimesteps],
+                @constraint(m, [t in 1:p.Ntime_steps],
                     Pⱼ[j,t] == 1e3/p.Sbase * (  # 1e3 b/c REopt values in kW
                         m[Symbol("TotalExport_" * j)][t]
                         - m[Symbol("dvGridPurchase_" * j)][t]
                     )
                 )
             else
-                @constraint(m, [t in 1:p.Ntimesteps],
+                @constraint(m, [t in 1:p.Ntime_steps],
                     Pⱼ[j,t] == -p.Pload[j][t]
                 )
             end
         elseif j != p.substation_bus
-            @constraint(m, [t in 1:p.Ntimesteps],
+            @constraint(m, [t in 1:p.Ntime_steps],
                 Pⱼ[j,t] == 0
             )
         end
         
         if j in keys(p.Qload)
             if parse(Int, j) in reopt_nodes
-                @constraint(m, [t in 1:p.Ntimesteps],
+                @constraint(m, [t in 1:p.Ntime_steps],
                     Qⱼ[j,t] == 1e3/p.Sbase * p.pf * (  # 1e3 b/c REopt values in kW
                     m[Symbol("TotalExport_" * j)][t]
                         - m[Symbol("dvGridPurchase_" * j)][t]
                     )
                 )
             else
-                @constraint(m, [t in 1:p.Ntimesteps],
+                @constraint(m, [t in 1:p.Ntime_steps],
                     Qⱼ[j,t] == -p.Qload[j][t]
                 )
             end
         elseif j != p.substation_bus
-            @constraint(m, [t in 1:p.Ntimesteps],
+            @constraint(m, [t in 1:p.Ntime_steps],
                 Qⱼ[j,t] == 0
             )
         end
     end
-    p.Nequality_cons += 2 * (p.Nnodes - 1) * p.Ntimesteps
+    p.Nequality_cons += 2 * (p.Nnodes - 1) * p.Ntime_steps
 end
 
 # TODO add LDF results (here and in LDF package)
