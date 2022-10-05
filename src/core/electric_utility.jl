@@ -43,20 +43,21 @@
     outage_time_steps::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:maximum(outage_durations),
     scenarios::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:length(outage_durations),
     # Emissions and renewable energy inputs:
-    emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[],
-    emissions_factor_series_lb_NOx_per_kwh::Union{Real,Array{<:Real,1}} = Float64[],
-    emissions_factor_series_lb_SO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[],
-    emissions_factor_series_lb_PM25_per_kwh::Union{Real,Array{<:Real,1}} = Float64[],
-    emissions_factor_CO2_decrease_pct::Real = 0.01174,
-    emissions_factor_NOx_decrease_pct::Real = 0.01174,
-    emissions_factor_SO2_decrease_pct::Real = 0.01174,
-    emissions_factor_PM25_decrease_pct::Real = 0.01174,
+    emissions_region::String = "", # AVERT emissions region. Default is based on location, or can be overriden by providing region here.
+    emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
+    emissions_factor_series_lb_NOx_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
+    emissions_factor_series_lb_SO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
+    emissions_factor_series_lb_PM25_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
+    emissions_factor_CO2_decrease_fraction::Real = 0.01174,
+    emissions_factor_NOx_decrease_fraction::Real = 0.01174,
+    emissions_factor_SO2_decrease_fraction::Real = 0.01174,
+    emissions_factor_PM25_decrease_fraction::Real = 0.01174,
     # fields from other models needed for validation
-    CO2_emissions_reduction_min_pct::Union{Real, Nothing} = nothing, # passed from Site
-    CO2_emissions_reduction_max_pct::Union{Real, Nothing} = nothing, # passed from Site
+    CO2_emissions_reduction_min_fraction::Union{Real, Nothing} = nothing, # passed from Site
+    CO2_emissions_reduction_max_fraction::Union{Real, Nothing} = nothing, # passed from Site
     include_climate_in_objective::Bool = false, # passed from Settings
     include_health_in_objective::Bool = false # passed from Settings
-```julia
+```
 
 !!! note "Outage modeling"
     Outage indexing begins at 1 (not 0) and the outage is inclusive of the outage end time step. 
@@ -75,6 +76,14 @@
     This constructor is intended to be used with latitude/longitude arguments provided for
     the non-MPC case and without latitude/longitude arguments provided for the MPC case.
 
+!!! note "Emissions Region"
+    The default `emissions_region` input is determined by the site's latitude and longitude. 
+    Alternatively, you may input the desired AVERT `emissions_region`, which must be one of: 
+    ["California", "Central", "Florida", "Mid-Atlantic", "Midwest", "Carolinas", "New England",
+     "Northwest", "New York", "Rocky Mountains", "Southeast", "Southwest", "Tennessee", "Texas",
+     "Alaska", "Hawaii (except Oahu)", "Hawaii (Oahu)"]
+
+
 """
 struct ElectricUtility
     emissions_region::String # AVERT emissions region
@@ -83,10 +92,10 @@ struct ElectricUtility
     emissions_factor_series_lb_NOx_per_kwh::Array{<:Real,1}
     emissions_factor_series_lb_SO2_per_kwh::Array{<:Real,1}
     emissions_factor_series_lb_PM25_per_kwh::Array{<:Real,1}
-    emissions_factor_CO2_decrease_pct::Real
-    emissions_factor_NOx_decrease_pct::Real
-    emissions_factor_SO2_decrease_pct::Real
-    emissions_factor_PM25_decrease_pct::Real
+    emissions_factor_CO2_decrease_fraction::Real
+    emissions_factor_NOx_decrease_fraction::Real
+    emissions_factor_SO2_decrease_fraction::Real
+    emissions_factor_PM25_decrease_fraction::Real
     outage_start_time_step::Int  # for modeling a single outage, with critical load spliced into the baseline load ...
     outage_end_time_step::Int  # ... utiltity production_factor = 0 during the outage
     allow_simultaneous_export_import::Bool  # if true the site has two meters (in effect)
@@ -119,45 +128,31 @@ struct ElectricUtility
         outage_time_steps::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:maximum(outage_durations),
         scenarios::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:length(outage_durations),
         # Emissions and renewable energy inputs:
+        emissions_region::String = "", # AVERT emissions region, use empty string instead of nothing because that's how missing strings stored in django
         emissions_factor_series_lb_CO2_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
         emissions_factor_series_lb_NOx_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
         emissions_factor_series_lb_SO2_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
         emissions_factor_series_lb_PM25_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
-        emissions_factor_CO2_decrease_pct::Real = 0.01174,
-        emissions_factor_NOx_decrease_pct::Real = 0.01174,
-        emissions_factor_SO2_decrease_pct::Real = 0.01174,
-        emissions_factor_PM25_decrease_pct::Real = 0.01174,
+        emissions_factor_CO2_decrease_fraction::Real = 0.01174,
+        emissions_factor_NOx_decrease_fraction::Real = 0.01174,
+        emissions_factor_SO2_decrease_fraction::Real = 0.01174,
+        emissions_factor_PM25_decrease_fraction::Real = 0.01174,
         # fields from other models needed for validation
-        CO2_emissions_reduction_min_pct::Union{Real, Nothing} = nothing, # passed from Site
-        CO2_emissions_reduction_max_pct::Union{Real, Nothing} = nothing, # passed from Site
+        CO2_emissions_reduction_min_fraction::Union{Real, Nothing} = nothing, # passed from Site
+        CO2_emissions_reduction_max_fraction::Union{Real, Nothing} = nothing, # passed from Site
         include_climate_in_objective::Bool = false, # passed from Settings
         include_health_in_objective::Bool = false # passed from Settings
         )
 
         is_MPC = isnothing(latitude) || isnothing(longitude)
-        if !is_MPC
-            region_lookup = Dict(
-                "CA" => "California",
-                "CENT" => "Central",
-                "FL" => "Florida",
-                "MIDA" => "Mid-Atlantic",
-                "MIDW" => "Midwest",
-                "NCSC" => "Carolinas",
-                "NE" => "New England",
-                "NW" => "Northwest",
-                "NY" => "New York",
-                "RM" => "Rocky Mountains",
-                "SE" => "Southeast",
-                "SW" => "Southwest",
-                "TN" => "Tennessee",
-                "TE" => "Texas",
-                "AKGD" => "Alaska",
-                "HIMS" => "Hawaii (except Oahu)",
-                "HIOA" => "Hawaii (Oahu)"
-            )
-            
-            region_abbr, meters_to_region = region_abbreviation(latitude, longitude)
-            emissions_region = get(region_lookup, region_abbr, "")
+        if !is_MPC    
+            if emissions_region == ""
+                region_abbr, meters_to_region = region_abbreviation(latitude, longitude)
+                emissions_region = region_abbr_to_name(region_abbr)
+            else
+                region_abbr = region_name_to_abbr(emissions_region)
+                meters_to_region = 0
+            end
             emissions_series_dict = Dict{String, Union{Nothing,Array{<:Real,1}}}()
 
             for (eseries, ekey) in [
@@ -181,8 +176,8 @@ struct ElectricUtility
                     if isnothing(emissions_series_dict[ekey])
                         @warn "Cannot find hourly $(ekey) emissions for region $(region_abbr). Setting emissions to zero."
                         if ekey == "CO2" && !off_grid_flag && 
-                                            (!isnothing(CO2_emissions_reduction_min_pct) || 
-                                            !isnothing(CO2_emissions_reduction_max_pct) || 
+                                            (!isnothing(CO2_emissions_reduction_min_fraction) || 
+                                            !isnothing(CO2_emissions_reduction_max_fraction) || 
                                             include_climate_in_objective)
                             error("To include CO2 costs in the objective function or enforce emissions reduction constraints, 
                                 you must either enter custom CO2 grid emissions factors or a site location within the continental U.S.")
@@ -220,10 +215,10 @@ struct ElectricUtility
             is_MPC ? Float64[] : emissions_series_dict["NOx"],
             is_MPC ? Float64[] : emissions_series_dict["SO2"],
             is_MPC ? Float64[] : emissions_series_dict["PM25"],
-            emissions_factor_CO2_decrease_pct,
-            emissions_factor_NOx_decrease_pct,
-            emissions_factor_SO2_decrease_pct,
-            emissions_factor_PM25_decrease_pct,
+            emissions_factor_CO2_decrease_fraction,
+            emissions_factor_NOx_decrease_fraction,
+            emissions_factor_SO2_decrease_fraction,
+            emissions_factor_PM25_decrease_fraction,
             outage_start_time_step,
             outage_end_time_step,
             allow_simultaneous_export_import,
@@ -332,4 +327,50 @@ function emissions_series(pollutant, region_abbr; time_steps_per_hour=1)
     catch
         return nothing
     end
+end
+
+function region_abbr_to_name(region_abbr)
+    lookup = Dict(
+        "CA" => "California",
+        "CENT" => "Central",
+        "FL" => "Florida",
+        "MIDA" => "Mid-Atlantic",
+        "MIDW" => "Midwest",
+        "NCSC" => "Carolinas",
+        "NE" => "New England",
+        "NW" => "Northwest",
+        "NY" => "New York",
+        "RM" => "Rocky Mountains",
+        "SE" => "Southeast",
+        "SW" => "Southwest",
+        "TN" => "Tennessee",
+        "TE" => "Texas",
+        "AKGD" => "Alaska",
+        "HIMS" => "Hawaii (except Oahu)",
+        "HIOA" => "Hawaii (Oahu)"
+    )
+    return get(lookup, region_abbr, "")
+end
+
+function region_name_to_abbr(region_name)
+    lookup = Dict(
+        "California" => "CA",
+        "Central" => "CENT",
+        "Florida" => "FL",
+        "Mid-Atlantic" => "MIDA",
+        "Midwest" => "MIDW",
+        "Carolinas" => "NCSC",
+        "New England" => "NE",
+        "Northwest" => "NW",
+        "New York" => "NY",
+        "Rocky Mountains" => "RM",
+        "Southeast" => "SE",
+        "Southwest" => "SW",
+        "Tennessee" => "TN",
+        "Texas" => "TE",
+        "Alaska" => "AKGD",
+        "Hawaii (except Oahu)" => "HIMS",
+        "Hawaii (Oahu)" => "HIOA"
+    )
+    return get(lookup, region_name, "")
 end

@@ -397,7 +397,7 @@ end
 Case for scaler export rate provided -> convert to array of time_steps
 """
 function create_export_rate(e::T, N::Int, ts_per_hour::Int=1) where T<:Real
-    [float(-1*e) for _ in range(1, stop=N) for ts in 1:ts_per_hour]
+    repeat([float(-1*e)], N * ts_per_hour)
 end
 
 

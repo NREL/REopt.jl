@@ -40,7 +40,7 @@
     fuel_slope_gal_per_kwh::Real = 0.076,
     fuel_intercept_gal_per_hr::Real = 0.0,
     fuel_avail_gal::Real = off_grid_flag ? 1.0e9 : 660.0,
-    min_turn_down_pct::Real = off_grid_flag ? 0.15 : 0.0,
+    min_turn_down_fraction::Real = off_grid_flag ? 0.15 : 0.0,
     only_runs_during_grid_outage::Bool = true,
     sells_energy_back_to_grid::Bool = false,
     can_net_meter::Bool = false,
@@ -48,15 +48,15 @@
     can_export_beyond_nem_limit = false,
     can_curtail::Bool = false,
     macrs_option_years::Int = 0,
-    macrs_bonus_pct::Real = 1.0,
+    macrs_bonus_fraction::Real = 1.0,
     macrs_itc_reduction::Real = 0.0,
-    federal_itc_pct::Real = 0.0,
+    federal_itc_fraction::Real = 0.0,
     federal_rebate_per_kw::Real = 0.0,
-    state_ibi_pct::Real = 0.0,
+    state_ibi_fraction::Real = 0.0,
     state_ibi_max::Real = 1.0e10,
     state_rebate_per_kw::Real = 0.0,
     state_rebate_max::Real = 1.0e10,
-    utility_ibi_pct::Real = 0.0,
+    utility_ibi_fraction::Real = 0.0,
     utility_ibi_max::Real = 1.0e10,
     utility_rebate_per_kw::Real = 0.0,
     utility_rebate_max::Real = 1.0e10,
@@ -64,7 +64,7 @@
     production_incentive_max_benefit::Real = 1.0e9,
     production_incentive_years::Int = 0,
     production_incentive_max_kw::Real = 1.0e9,
-    fuel_renewable_energy_pct::Real = 0.0,
+    fuel_renewable_energy_fraction::Real = 0.0,
     emissions_factor_lb_CO2_per_gal::Real = 22.51,
     emissions_factor_lb_NOx_per_gal::Real = 0.0775544,
     emissions_factor_lb_SO2_per_gal::Real = 0.040020476,
@@ -88,7 +88,7 @@ struct Generator <: AbstractGenerator
     fuel_slope_gal_per_kwh
     fuel_intercept_gal_per_hr
     fuel_avail_gal
-    min_turn_down_pct
+    min_turn_down_fraction
     only_runs_during_grid_outage
     sells_energy_back_to_grid
     can_net_meter
@@ -96,15 +96,15 @@ struct Generator <: AbstractGenerator
     can_export_beyond_nem_limit
     can_curtail
     macrs_option_years
-    macrs_bonus_pct
+    macrs_bonus_fraction
     macrs_itc_reduction
-    federal_itc_pct
+    federal_itc_fraction
     federal_rebate_per_kw
-    state_ibi_pct
+    state_ibi_fraction
     state_ibi_max
     state_rebate_per_kw
     state_rebate_max
-    utility_ibi_pct
+    utility_ibi_fraction
     utility_ibi_max
     utility_rebate_per_kw
     utility_rebate_max
@@ -112,7 +112,7 @@ struct Generator <: AbstractGenerator
     production_incentive_max_benefit
     production_incentive_years
     production_incentive_max_kw
-    fuel_renewable_energy_pct
+    fuel_renewable_energy_fraction
     emissions_factor_lb_CO2_per_gal
     emissions_factor_lb_NOx_per_gal
     emissions_factor_lb_SO2_per_gal
@@ -133,7 +133,7 @@ struct Generator <: AbstractGenerator
         fuel_slope_gal_per_kwh::Real = 0.076,
         fuel_intercept_gal_per_hr::Real = 0.0,
         fuel_avail_gal::Real = off_grid_flag ? 1.0e9 : 660.0,
-        min_turn_down_pct::Real = off_grid_flag ? 0.15 : 0.0,
+        min_turn_down_fraction::Real = off_grid_flag ? 0.15 : 0.0,
         only_runs_during_grid_outage::Bool = true,
         sells_energy_back_to_grid::Bool = false,
         can_net_meter::Bool = false,
@@ -141,15 +141,15 @@ struct Generator <: AbstractGenerator
         can_export_beyond_nem_limit = false,
         can_curtail::Bool = false,
         macrs_option_years::Int = 0,
-        macrs_bonus_pct::Real = 1.0,
+        macrs_bonus_fraction::Real = 1.0,
         macrs_itc_reduction::Real = 0.0,
-        federal_itc_pct::Real = 0.0,
+        federal_itc_fraction::Real = 0.0,
         federal_rebate_per_kw::Real = 0.0,
-        state_ibi_pct::Real = 0.0,
+        state_ibi_fraction::Real = 0.0,
         state_ibi_max::Real = 1.0e10,
         state_rebate_per_kw::Real = 0.0,
         state_rebate_max::Real = 1.0e10,
-        utility_ibi_pct::Real = 0.0,
+        utility_ibi_fraction::Real = 0.0,
         utility_ibi_max::Real = 1.0e10,
         utility_rebate_per_kw::Real = 0.0,
         utility_rebate_max::Real = 1.0e10,
@@ -157,7 +157,7 @@ struct Generator <: AbstractGenerator
         production_incentive_max_benefit::Real = 1.0e9,
         production_incentive_years::Int = 0,
         production_incentive_max_kw::Real = 1.0e9,
-        fuel_renewable_energy_pct::Real = 0.0,
+        fuel_renewable_energy_fraction::Real = 0.0,
         emissions_factor_lb_CO2_per_gal::Real = 22.51,
         emissions_factor_lb_NOx_per_gal::Real = 0.0775544,
         emissions_factor_lb_SO2_per_gal::Real = 0.040020476,
@@ -181,7 +181,7 @@ struct Generator <: AbstractGenerator
             fuel_slope_gal_per_kwh,
             fuel_intercept_gal_per_hr,
             fuel_avail_gal,
-            min_turn_down_pct,
+            min_turn_down_fraction,
             only_runs_during_grid_outage,
             sells_energy_back_to_grid,
             can_net_meter,
@@ -189,15 +189,15 @@ struct Generator <: AbstractGenerator
             can_export_beyond_nem_limit,
             can_curtail,
             macrs_option_years,
-            macrs_bonus_pct,
+            macrs_bonus_fraction,
             macrs_itc_reduction,
-            federal_itc_pct,
+            federal_itc_fraction,
             federal_rebate_per_kw,
-            state_ibi_pct,
+            state_ibi_fraction,
             state_ibi_max,
             state_rebate_per_kw,
             state_rebate_max,
-            utility_ibi_pct,
+            utility_ibi_fraction,
             utility_ibi_max,
             utility_rebate_per_kw,
             utility_rebate_max,
@@ -205,7 +205,7 @@ struct Generator <: AbstractGenerator
             production_incentive_max_benefit,
             production_incentive_years,
             production_incentive_max_kw,
-            fuel_renewable_energy_pct,
+            fuel_renewable_energy_fraction,
             emissions_factor_lb_CO2_per_gal,
             emissions_factor_lb_NOx_per_gal,
             emissions_factor_lb_SO2_per_gal,
