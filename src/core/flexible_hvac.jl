@@ -48,7 +48,7 @@ end
     temperature_upper_bound_degC::Union{Real, Nothing}
     temperature_lower_bound_degC::Union{Real, Nothing}
     installed_cost::Float64
-```julia
+```
 
 The `FlexibleHVAC` system is modeled via a discrete state-space system:
 

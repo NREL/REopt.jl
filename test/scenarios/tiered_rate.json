@@ -11,7 +11,7 @@
         "urdb_label": "5550d6fd5457a3187e8b4567"
     },
     "Financial": {
-        "offtaker_tax_pct": 0.26,
-        "elec_cost_escalation_pct": 0.026
+        "offtaker_tax_rate_fraction": 0.26,
+        "elec_cost_escalation_rate_fraction": 0.026
     }
 }

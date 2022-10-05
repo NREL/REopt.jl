@@ -58,6 +58,9 @@ struct BAUScenario <: AbstractScenario
     outage_outputs::OutageOutputs
     flexible_hvac::Union{BAU_HVAC, Nothing}
     cooling_load::CoolingLoad
+    ghp_option_list::Array{Union{GHP, Nothing}, 1}  # List of GHP objects (often just 1 element, but can be more)
+    heating_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
+    cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}    
 end
 
 
@@ -114,6 +117,11 @@ function BAUScenario(s::Scenario)
 
     # no existing storage
     storage = Storage()
+
+    # no existing GHP
+    ghp_option_list = []
+    heating_thermal_load_reduction_with_ghp_kw = zeros(8760 * s.settings.time_steps_per_hour)
+    cooling_thermal_load_reduction_with_ghp_kw = zeros(8760 * s.settings.time_steps_per_hour)
     
     t0, tf = s.electric_utility.outage_start_time_step, s.electric_utility.outage_end_time_step
     #=
@@ -124,7 +132,7 @@ function BAUScenario(s::Scenario)
     In the simplest case we set the BAU critical_loads_kw to zero during the outage. 
     However, if the BAU scenario has existing Generator and/or PV we calculate how many time steps the critical load can 
     be met and make the critical load non-zero for those time steps in order to show the most realistic dispatch results.
-    This calculation requires the PV prod_factor_series and so it is done in BAUInputs.
+    This calculation requires the PV production_factor_series and so it is done in BAUInputs.
     =#
     elec_load = deepcopy(s.electric_load)
     if tf > t0 && t0 > 0
@@ -160,6 +168,9 @@ function BAUScenario(s::Scenario)
         s.existing_chiller,
         outage_outputs,
         flexible_hvac,
-        s.cooling_load
+        s.cooling_load,
+        ghp_option_list,
+        heating_thermal_load_reduction_with_ghp_kw,
+        cooling_thermal_load_reduction_with_ghp_kw
     )
 end

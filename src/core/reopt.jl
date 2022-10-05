@@ -66,7 +66,7 @@ end
 Solve the model using a `Scenario` or `BAUScenario`.
 """
 function run_reopt(m::JuMP.AbstractModel, s::AbstractScenario)
-	if s.site.CO2_emissions_reduction_min_pct > 0.0 || s.site.CO2_emissions_reduction_max_pct < 1.0
+	if s.site.CO2_emissions_reduction_min_fraction > 0.0 || s.site.CO2_emissions_reduction_max_fraction < 1.0
 		error("To constrain CO2 emissions reduction min or max percentages, the optimal and business as usual scenarios must be run in parallel. Use a version of run_reopt() that takes an array of two models.")
 	end
 	run_reopt(m, REoptInputs(s))
@@ -217,6 +217,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	m[:dvComfortLimitViolationCost] = 0.0
 	m[:TotalCHPStandbyCharges] = 0
 	m[:OffgridOtherCapexAfterDepr] = 0.0
+    m[:GHPCapCosts] = 0.0
+    m[:GHPOMCosts] = 0.0   
 
 	if !isempty(p.techs.all)
 		add_tech_size_constraints(m, p)
@@ -241,13 +243,13 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 				m[:TotalCHPStandbyCharges] += sum(p.s.financial.pwf_e * 12 * p.s.chp.standby_rate_per_kw_per_month * m[:dvSize][t] for t in p.techs.chp)
 			end
 
-			if !isempty(p.techs.thermal)
-				m[:TotalTechCapCosts] += sum(p.s.chp.supplementary_firing_capital_cost_per_kw * m[:dvSupplementaryFiringSize][t] for t in p.techs.chp)
-			end
+			m[:TotalTechCapCosts] += sum(p.s.chp.supplementary_firing_capital_cost_per_kw * m[:dvSupplementaryFiringSize][t] for t in p.techs.chp)
         end
 
         if !isempty(p.techs.boiler)
             add_boiler_tech_constraints(m, p)
+			m[:TotalPerUnitProdOMCosts] += m[:TotalBoilerPerUnitProdOMCosts]
+			m[:TotalFuelCosts] += m[:TotalBoilerFuelCosts]
         end
 
 		if !isempty(p.techs.cooling)
@@ -262,11 +264,20 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             add_thermal_load_constraints(m, p)  # split into heating and cooling constraints?
         end
 
+        if !isempty(p.ghp_options)
+            add_ghp_constraints(m, p)
+        end
+
+        if !isempty(p.techs.steam_turbine)
+            add_steam_turbine_constraints(m, p)
+            m[:TotalPerUnitProdOMCosts] += m[:TotalSteamTurbinePerUnitProdOMCosts]
+        end
+
         if !isempty(p.techs.pbi)
             @warn "adding binary variable(s) to model production based incentives"
             add_prod_incent_vars_and_constraints(m, p)
         end
-	end
+    end
 
 	add_elec_load_balance_constraints(m, p)
 
@@ -366,38 +377,38 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	
 	if p.s.settings.off_grid_flag
 		offgrid_other_capex_depr_savings = get_offgrid_other_capex_depreciation_savings(p.s.financial.offgrid_other_capital_costs, 
-			p.s.financial.owner_discount_pct, p.s.financial.analysis_years, p.s.financial.owner_tax_pct)
+			p.s.financial.owner_discount_rate_fraction, p.s.financial.analysis_years, p.s.financial.owner_tax_rate_fraction)
 		m[:OffgridOtherCapexAfterDepr] = p.s.financial.offgrid_other_capital_costs - offgrid_other_capex_depr_savings 
 	end
 
 	#################################  Objective Function   ########################################
 	@expression(m, Costs,
 		# Capital Costs
-		m[:TotalTechCapCosts] + TotalStorageCapCosts +
+		m[:TotalTechCapCosts] + TotalStorageCapCosts + m[:GHPCapCosts] +
 
 		# Fixed O&M, tax deductible for owner
-		TotalPerUnitSizeOMCosts * (1 - p.s.financial.owner_tax_pct) +
+		(TotalPerUnitSizeOMCosts + m[:GHPOMCosts]) * (1 - p.s.financial.owner_tax_rate_fraction) +
 
 		# Variable O&M, tax deductible for owner
-		(m[:TotalPerUnitProdOMCosts] + m[:TotalPerUnitHourOMCosts]) * (1 - p.s.financial.owner_tax_pct) +
+		(m[:TotalPerUnitProdOMCosts] + m[:TotalPerUnitHourOMCosts]) * (1 - p.s.financial.owner_tax_rate_fraction) +
 
 		# Total Fuel Costs, tax deductible for offtaker
-        m[:TotalFuelCosts] * (1 - p.s.financial.offtaker_tax_pct) +
+        m[:TotalFuelCosts] * (1 - p.s.financial.offtaker_tax_rate_fraction) +
 
 		# CHP Standby Charges
-		m[:TotalCHPStandbyCharges] * (1 - p.s.financial.offtaker_tax_pct) +
+		m[:TotalCHPStandbyCharges] * (1 - p.s.financial.offtaker_tax_rate_fraction) +
 
 		# Utility Bill, tax deductible for offtaker
-		m[:TotalElecBill] * (1 - p.s.financial.offtaker_tax_pct) -
+		m[:TotalElecBill] * (1 - p.s.financial.offtaker_tax_rate_fraction) -
 
         # Subtract Incentives, which are taxable
-		m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_pct) +
+		m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_rate_fraction) +
 
 		# Comfort limit violation costs
 		m[:dvComfortLimitViolationCost] + 
 
 		# Additional annual costs, tax deductible for owner (only applies when off_grid_flag is true)
-		p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_pct) +
+		p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_rate_fraction) +
 
 		# Additional capital costs, depreciable (only applies when off_grid_flag is true)
 		m[:OffgridOtherCapexAfterDepr]
@@ -492,6 +503,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvPeakDemandTOU[p.ratchets, 1:p.s.electric_tariff.n_tou_demand_tiers] >= 0  # Peak electrical power demand during ratchet r [kW]
 		dvPeakDemandMonth[p.months, 1:p.s.electric_tariff.n_monthly_demand_tiers] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0
+        binGHP[p.ghp_options], Bin  # Can be <= 1 if require_ghp_purchase=0, and is ==1 if require_ghp_purchase=1
 	end
 
 	if !isempty(p.techs.gen)  # Problem becomes a MILP
@@ -527,6 +539,10 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
         end
     end
 
+    if !isempty(p.techs.steam_turbine)
+        @variable(m, dvThermalToSteamTurbine[p.techs.can_supply_steam_turbine, p.time_steps] >= 0)
+    end
+
 	if !isempty(p.s.electric_utility.outage_durations) # add dvUnserved Load if there is at least one outage
 		@warn """Adding binary variable to model outages. 
 				 Some solvers are very slow with integer variables"""
@@ -539,7 +555,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 			dvUnservedLoad[S, tZeros, outage_time_steps] >= 0 # unserved load not met by system
 			dvMGProductionToStorage[p.techs.elec, S, tZeros, outage_time_steps] >= 0 # Electricity going to the storage system during each time_step
 			dvMGDischargeFromStorage[S, tZeros, outage_time_steps] >= 0 # Electricity coming from the storage system during each time_step
-			dvMGRatedProduction[p.techs.elec, S, tZeros, outage_time_steps]  # MG Rated Production at every time_step.  Multiply by ProdFactor to get actual energy
+			dvMGRatedProduction[p.techs.elec, S, tZeros, outage_time_steps]  # MG Rated Production at every time_step.  Multiply by production_factor to get actual energy
 			dvMGStoredEnergy[S, tZeros, 0:max_outage_duration] >= 0 # State of charge of the MG storage system
 			dvMaxOutageCost[S] >= 0 # maximum outage cost dependent on number of outage durations
 			dvMGTechUpgradeCost[p.techs.elec] >= 0
