@@ -221,8 +221,9 @@ end
         @test results["CHP"]["year_one_electric_energy_produced_kwh"] ≈ 800*8760 rtol=1e-5
         @test results["CHP"]["year_one_thermal_energy_produced_mmbtu"] ≈ 800*(0.4418/0.3573)*8760/293.07107 rtol=1e-5
         @test results["ElectricTariff"]["lifecycle_demand_cost_after_tax"] == 0
-        @test results["HeatingLoad"]["annual_calculated_mmbtu"] == 12.0*8760
-        @test results["HeatingLoad"]["annual_calculated_dhw_mmbtu"] == 6.0*8760
+        @test results["HeatingLoad"]["annual_calculated_mmbtu"] == 12.0 * 8760 * REopt.EXISTING_BOILER_EFFICIENCY
+        @test results["HeatingLoad"]["annual_calculated_dhw_mmbtu"] == 6.0 * 8760 * REopt.EXISTING_BOILER_EFFICIENCY
+        @test results["HeatingLoad"]["annual_calculated_space_heating_mmbtu"] == 6.0 * 8760 * REopt.EXISTING_BOILER_EFFICIENCY
     
         #part 2: supplementary firing used when more efficient than the boiler and low-cost; demand charges not reduced by CHP
         data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10
@@ -699,6 +700,9 @@ end
     cooling_thermal_load_tonhour_total = 1427329.0 * crb_cop / REopt.KWH_THERMAL_PER_TONHOUR  # From CRB models, in heating_cooling_loads.jl, BuiltInCoolingLoad data for location (SanFrancisco Hospital)
     cooling_electric_load_total_mod_cop_kwh = cooling_thermal_load_tonhour_total / inputs.s.existing_chiller.cop * REopt.KWH_THERMAL_PER_TONHOUR
 
+    #Test cooling load results
+    @test round(cooling_thermal_load_tonhour_total, digits=1) ≈ results["CoolingLoad"]["annual_calculated_tonhr"] atol=1.0
+    
     # Annual heating **thermal** energy load of CRB is based on annual boiler fuel energy (from CRB models) and assumed const EXISTING_BOILER_EFFICIENCY
     # When the user specifies inputs["ExistingBoiler"]["efficiency"], this changes the **fuel** consumption of the boiler to meet that heating thermal load
     boiler_thermal_load_mmbtu_total = (671.40531 + 11570.9155) * REopt.EXISTING_BOILER_EFFICIENCY # From CRB models, in heating_cooling_loads.jl, BuiltInDomesticHotWaterLoad + BuiltInSpaceHeatingLoad data for location (SanFrancisco Hospital)
