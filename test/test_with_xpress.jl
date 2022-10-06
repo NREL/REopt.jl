@@ -221,8 +221,9 @@ end
         @test results["CHP"]["year_one_electric_energy_produced_kwh"] ≈ 800*8760 rtol=1e-5
         @test results["CHP"]["year_one_thermal_energy_produced_mmbtu"] ≈ 800*(0.4418/0.3573)*8760/293.07107 rtol=1e-5
         @test results["ElectricTariff"]["lifecycle_demand_cost_after_tax"] == 0
-        @test results["HeatingLoad"]["annual_calculated_mmbtu"] == 12.0*8760
-        @test results["HeatingLoad"]["annual_calculated_dhw_mmbtu"] == 6.0*8760
+        @test results["HeatingLoad"]["annual_calculated_mmbtu"] == 12.0*8760/REopt.EXISTING_BOILER_EFFICIENCY
+        @test results["HeatingLoad"]["annual_calculated_dhw_mmbtu"] == 6.0*8760/REopt.EXISTING_BOILER_EFFICIENCY
+        @test results["HeatingLoad"]["annual_calculated_space_heating_mmbtu"] == 6.0*8760/REopt.EXISTING_BOILER_EFFICIENCY
     
         #part 2: supplementary firing used when more efficient than the boiler and low-cost; demand charges not reduced by CHP
         data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10
