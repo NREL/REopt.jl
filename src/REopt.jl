@@ -70,10 +70,6 @@ using CoolProp
 
 function __init__()
     @require GhpGhx="7ce85f02-24a8-4d69-a3f0-14b5daa7d30c" println("using GhpGhx module in REopt")
-
-    global logREopt = REoptLogger()
-	global_logger(logREopt)
-    @debug "Created custom REopt Logger"
 end
 
 const EXISTING_BOILER_EFFICIENCY = 0.8

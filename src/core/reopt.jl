@@ -35,7 +35,17 @@ Return REoptInputs(s) where s in `Scenario` defined in dict `d`.
 """
 
 function REoptInputs(d::Dict)
-    REoptInputs(Scenario(d))
+	instantiate_logger()
+
+	try
+		REoptInputs(Scenario(d))
+	catch e
+		if isnothing(e) # Error thrown by REopt
+			handle_errors()
+		else
+			handle_errors(e, stacktrace(catch_backtrace()))
+		end
+	end
 end
 
 """
@@ -44,6 +54,9 @@ end
 Solve the model using the `Scenario` defined in JSON file stored at the file path `fp`.
 """
 function run_reopt(m::JuMP.AbstractModel, fp::String)
+
+	instantiate_logger()
+
 	try
 		s = Scenario(JSON.parsefile(fp))
 		run_reopt(m, REoptInputs(s))
@@ -63,6 +76,9 @@ end
 Solve the model using the `Scenario` defined in dict `d`.
 """
 function run_reopt(m::JuMP.AbstractModel, d::Dict)
+
+	instantiate_logger()
+
 	try
 		s = Scenario(d)
 		run_reopt(m, REoptInputs(s))
@@ -103,6 +119,9 @@ end
 Method for use with Threads when running BAU in parallel with optimal scenario.
 """
 function run_reopt(t::Tuple{JuMP.AbstractModel, AbstractInputs})
+
+	instantiate_logger()
+
 	try
 		run_reopt(t[1], t[2]; organize_pvs=false)
 		# must organize_pvs after adding proforma results
@@ -123,6 +142,9 @@ Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) m
 JSON file at the filepath `fp`.
 """
 function run_reopt(ms::AbstractArray{T, 1}, fp::String) where T <: JuMP.AbstractModel
+
+	instantiate_logger()
+
     try
 		d = JSON.parsefile(fp)
     	run_reopt(ms, d)
@@ -142,6 +164,9 @@ end
 Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) models in `ms` and inputs from `d`.
 """
 function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractModel
+
+	instantiate_logger()
+
 	try
 		s = Scenario(d)
 		if s.settings.off_grid_flag
@@ -226,6 +251,17 @@ function handle_errors()
 	end
 
 	return results
+end
+
+"""
+	instantiate_logger()
+
+Instantiate a global logger of type REoptLogger and set it to global logger for downstream processing.
+"""
+function instantiate_logger()
+	global logREopt = REoptLogger()
+	global_logger(logREopt)
+    @debug "Created custom REopt Logger"
 end
 
 """
