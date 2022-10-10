@@ -221,7 +221,7 @@ end
         @test results["CHP"]["year_one_electric_energy_produced_kwh"] ≈ 800*8760 rtol=1e-5
         @test results["CHP"]["year_one_thermal_energy_produced_mmbtu"] ≈ 800*(0.4418/0.3573)*8760/293.07107 rtol=1e-5
         @test results["ElectricTariff"]["lifecycle_demand_cost_after_tax"] == 0
-        @test results["HeatingLoad"]["annual_calculated_mmbtu"] == 12.0 * 8760 * REopt.EXISTING_BOILER_EFFICIENCY
+        @test results["HeatingLoad"]["annual_total_heating_thermal_load_mmbtu"] == 12.0 * 8760 * REopt.EXISTING_BOILER_EFFICIENCY
         @test results["HeatingLoad"]["annual_calculated_dhw_mmbtu"] == 6.0 * 8760 * REopt.EXISTING_BOILER_EFFICIENCY
         @test results["HeatingLoad"]["annual_calculated_space_heating_mmbtu"] == 6.0 * 8760 * REopt.EXISTING_BOILER_EFFICIENCY
     
