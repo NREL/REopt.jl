@@ -41,6 +41,8 @@ function add_cooling_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict
     load_series_kw = p.s.cooling_load.loads_kw_thermal
     r["load_series_ton"] = load_series_kw/ KWH_THERMAL_PER_TONHOUR
 
+    r["electric_chiller_base_load_series_kw"] = load_series_kw ./ p.s.cooling_load.existing_chiller_cop
+
     r["annual_calculated_tonhr"] = round(
         sum(r["load_series_ton"]) / p.s.settings.time_steps_per_hour, digits=2
     )
