@@ -51,11 +51,11 @@ end
 
 """
 `HeatingLoad` results keys:
-- `dhw_load_series_mmbtu` vector of site domestic hot water load in every time step
-- `space_heating_load_series_mmbtu` vector of site space heating load in every time step
-- `load_series_mmbtu` vector of sum heating load in every time step
-- `annual_calculated_dhw_mmbtu` sum of the `dhw_load_series_mmbtu`
-- `annual_calculated_space_heating_mmbtu` sum of the `space_heating_load_series_mmbtu`
+- `dhw_load_series_mmbtu_per_hour` vector of site domestic hot water load in every time step
+- `space_heating_load_series_mmbtu_per_hour` vector of site space heating load in every time step
+- `total_heating_thermal_load_series_mmbtu_per_hour` vector of sum heating load in every time step
+- `annual_calculated_dhw_mmbtu` sum of the `dhw_load_series_mmbtu_per_hour`
+- `annual_calculated_space_heating_mmbtu` sum of the `space_heating_load_series_mmbtu_per_hour`
 - `annual_calculated_mmbtu` sum of the `load_series_mmbtu`
 """
 function add_heating_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
@@ -67,15 +67,15 @@ function add_heating_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict
     dhw_load_series_kw = p.s.dhw_load.loads_kw
     space_heating_load_series_kw = p.s.space_heating_load.loads_kw
 
-    r["dhw_load_series_mmbtu"] = dhw_load_series_kw ./ KWH_PER_MMBTU
-    r["space_heating_load_series_mmbtu"] = space_heating_load_series_kw ./ KWH_PER_MMBTU
-    r["load_series_mmbtu"] = r["dhw_load_series_mmbtu"] .+ r["space_heating_load_series_mmbtu"]
+    r["dhw_load_series_mmbtu_per_hour"] = dhw_load_series_kw ./ KWH_PER_MMBTU
+    r["space_heating_load_series_mmbtu_per_hour"] = space_heating_load_series_kw ./ KWH_PER_MMBTU
+    r["total_heating_thermal_load_series_mmbtu_per_hour"] = r["dhw_load_series_mmbtu_per_hour"] .+ r["space_heating_load_series_mmbtu_per_hour"]
 
     r["annual_calculated_dhw_mmbtu"] = round(
-        sum(r["dhw_load_series_mmbtu"]) / p.s.settings.time_steps_per_hour, digits=2
+        sum(r["dhw_load_series_mmbtu_per_hour"]) / p.s.settings.time_steps_per_hour, digits=2
     )
     r["annual_calculated_space_heating_mmbtu"] = round(
-        sum(r["space_heating_load_series_mmbtu"]) / p.s.settings.time_steps_per_hour, digits=2
+        sum(r["space_heating_load_series_mmbtu_per_hour"]) / p.s.settings.time_steps_per_hour, digits=2
     )
     r["annual_calculated_mmbtu"] = r["annual_calculated_dhw_mmbtu"] + r["annual_calculated_space_heating_mmbtu"]
     
