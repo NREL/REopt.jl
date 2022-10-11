@@ -1440,7 +1440,7 @@ end
     end
 end
 
-## equivalent REopt API Post for test 2:
+# # equivalent REopt API Post for test 2:
 #   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
 # {"Scenario": {
 #     "Site": {
@@ -1494,7 +1494,7 @@ end
 #     }
 # }}}
 
-@testset "logREopt" begin
+@testset "Custom REopt logger" begin
     
     # Create minimal test case
     req = Dict()
@@ -1513,11 +1513,48 @@ end
     # No Errors, only warnings
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     r = run_reopt(m,req)
-
     @test r["status"] == "optimal"
     @test "Messages" ∈ keys(r)
     @test "errors" ∈ keys(r["Messages"])
     @test "warnings" ∈ keys(r["Messages"])
+
+    # No Errors, only warnings
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    r = run_reopt((m,REoptInputs(req)))
+    @test r["status"] == "optimal"
+    @test "Messages" ∈ keys(r)
+    @test "errors" ∈ keys(r["Messages"])
+    @test "warnings" ∈ keys(r["Messages"])
+
+    # No Errors, only warnings
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    r = run_reopt([m1,m2],req)
+    @test r["status"] == "optimal"
+    @test "Messages" ∈ keys(r)
+    @test "errors" ∈ keys(r["Messages"])
+    @test "warnings" ∈ keys(r["Messages"])
+
+    # No Errors, only warnings
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    r = run_reopt(m,"./scenarios/pv.json")
+    @test r["status"] == "optimal"
+    @test "Messages" ∈ keys(r)
+    @test "errors" ∈ keys(r["Messages"])
+    @test "warnings" ∈ keys(r["Messages"])
+
+    # No Errors, only warnings
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    r = run_reopt([m1,m2],"./scenarios/pv.json")
+    @test r["status"] == "optimal"
+    @test "Messages" ∈ keys(r)
+    @test "errors" ∈ keys(r["Messages"])
+    @test "warnings" ∈ keys(r["Messages"])
+
+    # No Errors, no warnings
+    p = REoptInputs(req)
+    @test !isa(p, Dict) # should be of type REoptInputs
 
     # Throw an unhandled error: Bad URDB rate -> stack gets returned for debugging
     req["ElectricTariff"]["urdb_label"] = "62c70a6c40a0c425535d387b"
