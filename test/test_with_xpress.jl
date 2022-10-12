@@ -356,7 +356,7 @@ end
         with flat ElectricTariff the ExistingChiller does not benefit from FlexibleHVAC =#
         d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = rand(Float64, (8760))*(50-25).+25;
         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MIPRELSTOP"=> 0.0327))
+        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MIPRELSTOP"=> 0.03))
         r = run_reopt([m1,m2], REoptInputs(Scenario(d)))
 
         # all of the savings are from the ExistingBoiler fuel costs
@@ -381,7 +381,7 @@ end
         )
         # d["FlexibleHVAC"]["installed_cost"] = 300
         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MIPRELSTOP"=> 0.02))
+        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MIPRELSTOP"=> 0.015))
         r = run_reopt([m1,m2], REoptInputs(Scenario(d)))
 
         elec_cost_savings = r["ElectricTariff"]["lifecycle_demand_cost_after_tax_bau"] + 
