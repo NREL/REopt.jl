@@ -30,7 +30,7 @@
 """
 `CoolingLoad` results keys:
 - `load_series_ton` vector of site cooling load in every time step
-- `annual_calculated_tonhr` sum of the `load_series_ton`
+- `annual_calculated_tonhour` sum of the `load_series_ton`
 """
 function add_cooling_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     # Adds the `ElectricLoad` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
@@ -43,7 +43,7 @@ function add_cooling_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict
 
     r["electric_chiller_base_load_series_kw"] = load_series_kw ./ p.s.cooling_load.existing_chiller_cop
 
-    r["annual_calculated_tonhr"] = round(
+    r["annual_calculated_tonhour"] = round(
         sum(r["load_series_ton"]) / p.s.settings.time_steps_per_hour, digits=2
     )
     
@@ -69,25 +69,25 @@ function add_heating_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict
     dhw_load_series_kw = p.s.dhw_load.loads_kw
     space_heating_load_series_kw = p.s.space_heating_load.loads_kw
 
-    r["dhw_load_series_mmbtu_per_hour"] = dhw_load_series_kw ./ KWH_PER_MMBTU
-    r["space_heating_load_series_mmbtu_per_hour"] = space_heating_load_series_kw ./ KWH_PER_MMBTU
-    r["total_heating_thermal_load_series_mmbtu_per_hour"] = r["dhw_load_series_mmbtu_per_hour"] .+ r["space_heating_load_series_mmbtu_per_hour"]
+    r["dhw_thermal_load_series_mmbtu_per_hour"] = dhw_load_series_kw ./ KWH_PER_MMBTU
+    r["space_heating_thermal_load_series_mmbtu_per_hour"] = space_heating_load_series_kw ./ KWH_PER_MMBTU
+    r["total_heating_thermal_load_series_mmbtu_per_hour"] = r["dhw_thermal_load_series_mmbtu_per_hour"] .+ r["space_heating_thermal_load_series_mmbtu_per_hour"]
 
-    r["dhw_boiler_fuel_load_series_mmbtu_per_hour"] = dhw_load_series_kw ./ KWH_PER_MMBTU
-    r["space_heating_boiler_fuel_load_series_mmbtu_per_hour"] = space_heating_load_series_kw ./ KWH_PER_MMBTU
+    r["dhw_boiler_fuel_load_series_mmbtu_per_hour"] = dhw_load_series_kw ./ KWH_PER_MMBTU ./ p.s.existing_boiler.efficiency
+    r["space_heating_boiler_fuel_load_series_mmbtu_per_hour"] = space_heating_load_series_kw ./ KWH_PER_MMBTU ./ p.s.existing_boiler.efficiency
     r["total_heating_boiler_fuel_load_series_mmbtu_per_hour"] = r["dhw_boiler_fuel_load_series_mmbtu_per_hour"] .+ r["space_heating_boiler_fuel_load_series_mmbtu_per_hour"]
 
-    r["annual_calculated_dhw_mmbtu"] = round(
-        sum(r["dhw_load_series_mmbtu_per_hour"]) / p.s.settings.time_steps_per_hour, digits=2
+    r["annual_calculated_dhw_thermal_load_mmbtu"] = round(
+        sum(r["dhw_thermal_load_series_mmbtu_per_hour"]) / p.s.settings.time_steps_per_hour, digits=2
     )
-    r["annual_calculated_space_heating_mmbtu"] = round(
+    r["annual_calculated_space_heating_thermal_load_mmbtu"] = round(
         sum(r["space_heating_load_series_mmbtu_per_hour"]) / p.s.settings.time_steps_per_hour, digits=2
     )
-    r["annual_total_heating_thermal_load_mmbtu"] = r["annual_calculated_dhw_mmbtu"] + r["annual_calculated_space_heating_mmbtu"]
+    r["annual_calculated_total_heating_thermal_load_mmbtu"] = r["annual_calculated_dhw_thermal_load_mmbtu"] + r["annual_calculated_space_heating_thermal_load_mmbtu"]
     
-    r["annual_calculated_dhw_boiler_fuel_load_mmbtu"] = r["annual_calculated_dhw_mmbtu"] / p.s.existing_boiler.efficiency
-    r["annual_calculated_space_heating_boiler_fuel_load_mmbtu"] = r["annual_calculated_space_heating_mmbtu"] / p.s.existing_boiler.efficiency
-    r["annual_calculated_total_heating_boiler_fuel_load_mmbtu"] = r["annual_total_heating_thermal_load_mmbtu"] / p.s.existing_boiler.efficiency
+    r["annual_calculated_dhw_boiler_fuel_load_mmbtu"] = r["annual_calculated_dhw_thermal_load_mmbtu"] / p.s.existing_boiler.efficiency
+    r["annual_calculated_space_heating_boiler_fuel_load_mmbtu"] = r["annual_calculated_space_heating_thermal_load_mmbtu"] / p.s.existing_boiler.efficiency
+    r["annual_calculated_total_heating_boiler_fuel_load_mmbtu"] = r["annual_calculated_total_heating_thermal_load_mmbtu"] / p.s.existing_boiler.efficiency
 
     d["HeatingLoad"] = r
     nothing
