@@ -47,6 +47,10 @@ function add_cooling_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict
         sum(r["load_series_ton"]) / p.s.settings.time_steps_per_hour, digits=2
     )
     
+    r["annual_electric_chiller_base_load_kwh"] = round(
+        sum(r["electric_chiller_base_load_series_kw"]) / p.s.settings.time_steps_per_hour, digits=2
+    )
+
     d["CoolingLoad"] = r
     nothing
 end
