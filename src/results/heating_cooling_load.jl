@@ -85,7 +85,7 @@ function add_heating_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict
         sum(r["dhw_thermal_load_series_mmbtu_per_hour"]) / p.s.settings.time_steps_per_hour, digits=2
     )
     r["annual_calculated_space_heating_thermal_load_mmbtu"] = round(
-        sum(r["space_heating_load_series_mmbtu_per_hour"]) / p.s.settings.time_steps_per_hour, digits=2
+        sum(r["space_heating_thermal_load_series_mmbtu_per_hour"]) / p.s.settings.time_steps_per_hour, digits=2
     )
     r["annual_calculated_total_heating_thermal_load_mmbtu"] = r["annual_calculated_dhw_thermal_load_mmbtu"] + r["annual_calculated_space_heating_thermal_load_mmbtu"]
     
