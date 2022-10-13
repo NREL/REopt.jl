@@ -91,6 +91,9 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 
     if !isempty(p.techs.boiler)
         add_existing_boiler_results(m, p, d)
+        if "Boiler" in p.techs.boiler
+            add_boiler_results(m, p, d)
+        end
     end
 
     if _n==""
@@ -112,6 +115,10 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     if !isempty(p.ghp_options)
         add_ghp_results(m, p, d)
 	end
+
+    if "SteamTurbine" in p.techs.all
+        add_steam_turbine_results(m, p, d; _n)
+    end
     
     return d
 end
@@ -163,8 +170,8 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("FlexibleHVAC", "temperatures_degC_node_by_time"),
         ("ExistingBoiler", "lifecycle_fuel_cost_after_tax"),
         ("Site", "annual_renewable_electricity_kwh"),
-        ("Site", "renewable_electricity_pct"),
-        ("Site", "total_renewable_energy_pct"),
+        ("Site", "renewable_electricity_fraction"),
+        ("Site", "total_renewable_energy_fraction"),
         ("Site", "year_one_emissions_tonnes_CO2"),
         ("Site", "year_one_emissions_tonnes_NOx"),
         ("Site", "year_one_emissions_tonnes_SO2"),
@@ -213,7 +220,7 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
     opt["ElectricLoad"]["bau_critical_load_met_time_steps"] = bau_scenario.outage_outputs.bau_critical_load_met_time_steps
 
     # emissions reductions
-    opt["Site"]["lifecycle_emissions_reduction_CO2_pct"] = (
+    opt["Site"]["lifecycle_emissions_reduction_CO2_fraction"] = (
         bau["Site"]["lifecycle_emissions_tonnes_CO2"] - opt["Site"]["lifecycle_emissions_tonnes_CO2"]
     ) / bau["Site"]["lifecycle_emissions_tonnes_CO2"]
 

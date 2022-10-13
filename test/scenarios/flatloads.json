@@ -1,0 +1,27 @@
+{
+    "Site": {
+        "latitude": 37.78, 
+        "longitude": -122.45
+    },
+    "ElectricLoad": {
+        "doe_reference_name": "FlatLoad_16_7"
+    },
+    "ElectricTariff": {
+        "blended_annual_energy_rate": 0.06,
+        "blended_annual_demand_rate": 0.0
+    },
+    "SpaceHeatingLoad": {
+        "doe_reference_name": "FlatLoad_8_5"
+    },
+    "DomesticHotWaterLoad": {
+        "doe_reference_name": "FlatLoad_8_5"
+    },
+    "ExistingBoiler": {
+        "fuel_cost_per_mmbtu": [11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11],
+        "efficiency": 0.8
+    },
+    "CoolingLoad": {
+        "annual_tonhour": 10000.0,
+        "doe_reference_name": "FlatLoad_8_5"
+    }
+}

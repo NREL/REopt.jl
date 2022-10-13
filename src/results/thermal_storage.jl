@@ -30,7 +30,7 @@
 """
 `HotThermalStorage` results keys:
 - `size_gal` Optimal TES capacity, by volume [gal]
-- `year_one_soc_series_pct` Vector of normalized (0-1) state of charge values over the first year [-]
+- `year_one_soc_series_fraction` Vector of normalized (0-1) state of charge values over the first year [-]
 - `year_one_to_load_series_mmbtu_per_hour` Vector of power used to meet load over the first year [MMBTU/hr]
 """
 function add_hot_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::String; _n="")
@@ -48,12 +48,12 @@ function add_hot_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict,
 
     if size_kwh != 0
     	soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
-        r["year_one_soc_series_pct"] = round.(value.(soc) ./ size_kwh, digits=3)
+        r["year_one_soc_series_fraction"] = round.(value.(soc) ./ size_kwh, digits=3)
 
         discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
         r["year_one_to_load_series_mmbtu_per_hour"] = round.(value.(discharge) / KWH_PER_MMBTU, digits=7)
     else
-        r["year_one_soc_series_pct"] = []
+        r["year_one_soc_series_fraction"] = []
         r["year_one_to_load_series_mmbtu_per_hour"] = []
     end
 
@@ -63,7 +63,7 @@ end
 
 """
 MPC `HotThermalStorage` results keys:
-- `soc_series_pct` Vector of normalized (0-1) state of charge values over the time horizon [-]
+- `soc_series_fraction` Vector of normalized (0-1) state of charge values over the time horizon [-]
 """
 function add_hot_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b::String; _n="")
     #=
@@ -73,7 +73,7 @@ function add_hot_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b
     r = Dict{String, Any}()
 
     soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
-    r["soc_series_pct"] = round.(value.(soc) ./ p.s.storage.attr[b].size_kwh, digits=3)
+    r["soc_series_fraction"] = round.(value.(soc) ./ p.s.storage.attr[b].size_kwh, digits=3)
 
     d[b] = r
     nothing
@@ -82,7 +82,7 @@ end
 """
 `ColdThermalStorage` results:
 - `size_gal` Optimal TES capacity, by volume [gal]
-- `year_one_soc_series_pct` Vector of normalized (0-1) state of charge values over the first year [-]
+- `year_one_soc_series_fraction` Vector of normalized (0-1) state of charge values over the first year [-]
 - `year_one_to_load_series_ton` Vector of power used to meet load over the first year [ton]
 """
 function add_cold_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::String; _n="")
@@ -102,12 +102,12 @@ function add_cold_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict
 
     if size_kwh != 0
     	soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
-        r["year_one_soc_series_pct"] = round.(value.(soc) ./ size_kwh, digits=3)
+        r["year_one_soc_series_fraction"] = round.(value.(soc) ./ size_kwh, digits=3)
 
         discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
         r["year_one_to_load_series_ton"] = round.(value.(discharge) / KWH_THERMAL_PER_TONHOUR, digits=7)
     else
-        r["year_one_soc_series_pct"] = []
+        r["year_one_soc_series_fraction"] = []
         r["year_one_to_load_series_ton"] = []
     end
 
@@ -117,7 +117,7 @@ end
 
 """
 MPC `ColdThermalStorage` results keys:
-- `soc_series_pct` Vector of normalized (0-1) state of charge values over the time horizon [-]
+- `soc_series_fraction` Vector of normalized (0-1) state of charge values over the time horizon [-]
 """
 function add_cold_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b::String; _n="")
     #= 
@@ -127,7 +127,7 @@ function add_cold_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, 
     r = Dict{String, Any}()
 
     soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
-    r["soc_series_pct"] = round.(value.(soc) ./ p.s.storage.attr[b].size_kwh, digits=3)
+    r["soc_series_fraction"] = round.(value.(soc) ./ p.s.storage.attr[b].size_kwh, digits=3)
 
     d[b] = r
     nothing
