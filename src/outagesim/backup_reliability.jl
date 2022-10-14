@@ -477,7 +477,7 @@ function backup_reliability_inputs(d::Dict, p::REoptInputs; r::Dict = Dict())::D
             
         batt_kwh = get(d["Storage"], "size_kwh", 0)
         batt_kw = get(d["Storage"], "size_kw", 0)
-        init_soc = get(d["Storage"], "year_one_soc_series_pct", [])
+        init_soc = get(d["Storage"], "year_one_soc_series_fraction", [])
 
         if microgrid_only && !Bool(get(d, "storage_upgraded", false))
             batt_kwh = 0

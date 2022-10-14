@@ -31,7 +31,7 @@
 `ElectricStorage` results keys:
 - `size_kw` Optimal inverter capacity
 - `size_kwh` Optimal storage capacity
-- `year_one_soc_series_pct` Vector of normalized (0-1) state of charge values over the first year
+- `year_one_soc_series_fraction` Vector of normalized (0-1) state of charge values over the first year
 - `year_one_to_load_series_kw` Vector of power used to meet load over the first year
 - `initial_capital_cost` Upfront capital cost for storage and inverter
 # The following results are reported if storage degradation is modeled
@@ -49,7 +49,7 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
 
     if r["size_kwh"] != 0
     	soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
-        r["year_one_soc_series_pct"] = round.(value.(soc) ./ r["size_kwh"], digits=3)
+        r["year_one_soc_series_fraction"] = round.(value.(soc) ./ r["size_kwh"], digits=3)
 
         discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
         r["year_one_to_load_series_kw"] = round.(value.(discharge), digits=3)
@@ -67,7 +67,7 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
             end
          end
     else
-        r["year_one_soc_series_pct"] = []
+        r["year_one_soc_series_fraction"] = []
         r["year_one_to_load_series_kw"] = []
     end
 
@@ -77,13 +77,13 @@ end
 
 """
 MPC `ElectricStorage` results keys:
-- `soc_series_pct` Vector of normalized (0-1) state of charge values over time horizon
+- `soc_series_fraction` Vector of normalized (0-1) state of charge values over time horizon
 """
 function add_electric_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b::String; _n="")
     r = Dict{String, Any}()
 
     soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
-    r["soc_series_pct"] = round.(value.(soc) ./ p.s.storage.attr[b].size_kwh, digits=3)
+    r["soc_series_fraction"] = round.(value.(soc) ./ p.s.storage.attr[b].size_kwh, digits=3)
 
     d[b] = r
     nothing
