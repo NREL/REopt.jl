@@ -28,11 +28,11 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 
-function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly", 
+function get_production_factor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly", 
     time_steps_per_hour::Int=1)
 
-    if !(isnothing(pv.prod_factor_series))
-        return pv.prod_factor_series
+    if !(isnothing(pv.production_factor_series))
+        return pv.production_factor_series
     end
 
     # Check if site is beyond the bounds of the NRSDB dataset. If so, use the international dataset.
@@ -54,7 +54,7 @@ function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly",
     )
 
     try
-        @info "Querying PVWatts for prodfactor with " pv.name
+        @info "Querying PVWatts for production_factor with " pv.name
         r = HTTP.get(url)
         response = JSON.parse(String(r.body))
         if r.status != 200
@@ -75,23 +75,23 @@ function prodfactor(pv::PV, latitude::Real, longitude::Real; timeframe="hourly",
 end
 
 
-function prodfactor(g::AbstractGenerator; time_steps_per_hour::Int=1)
+function get_production_factor(g::AbstractGenerator; time_steps_per_hour::Int=1)
     return ones(8760 * time_steps_per_hour)
 end
 
 
 """
-    prodfactor(wind::Wind, latitude::Real, longitude::Real)
+    get_production_factor(wind::Wind, latitude::Real, longitude::Real)
 
-If the user does not provide their own prod_factor_series for the Wind turbine, then this method creates
+If the user does not provide their own production_factor_series for the Wind turbine, then this method creates
 a production factor time-series using resource data and the System Advisor Model Wind module.
 If the user does not provide the resource data, the latitude and longitude are used to get the resource data from the
 Wind Toolkit.
 """
-function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_hour::Int)
+function get_production_factor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_hour::Int)
 
-    if !(isnothing(wind.prod_factor_series))
-        return wind.prod_factor_series
+    if !(isnothing(wind.production_factor_series))
+        return wind.production_factor_series
     end
 
     resources = []
@@ -193,7 +193,7 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
             libfile = "ssc.dll"
         else
             @error """Unsupported platform for using the SAM Wind module. 
-                      You can alternatively provide the Wind.prod_factor_series"""
+                      You can alternatively provide the Wind.production_factor_series"""
         end
 
         global hdl = joinpath(@__DIR__, "..", "sam", libfile)
@@ -324,13 +324,13 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
 end
 
 """
-    prodfactor(chp::AbstractCHP, year::Int=2017, outage_start_time_step::Int=0, outage_end_time_step::Int=0, ts_per_hour::Int=1)
+    get_production_factor(chp::AbstractCHP, year::Int=2017, outage_start_time_step::Int=0, outage_end_time_step::Int=0, ts_per_hour::Int=1)
 
-prodfactor for CHP accounts for unavailability (`unavailability_periods`) of CHP due to 
+production_factor for CHP accounts for unavailability (`unavailability_periods`) of CHP due to 
 scheduled (mostly off-peak) and "unscheduled" (on-peak) maintenance. 
 Note: this same prod_factor should be applied to electric and thermal production
 """
-function prodfactor(chp::AbstractCHP, year::Int=2017, outage_start_time_step::Int=0, outage_end_time_step::Int=0, ts_per_hour::Int=1)
+function get_production_factor(chp::AbstractCHP, year::Int=2017, outage_start_time_step::Int=0, outage_end_time_step::Int=0, ts_per_hour::Int=1)
     unavailability_hourly = generate_year_profile_hourly(year, chp.unavailability_periods)
 
     prod_factor = [1.0 - unavailability_hourly[i] for i in 1:8760 for _ in 1:ts_per_hour]
@@ -341,5 +341,9 @@ function prodfactor(chp::AbstractCHP, year::Int=2017, outage_start_time_step::In
     end
 
     return prod_factor
+end
+
+function get_production_factor(st::AbstractSteamTurbine; time_steps_per_hour::Int=1)
+    return ones(8760 * time_steps_per_hour)
 end
 
