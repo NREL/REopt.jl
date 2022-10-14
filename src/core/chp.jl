@@ -33,7 +33,7 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
 """
 `CHP` is an optional REopt input with the following keys and default values:
 ```julia
-    prime_mover::String = ""
+    prime_mover::String = "" Typically required if you don't want to input many other CHP parameters
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = []  # REQUIRED
 
     # Required "custom inputs" if not providing prime_mover:
@@ -120,7 +120,7 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     # Optional inputs:
     size_class::Int = 1
     min_kw::Float64 = 0.0
-    fuel_type::String = "natural_gas" # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
+    fuel_type::String = "natural_gas"
     om_cost_per_kw::Float64 = 0.0
     om_cost_per_hr_per_kw_rated::Float64 = 0.0
     supplementary_firing_capital_cost_per_kw::Float64 = 150.0
@@ -160,6 +160,15 @@ end
 
 
 function CHP(d::Dict)
+    # If array inputs are coming from Julia JSON reader, they have type "Any"; convert to expected type here
+    if haskey(d, "installed_cost_per_kw") && typeof(d["installed_cost_per_kw"]) == Vector{Any}
+        d["installed_cost_per_kw"] = convert(Vector{Float64}, d["installed_cost_per_kw"])
+    end
+    if haskey(d, "tech_sizes_for_cost_curve") && typeof(d["tech_sizes_for_cost_curve"]) == Vector{Any}
+        d["tech_sizes_for_cost_curve"] = convert(Vector{Float64}, d["tech_sizes_for_cost_curve"])
+    end
+
+    # Create CHP struct from inputs, to be mutated as needed
     chp = CHP(; dictkeys_tosymbols(d)...)
 
     @assert chp.fuel_type in FUEL_TYPES
@@ -187,9 +196,9 @@ function CHP(d::Dict)
             chp.tech_sizes_for_cost_curve = []
             @warn "Ignoring `chp.tech_sizes_for_cost_curve` input because `chp.installed_cost_per_kw` is a scalar"
         end
-    elseif !isempty(chp.installed_cost_per_kw) && isempty(chp.tech_sizes_for_cost_curve)
+    elseif length(chp.installed_cost_per_kw) > 1 && length(chp.installed_cost_per_kw) != length(chp.tech_sizes_for_cost_curve)
         @error "To model CHP cost curve, you must provide `chp.tech_sizes_for_cost_curve` vector of equal length to `chp.installed_cost_per_kw`"
-    elseif isempty(chp.tech_sizes_for_cost_curve)
+    elseif isempty(chp.tech_sizes_for_cost_curve) && isempty(chp.installed_cost_per_kw)
         update_installed_cost_params = true
     elseif isempty(chp.prime_mover)
         pass_all_params_error = true
