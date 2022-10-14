@@ -892,12 +892,12 @@ function backup_reliability_inputs(;r::Dict)::Dict
             r2[:battery_starting_soc_kwh] = init_soc .* r2[:battery_size_kwh]
             
             if :battery_minimum_soc in keys(r2)
-                battery_kwh_below_minimum_soc = r2[:battery_size_kwh] * r2[:battery_minimum_soc]
-                r2[:battery_size_kwh] -= battery_kwh_below_minimum_soc
-                if minimum(r2[:battery_starting_soc_kwh]) < battery_kwh_below_minimum_soc
+                battery_minimum_soc_kwh = r2[:battery_size_kwh] * r2[:battery_minimum_soc]
+                r2[:battery_size_kwh] -= battery_minimum_soc_kwh
+                if minimum(r2[:battery_starting_soc_kwh]) < battery_minimum_soc_kwh
                     @warn("Some battery starting states of charge are less than the provided minimum state of charge.")
                 end
-                r2[:battery_starting_soc_kwh] .-= battery_kwh_below_minimum_soc
+                r2[:battery_starting_soc_kwh] .-= battery_minimum_soc_kwh
             end
             
             #Only subtracts PV generation if there is also a battery
