@@ -160,13 +160,12 @@ end
 
 
 function CHP(d::Dict, boiler_type::String)
-    # If array inputs are coming from Julia JSON reader, they have type "Any"; convert to expected type here
-    if haskey(d, "installed_cost_per_kw") && typeof(d["installed_cost_per_kw"]) == Vector{Any}
-        d["installed_cost_per_kw"] = convert(Vector{Float64}, d["installed_cost_per_kw"])
-    end
-    if haskey(d, "tech_sizes_for_cost_curve") && typeof(d["tech_sizes_for_cost_curve"]) == Vector{Any}
-        d["tech_sizes_for_cost_curve"] = convert(Vector{Float64}, d["tech_sizes_for_cost_curve"])
-    end
+    # If array inputs are coming from Julia JSON.parsefile (reader), they have type Vector{Any}; convert to expected type here
+    for (k,v) in d
+        if typeof(v) <: AbstractVector{Any} && k != "unavailability_periods"
+            d[k] = convert(Vector{Float64}, v)
+        end
+    end    
 
     # Create CHP struct from inputs, to be mutated as needed
     chp = CHP(; dictkeys_tosymbols(d)...)
