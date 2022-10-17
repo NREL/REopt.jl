@@ -159,7 +159,7 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
 end
 
 
-function CHP(d::Dict)
+function CHP(d::Dict, boiler_type::String)
     # If array inputs are coming from Julia JSON reader, they have type "Any"; convert to expected type here
     if haskey(d, "installed_cost_per_kw") && typeof(d["installed_cost_per_kw"]) == Vector{Any}
         d["installed_cost_per_kw"] = convert(Vector{Float64}, d["installed_cost_per_kw"])
@@ -212,11 +212,6 @@ function CHP(d::Dict)
         end  
     elseif !(isempty(chp.prime_mover))
         @assert chp.prime_mover in prime_movers
-        if chp.prime_mover == "combustion_turbine"
-            boiler_type = "steam"
-        else
-            boiler_type = "hot_water"
-        end
         # set all missing default values in custom_chp_inputs
         defaults = get_prime_mover_defaults(chp.prime_mover, boiler_type, chp.size_class)
         for (k, v) in custom_chp_inputs

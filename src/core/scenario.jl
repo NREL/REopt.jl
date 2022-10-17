@@ -339,7 +339,12 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     chp = nothing
     if haskey(d, "CHP")
-        chp = CHP(d["CHP"])
+        if !isnothing(existing_boiler)
+            boiler_type = existing_boiler.production_type
+        else # Only if modeling CHP without heating_load and existing_boiler (for electric-only CHP)
+            boiler_type = "hot_water"
+        end
+        chp = CHP(d["CHP"], boiler_type)
     end
 
     max_cooling_demand_kw = 0
