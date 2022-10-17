@@ -30,6 +30,7 @@
 
 struct ExistingBoiler <: AbstractThermalTech  # useful to create AbstractHeatingTech or AbstractThermalTech?
     max_kw::Real
+    production_type::String
     efficiency::Real
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}}
     fuel_type::String
@@ -135,6 +136,7 @@ function ExistingBoiler(;
 
     ExistingBoiler(
         max_kw,
+        production_type,
         efficiency,
         fuel_cost_per_mmbtu,
         fuel_type,
