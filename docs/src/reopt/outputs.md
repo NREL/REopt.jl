@@ -65,6 +65,16 @@ REopt.add_chp_results
 REopt.add_boiler_results
 ```
 
+## HeatingLoad outputs
+```@docs
+REopt.add_heating_load_results
+```
+
+## CoolingLoad outputs
+```@docs
+REopt.add_cooling_load_results
+```
+
 ## Uncertain Outages outputs
 ```@docs
 REopt.add_outage_results

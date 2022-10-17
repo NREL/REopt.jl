@@ -89,6 +89,10 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         @debug "Outage results processing took $(round(time_elapsed, digits=3)) seconds."
 	end
 
+    if !isempty(union(p.techs.chp, p.techs.heating))
+        add_heating_load_results(m, p, d)
+    end
+
     if !isempty(p.techs.boiler)
         add_existing_boiler_results(m, p, d)
         if "Boiler" in p.techs.boiler
@@ -98,6 +102,10 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 
     if _n==""
         add_site_results(m, p, d)
+    end
+
+    if !isempty(p.techs.cooling)
+        add_cooling_load_results(m, p, d)
     end
 
     if !isnothing(p.s.existing_chiller)
