@@ -179,7 +179,7 @@ struct PV <: AbstractTech
         end
 
         if off_grid_flag && (can_net_meter || can_wholesale || can_export_beyond_nem_limit)
-            @warn "Setting PV can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False because off_grid_flag=True."
+            @warn "Setting PV can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False because off_grid_flag is True."
             can_net_meter = false
             can_wholesale = false
             can_export_beyond_nem_limit = false
@@ -216,7 +216,7 @@ struct PV <: AbstractTech
         end
         # TODO validate additional args
         if length(invalid_args) > 0
-            throw(@error("Invalid argument values: $(invalid_args)"))
+            throw(@error("Invalid PV argument values: $(invalid_args)"))
         end
 
         new(

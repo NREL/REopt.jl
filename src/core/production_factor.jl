@@ -193,7 +193,7 @@ function get_production_factor(wind::Wind, latitude::Real, longitude::Real, time
             libfile = "ssc.dll"
         else
             throw(@error("Unsupported platform for using the SAM Wind module. 
-                      You can alternatively provide the Wind.prod_factor_series"))
+                      You can alternatively provide the Wind `prod_factor_series`"))
         end
 
         global hdl = joinpath(dirname(@__FILE__), "..", "sam", libfile)

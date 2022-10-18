@@ -181,7 +181,7 @@ function ElectricTariff(;
             push!(invalid_args, "length(monthly_demand_rates) must equal 12, got length $(length(monthly_demand_rates))")
         end
         if length(invalid_args) > 0
-            throw(@error("Invalid argument values: $(invalid_args)"))
+            throw(@error("Invalid ElectricTariff argument values: $(invalid_args)"))
         end
 
         if isempty(monthly_demand_rates)
