@@ -858,13 +858,8 @@ function backup_reliability_inputs(;r::Dict)::Dict
         r2[g] = r2[g][1]
         end
     end
-    
-    r2[:net_critical_loads_kw] = r2[:critical_loads_kw]
-    zero_array = zeros(length(r2[:net_critical_loads_kw]))
 
-    if :chp_size_kw in keys(r2)
-        r2[:net_critical_loads_kw] .-= r2[:chp_size_kw]
-    end
+    zero_array = zeros(length(r2[:critical_loads_kw]))
 
     microgrid_only = get(r2, :microgrid_only, false)
 
@@ -879,6 +874,7 @@ function backup_reliability_inputs(;r::Dict)::Dict
     if microgrid_only && !Bool(get(r2, :pv_migrogrid_upgraded, false))
         pv_kw_ac_time_series = zero_array
     end
+    r2[:pv_kw_ac_time_series] = pv_kw_ac_time_series
 
     if :battery_size_kw in keys(r2)
         if !microgrid_only || Bool(get(r2, :storage_microgrid_upgraded, false))
@@ -887,7 +883,7 @@ function backup_reliability_inputs(;r::Dict)::Dict
                 init_soc = r2[:battery_starting_soc_series_fraction]
             else
                 @warn("No battery soc series provided to reliability inputs. Assuming battery fully charged at start of outage.")
-                init_soc = ones(length(r2[:net_critical_loads_kw]))
+                init_soc = ones(length(r2[:critical_loads_kw]))
             end
             r2[:battery_starting_soc_kwh] = init_soc .* r2[:battery_size_kwh]
             
@@ -900,8 +896,6 @@ function backup_reliability_inputs(;r::Dict)::Dict
                 r2[:battery_starting_soc_kwh] .-= battery_minimum_soc_kwh
             end
             
-            #Only subtracts PV generation if there is also a battery
-            r2[:net_critical_loads_kw] .-= pv_kw_ac_time_series
             if !haskey(r2, :battery_size_kwh)
                 push!(invalid_args, "Battery kW provided to reliability inputs but no kWh provided.")
             end
@@ -915,7 +909,7 @@ function backup_reliability_inputs(;r::Dict)::Dict
     return r2
 end
 """
-    return_backup_reliability(; critical_loads_kw::Vector, generator_operational_availability::Real = 0.9998, generator_failure_to_start::Real = 0.0066, 
+    return_backup_reliability_single_run(; critical_loads_kw::Vector, generator_operational_availability::Real = 0.9998, generator_failure_to_start::Real = 0.0066, 
         generator_failure_to_run::Real = 0.00157, num_generators::Int = 1, generator_size_kw::Real = 0.0, num_battery_bins::Int = 100, max_outage_duration::Int = 96,
         battery_size_kw::Real = 0.0, battery_size_kwh::Real = 0.0, battery_charge_efficiency::Real = 0.948, battery_discharge_efficiency::Real = 0.948)::Array
 
@@ -936,9 +930,9 @@ Return an array of backup reliability calculations. Inputs can be unpacked from 
 -battery_discharge_efficiency::Real = 0.948        Efficiency of discharging battery
 ```
 """
-function return_backup_reliability(; 
+function backup_reliability_single_run(; 
     net_critical_loads_kw::Vector, 
-    battery_starting_soc_kwh::Vector = [],  
+    battery_starting_soc_kwh::Vector = [],
     generator_operational_availability::Union{Real, Vector{<:Real}} = 0.9998, 
     generator_failure_to_start::Union{Real, Vector{<:Real}}  = 0.0066, 
     generator_failure_to_run::Union{Real, Vector{<:Real}}  = 0.00157, 
@@ -1012,6 +1006,100 @@ function return_backup_reliability(;
             )]
 
     end
+end
+
+"""
+    return_backup_reliability(; critical_loads_kw::Vector, battery_operational_availability::Real = 1.0,
+            pv_operational_availability::Real = 1.0, pv_kw_ac_time_series::Vector = [],
+            pv_can_dispatch_without_battery::Bool = false, kwargs...)
+Return an array of backup reliability calculations, accounting for operational availability of PV and battery. 
+# Arguments
+-critical_loads_kw::Vector                          Vector of critical loads
+-battery_operational_availability::Real = 1.0       Likelihood battery will be available at start of outage       
+-pv_operational_availability::Real = 1.0            Likelihood PV will be available at start of outage
+-pv_kw_ac_time_series::Vector = []                  timeseries of PV dispatch
+-pv_can_dispatch_without_battery::Bool = false      Boolian determining whether net load subtracts PV if battery is unavailable.
+-kwargs::Dict                                       Dictionary of additional inputs.  
+```
+"""
+function return_backup_reliability(;
+    critical_loads_kw::Vector, 
+    battery_operational_availability::Real = 1.0,
+    pv_operational_availability::Real = 1.0,
+    pv_kw_ac_time_series::Vector = [],
+    pv_can_dispatch_without_battery::Bool = false,
+    kwargs...)::Array
+
+    if length(pv_kw_ac_time_series) == 0
+        pv_kw_ac_time_series = zeros(length(critical_loads_kw))
+    end
+    net_critical_loads_kw = critical_loads_kw .- pv_kw_ac_time_series
+    battery_size_kw = get(kwargs, :battery_size_kw, 0)
+
+    #Four systems are 1) no PV + no battery, 2) PV + battery, 3) PV + no battery, and 4) no PV + battery
+    system_characteristics = Dict(
+        "gen_only"        => Dict(
+            "probability" => 1,
+            "net_critical_loads_kw" => critical_loads_kw,
+            "battery_size_kw" => 0),
+        "pv_plus_battery" => Dict(
+            "probability" => 0,
+            "net_critical_loads_kw" => net_critical_loads_kw,
+            "battery_size_kw" => battery_size_kw),
+        "battery_no_pv"   => Dict(
+            "probability" => 0,
+            "net_critical_loads_kw" => critical_loads_kw,
+            "battery_size_kw" => battery_size_kw),
+        "pv_no_battery"   => Dict(
+            "probability" => 0,
+            "net_critical_loads_kw" => net_critical_loads_kw,
+            "battery_size_kw" => 0)
+    )
+    #Sets probabilities for each potential system configuration
+    if :battery_size_kw in keys(kwargs) && :pv_size_kw in keys(kwargs)
+        system_characteristics["pv_plus_battery"]["probability"] = 
+            battery_operational_availability * pv_operational_availability
+        system_characteristics["battery_no_pv"]["probability"] = 
+            battery_operational_availability * (1 - pv_operational_availability)
+        if pv_can_dispatch_without_battery
+            system_characteristics["pv_no_battery"]["probability"] = 
+                (1 - battery_operational_availability) * pv_operational_availability
+            system_characteristics["gen_only"]["probability"] = 
+                (1 - battery_operational_availability) * (1 - pv_operational_availability)
+        else
+            system_characteristics["gen_only"]["probability"] = 
+                (1 - battery_operational_availability) 
+        end
+    elseif :battery_size_kw in keys(kwargs)
+        system_characteristics["battery_no_pv"]["probability"] = 
+            battery_operational_availability
+        system_characteristics["gen_only"]["probability"] = 
+            (1 - battery_operational_availability)
+    elseif :pv_size_kw in keys(kwargs) && pv_can_dispatch_without_battery
+        system_characteristics["pv_no_battery"]["probability"] = 
+            pv_operational_availability
+        system_characteristics["gen_only"]["probability"] = 
+            (1 - pv_operational_availability)
+    end
+
+    results = []
+    for sys_config in ["gen_only", "pv_plus_battery", "battery_no_pv", "pv_no_battery"]
+        system = system_characteristics[sys_config]
+        if system["probability"] != 0
+            run_survival_probs = backup_reliability_single_run(;
+                net_critical_loads_kw = system["net_critical_loads_kw"],
+                battery_size_kw = system["battery_size_kw"],
+                kwargs...)
+            #If no results then add results, else append to them
+            if length(results) == 0
+                #survival probs weighted by probability
+                results = run_survival_probs .* system["probability"]
+            else
+                results += run_survival_probs .* system["probability"]
+            end
+        end
+    end
+    return results
 end
 
 """
