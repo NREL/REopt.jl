@@ -50,7 +50,7 @@ end
     chp_prime_mover::String = "",
     max_thermal_factor_on_peak_load::Real = 1.25,
     efficiency::Real = NaN,
-    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [], # can be a scalar, a list of 12 monthly values, or a time series of values for every time step
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [], # REQUIRED. Can be a scalar, a list of 12 monthly values, or a time series of values for every time step
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     can_supply_steam_turbine::Bool = false,
     fuel_renewable_energy_fraction::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_fraction"],fuel_type,0),
@@ -95,7 +95,7 @@ function ExistingBoiler(;
     chp_prime_mover::String = "",
     max_thermal_factor_on_peak_load::Real = 1.25,
     efficiency::Real = NaN,
-    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [], # can be a scalar, a list of 12 monthly values, or a time series of values for every time step
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [], # REQUIRED. Can be a scalar, a list of 12 monthly values, or a time series of values for every time step
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     can_supply_steam_turbine::Bool = false,
     fuel_renewable_energy_fraction::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_fraction"],fuel_type,0),
