@@ -250,7 +250,13 @@ function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
         @warn "Error in easiur_costs: grid_or_onsite must equal either 'grid' or 'onsite'"
         return nothing
     end
-    EASIUR_data = get_EASIUR2005(type, pop_year=2020, income_year=2020, dollar_year=2010)
+    EASIUR_data = nothing
+    try
+        EASIUR_data = get_EASIUR2005(type, pop_year=2020, income_year=2020, dollar_year=2010)
+    catch e
+        @warn "Could not look up EASIUR health costs from point ($latitude,$longitude). {$e}"
+        return nothing
+    end
 
     # convert lon, lat to CAMx grid (x, y), specify datum. default is NAD83
     # Note: x, y returned from g2l follows the CAMx grid convention.
@@ -274,9 +280,15 @@ function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
 end
 
 function easiur_escalation_rates(latitude::Real, longitude::Real, inflation::Real)
-    EASIUR_150m_yr2020 = get_EASIUR2005("p150", pop_year=2020, income_year=2020, dollar_year=2010) 
-    EASIUR_150m_yr2024 = get_EASIUR2005("p150", pop_year=2024, income_year=2024, dollar_year=2010) 
-
+    EASIUR_150m_yr2020 = nothing
+    EASIUR_150m_yr2024 = nothing
+    try
+        EASIUR_150m_yr2020 = get_EASIUR2005("p150", pop_year=2020, income_year=2020, dollar_year=2010) 
+        EASIUR_150m_yr2024 = get_EASIUR2005("p150", pop_year=2024, income_year=2024, dollar_year=2010) 
+    catch e
+        @warn "Could not look up EASIUR health cost escalation rates from point ($latitude,$longitude). {$e}"
+        return nothing
+    end
     # convert lon, lat to CAMx grid (x, y), specify datum. default is NAD83
     coords = g2l(longitude, latitude, datum="NAD83")
     x = Int(round(coords[1]))
