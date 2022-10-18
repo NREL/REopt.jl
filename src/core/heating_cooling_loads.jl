@@ -69,7 +69,7 @@ struct DomesticHotWaterLoad
         if length(fuel_loads_mmbtu_per_hour) > 0
 
             if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
-                throw(@error("Provided domestic hot water load does not match the time_steps_per_hour."))
+                throw(@error("Provided DomesticHotWaterLoad fuel_loads_mmbtu_per_hour does not match the time_steps_per_hour."))
             end
 
             loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY) .* addressable_load_fraction
@@ -80,7 +80,7 @@ struct DomesticHotWaterLoad
 
             if length(addressable_load_fraction) > 1
                 if length(addressable_load_fraction) != length(fuel_loads_mmbtu_per_hour)
-                    throw(@error("`addressable_load_fraction`` must be a scalar or an array of length `fuel_loads_mmbtu_per_hour`"))
+                    throw(@error("`addressable_load_fraction` must be a scalar or an array of length `fuel_loads_mmbtu_per_hour`"))
                 end
             end
 
