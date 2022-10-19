@@ -197,7 +197,7 @@ struct Wind <: AbstractTech
                 size_class = "large"
             end
         elseif !(size_class in keys(size_class_to_hub_height))
-            throw(@error("Wind.size_class must be one of $(keys(size_class_to_hub_height))"))
+            throw(@error("Wind size_class must be one of $(keys(size_class_to_hub_height))"))
         end
 
         if isnothing(installed_cost_per_kw)
