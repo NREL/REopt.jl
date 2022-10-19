@@ -704,19 +704,11 @@ Return a dictionary of inputs required for backup reliability calculations.
 """
 function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dict())::Dict
     zero_array = zeros(length(p.time_steps))
-    net_critical_loads_kw = p.s.electric_load.critical_loads_kw
+    r2[:critical_loads_kw] = p.s.electric_load.critical_loads_kw
 
     r2 = dictkeys_tosymbols(r)
-    
-    #TODO Change CHP to meet capacity not load
-    if "CHP" in keys(d)
-        chp_generation =  get(d["CHP"], "size_kw", 0)
-        net_critical_loads_kw .-= chp_generation
-    end
-
     microgrid_only = get(r, "microgrid_only", false)
 
-    pv_kw_ac_time_series = zero_array
     if !(
             microgrid_only && 
             !Bool(get(d, "PV_upgraded", false))
@@ -729,40 +721,31 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
             + get(d["PV"], "year_one_to_load_series_kw", zero_array)
             + get(d["PV"], "year_one_to_grid_series_kw", zero_array)
         )
+        r2[:pv_kw_ac_time_series] = pv_kw_ac_time_series
     end
 
     battery_size_kwh = 0
     battery_size_kw = 0
-    if "ElectricStorage" in keys(d)
-        #TODO change to throw error if multiple storage types
-        for b in p.s.storage.types.elec
-            r2[:battery_charge_efficiency] = p.s.storage.attr[b].charge_efficiency
-            r2[:battery_discharge_efficiency] = p.s.storage.attr[b].discharge_efficiency
-        end
+    if !(
+        microgrid_only && 
+        !Bool(get(d, "PV_upgraded", false))
+    ) && 
+    "ElectricStorage" in keys(d)
+        r2[:battery_charge_efficiency] = p.s.storage.attr["ElectricStorage"].charge_efficiency
+        r2[:battery_discharge_efficiency] = p.s.storage.attr["ElectricStorage"].discharge_efficiency
+        r2[:battery_size_kw] = get(d["ElectricStorage"], "size_kw", 0)
 
+        #ERP tool uses effective battery size so need to subtract minimum SOC
         battery_size_kwh = get(d["ElectricStorage"], "size_kwh", 0)
-        battery_size_kw = get(d["ElectricStorage"], "size_kw", 0)
+        minimum_soc = p.s.storage.attr["ElectricStorage"].soc_min_fraction
+        battery_minimum_soc_kwh = battery_size_kwh * minimum_soc
+        r2[:battery_size_kwh] = battery_size_kwh - battery_minimum_soc_kwh
+
         init_soc = get(d["ElectricStorage"], "year_one_soc_series_fraction", [])
-
-        #TODO handle battery minimum SOC conversion to effective kWh capacity
-
-        if microgrid_only && !Bool(get(d, "storage_upgraded", false))
-            battery_size_kwh = 0
-            battery_size_kw = 0
-            init_soc = []
-        end
-
         battery_starting_soc_kwh = init_soc .* battery_size_kwh
-
-        #Only subtracts PV generation if there is also a battery
-        net_critical_loads_kw .-= pv_kw_ac_time_series
-        r2[:battery_starting_soc_kwh] = battery_starting_soc_kwh
-
+        r2[:battery_starting_soc_kwh] = battery_starting_soc_kwh .- battery_minimum_soc_kwh
     end
-
-    r2[:battery_size_kw] = battery_size_kw
-    r2[:battery_size_kwh] = battery_size_kwh
-    r2[:net_critical_loads_kw] = net_critical_loads_kw
+    
     diesel_kw = 0
     if "Generator" in keys(d)
         diesel_kw = get(d["Generator"], "size_kw", 0)
