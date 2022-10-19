@@ -173,7 +173,7 @@ function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractMod
 	try
 		s = Scenario(d)
 		if s.settings.off_grid_flag
-			@warn "Only using first Model and not running BAU case because Settings.off_grid_flag=true. The BAU scenario is not applicable for off-grid microgrids."
+			@warn "Only using first Model and not running BAU case because `off_grid_flag` is true. The BAU scenario is not applicable for off-grid microgrids."
 			results = run_reopt(ms[1], s)
 			return results
 		end
@@ -557,10 +557,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		# Comfort limit violation costs
 		m[:dvComfortLimitViolationCost] + 
 
-		# Additional annual costs, tax deductible for owner (only applies when off_grid_flag is true)
+		# Additional annual costs, tax deductible for owner (only applies when `off_grid_flag` is true)
 		p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_rate_fraction) +
 
-		# Additional capital costs, depreciable (only applies when off_grid_flag is true)
+		# Additional capital costs, depreciable (only applies when `off_grid_flag` is true)
 		m[:OffgridOtherCapexAfterDepr]
 
 	);

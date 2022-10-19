@@ -174,12 +174,12 @@ struct PV <: AbstractTech
         )
 
         if !(off_grid_flag) && !(operating_reserve_required_fraction == 0.0)
-            @warn "PV operating_reserve_required_fraction applies only when off_grid_flag is True. Setting operating_reserve_required_fraction to 0.0 for this on-grid analysis."
+            @warn "PV operating_reserve_required_fraction applies only when true. Setting operating_reserve_required_fraction to 0.0 for this on-grid analysis."
             operating_reserve_required_fraction = 0.0
         end
 
         if off_grid_flag && (can_net_meter || can_wholesale || can_export_beyond_nem_limit)
-            @warn "Setting PV can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False because off_grid_flag is True."
+            @warn "Setting PV can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False because `off_grid_flag` is true."
             can_net_meter = false
             can_wholesale = false
             can_export_beyond_nem_limit = false
