@@ -134,7 +134,7 @@ function URDBrate(urdb_response::Dict, year::Int=2019; time_steps_per_hour=1)
     )
 end
 
-
+#TODO: refactor two download_urdb to reduce duplicated code
 function download_urdb(urdb_label::String; version::Int=8)
     url = string("https://api.openei.org/utility_rates", "?api_key=", urdb_key,
                 "&version=", version , "&format=json", "&detail=full",
