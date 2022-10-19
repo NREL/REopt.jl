@@ -98,7 +98,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         offgrid_allowed_keys = ["PV", "Wind", "ElectricStorage", "Generator", "Settings", "Site", "Financial", "ElectricLoad", "ElectricTariff", "ElectricUtility"]
         unallowed_keys = setdiff(keys(d), offgrid_allowed_keys) 
         if !isempty(unallowed_keys)
-            throw(@error("The following key(s) are not permitted when off_grid_flag=true: $unallowed_keys."))
+            throw(@error("The following key(s) are not permitted when `off_grid_flag` is true: $unallowed_keys."))
         end
     end
     
@@ -148,7 +148,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                         )
     elseif settings.off_grid_flag 
         if haskey(d, "ElectricUtility")
-            @warn "ElectricUtility inputs are not applicable when off_grid_flag=true and will be ignored. For off-grid scenarios, a year-long outage will always be modeled."
+            @warn "ElectricUtility inputs are not applicable when `off_grid_flag` is true and will be ignored. For off-grid scenarios, a year-long outage will always be modeled."
         end
         electric_utility = ElectricUtility(; outage_start_time_step = 1, 
                                             outage_end_time_step = settings.time_steps_per_hour * 8760, 
@@ -191,7 +191,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                         )
     else # if ElectricTariff inputs supplied for off-grid, will not be applied. 
         if haskey(d, "ElectricTariff")
-            @warn "ElectricTariff inputs are not applicable when off_grid_flag=true, and will be ignored."
+            @warn "ElectricTariff inputs are not applicable when `off_grid_flag` is true, and will be ignored."
         end
         electric_tariff = ElectricTariff(;  blended_annual_energy_rate = 0.0, 
                                             blended_annual_demand_rate = 0.0,

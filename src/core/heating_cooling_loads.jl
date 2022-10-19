@@ -69,13 +69,13 @@ struct DomesticHotWaterLoad
         if length(fuel_loads_mmbtu_per_hour) > 0
 
             if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
-                throw(@error("Provided DomesticHotWaterLoad fuel_loads_mmbtu_per_hour does not match the time_steps_per_hour."))
+                throw(@error("Provided DomesticHotWaterLoad `fuel_loads_mmbtu_per_hour` does not match the time_steps_per_hour."))
             end
 
             loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY) .* addressable_load_fraction
 
             if !isempty(doe_reference_name) || length(blended_doe_reference_names) > 0
-                @warn "DomesticHotWaterLoad fuel_loads_mmbtu_per_hour was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
+                @warn "DomesticHotWaterLoad `fuel_loads_mmbtu_per_hour` was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
             end
 
             if length(addressable_load_fraction) > 1
@@ -87,7 +87,7 @@ struct DomesticHotWaterLoad
         elseif !isempty(doe_reference_name)
             if length(addressable_load_fraction) > 1
                 if !isempty(monthly_mmbtu) && length(addressable_load_fraction) != 12
-                    throw(@error("`addressable_load_fraction`` must be a scalar or an array of length 12 if `monthly_mmbtu` is input"))
+                    throw(@error("`addressable_load_fraction` must be a scalar or an array of length 12 if `monthly_mmbtu` is input"))
                 end
             end
             
