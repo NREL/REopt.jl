@@ -641,7 +641,7 @@ function survival_with_battery(;
     else
         N = prod(num_generators .+ 1)
     end
-    #Initialize lost load matrix
+    #Initialize survival probability matrix
     survival_probability_matrix = zeros(t_max, max_outage_duration) 
     #initialize vectors and matrices
     generator_markov_matrix = markov_matrix(num_generators, generator_failure_to_run) 
