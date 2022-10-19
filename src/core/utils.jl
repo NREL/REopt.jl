@@ -218,14 +218,15 @@ function dictkeys_tosymbols(d::Dict)
         if k in [
             "fuel_cost_per_mmbtu", "wholesale_rate"
             ] && !isnothing(v)
-            if typeof(v) == Vector{Any}
-                v = convert(Array{Real, 1}, v)
-            elseif typeof(v) <: Real
-                v = convert(Real, v)
-            elseif typeof(v) <: String
-                throw(@error("Unable to convert $k to a Array{Real, 1} or Real"))
-            else
-                nothing #is already int or float
+            #if not a Real try to convert to an Array{Real} 
+            if !(typeof(v) <: Real)
+                try
+                    if typeof(v) <: Array
+                        v = convert(Array{Real, 1}, v)
+                    end
+                catch
+                    throw(@error("Unable to convert $k to a Array{Real, 1} or Real"))
+                end
             end
         end
         d2[Symbol(k)] = v
