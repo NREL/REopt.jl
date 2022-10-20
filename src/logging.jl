@@ -40,13 +40,9 @@ function Logging.handle_message(logger::REoptLogger, lvl, msg, _mod, group, id, 
     end
     println(logger.io, "└ @ ", _mod, " ", file, ":", line)
 
-    if string(lvl) ∉  ["Warn","Error"]
-        nothing
-    else
+    if string(lvl) in ["Warn","Error"]
         if string(lvl) ∉ keys(logger.d) # key doesnt exists
             logger.d[string(lvl)] = Dict()
-        else
-            nothing #exists
         end
 
         # Does the key for file exist?
@@ -61,8 +57,6 @@ function Logging.handle_message(logger::REoptLogger, lvl, msg, _mod, group, id, 
 
         if f ∉ keys(logger.d[string(lvl)]) #file name doesnt exists
             logger.d[string(lvl)][f] = Any[]
-        else
-            nothing
         end
 
         push!(logger.d[string(lvl)][f], msg)
