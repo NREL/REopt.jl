@@ -154,3 +154,19 @@ function get_absorption_chiller_defaults(heat_transfer_medium::String, chp_prime
     end
     return prime_mover_defaults
 end
+
+function get_absorption_chiller_max_size_class(max_tons::Real,htf_defaults::Dict)
+    num_classes = length(htf_defaults["tech_sizes_for_cost_curve"])
+    if max_tons <= htf_defaults["tech_sizes_for_cost_curve"][1]
+        return 0
+    elseif max_tons > htf_defaults["tech_sizes_for_cost_curve"][num_classes]
+        return num_classes
+    else
+        for size_class in 1:num_classes-1
+            if (max_tons > htf_defaults["tech_sizes_for_cost_curve"][size_class] &&
+                max_tons <= htf_defaults["tech_sizes_for_cost_curve"][size_class+1])
+                return size_class
+            end
+        end
+    end
+end
