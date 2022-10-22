@@ -690,7 +690,7 @@ update_survival!(survival, maximum_generation, net_critical_loads_kw_at_time_h):
 
 inline update of survival matrix with 0 in states where generation cannot meet load and 1 in states where it can.
 """
-function update_survival!(survival, maximum_generation, net_critical_loads_kw_at_time_h)::Matrix{Int}
+function update_survival!(survival, maximum_generation, net_critical_loads_kw_at_time_h)
     @inbounds for i in eachindex(maximum_generation)
         survival[i] = 1 * (maximum_generation[i] - net_critical_loads_kw_at_time_h >= 0)
     end
