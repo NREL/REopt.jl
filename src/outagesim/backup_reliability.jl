@@ -734,20 +734,25 @@ function survival_with_battery_single_start_time(
     bin_size::Real,
     marginal_survival::Bool)::Vector{Float64}
 
-    gen_battery_prob_matrix = zeros(M, N)
-    gen_battery_prob_matrix[starting_battery_bins[t], :] = starting_gens
+    gen_battery_prob_matrix_array = [zeros(M, N), zeros(M, N)]
+    gen_battery_prob_matrix_array[1][starting_battery_bins[t], :] = starting_gens
+    gen_battery_prob_matrix_array[2][starting_battery_bins[t], :] = starting_gens
+
     return_survival_chance_vector = zeros(max_outage_duration)
     survival = ones(M, N)
+    gen_battery_prob_matrix_0 = zeros(M, N)
 
     for d in 1:max_outage_duration 
         h = mod(t + d - 2, t_max) + 1 #determines index accounting for looping around year
         
         update_survival!(survival, maximum_generation, net_critical_loads_kw[h])
+        
+        #This is a more memory efficient way of implementing gen_battery_prob_matrix *= generator_markov_matrix
+        gen_matrix_counter_start = ((d-1) % 2) + 1 
+        gen_matrix_counter_end = (d % 2) + 1 
+        mul!(gen_battery_prob_matrix_array[gen_matrix_counter_end], gen_battery_prob_matrix_array[gen_matrix_counter_start], generator_markov_matrix)
 
-        #Update probabilities to account for generator failures
-        gen_battery_prob_matrix *= generator_markov_matrix
-
-        survival_chance = gen_battery_prob_matrix .* survival
+        survival_chance = gen_battery_prob_matrix_array[gen_matrix_counter_end] .* survival
 
         if marginal_survival == false
             gen_battery_prob_matrix = survival_chance
@@ -756,10 +761,11 @@ function survival_with_battery_single_start_time(
         return_survival_chance_vector[d] = sum(survival_chance)
 
         #Update generation battery probability matrix to account for battery shifting
-        shift_gen_battery_prob_matrix!(gen_battery_prob_matrix, battery_bin_shift(generator_production .- net_critical_loads_kw[h], bin_size, battery_size_kw, battery_charge_efficiency, battery_discharge_efficiency))
+        shift_gen_battery_prob_matrix!(gen_battery_prob_matrix_array[gen_matrix_counter_end], battery_bin_shift(generator_production .- net_critical_loads_kw[h], bin_size, battery_size_kw, battery_charge_efficiency, battery_discharge_efficiency))
     end
     return return_survival_chance_vector
 end
+
 """
     backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict)::Dict
 
@@ -775,7 +781,9 @@ Return a dictionary of inputs required for backup reliability calculations.
     -generator_size_kw::Real = 0.0                          Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
     -num_battery_bins::Int = 101                            Internal value for discretely modeling battery state of charge
     -max_outage_duration::Int = 96                          Maximum outage time step modeled
-    -microgrid_only::Bool = false                           Boolean to specify if only microgrid upgraded technologies run during grid outage 
+    -microgrid_only::Bool = false                           Boolean to specify if only microgrid upgraded technologies run during grid outage
+    -use_full_battery_charge::Bool                          Optional input. If added and set to true then 100% of available battery can be used for power outages,
+                                                            otherwise
 """
 function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dict())::Dict
     r2 = dictkeys_tosymbols(r)
@@ -812,13 +820,20 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
 
         #ERP tool uses effective battery size so need to subtract minimum SOC
         battery_size_kwh = get(d["ElectricStorage"], "size_kwh", 0)
-        minimum_soc = p.s.storage.attr["ElectricStorage"].soc_min_fraction
-        battery_minimum_soc_kwh = battery_size_kwh * minimum_soc
-        r2[:battery_size_kwh] = battery_size_kwh - battery_minimum_soc_kwh
+        r2[:battery_size_kwh] = battery_size_kwh
 
         init_soc = get(d["ElectricStorage"], "year_one_soc_series_fraction", [])
-        battery_starting_soc_kwh = init_soc .* battery_size_kwh
-        r2[:battery_starting_soc_kwh] = battery_starting_soc_kwh .- battery_minimum_soc_kwh
+        if !(
+            "use_full_battery_charge" in keys(r) &&
+            r["use_full_battery_charge"] 
+        )
+            minimum_soc = p.s.storage.attr["ElectricStorage"].soc_min_fraction
+            battery_minimum_soc_kwh = battery_size_kwh * minimum_soc
+            r2[:battery_size_kwh] = battery_size_kwh - battery_minimum_soc_kwh
+
+            battery_starting_soc_kwh = init_soc .* battery_size_kwh
+            r2[:battery_starting_soc_kwh] = battery_starting_soc_kwh .- battery_minimum_soc_kwh
+        end
     end
     
     diesel_kw = 0
