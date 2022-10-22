@@ -326,6 +326,7 @@ else  # run HiGHS tests
         )
         p = REoptInputs("./scenarios/backup_reliability_reopt_inputs.json")
         results = run_reopt(model, p)
+        reliability_inputs["use_full_battery_charge"] = true
         reliability = backup_reliability(results, p, reliability_inputs)
         @test reliability["mean_cumulative_outage_survival_final_time_step"] ≈ 0.817088 atol=0.0001
     end                            
