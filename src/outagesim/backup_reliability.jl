@@ -735,6 +735,7 @@ function survival_with_battery_single_start_time(
     marginal_survival::Bool)::Vector{Float64}
 
     gen_battery_prob_matrix_array = [zeros(M, N), zeros(M, N)]
+
     gen_battery_prob_matrix_array[1][starting_battery_bins[t], :] = starting_gens
     gen_battery_prob_matrix_array[2][starting_battery_bins[t], :] = starting_gens
 
@@ -823,6 +824,9 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         r2[:battery_size_kwh] = battery_size_kwh
 
         init_soc = get(d["ElectricStorage"], "year_one_soc_series_fraction", [])
+        battery_starting_soc_kwh = init_soc .* battery_size_kwh
+        r2[:battery_starting_soc_kwh] = battery_starting_soc_kwh
+
         if !(
             "use_full_battery_charge" in keys(r) &&
             r["use_full_battery_charge"] 
@@ -830,8 +834,6 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
             minimum_soc = p.s.storage.attr["ElectricStorage"].soc_min_fraction
             battery_minimum_soc_kwh = battery_size_kwh * minimum_soc
             r2[:battery_size_kwh] = battery_size_kwh - battery_minimum_soc_kwh
-
-            battery_starting_soc_kwh = init_soc .* battery_size_kwh
             r2[:battery_starting_soc_kwh] = battery_starting_soc_kwh .- battery_minimum_soc_kwh
         end
     end
