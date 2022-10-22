@@ -778,10 +778,10 @@ Return a dictionary of inputs required for backup reliability calculations.
     -microgrid_only::Bool = false                           Boolean to specify if only microgrid upgraded technologies run during grid outage 
 """
 function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dict())::Dict
+    r2 = dictkeys_tosymbols(r)
     zero_array = zeros(length(p.time_steps))
     r2[:critical_loads_kw] = p.s.electric_load.critical_loads_kw
 
-    r2 = dictkeys_tosymbols(r)
     microgrid_only = get(r, "microgrid_only", false)
 
     if !(
