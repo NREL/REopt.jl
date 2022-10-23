@@ -741,7 +741,6 @@ function survival_with_battery_single_start_time(
 
     return_survival_chance_vector = zeros(max_outage_duration)
     survival = ones(M, N)
-    gen_battery_prob_matrix_0 = zeros(M, N)
 
     for d in 1:max_outage_duration 
         h = mod(t + d - 2, t_max) + 1 #determines index accounting for looping around year
@@ -756,7 +755,7 @@ function survival_with_battery_single_start_time(
         survival_chance = gen_battery_prob_matrix_array[gen_matrix_counter_end] .* survival
 
         if marginal_survival == false
-            gen_battery_prob_matrix = survival_chance
+            gen_battery_prob_matrix_array[gen_matrix_counter_end] = survival_chance
         end
         
         return_survival_chance_vector[d] = sum(survival_chance)
