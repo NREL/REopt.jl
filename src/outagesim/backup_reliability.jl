@@ -675,12 +675,10 @@ function survival_with_battery(;
     starting_gens = starting_probabilities(num_generators, generator_operational_availability, generator_failure_to_start) 
 
     Threads.@threads for t = 1:t_max
-        survival_probability_matrix[t, :] = survival_with_battery_single_start_time(t,
-            net_critical_loads_kw, battery_starting_soc_kwh, generator_operational_availability, 
-            generator_failure_to_start, generator_failure_to_run, num_generators, generator_size_kw,
-            battery_size_kwh, battery_size_kw, num_battery_bins, max_outage_duration, battery_charge_efficiency,
-            battery_discharge_efficiency, M, N, starting_gens, generator_production, generator_markov_matrix,
-            maximum_generation, t_max, starting_battery_bins, bin_size, marginal_survival)
+        survival_probability_matrix[t, :] = survival_with_battery_single_start_time(t, 
+        net_critical_loads_kw, battery_size_kw, max_outage_duration, battery_charge_efficiency,
+        battery_discharge_efficiency, M, N, starting_gens, generator_production,
+        generator_markov_matrix, maximum_generation, t_max, starting_battery_bins, bin_size, marginal_survival)
     end
     return survival_probability_matrix
 end
@@ -697,10 +695,8 @@ function update_survival!(survival, maximum_generation, net_critical_loads_kw_at
 end
 
 """
-survival_with_battery_single_start_time(t::Int, net_critical_loads_kw::Vector, battery_starting_soc_kwh::Vector, 
-    generator_operational_availability::Union{Real, Vector{<:Real}}, generator_failure_to_start::Union{Real, Vector{<:Real}},
-    generator_failure_to_run::Union{Real, Vector{<:Real}}, num_generators::Union{Int, Vector{Int}},
-    generator_size_kw::Union{Real, Vector{<:Real}}, battery_size_kwh::Real, battery_size_kw::Real, num_battery_bins::Int, 
+survival_with_battery_single_start_time(t::Int, net_critical_loads_kw::Vector, 
+    generator_size_kw::Union{Real, Vector{<:Real}}, 
     max_outage_duration::Int, battery_charge_efficiency::Real, battery_discharge_efficiency::Real, M::Int, N::Int,
     starting_gens::Matrix{Float64}, generator_production::Vector{Float64}, generator_markov_matrix::Matrix{Float64},
     maximum_generation::Matrix{Float64}, t_max::Int, starting_battery_bins::Vector{Int}, bin_size::Real, marginal_survival::Bool)::Vector{Float64}
@@ -711,15 +707,7 @@ Return a vector of probability of survival with for all outage durations given o
 function survival_with_battery_single_start_time(
     t::Int, 
     net_critical_loads_kw::Vector, 
-    battery_starting_soc_kwh::Vector, 
-    generator_operational_availability::Union{Real, Vector{<:Real}}, 
-    generator_failure_to_start::Union{Real, Vector{<:Real}},
-    generator_failure_to_run::Union{Real, Vector{<:Real}},
-    num_generators::Union{Int, Vector{Int}},
-    generator_size_kw::Union{Real, Vector{<:Real}}, 
-    battery_size_kwh::Real, 
     battery_size_kw::Real, 
-    num_battery_bins::Int, 
     max_outage_duration::Int, 
     battery_charge_efficiency::Real,
     battery_discharge_efficiency::Real,
@@ -797,7 +785,6 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
             !Bool(get(d, "PV_upgraded", false))
         ) && 
         "PV" in keys(d)
-
         pv_kw_ac_time_series = (
             get(d["PV"], "year_one_to_battery_series_kw", zero_array)
             + get(d["PV"], "year_one_curtailed_production_series_kw", zero_array)
@@ -807,11 +794,9 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         r2[:pv_kw_ac_time_series] = pv_kw_ac_time_series
     end
 
-    battery_size_kwh = 0
-    battery_size_kw = 0
     if !(
         microgrid_only && 
-        !Bool(get(d, "PV_upgraded", false))
+        !Bool(get(d, "Storage_upgraded", false))
     ) && 
     "ElectricStorage" in keys(d)
         r2[:battery_charge_efficiency] = p.s.storage.attr["ElectricStorage"].charge_efficiency
@@ -820,16 +805,15 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
 
         #ERP tool uses effective battery size so need to subtract minimum SOC
         battery_size_kwh = get(d["ElectricStorage"], "size_kwh", 0)
-        r2[:battery_size_kwh] = battery_size_kwh
+        
 
         init_soc = get(d["ElectricStorage"], "year_one_soc_series_fraction", [])
         battery_starting_soc_kwh = init_soc .* battery_size_kwh
-        r2[:battery_starting_soc_kwh] = battery_starting_soc_kwh
-
-        if !(
-            "use_full_battery_charge" in keys(r) &&
-            r["use_full_battery_charge"] 
-        )
+        
+        if :use_full_battery_charge in keys(r2) && r2[:use_full_battery_charge] 
+            r2[:battery_starting_soc_kwh] = battery_starting_soc_kwh
+            r2[:battery_size_kwh] = battery_size_kwh
+        else
             minimum_soc = p.s.storage.attr["ElectricStorage"].soc_min_fraction
             battery_minimum_soc_kwh = battery_size_kwh * minimum_soc
             r2[:battery_size_kwh] = battery_size_kwh - battery_minimum_soc_kwh
@@ -1100,14 +1084,17 @@ function return_backup_reliability(;
     critical_loads_kw::Vector, 
     battery_operational_availability::Real = 1.0,
     pv_operational_availability::Real = 1.0,
-    pv_kw_ac_time_series::Vector = [],
     pv_can_dispatch_without_battery::Bool = false,
     kwargs...)::Array
 
-    if length(pv_kw_ac_time_series) == 0
-        pv_kw_ac_time_series = zeros(length(critical_loads_kw))
+    if :pv_kw_ac_time_series in keys(kwargs)
+        pv_included = true
+        net_critical_loads_kw = critical_loads_kw - kwargs[:pv_kw_ac_time_series]
+    else
+        net_critical_loads_kw = critical_loads_kw
+        pv_included = false
     end
-    net_critical_loads_kw = critical_loads_kw .- pv_kw_ac_time_series
+    
     battery_size_kw = get(kwargs, :battery_size_kw, 0)
 
     #Four systems are 1) no PV + no battery, 2) PV + battery, 3) PV + no battery, and 4) no PV + battery
@@ -1130,7 +1117,7 @@ function return_backup_reliability(;
             "battery_size_kw" => 0)
     )
     #Sets probabilities for each potential system configuration
-    if :battery_size_kw in keys(kwargs) && :pv_size_kw in keys(kwargs)
+    if :battery_size_kw in keys(kwargs) && pv_included
         system_characteristics["pv_plus_battery"]["probability"] = 
             battery_operational_availability * pv_operational_availability
         system_characteristics["battery_no_pv"]["probability"] = 
@@ -1149,7 +1136,7 @@ function return_backup_reliability(;
             battery_operational_availability
         system_characteristics["gen_only"]["probability"] = 
             (1 - battery_operational_availability)
-    elseif :pv_size_kw in keys(kwargs) && pv_can_dispatch_without_battery
+    elseif pv_included && pv_can_dispatch_without_battery
         system_characteristics["pv_no_battery"]["probability"] = 
             pv_operational_availability
         system_characteristics["gen_only"]["probability"] = 
