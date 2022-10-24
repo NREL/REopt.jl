@@ -23,6 +23,11 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop
+### Added
+- `CoolingLoad` time series and annual summary data to results
+- `HeatingLoad` time series and annual summary data to results
+
 ## v0.20.0
 ### Added
 - `Boiler` tech from the REopt_API (known as NewBoiler in API)
