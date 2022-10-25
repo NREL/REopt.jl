@@ -27,6 +27,10 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+const existing_boiler_efficiency_defaults = Dict(
+                                                "hot_water" => EXISTING_BOILER_EFFICIENCY,
+                                                "steam" => 0.75
+                                            )
 
 struct ExistingBoiler <: AbstractThermalTech  # useful to create AbstractHeatingTech or AbstractThermalTech?
     max_kw::Real
@@ -48,7 +52,6 @@ end
 ```julia
     max_heat_demand_kw::Real=0,
     production_type::String = "hot_water",
-    chp_prime_mover::String = "",
     max_thermal_factor_on_peak_load::Real = 1.25,
     efficiency::Real = NaN,
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [],
@@ -71,13 +74,13 @@ end
     The `ExistingBoiler`'s `fuel_cost_per_mmbtu` field is a required input. The `fuel_cost_per_mmbtu` can be a scalar, a list of 12 monthly values, or a time series of values for every time step.
 
 !!! note "Determining `efficiency`" 
-    Must supply either: `efficiency`, `chp_prime_mover`, or `production_type`.
+    Must supply either: `efficiency` or `production_type`.
     
     If `efficiency` is not supplied, the `efficiency` will be determined based on the `production_type`. 
     If `production_type` is not supplied, it defaults to `hot_water`.
     The following defaults are used:
     ```julia
-    efficiency_defaults = Dict(
+    existing_boiler_efficiency_defaults = Dict(
         "hot_water" => 0.8,
         "steam" => 0.75
     )
@@ -87,7 +90,6 @@ end
 function ExistingBoiler(;
     max_heat_demand_kw::Real=0,
     production_type::String = "hot_water",
-    chp_prime_mover::String = "",
     max_thermal_factor_on_peak_load::Real = 1.25,
     efficiency::Real = NaN,
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [],
@@ -107,13 +109,8 @@ function ExistingBoiler(;
         throw(@error "The ExistingBoiler.fuel_cost_per_mmbtu is a required input when modeling a heating load which is served by the Existing Boiler in the BAU case")
     end
 
-    efficiency_defaults = Dict(
-        "hot_water" => EXISTING_BOILER_EFFICIENCY,
-        "steam" => 0.75
-    )
-
     if isnan(efficiency)
-        efficiency = efficiency_defaults[production_type]
+        efficiency = existing_boiler_efficiency_defaults[production_type]
     end
 
     max_kw = max_heat_demand_kw * max_thermal_factor_on_peak_load
