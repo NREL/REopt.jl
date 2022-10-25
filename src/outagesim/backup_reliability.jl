@@ -695,6 +695,18 @@ function update_survival!(survival, maximum_generation, net_critical_loads_kw_at
 end
 
 """
+survival_chance_mult(gen_battery_prob_matrix, survival)
+
+efficient implementation of sum(gen_battery_prob_matrix .* survival)
+"""
+function survival_chance_mult(gen_battery_prob_matrix, survival)
+    s = 0
+    @inbounds for i in eachindex(gen_battery_prob_matrix)
+        s += gen_battery_prob_matrix[i] * survival[i]
+    end
+    return s
+end
+"""
 survival_with_battery_single_start_time(t::Int, net_critical_loads_kw::Vector, 
     generator_size_kw::Union{Real, Vector{<:Real}}, 
     max_outage_duration::Int, battery_charge_efficiency::Real, battery_discharge_efficiency::Real, M::Int, N::Int,
@@ -740,13 +752,13 @@ function survival_with_battery_single_start_time(
         gen_matrix_counter_end = (d % 2) + 1 
         mul!(gen_battery_prob_matrix_array[gen_matrix_counter_end], gen_battery_prob_matrix_array[gen_matrix_counter_start], generator_markov_matrix)
 
-        survival_chance = gen_battery_prob_matrix_array[gen_matrix_counter_end] .* survival
-
         if marginal_survival == false
-            gen_battery_prob_matrix_array[gen_matrix_counter_end] = survival_chance
+            gen_battery_prob_matrix_array[gen_matrix_counter_end] = gen_battery_prob_matrix_array[gen_matrix_counter_end] .* survival 
+            return_survival_chance_vector[d] = sum(gen_battery_prob_matrix_array[gen_matrix_counter_end])
+        else
+            #Efficient implementation of sum(gen_battery_prob_matrix .* survival)
+            return_survival_chance_vector[d] = survival_chance_mult(gen_battery_prob_matrix_array[gen_matrix_counter_end], survival)
         end
-        
-        return_survival_chance_vector[d] = sum(survival_chance)
 
         #Update generation battery probability matrix to account for battery shifting
         shift_gen_battery_prob_matrix!(gen_battery_prob_matrix_array[gen_matrix_counter_end], battery_bin_shift(generator_production .- net_critical_loads_kw[h], bin_size, battery_size_kw, battery_charge_efficiency, battery_discharge_efficiency))
