@@ -28,7 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 function add_thermosyphon_expressions(m,p)
-	#TODO: uncomment for using binary dv
+	# NOTE: uncomment to use binary dv
 	if !isnothing(p.s.thermosyphon)#p.s.thermosyphon.active_cooling_rate_mmbtu_per_hour > 0
 		@expression(m, ThermosyphonActiveCooling[ts in p.time_steps], m[:binThermosyphonIsActiveInTS][ts] * p.s.thermosyphon.active_cooling_rate_mmbtu_per_hour)
 		@expression(m, ThermosyphonElectricConsumption[ts in p.time_steps], m[:binThermosyphonIsActiveInTS][ts] * p.s.thermosyphon.active_cooling_rate_mmbtu_per_hour / p.s.thermosyphon.coefficient_of_performance_series_mmbtu_per_kwh[ts] )
@@ -37,7 +37,7 @@ function add_thermosyphon_expressions(m,p)
 		@expression(m, ThermosyphonElectricConsumption[ts in p.time_steps], 0)
 	end
 
-	# TODO: uncomment to use continuous dv
+	# NOTE: uncomment to use continuous dv
 	# @variable(m, dvThermosyphonActiveCooling[ts in p.time_steps] >= 0)
 	# @expression(m, ThermosyphonActiveCooling[ts in p.time_steps], dvThermosyphonActiveCooling[ts])
 	# @constraint(m, [ts in p.time_steps], 
