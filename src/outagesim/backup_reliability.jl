@@ -706,6 +706,17 @@ function survival_chance_mult(gen_battery_prob_matrix, survival)
     end
     return s
 end
+
+"""
+battery_prob_matrix_update!(gen_battery_prob_matrix, survival)
+
+efficient implementation of gen_battery_prob_matrix = gen_battery_prob_matrix .* survival
+"""
+function battery_prob_matrix_update!(gen_battery_prob_matrix, survival)
+    @inbounds for i in eachindex(gen_battery_prob_matrix)
+        gen_battery_prob_matrix[i] *= survival[i]
+    end
+end
 """
 survival_with_battery_single_start_time(t::Int, net_critical_loads_kw::Vector, 
     generator_size_kw::Union{Real, Vector{<:Real}}, 
@@ -753,7 +764,8 @@ function survival_with_battery_single_start_time(
         mul!(gen_battery_prob_matrix_array[gen_matrix_counter_end], gen_battery_prob_matrix_array[gen_matrix_counter_start], generator_markov_matrix)
 
         if marginal_survival == false
-            gen_battery_prob_matrix_array[gen_matrix_counter_end] = gen_battery_prob_matrix_array[gen_matrix_counter_end] .* survival 
+            #Efficient implementation of gen_battery_prob_matrix = gen_battery_prob_matrix .* survival
+            battery_prob_matrix_update!(gen_battery_prob_matrix_array[gen_matrix_counter_end], survival) 
             return_survival_chance_vector[d] = sum(gen_battery_prob_matrix_array[gen_matrix_counter_end])
         else
             #Efficient implementation of sum(gen_battery_prob_matrix .* survival)
