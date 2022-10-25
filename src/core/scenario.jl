@@ -315,12 +315,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         boiler_inputs = Dict{Symbol, Any}()
         boiler_inputs[:max_heat_demand_kw] = max_heat_demand_kw
         boiler_inputs[:time_steps_per_hour] = settings.time_steps_per_hour
-        # If CHP is considered, prime_mover may inform the default boiler efficiency
-        if haskey(d, "CHP") 
-            if haskey(d["CHP"], "prime_mover")
-                boiler_inputs[:chp_prime_mover] = d["CHP"]["prime_mover"]
-            end
-        end
         if haskey(d, "ExistingBoiler")
             boiler_inputs = merge(boiler_inputs, dictkeys_tosymbols(d["ExistingBoiler"]))
         end
@@ -340,11 +334,14 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     chp = nothing
     if haskey(d, "CHP")
         if !isnothing(existing_boiler)
-            boiler_type = existing_boiler.production_type
+            total_fuel_heating_load_mmbtu_per_hour = (space_heating_load.loads_kw + dhw_load.loads_kw) / existing_boiler.efficiency / KWH_PER_MMBTU
+            avg_fuel_heating_load_mmbtu_per_hour = sum(total_fuel_heating_load_mmbtu_per_hour) / length(total_fuel_heating_load_mmbtu_per_hour)
+            chp = CHP(d["CHP"]; 
+                    avg_fuel_heating_load_mmbtu_per_hour = avg_fuel_heating_load_mmbtu_per_hour,
+                    existing_boiler = existing_boiler)
         else # Only if modeling CHP without heating_load and existing_boiler (for electric-only CHP)
-            boiler_type = "hot_water"
+            chp = CHP(d["CHP"])
         end
-        chp = CHP(d["CHP"], boiler_type)
     end
 
     max_cooling_demand_kw = 0
