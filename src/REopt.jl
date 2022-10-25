@@ -44,7 +44,8 @@ export
     MPCInputs,
     run_mpc,
     build_mpc!, 
-    backup_reliability
+    backup_reliability,
+    get_chp_defaults_prime_mover_size_class
 
 import HTTP
 import JSON
