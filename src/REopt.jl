@@ -45,7 +45,8 @@ export
     run_mpc,
     build_mpc!, 
     backup_reliability,
-    get_chp_defaults_prime_mover_size_class
+    get_chp_defaults_prime_mover_size_class,
+    get_steam_turbine_defaults_size_class
 
 import HTTP
 import JSON

@@ -158,7 +158,7 @@ end
 
 
 function CHP(d::Dict; 
-            avg_fuel_heating_load_mmbtu_per_hour::Union{Float64, Nothing}=nothing, 
+            avg_boiler_fuel_load_mmbtu_per_hour::Union{Float64, Nothing}=nothing, 
             existing_boiler::Union{ExistingBoiler, Nothing}=nothing)
     # If array inputs are coming from Julia JSON.parsefile (reader), they have type Vector{Any}; convert to expected type here
     for (k,v) in d
@@ -209,7 +209,7 @@ function CHP(d::Dict;
 
     # Set all missing default values in custom_chp_inputs
     chp_defaults_response = get_chp_defaults_prime_mover_size_class(;hot_water_or_steam=existing_boiler.production_type,
-                                                                avg_boiler_fuel_load_mmbtu_per_hour=avg_fuel_heating_load_mmbtu_per_hour,
+                                                                avg_boiler_fuel_load_mmbtu_per_hour=avg_boiler_fuel_load_mmbtu_per_hour,
                                                                 prime_mover=chp.prime_mover,
                                                                 size_class=chp.size_class,
                                                                 boiler_efficiency=existing_boiler.efficiency)
@@ -374,7 +374,7 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
     # If size class is not specified, heuristic sizing based on avg thermal load and size class 0 efficiencies
     elseif isnothing(size_class) && !isnothing(chp_elec_size_heuristic_kw)
         # With heuristic size, find the suggested size class
-        if chp_elec_size_heuristic_kw < class_bounds[1][1]
+        if chp_elec_size_heuristic_kw < class_bounds[2][1]
             # If smaller than the upper bound of the smallest class, assign the smallest class
             size_class = 2
         elseif chp_elec_size_heuristic_kw >= class_bounds[n_classes][1]
@@ -383,7 +383,8 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
         else
             # For middle size classes
             for sc in 2:n_classes
-                if chp_elec_size_heuristic_kw >= class_bounds[sc][1] && chp_elec_size_heuristic_kw < class_bounds[sc][2]
+                if chp_elec_size_heuristic_kw >= class_bounds[sc][1] && 
+                    chp_elec_size_heuristic_kw < class_bounds[sc][2]
                     size_class = sc
                 end
             end
@@ -405,46 +406,3 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
     return response
 
 end
-
-
-# function get_steam_turbine_defaults()
-#     steam_turbine_class_bounds = copy.deepcopy(SteamTurbine.class_bounds)
-#     if size_class:
-#         if int(size_class) < 0 or int(size_class) > len(steam_turbine_class_bounds)-1:
-#             raise ValueError("Invalid size_class given for steam_turbine, must be in [0,1,2,3]")
-#         else:
-#             size_class = int(size_class)
-#             chp_elec_size_heuristic_kw = None
-#     elif avg_boiler_fuel_load_mmbtu_per_hour is not None:
-#         steam_turbine_electric_efficiency = 0.07 # steam_turbine_kwe / boiler_fuel_kwt
-#         thermal_power_in_kw = float(avg_boiler_fuel_load_mmbtu_per_hour) * MMBTU_TO_KWH
-#         chp_elec_size_heuristic_kw = thermal_power_in_kw * steam_turbine_electric_efficiency
-#         # With heuristic size, find the suggested size class
-#         if chp_elec_size_heuristic_kw < steam_turbine_class_bounds[1][1]:
-#             # If smaller than the upper bound of the smallest class, assign the smallest class
-#             size_class = 1
-#         elif chp_elec_size_heuristic_kw >= steam_turbine_class_bounds[len(steam_turbine_class_bounds) - 1][0]:
-#             # If larger than or equal to the lower bound of the largest class, assign the largest class
-#             size_class = len(steam_turbine_class_bounds) - 1  # Size classes are zero-indexed
-#         else:
-#             # For middle size classes
-#             for sc in range(2, len(steam_turbine_class_bounds) - 1):
-#                 if (chp_elec_size_heuristic_kw >= steam_turbine_class_bounds[sc][0]) and \
-#                         (chp_elec_size_heuristic_kw < steam_turbine_class_bounds[sc][1]):
-#                     size_class = sc
-#     else:
-#         size_class = 0
-#         chp_elec_size_heuristic_kw = None
-
-#     prime_mover_defaults = SteamTurbine.get_steam_turbine_defaults(size_class=size_class)
-
-
-#     response = JsonResponse(
-#         {"prime_mover": prime_mover,
-#         "size_class": size_class,
-#         "default_inputs": prime_mover_defaults,
-#         "chp_size_based_on_avg_heating_load_kw": chp_elec_size_heuristic_kw,
-#         "size_class_bounds": SteamTurbine.class_bounds
-#         }
-#     )
-#     return response
