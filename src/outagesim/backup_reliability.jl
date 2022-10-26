@@ -451,11 +451,13 @@ function shift_gen_battery_prob_matrix!(gen_battery_prob_matrix::Matrix, shift_v
     for i in 1:length(shift_vector) 
         s = shift_vector[i]
         if s < 0 
-            circshift!(view(gen_battery_prob_matrix, :, i), s)
+            # circshift!(view(gen_battery_prob_matrix, :, i), s)
+            circshift!(gen_battery_prob_matrix[:, i], s)
             gen_battery_prob_matrix[1, i] += sum(view(gen_battery_prob_matrix, max(2,M+s+1):M, i))
             gen_battery_prob_matrix[max(2,M+s+1):M, i] .= 0
         elseif s > 0
-            circshift!(view(gen_battery_prob_matrix, :, i), s)
+            # circshift!(view(gen_battery_prob_matrix, :, i), s)
+            circshift!(gen_battery_prob_matrix[:, i], s)
             gen_battery_prob_matrix[end, i] += sum(view(gen_battery_prob_matrix, 1:min(s,M-1), i))
             gen_battery_prob_matrix[1:min(s,M-1), i] .= 0
         end
