@@ -224,7 +224,7 @@ Depending on the set of inputs, different sets of outputs are determine in addit
 """
 function get_steam_turbine_defaults_size_class(;avg_boiler_fuel_load_mmbtu_per_hour::Union{Float64, Nothing}=nothing, size_class::Union{Int64, Nothing}=nothing)
     defaults = JSON.parsefile(joinpath(dirname(@__FILE__), "..", "..", "data", "steam_turbine", "steam_turbine_default_data.json"))
-    class_bounds = [(0.0, 25000.0), (0, 1000.0), (1000.0, 5000.0), (5000.0, 250000.0)]
+    class_bounds = [(0.0, 25000.0), (0, 1000.0), (1000.0, 5000.0), (5000.0, 25000.0)]
     n_classes = length(class_bounds)
     if !isnothing(size_class)
         if size_class < 1 || size_class > n_classes
@@ -239,7 +239,7 @@ function get_steam_turbine_defaults_size_class(;avg_boiler_fuel_load_mmbtu_per_h
         thermal_power_in_kw = avg_boiler_fuel_load_mmbtu_per_hour * KWH_PER_MMBTU
         st_elec_size_heuristic_kw = thermal_power_in_kw * steam_turbine_electric_efficiency
         # With heuristic size, find the suggested size class
-        if st_elec_size_heuristic_kw < class_bounds[1][1]
+        if st_elec_size_heuristic_kw < class_bounds[2][2]
             # If smaller than the upper bound of the smallest class, assign the smallest class
             size_class = 2
         elseif st_elec_size_heuristic_kw >= class_bounds[n_classes][1]
@@ -247,7 +247,7 @@ function get_steam_turbine_defaults_size_class(;avg_boiler_fuel_load_mmbtu_per_h
             size_class = n_classes  # Size classes are zero-indexed
         else
             # For middle size classes
-            for sc in 2:n_classes
+            for sc in 2:(n_classes-1)
                 if st_elec_size_heuristic_kw >= class_bounds[sc][1] &&
                     st_elec_size_heuristic_kw < class_bounds[sc][2]
                     size_class = sc
