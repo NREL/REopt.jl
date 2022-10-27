@@ -23,7 +23,7 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop
+## v0.20.1
 ### Added
 - `CoolingLoad` time series and annual summary data to results
 - `HeatingLoad` time series and annual summary data to results
