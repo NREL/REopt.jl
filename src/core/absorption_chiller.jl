@@ -60,7 +60,7 @@ heat_transfer_mediums = ["steam", "hot_water"]
     `fuel_cost_per_mmbtu` is always required
 """
 Base.@kwdef mutable struct AbsorptionChiller <: AbstractThermalTech
-    prime_mover::String = ""
+    heat_transfer_medium::String = ""
     chp_prime_mover::String = ""
     installed_cost_per_ton::Union{<:Real, AbstractVector{<:Real}} = []
     tech_sizes_for_cost_curve::Union{<:Real, AbstractVector{<:Real}} = []
@@ -77,7 +77,7 @@ Base.@kwdef mutable struct AbsorptionChiller <: AbstractThermalTech
     installed_cost_per_kw::Real
     om_cost_per_kw::Real
     function AbsorptionChiller(;
-        prime_mover::String = "",
+        heat_transfer_medium::String = "",
         chp_prime_mover::String = "",
         installed_cost_per_ton::Union{<:Real, AbstractVector{<:Real}} = [],
         tech_sizes_for_cost_curve::Union{<:Real, AbstractVector{<:Real}} = [],
@@ -91,13 +91,15 @@ Base.@kwdef mutable struct AbsorptionChiller <: AbstractThermalTech
         macrs_bonus_fraction::Real = 0,
         )
 
+        htf_defaults = get_absorption_chiller_defaults(max_ton, heat_transfer_medium, chp_prime_mover)
+
         min_kw = min_ton * KWH_THERMAL_PER_TONHOUR
         max_kw = max_ton * KWH_THERMAL_PER_TONHOUR
         installed_cost_per_kw = installed_cost_per_ton / KWH_THERMAL_PER_TONHOUR
         om_cost_per_kw = om_cost_per_ton / KWH_THERMAL_PER_TONHOUR
 
         new(
-            prime_mover,
+            heat_transfer_medium,
             chp_prime_mover,
             installed_cost_per_ton,
             tech_sizes_for_cost_curve,
@@ -132,27 +134,38 @@ custom_chp_inputs, i.e.
 - "thermal_effic_half_load"
 - "unavailability_periods"
 """
-function get_absorption_chiller_defaults(heat_transfer_medium::String, chp_prime_mover::String)
-    acds = JSON.parsefile(joinpath(dirname(@__FILE__), "..", "..", "data", "absorption_chiller", "defaults.json"))
+function get_absorption_chiller_defaults(max_tons::Real, heat_transfer_medium::String, chp_prime_mover::String)
+    acds = JSON.parsefile(joinpath(dirname(@__FILE__), "..", "..", "data", "absorption_chiller", "absorption_chiller_default_data.json"))
     htf_defaults = Dict{String, Any}()
 
-    for key in keys(pmds[prime_mover])
-        if key in ["thermal_effic_full_load", "thermal_effic_half_load"]
-            prime_mover_defaults[key] = pmds[prime_mover][key][boiler_type][size_class]
-        elseif key == "unavailability_periods"
-            prime_mover_defaults[key] = convert(Vector{Dict}, pmds[prime_mover][key])
-        else
-            prime_mover_defaults[key] = pmds[prime_mover][key][size_class]
+    if heat_transfer_medium == ""
+        if chp_prime_mover == "combustion_engine"
+            heat_transfer_medium = "steam"
+        else  #if chp_prime mover is blank or is anything but "combustion engine" then assume hot water
+            heat_transfer_medium = "hot_water"
         end
     end
-    pmds = nothing
 
-    for (k,v) in prime_mover_defaults
-        if typeof(v) <: AbstractVector{Any} && k != "unavailability_periods"
-            prime_mover_defaults[k] = convert(Vector{Float64}, v)  # JSON.parsefile makes things Vector{Any}
+    size_class, frac_higher = get_absorption_chiller_max_size_class(
+        max_tons, htf_defaults[heat_transfer_medium]["tech_sizes_for_cost_curve"]
+        )
+
+    for key in keys(acds[heat_transfer_medium])
+        if key == "cop_thermal"
+            htf_defaults[key] = acds[heat_transfer_medium][key]
+        elseif key != "tech_sizes_for_cost_curve"
+            htf_defaults[key] = (frac_higher * acds[heat_transfer_medium][key][size_class+1] + 
+            (1-frac_higher) * acds[heat_transfer_medium][key][size_class])
         end
     end
-    return prime_mover_defaults
+    acds = nothing  #TODO this is copied from the analogous CHP function.  Do we need?
+
+    for (k,v) in htf_defaults
+        if typeof(v) <: AbstractVector{Any} && k != "unavailability_periods"
+            htf_defaults[k] = convert(Vector{Float64}, v)  # JSON.parsefile makes things Vector{Any}
+        end
+    end
+    return htf_defaults
 end
 
 function get_absorption_chiller_max_size_class(max_tons::Real,htf_defaults::Dict)
