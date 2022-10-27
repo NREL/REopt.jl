@@ -168,17 +168,29 @@ function get_absorption_chiller_defaults(max_tons::Real, heat_transfer_medium::S
     return htf_defaults
 end
 
-function get_absorption_chiller_max_size_class(max_tons::Real,htf_defaults::Dict)
-    num_classes = length(htf_defaults["tech_sizes_for_cost_curve"])
-    if max_tons <= htf_defaults["tech_sizes_for_cost_curve"][1]
-        return 0
-    elseif max_tons > htf_defaults["tech_sizes_for_cost_curve"][num_classes]
-        return num_classes
+"""
+get_absorption_chiller_max_size_class(max_tons::Real,sizes_by_class::AbstractVector{Float64})
+
+determines the adjacent size classes of absorption chiller from which to obtain defaults and the fraction of the larger
+class to allocate to the default value.
+
+Inputs: 
+max_tons::Real -- maximum size of absorption chiller
+sizes_by_class::AbstractVector{Float64} -- vector of max sizes by class for the absorption chiller defaults
+"""
+function get_absorption_chiller_max_size_class(max_tons::Real,sizes_by_class::AbstractVector{Float64})
+    num_classes = length(sizes_by_class)
+    if max_tons <= sizes_by_class[1]
+        return 1, 0.0
+    elseif max_tons > sizes_by_class[num_classes]
+        return num_classes-1, 1.0
     else
         for size_class in 1:num_classes-1
-            if (max_tons > htf_defaults["tech_sizes_for_cost_curve"][size_class] &&
-                max_tons <= htf_defaults["tech_sizes_for_cost_curve"][size_class+1])
-                return size_class
+            if (max_tons > sizes_by_class[size_class] &&
+                max_tons <= sizes_by_class[size_class+1])
+                ratio = ((max_tons - sizes_by_class[size_class]) /
+                    (sizes_by_class[size_class+1] - sizes_by_class[size_class]))
+                return size_class, ratio
             end
         end
     end
