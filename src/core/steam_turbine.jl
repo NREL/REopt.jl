@@ -228,7 +228,7 @@ function get_steam_turbine_defaults_size_class(;avg_boiler_fuel_load_mmbtu_per_h
     n_classes = length(class_bounds)
     if !isnothing(size_class)
         if size_class < 1 || size_class > n_classes
-            @error "Invalid size_class given for steam_turbine, must be in [0,1,2,3]"
+            @error "Invalid size_class given for steam_turbine, must be in [1,2,3,4]"
         end
     end
     if !isnothing(avg_boiler_fuel_load_mmbtu_per_hour)
