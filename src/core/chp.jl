@@ -33,8 +33,8 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
 """
 `CHP` is an optional REopt input with the following keys and default values:
 ```julia
-    prime_mover::String = "" Suggested to inform applicable default cost and performance
-    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = []  # REQUIRED
+    prime_mover::Union{String, Nothing} = nothing Suggested to inform applicable default cost and performance
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = []  REQUIRED
 
     # Required "custom inputs" if not providing prime_mover:
     installed_cost_per_kw::Union{Float64, AbstractVector{Float64}} = NaN
@@ -51,7 +51,7 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
     unavailability_periods::AbstractVector{Dict} = Dict[]
 
     # Optional inputs:
-    size_class::Int = 1
+    size_class::Union{Int, Nothing} = nothing
     min_kw::Float64 = 0.0
     fuel_type::String = "natural_gas" # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     om_cost_per_kw::Float64 = 0.0
@@ -374,7 +374,7 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
     # If size class is not specified, heuristic sizing based on avg thermal load and size class 0 efficiencies
     elseif isnothing(size_class) && !isnothing(chp_elec_size_heuristic_kw)
         # With heuristic size, find the suggested size class
-        if chp_elec_size_heuristic_kw < class_bounds[2][1]
+        if chp_elec_size_heuristic_kw < class_bounds[2][2]
             # If smaller than the upper bound of the smallest class, assign the smallest class
             size_class = 2
         elseif chp_elec_size_heuristic_kw >= class_bounds[n_classes][1]
@@ -382,7 +382,7 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
             size_class = n_classes # Size classes are one-indexed
         else
             # For middle size classes
-            for sc in 2:n_classes
+            for sc in 2:(n_classes-1)
                 if chp_elec_size_heuristic_kw >= class_bounds[sc][1] && 
                     chp_elec_size_heuristic_kw < class_bounds[sc][2]
                     size_class = sc
