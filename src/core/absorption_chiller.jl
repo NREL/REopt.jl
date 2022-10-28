@@ -37,8 +37,9 @@ heat_transfer_mediums = ["steam", "hot_water"]
     chp_prime_mover::String = ""
 
     #Required if neither "heat_transfer_medium" nor "chp_prime_mover" included in inputs:
-    installed_cost_per_ton::Union{<:Real, AbstractVector{<:Real}} = []
-    tech_sizes_for_cost_curve::Union{<:Real, AbstractVector{<:Real}} = []
+    installed_cost_per_ton::Real
+    om_cost_per_ton::Real
+
 
     #Optional
     min_ton::Real = 0.0,
@@ -60,10 +61,9 @@ heat_transfer_mediums = ["steam", "hot_water"]
     `fuel_cost_per_mmbtu` is always required
 """
 Base.@kwdef mutable struct AbsorptionChiller <: AbstractThermalTech
-    heat_transfer_medium::String = ""
-    chp_prime_mover::String = ""
-    installed_cost_per_ton::Union{<:Real, AbstractVector{<:Real}} = []
-    tech_sizes_for_cost_curve::Union{<:Real, AbstractVector{<:Real}} = []
+    heat_transfer_medium::Union{String, Nothing} = nothing
+    chp_prime_mover::Union{String, Nothing} = nothing
+    installed_cost_per_ton::Real
     min_ton::Real
     max_ton::Real
     cop_thermal::Real
@@ -79,8 +79,7 @@ Base.@kwdef mutable struct AbsorptionChiller <: AbstractThermalTech
     function AbsorptionChiller(;
         heat_transfer_medium::String = "",
         chp_prime_mover::String = "",
-        installed_cost_per_ton::Union{<:Real, AbstractVector{<:Real}} = [],
-        tech_sizes_for_cost_curve::Union{<:Real, AbstractVector{<:Real}} = [],
+        installed_cost_per_ton::Real,
         min_ton::Real = 0.0,
         max_ton::Real = 0.0,
         cop_thermal::Real,
