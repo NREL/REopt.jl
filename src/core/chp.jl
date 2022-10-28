@@ -311,13 +311,13 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
     # Inputs validation
     if !isnothing(prime_mover)
         if !(prime_mover in prime_movers)  # Validate user-entered hot_water_or_steam
-            @error "Invalid argument for hot_water_or_steam; must be 'hot_water' or 'steam'"
+            @error "Invalid argument for `prime_mover`; must be in $prime_movers"
         end
     end
 
     if !isnothing(hot_water_or_steam)  # Option 1 if prime_mover also not input
         if !(hot_water_or_steam in ["hot_water", "steam"])  # Validate user-entered hot_water_or_steam
-            @error "Invalid argument for hot_water_or_steam; must be 'hot_water' or 'steam'"
+            @error "Invalid argument for `hot_water_or_steam``; must be `hot_water` or `steam`"
         end
     else  # Options 2, 3, or 4
         hot_water_or_steam = "hot_water"
