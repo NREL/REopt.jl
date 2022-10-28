@@ -94,6 +94,7 @@ provided in the `ElectricLoad` inputs. Otherwise the `city` argument must be pro
 !!! note  
     The `ExistingChiller` is electric and so its operating cost is determined by the `ElectricTariff`.
 
+"""
 struct FlexibleHVAC
     system_matrix::AbstractMatrix{Float64}  # N x N, with N states (temperatures in RC network)
     input_matrix::AbstractMatrix{Float64}  # N x M, with M inputs
