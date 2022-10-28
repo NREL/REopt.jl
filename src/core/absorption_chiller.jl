@@ -62,61 +62,37 @@ heat_transfer_mediums = ["steam", "hot_water"]
 """
 Base.@kwdef mutable struct AbsorptionChiller <: AbstractThermalTech
     heat_transfer_medium::Union{String, Nothing} = nothing
-    chp_prime_mover::Union{String, Nothing} = nothing
     installed_cost_per_ton::Real
-    min_ton::Real
-    max_ton::Real
+    min_ton::Real = 0.0
+    max_ton::Real = 0.0
     cop_thermal::Real
-    cop_electric::Real
+    cop_electric::Real = 14.1
     installed_cost_us_dollars_per_ton::Real
     om_cost_us_dollars_per_ton::Real
-    macrs_option_years::Real
-    macrs_bonus_fraction::Real
+    macrs_option_years::Real = 0
+    macrs_bonus_fraction::Real = 0
     min_kw::Real
     max_kw::Real
     installed_cost_per_kw::Real
     om_cost_per_kw::Real
-    function AbsorptionChiller(;
-        heat_transfer_medium::String = "",
-        chp_prime_mover::String = "",
-        installed_cost_per_ton::Real,
-        min_ton::Real = 0.0,
-        max_ton::Real = 0.0,
-        cop_thermal::Real,
-        cop_electric::Real = 14.1,
-        installed_cost_per_ton::Real,
-        om_cost_per_ton::Real,
-        macrs_option_years::Real = 0,
-        macrs_bonus_fraction::Real = 0,
-        )
-
-        htf_defaults = get_absorption_chiller_defaults(max_ton, heat_transfer_medium, chp_prime_mover)
-
-        min_kw = min_ton * KWH_THERMAL_PER_TONHOUR
-        max_kw = max_ton * KWH_THERMAL_PER_TONHOUR
-        installed_cost_per_kw = installed_cost_per_ton / KWH_THERMAL_PER_TONHOUR
-        om_cost_per_kw = om_cost_per_ton / KWH_THERMAL_PER_TONHOUR
-
-        new(
-            heat_transfer_medium,
-            chp_prime_mover,
-            installed_cost_per_ton,
-            tech_sizes_for_cost_curve,
-            min_ton,
-            max_ton,
-            cop_thermal,
-            cop_electric,
-            installed_cost_per_ton,
-            om_cost_per_ton,
-            macrs_option_years,
-            macrs_bonus_fraction,
-            min_kw,
-            max_kw,
-            installed_cost_per_kw,
-            om_cost_per_kw
-        )
-    end
 end
+
+function AbsorptionChiller(d::dict;
+    chp_prime_mover::Union{String, Nothing} = nothing
+    )
+
+    #check for required inputs (chp_prime_mover or )
+    absorp_chl = AbsorptionChiller(; dictkeys_tosymbols(d)...)
+
+    htf_defaults = get_absorption_chiller_defaults(max_ton, heat_transfer_medium, chp_prime_mover)
+
+    absorp_chl.min_kw = absorp_chl.min_ton * KWH_THERMAL_PER_TONHOUR
+    absorp_chl.max_kw = absorp_chl.max_ton * KWH_THERMAL_PER_TONHOUR
+    absorp_chl.installed_cost_per_kw = absorp_chl.installed_cost_per_ton / KWH_THERMAL_PER_TONHOUR
+    absorp_chl.om_cost_per_kw = absorp_chl.om_cost_per_ton / KWH_THERMAL_PER_TONHOUR
+
+end
+
 
 """
 get_absorption_chiller_defaults(prime_mover::String, boiler_type::String, size_class::Int)
