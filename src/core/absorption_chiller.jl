@@ -177,6 +177,10 @@ class to allocate to the default value.
 Inputs: 
 max_tons::Real -- maximum size of absorption chiller
 sizes_by_class::AbstractVector{Float64} -- vector of max sizes by class for the absorption chiller defaults
+
+Returns: 
+size_class::Int -- class size index for smaller reference class
+ratio::Float -- fraction allocated to larger reference class (i.e., 0=use size_class only; 1=use size_class+1 only)
 """
 function get_absorption_chiller_max_size_class(max_tons::Real,sizes_by_class::AbstractVector{Float64})
     num_classes = length(sizes_by_class)
