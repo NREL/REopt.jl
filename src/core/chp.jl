@@ -207,12 +207,20 @@ function CHP(d::Dict;
         pass_all_params_error = true
     end
 
-    # Set all missing default values in custom_chp_inputs
-    chp_defaults_response = get_chp_defaults_prime_mover_size_class(;hot_water_or_steam=existing_boiler.production_type,
+    # Set all missing default values in custom_chp_inputs after checking for an existing boiler; this allows CHP wo/ existing boiler
+    if !isnothing(existing_boiler)
+        prod_type = existing_boiler.production_type
+        eff = existing_boiler.efficiency
+    else
+        prod_type = "hot_water"
+        eff = EXISTING_BOILER_EFFICIENCY
+    end
+
+    chp_defaults_response = get_chp_defaults_prime_mover_size_class(;hot_water_or_steam=prod_type,
                                                                 avg_boiler_fuel_load_mmbtu_per_hour=avg_boiler_fuel_load_mmbtu_per_hour,
                                                                 prime_mover=chp.prime_mover,
                                                                 size_class=chp.size_class,
-                                                                boiler_efficiency=existing_boiler.efficiency)
+                                                                boiler_efficiency=eff)
     defaults = chp_defaults_response["default_inputs"]
     for (k, v) in custom_chp_inputs
         if k in [:installed_cost_per_kw, :tech_sizes_for_cost_curve]
