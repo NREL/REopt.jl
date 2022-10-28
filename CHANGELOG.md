@@ -23,7 +23,7 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop
+## v0.21.0
 ### Changed
 For `CHP` and `SteamTurbine`, the `prime_mover` and/or `size_class` is chosen (if not input) based on the average heating load and the type of heating load (hot water or steam).
  - This logic replicates the current REopt webtool behavior which was implemented based on CHP industry experts, effectively syncing the webtool and the REopt.jl/API behavior.
@@ -33,6 +33,7 @@ For `CHP` and `SteamTurbine`, the `prime_mover` and/or `size_class` is chosen (i
 `ExistingBoiler.production_type_by_chp_prime_mover` because that is no longer consistent with the logic added above.
  - The logic from 1. is such that `ExistingBoiler.production_type` determines the `CHP.prime_mover` if not specified, not the other way around.
  - If `ExistingBoiler.production_type` is not input, `hot_water` is used as the default.
+
 ## v0.20.1
 ### Added
 - `CoolingLoad` time series and annual summary data to results
