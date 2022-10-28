@@ -329,6 +329,13 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
         end
     end
 
+    if !isnothing(size_class) && !isnothing(prime_mover) # Option 3
+        n_classes = length(prime_mover_defaults_all[prime_mover]["installed_cost_per_kw"])
+        if size_class < 1 || size_class >= n_classes
+            @error "The size class input is outside the valid range of 1-$n_classes for prime_mover $prime_mover"
+        end
+    end
+
     # Calculate heuristic CHP size based on average thermal load, using the default size class efficiency data
     if !isnothing(avg_boiler_fuel_load_mmbtu_per_hour)
         if isnothing(prime_mover)
