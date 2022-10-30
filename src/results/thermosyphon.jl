@@ -35,7 +35,7 @@ function add_thermosyphon_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict
     r["electric_consumption_series_kw"] = round.(value.(m[:ThermosyphonElectricConsumption]),digits=4)
     r["annual_electric_consumption_kwh"] = round(value(sum(m[:ThermosyphonElectricConsumption])/p.s.settings.time_steps_per_hour), digits=6)
     r["COP_series_mmbtu_per_kwh"] = round.(p.s.thermosyphon.coefficient_of_performance_series_mmbtu_per_kwh, digits=4)
-    r["average_COP_mmbtu_per_kwh"] = r["annual_active_cooling_mmbtu"] .* 1000000 ./ r["annual_electric_consumption_kwh"]
+    r["average_COP_mmbtu_per_kwh"] = r["annual_active_cooling_mmbtu"] / r["annual_electric_consumption_kwh"]
 
     d["Thermosyphon"] = r
     nothing
