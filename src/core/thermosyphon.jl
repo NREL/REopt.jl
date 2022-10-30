@@ -72,6 +72,7 @@ struct Thermosyphon <: AbstractTech
         invalid_args = String[]
         if !isempty(ambient_temp_degF) && length(ambient_temp_degF) != 8760
             push!(invalid_args, "if ambient_temp_degF is provided it's length must be 8760, got length of $(length(ambient_temp_degF))")
+        end
         if !(0 <= effective_conductance_btu_per_degF)
             push!(invalid_args, "effective_conductance_btu_per_degF must satisfy 0 <= effective_conductance_btu_per_degF, got $(effective_conductance_btu_per_degF)")
         end
