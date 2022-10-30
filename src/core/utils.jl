@@ -166,7 +166,8 @@ function dictkeys_tosymbols(d::Dict)
             "wholesale_rate", "blended_doe_reference_percents",
             "coincident_peak_load_charge_per_kw", "fuel_cost_per_mmbtu",
             "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
-            "outage_probabilities"
+            "outage_probabilities",
+            "macrs_five_year", "macrs_seven_year"
             ] && !isnothing(v)
             try
                 v = convert(Array{Real, 1}, v)
