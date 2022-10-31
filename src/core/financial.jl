@@ -46,8 +46,8 @@ function Financial(;
     analysis_years::Int = 25,
     value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00,
     microgrid_upgrade_cost_pct::Real = off_grid_flag ? 0.0 : 0.3,
-    macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
-    macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
+    macrs_five_year::Array{<:Real,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
+    macrs_seven_year::Array{<:Real,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
     offgrid_other_capital_costs::Real = 0.0, # only applicable when off_grid_flag is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
     offgrid_other_annual_costs::Real = 0.0 # only applicable when off_grid_flag is true. Considered tax deductible for owner. Costs are per year. 
 )
@@ -76,8 +76,8 @@ struct Financial
     analysis_years::Int
     value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real
     microgrid_upgrade_cost_pct::Real
-    macrs_five_year::Array{Float64,1}
-    macrs_seven_year::Array{Float64,1}
+    macrs_five_year::Array{<:Real,1}
+    macrs_seven_year::Array{<:Real,1}
     offgrid_other_capital_costs::Real
     offgrid_other_annual_costs::Real
 
@@ -96,8 +96,8 @@ struct Financial
         analysis_years::Int = 25,
         value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00,
         microgrid_upgrade_cost_pct::Real = off_grid_flag ? 0.0 : 0.3,
-        macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
-        macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
+        macrs_five_year::Array{<:Real,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
+        macrs_seven_year::Array{<:Real,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
         offgrid_other_capital_costs::Real = 0.0, # only applicable when off_grid_flag is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
         offgrid_other_annual_costs::Real = 0.0 # only applicable when off_grid_flag is true. Considered tax deductible for owner.
     )
