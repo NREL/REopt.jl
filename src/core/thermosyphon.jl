@@ -140,7 +140,6 @@ struct Thermosyphon <: AbstractTech
             time_steps_passively_cooling = findall(<=(passive_to_active_cutoff_temp_degF), ambient_temp_degF)
         else
             min_annual_active_cooling_mmbtu = 0
-            min_monthly_active_cooling_mmbtu = 0
             coefficient_of_performance_series_mmbtu_per_kwh = zeros(length(ambient_temp_degF))
             active_cooling_rate_mmbtu_per_hour = 0
             time_steps_can_actively_cool = Real[]
@@ -149,7 +148,7 @@ struct Thermosyphon <: AbstractTech
 
         new(
             min_annual_active_cooling_mmbtu,
-            min_monthly_active_cooling_mmbtu,
+            0,
             coefficient_of_performance_series_mmbtu_per_kwh,
             active_cooling_rate_mmbtu_per_hour,
             time_steps_can_actively_cool,
