@@ -161,16 +161,22 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             end
     
         elseif !isempty(doe_reference_name)
+            if isempty(city)
+                city = find_ashrae_zone_city(latitude, longitude)
+            end
             # NOTE: must use year that starts on Sunday with DOE reference doe_ref_profiles
             if year != 2017
                 @debug "Changing load profile year to 2017 because DOE reference profiles start on a Sunday."
             end
             year = 2017
-            loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, year, annual_kwh, monthly_totals_kwh)
+            loads_kw = BuiltInElectricLoad(city, doe_reference_name, year, annual_kwh, monthly_totals_kwh)
 
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
-            loads_kw = blend_and_scale_doe_profiles(BuiltInElectricLoad, latitude, longitude, year, 
+            if isempty(city)
+                city = find_ashrae_zone_city(latitude, longitude)
+            end
+            loads_kw = blend_and_scale_doe_profiles(BuiltInElectricLoad, year, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_kwh, monthly_totals_kwh)
         else
@@ -205,8 +211,6 @@ end
 function BuiltInElectricLoad(
     city::String,
     buildingtype::String,
-    latitude::Real,
-    longitude::Real,
     year::Int,
     annual_kwh::Union{Real, Nothing}=nothing,
     monthly_totals_kwh::Vector{<:Real}=Real[],
@@ -501,10 +505,6 @@ function BuiltInElectricLoad(
     )
     if !(buildingtype in default_buildings)
         error("buildingtype $(buildingtype) not in $(default_buildings).")
-    end
-
-    if isempty(city)
-        city = find_ashrae_zone_city(latitude, longitude)
     end
 
     if isnothing(annual_kwh)

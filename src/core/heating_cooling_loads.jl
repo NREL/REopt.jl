@@ -85,19 +85,27 @@ struct DomesticHotWaterLoad
             end
 
         elseif !isempty(doe_reference_name)
+            if isempty(city)
+                city = find_ashrae_zone_city(latitude, longitude)
+            end
+
             if length(addressable_load_fraction) > 1
                 if !isempty(monthly_mmbtu) && length(addressable_load_fraction) != 12
                     error("`addressable_load_fraction`` must be a scalar or an array of length 12 if `monthly_mmbtu` is input")
                 end
             end
             
-            loads_kw = BuiltInDomesticHotWaterLoad(city, doe_reference_name, latitude, longitude, 2017, addressable_load_fraction, annual_mmbtu, monthly_mmbtu)
+            loads_kw = BuiltInDomesticHotWaterLoad(city, doe_reference_name, 2017, addressable_load_fraction, annual_mmbtu, monthly_mmbtu)
             if length(blended_doe_reference_names) > 0
                 @warn "DomesticHotWaterLoad doe_reference_name was provided, so blended_doe_reference_names will be ignored."
             end
-        elseif length(blended_doe_reference_names) > 0 && 
+
+        elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
-            loads_kw = blend_and_scale_doe_profiles(BuiltInDomesticHotWaterLoad, latitude, longitude, 2017, 
+            if isempty(city)
+                city = find_ashrae_zone_city(latitude, longitude)
+            end
+            loads_kw = blend_and_scale_doe_profiles(BuiltInDomesticHotWaterLoad, 2017, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_mmbtu, monthly_mmbtu, addressable_load_fraction)
         else
@@ -182,13 +190,21 @@ struct SpaceHeatingLoad
             end
 
         elseif !isempty(doe_reference_name)
-            loads_kw = BuiltInSpaceHeatingLoad(city, doe_reference_name, latitude, longitude, 2017, addressable_load_fraction, annual_mmbtu, monthly_mmbtu)
+            if isempty(city)
+                city = find_ashrae_zone_city(latitude, longitude)
+            end
+
+            loads_kw = BuiltInSpaceHeatingLoad(city, doe_reference_name, 2017, addressable_load_fraction, annual_mmbtu, monthly_mmbtu)
             if length(blended_doe_reference_names) > 0
                 @warn "SpaceHeatingLoad doe_reference_name was provided, so blended_doe_reference_names will be ignored."
             end
-        elseif length(blended_doe_reference_names) > 0 && 
+
+        elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
-            loads_kw = blend_and_scale_doe_profiles(BuiltInSpaceHeatingLoad, latitude, longitude, 2017, 
+            if isempty(city)
+                city = find_ashrae_zone_city(latitude, longitude)
+            end
+            loads_kw = blend_and_scale_doe_profiles(BuiltInSpaceHeatingLoad, 2017, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_mmbtu, monthly_mmbtu, addressable_load_fraction)
         else
@@ -327,20 +343,27 @@ struct CoolingLoad
             loads_kw = annual_fraction_of_electric_load * site_electric_load_profile
         
         elseif !isempty(doe_reference_name)
+            if isempty(city)
+                city = find_ashrae_zone_city(latitude, longitude)
+            end
             if isnothing(annual_tonhour) && isempty(monthly_tonhour)
                 loads_kw = get_default_fraction_of_total_electric(city, doe_reference_name, 
-                                            latitude, longitude, 2017) .* site_electric_load_profile
+                                2017) .* site_electric_load_profile
             else
-                loads_kw = BuiltInCoolingLoad(city, doe_reference_name, latitude, longitude, 2017, 
+                loads_kw = BuiltInCoolingLoad(city, doe_reference_name, 2017, 
                                           annual_tonhour, monthly_tonhour, existing_chiller_cop)
             end
         
         elseif length(blended_doe_reference_names) > 1 && 
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
+            if isempty(city)
+                city = find_ashrae_zone_city(latitude, longitude)
+            end
+            length(blended_doe_reference_names) == length(blended_doe_reference_percents)
             if isnothing(annual_tonhour) && isempty(monthly_tonhour)
                 loads_kw = zeros(Int(8760/time_steps_per_hour))
                 for (i, building) in enumerate(blended_doe_reference_names)
-                    default_fraction = get_default_fraction_of_total_electric(city, building, latitude, longitude, 2017)
+                    default_fraction = get_default_fraction_of_total_electric(city, building, 2017)
                     modified_fraction = default_fraction * blended_doe_reference_percents[i]
                     if length(site_electric_load_profile) > 8784
                         modified_fraction = repeat(modified_fraction, inner=time_steps_per_hour / (length(site_electric_load_profile)/8760))
@@ -349,7 +372,7 @@ struct CoolingLoad
                     loads_kw += site_electric_load_profile .* modified_fraction
                 end
             else            
-                loads_kw = blend_and_scale_doe_profiles(BuiltInCoolingLoad, latitude, longitude, 2017, 
+                loads_kw = blend_and_scale_doe_profiles(BuiltInCoolingLoad, 2017, 
                                                         blended_doe_reference_names, 
                                                         blended_doe_reference_percents, city, 
                                                         annual_tonhour, monthly_tonhour)
@@ -395,10 +418,11 @@ struct CoolingLoad
     end
 end
 
-function get_default_fraction_of_total_electric(city, doe_reference_name, latitude, longitude, year)
-    crb_total_elec_loads_kw = BuiltInElectricLoad(city, doe_reference_name, latitude, longitude, year)
 
-    crb_cooling_elec_loads_kw = BuiltInCoolingLoad(city, doe_reference_name, latitude, longitude, year, nothing, Real[], nothing)
+function get_default_fraction_of_total_electric(city, doe_reference_name, year)
+    crb_total_elec_loads_kw = BuiltInElectricLoad(city, doe_reference_name, year)
+
+    crb_cooling_elec_loads_kw = BuiltInCoolingLoad(city, doe_reference_name, year, nothing, Real[], nothing)
     
     default_fraction_of_total_electric_profile = crb_cooling_elec_loads_kw ./
                                                     max.(crb_total_elec_loads_kw, repeat([1.0E-6], length(crb_total_elec_loads_kw)))
@@ -409,8 +433,6 @@ end
 function BuiltInDomesticHotWaterLoad(
     city::String,
     buildingtype::String,
-    latitude::Real,
-    longitude::Real,
     year::Int,
     addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}},
     annual_mmbtu::Union{Real, Nothing}=nothing,
@@ -722,9 +744,6 @@ function BuiltInDomesticHotWaterLoad(
             "FlatLoad" => 830.07826
         )
     )
-    if isempty(city)
-        city = find_ashrae_zone_city(latitude, longitude)
-    end
     if !(buildingtype in default_buildings)
         error("buildingtype $(buildingtype) not in $(default_buildings).")
     end
@@ -748,8 +767,6 @@ end
 function BuiltInSpaceHeatingLoad(
     city::String,
     buildingtype::String,
-    latitude::Real,
-    longitude::Real,
     year::Int,
     addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}},    
     annual_mmbtu::Union{Real, Nothing}=nothing,
@@ -1061,9 +1078,6 @@ function BuiltInSpaceHeatingLoad(
             "FlatLoad" => 7851.508208
         )
     )
-    if isempty(city)
-        city = find_ashrae_zone_city(latitude, longitude)
-    end
     if !(buildingtype in default_buildings)
         error("buildingtype $(buildingtype) not in $(default_buildings).")
     end
@@ -1087,8 +1101,6 @@ end
 function BuiltInCoolingLoad(
     city::String,
     buildingtype::String,
-    latitude::Float64,
-    longitude::Float64,
     year::Int,
     annual_tonhour::Union{Real, Nothing}=nothing,
     monthly_tonhour::Vector{<:Real}=Real[],
@@ -1400,9 +1412,6 @@ function BuiltInCoolingLoad(
             "MediumOffice" => 337147
         )
     )
-    if isempty(city)
-        city = find_ashrae_zone_city(latitude, longitude)
-    end
     if !(buildingtype in default_buildings)
         error("buildingtype $(buildingtype) not in $(default_buildings).")
     end

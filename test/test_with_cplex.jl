@@ -125,7 +125,7 @@ end
         v0 = 1.00,
         v_uplim = 1.05,
         v_lolim = 0.95,
-        Ntimesteps = 8760
+        Ntime_steps = 8760
     );
     build_reopt!(m, ps)
     LinDistFlow.build_ldf!(m, ldf_inputs, ps)

@@ -102,7 +102,7 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
         end
 
         if round(load_kw, digits=5) > 0  # failed to meet load in this time step
-            return i / n_steps_per_hour
+            return Int(floor(i / n_steps_per_hour))
         end
     end
 

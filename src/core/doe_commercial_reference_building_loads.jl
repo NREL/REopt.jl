@@ -184,8 +184,6 @@ end
 """
     blend_and_scale_doe_profiles(
         constructor,
-        latitude::Real,
-        longitude::Real,
         year::Int,
         blended_doe_reference_names::Array{String, 1},
         blended_doe_reference_percents::Array{<:Real,1},
@@ -203,8 +201,6 @@ Given `blended_doe_reference_names` and `blended_doe_reference_percents` use the
 """
 function blend_and_scale_doe_profiles(
     constructor,
-    latitude::Real,
-    longitude::Real,
     year::Int,
     blended_doe_reference_names::Array{String, 1},
     blended_doe_reference_percents::Array{<:Real,1},
@@ -225,11 +221,11 @@ function blend_and_scale_doe_profiles(
     profiles = Array[]  # collect the built in profiles
     if constructor in [BuiltInSpaceHeatingLoad, BuiltInDomesticHotWaterLoad]
         for name in blended_doe_reference_names
-            push!(profiles, constructor(city, name, latitude, longitude, year, addressable_load_fraction, annual_energy, monthly_energies))
+            push!(profiles, constructor(city, name, year, addressable_load_fraction, annual_energy, monthly_energies))
         end
     else
         for name in blended_doe_reference_names
-            push!(profiles, constructor(city, name, latitude, longitude, year, annual_energy, monthly_energies))
+            push!(profiles, constructor(city, name, year, annual_energy, monthly_energies))
         end
     end
     if isnothing(annual_energy) # then annual_energy should be the sum of all the profiles' annual kwhs

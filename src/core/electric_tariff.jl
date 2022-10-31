@@ -161,7 +161,12 @@ function ElectricTariff(;
         tou_demand_rates = Float64[]
         tou_demand_ratchet_time_steps = []
         energy_rates = tou_energy_rates_per_kwh
-        monthly_demand_rates = convert(Array{Float64}, monthly_demand_rates)
+
+        if !isnothing(blended_annual_demand_rate)
+            monthly_demand_rates = repeat(Real[blended_annual_demand_rate], 12)
+        else
+            monthly_demand_rates = convert(Array{Float64}, monthly_demand_rates)
+        end
 
         fixed_monthly_charge = 0.0
         annual_min_charge = 0.0

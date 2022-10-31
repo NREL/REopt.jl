@@ -249,66 +249,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     existing_chiller = nothing
 
     if haskey(d, "FlexibleHVAC")
-        # TODO how to handle Matrix from JSON (to Dict) ?
-        if flex_hvac_from_json
-            flexible_hvac = FlexibleHVAC(d["FlexibleHVAC"])
-        else
-            flexible_hvac = FlexibleHVAC(; dictkeys_tosymbols(d["FlexibleHVAC"])...)
-        end
-
-        if sum(flexible_hvac.bau_hvac.existing_boiler_kw_thermal) ≈ 0.0 && 
-            sum(flexible_hvac.bau_hvac.existing_chiller_kw_thermal) ≈ 0.0
-            @warn "The FlexibleHVAC inputs indicate that no heating nor cooling is required. Not creating FlexibleHVAC model."
-            flexible_hvac = nothing
-        else
-            # ExistingChiller and/or ExistingBoiler are added based on BAU_HVAC energy required to keep temperature within bounds
-            if sum(flexible_hvac.bau_hvac.existing_boiler_kw_thermal) > 0
-                boiler_inputs = Dict{Symbol, Any}()
-                boiler_inputs[:max_heat_demand_kw] = maximum(flexible_hvac.bau_hvac.existing_boiler_kw_thermal)
-                boiler_inputs[:time_steps_per_hour] = settings.time_steps_per_hour
-                if haskey(d, "ExistingBoiler")
-                    boiler_inputs = merge(boiler_inputs, dictkeys_tosymbols(d["ExistingBoiler"]))
-                end
-                existing_boiler = ExistingBoiler(; boiler_inputs...)
-
-                if haskey(d, "Boiler")
-                    boiler = Boiler(; dictkeys_tosymbols(d["Boiler"])...)
-                end
-                # TODO increase max_thermal_factor_on_peak_load to allow more heating flexibility?
-            elseif haskey(d, "Boiler")
-                @warn("Not creating Boiler because there is no heating load.") 
-            end
-
-            if sum(flexible_hvac.bau_hvac.existing_chiller_kw_thermal) > 0
-                chiller_inputs = Dict{Symbol, Any}()
-                chiller_inputs[:loads_kw_thermal] = flexible_hvac.bau_hvac.existing_chiller_kw_thermal                                 
-                if haskey(d, "ExistingChiller")
-                    if !haskey(d["ExistingChiller"], "cop")
-                        d["ExistingChiller"]["cop"] = get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_on_peak_load=1.25, 
-                                                                                        loads_kw=nothing, 
-                                                                                        loads_kw_thermal=chiller_inputs[:loads_kw_thermal])
-                    end 
-                    chiller_inputs = merge(chiller_inputs, dictkeys_tosymbols(d["ExistingChiller"]))
-                else
-                    chiller_inputs[:cop] = get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_on_peak_load=1.25, 
-                                                                                loads_kw=nothing, 
-                                                                                loads_kw_thermal=chiller_inputs[:loads_kw_thermal])
-                end              
-                existing_chiller = ExistingChiller(; chiller_inputs...)
-            end
-
-            if haskey(d, "SpaceHeatingLoad")
-                @warn "Not using SpaceHeatingLoad because FlexibleHVAC was provided."
-            end
-
-            if haskey(d, "DomesticHotWaterLoad")
-                @warn "Not using DomesticHotWaterLoad because FlexibleHVAC was provided."
-            end
-
-            if haskey(d, "CoolingLoad")
-                @warn "Not using CoolingLoad because FlexibleHVAC was provided."
-            end
-        end
+        flexible_hvac, existing_boiler, existing_chiller = 
+            make_flex_hvac(d, flex_hvac_from_json, settings, electric_load)
     end
 
     if max_heat_demand_kw > 0 && !haskey(d, "FlexibleHVAC")  # create ExistingBoiler
@@ -371,12 +313,12 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     
         # Check if cooling electric load is greater than total electric load in any hour, and throw error if true with the violating time time_steps
         cooling_elec = cooling_load.loads_kw_thermal / cooling_load.existing_chiller_cop
-        cooling_elec_too_high_timesteps = findall(cooling_elec .> electric_load.loads_kw)
-        if length(cooling_elec_too_high_timesteps) > 0
-            cooling_elec_too_high_kw = cooling_elec[cooling_elec_too_high_timesteps]
-            total_elec_when_cooling_elec_too_high = electric_load.loads_kw[cooling_elec_too_high_timesteps]
+        cooling_elec_too_high_time_steps = findall(cooling_elec .> electric_load.loads_kw)
+        if length(cooling_elec_too_high_time_steps) > 0
+            cooling_elec_too_high_kw = cooling_elec[cooling_elec_too_high_time_steps]
+            total_elec_when_cooling_elec_too_high = electric_load.loads_kw[cooling_elec_too_high_time_steps]
             error("Cooling electric consumption cannot be more than the total electric load at any time step. At time steps 
-                $cooling_elec_too_high_timesteps the cooling electric consumption is $cooling_elec_too_high_kw (kW) and
+                $cooling_elec_too_high_time_steps the cooling electric consumption is $cooling_elec_too_high_kw (kW) and
                 the total electric load is $total_elec_when_cooling_elec_too_high (kW). Note you may consider adjusting 
                 cooling load input versus the total electric load if you provided inputs in units of cooling tons, or 
                 check the electric chiller COP input value.")
@@ -585,3 +527,77 @@ function add_doe_reference_names_from_elec_to_thermal_loads(elec::Dict, thermal:
     end
 end
 
+
+function make_flex_hvac(d::Dict, flex_hvac_from_json::Bool, settings::Settings, electric_load::ElectricLoad)
+    flexible_hvac = nothing
+    existing_boiler = nothing
+    existing_chiller = nothing
+    if haskey(d["FlexibleHVAC"], "doe_reference_name")
+        flexible_hvac = FlexibleHVAC(
+            d["FlexibleHVAC"]["doe_reference_name"],
+            get(d["FlexibleHVAC"], "city", electric_load.city),
+            d["FlexibleHVAC"]["installed_cost"],
+            get(d["FlexibleHVAC"], "temperature_upper_bound_degC_heating", nothing),
+            get(d["FlexibleHVAC"], "temperature_lower_bound_degC_heating", nothing),
+            get(d["FlexibleHVAC"], "temperature_upper_bound_degC_cooling", nothing),
+            get(d["FlexibleHVAC"], "temperature_lower_bound_degC_cooling", nothing),
+        )
+    elseif flex_hvac_from_json  # then have to convert vector of vectors to matrix
+        flexible_hvac = FlexibleHVAC(d["FlexibleHVAC"])
+    else
+        flexible_hvac = FlexibleHVAC(; dictkeys_tosymbols(d["FlexibleHVAC"])...)
+    end
+
+    if sum(flexible_hvac.bau_hvac.existing_boiler_kw_thermal) ≈ 0.0 && 
+        sum(flexible_hvac.bau_hvac.existing_chiller_kw_thermal) ≈ 0.0
+        @warn "The FlexibleHVAC inputs indicate that no heating nor cooling is required. Not creating FlexibleHVAC model."
+    else
+        # ExistingChiller and/or ExistingBoiler are added based on BAU_HVAC energy required to keep temperature within bounds
+        if sum(flexible_hvac.bau_hvac.existing_boiler_kw_thermal) > 0
+            boiler_inputs = Dict{Symbol, Any}()
+            boiler_inputs[:max_heat_demand_kw] = maximum(flexible_hvac.bau_hvac.existing_boiler_kw_thermal)
+            boiler_inputs[:time_steps_per_hour] = settings.time_steps_per_hour
+            if haskey(d, "ExistingBoiler")
+                boiler_inputs = merge(boiler_inputs, dictkeys_tosymbols(d["ExistingBoiler"]))
+            end
+            existing_boiler = ExistingBoiler(; boiler_inputs...)
+            # TODO automatically add CHP or other heating techs?
+            # TODO increase max_thermal_factor_on_peak_load to allow more heating flexibility?
+        end
+
+        if sum(flexible_hvac.bau_hvac.existing_chiller_kw_thermal) > 0
+            chiller_inputs = Dict{Symbol, Any}()
+            chiller_inputs[:loads_kw_thermal] = flexible_hvac.bau_hvac.existing_chiller_kw_thermal                                 
+            if haskey(d, "ExistingChiller")
+                if !haskey(d["ExistingChiller"], "cop")
+                    d["ExistingChiller"]["cop"] = get_existing_chiller_default_cop(; 
+                        existing_chiller_max_thermal_factor_on_peak_load=1.25, 
+                        loads_kw=nothing, 
+                        loads_kw_thermal=chiller_inputs[:loads_kw_thermal]
+                    )
+                end 
+                chiller_inputs = merge(chiller_inputs, dictkeys_tosymbols(d["ExistingChiller"]))
+            else
+                chiller_inputs[:cop] = get_existing_chiller_default_cop(; 
+                    existing_chiller_max_thermal_factor_on_peak_load=1.25, 
+                    loads_kw=nothing, 
+                    loads_kw_thermal=chiller_inputs[:loads_kw_thermal]
+                )
+            end              
+            existing_chiller = ExistingChiller(; chiller_inputs...)
+        end
+
+        if haskey(d, "SpaceHeatingLoad")
+            @warn "Not using SpaceHeatingLoad because FlexibleHVAC was provided."
+        end
+
+        if haskey(d, "DomesticHotWaterLoad")
+            @warn "Not using DomesticHotWaterLoad because FlexibleHVAC was provided."
+        end
+
+        if haskey(d, "CoolingLoad")
+            @warn "Not using CoolingLoad because FlexibleHVAC was provided."
+        end
+    end
+    return flexible_hvac, existing_boiler, existing_chiller
+end
