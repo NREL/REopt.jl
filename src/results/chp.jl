@@ -29,21 +29,23 @@
 # *********************************************************************************
 """
 `CHP` results keys:
-- `size_kw`  # Power capacity size of the CHP system [kW]
-- `size_supplemental_firing_kw`  # Power capacity of CHP supplementary firing system [kW]
-- `year_one_fuel_used_mmbtu`  # Fuel consumed in year one [MMBtu]
-- `year_one_electric_energy_produced_kwh`  # Electric energy produced in year one [kWh]
-- `year_one_thermal_energy_produced_mmbtu`  # Thermal energy produced in year one [MMBtu]
-- `year_one_electric_production_series_kw`  # Electric power production time-series array [kW]
-- `year_one_to_grid_series_kw`  # Electric power exported time-series array [kW]
-- `year_one_to_battery_series_kw`  # Electric power to charge the battery storage time-series array [kW]
-- `year_one_to_load_series_kw`  # Electric power to serve the electric load time-series array [kW]
-- `year_one_thermal_to_tes_series_mmbtu_per_hour`  # Thermal power to TES time-series array [MMBtu/hr]
-- `year_one_thermal_to_waste_series_mmbtu_per_hour`  # Thermal power wasted/unused/vented time-series array [MMBtu/hr]
-- `year_one_thermal_to_load_series_mmbtu_per_hour`  # Thermal power to serve the heating load time-series array [MMBtu/hr]
-- `year_one_chp_fuel_cost_before_tax`  # Fuel cost from fuel consumed by the CHP system [\$]
-- `lifecycle_chp_fuel_cost_after_tax`  # Fuel cost from fuel consumed by the CHP system, after tax [\$]
-- `year_one_chp_standby_cost_before_tax`  # CHP standby charges in year one [\$] 
+- `size_kw` Power capacity size of the CHP system [kW]
+- `size_supplemental_firing_kw` Power capacity of CHP supplementary firing system [kW]
+- `year_one_fuel_used_mmbtu` Fuel consumed in year one [MMBtu]
+- `year_one_electric_energy_produced_kwh` Electric energy produced in year one [kWh]
+- `year_one_thermal_energy_produced_mmbtu` Thermal energy produced in year one [MMBtu]
+- `year_one_electric_production_series_kw` Electric power production time-series array [kW]
+- `year_one_to_grid_series_kw` Electric power exported time-series array [kW]
+- `year_one_to_battery_series_kw` Electric power to charge the battery storage time-series array [kW]
+- `year_one_to_load_series_kw` Electric power to serve the electric load time-series array [kW]
+- `year_one_thermal_to_tes_series_mmbtu_per_hour` Thermal power to TES time-series array [MMBtu/hr]
+- `year_one_thermal_to_waste_series_mmbtu_per_hour` Thermal power wasted/unused/vented time-series array [MMBtu/hr]
+- `year_one_thermal_to_load_series_mmbtu_per_hour` Thermal power to serve the heating load time-series array [MMBtu/hr]
+- `year_one_thermal_to_steamturbine_series_mmbtu_per_hour` Thermal (steam) power to steam turbine time-series array [MMBtu/hr]
+- `year_one_chp_fuel_cost_before_tax` Cost of fuel consumed by the CHP system in year one [\$]
+- `lifecycle_chp_fuel_cost_after_tax` Present value of cost of fuel consumed by the CHP system, after tax [\$]
+- `year_one_chp_standby_cost_before_tax` CHP standby charges in year one [\$] 
+- `lifecycle_chp_standby_cost_after_tax` Present value of all CHP standby charges, after tax.
 """
 function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	# Adds the `CHP` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
