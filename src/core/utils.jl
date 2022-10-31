@@ -97,7 +97,7 @@ function effective_cost(;
     discount_rate::Real, 
     tax_rate::Real, 
     itc::Real,
-    macrs_schedule::Array{Float64,1}, 
+    macrs_schedule::Array{<:Real,1}, 
     macrs_bonus_pct::Real, 
     macrs_itc_reduction::Real,
     rebate_per_kw::Real=0.0,
