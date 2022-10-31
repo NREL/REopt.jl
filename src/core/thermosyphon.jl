@@ -82,7 +82,7 @@ struct Thermosyphon <: AbstractTech
         if !(0 <= structure_heat_to_ground_mmbtu_per_year)
             push!(invalid_args, "structure_heat_to_ground_mmbtu_per_year must satisfy 0 <= structure_heat_to_ground_mmbtu_per_year, got $(structure_heat_to_ground_mmbtu_per_year)")
         end
-        if COP_curve_points_COP_kw_per_kw <: Real
+        if typeof(COP_curve_points_COP_kw_per_kw) <: Real
             COP_curve_points_COP_kw_per_kw = [COP_curve_points_COP_kw_per_kw]
             if isempty(COP_curve_points_ambient_temp_degF)
                 COP_curve_points_ambient_temp_degF = Real[0] #does't matter what value is in here because with only one point the COP curve is a flat line
