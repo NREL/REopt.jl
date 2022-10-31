@@ -145,10 +145,11 @@ struct Thermosyphon <: AbstractTech
             time_steps_can_actively_cool = Real[]
             time_steps_passively_cooling = Real[] #or all time steps?
         end
+        min_monthly_active_cooling_mmbtu = [0,0,0,0,0,0,0,0,0,0,0,0]
 
         new(
             min_annual_active_cooling_mmbtu,
-            0,
+            min_monthly_active_cooling_mmbtu,
             coefficient_of_performance_series_mmbtu_per_kwh,
             active_cooling_rate_mmbtu_per_hour,
             time_steps_can_actively_cool,
