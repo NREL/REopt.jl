@@ -551,9 +551,16 @@ end
     end
 
     @testset "Lookback Demand Charges" begin
+        data = JSON.parsefile("./scenarios/lookback_rate.json")
+        # urdb_label used https://apps.openei.org/IURDB/rate/view/539f6a23ec4f024411ec8bf9#2__Demand
+        # has a demand charge lookback of 35% for all months with 2 different demand charges based on which month
+        data["ElectricLoad"]["loads_kw"] = ones(8760)
+        data["ElectricLoad"]["loads_kw"][8] = 100.0
         m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         results = run_reopt(m, "./scenarios/lookback_rate.json")
-        @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ 721.99
+        # Expected result is 100 kW demand for January, 35% of that for all other months and 
+        # with 5x other $10.5/kW cold months and 6x $11.5/kW warm months
+        @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ 100 * (10.5 + 0.35*10.5*5 + 0.35*11.5*6)
     end
 
     @testset "Blended tariff" begin
