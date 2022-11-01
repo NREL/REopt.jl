@@ -32,5 +32,9 @@
     "Storage": {
         "max_kwh": 0,
         "max_kw": 0
-    }    
+    },
+    "CHP": {
+        "prime_mover": "recip_engine",
+        "fuel_cost_per_mmbtu": 10
+    }
 }
