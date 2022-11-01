@@ -33,7 +33,7 @@ heat_transfer_mediums = ["steam", "hot_water"]
 """
 `AbsorptionChiller` is an optional REopt input with the following keys and default values:
 ```julia
-    heat_transfer_medium::String = ""
+    heat_transfer_medium::Union{String, Nothing} = nothing
     chp_prime_mover::String = ""
 
     #Required if neither "heat_transfer_medium" nor "chp_prime_mover" included in inputs:
@@ -62,19 +62,18 @@ heat_transfer_mediums = ["steam", "hot_water"]
 """
 Base.@kwdef mutable struct AbsorptionChiller <: AbstractThermalTech
     heat_transfer_medium::Union{String, Nothing} = nothing
-    installed_cost_per_ton::Real
+    installed_cost_per_ton::Union{String, Nothing} = nothing
     min_ton::Real = 0.0
     max_ton::Real = 0.0
-    cop_thermal::Real
+    cop_thermal::Union{String, Nothing} = nothing
     cop_electric::Real = 14.1
-    installed_cost_us_dollars_per_ton::Real
-    om_cost_us_dollars_per_ton::Real
+    om_cost_per_ton::Union{String, Nothing} = nothing
     macrs_option_years::Real = 0
     macrs_bonus_fraction::Real = 0
-    min_kw::Real
-    max_kw::Real
-    installed_cost_per_kw::Real
-    om_cost_per_kw::Real
+    min_kw::Real = NaN
+    max_kw::Real = NaN
+    installed_cost_per_kw::Real = NaN
+    om_cost_per_kw::Real = NaN
 end
 
 function AbsorptionChiller(d::dict;
