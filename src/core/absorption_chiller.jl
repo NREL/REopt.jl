@@ -108,20 +108,35 @@ custom_chp_inputs, i.e.
 - "thermal_effic_half_load"
 - "unavailability_periods"
 """
-function get_absorption_chiller_defaults(max_tons::Real, heat_transfer_medium::String, chp_prime_mover::String)
+function get_absorption_chiller_defaults(;
+    max_ton::Real = 0.0, 
+    heat_transfer_medium::Union{String, Nothing} = nothing, 
+    chp_prime_mover::Union{String, Nothing} = nothing,
+    existing_boiler::Union{ExistingBoiler, Nothing}=nothing
+    )
     acds = JSON.parsefile(joinpath(dirname(@__FILE__), "..", "..", "data", "absorption_chiller", "absorption_chiller_default_data.json"))
     htf_defaults = Dict{String, Any}()
 
-    if heat_transfer_medium == ""
-        if chp_prime_mover == "combustion_engine"
-            heat_transfer_medium = "steam"
-        else  #if chp_prime mover is blank or is anything but "combustion engine" then assume hot water
-            heat_transfer_medium = "hot_water"
+    if isnothing(heat_transfer_medium)
+        if !isnothing(chp_prime_mover)
+            if chp_prime_mover == "combustion_engine"
+                heat_transfer_medium = "steam"
+            else  #if chp_prime mover is blank or is anything but "combustion engine" then assume hot water
+                heat_transfer_medium = "hot_water"
+            end
+        elseif !isnothing(existing_boiler)
+            heat_transfer_medium = existing_boiler.production_type
+        else
+            @error "Invalid argument for `hot_water_or_steam`; must be `hot_water` or `steam`"
+        end
+    else
+        if !(hot_water_or_steam in heat_transfer_mediums)
+            @error "Invalid argument for `hot_water_or_steam`; must be `hot_water` or `steam`"
         end
     end
 
     size_class, frac_higher = get_absorption_chiller_max_size_class(
-        max_tons, htf_defaults[heat_transfer_medium]["tech_sizes_for_cost_curve"]
+        d["max_ton"], htf_defaults[heat_transfer_medium]["tech_sizes_for_cost_curve"]
         )
 
     for key in keys(acds[heat_transfer_medium])
@@ -134,11 +149,11 @@ function get_absorption_chiller_defaults(max_tons::Real, heat_transfer_medium::S
     end
     acds = nothing  #TODO this is copied from the analogous CHP function.  Do we need?
 
-    for (k,v) in htf_defaults
-        if typeof(v) <: AbstractVector{Any} && k != "unavailability_periods"
-            htf_defaults[k] = convert(Vector{Float64}, v)  # JSON.parsefile makes things Vector{Any}
-        end
-    end
+    response = Dict([
+        "hot_water_or_steam": hot_water_or_steam,
+        "default_inputs": htf_defaults
+    ])
+
     return htf_defaults
 end
 
