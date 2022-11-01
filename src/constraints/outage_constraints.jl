@@ -49,7 +49,6 @@ function add_min_hours_crit_ld_met_constraint(m,p)
 end
 
 function add_outage_cost_constraints(m,p)
-    # TODO: fixed cost, account for outage_is_major_event
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps],
         m[:dvMaxOutageCost][s] >= p.pwf_e * sum(p.value_of_lost_load_per_kwh[tz+ts] * m[:dvUnservedLoad][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s])
     )
@@ -59,12 +58,12 @@ function add_outage_cost_constraints(m,p)
     )
 
     @constraint(m, [t in p.techs.elec],
-        m[:binMGTechUsed][t] => {m[:dvMGTechUpgradeCost][t] >= p.s.financial.microgrid_upgrade_cost_pct * p.third_party_factor *
+        m[:binMGTechUsed][t] => {m[:dvMGTechUpgradeCost][t] >= p.s.financial.microgrid_upgrade_cost_fraction * p.third_party_factor *
 		                         p.cap_cost_slope[t] * m[:dvMGsize][t]}
     )
 
     @constraint(m,
-        m[:binMGStorageUsed] => {m[:dvMGStorageUpgradeCost] >= p.s.financial.microgrid_upgrade_cost_pct * m[:TotalStorageCapCosts]}
+        m[:binMGStorageUsed] => {m[:dvMGStorageUpgradeCost] >= p.s.financial.microgrid_upgrade_cost_fraction * m[:TotalStorageCapCosts]}
     )
     
     @expression(m, mgTotalTechUpgradeCost,
@@ -151,13 +150,13 @@ end
 
 function add_binMGGenIsOnInTS_constraints(m,p)
     # The following 2 constraints define binMGGenIsOnInTS to be the binary corollary to dvMGRatedProd for generator,
-    # i.e. binMGGenIsOnInTS = 1 for dvMGRatedProd > min_turn_down_pct * dvMGsize, and binMGGenIsOnInTS = 0 for dvMGRatedProd = 0
+    # i.e. binMGGenIsOnInTS = 1 for dvMGRatedProd > min_turn_down_fraction * dvMGsize, and binMGGenIsOnInTS = 0 for dvMGRatedProd = 0
     @constraint(m, [t in p.techs.gen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
         !m[:binMGGenIsOnInTS][s, tz, ts] => { m[:dvMGRatedProduction][t, s, tz, ts] <= 0 }
     )
     @constraint(m, [t in p.techs.gen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
         m[:binMGGenIsOnInTS][s, tz, ts] => { 
-            m[:dvMGRatedProduction][t, s, tz, ts] >= p.s.generator.min_turn_down_pct * m[:dvMGsize][t]
+            m[:dvMGRatedProduction][t, s, tz, ts] >= p.s.generator.min_turn_down_fraction * m[:dvMGsize][t]
         }
     )
     @constraint(m, [t in p.techs.gen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
@@ -183,7 +182,7 @@ function add_MG_storage_dispatch_constraints(m,p)
 
     # Minimum state of charge
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-        m[:dvMGStoredEnergy][s, tz, ts] >=  p.s.storage.attr["ElectricStorage"].soc_min_pct * m[:dvStorageEnergy]["ElectricStorage"]
+        m[:dvMGStoredEnergy][s, tz, ts] >=  p.s.storage.attr["ElectricStorage"].soc_min_fraction * m[:dvStorageEnergy]["ElectricStorage"]
     )
     
     # Dispatch to MG electrical storage is no greater than inverter capacity
