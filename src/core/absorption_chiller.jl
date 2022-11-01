@@ -86,10 +86,26 @@ function AbsorptionChiller(d::dict;
         return nothing
     end
 
-    #check for required inputs (chp_prime_mover or )
     absorp_chl = AbsorptionChiller(; dictkeys_tosymbols(d)...)
 
-    htf_defaults = get_absorption_chiller_defaults(max_ton, heat_transfer_medium, chp_prime_mover)
+    custom_ac_inputs = Dict{Symbol, Any}(
+        :heat_transfer_medium => absorp_chl.heat_transfer_medium,
+        :installed_cost_per_ton => absorp_chl.installed_cost_per_ton,
+        :cop_thermal => absorp_chl.cop_thermal,
+        :om_cost_per_ton => absorp_chl.om_cost_per_ton
+    )
+
+    htf_defaults_response = get_absorption_chiller_defaults(;max_ton=absorp_chl.max_ton,
+        heat_transfer_medium=absorp_chl.heat_transfer_medium, 
+        chp_prime_mover=chp_prime_mover, 
+        existing_boiler
+    )
+    defaults = htf_defaults_response["default_inputs"]
+    for (k, v) in custom_chp_inputs
+        if isnothing(v)
+            setproperty!(chp, k, defaults[string(k)])
+        end
+    end
 
     absorp_chl.min_kw = absorp_chl.min_ton * KWH_THERMAL_PER_TONHOUR
     absorp_chl.max_kw = absorp_chl.max_ton * KWH_THERMAL_PER_TONHOUR
@@ -123,6 +139,7 @@ function get_absorption_chiller_defaults(;
     acds = JSON.parsefile(joinpath(dirname(@__FILE__), "..", "..", "data", "absorption_chiller", "absorption_chiller_default_data.json"))
     htf_defaults = Dict{String, Any}()
 
+    #check required inputs
     if isnothing(heat_transfer_medium)
         if !isnothing(chp_prime_mover)
             if chp_prime_mover == "combustion_engine"
