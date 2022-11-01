@@ -77,8 +77,14 @@ Base.@kwdef mutable struct AbsorptionChiller <: AbstractThermalTech
 end
 
 function AbsorptionChiller(d::dict;
-    chp_prime_mover::Union{String, Nothing} = nothing
+        chp_prime_mover::Union{String, Nothing} = nothing,
+        existing_boiler::Union{ExistingBoiler, Nothing}=nothing
     )
+    #check for 0.0 max size, return nothing if so
+    if d["max_ton"] = 0.0
+        @warn "0.0 kW provided as capacity for AbsoprtionChiller, this technology will be excluded."
+        return nothing
+    end
 
     #check for required inputs (chp_prime_mover or )
     absorp_chl = AbsorptionChiller(; dictkeys_tosymbols(d)...)
