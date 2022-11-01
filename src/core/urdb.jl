@@ -575,9 +575,9 @@ URDB lookback fields:
     - Number of months for which lookbackPercent applies. If not 0, lookbackMonths values should all be 0.
 """
 function parse_urdb_lookback_charges(d::Dict)
-    lookback_months = get(d, "lookbackMonths", Int[])
-    lookback_percent = Float64(get(d, "lookbackPercent", 0.0))
-    lookback_range = Int64(get(d, "lookbackRange", 0.0))
+    lookback_months = get(d, "lookbackmonths", Int[])
+    lookback_percent = Float64(get(d, "lookbackpercent", 0.0))
+    lookback_range = Int64(get(d, "lookbackrange", 0.0))
 
     reopt_lookback_months = Int[]
     if lookback_range == 0 && length(lookback_months) == 12
