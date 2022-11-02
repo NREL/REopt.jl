@@ -36,13 +36,13 @@
 - `mg_storage_upgrade_cost` The cost to include the storage system in the microgrid.
 - `storage_upgraded` Boolean that is true if it is cost optimal to include the storage system in the microgrid.
 - `discharge_from_storage_series` Array of storage power discharged in every outage modeled.
-- `PVmg_kw` Optimal microgrid PV capacity. Note that the name `PV` can change based on user provided `PV.name`.
+- `PV_mg_kw` Optimal microgrid PV capacity. Note that the name `PV` can change based on user provided `PV.name`.
 - `PV_upgraded` Boolean that is true if it is cost optimal to include the PV system in the microgrid.
 - `mg_PV_upgrade_cost` The cost to include the PV system in the microgrid.
 - `mgPV_to_storage_series` Array of PV power sent to the battery in every outage modeled.
 - `mgPV_curtailed_series` Array of PV curtailed in every outage modeled.
 - `mgPV_to_load_series` Array of PV power used to meet load in every outage modeled.
-- `Generatormg_kw` Optimal microgrid Generator capacity. Note that the name `Generator` can change based on user provided `Generator.name`.
+- `Generator_mg_kw` Optimal microgrid Generator capacity. Note that the name `Generator` can change based on user provided `Generator.name`.
 - `Generator_upgraded` Boolean that is true if it is cost optimal to include the Generator in the microgrid.
 - `mg_Generator_upgrade_cost` The cost to include the Generator system in the microgrid.
 - `mgGenerator_to_storage_series` Array of Generator power sent to the battery in every outage modeled.
@@ -105,9 +105,9 @@ function add_outage_results(m, p, d::Dict)
 			# need the following logic b/c can have non-zero mg capacity when not using the capacity
 			# due to the constraint for setting the mg capacities equal to the grid connected capacities
 			if Bool(r[t * "_upgraded"])
-				r[string(t, "mg_kw")] = round(value(m[:dvMGsize][t]), digits=4)
+				r[string(t, "_mg_kw")] = round(value(m[:dvMGsize][t]), digits=4)
 			else
-				r[string(t, "mg_kw")] = 0
+				r[string(t, "_mg_kw")] = 0
 			end
 			r[string("mg_", t, "_upgrade_cost")] = round(value(m[:dvMGTechUpgradeCost][t]), digits=2)
 			r["microgrid_upgrade_capital_cost"] += r[string("mg_", t, "_upgrade_cost")]
@@ -149,7 +149,7 @@ function add_outage_results(m, p, d::Dict)
 			if Bool(r[t * "_upgraded"])
 				r[string(t, "_mg_kw")] = round(value(m[:dvMGsize][t]), digits=4)
 			else
-				r[string(t, "mg_kw")] = 0
+				r[string(t, "_mg_kw")] = 0
 			end
 
 			r[string("mg_", t, "_fuel_used_per_outage_series")] = value.(m[:dvMGFuelUsed][t, :, :]).data
