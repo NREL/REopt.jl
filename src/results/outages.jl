@@ -48,7 +48,7 @@
 - `mgGenerator_to_storage_series` Array of Generator power sent to the battery in every outage modeled.
 - `mgGenerator_curtailed_series` Array of Generator curtailed in every outage modeled.
 - `mgGenerator_to_load_series` Array of Generator power used to meet load in every outage modeled.
-- `mg_Generator_fuel_used` Array of Generator fuel used in every outage modeled.
+- `mg_Generator_fuel_used_per_outage_series` Array of Generator fuel used in every outage modeled.
 - `microgrid_upgrade_capital_cost` Total capital cost of including technologies in the microgrid
 
 !!! warn
