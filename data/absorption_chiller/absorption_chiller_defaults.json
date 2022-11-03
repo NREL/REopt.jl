@@ -39,7 +39,7 @@
             20.0,
             18.0
         ],
-        "cop_thermal": 1.43
+        "cop_thermal": 0.74
     },
     "steam":{
         "installed_cost_per_ton": [
