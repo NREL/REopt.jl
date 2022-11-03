@@ -29,6 +29,7 @@
 # *********************************************************************************
 
 heat_transfer_mediums = ["steam", "hot_water"]
+chp_prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cell"]
 
 """
 `AbsorptionChiller` is an optional REopt input with the following keys and default values:
@@ -76,17 +77,18 @@ Base.@kwdef mutable struct AbsorptionChiller <: AbstractThermalTech
     om_cost_per_kw::Real = NaN
 end
 
-function AbsorptionChiller(d::dict;
+function AbsorptionChiller(d::Dict;
         chp_prime_mover::Union{String, Nothing} = nothing,
-        existing_boiler::Union{ExistingBoiler, Nothing}=nothing
+        existing_boiler::Union{ExistingBoiler, Nothing} = nothing
     )
+
+    absorp_chl = AbsorptionChiller(; dictkeys_tosymbols(d)...)
+
     #check for 0.0 max size, return nothing if so
-    if d["max_ton"] = 0.0
+    if absorp_chl.max_ton == 0.0
         @warn "0.0 kW provided as capacity for AbsoprtionChiller, this technology will be excluded."
         return nothing
     end
-
-    absorp_chl = AbsorptionChiller(; dictkeys_tosymbols(d)...)
 
     custom_ac_inputs = Dict{Symbol, Any}(
         :heat_transfer_medium => absorp_chl.heat_transfer_medium,
