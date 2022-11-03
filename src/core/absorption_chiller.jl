@@ -107,20 +107,24 @@ function AbsorptionChiller(d::Dict;
     htf_defaults_response = get_absorption_chiller_defaults(;max_ton=absorp_chl.max_ton,
         hot_water_or_steam=absorp_chl.hot_water_or_steam, 
         chp_prime_mover=chp_prime_mover, 
-        existing_boiler
+        existing_boiler=existing_boiler
     )
+    
+    #convert defaults for any properties not enetered
     defaults = htf_defaults_response["default_inputs"]
-    for (k, v) in custom_chp_inputs
+    for (k, v) in custom_ac_inputs
         if isnothing(v)
-            setproperty!(chp, k, defaults[string(k)])
+            setproperty!(absorp_chl, k, defaults[string(k)])
         end
     end
 
+    # generate derived inputs for use in JuMP model
     absorp_chl.min_kw = absorp_chl.min_ton * KWH_THERMAL_PER_TONHOUR
     absorp_chl.max_kw = absorp_chl.max_ton * KWH_THERMAL_PER_TONHOUR
     absorp_chl.installed_cost_per_kw = absorp_chl.installed_cost_per_ton / KWH_THERMAL_PER_TONHOUR
     absorp_chl.om_cost_per_kw = absorp_chl.om_cost_per_ton / KWH_THERMAL_PER_TONHOUR
 
+    return absorp_chl
 end
 
 
@@ -175,6 +179,8 @@ function get_absorption_chiller_defaults(;
             @error "Invalid argument for `hot_water_or_steam`; must be `hot_water` or `steam`"
         end
     end
+
+    htf_defaults["hot_water_or_steam"] = hot_water_or_steam
 
     size_class, frac_higher = get_absorption_chiller_max_size_class(
         max_ton, acds[hot_water_or_steam]["tech_sizes_for_cost_curve"]
