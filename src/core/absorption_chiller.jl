@@ -38,18 +38,18 @@ chp_prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel
     chp_prime_mover::String = ""
 
     #Required if neither "heat_transfer_medium" nor "chp_prime_mover" included in inputs:
-    installed_cost_per_ton::Real
-    om_cost_per_ton::Real
+    installed_cost_per_ton::Float64
+    om_cost_per_ton::Float64
 
 
     #Optional
-    min_ton::Real = 0.0,
-    max_ton::Real = 0.0,
-    cop_thermal::Real,
-    cop_electric::Real = 14.1,
-    om_cost_per_ton::Real,
-    macrs_option_years::Real = 0,
-    macrs_bonus_fraction::Real = 0
+    min_ton::Float64 = 0.0,
+    max_ton::Float64 = 0.0,
+    cop_thermal::Float64,
+    cop_electric::Float64 = 14.1,
+    om_cost_per_ton::Float64,
+    macrs_option_years::Float64 = 0,
+    macrs_bonus_fraction::Float64 = 0
 ```
 
 !!! note "Required inputs"
@@ -63,18 +63,18 @@ chp_prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel
 """
 Base.@kwdef mutable struct AbsorptionChiller <: AbstractThermalTech
     heat_transfer_medium::Union{String, Nothing} = nothing
-    installed_cost_per_ton::Union{Real, Nothing} = nothing
-    min_ton::Real = 0.0
-    max_ton::Real = 0.0
-    cop_thermal::Union{Real, Nothing} = nothing
-    cop_electric::Real = 14.1
-    om_cost_per_ton::Union{Real, Nothing} = nothing
-    macrs_option_years::Real = 0
-    macrs_bonus_fraction::Real = 0
-    min_kw::Real = NaN
-    max_kw::Real = NaN
-    installed_cost_per_kw::Real = NaN
-    om_cost_per_kw::Real = NaN
+    installed_cost_per_ton::Union{Float64, Nothing} = nothing
+    min_ton::Float64 = 0.0
+    max_ton::Float64 = 0.0
+    cop_thermal::Union{Float64, Nothing} = nothing
+    cop_electric::Float64 = 14.1
+    om_cost_per_ton::Union{Float64, Nothing} = nothing
+    macrs_option_years::Float64 = 0
+    macrs_bonus_fraction::Float64 = 0
+    min_kw::Float64 = NaN
+    max_kw::Float64 = NaN
+    installed_cost_per_kw::Float64 = NaN
+    om_cost_per_kw::Float64 = NaN
 end
 
 function AbsorptionChiller(d::Dict;
@@ -133,7 +133,7 @@ custom_chp_inputs, i.e.
 - "unavailability_periods"
 """
 function get_absorption_chiller_defaults(;
-    max_ton::Real = 0.0, 
+    max_ton::Float64 = 0.0, 
     heat_transfer_medium::Union{String, Nothing} = nothing, 
     chp_prime_mover::Union{String, Nothing} = nothing,
     existing_boiler::Union{ExistingBoiler, Nothing}=nothing
@@ -174,29 +174,29 @@ function get_absorption_chiller_defaults(;
     end
     acds = nothing  #TODO this is copied from the analogous CHP function.  Do we need?
 
-    response = Dict([
-        "hot_water_or_steam": hot_water_or_steam,
-        "default_inputs": htf_defaults
+    response = Dict{String, Any}([
+        ("hot_water_or_steam", heat_transfer_medium),
+        ("default_inputs", htf_defaults)
     ])
 
-    return htf_defaults
+    return response
 end
 
 """
-get_absorption_chiller_max_size_class(max_tons::Real,sizes_by_class::AbstractVector{Float64})
+get_absorption_chiller_max_size_class(max_tons::Float64,sizes_by_class::AbstractVector{Float64})
 
 determines the adjacent size classes of absorption chiller from which to obtain defaults and the fraction of the larger
 class to allocate to the default value.
 
 Inputs: 
-max_tons::Real -- maximum size of absorption chiller
+max_tons::Float64 -- maximum size of absorption chiller
 sizes_by_class::AbstractVector{Float64} -- vector of max sizes by class for the absorption chiller defaults
 
 Returns: 
 size_class::Int -- class size index for smaller reference class
 ratio::Float -- fraction allocated to larger reference class (i.e., 0=use size_class only; 1=use size_class+1 only)
 """
-function get_absorption_chiller_max_size_class(max_tons::Real,sizes_by_class::AbstractVector{Float64})
+function get_absorption_chiller_max_size_class(max_tons::Float64,sizes_by_class::AbstractVector{Float64})
     num_classes = length(sizes_by_class)
     if max_tons <= sizes_by_class[1]
         return 1, 0.0
