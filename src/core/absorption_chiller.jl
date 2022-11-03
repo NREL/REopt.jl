@@ -63,12 +63,12 @@ chp_prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel
 """
 Base.@kwdef mutable struct AbsorptionChiller <: AbstractThermalTech
     heat_transfer_medium::Union{String, Nothing} = nothing
-    installed_cost_per_ton::Union{String, Nothing} = nothing
+    installed_cost_per_ton::Union{Real, Nothing} = nothing
     min_ton::Real = 0.0
     max_ton::Real = 0.0
-    cop_thermal::Union{String, Nothing} = nothing
+    cop_thermal::Union{Real, Nothing} = nothing
     cop_electric::Real = 14.1
-    om_cost_per_ton::Union{String, Nothing} = nothing
+    om_cost_per_ton::Union{Real, Nothing} = nothing
     macrs_option_years::Real = 0
     macrs_bonus_fraction::Real = 0
     min_kw::Real = NaN
@@ -138,7 +138,7 @@ function get_absorption_chiller_defaults(;
     chp_prime_mover::Union{String, Nothing} = nothing,
     existing_boiler::Union{ExistingBoiler, Nothing}=nothing
     )
-    acds = JSON.parsefile(joinpath(dirname(@__FILE__), "..", "..", "data", "absorption_chiller", "absorption_chiller_default_data.json"))
+    acds = JSON.parsefile(joinpath(dirname(@__FILE__), "..", "..", "data", "absorption_chiller", "absorption_chiller_defaults.json"))
     htf_defaults = Dict{String, Any}()
 
     #check required inputs
@@ -161,7 +161,7 @@ function get_absorption_chiller_defaults(;
     end
 
     size_class, frac_higher = get_absorption_chiller_max_size_class(
-        d["max_ton"], htf_defaults[heat_transfer_medium]["tech_sizes_for_cost_curve"]
+        max_ton, acds[heat_transfer_medium]["tech_sizes_for_cost_curve"]
         )
 
     for key in keys(acds[heat_transfer_medium])
