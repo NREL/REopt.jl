@@ -82,6 +82,13 @@ function AbsorptionChiller(d::Dict;
         existing_boiler::Union{ExistingBoiler, Nothing} = nothing
     )
 
+    # convert Vector{Any} from JSON dictionary to Vector{Float64}
+    for (k, v) in d
+        if typeof(v) <: AbstractVector{Any}
+            d[k] = convert(Vector{Float64}, v)  # JSON.parsefile makes things Vector{Any}
+        end
+    end
+
     absorp_chl = AbsorptionChiller(; dictkeys_tosymbols(d)...)
 
     #check for 0.0 max size, return nothing if so
@@ -140,6 +147,15 @@ function get_absorption_chiller_defaults(;
     )
     acds = JSON.parsefile(joinpath(dirname(@__FILE__), "..", "..", "data", "absorption_chiller", "absorption_chiller_defaults.json"))
     htf_defaults = Dict{String, Any}()
+
+    # convert Vector{Any} to Vector{Float64}
+    for htf in heat_transfer_mediums
+        for (k, v) in acds[htf]
+            if typeof(v) <: AbstractVector{Any}
+                acds[htf][k] = convert(Vector{Float64}, v)  # JSON.parsefile makes things Vector{Any}
+            end
+        end
+    end
 
     #check required inputs
     if isnothing(hot_water_or_steam)
