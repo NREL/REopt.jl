@@ -208,7 +208,7 @@ struct ElectricUtility
             end
         end
         if length(outage_durations) != length(outage_probabilities)
-            error("ElectricUtility inputs outage_durations and outage_probabilities must be the same length")
+            throw(@error("ElectricUtility inputs outage_durations and outage_probabilities must be the same length"))
         end
 
         new(
