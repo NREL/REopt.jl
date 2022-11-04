@@ -565,7 +565,7 @@ function survival_gen_only(;
     #Get starting generator vector
     starting_gens = starting_probabilities(num_generators, generator_operational_availability, generator_failure_to_start) #initialize gen battery prob matrix
 
-    for Threads.@threads t = 1:t_max
+    Threads.@threads for t = 1:t_max
         
         survival_probability_matrix[t, :] = gen_only_survival_single_start_time(
             t, starting_gens, net_critical_loads_kw, generator_production,
@@ -953,11 +953,16 @@ function backup_reliability_inputs(;r::Dict)::Dict
     invalid_args = String[]
     r2 = dictkeys_tosymbols(r)
 
-    generator_inputs = [:generator_operational_availability, :generator_failure_to_start, :generator_failure_to_run, :num_generators, :generator_size_kw]
+    generator_inputs = [:generator_operational_availability, :generator_failure_to_start, :generator_failure_to_run, :num_generators, :generator_size_kw, :fuel_availability]
     for g in generator_inputs
         if haskey(r2, g) && isa(r2[g], Array) && length(r2[g]) == 1
         r2[g] = r2[g][1]
         end
+    end
+
+    #If multiple generators and no fuel input, then remove fuel constraint
+    if haskey(r2, :num_generators) && (length(r2[:num_generators]) > 1) && !haskey(r2, :fuel_availability)
+        r2[:fuel_availability] = [Inf for i = 1:length(r2[:num_generators])]
     end
 
     zero_array = zeros(length(r2[:critical_loads_kw]))
