@@ -1440,7 +1440,7 @@ end
     end
 end
 
-# # equivalent REopt API Post for test 2:
+# # equivalent REopt API v1/v2 Post for test 2:
 #   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
 # {"Scenario": {
 #     "Site": {
