@@ -631,11 +631,22 @@ end
     @test roof_east["average_annual_energy_produced_kwh"] ≈ 6482.37 atol=0.1
 end
 
-@testset "Thermal Energy Storage" begin
+@testset "Thermal Energy Storage + Absorption Chiller" begin
     model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG"=>0))
     data = JSON.parsefile("./scenarios/thermal_storage.json")
     s = Scenario(data)
     p = REoptInputs(s)
+
+    #test for absorption chiller defaults; should load the "hot_water" values for 1,000 ton max
+    @test p.s.absorp_chl.installed_cost_per_kw ≈ (1248.0 / REopt.KWH_THERMAL_PER_TONHOUR) atol=0.01
+    @test p.s.absorp_chl.om_cost_per_kw ≈ (18.0 / REopt.KWH_THERMAL_PER_TONHOUR) atol=0.01
+    @test p.s.absorp_chl.cop_thermal ≈ 0.74 atol=0.001
+
+    #load test values
+    p.s.absorp_chl.installed_cost_per_kw = 500.0
+    p.s.absorp_chl.om_cost_per_kw = 0.5
+    p.s.absorp_chl.cop_thermal = 0.0
+
     #Make every other hour zero fuel and electric cost; storage should charge and discharge in each period
     for ts in p.time_steps
         #heating and cooling loads only
