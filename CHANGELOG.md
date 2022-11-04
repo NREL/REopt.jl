@@ -23,6 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop 2022-11-04
+### Added
+- `AbsorptionChiller` default values for costs and thermal coefficient of performance (which depend on maximum size and heat transfer medium
+
 ## v0.21.0
 ### Changed
 For `CHP` and `SteamTurbine`, the `prime_mover` and/or `size_class` is chosen (if not input) based on the average heating load and the type of heating load (hot water or steam).
