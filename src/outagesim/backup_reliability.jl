@@ -753,7 +753,8 @@ function survival_with_battery_single_start_time(
     t_max::Int,
     starting_battery_bins::Vector{Int},
     bin_size::Real,
-    marginal_survival::Bool)::Vector{Float64}
+    marginal_survival::Bool, 
+    time_steps_per_hour::Real)::Vector{Float64}
 
     
     gen_battery_prob_matrix_array = [zeros(M, N), zeros(M, N)]
@@ -791,7 +792,7 @@ function survival_with_battery_single_start_time(
         
 
         #Update generation battery probability matrix to account for battery shifting
-        shift_gen_battery_prob_matrix!(gen_battery_prob_matrix_array[gen_matrix_counter_end], battery_bin_shift(generator_production .- net_critical_loads_kw[h], bin_size, battery_size_kw, battery_charge_efficiency, battery_discharge_efficiency))
+        shift_gen_battery_prob_matrix!(gen_battery_prob_matrix_array[gen_matrix_counter_end], battery_bin_shift((generator_production .- net_critical_loads_kw[h]) / time_steps_per_hour, bin_size, battery_size_kw, battery_charge_efficiency, battery_discharge_efficiency))
     end
     return return_survival_chance_vector
 end
