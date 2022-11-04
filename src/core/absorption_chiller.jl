@@ -37,17 +37,17 @@ chp_prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel
     hot_water_or_steam::Union{String, Nothing} = nothing
     chp_prime_mover::String = ""
 
-    #Required if neither "hot_water_or_steam" nor "chp_prime_mover" included in inputs:
-    installed_cost_per_ton::Float64
-    om_cost_per_ton::Float64
+    #Required if neither "hot_water_or_steam" nor "chp_prime_mover" nor an ExistingBoiler included in inputs:
+    installed_cost_per_ton::Union{Float64, Nothing} = nothing
+    om_cost_per_ton::Union{Float64, Nothing} = nothing
 
 
     #Optional
     min_ton::Float64 = 0.0,
     max_ton::Float64 = 0.0,
-    cop_thermal::Float64,
+    cop_thermal::Union{Float64, Nothing} = nothing,
     cop_electric::Float64 = 14.1,
-    om_cost_per_ton::Float64,
+    om_cost_per_ton::Union{Float64, Nothing} = nothing,
     macrs_option_years::Float64 = 0,
     macrs_bonus_fraction::Float64 = 0
 ```
@@ -131,23 +131,30 @@ end
 """
 get_absorption_chiller_defaults(prime_mover::String, boiler_type::String, size_class::Int)
 
-return a Dict{String, Union{Float64, AbstractVector{Float64}}} by selecting the appropriate values from 
-data/chp/chp_default_data.json, which contains values based on prime_mover, boiler_type, and size_class for the 
-custom_chp_inputs, i.e.
-- "installed_cost_per_kw"
+return a Dict{String, Any} by selecting the appropriate values from 
+data/chp/absorption_chiller_defaults.json, which contains values based on heat transfer medium (hot_water_or_steam)
+such as:
+- "installed_cost_per_ton"
+- "om_cost_per_ton"
+- "cop_thermal"
 - "tech_sizes_for_cost_curve"
-- "om_cost_per_kwh"
-- "elec_effic_full_load"
-- "min_turn_down_pct",
-- "thermal_effic_full_load"
-- "thermal_effic_half_load"
-- "unavailability_periods"
+
+Unlike CHP, the AbsorptionChiller tech sizes inform a single rate for installed_cost_per_ton that uses max_ton as input;
+there is no piecewise linear cost curve for the AbsorptionChiller technology.
+
+Inputs: 
+max_ton::Float64 -- maximum size of the absorption chiller technology, in tons
+
+
+response keys and descriptions:
+"hot_water_or_steam" -- string indicator of heat transfer medium for absorption chiller
+"default_inputs" -- Dict{string, Float64} containing default values for absorption chiller technology (see above)
 """
 function get_absorption_chiller_defaults(;
     max_ton::Float64 = 0.0, 
     hot_water_or_steam::Union{String, Nothing} = nothing, 
     chp_prime_mover::Union{String, Nothing} = nothing,
-    existing_boiler::Union{ExistingBoiler, Nothing}=nothing
+    existing_boiler::Union{ExistingBoiler, Nothing} = nothing
     )
     acds = JSON.parsefile(joinpath(dirname(@__FILE__), "..", "..", "data", "absorption_chiller", "absorption_chiller_defaults.json"))
     htf_defaults = Dict{String, Any}()
