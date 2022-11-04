@@ -49,6 +49,7 @@
 - `mg_Generator_curtailed_series` Array of Generator curtailed in every outage modeled.
 - `mg_Generator_to_load_series` Array of Generator power used to meet load in every outage modeled.
 - `mg_Generator_fuel_used_per_outage` Array of Generator fuel used in every outage modeled.
+- `generator_fuel_used_per_outage` Array of fuel used in every outage modeled, summed over all Generators.
 - `microgrid_upgrade_capital_cost` Total capital cost of including technologies in the microgrid
 
 !!! warn
@@ -183,6 +184,7 @@ function add_outage_results(m, p, d::Dict)
 			)
 			r[string("mg_", t, "_to_load_series")] = round.(value.(GENtoLoad), digits=3)
 		end
+		r["generator_fuel_used_per_outage"] = sum(r[string("mg_", t, "_fuel_used_per_outage")] for t in p.techs.gen)
 	end
 	d["Outages"] = r
 end
