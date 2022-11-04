@@ -4,28 +4,38 @@ function simulated_load(d::Dict)
         longitude = get(d, "longitude", @error "longitude must be provided")
         load_type = get(d, "load_type", nothing)
 
-        if haskey(d, "doe_reference_name") && typeof(d["doe_reference_name"]) != Vector{String} 
-            doe_reference_name = [d["doe_reference_name"]]
-        elseif haskey(d, "doe_reference_name") && haskey(d, "percent_share_list")
+        # Check consistency between type/length of doe_reference_name and percent_share
+        doe_reference_name_input = get(d, "doe_reference_name", nothing)
+        percent_share_input = get(d, "percent_share", nothing)
+        if !isnothing(doe_reference_name_input) && !(typeof(doe_reference_name) <: Vector{})
+            doe_reference_name = [doe_reference_name_input]
+        elseif !isnothing(doe_reference_name_input) && !isnothing(percent_share_input)
+            doe_reference_name = doe_reference_name_input
+            if !(typeof(percent_share_input) <: Vector{})
+                percent_share_list = [percent_share_input]
+            else
+                percent_share_list = percent_share_input
+            end
             if length(percent_share_list) != length(doe_reference_name)
                 @error "The number of percent_share entries does not match that of the number of doe_reference_name entries"
             end
-        else
-            doe_reference_name = nothing
-            percent_share_list = nothing
         end
 
         # When wanting cooling profile based on building type(s) for cooling, need separate cooling building(s)
-        if haskey(d, "cooling_doe_ref_name") && typeof(d["cooling_doe_ref_name"]) != Vector{String} 
-            cooling_doe_ref_name = d["cooling_doe_ref_name"]
-            cooling_pct_share_list = [100.0]
-        elseif haskey(d, "cooling_doe_ref_name") && haskey(d, "cooling_pct_share_list")
+        cooling_doe_ref_name_input = get(d, "cooling_doe_ref_name", nothing)
+        cooling_pct_share_input = get(d, "cooling_pct_share", nothing)
+        if !isnothing(cooling_doe_ref_name) && !(typeof(cooling_doe_ref_name_input) <: Vector{})
+            cooling_doe_ref_name = cooling_doe_ref_name_input
+        elseif !isnothing(cooling_doe_ref_name) && !isnothing(cooling_pct_share_input)
+            cooling_doe_ref_name = cooling_doe_ref_name_input
+            if !(typeof(cooling_pct_share_input) <: Vector{})
+                cooling_pct_share_list = [percent_share_input]
+            else
+                cooling_pct_share_list = percent_share_input
+            end            
             if length(cooling_pct_share_list) != length(cooling_doe_ref_name)
                 @error "The number of cooling_pct_share entries does not match that of the number of cooling_doe_ref_name entries"
             end
-        else
-            cooling_doe_ref_name = nothing
-            cooling_pct_share_list = nothing
         end
 
         if isnothing(doe_reference_name) && !isnothing(cooling_doe_ref_name)
@@ -35,7 +45,7 @@ function simulated_load(d::Dict)
 
         if !isnothing(doe_reference_name)
             for drn in doe_reference_name
-                if drn not in default_buildings
+                if !(drn in default_buildings)
                     @error "Invalid doe_reference_name - $doe_reference_name. Select from the following: $default_buildings"
                 end
             end
@@ -75,23 +85,20 @@ function simulated_load(d::Dict)
             if isnothing(doe_reference_name)
                 @error "Please supply a doe_reference_name and optionally scaling parameters (annual_kwh or monthly_totals_kwh)."
             end
-            #Annual loads
-            if !("annual_kwh" in keys(d))
-                annual_kwh = nothing
-            end
-            #Monthly loads
-            if !isnothing(get(d, "monthly_totals_kwh", nothing))
+            # Annual loads (default is nothing)
+            annual_kwh = get(d, "annual_kwh", nothing)
+            # Monthly loads (default is empty list)
+            monthly_totals_kwh = get(d, "monthly_totals_kwh", [])
+            if !isempty(monthly_totals_kwh)
                 bad_index = []
                 for (i, kwh) in enumerate(monthly_totals_kwh)
                     if isnothing(kwh)
                         append!(bad_index, i)
                     end
                 end
-                if length(bad_index) > 0
+                if !isempty(bad_index)
                     @error "monthly_totals_kwh must contain a value for each month, and it is null for these months: $bad_index"
                 end
-            else
-                monthly_totals_kwh = []
             end
 
             # Build dependent inputs for electric load
@@ -163,34 +170,36 @@ function simulated_load(d::Dict)
             return response
 
         if load_type == "heating"
+            error_list = []
             for key in keys(d)
                 if occursin("_kw", key) || occursin("_ton", key)
-                    @error "Invalid key $key for load_type=heating"
+                    append!(error_list, key)
                 end
+            end
+            if !isempty(error_list)
+                @error "Invalid key(s) $error_list for load_type=heating"
             end
             if isnothing(doe_reference_name)
                 @error "Please supply a doe_reference_name and optional scaling parameters (annual_mmbtu or monthly_mmbtu)."
             end
-            #Annual loads
-            if !("annual_mmbtu" in keys(d))
-                annual_mmbtu = nothing
-            end
-            #Monthly loads
-            if !isnothing(get(d, "monthly_mmbtu", nothing))
+            # Annual loads (default is nothing)
+            annual_mmbtu = get(d, "annual_mmbtu", nothing)
+            # Monthly loads (default is empty list)
+            monthly_mmbtu = get(d, "monthly_mmbtu", [])
+            if !isempty(monthly_mmbtu)
                 bad_index = []
                 for (i, mmbtu) in enumerate(monthly_mmbtu)
                     if isnothing(mmbtu)
                         append!(bad_index, i)
                     end
                 end
-                if length(bad_index) > 0
+                if !isempty(bad_index)
                     @error "monthly_mmbtu must contain a value for each month, and it is null for these months: $bad_index"
                 end
-            else
-                monthly_mmbtu = []
             end
-            # Addressable heating load
-            if !isnothing(get(d, "addressable_load_fraction", nothing))
+            # Addressable heating load (default is 1.0)
+            addressable_load_fraction = get(d, "addressable_load_fraction", 1.0)
+            if addressable_load_fraction <: Vector{}
                 bad_index = []
                 for (i, frac) in enumerate(addressable_load_fraction)
                     if isnothing(frac)
@@ -200,28 +209,66 @@ function simulated_load(d::Dict)
                 if length(bad_index) > 0
                     @error "addressable_load_fraction must contain a value for each month, and it is null for these months: $bad_index"
                 end
-            else
-                addressable_load_fraction = 1.0
+            elseif addressable_load_fraction < 0.0 ||addressable_load_fraction > 1.0
+                @error "addressable_load_fraction must be between 0.0 and 1.0"
             end
 
-            kwargs_heating = Dict{Symbol, Any}
-            kwargs_heating[:addressable_load_fraction] = addressable_load_fraction
+            heating_load_kwargs = Dict{Symbol, Any}()
+            if length(doe_reference_name) > 1
+                heating_load_kwargs[:blended_doe_reference_names] = doe_reference_name
+                heating_load_kwargs[:blended_doe_reference_percents] = percent_share_list
+            else
+                heating_load_kwargs[:doe_reference_name] = doe_reference_name[1]
+            end
+            if addressable_load_fraction != 1.0
+                heating_load_kwargs[:addressable_load_fraction] = addressable_load_fraction
+            end
+
+            #TODO split up the single value for space + dhw annual_mmbtu or monthly_mmbtu based on default
+            default_space_heating_load = SpaceHeatingLoad(; heating_load_kwargs...,
+                                                            latitude=latitude, 
+                                                            longitude=longitude
+                                                        )
+            default_dhw_load = DomesticHotWaterLoad(; heating_load_kwargs...,
+                                                        latitude=latitude, 
+                                                        longitude=longitude
+                                                    )
+            space_heating_annual_mmbtu = nothing
+            dhw_annual_mmbtu = nothing
+            space_heating_monthly_mmbtu = []
+            dhw_monthly_mmbtu = []
+            if !isnothing(monthly_mmbtu)    
+                space_heating_monthly_energy, space_heating_monthly_fraction = get_monthly_energy_fractions(; power_profile=default_space_heating_load.loads_kw)
+                dhw_monthly_energy, dhw_monthly_fraction = get_monthly_energy_fractions(; power_profile=default_dhw_load.loads_kw)
+                space_heating_fraction_monthly = space_heating_monthly_energy ./ (space_heating_monthly_energy + dhw_monthly_energy)
+                space_heating_monthly_mmbtu = monthly_mmbtu .* space_heating_fraction_monthly
+                dhw_monthly_mmbtu = monthly_mmbtu .* (1 .- space_heating_monthly_mmbtu)
+            elseif !isempty(annual_mmbtu)
+                total_heating_annual_mmbtu = default_space_heating_load.annual_mmbtu + 
+                                                default_dhw_load.annual_mmbtu
+                space_heating_fraction = default_space_heating_load.annual_mmbtu / total_heating_annual_mmbtu
+                space_heating_annual_mmbtu = annual_mmbtu * space_heating_fraction
+                dhw_fraction = default_dhw_load.annual_mmbtu / total_heating_annual_mmbtu
+                dhw_annual_mmbtu = annual_mmbtu * dhw_fraction
+            end
+            
+
+            space_heating_load = SpaceHeatingLoad(; heating_load_kwargs...,
+                                                    latitude=latitude, 
+                                                    longitude=longitude,
+                                                    annual_mmbtu=space_heating_annual_mmbtu,
+                                                    monthly_mmbtu=space_heating_monthly_mmbtu
+                                                )
+
+            dhw_load = DomesticHotWaterLoad(; heating_load_kwargs...,
+                                                latitude=latitude, 
+                                                longitude=longitude,
+                                                annual_mmbtu=dhw_annual_mmbtu,
+                                                monthly_mmbtu=dhw_monthly_mmbtu
+                                            )                                              
 
             # TODO left off here
-
-            if "space_heating_fraction_of_heating_load" in request.GET.keys():
-                space_heating_fraction_of_heating_load = [float(request.GET.get("space_heating_fraction_of_heating_load"))]
-                kwargs_heating["space_heating_fraction_of_heating_load"] = space_heating_fraction_of_heating_load
-
-            b_space = LoadProfileBoilerFuel(load_type="SpaceHeating", dfm=None, latitude=latitude, longitude=longitude, doe_reference_name=doe_reference_name,
-                           annual_mmbtu=annual_mmbtu, monthly_mmbtu=monthly_mmbtu, time_steps_per_hour=1,
-                           percent_share=percent_share_list, **kwargs_heating)
-
-            b_dhw = LoadProfileBoilerFuel(load_type="DHW", dfm=None, latitude=latitude, longitude=longitude, doe_reference_name=doe_reference_name,
-                           annual_mmbtu=annual_mmbtu, monthly_mmbtu=monthly_mmbtu, time_steps_per_hour=1,
-                           percent_share=percent_share_list, **kwargs_heating)
-
-            lp = [b_space.load_list[i] + b_dhw.load_list[i] for i in range(len(b_space.load_list))]
+            load_heating = [b_space.load_list[i] + b_dhw.load_list[i] for i in range(len(b_space.load_list))]
 
             response = JsonResponse(
                 {"loads_mmbtu": [round(ld, 3) for ld in lp],
