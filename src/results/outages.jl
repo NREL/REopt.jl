@@ -39,15 +39,15 @@
 - `PV_mg_kw` Optimal microgrid PV capacity. Note that the name `PV` can change based on user provided `PV.name`.
 - `PV_upgraded` Boolean that is true if it is cost optimal to include the PV system in the microgrid.
 - `mg_PV_upgrade_cost` The cost to include the PV system in the microgrid.
-- `mgPV_to_storage_series` Array of PV power sent to the battery in every outage modeled.
-- `mgPV_curtailed_series` Array of PV curtailed in every outage modeled.
-- `mgPV_to_load_series` Array of PV power used to meet load in every outage modeled.
+- `mg_PV_to_storage_series` Array of PV power sent to the battery in every outage modeled.
+- `mg_PV_curtailed_series` Array of PV curtailed in every outage modeled.
+- `mg_PV_to_load_series` Array of PV power used to meet load in every outage modeled.
 - `Generator_mg_kw` Optimal microgrid Generator capacity. Note that the name `Generator` can change based on user provided `Generator.name`.
 - `Generator_upgraded` Boolean that is true if it is cost optimal to include the Generator in the microgrid.
 - `mg_Generator_upgrade_cost` The cost to include the Generator system in the microgrid.
-- `mgGenerator_to_storage_series` Array of Generator power sent to the battery in every outage modeled.
-- `mgGenerator_curtailed_series` Array of Generator curtailed in every outage modeled.
-- `mgGenerator_to_load_series` Array of Generator power used to meet load in every outage modeled.
+- `mg_Generator_to_storage_series` Array of Generator power sent to the battery in every outage modeled.
+- `mg_Generator_curtailed_series` Array of Generator curtailed in every outage modeled.
+- `mg_Generator_to_load_series` Array of Generator power used to meet load in every outage modeled.
 - `mg_Generator_fuel_used_per_outage_series` Array of Generator fuel used in every outage modeled.
 - `microgrid_upgrade_capital_cost` Total capital cost of including technologies in the microgrid
 
@@ -120,13 +120,13 @@ function add_outage_results(m, p, d::Dict)
 			else
 				PVtoBatt = []
 			end
-			r[string("mg", t, "_to_storage_series")] = round.(value.(PVtoBatt), digits=3)
+			r[string("mg_", t, "_to_storage_series")] = round.(value.(PVtoBatt), digits=3)
 
 			PVtoCUR = (m[:dvMGCurtail][t, s, tz, ts] for 
 				s in p.s.electric_utility.scenarios,
 				tz in p.s.electric_utility.outage_start_time_steps,
 				ts in p.s.electric_utility.outage_time_steps)
-			r[string("mg", t, "_curtailed_series")] = round.(value.(PVtoCUR), digits=3)
+			r[string("mg_", t, "_curtailed_series")] = round.(value.(PVtoCUR), digits=3)
 
 			PVtoLoad = (
 				m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts] 
@@ -137,7 +137,7 @@ function add_outage_results(m, p, d::Dict)
 					tz in p.s.electric_utility.outage_start_time_steps,
 					ts in p.s.electric_utility.outage_time_steps
 			)
-			r[string("mg", t, "_to_load_series")] = round.(value.(PVtoLoad), digits=3)
+			r[string("mg_", t, "_to_load_series")] = round.(value.(PVtoLoad), digits=3)
 		end
 	end
 
@@ -164,13 +164,13 @@ function add_outage_results(m, p, d::Dict)
 			else
 				GenToBatt = []
 			end
-			r[string("mg", t, "_to_storage_series")] = round.(value.(GenToBatt), digits=3)
+			r[string("mg_", t, "_to_storage_series")] = round.(value.(GenToBatt), digits=3)
 
 			GENtoCUR = (m[:dvMGCurtail][t, s, tz, ts] for 
 				s in p.s.electric_utility.scenarios,
 				tz in p.s.electric_utility.outage_start_time_steps,
 				ts in p.s.electric_utility.outage_time_steps)
-			r[string("mg", t, "_curtailed_series")] = round.(value.(GENtoCUR), digits=3)
+			r[string("mg_", t, "_curtailed_series")] = round.(value.(GENtoCUR), digits=3)
 
 			GENtoLoad = (
 				m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts] 
@@ -181,7 +181,7 @@ function add_outage_results(m, p, d::Dict)
 					tz in p.s.electric_utility.outage_start_time_steps,
 					ts in p.s.electric_utility.outage_time_steps
 			)
-			r[string("mg", t, "_to_load_series")] = round.(value.(GENtoLoad), digits=3)
+			r[string("mg_", t, "_to_load_series")] = round.(value.(GENtoLoad), digits=3)
 		end
 	end
 	d["Outages"] = r
