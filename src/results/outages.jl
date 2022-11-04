@@ -30,9 +30,9 @@
 """
 `Outages` results keys:
 - `expected_outage_cost` The expected outage cost over the random outages modeled.
-- `max_outage_cost_per_outage_duration_series` The maximum outage cost in every outage duration modeled.
+- `max_outage_cost_per_outage_duration` The maximum outage cost in every outage duration modeled.
 - `unserved_load_series` The amount of unserved load in each outage and each time step.
-- `unserved_load_per_outage_series` The total unserved load in each outage.
+- `unserved_load_per_outage` The total unserved load in each outage.
 - `mg_storage_upgrade_cost` The cost to include the storage system in the microgrid.
 - `storage_upgraded` Boolean that is true if it is cost optimal to include the storage system in the microgrid.
 - `discharge_from_storage_series` Array of storage power discharged in every outage modeled.
@@ -48,7 +48,7 @@
 - `mg_Generator_to_storage_series` Array of Generator power sent to the battery in every outage modeled.
 - `mg_Generator_curtailed_series` Array of Generator curtailed in every outage modeled.
 - `mg_Generator_to_load_series` Array of Generator power used to meet load in every outage modeled.
-- `mg_Generator_fuel_used_per_outage_series` Array of Generator fuel used in every outage modeled.
+- `mg_Generator_fuel_used_per_outage` Array of Generator fuel used in every outage modeled.
 - `microgrid_upgrade_capital_cost` Total capital cost of including technologies in the microgrid
 
 !!! warn
@@ -74,7 +74,7 @@ function add_outage_results(m, p, d::Dict)
 	# other results.
 	r = Dict{String, Any}()
 	r["expected_outage_cost"] = value(m[:ExpectedOutageCost])
-	r["max_outage_cost_per_outage_duration_series"] = value.(m[:dvMaxOutageCost]).data
+	r["max_outage_cost_per_outage_duration"] = value.(m[:dvMaxOutageCost]).data
 	r["unserved_load_series"] = value.(m[:dvUnservedLoad]).data
 	S = length(p.s.electric_utility.scenarios)
 	T = length(p.s.electric_utility.outage_start_time_steps)
@@ -89,7 +89,7 @@ function add_outage_results(m, p, d::Dict)
 		# need to sum over ts in 1:p.s.electric_utility.outage_durations[s] 
 		# instead of all ts b/c dvUnservedLoad has unused values in third dimension
 	end
-	r["unserved_load_per_outage_series"] = round.(unserved_load_per_outage, digits=2)
+	r["unserved_load_per_outage"] = round.(unserved_load_per_outage, digits=2)
 	r["mg_storage_upgrade_cost"] = value(m[:dvMGStorageUpgradeCost])
 	r["microgrid_upgrade_capital_cost"] = r["mg_storage_upgrade_cost"]
 	r["discharge_from_storage_series"] = value.(m[:dvMGDischargeFromStorage]).data
@@ -152,7 +152,7 @@ function add_outage_results(m, p, d::Dict)
 				r[string(t, "_mg_kw")] = 0
 			end
 
-			r[string("mg_", t, "_fuel_used_per_outage_series")] = value.(m[:dvMGFuelUsed][t, :, :]).data
+			r[string("mg_", t, "_fuel_used_per_outage")] = value.(m[:dvMGFuelUsed][t, :, :]).data
 			r[string("mg_", t, "_upgrade_cost")] = round(value(m[:dvMGTechUpgradeCost][t]), digits=2)
 			r["microgrid_upgrade_capital_cost"] += r[string("mg_", t, "_upgrade_cost")]
 
