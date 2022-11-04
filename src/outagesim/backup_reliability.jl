@@ -466,6 +466,41 @@ function shift_gen_battery_prob_matrix!(gen_battery_prob_matrix::Matrix, shift_v
 end
 
 """
+update_survival!(survival, maximum_generation, net_critical_loads_kw_at_time_h)::Matrix{Int}
+
+inline update of survival matrix with 0 in states where generation cannot meet load and 1 in states where it can.
+"""
+function update_survival!(survival, maximum_generation, net_critical_loads_kw_at_time_h)
+    @inbounds for i in eachindex(maximum_generation)
+        survival[i] = 1 * (maximum_generation[i] - net_critical_loads_kw_at_time_h >= 0)
+    end
+end
+
+"""
+survival_chance_mult(prob_matrix, survival)
+
+efficient implementation of sum(prob_matrix .* survival)
+"""
+function survival_chance_mult(prob_matrix, survival)::Real
+    s = 0
+    @inbounds for i in eachindex(prob_matrix)
+        s += prob_matrix[i] * survival[i]
+    end
+    return s
+end
+
+"""
+prob_matrix_update!(prob_matrix, survival)
+
+efficient implementation of prob_matrix = prob_matrix .* survival
+"""
+function prob_matrix_update!(prob_matrix, survival)
+    @inbounds for i in eachindex(prob_matrix)
+        prob_matrix[i] *= survival[i]
+    end
+end
+
+"""
     survival_gen_only(;critical_load::Vector, generator_operational_availability::Real, generator_failure_to_start::Real, generator_failure_to_run::Real, num_generators::Int,
                                 generator_size_kw::Real, max_outage_duration::Int, marginal_survival = true)::Matrix{Float64}
 
@@ -558,23 +593,27 @@ function gen_only_survival_single_start_time(
     marginal_survival::Bool)::Vector{Float64}
 
     survival_chances = zeros(max_outage_duration)
-    gen_probs = starting_gens
+    gen_prob_array = [copy(starting_gens), copy(starting_gens)]
+    survival = ones(1, length(generator_production))
 
     for d in 1:max_outage_duration
-        survival = ones(1, length(generator_production))
-        
         h = mod(t + d - 2, t_max) + 1 #determines index accounting for looping around year
-        net_gen = generator_production .- net_critical_loads_kw[h]
-        survival[net_gen .< 0] .= 0
+        update_survival!(survival, generator_production, net_critical_loads_kw[h])
 
-        gen_probs *= generator_markov_matrix #Update to account for generator failures
-        survival_chance = gen_probs .* survival #Elementwise, probability that i gens is available * probability of surviving if i gens is available
+        #This is a more memory efficient way of implementing gen_battery_prob_matrix *= generator_markov_matrix
+        gen_matrix_counter_start = ((d-1) % 2) + 1 
+        gen_matrix_counter_end = (d % 2) + 1 
+        mul!(gen_prob_array[gen_matrix_counter_end], gen_prob_array[gen_matrix_counter_start], generator_markov_matrix)
+
+        survival_chance = survival_chance_mult(gen_prob_array[gen_matrix_counter_end], survival)  #Elementwise, probability that i gens is available * probability of surviving if i gens is available
         
         if marginal_survival == false
-            gen_probs = survival_chance
+            prob_matrix_update!(gen_prob_array[gen_matrix_counter_end], survival) 
+            survival_chances[d] = sum(gen_prob_array[gen_matrix_counter_end])
+        else
+            survival_chances[d] = survival_chance_mult(gen_prob_array[gen_matrix_counter_end], survival)
         end
-        survival_chances[d] = sum(survival_chance)
-        #update total probability of survival for given outage start time and outage duration
+
     end
     return survival_chances
 end
@@ -687,40 +726,7 @@ function survival_with_battery(;
     return survival_probability_matrix
 end
 
-"""
-update_survival!(survival, maximum_generation, net_critical_loads_kw_at_time_h)::Matrix{Int}
 
-inline update of survival matrix with 0 in states where generation cannot meet load and 1 in states where it can.
-"""
-function update_survival!(survival, maximum_generation, net_critical_loads_kw_at_time_h)
-    @inbounds for i in eachindex(maximum_generation)
-        survival[i] = 1 * (maximum_generation[i] - net_critical_loads_kw_at_time_h >= 0)
-    end
-end
-
-"""
-survival_chance_mult(gen_battery_prob_matrix, survival)
-
-efficient implementation of sum(gen_battery_prob_matrix .* survival)
-"""
-function survival_chance_mult(gen_battery_prob_matrix, survival)
-    s = 0
-    @inbounds for i in eachindex(gen_battery_prob_matrix)
-        s += gen_battery_prob_matrix[i] * survival[i]
-    end
-    return s
-end
-
-"""
-battery_prob_matrix_update!(gen_battery_prob_matrix, survival)
-
-efficient implementation of gen_battery_prob_matrix = gen_battery_prob_matrix .* survival
-"""
-function battery_prob_matrix_update!(gen_battery_prob_matrix, survival)
-    @inbounds for i in eachindex(gen_battery_prob_matrix)
-        gen_battery_prob_matrix[i] *= survival[i]
-    end
-end
 """
 survival_with_battery_single_start_time(t::Int, net_critical_loads_kw::Vector, 
     generator_size_kw::Union{Real, Vector{<:Real}}, 
@@ -747,16 +753,16 @@ function survival_with_battery_single_start_time(
     t_max::Int,
     starting_battery_bins::Vector{Int},
     bin_size::Real,
-    marginal_survival::Bool,
-    time_steps_per_hour::Real)::Vector{Float64}
+    marginal_survival::Bool)::Vector{Float64}
 
+    
     gen_battery_prob_matrix_array = [zeros(M, N), zeros(M, N)]
-
     gen_battery_prob_matrix_array[1][starting_battery_bins[t], :] = starting_gens
     gen_battery_prob_matrix_array[2][starting_battery_bins[t], :] = starting_gens
-
+    survival_chance = zeros(M, N)
     return_survival_chance_vector = zeros(max_outage_duration)
     survival = ones(M, N)
+    
 
     for d in 1:max_outage_duration 
         h = mod(t + d - 2, t_max) + 1 #determines index accounting for looping around year
@@ -768,18 +774,24 @@ function survival_with_battery_single_start_time(
         gen_matrix_counter_end = (d % 2) + 1 
         mul!(gen_battery_prob_matrix_array[gen_matrix_counter_end], gen_battery_prob_matrix_array[gen_matrix_counter_start], generator_markov_matrix)
 
+        # @timeit to "survival chance" survival_chance = gen_battery_prob_matrix_array[gen_matrix_counter_end] = gen_battery_prob_matrix_array[gen_matrix_counter_end] .* survival
+        # if marginal_survival == false
+        #     @timeit to "survival chance" gen_battery_prob_matrix_array[gen_matrix_counter_end] = survival_chance
+        # else
+        #     @timeit return_survival_chance_vector[d] = sum(survival_chance)
+        # end
+
         if marginal_survival == false
-            #Efficient implementation of gen_battery_prob_matrix = gen_battery_prob_matrix .* survival
-            battery_prob_matrix_update!(gen_battery_prob_matrix_array[gen_matrix_counter_end], survival) 
+            # @timeit to "survival chance" gen_battery_prob_matrix_array[gen_matrix_counter_end] = gen_battery_prob_matrix_array[gen_matrix_counter_end] .* survival 
+            prob_matrix_update!(gen_battery_prob_matrix_array[gen_matrix_counter_end], survival) 
             return_survival_chance_vector[d] = sum(gen_battery_prob_matrix_array[gen_matrix_counter_end])
         else
-            #Efficient implementation of sum(gen_battery_prob_matrix .* survival)
             return_survival_chance_vector[d] = survival_chance_mult(gen_battery_prob_matrix_array[gen_matrix_counter_end], survival)
         end
+        
 
         #Update generation battery probability matrix to account for battery shifting
-        shift_gen_battery_prob_matrix!(gen_battery_prob_matrix_array[gen_matrix_counter_end], 
-            battery_bin_shift((generator_production .- net_critical_loads_kw[h]) / time_steps_per_hour, bin_size, battery_size_kw, battery_charge_efficiency, battery_discharge_efficiency))
+        shift_gen_battery_prob_matrix!(gen_battery_prob_matrix_array[gen_matrix_counter_end], battery_bin_shift(generator_production .- net_critical_loads_kw[h], bin_size, battery_size_kw, battery_charge_efficiency, battery_discharge_efficiency))
     end
     return return_survival_chance_vector
 end
