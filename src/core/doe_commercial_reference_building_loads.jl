@@ -296,3 +296,51 @@ function custom_normalized_flatload(doe_reference_name, year)
     return normalized_profile
 end
 
+"""
+    get_monthly_energy(; power_profile::AbstractArray{<:Real,1}=Real[],
+                        normalized_profile::AbstractArray{<:Real,1}=Real[],
+                        annual_energy::Float64=nothing,
+                        year::Int64=2017)
+Get monthly energy from an hourly load profile.
+"""
+function get_monthly_energy(; power_profile::AbstractArray{<:Real,1}=Real[],
+                            normalized_profile::AbstractArray{<:Real,1}=Real[],
+                            annual_energy::Float64=nothing,
+                            year::Int64=2017)
+    t0 = 1
+    monthly_fraction = zeros(12)
+    if isnothing(annual_energy)
+        annual_energy = sum(power_profile)
+    elseif !isempty(power_profile)
+        annual_energy = sum(power_profile)
+        @warning "Using sum(power_profile) for annual_energy instead of input annual_energy"
+    end
+    for month in 1:12
+        plus_hours = daysinmonth(Date(string(year) * "-" * string(month))) * 24
+        if month == 2 && isleapyear(year)
+            plus_hours -= 24
+        end
+        if !isempty(power_profile)
+            month_energy_total = sum(power_profile[t0:t0+plus_hours-1])
+            monthly_fraction[month] = month_energy_total / annual_energy
+        elseif !isempty(normalized_profile)
+            monthly_fraction[month] = sum(normalized_profile[t0:t0+plus_hours-1])
+            if !isnothing(annual_energy)
+                monthly_energy_total = monthly_fraction * annual_energy
+            else
+                monthly_energy_total = nothing
+            end
+        else
+            @error "Must provide either power_profile or normalized_profile"
+        end
+        # Below code is to get scaling factor for monthly_energies which are different proportion than CRB
+        # if month_total == 0.0  # avoid division by zero
+        #     monthly_scalers[month] = 0.0
+        # else
+        #     monthly_scalers[month] = monthly_energies[month] / month_total
+        # end
+        t0 += plus_hours
+    end
+
+    return monthly_energy_total, monthly_fraction
+end
