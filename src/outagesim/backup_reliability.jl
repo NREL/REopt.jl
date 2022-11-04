@@ -530,7 +530,7 @@ function survival_gen_only(;
     #Get starting generator vector
     starting_gens = starting_probabilities(num_generators, generator_operational_availability, generator_failure_to_start) #initialize gen battery prob matrix
 
-    for t  = 1:t_max
+    for Threads.@threads t = 1:t_max
         
         survival_probability_matrix[t, :] = gen_only_survival_single_start_time(
             t, starting_gens, net_critical_loads_kw, generator_production,
@@ -582,7 +582,7 @@ end
 """
     survival_with_battery(;net_critical_loads_kw::Vector, battery_starting_soc_kwh::Vector, generator_operational_availability::Real, generator_failure_to_start::Real, 
                         generator_failure_to_run::Real, num_generators::Int, generator_size_kw::Real, battery_size_kwh::Real, battery_size_kw::Real, num_bins::Int, 
-                        max_outage_duration::Int, battery_charge_efficiency::Real, battery_discharge_efficiency::Real, marginal_survival = true)::Matrix{Float64} 
+                        max_outage_duration::Int, battery_charge_efficiency::Real, battery_discharge_efficiency::Real, marginal_survival::Bool = true, time_steps_per_hour::Real = 1)::Matrix{Float64} 
 
 Return a matrix of probability of survival with rows denoting outage start and columns denoting outage duration
 
@@ -653,7 +653,8 @@ function survival_with_battery(;
     max_outage_duration::Int, 
     battery_charge_efficiency::Real,
     battery_discharge_efficiency::Real,
-    marginal_survival = true)::Matrix{Float64} 
+    marginal_survival::Bool = true,
+    time_steps_per_hour::Real = 1)::Matrix{Float64} 
 
     t_max = length(net_critical_loads_kw)
     
@@ -681,7 +682,7 @@ function survival_with_battery(;
         survival_probability_matrix[t, :] = survival_with_battery_single_start_time(t, 
         net_critical_loads_kw, battery_size_kw, max_outage_duration, battery_charge_efficiency,
         battery_discharge_efficiency, M, N, starting_gens, generator_production,
-        generator_markov_matrix, maximum_generation, t_max, starting_battery_bins, bin_size, marginal_survival)
+        generator_markov_matrix, maximum_generation, t_max, starting_battery_bins, bin_size, marginal_survival, time_steps_per_hour)
     end
     return survival_probability_matrix
 end
@@ -725,7 +726,7 @@ survival_with_battery_single_start_time(t::Int, net_critical_loads_kw::Vector,
     generator_size_kw::Union{Real, Vector{<:Real}}, 
     max_outage_duration::Int, battery_charge_efficiency::Real, battery_discharge_efficiency::Real, M::Int, N::Int,
     starting_gens::Matrix{Float64}, generator_production::Vector{Float64}, generator_markov_matrix::Matrix{Float64},
-    maximum_generation::Matrix{Float64}, t_max::Int, starting_battery_bins::Vector{Int}, bin_size::Real, marginal_survival::Bool)::Vector{Float64}
+    maximum_generation::Matrix{Float64}, t_max::Int, starting_battery_bins::Vector{Int}, bin_size::Real, marginal_survival::Bool, time_steps_per_hour::Real)::Vector{Float64}
 
 Return a vector of probability of survival with for all outage durations given outages start time t. 
     Function is for internal loop of survival_with_battery
@@ -746,7 +747,8 @@ function survival_with_battery_single_start_time(
     t_max::Int,
     starting_battery_bins::Vector{Int},
     bin_size::Real,
-    marginal_survival::Bool)::Vector{Float64}
+    marginal_survival::Bool,
+    time_steps_per_hour::Real)::Vector{Float64}
 
     gen_battery_prob_matrix_array = [zeros(M, N), zeros(M, N)]
 
@@ -776,7 +778,8 @@ function survival_with_battery_single_start_time(
         end
 
         #Update generation battery probability matrix to account for battery shifting
-        shift_gen_battery_prob_matrix!(gen_battery_prob_matrix_array[gen_matrix_counter_end], battery_bin_shift(generator_production .- net_critical_loads_kw[h], bin_size, battery_size_kw, battery_charge_efficiency, battery_discharge_efficiency))
+        shift_gen_battery_prob_matrix!(gen_battery_prob_matrix_array[gen_matrix_counter_end], 
+            battery_bin_shift((generator_production .- net_critical_loads_kw[h]) / time_steps_per_hour, bin_size, battery_size_kw, battery_charge_efficiency, battery_discharge_efficiency))
     end
     return return_survival_chance_vector
 end
@@ -805,6 +808,7 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
     zero_array = zeros(length(p.time_steps))
     r2[:critical_loads_kw] = p.s.electric_load.critical_loads_kw
 
+    r2[:time_steps_per_hour] = 1 / p.hours_per_time_step
     microgrid_only = get(r, "microgrid_only", false)
 
     if !(
@@ -997,7 +1001,7 @@ end
 """
     return_backup_reliability_single_run(; critical_loads_kw::Vector, generator_operational_availability::Real = 0.9998, generator_failure_to_start::Real = 0.0066, 
         generator_failure_to_run::Real = 0.00157, num_generators::Int = 1, generator_size_kw::Real = 0.0, num_battery_bins::Int = 101, max_outage_duration::Int = 96,
-        battery_size_kw::Real = 0.0, battery_size_kwh::Real = 0.0, battery_charge_efficiency::Real = 0.948, battery_discharge_efficiency::Real = 0.948)::Array
+        battery_size_kw::Real = 0.0, battery_size_kwh::Real = 0.0, battery_charge_efficiency::Real = 0.948, battery_discharge_efficiency::Real = 0.948, time_steps_per_hour::Real = 1)::Array
 
 Return an array of backup reliability calculations. Inputs can be unpacked from backup_reliability_inputs() dictionary
 # Arguments
@@ -1014,6 +1018,7 @@ Return an array of backup reliability calculations. Inputs can be unpacked from 
 -battery_size_kwh::Real             = 0.0          Battery kWh of energy capacity
 -battery_charge_efficiency::Real    = 0.948        Efficiency of charging battery
 -battery_discharge_efficiency::Real = 0.948        Efficiency of discharging battery
+-time_steps_per_hour::Real          = 1            Used to determine amount battery gets shifted.
 ```
 """
 function backup_reliability_single_run(; 
@@ -1030,6 +1035,7 @@ function backup_reliability_single_run(;
     battery_size_kwh::Real = 0.0,
     battery_charge_efficiency::Real = 0.948, 
     battery_discharge_efficiency::Real = 0.948,
+    time_steps_per_hour::Real = 1,
     kwargs...)::Array
  
     #No reliability calculations if no outage duration
@@ -1072,7 +1078,8 @@ function backup_reliability_single_run(;
                 max_outage_duration=max_outage_duration, 
                 battery_charge_efficiency=battery_charge_efficiency,
                 battery_discharge_efficiency=battery_discharge_efficiency,
-                marginal_survival = true
+                marginal_survival = true,
+                time_steps_per_hour = time_steps_per_hour
             ),
             survival_with_battery(
                 net_critical_loads_kw=net_critical_loads_kw,
@@ -1088,7 +1095,8 @@ function backup_reliability_single_run(;
                 max_outage_duration=max_outage_duration, 
                 battery_charge_efficiency=battery_charge_efficiency,
                 battery_discharge_efficiency=battery_discharge_efficiency,
-                marginal_survival = false
+                marginal_survival = false,
+                time_steps_per_hour = time_steps_per_hour
             )]
 
     end
@@ -1099,23 +1107,25 @@ fuel_use(; net_critical_loads_kw::Vector, num_generators::Union{Int, Vector{Int}
             fuel_availability::Union{Real, Vector{<:Real}} = Inf, generator_fuel_intercept::Union{Real, Vector{<:Real}} = 0.0,
             fuel_availability_by_generator::Bool = false, generator_burn_rate_fuel_per_kwh::Union{Real, Vector{<:Real}} = 0.076,
             max_outage_duration::Int = 96, battery_starting_soc_kwh::Vector = [], battery_size_kw::Real = 0.0, battery_size_kwh::Real = 0.0,
-            battery_charge_efficiency::Real = 0.948, battery_discharge_efficiency::Real = 0.948, n_steps_per_hour::Int = 1, kwargs...)::Matrix{Int}
+            battery_charge_efficiency::Real = 0.948, battery_discharge_efficiency::Real = 0.948, time_steps_per_hour::Int = 1, kwargs...)::Matrix{Int}
 
 Return a matrix of fuel survival. Output is a matrix with rows of time periods and columns of durations
 # Arguments
--net_critical_loads_kw::Vector                                                      vector of net critical loads                     
--battery_starting_soc_kwh::Vector   = []            Battery kWh state of charge time series during normal grid-connected usage
--generator_operational_availability::Union{Real, Vector{<:Real}}      = 0.9998        Fraction of year generators not down for maintenance
--generator_failure_to_start::Union{Real, Vector{<:Real}}                        = 0.0066        Chance of generator starting given outage
--generator_failure_to_run::Union{Real, Vector{<:Real}}                = 0.00157       Chance of generator failing in each time step of outage
--num_generators::Union{Int, Vector{Int}}                            = 1             Number of generators
--generator_size_kw::Union{Real, Vector{<:Real}}                       = 0.0           Backup generator capacity
--num_battery_bins::Int              = 101          Internal value for modeling battery
--max_outage_duration::Int           = 96           Maximum outage duration modeled
--battery_size_kw::Real              = 0.0          Battery kW of power capacity
--battery_size_kwh::Real             = 0.0          Battery kWh of energy capacity
--battery_charge_efficiency::Real    = 0.948        Efficiency of charging battery
--battery_discharge_efficiency::Real = 0.948        Efficiency of discharging battery
+-net_critical_loads_kw::Vector                                                      vector of net critical loads
+-num_generators::Union{Int, Vector{Int}} = 1,                                       number of backup generators of each type
+-generator_size_kw::Union{Real, Vector{<:Real}} = 0.0,                              capacity of each generator type
+-fuel_availability::Union{Real, Vector{<:Real}} = Inf,                              Fuel stored by generator type. If fuel_availability_by_generator = true, then measured for each generator
+-generator_fuel_intercept::Union{Real, Vector{<:Real}} = 0.0,                       Fixed fuel use in each time period
+-fuel_availability_by_generator::Bool = false,                                      If false then fuel_availability measures fuel by generator type. If true then measures by each generator  
+-generator_burn_rate_fuel_per_kwh::Union{Real, Vector{<:Real}} = 0.076,             amount of fuel use per kWh generated
+-max_outage_duration::Int = 96,                                                     maximum outage duration
+-battery_starting_soc_kwh::Vector = [],                                             battery time series of starting charge
+-battery_size_kw::Real = 0.0,                                                       inverter capacity of battery
+-battery_size_kwh::Real = 0.0,                                                      energy capacity of battery
+-battery_charge_efficiency::Real = 0.948,                                           battery charging efficiency
+-battery_discharge_efficiency::Real = 0.948,                                        battery discharge efficiency
+-time_steps_per_hour::Real = 1,                                                     number of time steps per hour
+
 ```
 """
 function fuel_use(;    
@@ -1132,10 +1142,10 @@ function fuel_use(;
     battery_size_kwh::Real = 0.0,
     battery_charge_efficiency::Real = 0.948, 
     battery_discharge_efficiency::Real = 0.948,
-    n_steps_per_hour::Int = 1,
+    time_steps_per_hour::Real = 1,
     kwargs...)::Matrix{Int}
 
-
+    fuel_availability = convert.(Float64, fuel_availability)
     if fuel_availability_by_generator
         #if fuel availability by generator then multiply by number of generators to get
         #total fuel by generator type.
@@ -1181,8 +1191,8 @@ function fuel_use(;
             if (load_kw < 0) && battery_included && (battery_soc_kwh < battery_size_kwh)  # load is met
                 battery_soc_kwh += minimum([
                     battery_size_kwh - battery_soc_kwh,     # room available
-                    battery_size_kw / n_steps_per_hour * battery_charge_efficiency,  # inverter capacity
-                    -load_kw / n_steps_per_hour * battery_charge_efficiency  # excess energy
+                    battery_size_kw / time_steps_per_hour * battery_charge_efficiency,  # inverter capacity
+                    -load_kw / time_steps_per_hour * battery_charge_efficiency  # excess energy
                 ])
             else  # check if we can meet load with generator then storage
                 for i in 1:length(fuel_remaining)
@@ -1193,16 +1203,16 @@ function fuel_use(;
                         generation = minimum([
                             total_generator_capacity_kw[i],  #generator capacity
                             load_kw * total_generator_capacity_kw[i] / remaining_gen, #generator type share of load (spits between remaining generators)
-                            maximum([0, (fuel_remaining[i] * n_steps_per_hour - generator_fuel_intercept[i]) / generator_burn_rate_fuel_per_kwh[i]]) #fuel remaining
+                            maximum([0, (fuel_remaining[i] * time_steps_per_hour - generator_fuel_intercept[i]) / generator_burn_rate_fuel_per_kwh[i]]) #fuel remaining
                         ])
                     end
                     
-                    fuel_remaining[i] = maximum([0, fuel_remaining[i] - (generation * generator_burn_rate_fuel_per_kwh[i] + generator_fuel_intercept[i]) / n_steps_per_hour])  
+                    fuel_remaining[i] = maximum([0, fuel_remaining[i] - (generation * generator_burn_rate_fuel_per_kwh[i] + generator_fuel_intercept[i]) / time_steps_per_hour])  
                     load_kw -= generation
                 end
                 
                 if battery_included
-                    battery_dispatch = minimum([load_kw, battery_soc_kwh * n_steps_per_hour * battery_discharge_efficiency, battery_size_kw])
+                    battery_dispatch = minimum([load_kw, battery_soc_kwh * time_steps_per_hour * battery_discharge_efficiency, battery_size_kw])
                     load_kw -= battery_dispatch
                     battery_soc_kwh -= battery_dispatch 
                 end
@@ -1312,6 +1322,9 @@ function return_backup_reliability(;
             end
         end
     end
+
+    push!(results, fuel_use(; net_critical_loads_kw = net_critical_loads_kw, kwargs...))
+
     return results
 end
 
@@ -1329,6 +1342,7 @@ function process_reliability_results(results::Array)::Dict
     else
         marginal_results = round.(results[1], digits=6)
         cumulative_results = round.(results[2], digits=6)
+        fuel_results = results[3]
         marginal_duration_means = round.(vec(mean(marginal_results, dims = 1)), digits=6)
         marginal_duration_mins = round.(vec(minimum(marginal_results, dims = 1)), digits=6)
         marginal_final_resilience = round.(marginal_results[:, end], digits=6)
@@ -1336,6 +1350,13 @@ function process_reliability_results(results::Array)::Dict
         cumulative_duration_mins = round.(vec(minimum(cumulative_results, dims = 1)), digits=6)
         cumulative_final_resilience = round.(cumulative_results[:, end], digits=6)
         cumulative_final_resilience_mean = round(mean(cumulative_final_resilience), digits=6)
+        fuel_duration_means = round.(vec(mean(fuel_results, dims = 1)), digits =6)
+        fuel_final_availability = fuel_results[:, end]
+
+        survival_chance_means = round.(vec(mean(cumulative_results .* fuel_results, dims = 1)), digits=6)
+        survival_chance_mins = round.(vec(minimum(cumulative_results .* fuel_results, dims = 1)), digits=6)
+        survival_final_chance = round.(cumulative_results[:,end] .* fuel_results[:,end], digits=6)
+
         return Dict(
             "mean_marginal_survival_by_duration"    => marginal_duration_means,
             "min_marginal_survival_by_duration"     => marginal_duration_mins,
@@ -1343,8 +1364,13 @@ function process_reliability_results(results::Array)::Dict
             "mean_cumulative_survival_by_duration"  => cumulative_duration_means,
             "min_cumulative_survival_by_duration"   => cumulative_duration_mins,
             "cumulative_outage_survival_final_time_step" => cumulative_final_resilience,
-            "mean_cumulative_outage_survival_final_time_step" => cumulative_final_resilience_mean
-        )
+            "mean_cumulative_outage_survival_final_time_step" => cumulative_final_resilience_mean,
+            "fuel_duration_means" => fuel_duration_means,
+            "fuel_final_availability" => fuel_final_availability,
+            "mean_fuel_plus_reliability_survival_by_duration" => survival_chance_means,
+            "min_fuel_plus_reliability_survival_by_duration" => survival_chance_mins,
+            "fuel_plus_reliability_final_survival_by_duration" => survival_final_chance
+         )
     end
 end
 
