@@ -993,6 +993,7 @@ function backup_reliability_inputs(;r::Dict)::Dict
 
     return r2
 end
+
 """
     return_backup_reliability_single_run(; critical_loads_kw::Vector, generator_operational_availability::Real = 0.9998, generator_failure_to_start::Real = 0.0066, 
         generator_failure_to_run::Real = 0.00157, num_generators::Int = 1, generator_size_kw::Real = 0.0, num_battery_bins::Int = 101, max_outage_duration::Int = 96,
@@ -1091,6 +1092,130 @@ function backup_reliability_single_run(;
             )]
 
     end
+end
+
+"""
+fuel_use(; net_critical_loads_kw::Vector, num_generators::Union{Int, Vector{Int}} = 1, generator_size_kw::Union{Real, Vector{<:Real}} = 0.0,
+            fuel_availability::Union{Real, Vector{<:Real}} = Inf, generator_fuel_intercept::Union{Real, Vector{<:Real}} = 0.0,
+            fuel_availability_by_generator::Bool = false, generator_burn_rate_fuel_per_kwh::Union{Real, Vector{<:Real}} = 0.076,
+            max_outage_duration::Int = 96, battery_starting_soc_kwh::Vector = [], battery_size_kw::Real = 0.0, battery_size_kwh::Real = 0.0,
+            battery_charge_efficiency::Real = 0.948, battery_discharge_efficiency::Real = 0.948, n_steps_per_hour::Int = 1, kwargs...)::Matrix{Int}
+
+Return a matrix of fuel survival. Output is a matrix with rows of time periods and columns of durations
+# Arguments
+-net_critical_loads_kw::Vector                                                      vector of net critical loads                     
+-battery_starting_soc_kwh::Vector   = []            Battery kWh state of charge time series during normal grid-connected usage
+-generator_operational_availability::Union{Real, Vector{<:Real}}      = 0.9998        Fraction of year generators not down for maintenance
+-generator_failure_to_start::Union{Real, Vector{<:Real}}                        = 0.0066        Chance of generator starting given outage
+-generator_failure_to_run::Union{Real, Vector{<:Real}}                = 0.00157       Chance of generator failing in each time step of outage
+-num_generators::Union{Int, Vector{Int}}                            = 1             Number of generators
+-generator_size_kw::Union{Real, Vector{<:Real}}                       = 0.0           Backup generator capacity
+-num_battery_bins::Int              = 101          Internal value for modeling battery
+-max_outage_duration::Int           = 96           Maximum outage duration modeled
+-battery_size_kw::Real              = 0.0          Battery kW of power capacity
+-battery_size_kwh::Real             = 0.0          Battery kWh of energy capacity
+-battery_charge_efficiency::Real    = 0.948        Efficiency of charging battery
+-battery_discharge_efficiency::Real = 0.948        Efficiency of discharging battery
+```
+"""
+function fuel_use(;    
+    net_critical_loads_kw::Vector, 
+    num_generators::Union{Int, Vector{Int}} = 1, 
+    generator_size_kw::Union{Real, Vector{<:Real}} = 0.0,
+    fuel_availability::Union{Real, Vector{<:Real}} = Inf,
+    generator_fuel_intercept::Union{Real, Vector{<:Real}} = 0.0,
+    fuel_availability_by_generator::Bool = false,
+    generator_burn_rate_fuel_per_kwh::Union{Real, Vector{<:Real}} = 0.076,
+    max_outage_duration::Int = 96,
+    battery_starting_soc_kwh::Vector = [],
+    battery_size_kw::Real = 0.0,
+    battery_size_kwh::Real = 0.0,
+    battery_charge_efficiency::Real = 0.948, 
+    battery_discharge_efficiency::Real = 0.948,
+    n_steps_per_hour::Int = 1,
+    kwargs...)::Matrix{Int}
+
+
+    if fuel_availability_by_generator
+        #if fuel availability by generator then multiply by number of generators to get
+        #total fuel by generator type.
+        fuel_availability = fuel_availability .* num_generators  
+    end
+    
+    generator_fuel_intercept = generator_fuel_intercept .* num_generators
+    #put everything into arrays and sort based on fuel availability
+    if length(num_generators) == 1
+        num_generators = [num_generators]
+        generator_size_kw = [generator_size_kw]
+        fuel_availability = [fuel_availability]
+        generator_burn_rate_fuel_per_kwh = [generator_burn_rate_fuel_per_kwh]
+        generator_fuel_intercept = [generator_fuel_intercept]
+        total_generator_capacity_kw = num_generators .* generator_size_kw
+    else
+        total_generator_capacity_kw = num_generators .* generator_size_kw
+        fuel_order = sortperm(fuel_availability ./ (total_generator_capacity_kw .* generator_burn_rate_fuel_per_kwh .+ generator_fuel_intercept))
+
+        generator_burn_rate_fuel_per_kwh = generator_burn_rate_fuel_per_kwh[fuel_order] 
+        generator_fuel_intercept = generator_fuel_intercept[fuel_order]
+        total_generator_capacity_kw = total_generator_capacity_kw[fuel_order]
+    end
+
+    t_max = length(net_critical_loads_kw)
+    survival_matrix = zeros(t_max, max_outage_duration) 
+
+    battery_included = battery_size_kw > 0
+
+
+    for t in 1:t_max
+        fuel_remaining = copy(fuel_availability)
+        if battery_included 
+            battery_soc_kwh = battery_starting_soc_kwh[t]
+        end
+
+        for d in 1:max_outage_duration
+            
+
+            h = mod(t + d - 2, t_max) + 1 #determines index accounting for looping around year
+            load_kw = net_critical_loads_kw[h]
+            
+            if (load_kw < 0) && battery_included && (battery_soc_kwh < battery_size_kwh)  # load is met
+                battery_soc_kwh += minimum([
+                    battery_size_kwh - battery_soc_kwh,     # room available
+                    battery_size_kw / n_steps_per_hour * battery_charge_efficiency,  # inverter capacity
+                    -load_kw / n_steps_per_hour * battery_charge_efficiency  # excess energy
+                ])
+            else  # check if we can meet load with generator then storage
+                for i in 1:length(fuel_remaining)
+                    remaining_gen = sum(total_generator_capacity_kw[i:end])
+                    if remaining_gen == 0
+                        generation = 0
+                    else
+                        generation = minimum([
+                            total_generator_capacity_kw[i],  #generator capacity
+                            load_kw * total_generator_capacity_kw[i] / remaining_gen, #generator type share of load (spits between remaining generators)
+                            maximum([0, (fuel_remaining[i] * n_steps_per_hour - generator_fuel_intercept[i]) / generator_burn_rate_fuel_per_kwh[i]]) #fuel remaining
+                        ])
+                    end
+                    
+                    fuel_remaining[i] = maximum([0, fuel_remaining[i] - (generation * generator_burn_rate_fuel_per_kwh[i] + generator_fuel_intercept[i]) / n_steps_per_hour])  
+                    load_kw -= generation
+                end
+                
+                if battery_included
+                    battery_dispatch = minimum([load_kw, battery_soc_kwh * n_steps_per_hour * battery_discharge_efficiency, battery_size_kw])
+                    load_kw -= battery_dispatch
+                    battery_soc_kwh -= battery_dispatch 
+                end
+            end
+            if round(load_kw, digits=5) > 0  # failed to meet load in this time step
+                survival_matrix[t, d] = 0
+            else
+                survival_matrix[t, d] = 1
+            end
+        end
+    end
+
+    return survival_matrix
 end
 
 """
