@@ -811,7 +811,7 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
             microgrid_only && 
             !Bool(get(d, "PV_upgraded", false))
         ) && 
-        "PV" in keys(d)
+        haskey(d, "PV")
         pv_kw_ac_time_series = (
             get(d["PV"], "year_one_to_battery_series_kw", zero_array)
             + get(d["PV"], "year_one_curtailed_production_series_kw", zero_array)
@@ -825,7 +825,7 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         microgrid_only && 
         !Bool(get(d, "Storage_upgraded", false))
     ) && 
-    "ElectricStorage" in keys(d)
+    haskey(d, "ElectricStorage")
         r2[:battery_charge_efficiency] = p.s.storage.attr["ElectricStorage"].charge_efficiency
         r2[:battery_discharge_efficiency] = p.s.storage.attr["ElectricStorage"].discharge_efficiency
         r2[:battery_size_kw] = get(d["ElectricStorage"], "size_kw", 0)
@@ -837,7 +837,7 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         init_soc = get(d["ElectricStorage"], "year_one_soc_series_fraction", [])
         battery_starting_soc_kwh = init_soc .* battery_size_kwh
         
-        if :use_full_battery_charge in keys(r2) && r2[:use_full_battery_charge] 
+        if haskey(r2, :use_full_battery_charge) && r2[:use_full_battery_charge] 
             r2[:battery_starting_soc_kwh] = battery_starting_soc_kwh
             r2[:battery_size_kwh] = battery_size_kwh
         else
@@ -849,7 +849,7 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
     end
     
     diesel_kw = 0
-    if "Generator" in keys(d)
+    if haskey(d, "Generator")
         diesel_kw = get(d["Generator"], "size_kw", 0)
     end
     if microgrid_only
@@ -939,7 +939,7 @@ function backup_reliability_inputs(;r::Dict)::Dict
 
     generator_inputs = [:generator_operational_availability, :generator_failure_to_start, :generator_failure_to_run, :num_generators, :generator_size_kw]
     for g in generator_inputs
-        if g in keys(r2) && isa(r2[g], Array) && length(r2[g]) == 1
+        if haskey(r2, g) && isa(r2[g], Array) && length(r2[g]) == 1
         r2[g] = r2[g][1]
         end
     end
@@ -949,8 +949,8 @@ function backup_reliability_inputs(;r::Dict)::Dict
     microgrid_only = get(r2, :microgrid_only, false)
 
     pv_kw_ac_time_series = zero_array
-    if :pv_size_kw in keys(r2)
-        if :pv_production_factor_series in keys(r2)
+    if haskey(r2, :pv_size_kw) 
+        if haskey(r2, :pv_production_factor_series)
             pv_kw_ac_time_series = r2[:pv_size_kw] .* r2[:pv_production_factor_series]
         else
             push!(invalid_args, "pv_size_kw added to reliability inputs but no pv_production_factor_series provided")
@@ -961,10 +961,10 @@ function backup_reliability_inputs(;r::Dict)::Dict
     end
     r2[:pv_kw_ac_time_series] = pv_kw_ac_time_series
 
-    if :battery_size_kw in keys(r2)
+    if haskey(r2, :battery_size_kw)
         if !microgrid_only || Bool(get(r2, :storage_microgrid_upgraded, false))
             #check if minimum state of charge added. If so, then change battery size to effective size, and reduce starting SOC accordingly
-            if :battery_starting_soc_series_fraction in keys(r2)
+            if haskey(r2, :battery_starting_soc_series_fraction) 
                 init_soc = r2[:battery_starting_soc_series_fraction]
             else
                 @warn("No battery soc series provided to reliability inputs. Assuming battery fully charged at start of outage.")
@@ -972,7 +972,7 @@ function backup_reliability_inputs(;r::Dict)::Dict
             end
             r2[:battery_starting_soc_kwh] = init_soc .* r2[:battery_size_kwh]
             
-            if :battery_minimum_soc in keys(r2)
+            if haskey(r2, :battery_minimum_soc) 
                 battery_minimum_soc_kwh = r2[:battery_size_kwh] * r2[:battery_minimum_soc]
                 r2[:battery_size_kwh] -= battery_minimum_soc_kwh
                 if minimum(r2[:battery_starting_soc_kwh]) < battery_minimum_soc_kwh
@@ -995,7 +995,7 @@ function backup_reliability_inputs(;r::Dict)::Dict
 end
 """
     return_backup_reliability_single_run(; critical_loads_kw::Vector, generator_operational_availability::Real = 0.9998, generator_failure_to_start::Real = 0.0066, 
-        generator_failure_to_run::Real = 0.00157, num_generators::Int = 1, generator_size_kw::Real = 0.0, num_battery_bins::Int = 100, max_outage_duration::Int = 96,
+        generator_failure_to_run::Real = 0.00157, num_generators::Int = 1, generator_size_kw::Real = 0.0, num_battery_bins::Int = 101, max_outage_duration::Int = 96,
         battery_size_kw::Real = 0.0, battery_size_kwh::Real = 0.0, battery_charge_efficiency::Real = 0.948, battery_discharge_efficiency::Real = 0.948)::Array
 
 Return an array of backup reliability calculations. Inputs can be unpacked from backup_reliability_inputs() dictionary
@@ -1007,7 +1007,7 @@ Return an array of backup reliability calculations. Inputs can be unpacked from 
 -generator_failure_to_run::Union{Real, Vector{<:Real}}                = 0.00157       Chance of generator failing in each time step of outage
 -num_generators::Union{Int, Vector{Int}}                            = 1             Number of generators
 -generator_size_kw::Union{Real, Vector{<:Real}}                       = 0.0           Backup generator capacity
--num_battery_bins::Int              = 100          Internal value for modeling battery
+-num_battery_bins::Int              = 101          Internal value for modeling battery
 -max_outage_duration::Int           = 96           Maximum outage duration modeled
 -battery_size_kw::Real              = 0.0          Battery kW of power capacity
 -battery_size_kwh::Real             = 0.0          Battery kWh of energy capacity
@@ -1114,7 +1114,7 @@ function return_backup_reliability(;
     pv_can_dispatch_without_battery::Bool = false,
     kwargs...)::Array
 
-    if :pv_kw_ac_time_series in keys(kwargs)
+    if haskey(kwargs, :pv_kw_ac_time_series)
         pv_included = true
         net_critical_loads_kw = critical_loads_kw - kwargs[:pv_kw_ac_time_series]
     else
@@ -1144,7 +1144,7 @@ function return_backup_reliability(;
             "battery_size_kw" => 0)
     )
     #Sets probabilities for each potential system configuration
-    if :battery_size_kw in keys(kwargs) && pv_included
+    if haskey(kwargs, :battery_size_kw) && pv_included
         system_characteristics["pv_plus_battery"]["probability"] = 
             battery_operational_availability * pv_operational_availability
         system_characteristics["battery_no_pv"]["probability"] = 
@@ -1158,7 +1158,7 @@ function return_backup_reliability(;
             system_characteristics["gen_only"]["probability"] = 
                 (1 - battery_operational_availability) 
         end
-    elseif :battery_size_kw in keys(kwargs)
+    elseif haskey(kwargs, :battery_size_kw)
         system_characteristics["battery_no_pv"]["probability"] = 
             battery_operational_availability
         system_characteristics["gen_only"]["probability"] = 
@@ -1238,7 +1238,7 @@ Return dictionary of backup reliability results.
     -generator_failure_to_run::Real = 0.00157 (Chance of generator failing in each time step of outage)
     -num_generators::Int = 1  (Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1)
     -generator_size_kw::Real = 0.0 (Backup generator capacity. Will be determined by REopt optimization if set less than 0.1)
-    -num_battery_bins::Int = 100 (Internal value for discretely modeling battery state of charge)
+    -num_battery_bins::Int = 101 (Internal value for discretely modeling battery state of charge)
     -max_outage_duration::Int = 96 (Maximum outage duration modeled)
     -microgrid_only::Bool = false (determines how generator, PV, and battery act during islanded mode)
 
@@ -1273,7 +1273,7 @@ inputs of r:
 -generator_failure_to_run::Real = 0.00157   Chance of generator failing in each time step of outage
 -num_generators::Int = 1                    Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
 -generator_size_kw::Real = 0.0              Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
--num_battery_bins::Int = 100                Internal value for discretely modeling battery state of charge
+-num_battery_bins::Int = 101                Internal value for discretely modeling battery state of charge
 -max_outage_duration::Int = 96              Maximum outage duration modeled
 
 """
