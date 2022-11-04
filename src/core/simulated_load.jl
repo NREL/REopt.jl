@@ -1,12 +1,15 @@
 function simulated_load(d::Dict)
-    latitude = get(d, "latitude", @error "latitude must be provided")
-    longitude = get(d, "longitude", @error "longitude must be provided")
+    latitude = get(d, "latitude", nothing)
+    longitude = get(d, "longitude", nothing)
+    if isnothing(latitude) || isnothing(longitude)
+        throw(@error "latitude and longitude must be provided")
+    end
     load_type = get(d, "load_type", nothing)
 
     # Check consistency between type/length of doe_reference_name and percent_share (for blended/hybrid buildings)
     doe_reference_name_input = get(d, "doe_reference_name", nothing)
     percent_share_input = get(d, "percent_share", nothing)
-    if !isnothing(doe_reference_name_input) && !(typeof(doe_reference_name) <: Vector{})
+    if !isnothing(doe_reference_name_input) && !(typeof(doe_reference_name_input) <: Vector{})
         doe_reference_name = [doe_reference_name_input]
     elseif !isnothing(doe_reference_name_input) && !isnothing(percent_share_input)
         doe_reference_name = doe_reference_name_input
@@ -16,16 +19,16 @@ function simulated_load(d::Dict)
             percent_share_list = percent_share_input
         end
         if length(percent_share_list) != length(doe_reference_name)
-            @error "The number of percent_share entries does not match that of the number of doe_reference_name entries"
+            throw(@error "The number of percent_share entries does not match that of the number of doe_reference_name entries")
         end
     end
 
     # When wanting cooling profile based on building type(s) for cooling, need separate cooling building(s)
     cooling_doe_ref_name_input = get(d, "cooling_doe_ref_name", nothing)
     cooling_pct_share_input = get(d, "cooling_pct_share", nothing)
-    if !isnothing(cooling_doe_ref_name) && !(typeof(cooling_doe_ref_name_input) <: Vector{})
+    if !isnothing(cooling_doe_ref_name_input) && !(typeof(cooling_doe_ref_name_input) <: Vector{})
         cooling_doe_ref_name = cooling_doe_ref_name_input
-    elseif !isnothing(cooling_doe_ref_name) && !isnothing(cooling_pct_share_input)
+    elseif !isnothing(cooling_doe_ref_name_input) && !isnothing(cooling_pct_share_input)
         cooling_doe_ref_name = cooling_doe_ref_name_input
         if !(typeof(cooling_pct_share_input) <: Vector{})
             cooling_pct_share_list = [percent_share_input]
@@ -33,8 +36,11 @@ function simulated_load(d::Dict)
             cooling_pct_share_list = percent_share_input
         end            
         if length(cooling_pct_share_list) != length(cooling_doe_ref_name)
-            @error "The number of cooling_pct_share entries does not match that of the number of cooling_doe_ref_name entries"
+            throw(@error "The number of cooling_pct_share entries does not match that of the number of cooling_doe_ref_name entries")
         end
+    else
+        cooling_doe_ref_name = nothing
+        cooling_pct_share_list = Real[]
     end
 
     if isnothing(doe_reference_name) && !isnothing(cooling_doe_ref_name)
@@ -45,7 +51,7 @@ function simulated_load(d::Dict)
     if !isnothing(doe_reference_name)
         for drn in doe_reference_name
             if !(drn in default_buildings)
-                @error "Invalid doe_reference_name - $doe_reference_name. Select from the following: $default_buildings"
+                throw(@error "Invalid doe_reference_name - $doe_reference_name. Select from the following: $default_buildings")
             end
         end
     end
@@ -55,16 +61,15 @@ function simulated_load(d::Dict)
     end
 
     if latitude > 90 || latitude < -90
-        @error "latitude $latitude is out of acceptable range (-90 <= latitude <= 90)"
+        throw(@error "latitude $latitude is out of acceptable range (-90 <= latitude <= 90)")
     end
 
     if longitude > 180 || longitude < -180
-        @error "longitude $longitude is out of acceptable range (-180 <= longitude <= 180)"
+        throw(@error "longitude $longitude is out of acceptable range (-180 <= longitude <= 180)")
     end
 
-    if load_type not in ["electric","heating","cooling"]
-        @error "load_type parameter must be one of the following: 'electric', 'heating', or 'cooling'."
-                            " If load_type is not specified, 'electric' is assumed."
+    if !(load_type in ["electric","heating","cooling"])
+        throw(@error "load_type parameter must be one of the following: 'electric', 'heating', or 'cooling'. If load_type is not specified, 'electric' is assumed.")
     end
 
     # The following is possibly used in both load_type == "electric" and "cooling", so have to bring it out of those if-statements
@@ -79,18 +84,19 @@ function simulated_load(d::Dict)
     if load_type == "electric"
         for key in keys(d)
             if occursin("_mmbtu", key) || occursin("_ton", key) || occursin("_fraction", key)
-                @error "Invalid key $key for load_type=electric"
+                throw(@error "Invalid key $key for load_type=electric")
             end
+        end
         if isnothing(doe_reference_name)
-            @error "Please supply a doe_reference_name and optionally scaling parameters (annual_kwh or monthly_totals_kwh)."
+            throw(@error "Please supply a doe_reference_name and optionally scaling parameters (annual_kwh or monthly_totals_kwh).")
         end
         # Annual loads (default is nothing)
         annual_kwh = get(d, "annual_kwh", nothing)
         # Monthly loads (default is empty list)
-        monthly_totals_kwh = get(d, "monthly_totals_kwh", [])
+        monthly_totals_kwh = get(d, "monthly_totals_kwh", Real[])
         if !isempty(monthly_totals_kwh)
             if length(monthly_totals_kwh != 12)
-                @error "monthly_totals_kwh must contain a value for each of the 12 months"
+                throw(@error "monthly_totals_kwh must contain a value for each of the 12 months")
             end                  
             bad_index = []
             for (i, kwh) in enumerate(monthly_totals_kwh)
@@ -99,7 +105,7 @@ function simulated_load(d::Dict)
                 end
             end
             if !isempty(bad_index)
-                @error "monthly_totals_kwh must contain a value for each month, and it is null for these months: $bad_index"
+                throw(@error "monthly_totals_kwh must contain a value for each month, and it is null for these months: $bad_index")
             end
         end
 
@@ -170,6 +176,7 @@ function simulated_load(d::Dict)
                         ])
 
         return response
+    end
 
     if load_type == "heating"
         error_list = []
@@ -179,18 +186,18 @@ function simulated_load(d::Dict)
             end
         end
         if !isempty(error_list)
-            @error "Invalid key(s) $error_list for load_type=heating"
+            throw(@error "Invalid key(s) $error_list for load_type=heating")
         end
         if isnothing(doe_reference_name)
-            @error "Please supply a doe_reference_name and optional scaling parameters (annual_mmbtu or monthly_mmbtu)."
+            throw(@error "Please supply a doe_reference_name and optional scaling parameters (annual_mmbtu or monthly_mmbtu).")
         end
         # Annual loads (default is nothing)
         annual_mmbtu = get(d, "annual_mmbtu", nothing)
         # Monthly loads (default is empty list)
-        monthly_mmbtu = get(d, "monthly_mmbtu", [])
+        monthly_mmbtu = get(d, "monthly_mmbtu", Real[])
         if !isempty(monthly_mmbtu)
             if length(monthly_mmbtu != 12)
-                @error "monthly_mmbtu must contain a value for each of the 12 months"
+                throw(@error "monthly_mmbtu must contain a value for each of the 12 months")
             end                   
             bad_index = []
             for (i, mmbtu) in enumerate(monthly_mmbtu)
@@ -199,14 +206,14 @@ function simulated_load(d::Dict)
                 end
             end
             if !isempty(bad_index)
-                @error "monthly_mmbtu must contain a value for each month, and it is null for these months: $bad_index"
+                throw(@error "monthly_mmbtu must contain a value for each month, and it is null for these months: $bad_index")
             end
         end
         # Addressable heating load (default is 1.0)
         addressable_load_fraction = get(d, "addressable_load_fraction", 1.0)
         if addressable_load_fraction <: Vector{}
             if length(addressable_load_fraction != 12)
-                @error "addressable_load_fraction must contain a value for each of the 12 months"
+                throw(@error "addressable_load_fraction must contain a value for each of the 12 months")
             end                
             bad_index = []
             for (i, frac) in enumerate(addressable_load_fraction)
@@ -215,10 +222,10 @@ function simulated_load(d::Dict)
                 end
             end
             if length(bad_index) > 0
-                @error "addressable_load_fraction must contain a value for each month, and it is null for these months: $bad_index"
+                throw(@error "addressable_load_fraction must contain a value for each month, and it is null for these months: $bad_index")
             end
         elseif addressable_load_fraction < 0.0 ||addressable_load_fraction > 1.0
-            @error "addressable_load_fraction must be between 0.0 and 1.0"
+            throw(@error "addressable_load_fraction must be between 0.0 and 1.0")
         end
 
         heating_load_inputs = Dict{Symbol, Any}()
@@ -243,8 +250,8 @@ function simulated_load(d::Dict)
                                                 )
         space_heating_annual_mmbtu = nothing
         dhw_annual_mmbtu = nothing
-        space_heating_monthly_mmbtu = []
-        dhw_monthly_mmbtu = []
+        space_heating_monthly_mmbtu = Real[]
+        dhw_monthly_mmbtu = Real[]
         if !isempty(monthly_mmbtu)    
             space_heating_monthly_energy, space_heating_monthly_fraction = get_monthly_energy_fractions(; power_profile=default_space_heating_load.loads_kw)
             dhw_monthly_energy, dhw_monthly_fraction = get_monthly_energy_fractions(; power_profile=default_dhw_load.loads_kw)
@@ -298,6 +305,7 @@ function simulated_load(d::Dict)
         ])
 
         return response
+    end
 
     if load_type == "cooling"
         error_list = []
@@ -307,10 +315,10 @@ function simulated_load(d::Dict)
             end
         end
         if !isempty(error_list)
-            @error "Invalid key(s) $error_list for load_type=cooling"
+            throw(@error "Invalid key(s) $error_list for load_type=cooling")
         end
         if isnothing(doe_reference_name)
-            @error "Please supply a doe_reference_name and optional scaling parameters (annual_tonhour or monthly_tonhour)."
+            throw(@error "Please supply a doe_reference_name and optional scaling parameters (annual_tonhour or monthly_tonhour).")
         end            
 
         # First check if one of the "fraction" inputs were given, which supersedes doe_reference_name
@@ -325,12 +333,12 @@ function simulated_load(d::Dict)
                 ("max_fraction", round(maximum(cooling_fraction_series), digits=3)),
                     ])
             return response
-
-        monthly_fraction = get(d, "monthly_fraction", [])
+        end
+        monthly_fraction = get(d, "monthly_fraction", Real[])
         if !isempty(monthly_fraction)
             if length(monthly_fraction) > 1
                 if length(monthly_fraction != 12)
-                    @error "monthly_fraction must contain a value for each of the 12 months"
+                    throw(@error "monthly_fraction must contain a value for each of the 12 months")
                 end                     
                 bad_index = []
                 for (i, frac) in enumerate(monthly_fraction)
@@ -339,7 +347,7 @@ function simulated_load(d::Dict)
                     end
                 end
                 if length(bad_index) > 0
-                    @error "monthly_fraction must contain a value between 0-1 for each month, and it is not valid for these months: $bad_index"
+                    throw(@error "monthly_fraction must contain a value between 0-1 for each month, and it is not valid for these months: $bad_index")
                 end
             end
             days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]  # Only relevant for 2017 the CRB year, not for leap year
@@ -362,10 +370,10 @@ function simulated_load(d::Dict)
             # Annual loads (default is nothing)
             annual_tonhour = get(d, "annual_tonhour", nothing)
             # Monthly loads (default is empty list)
-            monthly_tonhour = get(d, "monthly_tonhour", [])
+            monthly_tonhour = get(d, "monthly_tonhour", Real[])
             if !isempty(monthly_tonhour)
                 if length(monthly_tonhour != 12)
-                    @error "monthly_tonhour must contain a value for each of the 12 months"
+                    throw(@error "monthly_tonhour must contain a value for each of the 12 months")
                 end                    
                 bad_index = []
                 for (i, mmbtu) in enumerate(monthly_tonhour)
@@ -374,12 +382,12 @@ function simulated_load(d::Dict)
                     end
                 end
                 if !isempty(bad_index)
-                    @error "monthly_tonhour must contain a value for each month, and it is null for these months: $bad_index"
+                    throw(@error "monthly_tonhour must contain a value for each month, and it is null for these months: $bad_index")
                 end
             end
 
             if isnothing(annual_tonhour) && isempty(monthly_tonhour)
-                @error "Use load_type=electric to get cooling load for buildings with no annual_tonhour or monthly_tonhour input (response.cooling_defaults)"
+                throw(@error "Use load_type=electric to get cooling load for buildings with no annual_tonhour or monthly_tonhour input (response.cooling_defaults)")
             end
 
             # Build dependent inputs for cooling load
@@ -410,7 +418,7 @@ function simulated_load(d::Dict)
                 ])
             return response
         else
-            @error "Please supply a doe_reference_name and optional scaling parameters (annual_tonhour or monthly_tonhour), or annual_fraction, or monthly_fraction."
+            throw(@error "Please supply a doe_reference_name and optional scaling parameters (annual_tonhour or monthly_tonhour), or annual_fraction, or monthly_fraction.")
         end
     end
 end
