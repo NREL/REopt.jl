@@ -313,7 +313,7 @@ function get_monthly_energy(; power_profile::AbstractArray{<:Real,1}=Real[],
         annual_energy = sum(power_profile)
     elseif !isempty(power_profile)
         annual_energy = sum(power_profile)
-        @warning "Using sum(power_profile) for annual_energy instead of input annual_energy"
+        @warn "Using sum(power_profile) for annual_energy instead of input annual_energy"
     end
     for month in 1:12
         plus_hours = daysinmonth(Date(string(year) * "-" * string(month))) * 24
