@@ -8,10 +8,10 @@ function simulated_load(d::Dict)
 
     # Check consistency between type/length of doe_reference_name and percent_share (for blended/hybrid buildings)
     doe_reference_name_input = get(d, "doe_reference_name", nothing)
-    percent_share_input = get(d, "percent_share", nothing)
+    percent_share_input = get(d, "percent_share", Real[])
     if !isnothing(doe_reference_name_input) && !(typeof(doe_reference_name_input) <: Vector{})
         doe_reference_name = [doe_reference_name_input]
-    elseif !isnothing(doe_reference_name_input) && !isnothing(percent_share_input)
+    elseif !isnothing(doe_reference_name_input) && !isempty(percent_share_input)
         doe_reference_name = doe_reference_name_input
         if !(typeof(percent_share_input) <: Vector{})
             percent_share_list = [percent_share_input]
@@ -21,23 +21,30 @@ function simulated_load(d::Dict)
         if length(percent_share_list) != length(doe_reference_name)
             throw(@error "The number of percent_share entries does not match that of the number of doe_reference_name entries")
         end
+    elseif !isnothing(doe_reference_name_input) && typeof(doe_reference_name_input) <: Vector{} && isempty(percent_share_input)  # Vector of doe_reference_name but no percent_share, as needed
+        throw(@error "Must provide percent_share list if modeling a blended/hybrid set of buildings")
+    else
+        doe_reference_name = doe_reference_name_input
     end
 
     # When wanting cooling profile based on building type(s) for cooling, need separate cooling building(s)
     cooling_doe_ref_name_input = get(d, "cooling_doe_ref_name", nothing)
-    cooling_pct_share_input = get(d, "cooling_pct_share", nothing)
+    cooling_pct_share_input = get(d, "cooling_pct_share", Real[])
     if !isnothing(cooling_doe_ref_name_input) && !(typeof(cooling_doe_ref_name_input) <: Vector{})
-        cooling_doe_ref_name = cooling_doe_ref_name_input
-    elseif !isnothing(cooling_doe_ref_name_input) && !isnothing(cooling_pct_share_input)
+        cooling_doe_ref_name = [cooling_doe_ref_name_input]
+        cooling_pct_share_list = Real[]
+    elseif !isnothing(cooling_doe_ref_name_input) && !isempty(cooling_pct_share_input)
         cooling_doe_ref_name = cooling_doe_ref_name_input
         if !(typeof(cooling_pct_share_input) <: Vector{})
-            cooling_pct_share_list = [percent_share_input]
+            cooling_pct_share_list = [cooling_pct_share_input]
         else
-            cooling_pct_share_list = percent_share_input
+            cooling_pct_share_list = cooling_pct_share_input
         end            
         if length(cooling_pct_share_list) != length(cooling_doe_ref_name)
             throw(@error "The number of cooling_pct_share entries does not match that of the number of cooling_doe_ref_name entries")
         end
+    elseif typeof(cooling_doe_ref_name_input) <: Vector{} && isempty(cooling_pct_share_input)  # Vector of cooling_doe_ref_name but no cooling_pct_share_input, as needed
+        throw(@error "Must provide cooling_pct_share list if modeling a blended/hybrid set of buildings")
     else
         cooling_doe_ref_name = nothing
         cooling_pct_share_list = Real[]
@@ -111,7 +118,7 @@ function simulated_load(d::Dict)
 
         # Build dependent inputs for electric load
         elec_load_inputs = Dict{Symbol, Any}()
-        if length(doe_reference_name) > 1
+        if typeof(doe_reference_name) <: Vector{} && length(doe_reference_name) > 1
             elec_load_inputs[:blended_doe_reference_names] = doe_reference_name
             elec_load_inputs[:blended_doe_reference_percents] = percent_share_list
         else
@@ -129,7 +136,7 @@ function simulated_load(d::Dict)
         if !isnothing(cooling_doe_ref_name)
             # Build dependent inputs for cooling load
             cooling_load_inputs = Dict{Symbol, Any}()
-            if length(cooling_doe_ref_name) > 1
+            if typeof(cooling_doe_ref_name) <: Vector{} && length(cooling_doe_ref_name) > 1
                 cooling_load_inputs[:blended_doe_reference_names] = cooling_doe_ref_name
                 cooling_load_inputs[:blended_doe_reference_percents] = cooling_pct_share_list
             else
@@ -144,17 +151,21 @@ function simulated_load(d::Dict)
                                         existing_chiller_max_thermal_factor_on_peak_load=max_thermal_factor_on_peak_load
                                 )
 
-            modified_fraction = []
-            for (i, building) in enumerate(cooling_doe_ref_name)
-                default_fraction = get_default_fraction_of_total_electric(electric_load.city, building, latitude, longitude, electric_load.year)
-                modified_fraction = default_fraction * cooling_pct_share_list[i] / 100.0
+            if length(cooling_doe_ref_name) > 1
+                modified_fraction = []
+                for (i, building) in enumerate(cooling_doe_ref_name)
+                    default_fraction = get_default_fraction_of_total_electric(electric_load.city, building, latitude, longitude, electric_load.year)
+                    modified_fraction = default_fraction * cooling_pct_share_list[i] / 100.0
+                end
+            else
+                modified_fraction = get_default_fraction_of_total_electric(electric_load.city, cooling_doe_ref_name[1], latitude, longitude, electric_load.year)
             end
 
             cooling_load_thermal_ton = round.(cooling_load.loads_kw_thermal ./ KWH_THERMAL_PER_TONHOUR, digits=3)
             cooling_defaults_dict = Dict([
                                         ("loads_ton", cooling_load_thermal_ton),
                                         ("annual_tonhour", sum(cooling_load_thermal_ton)),
-                                        ("chiller_cop", round(cooling_load.chiller_cop, digits=3)),
+                                        ("chiller_cop", round(cooling_load.existing_chiller_cop, digits=3)),
                                         ("min_ton", minimum(cooling_load_thermal_ton)),
                                         ("mean_ton", sum(cooling_load_thermal_ton) / length(cooling_load_thermal_ton)),
                                         ("max_ton", maximum(cooling_load_thermal_ton)),
@@ -182,7 +193,7 @@ function simulated_load(d::Dict)
         error_list = []
         for key in keys(d)
             if occursin("_kw", key) || occursin("_ton", key)
-                append!(error_list, key)
+                append!(error_list, [key])
             end
         end
         if !isempty(error_list)
@@ -211,7 +222,7 @@ function simulated_load(d::Dict)
         end
         # Addressable heating load (default is 1.0)
         addressable_load_fraction = get(d, "addressable_load_fraction", 1.0)
-        if addressable_load_fraction <: Vector{}
+        if typeof(addressable_load_fraction) <: Vector{}
             if length(addressable_load_fraction != 12)
                 throw(@error "addressable_load_fraction must contain a value for each of the 12 months")
             end                
@@ -253,8 +264,8 @@ function simulated_load(d::Dict)
         space_heating_monthly_mmbtu = Real[]
         dhw_monthly_mmbtu = Real[]
         if !isempty(monthly_mmbtu)    
-            space_heating_monthly_energy, space_heating_monthly_fraction = get_monthly_energy_fractions(; power_profile=default_space_heating_load.loads_kw)
-            dhw_monthly_energy, dhw_monthly_fraction = get_monthly_energy_fractions(; power_profile=default_dhw_load.loads_kw)
+            space_heating_monthly_energy, space_heating_monthly_fraction = get_monthly_energy(; power_profile=default_space_heating_load.loads_kw)
+            dhw_monthly_energy, dhw_monthly_fraction = get_monthly_energy(; power_profile=default_dhw_load.loads_kw)
             space_heating_fraction_monthly = space_heating_monthly_energy ./ (space_heating_monthly_energy + dhw_monthly_energy)
             space_heating_monthly_mmbtu = monthly_mmbtu .* space_heating_fraction_monthly
             dhw_monthly_mmbtu = monthly_mmbtu .* (1 .- space_heating_monthly_mmbtu)
@@ -284,24 +295,24 @@ function simulated_load(d::Dict)
         space_load_series = space_heating_load.loads_kw ./ EXISTING_BOILER_EFFICIENCY ./ KWH_PER_MMBTU
         dhw_load_series = dhw_load.loads_kw ./ EXISTING_BOILER_EFFICIENCY ./ KWH_PER_MMBTU
         total_load_series = space_load_series + dhw_load_series
-        total_heating_annual_mmbtu = space_heating_load.annual_mmbtu + dhw_load.annual_mmbtu
+        total_heating_annual_mmbtu = (space_heating_load.annual_mmbtu + dhw_load.annual_mmbtu) / EXISTING_BOILER_EFFICIENCY
 
         response = Dict([
-            ("loads_mmbtu", round.(total_load_series, digits=3)),
+            ("loads_mmbtu_per_hour", round.(total_load_series, digits=3)),
             ("annual_mmbtu", round(total_heating_annual_mmbtu, digits=3)),
-            ("min_mmbtu", round(minimum(total_load_series), digits=3)),
-            ("mean_mmbtu", round(sum(total_load_series) / length(total_load_series), digits=3)),
-            ("max_mmbtu", round(maximum(total_load_series), digits=3)),
-            ("space_loads_mmbtu", round.(space_load_series, digits=3)),
-            ("space_annual_mmbtu", round(space_heating_load.annual_mmbtu, digits=3)),
-            ("space_min_mmbtu", round(minimum(space_load_series), digits=3)),
-            ("space_mean_mmbtu", round(sum(space_load_series) / length(space_load_series), digits=3)),
-            ("space_max_mmbtu", round(maximum(space_load_series), digits=3)),
-            ("dhw_loads_mmbtu", round.(dhw_load_series, digits=3)),
-            ("dhw_annual_mmbtu", round(dhw_load.annual_mmbtu, digits=3)),
-            ("dhw_min_mmbtu", round(minimum(dhw_load_series), digits=3)),
-            ("dhw_mean_mmbtu", round(sum(dhw_load_series) / length(dhw_load_series), digits=3)),
-            ("dhw_max_mmbtu", round(maximum(dhw_load_series), digits=3)),  
+            ("min_mmbtu_per_hour", round(minimum(total_load_series), digits=3)),
+            ("mean_mmbtu_per_hour", round(sum(total_load_series) / length(total_load_series), digits=3)),
+            ("max_mmbtu_per_hour", round(maximum(total_load_series), digits=3)),
+            ("space_loads_mmbtu_per_hour", round.(space_load_series, digits=3)),
+            ("space_annual_mmbtu", round(space_heating_load.annual_mmbtu / EXISTING_BOILER_EFFICIENCY, digits=3)),
+            ("space_min_mmbtu_per_hour", round(minimum(space_load_series), digits=3)),
+            ("space_mean_mmbtu_per_hour", round(sum(space_load_series) / length(space_load_series), digits=3)),
+            ("space_max_mmbtu_per_hour", round(maximum(space_load_series), digits=3)),
+            ("dhw_loads_mmbtu_per_hour", round.(dhw_load_series, digits=3)),
+            ("dhw_annual_mmbtu", round(dhw_load.annual_mmbtu / EXISTING_BOILER_EFFICIENCY, digits=3)),
+            ("dhw_min_mmbtu_per_hour", round(minimum(dhw_load_series), digits=3)),
+            ("dhw_mean_mmbtu_per_hour", round(sum(dhw_load_series) / length(dhw_load_series), digits=3)),
+            ("dhw_max_mmbtu_per_hour", round(maximum(dhw_load_series), digits=3)),  
         ])
 
         return response
@@ -311,7 +322,7 @@ function simulated_load(d::Dict)
         error_list = []
         for key in keys(d)
             if occursin("_kw", key) || occursin("_mmbtu", key)
-                append!(error_list, key)
+                append!(error_list, [key])
             end
         end
         if !isempty(error_list)
