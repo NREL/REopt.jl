@@ -954,7 +954,8 @@ function backup_reliability_inputs(;r::Dict)::Dict
     invalid_args = String[]
     r2 = dictkeys_tosymbols(r)
 
-    generator_inputs = [:generator_operational_availability, :generator_failure_to_start, :generator_failure_to_run, :num_generators, :generator_size_kw, :fuel_availability]
+    generator_inputs = [:generator_operational_availability, :generator_failure_to_start, :generator_failure_to_run, 
+                        :num_generators, :generator_size_kw, :fuel_availability, :generator_fuel_intercept, :generator_burn_rate_fuel_per_kwh]
     for g in generator_inputs
         if haskey(r2, g) && isa(r2[g], Array) && length(r2[g]) == 1
         r2[g] = r2[g][1]
@@ -962,8 +963,17 @@ function backup_reliability_inputs(;r::Dict)::Dict
     end
 
     #If multiple generators and no fuel input, then remove fuel constraint
-    if haskey(r2, :num_generators) && (length(r2[:num_generators]) > 1) && !haskey(r2, :fuel_availability)
-        r2[:fuel_availability] = [Inf for i = 1:length(r2[:num_generators])]
+    if haskey(r2, :num_generators) && (length(r2[:num_generators]) > 1)
+        num_gen_types = length(r2[:num_generators])
+        if !haskey(r2, :fuel_availability)
+            r2[:fuel_availability] = [Inf for i = 1:num_gen_types]
+        end 
+        if !haskey(r2, :generator_fuel_intercept)
+            r2[:generator_fuel_intercept] = [0.0 for i in 1:num_gen_types]
+        end
+        if !haskey(r2, :generator_burn_rate_fuel_per_kwh)
+            r2[:generator_burn_rate_fuel_per_kwh] = [0.076 for i in 1:num_gen_types]
+        end
     end
 
     zero_array = zeros(length(r2[:critical_loads_kw]))
