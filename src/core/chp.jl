@@ -100,27 +100,30 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
 
 """
 Base.@kwdef mutable struct CHP <: AbstractCHP
-    prime_mover::Union{String, Nothing} = nothing
+    # Required input
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = []    
+    
+    # Inputs which defaults vary depending on prime_mover and size_class
     installed_cost_per_kw::Union{Float64, AbstractVector{Float64}} = Float64[]
     tech_sizes_for_cost_curve::AbstractVector{Float64} = Float64[]
     om_cost_per_kwh::Float64 = NaN
     electric_efficiency_full_load::Float64 = NaN
-    electric_efficiency_half_load::Float64 = NaN
-    min_turn_down_fraction::Float64 = NaN
     thermal_efficiency_full_load::Float64 = NaN
-    thermal_efficiency_half_load::Float64 = NaN
     min_allowable_kw::Float64 = NaN
-    max_kw::Float64 = NaN
     cooling_thermal_factor::Float64 = NaN  # only needed with cooling load
+    min_turn_down_fraction::Float64 = NaN
     unavailability_periods::AbstractVector{Dict} = Dict[]
 
     # Optional inputs:
+    prime_mover::Union{String, Nothing} = nothing
     size_class::Union{Int, Nothing} = nothing
     min_kw::Float64 = 0.0
+    max_kw::Float64 = 1.0e9
     fuel_type::String = "natural_gas"
     om_cost_per_kw::Float64 = 0.0
     om_cost_per_hr_per_kw_rated::Float64 = 0.0
+    electric_efficiency_half_load::Float64 = NaN  # Assigned to ..._full_load if not input
+    thermal_efficiency_half_load::Float64 = NaN  # Assigned to ..._full_load if not input
     supplementary_firing_capital_cost_per_kw::Float64 = 150.0
     supplementary_firing_max_steam_ratio::Float64 = 1.0
     supplementary_firing_efficiency::Float64 = 0.92
@@ -176,19 +179,16 @@ function CHP(d::Dict;
 
     @assert chp.fuel_type in FUEL_TYPES
 
-    # Must provide prime_mover or all of custom_chp_inputs
+    # These inputs are set based on prime_mover and size_class
     custom_chp_inputs = Dict{Symbol, Any}(
         :installed_cost_per_kw => chp.installed_cost_per_kw, 
         :tech_sizes_for_cost_curve => chp.tech_sizes_for_cost_curve, 
         :om_cost_per_kwh => chp.om_cost_per_kwh, 
-        :electric_efficiency_full_load => chp.electric_efficiency_full_load, 
-        :electric_efficiency_half_load => chp.electric_efficiency_half_load, 
-        :min_turn_down_fraction => chp.min_turn_down_fraction, 
-        :thermal_efficiency_full_load => chp.thermal_efficiency_full_load, 
-        :thermal_efficiency_half_load => chp.thermal_efficiency_half_load,
-        :min_allowable_kw => chp.min_allowable_kw, 
-        :max_kw => chp.max_kw, 
-        :cooling_thermal_factor => chp.cooling_thermal_factor
+        :electric_efficiency_full_load => chp.electric_efficiency_full_load,
+        :thermal_efficiency_full_load => chp.thermal_efficiency_full_load,
+        :min_allowable_kw => chp.min_allowable_kw,
+        :cooling_thermal_factor => chp.cooling_thermal_factor,
+        :min_turn_down_fraction => chp.min_turn_down_fraction 
     )
 
     # Installed cost input validation
@@ -231,6 +231,15 @@ function CHP(d::Dict;
             setproperty!(chp, k, defaults[string(k)])
         end
     end
+
+    # Set electric and thermal half load efficiency to full load if not input
+    if isnan(chp.electric_efficiency_half_load)
+        chp.electric_efficiency_half_load = chp.electric_efficiency_full_load
+    end
+    if isnan(chp.thermal_efficiency_half_load)
+        chp.thermal_efficiency_half_load = chp.electric_efficiency_full_load
+    end
+        
     if isempty(chp.unavailability_periods)
         chp.unavailability_periods = defaults["unavailability_periods"]
     end
