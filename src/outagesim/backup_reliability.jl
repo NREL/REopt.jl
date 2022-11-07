@@ -803,8 +803,9 @@ end
 Return a dictionary of inputs required for backup reliability calculations. 
 
 # Arguments
-- `d::Dict`: REopt results dictionary. 
-- `r::Dict`: Dictionary of inputs for reliability calculations. If r not included then uses all defaults. values read from dictionary:
+-d::Dict: REopt results dictionary.
+-p::REoptInputs: REopt inputs struct.  
+-r::Dict: Dictionary of inputs for reliability calculations. If r not included then uses all defaults. values read from dictionary:
     -generator_operational_availability::Real = 0.9998      Fraction of year generators not down for maintenance
     -generator_failure_to_start::Real = 0.0066              Chance of generator starting given outage
     -generator_failure_to_run::Real = 0.00157               Chance of generator failing in each time step of outage
@@ -813,8 +814,12 @@ Return a dictionary of inputs required for backup reliability calculations.
     -num_battery_bins::Int = 101                            Internal value for discretely modeling battery state of charge
     -max_outage_duration::Int = 96                          Maximum outage time step modeled
     -microgrid_only::Bool = false                           Boolean to specify if only microgrid upgraded technologies run during grid outage
-    -use_full_battery_charge::Bool                          Optional input. If added and set to true then 100% of available battery can be used for power outages,
-                                                            otherwise
+    -use_full_battery_charge::Bool                          Optional input. If added and set to true then 100% of available battery can be used for power outages
+    -fuel_availability:Union{Real, Vector{<:Real}} = Inf    Amount of fuel available, either by generator type or per generator. Change generator_burn_rate_fuel_per_kwh for different fuel efficiencies    
+    -generator_fuel_intercept::Union{Real, Vector{<:Real}} = 0.0                Amount of fuel burned each time step while idling   
+    -fuel_availability_by_generator::Bool = false                               Boolian to determine whether fuel availability is given per generator or per generator type
+    -generator_burn_rate_fuel_per_kwh::Union{Real, Vector{<:Real}} = 0.076      Amount of fuel used per kWh generated
+
 """
 function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dict())::Dict
     r2 = dictkeys_tosymbols(r)
@@ -910,25 +915,29 @@ Return a dictionary of inputs required for backup reliability calculations.
 # Arguments
 - `r::Dict`: Dictionary of inputs for reliability calculations.
     inputs of r:
-    -critical_loads_kw::Array                   Critical loads per time step. (Required input)
-    -microgrid_only::Bool = false               Boolean to specify if only microgrid upgraded technologies run during grid outage 
-    -chp_size_kw::Real                          CHP capacity. 
-    -pv_size_kw::Real                           Size of PV System
-    -pv_production_factor_series::Array         PV production factor per time step (required if pv_size_kw in dictionary)
-    -pv_migrogrid_upgraded::Bool                If true then PV runs during outage if microgrid_only = TRUE (defaults to false)
-    -battery_size_kw::Real                      Battery capacity. If no battery installed then PV disconnects from system during outage
-    -battery_size_kwh::Real                     Battery energy storage capacity
-    -charge_efficiency::Real                    Battery charge efficiency
-    -discharge_efficiency::Real                 Battery discharge efficiency
-    -battery_starting_soc_series_fraction       Battery state of charge in each time step (if not input then defaults to battery size)
-    -battery_minimum_soc                        fraction of battery unavailable. If provided then reduces battery_size_kwh and battery_starting_soc_kwh to effective values. Defaults to 0
-    -generator_operational_availability= 0.9998 Likelihood generator being available in given time step
-    -generator_failure_to_start::Real = 0.0066  Chance of generator starting given outage
-    -generator_failure_to_run::Real = 0.00157   Chance of generator failing in each time step of outage
-    -num_generators::Int = 1                    Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
-    -generator_size_kw::Real = 0.0              Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
-    -num_battery_bins::Int = 101                Internal value for discretely modeling battery state of charge
-    -max_outage_duration::Int = 96              Maximum outage duration modeled
+    -critical_loads_kw::Array                               Critical loads per time step. (Required input)
+    -microgrid_only::Bool = false                           Boolean to specify if only microgrid upgraded technologies run during grid outage 
+    -chp_size_kw::Real                                      CHP capacity. 
+    -pv_size_kw::Real                                       Size of PV System
+    -pv_production_factor_series::Array                     PV production factor per time step (required if pv_size_kw in dictionary)
+    -pv_migrogrid_upgraded::Bool                            If true then PV runs during outage if microgrid_only = TRUE (defaults to false)
+    -battery_size_kw::Real                                  Battery capacity. If no battery installed then PV disconnects from system during outage
+    -battery_size_kwh::Real                                 Battery energy storage capacity
+    -charge_efficiency::Real                                Battery charge efficiency
+    -discharge_efficiency::Real                             Battery discharge efficiency
+    -battery_starting_soc_series_fraction                   Battery state of charge in each time step (if not input then defaults to battery size)
+    -battery_minimum_soc                                    Fraction of battery unavailable. If provided then reduces battery_size_kwh and battery_starting_soc_kwh to effective values. Defaults to 0
+    -generator_operational_availability= 0.9998             Likelihood generator being available in given time step
+    -generator_failure_to_start::Real = 0.0066              Chance of generator starting given outage
+    -generator_failure_to_run::Real = 0.00157               Chance of generator failing in each time step of outage
+    -num_generators::Int = 1                                Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
+    -generator_size_kw::Real = 0.0                          Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
+    -num_battery_bins::Int = 101                            Internal value for discretely modeling battery state of charge
+    -max_outage_duration::Int = 96                          Maximum outage duration modeled
+    -fuel_availability:Union{Real, Vector{<:Real}} = Inf    Amount of fuel available, either by generator type or per generator. Change generator_burn_rate_fuel_per_kwh for different fuel efficiencies    
+    -generator_fuel_intercept::Union{Real, Vector{<:Real}} = 0.0                Amount of fuel burned each time step while idling   
+    -fuel_availability_by_generator::Bool = false                               Boolian to determine whether fuel availability is given per generator or per generator type
+    -generator_burn_rate_fuel_per_kwh::Union{Real, Vector{<:Real}} = 0.076      Amount of fuel used per kWh generated
 
 #Examples
 ```repl-julia
