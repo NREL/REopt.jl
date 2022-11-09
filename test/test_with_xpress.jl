@@ -483,21 +483,44 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
 # end
 
 @testset "Minimize Unserved Load" begin
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MAXTIME" => 420, "MIPRELSTOP" => 0.001))
-    results = run_reopt(m, "./scenarios/outage_api.json")
-    println(results["Outages"]["expected_outage_cost"])
-    println(results["Outages"]["unserved_load_per_outage"])
-    println(results["Outages"]["microgrid_upgrade_capital_cost"])
-    println(results["Outages"]["generator_fuel_used_per_outage"])
-    println(results["Financial"]["lcc"])
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MAXTIME" => 420, "MIPRELSTOP" => 0.001))
-    results = run_reopt(m, "./scenarios/outage_api_full.json")
-    println("full with defaults:")
-    println(results["Outages"]["expected_outage_cost"])
-    println(results["Outages"]["unserved_load_per_outage"])
-    println(results["Outages"]["microgrid_upgrade_capital_cost"])
-    println(results["Outages"]["generator_fuel_used_per_outage"])
-    println(results["Financial"]["lcc"])
+    m = direct_model(
+        Xpress.Optimizer(
+            MAXTIME = 420,
+            MIPRELSTOP = 0.001,
+            OUTPUTLOG = 0
+        )
+    )
+    # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MAXTIME" => 420, "MIPRELSTOP" => 0.001))
+    model_inputs = REoptInputs("./scenarios/outage_api_simpler.json")
+    # show(model_inputs)
+    results = run_reopt(m, model_inputs)
+    # results = run_reopt(m, "./scenarios/outage_api.json")
+    # println(results["Outages"]["expected_outage_cost"])
+    # println(results["Outages"]["unserved_load_per_outage"])
+    # println(results["Outages"]["microgrid_upgrade_capital_cost"])
+    # println(results["Outages"]["generator_fuel_used_per_outage"])
+    # println(results["Financial"]["lcc"])
+    JSON.print(open("test_results_outage_api_simpler.json","w"), results)
+
+    # m = direct_model(
+    #     Xpress.Optimizer(
+    #         MAXTIME = 420,
+    #         MIPRELSTOP = 0.001,
+    #         OUTPUTLOG = 0
+    #     )
+    # )
+    # # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MAXTIME" => 420, "MIPRELSTOP" => 0.001))
+    # model_inputs = REoptInputs("./scenarios/outage_api_full.json")
+    # # show(model_inputs)
+    # results = run_reopt(m, model_inputs)
+    # # results = run_reopt(m, "./scenarios/outage_api_full.json")
+    # # println("full with defaults:")
+    # # println(results["Outages"]["expected_outage_cost"])
+    # # println(results["Outages"]["unserved_load_per_outage"])
+    # # println(results["Outages"]["microgrid_upgrade_capital_cost"])
+    # # println(results["Outages"]["generator_fuel_used_per_outage"])
+    # # println(results["Financial"]["lcc"])
+    # JSON.print(open("test_results_outage_api_full.json","w"), results)
 
     # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     # results = run_reopt(m, "./scenarios/outage.json")
