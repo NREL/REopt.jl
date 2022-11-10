@@ -1286,7 +1286,7 @@ end
             @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] atol=1
             @test results["Site"]["lifecycle_emissions_tonnes_NOx"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_NOx"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_NOx"] atol=0.1
             @test results["Site"]["lifecycle_emissions_tonnes_SO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_SO2"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_SO2"] atol=1e-2
-            @test results["Site"]["lifecycle_emissions_tonnes_PM25"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_PM25"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_PM25"] atol=1e-2
+            @test results["Site"]["lifecycle_emissions_tonnes_PM25"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_PM25"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_PM25"] atol=1.5e-2
             @test results["Site"]["annual_renewable_electricity_kwh"] ≈ results["PV"]["average_annual_energy_produced_kwh"] + inputs["CHP"]["fuel_renewable_energy_fraction"] * results["CHP"]["year_one_electric_energy_produced_kwh"] atol=1
             @test results["Site"]["renewable_electricity_fraction"] ≈ results["Site"]["annual_renewable_electricity_kwh"] / results["ElectricLoad"]["annual_calculated_kwh"] atol=1e-6#0.044285 atol=1e-4
             KWH_PER_MMBTU = 293.07107
@@ -1448,7 +1448,7 @@ end
     # Check that all thermal supply to load meets the BAU load plus AbsorptionChiller load which is not explicitly tracked
     alltechs_thermal_to_load_total = sum([sum(tech_to_thermal_load[tech]["load"]) for tech in thermal_techs]) + sum(hottes_to_load)
     thermal_load_total = sum(load_boiler_thermal) + sum(absorptionchiller_thermal_in)
-    @test alltechs_thermal_to_load_total ≈ thermal_load_total atol=0.01
+    @test alltechs_thermal_to_load_total ≈ thermal_load_total atol=0.015
     
     # Check that all thermal to steam turbine is equal to steam turbine thermal consumption
     alltechs_thermal_to_steamturbine_total = sum([sum(tech_to_thermal_load[tech]["steamturbine"]) for tech in ["ExistingBoiler", "CHP"]])
