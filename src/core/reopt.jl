@@ -437,7 +437,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			) / (8760. / p.hours_per_time_step)
 		)
 	end
-	if !(isempty(p.s.storage.types.elec)) && p.s.settings.add_soc_incentive
+	if !isempty(p.s.electric_utility.outage_durations)
 		# Incentive to minimize unserved load in each outage, not just the max over outage start times
 		add_to_expression!(
 			Objective, 
