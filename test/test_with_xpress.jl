@@ -1448,7 +1448,7 @@ end
     # Check that all thermal supply to load meets the BAU load plus AbsorptionChiller load which is not explicitly tracked
     alltechs_thermal_to_load_total = sum([sum(tech_to_thermal_load[tech]["load"]) for tech in thermal_techs]) + sum(hottes_to_load)
     thermal_load_total = sum(load_boiler_thermal) + sum(absorptionchiller_thermal_in)
-    @test alltechs_thermal_to_load_total ≈ thermal_load_total atol=0.015
+    @test alltechs_thermal_to_load_total ≈ thermal_load_total atol=0.02
     
     # Check that all thermal to steam turbine is equal to steam turbine thermal consumption
     alltechs_thermal_to_steamturbine_total = sum([sum(tech_to_thermal_load[tech]["steamturbine"]) for tech in ["ExistingBoiler", "CHP"]])
