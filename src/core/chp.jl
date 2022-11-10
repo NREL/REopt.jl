@@ -258,10 +258,10 @@ custom_chp_inputs, i.e.
 - "tech_sizes_for_cost_curve"
 - "om_cost_per_kwh"
 - "electric_efficiency_full_load"
-- "electric_efficiency_half_load"
-- "min_turn_down_fraction",
 - "thermal_efficiency_full_load"
-- "thermal_efficiency_half_load"
+- "min_allowable_kw"
+- "cooling_thermal_factor"
+- "min_turn_down_fraction" 
 - "unavailability_periods"
 """
 function get_prime_mover_defaults(prime_mover::String, boiler_type::String, size_class::Int, prime_mover_defaults_all::Dict)
