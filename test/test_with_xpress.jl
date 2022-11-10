@@ -784,9 +784,9 @@ end
     #    the 320540.0 kWh number is from the default LargeOffice fraction of total electric profile applied to the Hospital default total electric profile
     total_chiller_electric_consumption = sum(inputs.s.cooling_load.loads_kw_thermal) / inputs.s.existing_chiller.cop
     @test round(total_chiller_electric_consumption, digits=0) ≈ 320544.0 atol=1.0  # loads_kw is **electric**, loads_kw_thermal is **thermal**
-    
-    #Test CHP defaults use average fuel load, size class 2 for recip_engine 
-    @test inputs.s.chp.max_kw ≈ 10000.0 atol=0.1
+
+    #Test CHP defaults use average fuel load, size class 3 for recip_engine 
+    @test inputs.s.chp.min_allowable_kw ≈ 50.0 atol=0.01
     @test inputs.s.chp.om_cost_per_kwh ≈ 0.0225 atol=0.0001
 
     delete!(input_data, "SpaceHeatingLoad")
@@ -808,7 +808,8 @@ end
 
     s = Scenario(input_data)
     inputs = REoptInputs(s)
-    #Test CHP defaults use average fuel load, size class changes to 3
+    #Test CHP defaults use average fuel load, size class changes to 4
+    @test inputs.s.chp.min_allowable_kw ≈ 315.0 atol=0.1
     @test inputs.s.chp.om_cost_per_kwh ≈ 0.02 atol=0.0001
     #Update CHP prime_mover and test new defaults
     input_data["CHP"]["prime_mover"] = "combustion_turbine"
@@ -817,7 +818,7 @@ end
     s = Scenario(input_data)
     inputs = REoptInputs(s)
 
-    @test inputs.s.chp.max_kw ≈ 20000.0 atol=0.1
+    @test inputs.s.chp.min_allowable_kw ≈ 950.0 atol=0.1
     @test inputs.s.chp.om_cost_per_kwh ≈ 0.014499999999999999 atol=0.0001
 
     total_heating_fuel_load_mmbtu = (sum(inputs.s.space_heating_load.loads_kw) + 
@@ -848,7 +849,7 @@ end
 
     s = Scenario(input_data)
     inputs = REoptInputs(s)
-    
+
     @test round(sum(inputs.s.cooling_load.loads_kw_thermal) / REopt.KWH_THERMAL_PER_TONHOUR, digits=0) ≈ annual_tonhour atol=1.0 
 end
 
