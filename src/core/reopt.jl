@@ -441,7 +441,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		# Incentive to minimize unserved load in each outage, not just the max over outage start times
 		add_to_expression!(
 			Objective, 
-			sum(0.0001 * m[:dvUnservedLoad][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s])
+			sum(sum(0.0001 * m[:dvUnservedLoad][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s]) for s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps)
 		)
 	end
 
