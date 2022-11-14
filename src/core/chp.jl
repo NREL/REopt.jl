@@ -239,6 +239,11 @@ function CHP(d::Dict;
     if isnan(chp.thermal_efficiency_half_load)
         chp.thermal_efficiency_half_load = chp.electric_efficiency_full_load
     end
+
+    if chp.min_allowable_kw > chp.max_kw
+        @warn "CHP.min_allowable_kw is greater than CHP.max_kw, so setting min_allowable_kw equal to max_kw"
+        setproperty!(chp, min_allowable_kw, chp.max_kw)
+    end
         
     if isempty(chp.unavailability_periods)
         chp.unavailability_periods = defaults["unavailability_periods"]
