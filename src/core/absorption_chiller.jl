@@ -34,10 +34,10 @@ chp_prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel
 """
 `AbsorptionChiller` is an optional REopt input with the following keys and default values:
 ```julia
-    hot_water_or_steam::Union{String, Nothing} = nothing
+    thermal_consumption_hot_water_or_steam::Union{String, Nothing} = nothing
     chp_prime_mover::String = ""
 
-    #Required if neither "hot_water_or_steam" nor "chp_prime_mover" nor an ExistingBoiler included in inputs:
+    #Required if neither "thermal_consumption_hot_water_or_steam" nor "chp_prime_mover" nor an ExistingBoiler included in inputs:
     installed_cost_per_ton::Union{Float64, Nothing} = nothing
     om_cost_per_ton::Union{Float64, Nothing} = nothing
 
@@ -53,16 +53,14 @@ chp_prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel
 ```
 
 !!! note "Required inputs"
-    To model AbsorptionChiller, you must provide at least one of the following: (i) `hot_water_or_steam` from $(heat_transfer_mediums), (ii) 
+    To model AbsorptionChiller, you must provide at least one of the following: (i) `thermal_consumption_hot_water_or_steam` from $(heat_transfer_mediums), (ii) 
     (ii), `chp_prime_mover` from $(chp_prime_movers),or (iii) all of the "custom inputs" defined below.
     If prime_mover is provided, any missing value from the "custom inputs" will be populated from data/absorption_chiller/defaults.json, 
-    based on the `hot_water_or_steam` or `prime_mover`. boiler_type is "steam" if `prime_mover` is "combustion_turbine" 
+    based on the `thermal_consumption_hot_water_or_steam` or `prime_mover`. boiler_type is "steam" if `prime_mover` is "combustion_turbine" 
     and is "hot_water" for all other `prime_mover` types.
-
-    `fuel_cost_per_mmbtu` is always required
 """
 Base.@kwdef mutable struct AbsorptionChiller <: AbstractThermalTech
-    hot_water_or_steam::Union{String, Nothing} = nothing
+    thermal_consumption_hot_water_or_steam::Union{String, Nothing} = nothing
     installed_cost_per_ton::Union{Float64, Nothing} = nothing
     min_ton::Float64 = 0.0
     max_ton::Float64 = 0.0
@@ -98,14 +96,14 @@ function AbsorptionChiller(d::Dict;
     end
 
     custom_ac_inputs = Dict{Symbol, Any}(
-        :hot_water_or_steam => absorp_chl.hot_water_or_steam,
+        :thermal_consumption_hot_water_or_steam => absorp_chl.thermal_consumption_hot_water_or_steam,
         :installed_cost_per_ton => absorp_chl.installed_cost_per_ton,
         :cop_thermal => absorp_chl.cop_thermal,
         :om_cost_per_ton => absorp_chl.om_cost_per_ton
     )
 
     htf_defaults_response = get_absorption_chiller_defaults(;max_ton=absorp_chl.max_ton,
-        hot_water_or_steam=absorp_chl.hot_water_or_steam, 
+        thermal_consumption_hot_water_or_steam=absorp_chl.thermal_consumption_hot_water_or_steam, 
         chp_prime_mover=chp_prime_mover, 
         existing_boiler=existing_boiler
     )
@@ -132,7 +130,7 @@ end
 get_absorption_chiller_defaults(prime_mover::String, boiler_type::String, size_class::Int)
 
 return a Dict{String, Any} by selecting the appropriate values from 
-data/chp/absorption_chiller_defaults.json, which contains values based on heat transfer medium (hot_water_or_steam)
+data/chp/absorption_chiller_defaults.json, which contains values based on heat transfer medium (thermal_consumption_hot_water_or_steam)
 such as:
 - "installed_cost_per_ton"
 - "om_cost_per_ton"
@@ -147,12 +145,12 @@ max_ton::Float64 -- maximum size of the absorption chiller technology, in tons
 
 
 response keys and descriptions:
-"hot_water_or_steam" -- string indicator of heat transfer medium for absorption chiller
+"thermal_consumption_hot_water_or_steam" -- string indicator of heat transfer medium for absorption chiller
 "default_inputs" -- Dict{string, Float64} containing default values for absorption chiller technology (see above)
 """
 function get_absorption_chiller_defaults(;
     max_ton::Float64 = 0.0, 
-    hot_water_or_steam::Union{String, Nothing} = nothing, 
+    thermal_consumption_hot_water_or_steam::Union{String, Nothing} = nothing, 
     chp_prime_mover::Union{String, Nothing} = nothing,
     existing_boiler::Union{ExistingBoiler, Nothing} = nothing
     )
@@ -169,42 +167,42 @@ function get_absorption_chiller_defaults(;
     end
 
     #check required inputs
-    if isnothing(hot_water_or_steam)
+    if isnothing(thermal_consumption_hot_water_or_steam)
         if !isnothing(chp_prime_mover)
             if chp_prime_mover == "combustion_engine"
-                hot_water_or_steam = "steam"
+                thermal_consumption_hot_water_or_steam = "steam"
             else  #if chp_prime mover is blank or is anything but "combustion engine" then assume hot water
-                hot_water_or_steam = "hot_water"
+                thermal_consumption_hot_water_or_steam = "hot_water"
             end
         elseif !isnothing(existing_boiler)
-            hot_water_or_steam = existing_boiler.production_type
+            thermal_consumption_hot_water_or_steam = existing_boiler.production_type
         else
-            @error "Invalid argument for `hot_water_or_steam`; must be `hot_water` or `steam`"
+            @error "Invalid argument for `thermal_consumption_hot_water_or_steam`; must be `hot_water` or `steam`"
         end
     else
-        if !(hot_water_or_steam in heat_transfer_mediums)
-            @error "Invalid argument for `hot_water_or_steam`; must be `hot_water` or `steam`"
+        if !(thermal_consumption_hot_water_or_steam in heat_transfer_mediums)
+            @error "Invalid argument for `thermal_consumption_hot_water_or_steam`; must be `hot_water` or `steam`"
         end
     end
 
-    htf_defaults["hot_water_or_steam"] = hot_water_or_steam
+    htf_defaults["thermal_consumption_hot_water_or_steam"] = thermal_consumption_hot_water_or_steam
 
     size_class, frac_higher = get_absorption_chiller_max_size_class(
-        max_ton, acds[hot_water_or_steam]["tech_sizes_for_cost_curve"]
+        max_ton, acds[thermal_consumption_hot_water_or_steam]["tech_sizes_for_cost_curve"]
         )
 
-    for key in keys(acds[hot_water_or_steam])
+    for key in keys(acds[thermal_consumption_hot_water_or_steam])
         if key == "cop_thermal"
-            htf_defaults[key] = acds[hot_water_or_steam][key]
+            htf_defaults[key] = acds[thermal_consumption_hot_water_or_steam][key]
         elseif key != "tech_sizes_for_cost_curve"
-            htf_defaults[key] = (frac_higher * acds[hot_water_or_steam][key][size_class+1] + 
-            (1-frac_higher) * acds[hot_water_or_steam][key][size_class])
+            htf_defaults[key] = (frac_higher * acds[thermal_consumption_hot_water_or_steam][key][size_class+1] + 
+            (1-frac_higher) * acds[thermal_consumption_hot_water_or_steam][key][size_class])
         end
     end
     acds = nothing  #TODO this is copied from the analogous CHP function.  Do we need?
 
     response = Dict{String, Any}([
-        ("hot_water_or_steam", hot_water_or_steam),
+        ("thermal_consumption_hot_water_or_steam", thermal_consumption_hot_water_or_steam),
         ("default_inputs", htf_defaults)
     ])
 
