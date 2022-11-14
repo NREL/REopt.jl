@@ -242,7 +242,7 @@ function CHP(d::Dict;
 
     if chp.min_allowable_kw > chp.max_kw
         @warn "CHP.min_allowable_kw is greater than CHP.max_kw, so setting min_allowable_kw equal to max_kw"
-        setproperty!(chp, min_allowable_kw, chp.max_kw)
+        setproperty!(chp, :min_allowable_kw, chp.max_kw)
     end
         
     if isempty(chp.unavailability_periods)
