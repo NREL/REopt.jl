@@ -32,9 +32,9 @@ Classify the change according to the following categories:
     - Add Warnings and Errors from `logREopt` to results dictionary. If error is unhandled in REopt, include a stacktrace
     - Add a `status` of `error` to results for consistency
     - Ensure all error text is returned as strings for proper handling in the API
-- Add `handle_errors(e::E, stacktrace::V) where {E <: Exception, V <: Vector}` and `handle_errors()` to `core/reopt.jl` to gracefully handle scenarios where REopt fails during data processing/optimization
+- Add `handle_errors(e::E, stacktrace::V) where {E <: Exception, V <: Vector}` and `handle_errors()` to `core/reopt.jl` to include info, warn and errors from REopt input data processing, optimization, and results processing in the returned dictionary.
 ### Changed
-- `core/reopt.jl` added try-catch statements to gracefully catch a REopt error and return it to user along with where the error happened.
+- `core/reopt.jl` added try-catch statements to call `handle_errors()` when there is a REopt error (handled or unhandled) and return it to the requestor/user.
 
 ## v0.20.0
 ### Added
