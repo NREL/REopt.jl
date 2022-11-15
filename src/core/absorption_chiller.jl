@@ -135,7 +135,7 @@ such as:
 - "installed_cost_per_ton"
 - "om_cost_per_ton"
 - "cop_thermal"
-- "tech_sizes_for_cost_curve"
+- "tech_sizes_for_cost_data"
 
 Unlike CHP, the AbsorptionChiller tech sizes inform a single rate for installed_cost_per_ton that uses max_ton as input;
 there is no piecewise linear cost curve for the AbsorptionChiller technology.
@@ -194,7 +194,7 @@ function get_absorption_chiller_defaults(;
     for key in keys(acds[thermal_consumption_hot_water_or_steam])
         if key == "cop_thermal"
             htf_defaults[key] = acds[thermal_consumption_hot_water_or_steam][key]
-        elseif key != "tech_sizes_for_cost_curve"
+        elseif key != "tech_sizes_for_cost_data"
             htf_defaults[key] = (frac_higher * acds[thermal_consumption_hot_water_or_steam][key][size_class+1] + 
             (1-frac_higher) * acds[thermal_consumption_hot_water_or_steam][key][size_class])
         end

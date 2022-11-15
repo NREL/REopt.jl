@@ -13,7 +13,7 @@
             1277.0,
             1248.0
         ],
-        "tech_sizes_for_cost_curve": [
+        "tech_sizes_for_cost_data": [
             10,
             50,
             200,
@@ -54,7 +54,7 @@
             1470.0,
             1427.0
         ],
-        "tech_sizes_for_cost_curve": [
+        "tech_sizes_for_cost_data": [
             50,
             200,
             300,
