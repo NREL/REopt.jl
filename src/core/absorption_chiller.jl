@@ -177,7 +177,8 @@ function get_absorption_chiller_defaults(;
         elseif !isnothing(existing_boiler)
             thermal_consumption_hot_water_or_steam = existing_boiler.production_type
         else
-            @error "Invalid argument for `thermal_consumption_hot_water_or_steam`; must be `hot_water` or `steam`"
+            #default to hot_water if no information given
+            thermal_consumption_hot_water_or_steam = "hot_water"
         end
     else
         if !(thermal_consumption_hot_water_or_steam in heat_transfer_mediums)
