@@ -82,6 +82,7 @@ const KWH_PER_MMBTU = 293.07107  # [kWh/mmbtu]
 const KWH_THERMAL_PER_TONHOUR = 3.51685
 const TONNE_PER_LB = 1/2204.62  # [tonne/lb]
 const FUEL_TYPES = ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
+const BIG_NUMBER = 1.0e10  #used for max size.  TODO use this number elsewhere.
 const FUEL_DEFAULTS = Dict(
     "fuel_renewable_energy_fraction" => Dict(
         "natural_gas"=>0.0,

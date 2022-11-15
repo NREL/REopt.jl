@@ -44,7 +44,7 @@ chp_prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel
 
     #Optional
     min_ton::Float64 = 0.0,
-    max_ton::Float64 = 0.0,
+    max_ton::Float64 = BIG_NUMBER,
     cop_thermal::Union{Float64, Nothing} = nothing,
     cop_electric::Float64 = 14.1,
     om_cost_per_ton::Union{Float64, Nothing} = nothing,
@@ -63,7 +63,7 @@ Base.@kwdef mutable struct AbsorptionChiller <: AbstractThermalTech
     thermal_consumption_hot_water_or_steam::Union{String, Nothing} = nothing
     installed_cost_per_ton::Union{Float64, Nothing} = nothing
     min_ton::Float64 = 0.0
-    max_ton::Float64 = 0.0
+    max_ton::Float64 = BIG_NUMBER
     cop_thermal::Union{Float64, Nothing} = nothing
     cop_electric::Float64 = 14.1
     om_cost_per_ton::Union{Float64, Nothing} = nothing
@@ -118,7 +118,11 @@ function AbsorptionChiller(d::Dict;
 
     # generate derived inputs for use in JuMP model
     absorp_chl.min_kw = absorp_chl.min_ton * KWH_THERMAL_PER_TONHOUR
-    absorp_chl.max_kw = absorp_chl.max_ton * KWH_THERMAL_PER_TONHOUR
+    if absorp_chl.max_ton == BIG_NUMBER
+        absorp_chl.max_kw = BIG_NUMBER
+    else
+        absorp_chl.max_kw = absorp_chl.max_ton * KWH_THERMAL_PER_TONHOUR
+    end
     absorp_chl.installed_cost_per_kw = absorp_chl.installed_cost_per_ton / KWH_THERMAL_PER_TONHOUR
     absorp_chl.om_cost_per_kw = absorp_chl.om_cost_per_ton / KWH_THERMAL_PER_TONHOUR
 
