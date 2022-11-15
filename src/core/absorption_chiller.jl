@@ -28,9 +28,6 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 
-heat_transfer_mediums = ["steam", "hot_water"]
-chp_prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cell"]
-
 """
 `AbsorptionChiller` is an optional REopt input with the following keys and default values:
 ```julia
@@ -53,8 +50,8 @@ chp_prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel
 ```
 
 !!! note "Required inputs"
-    To model AbsorptionChiller, you must provide at least one of the following: (i) `thermal_consumption_hot_water_or_steam` from $(heat_transfer_mediums), (ii) 
-    (ii), `chp_prime_mover` from $(chp_prime_movers),or (iii) all of the "custom inputs" defined below.
+    To model AbsorptionChiller, you must provide at least one of the following: (i) `thermal_consumption_hot_water_or_steam` from $(HOT_WATER_OR_STEAM), (ii) 
+    (ii), `chp_prime_mover` from $(PRIME_MOVERS),or (iii) all of the "custom inputs" defined below.
     If prime_mover is provided, any missing value from the "custom inputs" will be populated from data/absorption_chiller/defaults.json, 
     based on the `thermal_consumption_hot_water_or_steam` or `prime_mover`. boiler_type is "steam" if `prime_mover` is "combustion_turbine" 
     and is "hot_water" for all other `prime_mover` types.
@@ -162,7 +159,7 @@ function get_absorption_chiller_defaults(;
     htf_defaults = Dict{String, Any}()
 
     # convert Vector{Any} to Vector{Float64}
-    for htf in heat_transfer_mediums
+    for htf in HOT_WATER_OR_STEAM
         for (k, v) in acds[htf]
             if typeof(v) <: AbstractVector{Any}
                 acds[htf][k] = convert(Vector{Float64}, v)  # JSON.parsefile makes things Vector{Any}
@@ -175,8 +172,10 @@ function get_absorption_chiller_defaults(;
         if !isnothing(chp_prime_mover)
             if chp_prime_mover == "combustion_engine"
                 thermal_consumption_hot_water_or_steam = "steam"
-            else  #if chp_prime mover is blank or is anything but "combustion engine" then assume hot water
+            elseif chp_prime_mover in PRIME_MOVERS  #if chp_prime mover is blank or is anything but "combustion engine" then assume hot water
                 thermal_consumption_hot_water_or_steam = "hot_water"
+            else
+                throw(@error "Invalid argument for `prime_mover`; must be in $PRIME_MOVERS")
             end
         elseif !isnothing(existing_boiler)
             thermal_consumption_hot_water_or_steam = existing_boiler.production_type
@@ -185,8 +184,8 @@ function get_absorption_chiller_defaults(;
             thermal_consumption_hot_water_or_steam = "hot_water"
         end
     else
-        if !(thermal_consumption_hot_water_or_steam in heat_transfer_mediums)
-            @error "Invalid argument for `thermal_consumption_hot_water_or_steam`; must be `hot_water` or `steam`"
+        if !(thermal_consumption_hot_water_or_steam in HOT_WATER_OR_STEAM)
+            throw(@error "Invalid argument for `thermal_consumption_hot_water_or_steam`; must be `hot_water` or `steam`")
         end
     end
 
