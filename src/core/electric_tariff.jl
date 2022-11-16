@@ -365,16 +365,12 @@ function get_tier_with_lowest_energy_rate(u::URDBrate)
     ExportRate should be lowest energy cost for tiered rates. 
     Otherwise, ExportRate can be > FuelRate, which leads REopt to export all PV energy produced.
     """
-    tier_with_lowest_energy_cost = 1
+    #TODO: can eliminate if else if confirm that u.energy_rates is always 2D
     if length(u.energy_tier_limits) > 1
-        annual_energy_charge_sums = Float64[]
-        for etier in range(1, stop=length(u.energy_tier_limits)) 
-            push!(annual_energy_charge_sums, sum(u.energy_rates[:,etier]))
-        end
-        tier_with_lowest_energy_cost = 
-            findall(annual_energy_charge_sums .== minimum(annual_energy_charge_sums))[1]
+        return argmin(sum(u.energy_rates, dims=1))
+    else
+        return 1
     end
-    return tier_with_lowest_energy_cost
 end
 
 
