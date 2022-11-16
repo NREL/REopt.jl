@@ -23,6 +23,13 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+# Develop
+
+### Added
+- Simulated load function which mimicks the REopt_API /simulated_load endpoint for getting commercial reference building load data from annual or monthly energy data, or blended/hybrid buildings
+### Changed
+- Pruned the unnecessary chp_defaults data that were either zeros or not dependent on `prime_mover` or `size_class`, and reorganized the CHP struct.
+
 ## v0.21.0
 ### Changed
 For `CHP` and `SteamTurbine`, the `prime_mover` and/or `size_class` is chosen (if not input) based on the average heating load and the type of heating load (hot water or steam).
