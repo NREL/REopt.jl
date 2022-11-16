@@ -493,7 +493,6 @@ function get_tou_demand_steps(d::Dict; year::Int, month::Int, period::Int, time_
         start_step = 1
     end
 
-    hour_of_year = start_hour
     step_of_year = start_step
     step_array = Int[]
 
