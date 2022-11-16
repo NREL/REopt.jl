@@ -499,20 +499,15 @@ function get_tou_demand_steps(d::Dict; year::Int, month::Int, period::Int, time_
 
     for day in range(1, stop=daysinmonth(Date(string(year) * "-" * string(month))))
         for hour in range(1, stop=24)
-            if dayofweek(Date(year, month, day)) < 6 &&
-               d["demandweekdayschedule"][month][hour] == period
-               for step in range(1, stop=time_steps_per_hour)
-                append!(step_array, step_of_year + step - 1)
-               end 
-            elseif dayofweek(Date(year, month, day)) > 5 &&
-               d["demandweekendschedule"][month][hour] == period
-               for step in range(1, stop=time_steps_per_hour)
-                append!(step_array, step_of_year + step - 1)
-               end 
+            if (dayofweek(Date(year, month, day)) < 6 && 
+                d["demandweekdayschedule"][month][hour] == period) ||
+                (dayofweek(Date(year, month, day)) > 5 &&
+                d["demandweekendschedule"][month][hour] == period)
+                
+                append!(step_array, collect(step_of_year:step_of_year+time_steps_per_hour-1))
             end
-            step_of_year += 1 * time_steps_per_hour
+            step_of_year += time_steps_per_hour
         end
-        hour_of_year += 1
     end
     return step_array
 end
