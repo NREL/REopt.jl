@@ -189,13 +189,12 @@ function get_production_factor(wind::Wind, latitude::Real, longitude::Real, time
             libfile = "libssc.dylib"
         elseif Sys.islinux()
             libfile = "libssc.so"
+        elseif Sys.iswindows()
+            libfile = "ssc.dll"
         else
             throw(@error("Unsupported platform for using the SAM Wind module. 
                       You can alternatively provide the Wind `prod_factor_series`"))
         end
-
-        # elseif Sys.iswindows()
-        # libfile = "ssc.dll"
 
         global hdl = joinpath(dirname(@__FILE__), "..", "sam", libfile)
         wind_module = @ccall hdl.ssc_module_create("windpower"::Cstring)::Ptr{Cvoid}
