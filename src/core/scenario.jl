@@ -405,8 +405,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         existing_chiller = ExistingChiller(; chiller_inputs...)
 
         if haskey(d, "AbsorptionChiller")
-            absorption_chiller = AbsorptionChiller(d["AbsorptionChiller"]; existing_boiler = existing_boiler,
-                                                    chp_prime_mover = chp_prime_mover)
+            absorption_chiller = AbsorptionChiller(d["AbsorptionChiller"]; 
+                                                    existing_boiler = existing_boiler,
+                                                    chp_prime_mover = chp_prime_mover,
+                                                    cooling_load = cooling_load)
         end
     end
 
