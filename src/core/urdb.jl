@@ -478,10 +478,6 @@ end
 return Array{Int, 1} for time_steps in ratchet (aka period)
 """
 function get_tou_demand_steps(d::Dict; year::Int, month::Int, period::Int, time_steps_per_hour=1)
-    step_array = Int[]
-    start_step = 1
-    start_hour = 1
-
     if month > 1
         plus_days = 0
         for m in range(1, stop=month-1)
@@ -490,12 +486,16 @@ function get_tou_demand_steps(d::Dict; year::Int, month::Int, period::Int, time_
                 plus_days -= 1
             end
         end
-        start_hour += plus_days * 24
-        start_step = (start_hour - 1) * time_steps_per_hour + 1
+        start_hour = 1 + plus_days * 24
+        start_step = 1 + plus_days * 24 * time_steps_per_hour
+    else
+        start_hour = 1
+        start_step = 1
     end
 
     hour_of_year = start_hour
     step_of_year = start_step
+    step_array = Int[]
 
     for day in range(1, stop=daysinmonth(Date(string(year) * "-" * string(month))))
         for hour in range(1, stop=24)
