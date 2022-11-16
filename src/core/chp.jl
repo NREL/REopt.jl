@@ -122,8 +122,8 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     fuel_type::String = "natural_gas"
     om_cost_per_kw::Float64 = 0.0
     om_cost_per_hr_per_kw_rated::Float64 = 0.0
-    electric_efficiency_half_load::Float64 = NaN  # Assigned to ..._full_load if not input
-    thermal_efficiency_half_load::Float64 = NaN  # Assigned to ..._full_load if not input
+    electric_efficiency_half_load::Float64 = NaN  # Assigned to electric_efficiency_full_load if not input
+    thermal_efficiency_half_load::Float64 = NaN  # Assigned to thermal_efficiency_full_load if not input
     supplementary_firing_capital_cost_per_kw::Float64 = 150.0
     supplementary_firing_max_steam_ratio::Float64 = 1.0
     supplementary_firing_efficiency::Float64 = 0.92
