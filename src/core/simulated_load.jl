@@ -1,3 +1,18 @@
+"""
+    simulated_load(d::Dict)
+
+This function gets DOE commercial reference building (CRB) load profile data
+    which is the same way that loads are processed to create REoptInputs.s (Scenario struct).
+    
+This function is used for the /simulated_load endpoint in the REopt API, in particular 
+    for the webtool/UI to display loads before running REopt, but is also generally
+    an external way to access CRB load data without running REopt.
+
+One particular aspect of this function specifically for the webtool/UI is the heating load 
+    because there is just a single heating load instead of separated space heating and 
+    domestic hot water loads.
+
+"""
 function simulated_load(d::Dict)
     latitude = get(d, "latitude", nothing)
     longitude = get(d, "longitude", nothing)
@@ -264,8 +279,8 @@ function simulated_load(d::Dict)
         space_heating_monthly_mmbtu = Real[]
         dhw_monthly_mmbtu = Real[]
         if !isempty(monthly_mmbtu)    
-            space_heating_monthly_energy, space_heating_monthly_fraction = get_monthly_energy(; power_profile=default_space_heating_load.loads_kw)
-            dhw_monthly_energy, dhw_monthly_fraction = get_monthly_energy(; power_profile=default_dhw_load.loads_kw)
+            space_heating_monthly_energy = get_monthly_energy(power_profile=default_space_heating_load.loads_kw)
+            dhw_monthly_energy = get_monthly_energy(power_profile=default_dhw_load.loads_kw)
             space_heating_fraction_monthly = space_heating_monthly_energy ./ (space_heating_monthly_energy + dhw_monthly_energy)
             space_heating_monthly_mmbtu = monthly_mmbtu .* space_heating_fraction_monthly
             dhw_monthly_mmbtu = monthly_mmbtu .* (1 .- space_heating_monthly_mmbtu)
