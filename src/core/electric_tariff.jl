@@ -261,6 +261,7 @@ function ElectricTariff(;
 
         if add_monthly_rates_to_urdb_rate 
             if length(monthly_energy_rates) == 12
+                #TODO: but energy_rates could have been made a vector just above if remove_tiers=true
                 for tier in 1:size(energy_rates, 2), mth in 1:12, ts in time_steps_monthly[mth]
                     energy_rates[ts, tier] += monthly_energy_rates[mth]
                 end
