@@ -74,7 +74,8 @@ end
 
 function AbsorptionChiller(d::Dict;
         chp_prime_mover::Union{String, Nothing} = nothing,
-        existing_boiler::Union{ExistingBoiler, Nothing} = nothing
+        existing_boiler::Union{ExistingBoiler, Nothing} = nothing,
+        cooling_load::Union{CoolingLoad, Nothing} = nothing
     )
 
     # convert Vector{Any} from JSON dictionary to Vector{Float64}
@@ -99,10 +100,21 @@ function AbsorptionChiller(d::Dict;
         :om_cost_per_ton => absorp_chl.om_cost_per_ton
     )
 
-    htf_defaults_response = get_absorption_chiller_defaults(;max_ton=absorp_chl.max_ton,
+    if !isnothing(cooling_load)
+        load_max_tons = maximum(cooling_load.loads_kw_thermal) / KWH_THERMAL_PER_TONHOUR
+    else
+        throw(@error "Invalid argument cooling_load=nothing: a CoolingLoad is required for the AbsorptionChiller to be a technology option.")
+    end
+    if !isnothing(existing_boiler)
+        boiler_type = existing_boiler.production_type
+    else
+        boiler_type = nothing
+    end
+    htf_defaults_response = get_absorption_chiller_defaults(;
         thermal_consumption_hot_water_or_steam=absorp_chl.thermal_consumption_hot_water_or_steam, 
         chp_prime_mover=chp_prime_mover, 
-        existing_boiler=existing_boiler
+        boiler_type=boiler_type,
+        load_max_tons=load_max_tons
     )
     
     #convert defaults for any properties not enetered
@@ -142,7 +154,10 @@ Unlike CHP, the AbsorptionChiller tech sizes inform a single rate for installed_
 there is no piecewise linear cost curve for the AbsorptionChiller technology.
 
 Inputs: 
-max_ton::Float64 -- maximum size of the absorption chiller technology, in tons
+thermal_consumption_hot_water_or_steam::Union{String, Nothing} -- identifier of chiller thermal consumption type (steam or hot water)
+chp_prime_mover::Union{String, Nothing} -- identifier of CHP prime mover, if any 
+boiler_type::Union{String, Nothing} -- identifier of boiler type (steam or hot water)
+load_max_tons::Union{Float64, Nothing} -- maximum cooling load [ton]
 
 
 response keys and descriptions:
@@ -150,10 +165,10 @@ response keys and descriptions:
 "default_inputs" -- Dict{string, Float64} containing default values for absorption chiller technology (see above)
 """
 function get_absorption_chiller_defaults(;
-    max_ton::Float64 = 0.0, 
     thermal_consumption_hot_water_or_steam::Union{String, Nothing} = nothing, 
     chp_prime_mover::Union{String, Nothing} = nothing,
-    existing_boiler::Union{ExistingBoiler, Nothing} = nothing
+    boiler_type::Union{String, Nothing} = nothing,
+    load_max_tons::Union{Float64, Nothing} = nothing
     )
     acds = JSON.parsefile(joinpath(dirname(@__FILE__), "..", "..", "data", "absorption_chiller", "absorption_chiller_defaults.json"))
     htf_defaults = Dict{String, Any}()
@@ -177,8 +192,8 @@ function get_absorption_chiller_defaults(;
             else
                 throw(@error "Invalid argument for `prime_mover`; must be in $PRIME_MOVERS")
             end
-        elseif !isnothing(existing_boiler)
-            thermal_consumption_hot_water_or_steam = existing_boiler.production_type
+        elseif !isnothing(boiler_type)
+            thermal_consumption_hot_water_or_steam = boiler_type
         else
             #default to hot_water if no information given
             thermal_consumption_hot_water_or_steam = "hot_water"
@@ -192,7 +207,7 @@ function get_absorption_chiller_defaults(;
     htf_defaults["thermal_consumption_hot_water_or_steam"] = thermal_consumption_hot_water_or_steam
 
     size_class, frac_higher = get_absorption_chiller_max_size_class(
-        max_ton, acds[thermal_consumption_hot_water_or_steam]["tech_sizes_for_cost_curve"]
+        load_max_tons, acds[thermal_consumption_hot_water_or_steam]["tech_sizes_for_cost_data"]
         )
 
     for key in keys(acds[thermal_consumption_hot_water_or_steam])
@@ -214,30 +229,30 @@ function get_absorption_chiller_defaults(;
 end
 
 """
-get_absorption_chiller_max_size_class(max_tons::Float64,sizes_by_class::AbstractVector{Float64})
+get_absorption_chiller_max_size_class(load_max_tons::Float64,sizes_by_class::AbstractVector{Float64})
 
 determines the adjacent size classes of absorption chiller from which to obtain defaults and the fraction of the larger
 class to allocate to the default value.
 
 Inputs: 
-max_tons::Float64 -- maximum size of absorption chiller
+load_max_tons::Float64 -- maximum size of absorption chiller
 sizes_by_class::AbstractVector{Float64} -- vector of max sizes by class for the absorption chiller defaults
 
 Returns: 
 size_class::Int -- class size index for smaller reference class
 ratio::Float -- fraction allocated to larger reference class (i.e., 0=use size_class only; 1=use size_class+1 only)
 """
-function get_absorption_chiller_max_size_class(max_tons::Float64,sizes_by_class::AbstractVector{Float64})
+function get_absorption_chiller_max_size_class(load_max_tons::Float64,sizes_by_class::AbstractVector{Float64})
     num_classes = length(sizes_by_class)
-    if max_tons <= sizes_by_class[1]
+    if load_max_tons <= sizes_by_class[1]
         return 1, 0.0
-    elseif max_tons > sizes_by_class[num_classes]
+    elseif load_max_tons > sizes_by_class[num_classes]
         return num_classes-1, 1.0
     else
         for size_class in 1:num_classes-1
-            if (max_tons > sizes_by_class[size_class] &&
-                max_tons <= sizes_by_class[size_class+1])
-                ratio = ((max_tons - sizes_by_class[size_class]) /
+            if (load_max_tons > sizes_by_class[size_class] &&
+                load_max_tons <= sizes_by_class[size_class+1])
+                ratio = ((load_max_tons - sizes_by_class[size_class]) /
                     (sizes_by_class[size_class+1] - sizes_by_class[size_class]))
                 return size_class, ratio
             end
