@@ -1,0 +1,31 @@
+{
+    "Site": {
+        "latitude": 37.78,
+        "longitude": -122.45
+    },
+    "ElectricLoad": {
+    },
+    "SpaceHeatingLoad": {
+    },
+    "DomesticHotWaterLoad": {
+    },    
+    "CoolingLoad": {
+    },    
+    "ExistingChiller": {
+        "cop": 4.55
+    },
+    "ExistingBoiler": {
+        "fuel_cost_per_mmbtu": 11
+    },
+    "ElectricTariff": {
+        "blended_annual_energy_rate": 0.1,
+        "blended_annual_demand_rate": 10
+    },    
+    "PV": {
+        "max_kw": 0
+    },    
+    "Storage": {
+        "max_kwh": 0,
+        "max_kw": 0
+    }    
+}
