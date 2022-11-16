@@ -643,8 +643,9 @@ end
     @test p.s.absorption_chiller.cop_thermal ≈ 0.74 atol=0.001
 
     #load test values
-    p.s.absorption_chiller.installed_cost_per_kw = 500.0
-    p.s.absorption_chiller.om_cost_per_kw = 0.5
+    p.s.absorption_chiller.installed_cost_per_kw = 500.0 / REopt.KWH_THERMAL_PER_TONHOUR
+    p.s.absorption_chiller.om_cost_per_kw = 0.5 / REopt.KWH_THERMAL_PER_TONHOUR
+    p.s.absorption_chiller.cop_thermal = 0.7
 
     #Make every other hour zero fuel and electric cost; storage should charge and discharge in each period
     for ts in p.time_steps
@@ -665,7 +666,7 @@ end
             p.s.cooling_load.loads_kw_thermal[ts] = 0
             p.fuel_cost_per_kwh["ExistingBoiler"][ts] = 1
             for tier in 1:p.s.electric_tariff.n_energy_tiers
-                p.s.electric_tariff.energy_rates[ts, tier] = 100
+                p.s.electric_tariff.energy_rates[ts, tier] = 50
             end
         end
     end
