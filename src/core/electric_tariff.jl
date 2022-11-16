@@ -262,20 +262,20 @@ function ElectricTariff(;
         if add_monthly_rates_to_urdb_rate 
             if length(monthly_energy_rates) == 12
                 #TODO: but energy_rates could have been made a vector just above if remove_tiers=true
-                for tier in 1:size(energy_rates, 2), mth in 1:12, ts in time_steps_monthly[mth]
+                for tier in axes(energy_rates, 2), mth in 1:12, ts in time_steps_monthly[mth]
                     energy_rates[ts, tier] += monthly_energy_rates[mth]
                 end
             end
             if length(users_monthly_demand_rates) == 12
-                for tier in 1:size(monthly_demand_rates, 2), mth in 1:12
+                for tier in axes(monthly_demand_rates, 2), mth in 1:12
                     monthly_demand_rates[mth, tier] += users_monthly_demand_rates[mth]
                 end
             end
         end
 
         if add_tou_energy_rates_to_urdb_rate && length(tou_energy_rates_per_kwh) == size(energy_rates, 1)
-            for tier in 1:size(energy_rates, 2)
-                energy_rates[1:end, tier] += tou_energy_rates_per_kwh
+            for tier in axes(energy_rates, 2)
+                energy_rates[:, tier] += tou_energy_rates_per_kwh
             end
         end
     else
