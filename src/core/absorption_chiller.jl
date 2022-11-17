@@ -185,9 +185,9 @@ function get_absorption_chiller_defaults(;
     #check required inputs
     if isnothing(thermal_consumption_hot_water_or_steam)
         if !isnothing(chp_prime_mover)
-            if chp_prime_mover == "combustion_engine"
+            if chp_prime_mover == "combustion_turbine"
                 thermal_consumption_hot_water_or_steam = "steam"
-            elseif chp_prime_mover in PRIME_MOVERS  #if chp_prime mover is blank or is anything but "combustion engine" then assume hot water
+            elseif chp_prime_mover in PRIME_MOVERS  #if chp_prime mover is blank or is anything but "combustion_turbine" then assume hot water
                 thermal_consumption_hot_water_or_steam = "hot_water"
             else
                 throw(@error "Invalid argument for `prime_mover`; must be in $PRIME_MOVERS")
