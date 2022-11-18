@@ -25,7 +25,7 @@ Classify the change according to the following categories:
 
 ## Develop 2022-11-04
 ### Added
-- `AbsorptionChiller` default values for costs and thermal coefficient of performance (which depend on maximum size and heat transfer medium
+- `AbsorptionChiller` default values for costs and thermal coefficient of performance (which depend on maximum cooling load and heat transfer medium)
 
 ## v0.21.0
 ### Changed
