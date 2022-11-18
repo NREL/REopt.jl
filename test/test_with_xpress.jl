@@ -483,14 +483,7 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
 # end
 
 @testset "Minimize Unserved Load" begin
-    m = direct_model(
-        Xpress.Optimizer(
-            MAXTIME = 420,
-            MIPRELSTOP = 0.001,
-            OUTPUTLOG = 0
-        )
-    )
-    # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MAXTIME" => 420, "MIPRELSTOP" => 0.001))
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MAXTIME" => 420, "MIPRELSTOP" => 0.001))
     model_inputs = REoptInputs("./scenarios/outage_api_simpler.json")
     # show(model_inputs)
     results = run_reopt(m, model_inputs)
@@ -502,14 +495,7 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
     # println(results["Financial"]["lcc"])
     JSON.print(open("test_results_outage_api_simpler.json","w"), results)
 
-    # m = direct_model(
-    #     Xpress.Optimizer(
-    #         MAXTIME = 420,
-    #         MIPRELSTOP = 0.001,
-    #         OUTPUTLOG = 0
-    #     )
-    # )
-    # # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MAXTIME" => 420, "MIPRELSTOP" => 0.001))
+    # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MAXTIME" => 420, "MIPRELSTOP" => 0.001))
     # model_inputs = REoptInputs("./scenarios/outage_api_full.json")
     # # show(model_inputs)
     # results = run_reopt(m, model_inputs)
