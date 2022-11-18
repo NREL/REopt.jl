@@ -573,13 +573,9 @@ function parse_urdb_lookback_charges(d::Dict)
     lookback_percent = Float64(get(d, "lookbackpercent", 0.0))
     lookback_range = Int64(get(d, "lookbackrange", 0.0))
 
-    reopt_lookback_months = Int[]
     if lookback_range == 0 && length(lookback_months) == 12
-        for mth in range(1, stop=12)
-            if lookback_months[mth] == 1
-                push!(reopt_lookback_months, mth)
-            end
-        end
+        lookback_months = lookback_months[lookback_months == 1]
     end
-    return reopt_lookback_months, lookback_percent, lookback_range
+    
+    return lookback_months, lookback_percent, lookback_range
 end
