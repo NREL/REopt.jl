@@ -130,7 +130,7 @@ function add_outage_results(m, p, d::Dict)
 			r[string("mg_", t, "_curtailed_series")] = round.(value.(PVtoCUR), digits=3)
 
 			PVtoLoad = (
-				m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts] 
+				m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] 
 						* p.levelization_factor[t]
 				- m[:dvMGCurtail][t, s, tz, ts]
 				- m[:dvMGProductionToStorage][t, s, tz, ts] for 
@@ -174,7 +174,7 @@ function add_outage_results(m, p, d::Dict)
 			r[string("mg_", t, "_curtailed_series")] = round.(value.(GENtoCUR), digits=3)
 
 			GENtoLoad = (
-				m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts] 
+				m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] 
 						* p.levelization_factor[t]
 				- m[:dvMGCurtail][t, s, tz, ts]
 				- m[:dvMGProductionToStorage][t, s, tz, ts] for 
