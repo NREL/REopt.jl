@@ -483,15 +483,14 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
 # end
 
 @testset "Minimize Unserved Load" begin
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MAXTIME" => 420, "MIPRELSTOP" => 0.001))
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MIPRELSTOP" => 0.1))
     input_dict = JSON.parsefile("./scenarios/outage_timestep.json")
     input_dict["ElectricLoad"]["loads_kw"] = zeros(8760)
     input_dict["ElectricLoad"]["loads_kw"][1000] = 1000
     model_inputs = REoptInputs(input_dict)
-    # show(model_inputs)
     results = run_reopt(m, model_inputs)
-    # results = run_reopt(m, "./scenarios/outage_api.json")
-    println(results["Financial"]["lcc"])
+    @test results["Financial"]["lcc"] > results["Financial"]["lifecycle_elecbill_after_tax"]
+    @test results["Outages"]["microgrid_upgrade_capital_cost"] > 0
     JSON.print(open("test_results_outage_timestep.json","w"), results)
 
     # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
