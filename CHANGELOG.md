@@ -23,6 +23,18 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop 11/21/2022
+### Added
+- throw error if outage_durations and outage_probabilities not the same length
+- small incentive to minimize unserved load in each outage, not just the max over outage start times (makes expected outage results more realist and fixes same inputs giving different results)
+- add `Outages` output **generator_fuel_used_per_outage** which is the sum over backup generators
+### Changed
+- remove _series from non-timeseries outage output names
+- make the use of _ in multiple outages output names consistent
+- updates multiple outage test values that changed due to fixing timestep bug
+### Fixed
+- fixed mulitple outages timestep off-by-one bug
+
 ## v0.21.0
 ### Changed
 For `CHP` and `SteamTurbine`, the `prime_mover` and/or `size_class` is chosen (if not input) based on the average heating load and the type of heating load (hot water or steam).
