@@ -632,11 +632,31 @@ end
     @test roof_east["average_annual_energy_produced_kwh"] ≈ 6482.37 atol=0.1
 end
 
-@testset "Thermal Energy Storage" begin
+@testset "Thermal Energy Storage + Absorption Chiller" begin
     model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG"=>0))
     data = JSON.parsefile("./scenarios/thermal_storage.json")
     s = Scenario(data)
     p = REoptInputs(s)
+        
+    #test for get_absorption_chiller_defaults consistency with inputs data and Scenario s.
+    htf_defaults_response = get_absorption_chiller_defaults(;
+        thermal_consumption_hot_water_or_steam=get(data["AbsorptionChiller"], "thermal_consumption_hot_water_or_steam", nothing),  
+        boiler_type=get(data["ExistingBoiler"], "production_type", nothing),
+        load_max_tons=maximum(s.cooling_load.loads_kw_thermal / REopt.KWH_THERMAL_PER_TONHOUR)
+    )
+    
+    expected_installed_cost_per_ton = htf_defaults_response["default_inputs"]["installed_cost_per_ton"]
+    expected_om_cost_per_ton = htf_defaults_response["default_inputs"]["om_cost_per_ton"]
+    
+    @test p.s.absorption_chiller.installed_cost_per_kw ≈ expected_installed_cost_per_ton / REopt.KWH_THERMAL_PER_TONHOUR atol=0.001
+    @test p.s.absorption_chiller.om_cost_per_kw ≈ expected_om_cost_per_ton / REopt.KWH_THERMAL_PER_TONHOUR atol=0.001
+    @test p.s.absorption_chiller.cop_thermal ≈ htf_defaults_response["default_inputs"]["cop_thermal"] atol=0.001
+    
+    #load test values
+    p.s.absorption_chiller.installed_cost_per_kw = 500.0 / REopt.KWH_THERMAL_PER_TONHOUR
+    p.s.absorption_chiller.om_cost_per_kw = 0.5 / REopt.KWH_THERMAL_PER_TONHOUR
+    p.s.absorption_chiller.cop_thermal = 0.7
+    
     #Make every other hour zero fuel and electric cost; storage should charge and discharge in each period
     for ts in p.time_steps
         #heating and cooling loads only
@@ -656,13 +676,13 @@ end
             p.s.cooling_load.loads_kw_thermal[ts] = 0
             p.fuel_cost_per_kwh["ExistingBoiler"][ts] = 1
             for tier in 1:p.s.electric_tariff.n_energy_tiers
-                p.s.electric_tariff.energy_rates[ts, tier] = 100
+                p.s.electric_tariff.energy_rates[ts, tier] = 50
             end
         end
     end
-
+    
     r = run_reopt(model, p)
-
+    
     #dispatch to load should be 10kW every other period = 4,380 * 10
     @test sum(r["HotThermalStorage"]["year_one_to_load_series_mmbtu_per_hour"]) ≈ 149.45 atol=0.1
     @test sum(r["ColdThermalStorage"]["year_one_to_load_series_ton"]) ≈ 12454.33 atol=0.1
@@ -785,9 +805,9 @@ end
     #    the 320540.0 kWh number is from the default LargeOffice fraction of total electric profile applied to the Hospital default total electric profile
     total_chiller_electric_consumption = sum(inputs.s.cooling_load.loads_kw_thermal) / inputs.s.existing_chiller.cop
     @test round(total_chiller_electric_consumption, digits=0) ≈ 320544.0 atol=1.0  # loads_kw is **electric**, loads_kw_thermal is **thermal**
-    
-    #Test CHP defaults use average fuel load, size class 2 for recip_engine 
-    @test inputs.s.chp.max_kw ≈ 10000.0 atol=0.1
+
+    #Test CHP defaults use average fuel load, size class 3 for recip_engine 
+    @test inputs.s.chp.min_allowable_kw ≈ 50.0 atol=0.01
     @test inputs.s.chp.om_cost_per_kwh ≈ 0.0225 atol=0.0001
 
     delete!(input_data, "SpaceHeatingLoad")
@@ -809,7 +829,8 @@ end
 
     s = Scenario(input_data)
     inputs = REoptInputs(s)
-    #Test CHP defaults use average fuel load, size class changes to 3
+    #Test CHP defaults use average fuel load, size class changes to 4
+    @test inputs.s.chp.min_allowable_kw ≈ 315.0 atol=0.1
     @test inputs.s.chp.om_cost_per_kwh ≈ 0.02 atol=0.0001
     #Update CHP prime_mover and test new defaults
     input_data["CHP"]["prime_mover"] = "combustion_turbine"
@@ -818,7 +839,7 @@ end
     s = Scenario(input_data)
     inputs = REoptInputs(s)
 
-    @test inputs.s.chp.max_kw ≈ 20000.0 atol=0.1
+    @test inputs.s.chp.min_allowable_kw ≈ 950.0 atol=0.1
     @test inputs.s.chp.om_cost_per_kwh ≈ 0.014499999999999999 atol=0.0001
 
     total_heating_fuel_load_mmbtu = (sum(inputs.s.space_heating_load.loads_kw) + 
@@ -849,7 +870,7 @@ end
 
     s = Scenario(input_data)
     inputs = REoptInputs(s)
-    
+
     @test round(sum(inputs.s.cooling_load.loads_kw_thermal) / REopt.KWH_THERMAL_PER_TONHOUR, digits=0) ≈ annual_tonhour atol=1.0 
 end
 
@@ -1286,7 +1307,7 @@ end
             @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] atol=1
             @test results["Site"]["lifecycle_emissions_tonnes_NOx"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_NOx"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_NOx"] atol=0.1
             @test results["Site"]["lifecycle_emissions_tonnes_SO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_SO2"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_SO2"] atol=1e-2
-            @test results["Site"]["lifecycle_emissions_tonnes_PM25"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_PM25"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_PM25"] atol=1e-2
+            @test results["Site"]["lifecycle_emissions_tonnes_PM25"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_PM25"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_PM25"] atol=1.5e-2
             @test results["Site"]["annual_renewable_electricity_kwh"] ≈ results["PV"]["average_annual_energy_produced_kwh"] + inputs["CHP"]["fuel_renewable_energy_fraction"] * results["CHP"]["year_one_electric_energy_produced_kwh"] atol=1
             @test results["Site"]["renewable_electricity_fraction"] ≈ results["Site"]["annual_renewable_electricity_kwh"] / results["ElectricLoad"]["annual_calculated_kwh"] atol=1e-6#0.044285 atol=1e-4
             KWH_PER_MMBTU = 293.07107
@@ -1448,7 +1469,7 @@ end
     # Check that all thermal supply to load meets the BAU load plus AbsorptionChiller load which is not explicitly tracked
     alltechs_thermal_to_load_total = sum([sum(tech_to_thermal_load[tech]["load"]) for tech in thermal_techs]) + sum(hottes_to_load)
     thermal_load_total = sum(load_boiler_thermal) + sum(absorptionchiller_thermal_in)
-    @test alltechs_thermal_to_load_total ≈ thermal_load_total atol=0.01
+    @test alltechs_thermal_to_load_total ≈ thermal_load_total atol=0.02
     
     # Check that all thermal to steam turbine is equal to steam turbine thermal consumption
     alltechs_thermal_to_steamturbine_total = sum([sum(tech_to_thermal_load[tech]["steamturbine"]) for tech in ["ExistingBoiler", "CHP"]])
