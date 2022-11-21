@@ -574,7 +574,7 @@ function parse_urdb_lookback_charges(d::Dict)
     lookback_range = Int64(get(d, "lookbackrange", 0.0))
 
     if lookback_range == 0 && length(lookback_months) == 12
-        lookback_months = lookback_months[lookback_months .== 1]
+        lookback_months = collect(1:12)[lookback_months .== 1]
     end
 
     return lookback_months, lookback_percent, lookback_range
