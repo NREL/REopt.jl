@@ -296,3 +296,28 @@ function custom_normalized_flatload(doe_reference_name, year)
     return normalized_profile
 end
 
+"""
+    get_monthly_energy(power_profile::AbstractArray{<:Real,1};
+                        year::Int64=2017)
+
+Get monthly energy from an hourly load profile.
+"""
+function get_monthly_energy(power_profile::AbstractArray{<:Real,1}; 
+                            year::Int64=2017)
+    t0 = 1
+    monthly_energy_total = zeros(12)
+    for month in 1:12
+        plus_hours = daysinmonth(Date(string(year) * "-" * string(month))) * 24
+        if month == 2 && isleapyear(year)
+            plus_hours -= 24
+        end
+        if !isempty(power_profile)
+            monthly_energy_total[month] = sum(power_profile[t0:t0+plus_hours-1])
+        else
+            throw(@error "Must provide power_profile")
+        end
+        t0 += plus_hours
+    end
+
+    return monthly_energy_total
+end

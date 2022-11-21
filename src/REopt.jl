@@ -47,6 +47,7 @@ export
     backup_reliability,
     get_chp_defaults_prime_mover_size_class,
     get_steam_turbine_defaults_size_class,
+    simulated_load,
     get_absorption_chiller_defaults
 
 import HTTP
@@ -151,6 +152,7 @@ include("core/bau_scenario.jl")
 include("core/reopt_inputs.jl")
 include("core/bau_inputs.jl")
 include("core/cost_curve.jl")
+include("core/simulated_load.jl")
 
 include("constraints/outage_constraints.jl")
 include("constraints/storage_constraints.jl")
