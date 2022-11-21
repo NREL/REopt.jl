@@ -23,8 +23,7 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-# Develop
-
+# v0.22.0
 ### Added
 - Simulated load function which mimicks the REopt_API /simulated_load endpoint for getting commercial reference building load data from annual or monthly energy data, or blended/hybrid buildings
 - `AbsorptionChiller` default values for costs and thermal coefficient of performance (which depend on maximum cooling load and heat transfer medium)
