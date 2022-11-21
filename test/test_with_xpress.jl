@@ -483,39 +483,50 @@ Random.seed!(42)  # for test consistency, random prices used in FlexibleHVAC tes
 # end
 
 @testset "Minimize Unserved Load" begin
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MIPRELSTOP" => 0.1))
-    input_dict = JSON.parsefile("./scenarios/outage_timestep.json")
-    input_dict["ElectricLoad"]["loads_kw"] = zeros(8760)
-    input_dict["ElectricLoad"]["loads_kw"][1000] = 1000
-    model_inputs = REoptInputs(input_dict)
-    results = run_reopt(m, model_inputs)
-    @test results["Financial"]["lcc"] > results["Financial"]["lifecycle_elecbill_after_tax"]
-    @test results["Outages"]["microgrid_upgrade_capital_cost"] > 0
-    JSON.print(open("test_results_outage_timestep.json","w"), results)
+    # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MAXTIME" => 420, "MIPRELSTOP" => 0.001))
+    # model_inputs = REoptInputs("./scenarios/outage_api.json")
+    # results = run_reopt(m, model_inputs)
+    # println(results["Outages"]["expected_outage_cost"])
+    # println(results["Outages"]["unserved_load_per_outage"])
+    # println(results["Outages"]["microgrid_upgrade_capital_cost"])
+    # println(results["Outages"]["generator_fuel_used_per_outage"])
+    # println(results["Financial"]["lcc"])
+    # JSON.print(open("test_results_outage_api.json","w"), results)
 
-    # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    # results = run_reopt(m, "./scenarios/outage.json")
+    # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0, "MIPRELSTOP" => 0.1))
+    # input_dict = JSON.parsefile("./scenarios/outage_timestep.json")
+    # input_dict["ElectricLoad"]["loads_kw"] = zeros(8760)
+    # input_dict["ElectricLoad"]["loads_kw"][1000] = 1000
+    # model_inputs = REoptInputs(input_dict)
+    # results = run_reopt(m, model_inputs)
+    # @test results["Financial"]["lcc"] > results["Financial"]["lifecycle_elecbill_after_tax"]
+    # @test results["Outages"]["microgrid_upgrade_capital_cost"] > 0
 
-    # @test results["Outages"]["expected_outage_cost"] ≈ 0
-    # @test sum(results["Outages"]["unserved_load_per_outage"]) ≈ 0
-    # @test value(m[:binMGTechUsed]["Generator"]) == 1
-    # @test value(m[:binMGTechUsed]["PV"]) == 0
-    # @test value(m[:binMGStorageUsed]) == 1
-    # @test results["Financial"]["lcc"] ≈ 7.3879557e7 atol=5e4
     
-    # #=
-    # Scenario with $0/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
-    # - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
-    # =#
-    # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    # results = run_reopt(m, "./scenarios/nogridcost_minresilhours.json")
-    # @test sum(results["Outages"]["unserved_load_per_outage"]) ≈ 12
+    #=
+    Scenario with $0.001/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
+    - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
+    =#
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, "./scenarios/nogridcost_minresilhours.json")
+    @test sum(results["Outages"]["unserved_load_per_outage"]) ≈ 12
+    # print((results["Outages"]["unserved_load_per_outage"]))
     
-    # # testing dvUnserved load, which would output 100 kWh for this scenario before output fix
-    # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    # results = run_reopt(m, "./scenarios/nogridcost_multiscenario.json")
-    # @test sum(results["Outages"]["unserved_load_per_outage"]) ≈ 60
+    # testing dvUnserved load, which would output 100 kWh for this scenario before output fix
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, "./scenarios/nogridcost_multiscenario.json")
+    @test sum(results["Outages"]["unserved_load_per_outage"]) ≈ 60
+    # print((results["Outages"]["unserved_load_per_outage"]))
     
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, "./scenarios/outage.json")
+
+    @test results["Outages"]["expected_outage_cost"] ≈ 0
+    @test sum(results["Outages"]["unserved_load_per_outage"]) ≈ 0
+    @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
+    @test value(m[:binMGTechUsed]["PV"]) ≈ 0
+    @test value(m[:binMGStorageUsed]) ≈ 1
+    @test results["Financial"]["lcc"] ≈ 7.3879557e7 atol=5e4
 end
 
 # @testset "Multiple Sites" begin
