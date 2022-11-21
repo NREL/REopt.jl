@@ -27,6 +27,7 @@ Classify the change according to the following categories:
 
 ### Added
 - Simulated load function which mimicks the REopt_API /simulated_load endpoint for getting commercial reference building load data from annual or monthly energy data, or blended/hybrid buildings
+- `AbsorptionChiller` default values for costs and thermal coefficient of performance (which depend on maximum cooling load and heat transfer medium)
 ### Changed
 - Pruned the unnecessary chp_defaults data that were either zeros or not dependent on `prime_mover` or `size_class`, and reorganized the CHP struct.
 

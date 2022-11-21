@@ -631,11 +631,31 @@ end
     @test roof_east["average_annual_energy_produced_kwh"] ≈ 6482.37 atol=0.1
 end
 
-@testset "Thermal Energy Storage" begin
+@testset "Thermal Energy Storage + Absorption Chiller" begin
     model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG"=>0))
     data = JSON.parsefile("./scenarios/thermal_storage.json")
     s = Scenario(data)
     p = REoptInputs(s)
+        
+    #test for get_absorption_chiller_defaults consistency with inputs data and Scenario s.
+    htf_defaults_response = get_absorption_chiller_defaults(;
+        thermal_consumption_hot_water_or_steam=get(data["AbsorptionChiller"], "thermal_consumption_hot_water_or_steam", nothing),  
+        boiler_type=get(data["ExistingBoiler"], "production_type", nothing),
+        load_max_tons=maximum(s.cooling_load.loads_kw_thermal / REopt.KWH_THERMAL_PER_TONHOUR)
+    )
+    
+    expected_installed_cost_per_ton = htf_defaults_response["default_inputs"]["installed_cost_per_ton"]
+    expected_om_cost_per_ton = htf_defaults_response["default_inputs"]["om_cost_per_ton"]
+    
+    @test p.s.absorption_chiller.installed_cost_per_kw ≈ expected_installed_cost_per_ton / REopt.KWH_THERMAL_PER_TONHOUR atol=0.001
+    @test p.s.absorption_chiller.om_cost_per_kw ≈ expected_om_cost_per_ton / REopt.KWH_THERMAL_PER_TONHOUR atol=0.001
+    @test p.s.absorption_chiller.cop_thermal ≈ htf_defaults_response["default_inputs"]["cop_thermal"] atol=0.001
+    
+    #load test values
+    p.s.absorption_chiller.installed_cost_per_kw = 500.0 / REopt.KWH_THERMAL_PER_TONHOUR
+    p.s.absorption_chiller.om_cost_per_kw = 0.5 / REopt.KWH_THERMAL_PER_TONHOUR
+    p.s.absorption_chiller.cop_thermal = 0.7
+    
     #Make every other hour zero fuel and electric cost; storage should charge and discharge in each period
     for ts in p.time_steps
         #heating and cooling loads only
@@ -655,13 +675,13 @@ end
             p.s.cooling_load.loads_kw_thermal[ts] = 0
             p.fuel_cost_per_kwh["ExistingBoiler"][ts] = 1
             for tier in 1:p.s.electric_tariff.n_energy_tiers
-                p.s.electric_tariff.energy_rates[ts, tier] = 100
+                p.s.electric_tariff.energy_rates[ts, tier] = 50
             end
         end
     end
-
+    
     r = run_reopt(model, p)
-
+    
     #dispatch to load should be 10kW every other period = 4,380 * 10
     @test sum(r["HotThermalStorage"]["year_one_to_load_series_mmbtu_per_hour"]) ≈ 149.45 atol=0.1
     @test sum(r["ColdThermalStorage"]["year_one_to_load_series_ton"]) ≈ 12454.33 atol=0.1
