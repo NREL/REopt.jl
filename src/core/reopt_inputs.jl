@@ -177,6 +177,8 @@ Constructor for REoptInputs. Translates the `Scenario` into all the data necessa
 """
 function REoptInputs(s::AbstractScenario)
 
+    instantiate_logger()
+
     time_steps = 1:length(s.electric_load.loads_kw)
     hours_per_time_step = 1 / s.settings.time_steps_per_hour
     techs, pv_to_location, maxsize_pv_locations, pvlocations, 
