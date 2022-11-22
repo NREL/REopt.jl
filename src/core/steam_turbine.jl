@@ -31,7 +31,7 @@
 """
 `SteamTurbine` is an optional REopt input with the following keys and default values:
 ```julia
-    size_class::Int64 = 1
+    size_class::Union{Int64, Nothing} = nothing
     min_kw::Float64 = 0.0
     max_kw::Float64 = 0.0
     electric_produced_to_thermal_consumed_ratio::Float64 = NaN
@@ -60,7 +60,7 @@
 
 """
 Base.@kwdef mutable struct SteamTurbine <: AbstractSteamTurbine
-    size_class::Int64 = 1
+    size_class::Union{Int64, Nothing} = nothing
     min_kw::Float64 = 0.0
     max_kw::Float64 = 0.0
     electric_produced_to_thermal_consumed_ratio::Float64 = NaN
@@ -88,7 +88,7 @@ Base.@kwdef mutable struct SteamTurbine <: AbstractSteamTurbine
 end
 
 
-function SteamTurbine(d::Dict)
+function SteamTurbine(d::Dict; avg_boiler_fuel_load_mmbtu_per_hour::Union{Float64, Nothing}=nothing)
     st = SteamTurbine(; dictkeys_tosymbols(d)...)
 
     # Must provide prime_mover or all of custom_chp_inputs
@@ -104,7 +104,8 @@ function SteamTurbine(d::Dict)
     )
 
     # set all missing default values in custom_chp_inputs
-    defaults = get_steam_turbine_defaults(st.size_class)
+    defaults = get_steam_turbine_defaults_size_class(;avg_boiler_fuel_load_mmbtu_per_hour=avg_boiler_fuel_load_mmbtu_per_hour, 
+                                            size_class=st.size_class)
     for (k, v) in custom_st_inputs
         if isnan(v)
             if !(k == :inlet_steam_temperature_degF && !isnan(st.inlet_steam_superheat_degF))
@@ -124,7 +125,7 @@ end
 
 
 """
-    get_steam_turbine_defaults(size_class::Int)
+    get_steam_turbine_defaults(size_class::Int, defaults::Dict)
 
 return a Dict{String, Float64} by selecting the appropriate values from 
 data/steam_turbine/steam_turbine_default_data.json, which contains values based on size_class for the 
@@ -138,14 +139,13 @@ custom_st_inputs, i.e.
 - `gearbox_generator_efficiency`
 - `net_to_gross_electric_ratio`
 """
-function get_steam_turbine_defaults(size_class::Int)
-    defaults = JSON.parsefile(joinpath(dirname(@__FILE__), "..", "..", "data", "steam_turbine", "steam_turbine_default_data.json"))
+function get_steam_turbine_defaults(size_class::Int, defaults_all::Dict)
     steam_turbine_defaults = Dict{String, Any}()
 
-    for key in keys(defaults)
-        steam_turbine_defaults[key] = defaults[key][size_class]
+    for key in keys(defaults_all)
+        steam_turbine_defaults[key] = defaults_all[key][size_class]
     end
-    defaults = nothing
+    defaults_all = nothing
 
     return steam_turbine_defaults
 end
@@ -160,8 +160,6 @@ This function uses the CoolProp package to calculate steam properties, and does 
 
 """
 function assign_st_elec_and_therm_prod_ratios!(st::SteamTurbine)
-
-
     # Convert input steam conditions to SI (absolute pressures, not gauge)
     # Steam turbine inlet steam conditions and calculated properties
     p_in_pa = (st.inlet_steam_pressure_psig / 14.5038 + 1.01325) * 1.0E5
@@ -212,4 +210,65 @@ function assign_st_elec_and_therm_prod_ratios!(st::SteamTurbine)
     end
 
     nothing
+end
+
+"""
+    get_steam_turbine_defaults_size_class(;avg_boiler_fuel_load_mmbtu_per_hour::Union{Float64, Nothing}=nothing,
+                                    size_class::Union{Int64, Nothing}=nothing)
+
+Depending on the set of inputs, different sets of outputs are determine in addition to all SteamTurbine cost and performance parameter defaults:
+    1. Inputs: avg_boiler_fuel_load_mmbtu_per_hour
+       Outputs: size_class, st_size_based_on_avg_heating_load_kw
+    2. Inputs: sized_class
+       Outputs: (gets defaults directly from size_class)
+"""
+function get_steam_turbine_defaults_size_class(;avg_boiler_fuel_load_mmbtu_per_hour::Union{Float64, Nothing}=nothing, size_class::Union{Int64, Nothing}=nothing)
+    defaults = JSON.parsefile(joinpath(dirname(@__FILE__), "..", "..", "data", "steam_turbine", "steam_turbine_default_data.json"))
+    class_bounds = [(0.0, 25000.0), (0, 1000.0), (1000.0, 5000.0), (5000.0, 25000.0)]
+    n_classes = length(class_bounds)
+    if !isnothing(size_class)
+        if size_class < 1 || size_class > n_classes
+            @error "Invalid size_class given for steam_turbine, must be in [1,2,3,4]"
+        end
+    end
+    if !isnothing(avg_boiler_fuel_load_mmbtu_per_hour)
+        if avg_boiler_fuel_load_mmbtu_per_hour <= 0
+            @error "avg_boiler_fuel_load_mmbtu_per_hour must be > 0.0 MMBtu/hr"
+        end
+        steam_turbine_electric_efficiency = 0.07 # Typical, steam_turbine_kwe / boiler_fuel_kwt
+        thermal_power_in_kw = avg_boiler_fuel_load_mmbtu_per_hour * KWH_PER_MMBTU
+        st_elec_size_heuristic_kw = thermal_power_in_kw * steam_turbine_electric_efficiency
+        # With heuristic size, find the suggested size class
+        if st_elec_size_heuristic_kw < class_bounds[2][2]
+            # If smaller than the upper bound of the smallest class, assign the smallest class
+            size_class = 2
+        elseif st_elec_size_heuristic_kw >= class_bounds[n_classes][1]
+            # If larger than or equal to the lower bound of the largest class, assign the largest class
+            size_class = n_classes  # Size classes are zero-indexed
+        else
+            # For middle size classes
+            for sc in 2:(n_classes-1)
+                if st_elec_size_heuristic_kw >= class_bounds[sc][1] &&
+                    st_elec_size_heuristic_kw < class_bounds[sc][2]
+                    size_class = sc
+                end
+            end
+        end
+    else
+        size_class = 1
+        st_elec_size_heuristic_kw = nothing
+    end
+
+    steam_turbine_defaults = get_steam_turbine_defaults(size_class, defaults)
+    
+    response = Dict([
+        ("prime_mover", "steam_turbine"),
+        ("size_class", size_class),
+        ("default_inputs", steam_turbine_defaults),
+        ("chp_size_based_on_avg_heating_load_kw", st_elec_size_heuristic_kw),
+        ("size_class_bounds", class_bounds)
+    ])
+
+    return response
+
 end
