@@ -95,7 +95,7 @@ Solve the model using a `Scenario` or `BAUScenario`.
 """
 function run_reopt(m::JuMP.AbstractModel, s::AbstractScenario)
 	
-	instantiate_logger() # have to instantiate here to capture the CO2 emission reduction error
+	instantiate_logger() # have to instantiate here to capture the CO2 emission reduction error below, can remove otherwise
 	
 	try
 		if s.site.CO2_emissions_reduction_min_pct > 0.0 || s.site.CO2_emissions_reduction_max_pct < 1.0
@@ -493,8 +493,6 @@ end
 
 
 function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
-
-	instantiate_logger()
 
 	build_reopt!(m, p)
 

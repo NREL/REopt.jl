@@ -38,8 +38,18 @@
     - Error
         - Keys for file names with errors
             - Values of messages associated with those errors
+
 - The logger is instantiated in REopt.Scenario, REopt.REoptInputs functions and a few instances of REopt.run_reopt functions
+
 - Messages are appended to the results dictionary using the following layout:
+    - warnings (array of Tuples)
+        - 1st element: Folder, file and line of error
+        - 2nd element: Warning text
+    - errors (array of Tuples)
+        - 1st element: Folder, file and line of error
+        - 2nd element: Error text with stacktrace if uncaught error
+
+- Logger dictionary is flushed at every new REopt run by checking if logger type is REoptLogger
 """
 struct REoptLogger <: Logging.AbstractLogger
     d::Dict
@@ -183,9 +193,11 @@ function instantiate_logger()
 	if !isa(global_logger(), REoptLogger)
 		global logREopt = REoptLogger()
 		global_logger(logREopt)
-		@info "Created custom REopt Logger"
+		@debug "Created custom REopt Logger"
 	else
 		@debug "Already REoptLogger"
 		@debug typeof(global_logger())
+        logREopt.d["Warn"] = Dict()
+        logREopt.d["Error"] = Dict()
 	end
 end
