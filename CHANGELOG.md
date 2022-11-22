@@ -35,6 +35,28 @@ Classify the change according to the following categories:
 - Add `handle_errors(e::E, stacktrace::V) where {E <: Exception, V <: Vector}` and `handle_errors()` to `core/reopt.jl` to include info, warn and errors from REopt input data processing, optimization, and results processing in the returned dictionary.
 ### Changed
 - `core/reopt.jl` added try-catch statements to call `handle_errors()` when there is a REopt error (handled or unhandled) and return it to the requestor/user.
+# v0.22.0
+### Added
+- Simulated load function which mimicks the REopt_API /simulated_load endpoint for getting commercial reference building load data from annual or monthly energy data, or blended/hybrid buildings
+- `AbsorptionChiller` default values for costs and thermal coefficient of performance (which depend on maximum cooling load and heat transfer medium)
+### Changed
+- Pruned the unnecessary chp_defaults data that were either zeros or not dependent on `prime_mover` or `size_class`, and reorganized the CHP struct.
+
+## v0.21.0
+### Changed
+For `CHP` and `SteamTurbine`, the `prime_mover` and/or `size_class` is chosen (if not input) based on the average heating load and the type of heating load (hot water or steam).
+ - This logic replicates the current REopt webtool behavior which was implemented based on CHP industry experts, effectively syncing the webtool and the REopt.jl/API behavior.
+ - This makes `prime_mover` **NOT** a required input and avoids a lot of other required inputs if `prime_mover` is not input.
+ - The two functions made for `CHP` and `SteamTurbine` are exported in `REopt.jl` so they can be exposed in the API for communication with the webtool (or other API users).
+### Removed 
+`ExistingBoiler.production_type_by_chp_prime_mover` because that is no longer consistent with the logic added above.
+ - The logic from 1. is such that `ExistingBoiler.production_type` determines the `CHP.prime_mover` if not specified, not the other way around.
+ - If `ExistingBoiler.production_type` is not input, `hot_water` is used as the default.
+
+## v0.20.1
+### Added
+- `CoolingLoad` time series and annual summary data to results
+- `HeatingLoad` time series and annual summary data to results
 
 ## v0.20.0
 ### Added
