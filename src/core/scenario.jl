@@ -165,6 +165,26 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         storage_dict = Dict(:max_kw => 0.0) 
     end
     storage_structs["ElectricStorage"] = ElectricStorage(storage_dict, financial)
+    
+    if haskey(d, "EV")
+        if typeof(d["EV"]) <: AbstractArray
+            for (i, ev) in enumerate(d["EV"])
+                if !(haskey(ev, "name"))
+                    ev["name"] = string("EV", i)
+                end
+                storage_dict = dictkeys_tosymbols(ev)
+                storage_dict[:off_grid_flag] = settings.off_grid_flag
+                storage_structs[ev["name"]] = ElectricStorage(storage_dict, financial)
+            end
+        elseif typeof(d["EV"]) <: AbstractDict
+            storage_dict = dictkeys_tosymbols(d["EV"])
+            storage_dict[:off_grid_flag] = settings.off_grid_flag
+            storage_structs[ev["name"]] = ElectricStorage(storage_dict, financial)
+        else
+            error("EV input must be Dict or Dict[].")
+        end
+    end
+    
     # TODO stop building ElectricStorage when it is not modeled by user 
     #       (requires significant changes to constraints, variables)
     if haskey(d, "HotThermalStorage")
