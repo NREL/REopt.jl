@@ -1496,82 +1496,94 @@ end
 
 @testset "Custom REopt logger" begin
     
-    # Create minimal test case
-    req = Dict()
-    req["Site"] = Dict(
-        "longitude" => -155.8394336,
-        "latitude" => 65.0
-    )
-    req["ElectricLoad"] = Dict(
-        "doe_reference_name" => "MidriseApartment",
-        "annual_kwh" => 100000.0
-    )
-    req["ElectricTariff"] = Dict(
-        "urdb_label" => "5ed6c1a15457a3367add15ae"
-    )
+    # Throw a handled error
+    d = JSON.parsefile("./scenarios/logger.json")
 
-    # No Errors, only warnings
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    r = run_reopt(m,req)
-    @test r["status"] == "optimal"
+    m1 = Model(Xpress.Optimizer)
+    m2 = Model(Xpress.Optimizer)
+    r = run_reopt([m1,m2], d)
+    @test r["status"] == "error"
     @test "Messages" ∈ keys(r)
     @test "errors" ∈ keys(r["Messages"])
     @test "warnings" ∈ keys(r["Messages"])
+    @test length(r["Messages"]["errors"]) > 0
+    @test length(r["Messages"]["warnings"]) > 0
 
-    # No Errors, only warnings
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    r = run_reopt((m,REoptInputs(req)))
-    @test r["status"] == "optimal"
+    m = Model(Xpress.Optimizer)
+    r = run_reopt(m, d)
+    @test r["status"] == "error"
     @test "Messages" ∈ keys(r)
     @test "errors" ∈ keys(r["Messages"])
     @test "warnings" ∈ keys(r["Messages"])
+    @test length(r["Messages"]["errors"]) > 0
+    @test length(r["Messages"]["warnings"]) > 0
 
-    # No Errors, only warnings
-    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    r = run_reopt([m1,m2],req)
-    @test r["status"] == "optimal"
+    # Type is dict when errors, otherwise type REoptInputs
+    @test isa(REoptInputs(d), Dict)
+
+    # Using filepath
+    n1 = Model(Xpress.Optimizer)
+    n2 = Model(Xpress.Optimizer)
+    r = run_reopt([n1,n2], "./scenarios/logger.json")
+    @test r["status"] == "error"
     @test "Messages" ∈ keys(r)
     @test "errors" ∈ keys(r["Messages"])
     @test "warnings" ∈ keys(r["Messages"])
+    @test length(r["Messages"]["errors"]) > 0
+    @test length(r["Messages"]["warnings"]) > 0
 
-    # No Errors, only warnings
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    r = run_reopt(m,"./scenarios/pv.json")
-    @test r["status"] == "optimal"
+    n = Model(Xpress.Optimizer)
+    r = run_reopt(n, "./scenarios/logger.json")
+    @test r["status"] == "error"
     @test "Messages" ∈ keys(r)
     @test "errors" ∈ keys(r["Messages"])
     @test "warnings" ∈ keys(r["Messages"])
-
-    # No Errors, only warnings
-    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    r = run_reopt([m1,m2],"./scenarios/pv.json")
-    @test r["status"] == "optimal"
-    @test "Messages" ∈ keys(r)
-    @test "errors" ∈ keys(r["Messages"])
-    @test "warnings" ∈ keys(r["Messages"])
-
-    # No Errors, no warnings
-    p = REoptInputs(req)
-    @test !isa(p, Dict) # should be of type REoptInputs
+    @test length(r["Messages"]["errors"]) > 0
+    @test length(r["Messages"]["warnings"]) > 0
 
     # Throw an unhandled error: Bad URDB rate -> stack gets returned for debugging
-    req["ElectricTariff"]["urdb_label"] = "62c70a6c40a0c425535d387b"
-    m = Model(Xpress.Optimizer)
-    r = run_reopt(m,req)
+    d["ElectricLoad"]["doe_reference_name"] = "MidriseApartment"
+    d["ElectricTariff"]["urdb_label"] = "62c70a6c40a0c425535d387b"
 
+    m1 = Model(Xpress.Optimizer)
+    m2 = Model(Xpress.Optimizer)
+    r = run_reopt([m1,m2], d)
+    @test r["status"] == "error"
     @test "Messages" ∈ keys(r)
     @test "errors" ∈ keys(r["Messages"])
     @test "warnings" ∈ keys(r["Messages"])
-    @test typeof(r["Messages"]["errors"][1][2]) <: Array{String}
+    @test length(r["Messages"]["errors"]) > 0
+    @test length(r["Messages"]["warnings"]) > 0
 
-    # Throw a handled error
-    req["PV"] = "String"
     m = Model(Xpress.Optimizer)
-    r = run_reopt(m,req)
+    r = run_reopt(m, d)
+    @test r["status"] == "error"
     @test "Messages" ∈ keys(r)
     @test "errors" ∈ keys(r["Messages"])
     @test "warnings" ∈ keys(r["Messages"])
-    @test typeof(r["Messages"]["errors"][1][2]) <: Vector{Any}
+    @test length(r["Messages"]["errors"]) > 0
+    @test length(r["Messages"]["warnings"]) > 0
+
+    # Type is dict when errors, otherwise type REoptInputs
+    @test isa(REoptInputs(d), Dict)
+
+    # Using filepath
+    n1 = Model(Xpress.Optimizer)
+    n2 = Model(Xpress.Optimizer)
+    r = run_reopt([n1,n2], "./scenarios/logger.json")
+    @test r["status"] == "error"
+    @test "Messages" ∈ keys(r)
+    @test "errors" ∈ keys(r["Messages"])
+    @test "warnings" ∈ keys(r["Messages"])
+    @test length(r["Messages"]["errors"]) > 0
+    @test length(r["Messages"]["warnings"]) > 0
+
+    n = Model(Xpress.Optimizer)
+    r = run_reopt(n, "./scenarios/logger.json")
+    @test r["status"] == "error"
+    @test "Messages" ∈ keys(r)
+    @test "errors" ∈ keys(r["Messages"])
+    @test "warnings" ∈ keys(r["Messages"])
+    @test length(r["Messages"]["errors"]) > 0
+    @test length(r["Messages"]["warnings"]) > 0
 end

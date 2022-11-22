@@ -35,8 +35,8 @@ Return REoptInputs(s) where s in `Scenario` defined in dict `d`.
 """
 
 function REoptInputs(d::Dict)
-	instantiate_logger()
 
+	# Keep try catch to support API v3 call to `REoptInputs`
 	try
 		REoptInputs(Scenario(d))
 	catch e
@@ -54,8 +54,6 @@ end
 Solve the model using the `Scenario` defined in JSON file stored at the file path `fp`.
 """
 function run_reopt(m::JuMP.AbstractModel, fp::String)
-
-	instantiate_logger()
 
 	try
 		s = Scenario(JSON.parsefile(fp))
@@ -77,8 +75,6 @@ Solve the model using the `Scenario` defined in dict `d`.
 """
 function run_reopt(m::JuMP.AbstractModel, d::Dict)
 
-	instantiate_logger()
-
 	try
 		s = Scenario(d)
 		run_reopt(m, REoptInputs(s))
@@ -99,7 +95,7 @@ Solve the model using a `Scenario` or `BAUScenario`.
 """
 function run_reopt(m::JuMP.AbstractModel, s::AbstractScenario)
 	
-	instantiate_logger()
+	instantiate_logger() # have to instantiate here to capture the CO2 emission reduction error
 	
 	try
 		if s.site.CO2_emissions_reduction_min_pct > 0.0 || s.site.CO2_emissions_reduction_max_pct < 1.0
@@ -122,19 +118,8 @@ end
 Method for use with Threads when running BAU in parallel with optimal scenario.
 """
 function run_reopt(t::Tuple{JuMP.AbstractModel, AbstractInputs})
-
-	instantiate_logger()
-
-	try
-		run_reopt(t[1], t[2]; organize_pvs=false)
-		# must organize_pvs after adding proforma results
-	catch e
-		if isnothing(e) # Error thrown by REopt
-			handle_errors()
-		else
-			handle_errors(e, stacktrace(catch_backtrace()))
-		end
-	end
+	run_reopt(t[1], t[2]; organize_pvs=false)
+	# must organize_pvs after adding proforma results
 end
 
 
@@ -145,19 +130,8 @@ Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) m
 JSON file at the filepath `fp`.
 """
 function run_reopt(ms::AbstractArray{T, 1}, fp::String) where T <: JuMP.AbstractModel
-
-	instantiate_logger()
-
-    try
-		d = JSON.parsefile(fp)
-    	run_reopt(ms, d)
-	catch e
-		if isnothing(e) # Error thrown by REopt
-			handle_errors()
-		else
-			handle_errors(e, stacktrace(catch_backtrace()))
-		end
-	end
+	d = JSON.parsefile(fp)
+    run_reopt(ms, d)
 end
 
 
@@ -167,8 +141,6 @@ end
 Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) models in `ms` and inputs from `d`.
 """
 function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractModel
-
-	instantiate_logger()
 
 	try
 		s = Scenario(d)
@@ -186,85 +158,6 @@ function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractMod
 			handle_errors(e, stacktrace(catch_backtrace()))
 		end
 	end
-
-end
-
-"""
-    handle_errors(e::E, stacktrace::V) where {
-		E <: Exception,
-		V <: Vector
-	}
-
-Creates a results dictionary in case of an error from REopt.jl with Warnings and Errors from logREopt.d. The unhandled error+stacktrace is returned to the user.
-"""
-function handle_errors(e::E, stacktrace::V) where {
-	E <: Exception,
-	V <: Vector
-	}
-
-	results = Dict(
-		"Messages"=>Dict(),
-		"status"=>"error"
-	)
-
-	results["Messages"]["warnings"] = []
-	results["Messages"]["errors"] = []
-
-	if "Warn" in keys(logREopt.d)
-		for (keys,values) in logREopt.d["Warn"]
-			push!(results["Messages"]["warnings"], (keys, values))
-		end
-	end
-
-	if "Error" in keys(logREopt.d)
-		for (keys,values) in logREopt.d["Error"]
-			push!(results["Messages"]["errors"], (keys, values))
-		end
-	end
-
-	push!(results["Messages"]["errors"], (string(e),string.(stacktrace)))
-	return results
-end
-
-"""
-    handle_errors()
-
-Creates a results dictionary in case of a handled error from REopt.jl with Warnings and Errors from logREopt.d, which is returned to the user.
-"""
-function handle_errors()
-
-	results = Dict(
-		"Messages"=>Dict(),
-		"status"=>"error"
-	)
-
-	results["Messages"]["warnings"] = []
-	results["Messages"]["errors"] = []
-
-	if "Warn" in keys(logREopt.d)
-		for (keys,values) in logREopt.d["Warn"]
-			push!(results["Messages"]["warnings"], (keys, values))
-		end
-	end
-
-	if "Error" in keys(logREopt.d)
-		for (keys,values) in logREopt.d["Error"]
-			push!(results["Messages"]["errors"], (keys, values))
-		end
-	end
-
-	return results
-end
-
-"""
-	instantiate_logger()
-
-Instantiate a global logger of type REoptLogger and set it to global logger for downstream processing.
-"""
-function instantiate_logger()
-	global logREopt = REoptLogger()
-	global_logger(logREopt)
-    @debug "Created custom REopt Logger"
 end
 
 """
@@ -601,9 +494,7 @@ end
 
 function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 
-	if !isa(current_logger(), REopt.REoptLogger)
-		instantiate_logger()
-	end
+	instantiate_logger()
 
 	build_reopt!(m, p)
 
@@ -630,23 +521,12 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 	results["status"] = status
 	results["solver_seconds"] = opt_time
 
-    if organize_pvs && !isempty(p.techs.pv)  # do not want to organize_pvs when running BAU case in parallel b/c then proform code fails
-        organize_multiple_pv_results(p, results)
-    end
+	if organize_pvs && !isempty(p.techs.pv)  # do not want to organize_pvs when running BAU case in parallel b/c then proform code fails
+		organize_multiple_pv_results(p, results)
+	end
 
-	results["Messages"] = Dict()
-	results["Messages"]["warnings"] = []
-	results["Messages"]["errors"] = []
-	if "Warn" in keys(logREopt.d)
-		for (key, value) in logREopt.d["Warn"]
-    		push!(results["Messages"]["warnings"], (key, value))
-		end
-	end
-	if "Error" in keys(logREopt.d)
-		for (key, value) in logREopt.d["Error"]
-    		push!(results["Messages"]["errors"], (key, value))
-		end
-	end
+	# add error messages (if any) and warnings to results dict
+	results["Messages"] = logger_to_dict()
 
 	return results
 end
