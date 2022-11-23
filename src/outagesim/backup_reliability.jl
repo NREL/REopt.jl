@@ -468,7 +468,7 @@ end
 """
 update_survival!(survival, maximum_generation, net_critical_loads_kw_at_time_h)::Matrix{Int}
 
-inline update of survival matrix with 0 in states where generation cannot meet load and 1 in states where it can.
+In place update of survival matrix with 0 in states where generation cannot meet load and 1 in states where it can.
 """
 function update_survival!(survival, maximum_generation, net_critical_loads_kw_at_time_h)
     @inbounds for i in eachindex(maximum_generation)
@@ -479,7 +479,7 @@ end
 """
 survival_chance_mult(prob_matrix, survival)
 
-efficient implementation of sum(prob_matrix .* survival)
+More efficient implementation of sum(prob_matrix .* survival)
 """
 function survival_chance_mult(prob_matrix, survival)::Real
     s = 0
@@ -492,7 +492,7 @@ end
 """
 prob_matrix_update!(prob_matrix, survival)
 
-efficient implementation of prob_matrix = prob_matrix .* survival
+More efficient implementation of prob_matrix = prob_matrix .* survival
 """
 function prob_matrix_update!(prob_matrix, survival)
     @inbounds for i in eachindex(prob_matrix)
@@ -600,12 +600,11 @@ function gen_only_survival_single_start_time(
         h = mod(t + d - 2, t_max) + 1 #determines index accounting for looping around year
         update_survival!(survival, generator_production, net_critical_loads_kw[h])
 
+        #Update probabilities to account for generator failures
         #This is a more memory efficient way of implementing gen_battery_prob_matrix *= generator_markov_matrix
         gen_matrix_counter_start = ((d-1) % 2) + 1 
         gen_matrix_counter_end = (d % 2) + 1 
         mul!(gen_prob_array[gen_matrix_counter_end], gen_prob_array[gen_matrix_counter_start], generator_markov_matrix)
-
-        survival_chance = survival_chance_mult(gen_prob_array[gen_matrix_counter_end], survival)  #Elementwise, probability that i gens is available * probability of surviving if i gens is available
         
         if marginal_survival == false
             prob_matrix_update!(gen_prob_array[gen_matrix_counter_end], survival) 
@@ -760,7 +759,6 @@ function survival_with_battery_single_start_time(
     gen_battery_prob_matrix_array = [zeros(M, N), zeros(M, N)]
     gen_battery_prob_matrix_array[1][starting_battery_bins[t], :] = starting_gens
     gen_battery_prob_matrix_array[2][starting_battery_bins[t], :] = starting_gens
-    survival_chance = zeros(M, N)
     return_survival_chance_vector = zeros(max_outage_duration)
     survival = ones(M, N)
     
@@ -770,17 +768,11 @@ function survival_with_battery_single_start_time(
         
         update_survival!(survival, maximum_generation, net_critical_loads_kw[h])
         
+        #Update probabilities to account for generator failures
         #This is a more memory efficient way of implementing gen_battery_prob_matrix *= generator_markov_matrix
         gen_matrix_counter_start = ((d-1) % 2) + 1 
         gen_matrix_counter_end = (d % 2) + 1 
         mul!(gen_battery_prob_matrix_array[gen_matrix_counter_end], gen_battery_prob_matrix_array[gen_matrix_counter_start], generator_markov_matrix)
-
-        # @timeit to "survival chance" survival_chance = gen_battery_prob_matrix_array[gen_matrix_counter_end] = gen_battery_prob_matrix_array[gen_matrix_counter_end] .* survival
-        # if marginal_survival == false
-        #     @timeit to "survival chance" gen_battery_prob_matrix_array[gen_matrix_counter_end] = survival_chance
-        # else
-        #     @timeit return_survival_chance_vector[d] = sum(survival_chance)
-        # end
 
         if marginal_survival == false
             # @timeit to "survival chance" gen_battery_prob_matrix_array[gen_matrix_counter_end] = gen_battery_prob_matrix_array[gen_matrix_counter_end] .* survival 
@@ -971,10 +963,10 @@ function backup_reliability_inputs(;r::Dict)::Dict
         end
     end
 
-    #If multiple generators and no fuel input, then remove fuel constraint
     if haskey(r2, :num_generators) && (length(r2[:num_generators]) > 1)
         num_gen_types = length(r2[:num_generators])
         if !haskey(r2, :fuel_availability)
+            #If multiple generators and no fuel input, then remove fuel constraint
             r2[:fuel_availability] = [Inf for i = 1:num_gen_types]
         end 
         if !haskey(r2, :generator_fuel_intercept)
