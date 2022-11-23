@@ -426,3 +426,24 @@ end
 macro argname(arg)
     string(arg)
 end
+
+"""
+    get_monthly_time_steps(year::Int; time_steps_per_hour=1)
+
+return Array{Array{Int64,1},1}, size = (12,)
+"""
+function get_monthly_time_steps(year::Int; time_steps_per_hour=1)
+    a = Array[]
+    i = 1
+    for m in range(1, stop=12)
+        n_days = daysinmonth(Date(string(year) * "-" * string(m)))
+        stop = n_days * 24 * time_steps_per_hour + i - 1
+        if m == 2 && isleapyear(year)
+            stop -= 24 * time_steps_per_hour  # TODO support extra day in leap years?
+        end
+        steps = [step for step in range(i, stop=stop)]
+        append!(a, [steps])
+        i = stop + 1
+    end
+    return a
+end
