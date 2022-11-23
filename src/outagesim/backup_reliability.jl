@@ -1385,7 +1385,13 @@ function process_reliability_results(results::Array)::Dict
         total_cumulative_final_resilience = round.(cumulative_results[:,end] .* fuel_results[:,end], digits=6)
 
         total_cumulative_final_resilience_mean = round(mean(total_cumulative_final_resilience), digits=6)
-
+        total_cumulative_final_resilience_monthly = zeros(12)
+        ts_by_month = get_monthly_time_steps(2022; time_steps_per_hour=length(total_cumulative_final_resilience)/8760)
+        for mth in 1:12
+            t0 = ts_by_month[mth][1]
+            tf = ts_by_month[mth][end]
+            total_cumulative_final_resilience_monthly[mth] = round(mean(total_cumulative_final_resilience[t0:tf]), digits=6)
+        end
         return Dict(
             "inf_fuel_mean_marginal_survival_by_duration"    => marginal_duration_means,
             "inf_fuel_min_marginal_survival_by_duration"     => marginal_duration_mins,
@@ -1404,6 +1410,7 @@ function process_reliability_results(results::Array)::Dict
             "cumulative_outage_survival_final_time_step" => total_cumulative_final_resilience,
 
             "mean_cumulative_outage_survival_final_time_step" => total_cumulative_final_resilience_mean,
+            "monthly_cumulative_outage_survival_final_time_step" => total_cumulative_final_resilience_monthly
          )
     end
 end
