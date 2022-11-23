@@ -1169,6 +1169,7 @@ function fuel_use(;
     time_steps_per_hour::Real = 1,
     kwargs...)::Matrix{Int}
 
+    t_max = length(net_critical_loads_kw)
     if all(fuel_availability .== Inf)
         return ones(t_max, max_outage_duration)
     end
