@@ -851,7 +851,7 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         init_soc = get(d["ElectricStorage"], "year_one_soc_series_fraction", [])
         battery_starting_soc_kwh = init_soc .* battery_size_kwh
         
-        if haskey(r2, :use_full_battery_charge) && r2[:use_full_battery_charge] 
+        if get(r2, :use_full_battery_charge, false)
             r2[:battery_starting_soc_kwh] = battery_starting_soc_kwh
             r2[:battery_size_kwh] = battery_size_kwh
         else
@@ -959,21 +959,21 @@ function backup_reliability_inputs(;r::Dict)::Dict
                         :num_generators, :generator_size_kw, :fuel_availability, :generator_fuel_intercept, :generator_burn_rate_fuel_per_kwh]
     for g in generator_inputs
         if haskey(r2, g) && isa(r2[g], Array) && length(r2[g]) == 1
-        r2[g] = r2[g][1]
+            r2[g] = r2[g][1]
         end
     end
 
-    if haskey(r2, :num_generators) && (length(r2[:num_generators]) > 1)
+    if length(get(r2, :num_generators, [])) > 1
         num_gen_types = length(r2[:num_generators])
         if !haskey(r2, :fuel_availability)
             #If multiple generators and no fuel input, then remove fuel constraint
-            r2[:fuel_availability] = [Inf for i = 1:num_gen_types]
+            r2[:fuel_availability] = [Inf for _ in 1:num_gen_types]
         end 
         if !haskey(r2, :generator_fuel_intercept)
-            r2[:generator_fuel_intercept] = [0.0 for i in 1:num_gen_types]
+            r2[:generator_fuel_intercept] = [0.0 for _ in 1:num_gen_types]
         end
         if !haskey(r2, :generator_burn_rate_fuel_per_kwh)
-            r2[:generator_burn_rate_fuel_per_kwh] = [0.076 for i in 1:num_gen_types]
+            r2[:generator_burn_rate_fuel_per_kwh] = [0.076 for _ in 1:num_gen_types]
         end
     end
 
