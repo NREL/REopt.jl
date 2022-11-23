@@ -1366,8 +1366,8 @@ function process_reliability_results(results::Array)::Dict
     if isempty(results) 
         return Dict()
     else
-        marginal_results = round.(results[1], digits=6)
-        cumulative_results = round.(results[2], digits=6)
+        marginal_results = results[1]
+        cumulative_results = results[2]
         fuel_results = results[3]
         marginal_duration_means = round.(vec(mean(marginal_results, dims = 1)), digits=6)
         marginal_duration_mins = round.(vec(minimum(marginal_results, dims = 1)), digits=6)
@@ -1375,27 +1375,34 @@ function process_reliability_results(results::Array)::Dict
         cumulative_duration_means = round.(vec(mean(cumulative_results, dims = 1)), digits=6)
         cumulative_duration_mins = round.(vec(minimum(cumulative_results, dims = 1)), digits=6)
         cumulative_final_resilience = round.(cumulative_results[:, end], digits=6)
-        cumulative_final_resilience_mean = round(mean(cumulative_final_resilience), digits=6)
         fuel_duration_means = round.(vec(mean(fuel_results, dims = 1)), digits =6)
-        fuel_final_availability = fuel_results[:, end]
+        fuel_duration_mins = round.(vec(minimum(fuel_results, dims = 1)), digits =6)
+        fuel_final_availability = round.(fuel_results[:, end], digits=6)
 
-        survival_chance_means = round.(vec(mean(cumulative_results .* fuel_results, dims = 1)), digits=6)
-        survival_chance_mins = round.(vec(minimum(cumulative_results .* fuel_results, dims = 1)), digits=6)
-        survival_final_chance = round.(cumulative_results[:,end] .* fuel_results[:,end], digits=6)
+        total_cumulative_duration_means = round.(vec(mean(cumulative_results .* fuel_results, dims = 1)), digits=6)
+        total_cumulative_duration_mins = round.(vec(minimum(cumulative_results .* fuel_results, dims = 1)), digits=6)
+        total_cumulative_final_resilience = round.(cumulative_results[:,end] .* fuel_results[:,end], digits=6)
+
+        total_cumulative_final_resilience_mean = round(mean(total_cumulative_final_resilience), digits=6)
 
         return Dict(
-            "mean_marginal_survival_by_duration"    => marginal_duration_means,
-            "min_marginal_survival_by_duration"     => marginal_duration_mins,
-            "marginal_outage_survival_final_time_step"   => marginal_final_resilience,
-            "mean_cumulative_survival_by_duration"  => cumulative_duration_means,
-            "min_cumulative_survival_by_duration"   => cumulative_duration_mins,
-            "cumulative_outage_survival_final_time_step" => cumulative_final_resilience,
-            "mean_cumulative_outage_survival_final_time_step" => cumulative_final_resilience_mean,
-            "fuel_duration_means" => fuel_duration_means,
-            "fuel_final_availability" => fuel_final_availability,
-            "mean_fuel_plus_reliability_survival_by_duration" => survival_chance_means,
-            "min_fuel_plus_reliability_survival_by_duration" => survival_chance_mins,
-            "fuel_plus_reliability_final_survival_by_duration" => survival_final_chance
+            "inf_fuel_mean_marginal_survival_by_duration"    => marginal_duration_means,
+            "inf_fuel_min_marginal_survival_by_duration"     => marginal_duration_mins,
+            "inf_fuel_marginal_outage_survival_final_time_step"   => marginal_final_resilience,
+
+            "inf_fuel_mean_cumulative_survival_by_duration"  => cumulative_duration_means,
+            "inf_fuel_min_cumulative_survival_by_duration"   => cumulative_duration_mins,
+            "inf_fuel_cumulative_outage_survival_final_time_step" => cumulative_final_resilience,
+
+            "mean_fuel_survival_by_duration" => fuel_duration_means,
+            "min_fuel_survival_by_duration" => fuel_duration_mins,
+            "fuel_outage_survival_final_time_step" => fuel_final_availability,
+
+            "mean_cumulative_survival_by_duration" => total_cumulative_duration_means,
+            "min_cululative_survival_by_duration" => total_cumulative_duration_mins,
+            "cumulative_outage_survival_final_time_step" => total_cumulative_final_resilience,
+
+            "mean_cumulative_outage_survival_final_time_step" => total_cumulative_final_resilience_mean,
          )
     end
 end
