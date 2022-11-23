@@ -806,7 +806,7 @@ Return a dictionary of inputs required for backup reliability calculations.
     -num_battery_bins::Int = 101                            Internal value for discretely modeling battery state of charge
     -max_outage_duration::Int = 96                          Maximum outage time step modeled
     -microgrid_only::Bool = false                           Boolean to specify if only microgrid upgraded technologies run during grid outage
-    -use_full_battery_charge::Bool                          Optional input. If added and set to true then 100% of available battery can be used for power outages
+    -battery_minimum_soc::Real                              Optional input to override minimum SOC from REopt optimization. The battery minimum SOC allowed during outages.
     -fuel_availability:Union{Real, Vector{<:Real}} = Inf    Amount of fuel available, either by generator type or per generator. Change generator_burn_rate_fuel_per_kwh for different fuel efficiencies    
     -generator_fuel_intercept::Union{Real, Vector{<:Real}} = 0.0                Amount of fuel burned each time step while idling   
     -fuel_availability_by_generator::Bool = false                               Boolian to determine whether fuel availability is given per generator or per generator type
@@ -851,15 +851,10 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         init_soc = get(d["ElectricStorage"], "year_one_soc_series_fraction", [])
         battery_starting_soc_kwh = init_soc .* battery_size_kwh
         
-        if get(r2, :use_full_battery_charge, false)
-            r2[:battery_starting_soc_kwh] = battery_starting_soc_kwh
-            r2[:battery_size_kwh] = battery_size_kwh
-        else
-            minimum_soc = p.s.storage.attr["ElectricStorage"].soc_min_fraction
-            battery_minimum_soc_kwh = battery_size_kwh * minimum_soc
-            r2[:battery_size_kwh] = battery_size_kwh - battery_minimum_soc_kwh
-            r2[:battery_starting_soc_kwh] = battery_starting_soc_kwh .- battery_minimum_soc_kwh
-        end
+        minimum_soc = get(r2, :battery_minimum_soc, p.s.storage.attr["ElectricStorage"].soc_min_fraction)
+        battery_minimum_soc_kwh = battery_size_kwh * minimum_soc
+        r2[:battery_starting_soc_kwh] = battery_starting_soc_kwh .- battery_minimum_soc_kwh
+        r2[:battery_size_kwh] = battery_size_kwh - battery_minimum_soc_kwh
     end
     
     diesel_kw = 0
