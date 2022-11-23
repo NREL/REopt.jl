@@ -268,7 +268,7 @@ else  # run HiGHS tests
         #1 gen -> 1 -> 1       Prob = 0.2048,   Battery = -1, Failed
         #0 generators          Prob = 0.238144, Battery = -1, Failed
         #Survival Probability: 0.557056        
-        @test backup_reliability(input_dict)["marginal_outage_survival_final_time_step"][1] ≈ 0.557056
+        @test backup_reliability(input_dict)["inf_fuel_marginal_outage_survival_final_time_step"][1] ≈ 0.557056
 
         #Test multiple generator types
         input_dict = Dict(
@@ -286,7 +286,7 @@ else  # run HiGHS tests
             "battery_charge_efficiency" => 1,
             "battery_discharge_efficiency" => 1)
 
-        @test backup_reliability(input_dict)["marginal_outage_survival_final_time_step"][1] ≈ 0.557056
+        @test backup_reliability(input_dict)["inf_fuel_marginal_outage_survival_final_time_step"][1] ≈ 0.557056
 
         #8760 of flat load. Battery can survive 4 hours. 
         #Survival after 24 hours should be chance of generator surviving 20 or more hours
@@ -305,7 +305,7 @@ else  # run HiGHS tests
             "battery_discharge_efficiency" => 1)
 
         reliability_results = backup_reliability(input_dict)
-        @test reliability_results["mean_marginal_survival_by_duration"][24] ≈ (0.99^20)*(0.9*0.98) atol=0.00001
+        @test reliability_results["inf_fuel_mean_marginal_survival_by_duration"][24] ≈ (0.99^20)*(0.9*0.98) atol=0.00001
 
         #More realistic case of hospital load with 2 generators, PV, and battery
         reliability_inputs = JSON.parsefile("./scenarios/backup_reliability_inputs.json")
