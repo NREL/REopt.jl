@@ -1174,6 +1174,10 @@ function fuel_use(;
     time_steps_per_hour::Real = 1,
     kwargs...)::Matrix{Int}
 
+    if all(fuel_availability .== Inf)
+        return ones(t_max, max_outage_duration)
+    end
+
     fuel_availability = convert.(Float64, fuel_availability)
     if fuel_availability_by_generator
         #if fuel availability by generator then multiply by number of generators to get
@@ -1212,8 +1216,6 @@ function fuel_use(;
         end
 
         for d in 1:max_outage_duration
-            
-
             h = mod(t + d - 2, t_max) + 1 #determines index accounting for looping around year
             load_kw = net_critical_loads_kw[h]
             
