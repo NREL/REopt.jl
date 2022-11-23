@@ -80,7 +80,7 @@ function transition_prob(start_gen::Vector, end_gen::Vector, fail_prob_vec::Vect
     start_gen_matrix = hcat(collect.(start_gen)...)
     end_gen_matrix = hcat(collect.(end_gen)...)
 
-    transitions =  [binomial.(start_gen_matrix[i, :], end_gen_matrix[i, :]).*(1-fail_prob_vec[i]).^(end_gen_matrix[i, :]).*(fail_prob_vec[i]).^(start_gen_matrix[i, :].-end_gen_matrix[i, :]) for i in 1:length(fail_prob_vec)]
+    transitions =  [binomial.(start_gen_matrix[i, :], end_gen_matrix[i, :]).*(1-fail_prob_vec[i]).^(end_gen_matrix[i, :]).*(fail_prob_vec[i]).^(start_gen_matrix[i, :].-end_gen_matrix[i, :]) for i in eachindex(fail_prob_vec)]
     return .*(transitions...)
 end
 
@@ -294,7 +294,7 @@ function generator_output(num_generators::Vector{Int}, generator_size_kw::Vector
     gens_working = (0:g for g in num_generators)
     num_generators_working = reshape(collect(Iterators.product(gens_working...)), :, 1)
     #Returns vector of maximum generator output
-    return vec([sum(gw[i] * generator_size_kw[i] for i in 1:length(generator_size_kw)) for gw in num_generators_working])
+    return vec([sum(gw[i] * generator_size_kw[i] for i in eachindex(generator_size_kw)) for gw in num_generators_working])
 end
 
 """
@@ -1224,7 +1224,7 @@ function fuel_use(;
                     -load_kw / time_steps_per_hour * battery_charge_efficiency  # excess energy
                 ])
             else  # check if we can meet load with generator then storage
-                for i in 1:length(fuel_remaining)
+                for i in eachindex(fuel_remaining)
                     remaining_gen = sum(total_generator_capacity_kw[i:end])
                     if remaining_gen == 0
                         generation = 0
