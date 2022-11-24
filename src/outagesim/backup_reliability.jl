@@ -1388,8 +1388,8 @@ function process_reliability_results(results::Array)::Dict
         total_cumulative_final_resilience_monthly = zeros(12)
         ts_by_month = get_monthly_time_steps(2022; time_steps_per_hour=length(total_cumulative_final_resilience)/8760)
         for mth in 1:12
-            t0 = ts_by_month[mth][1]
-            tf = ts_by_month[mth][end]
+            t0 = Int(ts_by_month[mth][1])
+            tf = Int(ts_by_month[mth][end])
             total_cumulative_final_resilience_monthly[mth] = round(mean(total_cumulative_final_resilience[t0:tf]), digits=6)
         end
         return Dict(
