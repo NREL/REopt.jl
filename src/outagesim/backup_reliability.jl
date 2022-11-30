@@ -1231,7 +1231,7 @@ end
 """
     return_backup_reliability(; critical_loads_kw::Vector, battery_operational_availability::Real = 1.0,
             pv_operational_availability::Real = 1.0, pv_kw_ac_time_series::Vector = [],
-            pv_can_dispatch_without_battery::Bool = false, kwargs...)::Array
+            pv_can_dispatch_without_battery::Bool = false, kwargs...)
 Return an array of backup reliability calculations, accounting for operational availability of PV and battery. 
 # Arguments
 -critical_loads_kw::Vector                          Vector of critical loads
@@ -1247,7 +1247,7 @@ function return_backup_reliability(;
     battery_operational_availability::Real = 1.0,
     pv_operational_availability::Real = 1.0,
     pv_can_dispatch_without_battery::Bool = false,
-    kwargs...)::Array
+    kwargs...)
 
     if haskey(kwargs, :pv_kw_ac_time_series)
         pv_included = true
