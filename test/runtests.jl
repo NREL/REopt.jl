@@ -127,6 +127,18 @@ else  # run HiGHS tests
         @test sum(r["PV"]["to_grid_series_kw"]) ≈ 0
     end
 
+    @testset "MPC Multi-node" begin
+        # not doing much yet; just testing that two identical sites have the same costs
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+            "output_flag" => false, "log_to_console" => false)
+        )
+        ps = MPCInputs[]
+        push!(ps, MPCInputs("./scenarios/mpc_multinode1.json"));
+        push!(ps, MPCInputs("./scenarios/mpc_multinode2.json"));
+        r = run_mpc(model, ps)
+        @test r[1]["Costs"] ≈ r[2]["Costs"]
+    end
+
     @testset "Complex Incentives" begin
         """
         This test was compared against the API test:
