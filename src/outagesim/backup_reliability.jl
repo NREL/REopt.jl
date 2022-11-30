@@ -502,7 +502,7 @@ end
 
 """
     survival_gen_only(;critical_load::Vector, generator_operational_availability::Real, generator_failure_to_start::Real, generator_failure_to_run::Real, num_generators::Int,
-                                generator_size_kw::Real, max_outage_duration::Int, marginal_survival = true)::Matrix{Float64}
+                                generator_size_kw::Real, max_outage_duration::Int, marginal_survival = false)::Matrix{Float64}
 
 Return a matrix of probability of survival with rows denoting outage start timestep and columns denoting outage duration
 
@@ -552,7 +552,7 @@ function survival_gen_only(;
     num_generators::Union{Int, Vector{Int}}, 
     generator_size_kw::Union{Real, Vector{<:Real}},
     max_outage_duration::Int,
-    marginal_survival = true)::Matrix{Float64} 
+    marginal_survival = false)::Matrix{Float64} 
 
     t_max = length(net_critical_loads_kw)
     
@@ -620,7 +620,7 @@ end
 """
     survival_with_battery(;net_critical_loads_kw::Vector, battery_starting_soc_kwh::Vector, generator_operational_availability::Real, generator_failure_to_start::Real, 
                         generator_failure_to_run::Real, num_generators::Int, generator_size_kw::Real, battery_size_kwh::Real, battery_size_kw::Real, num_bins::Int, 
-                        max_outage_duration::Int, battery_charge_efficiency::Real, battery_discharge_efficiency::Real, marginal_survival::Bool = true, time_steps_per_hour::Real = 1)::Matrix{Float64} 
+                        max_outage_duration::Int, battery_charge_efficiency::Real, battery_discharge_efficiency::Real, marginal_survival::Bool = false, time_steps_per_hour::Real = 1)::Matrix{Float64} 
 
 Return a matrix of probability of survival with rows denoting outage start and columns denoting outage duration
 
@@ -691,7 +691,7 @@ function survival_with_battery(;
     max_outage_duration::Int, 
     battery_charge_efficiency::Real,
     battery_discharge_efficiency::Real,
-    marginal_survival::Bool = true,
+    marginal_survival::Bool = false,
     time_steps_per_hour::Real = 1)::Matrix{Float64} 
 
     t_max = length(net_critical_loads_kw)
@@ -1067,45 +1067,18 @@ function backup_reliability_single_run(;
         return []
     
     elseif battery_size_kw < 0.1
-        return [
-            survival_gen_only(
-                net_critical_loads_kw=net_critical_loads_kw, 
-                generator_operational_availability=generator_operational_availability, 
-                generator_failure_to_start=generator_failure_to_start, 
-                generator_failure_to_run=generator_failure_to_run, 
-                num_generators=num_generators, 
-                generator_size_kw=generator_size_kw, 
-                max_outage_duration=max_outage_duration, 
-                marginal_survival = true
-                ),
-            survival_gen_only(
+        return survival_gen_only(
                 net_critical_loads_kw=net_critical_loads_kw,
                 generator_operational_availability=generator_operational_availability, 
                 generator_failure_to_start=generator_failure_to_start, 
                 generator_failure_to_run=generator_failure_to_run, 
                 num_generators=num_generators, 
-                generator_size_kw=generator_size_kw, max_outage_duration=max_outage_duration, marginal_survival = false)]
+                generator_size_kw=generator_size_kw, 
+                max_outage_duration=max_outage_duration, 
+                marginal_survival = false)
 
     else
-        return [
-            survival_with_battery(
-                net_critical_loads_kw=net_critical_loads_kw, 
-                battery_starting_soc_kwh=battery_starting_soc_kwh, 
-                generator_operational_availability=generator_operational_availability,
-                generator_failure_to_start=generator_failure_to_start, 
-                generator_failure_to_run=generator_failure_to_run,
-                num_generators=num_generators,
-                generator_size_kw=generator_size_kw, 
-                battery_size_kw=battery_size_kw,
-                battery_size_kwh=battery_size_kwh,
-                num_battery_bins=num_battery_bins,
-                max_outage_duration=max_outage_duration, 
-                battery_charge_efficiency=battery_charge_efficiency,
-                battery_discharge_efficiency=battery_discharge_efficiency,
-                marginal_survival = true,
-                time_steps_per_hour = time_steps_per_hour
-            ),
-            survival_with_battery(
+        return survival_with_battery(
                 net_critical_loads_kw=net_critical_loads_kw,
                 battery_starting_soc_kwh=battery_starting_soc_kwh, 
                 generator_operational_availability=generator_operational_availability, 
@@ -1121,7 +1094,7 @@ function backup_reliability_single_run(;
                 battery_discharge_efficiency=battery_discharge_efficiency,
                 marginal_survival = false,
                 time_steps_per_hour = time_steps_per_hour
-            )]
+            )
 
     end
 end
