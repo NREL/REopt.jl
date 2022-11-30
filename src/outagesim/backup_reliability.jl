@@ -1025,7 +1025,7 @@ end
 """
     return_backup_reliability_single_run(; critical_loads_kw::Vector, generator_operational_availability::Real = 0.9998, generator_failure_to_start::Real = 0.0066, 
         generator_failure_to_run::Real = 0.00157, num_generators::Int = 1, generator_size_kw::Real = 0.0, num_battery_bins::Int = 101, max_outage_duration::Int = 96,
-        battery_size_kw::Real = 0.0, battery_size_kwh::Real = 0.0, battery_charge_efficiency::Real = 0.948, battery_discharge_efficiency::Real = 0.948, time_steps_per_hour::Real = 1)::Array
+        battery_size_kw::Real = 0.0, battery_size_kwh::Real = 0.0, battery_charge_efficiency::Real = 0.948, battery_discharge_efficiency::Real = 0.948, time_steps_per_hour::Real = 1)::Matrix
 
 Return an array of backup reliability calculations. Inputs can be unpacked from backup_reliability_inputs() dictionary
 # Arguments
@@ -1231,7 +1231,7 @@ end
 """
     return_backup_reliability(; critical_loads_kw::Vector, battery_operational_availability::Real = 1.0,
             pv_operational_availability::Real = 1.0, pv_kw_ac_time_series::Vector = [],
-            pv_can_dispatch_without_battery::Bool = false, kwargs...)
+            pv_can_dispatch_without_battery::Bool = false, kwargs...)::Array
 Return an array of backup reliability calculations, accounting for operational availability of PV and battery. 
 # Arguments
 -critical_loads_kw::Vector                          Vector of critical loads
@@ -1338,12 +1338,8 @@ function process_reliability_results(results::Array)::Dict
     if isempty(results) 
         return Dict()
     else
-        marginal_results = results[1]
-        cumulative_results = results[2]
-        fuel_results = results[3]
-        marginal_duration_means = round.(vec(mean(marginal_results, dims = 1)), digits=6)
-        marginal_duration_mins = round.(vec(minimum(marginal_results, dims = 1)), digits=6)
-        marginal_final_resilience = round.(marginal_results[:, end], digits=6)
+        cumulative_results = results[1]
+        fuel_results = results[2]
         cumulative_duration_means = round.(vec(mean(cumulative_results, dims = 1)), digits=6)
         cumulative_duration_mins = round.(vec(minimum(cumulative_results, dims = 1)), digits=6)
         cumulative_final_resilience = round.(cumulative_results[:, end], digits=6)
@@ -1364,10 +1360,6 @@ function process_reliability_results(results::Array)::Dict
             total_cumulative_final_resilience_monthly[mth] = round(mean(total_cumulative_final_resilience[t0:tf]), digits=6)
         end
         return Dict(
-            "inf_fuel_mean_marginal_survival_by_duration"    => marginal_duration_means,
-            "inf_fuel_min_marginal_survival_by_duration"     => marginal_duration_mins,
-            "inf_fuel_marginal_outage_survival_final_time_step"   => marginal_final_resilience,
-
             "inf_fuel_mean_cumulative_survival_by_duration"  => cumulative_duration_means,
             "inf_fuel_min_cumulative_survival_by_duration"   => cumulative_duration_mins,
             "inf_fuel_cumulative_outage_survival_final_time_step" => cumulative_final_resilience,
