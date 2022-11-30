@@ -1060,7 +1060,7 @@ function backup_reliability_single_run(;
     battery_charge_efficiency::Real = 0.948, 
     battery_discharge_efficiency::Real = 0.948,
     time_steps_per_hour::Real = 1,
-    kwargs...)::Array
+    kwargs...)::Matrix
  
     #No reliability calculations if no outage duration
     if max_outage_duration == 0
@@ -1305,7 +1305,7 @@ function return_backup_reliability(;
             (1 - pv_operational_availability)
     end
 
-    results = []
+    results_no_fuel_limit = []
     for sys_config in ["gen_only", "pv_plus_battery", "battery_no_pv", "pv_no_battery"]
         system = system_characteristics[sys_config]
         if system["probability"] != 0
@@ -1314,18 +1314,16 @@ function return_backup_reliability(;
                 battery_size_kw = system["battery_size_kw"],
                 kwargs...)
             #If no results then add results, else append to them
-            if length(results) == 0
+            if length(results_no_fuel_limit) == 0
                 #survival probs weighted by probability
-                results = run_survival_probs .* system["probability"]
+                results_no_fuel_limit = run_survival_probs .* system["probability"]
             else
-                results += run_survival_probs .* system["probability"]
+                results_no_fuel_limit += run_survival_probs .* system["probability"]
             end
         end
     end
 
-    push!(results, fuel_use(; net_critical_loads_kw = net_critical_loads_kw, kwargs...))
-
-    return results
+    return [results_no_fuel_limit, fuel_use(; net_critical_loads_kw = net_critical_loads_kw, kwargs...)]
 end
 
 """
