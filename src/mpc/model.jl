@@ -48,8 +48,7 @@ Solve the model predictive control problem using the `MPCScenario` defined in th
 Returns a Dict of results with keys matching those in the `MPCScenario`.
 """
 function run_mpc(m::JuMP.AbstractModel, d::Dict)
-	s = MPCScenario(d)
-	run_mpc(m, MPCInputs(s))
+	run_mpc(m, MPCInputs(d))
 end
 
 
