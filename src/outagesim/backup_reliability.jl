@@ -809,7 +809,7 @@ Return a dictionary of inputs required for backup reliability calculations.
     -battery_minimum_soc::Real                              Optional input to override minimum SOC from REopt optimization. The battery minimum SOC allowed during outages.
     -fuel_limit:Union{Real, Vector{<:Real}} = Inf    Amount of fuel available, either by generator type or per generator. Change generator_burn_rate_fuel_per_kwh for different fuel efficiencies    
     -generator_fuel_intercept::Union{Real, Vector{<:Real}} = 0.0                Amount of fuel burned each time step while idling   
-    -fuel_limit_is_per_generator::Bool = false                               Boolian to determine whether fuel availability is given per generator or per generator type
+    -fuel_limit_is_per_generator::Bool = false                                  Boolian to determine whether fuel availability is given per generator or per generator type
     -generator_burn_rate_fuel_per_kwh::Union{Real, Vector{<:Real}} = 0.076      Amount of fuel used per kWh generated
 
 """
@@ -923,7 +923,7 @@ Return a dictionary of inputs required for backup reliability calculations.
     -max_outage_duration::Int = 96                          Maximum outage duration modeled
     -fuel_limit:Union{Real, Vector{<:Real}} = Inf    Amount of fuel available, either by generator type or per generator. Change generator_burn_rate_fuel_per_kwh for different fuel efficiencies    
     -generator_fuel_intercept::Union{Real, Vector{<:Real}} = 0.0                Amount of fuel burned each time step while idling   
-    -fuel_limit_is_per_generator::Bool = false                               Boolian to determine whether fuel availability is given per generator or per generator type
+    -fuel_limit_is_per_generator::Bool = false                                  Boolian to determine whether fuel availability is given per generator or per generator type
     -generator_burn_rate_fuel_per_kwh::Union{Real, Vector{<:Real}} = 0.076      Amount of fuel used per kWh generated
 
 #Examples
@@ -1138,9 +1138,9 @@ Return a matrix of fuel survival. Output is a matrix with rows of time periods a
 -net_critical_loads_kw::Vector                                              vector of net critical loads
 -num_generators::Union{Int, Vector{Int}} = 1,                               number of backup generators of each type
 -generator_size_kw::Union{Real, Vector{<:Real}} = 0.0,                      capacity of each generator type
--fuel_limit::Union{Real, Vector{<:Real}} = Inf,                      Fuel stored by generator type. If fuel_limit_is_per_generator = true, then measured for each generator
+-fuel_limit::Union{Real, Vector{<:Real}} = Inf,                             Fuel stored by generator type. If fuel_limit_is_per_generator = true, then measured for each generator
 -generator_fuel_intercept::Union{Real, Vector{<:Real}} = 0.0,               Fixed fuel use in each time period
--fuel_limit_is_per_generator::Bool = false,                              If false then fuel_limit measures fuel by generator type. If true then measures by each generator  
+-fuel_limit_is_per_generator::Bool = false,                                 If false then fuel_limit measures fuel by generator type. If true then measures by each generator  
 -generator_burn_rate_fuel_per_kwh::Union{Real, Vector{<:Real}} = 0.076,     amount of fuel use per kWh generated
 -max_outage_duration::Int = 96,                                             maximum outage duration
 -battery_starting_soc_kwh::Vector = [],                                     battery time series of starting charge
