@@ -61,6 +61,12 @@ function MPCInputs(fp::String)
 end
 
 
+function MPCInputs(d::Dict)
+    s = MPCScenario(d)
+    MPCInputs(s)
+end
+
+
 function MPCInputs(s::MPCScenario)
 
     time_steps = 1:length(s.electric_load.loads_kw)
