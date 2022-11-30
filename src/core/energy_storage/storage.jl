@@ -44,6 +44,7 @@ mutable struct StorageTypes
     thermal::Vector{String}
     hot::Vector{String}
     cold::Vector{String}
+    ev::Vector{String}
 end
 ```
 """
@@ -53,7 +54,7 @@ mutable struct StorageTypes
     thermal::Vector{String}
     hot::Vector{String}
     cold::Vector{String}
-
+    ev::Vector{String}
 
     function StorageTypes()
         new(
@@ -61,7 +62,8 @@ mutable struct StorageTypes
             String[],
             String[],
             String[],
-            String[]
+            String[],
+            String[],
         )
     end
 
@@ -70,6 +72,7 @@ mutable struct StorageTypes
         elec_storage = String[]
         hot_storage = String[]
         cold_storage = String[]
+        ev = String[]
 
         for (k,v) in d
             if v.max_kw > 0.0 && v.max_kwh > 0.0
@@ -78,7 +81,10 @@ mutable struct StorageTypes
 
                 if typeof(v) <: AbstractElectricStorage
                     push!(elec_storage, k)
-
+                    # EV's are of type AbstractElectricStorage too, but also electric_vehicle attribute (and "EV" in v.name)
+                    if !isnothing(v.electric_vehicle)  # Alternatively could check for "EV" in v.name
+                        push!(ev, k)
+                    end
                 elseif typeof(v) <: ThermalStorage
                     if occursin("Hot", k)
                         push!(hot_storage, k)
@@ -98,7 +104,8 @@ mutable struct StorageTypes
             elec_storage,
             thermal_storage,
             hot_storage,
-            cold_storage
+            cold_storage,
+            ev
         )
     end
 end
