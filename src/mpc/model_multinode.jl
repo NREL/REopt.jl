@@ -38,13 +38,7 @@ Returns a Dict of results with keys matching those in the `MPCScenario`.
 function run_mpc(m::JuMP.AbstractModel, ps::AbstractVector{MPCInputs})
     build_mpc!(m, ps)
 
-    # if !p.s.settings.add_soc_incentive TODO?
-	# 	@objective(m, Min, m[:Costs])
-	# else # Keep SOC high
-	# 	@objective(m, Min, m[:Costs] - sum(m[:dvStoredEnergy]["ElectricStorage", ts] for ts in p.time_steps) /
-	# 								   (8760. / p.hours_per_time_step)
-	# 	)
-	# end
+    @objective(m, Min, sum(m[Symbol(string("Costs_", p.s.node))] for p in ps))
 
 	@info "Model built. Optimizing..."
 	tstart = time()
