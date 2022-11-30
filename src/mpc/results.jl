@@ -68,6 +68,8 @@ function mpc_results(m::JuMP.AbstractModel, p::MPCInputs; _n="")
 	if !isempty(p.techs.gen)
         add_generator_results(m, p, d; _n)
 	end
+
+    d["Costs"] = value(m[Symbol("Costs"*_n)])
 	
 	time_elapsed = time() - tstart
 	@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
