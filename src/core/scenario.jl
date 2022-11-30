@@ -166,22 +166,32 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
     storage_structs["ElectricStorage"] = ElectricStorage(storage_dict, financial)
     
-    if haskey(d, "EV")
-        if typeof(d["EV"]) <: AbstractArray
-            for (i, ev) in enumerate(d["EV"])
-                if !(haskey(ev, "name"))
-                    ev["name"] = string("EV", i)
-                end
-                storage_dict = dictkeys_tosymbols(ev)
-                storage_dict[:off_grid_flag] = settings.off_grid_flag
-                storage_structs[ev["name"]] = ElectricStorage(storage_dict, financial)
+    if haskey(d, "ElectricVehicle")
+        if typeof(d["ElectricVehicle"]) <: AbstractDict
+            d["ElectricVehicle"] = [deepcopy(d["ElectricVehicle"])]
+        elseif !(typeof(d["ElectricVehicle"]) <: AbstractArray)
+            throw(@error "EV input must be Dict or Dict[].")
+        end
+        for (i, ev) in enumerate(d["ElectricVehicle"])
+            ev_name_input = get(ev, "name", "")
+            if isempty(ev_name_input)
+                ev["name"] = string("EV", i)
+            elseif !("EV" in ev_name_input)
+                ev_name_change = ev_name_input * string("_EV", i)
+                ev["name"] = ev_name_change
+                @warn "Renaming ElectricVehicle name from $ev_name_input to $ev_name_change"
             end
-        elseif typeof(d["EV"]) <: AbstractDict
-            storage_dict = dictkeys_tosymbols(d["EV"])
+            # "Pop" EV-specific inputs and send to a newly created ElectricStorage attribute called "electric_vehicle"
+            storage_dict = dictkeys_tosymbols(ev)
+            electric_vehicle = Dict()
+            for ev_field in fieldnames(ElectricVehicle)
+                if haskey(storage_dict, ev_field)
+                    electric_vehicle[ev_field] = pop!(storage_dict, ev_field)
+                end
+            end
+            storage_dict[:electric_vehicle] = electric_vehicle
             storage_dict[:off_grid_flag] = settings.off_grid_flag
             storage_structs[ev["name"]] = ElectricStorage(storage_dict, financial)
-        else
-            error("EV input must be Dict or Dict[].")
         end
     end
     
