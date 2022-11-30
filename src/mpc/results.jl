@@ -40,6 +40,9 @@ MPC Scenarios will return a results Dict with the following keys:
 function mpc_results(m::JuMP.AbstractModel, p::MPCInputs; _n="")
 	tstart = time()
     d = Dict{String, Any}()
+
+    add_electric_load_results(m, p, d; _n)
+
     for b in p.s.storage.types.elec
         if p.s.storage.attr[b].size_kwh > 0
             add_electric_storage_results(m, p, d, b; _n)
