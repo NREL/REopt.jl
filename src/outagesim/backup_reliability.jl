@@ -1323,7 +1323,7 @@ function return_backup_reliability(;
         end
     end
 
-    return [results_no_fuel_limit, fuel_use(; net_critical_loads_kw = net_critical_loads_kw, kwargs...)]
+    return results_no_fuel_limit, fuel_use(; net_critical_loads_kw = net_critical_loads_kw, kwargs...)
 end
 
 """
@@ -1332,14 +1332,13 @@ process_reliability_results(results::Array)::Dict
 Return dictionary of processed backup reliability results.
 
 # Arguments
-- `results::Array`: results from function return_backup_reliability. 
+- `cumulative_results::Matrix`: cumulative survival probabilities matrix from function return_backup_reliability. 
+- `fuel_results::Matrix`: fuel survival probabilities matrix from function return_backup_reliability.
 """
-function process_reliability_results(results::Array)::Dict
+function process_reliability_results(cumulative_results::Matrix, fuel_results::Matrix)::Dict
     if isempty(results) 
         return Dict()
     else
-        cumulative_results = results[1]
-        fuel_results = results[2]
         cumulative_duration_means = round.(vec(mean(cumulative_results, dims = 1)), digits=6)
         cumulative_duration_mins = round.(vec(minimum(cumulative_results, dims = 1)), digits=6)
         cumulative_final_resilience = round.(cumulative_results[:, end], digits=6)
@@ -1401,8 +1400,8 @@ Possible keys in r:
 """
 function backup_reliability(d::Dict, p::REoptInputs, r::Dict)
     reliability_inputs = backup_reliability_reopt_inputs(d=d, p=p, r=r)
-	results = return_backup_reliability(; reliability_inputs... )
-	process_reliability_results(results)
+	cumulative_results, fuel_results = return_backup_reliability(; reliability_inputs... )
+	process_reliability_results(cumulative_results, fuel_results)
 end
 
 
@@ -1435,6 +1434,6 @@ Possible keys in r:
 """
 function backup_reliability(r::Dict)
     reliability_inputs = backup_reliability_inputs(r=r)
-	results = return_backup_reliability(; reliability_inputs... )
-	process_reliability_results(results)
+	cumulative_results, fuel_results = return_backup_reliability(; reliability_inputs... )
+	process_reliability_results(cumulative_results, fuel_results)
 end
