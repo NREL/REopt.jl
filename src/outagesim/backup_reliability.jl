@@ -1336,45 +1336,41 @@ Return dictionary of processed backup reliability results.
 - `fuel_results::Matrix`: fuel survival probabilities matrix from function return_backup_reliability.
 """
 function process_reliability_results(cumulative_results::Matrix, fuel_results::Matrix)::Dict
-    if isempty(results) 
-        return Dict()
-    else
-        cumulative_duration_means = round.(vec(mean(cumulative_results, dims = 1)), digits=6)
-        cumulative_duration_mins = round.(vec(minimum(cumulative_results, dims = 1)), digits=6)
-        cumulative_final_resilience = round.(cumulative_results[:, end], digits=6)
-        fuel_duration_means = round.(vec(mean(fuel_results, dims = 1)), digits =6)
-        fuel_duration_mins = round.(vec(minimum(fuel_results, dims = 1)), digits =6)
-        fuel_final_availability = round.(fuel_results[:, end], digits=6)
+    cumulative_duration_means = round.(vec(mean(cumulative_results, dims = 1)), digits=6)
+    cumulative_duration_mins = round.(vec(minimum(cumulative_results, dims = 1)), digits=6)
+    cumulative_final_resilience = round.(cumulative_results[:, end], digits=6)
+    fuel_duration_means = round.(vec(mean(fuel_results, dims = 1)), digits =6)
+    fuel_duration_mins = round.(vec(minimum(fuel_results, dims = 1)), digits =6)
+    fuel_final_availability = round.(fuel_results[:, end], digits=6)
 
-        total_cumulative_duration_means = round.(vec(mean(cumulative_results .* fuel_results, dims = 1)), digits=6)
-        total_cumulative_duration_mins = round.(vec(minimum(cumulative_results .* fuel_results, dims = 1)), digits=6)
-        total_cumulative_final_resilience = round.(cumulative_results[:,end] .* fuel_results[:,end], digits=6)
+    total_cumulative_duration_means = round.(vec(mean(cumulative_results .* fuel_results, dims = 1)), digits=6)
+    total_cumulative_duration_mins = round.(vec(minimum(cumulative_results .* fuel_results, dims = 1)), digits=6)
+    total_cumulative_final_resilience = round.(cumulative_results[:,end] .* fuel_results[:,end], digits=6)
 
-        total_cumulative_final_resilience_mean = round(mean(total_cumulative_final_resilience), digits=6)
-        total_cumulative_final_resilience_monthly = zeros(12)
-        ts_by_month = get_monthly_time_steps(2022; time_steps_per_hour=length(total_cumulative_final_resilience)/8760)
-        for mth in 1:12
-            t0 = Int(ts_by_month[mth][1])
-            tf = Int(ts_by_month[mth][end])
-            total_cumulative_final_resilience_monthly[mth] = round(mean(total_cumulative_final_resilience[t0:tf]), digits=6)
-        end
-        return Dict(
-            "inf_fuel_mean_cumulative_survival_by_duration"  => cumulative_duration_means,
-            "inf_fuel_min_cumulative_survival_by_duration"   => cumulative_duration_mins,
-            "inf_fuel_cumulative_outage_survival_final_time_step" => cumulative_final_resilience,
-
-            "mean_fuel_survival_by_duration" => fuel_duration_means,
-            "min_fuel_survival_by_duration" => fuel_duration_mins,
-            "fuel_outage_survival_final_time_step" => fuel_final_availability,
-
-            "mean_cumulative_survival_by_duration" => total_cumulative_duration_means,
-            "min_cululative_survival_by_duration" => total_cumulative_duration_mins,
-            "cumulative_outage_survival_final_time_step" => total_cumulative_final_resilience,
-
-            "mean_cumulative_outage_survival_final_time_step" => total_cumulative_final_resilience_mean,
-            "monthly_cumulative_outage_survival_final_time_step" => total_cumulative_final_resilience_monthly
-         )
+    total_cumulative_final_resilience_mean = round(mean(total_cumulative_final_resilience), digits=6)
+    total_cumulative_final_resilience_monthly = zeros(12)
+    ts_by_month = get_monthly_time_steps(2022; time_steps_per_hour=length(total_cumulative_final_resilience)/8760)
+    for mth in 1:12
+        t0 = Int(ts_by_month[mth][1])
+        tf = Int(ts_by_month[mth][end])
+        total_cumulative_final_resilience_monthly[mth] = round(mean(total_cumulative_final_resilience[t0:tf]), digits=6)
     end
+    return Dict(
+        "inf_fuel_mean_cumulative_survival_by_duration"  => cumulative_duration_means,
+        "inf_fuel_min_cumulative_survival_by_duration"   => cumulative_duration_mins,
+        "inf_fuel_cumulative_outage_survival_final_time_step" => cumulative_final_resilience,
+
+        "mean_fuel_survival_by_duration" => fuel_duration_means,
+        "min_fuel_survival_by_duration" => fuel_duration_mins,
+        "fuel_outage_survival_final_time_step" => fuel_final_availability,
+
+        "mean_cumulative_survival_by_duration" => total_cumulative_duration_means,
+        "min_cululative_survival_by_duration" => total_cumulative_duration_mins,
+        "cumulative_outage_survival_final_time_step" => total_cumulative_final_resilience,
+
+        "mean_cumulative_outage_survival_final_time_step" => total_cumulative_final_resilience_mean,
+        "monthly_cumulative_outage_survival_final_time_step" => total_cumulative_final_resilience_monthly
+        )
 end
 
 
@@ -1399,9 +1395,14 @@ Possible keys in r:
 
 """
 function backup_reliability(d::Dict, p::REoptInputs, r::Dict)
-    reliability_inputs = backup_reliability_reopt_inputs(d=d, p=p, r=r)
-	cumulative_results, fuel_results = return_backup_reliability(; reliability_inputs... )
-	process_reliability_results(cumulative_results, fuel_results)
+    try
+        reliability_inputs = backup_reliability_reopt_inputs(d=d, p=p, r=r)
+        cumulative_results, fuel_results = return_backup_reliability(; reliability_inputs... )
+        process_reliability_results(cumulative_results, fuel_results)
+    catch e
+        @info e
+        return Dict()
+    end
 end
 
 
