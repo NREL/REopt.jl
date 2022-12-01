@@ -23,6 +23,14 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+# dev
+### Added
+- multi-node MPC modeling capability
+- more MPC outputs (e.g. Costs, ElectricStorage.to_load_series_kw)
+### Fixed
+- PV results for all multi-node scenarios
+- MPC objective definition w/o ElectricStorage
+
 # v0.22.0
 ### Added
 - Simulated load function which mimicks the REopt_API /simulated_load endpoint for getting commercial reference building load data from annual or monthly energy data, or blended/hybrid buildings
