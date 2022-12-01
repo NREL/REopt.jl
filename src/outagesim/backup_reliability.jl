@@ -1340,8 +1340,7 @@ function process_reliability_results(cumulative_results::Matrix, fuel_results::M
     cumulative_duration_mins = round.(vec(minimum(cumulative_results, dims = 1)), digits=6)
     cumulative_final_resilience = round.(cumulative_results[:, end], digits=6)
     fuel_duration_means = round.(vec(mean(fuel_results, dims = 1)), digits =6)
-    fuel_duration_mins = round.(vec(minimum(fuel_results, dims = 1)), digits =6)
-    fuel_final_availability = round.(fuel_results[:, end], digits=6)
+    fuel_final_survival = round.(fuel_results[:, end], digits=6)
 
     total_cumulative_duration_means = round.(vec(mean(cumulative_results .* fuel_results, dims = 1)), digits=6)
     total_cumulative_duration_mins = round.(vec(minimum(cumulative_results .* fuel_results, dims = 1)), digits=6)
@@ -1366,8 +1365,7 @@ function process_reliability_results(cumulative_results::Matrix, fuel_results::M
         "unlimited_fuel_cumulative_outage_survival_final_time_step" => cumulative_final_resilience,
 
         "mean_fuel_survival_by_duration" => fuel_duration_means,
-        "min_fuel_survival_by_duration" => fuel_duration_mins,
-        "fuel_outage_survival_final_time_step" => fuel_final_availability,
+        "fuel_outage_survival_final_time_step" => fuel_final_survival,
 
         "mean_cumulative_survival_by_duration" => total_cumulative_duration_means,
         "min_cumulative_survival_by_duration" => total_cumulative_duration_mins,
