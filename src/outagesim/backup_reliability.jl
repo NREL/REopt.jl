@@ -1370,7 +1370,7 @@ function process_reliability_results(cumulative_results::Matrix, fuel_results::M
         "fuel_outage_survival_final_time_step" => fuel_final_availability,
 
         "mean_cumulative_survival_by_duration" => total_cumulative_duration_means,
-        "min_cululative_survival_by_duration" => total_cumulative_duration_mins,
+        "min_cumulative_survival_by_duration" => total_cumulative_duration_mins,
         "cumulative_outage_survival_final_time_step" => total_cumulative_final_resilience,
 
         "mean_cumulative_outage_survival_final_time_step" => total_cumulative_final_resilience_mean,
