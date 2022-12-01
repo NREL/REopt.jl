@@ -534,7 +534,7 @@ julia> survival_gen_only(net_critical_loads_kw=net_critical_loads_kw, generator_
  0.96  0.8704  0.761856
  0.96  0.8704  0.262144
 
-julia> survival_gen_only(critical_load=critical_loads_kw, generator_operational_availability=generator_operational_availability, 
+julia> survival_gen_only(net_critical_loads_kw=net_critical_loads_kw, generator_operational_availability=generator_operational_availability, 
                                 generator_failure_to_start=failure_to_start, generator_failure_to_run=failure_to_run, num_generators=num_generators, 
                                 generator_size_kw=generator_size_kw, max_outage_duration=max_outage_duration, marginal_survival = false)
 4×3 Matrix{Float64}:
@@ -807,7 +807,7 @@ Return a dictionary of inputs required for backup reliability calculations.
     -max_outage_duration::Int = 96                          Maximum outage time step modeled
     -microgrid_only::Bool = false                           Boolean to specify if only microgrid upgraded technologies run during grid outage
     -battery_minimum_soc::Real                              Optional input to override minimum SOC from REopt optimization. The battery minimum SOC allowed during outages.
-    -fuel_limit:Union{Real, Vector{<:Real}} = Inf    Amount of fuel available, either by generator type or per generator. Change generator_burn_rate_fuel_per_kwh for different fuel efficiencies    
+    -fuel_limit:Union{Real, Vector{<:Real}} = Inf           Amount of fuel available, either by generator type or per generator. Change generator_burn_rate_fuel_per_kwh for different fuel efficiencies    
     -generator_fuel_intercept::Union{Real, Vector{<:Real}} = 0.0                Amount of fuel burned each time step while idling   
     -fuel_limit_is_per_generator::Bool = false                                  Boolian to determine whether fuel availability is given per generator or per generator type
     -generator_burn_rate_fuel_per_kwh::Union{Real, Vector{<:Real}} = 0.076      Amount of fuel used per kWh generated
