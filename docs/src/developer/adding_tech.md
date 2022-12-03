@@ -57,7 +57,7 @@ Any new technology should have a `technologyname.jl` file in the `src/core` dire
 
 When adding a new technology to REopt one must decide on how a user of the REopt will define the technology. Continuing with the `PV` example we saw that we need to define the `production_factor` for the `PV` technology in every time step. The `production_factor` varies from zero to one and defines the availability of the technology. For `PV` we have a default method for creating the `production_factor` as well as allow the user to provide their own `production_factor`.
 
-We let the user define the `production_factor` by providing the `PV`s `prod_factor_series` input in their JSON file or dictionary when creating their [Scenario](@ref). If the user does not provide a value for `prod_factor_series` then we use the PVWatts API to get a `production_factor` based on the `Site.latitude` and `Site.longitude`. The [PV](@ref) inputs structure also allows the user to change the arguments that are passed to PVWatts.
+We let the user define the `production_factor` by providing the `PV`s `production_factor_series` input in their JSON file or dictionary when creating their [Scenario](@ref). If the user does not provide a value for `production_factor_series` then we use the PVWatts API to get a `production_factor` based on the `Site.latitude` and `Site.longitude`. The [PV](@ref) inputs structure also allows the user to change the arguments that are passed to PVWatts.
 
 
 ## 3. REopt Inputs
@@ -74,7 +74,7 @@ production_factor = DenseAxisArray{Float64}(undef, techs.all, 1:length(s.electri
 and then passes that array to technology specific functions that add their production factors to the `production_factor` array. For example, for `PV` within the `setup_pv_inputs` method we have:
 ```julia
 for pv in s.pvs
-    production_factor[pv.name, :] = prodfactor(pv, s.site.latitude, s.site.longitude)
+    production_factor[pv.name, :] = get_production_factor(pv, s.site.latitude, s.site.longitude)
     ...
 end
 ```

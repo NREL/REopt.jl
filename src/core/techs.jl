@@ -50,6 +50,8 @@ function Techs(p::REoptInputs, s::BAUScenario)
     providing_oper_res = String[]
     electric_chillers = String[]
     absorption_chillers = String[]
+    steam_turbines = String[]
+    techs_can_supply_steam_turbine = String[]
 
     if p.s.generator.existing_kw > 0
         push!(all_techs, "Generator")
@@ -90,7 +92,9 @@ function Techs(p::REoptInputs, s::BAUScenario)
         requiring_oper_res,
         providing_oper_res,
         electric_chillers,
-        absorption_chillers
+        absorption_chillers,
+        steam_turbines,
+        techs_can_supply_steam_turbine        
     )
 end
 
@@ -121,32 +125,53 @@ function Techs(s::Scenario)
     providing_oper_res = String[]
     electric_chillers = String[]
     absorption_chillers = String[]
+    steam_turbines = String[]
+    techs_can_supply_steam_turbine = String[]    
 
     if s.wind.max_kw > 0
         push!(all_techs, "Wind")
         push!(elec, "Wind")
+        append!(techs_no_turndown, ["Wind"])
+        if s.settings.off_grid_flag
+            push!(requiring_oper_res, "Wind")
+            push!(providing_oper_res, "Wind")
+        end
     end
 
-    if s.generator.max_kw > 0
+    if s.generator.existing_kw + s.generator.max_kw > 0
         push!(all_techs, "Generator")
         push!(gentechs, "Generator")
         push!(elec, "Generator")
+        if s.settings.off_grid_flag
+            push!(providing_oper_res, "Generator")
+        end
     end
 
     if !isnothing(s.existing_boiler)
         push!(all_techs, "ExistingBoiler")
         push!(heating_techs, "ExistingBoiler")
         push!(boiler_techs, "ExistingBoiler")
+        if s.existing_boiler.can_supply_steam_turbine
+            push!(techs_can_supply_steam_turbine, "ExistingBoiler")
+        end           
     end
 
-    if "Wind" in all_techs
-        append!(techs_no_turndown, ["Wind"])
+    if !isnothing(s.boiler)
+        push!(all_techs, "Boiler")
+        push!(heating_techs, "Boiler")
+        push!(boiler_techs, "Boiler")
+        if s.boiler.can_supply_steam_turbine
+            push!(techs_can_supply_steam_turbine, "Boiler")
+        end        
     end
     
     if !isnothing(s.chp)
         push!(all_techs, "CHP")
         push!(elec, "CHP")
         push!(chp_techs, "CHP")
+        if s.chp.can_supply_steam_turbine
+            push!(techs_can_supply_steam_turbine, "CHP")
+        end
     end
 
     if !isnothing(s.existing_chiller)
@@ -159,9 +184,16 @@ function Techs(s::Scenario)
         push!(absorption_chillers, "AbsorptionChiller")
     end
 
+    if !isnothing(s.steam_turbine)
+        push!(all_techs, "SteamTurbine")
+        push!(elec, "SteamTurbine")
+        push!(heating_techs, "SteamTurbine")
+        push!(steam_turbines, "SteamTurbine")
+    end    
+
     if s.settings.off_grid_flag
-        requiring_oper_res = copy(pvtechs) # Currently, only PV requires operating reserves.
-        providing_oper_res = union(pvtechs, gentechs) # Currently, only PV and generator (and storage) provide operating reserves.
+        append!(requiring_oper_res, pvtechs)
+        append!(providing_oper_res, pvtechs)
     end
 
     cooling_techs = union(electric_chillers, absorption_chillers)
@@ -186,7 +218,9 @@ function Techs(s::Scenario)
         requiring_oper_res, 
         providing_oper_res, 
         electric_chillers,
-        absorption_chillers
+        absorption_chillers,
+        steam_turbines,
+        techs_can_supply_steam_turbine
     )
 end
 
@@ -218,6 +252,8 @@ function Techs(s::MPCScenario)
         String[],
         String[],
         techs_no_turndown,
+        String[],
+        String[],
         String[],
         String[],
         String[],
