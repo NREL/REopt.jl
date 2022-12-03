@@ -67,17 +67,13 @@ end
 
 
 """
-    ElectricTariff
-
-ElectricTariff constructor
+`ElectricTariff` is a required REopt input for on-grid scenarios only (it cannot be supplied when `Settings.off_grid_flag` is true) with the following keys and default values:
 ```julia
-function ElectricTariff(;
     urdb_label::String="",
     urdb_response::Dict=Dict(),
     urdb_utility_name::String="",
     urdb_rate_name::String="",
     year::Int=2020,
-    time_steps_per_hour::Int=1,
     NEM::Bool=false,
     wholesale_rate::T1=nothing,
     export_rate_beyond_net_metering_limit::T2=nothing,
@@ -90,20 +86,20 @@ function ElectricTariff(;
     add_tou_energy_rates_to_urdb_rate::Bool=false,
     remove_tiers::Bool=false,
     demand_lookback_months::AbstractArray{Int64, 1}=Int64[],
-    demand_lookback_percent::Float64=0.0,
+    demand_lookback_percent::Real=0.0,
     demand_lookback_range::Int=0,
     coincident_peak_load_active_time_steps::Vector{Vector{Int64}}=[Int64[]],
     coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[]
     ) where {
-        T1 <: Union{Nothing, Int, Float64, Array}, 
-        T2 <: Union{Nothing, Int, Float64, Array}, 
-        S <: Union{Nothing, Int, Float64}, 
-        R <: Union{Nothing, Int, Float64}
+        T1 <: Union{Nothing, Real, Array{<:Real}}, 
+        T2 <: Union{Nothing, Real, Array{<:Real}}, 
+        S <: Union{Nothing, Real}, 
+        R <: Union{Nothing, Real}
     }
 ```
 
-!!! note
-    The `NEM` boolean is determined by the ElectricUtility.net_metering_limit_kw. There is no need to pass in a `NEM`
+!!! note "NEM input"
+    The `NEM` boolean is determined by the `ElectricUtility.net_metering_limit_kw`. There is no need to pass in a `NEM`
     value.
     
 """
@@ -126,15 +122,15 @@ function ElectricTariff(;
     add_tou_energy_rates_to_urdb_rate::Bool=false,
     remove_tiers::Bool=false,
     demand_lookback_months::AbstractArray{Int64, 1}=Int64[],
-    demand_lookback_percent::Float64=0.0,
+    demand_lookback_percent::Real=0.0,
     demand_lookback_range::Int=0,
     coincident_peak_load_active_time_steps::Vector{Vector{Int64}}=[Int64[]],
     coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[]
     ) where {
-        T1 <: Union{Nothing, Int, Float64, Array}, 
-        T2 <: Union{Nothing, Int, Float64, Array}, 
-        S <: Union{Nothing, Int, Float64}, 
-        R <: Union{Nothing, Int, Float64}
+        T1 <: Union{Nothing, Real, Array{<:Real}}, 
+        T2 <: Union{Nothing, Real, Array{<:Real}}, 
+        S <: Union{Nothing, Real}, 
+        R <: Union{Nothing, Real}
     }
     # TODO remove_tiers for multinode models
     nem_rate = Float64[]
@@ -232,10 +228,9 @@ function ElectricTariff(;
     end
 
     if !isnothing(u)  # use URDBrate
-
         if NEM
             t = get_tier_with_lowest_energy_rate(u)
-            nem_rate = [-0.999 * x for x in u.energy_rates[t,:]]
+            nem_rate = [-0.999 * x for x in u.energy_rates[:,t]]
         end
 
         energy_rates = u.energy_rates
@@ -397,7 +392,7 @@ end
 Case for scaler export rate provided -> convert to array of time_steps
 """
 function create_export_rate(e::T, N::Int, ts_per_hour::Int=1) where T<:Real
-    repeat(float(-1*e), N * ts_per_hour)
+    repeat([float(-1*e)], N * ts_per_hour)
 end
 
 
@@ -447,7 +442,7 @@ function remove_tiers_from_urdb_rate(u::URDBrate)
     if length(u.energy_tier_limits) > 1
         @warn "Energy rate contains tiers. Using the first tier!"
     end
-    elec_rates = vec(u.energy_rates[1,:])
+    elec_rates = vec(u.energy_rates[:,1])
 
     if u.n_monthly_demand_tiers > 1
         @warn "Monthly demand rate contains tiers. Using the last tier!"
