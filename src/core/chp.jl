@@ -353,8 +353,8 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
 
     if !isnothing(size_class) && !isnothing(prime_mover) # Option 3
         n_classes = length(prime_mover_defaults_all[prime_mover]["installed_cost_per_kw"])
-        if size_class < 1 || size_class >= n_classes
-            throw(@error "The size class input is outside the valid range of 1-$n_classes for prime_mover $prime_mover")
+        if size_class < 1 || size_class > n_classes
+            throw(@error "The size class $size_class input is outside the valid range of 1 to $n_classes for prime_mover $prime_mover")
         end
     end
 
@@ -397,8 +397,8 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
 
     # If size class is specified use that and ignore heuristic CHP sizing for determining size class
     if !isnothing(size_class)
-        if size_class < 1 || size_class >= n_classes
-            throw(@error "The size class input is outside the valid range of 1-$n_classes for prime_mover $prime_mover")
+        if size_class < 1 || size_class > n_classes
+            throw(@error "The size class $size_class input is outside the valid range of 1 to $n_classes for prime_mover $prime_mover")
         end
     # If size class is not specified, heuristic sizing based on avg thermal load and size class 0 efficiencies
     elseif isnothing(size_class) && !isnothing(chp_elec_size_heuristic_kw)
