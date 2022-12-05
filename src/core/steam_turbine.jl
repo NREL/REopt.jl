@@ -228,12 +228,12 @@ function get_steam_turbine_defaults_size_class(;avg_boiler_fuel_load_mmbtu_per_h
     n_classes = length(class_bounds)
     if !isnothing(size_class)
         if size_class < 1 || size_class > n_classes
-            @error "Invalid size_class given for steam_turbine, must be in [1,2,3,4]"
+            throw(@error "Invalid size_class given for steam_turbine, must be in [1,2,3,4]")
         end
     end
     if !isnothing(avg_boiler_fuel_load_mmbtu_per_hour)
         if avg_boiler_fuel_load_mmbtu_per_hour <= 0
-            @error "avg_boiler_fuel_load_mmbtu_per_hour must be > 0.0 MMBtu/hr"
+            throw(@error "avg_boiler_fuel_load_mmbtu_per_hour must be > 0.0 MMBtu/hr")
         end
         steam_turbine_electric_efficiency = 0.07 # Typical, steam_turbine_kwe / boiler_fuel_kwt
         thermal_power_in_kw = avg_boiler_fuel_load_mmbtu_per_hour * KWH_PER_MMBTU
