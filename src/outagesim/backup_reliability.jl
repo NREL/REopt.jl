@@ -974,8 +974,6 @@ function backup_reliability_inputs(;r::Dict)::Dict
         end
     end
 
-    zero_array = zeros(length(r2[:critical_loads_kw]))
-
     microgrid_only = get(r2, :microgrid_only, false)
 
     if haskey(r2, :pv_size_kw) 
