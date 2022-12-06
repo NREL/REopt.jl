@@ -1260,9 +1260,6 @@ function return_backup_reliability(;
         pv_included = false
     end
     
-    #need to pop not get so that doesn't get passed to backup_reliability_single_run
-    #and the battery sizing of four availability scenarios below is used
-
     #Four systems are 1) no PV + no battery, 2) PV + battery, 3) PV + no battery, and 4) no PV + battery
     system_characteristics = Dict(
         "gen"        => Dict(
