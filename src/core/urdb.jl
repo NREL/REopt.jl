@@ -50,9 +50,9 @@ struct URDBrate
     tou_demand_rates::Array{Float64,2}  # ratchet X tier
     tou_demand_ratchet_time_steps::Array{Array{Int64,1},1}  # length = n_tou_demand_ratchets
 
-    demand_lookback_months::AbstractArray{Int,1}
-    demand_lookback_percent::Float64
-    demand_lookback_range::Int
+    demand_lookback_months::AbstractArray{Int,1}  # Array of 12 binary values, indicating months in which lookbackPercent applies. If any of these is true, lookbackRange should be zero.
+    demand_lookback_percent::Float64  # Lookback percentage. Applies to either lookbackMonths with value=1, or a lookbackRange.
+    demand_lookback_range::Int  # Number of months for which lookbackPercent applies. If not 0, lookbackMonths values should all be 0.
 
     fixed_monthly_charge::Float64
     annual_min_charge::Float64
