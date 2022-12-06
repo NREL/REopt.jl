@@ -976,13 +976,14 @@ function backup_reliability_inputs(;r::Dict)::Dict
 
     microgrid_only = get(r2, :microgrid_only, false)
 
-    if haskey(r2, :pv_size_kw) 
+    pv_size_kw = get(r2, :pv_size_kw, 0.0) 
+    if pv_size_kw > 0
         if haskey(r2, :pv_production_factor_series)
             if !microgrid_only || Bool(get(r2, :pv_migrogrid_upgraded, false))
-                r2[:pv_kw_ac_time_series] = r2[:pv_size_kw] .* r2[:pv_production_factor_series]
+                r2[:pv_kw_ac_time_series] = pv_size_kw .* r2[:pv_production_factor_series]
             end
         else
-            push!(invalid_args, "pv_size_kw added to reliability inputs but no pv_production_factor_series provided")
+            push!(invalid_args, "Non-zero pv_size_kw is included in inputs but no pv_production_factor_series is provided.")
         end
     end
 
