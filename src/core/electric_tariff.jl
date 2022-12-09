@@ -85,9 +85,9 @@ end
     tou_energy_rates_per_kwh::Array=[],
     add_tou_energy_rates_to_urdb_rate::Bool=false,
     remove_tiers::Bool=false,
-    demand_lookback_months::AbstractArray{Int64, 1}=Int64[],
-    demand_lookback_percent::Real=0.0,
-    demand_lookback_range::Int=0,
+    demand_lookback_months::AbstractArray{Int64, 1}=Int64[], # Array of 12 binary values, indicating months in which lookbackPercent applies. If any of these is true, demand_lookback_range should be zero.
+    demand_lookback_percent::Real=0.0, # Lookback percentage. Applies to either demand_lookback_months with value=1, or months in demand_lookback_range.
+    demand_lookback_range::Int=0, # Number of months for which demand_lookback_percent applies. If not 0, demand_lookback_months should not be supplied.
     coincident_peak_load_active_time_steps::Vector{Vector{Int64}}=[Int64[]],
     coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[]
     ) where {
