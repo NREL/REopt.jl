@@ -51,6 +51,7 @@ struct Scenario <: AbstractScenario
     heating_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     steam_turbine::Union{SteamTurbine, Nothing}
+    evse::Union{EVSupplyEquipment, Nothing}
 end
 
 """
@@ -76,8 +77,9 @@ A Scenario struct can contain the following keys:
 - [AbsorptionChiller](@ref) (optional)
 - [GHP](@ref) (optional, can be Array)
 - [SteamTurbine](@ref) (optional)
+- [EVSupplyEquipment](@ref) (optional)
 
-All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
+All values of `d` are expected to be `Dicts` except for `PV`, `GHP`, and `ElectricVehicle`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays, GHP options, or EVs, respectively).
 
 !!! note 
     Set `flex_hvac_from_json=true` if `FlexibleHVAC` values were loaded in from JSON (necessary to 
@@ -166,6 +168,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
     storage_structs["ElectricStorage"] = ElectricStorage(storage_dict, financial)
     
+    evse = nothing
     if haskey(d, "ElectricVehicle")
         if typeof(d["ElectricVehicle"]) <: AbstractDict
             d["ElectricVehicle"] = [deepcopy(d["ElectricVehicle"])]
@@ -192,6 +195,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             storage_dict[:electric_vehicle] = electric_vehicle
             storage_dict[:off_grid_flag] = settings.off_grid_flag
             storage_structs[ev["name"]] = ElectricStorage(storage_dict, financial)
+        end
+        if haskey(d, "EVSupplyEquipment")
+            evse = EVSupplyEquipment(dictkeys_tosymbols(d["EVSupplyEquipment"]))
+        else
+            throw(@error "Must provide EVSupplyEquipment input when modeling ElectricVehicle")
         end
     end
     
@@ -591,7 +599,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         ghp_option_list,
         heating_thermal_load_reduction_with_ghp_kw,
         cooling_thermal_load_reduction_with_ghp_kw,
-        steam_turbine
+        steam_turbine,
+        evse
     )
 end
 
