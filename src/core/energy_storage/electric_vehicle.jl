@@ -32,15 +32,18 @@
 
 Inputs used when:
 ```julia 
-haskey(d["electric_vehicle"])
+haskey(d["ElectricVehicle"])
 ```
 Defined by these parameters which are contained in the EV dictionary, unique to EV vs (stationary) ElectricStorage
 ```julia
 Base.@kwdef mutable struct ElectricVehicle
     energy_capacity_kwh::Float64 = NaN
     max_c_rate::Float64 = 1.0
-    ev_on_site_start_end::Tuple{Int64, Int64} = (0,0)
-    soc_used_off_site::Float64 = 0.0 
+    ev_on_site_start_end::Array{Int64, 1} = [0,0]  # This should **maybe** be an array of arrays (meant to be array of tuples, could convert)
+    ev_on_site_series::Array{Int64, 1} = []
+    soc_used_off_site::Float64 = 0.0
+    leaving_next_time_step_soc_min::Array{Float64, 1} = []
+    back_on_site_time_step_soc_drained::Array{Float64, 1} = []
 end
 ```
 
@@ -54,14 +57,14 @@ end
 Base.@kwdef mutable struct ElectricVehicle
     energy_capacity_kwh::Float64 = NaN
     max_c_rate::Float64 = 1.0
-    ev_on_site_start_end::Tuple{Int64, Int64} = (0,0)
-    ev_on_site_series::Array{Int64, 1} = []
+    ev_on_site_start_end::Array{Int64, 1} = [0,0]  # This should **maybe** be an array of arrays (meant to be array of tuples, could convert)
+    ev_on_site_series::Array{Int64, 1} = Int64[]
     soc_used_off_site::Float64 = 0.0
-    energy_required::Array{Float64, 1} = []
-    energy_back_from_off_site::Array{Float64, 1} = []
+    leaving_next_time_step_soc_min::Array{Float64, 1} = Float64[]
+    back_on_site_time_step_soc_drained::Array{Float64, 1} = Float64[]
 end
 
-function get_availability_series(start_end::Tuple{Int64, Int64}, year::Int64=2017)
+function get_availability_series(start_end::Array{Int64, 1}, year::Int64=2017)
     if start_end[1] < start_end[2]
         # EV is at the site during the day (commercial without their own EVs, just workers' EVs)
         profile = zeros(8760)
@@ -110,9 +113,33 @@ function get_availability_series(start_end::Tuple{Int64, Int64}, year::Int64=201
     # profile = generate_year_profile_hourly(year, consecutive_periods)
 end
 
+function get_returned_and_required_soc(soc_used_off_site, availability_series)
+    back_on_site_time_step_soc_drained::Array{Float64, 1} = zeros(8760)
+    leaving_next_time_step_soc_min::Array{Float64, 1} = zeros(8760)
+    # TODO this is only populating the first event, then stuck in the same "switch" state
+    for ts in firstindex(availability_series)+1:lastindex(availability_series)  # eachindex or axes(availability_series, 1) starting at ts=2?
+        if !(availability_series[ts] == availability_series[ts-1])
+            if availability_series[ts] == 1
+                # Back on site
+                back_on_site_time_step_soc_drained[ts] = soc_used_off_site
+            elseif availability_series[ts] == 0
+                # Leaving next time step
+                # TODO add a "buffer"/extra charge as an input for soc above the min required soc_used_off_site (max(1,soc_used+buffer))
+                leaving_next_time_step_soc_min[ts-1] = soc_used_off_site
+            end
+        end
+    end
+
+    return back_on_site_time_step_soc_drained, leaving_next_time_step_soc_min
+
+end
+                
+
 function ElectricVehicle(d::Dict)
     ev = ElectricVehicle(;d...)
     ev.ev_on_site_series = get_availability_series(ev.ev_on_site_start_end)
+    ev.back_on_site_time_step_soc_drained, 
+        ev.leaving_next_time_step_soc_min = get_returned_and_required_soc(d[:soc_used_off_site], ev.ev_on_site_series)
     return ev
 end
 
@@ -189,7 +216,7 @@ end
 
 function ElectricVehicleDefaults(d::Dict)
     inputs = ElectricVehicleDefaults(;d..., 
-                    electric_vehicle=ElectricVehicle(;dictkeys_tosymbols(d[:electric_vehicle])...))
+                    electric_vehicle=ElectricVehicle(dictkeys_tosymbols(d[:electric_vehicle])))
     # Set min/max kwh/kw based on specified energy capacity and max c-rate
     energy_capacity = inputs.electric_vehicle.energy_capacity_kwh
     inputs.min_kwh = energy_capacity
@@ -198,4 +225,23 @@ function ElectricVehicleDefaults(d::Dict)
     inputs.max_kw = energy_capacity * inputs.electric_vehicle.max_c_rate
 
     return inputs
+end
+
+Base.@kwdef mutable struct EVSupplyEquipment
+    # TODO if we want to solve for number and/or size of EVSE, these inputs should 
+    # be bounds or categories (level 1, 2, 3) or discrete options thereof
+    power_rating_kw::Union{Float64, Array{Float64, 1}} = Float[]
+    v2g::Bool = false
+end
+
+function EVSupplyEquipment(d::Dict)
+    if typeof(d[:power_rating_kw]) <: AbstractArray
+        d[:power_rating_kw] = convert(Array{Float64, 1}, d[:power_rating_kw])
+    end
+    evse = EVSupplyEquipment(;d...)
+    if !(typeof(evse.power_rating_kw) <: AbstractArray)
+        evse.power_rating_kw = [deepcopy(evse.power_rating_kw)]
+    end
+
+    return evse
 end
