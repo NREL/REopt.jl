@@ -77,13 +77,21 @@ end
 
 
 function add_elec_storage_dispatch_constraints(m, p, b; _n="")
-				
+	if b in p.s.storage.types.ev
+        # TODO RHS of this equation could be combined in electric_vehicle
+        energy_drained_series = p.s.storage.attr[b].electric_vehicle.back_on_site_time_step_soc_drained * 
+                                    p.s.storage.attr[b].electric_vehicle.energy_capacity_kwh
+    else
+        energy_drained_series = zeros(p.time_steps)
+    end
+
 	# Constraint (4g): state-of-charge for electrical storage - with grid
 	@constraint(m, [ts in p.time_steps_with_grid],
         m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  
             sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) 
             + p.s.storage.attr[b].grid_charge_efficiency * m[Symbol("dvGridToStorage"*_n)][b, ts] 
             - m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.s.storage.attr[b].discharge_efficiency
+            - energy_drained_series[ts]
         )
 	)
 
@@ -92,6 +100,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
         m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  
             sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.elec) 
             - m[Symbol("dvDischargeFromStorage"*_n)][b, ts] / p.s.storage.attr[b].discharge_efficiency
+            - energy_drained_series[ts]
         )
     )
 
