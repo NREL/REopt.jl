@@ -200,8 +200,15 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			else
 				@error("Invalid storage does not fall in a thermal or electrical set")
 			end
+            if b in p.s.storage.types.ev
+                add_electric_vehicle_constraints(m, p, b)
+            end            
 		end
 	end
+
+    if !isempty(p.s.storage.types.ev)
+        add_ev_supply_equipment_constraints(m, p)
+    end
 
 	if any(max_kw->max_kw > 0, (p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec))
 		add_storage_sum_constraints(m, p)
