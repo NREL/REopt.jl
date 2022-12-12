@@ -342,7 +342,7 @@ struct CoolingLoad
                     modified_fraction = default_fraction * blended_doe_reference_percents[i]
                     if length(site_electric_load_profile) > 8784
                         modified_fraction = repeat(modified_fraction, inner=time_steps_per_hour / (length(site_electric_load_profile)/8760))
-                        @info "Repeating cooling electric load in each hour to match the time_steps_per_hour."
+                        @warn "Repeating cooling electric load in each hour to match the time_steps_per_hour."
                     end
                     loads_kw += site_electric_load_profile .* modified_fraction
                 end
