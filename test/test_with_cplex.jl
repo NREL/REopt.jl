@@ -149,6 +149,40 @@ end
     urdb_label = "59bc22705457a3372642da67"  # tiered monthly demand rate
 end
 
+@testset "Lookback Demand Charges" begin
+    # Testing custom rate from user
+    d = JSON.parsefile("./scenarios/lookback_rate.json")
+    d["ElectricTariff"] = Dict()
+    d["ElectricTariff"]["demand_lookback_percent"] = 0.75
+    d["ElectricLoad"]["loads_kw"] = [100 for i in range(1,8760)]
+    d["ElectricLoad"]["loads_kw"][22] = 200 # Jan peak
+    d["ElectricLoad"]["loads_kw"][2403] = 400 # April peak (Should set dvPeakDemandLookback)
+    d["ElectricLoad"]["loads_kw"][4088] = 500 # June peak (not in peak month lookback)
+    d["ElectricLoad"]["loads_kw"][8333] = 300 # Dec peak 
+    d["ElectricTariff"]["monthly_demand_rates"] = [
+        10, # Jan
+        10, # Feb
+        20, # Mar
+        50, # Apr
+        20, # May
+        10, # June # was $5
+        20, # July
+        20, # Aug
+        20, # Sept 
+        20, # Oct
+        20, # Nov
+        5  # Dec
+    ]
+    d["ElectricTariff"]["demand_lookback_months"] = [1,0,0,1,0,0,0,0,0,0,0,1] # Jan, April, Dec
+
+    m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
+    r = run_reopt(m, REoptInputs(Scenario(d)))
+
+    monthly_peaks = [300,300,300,400,300,500,300,300,300,300,300,300] # 300 = 400*0.75. Sets peak in all months excpet April and June
+    expected_demand_cost = sum(monthly_peaks.*r) 
+    @test r["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ expected_demand_cost
+end
+
 ## equivalent REopt API Post for test 2:
 #   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
 # {"Scenario": {
