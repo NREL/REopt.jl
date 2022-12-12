@@ -100,27 +100,30 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
 
 """
 Base.@kwdef mutable struct CHP <: AbstractCHP
-    prime_mover::Union{String, Nothing} = nothing
+    # Required input
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = []    
+    
+    # Inputs which defaults vary depending on prime_mover and size_class
     installed_cost_per_kw::Union{Float64, AbstractVector{Float64}} = Float64[]
     tech_sizes_for_cost_curve::AbstractVector{Float64} = Float64[]
     om_cost_per_kwh::Float64 = NaN
     electric_efficiency_full_load::Float64 = NaN
-    electric_efficiency_half_load::Float64 = NaN
-    min_turn_down_fraction::Float64 = NaN
     thermal_efficiency_full_load::Float64 = NaN
-    thermal_efficiency_half_load::Float64 = NaN
     min_allowable_kw::Float64 = NaN
-    max_kw::Float64 = NaN
     cooling_thermal_factor::Float64 = NaN  # only needed with cooling load
+    min_turn_down_fraction::Float64 = NaN
     unavailability_periods::AbstractVector{Dict} = Dict[]
 
     # Optional inputs:
+    prime_mover::Union{String, Nothing} = nothing
     size_class::Union{Int, Nothing} = nothing
     min_kw::Float64 = 0.0
+    max_kw::Float64 = 1.0e9
     fuel_type::String = "natural_gas"
     om_cost_per_kw::Float64 = 0.0
     om_cost_per_hr_per_kw_rated::Float64 = 0.0
+    electric_efficiency_half_load::Float64 = NaN  # Assigned to electric_efficiency_full_load if not input
+    thermal_efficiency_half_load::Float64 = NaN  # Assigned to thermal_efficiency_full_load if not input
     supplementary_firing_capital_cost_per_kw::Float64 = 150.0
     supplementary_firing_max_steam_ratio::Float64 = 1.0
     supplementary_firing_efficiency::Float64 = 0.92
@@ -169,26 +172,23 @@ function CHP(d::Dict;
 
     # Check for required fuel cost
     if !haskey(d, "fuel_cost_per_mmbtu")
-        @error "CHP must have the required fuel_cost_per_mmbtu input"
+        throw(@error "CHP must have the required fuel_cost_per_mmbtu input")
     end
     # Create CHP struct from inputs, to be mutated as needed
     chp = CHP(; dictkeys_tosymbols(d)...)
 
     @assert chp.fuel_type in FUEL_TYPES
 
-    # Must provide prime_mover or all of custom_chp_inputs
+    # These inputs are set based on prime_mover and size_class
     custom_chp_inputs = Dict{Symbol, Any}(
         :installed_cost_per_kw => chp.installed_cost_per_kw, 
         :tech_sizes_for_cost_curve => chp.tech_sizes_for_cost_curve, 
         :om_cost_per_kwh => chp.om_cost_per_kwh, 
-        :electric_efficiency_full_load => chp.electric_efficiency_full_load, 
-        :electric_efficiency_half_load => chp.electric_efficiency_half_load, 
-        :min_turn_down_fraction => chp.min_turn_down_fraction, 
-        :thermal_efficiency_full_load => chp.thermal_efficiency_full_load, 
-        :thermal_efficiency_half_load => chp.thermal_efficiency_half_load,
-        :min_allowable_kw => chp.min_allowable_kw, 
-        :max_kw => chp.max_kw, 
-        :cooling_thermal_factor => chp.cooling_thermal_factor
+        :electric_efficiency_full_load => chp.electric_efficiency_full_load,
+        :thermal_efficiency_full_load => chp.thermal_efficiency_full_load,
+        :min_allowable_kw => chp.min_allowable_kw,
+        :cooling_thermal_factor => chp.cooling_thermal_factor,
+        :min_turn_down_fraction => chp.min_turn_down_fraction 
     )
 
     # Installed cost input validation
@@ -200,7 +200,7 @@ function CHP(d::Dict;
             @warn "Ignoring `chp.tech_sizes_for_cost_curve` input because `chp.installed_cost_per_kw` is a scalar"
         end
     elseif length(chp.installed_cost_per_kw) > 1 && length(chp.installed_cost_per_kw) != length(chp.tech_sizes_for_cost_curve)
-        @error "To model CHP cost curve, you must provide `chp.tech_sizes_for_cost_curve` vector of equal length to `chp.installed_cost_per_kw`"
+        throw(@error "To model CHP cost curve, you must provide `chp.tech_sizes_for_cost_curve` vector of equal length to `chp.installed_cost_per_kw`")
     elseif isempty(chp.tech_sizes_for_cost_curve) && isempty(chp.installed_cost_per_kw)
         update_installed_cost_params = true
     elseif isempty(chp.prime_mover)
@@ -231,6 +231,20 @@ function CHP(d::Dict;
             setproperty!(chp, k, defaults[string(k)])
         end
     end
+
+    # Set electric and thermal half load efficiency to full load if not input
+    if isnan(chp.electric_efficiency_half_load)
+        chp.electric_efficiency_half_load = chp.electric_efficiency_full_load
+    end
+    if isnan(chp.thermal_efficiency_half_load)
+        chp.thermal_efficiency_half_load = chp.electric_efficiency_full_load
+    end
+
+    if chp.min_allowable_kw > chp.max_kw
+        @warn "CHP.min_allowable_kw is greater than CHP.max_kw, so setting min_allowable_kw equal to max_kw"
+        setproperty!(chp, :min_allowable_kw, chp.max_kw)
+    end
+        
     if isempty(chp.unavailability_periods)
         chp.unavailability_periods = defaults["unavailability_periods"]
     end
@@ -249,10 +263,10 @@ custom_chp_inputs, i.e.
 - "tech_sizes_for_cost_curve"
 - "om_cost_per_kwh"
 - "electric_efficiency_full_load"
-- "electric_efficiency_half_load"
-- "min_turn_down_fraction",
 - "thermal_efficiency_full_load"
-- "thermal_efficiency_half_load"
+- "min_allowable_kw"
+- "cooling_thermal_factor"
+- "min_turn_down_fraction" 
 - "unavailability_periods"
 """
 function get_prime_mover_defaults(prime_mover::String, boiler_type::String, size_class::Int, prime_mover_defaults_all::Dict)
@@ -319,13 +333,13 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
     # Inputs validation
     if !isnothing(prime_mover)
         if !(prime_mover in prime_movers)  # Validate user-entered hot_water_or_steam
-            @error "Invalid argument for `prime_mover`; must be in $prime_movers"
+            throw(@error "Invalid argument for `prime_mover`; must be in $prime_movers")
         end
     end
 
     if !isnothing(hot_water_or_steam)  # Option 1 if prime_mover also not input
         if !(hot_water_or_steam in ["hot_water", "steam"])  # Validate user-entered hot_water_or_steam
-            @error "Invalid argument for `hot_water_or_steam``; must be `hot_water` or `steam`"
+            throw(@error "Invalid argument for `hot_water_or_steam``; must be `hot_water` or `steam`")
         end
     else  # Options 2, 3, or 4
         hot_water_or_steam = "hot_water"
@@ -333,14 +347,14 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
 
     if !isnothing(avg_boiler_fuel_load_mmbtu_per_hour)  # Option 1
         if avg_boiler_fuel_load_mmbtu_per_hour <= 0
-            @error "avg_boiler_fuel_load_mmbtu_per_hour must be >= 0.0"
+            throw(@error "avg_boiler_fuel_load_mmbtu_per_hour must be >= 0.0")
         end
     end
 
     if !isnothing(size_class) && !isnothing(prime_mover) # Option 3
         n_classes = length(prime_mover_defaults_all[prime_mover]["installed_cost_per_kw"])
         if size_class < 1 || size_class >= n_classes
-            @error "The size class input is outside the valid range of 1-$n_classes for prime_mover $prime_mover"
+            throw(@error "The size class input is outside the valid range of 1-$n_classes for prime_mover $prime_mover")
         end
     end
 
@@ -384,7 +398,7 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
     # If size class is specified use that and ignore heuristic CHP sizing for determining size class
     if !isnothing(size_class)
         if size_class < 1 || size_class >= n_classes
-            @error "The size class input is outside the valid range of 1-$n_classes for prime_mover $prime_mover"
+            throw(@error "The size class input is outside the valid range of 1-$n_classes for prime_mover $prime_mover")
         end
     # If size class is not specified, heuristic sizing based on avg thermal load and size class 0 efficiencies
     elseif isnothing(size_class) && !isnothing(chp_elec_size_heuristic_kw)

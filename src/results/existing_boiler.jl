@@ -34,6 +34,7 @@
 - `year_one_thermal_production_series_mmbtu_per_hour`
 - `year_one_thermal_production_mmbtu`
 - `year_one_thermal_to_tes_series_mmbtu_per_hour`
+- `year_one_thermal_to_steamturbine_series_mmbtu_per_hour`
 - `year_one_thermal_to_load_series_mmbtu_per_hour`
 - `lifecycle_fuel_cost_after_tax`
 - `year_one_fuel_cost_before_tax`
