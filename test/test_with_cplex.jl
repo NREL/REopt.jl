@@ -179,7 +179,7 @@ end
     r = run_reopt(m, REoptInputs(Scenario(d)))
 
     monthly_peaks = [300,300,300,400,300,500,300,300,300,300,300,300] # 300 = 400*0.75. Sets peak in all months excpet April and June
-    expected_demand_cost = sum(monthly_peaks.*r) 
+    expected_demand_cost = sum(monthly_peaks.*d["ElectricTariff"]["monthly_demand_rates"]) 
     @test r["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ expected_demand_cost
 end
 
