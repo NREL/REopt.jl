@@ -575,6 +575,8 @@ function parse_urdb_lookback_charges(d::Dict)
 
     if lookback_range == 0 && length(lookback_months) == 12
         lookback_months = collect(1:12)[lookback_months .== 1]
+    elseif lookback_range !=0 && length(lookback_months) == 12
+        throw(@warn("URDB rate contains both lookbackRange and lookbackMonths. Only lookbackRange will apply."))
     end
 
     return lookback_months, lookback_percent, lookback_range
