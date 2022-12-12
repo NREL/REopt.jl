@@ -85,9 +85,9 @@ end
     tou_energy_rates_per_kwh::Array=[],
     add_tou_energy_rates_to_urdb_rate::Bool=false,
     remove_tiers::Bool=false,
-    demand_lookback_months::AbstractArray{Int64, 1}=Int64[], # Array of 12 binary values, indicating months in which lookbackPercent applies. If any of these is true, demand_lookback_range should be zero.
-    demand_lookback_percent::Real=0.0, # Lookback percentage. Applies to either demand_lookback_months with value=1, or months in demand_lookback_range.
-    demand_lookback_range::Int=0, # Number of months for which demand_lookback_percent applies. If not 0, demand_lookback_months should not be supplied.
+    demand_lookback_months::AbstractArray{Int64, 1}=Int64[], # Array of 12 binary values, indicating months in which `demand_lookback_percent` applies. If any of these is true, `demand_lookback_range` should be zero.
+    demand_lookback_percent::Real=0.0, # Lookback percentage. Applies to either `demand_lookback_months` with value=1, or months in `demand_lookback_range`.
+    demand_lookback_range::Int=0, # Number of months for which `demand_lookback_percent` applies. If not 0, `demand_lookback_months` should not be supplied.
     coincident_peak_load_active_time_steps::Vector{Vector{Int64}}=[Int64[]],
     coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[]
     ) where {
@@ -101,7 +101,10 @@ end
 !!! note "NEM input"
     The `NEM` boolean is determined by the `ElectricUtility.net_metering_limit_kw`. There is no need to pass in a `NEM`
     value.
-    
+
+!!! note "Demand Lookback Inputs" 
+    Cannot use both `demand_lookback_months` and `demand_lookback_range` inputs, only one or the other.
+    When using lookbacks, the peak demand in each month will be the greater of the peak kW in that month and the peak kW in the lookback months times the demand_lookback_percent. 
 """
 function ElectricTariff(;
     urdb_label::String="",
@@ -121,7 +124,7 @@ function ElectricTariff(;
     tou_energy_rates_per_kwh::Array=[],
     add_tou_energy_rates_to_urdb_rate::Bool=false,
     remove_tiers::Bool=false,
-    demand_lookback_months::AbstractArray{Int64, 1}=Int64[],
+    demand_lookback_months::AbstractArray{Int64, 1}=Int64[], # Array of 12 binary values, indicating months in which `demand_lookback_percent` applies. If any of these is true, demand_lookback_range should be zero.
     demand_lookback_percent::Real=0.0,
     demand_lookback_range::Int=0,
     coincident_peak_load_active_time_steps::Vector{Vector{Int64}}=[Int64[]],
@@ -225,6 +228,15 @@ function ElectricTariff(;
 
     else
         error("Creating ElectricTariff requires at least urdb_label, urdb_response, monthly rates, annual rates, or tou_energy_rates_per_kwh.")
+    end
+
+    # Error checks and processing for demand_lookback_months
+    if length(demand_lookback_months) != 0 && length(demand_lookback_months) != 12  # User provides value with incorrect length
+        throw(@error("Length of demand_lookback_months array must be 12."))
+    elseif demand_lookback_range != 0 # If user has provided demand_lookback_months of length 12, check that range is not used
+        throw(@error("Cannot supply demand_lookback_months if demand_lookback_range != 0."))
+    else # length(demand_lookback_months) == 12 && demand_lookback_range == 0
+        demand_lookback_months = collect(1:12)[demand_lookback_months .== 1]
     end
 
     if !isnothing(u)  # use URDBrate
