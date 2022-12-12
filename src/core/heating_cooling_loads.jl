@@ -383,7 +383,7 @@ struct CoolingLoad
         if length(loads_kw_thermal) < 8760*time_steps_per_hour
             loads_kw_thermal = repeat(loads_kw_thermal, inner=Int(time_steps_per_hour / 
                                (length(loads_kw_thermal)/8760)))
-            @info "Repeating cooling loads in each hour to match the time_steps_per_hour."
+            @warn "Repeating cooling loads in each hour to match the time_steps_per_hour."
         end
 
         new(
