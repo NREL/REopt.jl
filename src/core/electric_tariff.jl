@@ -230,12 +230,12 @@ function ElectricTariff(;
         error("Creating ElectricTariff requires at least urdb_label, urdb_response, monthly rates, annual rates, or tou_energy_rates_per_kwh.")
     end
 
-    # Error checks and processing for demand_lookback_months
+    # Error checks and processing for user-defined demand_lookback_months
     if length(demand_lookback_months) != 0 && length(demand_lookback_months) != 12  # User provides value with incorrect length
         throw(@error("Length of demand_lookback_months array must be 12."))
     elseif demand_lookback_range != 0 # If user has provided demand_lookback_months of length 12, check that range is not used
         throw(@error("Cannot supply demand_lookback_months if demand_lookback_range != 0."))
-    else # length(demand_lookback_months) == 12 && demand_lookback_range == 0
+    elseif demand_lookback_range == 0 && length(demand_lookback_months) == 12
         demand_lookback_months = collect(1:12)[demand_lookback_months .== 1]
     end
 
