@@ -1482,60 +1482,6 @@ end
     end
 end
 
-# # equivalent REopt API v1/v2 Post for test 2:
-#   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
-# {"Scenario": {
-#     "Site": {
-#         "longitude": -118.1164613,
-#         "latitude": 34.5794343,
-#         "roof_squarefeet": 5000.0,
-#         "land_acres": 1.0,
-#     "PV": {
-#         "macrs_bonus_pct": 0.4,
-#         "installed_cost_per_kw": 2000.0,
-#         "tilt": 34.579,
-#         "degradation_pct": 0.005,
-#         "macrs_option_years": 5,
-#         "federal_itc_pct": 0.3,
-#         "module_type": 0,
-#         "array_type": 1,
-#         "om_cost_per_kw": 16.0,
-#         "macrs_itc_reduction": 0.5,
-#         "azimuth": 180.0,
-#         "federal_rebate_per_kw": 350.0,
-#         "dc_ac_ratio": 1.1
-#     },
-#     "LoadProfile": {
-#         "doe_reference_name": "RetailStore",
-#         "annual_kwh": 10000000.0,
-#         "city": "LosAngeles"
-#     },
-#     "ElectricStorage": {
-#         "total_rebate_per_kw": 100.0,
-#         "macrs_option_years": 5,
-#         "can_grid_charge": true,
-#         "macrs_bonus_pct": 0.4,
-#         "macrs_itc_reduction": 0.5,
-#         "total_itc_pct": 0,
-#         "installed_cost_per_kw": 1000.0,
-#         "installed_cost_per_kwh": 500.0,
-#         "replace_cost_per_kw": 460.0,
-#         "replace_cost_per_kwh": 230.0
-#     },
-#     "ElectricTariff": {
-#         "urdb_label": "5ed6c1a15457a3367add15ae"
-#     },
-#     "Financial": {
-#         "escalation_pct": 0.026,
-#         "offtaker_discount_pct": 0.081,
-#         "owner_discount_pct": 0.081,
-#         "analysis_years": 20,
-#         "offtaker_tax_pct": 0.4,
-#         "owner_tax_pct": 0.4,
-#         "om_cost_escalation_pct": 0.025
-#     }
-# }}}
-
 @testset "Custom REopt logger" begin
     
     # Throw a handled error
