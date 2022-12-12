@@ -167,10 +167,17 @@ struct Financial
         camx_x = Int(round(coords[1]))
         camx_y = Int(round(coords[2]))
 
-        # CAMX_x coord, CAMX_y coord, onsite/grid, pop_year, income_year, dollar_year
-        grid_costs = off_grid_flag ? nothing : easiur_costs(camx_x, camx_y, "grid", 2020, 2020, 2010)
-        onsite_costs = easiur_costs(camx_x, camx_y, "onsite", 2020, 2020, 2010)
-        escalation_rates = easiur_escalation_rates(camx_x, camx_y, om_cost_escalation_rate_fraction)
+        if 1 <= camx_x <= 113 & 1 <= camx_y <= 148
+            # CAMX_x coord, CAMX_y coord, onsite/grid, pop_year, income_year, dollar_year
+            grid_costs = off_grid_flag ? nothing : easiur_costs(camx_x, camx_y, "grid", 2020, 2020, 2010)
+            onsite_costs = easiur_costs(camx_x, camx_y, "onsite", 2020, 2020, 2010)
+            escalation_rates = easiur_escalation_rates(camx_x, camx_y, om_cost_escalation_rate_fraction)
+        else
+            grid_costs = nothing
+            onsite_costs = nothing
+            escalation_rates = nothing
+            @warn "Unable to access grid costs, onsite costs, and cost escalation rates for $longitude and $latitude."
+        end
 
         missing_health_inputs = false
         # use EASIUR data for missing grid costs
@@ -184,6 +191,7 @@ struct Financial
         if isnothing(PM25_grid_cost_per_tonne)
             PM25_grid_cost_per_tonne = isnothing(grid_costs) ? 0.0 : grid_costs["PM25"]
         end
+
         # use EASIUR data for missing fuelburn costs
         missing_health_inputs = isnothing(onsite_costs) ? true : missing_health_inputs
         if isnothing(NOx_onsite_fuelburn_cost_per_tonne)
@@ -195,6 +203,7 @@ struct Financial
         if isnothing(PM25_onsite_fuelburn_cost_per_tonne)
             PM25_onsite_fuelburn_cost_per_tonne = isnothing(onsite_costs) ? 0.0 : onsite_costs["PM25"]
         end
+        
         # use EASIUR data for missing escalation rates
         missing_health_inputs = isnothing(escalation_rates) ? true : missing_health_inputs
         if isnothing(NOx_cost_escalation_rate_fraction)
@@ -249,7 +258,6 @@ end
 function easiur_costs(camx_x::Int, camx_y::Int, grid_or_onsite::String, pop_year=2020, income_year=2020, dollar_year=2010)
     # Assumption: grid emissions occur at site at 150m above ground
     # and on-site fuelburn emissions occur at site at 0m above ground
-    @info grid_or_onsite
     if grid_or_onsite=="grid"
         type = "p150"
     elseif grid_or_onsite=="onsite"
