@@ -31,7 +31,8 @@
 """
     REoptLogger
 
-- Instantiates a global logger of type REoptLogger which can log to console and a dictionary for logging events >= `@info`. Dictionary collects information in the following format
+- Instantiates a global logger of type REoptLogger which can log to console for logging events >= `@info` and to a dictionary for events >= `@warn`. 
+    Dictionary collects information in the following format:
     - Warn
         - Keys for file names with warnings
             - Values of messages associated with those warnings
