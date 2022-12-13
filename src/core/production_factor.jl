@@ -196,7 +196,7 @@ function get_production_factor(wind::Wind, latitude::Real, longitude::Real, time
                       You can alternatively provide the Wind.production_factor_series"""
         end
 
-        global hdl = joinpath(dirname(@__FILE__), "..", "sam", libfile)
+        global hdl = joinpath(@__DIR__, "..", "sam", libfile)
         wind_module = @ccall hdl.ssc_module_create("windpower"::Cstring)::Ptr{Cvoid}
         wind_resource = @ccall hdl.ssc_data_create()::Ptr{Cvoid}  # data pointer
         @ccall hdl.ssc_module_exec_set_print(0::Cint)::Cvoid

@@ -315,12 +315,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         boiler_inputs = Dict{Symbol, Any}()
         boiler_inputs[:max_heat_demand_kw] = max_heat_demand_kw
         boiler_inputs[:time_steps_per_hour] = settings.time_steps_per_hour
-        # If CHP is considered, prime_mover may inform the default boiler efficiency
-        if haskey(d, "CHP") 
-            if haskey(d["CHP"], "prime_mover")
-                boiler_inputs[:chp_prime_mover] = d["CHP"]["prime_mover"]
-            end
-        end
         if haskey(d, "ExistingBoiler")
             boiler_inputs = merge(boiler_inputs, dictkeys_tosymbols(d["ExistingBoiler"]))
         end
@@ -338,12 +332,23 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
 
     chp = nothing
+    chp_prime_mover = nothing
     if haskey(d, "CHP")
-        chp = CHP(d["CHP"])
+        if !isnothing(existing_boiler)
+            total_fuel_heating_load_mmbtu_per_hour = (space_heating_load.loads_kw + dhw_load.loads_kw) / existing_boiler.efficiency / KWH_PER_MMBTU
+            avg_boiler_fuel_load_mmbtu_per_hour = sum(total_fuel_heating_load_mmbtu_per_hour) / length(total_fuel_heating_load_mmbtu_per_hour)
+            chp = CHP(d["CHP"]; 
+                    avg_boiler_fuel_load_mmbtu_per_hour = avg_boiler_fuel_load_mmbtu_per_hour,
+                    existing_boiler = existing_boiler)
+        else # Only if modeling CHP without heating_load and existing_boiler (for electric-only CHP)
+            chp = CHP(d["CHP"])
+        end
+        chp_prime_mover = chp.prime_mover
     end
 
     max_cooling_demand_kw = 0
     if haskey(d, "CoolingLoad") && !haskey(d, "FlexibleHVAC")
+        d["CoolingLoad"] = convert(Dict{String, Any}, d["CoolingLoad"])
         # Note, if thermal_loads_ton or one of the "...fraction(s)_of_electric_load" inputs is used for CoolingLoad, doe_reference_name is ignored 
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["CoolingLoad"])
         d["CoolingLoad"]["site_electric_load_profile"] = electric_load.loads_kw
@@ -401,7 +406,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         existing_chiller = ExistingChiller(; chiller_inputs...)
 
         if haskey(d, "AbsorptionChiller")
-            absorption_chiller = AbsorptionChiller(; dictkeys_tosymbols(d["AbsorptionChiller"])...)
+            absorption_chiller = AbsorptionChiller(d["AbsorptionChiller"]; 
+                                                    existing_boiler = existing_boiler,
+                                                    chp_prime_mover = chp_prime_mover,
+                                                    cooling_load = cooling_load)
         end
     end
 
@@ -520,7 +528,14 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     steam_turbine = nothing
     if haskey(d, "SteamTurbine") && d["SteamTurbine"]["max_kw"] > 0.0
-        steam_turbine = SteamTurbine(d["SteamTurbine"])
+        if !isnothing(existing_boiler)
+            total_fuel_heating_load_mmbtu_per_hour = (space_heating_load.loads_kw + dhw_load.loads_kw) / existing_boiler.efficiency / KWH_PER_MMBTU
+            avg_boiler_fuel_load_mmbtu_per_hour = sum(total_fuel_heating_load_mmbtu_per_hour) / length(total_fuel_heating_load_mmbtu_per_hour)
+            steam_turbine = SteamTurbine(d["SteamTurbine"];  
+                                        avg_boiler_fuel_load_mmbtu_per_hour = avg_boiler_fuel_load_mmbtu_per_hour)
+        else
+            steam_turbine = SteamTurbine(d["SteamTurbine"])
+        end
     end
 
     return Scenario(
