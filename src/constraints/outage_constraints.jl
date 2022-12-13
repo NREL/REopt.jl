@@ -49,7 +49,6 @@ function add_min_hours_crit_ld_met_constraint(m,p)
 end
 
 function add_outage_cost_constraints(m,p)
-    # TODO: fixed cost, account for outage_is_major_event
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps],
         m[:dvMaxOutageCost][s] >= p.pwf_e * sum(p.value_of_lost_load_per_kwh[tz+ts] * m[:dvUnservedLoad][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s])
     )

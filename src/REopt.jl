@@ -44,7 +44,11 @@ export
     MPCInputs,
     run_mpc,
     build_mpc!, 
-    backup_reliability
+    backup_reliability,
+    get_chp_defaults_prime_mover_size_class,
+    get_steam_turbine_defaults_size_class,
+    simulated_load,
+    get_absorption_chiller_defaults
 
 import HTTP
 import JSON
@@ -80,6 +84,9 @@ const KWH_PER_MMBTU = 293.07107  # [kWh/mmbtu]
 const KWH_THERMAL_PER_TONHOUR = 3.51685
 const TONNE_PER_LB = 1/2204.62  # [tonne/lb]
 const FUEL_TYPES = ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
+const BIG_NUMBER = 1.0e10  #used for max size.  TODO use this number elsewhere.
+const PRIME_MOVERS = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cell"]  #TODO replace `prime_movers` references in CHP code
+const HOT_WATER_OR_STEAM = ["steam", "hot_water"]  #TODO replace references to this list in chp, boiler
 const FUEL_DEFAULTS = Dict(
     "fuel_renewable_energy_fraction" => Dict(
         "natural_gas"=>0.0,
@@ -131,9 +138,9 @@ include("core/electric_load.jl")
 include("core/existing_boiler.jl")
 include("core/boiler.jl")
 include("core/existing_chiller.jl")
-include("core/absorption_chiller.jl")
 include("core/flexible_hvac.jl")
 include("core/heating_cooling_loads.jl")
+include("core/absorption_chiller.jl")
 include("core/electric_utility.jl")
 include("core/production_factor.jl")
 include("core/urdb.jl")
@@ -146,6 +153,7 @@ include("core/bau_scenario.jl")
 include("core/reopt_inputs.jl")
 include("core/bau_inputs.jl")
 include("core/cost_curve.jl")
+include("core/simulated_load.jl")
 
 include("constraints/outage_constraints.jl")
 include("constraints/storage_constraints.jl")
@@ -192,6 +200,7 @@ include("results/chp.jl")
 include("results/flexible_hvac.jl")
 include("results/ghp.jl")
 include("results/steam_turbine.jl")
+include("results/heating_cooling_load.jl")
 
 include("core/reopt.jl")
 include("core/reopt_multinode.jl")
