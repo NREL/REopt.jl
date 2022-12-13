@@ -551,9 +551,59 @@ end
     end
 
     @testset "Lookback Demand Charges" begin
+        # 1. Testing rate from URDB
+        data = JSON.parsefile("./scenarios/lookback_rate.json")
+        # urdb_label used https://apps.openei.org/IURDB/rate/view/539f6a23ec4f024411ec8bf9#2__Demand
+        # has a demand charge lookback of 35% for all months with 2 different demand charges based on which month
+        data["ElectricLoad"]["loads_kw"] = ones(8760)
+        data["ElectricLoad"]["loads_kw"][8] = 100.0
+        inputs = REoptInputs(Scenario(data))        
         m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        results = run_reopt(m, "./scenarios/lookback_rate.json")
-        @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ 721.99
+        results = run_reopt(m, inputs)
+        # Expected result is 100 kW demand for January, 35% of that for all other months and 
+        # with 5x other $10.5/kW cold months and 6x $11.5/kW warm months
+        @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ 100 * (10.5 + 0.35*10.5*5 + 0.35*11.5*6)
+
+        # 2. Testing custom rate from user with demand_lookback_months
+        d = JSON.parsefile("./scenarios/lookback_rate.json")
+        d["ElectricTariff"] = Dict()
+        d["ElectricTariff"]["demand_lookback_percent"] = 0.75
+        d["ElectricLoad"]["loads_kw"] = [100 for i in range(1,8760)]
+        d["ElectricLoad"]["loads_kw"][22] = 200 # Jan peak
+        d["ElectricLoad"]["loads_kw"][2403] = 400 # April peak (Should set dvPeakDemandLookback)
+        d["ElectricLoad"]["loads_kw"][4088] = 500 # June peak (not in peak month lookback)
+        d["ElectricLoad"]["loads_kw"][8333] = 300 # Dec peak 
+        d["ElectricTariff"]["monthly_demand_rates"] = [10,10,20,50,20,10,20,20,20,20,20,5]
+        d["ElectricTariff"]["demand_lookback_months"] = [1,0,0,1,0,0,0,0,0,0,0,1] # Jan, April, Dec
+        d["ElectricTariff"]["blended_annual_energy_rate"] = 0.01
+
+        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        r = run_reopt(m, REoptInputs(Scenario(d)))
+
+        monthly_peaks = [300,300,300,400,300,500,300,300,300,300,300,300] # 300 = 400*0.75. Sets peak in all months excpet April and June
+        expected_demand_cost = sum(monthly_peaks.*d["ElectricTariff"]["monthly_demand_rates"]) 
+        @test r["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ expected_demand_cost
+
+        # 3. Testing custom rate from user with demand_lookback_range
+        d = JSON.parsefile("./scenarios/lookback_rate.json")
+        d["ElectricTariff"] = Dict()
+        d["ElectricTariff"]["demand_lookback_percent"] = 0.75
+        d["ElectricLoad"]["loads_kw"] = [100 for i in range(1,8760)]
+        d["ElectricLoad"]["loads_kw"][22] = 200 # Jan peak
+        d["ElectricLoad"]["loads_kw"][2403] = 400 # April peak (Should set dvPeakDemandLookback)
+        d["ElectricLoad"]["loads_kw"][4088] = 500 # June peak (not in peak month lookback)
+        d["ElectricLoad"]["loads_kw"][8333] = 300 # Dec peak 
+        d["ElectricTariff"]["monthly_demand_rates"] = [10,10,20,50,20,10,20,20,20,20,20,5]
+        d["ElectricTariff"]["blended_annual_energy_rate"] = 0.01
+        d["ElectricTariff"]["demand_lookback_range"] = 6
+
+        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        r = run_reopt(m, REoptInputs(Scenario(d)))
+
+        monthly_peaks = [225, 225, 225, 400, 300, 500, 375, 375, 375, 375, 375, 375]
+        expected_demand_cost = sum(monthly_peaks.*d["ElectricTariff"]["monthly_demand_rates"]) 
+        @test r["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ expected_demand_cost
+
     end
 
     @testset "Blended tariff" begin

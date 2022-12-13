@@ -50,9 +50,9 @@ struct URDBrate
     tou_demand_rates::Array{Float64,2}  # ratchet X tier
     tou_demand_ratchet_time_steps::Array{Array{Int64,1},1}  # length = n_tou_demand_ratchets
 
-    demand_lookback_months::AbstractArray{Int,1}
-    demand_lookback_percent::Float64
-    demand_lookback_range::Int
+    demand_lookback_months::AbstractArray{Int,1}  # Array of 12 binary values, indicating months in which lookbackPercent applies. If any of these is true, lookbackRange should be zero.
+    demand_lookback_percent::Float64  # Lookback percentage. Applies to either lookbackMonths with value=1, or a lookbackRange.
+    demand_lookback_range::Int  # Number of months for which lookbackPercent applies. If not 0, lookbackMonths values should all be 0.
 
     fixed_monthly_charge::Float64
     annual_min_charge::Float64
@@ -98,7 +98,7 @@ function URDBrate(urdb_response::Dict, year::Int=2019; time_steps_per_hour=1)
 
     n_monthly_demand_tiers, monthly_demand_tier_limits, monthly_demand_rates,
       n_tou_demand_tiers, tou_demand_tier_limits, tou_demand_rates, tou_demand_ratchet_time_steps =
-      parse_demand_rates(urdb_response, year)
+      parse_demand_rates(urdb_response, year, time_steps_per_hour=time_steps_per_hour)
 
     energy_rates, energy_tier_limits, n_energy_tiers, sell_rates = 
         parse_urdb_energy_costs(urdb_response, year; time_steps_per_hour=time_steps_per_hour)
@@ -313,12 +313,12 @@ end
 
 
 """
-    parse_demand_rates(d::Dict, year::Int; bigM=1.0e8)
+    parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
 
 Parse monthly ("flat") and TOU demand rates
     can modify URDB dict when there is inconsistent numbers of tiers in rate structures
 """
-function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8)
+function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
 
     if haskey(d, "flatdemandstructure")
         scrub_urdb_demand_tiers!(d["flatdemandstructure"])
@@ -335,7 +335,7 @@ function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8)
         scrub_urdb_demand_tiers!(d["demandratestructure"])
         tou_demand_tier_limits = parse_urdb_demand_tiers(d["demandratestructure"])
         n_tou_demand_tiers = length(tou_demand_tier_limits)
-        ratchet_time_steps, tou_demand_rates = parse_urdb_tou_demand(d, year=year, n_tiers=n_tou_demand_tiers)
+        ratchet_time_steps, tou_demand_rates = parse_urdb_tou_demand(d, year=year, n_tiers=n_tou_demand_tiers, time_steps_per_hour=time_steps_per_hour)
     else
         tou_demand_tier_limits = []
         n_tou_demand_tiers = 0
@@ -444,7 +444,7 @@ end
 
 return array of arrary for ratchet time steps, tou demand rates array{ratchet, tier}
 """
-function parse_urdb_tou_demand(d::Dict; year::Int, n_tiers::Int)
+function parse_urdb_tou_demand(d::Dict; year::Int, n_tiers::Int, time_steps_per_hour::Int)
     if !haskey(d, "demandratestructure")
         return [], []
     end
@@ -455,7 +455,7 @@ function parse_urdb_tou_demand(d::Dict; year::Int, n_tiers::Int)
 
     for month in range(1, stop=12)
         for period in range(0, stop=n_periods)
-            time_steps = get_tou_demand_steps(d, year=year, month=month, period=period-1)
+            time_steps = get_tou_demand_steps(d, year=year, month=month, period=period-1, time_steps_per_hour=time_steps_per_hour)
             if length(time_steps) > 0  # can be zero! not every month contains same number of periods
                 n_ratchets += 1
                 append!(ratchet_time_steps, [time_steps])
@@ -477,10 +477,6 @@ end
 return Array{Int, 1} for time_steps in ratchet (aka period)
 """
 function get_tou_demand_steps(d::Dict; year::Int, month::Int, period::Int, time_steps_per_hour=1)
-    step_array = Int[]
-    start_step = 1
-    start_hour = 1
-
     if month > 1
         plus_days = 0
         for m in range(1, stop=month-1)
@@ -489,25 +485,27 @@ function get_tou_demand_steps(d::Dict; year::Int, month::Int, period::Int, time_
                 plus_days -= 1
             end
         end
-        start_hour += plus_days * 24
-        start_step = start_hour * time_steps_per_hour
+        start_hour = 1 + plus_days * 24
+        start_step = 1 + plus_days * 24 * time_steps_per_hour
+    else
+        start_hour = 1
+        start_step = 1
     end
 
-    hour_of_year = start_hour
     step_of_year = start_step
+    step_array = Int[]
 
     for day in range(1, stop=daysinmonth(Date(string(year) * "-" * string(month))))
         for hour in range(1, stop=24)
-            if dayofweek(Date(year, month, day)) < 6 &&
-               d["demandweekdayschedule"][month][hour] == period
-                append!(step_array, step_of_year)
-            elseif dayofweek(Date(year, month, day)) > 5 &&
-               d["demandweekendschedule"][month][hour] == period
-                append!(step_array, step_of_year)
+            if (dayofweek(Date(year, month, day)) < 6 && 
+                d["demandweekdayschedule"][month][hour] == period) ||
+                (dayofweek(Date(year, month, day)) > 5 &&
+                d["demandweekendschedule"][month][hour] == period)
+                
+                append!(step_array, collect(step_of_year:step_of_year+time_steps_per_hour-1))
             end
-            step_of_year += 1
+            step_of_year += time_steps_per_hour
         end
-        hour_of_year += 1
     end
     return step_array
 end
@@ -567,20 +565,18 @@ URDB lookback fields:
     - Lookback percentage. Applies to either lookbackMonths with value=1, or a lookbackRange.
 - lookbackRange
     - Type: integer
-    - Number of months for which lookbackPercent applies. If not 0, lookbackMonths values should all be 0.
+    - Number of previous months for which lookbackPercent applies each month. If not 0, lookbackMonths values should all be 0.
 """
 function parse_urdb_lookback_charges(d::Dict)
-    lookback_months = get(d, "lookbackMonths", Int[])
-    lookback_percent = Float64(get(d, "lookbackPercent", 0.0))
-    lookback_range = Int64(get(d, "lookbackRange", 0.0))
+    lookback_months = get(d, "lookbackmonths", Int[])
+    lookback_percent = Float64(get(d, "lookbackpercent", 0.0))
+    lookback_range = Int64(get(d, "lookbackrange", 0.0))
 
-    reopt_lookback_months = Int[]
-    if lookback_range != 0 && length(lookback_months) == 12
-        for mth in range(1, stop=12)
-            if lookback_months[mth] == 1
-                push!(reopt_lookback_months, mth)
-            end
-        end
+    if lookback_range == 0 && length(lookback_months) == 12
+        lookback_months = collect(1:12)[lookback_months .== 1]
+    elseif lookback_range !=0 && length(lookback_months) == 12
+        throw(@warn("URDB rate contains both lookbackRange and lookbackMonths. Only lookbackRange will apply."))
     end
-    return reopt_lookback_months, lookback_percent, lookback_range
+
+    return lookback_months, lookback_percent, lookback_range
 end
