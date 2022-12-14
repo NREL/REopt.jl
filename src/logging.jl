@@ -197,7 +197,6 @@ function instantiate_logger()
 		@debug "Created custom REopt Logger"
 	else
 		@debug "Already REoptLogger"
-		@debug typeof(global_logger())
         logREopt.d["Warn"] = Dict()
         logREopt.d["Error"] = Dict()
 	end
