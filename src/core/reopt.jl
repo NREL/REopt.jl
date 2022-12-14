@@ -166,22 +166,31 @@ end
 Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) models in `ms` and inputs from `p`.
 """
 function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.AbstractModel
-    bau_inputs = BAUInputs(p)
-    inputs = ((ms[1], bau_inputs), (ms[2], p))
-    rs = Any[0, 0]
-    Threads.@threads for i = 1:2
-        rs[i] = run_reopt(inputs[i])
-    end
-	if typeof(rs[1]) <: Dict && typeof(rs[2]) <: Dict
-		# TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
-		results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
-		results_dict["Financial"] = merge(results_dict["Financial"], proforma_results(p, results_dict))
-		if !isempty(p.techs.pv)
-			organize_multiple_pv_results(p, results_dict)
+
+	try
+		bau_inputs = BAUInputs(p)
+		inputs = ((ms[1], bau_inputs), (ms[2], p))
+		rs = Any[0, 0]
+		Threads.@threads for i = 1:2
+			rs[i] = run_reopt(inputs[i])
 		end
-		return results_dict
-	else
-		return rs
+		if typeof(rs[1]) <: Dict && typeof(rs[2]) <: Dict
+			# TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
+			results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
+			results_dict["Financial"] = merge(results_dict["Financial"], proforma_results(p, results_dict))
+			if !isempty(p.techs.pv)
+				organize_multiple_pv_results(p, results_dict)
+			end
+			return results_dict
+		else
+			return rs
+		end
+	catch e
+		if isnothing(e) # Error thrown by REopt
+			handle_errors()
+		else
+			handle_errors(e, stacktrace(catch_backtrace()))
+		end
 	end
 end
 
@@ -494,39 +503,47 @@ end
 
 function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 
-	build_reopt!(m, p)
+	try
+		build_reopt!(m, p)
 
-	@info "Model built. Optimizing..."
-	tstart = time()
-	optimize!(m)
-	opt_time = round(time() - tstart, digits=3)
-	if termination_status(m) == MOI.TIME_LIMIT
-		status = "timed-out"
-    elseif termination_status(m) == MOI.OPTIMAL
-        status = "optimal"
-    else
-		status = "not optimal"
-		@warn "REopt solved with " termination_status(m), ", returning the model."
-		return m
+		@info "Model built. Optimizing..."
+		tstart = time()
+		optimize!(m)
+		opt_time = round(time() - tstart, digits=3)
+		if termination_status(m) == MOI.TIME_LIMIT
+			status = "timed-out"
+		elseif termination_status(m) == MOI.OPTIMAL
+			status = "optimal"
+		else
+			status = "not optimal"
+			@warn "REopt solved with " termination_status(m), ", returning the model."
+			return m
+		end
+		@info "REopt solved with " termination_status(m)
+		@info "Solving took $(opt_time) seconds."
+
+		tstart = time()
+		results = reopt_results(m, p)
+		time_elapsed = time() - tstart
+		@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
+		results["status"] = status
+		results["solver_seconds"] = opt_time
+
+		if organize_pvs && !isempty(p.techs.pv)  # do not want to organize_pvs when running BAU case in parallel b/c then proform code fails
+			organize_multiple_pv_results(p, results)
+		end
+
+		# add error messages (if any) and warnings to results dict
+		results["Messages"] = logger_to_dict()
+
+		return results
+	catch e
+		if isnothing(e) # Error thrown by REopt
+			handle_errors()
+		else
+			handle_errors(e, stacktrace(catch_backtrace()))
+		end
 	end
-	@info "REopt solved with " termination_status(m)
-	@info "Solving took $(opt_time) seconds."
-
-	tstart = time()
-	results = reopt_results(m, p)
-	time_elapsed = time() - tstart
-	@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
-	results["status"] = status
-	results["solver_seconds"] = opt_time
-
-	if organize_pvs && !isempty(p.techs.pv)  # do not want to organize_pvs when running BAU case in parallel b/c then proform code fails
-		organize_multiple_pv_results(p, results)
-	end
-
-	# add error messages (if any) and warnings to results dict
-	results["Messages"] = logger_to_dict()
-
-	return results
 end
 
 
