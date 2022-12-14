@@ -37,8 +37,8 @@
     om_cost_per_kw::Real = off_grid_flag ? 20.0 : 10.0,
     om_cost_per_kwh::Real = 0.0,
     fuel_cost_per_gallon::Real = 3.0,
-    fuel_slope_gal_per_kwh::Real = 0.076,
-    fuel_intercept_gal_per_hr::Real = 0.0,
+    electric_efficiency_full_load::Real = 0.34,
+    electric_efficiency_half_load::Real = electric_efficiency_full_load,
     fuel_avail_gal::Real = off_grid_flag ? 1.0e9 : 660.0,
     min_turn_down_fraction::Real = off_grid_flag ? 0.15 : 0.0,
     only_runs_during_grid_outage::Bool = true,
@@ -130,8 +130,8 @@ struct Generator <: AbstractGenerator
         om_cost_per_kw::Real= off_grid_flag ? 20.0 : 10.0,
         om_cost_per_kwh::Real = 0.0,
         fuel_cost_per_gallon::Real = 3.0,
-        fuel_slope_gal_per_kwh::Real = 0.076,
-        fuel_intercept_gal_per_hr::Real = 0.0,
+        electric_efficiency_full_load::Real = 0.34,
+        electric_efficiency_half_load::Real = electric_efficiency_full_load,
         fuel_avail_gal::Real = off_grid_flag ? 1.0e9 : 660.0,
         min_turn_down_fraction::Real = off_grid_flag ? 0.15 : 0.0,
         only_runs_during_grid_outage::Bool = true,
@@ -170,6 +170,14 @@ struct Generator <: AbstractGenerator
             @warn "Generator replacement costs will not be considered because replacement_year >= analysis_years."
         end
 
+        # Convert fuel burn efficiencies to slope and intercept
+        fuel_burn_full_load_kwht = 1.0 / electric_efficiency_full_load  # [kWe_rated/(kWhe/kWht)]
+        fuel_burn_half_load_kwht = 0.5 / electric_efficiency_half_load  # [kWe_rated/(kWhe/kWht)]
+        fuel_slope_kwht_per_kwhe = (fuel_burn_full_load_kwht - fuel_burn_half_load_kwht) / (1.0 - 0.5)  # [kWht/kWhe]
+        fuel_intercept_kwht_per_hr = fuel_burn_full_load_kwht - fuel_slope_kwht_per_kwhe * 1.0  # [kWht/hr]
+        fuel_slope_gal_per_kwhe = fuel_slope_kwht_per_kwhe / KWH_PER_GAL_DIESEL # [gal/kWhe]
+        fuel_intercept_gal_per_hr = fuel_intercept_kwht_per_hr / KWH_PER_GAL_DIESEL # [gal/hr]
+    
         new(
             existing_kw,
             min_kw,
@@ -178,7 +186,7 @@ struct Generator <: AbstractGenerator
             om_cost_per_kw,
             om_cost_per_kwh,
             fuel_cost_per_gallon,
-            fuel_slope_gal_per_kwh,
+            fuel_slope_gal_per_kwhe,
             fuel_intercept_gal_per_hr,
             fuel_avail_gal,
             min_turn_down_fraction,
