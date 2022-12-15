@@ -338,8 +338,11 @@ function bau_outage_check(critical_loads_kw::AbstractArray, pv_kw_series::Abstra
         if length(pv_kw_series) == 0
             pv_kw_series = zeros(length(critical_loads_kw))
         end
-        fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr = generator_fuel_slope_and_intercept(gen) 
-        for (i, (load, pv)) in enumerate(zip(critical_loads_kw, pv_kw_series))
+        fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr = generator_fuel_slope_and_intercept(
+            electric_efficiency_full_load=gen.electric_efficiency_full_load, 
+            electric_efficiency_half_load=gen.electric_efficiency_half_load
+        )
+            for (i, (load, pv)) in enumerate(zip(critical_loads_kw, pv_kw_series))
             unmet = load - pv
             if unmet > 0
                 fuel_kwh = (fuel_gal - fuel_intercept_gal_per_hr) / fuel_slope_gal_per_kwhe

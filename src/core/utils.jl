@@ -471,17 +471,3 @@ function generator_fuel_slope_and_intercept(;
     
     return fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr
 end
-
-"""
-generator_fuel_slope_and_intercept(gen::Generator)
-
-return Tuple{<:Real,<:Real} where 
-    first value is diesel fuel burn slope [gal/kWhe]
-    secnod value is diesel fuel burn intercept [gal/hr]
-"""
-function generator_fuel_slope_and_intercept(gen::Generator)    
-    return generator_fuel_slope_and_intercept(
-                    electric_efficiency_full_load=gen.electric_efficiency_full_load,
-                    electric_efficiency_half_load=gen.electric_efficiency_half_load
-                )
-end
