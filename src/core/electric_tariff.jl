@@ -184,7 +184,7 @@ function ElectricTariff(;
             push!(invalid_args, "length(monthly_demand_rates) must equal 12, got length $(length(monthly_demand_rates))")
         end
         if length(invalid_args) > 0
-            error("Invalid argument values: $(invalid_args)")
+            throw(@error("Invalid ElectricTariff argument values: $(invalid_args)"))
         end
 
         if isempty(monthly_demand_rates)
@@ -227,7 +227,7 @@ function ElectricTariff(;
         end
 
     else
-        error("Creating ElectricTariff requires at least urdb_label, urdb_response, monthly rates, annual rates, or tou_energy_rates_per_kwh.")
+        throw(@error("Creating ElectricTariff requires at least urdb_label, urdb_response, monthly rates, annual rates, or tou_energy_rates_per_kwh."))
     end
 
     # Error checks and processing for user-defined demand_lookback_months
@@ -412,7 +412,7 @@ Check length of e and upsample if length(e) != N
 function create_export_rate(e::AbstractArray{<:Real, 1}, N::Int, ts_per_hour::Int=1)
     Ne = length(e)
     if Ne != Int(N/ts_per_hour) || Ne != N
-        @error "Export rates do not have correct number of entries. Must be $(N) or $(Int(N/ts_per_hour))."
+        throw(@error("Export rates do not have correct number of entries. Must be $(N) or $(Int(N/ts_per_hour))."))
     end
     if Ne != N  # upsample
         export_rates = [-1*x for x in e for ts in 1:ts_per_hour]
