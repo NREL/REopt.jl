@@ -28,7 +28,10 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 function add_fuel_burn_constraints(m,p)
-	fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr = generator_fuel_slope_and_intercept(p.s.generator) 
+	fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr = generator_fuel_slope_and_intercept(
+		electric_efficiency_full_load=p.s.generator.electric_efficiency_full_load, 
+		electric_efficiency_half_load=p.s.generator.electric_efficiency_half_load
+	)
   	@constraint(m, [t in p.techs.gen, ts in p.time_steps],
 		m[:dvFuelUsage][t, ts] == (fuel_slope_gal_per_kwhe * KWH_PER_GAL_DIESEL *
 		p.production_factor[t, ts] * p.hours_per_time_step * m[:dvRatedProduction][t, ts]) +
