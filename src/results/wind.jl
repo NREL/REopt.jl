@@ -32,14 +32,14 @@
 - `size_kw` Optimal Wind capacity
 - `lifecycle_om_cost_after_tax` Lifecycle operations and maintenance cost in present value, after tax
 - `year_one_om_cost_before_tax` Operations and maintenance cost in the first year, before tax benefits
-- `year_one_to_battery_series_kw` Vector of power used to charge the battery over the first year
-- `year_one_to_grid_series_kw` Vector of power exported to the grid over the first year
-- `average_annual_energy_exported_kwh` Average annual energy exported to the grid
-- `year_one_to_load_series_kw` Vector of power used to meet load over the first year
+- `production_to_battery_series_kw` Vector of power used to charge the battery over the first year
+- `production_to_grid_series_kw` Vector of power exported to the grid over the first year
+- `annual_energy_exported_kwh` Average annual energy exported to the grid
+- `production_to_load_series_kw` Vector of power used to meet load over the first year
 - `year_one_energy_produced_kwh` Energy produced over the first year
-- `average_annual_energy_produced_kwh` Average annual energy produced when accounting for degradation
+- `annual_energy_produced_kwh` Average annual energy produced when accounting for degradation
 - `lcoe_per_kwh` Levelized Cost of Energy produced by the PV system
-- `year_one_curtailed_production_series_kw` Vector of power curtailed over the first year
+- `production_curtailed_series_kw` Vector of power curtailed over the first year
 """
 function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	# Adds the `Wind` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
@@ -59,35 +59,35 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	else
 		WindToStorage = zeros(length(p.time_steps))
 	end
-	r["year_one_to_battery_series_kw"] = round.(value.(WindToStorage), digits=3)
+	r["production_to_battery_series_kw"] = round.(value.(WindToStorage), digits=3)
 
-    r["average_annual_energy_exported_kwh"] = 0.0
+    r["annual_energy_exported_kwh"] = 0.0
     if !isempty(p.s.electric_tariff.export_bins)
         WindToGrid = @expression(m, [ts in p.time_steps],
                 sum(m[:dvProductionToGrid][t, u, ts] for u in p.export_bins_by_tech[t]))
-        r["year_one_to_grid_series_kw"] = round.(value.(WindToGrid), digits=3).data
-        r["average_annual_energy_exported_kwh"] = round(
-            sum(r["year_one_to_grid_series_kw"]) * p.hours_per_time_step, digits=0)
+        r["production_to_grid_series_kw"] = round.(value.(WindToGrid), digits=3).data
+        r["annual_energy_exported_kwh"] = round(
+            sum(r["production_to_grid_series_kw"]) * p.hours_per_time_step, digits=0)
 	else
 		WindToGrid = zeros(length(p.time_steps))
 	end
-	r["year_one_to_grid_series_kw"] = round.(value.(WindToGrid), digits=3)
+	r["production_to_grid_series_kw"] = round.(value.(WindToGrid), digits=3)
 	
 	WindToCUR = (m[Symbol("dvCurtail"*_n)][t, ts] for ts in p.time_steps)
-    r["year_one_curtailed_production_series_kw"] = round.(value.(WindToCUR), digits=3)
+    r["production_curtailed_series_kw"] = round.(value.(WindToCUR), digits=3)
 	
 	TotalHourlyWindProd = value.(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] for ts in p.time_steps)
 
 	WindToLoad =(TotalHourlyWindProd[ts] 
-			- r["year_one_to_battery_series_kw"][ts] 
-			- r["year_one_to_grid_series_kw"][ts] 
-			- r["year_one_curtailed_production_series_kw"][ts] for ts in p.time_steps
+			- r["production_to_battery_series_kw"][ts] 
+			- r["production_to_grid_series_kw"][ts] 
+			- r["production_curtailed_series_kw"][ts] for ts in p.time_steps
 	)
-	r["year_one_to_load_series_kw"] = round.(value.(WindToLoad), digits=3)
+	r["production_to_load_series_kw"] = round.(value.(WindToLoad), digits=3)
 
 	Year1WindProd = (sum(TotalHourlyWindProd) * p.hours_per_time_step)
 	r["year_one_energy_produced_kwh"] = round(value(Year1WindProd), digits=0)
-	r["average_annual_energy_produced_kwh"] = r["year_one_energy_produced_kwh"] * p.levelization_factor[t]
+	r["annual_energy_produced_kwh"] = r["year_one_energy_produced_kwh"] * p.levelization_factor[t]
 
     r["lcoe_per_kwh"] = calculate_lcoe(p, r, p.s.wind)
 	d[t] = r

@@ -190,6 +190,7 @@ function REoptInputs(s::AbstractScenario)
     months = 1:12
 
     levelization_factor, pwf_e, pwf_om, pwf_fuel, pwf_emissions_cost, pwf_grid_emissions, third_party_factor, pwf_offtaker, pwf_owner = setup_present_worth_factors(s, techs)
+    print("\nlevelization_factor: ", levelization_factor)
     # the following hardcoded values for levelization_factor matches the public REopt API value
     # and makes the test values match.
     # the REopt code herein uses the Desktop method for levelization_factor, which is more accurate
@@ -197,7 +198,7 @@ function REoptInputs(s::AbstractScenario)
     # levelization_factor = Dict("PV" => 0.9539)
     # levelization_factor = Dict("ground" => 0.942238, "roof_east" => 0.942238, "roof_west" => 0.942238)
     # levelization_factor["PV"] = 0.9539
-    # levelization_factor["Generator"] = 1.0
+    # levelization_factor["Generator"] = 1.0 # TODO: does it make sense to default this to 1 while the calculation involves discount and escalation rates?
     time_steps_with_grid, time_steps_without_grid, = setup_electric_utility_inputs(s)
     
     ghp_options, require_ghp_purchase, ghp_heating_thermal_load_served_kw, 

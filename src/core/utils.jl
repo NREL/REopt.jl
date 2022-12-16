@@ -70,7 +70,7 @@ function annuity_escalation(analysis_period::Int, rate_escalation::Real, rate_di
 end
 
 
-function levelization_factor(years::Int, rate_escalation::Real, rate_discount::Real, 
+function levelization_factor(years::Int, rate_escalation::Real, rate_discount::Real, # TODO: should this account for escalation and discount rates?
     rate_degradation::Real)
     #=
     NOTE: levelization_factor for an electricity producing tech is the ratio of:
