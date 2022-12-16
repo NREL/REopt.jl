@@ -54,7 +54,7 @@ end
     production_type::String = "hot_water",
     max_thermal_factor_on_peak_load::Real = 1.25,
     efficiency::Real = NaN,
-    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [],
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [], # REQUIRED. Can be a scalar, a list of 12 monthly values, or a time series of values for every time step
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     can_supply_steam_turbine::Bool = false,
     fuel_renewable_energy_fraction::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_fraction"],fuel_type,0),
@@ -92,7 +92,7 @@ function ExistingBoiler(;
     production_type::String = "hot_water",
     max_thermal_factor_on_peak_load::Real = 1.25,
     efficiency::Real = NaN,
-    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [],
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [], # REQUIRED. Can be a scalar, a list of 12 monthly values, or a time series of values for every time step
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     can_supply_steam_turbine::Bool = false,
     fuel_renewable_energy_fraction::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_fraction"],fuel_type,0),
@@ -106,7 +106,7 @@ function ExistingBoiler(;
     @assert production_type in ["steam", "hot_water"]
 
     if isempty(fuel_cost_per_mmbtu)
-        throw(@error "The ExistingBoiler.fuel_cost_per_mmbtu is a required input when modeling a heating load which is served by the Existing Boiler in the BAU case")
+        throw(@error("The ExistingBoiler.fuel_cost_per_mmbtu is a required input when modeling a heating load which is served by the Existing Boiler in the BAU case"))
     end
 
     if isnan(efficiency)
