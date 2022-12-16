@@ -281,7 +281,7 @@ struct with inner constructor:
 function MPCGenerator(;
     size_kw::Real,
     fuel_cost_per_gallon::Real = 3.0,
-    electric_efficiency_full_load::Real = 0.34,
+    electric_efficiency_full_load::Real = 0.3233,
     electric_efficiency_half_load::Real = electric_efficiency_full_load,
     fuel_avail_gal::Real = 660.0,
     min_turn_down_fraction::Real = 0.0,  # TODO change this to non-zero value
@@ -306,7 +306,7 @@ struct MPCGenerator <: AbstractGenerator
     function MPCGenerator(;
         size_kw::Real,
         fuel_cost_per_gallon::Real = 3.0,
-        electric_efficiency_full_load::Real = 0.34,
+        electric_efficiency_full_load::Real = 0.3233,
         electric_efficiency_half_load::Real = electric_efficiency_full_load,
         fuel_avail_gal::Real = 660.0,
         min_turn_down_fraction::Real = 0.0,  # TODO change this to non-zero value
