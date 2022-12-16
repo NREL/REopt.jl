@@ -39,7 +39,7 @@
 - `electric_to_battery_series_kw` Electric power to charge the battery storage time-series array [kW]
 - `electric_to_load_series_kw` Electric power to serve the electric load time-series array [kW]
 - `thermal_to_tes_series_mmbtu_per_hour` Thermal power to TES time-series array [MMBtu/hr]
-- `year_one_thermal_to_waste_series_mmbtu_per_hour` Thermal power wasted/unused/vented time-series array [MMBtu/hr]
+- `thermal_curtailed_series_mmbtu_per_hour` Thermal power wasted/unused/vented time-series array [MMBtu/hr]
 - `thermal_to_load_series_mmbtu_per_hour` Thermal power to serve the heating load time-series array [MMBtu/hr]
 - `thermal_to_steamturbine_series_mmbtu_per_hour` Thermal (steam) power to steam turbine time-series array [MMBtu/hr]
 - `year_one_fuel_cost_before_tax` Cost of fuel consumed by the CHP system in year one [\$]
@@ -97,7 +97,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["thermal_to_tes_series_mmbtu_per_hour"] = round.(value.(CHPtoHotTES / KWH_PER_MMBTU), digits=5)
 	@expression(m, CHPThermalToWasteKW[ts in p.time_steps],
 		sum(m[Symbol("dvProductionToWaste"*_n)][t,ts] for t in p.techs.chp))
-	r["year_one_thermal_to_waste_series_mmbtu_per_hour"] = round.(value.(CHPThermalToWasteKW) / KWH_PER_MMBTU, digits=5)
+	r["thermal_curtailed_series_mmbtu_per_hour"] = round.(value.(CHPThermalToWasteKW) / KWH_PER_MMBTU, digits=5)
     if !isempty(p.techs.steam_turbine) && p.s.chp.can_supply_steam_turbine
         @expression(m, CHPToSteamTurbineKW[ts in p.time_steps], sum(m[Symbol("dvThermalToSteamTurbine"*_n)][t,ts] for t in p.techs.chp))
     else
