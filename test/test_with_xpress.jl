@@ -809,7 +809,7 @@ end
     boiler_thermal_to_tes_series = results["ExistingBoiler"]["thermal_to_tes_series_mmbtu_per_hour"]
     chp_thermal_to_load_series = results["CHP"]["thermal_to_load_series_mmbtu_per_hour"]
     chp_thermal_to_tes_series = results["CHP"]["thermal_to_tes_series_mmbtu_per_hour"]
-    chp_thermal_to_waste_series = results["CHP"]["year_one_thermal_to_waste_series_mmbtu_per_hour"]
+    chp_thermal_to_waste_series = results["CHP"]["thermal_curtailed_series_mmbtu_per_hour"]
     absorpchl_thermal_series = results["AbsorptionChiller"]["thermal_consumption_series_mmbtu_per_hour"]
     hot_tes_mmbtu_per_hour_to_load_series = results["HotThermalStorage"]["storage_to_load_series_mmbtu_per_hour"]
     tes_inflows = sum(chp_thermal_to_tes_series) + sum(boiler_thermal_to_tes_series)
@@ -1498,7 +1498,11 @@ end
             if (tech == "SteamTurbine" && load == "steamturbine") || (load == "waste" && tech != "CHP")
                 tech_to_thermal_load[tech][load] = [0.0] * 8760
             else
-                tech_to_thermal_load[tech][load] = results[tech]["year_one_thermal_to_"*load*"_series_mmbtu_per_hour"]
+                if load == "waste"
+                    tech_to_thermal_load[tech][load] = results[tech]["thermal_curtailed_series_mmbtu_per_hour"]
+                else
+                    tech_to_thermal_load[tech][load] = results[tech]["thermal_to_"*load*"_series_mmbtu_per_hour"]
+                end
             end
         end
     end
