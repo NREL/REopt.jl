@@ -23,6 +23,11 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2022-12-19
+### Changed
+- Major name change overall for outputs/results. Changed energy-related outputs with "year_one" in name to "annual" to reflect that they are actually average annual output values. Changed any "average_annual" naming to "annual" to simplify. 
+### Added 
+- TODO: Added **thermal_production_series_mmbtu_per_hour** to CHP results. 
 ## v0.23.0
 ### Added
 - Add **REoptLogger** type of global logger with a standard out to the console and to a dictionary
