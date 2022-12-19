@@ -40,6 +40,7 @@
 - `average_annual_energy_produced_kwh` Average annual energy produced when accounting for degradation
 - `lcoe_per_kwh` Levelized Cost of Energy produced by the PV system
 - `year_one_curtailed_production_series_kw` Vector of power curtailed over the first year
+- `production_factor_series` Wind production factor in each time step, either provided by user or obtained from SAM
 """
 function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	# Adds the `Wind` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
@@ -47,6 +48,7 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 
     r = Dict{String, Any}()
     t = "Wind"
+	r["production_factor_series"] = p.production_factor[t, :]
 	per_unit_size_om = @expression(m, p.third_party_factor * p.pwf_om * m[:dvSize][t] * p.om_cost_per_kw[t])
 
 	r["size_kw"] = round(value(m[:dvSize][t]), digits=2)
