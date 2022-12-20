@@ -807,11 +807,10 @@ Return a dictionary of inputs required for backup reliability calculations.
     -max_outage_duration::Int = 96                          Maximum outage time step modeled
     -microgrid_only::Bool = false                           Boolean to specify if only microgrid upgraded technologies run during grid outage
     -battery_minimum_soc::Real                              Optional input to override minimum SOC from REopt optimization. The battery minimum SOC allowed during outages.
-    -fuel_limit:Union{Real, Vector{<:Real}} = Inf           Amount of fuel available, either by generator type or per generator. Change generator_burn_rate_fuel_per_kwh for different fuel efficiencies    
-    -generator_fuel_intercept::Union{Real, Vector{<:Real}} = 0.0                Amount of fuel burned each time step while idling   
-    -fuel_limit_is_per_generator::Union{Bool, Vector{Bool}} = false             Boolian to determine whether fuel availability is given per generator or per generator type
-    -generator_burn_rate_fuel_per_kwh::Union{Real, Vector{<:Real}} = 0.076      Amount of fuel used per kWh generated
-
+    -fuel_limit:Union{Real, Vector{<:Real}} = Inf           Amount of fuel available, either by generator type or per generator, depending on fuel_limit_is_per_generator. Change generator_burn_rate_fuel_per_kwh for different fuel efficiencies. Fuel units should be consistent with generator_fuel_intercept and generator_burn_rate_fuel_per_kwh.
+    -generator_fuel_intercept::Union{Real, Vector{<:Real}} = 0.0                Amount of fuel burned each time step while idling. Fuel units should be consistent with fuel_limit and generator_burn_rate_fuel_per_kwh.
+    -fuel_limit_is_per_generator::Union{Bool, Vector{Bool}} = false             Boolean to determine whether fuel limit is given per generator or per generator type
+    -generator_burn_rate_fuel_per_kwh::Union{Real, Vector{<:Real}} = 0.076      Amount of fuel used per kWh generated. Fuel units should be consistent with fuel_limit and generator_fuel_intercept.
 """
 function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dict())::Dict
     r2 = dictkeys_tosymbols(r)
@@ -923,11 +922,11 @@ Return a dictionary of inputs required for backup reliability calculations.
     -generator_size_kw::Real = 0.0                          Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
     -num_battery_bins::Int = 101                            Internal value for discretely modeling battery state of charge
     -max_outage_duration::Int = 96                          Maximum outage duration modeled
-    -fuel_limit:Union{Real, Vector{<:Real}} = Inf           Amount of fuel available, either by generator type or per generator. Change generator_burn_rate_fuel_per_kwh for different fuel efficiencies    
-    -generator_fuel_intercept::Union{Real, Vector{<:Real}} = 0.0                Amount of fuel burned each time step while idling   
-    -fuel_limit_is_per_generator::Union{Bool, Vector{Bool}} = false             Boolian to determine whether fuel availability is given per generator or per generator type
-    -generator_burn_rate_fuel_per_kwh::Union{Real, Vector{<:Real}} = 0.076      Amount of fuel used per kWh generated
-
+    -fuel_limit:Union{Real, Vector{<:Real}} = Inf           Amount of fuel available, either by generator type or per generator, depending on fuel_limit_is_per_generator. Change generator_burn_rate_fuel_per_kwh for different fuel efficiencies. Fuel units should be consistent with generator_fuel_intercept and generator_burn_rate_fuel_per_kwh.
+    -generator_fuel_intercept::Union{Real, Vector{<:Real}} = 0.0                Amount of fuel burned each time step while idling. Fuel units should be consistent with fuel_limit and generator_burn_rate_fuel_per_kwh.
+    -fuel_limit_is_per_generator::Union{Bool, Vector{Bool}} = false             Boolean to determine whether fuel limit is given per generator or per generator type
+    -generator_burn_rate_fuel_per_kwh::Union{Real, Vector{<:Real}} = 0.076      Amount of fuel used per kWh generated. Fuel units should be consistent with fuel_limit and generator_fuel_intercept.
+    
 #Examples
 ```repl-julia
 julia> r = Dict("critical_loads_kw" => [1,2,1,1], "generator_operational_availability" => 1, "generator_failure_to_start" => 0.0,
@@ -1109,10 +1108,10 @@ Return a matrix of fuel survival. Output is a matrix with rows of time periods a
 -net_critical_loads_kw::Vector                                              vector of net critical loads
 -num_generators::Union{Int, Vector{Int}} = 1,                               number of backup generators of each type
 -generator_size_kw::Union{Real, Vector{<:Real}} = 0.0,                      capacity of each generator type
--fuel_limit::Union{Real, Vector{<:Real}} = Inf,                             Fuel stored by generator type. If fuel_limit_is_per_generator = true, then measured for each generator
--generator_fuel_intercept::Union{Real, Vector{<:Real}} = 0.0,               Fixed fuel use in each time period
--fuel_limit_is_per_generator::Union{Bool, Vector{Bool}} = false,            If false then fuel_limit measures fuel by generator type. If true then measures by each generator  
--generator_burn_rate_fuel_per_kwh::Union{Real, Vector{<:Real}} = 0.076,     amount of fuel use per kWh generated
+-fuel_limit:Union{Real, Vector{<:Real}} = Inf                               Amount of fuel available, either by generator type or per generator, depending on fuel_limit_is_per_generator. Change generator_burn_rate_fuel_per_kwh for different fuel efficiencies. Fuel units should be consistent with generator_fuel_intercept and generator_burn_rate_fuel_per_kwh.
+-generator_fuel_intercept::Union{Real, Vector{<:Real}} = 0.0                Amount of fuel burned each time step while idling. Fuel units should be consistent with fuel_limit and generator_burn_rate_fuel_per_kwh.
+-fuel_limit_is_per_generator::Union{Bool, Vector{Bool}} = false             Boolean to determine whether fuel limit is given per generator or per generator type
+-generator_burn_rate_fuel_per_kwh::Union{Real, Vector{<:Real}} = 0.076      Amount of fuel used per kWh generated. Fuel units should be consistent with fuel_limit and generator_fuel_intercept.
 -max_outage_duration::Int = 96,                                             maximum outage duration
 -battery_starting_soc_kwh::Vector = [],                                     battery time series of starting charge
 -battery_size_kw::Real = 0.0,                                               inverter capacity of battery
