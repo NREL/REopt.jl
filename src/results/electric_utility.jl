@@ -29,19 +29,24 @@
 # *********************************************************************************
 """
 `ElectricUtility` results keys:
-- `annual_energy_supplied_kwh` Total energy supplied from the grid in year one.
-- `production_to_load_series_kw` Vector of power drawn from the grid to serve load in year one.
-- `production_to_battery_series_kw` Vector of power drawn from the grid to charge the battery in year one.
-- `annual_emissions_tonnes_CO2` # Total tons of CO2 emissions associated with the site's grid-purchased electricity in year one. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
-- `annual_emissions_tonnes_NOx` # Total tons of NOx emissions associated with the site's grid-purchased electricity in year one. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
-- `annual_emissions_tonnes_SO2` # Total tons of SO2 emissions associated with the site's grid-purchased electricity in year one. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
-- `annual_emissions_tonnes_PM25` # Total tons of PM2.5 emissions associated with the site's grid-purchased electricity in year one. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
+- `annual_energy_supplied_kwh` Total energy supplied from the grid in an average year.
+- `production_to_load_series_kw` Vector of power drawn from the grid to serve load.
+- `production_to_battery_series_kw` Vector of power drawn from the grid to charge the battery.
+- `annual_emissions_tonnes_CO2` # Total tons of CO2 emissions associated with the site's grid-purchased electricity in an average year. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
+- `annual_emissions_tonnes_NOx` # Total tons of NOx emissions associated with the site's grid-purchased electricity in an average year. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
+- `annual_emissions_tonnes_SO2` # Total tons of SO2 emissions associated with the site's grid-purchased electricity in an average year. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
+- `annual_emissions_tonnes_PM25` # Total tons of PM2.5 emissions associated with the site's grid-purchased electricity in an average year. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
 - `lifecycle_emissions_tonnes_CO2` # Total tons of CO2 emissions associated with the site's grid-purchased electricity over the analysis period. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
 - `lifecycle_emissions_tonnes_NOx` # Total tons of NOx emissions associated with the site's grid-purchased electricity over the analysis period. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
 - `lifecycle_emissions_tonnes_SO2` # Total tons of SO2 emissions associated with the site's grid-purchased electricity over the analysis period. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
 - `lifecycle_emissions_tonnes_PM25` # Total tons of PM2.5 emissions associated with the site's grid-purchased electricity over the analysis period. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
 - `emissions_region` # EPA AVERT region of the site (populated if default emissions values are used).
-- `distance_to_emissions_region_meters` 
+- `distance_to_emissions_region_meters`
+
+!!! note "'Series' and 'Annual' energy and emissions outputs are average annual"
+	REopt performs load balances using average annual production values for technologies that include degradation. 
+	Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy and emissions outputs averaged over the analysis period. 
+
 """
 function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, d::Dict; _n="")
     # Adds the `ElectricUtility` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.

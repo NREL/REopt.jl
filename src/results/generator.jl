@@ -42,6 +42,11 @@
 - `production_to_load_series_kw` Vector of power sent to load in year one
 - `year_one_energy_produced_kwh` Total energy produced in year one
 - `annual_energy_produced_kwh` Average annual energy produced over analysis period
+
+!!! note "'Series' and 'Annual' energy outputs are average annual"
+	REopt performs load balances using average annual production values for technologies that include degradation. 
+	Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy outputs averaged over the analysis period. 
+
 """
 function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	# Adds the `Generator` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.

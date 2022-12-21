@@ -56,6 +56,11 @@ Site results:
 calculated in combine_results function if BAU scenario is run:
 - `lifecycle_emissions_reduction_CO2_fraction`
 
+!!! note "'Series' and 'Annual' energy and emissions outputs are average annual"
+	REopt performs load balances using average annual production values for technologies that include degradation. 
+	Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy and emissions outputs averaged over the analysis period. 
+
+
 """
 function add_site_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r = Dict{String, Any}()

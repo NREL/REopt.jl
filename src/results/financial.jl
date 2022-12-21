@@ -57,7 +57,12 @@
 - `lifecycle_emissions_cost_health` LCC component if Settings input include_health_in_objective is true. Present value of NOx, SO2, and PM2.5 emissions cost over the analysis period.
 
 calculated in combine_results function if BAU scenario is run:
-    - `breakeven_cost_of_emissions_reduction_per_tonnes_CO2`
+- `breakeven_cost_of_emissions_reduction_per_tonnes_CO2`
+
+!!! note "'Series' and 'Annual' energy outputs are average annual"
+	REopt performs load balances using average annual production values for technologies that include degradation. 
+	Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy outputs averaged over the analysis period. 
+
 """
 function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Float64}()
