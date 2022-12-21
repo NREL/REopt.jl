@@ -56,6 +56,7 @@ Method for creating the MPCScenario struct:
         electric_utility::ElectricUtility
         financial::MPCFinancial
         generator::MPCGenerator
+        cooling_load::MPCCoolingLoad
         limits::MPCLimits
         node::Int
     end
