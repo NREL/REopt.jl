@@ -38,6 +38,11 @@
 - `thermal_to_load_series_mmbtu_per_hour`
 - `lifecycle_fuel_cost_after_tax`
 - `year_one_fuel_cost_before_tax`
+
+!!! note "'Series' and 'Annual' energy outputs are average annual"
+	REopt performs load balances using average annual production values for technologies that include degradation. 
+	Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy outputs averaged over the analysis period. 
+
 """
 function add_existing_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()

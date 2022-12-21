@@ -46,6 +46,11 @@
 - `lifecycle_chp_fuel_cost_after_tax` Present value of cost of fuel consumed by the CHP system, after tax [\$]
 - `year_one_standby_cost_before_tax` CHP standby charges in year one [\$] 
 - `lifecycle_chp_standby_cost_after_tax` Present value of all CHP standby charges, after tax.
+
+!!! note "'Series' and 'Annual' energy outputs are average annual"
+	REopt performs load balances using average annual production values for technologies that include degradation. 
+	Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy outputs averaged over the analysis period. 
+
 """
 function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	# Adds the `CHP` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
@@ -108,7 +113,10 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
         sum(m[Symbol("dvThermalProduction"*_n)][t,ts] + m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
             for t in p.techs.chp) - CHPtoHotTES[ts] - CHPToSteamTurbineKW[ts] - CHPThermalToWasteKW[ts])
     r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(CHPThermalToLoadKW) / KWH_PER_MMBTU, digits=5)
-    r["year_one_fuel_cost_before_tax"] = round(value(m[:TotalCHPFuelCosts] / p.pwf_fuel["CHP"]), digits=3)                
+    
+	# TODO add thermal_production_series_mmbtu_per_hour 
+	
+	r["year_one_fuel_cost_before_tax"] = round(value(m[:TotalCHPFuelCosts] / p.pwf_fuel["CHP"]), digits=3)                
 	r["lifecycle_chp_fuel_cost_after_tax"] = round(value(m[:TotalCHPFuelCosts]) * p.s.financial.offtaker_tax_rate_fraction, digits=3)
 	#Standby charges and hourly O&M
 	r["year_one_standby_cost_before_tax"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) / p.pwf_e, digits=0)

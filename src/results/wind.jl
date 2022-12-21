@@ -29,17 +29,21 @@
 # *********************************************************************************
 """
 `Wind` results keys:
-- `size_kw` Optimal Wind capacity
+- `size_kw` Optimal Wind capacity [kW]
 - `lifecycle_om_cost_after_tax` Lifecycle operations and maintenance cost in present value, after tax
 - `year_one_om_cost_before_tax` Operations and maintenance cost in the first year, before tax benefits
-- `production_to_battery_series_kw` Vector of power used to charge the battery over the first year
-- `production_to_grid_series_kw` Vector of power exported to the grid over the first year
+- `production_to_battery_series_kw` Vector of power used to charge the battery over an average year
+- `production_to_grid_series_kw` Vector of power exported to the grid over an average year
 - `annual_energy_exported_kwh` Average annual energy exported to the grid
-- `production_to_load_series_kw` Vector of power used to meet load over the first year
-- `year_one_energy_produced_kwh` Energy produced over the first year
+- `production_to_load_series_kw` Vector of power used to meet load over an average year
+- `year_one_energy_produced_kwh` Energy produced over an average year
 - `annual_energy_produced_kwh` Average annual energy produced when accounting for degradation
 - `lcoe_per_kwh` Levelized Cost of Energy produced by the PV system
-- `production_curtailed_series_kw` Vector of power curtailed over the first year
+- `production_curtailed_series_kw` Vector of power curtailed over an average year
+
+!!! note "'Series' and 'Annual' energy outputs are average annual"
+	REopt performs load balances using average annual production values for technologies that include degradation. 
+	Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy outputs averaged over the analysis period. 
 """
 function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	# Adds the `Wind` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
