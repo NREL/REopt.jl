@@ -33,7 +33,7 @@
 - `size_supplemental_firing_kw` Power capacity of CHP supplementary firing system [kW]
 - `annual_fuel_consumption_mmbtu` Fuel consumed in year one [MMBtu]
 - `annual_electric_production_kwh` Electric energy produced in year one [kWh]
-- `annual_thermal_production_mmbtu` Thermal energy produced in year one [MMBtu]
+- `annual_thermal_production_mmbtu` Thermal energy produced in year one (not including waste heat) [MMBtu]
 - `electric_production_series_kw` Electric power production time-series array [kW]
 - `electric_to_grid_series_kw` Electric power exported time-series array [kW]
 - `electric_to_battery_series_kw` Electric power to charge the battery storage time-series array [kW]
@@ -46,6 +46,7 @@
 - `lifecycle_chp_fuel_cost_after_tax` Present value of cost of fuel consumed by the CHP system, after tax [\$]
 - `year_one_standby_cost_before_tax` CHP standby charges in year one [\$] 
 - `lifecycle_chp_standby_cost_after_tax` Present value of all CHP standby charges, after tax.
+- `thermal_production_series_mmbtu_per_hour`  
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
 	REopt performs load balances using average annual production values for technologies that include degradation. 
@@ -114,7 +115,10 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
             for t in p.techs.chp) - CHPtoHotTES[ts] - CHPToSteamTurbineKW[ts] - CHPThermalToWasteKW[ts])
     r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(CHPThermalToLoadKW) / KWH_PER_MMBTU, digits=5)
     
-	# TODO add thermal_production_series_mmbtu_per_hour 
+	@expression(m, CHPThermalProdKW[ts in p.time_steps],
+		sum(m[Symbol("dvThermalProduction"*_n)][t,ts] + m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] - 
+        m[Symbol("dvProductionToWaste"*_n)][t,ts] for t in p.techs.chp))
+	r["thermal_production_series_mmbtu_per_hour"] = round.(value.(CHPThermalProdKW) / KWH_PER_MMBTU, digits=5)
 	
 	r["year_one_fuel_cost_before_tax"] = round(value(m[:TotalCHPFuelCosts] / p.pwf_fuel["CHP"]), digits=3)                
 	r["lifecycle_chp_fuel_cost_after_tax"] = round(value(m[:TotalCHPFuelCosts]) * p.s.financial.offtaker_tax_rate_fraction, digits=3)
