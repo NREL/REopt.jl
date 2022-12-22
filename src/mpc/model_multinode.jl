@@ -234,7 +234,6 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{MPCInputs})
 		m[Symbol(ex_name)] = 0 # TODO make sure this gets adjusted for multi nodes
 	
     end
-    # add_bounds(m, ps) TODO need this? already have lower_bound=0 ???
 
 	nothing
 	
