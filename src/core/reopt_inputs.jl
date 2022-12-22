@@ -198,7 +198,7 @@ function REoptInputs(s::AbstractScenario)
     # levelization_factor = Dict("PV" => 0.9539)
     # levelization_factor = Dict("ground" => 0.942238, "roof_east" => 0.942238, "roof_west" => 0.942238)
     # levelization_factor["PV"] = 0.9539
-    # levelization_factor["Generator"] = 1.0 # TODO: does it make sense to default this to 1 while the calculation involves discount and escalation rates?
+    # levelization_factor["Generator"] = 1.0
     time_steps_with_grid, time_steps_without_grid, = setup_electric_utility_inputs(s)
     
     ghp_options, require_ghp_purchase, ghp_heating_thermal_load_served_kw, 
