@@ -190,7 +190,6 @@ function REoptInputs(s::AbstractScenario)
     months = 1:12
 
     levelization_factor, pwf_e, pwf_om, pwf_fuel, pwf_emissions_cost, pwf_grid_emissions, third_party_factor, pwf_offtaker, pwf_owner = setup_present_worth_factors(s, techs)
-    print("\nlevelization_factor: ", levelization_factor)
     # the following hardcoded values for levelization_factor matches the public REopt API value
     # and makes the test values match.
     # the REopt code herein uses the Desktop method for levelization_factor, which is more accurate
