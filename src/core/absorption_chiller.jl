@@ -38,7 +38,6 @@
     installed_cost_per_ton::Union{Float64, Nothing} = nothing
     om_cost_per_ton::Union{Float64, Nothing} = nothing
 
-
     #Optional
     min_ton::Float64 = 0.0,
     max_ton::Float64 = BIG_NUMBER,
@@ -50,11 +49,13 @@
 ```
 
 !!! note "Required inputs"
-    To model AbsorptionChiller, you must provide at least one of the following: (i) `thermal_consumption_hot_water_or_steam` from $(HOT_WATER_OR_STEAM), (ii) 
-    (ii), `chp_prime_mover` from $(PRIME_MOVERS),or (iii) all of the "custom inputs" defined below.
-    If prime_mover is provided, any missing value from the "custom inputs" will be populated from data/absorption_chiller/defaults.json, 
-    based on the `thermal_consumption_hot_water_or_steam` or `prime_mover`. boiler_type is "steam" if `prime_mover` is "combustion_turbine" 
-    and is "hot_water" for all other `prime_mover` types.
+    To model AbsorptionChiller, you must provide at least one of the following: 
+    (i) `thermal_consumption_hot_water_or_steam` from $(HOT_WATER_OR_STEAM), 
+    (ii) `chp_prime_mover` from $(PRIME_MOVERS), or 
+    (iii) all of the "custom inputs" defined below.
+    If `chp_prime_mover` is provided, any missing value from the "custom inputs" will be populated from data/absorption_chiller/defaults.json, 
+    based on the `thermal_consumption_hot_water_or_steam` or `chp_prime_mover`. 
+    `boiler_type` is "steam" if `prime_mover` is "combustion_turbine" and is "hot_water" for all other `chp_prime_mover` types.
 """
 Base.@kwdef mutable struct AbsorptionChiller <: AbstractThermalTech
     thermal_consumption_hot_water_or_steam::Union{String, Nothing} = nothing
