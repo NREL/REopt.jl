@@ -40,7 +40,7 @@
 - `production_to_battery_series_kw` Vector of power sent to battery in year one
 - `production_to_grid_series_kw` Vector of power sent to grid in year one
 - `production_to_load_series_kw` Vector of power sent to load in year one
-- `year_one_energy_produced_kwh` Total energy produced in year one
+- `year_one_energy_produced_kwh` Total energy produced in year one # TODO: Remove?
 - `annual_energy_produced_kwh` Average annual energy produced over analysis period
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
