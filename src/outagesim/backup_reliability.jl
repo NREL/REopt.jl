@@ -1380,17 +1380,17 @@ function process_reliability_results(cumulative_results::Matrix, fuel_results::M
     return Dict(
         "unlimited_fuel_mean_cumulative_survival_by_duration"  => cumulative_duration_means,
         "unlimited_fuel_min_cumulative_survival_by_duration"   => cumulative_duration_mins,
-        "unlimited_fuel_cumulative_outage_survival_final_time_step" => cumulative_final_resilience,
+        "unlimited_fuel_cumulative_survival_final_time_step" => cumulative_final_resilience,
 
         "mean_fuel_survival_by_duration" => fuel_duration_means,
         "fuel_outage_survival_final_time_step" => fuel_final_survival,
 
         "mean_cumulative_survival_by_duration" => total_cumulative_duration_means,
         "min_cumulative_survival_by_duration" => total_cumulative_duration_mins,
-        "cumulative_outage_survival_final_time_step" => total_cumulative_final_resilience,
+        "cumulative_survival_final_time_step" => total_cumulative_final_resilience,
 
-        "mean_cumulative_outage_survival_final_time_step" => total_cumulative_final_resilience_mean,
-        "monthly_cumulative_outage_survival_final_time_step" => total_cumulative_final_resilience_monthly
+        "mean_cumulative_survival_final_time_step" => total_cumulative_final_resilience_mean,
+        "monthly_cumulative_survival_final_time_step" => total_cumulative_final_resilience_monthly
         )
 end
 
