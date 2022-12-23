@@ -434,3 +434,7 @@ end
 macro argname(arg)
     string(arg)
 end
+
+function convert_temp_degF_to_Kelvin(degF::Float64)
+    return (degF - 32) * 5.0 / 9.0 + 273.15
+end
