@@ -39,7 +39,7 @@ function add_hot_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict,
 
     delta_T_degF = p.s.storage.attr["HotThermalStorage"].hot_water_temp_degF - p.s.storage.attr["HotThermalStorage"].cool_water_temp_degF
     avg_T_degF = (p.s.storage.attr["HotThermalStorage"].hot_water_temp_degF + p.s.storage.attr["HotThermalStorage"].cool_water_temp_degF) / 2.0
-    avg_rho_kg_per_m3 = PropsSI("D","P",101325,"T",convert_temp_degF_to_Kelvin(avg_T_degF),"Water")
+    avg_rho_kg_per_m3 = PropsSI("D","P",101325,"T",convert_temp_degF_to_Kelvin(avg_T_degF),"Water")  # [kg/m^3]
     avg_cp_kj_per_kgK = PropsSI("CPMASS","P",101325,"T",convert_temp_degF_to_Kelvin(avg_T_degF),"Water")/1000  # kJ/kg-K
     kwh_per_gal = convert_gal_to_kwh(delta_T_degF, avg_rho_kg_per_m3, avg_cp_kj_per_kgK)
     
@@ -94,7 +94,7 @@ function add_cold_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict
 
     delta_T_degF = p.s.storage.attr["ColdThermalStorage"].hot_water_temp_degF - p.s.storage.attr["ColdThermalStorage"].cool_water_temp_degF
     avg_T_degF = (p.s.storage.attr["ColdThermalStorage"].hot_water_temp_degF + p.s.storage.attr["ColdThermalStorage"].cool_water_temp_degF) / 2.0
-    avg_rho_kg_per_m3 = PropsSI("D","P",101325,"T",convert_temp_degF_to_Kelvin(avg_T_degF),"Water")
+    avg_rho_kg_per_m3 = PropsSI("D","P",101325,"T",convert_temp_degF_to_Kelvin(avg_T_degF),"Water")  # [kg/m^3]
     avg_cp_kj_per_kgK = PropsSI("CPMASS","P",101325,"T",convert_temp_degF_to_Kelvin(avg_T_degF),"Water")/1000  # kJ/kg-K
     kwh_per_gal = convert_gal_to_kwh(delta_T_degF, avg_rho_kg_per_m3, avg_cp_kj_per_kgK)
     
