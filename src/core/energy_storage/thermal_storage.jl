@@ -144,11 +144,8 @@ struct ThermalStorage <: AbstractThermalStorage
 
     function ThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
          
-        delta_T_degF = s.hot_water_temp_degF - s.cool_water_temp_degF
-        avg_T_degF = (s.hot_water_temp_degF + s.cool_water_temp_degF) / 2.0
-        avg_rho_kg_per_m3 = PropsSI("D","P",101325,"T",convert_temp_degF_to_Kelvin(avg_T_degF),"Water")  # [kg/m^3]
-        avg_cp_kj_per_kgK = PropsSI("CPMASS","P",101325,"T",convert_temp_degF_to_Kelvin(avg_T_degF),"Water")/1000  # kJ/kg-K
-        kwh_per_gal = convert_gal_to_kwh(delta_T_degF, avg_rho_kg_per_m3, avg_cp_kj_per_kgK)
+        kwh_per_gal = get_kwh_per_gal(s.hot_water_temp_degF, s.cool_water_temp_degF)
+        println("kwh_per_gal = ", kwh_per_gal)
         min_kwh = s.min_gal * kwh_per_gal
         max_kwh = s.max_gal * kwh_per_gal
         min_kw = min_kwh * time_steps_per_hour
