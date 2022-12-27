@@ -536,9 +536,9 @@ if ``marginal_survival`` = false then result is chance of surviving up to and in
 Given generator_mean_time_to_failure = 5, the chance of no generators failing in 0.64 in time step 1, 0.4096 in time step 2, and 0.262144 in time step 3
 Chance of 2 generators failing is 0.04 in time step 1, 0.1296 by time step 1, and 0.238144 by time step 3   
 ```repl-julia
-julia> net_critical_loads_kw = [1,2,2,1]; generator_operational_availability = 1; failure_to_start = 0.0; MTBF = 0.2; num_generators = 2; generator_size_kw = 1; max_outage_duration = 3;
+julia> net_critical_loads_kw = [1,2,2,1]; generator_operational_availability = 1; failure_to_start = 0.0; MTTF = 0.2; num_generators = 2; generator_size_kw = 1; max_outage_duration = 3;
 julia> survival_gen_only(net_critical_loads_kw=net_critical_loads_kw, generator_operational_availability=generator_operational_availability, 
-                                generator_failure_to_start=failure_to_start, generator_mean_time_to_failure=MTBF, num_generators=num_generators, 
+                                generator_failure_to_start=failure_to_start, generator_mean_time_to_failure=MTTF, num_generators=num_generators, 
                                 generator_size_kw=generator_size_kw, max_outage_duration=max_outage_duration, marginal_survival = true)
 4×3 Matrix{Float64}:
  0.96  0.4096  0.262144
@@ -547,7 +547,7 @@ julia> survival_gen_only(net_critical_loads_kw=net_critical_loads_kw, generator_
  0.96  0.8704  0.262144
 
 julia> survival_gen_only(net_critical_loads_kw=net_critical_loads_kw, generator_operational_availability=generator_operational_availability, 
-                                generator_failure_to_start=failure_to_start, generator_mean_time_to_failure=MTBF, num_generators=num_generators, 
+                                generator_failure_to_start=failure_to_start, generator_mean_time_to_failure=MTTF, num_generators=num_generators, 
                                 generator_size_kw=generator_size_kw, max_outage_duration=max_outage_duration, marginal_survival = false)
 4×3 Matrix{Float64}:
  0.96  0.4096  0.262144
@@ -657,16 +657,16 @@ if ``marginal_survival`` = false then result is chance of surviving up to and in
 - `marginal_survival::Bool`: indicates whether results are probability of survival in given outage time step or probability of surviving up to and including time step.
 
 # Examples
-Given MTBF = 0.2, the chance of no generators failing in 0.64 in time step 1, 0.4096 in time step 2, and 0.262144 in time step 3
+Given MTTF = 0.2, the chance of no generators failing in 0.64 in time step 1, 0.4096 in time step 2, and 0.262144 in time step 3
 Chance of 2 generators failing is 0.04 in time step 1, 0.1296 by time step 2, and 0.238144 by time step 3   
 ```repl-julia
 julia> net_critical_loads_kw = [1,2,2,1]; battery_starting_soc_kwh = [1,1,1,1];  max_outage_duration = 3;
-julia> num_generators = 2; generator_size_kw = 1; generator_operational_availability = 1; failure_to_start = 0.0; MTBF = 0.2;
+julia> num_generators = 2; generator_size_kw = 1; generator_operational_availability = 1; failure_to_start = 0.0; MTTF = 0.2;
 julia> num_battery_bins = 3; battery_size_kwh = 2; battery_size_kw = 1;  battery_charge_efficiency = 1; battery_discharge_efficiency = 1;
 
 julia> survival_with_battery(net_critical_loads_kw=net_critical_loads_kw, battery_starting_soc_kwh=battery_starting_soc_kwh, 
                             generator_operational_availability=generator_operational_availability, generator_failure_to_start=failure_to_start, 
-                            generator_mean_time_to_failure=MTBF, num_generators=num_generators, generator_size_kw=generator_size_kw, 
+                            generator_mean_time_to_failure=MTTF, num_generators=num_generators, generator_size_kw=generator_size_kw, 
                             battery_size_kwh=battery_size_kwh, battery_size_kw = battery_size_kw, num_battery_bins=num_battery_bins, 
                             max_outage_duration=max_outage_duration, battery_charge_efficiency=battery_charge_efficiency, 
                             battery_discharge_efficiency=battery_discharge_efficiency, marginal_survival = true)
@@ -678,7 +678,7 @@ julia> survival_with_battery(net_critical_loads_kw=net_critical_loads_kw, batter
 
 julia> survival_with_battery(net_critical_loads_kw=net_critical_loads_kw, battery_starting_soc_kwh=battery_starting_soc_kwh, 
                             generator_operational_availability=generator_operational_availability, generator_failure_to_start=failure_to_start, 
-                            generator_mean_time_to_failure=MTBF, num_generators=num_generators, generator_size_kw=generator_size_kw, 
+                            generator_mean_time_to_failure=MTTF, num_generators=num_generators, generator_size_kw=generator_size_kw, 
                             battery_size_kwh=battery_size_kwh, battery_size_kw = battery_size_kw, num_battery_bins=num_battery_bins, 
                             max_outage_duration=max_outage_duration, battery_charge_efficiency=battery_charge_efficiency, 
                             battery_discharge_efficiency=battery_discharge_efficiency, marginal_survival = false)
@@ -954,7 +954,7 @@ Dict{Any, Any} with 11 entries:
   :battery_size_kwh                     => 4
   :battery_size_kw                      => 2
   :net_critical_loads_kw                => Real[1.0, 2.0, 1.0, 1.0]
-  :generator_mean_time_to_failure => 5
+  :generator_mean_time_to_failure       => 5
   :generator_operational_availability   => 1
   :critical_loads_kw                    => Real[1.0, 2.0, 1.0, 1.0]
 ```
@@ -1058,8 +1058,8 @@ function backup_reliability_single_run(;
     net_critical_loads_kw::Vector, 
     battery_starting_soc_kwh::Vector = [],
     generator_operational_availability::Union{Real, Vector{<:Real}} = 0.9998, 
-    generator_failure_to_start::Union{Real, Vector{<:Real}}  = 0.0066, 
-    generator_mean_time_to_failure::Union{Real, Vector{<:Real}}  = 637, 
+    generator_failure_to_start::Union{Real, Vector{<:Real}} = 0.0066, 
+    generator_mean_time_to_failure::Union{Real, Vector{<:Real}} = 637, 
     num_generators::Union{Int, Vector{Int}} = 1, 
     generator_size_kw::Union{Real, Vector{<:Real}} = 0.0, 
     num_battery_bins::Int = 101,
@@ -1164,7 +1164,7 @@ function fuel_use(;
     else
         fuel_limit[fuel_limit_is_per_generator] .*= num_generators[fuel_limit_is_per_generator]
     end
-    
+
     generator_fuel_intercept_per_hr = generator_fuel_intercept_per_hr .* num_generators
     #put everything into arrays and sort based on fuel availability
     if length(num_generators) == 1
@@ -1408,7 +1408,7 @@ Return dictionary of backup reliability results.
 Possible keys in r:
     -generator_operational_availability::Real = 0.9998      Fraction of year generators not down for maintenance
     -generator_failure_to_start::Real = 0.0066              Chance of generator starting given outage
-    -generator_mean_time_to_failure::Real = 0.00157   Average number of time steps between a generator's failures. 1/(failure to run proability). 
+    -generator_mean_time_to_failure::Real = 0.00157         Average number of time steps between a generator's failures. 1/(failure to run proability). 
     -num_generators::Int = 1                                Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
     -generator_size_kw::Real = 0.0                          Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
     -num_battery_bins::Int = 101                            Internal value for discretely modeling battery state of charge
@@ -1450,7 +1450,7 @@ Possible keys in r:
 -discharge_efficiency::Real                             Battery discharge efficiency
 -battery_starting_soc_series_fraction::Array            Battery percent state of charge time series during normal grid-connected usage
 -generator_failure_to_start::Real = 0.0066              Chance of generator starting given outage
--generator_mean_time_to_failure::Real = 637       Average number of time steps between a generator's failures. 1/(failure to run proability). 
+-generator_mean_time_to_failure::Real = 637             Average number of time steps between a generator's failures. 1/(failure to run proability). 
 -num_generators::Int = 1                                Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
 -generator_size_kw::Real = 0.0                          Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
 -num_battery_bins::Int = 101                            Internal value for discretely modeling battery state of charge
