@@ -1163,6 +1163,7 @@ function fuel_use(;
         end
     else
         fuel_limit[fuel_limit_is_per_generator] .*= num_generators[fuel_limit_is_per_generator]
+    end
     
     generator_fuel_intercept_per_hr = generator_fuel_intercept_per_hr .* num_generators
     #put everything into arrays and sort based on fuel availability
