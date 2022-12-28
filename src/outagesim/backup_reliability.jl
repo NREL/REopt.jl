@@ -180,10 +180,7 @@ julia> starting_probabilities(2, 0.99, 0.05)
 function starting_probabilities(num_generators::Int, generator_operational_availability::Real, generator_failure_to_start::Real)::Matrix{Float64} 
     starting_vec = markov_matrix(
         num_generators, 
-        1 / (
-            (1 - generator_operational_availability) + 
-            generator_failure_to_start*generator_operational_availability
-        )
+        (1 - generator_operational_availability) + (generator_failure_to_start * generator_operational_availability)
     )[end, :] 
     return reshape(starting_vec, 1, length(starting_vec))
 end
@@ -221,10 +218,7 @@ julia> starting_probabilities([2, 1], [0.99,0.95], [0.05, 0.1])
 function starting_probabilities(num_generators::Vector{Int}, generator_operational_availability::Vector{<:Real}, generator_failure_to_start::Vector{<:Real})::Matrix{Float64} 
     starting_vec = markov_matrix(
         num_generators, 
-        1 ./ (
-            (1 .- generator_operational_availability) + 
-            generator_failure_to_start .* generator_operational_availability
-        )
+        (1 .- generator_operational_availability) .+ (generator_failure_to_start .* generator_operational_availability)
     )[end, :]
     return reshape(starting_vec, 1, length(starting_vec))
 end
