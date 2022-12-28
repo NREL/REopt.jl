@@ -1362,8 +1362,9 @@ function process_reliability_results(cumulative_results::Matrix, fuel_results::M
     total_cumulative_final_resilience_mean = round(mean(total_cumulative_final_resilience), digits=6)
     time_steps_per_hour = length(total_cumulative_final_resilience)/8760
     if time_steps_per_hour < 1
-        total_cumulative_final_resilience_monthly = []
+        calc_monthly_quartiles = false
     else
+        calc_monthly_quartiles = true
         total_cumulative_final_resilience_monthly = zeros(12,5)
         ts_by_month = get_monthly_time_steps(2022; time_steps_per_hour=time_steps_per_hour)
         for mth in 1:12
@@ -1386,11 +1387,11 @@ function process_reliability_results(cumulative_results::Matrix, fuel_results::M
 
         "mean_cumulative_survival_final_time_step" => total_cumulative_final_resilience_mean,
         
-        "monthly_min_cumulative_survival_final_time_step" => total_cumulative_final_resilience_monthly[:,1],
-        "monthly_lower_quartile_cumulative_survival_final_time_step" => total_cumulative_final_resilience_monthly[:,2],
-        "monthly_median_cumulative_survival_final_time_step" => total_cumulative_final_resilience_monthly[:,3],
-        "monthly_upper_quartile_cumulative_survival_final_time_step" => total_cumulative_final_resilience_monthly[:,4],
-        "monthly_max_cumulative_survival_final_time_step" => total_cumulative_final_resilience_monthly[:,5]
+        "monthly_min_cumulative_survival_final_time_step" => calc_monthly_quartiles ? total_cumulative_final_resilience_monthly[:,1] : [],
+        "monthly_lower_quartile_cumulative_survival_final_time_step" => calc_monthly_quartiles ? total_cumulative_final_resilience_monthly[:,2] : [],
+        "monthly_median_cumulative_survival_final_time_step" => calc_monthly_quartiles ? total_cumulative_final_resilience_monthly[:,3] : [],
+        "monthly_upper_quartile_cumulative_survival_final_time_step" => calc_monthly_quartiles ? total_cumulative_final_resilience_monthly[:,4] : [],
+        "monthly_max_cumulative_survival_final_time_step" => calc_monthly_quartiles ? total_cumulative_final_resilience_monthly[:,5] : []
     )
 end
 
