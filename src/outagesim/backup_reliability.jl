@@ -1408,7 +1408,7 @@ Return dictionary of backup reliability results.
 Possible keys in r:
     -generator_operational_availability::Real = 0.9998      Fraction of year generators not down for maintenance
     -generator_failure_to_start::Real = 0.0066              Chance of generator starting given outage
-    -generator_mean_time_to_failure::Real = 0.00157         Average number of time steps between a generator's failures. 1/(failure to run proability). 
+    -generator_mean_time_to_failure::Real = 637             Average number of time steps between a generator's failures. 1/(failure to run proability). 
     -num_generators::Int = 1                                Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
     -generator_size_kw::Real = 0.0                          Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
     -num_battery_bins::Int = 101                            Internal value for discretely modeling battery state of charge
