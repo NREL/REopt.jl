@@ -88,7 +88,7 @@ end
 `ColdThermalStorage` results:
 - `size_gal` Optimal TES capacity, by volume [gal]
 - `soc_series_fraction` Vector of normalized (0-1) state of charge values over the first year [-]
-- `production_to_load_series_ton` Vector of power used to meet load over the first year [ton]
+- `storage_to_load_series_ton` Vector of power used to meet load over the first year [ton]
 """
 function add_cold_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::String; _n="")
     #=
@@ -110,10 +110,10 @@ function add_cold_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict
         r["soc_series_fraction"] = round.(value.(soc) ./ size_kwh, digits=3)
 
         discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
-        r["production_to_load_series_ton"] = round.(value.(discharge) / KWH_THERMAL_PER_TONHOUR, digits=7)
+        r["storage_to_load_series_ton"] = round.(value.(discharge) / KWH_THERMAL_PER_TONHOUR, digits=7)
     else
         r["soc_series_fraction"] = []
-        r["production_to_load_series_ton"] = []
+        r["storage_to_load_series_ton"] = []
     end
 
     d[b] = r
