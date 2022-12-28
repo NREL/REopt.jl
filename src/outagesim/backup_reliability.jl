@@ -812,7 +812,7 @@ Return a dictionary of inputs required for backup reliability calculations.
 -r::Dict: Dictionary of inputs for reliability calculations. If r not included then uses all defaults. values read from dictionary:
     -generator_operational_availability::Real = 0.9998      Fraction of year generators not down for maintenance
     -generator_failure_to_start::Real = 0.0066              Chance of generator starting given outage
-    -generator_mean_time_to_failure::Real = 637       Average number of time steps between a generator's failures. 1/(failure to run probability). 
+    -generator_mean_time_to_failure::Real = 637             Average number of time steps between a generator's failures. 1/(failure to run probability). 
     -num_generators::Int = 1                                Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
     -generator_size_kw::Real = 0.0                          Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
     -num_battery_bins::Int = 101                            Internal value for discretely modeling battery state of charge
@@ -929,7 +929,7 @@ Return a dictionary of inputs required for backup reliability calculations.
     -battery_minimum_soc                                    Fraction of battery unavailable. If provided then reduces battery_size_kwh and battery_starting_soc_kwh to effective values. Defaults to 0
     -generator_operational_availability= 0.9998             Likelihood generator being available in given time step
     -generator_failure_to_start::Real = 0.0066              Chance of generator starting given outage
-    -generator_mean_time_to_failure::Real = 637       Average number of time steps between a generator's failures. 1/(failure to run probability). 
+    -generator_mean_time_to_failure::Real = 637             Average number of time steps between a generator's failures. 1/(failure to run probability). 
     -num_generators::Int = 1                                Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
     -generator_size_kw::Real = 0.0                          Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
     -num_battery_bins::Int = 101                            Internal value for discretely modeling battery state of charge
@@ -1042,7 +1042,7 @@ Return an array of backup reliability calculations. Inputs can be unpacked from 
 -battery_starting_soc_kwh::Vector   = []           Battery kWh state of charge time series during normal grid-connected usage
 -generator_operational_availability::Union{Real, Vector{<:Real}}    = 0.9998        Fraction of year generators not down for maintenance
 -generator_failure_to_start::Union{Real, Vector{<:Real}}            = 0.0066        Chance of generator starting given outage
--generator_mean_time_to_failure::Union{Real, Vector{<:Real}}  = 637           Average number of time steps between a generator's failures. 1/(failure to run probability). 
+-generator_mean_time_to_failure::Union{Real, Vector{<:Real}}        = 637           Average number of time steps between a generator's failures. 1/(failure to run probability). 
 -num_generators::Union{Int, Vector{Int}}                            = 1             Number of generators
 -generator_size_kw::Union{Real, Vector{<:Real}}                     = 0.0           Backup generator capacity
 -num_battery_bins::Int              = 101          Internal value for modeling battery
