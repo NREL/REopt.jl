@@ -734,7 +734,7 @@ end
     
     #dispatch to load should be 10kW every other period = 4,380 * 10
     @test sum(r["HotThermalStorage"]["storage_to_load_series_mmbtu_per_hour"]) ≈ 149.45 atol=0.1
-    @test sum(r["ColdThermalStorage"]["production_to_load_series_ton"]) ≈ 12454.33 atol=0.1
+    @test sum(r["ColdThermalStorage"]["storage_to_load_series_ton"]) ≈ 12454.33 atol=0.1
     #size should be just over 10kW in gallons, accounting for efficiency losses and min SOC
     @test r["HotThermalStorage"]["size_gal"] ≈ 227.89 atol=0.1
     @test r["ColdThermalStorage"]["size_gal"] ≈ 379.82 atol=0.1
@@ -785,7 +785,7 @@ end
     cooling_absorpchl_tons_to_tes_series = results["AbsorptionChiller"]["production_to_tes_series_ton"]
     cooling_tonhour_to_load_tech_total = sum(cooling_elecchl_tons_to_load_series) + sum(cooling_absorpchl_tons_to_load_series)
     cooling_tonhour_to_tes_total = sum(cooling_elecchl_tons_to_tes_series) + sum(cooling_absorpchl_tons_to_tes_series)
-    cooling_tes_tons_to_load_series = results["ColdThermalStorage"]["production_to_load_series_ton"]
+    cooling_tes_tons_to_load_series = results["ColdThermalStorage"]["storage_to_load_series_ton"]
     cooling_extra_from_tes_losses = cooling_tonhour_to_tes_total - sum(cooling_tes_tons_to_load_series)
     tes_effic_with_decay = sum(cooling_tes_tons_to_load_series) / cooling_tonhour_to_tes_total
     cooling_total_prod_from_techs = cooling_tonhour_to_load_tech_total + cooling_tonhour_to_tes_total
