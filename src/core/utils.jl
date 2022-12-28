@@ -404,6 +404,8 @@ end
 
 """
     Convert gallons of stored liquid (e.g. water, water/glycol) to kWh of stored energy in a stratefied tank
+    Note: uses the PropsSI function from the CoolProp package.  Further details on inputs used are available
+        at: http://www.coolprop.org/coolprop/HighLevelAPI.html
     :param delta_T_degF: temperature difference between the hot/warm side and the cold side
     :param rho_kg_per_m3: density of the liquid
     :param cp_kj_per_kgK: heat capacity of the liquid
