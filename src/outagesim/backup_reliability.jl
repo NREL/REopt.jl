@@ -1391,7 +1391,7 @@ function process_reliability_results(cumulative_results::Matrix, fuel_results::M
         "monthly_median_cumulative_survival_final_time_step" => total_cumulative_final_resilience_monthly[:,3],
         "monthly_upper_quartile_cumulative_survival_final_time_step" => total_cumulative_final_resilience_monthly[:,4],
         "monthly_max_cumulative_survival_final_time_step" => total_cumulative_final_resilience_monthly[:,5]
-")
+    )
 end
 
 
