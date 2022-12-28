@@ -1362,27 +1362,14 @@ function process_reliability_results(cumulative_results::Matrix, fuel_results::M
     total_cumulative_final_resilience_mean = round(mean(total_cumulative_final_resilience), digits=6)
     time_steps_per_hour = length(total_cumulative_final_resilience)/8760
     if time_steps_per_hour < 1
-        total_cumulative_final_resilience_monthly_min = []
-        total_cumulative_final_resilience_monthly_qlow = []
-        total_cumulative_final_resilience_monthly_median = []
-        total_cumulative_final_resilience_monthly_qup = []
-        total_cumulative_final_resilience_monthly_max = []
+        total_cumulative_final_resilience_monthly = []
     else
-        total_cumulative_final_resilience_monthly_min = zeros(12)
-        total_cumulative_final_resilience_monthly_qlow = zeros(12)
-        total_cumulative_final_resilience_monthly_median = zeros(12)
-        total_cumulative_final_resilience_monthly_qup = zeros(12)
-        total_cumulative_final_resilience_monthly_max = zeros(12)
+        total_cumulative_final_resilience_monthly = zeros(12,5)
         ts_by_month = get_monthly_time_steps(2022; time_steps_per_hour=time_steps_per_hour)
         for mth in 1:12
             t0 = Int(ts_by_month[mth][1])
             tf = Int(ts_by_month[mth][end])
-            quartiles = nquantile(total_cumulative_final_resilience[t0:tf], 4)
-            total_cumulative_final_resilience_monthly_min[mth] = round(quartiles[1], digits=6)
-            total_cumulative_final_resilience_monthly_qlow[mth] = round(quartiles[2], digits=6)
-            total_cumulative_final_resilience_monthly_median[mth] = round(quartiles[3], digits=6)
-            total_cumulative_final_resilience_monthly_qup[mth] = round(quartiles[4], digits=6)
-            total_cumulative_final_resilience_monthly_max[mth] = round(quartiles[5], digits=6)
+            total_cumulative_final_resilience_monthly[mth,:] = nquantile(total_cumulative_final_resilience[t0:tf], 4)
         end
     end
     return Dict(
@@ -1399,11 +1386,11 @@ function process_reliability_results(cumulative_results::Matrix, fuel_results::M
 
         "mean_cumulative_survival_final_time_step" => total_cumulative_final_resilience_mean,
         
-        "monthly_min_cumulative_survival_final_time_step" => total_cumulative_final_resilience_monthly_min,
-        "monthly_lower_quartile_cumulative_survival_final_time_step" => total_cumulative_final_resilience_monthly_qlow,
-        "monthly_median_cumulative_survival_final_time_step" => total_cumulative_final_resilience_monthly_median,
-        "monthly_upper_quartile_cumulative_survival_final_time_step" => total_cumulative_final_resilience_monthly_qup,
-        "monthly_max_cumulative_survival_final_time_step" => total_cumulative_final_resilience_monthly_max
+        "monthly_min_cumulative_survival_final_time_step" => total_cumulative_final_resilience_monthly[:,1],
+        "monthly_lower_quartile_cumulative_survival_final_time_step" => total_cumulative_final_resilience_monthly[:,2],
+        "monthly_median_cumulative_survival_final_time_step" => total_cumulative_final_resilience_monthly[:,3],
+        "monthly_upper_quartile_cumulative_survival_final_time_step" => total_cumulative_final_resilience_monthly[:,4],
+        "monthly_max_cumulative_survival_final_time_step" => total_cumulative_final_resilience_monthly[:,5]
 ")
 end
 
