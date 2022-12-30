@@ -33,7 +33,7 @@
 - `size_supplemental_firing_kw` Power capacity of CHP supplementary firing system [kW]
 - `annual_fuel_consumption_mmbtu` Fuel consumed in a year [MMBtu]
 - `annual_electric_production_kwh` Electric energy produced in a year [kWh]
-- `annual_thermal_production_mmbtu` Thermal energy produced in a year (not including waste heat) [MMBtu]
+- `annual_thermal_production_mmbtu` Thermal energy produced in a year (not including curtailed thermal) [MMBtu]
 - `electric_production_series_kw` Electric power production time-series array [kW]
 - `electric_to_grid_series_kw` Electric power exported time-series array [kW]
 - `electric_to_battery_series_kw` Electric power to charge the battery storage time-series array [kW]
