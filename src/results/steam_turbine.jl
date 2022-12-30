@@ -36,9 +36,9 @@
 - `thermal_consumption_series_mmbtu_per_hour` Thermal (steam) energy consumption series [MMBtu/hr]
 - `electric_production_series_kw` Electric power production series [kW]
 - `electric_to_grid_series_kw` Electric power exported to grid series [kW]
-- `electric_to_battery_series_kw` Electric power to charge the battery series [kW]
+- `electric_to_storage_series_kw` Electric power to charge the battery series [kW]
 - `electric_to_load_series_kw` Electric power to serve load series [kW]
-- `thermal_to_tes_series_mmbtu_per_hour` Thermal production to charge the HotThermalStorage series [MMBtu/hr]
+- `thermal_to_storage_series_mmbtu_per_hour` Thermal production to charge the HotThermalStorage series [MMBtu/hr]
 - `thermal_to_load_series_mmbtu_per_hour` Thermal production to serve the heating load SERVICES [MMBtu/hr]
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
@@ -82,7 +82,7 @@ function add_steam_turbine_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
 	else
 		SteamTurbinetoBatt = zeros(length(p.time_steps))
 	end
-	r["electric_to_battery_series_kw"] = round.(value.(SteamTurbinetoBatt), digits=3)
+	r["electric_to_storage_series_kw"] = round.(value.(SteamTurbinetoBatt), digits=3)
 	@expression(m, SteamTurbinetoLoad[ts in p.time_steps],
 		sum(m[Symbol("dvRatedProduction"*_n)][t, ts] * p.production_factor[t, ts]
 			for t in p.techs.steam_turbine) - SteamTurbinetoBatt[ts] - SteamTurbinetoGrid[ts])
@@ -93,7 +93,7 @@ function add_steam_turbine_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
 	else
 		SteamTurbinetoHotTESKW = zeros(length(p.time_steps))
 	end
-	r["thermal_to_tes_series_mmbtu_per_hour"] = round.(value.(SteamTurbinetoHotTESKW) ./ KWH_PER_MMBTU, digits=5)
+	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(SteamTurbinetoHotTESKW) ./ KWH_PER_MMBTU, digits=5)
 	@expression(m, SteamTurbineThermalToLoadKW[ts in p.time_steps],
 		sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.techs.steam_turbine) - SteamTurbinetoHotTESKW[ts])
 	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(SteamTurbineThermalToLoadKW) ./ KWH_PER_MMBTU, digits=5)

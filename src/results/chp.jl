@@ -36,9 +36,9 @@
 - `annual_thermal_production_mmbtu` Thermal energy produced in a year (not including curtailed thermal) [MMBtu]
 - `electric_production_series_kw` Electric power production time-series array [kW]
 - `electric_to_grid_series_kw` Electric power exported time-series array [kW]
-- `electric_to_battery_series_kw` Electric power to charge the battery storage time-series array [kW]
+- `electric_to_storage_series_kw` Electric power to charge the battery storage time-series array [kW]
 - `electric_to_load_series_kw` Electric power to serve the electric load time-series array [kW]
-- `thermal_to_tes_series_mmbtu_per_hour` Thermal power to TES time-series array [MMBtu/hr]
+- `thermal_to_storage_series_mmbtu_per_hour` Thermal power to TES time-series array [MMBtu/hr]
 - `thermal_curtailed_series_mmbtu_per_hour` Thermal power wasted/unused/vented time-series array [MMBtu/hr]
 - `thermal_to_load_series_mmbtu_per_hour` Thermal power to serve the heating load time-series array [MMBtu/hr]
 - `thermal_to_steamturbine_series_mmbtu_per_hour` Thermal (steam) power to steam turbine time-series array [MMBtu/hr]
@@ -91,7 +91,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	else
 		CHPtoBatt = zeros(length(p.time_steps))
 	end
-	r["electric_to_battery_series_kw"] = round.(value.(CHPtoBatt), digits=3)
+	r["electric_to_storage_series_kw"] = round.(value.(CHPtoBatt), digits=3)
 	@expression(m, CHPtoLoad[ts in p.time_steps],
 		sum(m[Symbol("dvRatedProduction"*_n)][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
 			for t in p.techs.chp) - CHPtoBatt[ts] - CHPtoGrid[ts])
@@ -103,7 +103,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	else 
 		CHPtoHotTES = zeros(length(p.time_steps))
 	end
-	r["thermal_to_tes_series_mmbtu_per_hour"] = round.(value.(CHPtoHotTES / KWH_PER_MMBTU), digits=5)
+	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(CHPtoHotTES / KWH_PER_MMBTU), digits=5)
 	@expression(m, CHPThermalToWasteKW[ts in p.time_steps],
 		sum(m[Symbol("dvProductionToWaste"*_n)][t,ts] for t in p.techs.chp))
 	r["thermal_curtailed_series_mmbtu_per_hour"] = round.(value.(CHPThermalToWasteKW) / KWH_PER_MMBTU, digits=5)

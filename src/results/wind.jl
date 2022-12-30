@@ -32,7 +32,7 @@
 - `size_kw` Optimal Wind capacity [kW]
 - `lifecycle_om_cost_after_tax` Lifecycle operations and maintenance cost in present value, after tax
 - `year_one_om_cost_before_tax` Operations and maintenance cost in the first year, before tax benefits
-- `electric_to_battery_series_kw` Vector of power used to charge the battery over an average year
+- `electric_to_storage_series_kw` Vector of power used to charge the battery over an average year
 - `electric_to_grid_series_kw` Vector of power exported to the grid over an average year
 - `annual_energy_exported_kwh` Average annual energy exported to the grid
 - `electric_to_load_series_kw` Vector of power used to meet load over an average year
@@ -62,7 +62,7 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	else
 		WindToStorage = zeros(length(p.time_steps))
 	end
-	r["electric_to_battery_series_kw"] = round.(value.(WindToStorage), digits=3)
+	r["electric_to_storage_series_kw"] = round.(value.(WindToStorage), digits=3)
 
     r["annual_energy_exported_kwh"] = 0.0
     if !isempty(p.s.electric_tariff.export_bins)
@@ -82,7 +82,7 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	TotalHourlyWindProd = value.(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] for ts in p.time_steps)
 
 	WindToLoad =(TotalHourlyWindProd[ts] 
-			- r["electric_to_battery_series_kw"][ts] 
+			- r["electric_to_storage_series_kw"][ts] 
 			- r["electric_to_grid_series_kw"][ts] 
 			- r["electric_curtailed_series_kw"][ts] for ts in p.time_steps
 	)
