@@ -779,10 +779,10 @@ end
     boiler_fuel_consumption_total_mod_efficiency = boiler_thermal_load_mmbtu_total / inputs.s.existing_boiler.efficiency
 
     # Cooling outputs
-    cooling_elecchl_tons_to_load_series = results["ExistingChiller"]["production_to_load_series_ton"]
-    cooling_elecchl_tons_to_tes_series = results["ExistingChiller"]["production_to_tes_series_ton"]
-    cooling_absorpchl_tons_to_load_series = results["AbsorptionChiller"]["production_to_load_series_ton"]
-    cooling_absorpchl_tons_to_tes_series = results["AbsorptionChiller"]["production_to_tes_series_ton"]
+    cooling_elecchl_tons_to_load_series = results["ExistingChiller"]["thermal_to_load_series_ton"]
+    cooling_elecchl_tons_to_tes_series = results["ExistingChiller"]["thermal_to_tes_series_ton"]
+    cooling_absorpchl_tons_to_load_series = results["AbsorptionChiller"]["thermal_to_load_series_ton"]
+    cooling_absorpchl_tons_to_tes_series = results["AbsorptionChiller"]["thermal_to_tes_series_ton"]
     cooling_tonhour_to_load_tech_total = sum(cooling_elecchl_tons_to_load_series) + sum(cooling_absorpchl_tons_to_load_series)
     cooling_tonhour_to_tes_total = sum(cooling_elecchl_tons_to_tes_series) + sum(cooling_absorpchl_tons_to_tes_series)
     cooling_tes_tons_to_load_series = results["ColdThermalStorage"]["storage_to_load_series_ton"]
