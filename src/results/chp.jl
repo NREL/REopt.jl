@@ -65,12 +65,15 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 		p.hours_per_time_step * sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts]
 			for t in p.techs.chp, ts in p.time_steps))
 	r["annual_electric_production_kwh"] = round(value(Year1CHPElecProd), digits=3)
-	@expression(m, Year1CHPThermalProdKWH,
-		p.hours_per_time_step * sum(m[Symbol("dvThermalProduction"*_n)][t,ts] + 
-        m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] - 
-        m[Symbol("dvProductionToWaste"*_n)][t,ts] 
-            for t in p.techs.chp, ts in p.time_steps))
-	r["annual_thermal_production_mmbtu"] = round(value(Year1CHPThermalProdKWH) / KWH_PER_MMBTU, digits=3)
+	
+	@expression(m, CHPThermalProdKW[ts in p.time_steps],
+		sum(m[Symbol("dvThermalProduction"*_n)][t,ts] + m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] - 
+			m[Symbol("dvProductionToWaste"*_n)][t,ts] for t in p.techs.chp))
+
+	r["thermal_production_series_mmbtu_per_hour"] = round.(value.(CHPThermalProdKW) / KWH_PER_MMBTU, digits=5)
+	
+	r["annual_thermal_production_mmbtu"] = round(p.hours_per_time_step * sum(r["thermal_production_series_mmbtu_per_hour"]), digits=3)
+
 	@expression(m, CHPElecProdTotal[ts in p.time_steps],
 		sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] for t in p.techs.chp))
 	r["electric_production_series_kw"] = round.(value.(CHPElecProdTotal), digits=3)
@@ -118,7 +121,6 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	@expression(m, CHPThermalProdKW[ts in p.time_steps],
 		sum(m[Symbol("dvThermalProduction"*_n)][t,ts] + m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] - 
         m[Symbol("dvProductionToWaste"*_n)][t,ts] for t in p.techs.chp))
-	r["thermal_production_series_mmbtu_per_hour"] = round.(value.(CHPThermalProdKW) / KWH_PER_MMBTU, digits=5)
 	
 	r["year_one_fuel_cost_before_tax"] = round(value(m[:TotalCHPFuelCosts] / p.pwf_fuel["CHP"]), digits=3)                
 	r["lifecycle_fuel_cost_after_tax"] = round(value(m[:TotalCHPFuelCosts]) * p.s.financial.offtaker_tax_rate_fraction, digits=3)
