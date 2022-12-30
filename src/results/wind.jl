@@ -89,7 +89,7 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["production_to_load_series_kw"] = round.(value.(WindToLoad), digits=3)
 
 	AvgWindProd = (sum(TotalHourlyWindProd) * p.hours_per_time_step) * p.levelization_factor[t]
-	r["annual_energy_produced_kwh"] = r["year_one_energy_produced_kwh"]  round(value(AvgWindProd), digits=0)
+	r["annual_energy_produced_kwh"] = round(value(AvgWindProd), digits=0)
 
     r["lcoe_per_kwh"] = calculate_lcoe(p, r, p.s.wind)
 	d[t] = r
