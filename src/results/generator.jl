@@ -37,9 +37,9 @@
 - `lifecycle_fuel_cost_after_tax` Lifecycle fuel cost in present value, after tax
 - `year_one_fuel_cost_before_tax` Fuel cost over the first year, before considering tax benefits
 - `annual_fuel_consumption_gal` Gallons of fuel used in each year
-- `electric_to_storage_series_kw` Vector of power sent to battery in year one
-- `electric_to_grid_series_kw` Vector of power sent to grid in year one
-- `electric_to_load_series_kw` Vector of power sent to load in year one
+- `electric_to_storage_series_kw` Vector of power sent to battery in an average year
+- `electric_to_grid_series_kw` Vector of power sent to grid in an average year
+- `electric_to_load_series_kw` Vector of power sent to load in an average year
 - `annual_energy_produced_kwh` Average annual energy produced over analysis period
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"

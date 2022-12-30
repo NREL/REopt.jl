@@ -38,7 +38,7 @@
 - `electric_to_grid_series_kw` Electric power exported time-series array [kW]
 - `electric_to_storage_series_kw` Electric power to charge the battery storage time-series array [kW]
 - `electric_to_load_series_kw` Electric power to serve the electric load time-series array [kW]
-- `thermal_to_storage_series_mmbtu_per_hour` Thermal power to TES time-series array [MMBtu/hr]
+- `thermal_to_storage_series_mmbtu_per_hour` Thermal power to TES (HotThermalStorage) time-series array [MMBtu/hr]
 - `thermal_curtailed_series_mmbtu_per_hour` Thermal power wasted/unused/vented time-series array [MMBtu/hr]
 - `thermal_to_load_series_mmbtu_per_hour` Thermal power to serve the heating load time-series array [MMBtu/hr]
 - `thermal_to_steamturbine_series_mmbtu_per_hour` Thermal (steam) power to steam turbine time-series array [MMBtu/hr]
