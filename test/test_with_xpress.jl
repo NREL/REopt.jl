@@ -1490,7 +1490,7 @@ end
     results = run_reopt(m, inputs)
     
     thermal_techs = ["ExistingBoiler", "CHP", "SteamTurbine"]
-    thermal_loads = ["load", "tes", "steamturbine", "waste"]  # We don't track AbsorptionChiller thermal consumption by tech
+    thermal_loads = ["load", "storage", "steamturbine", "waste"]  # We don't track AbsorptionChiller thermal consumption by tech
     tech_to_thermal_load = Dict{Any, Any}()
     for tech in thermal_techs
         tech_to_thermal_load[tech] = Dict{Any, Any}()
