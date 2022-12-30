@@ -31,8 +31,8 @@
 `AbsorptionChiller` results keys:
 - `size_kw` # Optimal power capacity size of the absorption chiller system [kW]
 - `size_ton` 
-- `thermal_to_storage_series_ton` 
-- `thermal_to_load_series_ton` 
+- `thermal_to_storage_series_ton` # Thermal production to ColdThermalStorage
+- `thermal_to_load_series_ton` # Thermal production to cooling load
 - `thermal_consumption_series_mmbtu_per_hour`
 - `annual_thermal_consumption_mmbtu`
 - `annual_thermal_production_tonhour`
