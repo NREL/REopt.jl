@@ -29,7 +29,7 @@
 # *********************************************************************************
 """
 `ExistingChiller` results keys:
-- `thermal_to_tes_series_ton` 
+- `thermal_to_storage_series_ton` 
 - `thermal_to_load_series_ton`
 - `year_one_electric_consumption_series`
 - `annual_electric_consumption_kwh`
@@ -42,7 +42,7 @@ function add_existing_chiller_results(m::JuMP.AbstractModel, p::REoptInputs, d::
 	@expression(m, ELECCHLtoTES[ts in p.time_steps],
 		sum(m[:dvProductionToStorage][b,"ExistingChiller",ts] for b in p.s.storage.types.cold)
     )
-	r["thermal_to_tes_series_ton"] = round.(value.(ELECCHLtoTES / KWH_THERMAL_PER_TONHOUR), digits=3)   
+	r["thermal_to_storage_series_ton"] = round.(value.(ELECCHLtoTES / KWH_THERMAL_PER_TONHOUR), digits=3)   
 
 	@expression(m, ELECCHLtoLoad[ts in p.time_steps],
 		sum(m[:dvThermalProduction]["ExistingChiller", ts])

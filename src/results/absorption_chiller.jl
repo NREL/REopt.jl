@@ -31,7 +31,7 @@
 `AbsorptionChiller` results keys:
 - `size_kw` # Optimal power capacity size of the absorption chiller system [kW]
 - `size_ton` 
-- `thermal_to_tes_series_ton` 
+- `thermal_to_storage_series_ton` 
 - `thermal_to_load_series_ton` 
 - `thermal_consumption_series_mmbtu_per_hour`
 - `annual_thermal_consumption_mmbtu`
@@ -55,7 +55,7 @@ function add_absorption_chiller_results(m::JuMP.AbstractModel, p::REoptInputs, d
 	r["size_ton"] = r["size_kw"] / KWH_THERMAL_PER_TONHOUR
 	@expression(m, ABSORPCHLtoTESKW[ts in p.time_steps],
 		sum(m[:dvProductionToStorage][b,t,ts] for b in p.s.storage.types.cold, t in p.techs.absorption_chiller))
-	r["thermal_to_tes_series_ton"] = round.(value.(ABSORPCHLtoTESKW) ./ KWH_THERMAL_PER_TONHOUR, digits=5)
+	r["thermal_to_storage_series_ton"] = round.(value.(ABSORPCHLtoTESKW) ./ KWH_THERMAL_PER_TONHOUR, digits=5)
 	@expression(m, ABSORPCHLtoLoadKW[ts in p.time_steps],
 		sum(m[:dvThermalProduction][t,ts] for t in p.techs.absorption_chiller)
 			- ABSORPCHLtoTESKW[ts]) 

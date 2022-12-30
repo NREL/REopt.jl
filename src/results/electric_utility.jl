@@ -31,7 +31,7 @@
 `ElectricUtility` results keys:
 - `annual_energy_supplied_kwh` Total energy supplied from the grid in an average year.
 - `electric_to_load_series_kw` Vector of power drawn from the grid to serve load.
-- `electric_to_battery_series_kw` Vector of power drawn from the grid to charge the battery.
+- `electric_to_storage_series_kw` Vector of power drawn from the grid to charge the battery.
 - `annual_emissions_tonnes_CO2` # Total tons of CO2 emissions associated with the site's grid-purchased electricity in an average year. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
 - `annual_emissions_tonnes_NOx` # Total tons of NOx emissions associated with the site's grid-purchased electricity in an average year. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
 - `annual_emissions_tonnes_SO2` # Total tons of SO2 emissions associated with the site's grid-purchased electricity in an average year. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
@@ -71,7 +71,7 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
     end
     
     r["electric_to_load_series_kw"] = round.(value.(GridToLoad), digits=3)
-    r["electric_to_battery_series_kw"] = round.(value.(GridToBatt), digits=3)
+    r["electric_to_storage_series_kw"] = round.(value.(GridToBatt), digits=3)
 
     if _n=="" #only output emissions results if not a multinode model
         r["annual_emissions_tonnes_CO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2]*TONNE_PER_LB), digits=2)

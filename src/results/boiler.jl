@@ -34,7 +34,7 @@
 - `annual_fuel_consumption_mmbtu`  # Fuel consumed in a year [MMBtu]
 - `thermal_production_series_mmbtu_per_hour`  # Thermal energy production series [MMBtu/hr]
 - `annual_thermal_production_mmbtu`  # Thermal energy produced in a year [MMBtu]
-- `thermal_to_tes_series_mmbtu_per_hour`  # Thermal power production to HotThermalStorage series [MMBtu/hr]
+- `thermal_to_storage_series_mmbtu_per_hour`  # Thermal power production to HotThermalStorage series [MMBtu/hr]
 - `thermal_to_steamturbine_series_mmbtu_per_hour`  # Thermal power production to SteamTurbine series [MMBtu/hr]
 - `thermal_to_load_series_mmbtu_per_hour`  # Thermal power production to serve the heating load series [MMBtu/hr]
 - `lifecycle_fuel_cost_after_tax`  # Life cycle fuel cost [\$]
@@ -65,7 +65,7 @@ function add_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="
     else
         BoilerToHotTESKW = zeros(length(p.time_steps))
     end
-	r["thermal_to_tes_series_mmbtu_per_hour"] = round.(value.(BoilerToHotTESKW / KWH_PER_MMBTU), digits=3)
+	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(BoilerToHotTESKW / KWH_PER_MMBTU), digits=3)
 
     if !isempty(p.techs.steam_turbine) && p.s.boiler.can_supply_steam_turbine
         @expression(m, BoilerToSteamTurbine[ts in p.time_steps], m[:dvThermalToSteamTurbine]["Boiler",ts])

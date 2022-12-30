@@ -259,7 +259,7 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
     pv_kw_ac_hourly = zeros(length(p.time_steps))
     if "PV" in keys(d)
         pv_kw_ac_hourly = (
-            get(d["PV"], "electric_to_battery_series_kw", zeros(length(p.time_steps)))
+            get(d["PV"], "electric_to_storage_series_kw", zeros(length(p.time_steps)))
           + get(d["PV"], "electric_curtailed_series_kw", zeros(length(p.time_steps)))
           + get(d["PV"], "electric_to_load_series_kw", zeros(length(p.time_steps)))
           + get(d["PV"], "electric_to_grid_series_kw", zeros(length(p.time_steps)))

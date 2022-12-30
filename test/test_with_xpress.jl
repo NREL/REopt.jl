@@ -780,9 +780,9 @@ end
 
     # Cooling outputs
     cooling_elecchl_tons_to_load_series = results["ExistingChiller"]["thermal_to_load_series_ton"]
-    cooling_elecchl_tons_to_tes_series = results["ExistingChiller"]["thermal_to_tes_series_ton"]
+    cooling_elecchl_tons_to_tes_series = results["ExistingChiller"]["thermal_to_storage_series_ton"]
     cooling_absorpchl_tons_to_load_series = results["AbsorptionChiller"]["thermal_to_load_series_ton"]
-    cooling_absorpchl_tons_to_tes_series = results["AbsorptionChiller"]["thermal_to_tes_series_ton"]
+    cooling_absorpchl_tons_to_tes_series = results["AbsorptionChiller"]["thermal_to_storage_series_ton"]
     cooling_tonhour_to_load_tech_total = sum(cooling_elecchl_tons_to_load_series) + sum(cooling_absorpchl_tons_to_load_series)
     cooling_tonhour_to_tes_total = sum(cooling_elecchl_tons_to_tes_series) + sum(cooling_absorpchl_tons_to_tes_series)
     cooling_tes_tons_to_load_series = results["ColdThermalStorage"]["storage_to_load_series_ton"]
@@ -806,9 +806,9 @@ end
     boiler_fuel_consumption_calculated = results["ExistingBoiler"]["annual_fuel_consumption_mmbtu"]
     boiler_thermal_series = results["ExistingBoiler"]["thermal_production_series_mmbtu_per_hour"]
     boiler_to_load_series = results["ExistingBoiler"]["thermal_to_load_series_mmbtu_per_hour"]
-    boiler_thermal_to_tes_series = results["ExistingBoiler"]["thermal_to_tes_series_mmbtu_per_hour"]
+    boiler_thermal_to_tes_series = results["ExistingBoiler"]["thermal_to_storage_series_mmbtu_per_hour"]
     chp_thermal_to_load_series = results["CHP"]["thermal_to_load_series_mmbtu_per_hour"]
-    chp_thermal_to_tes_series = results["CHP"]["thermal_to_tes_series_mmbtu_per_hour"]
+    chp_thermal_to_tes_series = results["CHP"]["thermal_to_storage_series_mmbtu_per_hour"]
     chp_thermal_to_waste_series = results["CHP"]["thermal_curtailed_series_mmbtu_per_hour"]
     absorpchl_thermal_series = results["AbsorptionChiller"]["thermal_consumption_series_mmbtu_per_hour"]
     hot_tes_mmbtu_per_hour_to_load_series = results["HotThermalStorage"]["storage_to_load_series_mmbtu_per_hour"]
