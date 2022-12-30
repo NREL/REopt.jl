@@ -39,10 +39,6 @@
 - `electric_consumption_series_kw`
 - `annual_electric_consumption_kwh`
 
-!!! note "'Series' and 'Annual' energy outputs are average annual"
-	REopt performs load balances using average annual production values for technologies that include degradation. 
-	Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy outputs averaged over the analysis period. 
-
 """
 function add_absorption_chiller_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	# Adds the `AbsorptionChiller` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
