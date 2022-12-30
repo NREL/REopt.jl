@@ -416,8 +416,8 @@ check to make sure that PV does NOT export unless the site load is met first for
     inputs = REoptInputs(s)
     results = run_reopt(model, inputs)
 
-    @test all(x == 0.0 for (i,x) in enumerate(results["ElectricUtility"]["production_to_load_series_kw"][1:744]) 
-              if results["PV"]["production_to_grid_series_kw"][i] > 0)
+    @test all(x == 0.0 for (i,x) in enumerate(results["ElectricUtility"]["electric_to_load_series_kw"][1:744]) 
+              if results["PV"]["electric_to_grid_series_kw"][i] > 0)
 end
 
 @testset "Solar and ElectricStorage w/BAU and degradation" begin
@@ -473,8 +473,8 @@ end
     p = REoptInputs("./scenarios/generator.json")
     results = run_reopt([m1,m2], p)
     @test results["Generator"]["size_kw"] ≈ 8.13 atol=0.01
-    @test (sum(results["Generator"]["production_to_load_series_kw"][i] for i in 1:9) + 
-           sum(results["Generator"]["production_to_load_series_kw"][i] for i in 13:8760)) == 0
+    @test (sum(results["Generator"]["electric_to_load_series_kw"][i] for i in 1:9) + 
+           sum(results["Generator"]["electric_to_load_series_kw"][i] for i in 13:8760)) == 0
     @test results["ElectricLoad"]["bau_critical_load_met"] == false
     @test results["ElectricLoad"]["bau_critical_load_met_time_steps"] == 0
     
@@ -1120,7 +1120,7 @@ end
              f["lifecycle_outage_cost"] + f["lifecycle_MG_upgrade_and_fuel_cost"] - 
              f["lifecycle_production_incentive_after_tax"] ≈ f["lcc"] atol=1.0
 
-    windOR = sum(results["Wind"]["production_to_load_series_kw"]  * post["Wind"]["operating_reserve_required_fraction"])
+    windOR = sum(results["Wind"]["electric_to_load_series_kw"]  * post["Wind"]["operating_reserve_required_fraction"])
     loadOR = sum(post["ElectricLoad"]["loads_kw"] * scen.electric_load.operating_reserve_required_fraction)
     @test sum(results["ElectricLoad"]["offgrid_annual_oper_res_required_series_kwh"]) ≈ loadOR  + windOR atol=1.0
 

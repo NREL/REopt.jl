@@ -37,9 +37,9 @@
 - `lifecycle_fuel_cost_after_tax` Lifecycle fuel cost in present value, after tax
 - `year_one_fuel_cost_before_tax` Fuel cost over the first year, before considering tax benefits
 - `annual_fuel_consumption_gal` Gallons of fuel used in each year
-- `production_to_battery_series_kw` Vector of power sent to battery in year one
-- `production_to_grid_series_kw` Vector of power sent to grid in year one
-- `production_to_load_series_kw` Vector of power sent to load in year one
+- `electric_to_battery_series_kw` Vector of power sent to battery in year one
+- `electric_to_grid_series_kw` Vector of power sent to grid in year one
+- `electric_to_load_series_kw` Vector of power sent to load in year one
 - `annual_energy_produced_kwh` Average annual energy produced over analysis period
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
@@ -73,19 +73,19 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 	else
 		generatorToBatt = zeros(length(p.time_steps))
 	end
-	r["production_to_battery_series_kw"] = round.(value.(generatorToBatt), digits=3)
+	r["electric_to_battery_series_kw"] = round.(value.(generatorToBatt), digits=3)
 
 	generatorToGrid = @expression(m, [ts in p.time_steps],
 		sum(m[:dvProductionToGrid][t, u, ts] for t in p.techs.gen, u in p.export_bins_by_tech[t])
 	)
-	r["production_to_grid_series_kw"] = round.(value.(generatorToGrid), digits=3)
+	r["electric_to_grid_series_kw"] = round.(value.(generatorToGrid), digits=3)
 
 	generatorToLoad = @expression(m, [ts in p.time_steps],
 		sum(m[:dvRatedProduction][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
 			for t in p.techs.gen) -
 			generatorToBatt[ts] - generatorToGrid[ts]
 	)
-	r["production_to_load_series_kw"] = round.(value.(generatorToLoad), digits=3)
+	r["electric_to_load_series_kw"] = round.(value.(generatorToLoad), digits=3)
 
     GeneratorFuelUsed = @expression(m, sum(m[:dvFuelUsage][t, ts] for t in p.techs.gen, ts in p.time_steps) / KWH_PER_GAL_DIESEL)
 	r["annual_fuel_consumption_gal"] = round(value(GeneratorFuelUsed), digits=2)
