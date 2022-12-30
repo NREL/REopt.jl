@@ -40,7 +40,6 @@
 - `production_to_battery_series_kw` Vector of power sent to battery in year one
 - `production_to_grid_series_kw` Vector of power sent to grid in year one
 - `production_to_load_series_kw` Vector of power sent to load in year one
-- `year_one_energy_produced_kwh` Total energy produced in year one # TODO: Remove?
 - `annual_energy_produced_kwh` Average annual energy produced over analysis period
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
@@ -91,11 +90,6 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     GeneratorFuelUsed = @expression(m, sum(m[:dvFuelUsage][t, ts] for t in p.techs.gen, ts in p.time_steps) / KWH_PER_GAL_DIESEL)
 	r["annual_fuel_consumption_gal"] = round(value(GeneratorFuelUsed), digits=2)
 
-	Year1GenProd = @expression(m,
-		p.hours_per_time_step * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts]
-			for t in p.techs.gen, ts in p.time_steps)
-	)
-	r["year_one_energy_produced_kwh"] = round(value(Year1GenProd), digits=0)
 	AverageGenProd = @expression(m,
 		p.hours_per_time_step * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts] *
 		p.levelization_factor[t]

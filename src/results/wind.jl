@@ -36,8 +36,7 @@
 - `production_to_grid_series_kw` Vector of power exported to the grid over an average year
 - `annual_energy_exported_kwh` Average annual energy exported to the grid
 - `production_to_load_series_kw` Vector of power used to meet load over an average year
-- `year_one_energy_produced_kwh` Energy produced over an average year
-- `annual_energy_produced_kwh` Average annual energy produced when accounting for degradation
+- `annual_energy_produced_kwh` Average annual energy produced
 - `lcoe_per_kwh` Levelized Cost of Energy produced by the PV system
 - `production_curtailed_series_kw` Vector of power curtailed over an average year
 
@@ -89,9 +88,8 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	)
 	r["production_to_load_series_kw"] = round.(value.(WindToLoad), digits=3)
 
-	Year1WindProd = (sum(TotalHourlyWindProd) * p.hours_per_time_step)
-	r["year_one_energy_produced_kwh"] = round(value(Year1WindProd), digits=0)
-	r["annual_energy_produced_kwh"] = r["year_one_energy_produced_kwh"] * p.levelization_factor[t]
+	AvgWindProd = (sum(TotalHourlyWindProd) * p.hours_per_time_step) * p.levelization_factor[t]
+	r["annual_energy_produced_kwh"] = r["year_one_energy_produced_kwh"]  round(value(AvgWindProd), digits=0)
 
     r["lcoe_per_kwh"] = calculate_lcoe(p, r, p.s.wind)
 	d[t] = r
