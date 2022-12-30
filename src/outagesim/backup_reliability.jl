@@ -456,10 +456,10 @@ function backup_reliability_inputs(d::Dict, p::REoptInputs; r::Dict = Dict())::D
     pv_kw_ac_hourly = zero_array
     if "PV" in keys(d)
         pv_kw_ac_hourly = (
-            get(d["PV"], "production_to_battery_series_kw", zero_array)
-            + get(d["PV"], "production_curtailed_series_kw", zero_array)
-            + get(d["PV"], "production_to_load_series_kw", zero_array)
-            + get(d["PV"], "production_to_grid_series_kw", zero_array)
+            get(d["PV"], "electric_to_battery_series_kw", zero_array)
+            + get(d["PV"], "electric_curtailed_series_kw", zero_array)
+            + get(d["PV"], "electric_to_load_series_kw", zero_array)
+            + get(d["PV"], "electric_to_grid_series_kw", zero_array)
         )
     end
     if microgrid_only && !Bool(get(d, "PV_upgraded", false))

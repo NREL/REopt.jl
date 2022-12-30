@@ -155,7 +155,7 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("ElectricTariff", "year_one_export_benefit_before_tax"),
         ("ElectricTariff", "year_one_coincident_peak_cost_before_tax"),
         ("ElectricTariff", "lifecycle_coincident_peak_cost_after_tax"),
-        ("ElectricUtility", "production_to_load_series_kw"),  
+        ("ElectricUtility", "electric_to_load_series_kw"),  
         ("ElectricUtility", "annual_energy_supplied_kwh"),
         ("ElectricUtility", "annual_emissions_tonnes_CO2"),
         ("ElectricUtility", "annual_emissions_tonnes_NOx"),

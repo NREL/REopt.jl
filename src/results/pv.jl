@@ -34,10 +34,10 @@
 - `year_one_energy_produced_kwh` Energy produced over the first year
 - `annual_energy_produced_kwh` Average annual energy produced when accounting for degradation
 - `lcoe_per_kwh` Levelized Cost of Energy produced by the PV system
-- `production_to_load_series_kw` Vector of power used to meet load over the first year
-- `production_to_battery_series_kw` Vector of power used to charge the battery over the first year
-- `production_to_grid_series_kw` Vector of power exported to the grid over the first year
-- `production_curtailed_series_kw` Vector of power curtailed over the first year
+- `electric_to_load_series_kw` Vector of power used to meet load over the first year
+- `electric_to_battery_series_kw` Vector of power used to charge the battery over the first year
+- `electric_to_grid_series_kw` Vector of power exported to the grid over the first year
+- `electric_curtailed_series_kw` Vector of power curtailed over the first year
 - `annual_energy_exported_kwh` Average annual energy exported to the grid
 
 !!! warn
@@ -65,27 +65,27 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 		else
 			PVtoBatt = repeat([0], length(p.time_steps))
 		end
-		r["production_to_battery_series_kw"] = round.(value.(PVtoBatt), digits=3)
+		r["electric_to_battery_series_kw"] = round.(value.(PVtoBatt), digits=3)
 
-        r["production_to_grid_series_kw"] = zeros(size(r["production_to_battery_series_kw"]))
+        r["electric_to_grid_series_kw"] = zeros(size(r["electric_to_battery_series_kw"]))
         r["annual_energy_exported_kwh"] = 0.0
         if !isempty(p.s.electric_tariff.export_bins)
             PVtoGrid = @expression(m, [ts in p.time_steps],
                     sum(m[:dvProductionToGrid][t, u, ts] for u in p.export_bins_by_tech[t]))
-            r["production_to_grid_series_kw"] = round.(value.(PVtoGrid), digits=3).data
+            r["electric_to_grid_series_kw"] = round.(value.(PVtoGrid), digits=3).data
 
             r["annual_energy_exported_kwh"] = round(
-                sum(r["production_to_grid_series_kw"]) * p.hours_per_time_step, digits=0)
+                sum(r["electric_to_grid_series_kw"]) * p.hours_per_time_step, digits=0)
         end
 
 		PVtoCUR = (m[Symbol("dvCurtail"*_n)][t, ts] for ts in p.time_steps)
-		r["production_curtailed_series_kw"] = round.(value.(PVtoCUR), digits=3)
+		r["electric_curtailed_series_kw"] = round.(value.(PVtoCUR), digits=3)
 		PVtoLoad = (m[Symbol("dvRatedProduction"*_n)][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
-					- r["production_curtailed_series_kw"][ts]
-					- r["production_to_grid_series_kw"][ts]
-					- r["production_to_battery_series_kw"][ts] for ts in p.time_steps
+					- r["electric_curtailed_series_kw"][ts]
+					- r["electric_to_grid_series_kw"][ts]
+					- r["electric_to_battery_series_kw"][ts] for ts in p.time_steps
 		)
-		r["production_to_load_series_kw"] = round.(value.(PVtoLoad), digits=3)
+		r["electric_to_load_series_kw"] = round.(value.(PVtoLoad), digits=3)
 		Year1PvProd = (sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] for ts in p.time_steps) * p.hours_per_time_step)
 		r["year_one_energy_produced_kwh"] = round(value(Year1PvProd), digits=0)
         r["annual_energy_produced_kwh"] = round(r["year_one_energy_produced_kwh"] * p.levelization_factor[t], digits=2)

@@ -32,13 +32,13 @@
 - `size_kw` Optimal Wind capacity [kW]
 - `lifecycle_om_cost_after_tax` Lifecycle operations and maintenance cost in present value, after tax
 - `year_one_om_cost_before_tax` Operations and maintenance cost in the first year, before tax benefits
-- `production_to_battery_series_kw` Vector of power used to charge the battery over an average year
-- `production_to_grid_series_kw` Vector of power exported to the grid over an average year
+- `electric_to_battery_series_kw` Vector of power used to charge the battery over an average year
+- `electric_to_grid_series_kw` Vector of power exported to the grid over an average year
 - `annual_energy_exported_kwh` Average annual energy exported to the grid
-- `production_to_load_series_kw` Vector of power used to meet load over an average year
+- `electric_to_load_series_kw` Vector of power used to meet load over an average year
 - `annual_energy_produced_kwh` Average annual energy produced
 - `lcoe_per_kwh` Levelized Cost of Energy produced by the PV system
-- `production_curtailed_series_kw` Vector of power curtailed over an average year
+- `electric_curtailed_series_kw` Vector of power curtailed over an average year
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
 	REopt performs load balances using average annual production values for technologies that include degradation. 
@@ -62,31 +62,31 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	else
 		WindToStorage = zeros(length(p.time_steps))
 	end
-	r["production_to_battery_series_kw"] = round.(value.(WindToStorage), digits=3)
+	r["electric_to_battery_series_kw"] = round.(value.(WindToStorage), digits=3)
 
     r["annual_energy_exported_kwh"] = 0.0
     if !isempty(p.s.electric_tariff.export_bins)
         WindToGrid = @expression(m, [ts in p.time_steps],
                 sum(m[:dvProductionToGrid][t, u, ts] for u in p.export_bins_by_tech[t]))
-        r["production_to_grid_series_kw"] = round.(value.(WindToGrid), digits=3).data
+        r["electric_to_grid_series_kw"] = round.(value.(WindToGrid), digits=3).data
         r["annual_energy_exported_kwh"] = round(
-            sum(r["production_to_grid_series_kw"]) * p.hours_per_time_step, digits=0)
+            sum(r["electric_to_grid_series_kw"]) * p.hours_per_time_step, digits=0)
 	else
 		WindToGrid = zeros(length(p.time_steps))
 	end
-	r["production_to_grid_series_kw"] = round.(value.(WindToGrid), digits=3)
+	r["electric_to_grid_series_kw"] = round.(value.(WindToGrid), digits=3)
 	
 	WindToCUR = (m[Symbol("dvCurtail"*_n)][t, ts] for ts in p.time_steps)
-    r["production_curtailed_series_kw"] = round.(value.(WindToCUR), digits=3)
+    r["electric_curtailed_series_kw"] = round.(value.(WindToCUR), digits=3)
 	
 	TotalHourlyWindProd = value.(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] for ts in p.time_steps)
 
 	WindToLoad =(TotalHourlyWindProd[ts] 
-			- r["production_to_battery_series_kw"][ts] 
-			- r["production_to_grid_series_kw"][ts] 
-			- r["production_curtailed_series_kw"][ts] for ts in p.time_steps
+			- r["electric_to_battery_series_kw"][ts] 
+			- r["electric_to_grid_series_kw"][ts] 
+			- r["electric_curtailed_series_kw"][ts] for ts in p.time_steps
 	)
-	r["production_to_load_series_kw"] = round.(value.(WindToLoad), digits=3)
+	r["electric_to_load_series_kw"] = round.(value.(WindToLoad), digits=3)
 
 	AvgWindProd = (sum(TotalHourlyWindProd) * p.hours_per_time_step) * p.levelization_factor[t]
 	r["annual_energy_produced_kwh"] = round(value(AvgWindProd), digits=0)
