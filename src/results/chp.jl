@@ -117,11 +117,6 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
         sum(m[Symbol("dvThermalProduction"*_n)][t,ts] + m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
             for t in p.techs.chp) - CHPtoHotTES[ts] - CHPToSteamTurbineKW[ts] - CHPThermalToWasteKW[ts])
     r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(CHPThermalToLoadKW) / KWH_PER_MMBTU, digits=5)
-    
-	@expression(m, CHPThermalProdKW[ts in p.time_steps],
-		sum(m[Symbol("dvThermalProduction"*_n)][t,ts] + m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] - 
-        m[Symbol("dvProductionToWaste"*_n)][t,ts] for t in p.techs.chp))
-	
 	r["year_one_fuel_cost_before_tax"] = round(value(m[:TotalCHPFuelCosts] / p.pwf_fuel["CHP"]), digits=3)                
 	r["lifecycle_fuel_cost_after_tax"] = round(value(m[:TotalCHPFuelCosts]) * p.s.financial.offtaker_tax_rate_fraction, digits=3)
 	#Standby charges and hourly O&M
