@@ -1370,7 +1370,7 @@ function process_reliability_results(cumulative_results::Matrix, fuel_results::M
         for mth in 1:12
             t0 = Int(ts_by_month[mth][1])
             tf = Int(ts_by_month[mth][end])
-            total_cumulative_final_resilience_monthly[mth,:] = nquantile(total_cumulative_final_resilience[t0:tf], 4)
+            total_cumulative_final_resilience_monthly[mth,:] = quantile(total_cumulative_final_resilience[t0:tf], (0:4)/4)
         end
     end
     return Dict(
