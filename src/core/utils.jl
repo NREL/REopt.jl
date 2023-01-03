@@ -229,6 +229,7 @@ function dictkeys_tosymbols(d::Dict)
                 catch
                     @debug "Unable to convert $k to a Array{Bool, 1}"
                 end
+            end
         end
         d2[Symbol(k)] = v
     end
