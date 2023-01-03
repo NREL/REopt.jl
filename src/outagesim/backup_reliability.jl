@@ -1430,35 +1430,35 @@ function backup_reliability(r::Dict)
 end
 
 
-# """
-# 	backup_reliability(d::Dict, p::REoptInputs, r::Dict)
+"""
+	backup_reliability(d::Dict, p::REoptInputs, r::Dict)
 
-# Return dictionary of backup reliability results.
+Return dictionary of backup reliability results.
 
-# # Arguments
-# - `d::Dict`: REopt results dictionary. 
-# - `p::REoptInputs`: REopt Inputs Struct.
-# - `r::Dict`: Dictionary of inputs for reliability calculations. If r not included then uses all defaults. 
-# Possible keys in r:
-#     -generator_operational_availability::Real = 0.9998      Fraction of year generators not down for maintenance
-#     -generator_failure_to_start::Real = 0.0066              Chance of generator starting given outage
-#     -generator_mean_time_to_failure::Real = 637             Average number of time steps between a generator's failures. 1/(failure to run probability). 
-#     -num_generators::Int = 1                                Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
-#     -generator_size_kw::Real = 0.0                          Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
-#     -num_battery_bins::Int = 101                            Internal value for discretely modeling battery state of charge
-#     -battery_operational_availability::Real = 1.0           Likelihood battery will be available at start of outage       
-#     -pv_operational_availability::Real = 1.0                Likelihood PV will be available at start of outage
-#     -max_outage_duration::Int = 96                          Maximum outage duration modeled
-#     -microgrid_only::Bool = false                           Determines how generator, PV, and battery act during islanded mode
+# Arguments
+- `d::Dict`: REopt results dictionary. 
+- `p::REoptInputs`: REopt Inputs Struct.
+- `r::Dict`: Dictionary of inputs for reliability calculations. If r not included then uses all defaults. 
+Possible keys in r:
+    -generator_operational_availability::Real = 0.9998      Fraction of year generators not down for maintenance
+    -generator_failure_to_start::Real = 0.0066              Chance of generator starting given outage
+    -generator_mean_time_to_failure::Real = 637             Average number of time steps between a generator's failures. 1/(failure to run probability). 
+    -num_generators::Int = 1                                Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
+    -generator_size_kw::Real = 0.0                          Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
+    -num_battery_bins::Int = 101                            Internal value for discretely modeling battery state of charge
+    -battery_operational_availability::Real = 1.0           Likelihood battery will be available at start of outage       
+    -pv_operational_availability::Real = 1.0                Likelihood PV will be available at start of outage
+    -max_outage_duration::Int = 96                          Maximum outage duration modeled
+    -microgrid_only::Bool = false                           Determines how generator, PV, and battery act during islanded mode
 
-# """
-# function backup_reliability(d::Dict, p::REoptInputs, r::Dict)
-#     try
-#         reliability_inputs = backup_reliability_reopt_inputs(d=d, p=p, r=r)    
-#         cumulative_results, fuel_results = return_backup_reliability(; reliability_inputs... )
-#         process_reliability_results(cumulative_results, fuel_results)
-#     catch e
-#         @info e
-#         return Dict()
-#     end
-# end
+"""
+function backup_reliability(d::Dict, p::REoptInputs, r::Dict)
+    try
+        reliability_inputs = backup_reliability_reopt_inputs(d=d, p=p, r=r)    
+        cumulative_results, fuel_results = return_backup_reliability(; reliability_inputs... )
+        process_reliability_results(cumulative_results, fuel_results)
+    catch e
+        @info e
+        return Dict()
+    end
+end

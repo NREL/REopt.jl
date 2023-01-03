@@ -312,24 +312,24 @@ else  # run HiGHS tests
         reliability_inputs = JSON.parsefile("./scenarios/backup_reliability_inputs.json")
         @test backup_reliability(reliability_inputs)["mean_cumulative_survival_final_time_step"] ≈ 0.904242 atol=0.0001
         
-        # for input_key in [
-        #             "generator_size_kw",
-        #             "battery_size_kw",
-        #             "battery_size_kwh",
-        #             "pv_size_kw",
-        #             "critical_loads_kw",
-        #             "pv_production_factor_series"
-        #         ]
-        #     delete!(reliability_inputs, input_key)
-        # end
-        # model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-        #     "output_flag" => false, "log_to_console" => false)
-        # )
-        # p = REoptInputs("./scenarios/backup_reliability_reopt_inputs.json")
-        # results = run_reopt(model, p)
-        # reliability_inputs["use_full_battery_charge"] = true
-        # reliability = backup_reliability(results, p, reliability_inputs)
-        # @test reliability["mean_cumulative_survival_final_time_step"] ≈ 0.817088 atol=0.0001
+        for input_key in [
+                    "generator_size_kw",
+                    "battery_size_kw",
+                    "battery_size_kwh",
+                    "pv_size_kw",
+                    "critical_loads_kw",
+                    "pv_production_factor_series"
+                ]
+            delete!(reliability_inputs, input_key)
+        end
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+            "output_flag" => false, "log_to_console" => false)
+        )
+        p = REoptInputs("./scenarios/backup_reliability_reopt_inputs.json")
+        results = run_reopt(model, p)
+        reliability_inputs["use_full_battery_charge"] = true
+        reliability = backup_reliability(results, p, reliability_inputs)
+        @test reliability["mean_cumulative_survival_final_time_step"] ≈ 0.817088 atol=0.0001
     end                            
 
     # removed Wind test for two reasons
