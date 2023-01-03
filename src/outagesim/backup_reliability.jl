@@ -1268,7 +1268,7 @@ function return_backup_reliability(;
     
     #Four systems are 1) no PV + no battery, 2) PV + battery, 3) PV + no battery, and 4) no PV + battery
     system_characteristics = Dict(
-        "gen"        => Dict(
+        "gen" => Dict(
             "probability" => 1,
             "net_critical_loads_kw" => critical_loads_kw,
             "battery_size_kw" => 0,
@@ -1278,12 +1278,12 @@ function return_backup_reliability(;
             "net_critical_loads_kw" => net_critical_loads_kw,
             "battery_size_kw" => battery_size_kw,
             "battery_size_kwh" => battery_size_kwh),
-        "gen_battery"   => Dict(
+        "gen_battery" => Dict(
             "probability" => 0,
             "net_critical_loads_kw" => critical_loads_kw,
             "battery_size_kw" => battery_size_kw,
             "battery_size_kwh" => battery_size_kwh),
-        "gen_pv"   => Dict(
+        "gen_pv" => Dict(
             "probability" => 0,
             "net_critical_loads_kw" => net_critical_loads_kw,
             "battery_size_kw" => 0,
