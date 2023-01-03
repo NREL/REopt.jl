@@ -1397,40 +1397,6 @@ end
 
 
 """
-	backup_reliability(r::Dict)
-
-Return dictionary of backup reliability results.
-
-# Arguments
-- `r::Dict`: Dictionary of inputs for reliability calculations. If r not included then uses all defaults. 
-Possible keys in r:
--critical_loads_kw::Array                               Critical loads per time step. (Required input)
--microgrid_only::Bool                                   Boolean to check if only microgrid runs during grid outage (defaults to false)
--chp_size_kw::Real                                      CHP capacity. 
--pv_size_kw::Real                                       Size of PV System
--pv_production_factor_series::Array                     PV production factor per time step (required if pv_size_kw in dictionary)
--pv_migrogrid_upgraded::Bool                            If true then PV runs during outage if microgrid_only = TRUE (defaults to false)
--battery_size_kw::Real                                  Battery capacity. If no battery installed then PV disconnects from system during outage
--battery_size_kwh::Real                                 Battery energy storage capacity
--charge_efficiency::Real                                Battery charge efficiency
--discharge_efficiency::Real                             Battery discharge efficiency
--battery_starting_soc_series_fraction::Array            Battery percent state of charge time series during normal grid-connected usage
--generator_failure_to_start::Real = 0.0066              Chance of generator starting given outage
--generator_mean_time_to_failure::Real = 637             Average number of time steps between a generator's failures. 1/(failure to run probability). 
--num_generators::Int = 1                                Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
--generator_size_kw::Real = 0.0                          Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
--num_battery_bins::Int = 101                            Internal value for discretely modeling battery state of charge
--max_outage_duration::Int = 96                          Maximum outage duration modeled
-
-"""
-function backup_reliability(r::Dict)
-    reliability_inputs = backup_reliability_inputs(r=r)
-	cumulative_results, fuel_results = return_backup_reliability(; reliability_inputs... )
-	process_reliability_results(cumulative_results, fuel_results)
-end
-
-
-"""
 	backup_reliability(d::Dict, p::REoptInputs, r::Dict)
 
 Return dictionary of backup reliability results.
@@ -1461,4 +1427,38 @@ function backup_reliability(d::Dict, p::REoptInputs, r::Dict)
         @info e
         return Dict()
     end
+end
+
+
+"""
+	backup_reliability(r::Dict)
+
+Return dictionary of backup reliability results.
+
+# Arguments
+- `r::Dict`: Dictionary of inputs for reliability calculations. If r not included then uses all defaults. 
+Possible keys in r:
+-critical_loads_kw::Array                               Critical loads per time step. (Required input)
+-microgrid_only::Bool                                   Boolean to check if only microgrid runs during grid outage (defaults to false)
+-chp_size_kw::Real                                      CHP capacity. 
+-pv_size_kw::Real                                       Size of PV System
+-pv_production_factor_series::Array                     PV production factor per time step (required if pv_size_kw in dictionary)
+-pv_migrogrid_upgraded::Bool                            If true then PV runs during outage if microgrid_only = TRUE (defaults to false)
+-battery_size_kw::Real                                  Battery capacity. If no battery installed then PV disconnects from system during outage
+-battery_size_kwh::Real                                 Battery energy storage capacity
+-charge_efficiency::Real                                Battery charge efficiency
+-discharge_efficiency::Real                             Battery discharge efficiency
+-battery_starting_soc_series_fraction::Array            Battery percent state of charge time series during normal grid-connected usage
+-generator_failure_to_start::Real = 0.0066              Chance of generator starting given outage
+-generator_mean_time_to_failure::Real = 637             Average number of time steps between a generator's failures. 1/(failure to run probability). 
+-num_generators::Int = 1                                Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
+-generator_size_kw::Real = 0.0                          Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
+-num_battery_bins::Int = 101                            Internal value for discretely modeling battery state of charge
+-max_outage_duration::Int = 96                          Maximum outage duration modeled
+
+"""
+function backup_reliability(r::Dict)
+    reliability_inputs = backup_reliability_inputs(r=r)
+	cumulative_results, fuel_results = return_backup_reliability(; reliability_inputs... )
+	process_reliability_results(cumulative_results, fuel_results)
 end
