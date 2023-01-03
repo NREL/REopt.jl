@@ -182,9 +182,12 @@ function dictkeys_tosymbols(d::Dict)
                 "emissions_factor_series_lb_NOx_per_kwh", 
                 "emissions_factor_series_lb_SO2_per_kwh",
                 "emissions_factor_series_lb_PM25_per_kwh",
-                "pv_production_factor", "battery_starting_soc_series_fraction", #for ERP
+                #for ERP
+                "pv_production_factor_series", "battery_starting_soc_series_fraction",
                 "generator_size_kw", "generator_operational_availability",
-                "generator_failure_to_start", "generator_mean_time_to_failure"
+                "generator_failure_to_start", "generator_mean_time_to_failure",
+                "generator_fuel_intercept_per_hr", "generator_fuel_burn_rate_per_kwh",
+                "fuel_avail_gal"
                 ] && !isnothing(v)
                 try
                     v = convert(Array{Real, 1}, v)
@@ -220,6 +223,12 @@ function dictkeys_tosymbols(d::Dict)
                     @debug "Unable to convert $k to a Array{Int64, 1}"
                 end
             end
+            if k in ["fuel_avail_gal_is_per_generator"] #for ERP
+                try
+                    v = convert(Array{Bool, 1}, v)
+                catch
+                    @debug "Unable to convert $k to a Array{Bool, 1}"
+                end
         end
         d2[Symbol(k)] = v
     end
