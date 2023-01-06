@@ -79,7 +79,7 @@ else  # run HiGHS tests
 
         @test results["PV"]["size_kw"] ≈ 70.3084 atol=0.01
         @test results["Financial"]["lcc"] ≈ 430747.0 rtol=1e-5 # with levelization_factor hack the LCC is within 5e-5 of REopt API LCC
-        @test all(x == 0.0 for x in results["PV"]["year_one_to_load_series_kw"][1:744])
+        @test all(x == 0.0 for x in results["PV"]["electric_to_load_series_kw"][1:744])
     end
 
     @testset "Blended tariff" begin
@@ -109,8 +109,8 @@ else  # run HiGHS tests
         )
         results = run_reopt(model, "./scenarios/generator.json")
         @test results["Generator"]["size_kw"] ≈ 8.13 atol=0.01
-        @test (sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 1:9) + 
-            sum(results["Generator"]["year_one_to_load_series_kw"][i] for i in 13:8760)) == 0
+        @test (sum(results["Generator"]["electric_to_load_series_kw"][i] for i in 1:9) + 
+            sum(results["Generator"]["electric_to_load_series_kw"][i] for i in 13:8760)) == 0
         p = REoptInputs("./scenarios/generator.json")
         simresults = simulate_outages(results, p)
         @test simresults["resilience_hours_max"] == 11
