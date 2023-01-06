@@ -31,15 +31,12 @@
 """
 `AbsorptionChiller` is an optional REopt input with the following keys and default values:
 ```julia
-    thermal_consumption_hot_water_or_steam::Union{String, Nothing} = nothing
-    chp_prime_mover::String = ""
+    thermal_consumption_hot_water_or_steam::Union{String, Nothing} = nothing  # Defaults to "hot_water" if chp_prime_mover or boiler_type are not provided
+    chp_prime_mover::String = ""  # Informs thermal_consumption_hot_water_or_steam if not provided
 
-    #Required if neither "thermal_consumption_hot_water_or_steam" nor "chp_prime_mover" nor an ExistingBoiler included in inputs:
+    # Defaults for fields below are dependent on thermal_consumption_hot_water_or_steam and max cooling load
     installed_cost_per_ton::Union{Float64, Nothing} = nothing
     om_cost_per_ton::Union{Float64, Nothing} = nothing
-
-
-    #Optional
     min_ton::Float64 = 0.0,
     max_ton::Float64 = BIG_NUMBER,
     cop_thermal::Union{Float64, Nothing} = nothing,
@@ -49,12 +46,14 @@
     macrs_bonus_fraction::Float64 = 0
 ```
 
-!!! note "Required inputs"
-    To model AbsorptionChiller, you must provide at least one of the following: (i) `thermal_consumption_hot_water_or_steam` from $(HOT_WATER_OR_STEAM), (ii) 
-    (ii), `chp_prime_mover` from $(PRIME_MOVERS),or (iii) all of the "custom inputs" defined below.
-    If prime_mover is provided, any missing value from the "custom inputs" will be populated from data/absorption_chiller/defaults.json, 
-    based on the `thermal_consumption_hot_water_or_steam` or `prime_mover`. boiler_type is "steam" if `prime_mover` is "combustion_turbine" 
-    and is "hot_water" for all other `prime_mover` types.
+!!! Note
+    To model AbsorptionChiller, there is logic which informs defaults for costs and COP: 
+    (i) `thermal_consumption_hot_water_or_steam` from $(HOT_WATER_OR_STEAM), 
+    (ii) `chp_prime_mover` from $(PRIME_MOVERS), or 
+    (iii) if (i) and (ii) are not provided, the default `thermal_consumption_hot_water_or_steam` is `hot_water`
+    The defaults for costs and COP will be populated from data/absorption_chiller/defaults.json, 
+    based on the `thermal_consumption_hot_water_or_steam` or `chp_prime_mover`. 
+    `boiler_type` is "steam" if `prime_mover` is "combustion_turbine" and is "hot_water" for all other `chp_prime_mover` types.
 """
 Base.@kwdef mutable struct AbsorptionChiller <: AbstractThermalTech
     thermal_consumption_hot_water_or_steam::Union{String, Nothing} = nothing

@@ -49,8 +49,8 @@ check to make sure that PV does NOT export unless the site load is met first for
     inputs = REoptInputs(s)
     results = run_reopt(model, inputs)
 
-    @test all(x == 0.0 for (i,x) in enumerate(results["ElectricUtility"]["year_one_to_load_series_kw"][1:744]) 
-              if results["PV"]["year_one_to_grid_series_kw"][i] > 0)
+    @test all(x == 0.0 for (i,x) in enumerate(results["ElectricUtility"]["electric_to_load_series_kw"][1:744]) 
+              if results["PV"]["electric_to_grid_series_kw"][i] > 0)
 end
 
 

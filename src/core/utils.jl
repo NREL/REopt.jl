@@ -70,8 +70,7 @@ function annuity_escalation(analysis_period::Int, rate_escalation::Real, rate_di
 end
 
 
-function levelization_factor(years::Int, rate_escalation::Real, rate_discount::Real, 
-    rate_degradation::Real)
+function levelization_factor(years::Int, rate_escalation::Real, rate_discount::Real, rate_degradation::Real)
     #=
     NOTE: levelization_factor for an electricity producing tech is the ratio of:
     - an annuity with an escalation rate equal to the electricity cost escalation rate, starting year 1,
