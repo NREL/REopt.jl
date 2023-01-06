@@ -23,6 +23,13 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2022-12-19
+### Changed
+- Major name change overall for outputs/results. Changed energy-related outputs with "year_one" in name to "annual" to reflect that they are actually average annual output values. Changed any "average_annual" naming to "annual" to simplify. Changed `to_tes` and `to_battery` outputs to `to_storage` for consistency
+### Added 
+- Added **thermal_production_series_mmbtu_per_hour** to CHP results. 
+### Removed 
+- Removed `Wind` and `Generator` outputs `year_one_energy_produced_kwh` since these techs do not include degradation
 ## v0.23.0
 ### Added
 - Add **REoptLogger** type of global logger with a standard out to the console and to a dictionary
