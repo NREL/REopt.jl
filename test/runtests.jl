@@ -244,7 +244,7 @@ else  # run HiGHS tests
             "battery_size_kw" => 1,
             "battery_charge_efficiency" => 1,
             "battery_discharge_efficiency" => 1,
-            "battery_minimum_soc" => 0)
+            "battery_minimum_soc_fraction" => 0)
         
 
 
@@ -287,7 +287,7 @@ else  # run HiGHS tests
             "battery_size_kw" => 1,
             "battery_charge_efficiency" => 1,
             "battery_discharge_efficiency" => 1,
-            "battery_minimum_soc" => 0)
+            "battery_minimum_soc_fraction" => 0)
 
         @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.557056
 
@@ -306,7 +306,7 @@ else  # run HiGHS tests
             "battery_size_kw" => 100,
             "battery_charge_efficiency" => 1,
             "battery_discharge_efficiency" => 1,
-            "battery_minimum_soc" => 0)
+            "battery_minimum_soc_fraction" => 0)
 
         reliability_results = backup_reliability(input_dict)
         @test reliability_results["unlimited_fuel_mean_cumulative_survival_by_duration"][24] ≈ (0.99^20)*(0.9*0.98) atol=0.00001
@@ -319,10 +319,10 @@ else  # run HiGHS tests
                     "generator_size_kw",
                     "battery_size_kw",
                     "battery_size_kwh",
+                    "battery_minimum_soc_fraction",
                     "pv_size_kw",
                     "critical_loads_kw",
-                    "pv_production_factor_series",
-                    "battery_minimum_soc"
+                    "pv_production_factor_series"
                 ]
             delete!(reliability_inputs, input_key)
         end
