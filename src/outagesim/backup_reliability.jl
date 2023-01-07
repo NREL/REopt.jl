@@ -856,13 +856,11 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         init_soc = get(d["ElectricStorage"], "year_one_soc_series_fraction", [])
         battery_starting_soc_kwh = init_soc .* battery_size_kwh
         
-        if haskey(r2, :battery_minimum_soc) 
-            battery_minimum_soc_kwh = battery_size_kwh * r2[:battery_minimum_soc]
-            r2[:battery_size_kwh] = battery_size_kwh - battery_minimum_soc_kwh
-            r2[:battery_starting_soc_kwh] = battery_starting_soc_kwh .- battery_minimum_soc_kwh
-            if minimum(r2[:battery_starting_soc_kwh]) < 0
-                @warn("Some battery starting states of charge are less than the provided minimum state of charge.")
-            end
+        battery_minimum_soc_kwh = battery_size_kwh * get(r2, :battery_minimum_soc, 0)
+        r2[:battery_size_kwh] = battery_size_kwh - battery_minimum_soc_kwh
+        r2[:battery_starting_soc_kwh] = battery_starting_soc_kwh .- battery_minimum_soc_kwh
+        if minimum(r2[:battery_starting_soc_kwh]) < 0
+            @warn("Some battery starting states of charge are less than the provided minimum state of charge.")
         end
     end
     
