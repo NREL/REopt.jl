@@ -812,7 +812,7 @@ Return a dictionary of inputs required for backup reliability calculations.
     -num_battery_bins::Int = 101                            Internal value for discretely modeling battery state of charge
     -max_outage_duration::Int = 96                          Maximum outage time step modeled
     -microgrid_only::Bool = false                           Boolean to specify if only microgrid upgraded technologies run during grid outage
-    -battery_minimum_soc_fraction::Real = 0.0                        The minimum battery state of charge (represented as a fraction) allowed during outages.
+    -battery_minimum_soc_fraction::Real = 0.0               The minimum battery state of charge (represented as a fraction) allowed during outages.
     -fuel_limit:Union{Real, Vector{<:Real}} = Inf           Amount of fuel available, either by generator type or per generator, depending on fuel_limit_is_per_generator. Change generator_fuel_burn_rate_per_kwh for different fuel efficiencies. Fuel units should be consistent with generator_fuel_intercept_per_hr and generator_fuel_burn_rate_per_kwh.
     -generator_fuel_intercept_per_hr::Union{Real, Vector{<:Real}} = 0.0         Amount of fuel burned each time step while idling. Fuel units should be consistent with fuel_limit and generator_fuel_burn_rate_per_kwh.
     -fuel_limit_is_per_generator::Union{Bool, Vector{Bool}} = false             Boolean to determine whether fuel limit is given per generator or per generator type
@@ -856,7 +856,10 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         init_soc = get(d["ElectricStorage"], "year_one_soc_series_fraction", [])
         battery_starting_soc_kwh = init_soc .* battery_size_kwh
         
+        @info p.s.storage.attr["ElectricStorage"].soc_min_fraction
         battery_minimum_soc_kwh = battery_size_kwh * get(r2, :battery_minimum_soc_fraction, 0)
+        @info battery_size_kwh
+        @info battery_minimum_soc_kwh
         r2[:battery_size_kwh] = battery_size_kwh - battery_minimum_soc_kwh
         r2[:battery_starting_soc_kwh] = battery_starting_soc_kwh .- battery_minimum_soc_kwh
         if minimum(r2[:battery_starting_soc_kwh]) < 0
@@ -922,7 +925,7 @@ Return a dictionary of inputs required for backup reliability calculations.
     -charge_efficiency::Real                                Battery charge efficiency
     -discharge_efficiency::Real                             Battery discharge efficiency
     -battery_starting_soc_series_fraction                   Battery state of charge in each time step (if not input then defaults to battery size)
-    -battery_minimum_soc_fraction = 0.0                              The minimum battery state of charge (represented as a fraction) allowed during outages.
+    -battery_minimum_soc_fraction = 0.0                     The minimum battery state of charge (represented as a fraction) allowed during outages.
     -generator_operational_availability= 0.9998             Likelihood generator being available in given time step
     -generator_failure_to_start::Real = 0.0066              Chance of generator starting given outage
     -generator_mean_time_to_failure::Real = 637             Average number of time steps between a generator's failures. 1/(failure to run probability). 
