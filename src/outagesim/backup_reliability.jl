@@ -856,10 +856,7 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         init_soc = get(d["ElectricStorage"], "year_one_soc_series_fraction", [])
         battery_starting_soc_kwh = init_soc .* battery_size_kwh
         
-        @info p.s.storage.attr["ElectricStorage"].soc_min_fraction
         battery_minimum_soc_kwh = battery_size_kwh * get(r2, :battery_minimum_soc_fraction, 0)
-        @info battery_size_kwh
-        @info battery_minimum_soc_kwh
         r2[:battery_size_kwh] = battery_size_kwh - battery_minimum_soc_kwh
         r2[:battery_starting_soc_kwh] = battery_starting_soc_kwh .- battery_minimum_soc_kwh
         if minimum(r2[:battery_starting_soc_kwh]) < 0
