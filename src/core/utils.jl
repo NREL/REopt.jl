@@ -182,7 +182,7 @@ function dictkeys_tosymbols(d::Dict)
             "emissions_factor_series_lb_PM25_per_kwh",
             #for ERP
             "pv_production_factor_series", "battery_starting_soc_series_fraction"
-            ] && !isnothing(v)
+        ] && !isnothing(v)
             try
                 v = convert(Array{Real, 1}, v)
             catch
@@ -208,13 +208,21 @@ function dictkeys_tosymbols(d::Dict)
             end
         end
         if k in [
-            "outage_start_time_steps", "outage_durations", 
-            "num_generators" #for ERP
+            "outage_start_time_steps", "outage_durations"
         ]
             try
                 v = convert(Array{Int64, 1}, v)
             catch
                 throw(@error("Unable to convert $k to a Array{Int64, 1}"))
+            end
+        end
+        if k in [
+            "fuel_limit_is_per_generator" #for ERP
+        ]
+            try
+                v = convert(Array{Bool, 1}, v)
+            catch
+                throw(@error("Unable to convert $k to a Array{Bool, 1}"))
             end
         end
         if k in [
@@ -224,23 +232,26 @@ function dictkeys_tosymbols(d::Dict)
             "generator_failure_to_start", "generator_mean_time_to_failure",
             "generator_fuel_intercept_per_hr", "generator_fuel_burn_rate_per_kwh",
             "fuel_limit"
-            ] && !isnothing(v)
+        ] && !isnothing(v)
             #if not a Real try to convert to an Array{Real} 
             if !(typeof(v) <: Real)
                 try
-                    if typeof(v) <: Array
-                        v = convert(Array{Real, 1}, v)
-                    end
+                    v = convert(Array{Real, 1}, v)
                 catch
                     throw(@error("Unable to convert $k to a Array{Real, 1} or Real"))
                 end
             end
         end
-        if k in ["fuel_limit_is_per_generator"] #for ERP
-            try
-                v = convert(Array{Bool, 1}, v)
-            catch
-                throw(@error("Unable to convert $k to a Array{Bool, 1}"))
+        if k in [
+            "num_generators" #for ERP
+        ]
+            #if not a Real try to convert to an Array{Real} 
+            if !(typeof(v) <: Int)
+                try
+                    v = convert(Array{Int64, 1}, v)
+                catch
+                    throw(@error("Unable to convert $k to a Array{Int64, 1} or Int"))
+                end
             end
         end
         d2[Symbol(k)] = v
