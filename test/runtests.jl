@@ -232,7 +232,7 @@ else  # run HiGHS tests
     @testset "Backup Generator Reliability" begin
         input_dict = Dict(
             "critical_loads_kw" => [1,2,2,1],
-            "battery_starting_soc_series_fraction" => [0.5,0.5,0.5,0.5],
+            "battery_starting_soc_series_fraction" => [0.75,0.75,0.75,0.75],
             "max_outage_duration" => 3,
             "num_generators" => 2, "generator_size_kw" => 1,
             "generator_operational_availability" => 1,
@@ -240,11 +240,11 @@ else  # run HiGHS tests
             "generator_mean_time_to_failure" => 5,
             "battery_operational_availability" => 1,
             "num_battery_bins" => 3,
-            "battery_size_kwh" => 2,
+            "battery_size_kwh" => 4,
             "battery_size_kw" => 1,
             "battery_charge_efficiency" => 1,
             "battery_discharge_efficiency" => 1,
-            "battery_minimum_soc_fraction" => 0)
+            "battery_minimum_soc_fraction" => 0.5)
         
 
 
