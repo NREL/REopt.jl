@@ -91,12 +91,12 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
     emissions_factor_lb_PM25_per_mmbtu::Float64 = FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"][fuel_type]
 ```
 
-!!! note defaults and "Required inputs"
+!!! note "Defaults and required inputs"
     See the `get_chp_defaults_prime_mover_size_class()` function docstring for details on the logic of choosing the type of CHP that is modeled
     If no information is provided, the default `prime_mover` is `recip_engine` and the `size_class` is 1 which represents
     the widest range of sizes available.
 
-    `fuel_cost_per_mmbtu` is always required
+    `fuel_cost_per_mmbtu` is always required and can be a scalar, a list of 12 monthly values, or a time series of values for every time step
 
 """
 Base.@kwdef mutable struct CHP <: AbstractCHP
@@ -172,7 +172,7 @@ function CHP(d::Dict;
 
     # Check for required fuel cost
     if !haskey(d, "fuel_cost_per_mmbtu")
-        throw(@error "CHP must have the required fuel_cost_per_mmbtu input")
+        throw(@error("CHP must have the required fuel_cost_per_mmbtu input"))
     end
     # Create CHP struct from inputs, to be mutated as needed
     chp = CHP(; dictkeys_tosymbols(d)...)
@@ -200,7 +200,7 @@ function CHP(d::Dict;
             @warn "Ignoring `chp.tech_sizes_for_cost_curve` input because `chp.installed_cost_per_kw` is a scalar"
         end
     elseif length(chp.installed_cost_per_kw) > 1 && length(chp.installed_cost_per_kw) != length(chp.tech_sizes_for_cost_curve)
-        throw(@error "To model CHP cost curve, you must provide `chp.tech_sizes_for_cost_curve` vector of equal length to `chp.installed_cost_per_kw`")
+        throw(@error("To model CHP cost curve, you must provide `chp.tech_sizes_for_cost_curve` vector of equal length to `chp.installed_cost_per_kw`"))
     elseif isempty(chp.tech_sizes_for_cost_curve) && isempty(chp.installed_cost_per_kw)
         update_installed_cost_params = true
     elseif isempty(chp.prime_mover)
@@ -333,13 +333,13 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
     # Inputs validation
     if !isnothing(prime_mover)
         if !(prime_mover in prime_movers)  # Validate user-entered hot_water_or_steam
-            throw(@error "Invalid argument for `prime_mover`; must be in $prime_movers")
+            throw(@error("Invalid argument for `prime_mover`; must be in $prime_movers"))
         end
     end
 
     if !isnothing(hot_water_or_steam)  # Option 1 if prime_mover also not input
         if !(hot_water_or_steam in ["hot_water", "steam"])  # Validate user-entered hot_water_or_steam
-            throw(@error "Invalid argument for `hot_water_or_steam``; must be `hot_water` or `steam`")
+            throw(@error("Invalid argument for `hot_water_or_steam``; must be `hot_water` or `steam`"))
         end
     else  # Options 2, 3, or 4
         hot_water_or_steam = "hot_water"
@@ -347,14 +347,14 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
 
     if !isnothing(avg_boiler_fuel_load_mmbtu_per_hour)  # Option 1
         if avg_boiler_fuel_load_mmbtu_per_hour <= 0
-            throw(@error "avg_boiler_fuel_load_mmbtu_per_hour must be >= 0.0")
+            throw(@error("avg_boiler_fuel_load_mmbtu_per_hour must be >= 0.0"))
         end
     end
 
     if !isnothing(size_class) && !isnothing(prime_mover) # Option 3
         n_classes = length(prime_mover_defaults_all[prime_mover]["installed_cost_per_kw"])
-        if size_class < 1 || size_class >= n_classes
-            throw(@error "The size class input is outside the valid range of 1-$n_classes for prime_mover $prime_mover")
+        if size_class < 1 || size_class > n_classes
+            throw(@error("The size class $size_class input is outside the valid range of 1 to $n_classes for prime_mover $prime_mover"))
         end
     end
 
@@ -397,8 +397,8 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
 
     # If size class is specified use that and ignore heuristic CHP sizing for determining size class
     if !isnothing(size_class)
-        if size_class < 1 || size_class >= n_classes
-            throw(@error "The size class input is outside the valid range of 1-$n_classes for prime_mover $prime_mover")
+        if size_class < 1 || size_class > n_classes
+            throw(@error("The size class $size_class input is outside the valid range of 1 to $n_classes for prime_mover $prime_mover"))
         end
     # If size class is not specified, heuristic sizing based on avg thermal load and size class 0 efficiencies
     elseif isnothing(size_class) && !isnothing(chp_elec_size_heuristic_kw)

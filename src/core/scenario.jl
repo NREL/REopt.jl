@@ -84,6 +84,9 @@ All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which ca
     handle conversion of Vector of Vectors from JSON to a Matrix in Julia).
 """
 function Scenario(d::Dict; flex_hvac_from_json=false)
+
+    instantiate_logger()
+
     d = deepcopy(d)
     if haskey(d, "Settings")
         settings = Settings(;dictkeys_tosymbols(d["Settings"])...)
@@ -98,7 +101,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         offgrid_allowed_keys = ["PV", "Wind", "ElectricStorage", "Generator", "Settings", "Site", "Financial", "ElectricLoad", "ElectricTariff", "ElectricUtility"]
         unallowed_keys = setdiff(keys(d), offgrid_allowed_keys) 
         if !isempty(unallowed_keys)
-            error("Currently, only PV, ElectricStorage, and Generator can be modeled when off_grid_flag is true. Cannot model $unallowed_keys.")
+            throw(@error("The following key(s) are not permitted when `off_grid_flag` is true: $unallowed_keys."))
         end
     end
     
@@ -116,7 +119,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             push!(pvs, PV(;dictkeys_tosymbols(d["PV"])..., off_grid_flag = settings.off_grid_flag, 
                         latitude=site.latitude))
         else
-            error("PV input must be Dict or Dict[].")
+            throw(@error("PV input must be Dict or Dict[]."))
         end
     end
 
@@ -148,7 +151,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                         )
     elseif settings.off_grid_flag 
         if haskey(d, "ElectricUtility")
-            @warn "ElectricUtility inputs are not applicable when off_grid_flag is true and any ElectricUtility inputs will be ignored. For off-grid scenarios, a year-long outage will always be modeled."
+            @warn "ElectricUtility inputs are not applicable when `off_grid_flag` is true and will be ignored. For off-grid scenarios, a year-long outage will always be modeled."
         end
         electric_utility = ElectricUtility(; outage_start_time_step = 1, 
                                             outage_end_time_step = settings.time_steps_per_hour * 8760, 
@@ -191,7 +194,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                         )
     else # if ElectricTariff inputs supplied for off-grid, will not be applied. 
         if haskey(d, "ElectricTariff")
-            @warn "ElectricTariff inputs are not applicable when off_grid_flag is true, and will be ignored."
+            @warn "ElectricTariff inputs are not applicable when `off_grid_flag` is true, and will be ignored."
         end
         electric_tariff = ElectricTariff(;  blended_annual_energy_rate = 0.0, 
                                             blended_annual_demand_rate = 0.0,
@@ -378,11 +381,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         if length(cooling_elec_too_high_timesteps) > 0
             cooling_elec_too_high_kw = cooling_elec[cooling_elec_too_high_timesteps]
             total_elec_when_cooling_elec_too_high = electric_load.loads_kw[cooling_elec_too_high_timesteps]
-            error("Cooling electric consumption cannot be more than the total electric load at any time step. At time steps 
+            throw(@error("Cooling electric consumption cannot be more than the total electric load at any time step. At time steps 
                 $cooling_elec_too_high_timesteps the cooling electric consumption is $cooling_elec_too_high_kw (kW) and
                 the total electric load is $total_elec_when_cooling_elec_too_high (kW). Note you may consider adjusting 
                 cooling load input versus the total electric load if you provided inputs in units of cooling tons, or 
-                check the electric chiller COP input value.")
+                check the electric chiller COP input value."))
         end
     else
         cooling_load = CoolingLoad(; 
@@ -425,7 +428,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             get_ghpghx_from_input = true
         end        
     elseif haskey(d, "GHP") && !haskey(d["GHP"],"building_sqft")
-        error("If evaluating GHP you must enter a building_sqft")
+        throw(@error("If evaluating GHP you must enter a building_sqft."))
     end
     # Modify Heating and Cooling loads for GHP retrofit to account for HVAC VAV efficiency gains
     if eval_ghp
@@ -460,16 +463,16 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 r = HTTP.get(url)
                 response = JSON.parse(String(r.body))
                 if r.status != 200
-                    error("Bad response from PVWatts: $(response["errors"])")
+                    throw(@error("Bad response from PVWatts: $(response["errors"])"))
                 end
                 @info "PVWatts success."
                 temp_c = get(response["outputs"], "tamb", [])
                 if length(temp_c) != 8760 || isempty(temp_c)
-                    @error "PVWatts did not return a valid temperature profile. Got $temp_c"
+                    throw(@error("PVWatts did not return a valid temperature profile. Got $temp_c"))
                 end
                 ambient_temperature_f = temp_c * 1.8 .+ 32.0
             catch e
-                @error "Error occurred when calling PVWatts: $e"
+                throw(@error("Error occurred when calling PVWatts: $e"))
             end
         end
         
@@ -510,8 +513,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     JSON.print(f, ghpghx_response)
                 end
             catch
-                error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
-                    loaded (using GhpGhx) to the active Julia environment")
+                throw(@error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
+                    loaded (using GhpGhx) to the active Julia environment"))
             end                
         end
     # If ghpghx_responses is included in inputs, do NOT run GhpGhx.jl model and use already-run ghpghx result as input to REopt

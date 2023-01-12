@@ -58,19 +58,19 @@ function get_production_factor(pv::PV, latitude::Real, longitude::Real; timefram
         r = HTTP.get(url)
         response = JSON.parse(String(r.body))
         if r.status != 200
-            error("Bad response from PVWatts: $(response["errors"])")
+            throw(@error("Bad response from PVWatts: $(response["errors"])"))
         end
         @info "PVWatts success."
         watts = collect(get(response["outputs"], "ac", []) / 1000)  # scale to 1 kW system (* 1 kW / 1000 W)
         if length(watts) != 8760
-            @error "PVWatts did not return a valid production factor. Got $watts"
+            throw(@error("PVWatts did not return a valid production factor. Got $watts"))
         end
         if time_steps_per_hour > 1
             watts = repeat(watts, inner=time_steps_per_hour)
         end
         return watts
     catch e
-        @error "Error occurred when calling PVWatts: $e"
+        throw(@error("Error occurred when calling PVWatts: $e"))
     end
 end
 
@@ -132,17 +132,17 @@ function get_production_factor(wind::Wind, latitude::Real, longitude::Real, time
                 @info "Querying Wind Toolkit for resource data ..."
                 r = HTTP.get(url; retries=5)
                 if r.status != 200
-                    error("Bad response from Wind Toolkit: $(response["errors"])")
+                    throw(@error("Bad response from Wind Toolkit: $(response["errors"])"))
                 end
                 @info "Wind Toolkit success."
 
                 resource = readdlm(IOBuffer(String(r.body)), ',', Float64, '\n'; skipstart=5);
                 # columns: Temperature, Pressure, Speed, Direction (C, atm, m/s, Degrees)
                 if size(resource) != (8760, 4)
-                    @error "Wind Toolkit did not return valid resource data. Got an array with size $(size(resource))"
+                    throw(@error("Wind Toolkit did not return valid resource data. Got an array with size $(size(resource))"))
                 end
             catch e
-                @error "Error occurred when calling Wind Toolkit: $e"
+                throw(@error("Error occurred when calling Wind Toolkit: $e"))
             end
             push!(resources, resource)
         end
@@ -192,8 +192,8 @@ function get_production_factor(wind::Wind, latitude::Real, longitude::Real, time
         elseif Sys.iswindows()
             libfile = "ssc.dll"
         else
-            @error """Unsupported platform for using the SAM Wind module. 
-                      You can alternatively provide the Wind.production_factor_series"""
+            throw(@error("Unsupported platform for using the SAM Wind module. 
+                      You can alternatively provide the Wind `prod_factor_series`"))
         end
 
         global hdl = joinpath(@__DIR__, "..", "sam", libfile)
@@ -290,7 +290,7 @@ function get_production_factor(wind::Wind, latitude::Real, longitude::Real, time
             try
                 msg = unsafe_string(msg_ptr)
             finally
-                @error("SAM Wind simulation error: $msg")
+                throw(@error("SAM Wind simulation error: $msg"))
             end
         end
 
@@ -304,12 +304,11 @@ function get_production_factor(wind::Wind, latitude::Real, longitude::Real, time
         @ccall hdl.ssc_data_free(data::Ptr{Cvoid})::Cvoid
 
     catch e
-        @error "Problem calling SAM C library!"
-        showerror(stdout, e)
+        throw(@error("Problem calling SAM C library! $e"))
     end
 
     if !(length(sam_prodfactor) == 8760)
-        @error "Wind production factor from SAM has length $(length(sam_prodfactor)) (should be 8760)."
+        throw(@error("Wind production factor from SAM has length $(length(sam_prodfactor)) (should be 8760)."))
     end
 
     @assert !(nothing in sam_prodfactor) "Did not get complete Wind production factor from SAM."

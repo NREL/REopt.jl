@@ -29,11 +29,12 @@
 # *********************************************************************************
 """
 `ExistingChiller` results keys:
-- `year_one_to_tes_series_ton` 
-- `year_one_to_load_series_ton`
+- `thermal_to_storage_series_ton` # Thermal production to ColdThermalStorage
+- `thermal_to_load_series_ton` # Thermal production to cooling load
 - `year_one_electric_consumption_series`
-- `year_one_electric_consumption_kwh`
-- `year_one_thermal_production_tonhour`
+- `annual_electric_consumption_kwh`
+- `annual_thermal_production_tonhour`
+
 """
 function add_existing_chiller_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
@@ -41,30 +42,30 @@ function add_existing_chiller_results(m::JuMP.AbstractModel, p::REoptInputs, d::
 	@expression(m, ELECCHLtoTES[ts in p.time_steps],
 		sum(m[:dvProductionToStorage][b,"ExistingChiller",ts] for b in p.s.storage.types.cold)
     )
-	r["year_one_to_tes_series_ton"] = round.(value.(ELECCHLtoTES / KWH_THERMAL_PER_TONHOUR), digits=3)   
+	r["thermal_to_storage_series_ton"] = round.(value.(ELECCHLtoTES / KWH_THERMAL_PER_TONHOUR), digits=3)   
 
 	@expression(m, ELECCHLtoLoad[ts in p.time_steps],
 		sum(m[:dvThermalProduction]["ExistingChiller", ts])
 			- ELECCHLtoTES[ts]
     )
-	r["year_one_to_load_series_ton"] = round.(value.(ELECCHLtoLoad / KWH_THERMAL_PER_TONHOUR).data, digits=3)
+	r["thermal_to_load_series_ton"] = round.(value.(ELECCHLtoLoad / KWH_THERMAL_PER_TONHOUR).data, digits=3)
 
 	@expression(m, ELECCHLElecConsumptionSeries[ts in p.time_steps],
 		sum(m[:dvThermalProduction]["ExistingChiller", ts] / p.cop["ExistingChiller"])
     )
-	r["year_one_electric_consumption_series_kw"] = round.(value.(ELECCHLElecConsumptionSeries).data, digits=3)
+	r["electric_consumption_series_kw"] = round.(value.(ELECCHLElecConsumptionSeries).data, digits=3)
 
 	@expression(m, Year1ELECCHLElecConsumption,
 		p.hours_per_time_step * sum(m[:dvThermalProduction]["ExistingChiller", ts] / p.cop["ExistingChiller"]
 			for ts in p.time_steps)
     )
-	r["year_one_electric_consumption_kwh"] = round(value(Year1ELECCHLElecConsumption), digits=3)
+	r["annual_electric_consumption_kwh"] = round(value(Year1ELECCHLElecConsumption), digits=3)
 
 	@expression(m, Year1ELECCHLThermalProd,
 		p.hours_per_time_step * sum(m[:dvThermalProduction]["ExistingChiller", ts]
 			for ts in p.time_steps)
     )
-	r["year_one_thermal_production_tonhour"] = round(value(Year1ELECCHLThermalProd / KWH_THERMAL_PER_TONHOUR), digits=3)
+	r["annual_thermal_production_tonhour"] = round(value(Year1ELECCHLThermalProd / KWH_THERMAL_PER_TONHOUR), digits=3)
 
     d["ExistingChiller"] = r
 	nothing

@@ -826,25 +826,23 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
     r2[:time_steps_per_hour] = 1 / p.hours_per_time_step
     microgrid_only = get(r, "microgrid_only", false)
 
-    if !(
+    if haskey(d, "PV") && !(
             microgrid_only && 
             !Bool(get(d, "PV_upgraded", false))
-        ) && 
-        haskey(d, "PV")
+        ) 
         pv_kw_ac_time_series = (
-            get(d["PV"], "year_one_to_battery_series_kw", zero_array)
-            + get(d["PV"], "year_one_curtailed_production_series_kw", zero_array)
-            + get(d["PV"], "year_one_to_load_series_kw", zero_array)
-            + get(d["PV"], "year_one_to_grid_series_kw", zero_array)
+            get(d["PV"], "electric_to_storage_series_kw", zero_array)
+            + get(d["PV"], "electric_curtailed_series_kw", zero_array)
+            + get(d["PV"], "electric_to_load_series_kw", zero_array)
+            + get(d["PV"], "electric_to_grid_series_kw", zero_array)
         )
         r2[:pv_kw_ac_time_series] = pv_kw_ac_time_series
     end
 
-    if !(
+    if haskey(d, "ElectricStorage") && !(
         microgrid_only && 
         !Bool(get(d, "Storage_upgraded", false))
-    ) && 
-    haskey(d, "ElectricStorage")
+    )
         r2[:battery_charge_efficiency] = p.s.storage.attr["ElectricStorage"].charge_efficiency
         r2[:battery_discharge_efficiency] = p.s.storage.attr["ElectricStorage"].discharge_efficiency
         r2[:battery_size_kw] = get(d["ElectricStorage"], "size_kw", 0)
@@ -853,7 +851,7 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         battery_size_kwh = get(d["ElectricStorage"], "size_kwh", 0)
         
 
-        init_soc = get(d["ElectricStorage"], "year_one_soc_series_fraction", [])
+        init_soc = get(d["ElectricStorage"], "soc_series_fraction", [])
         battery_starting_soc_kwh = init_soc .* battery_size_kwh
         
         battery_minimum_soc_kwh = battery_size_kwh * get(r2, :battery_minimum_soc_fraction, 0)
