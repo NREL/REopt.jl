@@ -325,7 +325,7 @@ struct ElectricStorage <: AbstractElectricStorage
         if s.model_degradation
             if haskey(d, :replace_cost_per_kw) && d[:replace_cost_per_kw] != 0.0 || 
                 haskey(d, :replace_cost_per_kwh) && d[:replace_cost_per_kwh] != 0.0
-                @warn "Setting ElectricStorage replacement costs to zero. \nUsing degradation.maintenance_cost_per_kwh instead."
+                @warn "Setting ElectricStorage replacement costs to zero. Using degradation.maintenance_cost_per_kwh instead."
             end
             replace_cost_per_kw = 0.0
             replace_cost_per_kwh = 0.0

@@ -1,7 +1,7 @@
 name = "REopt"
 uuid = "d36ad4e8-d74a-4f7a-ace1-eaea049febf6"
 authors = ["Nick Laws", "Hallie Dunham <hallie.dunham@nrel.gov>", "Bill Becker <william.becker@nrel.gov>", "Bhavesh Rathod <bhavesh.rathod@nrel.gov>", "Alex Zolan <alexander.aolan@nrel.gov>", "Amanda Farthing <amanda.farthing@nrel.gov>"]
-version = "0.22.0"
+version = "0.24.0"
 
 [deps]
 ArchGDAL = "c9ce4bd3-c3d5-55b8-8973-c0e20141b8c3"
@@ -23,8 +23,8 @@ TestEnv = "1e6cf692-eddd-4d53-88a5-2d735e33781b"
 
 [compat]
 ArchGDAL = "0.8, 0.9"
-HTTP = "0.8, 0.9"
-JLD = "0.13.2"
+HTTP = "0.8, 0.9, 1"
+JLD = "0.13"
 JSON = "0.21"
 JuMP = "0.21, 0.22, 0.23, 1"
 LinDistFlow = "0.1, 0.2"
