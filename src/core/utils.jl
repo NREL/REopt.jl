@@ -185,7 +185,7 @@ function dictkeys_tosymbols(d::Dict)
             "generator_size_kw", "generator_operational_availability",
             "generator_failure_to_start", "generator_mean_time_to_failure",
             "generator_fuel_intercept_per_hr", "generator_fuel_burn_rate_per_kwh",
-            "fuel_avail_gal"
+            "fuel_limit"
             ] && !isnothing(v)
             try
                 v = convert(Array{Real, 1}, v)
@@ -235,7 +235,7 @@ function dictkeys_tosymbols(d::Dict)
                 end
             end
         end
-        if k in ["fuel_avail_gal_is_per_generator"] #for ERP
+        if k in ["fuel_limit_is_per_generator"] #for ERP
             try
                 v = convert(Array{Bool, 1}, v)
             catch
