@@ -313,27 +313,32 @@ else  # run HiGHS tests
 
         #More realistic case of hospital load with 2 generators, PV, and battery
         reliability_inputs = JSON.parsefile("./scenarios/backup_reliability_inputs.json")
-        @test backup_reliability(reliability_inputs)["mean_cumulative_survival_final_time_step"] ≈ 0.904242 atol=0.0001
+        reliability_results = backup_reliability(reliability_inputs)
+        @test reliability_results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.858756 atol=0.0001
+        @test reliability_results["cumulative_survival_final_time_step"][1] ≈ 0.858756 atol=0.0001
+        @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.904242 atol=0.0001#0.833224
         
         for input_key in [
                     "generator_size_kw",
                     "battery_size_kw",
                     "battery_size_kwh",
-                    "battery_minimum_soc_fraction",
                     "pv_size_kw",
                     "critical_loads_kw",
                     "pv_production_factor_series"
                 ]
             delete!(reliability_inputs, input_key)
         end
+
         model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
             "output_flag" => false, "log_to_console" => false)
         )
         p = REoptInputs("./scenarios/backup_reliability_reopt_inputs.json")
         results = run_reopt(model, p)
-        reliability_inputs["use_full_battery_charge"] = true
-        reliability = backup_reliability(results, p, reliability_inputs)
-        @test reliability["mean_cumulative_survival_final_time_step"] ≈ 0.817088 atol=0.0001
+        reliability_results = backup_reliability(results, p, reliability_inputs)
+
+        @test reliability_results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.802997 atol=0.0001
+        @test reliability_results["cumulative_survival_final_time_step"][1] ≈ 0.802997 atol=0.0001
+        @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.817088 atol=0.0001
     end                            
 
     # removed Wind test for two reasons
