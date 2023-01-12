@@ -181,11 +181,7 @@ function dictkeys_tosymbols(d::Dict)
             "emissions_factor_series_lb_SO2_per_kwh",
             "emissions_factor_series_lb_PM25_per_kwh",
             #for ERP
-            "pv_production_factor_series", "battery_starting_soc_series_fraction",
-            "generator_size_kw", "generator_operational_availability",
-            "generator_failure_to_start", "generator_mean_time_to_failure",
-            "generator_fuel_intercept_per_hr", "generator_fuel_burn_rate_per_kwh",
-            "fuel_limit"
+            "pv_production_factor_series", "battery_starting_soc_series_fraction"
             ] && !isnothing(v)
             try
                 v = convert(Array{Real, 1}, v)
@@ -222,7 +218,12 @@ function dictkeys_tosymbols(d::Dict)
             end
         end
         if k in [
-            "fuel_cost_per_mmbtu", "wholesale_rate"
+            "fuel_cost_per_mmbtu", "wholesale_rate",
+            # for ERP
+            "generator_size_kw", "generator_operational_availability",
+            "generator_failure_to_start", "generator_mean_time_to_failure",
+            "generator_fuel_intercept_per_hr", "generator_fuel_burn_rate_per_kwh",
+            "fuel_limit"
             ] && !isnothing(v)
             #if not a Real try to convert to an Array{Real} 
             if !(typeof(v) <: Real)
