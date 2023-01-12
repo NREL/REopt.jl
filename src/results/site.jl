@@ -36,14 +36,14 @@ Site results:
 - `annual_renewable_electricity_kwh`
 - `renewable_electricity_fraction`
 - `total_renewable_energy_fraction`
-- `year_one_emissions_tonnes_CO2`
-- `year_one_emissions_tonnes_NOx`
-- `year_one_emissions_tonnes_SO2`
-- `year_one_emissions_tonnes_PM25`
-- `year_one_emissions_from_fuelburn_tonnes_CO2`
-- `year_one_emissions_from_fuelburn_tonnes_NOx`
-- `year_one_emissions_from_fuelburn_tonnes_SO2`
-- `year_one_emissions_from_fuelburn_tonnes_PM25`
+- `annual_emissions_tonnes_CO2`
+- `annual_emissions_tonnes_NOx`
+- `annual_emissions_tonnes_SO2`
+- `annual_emissions_tonnes_PM25`
+- `annual_emissions_from_fuelburn_tonnes_CO2`
+- `annual_emissions_from_fuelburn_tonnes_NOx`
+- `annual_emissions_from_fuelburn_tonnes_SO2`
+- `annual_emissions_from_fuelburn_tonnes_PM25`
 - `lifecycle_emissions_tonnes_CO2`
 - `lifecycle_emissions_tonnes_NOx`
 - `lifecycle_emissions_tonnes_SO2`
@@ -55,6 +55,11 @@ Site results:
 
 calculated in combine_results function if BAU scenario is run:
 - `lifecycle_emissions_reduction_CO2_fraction`
+
+!!! note "'Series' and 'Annual' energy and emissions outputs are average annual"
+	REopt performs load balances using average annual production values for technologies that include degradation. 
+	Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy and emissions outputs averaged over the analysis period. 
+
 
 """
 function add_site_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
@@ -69,15 +74,15 @@ function add_site_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["total_renewable_energy_fraction"] = round(value(m[:AnnualRETotkWh])/value(m[:AnnualTotkWh]), digits=6)
 	
 	# Year 1 Emissions results at Site level
-	r["year_one_emissions_tonnes_CO2"] = round(value(m[:EmissionsYr1_Total_LbsCO2] * TONNE_PER_LB), digits=2)
-	r["year_one_emissions_tonnes_NOx"] = round(value(m[:EmissionsYr1_Total_LbsNOx] * TONNE_PER_LB), digits=2)
-	r["year_one_emissions_tonnes_SO2"] = round(value(m[:EmissionsYr1_Total_LbsSO2] * TONNE_PER_LB), digits=2)
-	r["year_one_emissions_tonnes_PM25"] = round(value(m[:EmissionsYr1_Total_LbsPM25] * TONNE_PER_LB), digits=2)
+	r["annual_emissions_tonnes_CO2"] = round(value(m[:EmissionsYr1_Total_LbsCO2] * TONNE_PER_LB), digits=2)
+	r["annual_emissions_tonnes_NOx"] = round(value(m[:EmissionsYr1_Total_LbsNOx] * TONNE_PER_LB), digits=2)
+	r["annual_emissions_tonnes_SO2"] = round(value(m[:EmissionsYr1_Total_LbsSO2] * TONNE_PER_LB), digits=2)
+	r["annual_emissions_tonnes_PM25"] = round(value(m[:EmissionsYr1_Total_LbsPM25] * TONNE_PER_LB), digits=2)
 
-	r["year_one_emissions_from_fuelburn_tonnes_CO2"] = round(value(m[:yr1_emissions_onsite_fuel_lbs_CO2] * TONNE_PER_LB), digits=2)
-	r["year_one_emissions_from_fuelburn_tonnes_NOx"] = round(value(m[:yr1_emissions_onsite_fuel_lbs_NOx] * TONNE_PER_LB), digits=2)
-	r["year_one_emissions_from_fuelburn_tonnes_SO2"] = round(value(m[:yr1_emissions_onsite_fuel_lbs_SO2] * TONNE_PER_LB), digits=2)
-	r["year_one_emissions_from_fuelburn_tonnes_PM25"] = round(value(m[:yr1_emissions_onsite_fuel_lbs_PM25] * TONNE_PER_LB), digits=2)
+	r["annual_emissions_from_fuelburn_tonnes_CO2"] = round(value(m[:yr1_emissions_onsite_fuel_lbs_CO2] * TONNE_PER_LB), digits=2)
+	r["annual_emissions_from_fuelburn_tonnes_NOx"] = round(value(m[:yr1_emissions_onsite_fuel_lbs_NOx] * TONNE_PER_LB), digits=2)
+	r["annual_emissions_from_fuelburn_tonnes_SO2"] = round(value(m[:yr1_emissions_onsite_fuel_lbs_SO2] * TONNE_PER_LB), digits=2)
+	r["annual_emissions_from_fuelburn_tonnes_PM25"] = round(value(m[:yr1_emissions_onsite_fuel_lbs_PM25] * TONNE_PER_LB), digits=2)
 
 	# Lifecycle emissions results at Site level
 	if !isnothing(p.s.site.bau_emissions_lb_CO2_per_year)

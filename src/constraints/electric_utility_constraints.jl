@@ -72,8 +72,8 @@ function add_export_constraints(m, p; _n="")
             end
         else
             if !(isempty(_n))
-                @error """Binaries decisions for net metering capacity limit is not implemented for multinode models to keep 
-                            them linear. Please set the net metering limit to zero or equal to the interconnection limit."""
+                throw(@error("Binaries decisions for net metering capacity limit is not implemented for multinode models to keep 
+                            them linear. Please set the net metering limit to zero or equal to the interconnection limit."))
             end
 
             binNEM = @variable(m, binary = true)

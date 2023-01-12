@@ -35,7 +35,17 @@ Return REoptInputs(s) where s in `Scenario` defined in dict `d`.
 """
 
 function REoptInputs(d::Dict)
-    REoptInputs(Scenario(d))
+
+	# Keep try catch to support API v3 call to `REoptInputs`
+	try
+		REoptInputs(Scenario(d))
+	catch e
+		if isnothing(e) # Error thrown by REopt
+			handle_errors()
+		else
+			handle_errors(e, stacktrace(catch_backtrace()))
+		end
+	end
 end
 
 """
@@ -44,8 +54,17 @@ end
 Solve the model using the `Scenario` defined in JSON file stored at the file path `fp`.
 """
 function run_reopt(m::JuMP.AbstractModel, fp::String)
-	s = Scenario(JSON.parsefile(fp))
-	run_reopt(m, REoptInputs(s))
+
+	try
+		s = Scenario(JSON.parsefile(fp))
+		run_reopt(m, REoptInputs(s))
+	catch e
+		if isnothing(e) # Error thrown by REopt
+			handle_errors()
+		else
+			handle_errors(e, stacktrace(catch_backtrace()))
+		end
+	end
 end
 
 
@@ -55,8 +74,17 @@ end
 Solve the model using the `Scenario` defined in dict `d`.
 """
 function run_reopt(m::JuMP.AbstractModel, d::Dict)
-	s = Scenario(d)
-	run_reopt(m, REoptInputs(s))
+
+	try
+		s = Scenario(d)
+		run_reopt(m, REoptInputs(s))
+	catch e
+		if isnothing(e) # Error thrown by REopt
+			handle_errors()
+		else
+			handle_errors(e, stacktrace(catch_backtrace()))
+		end
+	end
 end
 
 
@@ -66,10 +94,19 @@ end
 Solve the model using a `Scenario` or `BAUScenario`.
 """
 function run_reopt(m::JuMP.AbstractModel, s::AbstractScenario)
-	if s.site.CO2_emissions_reduction_min_fraction > 0.0 || s.site.CO2_emissions_reduction_max_fraction < 1.0
-		error("To constrain CO2 emissions reduction min or max percentages, the optimal and business as usual scenarios must be run in parallel. Use a version of run_reopt() that takes an array of two models.")
+	
+	try
+		if s.site.CO2_emissions_reduction_min_fraction > 0.0 || s.site.CO2_emissions_reduction_max_fraction < 1.0
+			throw(@error("To constrain CO2 emissions reduction min or max percentages, the optimal and business as usual scenarios must be run in parallel. Use a version of run_reopt() that takes an array of two models."))
+		end
+		run_reopt(m, REoptInputs(s))
+	catch e
+		if isnothing(e) # Error thrown by REopt
+			handle_errors()
+		else
+			handle_errors(e, stacktrace(catch_backtrace()))
+		end
 	end
-	run_reopt(m, REoptInputs(s))
 end
 
 
@@ -80,7 +117,7 @@ Method for use with Threads when running BAU in parallel with optimal scenario.
 """
 function run_reopt(t::Tuple{JuMP.AbstractModel, AbstractInputs})
 	run_reopt(t[1], t[2]; organize_pvs=false)
-    # must organize_pvs after adding proforma results
+	# must organize_pvs after adding proforma results
 end
 
 
@@ -91,7 +128,7 @@ Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) m
 JSON file at the filepath `fp`.
 """
 function run_reopt(ms::AbstractArray{T, 1}, fp::String) where T <: JuMP.AbstractModel
-    d = JSON.parsefile(fp)
+	d = JSON.parsefile(fp)
     run_reopt(ms, d)
 end
 
@@ -102,16 +139,24 @@ end
 Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) models in `ms` and inputs from `d`.
 """
 function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractModel
-    s = Scenario(d)
-    if s.settings.off_grid_flag
-        @warn "Only using first Model and not running BAU case because Settings.off_grid_flag == true. The BAU scenario is not applicable for off-grid microgrids."
-	    results = run_reopt(ms[1], s)
-        return results
-    end
 
-    run_reopt(ms, REoptInputs(s))
+	try
+		s = Scenario(d)
+		if s.settings.off_grid_flag
+			@warn "Only using first Model and not running BAU case because `off_grid_flag` is true. The BAU scenario is not applicable for off-grid microgrids."
+			results = run_reopt(ms[1], s)
+			return results
+		end
+	
+		run_reopt(ms, REoptInputs(s))		
+	catch e
+		if isnothing(e) # Error thrown by REopt
+			handle_errors()
+		else
+			handle_errors(e, stacktrace(catch_backtrace()))
+		end
+	end
 end
-
 
 """
     run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.AbstractModel
@@ -119,22 +164,31 @@ end
 Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) models in `ms` and inputs from `p`.
 """
 function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.AbstractModel
-    bau_inputs = BAUInputs(p)
-    inputs = ((ms[1], bau_inputs), (ms[2], p))
-    rs = Any[0, 0]
-    Threads.@threads for i = 1:2
-        rs[i] = run_reopt(inputs[i])
-    end
-	if typeof(rs[1]) <: Dict && typeof(rs[2]) <: Dict
-		# TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
-		results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
-		results_dict["Financial"] = merge(results_dict["Financial"], proforma_results(p, results_dict))
-		if !isempty(p.techs.pv)
-			organize_multiple_pv_results(p, results_dict)
+
+	try
+		bau_inputs = BAUInputs(p)
+		inputs = ((ms[1], bau_inputs), (ms[2], p))
+		rs = Any[0, 0]
+		Threads.@threads for i = 1:2
+			rs[i] = run_reopt(inputs[i])
 		end
-		return results_dict
-	else
-		return rs
+		if typeof(rs[1]) <: Dict && typeof(rs[2]) <: Dict
+			# TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
+			results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
+			results_dict["Financial"] = merge(results_dict["Financial"], proforma_results(p, results_dict))
+			if !isempty(p.techs.pv)
+				organize_multiple_pv_results(p, results_dict)
+			end
+			return results_dict
+		else
+			return rs
+		end
+	catch e
+		if isnothing(e) # Error thrown by REopt
+			handle_errors()
+		else
+			handle_errors(e, stacktrace(catch_backtrace()))
+		end
 	end
 end
 
@@ -198,7 +252,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			elseif b in p.s.storage.types.cold
 				add_cold_thermal_storage_dispatch_constraints(m, p, b)
 			else
-				@error("Invalid storage does not fall in a thermal or electrical set")
+				throw(@error("Invalid storage does not fall in a thermal or electrical set"))
 			end
 		end
 	end
@@ -270,7 +324,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         end
 
         if !isempty(p.techs.pbi)
-            @warn "adding binary variable(s) to model production based incentives"
+            @warn "Adding binary variable(s) to model production based incentives"
             add_prod_incent_vars_and_constraints(m, p)
         end
     end
@@ -315,7 +369,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     end
 
     if !isempty(p.techs.segmented)
-        @warn "adding binary variable(s) to model cost curves"
+        @warn "Adding binary variable(s) to model cost curves"
         add_cost_curve_vars_and_constraints(m, p)
         for t in p.techs.segmented  # cannot have this for statement in sum( ... for t in ...) ???
             m[:TotalTechCapCosts] += p.third_party_factor * (
@@ -403,10 +457,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		# Comfort limit violation costs
 		m[:dvComfortLimitViolationCost] + 
 
-		# Additional annual costs, tax deductible for owner (only applies when off_grid_flag is true)
+		# Additional annual costs, tax deductible for owner (only applies when `off_grid_flag` is true)
 		p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_rate_fraction) +
 
-		# Additional capital costs, depreciable (only applies when off_grid_flag is true)
+		# Additional capital costs, depreciable (only applies when `off_grid_flag` is true)
 		m[:OffgridOtherCapexAfterDepr]
 
 	);
@@ -447,34 +501,47 @@ end
 
 function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 
-	build_reopt!(m, p)
+	try
+		build_reopt!(m, p)
 
-	@info "Model built. Optimizing..."
-	tstart = time()
-	optimize!(m)
-	opt_time = round(time() - tstart, digits=3)
-	if termination_status(m) == MOI.TIME_LIMIT
-		status = "timed-out"
-    elseif termination_status(m) == MOI.OPTIMAL
-        status = "optimal"
-    else
-		status = "not optimal"
-		@warn "REopt solved with " termination_status(m), ", returning the model."
-		return m
+		@info "Model built. Optimizing..."
+		tstart = time()
+		optimize!(m)
+		opt_time = round(time() - tstart, digits=3)
+		if termination_status(m) == MOI.TIME_LIMIT
+			status = "timed-out"
+		elseif termination_status(m) == MOI.OPTIMAL
+			status = "optimal"
+		else
+			status = "not optimal"
+			@warn "REopt solved with " termination_status(m), ", returning the model."
+			return m
+		end
+		@info "REopt solved with " termination_status(m)
+		@info "Solving took $(opt_time) seconds."
+
+		tstart = time()
+		results = reopt_results(m, p)
+		time_elapsed = time() - tstart
+		@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
+		results["status"] = status
+		results["solver_seconds"] = opt_time
+
+		if organize_pvs && !isempty(p.techs.pv)  # do not want to organize_pvs when running BAU case in parallel b/c then proform code fails
+			organize_multiple_pv_results(p, results)
+		end
+
+		# add error messages (if any) and warnings to results dict
+		results["Messages"] = logger_to_dict()
+
+		return results
+	catch e
+		if isnothing(e) # Error thrown by REopt
+			handle_errors()
+		else
+			handle_errors(e, stacktrace(catch_backtrace()))
+		end
 	end
-	@info "REopt solved with " termination_status(m)
-	@info "Solving took $(opt_time) seconds."
-
-	tstart = time()
-	results = reopt_results(m, p)
-	time_elapsed = time() - tstart
-	@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
-	results["status"] = status
-	results["solver_seconds"] = opt_time
-    if organize_pvs && !isempty(p.techs.pv)  # do not want to organize_pvs when running BAU case in parallel b/c then proform code fails
-        organize_multiple_pv_results(p, results)
-    end
-	return results
 end
 
 
@@ -503,8 +570,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
 	if !isempty(p.techs.gen)  # Problem becomes a MILP
-		@warn """Adding binary variable to model gas generator. 
-				 Some solvers are very slow with integer variables"""
+		@warn "Adding binary variable to model gas generator. Some solvers are very slow with integer variables."
 		@variables m begin
 			binGenIsOnInTS[p.techs.gen, p.time_steps], Bin  # 1 If technology t is operating in time step h; 0 otherwise
 		end
@@ -519,8 +585,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
     end
 
 	if !(p.s.electric_utility.allow_simultaneous_export_import) & !isempty(p.s.electric_tariff.export_bins)
-		@warn """Adding binary variable to prevent simultaneous grid import/export. 
-				 Some solvers are very slow with integer variables"""
+		@warn "Adding binary variable to prevent simultaneous grid import/export. Some solvers are very slow with integer variables"
 		@variable(m, binNoGridPurchases[p.time_steps], Bin)
 	end
 
@@ -540,8 +605,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
     end
 
 	if !isempty(p.s.electric_utility.outage_durations) # add dvUnserved Load if there is at least one outage
-		@warn """Adding binary variable to model outages. 
-				 Some solvers are very slow with integer variables"""
+		@warn "Adding binary variable to model outages. Some solvers are very slow with integer variables"
 		max_outage_duration = maximum(p.s.electric_utility.outage_durations)
 		outage_time_steps = p.s.electric_utility.outage_time_steps
 		tZeros = p.s.electric_utility.outage_start_time_steps

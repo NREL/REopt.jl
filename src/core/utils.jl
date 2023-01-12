@@ -70,8 +70,7 @@ function annuity_escalation(analysis_period::Int, rate_escalation::Real, rate_di
 end
 
 
-function levelization_factor(years::Int, rate_escalation::Real, rate_discount::Real, 
-    rate_degradation::Real)
+function levelization_factor(years::Int, rate_escalation::Real, rate_discount::Real, rate_degradation::Real)
     #=
     NOTE: levelization_factor for an electricity producing tech is the ratio of:
     - an annuity with an escalation rate equal to the electricity cost escalation rate, starting year 1,
@@ -168,67 +167,79 @@ function dictkeys_tosymbols(d::Dict)
     d2 = Dict()
     for (k, v) in d
         # handling array type conversions for API inputs and JSON
-        if typeof(v) <: Array
-            if k in [
-                "loads_kw", "critical_loads_kw",
-                "monthly_totals_kwh",
-                "prod_factor_series", 
-                "monthly_energy_rates", "monthly_demand_rates",
-                "wholesale_rate", "blended_doe_reference_percents",
-                "coincident_peak_load_charge_per_kw", "fuel_cost_per_mmbtu",
-                "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
-                "outage_probabilities", "wholesale_rate",
-                "emissions_factor_series_lb_CO2_per_kwh",
-                "emissions_factor_series_lb_NOx_per_kwh", 
-                "emissions_factor_series_lb_SO2_per_kwh",
-                "emissions_factor_series_lb_PM25_per_kwh",
-                #for ERP
-                "pv_production_factor_series", "battery_starting_soc_series_fraction",
-                "generator_size_kw", "generator_operational_availability",
-                "generator_failure_to_start", "generator_mean_time_to_failure",
-                "generator_fuel_intercept_per_hr", "generator_fuel_burn_rate_per_kwh",
-                "fuel_avail_gal"
-                ] && !isnothing(v)
+        if k in [
+            "loads_kw", "critical_loads_kw",
+            "monthly_totals_kwh",
+            "prod_factor_series", 
+            "monthly_energy_rates", "monthly_demand_rates",
+            "blended_doe_reference_percents",
+            "coincident_peak_load_charge_per_kw",
+            "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
+            "outage_probabilities",
+            "emissions_factor_series_lb_CO2_per_kwh",
+            "emissions_factor_series_lb_NOx_per_kwh", 
+            "emissions_factor_series_lb_SO2_per_kwh",
+            "emissions_factor_series_lb_PM25_per_kwh",
+            #for ERP
+            "pv_production_factor_series", "battery_starting_soc_series_fraction",
+            "generator_size_kw", "generator_operational_availability",
+            "generator_failure_to_start", "generator_mean_time_to_failure",
+            "generator_fuel_intercept_per_hr", "generator_fuel_burn_rate_per_kwh",
+            "fuel_avail_gal"
+            ] && !isnothing(v)
+            try
+                v = convert(Array{Real, 1}, v)
+            catch
+                throw(@error("Unable to convert $k to an Array{Real, 1}"))
+            end
+        end
+        if k in [
+            "blended_doe_reference_names"
+        ]
+            try
+                v = convert(Array{String, 1}, v)
+            catch
+                throw(@error("Unable to convert $k to an Array{String, 1}"))
+            end
+        end
+        if k in [
+            "coincident_peak_load_active_time_steps"
+        ]
+            try
+                v = convert(Vector{Vector{Int64}}, v)
+            catch
+                throw(@error("Unable to convert $k to a Vector{Vector{Int64}}"))
+            end
+        end
+        if k in [
+            "outage_start_time_steps", "outage_durations", 
+            "num_generators" #for ERP
+        ]
+            try
+                v = convert(Array{Int64, 1}, v)
+            catch
+                throw(@error("Unable to convert $k to a Array{Int64, 1}"))
+            end
+        end
+        if k in [
+            "fuel_cost_per_mmbtu", "wholesale_rate"
+            ] && !isnothing(v)
+            #if not a Real try to convert to an Array{Real} 
+            if !(typeof(v) <: Real)
                 try
-                    v = convert(Array{Real, 1}, v)
+                    if typeof(v) <: Array
+                        v = convert(Array{Real, 1}, v)
+                    end
                 catch
-                    @debug "Unable to convert $k to an Array{Real, 1}"
+                    throw(@error("Unable to convert $k to a Array{Real, 1} or Real"))
                 end
             end
-            if k in [
-                "blended_doe_reference_names"
-            ]
-                try
-                    v = convert(Array{String, 1}, v)
-                catch
-                    @debug "Unable to convert $k to an Array{String, 1}"
-                end
-            end
-            if k in [
-                "coincident_peak_load_active_time_steps"
-            ]
-                try
-                    v = convert(Vector{Vector{Int64}}, v)
-                catch
-                    @debug "Unable to convert $k to a Vector{Vector{Int64}}"
-                end
-            end
-            if k in [
-                "outage_start_time_steps", "outage_durations", 
-                "num_generators" #for ERP
-            ]
-                try
-                    v = convert(Array{Int64, 1}, v)
-                catch
-                    @debug "Unable to convert $k to a Array{Int64, 1}"
-                end
-            end
-            if k in ["fuel_avail_gal_is_per_generator"] #for ERP
-                try
-                    v = convert(Array{Bool, 1}, v)
-                catch
-                    @debug "Unable to convert $k to a Array{Bool, 1}"
-                end
+        end
+        if k in ["fuel_avail_gal_is_per_generator"] #for ERP
+            try
+                v = convert(Array{Bool, 1}, v)
+            catch
+                throw(@error("Unable to convert $k to a Array{Bool, 1}"))
             end
         end
         d2[Symbol(k)] = v
@@ -291,7 +302,7 @@ function per_hour_value_to_time_series(x::AbstractVector{<:Real}, time_steps_per
         end
         return vals
     end
-    @error "Cannot convert $name to appropriate length time series."
+    throw(@error("Cannot convert $name to appropriate length time series."))
 end
 
 """
@@ -332,11 +343,11 @@ function generate_year_profile_hourly(year::Int64, consecutive_periods::Abstract
             start_date = Dates.firstdayofweek(start_date_of_month_year) + Dates.Week(start_week_of_month - 1) + Dates.Day(start_day_of_week - 1)
             # Throw an error if start_date is in the previous month when start_week_of_month=1 and there is no start_day_of_week in the first week of the month.
             if Dates.month(start_date) != start_month
-                @error "For $(error_start_text), there is no day $(start_day_of_week) ($(day_of_week_name[start_day_of_week])) in the first week of month $(start_month) ($(Dates.monthname(start_date))), $(year)"
+                throw(@error("For $(error_start_text), there is no day $(start_day_of_week) ($(day_of_week_name[start_day_of_week])) in the first week of month $(start_month) ($(Dates.monthname(start_date))), $(year)"))
             end
             start_datetime = Dates.DateTime(start_date) + Dates.Hour(start_hour - 1)
             if Dates.year(start_datetime + Dates.Hour(duration_hours)) > year
-                @error "For $(error_start_text), the start day/time and duration_hours exceeds the end of the year. Please specify two separate unavailability periods: one for the beginning of the year and one for up to the end of the year."
+                throw(@error("For $(error_start_text), the start day/time and duration_hours exceeds the end of the year. Please specify two separate unavailability periods: one for the beginning of the year and one for up to the end of the year."))
             else
                 #end_datetime is the last hour that is 1.0 (e.g. that is still unavailable), not the first hour that is 0.0 after the period
                 end_datetime = start_datetime + Dates.Hour(duration_hours - 1)
@@ -363,16 +374,16 @@ function get_ambient_temperature(latitude::Real, longitude::Real; timeframe="hou
         r = HTTP.get(url)
         response = JSON.parse(String(r.body))
         if r.status != 200
-            error("Bad response from PVWatts: $(response["errors"])")
+            throw(@error("Bad response from PVWatts: $(response["errors"])"))
         end
         @info "PVWatts success."
         tamb = collect(get(response["outputs"], "tamb", []))  # Celcius
         if length(tamb) != 8760
-            @error "PVWatts did not return a valid temperature. Got $tamb"
+            throw(@error("PVWatts did not return a valid temperature. Got $tamb"))
         end
         return tamb
     catch e
-        @error "Error occurred when calling PVWatts: $e"
+        throw(@error("Error occurred when calling PVWatts: $e"))
     end
 end
 
@@ -390,16 +401,16 @@ function get_pvwatts_prodfactor(latitude::Real, longitude::Real; timeframe="hour
         r = HTTP.get(url)
         response = JSON.parse(String(r.body))
         if r.status != 200
-            error("Bad response from PVWatts: $(response["errors"])")
+            throw(@error("Bad response from PVWatts: $(response["errors"])"))
         end
         @info "PVWatts success."
         watts = collect(get(response["outputs"], "ac", []) / 1000)  # scale to 1 kW system (* 1 kW / 1000 W)
         if length(watts) != 8760
-            @error "PVWatts did not return a valid production_factor. Got $watts"
+            throw(@error("PVWatts did not return a valid prodfactor. Got $watts"))
         end
         return watts
     catch e
-        @error "Error occurred when calling PVWatts: $e"
+        throw(@error("Error occurred when calling PVWatts: $e"))
     end
 end
 

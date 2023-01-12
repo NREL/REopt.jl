@@ -105,9 +105,10 @@ end
 Create a `Techs` struct for the REoptInputs.
 """
 function Techs(s::Scenario)
+    #TODO: refactor code duplicated in Tech(s::MPCScenario)
     pvtechs = String[pv.name for pv in s.pvs]
     if length(Base.Set(pvtechs)) != length(pvtechs)
-        error("PV names must be unique, got $(pvtechs)")
+        throw(@error("PV names must be unique, got $(pvtechs)"))
     end
 
     all_techs = copy(pvtechs)
@@ -233,7 +234,7 @@ Create a `Techs` struct for the MPCInputs
 function Techs(s::MPCScenario)
     pvtechs = String[pv.name for pv in s.pvs]
     if length(Base.Set(pvtechs)) != length(pvtechs)
-        error("PV names must be unique, got $(pvtechs)")
+        throw(@error("PV names must be unique, got $(pvtechs)"))
     end
 
     all_techs = copy(pvtechs)

@@ -60,7 +60,7 @@
     can_net_meter = true,
     can_wholesale = true,
     can_export_beyond_nem_limit = true
-    operating_reserve_required_fraction::Real = off_grid_flag ? 0.50 : 0.0, # Only applicable when off_grid_flag is True. Applied to each time_step as a % of wind generation serving load.
+    operating_reserve_required_fraction::Real = off_grid_flag ? 0.50 : 0.0, # Only applicable when `off_grid_flag` is true. Applied to each time_step as a % of wind generation serving load.
 ```
 
 `size_class` must be one of ["residential", "commercial", "medium", "large"]. If `size_class` is not provided then it is determined based on the average electric load.
@@ -164,7 +164,7 @@ struct Wind <: AbstractTech
         can_export_beyond_nem_limit = off_grid_flag ? false : true,
         can_curtail= true,
         average_elec_load = 0.0,
-        operating_reserve_required_fraction::Real = off_grid_flag ? 0.50 : 0.0, # Only applicable when off_grid_flag is True. Applied to each time_step as a % of wind generation serving load.
+        operating_reserve_required_fraction::Real = off_grid_flag ? 0.50 : 0.0, # Only applicable when `off_grid_flag` is true. Applied to each time_step as a % of wind generation serving load.
         )
         size_class_to_hub_height = Dict(
             "residential"=> 20,
@@ -197,7 +197,7 @@ struct Wind <: AbstractTech
                 size_class = "large"
             end
         elseif !(size_class in keys(size_class_to_hub_height))
-            @error "Wind.size_class must be one of $(keys(size_class_to_hub_height))"
+            throw(@error("Wind size_class must be one of $(keys(size_class_to_hub_height))"))
         end
 
         if isnothing(installed_cost_per_kw)
@@ -211,12 +211,12 @@ struct Wind <: AbstractTech
         hub_height = size_class_to_hub_height[size_class]
 
         if !(off_grid_flag) && !(operating_reserve_required_fraction == 0.0)
-            @warn "Wind operating_reserve_required_fraction applies only when off_grid_flag is True. Setting operating_reserve_required_fraction to 0.0 for this on-grid analysis."
+            @warn "Wind operating_reserve_required_fraction applies only when `off_grid_flag` is true. Setting operating_reserve_required_fraction to 0.0 for this on-grid analysis."
             operating_reserve_required_fraction = 0.0
         end
 
         if off_grid_flag && (can_net_meter || can_wholesale || can_export_beyond_nem_limit)
-            @warn "Net metering, wholesale, and grid exports are not possible for off-grid scenarios. Setting Wind can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False."
+            @warn "Setting Wind can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False because `off_grid_flag` is true."
             can_net_meter = false
             can_wholesale = false
             can_export_beyond_nem_limit = false
