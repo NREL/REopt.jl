@@ -39,6 +39,7 @@ abstract type AbstractThermalStorage <: AbstractStorage end
 abstract type AbstractElectricStorage <: AbstractStorage end
 abstract type AbstractThermalStorageDefaults end
 abstract type AbstractGHP <: AbstractTech end
+abstract type AbstractSteamTurbine <: AbstractTech end
 
 
 """
@@ -66,6 +67,8 @@ mutable struct Techs
     providing_oper_res::Vector{String}
     electric_chiller::Vector{String}
     absorption_chiller::Vector{String}
+    steam_turbine::Vector{String}
+    can_supply_steam_turbine::Vector{String}    
 end
 ```
 """
@@ -88,4 +91,6 @@ mutable struct Techs
     providing_oper_res::Vector{String}
     electric_chiller::Vector{String}
     absorption_chiller::Vector{String}
+    steam_turbine::Vector{String}
+    can_supply_steam_turbine::Vector{String}
 end

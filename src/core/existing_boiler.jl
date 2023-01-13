@@ -27,13 +27,19 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+const existing_boiler_efficiency_defaults = Dict(
+                                                "hot_water" => EXISTING_BOILER_EFFICIENCY,
+                                                "steam" => 0.75
+                                            )
 
 struct ExistingBoiler <: AbstractThermalTech  # useful to create AbstractHeatingTech or AbstractThermalTech?
     max_kw::Real
+    production_type::String
     efficiency::Real
-    fuel_cost_series::AbstractVector{<:Real}
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}}
     fuel_type::String
-    fuel_renewable_energy_pct::Real
+    can_supply_steam_turbine::Bool
+    fuel_renewable_energy_fraction::Real
     emissions_factor_lb_CO2_per_mmbtu::Real
     emissions_factor_lb_NOx_per_mmbtu::Real
     emissions_factor_lb_SO2_per_mmbtu::Real
@@ -46,12 +52,12 @@ end
 ```julia
     max_heat_demand_kw::Real=0,
     production_type::String = "hot_water",
-    chp_prime_mover::String = "",
     max_thermal_factor_on_peak_load::Real = 1.25,
     efficiency::Real = NaN,
-    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [],
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [], # REQUIRED. Can be a scalar, a list of 12 monthly values, or a time series of values for every time step
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
-    fuel_renewable_energy_pct::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_pct"],fuel_type,0),
+    can_supply_steam_turbine::Bool = false,
+    fuel_renewable_energy_fraction::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_fraction"],fuel_type,0),
     emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0),
     emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0),
     emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0),
@@ -68,19 +74,13 @@ end
     The `ExistingBoiler`'s `fuel_cost_per_mmbtu` field is a required input. The `fuel_cost_per_mmbtu` can be a scalar, a list of 12 monthly values, or a time series of values for every time step.
 
 !!! note "Determining `efficiency`" 
-    Must supply either: `efficiency`, `chp_prime_mover`, or `production_type`.
+    Must supply either: `efficiency` or `production_type`.
     
     If `efficiency` is not supplied, the `efficiency` will be determined based on the `production_type`. 
-    If `production_type` is not supplied, the `production_type` will be determined based on the `chp_prime_mover` (one of ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cell"]).
+    If `production_type` is not supplied, it defaults to `hot_water`.
     The following defaults are used:
-    ```julia    
-    production_type_by_chp_prime_mover = Dict(
-            "recip_engine" => "hot_water",
-            "micro_turbine" => "hot_water",
-            "combustion_turbine" => "steam",
-            "fuel_cell" => "hot_water"
-    )
-    efficiency_defaults = Dict(
+    ```julia
+    existing_boiler_efficiency_defaults = Dict(
         "hot_water" => 0.8,
         "steam" => 0.75
     )
@@ -90,13 +90,12 @@ end
 function ExistingBoiler(;
     max_heat_demand_kw::Real=0,
     production_type::String = "hot_water",
-    chp_prime_mover::String = "",
     max_thermal_factor_on_peak_load::Real = 1.25,
     efficiency::Real = NaN,
-    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [],
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [], # REQUIRED. Can be a scalar, a list of 12 monthly values, or a time series of values for every time step
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
-    # can_supply_steam_turbine::Bool,
-    fuel_renewable_energy_pct::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_pct"],fuel_type,0),
+    can_supply_steam_turbine::Bool = false,
+    fuel_renewable_energy_fraction::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_fraction"],fuel_type,0),
     emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0),
     emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0),
     emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0),
@@ -107,40 +106,23 @@ function ExistingBoiler(;
     @assert production_type in ["steam", "hot_water"]
 
     if isempty(fuel_cost_per_mmbtu)
-        throw(@error "The ExistingBoiler.fuel_cost_per_mmbtu is a required input when modeling a heating load which is served by the Existing Boiler in the BAU case")
+        throw(@error("The ExistingBoiler.fuel_cost_per_mmbtu is a required input when modeling a heating load which is served by the Existing Boiler in the BAU case"))
     end
 
-    production_type_by_chp_prime_mover = Dict(
-        "recip_engine" => "hot_water",
-        "micro_turbine" => "hot_water",
-        "combustion_turbine" => "steam",
-        "fuel_cell" => "hot_water"
-    )
-
-    fuel_cost_per_kwh = fuel_cost_per_mmbtu / KWH_PER_MMBTU
-    fuel_cost_series = per_hour_value_to_time_series(fuel_cost_per_kwh, time_steps_per_hour, 
-                                                     "ExistingBoiler.fuel_cost_per_mmbtu")
-
-    efficiency_defaults = Dict(
-        "hot_water" => 0.8,
-        "steam" => 0.75
-    )
-
     if isnan(efficiency)
-        if !isempty(chp_prime_mover) && isempty(production_type)
-            production_type = production_type_by_chp_prime_mover[chp_prime_mover]
-        end
-        efficiency = efficiency_defaults[production_type]
+        efficiency = existing_boiler_efficiency_defaults[production_type]
     end
 
     max_kw = max_heat_demand_kw * max_thermal_factor_on_peak_load
 
     ExistingBoiler(
         max_kw,
+        production_type,
         efficiency,
-        fuel_cost_series,
+        fuel_cost_per_mmbtu,
         fuel_type,
-        fuel_renewable_energy_pct,
+        can_supply_steam_turbine,
+        fuel_renewable_energy_fraction,
         emissions_factor_lb_CO2_per_mmbtu,
         emissions_factor_lb_NOx_per_mmbtu,
         emissions_factor_lb_SO2_per_mmbtu,

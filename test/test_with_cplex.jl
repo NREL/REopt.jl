@@ -49,8 +49,8 @@ check to make sure that PV does NOT export unless the site load is met first for
     inputs = REoptInputs(s)
     results = run_reopt(model, inputs)
 
-    @test all(x == 0.0 for (i,x) in enumerate(results["ElectricUtility"]["year_one_to_load_series_kw"][1:744]) 
-              if results["PV"]["year_one_to_grid_series_kw"][i] > 0)
+    @test all(x == 0.0 for (i,x) in enumerate(results["ElectricUtility"]["electric_to_load_series_kw"][1:744]) 
+              if results["PV"]["electric_to_grid_series_kw"][i] > 0)
 end
 
 
@@ -149,6 +149,48 @@ end
     urdb_label = "59bc22705457a3372642da67"  # tiered monthly demand rate
 end
 
+@testset "Lookback Demand Charges" begin
+    # 1. Testing custom rate from user with demand_lookback_months
+    d = JSON.parsefile("./scenarios/lookback_rate.json")
+    d["ElectricTariff"] = Dict()
+    d["ElectricTariff"]["demand_lookback_percent"] = 0.75
+    d["ElectricLoad"]["loads_kw"] = [100 for i in range(1,8760)]
+    d["ElectricLoad"]["loads_kw"][22] = 200 # Jan peak
+    d["ElectricLoad"]["loads_kw"][2403] = 400 # April peak (Should set dvPeakDemandLookback)
+    d["ElectricLoad"]["loads_kw"][4088] = 500 # June peak (not in peak month lookback)
+    d["ElectricLoad"]["loads_kw"][8333] = 300 # Dec peak 
+    d["ElectricTariff"]["monthly_demand_rates"] = [10,10,20,50,20,10,20,20,20,20,20,5]
+    d["ElectricTariff"]["demand_lookback_months"] = [1,0,0,1,0,0,0,0,0,0,0,1] # Jan, April, Dec
+    d["ElectricTariff"]["blended_annual_energy_rate"] = 0.01
+
+    m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
+    r = run_reopt(m, REoptInputs(Scenario(d)))
+
+    monthly_peaks = [300,300,300,400,300,500,300,300,300,300,300,300] # 300 = 400*0.75. Sets peak in all months excpet April and June
+    expected_demand_cost = sum(monthly_peaks.*d["ElectricTariff"]["monthly_demand_rates"]) 
+    @test r["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ expected_demand_cost
+
+    # 2. Testing custom rate from user with demand_lookback_range
+    d = JSON.parsefile("./scenarios/lookback_rate.json")
+    d["ElectricTariff"] = Dict()
+    d["ElectricTariff"]["demand_lookback_percent"] = 0.75
+    d["ElectricLoad"]["loads_kw"] = [100 for i in range(1,8760)]
+    d["ElectricLoad"]["loads_kw"][22] = 200 # Jan peak
+    d["ElectricLoad"]["loads_kw"][2403] = 400 # April peak (Should set dvPeakDemandLookback)
+    d["ElectricLoad"]["loads_kw"][4088] = 500 # June peak (not in peak month lookback)
+    d["ElectricLoad"]["loads_kw"][8333] = 300 # Dec peak 
+    d["ElectricTariff"]["monthly_demand_rates"] = [10,10,20,50,20,10,20,20,20,20,20,5]
+    d["ElectricTariff"]["blended_annual_energy_rate"] = 0.01
+    d["ElectricTariff"]["demand_lookback_range"] = 6
+
+    m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
+    r = run_reopt(m, REoptInputs(Scenario(d)))
+
+    monthly_peaks = [225, 225, 225, 400, 300, 500, 375, 375, 375, 375, 375, 375]
+    expected_demand_cost = sum(monthly_peaks.*d["ElectricTariff"]["monthly_demand_rates"]) 
+    @test r["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ expected_demand_cost
+end
+
 ## equivalent REopt API Post for test 2:
 #   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
 # {"Scenario": {
@@ -158,12 +200,12 @@ end
 #         "roof_squarefeet": 5000.0,
 #         "land_acres": 1.0,
 #     "PV": {
-#         "macrs_bonus_pct": 0.4,
+#         "macrs_bonus_fraction": 0.4,
 #         "installed_cost_per_kw": 2000.0,
 #         "tilt": 34.579,
-#         "degradation_pct": 0.005,
+#         "degradation_fraction": 0.005,
 #         "macrs_option_years": 5,
-#         "federal_itc_pct": 0.3,
+#         "federal_itc_fraction": 0.3,
 #         "module_type": 0,
 #         "array_type": 1,
 #         "om_cost_per_kw": 16.0,
@@ -181,9 +223,9 @@ end
 #         "total_rebate_per_kw": 100.0,
 #         "macrs_option_years": 5,
 #         "can_grid_charge": true,
-#         "macrs_bonus_pct": 0.4,
+#         "macrs_bonus_fraction": 0.4,
 #         "macrs_itc_reduction": 0.5,
-#         "total_itc_pct": 0,
+#         "total_itc_fraction": 0,
 #         "installed_cost_per_kw": 1000.0,
 #         "installed_cost_per_kwh": 500.0,
 #         "replace_cost_per_kw": 460.0,
@@ -193,12 +235,12 @@ end
 #         "urdb_label": "5ed6c1a15457a3367add15ae"
 #     },
 #     "Financial": {
-#         "escalation_pct": 0.026,
-#         "offtaker_discount_pct": 0.081,
-#         "owner_discount_pct": 0.081,
+#         "escalation_rate_fraction": 0.026,
+#         "offtaker_discount_rate_fraction": 0.081,
+#         "owner_discount_rate_fraction": 0.081,
 #         "analysis_years": 20,
-#         "offtaker_tax_pct": 0.4,
-#         "owner_tax_pct": 0.4,
-#         "om_cost_escalation_pct": 0.025
+#         "offtaker_tax_rate_fraction": 0.4,
+#         "owner_tax_rate_fraction": 0.4,
+#         "om_cost_escalation_rate_fraction": 0.025
 #     }
 # }}}

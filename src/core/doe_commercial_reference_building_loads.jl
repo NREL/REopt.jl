@@ -45,11 +45,16 @@ const default_buildings = [
     "Supermarket",
     "Warehouse",
     "FlatLoad",
+    "FlatLoad_24_5",
+    "FlatLoad_16_7",
+    "FlatLoad_16_5",
+    "FlatLoad_8_7",
+    "FlatLoad_8_5"    
 ]
 
 
 function find_ashrae_zone_city(lat, lon; get_zone=false)
-    file_path = joinpath(dirname(@__FILE__), "..", "..", "data", "climate_cities.shp")
+    file_path = joinpath(@__DIR__, "..", "..", "data", "climate_cities.shp")
     shpfile = ArchGDAL.read(file_path)
 	cities_layer = ArchGDAL.getlayer(shpfile, 0)
 
@@ -67,7 +72,7 @@ function find_ashrae_zone_city(lat, lon; get_zone=false)
 		end
 	end
     if isnothing(archgdal_city)
-        @info "Could not find latitude/longitude in U.S. Using geometrically nearest city."
+        @warn "Could not find latitude/longitude in U.S. Using geometrically nearest city."
     elseif !get_zone
         return archgdal_city
     end
@@ -129,11 +134,15 @@ function built_in_load(type::String, city::String, buildingtype::String,
 
     @assert type in ["electric", "domestic_hot_water", "space_heating", "cooling"]
     monthly_scalers = ones(12)
-    lib_path = joinpath(dirname(@__FILE__), "..", "..", "data", "load_profiles", type)
+    lib_path = joinpath(@__DIR__, "..", "..", "data", "load_profiles", type)
 
     profile_path = joinpath(lib_path, string("crb8760_norm_" * city * "_" * buildingtype * ".dat"))
-    normalized_profile = vec(readdlm(profile_path, '\n', Float64, '\n'))
-    
+    if occursin("FlatLoad", buildingtype)
+        normalized_profile = custom_normalized_flatload(buildingtype, year)
+    else 
+        normalized_profile = vec(readdlm(profile_path, '\n', Float64, '\n'))
+    end
+
     if length(monthly_energies) == 12
         annual_energy = 1.0  # do not scale based on annual_energy
         t0 = 1
@@ -154,17 +163,17 @@ function built_in_load(type::String, city::String, buildingtype::String,
 
     scaled_load = Float64[]
     boiler_efficiency = 1.0
-    mmbtu_to_kwh = 1.0  # do not convert electric loads
+    used_kwh_per_mmbtu = 1.0  # do not convert electric loads
     if type in ["domestic_hot_water", "space_heating"]
         # CRB thermal "loads" are in terms of energy input required (boiler fuel), not the actual energy demand.
         # So we multiply the fuel energy by the boiler_efficiency to get the actual energy demand.
         boiler_efficiency = EXISTING_BOILER_EFFICIENCY
-        mmbtu_to_kwh = KWH_PER_MMBTU  # do convert thermal loads
+        used_kwh_per_mmbtu = KWH_PER_MMBTU  # do convert thermal loads
     end
     datetime = DateTime(year, 1, 1, 1)
     for ld in normalized_profile
         month = Month(datetime).value
-        push!(scaled_load, ld * annual_energy * monthly_scalers[month] * boiler_efficiency * mmbtu_to_kwh)
+        push!(scaled_load, ld * annual_energy * monthly_scalers[month] * boiler_efficiency * used_kwh_per_mmbtu)
         datetime += Dates.Hour(1)
     end
 
@@ -202,6 +211,7 @@ function blend_and_scale_doe_profiles(
     city::String = "",
     annual_energy::Union{Real, Nothing} = nothing,
     monthly_energies::Array{<:Real,1} = Real[],
+    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}} = 1.0
     )
 
     @assert sum(blended_doe_reference_percents) ≈ 1 "The sum of the blended_doe_reference_percents must equal 1"
@@ -213,8 +223,14 @@ function blend_and_scale_doe_profiles(
         city = find_ashrae_zone_city(latitude, longitude)  # avoid redundant look-ups
     end
     profiles = Array[]  # collect the built in profiles
-    for name in blended_doe_reference_names
-        push!(profiles, constructor(city, name, latitude, longitude, year, annual_energy, monthly_energies))
+    if constructor in [BuiltInSpaceHeatingLoad, BuiltInDomesticHotWaterLoad]
+        for name in blended_doe_reference_names
+            push!(profiles, constructor(city, name, latitude, longitude, year, addressable_load_fraction, annual_energy, monthly_energies))
+        end
+    else
+        for name in blended_doe_reference_names
+            push!(profiles, constructor(city, name, latitude, longitude, year, annual_energy, monthly_energies))
+        end
     end
     if isnothing(annual_energy) # then annual_energy should be the sum of all the profiles' annual kwhs
         # we have to rescale the built in profiles to the total_kwh by normalizing them with their
@@ -233,4 +249,75 @@ function blend_and_scale_doe_profiles(
         profiles[idx] .*= blended_doe_reference_percents[idx]
     end
     sum(profiles)
+end
+
+function custom_normalized_flatload(doe_reference_name, year)
+    # built in profiles are assumed to be hourly
+    periods = 8760
+    # get datetimes of all hours 
+    if Dates.isleapyear(year)
+        end_year_datetime = DateTime(string(year)*"-12-30T23:00:00")
+    else
+        end_year_datetime = DateTime(string(year)*"-12-31T23:00:00")
+    end
+    dt_hourly = collect(DateTime(string(year)*"-01-01T00:00:00"):Hour(1):end_year_datetime)
+
+    # create boolean masks for weekday and hour of day filters
+    weekday_mask = convert(Vector{Int}, ones(periods))
+    hour_mask = convert(Vector{Int}, ones(periods))
+    weekends = [6,7]
+    hour_range_16 = 6:21  # DateTime hours are 0-indexed, so this is 6am (7th hour of the day) to 10pm (end of 21st hour)
+    hour_range_8 = 9:16  # This is 9am (10th hour of the day) to 5pm (end of 16th hour)
+    if !(doe_reference_name == "FlatLoad")
+        for (i,dt) in enumerate(dt_hourly)
+            # Zero out no-weekend operation
+            if doe_reference_name in ["FlatLoad_24_5","FlatLoad_16_5","FlatLoad_8_5"]
+                if Dates.dayofweek(dt) in weekends
+                    weekday_mask[i] = 0
+                end
+            end
+            # Assign 1's for 16 or 8 hour shift profiles
+            if doe_reference_name in ["FlatLoad_16_5","FlatLoad_16_7"]
+                if !(Dates.hour(dt) in hour_range_16)
+                    hour_mask[i] = 0
+                end
+            elseif doe_reference_name in ["FlatLoad_8_5","FlatLoad_8_7"]
+                if !(Dates.hour(dt) in hour_range_8)
+                    hour_mask[i] = 0
+                end
+            end
+        end
+    end
+    # combine masks to a dt_hourly where 1 is on and 0 is off
+    dt_hourly_binary = weekday_mask .* hour_mask
+    # convert combined masks to a normalized profile
+    sum_dt_hourly_binary = sum(dt_hourly_binary)
+    normalized_profile = [i/sum_dt_hourly_binary for i in dt_hourly_binary]
+    return normalized_profile
+end
+
+"""
+    get_monthly_energy(power_profile::AbstractArray{<:Real,1};
+                        year::Int64=2017)
+
+Get monthly energy from an hourly load profile.
+"""
+function get_monthly_energy(power_profile::AbstractArray{<:Real,1}; 
+                            year::Int64=2017)
+    t0 = 1
+    monthly_energy_total = zeros(12)
+    for month in 1:12
+        plus_hours = daysinmonth(Date(string(year) * "-" * string(month))) * 24
+        if month == 2 && isleapyear(year)
+            plus_hours -= 24
+        end
+        if !isempty(power_profile)
+            monthly_energy_total[month] = sum(power_profile[t0:t0+plus_hours-1])
+        else
+            throw(@error("Must provide power_profile"))
+        end
+        t0 += plus_hours
+    end
+
+    return monthly_energy_total
 end

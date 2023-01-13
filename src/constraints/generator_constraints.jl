@@ -45,15 +45,15 @@ function add_binGenIsOnInTS_constraints(m,p)
 	@constraint(m, [t in p.techs.gen, ts in p.time_steps],
 		m[:dvRatedProduction][t, ts] <= p.max_sizes[t] * m[:binGenIsOnInTS][t, ts]
 	)
-	# Note: min_turn_down_pct is only enforced when off_grid_flag is true and in p.time_steps_with_grid, but not for grid outages for on-grid analyses
+	# Note: min_turn_down_fraction is only enforced when `off_grid_flag` is true and in p.time_steps_with_grid, but not for grid outages for on-grid analyses
 	if p.s.settings.off_grid_flag 
 		@constraint(m, [t in p.techs.gen, ts in p.time_steps_without_grid],
-			p.s.generator.min_turn_down_pct * m[:dvSize][t] - m[:dvRatedProduction][t, ts] <=
+			p.s.generator.min_turn_down_fraction * m[:dvSize][t] - m[:dvRatedProduction][t, ts] <=
 			p.max_sizes[t] * (1 - m[:binGenIsOnInTS][t, ts])
 		)
 	else 
 		@constraint(m, [t in p.techs.gen, ts in p.time_steps_with_grid],
-			p.s.generator.min_turn_down_pct * m[:dvSize][t] - m[:dvRatedProduction][t, ts] <=
+			p.s.generator.min_turn_down_fraction * m[:dvSize][t] - m[:dvRatedProduction][t, ts] <=
 			p.max_sizes[t] * (1 - m[:binGenIsOnInTS][t, ts])
 		)
 	end 
@@ -97,7 +97,7 @@ function add_gen_constraints(m, p)
         sum(p.s.generator.om_cost_per_kwh * p.hours_per_time_step *
         m[:dvRatedProduction][t, ts] for t in p.techs.gen, ts in p.time_steps)
     )
-    m[:TotalGenFuelCosts] = @expression(m, p.pwf_fuel["Generator"] *
-        sum(m[:dvFuelUsage][t,ts] * p.s.generator.fuel_cost_per_gallon / KWH_PER_GAL_DIESEL for t in p.techs.gen, ts in p.time_steps)
+    m[:TotalGenFuelCosts] = @expression(m, p.pwf_fuel[t] *
+        sum(m[:dvFuelUsage][t,ts] * p.fuel_cost_per_kwh[t][ts] for t in p.techs.gen, ts in p.time_steps)
     )
 end

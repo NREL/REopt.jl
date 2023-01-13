@@ -44,22 +44,22 @@
     max_kw::Real=1.0e9,
     installed_cost_per_kw::Real=1592.0,
     om_cost_per_kw::Real=17.0,
-    degradation_pct::Real=0.005,
+    degradation_fraction::Real=0.005,
     macrs_option_years::Int = 5,
-    macrs_bonus_pct::Real = 1.0,
+    macrs_bonus_fraction::Real = 1.0,
     macrs_itc_reduction::Real = 0.5,
     kw_per_square_foot::Real=0.01,
     acres_per_kw::Real=6e-3,
     inv_eff::Real=0.96,
     dc_ac_ratio::Real=1.2,
-    prod_factor_series::Union{Nothing, Array{<:Real,1}} = nothing,
-    federal_itc_pct::Real = 0.26,
+    production_factor_series::Union{Nothing, Array{<:Real,1}} = nothing,
+    federal_itc_fraction::Real = 0.26,
     federal_rebate_per_kw::Real = 0.0,
-    state_ibi_pct::Real = 0.0,
+    state_ibi_fraction::Real = 0.0,
     state_ibi_max::Real = 1.0e10,
     state_rebate_per_kw::Real = 0.0,
     state_rebate_max::Real = 1.0e10,
-    utility_ibi_pct::Real = 0.0,
+    utility_ibi_fraction::Real = 0.0,
     utility_ibi_max::Real = 1.0e10,
     utility_rebate_per_kw::Real = 0.0,
     utility_rebate_max::Real = 1.0e10,
@@ -71,7 +71,7 @@
     can_wholesale::Bool = off_grid_flag ? false : true,
     can_export_beyond_nem_limit::Bool = off_grid_flag ? false : true,
     can_curtail::Bool = true,
-    operating_reserve_required_pct::Real = off_grid_flag ? 0.25 : 0.0, # if off grid, 25%, else 0%. Applied to each time_step as a % of PV generation serving load.
+    operating_reserve_required_fraction::Real = off_grid_flag ? 0.25 : 0.0, # if off grid, 25%, else 0%. Applied to each time_step as a % of PV generation.
 ```
 
 !!! note "Multiple PV types" 
@@ -97,22 +97,22 @@ struct PV <: AbstractTech
     max_kw
     installed_cost_per_kw
     om_cost_per_kw
-    degradation_pct
+    degradation_fraction
     macrs_option_years
-    macrs_bonus_pct
+    macrs_bonus_fraction
     macrs_itc_reduction
     kw_per_square_foot
     acres_per_kw
     inv_eff
     dc_ac_ratio
-    prod_factor_series
-    federal_itc_pct
+    production_factor_series
+    federal_itc_fraction
     federal_rebate_per_kw
-    state_ibi_pct
+    state_ibi_fraction
     state_ibi_max
     state_rebate_per_kw
     state_rebate_max
-    utility_ibi_pct
+    utility_ibi_fraction
     utility_ibi_max
     utility_rebate_per_kw
     utility_rebate_max
@@ -124,7 +124,7 @@ struct PV <: AbstractTech
     can_wholesale
     can_export_beyond_nem_limit
     can_curtail
-    operating_reserve_required_pct
+    operating_reserve_required_fraction
 
     function PV(;
         off_grid_flag::Bool = false,
@@ -143,22 +143,22 @@ struct PV <: AbstractTech
         max_kw::Real=1.0e9,
         installed_cost_per_kw::Real=1592.0,
         om_cost_per_kw::Real=17.0,
-        degradation_pct::Real=0.005,
+        degradation_fraction::Real=0.005,
         macrs_option_years::Int = 5,
-        macrs_bonus_pct::Real = 1.0,
+        macrs_bonus_fraction::Real = 1.0,
         macrs_itc_reduction::Real = 0.5,
         kw_per_square_foot::Real=0.01,
         acres_per_kw::Real=6e-3,
         inv_eff::Real=0.96,
         dc_ac_ratio::Real=1.2,
-        prod_factor_series::Union{Nothing, Array{Real,1}} = nothing,
-        federal_itc_pct::Real = 0.26,
+        production_factor_series::Union{Nothing, Array{Real,1}} = nothing,
+        federal_itc_fraction::Real = 0.26,
         federal_rebate_per_kw::Real = 0.0,
-        state_ibi_pct::Real = 0.0,
+        state_ibi_fraction::Real = 0.0,
         state_ibi_max::Real = 1.0e10,
         state_rebate_per_kw::Real = 0.0,
         state_rebate_max::Real = 1.0e10,
-        utility_ibi_pct::Real = 0.0,
+        utility_ibi_fraction::Real = 0.0,
         utility_ibi_max::Real = 1.0e10,
         utility_rebate_per_kw::Real = 0.0,
         utility_rebate_max::Real = 1.0e10,
@@ -170,16 +170,16 @@ struct PV <: AbstractTech
         can_wholesale::Bool = off_grid_flag ? false : true,
         can_export_beyond_nem_limit::Bool = off_grid_flag ? false : true,
         can_curtail::Bool = true,
-        operating_reserve_required_pct::Real = off_grid_flag ? 0.25 : 0.0, # if off grid, 25%, else 0%. Applied to each time_step as a % of PV generation serving load.
+        operating_reserve_required_fraction::Real = off_grid_flag ? 0.25 : 0.0, # if off grid, 25%, else 0%. Applied to each time_step as a % of PV generation.
         )
 
-        if !(off_grid_flag) && !(operating_reserve_required_pct == 0.0)
-            @warn "PV operating_reserve_required_pct applies only when off_grid_flag is True. Setting operating_reserve_required_pct to 0.0 for this on-grid analysis."
-            operating_reserve_required_pct = 0.0
+        if !(off_grid_flag) && !(operating_reserve_required_fraction == 0.0)
+            @warn "PV operating_reserve_required_fraction applies only when true. Setting operating_reserve_required_fraction to 0.0 for this on-grid analysis."
+            operating_reserve_required_fraction = 0.0
         end
 
         if off_grid_flag && (can_net_meter || can_wholesale || can_export_beyond_nem_limit)
-            @warn "Net metering, wholesale, and grid exports are not possible for off-grid scenarios. Setting PV can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False."
+            @warn "Setting PV can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False because `off_grid_flag` is true."
             can_net_meter = false
             can_wholesale = false
             can_export_beyond_nem_limit = false
@@ -205,8 +205,8 @@ struct PV <: AbstractTech
         if !(location in ["roof", "ground", "both"])
             push!(invalid_args, "location must be in [\"roof\", \"ground\", \"both\"], got $(location)")
         end
-        if !(0.0 <= degradation_pct <= 1.0)
-            push!(invalid_args, "degradation_pct must satisfy 0 <= degradation_pct <= 1, got $(degradation_pct)")
+        if !(0.0 <= degradation_fraction <= 1.0)
+            push!(invalid_args, "degradation_fraction must satisfy 0 <= degradation_fraction <= 1, got $(degradation_fraction)")
         end
         if !(0.0 <= inv_eff <= 1.0)
             push!(invalid_args, "inv_eff must satisfy 0 <= inv_eff <= 1, got $(inv_eff)")
@@ -216,7 +216,7 @@ struct PV <: AbstractTech
         end
         # TODO validate additional args
         if length(invalid_args) > 0
-            error("Invalid argument values: $(invalid_args)")
+            throw(@error("Invalid PV argument values: $(invalid_args)"))
         end
 
         new(
@@ -234,22 +234,22 @@ struct PV <: AbstractTech
             max_kw,
             installed_cost_per_kw,
             om_cost_per_kw,
-            degradation_pct,
+            degradation_fraction,
             macrs_option_years,
-            macrs_bonus_pct,
+            macrs_bonus_fraction,
             macrs_itc_reduction,
             kw_per_square_foot,
             acres_per_kw,
             inv_eff,
             dc_ac_ratio,
-            prod_factor_series,
-            federal_itc_pct,
+            production_factor_series,
+            federal_itc_fraction,
             federal_rebate_per_kw,
-            state_ibi_pct,
+            state_ibi_fraction,
             state_ibi_max,
             state_rebate_per_kw,
             state_rebate_max,
-            utility_ibi_pct,
+            utility_ibi_fraction,
             utility_ibi_max,
             utility_rebate_per_kw,
             utility_rebate_max,
@@ -261,7 +261,7 @@ struct PV <: AbstractTech
             can_wholesale,
             can_export_beyond_nem_limit,
             can_curtail,
-            operating_reserve_required_pct
+            operating_reserve_required_fraction
         )
     end
 end

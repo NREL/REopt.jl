@@ -10,18 +10,18 @@
     "Wind": {
         "installed_cost_per_kw": 1874,
         "om_cost_per_kw": 35,
-        "macrs_bonus_pct": 0.0,
+        "macrs_bonus_fraction": 0.0,
         "max_kw": 10000,
-        "federal_itc_pct": 0,
+        "federal_itc_fraction": 0,
         "macrs_option_years": 0,
         "size_class": "large"
     },
     "Financial": {
-        "om_cost_escalation_pct": 0.001,
-        "elec_cost_escalation_pct": 0.006,
-        "offtaker_discount_pct": 0.07,
+        "om_cost_escalation_rate_fraction": 0.001,
+        "elec_cost_escalation_rate_fraction": 0.006,
+        "offtaker_discount_rate_fraction": 0.07,
         "analysis_years": 25,
-        "offtaker_tax_pct": 0.0
+        "offtaker_tax_rate_fraction": 0.0
     },
     "ElectricTariff": {
         "monthly_demand_rates": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
