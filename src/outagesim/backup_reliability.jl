@@ -447,7 +447,7 @@ function backup_reliability_inputs(d::Dict, p::REoptInputs; r::Dict = Dict())::D
     critical_loads_kw = p.s.electric_load.critical_loads_kw
 
     if "CHP" in keys(d)
-        chp_generation =  get(d["CHP"], "year_one_electric_production_series_kw", zero_array)
+        chp_generation =  get(d["CHP"], "electric_production_series_kw", zero_array)
         critical_loads_kw .-= chp_generation
     end
 
@@ -456,10 +456,10 @@ function backup_reliability_inputs(d::Dict, p::REoptInputs; r::Dict = Dict())::D
     pv_kw_ac_hourly = zero_array
     if "PV" in keys(d)
         pv_kw_ac_hourly = (
-            get(d["PV"], "year_one_to_battery_series_kw", zero_array)
-            + get(d["PV"], "year_one_curtailed_production_series_kw", zero_array)
-            + get(d["PV"], "year_one_to_load_series_kw", zero_array)
-            + get(d["PV"], "year_one_to_grid_series_kw", zero_array)
+            get(d["PV"], "electric_to_storage_series_kw", zero_array)
+            + get(d["PV"], "electric_curtailed_series_kw", zero_array)
+            + get(d["PV"], "electric_to_load_series_kw", zero_array)
+            + get(d["PV"], "electric_to_grid_series_kw", zero_array)
         )
     end
     if microgrid_only && !Bool(get(d, "PV_upgraded", false))
@@ -477,7 +477,7 @@ function backup_reliability_inputs(d::Dict, p::REoptInputs; r::Dict = Dict())::D
             
         batt_kwh = get(d["Storage"], "size_kwh", 0)
         batt_kw = get(d["Storage"], "size_kw", 0)
-        init_soc = get(d["Storage"], "year_one_soc_series_pct", [])
+        init_soc = get(d["Storage"], "soc_series_fraction", [])
 
         if microgrid_only && !Bool(get(d, "storage_upgraded", false))
             batt_kwh = 0

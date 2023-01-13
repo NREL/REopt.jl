@@ -52,6 +52,13 @@ function add_tech_size_constraints(m, p; _n="")
     @constraint(m, [t in p.techs.no_turndown, ts in p.time_steps],
         m[Symbol("dvRatedProduction"*_n)][t,ts] == m[Symbol("dvSize"*_n)][t]
     )
+
+	##Constraint (7e): SteamTurbine is not in techs.no_turndown OR techs.segmented, so handle electric production to dvSize constraint
+    if !isempty(p.techs.steam_turbine)
+        @constraint(m, [t in p.techs.steam_turbine, ts in p.time_steps],
+            m[Symbol("dvRatedProduction"*_n)][t,ts]  <= m[:dvSize][t]
+        )
+    end  
 end
 
 

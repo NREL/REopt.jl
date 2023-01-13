@@ -30,35 +30,36 @@
 """
 `Financial` is an optional REopt input with the following keys and default values:
 ```julia
-    om_cost_escalation_pct::Real = 0.025,
-    elec_cost_escalation_pct::Real = 0.019,
-    boiler_fuel_cost_escalation_pct::Real = 0.034,
-    chp_fuel_cost_escalation_pct::Real = 0.034,
-    generator_fuel_cost_escalation_pct::Real = 0.027,
-    offtaker_tax_pct::Real = 0.26,
-    offtaker_discount_pct::Real = 0.0564,
+    om_cost_escalation_rate_fraction::Real = 0.025,
+    elec_cost_escalation_rate_fraction::Real = 0.019,
+    existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.034, 
+    boiler_fuel_cost_escalation_rate_fraction::Real = 0.034,
+    chp_fuel_cost_escalation_rate_fraction::Real = 0.034,
+    generator_fuel_cost_escalation_rate_fraction::Real = 0.027,
+    offtaker_tax_rate_fraction::Real = 0.26,
+    offtaker_discount_rate_fraction::Real = 0.0564,
     third_party_ownership::Bool = false,
-    owner_tax_pct::Real = 0.26,
-    owner_discount_pct::Real = 0.0564,
+    owner_tax_rate_fraction::Real = 0.26,
+    owner_discount_rate_fraction::Real = 0.0564,
     analysis_years::Int = 25,
     value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00, # [dollars per kWh] value of unmet load during outage. Used with multiple/probabilistic outage modeling (not single/deterministic outage modeling)
-    microgrid_upgrade_cost_pct::Real = off_grid_flag ? 0.0 : 0.3, # MG upgrade cost as percentage of normal operations capital costs. Used with multiple/probabilistic outage modeling (not single/deterministic outage modeling). Not applicable when off_grid_flag is true
+    microgrid_upgrade_cost_fraction::Real = off_grid_flag ? 0.0 : 0.3, # MG upgrade cost as percentage of normal operations capital costs. Used with multiple/probabilistic outage modeling (not single/deterministic outage modeling). Not applicable when off_grid_flag is true
     macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
     macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
-    offgrid_other_capital_costs::Real = 0.0, # only applicable when off_grid_flag is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
-    offgrid_other_annual_costs::Real = 0.0 # only applicable when off_grid_flag is true. Considered tax deductible for owner. Costs are per year. 
+    offgrid_other_capital_costs::Real = 0.0, # only applicable when `off_grid_flag` is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
+    offgrid_other_annual_costs::Real = 0.0 # only applicable when `off_grid_flag` is true. Considered tax deductible for owner. Costs are per year. 
     # Emissions cost inputs
     CO2_cost_per_tonne::Real = 51.0,
-    CO2_cost_escalation_pct::Real = 0.042173,
+    CO2_cost_escalation_rate_fraction::Real = 0.042173,
     NOx_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
     SO2_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
     PM25_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
     NOx_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
     SO2_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
     PM25_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
-    NOx_cost_escalation_pct::Union{Nothing,Real} = nothing,
-    SO2_cost_escalation_pct::Union{Nothing,Real} = nothing,
-    PM25_cost_escalation_pct::Union{Nothing,Real} = nothing,
+    NOx_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
+    SO2_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
+    PM25_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
     # fields from other models needed for validation
     latitude::Real, # Passed from Site
     longitude::Real, # Passed from Site
@@ -69,97 +70,99 @@
     When `third_party_ownership` is `false` the offtaker's discount and tax percentages are used throughout the model:
     ```julia
         if !third_party_ownership
-            owner_tax_pct = offtaker_tax_pct
-            owner_discount_pct = offtaker_discount_pct
+            owner_tax_rate_fraction = offtaker_tax_rate_fraction
+            owner_discount_rate_fraction = offtaker_discount_rate_fraction
         end
     ```
 """
 struct Financial
-    om_cost_escalation_pct::Float64
-    elec_cost_escalation_pct::Float64
-    boiler_fuel_cost_escalation_pct::Float64
-    chp_fuel_cost_escalation_pct::Float64
-    generator_fuel_cost_escalation_pct::Float64
-    offtaker_tax_pct::Float64
-    offtaker_discount_pct::Float64
+    om_cost_escalation_rate_fraction::Float64
+    elec_cost_escalation_rate_fraction::Float64
+    existing_boiler_fuel_cost_escalation_rate_fraction::Float64
+    boiler_fuel_cost_escalation_rate_fraction::Float64
+    chp_fuel_cost_escalation_rate_fraction::Float64
+    generator_fuel_cost_escalation_rate_fraction::Float64
+    offtaker_tax_rate_fraction::Float64
+    offtaker_discount_rate_fraction::Float64
     third_party_ownership::Bool
-    owner_tax_pct::Float64
-    owner_discount_pct::Float64
+    owner_tax_rate_fraction::Float64
+    owner_discount_rate_fraction::Float64
     analysis_years::Int
     value_of_lost_load_per_kwh::Union{Array{Float64,1}, Float64}
-    microgrid_upgrade_cost_pct::Float64
+    microgrid_upgrade_cost_fraction::Float64
     macrs_five_year::Array{Float64,1}
     macrs_seven_year::Array{Float64,1}
     offgrid_other_capital_costs::Float64
     offgrid_other_annual_costs::Float64
     CO2_cost_per_tonne::Float64
-    CO2_cost_escalation_pct::Float64
+    CO2_cost_escalation_rate_fraction::Float64
     NOx_grid_cost_per_tonne::Float64
     SO2_grid_cost_per_tonne::Float64
     PM25_grid_cost_per_tonne::Float64
     NOx_onsite_fuelburn_cost_per_tonne::Float64
     SO2_onsite_fuelburn_cost_per_tonne::Float64
     PM25_onsite_fuelburn_cost_per_tonne::Float64
-    NOx_cost_escalation_pct::Float64
-    SO2_cost_escalation_pct::Float64
-    PM25_cost_escalation_pct::Float64
+    NOx_cost_escalation_rate_fraction::Float64
+    SO2_cost_escalation_rate_fraction::Float64
+    PM25_cost_escalation_rate_fraction::Float64
 
     function Financial(;
         off_grid_flag::Bool = false,
-        om_cost_escalation_pct::Real = 0.025,
-        elec_cost_escalation_pct::Real = 0.019,
-        boiler_fuel_cost_escalation_pct::Real = 0.034,
-        chp_fuel_cost_escalation_pct::Real = 0.034,
-        generator_fuel_cost_escalation_pct::Real = 0.027,
-        offtaker_tax_pct::Real = 0.26,
-        offtaker_discount_pct::Real = 0.0564,
+        om_cost_escalation_rate_fraction::Real = 0.025,
+        elec_cost_escalation_rate_fraction::Real = 0.019,
+        existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.034,
+        boiler_fuel_cost_escalation_rate_fraction::Real = 0.034,
+        chp_fuel_cost_escalation_rate_fraction::Real = 0.034,
+        generator_fuel_cost_escalation_rate_fraction::Real = 0.027,
+        offtaker_tax_rate_fraction::Real = 0.26,
+        offtaker_discount_rate_fraction::Real = 0.0564,
         third_party_ownership::Bool = false,
-        owner_tax_pct::Real = 0.26,
-        owner_discount_pct::Real = 0.0564,
+        owner_tax_rate_fraction::Real = 0.26,
+        owner_discount_rate_fraction::Real = 0.0564,
         analysis_years::Int = 25,
         value_of_lost_load_per_kwh::Union{Array{<:Real,1}, Real} = 1.00, # used with multiple/probabilistic outage modeling (not single/deterministic outage modeling)
-        microgrid_upgrade_cost_pct::Real = off_grid_flag ? 0.0 : 0.3, # MG upgrade cost as percentage of normal operations capital costs. Used with multiple/probabilistic outage modeling (not single/deterministic outage modeling). Not applicable when off_grid_flag is true
+        microgrid_upgrade_cost_fraction::Real = off_grid_flag ? 0.0 : 0.3, # MG upgrade cost as percentage of normal operations capital costs. Used with multiple/probabilistic outage modeling (not single/deterministic outage modeling). Not applicable when off_grid_flag is true
         macrs_five_year::Array{<:Real,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
         macrs_seven_year::Array{<:Real,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
-        offgrid_other_capital_costs::Real = 0.0, # only applicable when off_grid_flag is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
-        offgrid_other_annual_costs::Real = 0.0, # only applicable when off_grid_flag is true. Considered tax deductible for owner.
+        offgrid_other_capital_costs::Real = 0.0, # only applicable when `off_grid_flag` is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
+        offgrid_other_annual_costs::Real = 0.0, # only applicable when `off_grid_flag` is true. Considered tax deductible for owner.
         # Emissions cost inputs
         CO2_cost_per_tonne::Real = 51.0,
-        CO2_cost_escalation_pct::Real = 0.042173,
+        CO2_cost_escalation_rate_fraction::Real = 0.042173,
         NOx_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
         SO2_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
         PM25_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
         NOx_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
         SO2_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
         PM25_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
-        NOx_cost_escalation_pct::Union{Nothing,Real} = nothing,
-        SO2_cost_escalation_pct::Union{Nothing,Real} = nothing,
-        PM25_cost_escalation_pct::Union{Nothing,Real} = nothing,
+        NOx_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
+        SO2_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
+        PM25_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
         # fields from other models needed for validation
         latitude::Real, # Passed from Site
         longitude::Real, # Passed from Site
         include_health_in_objective::Bool = false # Passed from Settings
     )
         
-        if off_grid_flag && !(microgrid_upgrade_cost_pct == 0.0)
-            @warn "microgrid_upgrade_cost_pct is not applied when off_grid_flag is true. Setting microgrid_upgrade_cost_pct to 0.0."
-            microgrid_upgrade_cost_pct = 0.0
+        if off_grid_flag && !(microgrid_upgrade_cost_fraction == 0.0)
+            @warn "microgrid_upgrade_cost_fraction is not applied when `off_grid_flag` is true. Setting microgrid_upgrade_cost_fraction to 0.0."
+            microgrid_upgrade_cost_fraction = 0.0
         end
 
         if !off_grid_flag && (offgrid_other_capital_costs != 0.0 || offgrid_other_annual_costs != 0.0)
-            @warn "offgrid_other_capital_costs and offgrid_other_annual_costs are only applied when off_grid_flag is true. Setting these inputs to 0.0 for this grid-connected analysis."
+            @warn "offgrid_other_capital_costs and offgrid_other_annual_costs are only applied when `off_grid_flag` is true. Setting these inputs to 0.0 for this grid-connected analysis."
             offgrid_other_capital_costs = 0.0
             offgrid_other_annual_costs = 0.0
         end
 
         if !third_party_ownership
-            owner_tax_pct = offtaker_tax_pct
-            owner_discount_pct = offtaker_discount_pct
+            owner_tax_rate_fraction = offtaker_tax_rate_fraction
+            owner_discount_rate_fraction = offtaker_discount_rate_fraction
         end
 
         grid_costs = off_grid_flag ? nothing : easiur_costs(latitude, longitude, "grid")
         onsite_costs = easiur_costs(latitude, longitude, "onsite")
-        escalation_rates = easiur_escalation_rates(latitude, longitude, om_cost_escalation_pct)
+        escalation_rates = easiur_escalation_rates(latitude, longitude, om_cost_escalation_rate_fraction)
 
         missing_health_inputs = false
         # use EASIUR data for missing grid costs
@@ -186,50 +189,51 @@ struct Financial
         end
         # use EASIUR data for missing escalation rates
         missing_health_inputs = isnothing(escalation_rates) ? true : missing_health_inputs
-        if isnothing(NOx_cost_escalation_pct)
-            NOx_cost_escalation_pct = isnothing(escalation_rates) ? 0.0 : escalation_rates["NOx"]
+        if isnothing(NOx_cost_escalation_rate_fraction)
+            NOx_cost_escalation_rate_fraction = isnothing(escalation_rates) ? 0.0 : escalation_rates["NOx"]
         end
-        if isnothing(SO2_cost_escalation_pct)
-            SO2_cost_escalation_pct = isnothing(escalation_rates) ? 0.0 : escalation_rates["SO2"]
+        if isnothing(SO2_cost_escalation_rate_fraction)
+            SO2_cost_escalation_rate_fraction = isnothing(escalation_rates) ? 0.0 : escalation_rates["SO2"]
         end
-        if isnothing(PM25_cost_escalation_pct)
-            PM25_cost_escalation_pct = isnothing(escalation_rates) ? 0.0 : escalation_rates["PM25"]
+        if isnothing(PM25_cost_escalation_rate_fraction)
+            PM25_cost_escalation_rate_fraction = isnothing(escalation_rates) ? 0.0 : escalation_rates["PM25"]
         end
 
         if missing_health_inputs && include_health_in_objective
-            error("To include health costs in the objective function, you must either enter custom emissions costs and escalation rates or a site location within the CAMx grid.")
+            throw(@error("To include health costs in the objective function, you must either enter custom emissions costs and escalation rates or a site location within the CAMx grid."))
         end
     
 
-        return new(
-            om_cost_escalation_pct,
-            elec_cost_escalation_pct,
-            boiler_fuel_cost_escalation_pct,
-            chp_fuel_cost_escalation_pct,
-            generator_fuel_cost_escalation_pct,
-            offtaker_tax_pct,
-            offtaker_discount_pct,
+        return new(    
+            om_cost_escalation_rate_fraction,
+            elec_cost_escalation_rate_fraction,
+            existing_boiler_fuel_cost_escalation_rate_fraction,
+            boiler_fuel_cost_escalation_rate_fraction,
+            chp_fuel_cost_escalation_rate_fraction,
+            generator_fuel_cost_escalation_rate_fraction,
+            offtaker_tax_rate_fraction,
+            offtaker_discount_rate_fraction,
             third_party_ownership,
-            owner_tax_pct,
-            owner_discount_pct,
+            owner_tax_rate_fraction,
+            owner_discount_rate_fraction,
             analysis_years,
             value_of_lost_load_per_kwh,
-            microgrid_upgrade_cost_pct,
+            microgrid_upgrade_cost_fraction,
             macrs_five_year,
             macrs_seven_year,
             offgrid_other_capital_costs,
             offgrid_other_annual_costs,
             CO2_cost_per_tonne,
-            CO2_cost_escalation_pct,
+            CO2_cost_escalation_rate_fraction,
             NOx_grid_cost_per_tonne,
             SO2_grid_cost_per_tonne,
             PM25_grid_cost_per_tonne,
             NOx_onsite_fuelburn_cost_per_tonne,
             SO2_onsite_fuelburn_cost_per_tonne,
             PM25_onsite_fuelburn_cost_per_tonne,
-            NOx_cost_escalation_pct,
-            SO2_cost_escalation_pct,
-            PM25_cost_escalation_pct
+            NOx_cost_escalation_rate_fraction,
+            SO2_cost_escalation_rate_fraction,
+            PM25_cost_escalation_rate_fraction
         )
     end
 end
@@ -246,7 +250,13 @@ function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
         @warn "Error in easiur_costs: grid_or_onsite must equal either 'grid' or 'onsite'"
         return nothing
     end
-    EASIUR_data = get_EASIUR2005(type, pop_year=2020, income_year=2020, dollar_year=2010)
+    EASIUR_data = nothing
+    try
+        EASIUR_data = get_EASIUR2005(type, pop_year=2020, income_year=2020, dollar_year=2010)
+    catch e
+        @warn "Could not look up EASIUR health costs from point ($latitude,$longitude). {$e}"
+        return nothing
+    end
 
     # convert lon, lat to CAMx grid (x, y), specify datum. default is NAD83
     # Note: x, y returned from g2l follows the CAMx grid convention.
@@ -264,15 +274,21 @@ function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
         )
         return costs_per_tonne
     catch
-        @error "Could not look up EASIUR health costs from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid."
+        @warn "Could not look up EASIUR health costs from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid."
         return nothing
     end
 end
 
 function easiur_escalation_rates(latitude::Real, longitude::Real, inflation::Real)
-    EASIUR_150m_yr2020 = get_EASIUR2005("p150", pop_year=2020, income_year=2020, dollar_year=2010) 
-    EASIUR_150m_yr2024 = get_EASIUR2005("p150", pop_year=2024, income_year=2024, dollar_year=2010) 
-
+    EASIUR_150m_yr2020 = nothing
+    EASIUR_150m_yr2024 = nothing
+    try
+        EASIUR_150m_yr2020 = get_EASIUR2005("p150", pop_year=2020, income_year=2020, dollar_year=2010) 
+        EASIUR_150m_yr2024 = get_EASIUR2005("p150", pop_year=2024, income_year=2024, dollar_year=2010) 
+    catch e
+        @warn "Could not look up EASIUR health cost escalation rates from point ($latitude,$longitude). {$e}"
+        return nothing
+    end
     # convert lon, lat to CAMx grid (x, y), specify datum. default is NAD83
     coords = g2l(longitude, latitude, datum="NAD83")
     x = Int(round(coords[1]))
@@ -287,7 +303,7 @@ function easiur_escalation_rates(latitude::Real, longitude::Real, inflation::Rea
         )
         return escalation_rates
     catch
-        @error "Could not look up EASIUR health cost escalation rates from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid"
+        @warn "Could not look up EASIUR health cost escalation rates from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid"
         return nothing
     end
 end
@@ -383,7 +399,7 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
     )
 
     if !(stack in ["area", "p150", "p300"])
-        @error "stack should be one of 'area', 'p150', 'p300'"
+        throw(@error("stack should be one of 'area', 'p150', 'p300'"))
         return nothing
     end
 
@@ -403,7 +419,7 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
                 setindex!(ret_map, v .* adj, k)
             end
         catch
-            @error "income year is $(income_year) but must be between 1990 to 2024"
+            throw(@error("income year is $(income_year) but must be between 1990 to 2024"))
             return nothing
         end
     end
@@ -414,7 +430,7 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
                 setindex!(ret_map, v .* adj, k)
             end
         catch e
-            @error "Dollar year must be between 1980 to 2010"
+            throw(@error("Dollar year must be between 1980 to 2010"))
             return nothing
         end
     end

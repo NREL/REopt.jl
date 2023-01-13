@@ -34,22 +34,22 @@
     max_kw = 1.0e9,
     installed_cost_per_kw = nothing,
     om_cost_per_kw = 35.0,
-    prod_factor_series = nothing,
+    production_factor_series = nothing,
     size_class = "",
     wind_meters_per_sec = [],
     wind_direction_degrees = [],
     temperature_celsius = [],
     pressure_atmospheres = [],
     macrs_option_years = 5,
-    macrs_bonus_pct = 0.0,
+    macrs_bonus_fraction = 0.0,
     macrs_itc_reduction = 0.5,
-    federal_itc_pct = nothing,
+    federal_itc_fraction = nothing,
     federal_rebate_per_kw = 0.0,
-    state_ibi_pct = 0.0,
+    state_ibi_fraction = 0.0,
     state_ibi_max = 1.0e10,
     state_rebate_per_kw = 0.0,
     state_rebate_max = 1.0e10,
-    utility_ibi_pct = 0.0,
+    utility_ibi_fraction = 0.0,
     utility_ibi_max = 1.0e10,
     utility_rebate_per_kw = 0.0,
     utility_rebate_max = 1.0e10,
@@ -60,7 +60,7 @@
     can_net_meter = true,
     can_wholesale = true,
     can_export_beyond_nem_limit = true
-    operating_reserve_required_pct::Real = off_grid_flag ? 0.50 : 0.0, # Only applicable when off_grid_flag is True. Applied to each time_step as a % of wind generation serving load.
+    operating_reserve_required_fraction::Real = off_grid_flag ? 0.50 : 0.0, # Only applicable when `off_grid_flag` is true. Applied to each time_step as a % of wind generation serving load.
 ```
 
 `size_class` must be one of ["residential", "commercial", "medium", "large"]. If `size_class` is not provided then it is determined based on the average electric load.
@@ -85,7 +85,7 @@ size_class_to_itc_incentives = Dict(
 )
 ```
 
-If the `prod_factor_series` is not provided then NREL's System Advisor Model (SAM) is used to get the wind turbine 
+If the `production_factor_series` is not provided then NREL's System Advisor Model (SAM) is used to get the wind turbine 
 production factor.
 
 Wind resource values are optional, i.e.
@@ -100,7 +100,7 @@ struct Wind <: AbstractTech
     max_kw::Real
     installed_cost_per_kw::Union{Nothing, Real}
     om_cost_per_kw::Real
-    prod_factor_series::Union{Nothing, Array{Real,1}}
+    production_factor_series::Union{Nothing, Array{Real,1}}
     size_class::String
     hub_height::T where T <: Real
     wind_meters_per_sec::AbstractArray{Float64,1}
@@ -108,15 +108,15 @@ struct Wind <: AbstractTech
     temperature_celsius::AbstractArray{Float64,1}
     pressure_atmospheres::AbstractArray{Float64,1}
     macrs_option_years::Int
-    macrs_bonus_pct::Real
+    macrs_bonus_fraction::Real
     macrs_itc_reduction::Real
-    federal_itc_pct::Union{Nothing, Real}
+    federal_itc_fraction::Union{Nothing, Real}
     federal_rebate_per_kw::Real
-    state_ibi_pct::Real
+    state_ibi_fraction::Real
     state_ibi_max::Real
     state_rebate_per_kw::Real
     state_rebate_max::Real
-    utility_ibi_pct::Real
+    utility_ibi_fraction::Real
     utility_ibi_max::Real
     utility_rebate_per_kw::Real
     utility_rebate_max::Real
@@ -128,7 +128,7 @@ struct Wind <: AbstractTech
     can_wholesale::Bool
     can_export_beyond_nem_limit::Bool
     can_curtail::Bool
-    operating_reserve_required_pct::Real
+    operating_reserve_required_fraction::Real
 
     function Wind(;
         off_grid_flag::Bool = false,
@@ -136,22 +136,22 @@ struct Wind <: AbstractTech
         max_kw = 1.0e9,
         installed_cost_per_kw = nothing,
         om_cost_per_kw = 35.0,
-        prod_factor_series = nothing,
+        production_factor_series = nothing,
         size_class = "",
         wind_meters_per_sec = [],
         wind_direction_degrees = [],
         temperature_celsius = [],
         pressure_atmospheres = [],
         macrs_option_years = 5,
-        macrs_bonus_pct = 0.0,
+        macrs_bonus_fraction = 0.0,
         macrs_itc_reduction = 0.5,
-        federal_itc_pct = nothing,
+        federal_itc_fraction = nothing,
         federal_rebate_per_kw = 0.0,
-        state_ibi_pct = 0.0,
+        state_ibi_fraction = 0.0,
         state_ibi_max = 1.0e10,
         state_rebate_per_kw = 0.0,
         state_rebate_max = 1.0e10,
-        utility_ibi_pct = 0.0,
+        utility_ibi_fraction = 0.0,
         utility_ibi_max = 1.0e10,
         utility_rebate_per_kw = 0.0,
         utility_rebate_max = 1.0e10,
@@ -164,7 +164,7 @@ struct Wind <: AbstractTech
         can_export_beyond_nem_limit = off_grid_flag ? false : true,
         can_curtail= true,
         average_elec_load = 0.0,
-        operating_reserve_required_pct::Real = off_grid_flag ? 0.50 : 0.0, # Only applicable when off_grid_flag is True. Applied to each time_step as a % of wind generation serving load.
+        operating_reserve_required_fraction::Real = off_grid_flag ? 0.50 : 0.0, # Only applicable when `off_grid_flag` is true. Applied to each time_step as a % of wind generation serving load.
         )
         size_class_to_hub_height = Dict(
             "residential"=> 20,
@@ -197,26 +197,26 @@ struct Wind <: AbstractTech
                 size_class = "large"
             end
         elseif !(size_class in keys(size_class_to_hub_height))
-            @error "Wind.size_class must be one of $(keys(size_class_to_hub_height))"
+            throw(@error("Wind size_class must be one of $(keys(size_class_to_hub_height))"))
         end
 
         if isnothing(installed_cost_per_kw)
             installed_cost_per_kw = size_class_to_installed_cost[size_class]
         end
 
-        if isnothing(federal_itc_pct)
-            federal_itc_pct = size_class_to_itc_incentives[size_class]
+        if isnothing(federal_itc_fraction)
+            federal_itc_fraction = size_class_to_itc_incentives[size_class]
         end
 
         hub_height = size_class_to_hub_height[size_class]
 
-        if !(off_grid_flag) && !(operating_reserve_required_pct == 0.0)
-            @warn "Wind operating_reserve_required_pct applies only when off_grid_flag is True. Setting operating_reserve_required_pct to 0.0 for this on-grid analysis."
-            operating_reserve_required_pct = 0.0
+        if !(off_grid_flag) && !(operating_reserve_required_fraction == 0.0)
+            @warn "Wind operating_reserve_required_fraction applies only when `off_grid_flag` is true. Setting operating_reserve_required_fraction to 0.0 for this on-grid analysis."
+            operating_reserve_required_fraction = 0.0
         end
 
         if off_grid_flag && (can_net_meter || can_wholesale || can_export_beyond_nem_limit)
-            @warn "Net metering, wholesale, and grid exports are not possible for off-grid scenarios. Setting Wind can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False."
+            @warn "Setting Wind can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False because `off_grid_flag` is true."
             can_net_meter = false
             can_wholesale = false
             can_export_beyond_nem_limit = false
@@ -227,7 +227,7 @@ struct Wind <: AbstractTech
             max_kw,
             installed_cost_per_kw,
             om_cost_per_kw,
-            prod_factor_series,
+            production_factor_series,
             size_class,
             hub_height,
             wind_meters_per_sec,
@@ -235,15 +235,15 @@ struct Wind <: AbstractTech
             temperature_celsius,
             pressure_atmospheres,
             macrs_option_years,
-            macrs_bonus_pct,
+            macrs_bonus_fraction,
             macrs_itc_reduction,
-            federal_itc_pct,
+            federal_itc_fraction,
             federal_rebate_per_kw,
-            state_ibi_pct,
+            state_ibi_fraction,
             state_ibi_max,
             state_rebate_per_kw,
             state_rebate_max,
-            utility_ibi_pct,
+            utility_ibi_fraction,
             utility_ibi_max,
             utility_rebate_per_kw,
             utility_rebate_max,
@@ -255,7 +255,7 @@ struct Wind <: AbstractTech
             can_wholesale,
             can_export_beyond_nem_limit,
             can_curtail,
-            operating_reserve_required_pct
+            operating_reserve_required_fraction
         )
     end
 end

@@ -138,7 +138,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 			elseif b in p.s.storage.types.cold
 				add_cold_thermal_storage_dispatch_constraints(m, p, b)
 			else
-				@error("Invalid storage does not fall in a thermal or electrical set")
+				throw(@error("Invalid storage does not fall in a thermal or electrical set"))
 			end
 		end
 	end
@@ -311,7 +311,7 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 			dvUnservedLoad[S, tZeros, outage_time_steps] >= 0 # unserved load not met by system
 			dvMGProductionToStorage[p.techs.all, S, tZeros, outage_time_steps] >= 0 # Electricity going to the storage system during each time_step
 			dvMGDischargeFromStorage[S, tZeros, outage_time_steps] >= 0 # Electricity coming from the storage system during each time_step
-			dvMGRatedProduction[p.techs.all, S, tZeros, outage_time_steps]  # MG Rated Production at every time_step.  Multiply by ProdFactor to get actual energy
+			dvMGRatedProduction[p.techs.all, S, tZeros, outage_time_steps]  # MG Rated Production at every time_step.  Multiply by production_factor to get actual energy
 			dvMGStoredEnergy[S, tZeros, 0:max_outage_duration] >= 0 # State of charge of the MG storage system
 			dvMaxOutageCost[S] >= 0 # maximum outage cost dependent on number of outage durations
 			# dvMGTechUpgradeCost[p.techs.all] >= 0

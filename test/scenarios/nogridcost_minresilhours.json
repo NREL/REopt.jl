@@ -57,7 +57,7 @@
     "annual_kwh": 8760.0,
     "doe_reference_name": "FlatLoad",
     "city": "Boulder",
-    "critical_load_pct": 1
+    "critical_load_fraction": 1
   },
   "Generator": {
   },

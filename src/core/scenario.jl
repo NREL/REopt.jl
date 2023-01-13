@@ -42,6 +42,7 @@ struct Scenario <: AbstractScenario
     space_heating_load::SpaceHeatingLoad
     cooling_load::CoolingLoad
     existing_boiler::Union{ExistingBoiler, Nothing}
+    boiler::Union{Boiler, Nothing}
     chp::Union{CHP, Nothing}  # use nothing for more items when they are not modeled?
     flexible_hvac::Union{FlexibleHVAC, Nothing}
     existing_chiller::Union{ExistingChiller, Nothing}
@@ -49,6 +50,7 @@ struct Scenario <: AbstractScenario
     ghp_option_list::Array{Union{GHP, Nothing}, 1}  # List of GHP objects (often just 1 element, but can be more)
     heating_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
+    steam_turbine::Union{SteamTurbine, Nothing}
 end
 
 """
@@ -67,11 +69,13 @@ A Scenario struct can contain the following keys:
 - [DomesticHotWaterLoad](@ref) (optional)
 - [SpaceHeatingLoad](@ref) (optional)
 - [ExistingBoiler](@ref) (optional)
+- [Boiler](@ref) (optional)
 - [CHP](@ref) (optional)
 - [FlexibleHVAC](@ref) (optional)
 - [ExistingChiller](@ref) (optional)
 - [AbsorptionChiller](@ref) (optional)
 - [GHP](@ref) (optional, can be Array)
+- [SteamTurbine](@ref) (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
 
@@ -80,6 +84,10 @@ All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which ca
     handle conversion of Vector of Vectors from JSON to a Matrix in Julia).
 """
 function Scenario(d::Dict; flex_hvac_from_json=false)
+
+    instantiate_logger()
+
+    d = deepcopy(d)
     if haskey(d, "Settings")
         settings = Settings(;dictkeys_tosymbols(d["Settings"])...)
     else
@@ -93,7 +101,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         offgrid_allowed_keys = ["PV", "Wind", "ElectricStorage", "Generator", "Settings", "Site", "Financial", "ElectricLoad", "ElectricTariff", "ElectricUtility"]
         unallowed_keys = setdiff(keys(d), offgrid_allowed_keys) 
         if !isempty(unallowed_keys)
-            error("Off-grid functionality does not allow the following input keys: $unallowed_keys.")
+            throw(@error("The following key(s) are not permitted when `off_grid_flag` is true: $unallowed_keys."))
         end
     end
     
@@ -111,7 +119,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             push!(pvs, PV(;dictkeys_tosymbols(d["PV"])..., off_grid_flag = settings.off_grid_flag, 
                         latitude=site.latitude))
         else
-            error("PV input must be Dict or Dict[].")
+            throw(@error("PV input must be Dict or Dict[]."))
         end
     end
 
@@ -130,8 +138,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d, "ElectricUtility") && !(settings.off_grid_flag)
         electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...,
                                             latitude=site.latitude, longitude=site.longitude, 
-                                            CO2_emissions_reduction_min_pct=site.CO2_emissions_reduction_min_pct,
-                                            CO2_emissions_reduction_max_pct=site.CO2_emissions_reduction_max_pct,
+                                            CO2_emissions_reduction_min_fraction=site.CO2_emissions_reduction_min_fraction,
+                                            CO2_emissions_reduction_max_fraction=site.CO2_emissions_reduction_max_fraction,
                                             include_climate_in_objective=settings.include_climate_in_objective,
                                             include_health_in_objective=settings.include_health_in_objective,
                                             off_grid_flag=settings.off_grid_flag,
@@ -143,7 +151,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                         )
     elseif settings.off_grid_flag 
         if haskey(d, "ElectricUtility")
-            @warn "ElectricUtility inputs are not applicable when off_grid_flag is true and any ElectricUtility inputs will be ignored. For off-grid scenarios, a year-long outage will always be modeled."
+            @warn "ElectricUtility inputs are not applicable when `off_grid_flag` is true and will be ignored. For off-grid scenarios, a year-long outage will always be modeled."
         end
         electric_utility = ElectricUtility(; outage_start_time_step = 1, 
                                             outage_end_time_step = settings.time_steps_per_hour * 8760, 
@@ -186,7 +194,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                         )
     else # if ElectricTariff inputs supplied for off-grid, will not be applied. 
         if haskey(d, "ElectricTariff")
-            @warn "ElectricTariff inputs are not applicable when off_grid_flag is true, and will be ignored."
+            @warn "ElectricTariff inputs are not applicable when `off_grid_flag` is true, and will be ignored."
         end
         electric_tariff = ElectricTariff(;  blended_annual_energy_rate = 0.0, 
                                             blended_annual_demand_rate = 0.0,
@@ -240,6 +248,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     flexible_hvac = nothing
     existing_boiler = nothing
+    boiler = nothing
     existing_chiller = nothing
 
     if haskey(d, "FlexibleHVAC")
@@ -264,8 +273,13 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     boiler_inputs = merge(boiler_inputs, dictkeys_tosymbols(d["ExistingBoiler"]))
                 end
                 existing_boiler = ExistingBoiler(; boiler_inputs...)
-                # TODO automatically add CHP or other heating techs?
+
+                if haskey(d, "Boiler")
+                    boiler = Boiler(; dictkeys_tosymbols(d["Boiler"])...)
+                end
                 # TODO increase max_thermal_factor_on_peak_load to allow more heating flexibility?
+            elseif haskey(d, "Boiler")
+                @warn("Not creating Boiler because there is no heating load.") 
             end
 
             if sum(flexible_hvac.bau_hvac.existing_chiller_kw_thermal) > 0
@@ -300,29 +314,44 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         end
     end
 
-    if max_heat_demand_kw > 0 && !haskey(d, "FlexibleHVAC")  # create ExistingBoler
+    if max_heat_demand_kw > 0 && !haskey(d, "FlexibleHVAC")  # create ExistingBoiler
         boiler_inputs = Dict{Symbol, Any}()
         boiler_inputs[:max_heat_demand_kw] = max_heat_demand_kw
         boiler_inputs[:time_steps_per_hour] = settings.time_steps_per_hour
-        # If CHP is considered, prime_mover may inform the default boiler efficiency
-        if haskey(d, "CHP") 
-            if haskey(d["CHP"], "prime_mover")
-                boiler_inputs[:chp_prime_mover] = d["CHP"]["prime_mover"]
-            end
-        end
         if haskey(d, "ExistingBoiler")
             boiler_inputs = merge(boiler_inputs, dictkeys_tosymbols(d["ExistingBoiler"]))
         end
         existing_boiler = ExistingBoiler(; boiler_inputs...)
     end
 
+    if haskey(d, "Boiler")
+        if max_heat_demand_kw > 0 && !haskey(d, "FlexibleHVAC")
+            boiler = Boiler(; dictkeys_tosymbols(d["Boiler"])...)
+        end
+        if !(max_heat_demand_kw > 0) && !haskey(d, "FlexibleHVAC")
+            @warn("Not creating Boiler because there is no heating load.")
+        end
+    end
+
+
     chp = nothing
+    chp_prime_mover = nothing
     if haskey(d, "CHP")
-        chp = CHP(d["CHP"])
+        if !isnothing(existing_boiler)
+            total_fuel_heating_load_mmbtu_per_hour = (space_heating_load.loads_kw + dhw_load.loads_kw) / existing_boiler.efficiency / KWH_PER_MMBTU
+            avg_boiler_fuel_load_mmbtu_per_hour = sum(total_fuel_heating_load_mmbtu_per_hour) / length(total_fuel_heating_load_mmbtu_per_hour)
+            chp = CHP(d["CHP"]; 
+                    avg_boiler_fuel_load_mmbtu_per_hour = avg_boiler_fuel_load_mmbtu_per_hour,
+                    existing_boiler = existing_boiler)
+        else # Only if modeling CHP without heating_load and existing_boiler (for electric-only CHP)
+            chp = CHP(d["CHP"])
+        end
+        chp_prime_mover = chp.prime_mover
     end
 
     max_cooling_demand_kw = 0
     if haskey(d, "CoolingLoad") && !haskey(d, "FlexibleHVAC")
+        d["CoolingLoad"] = convert(Dict{String, Any}, d["CoolingLoad"])
         # Note, if thermal_loads_ton or one of the "...fraction(s)_of_electric_load" inputs is used for CoolingLoad, doe_reference_name is ignored 
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["CoolingLoad"])
         d["CoolingLoad"]["site_electric_load_profile"] = electric_load.loads_kw
@@ -345,6 +374,19 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                     time_steps_per_hour=settings.time_steps_per_hour
                                     )
         max_cooling_demand_kw = maximum(cooling_load.loads_kw_thermal)
+    
+        # Check if cooling electric load is greater than total electric load in any hour, and throw error if true with the violating time time_steps
+        cooling_elec = cooling_load.loads_kw_thermal / cooling_load.existing_chiller_cop
+        cooling_elec_too_high_timesteps = findall(cooling_elec .> electric_load.loads_kw)
+        if length(cooling_elec_too_high_timesteps) > 0
+            cooling_elec_too_high_kw = cooling_elec[cooling_elec_too_high_timesteps]
+            total_elec_when_cooling_elec_too_high = electric_load.loads_kw[cooling_elec_too_high_timesteps]
+            throw(@error("Cooling electric consumption cannot be more than the total electric load at any time step. At time steps 
+                $cooling_elec_too_high_timesteps the cooling electric consumption is $cooling_elec_too_high_kw (kW) and
+                the total electric load is $total_elec_when_cooling_elec_too_high (kW). Note you may consider adjusting 
+                cooling load input versus the total electric load if you provided inputs in units of cooling tons, or 
+                check the electric chiller COP input value."))
+        end
     else
         cooling_load = CoolingLoad(; 
             thermal_loads_ton=zeros(8760*settings.time_steps_per_hour),
@@ -367,7 +409,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         existing_chiller = ExistingChiller(; chiller_inputs...)
 
         if haskey(d, "AbsorptionChiller")
-            absorption_chiller = AbsorptionChiller(; dictkeys_tosymbols(d["AbsorptionChiller"])...)
+            absorption_chiller = AbsorptionChiller(d["AbsorptionChiller"]; 
+                                                    existing_boiler = existing_boiler,
+                                                    chp_prime_mover = chp_prime_mover,
+                                                    cooling_load = cooling_load)
         end
     end
 
@@ -383,7 +428,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             get_ghpghx_from_input = true
         end        
     elseif haskey(d, "GHP") && !haskey(d["GHP"],"building_sqft")
-        error("If evaluating GHP you must enter a building_sqft")
+        throw(@error("If evaluating GHP you must enter a building_sqft."))
     end
     # Modify Heating and Cooling loads for GHP retrofit to account for HVAC VAV efficiency gains
     if eval_ghp
@@ -418,16 +463,16 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 r = HTTP.get(url)
                 response = JSON.parse(String(r.body))
                 if r.status != 200
-                    error("Bad response from PVWatts: $(response["errors"])")
+                    throw(@error("Bad response from PVWatts: $(response["errors"])"))
                 end
                 @info "PVWatts success."
                 temp_c = get(response["outputs"], "tamb", [])
                 if length(temp_c) != 8760 || isempty(temp_c)
-                    @error "PVWatts did not return a valid temperature profile. Got $temp_c"
+                    throw(@error("PVWatts did not return a valid temperature profile. Got $temp_c"))
                 end
                 ambient_temperature_f = temp_c * 1.8 .+ 32.0
             catch e
-                @error "Error occurred when calling PVWatts: $e"
+                throw(@error("Error occurred when calling PVWatts: $e"))
             end
         end
         
@@ -468,8 +513,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     JSON.print(f, ghpghx_response)
                 end
             catch
-                error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
-                    loaded (using GhpGhx) to the active Julia environment")
+                throw(@error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
+                    loaded (using GhpGhx) to the active Julia environment"))
             end                
         end
     # If ghpghx_responses is included in inputs, do NOT run GhpGhx.jl model and use already-run ghpghx result as input to REopt
@@ -481,6 +526,18 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         end
         for ghpghx_response in get(d["GHP"], "ghpghx_responses", [])
             append!(ghp_option_list, [GHP(ghpghx_response, ghp_inputs_removed_ghpghx_responses)])
+        end
+    end
+
+    steam_turbine = nothing
+    if haskey(d, "SteamTurbine") && d["SteamTurbine"]["max_kw"] > 0.0
+        if !isnothing(existing_boiler)
+            total_fuel_heating_load_mmbtu_per_hour = (space_heating_load.loads_kw + dhw_load.loads_kw) / existing_boiler.efficiency / KWH_PER_MMBTU
+            avg_boiler_fuel_load_mmbtu_per_hour = sum(total_fuel_heating_load_mmbtu_per_hour) / length(total_fuel_heating_load_mmbtu_per_hour)
+            steam_turbine = SteamTurbine(d["SteamTurbine"];  
+                                        avg_boiler_fuel_load_mmbtu_per_hour = avg_boiler_fuel_load_mmbtu_per_hour)
+        else
+            steam_turbine = SteamTurbine(d["SteamTurbine"])
         end
     end
 
@@ -499,13 +556,15 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         space_heating_load,
         cooling_load,
         existing_boiler,
+        boiler,
         chp,
         flexible_hvac,
         existing_chiller,
         absorption_chiller,
         ghp_option_list,
         heating_thermal_load_reduction_with_ghp_kw,
-        cooling_thermal_load_reduction_with_ghp_kw
+        cooling_thermal_load_reduction_with_ghp_kw,
+        steam_turbine
     )
 end
 

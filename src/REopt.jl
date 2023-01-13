@@ -44,7 +44,11 @@ export
     MPCInputs,
     run_mpc,
     build_mpc!, 
-    backup_reliability
+    backup_reliability,
+    get_chp_defaults_prime_mover_size_class,
+    get_steam_turbine_defaults_size_class,
+    simulated_load,
+    get_absorption_chiller_defaults
 
 import HTTP
 import JSON
@@ -66,21 +70,24 @@ using Roots: fzero  # for IRR
 global hdl = nothing
 using JLD
 using Requires
+using CoolProp
 
 function __init__()
     @require GhpGhx="7ce85f02-24a8-4d69-a3f0-14b5daa7d30c" println("using GhpGhx module in REopt")
 end
 
 const EXISTING_BOILER_EFFICIENCY = 0.8
-
 const GAL_PER_M3 = 264.172  # [gal/m^3]
-const KWH_PER_GAL_DIESEL = 40.7  # [kWh/gal_diesel]
+const KWH_PER_GAL_DIESEL = 40.7  # [kWh/gal_diesel] higher heating value of diesel
 const KWH_PER_MMBTU = 293.07107  # [kWh/mmbtu]
 const KWH_THERMAL_PER_TONHOUR = 3.51685
 const TONNE_PER_LB = 1/2204.62  # [tonne/lb]
 const FUEL_TYPES = ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
+const BIG_NUMBER = 1.0e10  #used for max size.  TODO use this number elsewhere.
+const PRIME_MOVERS = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cell"]  #TODO replace `prime_movers` references in CHP code
+const HOT_WATER_OR_STEAM = ["steam", "hot_water"]  #TODO replace references to this list in chp, boiler
 const FUEL_DEFAULTS = Dict(
-    "fuel_renewable_energy_pct" => Dict(
+    "fuel_renewable_energy_fraction" => Dict(
         "natural_gas"=>0.0,
         "landfill_bio_gas"=>1.0,
         "propane"=>0.0,
@@ -112,6 +119,8 @@ const FUEL_DEFAULTS = Dict(
     )
 )
 
+include("logging.jl")
+
 include("keys.jl")
 include("core/types.jl")
 include("core/utils.jl")
@@ -128,21 +137,24 @@ include("core/generator.jl")
 include("core/doe_commercial_reference_building_loads.jl")
 include("core/electric_load.jl")
 include("core/existing_boiler.jl")
+include("core/boiler.jl")
 include("core/existing_chiller.jl")
-include("core/absorption_chiller.jl")
 include("core/flexible_hvac.jl")
 include("core/heating_cooling_loads.jl")
+include("core/absorption_chiller.jl")
 include("core/electric_utility.jl")
-include("core/prodfactor.jl")
+include("core/production_factor.jl")
 include("core/urdb.jl")
 include("core/electric_tariff.jl")
 include("core/chp.jl")
 include("core/ghp.jl")
+include("core/steam_turbine.jl")
 include("core/scenario.jl")
 include("core/bau_scenario.jl")
 include("core/reopt_inputs.jl")
 include("core/bau_inputs.jl")
 include("core/cost_curve.jl")
+include("core/simulated_load.jl")
 
 include("constraints/outage_constraints.jl")
 include("constraints/storage_constraints.jl")
@@ -158,6 +170,7 @@ include("constraints/chp_constraints.jl")
 include("constraints/operating_reserve_constraints.jl")
 include("constraints/battery_degradation.jl")
 include("constraints/ghp_constraints.jl")
+include("constraints/steam_turbine_constraints.jl")
 include("constraints/renewable_energy_constraints.jl")
 include("constraints/emissions_constraints.jl")
 
@@ -181,11 +194,14 @@ include("results/outages.jl")
 include("results/wind.jl")
 include("results/electric_load.jl")
 include("results/existing_boiler.jl")
+include("results/boiler.jl")
 include("results/existing_chiller.jl")
 include("results/absorption_chiller.jl")
 include("results/chp.jl")
 include("results/flexible_hvac.jl")
 include("results/ghp.jl")
+include("results/steam_turbine.jl")
+include("results/heating_cooling_load.jl")
 
 include("core/reopt.jl")
 include("core/reopt_multinode.jl")

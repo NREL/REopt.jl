@@ -48,13 +48,13 @@
     emissions_factor_series_lb_NOx_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
     emissions_factor_series_lb_SO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
     emissions_factor_series_lb_PM25_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
-    emissions_factor_CO2_decrease_pct::Real = 0.01174,
-    emissions_factor_NOx_decrease_pct::Real = 0.01174,
-    emissions_factor_SO2_decrease_pct::Real = 0.01174,
-    emissions_factor_PM25_decrease_pct::Real = 0.01174,
+    emissions_factor_CO2_decrease_fraction::Real = 0.01174,
+    emissions_factor_NOx_decrease_fraction::Real = 0.01174,
+    emissions_factor_SO2_decrease_fraction::Real = 0.01174,
+    emissions_factor_PM25_decrease_fraction::Real = 0.01174,
     # fields from other models needed for validation
-    CO2_emissions_reduction_min_pct::Union{Real, Nothing} = nothing, # passed from Site
-    CO2_emissions_reduction_max_pct::Union{Real, Nothing} = nothing, # passed from Site
+    CO2_emissions_reduction_min_fraction::Union{Real, Nothing} = nothing, # passed from Site
+    CO2_emissions_reduction_max_fraction::Union{Real, Nothing} = nothing, # passed from Site
     include_climate_in_objective::Bool = false, # passed from Settings
     include_health_in_objective::Bool = false # passed from Settings
 ```
@@ -92,10 +92,10 @@ struct ElectricUtility
     emissions_factor_series_lb_NOx_per_kwh::Array{<:Real,1}
     emissions_factor_series_lb_SO2_per_kwh::Array{<:Real,1}
     emissions_factor_series_lb_PM25_per_kwh::Array{<:Real,1}
-    emissions_factor_CO2_decrease_pct::Real
-    emissions_factor_NOx_decrease_pct::Real
-    emissions_factor_SO2_decrease_pct::Real
-    emissions_factor_PM25_decrease_pct::Real
+    emissions_factor_CO2_decrease_fraction::Real
+    emissions_factor_NOx_decrease_fraction::Real
+    emissions_factor_SO2_decrease_fraction::Real
+    emissions_factor_PM25_decrease_fraction::Real
     outage_start_time_step::Int  # for modeling a single outage, with critical load spliced into the baseline load ...
     outage_end_time_step::Int  # ... utility production_factor = 0 during the outage
     allow_simultaneous_export_import::Bool  # if true the site has two meters (in effect)
@@ -133,13 +133,13 @@ struct ElectricUtility
         emissions_factor_series_lb_NOx_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
         emissions_factor_series_lb_SO2_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
         emissions_factor_series_lb_PM25_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
-        emissions_factor_CO2_decrease_pct::Real = 0.01174,
-        emissions_factor_NOx_decrease_pct::Real = 0.01174,
-        emissions_factor_SO2_decrease_pct::Real = 0.01174,
-        emissions_factor_PM25_decrease_pct::Real = 0.01174,
+        emissions_factor_CO2_decrease_fraction::Real = 0.01174,
+        emissions_factor_NOx_decrease_fraction::Real = 0.01174,
+        emissions_factor_SO2_decrease_fraction::Real = 0.01174,
+        emissions_factor_PM25_decrease_fraction::Real = 0.01174,
         # fields from other models needed for validation
-        CO2_emissions_reduction_min_pct::Union{Real, Nothing} = nothing, # passed from Site
-        CO2_emissions_reduction_max_pct::Union{Real, Nothing} = nothing, # passed from Site
+        CO2_emissions_reduction_min_fraction::Union{Real, Nothing} = nothing, # passed from Site
+        CO2_emissions_reduction_max_fraction::Union{Real, Nothing} = nothing, # passed from Site
         include_climate_in_objective::Bool = false, # passed from Settings
         include_health_in_objective::Bool = false # passed from Settings
         )
@@ -176,14 +176,14 @@ struct ElectricUtility
                     if isnothing(emissions_series_dict[ekey])
                         @warn "Cannot find hourly $(ekey) emissions for region $(region_abbr). Setting emissions to zero."
                         if ekey == "CO2" && !off_grid_flag && 
-                                            (!isnothing(CO2_emissions_reduction_min_pct) || 
-                                            !isnothing(CO2_emissions_reduction_max_pct) || 
+                                            (!isnothing(CO2_emissions_reduction_min_fraction) || 
+                                            !isnothing(CO2_emissions_reduction_max_fraction) || 
                                             include_climate_in_objective)
-                            error("To include CO2 costs in the objective function or enforce emissions reduction constraints, 
-                                you must either enter custom CO2 grid emissions factors or a site location within the continental U.S.")
+                            throw(@error("To include CO2 costs in the objective function or enforce emissions reduction constraints, 
+                                you must either enter custom CO2 grid emissions factors or a site location within the continental U.S."))
                         elseif ekey in ["NOx", "SO2", "PM25"] && !off_grid_flag && include_health_in_objective
-                            error("To include health costs in the objective function, you must either enter custom health 
-                                grid emissions factors or a site location within the continental U.S.")
+                            throw(@error("To include health costs in the objective function, you must either enter custom health 
+                                grid emissions factors or a site location within the continental U.S."))
                         end
                         emissions_series_dict[ekey] = zeros(8760*time_steps_per_hour)
                     end
@@ -192,19 +192,19 @@ struct ElectricUtility
         end
         
         if (!isempty(outage_start_time_steps) && isempty(outage_durations)) || (isempty(outage_start_time_steps) && !isempty(outage_durations))
-            error("ElectricUtility inputs outage_start_time_steps and outage_durations must both be provided to model multiple outages")
+            throw(@error("ElectricUtility inputs outage_start_time_steps and outage_durations must both be provided to model multiple outages"))
         end
         if (outage_start_time_step == 0 && outage_end_time_step != 0) || (outage_start_time_step != 0 && outage_end_time_step == 0)
-            error("ElectricUtility inputs outage_start_time_step and outage_end_time_step must both be provided to model an outage")
+            throw(@error("ElectricUtility inputs outage_start_time_step and outage_end_time_step must both be provided to model an outage"))
         end
         if !isempty(outage_start_time_steps)
             if outage_start_time_step != 0 && outage_end_time_step !=0
                 # Warn if outage_start/end_time_step is provided and outage_start_time_steps not empty
-                error("Cannot supply both outage_start(/end)_time_step for deterministic outage modeling and 
-                    multiple outage_start_time_steps for stochastic outage modeling. Please use one or the other.")
+                throw(@error("Cannot supply both outage_start(/end)_time_step for deterministic outage modeling and 
+                    multiple outage_start_time_steps for stochastic outage modeling. Please use one or the other."))
             else
-                @warn ("When using stochastic outage modeling (i.e. outage_start_time_steps, outage_durations, outage_probabilities), 
-                    emissions and renewable energy percentage calculations and constraints do not consider outages.")
+                @warn "When using stochastic outage modeling (i.e. outage_start_time_steps, outage_durations, outage_probabilities), 
+                    emissions and renewable energy percentage calculations and constraints do not consider outages."
             end
         end
 
@@ -215,10 +215,10 @@ struct ElectricUtility
             is_MPC ? Float64[] : emissions_series_dict["NOx"],
             is_MPC ? Float64[] : emissions_series_dict["SO2"],
             is_MPC ? Float64[] : emissions_series_dict["PM25"],
-            emissions_factor_CO2_decrease_pct,
-            emissions_factor_NOx_decrease_pct,
-            emissions_factor_SO2_decrease_pct,
-            emissions_factor_PM25_decrease_pct,
+            emissions_factor_CO2_decrease_fraction,
+            emissions_factor_NOx_decrease_fraction,
+            emissions_factor_SO2_decrease_fraction,
+            emissions_factor_PM25_decrease_fraction,
             outage_start_time_step,
             outage_end_time_step,
             allow_simultaneous_export_import,
@@ -269,7 +269,7 @@ function region_abbreviation(latitude, longitude)
 		end
 	end
     if isnothing(abbr)
-        @info "Could not find AVERT region containing site latitude/longitude. Checking site proximity to AVERT regions."
+        @warn "Could not find AVERT region containing site latitude/longitude. Checking site proximity to AVERT regions."
     else
         return abbr, meters_to_region
     end
