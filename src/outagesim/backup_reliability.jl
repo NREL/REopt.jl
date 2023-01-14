@@ -1159,7 +1159,11 @@ function fuel_use(;
             fuel_limit *= num_generators
         end
     else
-        fuel_limit[fuel_limit_is_per_generator] .*= num_generators[fuel_limit_is_per_generator]
+        for i in 1:length(fuel_limit_is_per_generator)
+            if fuel_limit_is_per_generator[i]
+                fuel_limit[i] *= num_generators[i]
+            end
+        end
     end
 
     generator_fuel_intercept_per_hr = generator_fuel_intercept_per_hr .* num_generators
