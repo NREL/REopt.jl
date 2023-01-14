@@ -984,6 +984,9 @@ function backup_reliability_inputs(;r::Dict)::Dict
     pv_size_kw = get(r2, :pv_size_kw, 0.0) 
     if pv_size_kw > 0
         if haskey(r2, :pv_production_factor_series)
+            if length(r2[:pv_production_factor_series]) != length(r2[:critical_loads_kw])
+                push!(invalid_args, "The lengths of pv_production_factor_series and critical_loads_kw do not match.")
+            end
             if !microgrid_only || Bool(get(r2, :pv_migrogrid_upgraded, false))
                 r2[:pv_kw_ac_time_series] = pv_size_kw .* r2[:pv_production_factor_series]
             end
