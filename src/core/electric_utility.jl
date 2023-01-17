@@ -376,8 +376,8 @@ function region_name_to_abbr(region_name)
 end
 
 #TODO: add docstring
-function emissions_profiles(; latitude, longtiude, time_steps_per_hour=1)
-    region_abbr, meters_to_region = region_abbreviation(latitude, longtiude)
+function emissions_profiles(; latitude, longitude, time_steps_per_hour=1)
+    region_abbr, meters_to_region = region_abbreviation(latitude, longitude)
     emissions_region = region_abbr_to_name(region_abbr)
     response_dict = Dict{String, Any}(
         "region_abbr" => region_abbr,
@@ -389,7 +389,7 @@ function emissions_profiles(; latitude, longtiude, time_steps_per_hour=1)
     for ekey in ["CO2", "NOx", "SO2", "PM25"]
         response_dict["emissions_factor_series_lb_"*ekey*"_per_kwh"] = emissions_series(ekey, region_abbr, time_steps_per_hour=time_steps_per_hour)
         if isnothing(emissions_series_dict[ekey])
-            @error "Cannot find hourly $(ekey) emissions for coordinates $(latitude), $(longtiude)."
+            @error "Cannot find hourly $(ekey) emissions for coordinates $(latitude), $(longitude)."
         end
     end
     return response_dict
