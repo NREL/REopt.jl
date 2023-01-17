@@ -386,12 +386,7 @@ function emissions_profiles(; latitude, longtiude, time_steps_per_hour=1)
         "description" => "Regional hourly grid emissions factors for applicable EPA AVERT region.",
         "meters_to_region" => meters_to_region
     )
-    for ekey in [
-        "CO2",
-        "NOx",
-        "SO2",
-        "PM25"
-    ]
+    for ekey in ["CO2", "NOx", "SO2", "PM25"]
         response_dict["emissions_factor_series_lb_"*ekey*"_per_kwh"] = emissions_series(ekey, region_abbr, time_steps_per_hour=time_steps_per_hour)
         if isnothing(emissions_series_dict[ekey])
             @error "Cannot find hourly $(ekey) emissions for region $(region_abbr)."
