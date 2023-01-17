@@ -69,7 +69,7 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
                 r["replacement_month"] = round(Int, value(
                     sum(mth * m[:bmth][mth] for mth in 1:p.s.financial.analysis_years*12)
                 ))
-                r["residual_value"] = value(m[:salv_value])
+                r["residual_value"] = value(m[:residual_value])
             end
          end
     else

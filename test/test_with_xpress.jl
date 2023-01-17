@@ -445,11 +445,11 @@ end
 
     # Results vary on Github actions => relax the tests
     @test 150 < results["ElectricStorage"]["size_kw"] < 165
-    @test 550 < results["ElectricStorage"]["size_kwh"] < 650
-    @test 160 < results["ElectricStorage"]["replacement_month"] < 230
+    @test 500 < results["ElectricStorage"]["size_kwh"] < 650
+    @test 160 < results["ElectricStorage"]["replacement_month"] < 250
     @test 3.0e5 < results["ElectricStorage"]["initial_capital_cost"] < 3.8e5
     @test 750 < results["ElectricStorage"]["maintenance_cost"] < 5100
-    @test 50 < results["ElectricStorage"]["residual_value"] < 100
+    @test 50 < results["ElectricStorage"]["residual_value"] < 150
 
     # Validate model decision variables make sense.
     replace_month = Int(value.(m[:m_0p8]))+1

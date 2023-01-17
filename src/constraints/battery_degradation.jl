@@ -173,7 +173,7 @@ function add_degradation(m, p; b="ElectricStorage")
         @expression(m, degr_cost, sum(c[mth] * bmth_BkWh[mth] for mth in months))
 
         # create residual value expression for objective
-        @expression(m, salv_value, sum(s[mth] * bmth_BkWh[mth] for mth in months))
+        @expression(m, residual_value, sum(s[mth] * bmth_BkWh[mth] for mth in months))
 
     elseif strategy == "augmentation"
 
