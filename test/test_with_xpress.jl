@@ -426,14 +426,14 @@ end
     d = JSON.parsefile("scenarios/batt_degradation.json");
 
     d["ElectricStorage"]["macrs_option_years"] = 0
-    d["ElectricStorage"]["macrs_bonus_pct"] = 0.0
+    d["ElectricStorage"]["macrs_bonus_fraction"] = 0.0
     d["ElectricStorage"]["macrs_itc_reduction"] = 0.0
-    d["ElectricStorage"]["total_itc_pct"] = 0.0
+    d["ElectricStorage"]["total_itc_fraction"] = 0.0
     d["ElectricStorage"]["replace_cost_per_kwh"] = 0.0
     d["ElectricStorage"]["replace_cost_per_kw"] = 0.0
     d["Financial"] = Dict(
-        "offtaker_tax_pct" => 0.0,
-        "owner_tax_pct" => 0.0
+        "offtaker_tax_rate_fraction" => 0.0,
+        "owner_tax_rate_fraction" => 0.0
     )
     d["ElectricStorage"]["degradation"]["installed_cost_per_kwh_declination_rate"] = 0.2
 
