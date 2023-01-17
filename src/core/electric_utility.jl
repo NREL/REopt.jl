@@ -382,7 +382,7 @@ function emissions_profiles(; latitude, longitude, time_steps_per_hour=1)
     response_dict = Dict{String, Any}(
         "region_abbr" => region_abbr,
         "region" => emissions_region,
-        "units" => "Pounds emission species per kWh",
+        "units" => "Pounds emissions per kWh",
         "description" => "Regional hourly grid emissions factors for applicable EPA AVERT region.",
         "meters_to_region" => meters_to_region
     )
