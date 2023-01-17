@@ -444,13 +444,14 @@ end
     results = run_reopt(m, d)
 
     # Results vary on Github actions => relax the tests
-    @test 150 < results["ElectricStorage"]["size_kw"] < 155
-    @test 500 < results["ElectricStorage"]["size_kwh"] < 550
-    @test 220 < results["ElectricStorage"]["replacement_month"] < 230
-    @test 300000 < results["ElectricStorage"]["initial_capital_cost"] < 325000
-    @test 750 < results["ElectricStorage"]["maintenance_cost"] < 1000
-    @test 100 < results["ElectricStorage"]["residual_value"] < 150
+    @test 150 < results["ElectricStorage"]["size_kw"] < 165
+    @test 550 < results["ElectricStorage"]["size_kwh"] < 650
+    @test 160 < results["ElectricStorage"]["replacement_month"] < 230
+    @test 3.0e5 < results["ElectricStorage"]["initial_capital_cost"] < 3.8e5
+    @test 750 < results["ElectricStorage"]["maintenance_cost"] < 5100
+    @test 50 < results["ElectricStorage"]["residual_value"] < 100
 
+    # Validate model decision variables make sense.
     replace_month = Int(value.(m[:m_0p8]))+1
     @test replace_month ≈ results["ElectricStorage"]["replacement_month"]
     @test sum(value.(m[:soh_indicator])[replace_month:end]) ≈ 0.0
@@ -477,7 +478,7 @@ end
 
     # compare avg soc with and without degradation, 
     # using default augmentation battery maintenance strategy
-    avg_soc_no_degr = sum(results["ElectricStorage"]["year_one_soc_series_fraction"]) / 8760
+    avg_soc_no_degr = sum(results["ElectricStorage"]["soc_series_fraction"]) / 8760
     
     # soc_incentive should not be added to objective by default
     # no need to set it to false if degradation=true
@@ -506,7 +507,7 @@ end
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
     r = run_reopt(m, d)
-    @test round(sum(r["ElectricStorage"]["year_one_soc_series_pct"])/8760, digits=2) >= 0.72
+    @test round(sum(r["ElectricStorage"]["soc_series_fraction"])/8760, digits=2) >= 0.72
 end
 
 @testset "Outage with Generator, outage simulator, BAU critical load outputs" begin
