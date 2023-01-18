@@ -307,4 +307,38 @@ else  # run HiGHS tests
         @test sim_electric_kw ≈ s.electric_load.loads_kw atol=0.1
         @test sim_cooling_ton ≈ s.cooling_load.loads_kw_thermal ./ REopt.KWH_THERMAL_PER_TONHOUR atol=0.1    
     end
+
+    @testset "Electric vehicle" begin
+
+        input_data = JSON.parsefile("./scenarios/ev.json")
+
+        s = Scenario(input_data)
+        inputs = REoptInputs(s)
+
+        # HiGHS solver
+        m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+            "output_flag" => false, "log_to_console" => false)
+        )
+        m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+            "output_flag" => false, "log_to_console" => false)
+        )
+
+        results = run_reopt([m1,m2], inputs)
+
+        charge_efficiency = 0.96 * 0.975^0.5
+        expected_charge_energy = 365 * (input_data["ElectricVehicle"][1]["soc_used_off_site"] * 
+                                        input_data["ElectricVehicle"][1]["energy_capacity_kwh"] + 
+                                        input_data["ElectricVehicle"][2]["soc_used_off_site"] * 
+                                        input_data["ElectricVehicle"][2]["energy_capacity_kwh"]) / charge_efficiency
+
+        @test sum(results["ElectricUtility"]["electric_to_storage_series_kw"]) ≈ expected_charge_energy rtol=0.01
+
+        evs_connected_to_same_charger = [(results["EV1"]["ev_to_evse_series_binary"][1][i] == 
+                                            results["EV2"]["ev_to_evse_series_binary"][1][i]) && 
+                                            (results["EV1"]["ev_to_evse_series_binary"][1][i] == 1) 
+                                            for i in 1:length(results["EV1"]["ev_to_evse_series_binary"][1])]
+                                                
+        @test sum(evs_connected_to_same_charger) == 0
+
+    end
 end
