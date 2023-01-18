@@ -59,8 +59,8 @@ end
 
 function add_ev_supply_equipment_constraints(m, p; _n="")
 
-    # Create binary dV for which EVSE the EV is hooked up to
-    # TODO EV cannot switch EVSE for the duration of the parking event
+    # TODO Don't let EV switch EVSE for the duration of the parking event?? This is maybe too restrictive
+    # ...just trying to not allow switching every hour back and forth, but would want a full EV to let another EV charge even if it's still there
     @variable(m, binEVtoEVSE[eachindex(p.s.evse.power_rating_kw), p.s.storage.types.ev, ts in p.time_steps], Bin)
     # Each EVSE can only have at most 1 EV at it, so sum across all EVs for each EVSE
     @constraint(m, [se in eachindex(p.s.evse.power_rating_kw), ts in p.time_steps], 
@@ -74,18 +74,28 @@ function add_ev_supply_equipment_constraints(m, p; _n="")
 
 	# Charger rating is greater than total charging power to EACH EV individually
 	@constraint(m, [b in p.s.storage.types.ev, ts in p.time_steps],
-        sum(p.s.evse.power_rating_kw[se] * m[Symbol("binEVtoEVSE"*_n)][se, b, ts] for se in eachindex(p.s.evse.power_rating_kw))
+        sum(p.s.evse.power_rating_kw[se] * m[Symbol("binEVtoEVSE"*_n)][se, b, ts] 
+            for se in eachindex(p.s.evse.power_rating_kw))
         >=
-        sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) + m[Symbol("dvGridToStorage"*_n)][b, ts]
+        sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) + 
+        m[Symbol("dvGridToStorage"*_n)][b, ts]
     )
 
-	# Charger rating is greater than total dicharge power from EACH EV individually, if V2G is enabled
+	# Charger rating is greater than total dicharge power from EACH EV individually, if V2G is enabled (if not, zero)
+    v2g_binary = 0.0
     if p.s.evse.v2g
-        @constraint(m, [b in p.s.storage.types.ev, ts in p.time_steps],
-            sum(p.s.evse.power_rating_kw[se] * m[Symbol("binEVtoEVSE"*_n)][se, b, ts] for se in eachindex(p.s.evse.power_rating_kw))
-            >=
-            sum(m[Symbol("dvDischargeFromStorage"*_n)][b, ts])
-        )
+        v2g_binary = 1.0
+    end
+
+    if p.s.evse.v2g
+    @constraint(m, [b in p.s.storage.types.ev, ts in p.time_steps],
+        v2g_binary * 
+        sum(p.s.evse.power_rating_kw[se] * 
+            m[Symbol("binEVtoEVSE"*_n)][se, b, ts] 
+            for se in eachindex(p.s.evse.power_rating_kw))
+        >=
+        sum(m[Symbol("dvDischargeFromStorage"*_n)][b, ts])
+    )
     end
 
 end
