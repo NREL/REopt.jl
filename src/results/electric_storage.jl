@@ -31,13 +31,18 @@
 `ElectricStorage` results keys:
 - `size_kw` Optimal inverter capacity
 - `size_kwh` Optimal storage capacity
-- `year_one_soc_series_fraction` Vector of normalized (0-1) state of charge values over the first year
-- `year_one_to_load_series_kw` Vector of power used to meet load over the first year
+- `soc_series_fraction` Vector of normalized (0-1) state of charge values over the first year
+- `storage_to_load_series_kw` Vector of power used to meet load over the first year
 - `initial_capital_cost` Upfront capital cost for storage and inverter
-# The following results are reported if storage degradation is modeled
+# The following results are reported if storage degradation is modeled:
 - `state_of_health`
 - `maintenance_cost`
 - `replacement_month`
+
+!!! note "'Series' and 'Annual' energy outputs are average annual"
+	REopt performs load balances using average annual production values for technologies that include degradation. 
+	Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy outputs averaged over the analysis period. 
+
 """
 function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::String; _n="")
     # Adds the `Storage` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
@@ -49,10 +54,10 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
 
     if r["size_kwh"] != 0
     	soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
-        r["year_one_soc_series_fraction"] = round.(value.(soc) ./ r["size_kwh"], digits=3)
+        r["soc_series_fraction"] = round.(value.(soc) ./ r["size_kwh"], digits=3)
 
         discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
-        r["year_one_to_load_series_kw"] = round.(value.(discharge), digits=3)
+        r["storage_to_load_series_kw"] = round.(value.(discharge), digits=3)
 
         r["initial_capital_cost"] = r["size_kwh"] * p.s.storage.attr[b].installed_cost_per_kwh +
             r["size_kw"] * p.s.storage.attr[b].installed_cost_per_kw
@@ -67,8 +72,8 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
             end
          end
     else
-        r["year_one_soc_series_fraction"] = []
-        r["year_one_to_load_series_kw"] = []
+        r["soc_series_fraction"] = []
+        r["storage_to_load_series_kw"] = []
     end
 
     d[b] = r

@@ -33,7 +33,7 @@
 Adds the `GHP` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
 Note: the node number is an empty string if evaluating a single `Site`.
 
-CHP results:
+GHP results:
 - `ghp_option_chosen` Option chosen for GHP (0 = none)
 -- With ghp_option_chosen >=1, all data about the GHP system can be achieved by s.ghp_option_list[ghp_option_chosen]
 - `heating_thermal_load_reduction_with_ghp_kw`
