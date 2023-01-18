@@ -1,0 +1,38 @@
+{
+    "Site": {
+        "longitude": -118.1164613,
+        "latitude": 34.5794343
+    },
+    "ElectricTariff": {
+        "urdb_label": "62d5b7fc4939f52c862151f9"
+    },    
+    "ElectricLoad": {
+        "doe_reference_name": "RetailStore",
+        "annual_kwh": 10000000.0
+    },
+    "ElectricVehicle": [
+        {
+        "energy_capacity_kwh": 100.0,
+        "ev_on_site_start_end": [16, 8],
+        "soc_used_off_site": 0.8,
+        "max_c_rate": 2.0
+        },
+        {
+        "energy_capacity_kwh": 100.0,
+        "ev_on_site_start_end": [16, 8],
+        "soc_used_off_site": 0.8,
+        "max_c_rate": 2.0
+        }
+    ],
+    "EVSupplyEquipment":{
+        "power_rating_kw": 25.0,
+        "v2g": false
+    },
+    "PV": {
+        "max_kw": 0.0
+    },
+    "ElectricStorage": {
+        "max_kw": 0.0,
+        "max_kwh": 0.0
+    }
+}
