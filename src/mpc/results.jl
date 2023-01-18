@@ -40,6 +40,9 @@ MPC Scenarios will return a results Dict with the following keys:
 function mpc_results(m::JuMP.AbstractModel, p::MPCInputs; _n="")
 	tstart = time()
     d = Dict{String, Any}()
+
+    add_electric_load_results(m, p, d; _n)
+
     for b in p.s.storage.types.elec
         if p.s.storage.attr[b].size_kwh > 0
             add_electric_storage_results(m, p, d, b; _n)
@@ -68,6 +71,8 @@ function mpc_results(m::JuMP.AbstractModel, p::MPCInputs; _n="")
 	if !isempty(p.techs.gen)
         add_generator_results(m, p, d; _n)
 	end
+
+    d["Costs"] = value(m[Symbol("Costs"*_n)])
 	
 	time_elapsed = time() - tstart
 	@info "Results processing took $(round(time_elapsed, digits=3)) seconds."
