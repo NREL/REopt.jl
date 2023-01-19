@@ -36,6 +36,11 @@
 - `offgrid_load_met_fraction` percentage of total electric load met on an annual basis, for off-grid scenarios only
 - `offgrid_annual_oper_res_required_series_kwh` , total operating reserves required (for load and techs) on an annual basis, for off-grid scenarios only
 - `offgrid_annual_oper_res_provided_series_kwh` , total operating reserves provided on an annual basis, for off-grid scenarios only
+
+!!! note "'Series' and 'Annual' energy outputs are average annual"
+	REopt performs load balances using average annual production values for technologies that include degradation. 
+	Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy outputs averaged over the analysis period. 
+
 """
 function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     # Adds the `ElectricLoad` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
@@ -59,6 +64,19 @@ function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
         r["offgrid_annual_oper_res_required_series_kwh"] = round.(value.(m[:OpResRequired][ts] for ts in p.time_steps_without_grid), digits=3)
         r["offgrid_annual_oper_res_provided_series_kwh"] = round.(value.(m[:OpResProvided][ts] for ts in p.time_steps_without_grid), digits=3)
     end
+    
+    d["ElectricLoad"] = r
+    nothing
+end
+
+
+function add_electric_load_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
+    # Adds the `ElectricLoad` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+    # Note: the node number is an empty string if evaluating a single `Site`.
+
+    r = Dict{String, Any}()
+
+    r["load_series_kw"] = p.s.electric_load.loads_kw
     
     d["ElectricLoad"] = r
     nothing

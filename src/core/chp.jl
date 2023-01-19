@@ -91,7 +91,7 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
     emissions_factor_lb_PM25_per_mmbtu::Float64 = FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"][fuel_type]
 ```
 
-!!! note defaults and "Required inputs"
+!!! note "Defaults and required inputs"
     See the `get_chp_defaults_prime_mover_size_class()` function docstring for details on the logic of choosing the type of CHP that is modeled
     If no information is provided, the default `prime_mover` is `recip_engine` and the `size_class` is 1 which represents
     the widest range of sizes available.
