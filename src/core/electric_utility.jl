@@ -210,6 +210,9 @@ struct ElectricUtility
         if length(outage_durations) != length(outage_probabilities)
             throw(@error("ElectricUtility inputs outage_durations and outage_probabilities must be the same length"))
         end
+        if sum(outage_probabilities) < 0.99999 || sum(outage_probabilities) > 1.00001
+            throw(@error("Sum of ElectricUtility inputs outage_probabilities must be equal to 1"))
+        end
 
         new(
             is_MPC ? "" : emissions_region,
