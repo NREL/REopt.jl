@@ -36,12 +36,16 @@
 - `year_one_variable_om_cost_before_tax` variable operations and maintenance cost over the first year, before considering tax benefits
 - `lifecycle_fuel_cost_after_tax` Lifecycle fuel cost in present value, after tax
 - `year_one_fuel_cost_before_tax` Fuel cost over the first year, before considering tax benefits
-- `average_annual_fuel_used_gal` Gallons of fuel used in each year
-- `year_one_to_battery_series_kw` Vector of power sent to battery in year one
-- `year_one_to_grid_series_kw` Vector of power sent to grid in year one
-- `year_one_to_load_series_kw` Vector of power sent to load in year one
-- `year_one_energy_produced_kwh` Total energy produced in year one
-- `average_annual_energy_produced_kwh` Average annual energy produced over analysis period
+- `annual_fuel_consumption_gal` Gallons of fuel used in each year
+- `electric_to_storage_series_kw` Vector of power sent to battery in an average year
+- `electric_to_grid_series_kw` Vector of power sent to grid in an average year
+- `electric_to_load_series_kw` Vector of power sent to load in an average year
+- `annual_energy_produced_kwh` Average annual energy produced over analysis period
+
+!!! note "'Series' and 'Annual' energy outputs are average annual"
+	REopt performs load balances using average annual production values for technologies that include degradation. 
+	Therefore, all timeseries (`_series`) and `annual_` results should be interpretted as energy outputs averaged over the analysis period. 
+
 """
 function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	# Adds the `Generator` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
@@ -69,34 +73,29 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 	else
 		generatorToBatt = zeros(length(p.time_steps))
 	end
-	r["year_one_to_battery_series_kw"] = round.(value.(generatorToBatt), digits=3)
+	r["electric_to_storage_series_kw"] = round.(value.(generatorToBatt), digits=3)
 
 	generatorToGrid = @expression(m, [ts in p.time_steps],
 		sum(m[:dvProductionToGrid][t, u, ts] for t in p.techs.gen, u in p.export_bins_by_tech[t])
 	)
-	r["year_one_to_grid_series_kw"] = round.(value.(generatorToGrid), digits=3)
+	r["electric_to_grid_series_kw"] = round.(value.(generatorToGrid), digits=3)
 
 	generatorToLoad = @expression(m, [ts in p.time_steps],
 		sum(m[:dvRatedProduction][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
 			for t in p.techs.gen) -
 			generatorToBatt[ts] - generatorToGrid[ts]
 	)
-	r["year_one_to_load_series_kw"] = round.(value.(generatorToLoad), digits=3)
+	r["electric_to_load_series_kw"] = round.(value.(generatorToLoad), digits=3)
 
     GeneratorFuelUsed = @expression(m, sum(m[:dvFuelUsage][t, ts] for t in p.techs.gen, ts in p.time_steps) / KWH_PER_GAL_DIESEL)
-	r["average_annual_fuel_used_gal"] = round(value(GeneratorFuelUsed), digits=2)
+	r["annual_fuel_consumption_gal"] = round(value(GeneratorFuelUsed), digits=2)
 
-	Year1GenProd = @expression(m,
-		p.hours_per_time_step * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts]
-			for t in p.techs.gen, ts in p.time_steps)
-	)
-	r["year_one_energy_produced_kwh"] = round(value(Year1GenProd), digits=0)
 	AverageGenProd = @expression(m,
 		p.hours_per_time_step * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts] *
 		p.levelization_factor[t]
 			for t in p.techs.gen, ts in p.time_steps)
 	)
-	r["average_annual_energy_produced_kwh"] = round(value(AverageGenProd), digits=0)
+	r["annual_energy_produced_kwh"] = round(value(AverageGenProd), digits=0)
     
 	d["Generator"] = r
     nothing
@@ -109,7 +108,7 @@ MPC `Generator` results keys:
 - `to_battery_series_kw`
 - `to_grid_series_kw`
 - `to_load_series_kw`
-- `average_annual_fuel_used_gal`
+- `annual_fuel_consumption_gal`
 - `energy_produced_kwh`
 """
 function add_generator_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
@@ -139,7 +138,7 @@ function add_generator_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n=
 	r["to_load_series_kw"] = round.(value.(generatorToLoad), digits=3).data
 
     GeneratorFuelUsed = @expression(m, sum(m[:dvFuelUsage][t, ts] for t in p.techs.gen, ts in p.time_steps) / KWH_PER_GAL_DIESEL)
-	r["average_annual_fuel_used_gal"] = round(value(GeneratorFuelUsed), digits=2)
+	r["annual_fuel_consumption_gal"] = round(value(GeneratorFuelUsed), digits=2)
 
 	Year1GenProd = @expression(m,
 		p.hours_per_time_step * sum(m[:dvRatedProduction][t,ts] * p.production_factor[t, ts]
