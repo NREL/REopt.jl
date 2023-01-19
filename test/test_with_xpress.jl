@@ -506,6 +506,8 @@ end
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/nogridcost_multiscenario.json")
     @test sum(results["Outages"]["unserved_load_per_outage"]) ≈ 60
+    @test results["Outages"]["expected_outage_cost"] ≈ 485.43270 atol=1.0e-5  #avg duration (3h) * load per time step (10) * present worth factor (16.18109)
+    @test results["Outages"]["max_outage_cost_per_outage_duration"][1] ≈ 161.8109 atol=1.0e-5
 
 end
 
