@@ -164,7 +164,6 @@ end
 `ElectricStorage` is an optional optional REopt input with the following keys and default values:
 
 ```julia
-    off_grid_flag::Bool = false  
     min_kw::Real = 0.0
     max_kw::Real = 1.0e4
     min_kwh::Real = 0.0

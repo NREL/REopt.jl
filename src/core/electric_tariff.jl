@@ -75,21 +75,21 @@ end
     urdb_rate_name::String="",
     year::Int=2020,
     NEM::Bool=false,
-    wholesale_rate::T1=nothing,
-    export_rate_beyond_net_metering_limit::T2=nothing,
-    monthly_energy_rates::Array=[],
-    monthly_demand_rates::Array=[],
-    blended_annual_energy_rate::S=nothing,
-    blended_annual_demand_rate::R=nothing,
-    add_monthly_rates_to_urdb_rate::Bool=false,
-    tou_energy_rates_per_kwh::Array=[],
-    add_tou_energy_rates_to_urdb_rate::Bool=false,
+    wholesale_rate::T1=nothing, # Price of electricity sold back to the grid in absence of net metering. Can be a scalar value, which applies for all-time, or an array with time-sensitive values. If an array is input then it must have a length of 8760, 17520, or 35040. The inputed array values are up/down-sampled using mean values to match the Settings.time_steps_per_hour.
+    export_rate_beyond_net_metering_limit::T2=nothing, # Price of electricity sold back to the grid above the site load, regardless of net metering. Can be a scalar value, which applies for all-time, or an array with time-sensitive values. If an array is input then it must have a length of 8760, 17520, or 35040. The inputed array values are up/down-sampled using mean values to match the Scenario time_steps_per_hour
+    monthly_energy_rates::Array=[], # Array (length of 12) of blended energy rates in dollars per kWh
+    monthly_demand_rates::Array=[], # Array (length of 12) of blended demand charges in dollars per kW
+    blended_annual_energy_rate::S=nothing, # Annual blended energy rate (total annual energy in kWh divided by annual cost in $)
+    blended_annual_demand_rate::R=nothing, # Annual blended demand rates (annual demand charge cost divided by annual peak demand in kW)
+    add_monthly_rates_to_urdb_rate::Bool=false, # Set to 'true' to add the monthly blended energy rates and demand charges to the URDB rate schedule. Otherwise, blended rates will only be considered if a URDB rate is not provided.
+    tou_energy_rates_per_kwh::Array=[], # Time-of-use energy rates, provided by user. Must be an array with length equal to number of timesteps per year.
+    add_tou_energy_rates_to_urdb_rate::Bool=false, # Set to 'true' to add the tou  energy rates to the URDB rate schedule. Otherwise, tou energy rates will only be considered if a URDB rate is not provided.
     remove_tiers::Bool=false,
     demand_lookback_months::AbstractArray{Int64, 1}=Int64[], # Array of 12 binary values, indicating months in which `demand_lookback_percent` applies. If any of these is true, `demand_lookback_range` should be zero.
     demand_lookback_percent::Real=0.0, # Lookback percentage. Applies to either `demand_lookback_months` with value=1, or months in `demand_lookback_range`.
     demand_lookback_range::Int=0, # Number of months for which `demand_lookback_percent` applies. If not 0, `demand_lookback_months` should not be supplied.
-    coincident_peak_load_active_time_steps::Vector{Vector{Int64}}=[Int64[]],
-    coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[]
+    coincident_peak_load_active_time_steps::Vector{Vector{Int64}}=[Int64[]], # The optional coincident_peak_load_charge_per_kw will apply at the max grid-purchased power during these timesteps. Note timesteps are indexed to a base of 1 not 0.
+    coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[] # Optional coincident peak demand charge that is applied to the max load during the timesteps specified in coincident_peak_load_active_time_steps.
     ) where {
         T1 <: Union{Nothing, Real, Array{<:Real}}, 
         T2 <: Union{Nothing, Real, Array{<:Real}}, 
