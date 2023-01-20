@@ -35,15 +35,15 @@
     chp_prime_mover::String = ""  # Informs thermal_consumption_hot_water_or_steam if not provided
 
     # Defaults for fields below are dependent on thermal_consumption_hot_water_or_steam and max cooling load
-    installed_cost_per_ton::Union{Float64, Nothing} = nothing
-    om_cost_per_ton::Union{Float64, Nothing} = nothing
-    min_ton::Float64 = 0.0,
-    max_ton::Float64 = BIG_NUMBER,
-    cop_thermal::Union{Float64, Nothing} = nothing,
-    cop_electric::Float64 = 14.1,
-    om_cost_per_ton::Union{Float64, Nothing} = nothing,
-    macrs_option_years::Float64 = 0,
-    macrs_bonus_fraction::Float64 = 0
+    installed_cost_per_ton::Union{Float64, Nothing} = nothing # Thermal power-based cost of absorption chiller (3.5 to 1 ton to kwt)
+    om_cost_per_ton::Union{Float64, Nothing} = nothing # Yearly fixed O&M cost on a thermal power (ton) basis
+    om_cost_per_kw::Float64 = NaN,  
+    min_ton::Float64 = 0.0, # Minimum thermal power size constraint for optimization
+    max_ton::Float64 = BIG_NUMBER, # Maximum thermal power size constraint for optimization
+    cop_thermal::Union{Float64, Nothing} = nothing, # Absorption chiller system coefficient of performance - conversion of hot thermal power input to usable cooling thermal energy output
+    cop_electric::Float64 = 14.1, # Absorption chiller electric consumption CoP from cooling tower heat rejection - conversion of electric power input to usable cooling thermal energy outpu
+    macrs_option_years::Float64 = 0, # MACRS schedule for financial analysis. Set to zero to disable
+    macrs_bonus_fraction::Float64 = 0 # Percent of upfront project costs to depreciate under MACRS
 ```
 
 !!! Note
