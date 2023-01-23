@@ -52,7 +52,7 @@ struct with outer constructor:
     can_serve_dhw::Bool = false
 
     macrs_option_years::Int = 5
-    macrs_bonus_fraction::Float64 = 1.0
+    macrs_bonus_fraction::Float64 = 0.8
     macrs_itc_reduction::Float64 = 0.5
     federal_itc_fraction::Float64 = 0.3
     federal_rebate_per_ton::Float64 = 0.0
@@ -98,7 +98,7 @@ Base.@kwdef mutable struct GHP <: AbstractGHP
     can_serve_dhw::Bool = false
 
     macrs_option_years::Int = 5
-    macrs_bonus_fraction::Float64 = 1.0
+    macrs_bonus_fraction::Float64 = 0.8
     macrs_itc_reduction::Float64 = 0.5
     federal_itc_fraction::Float64 = 0.3
     federal_rebate_per_ton::Float64 = 0.0
