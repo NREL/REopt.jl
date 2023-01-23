@@ -38,7 +38,7 @@
     installed_cost_per_ton::Real,
     om_cost_per_ton::Real,
     macrs_option_years::Real = 0,
-    macrs_bonus_fraction::Real = 0
+    macrs_bonus_fraction::Real = 0.8
 ```
 """
 struct AbsorptionChiller <: AbstractThermalTech
@@ -62,7 +62,7 @@ struct AbsorptionChiller <: AbstractThermalTech
         installed_cost_per_ton::Real,
         om_cost_per_ton::Real,
         macrs_option_years::Real = 0,
-        macrs_bonus_fraction::Real = 0,
+        macrs_bonus_fraction::Real = 0.8,
         )
 
         min_kw = min_ton * KWH_THERMAL_PER_TONHOUR
