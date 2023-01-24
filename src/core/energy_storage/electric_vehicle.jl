@@ -228,9 +228,12 @@ function ElectricVehicleDefaults(d::Dict)
 end
 
 Base.@kwdef mutable struct EVSupplyEquipment
-    # TODO if we want to solve for number and/or size of EVSE, these inputs should 
-    # be bounds or categories (level 1, 2, 3) or discrete options thereof
-    power_rating_kw::Union{Float64, Array{Float64, 1}} = Float[]
+    # Do we want to allow a combination of level and/or bidirectional chargers?
+    force_num_to_max::Bool = true
+    max_num::Union{Int64, Array{Int64, 1}} = 1
+    power_rating_kw::Union{Float64, Array{Float64, 1}} = [10.0, 80.0]
+    installed_cost::Union{Float64, Array{Float64, 1}} = [1000.0, 18000.0]
+    # TODO allow array for v2g (or "bidirectional") for each type
     v2g::Bool = false
 end
 
@@ -238,9 +241,30 @@ function EVSupplyEquipment(d::Dict)
     if typeof(d[:power_rating_kw]) <: AbstractArray
         d[:power_rating_kw] = convert(Array{Float64, 1}, d[:power_rating_kw])
     end
+    if typeof(d[:max_num]) <: AbstractArray
+        if !(length(d[:max_num]) == length(d[:power_rating_kw]))
+            throw(@error("The length of max_num must equal the length of power_rating_kw"))
+        end   
+        d[:max_num] = convert(Array{Int64, 1}, d[:max_num])
+    end 
+    if haskey(d, :installed_cost)
+        if typeof(d[:installed_cost]) <: AbstractArray
+            if !(length(d[:installed_cost]) == length(d[:power_rating_kw]))
+                throw(@error("The length of installed_cost must equal the length of power_rating_kw"))
+            end
+            d[:installed_cost] = convert(Array{Float64, 1}, d[:installed_cost])
+        end
+    end
     evse = EVSupplyEquipment(;d...)
+    # Convert scalars to arrays
     if !(typeof(evse.power_rating_kw) <: AbstractArray)
         evse.power_rating_kw = [deepcopy(evse.power_rating_kw)]
+    end
+    if !(typeof(evse.installed_cost) <: AbstractArray)
+        evse.installed_cost = [deepcopy(evse.installed_cost)]
+    end
+    if !(typeof(evse.max_num) <: AbstractArray)
+        evse.max_num = [deepcopy(evse.max_num)]
     end
 
     return evse
