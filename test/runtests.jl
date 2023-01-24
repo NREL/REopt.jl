@@ -353,7 +353,7 @@ else  # run HiGHS tests
                 for n in 1:results["EV1"]["number_evse_by_type"][se]
                     if results["EV1"]["ev_to_evse_series_binary"][se][n][ts] == 1
                         if results["EV2"]["ev_to_evse_series_binary"][se][n][ts] == 1
-                            global evs_connected_to_same_charger = true
+                            evs_connected_to_same_charger = true
                         end
                     end
                 end
