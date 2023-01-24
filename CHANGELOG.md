@@ -23,6 +23,11 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop
+### Fixed
+- Fixed calculation of ["Financial"]["lifecycle_om_costs_before_tax_bau"] (was previously showing after tax result)
+### Added
+- Descriptions/help text for many inputs and outputs
 ## dev
 ### Added
 - multi-node MPC modeling capability
