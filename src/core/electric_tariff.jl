@@ -74,7 +74,7 @@ end
     urdb_utility_name::String="",
     urdb_rate_name::String="",
     wholesale_rate::T1=nothing, # Price of electricity sold back to the grid in absence of net metering. Can be a scalar value, which applies for all-time, or an array with time-sensitive values. If an array is input then it must have a length of 8760, 17520, or 35040. The inputed array values are up/down-sampled using mean values to match the Settings.time_steps_per_hour.
-    export_rate_beyond_net_metering_limit::T2=nothing, # Price of electricity sold back to the grid above the site load, regardless of net metering. Can be a scalar value, which applies for all-time, or an array with time-sensitive values. If an array is input then it must have a length of 8760, 17520, or 35040. The inputed array values are up/down-sampled using mean values to match the Scenario time_steps_per_hour
+    export_rate_beyond_net_metering_limit::T2=nothing, # Price of electricity sold back to the grid beyond total annual grid purchases, regardless of net metering. Can be a scalar value, which applies for all-time, or an array with time-sensitive values. If an array is input then it must have a length of 8760, 17520, or 35040. The inputed array values are up/down-sampled using mean values to match the Settings.time_steps_per_hour
     monthly_energy_rates::Array=[], # Array (length of 12) of blended energy rates in dollars per kWh
     monthly_demand_rates::Array=[], # Array (length of 12) of blended demand charges in dollars per kW
     blended_annual_energy_rate::S=nothing, # Annual blended energy rate [\$ per kWh] (total annual energy in kWh divided by annual cost in dollars)
@@ -95,6 +95,18 @@ end
         R <: Union{Nothing, Real}
     }
 ```
+!!! note "Export Rates" 
+    There are three Export tiers and their associated export rates (negative cost values):
+    1. NEM (Net Energy Metering) - set to the energy rate (or tier with the lowest energy rate, if tiered) 
+    2. WHL (Wholesale) - set to wholesale_rate
+    3. EXC (Excess, beyond NEM) - set to export_rate_beyond_net_metering_limit
+
+    Only one of NEM and Wholesale can be exported into due to the binary constraints.
+    Excess can be exported into in the same time step as NEM.
+
+    Excess is meant to be combined with NEM: NEM export is limited to the total grid purchased energy in a year and some
+    utilities offer a compensation mechanism for export beyond the site load.
+    The Excess tier is not available with the Wholesale tier.
 
 !!! note "NEM input"
     The `NEM` boolean is determined by the `ElectricUtility.net_metering_limit_kw`. There is no need to pass in a `NEM`
@@ -316,23 +328,23 @@ function ElectricTariff(;
     end
     exc_rate = create_export_rate(export_rate_beyond_net_metering_limit, length(energy_rates), time_steps_per_hour)
     
-    if !NEM & (sum(whl_rate) >= 0)
+    if !NEM & (sum(whl_rate) >= 0) # no NEM or WHL 
         export_rates = Dict{Symbol, AbstractArray}()
         export_bins = Symbol[]
-    elseif !NEM
+    elseif !NEM # no NEM, with WHL
         export_bins = [:WHL]
         export_rates = Dict(:WHL => whl_rate)
-    elseif (sum(whl_rate) >= 0)
+    elseif (sum(whl_rate) >= 0) # NEM, no WHL
         export_bins = [:NEM]
         export_rates = Dict(:NEM => nem_rate)
-        if sum(exc_rate) < 0
+        if sum(exc_rate) < 0 # NEM with EXC rate
             push!(export_bins, :EXC)
             export_rates[:EXC] = exc_rate
         end
-    else
+    else # NEM and WHL
         export_bins = [:NEM, :WHL]
         export_rates = Dict(:NEM => nem_rate, :WHL => whl_rate)
-        if sum(exc_rate) < 0
+        if sum(exc_rate) < 0 # NEM and WHL with EXC rate
             push!(export_bins, :EXC)
             export_rates[:EXC] = exc_rate
         end
