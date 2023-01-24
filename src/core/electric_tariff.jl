@@ -73,14 +73,12 @@ end
     urdb_response::Dict=Dict(),
     urdb_utility_name::String="",
     urdb_rate_name::String="",
-    year::Int=2020,
-    NEM::Bool=false,
     wholesale_rate::T1=nothing, # Price of electricity sold back to the grid in absence of net metering. Can be a scalar value, which applies for all-time, or an array with time-sensitive values. If an array is input then it must have a length of 8760, 17520, or 35040. The inputed array values are up/down-sampled using mean values to match the Settings.time_steps_per_hour.
     export_rate_beyond_net_metering_limit::T2=nothing, # Price of electricity sold back to the grid above the site load, regardless of net metering. Can be a scalar value, which applies for all-time, or an array with time-sensitive values. If an array is input then it must have a length of 8760, 17520, or 35040. The inputed array values are up/down-sampled using mean values to match the Scenario time_steps_per_hour
     monthly_energy_rates::Array=[], # Array (length of 12) of blended energy rates in dollars per kWh
     monthly_demand_rates::Array=[], # Array (length of 12) of blended demand charges in dollars per kW
-    blended_annual_energy_rate::S=nothing, # Annual blended energy rate (total annual energy in kWh divided by annual cost in $)
-    blended_annual_demand_rate::R=nothing, # Annual blended demand rates (annual demand charge cost divided by annual peak demand in kW)
+    blended_annual_energy_rate::S=nothing, # Annual blended energy rate [\$ per kWh] (total annual energy in kWh divided by annual cost in dollars)
+    blended_annual_demand_rate::R=nothing, # Average monthly demand charge [\$ per kW per month]. Rate will be applied to monthly peak demand.
     add_monthly_rates_to_urdb_rate::Bool=false, # Set to 'true' to add the monthly blended energy rates and demand charges to the URDB rate schedule. Otherwise, blended rates will only be considered if a URDB rate is not provided.
     tou_energy_rates_per_kwh::Array=[], # Time-of-use energy rates, provided by user. Must be an array with length equal to number of timesteps per year.
     add_tou_energy_rates_to_urdb_rate::Bool=false, # Set to 'true' to add the tou  energy rates to the URDB rate schedule. Otherwise, tou energy rates will only be considered if a URDB rate is not provided.
