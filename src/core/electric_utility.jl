@@ -40,8 +40,6 @@
     outage_start_time_steps::Array{Int,1}=Int[],  # we minimize the maximum outage cost over outage start times
     outage_durations::Array{Int,1}=Int[],  # one-to-one with outage_probabilities, outage_durations can be a random variable
     outage_probabilities::Array{R,1} where R<:Real = [1.0],
-    outage_time_steps::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:maximum(outage_durations),
-    scenarios::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:length(outage_durations),
     # Emissions and renewable energy inputs:
     emissions_region::String = "", # AVERT emissions region. Default is based on location, or can be overriden by providing region here.
     emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
@@ -51,12 +49,7 @@
     emissions_factor_CO2_decrease_fraction::Real = 0.01174, # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase.
     emissions_factor_NOx_decrease_fraction::Real = 0.01174,
     emissions_factor_SO2_decrease_fraction::Real = 0.01174,
-    emissions_factor_PM25_decrease_fraction::Real = 0.01174,
-    # fields from other models needed for validation
-    CO2_emissions_reduction_min_fraction::Union{Real, Nothing} = nothing, # passed from Site
-    CO2_emissions_reduction_max_fraction::Union{Real, Nothing} = nothing, # passed from Site
-    include_climate_in_objective::Bool = false, # passed from Settings
-    include_health_in_objective::Bool = false # passed from Settings
+    emissions_factor_PM25_decrease_fraction::Real = 0.01174
 ```
 
 !!! note "Outage modeling"
