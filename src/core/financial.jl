@@ -59,11 +59,7 @@
     PM25_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
     NOx_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
     SO2_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
-    PM25_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
-    # fields from other models needed for validation
-    latitude::Real, # Passed from Site
-    longitude::Real, # Passed from Site
-    include_health_in_objective::Bool = false # Passed from Settings
+    PM25_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing
 ```
 
 !!! note "Third party financing"
