@@ -46,16 +46,16 @@ function add_electric_vehicle_results!(m::JuMP.AbstractModel, p::REoptInputs, d:
 
     # Debugging info for EVSE
     if !p.s.evse.force_num_to_max
-        d[b]["binListEVSE[se, n]"] = [value.([m[:binListEVSE][se,n] for n in 1:p.s.evse.max_num[se]]) for se in eachindex(p.s.evse.power_rating_kw)]
+        d[b]["binListEVSE[se][n]"] = [value.(m[:EXPbinListEVSE][se][n] for n in 1:p.s.evse.max_num[se]) for se in eachindex(p.s.evse.power_rating_kw)]
     else
-        d[b]["binListEVSE[se, n]"] = [[]]
+        d[b]["binListEVSE[se][n]"] = []
     end
     
     d[b]["ev_to_evse_series_binary"] = [[Int64[] for _ in 1:d[b]["number_evse_by_type"][se]] for se in eachindex(p.s.evse.power_rating_kw)]
 
     for se in eachindex(p.s.evse.power_rating_kw)
         for n in 1:d[b]["number_evse_by_type"][se]
-            d[b]["ev_to_evse_series_binary"][se][n] = round.(value.(m[Symbol("binEVtoEVSE"*_n)][se, n, b, ts] for ts in p.time_steps), digits=0)
+            d[b]["ev_to_evse_series_binary"][se][n] = round.(value.(m[:EXPbinEVtoEVSE][se][n, b, ts] for ts in p.time_steps), digits=0)
         end
     end
 
