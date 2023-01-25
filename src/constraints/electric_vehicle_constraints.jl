@@ -57,45 +57,95 @@ function add_electric_vehicle_constraints(m, p, b; _n="")
     end
 end
 
-function add_ev_supply_equipment_constraints(m, p; _n="")
+function add_ev_supply_equipment_constraints(m, p; _n="")   
+    # TODO Add variables in reopt.jl -> add_variables function and then reference all variables as e.g. m[Symbol("binNumEVSE"*_n)][se]
+    # Currently EVs can switch EVSE every time step; we want a "full" EV to let another EV charge even if it's still there
+    binEVtoEVSE = [@variable(m, [1:p.s.evse.max_num[se], p.s.storage.types.ev, ts in p.time_steps], Bin) 
+                                for se in eachindex(p.s.evse.power_rating_kw)]
 
-    # TODO Don't let EV switch EVSE for the duration of the parking event?? This is maybe too restrictive
-    # ...just trying to not allow switching every hour back and forth, but would want a full EV to let another EV charge even if it's still there
-    @variable(m, binEVtoEVSE[eachindex(p.s.evse.power_rating_kw), p.s.storage.types.ev, ts in p.time_steps], Bin)
-    # Each EVSE can only have at most 1 EV at it, so sum across all EVs for each EVSE
-    @constraint(m, [se in eachindex(p.s.evse.power_rating_kw), ts in p.time_steps], 
-        sum(binEVtoEVSE[se, ev, ts] for ev in p.s.storage.types.ev) <= 1.0
+    # Chosen # of EVSE of each type is the sum of the binary list
+    if p.s.evse.force_num_to_max == true
+        # Each EVSE (type!) can only have 1 EV hooked up at a given time
+        @constraint(m, [se in eachindex(p.s.evse.power_rating_kw), n in 1:p.s.evse.max_num[se], ts in p.time_steps], 
+            sum(binEVtoEVSE[se][n, ev, ts] for ev in p.s.storage.types.ev)
+            <=
+            1.0
         )
-    
-    # Each EV can only be hooked up to a charger if it's on-site
-    @constraint(m, [se in eachindex(p.s.evse.power_rating_kw), ev in p.s.storage.types.ev, ts in p.time_steps], 
-        binEVtoEVSE[se, ev, ts] <= p.s.storage.attr[ev].electric_vehicle.ev_on_site_series[ts]
-        )    
 
-	# Charger rating is greater than total charging power to EACH EV individually
+        m[:NumberEVSEChosenByType] = [p.s.evse.max_num[se] for se in eachindex(p.s.evse.power_rating_kw)]
+    else
+        # Decision for the number of EVSE as an index of this binary variable for each type (N of each type of charger)
+        # Consider "start" (=value) argument for "warm-start"
+        binNumEVSE = [@variable(m, integer=true, start=1, lower_bound=0, upper_bound=p.s.evse.max_num[se]) for se in eachindex(p.s.evse.power_rating_kw)]
+        binListEVSE = [@variable(m, [1:p.s.evse.max_num[se]], Bin) for se in eachindex(p.s.evse.power_rating_kw)]
+        
+        # Create a binary list with 1's for up to the binNumEVSE[se] and 0's after
+        @constraint(m, [se in eachindex(p.s.evse.power_rating_kw)],
+            sum(binListEVSE[se][n] for n in 1:p.s.evse.max_num[se]) <= binNumEVSE[se]
+        )
+        for se in eachindex(p.s.evse.power_rating_kw)
+            # The list of 1's must be consecutive starting at index 1 until binNumEVSE is reached, then zeros (can also be all zeros)
+            if p.s.evse.max_num[se] > 1
+                @constraint(m, [n in 2:p.s.evse.max_num[se]],
+                    binListEVSE[se][n] <= binListEVSE[se][n-1]
+                )
+            end
+            # Each EVSE (type!) can only have 1 EV hooked up at a given time
+            @constraint(m, [n in 1:p.s.evse.max_num[se], ts in p.time_steps], 
+                sum(binEVtoEVSE[se][n, ev, ts] for ev in p.s.storage.types.ev) 
+                <= 
+                binListEVSE[se][n]
+            )            
+        end
+        
+        m[:EXPbinListEVSE] = @expression(m, [[binListEVSE[se][n] for n in 1:p.s.evse.max_num[se]] for se in eachindex(p.s.evse.power_rating_kw)])
+        
+        m[:NumberEVSEChosenByType] = @expression(m, [binNumEVSE[se] for se in eachindex(p.s.evse.power_rating_kw)])
+
+        # Debugging - force stuff
+        # @constraint(m, binNumEVSE[1] == 1)
+        # @constraint(m, binNumEVSE[2] == 1)
+
+        # @constraint(m, m[Symbol("dvGridToStorage"*_n)]["EV1", 10] == 45.0)
+        # @constraint(m, m[Symbol("dvGridToStorage"*_n)]["EV2", 10] == 70.0)
+    end   
+
+    # Make sure EV is not connected to two different EVSE types at the same time which the above constraint allows
+    @constraint(m, [ev in p.s.storage.types.ev, ts in p.time_steps], 
+        sum(sum(binEVtoEVSE[se][n, ev, ts] for n in 1:p.s.evse.max_num[se]) for se in eachindex(p.s.evse.power_rating_kw)) 
+        <= 
+        1.0
+    )
+
+    # Each EV can only be hooked up to any charger if it's on-site (summing across evse_max_num for efficiency)
+    @constraint(m, [se in eachindex(p.s.evse.power_rating_kw), ev in p.s.storage.types.ev, ts in p.time_steps], 
+        sum(binEVtoEVSE[se][n, ev, ts] for n in 1:p.s.evse.max_num[se]) <= p.s.storage.attr[ev].electric_vehicle.ev_on_site_series[ts]
+    )    
+
+	# Charger rating is greater than total charging power to each EV
 	@constraint(m, [b in p.s.storage.types.ev, ts in p.time_steps],
-        sum(p.s.evse.power_rating_kw[se] * m[Symbol("binEVtoEVSE"*_n)][se, b, ts] 
-            for se in eachindex(p.s.evse.power_rating_kw))
+        sum(sum(se_kw * binEVtoEVSE[se][n, b, ts] 
+            for n in 1:p.s.evse.max_num[se]) 
+            for (se, se_kw) in enumerate(p.s.evse.power_rating_kw))
         >=
         sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) + 
         m[Symbol("dvGridToStorage"*_n)][b, ts]
     )
 
-	# Charger rating is greater than total dicharge power from EACH EV individually, if V2G is enabled (if not, zero)
-    v2g_binary = 0.0
+    # V2G/V2B (Storage cannot currently export power to grid, so "B"(Building) is more appropriate)
     if p.s.evse.v2g
-        v2g_binary = 1.0
+        @constraint(m, [b in p.s.storage.types.ev, ts in p.time_steps],
+            sum(sum(se_kw * binEVtoEVSE[se][n, b, ts] 
+                for n in 1:p.s.evse.max_num[se]) 
+                for (se, se_kw) in enumerate(p.s.evse.power_rating_kw))
+            >=
+            sum(m[Symbol("dvDischargeFromStorage"*_n)][b, ts])
+        )
     end
 
-    if p.s.evse.v2g
-    @constraint(m, [b in p.s.storage.types.ev, ts in p.time_steps],
-        v2g_binary * 
-        sum(p.s.evse.power_rating_kw[se] * 
-            m[Symbol("binEVtoEVSE"*_n)][se, b, ts] 
-            for se in eachindex(p.s.evse.power_rating_kw))
-        >=
-        sum(m[Symbol("dvDischargeFromStorage"*_n)][b, ts])
+    m[:EXPbinEVtoEVSE] = @expression(m, [binEVtoEVSE[se] for se in eachindex(p.s.evse.power_rating_kw)])
+    m[:TotalEVSEInstalledCost] = @expression(m, 
+        sum(m[:NumberEVSEChosenByType][se] * p.s.evse.installed_cost[se] for se in eachindex(p.s.evse.power_rating_kw))
     )
-    end
 
 end

@@ -29,6 +29,7 @@
 # *********************************************************************************
 """
 `ElectricStorage` results keys:
+- `number_evse_by_type` The number of EVSE's chosen by type
 - `ev_to_evse_series_binary` The timesteps (1's) for which each EV is connected to which EVSE
 - `on_site_techs_to_ev_series_kw` On-site techs charging EV
 - `annual_on_site_techs_to_ev_charge_energy_kwh`
@@ -39,10 +40,23 @@
 function add_electric_vehicle_results!(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::String; _n="")
     # The ElectricVehicle dictionaries are already populated with electric_storage_results,
     # so just add the unique EV results to them
+    
+    # TODO this is not an EV-specific output, so make an EVSE output section heading
+    d[b]["number_evse_by_type"] = convert(Array{Int64}, value.(m[Symbol("NumberEVSEChosenByType"*_n)]))
 
-    d[b]["ev_to_evse_series_binary"] = [Int64[] for i in eachindex(p.s.evse.power_rating_kw)]
+    # Debugging info for EVSE
+    if !p.s.evse.force_num_to_max
+        d[b]["binListEVSE[se][n]"] = [value.(m[:EXPbinListEVSE][se][n] for n in 1:p.s.evse.max_num[se]) for se in eachindex(p.s.evse.power_rating_kw)]
+    else
+        d[b]["binListEVSE[se][n]"] = []
+    end
+    
+    d[b]["ev_to_evse_series_binary"] = [[Int64[] for _ in 1:d[b]["number_evse_by_type"][se]] for se in eachindex(p.s.evse.power_rating_kw)]
+
     for se in eachindex(p.s.evse.power_rating_kw)
-        d[b]["ev_to_evse_series_binary"][se] = round.(value.(m[Symbol("binEVtoEVSE"*_n)][se, b, ts] for ts in p.time_steps), digits=0)
+        for n in 1:d[b]["number_evse_by_type"][se]
+            d[b]["ev_to_evse_series_binary"][se][n] = round.(value.(m[:EXPbinEVtoEVSE][se][n, b, ts] for ts in p.time_steps), digits=0)
+        end
     end
 
     d[b]["on_site_techs_to_ev_series_kw"] = round.(value.(sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) for ts in p.time_steps), digits=3)

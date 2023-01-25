@@ -344,13 +344,23 @@ else  # run HiGHS tests
                                         input_data["ElectricVehicle"][2]["energy_capacity_kwh"]) / charge_efficiency
 
         @test sum(results["ElectricUtility"]["electric_to_storage_series_kw"]) ≈ expected_charge_energy rtol=0.01
+        # println("NPV = ", results["Financial"]["npv"])
 
-        evs_connected_to_same_charger = [(results["EV1"]["ev_to_evse_series_binary"][1][i] == 
-                                            results["EV2"]["ev_to_evse_series_binary"][1][i]) && 
-                                            (results["EV1"]["ev_to_evse_series_binary"][1][i] == 1) 
-                                            for i in 1:length(results["EV1"]["ev_to_evse_series_binary"][1])]
-                                                
-        @test sum(evs_connected_to_same_charger) == 0
+        # Make sure the same EV is not connected to different charger types
+        evs_connected_to_same_charger = false
+        for ts in inputs.time_steps
+            for se in eachindex(s.evse.power_rating_kw)
+                for n in 1:results["EV1"]["number_evse_by_type"][se]
+                    if results["EV1"]["ev_to_evse_series_binary"][se][n][ts] == 1
+                        if results["EV2"]["ev_to_evse_series_binary"][se][n][ts] == 1
+                            evs_connected_to_same_charger = true
+                        end
+                    end
+                end
+            end
+        end
+
+        @test evs_connected_to_same_charger == false
 
     end
 end
