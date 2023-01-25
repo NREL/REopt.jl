@@ -12,23 +12,23 @@
     },
     "ElectricVehicle": [
         {
-        "energy_capacity_kwh": 100.0,
+        "energy_capacity_kwh": 150.0,
         "ev_on_site_start_end": [6, 18],
-        "soc_used_off_site": 0.95,
+        "soc_used_off_site": 0.8,
         "max_c_rate": 2.0
         },
         {
-        "energy_capacity_kwh": 100.0,
+        "energy_capacity_kwh": 150.0,
         "ev_on_site_start_end": [6, 18],
-        "soc_used_off_site": 0.95,
+        "soc_used_off_site": 0.8,
         "max_c_rate": 2.0
         }
     ],
     "EVSupplyEquipment":{
-        "force_num_to_max": true,
-        "max_num": 2,
-        "power_rating_kw": [50.0, 75.0],
-        "installed_cost": [2000.0, 3500.0],
+        "force_num_to_max": false,
+        "max_num": [2, 1, 1],
+        "power_rating_kw": [50.0, 75.0, 100.0],
+        "installed_cost": [2000.0, 3500.0, 4200.0],
         "v2g": false
     },
     "PV": {
