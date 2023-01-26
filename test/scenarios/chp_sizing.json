@@ -56,10 +56,14 @@
         ]
     },
     "PV": {
-        "max_kw": 0.0
+        "max_kw": 0.0,
+        "federal_itc_fraction": 0.26,
+        "macrs_bonus_fraction": 1.0
       },
     "ElectricStorage": {
         "max_kw": 0.0,
-        "max_kwh": 0.0
+        "max_kwh": 0.0,
+        "total_itc_fraction": 0.0,
+        "macrs_bonus_fraction": 1.0
     }    
 }
