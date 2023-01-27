@@ -51,10 +51,13 @@ function add_electric_vehicle_results!(m::JuMP.AbstractModel, p::REoptInputs, d:
         d[b]["binListEVSE[se][n]"] = []
     end
     
-    d[b]["ev_to_evse_series_binary"] = [[Int64[] for _ in 1:d[b]["number_evse_by_type"][se]] for se in eachindex(p.s.evse.power_rating_kw)]
+    # TODO change back to 1:d[b]["number_evse_by_type"][se] instead of 1:p.s.evse.max_num[se]
+    # d[b]["ev_to_evse_series_binary"] = [[Int64[] for _ in 1:d[b]["number_evse_by_type"][se]] for se in eachindex(p.s.evse.power_rating_kw)]
+    d[b]["ev_to_evse_series_binary"] = [[Int64[] for _ in 1:p.s.evse.max_num[se]] for se in eachindex(p.s.evse.power_rating_kw)]
 
     for se in eachindex(p.s.evse.power_rating_kw)
-        for n in 1:d[b]["number_evse_by_type"][se]
+        for n in 1:p.s.evse.max_num[se]
+        #for n in 1:d[b]["number_evse_by_type"][se]
             d[b]["ev_to_evse_series_binary"][se][n] = round.(value.(m[:EXPbinEVtoEVSE][se][n, b, ts] for ts in p.time_steps), digits=0)
         end
     end

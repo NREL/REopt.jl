@@ -329,10 +329,10 @@ else  # run HiGHS tests
 
         # HiGHS solver
         m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-            "output_flag" => false, "log_to_console" => false)
+            "output_flag" => false, "mip_rel_gap" => 0.00001, "log_to_console" => false)
         )
         m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-            "output_flag" => false, "log_to_console" => false)
+            "output_flag" => false, "mip_rel_gap" => 0.00001, "log_to_console" => false)
         )
 
         results = run_reopt([m1,m2], inputs)
@@ -359,8 +359,30 @@ else  # run HiGHS tests
                 end
             end
         end
-
         @test evs_connected_to_same_charger == false
+
+        # Check the EV switching after implementing a cost for switching more than when the EV arrives or leaves
+        num_evs_by_type = s.evse.max_num
+        num_leave_vs_disconnect = Dict()
+        for ev in ["EV1", "EV2"]
+            num_leave_vs_disconnect[ev] = Dict([("leave", 0), ("disconnect", 0)])
+            for ts in inputs.time_steps[1:end-1]
+                if s.storage.attr[ev].electric_vehicle.ev_on_site_series[ts] -
+                    s.storage.attr[ev].electric_vehicle.ev_on_site_series[ts+1] == 1
+                    num_leave_vs_disconnect[ev]["leave"] += 1
+                end
+                for se in eachindex(s.evse.power_rating_kw)
+                    for n in 1:num_evs_by_type[se]
+                        if results[ev]["ev_to_evse_series_binary"][se][n][ts] -
+                            results[ev]["ev_to_evse_series_binary"][se][n][ts+1] == 1
+                            num_leave_vs_disconnect[ev]["disconnect"] += 1
+                        end
+                    end
+                end        
+            end
+            # Make sure the EV's are not switching more than 10% above what they need to
+            @test num_leave_vs_disconnect[ev]["disconnect"] <= num_leave_vs_disconnect[ev]["leave"] * 1.1
+        end        
 
     end
 end

@@ -59,7 +59,8 @@ end
 
 function add_ev_supply_equipment_constraints(m, p; _n="")   
     # TODO Add variables in reopt.jl -> add_variables function and then reference all variables as e.g. m[Symbol("binNumEVSE"*_n)][se]
-    # Currently EVs can switch EVSE every time step; we want a "full" EV to let another EV charge even if it's still there
+    # Currently EVs can switch EVSE every time step but there is a small cost to try avoiding this unnecessarily;
+    # We still want to allow EV's to switch to let other EVs charge, for example, if there are more EVs than EVSEs
     binEVtoEVSE = [@variable(m, [1:p.s.evse.max_num[se], p.s.storage.types.ev, ts in p.time_steps], Bin) 
                                 for se in eachindex(p.s.evse.power_rating_kw)]
 
@@ -101,13 +102,6 @@ function add_ev_supply_equipment_constraints(m, p; _n="")
         m[:EXPbinListEVSE] = @expression(m, [[binListEVSE[se][n] for n in 1:p.s.evse.max_num[se]] for se in eachindex(p.s.evse.power_rating_kw)])
         
         m[:NumberEVSEChosenByType] = @expression(m, [binNumEVSE[se] for se in eachindex(p.s.evse.power_rating_kw)])
-
-        # Debugging - force stuff
-        # @constraint(m, binNumEVSE[1] == 1)
-        # @constraint(m, binNumEVSE[2] == 1)
-
-        # @constraint(m, m[Symbol("dvGridToStorage"*_n)]["EV1", 10] == 45.0)
-        # @constraint(m, m[Symbol("dvGridToStorage"*_n)]["EV2", 10] == 70.0)
     end   
 
     # Make sure EV is not connected to two different EVSE types at the same time which the above constraint allows
@@ -142,6 +136,50 @@ function add_ev_supply_equipment_constraints(m, p; _n="")
             sum(m[Symbol("dvDischargeFromStorage"*_n)][b, ts])
         )
     end
+
+    # EV switching cost - first find arrival and departure timesteps to zero out any switching costs there
+    arrival_departure_ts = Dict([(ev, zeros(length(p.time_steps))) for ev in p.s.storage.types.ev])
+    for ev in p.s.storage.types.ev
+        for ts in p.time_steps[2:end]
+            delta_ts = p.s.storage.attr[ev].electric_vehicle.ev_on_site_series[ts] - p.s.storage.attr[ev].electric_vehicle.ev_on_site_series[ts-1]
+            if delta_ts == 1
+                # Arrived on-site this ts
+                arrival_departure_ts[ev][ts] = 1.0
+            elseif delta_ts == -1
+                # Left site this ts
+                arrival_departure_ts[ev][ts] = 1.0
+            end
+        end
+    end
+
+    # Still "erroneously" applies a cost for an EVSE that unhooks before the timestep it leaves
+    #   or an EV that hooks up after the first timestep it arrives
+    #   e.g. to wait for or allow another EV to charge at that EVSE
+    cost_per_switch = 1.0
+    dvEVSwitching = [@variable(m, [1:p.s.evse.max_num[se], p.s.storage.types.ev, p.time_steps], start=0, Bin) for se in eachindex(p.s.evse.power_rating_kw)]
+    for se in eachindex(p.s.evse.power_rating_kw)
+        # Incentive for hooking up right away when EV arrives
+        @constraint(m, [n in 1:p.s.evse.max_num[se], ev in p.s.storage.types.ev, ts in p.time_steps[2:end]], 
+            dvEVSwitching[se][n, ev, ts]
+            >= 
+            (binEVtoEVSE[se][n, ev, ts] - binEVtoEVSE[se][n, ev, ts-1]) * 
+            (1.0 - arrival_departure_ts[ev][ts])
+        )
+        # Incentive for staying hooked up until right before EV leaves
+        @constraint(m, [n in 1:p.s.evse.max_num[se], ev in p.s.storage.types.ev, ts in p.time_steps[2:end]], 
+            dvEVSwitching[se][n, ev, ts]
+            >= 
+            (binEVtoEVSE[se][n, ev, ts-1] - binEVtoEVSE[se][n, ev, ts]) * 
+            (1.0 - arrival_departure_ts[ev][ts])
+        )        
+    end  
+
+    m[:EVSESwitchingCost] = @expression(m, sum(sum(sum(sum(cost_per_switch * dvEVSwitching[se][n, ev, ts] 
+                                                        for ts in p.time_steps)
+                                                            for ev in p.s.storage.types.ev)
+                                                                for n in 1:p.s.evse.max_num[se])
+                                                                    for se in eachindex(p.s.evse.power_rating_kw))
+    )
 
     m[:EXPbinEVtoEVSE] = @expression(m, [binEVtoEVSE[se] for se in eachindex(p.s.evse.power_rating_kw)])
     m[:TotalEVSEInstalledCost] = @expression(m, 
