@@ -159,7 +159,7 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("ElectricUtility", "annual_energy_supplied_kwh"),
         ("ElectricUtility", "annual_emissions_tonnes_CO2"),
         ("ElectricUtility", "annual_emissions_tonnes_NOx"),
-        ("ElectricUtility", "annual_emissions_tonnes_NOx"),
+        ("ElectricUtility", "annual_emissions_tonnes_SO2"),
         ("ElectricUtility", "annual_emissions_tonnes_PM25"),
         ("ElectricUtility", "lifecycle_emissions_tonnes_CO2"),
         ("ElectricUtility", "lifecycle_emissions_tonnes_NOx"),
