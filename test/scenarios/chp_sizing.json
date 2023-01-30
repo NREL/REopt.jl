@@ -42,9 +42,9 @@
         "thermal_efficiency_full_load": 0.4418,
         "thermal_efficiency_half_load": 0.4664,
         "macrs_option_years": 0,
+        "macrs_bonus_fraction": 0.0,
         "macrs_itc_reduction": 0.0,
-        "macrs_bonus_fraction": 1.0,
-        "federal_itc_fraction": 0.1,
+        "federal_itc_fraction": 0.0,
         "unavailability_periods": [
             {
                 "month": 1,
@@ -56,14 +56,10 @@
         ]
     },
     "PV": {
-        "max_kw": 0.0,
-        "federal_itc_fraction": 0.26,
-        "macrs_bonus_fraction": 1.0
+        "max_kw": 0.0
       },
     "ElectricStorage": {
         "max_kw": 0.0,
-        "max_kwh": 0.0,
-        "total_itc_fraction": 0.0,
-        "macrs_bonus_fraction": 1.0
+        "max_kwh": 0.0
     }    
 }
