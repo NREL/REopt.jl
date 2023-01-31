@@ -75,16 +75,6 @@ size_class_to_installed_cost = Dict(
 )
 ```
 
-The Federal Investment Tax Credit is adjusted based on the `size_class` as follows (if the default of 0.3 is not changed):
-```julia
-size_class_to_itc_incentives = Dict(
-    "residential"=> 0.3,
-    "commercial"=> 0.3,
-    "medium"=> 0.0,
-    "large"=> 0.0
-)
-```
-
 If the `production_factor_series` is not provided then NREL's System Advisor Model (SAM) is used to get the wind turbine 
 production factor.
 
@@ -178,13 +168,6 @@ struct Wind <: AbstractTech
             "medium"=> 2766.0,
             "large"=> 2239.0
         )
-
-        size_class_to_itc_incentives = Dict(
-            "residential"=> 0.3,
-            "commercial"=> 0.3,
-            "medium"=> 0.0,
-            "large"=> 0.0
-        )
         
         if size_class == ""
             if average_elec_load <= 12.5
@@ -202,10 +185,6 @@ struct Wind <: AbstractTech
 
         if isnothing(installed_cost_per_kw)
             installed_cost_per_kw = size_class_to_installed_cost[size_class]
-        end
-
-        if isnothing(federal_itc_fraction)
-            federal_itc_fraction = size_class_to_itc_incentives[size_class]
         end
 
         hub_height = size_class_to_hub_height[size_class]
