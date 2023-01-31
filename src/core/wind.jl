@@ -80,8 +80,8 @@ The Federal Investment Tax Credit is adjusted based on the `size_class` as follo
 size_class_to_itc_incentives = Dict(
     "residential"=> 0.3,
     "commercial"=> 0.3,
-    "medium"=> 0.12,
-    "large"=> 0.12
+    "medium"=> 0.0,
+    "large"=> 0.0
 )
 ```
 
@@ -182,8 +182,8 @@ struct Wind <: AbstractTech
         size_class_to_itc_incentives = Dict(
             "residential"=> 0.3,
             "commercial"=> 0.3,
-            "medium"=> 0.12,
-            "large"=> 0.12
+            "medium"=> 0.0,
+            "large"=> 0.0
         )
         
         if size_class == ""
