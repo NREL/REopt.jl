@@ -50,6 +50,7 @@ function add_electric_vehicle_constraints(m, p, b; _n="")
     end
 
     # If not V2G force discharge from EV to zero
+    # TODO make V2G/bi-directional an EV-specific input so this will apply to each EV uniquely
     if !p.s.evse.v2g
         for ts in p.time_steps
             fix(m[Symbol("dvDischargeFromStorage"*_n)][b, ts], 0.0, force=true)
@@ -81,11 +82,13 @@ function add_ev_supply_equipment_constraints(m, p; _n="")
         binListEVSE = [@variable(m, [1:p.s.evse.max_num[se]], Bin) for se in eachindex(p.s.evse.power_rating_kw)]
         
         # Create a binary list with 1's for up to the binNumEVSE[se] and 0's after
+        # TODO this constraint could be ==, which is better/faster?
         @constraint(m, [se in eachindex(p.s.evse.power_rating_kw)],
             sum(binListEVSE[se][n] for n in 1:p.s.evse.max_num[se]) <= binNumEVSE[se]
         )
         for se in eachindex(p.s.evse.power_rating_kw)
             # The list of 1's must be consecutive starting at index 1 until binNumEVSE is reached, then zeros (can also be all zeros)
+            # TODO this constraint is not needed if the above constraint uses "=="
             if p.s.evse.max_num[se] > 1
                 @constraint(m, [n in 2:p.s.evse.max_num[se]],
                     binListEVSE[se][n] <= binListEVSE[se][n-1]
@@ -111,7 +114,7 @@ function add_ev_supply_equipment_constraints(m, p; _n="")
         1.0
     )
 
-    # Each EV can only be hooked up to any charger if it's on-site (summing across evse_max_num for efficiency)
+    # Each EV can only be hooked up to any charger if it's on-site (summing across evse_max_num[se] for efficiency)
     @constraint(m, [se in eachindex(p.s.evse.power_rating_kw), ev in p.s.storage.types.ev, ts in p.time_steps], 
         sum(binEVtoEVSE[se][n, ev, ts] for n in 1:p.s.evse.max_num[se]) <= p.s.storage.attr[ev].electric_vehicle.ev_on_site_series[ts]
     )    
