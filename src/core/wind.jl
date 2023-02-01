@@ -40,6 +40,7 @@
     wind_direction_degrees = [],
     temperature_celsius = [],
     pressure_atmospheres = [],
+    acres_per_kw = 0.03, # assuming a power density of 30 acres per MW for turbine sizes >= 1.5 MW. No size constraint applied to turbines below 1.5 MW capacity.
     macrs_option_years = 5,
     macrs_bonus_fraction = 0.0,
     macrs_itc_reduction = 0.5,
@@ -75,24 +76,18 @@ size_class_to_installed_cost = Dict(
 )
 ```
 
-The Federal Investment Tax Credit is adjusted based on the `size_class` as follows (if the default of 0.3 is not changed):
-```julia
-size_class_to_itc_incentives = Dict(
-    "residential"=> 0.3,
-    "commercial"=> 0.3,
-    "medium"=> 0.12,
-    "large"=> 0.12
-)
-```
-
 If the `production_factor_series` is not provided then NREL's System Advisor Model (SAM) is used to get the wind turbine 
 production factor.
 
-Wind resource values are optional, i.e.
-(`wind_meters_per_sec`, `wind_direction_degrees`, `temperature_celsius`, and `pressure_atmospheres`).
-If not provided then the resource values are downloaded from NREL's Wind Toolkit.
-These values are passed to SAM to get the turbine production factor.
+!!! note "Wind inputs"
+    Wind resource values are optional (i.e., `wind_meters_per_sec`, `wind_direction_degrees`, `temperature_celsius`, and `pressure_atmospheres`).
+    If not provided then the resource values are downloaded from NREL's Wind Toolkit.
+    These values are passed to SAM to get the turbine production factor.
 
+!!! note "Wind sizing and land constraint" 
+    Wind size is constrained by Site.land_acres, assuming a power density of Wind.acres_per_kw for turbine sizes above 1.5 MW (default assumption of 30 acres per MW). 
+    If the turbine size recommended is smaller than 1.5 MW, the input for land available will not constrain the system size. 
+    If the the land available constrains the system size to less than 1.5 MW, the system will be capped at 1.5 MW (i.e., turbines < 1.5 MW are not subject to the acres/kW limit).  
 
 """
 struct Wind <: AbstractTech
@@ -107,6 +102,7 @@ struct Wind <: AbstractTech
     wind_direction_degrees::AbstractArray{Float64,1}
     temperature_celsius::AbstractArray{Float64,1}
     pressure_atmospheres::AbstractArray{Float64,1}
+    acres_per_kw::Real
     macrs_option_years::Int
     macrs_bonus_fraction::Real
     macrs_itc_reduction::Real
@@ -142,6 +138,7 @@ struct Wind <: AbstractTech
         wind_direction_degrees = [],
         temperature_celsius = [],
         pressure_atmospheres = [],
+        acres_per_kw = 0.03, # assuming a power density of 30 acres per MW for turbine sizes >= 1.5 MW. No size constraint applied to turbines below 1.5 MW capacity.
         macrs_option_years = 5,
         macrs_bonus_fraction = 0.0,
         macrs_itc_reduction = 0.5,
@@ -234,6 +231,7 @@ struct Wind <: AbstractTech
             wind_direction_degrees,
             temperature_celsius,
             pressure_atmospheres,
+            acres_per_kw,
             macrs_option_years,
             macrs_bonus_fraction,
             macrs_itc_reduction,
