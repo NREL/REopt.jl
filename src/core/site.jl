@@ -34,7 +34,7 @@ Inputs related to the physical location:
 ```julia
     latitude::Real, 
     longitude::Real, 
-    land_acres::Union{Real, Nothing} = nothing, 
+    land_acres::Union{Real, Nothing} = nothing, # acres of land available for PV panels and/or Wind turbines. Constraint applied separately to PV and Wind, meaning the two technologies are assumed to be able to be co-located.
     roof_squarefeet::Union{Real, Nothing} = nothing,
     min_resil_time_steps::Int=0,
     mg_tech_sizes_equal_grid_sizes::Bool = true,
