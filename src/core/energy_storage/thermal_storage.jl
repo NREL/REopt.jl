@@ -47,7 +47,7 @@ Cold thermal energy storage sytem; specifically, a chilled water system used to 
     om_cost_per_gal::Float64 = 0.0
     macrs_option_years::Int = 7
     macrs_bonus_fraction::Float64 = 0.8
-    macrs_itc_reduction::Float64 = 0.0
+    macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kwh::Float64 = 0.0
 ```
@@ -65,7 +65,7 @@ Base.@kwdef struct ColdThermalStorageDefaults <: AbstractThermalStorageDefaults
     om_cost_per_gal::Float64 = 0.0
     macrs_option_years::Int = 7
     macrs_bonus_fraction::Float64 = 0.8
-    macrs_itc_reduction::Float64 = 0.0
+    macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kwh::Float64 = 0.0
 end
@@ -87,7 +87,7 @@ end
     om_cost_per_gal::Float64 = 0.0
     macrs_option_years::Int = 7
     macrs_bonus_fraction::Float64 = 0.8
-    macrs_itc_reduction::Float64 = 0.0
+    macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kwh::Float64 = 0.0
 ```
@@ -105,7 +105,7 @@ Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults
     om_cost_per_gal::Float64 = 0.0
     macrs_option_years::Int = 7
     macrs_bonus_fraction::Float64 = 0.8
-    macrs_itc_reduction::Float64 = 0.0
+    macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kwh::Float64 = 0.0
 end
