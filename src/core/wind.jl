@@ -100,7 +100,7 @@ struct Wind <: AbstractTech
     macrs_option_years::Int
     macrs_bonus_fraction::Real
     macrs_itc_reduction::Real
-    federal_itc_fraction::Union{Nothing, Real}
+    federal_itc_fraction::Real
     federal_rebate_per_kw::Real
     state_ibi_fraction::Real
     state_ibi_max::Real
