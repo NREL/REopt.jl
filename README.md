@@ -1,5 +1,5 @@
 # REopt Julia package
-This package is currently under development, but it now has all of the capabilities of the REopt model used in the [REopt API](https://github.com/NREL/REopt_API). We expect to have the first stable release by Summer 2023.
+This package is currently under development, but it now has **most** of capabilities of the REopt model used in the [REopt API](https://github.com/NREL/REopt_API). We expect to have the first stable release by Fall 2022.
 
 For more information please see the documentation:
 <!-- [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://nrel.github.io/REopt.jl/stable) -->
