@@ -22,7 +22,11 @@ Classify the change according to the following categories:
     ### Fixed
     ### Deprecated
     ### Removed
-
+## Develop - 2023-01-31
+ ##### Changed
+ - Updated the following default values:
+   - PV, Wind, Storage, CHP, GHP, Hot Water Storage, Cold Water Storage, Electric Storage: **federal_itc_fraction(PV,Wind, CHP,GHP)** and **total_itc_fraction(Hot Water Storage, Cold Water Storage, Electric Storage)** to 0.3 (30%)
+   - PV, Wind, Storage, CHP, GHP, Hot Water Storage, Cold Water Storage, Electric Storage: ***macrs_bonus_fraction** to 0.8 (80%)
 ## v0.24.0
 ### Changed
 - Major name change overall for outputs/results. Changed energy-related outputs with "year_one" in name to "annual" to reflect that they are actually average annual output values. Changed any "average_annual" naming to "annual" to simplify. Changed `to_tes` and `to_battery` outputs to `to_storage` for consistency
