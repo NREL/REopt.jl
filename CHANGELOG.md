@@ -28,7 +28,8 @@ Classify the change according to the following categories:
  - Updated the following default values:
    - PV, Wind, Storage, CHP, GHP, Hot Water Storage, Cold Water Storage, Electric Storage: **federal_itc_fraction(PV,Wind, CHP,GHP)** and **total_itc_fraction(Hot Water Storage, Cold Water Storage, Electric Storage)** to 0.3 (30%)
    - PV, Wind, Storage, CHP, GHP, Hot Water Storage, Cold Water Storage, Electric Storage: ***macrs_bonus_fraction** to 0.8 (80%)
-
+   - Wind ITC no longer determined based on size class
+   - Hot Water Storage and Cold Water Storage: **macrs_itc_reduction** to 0.5 (50%)
 ## dev
 ### Added
 - multi-node MPC modeling capability
