@@ -32,8 +32,8 @@ Classify the change according to the following categories:
     - Hot Water Storage and Cold Water Storage: **macrs_option_years** to 7 years
 ### Removed 
    - Wind ITC no longer determined based on size class. Removed all size class dependencies from wind.jl
-
-## dev
+   
+## v0.25.0
 ### Added
 - multi-node MPC modeling capability
 - more MPC outputs (e.g. Costs, ElectricStorage.to_load_series_kw)
