@@ -23,6 +23,9 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2023-02-02
+### Added 
+- Constraint on wind sizing based on Site.land_acres
 ## Develop - 2023-02-01
 ### Added
 - multi-node MPC modeling capability
