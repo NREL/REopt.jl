@@ -4,7 +4,9 @@
         "latitude": 34.5794343
     },
     "PV": {
-        "array_type": 0
+        "array_type": 0,
+        "federal_itc_fraction": 0.26,
+        "macrs_bonus_fraction": 1.0
     },
     "ElectricLoad": {
         "doe_reference_name": "RetailStore",
