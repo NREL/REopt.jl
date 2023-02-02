@@ -64,9 +64,9 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
     can_supply_steam_turbine::Bool=false # If CHP can supply steam to the steam turbine for electric production 
 
     macrs_option_years::Int = 5
-    macrs_bonus_fraction::Float64 = 1.0
+    macrs_bonus_fraction::Float64 = 0.8
     macrs_itc_reduction::Float64 = 0.5
-    federal_itc_fraction::Float64 = 0.1
+    federal_itc_fraction::Float64 = 0.3
     federal_rebate_per_kw::Float64 = 0.0
     state_ibi_fraction::Float64 = 0.0
     state_ibi_max::Float64 = 1.0e10
@@ -132,9 +132,9 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     can_supply_steam_turbine::Bool = false
 
     macrs_option_years::Int = 5
-    macrs_bonus_fraction::Float64 = 1.0
+    macrs_bonus_fraction::Float64 = 0.8
     macrs_itc_reduction::Float64 = 0.5
-    federal_itc_fraction::Float64 = 0.1
+    federal_itc_fraction::Float64 = 0.3
     federal_rebate_per_kw::Float64 = 0.0
     state_ibi_fraction::Float64 = 0.0
     state_ibi_max::Float64 = 1.0e10

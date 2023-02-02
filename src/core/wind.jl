@@ -41,9 +41,9 @@
     temperature_celsius = [],
     pressure_atmospheres = [],
     macrs_option_years = 5,
-    macrs_bonus_fraction = 0.0,
+    macrs_bonus_fraction = 0.8,
     macrs_itc_reduction = 0.5,
-    federal_itc_fraction = nothing,
+    federal_itc_fraction = 0.3,
     federal_rebate_per_kw = 0.0,
     state_ibi_fraction = 0.0,
     state_ibi_max = 1.0e10,
@@ -75,16 +75,6 @@ size_class_to_installed_cost = Dict(
 )
 ```
 
-The Federal Investment Tax Credit is adjusted based on the `size_class` as follows (if the default of 0.3 is not changed):
-```julia
-size_class_to_itc_incentives = Dict(
-    "residential"=> 0.3,
-    "commercial"=> 0.3,
-    "medium"=> 0.12,
-    "large"=> 0.12
-)
-```
-
 If the `production_factor_series` is not provided then NREL's System Advisor Model (SAM) is used to get the wind turbine 
 production factor.
 
@@ -110,7 +100,7 @@ struct Wind <: AbstractTech
     macrs_option_years::Int
     macrs_bonus_fraction::Real
     macrs_itc_reduction::Real
-    federal_itc_fraction::Union{Nothing, Real}
+    federal_itc_fraction::Real
     federal_rebate_per_kw::Real
     state_ibi_fraction::Real
     state_ibi_max::Real
@@ -143,9 +133,9 @@ struct Wind <: AbstractTech
         temperature_celsius = [],
         pressure_atmospheres = [],
         macrs_option_years = 5,
-        macrs_bonus_fraction = 0.0,
+        macrs_bonus_fraction = 0.8,
         macrs_itc_reduction = 0.5,
-        federal_itc_fraction = nothing,
+        federal_itc_fraction = 0.3,
         federal_rebate_per_kw = 0.0,
         state_ibi_fraction = 0.0,
         state_ibi_max = 1.0e10,
@@ -178,13 +168,6 @@ struct Wind <: AbstractTech
             "medium"=> 2766.0,
             "large"=> 2239.0
         )
-
-        size_class_to_itc_incentives = Dict(
-            "residential"=> 0.3,
-            "commercial"=> 0.3,
-            "medium"=> 0.12,
-            "large"=> 0.12
-        )
         
         if size_class == ""
             if average_elec_load <= 12.5
@@ -202,10 +185,6 @@ struct Wind <: AbstractTech
 
         if isnothing(installed_cost_per_kw)
             installed_cost_per_kw = size_class_to_installed_cost[size_class]
-        end
-
-        if isnothing(federal_itc_fraction)
-            federal_itc_fraction = size_class_to_itc_incentives[size_class]
         end
 
         hub_height = size_class_to_hub_height[size_class]

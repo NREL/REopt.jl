@@ -89,6 +89,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 	
 		#################################  Objective Function   ########################################
 		m[Symbol("Costs"*_n)] = @expression(m,
+			#TODO: update in line with non-multinode version
 			# Capital Costs
 			m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)] +  
 			
