@@ -23,7 +23,7 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## develop 01/19/2023
+## v0.25.0
 ### Added
 - multi-node MPC modeling capability
 - more MPC outputs (e.g. Costs, ElectricStorage.to_load_series_kw)
