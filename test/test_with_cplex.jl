@@ -72,9 +72,9 @@ end
     @test results["expected_outage_cost"] ≈ 0
     @test sum(results["unserved_load_per_outage"]) ≈ 0
     @test value(m[:binMGTechUsed]["Generator"]) == 1
-    @test value(m[:binMGTechUsed]["PV"]) == 0
+    @test value(m[:binMGTechUsed]["PV"]) == 1
     @test value(m[:binMGStorageUsed]) == 1
-    @test results["Financial"]["lcc"] ≈ 7.3879557e7 atol=5e4
+    @test results["Financial"]["lcc"] ≈ 7.19753998668e7 atol=5e4
     
     #=
     Scenario with $0/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168

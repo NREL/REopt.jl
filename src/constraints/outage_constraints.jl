@@ -30,8 +30,8 @@
 function add_dv_UnservedLoad_constraints(m,p)
     # effective load balance (with slack in dvUnservedLoad)
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-        m[:dvUnservedLoad][s, tz, ts] >= p.s.electric_load.critical_loads_kw[tz+ts]
-        - sum(  m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts] * p.levelization_factor[t]
+        m[:dvUnservedLoad][s, tz, ts] >= p.s.electric_load.critical_loads_kw[tz+ts-1]
+        - sum(  m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] * p.levelization_factor[t]
               - m[:dvMGProductionToStorage][t, s, tz, ts] - m[:dvMGCurtail][t, s, tz, ts]
             for t in p.techs.elec
         )
@@ -50,7 +50,7 @@ end
 
 function add_outage_cost_constraints(m,p)
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps],
-        m[:dvMaxOutageCost][s] >= p.pwf_e * sum(p.value_of_lost_load_per_kwh[tz+ts] * m[:dvUnservedLoad][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s])
+        m[:dvMaxOutageCost][s] >= p.pwf_e * sum(p.value_of_lost_load_per_kwh[tz+ts-1] * m[:dvUnservedLoad][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s])
     )
 
     @expression(m, ExpectedOutageCost,
@@ -98,7 +98,7 @@ function add_MG_production_constraints(m,p)
 	# Electrical production sent to storage or export must be less than technology's rated production
 	@constraint(m, [t in p.techs.elec, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
 		m[:dvMGProductionToStorage][t, s, tz, ts] + m[:dvMGCurtail][t, s, tz, ts] <=
-		p.production_factor[t, tz+ts] * p.levelization_factor[t] * m[:dvMGRatedProduction][t, s, tz, ts]
+		p.production_factor[t, tz+ts-1] * p.levelization_factor[t] * m[:dvMGRatedProduction][t, s, tz, ts]
     )
 
     @constraint(m, [t in p.techs.elec, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps], 
@@ -115,7 +115,7 @@ function add_MG_fuel_burn_constraints(m,p)
     # Define dvMGFuelUsed by summing over outage time_steps.
     @constraint(m, [t in p.techs.gen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps],
         m[:dvMGFuelUsed][t, s, tz] == p.s.generator.fuel_slope_gal_per_kwh * p.hours_per_time_step * p.levelization_factor[t] *
-        sum( p.production_factor[t, tz+ts] * m[:dvMGRatedProduction][t, s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s])
+        sum( p.production_factor[t, tz+ts-1] * m[:dvMGRatedProduction][t, s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s])
         + p.s.generator.fuel_intercept_gal_per_hr * p.hours_per_time_step * 
         sum( m[:binMGGenIsOnInTS][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s])
     )
