@@ -24,14 +24,13 @@ Classify the change according to the following categories:
     ### Removed
 
 ## Develop - 2023-02-01
- ##### Changed
+ ### Changed
  - Updated the following default values:
     - PV, Wind, Storage, CHP, GHP, Hot Water Storage, Cold Water Storage, Electric Storage: **federal_itc_fraction(PV,Wind, CHP,GHP)** and **total_itc_fraction(Hot Water Storage, Cold Water Storage, Electric Storage)** to 0.3 (30%)
     - PV, Wind, Storage, CHP, GHP, Hot Water Storage, Cold Water Storage, Electric Storage: ***macrs_bonus_fraction** to 0.8 (80%)
     - Hot Water Storage and Cold Water Storage: **macrs_itc_reduction** to 0.5 (50%)
     - Hot Water Storage and Cold Water Storage: **macrs_option_years** to 7 years
-
--Additional
+### Removed 
    - Wind ITC no longer determined based on size class. Removed all size class dependencies from wind.jl
 ## dev
 ### Added
