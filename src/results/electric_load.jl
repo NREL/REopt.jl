@@ -68,3 +68,16 @@ function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
     d["ElectricLoad"] = r
     nothing
 end
+
+
+function add_electric_load_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
+    # Adds the `ElectricLoad` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+    # Note: the node number is an empty string if evaluating a single `Site`.
+
+    r = Dict{String, Any}()
+
+    r["load_series_kw"] = p.s.electric_load.loads_kw
+    
+    d["ElectricLoad"] = r
+    nothing
+end
