@@ -109,7 +109,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         off_grid_flag::Bool = false,
         loads_kw::Array{<:Real,1} = Real[],
         path_to_csv::String = "",
-        year::Int = 2020, # used in ElectricTariff to align rate schedule with weekdays/weekends
+        year::Int = 2020, # used in ElectricTariff to align rate schedule with weekdays/weekends # TODO: why don't we default this to 2017 to avoid warning each time?
         doe_reference_name::String = "",
         blended_doe_reference_names::Array{String, 1} = String[],
         blended_doe_reference_percents::Array{<:Real,1} = Real[],
