@@ -29,10 +29,10 @@
 # *********************************************************************************
 """
 `CoolingLoad` results keys:
-- `load_series_ton` vector of site cooling load in every time step
-- `annual_calculated_tonhour` sum of the `load_series_ton`
-- `electric_chiller_base_load_series_kw`
-- `annual_electric_chiller_base_load_kwh`
+- `load_series_ton` # vector of site cooling load in every time step
+- `annual_calculated_tonhour` # sum of the `load_series_ton`. Annual site total cooling load [tonhr]
+- `electric_chiller_base_load_series_kw` # Hourly total base load drawn from chiller [kW-electric]
+- `annual_electric_chiller_base_load_kwh` # Annual total base load drawn from chiller [kWh-electric]
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
 	REopt performs load balances using average annual production values for technologies that include degradation. 
