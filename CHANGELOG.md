@@ -26,6 +26,7 @@ Classify the change according to the following categories:
 ## Develop - 2023-02-02
 ### Added 
 - Constraint on wind sizing based on Site.land_acres
+- New Wind input acres_per_kw, defaults to 0.03 
 ## Develop - 2023-02-01
 ### Added
 - multi-node MPC modeling capability
