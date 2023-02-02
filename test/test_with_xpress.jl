@@ -1553,6 +1553,7 @@ end
     @test "warnings" ∈ keys(r["Messages"])
     @test length(r["Messages"]["errors"]) > 0
     @test length(r["Messages"]["warnings"]) > 0
+    @test r["Messages"]["has_stacktrace"] = false
 
     m = Model(Xpress.Optimizer)
     r = run_reopt(m, d)
@@ -1599,6 +1600,7 @@ end
     @test "warnings" ∈ keys(r["Messages"])
     @test length(r["Messages"]["errors"]) > 0
     @test length(r["Messages"]["warnings"]) > 0
+    @test r["Messages"]["has_stacktrace"] = true
 
     m = Model(Xpress.Optimizer)
     r = run_reopt(m, d)
