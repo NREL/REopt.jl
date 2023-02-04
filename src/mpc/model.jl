@@ -48,8 +48,7 @@ Solve the model predictive control problem using the `MPCScenario` defined in th
 Returns a Dict of results with keys matching those in the `MPCScenario`.
 """
 function run_mpc(m::JuMP.AbstractModel, d::Dict)
-	s = MPCScenario(d)
-	run_mpc(m, MPCInputs(s))
+	run_mpc(m, MPCInputs(d))
 end
 
 
@@ -63,7 +62,7 @@ Returns a Dict of results with keys matching those in the `MPCScenario`.
 function run_mpc(m::JuMP.AbstractModel, p::MPCInputs)
     build_mpc!(m, p)
 
-    if !p.s.settings.add_soc_incentive
+    if !p.s.settings.add_soc_incentive || !("ElectricStorage" in p.s.storage.types.elec)
 		@objective(m, Min, m[:Costs])
 	else # Keep SOC high
 		@objective(m, Min, m[:Costs] - sum(m[:dvStoredEnergy]["ElectricStorage", ts] for ts in p.time_steps) /

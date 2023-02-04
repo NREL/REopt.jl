@@ -38,6 +38,7 @@ struct MPCScenario <: AbstractScenario
     generator::MPCGenerator
     cooling_load::MPCCoolingLoad
     limits::MPCLimits
+    node::Int
 end
 
 
@@ -55,7 +56,9 @@ Method for creating the MPCScenario struct:
         electric_utility::ElectricUtility
         financial::MPCFinancial
         generator::MPCGenerator
+        cooling_load::MPCCoolingLoad
         limits::MPCLimits
+        node::Int
     end
 ```
 
@@ -133,6 +136,12 @@ function MPCScenario(d::Dict)
         limits = MPCLimits()
     end
 
+    if haskey(d, "node")
+        node = d["node"]
+    else
+        node = 1
+    end
+
     return MPCScenario(
         settings,
         pvs, 
@@ -143,6 +152,7 @@ function MPCScenario(d::Dict)
         financial,
         generator,
         cooling_load,
-        limits
+        limits,
+        node
     )
 end
