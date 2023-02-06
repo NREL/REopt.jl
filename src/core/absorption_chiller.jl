@@ -37,7 +37,6 @@
     # Defaults for fields below are dependent on thermal_consumption_hot_water_or_steam and max cooling load
     installed_cost_per_ton::Union{Float64, Nothing} = nothing # Thermal power-based cost of absorption chiller (3.5 to 1 ton to kwt)
     om_cost_per_ton::Union{Float64, Nothing} = nothing # Yearly fixed O&M cost on a thermal power (ton) basis
-    om_cost_per_kw::Float64 = NaN,  
     min_ton::Float64 = 0.0, # Minimum thermal power size constraint for optimization
     max_ton::Float64 = BIG_NUMBER, # Maximum thermal power size constraint for optimization
     cop_thermal::Union{Float64, Nothing} = nothing, # Absorption chiller system coefficient of performance - conversion of hot thermal power input to usable cooling thermal energy output
