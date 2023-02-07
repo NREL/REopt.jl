@@ -382,9 +382,10 @@ function cost_curve(tech::AbstractTech, financial::Financial)
             macrs_itc_reduction = macrs_itc_reduction,
             rebate_per_kw = rebate_federal
         )
-        
+
         println("############################################")
         println(updated_slope)
+        println(n_segment)
         println("############################################")
 
         # The way REopt incentives currently work, the federal rebate is the only incentive that doesn't reduce ITC basis
