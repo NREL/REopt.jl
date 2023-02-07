@@ -481,10 +481,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             d["GHP"]["ghpghx_inputs"][i]["ambient_temperature_f"] = ambient_temperature_f
             # Only SpaceHeating portion of Heating Load gets served by GHP, unless allowed by can_serve_dhw
             if get(ghpghx_inputs, "heating_thermal_load_mmbtu_per_hr", []) in [nothing, []]
-                if d["GHP"]["can_serve_dhw"]
-                    ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = (space_heating_load.loads_kw + dhw_load.loads_kw - heating_thermal_load_reduction_with_ghp_kw)  / KWH_PER_MMBTU
+                if haskey(d["GHP"], "can_serve_dhw") && d["GHP"]["can_serve_dhw"]
+                    ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = (space_heating_load.loads_kw + dhw_load.loads_kw - space_heating_thermal_load_reduction_with_ghp_kw)  / KWH_PER_MMBTU
                 else
-                    ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = (space_heating_load.loads_kw - heating_thermal_load_reduction_with_ghp_kw) / KWH_PER_MMBTU
+                    ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = (space_heating_load.loads_kw - space_heating_thermal_load_reduction_with_ghp_kw) / KWH_PER_MMBTU
                 end
             end
             if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
@@ -505,13 +505,17 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 ghpghx_results = GhpGhx.get_results_for_reopt(results, inputs_params)
                 ghpghx_response = Dict([("inputs", ghpghx_inputs), ("outputs", ghpghx_results)])
                 @info "GhpGhx.jl model solved" #with status $(results["status"])."
-                ghp_inputs_removed_ghpghx_inputs = deepcopy(d["GHP"])
-                pop!(ghp_inputs_removed_ghpghx_inputs, "ghpghx_inputs")                
-                append!(ghp_option_list, [GHP(ghpghx_response, ghp_inputs_removed_ghpghx_inputs)])
+                ghp_inputs_removed_ghpghx_params = deepcopy(d["GHP"])
+                for param in ["ghpghx_inputs", "ghpghx_responses", "ghpghx_response_uuids"]
+                    if haskey(d["GHP"], param)    
+                        pop!(ghp_inputs_removed_ghpghx_params, param)
+                    end
+                end                    
+                append!(ghp_option_list, [GHP(ghpghx_response, ghp_inputs_removed_ghpghx_params)])
                 # Print out ghpghx_response for loading into a future run without running GhpGhx.jl again
-                open("scenarios/ghpghx_response.json","w") do f
-                    JSON.print(f, ghpghx_response)
-                end
+                # open("scenarios/ghpghx_response.json","w") do f
+                #     JSON.print(f, ghpghx_response)
+                # end
             catch
                 throw(@error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
                     loaded (using GhpGhx) to the active Julia environment"))
