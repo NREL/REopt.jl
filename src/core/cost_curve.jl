@@ -393,6 +393,7 @@ function cost_curve(tech::AbstractTech, financial::Financial)
     end
     cap_cost_slope = updated_cap_cost_slope
     cap_cost_yint = updated_y_intercept
+    cap_cost_yint = 31000.0
 
 
     return cap_cost_slope, cost_curve_bp_x, cap_cost_yint, n_segments
