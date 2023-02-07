@@ -443,7 +443,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
     # Call GhpGhx.jl module if only ghpghx_inputs is given, otherwise use ghpghx_responses
     if eval_ghp && !(get_ghpghx_from_input)
-        if d["GHP"]["ghpghx_inputs"] in [nothing, []]
+        if get(d["GHP"], "ghpghx_inputs", nothing) in [nothing, []]
             number_of_ghpghx = 1
             d["GHP"]["ghpghx_inputs"] = [Dict()]
         else
