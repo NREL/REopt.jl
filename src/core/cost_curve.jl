@@ -383,10 +383,7 @@ function cost_curve(tech::AbstractTech, financial::Financial)
             rebate_per_kw = rebate_federal
         )
 
-        println("############################################")
-        println(updated_slope)
-        println(n_segment)
-        println("############################################")
+
 
         # The way REopt incentives currently work, the federal rebate is the only incentive that doesn't reduce ITC basis
 
@@ -400,6 +397,9 @@ function cost_curve(tech::AbstractTech, financial::Financial)
     end
     cap_cost_slope = updated_cap_cost_slope
     cap_cost_yint = updated_y_intercept
-
+    println("############################################")
+    println(cap_cost_slope)
+    println(cap_cost_yint)
+    println("############################################")
     return cap_cost_slope, cost_curve_bp_x, cap_cost_yint, n_segments
 end
