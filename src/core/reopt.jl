@@ -263,7 +263,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 	add_production_constraints(m, p)
 
-    m[:TotalTechCapCosts] = 31000.0
+    m[:TotalTechCapCosts] = 0.0
     m[:TotalPerUnitProdOMCosts] = 0.0
     m[:TotalPerUnitHourOMCosts] = 0.0
     m[:TotalFuelCosts] = 0.0
