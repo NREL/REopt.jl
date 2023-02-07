@@ -364,7 +364,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     end
 
     if !isempty(setdiff(p.techs.all, p.techs.segmented))
-        m[:TotalTechCapCosts] = (p.third_party_factor * sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in setdiff(p.techs.all, p.techs.segmented))) + 31000
+        m[:TotalTechCapCosts] += p.third_party_factor *
+            sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in setdiff(p.techs.all, p.techs.segmented))
     end
 
     if !isempty(p.techs.segmented)
@@ -433,7 +434,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	#################################  Objective Function   ########################################
 	@expression(m, Costs,
 		# Capital Costs
-		m[:TotalTechCapCosts] + TotalStorageCapCosts + m[:GHPCapCosts] +
+		m[:TotalTechCapCosts] + 31000 + TotalStorageCapCosts + m[:GHPCapCosts] +
 
 		# Fixed O&M, tax deductible for owner
 		(TotalPerUnitSizeOMCosts + m[:GHPOMCosts]) * (1 - p.s.financial.owner_tax_rate_fraction) +
