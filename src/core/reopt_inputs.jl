@@ -513,8 +513,11 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
         existing_sizes[pv.name] = pv.existing_kw
         min_sizes[pv.name] = pv.existing_kw + pv.min_kw
         max_sizes[pv.name] = pv.existing_kw + beyond_existing_kw
+        println("#########################")
+        println(max_sizes[pv.name])
+        println("#########################")
 
-        
+
 
         update_cost_curve!(pv, pv.name, s.financial,
             cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
