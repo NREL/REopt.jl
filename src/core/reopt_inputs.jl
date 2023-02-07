@@ -517,17 +517,6 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
         update_cost_curve!(pv, pv.name, s.financial,
             cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
         )
-        
-        println("###########################################################")
-        println("###########################################################")
-        println(pv.cap_cost_slope)
-        println(pv.segmented_techs)
-        println(pv.n_segs_by_tech)
-        println(pv.seg_min_size)
-        println(pv.seg_max_size)
-        println(pv.seg_yint)
-        println("###########################################################")
-        println("###########################################################")
 
         om_cost_per_kw[pv.name] = pv.om_cost_per_kw
         fillin_techs_by_exportbin(techs_by_exportbin, pv, pv.name)
