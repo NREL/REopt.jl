@@ -359,10 +359,9 @@ function cost_curve(tech::AbstractTech, financial::Financial)
             macrs_schedule = financial.macrs_seven_year
         end
 
-        ###TESTING
-        replacement_cost = 1000
-        replacement_year = 1
-
+        replacement_cost = 0.0
+        replacement_year = financial.analysis_years
+        
         if nameof(T) in [:Generator]  # Generator is currently only Tech with replacement year and cost
             if tech.replacement_year >= financial.analysis_years # assume no replacement in final year of project
                 replacement_cost = 0.0
@@ -394,6 +393,7 @@ function cost_curve(tech::AbstractTech, financial::Financial)
     end
     cap_cost_slope = updated_cap_cost_slope
     cap_cost_yint = updated_y_intercept
+
 
     return cap_cost_slope, cost_curve_bp_x, cap_cost_yint, n_segments
 end
