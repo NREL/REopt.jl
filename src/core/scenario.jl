@@ -48,7 +48,7 @@ struct Scenario <: AbstractScenario
     existing_chiller::Union{ExistingChiller, Nothing}
     absorption_chiller::Union{AbsorptionChiller, Nothing}
     ghp_option_list::Array{Union{GHP, Nothing}, 1}  # List of GHP objects (often just 1 element, but can be more)
-    heating_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
+    space_heating_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     steam_turbine::Union{SteamTurbine, Nothing}
 end
@@ -418,7 +418,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     # GHP
     ghp_option_list = []
-    heating_thermal_load_reduction_with_ghp_kw = zeros(8760 * settings.time_steps_per_hour)
+    space_heating_thermal_load_reduction_with_ghp_kw = zeros(8760 * settings.time_steps_per_hour)
     cooling_thermal_load_reduction_with_ghp_kw = zeros(8760 * settings.time_steps_per_hour)
     eval_ghp = false
     get_ghpghx_from_input = false    
@@ -438,7 +438,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 assign_thermal_factor!(d, factor[2])
             end
         end
-        heating_thermal_load_reduction_with_ghp_kw = space_heating_load.loads_kw * (1.0 - d["GHP"]["space_heating_efficiency_thermal_factor"])
+        space_heating_thermal_load_reduction_with_ghp_kw = space_heating_load.loads_kw * (1.0 - d["GHP"]["space_heating_efficiency_thermal_factor"])
         cooling_thermal_load_reduction_with_ghp_kw = cooling_load.loads_kw_thermal * (1.0 - d["GHP"]["cooling_efficiency_thermal_factor"])
     end
     # Call GhpGhx.jl module if only ghpghx_inputs is given, otherwise use ghpghx_responses
@@ -562,7 +562,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         existing_chiller,
         absorption_chiller,
         ghp_option_list,
-        heating_thermal_load_reduction_with_ghp_kw,
+        space_heating_thermal_load_reduction_with_ghp_kw,
         cooling_thermal_load_reduction_with_ghp_kw,
         steam_turbine
     )

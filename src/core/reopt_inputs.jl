@@ -78,7 +78,7 @@ struct REoptInputs <: AbstractInputs
     require_ghp_purchase::Int64  # 0/1 binary if GHP purchase is forced/required
     ghp_heating_thermal_load_served_kw::Array{Float64,2}  # Array of heating load (thermal!) profiles served by GHP
     ghp_cooling_thermal_load_served_kw::Array{Float64,2}  # Array of cooling load profiles served by GHP
-    heating_thermal_load_reduction_with_ghp_kw::Array{Float64,2}  # Array of heating load reduction (thermal!) profile from GHP retrofit
+    space_heating_thermal_load_reduction_with_ghp_kw::Array{Float64,2}  # Array of heating load reduction (thermal!) profile from GHP retrofit
     cooling_thermal_load_reduction_with_ghp_kw::Array{Float64,2}  # Array of cooling load reduction (thermal!) profile from GHP retrofit
     ghp_electric_consumption_kw::Array{Float64,2}  # Array of electric load profiles consumed by GHP
     ghp_installed_cost::Array{Float64,1}  # Array of installed cost for GHP options
@@ -138,7 +138,7 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     require_ghp_purchase::Int64  # 0/1 binary if GHP purchase is forced/required
     ghp_heating_thermal_load_served_kw::Array{Float64,2}  # Array of heating load (thermal!) profiles served by GHP
     ghp_cooling_thermal_load_served_kw::Array{Float64,2}  # Array of cooling load profiles served by GHP
-    heating_thermal_load_reduction_with_ghp_kw::Array{Float64,2}  # Array of heating load reduction (thermal!) profile from GHP retrofit
+    space_heating_thermal_load_reduction_with_ghp_kw::Array{Float64,2}  # Array of heating load reduction (thermal!) profile from GHP retrofit
     cooling_thermal_load_reduction_with_ghp_kw::Array{Float64,2}  # Array of cooling load reduction (thermal!) profile from GHP retrofit
     ghp_electric_consumption_kw::Array{Float64,2}  # Array of electric load profiles consumed by GHP
     ghp_installed_cost::Array{Float64,1}  # Array of installed cost for GHP options
@@ -201,7 +201,7 @@ function REoptInputs(s::AbstractScenario)
     time_steps_with_grid, time_steps_without_grid, = setup_electric_utility_inputs(s)
     
     ghp_options, require_ghp_purchase, ghp_heating_thermal_load_served_kw, 
-        ghp_cooling_thermal_load_served_kw, heating_thermal_load_reduction_with_ghp_kw, 
+        ghp_cooling_thermal_load_served_kw, space_heating_thermal_load_reduction_with_ghp_kw, 
         cooling_thermal_load_reduction_with_ghp_kw, ghp_electric_consumption_kw, 
         ghp_installed_cost, ghp_om_cost_year_one = setup_ghp_inputs(s, time_steps, time_steps_without_grid)
 
@@ -255,7 +255,7 @@ function REoptInputs(s::AbstractScenario)
         require_ghp_purchase,
         ghp_heating_thermal_load_served_kw,
         ghp_cooling_thermal_load_served_kw,
-        heating_thermal_load_reduction_with_ghp_kw,
+        space_heating_thermal_load_reduction_with_ghp_kw,
         cooling_thermal_load_reduction_with_ghp_kw,
         ghp_electric_consumption_kw,
         ghp_installed_cost,
@@ -982,7 +982,7 @@ function setup_ghp_inputs(s::AbstractScenario, time_steps, time_steps_without_gr
     ghp_om_cost_year_one = Vector{Float64}(undef, num)
     ghp_heating_thermal_load_served_kw = zeros(num, length(time_steps))
     ghp_cooling_thermal_load_served_kw = zeros(num, length(time_steps))
-    heating_thermal_load_reduction_with_ghp_kw = zeros(num, length(time_steps))
+    space_heating_thermal_load_reduction_with_ghp_kw = zeros(num, length(time_steps))
     cooling_thermal_load_reduction_with_ghp_kw = zeros(num, length(time_steps))
     ghp_cooling_thermal_load_served_kw = zeros(num, length(time_steps))        
     ghp_electric_consumption_kw = zeros(num, length(time_steps))
@@ -1009,9 +1009,9 @@ function setup_ghp_inputs(s::AbstractScenario, time_steps, time_steps_without_gr
             heating_thermal_load = s.space_heating_load.loads_kw + s.dhw_load.loads_kw
             # Using minimum of thermal load and ghp-serving load to avoid small negative net loads
             for j in time_steps
-                heating_thermal_load_reduction_with_ghp_kw[i,j] = min(s.heating_thermal_load_reduction_with_ghp_kw[j], heating_thermal_load[j])
+                space_heating_thermal_load_reduction_with_ghp_kw[i,j] = min(s.space_heating_thermal_load_reduction_with_ghp_kw[j], heating_thermal_load[j])
                 cooling_thermal_load_reduction_with_ghp_kw[i,j] = min(s.cooling_thermal_load_reduction_with_ghp_kw[j], s.cooling_load.loads_kw_thermal[j])
-                ghp_heating_thermal_load_served_kw[i,j] = min(option.heating_thermal_kw[j], heating_thermal_load[j] - heating_thermal_load_reduction_with_ghp_kw[i,j])
+                ghp_heating_thermal_load_served_kw[i,j] = min(option.heating_thermal_kw[j], heating_thermal_load[j] - space_heating_thermal_load_reduction_with_ghp_kw[i,j])
                 ghp_cooling_thermal_load_served_kw[i,j] = min(option.cooling_thermal_kw[j], s.cooling_load.loads_kw_thermal[j] - cooling_thermal_load_reduction_with_ghp_kw[i,j])
                 ghp_electric_consumption_kw[i,j] = option.yearly_electric_consumption_kw[j]
             end
@@ -1020,7 +1020,7 @@ function setup_ghp_inputs(s::AbstractScenario, time_steps, time_steps_without_gr
             # So here we also have to zero out heating and cooling thermal production from GHP during an outage
             if !isempty(time_steps_without_grid)
                 for outage_time_step in time_steps_without_grid
-                    heating_thermal_load_reduction_with_ghp_kw[i,outage_time_step] = 0.0
+                    space_heating_thermal_load_reduction_with_ghp_kw[i,outage_time_step] = 0.0
                     cooling_thermal_load_reduction_with_ghp_kw[i,outage_time_step] = 0.0
                     ghp_heating_thermal_load_served_kw[i,outage_time_step] = 0.0
                     ghp_cooling_thermal_load_served_kw[i,outage_time_step] = 0.0
@@ -1031,7 +1031,7 @@ function setup_ghp_inputs(s::AbstractScenario, time_steps, time_steps_without_gr
     end
 
     return ghp_options, require_ghp_purchase, ghp_heating_thermal_load_served_kw, 
-    ghp_cooling_thermal_load_served_kw, heating_thermal_load_reduction_with_ghp_kw, 
+    ghp_cooling_thermal_load_served_kw, space_heating_thermal_load_reduction_with_ghp_kw, 
     cooling_thermal_load_reduction_with_ghp_kw, ghp_electric_consumption_kw, 
     ghp_installed_cost, ghp_om_cost_year_one
 end
