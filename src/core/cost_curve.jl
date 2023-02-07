@@ -104,7 +104,7 @@ function cost_curve(tech::AbstractTech, financial::Financial)
     cap_cost_slope = Real[]
     cost_curve_bp_x = [0.0]
     cost_curve_bp_y = [0.0]
-    cap_cost_yint = Real[]
+    cap_cost_yint = Real[31000.0]
     n_segments = 1
 
     existing_kw = 0.0
@@ -392,18 +392,6 @@ function cost_curve(tech::AbstractTech, financial::Financial)
     end
     cap_cost_slope = updated_cap_cost_slope
     cap_cost_yint = updated_y_intercept
-
-    println("############################################################################")
-    println("############################################################################")
-    println("############################################################################")
-    println(cap_cost_yint)
-    println("############################################################################")
-    println("############################################################################")
-    println("############################################################################")
-    cap_cost_yint += 31000
-    println("############################################################################")
-    println("############################################################################")
-    println("############################################################################")
 
     return cap_cost_slope, cost_curve_bp_x, cap_cost_yint, n_segments
 end
