@@ -152,7 +152,11 @@ function effective_cost(;
     tax_savings = npv(discount_rate, tax_savings_array)
 
     # Adjust cost curve to account for itc and depreciation savings ($/kW)
-    cap_cost_slope = itc_basis - tax_savings + replacement - rebate_per_kw
+    cap_cost_slope = itc_basis - tax_savings + replacement - rebate_per_kw 
+    
+    println("##################################################")
+    println(beyond_existing_kw)
+    println("##################################################")
 
     # Sanity check
     if cap_cost_slope < 0

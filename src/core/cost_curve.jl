@@ -104,7 +104,7 @@ function cost_curve(tech::AbstractTech, financial::Financial)
     cap_cost_slope = Real[]
     cost_curve_bp_x = [0.0]
     cost_curve_bp_y = [0.0]
-    cap_cost_yint = Real[31000.0]
+    cap_cost_yint = Real[]
     n_segments = 1
 
     existing_kw = 0.0
