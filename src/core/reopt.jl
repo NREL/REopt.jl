@@ -499,7 +499,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		)
 	end
 
-	@objective(m, Min, m[:Objective]+ 31000)
+	@objective(m, Min, m[:Objective])
 	
 	# if !(isempty(p.s.storage.types.elec)) && p.s.settings.add_soc_incentive # Keep SOC high
 	# 	@objective(m, Min, m[:Costs] - 
