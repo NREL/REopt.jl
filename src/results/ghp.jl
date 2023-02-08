@@ -34,6 +34,7 @@ Adds the `GHP` results to the dictionary passed back from `run_reopt` using the 
 Note: the node number is an empty string if evaluating a single `Site`.
 
 GHP results:
+- `ghp_option_chosen` Integer option # chosen by model, possible 0 for no GHP
 - `ghpghx_chosen_outputs` Dict of all outputs from GhpGhx.jl results of the chosen GhpGhx system
 - `size_heat_pump_ton` Total heat pump capacity [ton]
 - `space_heating_thermal_load_reduction_with_ghp_mmbtu_per_hour`
