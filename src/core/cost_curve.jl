@@ -359,8 +359,8 @@ function cost_curve(tech::AbstractTech, financial::Financial)
             macrs_schedule = financial.macrs_seven_year
         end
 
-        replacement_cost = 200.0
-        replacement_year = 1
+        replacement_cost = 300.0
+        replacement_year = 0
 
 
         if nameof(T) in [:Generator]  # Generator is currently only Tech with replacement year and cost
