@@ -44,6 +44,7 @@ function add_ghp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r = Dict{String, Any}()
     @expression(m, GHPOptionChosen, sum(g * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options))
 	ghp_option_chosen = convert(Int64, value(GHPOptionChosen))
+    r["ghp_option_chosen"] = ghp_option_chosen
     if ghp_option_chosen >= 1
         r["ghpghx_chosen_outputs"] = p.s.ghp_option_list[ghp_option_chosen].ghpghx_response["outputs"]
         r["size_heat_pump_ton"] = r["ghpghx_chosen_outputs"]["peak_combined_heatpump_thermal_ton"] * 
