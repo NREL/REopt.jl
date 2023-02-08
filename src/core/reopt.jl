@@ -270,7 +270,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     m[:TotalProductionIncentive] = 0
 	m[:dvComfortLimitViolationCost] = 0.0
 	m[:TotalCHPStandbyCharges] = 0
-	m[:OffgridOtherCapexAfterDepr] = 0.0
+	m[:OffgridOtherCapexAfterDepr] = 31000.0
     m[:GHPCapCosts] = 0.0
     m[:GHPOMCosts] = 0.0   
 
@@ -460,7 +460,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:dvComfortLimitViolationCost] + 
 
 		# Additional annual costs, tax deductible for owner (only applies when `off_grid_flag` is true)
-		p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_rate_fraction) +
+		p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_rate_fraction) + 
 
 		# Additional capital costs, depreciable (only applies when `off_grid_flag` is true)
 		m[:OffgridOtherCapexAfterDepr]

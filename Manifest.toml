@@ -2,7 +2,7 @@
 
 julia_version = "1.8.4"
 manifest_format = "2.0"
-project_hash = "0256e12a1492e5f6cbbcc51b94593796440491b9"
+project_hash = "bb8e47082fa3ac6e2bf0cf66aaef2c3b195cadf0"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
@@ -893,6 +893,12 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Libiconv_jll", "Pkg", "Zlib_jll"]
 git-tree-sha1 = "93c41695bc1c08c46c5899f4fe06d6ead504bb73"
 uuid = "02c8fc9c-b97f-50b9-bbe4-9be30ff0a78a"
 version = "2.10.3+0"
+
+[[deps.Xpress]]
+deps = ["Libdl", "LinearAlgebra", "MathOptInterface", "SparseArrays"]
+git-tree-sha1 = "fac5fe95ce2f540058195e8b8c2cb9f894ada64c"
+uuid = "9e70acf3-d6c9-5be6-b5bd-4e2c73e3e054"
+version = "0.15.5"
 
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
