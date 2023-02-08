@@ -359,7 +359,7 @@ function cost_curve(tech::AbstractTech, financial::Financial)
             macrs_schedule = financial.macrs_seven_year
         end
 
-        replacement_cost = 300.0
+        replacement_cost = 200.0
         replacement_year = 1
 
 
