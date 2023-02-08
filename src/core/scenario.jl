@@ -433,8 +433,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     # Modify Heating and Cooling loads for GHP retrofit to account for HVAC VAV efficiency gains
     if eval_ghp
         # Assign efficiency_thermal_factors if not specified (and if applicable to building type and climate zone)
-        for factor in [("space_heating_efficiency_thermal_factor", "heating"), ("cooling_efficiency_thermal_factor", "cooling")]
-            if isnan(d["GHP"][factor[1]])
+        for factor in [("space_heating_efficiency_thermal_factor", "space_heating"), ("cooling_efficiency_thermal_factor", "cooling")]
+            if !(haskey(d["GHP"], factor[1]))
                 assign_thermal_factor!(d, factor[2])
             end
         end
