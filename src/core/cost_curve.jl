@@ -360,7 +360,7 @@ function cost_curve(tech::AbstractTech, financial::Financial)
         end
 
         replacement_cost = 200.0
-        replacement_year = 0
+        replacement_year = 1
 
 
         if nameof(T) in [:Generator]  # Generator is currently only Tech with replacement year and cost
