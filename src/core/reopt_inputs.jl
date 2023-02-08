@@ -438,7 +438,7 @@ and all of the other arguments will be updated as well.
 function update_cost_curve!(tech::AbstractTech, tech_name::String, financial::Financial,
     cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
     )
-    cost_slope, cost_curve_bp_x, 31000, n_segments = cost_curve(tech, financial)
+    cost_slope, cost_curve_bp_x, cost_yint, n_segments = cost_curve(tech, financial)
     cap_cost_slope[tech_name] = cost_slope[1]
     min_allowable_kw = 0.0
     if isdefined(tech, :min_allowable_kw)
