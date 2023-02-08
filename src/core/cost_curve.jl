@@ -361,7 +361,11 @@ function cost_curve(tech::AbstractTech, financial::Financial)
 
         replacement_cost = 0.0
         replacement_year = financial.analysis_years
-        
+
+        for t in p.techs.pv
+            println(round(value(m[Symbol("dvSize"*_n)][t]), digits=4))
+        end
+
         if nameof(T) in [:Generator]  # Generator is currently only Tech with replacement year and cost
             if tech.replacement_year >= financial.analysis_years # assume no replacement in final year of project
                 replacement_cost = 0.0
