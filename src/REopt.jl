@@ -71,6 +71,8 @@ global hdl = nothing
 using JLD
 using Requires
 using CoolProp
+using CSV
+using DataFrames
 
 function __init__()
     @require GhpGhx="7ce85f02-24a8-4d69-a3f0-14b5daa7d30c" println("using GhpGhx module in REopt")
