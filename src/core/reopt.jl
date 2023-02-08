@@ -270,7 +270,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     m[:TotalProductionIncentive] = 0
 	m[:dvComfortLimitViolationCost] = 0.0
 	m[:TotalCHPStandbyCharges] = 0
-	m[:OffgridOtherCapexAfterDepr] = 31000.0
+	m[:OffgridOtherCapexAfterDepr] = 0.0
     m[:GHPCapCosts] = 0.0
     m[:GHPOMCosts] = 0.0   
 

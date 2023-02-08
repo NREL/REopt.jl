@@ -151,7 +151,7 @@ struct Financial
 
         if !off_grid_flag && (offgrid_other_capital_costs != 0.0 || offgrid_other_annual_costs != 0.0)
             @warn "offgrid_other_capital_costs and offgrid_other_annual_costs are only applied when `off_grid_flag` is true. Setting these inputs to 0.0 for this grid-connected analysis."
-            # offgrid_other_capital_costs = 0.0
+            offgrid_other_capital_costs = 0.0
             offgrid_other_annual_costs = 0.0
         end
 
