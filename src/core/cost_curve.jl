@@ -327,7 +327,7 @@ function cost_curve(tech::AbstractTech, financial::Financial)
 
     # Following logic modifies the cap cost segments to account for the tax benefits of the ITC and MACRs
     updated_cap_cost_slope = Real[]
-    updated_y_intercept = Real[31000.0]
+    updated_y_intercept = Real[]
 
     for s in range(1, stop=n_segments)
         if cost_curve_bp_x[s + 1] <= 0
