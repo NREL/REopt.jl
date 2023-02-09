@@ -198,11 +198,13 @@ end
 function assign_thermal_factor!(d::Dict, heating_or_cooling::String)
     if heating_or_cooling == "space_heating"
         name = "space_heating_efficiency_thermal_factor"
-        factor_data = CSV.read("../data/ghp/ghp_space_heating_efficiency_thermal_factors.csv", DataFrame)
+        file_path = joinpath(@__DIR__, "..", "..", "data", "ghp", "ghp_space_heating_efficiency_thermal_factors.csv")
+        factor_data = CSV.read(file_path, DataFrame)
         building_type = get(d["SpaceHeatingLoad"], "doe_reference_name", [])
     elseif heating_or_cooling == "cooling"
         name = "cooling_efficiency_thermal_factor"
-        factor_data = CSV.read("../data/ghp/ghp_cooling_efficiency_thermal_factors.csv", DataFrame)
+        file_path = joinpath(@__DIR__, "..", "..", "data", "ghp", "ghp_cooling_efficiency_thermal_factors.csv")
+        factor_data = CSV.read(file_path, DataFrame)
         building_type = get(d["CoolingLoad"], "doe_reference_name", [])
     else
         throw(@error("Specify `space_heating` or `cooling` for assign_thermal_factor! function"))
