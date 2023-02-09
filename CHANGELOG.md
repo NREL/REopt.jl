@@ -23,7 +23,15 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop
+### Fixed
+- Fixed calculation of ["Financial"]["lifecycle_om_costs_before_tax_bau"] (was previously showing after tax result)
+- Added **bau_annual_emissions_tonnes_SO2** to the bau_outputs dict in results.jl and removed duplicate **bau_annual_emissions_tonnes_NOx** result
+### Added
+- Descriptions/help text for many inputs and outputs
+## dev
 ## Develop - 2023-02-01
+## v0.25.0
 ### Added
 - multi-node MPC modeling capability
 - more MPC outputs (e.g. Costs, ElectricStorage.to_load_series_kw)
@@ -37,7 +45,7 @@ Classify the change according to the following categories:
 - updates multiple outage test values that changed due to fixing timestep bug
 - Updated the following default values:
    - PV, Wind, Storage, CHP, GHP, Hot Water Storage, Cold Water Storage, Electric Storage: **federal_itc_fraction(PV,Wind, CHP,GHP)** and **total_itc_fraction(Hot Water Storage, Cold Water Storage, Electric Storage)** to 0.3 (30%)
-   - PV, Wind, Storage, CHP, GHP, Hot Water Storage, Cold Water Storage, Electric Storage: ***macrs_bonus_fraction** to 0.8 (80%)
+   - PV, Wind, Storage, CHP, GHP, Hot Water Storage, Cold Water Storage, Electric Storage: **macrs_bonus_fraction** to 0.8 (80%)
    - Hot Water Storage and Cold Water Storage: **macrs_itc_reduction** to 0.5 (50%)
    - Hot Water Storage and Cold Water Storage: **macrs_option_years** to 7 years
 ### Fixed
