@@ -435,7 +435,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         # Assign efficiency_thermal_factors if not specified (and if applicable to building type and climate zone)
         for factor in [("space_heating_efficiency_thermal_factor", "space_heating"), ("cooling_efficiency_thermal_factor", "cooling")]
             if !(haskey(d["GHP"], factor[1]))
-                assign_thermal_factor!(d, factor[2])
+                nearest_city, climate_zone = assign_thermal_factor!(d, factor[2])
             end
         end
         space_heating_thermal_load_reduction_with_ghp_kw = space_heating_load.loads_kw * (1.0 - d["GHP"]["space_heating_efficiency_thermal_factor"])
