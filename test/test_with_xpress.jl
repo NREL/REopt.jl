@@ -644,7 +644,8 @@ end
 
 @testset "Wind" begin
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt(m, "./scenarios/wind.json")
+    d = JSON.parsefile("./scenarios/wind.json")
+    results = run_reopt(m, d)
     @test results["Wind"]["size_kw"] ≈ 3752 atol=0.1
     @test results["Financial"]["lcc"] ≈ 8.591017e6 rtol=1e-5
     #= 
@@ -661,6 +662,18 @@ end
 
     TODO: will these discrepancies be addressed once NMIL binaries are added?
     =#
+
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    d["Site"]["land_acres"] = 60 # = 2 MW (with 0.03 acres/kW)
+    results = run_reopt(m, d)
+    @test results["Wind"]["size_kw"] == 2000.0 # Wind should be constrained by land_acres
+
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    d["Wind"]["min_kw"] = 2001 # min_kw greater than land-constrained max should error
+    results = run_reopt(m, d)
+    @test "errors" ∈ keys(results["Messages"])
+    @test length(results["Messages"]["errors"]) > 0
+    
 end
 
 @testset "Multiple PVs" begin
