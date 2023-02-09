@@ -23,13 +23,21 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2023-02-02
+### Added 
+- Constraint on wind sizing based on Site.land_acres
+- New Wind input **acres_per_kw**, defaults to 0.03 
+
+### Changed
+- Changed default **year** in ElectricLoad to be 2017 if using a CRB model and 2022 otherwise. 
+- Removed default year in URDBrate() functions, since year is always supplied to this function.
 ## Develop
 ### Fixed
 - Fixed calculation of ["Financial"]["lifecycle_om_costs_before_tax_bau"] (was previously showing after tax result)
 - Added **bau_annual_emissions_tonnes_SO2** to the bau_outputs dict in results.jl and removed duplicate **bau_annual_emissions_tonnes_NOx** result
 ### Added
 - Descriptions/help text for many inputs and outputs
-## dev
+
 ## Develop - 2023-02-01
 ## v0.25.0
 ### Added
