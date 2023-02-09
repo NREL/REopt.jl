@@ -26,7 +26,11 @@ Classify the change according to the following categories:
 ## Develop - 2023-02-02
 ### Added 
 - Constraint on wind sizing based on Site.land_acres
-- New Wind input acres_per_kw, defaults to 0.03 
+- New Wind input **acres_per_kw**, defaults to 0.03 
+
+### Changed
+- Changed default **year** in ElectricLoad to be 2017 if using a CRB model and 2022 otherwise. 
+- Removed default year in URDBrate() functions, since year is always supplied to this function.
 ## Develop
 ### Fixed
 - Fixed calculation of ["Financial"]["lifecycle_om_costs_before_tax_bau"] (was previously showing after tax result)

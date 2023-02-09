@@ -32,10 +32,10 @@
 ```julia
     loads_kw::Array{<:Real,1} = Real[],
     path_to_csv::String = "", # for csv containing loads_kw
-    year::Int = 2020, # used in ElectricTariff to align rate schedule with weekdays/weekends
     doe_reference_name::String = "",
     blended_doe_reference_names::Array{String, 1} = String[],
     blended_doe_reference_percents::Array{<:Real,1} = Real[],
+    year::Int = doe_reference_name ≠ nothing && blended_doe_reference_names ≠ nothing ? 2017 : 2022, # used in ElectricTariff to align rate schedule with weekdays/weekends. DOE CRB profiles must use 2017. If providing load data, specify year of data.
     city::String = "",
     annual_kwh::Union{Real, Nothing} = nothing,
     monthly_totals_kwh::Array{<:Real,1} = Real[],
@@ -94,6 +94,11 @@
 
     Each `city` and `doe_reference_name` combination has a default `annual_kwh`, or you can provide your
     own `annual_kwh` or `monthly_totals_kwh` and the reference profile will be scaled appropriately.
+
+
+!!! note "Year" 
+    The ElectricLoad `year` is used in ElectricTariff to align rate schedules with weekdays/weekends. If providing your own `loads_kw`, ensure the `year` matches the year of your data.
+    If utilizing `doe_reference_name` or `blended_doe_reference_names`, the default year of 2017 is used because these load profiles start on a Sunday.
 """
 mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off of (critical_)loads_kw_is_net
     loads_kw::Array{Real,1}
@@ -109,10 +114,10 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         off_grid_flag::Bool = false,
         loads_kw::Array{<:Real,1} = Real[],
         path_to_csv::String = "",
-        year::Int = 2020, # used in ElectricTariff to align rate schedule with weekdays/weekends # TODO: why don't we default this to 2017 to avoid warning each time?
         doe_reference_name::String = "",
         blended_doe_reference_names::Array{String, 1} = String[],
         blended_doe_reference_percents::Array{<:Real,1} = Real[],
+        year::Int = doe_reference_name ≠ "" && blended_doe_reference_names ≠ String[] ? 2017 : 2022, # used in ElectricTariff to align rate schedule with weekdays/weekends. DOE CRB profiles must use 2017. If providing load data, specify year of data.
         city::String = "",
         annual_kwh::Union{Real, Nothing} = nothing,
         monthly_totals_kwh::Array{<:Real,1} = Real[],
@@ -172,6 +177,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
             loads_kw = blend_and_scale_doe_profiles(BuiltInElectricLoad, latitude, longitude, year, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_kwh, monthly_totals_kwh)
+            # TODO: Should also warn here about year 2017
         else
             throw(@error("Cannot construct ElectricLoad. You must provide either [loads_kw], [doe_reference_name, city], 
                   [doe_reference_name, latitude, longitude], 

@@ -63,24 +63,24 @@ end
 
 
 """
-    URDBrate(urdb_label::String, year::Int=2019; time_steps_per_hour=1)
+    URDBrate(urdb_label::String, year::Int; time_steps_per_hour=1)
 
 download URDB dict, parse into reopt inputs, return URDBrate struct.
     year is required to align weekday/weekend schedules.
 """
-function URDBrate(urdb_label::String, year::Int=2019; time_steps_per_hour=1)
+function URDBrate(urdb_label::String, year::Int; time_steps_per_hour=1)
     urdb_response = download_urdb(urdb_label)
     URDBrate(urdb_response, year; time_steps_per_hour=time_steps_per_hour)
 end
 
 
 """
-    URDBrate(util_name::String, rate_name::String, year::Int=2019; time_steps_per_hour=1)
+    URDBrate(util_name::String, rate_name::String, year::Int; time_steps_per_hour=1)
 
 download URDB dict, parse into reopt inputs, return URDBrate struct.
     year is required to align weekday/weekend schedules.
 """
-function URDBrate(util_name::String, rate_name::String, year::Int=2019; time_steps_per_hour=1)
+function URDBrate(util_name::String, rate_name::String, year::Int; time_steps_per_hour=1)
     urdb_response = download_urdb(util_name, rate_name)
     URDBrate(urdb_response, year; time_steps_per_hour=time_steps_per_hour)
 end
@@ -92,7 +92,7 @@ end
 process URDB response dict, parse into reopt inputs, return URDBrate struct.
     year is required to align weekday/weekend schedules.
 """
-function URDBrate(urdb_response::Dict, year::Int=2019; time_steps_per_hour=1)
+function URDBrate(urdb_response::Dict, year::Int; time_steps_per_hour=1)
 
     demand_min = get(urdb_response, "peakkwcapacitymin", 0.0)  # TODO add check for site min demand against tariff?
 
