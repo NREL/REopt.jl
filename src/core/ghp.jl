@@ -199,12 +199,12 @@ function assign_thermal_factor!(d::Dict, heating_or_cooling::String)
     if heating_or_cooling == "space_heating"
         name = "space_heating_efficiency_thermal_factor"
         file_path = joinpath(@__DIR__, "..", "..", "data", "ghp", "ghp_space_heating_efficiency_thermal_factors.csv")
-        factor_data = CSV.read(file_path, DataFrame)
+        factor_data_df = CSV.read(file_path, DataFrame)
         building_type = get(d["SpaceHeatingLoad"], "doe_reference_name", [])
     elseif heating_or_cooling == "cooling"
         name = "cooling_efficiency_thermal_factor"
         file_path = joinpath(@__DIR__, "..", "..", "data", "ghp", "ghp_cooling_efficiency_thermal_factors.csv")
-        factor_data = CSV.read(file_path, DataFrame)
+        factor_data_df = CSV.read(file_path, DataFrame)
         building_type = get(d["CoolingLoad"], "doe_reference_name", [])
     else
         throw(@error("Specify `space_heating` or `cooling` for assign_thermal_factor! function"))
@@ -213,12 +213,15 @@ function assign_thermal_factor!(d::Dict, heating_or_cooling::String)
     longitude = d["Site"]["longitude"]
     nearest_city, climate_zone = find_ashrae_zone_city(latitude, longitude; get_zone=true)
     # Default thermal factors are assigned for certain building types and not for campuses (multiple buildings)
-    if length(building_type) != 1
-        factor = 1.0
-    elseif building_type[0] in factor_data["Building Type"]
-        factor = factor_data[climate_zone][building_type[0]]
+    if building_type in factor_data_df[!, "BuildingType"]
+        factor = filter("BuildingType" => ==(building_type), factor_data_df)[1, climate_zone]
     else
         factor = 1.0
     end
+    
+    # Mutate d to assign GHP efficiency_thermal_factors
     d["GHP"][name] = factor
+
+    # Return this data for informational purposes
+    return nearest_city, climate_zone
 end
