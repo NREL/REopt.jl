@@ -162,7 +162,7 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("ElectricUtility", "annual_energy_supplied_kwh"),
         ("ElectricUtility", "annual_emissions_tonnes_CO2"),
         ("ElectricUtility", "annual_emissions_tonnes_NOx"),
-        ("ElectricUtility", "annual_emissions_tonnes_NOx"),
+        ("ElectricUtility", "annual_emissions_tonnes_SO2"),
         ("ElectricUtility", "annual_emissions_tonnes_PM25"),
         ("ElectricUtility", "lifecycle_emissions_tonnes_CO2"),
         ("ElectricUtility", "lifecycle_emissions_tonnes_NOx"),
@@ -224,7 +224,6 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
             end
         end
     end
-
     opt["Financial"]["npv"] = round(opt["Financial"]["lcc_bau"] - opt["Financial"]["lcc"], digits=2)
 
     opt["ElectricLoad"]["bau_critical_load_met"] = bau_scenario.outage_outputs.bau_critical_load_met
