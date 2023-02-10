@@ -48,8 +48,7 @@ export
     get_chp_defaults_prime_mover_size_class,
     get_steam_turbine_defaults_size_class,
     simulated_load,
-    get_absorption_chiller_defaults,
-    assign_thermal_factor!
+    get_absorption_chiller_defaults
 
 import HTTP
 import JSON
