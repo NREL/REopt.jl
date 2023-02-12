@@ -4,21 +4,14 @@
         "latitude": 33.748995
     },
     "ElectricLoad": {
+        "doe_reference_name": "MidriseApartment",
+        "annual_kwh": 24000.0
     },
     "ElectricTariff": {
         "urdb_label": "539f6a23ec4f024411ec8bf9"
     },
     "Financial": {
-        "offtaker_discount_rate_fraction": 0.0,
-        "offtaker_tax_rate_fraction": 0.0,
-        "elec_cost_escalation_rate_fraction": 0.0,
-        "om_cost_escalation_rate_fraction": 0.0
-    },
-    "PV": {
-        "max_kw": 0.0
-    },
-    "Storage": {
-        "max_kw": 0.0,
-        "max_kwh": 0.0
+        "offtaker_tax_rate_fraction": 0.26,
+        "elec_cost_escalation_rate_fraction": 0.026
     }
 }

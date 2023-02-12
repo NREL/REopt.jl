@@ -97,7 +97,7 @@ mutable struct Site
             end
         end
         if length(invalid_args) > 0
-            throw(@error("Invalid Site argument values: $(invalid_args)"))
+            error("Invalid argument values: $(invalid_args)")
         end
 
         new(latitude, longitude, land_acres, roof_squarefeet, min_resil_time_steps, 

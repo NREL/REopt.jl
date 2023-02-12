@@ -85,7 +85,7 @@ mutable struct StorageTypes
                     elseif occursin("Cold", k)
                         push!(cold_storage, k)
                     else
-                        throw(@error("Thermal Storage not labeled as Hot or Cold."))
+                        @warn "Thermal Storage not labeled as Hot or Cold."
                     end
                 end
             end

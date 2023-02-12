@@ -332,7 +332,7 @@ function cost_curve(tech::AbstractTech, financial::Financial)
     for s in range(1, stop=n_segments)
         if cost_curve_bp_x[s + 1] <= 0
             # Not sure how else to handle this case, perhaps there is a better way to handle it?
-            throw(@error("Invalid cost curve for {$nameof(T)}. Value at index {$s} ({$cost_curve_bp_x[s + 1]}) cannot be less than or equal to 0."))
+            @error "Invalid cost curve for {$nameof(T)}. Value at index {$s} ({$cost_curve_bp_x[s + 1]}) cannot be less than or equal to 0."
         end
 
         # Remove federal incentives for ITC basis and tax benefit calculations

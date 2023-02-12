@@ -43,11 +43,11 @@
     owner_discount_rate_fraction::Real = 0.0564,
     analysis_years::Int = 25,
     value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00, #only applies to multiple outage modeling
-    microgrid_upgrade_cost_fraction::Real = off_grid_flag ? 0.0 : 0.3, # not applicable when `off_grid_flag` is true
+    microgrid_upgrade_cost_fraction::Real = off_grid_flag ? 0.0 : 0.3, # not applicable when off_grid_flag is true
     macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
     macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
-    offgrid_other_capital_costs::Real = 0.0, # only applicable when `off_grid_flag` is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
-    offgrid_other_annual_costs::Real = 0.0 # only applicable when `off_grid_flag` is true. Considered tax deductible for owner. Costs are per year. 
+    offgrid_other_capital_costs::Real = 0.0, # only applicable when off_grid_flag is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
+    offgrid_other_annual_costs::Real = 0.0 # only applicable when off_grid_flag is true. Considered tax deductible for owner. Costs are per year. 
     # Emissions cost inputs
     CO2_cost_per_tonne::Real = 51.0,
     CO2_cost_escalation_rate_fraction::Real = 0.042173,
@@ -120,12 +120,12 @@ struct Financial
         owner_tax_rate_fraction::Real = 0.26,
         owner_discount_rate_fraction::Real = 0.0564,
         analysis_years::Int = 25,
-        value_of_lost_load_per_kwh::Union{Array{<:Real,1}, Real} = 1.00, #only applies to multiple outage modeling
-        microgrid_upgrade_cost_fraction::Real = off_grid_flag ? 0.0 : 0.3, # not applicable when `off_grid_flag` is true
+        value_of_lost_load_per_kwh::Union{Array{<:Real,1}, Real} = 1.00,
+        microgrid_upgrade_cost_fraction::Real = off_grid_flag ? 0.0 : 0.3, # not applicable when off_grid_flag is true
         macrs_five_year::Array{<:Real,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
         macrs_seven_year::Array{<:Real,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
-        offgrid_other_capital_costs::Real = 0.0, # only applicable when `off_grid_flag` is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
-        offgrid_other_annual_costs::Real = 0.0, # only applicable when `off_grid_flag` is true. Considered tax deductible for owner.
+        offgrid_other_capital_costs::Real = 0.0, # only applicable when off_grid_flag is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
+        offgrid_other_annual_costs::Real = 0.0, # only applicable when off_grid_flag is true. Considered tax deductible for owner.
         # Emissions cost inputs
         CO2_cost_per_tonne::Real = 51.0,
         CO2_cost_escalation_rate_fraction::Real = 0.042173,
@@ -145,12 +145,12 @@ struct Financial
     )
         
         if off_grid_flag && !(microgrid_upgrade_cost_fraction == 0.0)
-            @warn "microgrid_upgrade_cost_fraction is not applied when `off_grid_flag` is true. Setting microgrid_upgrade_cost_fraction to 0.0."
+            @warn "microgrid_upgrade_cost_fraction is not applied when off_grid_flag is true. Setting microgrid_upgrade_cost_fraction to 0.0."
             microgrid_upgrade_cost_fraction = 0.0
         end
 
         if !off_grid_flag && (offgrid_other_capital_costs != 0.0 || offgrid_other_annual_costs != 0.0)
-            @warn "offgrid_other_capital_costs and offgrid_other_annual_costs are only applied when `off_grid_flag` is true. Setting these inputs to 0.0 for this grid-connected analysis."
+            @warn "offgrid_other_capital_costs and offgrid_other_annual_costs are only applied when off_grid_flag is true. Setting these inputs to 0.0 for this grid-connected analysis."
             offgrid_other_capital_costs = 0.0
             offgrid_other_annual_costs = 0.0
         end
@@ -200,7 +200,7 @@ struct Financial
         end
 
         if missing_health_inputs && include_health_in_objective
-            throw(@error("To include health costs in the objective function, you must either enter custom emissions costs and escalation rates or a site location within the CAMx grid."))
+            error("To include health costs in the objective function, you must either enter custom emissions costs and escalation rates or a site location within the CAMx grid.")
         end
     
 
@@ -250,13 +250,7 @@ function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
         @warn "Error in easiur_costs: grid_or_onsite must equal either 'grid' or 'onsite'"
         return nothing
     end
-    EASIUR_data = nothing
-    try
-        EASIUR_data = get_EASIUR2005(type, pop_year=2020, income_year=2020, dollar_year=2010)
-    catch e
-        @warn "Could not look up EASIUR health costs from point ($latitude,$longitude). {$e}"
-        return nothing
-    end
+    EASIUR_data = get_EASIUR2005(type, pop_year=2020, income_year=2020, dollar_year=2010)
 
     # convert lon, lat to CAMx grid (x, y), specify datum. default is NAD83
     # Note: x, y returned from g2l follows the CAMx grid convention.
@@ -274,21 +268,15 @@ function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
         )
         return costs_per_tonne
     catch
-        @warn "Could not look up EASIUR health costs from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid."
+        @error "Could not look up EASIUR health costs from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid."
         return nothing
     end
 end
 
 function easiur_escalation_rates(latitude::Real, longitude::Real, inflation::Real)
-    EASIUR_150m_yr2020 = nothing
-    EASIUR_150m_yr2024 = nothing
-    try
-        EASIUR_150m_yr2020 = get_EASIUR2005("p150", pop_year=2020, income_year=2020, dollar_year=2010) 
-        EASIUR_150m_yr2024 = get_EASIUR2005("p150", pop_year=2024, income_year=2024, dollar_year=2010) 
-    catch e
-        @warn "Could not look up EASIUR health cost escalation rates from point ($latitude,$longitude). {$e}"
-        return nothing
-    end
+    EASIUR_150m_yr2020 = get_EASIUR2005("p150", pop_year=2020, income_year=2020, dollar_year=2010) 
+    EASIUR_150m_yr2024 = get_EASIUR2005("p150", pop_year=2024, income_year=2024, dollar_year=2010) 
+
     # convert lon, lat to CAMx grid (x, y), specify datum. default is NAD83
     coords = g2l(longitude, latitude, datum="NAD83")
     x = Int(round(coords[1]))
@@ -303,7 +291,7 @@ function easiur_escalation_rates(latitude::Real, longitude::Real, inflation::Rea
         )
         return escalation_rates
     catch
-        @warn "Could not look up EASIUR health cost escalation rates from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid"
+        @error "Could not look up EASIUR health cost escalation rates from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid"
         return nothing
     end
 end
@@ -399,7 +387,7 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
     )
 
     if !(stack in ["area", "p150", "p300"])
-        throw(@error("stack should be one of 'area', 'p150', 'p300'"))
+        @error "stack should be one of 'area', 'p150', 'p300'"
         return nothing
     end
 
@@ -419,7 +407,7 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
                 setindex!(ret_map, v .* adj, k)
             end
         catch
-            throw(@error("income year is $(income_year) but must be between 1990 to 2024"))
+            @error "income year is $(income_year) but must be between 1990 to 2024"
             return nothing
         end
     end
@@ -430,7 +418,7 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
                 setindex!(ret_map, v .* adj, k)
             end
         catch e
-            throw(@error("Dollar year must be between 1980 to 2010"))
+            @error "Dollar year must be between 1980 to 2010"
             return nothing
         end
     end

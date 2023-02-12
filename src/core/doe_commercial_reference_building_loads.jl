@@ -72,7 +72,7 @@ function find_ashrae_zone_city(lat, lon; get_zone=false)
 		end
 	end
     if isnothing(archgdal_city)
-        @warn "Could not find latitude/longitude in U.S. Using geometrically nearest city."
+        @info "Could not find latitude/longitude in U.S. Using geometrically nearest city."
     elseif !get_zone
         return archgdal_city
     end
@@ -314,7 +314,7 @@ function get_monthly_energy(power_profile::AbstractArray{<:Real,1};
         if !isempty(power_profile)
             monthly_energy_total[month] = sum(power_profile[t0:t0+plus_hours-1])
         else
-            throw(@error("Must provide power_profile"))
+            throw(@error "Must provide power_profile")
         end
         t0 += plus_hours
     end

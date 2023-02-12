@@ -197,7 +197,7 @@ function add_degradation(m, p; b="ElectricStorage")
         # add augmentation cost to objective
         # maintenance_cost_per_kwh must have length == length(days) - 1, i.e. starts on day 2
     else
-        throw(@error("Battery maintenance strategy $strategy is not supported. Choose from augmentation and replacement."))
+        @error "Battery maintenance strategy $strategy is not supported. Choose from augmentation and replacement."
     end
 
     @objective(m, Min, m[:Costs] + m[:degr_cost])

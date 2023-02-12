@@ -91,7 +91,7 @@ function MPCScenario(d::Dict)
         elseif typeof(d["PV"]) <: AbstractDict
             push!(pvs, MPCPV(;dictkeys_tosymbols(d["PV"])...))
         else
-            throw(@error("PV input must be Dict or Dict[]."))
+            error("PV input must be Dict or Dict[].")
         end
     end
 

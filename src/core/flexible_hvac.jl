@@ -74,7 +74,9 @@ constructor then the conversion to Matrices will be done appropriately.
     The `ExistingChiller` is electric and so its operating cost is determined by the `ElectricTariff`.
 
 !!! note 
-    BAU heating costs will be determined by the `ExistingBoiler` inputs, including`fuel_cost_per_mmbtu`.
+    The `ExistingBoiler` default operating cost is zero. Please provide the `fuel_cost_per_mmbtu` field
+    for the `ExistingBoiler` if you want non-zero BAU heating costs. The `fuel_cost_per_mmbtu` can be
+    a scalar, a list of 12 monthly values, or a time series of values for every time step.
 """
 struct FlexibleHVAC
     system_matrix::AbstractMatrix{Float64}  # N x N, with N states (temperatures in RC network)

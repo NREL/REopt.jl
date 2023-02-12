@@ -103,7 +103,7 @@ function AbsorptionChiller(d::Dict;
     if !isnothing(cooling_load)
         load_max_tons = maximum(cooling_load.loads_kw_thermal) / KWH_THERMAL_PER_TONHOUR
     else
-        throw(@error("Invalid argument cooling_load=nothing: a CoolingLoad is required for the AbsorptionChiller to be a technology option."))
+        throw(@error "Invalid argument cooling_load=nothing: a CoolingLoad is required for the AbsorptionChiller to be a technology option.")
     end
     if !isnothing(existing_boiler)
         boiler_type = existing_boiler.production_type
@@ -190,7 +190,7 @@ function get_absorption_chiller_defaults(;
             elseif chp_prime_mover in PRIME_MOVERS  #if chp_prime mover is blank or is anything but "combustion_turbine" then assume hot water
                 thermal_consumption_hot_water_or_steam = "hot_water"
             else
-                throw(@error("Invalid argument for `prime_mover`; must be in $PRIME_MOVERS"))
+                throw(@error "Invalid argument for `prime_mover`; must be in $PRIME_MOVERS")
             end
         elseif !isnothing(boiler_type)
             thermal_consumption_hot_water_or_steam = boiler_type
@@ -200,7 +200,7 @@ function get_absorption_chiller_defaults(;
         end
     else
         if !(thermal_consumption_hot_water_or_steam in HOT_WATER_OR_STEAM)
-            throw(@error("Invalid argument for `thermal_consumption_hot_water_or_steam`; must be `hot_water` or `steam`"))
+            throw(@error "Invalid argument for `thermal_consumption_hot_water_or_steam`; must be `hot_water` or `steam`")
         end
     end
 

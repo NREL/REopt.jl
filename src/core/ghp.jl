@@ -205,7 +205,7 @@ function assign_thermal_factor!(d::Dict, heating_or_cooling::String)
         factor_data = CSV.read("../data/ghp/ghp_cooling_efficiency_thermal_factors.csv", DataFrame)
         building_type = get(d["CoolingLoad"], "doe_reference_name", [])
     else
-        throw(@error("Specify `space_heating` or `cooling` for assign_thermal_factor! function"))
+        @error("Specify `space_heating` or `cooling` for assign_thermal_factor! function")
     end
     latitude = d["Site"]["latitude"]
     longitude = d["Site"]["longitude"]

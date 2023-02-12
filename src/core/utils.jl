@@ -174,9 +174,9 @@ function dictkeys_tosymbols(d::Dict)
             "production_factor_series", 
             "monthly_energy_rates", "monthly_demand_rates",
             "blended_doe_reference_percents",
-            "coincident_peak_load_charge_per_kw",
+            "coincident_peak_load_charge_per_kw", "fuel_cost_per_mmbtu",
             "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
-            "outage_probabilities",
+            "outage_probabilities", "wholesale_rate",
             "emissions_factor_series_lb_CO2_per_kwh",
             "emissions_factor_series_lb_NOx_per_kwh", 
             "emissions_factor_series_lb_SO2_per_kwh",
@@ -185,7 +185,7 @@ function dictkeys_tosymbols(d::Dict)
             try
                 v = convert(Array{Real, 1}, v)
             catch
-                throw(@error("Unable to convert $k to an Array{Real, 1}"))
+                @debug "Unable to convert $k to an Array{Real, 1}"
             end
         end
         if k in [
@@ -194,7 +194,7 @@ function dictkeys_tosymbols(d::Dict)
             try
                 v = convert(Array{String, 1}, v)
             catch
-                throw(@error("Unable to convert $k to an Array{String, 1}"))
+                @warn "Unable to convert $k to an Array{String, 1}"
             end
         end
         if k in [
@@ -203,7 +203,7 @@ function dictkeys_tosymbols(d::Dict)
             try
                 v = convert(Vector{Vector{Int64}}, v)
             catch
-                throw(@error("Unable to convert $k to a Vector{Vector{Int64}}"))
+                @debug "Unable to convert $k to a Vector{Vector{Int64}}"
             end
         end
         if k in [
@@ -212,21 +212,7 @@ function dictkeys_tosymbols(d::Dict)
             try
                 v = convert(Array{Int64, 1}, v)
             catch
-                throw(@error("Unable to convert $k to a Array{Int64, 1}"))
-            end
-        end
-        if k in [
-            "fuel_cost_per_mmbtu", "wholesale_rate"
-            ] && !isnothing(v)
-            #if not a Real try to convert to an Array{Real} 
-            if !(typeof(v) <: Real)
-                try
-                    if typeof(v) <: Array
-                        v = convert(Array{Real, 1}, v)
-                    end
-                catch
-                    throw(@error("Unable to convert $k to a Array{Real, 1} or Real"))
-                end
+                @warn "Unable to convert $k to a Array{Int64, 1}"
             end
         end
         d2[Symbol(k)] = v
@@ -289,7 +275,7 @@ function per_hour_value_to_time_series(x::AbstractVector{<:Real}, time_steps_per
         end
         return vals
     end
-    throw(@error("Cannot convert $name to appropriate length time series."))
+    @error "Cannot convert $name to appropriate length time series."
 end
 
 """
@@ -330,11 +316,11 @@ function generate_year_profile_hourly(year::Int64, consecutive_periods::Abstract
             start_date = Dates.firstdayofweek(start_date_of_month_year) + Dates.Week(start_week_of_month - 1) + Dates.Day(start_day_of_week - 1)
             # Throw an error if start_date is in the previous month when start_week_of_month=1 and there is no start_day_of_week in the first week of the month.
             if Dates.month(start_date) != start_month
-                throw(@error("For $(error_start_text), there is no day $(start_day_of_week) ($(day_of_week_name[start_day_of_week])) in the first week of month $(start_month) ($(Dates.monthname(start_date))), $(year)"))
+                @error "For $(error_start_text), there is no day $(start_day_of_week) ($(day_of_week_name[start_day_of_week])) in the first week of month $(start_month) ($(Dates.monthname(start_date))), $(year)"
             end
             start_datetime = Dates.DateTime(start_date) + Dates.Hour(start_hour - 1)
             if Dates.year(start_datetime + Dates.Hour(duration_hours)) > year
-                throw(@error("For $(error_start_text), the start day/time and duration_hours exceeds the end of the year. Please specify two separate unavailability periods: one for the beginning of the year and one for up to the end of the year."))
+                @error "For $(error_start_text), the start day/time and duration_hours exceeds the end of the year. Please specify two separate unavailability periods: one for the beginning of the year and one for up to the end of the year."
             else
                 #end_datetime is the last hour that is 1.0 (e.g. that is still unavailable), not the first hour that is 0.0 after the period
                 end_datetime = start_datetime + Dates.Hour(duration_hours - 1)
@@ -361,16 +347,16 @@ function get_ambient_temperature(latitude::Real, longitude::Real; timeframe="hou
         r = HTTP.get(url)
         response = JSON.parse(String(r.body))
         if r.status != 200
-            throw(@error("Bad response from PVWatts: $(response["errors"])"))
+            error("Bad response from PVWatts: $(response["errors"])")
         end
         @info "PVWatts success."
         tamb = collect(get(response["outputs"], "tamb", []))  # Celcius
         if length(tamb) != 8760
-            throw(@error("PVWatts did not return a valid temperature. Got $tamb"))
+            @error "PVWatts did not return a valid temperature. Got $tamb"
         end
         return tamb
     catch e
-        throw(@error("Error occurred when calling PVWatts: $e"))
+        @error "Error occurred when calling PVWatts: $e"
     end
 end
 
@@ -388,16 +374,16 @@ function get_pvwatts_prodfactor(latitude::Real, longitude::Real; timeframe="hour
         r = HTTP.get(url)
         response = JSON.parse(String(r.body))
         if r.status != 200
-            throw(@error("Bad response from PVWatts: $(response["errors"])"))
+            error("Bad response from PVWatts: $(response["errors"])")
         end
         @info "PVWatts success."
         watts = collect(get(response["outputs"], "ac", []) / 1000)  # scale to 1 kW system (* 1 kW / 1000 W)
         if length(watts) != 8760
-            throw(@error("PVWatts did not return a valid prodfactor. Got $watts"))
+            @error "PVWatts did not return a valid production_factor. Got $watts"
         end
         return watts
     catch e
-        throw(@error("Error occurred when calling PVWatts: $e"))
+        @error "Error occurred when calling PVWatts: $e"
     end
 end
 
