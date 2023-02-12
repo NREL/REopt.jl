@@ -477,6 +477,10 @@ end
 return Array{Int, 1} for time_steps in ratchet (aka period)
 """
 function get_tou_demand_steps(d::Dict; year::Int, month::Int, period::Int, time_steps_per_hour=1)
+    step_array = Int[]
+    start_step = 1
+    start_hour = 1
+
     if month > 1
         plus_days = 0
         for m in range(1, stop=month-1)
@@ -485,27 +489,25 @@ function get_tou_demand_steps(d::Dict; year::Int, month::Int, period::Int, time_
                 plus_days -= 1
             end
         end
-        start_hour = 1 + plus_days * 24
-        start_step = 1 + plus_days * 24 * time_steps_per_hour
-    else
-        start_hour = 1
-        start_step = 1
+        start_hour += plus_days * 24
+        start_step = start_hour * time_steps_per_hour
     end
 
+    hour_of_year = start_hour
     step_of_year = start_step
-    step_array = Int[]
 
     for day in range(1, stop=daysinmonth(Date(string(year) * "-" * string(month))))
         for hour in range(1, stop=24)
-            if (dayofweek(Date(year, month, day)) < 6 && 
-                d["demandweekdayschedule"][month][hour] == period) ||
-                (dayofweek(Date(year, month, day)) > 5 &&
-                d["demandweekendschedule"][month][hour] == period)
-                
-                append!(step_array, collect(step_of_year:step_of_year+time_steps_per_hour-1))
+            if dayofweek(Date(year, month, day)) < 6 &&
+               d["demandweekdayschedule"][month][hour] == period
+                append!(step_array, step_of_year)
+            elseif dayofweek(Date(year, month, day)) > 5 &&
+               d["demandweekendschedule"][month][hour] == period
+                append!(step_array, step_of_year)
             end
-            step_of_year += time_steps_per_hour
+            step_of_year += 1
         end
+        hour_of_year += 1
     end
     return step_array
 end
@@ -568,15 +570,18 @@ URDB lookback fields:
     - Number of previous months for which lookbackPercent applies each month. If not 0, lookbackMonths values should all be 0.
 """
 function parse_urdb_lookback_charges(d::Dict)
-    lookback_months = get(d, "lookbackmonths", Int[])
-    lookback_percent = Float64(get(d, "lookbackpercent", 0.0))
-    lookback_range = Int64(get(d, "lookbackrange", 0.0))
+    lookback_months = get(d, "lookbackMonths", Int[])
+    lookback_percent = Float64(get(d, "lookbackPercent", 0.0))
+    lookback_range = Int64(get(d, "lookbackRange", 0.0))
 
-    if lookback_range == 0 && length(lookback_months) == 12
-        lookback_months = collect(1:12)[lookback_months .== 1]
-    elseif lookback_range !=0 && length(lookback_months) == 12
-        throw(@warn("URDB rate contains both lookbackRange and lookbackMonths. Only lookbackRange will apply."))
+    reopt_lookback_months = Int[]
+    if lookback_range != 0 && length(lookback_months) == 12
+        for mth in range(1, stop=12)
+            if lookback_months[mth] == 1
+                push!(reopt_lookback_months, mth)
+            end
+        end
     end
 
-    return lookback_months, lookback_percent, lookback_range
+    return reopt_lookback_months, lookback_percent, lookback_range
 end
