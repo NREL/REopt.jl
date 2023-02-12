@@ -298,25 +298,10 @@ function add_demand_lookback_constraints(m, p; _n="")
 	if p.s.electric_tariff.demand_lookback_range != 0  # then the dvPeakDemandLookback varies by month
 
 		##Constraint (12e): dvPeakDemandLookback is the highest peak demand in DemandLookbackMonths
-        for mth in p.months
-			if mth > p.s.electric_tariff.demand_lookback_range
-				@constraint(m, [lm in 1:p.s.electric_tariff.demand_lookback_range, ts in p.s.electric_tariff.time_steps_monthly[mth - lm]],
-					m[Symbol(dv)][mth] ≥ sum( m[Symbol("dvGridPurchase"*_n)][ts, tier] 
-                                              for tier in 1:p.s.electric_tariff.n_energy_tiers )
-				)
-			else  # need to handle rollover months
-				for lm in 1:p.s.electric_tariff.demand_lookback_range
-					lkbkmonth = mth - lm
-					if lkbkmonth ≤ 0
-						lkbkmonth += 12
-					end
-					@constraint(m, [ts in p.s.electric_tariff.time_steps_monthly[lkbkmonth]],
-						m[Symbol(dv)][mth] ≥ sum( m[Symbol("dvGridPurchase"*_n)][ts, tier] 
-                                                  for tier in 1:p.s.electric_tariff.n_energy_tiers )
-					)
-				end
-			end
-		end
+        @constraint(m, [mth in p.months, lm in 1:p.s.electric_tariff.demand_lookback_range, ts in p.s.electric_tariff.time_steps_monthly[mod(mth - lm - 1, 12) + 1]],
+            m[Symbol(dv)][mth] ≥ sum( m[Symbol("dvGridPurchase"*_n)][ts, tier] 
+                                        for tier in 1:p.s.electric_tariff.n_energy_tiers )
+        )
 
 		##Constraint (12f): Ratchet peak demand charge is bounded below by lookback
 		@constraint(m, [mth in p.months],

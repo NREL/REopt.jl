@@ -230,6 +230,15 @@ function ElectricTariff(;
         throw(@error("Creating ElectricTariff requires at least urdb_label, urdb_response, monthly rates, annual rates, or tou_energy_rates_per_kwh."))
     end
 
+    # Error checks and processing for user-defined demand_lookback_months
+    if length(demand_lookback_months) != 0 && length(demand_lookback_months) != 12  # User provides value with incorrect length
+        throw(@error("Length of demand_lookback_months array must be 12."))
+    elseif demand_lookback_range != 0 && length(demand_lookback_months) != 0 # If user has provided demand_lookback_months of length 12, check that range is not used
+        throw(@error("Cannot supply demand_lookback_months if demand_lookback_range != 0."))
+    elseif demand_lookback_range == 0 && length(demand_lookback_months) == 12
+        demand_lookback_months = collect(1:12)[demand_lookback_months .== 1]
+    end
+
     if !isnothing(u)  # use URDBrate
         if NEM
             t = get_tier_with_lowest_energy_rate(u)
@@ -264,20 +273,20 @@ function ElectricTariff(;
 
         if add_monthly_rates_to_urdb_rate 
             if length(monthly_energy_rates) == 12
-                for tier in 1:size(energy_rates, 2), mth in 1:12, ts in time_steps_monthly[mth]
+                for tier in axes(energy_rates, 2), mth in 1:12, ts in time_steps_monthly[mth]
                     energy_rates[ts, tier] += monthly_energy_rates[mth]
                 end
             end
             if length(users_monthly_demand_rates) == 12
-                for tier in 1:size(monthly_demand_rates, 2), mth in 1:12
+                for tier in axes(monthly_demand_rates, 2), mth in 1:12
                     monthly_demand_rates[mth, tier] += users_monthly_demand_rates[mth]
                 end
             end
         end
 
         if add_tou_energy_rates_to_urdb_rate && length(tou_energy_rates_per_kwh) == size(energy_rates, 1)
-            for tier in 1:size(energy_rates, 2)
-                energy_rates[1:end, tier] += tou_energy_rates_per_kwh
+            for tier in axes(energy_rates, 2)
+                energy_rates[:, tier] += tou_energy_rates_per_kwh
             end
         end
     else
@@ -368,15 +377,11 @@ function get_tier_with_lowest_energy_rate(u::URDBrate)
     ExportRate should be lowest energy cost for tiered rates. 
     Otherwise, ExportRate can be > FuelRate, which leads REopt to export all PV energy produced.
     """
-    tier_with_lowest_energy_cost = 1
     #TODO: can eliminate if else if confirm that u.energy_rates is always 2D
     if length(u.energy_tier_limits) > 1
-        annual_energy_charge_sums = Float64[]
-        for etier in u.energy_rates
-            push!(annual_energy_charge_sums, sum(etier))
-        end
-        tier_with_lowest_energy_cost = 
-            findall(annual_energy_charge_sums .== minimum(annual_energy_charge_sums))[1]
+        return argmin(sum(u.energy_rates, dims=1))
+    else
+        return 1
     end
 end
 
@@ -445,24 +450,24 @@ function remove_tiers_from_urdb_rate(u::URDBrate)
     if length(u.energy_tier_limits) > 1
         @warn "Energy rate contains tiers. Using the first tier!"
     end
-    elec_rates = vec(u.energy_rates[:,1])
+    elec_rates = u.energy_rates[:,1]
 
     if u.n_monthly_demand_tiers > 1
         @warn "Monthly demand rate contains tiers. Using the last tier!"
     end
     if u.n_monthly_demand_tiers > 0
-        demand_rates_monthly = vec(u.monthly_demand_rates[:,u.n_monthly_demand_tiers])
+        demand_rates_monthly = u.monthly_demand_rates[:,u.n_monthly_demand_tiers]
     else
-        demand_rates_monthly = vec(u.monthly_demand_rates)  # 0×0 Array{Float64,2}
+        demand_rates_monthly = u.monthly_demand_rates  # 0×0 Array{Float64,2}
     end
 
     if u.n_tou_demand_tiers > 1
         @warn "TOU demand rate contains tiers. Using the last tier!"
     end
     if u.n_tou_demand_tiers > 0
-        demand_rates = vec(u.tou_demand_rates[:,u.n_tou_demand_tiers])
+        demand_rates = u.tou_demand_rates[:,u.n_tou_demand_tiers]
     else
-        demand_rates = vec(u.tou_demand_rates)
+        demand_rates = u.tou_demand_rates
     end
 
     return elec_rates, demand_rates_monthly, demand_rates
