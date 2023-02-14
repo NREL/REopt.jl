@@ -760,7 +760,6 @@ function survival_with_battery_single_start_time(
     bin_size::Real,
     marginal_survival::Bool, 
     time_steps_per_hour::Real)::Vector{Float64}
-
     
     gen_battery_prob_matrix_array = [zeros(M, N), zeros(M, N)]
     gen_battery_prob_matrix_array[1][starting_battery_bins[t], :] = starting_gens
@@ -790,7 +789,16 @@ function survival_with_battery_single_start_time(
         
 
         #Update generation battery probability matrix to account for battery shifting
-        shift_gen_battery_prob_matrix!(gen_battery_prob_matrix_array[gen_matrix_counter_end], battery_bin_shift((generator_production .- net_critical_loads_kw[h]) / time_steps_per_hour, bin_size, battery_size_kw, battery_charge_efficiency, battery_discharge_efficiency))
+        shift_gen_battery_prob_matrix!(
+            gen_battery_prob_matrix_array[gen_matrix_counter_end], 
+            battery_bin_shift(
+                (generator_production .- net_critical_loads_kw[h]) / time_steps_per_hour, 
+                bin_size, 
+                battery_size_kw, 
+                battery_charge_efficiency, 
+                battery_discharge_efficiency
+            )
+        )
     end
     return return_survival_chance_vector
 end
@@ -1159,7 +1167,7 @@ function fuel_use(;
             fuel_limit *= num_generators
         end
     else
-        for i in 1:length(fuel_limit_is_per_generator)
+        for i in eachindex(fuel_limit_is_per_generator)
             if fuel_limit_is_per_generator[i]
                 fuel_limit[i] *= num_generators[i]
             end
@@ -1167,7 +1175,7 @@ function fuel_use(;
     end
 
     generator_fuel_intercept_per_hr = generator_fuel_intercept_per_hr .* num_generators
-    #put everything into arrays and sort based on fuel availability
+    #put everything into arrays and sort based on ratio of fuel available to fuel burn
     if length(num_generators) == 1
         num_generators = [num_generators]
         generator_size_kw = [generator_size_kw]
@@ -1177,6 +1185,7 @@ function fuel_use(;
         total_generator_capacity_kw = num_generators .* generator_size_kw
     else
         total_generator_capacity_kw = num_generators .* generator_size_kw
+        #TODO: remove .+ generator_fuel_intercept_per_hr? or put it outside parentheses?
         fuel_order = sortperm(fuel_limit ./ (total_generator_capacity_kw .* generator_fuel_burn_rate_per_kwh .+ generator_fuel_intercept_per_hr))
 
         generator_fuel_burn_rate_per_kwh = generator_fuel_burn_rate_per_kwh[fuel_order] 
@@ -1343,7 +1352,7 @@ function return_backup_reliability(;
         end
     end
 
-    return results_no_fuel_limit, fuel_use(; net_critical_loads_kw = net_critical_loads_kw, kwargs...)
+    return results_no_fuel_limit, fuel_use(; net_critical_loads_kw = net_critical_loads_kw, battery_size_kw=battery_size_kw, battery_size_kwh=battery_size_kwh, kwargs...)
 end
 
 """
