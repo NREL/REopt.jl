@@ -219,10 +219,12 @@ function dictkeys_tosymbols(d::Dict)
         if k in [
             "fuel_limit_is_per_generator" #for ERP
         ]
-            try
-                v = convert(Array{Bool, 1}, v)
-            catch
-                throw(@error("Unable to convert $k to a Array{Bool, 1}"))
+            if !(typeof(v) <: Bool)
+                try
+                    v = convert(Array{Bool, 1}, v)
+                catch
+                    throw(@error("Unable to convert $k to a Array{Bool, 1}"))
+                end
             end
         end
         if k in [
