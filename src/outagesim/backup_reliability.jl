@@ -1189,7 +1189,6 @@ function fuel_use(;
         total_generator_capacity_kw = num_generators .* generator_size_kw
     else
         total_generator_capacity_kw = num_generators .* generator_size_kw
-        #TODO: remove .+ generator_fuel_intercept_per_hr? or put it outside parentheses?
         fuel_order = sortperm(fuel_limit ./ (total_generator_capacity_kw .* generator_fuel_burn_rate_per_kwh .+ generator_fuel_intercept_per_hr))
 
         generator_fuel_burn_rate_per_kwh = generator_fuel_burn_rate_per_kwh[fuel_order] 
