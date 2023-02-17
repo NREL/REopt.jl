@@ -1230,12 +1230,6 @@ function fuel_use(;
                             maximum([0, (fuel_remaining[i] * time_steps_per_hour - generator_fuel_intercept_per_hr[i]) / generator_fuel_burn_rate_per_kwh[i]]) #fuel remaining
                         ])
                     end
-                    
-                    if t==1 && d%12 == 0
-                        @info fuel_remaining
-                        @info generation
-                        @info ""
-                    end
 
                     fuel_remaining[i] = maximum([0, fuel_remaining[i] - (generation * generator_fuel_burn_rate_per_kwh[i] + generator_fuel_intercept_per_hr[i]) / time_steps_per_hour])  
                     load_kw -= generation
@@ -1249,6 +1243,7 @@ function fuel_use(;
             end
             if round(load_kw, digits=5) > 0  # failed to meet load in this time step
                 survival_matrix[t, d] = 0
+                break
             else
                 survival_matrix[t, d] = 1
             end
