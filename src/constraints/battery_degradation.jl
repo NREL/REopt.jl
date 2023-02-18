@@ -96,7 +96,7 @@ function add_degradation(m, p; b="ElectricStorage")
     # Under augmentation scenario, each day's battery augmentation cost is calculated using day-1 value from maintenance_cost_per_kwh vector
     #   Therefore, on last day, day-1's maintenance cost is utilized.
     if length(p.s.storage.attr[b].degradation.maintenance_cost_per_kwh) != length(days) - 1
-        @warn "The degradation maintenance_cost_per_kwh must have a length of $(length(days)-1)."
+        throw(@error("The degradation maintenance_cost_per_kwh must have a length of $(length(days)-1)."))
     end
 
     @variable(m, SOH[days])
