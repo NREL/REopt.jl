@@ -169,6 +169,8 @@ function dictkeys_tosymbols(d::Dict)
         # handling some type conversions for API inputs and JSON
         if k in [
             "loads_kw", "critical_loads_kw",
+            "thermal_loads_ton",
+            "fuel_loads_mmbtu_per_hour",
             "monthly_totals_kwh",
             "production_factor_series", 
             "monthly_energy_rates", "monthly_demand_rates",
