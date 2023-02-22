@@ -23,6 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2023-02-22
+### Fixed
+- Fixed a bug which threw an error when providing time-series thermal load inputs in a scenario inputs .json.
+ 
 ## v0.25.0
 ### Added
 - multi-node MPC modeling capability
