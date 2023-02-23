@@ -202,8 +202,6 @@ function get_absorption_chiller_defaults(;
         end
     end
 
-    htf_defaults["thermal_consumption_hot_water_or_steam"] = thermal_consumption_hot_water_or_steam
-
     size_class, frac_higher = get_absorption_chiller_max_size_class(
         load_max_tons, acds[thermal_consumption_hot_water_or_steam]["tech_sizes_for_cost_data"]
         )
