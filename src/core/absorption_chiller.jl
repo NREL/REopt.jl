@@ -92,7 +92,6 @@ function AbsorptionChiller(d::Dict;
     end
 
     custom_ac_inputs = Dict{Symbol, Any}(
-        :thermal_consumption_hot_water_or_steam => absorp_chl.thermal_consumption_hot_water_or_steam,
         :installed_cost_per_ton => absorp_chl.installed_cost_per_ton,
         :cop_thermal => absorp_chl.cop_thermal,
         :om_cost_per_ton => absorp_chl.om_cost_per_ton
