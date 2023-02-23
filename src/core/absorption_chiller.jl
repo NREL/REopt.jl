@@ -124,7 +124,7 @@ function AbsorptionChiller(d::Dict;
 
     # update thermal_consumption_hot_water_or_steam
     if isnothing(absorp_chl.thermal_consumption_hot_water_or_steam)
-        setproperty!(absorp_chl, :thermal_consumption_hot_water_or_steam, defaults["thermal_consumption_hot_water_or_steam"])
+        setproperty!(absorp_chl, :thermal_consumption_hot_water_or_steam, htf_defaults_response["thermal_consumption_hot_water_or_steam"])
     end
 
     # generate derived inputs for use in JuMP model
