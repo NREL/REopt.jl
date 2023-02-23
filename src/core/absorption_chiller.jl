@@ -123,6 +123,11 @@ function AbsorptionChiller(d::Dict;
         end
     end
 
+    # update thermal_consumption_hot_water_or_steam
+    if isnothing(absorp_chl.thermal_consumption_hot_water_or_steam)
+        setproperty!(absorp_chl, :thermal_consumption_hot_water_or_steam, defaults["thermal_consumption_hot_water_or_steam"])
+    end
+
     # generate derived inputs for use in JuMP model
     absorp_chl.min_kw = absorp_chl.min_ton * KWH_THERMAL_PER_TONHOUR
     if absorp_chl.max_ton == BIG_NUMBER
