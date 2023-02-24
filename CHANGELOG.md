@@ -36,6 +36,8 @@ Classify the change according to the following categories:
 - Fixed a bug which threw an error when providing time-series thermal load inputs in a scenario inputs .json.
 - Fixed calculation of ["Financial"]["lifecycle_om_costs_before_tax_bau"] (was previously showing after tax result)
 - Added **bau_annual_emissions_tonnes_SO2** to the bau_outputs dict in results.jl and removed duplicate **bau_annual_emissions_tonnes_NOx** result
+### Removed
+- Removed duplicate **thermal_production_hot_water_or_steam** field from the absorption chiller defaults response dictionary. 
 
 ## v0.25.0
 ### Added
