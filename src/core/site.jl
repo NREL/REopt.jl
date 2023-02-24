@@ -34,14 +34,14 @@ Inputs related to the physical location:
 ```julia
     latitude::Real, 
     longitude::Real, 
-    land_acres::Union{Real, Nothing} = nothing, 
+    land_acres::Union{Real, Nothing} = nothing, # acres of land available for PV panels and/or Wind turbines. Constraint applied separately to PV and Wind, meaning the two technologies are assumed to be able to be co-located.
     roof_squarefeet::Union{Real, Nothing} = nothing,
     min_resil_time_steps::Int=0,
     mg_tech_sizes_equal_grid_sizes::Bool = true,
     node::Int = 1,
     CO2_emissions_reduction_min_fraction::Union{Float64, Nothing} = nothing,
     CO2_emissions_reduction_max_fraction::Union{Float64, Nothing} = nothing,
-    bau_emissions_lb_CO2_per_year::Union{Float64, Nothing} = nothing,
+    bau_emissions_lb_CO2_per_year::Union{Float64, Nothing} = nothing, # Auto-populated based on BAU run. This input will be overwritten if the BAU scenario is run, but can be user-provided if no BAU scenario is run.
     bau_grid_emissions_lb_CO2_per_year::Union{Float64, Nothing} = nothing,
     renewable_electricity_min_fraction::Real = 0.0,
     renewable_electricity_max_fraction::Union{Float64, Nothing} = nothing,
