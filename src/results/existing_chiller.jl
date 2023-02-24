@@ -31,7 +31,7 @@
 `ExistingChiller` results keys:
 - `thermal_to_storage_series_ton` # Thermal production to ColdThermalStorage
 - `thermal_to_load_series_ton` # Thermal production to cooling load
-- `year_one_electric_consumption_series`
+- `electric_consumption_series_kw`
 - `annual_electric_consumption_kwh`
 - `annual_thermal_production_tonhour`
 

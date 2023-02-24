@@ -50,10 +50,10 @@ end
 """
 `ExistingBoiler` is an optional REopt input with the following keys and default values:
 ```julia
-    max_heat_demand_kw::Real=0,
-    production_type::String = "hot_water",
+    max_heat_demand_kw::Real=0, # Auto-populated based on SpaceHeatingLoad and DomesticHotWaterLoad inputs
+    production_type::String = "hot_water", # Can be "steam" or "hot_water"
     max_thermal_factor_on_peak_load::Real = 1.25,
-    efficiency::Real = NaN,
+    efficiency::Real = NaN, # Existing boiler system efficiency - conversion of fuel to usable heating thermal energy. See note below.
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [], # REQUIRED. Can be a scalar, a list of 12 monthly values, or a time series of values for every time step
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     can_supply_steam_turbine::Bool = false,
