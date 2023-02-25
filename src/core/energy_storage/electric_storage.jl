@@ -183,9 +183,9 @@ end
     inverter_replacement_year::Int = 10
     battery_replacement_year::Int = 10
     macrs_option_years::Int = 7
-    macrs_bonus_fraction::Float64 = 1.0
+    macrs_bonus_fraction::Float64 = 0.8
     macrs_itc_reduction::Float64 = 0.5
-    total_itc_fraction::Float64 = 0.0
+    total_itc_fraction::Float64 = 0.3
     total_rebate_per_kw::Real = 0.0
     total_rebate_per_kwh::Real = 0.0
     charge_efficiency::Float64 = rectifier_efficiency_fraction * internal_efficiency_fraction^0.5
@@ -217,9 +217,9 @@ Base.@kwdef struct ElectricStorageDefaults
     inverter_replacement_year::Int = 10
     battery_replacement_year::Int = 10
     macrs_option_years::Int = 7
-    macrs_bonus_fraction::Float64 = 1.0
+    macrs_bonus_fraction::Float64 = 0.8
     macrs_itc_reduction::Float64 = 0.5
-    total_itc_fraction::Float64 = 0.0
+    total_itc_fraction::Float64 = 0.3
     total_rebate_per_kw::Real = 0.0
     total_rebate_per_kwh::Real = 0.0
     charge_efficiency::Float64 = rectifier_efficiency_fraction * internal_efficiency_fraction^0.5
