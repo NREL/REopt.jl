@@ -53,17 +53,17 @@ in addition to using the `ExistingBoiler` to meet the heating load.
 
 ```julia
 function Boiler(;
-    min_mmbtu_per_hour::Real = 0.0,
-    max_mmbtu_per_hour::Real = 0.0,
-    efficiency::Real = 0.8,
+    min_mmbtu_per_hour::Real = 0.0, # Minimum thermal power size
+    max_mmbtu_per_hour::Real = 0.0, # Maximum thermal power size
+    efficiency::Real = 0.8, # boiler system efficiency - conversion of fuel to usable heating thermal energy
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
-    macrs_option_years::Int = 0,
-    macrs_bonus_fraction::Real = 0.0,
-    installed_cost_per_mmbtu_per_hour::Real = 293000.0,
-    om_cost_per_mmbtu_per_hour::Real = 2930.0,
-    om_cost_per_mmbtu::Real = 0.0,
+    macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
+    macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
+    installed_cost_per_mmbtu_per_hour::Real = 293000.0, # Thermal power-based cost
+    om_cost_per_mmbtu_per_hour::Real = 2930.0, # Thermal power-based fixed O&M cost
+    om_cost_per_mmbtu::Real = 0.0, # Thermal energy-based variable O&M cost
     fuel_type::String = "natural_gas",  # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil", "uranium"]
-    can_supply_steam_turbine::Bool = true
+    can_supply_steam_turbine::Bool = true # If the boiler can supply steam to the steam turbine for electric production
 )
 ```
 """
