@@ -474,6 +474,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             catch e
                 throw(@error("Error occurred when calling PVWatts: $e"))
             end
+        else
+            ambient_temperature_f = d["GHP"]["ghpghx_inputs"][1]["ambient_temperature_f"]
         end
         
         for i in 1:number_of_ghpghx
@@ -490,7 +492,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
                 ghpghx_inputs["cooling_thermal_load_ton"] = (cooling_load.loads_kw_thermal - cooling_thermal_load_reduction_with_ghp_kw)  / KWH_THERMAL_PER_TONHOUR
             end
-            # This code call GhpGhx.jl module functions and is only available if we load in the GhpGhx package
+            # This code calls GhpGhx.jl module functions and is only available if we load in the GhpGhx package
             try            
                 # Update ground thermal conductivity based on climate zone if not user-input
                 if isnothing(get(ghpghx_inputs, "ground_thermal_conductivity_btu_per_hr_ft_f", nothing))
