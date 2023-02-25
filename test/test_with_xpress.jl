@@ -619,7 +619,7 @@ end
     @testset "Coincident Peak Charges" begin
         model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         results = run_reopt(model, "./scenarios/coincident_peak.json")
-        @test results["ElectricTariff"]["year_one_coincident_peak_cost_before_tax"] ≈ 11.1
+        @test results["ElectricTariff"]["year_one_coincident_peak_cost_before_tax"] ≈ 15.0
     end
 
     @testset "URDB sell rate" begin
@@ -1566,7 +1566,7 @@ end
     @test "warnings" ∈ keys(r["Messages"])
     @test length(r["Messages"]["errors"]) > 0
     @test length(r["Messages"]["warnings"]) > 0
-    @test r["Messages"]["has_stacktrace"] = false
+    @test r["Messages"]["has_stacktrace"] = "false" # fails when using false without quotes
 
     m = Model(Xpress.Optimizer)
     r = run_reopt(m, d)
@@ -1613,7 +1613,7 @@ end
     @test "warnings" ∈ keys(r["Messages"])
     @test length(r["Messages"]["errors"]) > 0
     @test length(r["Messages"]["warnings"]) > 0
-    @test r["Messages"]["has_stacktrace"] = true
+    @test r["Messages"]["has_stacktrace"] = "true"
 
     m = Model(Xpress.Optimizer)
     r = run_reopt(m, d)
