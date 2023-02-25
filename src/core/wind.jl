@@ -40,10 +40,11 @@
     wind_direction_degrees = [],
     temperature_celsius = [],
     pressure_atmospheres = [],
+    acres_per_kw = 0.03, # assuming a power density of 30 acres per MW for turbine sizes >= 1.5 MW. No size constraint applied to turbines below 1.5 MW capacity. (not exposed in API)
     macrs_option_years = 5,
-    macrs_bonus_fraction = 0.0,
+    macrs_bonus_fraction = 0.8,
     macrs_itc_reduction = 0.5,
-    federal_itc_fraction = nothing,
+    federal_itc_fraction = 0.3,
     federal_rebate_per_kw = 0.0,
     state_ibi_fraction = 0.0,
     state_ibi_max = 1.0e10,
@@ -62,37 +63,30 @@
     can_export_beyond_nem_limit = true
     operating_reserve_required_fraction::Real = off_grid_flag ? 0.50 : 0.0, # Only applicable when `off_grid_flag` is true. Applied to each time_step as a % of wind generation serving load.
 ```
+!!! note "Default assumptions" 
+    `size_class` must be one of ["residential", "commercial", "medium", "large"]. If `size_class` is not provided then it is determined based on the average electric load.
 
-`size_class` must be one of ["residential", "commercial", "medium", "large"]. If `size_class` is not provided then it is determined based on the average electric load.
+    If no `installed_cost_per_kw` is provided then it is determined from:
+    ```julia
+    size_class_to_installed_cost = Dict(
+        "residential"=> 11950.0,
+        "commercial"=> 7390.0,
+        "medium"=> 4440.0,
+        "large"=> 3450.0
+    )
+    ```
+    If the `production_factor_series` is not provided then NREL's System Advisor Model (SAM) is used to get the wind turbine 
+    production factor.
 
-If no `installed_cost_per_kw` is provided then it is determined from:
-```julia
-size_class_to_installed_cost = Dict(
-    "residential"=> 11950.0,
-    "commercial"=> 7390.0,
-    "medium"=> 4440.0,
-    "large"=> 3450.0
-)
-```
-
-The Federal Investment Tax Credit is adjusted based on the `size_class` as follows (if the default of 0.3 is not changed):
-```julia
-size_class_to_itc_incentives = Dict(
-    "residential"=> 0.3,
-    "commercial"=> 0.3,
-    "medium"=> 0.12,
-    "large"=> 0.12
-)
-```
-
-If the `production_factor_series` is not provided then NREL's System Advisor Model (SAM) is used to get the wind turbine 
-production factor.
-
-Wind resource values are optional, i.e.
-(`wind_meters_per_sec`, `wind_direction_degrees`, `temperature_celsius`, and `pressure_atmospheres`).
-If not provided then the resource values are downloaded from NREL's Wind Toolkit.
-These values are passed to SAM to get the turbine production factor.
-
+!!! note "Wind resource value inputs"
+    Wind resource values are optional (i.e., `wind_meters_per_sec`, `wind_direction_degrees`, `temperature_celsius`, and `pressure_atmospheres`).
+    If not provided then the resource values are downloaded from NREL's Wind Toolkit.
+    These values are passed to SAM to get the turbine production factor.
+    
+!!! note "Wind sizing and land constraint" 
+    Wind size is constrained by Site.land_acres, assuming a power density of Wind.acres_per_kw for turbine sizes above 1.5 MW (default assumption of 30 acres per MW). 
+    If the turbine size recommended is smaller than 1.5 MW, the input for land available will not constrain the system size. 
+    If the the land available constrains the system size to less than 1.5 MW, the system will be capped at 1.5 MW (i.e., turbines < 1.5 MW are not subject to the acres/kW limit).  
 
 """
 struct Wind <: AbstractTech
@@ -107,10 +101,11 @@ struct Wind <: AbstractTech
     wind_direction_degrees::AbstractArray{Float64,1}
     temperature_celsius::AbstractArray{Float64,1}
     pressure_atmospheres::AbstractArray{Float64,1}
+    acres_per_kw::Real
     macrs_option_years::Int
     macrs_bonus_fraction::Real
     macrs_itc_reduction::Real
-    federal_itc_fraction::Union{Nothing, Real}
+    federal_itc_fraction::Real
     federal_rebate_per_kw::Real
     state_ibi_fraction::Real
     state_ibi_max::Real
@@ -142,10 +137,11 @@ struct Wind <: AbstractTech
         wind_direction_degrees = [],
         temperature_celsius = [],
         pressure_atmospheres = [],
+        acres_per_kw = 0.03, # assuming a power density of 30 acres per MW for turbine sizes >= 1.5 MW. No size constraint applied to turbines below 1.5 MW capacity.
         macrs_option_years = 5,
-        macrs_bonus_fraction = 0.0,
+        macrs_bonus_fraction = 0.8,
         macrs_itc_reduction = 0.5,
-        federal_itc_fraction = nothing,
+        federal_itc_fraction = 0.3,
         federal_rebate_per_kw = 0.0,
         state_ibi_fraction = 0.0,
         state_ibi_max = 1.0e10,
@@ -178,13 +174,6 @@ struct Wind <: AbstractTech
             "medium"=> 2766.0,
             "large"=> 2239.0
         )
-
-        size_class_to_itc_incentives = Dict(
-            "residential"=> 0.3,
-            "commercial"=> 0.3,
-            "medium"=> 0.12,
-            "large"=> 0.12
-        )
         
         if size_class == ""
             if average_elec_load <= 12.5
@@ -202,10 +191,6 @@ struct Wind <: AbstractTech
 
         if isnothing(installed_cost_per_kw)
             installed_cost_per_kw = size_class_to_installed_cost[size_class]
-        end
-
-        if isnothing(federal_itc_fraction)
-            federal_itc_fraction = size_class_to_itc_incentives[size_class]
         end
 
         hub_height = size_class_to_hub_height[size_class]
@@ -234,6 +219,7 @@ struct Wind <: AbstractTech
             wind_direction_degrees,
             temperature_celsius,
             pressure_atmospheres,
+            acres_per_kw,
             macrs_option_years,
             macrs_bonus_fraction,
             macrs_itc_reduction,
