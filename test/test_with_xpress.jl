@@ -1566,7 +1566,7 @@ end
     @test "warnings" ∈ keys(r["Messages"])
     @test length(r["Messages"]["errors"]) > 0
     @test length(r["Messages"]["warnings"]) > 0
-    @test r["Messages"]["has_stacktrace"] = "false" # fails when using false without quotes
+    @test r["Messages"]["has_stacktrace"] == "false" # fails when using false without quotes
 
     m = Model(Xpress.Optimizer)
     r = run_reopt(m, d)
@@ -1613,7 +1613,7 @@ end
     @test "warnings" ∈ keys(r["Messages"])
     @test length(r["Messages"]["errors"]) > 0
     @test length(r["Messages"]["warnings"]) > 0
-    @test r["Messages"]["has_stacktrace"] = "true"
+    @test r["Messages"]["has_stacktrace"] == "true"
 
     m = Model(Xpress.Optimizer)
     r = run_reopt(m, d)
