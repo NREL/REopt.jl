@@ -27,11 +27,15 @@ Classify the change according to the following categories:
 ## Develop - 2023-02-22 
 ### Added 
 - Constraint on wind sizing based on Site.land_acres
-- New Wind input **acres_per_kw**, defaults to 0.03 
+- New Wind input **acres_per_kw**, defaults to 0.03
 - Descriptions/help text for many inputs and outputs
+- Add and modify the `GHP` results to align with the existing/expected results from the v2 REopt_API
+- Add `CSV` and `DataFrames` packages to REopt.jl dependencies 
 ### Changed
+- Update REopt.jl environment to Julia v1.8
 - Changed default **year** in ElectricLoad to be 2017 if using a CRB model and 2022 otherwise. 
 - Removed default year in URDBrate() functions, since year is always supplied to this function.
+- In `scenario.jl`, `change heating_thermal_load_reduction_with_ghp_kw` to `space_heating_thermal_load_reduction_with_ghp_kw` to be more explicit
 ### Fixed
 - Fixed a bug which threw an error when providing time-series thermal load inputs in a scenario inputs .json.
 - Fixed calculation of ["Financial"]["lifecycle_om_costs_before_tax_bau"] (was previously showing after tax result)
