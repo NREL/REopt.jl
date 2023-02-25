@@ -1198,7 +1198,7 @@ function fuel_use(;
 
     t_max = length(net_critical_loads_kw)
     survival_matrix = zeros(t_max, max_outage_duration) 
-    fuel_used_if_unlimited = zeros(t_max, length(fuel_limit))
+    fuel_used = zeros(t_max, length(fuel_limit))
 
     battery_included = battery_size_kw > 0
 
@@ -1235,13 +1235,6 @@ function fuel_use(;
 
                     fuel_remaining[i] = maximum([0, fuel_remaining[i] - (generation * generator_fuel_burn_rate_per_kwh[i] + generator_fuel_intercept_per_hr[i]) / time_steps_per_hour])  
                     load_kw -= generation
-
-                    generation_if_fuel_unlimited = minimum([
-                        total_generator_capacity_kw[i],  #generator capacity
-                        load_kw * total_generator_capacity_kw[i] / remaining_gen #generator type share of load (spits between remaining generators)
-                    ])
-                    fuel_used_if_unlimited[t,i] += (generation_if_fuel_unlimited * generator_fuel_burn_rate_per_kwh[i] + generator_fuel_intercept_per_hr[i]) / time_steps_per_hour
-
                 end
 
                 if battery_included
@@ -1256,10 +1249,11 @@ function fuel_use(;
                 survival_matrix[t, d] = 1
             end
         end
+        fuel_used[t,:] = fuel_limit - fuel_remaining
     end
 
     writedlm( "./fuel_survival_matrix.csv",  survival_matrix, ',')
-    return survival_matrix, maximum(fuel_used_if_unlimited, axes=1)
+    return survival_matrix, fuel_used
 end
 
 """
@@ -1365,21 +1359,21 @@ function return_backup_reliability(;
         end
     end
 
-    fuel_survival, fuel_used_if_unlimited = fuel_use(; net_critical_loads_kw = net_critical_loads_kw, battery_size_kw=battery_size_kw, battery_size_kwh=battery_size_kwh, kwargs...)
-    return results_no_fuel_limit, fuel_survival, fuel_used_if_unlimited
+    fuel_survival, fuel_used = fuel_use(; net_critical_loads_kw = net_critical_loads_kw, battery_size_kw=battery_size_kw, battery_size_kwh=battery_size_kwh, kwargs...)
+    return results_no_fuel_limit, fuel_survival, fuel_used
 end
 
 """
-process_reliability_results(cumulative_results::Matrix, fuel_survival::Matrix, fuel_used_if_unlimited::Vector)::Dict
+process_reliability_results(cumulative_results::Matrix, fuel_survival::Matrix, fuel_used::Vector)::Dict
 
 Return dictionary of processed backup reliability results.
 
 # Arguments
 - `cumulative_results::Matrix`: cumulative survival probabilities matrix from function return_backup_reliability. 
 - `fuel_survival::Matrix`: fuel survival probabilities matrix from function return_backup_reliability.
-- `fuel_used_if_unlimited::Vector`: max over outage start times of quantity of fuels used in outage of max duration if there were no fuel limit.
+- `fuel_used::Vector`: quantity of fuels used in outage of max duration for each start time.
 """
-function process_reliability_results(cumulative_results::Matrix, fuel_survival::Matrix, fuel_used_if_unlimited::Vector)::Dict
+function process_reliability_results(cumulative_results::Matrix, fuel_survival::Matrix, fuel_used::Vector)::Dict
     cumulative_duration_means = round.(vec(mean(cumulative_results, dims = 1)), digits=6)
     cumulative_duration_mins = round.(vec(minimum(cumulative_results, dims = 1)), digits=6)
     cumulative_final_resilience = round.(cumulative_results[:, end], digits=6)
@@ -1452,8 +1446,8 @@ Possible keys in r:
 function backup_reliability(d::Dict, p::REoptInputs, r::Dict)
     try
         reliability_inputs = backup_reliability_reopt_inputs(d=d, p=p, r=r)    
-        cumulative_results, fuel_survival, fuel_used_if_unlimited = return_backup_reliability(; reliability_inputs... )
-        process_reliability_results(cumulative_results, fuel_survival, fuel_used_if_unlimited)
+        cumulative_results, fuel_survival, fuel_used = return_backup_reliability(; reliability_inputs... )
+        process_reliability_results(cumulative_results, fuel_survival, fuel_used)
     catch e
         @info e
         return Dict()
@@ -1490,6 +1484,6 @@ Possible keys in r:
 """
 function backup_reliability(r::Dict)
     reliability_inputs = backup_reliability_inputs(r=r)
-	cumulative_results, fuel_survival, fuel_used_if_unlimited = return_backup_reliability(; reliability_inputs... )
-	process_reliability_results(cumulative_results, fuel_survival, fuel_used_if_unlimited)
+	cumulative_results, fuel_survival, fuel_used = return_backup_reliability(; reliability_inputs... )
+	process_reliability_results(cumulative_results, fuel_survival, fuel_used)
 end
