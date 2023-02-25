@@ -198,14 +198,22 @@ end
 function assign_thermal_factor!(d::Dict, heating_or_cooling::String)
     if heating_or_cooling == "space_heating"
         name = "space_heating_efficiency_thermal_factor"
-        file_path = joinpath(@__DIR__, "..", "..", "data", "ghp", "ghp_space_heating_efficiency_thermal_factors.csv")
-        factor_data_df = CSV.read(file_path, DataFrame)
-        building_type = get(d["SpaceHeatingLoad"], "doe_reference_name", [])
+        if haskey(d, "SpaceHeatingLoad")
+            file_path = joinpath(@__DIR__, "..", "..", "data", "ghp", "ghp_space_heating_efficiency_thermal_factors.csv")
+            factor_data_df = CSV.read(file_path, DataFrame)
+            building_type = get(d["SpaceHeatingLoad"], "doe_reference_name", [])
+        else
+            building_type = "dummy"
+        end
     elseif heating_or_cooling == "cooling"
         name = "cooling_efficiency_thermal_factor"
-        file_path = joinpath(@__DIR__, "..", "..", "data", "ghp", "ghp_cooling_efficiency_thermal_factors.csv")
-        factor_data_df = CSV.read(file_path, DataFrame)
-        building_type = get(d["CoolingLoad"], "doe_reference_name", [])
+        if haskey(d, "CoolingLoad")
+            file_path = joinpath(@__DIR__, "..", "..", "data", "ghp", "ghp_cooling_efficiency_thermal_factors.csv")
+            factor_data_df = CSV.read(file_path, DataFrame)
+            building_type = get(d["CoolingLoad"], "doe_reference_name", [])
+        else
+            building_type = "dummy"
+        end
     else
         throw(@error("Specify `space_heating` or `cooling` for assign_thermal_factor! function"))
     end
@@ -213,7 +221,7 @@ function assign_thermal_factor!(d::Dict, heating_or_cooling::String)
     longitude = d["Site"]["longitude"]
     nearest_city, climate_zone = find_ashrae_zone_city(latitude, longitude; get_zone=true)
     # Default thermal factors are assigned for certain building types and not for campuses (multiple buildings)
-    if building_type in factor_data_df[!, "BuildingType"]
+    if !(building_type == "dummy") && building_type in factor_data_df[!, "BuildingType"]
         factor = filter("BuildingType" => ==(building_type), factor_data_df)[1, climate_zone]
     else
         factor = 1.0
