@@ -23,7 +23,8 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop - 2023-02-10
+
+## Develop - 2023-02-22 
 ### Added 
 - Constraint on wind sizing based on Site.land_acres
 - New Wind input **acres_per_kw**, defaults to 0.03
@@ -36,8 +37,11 @@ Classify the change according to the following categories:
 - Removed default year in URDBrate() functions, since year is always supplied to this function.
 - In `scenario.jl`, `change heating_thermal_load_reduction_with_ghp_kw` to `space_heating_thermal_load_reduction_with_ghp_kw` to be more explicit
 ### Fixed
+- Fixed a bug which threw an error when providing time-series thermal load inputs in a scenario inputs .json.
 - Fixed calculation of ["Financial"]["lifecycle_om_costs_before_tax_bau"] (was previously showing after tax result)
 - Added **bau_annual_emissions_tonnes_SO2** to the bau_outputs dict in results.jl and removed duplicate **bau_annual_emissions_tonnes_NOx** result
+### Removed
+- Removed duplicate **thermal_production_hot_water_or_steam** field from the absorption chiller defaults response dictionary. 
 
 ## v0.25.0
 ### Added
