@@ -36,6 +36,8 @@ Classify the change according to the following categories:
 - Changed default **year** in ElectricLoad to be 2017 if using a CRB model and 2022 otherwise. 
 - Removed default year in URDBrate() functions, since year is always supplied to this function.
 - In `scenario.jl`, `change heating_thermal_load_reduction_with_ghp_kw` to `space_heating_thermal_load_reduction_with_ghp_kw` to be more explicit
+- Round Hot and Cold TES size result to 0 digits
+- Use CoolProp to get water properties for Hot and Cold TES based on average of temperature inputs
 ### Fixed
 - Fixed a bug which threw an error when providing time-series thermal load inputs in a scenario inputs .json.
 - Fixed calculation of ["Financial"]["lifecycle_om_costs_before_tax_bau"] (was previously showing after tax result)
