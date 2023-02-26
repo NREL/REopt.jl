@@ -42,14 +42,12 @@ function add_hot_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict,
     # Adds the `HotThermalStorage` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
     # Note: the node number is an empty string if evaluating a single `Site`.
 
-    delta_T_degF = p.s.storage.attr["HotThermalStorage"].hot_water_temp_degF - p.s.storage.attr["HotThermalStorage"].cool_water_temp_degF
-    avg_cp_kj_per_kgK = 998.2 
-    avg_rho_kg_per_m3 = 4.184 #TODO: add CoolProp reference or perform analogous calculations for water and build lookup tables
-    kwh_per_gal = convert_gal_to_kwh(delta_T_degF, avg_rho_kg_per_m3, avg_cp_kj_per_kgK)
+    kwh_per_gal = get_kwh_per_gal(p.s.storage.attr["HotThermalStorage"].hot_water_temp_degF,
+                                    p.s.storage.attr["HotThermalStorage"].cool_water_temp_degF)
     
     r = Dict{String, Any}()
-    size_kwh = round(value(m[Symbol("dvStorageEnergy"*_n)][b]), digits=2)
-    r["size_gal"] = size_kwh / kwh_per_gal
+    size_kwh = round(value(m[Symbol("dvStorageEnergy"*_n)][b]), digits=3)
+    r["size_gal"] = round(size_kwh / kwh_per_gal, digits=0)
 
     if size_kwh != 0
     	soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
@@ -96,14 +94,12 @@ function add_cold_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict
     Note: the node number is an empty string if evaluating a single `Site`.
     =#
 
-    delta_T_degF = p.s.storage.attr["ColdThermalStorage"].hot_water_temp_degF - p.s.storage.attr["ColdThermalStorage"].cool_water_temp_degF
-    avg_cp_kj_per_kgK = 998.2 
-    avg_rho_kg_per_m3 = 4.184 #TODO: add CoolProp reference or perform analogous calculations for water and build lookup tables
-    kwh_per_gal = convert_gal_to_kwh(delta_T_degF, avg_rho_kg_per_m3, avg_cp_kj_per_kgK)
+    kwh_per_gal = get_kwh_per_gal(p.s.storage.attr["ColdThermalStorage"].hot_water_temp_degF,
+                                    p.s.storage.attr["ColdThermalStorage"].cool_water_temp_degF)
     
     r = Dict{String, Any}()
-    size_kwh = round(value(m[Symbol("dvStorageEnergy"*_n)][b]), digits=2)
-    r["size_gal"] = size_kwh / kwh_per_gal
+    size_kwh = round(value(m[Symbol("dvStorageEnergy"*_n)][b]), digits=3)
+    r["size_gal"] = round(size_kwh / kwh_per_gal, digits=0)
 
     if size_kwh != 0
     	soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)

@@ -403,14 +403,20 @@ end
 
 """
     Convert gallons of stored liquid (e.g. water, water/glycol) to kWh of stored energy in a stratefied tank
+    Note: uses the PropsSI function from the CoolProp package.  Further details on inputs used are available
+        at: http://www.coolprop.org/coolprop/HighLevelAPI.html
     :param delta_T_degF: temperature difference between the hot/warm side and the cold side
     :param rho_kg_per_m3: density of the liquid
     :param cp_kj_per_kgK: heat capacity of the liquid
     :return gal_to_kwh: stored energy, in kWh
 """
-function convert_gal_to_kwh(delta_T_degF::Real, rho_kg_per_m3::Real, cp_kj_per_kgK::Real)
-    delta_T_K = delta_T_degF * 5.0 / 9.0  # [K]
-    kj_per_m3 = rho_kg_per_m3 * cp_kj_per_kgK * delta_T_K  # [kJ/m^3]
+function get_kwh_per_gal(t_hot_degF::Real, t_cold_degF::Real, fluid::String="Water")
+    t_hot_K = convert_temp_degF_to_Kelvin(t_hot_degF)  # [K]
+    t_cold_K = convert_temp_degF_to_Kelvin(t_cold_degF)  # [K]
+    avg_t_K = (t_hot_K + t_cold_K) / 2.0
+    avg_rho_kg_per_m3 = PropsSI("D", "P", 101325.0, "T", avg_t_K, fluid)  # [kg/m^3]
+    avg_cp_kj_per_kgK = PropsSI("CPMASS", "P", 101325.0, "T", avg_t_K, fluid) / 1000  # kJ/kg-K
+    kj_per_m3 = avg_rho_kg_per_m3 * avg_cp_kj_per_kgK * (t_hot_K - t_cold_K)  # [kJ/m^3]
     kj_per_gal = kj_per_m3 / 264.172   # divide by gal/m^3 to get: [kJ/gal]
     kwh_per_gal = kj_per_gal / 3600.0  # divide by kJ/kWh, i.e., sec/hr, to get: [kWh/gal]
     return kwh_per_gal
@@ -432,4 +438,8 @@ end
 
 macro argname(arg)
     string(arg)
+end
+
+function convert_temp_degF_to_Kelvin(degF::Float64)
+    return (degF - 32) * 5.0 / 9.0 + 273.15
 end
