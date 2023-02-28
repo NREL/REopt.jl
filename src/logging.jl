@@ -137,7 +137,7 @@ function handle_errors(e::E, stacktrace::V) where {
 
 	results["Messages"] = logger_to_dict()
 
-    results["Messages"]["has_stacktrace"] = "true"
+    results["Messages"]["has_stacktrace"] = true
 
 	push!(results["Messages"]["errors"], (string(e),string.(stacktrace)))
 	return results
@@ -157,7 +157,7 @@ function handle_errors()
 
 	results["Messages"] = logger_to_dict()
 
-    results["Messages"]["has_stacktrace"] = "false"
+    results["Messages"]["has_stacktrace"] = false
 	return results
 end
 
