@@ -23,6 +23,14 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2023-03-01
+## Added
+- Added `has_stacktrace` boolean which is returned with error messages and indicates if error is of type which contains stacktrace
+
+## Fixed
+- Fixed calculation of `year_one_coincident_peak_cost_before_tax` in **ElectricTariff** results to correctly calculate before-tax value. Previously, the after-tax value was being calculated for this field instead.
+- Fixed `outage_simulator` to work with sub-hourly outage simulation scenarios
+
 ## Develop - 2023-02-02
 ### Added 
 - Constraint on wind sizing based on Site.land_acres
