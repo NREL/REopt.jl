@@ -24,8 +24,9 @@ Classify the change according to the following categories:
     ### Removed
 
 
-## Develop - 2023-02-22 
+## Develop - 2023-03-01 
 ### Added 
+- Added `has_stacktrace` boolean which is returned with error messages and indicates if error is of type which contains stacktrace
 - Constraint on wind sizing based on Site.land_acres
 - New Wind input **acres_per_kw**, defaults to 0.03
 - Descriptions/help text for many inputs and outputs
@@ -39,6 +40,8 @@ Classify the change according to the following categories:
 - Round Hot and Cold TES size result to 0 digits
 - Use CoolProp to get water properties for Hot and Cold TES based on average of temperature inputs
 ### Fixed
+- Fixed calculation of `year_one_coincident_peak_cost_before_tax` in **ElectricTariff** results to correctly calculate before-tax value. Previously, the after-tax value was being calculated for this field instead.
+- Fixed `outage_simulator` to work with sub-hourly outage simulation scenarios
 - Fixed a bug which threw an error when providing time-series thermal load inputs in a scenario inputs .json.
 - Fixed calculation of ["Financial"]["lifecycle_om_costs_before_tax_bau"] (was previously showing after tax result)
 - Added **bau_annual_emissions_tonnes_SO2** to the bau_outputs dict in results.jl and removed duplicate **bau_annual_emissions_tonnes_NOx** result
