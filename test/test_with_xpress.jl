@@ -752,8 +752,8 @@ end
     @test sum(r["HotThermalStorage"]["storage_to_load_series_mmbtu_per_hour"]) ≈ 149.45 atol=0.1
     @test sum(r["ColdThermalStorage"]["storage_to_load_series_ton"]) ≈ 12454.33 atol=0.1
     #size should be just over 10kW in gallons, accounting for efficiency losses and min SOC
-    @test r["HotThermalStorage"]["size_gal"] ≈ 227.89 atol=0.1
-    @test r["ColdThermalStorage"]["size_gal"] ≈ 379.82 atol=0.1
+    @test r["HotThermalStorage"]["size_gal"] ≈ 233.0 atol=0.1
+    @test r["ColdThermalStorage"]["size_gal"] ≈ 378.0 atol=0.1
     #No production from existing chiller, only absorption chiller, which is sized at ~5kW to manage electric demand charge & capital cost.
     @test r["ExistingChiller"]["annual_thermal_production_tonhour"] ≈ 0.0 atol=0.1
     @test r["AbsorptionChiller"]["annual_thermal_production_tonhour"] ≈ 12464.15 atol=0.1
@@ -1194,7 +1194,13 @@ end
     
     ghp_option_chosen = results["GHP"]["ghp_option_chosen"]
     @test ghp_option_chosen == 2
-    
+
+    # Test GHP heating and cooling load reduced
+    hot_load_reduced_mmbtu = sum(results["GHP"]["space_heating_thermal_load_reduction_with_ghp_mmbtu_per_hour"])
+    cold_load_reduced_tonhour = sum(results["GHP"]["cooling_thermal_load_reduction_with_ghp_ton"])
+    @test hot_load_reduced_mmbtu ≈ 1440.00 atol=0.1
+    @test cold_load_reduced_tonhour ≈ 761382.78 atol=0.1
+
     # Test GHP serving space heating with VAV thermal efficiency improvements
     heating_served_mmbtu = sum(s.ghp_option_list[ghp_option_chosen].heating_thermal_kw / REopt.KWH_PER_MMBTU)
     expected_heating_served_mmbtu = 12000 * 0.8 * 0.85  # (fuel_mmbtu * boiler_effic * space_heating_efficiency_thermal_factor)
