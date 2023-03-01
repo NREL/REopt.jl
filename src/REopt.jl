@@ -71,6 +71,8 @@ global hdl = nothing
 using JLD
 using Requires
 using CoolProp
+using CSV
+using DataFrames
 
 function __init__()
     @require GhpGhx="7ce85f02-24a8-4d69-a3f0-14b5daa7d30c" println("using GhpGhx module in REopt")
@@ -78,7 +80,7 @@ end
 
 const EXISTING_BOILER_EFFICIENCY = 0.8
 const GAL_PER_M3 = 264.172  # [gal/m^3]
-const KWH_PER_GAL_DIESEL = 40.7  # [kWh/gal_diesel]
+const KWH_PER_GAL_DIESEL = 40.7  # [kWh/gal_diesel] higher heating value of diesel
 const KWH_PER_MMBTU = 293.07107  # [kWh/mmbtu]
 const KWH_THERMAL_PER_TONHOUR = 3.51685
 const TONNE_PER_LB = 1/2204.62  # [tonne/lb]
@@ -118,6 +120,8 @@ const FUEL_DEFAULTS = Dict(
         "diesel_oil"=>0.0
     )
 )
+
+include("logging.jl")
 
 include("keys.jl")
 include("core/types.jl")
@@ -210,5 +214,6 @@ include("lindistflow/extend.jl")
 
 include("mpc/results.jl")
 include("mpc/model.jl")
+include("mpc/model_multinode.jl")
 
 end

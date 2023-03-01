@@ -69,25 +69,25 @@ struct DomesticHotWaterLoad
         if length(fuel_loads_mmbtu_per_hour) > 0
 
             if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
-                throw(@error "Provided domestic hot water load does not match the time_steps_per_hour.")
+                throw(@error("Provided DomesticHotWaterLoad `fuel_loads_mmbtu_per_hour` does not match the time_steps_per_hour."))
             end
 
             loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY) .* addressable_load_fraction
 
             if !isempty(doe_reference_name) || length(blended_doe_reference_names) > 0
-                @warn "DomesticHotWaterLoad fuel_loads_mmbtu_per_hour was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
+                @warn "DomesticHotWaterLoad `fuel_loads_mmbtu_per_hour` was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
             end
 
             if length(addressable_load_fraction) > 1
                 if length(addressable_load_fraction) != length(fuel_loads_mmbtu_per_hour)
-                    error("`addressable_load_fraction`` must be a scalar or an array of length `fuel_loads_mmbtu_per_hour`")
+                    throw(@error("`addressable_load_fraction` must be a scalar or an array of length `fuel_loads_mmbtu_per_hour`"))
                 end
             end
 
         elseif !isempty(doe_reference_name)
             if length(addressable_load_fraction) > 1
                 if !isempty(monthly_mmbtu) && length(addressable_load_fraction) != 12
-                    error("`addressable_load_fraction`` must be a scalar or an array of length 12 if `monthly_mmbtu` is input")
+                    throw(@error("`addressable_load_fraction` must be a scalar or an array of length 12 if `monthly_mmbtu` is input"))
                 end
             end
             
@@ -101,14 +101,13 @@ struct DomesticHotWaterLoad
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_mmbtu, monthly_mmbtu, addressable_load_fraction)
         else
-            error("Cannot construct DomesticHotWaterLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
-                [doe_reference_name, city],
-                or [blended_doe_reference_names, blended_doe_reference_percents, city].")
+            throw(@error("Cannot construct DomesticHotWaterLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
+                [doe_reference_name, city], or [blended_doe_reference_names, blended_doe_reference_percents, city]."))
         end
 
         if length(loads_kw) < 8760*time_steps_per_hour
             loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw)/8760)))
-            @info "Repeating domestic hot water loads in each hour to match the time_steps_per_hour."
+            @warn "Repeating domestic hot water loads in each hour to match the time_steps_per_hour."
         end
 
         new(
@@ -172,7 +171,7 @@ struct SpaceHeatingLoad
         if length(fuel_loads_mmbtu_per_hour) > 0
 
             if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
-                throw(@error "Provided space heating load does not match the time_steps_per_hour.")
+                throw(@error("Provided space heating load does not match the time_steps_per_hour."))
             end
 
             loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY) .* addressable_load_fraction
@@ -192,14 +191,13 @@ struct SpaceHeatingLoad
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
                                                     annual_mmbtu, monthly_mmbtu, addressable_load_fraction)
         else
-            error("Cannot construct BuiltInSpaceHeatingLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
-                [doe_reference_name, city], 
-                or [blended_doe_reference_names, blended_doe_reference_percents, city].")
+            throw(@error("Cannot construct BuiltInSpaceHeatingLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
+                [doe_reference_name, city], or [blended_doe_reference_names, blended_doe_reference_percents, city]."))
         end
 
         if length(loads_kw) < 8760*time_steps_per_hour
             loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw)/8760)))
-            @info "Repeating space heating loads in each hour to match the time_steps_per_hour."
+            @warn "Repeating space heating loads in each hour to match the time_steps_per_hour."
         end
 
         new(
@@ -239,20 +237,19 @@ function get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_
 end
 
 """
-    function CoolingLoad(;
-        doe_reference_name::String = "",
-        city::String = "",
-        blended_doe_reference_names::Array{String, 1} = String[],
-        blended_doe_reference_percents::Array{<:Real,1} = Real[],
-        annual_tonhour::Union{Real, Nothing} = nothing,
-        monthly_tonhour::Array{<:Real,1} = Real[],
-        thermal_loads_ton::Array{<:Real,1} = Real[], # Vector of cooling thermal loads [ton] = [short ton hours/hour]. Length must equal 8760 * `Settings.time_steps_per_hour`
-        annual_fraction_of_electric_load::Union{Real, Nothing} = nothing, # Fraction of total electric load that is used for cooling 
-        monthly_fractions_of_electric_load::Array{<:Real,1} = Real[],
-        per_time_step_fractions_of_electric_load::Array{<:Real,1} = Real[],
-        existing_chiller_cop::Real = nothing,
-        existing_chiller_max_thermal_factor_on_peak_load::Real= nothing
-    )
+`CoolingLoad` is an optional REopt input with the following keys and default values:
+```julia
+    doe_reference_name::String = "",
+    city::String = "",
+    blended_doe_reference_names::Array{String, 1} = String[],
+    blended_doe_reference_percents::Array{<:Real,1} = Real[],
+    annual_tonhour::Union{Real, Nothing} = nothing,
+    monthly_tonhour::Array{<:Real,1} = Real[],
+    thermal_loads_ton::Array{<:Real,1} = Real[], # Vector of cooling thermal loads [ton] = [short ton hours/hour]. Length must equal 8760 * `Settings.time_steps_per_hour`
+    annual_fraction_of_electric_load::Union{Real, Nothing} = nothing, # Fraction of total electric load that is used for cooling 
+    monthly_fractions_of_electric_load::Array{<:Real,1} = Real[],
+    per_time_step_fractions_of_electric_load::Array{<:Real,1} = Real[]
+```
 
 
 There are many ways to define a `CoolingLoad`:
@@ -304,19 +301,19 @@ struct CoolingLoad
         loads_kw = nothing
         if length(thermal_loads_ton) > 0
             if !(length(thermal_loads_ton) / time_steps_per_hour ≈ 8760)
-                error("Provided cooling load does not match the time_steps_per_hour.")
+                throw(@error("Provided cooling load does not match the time_steps_per_hour."))
             end
             loads_kw_thermal = thermal_loads_ton .* (KWH_THERMAL_PER_TONHOUR)
         
         elseif !isempty(per_time_step_fractions_of_electric_load) && (length(site_electric_load_profile) / time_steps_per_hour ≈ 8760)
             if !(length(per_time_step_fractions_of_electric_load) / time_steps_per_hour ≈ 8760)
-                @error "Provided cooling per_time_step_fractions_of_electric_load array does not match the time_steps_per_hour."
+                throw(@error("Provided cooling per_time_step_fractions_of_electric_load array does not match the time_steps_per_hour."))
             end
             loads_kw = per_time_step_fractions_of_electric_load .* site_electric_load_profile
         
         elseif !isempty(monthly_fractions_of_electric_load) && (length(site_electric_load_profile) / time_steps_per_hour ≈ 8760)
             if !(length(monthly_fractions_of_electric_load) ≈ 12)
-                @error "Provided cooling monthly_fractions_of_electric_load array does not have 12 values."
+                throw(@error("Provided cooling monthly_fractions_of_electric_load array does not have 12 values."))
             end
             timeseries = collect(DateTime(2017,1,1) : Minute(60/time_steps_per_hour) : 
                                  DateTime(2017,1,1) + Minute(8760*60 - 60/time_steps_per_hour))
@@ -344,7 +341,7 @@ struct CoolingLoad
                     modified_fraction = default_fraction * blended_doe_reference_percents[i]
                     if length(site_electric_load_profile) > 8784
                         modified_fraction = repeat(modified_fraction, inner=time_steps_per_hour / (length(site_electric_load_profile)/8760))
-                        @info "Repeating cooling electric load in each hour to match the time_steps_per_hour."
+                        @warn "Repeating cooling electric load in each hour to match the time_steps_per_hour."
                     end
                     loads_kw += site_electric_load_profile .* modified_fraction
                 end
@@ -356,9 +353,9 @@ struct CoolingLoad
             end
         
         else
-            error("Cannot construct BuiltInCoolingLoad. You must provide either [thermal_loads_ton], 
+            throw(@error("Cannot construct BuiltInCoolingLoad. You must provide either [thermal_loads_ton], 
                 [doe_reference_name, city], [blended_doe_reference_names, blended_doe_reference_percents, city],
-                or the site_electric_load_profile along with one of [per_time_step_fractions_of_electric_load, monthly_fractions_of_electric_load, annual_fraction_of_electric_load].")
+                or the site_electric_load_profile along with one of [per_time_step_fractions_of_electric_load, monthly_fractions_of_electric_load, annual_fraction_of_electric_load]."))
         end
 
         if isnothing(loads_kw_thermal)  # have to convert electric loads_kw to thermal load
@@ -385,7 +382,7 @@ struct CoolingLoad
         if length(loads_kw_thermal) < 8760*time_steps_per_hour
             loads_kw_thermal = repeat(loads_kw_thermal, inner=Int(time_steps_per_hour / 
                                (length(loads_kw_thermal)/8760)))
-            @info "Repeating cooling loads in each hour to match the time_steps_per_hour."
+            @warn "Repeating cooling loads in each hour to match the time_steps_per_hour."
         end
 
         new(
@@ -726,7 +723,7 @@ function BuiltInDomesticHotWaterLoad(
         city = find_ashrae_zone_city(latitude, longitude)
     end
     if !(buildingtype in default_buildings)
-        error("buildingtype $(buildingtype) not in $(default_buildings).")
+        throw(@error("buildingtype $(buildingtype) not in $(default_buildings)."))
     end
     if isnothing(annual_mmbtu)
         # Use FlatLoad annual_mmbtu from data for all types of FlatLoads because we don't have separate data for e.g. FlatLoad_16_7
@@ -1065,7 +1062,7 @@ function BuiltInSpaceHeatingLoad(
         city = find_ashrae_zone_city(latitude, longitude)
     end
     if !(buildingtype in default_buildings)
-        error("buildingtype $(buildingtype) not in $(default_buildings).")
+        throw(@error("buildingtype $(buildingtype) not in $(default_buildings)."))
     end
     if isnothing(annual_mmbtu)
         # Use FlatLoad annual_mmbtu from data for all types of FlatLoads because we don't have separate data for e.g. FlatLoad_16_7
@@ -1404,7 +1401,7 @@ function BuiltInCoolingLoad(
         city = find_ashrae_zone_city(latitude, longitude)
     end
     if !(buildingtype in default_buildings)
-        error("buildingtype $(buildingtype) not in $(default_buildings).")
+        throw(@error("buildingtype $(buildingtype) not in $(default_buildings)."))
     end
     # Set initial existing_chiller_cop to "cop_unknown_thermal" if not passed in; we will update existing_chiller_cop once the load profile is determined
     if isnothing(existing_chiller_cop)

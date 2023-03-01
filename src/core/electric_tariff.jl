@@ -73,23 +73,21 @@ end
     urdb_response::Dict=Dict(),
     urdb_utility_name::String="",
     urdb_rate_name::String="",
-    year::Int=2020,
-    NEM::Bool=false,
-    wholesale_rate::T1=nothing,
-    export_rate_beyond_net_metering_limit::T2=nothing,
-    monthly_energy_rates::Array=[],
-    monthly_demand_rates::Array=[],
-    blended_annual_energy_rate::S=nothing,
-    blended_annual_demand_rate::R=nothing,
-    add_monthly_rates_to_urdb_rate::Bool=false,
-    tou_energy_rates_per_kwh::Array=[],
-    add_tou_energy_rates_to_urdb_rate::Bool=false,
+    wholesale_rate::T1=nothing, # Price of electricity sold back to the grid in absence of net metering. Can be a scalar value, which applies for all-time, or an array with time-sensitive values. If an array is input then it must have a length of 8760, 17520, or 35040. The inputed array values are up/down-sampled using mean values to match the Settings.time_steps_per_hour.
+    export_rate_beyond_net_metering_limit::T2=nothing, # Price of electricity sold back to the grid beyond total annual grid purchases, regardless of net metering. Can be a scalar value, which applies for all-time, or an array with time-sensitive values. If an array is input then it must have a length of 8760, 17520, or 35040. The inputed array values are up/down-sampled using mean values to match the Settings.time_steps_per_hour
+    monthly_energy_rates::Array=[], # Array (length of 12) of blended energy rates in dollars per kWh
+    monthly_demand_rates::Array=[], # Array (length of 12) of blended demand charges in dollars per kW
+    blended_annual_energy_rate::S=nothing, # Annual blended energy rate [\$ per kWh] (total annual energy in kWh divided by annual cost in dollars)
+    blended_annual_demand_rate::R=nothing, # Average monthly demand charge [\$ per kW per month]. Rate will be applied to monthly peak demand.
+    add_monthly_rates_to_urdb_rate::Bool=false, # Set to 'true' to add the monthly blended energy rates and demand charges to the URDB rate schedule. Otherwise, blended rates will only be considered if a URDB rate is not provided.
+    tou_energy_rates_per_kwh::Array=[], # Time-of-use energy rates, provided by user. Must be an array with length equal to number of timesteps per year.
+    add_tou_energy_rates_to_urdb_rate::Bool=false, # Set to 'true' to add the tou  energy rates to the URDB rate schedule. Otherwise, tou energy rates will only be considered if a URDB rate is not provided.
     remove_tiers::Bool=false,
-    demand_lookback_months::AbstractArray{Int64, 1}=Int64[],
-    demand_lookback_percent::Real=0.0,
-    demand_lookback_range::Int=0,
-    coincident_peak_load_active_time_steps::Vector{Vector{Int64}}=[Int64[]],
-    coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[]
+    demand_lookback_months::AbstractArray{Int64, 1}=Int64[], # Array of 12 binary values, indicating months in which `demand_lookback_percent` applies. If any of these is true, `demand_lookback_range` should be zero.
+    demand_lookback_percent::Real=0.0, # Lookback percentage. Applies to either `demand_lookback_months` with value=1, or months in `demand_lookback_range`.
+    demand_lookback_range::Int=0, # Number of months for which `demand_lookback_percent` applies. If not 0, `demand_lookback_months` should not be supplied.
+    coincident_peak_load_active_time_steps::Vector{Vector{Int64}}=[Int64[]], # The optional coincident_peak_load_charge_per_kw will apply at the max grid-purchased power during these timesteps. Note timesteps are indexed to a base of 1 not 0.
+    coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[] # Optional coincident peak demand charge that is applied to the max load during the timesteps specified in coincident_peak_load_active_time_steps.
     ) where {
         T1 <: Union{Nothing, Real, Array{<:Real}}, 
         T2 <: Union{Nothing, Real, Array{<:Real}}, 
@@ -97,18 +95,33 @@ end
         R <: Union{Nothing, Real}
     }
 ```
+!!! note "Export Rates" 
+    There are three Export tiers and their associated export rates (negative cost values):
+    1. NEM (Net Energy Metering) - set to the energy rate (or tier with the lowest energy rate, if tiered) 
+    2. WHL (Wholesale) - set to wholesale_rate
+    3. EXC (Excess, beyond NEM) - set to export_rate_beyond_net_metering_limit
+
+    Only one of NEM and Wholesale can be exported into due to the binary constraints.
+    Excess can be exported into in the same time step as NEM.
+
+    Excess is meant to be combined with NEM: NEM export is limited to the total grid purchased energy in a year and some
+    utilities offer a compensation mechanism for export beyond the site load.
+    The Excess tier is not available with the Wholesale tier.
 
 !!! note "NEM input"
     The `NEM` boolean is determined by the `ElectricUtility.net_metering_limit_kw`. There is no need to pass in a `NEM`
     value.
-    
+
+!!! note "Demand Lookback Inputs" 
+    Cannot use both `demand_lookback_months` and `demand_lookback_range` inputs, only one or the other.
+    When using lookbacks, the peak demand in each month will be the greater of the peak kW in that month and the peak kW in the lookback months times the demand_lookback_percent. 
 """
 function ElectricTariff(;
     urdb_label::String="",
     urdb_response::Dict=Dict(),
     urdb_utility_name::String="",
     urdb_rate_name::String="",
-    year::Int=2020,
+    year::Int=2022,   # Will be passed from ElectricLoad
     time_steps_per_hour::Int=1,
     NEM::Bool=false,
     wholesale_rate::T1=nothing,
@@ -121,7 +134,7 @@ function ElectricTariff(;
     tou_energy_rates_per_kwh::Array=[],
     add_tou_energy_rates_to_urdb_rate::Bool=false,
     remove_tiers::Bool=false,
-    demand_lookback_months::AbstractArray{Int64, 1}=Int64[],
+    demand_lookback_months::AbstractArray{Int64, 1}=Int64[], # Array of 12 binary values, indicating months in which `demand_lookback_percent` applies. If any of these is true, demand_lookback_range should be zero.
     demand_lookback_percent::Real=0.0,
     demand_lookback_range::Int=0,
     coincident_peak_load_active_time_steps::Vector{Vector{Int64}}=[Int64[]],
@@ -181,7 +194,7 @@ function ElectricTariff(;
             push!(invalid_args, "length(monthly_demand_rates) must equal 12, got length $(length(monthly_demand_rates))")
         end
         if length(invalid_args) > 0
-            error("Invalid argument values: $(invalid_args)")
+            throw(@error("Invalid ElectricTariff argument values: $(invalid_args)"))
         end
 
         if isempty(monthly_demand_rates)
@@ -224,7 +237,16 @@ function ElectricTariff(;
         end
 
     else
-        error("Creating ElectricTariff requires at least urdb_label, urdb_response, monthly rates, annual rates, or tou_energy_rates_per_kwh.")
+        throw(@error("Creating ElectricTariff requires at least urdb_label, urdb_response, monthly rates, annual rates, or tou_energy_rates_per_kwh."))
+    end
+
+    # Error checks and processing for user-defined demand_lookback_months
+    if length(demand_lookback_months) != 0 && length(demand_lookback_months) != 12  # User provides value with incorrect length
+        throw(@error("Length of demand_lookback_months array must be 12."))
+    elseif demand_lookback_range != 0 && length(demand_lookback_months) != 0 # If user has provided demand_lookback_months of length 12, check that range is not used
+        throw(@error("Cannot supply demand_lookback_months if demand_lookback_range != 0."))
+    elseif demand_lookback_range == 0 && length(demand_lookback_months) == 12
+        demand_lookback_months = collect(1:12)[demand_lookback_months .== 1]
     end
 
     if !isnothing(u)  # use URDBrate
@@ -261,20 +283,20 @@ function ElectricTariff(;
 
         if add_monthly_rates_to_urdb_rate 
             if length(monthly_energy_rates) == 12
-                for tier in 1:size(energy_rates, 2), mth in 1:12, ts in time_steps_monthly[mth]
+                for tier in axes(energy_rates, 2), mth in 1:12, ts in time_steps_monthly[mth]
                     energy_rates[ts, tier] += monthly_energy_rates[mth]
                 end
             end
             if length(users_monthly_demand_rates) == 12
-                for tier in 1:size(monthly_demand_rates, 2), mth in 1:12
+                for tier in axes(monthly_demand_rates, 2), mth in 1:12
                     monthly_demand_rates[mth, tier] += users_monthly_demand_rates[mth]
                 end
             end
         end
 
         if add_tou_energy_rates_to_urdb_rate && length(tou_energy_rates_per_kwh) == size(energy_rates, 1)
-            for tier in 1:size(energy_rates, 2)
-                energy_rates[1:end, tier] += tou_energy_rates_per_kwh
+            for tier in axes(energy_rates, 2)
+                energy_rates[:, tier] += tou_energy_rates_per_kwh
             end
         end
     else
@@ -306,23 +328,23 @@ function ElectricTariff(;
     end
     exc_rate = create_export_rate(export_rate_beyond_net_metering_limit, length(energy_rates), time_steps_per_hour)
     
-    if !NEM & (sum(whl_rate) >= 0)
+    if !NEM & (sum(whl_rate) >= 0) # no NEM or WHL 
         export_rates = Dict{Symbol, AbstractArray}()
         export_bins = Symbol[]
-    elseif !NEM
+    elseif !NEM # no NEM, with WHL
         export_bins = [:WHL]
         export_rates = Dict(:WHL => whl_rate)
-    elseif (sum(whl_rate) >= 0)
+    elseif (sum(whl_rate) >= 0) # NEM, no WHL
         export_bins = [:NEM]
         export_rates = Dict(:NEM => nem_rate)
-        if sum(exc_rate) < 0
+        if sum(exc_rate) < 0 # NEM with EXC rate
             push!(export_bins, :EXC)
             export_rates[:EXC] = exc_rate
         end
-    else
+    else # NEM and WHL
         export_bins = [:NEM, :WHL]
         export_rates = Dict(:NEM => nem_rate, :WHL => whl_rate)
-        if sum(exc_rate) < 0
+        if sum(exc_rate) < 0 # NEM and WHL with EXC rate
             push!(export_bins, :EXC)
             export_rates[:EXC] = exc_rate
         end
@@ -365,16 +387,12 @@ function get_tier_with_lowest_energy_rate(u::URDBrate)
     ExportRate should be lowest energy cost for tiered rates. 
     Otherwise, ExportRate can be > FuelRate, which leads REopt to export all PV energy produced.
     """
-    tier_with_lowest_energy_cost = 1
+    #TODO: can eliminate if else if confirm that u.energy_rates is always 2D
     if length(u.energy_tier_limits) > 1
-        annual_energy_charge_sums = Float64[]
-        for etier in u.energy_rates
-            push!(annual_energy_charge_sums, sum(etier))
-        end
-        tier_with_lowest_energy_cost = 
-            findall(annual_energy_charge_sums .== minimum(annual_energy_charge_sums))[1]
+        return argmin(sum(u.energy_rates, dims=1))
+    else
+        return 1
     end
-    return tier_with_lowest_energy_cost
 end
 
 
@@ -404,7 +422,7 @@ Check length of e and upsample if length(e) != N
 function create_export_rate(e::AbstractArray{<:Real, 1}, N::Int, ts_per_hour::Int=1)
     Ne = length(e)
     if Ne != Int(N/ts_per_hour) || Ne != N
-        @error "Export rates do not have correct number of entries. Must be $(N) or $(Int(N/ts_per_hour))."
+        throw(@error("Export rates do not have correct number of entries. Must be $(N) or $(Int(N/ts_per_hour))."))
     end
     if Ne != N  # upsample
         export_rates = [-1*x for x in e for ts in 1:ts_per_hour]
@@ -442,24 +460,24 @@ function remove_tiers_from_urdb_rate(u::URDBrate)
     if length(u.energy_tier_limits) > 1
         @warn "Energy rate contains tiers. Using the first tier!"
     end
-    elec_rates = vec(u.energy_rates[:,1])
+    elec_rates = u.energy_rates[:,1]
 
     if u.n_monthly_demand_tiers > 1
         @warn "Monthly demand rate contains tiers. Using the last tier!"
     end
     if u.n_monthly_demand_tiers > 0
-        demand_rates_monthly = vec(u.monthly_demand_rates[:,u.n_monthly_demand_tiers])
+        demand_rates_monthly = u.monthly_demand_rates[:,u.n_monthly_demand_tiers]
     else
-        demand_rates_monthly = vec(u.monthly_demand_rates)  # 0×0 Array{Float64,2}
+        demand_rates_monthly = u.monthly_demand_rates  # 0×0 Array{Float64,2}
     end
 
     if u.n_tou_demand_tiers > 1
         @warn "TOU demand rate contains tiers. Using the last tier!"
     end
     if u.n_tou_demand_tiers > 0
-        demand_rates = vec(u.tou_demand_rates[:,u.n_tou_demand_tiers])
+        demand_rates = u.tou_demand_rates[:,u.n_tou_demand_tiers]
     else
-        demand_rates = vec(u.tou_demand_rates)
+        demand_rates = u.tou_demand_rates
     end
 
     return elec_rates, demand_rates_monthly, demand_rates

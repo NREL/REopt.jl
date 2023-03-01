@@ -31,30 +31,28 @@
 """
 `AbsorptionChiller` is an optional REopt input with the following keys and default values:
 ```julia
-    thermal_consumption_hot_water_or_steam::Union{String, Nothing} = nothing
-    chp_prime_mover::String = ""
+    thermal_consumption_hot_water_or_steam::Union{String, Nothing} = nothing  # Defaults to "hot_water" if chp_prime_mover or boiler_type are not provided
+    chp_prime_mover::String = ""  # Informs thermal_consumption_hot_water_or_steam if not provided
 
-    #Required if neither "thermal_consumption_hot_water_or_steam" nor "chp_prime_mover" nor an ExistingBoiler included in inputs:
-    installed_cost_per_ton::Union{Float64, Nothing} = nothing
-    om_cost_per_ton::Union{Float64, Nothing} = nothing
-
-
-    #Optional
-    min_ton::Float64 = 0.0,
-    max_ton::Float64 = BIG_NUMBER,
-    cop_thermal::Union{Float64, Nothing} = nothing,
-    cop_electric::Float64 = 14.1,
-    om_cost_per_ton::Union{Float64, Nothing} = nothing,
-    macrs_option_years::Float64 = 0,
-    macrs_bonus_fraction::Float64 = 0
+    # Defaults for fields below are dependent on thermal_consumption_hot_water_or_steam and max cooling load
+    installed_cost_per_ton::Union{Float64, Nothing} = nothing # Thermal power-based cost of absorption chiller (3.5 to 1 ton to kwt)
+    om_cost_per_ton::Union{Float64, Nothing} = nothing # Yearly fixed O&M cost on a thermal power (ton) basis
+    min_ton::Float64 = 0.0, # Minimum thermal power size constraint for optimization
+    max_ton::Float64 = BIG_NUMBER, # Maximum thermal power size constraint for optimization
+    cop_thermal::Union{Float64, Nothing} = nothing, # Absorption chiller system coefficient of performance - conversion of hot thermal power input to usable cooling thermal energy output
+    cop_electric::Float64 = 14.1, # Absorption chiller electric consumption CoP from cooling tower heat rejection - conversion of electric power input to usable cooling thermal energy outpu
+    macrs_option_years::Float64 = 0, # MACRS schedule for financial analysis. Set to zero to disable
+    macrs_bonus_fraction::Float64 = 0 # Percent of upfront project costs to depreciate under MACRS
 ```
 
-!!! note "Required inputs"
-    To model AbsorptionChiller, you must provide at least one of the following: (i) `thermal_consumption_hot_water_or_steam` from $(HOT_WATER_OR_STEAM), (ii) 
-    (ii), `chp_prime_mover` from $(PRIME_MOVERS),or (iii) all of the "custom inputs" defined below.
-    If prime_mover is provided, any missing value from the "custom inputs" will be populated from data/absorption_chiller/defaults.json, 
-    based on the `thermal_consumption_hot_water_or_steam` or `prime_mover`. boiler_type is "steam" if `prime_mover` is "combustion_turbine" 
-    and is "hot_water" for all other `prime_mover` types.
+!!! Note
+    To model AbsorptionChiller, there is logic which informs defaults for costs and COP: 
+    (i) `thermal_consumption_hot_water_or_steam` from $(HOT_WATER_OR_STEAM), 
+    (ii) `chp_prime_mover` from $(PRIME_MOVERS), or 
+    (iii) if (i) and (ii) are not provided, the default `thermal_consumption_hot_water_or_steam` is `hot_water`
+    The defaults for costs and COP will be populated from data/absorption_chiller/defaults.json, 
+    based on the `thermal_consumption_hot_water_or_steam` or `chp_prime_mover`. 
+    `boiler_type` is "steam" if `prime_mover` is "combustion_turbine" and is "hot_water" for all other `chp_prime_mover` types.
 """
 Base.@kwdef mutable struct AbsorptionChiller <: AbstractThermalTech
     thermal_consumption_hot_water_or_steam::Union{String, Nothing} = nothing
@@ -87,14 +85,13 @@ function AbsorptionChiller(d::Dict;
 
     absorp_chl = AbsorptionChiller(; dictkeys_tosymbols(d)...)
 
-    #check for 0.0 max size, return nothing if so
+    # check for 0.0 max size, return nothing if so
     if absorp_chl.max_ton == 0.0
         @warn "0.0 kW provided as capacity for AbsoprtionChiller, this technology will be excluded."
         return nothing
     end
 
     custom_ac_inputs = Dict{Symbol, Any}(
-        :thermal_consumption_hot_water_or_steam => absorp_chl.thermal_consumption_hot_water_or_steam,
         :installed_cost_per_ton => absorp_chl.installed_cost_per_ton,
         :cop_thermal => absorp_chl.cop_thermal,
         :om_cost_per_ton => absorp_chl.om_cost_per_ton
@@ -103,7 +100,7 @@ function AbsorptionChiller(d::Dict;
     if !isnothing(cooling_load)
         load_max_tons = maximum(cooling_load.loads_kw_thermal) / KWH_THERMAL_PER_TONHOUR
     else
-        throw(@error "Invalid argument cooling_load=nothing: a CoolingLoad is required for the AbsorptionChiller to be a technology option.")
+        throw(@error("Invalid argument cooling_load=nothing: a CoolingLoad is required for the AbsorptionChiller to be a technology option."))
     end
     if !isnothing(existing_boiler)
         boiler_type = existing_boiler.production_type
@@ -117,12 +114,17 @@ function AbsorptionChiller(d::Dict;
         load_max_tons=load_max_tons
     )
     
-    #convert defaults for any properties not enetered
+    # convert defaults for any properties not enetered
     defaults = htf_defaults_response["default_inputs"]
     for (k, v) in custom_ac_inputs
         if isnothing(v)
             setproperty!(absorp_chl, k, defaults[string(k)])
         end
+    end
+
+    # update thermal_consumption_hot_water_or_steam
+    if isnothing(absorp_chl.thermal_consumption_hot_water_or_steam)
+        setproperty!(absorp_chl, :thermal_consumption_hot_water_or_steam, htf_defaults_response["thermal_consumption_hot_water_or_steam"])
     end
 
     # generate derived inputs for use in JuMP model
@@ -182,29 +184,27 @@ function get_absorption_chiller_defaults(;
         end
     end
 
-    #check required inputs
+    # check required inputs
     if isnothing(thermal_consumption_hot_water_or_steam)
         if !isnothing(chp_prime_mover)
             if chp_prime_mover == "combustion_turbine"
                 thermal_consumption_hot_water_or_steam = "steam"
-            elseif chp_prime_mover in PRIME_MOVERS  #if chp_prime mover is blank or is anything but "combustion_turbine" then assume hot water
+            elseif chp_prime_mover in PRIME_MOVERS  # if chp_prime mover is blank or is anything but "combustion_turbine" then assume hot water
                 thermal_consumption_hot_water_or_steam = "hot_water"
             else
-                throw(@error "Invalid argument for `prime_mover`; must be in $PRIME_MOVERS")
+                throw(@error("Invalid argument for `prime_mover`; must be in $PRIME_MOVERS"))
             end
         elseif !isnothing(boiler_type)
             thermal_consumption_hot_water_or_steam = boiler_type
         else
-            #default to hot_water if no information given
+            # default to hot_water if no information given
             thermal_consumption_hot_water_or_steam = "hot_water"
         end
     else
         if !(thermal_consumption_hot_water_or_steam in HOT_WATER_OR_STEAM)
-            throw(@error "Invalid argument for `thermal_consumption_hot_water_or_steam`; must be `hot_water` or `steam`")
+            throw(@error("Invalid argument for `thermal_consumption_hot_water_or_steam`; must be `hot_water` or `steam`"))
         end
     end
-
-    htf_defaults["thermal_consumption_hot_water_or_steam"] = thermal_consumption_hot_water_or_steam
 
     size_class, frac_higher = get_absorption_chiller_max_size_class(
         load_max_tons, acds[thermal_consumption_hot_water_or_steam]["tech_sizes_for_cost_data"]
@@ -218,7 +218,7 @@ function get_absorption_chiller_defaults(;
             (1-frac_higher) * acds[thermal_consumption_hot_water_or_steam][key][size_class])
         end
     end
-    acds = nothing  #TODO this is copied from the analogous CHP function.  Do we need?
+    acds = nothing  # TODO this is copied from the analogous CHP function.  Do we need?
 
     response = Dict{String, Any}([
         ("thermal_consumption_hot_water_or_steam", thermal_consumption_hot_water_or_steam),

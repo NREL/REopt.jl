@@ -164,7 +164,6 @@ end
 `ElectricStorage` is an optional optional REopt input with the following keys and default values:
 
 ```julia
-    off_grid_flag::Bool = false  
     min_kw::Real = 0.0
     max_kw::Real = 1.0e4
     min_kwh::Real = 0.0
@@ -182,9 +181,9 @@ end
     inverter_replacement_year::Int = 10
     battery_replacement_year::Int = 10
     macrs_option_years::Int = 7
-    macrs_bonus_fraction::Float64 = 1.0
+    macrs_bonus_fraction::Float64 = 0.8
     macrs_itc_reduction::Float64 = 0.5
-    total_itc_fraction::Float64 = 0.0
+    total_itc_fraction::Float64 = 0.3
     total_rebate_per_kw::Real = 0.0
     total_rebate_per_kwh::Real = 0.0
     charge_efficiency::Float64 = rectifier_efficiency_fraction * internal_efficiency_fraction^0.5
@@ -214,9 +213,9 @@ Base.@kwdef struct ElectricStorageDefaults
     inverter_replacement_year::Int = 10
     battery_replacement_year::Int = 10
     macrs_option_years::Int = 7
-    macrs_bonus_fraction::Float64 = 1.0
+    macrs_bonus_fraction::Float64 = 0.8
     macrs_itc_reduction::Float64 = 0.5
-    total_itc_fraction::Float64 = 0.0
+    total_itc_fraction::Float64 = 0.3
     total_rebate_per_kw::Real = 0.0
     total_rebate_per_kwh::Real = 0.0
     charge_efficiency::Float64 = rectifier_efficiency_fraction * internal_efficiency_fraction^0.5
@@ -315,7 +314,7 @@ struct ElectricStorage <: AbstractElectricStorage
         if s.model_degradation
             if haskey(d, :replace_cost_per_kw) && d[:replace_cost_per_kw] != 0.0 || 
                 haskey(d, :replace_cost_per_kwh) && d[:replace_cost_per_kwh] != 0.0
-                @warn "Setting ElectricStorage replacement costs to zero. \nUsing degradation.maintenance_cost_per_kwh instead."
+                @warn "Setting ElectricStorage replacement costs to zero. Using degradation.maintenance_cost_per_kwh instead."
             end
             replace_cost_per_kw = 0.0
             replace_cost_per_kwh = 0.0

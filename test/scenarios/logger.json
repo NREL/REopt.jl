@@ -1,0 +1,13 @@
+{
+    "ElectricTariff": {
+        "urdb_label": "632b4e5279d29ba1130491d11"
+    },
+    "Site": {
+        "latitude": 65.0,
+        "longitude": -155.8394336
+    },
+    "ElectricLoad": {
+        "annual_kwh": 100000.0,
+        "doe_reference_name": "MidriceApartment"
+    }
+}
