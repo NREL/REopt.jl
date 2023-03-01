@@ -70,8 +70,7 @@ function annuity_escalation(analysis_period::Int, rate_escalation::Real, rate_di
 end
 
 
-function levelization_factor(years::Int, rate_escalation::Real, rate_discount::Real, 
-    rate_degradation::Real)
+function levelization_factor(years::Int, rate_escalation::Real, rate_discount::Real, rate_degradation::Real)
     #=
     NOTE: levelization_factor for an electricity producing tech is the ratio of:
     - an annuity with an escalation rate equal to the electricity cost escalation rate, starting year 1,
@@ -170,13 +169,15 @@ function dictkeys_tosymbols(d::Dict)
         # handling some type conversions for API inputs and JSON
         if k in [
             "loads_kw", "critical_loads_kw",
+            "thermal_loads_ton",
+            "fuel_loads_mmbtu_per_hour",
             "monthly_totals_kwh",
             "production_factor_series", 
             "monthly_energy_rates", "monthly_demand_rates",
             "blended_doe_reference_percents",
-            "coincident_peak_load_charge_per_kw", "fuel_cost_per_mmbtu",
+            "coincident_peak_load_charge_per_kw",
             "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
-            "outage_probabilities", "wholesale_rate",
+            "outage_probabilities",
             "emissions_factor_series_lb_CO2_per_kwh",
             "emissions_factor_series_lb_NOx_per_kwh", 
             "emissions_factor_series_lb_SO2_per_kwh",
@@ -185,7 +186,7 @@ function dictkeys_tosymbols(d::Dict)
             try
                 v = convert(Array{Real, 1}, v)
             catch
-                @debug "Unable to convert $k to an Array{Real, 1}"
+                throw(@error("Unable to convert $k to an Array{Real, 1}"))
             end
         end
         if k in [
@@ -194,7 +195,7 @@ function dictkeys_tosymbols(d::Dict)
             try
                 v = convert(Array{String, 1}, v)
             catch
-                @warn "Unable to convert $k to an Array{String, 1}"
+                throw(@error("Unable to convert $k to an Array{String, 1}"))
             end
         end
         if k in [
@@ -203,7 +204,7 @@ function dictkeys_tosymbols(d::Dict)
             try
                 v = convert(Vector{Vector{Int64}}, v)
             catch
-                @debug "Unable to convert $k to a Vector{Vector{Int64}}"
+                throw(@error("Unable to convert $k to a Vector{Vector{Int64}}"))
             end
         end
         if k in [
@@ -212,7 +213,21 @@ function dictkeys_tosymbols(d::Dict)
             try
                 v = convert(Array{Int64, 1}, v)
             catch
-                @warn "Unable to convert $k to a Array{Int64, 1}"
+                throw(@error("Unable to convert $k to a Array{Int64, 1}"))
+            end
+        end
+        if k in [
+            "fuel_cost_per_mmbtu", "wholesale_rate"
+            ] && !isnothing(v)
+            #if not a Real try to convert to an Array{Real} 
+            if !(typeof(v) <: Real)
+                try
+                    if typeof(v) <: Array
+                        v = convert(Array{Real, 1}, v)
+                    end
+                catch
+                    throw(@error("Unable to convert $k to a Array{Real, 1} or Real"))
+                end
             end
         end
         d2[Symbol(k)] = v
@@ -275,7 +290,7 @@ function per_hour_value_to_time_series(x::AbstractVector{<:Real}, time_steps_per
         end
         return vals
     end
-    @error "Cannot convert $name to appropriate length time series."
+    throw(@error("Cannot convert $name to appropriate length time series."))
 end
 
 """
@@ -316,11 +331,11 @@ function generate_year_profile_hourly(year::Int64, consecutive_periods::Abstract
             start_date = Dates.firstdayofweek(start_date_of_month_year) + Dates.Week(start_week_of_month - 1) + Dates.Day(start_day_of_week - 1)
             # Throw an error if start_date is in the previous month when start_week_of_month=1 and there is no start_day_of_week in the first week of the month.
             if Dates.month(start_date) != start_month
-                @error "For $(error_start_text), there is no day $(start_day_of_week) ($(day_of_week_name[start_day_of_week])) in the first week of month $(start_month) ($(Dates.monthname(start_date))), $(year)"
+                throw(@error("For $(error_start_text), there is no day $(start_day_of_week) ($(day_of_week_name[start_day_of_week])) in the first week of month $(start_month) ($(Dates.monthname(start_date))), $(year)"))
             end
             start_datetime = Dates.DateTime(start_date) + Dates.Hour(start_hour - 1)
             if Dates.year(start_datetime + Dates.Hour(duration_hours)) > year
-                @error "For $(error_start_text), the start day/time and duration_hours exceeds the end of the year. Please specify two separate unavailability periods: one for the beginning of the year and one for up to the end of the year."
+                throw(@error("For $(error_start_text), the start day/time and duration_hours exceeds the end of the year. Please specify two separate unavailability periods: one for the beginning of the year and one for up to the end of the year."))
             else
                 #end_datetime is the last hour that is 1.0 (e.g. that is still unavailable), not the first hour that is 0.0 after the period
                 end_datetime = start_datetime + Dates.Hour(duration_hours - 1)
@@ -347,16 +362,16 @@ function get_ambient_temperature(latitude::Real, longitude::Real; timeframe="hou
         r = HTTP.get(url)
         response = JSON.parse(String(r.body))
         if r.status != 200
-            error("Bad response from PVWatts: $(response["errors"])")
+            throw(@error("Bad response from PVWatts: $(response["errors"])"))
         end
         @info "PVWatts success."
         tamb = collect(get(response["outputs"], "tamb", []))  # Celcius
         if length(tamb) != 8760
-            @error "PVWatts did not return a valid temperature. Got $tamb"
+            throw(@error("PVWatts did not return a valid temperature. Got $tamb"))
         end
         return tamb
     catch e
-        @error "Error occurred when calling PVWatts: $e"
+        throw(@error("Error occurred when calling PVWatts: $e"))
     end
 end
 
@@ -374,30 +389,36 @@ function get_pvwatts_prodfactor(latitude::Real, longitude::Real; timeframe="hour
         r = HTTP.get(url)
         response = JSON.parse(String(r.body))
         if r.status != 200
-            error("Bad response from PVWatts: $(response["errors"])")
+            throw(@error("Bad response from PVWatts: $(response["errors"])"))
         end
         @info "PVWatts success."
         watts = collect(get(response["outputs"], "ac", []) / 1000)  # scale to 1 kW system (* 1 kW / 1000 W)
         if length(watts) != 8760
-            @error "PVWatts did not return a valid production_factor. Got $watts"
+            throw(@error("PVWatts did not return a valid prodfactor. Got $watts"))
         end
         return watts
     catch e
-        @error "Error occurred when calling PVWatts: $e"
+        throw(@error("Error occurred when calling PVWatts: $e"))
     end
 end
 
 
 """
     Convert gallons of stored liquid (e.g. water, water/glycol) to kWh of stored energy in a stratefied tank
+    Note: uses the PropsSI function from the CoolProp package.  Further details on inputs used are available
+        at: http://www.coolprop.org/coolprop/HighLevelAPI.html
     :param delta_T_degF: temperature difference between the hot/warm side and the cold side
     :param rho_kg_per_m3: density of the liquid
     :param cp_kj_per_kgK: heat capacity of the liquid
     :return gal_to_kwh: stored energy, in kWh
 """
-function convert_gal_to_kwh(delta_T_degF::Real, rho_kg_per_m3::Real, cp_kj_per_kgK::Real)
-    delta_T_K = delta_T_degF * 5.0 / 9.0  # [K]
-    kj_per_m3 = rho_kg_per_m3 * cp_kj_per_kgK * delta_T_K  # [kJ/m^3]
+function get_kwh_per_gal(t_hot_degF::Real, t_cold_degF::Real, fluid::String="Water")
+    t_hot_K = convert_temp_degF_to_Kelvin(t_hot_degF)  # [K]
+    t_cold_K = convert_temp_degF_to_Kelvin(t_cold_degF)  # [K]
+    avg_t_K = (t_hot_K + t_cold_K) / 2.0
+    avg_rho_kg_per_m3 = PropsSI("D", "P", 101325.0, "T", avg_t_K, fluid)  # [kg/m^3]
+    avg_cp_kj_per_kgK = PropsSI("CPMASS", "P", 101325.0, "T", avg_t_K, fluid) / 1000  # kJ/kg-K
+    kj_per_m3 = avg_rho_kg_per_m3 * avg_cp_kj_per_kgK * (t_hot_K - t_cold_K)  # [kJ/m^3]
     kj_per_gal = kj_per_m3 / 264.172   # divide by gal/m^3 to get: [kJ/gal]
     kwh_per_gal = kj_per_gal / 3600.0  # divide by kJ/kWh, i.e., sec/hr, to get: [kWh/gal]
     return kwh_per_gal
@@ -419,4 +440,8 @@ end
 
 macro argname(arg)
     string(arg)
+end
+
+function convert_temp_degF_to_Kelvin(degF::Float64)
+    return (degF - 32) * 5.0 / 9.0 + 273.15
 end

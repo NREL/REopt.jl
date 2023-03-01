@@ -46,14 +46,14 @@
     om_cost_per_kw::Real=17.0,
     degradation_fraction::Real=0.005,
     macrs_option_years::Int = 5,
-    macrs_bonus_fraction::Real = 1.0,
+    macrs_bonus_fraction::Real = 0.8,
     macrs_itc_reduction::Real = 0.5,
     kw_per_square_foot::Real=0.01,
     acres_per_kw::Real=6e-3,
     inv_eff::Real=0.96,
     dc_ac_ratio::Real=1.2,
     production_factor_series::Union{Nothing, Array{<:Real,1}} = nothing,
-    federal_itc_fraction::Real = 0.26,
+    federal_itc_fraction::Real = 0.3,
     federal_rebate_per_kw::Real = 0.0,
     state_ibi_fraction::Real = 0.0,
     state_ibi_max::Real = 1.0e10,
@@ -145,14 +145,14 @@ struct PV <: AbstractTech
         om_cost_per_kw::Real=17.0,
         degradation_fraction::Real=0.005,
         macrs_option_years::Int = 5,
-        macrs_bonus_fraction::Real = 1.0,
+        macrs_bonus_fraction::Real = 0.8,
         macrs_itc_reduction::Real = 0.5,
         kw_per_square_foot::Real=0.01,
         acres_per_kw::Real=6e-3,
         inv_eff::Real=0.96,
         dc_ac_ratio::Real=1.2,
         production_factor_series::Union{Nothing, Array{Real,1}} = nothing,
-        federal_itc_fraction::Real = 0.26,
+        federal_itc_fraction::Real = 0.3,
         federal_rebate_per_kw::Real = 0.0,
         state_ibi_fraction::Real = 0.0,
         state_ibi_max::Real = 1.0e10,
@@ -174,12 +174,12 @@ struct PV <: AbstractTech
         )
 
         if !(off_grid_flag) && !(operating_reserve_required_fraction == 0.0)
-            @warn "PV operating_reserve_required_fraction applies only when off_grid_flag is True. Setting operating_reserve_required_fraction to 0.0 for this on-grid analysis."
+            @warn "PV operating_reserve_required_fraction applies only when true. Setting operating_reserve_required_fraction to 0.0 for this on-grid analysis."
             operating_reserve_required_fraction = 0.0
         end
 
         if off_grid_flag && (can_net_meter || can_wholesale || can_export_beyond_nem_limit)
-            @warn "Net metering, wholesale, and grid exports are not possible for off-grid scenarios. Setting PV can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False."
+            @warn "Setting PV can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False because `off_grid_flag` is true."
             can_net_meter = false
             can_wholesale = false
             can_export_beyond_nem_limit = false
@@ -216,7 +216,7 @@ struct PV <: AbstractTech
         end
         # TODO validate additional args
         if length(invalid_args) > 0
-            error("Invalid argument values: $(invalid_args)")
+            throw(@error("Invalid PV argument values: $(invalid_args)"))
         end
 
         new(

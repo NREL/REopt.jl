@@ -48,7 +48,7 @@ struct Scenario <: AbstractScenario
     existing_chiller::Union{ExistingChiller, Nothing}
     absorption_chiller::Union{AbsorptionChiller, Nothing}
     ghp_option_list::Array{Union{GHP, Nothing}, 1}  # List of GHP objects (often just 1 element, but can be more)
-    heating_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
+    space_heating_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     steam_turbine::Union{SteamTurbine, Nothing}
 end
@@ -84,6 +84,9 @@ All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which ca
     handle conversion of Vector of Vectors from JSON to a Matrix in Julia).
 """
 function Scenario(d::Dict; flex_hvac_from_json=false)
+
+    instantiate_logger()
+
     d = deepcopy(d)
     if haskey(d, "Settings")
         settings = Settings(;dictkeys_tosymbols(d["Settings"])...)
@@ -98,7 +101,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         offgrid_allowed_keys = ["PV", "Wind", "ElectricStorage", "Generator", "Settings", "Site", "Financial", "ElectricLoad", "ElectricTariff", "ElectricUtility"]
         unallowed_keys = setdiff(keys(d), offgrid_allowed_keys) 
         if !isempty(unallowed_keys)
-            error("Currently, only PV, ElectricStorage, and Generator can be modeled when off_grid_flag is true. Cannot model $unallowed_keys.")
+            throw(@error("The following key(s) are not permitted when `off_grid_flag` is true: $unallowed_keys."))
         end
     end
     
@@ -116,7 +119,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             push!(pvs, PV(;dictkeys_tosymbols(d["PV"])..., off_grid_flag = settings.off_grid_flag, 
                         latitude=site.latitude))
         else
-            error("PV input must be Dict or Dict[].")
+            throw(@error("PV input must be Dict or Dict[]."))
         end
     end
 
@@ -148,7 +151,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                         )
     elseif settings.off_grid_flag 
         if haskey(d, "ElectricUtility")
-            @warn "ElectricUtility inputs are not applicable when off_grid_flag is true and any ElectricUtility inputs will be ignored. For off-grid scenarios, a year-long outage will always be modeled."
+            @warn "ElectricUtility inputs are not applicable when `off_grid_flag` is true and will be ignored. For off-grid scenarios, a year-long outage will always be modeled."
         end
         electric_utility = ElectricUtility(; outage_start_time_step = 1, 
                                             outage_end_time_step = settings.time_steps_per_hour * 8760, 
@@ -191,7 +194,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                         )
     else # if ElectricTariff inputs supplied for off-grid, will not be applied. 
         if haskey(d, "ElectricTariff")
-            @warn "ElectricTariff inputs are not applicable when off_grid_flag is true, and will be ignored."
+            @warn "ElectricTariff inputs are not applicable when `off_grid_flag` is true, and will be ignored."
         end
         electric_tariff = ElectricTariff(;  blended_annual_energy_rate = 0.0, 
                                             blended_annual_demand_rate = 0.0,
@@ -378,11 +381,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         if length(cooling_elec_too_high_timesteps) > 0
             cooling_elec_too_high_kw = cooling_elec[cooling_elec_too_high_timesteps]
             total_elec_when_cooling_elec_too_high = electric_load.loads_kw[cooling_elec_too_high_timesteps]
-            error("Cooling electric consumption cannot be more than the total electric load at any time step. At time steps 
+            throw(@error("Cooling electric consumption cannot be more than the total electric load at any time step. At time steps 
                 $cooling_elec_too_high_timesteps the cooling electric consumption is $cooling_elec_too_high_kw (kW) and
                 the total electric load is $total_elec_when_cooling_elec_too_high (kW). Note you may consider adjusting 
                 cooling load input versus the total electric load if you provided inputs in units of cooling tons, or 
-                check the electric chiller COP input value.")
+                check the electric chiller COP input value."))
         end
     else
         cooling_load = CoolingLoad(; 
@@ -415,7 +418,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     # GHP
     ghp_option_list = []
-    heating_thermal_load_reduction_with_ghp_kw = zeros(8760 * settings.time_steps_per_hour)
+    space_heating_thermal_load_reduction_with_ghp_kw = zeros(8760 * settings.time_steps_per_hour)
     cooling_thermal_load_reduction_with_ghp_kw = zeros(8760 * settings.time_steps_per_hour)
     eval_ghp = false
     get_ghpghx_from_input = false    
@@ -425,22 +428,22 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             get_ghpghx_from_input = true
         end        
     elseif haskey(d, "GHP") && !haskey(d["GHP"],"building_sqft")
-        error("If evaluating GHP you must enter a building_sqft")
+        throw(@error("If evaluating GHP you must enter a building_sqft."))
     end
     # Modify Heating and Cooling loads for GHP retrofit to account for HVAC VAV efficiency gains
     if eval_ghp
         # Assign efficiency_thermal_factors if not specified (and if applicable to building type and climate zone)
-        for factor in [("space_heating_efficiency_thermal_factor", "heating"), ("cooling_efficiency_thermal_factor", "cooling")]
-            if isnan(d["GHP"][factor[1]])
-                assign_thermal_factor!(d, factor[2])
+        for factor in [("space_heating_efficiency_thermal_factor", "space_heating"), ("cooling_efficiency_thermal_factor", "cooling")]
+            if !(haskey(d["GHP"], factor[1]))
+                nearest_city, climate_zone = assign_thermal_factor!(d, factor[2])
             end
         end
-        heating_thermal_load_reduction_with_ghp_kw = space_heating_load.loads_kw * (1.0 - d["GHP"]["space_heating_efficiency_thermal_factor"])
+        space_heating_thermal_load_reduction_with_ghp_kw = space_heating_load.loads_kw * (1.0 - d["GHP"]["space_heating_efficiency_thermal_factor"])
         cooling_thermal_load_reduction_with_ghp_kw = cooling_load.loads_kw_thermal * (1.0 - d["GHP"]["cooling_efficiency_thermal_factor"])
     end
     # Call GhpGhx.jl module if only ghpghx_inputs is given, otherwise use ghpghx_responses
     if eval_ghp && !(get_ghpghx_from_input)
-        if d["GHP"]["ghpghx_inputs"] in [nothing, []]
+        if get(d["GHP"], "ghpghx_inputs", nothing) in [nothing, []]
             number_of_ghpghx = 1
             d["GHP"]["ghpghx_inputs"] = [Dict()]
         else
@@ -460,17 +463,19 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 r = HTTP.get(url)
                 response = JSON.parse(String(r.body))
                 if r.status != 200
-                    error("Bad response from PVWatts: $(response["errors"])")
+                    throw(@error("Bad response from PVWatts: $(response["errors"])"))
                 end
                 @info "PVWatts success."
                 temp_c = get(response["outputs"], "tamb", [])
                 if length(temp_c) != 8760 || isempty(temp_c)
-                    @error "PVWatts did not return a valid temperature profile. Got $temp_c"
+                    throw(@error("PVWatts did not return a valid temperature profile. Got $temp_c"))
                 end
                 ambient_temperature_f = temp_c * 1.8 .+ 32.0
             catch e
-                @error "Error occurred when calling PVWatts: $e"
+                throw(@error("Error occurred when calling PVWatts: $e"))
             end
+        else
+            ambient_temperature_f = d["GHP"]["ghpghx_inputs"][1]["ambient_temperature_f"]
         end
         
         for i in 1:number_of_ghpghx
@@ -478,16 +483,16 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             d["GHP"]["ghpghx_inputs"][i]["ambient_temperature_f"] = ambient_temperature_f
             # Only SpaceHeating portion of Heating Load gets served by GHP, unless allowed by can_serve_dhw
             if get(ghpghx_inputs, "heating_thermal_load_mmbtu_per_hr", []) in [nothing, []]
-                if d["GHP"]["can_serve_dhw"]
-                    ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = (space_heating_load.loads_kw + dhw_load.loads_kw - heating_thermal_load_reduction_with_ghp_kw)  / KWH_PER_MMBTU
+                if haskey(d["GHP"], "can_serve_dhw") && d["GHP"]["can_serve_dhw"]
+                    ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = (space_heating_load.loads_kw + dhw_load.loads_kw - space_heating_thermal_load_reduction_with_ghp_kw)  / KWH_PER_MMBTU
                 else
-                    ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = (space_heating_load.loads_kw - heating_thermal_load_reduction_with_ghp_kw) / KWH_PER_MMBTU
+                    ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = (space_heating_load.loads_kw - space_heating_thermal_load_reduction_with_ghp_kw) / KWH_PER_MMBTU
                 end
             end
             if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
                 ghpghx_inputs["cooling_thermal_load_ton"] = (cooling_load.loads_kw_thermal - cooling_thermal_load_reduction_with_ghp_kw)  / KWH_THERMAL_PER_TONHOUR
             end
-            # This code call GhpGhx.jl module functions and is only available if we load in the GhpGhx package
+            # This code calls GhpGhx.jl module functions and is only available if we load in the GhpGhx package
             try            
                 # Update ground thermal conductivity based on climate zone if not user-input
                 if isnothing(get(ghpghx_inputs, "ground_thermal_conductivity_btu_per_hr_ft_f", nothing))
@@ -502,16 +507,20 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 ghpghx_results = GhpGhx.get_results_for_reopt(results, inputs_params)
                 ghpghx_response = Dict([("inputs", ghpghx_inputs), ("outputs", ghpghx_results)])
                 @info "GhpGhx.jl model solved" #with status $(results["status"])."
-                ghp_inputs_removed_ghpghx_inputs = deepcopy(d["GHP"])
-                pop!(ghp_inputs_removed_ghpghx_inputs, "ghpghx_inputs")                
-                append!(ghp_option_list, [GHP(ghpghx_response, ghp_inputs_removed_ghpghx_inputs)])
+                ghp_inputs_removed_ghpghx_params = deepcopy(d["GHP"])
+                for param in ["ghpghx_inputs", "ghpghx_responses", "ghpghx_response_uuids"]
+                    if haskey(d["GHP"], param)    
+                        pop!(ghp_inputs_removed_ghpghx_params, param)
+                    end
+                end                    
+                append!(ghp_option_list, [GHP(ghpghx_response, ghp_inputs_removed_ghpghx_params)])
                 # Print out ghpghx_response for loading into a future run without running GhpGhx.jl again
-                open("scenarios/ghpghx_response.json","w") do f
-                    JSON.print(f, ghpghx_response)
-                end
+                # open("scenarios/ghpghx_response.json","w") do f
+                #     JSON.print(f, ghpghx_response)
+                # end
             catch
-                error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
-                    loaded (using GhpGhx) to the active Julia environment")
+                throw(@error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
+                    loaded (using GhpGhx) to the active Julia environment"))
             end                
         end
     # If ghpghx_responses is included in inputs, do NOT run GhpGhx.jl model and use already-run ghpghx result as input to REopt
@@ -559,7 +568,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         existing_chiller,
         absorption_chiller,
         ghp_option_list,
-        heating_thermal_load_reduction_with_ghp_kw,
+        space_heating_thermal_load_reduction_with_ghp_kw,
         cooling_thermal_load_reduction_with_ghp_kw,
         steam_turbine
     )

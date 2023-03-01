@@ -165,10 +165,10 @@ function assign_st_elec_and_therm_prod_ratios!(st::SteamTurbine)
     p_in_pa = (st.inlet_steam_pressure_psig / 14.5038 + 1.01325) * 1.0E5
     if isnan(st.inlet_steam_temperature_degF)
         t_in_sat_k = PropsSI("T","P",p_in_pa,"Q",1.0,"Water")
-        t_superheat_in_k = (st.inlet_steam_superheat_degF - 32.0) * 5.0 / 9.0 + 273.15
+        t_superheat_in_k = convert_temp_degF_to_Kelvin(st.inlet_steam_superheat_degF)
         t_in_k = t_in_sat_k + t_superheat_in_k
     else
-        t_in_k = (st.inlet_steam_temperature_degF - 32.0) * 5.0 / 9.0 + 273.15
+        t_in_k = convert_temp_degF_to_Kelvin(st.inlet_steam_temperature_degF)
     end
     h_in_j_per_kg = PropsSI("H","P",p_in_pa,"T",t_in_k,"Water")
     s_in_j_per_kgK = PropsSI("S","P",p_in_pa,"T",t_in_k,"Water")
@@ -181,7 +181,7 @@ function assign_st_elec_and_therm_prod_ratios!(st::SteamTurbine)
 
     # Check if the outlet steam vapor fraction is lower than the lowest allowable (-1 means superheated so no problem)
     if x_out != -1.0 && x_out < st.outlet_steam_min_vapor_fraction
-        error("The calculated steam outlet vapor fraction of $x_out is lower than the minimum allowable value of $(st.outlet_steam_min_vapor_fraction)")
+        throw(@error("The calculated steam outlet vapor fraction of $x_out is lower than the minimum allowable value of $(st.outlet_steam_min_vapor_fraction)"))
     end
 
     # Steam turbine shaft power calculations from enthalpy difference at inlet and outlet, and net power with efficiencies
@@ -228,12 +228,12 @@ function get_steam_turbine_defaults_size_class(;avg_boiler_fuel_load_mmbtu_per_h
     n_classes = length(class_bounds)
     if !isnothing(size_class)
         if size_class < 1 || size_class > n_classes
-            @error "Invalid size_class given for steam_turbine, must be in [1,2,3,4]"
+            throw(@error("Invalid size_class given for steam_turbine, must be in [1,2,3,4]"))
         end
     end
     if !isnothing(avg_boiler_fuel_load_mmbtu_per_hour)
         if avg_boiler_fuel_load_mmbtu_per_hour <= 0
-            @error "avg_boiler_fuel_load_mmbtu_per_hour must be > 0.0 MMBtu/hr"
+            throw(@error("avg_boiler_fuel_load_mmbtu_per_hour must be > 0.0 MMBtu/hr"))
         end
         steam_turbine_electric_efficiency = 0.07 # Typical, steam_turbine_kwe / boiler_fuel_kwt
         thermal_power_in_kw = avg_boiler_fuel_load_mmbtu_per_hour * KWH_PER_MMBTU

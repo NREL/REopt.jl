@@ -52,9 +52,9 @@ struct with outer constructor:
     can_serve_dhw::Bool = false
 
     macrs_option_years::Int = 5
-    macrs_bonus_fraction::Float64 = 1.0
+    macrs_bonus_fraction::Float64 = 0.8
     macrs_itc_reduction::Float64 = 0.5
-    federal_itc_fraction::Float64 = 0.1
+    federal_itc_fraction::Float64 = 0.3
     federal_rebate_per_ton::Float64 = 0.0
     federal_rebate_per_kw::Float64 = 0.0
     state_ibi_fraction::Float64 = 0.0
@@ -98,9 +98,9 @@ Base.@kwdef mutable struct GHP <: AbstractGHP
     can_serve_dhw::Bool = false
 
     macrs_option_years::Int = 5
-    macrs_bonus_fraction::Float64 = 1.0
+    macrs_bonus_fraction::Float64 = 0.8
     macrs_itc_reduction::Float64 = 0.5
-    federal_itc_fraction::Float64 = 0.1
+    federal_itc_fraction::Float64 = 0.3
     federal_rebate_per_ton::Float64 = 0.0
     federal_rebate_per_kw::Float64 = 0.0
     state_ibi_fraction::Float64 = 0.0
@@ -198,25 +198,38 @@ end
 function assign_thermal_factor!(d::Dict, heating_or_cooling::String)
     if heating_or_cooling == "space_heating"
         name = "space_heating_efficiency_thermal_factor"
-        factor_data = CSV.read("../data/ghp/ghp_space_heating_efficiency_thermal_factors.csv", DataFrame)
-        building_type = get(d["SpaceHeatingLoad"], "doe_reference_name", [])
+        if haskey(d, "SpaceHeatingLoad")
+            file_path = joinpath(@__DIR__, "..", "..", "data", "ghp", "ghp_space_heating_efficiency_thermal_factors.csv")
+            factor_data_df = CSV.read(file_path, DataFrame)
+            building_type = get(d["SpaceHeatingLoad"], "doe_reference_name", [])
+        else
+            building_type = "dummy"
+        end
     elseif heating_or_cooling == "cooling"
         name = "cooling_efficiency_thermal_factor"
-        factor_data = CSV.read("../data/ghp/ghp_cooling_efficiency_thermal_factors.csv", DataFrame)
-        building_type = get(d["CoolingLoad"], "doe_reference_name", [])
+        if haskey(d, "CoolingLoad")
+            file_path = joinpath(@__DIR__, "..", "..", "data", "ghp", "ghp_cooling_efficiency_thermal_factors.csv")
+            factor_data_df = CSV.read(file_path, DataFrame)
+            building_type = get(d["CoolingLoad"], "doe_reference_name", [])
+        else
+            building_type = "dummy"
+        end
     else
-        @error("Specify `space_heating` or `cooling` for assign_thermal_factor! function")
+        throw(@error("Specify `space_heating` or `cooling` for assign_thermal_factor! function"))
     end
     latitude = d["Site"]["latitude"]
     longitude = d["Site"]["longitude"]
     nearest_city, climate_zone = find_ashrae_zone_city(latitude, longitude; get_zone=true)
     # Default thermal factors are assigned for certain building types and not for campuses (multiple buildings)
-    if length(building_type) != 1
-        factor = 1.0
-    elseif building_type[0] in factor_data["Building Type"]
-        factor = factor_data[climate_zone][building_type[0]]
+    if !(building_type == "dummy") && building_type in factor_data_df[!, "BuildingType"]
+        factor = filter("BuildingType" => ==(building_type), factor_data_df)[1, climate_zone]
     else
         factor = 1.0
     end
+    
+    # Mutate d to assign GHP efficiency_thermal_factors
     d["GHP"][name] = factor
+
+    # Return this data for informational purposes
+    return nearest_city, climate_zone
 end
