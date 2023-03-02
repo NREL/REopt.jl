@@ -85,14 +85,13 @@ function AbsorptionChiller(d::Dict;
 
     absorp_chl = AbsorptionChiller(; dictkeys_tosymbols(d)...)
 
-    #check for 0.0 max size, return nothing if so
+    # check for 0.0 max size, return nothing if so
     if absorp_chl.max_ton == 0.0
         @warn "0.0 kW provided as capacity for AbsoprtionChiller, this technology will be excluded."
         return nothing
     end
 
     custom_ac_inputs = Dict{Symbol, Any}(
-        :thermal_consumption_hot_water_or_steam => absorp_chl.thermal_consumption_hot_water_or_steam,
         :installed_cost_per_ton => absorp_chl.installed_cost_per_ton,
         :cop_thermal => absorp_chl.cop_thermal,
         :om_cost_per_ton => absorp_chl.om_cost_per_ton
@@ -115,12 +114,17 @@ function AbsorptionChiller(d::Dict;
         load_max_tons=load_max_tons
     )
     
-    #convert defaults for any properties not enetered
+    # convert defaults for any properties not enetered
     defaults = htf_defaults_response["default_inputs"]
     for (k, v) in custom_ac_inputs
         if isnothing(v)
             setproperty!(absorp_chl, k, defaults[string(k)])
         end
+    end
+
+    # update thermal_consumption_hot_water_or_steam
+    if isnothing(absorp_chl.thermal_consumption_hot_water_or_steam)
+        setproperty!(absorp_chl, :thermal_consumption_hot_water_or_steam, htf_defaults_response["thermal_consumption_hot_water_or_steam"])
     end
 
     # generate derived inputs for use in JuMP model
@@ -180,12 +184,12 @@ function get_absorption_chiller_defaults(;
         end
     end
 
-    #check required inputs
+    # check required inputs
     if isnothing(thermal_consumption_hot_water_or_steam)
         if !isnothing(chp_prime_mover)
             if chp_prime_mover == "combustion_turbine"
                 thermal_consumption_hot_water_or_steam = "steam"
-            elseif chp_prime_mover in PRIME_MOVERS  #if chp_prime mover is blank or is anything but "combustion_turbine" then assume hot water
+            elseif chp_prime_mover in PRIME_MOVERS  # if chp_prime mover is blank or is anything but "combustion_turbine" then assume hot water
                 thermal_consumption_hot_water_or_steam = "hot_water"
             else
                 throw(@error("Invalid argument for `prime_mover`; must be in $PRIME_MOVERS"))
@@ -193,7 +197,7 @@ function get_absorption_chiller_defaults(;
         elseif !isnothing(boiler_type)
             thermal_consumption_hot_water_or_steam = boiler_type
         else
-            #default to hot_water if no information given
+            # default to hot_water if no information given
             thermal_consumption_hot_water_or_steam = "hot_water"
         end
     else
@@ -201,8 +205,6 @@ function get_absorption_chiller_defaults(;
             throw(@error("Invalid argument for `thermal_consumption_hot_water_or_steam`; must be `hot_water` or `steam`"))
         end
     end
-
-    htf_defaults["thermal_consumption_hot_water_or_steam"] = thermal_consumption_hot_water_or_steam
 
     size_class, frac_higher = get_absorption_chiller_max_size_class(
         load_max_tons, acds[thermal_consumption_hot_water_or_steam]["tech_sizes_for_cost_data"]
@@ -216,7 +218,7 @@ function get_absorption_chiller_defaults(;
             (1-frac_higher) * acds[thermal_consumption_hot_water_or_steam][key][size_class])
         end
     end
-    acds = nothing  #TODO this is copied from the analogous CHP function.  Do we need?
+    acds = nothing  # TODO this is copied from the analogous CHP function.  Do we need?
 
     response = Dict{String, Any}([
         ("thermal_consumption_hot_water_or_steam", thermal_consumption_hot_water_or_steam),
