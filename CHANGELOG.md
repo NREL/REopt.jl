@@ -23,6 +23,32 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+
+## v0.26.0
+### Added 
+- Added `has_stacktrace` boolean which is returned with error messages and indicates if error is of type which contains stacktrace
+- Constraint on wind sizing based on Site.land_acres
+- New Wind input **acres_per_kw**, defaults to 0.03
+- Descriptions/help text for many inputs and outputs
+- Add and modify the `GHP` results to align with the existing/expected results from the v2 REopt_API
+- Add `CSV` and `DataFrames` packages to REopt.jl dependencies 
+### Changed
+- Update REopt.jl environment to Julia v1.8
+- Changed default **year** in ElectricLoad to be 2017 if using a CRB model and 2022 otherwise. 
+- Removed default year in URDBrate() functions, since year is always supplied to this function.
+- In `scenario.jl`, `change heating_thermal_load_reduction_with_ghp_kw` to `space_heating_thermal_load_reduction_with_ghp_kw` to be more explicit
+- Round Hot and Cold TES size result to 0 digits
+- Use CoolProp to get water properties for Hot and Cold TES based on average of temperature inputs
+### Fixed
+- `Wind` evaluations with BAU - was temporarily broken because of an unconverted `year_one` -> `annual` expected name
+- Fixed calculation of `year_one_coincident_peak_cost_before_tax` in **ElectricTariff** results to correctly calculate before-tax value. Previously, the after-tax value was being calculated for this field instead.
+- Fixed `outage_simulator` to work with sub-hourly outage simulation scenarios
+- Fixed a bug which threw an error when providing time-series thermal load inputs in a scenario inputs .json.
+- Fixed calculation of ["Financial"]["lifecycle_om_costs_before_tax_bau"] (was previously showing after tax result)
+- Added **bau_annual_emissions_tonnes_SO2** to the bau_outputs dict in results.jl and removed duplicate **bau_annual_emissions_tonnes_NOx** result
+### Removed
+- Removed duplicate **thermal_production_hot_water_or_steam** field from the absorption chiller defaults response dictionary. 
+
 ## v0.25.0
 ### Added
 - multi-node MPC modeling capability
@@ -37,7 +63,7 @@ Classify the change according to the following categories:
 - updates multiple outage test values that changed due to fixing timestep bug
 - Updated the following default values:
    - PV, Wind, Storage, CHP, GHP, Hot Water Storage, Cold Water Storage, Electric Storage: **federal_itc_fraction(PV,Wind, CHP,GHP)** and **total_itc_fraction(Hot Water Storage, Cold Water Storage, Electric Storage)** to 0.3 (30%)
-   - PV, Wind, Storage, CHP, GHP, Hot Water Storage, Cold Water Storage, Electric Storage: ***macrs_bonus_fraction** to 0.8 (80%)
+   - PV, Wind, Storage, CHP, GHP, Hot Water Storage, Cold Water Storage, Electric Storage: **macrs_bonus_fraction** to 0.8 (80%)
    - Hot Water Storage and Cold Water Storage: **macrs_itc_reduction** to 0.5 (50%)
    - Hot Water Storage and Cold Water Storage: **macrs_option_years** to 7 years
 ### Fixed
