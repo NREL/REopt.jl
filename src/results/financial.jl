@@ -313,7 +313,7 @@ function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
 
     #calculate the value of the production-based incentive stream
     npv_pbi = 0
-    year_one_energy_produced = :year_one_energy_produced_kwh in fieldnames(typeof(tech)) ? tech_results["year_one_energy_produced_kwh"] : tech_results["annual_energy_produced_kwh"]
+    year_one_energy_produced = "year_one_energy_produced_kwh" in keys(tech_results) ? tech_results["year_one_energy_produced_kwh"] : tech_results["annual_energy_produced_kwh"]
     degradation_fraction = :degradation_fraction in fieldnames(typeof(tech)) ? tech.degradation_fraction : 0.0
     if tech.production_incentive_max_benefit > 0
         for yr in 1:years
