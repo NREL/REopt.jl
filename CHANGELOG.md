@@ -40,6 +40,7 @@ Classify the change according to the following categories:
 - Round Hot and Cold TES size result to 0 digits
 - Use CoolProp to get water properties for Hot and Cold TES based on average of temperature inputs
 ### Fixed
+- `Wind` evaluations with BAU - was temporarily broken because of an unconverted `year_one` -> `annual` expected name
 - Fixed calculation of `year_one_coincident_peak_cost_before_tax` in **ElectricTariff** results to correctly calculate before-tax value. Previously, the after-tax value was being calculated for this field instead.
 - Fixed `outage_simulator` to work with sub-hourly outage simulation scenarios
 - Fixed a bug which threw an error when providing time-series thermal load inputs in a scenario inputs .json.
