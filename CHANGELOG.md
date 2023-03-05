@@ -24,7 +24,7 @@ Classify the change according to the following categories:
     ### Removed
 
 
-## Develop - 2023-03-01 
+## v0.26.0
 ### Added 
 - Added `has_stacktrace` boolean which is returned with error messages and indicates if error is of type which contains stacktrace
 - Constraint on wind sizing based on Site.land_acres
