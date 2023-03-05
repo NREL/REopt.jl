@@ -37,14 +37,14 @@ Cold thermal energy storage sytem; specifically, a chilled water system used to 
 ```julia
     min_gal::Float64 = 0.0
     max_gal::Float64 = 0.0
-    hot_water_temp_degF::Float64 = 56.0
-    cool_water_temp_degF::Float64 = 44.0
-    internal_efficiency_fraction::Float64 = 0.999999
-    soc_min_fraction::Float64 = 0.1
-    soc_init_fraction::Float64 = 0.5
-    installed_cost_per_gal::Float64 = 1.50
-    thermal_decay_rate_fraction::Float64 = 0.0004
-    om_cost_per_gal::Float64 = 0.0
+    hot_water_temp_degF::Float64 = 56.0 # Warmed-side return water temperature from the cooling load to the ColdTES (top of tank)
+    cool_water_temp_degF::Float64 = 44.0 # Chilled-side supply water temperature from ColdTES (bottom of tank) to the cooling load
+    internal_efficiency_fraction::Float64 = 0.999999 # Thermal losses due to mixing from thermal power entering or leaving tank
+    soc_min_fraction::Float64 = 0.1 # Minimum allowable TES thermal state of charge
+    soc_init_fraction::Float64 = 0.5 # TES thermal state of charge at first hour of optimization
+    installed_cost_per_gal::Float64 = 1.50 # Thermal energy-based cost of TES (e.g. volume of the tank)
+    thermal_decay_rate_fraction::Float64 = 0.0004 # Thermal loss (gain) rate as a fraction of energy storage capacity, per hour (frac*energy_capacity/hr = kw_thermal)
+    om_cost_per_gal::Float64 = 0.0 # Yearly fixed O&M cost dependent on storage energy size
     macrs_option_years::Int = 7
     macrs_bonus_fraction::Float64 = 0.8
     macrs_itc_reduction::Float64 = 0.5
@@ -144,10 +144,7 @@ struct ThermalStorage <: AbstractThermalStorage
 
     function ThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
          
-        delta_T_degF = s.hot_water_temp_degF - s.cool_water_temp_degF
-        avg_rho_kg_per_m3 = 998.2 
-        avg_cp_kj_per_kgK = 4.184 #TODO: add CoolProp reference or perform analogous calculations for water and build lookup tables
-        kwh_per_gal = convert_gal_to_kwh(delta_T_degF, avg_rho_kg_per_m3, avg_cp_kj_per_kgK)
+        kwh_per_gal = get_kwh_per_gal(s.hot_water_temp_degF, s.cool_water_temp_degF)
         min_kwh = s.min_gal * kwh_per_gal
         max_kwh = s.max_gal * kwh_per_gal
         min_kw = min_kwh * time_steps_per_hour

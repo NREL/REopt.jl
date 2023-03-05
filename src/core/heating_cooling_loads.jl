@@ -237,20 +237,19 @@ function get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_
 end
 
 """
-    function CoolingLoad(;
-        doe_reference_name::String = "",
-        city::String = "",
-        blended_doe_reference_names::Array{String, 1} = String[],
-        blended_doe_reference_percents::Array{<:Real,1} = Real[],
-        annual_tonhour::Union{Real, Nothing} = nothing,
-        monthly_tonhour::Array{<:Real,1} = Real[],
-        thermal_loads_ton::Array{<:Real,1} = Real[], # Vector of cooling thermal loads [ton] = [short ton hours/hour]. Length must equal 8760 * `Settings.time_steps_per_hour`
-        annual_fraction_of_electric_load::Union{Real, Nothing} = nothing, # Fraction of total electric load that is used for cooling 
-        monthly_fractions_of_electric_load::Array{<:Real,1} = Real[],
-        per_time_step_fractions_of_electric_load::Array{<:Real,1} = Real[],
-        existing_chiller_cop::Real = nothing,
-        existing_chiller_max_thermal_factor_on_peak_load::Real= nothing
-    )
+`CoolingLoad` is an optional REopt input with the following keys and default values:
+```julia
+    doe_reference_name::String = "",
+    city::String = "",
+    blended_doe_reference_names::Array{String, 1} = String[],
+    blended_doe_reference_percents::Array{<:Real,1} = Real[],
+    annual_tonhour::Union{Real, Nothing} = nothing,
+    monthly_tonhour::Array{<:Real,1} = Real[],
+    thermal_loads_ton::Array{<:Real,1} = Real[], # Vector of cooling thermal loads [ton] = [short ton hours/hour]. Length must equal 8760 * `Settings.time_steps_per_hour`
+    annual_fraction_of_electric_load::Union{Real, Nothing} = nothing, # Fraction of total electric load that is used for cooling 
+    monthly_fractions_of_electric_load::Array{<:Real,1} = Real[],
+    per_time_step_fractions_of_electric_load::Array{<:Real,1} = Real[]
+```
 
 
 There are many ways to define a `CoolingLoad`:
