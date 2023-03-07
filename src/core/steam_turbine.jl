@@ -100,14 +100,17 @@ function SteamTurbine(d::Dict; avg_boiler_fuel_load_mmbtu_per_hour::Union{Float6
         :outlet_steam_pressure_psig => st.outlet_steam_pressure_psig, 
         :isentropic_efficiency => st.isentropic_efficiency, 
         :gearbox_generator_efficiency => st.gearbox_generator_efficiency,
-        :net_to_gross_electric_ratio => st.net_to_gross_electric_ratio
+        :net_to_gross_electric_ratio => st.net_to_gross_electric_ratio,
+        :size_class => st.size_class
     )
 
     # set all missing default values in custom_chp_inputs
     defaults = get_steam_turbine_defaults_size_class(;avg_boiler_fuel_load_mmbtu_per_hour=avg_boiler_fuel_load_mmbtu_per_hour, 
                                             size_class=st.size_class)
     for (k, v) in custom_st_inputs
-        if isnan(v)
+        if k == :size_class && isnothing(v)
+            setproperty!(st, k, defaults[string(k)])
+        elseif isnan(v)
             if !(k == :inlet_steam_temperature_degF && !isnan(st.inlet_steam_superheat_degF))
                 try
                     setproperty!(st, k, defaults[string(k)])
@@ -120,7 +123,7 @@ function SteamTurbine(d::Dict; avg_boiler_fuel_load_mmbtu_per_hour::Union{Float6
         end
     end
 
-    if isnan(st.electric_produced_to_thermal_consumed_ratio) || isnan(thermal_produced_to_thermal_consumed_ratio)
+    if isnan(st.electric_produced_to_thermal_consumed_ratio) || isnan(st.thermal_produced_to_thermal_consumed_ratio)
         assign_st_elec_and_therm_prod_ratios!(st)
     end
 
