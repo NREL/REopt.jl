@@ -8766,13 +8766,13 @@
     "generator_failure_to_start": 0.0094,
     "generator_mean_time_to_failure": 1100.0,
     "num_generators": 1,
-    "generator_size_kw": 1000.0,
+    "generator_size_kw": 157.0,
     "fuel_limit": 5000.0,
     "fuel_limit_is_per_generator": false,
     "generator_fuel_burn_rate_per_kwh": 0.072265,
     "generator_fuel_intercept_per_hr": 0.0,
     "pv_operational_availability": 1.0,
-    "pv_size_kw": 0.0,
+    "pv_size_kw": 3635.0,
     "pv_production_factor_series": [
         0.0,
         0.0,
@@ -17534,5 +17534,12 @@
         0.0,
         0.0,
         0.0
-    ]
+    ],
+    "battery_operational_availability": 1.0,
+    "battery_size_kw": 2000.0,
+    "battery_size_kwh": 600035.0,
+    "charge_efficiency": 0.9479240475903119,
+    "discharge_efficiency": 0.9479240475903119,
+    "num_battery_bins": 100,
+    "battery_minimum_soc_fraction": 0.0
 }

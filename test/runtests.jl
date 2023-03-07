@@ -234,7 +234,8 @@ else  # run HiGHS tests
         #test fuel limit
         input_dict = JSON.parsefile("./scenarios/erp_fuel_limit_inputs.json")
         results = backup_reliability(input_dict)
-        # results["unlimited_fuel_cumulative_survival_final_time_step"][1]
+        @test results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 1
+        @test results["cumulative_survival_final_time_step"][1] ≈ 1
 
         # input_dict = Dict(
         #     "critical_loads_kw" => [1,2,2,1],
