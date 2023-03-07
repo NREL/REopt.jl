@@ -1157,7 +1157,7 @@ function fuel_use(;
     battery_charge_efficiency::Real = 0.948, 
     battery_discharge_efficiency::Real = 0.948,
     time_steps_per_hour::Real = 1,
-    kwargs...)::Tuple{Matrix{Int}, Matrix{Float}}
+    kwargs...)::Tuple{Matrix{Int}, Matrix{Float64}}
 
     t_max = length(net_critical_loads_kw)
     if all(fuel_limit .>= 1e9)
