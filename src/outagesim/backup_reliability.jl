@@ -1367,7 +1367,7 @@ function return_backup_reliability(;
 end
 
 """
-process_reliability_results(cumulative_results::Matrix, fuel_survival::Matrix, fuel_used::Vector)::Dict
+process_reliability_results(cumulative_results::Matrix, fuel_survival::Matrix, fuel_used::Matrix)::Dict
 
 Return dictionary of processed backup reliability results.
 
@@ -1376,7 +1376,7 @@ Return dictionary of processed backup reliability results.
 - `fuel_survival::Matrix`: fuel survival probabilities matrix from function return_backup_reliability.
 - `fuel_used::Vector`: quantity of fuels used in outage of max duration for each start time.
 """
-function process_reliability_results(cumulative_results::Matrix, fuel_survival::Matrix, fuel_used::Vector)::Dict
+function process_reliability_results(cumulative_results::Matrix, fuel_survival::Matrix, fuel_used::Matrix)::Dict
     cumulative_duration_means = round.(vec(mean(cumulative_results, dims = 1)), digits=6)
     cumulative_duration_mins = round.(vec(minimum(cumulative_results, dims = 1)), digits=6)
     cumulative_final_resilience = round.(cumulative_results[:, end], digits=6)
