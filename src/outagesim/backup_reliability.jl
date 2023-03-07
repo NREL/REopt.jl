@@ -1120,7 +1120,10 @@ fuel_use(; net_critical_loads_kw::Vector, num_generators::Union{Int, Vector{Int}
             max_outage_duration::Int = 96, battery_starting_soc_kwh::Vector = [], battery_size_kw::Real = 0.0, battery_size_kwh::Real = 0.0,
             battery_charge_efficiency::Real = 0.948, battery_discharge_efficiency::Real = 0.948, time_steps_per_hour::Int = 1, kwargs...)::Matrix{Int}
 
-Return a matrix of fuel survival. Output is a matrix with rows of time periods and columns of durations
+# Returns
+-A matrix of fuel survival, with rows corresponding to start times and columns to duration.
+-The total fuel used, if no components fail.
+
 # Arguments
 -net_critical_loads_kw::Vector                                              vector of net critical loads
 -num_generators::Union{Int, Vector{Int}} = 1,                               number of backup generators of each type
@@ -1154,7 +1157,7 @@ function fuel_use(;
     battery_charge_efficiency::Real = 0.948, 
     battery_discharge_efficiency::Real = 0.948,
     time_steps_per_hour::Real = 1,
-    kwargs...)::Matrix{Int}
+    kwargs...)::Tuple{Matrix{Int}, Matrix{Float}}
 
     t_max = length(net_critical_loads_kw)
     if all(fuel_limit .>= 1e9)
