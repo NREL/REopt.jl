@@ -1177,10 +1177,6 @@ function fuel_use(;
         end
     end
 
-    @info battery_size_kw
-    @info battery_size_kwh
-    @info fuel_limit
-
     generator_fuel_intercept_per_hr = generator_fuel_intercept_per_hr .* num_generators
     #put everything into arrays and sort based on ratio of fuel available to fuel burn
     if length(num_generators) == 1
@@ -1255,7 +1251,6 @@ function fuel_use(;
         fuel_used[t,:] = fuel_limit - fuel_remaining
     end
 
-    writedlm( "./fuel_survival_matrix.csv",  survival_matrix, ',')
     return survival_matrix, fuel_used
 end
 
