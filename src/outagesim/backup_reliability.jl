@@ -1160,9 +1160,6 @@ function fuel_use(;
     kwargs...)::Tuple{Matrix{Int}, Matrix{Float64}}
 
     t_max = length(net_critical_loads_kw)
-    if all(fuel_limit .>= 1e9)
-        return ones(t_max, max_outage_duration)
-    end
 
     fuel_limit = convert.(Float64, fuel_limit)
     if isa(fuel_limit_is_per_generator, Bool)
