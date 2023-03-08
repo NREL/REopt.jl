@@ -921,8 +921,8 @@ Return a dictionary of inputs required for backup reliability calculations.
     -pv_size_kw::Real                                       Size of PV System
     -pv_production_factor_series::Array                     PV production factor per time step (required if pv_size_kw in dictionary)
     -pv_migrogrid_upgraded::Bool                            If true then PV runs during outage if microgrid_only = TRUE (defaults to false)
-    -battery_operational_availability::Real = 1.0           Likelihood battery will be available at start of outage       
-    -pv_operational_availability::Real = 1.0                Likelihood PV will be available at start of outage    -battery_size_kw::Real                                  Battery capacity. If no battery installed then PV disconnects from system during outage
+    -battery_operational_availability::Real = 0.97          Likelihood battery will be available at start of outage       
+    -pv_operational_availability::Real = 0.98               Likelihood PV will be available at start of outage    -battery_size_kw::Real                                  Battery capacity. If no battery installed then PV disconnects from system during outage
     -battery_size_kwh::Real                                 Battery energy storage capacity
     -battery_size_kw::Real                                  Battery power capacity
     -charge_efficiency::Real                                Battery charge efficiency
@@ -1252,14 +1252,14 @@ function fuel_use(;
 end
 
 """
-    return_backup_reliability(; critical_loads_kw::Vector, battery_operational_availability::Real = 1.0,
-            pv_operational_availability::Real = 1.0, pv_kw_ac_time_series::Vector = [],
+    return_backup_reliability(; critical_loads_kw::Vector, battery_operational_availability::Real = 0.97,
+            pv_operational_availability::Real = 0.98, pv_kw_ac_time_series::Vector = [],
             pv_can_dispatch_without_battery::Bool = false, kwargs...)
 Return an array of backup reliability calculations, accounting for operational availability of PV and battery. 
 # Arguments
 -critical_loads_kw::Vector                          Vector of critical loads
 -battery_operational_availability::Real = 1.0       Likelihood battery will be available at start of outage       
--pv_operational_availability::Real      = 1.0       Likelihood PV will be available at start of outage
+-pv_operational_availability::Real      = 0.98      Likelihood PV will be available at start of outage
 -pv_kw_ac_time_series::Vector = []                  timeseries of PV dispatch
 -pv_can_dispatch_without_battery::Bool  = false     Boolian determining whether net load subtracts PV if battery is unavailable.
 -battery_size_kw::Real                  = 0.0       Battery kW of power capacity
@@ -1269,8 +1269,8 @@ Return an array of backup reliability calculations, accounting for operational a
 """
 function return_backup_reliability(;
     critical_loads_kw::Vector, 
-    battery_operational_availability::Real = 1.0,
-    pv_operational_availability::Real = 1.0,
+    battery_operational_availability::Real = 0.97,
+    pv_operational_availability::Real = 0.98,
     pv_can_dispatch_without_battery::Bool = false,
     battery_size_kw::Real = 0.0,
     battery_size_kwh::Real = 0.0,
@@ -1432,8 +1432,8 @@ Possible keys in r:
     -num_generators::Int = 1                                Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
     -generator_size_kw::Real = 0.0                          Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
     -num_battery_bins::Int = 101                            Internal value for discretely modeling battery state of charge
-    -battery_operational_availability::Real = 1.0           Likelihood battery will be available at start of outage       
-    -pv_operational_availability::Real = 1.0                Likelihood PV will be available at start of outage
+    -battery_operational_availability::Real = 0.97          Likelihood battery will be available at start of outage       
+    -pv_operational_availability::Real = 0.98               Likelihood PV will be available at start of outage
     -max_outage_duration::Int = 96                          Maximum outage duration modeled
     -microgrid_only::Bool = false                           Determines how generator, PV, and battery act during islanded mode
 
