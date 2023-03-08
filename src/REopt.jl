@@ -72,6 +72,8 @@ using JLD
 using Requires
 using CoolProp
 using LinearAlgebra
+using CSV
+using DataFrames
 
 function __init__()
     @require GhpGhx="7ce85f02-24a8-4d69-a3f0-14b5daa7d30c" println("using GhpGhx module in REopt")
@@ -213,5 +215,6 @@ include("lindistflow/extend.jl")
 
 include("mpc/results.jl")
 include("mpc/model.jl")
+include("mpc/model_multinode.jl")
 
 end

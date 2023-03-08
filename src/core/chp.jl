@@ -33,40 +33,40 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
 """
 `CHP` is an optional REopt input with the following keys and default values:
 ```julia
-    prime_mover::Union{String, Nothing} = nothing Suggested to inform applicable default cost and performance
-    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = []  REQUIRED
+    prime_mover::Union{String, Nothing} = nothing # Suggested to inform applicable default cost and performance. "restrict_to": ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cell"]
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [] # REQUIRED. Can be a scalar, a list of 12 monthly values, or a time series of values for every time step
 
     # Required "custom inputs" if not providing prime_mover:
-    installed_cost_per_kw::Union{Float64, AbstractVector{Float64}} = NaN
-    tech_sizes_for_cost_curve::Union{Float64, AbstractVector{Float64}} = NaN
-    om_cost_per_kwh::Float64 = NaN
-    electric_efficiency_full_load::Float64 = NaN
-    electric_efficiency_half_load::Float64 = NaN
-    min_turn_down_fraction::Float64 = NaN
-    thermal_efficiency_full_load::Float64 = NaN
-    thermal_efficiency_half_load::Float64 = NaN
-    min_allowable_kw::Float64 = NaN
-    max_kw::Float64 = NaN
+    installed_cost_per_kw::Union{Float64, AbstractVector{Float64}} = NaN # Installed CHP system cost in \$/kW (based on rated electric power)
+    tech_sizes_for_cost_curve::Union{Float64, AbstractVector{Float64}} = NaN # Size of CHP systems corresponding to installed cost input points"
+    om_cost_per_kwh::Float64 = NaN # CHP non-fuel variable operations and maintenance costs in \$/kwh
+    electric_efficiency_full_load::Float64 = NaN # Electric efficiency of CHP prime-mover at full-load, HHV-basis
+    electric_efficiency_half_load::Float64 = NaN # Electric efficiency of CHP prime-mover at half-load, HHV-basis
+    min_turn_down_fraction::Float64 = NaN # Minimum CHP electric loading in fraction of capacity (size_kw)
+    thermal_efficiency_full_load::Float64 = NaN # CHP fraction of fuel energy converted to hot-thermal energy at full electric load
+    thermal_efficiency_half_load::Float64 = NaN # CHP fraction of fuel energy converted to hot-thermal energy at half electric load
+    min_allowable_kw::Float64 = NaN # Minimum CHP size (based on electric) that still allows the model to choose zero (e.g. no CHP system)
+    max_kw::Float64 = NaN # Maximum CHP size (based on electric) constraint for optimization.
     cooling_thermal_factor::Float64 = NaN  # only needed with cooling load
-    unavailability_periods::AbstractVector{Dict} = Dict[]
+    unavailability_periods::AbstractVector{Dict} = Dict[] # CHP unavailability periods for scheduled and unscheduled maintenance, list of dictionaries with keys of "['month', 'start_week_of_month', 'start_day_of_week', 'start_hour', 'duration_hours'] all values are one-indexed and start_day_of_week uses 1 for Monday, 7 for Sunday
 
     # Optional inputs:
-    size_class::Union{Int, Nothing} = nothing
-    min_kw::Float64 = 0.0
+    size_class::Union{Int, Nothing} = nothing # CHP size class for using appropriate default inputs 
+    min_kw::Float64 = 0.0 # Minimum CHP size (based on electric) constraint for optimization 
     fuel_type::String = "natural_gas" # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
-    om_cost_per_kw::Float64 = 0.0
-    om_cost_per_hr_per_kw_rated::Float64 = 0.0
-    supplementary_firing_capital_cost_per_kw::Float64 = 150.0
-    supplementary_firing_max_steam_ratio::Float64 = 1.0
-    supplementary_firing_efficiency::Float64 = 0.92
-    standby_rate_per_kw_per_month::Float64 = 0.0
-    reduces_demand_charges::Bool = true
-    can_supply_steam_turbine::Bool=false
+    om_cost_per_kw::Float64 = 0.0 # Annual CHP fixed operations and maintenance costs in \$/kw-yr 
+    om_cost_per_hr_per_kw_rated::Float64 = 0.0 # CHP non-fuel variable operations and maintenance costs in \$/hr/kw_rated
+    supplementary_firing_capital_cost_per_kw::Float64 = 150.0 # Installed CHP supplementary firing system cost in \$/kW (based on rated electric power)
+    supplementary_firing_max_steam_ratio::Float64 = 1.0 # Ratio of max fired steam to un-fired steam production. Relevant only for combustion_turbine prime_mover 
+    supplementary_firing_efficiency::Float64 = 0.92 # Thermal efficiency of the incremental steam production from supplementary firing. Relevant only for combustion_turbine prime_mover 
+    standby_rate_per_kw_per_month::Float64 = 0.0 # Standby rate charged to CHP based on CHP electric power size
+    reduces_demand_charges::Bool = true # Boolean indicator if CHP does not reduce demand charges 
+    can_supply_steam_turbine::Bool=false # If CHP can supply steam to the steam turbine for electric production 
 
     macrs_option_years::Int = 5
-    macrs_bonus_fraction::Float64 = 1.0
+    macrs_bonus_fraction::Float64 = 0.8
     macrs_itc_reduction::Float64 = 0.5
-    federal_itc_fraction::Float64 = 0.1
+    federal_itc_fraction::Float64 = 0.3
     federal_rebate_per_kw::Float64 = 0.0
     state_ibi_fraction::Float64 = 0.0
     state_ibi_max::Float64 = 1.0e10
@@ -132,9 +132,9 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     can_supply_steam_turbine::Bool = false
 
     macrs_option_years::Int = 5
-    macrs_bonus_fraction::Float64 = 1.0
+    macrs_bonus_fraction::Float64 = 0.8
     macrs_itc_reduction::Float64 = 0.5
-    federal_itc_fraction::Float64 = 0.1
+    federal_itc_fraction::Float64 = 0.3
     federal_rebate_per_kw::Float64 = 0.0
     state_ibi_fraction::Float64 = 0.0
     state_ibi_max::Float64 = 1.0e10

@@ -483,29 +483,32 @@ end
 end
 
 @testset "Minimize Unserved Load" begin
+        
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/outage.json")
 
     @test results["Outages"]["expected_outage_cost"] ≈ 0
-    @test sum(results["Outages"]["unserved_load_per_outage_series"]) ≈ 0
-    @test value(m[:binMGTechUsed]["Generator"]) == 1
-    @test value(m[:binMGTechUsed]["PV"]) == 0
-    @test value(m[:binMGStorageUsed]) == 1
-    @test results["Financial"]["lcc"] ≈ 7.3879557e7 atol=5e4
-    
+    @test sum(results["Outages"]["unserved_load_per_outage"]) ≈ 0
+    @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
+    @test value(m[:binMGTechUsed]["PV"]) ≈ 1
+    @test value(m[:binMGStorageUsed]) ≈ 1
+    @test results["Financial"]["lcc"] ≈ 7.19753998668e7 atol=5e4
+
     #=
-    Scenario with $0/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
+    Scenario with $0.001/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
     - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
     =#
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/nogridcost_minresilhours.json")
-    @test sum(results["Outages"]["unserved_load_per_outage_series"]) ≈ 12
+    @test sum(results["Outages"]["unserved_load_per_outage"]) ≈ 12
     
     # testing dvUnserved load, which would output 100 kWh for this scenario before output fix
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/nogridcost_multiscenario.json")
-    @test sum(results["Outages"]["unserved_load_per_outage_series"]) ≈ 60
-    
+    @test sum(results["Outages"]["unserved_load_per_outage"]) ≈ 60
+    @test results["Outages"]["expected_outage_cost"] ≈ 485.43270 atol=1.0e-5  #avg duration (3h) * load per time step (10) * present worth factor (16.18109)
+    @test results["Outages"]["max_outage_cost_per_outage_duration"][1] ≈ 161.8109 atol=1.0e-5
+
 end
 
 @testset "Multiple Sites" begin
@@ -616,7 +619,7 @@ end
     @testset "Coincident Peak Charges" begin
         model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         results = run_reopt(model, "./scenarios/coincident_peak.json")
-        @test results["ElectricTariff"]["year_one_coincident_peak_cost_before_tax"] ≈ 11.1
+        @test results["ElectricTariff"]["year_one_coincident_peak_cost_before_tax"] ≈ 15.0
     end
 
     @testset "URDB sell rate" begin
@@ -641,7 +644,8 @@ end
 
 @testset "Wind" begin
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt(m, "./scenarios/wind.json")
+    d = JSON.parsefile("./scenarios/wind.json")
+    results = run_reopt(m, d)
     @test results["Wind"]["size_kw"] ≈ 3752 atol=0.1
     @test results["Financial"]["lcc"] ≈ 8.591017e6 rtol=1e-5
     #= 
@@ -658,6 +662,18 @@ end
 
     TODO: will these discrepancies be addressed once NMIL binaries are added?
     =#
+
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    d["Site"]["land_acres"] = 60 # = 2 MW (with 0.03 acres/kW)
+    results = run_reopt(m, d)
+    @test results["Wind"]["size_kw"] == 2000.0 # Wind should be constrained by land_acres
+
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    d["Wind"]["min_kw"] = 2001 # min_kw greater than land-constrained max should error
+    results = run_reopt(m, d)
+    @test "errors" ∈ keys(results["Messages"])
+    @test length(results["Messages"]["errors"]) > 0
+    
 end
 
 @testset "Multiple PVs" begin
@@ -736,8 +752,8 @@ end
     @test sum(r["HotThermalStorage"]["storage_to_load_series_mmbtu_per_hour"]) ≈ 149.45 atol=0.1
     @test sum(r["ColdThermalStorage"]["storage_to_load_series_ton"]) ≈ 12454.33 atol=0.1
     #size should be just over 10kW in gallons, accounting for efficiency losses and min SOC
-    @test r["HotThermalStorage"]["size_gal"] ≈ 227.89 atol=0.1
-    @test r["ColdThermalStorage"]["size_gal"] ≈ 379.82 atol=0.1
+    @test r["HotThermalStorage"]["size_gal"] ≈ 233.0 atol=0.1
+    @test r["ColdThermalStorage"]["size_gal"] ≈ 378.0 atol=0.1
     #No production from existing chiller, only absorption chiller, which is sized at ~5kW to manage electric demand charge & capital cost.
     @test r["ExistingChiller"]["annual_thermal_production_tonhour"] ≈ 0.0 atol=0.1
     @test r["AbsorptionChiller"]["annual_thermal_production_tonhour"] ≈ 12464.15 atol=0.1
@@ -1178,7 +1194,13 @@ end
     
     ghp_option_chosen = results["GHP"]["ghp_option_chosen"]
     @test ghp_option_chosen == 2
-    
+
+    # Test GHP heating and cooling load reduced
+    hot_load_reduced_mmbtu = sum(results["GHP"]["space_heating_thermal_load_reduction_with_ghp_mmbtu_per_hour"])
+    cold_load_reduced_tonhour = sum(results["GHP"]["cooling_thermal_load_reduction_with_ghp_ton"])
+    @test hot_load_reduced_mmbtu ≈ 1440.00 atol=0.1
+    @test cold_load_reduced_tonhour ≈ 761382.78 atol=0.1
+
     # Test GHP serving space heating with VAV thermal efficiency improvements
     heating_served_mmbtu = sum(s.ghp_option_list[ghp_option_chosen].heating_thermal_kw / REopt.KWH_PER_MMBTU)
     expected_heating_served_mmbtu = 12000 * 0.8 * 0.85  # (fuel_mmbtu * boiler_effic * space_heating_efficiency_thermal_factor)
@@ -1550,6 +1572,7 @@ end
     @test "warnings" ∈ keys(r["Messages"])
     @test length(r["Messages"]["errors"]) > 0
     @test length(r["Messages"]["warnings"]) > 0
+    @test r["Messages"]["has_stacktrace"] == false
 
     m = Model(Xpress.Optimizer)
     r = run_reopt(m, d)
@@ -1596,6 +1619,7 @@ end
     @test "warnings" ∈ keys(r["Messages"])
     @test length(r["Messages"]["errors"]) > 0
     @test length(r["Messages"]["warnings"]) > 0
+    @test r["Messages"]["has_stacktrace"] == true
 
     m = Model(Xpress.Optimizer)
     r = run_reopt(m, d)
