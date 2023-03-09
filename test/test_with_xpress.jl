@@ -85,7 +85,7 @@ end
         data_cost_curve = JSON.parsefile("./scenarios/chp_sizing.json")
         data_cost_curve["CHP"] = Dict()
         data_cost_curve["CHP"]["prime_mover"] = "recip_engine"
-        data_cost_curve["CHP"]["size_class"] = 2
+        data_cost_curve["CHP"]["size_class"] = 3
         data_cost_curve["CHP"]["fuel_cost_per_mmbtu"] = 8.0
         data_cost_curve["CHP"]["min_kw"] = 0
         data_cost_curve["CHP"]["min_allowable_kw"] = 555.5

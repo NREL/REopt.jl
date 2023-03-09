@@ -51,7 +51,7 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
     unavailability_periods::AbstractVector{Dict} = Dict[] # CHP unavailability periods for scheduled and unscheduled maintenance, list of dictionaries with keys of "['month', 'start_week_of_month', 'start_day_of_week', 'start_hour', 'duration_hours'] all values are one-indexed and start_day_of_week uses 1 for Monday, 7 for Sunday
 
     # Optional inputs:
-    size_class::Union{Int, Nothing} = nothing # CHP size class for using appropriate default inputs 
+    size_class::Union{Int, Nothing} = nothing # CHP size class for using appropriate default inputs, with size_class=0 using an average of all other size class data 
     min_kw::Float64 = 0.0 # Minimum CHP size (based on electric) constraint for optimization 
     fuel_type::String = "natural_gas" # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     om_cost_per_kw::Float64 = 0.0 # Annual CHP fixed operations and maintenance costs in \$/kw-yr 
@@ -93,7 +93,7 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
 
 !!! note "Defaults and required inputs"
     See the `get_chp_defaults_prime_mover_size_class()` function docstring for details on the logic of choosing the type of CHP that is modeled
-    If no information is provided, the default `prime_mover` is `recip_engine` and the `size_class` is 1 which represents
+    If no information is provided, the default `prime_mover` is `recip_engine` and the `size_class` is 0 which represents
     the widest range of sizes available.
 
     `fuel_cost_per_mmbtu` is always required and can be a scalar, a list of 12 monthly values, or a time series of values for every time step
@@ -272,14 +272,14 @@ custom_chp_inputs, i.e.
 function get_prime_mover_defaults(prime_mover::String, boiler_type::String, size_class::Int, prime_mover_defaults_all::Dict)
     pmds = prime_mover_defaults_all
     prime_mover_defaults = Dict{String, Any}()
-
+    # Since size_class=0 is the first entry in the one-based indexed arrays in Julia, we need to add 1 for indexing
     for key in keys(pmds[prime_mover])
         if key in ["thermal_efficiency_full_load", "thermal_efficiency_half_load"]
-            prime_mover_defaults[key] = pmds[prime_mover][key][boiler_type][size_class]
+            prime_mover_defaults[key] = pmds[prime_mover][key][boiler_type][size_class+1]
         elseif key == "unavailability_periods"
             prime_mover_defaults[key] = convert(Vector{Dict}, pmds[prime_mover][key])
         else
-            prime_mover_defaults[key] = pmds[prime_mover][key][size_class]
+            prime_mover_defaults[key] = pmds[prime_mover][key][size_class+1]
         end
     end
     pmds = nothing
@@ -308,7 +308,7 @@ Depending on the set of inputs, different sets of outputs are determine in addit
     3. Inputs: prime_mover and size_class
        Outputs: (uses default hot_water_or_steam)
     4. Inputs: prime_mover
-       Outputs: default average size_class = 1
+       Outputs: default average size_class = 0
 
 The main purpose of this function is to communicate the following mapping of dependency of CHP defaults versus 
     existing_boiler_production_type_steam_or_hot_water and avg_boiler_fuel_load_mmbtu_per_hour:
@@ -353,8 +353,9 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
 
     if !isnothing(size_class) && !isnothing(prime_mover) # Option 3
         n_classes = length(prime_mover_defaults_all[prime_mover]["installed_cost_per_kw"])
-        if size_class < 1 || size_class > n_classes
-            throw(@error("The size class $size_class input is outside the valid range of 1 to $n_classes for prime_mover $prime_mover"))
+        # Note, size_class=0 is first class, so (n_class-1) is largest valid size_class number
+        if size_class < 0 || size_class > (n_classes-1)
+            throw(@error("The size class $size_class input is outside the valid range of 0 to $(n_classes-1) for prime_mover $prime_mover"))
         end
     end
 
@@ -368,7 +369,7 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
             end
         end
         if isnothing(size_class)
-            size_class_calc = 1
+            size_class_calc = 0
         else
             size_class_calc = size_class
         end
@@ -377,8 +378,8 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
         else
             boiler_effic = boiler_efficiency
         end
-        therm_effic = prime_mover_defaults_all[prime_mover]["thermal_efficiency_full_load"][hot_water_or_steam][size_class_calc]
-        elec_effic = prime_mover_defaults_all[prime_mover]["electric_efficiency_full_load"][size_class_calc]
+        therm_effic = prime_mover_defaults_all[prime_mover]["thermal_efficiency_full_load"][hot_water_or_steam][size_class_calc+1]
+        elec_effic = prime_mover_defaults_all[prime_mover]["electric_efficiency_full_load"][size_class_calc+1]
         avg_heating_thermal_load_mmbtu_per_hr = avg_boiler_fuel_load_mmbtu_per_hour * boiler_effic
         chp_fuel_rate_mmbtu_per_hr = avg_heating_thermal_load_mmbtu_per_hr / therm_effic
         chp_elec_size_heuristic_kw = chp_fuel_rate_mmbtu_per_hr * elec_effic * KWH_PER_MMBTU
@@ -397,15 +398,15 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
 
     # If size class is specified use that and ignore heuristic CHP sizing for determining size class
     if !isnothing(size_class)
-        if size_class < 1 || size_class > n_classes
-            throw(@error("The size class $size_class input is outside the valid range of 1 to $n_classes for prime_mover $prime_mover"))
+        if size_class < 0 || size_class > (n_classes-1)
+            throw(@error("The size class $size_class input is outside the valid range of 1 to $(n_classes-1) for prime_mover $prime_mover"))
         end
     # If size class is not specified, heuristic sizing based on avg thermal load and size class 0 efficiencies
     elseif isnothing(size_class) && !isnothing(chp_elec_size_heuristic_kw)
         # With heuristic size, find the suggested size class
         if chp_elec_size_heuristic_kw < class_bounds[2][2]
             # If smaller than the upper bound of the smallest class, assign the smallest class
-            size_class = 2
+            size_class = 1
         elseif chp_elec_size_heuristic_kw >= class_bounds[n_classes][1]
             # If larger than or equal to the lower bound of the largest class, assign the largest class
             size_class = n_classes # Size classes are one-indexed
