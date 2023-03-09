@@ -23,7 +23,12 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2023-03-09
+### Changed 
+- Financial **breakeven_cost_of_emissions_reduction_per_tonnes_CO2** to **breakeven_cost_of_emissions_reduction_per_tonne_CO2**
 
+### Added 
+- Previously missing Financial BAU outputs: **lifecycle_om_costs_before_tax**, **lifecycle_om_costs_after_tax**, **year_one_om_costs_before_tax**
 ## v0.26.0
 ### Added 
 - Added `has_stacktrace` boolean which is returned with error messages and indicates if error is of type which contains stacktrace
