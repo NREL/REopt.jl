@@ -42,8 +42,6 @@
 - `year_one_export_benefit_before_tax` export credits over the first year, before considering tax benefits
 - `lifecycle_coincident_peak_cost_after_tax` lifecycle coincident peak charge in present value, after tax
 - `year_one_coincident_peak_cost_before_tax` coincident peak charge over the first year
-- TODO: `year_one_demand_cost_series_us_dollars_per_kw`
-- TODO: `year_one_energy_cost_series_us_dollars_per_kwh`
 """
 function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     # Adds the `ElectricTariff` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
