@@ -165,10 +165,10 @@ function assign_st_elec_and_therm_prod_ratios!(st::SteamTurbine)
     p_in_pa = (st.inlet_steam_pressure_psig / 14.5038 + 1.01325) * 1.0E5
     if isnan(st.inlet_steam_temperature_degF)
         t_in_sat_k = PropsSI("T","P",p_in_pa,"Q",1.0,"Water")
-        t_superheat_in_k = (st.inlet_steam_superheat_degF - 32.0) * 5.0 / 9.0 + 273.15
+        t_superheat_in_k = convert_temp_degF_to_Kelvin(st.inlet_steam_superheat_degF)
         t_in_k = t_in_sat_k + t_superheat_in_k
     else
-        t_in_k = (st.inlet_steam_temperature_degF - 32.0) * 5.0 / 9.0 + 273.15
+        t_in_k = convert_temp_degF_to_Kelvin(st.inlet_steam_temperature_degF)
     end
     h_in_j_per_kg = PropsSI("H","P",p_in_pa,"T",t_in_k,"Water")
     s_in_j_per_kgK = PropsSI("S","P",p_in_pa,"T",t_in_k,"Water")

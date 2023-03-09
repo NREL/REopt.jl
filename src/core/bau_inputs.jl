@@ -128,7 +128,7 @@ function BAUInputs(p::REoptInputs)
 
     # Assign null GHP parameters for REoptInputs
     ghp_options, require_ghp_purchase, ghp_heating_thermal_load_served_kw, 
-        ghp_cooling_thermal_load_served_kw, heating_thermal_load_reduction_with_ghp_kw, 
+        ghp_cooling_thermal_load_served_kw, space_heating_thermal_load_reduction_with_ghp_kw, 
         cooling_thermal_load_reduction_with_ghp_kw, ghp_electric_consumption_kw, 
         ghp_installed_cost, ghp_om_cost_year_one = setup_ghp_inputs(bau_scenario, p.time_steps, p.time_steps_without_grid)    
 
@@ -199,7 +199,7 @@ function BAUInputs(p::REoptInputs)
         require_ghp_purchase,
         ghp_heating_thermal_load_served_kw,
         ghp_cooling_thermal_load_served_kw,
-        heating_thermal_load_reduction_with_ghp_kw,
+        space_heating_thermal_load_reduction_with_ghp_kw,
         cooling_thermal_load_reduction_with_ghp_kw,
         ghp_electric_consumption_kw,
         ghp_installed_cost,
