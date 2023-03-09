@@ -334,11 +334,12 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
     pbi_series = Float64[]
     pbi_series_bau = Float64[]
     existing_energy_bau = third_party ? get(results[tech_name], "year_one_energy_produced_kwh_bau", 0) : 0
+    year_one_energy = "year_one_energy_produced_kwh" in keys(results[tech_name]) ? results[tech_name]["year_one_energy_produced_kwh"] : results[tech_name]["annual_energy_produced_kwh"]
     for yr in range(0, stop=years-1)
         if yr < tech.production_incentive_years
             degredation_fraction = :degradation_fraction in fieldnames(typeof(tech)) ? (1 - tech.degradation_fraction)^yr : 1.0
             base_pbi = minimum([
-                tech.production_incentive_per_kwh * (results[tech_name]["year_one_energy_produced_kwh"] - existing_energy_bau) * degredation_fraction,  
+                tech.production_incentive_per_kwh * (year_one_energy - existing_energy_bau) * degredation_fraction,  
                 tech.production_incentive_max_benefit * degredation_fraction
             ])
             base_pbi_bau = minimum([
