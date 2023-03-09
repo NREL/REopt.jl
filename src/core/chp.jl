@@ -409,13 +409,14 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
             size_class = 1
         elseif chp_elec_size_heuristic_kw >= class_bounds[n_classes][1]
             # If larger than or equal to the lower bound of the largest class, assign the largest class
-            size_class = n_classes # Size classes are one-indexed
+            size_class = n_classes - 1 # Size classes are one-indexed
         else
             # For middle size classes
-            for sc in 2:(n_classes-1)
+            for sc in 3:(n_classes-1)
                 if chp_elec_size_heuristic_kw >= class_bounds[sc][1] && 
                     chp_elec_size_heuristic_kw < class_bounds[sc][2]
-                    size_class = sc
+                    size_class = sc - 1
+                    break
                 end
             end
         end
