@@ -346,7 +346,7 @@ function generate_year_profile_hourly(year::Int64, consecutive_periods::Abstract
 
     # Note, day = 1 is Monday, not Sunday
     day_of_week_name = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    for i in 1:length(consecutive_periods)
+    for i in eachindex(consecutive_periods)
         start_month = convert(Int,consecutive_periods[i]["month"])
         start_week_of_month = convert(Int,consecutive_periods[i]["start_week_of_month"])
         start_day_of_week = convert(Int,consecutive_periods[i]["start_day_of_week"])  # Monday - Sunday is 1 - 7
