@@ -241,16 +241,17 @@ function get_steam_turbine_defaults_size_class(;avg_boiler_fuel_load_mmbtu_per_h
         # With heuristic size, find the suggested size class
         if st_elec_size_heuristic_kw < class_bounds[2][2]
             # If smaller than the upper bound of the smallest class, assign the smallest class
-            size_class = 2
+            size_class = 1
         elseif st_elec_size_heuristic_kw >= class_bounds[n_classes][1]
             # If larger than or equal to the lower bound of the largest class, assign the largest class
             size_class = n_classes - 1  # Size classes are zero-indexed
         else
             # For middle size classes
-            for sc in 2:(n_classes-1)
+            for sc in 3:(n_classes-1)
                 if st_elec_size_heuristic_kw >= class_bounds[sc][1] &&
                     st_elec_size_heuristic_kw < class_bounds[sc][2]
-                    size_class = sc
+                    size_class = sc - 1
+                    break
                 end
             end
         end

@@ -421,7 +421,7 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
             end
         end
     else
-        size_class = 1
+        size_class = 0
     end
 
     prime_mover_defaults = get_prime_mover_defaults(prime_mover, hot_water_or_steam, size_class, prime_mover_defaults_all)
