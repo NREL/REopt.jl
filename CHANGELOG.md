@@ -23,9 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
     
-## Develop
+## v0.27.0
 ### Added
-- capability to model limited reliability of backup generators and calculate survival probability metrics during power outages
+- Energy Resilience Performance post-process tool: capability to model limited reliability of backup generators and RE, and calculate survival probability metrics during power outages
+- Exported `backup_reliability` function to run the reliability based calculations
 
 
 ## v0.26.0
