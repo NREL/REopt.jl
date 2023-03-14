@@ -15,3 +15,8 @@ build_reopt!
 ```@docs
 simulate_outages
 ```
+
+## backup_reliability
+```@docs
+backup_reliability
+```
