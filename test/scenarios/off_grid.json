@@ -24,8 +24,8 @@
         "max_kw": 100,
         "replacement_year": 10,
         "replace_cost_per_kw": 700,
-        "fuel_intercept_gal_per_hr": 0.0,
-        "fuel_slope_gal_per_kwh": 0.076
+        "electric_efficiency_full_load": 0.3233,
+        "electric_efficiency_half_load": 0.3233
     },
     "ElectricLoad": {
         "doe_reference_name": "RetailStore",

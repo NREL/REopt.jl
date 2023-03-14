@@ -22,6 +22,10 @@ Classify the change according to the following categories:
     ### Fixed
     ### Deprecated
     ### Removed
+    
+## Develop
+### Added
+- capability to model limited reliability of backup generators and calculate survival probability metrics during power outages
 
 
 ## v0.26.0
