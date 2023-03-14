@@ -509,6 +509,11 @@ end
     @test results["Outages"]["expected_outage_cost"] ≈ 485.43270 atol=1.0e-5  #avg duration (3h) * load per time step (10) * present worth factor (16.18109)
     @test results["Outages"]["max_outage_cost_per_outage_duration"][1] ≈ 161.8109 atol=1.0e-5
 
+    # Scenario with generator, PV, electric storage
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, "./scenarios/outages_gen_pv_stor.json")
+    @test results["Outages"]["expected_outage_cost"] ≈ 4.800393567995261e6 atol=10
+    @test results["Financial"]["lcc"] ≈ 8.9857671584e7 atol=100
 end
 
 @testset "Multiple Sites" begin
