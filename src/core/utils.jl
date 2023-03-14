@@ -99,6 +99,28 @@ function levelization_factor(years::Int, rate_escalation::Real, rate_discount::R
 end
 
 
+function include_replacement_macrs(macrs_schedule_arr::Array{Float64,1}, replacement_year::Int64)
+    # Determine the length of the new macrs array
+    new_macrs_len = length(macrs_schedule_arr) + replacement_year
+    
+    # Create a new array of length new_macrs_len with all zeros
+    new_macrs_array = zeros(Float64, new_macrs_len)
+    
+    # Copy the original macrs array into the first positions of the new  macrs array
+    new_macrs_array[1:length(macrs_schedule_arr)] = macrs_schedule_arr
+    
+    # Calculate the starting index of the copy macrs array in the new macrs array
+    copy_start = replacement_year + 1
+    
+    # Calculate the ending index of the copy macrs array in the new macrs array
+    copy_end = copy_start + length(macrs_schedule_arr) - 1
+    
+    # Copy the macrs array with the original values into the new array starting at the replacement year+1 index
+    new_macrs_array[copy_start:copy_end] = macrs_schedule_arr
+    
+    return new_macrs_array
+end
+
 function effective_cost(;
     itc_basis::Real, 
     replacement_cost::Real, 
@@ -123,36 +145,59 @@ function effective_cost(;
     """
 
     # itc reduces depreciable_basis
-    depr_basis = itc_basis * (1 - macrs_itc_reduction * itc)
+    depr_basis              = itc_basis * (1 - macrs_itc_reduction * itc)
 
     # Bonus depreciation taken from tech cost after itc reduction ($/kW)
-    bonus_depreciation = depr_basis * macrs_bonus_fraction
-
+    bonus_depreciation      = depr_basis * macrs_bonus_fraction 
+   
     # Assume the ITC and bonus depreciation reduce the depreciable basis ($/kW)
-    depr_basis -= bonus_depreciation
-
+    depr_basis             -= bonus_depreciation
+  
     # Calculate replacement cost, discounted to the replacement year accounting for tax deduction
-    replacement = replacement_cost * (1-tax_rate) / ((1 + discount_rate)^replacement_year)
+    # replacement = replacement_cost / ((1 + discount_rate)^replacement_year)
 
     # Compute savings from depreciation and itc in array to capture NPV
     tax_savings_array = [0.0]
+
+
+    og_macrs_schedule_length = length(macrs_schedule)
+
+    if replacement_year > 0 && replacement_year > og_macrs_schedule_length
+        macrs_schedule = include_replacement_macrs(macrs_schedule, replacement_year)
+    end
+
     for (idx, macrs_rate) in enumerate(macrs_schedule)
-        depreciation_amount = macrs_rate * depr_basis
-        if idx == 1
-            depreciation_amount += bonus_depreciation
+
+        if idx > replacement_year && replacement_year > og_macrs_schedule_length
+            bonus_basis_rep         = replacement_cost*(1 - macrs_itc_reduction*itc)
+            basis_rep               = bonus_basis_rep*(1-macrs_bonus_fraction)
+            bonus_depreciation_rep  = bonus_basis_rep*macrs_bonus_fraction
+            depreciation_amount     = basis_rep*macrs_rate
+
+            if idx == replacement_year+1
+                depreciation_amount += bonus_depreciation_rep
+            end
+        
+        else
+            depreciation_amount = macrs_rate * depr_basis
+            if idx == 1
+                depreciation_amount += bonus_depreciation
+            end
         end
+
         taxable_income = depreciation_amount
         push!(tax_savings_array, taxable_income * tax_rate)
     end
 
     # Add the ITC to the tax savings
-    tax_savings_array[2] += itc_basis * itc
+    tax_savings_array[2]                    += itc_basis* itc 
+    tax_savings_array[replacement_year+1]   += basis_rep*itc
 
     # Compute the net present value of the tax savings
     tax_savings = npv(discount_rate, tax_savings_array)
 
     # Adjust cost curve to account for itc and depreciation savings ($/kW)
-    cap_cost_slope = itc_basis - tax_savings + replacement - rebate_per_kw
+    cap_cost_slope = itc_basis + basis_rep - tax_savings - rebate_per_kw
 
     # Sanity check
     if cap_cost_slope < 0
