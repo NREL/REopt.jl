@@ -112,15 +112,15 @@ end
 
 
 function add_MG_fuel_burn_constraints(m,p)
-	# fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr = generator_fuel_slope_and_intercept(
-	# 	electric_efficiency_full_load=p.s.generator.electric_efficiency_full_load, 
-	# 	electric_efficiency_half_load=p.s.generator.electric_efficiency_half_load
-	# )
+	fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr = generator_fuel_slope_and_intercept(
+		electric_efficiency_full_load=p.s.generator.electric_efficiency_full_load, 
+		electric_efficiency_half_load=p.s.generator.electric_efficiency_half_load
+	)
     # Define dvMGFuelUsed by summing over outage time_steps.
     @constraint(m, [t in p.techs.gen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps],
-        m[:dvMGFuelUsed][t, s, tz] == p.s.generator.fuel_slope_gal_per_kwh * p.hours_per_time_step * p.levelization_factor[t] *
+        m[:dvMGFuelUsed][t, s, tz] == fuel_slope_gal_per_kwhe * p.hours_per_time_step * p.levelization_factor[t] *
         sum( p.production_factor[t, tz+ts-1] * m[:dvMGRatedProduction][t, s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s])
-        + p.s.generator.fuel_intercept_gal_per_hr * p.hours_per_time_step * 
+        + fuel_intercept_gal_per_hr * p.hours_per_time_step * 
         sum( m[:binMGGenIsOnInTS][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s])
     )
 
