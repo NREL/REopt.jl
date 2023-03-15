@@ -25,8 +25,9 @@ Classify the change according to the following categories:
     
 ## v0.27.0
 ### Added
-- Energy Resilience Performance post-process tool: capability to model limited reliability of backup generators and RE, and calculate survival probability metrics during power outages
+- Energy Resilience Performance tool: capability to model limited reliability of backup generators and RE, and calculate survival probability metrics during power outages for a DER scenario
 - Exported `backup_reliability` function to run the reliability based calculations
+### Changed
 - Changed `Generator` inputs **fuel_slope_gal_per_kwh** and **fuel_intercept_gal_per_hr** to **electric_efficiency_full_load** and **electric_efficiency_half_load** to represent the same fuel burn curve in a different way consistent with `CHP`
 
 ## v0.26.0
