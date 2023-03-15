@@ -71,6 +71,7 @@ global hdl = nothing
 using JLD
 using Requires
 using CoolProp
+using LinearAlgebra
 using CSV
 using DataFrames
 
