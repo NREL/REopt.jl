@@ -25,7 +25,7 @@ Classify the change according to the following categories:
 
 ## Develop 2023-03-10
 ### Changed
-- Changed `CHP.size_class` to start at 0 instead of 1, constent with the API, and 0 represents the average of all `size_class`s
+- Changed `CHP.size_class` to start at 0 instead of 1, consistent with the API, and 0 represents the average of all `size_class`s
     
 ## v0.27.0
 ### Added
