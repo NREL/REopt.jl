@@ -320,6 +320,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         boiler_inputs[:time_steps_per_hour] = settings.time_steps_per_hour
         if haskey(d, "ExistingBoiler")
             boiler_inputs = merge(boiler_inputs, dictkeys_tosymbols(d["ExistingBoiler"]))
+        else
+            throw(@error("Must include ExistingBoiler input with at least fuel_cost_per_mmbtu if modeling heating load"))
         end
         existing_boiler = ExistingBoiler(; boiler_inputs...)
     end
