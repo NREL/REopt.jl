@@ -32,7 +32,7 @@
 - `lcc` Optimal lifecycle cost
 - `lifecycle_generation_tech_capital_costs` LCC component. Net capital costs for all generation technologies, in present value, including replacement costs and incentives. This value does not include offgrid_other_capital_costs.
 - `lifecycle_storage_capital_costs` LCC component. Net capital costs for all storage technologies, in present value, including replacement costs and incentives. This value does not include offgrid_other_capital_costs.
-- `lifecycle_om_costs_after_tax` LCC component. Present value of all O&M costs, after tax.
+- `lifecycle_om_costs_after_tax` LCC component. Present value of all O&M costs, after tax. (does not include fuel costs)
 - `lifecycle_fuel_costs_after_tax` LCC component. Present value of all fuel costs over the analysis period, after tax.
 - `lifecycle_chp_standby_cost_after_tax` LCC component. Present value of all CHP standby charges, after tax.
 - `lifecycle_elecbill_after_tax` LCC component. Present value of all electric utility charges, after tax. 
@@ -57,7 +57,7 @@
 - `lifecycle_emissions_cost_health` LCC component if Settings input include_health_in_objective is true. Present value of NOx, SO2, and PM2.5 emissions cost over the analysis period.
 
 calculated in combine_results function if BAU scenario is run:
-- `breakeven_cost_of_emissions_reduction_per_tonnes_CO2`
+- `breakeven_cost_of_emissions_reduction_per_tonne_CO2`
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
 	REopt performs load balances using average annual production values for technologies that include degradation. 
