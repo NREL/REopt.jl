@@ -344,7 +344,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             avg_boiler_fuel_load_mmbtu_per_hour = sum(total_fuel_heating_load_mmbtu_per_hour) / length(total_fuel_heating_load_mmbtu_per_hour)
             chp = CHP(d["CHP"]; 
                     avg_boiler_fuel_load_mmbtu_per_hour = avg_boiler_fuel_load_mmbtu_per_hour,
-                    existing_boiler = existing_boiler)
+                    existing_boiler = existing_boiler,
+                    electric_load_series_kw = electric_load.loads_kw)
         else # Only if modeling CHP without heating_load and existing_boiler (for electric-only CHP)
             chp = CHP(d["CHP"])
         end
