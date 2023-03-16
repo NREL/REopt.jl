@@ -347,7 +347,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     existing_boiler = existing_boiler,
                     electric_load_series_kw = electric_load.loads_kw)
         else # Only if modeling CHP without heating_load and existing_boiler (for electric-only CHP)
-            chp = CHP(d["CHP"])
+            chp = CHP(d["CHP"],
+                    electric_load_series_kw = electric_load.loads_kw)
         end
         chp_prime_mover = chp.prime_mover
     end
