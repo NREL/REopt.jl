@@ -22,6 +22,18 @@ Classify the change according to the following categories:
     ### Fixed
     ### Deprecated
     ### Removed
+
+
+## v0.28
+### Changed 
+- Changed Financial **breakeven_cost_of_emissions_reduction_per_tonnes_CO2** to **breakeven_cost_of_emissions_reduction_per_tonne_CO2**
+- Changed `CHP.size_class` to start at 0 instead of 1, consistent with the API, and 0 represents the average of all `size_class`s
+- Change `CHP.max_kw` to be based on either the heuristic sizing from average heating load (if heating) or peak electric load (if no heating, aka Prime Generator in the UI)
+  - The "big_number" for `max_kw` was causing the model to take forever to solve and some erroneous behavior; this is also consistent with the API to limit max_kw to a reasonable number
+### Added 
+- Added previously missing Financial BAU outputs: **lifecycle_om_costs_before_tax**, **lifecycle_om_costs_after_tax**, **year_one_om_costs_before_tax**
+### Fixed
+- Fixed if statement to determing ElectricLoad "year" from && to ||, so that defaults to 2017 if any CRB input is used
     
 ## v0.27.0
 ### Added
