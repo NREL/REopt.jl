@@ -39,6 +39,7 @@
 - `annual_energy_produced_kwh` Average annual energy produced
 - `lcoe_per_kwh` Levelized Cost of Energy produced by the PV system
 - `electric_curtailed_series_kw` Vector of power curtailed over an average year
+- `production_factor_series` Wind production factor in each time step, either provided by user or obtained from SAM
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
 	REopt performs load balances using average annual production values for technologies that include degradation. 
@@ -50,6 +51,7 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 
     r = Dict{String, Any}()
     t = "Wind"
+	r["production_factor_series"] = p.production_factor[t, :]
 	per_unit_size_om = @expression(m, p.third_party_factor * p.pwf_om * m[:dvSize][t] * p.om_cost_per_kw[t])
 
 	r["size_kw"] = round(value(m[:dvSize][t]), digits=2)

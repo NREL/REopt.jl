@@ -47,7 +47,7 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
     thermal_efficiency_half_load::Float64 = NaN # CHP fraction of fuel energy converted to hot-thermal energy at half electric load
     min_allowable_kw::Float64 = NaN # Minimum CHP size (based on electric) that still allows the model to choose zero (e.g. no CHP system)
     cooling_thermal_factor::Float64 = NaN  # only needed with cooling load
-    unavailability_periods::AbstractVector{Dict} = Dict[] # CHP unavailability periods for scheduled and unscheduled maintenance, list of dictionaries with keys of "['month', 'start_week_of_month', 'start_day_of_week', 'start_hour', 'duration_hours'] all values are one-indexed and start_day_of_week uses 1 for Monday, 7 for Sunday
+    unavailability_periods::AbstractVector{Dict} = Dict[] # CHP unavailability periods for scheduled and unscheduled maintenance, list of dictionaries with keys of "['month', 'start_week_of_month', 'start_day_of_week', 'start_hour', 'duration_hours'] all values are zero-indexed and start_day_of_week uses 1 for Monday, 7 for Sunday
 
     # Optional inputs:
     size_class::Union{Int, Nothing} = nothing # CHP size class for using appropriate default inputs, with size_class=0 using an average of all other size class data 
@@ -449,7 +449,7 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
             size_class = 1
         elseif chp_elec_size_heuristic_kw >= class_bounds[n_classes][1]
             # If larger than or equal to the lower bound of the largest class, assign the largest class
-            size_class = n_classes - 1 # Size classes are one-indexed
+            size_class = n_classes - 1 # Size classes are zero-indexed
         else
             # For middle size classes
             for sc in 3:(n_classes-1)

@@ -25,7 +25,13 @@ Classify the change according to the following categories:
 
 ## Develop 2023-03-10
 ### Changed
-- Changed `CHP.size_class` to start at 0 instead of 1, constent with the API, and 0 represents the average of all `size_class`s
+- Changed `CHP.size_class` to start at 0 instead of 1, consistent with the API, and 0 represents the average of all `size_class`s
+    
+## v0.27.0
+### Added
+- Energy Resilience Performance post-process tool: capability to model limited reliability of backup generators and RE, and calculate survival probability metrics during power outages
+- Exported `backup_reliability` function to run the reliability based calculations
+- Changed `Generator` inputs **fuel_slope_gal_per_kwh** and **fuel_intercept_gal_per_hr** to **electric_efficiency_full_load** and **electric_efficiency_half_load** to represent the same fuel burn curve in a different way consistent with `CHP`
 
 ## v0.26.0
 ### Added 
@@ -43,8 +49,8 @@ Classify the change according to the following categories:
 - Round Hot and Cold TES size result to 0 digits
 - Use CoolProp to get water properties for Hot and Cold TES based on average of temperature inputs
 ### Fixed
-- `Wind` evaluations with BAU - was temporarily broken because of an unconverted `year_one` -> `annual` expected name
-- Fixed calculation of `year_one_coincident_peak_cost_before_tax` in **ElectricTariff** results to correctly calculate before-tax value. Previously, the after-tax value was being calculated for this field instead.
+- `Wind` evaluations with BAU - was temporarily broken because of an unconverted **year_one** -> **annual** expected name
+- Fixed calculation of **year_one_coincident_peak_cost_before_tax** in `ElectricTariff` results to correctly calculate before-tax value. Previously, the after-tax value was being calculated for this field instead.
 - Fixed `outage_simulator` to work with sub-hourly outage simulation scenarios
 - Fixed a bug which threw an error when providing time-series thermal load inputs in a scenario inputs .json.
 - Fixed calculation of ["Financial"]["lifecycle_om_costs_before_tax_bau"] (was previously showing after tax result)
