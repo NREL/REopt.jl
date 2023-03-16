@@ -893,6 +893,9 @@ end
     @test round(total_chiller_electric_consumption, digits=0) ≈ round(expected_cooling_electricity) atol=1.0
     @test round(total_chiller_electric_consumption, digits=0) ≈ 3876410 atol=1.0
 
+    # Check that without heating load or max_kw input, CHP.max_kw gets set based on peak electric load
+    @test inputs.s.chp.max_kw ≈ maximum(inputs.s.electric_load.loads_kw) atol=0.01
+
     input_data["SpaceHeatingLoad"] = Dict{Any, Any}("monthly_mmbtu" => repeat([500.0], 12))
     input_data["DomesticHotWaterLoad"] = Dict{Any, Any}("monthly_mmbtu" => repeat([500.0], 12))
     input_data["CoolingLoad"] = Dict{Any, Any}("monthly_fractions_of_electric_load" => repeat([0.1], 12))
@@ -905,6 +908,8 @@ end
     #Update CHP prime_mover and test new defaults
     input_data["CHP"]["prime_mover"] = "combustion_turbine"
     input_data["CHP"]["size_class"] = 1
+    # Set max_kw higher than peak electric load so min_allowable_kw doesn't get assigned to max_kw
+    input_data["CHP"]["max_kw"] = 1000.0
 
     s = Scenario(input_data)
     inputs = REoptInputs(s)
