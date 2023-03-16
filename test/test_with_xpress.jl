@@ -85,7 +85,7 @@ end
         data_cost_curve = JSON.parsefile("./scenarios/chp_sizing.json")
         data_cost_curve["CHP"] = Dict()
         data_cost_curve["CHP"]["prime_mover"] = "recip_engine"
-        data_cost_curve["CHP"]["size_class"] = 2
+        data_cost_curve["CHP"]["size_class"] = 1
         data_cost_curve["CHP"]["fuel_cost_per_mmbtu"] = 8.0
         data_cost_curve["CHP"]["min_kw"] = 0
         data_cost_curve["CHP"]["min_allowable_kw"] = 555.5
@@ -876,7 +876,7 @@ end
     total_chiller_electric_consumption = sum(inputs.s.cooling_load.loads_kw_thermal) / inputs.s.existing_chiller.cop
     @test round(total_chiller_electric_consumption, digits=0) ≈ 320544.0 atol=1.0  # loads_kw is **electric**, loads_kw_thermal is **thermal**
 
-    #Test CHP defaults use average fuel load, size class 3 for recip_engine 
+    #Test CHP defaults use average fuel load, size class 2 for recip_engine 
     @test inputs.s.chp.min_allowable_kw ≈ 50.0 atol=0.01
     @test inputs.s.chp.om_cost_per_kwh ≈ 0.0225 atol=0.0001
 
@@ -893,18 +893,23 @@ end
     @test round(total_chiller_electric_consumption, digits=0) ≈ round(expected_cooling_electricity) atol=1.0
     @test round(total_chiller_electric_consumption, digits=0) ≈ 3876410 atol=1.0
 
+    # Check that without heating load or max_kw input, CHP.max_kw gets set based on peak electric load
+    @test inputs.s.chp.max_kw ≈ maximum(inputs.s.electric_load.loads_kw) atol=0.01
+
     input_data["SpaceHeatingLoad"] = Dict{Any, Any}("monthly_mmbtu" => repeat([500.0], 12))
     input_data["DomesticHotWaterLoad"] = Dict{Any, Any}("monthly_mmbtu" => repeat([500.0], 12))
     input_data["CoolingLoad"] = Dict{Any, Any}("monthly_fractions_of_electric_load" => repeat([0.1], 12))
 
     s = Scenario(input_data)
     inputs = REoptInputs(s)
-    #Test CHP defaults use average fuel load, size class changes to 4
+    #Test CHP defaults use average fuel load, size class changes to 3
     @test inputs.s.chp.min_allowable_kw ≈ 315.0 atol=0.1
     @test inputs.s.chp.om_cost_per_kwh ≈ 0.02 atol=0.0001
     #Update CHP prime_mover and test new defaults
     input_data["CHP"]["prime_mover"] = "combustion_turbine"
-    input_data["CHP"]["size_class"] = 2
+    input_data["CHP"]["size_class"] = 1
+    # Set max_kw higher than peak electric load so min_allowable_kw doesn't get assigned to max_kw
+    input_data["CHP"]["max_kw"] = 1000.0
 
     s = Scenario(input_data)
     inputs = REoptInputs(s)
@@ -1283,8 +1288,8 @@ end
         yr1_grid_emissions_tonnes_CO2_out = results["ElectricUtility"]["annual_emissions_tonnes_CO2"]
         yr1_total_emissions_calced_tonnes_CO2 = yr1_fuel_emissions_tonnes_CO2_out + yr1_grid_emissions_tonnes_CO2_out 
         @test annual_emissions_tonnes_CO2_out ≈ yr1_total_emissions_calced_tonnes_CO2 atol=1e-1
-        if haskey(results["Financial"],"breakeven_cost_of_emissions_reduction_per_tonnes_CO2")
-            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"] >= 0.0
+        if haskey(results["Financial"],"breakeven_cost_of_emissions_reduction_per_tonne_CO2")
+            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] >= 0.0
         end
         
         if i == 1
@@ -1300,7 +1305,7 @@ end
             @test results["Site"]["total_renewable_energy_fraction"] ≈ 0.8
             @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.14495 atol=1e-4
             @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.61865 atol=1e-4
-            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"] ≈ 283.5 atol=1
+            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 283.5 atol=1
             @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 11.36 atol=1e-2
             @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 32.16 atol=1e-2
             @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 6.96
@@ -1334,7 +1339,7 @@ end
             @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.1365 atol=1e-3 # 0.1354 atol=1e-3
             # CO2 emissions - totals ≈  from grid, from fuelburn, ER, $/tCO2 breakeven
             @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.8 atol=1e-3 # 0.8
-            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"] ≈ 351.24 atol=1e-1
+            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 351.24 atol=1e-1
             @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 14.2 atol=1
             @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 70.99 atol=1
             @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
@@ -1357,13 +1362,13 @@ end
             inputs["ElectricStorage"]["max_kw"] = results["ElectricStorage"]["size_kw"]
             inputs["ElectricStorage"]["min_kwh"] = results["ElectricStorage"]["size_kwh"]
             inputs["ElectricStorage"]["max_kwh"] = results["ElectricStorage"]["size_kwh"]
-            inputs["Financial"]["CO2_cost_per_tonne"] = results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"]
+            inputs["Financial"]["CO2_cost_per_tonne"] = results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"]
             inputs["Settings"]["include_climate_in_objective"] = true
             m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
             m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
             results = run_reopt([m1, m2], inputs)
             @test results["Financial"]["npv"]/expected_npv ≈ 0 atol=1e-3
-            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"] ≈ inputs["Financial"]["CO2_cost_per_tonne"] atol=1e-1
+            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ inputs["Financial"]["CO2_cost_per_tonne"] atol=1e-1
         elseif i == 3
             @test results["PV"]["size_kw"] ≈ 20.0 atol=1e-1
             @test !haskey(results, "Wind")
@@ -1484,7 +1489,7 @@ end
     # Add CHP 
     input_data["CHP"] = Dict{Any, Any}([
                         ("prime_mover", "recip_engine"),
-                        ("size_class", 2),
+                        ("size_class", 1),
                         ("min_kw", 250.0),
                         ("min_allowable_kw", 0.0),
                         ("max_kw", 250.0),
