@@ -166,9 +166,11 @@ end
 function dictkeys_tosymbols(d::Dict)
     d2 = Dict()
     for (k, v) in d
-        # handling some type conversions for API inputs and JSON
+        # handling array type conversions for API inputs and JSON
         if k in [
             "loads_kw", "critical_loads_kw",
+            "thermal_loads_ton",
+            "fuel_loads_mmbtu_per_hour",
             "monthly_totals_kwh",
             "production_factor_series", 
             "monthly_energy_rates", "monthly_demand_rates",
@@ -179,8 +181,10 @@ function dictkeys_tosymbols(d::Dict)
             "emissions_factor_series_lb_CO2_per_kwh",
             "emissions_factor_series_lb_NOx_per_kwh", 
             "emissions_factor_series_lb_SO2_per_kwh",
-            "emissions_factor_series_lb_PM25_per_kwh"
-            ] && !isnothing(v)
+            "emissions_factor_series_lb_PM25_per_kwh",
+            #for ERP
+            "pv_production_factor_series", "battery_starting_soc_series_fraction"
+        ] && !isnothing(v)
             try
                 v = convert(Array{Real, 1}, v)
             catch
@@ -215,16 +219,42 @@ function dictkeys_tosymbols(d::Dict)
             end
         end
         if k in [
-            "fuel_cost_per_mmbtu", "wholesale_rate"
-            ] && !isnothing(v)
+            "fuel_limit_is_per_generator" #for ERP
+        ]
+            if !(typeof(v) <: Bool)
+                try
+                    v = convert(Array{Bool, 1}, v)
+                catch
+                    throw(@error("Unable to convert $k to a Array{Bool, 1}"))
+                end
+            end
+        end
+        if k in [
+            "fuel_cost_per_mmbtu", "wholesale_rate",
+            # for ERP
+            "generator_size_kw", "generator_operational_availability",
+            "generator_failure_to_start", "generator_mean_time_to_failure",
+            "generator_fuel_intercept_per_hr", "generator_fuel_burn_rate_per_kwh",
+            "fuel_limit"
+        ] && !isnothing(v)
             #if not a Real try to convert to an Array{Real} 
             if !(typeof(v) <: Real)
                 try
-                    if typeof(v) <: Array
-                        v = convert(Array{Real, 1}, v)
-                    end
+                    v = convert(Array{Real, 1}, v)
                 catch
                     throw(@error("Unable to convert $k to a Array{Real, 1} or Real"))
+                end
+            end
+        end
+        if k in [
+            "num_generators" #for ERP
+        ]
+            #if not a Real try to convert to an Array{Real} 
+            if !(typeof(v) <: Int)
+                try
+                    v = convert(Array{Int64, 1}, v)
+                catch
+                    throw(@error("Unable to convert $k to a Array{Int64, 1} or Int"))
                 end
             end
         end
@@ -316,7 +346,7 @@ function generate_year_profile_hourly(year::Int64, consecutive_periods::Abstract
 
     # Note, day = 1 is Monday, not Sunday
     day_of_week_name = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    for i in 1:length(consecutive_periods)
+    for i in eachindex(consecutive_periods)
         start_month = convert(Int,consecutive_periods[i]["month"])
         start_week_of_month = convert(Int,consecutive_periods[i]["start_week_of_month"])
         start_day_of_week = convert(Int,consecutive_periods[i]["start_day_of_week"])  # Monday - Sunday is 1 - 7
@@ -403,14 +433,20 @@ end
 
 """
     Convert gallons of stored liquid (e.g. water, water/glycol) to kWh of stored energy in a stratefied tank
+    Note: uses the PropsSI function from the CoolProp package.  Further details on inputs used are available
+        at: http://www.coolprop.org/coolprop/HighLevelAPI.html
     :param delta_T_degF: temperature difference between the hot/warm side and the cold side
     :param rho_kg_per_m3: density of the liquid
     :param cp_kj_per_kgK: heat capacity of the liquid
     :return gal_to_kwh: stored energy, in kWh
 """
-function convert_gal_to_kwh(delta_T_degF::Real, rho_kg_per_m3::Real, cp_kj_per_kgK::Real)
-    delta_T_K = delta_T_degF * 5.0 / 9.0  # [K]
-    kj_per_m3 = rho_kg_per_m3 * cp_kj_per_kgK * delta_T_K  # [kJ/m^3]
+function get_kwh_per_gal(t_hot_degF::Real, t_cold_degF::Real, fluid::String="Water")
+    t_hot_K = convert_temp_degF_to_Kelvin(t_hot_degF)  # [K]
+    t_cold_K = convert_temp_degF_to_Kelvin(t_cold_degF)  # [K]
+    avg_t_K = (t_hot_K + t_cold_K) / 2.0
+    avg_rho_kg_per_m3 = PropsSI("D", "P", 101325.0, "T", avg_t_K, fluid)  # [kg/m^3]
+    avg_cp_kj_per_kgK = PropsSI("CPMASS", "P", 101325.0, "T", avg_t_K, fluid) / 1000  # kJ/kg-K
+    kj_per_m3 = avg_rho_kg_per_m3 * avg_cp_kj_per_kgK * (t_hot_K - t_cold_K)  # [kJ/m^3]
     kj_per_gal = kj_per_m3 / 264.172   # divide by gal/m^3 to get: [kJ/gal]
     kwh_per_gal = kj_per_gal / 3600.0  # divide by kJ/kWh, i.e., sec/hr, to get: [kWh/gal]
     return kwh_per_gal
@@ -432,4 +468,53 @@ end
 
 macro argname(arg)
     string(arg)
+end
+
+"""
+    get_monthly_time_steps(year::Int; time_steps_per_hour=1)
+
+return Array{Array{Int64,1},1}, size = (12,)
+"""
+function get_monthly_time_steps(year::Int; time_steps_per_hour=1)
+    a = Array[]
+    i = 1
+    for m in range(1, stop=12)
+        n_days = daysinmonth(Date(string(year) * "-" * string(m)))
+        stop = n_days * 24 * time_steps_per_hour + i - 1
+        if m == 2 && isleapyear(year)
+            stop -= 24 * time_steps_per_hour  # TODO support extra day in leap years?
+        end
+        steps = [step for step in range(i, stop=stop)]
+        append!(a, [steps])
+        i = stop + 1
+    end
+    return a
+end
+
+"""
+generator_fuel_slope_and_intercept(;
+                electric_efficiency_full_load::Real, [kWhe/kWht]
+                electric_efficiency_half_load::Real [kWhe/kWht]
+            )
+
+return Tuple{<:Real,<:Real} where 
+    first value is diesel fuel burn slope [gal/kWhe]
+    secnod value is diesel fuel burn intercept [gal/hr]
+"""
+function generator_fuel_slope_and_intercept(;
+                        electric_efficiency_full_load::Real, 
+                        electric_efficiency_half_load::Real
+                    )
+    fuel_burn_full_load_kwht = 1.0 / electric_efficiency_full_load  # [kWe_rated/(kWhe/kWht)]
+    fuel_burn_half_load_kwht = 0.5 / electric_efficiency_half_load  # [kWe_rated/(kWhe/kWht)]
+    fuel_slope_kwht_per_kwhe = (fuel_burn_full_load_kwht - fuel_burn_half_load_kwht) / (1.0 - 0.5)  # [kWht/kWhe]
+    fuel_intercept_kwht_per_hr = fuel_burn_full_load_kwht - fuel_slope_kwht_per_kwhe * 1.0  # [kWht/hr]
+    fuel_slope_gal_per_kwhe = fuel_slope_kwht_per_kwhe / KWH_PER_GAL_DIESEL # [gal/kWhe]
+    fuel_intercept_gal_per_hr = fuel_intercept_kwht_per_hr / KWH_PER_GAL_DIESEL # [gal/hr]
+    
+    return fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr
+end
+
+function convert_temp_degF_to_Kelvin(degF::Float64)
+    return (degF - 32) * 5.0 / 9.0 + 273.15
 end

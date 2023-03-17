@@ -33,40 +33,40 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
 """
 `CHP` is an optional REopt input with the following keys and default values:
 ```julia
-    prime_mover::Union{String, Nothing} = nothing Suggested to inform applicable default cost and performance
-    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = []  REQUIRED
+    prime_mover::Union{String, Nothing} = nothing # Suggested to inform applicable default cost and performance. "restrict_to": ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cell"]
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [] # REQUIRED. Can be a scalar, a list of 12 monthly values, or a time series of values for every time step
 
     # Required "custom inputs" if not providing prime_mover:
-    installed_cost_per_kw::Union{Float64, AbstractVector{Float64}} = NaN
-    tech_sizes_for_cost_curve::Union{Float64, AbstractVector{Float64}} = NaN
-    om_cost_per_kwh::Float64 = NaN
-    electric_efficiency_full_load::Float64 = NaN
-    electric_efficiency_half_load::Float64 = NaN
-    min_turn_down_fraction::Float64 = NaN
-    thermal_efficiency_full_load::Float64 = NaN
-    thermal_efficiency_half_load::Float64 = NaN
-    min_allowable_kw::Float64 = NaN
-    max_kw::Float64 = NaN
+    installed_cost_per_kw::Union{Float64, AbstractVector{Float64}} = NaN # Installed CHP system cost in \$/kW (based on rated electric power)
+    tech_sizes_for_cost_curve::Union{Float64, AbstractVector{Float64}} = NaN # Size of CHP systems corresponding to installed cost input points"
+    om_cost_per_kwh::Float64 = NaN # CHP non-fuel variable operations and maintenance costs in \$/kwh
+    electric_efficiency_full_load::Float64 = NaN # Electric efficiency of CHP prime-mover at full-load, HHV-basis
+    electric_efficiency_half_load::Float64 = NaN # Electric efficiency of CHP prime-mover at half-load, HHV-basis
+    min_turn_down_fraction::Float64 = NaN # Minimum CHP electric loading in fraction of capacity (size_kw)
+    thermal_efficiency_full_load::Float64 = NaN # CHP fraction of fuel energy converted to hot-thermal energy at full electric load
+    thermal_efficiency_half_load::Float64 = NaN # CHP fraction of fuel energy converted to hot-thermal energy at half electric load
+    min_allowable_kw::Float64 = NaN # Minimum CHP size (based on electric) that still allows the model to choose zero (e.g. no CHP system)
     cooling_thermal_factor::Float64 = NaN  # only needed with cooling load
-    unavailability_periods::AbstractVector{Dict} = Dict[]
+    unavailability_periods::AbstractVector{Dict} = Dict[] # CHP unavailability periods for scheduled and unscheduled maintenance, list of dictionaries with keys of "['month', 'start_week_of_month', 'start_day_of_week', 'start_hour', 'duration_hours'] all values are one-indexed and start_day_of_week uses 1 for Monday, 7 for Sunday
 
     # Optional inputs:
-    size_class::Union{Int, Nothing} = nothing
-    min_kw::Float64 = 0.0
+    size_class::Union{Int, Nothing} = nothing # CHP size class for using appropriate default inputs, with size_class=0 using an average of all other size class data 
+    min_kw::Float64 = 0.0 # Minimum CHP size (based on electric) constraint for optimization 
+    max_kw::Float64 = NaN # Maximum CHP size (based on electric) constraint for optimization. Determined by heuristic sizing based on heating load or electric load.    
     fuel_type::String = "natural_gas" # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
-    om_cost_per_kw::Float64 = 0.0
-    om_cost_per_hr_per_kw_rated::Float64 = 0.0
-    supplementary_firing_capital_cost_per_kw::Float64 = 150.0
-    supplementary_firing_max_steam_ratio::Float64 = 1.0
-    supplementary_firing_efficiency::Float64 = 0.92
-    standby_rate_per_kw_per_month::Float64 = 0.0
-    reduces_demand_charges::Bool = true
-    can_supply_steam_turbine::Bool=false
+    om_cost_per_kw::Float64 = 0.0 # Annual CHP fixed operations and maintenance costs in \$/kw-yr 
+    om_cost_per_hr_per_kw_rated::Float64 = 0.0 # CHP non-fuel variable operations and maintenance costs in \$/hr/kw_rated
+    supplementary_firing_capital_cost_per_kw::Float64 = 150.0 # Installed CHP supplementary firing system cost in \$/kW (based on rated electric power)
+    supplementary_firing_max_steam_ratio::Float64 = 1.0 # Ratio of max fired steam to un-fired steam production. Relevant only for combustion_turbine prime_mover 
+    supplementary_firing_efficiency::Float64 = 0.92 # Thermal efficiency of the incremental steam production from supplementary firing. Relevant only for combustion_turbine prime_mover 
+    standby_rate_per_kw_per_month::Float64 = 0.0 # Standby rate charged to CHP based on CHP electric power size
+    reduces_demand_charges::Bool = true # Boolean indicator if CHP does not reduce demand charges 
+    can_supply_steam_turbine::Bool=false # If CHP can supply steam to the steam turbine for electric production 
 
     macrs_option_years::Int = 5
-    macrs_bonus_fraction::Float64 = 1.0
+    macrs_bonus_fraction::Float64 = 0.8
     macrs_itc_reduction::Float64 = 0.5
-    federal_itc_fraction::Float64 = 0.1
+    federal_itc_fraction::Float64 = 0.3
     federal_rebate_per_kw::Float64 = 0.0
     state_ibi_fraction::Float64 = 0.0
     state_ibi_max::Float64 = 1.0e10
@@ -93,7 +93,7 @@ prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cel
 
 !!! note "Defaults and required inputs"
     See the `get_chp_defaults_prime_mover_size_class()` function docstring for details on the logic of choosing the type of CHP that is modeled
-    If no information is provided, the default `prime_mover` is `recip_engine` and the `size_class` is 1 which represents
+    If no information is provided, the default `prime_mover` is `recip_engine` and the `size_class` is 0 which represents
     the widest range of sizes available.
 
     `fuel_cost_per_mmbtu` is always required and can be a scalar, a list of 12 monthly values, or a time series of values for every time step
@@ -118,7 +118,7 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     prime_mover::Union{String, Nothing} = nothing
     size_class::Union{Int, Nothing} = nothing
     min_kw::Float64 = 0.0
-    max_kw::Float64 = 1.0e9
+    max_kw::Float64 = NaN
     fuel_type::String = "natural_gas"
     om_cost_per_kw::Float64 = 0.0
     om_cost_per_hr_per_kw_rated::Float64 = 0.0
@@ -132,9 +132,9 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     can_supply_steam_turbine::Bool = false
 
     macrs_option_years::Int = 5
-    macrs_bonus_fraction::Float64 = 1.0
+    macrs_bonus_fraction::Float64 = 0.8
     macrs_itc_reduction::Float64 = 0.5
-    federal_itc_fraction::Float64 = 0.1
+    federal_itc_fraction::Float64 = 0.3
     federal_rebate_per_kw::Float64 = 0.0
     state_ibi_fraction::Float64 = 0.0
     state_ibi_max::Float64 = 1.0e10
@@ -162,7 +162,8 @@ end
 
 function CHP(d::Dict; 
             avg_boiler_fuel_load_mmbtu_per_hour::Union{Float64, Nothing}=nothing, 
-            existing_boiler::Union{ExistingBoiler, Nothing}=nothing)
+            existing_boiler::Union{ExistingBoiler, Nothing}=nothing,
+            electric_load_series_kw::Array{<:Real,1}=Real[])
     # If array inputs are coming from Julia JSON.parsefile (reader), they have type Vector{Any}; convert to expected type here
     for (k,v) in d
         if typeof(v) <: AbstractVector{Any} && k != "unavailability_periods"
@@ -201,6 +202,8 @@ function CHP(d::Dict;
         end
     elseif length(chp.installed_cost_per_kw) > 1 && length(chp.installed_cost_per_kw) != length(chp.tech_sizes_for_cost_curve)
         throw(@error("To model CHP cost curve, you must provide `chp.tech_sizes_for_cost_curve` vector of equal length to `chp.installed_cost_per_kw`"))
+    elseif typeof(chp.installed_cost_per_kw) == Vector && length(chp.installed_cost_per_kw) == 1
+        chp.installed_cost_per_kw = chp.installed_cost_per_kw[1]
     elseif isempty(chp.tech_sizes_for_cost_curve) && isempty(chp.installed_cost_per_kw)
         update_installed_cost_params = true
     elseif isempty(chp.prime_mover)
@@ -216,11 +219,22 @@ function CHP(d::Dict;
         eff = EXISTING_BOILER_EFFICIENCY
     end
 
+    # For non-heating CHP, Prime Generator, defaults require electric load metrics
+    if !isempty(electric_load_series_kw)
+        avg_electric_load_kw = sum(electric_load_series_kw) / length(electric_load_series_kw)
+        max_electric_load_kw = maximum(electric_load_series_kw)
+    else
+        avg_electric_load_kw = nothing
+        max_electric_load_kw = nothing
+    end
+
     chp_defaults_response = get_chp_defaults_prime_mover_size_class(;hot_water_or_steam=prod_type,
                                                                 avg_boiler_fuel_load_mmbtu_per_hour=avg_boiler_fuel_load_mmbtu_per_hour,
                                                                 prime_mover=chp.prime_mover,
                                                                 size_class=chp.size_class,
-                                                                boiler_efficiency=eff)
+                                                                boiler_efficiency=eff,
+                                                                avg_electric_load_kw=avg_electric_load_kw,
+                                                                max_electric_load_kw=max_electric_load_kw)
     defaults = chp_defaults_response["default_inputs"]
     for (k, v) in custom_chp_inputs
         if k in [:installed_cost_per_kw, :tech_sizes_for_cost_curve]
@@ -240,6 +254,10 @@ function CHP(d::Dict;
         chp.thermal_efficiency_half_load = chp.electric_efficiency_full_load
     end
 
+    if isnan(chp.max_kw)
+        chp.max_kw = chp_defaults_response["chp_max_size_kw"]
+    end
+
     if chp.min_allowable_kw > chp.max_kw
         @warn "CHP.min_allowable_kw is greater than CHP.max_kw, so setting min_allowable_kw equal to max_kw"
         setproperty!(chp, :min_allowable_kw, chp.max_kw)
@@ -247,6 +265,10 @@ function CHP(d::Dict;
         
     if isempty(chp.unavailability_periods)
         chp.unavailability_periods = defaults["unavailability_periods"]
+    end
+
+    if isnothing(chp.size_class)
+        chp.size_class = chp_defaults_response["size_class"]
     end
 
     return chp
@@ -272,14 +294,14 @@ custom_chp_inputs, i.e.
 function get_prime_mover_defaults(prime_mover::String, boiler_type::String, size_class::Int, prime_mover_defaults_all::Dict)
     pmds = prime_mover_defaults_all
     prime_mover_defaults = Dict{String, Any}()
-
+    # Since size_class=0 is the first entry in the one-based indexed arrays in Julia, we need to add 1 for indexing
     for key in keys(pmds[prime_mover])
         if key in ["thermal_efficiency_full_load", "thermal_efficiency_half_load"]
-            prime_mover_defaults[key] = pmds[prime_mover][key][boiler_type][size_class]
+            prime_mover_defaults[key] = pmds[prime_mover][key][boiler_type][size_class+1]
         elseif key == "unavailability_periods"
             prime_mover_defaults[key] = convert(Vector{Dict}, pmds[prime_mover][key])
         else
-            prime_mover_defaults[key] = pmds[prime_mover][key][size_class]
+            prime_mover_defaults[key] = pmds[prime_mover][key][size_class+1]
         end
     end
     pmds = nothing
@@ -298,17 +320,21 @@ end
                                         avg_boiler_fuel_load_mmbtu_per_hour::Union{Float64, Vector{Float64}, Nothing}=nothing,
                                         prime_mover::Union{String, Nothing}=nothing,
                                         size_class::Union{Int64, Nothing}=nothing,
-                                        boiler_efficiency::Union{Float64, Nothing}=nothing)
+                                        boiler_efficiency::Union{Float64, Nothing}=nothing,
+                                        avg_electric_load_kw::Union{Float64, Nothing}=nothing,
+                                        max_electric_load_kw::Union{Float64, Nothing}=nothing)
 
 Depending on the set of inputs, different sets of outputs are determine in addition to all CHP cost and performance parameter defaults:
     1. Inputs: existing_boiler_production_type_steam_or_hw and avg_boiler_fuel_load_mmbtu_per_hour
-       Outputs: prime_mover, size_class, chp_size_based_on_avg_heating_load_kw
+       Outputs: prime_mover, size_class, chp_elec_size_heuristic_kw, chp_max_size_kw
     2. Inputs: prime_mover and avg_boiler_fuel_load_mmbtu_per_hour
-       Outputs: size_class
+       Outputs: size_class, chp_elec_size_heuristic_kw, chp_max_size_kw
     3. Inputs: prime_mover and size_class
-       Outputs: (uses default hot_water_or_steam)
+       Outputs: (uses default hot_water_or_steam), chp_max_size_kw
     4. Inputs: prime_mover
-       Outputs: default average size_class = 1
+       Outputs: default average size_class = 0, chp_max_size_kw
+    5. Inputs: prime_mover, avg_electric_load_kw, max_electric_load_kw
+       Outputs: chp_elec_size_heuristic_kw, chp_max_size_kw
 
 The main purpose of this function is to communicate the following mapping of dependency of CHP defaults versus 
     existing_boiler_production_type_steam_or_hot_water and avg_boiler_fuel_load_mmbtu_per_hour:
@@ -320,12 +346,16 @@ If steam and > 7 MMBtu/hr avg_boiler_fuel_load_mmbtu_per_hour --> prime_mover = 
 The threshold avg_boiler_fuel_load_mmbtu_per_hour are based on industry expert judgements for applicable prime_movers where
 reciprocating engine is more suitable for smaller sizes and hot water, and combustion turbine is more suitable
 for larger sizes and steam.
+
+The determination of size_class and defaults based only on the electric load metrics is for non-heating "CHP", a.k.a. Prime Generator
 """
 function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{String, Nothing}=nothing,
                                                 avg_boiler_fuel_load_mmbtu_per_hour::Union{Float64, Vector{Float64}, Nothing}=nothing,
                                                 prime_mover::Union{String, Nothing}=nothing,
                                                 size_class::Union{Int64, Nothing}=nothing,
-                                                boiler_efficiency::Union{Float64, Nothing}=nothing)
+                                                boiler_efficiency::Union{Float64, Nothing}=nothing,
+                                                avg_electric_load_kw::Union{Float64, Nothing}=nothing,
+                                                max_electric_load_kw::Union{Float64, Nothing}=nothing)
     
     prime_mover_defaults_all = JSON.parsefile(joinpath(@__DIR__, "..", "..", "data", "chp", "chp_defaults.json"))
     avg_boiler_fuel_load_under_recip_over_ct = Dict([("hot_water", 27.0), ("steam", 7.0)])  # [MMBtu/hr] Based on external calcs for size versus production by prime_mover type
@@ -353,12 +383,14 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
 
     if !isnothing(size_class) && !isnothing(prime_mover) # Option 3
         n_classes = length(prime_mover_defaults_all[prime_mover]["installed_cost_per_kw"])
-        if size_class < 1 || size_class > n_classes
-            throw(@error("The size class $size_class input is outside the valid range of 1 to $n_classes for prime_mover $prime_mover"))
+        # Note, size_class=0 is first class, so (n_class-1) is largest valid size_class number
+        if size_class < 0 || size_class > (n_classes-1)
+            throw(@error("The size class $size_class input is outside the valid range of 0 to $(n_classes-1) for prime_mover $prime_mover"))
         end
     end
 
     # Calculate heuristic CHP size based on average thermal load, using the default size class efficiency data
+    # and estimate max size based on 2x the heuristic size
     if !isnothing(avg_boiler_fuel_load_mmbtu_per_hour)
         if isnothing(prime_mover)
             if avg_boiler_fuel_load_mmbtu_per_hour <= avg_boiler_fuel_load_under_recip_over_ct[hot_water_or_steam]
@@ -368,7 +400,7 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
             end
         end
         if isnothing(size_class)
-            size_class_calc = 1
+            size_class_calc = 0
         else
             size_class_calc = size_class
         end
@@ -377,13 +409,19 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
         else
             boiler_effic = boiler_efficiency
         end
-        therm_effic = prime_mover_defaults_all[prime_mover]["thermal_efficiency_full_load"][hot_water_or_steam][size_class_calc]
-        elec_effic = prime_mover_defaults_all[prime_mover]["electric_efficiency_full_load"][size_class_calc]
+        therm_effic = prime_mover_defaults_all[prime_mover]["thermal_efficiency_full_load"][hot_water_or_steam][size_class_calc+1]
+        elec_effic = prime_mover_defaults_all[prime_mover]["electric_efficiency_full_load"][size_class_calc+1]
         avg_heating_thermal_load_mmbtu_per_hr = avg_boiler_fuel_load_mmbtu_per_hour * boiler_effic
         chp_fuel_rate_mmbtu_per_hr = avg_heating_thermal_load_mmbtu_per_hr / therm_effic
         chp_elec_size_heuristic_kw = chp_fuel_rate_mmbtu_per_hr * elec_effic * KWH_PER_MMBTU
+        chp_max_size_kw = 2 * chp_elec_size_heuristic_kw
+    # Calculate heuristic CHP size based on average electric load, and max size based on peak electric load
+    elseif !isnothing(avg_electric_load_kw) && !isnothing(max_electric_load_kw)
+        chp_elec_size_heuristic_kw = avg_electric_load_kw
+        chp_max_size_kw = max_electric_load_kw
     else
         chp_elec_size_heuristic_kw = nothing
+        chp_max_size_kw = nothing
     end
 
     # Assign recip_engine as the (default) prime mover if not input or assigned base on avg_boiler_fuel_load_mmbtu_per_hour
@@ -397,29 +435,33 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
 
     # If size class is specified use that and ignore heuristic CHP sizing for determining size class
     if !isnothing(size_class)
-        if size_class < 1 || size_class > n_classes
-            throw(@error("The size class $size_class input is outside the valid range of 1 to $n_classes for prime_mover $prime_mover"))
+        if size_class < 0 || size_class > (n_classes-1)
+            throw(@error("The size class $size_class input is outside the valid range of 1 to $(n_classes-1) for prime_mover $prime_mover"))
+        end
+        if isnothing(chp_max_size_kw)
+            chp_max_size_kw = class_bounds[size_class+1][2]
         end
     # If size class is not specified, heuristic sizing based on avg thermal load and size class 0 efficiencies
     elseif isnothing(size_class) && !isnothing(chp_elec_size_heuristic_kw)
         # With heuristic size, find the suggested size class
         if chp_elec_size_heuristic_kw < class_bounds[2][2]
             # If smaller than the upper bound of the smallest class, assign the smallest class
-            size_class = 2
+            size_class = 1
         elseif chp_elec_size_heuristic_kw >= class_bounds[n_classes][1]
             # If larger than or equal to the lower bound of the largest class, assign the largest class
-            size_class = n_classes # Size classes are one-indexed
+            size_class = n_classes - 1 # Size classes are zero-indexed
         else
             # For middle size classes
-            for sc in 2:(n_classes-1)
+            for sc in 3:(n_classes-1)
                 if chp_elec_size_heuristic_kw >= class_bounds[sc][1] && 
                     chp_elec_size_heuristic_kw < class_bounds[sc][2]
-                    size_class = sc
+                    size_class = sc - 1
+                    break
                 end
             end
         end
     else
-        size_class = 1
+        size_class = 0
     end
 
     prime_mover_defaults = get_prime_mover_defaults(prime_mover, hot_water_or_steam, size_class, prime_mover_defaults_all)
@@ -429,8 +471,9 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
         ("size_class", size_class),
         ("hot_water_or_steam", hot_water_or_steam),
         ("default_inputs", prime_mover_defaults),
-        ("chp_size_based_on_avg_heating_load_kw", chp_elec_size_heuristic_kw),
-        ("size_class_bounds", class_bounds)
+        ("chp_elec_size_heuristic_kw", chp_elec_size_heuristic_kw),
+        ("size_class_bounds", class_bounds),
+        ("chp_max_size_kw", chp_max_size_kw)
     ])
     return response
 

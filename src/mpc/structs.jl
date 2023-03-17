@@ -281,8 +281,8 @@ struct with inner constructor:
 function MPCGenerator(;
     size_kw::Real,
     fuel_cost_per_gallon::Real = 3.0,
-    fuel_slope_gal_per_kwh::Real = 0.076,
-    fuel_intercept_gal_per_hr::Real = 0.0,
+    electric_efficiency_full_load::Real = 0.3233,
+    electric_efficiency_half_load::Real = electric_efficiency_full_load,
     fuel_avail_gal::Real = 660.0,
     min_turn_down_fraction::Real = 0.0,  # TODO change this to non-zero value
     only_runs_during_grid_outage::Bool = true,
@@ -295,8 +295,8 @@ struct MPCGenerator <: AbstractGenerator
     size_kw
     max_kw
     fuel_cost_per_gallon
-    fuel_slope_gal_per_kwh
-    fuel_intercept_gal_per_hr
+    electric_efficiency_full_load
+    electric_efficiency_half_load
     fuel_avail_gal
     min_turn_down_fraction
     only_runs_during_grid_outage
@@ -306,8 +306,8 @@ struct MPCGenerator <: AbstractGenerator
     function MPCGenerator(;
         size_kw::Real,
         fuel_cost_per_gallon::Real = 3.0,
-        fuel_slope_gal_per_kwh::Real = 0.076,
-        fuel_intercept_gal_per_hr::Real = 0.0,
+        electric_efficiency_full_load::Real = 0.3233,
+        electric_efficiency_half_load::Real = electric_efficiency_full_load,
         fuel_avail_gal::Real = 660.0,
         min_turn_down_fraction::Real = 0.0,  # TODO change this to non-zero value
         only_runs_during_grid_outage::Bool = true,
@@ -316,13 +316,13 @@ struct MPCGenerator <: AbstractGenerator
         )
 
         max_kw = size_kw
-
+        
         new(
             size_kw,
             max_kw,
             fuel_cost_per_gallon,
-            fuel_slope_gal_per_kwh,
-            fuel_intercept_gal_per_hr,
+            electric_efficiency_full_load,
+            electric_efficiency_half_load,
             fuel_avail_gal,
             min_turn_down_fraction,
             only_runs_during_grid_outage,

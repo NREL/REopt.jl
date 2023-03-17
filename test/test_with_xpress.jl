@@ -85,7 +85,7 @@ end
         data_cost_curve = JSON.parsefile("./scenarios/chp_sizing.json")
         data_cost_curve["CHP"] = Dict()
         data_cost_curve["CHP"]["prime_mover"] = "recip_engine"
-        data_cost_curve["CHP"]["size_class"] = 2
+        data_cost_curve["CHP"]["size_class"] = 1
         data_cost_curve["CHP"]["fuel_cost_per_mmbtu"] = 8.0
         data_cost_curve["CHP"]["min_kw"] = 0
         data_cost_curve["CHP"]["min_allowable_kw"] = 555.5
@@ -509,6 +509,11 @@ end
     @test results["Outages"]["expected_outage_cost"] ≈ 485.43270 atol=1.0e-5  #avg duration (3h) * load per time step (10) * present worth factor (16.18109)
     @test results["Outages"]["max_outage_cost_per_outage_duration"][1] ≈ 161.8109 atol=1.0e-5
 
+    # Scenario with generator, PV, electric storage
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, "./scenarios/outages_gen_pv_stor.json")
+    @test results["Outages"]["expected_outage_cost"] ≈ 4.800393567995261e6 atol=10
+    @test results["Financial"]["lcc"] ≈ 8.9857671584e7 atol=100
 end
 
 @testset "Multiple Sites" begin
@@ -619,7 +624,7 @@ end
     @testset "Coincident Peak Charges" begin
         model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         results = run_reopt(model, "./scenarios/coincident_peak.json")
-        @test results["ElectricTariff"]["year_one_coincident_peak_cost_before_tax"] ≈ 11.1
+        @test results["ElectricTariff"]["year_one_coincident_peak_cost_before_tax"] ≈ 15.0
     end
 
     @testset "URDB sell rate" begin
@@ -644,7 +649,8 @@ end
 
 @testset "Wind" begin
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt(m, "./scenarios/wind.json")
+    d = JSON.parsefile("./scenarios/wind.json")
+    results = run_reopt(m, d)
     @test results["Wind"]["size_kw"] ≈ 3752 atol=0.1
     @test results["Financial"]["lcc"] ≈ 8.591017e6 rtol=1e-5
     #= 
@@ -661,6 +667,18 @@ end
 
     TODO: will these discrepancies be addressed once NMIL binaries are added?
     =#
+
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    d["Site"]["land_acres"] = 60 # = 2 MW (with 0.03 acres/kW)
+    results = run_reopt(m, d)
+    @test results["Wind"]["size_kw"] == 2000.0 # Wind should be constrained by land_acres
+
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    d["Wind"]["min_kw"] = 2001 # min_kw greater than land-constrained max should error
+    results = run_reopt(m, d)
+    @test "errors" ∈ keys(results["Messages"])
+    @test length(results["Messages"]["errors"]) > 0
+    
 end
 
 @testset "Multiple PVs" begin
@@ -739,8 +757,8 @@ end
     @test sum(r["HotThermalStorage"]["storage_to_load_series_mmbtu_per_hour"]) ≈ 149.45 atol=0.1
     @test sum(r["ColdThermalStorage"]["storage_to_load_series_ton"]) ≈ 12454.33 atol=0.1
     #size should be just over 10kW in gallons, accounting for efficiency losses and min SOC
-    @test r["HotThermalStorage"]["size_gal"] ≈ 227.89 atol=0.1
-    @test r["ColdThermalStorage"]["size_gal"] ≈ 379.82 atol=0.1
+    @test r["HotThermalStorage"]["size_gal"] ≈ 233.0 atol=0.1
+    @test r["ColdThermalStorage"]["size_gal"] ≈ 378.0 atol=0.1
     #No production from existing chiller, only absorption chiller, which is sized at ~5kW to manage electric demand charge & capital cost.
     @test r["ExistingChiller"]["annual_thermal_production_tonhour"] ≈ 0.0 atol=0.1
     @test r["AbsorptionChiller"]["annual_thermal_production_tonhour"] ≈ 12464.15 atol=0.1
@@ -858,7 +876,7 @@ end
     total_chiller_electric_consumption = sum(inputs.s.cooling_load.loads_kw_thermal) / inputs.s.existing_chiller.cop
     @test round(total_chiller_electric_consumption, digits=0) ≈ 320544.0 atol=1.0  # loads_kw is **electric**, loads_kw_thermal is **thermal**
 
-    #Test CHP defaults use average fuel load, size class 3 for recip_engine 
+    #Test CHP defaults use average fuel load, size class 2 for recip_engine 
     @test inputs.s.chp.min_allowable_kw ≈ 50.0 atol=0.01
     @test inputs.s.chp.om_cost_per_kwh ≈ 0.0225 atol=0.0001
 
@@ -875,18 +893,23 @@ end
     @test round(total_chiller_electric_consumption, digits=0) ≈ round(expected_cooling_electricity) atol=1.0
     @test round(total_chiller_electric_consumption, digits=0) ≈ 3876410 atol=1.0
 
+    # Check that without heating load or max_kw input, CHP.max_kw gets set based on peak electric load
+    @test inputs.s.chp.max_kw ≈ maximum(inputs.s.electric_load.loads_kw) atol=0.01
+
     input_data["SpaceHeatingLoad"] = Dict{Any, Any}("monthly_mmbtu" => repeat([500.0], 12))
     input_data["DomesticHotWaterLoad"] = Dict{Any, Any}("monthly_mmbtu" => repeat([500.0], 12))
     input_data["CoolingLoad"] = Dict{Any, Any}("monthly_fractions_of_electric_load" => repeat([0.1], 12))
 
     s = Scenario(input_data)
     inputs = REoptInputs(s)
-    #Test CHP defaults use average fuel load, size class changes to 4
+    #Test CHP defaults use average fuel load, size class changes to 3
     @test inputs.s.chp.min_allowable_kw ≈ 315.0 atol=0.1
     @test inputs.s.chp.om_cost_per_kwh ≈ 0.02 atol=0.0001
     #Update CHP prime_mover and test new defaults
     input_data["CHP"]["prime_mover"] = "combustion_turbine"
-    input_data["CHP"]["size_class"] = 2
+    input_data["CHP"]["size_class"] = 1
+    # Set max_kw higher than peak electric load so min_allowable_kw doesn't get assigned to max_kw
+    input_data["CHP"]["max_kw"] = 1000.0
 
     s = Scenario(input_data)
     inputs = REoptInputs(s)
@@ -1181,7 +1204,13 @@ end
     
     ghp_option_chosen = results["GHP"]["ghp_option_chosen"]
     @test ghp_option_chosen == 2
-    
+
+    # Test GHP heating and cooling load reduced
+    hot_load_reduced_mmbtu = sum(results["GHP"]["space_heating_thermal_load_reduction_with_ghp_mmbtu_per_hour"])
+    cold_load_reduced_tonhour = sum(results["GHP"]["cooling_thermal_load_reduction_with_ghp_ton"])
+    @test hot_load_reduced_mmbtu ≈ 1440.00 atol=0.1
+    @test cold_load_reduced_tonhour ≈ 761382.78 atol=0.1
+
     # Test GHP serving space heating with VAV thermal efficiency improvements
     heating_served_mmbtu = sum(s.ghp_option_list[ghp_option_chosen].heating_thermal_kw / REopt.KWH_PER_MMBTU)
     expected_heating_served_mmbtu = 12000 * 0.8 * 0.85  # (fuel_mmbtu * boiler_effic * space_heating_efficiency_thermal_factor)
@@ -1259,8 +1288,8 @@ end
         yr1_grid_emissions_tonnes_CO2_out = results["ElectricUtility"]["annual_emissions_tonnes_CO2"]
         yr1_total_emissions_calced_tonnes_CO2 = yr1_fuel_emissions_tonnes_CO2_out + yr1_grid_emissions_tonnes_CO2_out 
         @test annual_emissions_tonnes_CO2_out ≈ yr1_total_emissions_calced_tonnes_CO2 atol=1e-1
-        if haskey(results["Financial"],"breakeven_cost_of_emissions_reduction_per_tonnes_CO2")
-            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"] >= 0.0
+        if haskey(results["Financial"],"breakeven_cost_of_emissions_reduction_per_tonne_CO2")
+            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] >= 0.0
         end
         
         if i == 1
@@ -1276,7 +1305,7 @@ end
             @test results["Site"]["total_renewable_energy_fraction"] ≈ 0.8
             @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.14495 atol=1e-4
             @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.61865 atol=1e-4
-            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"] ≈ 283.5 atol=1
+            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 283.5 atol=1
             @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 11.36 atol=1e-2
             @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 32.16 atol=1e-2
             @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 6.96
@@ -1310,7 +1339,7 @@ end
             @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.1365 atol=1e-3 # 0.1354 atol=1e-3
             # CO2 emissions - totals ≈  from grid, from fuelburn, ER, $/tCO2 breakeven
             @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.8 atol=1e-3 # 0.8
-            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"] ≈ 351.24 atol=1e-1
+            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 351.24 atol=1e-1
             @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 14.2 atol=1
             @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 70.99 atol=1
             @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
@@ -1333,13 +1362,13 @@ end
             inputs["ElectricStorage"]["max_kw"] = results["ElectricStorage"]["size_kw"]
             inputs["ElectricStorage"]["min_kwh"] = results["ElectricStorage"]["size_kwh"]
             inputs["ElectricStorage"]["max_kwh"] = results["ElectricStorage"]["size_kwh"]
-            inputs["Financial"]["CO2_cost_per_tonne"] = results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"]
+            inputs["Financial"]["CO2_cost_per_tonne"] = results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"]
             inputs["Settings"]["include_climate_in_objective"] = true
             m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
             m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
             results = run_reopt([m1, m2], inputs)
             @test results["Financial"]["npv"]/expected_npv ≈ 0 atol=1e-3
-            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"] ≈ inputs["Financial"]["CO2_cost_per_tonne"] atol=1e-1
+            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ inputs["Financial"]["CO2_cost_per_tonne"] atol=1e-1
         elseif i == 3
             @test results["PV"]["size_kw"] ≈ 20.0 atol=1e-1
             @test !haskey(results, "Wind")
@@ -1460,7 +1489,7 @@ end
     # Add CHP 
     input_data["CHP"] = Dict{Any, Any}([
                         ("prime_mover", "recip_engine"),
-                        ("size_class", 2),
+                        ("size_class", 1),
                         ("min_kw", 250.0),
                         ("min_allowable_kw", 0.0),
                         ("max_kw", 250.0),
@@ -1553,6 +1582,7 @@ end
     @test "warnings" ∈ keys(r["Messages"])
     @test length(r["Messages"]["errors"]) > 0
     @test length(r["Messages"]["warnings"]) > 0
+    @test r["Messages"]["has_stacktrace"] == false
 
     m = Model(Xpress.Optimizer)
     r = run_reopt(m, d)
@@ -1599,6 +1629,7 @@ end
     @test "warnings" ∈ keys(r["Messages"])
     @test length(r["Messages"]["errors"]) > 0
     @test length(r["Messages"]["warnings"]) > 0
+    @test r["Messages"]["has_stacktrace"] == true
 
     m = Model(Xpress.Optimizer)
     r = run_reopt(m, d)

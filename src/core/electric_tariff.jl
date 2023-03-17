@@ -73,23 +73,21 @@ end
     urdb_response::Dict=Dict(),
     urdb_utility_name::String="",
     urdb_rate_name::String="",
-    year::Int=2020,
-    NEM::Bool=false,
-    wholesale_rate::T1=nothing,
-    export_rate_beyond_net_metering_limit::T2=nothing,
-    monthly_energy_rates::Array=[],
-    monthly_demand_rates::Array=[],
-    blended_annual_energy_rate::S=nothing,
-    blended_annual_demand_rate::R=nothing,
-    add_monthly_rates_to_urdb_rate::Bool=false,
-    tou_energy_rates_per_kwh::Array=[],
-    add_tou_energy_rates_to_urdb_rate::Bool=false,
+    wholesale_rate::T1=nothing, # Price of electricity sold back to the grid in absence of net metering. Can be a scalar value, which applies for all-time, or an array with time-sensitive values. If an array is input then it must have a length of 8760, 17520, or 35040. The inputed array values are up/down-sampled using mean values to match the Settings.time_steps_per_hour.
+    export_rate_beyond_net_metering_limit::T2=nothing, # Price of electricity sold back to the grid beyond total annual grid purchases, regardless of net metering. Can be a scalar value, which applies for all-time, or an array with time-sensitive values. If an array is input then it must have a length of 8760, 17520, or 35040. The inputed array values are up/down-sampled using mean values to match the Settings.time_steps_per_hour
+    monthly_energy_rates::Array=[], # Array (length of 12) of blended energy rates in dollars per kWh
+    monthly_demand_rates::Array=[], # Array (length of 12) of blended demand charges in dollars per kW
+    blended_annual_energy_rate::S=nothing, # Annual blended energy rate [\$ per kWh] (total annual energy in kWh divided by annual cost in dollars)
+    blended_annual_demand_rate::R=nothing, # Average monthly demand charge [\$ per kW per month]. Rate will be applied to monthly peak demand.
+    add_monthly_rates_to_urdb_rate::Bool=false, # Set to 'true' to add the monthly blended energy rates and demand charges to the URDB rate schedule. Otherwise, blended rates will only be considered if a URDB rate is not provided.
+    tou_energy_rates_per_kwh::Array=[], # Time-of-use energy rates, provided by user. Must be an array with length equal to number of timesteps per year.
+    add_tou_energy_rates_to_urdb_rate::Bool=false, # Set to 'true' to add the tou  energy rates to the URDB rate schedule. Otherwise, tou energy rates will only be considered if a URDB rate is not provided.
     remove_tiers::Bool=false,
     demand_lookback_months::AbstractArray{Int64, 1}=Int64[], # Array of 12 binary values, indicating months in which `demand_lookback_percent` applies. If any of these is true, `demand_lookback_range` should be zero.
     demand_lookback_percent::Real=0.0, # Lookback percentage. Applies to either `demand_lookback_months` with value=1, or months in `demand_lookback_range`.
     demand_lookback_range::Int=0, # Number of months for which `demand_lookback_percent` applies. If not 0, `demand_lookback_months` should not be supplied.
-    coincident_peak_load_active_time_steps::Vector{Vector{Int64}}=[Int64[]],
-    coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[]
+    coincident_peak_load_active_time_steps::Vector{Vector{Int64}}=[Int64[]], # The optional coincident_peak_load_charge_per_kw will apply at the max grid-purchased power during these timesteps. Note timesteps are indexed to a base of 1 not 0.
+    coincident_peak_load_charge_per_kw::AbstractVector{<:Real}=Real[] # Optional coincident peak demand charge that is applied to the max load during the timesteps specified in coincident_peak_load_active_time_steps.
     ) where {
         T1 <: Union{Nothing, Real, Array{<:Real}}, 
         T2 <: Union{Nothing, Real, Array{<:Real}}, 
@@ -97,6 +95,18 @@ end
         R <: Union{Nothing, Real}
     }
 ```
+!!! note "Export Rates" 
+    There are three Export tiers and their associated export rates (negative cost values):
+    1. NEM (Net Energy Metering) - set to the energy rate (or tier with the lowest energy rate, if tiered) 
+    2. WHL (Wholesale) - set to wholesale_rate
+    3. EXC (Excess, beyond NEM) - set to export_rate_beyond_net_metering_limit
+
+    Only one of NEM and Wholesale can be exported into due to the binary constraints.
+    Excess can be exported into in the same time step as NEM.
+
+    Excess is meant to be combined with NEM: NEM export is limited to the total grid purchased energy in a year and some
+    utilities offer a compensation mechanism for export beyond the site load.
+    The Excess tier is not available with the Wholesale tier.
 
 !!! note "NEM input"
     The `NEM` boolean is determined by the `ElectricUtility.net_metering_limit_kw`. There is no need to pass in a `NEM`
@@ -111,7 +121,7 @@ function ElectricTariff(;
     urdb_response::Dict=Dict(),
     urdb_utility_name::String="",
     urdb_rate_name::String="",
-    year::Int=2020,
+    year::Int=2022,   # Will be passed from ElectricLoad
     time_steps_per_hour::Int=1,
     NEM::Bool=false,
     wholesale_rate::T1=nothing,
@@ -318,23 +328,23 @@ function ElectricTariff(;
     end
     exc_rate = create_export_rate(export_rate_beyond_net_metering_limit, length(energy_rates), time_steps_per_hour)
     
-    if !NEM & (sum(whl_rate) >= 0)
+    if !NEM & (sum(whl_rate) >= 0) # no NEM or WHL 
         export_rates = Dict{Symbol, AbstractArray}()
         export_bins = Symbol[]
-    elseif !NEM
+    elseif !NEM # no NEM, with WHL
         export_bins = [:WHL]
         export_rates = Dict(:WHL => whl_rate)
-    elseif (sum(whl_rate) >= 0)
+    elseif (sum(whl_rate) >= 0) # NEM, no WHL
         export_bins = [:NEM]
         export_rates = Dict(:NEM => nem_rate)
-        if sum(exc_rate) < 0
+        if sum(exc_rate) < 0 # NEM with EXC rate
             push!(export_bins, :EXC)
             export_rates[:EXC] = exc_rate
         end
-    else
+    else # NEM and WHL
         export_bins = [:NEM, :WHL]
         export_rates = Dict(:NEM => nem_rate, :WHL => whl_rate)
-        if sum(exc_rate) < 0
+        if sum(exc_rate) < 0 # NEM and WHL with EXC rate
             push!(export_bins, :EXC)
             export_rates[:EXC] = exc_rate
         end
@@ -422,27 +432,6 @@ function create_export_rate(e::AbstractArray{<:Real, 1}, N::Int, ts_per_hour::In
     return export_rates
 end
 
-
-"""
-    get_monthly_time_steps(year::Int; time_steps_per_hour=1)
-
-return Array{Array{Int64,1},1}, size = (12,)
-"""
-function get_monthly_time_steps(year::Int; time_steps_per_hour=1)
-    a = Array[]
-    i = 1
-    for m in range(1, stop=12)
-        n_days = daysinmonth(Date(string(year) * "-" * string(m)))
-        stop = n_days * 24 * time_steps_per_hour + i - 1
-        if m == 2 && isleapyear(year)
-            stop -= 24 * time_steps_per_hour  # TODO support extra day in leap years?
-        end
-        steps = [step for step in range(i, stop=stop)]
-        append!(a, [steps])
-        i = stop + 1
-    end
-    return a
-end
 
 # TODO use this function only for URDBrate
 function remove_tiers_from_urdb_rate(u::URDBrate)
