@@ -35,17 +35,16 @@
 - `unserved_load_per_outage` The total unserved load in each outage.
 - `storage_microgrid_upgrade_cost` The cost to include the storage system in the microgrid.
 - `storage_discharge_series` Array of storage power discharged in every outage modeled.
-- `pv_microgrid_kw` Optimal microgrid PV capacity. Note that the name `PV` can change based on user provided `PV.name`.
+- `pv_microgrid_size_kw` Optimal microgrid PV capacity. Note that the name `PV` can change based on user provided `PV.name`.
 - `pv_microgrid_upgrade_cost` The cost to include the PV system in the microgrid.
 - `pv_to_storage_series` Array of PV power sent to the battery in every outage modeled.
 - `pv_curtailed_series` Array of PV curtailed in every outage modeled.
 - `pv_to_load_series` Array of PV power used to meet load in every outage modeled.
-- `generator_microgrid_kw` Optimal microgrid Generator capacity. Note that the name `Generator` can change based on user provided `Generator.name`.
-- `mg_Generator_upgrade_cost` The cost to include the Generator system in the microgrid.
-- `mg_Generator_to_storage_series` Array of Generator power sent to the battery in every outage modeled.
-- `mg_Generator_curtailed_series` Array of Generator curtailed in every outage modeled.
-- `mg_Generator_to_load_series` Array of Generator power used to meet load in every outage modeled.
-- `mg_Generator_fuel_used_per_outage` Array of Generator fuel used in every outage modeled.
+- `generator_microgrid_size_kw` Optimal microgrid Generator capacity. Note that the name `Generator` can change based on user provided `Generator.name`.
+- `generator_microgrid_upgrade_cost` The cost to include the Generator system in the microgrid.
+- `generator_to_storage_series` Array of Generator power sent to the battery in every outage modeled.
+- `generator_curtailed_series` Array of Generator curtailed in every outage modeled.
+- `generator_to_load_series` Array of Generator power used to meet load in every outage modeled.
 - `generator_fuel_used_per_outage` Array of fuel used in every outage modeled, summed over all Generators.
 - `microgrid_upgrade_capital_cost` Total capital cost of including technologies in the microgrid
 
@@ -102,7 +101,7 @@ function add_outage_results(m, p, d::Dict)
 	# r["storage_microgrid_upgraded"] = round(value(m[:binMGStorageUsed]), digits=0)
 
 	if !isempty(p.techs.pv)
-		r["pv_microgrid_kw"] = round(
+		r["pv_microgrid_size_kw"] = round(
 			sum(
 				# need to multiply by the binary b/c can have non-zero mg capacity when not using the capacity
 				# due to the constraint for setting the mg capacities equal to the grid connected capacities
@@ -172,49 +171,79 @@ function add_outage_results(m, p, d::Dict)
 	end
 
 	if !isempty(p.techs.gen)
-		t = p.techs.gen[1]
-		r["generator_fuel_used_per_outage"] = sum(value.(m[:dvMGFuelUsed][t, :, :]).data)
-
-		# need the following logic b/c can have non-zero mg capacity when not using the capacity
-		# due to the constraint for setting the mg capacities equal to the grid connected capacities
-		if Bool(r["generator_upgraded"])
-			r[string(t, "_mg_kw")] = round(value(m[:dvMGsize][t]), digits=4)
+		r["generator_microgrid_size_kw"] = round(
+			sum(
+				# need to multiply by the binary b/c can have non-zero mg capacity when not using the capacity
+				# due to the constraint for setting the mg capacities equal to the grid connected capacities
+				value(m[:dvMGsize][t]) * round(value(m[:binMGTechUsed][t]), digits=0)
+				for t in p.techs.gen
+			), 
+			digits=4
+		)
+		r["generator_microgrid_upgrade_cost"] = round(
+			sum(
+				value(m[:dvMGTechUpgradeCost][t]) for t in p.techs.gen
+			), 
+			digits=2
+		)
+		r["generator_fuel_used_per_outage"] = round(
+			sum(
+				value.(m[:dvMGFuelUsed][t, :, :]).data for t in p.techs.gen
+			), 
+			digits=4
+		)
+		if isempty(p.s.storage.types.elec)
+			r["generator_to_storage_series"] = []
 		else
-			r[string(t, "_mg_kw")] = 0
-		end
-
-			r[string("mg_", t, "_fuel_used_per_outage")] = value.(m[:dvMGFuelUsed][t, :, :]).data
-			r[string("mg_", t, "_upgrade_cost")] = round(value(m[:dvMGTechUpgradeCost][t]), digits=2)
-			r["microgrid_upgrade_capital_cost"] += r[string("mg_", t, "_upgrade_cost")]
-
-			if !isempty(p.s.storage.types.elec)
-				GenToBatt = (m[:dvMGProductionToStorage][t, s, tz, ts] for 
-					s in p.s.electric_utility.scenarios,
-					tz in p.s.electric_utility.outage_start_time_steps,
-					ts in p.s.electric_utility.outage_time_steps)
-			else
-				GenToBatt = []
-			end
-			r[string("mg_", t, "_to_storage_series")] = round.(value.(GenToBatt), digits=3)
-
-			GENtoCUR = (m[:dvMGCurtail][t, s, tz, ts] for 
-				s in p.s.electric_utility.scenarios,
-				tz in p.s.electric_utility.outage_start_time_steps,
-				ts in p.s.electric_utility.outage_time_steps)
-			r[string("mg_", t, "_curtailed_series")] = round.(value.(GENtoCUR), digits=3)
-
-			GENtoLoad = (
-				m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] 
-						* p.levelization_factor[t]
-				- m[:dvMGCurtail][t, s, tz, ts]
-				- m[:dvMGProductionToStorage][t, s, tz, ts] for 
-					s in p.s.electric_utility.scenarios,
-					tz in p.s.electric_utility.outage_start_time_steps,
-					ts in p.s.electric_utility.outage_time_steps
+			r["generator_to_storage_series"] = round.(
+				sum(
+					(
+						value.(
+							m[:dvMGProductionToStorage][t, s, tz, ts] 
+							for s in p.s.electric_utility.scenarios,
+								tz in p.s.electric_utility.outage_start_time_steps,
+								ts in p.s.electric_utility.outage_time_steps
+						) 
+						for t in p.techs.gen
+					),
+					dims=1
+				), 
+				digits=3
 			)
-			r[string("mg_", t, "_to_load_series")] = round.(value.(GENtoLoad), digits=3)
 		end
-		r["generator_fuel_used_per_outage"] = sum(r[string("mg_", t, "_fuel_used_per_outage")] for t in p.techs.gen)
+		r["generator_curtailed_series"] = round.(
+			sum(
+				(
+					value.(
+						m[:dvMGCurtail][t, s, tz, ts] 
+						for s in p.s.electric_utility.scenarios,
+							tz in p.s.electric_utility.outage_start_time_steps,
+							ts in p.s.electric_utility.outage_time_steps
+					) 
+					for t in p.techs.gen
+				),
+				dims=1
+			), 
+			digits=3
+		)
+		r["generator_to_load_series"] = round.(
+			sum(
+				(
+					value.(
+						m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] * p.levelization_factor[t]
+						- m[:dvMGCurtail][t, s, tz, ts]
+						- m[:dvMGProductionToStorage][t, s, tz, ts]
+						for s in p.s.electric_utility.scenarios,
+							tz in p.s.electric_utility.outage_start_time_steps,
+							ts in p.s.electric_utility.outage_time_steps
+					) 
+					for t in p.techs.gen
+				),
+				dims=1
+			), 
+			digits=3
+		)
+		r["microgrid_upgrade_capital_cost"] += r["generator_microgrid_upgrade_cost"]
 	end
 	d["Outages"] = r
 end
