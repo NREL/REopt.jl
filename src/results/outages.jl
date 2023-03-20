@@ -102,49 +102,72 @@ function add_outage_results(m, p, d::Dict)
 	# r["storage_microgrid_upgraded"] = round(value(m[:binMGStorageUsed]), digits=0)
 
 	if !isempty(p.techs.pv)
-		r["pv_microgrid_kw"] = 0
-		r["pv_microgrid_upgrade_cost"] = 0
-		r["pv_to_storage_series"] = []
-
-		for t in p.techs.pv
-
-			# need the following logic b/c can have non-zero mg capacity when not using the capacity
-			# due to the constraint for setting the mg capacities equal to the grid connected capacities
-			#if Bool(r[t * "_microgrid_upgraded"])
-			if Bool(round(value(m[:binMGTechUsed][t]), digits=0))
-				r["pv_microgrid_kw"] += round(value(m[:dvMGsize][t]), digits=4)
-			end
-			r["pv_microgrid_upgrade_cost"] += round(value(m[:dvMGTechUpgradeCost][t]), digits=2)
-
-			if !isempty(p.s.storage.types.elec)
-				PVtoBatt = (m[:dvMGProductionToStorage][t, s, tz, ts] for 
-					s in p.s.electric_utility.scenarios,
-					tz in p.s.electric_utility.outage_start_time_steps,
-					ts in p.s.electric_utility.outage_time_steps)
-				if isempty(r["pv_to_storage_series"])
-					r["pv_to_storage_series"] = round.(value.(PVtoBatt), digits=3)
-				else
-					r["pv_to_storage_series"] += round.(value.(PVtoBatt), digits=3)
-				end
-			end
-
-			PVtoCUR = (m[:dvMGCurtail][t, s, tz, ts] for 
-				s in p.s.electric_utility.scenarios,
-				tz in p.s.electric_utility.outage_start_time_steps,
-				ts in p.s.electric_utility.outage_time_steps)
-			r[string("pv_curtailed_series")] = round.(value.(PVtoCUR), digits=3)
-
-			PVtoLoad = (
-				m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] 
-						* p.levelization_factor[t]
-				- m[:dvMGCurtail][t, s, tz, ts]
-				- m[:dvMGProductionToStorage][t, s, tz, ts] for 
-					s in p.s.electric_utility.scenarios,
-					tz in p.s.electric_utility.outage_start_time_steps,
-					ts in p.s.electric_utility.outage_time_steps
+		r["pv_microgrid_kw"] = round(
+			sum(
+				# need to multiply by the binary b/c can have non-zero mg capacity when not using the capacity
+				# due to the constraint for setting the mg capacities equal to the grid connected capacities
+				value(m[:dvMGsize][t]) * round(value(m[:binMGTechUsed][t]), digits=0)
+				for t in p.techs.pv
+			), 
+			digits=4
+		)
+		r["pv_microgrid_upgrade_cost"] = round(
+			sum(
+				value(m[:dvMGTechUpgradeCost][t]) for t in p.techs.pv
+			), 
+			digits=2
+		)
+		if isempty(p.s.storage.types.elec)
+			r["pv_to_storage_series"] = []
+		else
+			r["pv_to_storage_series"] = round.(
+				sum(
+					(
+						value.(
+							m[:dvMGProductionToStorage][t, s, tz, ts] 
+							for s in p.s.electric_utility.scenarios,
+								tz in p.s.electric_utility.outage_start_time_steps,
+								ts in p.s.electric_utility.outage_time_steps
+						) 
+						for t in p.techs.pv
+					),
+					dims=1
+				), 
+				digits=3
 			)
-			r[string("pv_to_load_series")] = round.(value.(PVtoLoad), digits=3)
 		end
+		r["pv_curtailed_series"] = round.(
+			sum(
+				(
+					value.(
+						m[:dvMGCurtail][t, s, tz, ts] 
+						for s in p.s.electric_utility.scenarios,
+							tz in p.s.electric_utility.outage_start_time_steps,
+							ts in p.s.electric_utility.outage_time_steps
+					) 
+					for t in p.techs.pv
+				),
+				dims=1
+			), 
+			digits=3
+		)
+		r["pv_to_load_series"] = round.(
+			sum(
+				(
+					value.(
+						m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] * p.levelization_factor[t]
+						- m[:dvMGCurtail][t, s, tz, ts]
+						- m[:dvMGProductionToStorage][t, s, tz, ts]
+						for s in p.s.electric_utility.scenarios,
+							tz in p.s.electric_utility.outage_start_time_steps,
+							ts in p.s.electric_utility.outage_time_steps
+					) 
+					for t in p.techs.pv
+				),
+				dims=1
+			), 
+			digits=3
+		)
 		r["microgrid_upgrade_capital_cost"] += r["pv_microgrid_upgrade_cost"]
 	end
 
