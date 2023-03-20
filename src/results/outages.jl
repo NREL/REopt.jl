@@ -95,150 +95,86 @@ function add_outage_results(m, p, d::Dict)
 		r["storage_discharge_series"] = []
 	end
 
-	if !isempty(p.techs.pv)
-		r["pv_microgrid_size_kw"] = round(
-			sum(
-				# need to multiply by the binary b/c can have non-zero mg capacity when not using the capacity
-				# due to the constraint for setting the mg capacities equal to the grid connected capacities
-				value(m[:dvMGsize][t]) * round(value(m[:binMGTechUsed][t]), digits=0)
-				for t in p.techs.pv
-			), 
-			digits=4
-		)
-		r["pv_microgrid_upgrade_cost"] = round(
-			sum(
-				value(m[:dvMGTechUpgradeCost][t]) for t in p.techs.pv
-			), 
-			digits=2
-		)
-		if isempty(p.s.storage.types.elec)
-			r["pv_to_storage_series"] = []
-		else
-			r["pv_to_storage_series"] = round.(
+	for (tech_type_name, tech_set) in [("pv", p.techs.pv), ("generator", p.techs.gen)]
+		if !isempty(tech_set)
+			r[tech_type_name * "_microgrid_size_kw"] = round(
+				sum(
+					# need to multiply by the binary b/c can have non-zero mg capacity when not using the capacity
+					# due to the constraint for setting the mg capacities equal to the grid connected capacities
+					value(m[:dvMGsize][t]) * round(value(m[:binMGTechUsed][t]), digits=0)
+					for t in tech_set
+				), 
+				digits=4
+			)
+			r[tech_type_name * "_microgrid_upgrade_cost"] = round(
+				sum(
+					value(m[:dvMGTechUpgradeCost][t]) for t in tech_set
+				), 
+				digits=2
+			)
+			if isempty(p.s.storage.types.elec)
+				r[tech_type_name * "_to_storage_series"] = []
+			else
+				r[tech_type_name * "_to_storage_series"] = round.(
+					sum(
+						(
+							value.(
+								m[:dvMGProductionToStorage][t, s, tz, ts] 
+								for s in p.s.electric_utility.scenarios,
+									tz in p.s.electric_utility.outage_start_time_steps,
+									ts in p.s.electric_utility.outage_time_steps
+							) 
+							for t in tech_set
+						),
+						dims=1
+					), 
+					digits=3
+				)
+			end
+			r[tech_type_name * "_curtailed_series"] = round.(
 				sum(
 					(
 						value.(
-							m[:dvMGProductionToStorage][t, s, tz, ts] 
+							m[:dvMGCurtail][t, s, tz, ts] 
 							for s in p.s.electric_utility.scenarios,
 								tz in p.s.electric_utility.outage_start_time_steps,
 								ts in p.s.electric_utility.outage_time_steps
 						) 
-						for t in p.techs.pv
+						for t in tech_set
 					),
 					dims=1
 				), 
 				digits=3
 			)
+			r[tech_type_name * "_to_load_series"] = round.(
+				sum(
+					(
+						value.(
+							m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] * p.levelization_factor[t]
+							- m[:dvMGCurtail][t, s, tz, ts]
+							- m[:dvMGProductionToStorage][t, s, tz, ts]
+							for s in p.s.electric_utility.scenarios,
+								tz in p.s.electric_utility.outage_start_time_steps,
+								ts in p.s.electric_utility.outage_time_steps
+						) 
+						for t in tech_set
+					),
+					dims=1
+				), 
+				digits=3
+			)
+			r["microgrid_upgrade_capital_cost"] += r[tech_type_name * "_microgrid_upgrade_cost"]
 		end
-		r["pv_curtailed_series"] = round.(
-			sum(
-				(
-					value.(
-						m[:dvMGCurtail][t, s, tz, ts] 
-						for s in p.s.electric_utility.scenarios,
-							tz in p.s.electric_utility.outage_start_time_steps,
-							ts in p.s.electric_utility.outage_time_steps
-					) 
-					for t in p.techs.pv
-				),
-				dims=1
-			), 
-			digits=3
-		)
-		r["pv_to_load_series"] = round.(
-			sum(
-				(
-					value.(
-						m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] * p.levelization_factor[t]
-						- m[:dvMGCurtail][t, s, tz, ts]
-						- m[:dvMGProductionToStorage][t, s, tz, ts]
-						for s in p.s.electric_utility.scenarios,
-							tz in p.s.electric_utility.outage_start_time_steps,
-							ts in p.s.electric_utility.outage_time_steps
-					) 
-					for t in p.techs.pv
-				),
-				dims=1
-			), 
-			digits=3
-		)
-		r["microgrid_upgrade_capital_cost"] += r["pv_microgrid_upgrade_cost"]
 	end
 
 	if !isempty(p.techs.gen)
-		r["generator_microgrid_size_kw"] = round(
-			sum(
-				# need to multiply by the binary b/c can have non-zero mg capacity when not using the capacity
-				# due to the constraint for setting the mg capacities equal to the grid connected capacities
-				value(m[:dvMGsize][t]) * round(value(m[:binMGTechUsed][t]), digits=0)
-				for t in p.techs.gen
-			), 
-			digits=4
-		)
-		r["generator_microgrid_upgrade_cost"] = round(
-			sum(
-				value(m[:dvMGTechUpgradeCost][t]) for t in p.techs.gen
-			), 
-			digits=2
-		)
 		r["generator_fuel_used_per_outage"] = round(
 			sum(
 				value.(m[:dvMGFuelUsed][t, :, :]).data for t in p.techs.gen
 			), 
 			digits=4
 		)
-		if isempty(p.s.storage.types.elec)
-			r["generator_to_storage_series"] = []
-		else
-			r["generator_to_storage_series"] = round.(
-				sum(
-					(
-						value.(
-							m[:dvMGProductionToStorage][t, s, tz, ts] 
-							for s in p.s.electric_utility.scenarios,
-								tz in p.s.electric_utility.outage_start_time_steps,
-								ts in p.s.electric_utility.outage_time_steps
-						) 
-						for t in p.techs.gen
-					),
-					dims=1
-				), 
-				digits=3
-			)
-		end
-		r["generator_curtailed_series"] = round.(
-			sum(
-				(
-					value.(
-						m[:dvMGCurtail][t, s, tz, ts] 
-						for s in p.s.electric_utility.scenarios,
-							tz in p.s.electric_utility.outage_start_time_steps,
-							ts in p.s.electric_utility.outage_time_steps
-					) 
-					for t in p.techs.gen
-				),
-				dims=1
-			), 
-			digits=3
-		)
-		r["generator_to_load_series"] = round.(
-			sum(
-				(
-					value.(
-						m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] * p.levelization_factor[t]
-						- m[:dvMGCurtail][t, s, tz, ts]
-						- m[:dvMGProductionToStorage][t, s, tz, ts]
-						for s in p.s.electric_utility.scenarios,
-							tz in p.s.electric_utility.outage_start_time_steps,
-							ts in p.s.electric_utility.outage_time_steps
-					) 
-					for t in p.techs.gen
-				),
-				dims=1
-			), 
-			digits=3
-		)
-		r["microgrid_upgrade_capital_cost"] += r["generator_microgrid_upgrade_cost"]
 	end
+	
 	d["Outages"] = r
 end
