@@ -95,11 +95,6 @@ function add_outage_results(m, p, d::Dict)
 		r["storage_discharge_series"] = []
 	end
 
-	# for t in p.techs.all
-	# 	r[t * "_microgrid_upgraded"] = round(value(m[:binMGTechUsed][t]), digits=0)
-	# end
-	# r["storage_microgrid_upgraded"] = round(value(m[:binMGStorageUsed]), digits=0)
-
 	if !isempty(p.techs.pv)
 		r["pv_microgrid_size_kw"] = round(
 			sum(
