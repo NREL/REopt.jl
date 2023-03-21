@@ -466,6 +466,10 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
 
     prime_mover_defaults = get_prime_mover_defaults(prime_mover, hot_water_or_steam, size_class, prime_mover_defaults_all)
 
+    if !isnothing(chp_max_size_kw) && prime_mover_defaults["min_allowable_kw"] > chp_max_size_kw
+        prime_mover_defaults["min_allowable_kw"] = chp_max_size_kw
+    end
+
     response = Dict([
         ("prime_mover", prime_mover),
         ("size_class", size_class),
