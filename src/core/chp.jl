@@ -232,6 +232,7 @@ function CHP(d::Dict;
                                                                 avg_boiler_fuel_load_mmbtu_per_hour=avg_boiler_fuel_load_mmbtu_per_hour,
                                                                 prime_mover=chp.prime_mover,
                                                                 size_class=chp.size_class,
+                                                                max_kw=chp.max_kw,
                                                                 boiler_efficiency=eff,
                                                                 avg_electric_load_kw=avg_electric_load_kw,
                                                                 max_electric_load_kw=max_electric_load_kw)
@@ -276,7 +277,7 @@ end
 
 
 """
-    get_prime_mover_defaults(prime_mover::String, boiler_type::String, size_class::Int, prime_mover_defaults_all::Dict)
+    get_prime_mover_defaults(prime_mover::String, boiler_type::String, size_class::Int, max_kw::Float64, prime_mover_defaults_all::Dict)
 
 return a Dict{String, Union{Float64, AbstractVector{Float64}}} by selecting the appropriate values from 
 data/chp/chp_default_data.json, which contains values based on prime_mover, boiler_type, and size_class for the 
@@ -291,7 +292,7 @@ custom_chp_inputs, i.e.
 - "min_turn_down_fraction" 
 - "unavailability_periods"
 """
-function get_prime_mover_defaults(prime_mover::String, boiler_type::String, size_class::Int, prime_mover_defaults_all::Dict)
+function get_prime_mover_defaults(prime_mover::String, boiler_type::String, size_class::Int, max_kw::Float64, prime_mover_defaults_all::Dict)
     pmds = prime_mover_defaults_all
     prime_mover_defaults = Dict{String, Any}()
     # Since size_class=0 is the first entry in the one-based indexed arrays in Julia, we need to add 1 for indexing
@@ -311,6 +312,7 @@ function get_prime_mover_defaults(prime_mover::String, boiler_type::String, size
             prime_mover_defaults[k] = convert(Vector{Float64}, v)  # JSON.parsefile makes things Vector{Any}
         end
     end
+    
     return prime_mover_defaults
 end
 
@@ -320,6 +322,7 @@ end
                                         avg_boiler_fuel_load_mmbtu_per_hour::Union{Float64, Vector{Float64}, Nothing}=nothing,
                                         prime_mover::Union{String, Nothing}=nothing,
                                         size_class::Union{Int64, Nothing}=nothing,
+                                        max_kw::Float64=NaN,
                                         boiler_efficiency::Union{Float64, Nothing}=nothing,
                                         avg_electric_load_kw::Union{Float64, Nothing}=nothing,
                                         max_electric_load_kw::Union{Float64, Nothing}=nothing)
@@ -353,6 +356,7 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
                                                 avg_boiler_fuel_load_mmbtu_per_hour::Union{Float64, Vector{Float64}, Nothing}=nothing,
                                                 prime_mover::Union{String, Nothing}=nothing,
                                                 size_class::Union{Int64, Nothing}=nothing,
+                                                max_kw::Float64=NaN,
                                                 boiler_efficiency::Union{Float64, Nothing}=nothing,
                                                 avg_electric_load_kw::Union{Float64, Nothing}=nothing,
                                                 max_electric_load_kw::Union{Float64, Nothing}=nothing)
@@ -429,6 +433,11 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
         prime_mover = "recip_engine"
     end
 
+    # Overwrite chp_max_size_kw, if max_kw is input
+    if !isnan(max_kw)
+        chp_max_size_kw = max_kw
+    end
+
     # prime_mover now assigned even if it was not input, so now load in these size_class metrics
     n_classes = length(prime_mover_defaults_all[prime_mover]["installed_cost_per_kw"])
     class_bounds = prime_mover_defaults_all[prime_mover]["tech_sizes_for_cost_curve"]
@@ -464,7 +473,7 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
         size_class = 0
     end
 
-    prime_mover_defaults = get_prime_mover_defaults(prime_mover, hot_water_or_steam, size_class, prime_mover_defaults_all)
+    prime_mover_defaults = get_prime_mover_defaults(prime_mover, hot_water_or_steam, size_class, max_kw, prime_mover_defaults_all)
 
     if !isnothing(chp_max_size_kw) && prime_mover_defaults["min_allowable_kw"] > chp_max_size_kw
         prime_mover_defaults["min_allowable_kw"] = chp_max_size_kw
