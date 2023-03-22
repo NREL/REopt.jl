@@ -29,6 +29,7 @@
 # *********************************************************************************
 
 prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cell"]
+conflict_res_min_allowable_fraction_of_max = 0.25
 
 """
 `CHP` is an optional REopt input with the following keys and default values:
@@ -260,8 +261,8 @@ function CHP(d::Dict;
     end
 
     if chp.min_allowable_kw > chp.max_kw
-        @warn "CHP.min_allowable_kw is greater than CHP.max_kw, so setting min_allowable_kw equal to max_kw"
-        setproperty!(chp, :min_allowable_kw, chp.max_kw)
+        @warn "CHP.min_allowable_kw is greater than CHP.max_kw, so setting min_allowable_kw equal to $conflict_res_min_allowable_fraction_of_max of the max_kw"
+        setproperty!(chp, :min_allowable_kw, chp.max_kw * conflict_res_min_allowable_fraction_of_max)
     end
         
     if isempty(chp.unavailability_periods)
@@ -476,7 +477,7 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
     prime_mover_defaults = get_prime_mover_defaults(prime_mover, hot_water_or_steam, size_class, max_kw, prime_mover_defaults_all)
 
     if !isnothing(chp_max_size_kw) && prime_mover_defaults["min_allowable_kw"] > chp_max_size_kw
-        prime_mover_defaults["min_allowable_kw"] = chp_max_size_kw
+        prime_mover_defaults["min_allowable_kw"] = chp_max_size_kw * conflict_res_min_allowable_fraction_of_max
     end
 
     response = Dict([
