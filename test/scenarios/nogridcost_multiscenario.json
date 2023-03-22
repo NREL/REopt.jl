@@ -56,6 +56,7 @@
 	  "max_kw": 0.0
   },
   "Financial": {
-    "value_of_lost_load_per_kwh": 1.0
+    "value_of_lost_load_per_kwh": 1.0,
+    "microgrid_upgrade_cost_fraction": 0.3
   }
 }
