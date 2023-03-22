@@ -421,7 +421,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 				m[:binMGCHPIsOnInTS][s, tz, ts] == 0
 			)
 			@constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-				m[:dvMGCHPFuelBurnYIntercept][s, tz, ts] == 0
+				m[:dvMGCHPFuelBurnYIntercept][s, tz] == 0
 			)            
 		end        
 		
