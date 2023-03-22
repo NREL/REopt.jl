@@ -56,11 +56,22 @@ function add_outage_cost_constraints(m,p)
     @expression(m, ExpectedOutageCost,
         sum(m[:dvMaxOutageCost][s] * p.s.electric_utility.outage_probabilities[s] for s in p.s.electric_utility.scenarios)
     )
+   
+    if !isempty(setdiff(p.techs.elec, p.techs.segmented))
+        @constraint(m, [t in setdiff(p.techs.elec, p.techs.segmented)],
+            m[:binMGTechUsed][t] => {m[:dvMGTechUpgradeCost][t] >= p.s.financial.microgrid_upgrade_cost_fraction * p.third_party_factor *
+                                    p.cap_cost_slope[t] * m[:dvMGsize][t]}
+        )
+    end
 
-    @constraint(m, [t in p.techs.elec],
-        m[:binMGTechUsed][t] => {m[:dvMGTechUpgradeCost][t] >= p.s.financial.microgrid_upgrade_cost_fraction * p.third_party_factor *
-		                         p.cap_cost_slope[t] * m[:dvMGsize][t]}
-    )
+    if !isempty(p.techs.segmented)
+        @warn "Adding binary variable(s) to model cost curves in stochastic outages"
+        @constraint(m, [t in p.techs.segmented],  # cannot have this for statement in sum( ... for t in ...) ???
+            m[:binMGTechUsed][t] => {m[:dvMGTechUpgradeCost][t] >= p.s.financial.microgrid_upgrade_cost_fraction * p.third_party_factor * 
+                sum(p.cap_cost_slope[t][s] * m[Symbol("dvSegmentSystemSize"*t)][s] + 
+                    p.seg_yint[t][s] * m[Symbol("binSegment"*t)][s] for s in 1:p.n_segs_by_tech[t])}
+            )
+    end
 
     @constraint(m,
         m[:binMGStorageUsed] => {m[:dvMGStorageUpgradeCost] >= p.s.financial.microgrid_upgrade_cost_fraction * m[:TotalStorageCapCosts]}
