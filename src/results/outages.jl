@@ -186,5 +186,51 @@ function add_outage_results(m, p, d::Dict)
 		end
 		r["generator_fuel_used_per_outage"] = sum(r[string("mg_", t, "_fuel_used_per_outage")] for t in p.techs.gen)
 	end
+
+	if !isempty(p.techs.chp)
+		for t in p.techs.chp
+
+			# need the following logic b/c can have non-zero mg capacity when not using the capacity
+			# due to the constraint for setting the mg capacities equal to the grid connected capacities
+			if Bool(r[t * "_upgraded"])
+				r[string(t, "_mg_kw")] = round(value(m[:dvMGsize][t]), digits=4)
+			else
+				r[string(t, "_mg_kw")] = 0
+			end
+
+			r[string("mg_", t, "_fuel_used_per_outage")] = value.(m[:dvMGFuelUsed][t, :, :]).data
+			r[string("mg_", t, "_upgrade_cost")] = round(value(m[:dvMGTechUpgradeCost][t]), digits=2)
+			r["microgrid_upgrade_capital_cost"] += r[string("mg_", t, "_upgrade_cost")]
+
+			if !isempty(p.s.storage.types.elec)
+				CHPToBatt = (m[:dvMGProductionToStorage][t, s, tz, ts] for 
+					s in p.s.electric_utility.scenarios,
+					tz in p.s.electric_utility.outage_start_time_steps,
+					ts in p.s.electric_utility.outage_time_steps)
+			else
+				CHPToBatt = []
+			end
+			r[string("mg_", t, "_to_storage_series")] = round.(value.(CHPToBatt), digits=3)
+
+			CHPtoCUR = (m[:dvMGCurtail][t, s, tz, ts] for 
+				s in p.s.electric_utility.scenarios,
+				tz in p.s.electric_utility.outage_start_time_steps,
+				ts in p.s.electric_utility.outage_time_steps)
+			r[string("mg_", t, "_curtailed_series")] = round.(value.(CHPtoCUR), digits=3)
+
+			CHPtoLoad = (
+				m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] 
+						* p.levelization_factor[t]
+				- m[:dvMGCurtail][t, s, tz, ts]
+				- m[:dvMGProductionToStorage][t, s, tz, ts] for 
+					s in p.s.electric_utility.scenarios,
+					tz in p.s.electric_utility.outage_start_time_steps,
+					ts in p.s.electric_utility.outage_time_steps
+			)
+			r[string("mg_", t, "_to_load_series")] = round.(value.(CHPtoLoad), digits=3)
+		end
+		r["chp_fuel_used_per_outage"] = sum(r[string("mg_", t, "_fuel_used_per_outage")] for t in p.techs.chp)
+	end
+    
 	d["Outages"] = r
 end
