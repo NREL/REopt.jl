@@ -23,6 +23,12 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop 3/22/23
+### Changed
+- Made outages output names not dynamic to allow integration into API
+- Add missing units to outages results field names: **unserved_load_series_kw**, **unserved_load_per_outage_kwh**, **generator_fuel_used_per_outage_gal**
+- Default `Financial` field **microgrid_upgrade_cost_fraction** to 0
+
 ## v0.28.1
 ### Added
 - `emissions_profiles` function, exported for external use as an endpoint in REopt_API for the webtool/UI
