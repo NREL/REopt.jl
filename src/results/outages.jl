@@ -125,8 +125,7 @@ function add_outage_results(m, p, d::Dict)
 									ts in p.s.electric_utility.outage_time_steps
 							) 
 							for t in tech_set
-						),
-						dims=1
+						)
 					), 
 					digits=3
 				)
@@ -141,8 +140,7 @@ function add_outage_results(m, p, d::Dict)
 								ts in p.s.electric_utility.outage_time_steps
 						) 
 						for t in tech_set
-					),
-					dims=1
+					)
 				), 
 				digits=3
 			)
@@ -158,8 +156,7 @@ function add_outage_results(m, p, d::Dict)
 								ts in p.s.electric_utility.outage_time_steps
 						) 
 						for t in tech_set
-					),
-					dims=1
+					)
 				), 
 				digits=3
 			)
@@ -168,9 +165,9 @@ function add_outage_results(m, p, d::Dict)
 	end
 
 	if !isempty(p.techs.gen)
-		r["generator_fuel_used_per_outage_gal"] = round(
+		r["generator_fuel_used_per_outage_gal"] = round.(
 			sum(
-				value.(m[:dvMGFuelUsed][t, :, :]).data for t in p.techs.gen
+				[value.(m[:dvMGFuelUsed][t, :, :]).data for t in p.techs.gen]
 			), 
 			digits=4
 		)
