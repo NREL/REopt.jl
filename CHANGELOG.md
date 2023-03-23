@@ -35,6 +35,7 @@ Classify the change according to the following categories:
 - Iterate on calculating `CHP` heuristic size based on average heating load which is also used to set `max_kw` if not given: once `size_class` is determined, recalculate using the efficiency numbers for that `size_class`.
 ### Fixed
 - Fix non-handling of cost-curve/segmented techs in stochastic outages
+- Fix issues with `simulated_load.jl` monthly heating energy input to return the heating load profile
 
 ## v0.28.1
 ### Added
