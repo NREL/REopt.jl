@@ -71,6 +71,7 @@
         "analysis_years": 20,
         "offtaker_tax_rate_fraction": 0.4,
         "owner_tax_rate_fraction": 0.4,
-        "om_cost_escalation_rate_fraction": 0.025
+        "om_cost_escalation_rate_fraction": 0.025,
+        "microgrid_upgrade_cost_fraction": 0.3
     }
 }

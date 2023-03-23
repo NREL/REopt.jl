@@ -13,6 +13,13 @@
         "only_runs_during_grid_outage": true,
         "sells_energy_back_to_grid": false
     },
+    "CHP": {
+        "thermal_efficiency_full_load": 0.0,
+        "prime_mover": "recip_engine",
+        "fuel_cost_per_mmbtu": 12.0,
+        "min_kw": 150.0,
+        "max_kw": 150.0
+    },    
     "PV": {
         "existing_kw": 3580.54,
         "array_type": 0,
@@ -50,6 +57,7 @@
         "offtaker_tax_rate_fraction": 0.0,
         "owner_discount_rate_fraction": 0.1,
         "offtaker_discount_rate_fraction": 0.03,
-        "elec_cost_escalation_rate_fraction": 0.023
+        "elec_cost_escalation_rate_fraction": 0.023,
+        "microgrid_upgrade_cost_fraction": 0.3
     }
 }
