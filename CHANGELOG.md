@@ -23,7 +23,7 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop 3/22/23
+## v0.29.0
 ### Added
 - Add `CHP` `FuelUsed` and `FuelCost` modeling/tracking for stochastic/multi-outages
 - Add `CHP` outputs for stochastic/multi-outages
