@@ -46,6 +46,12 @@
 - `generator_curtailed_series_kw` Array of Generator curtailed in every outage modeled.
 - `generator_to_load_series_kw` Array of Generator power used to meet load in every outage modeled.
 - `generator_fuel_used_per_outage_gal` Array of fuel used in every outage modeled, summed over all Generators.
+- `chp_microgrid_size_kw` Optimal microgrid CHP capacity.
+- `chp_microgrid_upgrade_cost` The cost to include the CHP system in the microgrid.
+- `chp_to_storage_series_kw` Array of CHP power sent to the battery in every outage modeled.
+- `chp_curtailed_series_kw` Array of CHP curtailed in every outage modeled.
+- `chp_to_load_series_kw` Array of CHP power used to meet load in every outage modeled.
+- `chp_fuel_used_per_outage_mmbtu` Array of fuel used in every outage modeled, summed over all CHPs.
 - `microgrid_upgrade_capital_cost` Total capital cost of including technologies in the microgrid
 
 !!! warn
@@ -95,7 +101,7 @@ function add_outage_results(m, p, d::Dict)
 		r["storage_discharge_series_kw"] = []
 	end
 
-	for (tech_type_name, tech_set) in [("pv", p.techs.pv), ("generator", p.techs.gen)]
+	for (tech_type_name, tech_set) in [("pv", p.techs.pv), ("generator", p.techs.gen), ("chp", p.techs.chp)]
 		if !isempty(tech_set)
 			r[tech_type_name * "_microgrid_size_kw"] = round(
 				sum(
@@ -163,14 +169,22 @@ function add_outage_results(m, p, d::Dict)
 			r["microgrid_upgrade_capital_cost"] += r[tech_type_name * "_microgrid_upgrade_cost"]
 		end
 	end
-
-	if !isempty(p.techs.gen)
-		r["generator_fuel_used_per_outage_gal"] = round.(
-			sum(
-				[value.(m[:dvMGFuelUsed][t, :, :]).data for t in p.techs.gen]
-			), 
-			digits=4
-		)
+	for (tech_type_name, tech_set) in [("generator", p.techs.gen), ("chp", p.techs.chp)]
+		if !isempty(tech_set)
+            if tech_type_name == "generator"
+                fuel_unit = "gal"
+                unit_conversion = 1.0
+            else
+                fuel_unit = "mmbtu"
+                unit_conversion = KWH_PER_MMBTU
+            end
+            r[tech_type_name*"_fuel_used_per_outage_"*fuel_unit] = round.(
+                sum(
+                    [value.(m[:dvMGFuelUsed][t, :, :]).data ./ unit_conversion for t in tech_set]
+                ), 
+                digits=4
+            )
+        end
 	end
 
 	d["Outages"] = r

@@ -484,15 +484,16 @@ end
 
 @testset "Minimize Unserved Load" begin
         
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/outage.json")
 
     @test results["Outages"]["expected_outage_cost"] ≈ 0
     @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 0
     @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
+    @test value(m[:binMGTechUsed]["CHP"]) ≈ 1
     @test value(m[:binMGTechUsed]["PV"]) ≈ 1
     @test value(m[:binMGStorageUsed]) ≈ 1
-    @test results["Financial"]["lcc"] ≈ 7.19753998668e7 atol=5e4
+    @test results["Financial"]["lcc"] ≈ 7.0176719775e7 atol=5e4
 
     #=
     Scenario with $0.001/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
