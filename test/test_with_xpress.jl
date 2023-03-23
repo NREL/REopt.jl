@@ -484,7 +484,7 @@ end
 
 @testset "Minimize Unserved Load" begin
         
-    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/outage.json")
 
     @test results["Outages"]["expected_outage_cost"] ≈ 0
