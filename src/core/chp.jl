@@ -414,11 +414,8 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
         else
             boiler_effic = boiler_efficiency
         end
-        therm_effic = prime_mover_defaults_all[prime_mover]["thermal_efficiency_full_load"][hot_water_or_steam][size_class_calc+1]
-        elec_effic = prime_mover_defaults_all[prime_mover]["electric_efficiency_full_load"][size_class_calc+1]
-        avg_heating_thermal_load_mmbtu_per_hr = avg_boiler_fuel_load_mmbtu_per_hour * boiler_effic
-        chp_fuel_rate_mmbtu_per_hr = avg_heating_thermal_load_mmbtu_per_hr / therm_effic
-        chp_elec_size_heuristic_kw = chp_fuel_rate_mmbtu_per_hr * elec_effic * KWH_PER_MMBTU
+        chp_elec_size_heuristic_kw = get_heuristic_chp_size_kw(prime_mover_defaults_all, avg_boiler_fuel_load_mmbtu_per_hour, 
+                                        prime_mover, size_class_calc, hot_water_or_steam, boiler_effic)
         chp_max_size_kw = 2 * chp_elec_size_heuristic_kw
     # Calculate heuristic CHP size based on average electric load, and max size based on peak electric load
     elseif !isnothing(avg_electric_load_kw) && !isnothing(max_electric_load_kw)
@@ -491,4 +488,15 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
     ])
     return response
 
+end
+
+function get_heuristic_chp_size_kw(prime_mover_defaults_all, avg_boiler_fuel_load_mmbtu_per_hour, 
+                                prime_mover, size_class, hot_water_or_steam, boiler_effic)
+    therm_effic = prime_mover_defaults_all[prime_mover]["thermal_efficiency_full_load"][hot_water_or_steam][size_class+1]
+    elec_effic = prime_mover_defaults_all[prime_mover]["electric_efficiency_full_load"][size_class+1]
+    avg_heating_thermal_load_mmbtu_per_hr = avg_boiler_fuel_load_mmbtu_per_hour * boiler_effic
+    chp_fuel_rate_mmbtu_per_hr = avg_heating_thermal_load_mmbtu_per_hr / therm_effic
+    chp_elec_size_heuristic_kw = chp_fuel_rate_mmbtu_per_hr * elec_effic * KWH_PER_MMBTU
+    
+    return chp_elec_size_heuristic_kw
 end
