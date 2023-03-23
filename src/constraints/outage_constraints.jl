@@ -161,7 +161,6 @@ function add_MG_Gen_fuel_burn_constraints(m,p)
         sum( m[:dvMGGenMaxFuelCost][s] * p.s.electric_utility.outage_probabilities[s] for s in p.s.electric_utility.scenarios )
     )
 
-    m[:ExpectedMGFuelUsed] += ExpectedMGGenFuelUsed
     m[:ExpectedMGFuelCost] += ExpectedMGGenFuelCost
 end
 
@@ -218,7 +217,6 @@ function add_MG_CHP_fuel_burn_constraints(m, p; _n="")
         sum( m[:dvMGCHPMaxFuelCost][s] * p.s.electric_utility.outage_probabilities[s] for s in p.s.electric_utility.scenarios )
     )
 
-    m[:ExpectedMGFuelUsed] += ExpectedMGCHPFuelUsed
     m[:ExpectedMGFuelCost] += ExpectedMGCHPFuelCost
 end
 
