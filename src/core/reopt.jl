@@ -401,8 +401,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 		add_cannot_have_MG_with_only_PVwind_constraints(m,p)
 		add_MG_size_constraints(m,p)
-		
-		m[:ExpectedMGFuelUsed] = 0
+		0
 		m[:ExpectedMGFuelCost] = 0
         if !isempty(p.techs.gen)
 			add_MG_Gen_fuel_burn_constraints(m,p)
