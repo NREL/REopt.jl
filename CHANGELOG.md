@@ -24,10 +24,18 @@ Classify the change according to the following categories:
     ### Removed
 
 ## Develop 3/22/23
+### Added
+- Add `CHP` `FuelUsed` and `FuelCost` modeling/tracking for stochastic/multi-outages
+- Add `CHP` outputs for stochastic/multi-outages
 ### Changed
 - Made outages output names not dynamic to allow integration into API
 - Add missing units to outages results field names: **unserved_load_series_kw**, **unserved_load_per_outage_kwh**, **generator_fuel_used_per_outage_gal**
 - Default `Financial` field **microgrid_upgrade_cost_fraction** to 0
+- Add conditional logic to make `CHP.min_allowable_kw` 25% of `max_kw` if there is a conflicting relationship 
+- Iterate on calculating `CHP` heuristic size based on average heating load which is also used to set `max_kw` if not given: once `size_class` is determined, recalculate using the efficiency numbers for that `size_class`.
+### Fixed
+- Fix non-handling of cost-curve/segmented techs in stochastic outages
+- Fix issues with `simulated_load.jl` monthly heating energy input to return the heating load profile
 
 ## v0.28.1
 ### Added

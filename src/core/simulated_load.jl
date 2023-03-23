@@ -222,7 +222,7 @@ function simulated_load(d::Dict)
         # Monthly loads (default is empty list)
         monthly_mmbtu = get(d, "monthly_mmbtu", Real[])
         if !isempty(monthly_mmbtu)
-            if length(monthly_mmbtu != 12)
+            if length(monthly_mmbtu) != 12
                 throw(@error("monthly_mmbtu must contain a value for each of the 12 months"))
             end                   
             bad_index = []
@@ -279,11 +279,11 @@ function simulated_load(d::Dict)
         space_heating_monthly_mmbtu = Real[]
         dhw_monthly_mmbtu = Real[]
         if !isempty(monthly_mmbtu)    
-            space_heating_monthly_energy = get_monthly_energy(power_profile=default_space_heating_load.loads_kw)
-            dhw_monthly_energy = get_monthly_energy(power_profile=default_dhw_load.loads_kw)
+            space_heating_monthly_energy = get_monthly_energy(default_space_heating_load.loads_kw)
+            dhw_monthly_energy = get_monthly_energy(default_dhw_load.loads_kw)
             space_heating_fraction_monthly = space_heating_monthly_energy ./ (space_heating_monthly_energy + dhw_monthly_energy)
             space_heating_monthly_mmbtu = monthly_mmbtu .* space_heating_fraction_monthly
-            dhw_monthly_mmbtu = monthly_mmbtu .* (1 .- space_heating_monthly_mmbtu)
+            dhw_monthly_mmbtu = monthly_mmbtu - space_heating_monthly_mmbtu
         elseif !isnothing(annual_mmbtu)
             total_heating_annual_mmbtu = default_space_heating_load.annual_mmbtu + default_dhw_load.annual_mmbtu
             space_heating_fraction = default_space_heating_load.annual_mmbtu / total_heating_annual_mmbtu
