@@ -175,10 +175,10 @@ function add_MG_CHP_fuel_burn_constraints(m, p; _n="")
     if fuel_burn_intercept > 1.0E-7
         #Constraint (1c1): Total Fuel burn for CHP **with** y-intercept fuel burn and supplementary firing
         @constraint(m, MGCHPFuelBurnCon[t in p.techs.chp, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps],
-            m[Symbol("dvMGFuelUsed"*_n)][t,s,tz]  == p.hours_per_time_step * 
+            m[Symbol("dvMGFuelUsed"*_n)][t,s,tz]  == p.hours_per_time_step * (
                 m[Symbol("dvMGCHPFuelBurnYIntercept"*_n)][s,tz] +
                 sum(p.production_factor[t,tz+ts-1] * fuel_burn_slope * m[Symbol("dvMGRatedProduction"*_n)][t,s,tz,ts]
-                    for ts in 1:p.s.electric_utility.outage_durations[s])
+                    for ts in 1:p.s.electric_utility.outage_durations[s]))
         )
 
         #Constraint (1d): Y-intercept fuel burn for CHP across the scenario outage time steps
