@@ -38,6 +38,8 @@ mutable struct Metrics
     om_series_bau::Array{Float64, 1}
     total_pbi::Array{Float64, 1}
     total_pbi_bau::Array{Float64, 1}
+    total_timed_pbi::Array{Float64, 1}
+    total_timed_pbi_bau::Array{Float64, 1}
     total_depreciation::Array{Float64, 1}
     total_ibi_and_cbi::Float64
 end
@@ -183,7 +185,7 @@ function proforma_results(p::REoptInputs, d::Dict)
 
     operating_expenses_after_tax = (total_operating_expenses - deductable_operating_expenses_series) + 
                                     deductable_operating_expenses_series * (1 - tax_rate_fraction)
-    total_cash_incentives = m.total_pbi * (1 - tax_rate_fraction)
+    total_cash_incentives = m.total_pbi * (1 - tax_rate_fraction) + m.total_timed_pbi # Added
     free_cashflow_without_year_zero = m.total_depreciation * tax_rate_fraction + total_cash_incentives + operating_expenses_after_tax
     free_cashflow_without_year_zero[1] += m.federal_itc
     free_cashflow = append!([(-1 * d["Financial"]["initial_capital_costs"]) + m.total_ibi_and_cbi], free_cashflow_without_year_zero)
@@ -250,7 +252,7 @@ function proforma_results(p::REoptInputs, d::Dict)
         electricity_bill_series_bau = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax_bau"])
         export_credit_series_bau = escalate_elec(-d["ElectricTariff"]["lifecycle_export_benefit_after_tax_bau"])
         total_operating_expenses_bau = electricity_bill_series_bau + export_credit_series_bau + m.om_series_bau
-        total_cash_incentives_bau = m.total_pbi_bau * (1 - p.s.financial.offtaker_tax_rate_fraction)
+        total_cash_incentives_bau = m.total_pbi_bau * (1 - p.s.financial.offtaker_tax_rate_fraction) + m.total_timed_pbi_bau # Added
 
         if p.s.financial.offtaker_tax_rate_fraction > 0
             deductable_operating_expenses_series_bau = copy(total_operating_expenses_bau)

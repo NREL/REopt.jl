@@ -72,6 +72,10 @@ struct REoptInputs <: AbstractInputs
     pbi_max_benefit::Dict{String, Any}  # (pbi_techs)
     pbi_max_kw::Dict{String, Any}  # (pbi_techs)
     pbi_benefit_per_kwh::Dict{String, Any}  # (pbi_techs)
+    timed_pbi_pwf::Dict{String, Any}  # (timed_pbi_techs)
+    timed_pbi_max_benefit::Dict{String, Any}  # (timed_pbi_techs)
+    timed_pbi_max_kw::Dict{String, Any}  # (timed_pbi_techs)
+    timed_pbi_benefit_per_kwh::Dict{String, Any}  # (timed_pbi_techs)    
     boiler_efficiency::Dict{String, <:Real}
     fuel_cost_per_kwh::Dict{String, AbstractArray}  # Fuel cost array for all time_steps
     ghp_options::UnitRange{Int64}  # Range of the number of GHP options
@@ -132,6 +136,10 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     pbi_max_benefit::Dict{String, Any}  # (pbi_techs)
     pbi_max_kw::Dict{String, Any}  # (pbi_techs)
     pbi_benefit_per_kwh::Dict{String, Any}  # (pbi_techs)
+    timed_pbi_pwf::Dict{String, Any}  # (timed_pbi_techs) # Added
+    timed_pbi_max_benefit::Dict{String, Any}  # (timed_pbi_techs)
+    timed_pbi_max_kw::Dict{String, Any}  # (timed_pbi_techs)
+    timed_pbi_benefit_per_kwh::Dict{String, Any}  # (timed_pbi_techs) 
     boiler_efficiency::Dict{String, <:Real}
     fuel_cost_per_kwh::Dict{String, AbstractArray}  # Fuel cost array for all time_steps
     ghp_options::UnitRange{Int64}  # Range of the number of GHP options
@@ -186,6 +194,8 @@ function REoptInputs(s::AbstractScenario)
         tech_emissions_factors_PM25, cop, techs_operating_reserve_req_fraction, thermal_cop, fuel_cost_per_kwh = setup_tech_inputs(s)
 
     pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
+
+    timed_pbi_pwf, timed_pbi_max_benefit, timed_pbi_max_kw, timed_pbi_benefit_per_kwh = setup_timed_pbi_inputs(s, techs)
 
     months = 1:12
 
@@ -249,6 +259,10 @@ function REoptInputs(s::AbstractScenario)
         pbi_max_benefit, 
         pbi_max_kw, 
         pbi_benefit_per_kwh,
+        timed_pbi_pwf,  # Added
+        timed_pbi_max_benefit, 
+        timed_pbi_max_kw, 
+        timed_pbi_benefit_per_kwh,
         boiler_efficiency,
         fuel_cost_per_kwh,
         ghp_options,
@@ -419,6 +433,35 @@ function setup_pbi_inputs(s::AbstractScenario, techs::Techs)
         
     end
     return pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh
+end
+
+
+"""
+    setup_timed_pbi_inputs(s::AbstractScenario, techs::Techs)
+
+Create data arrays for production based incentives. 
+All arrays can be empty if no techs have timed_production_incentive_per_kwh > 0.
+Will only be called for PV techs
+"""
+function setup_timed_pbi_inputs(s::AbstractScenario, techs::Techs) # Added
+
+    timed_pbi_pwf = Dict{String, Any}()
+    timed_pbi_max_benefit = Dict{String, Any}()
+    timed_pbi_max_kw = Dict{String, Any}()
+    timed_pbi_benefit_per_kwh = Dict{String, Any}()
+
+    for tech in techs.all
+        if (tech in techs.pv)
+            pv = get_pv_by_name(tech, s.pvs)
+            if pv.timed_production_incentive_per_kwh > 0 
+                push!(techs.timed_pbi, tech)
+                timed_pbi_pwf[tech], timed_pbi_max_benefit[tech], timed_pbi_max_kw[tech], timed_pbi_benefit_per_kwh[tech] = 
+                    timed_production_incentives(pv, s.financial)
+            end
+        end
+        
+    end
+    return timed_pbi_pwf, timed_pbi_max_benefit, timed_pbi_max_kw, timed_pbi_benefit_per_kwh
 end
 
 
@@ -958,9 +1001,15 @@ function production_incentives(tech::AbstractTech, financial::Financial)
     T = typeof(tech)
     # TODO should Generator be excluded? (v1 has the PBI inputs for Generator)
     if !(nameof(T) in [:Generator, :Boiler, :Elecchl, :Absorpchl])
+        print("\nnameof(T): ", nameof(T))
         if :degradation_fraction in fieldnames(T)  # PV has degradation
             pwf_prod_incent = annuity_escalation(tech.production_incentive_years, -1*tech.degradation_fraction,
                                                  financial.owner_discount_rate_fraction)
+            # Added                                     
+            if (nameof(T) in [:PV])
+                timed_pwf_prod_incent = annuity_escalation(tech.timed_production_incentive_years, -1*tech.degradation_fraction,
+                                                            financial.owner_discount_rate_fraction)
+            end
         else
             # prod incentives have zero escalation rate
             pwf_prod_incent = annuity(tech.production_incentive_years, 0, financial.owner_discount_rate_fraction)
@@ -968,9 +1017,41 @@ function production_incentives(tech::AbstractTech, financial::Financial)
         max_prod_incent = tech.production_incentive_max_benefit
         max_size_for_prod_incent = tech.production_incentive_max_kw
         production_incentive_rate = tech.production_incentive_per_kwh
+
+        # Added
+        timed_max_prod_incent = tech.production_incentive_max_benefit
+        timed_max_size_for_prod_incent = tech.production_incentive_max_kw
+        timed_production_incentive_rate = tech.production_incentive_per_kwh
     end
 
-    return pwf_prod_incent, max_prod_incent, max_size_for_prod_incent, production_incentive_rate
+    return pwf_prod_incent, max_prod_incent, max_size_for_prod_incent, production_incentive_rate, timed_pwf_prod_incent, timed_max_prod_incent, timed_max_size_for_prod_incent, timed_production_incentive_rate
+end
+
+"""
+    timed_production_incentives(tech::AbstractTech, financial::Financial)
+
+Intermediate function for building the PBI arrays in REoptInputs
+    Will be called for PV techs only
+"""
+function timed_production_incentives(tech::AbstractTech, financial::Financial) # Added
+    timed_pwf_prod_incent = 0.0
+    timed_max_prod_incent = 0.0
+    timed_max_size_for_prod_incent = 0.0
+    timed_production_incentive_rate = 0.0
+    T = typeof(tech)
+
+    if !(nameof(T) in [:Generator, :Boiler, :Elecchl, :Absorpchl])
+        print("\nnameof(T): ", nameof(T))
+        if :degradation_fraction in fieldnames(T)  # PV has degradation
+            timed_pwf_prod_incent = annuity_escalation(tech.timed_production_incentive_years, -1*tech.degradation_fraction,
+                                                 financial.owner_discount_rate_fraction)
+        end
+        timed_max_prod_incent = tech.timed_production_incentive_max_benefit
+        timed_max_size_for_prod_incent = tech.timed_production_incentive_max_kw
+        timed_production_incentive_rate = tech.timed_production_incentive_per_kwh
+    end
+
+    return timed_pwf_prod_incent, timed_max_prod_incent, timed_max_size_for_prod_incent, timed_production_incentive_rate
 end
 
 

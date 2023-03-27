@@ -268,6 +268,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     m[:TotalPerUnitHourOMCosts] = 0.0
     m[:TotalFuelCosts] = 0.0
     m[:TotalProductionIncentive] = 0
+	m[:TotalTimedProductionIncentive] = 0
 	m[:dvComfortLimitViolationCost] = 0.0
 	m[:TotalCHPStandbyCharges] = 0
 	m[:OffgridOtherCapexAfterDepr] = 0.0
@@ -326,6 +327,11 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         if !isempty(p.techs.pbi)
             @warn "Adding binary variable(s) to model production based incentives"
             add_prod_incent_vars_and_constraints(m, p)
+        end
+
+		if !isempty(p.techs.timed_pbi) # Added
+            @warn "Adding binary variable(s) to model timed production based incentives"
+            add_timed_prod_incent_vars_and_constraints(m, p)
         end
     end
 
@@ -463,7 +469,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:TotalElecBill] * (1 - p.s.financial.offtaker_tax_rate_fraction) -
 
         # Subtract Incentives, which are taxable
-		m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_rate_fraction) +
+		m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_rate_fraction) -
+
+		# Subtract Timed Incentives, assumed non-taxable
+		m[:TotalTimedProductionIncentive] +
 
 		# Comfort limit violation costs
 		#TODO: add this to objective like SOC incentive below and 

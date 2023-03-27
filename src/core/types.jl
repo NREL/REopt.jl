@@ -54,6 +54,7 @@ mutable struct Techs
     pv::Vector{String}
     gen::Vector{String}
     pbi::Vector{String}
+    timed_pbi::Vector{String} # Added
     no_curtail::Vector{String}
     no_turndown::Vector{String}
     segmented::Vector{String}
@@ -78,6 +79,7 @@ mutable struct Techs
     pv::Vector{String}
     gen::Vector{String}
     pbi::Vector{String}
+    timed_pbi::Vector{String} # Added
     no_curtail::Vector{String}
     no_turndown::Vector{String}
     segmented::Vector{String}

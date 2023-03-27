@@ -91,6 +91,9 @@ function BAUInputs(p::REoptInputs)
         if pvname in p.techs.pbi
             push!(pbi_techs, pvname)
         end
+        if pvname in p.techs.timed_pbi
+            push!(timed_pbi_techs, pvname)
+        end
         pv = get_pv_by_name(pvname, p.s.pvs)
         fillin_techs_by_exportbin(techs_by_exportbin, pv, pv.name)
         if !pv.can_curtail
@@ -193,6 +196,10 @@ function BAUInputs(p::REoptInputs)
         p.pbi_max_benefit, 
         p.pbi_max_kw, 
         p.pbi_benefit_per_kwh,
+        p.timed_pbi_pwf,  # Added
+        p.timed_pbi_max_benefit, 
+        p.timed_pbi_max_kw, 
+        p.timed_pbi_benefit_per_kwh,
         boiler_efficiency,
         fuel_cost_per_kwh,
         ghp_options,

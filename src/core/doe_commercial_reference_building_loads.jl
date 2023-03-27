@@ -170,7 +170,7 @@ function built_in_load(type::String, city::String, buildingtype::String,
         boiler_efficiency = EXISTING_BOILER_EFFICIENCY
         used_kwh_per_mmbtu = KWH_PER_MMBTU  # do convert thermal loads
     end
-    datetime = DateTime(year, 1, 1, 1)
+    datetime = DateTime(year, 1, 1, 1) # TODO: Should this be (year, 1,1,0) since ts 1 = 12AM = hour 0 ? 
     for ld in normalized_profile
         month = Month(datetime).value
         push!(scaled_load, ld * annual_energy * monthly_scalers[month] * boiler_efficiency * used_kwh_per_mmbtu)

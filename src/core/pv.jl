@@ -67,6 +67,10 @@
     production_incentive_max_benefit::Real = 1.0e9,
     production_incentive_years::Int = 1,
     production_incentive_max_kw::Real = 1.0e9,
+    timed_production_incentive_per_kwh::Real = 0.0, # Compensate solar generation 1pm-7pm
+    timed_production_incentive_max_benefit::Real = 1.0e9,
+    timed_production_incentive_years::Int = 1,
+    timed_production_incentive_max_kw::Real = 1.0e9,
     can_net_meter::Bool = off_grid_flag ? false : true,
     can_wholesale::Bool = off_grid_flag ? false : true,
     can_export_beyond_nem_limit::Bool = off_grid_flag ? false : true,

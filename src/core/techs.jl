@@ -42,6 +42,7 @@ function Techs(p::REoptInputs, s::BAUScenario)
     segmented_techs = String[]
     gentechs = String[]
     pbi_techs = String[]
+    timed_pbi_techs = String[] # Added
     heating_techs = String[]
     cooling_techs = String[]
     boiler_techs = String[]
@@ -80,6 +81,7 @@ function Techs(p::REoptInputs, s::BAUScenario)
         pvtechs,
         gentechs,
         pbi_techs,
+        timed_pbi_techs, # Added
         techs_no_curtail,
         techs_no_turndown,
         segmented_techs,
@@ -116,6 +118,7 @@ function Techs(s::Scenario)
     techs_no_turndown = copy(pvtechs)
     gentechs = String[]
     pbi_techs = String[]
+    timed_pbi_techs = String[] # Added
     techs_no_curtail = String[]
     segmented_techs = String[]
     heating_techs = String[]
@@ -207,6 +210,7 @@ function Techs(s::Scenario)
         pvtechs,
         gentechs,
         pbi_techs,
+        timed_pbi_techs, # Added
         techs_no_curtail,
         techs_no_turndown,
         segmented_techs,

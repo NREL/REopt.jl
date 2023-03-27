@@ -37,6 +37,7 @@
 - `lifecycle_chp_standby_cost_after_tax` LCC component. Present value of all CHP standby charges, after tax.
 - `lifecycle_elecbill_after_tax` LCC component. Present value of all electric utility charges, after tax. 
 - `lifecycle_production_incentive_after_tax` LCC component. Present value of all production-based incentives, after tax.
+- `lifecycle_timed_production_incentive_after_tax`
 - `lifecycle_offgrid_other_annual_costs_after_tax` LCC component. Present value of offgrid_other_annual_costs over the analysis period, after tax. 
 - `lifecycle_offgrid_other_capital_costs` LCC component. Equal to offgrid_other_capital_costs with straight line depreciation applied over analysis period. The depreciation expense is assumed to reduce the owner's taxable income.
 - `lifecycle_outage_cost` LCC component. Expected outage cost. 
@@ -94,6 +95,7 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     r["lifecycle_chp_standby_cost_after_tax"] = value(m[Symbol("TotalCHPStandbyCharges"*_n)]) * (1 - p.s.financial.offtaker_tax_rate_fraction) # CHP standby
     r["lifecycle_elecbill_after_tax"] = value(m[Symbol("TotalElecBill"*_n)]) * (1 - p.s.financial.offtaker_tax_rate_fraction)  # Total utility bill 
     r["lifecycle_production_incentive_after_tax"] = value(m[Symbol("TotalProductionIncentive"*_n)])  * (1 - p.s.financial.owner_tax_rate_fraction)  # Production incentives
+    r["lifecycle_timed_production_incentive_after_tax"] = value(m[Symbol("TotalTimedProductionIncentive"*_n)]) # Timed Production incentives
     if p.s.settings.off_grid_flag # Offgrid other annual and capital costs
         r["lifecycle_offgrid_other_annual_costs_after_tax"] = p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_rate_fraction)
         r["lifecycle_offgrid_other_capital_costs"] = m[:OffgridOtherCapexAfterDepr]
@@ -327,6 +329,8 @@ function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
             end
         end
     end
+
+    # TODO could add time-based PBI here but ignoring for now
 
     npv_federal_itc = 0
     federal_itc_basis = capital_costs - state_ibi - utility_ibi - state_cbi - utility_cbi - federal_cbi
