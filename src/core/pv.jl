@@ -52,7 +52,7 @@
     acres_per_kw::Real=6e-3,
     inv_eff::Real=0.96,
     dc_ac_ratio::Real=1.2,
-    production_factor_series::Union{Nothing, Array{<:Real,1}} = nothing,
+    production_factor_series::Union{Nothing, Array{<:Real,1}} = nothing, # Optional user-defined production factors. Must be normalized to units of kW-AC/kW-DC nameplate. The series must be one year (January through December) of hourly, 30-minute, or 15-minute generation data.
     federal_itc_fraction::Real = 0.3,
     federal_rebate_per_kw::Real = 0.0,
     state_ibi_fraction::Real = 0.0,
