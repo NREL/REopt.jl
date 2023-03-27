@@ -339,14 +339,14 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
     year_one_energy = "year_one_energy_produced_kwh" in keys(results[tech_name]) ? results[tech_name]["year_one_energy_produced_kwh"] : results[tech_name]["annual_energy_produced_kwh"]
     for yr in range(0, stop=years-1)
         if yr < tech.production_incentive_years
-            degredation_fraction = :degradation_fraction in fieldnames(typeof(tech)) ? (1 - tech.degradation_fraction)^yr : 1.0
+            degradation_fraction = :degradation_fraction in fieldnames(typeof(tech)) ? (1 - tech.degradation_fraction)^yr : 1.0
             base_pbi = minimum([
-                tech.production_incentive_per_kwh * (year_one_energy - existing_energy_bau) * degredation_fraction,  
-                tech.production_incentive_max_benefit * degredation_fraction
+                tech.production_incentive_per_kwh * (year_one_energy - existing_energy_bau) * degradation_fraction,  
+                tech.production_incentive_max_benefit * degradation_fraction
             ])
             base_pbi_bau = minimum([
-                tech.production_incentive_per_kwh * get(results[tech_name], "year_one_energy_produced_kwh_bau", 0) * degredation_fraction,  
-                tech.production_incentive_max_benefit * degredation_fraction 
+                tech.production_incentive_per_kwh * get(results[tech_name], "year_one_energy_produced_kwh_bau", 0) * degradation_fraction,  
+                tech.production_incentive_max_benefit * degradation_fraction 
             ])
             push!(pbi_series, base_pbi)
             push!(pbi_series_bau, base_pbi_bau)
@@ -357,6 +357,29 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
     end
     m.total_pbi += pbi_series
     m.total_pbi_bau += pbi_series_bau
+
+    # Timed Production-based incentives # Added
+    timed_pbi_series = Float64[]
+    timed_pbi_series_bau = Float64[]
+    timed_existing_energy_bau = 0
+    timed_year_one_energy = "year_one_energy_produced_for_timed_pbi_kwh" in keys(results[tech_name]) ? results[tech_name]["year_one_energy_produced_for_timed_pbi_kwh"] : 0
+    for yr in range(0, stop=years-1)
+        if yr < tech.timed_production_incentive_years
+            degradation_fraction = :degradation_fraction in fieldnames(typeof(tech)) ? (1 - tech.degradation_fraction)^yr : 1.0
+            timed_base_pbi = minimum([
+                tech.timed_production_incentive_per_kwh * (timed_year_one_energy - timed_existing_energy_bau) * degradation_fraction,  
+                tech.timed_production_incentive_max_benefit * degradation_fraction
+            ])
+            timed_base_pbi_bau = 0
+            push!(timed_pbi_series, timed_base_pbi)
+            push!(timed_pbi_series_bau, timed_base_pbi_bau)
+        else
+            push!(timed_pbi_series, 0.0)
+            push!(timed_pbi_series_bau, 0.0)
+        end
+    end
+    m.total_timed_pbi += timed_pbi_series
+    m.total_timed_pbi_bau += timed_pbi_series_bau
 
     # Federal ITC 
     # NOTE: bug in v1 has the ITC within the `if tech.macrs_option_years in [5 ,7]` block.

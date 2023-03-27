@@ -320,10 +320,10 @@ function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
     if tech.production_incentive_max_benefit > 0
         for yr in 1:years
             if yr < tech.production_incentive_years
-                degredation_fraction = (1- degradation_fraction)^yr
+                degradation_fraction = (1- degradation_fraction)^yr
                 base_pbi = minimum([tech.production_incentive_per_kwh * 
-                    (year_one_energy_produced - existing_energy_bau) * degredation_fraction,  
-                    tech.production_incentive_max_benefit * degredation_fraction 
+                    (year_one_energy_produced - existing_energy_bau) * degradation_fraction,  
+                    tech.production_incentive_max_benefit * degradation_fraction 
                 ])
                 npv_pbi += base_pbi * (1.0/(1.0+discount_rate_fraction))^(yr+1)
             end

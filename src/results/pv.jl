@@ -32,6 +32,7 @@
 - `size_kw` Optimal PV capacity
 - `lifecycle_om_cost_after_tax` Lifecycle operations and maintenance cost in present value, after tax
 - `year_one_energy_produced_kwh` Energy produced over the first year
+- `year_one_energy_produced_for_timed_pbi_kwh` Energy produced over the first year during timed_pbi hours (1-7pm)
 - `annual_energy_produced_kwh` Average annual energy produced when accounting for degradation
 - `lcoe_per_kwh` Levelized Cost of Energy produced by the PV system
 - `electric_to_load_series_kw` Vector of power used to meet load over the first year
@@ -94,6 +95,24 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 		PVPerUnitSizeOMCosts = p.om_cost_per_kw[t] * p.pwf_om * m[Symbol("dvSize"*_n)][t]
 		r["lifecycle_om_cost_after_tax"] = round(value(PVPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_rate_fraction), digits=0)
         r["lcoe_per_kwh"] = calculate_lcoe(p, r, get_pv_by_name(t, p.s.pvs))
+
+        # Determine time steps between 1-7pm 
+        timed_pbi_time_steps = Int[]
+        start_hr = 13 # 1pm
+        end_hr = 19 # 7pm (noninclusive) (goes 1-7pm)
+        datetime = DateTime(2017, 1, 1, 0) # starting at hour 0 because ts 1 = 12am = hour 0. Using 2017 bc not considering leap years
+        for ts in time_steps
+            hour = Hour(datetime).value
+            if start_hr <= hour < end_hr
+                push!(timed_pbi_time_steps, ts)
+            end
+            datetime += Dates.Hour(1)
+        end
+
+        # Note: Timed PBI only works with hourly analyses 
+        TimedYear1PvProd = (sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] for ts in timed_pbi_time_steps) * p.hours_per_time_step)
+        r["year_one_energy_produced_for_timed_pbi_kwh"] = round(value(TimedYear1PvProd), digits=0)
+
         d[t] = r
 	end
     nothing
