@@ -47,7 +47,8 @@ end
 
 
 function insert_u_after_p_bp(xp_array_incent, yp_array_incent, region, u_xbp, u_ybp, p, p_cap, u_cap)
-    xp_array_incent[region].append(u_xbp)
+    # xp_array_incent[region].append(u_xbp)
+    push!(xp_array_incent[region], u_xbp)
     if p_cap == 0
         push!(yp_array_incent[region], u_ybp - (p * u_ybp + u_cap))
     else
