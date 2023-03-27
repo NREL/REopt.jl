@@ -267,8 +267,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     m[:TotalPerUnitProdOMCosts] = 0.0
     m[:TotalPerUnitHourOMCosts] = 0.0
     m[:TotalFuelCosts] = 0.0
-    m[:TotalProductionIncentive] = 0
-	m[:TotalTimedProductionIncentive] = 0
+    m[:TotalProductionIncentive] = 0.0
+	m[:TotalTimedProductionIncentive] = 0.0
 	m[:dvComfortLimitViolationCost] = 0.0
 	m[:TotalCHPStandbyCharges] = 0
 	m[:OffgridOtherCapexAfterDepr] = 0.0
@@ -329,8 +329,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             add_prod_incent_vars_and_constraints(m, p)
         end
 
-		print("\np.techs.timed_pbi: ", p.techs.timed_pbi, "\n")
-		
 		if !isempty(p.techs.timed_pbi) # Added
             @warn "Adding binary variable(s) to model timed production based incentives"
             add_timed_prod_incent_vars_and_constraints(m, p)

@@ -81,7 +81,7 @@ function proforma_results(p::REoptInputs, d::Dict)
     third_party = p.s.financial.third_party_ownership
     
     # Create placeholder variables to store summed totals across all relevant techs
-    m = Metrics(0, zeros(years), zeros(years), zeros(years), zeros(years), zeros(years), 0)
+    m = Metrics(0, zeros(years), zeros(years), zeros(years), zeros(years), zeros(years), zeros(years), zeros(years), 0)
 
     # calculate PV o+m costs, incentives, and depreciation
     for pv in p.s.pvs

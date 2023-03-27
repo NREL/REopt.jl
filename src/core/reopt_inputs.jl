@@ -1001,7 +1001,6 @@ function production_incentives(tech::AbstractTech, financial::Financial)
     T = typeof(tech)
     # TODO should Generator be excluded? (v1 has the PBI inputs for Generator)
     if !(nameof(T) in [:Generator, :Boiler, :Elecchl, :Absorpchl])
-        print("\nnameof(T): ", nameof(T))
         if :degradation_fraction in fieldnames(T)  # PV has degradation
             pwf_prod_incent = annuity_escalation(tech.production_incentive_years, -1*tech.degradation_fraction,
                                                  financial.owner_discount_rate_fraction)
@@ -1041,7 +1040,6 @@ function timed_production_incentives(tech::AbstractTech, financial::Financial) #
     T = typeof(tech)
 
     if !(nameof(T) in [:Generator, :Boiler, :Elecchl, :Absorpchl])
-        print("\nnameof(T): ", nameof(T))
         if :degradation_fraction in fieldnames(T)  # PV has degradation
             timed_pwf_prod_incent = annuity_escalation(tech.timed_production_incentive_years, -1*tech.degradation_fraction,
                                                  financial.owner_discount_rate_fraction)
