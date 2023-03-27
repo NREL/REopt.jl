@@ -28,7 +28,7 @@ Classify the change according to the following categories:
 ### Changed
 - Added more description to **production_factor_series inputs**
 ### Fixed
-- Fixed bug in spelling of degradation_fraction
+- Fixed spelling of degradation_fraction
 - use push! instead of append() for array in core/cost_curve.jl
 ## v0.29.0
 ### Added
