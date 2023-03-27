@@ -101,7 +101,7 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
         start_hr = 13 # 1pm
         end_hr = 19 # 7pm (noninclusive) (goes 1-7pm)
         datetime = DateTime(2017, 1, 1, 0) # starting at hour 0 because ts 1 = 12am = hour 0. Using 2017 bc not considering leap years
-        for ts in time_steps
+        for ts in p.time_steps
             hour = Hour(datetime).value
             if start_hr <= hour < end_hr
                 push!(timed_pbi_time_steps, ts)
