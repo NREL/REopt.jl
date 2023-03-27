@@ -34,7 +34,7 @@
     max_kw = 1.0e9,
     installed_cost_per_kw = nothing,
     om_cost_per_kw = 35.0,
-    production_factor_series = nothing,
+    production_factor_series = nothing, # Optional user-defined production factors. Must be normalized to units of kW-AC/kW-DC nameplate. The series must be one year (January through December) of hourly, 30-minute, or 15-minute generation data.
     size_class = "",
     wind_meters_per_sec = [],
     wind_direction_degrees = [],
