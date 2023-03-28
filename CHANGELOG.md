@@ -30,6 +30,7 @@ Classify the change according to the following categories:
 ### Fixed
 - Fixed spelling of degradation_fraction
 - use push! instead of append() for array in core/cost_curve.jl
+- Fixed calculation of batt_roundtrip_efficiency in outage_simulator.jl
 ## v0.29.0
 ### Added
 - Add `CHP` `FuelUsed` and `FuelCost` modeling/tracking for stochastic/multi-outages
