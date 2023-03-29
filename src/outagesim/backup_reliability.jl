@@ -1160,8 +1160,10 @@ function fuel_use(;
     kwargs...)::Tuple{Matrix{Int}, Matrix{Float64}}
 
     t_max = length(net_critical_loads_kw)
-
+    @info typeof(fuel_limit)
     fuel_limit = convert.(Float64, fuel_limit)
+    @info typeof(fuel_limit)
+    @info typeof(fuel_limit_is_per_generator)
     if isa(fuel_limit_is_per_generator, Bool)
         if fuel_limit_is_per_generator
             fuel_limit *= num_generators
