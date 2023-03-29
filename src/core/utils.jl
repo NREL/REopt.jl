@@ -115,11 +115,12 @@ function effective_cost(;
     """ effective PV and battery prices with ITC and depreciation
         (i) depreciation tax shields are inherently nominal --> no need to account for inflation
         (ii) ITC and bonus depreciation are taken at end of year 1
-        (iii) battery & generator replacement cost: one time capex in user defined year discounted back to t=0 with r_owner
+        (iii) battery & generator replacement cost: one time capex in user defined year discounted back to t=0 with r_owner 
+        (iiia) replacement costs receive same ITC and MACRS treatment as capital costs, but do not get any additional rebates applied
         (iv) Assume that cash incentives reduce ITC basis
         (v) Assume cash incentives are not taxable, (don't affect tax savings from MACRS)
         (vi) Cash incentives should be applied before this function into "itc_basis".
-             This includes all rebates and percentage-based incentives besides the ITC
+             This includes all rebates and percentage-based incentives besides the ITC 
     """
 
     # itc reduces depreciable_basis
