@@ -164,7 +164,7 @@ end
 function setup_gen_inputs(s::MPCScenario, existing_sizes, production_factor, fuel_cost_per_kwh)
     existing_sizes["Generator"] = s.generator.size_kw
     production_factor["Generator", :] = ones(length(s.electric_load.loads_kw))
-    generator_fuel_cost_per_kwh = s.generator.fuel_cost_per_gallon / KWH_PER_GAL_DIESEL
+    generator_fuel_cost_per_kwh = s.generator.fuel_cost_per_gallon / s.generator.fuel_higher_heating_value_kwh_per_gal
     fuel_cost_per_kwh["Generator"] = per_hour_value_to_time_series(generator_fuel_cost_per_kwh, s.settings.time_steps_per_hour, "Generator")
     return nothing
 end
