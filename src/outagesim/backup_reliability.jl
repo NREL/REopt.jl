@@ -827,6 +827,8 @@ Return a dictionary of inputs required for backup reliability calculations.
     -generator_fuel_burn_rate_per_kwh::Union{Real, Vector{<:Real}} = 0.076      Amount of fuel used per kWh generated. Fuel units should be consistent with fuel_limit and generator_fuel_intercept_per_hr.
 """
 function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dict())::Dict
+    @info typeof(fuel_limit)
+
     r2 = dictkeys_tosymbols(r)
     zero_array = zeros(length(p.time_steps))
     r2[:critical_loads_kw] = p.s.electric_load.critical_loads_kw
@@ -962,6 +964,9 @@ Dict{Any, Any} with 11 entries:
 ```
 """
 function backup_reliability_inputs(;r::Dict)::Dict
+    @info "backup_reliability_inputs(r::Dict)"
+    @info typeof(r["fuel_limit"])
+
     invalid_args = String[]
     r2 = dictkeys_tosymbols(r)
 
@@ -1159,11 +1164,12 @@ function fuel_use(;
     time_steps_per_hour::Real = 1,
     kwargs...)::Tuple{Matrix{Int}, Matrix{Float64}}
 
-    t_max = length(net_critical_loads_kw)
-    @info typeof(fuel_limit)
-    fuel_limit = convert.(Float64, fuel_limit)
+    @info "fuel_use()"
     @info typeof(fuel_limit)
     @info typeof(fuel_limit_is_per_generator)
+
+    t_max = length(net_critical_loads_kw)
+    fuel_limit = convert.(Float64, fuel_limit)
     if isa(fuel_limit_is_per_generator, Bool)
         if fuel_limit_is_per_generator
             fuel_limit *= num_generators
@@ -1480,6 +1486,8 @@ Possible keys in r:
 
 """
 function backup_reliability(r::Dict)
+    @info "backup_reliability(r::Dict)"
+    @info typeof(r["fuel_limit"])
     reliability_inputs = backup_reliability_inputs(r=r)
 	cumulative_results, fuel_survival, fuel_used = return_backup_reliability(; reliability_inputs... )
 	process_reliability_results(cumulative_results, fuel_survival, fuel_used)
