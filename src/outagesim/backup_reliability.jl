@@ -971,7 +971,8 @@ function backup_reliability_inputs(;r::Dict)::Dict
     r2 = dictkeys_tosymbols(r)
 
     generator_inputs = [:generator_operational_availability, :generator_failure_to_start, :generator_mean_time_to_failure, 
-                        :num_generators, :generator_size_kw, :fuel_limit, :generator_fuel_intercept_per_hr, :generator_fuel_burn_rate_per_kwh]
+                        :num_generators, :generator_size_kw, :fuel_limit, :fuel_limit_is_per_generator, 
+                        :generator_fuel_intercept_per_hr, :generator_fuel_burn_rate_per_kwh]
     for g in generator_inputs
         if haskey(r2, g) && isa(r2[g], Array) && length(r2[g]) == 1
             r2[g] = r2[g][1]
