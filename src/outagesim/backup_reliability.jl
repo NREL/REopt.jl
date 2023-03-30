@@ -964,6 +964,9 @@ Dict{Any, Any} with 11 entries:
 """
 function backup_reliability_inputs(;r::Dict)::Dict
 
+    @info "backup_reliability r1"
+    @info r["generator_fuel_burn_rate_per_kwh"]
+
     invalid_args = String[]
     r2 = dictkeys_tosymbols(r)
 
@@ -975,6 +978,9 @@ function backup_reliability_inputs(;r::Dict)::Dict
             r2[g] = r2[g][1]
         end
     end
+
+    @info "backup_reliability r2"
+    @info r2[:generator_fuel_burn_rate_per_kwh:]
 
     if length(get(r2, :num_generators, [])) > 1
         num_gen_types = length(r2[:num_generators])
@@ -1163,6 +1169,9 @@ function fuel_use(;
     kwargs...
     )::Tuple{Matrix{Int}, Matrix{Float64}}
 
+    @info "fuel_use"
+    @info generator_fuel_burn_rate_per_kwh
+
     t_max = length(net_critical_loads_kw)
     fuel_limit = convert.(Float64, fuel_limit)
     if isa(fuel_limit_is_per_generator, Bool)
@@ -1278,6 +1287,9 @@ function return_backup_reliability(;
     battery_size_kw::Real = 0.0,
     battery_size_kwh::Real = 0.0,
     kwargs...)
+
+    @info "return_backup_reliability"
+    @info kwargs[:generator_fuel_burn_rate_per_kwh]
     
     if haskey(kwargs, :pv_kw_ac_time_series)
         pv_included = true
@@ -1481,6 +1493,8 @@ Possible keys in r:
 
 """
 function backup_reliability(r::Dict)
+    @info "backup_reliability"
+    @info d["generator_fuel_burn_rate_per_kwh"]
     reliability_inputs = backup_reliability_inputs(r=r)
 	cumulative_results, fuel_survival, fuel_used = return_backup_reliability(; reliability_inputs... )
 	process_reliability_results(cumulative_results, fuel_survival, fuel_used)
