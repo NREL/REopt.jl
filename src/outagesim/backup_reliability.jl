@@ -1161,8 +1161,8 @@ function fuel_use(;
     battery_size_kwh::Real = 0.0,
     battery_charge_efficiency::Real = 0.948, 
     battery_discharge_efficiency::Real = 0.948,
-    time_steps_per_hour::Real = 1,
-    kwargs...)::Tuple{Matrix{Int}, Matrix{Float64}}
+    time_steps_per_hour::Real = 1
+    )::Tuple{Matrix{Int}, Matrix{Float64}}
 
     @info "fuel_use()"
     @info typeof(fuel_limit)
@@ -1283,6 +1283,9 @@ function return_backup_reliability(;
     battery_size_kw::Real = 0.0,
     battery_size_kwh::Real = 0.0,
     kwargs...)
+
+    @info "return_backup_reliability"
+    @info typeof(kwargs[:fuel_limit])
     
     if haskey(kwargs, :pv_kw_ac_time_series)
         pv_included = true
