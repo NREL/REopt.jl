@@ -1161,7 +1161,8 @@ function fuel_use(;
     battery_size_kwh::Real = 0.0,
     battery_charge_efficiency::Real = 0.948, 
     battery_discharge_efficiency::Real = 0.948,
-    time_steps_per_hour::Real = 1
+    time_steps_per_hour::Real = 1,
+    kwargs...
     )::Tuple{Matrix{Int}, Matrix{Float64}}
 
     @info "fuel_use()"
