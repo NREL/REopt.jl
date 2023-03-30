@@ -217,6 +217,7 @@ end
 
 
 """
+## TODO: modify below once replacement treatments are finalized. 
     replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 
 Replacement costs for storage and generator are not considered if the replacement year is >= the analysis period.
@@ -240,6 +241,7 @@ function replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInp
             future_cost_inverter = 0
         else
             future_cost_inverter = p.s.storage.attr[b].replace_cost_per_kw * value.(m[Symbol("dvStoragePower"*_n)])[b]
+            print("\n\np.s.storage.attr[b].replace_cost_per_kw: ", p.s.storage.attr[b].replace_cost_per_kw)
         end
         if p.s.storage.attr[b].battery_replacement_year >= p.s.financial.analysis_years
             future_cost_storage = 0
@@ -270,6 +272,7 @@ end
 
 
 """
+## TODO: Modify!! 
     calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
 
 The Levelized Cost of Energy (LCOE) is calculated as annualized costs (capital and O+M translated to current value) 
