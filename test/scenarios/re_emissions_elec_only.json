@@ -54,6 +54,7 @@
     "installed_cost_per_kw": 600.0,
     "utility_ibi_max": 0.0,
     "fuel_avail_gal": 0.0,
+    "fuel_higher_heating_value_kwh_per_gal": 40.7,
     "min_turn_down_fraction": 0.0,
     "production_incentive_max_kw": 0.0,
     "utility_ibi_fraction": 0.0,
