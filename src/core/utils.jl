@@ -166,6 +166,7 @@ end
 function dictkeys_tosymbols(d::Dict)
     d2 = Dict()
     for (k, v) in d
+        @info k * " " * string(typeof(v))
         # handling array type conversions for API inputs and JSON
         if k in [
             "loads_kw", "critical_loads_kw",
@@ -221,7 +222,6 @@ function dictkeys_tosymbols(d::Dict)
         if k in [
             "fuel_limit_is_per_generator" #for ERP
         ]
-            @info typeof(v)
             if !(typeof(v) <: Bool)
                 try
                     v = convert(Array{Bool, 1}, v)
