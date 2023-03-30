@@ -166,7 +166,6 @@ end
 function dictkeys_tosymbols(d::Dict)
     d2 = Dict()
     for (k, v) in d
-        @info k * " " * string(typeof(v))
         # handling array type conversions for API inputs and JSON
         if k in [
             "loads_kw", "critical_loads_kw",
