@@ -44,6 +44,7 @@ end
 
 
 """
+## TODO: Modify! 
     calculate_proforma_metrics(p::REoptInputs, d::Dict)
 
 Recreates the ProForma spreadsheet calculations to get the simple payback period, irr, net present cost (3rd

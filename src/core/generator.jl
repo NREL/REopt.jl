@@ -48,7 +48,7 @@
     can_export_beyond_nem_limit = false,
     can_curtail::Bool = false,
     macrs_option_years::Int = 0,
-    macrs_bonus_fraction::Real = 1.0,
+    macrs_bonus_fraction::Real = 0.0,
     macrs_itc_reduction::Real = 0.0,
     federal_itc_fraction::Real = 0.0,
     federal_rebate_per_kw::Real = 0.0,
@@ -71,6 +71,9 @@
     emissions_factor_lb_PM25_per_gal::Real = 0.0,
     replacement_year::Int = off_grid_flag ? 10 : analysis_years, 
     replace_cost_per_kw::Real = off_grid_flag ? installed_cost_per_kw : 0.0
+    replace_macrs_option_years::Int = 0,
+    replace_macrs_bonus_fraction::Real = 0.0,
+    replace_federal_itc_fraction::Real = 0.0,
 ```
 
 !!! note "Replacement costs" 
@@ -119,6 +122,9 @@ struct Generator <: AbstractGenerator
     emissions_factor_lb_PM25_per_gal
     replacement_year
     replace_cost_per_kw
+    replace_macrs_option_years
+    replace_macrs_bonus_fraction
+    replace_federal_itc_fraction
 
     function Generator(;
         off_grid_flag::Bool = false,
@@ -163,7 +169,10 @@ struct Generator <: AbstractGenerator
         emissions_factor_lb_SO2_per_gal::Real = 0.040020476,
         emissions_factor_lb_PM25_per_gal::Real = 0.0,
         replacement_year::Int = off_grid_flag ? 10 : analysis_years, 
-        replace_cost_per_kw::Real = off_grid_flag ? installed_cost_per_kw : 0.0
+        replace_cost_per_kw::Real = off_grid_flag ? installed_cost_per_kw : 0.0,
+        replace_macrs_option_years::Int = 0,
+        replace_macrs_bonus_fraction::Real = 1.0,
+        replace_federal_itc_fraction::Real = 0.0,
     )
 
         if (replacement_year >= analysis_years) && !(replace_cost_per_kw == 0.0)
@@ -211,7 +220,10 @@ struct Generator <: AbstractGenerator
             emissions_factor_lb_SO2_per_gal,
             emissions_factor_lb_PM25_per_gal,
             replacement_year,
-            replace_cost_per_kw
+            replace_cost_per_kw,
+            replace_macrs_option_years,
+            replace_macrs_bonus_fraction,
+            replace_federal_itc_fraction
         )
     end
 end
