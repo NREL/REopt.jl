@@ -193,7 +193,7 @@ function effective_cost(;
     print("\nrepl_tax_savings: ", repl_tax_savings)
 
     # Adjust cost curve to account for itc and depreciation savings ($/kW)
-    cap_cost_slope = itc_basis - tax_savings + replacement - repl_tax_savings - rebate_per_kw
+    cap_cost_slope = itc_basis - tax_savings - rebate_per_kw + replacement - repl_tax_savings 
     print("\ncap_cost_slope: ", cap_cost_slope)
 
     # Sanity check
