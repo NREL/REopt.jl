@@ -980,7 +980,7 @@ function backup_reliability_inputs(;r::Dict)::Dict
     end
 
     @info "backup_reliability r2"
-    @info r2[:generator_fuel_burn_rate_per_kwh:]
+    @info r2[:generator_fuel_burn_rate_per_kwh]
 
     if length(get(r2, :num_generators, [])) > 1
         num_gen_types = length(r2[:num_generators])
