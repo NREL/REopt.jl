@@ -26,8 +26,6 @@ Classify the change according to the following categories:
 ## Develop
 ### Added
 - `Generator` input **fuel_higher_heating_value_kwh_per_gal**, which defaults to the constant KWH_PER_GAL_DIESEL
-
-## v0.29.1
 ### Changed
 - Added more description to **production_factor_series inputs**
 ### Fixed
