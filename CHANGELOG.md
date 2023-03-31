@@ -23,14 +23,18 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## v0.29.1
+## Develop
+### Added
+- `Generator` input **fuel_higher_heating_value_kwh_per_gal**, which defaults to the constant KWH_PER_GAL_DIESEL
 
+## v0.29.1
 ### Changed
 - Added more description to **production_factor_series inputs**
 ### Fixed
 - Fixed spelling of degradation_fraction
 - use push! instead of append() for array in core/cost_curve.jl
 - Fixed calculation of batt_roundtrip_efficiency in outage_simulator.jl
+
 ## v0.29.0
 ### Added
 - Add `CHP` `FuelUsed` and `FuelCost` modeling/tracking for stochastic/multi-outages
