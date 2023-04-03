@@ -62,6 +62,7 @@
   "Generator": {
   },
   "Financial": {
-    "value_of_lost_load_per_kwh": 0.001
+    "value_of_lost_load_per_kwh": 0.001,
+    "microgrid_upgrade_cost_fraction": 0.3
   }
 }
