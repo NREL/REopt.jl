@@ -338,15 +338,19 @@ function bau_outage_check(critical_loads_kw::AbstractArray, pv_kw_series::Abstra
         if length(pv_kw_series) == 0
             pv_kw_series = zeros(length(critical_loads_kw))
         end
-
-        for (i, (load, pv)) in enumerate(zip(critical_loads_kw, pv_kw_series))
+        fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr = generator_fuel_slope_and_intercept(
+            electric_efficiency_full_load=gen.electric_efficiency_full_load, 
+            electric_efficiency_half_load=gen.electric_efficiency_half_load,
+            fuel_higher_heating_value_kwh_per_gal=gen.fuel_higher_heating_value_kwh_per_gal
+        )
+            for (i, (load, pv)) in enumerate(zip(critical_loads_kw, pv_kw_series))
             unmet = load - pv
             if unmet > 0
-                fuel_kwh = (fuel_gal - gen.fuel_intercept_gal_per_hr) / gen.fuel_slope_gal_per_kwh
+                fuel_kwh = (fuel_gal - fuel_intercept_gal_per_hr) / fuel_slope_gal_per_kwhe
                 gen_avail = minimum([fuel_kwh, gen.existing_kw * (1.0 / time_steps_per_hour)])
                 # output = the greater of either the unmet load or available generation based on fuel and the min loading
                 gen_output = maximum([minimum([unmet, gen_avail]), gen.min_turn_down_fraction * gen.existing_kw])
-                fuel_needed = gen.fuel_intercept_gal_per_hr + gen.fuel_slope_gal_per_kwh * gen_output
+                fuel_needed = fuel_intercept_gal_per_hr + fuel_slope_gal_per_kwhe * gen_output
                 fuel_gal -= fuel_needed
                 generator_fuel_use_gal += fuel_needed # previous logic: max(min(fuel_needed,fuel_gal), 0)
 
