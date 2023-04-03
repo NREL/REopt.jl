@@ -50,7 +50,7 @@ export
     simulated_load,
     get_absorption_chiller_defaults,
     emissions_profiles
-    easiur_costs
+    easiur_data
 
 import HTTP
 import JSON
