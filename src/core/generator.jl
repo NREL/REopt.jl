@@ -40,6 +40,7 @@
     electric_efficiency_full_load::Real = 0.3233,
     electric_efficiency_half_load::Real = electric_efficiency_full_load,
     fuel_avail_gal::Real = off_grid_flag ? 1.0e9 : 660.0,
+    fuel_higher_heating_value_kwh_per_gal::Real = 40.7,
     min_turn_down_fraction::Real = off_grid_flag ? 0.15 : 0.0,
     only_runs_during_grid_outage::Bool = true,
     sells_energy_back_to_grid::Bool = false,
@@ -91,6 +92,7 @@ struct Generator <: AbstractGenerator
     electric_efficiency_full_load
     electric_efficiency_half_load
     fuel_avail_gal
+    fuel_higher_heating_value_kwh_per_gal
     min_turn_down_fraction
     only_runs_during_grid_outage
     sells_energy_back_to_grid
@@ -139,6 +141,7 @@ struct Generator <: AbstractGenerator
         electric_efficiency_full_load::Real = 0.3233,
         electric_efficiency_half_load::Real = electric_efficiency_full_load,
         fuel_avail_gal::Real = off_grid_flag ? 1.0e9 : 660.0,
+        fuel_higher_heating_value_kwh_per_gal::Real = KWH_PER_GAL_DIESEL,
         min_turn_down_fraction::Real = off_grid_flag ? 0.15 : 0.0,
         only_runs_during_grid_outage::Bool = true,
         sells_energy_back_to_grid::Bool = false,
@@ -190,6 +193,7 @@ struct Generator <: AbstractGenerator
             electric_efficiency_full_load,
             electric_efficiency_half_load,
             fuel_avail_gal,
+            fuel_higher_heating_value_kwh_per_gal,
             min_turn_down_fraction,
             only_runs_during_grid_outage,
             sells_energy_back_to_grid,
