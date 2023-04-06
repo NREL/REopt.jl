@@ -827,6 +827,7 @@ Return a dictionary of inputs required for backup reliability calculations.
     -generator_fuel_burn_rate_per_kwh::Union{Real, Vector{<:Real}} = 0.076      Amount of fuel used per kWh generated. Fuel units should be consistent with fuel_limit and generator_fuel_intercept_per_hr.
 """
 function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dict())::Dict
+
     r2 = dictkeys_tosymbols(r)
     zero_array = zeros(length(p.time_steps))
     r2[:critical_loads_kw] = p.s.electric_load.critical_loads_kw
@@ -962,11 +963,13 @@ Dict{Any, Any} with 11 entries:
 ```
 """
 function backup_reliability_inputs(;r::Dict)::Dict
+
     invalid_args = String[]
     r2 = dictkeys_tosymbols(r)
 
     generator_inputs = [:generator_operational_availability, :generator_failure_to_start, :generator_mean_time_to_failure, 
-                        :num_generators, :generator_size_kw, :fuel_limit, :generator_fuel_intercept_per_hr, :generator_fuel_burn_rate_per_kwh]
+                        :num_generators, :generator_size_kw, :fuel_limit, :fuel_limit_is_per_generator, 
+                        :generator_fuel_intercept_per_hr, :generator_fuel_burn_rate_per_kwh]
     for g in generator_inputs
         if haskey(r2, g) && isa(r2[g], Array) && length(r2[g]) == 1
             r2[g] = r2[g][1]
@@ -1157,10 +1160,10 @@ function fuel_use(;
     battery_charge_efficiency::Real = 0.948, 
     battery_discharge_efficiency::Real = 0.948,
     time_steps_per_hour::Real = 1,
-    kwargs...)::Tuple{Matrix{Int}, Matrix{Float64}}
+    kwargs...
+    )::Tuple{Matrix{Int}, Matrix{Float64}}
 
     t_max = length(net_critical_loads_kw)
-
     fuel_limit = convert.(Float64, fuel_limit)
     if isa(fuel_limit_is_per_generator, Bool)
         if fuel_limit_is_per_generator

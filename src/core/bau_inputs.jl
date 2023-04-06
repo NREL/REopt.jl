@@ -340,7 +340,8 @@ function bau_outage_check(critical_loads_kw::AbstractArray, pv_kw_series::Abstra
         end
         fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr = generator_fuel_slope_and_intercept(
             electric_efficiency_full_load=gen.electric_efficiency_full_load, 
-            electric_efficiency_half_load=gen.electric_efficiency_half_load
+            electric_efficiency_half_load=gen.electric_efficiency_half_load,
+            fuel_higher_heating_value_kwh_per_gal=gen.fuel_higher_heating_value_kwh_per_gal
         )
             for (i, (load, pv)) in enumerate(zip(critical_loads_kw, pv_kw_series))
             unmet = load - pv

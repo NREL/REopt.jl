@@ -252,8 +252,8 @@ Returns a dict
 ```
 """
 function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
-    batt_roundtrip_efficiency = p.s.storage.attr["ElectricStorage"].charge_efficiency 
-                                p.s.storage.attr["ElectricStorage"].discharge_efficiency
+    batt_roundtrip_efficiency = (p.s.storage.attr["ElectricStorage"].charge_efficiency *
+                                p.s.storage.attr["ElectricStorage"].discharge_efficiency)
 
     # TODO handle generic PV names
     pv_kw_ac_hourly = zeros(length(p.time_steps))
@@ -293,7 +293,8 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
 
 	fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr = generator_fuel_slope_and_intercept(
 		electric_efficiency_full_load=p.s.generator.electric_efficiency_full_load, 
-		electric_efficiency_half_load=p.s.generator.electric_efficiency_half_load
+		electric_efficiency_half_load=p.s.generator.electric_efficiency_half_load,
+        fuel_higher_heating_value_kwh_per_gal = p.s.generator.fuel_higher_heating_value_kwh_per_gal
 	)
 
     simulate_outages(;
