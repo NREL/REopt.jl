@@ -311,8 +311,23 @@ function setup_tech_inputs(s::AbstractScenario)
     seg_yint = Dict{String, Dict{Int, Real}}()
 
     # PV specific arrays
+    # Section to extract the location of the PV arrays from the input s
+    pv_assignedlocations = Symbol[]
+    for pv in s.pvs
+        if pv.location == "roof"
+            pvlocationvalue = :roof
+        elseif pv.location == "ground"
+            pvlocationvalue = :ground
+        elseif pv.location == "both"
+            pvlocationvalue = :both
+        else
+            throw(@error("A provided PV location is not valid")) 
+        end 
+        push!(pv_assignedlocations, pvlocationvalue)
+    end 
+    
     pvlocations = [:roof, :ground, :both]
-    pv_to_location = Dict(t => Dict(loc => 0) for (t, loc) in zip(techs.pv, pvlocations))
+    pv_to_location = Dict(t => Dict(loc => 0) for (t, loc) in zip(techs.pv, pv_assignedlocations))
     maxsize_pv_locations = DenseAxisArray([1.0e5, 1.0e5, 1.0e5], pvlocations)
     # default to large max size per location. Max size by roof, ground, both
 
