@@ -473,7 +473,7 @@ function g2l(lon::Real, lat::Real; datum::String="NAD83")
 end
 
 #TODO: add docstring
-function easiur_data(; latitude, longitude, inflation)
+function easiur_data(; latitude::Real, longitude::Real, inflation::Real)
     response_dict = Dict{String, Any}(
         "units_costs" => "US dollars per metric ton",
         "description_costs" => "Health costs of emissions from the grid and on-site fuel burn, as reported by the EASIUR model.",
