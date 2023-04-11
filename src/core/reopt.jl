@@ -122,23 +122,23 @@ end
 
 
 """
-    run_reopt(ms::AbstractArray{T, 1}, fp::String) where T <: JuMP.AbstractModel
+    run_reopt(ms::AbstractArray{T, 1}, fp::String; threads=true) where T <: JuMP.AbstractModel
 
 Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) models in `ms` and inputs defined in the
 JSON file at the filepath `fp`.
 """
-function run_reopt(ms::AbstractArray{T, 1}, fp::String) where T <: JuMP.AbstractModel
+function run_reopt(ms::AbstractArray{T, 1}, fp::String; threads=true) where T <: JuMP.AbstractModel
 	d = JSON.parsefile(fp)
-    run_reopt(ms, d)
+    run_reopt(ms, d; threads=threads)
 end
 
 
 """
-    run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractModel
+    run_reopt(ms::AbstractArray{T, 1}, d::Dict; threads=true) where T <: JuMP.AbstractModel
 
 Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) models in `ms` and inputs from `d`.
 """
-function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractModel
+function run_reopt(ms::AbstractArray{T, 1}, d::Dict; threads=true) where T <: JuMP.AbstractModel
 
 	try
 		s = Scenario(d)
@@ -148,7 +148,7 @@ function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractMod
 			return results
 		end
 	
-		run_reopt(ms, REoptInputs(s))		
+		run_reopt(ms, REoptInputs(s); threads=threads)		
 	catch e
 		if isnothing(e) # Error thrown by REopt
 			handle_errors()
@@ -159,19 +159,24 @@ function run_reopt(ms::AbstractArray{T, 1}, d::Dict) where T <: JuMP.AbstractMod
 end
 
 """
-    run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.AbstractModel
+    run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs; threads=true) where T <: JuMP.AbstractModel
 
 Solve the `Scenario` and `BAUScenario` in parallel using the first two (empty) models in `ms` and inputs from `p`.
 """
-function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.AbstractModel
+function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs; threads=true) where T <: JuMP.AbstractModel
 
 	try
 		bau_inputs = BAUInputs(p)
 		inputs = ((ms[1], bau_inputs), (ms[2], p))
 		rs = Any[0, 0]
-		Threads.@threads for i = 1:2
-			rs[i] = run_reopt(inputs[i])
-		end
+        if threads
+            Threads.@threads for i = 1:2
+                rs[i] = run_reopt(inputs[i])
+            end
+        else
+            rs[1] = run_reopt(inputs[1])
+            rs[2] = run_reopt(inputs[2])
+        end
 		if typeof(rs[1]) <: Dict && typeof(rs[2]) <: Dict
 			# TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
 			results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
