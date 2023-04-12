@@ -39,6 +39,7 @@
 - `electric_to_grid_series_kw` Vector of power exported to the grid over the first year
 - `electric_curtailed_series_kw` Vector of power curtailed over the first year
 - `annual_energy_exported_kwh` Average annual energy exported to the grid
+- `production_factor_series` PV production factor in each time step, either provided by user or obtained from PVWatts
 
 !!! warn
     The key(s) used to access PV outputs in the results dictionary is determined by the `PV.name` value to allow for modeling multiple PV options. (The default `PV.name` is "PV".)
@@ -57,6 +58,7 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 
     for t in p.techs.pv
         r = Dict{String, Any}()
+        r["production_factor_series"] = p.production_factor[t, :]
 		r["size_kw"] = round(value(m[Symbol("dvSize"*_n)][t]), digits=4)
 
 		# NOTE: must use anonymous expressions in this loop to overwrite values for cases with multiple PV

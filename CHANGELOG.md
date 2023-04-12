@@ -23,8 +23,52 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.30.0
+### Added
+- `Generator` input **fuel_higher_heating_value_kwh_per_gal**, which defaults to the constant KWH_PER_GAL_DIESEL
+### Changed
+- Added more description to **production_factor_series inputs**
+### Fixed
+- Fixed spelling of degradation_fraction
+- use push! instead of append() for array in core/cost_curve.jl
+- Fixed calculation of batt_roundtrip_efficiency in outage_simulator.jl
 
-## Develop - 2023-03-01 
+## v0.29.0
+### Added
+- Add `CHP` `FuelUsed` and `FuelCost` modeling/tracking for stochastic/multi-outages
+- Add `CHP` outputs for stochastic/multi-outages
+### Changed
+- Made outages output names not dynamic to allow integration into API
+- Add missing units to outages results field names: **unserved_load_series_kw**, **unserved_load_per_outage_kwh**, **generator_fuel_used_per_outage_gal**
+- Default `Financial` field **microgrid_upgrade_cost_fraction** to 0
+- Add conditional logic to make `CHP.min_allowable_kw` 25% of `max_kw` if there is a conflicting relationship 
+- Iterate on calculating `CHP` heuristic size based on average heating load which is also used to set `max_kw` if not given: once `size_class` is determined, recalculate using the efficiency numbers for that `size_class`.
+### Fixed
+- Fix non-handling of cost-curve/segmented techs in stochastic outages
+- Fix issues with `simulated_load.jl` monthly heating energy input to return the heating load profile
+
+## v0.28.1
+### Added
+- `emissions_profiles` function, exported for external use as an endpoint in REopt_API for the webtool/UI
+
+## v0.28.0
+### Changed 
+- Changed Financial **breakeven_cost_of_emissions_reduction_per_tonnes_CO2** to **breakeven_cost_of_emissions_reduction_per_tonne_CO2**
+- Changed `CHP.size_class` to start at 0 instead of 1, consistent with the API, and 0 represents the average of all `size_class`s
+- Change `CHP.max_kw` to be based on either the heuristic sizing from average heating load (if heating) or peak electric load (if no heating, aka Prime Generator in the UI)
+  - The "big_number" for `max_kw` was causing the model to take forever to solve and some erroneous behavior; this is also consistent with the API to limit max_kw to a reasonable number
+### Added 
+- Added previously missing Financial BAU outputs: **lifecycle_om_costs_before_tax**, **lifecycle_om_costs_after_tax**, **year_one_om_costs_before_tax**
+### Fixed
+- Fixed if statement to determing ElectricLoad "year" from && to ||, so that defaults to 2017 if any CRB input is used
+    
+## v0.27.0
+### Added
+- Energy Resilience Performance post-process tool: capability to model limited reliability of backup generators and RE, and calculate survival probability metrics during power outages
+- Exported `backup_reliability` function to run the reliability based calculations
+- Changed `Generator` inputs **fuel_slope_gal_per_kwh** and **fuel_intercept_gal_per_hr** to **electric_efficiency_full_load** and **electric_efficiency_half_load** to represent the same fuel burn curve in a different way consistent with `CHP`
+
+## v0.26.0
 ### Added 
 - Added `has_stacktrace` boolean which is returned with error messages and indicates if error is of type which contains stacktrace
 - Constraint on wind sizing based on Site.land_acres
@@ -40,7 +84,8 @@ Classify the change according to the following categories:
 - Round Hot and Cold TES size result to 0 digits
 - Use CoolProp to get water properties for Hot and Cold TES based on average of temperature inputs
 ### Fixed
-- Fixed calculation of `year_one_coincident_peak_cost_before_tax` in **ElectricTariff** results to correctly calculate before-tax value. Previously, the after-tax value was being calculated for this field instead.
+- `Wind` evaluations with BAU - was temporarily broken because of an unconverted **year_one** -> **annual** expected name
+- Fixed calculation of **year_one_coincident_peak_cost_before_tax** in `ElectricTariff` results to correctly calculate before-tax value. Previously, the after-tax value was being calculated for this field instead.
 - Fixed `outage_simulator` to work with sub-hourly outage simulation scenarios
 - Fixed a bug which threw an error when providing time-series thermal load inputs in a scenario inputs .json.
 - Fixed calculation of ["Financial"]["lifecycle_om_costs_before_tax_bau"] (was previously showing after tax result)

@@ -142,6 +142,9 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("Financial", "lcc"),
         ("Financial", "lifecycle_emissions_cost_climate"),
         ("Financial", "lifecycle_emissions_cost_health"),
+        ("Financial", "lifecycle_om_costs_before_tax"),
+        ("Financial", "lifecycle_om_costs_after_tax"),
+        ("Financial", "year_one_om_costs_before_tax"),
         ("ElectricTariff", "year_one_energy_cost_before_tax"),
         ("ElectricTariff", "year_one_demand_cost_before_tax"),
         ("ElectricTariff", "year_one_fixed_cost_before_tax"),
@@ -221,7 +224,6 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
             end
         end
     end
-    opt["Financial"]["lifecycle_om_costs_before_tax_bau"] = bau["Financial"]["lifecycle_om_costs_before_tax"]
     opt["Financial"]["npv"] = round(opt["Financial"]["lcc_bau"] - opt["Financial"]["lcc"], digits=2)
 
     opt["ElectricLoad"]["bau_critical_load_met"] = bau_scenario.outage_outputs.bau_critical_load_met
@@ -247,7 +249,7 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
             bau["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] - opt["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] 
         )
         if breakeven_cost_denominator != 0.0
-            opt["Financial"]["breakeven_cost_of_emissions_reduction_per_tonnes_CO2"] = -1 * npv_without_modeled_climate_costs / breakeven_cost_denominator
+            opt["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] = -1 * npv_without_modeled_climate_costs / breakeven_cost_denominator
         end
     end
         
