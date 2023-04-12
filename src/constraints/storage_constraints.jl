@@ -98,23 +98,25 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
         - ((0.01/24)*m[Symbol("dvStoredEnergy"*_n)][b, ts]) # TEO added this to account for 1% thermal loss of LDES; this line currently only works for hourly data
         
     )
-
+    # TEO: Commented-out this constraint so the inverter is sized only to the discharge
 	# Constraint (4i)-1: Dispatch to electrical storage is no greater than power capacity
-	@constraint(m, [ts in p.time_steps],
-        m[Symbol("dvStoragePower"*_n)][b] >= 
-            sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) + m[Symbol("dvGridToStorage"*_n)][b, ts]
-    )
+	#@constraint(m, [ts in p.time_steps],
+    #    m[Symbol("dvStoragePower"*_n)][b] >= 
+    #        sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) + m[Symbol("dvGridToStorage"*_n)][b, ts]
+    #)
 	
 	#Constraint (4k)-alt: Dispatch to and from electrical storage is no greater than power capacity
 	@constraint(m, [ts in p.time_steps_with_grid],
-        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] + 
-            sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) + m[Symbol("dvGridToStorage"*_n)][b, ts]
+        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] #+ 
+            # TEO: Commented-out this part of the constraint so the inverter is sized only to the discharge
+            #sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) + m[Symbol("dvGridToStorage"*_n)][b, ts]
     )
 
 	#Constraint (4l)-alt: Dispatch from electrical storage is no greater than power capacity (no grid connection)
 	@constraint(m, [ts in p.time_steps_without_grid],
-        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b,ts] + 
-            sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec)
+        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b,ts] #+
+            # TEO: Commented-out this part of the constraint so the inverter is sized only to the discharge 
+            #sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec)
     )
 					
     # Remove grid-to-storage as an option if option to grid charge is turned off
