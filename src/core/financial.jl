@@ -474,22 +474,31 @@ end
 
 #TODO: add docstring
 function easiur_data(; latitude::Real, longitude::Real, inflation::Real)
-    response_dict = Dict{String, Any}(
-        "units_costs" => "US dollars per metric ton",
-        "description_costs" => "Health costs of emissions from the grid and on-site fuel burn, as reported by the EASIUR model.",
-        "units_escalation" => "nominal annual fraction",
-        "description_escalation" => "Annual nominal escalation rate of public health costs of emissions.",
-    )
-    grid_costs = easiur_costs(latitude, longitude, "grid")
-    if isnothing(grid_costs)
-        throw(@error("Could not look up EASIUR health cost data from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid."))
+    instantiate_logger()
+    try
+        response_dict = Dict{String, Any}(
+            "units_costs" => "US dollars per metric ton",
+            "description_costs" => "Health costs of emissions from the grid and on-site fuel burn, as reported by the EASIUR model.",
+            "units_escalation" => "nominal annual fraction",
+            "description_escalation" => "Annual nominal escalation rate of public health costs of emissions.",
+        )
+        grid_costs = easiur_costs(latitude, longitude, "grid")
+        if isnothing(grid_costs)
+            throw(@error("Could not look up EASIUR health cost data from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid."))
+        end
+        onsite_costs = easiur_costs(latitude, longitude, "onsite")
+        escalation = easiur_escalation_rates(latitude, longitude, inflation)
+        for ekey in ["NOx", "SO2", "PM25"]
+            response_dict[ekey*"_grid_cost_per_tonne"] = grid_costs[ekey]
+            response_dict[ekey*"_onsite_fuelburn_cost_per_tonne"] = onsite_costs[ekey]
+            response_dict[ekey*"_cost_escalation_rate_fraction"] = escalation[ekey]
+        end
+        return response_dict
+    catch e
+        if isnothing(e) #Error thrown intentionally
+            handle_errors()
+        else
+            handle_errors(e, stacktrace(catch_backtrace()))
+        end
     end
-    onsite_costs = easiur_costs(latitude, longitude, "onsite")
-    escalation = easiur_escalation_rates(latitude, longitude, inflation)
-    for ekey in ["NOx", "SO2", "PM25"]
-        response_dict[ekey*"_grid_cost_per_tonne"] = grid_costs[ekey]
-        response_dict[ekey*"_onsite_fuelburn_cost_per_tonne"] = onsite_costs[ekey]
-        response_dict[ekey*"_cost_escalation_rate_fraction"] = escalation[ekey]
-    end
-    return response_dict
 end
