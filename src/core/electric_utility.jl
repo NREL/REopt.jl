@@ -378,6 +378,13 @@ end
 function emissions_profiles(; latitude::Real, longitude::Real, time_steps_per_hour::Int=1)
     region_abbr, meters_to_region = region_abbreviation(latitude, longitude)
     emissions_region = region_abbr_to_name(region_abbr)
+    if isnothing(region_abbr)
+        return Dict{String, Any}(
+                "error"=>
+                "Could not look up AVERT emissions region within 5 miles from point ($(latitude), $(longitude)).
+                Location is likely invalid or well outside continental US, AK and HI."
+            )
+    end
     response_dict = Dict{String, Any}(
         "region_abbr" => region_abbr,
         "region" => emissions_region,
