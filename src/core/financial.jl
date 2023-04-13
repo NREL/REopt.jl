@@ -476,7 +476,11 @@ end
 function easiur_data(; latitude::Real, longitude::Real, inflation::Real)
         grid_costs = easiur_costs(latitude, longitude, "grid")
         if isnothing(grid_costs)
-            return Dict{String, Any}("error"=>"Could not look up EASIUR health cost data from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid.")
+            return Dict{String, Any}(
+                    "error"=>
+                    "Could not look up EASIUR health cost data from point ($latitude,$longitude). 
+                    Location is likely invalid or outside the CAMx grid."
+                )
         end
         onsite_costs = easiur_costs(latitude, longitude, "onsite")
         escalation = easiur_escalation_rates(latitude, longitude, inflation)
