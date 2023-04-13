@@ -56,7 +56,7 @@ function get_production_factor(pv::PV, latitude::Real, longitude::Real; timefram
 
     try
         @info "Querying PVWatts for production_factor with " pv.name
-        r = HTTP.get(url, keepalive=false, readtimeout=10, verbose=2)
+        r = HTTP.get(url, keepalive=false, readtimeout=10, verbose=1)
         @info "Response received from PVWatts"
         response = JSON.parse(String(r.body))
         if r.status != 200
