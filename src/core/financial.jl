@@ -481,6 +481,9 @@ function easiur_data(; latitude::Real, longitude::Real, inflation::Real)
         "description_escalation" => "Annual nominal escalation rate of public health costs of emissions.",
     )
     grid_costs = easiur_costs(latitude, longitude, "grid")
+    if isnothing(grid_costs)
+        throw(@error("Could not look up EASIUR health cost data from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid."))
+    end
     onsite_costs = easiur_costs(latitude, longitude, "onsite")
     escalation = easiur_escalation_rates(latitude, longitude, inflation)
     for ekey in ["NOx", "SO2", "PM25"]
