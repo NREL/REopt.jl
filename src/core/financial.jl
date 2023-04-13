@@ -481,7 +481,7 @@ function easiur_data(; latitude::Real, longitude::Real, inflation::Real)
         "description_escalation" => "Annual nominal escalation rate of public health costs of emissions.",
     )
     grid_costs = easiur_costs(latitude, longitude, "grid")
-    onsite_costs = easiur_costs(latitude, longitude, "grid")
+    onsite_costs = easiur_costs(latitude, longitude, "onsite")
     escalation = easiur_escalation_rates(latitude, longitude, inflation)
     for ekey in ["NOx", "SO2", "PM25"]
         response_dict[ekey*"_grid_cost_per_tonne"] = grid_costs[ekey]
