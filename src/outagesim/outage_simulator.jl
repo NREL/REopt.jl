@@ -156,8 +156,8 @@ function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[
     if batt_kw == 0 || batt_kwh == 0
         init_soc = repeat([0], n_time_steps)  # default is 0
 
-        if (isempty(pv_kw_ac_hourly) || (sum(pv_kw_ac_hourly) == 0)) && diesel_kw == 0
-            # no pv, generator, nor battery --> no resilience
+        if (isempty(pv_kw_ac_hourly) || (sum(pv_kw_ac_hourly) == 0)) && (isempty(wind_kw_ac_hourly) || (sum(wind_kw_ac_hourly) == 0)) && diesel_kw == 0
+            # no pv, generator, wind, nor battery --> no resilience
             return Dict(
                 "resilience_by_time_step" => r,
                 "resilience_hours_min" => 0,
