@@ -313,7 +313,7 @@ function setup_tech_inputs(s::AbstractScenario)
     pvlocations = [:roof, :ground, :both]
     d = Dict(loc => 0 for loc in pvlocations)
     pv_to_location = Dict(t => copy(d) for t in techs.pv)
-    maxsize_pv_locations = DenseAxisArray([1.0e5, 1.0e5, 1.0e5], pvlocations)
+    maxsize_pv_locations = DenseAxisArray([1.0e9, 1.0e9, 1.0e9], pvlocations)
     # default to large max size per location. Max size by roof, ground, both
 
     if !isempty(techs.pv)
@@ -475,7 +475,6 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
         production_factor[pv.name, :] = get_production_factor(pv, s.site.latitude, s.site.longitude; 
             time_steps_per_hour=s.settings.time_steps_per_hour)
         for location in pvlocations
-
             if pv.location == String(location) # Must convert symbol to string
                 pv_to_location[pv.name][location] = 1
             else
