@@ -23,6 +23,9 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2023-04-17
+### Fixed
+- Fixed bug in multiple PVs pv_to_location dictionary creation. 
 ## v0.30.0
 ### Added
 - `Generator` input **fuel_higher_heating_value_kwh_per_gal**, which defaults to the constant KWH_PER_GAL_DIESEL
