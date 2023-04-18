@@ -374,7 +374,15 @@ function region_name_to_abbr(region_name)
     return get(lookup, region_name, "")
 end
 
-#TODO: add docstring
+"""
+    emissions_profiles(; latitude::Real, longitude::Real, time_steps_per_hour::Int=1)
+
+This function gets CO2, NOx, SO2, and PM2.5 grid emission rate profiles (1-year time series) from the AVERT dataset.
+    
+This function is used for the /emissions_profile endpoint in the REopt API, in particular 
+    for the webtool to display grid emissions defaults before running REopt, 
+    but is also generally an external way to access AVERT data without running REopt.
+"""
 function emissions_profiles(; latitude::Real, longitude::Real, time_steps_per_hour::Int=1)
     region_abbr, meters_to_region = region_abbreviation(latitude, longitude)
     emissions_region = region_abbr_to_name(region_abbr)
