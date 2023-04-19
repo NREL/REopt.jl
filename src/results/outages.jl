@@ -184,6 +184,8 @@ function add_outage_results(m, p, d::Dict)
                 ), 
                 digits=4
             )
+			@info tech_set
+			@info r[tech_type_name*"_fuel_used_per_outage_"*fuel_unit]
         end
 	end
 
