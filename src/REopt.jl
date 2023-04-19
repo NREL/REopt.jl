@@ -49,7 +49,8 @@ export
     get_steam_turbine_defaults_size_class,
     simulated_load,
     get_absorption_chiller_defaults,
-    emissions_profiles
+    emissions_profiles,
+    easiur_data
 
 import HTTP
 import JSON
