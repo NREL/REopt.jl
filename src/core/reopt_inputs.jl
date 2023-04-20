@@ -636,11 +636,12 @@ function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_si
         push!(techs.no_curtail, "Generator")
     end
     tech_renewable_energy_fraction["Generator"] = s.generator.fuel_renewable_energy_fraction
-    tech_emissions_factors_CO2["Generator"] = s.generator.emissions_factor_lb_CO2_per_gal / KWH_PER_GAL_DIESEL  # lb/gal * gal/kWh
-    tech_emissions_factors_NOx["Generator"] = s.generator.emissions_factor_lb_NOx_per_gal / KWH_PER_GAL_DIESEL
-    tech_emissions_factors_SO2["Generator"] = s.generator.emissions_factor_lb_SO2_per_gal / KWH_PER_GAL_DIESEL
-    tech_emissions_factors_PM25["Generator"] = s.generator.emissions_factor_lb_PM25_per_gal / KWH_PER_GAL_DIESEL
-    generator_fuel_cost_per_kwh = s.generator.fuel_cost_per_gallon / KWH_PER_GAL_DIESEL
+    hhv_kwh_per_gal = s.generator.fuel_higher_heating_value_kwh_per_gal
+    tech_emissions_factors_CO2["Generator"] = s.generator.emissions_factor_lb_CO2_per_gal / hhv_kwh_per_gal  # lb/gal * gal/kWh
+    tech_emissions_factors_NOx["Generator"] = s.generator.emissions_factor_lb_NOx_per_gal / hhv_kwh_per_gal
+    tech_emissions_factors_SO2["Generator"] = s.generator.emissions_factor_lb_SO2_per_gal / hhv_kwh_per_gal
+    tech_emissions_factors_PM25["Generator"] = s.generator.emissions_factor_lb_PM25_per_gal / hhv_kwh_per_gal
+    generator_fuel_cost_per_kwh = s.generator.fuel_cost_per_gallon / hhv_kwh_per_gal
     fuel_cost_per_kwh["Generator"] = per_hour_value_to_time_series(generator_fuel_cost_per_kwh, s.settings.time_steps_per_hour, "Generator")
     return nothing
 end

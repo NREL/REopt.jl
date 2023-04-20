@@ -23,14 +23,21 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## v0.29.1
+## v0.31.0
+### Added
+- Created and exported easiur_data function (returns health emissions costs and escalations) for the API to be able to call for it's easiur_costs endpoint
+- Added docstrings for easiur_data and emissions_profiles
 
+## v0.30.0
+### Added
+- `Generator` input **fuel_higher_heating_value_kwh_per_gal**, which defaults to the constant KWH_PER_GAL_DIESEL
 ### Changed
 - Added more description to **production_factor_series inputs**
 ### Fixed
 - Fixed spelling of degradation_fraction
 - use push! instead of append() for array in core/cost_curve.jl
 - Fixed calculation of batt_roundtrip_efficiency in outage_simulator.jl
+
 ## v0.29.0
 ### Added
 - Add `CHP` `FuelUsed` and `FuelCost` modeling/tracking for stochastic/multi-outages
@@ -62,8 +69,9 @@ Classify the change according to the following categories:
     
 ## v0.27.0
 ### Added
-- Energy Resilience Performance post-process tool: capability to model limited reliability of backup generators and RE, and calculate survival probability metrics during power outages
+- Energy Resilience Performance tool: capability to model limited reliability of backup generators and RE, and calculate survival probability metrics during power outages for a DER scenario
 - Exported `backup_reliability` function to run the reliability based calculations
+### Changed
 - Changed `Generator` inputs **fuel_slope_gal_per_kwh** and **fuel_intercept_gal_per_hr** to **electric_efficiency_full_load** and **electric_efficiency_half_load** to represent the same fuel burn curve in a different way consistent with `CHP`
 
 ## v0.26.0
