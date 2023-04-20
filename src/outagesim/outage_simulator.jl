@@ -257,7 +257,7 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
 
     # TODO handle generic PV names
     pv_kw_ac_hourly = zeros(length(p.time_steps))
-    if "PV" in keys(d)
+    if "PV" in keys(d) && !(microgrid_only && !Bool(get(d["Outages"], "PV_upgraded", false)))
         pv_kw_ac_hourly = (
             get(d["PV"], "electric_to_storage_series_kw", zeros(length(p.time_steps)))
           + get(d["PV"], "electric_curtailed_series_kw", zeros(length(p.time_steps)))
@@ -265,21 +265,15 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
           + get(d["PV"], "electric_to_grid_series_kw", zeros(length(p.time_steps)))
         )
     end
-    if microgrid_only && !Bool(get(d["Outages"], "PV_upgraded", false))
-        pv_kw_ac_hourly = zeros(length(p.time_steps))
-    end
 
     wind_kw_ac_hourly = zeros(length(p.time_steps))
-    if "Wind" in keys(d)
+    if "Wind" in keys(d) && !(microgrid_only && !Bool(get(d["Outages"], "Wind_upgraded", false)))
         wind_kw_ac_hourly = (
             get(d["Wind"], "electric_to_storage_series_kw", zeros(length(p.time_steps)))
           + get(d["Wind"], "electric_curtailed_series_kw", zeros(length(p.time_steps)))
           + get(d["Wind"], "electric_to_load_series_kw", zeros(length(p.time_steps)))
           + get(d["Wind"], "electric_to_grid_series_kw", zeros(length(p.time_steps)))
         )
-    end
-    if microgrid_only && !Bool(get(d["Outages"], "Wind_upgraded", false))
-        wind_kw_ac_hourly = zeros(length(p.time_steps))
     end
 
     batt_kwh = 0
