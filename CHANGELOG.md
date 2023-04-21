@@ -26,6 +26,10 @@ Classify the change according to the following categories:
 ## Develop - 2023-04-17
 ### Fixed
 - Fixed bug in multiple PVs pv_to_location dictionary creation. 
+## Develop 2023-04-18
+### Fixed
+- Fixed calculation of `wind_kw_ac_hourly` in `outagesim/outage_simulator.jl`
+
 ## v0.31.0
 ### Added
 - Created and exported easiur_data function (returns health emissions costs and escalations) for the API to be able to call for it's easiur_costs endpoint
