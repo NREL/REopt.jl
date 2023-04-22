@@ -8,7 +8,7 @@ Outline:
 # TODO add complementary constraint to UL for dvProductionToGrid_ and dvGridPurchase_ (don't want it in LL s.t. it stays linear)
 
 
-function LDF.build_ldf!(m::JuMP.AbstractModel, p::LDF.Inputs, ps::Array{REoptInputs, 1};
+function LDF.build_ldf!(m::JuMP.AbstractModel, p::LDF.Inputs, ps::Array{REoptInputs{Scenario}, 1};
         make_import_export_complementary::Bool=true
     )
     LDF.add_variables(m, p)
@@ -25,7 +25,7 @@ function LDF.build_ldf!(m::JuMP.AbstractModel, p::LDF.Inputs, ps::Array{REoptInp
 end
 
 
-function add_expressions(m::JuMP.AbstractModel, ps::Array{REoptInputs, 1})
+function add_expressions(m::JuMP.AbstractModel, ps::Array{REoptInputs{Scenario}, 1})
     for p in ps
         _n = string("_", p.s.site.node)
         m[Symbol("TotalExport"*_n)] = @expression(m, [t in p.time_steps],
@@ -38,7 +38,7 @@ function add_expressions(m::JuMP.AbstractModel, ps::Array{REoptInputs, 1})
 end
 
 
-function add_complementary_constraints(m::JuMP.AbstractModel, ps::Array{REoptInputs, 1})
+function add_complementary_constraints(m::JuMP.AbstractModel, ps::Array{REoptInputs{Scenario}, 1})
     for p in ps
         _n = string("_", p.s.site.node)
         for (i, e) in zip(m[Symbol("dvGridPurchase"*_n)], m[Symbol("TotalExport"*_n)])
@@ -50,7 +50,7 @@ function add_complementary_constraints(m::JuMP.AbstractModel, ps::Array{REoptInp
 end
 
 
-function LDF.constrain_loads(m::JuMP.AbstractModel, p::LDF.Inputs, ps::Array{REoptInputs, 1})
+function LDF.constrain_loads(m::JuMP.AbstractModel, p::LDF.Inputs, ps::Array{REoptInputs{Scenario}, 1})
     reopt_nodes = [p.s.site.node for p in ps]
 
     Pⱼ = m[:Pⱼ]
