@@ -23,6 +23,13 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.32.0
+### Fixed
+- Fixed calculation of `wind_kw_ac_hourly` in `outagesim/outage_simulator.jl`
+- Add  a test of multiple outages that includes wind
+### Fixed
+- Add a timeout to PVWatts API call so that if it does not connect within 10 seconds, it will retry. It seems to always work on the first retry.
+
 ## v0.31.0
 ### Added
 - Created and exported easiur_data function (returns health emissions costs and escalations) for the API to be able to call for it's easiur_costs endpoint
