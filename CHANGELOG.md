@@ -27,8 +27,12 @@ Classify the change according to the following categories:
 ### Fixed
 - Fixed bug in multiple PVs pv_to_location dictionary creation. 
 ## Develop 2023-04-18
+## v0.32.0
 ### Fixed
 - Fixed calculation of `wind_kw_ac_hourly` in `outagesim/outage_simulator.jl`
+- Add  a test of multiple outages that includes wind
+### Fixed
+- Add a timeout to PVWatts API call so that if it does not connect within 10 seconds, it will retry. It seems to always work on the first retry.
 
 ## v0.31.0
 ### Added
