@@ -311,6 +311,15 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
     return energy_rates, energy_tier_limits_kwh, n_energy_tiers, sell_rates
 end
 
+"""
+    convert_matrix_to_array(M::AbstractMatrix)
+
+Convert an unexpected type::Matrix from URDB into an Array
+    - Observed while using REopt.jl with PyJulia/PyCall
+"""
+function convert_matrix_to_array(M::AbstractMatrix)
+    return [M[:,c] for c in eachindex(M,2)]
+end
 
 """
     parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
@@ -319,8 +328,10 @@ Parse monthly ("flat") and TOU demand rates
     can modify URDB dict when there is inconsistent numbers of tiers in rate structures
 """
 function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
-
     if haskey(d, "flatdemandstructure")
+        if typeof(d["flatdemandstructure"]) <: AbstractMatrix
+            d["flatdemandstructure"] = convert_matrix_to_array(d["flatdemandstructure"])
+        end
         scrub_urdb_demand_tiers!(d["flatdemandstructure"])
         monthly_demand_tier_limits = parse_urdb_demand_tiers(d["flatdemandstructure"])
         n_monthly_demand_tiers = length(monthly_demand_tier_limits)
@@ -332,6 +343,9 @@ function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour:
     end
 
     if haskey(d, "demandratestructure")
+        if typeof(d["demandratestructure"]) <: AbstractMatrix
+            d["demandratestructure"] = convert_matrix_to_array(d["demandratestructure"])
+        end
         scrub_urdb_demand_tiers!(d["demandratestructure"])
         tou_demand_tier_limits = parse_urdb_demand_tiers(d["demandratestructure"])
         n_tou_demand_tiers = length(tou_demand_tier_limits)
