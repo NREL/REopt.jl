@@ -28,7 +28,7 @@ end
 function add_expressions(m::JuMP.AbstractModel, ps::Array{REoptInputs{Scenario}, 1})
     for p in ps
         _n = string("_", p.s.site.node)
-        m[Symbol("TotalExport"*_n)] = @expression(m, [t in p.time_steps],
+        m[Symbol("TotalExport"*_n)] = @expression(m, [ts in p.time_steps],
             sum(
                 m[Symbol("dvProductionToGrid"*_n)][t,u,ts] 
                 for t in p.techs.elec, u in p.export_bins_by_tech[t]

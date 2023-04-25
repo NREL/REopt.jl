@@ -141,6 +141,8 @@ function add_export_constraints(m, p; _n="")
     end
 
     # register the benefits in the model
+    #println("Checking NEM Benefit for"*string(_n))
+    #println("NEM_benefit is: "*string(NEM_benefit))
     m[Symbol("NEM_benefit"*_n)] = NEM_benefit
     m[Symbol("EXC_benefit"*_n)] = EXC_benefit
     m[Symbol("WHL_benefit"*_n)] = WHL_benefit
@@ -342,6 +344,7 @@ function add_elec_utility_expressions(m, p; _n="")
 
     if !isempty(p.s.electric_tariff.export_bins) && !isempty(p.techs.all)
         # NOTE: levelization_factor is baked into dvProductionToGrid
+        #println("TESTING*****************************************************")
         m[Symbol("TotalExportBenefit"*_n)] = m[Symbol("NEM_benefit"*_n)] + m[Symbol("WHL_benefit"*_n)] +
                                              m[Symbol("EXC_benefit"*_n)]
     else

@@ -84,7 +84,11 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 
         ex_name = "TotalPerUnitProdOMCosts"*_n
 		m[Symbol(ex_name)] = 0
-	
+		
+		if !isempty(p.s.electric_tariff.export_bins)  # added for testing
+            add_export_constraints(m, p; _n=_n)  # added for testing 
+        end
+
 		add_elec_utility_expressions(m, p; _n=_n)
 	
 		#################################  Objective Function   ########################################
@@ -110,6 +114,8 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
 	@warn "Emissions and renewable energy fractions are not currently modeling in multinode mode."
     for p in ps
         _n = string("_", p.s.site.node)
+
+		
 
         for b in p.s.storage.types.all
             if p.s.storage.attr[b].max_kw == 0 || p.s.storage.attr[b].max_kwh == 0
