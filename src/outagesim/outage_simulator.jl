@@ -156,8 +156,8 @@ function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[
     if batt_kw == 0 || batt_kwh == 0
         init_soc = repeat([0], n_time_steps)  # default is 0
 
-        if (isempty(pv_kw_ac_hourly) || (sum(pv_kw_ac_hourly) == 0)) && diesel_kw == 0
-            # no pv, generator, nor battery --> no resilience
+        if (isempty(pv_kw_ac_hourly) || (sum(pv_kw_ac_hourly) == 0)) && (isempty(wind_kw_ac_hourly) || (sum(wind_kw_ac_hourly) == 0)) && diesel_kw == 0
+            # no pv, generator, wind, nor battery --> no resilience
             return Dict(
                 "resilience_by_time_step" => r,
                 "resilience_hours_min" => 0,
@@ -257,7 +257,7 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
 
     # TODO handle generic PV names
     pv_kw_ac_hourly = zeros(length(p.time_steps))
-    if "PV" in keys(d)
+    if "PV" in keys(d) && !(microgrid_only && !Bool(get(d["Outages"], "PV_upgraded", false)))
         pv_kw_ac_hourly = (
             get(d["PV"], "electric_to_storage_series_kw", zeros(length(p.time_steps)))
           + get(d["PV"], "electric_curtailed_series_kw", zeros(length(p.time_steps)))
@@ -265,8 +265,15 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
           + get(d["PV"], "electric_to_grid_series_kw", zeros(length(p.time_steps)))
         )
     end
-    if microgrid_only && !Bool(get(d["Outages"], "PV_upgraded", false))
-        pv_kw_ac_hourly = zeros(length(p.time_steps))
+
+    wind_kw_ac_hourly = zeros(length(p.time_steps))
+    if "Wind" in keys(d) && !(microgrid_only && !Bool(get(d["Outages"], "Wind_upgraded", false)))
+        wind_kw_ac_hourly = (
+            get(d["Wind"], "electric_to_storage_series_kw", zeros(length(p.time_steps)))
+          + get(d["Wind"], "electric_curtailed_series_kw", zeros(length(p.time_steps)))
+          + get(d["Wind"], "electric_to_load_series_kw", zeros(length(p.time_steps)))
+          + get(d["Wind"], "electric_to_grid_series_kw", zeros(length(p.time_steps)))
+        )
     end
 
     batt_kwh = 0
@@ -303,7 +310,7 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
         pv_kw_ac_hourly = pv_kw_ac_hourly,
         init_soc = init_soc, 
         critical_loads_kw = p.s.electric_load.critical_loads_kw, 
-        wind_kw_ac_hourly = [],
+        wind_kw_ac_hourly = wind_kw_ac_hourly,
         batt_roundtrip_efficiency = batt_roundtrip_efficiency,
         diesel_kw = diesel_kw, 
         fuel_available = p.s.generator.fuel_avail_gal,
