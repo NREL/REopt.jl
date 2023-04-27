@@ -27,12 +27,47 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-function add_outage_results(m, p, r::Dict)
+"""
+	add_outage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict)
+
+Adds the Outages results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs`.
+Only added to results when multiple outages are modeled via the `ElectricUtility.outage_durations` input.
+
+!!! note
+	When modeling PV the name of the PV system is used for the output keys to allow for modeling multiple PV systems. The default PV name is `PV`.
+
+!!! warn
+	The Outage results can be very large when many outages are modeled and can take a long time to generate.
+
+Outages results:
+- `expected_outage_cost` The expected outage cost over the random outages modeled.
+- `max_outage_cost_per_outage_duration` The maximum outage cost in every outage duration modeled.
+- `dvUnservedLoad` The amount of unserved load in each outage and each time step.
+- `unserved_load_per_outage` The total unserved load in each outage.
+- `mg_storage_upgrade_cost` The cost to include the storage system in the microgrid.
+- `storage_upgraded` Boolean that is true if it is cost optimal to include the storage system in the microgrid.
+- `PVmg_kw` Optimal microgrid PV capacity. Note that the name `PV` can change based on user provided `PV.name`.
+- `mg_PV_upgrade_cost` The cost to include the PV system in the microgrid.
+- `mgPVtoBatt` Array of PV power sent to the battery in every outage modeled.
+- `mgPVtoCurtail` Array of PV curtailed in every outage modeled.
+- `mgPVtoLoad` Array of PV power used to meet load in every outage modeled.
+- `Generatormg_kw` Optimal microgrid Generator capacity. Note that the name `Generator` can change based on user provided `Generator.name`.
+- `mg_Generator_upgrade_cost` The cost to include the Generator system in the microgrid.
+- `mgGeneratortoBatt` Array of Generator power sent to the battery in every outage modeled.
+- `mgGeneratortoCurtail` Array of Generator curtailed in every outage modeled.
+- `mgGeneratortoLoad` Array of Generator power used to meet load in every outage modeled.
+- `mg_Generator_fuel_used` Array of Generator fuel used in every outage modeled.
+
+!!! warn
+	The output keys for "Outages" are subject to change.
+"""
+function add_outage_results(m, p, d::Dict)
 	# TODO with many outages the dispatch arrays are so large that it can take hours to create them
 	# (eg. 8760 * 12 hour outages with PV, storage and diesel makes 7*12*8760 = 735,840 values)
 	# For now the outage dispatch outputs are not created (commented out below). Perhaps make a new
 	# function to optionally get the outage dispatch values so that we don't slow down returning the
 	# other results.
+	r = Dict{String, Any}()
 	r["expected_outage_cost"] = value(m[:ExpectedOutageCost])
 	r["max_outage_cost_per_outage_duration"] = value.(m[:dvMaxOutageCost]).data
 	r["dvUnservedLoad"] = value.(m[:dvUnservedLoad]).data
@@ -136,4 +171,5 @@ function add_outage_results(m, p, r::Dict)
 			r[string("mg", t, "toLoad")] = round.(value.(GENtoLoad), digits=3)
 		end
 	end
+	d["Outages"] = r
 end

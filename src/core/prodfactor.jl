@@ -308,3 +308,24 @@ function prodfactor(wind::Wind, latitude::Real, longitude::Real, time_steps_per_
     end
     return normalized_prod_factor
 end
+
+"""
+    prodfactor(chp::AbstractCHP, year::Int=2017, outage_start_time_step::Int=0, outage_end_time_step::Int=0, ts_per_hour::Int=1)
+
+prodfactor for CHP accounts for unavailability (`unavailability_periods`) of CHP due to 
+scheduled (mostly off-peak) and "unscheduled" (on-peak) maintenance. 
+Note: this same prod_factor should be applied to electric and thermal production
+"""
+function prodfactor(chp::AbstractCHP, year::Int=2017, outage_start_time_step::Int=0, outage_end_time_step::Int=0, ts_per_hour::Int=1)
+    unavailability_hourly = generate_year_profile_hourly(year, chp.unavailability_periods)
+
+    prod_factor = [1.0 - unavailability_hourly[i] for i in 1:8760 for _ in 1:ts_per_hour]
+
+    # Ignore unavailability in timestep if it intersects with an outage interval
+    if outage_end_time_step - outage_start_time_step >= 1
+        prod_factor[outage_start_time_step:outage_end_time_step] .= ones(outage_end_time_step - outage_start_time_step + 1)
+    end
+
+    return prod_factor
+end
+

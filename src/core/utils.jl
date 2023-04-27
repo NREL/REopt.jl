@@ -252,3 +252,112 @@ function per_hour_value_to_time_series(x::AbstractVector{<:Real}, time_steps_per
     end
     @error "Cannot convert $name to appropriate length time series."
 end
+
+"""
+    generate_year_profile_hourly(year::Int64, consecutive_periods::AbstractVector{Dict})
+
+This function creates a year-specific hourly (8760) profile with 1.0 value for timesteps which are defined in `consecutive_periods` based on
+    relative (non-year specific) datetime metrics. All other values are 0.0. This functions uses the `Dates` package.
+
+- `year` applies the relative calendar-based `consecutive_periods` to the year's calendar and handles leap years by truncating the last day
+- `consecutive_periods` is a list of dictionaries where each dict defines a consecutive period of time which gets a value of 1.0
+-- keys for each dict must include "month", "start_week_of_month", "start_day_of_week", "start_hour", "duration_hours
+- Returns the `year_profile_hourly` which is an 8760 profile with 1.0 for timesteps defined in consecutive_periods, and 0.0 for all other hours.
+"""
+function generate_year_profile_hourly(year::Int64, consecutive_periods::AbstractVector{Dict})
+    # Create datetime series of the year, remove last day of the year if leap year
+    if Dates.isleapyear(year)
+        end_year_datetime = DateTime(string(year)*"-12-30T23:00:00")
+    else
+        end_year_datetime = DateTime(string(year+1)*"-12-31T23:00:00")
+    end
+
+    dt_hourly = collect(DateTime(string(year)*"-01-01T00:00:00"):Hour(1):end_year_datetime)
+    
+    year_profile_hourly = zeros(8760)
+
+    # Note, day = 1 is Monday, not Sunday
+    day_of_week_name = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    for i in 1:length(consecutive_periods)
+        start_month = convert(Int,consecutive_periods[i]["month"])
+        start_week_of_month = convert(Int,consecutive_periods[i]["start_week_of_month"])
+        start_day_of_week = convert(Int,consecutive_periods[i]["start_day_of_week"])  # Monday - Sunday is 1 - 7
+        start_hour = convert(Int,consecutive_periods[i]["start_hour"])
+        duration_hours = convert(Int,consecutive_periods[i]["duration_hours"])
+        error_start_text = "Error in chp.unavailability_period $(i)."
+        
+        try
+            start_date_of_month_year = Date(Dates.Year(year), Dates.Month(start_month))
+            start_date = Dates.firstdayofweek(start_date_of_month_year) + Dates.Week(start_week_of_month - 1) + Dates.Day(start_day_of_week - 1)
+            # Throw an error if start_date is in the previous month when start_week_of_month=1 and there is no start_day_of_week in the first week of the month.
+            if Dates.month(start_date) != start_month
+                @error "For $(error_start_text), there is no day $(start_day_of_week) ($(day_of_week_name[start_day_of_week])) in the first week of month $(start_month) ($(Dates.monthname(start_date))), $(year)"
+            end
+            start_datetime = Dates.DateTime(start_date) + Dates.Hour(start_hour - 1)
+            if Dates.year(start_datetime + Dates.Hour(duration_hours)) > year
+                @error "For $(error_start_text), the start day/time and duration_hours exceeds the end of the year. Please specify two separate unavailability periods: one for the beginning of the year and one for up to the end of the year."
+            else
+                #end_datetime is the last hour that is 1.0 (e.g. that is still unavailable), not the first hour that is 0.0 after the period
+                end_datetime = start_datetime + Dates.Hour(duration_hours - 1)
+                year_profile_hourly[findfirst(x->x==start_datetime, dt_hourly):findfirst(x->x==end_datetime, dt_hourly)] .= 1.0
+            end
+        catch e
+            println("For $error_start_text, invalid set for month $start_month (1-12), start_week_of_month $start_week_of_month (1-4, possible 5 and 6), $start_day_of_week (1-7), and $start_hour (1-24) for the year $year.")
+        end
+    end
+    return year_profile_hourly
+end
+
+
+function get_ambient_temperature(latitude::Real, longitude::Real; timeframe="hourly")
+    url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
+        "&lat=", latitude , "&lon=", longitude, "&tilt=", latitude,
+        "&system_capacity=1", "&azimuth=", 180, "&module_type=", 0,
+        "&array_type=", 0, "&losses=", 14,
+        "&timeframe=", timeframe, "&dataset=nsrdb"
+    )
+
+    try
+        @info "Querying PVWatts for ambient temperature... "
+        r = HTTP.get(url)
+        response = JSON.parse(String(r.body))
+        if r.status != 200
+            error("Bad response from PVWatts: $(response["errors"])")
+        end
+        @info "PVWatts success."
+        tamb = collect(get(response["outputs"], "tamb", []))  # Celcius
+        if length(tamb) != 8760
+            @error "PVWatts did not return a valid temperature. Got $tamb"
+        end
+        return tamb
+    catch e
+        @error "Error occurred when calling PVWatts: $e"
+    end
+end
+
+
+function get_pvwatts_prodfactor(latitude::Real, longitude::Real; timeframe="hourly")
+    url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
+        "&lat=", latitude , "&lon=", longitude, "&tilt=", latitude,
+        "&system_capacity=1", "&azimuth=", 180, "&module_type=", 0,
+        "&array_type=", 0, "&losses=", 14,
+        "&timeframe=", timeframe, "&dataset=nsrdb"
+    )
+
+    try
+        @info "Querying PVWatts for production factor of 1 kW system with tilt set to latitude... "
+        r = HTTP.get(url)
+        response = JSON.parse(String(r.body))
+        if r.status != 200
+            error("Bad response from PVWatts: $(response["errors"])")
+        end
+        @info "PVWatts success."
+        watts = collect(get(response["outputs"], "ac", []) / 1000)  # scale to 1 kW system (* 1 kW / 1000 W)
+        if length(watts) != 8760
+            @error "PVWatts did not return a valid prodfactor. Got $watts"
+        end
+        return watts
+    catch e
+        @error "Error occurred when calling PVWatts: $e"
+    end
+end

@@ -27,6 +27,27 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+	add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+
+Adds the Generator results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+Note: the node number is an empty string if evaluating a single `Site`.
+
+Generator results:
+- `size_kw` Optimal generator capacity
+- `lifecycle_fixed_om_cost` Lifecycle fixed operations and maintenance cost in present value, after tax
+- `year_one_fixed_om_cost` fixed operations and maintenance cost over the first year
+- `lifecycle_variable_om_cost` Lifecycle variable operations and maintenance cost in present value, after tax
+- `year_one_variable_om_cost` variable operations and maintenance cost over the first year
+- `lifecycle_fuel_cost` Lifecycle fuel cost in present value, after tax
+- `year_one_fuel_cost` Fuel cost over the first year
+- `fuel_used_gal` Gallons of fuel used in each year
+- `year_one_to_battery_series_kw` Vector of power sent to battery in year one
+- `year_one_to_grid_series_kw` Vector of power sent to grid in year one
+- `year_one_to_load_series_kw` Vector of power sent to load in year one
+- `year_one_energy_produced_kwh` Total energy produced in year one
+- `average_annual_energy_produced_kwh` Average annual energy produced over analysis period
+"""
 function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 

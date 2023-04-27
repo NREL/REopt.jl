@@ -44,6 +44,7 @@ function Techs(p::REoptInputs, s::BAUScenario)
     pbi_techs = String[]
     heating_techs = String[]
     boiler_techs = String[]
+    chp_techs = String[]
 
     if p.s.generator.existing_kw > 0
         push!(all_techs, "Generator")
@@ -57,7 +58,7 @@ function Techs(p::REoptInputs, s::BAUScenario)
         push!(boiler_techs, "ExistingBoiler")
     end
 
-    fuel_burning_techs = union(gentechs, boiler_techs)
+    fuel_burning_techs = union(gentechs, boiler_techs, chp_techs)
     thermal_techs = union(heating_techs, boiler_techs)
 
     Techs(
@@ -72,7 +73,8 @@ function Techs(p::REoptInputs, s::BAUScenario)
         heating_techs,
         boiler_techs,
         fuel_burning_techs,
-        thermal_techs
+        thermal_techs,
+        chp_techs
     )
 end
 
@@ -97,6 +99,7 @@ function Techs(s::Scenario)
     segmented_techs = String[]
     heating_techs = String[]
     boiler_techs = String[]
+    chp_techs = String[]
     if s.wind.max_kw > 0
         push!(all_techs, "Wind")
         push!(elec, "Wind")
@@ -117,8 +120,14 @@ function Techs(s::Scenario)
         append!(techs_no_turndown, ["Wind"])
     end
 
-    thermal_techs = union(heating_techs, boiler_techs)
-    fuel_burning_techs = union(gentechs, boiler_techs)
+    if !isnothing(s.chp)
+        push!(all_techs, "CHP")
+        push!(elec, "CHP")
+        push!(chp_techs, "CHP")
+    end
+
+    thermal_techs = union(heating_techs, boiler_techs, chp_techs)
+    fuel_burning_techs = union(gentechs, boiler_techs, chp_techs)
 
     Techs(
         all_techs,
@@ -132,7 +141,8 @@ function Techs(s::Scenario)
         heating_techs,
         boiler_techs,
         fuel_burning_techs,
-        thermal_techs
+        thermal_techs,
+        chp_techs
     )
 end
 
@@ -164,6 +174,7 @@ function Techs(s::MPCScenario)
         String[],
         String[],
         techs_no_turndown,
+        String[],
         String[],
         String[],
         String[],

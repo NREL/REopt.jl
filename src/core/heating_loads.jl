@@ -27,6 +27,29 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+    DomesticHotWaterLoad
+
+There are many ways in which a DomesticHotWaterLoad can be defined:
+1. When using either `doe_reference_name` or `blended_doe_reference_names` in an `ElectricLoad` one only needs to provide the input key "DomesticHotWaterLoad" in the `Scenario` (JSON or Dict). In this case the values from DoE reference names from the `ElectricLoad` will be used to define the `DomesticHotWaterLoad`.
+2. One can provide the `doe_reference_name` or `blended_doe_reference_names` directly in the `DomesticHotWaterLoad` key within the `Scenario`. These values can be combined with the `annual_mmbtu` or `monthly_mmbtu` inputs to scale the DoE reference profile(s).
+3. One can provide the `fuel_loads_mmbtu_per_hour` value in the `DomesticHotWaterLoad` key within the `Scenario`.
+
+```julia
+function DomesticHotWaterLoad(;
+    doe_reference_name::String = "",
+    city::String = "",
+    blended_doe_reference_names::Array{String, 1} = String[],
+    blended_doe_reference_percents::Array{<:Real,1} = Real[],
+    annual_mmbtu::Union{Real, Nothing} = nothing,
+    monthly_mmbtu::Array{<:Real,1} = Real[],
+    fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
+    time_steps_per_hour::Int = 1,
+    latitude::Real=0.0,
+    longitude::Real=0.0
+)
+```
+"""
 struct DomesticHotWaterLoad
     loads_kw::Array{Real, 1}
 
@@ -38,10 +61,10 @@ struct DomesticHotWaterLoad
         annual_mmbtu::Union{Real, Nothing} = nothing,
         monthly_mmbtu::Array{<:Real,1} = Real[],
         # addressable_load_fraction,  # TODO
-        fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
+        fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],  # TODO shouldn't this be per_time_step?
         time_steps_per_hour::Int = 1,
-        latitude::Float64=0.0,
-        longitude::Float64=0.0
+        latitude::Real=0.0,
+        longitude::Real=0.0
     )
         if length(fuel_loads_mmbtu_per_hour) > 0
 
@@ -77,6 +100,29 @@ struct DomesticHotWaterLoad
 end
 
 
+"""
+    SpaceHeatingLoad
+
+There are many ways in which a SpaceHeatingLoad can be defined:
+1. When using either `doe_reference_name` or `blended_doe_reference_names` in an `ElectricLoad` one only needs to provide the input key "SpaceHeatingLoad" in the `Scenario` (JSON or Dict). In this case the values from DoE reference names from the `ElectricLoad` will be used to define the `SpaceHeatingLoad`.
+2. One can provide the `doe_reference_name` or `blended_doe_reference_names` directly in the `SpaceHeatingLoad` key within the `Scenario`. These values can be combined with the `annual_mmbtu` or `monthly_mmbtu` inputs to scale the DoE reference profile(s).
+3. One can provide the `fuel_loads_mmbtu_per_hour` value in the `SpaceHeatingLoad` key within the `Scenario`.
+
+```julia
+function SpaceHeatingLoad(;
+    doe_reference_name::String = "",
+    city::String = "",
+    blended_doe_reference_names::Array{String, 1} = String[],
+    blended_doe_reference_percents::Array{<:Real,1} = Real[],
+    annual_mmbtu::Union{Real, Nothing} = nothing,
+    monthly_mmbtu::Array{<:Real,1} = Real[],
+    fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
+    time_steps_per_hour::Int = 1,
+    latitude::Real=0.0,
+    longitude::Real=0.0
+)
+```
+"""
 struct SpaceHeatingLoad
     loads_kw::Array{Real, 1}
 
@@ -90,8 +136,8 @@ struct SpaceHeatingLoad
         # addressable_load_fraction,  # TODO
         fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
         time_steps_per_hour::Int = 1,
-        latitude::Float64=0.0,
-        longitude::Float64=0.0
+        latitude::Real=0.0,
+        longitude::Real=0.0
     )
         if length(fuel_loads_mmbtu_per_hour) > 0
 
@@ -130,8 +176,8 @@ end
 function BuiltInDomesticHotWaterLoad(
     city::String,
     buildingtype::String,
-    latitude::Float64,
-    longitude::Float64,
+    latitude::Real,
+    longitude::Real,
     year::Int,
     annual_mmbtu::Union{<:Real, Nothing}=nothing,
     monthly_mmbtu::Union{Vector{<:Real}, Nothing}=nothing
@@ -458,8 +504,8 @@ end
 function BuiltInSpaceHeatingLoad(
     city::String,
     buildingtype::String,
-    latitude::Float64,
-    longitude::Float64,
+    latitude::Real,
+    longitude::Real,
     year::Int,
     annual_mmbtu::Union{<:Real, Nothing}=nothing,
     monthly_mmbtu::Union{Vector{<:Real}, Nothing}=nothing,

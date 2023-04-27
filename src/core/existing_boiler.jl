@@ -36,6 +36,21 @@ struct ExistingBoiler <: AbstractThermalTech  # useful to create AbstractHeating
 end
 
 
+"""
+    ExistingBoiler
+
+```julia
+function ExistingBoiler(;
+    max_heat_demand_kw::Real=0,
+    production_type::String = "hot_water",
+    chp_prime_mover::String = "",
+    max_thermal_factor_on_peak_load::Real = 1.25,
+    efficiency::Real = 0.0,
+    fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
+    time_steps_per_hour::Int = 1
+)
+```
+"""
 function ExistingBoiler(;
     max_heat_demand_kw::Real=0,
     production_type::String = "hot_water",

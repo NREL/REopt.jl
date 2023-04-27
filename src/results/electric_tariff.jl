@@ -27,6 +27,27 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+    add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+
+Adds the ElectricTariff results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+Note: the node number is an empty string if evaluating a single `Site`.
+
+ElectricTariff results:
+- `lifecycle_energy_cost` lifecycle cost of energy from the grid in present value, after tax
+- `year_one_energy_cost` cost of energy from the grid over the first year
+- `lifecycle_demand_cost` lifecycle cost of power from the grid in present value, after tax
+- `year_one_demand_cost` cost of power from the grid over the first year
+- `lifecycle_fixed_cost` lifecycle fixed cost in present value, after tax
+- `year_one_fixed_cost` fixed cost over the first year
+- `lifecycle_min_charge_adder` lifecycle minimum charge in present value, after tax
+- `year_one_min_charge_adder` minimum charge over the first year
+- `year_one_bill` sum of `year_one_energy_cost`, `year_one_demand_cost`, `year_one_fixed_cost`, and `year_one_min_charge_adder`
+- `lifecycle_export_benefit` lifecycle export credits in present value, after tax
+- `year_one_export_benefit` export credits over the first year
+- `lifecycle_coincident_peak_cost` lifecycle coincident peak charge in present value
+- `year_one_coincident_peak_cost` coincident peak charge over the first year
+"""
 function add_electric_tariff_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
     m[Symbol("Year1UtilityEnergy"*_n)] = p.hours_per_timestep * 

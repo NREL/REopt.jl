@@ -1,7 +1,7 @@
 name = "REoptLite"
 uuid = "0144022d-7626-48b7-867b-06d945449d75"
 authors = ["Nick Laws <nick.laws@nrel.gov>"]
-version = "0.12.0"
+version = "0.12.3"
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
@@ -20,7 +20,7 @@ Shapefile = "8e980c4a-a4fe-5da2-b3a7-4b4b0353a2f4"
 [compat]
 HTTP = "0.8, 0.9"
 JSON = "0.21"
-JuMP = "0.21"
+JuMP = "0.21, 0.22"
 LinDistFlow = "0.1"
 MathOptInterface = "0.9, 0.10"
 PolygonInbounds = "0.2"

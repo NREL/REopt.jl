@@ -27,6 +27,19 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+    add_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+
+Adds the Storage results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+Note: the node number is an empty string if evaluating a single `Site`.
+
+Storage results:
+- `size_kw` Optimal inverter capacity
+- `size_kwh` Optimal storage capacity
+- `year_one_soc_series_pct` Vector of normalized (0-1) state of charge values over the first year
+- `year_one_to_load_series_kw` Vector of power used to meet load over the first year
+- `year_one_to_grid_series_kw` Vector of power exported to the grid over the first year
+"""
 function add_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::Symbol; _n="")
     r = Dict{String, Any}()
     r["size_kwh"] = round(value(m[Symbol("dvStorageEnergy"*_n)][b]), digits=2)

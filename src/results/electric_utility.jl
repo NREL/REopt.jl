@@ -27,6 +27,17 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+    add_electric_utility_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+
+Adds the ElectricUtility results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+Note: the node number is an empty string if evaluating a single `Site`.
+
+ElectricUtility results:
+- `year_one_energy_supplied_kwh` Total energy supplied from the grid in year one.
+- `year_one_to_load_series_kw` Vector of powers drawn from the grid to serve load in year one.
+- `year_one_to_battery_series_kw` Vector of powers drawn from the grid to charge the battery in year one.
+"""
 function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 

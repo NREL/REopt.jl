@@ -53,6 +53,10 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     if "Wind" in p.techs.all
         add_wind_results(m, p, d; _n)
     end
+    
+    if "CHP" in p.techs.all
+        add_chp_results(m, p, d; _n)
+    end
 	
 	time_elapsed = time() - tstart
 	@info "Base results processing took $(round(time_elapsed, digits=3)) seconds."

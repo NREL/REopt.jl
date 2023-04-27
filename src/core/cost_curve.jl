@@ -94,7 +94,7 @@ Assumes that `tech` has the following attributes:
 
 Optional attributes of `tech` are:
 - existing_kw
-- tech_size_for_cost_curve
+- tech_sizes_for_cost_curve
 """
 function cost_curve(tech::AbstractTech, financial::Financial)
     big_number = 1.0e10
@@ -153,26 +153,26 @@ function cost_curve(tech::AbstractTech, financial::Financial)
     xp_array_incent = Dict("utility" => [0.0, big_number])
     yp_array_incent = Dict("utility" => [0.0, big_number * tech.installed_cost_per_kw])  # [$]
 
-    # New input of tech_size_for_cost_curve to be associated with tech.installed_cost_per_kw with same type and length
-    if :tech_size_for_cost_curve in fieldnames(T)
-        if !(tech.tech_size_for_cost_curve in [nothing, []])
-            if length(tech.tech_size_for_cost_curve) == 1
+    # New input of tech_sizes_for_cost_curve to be associated with tech.installed_cost_per_kw with same type and length
+    if :tech_sizes_for_cost_curve in fieldnames(T)
+        if !isempty(tech.tech_sizes_for_cost_curve)
+            if length(tech.tech_sizes_for_cost_curve) == 1
                 yp_array_incent["utility"] = [0.0, big_number * tech.installed_cost_per_kw[1]]  # [$]
-            else  # length(tech.tech_size_for_cost_curve) > 1
+            else  # length(tech.tech_sizes_for_cost_curve) > 1
                 xp_array_incent["utility"] = []
-                if tech.tech_size_for_cost_curve[1] != 0 # Append a 0 to the front of the list if not included (we"ll assume that it has a 0 y-intercept below)
+                if tech.tech_sizes_for_cost_curve[1] != 0 # Append a 0 to the front of the list if not included (we"ll assume that it has a 0 y-intercept below)
                     push!(xp_array_incent["utility"], 0)
                 end
-                push!(xp_array_incent["utility"], tech.tech_size_for_cost_curve...)  # [$]  # Append list of sizes for cost curve [kW]
+                push!(xp_array_incent["utility"], tech.tech_sizes_for_cost_curve...)  # [$]  # Append list of sizes for cost curve [kW]
                 push!(xp_array_incent["utility"], big_number)  # Append big number size to assume same cost as last input point
 
-                if tech.tech_size_for_cost_curve[1] == 0
-                    yp_array_incent["utility"] = [tech.installed_cost_per_kw[1], tech.tech_size_for_cost_curve[2:end] .* tech.installed_cost_per_kw[2:end]...]  # [$]
-                    # tech.installed_cost_per_kw[1] is assumed to be in units of $, if there is tech.tech_size_for_cost_curve[1]=0 point
+                if tech.tech_sizes_for_cost_curve[1] == 0
+                    yp_array_incent["utility"] = [tech.installed_cost_per_kw[1], tech.tech_sizes_for_cost_curve[2:end] .* tech.installed_cost_per_kw[2:end]...]  # [$]
+                    # tech.installed_cost_per_kw[1] is assumed to be in units of $, if there is tech.tech_sizes_for_cost_curve[1]=0 point
                 else
-                    yp_array_incent["utility"] = [0, tech.tech_size_for_cost_curve .* tech.installed_cost_per_kw...]
+                    yp_array_incent["utility"] = [0, tech.tech_sizes_for_cost_curve .* tech.installed_cost_per_kw...]
                 end
-                yp_array_incent["utility"] += [big_number * tech.installed_cost_per_kw[-1]]  # Last cost assumed for big_number size
+                append!(yp_array_incent["utility"], big_number * tech.installed_cost_per_kw[end])  # Last cost assumed for big_number size
                 cost_curve_bp_y = [yp_array_incent["utility"][1]]
             end
         end

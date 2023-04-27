@@ -98,6 +98,34 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         initial_capex += p.s.wind.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Wind"]
     end
 
+    if "CHP" in p.techs.all
+        # CHP.installed_cost_per_kw is now a list with potentially > 1 elements
+        cost_list = p.s.chp.installed_cost_per_kw
+        size_list = p.s.chp.tech_sizes_for_cost_curve
+        chp_size = value.(m[Symbol("dvPurchaseSize"*_n)])["CHP"]
+        if typeof(cost_list) == Vector{Float64}
+            if chp_size <= size_list[1]
+                initial_capex += chp_size * cost_list[1]  # Currently not handling non-zero cost ($) for 0 kW size input
+            elseif chp_size > size_list[end]
+                initial_capex += chp_size * cost_list[end]
+            else
+                for s in 2:length(size_list)
+                    if (chp_size > size_list[s-1]) && (chp_size <= size_list[s])
+                        slope = (cost_list[s] * size_list[s] - cost_list[s-1] * size_list[s-1]) /
+                                (size_list[s] - size_list[s-1])
+                        initial_capex += cost_list[s-1] * size_list[s-1] + (chp_size - size_list[s-1]) * slope
+                    end
+                end
+            end
+        else
+            initial_capex += cost_list * chp_size
+        #Add supplementary firing capital cost
+        # chp_supp_firing_size = self.nested_outputs["Scenario"]["Site"][tech].get("size_supplementary_firing_kw")
+        # chp_supp_firing_cost = self.inputs[tech].get("supplementary_firing_capital_cost_per_kw") or 0
+        # initial_capex += chp_supp_firing_size * chp_supp_firing_cost
+        end
+    end
+
     # TODO thermal tech costs
 
     return initial_capex

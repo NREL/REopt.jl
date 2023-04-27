@@ -27,6 +27,40 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+"""
+    Storage
+
+Currently only electric storage is modeled but thermal storage will be added soon.
+
+TODO update this doc string and perhaps the way we define arbitrary storage.
+
+```julia
+Base.@kwdef struct ElecStorage <: AbstractStorage
+    min_kw::Float64 = 0.0
+    max_kw::Float64 = 1.0e4
+    min_kwh::Float64 = 0.0
+    max_kwh::Float64 = 1.0e6
+    internal_efficiency_pct::Float64 = 0.975
+    inverter_efficiency_pct::Float64 = 0.96
+    rectifier_efficiency_pct::Float64 = 0.96
+    soc_min_pct::Float64 = 0.2
+    soc_init_pct::Float64 = 0.5
+    can_grid_charge::Bool = true
+    installed_cost_per_kw::Float64 = 840.0
+    installed_cost_per_kwh::Float64 = 420.0
+    replace_cost_per_kw::Float64 = 410.0
+    replace_cost_per_kwh::Float64 = 200.0
+    inverter_replacement_year::Int = 10
+    battery_replacement_year::Int = 10
+    macrs_option_years::Int = 7
+    macrs_bonus_pct::Float64 = 1.0
+    macrs_itc_reduction::Float64 = 0.5
+    total_itc_pct::Float64 = 0.0
+    total_rebate_per_kw::Float64 = 0.0
+    total_rebate_per_kwh::Float64 = 0.0
+end
+```
+"""
 Base.@kwdef struct ElecStorage <: AbstractStorage
     min_kw::Float64 = 0.0
     max_kw::Float64 = 1.0e4
@@ -72,7 +106,7 @@ end
 
 
 """
-    function Storage(d::Dict{Symbol,Dict}, f::Financial)
+    # function Storage(d::Dict{Symbol,Dict}, f::Financial)
 
 Construct Storage struct from Dict with keys for each storage type (eg. :elec) and values with
     input dicts for each storage type. Note that the REopt inputs are indexed on the storage type.

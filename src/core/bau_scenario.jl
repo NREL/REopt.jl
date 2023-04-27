@@ -66,6 +66,19 @@ function set_min_max_kw_to_existing(tech::AbstractTech)
 end
 
 
+function bau_site(site::Site)
+    Site(;
+        latitude=site.latitude,
+        longitude=site.longitude,
+        land_acres=site.land_acres,
+        roof_squarefeet=site.roof_squarefeet,
+        min_resil_timesteps=0,
+        mg_tech_sizes_equal_grid_sizes=site.mg_tech_sizes_equal_grid_sizes,
+        node=site.node,
+    )
+end
+
+
 """
     BAUScenario(s::Scenario)
 
@@ -109,9 +122,16 @@ function BAUScenario(s::Scenario)
     end
     outage_outputs = OutageOutputs()
 
+    #=
+    For random or uncertain outages there is no need to zero out the critical load but we do have to
+    set the Site.min_resil_timesteps to zero s.t. the model is not forced to meet any critical load
+    in the BAUScenario
+    =#
+    site = bau_site(s.site)
+
     return BAUScenario(
         s.settings,
-        s.site, 
+        site, 
         pvs, 
         wind,
         storage, 

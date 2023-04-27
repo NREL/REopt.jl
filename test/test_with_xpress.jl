@@ -45,6 +45,174 @@ using Xpress
 
     @test round(results["ExistingBoiler"]["year_one_boiler_fuel_consumption_mmbtu"], digits=0) ≈ 8760
 end
+
+@testset "CHP Sizing" begin
+    # Sizing CHP with non-constant efficiency, no cost curve, no unavailability_periods
+    data_sizing = JSON.parsefile("./scenarios/chp_sizing.json")
+    s = Scenario(data_sizing)
+    inputs = REoptInputs(s)
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+    results = run_reopt(m, inputs)
+
+    @test round(results["CHP"]["size_kw"], digits=0) ≈ 468.7 atol=1.0
+    @test round(results["Financial"]["lcc"], digits=0) ≈ 1.3476e7 atol=1.0e7
+end
+
+@testset "CHP Cost Curve and Min Allowable Size" begin
+    # Fixed size CHP with cost curve, no unavailability_periods
+    data_cost_curve = JSON.parsefile("./scenarios/chp_sizing.json")
+    data_cost_curve["CHP"] = Dict()
+    data_cost_curve["CHP"]["prime_mover"] = "recip_engine"
+    data_cost_curve["CHP"]["size_class"] = 2
+    data_cost_curve["CHP"]["fuel_cost_per_mmbtu"] = 8.0
+    data_cost_curve["CHP"]["min_kw"] = 0
+    data_cost_curve["CHP"]["min_allowable_kw"] = 555.5
+    data_cost_curve["CHP"]["max_kw"] = 1000
+    data_cost_curve["CHP"]["installed_cost_per_kw"] = 1800.0
+    data_cost_curve["CHP"]["installed_cost_per_kw"] = [2300.0, 1800.0, 1500.0]
+    data_cost_curve["CHP"]["tech_sizes_for_cost_curve"] = [100.0, 300.0, 1140.0]
+
+    data_cost_curve["CHP"]["federal_itc_pct"] = 0.1
+    data_cost_curve["CHP"]["macrs_option_years"] = 0
+    data_cost_curve["CHP"]["macrs_bonus_pct"] = 0.0
+    data_cost_curve["CHP"]["macrs_itc_reduction"] = 0.0
+
+    expected_x = data_cost_curve["CHP"]["min_allowable_kw"]
+    cap_cost_y = data_cost_curve["CHP"]["installed_cost_per_kw"]
+    cap_cost_x = data_cost_curve["CHP"]["tech_sizes_for_cost_curve"]
+    slope = (cap_cost_x[3] * cap_cost_y[3] - cap_cost_x[2] * cap_cost_y[2]) / (cap_cost_x[3] - cap_cost_x[2])
+    init_capex_chp_expected = cap_cost_x[2] * cap_cost_y[2] + (expected_x - cap_cost_x[2]) * slope
+    lifecycle_capex_chp_expected = init_capex_chp_expected - 
+        REoptLite.npv(data_cost_curve["Financial"]["offtaker_discount_pct"], 
+        [0, init_capex_chp_expected * data_cost_curve["CHP"]["federal_itc_pct"]])
+
+    #PV
+    data_cost_curve["PV"]["min_kw"] = 1500
+    data_cost_curve["PV"]["max_kw"] = 1500
+    data_cost_curve["PV"]["installed_cost_per_kw"] = 1600
+    data_cost_curve["PV"]["federal_itc_pct"] = 0.26
+    data_cost_curve["PV"]["macrs_option_years"] = 0
+    data_cost_curve["PV"]["macrs_bonus_pct"] = 0.0
+    data_cost_curve["PV"]["macrs_itc_reduction"] = 0.0
+
+    init_capex_pv_expected = data_cost_curve["PV"]["max_kw"] * data_cost_curve["PV"]["installed_cost_per_kw"]
+    lifecycle_capex_pv_expected = init_capex_pv_expected - 
+        REoptLite.npv(data_cost_curve["Financial"]["offtaker_discount_pct"], 
+        [0, init_capex_pv_expected * data_cost_curve["PV"]["federal_itc_pct"]])
+
+    s = Scenario(data_cost_curve)
+    inputs = REoptInputs(s)
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+    results = run_reopt(m, inputs)
+
+    init_capex_total_expected = init_capex_chp_expected + init_capex_pv_expected
+    lifecycle_capex_total_expected = lifecycle_capex_chp_expected + lifecycle_capex_pv_expected
+
+    init_capex_total = results["Financial"]["initial_capital_costs"]
+    lifecycle_capex_total = results["Financial"]["initial_capital_costs_after_incentives"]
+
+
+    # Check initial CapEx (pre-incentive/tax) and life cycle CapEx (post-incentive/tax) cost with expect
+    @test init_capex_total_expected ≈ init_capex_total atol=0.0001*init_capex_total_expected
+    @test lifecycle_capex_total_expected ≈ lifecycle_capex_total atol=0.0001*lifecycle_capex_total_expected
+
+    # Test CHP.min_allowable_kw - the size would otherwise be ~100 kW less by setting min_allowable_kw to zero
+    @test results["CHP"]["size_kw"] ≈ data_cost_curve["CHP"]["min_allowable_kw"] atol=0.1
+end
+
+@testset "CHP Unavailability and Outage" begin
+    """
+    Validation to ensure that:
+        1) CHP meets load during outage without exporting
+        2) CHP never exports if chp.can_wholesale and chp.can_net_meter inputs are False (default)
+        3) CHP does not "curtail", i.e. send power to a load bank when chp.can_curtail is False (default)
+        4) CHP min_turn_down_pct is ignored during an outage
+        5) **Not until cooling is added:** Cooling load gets zeroed out during the outage period
+        6) Unavailability intervals that intersect with grid-outages get ignored
+        7) Unavailability intervals that do not intersect with grid-outages result in no CHP production
+    """
+    # Sizing CHP with non-constant efficiency, no cost curve, no unavailability_periods
+    data = JSON.parsefile("./scenarios/chp_unavailability_outage.json")
+
+    # Add unavailability periods that 1) intersect (ignored) and 2) don't intersect with outage period
+    data["CHP"]["unavailability_periods"] = [Dict([("month", 1), ("start_week_of_month", 2),
+            ("start_day_of_week", 1), ("start_hour", 1), ("duration_hours", 8)]),
+            Dict([("month", 1), ("start_week_of_month", 2),
+            ("start_day_of_week", 3), ("start_hour", 9), ("duration_hours", 8)])]
+
+    # Manually doing the math from the unavailability defined above
+    unavail_1_start = 24 + 1
+    unavail_1_end = unavail_1_start + 8 - 1
+    unavail_2_start = 24*3 + 9
+    unavail_2_end = unavail_2_start + 8 - 1
+    
+    # Specify the CHP.min_turn_down_pct which is NOT used during an outage
+    data["CHP"]["min_turn_down_pct"] = 0.5
+    # Specify outage period; outage timesteps are 1-indexed
+    outage_start = unavail_1_start
+    data["ElectricUtility"]["outage_start_time_step"] = outage_start
+    outage_end = unavail_1_end
+    data["ElectricUtility"]["outage_end_time_step"] = outage_end
+    data["ElectricLoad"]["critical_load_pct"] = 0.25
+
+    s = Scenario(data)
+    inputs = REoptInputs(s)
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+    results = run_reopt(m, inputs)
+
+    tot_elec_load = results["ElectricLoad"]["load_series_kw"]
+    chp_total_elec_prod = results["CHP"]["year_one_electric_production_series_kw"]
+    chp_to_load = results["CHP"]["year_one_to_load_series_kw"]
+    chp_export = results["CHP"]["year_one_to_grid_series_kw"]
+    #cooling_elec_load = results["LoadProfileChillerThermal"]["year_one_chiller_electric_load_kw"]
+
+    # The values compared to the expected values
+    #@test sum([(chp_to_load[i] - tot_elec_load[i]) for i in outage_start:outage_end])) == 0.0
+    critical_load = tot_elec_load[outage_start:outage_end] * data["ElectricLoad"]["critical_load_pct"]
+    @test sum(chp_to_load[outage_start:outage_end]) ≈ sum(critical_load) atol=0.1
+    @test sum(chp_export) == 0.0
+    @test sum(chp_total_elec_prod) ≈ sum(chp_to_load) atol=1.0e-5*sum(chp_total_elec_prod)
+    #@test sum(cooling_elec_load[outage_start:outage_end]) == 0.0 
+    @test sum(chp_total_elec_prod[unavail_2_start:unavail_2_end]) == 0.0  
+end
+
+@testset "CHP Supplementary firing and standby" begin
+    """
+    Test to ensure that supplementary firing and standby charges work as intended.  The thermal and 
+    electrical loads are constant, and the CHP system size is fixed; the supplementary firing has a
+    similar cost to the boiler and is purcahsed and used when the boiler efficiency is set to a lower 
+    value than that of the supplementary firing. The test also ensures that demand charges are  
+    correctly calculated when CHP is and is not allowed to reduce demand charges.
+    """
+    data = JSON.parsefile("./scenarios/chp_supplementary_firing.json")
+    data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10000
+    data["ElectricLoad"]["loads_kw"] = repeat([800.0], 8760)
+    data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([6.0], 8760)
+    data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([6.0], 8760)
+    #part 1: supplementary firing not used when less efficient than the boiler and expensive 
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    s = Scenario(data)
+    inputs = REoptInputs(s)
+    results = run_reopt(m1, inputs)
+    @test results["CHP"]["size_kw"] == 800
+    @test results["CHP"]["size_supplemental_firing_kw"] == 0
+    @test results["CHP"]["year_one_electric_energy_produced_kwh"] ≈ 800*8760 rtol=1e-5
+    @test results["CHP"]["year_one_thermal_energy_produced_mmbtu"] ≈ 800*(0.4418/0.3573)*8760/293.07107 rtol=1e-5
+    @test results["ElectricTariff"]["lifecycle_demand_cost"] == 0
+
+    #part 2: supplementary firing used when more efficient than the boiler and low-cost; demand charges not reduced by CHP
+    data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10
+    data["CHP"]["reduces_demand_charges"] = false
+    data["ExistingBoiler"]["efficiency"] = 0.85
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    s = Scenario(data)
+    inputs = REoptInputs(s)
+    results = run_reopt(m2, inputs)
+    @test results["CHP"]["size_supplemental_firing_kw"] ≈ 278.73 atol=0.1
+    @test results["CHP"]["year_one_thermal_energy_produced_mmbtu"] ≈ 138624 rtol=1e-5
+    @test results["ElectricTariff"]["lifecycle_demand_cost"] ≈ 5212.7 rtol=1e-5
+end
+
 #=
 add a time-of-export rate that is greater than retail rate for the month of January,
 check to make sure that PV does NOT export unless the site load is met first for the month of January.
@@ -103,8 +271,8 @@ end
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/outage.json")
 
-    @test results["expected_outage_cost"] ≈ 0
-    @test sum(results["unserved_load_per_outage"]) ≈ 0
+    @test results["Outages"]["expected_outage_cost"] ≈ 0
+    @test sum(results["Outages"]["unserved_load_per_outage"]) ≈ 0
     @test value(m[:binMGTechUsed]["Generator"]) == 1
     @test value(m[:binMGTechUsed]["PV"]) == 0
     @test value(m[:binMGStorageUsed]) == 1
@@ -116,12 +284,12 @@ end
     =#
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/nogridcost_minresilhours.json")
-    @test sum(results["unserved_load_per_outage"]) ≈ 12
+    @test sum(results["Outages"]["unserved_load_per_outage"]) ≈ 12
     
     # testing dvUnserved load, which would output 100 kWh for this scenario before output fix
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/nogridcost_multiscenario.json")
-    @test sum(results["unserved_load_per_outage"]) ≈ 60
+    @test sum(results["Outages"]["unserved_load_per_outage"]) ≈ 60
     
 end
 
@@ -155,7 +323,7 @@ end
     """
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/incentives.json")
-    @test results["Financial"]["lcc"] ≈ 1.0968526e7 atol=5e4  
+    @test results["Financial"]["lcc"] ≈ 1.094596365e7 atol=5e4  
 end
 
 @testset verbose = true "Rate Structures" begin
@@ -184,6 +352,15 @@ end
         results = run_reopt(model, "./scenarios/coincident_peak.json")
         @test results["ElectricTariff"]["year_one_coincident_peak_cost"] ≈ 15.0
         @test results["ElectricTariff"]["lifecycle_coincident_peak_cost"] ≈ 15.0 * 12.94887 atol=0.1
+    end
+
+    @testset "URDB sell rate" begin
+        #= The URDB contains at least one "Customer generation" tariff that only has a "sell" key in the energyratestructure (the tariff tested here)
+        =#
+        model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        p = REoptInputs("./scenarios/URDB_customer_generation.json")
+        results = run_reopt(model, p)
+        @test results["PV"]["size_kw"] ≈ p.max_sizes["PV"]
     end
 
     # # tiered monthly demand rate  TODO: expected results?
