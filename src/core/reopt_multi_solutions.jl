@@ -1,12 +1,12 @@
 """
-run_reopt_multi_solutions(fp::String, size_scale::Vector{Float64}, ms::AbstractVector{T})  where T <: JuMP.AbstractModel
+    run_reopt_multi_solutions(fp::String, size_scale::Vector{Float64}, ms::AbstractVector{T})  where T <: JuMP.AbstractModel
 
 Run REopt to get optimal tech sizes, and then run REopt multiple times with scaling factor size_scale applied to 
-    the optimal sizes to look at sensitivity of tech size on key results parameters
+the optimal sizes to look at sensitivity of tech size on key results parameters
 
-    fp is the inputs .json file path
-    size_scale is the vector of scaling factors to apply to each optimal tech size
-    ms is a vector of identical JuMP model objects and the length has to be larger than the max possible REopt runs
+fp is the inputs .json file path
+size_scale is the vector of scaling factors to apply to each optimal tech size
+ms is a vector of identical JuMP model objects and the length has to be larger than the max possible REopt runs
 
 """
 function run_reopt_multi_solutions(fp::String, size_scale::Vector{Float64}, ms::AbstractVector{T}) where T <: JuMP.AbstractModel
@@ -74,7 +74,7 @@ end
     get_multi_solutions_results_summary(results::Dict, p::REoptInputs, m::JuMP.AbstractModel, techs_sized::Vector{String})
 
 Get the results summary dictionary which is a selected number of outputs for Financial, Emissions, and 
-    the relevant techs
+the relevant techs
 
 """
 function get_multi_solutions_results_summary(results::Dict, p::REoptInputs, m::JuMP.AbstractModel, techs_sized::Vector{String})
