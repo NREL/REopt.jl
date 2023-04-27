@@ -318,7 +318,7 @@ Convert an unexpected type::Matrix from URDB into an Array
     - Observed while using REopt.jl with PyJulia/PyCall
 """
 function convert_matrix_to_array(M::AbstractMatrix)
-    return [M[:,c] for c in eachindex(M,2)]
+    return [M[:,c] for c in 1:size(M,2)]
 end
 
 """
