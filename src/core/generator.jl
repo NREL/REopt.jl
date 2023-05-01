@@ -70,8 +70,8 @@
     emissions_factor_lb_NOx_per_gal::Real = 0.0775544,
     emissions_factor_lb_SO2_per_gal::Real = 0.040020476,
     emissions_factor_lb_PM25_per_gal::Real = 0.0,
-    replacement_year::Int = off_grid_flag ? 10 : analysis_years, 
-    replace_cost_per_kw::Real = off_grid_flag ? installed_cost_per_kw : 0.0
+    replacement_year::Int = off_grid_flag ? 10 : analysis_years, # Project year in which generator capacity will be replaced at a cost of replace_cost_per_kw.
+    replace_cost_per_kw::Real = off_grid_flag ? installed_cost_per_kw : 0.0  # Per kW replacement cost for generator capacity. Replacement costs are considered tax deductible.
     replace_macrs_option_years::Int = 0,
     replace_macrs_bonus_fraction::Real = 0.0,
     replace_federal_itc_fraction::Real = 0.0,
