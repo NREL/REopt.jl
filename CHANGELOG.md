@@ -23,6 +23,16 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2023-05-01
+### Changed 
+- Changed tax treatment of replacement costs for technologies with replacement_year inputs (currently, Generator and ElectricStorage). Previously, replacement costs were treated as tax deductible (similar to O&M costs). Accordingly, neither ITC nor MACRS were applied to these costs. Now, we are treating replacement costs are depreciable and are applying the ITC and MACRS to these costs. Updates are mostly captured in the `effective_cost()` calculation. 
+
+### Added 
+- The following new inputs have been added to `ElectricStorage` and `Generator`:
+-- `replace_macrs_option_years`
+-- `replace_macrs_bonus_fraction`
+-- `replace_total_itc_fraction` 
+- *Note* For Generators, by default we assume no ITC or MACRS incentives for the upfront cost nor replacements. For ElectricStorage replacements, we assume that the MACRS bonus depreciation has phased out, that storage qualifies for 5-year depreciation (2025 and onward), and that the ITC remains at 30%. 
 ## v0.32.0
 ### Fixed
 - Fixed calculation of `wind_kw_ac_hourly` in `outagesim/outage_simulator.jl`
