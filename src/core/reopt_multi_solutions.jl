@@ -147,3 +147,94 @@ function get_multi_solutions_results_summary(results::Dict, p::REoptInputs, m::J
     end
     return results_summary
 end
+
+"""
+    run_reopt_multi_solutions_parallel(fp::String, size_scale::Vector{Float64}, ms::AbstractVector{T})  where T <: JuMP.AbstractModel
+
+Run REopt to get optimal tech sizes, and then run REopt multiple times with scaling factor size_scale applied to 
+the optimal sizes to look at sensitivity of tech size on key results parameters
+
+fp is the inputs .json file path
+size_scale is the vector of scaling factors to apply to each optimal tech size
+ms is a vector of identical JuMP model objects and the length has to be larger than the max possible REopt runs
+
+For this multi-threading version, but set JULIA_NUM_THREADS="auto" or set to max on computer
+export JULIA_NUM_THREADS="auto"
+or
+export JULIA_NUM_THREADS=8
+
+"""
+
+function run_reopt_multi_solutions_parallel(fp::String, size_scale::Vector{Float64}, ms::AbstractVector{T}) where T <: JuMP.AbstractModel
+    # Load in input_data from .json to dictionary
+    input_data = JSON.parsefile(fp)
+    # Create optimal and BAU inputs structs for initial 2 runs
+    p = REoptInputs(input_data)
+    bau_inputs = BAUInputs(p)
+    # Note, ms[1] and rs[1] are for the BAU case which we'll need to combine with all other solutions too
+    # and ms[2] and rs[2] are for the optimal case
+    inputs = ((ms[1], bau_inputs), (ms[2], p))
+    rs = Any[0, 0]
+    Threads.@threads for i = 1:2
+        rs[i] = run_reopt(inputs[i])
+    end
+
+    # Combine results for BAU-Opt to get e.g. NPV
+    results_dict = REopt.combine_results(p, rs[1], rs[2], bau_inputs.s)
+    results_dict["Financial"] = merge(results_dict["Financial"], REopt.proforma_results(p, results_dict))
+
+    # Check results to see which techs are sized, to inform number of solutions
+    techs_possible = ["PV", "ElectricStorage", "Generator", "CHP"]
+    techs_considered = intersect(techs_possible, keys(input_data))
+    techs_sized = intersect(techs_possible, keys(results_dict))
+    techs_to_zero = setdiff(techs_considered, techs_sized)
+    n_solutions = length(size_scale) * length(techs_sized)
+
+    # Create the first entry for "optimal" solution in the results dictionary
+    results_all = Dict("optimal" => results_dict)
+    results_summary = Dict("optimal" => get_multi_solutions_results_summary(results_dict, p, ms[2], techs_sized))
+
+    # Now create number of inputs based on the # of techs sized in optimal case
+    ps = []
+    for i in eachindex(size_scale)
+        for tech in techs_sized
+            # Copy input_data so all techs start at optimal size (size_scale = 1.0)
+            # Remove techs which were considered but not sized (size=0) in optimal case
+            input_data_s = deepcopy(input_data)
+            for t in techs_to_zero
+                delete!(input_data_s, t)
+            end
+            # Force size based on size_scale factor
+            input_data_s[tech]["min_kw"] = results_all["optimal"][tech]["size_kw"] * size_scale[i]
+            input_data_s[tech]["max_kw"] = results_all["optimal"][tech]["size_kw"] * size_scale[i]
+            if tech == "ElectricStorage"
+                input_data_s[tech]["min_kwh"] = results_all["optimal"][tech]["size_kwh"] * size_scale[i]
+                input_data_s[tech]["max_kwh"] = results_all["optimal"][tech]["size_kwh"] * size_scale[i]
+            end
+            
+            # Create named entry for REoptInputs
+            append!(ps, [(tech*"_size_scale_"*string(size_scale[i]), REoptInputs(input_data_s))])
+        end
+    end
+
+    # Run extra n_solutions with multi-threading
+    rs_solns = Vector{Any}(nothing, n_solutions)
+    Threads.@threads for i in 1:n_solutions  # Threads doesn't like enumerate with for loop
+        # JuMP model index starts at 3 because 1 and 2 were used by BAU and optimal sceanarios
+        n = 2 + i
+        rs_solns[i] = run_reopt((ms[n], ps[i][2]))   
+    end
+    
+    # Combine BAU with each extra solution and get results summary
+    for (i, p) in enumerate(ps)
+        n = 2 + i
+        # Combine with BAU to get e.g. NPV
+        local results_dict = REopt.combine_results(p[2], rs[1], rs_solns[i], bau_inputs.s)
+        results_dict["Financial"] = merge(results_dict["Financial"], REopt.proforma_results(p[2], results_dict))
+        results_all[p[1]] = results_dict
+        # Build results summary, a select number of outputs for Eaton
+        results_summary[p[1]] = get_multi_solutions_results_summary(results_dict, p[2], ms[n], techs_sized)  
+    end
+
+    return results_all, results_summary
+end

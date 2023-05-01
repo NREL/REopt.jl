@@ -19,7 +19,11 @@ max_models = 2 + length(size_scale) * n_techs
 ms = [Model(optimizer_with_attributes(HiGHS.Optimizer, 
     "output_flag" => false, "mip_rel_gap" => 0.001, "log_to_console" => true)) for _ in 1:max_models]
 
+# In-series/sequential run_reopt:
 results_all, results_summary = REopt.run_reopt_multi_solutions(fp, size_scale, ms)
+
+# Parallel run_reopt:
+results_all, results_summary = REopt.run_reopt_multi_solutions_parallel(fp, size_scale, ms)
 
 # Print some interesting data from all the solutions
 for s in keys(results_summary)
