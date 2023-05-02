@@ -45,7 +45,7 @@ elseif "CPLEX" in ARGS
     end
 
 else  # run HiGHS tests
-    
+
     @testset "Inputs" begin
         @testset "hybrid profile" begin
             electric_load = REopt.ElectricLoad(; 
@@ -244,15 +244,15 @@ else  # run HiGHS tests
     @testset "Backup Generator Reliability" begin
 
         #test decreasing survival with no generator
-        reliability_inputs = {
-            "num_generators" : 0,
-            "generator_size_kw" : 312.0,
-            "fuel_limit": 0.0,
-            "max_outage_duration" : 10,
-            "battery_size_kw" : 428.0,
-            "battery_size_kwh" : 1585.0,
-            "num_battery_bins": 5
-           }
+        reliability_inputs = Dict(
+            "num_generators" => 0,
+            "generator_size_kw" => 312.0,
+            "fuel_limit" => 0.0,
+            "max_outage_duration" => 10,
+            "battery_size_kw" => 428.0,
+            "battery_size_kwh" => 1585.0,
+            "num_battery_bins" => 5
+        )
         reliability_results = backup_reliability(reliability_inputs)
         for i in 2:length(reliability_results["mean_fuel_survival_by_duration"])
             @test reliability_results["mean_fuel_survival_by_duration"][i] <= reliability_results["mean_fuel_survival_by_duration"][i-1]
