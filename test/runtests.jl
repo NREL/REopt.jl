@@ -245,6 +245,7 @@ else  # run HiGHS tests
 
         #test decreasing survival with no generator
         reliability_inputs = Dict(
+            "critical_loads_kw" => JSON.parsefile("./scenarios/backup_reliability_inputs.json")["critical_loads_kw"],
             "num_generators" => 0,
             "generator_size_kw" => 312.0,
             "fuel_limit" => 0.0,
