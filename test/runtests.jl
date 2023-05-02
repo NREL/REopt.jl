@@ -254,9 +254,13 @@ else  # run HiGHS tests
             "battery_size_kwh" => 1585.0,
             "num_battery_bins" => 5
         )
-        reliability_results = backup_reliability(reliability_inputs)
+        reliability_results1 = backup_reliability(reliability_inputs)
+        reliability_inputs["generator_size_kw"] = 0
+        reliability_inputs["fuel_limit"] = 1e10
+        reliability_results2 = backup_reliability(reliability_inputs)
         for i in 2:length(reliability_results["mean_fuel_survival_by_duration"])
-            @test reliability_results["mean_fuel_survival_by_duration"][i] <= reliability_results["mean_fuel_survival_by_duration"][i-1]
+            @test reliability_results1["mean_fuel_survival_by_duration"][i] <= reliability_results1["mean_fuel_survival_by_duration"][i-1]
+            @test reliability_results2["mean_fuel_survival_by_duration"][i] <= reliability_results2["mean_fuel_survival_by_duration"][i-1]
         end
 
         #test fuel limit
