@@ -23,7 +23,7 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop
+## v0.32.1
 ### Fixed
 - In `backup_reliability.jl`:
     - Check if generator input is a Vector instead of has length greater than 1
