@@ -243,9 +243,9 @@ else  # run HiGHS tests
 
     @testset "Backup Generator Reliability" begin
 
-        #test decreasing survival with no generator
+        #test survival with no generator decreasing and same as with generator but no fuel
         reliability_inputs = Dict(
-            "critical_loads_kw" => JSON.parsefile("./scenarios/backup_reliability_inputs.json")["critical_loads_kw"],
+            "critical_loads_kw" => 200 .* (2 .+ sin.(collect(1:8760)*2*pi/24)),
             "num_generators" => 0,
             "generator_size_kw" => 312.0,
             "fuel_limit" => 0.0,
@@ -258,9 +258,11 @@ else  # run HiGHS tests
         reliability_inputs["generator_size_kw"] = 0
         reliability_inputs["fuel_limit"] = 1e10
         reliability_results2 = backup_reliability(reliability_inputs)
-        for i in 2:length(reliability_results["mean_fuel_survival_by_duration"])
-            @test reliability_results1["mean_fuel_survival_by_duration"][i] <= reliability_results1["mean_fuel_survival_by_duration"][i-1]
-            @test reliability_results2["mean_fuel_survival_by_duration"][i] <= reliability_results2["mean_fuel_survival_by_duration"][i-1]
+        for i in 1:reliability_inputs["max_outage_duration"]
+            if i != 1
+                @test reliability_results1["mean_fuel_survival_by_duration"][i] <= reliability_results1["mean_fuel_survival_by_duration"][i-1]
+            end
+            @test reliability_results2["mean_fuel_survival_by_duration"][i] == reliability_results1["mean_fuel_survival_by_duration"][i]
         end
 
         #test fuel limit
