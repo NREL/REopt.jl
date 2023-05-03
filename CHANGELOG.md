@@ -27,9 +27,10 @@ Classify the change according to the following categories:
 ### Fixed
 - In `backup_reliability.jl`:
     - Check if generator input is a Vector instead of has length greater than 1
-    - Correct correct calculation of battery SOC adjustment in `fuel_use()` function
+    - Correct calculation of battery SOC adjustment in `fuel_use()` function
     - Correct outage time step survival condition in `fuel_use()` function
 - Add test to ensure `backup_reliability()` gives the same results for equivalent scenarios (1. battery only and 2. battery plus generator with no fuel) and that the survival probability decreases monotonically with outage duration
+- Add test to ensure `backup_reliability()` gives the same results as `simulate_outages()` when operational availability inputs are 1, probability of failure to run is 0, and mean time to failure is a very large number.
 
 ## v0.32.0
 ### Fixed
