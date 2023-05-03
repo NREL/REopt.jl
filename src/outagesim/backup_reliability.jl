@@ -571,11 +571,16 @@ function survival_gen_only(;
     #Get starting generator vector
     starting_gens = starting_probabilities(num_generators, generator_operational_availability, generator_failure_to_start) #initialize gen battery prob matrix
 
+    @info generator_production
+    @info starting_gens
     Threads.@threads for t = 1:t_max
         
         survival_probability_matrix[t, :] = gen_only_survival_single_start_time(
             t, starting_gens, net_critical_loads_kw, generator_production,
             generator_markov_matrix, max_outage_duration, t_max, marginal_survival) 
+        if t==1
+            @info survival_probability_matrix[t, :]
+        end
  
     end
     return survival_probability_matrix
@@ -1082,6 +1087,7 @@ function backup_reliability_single_run(;
         return []
     
     elseif battery_size_kw < 0.1
+        @info "in gen only"
         return survival_gen_only(
                 net_critical_loads_kw=net_critical_loads_kw,
                 generator_operational_availability=generator_operational_availability, 
@@ -1341,6 +1347,9 @@ function return_backup_reliability(;
 
     results_no_fuel_limit = []
     for (description, system) in system_characteristics
+        @info description
+        @info system["probability"]
+        @info system["battery_size_kw"]
 
         if system["probability"] != 0
             run_survival_probs = backup_reliability_single_run(;
@@ -1357,6 +1366,8 @@ function return_backup_reliability(;
             end
         end
     end
+
+    @info size(results_no_fuel_limit)
 
     fuel_survival, fuel_used = fuel_use(; net_critical_loads_kw = net_critical_loads_kw, battery_size_kw=battery_size_kw, battery_size_kwh=battery_size_kwh, kwargs...)
     return results_no_fuel_limit, fuel_survival, fuel_used
