@@ -263,8 +263,7 @@ function replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInp
         end
         future_cost += future_cost_generator
 
-        present_cost += future_cost_generator * (1 - p.s.financial.owner_tax_rate_fraction) /  # TODO: modify! 
-            ((1 + p.s.financial.owner_discount_rate_fraction)^p.s.generator.replacement_year)
+        present_cost += p.s.generator.net_present_replace_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Generator"]
     end
 
     return future_cost, present_cost
@@ -272,11 +271,11 @@ end
 
 
 """
-## TODO: Modify!! 
     calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
 
 The Levelized Cost of Energy (LCOE) is calculated as annualized costs (capital and O+M translated to current value) 
-divided by annual energy output. This tech-specific LCOE is distinct from the off-grid microgrid LCOE.
+divided by annual energy output. This tech-specific LCOE is distinct from the off-grid microgrid LCOE. 
+Replacement costs not currently accounted for since utilized for PV and Wind only.
 """
 function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
     existing_kw = :existing_kw in fieldnames(typeof(tech)) ? tech.existing_kw : 0.0
