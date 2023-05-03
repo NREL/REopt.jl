@@ -48,7 +48,7 @@
 - `lifecycle_capital_costs` Net capital costs for all technologies, in present value, including replacement costs and incentives. This value does not include offgrid_other_capital_costs.
 - `initial_capital_costs` Up-front capital costs for all technologies, in present value, excluding replacement costs and incentives. This value does not include offgrid_other_capital_costs.
 - `initial_capital_costs_after_incentives` Up-front capital costs for all technologies, in present value, excluding replacement costs, and accounting for incentives. This value does not include offgrid_other_capital_costs.
-- `replacements_future_cost_after_tax` Future cost of replacing storage and/or generator systems, after tax.
+- `replacements_future_cost_before_tax` Future cost of replacing storage and/or generator systems, before any tax-based incentives.
 - `replacements_present_cost_after_tax` Present value cost of replacing storage and/or generator systems, after tax.
 - `om_and_replacement_present_cost_after_tax` Present value of all O&M and replacement costs, after tax.
 - `developer_om_and_replacement_present_cost_after_tax` Present value of all O&M and replacement costs incurred by developer, after tax.
@@ -117,10 +117,10 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
         r["lifecycle_om_costs_after_tax"]
     r["lifecycle_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)])
     r["initial_capital_costs"] = initial_capex(m, p; _n=_n)
-    future_replacement_cost, present_replacement_cost = replacement_costs_future_and_present(m, p; _n=_n)
+    future_replacement_cost, present_replacement_cost = replacement_costs_future_and_present(m, p; _n=_n) ## TODO: modify
     r["initial_capital_costs_after_incentives"] = r["lifecycle_capital_costs"] / p.third_party_factor - present_replacement_cost
 
-    r["replacements_future_cost_after_tax"] = future_replacement_cost 
+    r["replacements_future_cost_before_tax"] = future_replacement_cost  
     r["replacements_present_cost_after_tax"] = present_replacement_cost 
     r["om_and_replacement_present_cost_after_tax"] = present_replacement_cost + r["lifecycle_om_costs_after_tax"]
     r["developer_om_and_replacement_present_cost_after_tax"] = r["om_and_replacement_present_cost_after_tax"] / 
@@ -228,13 +228,13 @@ NOTE these replacement costs include the tax benefit available to commercial ent
 returns two values: the future and present costs of replacing all storage and generator systems
 """
 function replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInputs; _n="")
-    future_cost = 0
-    present_cost = 0
+    future_cost = 0 # Future cost is without tax benefits or discounting 
+    present_cost = 0 # Present cost is with tax benefits and discounting
 
     for b in p.s.storage.types.all # Storage replacement
 
         if !(:inverter_replacement_year in fieldnames(typeof(p.s.storage.attr[b])))
-            continue
+            continue  
         end
 
         if p.s.storage.attr[b].inverter_replacement_year >= p.s.financial.analysis_years
@@ -250,10 +250,9 @@ function replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInp
         end
         future_cost += future_cost_inverter + future_cost_storage
 
-        present_cost += future_cost_inverter * (1 - p.s.financial.owner_tax_rate_fraction) / 
-            ((1 + p.s.financial.owner_discount_rate_fraction)^p.s.storage.attr[b].inverter_replacement_year)
-        present_cost += future_cost_storage * (1 - p.s.financial.owner_tax_rate_fraction) / 
-            ((1 + p.s.financial.owner_discount_rate_fraction)^p.s.storage.attr[b].battery_replacement_year)
+        present_cost_inverter = p.s.storage.attr[b].net_present_replace_cost_per_kw * value.(m[Symbol("dvStoragePower"*_n)])[b]
+        present_cost_storage = p.s.storage.attr[b].net_present_replace_cost_per_kwh * value.(m[Symbol("dvStorageEnergy"*_n)])[b]
+        present_cost += present_cost_inverter + present_cost_storage
     end
 
     if !isempty(p.techs.gen) # Generator replacement 
@@ -263,7 +262,8 @@ function replacement_costs_future_and_present(m::JuMP.AbstractModel, p::REoptInp
             future_cost_generator = p.s.generator.replace_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Generator"]
         end
         future_cost += future_cost_generator
-        present_cost += future_cost_generator * (1 - p.s.financial.owner_tax_rate_fraction) / 
+
+        present_cost += future_cost_generator * (1 - p.s.financial.owner_tax_rate_fraction) /  # TODO: modify! 
             ((1 + p.s.financial.owner_discount_rate_fraction)^p.s.generator.replacement_year)
     end
 
