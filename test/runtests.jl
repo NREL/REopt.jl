@@ -47,7 +47,9 @@ elseif "CPLEX" in ARGS
 else  # run HiGHS tests
 
     @testset "Debug" begin
-        p = REoptInputs("./scenarios/generator.json")
+        reopt_inputs = JSON.parsefile("./scenarios/backup_reliability_reopt_inputs.json")
+        reopt_inputs["ElectricLoad"]["annual_kwh"] = 4*reopt_inputs["ElectricLoad"]["annual_kwh"]
+        p = REoptInputs(reopt_inputs)
         model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
             "output_flag" => false, "log_to_console" => false)
         )
@@ -55,25 +57,22 @@ else  # run HiGHS tests
         open("debug_erp_reopt_results.json","w") do f
             JSON.print(f, results)
         end
-        @test results["Generator"]["size_kw"] ≈ 8.13 atol=0.01
-        @test (sum(results["Generator"]["electric_to_load_series_kw"][i] for i in 1:9) + 
-            sum(results["Generator"]["electric_to_load_series_kw"][i] for i in 13:8760)) == 0
-        
+
         simresults = simulate_outages(results, p)
         open("debug_erp_os_results.json","w") do f
             JSON.print(f, simresults)
         end
         reliability_inputs = Dict(
+            "max_outage_duration" => 96,
             "generator_operational_availability" => 1.0, 
             "generator_failure_to_start" => 0.0, 
             "generator_mean_time_to_failure" => 10000000000,
             "fuel_limit" => 1000000000,
-            # "num_battery_bins" => 100,
-            "max_outage_duration" => 12,
-            # "battery_operational_availability" => 1.0,
-            # "battery_minimum_soc_fraction" => 0.0,
+            "num_battery_bins" => 100,
+            "battery_operational_availability" => 1.0,
+            "battery_minimum_soc_fraction" => 0.0,
             "pv_operational_availability" => 1.0,
-            "pv_can_dispatch_without_battery" => true
+            # "pv_can_dispatch_without_battery" => true
         )
         reliability_results = backup_reliability(results, p, reliability_inputs)
         @info simresults["probs_of_surviving"]
@@ -81,6 +80,9 @@ else  # run HiGHS tests
             JSON.print(f, reliability_results)
         end
         @info reliability_results["mean_cumulative_survival_by_duration"]
+        for i = 1:min(length(simresults["probs_of_surviving"]), reliability_inputs["max_outage_duration"])
+            @test simresults["probs_of_surviving"][i] ≈ reliability_results["mean_cumulative_survival_by_duration"][i] atol=0.001
+        end
     end
 
     # @testset "Inputs" begin
