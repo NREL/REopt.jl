@@ -196,6 +196,11 @@ end
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
 ```
+
+!!! note "Replacement costs" 
+    The Investment Tax Credit (ITC) is applied to replacement costs at `replace_federal_itc_fraction`. 
+    MACRS is applied to replacement costs with a first year bonus depreciation of `replace_macrs_bonus_fraction` and a schedule of `replace_macrs_option_years`. 
+    
 """
 Base.@kwdef struct ElectricStorageDefaults
     off_grid_flag::Bool = false
@@ -270,6 +275,8 @@ struct ElectricStorage <: AbstractElectricStorage
     grid_charge_efficiency::Float64
     net_present_cost_per_kw::Real
     net_present_cost_per_kwh::Real
+    net_present_replace_cost_per_kw::Real
+    net_present_replace_cost_per_kwh::Real
     model_degradation::Bool
     degradation::Degradation
     minimum_avg_soc_fraction::Float64
@@ -284,7 +291,7 @@ struct ElectricStorage <: AbstractElectricStorage
         if s.battery_replacement_year >= f.analysis_years
             @warn "Battery replacement costs (per_kwh) will not be considered because battery_replacement_year >= analysis_years."
         end
-
+        
         net_present_cost_per_kw = effective_cost(;
             itc_basis = s.installed_cost_per_kw,
             replacement_cost = s.inverter_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_per_kw,
@@ -317,6 +324,28 @@ struct ElectricStorage <: AbstractElectricStorage
 
         net_present_cost_per_kwh -= s.total_rebate_per_kwh
 
+        net_present_replace_cost_per_kw = replacement_effective_cost(; # gets used in results/financial.jl
+            replacement_cost =  s.inverter_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_per_kw,
+            replacement_year = s.inverter_replacement_year,
+            discount_rate = f.owner_discount_rate_fraction,
+            tax_rate = f.owner_tax_rate_fraction,
+            macrs_itc_reduction = s.macrs_itc_reduction,
+            replace_macrs_schedule = s.replace_macrs_option_years == 7 ? f.macrs_seven_year : s.replace_macrs_option_years == 5 ? f.macrs_five_year : [0.0],
+            replace_macrs_bonus_fraction = s.replace_macrs_bonus_fraction,
+            replace_itc = s.replace_total_itc_fraction
+        )
+
+        net_present_replace_cost_per_kwh = replacement_effective_cost(; # gets used in results/financial.jl
+            replacement_cost =  s.battery_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_per_kwh,
+            replacement_year = s.battery_replacement_year,
+            discount_rate = f.owner_discount_rate_fraction,
+            tax_rate = f.owner_tax_rate_fraction,
+            macrs_itc_reduction = s.macrs_itc_reduction,
+            replace_macrs_schedule = s.replace_macrs_option_years == 7 ? f.macrs_seven_year : s.replace_macrs_option_years == 5 ? f.macrs_five_year : [0.0],
+            replace_macrs_bonus_fraction = s.replace_macrs_bonus_fraction,
+            replace_itc = s.replace_total_itc_fraction
+        )
+
         if haskey(d, :degradation)
             degr = Degradation(;dictkeys_tosymbols(d[:degradation])...)
         else
@@ -331,12 +360,15 @@ struct ElectricStorage <: AbstractElectricStorage
                 haskey(d, :replace_cost_per_kwh) && d[:replace_cost_per_kwh] != 0.0
                 @warn "Setting ElectricStorage replacement costs to zero. Using degradation.maintenance_cost_per_kwh instead."
             end
-            # TODO: So, these get set to zero but they're still used in the net_present_cost calculation?
-            # TODO: Shoud this if statement come before the effective_cost fn is called?
+            # TODO: These get set to zero but their non-zero value is used in the net_present_cost calculation above? Should this if statement come before the effective_cost fn is called?
             replace_cost_per_kw = 0.0 
             replace_cost_per_kwh = 0.0
+            net_present_replace_cost_per_kw = 0.0 ## TODO: is this the right thing to do with degredation modeling? 
+            net_present_replace_cost_per_kwh = 0.0
         end
-    
+
+
+
         return new(
             s.min_kw,
             s.max_kw,
@@ -368,6 +400,8 @@ struct ElectricStorage <: AbstractElectricStorage
             s.grid_charge_efficiency,
             net_present_cost_per_kw,
             net_present_cost_per_kwh,
+            net_present_replace_cost_per_kw,
+            net_present_replace_cost_per_kwh,  
             s.model_degradation,
             degr,
             s.minimum_avg_soc_fraction
