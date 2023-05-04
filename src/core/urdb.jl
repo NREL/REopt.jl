@@ -96,6 +96,15 @@ function URDBrate(urdb_response::Dict, year::Int; time_steps_per_hour=1)
 
     demand_min = get(urdb_response, "peakkwcapacitymin", 0.0)  # TODO add check for site min demand against tariff?
 
+    # Convert matrix to array if needed
+    possible_matrix = ["demandratestructure", "flatdemandstructure" "demandweekdayschedule", 
+        "demandweekendschedule", "energyratestructure", "energyweekdayschedule", "energyweekendschedule"]
+    for param in possible_matrix
+        if haskey(d, param) && typeof(param) <: AbstractMatrix
+            d[param] = convert_matrix_to_array(d[param])
+        end
+    end
+
     n_monthly_demand_tiers, monthly_demand_tier_limits, monthly_demand_rates,
       n_tou_demand_tiers, tou_demand_tier_limits, tou_demand_rates, tou_demand_ratchet_time_steps =
       parse_demand_rates(urdb_response, year, time_steps_per_hour=time_steps_per_hour)
@@ -318,7 +327,7 @@ Convert an unexpected type::Matrix from URDB into an Array
     - Observed while using REopt.jl with PyJulia/PyCall
 """
 function convert_matrix_to_array(M::AbstractMatrix)
-    return [M[:,c] for c in 1:size(M,2)]
+    return [M[r,:] for r in 1:size(M,1)]
 end
 
 """
@@ -329,9 +338,6 @@ Parse monthly ("flat") and TOU demand rates
 """
 function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
     if haskey(d, "flatdemandstructure")
-        if typeof(d["flatdemandstructure"]) <: AbstractMatrix
-            d["flatdemandstructure"] = convert_matrix_to_array(d["flatdemandstructure"])
-        end
         scrub_urdb_demand_tiers!(d["flatdemandstructure"])
         monthly_demand_tier_limits = parse_urdb_demand_tiers(d["flatdemandstructure"])
         n_monthly_demand_tiers = length(monthly_demand_tier_limits)
@@ -343,9 +349,6 @@ function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour:
     end
 
     if haskey(d, "demandratestructure")
-        if typeof(d["demandratestructure"]) <: AbstractMatrix
-            d["demandratestructure"] = convert_matrix_to_array(d["demandratestructure"])
-        end
         scrub_urdb_demand_tiers!(d["demandratestructure"])
         tou_demand_tier_limits = parse_urdb_demand_tiers(d["demandratestructure"])
         n_tou_demand_tiers = length(tou_demand_tier_limits)
