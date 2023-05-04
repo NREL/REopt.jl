@@ -97,7 +97,7 @@ function URDBrate(urdb_response::Dict, year::Int; time_steps_per_hour=1)
     demand_min = get(urdb_response, "peakkwcapacitymin", 0.0)  # TODO add check for site min demand against tariff?
 
     # Convert matrix to array if needed
-    possible_matrix = ["demandratestructure", "flatdemandstructure" "demandweekdayschedule", 
+    possible_matrix = ["demandratestructure", "flatdemandstructure", "demandweekdayschedule", 
         "demandweekendschedule", "energyratestructure", "energyweekdayschedule", "energyweekendschedule"]
     for param in possible_matrix
         if haskey(d, param) && typeof(param) <: AbstractMatrix
