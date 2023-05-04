@@ -100,7 +100,7 @@ function URDBrate(urdb_response::Dict, year::Int; time_steps_per_hour=1)
     possible_matrix = ["demandratestructure", "flatdemandstructure", "demandweekdayschedule", 
         "demandweekendschedule", "energyratestructure", "energyweekdayschedule", "energyweekendschedule"]
     for param in possible_matrix
-        if haskey(urdb_response, param) && typeof(param) <: AbstractMatrix
+        if typeof(get(urdb_response, param, nothing)) <: AbstractMatrix
             urdb_response[param] = convert_matrix_to_array(urdb_response[param])
         end
     end
