@@ -67,7 +67,13 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 		else
 			PVtoBatt = repeat([0], length(p.time_steps))
 		end
+        if !isempty(p.s.storage.types.electrothermal)
+			PVtoElectrothermalBatt = (sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.electrothermal) for ts in p.time_steps)
+		else
+			PVtoElectrothermalBatt = repeat([0], length(p.time_steps))
+		end
 		r["electric_to_storage_series_kw"] = round.(value.(PVtoBatt), digits=3)
+        r["electric_to_electrothermal_storage_series_kw"] = round.(value.(PVtoElectrothermalBatt), digits=3)
 
         r["electric_to_grid_series_kw"] = zeros(size(r["electric_to_storage_series_kw"]))
         r["annual_energy_exported_kwh"] = 0.0

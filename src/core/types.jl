@@ -37,6 +37,7 @@ abstract type AbstractThermalTech <: AbstractGenerator end
 abstract type AbstractCHP <: AbstractFuelBurningTech end
 abstract type AbstractThermalStorage <: AbstractStorage end
 abstract type AbstractElectricStorage <: AbstractStorage end
+abstract type AbstractElectrothermalStorage <: AbstractStorage end
 abstract type AbstractThermalStorageDefaults end
 abstract type AbstractGHP <: AbstractTech end
 abstract type AbstractSteamTurbine <: AbstractTech end
