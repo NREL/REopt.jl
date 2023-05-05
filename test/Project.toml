@@ -1,7 +1,8 @@
 [deps]
-CPLEX = "a076750e-1247-5638-91d2-ce28b192dca0"
-Cbc = "9961bab8-2fa3-5c5a-9d89-47fab24efd76"
+DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
+HiGHS = "87dc4568-4c63-4d18-b0c0-bb2238e4078b"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Xpress = "9e70acf3-d6c9-5be6-b5bd-4e2c73e3e054"

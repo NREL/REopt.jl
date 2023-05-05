@@ -5,12 +5,12 @@
     },
     "Financial": {
         "analysis_years": 25,
-        "om_cost_escalation_pct": 0.025,
-        "elec_cost_escalation_pct": 0.023,
-        "boiler_fuel_cost_escalation_pct": 0.034,
-        "chp_fuel_cost_escalation_pct": 0.034,
-        "offtaker_discount_pct": 0.083,
-        "offtaker_tax_pct": 0.26
+        "om_cost_escalation_rate_fraction": 0.025,
+        "elec_cost_escalation_rate_fraction": 0.023,
+        "boiler_fuel_cost_escalation_rate_fraction": 0.034,
+        "chp_fuel_cost_escalation_rate_fraction": 0.034,
+        "offtaker_discount_rate_fraction": 0.083,
+        "offtaker_tax_rate_fraction": 0.26
     },
     "ElectricLoad": {
         "doe_reference_name": "Hospital"
@@ -27,6 +27,9 @@
     "DomesticHotWaterLoad": {
         "doe_reference_name": "Hospital"
     },
+    "CoolingLoad": {
+        "doe_reference_name": "Hospital"
+    },
     "ExistingBoiler": {
         "fuel_cost_per_mmbtu": 5.0
     },
@@ -40,7 +43,7 @@
     "PV": {
         "max_kw": 0.0
       },
-    "Storage": {
+    "ElectricStorage": {
         "max_kw": 0.0,
         "max_kwh": 0.0
     }    

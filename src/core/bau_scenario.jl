@@ -53,13 +53,22 @@ struct BAUScenario <: AbstractScenario
     generator::Generator
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
-    existing_boiler::ExistingBoiler
+    existing_boiler::Union{ExistingBoiler, Nothing}
+    existing_chiller::Union{ExistingChiller, Nothing}
     outage_outputs::OutageOutputs
+    flexible_hvac::Union{BAU_HVAC, Nothing}
+    cooling_load::CoolingLoad
+    ghp_option_list::Array{Union{GHP, Nothing}, 1}  # List of GHP objects (often just 1 element, but can be more)
+    space_heating_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
+    cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}    
 end
 
 
-function set_min_max_kw_to_existing(tech::AbstractTech)
+function set_min_max_kw_to_existing(tech::AbstractTech, site::Site)
     techdict = Dict(fn => getfield(tech, fn) for fn in fieldnames(typeof(tech)))
+    if nameof(typeof(tech)) in [:PV]
+        techdict[:latitude] = site.latitude
+    end
     techdict[:min_kw] = techdict[:existing_kw]
     techdict[:max_kw] = techdict[:existing_kw]
     eval(Meta.parse(string(typeof(tech)) * "(; $techdict...)"))
@@ -72,8 +81,10 @@ function bau_site(site::Site)
         longitude=site.longitude,
         land_acres=site.land_acres,
         roof_squarefeet=site.roof_squarefeet,
-        min_resil_timesteps=0,
+        min_resil_time_steps=0,
         mg_tech_sizes_equal_grid_sizes=site.mg_tech_sizes_equal_grid_sizes,
+        include_exported_elec_emissions_in_total=site.include_exported_elec_emissions_in_total,
+        include_exported_renewable_electricity_in_total=site.include_exported_renewable_electricity_in_total,
         node=site.node,
     )
 end
@@ -82,9 +93,11 @@ end
 """
     BAUScenario(s::Scenario)
 
-Constructor for BAUScenario (BAU = Business As Usual) struct.
-- sets the PV and Generator max_kw values to the existing_kw values
-- sets wind and storage max_kw values to zero
+Constructs the BAUScenario (used to create the Business-as-usual inputs) based on the Scenario for the optimized case.
+
+The following assumptions are made for the BAU scenario: 
+- sets the `PV` and `Generator` min_kw and max_kw values to the existing_kw values
+- sets wind and storage max_kw values to zero (existing wind and storage cannot be modeled)
 """
 function BAUScenario(s::Scenario)
 
@@ -92,18 +105,23 @@ function BAUScenario(s::Scenario)
     pvs = PV[]
     for pv in s.pvs
         if pv.existing_kw > 0
-            push!(pvs, set_min_max_kw_to_existing(pv))
+            push!(pvs, set_min_max_kw_to_existing(pv, s.site))
         end
     end
 
     # set Generator.max_kw to existing_kw
-    generator = set_min_max_kw_to_existing(s.generator)
+    generator = set_min_max_kw_to_existing(s.generator, s.site)
 
     # no existing wind
     wind = Wind(; max_kw=0)
 
     # no existing storage
-    storage = Storage(Dict(:elec => Dict(:max_kw => 0)), s.financial)
+    storage = Storage()
+
+    # no existing GHP
+    ghp_option_list = []
+    space_heating_thermal_load_reduction_with_ghp_kw = zeros(8760 * s.settings.time_steps_per_hour)
+    cooling_thermal_load_reduction_with_ghp_kw = zeros(8760 * s.settings.time_steps_per_hour)
     
     t0, tf = s.electric_utility.outage_start_time_step, s.electric_utility.outage_end_time_step
     #=
@@ -114,7 +132,7 @@ function BAUScenario(s::Scenario)
     In the simplest case we set the BAU critical_loads_kw to zero during the outage. 
     However, if the BAU scenario has existing Generator and/or PV we calculate how many time steps the critical load can 
     be met and make the critical load non-zero for those time steps in order to show the most realistic dispatch results.
-    This calculation requires the PV prod_factor_series and so it is done in BAUInputs.
+    This calculation requires the PV production_factor_series and so it is done in BAUInputs.
     =#
     elec_load = deepcopy(s.electric_load)
     if tf > t0 && t0 > 0
@@ -122,9 +140,13 @@ function BAUScenario(s::Scenario)
     end
     outage_outputs = OutageOutputs()
 
+    flexible_hvac = nothing
+    if !isnothing(s.flexible_hvac)
+        flexible_hvac = s.flexible_hvac.bau_hvac
+    end
     #=
     For random or uncertain outages there is no need to zero out the critical load but we do have to
-    set the Site.min_resil_timesteps to zero s.t. the model is not forced to meet any critical load
+    set the Site.min_resil_time_steps to zero s.t. the model is not forced to meet any critical load
     in the BAUScenario
     =#
     site = bau_site(s.site)
@@ -143,6 +165,12 @@ function BAUScenario(s::Scenario)
         s.dhw_load,
         s.space_heating_load,
         s.existing_boiler,
-        outage_outputs
+        s.existing_chiller,
+        outage_outputs,
+        flexible_hvac,
+        s.cooling_load,
+        ghp_option_list,
+        space_heating_thermal_load_reduction_with_ghp_kw,
+        cooling_thermal_load_reduction_with_ghp_kw
     )
 end

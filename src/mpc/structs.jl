@@ -32,12 +32,12 @@
 
     Base.@kwdef struct MPCElectricLoad
         loads_kw::Array{Real,1}
-        critical_loads_kw::Union{Missing, Array{Real,1}} = missing
+        critical_loads_kw::Union{Nothing, Array{Real,1}} = nothing
     end
 """
 Base.@kwdef struct MPCElectricLoad
     loads_kw::Array{Real,1}
-    critical_loads_kw::Union{Missing, Array{Real,1}} = missing
+    critical_loads_kw::Union{Nothing, Array{Real,1}} = nothing
 end
 
 
@@ -59,14 +59,14 @@ end
 Base.@kwdef struct MPCPV
     name::String="PV"
     size_kw::Real = 0
-    prod_factor_series::Union{Missing, Array{Real,1}} = missing
+    production_factor_series::Union{Nothing, Array{Real,1}} = nothing
 end
 ```
 """
 Base.@kwdef struct MPCPV
     name::String="PV"
     size_kw::Real = 0
-    prod_factor_series::Union{Missing, Array{Real,1}} = missing
+    production_factor_series::Union{Nothing, Array{Real,1}} = nothing
 end
 
 
@@ -80,7 +80,7 @@ struct MPCElectricTariff
     n_monthly_demand_tiers::Int
 
     tou_demand_rates::AbstractVector{Float64}
-    tou_demand_ratchet_timesteps::Array{Array{Int64,1},1}  # length = n_tou_demand_ratchets
+    tou_demand_ratchet_time_steps::Array{Array{Int64,1},1}  # length = n_tou_demand_ratchets
     tou_previous_peak_demands::AbstractVector{Float64}
     n_tou_demand_tiers::Int
 
@@ -92,7 +92,7 @@ struct MPCElectricTariff
     export_bins::Array{Symbol,1}
 
     # coincident_peak not used in MPC but must implement it for model building
-    coincident_peak_load_active_timesteps::AbstractVector{AbstractVector{Int64}}
+    coincident_peak_load_active_time_steps::AbstractVector{AbstractVector{Int64}}
     coincident_peak_load_charge_per_kw::AbstractVector{Float64}
     coincpeak_periods::AbstractVector{Int64}
 end
@@ -111,7 +111,7 @@ function for parsing user inputs into
         time_steps_monthly::Array{Array{Int64,1},1}  # length = 0 or 12
 
         tou_demand_rates::Array{Float64,1}
-        tou_demand_ratchet_timesteps::Array{Array{Int64,1},1}  # length = n_tou_demand_ratchets
+        tou_demand_ratchet_time_steps::Array{Array{Int64,1},1}  # length = n_tou_demand_ratchets
         tou_previous_peak_demands::Array{Float64,1}
 
         fixed_monthly_charge::Float64
@@ -150,10 +150,10 @@ Keys for `d` include:
   - `tou_demand_rates`
 
     - an array of time-of-use demand rates
-    - must have length equal to `tou_demand_timesteps`
+    - must have length equal to `tou_demand_time_steps`
     - default = []
 
-  - `tou_demand_timesteps`
+  - `tou_demand_time_steps`
 
     - an array of arrays for the integer time steps that apply to the `tou_demand_rates`
     - default = []
@@ -161,7 +161,7 @@ Keys for `d` include:
   - `tou_previous_peak_demands`
 
     - an array of the previous peak demands set in each time-of-use demand period
-    - must have length equal to `tou_demand_timesteps`
+    - must have length equal to `tou_demand_time_steps`
     - default = []
 
   - `net_metering`
@@ -184,9 +184,9 @@ function MPCElectricTariff(d::Dict)
     monthly_previous_peak_demands = get(d, "monthly_previous_peak_demands", [0.0])
 
     tou_demand_rates = get(d, "tou_demand_rates", Float64[])
-    tou_demand_timesteps = get(d, "tou_demand_timesteps", [])
+    tou_demand_time_steps = get(d, "tou_demand_time_steps", [])
     tou_previous_peak_demands = get(d, "tou_previous_peak_demands", Float64[])
-    @assert length(tou_demand_rates) == length(tou_demand_timesteps) == length(tou_previous_peak_demands)
+    @assert length(tou_demand_rates) == length(tou_demand_time_steps) == length(tou_previous_peak_demands)
 
     # TODO can remove these inputs?
     fixed_monthly_charge = 0.0
@@ -229,7 +229,7 @@ function MPCElectricTariff(d::Dict)
         monthly_previous_peak_demands,
         1,
         tou_demand_rates,
-        tou_demand_timesteps,
+        tou_demand_time_steps,
         tou_previous_peak_demands,
         1,
         fixed_monthly_charge,
@@ -247,69 +247,33 @@ end
 
 
 """
-    MPCElecStorage
+    MPCElectricStorage
+
 ```julia
-Base.@kwdef struct MPCElecStorage
+Base.@kwdef struct MPCElectricStorage < AbstractElectricStorage
     size_kw::Float64
     size_kwh::Float64
-    charge_efficiency::Float64
-    discharge_efficiency::Float64
-    soc_min_pct::Float64
-    soc_init_pct::Float64
+    charge_efficiency::Float64 =  0.96 * 0.975^2
+    discharge_efficiency::Float64 =  0.96 * 0.975^2
+    soc_min_fraction::Float64 = 0.2
+    soc_init_fraction::Float64 = 0.5
     can_grid_charge::Bool = true
-    grid_charge_efficiency::Float64
+    grid_charge_efficiency::Float64 = 0.96 * 0.975^2
 end
 ```
 """
-Base.@kwdef struct MPCElecStorage
+Base.@kwdef struct MPCElectricStorage <: AbstractElectricStorage
     size_kw::Float64
     size_kwh::Float64
-    internal_efficiency_pct::Float64 = 0.975
-    inverter_efficiency_pct::Float64 = 0.96
-    rectifier_efficiency_pct::Float64 = 0.96
-    soc_min_pct::Float64 = 0.2
-    soc_init_pct::Float64 = 0.5
+    charge_efficiency::Float64 = 0.96 * 0.975^2
+    discharge_efficiency::Float64 = 0.96 * 0.975^2
+    soc_min_fraction::Float64 = 0.2
+    soc_init_fraction::Float64 = 0.5
     can_grid_charge::Bool = true
-    grid_charge_efficiency::Float64 = 0.96 * 0.975^0.5
-end
-
-
-Base.@kwdef struct MPCStorage
-    types::Array{Symbol,1} = [:elec]
-    size_kw::Dict{Symbol, Float64}
-    size_kwh::Dict{Symbol, Float64}
-    charge_efficiency::Dict{Symbol, Float64} = Dict(:elec => 0.96 * 0.975^0.5)
-    discharge_efficiency::Dict{Symbol, Float64} = Dict(:elec => 0.96 * 0.975^0.5)
-    soc_min_pct::Dict{Symbol, Float64} = Dict(:elec => 0.2)
-    soc_init_pct::Dict{Symbol, Float64} = Dict(:elec => 0.5)
-    can_grid_charge::Array{Symbol,1} = [:elec]
-    grid_charge_efficiency::Dict{Symbol, Float64} = Dict(:elec => 0.96 * 0.975^0.5)
-end
-
-
-"""
-    MPCStorage(d::Dict)
-
-Constructor for MPCElecStorage (no thermal technologies in MPC yet). Parses the user's inputs
-    into the MPCStorage struct
-"""
-function MPCStorage(d::Dict)
-    elec_storage = MPCElecStorage(; dictkeys_tosymbols(d)...)
-    charge_efficiency =  elec_storage.rectifier_efficiency_pct * elec_storage.internal_efficiency_pct^0.5
-    discharge_efficiency = elec_storage.inverter_efficiency_pct * elec_storage.internal_efficiency_pct^0.5
-    
-    can_grid_charge = elec_storage.can_grid_charge ? [:elec] : Symbol[]
-
-    return MPCStorage(;
-        size_kw = Dict(:elec => elec_storage.size_kw),
-        size_kwh = Dict(:elec => elec_storage.size_kwh),
-        charge_efficiency = Dict(:elec => charge_efficiency),
-        discharge_efficiency = Dict(:elec => discharge_efficiency),
-        soc_min_pct = Dict(:elec => elec_storage.soc_min_pct),
-        soc_init_pct = Dict(:elec => elec_storage.soc_init_pct),
-        can_grid_charge = can_grid_charge,
-        grid_charge_efficiency = Dict(:elec => charge_efficiency)
-    )
+    grid_charge_efficiency::Float64 = 0.96 * 0.975^2
+    max_kw::Float64 = size_kw
+    max_kwh::Float64 = size_kwh
+    minimum_avg_soc_fraction::Float64 = 0.0
 end
 
 
@@ -320,14 +284,15 @@ struct with inner constructor:
 ```julia
 function MPCGenerator(;
     size_kw::Real,
-    fuel_cost_per_gallon::Float64 = 3.0,
-    fuel_slope_gal_per_kwh::Float64 = 0.076,
-    fuel_intercept_gal_per_hr::Float64 = 0.0,
-    fuel_avail_gal::Float64 = 660.0,
-    min_turn_down_pct::Float64 = 0.0,  # TODO change this to non-zero value
+    fuel_cost_per_gallon::Real = 3.0,
+    electric_efficiency_full_load::Real = 0.3233,
+    electric_efficiency_half_load::Real = electric_efficiency_full_load,
+    fuel_avail_gal::Real = 660.0,
+    fuel_higher_heating_value_kwh_per_gal::Real = KWH_PER_GAL_DIESEL,
+    min_turn_down_fraction::Real = 0.0,  # TODO change this to non-zero value
     only_runs_during_grid_outage::Bool = true,
     sells_energy_back_to_grid::Bool = false,
-    om_cost_per_kwh::Float64=0.0,
+    om_cost_per_kwh::Real=0.0,
     )
 ```
 """
@@ -335,39 +300,74 @@ struct MPCGenerator <: AbstractGenerator
     size_kw
     max_kw
     fuel_cost_per_gallon
-    fuel_slope_gal_per_kwh
-    fuel_intercept_gal_per_hr
+    electric_efficiency_full_load
+    electric_efficiency_half_load
     fuel_avail_gal
-    min_turn_down_pct
+    fuel_higher_heating_value_kwh_per_gal
+    min_turn_down_fraction
     only_runs_during_grid_outage
     sells_energy_back_to_grid
     om_cost_per_kwh
 
     function MPCGenerator(;
         size_kw::Real,
-        fuel_cost_per_gallon::Float64 = 3.0,
-        fuel_slope_gal_per_kwh::Float64 = 0.076,
-        fuel_intercept_gal_per_hr::Float64 = 0.0,
-        fuel_avail_gal::Float64 = 660.0,
-        min_turn_down_pct::Float64 = 0.0,  # TODO change this to non-zero value
+        fuel_cost_per_gallon::Real = 3.0,
+        electric_efficiency_full_load::Real = 0.3233,
+        electric_efficiency_half_load::Real = electric_efficiency_full_load,
+        fuel_avail_gal::Real = 660.0,
+        fuel_higher_heating_value_kwh_per_gal::Real = KWH_PER_GAL_DIESEL,
+        min_turn_down_fraction::Real = 0.0,  # TODO change this to non-zero value
         only_runs_during_grid_outage::Bool = true,
         sells_energy_back_to_grid::Bool = false,
-        om_cost_per_kwh::Float64=0.0,
+        om_cost_per_kwh::Real=0.0,
         )
 
         max_kw = size_kw
-
+        
         new(
             size_kw,
             max_kw,
             fuel_cost_per_gallon,
-            fuel_slope_gal_per_kwh,
-            fuel_intercept_gal_per_hr,
+            electric_efficiency_full_load,
+            electric_efficiency_half_load,
             fuel_avail_gal,
-            min_turn_down_pct,
+            fuel_higher_heating_value_kwh_per_gal,
+            min_turn_down_fraction,
             only_runs_during_grid_outage,
             sells_energy_back_to_grid,
             om_cost_per_kwh,
         )
     end
+end
+
+
+"""
+    MPCCoolingLoad
+
+    Base.@kwdef struct MPCCoolingLoad
+        loads_kw_thermal::Array{Real,1}
+    end
+"""
+Base.@kwdef struct MPCCoolingLoad
+    loads_kw_thermal::Array{Real,1}
+    cop::Union{Real, Nothing}
+end
+
+
+"""
+    MPCLimits
+
+struct for MPC specific input parameters:
+- `grid_draw_limit_kw_by_time_step::Vector{<:Real}` limits for grid power consumption in each time step; length must be same as `length(loads_kw)`.
+- `export_limit_kw_by_time_step::Vector{<:Real}` limits for grid power export in each time step; length must be same as `length(loads_kw)`.
+
+!!! warn 
+    `grid_draw_limit_kw_by_time_step` and `export_limit_kw_by_time_step` values can lead to 
+    infeasible problems. For example, there is a constraint that the electric load must be met in 
+    each time step and by limiting the amount of power from the grid the load balance constraint 
+    could be infeasible.
+"""
+Base.@kwdef struct MPCLimits
+    grid_draw_limit_kw_by_time_step::Vector{<:Real} = Real[]
+    export_limit_kw_by_time_step::Vector{<:Real} =  Real[]
 end

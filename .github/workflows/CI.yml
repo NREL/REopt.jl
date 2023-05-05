@@ -1,13 +1,17 @@
 name: Run tests
 
-on: [push, pull_request]
+on:
+  push:
+    paths-ignore: [README.md, CHANGELOG.md]
+  pull_request:
+    types: [opened, reopened, ready_for_review]
 
 jobs:
-  cbctests:
+  highstests:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        julia-version: ['1.6']
+        julia-version: ['1.8']
         julia-arch: [x64]
         os: [ubuntu-latest, windows-latest, macOS-latest]
 
@@ -18,10 +22,11 @@ jobs:
           version: ${{ matrix.julia-version }}
       - uses: julia-actions/julia-buildpkg@latest
       # - uses: mxschmitt/action-tmate@v3  # for interactive debugging
-      - uses: julia-actions/julia-runtest@latest
+      - run: julia --project=. -e 'using Pkg; Pkg.activate("test"); Pkg.rm("Xpress"); Pkg.activate("."); using TestEnv; TestEnv.activate(); cd("test"); include("runtests.jl")'
+        shell: bash
 
   xpresstests:
-      runs-on: ubuntu-18.04
+      runs-on: ubuntu-latest
 
       steps:
         - uses: actions/checkout@v2
@@ -32,4 +37,4 @@ jobs:
         - name: Build containers
           run: docker-compose up -d
         - name: Execute tests in container
-          run: docker exec jul julia --project=. -e 'import Pkg; Pkg.test("REoptLite"; test_args=["Xpress"])'
+          run: docker exec jul julia --project=. -e 'import Pkg; Pkg.test("REopt"; test_args=["Xpress"])'

@@ -16,12 +16,12 @@ First, the `PV` technology can meet electrical demand and thus is part of the `t
 ```julia
 @constraint(m, [ts in p.time_steps_with_grid],
     sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.elec) 
-    + sum( m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types ) 
+    + sum( m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.elec ) 
     + sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) 
     ==
-    sum( sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types) 
+    sum( sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) 
     + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.elec)
-    + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types)
+    + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec)
     + p.s.electric_load.loads_kw[ts]
 )
 ```
@@ -37,9 +37,9 @@ From the load balance constraint we can see that the `PV` technology (and each `
 The `p.techs` data structure is defined as follows:
 ### Techs
 ```@docs
-REoptLite.Techs
-REoptLite.Techs(s::Scenario)
-REoptLite.Techs(p::REoptInputs, s::BAUScenario)
+REopt.Techs
+REopt.Techs(s::Scenario)
+REopt.Techs(p::REoptInputs, s::BAUScenario)
 ```
 
 From the [Techs](@ref) definition we can see that there are already a lot of different energy generation technology categories in REopt. Adding a new technology to the model could be as simple as adding the appropriate inputs to `REoptInputs` (described in the next section) and using the `Techs` structure to define which variables and constraints apply to the new technology.
@@ -57,7 +57,7 @@ Any new technology should have a `technologyname.jl` file in the `src/core` dire
 
 When adding a new technology to REopt one must decide on how a user of the REopt will define the technology. Continuing with the `PV` example we saw that we need to define the `production_factor` for the `PV` technology in every time step. The `production_factor` varies from zero to one and defines the availability of the technology. For `PV` we have a default method for creating the `production_factor` as well as allow the user to provide their own `production_factor`.
 
-We let the user define the `production_factor` by providing the `PV`s `prod_factor_series` input in their JSON file or dictionary when creating their [Scenario](@ref). If the user does not provide a value for `prod_factor_series` then we use the PVWatts API to get a `production_factor` based on the `Site.latitude` and `Site.longitude`. The [PV](@ref) inputs structure also allows the user to change the arguments that are passed to PVWatts.
+We let the user define the `production_factor` by providing the `PV`s `production_factor_series` input in their JSON file or dictionary when creating their [Scenario](@ref). If the user does not provide a value for `production_factor_series` then we use the PVWatts API to get a `production_factor` based on the `Site.latitude` and `Site.longitude`. The [PV](@ref) inputs structure also allows the user to change the arguments that are passed to PVWatts.
 
 
 ## 3. REopt Inputs
@@ -74,7 +74,7 @@ production_factor = DenseAxisArray{Float64}(undef, techs.all, 1:length(s.electri
 and then passes that array to technology specific functions that add their production factors to the `production_factor` array. For example, for `PV` within the `setup_pv_inputs` method we have:
 ```julia
 for pv in s.pvs
-    production_factor[pv.name, :] = prodfactor(pv, s.site.latitude, s.site.longitude)
+    production_factor[pv.name, :] = get_production_factor(pv, s.site.latitude, s.site.longitude)
     ...
 end
 ```

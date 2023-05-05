@@ -4,7 +4,7 @@
       1,
       5
     ],
-    "outage_start_timesteps": [
+    "outage_start_time_steps": [
       10
     ],
     "outage_probabilities": [
@@ -50,11 +50,13 @@
     "annual_kwh": 876000.0,
     "doe_reference_name": "FlatLoad",
     "city": "Boulder",
-    "critical_load_pct": 0.1
+    "critical_load_fraction": 0.1
   },
   "Generator": {
+	  "max_kw": 0.0
   },
   "Financial": {
-    "value_of_lost_load_per_kwh": 0.0
+    "value_of_lost_load_per_kwh": 1.0,
+    "microgrid_upgrade_cost_fraction": 0.3
   }
 }

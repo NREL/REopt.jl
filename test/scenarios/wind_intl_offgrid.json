@@ -1,0 +1,40 @@
+{
+    "Settings":{
+        "time_steps_per_hour": 1,
+        "off_grid_flag": true
+    },
+    "ElectricLoad": {
+        "loads_kw": []
+    },
+    "Site": {
+        "latitude": 1.5709993,
+        "longitude": 127.8087693
+    },
+    "Wind": {
+        "installed_cost_per_kw": 1874,
+        "om_cost_per_kw": 35,
+        "macrs_bonus_fraction": 0.0,
+        "min_kw": 250,
+        "max_kw": 250,
+        "federal_itc_fraction": 0,
+        "macrs_option_years": 0,
+        "size_class": "commercial",
+        "operating_reserve_required_fraction": 0.05
+    },
+    "Generator": {
+        "installed_cost_per_kw": 700,
+        "min_kw": 20,
+        "max_kw": 20,
+        "replacement_year": 10,
+        "replace_cost_per_kw": 700,
+        "electric_efficiency_full_load": 0.3232898,
+        "electric_efficiency_half_load": 0.3232898,
+        "min_turn_down_fraction": 0.05
+    },
+    "Financial": {
+        "om_cost_escalation_rate_fraction": 0.001,
+        "offtaker_discount_rate_fraction": 0.07,
+        "analysis_years": 25,
+        "offtaker_tax_rate_fraction": 0.0
+    }
+}

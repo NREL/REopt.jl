@@ -28,18 +28,21 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-    Settings
+Captures high-level inputs affecting the optimization.
 
-Data struct for top-level Scenario settings.
-Captures inputs that do not logically fall under any of the other data structs.
-
-    Base.@kwdef struct Settings
-        time_steps_per_hour::Int = 1
-        run_bau::Bool = true
-    end
+`Settings` is an optional REopt input with the following keys and default values:
+```julia
+    time_steps_per_hour::Int = 1 # corresponds to the time steps per hour for user-provided time series (e.g., `ElectricLoad.loads_kw` and `DomesticHotWaterLoad.fuel_loads_mmbtu_per_hour`) 
+    add_soc_incentive::Bool = true # when true, an incentive is added to the model's objective function to keep the ElectricStorage SOC high
+    off_grid_flag::Bool = false # true if modeling an off-grid system, not connected to bulk power system
+    include_climate_in_objective::Bool = false # true if climate costs of emissions should be included in the model's objective function
+    include_health_in_objective::Bool = false # true if health costs of emissions should be included in the model's objective function
+```
 """
 Base.@kwdef struct Settings
-    time_steps_per_hour::Int = 1
-    run_bau::Bool = true
-    add_soc_incentive::Bool = true
+    time_steps_per_hour::Int = 1 # corresponds to the time steps per hour for user-provided time series (e.g., `ElectricLoad.loads_kw` and `DomesticHotWaterLoad.fuel_loads_mmbtu_per_hour`) 
+    add_soc_incentive::Bool = true # when true, an incentive is added to the model's objective function to keep the ElectricStorage SOC high
+    off_grid_flag::Bool = false # true if modeling an off-grid system, not connected to bulk power system
+    include_climate_in_objective::Bool = false # true if climate costs of emissions should be included in the model's objective function
+    include_health_in_objective::Bool = false # true if health costs of emissions should be included in the model's objective function
 end

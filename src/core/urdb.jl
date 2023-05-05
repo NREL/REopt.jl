@@ -48,11 +48,11 @@ struct URDBrate
     n_tou_demand_tiers::Int
     tou_demand_tier_limits::Array{Real,1}
     tou_demand_rates::Array{Float64,2}  # ratchet X tier
-    tou_demand_ratchet_timesteps::Array{Array{Int64,1},1}  # length = n_tou_demand_ratchets
+    tou_demand_ratchet_time_steps::Array{Array{Int64,1},1}  # length = n_tou_demand_ratchets
 
-    demand_lookback_months::AbstractArray{Int,1}
-    demand_lookback_percent::Float64
-    demand_lookback_range::Int
+    demand_lookback_months::AbstractArray{Int,1}  # Array of 12 binary values, indicating months in which lookbackPercent applies. If any of these is true, lookbackRange should be zero.
+    demand_lookback_percent::Float64  # Lookback percentage. Applies to either lookbackMonths with value=1, or a lookbackRange.
+    demand_lookback_range::Int  # Number of months for which lookbackPercent applies. If not 0, lookbackMonths values should all be 0.
 
     fixed_monthly_charge::Float64
     annual_min_charge::Float64
@@ -63,24 +63,24 @@ end
 
 
 """
-    URDBrate(urdb_label::String, year::Int=2019; time_steps_per_hour=1)
+    URDBrate(urdb_label::String, year::Int; time_steps_per_hour=1)
 
 download URDB dict, parse into reopt inputs, return URDBrate struct.
     year is required to align weekday/weekend schedules.
 """
-function URDBrate(urdb_label::String, year::Int=2019; time_steps_per_hour=1)
+function URDBrate(urdb_label::String, year::Int; time_steps_per_hour=1)
     urdb_response = download_urdb(urdb_label)
     URDBrate(urdb_response, year; time_steps_per_hour=time_steps_per_hour)
 end
 
 
 """
-    URDBrate(util_name::String, rate_name::String, year::Int=2019; time_steps_per_hour=1)
+    URDBrate(util_name::String, rate_name::String, year::Int; time_steps_per_hour=1)
 
 download URDB dict, parse into reopt inputs, return URDBrate struct.
     year is required to align weekday/weekend schedules.
 """
-function URDBrate(util_name::String, rate_name::String, year::Int=2019; time_steps_per_hour=1)
+function URDBrate(util_name::String, rate_name::String, year::Int; time_steps_per_hour=1)
     urdb_response = download_urdb(util_name, rate_name)
     URDBrate(urdb_response, year; time_steps_per_hour=time_steps_per_hour)
 end
@@ -92,15 +92,16 @@ end
 process URDB response dict, parse into reopt inputs, return URDBrate struct.
     year is required to align weekday/weekend schedules.
 """
-function URDBrate(urdb_response::Dict, year::Int=2019; time_steps_per_hour=1)
+function URDBrate(urdb_response::Dict, year::Int; time_steps_per_hour=1)
 
     demand_min = get(urdb_response, "peakkwcapacitymin", 0.0)  # TODO add check for site min demand against tariff?
 
     n_monthly_demand_tiers, monthly_demand_tier_limits, monthly_demand_rates,
-      n_tou_demand_tiers, tou_demand_tier_limits, tou_demand_rates, tou_demand_ratchet_timesteps =
-      parse_demand_rates(urdb_response, year)
+      n_tou_demand_tiers, tou_demand_tier_limits, tou_demand_rates, tou_demand_ratchet_time_steps =
+      parse_demand_rates(urdb_response, year, time_steps_per_hour=time_steps_per_hour)
 
-    energy_rates, energy_tier_limits, n_energy_tiers, sell_rates = parse_urdb_energy_costs(urdb_response, year)
+    energy_rates, energy_tier_limits, n_energy_tiers, sell_rates = 
+        parse_urdb_energy_costs(urdb_response, year; time_steps_per_hour=time_steps_per_hour)
 
     fixed_monthly_charge, annual_min_charge, min_monthly_charge = parse_urdb_fixed_charges(urdb_response)
 
@@ -119,7 +120,7 @@ function URDBrate(urdb_response::Dict, year::Int=2019; time_steps_per_hour=1)
         n_tou_demand_tiers,
         tou_demand_tier_limits,
         tou_demand_rates,
-        tou_demand_ratchet_timesteps,
+        tou_demand_ratchet_time_steps,
 
         demand_lookback_months,
         demand_lookback_percent,
@@ -133,7 +134,7 @@ function URDBrate(urdb_response::Dict, year::Int=2019; time_steps_per_hour=1)
     )
 end
 
-
+#TODO: refactor two download_urdb to reduce duplicated code
 function download_urdb(urdb_label::String; version::Int=8)
     url = string("https://api.openei.org/utility_rates", "?api_key=", urdb_key,
                 "&version=", version , "&format=json", "&detail=full",
@@ -145,20 +146,20 @@ function download_urdb(urdb_label::String; version::Int=8)
         r = HTTP.get(url, require_ssl_verification=false)  # cannot verify on NREL VPN
         response = JSON.parse(String(r.body))
         if r.status != 200
-            error("Bad response from URDB: $(response["errors"])")  # TODO URDB has "errors"?
+            throw(@error("Bad response from URDB: $(response["errors"])"))  # TODO URDB has "errors"?
         end
     catch e
-        error("Error occurred :$(e)")
+        throw(@error("Error occurred :$(e)"))
     end
 
     rates = response["items"]  # response['items'] contains a vector of dicts
     if length(rates) == 0
-        error("Could not find $(urdb_label) in URDB.")
+        throw(@error("Could not find $(urdb_label) in URDB."))
     end
     if rates[1]["label"] == urdb_label
         return rates[1]
     else
-        error("Could not find $(urdb_label) in URDB.")
+        throw(@error("Could not find $(urdb_label) in URDB."))
     end
 end
 
@@ -174,15 +175,15 @@ function download_urdb(util_name::String, rate_name::String; version::Int=8)
         r = HTTP.get(url, require_ssl_verification=false)  # cannot verify on NREL VPN
         response = JSON.parse(String(r.body))
         if r.status != 200
-            error("Bad response from URDB: $(response["errors"])")  # TODO URDB has "errors"?
+            throw(@error("Bad response from URDB: $(response["errors"])"))  # TODO URDB has "errors"?
         end
     catch e
-        error("Error occurred :$(e)")
+        throw(@error("Error occurred :$(e)"))
     end
 
     rates = response["items"]  # response['items'] contains a vector of dicts
     if length(rates) == 0
-        error("Could not find $(rate_name) in URDB.")
+        throw(@error("Could not find $(rate_name) in URDB."))
     end
 
     matched_rates = []
@@ -204,7 +205,7 @@ function download_urdb(util_name::String, rate_name::String; version::Int=8)
     end
     
     if length(matched_rates) == 0
-        error("Could not find $(rate_name) in URDB.")
+        throw(@error("Could not find $(rate_name) in URDB."))
     end
 
     return matched_rates[newest_index]
@@ -222,7 +223,7 @@ use URDB dict to return rates, energy_cost_vector, energy_tier_limits_kwh where:
 """
 function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM = 1.0e8)
     if length(d["energyratestructure"]) == 0
-        error("No energyratestructure in URDB response.")
+        throw(@error("No energyratestructure in URDB response."))
     end
     # TODO check bigM (in multiple functions)
     energy_tiers = Float64[]
@@ -231,7 +232,7 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
     end
     energy_tier_set = Set(energy_tiers)
     if length(energy_tier_set) > 1
-        @warn "energy periods contain different numbers of tiers, using limits of period with most tiers"
+        @warn "Energy periods contain different numbers of tiers, using limits of period with most tiers."
     end
     period_with_max_tiers = findall(energy_tiers .== maximum(energy_tiers))[1]
     n_energy_tiers = Int(maximum(energy_tier_set))
@@ -312,12 +313,12 @@ end
 
 
 """
-    parse_demand_rates(d::Dict, year::Int; bigM=1.0e8)
+    parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
 
 Parse monthly ("flat") and TOU demand rates
     can modify URDB dict when there is inconsistent numbers of tiers in rate structures
 """
-function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8)
+function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
 
     if haskey(d, "flatdemandstructure")
         scrub_urdb_demand_tiers!(d["flatdemandstructure"])
@@ -334,16 +335,16 @@ function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8)
         scrub_urdb_demand_tiers!(d["demandratestructure"])
         tou_demand_tier_limits = parse_urdb_demand_tiers(d["demandratestructure"])
         n_tou_demand_tiers = length(tou_demand_tier_limits)
-        ratchet_timesteps, tou_demand_rates = parse_urdb_tou_demand(d, year=year, n_tiers=n_tou_demand_tiers)
+        ratchet_time_steps, tou_demand_rates = parse_urdb_tou_demand(d, year=year, n_tiers=n_tou_demand_tiers, time_steps_per_hour=time_steps_per_hour)
     else
         tou_demand_tier_limits = []
         n_tou_demand_tiers = 0
-        ratchet_timesteps = []
+        ratchet_time_steps = []
         tou_demand_rates = Array{Float64,2}(undef, 0, 0)
     end
 
     return n_monthly_demand_tiers, monthly_demand_tier_limits, monthly_demand_rates,
-           n_tou_demand_tiers, tou_demand_tier_limits, tou_demand_rates, ratchet_timesteps
+           n_tou_demand_tiers, tou_demand_tier_limits, tou_demand_rates, ratchet_time_steps
 
 end
 
@@ -362,8 +363,7 @@ function scrub_urdb_demand_tiers!(A::Array)
     n_tiers = maximum(len_tiers_set)
 
     if length(len_tiers_set) > 1
-        @warn """Demand rate structure has varying number of tiers in periods.
-                 Making the number of tiers the same across all periods by repeating the last tier."""
+        @warn "Demand rate structure has varying number of tiers in periods. Making the number of tiers the same across all periods by repeating the last tier."
         for (i, rate) in enumerate(A)
             n_tiers_in_period = length(rate)
             if n_tiers_in_period != n_tiers
@@ -444,21 +444,21 @@ end
 
 return array of arrary for ratchet time steps, tou demand rates array{ratchet, tier}
 """
-function parse_urdb_tou_demand(d::Dict; year::Int, n_tiers::Int)
+function parse_urdb_tou_demand(d::Dict; year::Int, n_tiers::Int, time_steps_per_hour::Int)
     if !haskey(d, "demandratestructure")
         return [], []
     end
     n_periods = length(d["demandratestructure"])
-    ratchet_timesteps = Array[]
+    ratchet_time_steps = Array[]
     rates_vec = Float64[]  # array(ratchet_num, tier), reshape later
     n_ratchets = 0  # counter
 
     for month in range(1, stop=12)
         for period in range(0, stop=n_periods)
-            time_steps = get_tou_demand_steps(d, year=year, month=month, period=period-1)
+            time_steps = get_tou_demand_steps(d, year=year, month=month, period=period-1, time_steps_per_hour=time_steps_per_hour)
             if length(time_steps) > 0  # can be zero! not every month contains same number of periods
                 n_ratchets += 1
-                append!(ratchet_timesteps, [time_steps])
+                append!(ratchet_time_steps, [time_steps])
                 for (t, tier) in enumerate(d["demandratestructure"][period])
                     append!(rates_vec, round(get(tier, "rate", 0.0) + get(tier, "adj", 0.0), digits=6))
                 end
@@ -466,21 +466,17 @@ function parse_urdb_tou_demand(d::Dict; year::Int, n_tiers::Int)
         end
     end
     rates = reshape(rates_vec, (:, n_tiers))  # Array{Float64,2}
-    ratchet_timesteps = convert(Array{Array{Int64,1},1}, ratchet_timesteps)
-    return ratchet_timesteps, rates
+    ratchet_time_steps = convert(Array{Array{Int64,1},1}, ratchet_time_steps)
+    return ratchet_time_steps, rates
 end
 
 
 """
     get_tou_demand_steps(d::Dict; year::Int, month::Int, period::Int, time_steps_per_hour=1)
 
-return Array{Int, 1} for timesteps in ratchet (aka period)
+return Array{Int, 1} for time_steps in ratchet (aka period)
 """
 function get_tou_demand_steps(d::Dict; year::Int, month::Int, period::Int, time_steps_per_hour=1)
-    step_array = Int[]
-    start_step = 1
-    start_hour = 1
-
     if month > 1
         plus_days = 0
         for m in range(1, stop=month-1)
@@ -489,25 +485,27 @@ function get_tou_demand_steps(d::Dict; year::Int, month::Int, period::Int, time_
                 plus_days -= 1
             end
         end
-        start_hour += plus_days * 24
-        start_step = start_hour * time_steps_per_hour
+        start_hour = 1 + plus_days * 24
+        start_step = 1 + plus_days * 24 * time_steps_per_hour
+    else
+        start_hour = 1
+        start_step = 1
     end
 
-    hour_of_year = start_hour
     step_of_year = start_step
+    step_array = Int[]
 
     for day in range(1, stop=daysinmonth(Date(string(year) * "-" * string(month))))
         for hour in range(1, stop=24)
-            if dayofweek(Date(year, month, day)) < 6 &&
-               d["demandweekdayschedule"][month][hour] == period
-                append!(step_array, step_of_year)
-            elseif dayofweek(Date(year, month, day)) > 5 &&
-               d["demandweekendschedule"][month][hour] == period
-                append!(step_array, step_of_year)
+            if (dayofweek(Date(year, month, day)) < 6 && 
+                d["demandweekdayschedule"][month][hour] == period) ||
+                (dayofweek(Date(year, month, day)) > 5 &&
+                d["demandweekendschedule"][month][hour] == period)
+                
+                append!(step_array, collect(step_of_year:step_of_year+time_steps_per_hour-1))
             end
-            step_of_year += 1
+            step_of_year += time_steps_per_hour
         end
-        hour_of_year += 1
     end
     return step_array
 end
@@ -524,25 +522,30 @@ function parse_urdb_fixed_charges(d::Dict)
     min_monthly = 0.0
 
     # first try $/month, then check if $/day exists, as of 1/28/2020 there were only $/day and $month entries in the URDB
-    if get(d, "fixedchargeunits", "") == "\$/month" 
-        fixed_monthly = Float64(get(d, "fixedchargefirstmeter", 0.0))
-    end
-    if get(d, "fixedchargeunits", "") == "\$/day"
-        fixed_monthly = Float64(get(d, "fixedchargefirstmeter", 0.0) * 30.4375)
-        # scalar intended to approximate annual charges over 12 month period, derived from 365.25/12
+    fixed_monthly = Float64(get(d, "fixedmonthlycharge", 0.0))
+    if fixed_monthly == 0.0
+        if get(d, "fixedchargeunits", "") == "\$/month" 
+            fixed_monthly = Float64(get(d, "fixedchargefirstmeter", 0.0))
+        elseif get(d, "fixedchargeunits", "") == "\$/day"
+            fixed_monthly = Float64(get(d, "fixedchargefirstmeter", 0.0) * 30.4375)
+            # scalar intended to approximate annual charges over 12 month period, derived from 365.25/12
+        elseif get(d, "fixedchargeunits", "") == "\$/year"
+            fixed_monthly = Float64(get(d, "fixedchargefirstmeter", 0.0) / 12)
+        elseif !isnothing(get(d, "fixedchargefirstmeter",  nothing))
+            @warn "A valid value for fixedchargeunits (\$/month, \$/day, or \$/year) was not provided in urdb_response so the value provided for fixedchargefirstmeter will be ignored."
+        end
     end
 
     if get(d, "minchargeunits", "") == "\$/month"
         min_monthly = Float64(get(d, "mincharge", 0.0))
         # first try $/month, then check if $/day or $/year exists, as of 1/28/2020 these were the only unit types in the urdb
-    end
-    if get(d, "minchargeunits", "") == "\$/day"
+    elseif get(d, "minchargeunits", "") == "\$/day"
         min_monthly = Float64(get(d, "mincharge", 0.0) * 30.4375 )
         # scalar intended to approximate annual charges over 12 month period, derived from 365.25/12
-    end
-
-    if get(d, "minchargeunits", "") == "\$/year"
+    elseif get(d, "minchargeunits", "") == "\$/year"
         annual_min = Float64(get(d, "mincharge", 0.0))
+    elseif !isnothing(get(d, "minchargeunits",  nothing))
+        @warn "A valid value for minchargeunits (\$/month, \$/day, or \$/year) was not provided in urdb_response so the value provided for mincharge will be ignored."
     end
     
     return fixed_monthly, annual_min, min_monthly
@@ -562,81 +565,18 @@ URDB lookback fields:
     - Lookback percentage. Applies to either lookbackMonths with value=1, or a lookbackRange.
 - lookbackRange
     - Type: integer
-    - Number of months for which lookbackPercent applies. If not 0, lookbackMonths values should all be 0.
+    - Number of previous months for which lookbackPercent applies each month. If not 0, lookbackMonths values should all be 0.
 """
 function parse_urdb_lookback_charges(d::Dict)
-    lookback_months = get(d, "lookbackMonths", Int[])
-    lookback_percent = Float64(get(d, "lookbackPercent", 0.0))
-    lookback_range = Int64(get(d, "lookbackRange", 0.0))
+    lookback_months = get(d, "lookbackmonths", Int[])
+    lookback_percent = Float64(get(d, "lookbackpercent", 0.0))
+    lookback_range = Int64(get(d, "lookbackrange", 0.0))
 
-    reopt_lookback_months = Int[]
-    if lookback_range != 0 && length(lookback_months) == 12
-        for mth in range(1, stop=12)
-            if lookback_months[mth] == 1
-                push!(reopt_lookback_months, mth)
-            end
-        end
-    end
-    return reopt_lookback_months, lookback_percent, lookback_range
-end
-
-function get_subset_of_urdb(rate::URDBrate, t_start::Integer, t_end::Integer)::Dict
-    energy_rates = rate.energy_rates[t_start:t_end] # Just take the first tier until the model supports tiers
-    
-    # Export rates not presented in URDB, ignore
-
-    # For now, assume the demand rates from the month of t_start - later update this to mix demand charges based on time intervals with multiple months (is the model aware?)
-    month = month_of_hour(t_start)
-    print("Month ", month, "\n")
-    monthly_demand = rate.monthly_demand_rates[month:month]
-
-    # What if different months have different numbers of periods?
-    periods_per_month = floor(Int, size(rate.tou_demand_rates)[1] / 12)
-
-    start_index = periods_per_month * (month - 1) + 1
-    end_index = periods_per_month * month
-
-    print("start index ", start_index, "\n")
-    print("end_index ", end_index, "\n")
-
-    tou_demand = rate.tou_demand_rates[start_index:end_index]
-
-    function is_in_range(item::Integer)
-        return item >= t_start && item <= t_end
+    if lookback_range == 0 && length(lookback_months) == 12
+        lookback_months = collect(1:12)[lookback_months .== 1]
+    elseif lookback_range !=0 && length(lookback_months) == 12
+        throw(@warn("URDB rate contains both lookbackRange and lookbackMonths. Only lookbackRange will apply."))
     end
 
-    tou_rate_sched = []
-    i = start_index
-    while i <= end_index
-        rates_at_time = filter(is_in_range, rate.tou_demand_ratchet_timesteps[i])
-        rates_at_time = rates_at_time .- (t_start - 1)
-        push!(tou_rate_sched, rates_at_time)
-        i += 1
-    end
-
-    
-    results = Dict("energy_rates" => energy_rates, "monthly_demand_rates" => monthly_demand, 
-        "tou_demand_rates" => tou_demand, "tou_demand_timesteps" => tou_rate_sched)
-
-    return results
-end
-
-function month_of_hour(time::Integer)
-
-        # returns month number 1..12 given
-        #   time: hour index in year 1..8760
-        if (time < 0) return 0 end
-        if (time < 745) return 1 end
-        if (time < 1417) return 2 end
-        if (time < 2161) return 3 end
-        if (time < 2881) return 4 end
-        if (time < 3625) return 5 end
-        if (time < 4345) return 6 end
-        if (time < 5089) return 7 end
-        if (time < 5833) return 8 end
-        if (time < 6553) return 9 end
-        if (time < 7297) return 10 end
-        if (time < 8017) return 11 end
-        if (time < 8761) return 12 end
-        return 0;
+    return lookback_months, lookback_percent, lookback_range
 end

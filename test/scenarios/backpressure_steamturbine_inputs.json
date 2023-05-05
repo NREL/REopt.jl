@@ -1,0 +1,58 @@
+{
+    "Site": {
+        "latitude": 37.78,
+        "longitude": -122.45
+    },
+    "ElectricLoad": {
+    },
+    "SpaceHeatingLoad": {
+    },
+    "DomesticHotWaterLoad": {
+    },
+    "ElectricTariff": {
+        "urdb_label": "5e1676e95457a3f87673e3b0"
+    },    
+    "ExistingBoiler": {
+        "production_type": "steam",
+        "efficiency": 0.8,
+        "fuel_type": "natural_gas",
+        "fuel_cost_per_mmbtu": 10.0,
+        "max_thermal_factor_on_peak_load": 1.25,
+        "can_supply_steam_turbine": true
+    },
+    "SteamTurbine": {
+        "min_kw": 0,
+        "max_kw": 20000.0,
+        "is_condensing": false,
+        "inlet_steam_pressure_psig": 600.0,
+        "inlet_steam_temperature_degF": 575.0,
+        "outlet_steam_pressure_psig": 150.0,
+        "outlet_steam_min_vapor_fraction": 0.8,                         
+        "isentropic_efficiency": 0.612,
+        "gearbox_generator_efficiency": 0.94,
+        "net_to_gross_electric_ratio": 0.9,
+        "installed_cost_per_kw": 682.0,
+        "om_cost_per_kw": 0.0,
+        "om_cost_per_kwh": 0.009,
+        "can_wholesale": false,
+		"can_curtail": false
+      },
+    "Financial": {
+        "om_cost_escalation_rate_fraction": 0.025,
+        "elec_cost_escalation_rate_fraction": 0.023,
+        "existing_boiler_fuel_cost_escalation_rate_fraction": 0.034,
+        "offtaker_tax_rate_fraction": 0.26,
+        "offtaker_discount_rate_fraction": 0.083,
+        "third_party_ownership": false,
+        "owner_tax_rate_fraction": 0.26,
+        "owner_discount_rate_fraction": 0.083,
+        "analysis_years": 25
+    },
+    "PV": {
+        "max_kw": 0.0
+    },
+    "ElectricStorage": {
+        "max_kw": 0.0,
+        "max_kwh": 0.0
+    }
+}

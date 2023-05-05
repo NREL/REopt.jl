@@ -47,7 +47,7 @@ end
 
 
 function insert_u_after_p_bp(xp_array_incent, yp_array_incent, region, u_xbp, u_ybp, p, p_cap, u_cap)
-    xp_array_incent[region].append(u_xbp)
+    push!(xp_array_incent[region], u_xbp)
     if p_cap == 0
         push!(yp_array_incent[region], u_ybp - (p * u_ybp + u_cap))
     else
@@ -78,18 +78,18 @@ Determine the cost curve segments (x and y points) accounting for:
 
 Assumes that `tech` has the following attributes:
 - installed_cost_per_kw
-- federal_itc_pct
+- federal_itc_fraction
 - federal_rebate_per_kw
-- state_ibi_pct
+- state_ibi_fraction
 - state_ibi_max
 - state_rebate_per_kw
 - state_rebate_max
-- utility_ibi_pct
+- utility_ibi_fraction
 - utility_ibi_max
 - utility_rebate_per_kw
 - utility_rebate_max
 - macrs_option_years
-- macrs_bonus_pct
+- macrs_bonus_fraction
 - macrs_itc_reduction
 
 Optional attributes of `tech` are:
@@ -99,14 +99,6 @@ Optional attributes of `tech` are:
 function cost_curve(tech::AbstractTech, financial::Financial)
     big_number = 1.0e10
     T = typeof(tech)
-
-    if nameof(T) in [:Boiler, :Elecchl]  # zero cost technologies
-        cap_cost_slope = [0.0]
-        cap_cost_yint = [0.0]
-        cost_curve_bp_x = [0.0, big_number]
-        n_segments = 1
-        return cap_cost_slope, cost_curve_bp_x, cap_cost_yint, n_segments
-    end
 
     regions = ["utility", "state", "federal", "combined"]
     cap_cost_slope = Real[]
@@ -134,11 +126,11 @@ function cost_curve(tech::AbstractTech, financial::Financial)
         end
     else
         # NOTE REopt incentive calculation works best if "unlimited" incentives are entered as 0
-        tech_incentives["federal"]["%"] = tech.federal_itc_pct
+        tech_incentives["federal"]["%"] = tech.federal_itc_fraction
         tech_incentives["federal"]["%_max"] = 0
-        tech_incentives["state"]["%"] = tech.state_ibi_pct
+        tech_incentives["state"]["%"] = tech.state_ibi_fraction
         tech_incentives["state"]["%_max"] = tech.state_ibi_max ==  big_number ? 0 : tech.state_ibi_max
-        tech_incentives["utility"]["%"] = tech.utility_ibi_pct
+        tech_incentives["utility"]["%"] = tech.utility_ibi_fraction
         tech_incentives["utility"]["%_max"] = tech.utility_ibi_max == big_number ? 0 : tech.utility_ibi_max
 
         tech_incentives["federal"]["rebate"] = tech.federal_rebate_per_kw
@@ -164,7 +156,9 @@ function cost_curve(tech::AbstractTech, financial::Financial)
                     push!(xp_array_incent["utility"], 0)
                 end
                 push!(xp_array_incent["utility"], tech.tech_sizes_for_cost_curve...)  # [$]  # Append list of sizes for cost curve [kW]
-                push!(xp_array_incent["utility"], big_number)  # Append big number size to assume same cost as last input point
+                if tech.tech_sizes_for_cost_curve[end] <= (big_number - 1.0)  # Avoid redundant append of a big number if the last size is basically big_number
+                    push!(xp_array_incent["utility"], big_number)  # Append big number size to assume same cost as last input point
+                end
 
                 if tech.tech_sizes_for_cost_curve[1] == 0
                     yp_array_incent["utility"] = [tech.installed_cost_per_kw[1], tech.tech_sizes_for_cost_curve[2:end] .* tech.installed_cost_per_kw[2:end]...]  # [$]
@@ -338,11 +332,11 @@ function cost_curve(tech::AbstractTech, financial::Financial)
     for s in range(1, stop=n_segments)
         if cost_curve_bp_x[s + 1] <= 0
             # Not sure how else to handle this case, perhaps there is a better way to handle it?
-            @error "Invalid cost curve for {$nameof(T)}. Value at index {$s} ({$cost_curve_bp_x[s + 1]}) cannot be less than or equal to 0."
+            throw(@error("Invalid cost curve for {$nameof(T)}. Value at index {$s} ({$cost_curve_bp_x[s + 1]}) cannot be less than or equal to 0."))
         end
 
         # Remove federal incentives for ITC basis and tax benefit calculations
-        itc = tech.federal_itc_pct
+        itc = tech.federal_itc_fraction
         rebate_federal = tech.federal_rebate_per_kw
         if itc == 1
             itc_unit_basis = 0
@@ -351,11 +345,11 @@ function cost_curve(tech::AbstractTech, financial::Financial)
         end
 
         macrs_schedule = [0.0]
-        macrs_bonus_pct = 0.0
+        macrs_bonus_fraction = 0.0
         macrs_itc_reduction = 0.0
 
         if tech.macrs_option_years != 0
-            macrs_bonus_pct = tech.macrs_bonus_pct
+            macrs_bonus_fraction = tech.macrs_bonus_fraction
             macrs_itc_reduction = tech.macrs_itc_reduction
         end
         if tech.macrs_option_years == 5
@@ -364,15 +358,26 @@ function cost_curve(tech::AbstractTech, financial::Financial)
         if tech.macrs_option_years == 7
             macrs_schedule = financial.macrs_seven_year
         end
+
+        replacement_cost = 0.0
+        replacement_year = financial.analysis_years
+        if nameof(T) in [:Generator]  # Generator is currently only Tech with replacement year and cost
+            if tech.replacement_year >= financial.analysis_years # assume no replacement in final year of project
+                replacement_cost = 0.0
+            else
+                replacement_cost = tech.replace_cost_per_kw
+            end
+            replacement_year = tech.replacement_year
+        end
         updated_slope = effective_cost(;
-            itc_basis=itc_unit_basis,  # input tech cost with incentives, but no ITC
-            replacement_cost=0.0,
-            replacement_year=financial.analysis_years,
-            discount_rate=financial.owner_discount_pct,
-            tax_rate=financial.owner_tax_pct,
-            itc=itc,
+            itc_basis = itc_unit_basis,  # input tech cost with incentives, but no ITC
+            replacement_cost = replacement_cost,
+            replacement_year = replacement_year,
+            discount_rate = financial.owner_discount_rate_fraction,
+            tax_rate = financial.owner_tax_rate_fraction,
+            itc = itc,
             macrs_schedule = macrs_schedule,
-            macrs_bonus_pct=macrs_bonus_pct,
+            macrs_bonus_fraction = macrs_bonus_fraction,
             macrs_itc_reduction = macrs_itc_reduction,
             rebate_per_kw = rebate_federal
         )

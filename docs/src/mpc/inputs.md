@@ -13,18 +13,17 @@ Just like [REopt Inputs](@ref), inputs to `run_mpc` can be provided in one of th
 3. using the `MPCInputs` struct
 
 The accepted keys for the JSON file or `Dict` are:
-
 - ElectricLoad
 - ElectricTariff
 - PV
-- Storage
+- ElectricStorage
 - Financial
 - Generator
 - ElectricUtility
 - Settings
 
 
-The simplest scenario does not have any dispatch optimization and is essentially a cost "calculator:
+The simplest scenario does not have any dispatch optimization and is essentially a cost "calculator":
 ```javascript
 {
     "ElectricLoad": {
@@ -36,14 +35,14 @@ The simplest scenario does not have any dispatch optimization and is essentially
 }
 ```
 !!! note
-    The `ElectricLoad.loads_kw` can have an arbitrary length, but its length must be the same lengths as many other inputs such as the `MPCElectricTariff.energy_rates` and the `PV.prod_factor_series`.
+    The `ElectricLoad.loads_kw` can have an arbitrary length, but its length must be the same lengths as many other inputs such as the `MPCElectricTariff.energy_rates` and the `PV.production_factor_series`.
 
 Here is a more complex `MPCScenario`, which is used in [MPC Examples](@ref):
 ```javascript
 {
     "PV": {
         "size_kw": 150,
-        "prod_factor_series": [
+        "production_factor_series": [
             0.0,
             0.0,
             0.0,
@@ -70,7 +69,7 @@ Here is a more complex `MPCScenario`, which is used in [MPC Examples](@ref):
             0.0
         ]
     },
-    "Storage": {
+    "ElectricStorage": {
         "size_kw": 30.0,
         "size_kwh": 60.0,
         "can_grid_charge": true
@@ -133,7 +132,7 @@ Here is a more complex `MPCScenario`, which is used in [MPC Examples](@ref):
         "monthly_demand_rates": [10.0],
         "monthly_previous_peak_demands": [98.0],
         "tou_demand_rates": [0.0, 15.0],
-        "tou_demand_timesteps": [
+        "tou_demand_time_steps": [
             [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
             [16, 17, 18, 19, 20, 21, 22, 23, 24]
         ],
@@ -150,33 +149,39 @@ Note that the keys of the input `Dict` or JSON file do not need the `MPC` prefix
 
 ## MPCElectricTariff
 ```@docs
-REoptLite.MPCElectricTariff(d::Dict)
+REopt.MPCElectricTariff(d::Dict)
 ```
 
 ## MPCElectricLoad
 ```@docs
-REoptLite.MPCElectricLoad
+REopt.MPCElectricLoad
 ```
 
-## MPCElecStorage
+## MPCElectricStorage
 ```@docs
-REoptLite.MPCElecStorage
+REopt.MPCElectricStorage
 ```
 
 ## MPCFinancial
 ```@docs
-REoptLite.MPCFinancial
+REopt.MPCFinancial
 ```
 
 ## MPCPV
 ```@docs
-REoptLite.MPCPV
+REopt.MPCPV
 ```
 
 ## MPCGenerator
 ```@docs
-REoptLite.MPCGenerator
+REopt.MPCGenerator
 ```
 
 ## MPCSettings
-The MPCSetting is the same as the [Settings](@ref).
+The MPCSettings is the same as the [Settings](@ref).
+
+
+## MPCLimits
+```@docs
+REopt.MPCLimits
+```

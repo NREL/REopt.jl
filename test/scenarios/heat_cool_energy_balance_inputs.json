@@ -1,0 +1,92 @@
+{
+    "Site": {
+        "latitude": 37.78, 
+        "longitude": -122.45
+    },
+    "ElectricLoad": {
+        "doe_reference_name": "Hospital"
+    },
+    "ElectricTariff": {
+        "urdb_label": "5e1676e95457a3f87673e3b0"
+    },
+    "SpaceHeatingLoad": {
+        "doe_reference_name": "Hospital"
+    },
+    "DomesticHotWaterLoad": {
+        "doe_reference_name": "Hospital"
+    },
+    "CoolingLoad": {
+        "doe_reference_name": "Hospital"
+    },
+    "ExistingBoiler": {
+        "production_type": "hot_water" ,
+        "efficiency": 0.78,
+        "fuel_cost_per_mmbtu": [
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0
+            ]         
+    },
+    "ExistingChiller": {
+        "cop": 3.4,
+        "max_thermal_factor_on_peak_load": 1.25
+    },
+    "CHP": {
+        "prime_mover": "recip_engine" ,
+        "min_kw": 300.0 ,
+        "max_kw": 300.0 ,
+        "cooling_thermal_factor": 0.8,
+        "fuel_cost_per_mmbtu": [
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0 ,
+            11.0
+          ]
+    },
+    "PV": {
+        "max_kw": 0.0
+      },
+    "ElectricStorage": {
+        "max_kw": 0.0,
+        "max_kwh": 0.0
+    },
+    "HotThermalStorage":{
+        "min_gal": 20000.0,
+        "max_gal": 20000.0,
+        "internal_efficiency_fraction": 0.97,
+        "thermal_decay_rate_fraction": 0.004
+    },
+    "ColdThermalStorage":{
+        "min_gal": 30000.0,
+        "max_gal": 30000.0,
+        "internal_efficiency_fraction": 0.97,
+        "thermal_decay_rate_fraction": 0.004,
+        "soc_init_fraction": 0.1
+    },
+    "AbsorptionChiller": {
+        "min_ton": 400.0,
+        "max_ton": 400.0,
+        "cop_thermal": 0.7,
+        "installed_cost_per_ton": 500.0,
+        "om_cost_per_ton": 0.5,
+        "macrs_option_years": 0,
+        "macrs_bonus_fraction": 0.0
+      }    
+}
