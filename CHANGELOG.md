@@ -26,7 +26,7 @@ Classify the change according to the following categories:
 ## Develop - 2023-04-17
 ### Fixed
 - Fixed bug in multiple PVs pv_to_location dictionary creation. 
-## Develop 2023-04-18
+
 ## v0.32.1
 ### Fixed
 - In `backup_reliability.jl`:
