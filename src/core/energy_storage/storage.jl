@@ -42,6 +42,7 @@ mutable struct StorageTypes
     all::Vector{String}
     elec::Vector{String}
     thermal::Vector{String}
+    electrothermal::Vector{String}
     hot::Vector{String}
     cold::Vector{String}
 end
@@ -51,12 +52,14 @@ mutable struct StorageTypes
     all::Vector{String}
     elec::Vector{String}
     thermal::Vector{String}
+    electrothermal::Vector{String}
     hot::Vector{String}
     cold::Vector{String}
 
 
     function StorageTypes()
         new(
+            String[],
             String[],
             String[],
             String[],
@@ -68,6 +71,7 @@ mutable struct StorageTypes
     function StorageTypes(d::Dict{String, AbstractStorage})
         all_storage = String[]
         elec_storage = String[]
+        electrothermal_storage = String[]
         hot_storage = String[]
         cold_storage = String[]
 
@@ -78,6 +82,9 @@ mutable struct StorageTypes
 
                 if typeof(v) <: AbstractElectricStorage
                     push!(elec_storage, k)
+
+                elseif typeof(v) <: AbstractElectrothermalStorage
+                    push!(electrothermal_storage, k)
 
                 elseif typeof(v) <: ThermalStorage
                     if occursin("Hot", k)
@@ -97,6 +104,7 @@ mutable struct StorageTypes
             all_storage,
             elec_storage,
             thermal_storage,
+            electrothermal_storage,
             hot_storage,
             cold_storage
         )

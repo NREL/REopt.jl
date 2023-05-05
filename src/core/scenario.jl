@@ -64,6 +64,7 @@ A Scenario struct can contain the following keys:
 - [PV](@ref) (optional, can be Array)
 - [Wind](@ref) (optional)
 - [ElectricStorage](@ref) (optional)
+- [ElectrothermalStorage](@ref) (optional)
 - [ElectricUtility](@ref) (optional)
 - [Generator](@ref) (optional)
 - [DomesticHotWaterLoad](@ref) (optional)
@@ -170,6 +171,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     storage_structs["ElectricStorage"] = ElectricStorage(storage_dict, financial)
     # TODO stop building ElectricStorage when it is not modeled by user 
     #       (requires significant changes to constraints, variables)
+    if haskey(d, "ElectrothermalStorage")
+        electrothermal_storage_dict = dictkeys_tosymbols(d["ElectrothermalStorage"])
+        electrothermal_storage_dict[:off_grid_flag] = settings.off_grid_flag
+        storage_structs["ElectrothermalStorage"] = ElectrothermalStorage(electrothermal_storage_dict, financial)
+    end
     if haskey(d, "HotThermalStorage")
         params = HotThermalStorageDefaults(; dictkeys_tosymbols(d["HotThermalStorage"])...)
         storage_structs["HotThermalStorage"] = ThermalStorage(params, financial, settings.time_steps_per_hour)
@@ -320,10 +326,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         boiler_inputs[:time_steps_per_hour] = settings.time_steps_per_hour
         if haskey(d, "ExistingBoiler")
             boiler_inputs = merge(boiler_inputs, dictkeys_tosymbols(d["ExistingBoiler"]))
-        else
+            existing_boiler = ExistingBoiler(; boiler_inputs...)
+        elseif !haskey(d, "ElectrothermalStorage")
             throw(@error("Must include ExistingBoiler input with at least fuel_cost_per_mmbtu if modeling heating load"))
         end
-        existing_boiler = ExistingBoiler(; boiler_inputs...)
     end
 
     if haskey(d, "Boiler")

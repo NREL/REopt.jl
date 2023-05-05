@@ -247,6 +247,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			add_general_storage_dispatch_constraints(m, p, b)
 			if b in p.s.storage.types.elec
 				add_elec_storage_dispatch_constraints(m, p, b)
+			elseif b in p.s.storage.types.electrothermal
+				add_electrothermal_storage_dispatch_constraints(m, p, b)
 			elseif b in p.s.storage.types.hot
 				add_hot_thermal_storage_dispatch_constraints(m, p, b)
 			elseif b in p.s.storage.types.cold
@@ -310,7 +312,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             add_cooling_tech_constraints(m, p)
         end
     
-        if !isempty(p.techs.thermal)
+        if !isempty(p.techs.thermal) || !isempty(p.s.storage.types.electrothermal)
             add_thermal_load_constraints(m, p)  # split into heating and cooling constraints?
         end
 
@@ -381,11 +383,13 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	
 	@expression(m, TotalStorageCapCosts, p.third_party_factor * (
 		sum( p.s.storage.attr[b].net_present_cost_per_kw * m[:dvStoragePower][b] for b in p.s.storage.types.elec) + 
+		sum( p.s.storage.attr[b].net_present_cost_per_kw * m[:dvStoragePower][b] for b in p.s.storage.types.electrothermal) +
 		sum( p.s.storage.attr[b].net_present_cost_per_kwh * m[:dvStorageEnergy][b] for b in p.s.storage.types.all )
 	))
 	
 	@expression(m, TotalPerUnitSizeOMCosts, p.third_party_factor * p.pwf_om *
-		sum( p.om_cost_per_kw[t] * m[:dvSize][t] for t in p.techs.all )
+		(sum( p.om_cost_per_kw[t] * m[:dvSize][t] for t in p.techs.all ) + 
+		sum( p.s.storage.attr[b].om_cost_per_kw * m[:dvStoragePower][b] for b in p.s.storage.types.electrothermal))
 	)
 
 	add_elec_utility_expressions(m, p)
@@ -593,7 +597,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvCurtail[p.techs.all, p.time_steps] >= 0  # [kW]
 		dvProductionToStorage[p.s.storage.types.all, p.techs.all, p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
 		dvDischargeFromStorage[p.s.storage.types.all, p.time_steps] >= 0 # Power discharged from storage system b [kW]
-		dvGridToStorage[p.s.storage.types.elec, p.time_steps] >= 0 # Electrical power delivered to storage by the grid [kW]
+		dvGridToStorage[union(p.s.storage.types.elec, p.s.storage.types.electrothermal), p.time_steps] >= 0 # Electrical power delivered to storage by the grid [kW]
 		dvStoredEnergy[p.s.storage.types.all, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
 		dvStoragePower[p.s.storage.types.all] >= 0   # Power capacity of storage system b [kW]
 		dvStorageEnergy[p.s.storage.types.all] >= 0   # Energy capacity of storage system b [kWh]
@@ -602,6 +606,10 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		MinChargeAdder >= 0
         binGHP[p.ghp_options], Bin  # Can be <= 1 if require_ghp_purchase=0, and is ==1 if require_ghp_purchase=1
 	end
+
+	if !isempty(p.s.storage.types.electrothermal)
+        @variable(m, dvThermalDischargeFromStorage[p.s.storage.types.electrothermal, p.time_steps] >= 0)
+    end
 
 	if !isempty(p.techs.gen)  # Problem becomes a MILP
 		@warn "Adding binary variable to model gas generator. Some solvers are very slow with integer variables."

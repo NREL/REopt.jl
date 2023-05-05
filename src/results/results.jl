@@ -43,6 +43,12 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         end
     end
 
+    for b in p.s.storage.types.electrothermal
+        if p.s.storage.attr[b].max_kwh > 0
+            add_electrothermal_storage_results(m, p, d, b; _n)
+        end
+    end
+
     for b in p.s.storage.types.hot
         if p.s.storage.attr[b].max_kwh > 0
             add_hot_storage_results(m, p, d, b; _n)
