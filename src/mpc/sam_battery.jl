@@ -136,13 +136,15 @@ mutable struct SAM_Battery
 end
 
 """
-    run_sam_battery(batt::SAM_Battery, power::Vector{Float64})
+    run_sam_battery(batt::SAM_Battery, power::Vector{Float64})::Vector{Float64}
 Function takes a SAM_Battery, and runs it for steps equal to the length of power
 Amount of time is defined in dt, as passed to the constructor of SAM_Battery
 Units of power are in DC kW, positive is discharging, negative is charging
+Returns time series of actual DC powers executed by the battery
 """
-function run_sam_battery(batt::SAM_Battery, power::Vector{Float64})
-    for p in power
+function run_sam_battery(batt::SAM_Battery, power::Vector{Float64})::Vector{Float64}
+    dispatched_power = zeros(Float64, size(power))
+    for (i, p) in enumerate(power)
         try
             @ccall hdl.ssc_data_set_number(batt.batt_data::Ptr{Cvoid}, "input_power"::Cstring, p::Cdouble)::Cvoid
             
@@ -160,12 +162,13 @@ function run_sam_battery(batt::SAM_Battery, power::Vector{Float64})
                     @error("SAM Battery simulation error: $msg")
                 end
             end
+            dispatched_power[i] = get_sam_battery_number(batt, "P")
         catch e
             @error "Problem running SAM stateful battery"
             showerror(stdout, e)
         end
     end
-    return nothing # Should this be success/failure?
+    return dispatched_power
 end
 
 """
@@ -204,7 +207,7 @@ Converts AC power flow outputs from the results dictionary into a DC powers vect
 function get_batt_power_time_series(results::Dict{String, Any}, inverter_efficiency_pct::Float64, rectifier_efficiency_pct::Float64)::Vector{Float64}
     pv_to_battery = results["PV"]["to_battery_series_kw"]
     grid_to_battery = results["ElectricUtility"]["to_battery_series_kw"]
-    battery_to_load = results["Storage"]["to_load_series_kw"]
+    battery_to_load = results["ElectricStorage"]["to_load_series_kw"]
 
     batt_power_series = zeros(0)
     n = length(pv_to_battery)
@@ -218,6 +221,27 @@ function get_batt_power_time_series(results::Dict{String, Any}, inverter_efficie
             batt_power /= rectifier_efficiency_pct
         else
             batt_power *= inverter_efficiency_pct
+        end
+
+        append!(batt_power_series, batt_power)
+        i += 1
+    end
+
+    return batt_power_series
+end
+
+function dc_to_ac_power(powers::Vector{Float64}, inverter_efficiency_pct::Float64, rectifier_efficiency_pct::Float64)::Vector{Float64}
+    batt_power_series = zeros(0)
+    n = length(powers)
+    i = 1
+    while i <= n
+        batt_power = powers[i]
+
+        # Covert DC to AC
+        if (batt_power > 0)
+            batt_power *= inverter_efficiency_pct
+        else
+            batt_power /= rectifier_efficiency_pct
         end
 
         append!(batt_power_series, batt_power)
@@ -243,9 +267,9 @@ function update_mpc_from_batt_stateful(batt::SAM_Battery, inputs::Dict)::Dict{St
 
     nominal_voltage = batt.params["nominal_voltage"]
 
-    inputs["Storage"]["size_kwh"] = Q_max * nominal_voltage * 1e-3
+    inputs["ElectricStorage"]["size_kwh"] = Q_max * nominal_voltage * 1e-3
     
-    inputs["Storage"]["soc_init_pct"] = get_sam_battery_number(batt, "SOC") / 100.0
+    inputs["ElectricStorage"]["soc_init_fraction"] = get_sam_battery_number(batt, "SOC") / 100.0
 
     # TODO - track and update efficiency numbers
 
