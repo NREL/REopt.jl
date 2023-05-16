@@ -23,11 +23,23 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2023-04-17
+### Fixed
+- Fixed bug in multiple PVs pv_to_location dictionary creation. 
+
+## v0.32.1
+### Fixed
+- In `backup_reliability.jl`:
+    - Check if generator input is a Vector instead of has length greater than 1
+    - Correct calculation of battery SOC adjustment in `fuel_use()` function
+    - Correct outage time step survival condition in `fuel_use()` function
+- Add test to ensure `backup_reliability()` gives the same results for equivalent scenarios (1. battery only and 2. battery plus generator with no fuel) and that the survival probability decreases monotonically with outage duration
+- Add test to ensure `backup_reliability()` gives the same results as `simulate_outages()` when operational availability inputs are 1, probability of failure to run is 0, and mean time to failure is a very large number.
+
 ## v0.32.0
 ### Fixed
 - Fixed calculation of `wind_kw_ac_hourly` in `outagesim/outage_simulator.jl`
 - Add  a test of multiple outages that includes wind
-### Fixed
 - Add a timeout to PVWatts API call so that if it does not connect within 10 seconds, it will retry. It seems to always work on the first retry.
 
 ## v0.31.0
