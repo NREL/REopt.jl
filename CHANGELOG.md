@@ -23,10 +23,11 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop - 2023-04-17
+## Develop - 2023-05-22
 ### Fixed
 - Fixed bug in multiple PVs pv_to_location dictionary creation. 
 - Fixed bug in reporting of grid purchase results when multiple energy tiers are present.
+- Fixed bug in TOU demand charge calculation when multiple demand tiers are present.
 
 ## v0.32.1
 ### Fixed
