@@ -26,6 +26,7 @@ Classify the change according to the following categories:
 ## Develop - 2023-04-17
 ### Fixed
 - Fixed bug in multiple PVs pv_to_location dictionary creation. 
+- Fixed bug in reporting of grid purchase results when multiple energy tiers are present.
 
 ## v0.32.1
 ### Fixed
