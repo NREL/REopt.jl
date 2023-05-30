@@ -815,7 +815,7 @@ Return a dictionary of inputs required for backup reliability calculations.
     -generator_mean_time_to_failure::Real = 1100            Average number of time steps between a generator's failures. 1/(failure to run probability). 
     -num_generators::Int = 1                                Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
     -generator_size_kw::Real = 0.0                          Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
-    -num_battery_bins::Int                                  Number of discrete bins battery state of charge modeled as
+    -num_battery_bins::Int                                  Number of bins for discretely modeling battery state of charge
     -max_outage_duration::Int = 96                          Maximum outage time step modeled
     -microgrid_only::Bool = false                           Boolean to specify if only microgrid upgraded technologies run during grid outage
     -battery_minimum_soc_fraction::Real = 0.0               The minimum battery state of charge (represented as a fraction) allowed during outages.
@@ -933,7 +933,7 @@ Return a dictionary of inputs required for backup reliability calculations.
     -generator_mean_time_to_failure::Real = 1100            Average number of time steps between a generator's failures. 1/(failure to run probability). 
     -num_generators::Int = 1                                Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
     -generator_size_kw::Real = 0.0                          Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
-    -num_battery_bins::Int                                  Number of discrete bins battery state of charge modeled as
+    -num_battery_bins::Int                                  Number of bins for discretely modeling battery state of charge
     -max_outage_duration::Int = 96                          Maximum outage duration modeled
     -fuel_limit:Union{Real, Vector{<:Real}} = 1e9           Amount of fuel available, either by generator type or per generator, depending on fuel_limit_is_per_generator. Change generator_fuel_burn_rate_per_kwh for different fuel efficiencies. Fuel units should be consistent with generator_fuel_intercept_per_hr and generator_fuel_burn_rate_per_kwh.
     -generator_fuel_intercept_per_hr::Union{Real, Vector{<:Real}} = 0.0         Amount of fuel burned each time step while idling. Fuel units should be consistent with fuel_limit and generator_fuel_burn_rate_per_kwh.
@@ -1051,7 +1051,7 @@ Return an array of backup reliability calculations. Inputs can be unpacked from 
 -generator_mean_time_to_failure::Union{Real, Vector{<:Real}}        = 1100          Average number of time steps between a generator's failures. 1/(failure to run probability). 
 -num_generators::Union{Int, Vector{Int}}                            = 1             Number of generators
 -generator_size_kw::Union{Real, Vector{<:Real}}                     = 0.0           Backup generator capacity
--num_battery_bins::Int              = num_battery_bins_default(battery_size_kw,battery_size_kwh)     Number of discrete bins battery state of charge modeled as
+-num_battery_bins::Int              = num_battery_bins_default(battery_size_kw,battery_size_kwh)     Number of bins for discretely modeling battery state of charge
 -max_outage_duration::Int           = 96           Maximum outage duration modeled
 -battery_size_kw::Real              = 0.0          Battery kW of power capacity
 -battery_size_kwh::Real             = 0.0          Battery kWh of energy capacity
@@ -1434,7 +1434,7 @@ Possible keys in r:
     -generator_mean_time_to_failure::Real = 1100            Average number of time steps between a generator's failures. 1/(failure to run probability). 
     -num_generators::Int = 1                                Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
     -generator_size_kw::Real = 0.0                          Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
-    -num_battery_bins::Int = depends on battery sizing      Number of discrete bins battery state of charge modeled as
+    -num_battery_bins::Int = depends on battery sizing      Number of bins for discretely modeling battery state of charge
     -battery_operational_availability::Real = 0.97          Likelihood battery will be available at start of outage       
     -pv_operational_availability::Real = 0.98               Likelihood PV will be available at start of outage
     -max_outage_duration::Int = 96                          Maximum outage duration modeled
@@ -1476,7 +1476,7 @@ Possible keys in r:
 -generator_mean_time_to_failure::Real = 1100            Average number of time steps between a generator's failures. 1/(failure to run probability). 
 -num_generators::Int = 1                                Number of generators. Will be determined by code if set to 0 and gen capacity > 0.1
 -generator_size_kw::Real = 0.0                          Backup generator capacity. Will be determined by REopt optimization if set less than 0.1
--num_battery_bins::Int = num_battery_bins_default(r[:battery_size_kw],r[:battery_size_kwh])     Number of discrete bins battery state of charge modeled as
+-num_battery_bins::Int = num_battery_bins_default(r[:battery_size_kw],r[:battery_size_kwh])     Number of bins for discretely modeling battery state of charge
 -max_outage_duration::Int = 96                          Maximum outage duration modeled
 
 """
