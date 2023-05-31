@@ -16,14 +16,17 @@ n_techs = 2
 # Max models is 2 for optimal+BAU and then however many scenarios are possible
 max_models = 2 + length(size_scale) * n_techs
 # Hard to duplicate JuMP models dynamically, so conservatively instantiate max possible models
+# Solver options for Cbc.jl: https://github.com/jump-dev/Cbc.jl
+# Solver options for HiGHS.jl:  https://ergo-code.github.io/HiGHS/dev/options/definitions/
+# Increasing optimality gap (allowableGap for Cbc and mip_rel_gap for HiGHS) to 0.01 (1%) is particularly useful if REopt is taking a long time to solver
 ms = [Model(optimizer_with_attributes(HiGHS.Optimizer, 
     "output_flag" => false, "mip_rel_gap" => 0.001, "log_to_console" => true)) for _ in 1:max_models]
 
 # In-series/sequential run_reopt:
-results_all, results_summary = REopt.run_reopt_multi_solutions(fp, size_scale, ms)
+results_all, results_summary = REopt.run_reopt_multi_solutions(fp, size_scale, ms; parallel=false)
 
 # Parallel run_reopt:
-results_all, results_summary = REopt.run_reopt_multi_solutions_parallel(fp, size_scale, ms)
+results_all, results_summary = REopt.run_reopt_multi_solutions(fp, size_scale, ms; parallel=true)
 
 # Print some interesting data from all the solutions
 for s in keys(results_summary)
