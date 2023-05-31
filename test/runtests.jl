@@ -258,7 +258,6 @@ else  # run HiGHS tests
             "generator_failure_to_start" => 0.0, 
             "generator_mean_time_to_failure" => 10000000000,
             "fuel_limit" => 1000000000,
-            "num_battery_bins" => 100,
             "battery_operational_availability" => 1.0,
             "battery_minimum_soc_fraction" => 0.0,
             "pv_operational_availability" => 1.0,
