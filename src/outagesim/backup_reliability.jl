@@ -1442,14 +1442,9 @@ Possible keys in r:
 
 """
 function backup_reliability(d::Dict, p::REoptInputs, r::Dict)
-    try
-        reliability_inputs = backup_reliability_reopt_inputs(d=d, p=p, r=r)    
-        cumulative_results, fuel_survival, fuel_used = return_backup_reliability(; reliability_inputs... )
-        process_reliability_results(cumulative_results, fuel_survival, fuel_used)
-    catch e
-        @info e
-        return Dict()
-    end
+    reliability_inputs = backup_reliability_reopt_inputs(d=d, p=p, r=r)    
+    cumulative_results, fuel_survival, fuel_used = return_backup_reliability(; reliability_inputs... )
+    process_reliability_results(cumulative_results, fuel_survival, fuel_used)
 end
 
 
