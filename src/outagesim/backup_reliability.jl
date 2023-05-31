@@ -1487,12 +1487,12 @@ function backup_reliability(r::Dict)
 end
 
 
-function num_battery_bins_default(size_kw::Float64, size_kwh::Float64)
+function num_battery_bins_default(size_kw::Float64, size_kwh::Float64)::Int
     if size_kw == 0
         return 1
     else
         duration = size_kwh / size_kw
-        return duration * 20
+        return Int(duration * 20)
     end
 end
      
