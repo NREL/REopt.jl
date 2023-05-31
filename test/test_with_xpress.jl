@@ -566,6 +566,8 @@ end
         m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         results = run_reopt(m, "./scenarios/tiered_rate.json")
         @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ 2342.88
+        @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ 24000.0 atol=0.1
+        @test results["ElectricLoad"]["annual_calculated_kwh"] ≈ 24000.0 atol=0.1
     end
 
     @testset "Lookback Demand Charges" begin
