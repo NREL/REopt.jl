@@ -23,6 +23,12 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.32.2
+### Fixed
+- Fixed bug in multiple PVs pv_to_location dictionary creation. 
+- Fixed bug in reporting of grid purchase results when multiple energy tiers are present.
+- Fixed bug in TOU demand charge calculation when multiple demand tiers are present.
+
 ## v0.32.1
 ### Fixed
 - In `backup_reliability.jl`:
