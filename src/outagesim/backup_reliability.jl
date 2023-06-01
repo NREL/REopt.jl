@@ -701,8 +701,6 @@ function survival_with_battery(;
     marginal_survival::Bool = false,
     time_steps_per_hour::Real = 1)::Matrix{Float64} 
 
-    @info battery_size_kwh
-
     t_max = length(net_critical_loads_kw)
     
     #bin size is battery storage divided by num bins-1 because zero is also a bin
@@ -710,7 +708,6 @@ function survival_with_battery(;
      
     #bin initial battery 
     starting_battery_bins = bin_battery_charge(battery_starting_soc_kwh, num_battery_bins, battery_size_kwh)
-    writedlm("debug_erp_battery_starting_soc.csv", hcat(battery_starting_soc_kwh, starting_battery_bins), ",")
     #For easier indice reading
     M = num_battery_bins
     if length(num_generators) == 1
@@ -722,12 +719,9 @@ function survival_with_battery(;
     survival_probability_matrix = zeros(t_max, max_outage_duration) 
     #initialize vectors and matrices
     generator_markov_matrix = markov_matrix(num_generators, 1 ./ generator_mean_time_to_failure) 
-    writedlm("debug_erp_markov_matrix.csv", generator_markov_matrix, ",")
     generator_production = generator_output(num_generators, generator_size_kw)
     maximum_generation = get_maximum_generation(battery_size_kw, generator_size_kw, bin_size, num_battery_bins, num_generators, battery_discharge_efficiency)
-    writedlm("debug_erp_maximum_generation.csv", maximum_generation, ",")
     starting_gens = starting_probabilities(num_generators, generator_operational_availability, generator_failure_to_start) 
-    writedlm("debug_erp_starting_probabilities.csv", starting_gens, ",")
 
     Threads.@threads for t = 1:t_max
         survival_probability_matrix[t, :] = survival_with_battery_single_start_time(t, 
@@ -767,10 +761,6 @@ function survival_with_battery_single_start_time(
     bin_size::Real,
     marginal_survival::Bool, 
     time_steps_per_hour::Real)::Vector{Float64}
-
-    if t==1
-        @info bin_size * (M-1)
-    end
 
     gen_battery_prob_matrix_array = [zeros(M, N), zeros(M, N)]
     gen_battery_prob_matrix_array[1][starting_battery_bins[t], :] = starting_gens
@@ -1087,9 +1077,7 @@ function backup_reliability_single_run(;
     battery_discharge_efficiency::Real = 0.948,
     time_steps_per_hour::Real = 1,
     kwargs...)::Matrix
- 
-    @info num_battery_bins
-    
+     
     #No reliability calculations if no outage duration
     if max_outage_duration == 0
         return []
@@ -1456,12 +1444,7 @@ Possible keys in r:
 """
 function backup_reliability(d::Dict, p::REoptInputs, r::Dict)
     reliability_inputs = backup_reliability_reopt_inputs(d=d, p=p, r=r)
-    open("debug_erp_processed_inputs.json","w") do f
-        JSON.print(f, reliability_inputs)
-    end
     cumulative_results, fuel_survival, fuel_used = return_backup_reliability(; reliability_inputs... )
-    writedlm("debug_erp_results_matrix_no_fuel.csv",  cumulative_results, ',')
-    writedlm("debug_erp_results_matrix_fuel.csv",  fuel_survival, ',')
     process_reliability_results(cumulative_results, fuel_survival, fuel_used)
 end
 
@@ -1495,12 +1478,7 @@ Possible keys in r:
 """
 function backup_reliability(r::Dict)
     reliability_inputs = backup_reliability_inputs(r=r)
-    open("debug_erp_processed_inputs.json","w") do f
-        JSON.print(f, reliability_inputs)
-    end
 	cumulative_results, fuel_survival, fuel_used = return_backup_reliability(; reliability_inputs... )
-    writedlm("debug_erp_results_matrix_no_fuel.csv",  cumulative_results, ',')
-    writedlm("debug_erp_results_matrix_fuel.csv",  fuel_survival, ',')
 	process_reliability_results(cumulative_results, fuel_survival, fuel_used)
 end
 
