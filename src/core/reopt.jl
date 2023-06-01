@@ -401,17 +401,28 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 		add_cannot_have_MG_with_only_PVwind_constraints(m,p)
 		add_MG_size_constraints(m,p)
-		
-		if !isempty(p.techs.gen)
-			add_MG_fuel_burn_constraints(m,p)
+		0
+		m[:ExpectedMGFuelCost] = 0
+        if !isempty(p.techs.gen)
+			add_MG_Gen_fuel_burn_constraints(m,p)
 			add_binMGGenIsOnInTS_constraints(m,p)
 		else
-			m[:ExpectedMGFuelUsed] = 0
-			m[:ExpectedMGFuelCost] = 0
 			@constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
 				m[:binMGGenIsOnInTS][s, tz, ts] == 0
 			)
 		end
+
+		if !isempty(p.techs.chp)
+			add_MG_CHP_fuel_burn_constraints(m,p)
+			add_binMGCHPIsOnInTS_constraints(m,p)
+		else
+			@constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+				m[:binMGCHPIsOnInTS][s, tz, ts] == 0
+			)
+			@constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+				m[:dvMGCHPFuelBurnYIntercept][s, tz] == 0
+			)            
+		end        
 		
 		if p.s.site.min_resil_time_steps > 0
 			add_min_hours_crit_ld_met_constraint(m,p)
@@ -645,7 +656,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		tZeros = p.s.electric_utility.outage_start_time_steps
 		S = p.s.electric_utility.scenarios
 		# TODO: currently defining more decision variables than necessary b/c using rectangular arrays, could use dicts of decision variables instead
-		@variables m begin # if there is more than one specified outage, there can be more othan one outage start time
+        @variables m begin # if there is more than one specified outage, there can be more othan one outage start time
 			dvUnservedLoad[S, tZeros, outage_time_steps] >= 0 # unserved load not met by system
 			dvMGProductionToStorage[p.techs.elec, S, tZeros, outage_time_steps] >= 0 # Electricity going to the storage system during each time_step
 			dvMGDischargeFromStorage[S, tZeros, outage_time_steps] >= 0 # Electricity coming from the storage system during each time_step
@@ -657,13 +668,17 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 			dvMGsize[p.techs.elec] >= 0
 			
 			dvMGFuelUsed[p.techs.elec, S, tZeros] >= 0
-			dvMGMaxFuelUsage[S] >= 0
-			dvMGMaxFuelCost[S] >= 0
+            dvMGGenMaxFuelUsage[S] >= 0
+            dvMGCHPMaxFuelUsage[S] >= 0
+			dvMGGenMaxFuelCost[S] >= 0
+            dvMGCHPMaxFuelCost[S] >= 0
 			dvMGCurtail[p.techs.elec, S, tZeros, outage_time_steps] >= 0
 
 			binMGStorageUsed, Bin # 1 if MG storage battery used, 0 otherwise
 			binMGTechUsed[p.techs.elec], Bin # 1 if MG tech used, 0 otherwise
 			binMGGenIsOnInTS[S, tZeros, outage_time_steps], Bin
+            binMGCHPIsOnInTS[S, tZeros, outage_time_steps], Bin
+            dvMGCHPFuelBurnYIntercept[S, tZeros] >= 0
 		end
 	end
 

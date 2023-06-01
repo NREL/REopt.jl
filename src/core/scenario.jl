@@ -320,6 +320,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         boiler_inputs[:time_steps_per_hour] = settings.time_steps_per_hour
         if haskey(d, "ExistingBoiler")
             boiler_inputs = merge(boiler_inputs, dictkeys_tosymbols(d["ExistingBoiler"]))
+        else
+            throw(@error("Must include ExistingBoiler input with at least fuel_cost_per_mmbtu if modeling heating load"))
         end
         existing_boiler = ExistingBoiler(; boiler_inputs...)
     end
@@ -342,9 +344,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             avg_boiler_fuel_load_mmbtu_per_hour = sum(total_fuel_heating_load_mmbtu_per_hour) / length(total_fuel_heating_load_mmbtu_per_hour)
             chp = CHP(d["CHP"]; 
                     avg_boiler_fuel_load_mmbtu_per_hour = avg_boiler_fuel_load_mmbtu_per_hour,
-                    existing_boiler = existing_boiler)
+                    existing_boiler = existing_boiler,
+                    electric_load_series_kw = electric_load.loads_kw)
         else # Only if modeling CHP without heating_load and existing_boiler (for electric-only CHP)
-            chp = CHP(d["CHP"])
+            chp = CHP(d["CHP"],
+                    electric_load_series_kw = electric_load.loads_kw)
         end
         chp_prime_mover = chp.prime_mover
     end
