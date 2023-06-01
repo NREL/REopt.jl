@@ -310,10 +310,10 @@ function setup_tech_inputs(s::AbstractScenario)
     seg_max_size = Dict{String, Dict{Int, Real}}()
     seg_yint = Dict{String, Dict{Int, Real}}()
 
-    # PV specific arrays
     pvlocations = [:roof, :ground, :both]
-    pv_to_location = Dict(t => Dict(loc => 0) for (t, loc) in zip(techs.pv, pvlocations))
-    maxsize_pv_locations = DenseAxisArray([1.0e5, 1.0e5, 1.0e5], pvlocations)
+    d = Dict(loc => 0 for loc in pvlocations)
+    pv_to_location = Dict(t => copy(d) for t in techs.pv)
+    maxsize_pv_locations = DenseAxisArray([1.0e9, 1.0e9, 1.0e9], pvlocations)
     # default to large max size per location. Max size by roof, ground, both
 
     if !isempty(techs.pv)
@@ -471,11 +471,11 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
     roof_existing_pv_kw, ground_existing_pv_kw, both_existing_pv_kw = 0.0, 0.0, 0.0
     roof_max_kw, land_max_kw = 1.0e5, 1.0e5
 
-    for pv in s.pvs
+    for pv in s.pvs        
         production_factor[pv.name, :] = get_production_factor(pv, s.site.latitude, s.site.longitude; 
             time_steps_per_hour=s.settings.time_steps_per_hour)
         for location in pvlocations
-            if pv.location == location
+            if pv.location == String(location) # Must convert symbol to string
                 pv_to_location[pv.name][location] = 1
             else
                 pv_to_location[pv.name][location] = 0
@@ -593,11 +593,12 @@ function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_si
         push!(techs.no_curtail, "Generator")
     end
     tech_renewable_energy_fraction["Generator"] = s.generator.fuel_renewable_energy_fraction
-    tech_emissions_factors_CO2["Generator"] = s.generator.emissions_factor_lb_CO2_per_gal / KWH_PER_GAL_DIESEL  # lb/gal * gal/kWh
-    tech_emissions_factors_NOx["Generator"] = s.generator.emissions_factor_lb_NOx_per_gal / KWH_PER_GAL_DIESEL
-    tech_emissions_factors_SO2["Generator"] = s.generator.emissions_factor_lb_SO2_per_gal / KWH_PER_GAL_DIESEL
-    tech_emissions_factors_PM25["Generator"] = s.generator.emissions_factor_lb_PM25_per_gal / KWH_PER_GAL_DIESEL
-    generator_fuel_cost_per_kwh = s.generator.fuel_cost_per_gallon / KWH_PER_GAL_DIESEL
+    hhv_kwh_per_gal = s.generator.fuel_higher_heating_value_kwh_per_gal
+    tech_emissions_factors_CO2["Generator"] = s.generator.emissions_factor_lb_CO2_per_gal / hhv_kwh_per_gal  # lb/gal * gal/kWh
+    tech_emissions_factors_NOx["Generator"] = s.generator.emissions_factor_lb_NOx_per_gal / hhv_kwh_per_gal
+    tech_emissions_factors_SO2["Generator"] = s.generator.emissions_factor_lb_SO2_per_gal / hhv_kwh_per_gal
+    tech_emissions_factors_PM25["Generator"] = s.generator.emissions_factor_lb_PM25_per_gal / hhv_kwh_per_gal
+    generator_fuel_cost_per_kwh = s.generator.fuel_cost_per_gallon / hhv_kwh_per_gal
     fuel_cost_per_kwh["Generator"] = per_hour_value_to_time_series(generator_fuel_cost_per_kwh, s.settings.time_steps_per_hour, "Generator")
     return nothing
 end

@@ -373,3 +373,35 @@ function region_name_to_abbr(region_name)
     )
     return get(lookup, region_name, "")
 end
+
+"""
+    emissions_profiles(; latitude::Real, longitude::Real, time_steps_per_hour::Int=1)
+
+This function gets CO2, NOx, SO2, and PM2.5 grid emission rate profiles (1-year time series) from the AVERT dataset.
+    
+This function is used for the /emissions_profile endpoint in the REopt API, in particular 
+    for the webtool to display grid emissions defaults before running REopt, 
+    but is also generally an external way to access AVERT data without running REopt.
+"""
+function emissions_profiles(; latitude::Real, longitude::Real, time_steps_per_hour::Int=1)
+    region_abbr, meters_to_region = region_abbreviation(latitude, longitude)
+    emissions_region = region_abbr_to_name(region_abbr)
+    if isnothing(region_abbr)
+        return Dict{String, Any}(
+                "error"=>
+                "Could not look up AVERT emissions region within 5 miles from point ($(latitude), $(longitude)).
+                Location is likely invalid or well outside continental US, AK and HI."
+            )
+    end
+    response_dict = Dict{String, Any}(
+        "region_abbr" => region_abbr,
+        "region" => emissions_region,
+        "units" => "Pounds emissions per kWh",
+        "description" => "Regional hourly grid emissions factors for applicable EPA AVERT region.",
+        "meters_to_region" => meters_to_region
+    )
+    for ekey in ["CO2", "NOx", "SO2", "PM25"]
+        response_dict["emissions_factor_series_lb_"*ekey*"_per_kwh"] = emissions_series(ekey, region_abbr, time_steps_per_hour=time_steps_per_hour)
+    end
+    return response_dict
+end

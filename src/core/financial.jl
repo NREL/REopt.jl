@@ -43,7 +43,7 @@
     owner_discount_rate_fraction::Real = 0.0564,
     analysis_years::Int = 25,
     value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00, #only applies to multiple outage modeling
-    microgrid_upgrade_cost_fraction::Real = off_grid_flag ? 0.0 : 0.3, # not applicable when `off_grid_flag` is true
+    microgrid_upgrade_cost_fraction::Real = 0.0
     macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
     macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
     offgrid_other_capital_costs::Real = 0.0, # only applicable when `off_grid_flag` is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
@@ -117,7 +117,7 @@ struct Financial
         owner_discount_rate_fraction::Real = 0.0564,
         analysis_years::Int = 25,
         value_of_lost_load_per_kwh::Union{Array{<:Real,1}, Real} = 1.00, #only applies to multiple outage modeling
-        microgrid_upgrade_cost_fraction::Real = off_grid_flag ? 0.0 : 0.3, # not applicable when `off_grid_flag` is true
+        microgrid_upgrade_cost_fraction::Real = 0.0,
         macrs_five_year::Array{<:Real,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
         macrs_seven_year::Array{<:Real,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
         offgrid_other_capital_costs::Real = 0.0, # only applicable when `off_grid_flag` is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
@@ -470,4 +470,38 @@ Convert Geodetic (lon, lat) to LCP (x, y) in CAMx 148x112 grid
 """
 function g2l(lon::Real, lat::Real; datum::String="NAD83")
     return l2g(lon, lat, inverse=true, datum=datum)
+end
+
+"""
+    easiur_data(; latitude::Real, longitude::Real, inflation::Real)
+
+This function gets NOx, SO2, and PM2.5 costs (for grid and on-site emissions) and cost escalation rates from the EASIUR dataset.
+    
+This function is used for the /easiur_costs endpoint in the REopt API, in particular 
+    for the webtool to display health emissions cost/escalation defaults before running REopt, 
+    but is also generally an external way to access EASIUR data without running REopt.
+"""
+function easiur_data(; latitude::Real, longitude::Real, inflation::Real)
+        grid_costs = easiur_costs(latitude, longitude, "grid")
+        if isnothing(grid_costs)
+            return Dict{String, Any}(
+                    "error"=>
+                    "Could not look up EASIUR health cost data from point ($latitude,$longitude). 
+                    Location is likely invalid or outside the CAMx grid."
+                )
+        end
+        onsite_costs = easiur_costs(latitude, longitude, "onsite")
+        escalation = easiur_escalation_rates(latitude, longitude, inflation)
+        response_dict = Dict{String, Any}(
+            "units_costs" => "US dollars per metric ton",
+            "description_costs" => "Health costs of emissions from the grid and on-site fuel burn, as reported by the EASIUR model.",
+            "units_escalation" => "nominal annual fraction",
+            "description_escalation" => "Annual nominal escalation rate of public health costs of emissions.",
+        )
+        for ekey in ["NOx", "SO2", "PM25"]
+            response_dict[ekey*"_grid_cost_per_tonne"] = grid_costs[ekey]
+            response_dict[ekey*"_onsite_fuelburn_cost_per_tonne"] = onsite_costs[ekey]
+            response_dict[ekey*"_cost_escalation_rate_fraction"] = escalation[ekey]
+        end
+        return response_dict
 end
