@@ -766,7 +766,6 @@ function survival_with_battery_single_start_time(
     gen_battery_prob_matrix_array[2][starting_battery_bins[t], :] = starting_gens
     return_survival_chance_vector = zeros(max_outage_duration)
     survival = ones(M, N)
-    
 
     for d in 1:max_outage_duration 
         h = mod(t + d - 2, t_max) + 1 #determines index accounting for looping around year
@@ -786,7 +785,6 @@ function survival_with_battery_single_start_time(
         else
             return_survival_chance_vector[d] = survival_chance_mult(gen_battery_prob_matrix_array[gen_matrix_counter_end], survival)
         end
-        
 
         #Update generation battery probability matrix to account for battery shifting
         shift_gen_battery_prob_matrix!(
@@ -883,7 +881,7 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
     #If num_generators is zero then either set to 1 or base on ceiling(diesel_kw / generator_size_kw)
     generator_size_kw = get(r, "generator_size_kw", 0)
     num_generators = get(r, "num_generators", 1)
-    if length(num_generators) == 1
+    if !(typeof(generator_size_kw) <: Vector)
         if generator_size_kw < 0.1
             if num_generators == 0
                 generator_size_kw = diesel_kw
@@ -1163,7 +1161,6 @@ function fuel_use(;
     kwargs...
     )::Tuple{Matrix{Int}, Matrix{Float64}}
 
-    t_max = length(net_critical_loads_kw)
     fuel_limit = convert.(Float64, fuel_limit)
     if isa(fuel_limit_is_per_generator, Bool)
         if fuel_limit_is_per_generator
@@ -1237,12 +1234,16 @@ function fuel_use(;
                 end
 
                 if battery_included
-                    battery_dispatch = minimum([load_kw, battery_soc_kwh * time_steps_per_hour * battery_discharge_efficiency, battery_size_kw])
+                    battery_dispatch = minimum([
+                            load_kw, 
+                            battery_soc_kwh * time_steps_per_hour * battery_discharge_efficiency, 
+                            battery_size_kw
+                        ])
                     load_kw -= battery_dispatch
-                    battery_soc_kwh -= battery_dispatch 
+                    battery_soc_kwh -= battery_dispatch  / (time_steps_per_hour * battery_discharge_efficiency)
                 end
             end
-            if survival_matrix[t, max(1,d-1)] == 0 && round(load_kw, digits=5) > 0  # failed to meet load in this time step or any previous
+            if (d > 1 && survival_matrix[t, d-1] == 0) || round(load_kw, digits=5) > 0  # failed to meet load in this time step or any previous
                 survival_matrix[t, d] = 0
             else
                 survival_matrix[t, d] = 1
@@ -1340,7 +1341,6 @@ function return_backup_reliability(;
 
     results_no_fuel_limit = []
     for (description, system) in system_characteristics
-
         if system["probability"] != 0
             run_survival_probs = backup_reliability_single_run(;
                 net_critical_loads_kw = system["net_critical_loads_kw"],
