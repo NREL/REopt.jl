@@ -418,12 +418,12 @@ function battery_bin_shift(excess_generation_kw::Vector{<:Real}, bin_size::Real,
     #Lose energy charging battery and use more energy discharging battery
     #Need to shift battery up by less and down by more.
     
-    #positive excess generation 
-    excess_generation_kw[excess_generation_kw .> 0] = excess_generation_kw[excess_generation_kw .> 0] .* battery_charge_efficiency
-    excess_generation_kw[excess_generation_kw .< 0] = excess_generation_kw[excess_generation_kw .< 0] ./ battery_discharge_efficiency    
     #Battery cannot charge or discharge more than its capacity
     excess_generation_kw[excess_generation_kw .> battery_size_kw] .= battery_size_kw
     excess_generation_kw[excess_generation_kw .< -battery_size_kw] .= -battery_size_kw
+    #Account for (dis)charge efficiency
+    excess_generation_kw[excess_generation_kw .> 0] = excess_generation_kw[excess_generation_kw .> 0] .* battery_charge_efficiency
+    excess_generation_kw[excess_generation_kw .< 0] = excess_generation_kw[excess_generation_kw .< 0] ./ battery_discharge_efficiency
 
     shift = round.(excess_generation_kw ./ bin_size)
     return shift
