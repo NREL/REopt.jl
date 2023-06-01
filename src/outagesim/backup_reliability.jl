@@ -1505,7 +1505,7 @@ function backup_reliability(r::Dict)
 end
 
 
-function num_battery_bins_default(size_kw::Float64, size_kwh::Float64)::Int
+function num_battery_bins_default(size_kw::Real, size_kwh::Real)::Int
     if size_kw == 0
         return 1
     else
