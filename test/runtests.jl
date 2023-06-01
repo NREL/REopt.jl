@@ -243,86 +243,90 @@ else  # run HiGHS tests
 
     @testset "Backup Generator Reliability" begin
 
-        reopt_inputs = Dict(
-            "Site" => Dict(
-                "longitude" => -106.42077256104001,
-                "latitude" => 31.810468380036337
-            ),
-            "ElectricStorage" => Dict(
-                "min_kw" => 4000,
-                "max_kw" => 4000,
-                "min_kwh" => 400000,
-                "max_kwh" => 400000,
-                "soc_min_fraction" => 0.8,
-                "soc_init_fraction" => 0.9
-            ),
-            "ElectricLoad" => Dict(
-                "doe_reference_name" => "FlatLoad",
-                "annual_kwh" => 175200000.0,
-                "critical_load_fraction" => 0.2
-            ),
-            "ElectricTariff" => Dict(
-                "urdb_label" => "5ed6c1a15457a3367add15ae"
-            ),
-        )
-        p = REoptInputs(reopt_inputs)
-        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-            "output_flag" => false, "log_to_console" => false)
-        )
-        results = run_reopt(model, p)
-        simresults = simulate_outages(results, p)
+        @testset "Compare backup_reliability and simulate_outages" begin
+            # Tests ensure `backup_reliability()` consistent with `simulate_outages()`
+            # First, just battery
+            reopt_inputs = Dict(
+                "Site" => Dict(
+                    "longitude" => -106.42077256104001,
+                    "latitude" => 31.810468380036337
+                ),
+                "ElectricStorage" => Dict(
+                    "min_kw" => 4000,
+                    "max_kw" => 4000,
+                    "min_kwh" => 400000,
+                    "max_kwh" => 400000,
+                    "soc_min_fraction" => 0.8,
+                    "soc_init_fraction" => 0.9
+                ),
+                "ElectricLoad" => Dict(
+                    "doe_reference_name" => "FlatLoad",
+                    "annual_kwh" => 175200000.0,
+                    "critical_load_fraction" => 0.2
+                ),
+                "ElectricTariff" => Dict(
+                    "urdb_label" => "5ed6c1a15457a3367add15ae"
+                ),
+            )
+            p = REoptInputs(reopt_inputs)
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+                "output_flag" => false, "log_to_console" => false)
+            )
+            results = run_reopt(model, p)
+            simresults = simulate_outages(results, p)
 
-        reliability_inputs = Dict(
-            "generator_size_kw" => 0,
-            "max_outage_duration" => 100,
-            "generator_operational_availability" => 1.0, 
-            "generator_failure_to_start" => 0.0, 
-            "generator_mean_time_to_failure" => 10000000000,
-            "fuel_limit" => 0,
-            "battery_size_kw" => 4000,
-            "battery_size_kwh" => 400000,
-            "battery_charge_efficiency" => 1,
-            "battery_discharge_efficiency" => 1,
-            "battery_operational_availability" => 1.0,
-            "battery_minimum_soc_fraction" => 0.0,
-            "battery_starting_soc_series_fraction" => results["ElectricStorage"]["soc_series_fraction"],
-            "pv_operational_availability" => 1.0,
-            "critical_loads_kw" => results["ElectricLoad"]["critical_load_series_kw"]#4000*ones(8760)#p.s.electric_load.critical_loads_kw
-        )
-        reliability_results = backup_reliability(reliability_inputs)
+            reliability_inputs = Dict(
+                "generator_size_kw" => 0,
+                "max_outage_duration" => 100,
+                "generator_operational_availability" => 1.0, 
+                "generator_failure_to_start" => 0.0, 
+                "generator_mean_time_to_failure" => 10000000000,
+                "fuel_limit" => 0,
+                "battery_size_kw" => 4000,
+                "battery_size_kwh" => 400000,
+                "battery_charge_efficiency" => 1,
+                "battery_discharge_efficiency" => 1,
+                "battery_operational_availability" => 1.0,
+                "battery_minimum_soc_fraction" => 0.0,
+                "battery_starting_soc_series_fraction" => results["ElectricStorage"]["soc_series_fraction"],
+                "pv_operational_availability" => 1.0,
+                "critical_loads_kw" => results["ElectricLoad"]["critical_load_series_kw"]#4000*ones(8760)#p.s.electric_load.critical_loads_kw
+            )
+            reliability_results = backup_reliability(reliability_inputs)
 
-        #TODO: resolve bug where unlimted fuel markov portion of results goes to zero 1 timestep early
-        for i = 1:99#min(length(simresults["probs_of_surviving"]), reliability_inputs["max_outage_duration"])
-            @test simresults["probs_of_surviving"][i] ≈ reliability_results["mean_cumulative_survival_by_duration"][i] atol=0.01
-            @test simresults["probs_of_surviving"][i] ≈ reliability_results["unlimited_fuel_mean_cumulative_survival_by_duration"][i] atol=0.01
-            @test simresults["probs_of_surviving"][i] ≈ reliability_results["mean_fuel_survival_by_duration"][i] atol=0.01
+            #TODO: resolve bug where unlimted fuel markov portion of results goes to zero 1 timestep early
+            for i = 1:99#min(length(simresults["probs_of_surviving"]), reliability_inputs["max_outage_duration"])
+                @test simresults["probs_of_surviving"][i] ≈ reliability_results["mean_cumulative_survival_by_duration"][i] atol=0.01
+                @test simresults["probs_of_surviving"][i] ≈ reliability_results["unlimited_fuel_mean_cumulative_survival_by_duration"][i] atol=0.01
+                @test simresults["probs_of_surviving"][i] ≈ reliability_results["mean_fuel_survival_by_duration"][i] atol=0.01
+            end
+
+            # Second, gen, PV, battery
+            reopt_inputs = JSON.parsefile("./scenarios/backup_reliability_reopt_inputs.json")
+            reopt_inputs["ElectricLoad"]["annual_kwh"] = 4*reopt_inputs["ElectricLoad"]["annual_kwh"]
+            p = REoptInputs(reopt_inputs)
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+                "output_flag" => false, "log_to_console" => false)
+            )
+            results = run_reopt(model, p)
+            simresults = simulate_outages(results, p)
+            reliability_inputs = Dict(
+                "max_outage_duration" => 48,
+                "generator_operational_availability" => 1.0, 
+                "generator_failure_to_start" => 0.0, 
+                "generator_mean_time_to_failure" => 10000000000,
+                "fuel_limit" => 1000000000,
+                "battery_operational_availability" => 1.0,
+                "battery_minimum_soc_fraction" => 0.0,
+                "pv_operational_availability" => 1.0,
+            )
+            reliability_results = backup_reliability(results, p, reliability_inputs)
+            for i = 1:min(length(simresults["probs_of_surviving"]), reliability_inputs["max_outage_duration"])
+                @test simresults["probs_of_surviving"][i] ≈ reliability_results["mean_cumulative_survival_by_duration"][i] atol=0.001
+            end
         end
 
-        #test ensure `backup_reliability()` consistent with `simulate_outages()`
-        reopt_inputs = JSON.parsefile("./scenarios/backup_reliability_reopt_inputs.json")
-        reopt_inputs["ElectricLoad"]["annual_kwh"] = 4*reopt_inputs["ElectricLoad"]["annual_kwh"]
-        p = REoptInputs(reopt_inputs)
-        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-            "output_flag" => false, "log_to_console" => false)
-        )
-        results = run_reopt(model, p)
-        simresults = simulate_outages(results, p)
-        reliability_inputs = Dict(
-            "max_outage_duration" => 48,
-            "generator_operational_availability" => 1.0, 
-            "generator_failure_to_start" => 0.0, 
-            "generator_mean_time_to_failure" => 10000000000,
-            "fuel_limit" => 1000000000,
-            "battery_operational_availability" => 1.0,
-            "battery_minimum_soc_fraction" => 0.0,
-            "pv_operational_availability" => 1.0,
-        )
-        reliability_results = backup_reliability(results, p, reliability_inputs)
-        for i = 1:min(length(simresults["probs_of_surviving"]), reliability_inputs["max_outage_duration"])
-            @test simresults["probs_of_surviving"][i] ≈ reliability_results["mean_cumulative_survival_by_duration"][i] atol=0.001
-        end
-
-        #test survival with no generator decreasing and same as with generator but no fuel
+        # Test survival with no generator decreasing and same as with generator but no fuel
         reliability_inputs = Dict(
             "critical_loads_kw" => 200 .* (2 .+ sin.(collect(1:8760)*2*pi/24)),
             "num_generators" => 0,
@@ -367,8 +371,7 @@ else  # run HiGHS tests
             "battery_discharge_efficiency" => 1,
             "battery_minimum_soc_fraction" => 0.5)
         
-
-
+            
         #Given outage starts in time period 1
         #____________________________________
         #Outage hour 1:
