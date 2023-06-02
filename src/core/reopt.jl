@@ -530,15 +530,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
 	@objective(m, Min, m[:Objective])
-
-	for b in p.s.storage.types.elec
-		if p.s.storage.attr[b].model_degradation
-			add_degradation(m, p; b=b)
-			if p.s.settings.add_soc_incentive # this warning should be tied to IF condition where SOC incentive is added
-				@warn "Settings.add_soc_incentive is set to true and it will incentivize BESS energy levels to be kept high. It could conflict with the battery degradation model and should be disabled."
-			end
-		end
-	end
     
 	nothing
 end
