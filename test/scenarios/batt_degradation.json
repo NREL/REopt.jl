@@ -1,1 +1,16 @@
-{"ElectricStorage":{"model_degradation":true,"degradation":{"maintenance_strategy":"replacement"}},"ElectricTariff":{"urdb_label":"5ed6c1a15457a3367add15ae"},"Site":{"latitude":34.5794343,"longitude":-118.1164613},"ElectricLoad":{"doe_reference_name":"LargeOffice"}}
+{
+    "ElectricStorage":{
+        "model_degradation":true,
+        "degradation":{"maintenance_strategy":"replacement"}
+    },
+    "ElectricTariff":{
+        "urdb_label":"5ed6c1a15457a3367add15ae"
+    },
+    "Site":{
+        "latitude":34.5794343,
+        "longitude":-118.1164613
+    },
+    "ElectricLoad":{
+        "doe_reference_name":"LargeOffice"
+    }
+}
