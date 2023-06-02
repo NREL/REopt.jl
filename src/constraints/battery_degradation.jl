@@ -35,6 +35,7 @@ function add_degradation_variables(m, p)
     @variable(m, Eplus_sum[days] >= 0)
     @variable(m, Eminus_sum[days] >= 0)
     @variable(m, EFC[days] >= 0)
+    @variable(m, SOH[days])
 end
 
 
@@ -98,8 +99,6 @@ function add_degradation(m, p; b="ElectricStorage")
     if length(p.s.storage.attr[b].degradation.maintenance_cost_per_kwh) != length(days) - 1
         throw(@error("The degradation maintenance_cost_per_kwh must have a length of $(length(days)-1)."))
     end
-
-    @variable(m, SOH[days])
 
     add_degradation_variables(m, p)
     constrain_degradation_variables(m, p, b=b)
