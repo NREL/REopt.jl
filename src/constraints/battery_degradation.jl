@@ -105,7 +105,7 @@ function add_degradation(m, p; b="ElectricStorage")
     constrain_degradation_variables(m, p, b=b)
 
     @constraint(m, [d in 2:days[end]],
-        SOH[d] == SOH[d-1] - p.hours_per_time_step * (
+        m[:SOH][d] == m[:SOH][d-1] - p.hours_per_time_step * (
             p.s.storage.attr[b].degradation.calendar_fade_coefficient * 
             p.s.storage.attr[b].degradation.time_exponent * 
             m[:Eavg][d-1] * d^(p.s.storage.attr[b].degradation.time_exponent-1) + 
@@ -114,7 +114,7 @@ function add_degradation(m, p; b="ElectricStorage")
     )
     # NOTE SOH can be negative
 
-    @constraint(m, SOH[1] == m[:dvStorageEnergy][b])
+    @constraint(m, m[:SOH][1] == m[:dvStorageEnergy][b])
     # NOTE SOH is _not_ normalized, and has units of kWh
 
     if strategy == "replacement"
@@ -137,10 +137,10 @@ function add_degradation(m, p; b="ElectricStorage")
         end
 
         # HEALTHY: if soh_indicator is 1, then SOH >= 80%. If soh_indicator is 0 and SOH >= very negative number
-        @constraint(m, [mth in months], SOH[Int(round(30.4167*mth))] >= 0.8*m[:dvStorageEnergy][b] - M * (1-soh_indicator[mth]))
+        @constraint(m, [mth in months], m[:SOH][Int(round(30.4167*mth))] >= 0.8*m[:dvStorageEnergy][b] - M * (1-soh_indicator[mth]))
         
         # UNHEALTHY: if soh_indicator is 1, then SOH <= large number. If soh_indicator is 0 and SOH <= 80%
-        @constraint(m, [mth in months], SOH[Int(round(30.4167*mth))] <= 0.8*m[:dvStorageEnergy][b] + M * (soh_indicator[mth]))
+        @constraint(m, [mth in months], m[:SOH][Int(round(30.4167*mth))] <= 0.8*m[:dvStorageEnergy][b] + M * (soh_indicator[mth]))
 
         # bmth[mth] = soh_indicator[mth-1] - soh_indicator[mth].
         # If replacement month is x, then bmth[x] = 1. All other bmth values will be 0s (either 1-1 or 0-0)
@@ -179,7 +179,7 @@ function add_degradation(m, p; b="ElectricStorage")
 
         @expression(m, degr_cost,
             sum(
-                p.s.storage.attr[b].degradation.maintenance_cost_per_kwh[d-1] * (SOH[d-1] - SOH[d])
+                p.s.storage.attr[b].degradation.maintenance_cost_per_kwh[d-1] * (m[:SOH][d-1] - m[:SOH][d])
                 for d in days[2:end]
             )
         )
