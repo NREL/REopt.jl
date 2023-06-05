@@ -515,6 +515,15 @@ end
     results = run_reopt(m, "./scenarios/outages_gen_pv_stor.json")
     @test results["Outages"]["expected_outage_cost"] ≈ 4.800393567995261e6 atol=10
     @test results["Financial"]["lcc"] ≈ 8.9857671584e7 atol=100
+
+    # Scenario with generator, PV, wind, electric storage
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, "./scenarios/outages_gen_pv_wind_stor.json")
+    @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
+    @test value(m[:binMGTechUsed]["PV"]) ≈ 1
+    @test value(m[:binMGTechUsed]["Wind"]) ≈ 1
+    @test results["Outages"]["expected_outage_cost"] ≈ 50147.6 atol=1.0
+    @test results["Financial"]["lcc"] ≈ 6.84048993e7 rtol=0.001
 end
 
 @testset "Multiple Sites" begin
@@ -557,6 +566,8 @@ end
         m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         results = run_reopt(m, "./scenarios/tiered_rate.json")
         @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ 2342.88
+        @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ 24000.0 atol=0.1
+        @test results["ElectricLoad"]["annual_calculated_kwh"] ≈ 24000.0 atol=0.1
     end
 
     @testset "Lookback Demand Charges" begin

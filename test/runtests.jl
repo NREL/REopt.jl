@@ -243,6 +243,54 @@ else  # run HiGHS tests
 
     @testset "Backup Generator Reliability" begin
 
+        #test ensure `backup_reliability()` consistent with `simulate_outages()`
+        reopt_inputs = JSON.parsefile("./scenarios/backup_reliability_reopt_inputs.json")
+        reopt_inputs["ElectricLoad"]["annual_kwh"] = 4*reopt_inputs["ElectricLoad"]["annual_kwh"]
+        p = REoptInputs(reopt_inputs)
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+            "output_flag" => false, "log_to_console" => false)
+        )
+        results = run_reopt(model, p)
+        simresults = simulate_outages(results, p)
+        reliability_inputs = Dict(
+            "max_outage_duration" => 48,
+            "generator_operational_availability" => 1.0, 
+            "generator_failure_to_start" => 0.0, 
+            "generator_mean_time_to_failure" => 10000000000,
+            "fuel_limit" => 1000000000,
+            "num_battery_bins" => 100,
+            "battery_operational_availability" => 1.0,
+            "battery_minimum_soc_fraction" => 0.0,
+            "pv_operational_availability" => 1.0,
+        )
+        reliability_results = backup_reliability(results, p, reliability_inputs)
+        for i = 1:min(length(simresults["probs_of_surviving"]), reliability_inputs["max_outage_duration"])
+            @test simresults["probs_of_surviving"][i] ≈ reliability_results["mean_cumulative_survival_by_duration"][i] atol=0.001
+        end
+
+        #test survival with no generator decreasing and same as with generator but no fuel
+        reliability_inputs = Dict(
+            "critical_loads_kw" => 200 .* (2 .+ sin.(collect(1:8760)*2*pi/24)),
+            "num_generators" => 0,
+            "generator_size_kw" => 312.0,
+            "fuel_limit" => 0.0,
+            "max_outage_duration" => 10,
+            "battery_size_kw" => 428.0,
+            "battery_size_kwh" => 1585.0,
+            "num_battery_bins" => 5
+        )
+        reliability_results1 = backup_reliability(reliability_inputs)
+        reliability_inputs["generator_size_kw"] = 0
+        reliability_inputs["fuel_limit"] = 1e10
+        reliability_results2 = backup_reliability(reliability_inputs)
+        for i in 1:reliability_inputs["max_outage_duration"]
+            if i != 1
+                @test reliability_results1["mean_fuel_survival_by_duration"][i] <= reliability_results1["mean_fuel_survival_by_duration"][i-1]
+                @test reliability_results1["mean_cumulative_survival_by_duration"][i] <= reliability_results1["mean_cumulative_survival_by_duration"][i-1]
+            end
+            @test reliability_results2["mean_fuel_survival_by_duration"][i] == reliability_results1["mean_fuel_survival_by_duration"][i]
+        end
+
         #test fuel limit
         input_dict = JSON.parsefile("./scenarios/erp_fuel_limit_inputs.json")
         results = backup_reliability(input_dict)

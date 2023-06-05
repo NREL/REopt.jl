@@ -23,6 +23,32 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.32.2
+### Fixed
+- Fixed bug in multiple PVs pv_to_location dictionary creation. 
+- Fixed bug in reporting of grid purchase results when multiple energy tiers are present.
+- Fixed bug in TOU demand charge calculation when multiple demand tiers are present.
+
+## v0.32.1
+### Fixed
+- In `backup_reliability.jl`:
+    - Check if generator input is a Vector instead of has length greater than 1
+    - Correct calculation of battery SOC adjustment in `fuel_use()` function
+    - Correct outage time step survival condition in `fuel_use()` function
+- Add test to ensure `backup_reliability()` gives the same results for equivalent scenarios (1. battery only and 2. battery plus generator with no fuel) and that the survival probability decreases monotonically with outage duration
+- Add test to ensure `backup_reliability()` gives the same results as `simulate_outages()` when operational availability inputs are 1, probability of failure to run is 0, and mean time to failure is a very large number.
+
+## v0.32.0
+### Fixed
+- Fixed calculation of `wind_kw_ac_hourly` in `outagesim/outage_simulator.jl`
+- Add  a test of multiple outages that includes wind
+- Add a timeout to PVWatts API call so that if it does not connect within 10 seconds, it will retry. It seems to always work on the first retry.
+
+## v0.31.0
+### Added
+- Created and exported easiur_data function (returns health emissions costs and escalations) for the API to be able to call for it's easiur_costs endpoint
+- Added docstrings for easiur_data and emissions_profiles
+
 ## v0.30.0
 ### Added
 - `Generator` input **fuel_higher_heating_value_kwh_per_gal**, which defaults to the constant KWH_PER_GAL_DIESEL
@@ -64,8 +90,9 @@ Classify the change according to the following categories:
     
 ## v0.27.0
 ### Added
-- Energy Resilience Performance post-process tool: capability to model limited reliability of backup generators and RE, and calculate survival probability metrics during power outages
+- Energy Resilience Performance tool: capability to model limited reliability of backup generators and RE, and calculate survival probability metrics during power outages for a DER scenario
 - Exported `backup_reliability` function to run the reliability based calculations
+### Changed
 - Changed `Generator` inputs **fuel_slope_gal_per_kwh** and **fuel_intercept_gal_per_hr** to **electric_efficiency_full_load** and **electric_efficiency_half_load** to represent the same fuel burn curve in a different way consistent with `CHP`
 
 ## v0.26.0
