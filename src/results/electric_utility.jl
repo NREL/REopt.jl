@@ -59,17 +59,17 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
     r = Dict{String, Any}()
 
     Year1UtilityEnergy = p.hours_per_time_step * sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] 
-        for ts in p.time_steps, tier in p.s.electric_tariff.n_energy_tiers)
+        for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers)
     r["annual_energy_supplied_kwh"] = round(value(Year1UtilityEnergy), digits=2)
     
     if !isempty(p.s.storage.types.elec)
-        GridToLoad = (sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in p.s.electric_tariff.n_energy_tiers) 
+        GridToLoad = (sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) 
                   - sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec) 
                   for ts in p.time_steps)
         GridToBatt = (sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec) 
                 for ts in p.time_steps)
     else
-        GridToLoad = (sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in p.s.electric_tariff.n_energy_tiers) 
+        GridToLoad = (sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) 
                   for ts in p.time_steps)
         GridToBatt = zeros(length(p.time_steps))
     end
@@ -107,7 +107,7 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::MPCInputs, d::Di
 
     Year1UtilityEnergy = p.hours_per_time_step * 
         sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for ts in p.time_steps, 
-                                                         tier in p.s.electric_tariff.n_energy_tiers)
+                                                         tier in 1:p.s.electric_tariff.n_energy_tiers)
     r["energy_supplied_kwh"] = round(value(Year1UtilityEnergy), digits=2)
 
     if p.s.storage.attr["ElectricStorage"].size_kwh > 0
@@ -119,7 +119,7 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::MPCInputs, d::Di
         GridToBatt = zeros(length(p.time_steps))
     end
     GridToLoad = @expression(m, [ts in p.time_steps], 
-        sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in p.s.electric_tariff.n_energy_tiers) - 
+        sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) - 
         GridToBatt[ts]
     )
     r["to_load_series_kw"] = round.(value.(GridToLoad), digits=3).data

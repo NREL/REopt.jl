@@ -55,7 +55,8 @@ function get_production_factor(pv::PV, latitude::Real, longitude::Real; timefram
 
     try
         @info "Querying PVWatts for production_factor with " pv.name
-        r = HTTP.get(url)
+        r = HTTP.get(url, keepalive=true, readtimeout=10)
+        @info "Response received from PVWatts"
         response = JSON.parse(String(r.body))
         if r.status != 200
             throw(@error("Bad response from PVWatts: $(response["errors"])"))
