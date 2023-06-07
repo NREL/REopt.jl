@@ -166,7 +166,7 @@ end
 function dictkeys_tosymbols(d::Dict)
     d2 = Dict()
     for (k, v) in d
-        # handling some type conversions for API inputs and JSON
+        # handling array type conversions for API inputs and JSON
         if k in [
             "loads_kw", "critical_loads_kw",
             "thermal_loads_ton",
@@ -181,8 +181,10 @@ function dictkeys_tosymbols(d::Dict)
             "emissions_factor_series_lb_CO2_per_kwh",
             "emissions_factor_series_lb_NOx_per_kwh", 
             "emissions_factor_series_lb_SO2_per_kwh",
-            "emissions_factor_series_lb_PM25_per_kwh"
-            ] && !isnothing(v)
+            "emissions_factor_series_lb_PM25_per_kwh",
+            #for ERP
+            "pv_production_factor_series", "battery_starting_soc_series_fraction"
+        ] && !isnothing(v)
             try
                 v = convert(Array{Real, 1}, v)
             catch
@@ -217,16 +219,42 @@ function dictkeys_tosymbols(d::Dict)
             end
         end
         if k in [
-            "fuel_cost_per_mmbtu", "wholesale_rate"
-            ] && !isnothing(v)
+            "fuel_limit_is_per_generator" #for ERP
+        ]
+            if !(typeof(v) <: Bool)
+                try
+                    v = convert(Array{Bool, 1}, v)
+                catch
+                    throw(@error("Unable to convert $k to a Array{Bool, 1}"))
+                end
+            end
+        end
+        if k in [
+            "fuel_cost_per_mmbtu", "wholesale_rate",
+            # for ERP
+            "generator_size_kw", "generator_operational_availability",
+            "generator_failure_to_start", "generator_mean_time_to_failure",
+            "generator_fuel_intercept_per_hr", "generator_fuel_burn_rate_per_kwh",
+            "fuel_limit"
+        ] && !isnothing(v)
             #if not a Real try to convert to an Array{Real} 
             if !(typeof(v) <: Real)
                 try
-                    if typeof(v) <: Array
-                        v = convert(Array{Real, 1}, v)
-                    end
+                    v = convert(Array{Real, 1}, v)
                 catch
                     throw(@error("Unable to convert $k to a Array{Real, 1} or Real"))
+                end
+            end
+        end
+        if k in [
+            "num_generators" #for ERP
+        ]
+            #if not a Real try to convert to an Array{Real} 
+            if !(typeof(v) <: Int)
+                try
+                    v = convert(Array{Int64, 1}, v)
+                catch
+                    throw(@error("Unable to convert $k to a Array{Int64, 1} or Int"))
                 end
             end
         end
@@ -318,7 +346,7 @@ function generate_year_profile_hourly(year::Int64, consecutive_periods::Abstract
 
     # Note, day = 1 is Monday, not Sunday
     day_of_week_name = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    for i in 1:length(consecutive_periods)
+    for i in eachindex(consecutive_periods)
         start_month = convert(Int,consecutive_periods[i]["month"])
         start_week_of_month = convert(Int,consecutive_periods[i]["start_week_of_month"])
         start_day_of_week = convert(Int,consecutive_periods[i]["start_day_of_week"])  # Monday - Sunday is 1 - 7
@@ -440,6 +468,53 @@ end
 
 macro argname(arg)
     string(arg)
+end
+
+"""
+    get_monthly_time_steps(year::Int; time_steps_per_hour=1)
+
+return Array{Array{Int64,1},1}, size = (12,)
+"""
+function get_monthly_time_steps(year::Int; time_steps_per_hour=1)
+    a = Array[]
+    i = 1
+    for m in range(1, stop=12)
+        n_days = daysinmonth(Date(string(year) * "-" * string(m)))
+        stop = n_days * 24 * time_steps_per_hour + i - 1
+        if m == 2 && isleapyear(year)
+            stop -= 24 * time_steps_per_hour  # TODO support extra day in leap years?
+        end
+        steps = [step for step in range(i, stop=stop)]
+        append!(a, [steps])
+        i = stop + 1
+    end
+    return a
+end
+
+"""
+generator_fuel_slope_and_intercept(;
+                electric_efficiency_full_load::Real, [kWhe/kWht]
+                electric_efficiency_half_load::Real, [kWhe/kWht]
+                fuel_higher_heating_value_kwh_per_gal::Real
+            )
+
+return Tuple{<:Real,<:Real} where 
+    first value is diesel fuel burn slope [gal/kWhe]
+    secnod value is diesel fuel burn intercept [gal/hr]
+"""
+function generator_fuel_slope_and_intercept(;
+                        electric_efficiency_full_load::Real, 
+                        electric_efficiency_half_load::Real,
+                        fuel_higher_heating_value_kwh_per_gal::Real
+                    )
+    fuel_burn_full_load_kwht = 1.0 / electric_efficiency_full_load  # [kWe_rated/(kWhe/kWht)]
+    fuel_burn_half_load_kwht = 0.5 / electric_efficiency_half_load  # [kWe_rated/(kWhe/kWht)]
+    fuel_slope_kwht_per_kwhe = (fuel_burn_full_load_kwht - fuel_burn_half_load_kwht) / (1.0 - 0.5)  # [kWht/kWhe]
+    fuel_intercept_kwht_per_hr = fuel_burn_full_load_kwht - fuel_slope_kwht_per_kwhe * 1.0  # [kWht/hr]
+    fuel_slope_gal_per_kwhe = fuel_slope_kwht_per_kwhe / fuel_higher_heating_value_kwh_per_gal # [gal/kWhe]
+    fuel_intercept_gal_per_hr = fuel_intercept_kwht_per_hr / fuel_higher_heating_value_kwh_per_gal # [gal/hr]
+    
+    return fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr
 end
 
 function convert_temp_degF_to_Kelvin(degF::Float64)
