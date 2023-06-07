@@ -156,9 +156,24 @@ struct Financial
             owner_discount_rate_fraction = offtaker_discount_rate_fraction
         end
 
-        grid_costs = off_grid_flag ? nothing : easiur_costs(latitude, longitude, "grid")
-        onsite_costs = easiur_costs(latitude, longitude, "onsite")
-        escalation_rates = easiur_escalation_rates(latitude, longitude, om_cost_escalation_rate_fraction)
+        # convert lon, lat to CAMx grid (x, y), specify datum. default is NAD83
+        # Note: x, y returned from g2l follows the CAMx grid convention.
+        # x and y start from 1, not zero. (x) ranges (1, ..., 148) and (y) ranges (1, ..., 112)
+        coords = g2l(longitude, latitude)
+        camx_x = Int(round(coords[1]))
+        camx_y = Int(round(coords[2]))
+
+        if 1 <= camx_x <= 113 & 1 <= camx_y <= 148
+            # CAMX_x coord, CAMX_y coord, onsite/grid, pop_year, income_year, dollar_year
+            grid_costs = off_grid_flag ? nothing : easiur_costs(camx_x, camx_y, "grid", 2020, 2020, 2010)
+            onsite_costs = easiur_costs(camx_x, camx_y, "onsite", 2020, 2020, 2010)
+            escalation_rates = easiur_escalation_rates(camx_x, camx_y, om_cost_escalation_rate_fraction)
+        else
+            grid_costs = nothing
+            onsite_costs = nothing
+            escalation_rates = nothing
+            @warn "Unable to access grid costs, onsite costs, and cost escalation rates for $longitude and $latitude."
+        end
 
         missing_health_inputs = false
         # use EASIUR data for missing grid costs
@@ -172,6 +187,7 @@ struct Financial
         if isnothing(PM25_grid_cost_per_tonne)
             PM25_grid_cost_per_tonne = isnothing(grid_costs) ? 0.0 : grid_costs["PM25"]
         end
+
         # use EASIUR data for missing fuelburn costs
         missing_health_inputs = isnothing(onsite_costs) ? true : missing_health_inputs
         if isnothing(NOx_onsite_fuelburn_cost_per_tonne)
@@ -183,6 +199,7 @@ struct Financial
         if isnothing(PM25_onsite_fuelburn_cost_per_tonne)
             PM25_onsite_fuelburn_cost_per_tonne = isnothing(onsite_costs) ? 0.0 : onsite_costs["PM25"]
         end
+        
         # use EASIUR data for missing escalation rates
         missing_health_inputs = isnothing(escalation_rates) ? true : missing_health_inputs
         if isnothing(NOx_cost_escalation_rate_fraction)
@@ -234,8 +251,7 @@ struct Financial
     end
 end
 
-
-function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
+function easiur_costs(camx_x::Int, camx_y::Int, grid_or_onsite::String, pop_year=2020, income_year=2020, dollar_year=2010)
     # Assumption: grid emissions occur at site at 150m above ground
     # and on-site fuelburn emissions occur at site at 0m above ground
     if grid_or_onsite=="grid"
@@ -246,80 +262,6 @@ function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
         @warn "Error in easiur_costs: grid_or_onsite must equal either 'grid' or 'onsite'"
         return nothing
     end
-    EASIUR_data = nothing
-    try
-        EASIUR_data = get_EASIUR2005(type, pop_year=2020, income_year=2020, dollar_year=2010)
-    catch e
-        @warn "Could not look up EASIUR health costs from point ($latitude,$longitude). {$e}"
-        return nothing
-    end
-
-    # convert lon, lat to CAMx grid (x, y), specify datum. default is NAD83
-    # Note: x, y returned from g2l follows the CAMx grid convention.
-    # x and y start from 1, not zero. (x) ranges (1, ..., 148) and (y) ranges (1, ..., 112)
-    coords = g2l(longitude, latitude, datum="NAD83")
-    x = Int(round(coords[1]))
-    y = Int(round(coords[2]))
-    # Convert from 2010$ to 2020$ (source: https://www.in2013dollars.com/us/inflation/2010?amount=100)
-    USD_2010_to_2020 = 1.246
-    try
-        costs_per_tonne = Dict(
-            "NOx" => EASIUR_data["NOX_Annual"][x - 1, y - 1] .* USD_2010_to_2020,
-            "SO2" => EASIUR_data["SO2_Annual"][x - 1, y - 1] .* USD_2010_to_2020,
-            "PM25" => EASIUR_data["PEC_Annual"][x - 1, y - 1] .* USD_2010_to_2020
-        )
-        return costs_per_tonne
-    catch
-        @warn "Could not look up EASIUR health costs from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid."
-        return nothing
-    end
-end
-
-function easiur_escalation_rates(latitude::Real, longitude::Real, inflation::Real)
-    EASIUR_150m_yr2020 = nothing
-    EASIUR_150m_yr2024 = nothing
-    try
-        EASIUR_150m_yr2020 = get_EASIUR2005("p150", pop_year=2020, income_year=2020, dollar_year=2010) 
-        EASIUR_150m_yr2024 = get_EASIUR2005("p150", pop_year=2024, income_year=2024, dollar_year=2010) 
-    catch e
-        @warn "Could not look up EASIUR health cost escalation rates from point ($latitude,$longitude). {$e}"
-        return nothing
-    end
-    # convert lon, lat to CAMx grid (x, y), specify datum. default is NAD83
-    coords = g2l(longitude, latitude, datum="NAD83")
-    x = Int(round(coords[1]))
-    y = Int(round(coords[2]))
-
-    try
-        # nominal compound annual growth rate (real + inflation)
-        escalation_rates = Dict(
-            "NOx" => ((EASIUR_150m_yr2024["NOX_Annual"][x - 1, y - 1]/EASIUR_150m_yr2020["NOX_Annual"][x - 1, y - 1])^(1/4)-1) + inflation,
-            "SO2" => ((EASIUR_150m_yr2024["SO2_Annual"][x - 1, y - 1]/EASIUR_150m_yr2020["SO2_Annual"][x - 1, y - 1])^(1/4)-1) + inflation,
-            "PM25" => ((EASIUR_150m_yr2024["PEC_Annual"][x - 1, y - 1]/EASIUR_150m_yr2020["PEC_Annual"][x - 1, y - 1])^(1/4)-1) + inflation
-        )
-        return escalation_rates
-    catch
-        @warn "Could not look up EASIUR health cost escalation rates from point ($latitude,$longitude). Location is likely invalid or outside the CAMx grid"
-        return nothing
-    end
-end
-
-
-"""
-Adapted to Julia from example Python code for EASIUR found at https://barney.ce.cmu.edu/~jinhyok/apsca/#getting
-"""
-
-"""
-    get_EASIUR2005(
-        stack::String, # area, p150, or p300
-        pop_year::Int64=2005, # population year
-        income_year::Int64=2005, # income level (1990 to 2024)
-        dollar_year::Int64=2010 # dollar year (1980 to 2010)
-    )
-
-Returns EASIUR for a given `stack` height in a dict, or nothing if arguments are invalid.
-"""
-function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=2005, dollar_year::Int64=2010)
     EASIUR_data_lib = joinpath(@__DIR__,"..","..","data","emissions","EASIUR_Data")
     # Income Growth Adjustment factors from BenMAP
     MorIncomeGrowthAdj = Dict(
@@ -394,45 +336,72 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
         2010 => 1.266295,
     )
 
-    if !(stack in ["area", "p150", "p300"])
-        throw(@error("stack should be one of 'area', 'p150', 'p300'"))
+    USD_2010_to_2020 = 1.246
+
+    pollutants = Dict()
+
+    # Load EASIUR data for area / p150 emissions for NOx, SO2 and PEC.
+    for k in ["NOx", "SO2", "PEC"]
+        # get social cost
+        fp = joinpath(EASIUR_data_lib,"$(k)_annual_$(type).csv")
+        sc = readdlm(fp, ',')[camx_x - 1, camx_y - 1]
+
+        # pop growth adjustment
+        fp = joinpath(EASIUR_data_lib,"$(k)_growth_rate_pop2005_pop2040_$(type).csv")
+        sc *= readdlm(fp, ',')[camx_x - 1, camx_y - 1]*(readdlm(fp, ',')[camx_x - 1, camx_y - 1]^(pop_year - 2005))
+
+        # income adjustment 2020 to 2005    
+        adj = get(MorIncomeGrowthAdj, income_year, nothing) / get(MorIncomeGrowthAdj, 2005, nothing)
+        sc *= adj
+
+        # income adjustment 2020 to 2005    
+        adj = get(GDP_deflator, dollar_year, nothing) / get(GDP_deflator, 2010, nothing)
+        sc *= adj
+
+        if k == "PEC"
+            pollutants["PM25"] = sc*USD_2010_to_2020
+        else
+            pollutants[k] = sc*USD_2010_to_2020
+        end
+    end
+    return pollutants
+end
+
+
+function easiur_escalation_rates(camx_x::Int, camx_y::Int, inflation::Real)
+
+    EASIUR_150m_yr2020 = easiur_costs(camx_x, camx_y, "grid", 2020, 2020, 2010) 
+    EASIUR_150m_yr2024 = easiur_costs(camx_x, camx_y, "grid", 2024, 2024, 2010) 
+
+    try
+        # nominal compound annual growth rate (real + inflation)
+        escalation_rates = Dict(
+            "NOx" => ((EASIUR_150m_yr2024["NOx"]/EASIUR_150m_yr2020["NOx"])^(1/4)-1) + inflation,
+            "SO2" => ((EASIUR_150m_yr2024["SO2"]/EASIUR_150m_yr2020["SO2"])^(1/4)-1) + inflation,
+            "PM25" => ((EASIUR_150m_yr2024["PM25"]/EASIUR_150m_yr2020["PM25"])^(1/4)-1) + inflation
+        )
+        return escalation_rates
+    catch
+        @error "Could not look up EASIUR health cost escalation rates from CAMX coordinates ($camx_x,$camx_y). Location is likely invalid or outside the CAMx grid"
         return nothing
     end
-
-    fn_2005 = joinpath(EASIUR_data_lib,"sc_8.6MVSL_$(stack)_pop2005.hdf5")
-    ret_map = JLD.load(fn_2005)
-    if pop_year != 2005
-        fn_growth = joinpath(EASIUR_data_lib,"sc_growth_rate_pop2005_pop2040_$(stack).hdf5")
-        map_rate = JLD.load(fn_growth)
-        for (k,v) in map_rate
-            setindex!(ret_map, v .* (v.^(pop_year - 2005)), k)
-        end
-    end
-    if income_year != 2005
-        try
-            adj = get(MorIncomeGrowthAdj, income_year, nothing) / get(MorIncomeGrowthAdj, 2005, nothing)
-            for (k, v) in ret_map
-                setindex!(ret_map, v .* adj, k)
-            end
-        catch
-            throw(@error("income year is $(income_year) but must be between 1990 to 2024"))
-            return nothing
-        end
-    end
-    if dollar_year != 2010
-        try
-            adj = get(GDP_deflator, dollar_year, nothing) / get(GDP_deflator, 2010, nothing)
-            for (k, v) in ret_map
-                setindex!(ret_map, v .* adj, k)
-            end
-        catch e
-            throw(@error("Dollar year must be between 1980 to 2010"))
-            return nothing
-        end
-    end
-
-    return ret_map
 end
+
+
+"""
+Adapted to Julia from example Python code for EASIUR found at https://barney.ce.cmu.edu/~jinhyok/apsca/#getting
+"""
+
+"""
+    get_EASIUR2005(
+        stack::String, # area, p150, or p300
+        pop_year::Int64=2005, # population year
+        income_year::Int64=2005, # income level (1990 to 2024)
+        dollar_year::Int64=2010 # dollar year (1980 to 2010)
+    )
+
+Returns EASIUR for a given `stack` height in a dict, or nothing if arguments are invalid.
+"""
 
 """
     l2g(x::Real, y::Real, inverse::Bool=false, datum::String="NAD83")
