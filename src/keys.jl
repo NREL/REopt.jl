@@ -28,4 +28,4 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************nrel_developer_key = "X3Fd4msuCdRGpgelMSjr8FYXfgdjWSuHHMdZE8Ta"
 urdb_key = "2qt5uihpKXdywTj3uMIhBewxY9K4eNjpRje1JUPL"
-nrel_developer_key = "l99igVIpARnpTx0E5oykVTcgahiS1GE5j3A6B3ve"
+nrel_developer_key = "CuZkq9itm7sUAkuJF6lpUYd9HVw2c7ZCCyxAeVp8"
