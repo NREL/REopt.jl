@@ -19,7 +19,8 @@ else
 
 """
 
-function run_reopt_multi_solutions(fp::String, size_scale::Vector{Float64}, ms::AbstractVector{T}; parallel=true) where T <: JuMP.AbstractModel
+function run_reopt_multi_solutions(fp::String, size_scale::Vector{Float64}, ms::AbstractVector{T}; 
+                                    parallel=true) where T <: JuMP.AbstractModel
     # Load in input_data from .json to dictionary
     input_data = JSON.parsefile(fp)
     # Create optimal and BAU inputs structs for initial 2 runs
@@ -40,15 +41,25 @@ function run_reopt_multi_solutions(fp::String, size_scale::Vector{Float64}, ms::
     results_dict["Financial"] = merge(results_dict["Financial"], REopt.proforma_results(p, results_dict))
 
     # Check results to see which techs are sized, to inform number of solutions
-    techs_possible = ["PV", "ElectricStorage", "Generator", "CHP"]  # Eaton's techs of interest
+    techs_possible = ["PV", "ElectricStorage", "Generator", "CHP"]  # Eaton's techs of interest, where CHP really for power-only fuel cell
     techs_considered = intersect(techs_possible, keys(input_data))
-    techs_sized = intersect(techs_possible, keys(results_dict))
+    techs_sized = String[]
+    for tech in techs_considered
+        if results_dict[tech]["size_kw"] > 0.0
+            append!(techs_sized, [tech])
+        end
+    end
     techs_to_zero = setdiff(techs_considered, techs_sized)
     n_solutions = length(size_scale) * length(techs_sized)
 
     # Create the first entry for "optimal" solution in the results dictionary
+    if !isempty(p.s.electric_utility.outage_start_time_steps)
+        simresults = simulate_outages(results_dict, p)
+    else
+        simresults = Dict()
+    end
     results_all = Dict("optimal" => results_dict)
-    results_summary = Dict("optimal" => get_multi_solutions_results_summary(results_dict, p, ms[2], techs_sized))
+    results_summary = Dict("optimal" => get_multi_solutions_results_summary(results_dict, p, ms[2], techs_sized, simresults))
 
     # Now create number of inputs based on the # of techs sized in optimal case
     ps = []
@@ -104,8 +115,13 @@ function run_reopt_multi_solutions(fp::String, size_scale::Vector{Float64}, ms::
             local results_dict = REopt.combine_results(p[2], rs[1], rs_solns[i], bau_inputs.s)
             results_dict["Financial"] = merge(results_dict["Financial"], REopt.proforma_results(p[2], results_dict))
             results_all[p[1]] = results_dict
+            if !isempty(p[2].s.electric_utility.outage_start_time_steps)
+                simresults = simulate_outages(rs_solns[i], p[2])
+            else
+                simresults = Dict()
+            end
             # Build results summary, a select number of outputs for Eaton
-            results_summary[p[1]] = get_multi_solutions_results_summary(results_dict, p[2], ms[n], techs_sized)  
+            results_summary[p[1]] = get_multi_solutions_results_summary(results_dict, p[2], ms[n], techs_sized, simresults)  
         else
             @warn "REopt did not solve successully (infeasible) for extra run number $i"
             results_all[p[1]] = Dict("status"=>Dict("error" => "infeasible"))
@@ -117,13 +133,13 @@ function run_reopt_multi_solutions(fp::String, size_scale::Vector{Float64}, ms::
 end
 
 """
-    get_multi_solutions_results_summary(results::Dict, p::REoptInputs, m::JuMP.AbstractModel, techs_sized::Vector{String})
+    get_multi_solutions_results_summary(results::Dict, p::REoptInputs, m::JuMP.AbstractModel, techs_sized::Vector{String}, simresults::Dict)
 
 Get the results summary dictionary which is a selected number of outputs for Financial, Emissions, and 
 the relevant techs
 
 """
-function get_multi_solutions_results_summary(results::Dict, p::REoptInputs, m::JuMP.AbstractModel, techs_sized::Vector{String})
+function get_multi_solutions_results_summary(results::Dict, p::REoptInputs, m::JuMP.AbstractModel, techs_sized::Vector{String}, simresults::Dict)
     # results_summary always has Financial and emissions, and then add techs as needed
     results_summary = Dict(
         "status" => results["status"],
@@ -138,6 +154,33 @@ function get_multi_solutions_results_summary(results::Dict, p::REoptInputs, m::J
                 "Site life cycle SO2 tonnes" => results["Site"]["lifecycle_emissions_tonnes_SO2"],
                 "Site life cycle PM25 tonnes" => results["Site"]["lifecycle_emissions_tonnes_PM25"])
     )
+
+    if !isempty(simresults)
+        # WIP find BAU max_cost_outage to get the delta/% between optimal and BAU
+        # General Q?: How could dvMaxOutageCost be anything other than the largest outage_duration?
+        BAUOutageCost = Array{Array{Float64, 1}}(undef, length(p.s.electric_utility.scenarios))
+        for s in p.s.electric_utility.scenarios
+            BAUOutageCost[s] = [p.pwf_e * sum(p.value_of_lost_load_per_kwh[tz+ts-1] * p.s.electric_load.critical_loads_kw[tz+ts-1] 
+                                    for ts in 1:p.s.electric_utility.outage_durations[s])
+                                        for tz in p.s.electric_utility.outage_start_time_steps]
+        end
+        BAUMaxOutageCost = [maximum(BAUOutageCost[s]) for s in p.s.electric_utility.scenarios]
+        BAUExpectedOutageCost = sum(BAUMaxOutageCost[s] * p.s.electric_utility.outage_probabilities[s] for s in p.s.electric_utility.scenarios)
+
+        # % Improvement is (1 - unserved/total) * 100
+        # Cost improvement ($/year) is expected_outage_cost/25 - (critical load kWh) * VoLL *pwf_e/25
+        annual_outage_cost = results["Outages"]["expected_outage_cost"] / p.s.financial.analysis_years
+        annual_outage_cost_bau = BAUExpectedOutageCost / p.s.financial.analysis_years
+        annual_cost_reduction_percent = (1 - annual_outage_cost / annual_outage_cost_bau) * 100.0
+        results_summary["resilience"] = Dict("Input outage duration (hours)" => sum(p.s.electric_utility.outage_durations) / 
+                                                                                    length(p.s.electric_utility.outage_durations),
+                                            "Average hours of load served during outage" => simresults["resilience_hours_avg"],
+                                            "Annual value of load served" => annual_outage_cost_bau - annual_outage_cost,
+                                            "Value of load served as a percent of total unserved load" => annual_cost_reduction_percent
+                                            )
+    else
+        results_summary["resilience"] = Dict("No resilience simulation was run" => 0.0)
+    end
 
     # Add techs if they have been sized in the optimal case
     for key in techs_sized

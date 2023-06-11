@@ -1,0 +1,20 @@
+{
+    "Site": {
+        "longitude": -118.1164613,
+        "latitude": 34.5794343
+    },
+    "ElectricLoad": {
+        "doe_reference_name": "LargeOffice"
+    },    
+    "PV": {
+    },
+    "ElectricStorage": {
+    },
+    "ElectricUtility": {
+        "outage_start_time_step": 2,
+        "outage_end_time_step": 4
+    },
+    "ElectricTariff": {
+        "urdb_label": "5ed6c1a15457a3367add15ae"
+    }
+}

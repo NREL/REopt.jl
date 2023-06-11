@@ -5,31 +5,39 @@ sizing variations around the optimal technology sizes. The function first runs t
 identify the cost-effective technologies recommended by REopt. It then re-runs a number of times with scaling factors applied to each of the cost-optimal techs, and it forces those sizes into the
 solution. 
 
-# Example use-case for multi-solutions
-fp = "scenarios/eaton_multi.json"
-# Fractions/ratios of size relative to the optimal size
-# For each technology which is sized, multiply the size by the size_scale for a different solution
-# The other techs will all be at 1.0/optimal size for the scaling of other techs
-size_scale = [0.5, 1.5]
-# Need to know max number of JuMP model to create, so identify the number of technologies considered
-n_techs = 2
-# Max models is 2 for optimal+BAU and then however many scenarios are possible
-max_models = 2 + length(size_scale) * n_techs
-# Hard to duplicate JuMP models dynamically, so conservatively instantiate max possible models
-# Solver options for Cbc.jl: https://github.com/jump-dev/Cbc.jl
-# Solver options for HiGHS.jl:  https://ergo-code.github.io/HiGHS/dev/options/definitions/
-# Increasing optimality gap (allowableGap for Cbc and mip_rel_gap for HiGHS) to 0.01 (1%) is particularly useful if REopt is taking a long time to solver
-ms = [Model(optimizer_with_attributes(HiGHS.Optimizer, 
-    "output_flag" => false, "mip_rel_gap" => 0.001, "log_to_console" => true)) for _ in 1:max_models]
+If outages are modeled for a resilience analysis, the `resilience` key in the results summary gets populated which includes results from the stochastic outages modeled in the optimization as well as the results from the `simulate_outages()` function which is run to evaluate the resilience performance for all outage start times of the year.
 
-# In-series/sequential run_reopt:
-results_all, results_summary = REopt.run_reopt_multi_solutions(fp, size_scale, ms; parallel=false)
+## Example use-case for multi-solutions
+### Specify path to input file:
+`fp = "scenarios/eaton_multi.json"`
 
-# Parallel run_reopt:
-results_all, results_summary = REopt.run_reopt_multi_solutions(fp, size_scale, ms; parallel=true)
+or for resilience:
 
-# Print some interesting data from all the solutions
+`fp = "scenarios/eaton_voll.json"`
+
+### Specify fractions/ratios of size relative to the optimal size to run. The other techs will all be forced to the optimal size for each run:
+`size_scale = [0.5, 1.5]`
+### Need to know the maximum number of JuMP models to create, so first identify the number of technologies considered. So for the eaton_multi.json scenario with PV and Battery (ElectricStorage):
+`n_techs = 2`
+### This equation uses 2 for optimal+BAU plus however many scenario combinations are possible:
+`max_models = 2 + length(size_scale) * n_techs`
+### Define an array of models of length `max_models` along with the specified solver and desired parameters:
+`ms = [Model(optimizer_with_attributes(HiGHS.Optimizer, 
+    "output_flag" => false, "mip_rel_gap" => 0.001, "log_to_console" => true)) for _ in 1:max_models]`
+- Solver options for Cbc.jl: https://github.com/jump-dev/Cbc.jl
+- Solver options for HiGHS.jl:  https://ergo-code.github.io/HiGHS/dev/options/definitions/
+- Increasing optimality gap (ratioGap for Cbc and mip_rel_gap for HiGHS) to 0.01 (1%) is particularly useful if REopt is taking a long time to solver
+### In-series/sequential runs to reduce number of threads required to 2:
+`results_all, results_summary = REopt.run_reopt_multi_solutions(fp, size_scale, ms; parallel=false)`
+
+## Parallel runs, requiring multiple cores for the multiple threads (see function docstring for more information):
+`results_all, results_summary = REopt.run_reopt_multi_solutions(fp, size_scale, ms; parallel=true)`
+
+### Print some interesting data from all the solutions from the results_summary which is created:
+```
 for s in keys(results_summary)
     println("NPV for scenario "*s*" = ", results_summary[s]["Financial"]["Net Present Value"])
     println("Capital cost for scenario "*s*" = ", results_summary[s]["Financial"]["Net capital cost"])
+    println("Resilience duration average (hours) for scenario "*s*" = ", results_summary[s]["resilience"]["Average hours of load served during outage"])
 end
+```
