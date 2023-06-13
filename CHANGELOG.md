@@ -23,6 +23,12 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop
+### Fixed
+- Calculate **num_battery_bins** default in `backup_reliability.jl` based on battery duration to prevent significant discretization error (and add test)
+- Account for battery (dis)charge efficiency after capping power in/out in `battery_bin_shift()`
+- Remove _try_ _catch_ in `backup_reliability(d::Dict, p::REoptInputs, r::Dict)` so can see where error was thrown
+
 ## v0.32.2
 ### Fixed
 - Fixed bug in multiple PVs pv_to_location dictionary creation. 
