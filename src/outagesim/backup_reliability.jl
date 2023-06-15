@@ -625,7 +625,7 @@ function gen_only_survival_single_start_time(
 end
 
 """
-    survival_with_battery(;net_critical_loads_kw::Vector, battery_starting_soc_kwh::Vector, generator_operational_availability::Real, generator_failure_to_start::Real, 
+    survival_with_storage(;net_critical_loads_kw::Vector, battery_starting_soc_kwh::Vector, generator_operational_availability::Real, generator_failure_to_start::Real, 
                         generator_mean_time_to_failure::Real, num_generators::Int, generator_size_kw::Real, battery_size_kwh::Real, battery_size_kw::Real, num_bins::Int, 
                         max_outage_duration::Int, battery_charge_efficiency::Real, battery_discharge_efficiency::Real, marginal_survival::Bool = false, time_steps_per_hour::Real = 1)::Matrix{Float64} 
 
@@ -659,7 +659,7 @@ julia> net_critical_loads_kw = [1,2,2,1]; battery_starting_soc_kwh = [1,1,1,1]; 
 julia> num_generators = 2; generator_size_kw = 1; generator_operational_availability = 1; failure_to_start = 0.0; MTTF = 0.2;
 julia> num_battery_bins = 3; battery_size_kwh = 2; battery_size_kw = 1;  battery_charge_efficiency = 1; battery_discharge_efficiency = 1;
 
-julia> survival_with_battery(net_critical_loads_kw=net_critical_loads_kw, battery_starting_soc_kwh=battery_starting_soc_kwh, 
+julia> survival_with_storage(net_critical_loads_kw=net_critical_loads_kw, battery_starting_soc_kwh=battery_starting_soc_kwh, 
                             generator_operational_availability=generator_operational_availability, generator_failure_to_start=failure_to_start, 
                             generator_mean_time_to_failure=MTTF, num_generators=num_generators, generator_size_kw=generator_size_kw, 
                             battery_size_kwh=battery_size_kwh, battery_size_kw = battery_size_kw, num_battery_bins=num_battery_bins, 
@@ -671,7 +671,7 @@ julia> survival_with_battery(net_critical_loads_kw=net_critical_loads_kw, batter
 0.96  0.896   0.8192
 1.0   0.96    0.761856
 
-julia> survival_with_battery(net_critical_loads_kw=net_critical_loads_kw, battery_starting_soc_kwh=battery_starting_soc_kwh, 
+julia> survival_with_storage(net_critical_loads_kw=net_critical_loads_kw, battery_starting_soc_kwh=battery_starting_soc_kwh, 
                             generator_operational_availability=generator_operational_availability, generator_failure_to_start=failure_to_start, 
                             generator_mean_time_to_failure=MTTF, num_generators=num_generators, generator_size_kw=generator_size_kw, 
                             battery_size_kwh=battery_size_kwh, battery_size_kw = battery_size_kw, num_battery_bins=num_battery_bins, 
@@ -684,7 +684,7 @@ julia> survival_with_battery(net_critical_loads_kw=net_critical_loads_kw, batter
 1.0   0.96    0.761856
 ```
 """
-function survival_with_battery(;
+function survival_with_storage(;
     net_critical_loads_kw::Vector, 
     battery_starting_soc_kwh::Vector, 
     generator_operational_availability::Union{Real, Vector{<:Real}}, 
@@ -724,7 +724,7 @@ function survival_with_battery(;
     starting_gens = starting_probabilities(num_generators, generator_operational_availability, generator_failure_to_start) 
 
     Threads.@threads for t = 1:t_max
-        survival_probability_matrix[t, :] = survival_with_battery_single_start_time(t, 
+        survival_probability_matrix[t, :] = survival_with_storage_single_start_time(t, 
         net_critical_loads_kw, battery_size_kw, max_outage_duration, battery_charge_efficiency,
         battery_discharge_efficiency, M, N, starting_gens, generator_production,
         generator_markov_matrix, maximum_generation, t_max, starting_battery_bins, bin_size, marginal_survival, time_steps_per_hour)
@@ -734,16 +734,16 @@ end
 
 
 """
-survival_with_battery_single_start_time(t::Int, net_critical_loads_kw::Vector, 
+survival_with_storage_single_start_time(t::Int, net_critical_loads_kw::Vector, 
     generator_size_kw::Union{Real, Vector{<:Real}}, 
     max_outage_duration::Int, battery_charge_efficiency::Real, battery_discharge_efficiency::Real, M::Int, N::Int,
     starting_gens::Matrix{Float64}, generator_production::Vector{Float64}, generator_markov_matrix::Matrix{Float64},
     maximum_generation::Matrix{Float64}, t_max::Int, starting_battery_bins::Vector{Int}, bin_size::Real, marginal_survival::Bool, time_steps_per_hour::Real)::Vector{Float64}
 
 Return a vector of probability of survival with for all outage durations given outages start time t. 
-    Function is for internal loop of survival_with_battery
+    Function is for internal loop of survival_with_storage
 """
-function survival_with_battery_single_start_time(
+function survival_with_storage_single_start_time(
     t::Int, 
     net_critical_loads_kw::Vector, 
     battery_size_kw::Real, 
@@ -1094,7 +1094,7 @@ function backup_reliability_single_run(;
                 marginal_survival = false)
 
     else
-        return survival_with_battery(
+        return survival_with_storage(
                 net_critical_loads_kw=net_critical_loads_kw,
                 battery_starting_soc_kwh=battery_starting_soc_kwh, 
                 generator_operational_availability=generator_operational_availability, 
