@@ -431,20 +431,20 @@ function storage_bin_shift(excess_generation_kw::Vector{<:Real}, bin_size::Real,
 end
 
 """
-    shift_gen_battery_prob_matrix!(gen_battery_prob_matrix::Matrix, shift_vector::Vector{Int})
+    shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Matrix, shift_vector::Vector{Int})
 
-Updates ``gen_battery_prob_matrix`` in place to account for change in battery state of charge bin
+Updates ``gen_storage_prob_matrix`` in place to account for change in battery state of charge bin
 
 shifts probabiilities in column i by ``shift_vector``[i] positions, accounting for accumulation at 0 or full soc   
 
 #Examples
 ```repl-julia
-gen_battery_prob_matrix = [0.6 0.3;
+gen_storage_prob_matrix = [0.6 0.3;
                            0.2 0.3;
                            0.1 0.2;
                            0.1 0.2]
 shift_vector = [-1, 2]
-shift_gen_battery_prob_matrix!(gen_battery_prob_matrix, shift_vector)
+shift_gen_storage_prob_matrix!(gen_storage_prob_matrix, shift_vector)
 gen_battery_prob_matrix
 4×2 Matrix{Float64}:
  0.8  0.0
@@ -453,22 +453,22 @@ gen_battery_prob_matrix
  0.0  0.7
 ```
 """
-function shift_gen_battery_prob_matrix!(gen_battery_prob_matrix::Matrix, shift_vector::Vector{Int})
-    M = size(gen_battery_prob_matrix, 1)
+function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Matrix, shift_vector::Vector{Int})
+    M = size(gen_storage_prob_matrix, 1)
     
     for i in 1:length(shift_vector) 
         s = shift_vector[i]
         if s < 0 
             #TODO figure out why implementation of cirshift! is working locally but not on server
-            # circshift!(view(gen_battery_prob_matrix, :, i), s)
-            gen_battery_prob_matrix[:, i] = circshift(view(gen_battery_prob_matrix, :, i), s)
-            gen_battery_prob_matrix[1, i] += sum(view(gen_battery_prob_matrix, max(2,M+s+1):M, i))
-            gen_battery_prob_matrix[max(2,M+s+1):M, i] .= 0
+            # circshift!(view(gen_storage_prob_matrix, :, i), s)
+            gen_storage_prob_matrix[:, i] = circshift(view(gen_storage_prob_matrix, :, i), s)
+            gen_storage_prob_matrix[1, i] += sum(view(gen_storage_prob_matrix, max(2,M+s+1):M, i))
+            gen_storage_prob_matrix[max(2,M+s+1):M, i] .= 0
         elseif s > 0
-            # circshift!(view(gen_battery_prob_matrix, :, i), s)
-            gen_battery_prob_matrix[:, i] = circshift(view(gen_battery_prob_matrix, :, i), s)
-            gen_battery_prob_matrix[end, i] += sum(view(gen_battery_prob_matrix, 1:min(s,M-1), i))
-            gen_battery_prob_matrix[1:min(s,M-1), i] .= 0
+            # circshift!(view(gen_storage_prob_matrix, :, i), s)
+            gen_storage_prob_matrix[:, i] = circshift(view(gen_storage_prob_matrix, :, i), s)
+            gen_storage_prob_matrix[end, i] += sum(view(gen_storage_prob_matrix, 1:min(s,M-1), i))
+            gen_storage_prob_matrix[1:min(s,M-1), i] .= 0
         end
     end
 end
@@ -788,7 +788,7 @@ function survival_with_storage_single_start_time(
         end
 
         #Update generation battery probability matrix to account for battery shifting
-        shift_gen_battery_prob_matrix!(
+        shift_gen_storage_prob_matrix!(
             gen_battery_prob_matrix_array[gen_matrix_counter_end], 
             storage_bin_shift(
                 (generator_production .- net_critical_loads_kw[h]) / time_steps_per_hour, 
