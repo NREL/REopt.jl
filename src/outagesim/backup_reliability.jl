@@ -704,12 +704,11 @@ function survival_with_storage(;
     t_max = length(net_critical_loads_kw)
     
     #bin size is battery storage divided by num bins-1 because zero is also a bin
-    bin_size = battery_size_kwh / (num_battery_bins-1)
+    battery_bin_size = battery_size_kwh / (num_battery_bins-1)
      
     #bin initial battery 
     starting_battery_bins = bin_battery_charge(battery_starting_soc_kwh, num_battery_bins, battery_size_kwh)
-    #For easier indice reading
-    M = num_battery_bins
+    #Size of state space in generator dimension 
     if length(num_generators) == 1
         N = num_generators + 1
     else
@@ -720,14 +719,14 @@ function survival_with_storage(;
     #initialize vectors and matrices
     generator_markov_matrix = markov_matrix(num_generators, 1 ./ generator_mean_time_to_failure) 
     generator_production = generator_output(num_generators, generator_size_kw)
-    maximum_generation = get_maximum_generation(battery_size_kw, generator_size_kw, bin_size, num_battery_bins, num_generators, battery_discharge_efficiency)
+    maximum_generation = get_maximum_generation(battery_size_kw, generator_size_kw, battery_bin_size, num_battery_bins, num_generators, battery_discharge_efficiency)
     starting_gens = starting_probabilities(num_generators, generator_operational_availability, generator_failure_to_start) 
 
     Threads.@threads for t = 1:t_max
         survival_probability_matrix[t, :] = survival_with_storage_single_start_time(t, 
         net_critical_loads_kw, battery_size_kw, max_outage_duration, battery_charge_efficiency,
-        battery_discharge_efficiency, M, N, starting_gens, generator_production,
-        generator_markov_matrix, maximum_generation, t_max, starting_battery_bins, bin_size, marginal_survival, time_steps_per_hour)
+        battery_discharge_efficiency, num_battery_bins, N, starting_gens, generator_production,
+        generator_markov_matrix, maximum_generation, t_max, starting_battery_bins, battery_bin_size, H2_bin_size, marginal_survival, time_steps_per_hour)
     end
     return survival_probability_matrix
 end
@@ -750,7 +749,7 @@ function survival_with_storage_single_start_time(
     max_outage_duration::Int, 
     battery_charge_efficiency::Real,
     battery_discharge_efficiency::Real,
-    M::Int,
+    M_b::Int,
     N::Int,
     starting_gens::Matrix{Float64},
     generator_production::Vector{Float64},
@@ -758,15 +757,15 @@ function survival_with_storage_single_start_time(
     maximum_generation::Matrix{Float64},
     t_max::Int,
     starting_battery_bins::Vector{Int},
-    bin_size::Real,
+    battery_bin_size::Real,
     marginal_survival::Bool, 
     time_steps_per_hour::Real)::Vector{Float64}
 
-    gen_battery_prob_matrix_array = [zeros(M, N), zeros(M, N)]
+    gen_battery_prob_matrix_array = [zeros(M_b, N), zeros(M_b, N)]
     gen_battery_prob_matrix_array[1][starting_battery_bins[t], :] = starting_gens
     gen_battery_prob_matrix_array[2][starting_battery_bins[t], :] = starting_gens
     return_survival_chance_vector = zeros(max_outage_duration)
-    survival = ones(M, N)
+    survival = ones(M_b, N)
 
     for d in 1:max_outage_duration 
         h = mod(t + d - 2, t_max) + 1 #determines index accounting for looping around year
@@ -792,7 +791,7 @@ function survival_with_storage_single_start_time(
             gen_battery_prob_matrix_array[gen_matrix_counter_end], 
             battery_bin_shift(
                 (generator_production .- net_critical_loads_kw[h]) / time_steps_per_hour, 
-                bin_size, 
+                battery_bin_size, 
                 battery_size_kw, 
                 battery_charge_efficiency, 
                 battery_discharge_efficiency
