@@ -381,19 +381,20 @@ function get_maximum_generation(battery_size_kw::Real, generator_size_kw::Vector
 end
 
 """
-    battery_bin_shift(excess_generation_kw::Vector, bin_size::Real, battery_size_kw::Real, battery_charge_efficiency::Real, battery_discharge_efficiency::Real)::Vector{Int} 
+    storage_bin_shift(excess_generation_kw::Vector{<:Real}, bin_size::Real,
+                                charge_size_kw::Real, discharge_size_kw::Real,
+                                charge_efficiency::Real, discharge_efficiency::Real)::Vector{Int} 
+Return a vector of number of bins storage (electric or H2) is shifted by, where each element of the vector corresponds to the number of working generators
 
-Return a vector of number of bins battery is shifted by, where each element of the vector corresponds to the number of working generators
-
-Bins are the discritized battery sizes, with the first bin denoting zero charge and the last bin denoting full charge. Thus, if there are 101 bins, then each bin denotes 
-a one percent difference in battery charge. The battery will attempt to dispatch to meet critical loads not met by other generation sources, and will charge from excess generation. 
+Bins are the discritized storage kWh size, with the first bin denoting empty and the last bin denoting full. Thus, if there are 101 bins, then each bin denotes 
+a one percent difference in SOC. The storage will attempt to dispatch to meet critical loads not met by other generation sources, and will charge from excess generation. 
 
 # Arguments
 - `excess_generation_kw::Vector`: maximum generator output minus net critical load for each number of working generators
 - `bin_size::Real`: size of battery bin
-- `battery_size_kw::Real`: inverter size
-- `battery_charge_efficiency::Real`: battery_charge_efficiency = increase_in_soc_kwh / grid_input_kwh 
-- `battery_discharge_efficiency::Real`: battery_discharge_efficiency = battery_discharge / battery_reduction_in_soc
+- `size_kw::Real`: inverter size
+- `charge_efficiency::Real`: charge_efficiency = increase in SOC / kWh in 
+- `discharge_efficiency::Real`: discharge_efficiency = kWh out / reduction in SOC
 
 #Examples
 ```repl-julia
@@ -401,7 +402,7 @@ julia>
 excess_generation_kw = [-500, -120, 0, 50, 175, 400]
 bin_size = 100
 battery_size_kw = 300
-battery_bin_shift(excess_generation_kw, bin_size, battery_size_kw, 1, 1)
+storage_bin_shift(excess_generation_kw, bin_size, battery_size_kw, 1, 1)
 7-element Vector{Int64}:
  -3
  -1
@@ -412,18 +413,18 @@ battery_bin_shift(excess_generation_kw, bin_size, battery_size_kw, 1, 1)
   3
   ```
 """
-function battery_bin_shift(excess_generation_kw::Vector{<:Real}, bin_size::Real, battery_size_kw::Real,
-                                battery_charge_efficiency::Real, battery_discharge_efficiency::Real)::Vector{Int} 
-    #Determines how many battery bins to shift by
-    #Lose energy charging battery and use more energy discharging battery
-    #Need to shift battery up by less and down by more.
+function storage_bin_shift(excess_generation_kw::Vector{<:Real}, bin_size::Real,
+                                charge_size_kw::Real, discharge_size_kw::Real,
+                                charge_efficiency::Real, discharge_efficiency::Real)::Vector{Int} 
+    #Determines how many bins to shift storage SOC by
+    #Lose energy charging battery/producing H2 and use more energy discharging battery/using H2
     
-    #Battery cannot charge or discharge more than its capacity
-    excess_generation_kw[excess_generation_kw .> battery_size_kw] .= battery_size_kw
-    excess_generation_kw[excess_generation_kw .< -battery_size_kw] .= -battery_size_kw
+    #Cannot charge or discharge more than power rating
+    excess_generation_kw[excess_generation_kw .> size_kw] .= charge_size_kw
+    excess_generation_kw[excess_generation_kw .< -size_kw] .= -discharge_size_kw
     #Account for (dis)charge efficiency
-    excess_generation_kw[excess_generation_kw .> 0] = excess_generation_kw[excess_generation_kw .> 0] .* battery_charge_efficiency
-    excess_generation_kw[excess_generation_kw .< 0] = excess_generation_kw[excess_generation_kw .< 0] ./ battery_discharge_efficiency
+    excess_generation_kw[excess_generation_kw .> 0] = excess_generation_kw[excess_generation_kw .> 0] .* charge_efficiency
+    excess_generation_kw[excess_generation_kw .< 0] = excess_generation_kw[excess_generation_kw .< 0] ./ discharge_efficiency
 
     shift = round.(excess_generation_kw ./ bin_size)
     return shift
@@ -789,10 +790,11 @@ function survival_with_storage_single_start_time(
         #Update generation battery probability matrix to account for battery shifting
         shift_gen_battery_prob_matrix!(
             gen_battery_prob_matrix_array[gen_matrix_counter_end], 
-            battery_bin_shift(
+            storage_bin_shift(
                 (generator_production .- net_critical_loads_kw[h]) / time_steps_per_hour, 
                 battery_bin_size, 
                 battery_size_kw, 
+                battery_size_kw,
                 battery_charge_efficiency, 
                 battery_discharge_efficiency
             )
