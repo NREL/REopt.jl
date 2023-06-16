@@ -452,9 +452,10 @@ end
     @test results["ElectricStorage"]["size_kw"] ≈ 11.13 atol=0.05
     @test results["ElectricStorage"]["size_kwh"] ≈ 14.07 atol=0.05
     @test results["ElectricStorage"]["replacement_month"] == 8
-    @test results["ElectricStorage"]["maintenance_cost"] ≈ 28750 atol=1
-    @test results["ElectricStorage"]["residual_value"] < 2.61
-    @test results["ElectricStorage"]["residual_value"] ≈ 43800 atol=1.0 #battery should serve all load, every other period
+    @test results["ElectricStorage"]["maintenance_cost"] ≈ 28750.7 atol=1
+    @test results["ElectricStorage"]["state_of_health"][8760] ≈ -6.8239 atol=0.001
+    @test results["ElectricStorage"]["residual_value"] ≈ 2.61 atol=0.1
+    @test sum(results["ElectricStorage"]["storage_to_load_series_kw"]) ≈ 43800 atol=1.0 #battery should serve all load, every other period
 
 
     # Validate model decision variables make sense.
