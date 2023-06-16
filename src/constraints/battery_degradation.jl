@@ -152,7 +152,7 @@ function add_degradation(m, p; b="ElectricStorage")
         @constraint(m, [mth in months], m[:dvSOHChangeTimesEnergy][mth] >= m[:dvStorageEnergy][b] - bigM_StorageEnergy * (1 - m[:binSOHIndicatorChange][mth]))
         @constraint(m, [mth in months], m[:dvSOHChangeTimesEnergy][mth] <= m[:dvStorageEnergy][b] + bigM_StorageEnergy * (1 - m[:binSOHIndicatorChange][mth]))
 
-        maintenance_costs = zeros(length(months))  # initialize cost coefficients
+        replacement_costs = zeros(length(months))  # initialize cost coefficients
         residual_values = zeros(length(months))  # initialize cost coefficients for residual_value
         N = 365*p.s.financial.analysis_years # number of days
 
@@ -160,7 +160,7 @@ function add_degradation(m, p; b="ElectricStorage")
             day = Int(round((mth-1)*30.4167 + 15, digits=0))
             batt_replace_count = Int(ceil(N/day - 1)) # number of battery replacements in analysis period if they periodically happened on "day"
             maint_cost = sum(p.s.storage.attr[b].degradation.maintenance_cost_per_kwh[day*i] for i in 1:batt_replace_count)
-            maintenance_costs[mth] = maint_cost
+            replacement_costs[mth] = maint_cost
 
             residual_factor = 1 - (p.s.financial.analysis_years*12/mth - floor(p.s.financial.analysis_years*12/mth))
             residual_value = p.s.storage.attr[b].degradation.maintenance_cost_per_kwh[end]*residual_factor
@@ -169,7 +169,7 @@ function add_degradation(m, p; b="ElectricStorage")
         end
 
         # create replacement cost expression for objective
-        @expression(m, degr_cost, sum(maintenance_costs[mth] * m[:dvSOHChangeTimesEnergy][mth] for mth in months))
+        @expression(m, degr_cost, sum(replacement_costs[mth] * m[:dvSOHChangeTimesEnergy][mth] for mth in months))
 
         # create residual value expression for objective
         @expression(m, residual_value, sum(residual_values[mth] * m[:dvSOHChangeTimesEnergy][mth] for mth in months))
