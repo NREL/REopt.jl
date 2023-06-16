@@ -143,36 +143,36 @@ function add_degradation(m, p; b="ElectricStorage")
 
         # binSOHIndicatorChange[mth] = binSOHIndicator[mth-1] - binSOHIndicator[mth].
         # If replacement month is x, then binSOHIndicatorChange[x] = 1. All other binSOHIndicatorChange values will be 0s (either 1-1 or 0-0)
-        @constraint(m, binSOHIndicatorChange[1] == 1 - binSOHIndicator[1])
-        @constraint(m, [mth in 2:months[end]], binSOHIndicatorChange[mth] == binSOHIndicator[mth-1] - binSOHIndicator[mth])
+        @constraint(m, m[:binSOHIndicatorChange][1] == 1 - m[:binSOHIndicator][1])
+        @constraint(m, [mth in 2:months[end]], m[:binSOHIndicatorChange][mth] == m[:binSOHIndicator][mth-1] - m[:binSOHIndicator][mth])
 
-        @expression(m, months_to_first_replacement, sum(binSOHIndicator[mth] for mth in months))
+        @expression(m, months_to_first_replacement, sum(m[:binSOHIndicator][mth] for mth in months))
         
         # -> linearize the product of binSOHIndicatorChange & m[:dvStorageEnergy][b]
-        @constraint(m, [mth in months], dvSOHChangeTimesEnergy[mth] >= m[:dvStorageEnergy][b] - bigM_StorageEnergy * (1 - binSOHIndicatorChange[mth]))
-        @constraint(m, [mth in months], dvSOHChangeTimesEnergy[mth] <= m[:dvStorageEnergy][b] + bigM_StorageEnergy * (1 - binSOHIndicatorChange[mth]))
+        @constraint(m, [mth in months], m[:dvSOHChangeTimesEnergy][mth] >= m[:dvStorageEnergy][b] - bigM_StorageEnergy * (1 - m[:binSOHIndicatorChange][mth]))
+        @constraint(m, [mth in months], m[:dvSOHChangeTimesEnergy][mth] <= m[:dvStorageEnergy][b] + bigM_StorageEnergy * (1 - m[:binSOHIndicatorChange][mth]))
 
-        c = zeros(length(months))  # initialize cost coefficients
-        s = zeros(length(months))  # initialize cost coefficients for residual_value
+        maintenance_costs = zeros(length(months))  # initialize cost coefficients
+        residual_values = zeros(length(months))  # initialize cost coefficients for residual_value
         N = 365*p.s.financial.analysis_years # number of days
 
         for mth in months
             day = Int(round((mth-1)*30.4167 + 15, digits=0))
             batt_replace_count = Int(ceil(N/day - 1)) # number of battery replacements in analysis period if they periodically happened on "day"
             maint_cost = sum(p.s.storage.attr[b].degradation.maintenance_cost_per_kwh[day*i] for i in 1:batt_replace_count)
-            c[mth] = maint_cost
+            maintenance_costs[mth] = maint_cost
 
             residual_factor = 1 - (p.s.financial.analysis_years*12/mth - floor(p.s.financial.analysis_years*12/mth))
             residual_value = p.s.storage.attr[b].degradation.maintenance_cost_per_kwh[end]*residual_factor
-            s[mth] = residual_value
+            residual_values[mth] = residual_value
             
         end
 
         # create replacement cost expression for objective
-        @expression(m, degr_cost, sum(c[mth] * dvSOHChangeTimesEnergy[mth] for mth in months))
+        @expression(m, degr_cost, sum(maintenance_costs[mth] * m[:dvSOHChangeTimesEnergy][mth] for mth in months))
 
         # create residual value expression for objective
-        @expression(m, residual_value, sum(s[mth] * dvSOHChangeTimesEnergy[mth] for mth in months))
+        @expression(m, residual_value, sum(residual_values[mth] * m[:dvSOHChangeTimesEnergy][mth] for mth in months))
 
     elseif strategy == "augmentation"
 
