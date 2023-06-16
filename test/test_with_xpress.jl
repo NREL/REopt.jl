@@ -452,10 +452,10 @@ end
     @test 50 < results["ElectricStorage"]["residual_value"] < 150
 
     # Validate model decision variables make sense.
-    replace_month = Int(value.(m[:m_0p8]))+1
+    replace_month = Int(value.(m[:months_to_first_replacement]))+1
     @test replace_month ≈ results["ElectricStorage"]["replacement_month"]
     @test sum(value.(m[:soh_indicator])[replace_month:end]) ≈ 0.0
-    @test sum(value.(m[:bmth])) ≈ value.(m[:bmth])[replace_month] ≈ 1.0
+    @test sum(value.(m[:soh_indicator_change])) ≈ value.(m[:soh_indicator_change])[replace_month] ≈ 1.0
     @test value.(m[:soh_indicator])[end] ≈ 0.0
 end
 
