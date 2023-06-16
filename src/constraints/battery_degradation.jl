@@ -122,9 +122,9 @@ function add_degradation(m, p; b="ElectricStorage")
         ElectricStorage.degradation.maintenance_strategy = \"replacement\". 
         Some solvers are slow with integers."
         
-        @variable(m, soh_indicator[months], Bin) # track SOH levels, should be 1 if SOH >= 80%, 0 otherwise
-        @variable(m, soh_indicator_change[months], Bin) # track which month SOH indicator drops to < 80%
-        @variable(m, 0 <= bmth_BkWh[months]) # track the kwh to be replaced in a replacement month
+        @variable(m, binSOHIndicator[months], Bin) # track SOH levels, should be 1 if SOH >= 80%, 0 otherwise
+        @variable(m, binSOHIndicatorChange[months], Bin) # track which month SOH indicator drops to < 80%
+        @variable(m, 0 <= dvSOHChangeTimesEnergy[months]) # track the kwh to be replaced in a replacement month
 
         # the big M
         if p.s.storage.attr[b].max_kwh == 1.0e6 || p.s.storage.attr[b].max_kwh == 0
@@ -135,22 +135,22 @@ function add_degradation(m, p; b="ElectricStorage")
             bigM_StorageEnergy = max(24*maximum(p.s.electric_load.loads_kw), p.s.storage.attr[b].max_kwh)
         end
 
-        # HEALTHY: if soh_indicator is 1, then SOH >= 80%. If soh_indicator is 0 and SOH >= very negative number
-        @constraint(m, [mth in months], m[:SOH][Int(round(30.4167*mth))] >= 0.8*m[:dvStorageEnergy][b] - bigM_StorageEnergy * (1-soh_indicator[mth]))
+        # HEALTHY: if binSOHIndicator is 1, then SOH >= 80%. If binSOHIndicator is 0 and SOH >= very negative number
+        @constraint(m, [mth in months], m[:SOH][Int(round(30.4167*mth))] >= 0.8*m[:dvStorageEnergy][b] - bigM_StorageEnergy * (1-binSOHIndicator[mth]))
         
-        # UNHEALTHY: if soh_indicator is 1, then SOH <= large number. If soh_indicator is 0 and SOH <= 80%
-        @constraint(m, [mth in months], m[:SOH][Int(round(30.4167*mth))] <= 0.8*m[:dvStorageEnergy][b] + bigM_StorageEnergy * (soh_indicator[mth]))
+        # UNHEALTHY: if binSOHIndicator is 1, then SOH <= large number. If binSOHIndicator is 0 and SOH <= 80%
+        @constraint(m, [mth in months], m[:SOH][Int(round(30.4167*mth))] <= 0.8*m[:dvStorageEnergy][b] + bigM_StorageEnergy * (binSOHIndicator[mth]))
 
-        # soh_indicator_change[mth] = soh_indicator[mth-1] - soh_indicator[mth].
-        # If replacement month is x, then soh_indicator_change[x] = 1. All other soh_indicator_change values will be 0s (either 1-1 or 0-0)
-        @constraint(m, soh_indicator_change[1] == 1 - soh_indicator[1])
-        @constraint(m, [mth in 2:months[end]], soh_indicator_change[mth] == soh_indicator[mth-1] - soh_indicator[mth])
+        # binSOHIndicatorChange[mth] = binSOHIndicator[mth-1] - binSOHIndicator[mth].
+        # If replacement month is x, then binSOHIndicatorChange[x] = 1. All other binSOHIndicatorChange values will be 0s (either 1-1 or 0-0)
+        @constraint(m, binSOHIndicatorChange[1] == 1 - binSOHIndicator[1])
+        @constraint(m, [mth in 2:months[end]], binSOHIndicatorChange[mth] == binSOHIndicator[mth-1] - binSOHIndicator[mth])
 
-        @expression(m, months_to_first_replacement, sum(soh_indicator[mth] for mth in months))
+        @expression(m, months_to_first_replacement, sum(binSOHIndicator[mth] for mth in months))
         
-        # -> linearize the product of soh_indicator_change & m[:dvStorageEnergy][b]
-        @constraint(m, [mth in months], bmth_BkWh[mth] >= m[:dvStorageEnergy][b] - bigM_StorageEnergy * (1 - soh_indicator_change[mth]))
-        @constraint(m, [mth in months], bmth_BkWh[mth] <= m[:dvStorageEnergy][b] + bigM_StorageEnergy * (1 - soh_indicator_change[mth]))
+        # -> linearize the product of binSOHIndicatorChange & m[:dvStorageEnergy][b]
+        @constraint(m, [mth in months], dvSOHChangeTimesEnergy[mth] >= m[:dvStorageEnergy][b] - bigM_StorageEnergy * (1 - binSOHIndicatorChange[mth]))
+        @constraint(m, [mth in months], dvSOHChangeTimesEnergy[mth] <= m[:dvStorageEnergy][b] + bigM_StorageEnergy * (1 - binSOHIndicatorChange[mth]))
 
         c = zeros(length(months))  # initialize cost coefficients
         s = zeros(length(months))  # initialize cost coefficients for residual_value
@@ -169,10 +169,10 @@ function add_degradation(m, p; b="ElectricStorage")
         end
 
         # create replacement cost expression for objective
-        @expression(m, degr_cost, sum(c[mth] * bmth_BkWh[mth] for mth in months))
+        @expression(m, degr_cost, sum(c[mth] * dvSOHChangeTimesEnergy[mth] for mth in months))
 
         # create residual value expression for objective
-        @expression(m, residual_value, sum(s[mth] * bmth_BkWh[mth] for mth in months))
+        @expression(m, residual_value, sum(s[mth] * dvSOHChangeTimesEnergy[mth] for mth in months))
 
     elseif strategy == "augmentation"
 

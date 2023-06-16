@@ -454,9 +454,9 @@ end
     # Validate model decision variables make sense.
     replace_month = Int(value.(m[:months_to_first_replacement]))+1
     @test replace_month ≈ results["ElectricStorage"]["replacement_month"]
-    @test sum(value.(m[:soh_indicator])[replace_month:end]) ≈ 0.0
-    @test sum(value.(m[:soh_indicator_change])) ≈ value.(m[:soh_indicator_change])[replace_month] ≈ 1.0
-    @test value.(m[:soh_indicator])[end] ≈ 0.0
+    @test sum(value.(m[:binSOHIndicator])[replace_month:end]) ≈ 0.0
+    @test sum(value.(m[:binSOHIndicatorChange])) ≈ value.(m[:binSOHIndicatorChange])[replace_month] ≈ 1.0
+    @test value.(m[:binSOHIndicator])[end] ≈ 0.0
 end
 
 @testset "Solar and ElectricStorage w/BAU and degradation" begin
@@ -495,7 +495,7 @@ end
     set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
     r = run_reopt(m, d)
     #optimal SOH at end of horizon is 80\% to prevent any replacement
-    @test sum(value.(m[:bmth_BkWh])) ≈ 68.48 atol=0.01
+    @test sum(value.(m[:dvSOHChangeTimesEnergy])) ≈ 68.48 atol=0.01
     # @test r["ElectricStorage"]["maintenance_cost"] ≈ 2972.66 atol=0.01 
     # the maintenance_cost comes out to 3004.39 on Actions, so we test the LCC since it should match
     @test r["Financial"]["lcc"] ≈ 1.240096e7  rtol=0.01

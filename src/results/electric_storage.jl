@@ -67,7 +67,7 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
             r["maintenance_cost"] = value(m[:degr_cost])
             if p.s.storage.attr[b].degradation.maintenance_strategy == "replacement"
                 r["replacement_month"] = round(Int, value(
-                    sum(mth * m[:soh_indicator_change][mth] for mth in 1:p.s.financial.analysis_years*12)
+                    sum(mth * m[:binSOHIndicatorChange][mth] for mth in 1:p.s.financial.analysis_years*12)
                 ))
                 r["residual_value"] = value(m[:residual_value])
             end
