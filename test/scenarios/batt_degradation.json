@@ -4,13 +4,15 @@
         "degradation":{"maintenance_strategy":"replacement"}
     },
     "ElectricTariff":{
-        "urdb_label":"5ed6c1a15457a3367add15ae"
+        "monthly_energy_rates": [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+        "monthly_demand_rates": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     },
     "Site":{
         "latitude":34.5794343,
         "longitude":-118.1164613
     },
     "ElectricLoad":{
-        "doe_reference_name":"LargeOffice"
+        "doe_reference_name":"FlatLoad",
+        "annual_kwh": 87600
     }
 }
