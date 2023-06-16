@@ -439,17 +439,23 @@ end
 
     d["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
 
+    s = Scenario(d)
+    p = REoptInputs(s)
+    for t in 1:4380
+        p.s.electric_tariff.energy_rates[2*t-1] = 0
+        p.s.electric_tariff.energy_rates[2*t] = 10.0
+    end
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    set_optimizer_attribute(m, "MIPRELSTOP", 0.0008)
-    results = run_reopt(m, d)
+    results = run_reopt(m, p)
 
     # Results vary on Github actions => relax the tests
-    @test 150 < results["ElectricStorage"]["size_kw"] < 165
-    @test 500 < results["ElectricStorage"]["size_kwh"] < 650
-    @test 160 < results["ElectricStorage"]["replacement_month"] < 250
-    @test 3.0e5 < results["ElectricStorage"]["initial_capital_cost"] < 3.8e5
-    @test 750 < results["ElectricStorage"]["maintenance_cost"] < 5100
-    @test 50 < results["ElectricStorage"]["residual_value"] < 150
+    @test results["ElectricStorage"]["size_kw"] ≈ 11.13 atol=0.05
+    @test results["ElectricStorage"]["size_kwh"] ≈ 14.07 atol=0.05
+    @test results["ElectricStorage"]["replacement_month"] == 8
+    @test results["ElectricStorage"]["maintenance_cost"] ≈ 28750 atol=1
+    @test results["ElectricStorage"]["residual_value"] < 2.61
+    @test results["ElectricStorage"]["residual_value"] ≈ 43800 atol=1.0 #battery should serve all load, every other period
+
 
     # Validate model decision variables make sense.
     replace_month = Int(value.(m[:months_to_first_replacement]))+1
