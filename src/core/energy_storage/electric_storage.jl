@@ -142,12 +142,12 @@ In this case, the battery has 93.1% of residual life remaining as useful life le
 A residual value cost vector is created to hold this value for all months. Residual value is calculated as:
 
 ``
-C_{\\text{residualvalue}} = R f(d_{last}) C_{\\text{install}}
+C_{\\text{residual}} = R f(d_{\\text{last}}) C_{\\text{install}}
 ``
 
 where:
 - ``R`` is the `residual_factor` which determines portion of battery life remaining at end of analysis period;
-- ``f(d_{last})`` is the present worth factor at approximately the 15th day of last month in analysis period;
+- ``f(d_{\\text{last}})`` is the present worth factor at approximately the 15th day of last month in analysis period;
 - ``C_{\\text{install}}`` is the `ElectricStorage.installed_cost_per_kwh`.
 
 The ``C_{\\text{repl}}`` is added to the objective function to be minimized with all other costs.
