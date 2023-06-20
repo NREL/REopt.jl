@@ -39,11 +39,6 @@ if "Xpress" in ARGS
         include("test_with_xpress.jl")
     end
 
-elseif "CPLEX" in ARGS
-    @testset "test_with_cplex" begin
-        include("test_with_cplex.jl")
-    end
-
 else  # run HiGHS tests
 
     @testset "Inputs" begin
