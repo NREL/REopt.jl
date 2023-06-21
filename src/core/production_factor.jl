@@ -45,8 +45,7 @@ function get_production_factor(pv::PV, latitude::Real, longitude::Real; timefram
         end
     end
 
-    ## TODO: Update to v8 here
-    url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
+    url = string("https://developer.nrel.gov/api/pvwatts/v8.json", "?api_key=", nrel_developer_key,
         "&lat=", latitude , "&lon=", longitude, "&tilt=", pv.tilt,
         "&system_capacity=1", "&azimuth=", pv.azimuth, "&module_type=", pv.module_type,
         "&array_type=", pv.array_type, "&losses=", round(pv.losses*100, digits=3), "&dc_ac_ratio=", pv.dc_ac_ratio,

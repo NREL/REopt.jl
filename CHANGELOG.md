@@ -23,6 +23,11 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+
+## Develop - 2023-06-21
+### Changed
+- In `src/core/production_factor.jl`, updated NSRDB bounds used in PVWatts query (now includes southern New Zealand)
+- Updated PV Watts version from v6 to v8. PVWatts V8 updates the weather data to 2020 TMY data from the NREL NSRDB for locations covered by the database. (The NSRDB weather data used in PVWatts V6 is from around 2015.) See other differences at https://developer.nrel.gov/docs/solar/pvwatts/. 
 ## v0.32.3
 ### Fixed
 - Calculate **num_battery_bins** default in `backup_reliability.jl` based on battery duration to prevent significant discretization error (and add test)
