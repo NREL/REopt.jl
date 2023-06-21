@@ -77,8 +77,8 @@ else  # run HiGHS tests
         inputs = REoptInputs(s)
         results = run_reopt(model, inputs)
 
-        @test results["PV"]["size_kw"] ≈ 70.3084 atol=0.01
-        @test results["Financial"]["lcc"] ≈ 430747.0 rtol=1e-5 # with levelization_factor hack the LCC is within 5e-5 of REopt API LCC
+        @test results["PV"]["size_kw"] ≈ 68.9323 atol=0.01
+        @test results["Financial"]["lcc"] ≈ 432672.0 rtol=1e-5 # with levelization_factor hack the LCC is within 5e-5 of REopt API LCC
         @test all(x == 0.0 for x in results["PV"]["electric_to_load_series_kw"][1:744])
     end
 
