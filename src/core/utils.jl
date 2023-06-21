@@ -378,7 +378,7 @@ end
 
 
 function get_ambient_temperature(latitude::Real, longitude::Real; timeframe="hourly")
-    url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
+    url = string("https://developer.nrel.gov/api/pvwatts/v8.json", "?api_key=", nrel_developer_key,
         "&lat=", latitude , "&lon=", longitude, "&tilt=", latitude,
         "&system_capacity=1", "&azimuth=", 180, "&module_type=", 0,
         "&array_type=", 0, "&losses=", 14,
@@ -405,7 +405,7 @@ end
 
 
 function get_pvwatts_prodfactor(latitude::Real, longitude::Real; timeframe="hourly")
-    url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
+    url = string("https://developer.nrel.gov/api/pvwatts/v8.json", "?api_key=", nrel_developer_key,
         "&lat=", latitude , "&lon=", longitude, "&tilt=", latitude,
         "&system_capacity=1", "&azimuth=", 180, "&module_type=", 0,
         "&array_type=", 0, "&losses=", 14,
