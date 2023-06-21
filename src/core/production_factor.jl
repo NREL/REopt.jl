@@ -35,16 +35,17 @@ function get_production_factor(pv::PV, latitude::Real, longitude::Real; timefram
         return pv.production_factor_series
     end
 
-    # Check if site is beyond the bounds of the NRSDB dataset. If so, use the international dataset.
+    # Check if site is beyond the bounds of the NRSDB TMY dataset. If so, use the international dataset.
     dataset = "nsrdb"
     if longitude < -179.5 || longitude > -21.0 || latitude < -21.5 || latitude > 60.0
-        if longitude < 81.5 || longitude > 179.5 || latitude < -43.8 || latitude > 60.0 
-            if longitude < 67.0 || longitude > 81.5 || latitude < -43.8 || latitude > 38.0
+        if longitude < 81.5 || longitude > 179.5 || latitude < -60.0 || latitude > 60.0 
+            if longitude < 67.0 || latitude < -40.0 || latitude > 38.0
                 dataset = "intl"
             end
         end
     end
 
+    ## TODO: Update to v8 here
     url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
         "&lat=", latitude , "&lon=", longitude, "&tilt=", pv.tilt,
         "&system_capacity=1", "&azimuth=", pv.azimuth, "&module_type=", pv.module_type,
