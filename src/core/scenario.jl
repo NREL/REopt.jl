@@ -456,11 +456,19 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         # Call PVWatts for hourly dry-bulb outdoor air temperature
         ambient_temperature_f = []
         if !haskey(d["GHP"]["ghpghx_inputs"][1], "ambient_temperature_f") || isempty(d["GHP"]["ghpghx_inputs"][1]["ambient_temperature_f"])
-            url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
+            dataset = "nsrdb"
+            if longitude < -179.5 || longitude > -21.0 || latitude < -21.5 || latitude > 60.0
+                if longitude < 81.5 || longitude > 179.5 || latitude < -60.0 || latitude > 60.0 
+                    if longitude < 67.0 || latitude < -40.0 || latitude > 38.0
+                        dataset = "intl"
+                    end
+                end
+            end
+            url = string("https://developer.nrel.gov/api/pvwatts/v8.json", "?api_key=", nrel_developer_key,
                     "&lat=", d["Site"]["latitude"] , "&lon=", d["Site"]["longitude"], "&tilt=", d["Site"]["latitude"],
                     "&system_capacity=1", "&azimuth=", 180, "&module_type=", 0,
                     "&array_type=", 0, "&losses=", 0.14, "&dc_ac_ratio=", 1.1,
-                    "&gcr=", 0.4, "&inv_eff=", 99, "&timeframe=", "hourly", "&dataset=nsrdb",
+                    "&gcr=", 0.4, "&inv_eff=", 99, "&timeframe=", "hourly", "&dataset=", dataset,
                     "&radius=", 100)
             try
                 @info "Querying PVWatts for ambient temperature"

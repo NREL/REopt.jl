@@ -428,11 +428,11 @@ end
     results = run_reopt([m1,m2], d)
 
     @test results["PV"]["size_kw"] ≈ 216.6667 atol=0.01
-    @test results["PV"]["lcoe_per_kwh"] ≈ 0.0483 atol = 0.001
-    @test results["Financial"]["lcc"] ≈ 1.240037e7 rtol=1e-5
+    @test results["PV"]["lcoe_per_kwh"] ≈ 0.0468 atol = 0.001
+    @test results["Financial"]["lcc"] ≈ 1.239151e7rtol=1e-5
     @test results["Financial"]["lcc_bau"] ≈ 12766397 rtol=1e-5
-    @test results["ElectricStorage"]["size_kw"] ≈ 55.9 atol=0.1
-    @test results["ElectricStorage"]["size_kwh"] ≈ 78.9 atol=0.1
+    @test results["ElectricStorage"]["size_kw"] ≈ 49.02 atol=0.1
+    @test results["ElectricStorage"]["size_kwh"] ≈ 83.3 atol=0.1
     proforma_npv = REopt.npv(results["Financial"]["offtaker_annual_free_cashflows"] - 
         results["Financial"]["offtaker_annual_free_cashflows_bau"], 0.081)
     @test results["Financial"]["npv"] ≈ proforma_npv rtol=0.0001
@@ -456,8 +456,8 @@ end
     # @test r["ElectricStorage"]["maintenance_cost"] ≈ 2972.66 atol=0.01 
     # the maintenance_cost comes out to 3004.39 on Actions, so we test the LCC since it should match
     @test r["Financial"]["lcc"] ≈ 1.240096e7  rtol=0.01
-    @test last(value.(m[:SOH])) ≈ 63.129  rtol=0.01
-    @test r["ElectricStorage"]["size_kwh"] ≈ 78.91  rtol=0.01
+    @test last(value.(m[:SOH])) ≈ 66.633  rtol=0.01
+    @test r["ElectricStorage"]["size_kwh"] ≈ 83.29  rtol=0.01
 
     # test minimum_avg_soc_fraction
     d["ElectricStorage"]["minimum_avg_soc_fraction"] = 0.72

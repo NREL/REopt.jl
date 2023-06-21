@@ -377,12 +377,21 @@ function generate_year_profile_hourly(year::Int64, consecutive_periods::Abstract
 end
 
 
-function get_ambient_temperature(latitude::Real, longitude::Real; timeframe="hourly")
+function get_ambient_temperature(latitude::Real, longitude::Real)
+    dataset = "nsrdb"
+    if longitude < -179.5 || longitude > -21.0 || latitude < -21.5 || latitude > 60.0
+        if longitude < 81.5 || longitude > 179.5 || latitude < -60.0 || latitude > 60.0 
+            if longitude < 67.0 || latitude < -40.0 || latitude > 38.0
+                dataset = "intl"
+            end
+        end
+    end
     url = string("https://developer.nrel.gov/api/pvwatts/v8.json", "?api_key=", nrel_developer_key,
         "&lat=", latitude , "&lon=", longitude, "&tilt=", latitude,
         "&system_capacity=1", "&azimuth=", 180, "&module_type=", 0,
         "&array_type=", 0, "&losses=", 14,
-        "&timeframe=", timeframe, "&dataset=nsrdb"
+        "&timeframe=hourly", # can only get tamb when timeframe=houly according to PVWatts documentation
+        "&dataset=", dataset 
     )
 
     try
@@ -404,12 +413,21 @@ function get_ambient_temperature(latitude::Real, longitude::Real; timeframe="hou
 end
 
 
-function get_pvwatts_prodfactor(latitude::Real, longitude::Real; timeframe="hourly")
+function get_pvwatts_prodfactor(latitude::Real, longitude::Real; timeframe="hourly", azimuth=180, module_type=0, array_type=1, tilt=latitude)
+    # Check if site is beyond the bounds of the NRSDB TMY dataset. If so, use the international dataset.
+    dataset = "nsrdb"
+    if longitude < -179.5 || longitude > -21.0 || latitude < -21.5 || latitude > 60.0
+        if longitude < 81.5 || longitude > 179.5 || latitude < -60.0 || latitude > 60.0 
+            if longitude < 67.0 || latitude < -40.0 || latitude > 38.0
+                dataset = "intl"
+            end
+        end
+    end
     url = string("https://developer.nrel.gov/api/pvwatts/v8.json", "?api_key=", nrel_developer_key,
-        "&lat=", latitude , "&lon=", longitude, "&tilt=", latitude,
-        "&system_capacity=1", "&azimuth=", 180, "&module_type=", 0,
-        "&array_type=", 0, "&losses=", 14,
-        "&timeframe=", timeframe, "&dataset=nsrdb"
+        "&lat=", latitude , "&lon=", longitude, "&tilt=", tilt,
+        "&system_capacity=1", "&azimuth=", azimuth, "&module_type=", module_type,
+        "&array_type=", array_type, "&losses=", 14,
+        "&timeframe=", timeframe, "&dataset=", dataset
     )
 
     try
