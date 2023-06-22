@@ -4,15 +4,15 @@
         "latitude": 34.5794343
     },
     "ElectricLoad": {
-        "doe_reference_name": "LargeOffice"
-    },    
+        "doe_reference_name": "LargeOffice",
+        "critical_load_fraction": 1.0
+    },
+    "Financial": {
+        "value_of_lost_load_per_kwh": 5000.0
+    },
     "PV": {
     },
     "ElectricStorage": {
-    },
-    "ElectricUtility": {
-        "outage_start_time_step": 2,
-        "outage_end_time_step": 4
     },
     "ElectricTariff": {
         "urdb_label": "5ed6c1a15457a3367add15ae"
