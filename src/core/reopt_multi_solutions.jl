@@ -1,5 +1,7 @@
 """
-    run_reopt_multi_solutions(fp::String, size_scale::Vector{Float64}, ms::AbstractVector{T}; parallel::Bool=false)  where T <: JuMP.AbstractModel
+    run_reopt_multi_solutions(fp::String, size_scale::Vector{Union{Any,Float64}}, ms::AbstractVector{T}; 
+                                parallel::Bool=false, resilience=false, outage_start_hour::Int64=1, 
+                                outage_duration_hours::Int64=0))  where T <: JuMP.AbstractModel
 
 Run REopt to get optimal tech sizes, and then run REopt multiple times with scaling factor size_scale applied to 
     the optimal sizes to look at sensitivity of tech size on key results parameters
@@ -18,9 +20,9 @@ else
     so still at least need JULIA_NUM_THREADS=2
 
 """
-
-function run_reopt_multi_solutions(fp::String, size_scale::Vector{Float64}, ms::AbstractVector{T}; 
-                                    parallel=true) where T <: JuMP.AbstractModel
+# TODO allow empty vector for size_scale to bypass multiple solutions while leveraging results summary stuff (currently errors with []=Vector[Any])
+function run_reopt_multi_solutions(fp::String, size_scale::Vector{Union{Any,Float64}}, ms::AbstractVector{T}; 
+                                    parallel=false, resilience=false, outage_start_hour=1, outage_duration_hours=0) where T <: JuMP.AbstractModel
     # Load in input_data from .json to dictionary
     input_data = JSON.parsefile(fp)
     # Create optimal and BAU inputs structs for initial 2 runs
@@ -53,13 +55,13 @@ function run_reopt_multi_solutions(fp::String, size_scale::Vector{Float64}, ms::
     n_solutions = length(size_scale) * length(techs_sized)
 
     # Create the first entry for "optimal" solution in the results dictionary
-    if !isempty(p.s.electric_utility.outage_start_time_steps)
+    if resilience
         simresults = simulate_outages(results_dict, p)
     else
         simresults = Dict()
     end
     results_all = Dict("optimal" => results_dict)
-    results_summary = Dict("optimal" => get_multi_solutions_results_summary(results_dict, p, ms[2], techs_sized, simresults))
+    results_summary = Dict("optimal" => get_multi_solutions_results_summary(results_dict, p, ms[2], techs_sized, simresults, outage_start_hour, outage_duration_hours))
 
     # Now create number of inputs based on the # of techs sized in optimal case
     ps = []
@@ -115,13 +117,13 @@ function run_reopt_multi_solutions(fp::String, size_scale::Vector{Float64}, ms::
             local results_dict = REopt.combine_results(p[2], rs[1], rs_solns[i], bau_inputs.s)
             results_dict["Financial"] = merge(results_dict["Financial"], REopt.proforma_results(p[2], results_dict))
             results_all[p[1]] = results_dict
-            if !isempty(p[2].s.electric_utility.outage_start_time_steps)
+            if resilience
                 simresults = simulate_outages(rs_solns[i], p[2])
             else
                 simresults = Dict()
             end
             # Build results summary, a select number of outputs for Eaton
-            results_summary[p[1]] = get_multi_solutions_results_summary(results_dict, p[2], ms[n], techs_sized, simresults)  
+            results_summary[p[1]] = get_multi_solutions_results_summary(results_dict, p[2], ms[n], techs_sized, simresults, outage_start_hour, outage_duration_hours)
         else
             @warn "REopt did not solve successully (infeasible) for extra run number $i"
             results_all[p[1]] = Dict("status"=>Dict("error" => "infeasible"))
@@ -133,13 +135,15 @@ function run_reopt_multi_solutions(fp::String, size_scale::Vector{Float64}, ms::
 end
 
 """
-    get_multi_solutions_results_summary(results::Dict, p::REoptInputs, m::JuMP.AbstractModel, techs_sized::Vector{String}, simresults::Dict)
+    get_multi_solutions_results_summary(results::Dict, p::REoptInputs, m::JuMP.AbstractModel, techs_sized::Vector{String}, simresults::Dict,
+                                        outage_start_hour::Int64, outage_duration_hours::Int64)
 
 Get the results summary dictionary which is a selected number of outputs for Financial, Emissions, and 
 the relevant techs
 
 """
-function get_multi_solutions_results_summary(results::Dict, p::REoptInputs, m::JuMP.AbstractModel, techs_sized::Vector{String}, simresults::Dict)
+function get_multi_solutions_results_summary(results::Dict, p::REoptInputs, m::JuMP.AbstractModel, techs_sized::Vector{String}, simresults::Dict,
+                                                outage_start_hour::Int64, outage_duration_hours::Int64)
     # results_summary always has Financial and emissions, and then add techs as needed
     results_summary = Dict(
         "status" => results["status"],
@@ -156,27 +160,53 @@ function get_multi_solutions_results_summary(results::Dict, p::REoptInputs, m::J
     )
 
     if !isempty(simresults)
-        # WIP find BAU max_cost_outage to get the delta/% between optimal and BAU
-        # General Q?: How could dvMaxOutageCost be anything other than the largest outage_duration?
-        BAUOutageCost = Array{Array{Float64, 1}}(undef, length(p.s.electric_utility.scenarios))
-        for s in p.s.electric_utility.scenarios
-            BAUOutageCost[s] = [p.pwf_e * sum(p.value_of_lost_load_per_kwh[tz+ts-1] * p.s.electric_load.critical_loads_kw[tz+ts-1] 
-                                    for ts in 1:p.s.electric_utility.outage_durations[s])
-                                        for tz in p.s.electric_utility.outage_start_time_steps]
+        # User specified outage_start_hour and outage_duration_hours ONLY for this post-processing for Eaton
+        # Also VoLL only specified for this post-processing, NOT using it in the model
+        # Must specify critical_load_fraction of 1.0 if you want to use the whole load (default 0.5) in REopt inputs 
+        #   even though the model is NOT going to use that if no outage is input
+        num_outage_time_steps = outage_duration_hours * p.s.settings.time_steps_per_hour
+        
+        # Get BAU and Optimal outage lost load and cost for every hour of the year to get average and max values
+        BAUOutageLostLoadKWH = Array{Float64}(undef, 8760 * p.s.settings.time_steps_per_hour)
+        BAUOutageCost = Array{Float64}(undef, 8760 * p.s.settings.time_steps_per_hour)
+        OptimalOutageLostLoadKWH = Array{Float64}(undef, 8760 * p.s.settings.time_steps_per_hour)
+        OptimalOutageCost = Array{Float64}(undef, 8760 * p.s.settings.time_steps_per_hour)
+        for tz in 1:((8760-outage_duration_hours) * p.s.settings.time_steps_per_hour)  # Avoid wrapping around the year
+            BAUOutageLostLoadKWH[tz] = sum(p.s.electric_load.critical_loads_kw[tz+ts-1] / p.s.settings.time_steps_per_hour
+                                        for ts in 1:num_outage_time_steps; init=0.0)
+            BAUOutageCost[tz] = sum(p.value_of_lost_load_per_kwh[tz+ts-1] * p.s.electric_load.critical_loads_kw[tz+ts-1] / p.s.settings.time_steps_per_hour
+                                    for ts in 1:num_outage_time_steps; init=0.0)
+            OptimalOutageLostLoadKWH[tz] = sum(p.s.electric_load.critical_loads_kw[tz+ts-1] / p.s.settings.time_steps_per_hour
+                                                for ts in (convert(Int, simresults["resilience_by_time_step"][tz])+1):outage_duration_hours; init=0.0)
+            OptimalOutageCost[tz] = sum(p.value_of_lost_load_per_kwh[tz+ts-1] * p.s.electric_load.critical_loads_kw[tz+ts-1] / p.s.settings.time_steps_per_hour
+                                                for ts in (convert(Int, simresults["resilience_by_time_step"][tz])+1):outage_duration_hours; init=0.0)                                                    
         end
-        BAUMaxOutageCost = [maximum(BAUOutageCost[s]) for s in p.s.electric_utility.scenarios]
-        BAUExpectedOutageCost = sum(BAUMaxOutageCost[s] * p.s.electric_utility.outage_probabilities[s] for s in p.s.electric_utility.scenarios)
+        avg_lost_load_bau_kwh = sum(BAUOutageLostLoadKWH) / length(BAUOutageLostLoadKWH)
+        avg_year_one_outage_cost_bau = sum(BAUOutageCost) / length(BAUOutageCost)
+        avg_lost_load_optimal_kwh = sum(OptimalOutageLostLoadKWH) / length(OptimalOutageLostLoadKWH)
+        avg_year_one_outage_cost_optimal = sum(OptimalOutageCost) / length(OptimalOutageCost)
+        avg_outage_load_served = avg_lost_load_bau_kwh - avg_lost_load_optimal_kwh
+        avg_outage_cost_savings = avg_year_one_outage_cost_bau - avg_year_one_outage_cost_optimal
+        avg_outage_hours_served = sum(simresults["resilience_by_time_step"]) / length(simresults["resilience_by_time_step"])
+        specific_outage_lost_load_bau_kwh = BAUOutageLostLoadKWH[outage_start_hour * p.s.settings.time_steps_per_hour]
+        specific_outage_cost_bau = BAUOutageCost[outage_start_hour * p.s.settings.time_steps_per_hour]
+        specific_outage_lost_load_optimal_kwh = OptimalOutageLostLoadKWH[outage_start_hour * p.s.settings.time_steps_per_hour]
+        specific_outage_cost_optimal = OptimalOutageCost[outage_start_hour * p.s.settings.time_steps_per_hour]
+        specific_outage_load_served_kwh = specific_outage_lost_load_bau_kwh - specific_outage_lost_load_optimal_kwh
+        specific_outage_hours_served = simresults["resilience_by_time_step"][outage_start_hour]
+        year_one_outage_cost_savings = specific_outage_cost_bau - specific_outage_cost_optimal
+        # Outage cost as percentage of year one utility bill to put into perspective?
+        year_one_utility_bill_bau = results["ElectricTariff"]["year_one_bill_before_tax"]
+        year_one_outage_cost_savings_percent_of_utility_bill = year_one_outage_cost_savings / year_one_utility_bill_bau * 100.0
 
-        # % Improvement is (1 - unserved/total) * 100
-        # Cost improvement ($/year) is expected_outage_cost/25 - (critical load kWh) * VoLL *pwf_e/25
-        annual_outage_cost = results["Outages"]["expected_outage_cost"] / p.s.financial.analysis_years
-        annual_outage_cost_bau = BAUExpectedOutageCost / p.s.financial.analysis_years
-        annual_cost_reduction_percent = (1 - annual_outage_cost / annual_outage_cost_bau) * 100.0
-        results_summary["resilience"] = Dict("Input outage duration (hours)" => sum(p.s.electric_utility.outage_durations) / 
-                                                                                    length(p.s.electric_utility.outage_durations),
-                                            "Average hours of load served during outage" => simresults["resilience_hours_avg"],
-                                            "Annual value of load served" => annual_outage_cost_bau - annual_outage_cost,
-                                            "Value of load served as a percent of total unserved load" => annual_cost_reduction_percent
+        results_summary["resilience"] = Dict("Input outage duration (hours)" => outage_duration_hours,
+                                            "Average outage hours of load served (hours)" => round(avg_outage_hours_served, digits=0),
+                                            "Average outage load served (kWh)" => round(avg_outage_load_served, sigdigits=3),
+                                            "Average outage cost savings per year" => round(avg_outage_cost_savings, sigdigits=3),
+                                            "Specified outage hours of load served" => round(specific_outage_hours_served, digits=0),
+                                            "Specified outage load served with DERs (kWh)" => round(specific_outage_load_served_kwh, sigdigits=3),
+                                            "Specified outage cost savings per year with DERs" => round(year_one_outage_cost_savings, sigdigits=3),
+                                            "Specified outage cost savings as percent of annual utility bill" => round(year_one_outage_cost_savings_percent_of_utility_bill, sigdigits=3)
                                             )
     else
         results_summary["resilience"] = Dict("No resilience simulation was run" => 0.0)
