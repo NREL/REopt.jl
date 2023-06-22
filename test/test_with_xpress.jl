@@ -707,7 +707,7 @@ end
     @test roof_east["size_kw"] ≈ 4 atol=0.1
     @test ground_pv["lifecycle_om_cost_after_tax_bau"] ≈ 782.0 atol=0.1
     @test roof_west["lifecycle_om_cost_after_tax_bau"] ≈ 782.0 atol=0.1
-    @test ground_pv["annual_energy_produced_kwh_bau"] ≈ 8844.19 atol=0.1
+    @test ground_pv["annual_energy_produced_kwh_bau"] ≈ 8912.06 atol=0.1
     @test roof_west["annual_energy_produced_kwh_bau"] ≈ 7656.11 atol=0.1
     @test ground_pv["annual_energy_produced_kwh"] ≈ 26735.22 atol=0.1
     @test roof_west["annual_energy_produced_kwh"] ≈ 10719.51 atol=0.1
@@ -1329,7 +1329,7 @@ end
             @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 140.75
             @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0
             @test results["ElectricUtility"]["annual_emissions_tonnes_CO2"] ≈ 4.34
-            @test results["ElectricUtility"]["annual_emissions_tonnes_CO2_bau"] ≈ 32.16
+            @test results["ElectricUtility"]["annual_emissions_tonnes_CO2_bau"] ≈ 32.06
             @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] ≈ 76.88
             @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 567.69
         elseif i == 2

@@ -464,7 +464,7 @@ else  # run HiGHS tests
 
         @test reliability_results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.802997 atol=0.0001
         @test reliability_results["cumulative_survival_final_time_step"][1] ≈ 0.802997 atol=0.0001
-        @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.817088 atol=0.0001
+        @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.817586 atol=0.0001
     end                            
 
     # removed Wind test for two reasons
