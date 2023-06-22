@@ -1,22 +1,32 @@
 # Summary
 The multiple solutions functionality runs REopt (like `run_reopt`) multiple times to look at the
 sensitivity of a number of key results, such as Net Present Value (NPV) and capital cost, on
-sizing variations around the optimal technology sizes. The function first runs the optimal case to
-identify the cost-effective technologies recommended by REopt. It then re-runs a number of times with scaling factors applied to each of the cost-optimal techs, and it forces those sizes into the
-solution. 
+sizing variations around the optimal technology sizes. The `run_reopt_multi_solutions()` function first runs the optimal case to
+identify the cost-effective technologies recommended by REopt. It then re-runs a number of times with user-specified scaling factors applied to each of the cost-optimal techs, and it forces those DER sizes into the solution.
 
-If outages are modeled for a resilience analysis, the `resilience` key in the results summary gets populated which includes results from the stochastic outages modeled in the optimization as well as the results from the `simulate_outages()` function which is run to evaluate the resilience performance for all outage start times of the year.
+## Resilience evaluation option
+If resilience metrics and an estimate of the value of avoided lost load are desired, modify the `resilience` keyword argument to `resilience=true`. Additionally, the user must input the `outage_start_hour` and the `outage_duration_hours` keyword arguments to the function to evaluate the value of avoided lost load for that specific outage period. The `simulate_outages()` function gets evaluated after running REopt to calculate the number of hours the DERs serve the critical load for all possible outage start times of the year to get an average, and it outputs the specified outage from the user inputs.
 
-## Example use-case for multi-solutions
+Note, this resilience evaluation is not considering the user-specified outage for sizing the DERs in the model. The evaluation first runs REopt to get DER size recommendations based on economics. Then the resilience benefit of the recommended DERs are evaluated using a post-processing algorithm from `simulate_outages()` for dispatching the DERs during outages to serve the critical load (determined by `ElectricLoad.critical_load_fraction`). Therefore, the DERs may not serve any or all of the critical load during the user specified outage. The calculations describe how much of the critical load is served compared to not having DERs (where none of the critical load is served), and it estimates the value of avoided lost load based on the user input `Financial.value_of_lost_load`.
+
+The `resilience` key in the results summary gets populated with the following information:
+```
+    "Input outage duration (hours)"  # The user-input outage duration
+    "Average outage hours of load served (hours)"  # Average number of hours of critical load served for all (8760) start times of the year
+    "Average outage load served (kWh)"  # The average amount of critical load served for all (8760) start times of the year
+    "Average outage cost savings per year"  # The average yearly cost savings for all outage start times of the year 
+    "Specified outage hours of load served"  # The number of hours of critical load served for the user-input outage duration
+    "Specified outage load served with DERs (kWh)"  # The critical load served for the user-input outage start time
+    "Specified outage cost savings per year with DERs"  # The yearly savings from serving load during the user-input outage start time
+    "Specified outage cost savings as percent of annual utility bill"  # The value of avoided lost load as a percent of the annual electric bill
+```
+
+# Example use-case for multi-solutions
 ### Specify path to input file:
 `fp = "scenarios/eaton_multi.json"`
 
-or for resilience:
-
-`fp = "scenarios/eaton_voll.json"`
-
-### Specify fractions/ratios of size relative to the optimal size to run. The other techs will all be forced to the optimal size for each run:
-`size_scale = [0.5, 1.5]`
+### Specify fractions/ratios of size relative to the optimal size to run. The other techs will all be forced to the optimal size for each run. If you run with an empty array for size_scale, it will just run the optimal scenario.
+`size_scale = [0.8, 1.2]`
 ### Need to know the maximum number of JuMP models to create, so first identify the number of technologies considered. So for the eaton_multi.json scenario with PV and Battery (ElectricStorage):
 `n_techs = 2`
 ### This equation uses 2 for optimal+BAU plus however many scenario combinations are possible:
@@ -30,14 +40,46 @@ or for resilience:
 ### In-series/sequential runs to reduce number of threads required to 2:
 `results_all, results_summary = REopt.run_reopt_multi_solutions(fp, size_scale, ms; parallel=false)`
 
-## Parallel runs, requiring multiple cores for the multiple threads (see function docstring for more information):
-`results_all, results_summary = REopt.run_reopt_multi_solutions(fp, size_scale, ms; parallel=true)`
+### Parallel runs with resilience, requiring multiple cores for the multiple threads (see function docstring for more information):
+`results_all, results_summary = REopt.run_reopt_multi_solutions(fp, size_scale, ms; parallel=true,  resilience=true, outage_start_hour=4000, outage_duration_hours=10)`
 
-### Print some interesting data from all the solutions from the results_summary which is created:
+### Here is an example `results_summary` output for `PV` and Battery (`ElectricStorage`) with `resilience=true`:
 ```
-for s in keys(results_summary)
-    println("NPV for scenario "*s*" = ", results_summary[s]["Financial"]["Net Present Value"])
-    println("Capital cost for scenario "*s*" = ", results_summary[s]["Financial"]["Net capital cost"])
-    println("Resilience duration average (hours) for scenario "*s*" = ", results_summary[s]["resilience"]["Average hours of load served during outage"])
-end
+    "optimal": {
+        "status": "optimal",
+        "resilience": {
+            "Specified outage hours of load served": 3.0,
+            "Average outage hours of load served (hours)": 15.0,
+            "Average outage load served (kWh)": 4940.0,
+            "Specified outage load served with DERs (kWh)": 4090.0,
+            "Specified outage cost savings per year with DERs": 2.05e7,
+            "Specified outage cost savings as percent of annual utility bill": 6640.0,
+            "Input outage duration (hours)": 10,
+            "Average outage cost savings per year": 2.47e7
+        },
+        "PV": {
+            "Capital cost": 2.9387651486586295e6,
+            "Annual maintenance cost": 61478.709899999994,
+            "Average annual energy produced": 6.131804e6,
+            "Rated capacity": 3616.3947
+        },
+        "Financial": {
+            "Simple payback period": 6.66,
+            "Net Present Value": 4.1934961e6,
+            "Net capital cost": 5.0679701147e6,
+            "Internal Rate of Return %": 13.0
+        },
+        "Storage": {
+            "Capital cost": 1.3586723305624602e6,
+            "Rated inverter capacity": 961.82,
+            "Rated energy capacity": 5350.36,
+            "Total replacement cost": 770532.6255763071
+        },
+        "emissions": {
+            "Site life cycle PM25 tonnes": 1.08,
+            "Site life cycle SO2 tonnes": 1.43,
+            "Site life cycle NOx tonnes": 1.43,
+            "Site life cycle CO2 tonnes": 18582.68
+        }
+    }
 ```
