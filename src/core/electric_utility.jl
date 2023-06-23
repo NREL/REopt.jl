@@ -41,12 +41,25 @@
     outage_durations::Array{Int,1}=Int[],  # one-to-one with outage_probabilities, outage_durations can be a random variable
     outage_probabilities::Array{R,1} where R<:Real = [1.0],
     # Emissions and renewable energy inputs:
-    emissions_region::String = "", # AVERT emissions region. Default is based on location, or can be overriden by providing region here.
+    
+    
+    ### Climate Emissions from Grid Electricity ### 
+    # Option 1 (Default): Use levelized emissions data from NREL's Cambium database by specifying the following fields:
+
+    # Option 2: Provide your own custom emissions factors for CO2 and specify annual percent decrease  
     emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
+    emissions_factor_CO2_decrease_fraction::Real = 0.01174, # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase.
+    
+    ### Health Emissions from Grid Electricity ### 
+    # Option 1 (Default): Use health emissions data from AVERT based on the AVERT emissions region and specify annual percent decrease
+    avert_emissions_region::String = "", # AVERT emissions region. Default is based on location, or can be overriden by providing region here.
+    
+    # Option 2: Provide your own custom emissions factors for health emissions and specify annual percent decrease:
     emissions_factor_series_lb_NOx_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
     emissions_factor_series_lb_SO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
     emissions_factor_series_lb_PM25_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
-    emissions_factor_CO2_decrease_fraction::Real = 0.01174, # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase.
+
+    # Used in Options 1 or 2: Annual percent decrease in health emissions factors: 
     emissions_factor_NOx_decrease_fraction::Real = 0.01174,
     emissions_factor_SO2_decrease_fraction::Real = 0.01174,
     emissions_factor_PM25_decrease_fraction::Real = 0.01174
@@ -70,11 +83,36 @@
     the non-MPC case and without latitude/longitude arguments provided for the MPC case.
 
 !!! note "Emissions Region"
-    The default `emissions_region` input is determined by the site's latitude and longitude. 
+    The default `avert_emissions_region` input is determined by the site's latitude and longitude. 
     Alternatively, you may input the desired AVERT `emissions_region`, which must be one of: 
     ["California", "Central", "Florida", "Mid-Atlantic", "Midwest", "Carolinas", "New England",
      "Northwest", "New York", "Rocky Mountains", "Southeast", "Southwest", "Tennessee", "Texas",
      "Alaska", "Hawaii (except Oahu)", "Hawaii (Oahu)"]
+
+!!! note "Climate and Health Emissions Modeling" 
+    Climate and health-related emissions from grid electricity come from two different datasources and have different REopt inputs as described below: 
+
+    **Climate Emissions**
+    - Climate-related emissions rates for sites in the contiguous United States come from NREL's Cambium database (Current version: 2022)
+    - By default, REopt uses *levelized long-run marginal emission rates for CO2-equivalent emissions* for the balancing area in which the site is located. ## TODO check is BA's work and if not, use state's or GEAs. 
+        The emissions rates are levelized over the analysis period (e.g., from 2023 through 2047 for a 25-year analysis) ## TODO: check and document Cambium API behavior for out-years beyond 2050
+    - The following inputs can be modified for the API request (with default values shown): 
+        "scenario": "Mid-case" # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions). 
+                               # Options: "Mid-case", "Low Renewable Energy and Battery Costs", "High Renewable Energy and Battery Costs", "Electricifcation", "Low Natural Gas Price", "High Natural Gas Price", "Mid-case with 95% Decarbonization by 2050"
+        "location_type": "States" – should allow user to modify
+        "location": "Colorado" – use lat long of site
+        "time_type": "annual" – should allow user to modify
+        "metric": "LRMER: CO2e Combined" – should allow user to modify
+        "start_year": 2024 – set to current year? 
+        "grid_level": "enduse" – could probably exclude from user inputs
+        "lifetime": 20 – set to analysis_years 
+        "discount_rate": 0.03 - expose? 
+        "smoothing_method": "none"
+        "gwp": "100yrAR6" # "100yrAR5", # "100yrAR5", "20yrAR5", "100yrAR6", "20yrAR6" or a custom tuple [1,10.0,100] with GWP values for [CO2, CH4, N2O] # TODO check use of custom tuples
+        hide: "ems_mass_units": "lb" # lb or kg
+
+
+
 
 
 """
