@@ -56,7 +56,7 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
             if batt_soc_kwh < batt_kwh  # charge battery if there's room in the battery
                 batt_soc_kwh += minimum([
                     batt_kwh - batt_soc_kwh,     # room available
-                    batt_kw / n_steps_per_hour * batt_roundtrip_efficiency,  # inverter capacity
+                    #batt_kw / n_steps_per_hour * batt_roundtrip_efficiency,  # inverter capacity # commented out to let battery charge more than discharge
                     -load_kw / n_steps_per_hour * batt_roundtrip_efficiency,  # excess energy
                 ])
             end
@@ -70,7 +70,7 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
                     if batt_soc_kwh < batt_kwh  # charge battery if there's room in the battery
                         batt_soc_kwh += minimum([
                             batt_kwh - batt_soc_kwh,     # room available
-                            batt_kw / n_steps_per_hour * batt_roundtrip_efficiency,  # inverter capacity
+                            #batt_kw / n_steps_per_hour * batt_roundtrip_efficiency,  # inverter capacity # commented out to let the battery charge more than discharge
                             (diesel_min_turndown * diesel_kw - load_kw) / n_steps_per_hour * batt_roundtrip_efficiency  # excess energy
                         ])
                     end
@@ -271,6 +271,7 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
     batt_kwh = 0
     batt_kw = 0
     init_soc = zeros(length(p.time_steps))
+    
     if "ElectricStorage" in keys(d)
         batt_roundtrip_efficiency = (p.s.storage.attr["ElectricStorage"].charge_efficiency *
                                 p.s.storage.attr["ElectricStorage"].discharge_efficiency)
@@ -278,6 +279,7 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
         batt_kw = get(d["ElectricStorage"], "size_kw", 0)
         init_soc = get(d["ElectricStorage"], "soc_series_fraction", zeros(length(p.time_steps)))
     end
+    
     if "ElectrothermalStorage" in keys(d)
        batt_roundtrip_efficiency = (p.s.storage.attr["ElectrothermalStorage"].charge_efficiency_fraction *
                                 p.s.storage.attr["ElectrothermalStorage"].electric_discharge_efficiency_fraction)
