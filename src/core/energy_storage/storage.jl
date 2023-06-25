@@ -44,6 +44,9 @@ mutable struct StorageTypes
     thermal::Vector{String}
     hot::Vector{String}
     cold::Vector{String}
+    hydrogen::Vector{String}
+    hydrogen_lp::Vector{String}
+    hydrogen_hp::Vector{String}
 end
 ```
 """
@@ -53,10 +56,15 @@ mutable struct StorageTypes
     thermal::Vector{String}
     hot::Vector{String}
     cold::Vector{String}
-
+    hydrogen::Vector{String}
+    hydrogen_lp::Vector{String}
+    hydrogen_hp::Vector{String}
 
     function StorageTypes()
         new(
+            String[],
+            String[],
+            String[],
             String[],
             String[],
             String[],
@@ -70,6 +78,9 @@ mutable struct StorageTypes
         elec_storage = String[]
         hot_storage = String[]
         cold_storage = String[]
+        hydrogen_storage = String[]
+        hydrogen_lp_storage = String[]
+        hydrogen_hp_storage = String[]
 
         for (k,v) in d
             if v.max_kw > 0.0 && v.max_kwh > 0.0
@@ -78,6 +89,15 @@ mutable struct StorageTypes
 
                 if typeof(v) <: AbstractElectricStorage
                     push!(elec_storage, k)
+
+                elseif typeof(v) <: AbstractHydrogenStorage
+                    if occursin("LP", k)
+                        push!(hydrogen_lp_storage, k)
+                    elseif occursin("HP", k)
+                        push!(hydrogen_hp_storage, k)
+                    else
+                        throw(@error("Hydrogen Storage not labeled as LP or HP."))
+                    end
 
                 elseif typeof(v) <: ThermalStorage
                     if occursin("Hot", k)
@@ -92,13 +112,17 @@ mutable struct StorageTypes
         end
 
         thermal_storage = union(hot_storage, cold_storage)
+        hydrogen_storage = union(hydrogen_lp_storage, hydrogen_hp_storage)
 
         new(
             all_storage,
             elec_storage,
             thermal_storage,
             hot_storage,
-            cold_storage
+            cold_storage,
+            hydrogen_storage,
+            hydrogen_lp_storage,
+            hydrogen_hp_storage
         )
     end
 end

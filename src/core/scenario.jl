@@ -38,6 +38,7 @@ struct Scenario <: AbstractScenario
     electric_utility::ElectricUtility
     financial::Financial
     generator::Generator
+    hydrogen_load::HydrogenLoad
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
     cooling_load::CoolingLoad
@@ -66,6 +67,7 @@ A Scenario struct can contain the following keys:
 - [ElectricStorage](@ref) (optional)
 - [ElectricUtility](@ref) (optional)
 - [Generator](@ref) (optional)
+- [HydrogenLoad](@ref) (optional)
 - [DomesticHotWaterLoad](@ref) (optional)
 - [SpaceHeatingLoad](@ref) (optional)
 - [ExistingBoiler](@ref) (optional)
@@ -178,6 +180,15 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         params = ColdThermalStorageDefaults(; dictkeys_tosymbols(d["ColdThermalStorage"])...)
         storage_structs["ColdThermalStorage"] = ThermalStorage(params, financial, settings.time_steps_per_hour)
     end
+    if haskey(d, "HydrogenStorageLP")
+        params = dictkeys_tosymbols(d["HydrogenStorageLP"])
+        storage_structs["HydrogenStorageLP"] = HydrogenStorageLP(params, financial)
+    end
+    if haskey(d, "HydrogenStorageHP")
+        params = dictkeys_tosymbols(d["HydrogenStorageHP"])
+        storage_structs["HydrogenStorageHP"] = HydrogenStorageHP(params, financial)
+    end
+        
     storage = Storage(storage_structs)
 
     electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
@@ -214,6 +225,16 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         generator = Generator(; dictkeys_tosymbols(d["Generator"])..., off_grid_flag=settings.off_grid_flag, analysis_years=financial.analysis_years)
     else
         generator = Generator(; max_kw=0)
+    end
+
+    if haskey(d, "HydrogenLoad") 
+        hydrogen_load = HydrogenLoad(; dictkeys_tosymbols(d["HydrogenLoad"])..., 
+                                          time_steps_per_hour=settings.time_steps_per_hour
+                                        )
+    else
+        hydrogen_load = HydrogenLoad(; loads_kg=zeros(8760*settings.time_steps_per_hour),
+                                            time_steps_per_hour=settings.time_steps_per_hour
+                                        )
     end
 
     max_heat_demand_kw = 0.0
@@ -562,6 +583,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         electric_utility, 
         financial,
         generator,
+        hydrogen_load,
         dhw_load,
         space_heating_load,
         cooling_load,

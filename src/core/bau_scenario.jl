@@ -51,6 +51,7 @@ struct BAUScenario <: AbstractScenario
     electric_utility::ElectricUtility
     financial::Financial
     generator::Generator
+    hydrogen_load::HydrogenLoad
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
     existing_boiler::Union{ExistingBoiler, Nothing}
@@ -122,7 +123,10 @@ function BAUScenario(s::Scenario)
     ghp_option_list = []
     space_heating_thermal_load_reduction_with_ghp_kw = zeros(8760 * s.settings.time_steps_per_hour)
     cooling_thermal_load_reduction_with_ghp_kw = zeros(8760 * s.settings.time_steps_per_hour)
-    
+
+    # currently assuming no existing hydrogen assets
+    hydrogen_load = zeros(8760 * s.settings.time_steps_per_hour)
+
     t0, tf = s.electric_utility.outage_start_time_step, s.electric_utility.outage_end_time_step
     #=
     When a deterministic grid outage is modeled we must adjust the BAU critical load profile to keep the problem 
@@ -162,6 +166,7 @@ function BAUScenario(s::Scenario)
         s.electric_utility, 
         s.financial,
         generator,
+        hydrogen_load,
         s.dhw_load,
         s.space_heating_load,
         s.existing_boiler,
