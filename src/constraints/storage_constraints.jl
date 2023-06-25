@@ -84,6 +84,8 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
             sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) 
             + p.s.storage.attr[b].grid_charge_efficiency * m[Symbol("dvGridToStorage"*_n)][b, ts] 
             - m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.s.storage.attr[b].discharge_efficiency
+            - m[Symbol("dvStorageToElectrolyzer"*_n)][b,ts] / p.s.storage.attr[b].discharge_efficiency
+            - m[Symbol("dvStorageToCompressor"*_n)][b,ts] / p.s.storage.attr[b].discharge_efficiency
         )
 	)
 
@@ -92,6 +94,8 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
         m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  
             sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.elec) 
             - m[Symbol("dvDischargeFromStorage"*_n)][b, ts] / p.s.storage.attr[b].discharge_efficiency
+            - m[Symbol("dvStorageToElectrolyzer"*_n)][b, ts] / p.s.storage.attr[b].discharge_efficiency
+            - m[Symbol("dvStorageToCompressor"*_n)][b, ts] / p.s.storage.attr[b].discharge_efficiency
         )
     )
 
@@ -103,13 +107,15 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
 	
 	#Constraint (4k)-alt: Dispatch to and from electrical storage is no greater than power capacity
 	@constraint(m, [ts in p.time_steps_with_grid],
-        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] + 
+        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] 
+            + m[Symbol("dvStorageToElectrolyzer"*_n)][b, ts] + m[Symbol("dvStorageToCompressor"*_n)][b, ts] +
             sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) + m[Symbol("dvGridToStorage"*_n)][b, ts]
     )
 
 	#Constraint (4l)-alt: Dispatch from electrical storage is no greater than power capacity (no grid connection)
 	@constraint(m, [ts in p.time_steps_without_grid],
         m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b,ts] + 
+            m[Symbol("dvStorageToElectrolyzer"*_n)][b, ts] + m[Symbol("dvStorageToCompressor"*_n)][b, ts] +
             sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec)
     )
 					
@@ -220,5 +226,69 @@ function add_storage_sum_constraints(m, p; _n="")
 	@constraint(m, [ts in p.time_steps_with_grid],
       sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) >= 
       sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec)
+      + m[Symbol("dvGridToElectrolyzer"*_n)][ts]
+      + m[Symbol("dvGridToCompressor"*_n)][ts]
     )
+end
+
+function add_hp_hydrogen_storage_dispatch_constraints(m, p, b; _n="")
+				
+	# Constraint
+	@constraint(m, [ts in p.time_steps],
+        m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  
+            sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.compressor) 
+            - m[Symbol("dvDischargeFromStorage"*_n)][b,ts]
+        )
+	)
+
+	# Constraint
+	@constraint(m, [ts in p.time_steps],
+        m[Symbol("dvStoragePower"*_n)][b] >= 
+            sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.compressor)
+    )
+	
+	#Constraint
+	@constraint(m, [ts in p.time_steps_with_grid],
+        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] + 
+            sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.compressor)
+    )
+					
+    if p.s.storage.attr[b].minimum_avg_soc_fraction > 0
+        avg_soc = sum(m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps) /
+                   (8760. / p.hours_per_time_step)
+        @constraint(m, avg_soc >= p.s.storage.attr[b].minimum_avg_soc_fraction * 
+            sum(m[Symbol("dvStorageEnergy"*_n)][b])
+        )
+    end
+end
+
+function add_lp_hydrogen_storage_dispatch_constraints(m, p, b; _n="")
+				
+	# Constraint
+	@constraint(m, [ts in p.time_steps],
+        m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  
+            sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.electrolyzer) 
+            - m[Symbol("dvDischargeFromStorage"*_n)][b,ts]
+        )
+	)
+
+	# Constraint
+	@constraint(m, [ts in p.time_steps],
+        m[Symbol("dvStoragePower"*_n)][b] >= 
+            sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.electrolyzer)
+    )
+	
+	#Constraint
+	@constraint(m, [ts in p.time_steps_with_grid],
+        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] + 
+            sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.electrolyzer)
+    )
+					
+    if p.s.storage.attr[b].minimum_avg_soc_fraction > 0
+        avg_soc = sum(m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps) /
+                   (8760. / p.hours_per_time_step)
+        @constraint(m, avg_soc >= p.s.storage.attr[b].minimum_avg_soc_fraction * 
+            sum(m[Symbol("dvStorageEnergy"*_n)][b])
+        )
+    end
 end
