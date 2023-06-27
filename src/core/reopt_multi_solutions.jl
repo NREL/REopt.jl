@@ -1,5 +1,5 @@
 """
-    run_reopt_multi_solutions(fp::String, size_scale::Vector{Union{Any,Float64}}, ms::AbstractVector{T}; 
+    run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vector{Float64}}, ms::AbstractVector{T}; 
                                 parallel::Bool=false, resilience=false, outage_start_hour::Int64=1, 
                                 outage_duration_hours::Int64=0))  where T <: JuMP.AbstractModel
 
@@ -21,7 +21,7 @@ else
 
 """
 # TODO allow empty vector for size_scale to bypass multiple solutions while leveraging results summary stuff (currently errors with []=Vector[Any])
-function run_reopt_multi_solutions(fp::String, size_scale::Vector{Union{Any,Float64}}, ms::AbstractVector{T}; 
+function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vector{Float64}}, ms::AbstractVector{T}; 
                                     parallel=false, resilience=false, outage_start_hour=1, outage_duration_hours=0) where T <: JuMP.AbstractModel
     # Load in input_data from .json to dictionary
     input_data = JSON.parsefile(fp)
