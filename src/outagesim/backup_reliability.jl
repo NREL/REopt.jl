@@ -772,7 +772,7 @@ function survival_with_storage(;
         survival_probability_matrix[t, :] = survival_with_storage_single_start_time(t, 
         net_critical_loads_kw, battery_size_kw, max_outage_duration, battery_charge_efficiency,
         battery_discharge_efficiency, num_battery_bins, N, starting_gens, generator_production,
-        generator_markov_matrix, maximum_generation, t_max, starting_battery_bins, battery_bin_size, H2_bin_size, marginal_survival, time_steps_per_hour)
+        generator_markov_matrix, maximum_generation, t_max, starting_battery_bins, battery_bin_size, marginal_survival, time_steps_per_hour)
     end
     return survival_probability_matrix
 end
