@@ -104,8 +104,8 @@ julia> markov_matrix(2, 0.1)
 """
 function markov_matrix(num_generators::Int, fail_prob::Real)::Matrix{Float64} 
     #Creates Markov matrix for generator transition probabilities
-    M = reshape(transition_prob(repeat(0:num_generators, outer = num_generators + 1), 
-                                repeat(0:num_generators, inner = num_generators+1), 
+    M = reshape(transition_prob(repeat(0:num_generators, inner = num_generators + 1), 
+                                repeat(0:num_generators, outer = num_generators + 1), 
                                 fail_prob), 
                 num_generators+1, num_generators+1)
     replace!(M, NaN => 0)
@@ -148,8 +148,8 @@ julia> markov_matrix([2, 1], [0.1, 0.25])
 function markov_matrix(num_generators::Vector{Int}, fail_prob_vec::Vector{<:Real})::Matrix{Float64} 
     # num_generators_working is a vector of tuples, each tuple indicating a number of each gen type that is working
     num_generators_working = reshape(collect(Iterators.product((0:g for g in num_generators)...)), :, 1)
-    starting_gens = vec(repeat(num_generators_working, outer = prod(num_generators .+ 1)))
-    ending_gens = repeat(vec(num_generators_working), inner = prod(num_generators .+ 1))
+    starting_gens = vec(repeat(num_generators_working, inner = prod(num_generators .+ 1)))
+    ending_gens = repeat(vec(num_generators_working), outer = prod(num_generators .+ 1))
 
     #Creates Markov matrix for generator transition probabilities
     M = reshape(transition_prob(starting_gens, ending_gens, fail_prob_vec), prod(num_generators.+1), prod(num_generators .+1))
@@ -177,12 +177,17 @@ julia> starting_probabilities(2, 0.99, 0.05)
  0.00354025  0.11192  0.88454
 ```
 """
-function starting_probabilities(num_generators::Int, generator_operational_availability::Real, generator_failure_to_start::Real)::Matrix{Float64} 
-    starting_vec = markov_matrix(
-        num_generators, 
-        (1 - generator_operational_availability) + (generator_failure_to_start * generator_operational_availability)
-    )[end, :] 
-    return reshape(starting_vec, 1, length(starting_vec))
+function starting_probabilities(num_generators::Int, generator_operational_availability::Real, generator_failure_to_start::Real)::Vector{Float64} 
+    starting_vec = transition_prob(num_generators * ones(num_generators + 1), 
+                            0:num_generators, 
+                            (1 - generator_operational_availability) + (generator_failure_to_start * generator_operational_availability)
+                        )
+    replace!(M, NaN => 0)
+    # starting_vec = markov_matrix(
+    #     num_generators, 
+    #     (1 - generator_operational_availability) + (generator_failure_to_start * generator_operational_availability)
+    # )[:, end] 
+    return starting_vec
 end
 
 """
@@ -216,11 +221,20 @@ julia> starting_probabilities([2, 1], [0.99,0.95], [0.05, 0.1])
 ```
 """
 function starting_probabilities(num_generators::Vector{Int}, generator_operational_availability::Vector{<:Real}, generator_failure_to_start::Vector{<:Real})::Matrix{Float64} 
-    starting_vec = markov_matrix(
-        num_generators, 
-        (1 .- generator_operational_availability) .+ (generator_failure_to_start .* generator_operational_availability)
-    )[end, :]
-    return reshape(starting_vec, 1, length(starting_vec))
+    # num_generators_working is a vector of tuples, each tuple indicating a number of each gen type that is working
+    num_generators_working = reshape(collect(Iterators.product((0:g for g in num_generators)...)), :, 1)
+    starting_gens = vec(repeat(num_generators_working[end], prod(num_generators .+ 1)))
+    ending_gens = vec(num_generators_working)
+    starting_vec = transition_prob(starting_gens, 
+                            ending_gens, 
+                            (1 - generator_operational_availability) + (generator_failure_to_start * generator_operational_availability)
+                        )
+    replace!(M, NaN => 0)
+    # starting_vec = markov_matrix(
+    #     num_generators, 
+    #     (1 .- generator_operational_availability) .+ (generator_failure_to_start .* generator_operational_availability)
+    # )[:, end]
+    return starting_vec
 end
 
 """
@@ -335,9 +349,9 @@ function get_maximum_generation(battery_size_kw::Real, generator_size_kw::Real, 
     #Returns a matrix of maximum generation (rows denote number of generators starting at 0, columns denote battery bin)
     N = num_generators + 1
     M = num_bins
-    max_system_output = zeros(M, N) 
+    max_system_output = zeros(N, M) 
     for i in 1:M
-       max_system_output[i, :] = generator_output(num_generators, generator_size_kw) .+ min(battery_size_kw, (i-1)*bin_size*battery_discharge_efficiency)
+       max_system_output[:, i] = generator_output(num_generators, generator_size_kw) .+ min(battery_size_kw, (i-1)*bin_size*battery_discharge_efficiency)
     end
     return max_system_output
 end
@@ -454,21 +468,21 @@ gen_battery_prob_matrix
 ```
 """
 function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Matrix, shift_vector::Vector{Int})
-    M = size(gen_storage_prob_matrix, 1)
+    M = size(gen_storage_prob_matrix, 2)
 
     for i in 1:length(shift_vector) 
         s = shift_vector[i]
         if s < 0 
             #TODO figure out why implementation of cirshift! is working locally but not on server
-            # circshift!(view(gen_storage_prob_matrix, :, i), s)
-            gen_storage_prob_matrix[:, i] = circshift(view(gen_storage_prob_matrix, :, i), s)
-            gen_storage_prob_matrix[1, i] += sum(view(gen_storage_prob_matrix, max(2,M+s+1):M, i))
-            gen_storage_prob_matrix[max(2,M+s+1):M, i] .= 0
+            # circshift!(view(gen_storage_prob_matrix, i, :), s)
+            gen_storage_prob_matrix[i, :] = circshift(view(gen_storage_prob_matrix, i, :), s)
+            gen_storage_prob_matrix[i, 1] += sum(view(gen_storage_prob_matrix, i, max(2,M+s+1):M))
+            gen_storage_prob_matrix[i, max(2,M+s+1):M] .= 0
         elseif s > 0
-            # circshift!(view(gen_storage_prob_matrix, :, i), s)
-            gen_storage_prob_matrix[:, i] = circshift(view(gen_storage_prob_matrix, :, i), s)
-            gen_storage_prob_matrix[end, i] += sum(view(gen_storage_prob_matrix, 1:min(s,M-1), i))
-            gen_storage_prob_matrix[1:min(s,M-1), i] .= 0
+            # circshift!(view(gen_storage_prob_matrix, i, :), s)
+            gen_storage_prob_matrix[i, :] = circshift(view(gen_storage_prob_matrix, i, :), s)
+            gen_storage_prob_matrix[i, end] += sum(view(gen_storage_prob_matrix, i, 1:min(s,M-1)))
+            gen_storage_prob_matrix[i, 1:min(s,M-1)] .= 0
         end
     end
 end
@@ -484,7 +498,7 @@ function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Matrix,
                                         H2_discharge_size_kw::Real,
                                         H2_charge_efficiency::Real,
                                         H2_discharge_efficiency::Real)
-    M_b = size(gen_storage_prob_matrix, 1)#change to 2 once dims switched
+    M_b = size(gen_storage_prob_matrix, 2)
     M_H2 = size(gen_storage_prob_matrix, 3)
 
     battery_shift = storage_bin_shift(
@@ -499,21 +513,19 @@ function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Matrix,
         s = battery_shift[i]
         if s < 0 
             #TODO figure out why implementation of cirshift! is working locally but not on server
-            # circshift!(view(gen_storage_prob_matrix, :, i), s)
-            gen_storage_prob_matrix[:, i] = circshift(view(gen_storage_prob_matrix, :, i), s)
+            gen_storage_prob_matrix[i, :] = circshift(view(gen_storage_prob_matrix, i, :), s)
             shift_wrap_around = max(2,M+s+1):M
             #Before zeroing out, calculate unmet kwh in each maxed out state.
             #Will use this and associated probs to calculate of kwh that H2 must try to meet.
-            unmet_kwh[shift_wrap_around, i] = [(m-M+1) * bin_size for m in shift_wrap_around]
-            unmet_states_probs[:, i] = view(gen_storage_prob_matrix, :, i)
+            unmet_kwh[i, shift_wrap_around] = [(m-M+1) * bin_size for m in shift_wrap_around]
+            unmet_states_probs[i, :] = view(gen_storage_prob_matrix, i, :)
             #
-            gen_storage_prob_matrix[1, i] += sum(view(gen_storage_prob_matrix, shift_wrap_around, i))
-            gen_storage_prob_matrix[max(2,M+s+1):M, i] .= 0
+            gen_storage_prob_matrix[i, 1] += sum(view(gen_storage_prob_matrix, i, max(2,M+s+1):M))
+            gen_storage_prob_matrix[i, max(2,M+s+1):M] .= 0
         elseif s > 0
-            # circshift!(view(gen_storage_prob_matrix, :, i), s)
-            gen_storage_prob_matrix[:, i] = circshift(view(gen_storage_prob_matrix, :, i), s)
-            gen_storage_prob_matrix[end, i] += sum(view(gen_storage_prob_matrix, 1:min(s,M-1), i))
-            gen_storage_prob_matrix[1:min(s,M-1), i] .= 0
+            gen_storage_prob_matrix[i, :] = circshift(view(gen_storage_prob_matrix, i, :), s)
+            gen_storage_prob_matrix[i, end] += sum(view(gen_storage_prob_matrix, i, 1:min(s,M-1)))
+            gen_storage_prob_matrix[i, 1:min(s,M-1)] .= 0
         end
     end
 end
@@ -647,7 +659,7 @@ function gen_only_survival_single_start_time(
 
     survival_chances = zeros(max_outage_duration)
     gen_prob_array = [copy(starting_gens), copy(starting_gens)]
-    survival = ones(1, length(generator_production))
+    survival = ones(length(generator_production), 1)
 
     for d in 1:max_outage_duration
         h = mod(t + d - 2, t_max) + 1 #determines index accounting for looping around year
@@ -807,11 +819,11 @@ function survival_with_storage_single_start_time(
     marginal_survival::Bool, 
     time_steps_per_hour::Real)::Vector{Float64}
 
-    gen_battery_prob_matrix_array = [zeros(M_b, N), zeros(M_b, N)]
-    gen_battery_prob_matrix_array[1][starting_battery_bins[t], :] = starting_gens
-    gen_battery_prob_matrix_array[2][starting_battery_bins[t], :] = starting_gens
+    gen_battery_prob_matrix_array = [zeros(N, M_b), zeros(N, M_b)]
+    gen_battery_prob_matrix_array[1][:, starting_battery_bins[t]] = starting_gens
+    gen_battery_prob_matrix_array[2][:, starting_battery_bins[t]] = starting_gens
     return_survival_chance_vector = zeros(max_outage_duration)
-    survival = ones(M_b, N)
+    survival = ones(N, M_b)
 
     for d in 1:max_outage_duration 
         h = mod(t + d - 2, t_max) + 1 #determines index accounting for looping around year
@@ -822,7 +834,7 @@ function survival_with_storage_single_start_time(
         #This is a more memory efficient way of implementing gen_battery_prob_matrix *= generator_markov_matrix
         gen_matrix_counter_start = ((d-1) % 2) + 1 
         gen_matrix_counter_end = (d % 2) + 1 
-        mul!(gen_battery_prob_matrix_array[gen_matrix_counter_end], gen_battery_prob_matrix_array[gen_matrix_counter_start], generator_markov_matrix)
+        mul!(gen_battery_prob_matrix_array[gen_matrix_counter_end], generator_markov_matrix, gen_battery_prob_matrix_array[gen_matrix_counter_start])
 
         if marginal_survival == false
             # @timeit to "survival chance" gen_battery_prob_matrix_array[gen_matrix_counter_end] = gen_battery_prob_matrix_array[gen_matrix_counter_end] .* survival 
