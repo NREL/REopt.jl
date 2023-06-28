@@ -420,8 +420,8 @@ function storage_bin_shift(excess_generation_kw::Vector{<:Real}, bin_size::Real,
     #Lose energy charging battery/producing H2 and use more energy discharging battery/using H2
     
     #Cannot charge or discharge more than power rating
-    excess_generation_kw[excess_generation_kw .> size_kw] .= charge_size_kw
-    excess_generation_kw[excess_generation_kw .< -size_kw] .= -discharge_size_kw
+    excess_generation_kw[excess_generation_kw .> charge_size_kw] .= charge_size_kw
+    excess_generation_kw[excess_generation_kw .< -discharge_size_kw] .= -discharge_size_kw
     #Account for (dis)charge efficiency
     excess_generation_kw[excess_generation_kw .> 0] = excess_generation_kw[excess_generation_kw .> 0] .* charge_efficiency
     excess_generation_kw[excess_generation_kw .< 0] = excess_generation_kw[excess_generation_kw .< 0] ./ discharge_efficiency
