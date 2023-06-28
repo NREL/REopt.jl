@@ -455,7 +455,7 @@ gen_battery_prob_matrix
 """
 function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Matrix, shift_vector::Vector{Int})
     M = size(gen_storage_prob_matrix, 1)
-    
+
     for i in 1:length(shift_vector) 
         s = shift_vector[i]
         if s < 0 
@@ -463,6 +463,51 @@ function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Matrix, shift_v
             # circshift!(view(gen_storage_prob_matrix, :, i), s)
             gen_storage_prob_matrix[:, i] = circshift(view(gen_storage_prob_matrix, :, i), s)
             gen_storage_prob_matrix[1, i] += sum(view(gen_storage_prob_matrix, max(2,M+s+1):M, i))
+            gen_storage_prob_matrix[max(2,M+s+1):M, i] .= 0
+        elseif s > 0
+            # circshift!(view(gen_storage_prob_matrix, :, i), s)
+            gen_storage_prob_matrix[:, i] = circshift(view(gen_storage_prob_matrix, :, i), s)
+            gen_storage_prob_matrix[end, i] += sum(view(gen_storage_prob_matrix, 1:min(s,M-1), i))
+            gen_storage_prob_matrix[1:min(s,M-1), i] .= 0
+        end
+    end
+end
+
+function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Matrix, 
+                                        excess_generation_kw::Vector{<:Real}, 
+                                        battery_bin_size::Real,
+                                        battery_size_kw::Real,
+                                        battery_charge_efficiency::Real, 
+                                        battery_discharge_efficiency::Real,
+                                        H2_bin_size::Real,
+                                        H2_charge_size_kw::Real,
+                                        H2_discharge_size_kw::Real,
+                                        H2_charge_efficiency::Real,
+                                        H2_discharge_efficiency::Real)
+    M_b = size(gen_storage_prob_matrix, 1)#change to 2 once dims switched
+    M_H2 = size(gen_storage_prob_matrix, 3)
+
+    battery_shift = storage_bin_shift(
+                excess_generation_kw, 
+                battery_bin_size, 
+                battery_size_kw, 
+                battery_size_kw,
+                battery_charge_efficiency, 
+                battery_discharge_efficiency
+            )
+    for i in 1:length(shift_vector) 
+        s = battery_shift[i]
+        if s < 0 
+            #TODO figure out why implementation of cirshift! is working locally but not on server
+            # circshift!(view(gen_storage_prob_matrix, :, i), s)
+            gen_storage_prob_matrix[:, i] = circshift(view(gen_storage_prob_matrix, :, i), s)
+            shift_wrap_around = max(2,M+s+1):M
+            #Before zeroing out, calculate unmet kwh in each maxed out state.
+            #Will use this and associated probs to calculate of kwh that H2 must try to meet.
+            unmet_kwh[shift_wrap_around, i] = [(m-M+1) * bin_size for m in shift_wrap_around]
+            unmet_states_probs[:, i] = view(gen_storage_prob_matrix, :, i)
+            #
+            gen_storage_prob_matrix[1, i] += sum(view(gen_storage_prob_matrix, shift_wrap_around, i))
             gen_storage_prob_matrix[max(2,M+s+1):M, i] .= 0
         elseif s > 0
             # circshift!(view(gen_storage_prob_matrix, :, i), s)
@@ -799,6 +844,20 @@ function survival_with_storage_single_start_time(
                 battery_discharge_efficiency
             )
         )
+        # For later, using new shift_gen_storage_prob_matrix!()
+        # shift_gen_storage_prob_matrix!(
+        #     gen_battery_prob_matrix_array[gen_matrix_counter_end],
+        #     (generator_production .- net_critical_loads_kw[h]) / time_steps_per_hour,
+        #     battery_bin_size,#TODO: don't need all three of bin size, size, and num bins
+        #     battery_size_kw,
+        #     battery_charge_efficiency, 
+        #     battery_discharge_efficiency,
+        #     0,#TODO: use these args
+        #     0,
+        #     0,
+        #     0,
+        #     0
+        # )
     end
     return return_survival_chance_vector
 end
@@ -1492,4 +1551,3 @@ function num_battery_bins_default(size_kw::Real, size_kwh::Real)::Int
         return Int(duration * 20)
     end
 end
-     
