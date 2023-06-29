@@ -40,26 +40,38 @@
     outage_start_time_steps::Array{Int,1}=Int[],  # we minimize the maximum outage cost over outage start times
     outage_durations::Array{Int,1}=Int[],  # one-to-one with outage_probabilities, outage_durations can be a random variable
     outage_probabilities::Array{R,1} where R<:Real = [1.0],
+    
     # Emissions and renewable energy inputs:
-    
-    
-    ### Climate Emissions from Grid Electricity ### 
-    # Option 1 (Default): Use levelized emissions data from NREL's Cambium database by specifying the following fields:
 
-    # Option 2: Provide your own custom emissions factors for CO2 and specify annual percent decrease  
-    emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
+    ### Climate Emissions from Grid Electricity ### 
+    # Climate Option 1 (Default): Use levelized emissions data from NREL's Cambium database by specifying the following fields:
+    "cambium_scenario": "Mid-case" # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions). Default: Mid-case.
+        ## Options: "Mid-case", "Low Renewable Energy and Battery Costs", "High Renewable Energy and Battery Costs", "Electricifcation", "Low Natural Gas Price", "High Natural Gas Price", "Mid-case with 95% Decarbonization by 2050", "Mid-case with 100% Decarbonization by 2035", "Mid-case (with tax credit phaseout)", "Low Renewable Energy and Battery Costs (with tax credit phaseout)"      
+    "cambium_location_type": "States" # Geographic boundary at which emissions are calculated. Default: States. Options: Nations, GEA Regions, States, Balancing Areas # TODO: some may not work 
+    "cambium_location":  # This will automatically populate based on the site's lat-long. Options (should align with location_type): Contiguous United States (TODO: check this), Colorado, p33
+    "cambium_metric_col": "lrmer_co2e" # Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
+    "cambium_start_year": 2024 # First year of operation of system. Default: 2024 # Options: any year now through 2050.
+    "cambium_lifetime": analysis_years # Expected lifetime or analysis period of the intervention being studied. 
+    
+    # Climate Option 2: Use CO2 emissions data from the EPA's AVERT 
+    use_AVERT_for_CO2::Bool = false # Default is to use Cambium data for CO2 grid emissions. Set to true to instead use data from the EPA's AVERT database. 
+
+    # Climate Option 3: Provide your own custom emissions factors for CO2 and specify annual percent decrease  
+    emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom CO2 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour)
+    
+    # Used in Climate Options 2 or 3: Annual percent decrease in CO2 emissions factors
     emissions_factor_CO2_decrease_fraction::Real = 0.01174, # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase.
     
     ### Health Emissions from Grid Electricity ### 
-    # Option 1 (Default): Use health emissions data from AVERT based on the AVERT emissions region and specify annual percent decrease
+    # Health Option 1 (Default): Use health emissions data from AVERT based on the AVERT emissions region and specify annual percent decrease
     avert_emissions_region::String = "", # AVERT emissions region. Default is based on location, or can be overriden by providing region here.
     
-    # Option 2: Provide your own custom emissions factors for health emissions and specify annual percent decrease:
-    emissions_factor_series_lb_NOx_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
-    emissions_factor_series_lb_SO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
-    emissions_factor_series_lb_PM25_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
+    # Health Option 2: Provide your own custom emissions factors for health emissions and specify annual percent decrease:
+    emissions_factor_series_lb_NOx_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom NOx emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour)
+    emissions_factor_series_lb_SO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom SO2 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour)
+    emissions_factor_series_lb_PM25_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom PM2.5 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour)
 
-    # Used in Options 1 or 2: Annual percent decrease in health emissions factors: 
+    # Used in Health Options 1 or 2: Annual percent decrease in health emissions factors: 
     emissions_factor_NOx_decrease_fraction::Real = 0.01174,
     emissions_factor_SO2_decrease_fraction::Real = 0.01174,
     emissions_factor_PM25_decrease_fraction::Real = 0.01174
@@ -82,43 +94,40 @@
     This constructor is intended to be used with latitude/longitude arguments provided for
     the non-MPC case and without latitude/longitude arguments provided for the MPC case.
 
-!!! note "Emissions Region"
-    The default `avert_emissions_region` input is determined by the site's latitude and longitude. 
-    Alternatively, you may input the desired AVERT `emissions_region`, which must be one of: 
+!!! note "Climate and Health Emissions Modeling" 
+    Climate and health-related emissions from grid electricity come from two different data sources and have different REopt inputs as described below. 
+
+    **Climate Emissions**
+    - For sites in the contiguous United States: 
+        - Default climate-related emissions factors (CO2e) come from NREL's Cambium database (Current version: 2022)
+            - By default, REopt uses *levelized long-run marginal emission rates for CO2-equivalent emissions* for the state in which the site is located. ## TODO check is BA's work and if not, use state's or GEAs. 
+                The emissions rates are levelized over the analysis period (e.g., from 2023 through 2047 for a 25-year analysis)
+            - The inputs to the Cambium API request can be modified by the user based on emissions accounting needs (e.g., can change "lifetime" to 1 to analyze a single year's emissions)
+                # TODO: put these in Cambium API request:  
+                hide: "time_type": "hourly" 
+                hide: "grid_level": "enduse" # Options: enduse or busbar
+                hide?: "discount_rate": 0 # Zero = simple average
+                hide: "smoothing_method": "none" # Options: rolling or none
+                hide: "ems_mass_units": "lb" # lb or kg 
+                hide: "gwp": "100yrAR6" # Global warming potential values. Default: "100yrAR6". Options: "100yrAR5", "20yrAR5", "100yrAR6", "20yrAR6" or a custom tuple [1,10.0,100] with GWP values for [CO2, CH4, N2O] # TODO check use of custom tuples 
+
+            - Note for analysis periods extending beyond 2050: Values beyond 2050 are estimated with the 2050 values. Analysts are advised to use caution when selecting values that place significant weight on 2050 (e.g., greater than 50%)
+        - Users can alternatively choose to use emissions factors from the EPA's AVERT by setting `use_AVERT_for_CO2` to `true`
+    - For Alaska and HI: Climate-related emissions rates for AK and HI come from... 
+    - For sites outside of the United States: We currently do not have default grid emissions rates for sites outside of the U.S. For these sites, users must supply custom emissions factor series (e.g., emissions_factor_series_lb_CO2_per_kwh) and projected emissions decreases (e.g., emissions_factor_CO2_decrease_fraction). 
+
+    **Health Emissions**
+    - For sites in the contiguous United States: health-related emissions factors (PM2.5, SO2, and NOx) come from the EPA's AVERT database. 
+    - The default `avert_emissions_region` input is determined by the site's latitude and longitude. 
+    Alternatively, you may input the desired AVERT `avert_emissions_region`, which must be one of: 
     ["California", "Central", "Florida", "Mid-Atlantic", "Midwest", "Carolinas", "New England",
      "Northwest", "New York", "Rocky Mountains", "Southeast", "Southwest", "Tennessee", "Texas",
      "Alaska", "Hawaii (except Oahu)", "Hawaii (Oahu)"]
 
-!!! note "Climate and Health Emissions Modeling" 
-    Climate and health-related emissions from grid electricity come from two different datasources and have different REopt inputs as described below: 
-
-    **Climate Emissions**
-    - Climate-related emissions rates for sites in the contiguous United States come from NREL's Cambium database (Current version: 2022)
-    - By default, REopt uses *levelized long-run marginal emission rates for CO2-equivalent emissions* for the balancing area in which the site is located. ## TODO check is BA's work and if not, use state's or GEAs. 
-        The emissions rates are levelized over the analysis period (e.g., from 2023 through 2047 for a 25-year analysis) ## TODO: check and document Cambium API behavior for out-years beyond 2050
-    - The following inputs can be modified for the API request (with default values shown): 
-        "scenario": "Mid-case" # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions). 
-                               # Options: "Mid-case", "Low Renewable Energy and Battery Costs", "High Renewable Energy and Battery Costs", "Electricifcation", "Low Natural Gas Price", "High Natural Gas Price", "Mid-case with 95% Decarbonization by 2050"
-        "location_type": "States" – should allow user to modify
-        "location": "Colorado" – use lat long of site
-        "time_type": "annual" – should allow user to modify
-        "metric": "LRMER: CO2e Combined" – should allow user to modify
-        "start_year": 2024 – set to current year? 
-        "grid_level": "enduse" – could probably exclude from user inputs
-        "lifetime": 20 – set to analysis_years 
-        "discount_rate": 0.03 - expose? 
-        "smoothing_method": "none"
-        "gwp": "100yrAR6" # "100yrAR5", # "100yrAR5", "20yrAR5", "100yrAR6", "20yrAR6" or a custom tuple [1,10.0,100] with GWP values for [CO2, CH4, N2O] # TODO check use of custom tuples
-        hide: "ems_mass_units": "lb" # lb or kg
-
-
-
-
-
 """
 struct ElectricUtility
-    emissions_region::String # AVERT emissions region
-    distance_to_emissions_region_meters::Real
+    avert_emissions_region::String # AVERT emissions region
+    distance_to_avert_emissions_region_meters::Real
     emissions_factor_series_lb_CO2_per_kwh::Array{<:Real,1}
     emissions_factor_series_lb_NOx_per_kwh::Array{<:Real,1}
     emissions_factor_series_lb_SO2_per_kwh::Array{<:Real,1}
@@ -159,7 +168,7 @@ struct ElectricUtility
         outage_time_steps::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:maximum(outage_durations),
         scenarios::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:length(outage_durations),
         # Emissions and renewable energy inputs:
-        emissions_region::String = "", # AVERT emissions region, use empty string instead of nothing because that's how missing strings stored in django
+        avert_emissions_region::String = "", # AVERT emissions region, use empty string instead of nothing because that's how missing strings stored in django
         emissions_factor_series_lb_CO2_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
         emissions_factor_series_lb_NOx_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
         emissions_factor_series_lb_SO2_per_kwh::Union{Real, Array{<:Real,1}} = Float64[],
@@ -177,11 +186,12 @@ struct ElectricUtility
 
         is_MPC = isnothing(latitude) || isnothing(longitude)
         if !is_MPC    
-            if emissions_region == ""
-                region_abbr, meters_to_region = region_abbreviation(latitude, longitude)
-                emissions_region = region_abbr_to_name(region_abbr)
+            # Get AVERT emissions region
+            if avert_emissions_region == ""
+                region_abbr, meters_to_region = avert_region_abbreviation(latitude, longitude)
+                avert_emissions_region = region_abbr_to_name(region_abbr)
             else
-                region_abbr = region_name_to_abbr(emissions_region)
+                region_abbr = region_name_to_abbr(avert_emissions_region)
                 meters_to_region = 0
             end
             emissions_series_dict = Dict{String, Union{Nothing,Array{<:Real,1}}}()
@@ -192,18 +202,17 @@ struct ElectricUtility
                 (emissions_factor_series_lb_SO2_per_kwh, "SO2"),
                 (emissions_factor_series_lb_PM25_per_kwh, "PM25")
             ]
-                if typeof(eseries) <: Real  # user provided scaler value
+                if typeof(eseries) <: Real  # user provided scalar value
                     emissions_series_dict[ekey] = repeat([eseries], 8760*time_steps_per_hour)
                 elseif length(eseries) == 1  # user provided array of one value
                     emissions_series_dict[ekey] = repeat(eseries, 8760*time_steps_per_hour)
                 elseif length(eseries) / time_steps_per_hour ≈ 8760  # user provided array with correct length
                     emissions_series_dict[ekey] = eseries
-                else
-                    if length(eseries) > 1 && !(length(eseries) / time_steps_per_hour ≈ 8760)  # user provided array with incorrect length
-                        @warn "Provided ElectricUtility emissions factor series for $(ekey) will be ignored because it does not match the time_steps_per_hour. AVERT emissions data will be used."
-                    end
-                    emissions_series_dict[ekey] = emissions_series(ekey, region_abbr, time_steps_per_hour=time_steps_per_hour)
-                    #Handle missing emissions inputs (due to failed lookup and not provided by user)
+                elseif length(eseries) > 1 && !(length(eseries) / time_steps_per_hour ≈ 8760)  # user provided array with incorrect length
+                    throw(@error("The provided ElectricUtility emissions factor series for $(ekey) does not match the time_steps_per_hour."))
+                else # if not user-provided, get emissions factors from AVERT and/or Cambium
+                    emissions_series_dict[ekey] = emissions_series(ekey, region_abbr, use_AVERT_for_CO2, time_steps_per_hour=time_steps_per_hour)
+                    # Handle missing emissions inputs (due to failed lookup and not provided by user)
                     if isnothing(emissions_series_dict[ekey])
                         @warn "Cannot find hourly $(ekey) emissions for region $(region_abbr). Setting emissions to zero."
                         if ekey == "CO2" && !off_grid_flag && 
@@ -226,7 +235,7 @@ struct ElectricUtility
             throw(@error("ElectricUtility inputs outage_start_time_steps and outage_durations must both be provided to model multiple outages"))
         end
         if (outage_start_time_step == 0 && outage_end_time_step != 0) || (outage_start_time_step != 0 && outage_end_time_step == 0)
-            throw(@error("ElectricUtility inputs outage_start_time_step and outage_end_time_step must both be provided to model an outage"))
+            throw(@error("ElectricUtility inputs outage_start_time_step and outage_end_time_step must both be provided to model a single outage"))
         end
         if !isempty(outage_start_time_steps)
             if outage_start_time_step != 0 && outage_end_time_step !=0
@@ -246,7 +255,7 @@ struct ElectricUtility
         end
 
         new(
-            is_MPC ? "" : emissions_region,
+            is_MPC ? "" : avert_emissions_region,
             is_MPC || isnothing(meters_to_region) ? typemax(Int64) : meters_to_region,
             is_MPC ? Float64[] : emissions_series_dict["CO2"],
             is_MPC ? Float64[] : emissions_series_dict["NOx"],
@@ -273,7 +282,7 @@ end
 
 
 """
-Determine the region abberviation for a given lat/lon pair.
+Determine the AVERT region abberviation for a given lat/lon pair.
     1. Checks to see if given point is in an AVERT region
     2. If 1 doesnt work, check to see if our point is near any AVERT regions.
         1. Transform point from NAD83 CRS to EPSG 102008 (NA focused conic projection)
@@ -285,7 +294,7 @@ Helpful links:
 # https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry
 # https://epsg.io/102008
 """
-function region_abbreviation(latitude, longitude)
+function avert_region_abbreviation(latitude, longitude)
     
     file_path = joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "avert_4326.shp")
 
@@ -324,7 +333,7 @@ function region_abbreviation(latitude, longitude)
         end
     catch
         @warn "Could not look up AVERT emissions region closest to point ($(latitude), $(longitude)). Location is
-        likely invalid or well outside continental US, AK and HI"
+        likely invalid or well outside continental US, AK and HI." # TODO: what happens if cannot look this up? 
         return abbr, meters_to_region #nothing, nothing
     end
 
@@ -347,22 +356,29 @@ function region_abbreviation(latitude, longitude)
     end
 end
 
-function emissions_series(pollutant, region_abbr; time_steps_per_hour=1)
-    if isnothing(region_abbr)
-        return nothing
-    end
-    # Columns 1 and 2 do not contain AVERT region information, so skip them
-    avert_df = readdlm(joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "AVERT_2021_$(pollutant)_lb_per_kwh.csv"), ',')[:, 3:end]
-
-    try
-        # Find col index for region, and then row 1 does not contain AVERT data so skip that.
-        emissions_profile = round.(avert_df[2:end,findfirst(x -> x == region_abbr, avert_df[1,:])], digits=6)
-        if time_steps_per_hour > 1
-            emissions_profile = repeat(emissions_profile,inner=time_steps_per_hour)
+function emissions_series(pollutant, region_abbr, use_AVERT_for_CO2; time_steps_per_hour=1)
+    
+    # AVERT Lookup
+    if pollutant in ["NOx", "SO2", "PM25"] || use_AVERT_for_CO2
+        if isnothing(region_abbr)
+            return nothing
         end
-        return emissions_profile
-    catch
-        return nothing
+        # Columns 1 and 2 do not contain AVERT region information, so skip them
+        # TODO: Update to latest AVERT data? 
+        avert_df = readdlm(joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "AVERT_2021_$(pollutant)_lb_per_kwh.csv"), ',')[:, 3:end]
+
+        try
+            # Find col index for region, and then row 1 does not contain AVERT data so skip that.
+            emissions_profile = round.(avert_df[2:end,findfirst(x -> x == region_abbr, avert_df[1,:])], digits=6)
+            if time_steps_per_hour > 1
+                emissions_profile = repeat(emissions_profile,inner=time_steps_per_hour)
+            end
+            return emissions_profile
+        catch
+            return nothing
+        end
+    else # For CO2 from Cambium 
+
     end
 end
 
@@ -421,9 +437,9 @@ This function is used for the /emissions_profile endpoint in the REopt API, in p
     for the webtool to display grid emissions defaults before running REopt, 
     but is also generally an external way to access AVERT data without running REopt.
 """
-function emissions_profiles(; latitude::Real, longitude::Real, time_steps_per_hour::Int=1)
-    region_abbr, meters_to_region = region_abbreviation(latitude, longitude)
-    emissions_region = region_abbr_to_name(region_abbr)
+function emissions_profiles(; latitude::Real, longitude::Real, time_steps_per_hour::Int=1, use_AVERT_for_CO2::Bool=false)
+    region_abbr, meters_to_region = avert_region_abbreviation(latitude, longitude)
+    avert_emissions_region = region_abbr_to_name(region_abbr)
     if isnothing(region_abbr)
         return Dict{String, Any}(
                 "error"=>
@@ -431,15 +447,17 @@ function emissions_profiles(; latitude::Real, longitude::Real, time_steps_per_ho
                 Location is likely invalid or well outside continental US, AK and HI."
             )
     end
+
+    ## TODO: distinguish between Cambium CO2 and AVERT data here. 
     response_dict = Dict{String, Any}(
         "region_abbr" => region_abbr,
-        "region" => emissions_region,
+        "region" => avert_emissions_region,
         "units" => "Pounds emissions per kWh",
         "description" => "Regional hourly grid emissions factors for applicable EPA AVERT region.",
         "meters_to_region" => meters_to_region
     )
     for ekey in ["CO2", "NOx", "SO2", "PM25"]
-        response_dict["emissions_factor_series_lb_"*ekey*"_per_kwh"] = emissions_series(ekey, region_abbr, time_steps_per_hour=time_steps_per_hour)
+        response_dict["emissions_factor_series_lb_"*ekey*"_per_kwh"] = emissions_series(ekey, region_abbr, use_AVERT_for_CO2, time_steps_per_hour=time_steps_per_hour)
     end
     return response_dict
 end

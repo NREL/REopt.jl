@@ -1264,7 +1264,7 @@ end
         if i == 1
             inputs["Site"]["latitude"] = 37.746
             inputs["Site"]["longitude"] = -122.448
-            # inputs["ElectricUtility"]["emissions_region"] = "California"
+            # inputs["ElectricUtility"]["avert_emissions_region"] = "California"
         end
         inputs["Site"]["include_exported_renewable_electricity_in_total"] = include_exported_RE_in_total[i]
         inputs["Site"]["include_exported_elec_emissions_in_total"] = include_exported_ER_in_total[i]

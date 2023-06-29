@@ -23,6 +23,9 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2023-06-26
+### Changed
+- In `electric_utility.jl` error when user-provided emissions series does not match timestep per hour, as is done in other cases of incorrect user-provided data. 
 ## v0.32.3
 ### Fixed
 - Calculate **num_battery_bins** default in `backup_reliability.jl` based on battery duration to prevent significant discretization error (and add test)

@@ -40,8 +40,8 @@
 - `lifecycle_emissions_tonnes_NOx` # Total tons of NOx emissions associated with the site's grid-purchased electricity over the analysis period. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
 - `lifecycle_emissions_tonnes_SO2` # Total tons of SO2 emissions associated with the site's grid-purchased electricity over the analysis period. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
 - `lifecycle_emissions_tonnes_PM25` # Total tons of PM2.5 emissions associated with the site's grid-purchased electricity over the analysis period. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
-- `emissions_region` # EPA AVERT region of the site (populated if default emissions values are used).
-- `distance_to_emissions_region_meters`
+- `avert_emissions_region` # EPA AVERT region of the site (populated if default emissions values are used).
+- `distance_to_avert_emissions_region_meters`
 
 !!! note "'Series' and 'Annual' energy and emissions outputs are average annual"
 	REopt performs load balances using average annual production values for technologies that include degradation. 
@@ -87,8 +87,8 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
         r["lifecycle_emissions_tonnes_SO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2]*TONNE_PER_LB*p.pwf_grid_emissions["SO2"]), digits=2)
         r["lifecycle_emissions_tonnes_PM25"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25]*TONNE_PER_LB*p.pwf_grid_emissions["PM25"]), digits=2)
         
-        r["emissions_region"] = p.s.electric_utility.emissions_region
-        r["distance_to_emissions_region_meters"] = p.s.electric_utility.distance_to_emissions_region_meters
+        r["avert_emissions_region"] = p.s.electric_utility.avert_emissions_region
+        r["distance_to_avert_emissions_region_meters"] = p.s.electric_utility.distance_to_avert_emissions_region_meters
     end
 
     d["ElectricUtility"] = r
