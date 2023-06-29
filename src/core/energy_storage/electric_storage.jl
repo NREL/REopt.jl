@@ -174,8 +174,8 @@ end
     soc_min_fraction::Float64 = 0.2
     soc_init_fraction::Float64 = off_grid_flag ? 1.0 : 0.5
     can_grid_charge::Bool = off_grid_flag ? false : true
-    installed_cost_per_kw::Real = 775.0
-    installed_cost_per_kwh::Real = 388.0
+    installed_cost_per_kw::Real = 958.0
+    installed_cost_per_kwh::Real = 479.0
     replace_cost_per_kw::Real = 440.0
     replace_cost_per_kwh::Real = 220.0
     inverter_replacement_year::Int = 10
@@ -206,8 +206,8 @@ Base.@kwdef struct ElectricStorageDefaults
     soc_min_fraction::Float64 = 0.2
     soc_init_fraction::Float64 = off_grid_flag ? 1.0 : 0.5
     can_grid_charge::Bool = off_grid_flag ? false : true
-    installed_cost_per_kw::Real = 775.0
-    installed_cost_per_kwh::Real = 388.0
+    installed_cost_per_kw::Real = 958.0
+    installed_cost_per_kwh::Real = 479.0
     replace_cost_per_kw::Real = 440.0
     replace_cost_per_kwh::Real = 220.0
     inverter_replacement_year::Int = 10
