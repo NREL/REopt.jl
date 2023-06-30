@@ -23,6 +23,9 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop 
+### Fixed
+- Don't double add adjustments to urdb rates with non-standard units 
 ## v0.32.3
 ### Fixed
 - Calculate **num_battery_bins** default in `backup_reliability.jl` based on battery duration to prevent significant discretization error (and add test)
