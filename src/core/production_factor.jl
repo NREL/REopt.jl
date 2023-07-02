@@ -35,44 +35,14 @@ function get_production_factor(pv::PV, latitude::Real, longitude::Real; timefram
         return pv.production_factor_series
     end
 
-    # Check if site is beyond the bounds of the NRSDB TMY dataset. If so, use the international dataset.
-    dataset = "nsrdb"
-    if longitude < -179.5 || longitude > -21.0 || latitude < -21.5 || latitude > 60.0
-        if longitude < 81.5 || longitude > 179.5 || latitude < -60.0 || latitude > 60.0 
-            if longitude < 67.0 || latitude < -40.0 || latitude > 38.0
-                dataset = "intl"
-            end
-        end
-    end
+    # TODO need to add all of these parameters defined above into the call_pvwatts_api function arguments
+    watts, ambient_temp_celcius = call_pvwatts_api(latitude, longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
+        array_type=pv.array_type, losses=round(pv.losses*100, digits=3), dc_ac_ratio=pv.dc_ac_ratio,
+        gcr=pv.gcr, inv_eff=pv.inv_eff*100, timeframe=timeframe, radius=pv.radius,
+        time_steps_per_hour=time_steps_per_hour)
 
-    url = string("https://developer.nrel.gov/api/pvwatts/v8.json", "?api_key=", nrel_developer_key,
-        "&lat=", latitude , "&lon=", longitude, "&tilt=", pv.tilt,
-        "&system_capacity=1", "&azimuth=", pv.azimuth, "&module_type=", pv.module_type,
-        "&array_type=", pv.array_type, "&losses=", round(pv.losses*100, digits=3), "&dc_ac_ratio=", pv.dc_ac_ratio,
-        "&gcr=", pv.gcr, "&inv_eff=", pv.inv_eff*100, "&timeframe=", timeframe, "&dataset=", dataset,
-        "&radius=", pv.radius
-    )
+    return watts
 
-    try
-        @info "Querying PVWatts for production_factor with " pv.name
-        r = HTTP.get(url, keepalive=true, readtimeout=10)
-        @info "Response received from PVWatts"
-        response = JSON.parse(String(r.body))
-        if r.status != 200
-            throw(@error("Bad response from PVWatts: $(response["errors"])"))
-        end
-        @info "PVWatts success."
-        watts = collect(get(response["outputs"], "ac", []) / 1000)  # scale to 1 kW system (* 1 kW / 1000 W)
-        if length(watts) != 8760
-            throw(@error("PVWatts did not return a valid production factor. Got $watts"))
-        end
-        if time_steps_per_hour > 1
-            watts = repeat(watts, inner=time_steps_per_hour)
-        end
-        return watts
-    catch e
-        throw(@error("Error occurred when calling PVWatts: $e"))
-    end
 end
 
 
