@@ -245,12 +245,17 @@ function starting_probabilities(num_generators::Vector{Int}, generator_operation
 end
 
 """
-    bin_battery_charge(batt_soc_kwh::Vector, num_bins::Int, battery_size_kwh::Real)::Vector{Int}
+    bin_battery_charge(batt_soc::Vector, num_bins::Int, battery_size_kwh::Real)::Vector{Int}
 
-Return a vector the same length as ``batt_soc_kwh`` of discritized battery charge bins
+Return a vector the same length as ``batt_soc`` of discritized battery charge bins
 
 The first bin denotes zero battery charge, and each additional bin has size of ``battery_size_kwh``/(``num_bins``-1)
 Values are rounded to nearest bin.
+
+# Arguments
+- `storage_soc_kwh::Vector`: the state of charge, in kWh or the same units as the storage size is measured in
+- `num_bins::Int`: number of bins storage is divided into
+- `storage_size_kwh::Real`: capacity of the storage
 
 # Examples
 ```repl-julia
@@ -264,10 +269,10 @@ julia>  bin_battery_charge([30, 100, 170.5, 250, 251, 1000], 11, 1000)
  11
 ```
 """
-function bin_battery_charge(batt_soc_kwh::Vector, num_bins::Int, battery_size_kwh::Real)::Vector{Int}  
+function bin_storage_charge(storage_soc_kwh::Vector, num_bins::Int, storage_size_kwh::Real)::Vector{Int}  
     #Bins battery into discrete portions. Zero is one of the bins. 
-    bin_size = battery_size_kwh / (num_bins-1)
-    return min.(num_bins, round.(batt_soc_kwh./bin_size).+1)
+    bin_size = storage_size_kwh / (num_bins-1)
+    return min.(num_bins, round.(storage_soc_kwh./bin_size).+1)
 end
 
 """
