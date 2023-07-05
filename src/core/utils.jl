@@ -378,13 +378,13 @@ end
 
 
 """
-    call_pvwatts_api(latitude::Real, longitude::Real; timeframe="hourly", azimuth=180, module_type=0, array_type=1, tilt=latitude, time_steps_per_hour=1)
-
+    call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimuth=180, module_type=0, array_type=1, 
+        losses=14, dc_ac_ratio=1.2, gcr=0.4, inv_eff=96, timeframe="hourly", radius=0, time_steps_per_hour=1)
 This calls the PVWatts API and returns both:
  - PV production factor
  - Ambient outdoor air dry bulb temperature profile [Celcius] 
 """
-function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimuth=180, module_type=1, array_type=1, 
+function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimuth=180, module_type=0, array_type=1, 
     losses=14, dc_ac_ratio=1.2, gcr=0.4, inv_eff=96, timeframe="hourly", radius=0, time_steps_per_hour=1)
     # Check if site is beyond the bounds of the NRSDB TMY dataset. If so, use the international dataset.
     dataset = "nsrdb"

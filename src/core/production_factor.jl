@@ -35,7 +35,6 @@ function get_production_factor(pv::PV, latitude::Real, longitude::Real; timefram
         return pv.production_factor_series
     end
 
-    # TODO need to add all of these parameters defined above into the call_pvwatts_api function arguments
     watts, ambient_temp_celcius = call_pvwatts_api(latitude, longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
         array_type=pv.array_type, losses=round(pv.losses*100, digits=3), dc_ac_ratio=pv.dc_ac_ratio,
         gcr=pv.gcr, inv_eff=pv.inv_eff*100, timeframe=timeframe, radius=pv.radius,
