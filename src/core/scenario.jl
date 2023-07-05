@@ -157,7 +157,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         electric_utility = ElectricUtility(; outage_start_time_step = 1, 
                                             outage_end_time_step = settings.time_steps_per_hour * 8760, 
                                             latitude=site.latitude, longitude=site.longitude, 
-                                            time_steps_per_hour=settings.time_steps_per_hour
+                                            time_steps_per_hour=settings.time_steps_per_hour,
+                                            off_grid_flag=settings.off_grid_flag,
                                         ) 
     end
         
