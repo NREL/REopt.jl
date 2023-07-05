@@ -36,7 +36,7 @@ Inputs related to the physical location:
     longitude::Real, 
     land_acres::Union{Real, Nothing} = nothing, # acres of land available for PV panels and/or Wind turbines. Constraint applied separately to PV and Wind, meaning the two technologies are assumed to be able to be co-located.
     roof_squarefeet::Union{Real, Nothing} = nothing,
-    min_resil_time_steps::Int=0,
+    min_resil_time_steps::Int=0, # The minimum number consecutive timesteps that load must be fully met once an outage begins. Only applies to multiple outage modeling using inputs outage_start_time_steps and outage_durations.
     mg_tech_sizes_equal_grid_sizes::Bool = true,
     node::Int = 1,
     CO2_emissions_reduction_min_fraction::Union{Float64, Nothing} = nothing,
