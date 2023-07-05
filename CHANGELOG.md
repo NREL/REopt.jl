@@ -26,9 +26,10 @@ Classify the change according to the following categories:
 
 ## Develop - 2023-06-21
 ### Changed
-- In `src/core/production_factor.jl`, updated NSRDB bounds used in PVWatts query (now includes southern New Zealand)
+- Consolidated PVWatts API calls to 1 call (previously 3 separate calls existed). API call occurs in `src/core/utils.jl/call_pvwatts_api()`. This function is called for PV in `src/core/production_factor.jl/get_production_factor(PV)` and for GHP in `src/core/scenario.jl`. If GHP and PV are evaluated together, the GHP PVWatts call for ambient temperature is also used to assign the pv.production_factor_series in Scenario.jl so that the PVWatts API does not get called again downstream in `get_production_factor(PV)`.  
+- In `src/core/utils.jl/call_pvwatts_api()`, updated NSRDB bounds used in PVWatts query (now includes southern New Zealand)
 - Updated PV Watts version from v6 to v8. PVWatts V8 updates the weather data to 2020 TMY data from the NREL NSRDB for locations covered by the database. (The NSRDB weather data used in PVWatts V6 is from around 2015.) See other differences at https://developer.nrel.gov/docs/solar/pvwatts/.
-- Updated PVwatts calls in `src/core/utils.jl` (`get_ambient_temperature` and `get_pvwatts_prodfactor`) and `scenario.jl` (used for GHP) to use v8 and to determine dataset based on lat long. 
+- Made PV struct mutable: This allows for assigning pv.production_factor_series when calling PVWatts for GHP, to avoid a extra PVWatts calls later.
 ## v0.32.3
 ### Fixed
 - Calculate **num_battery_bins** default in `backup_reliability.jl` based on battery duration to prevent significant discretization error (and add test)
