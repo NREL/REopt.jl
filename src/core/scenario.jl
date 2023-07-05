@@ -148,7 +148,13 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                         )
     elseif !(settings.off_grid_flag)
         electric_utility = ElectricUtility(; latitude=site.latitude, longitude=site.longitude, 
-                                            time_steps_per_hour=settings.time_steps_per_hour
+                                            CO2_emissions_reduction_min_fraction=site.CO2_emissions_reduction_min_fraction,
+                                            CO2_emissions_reduction_max_fraction=site.CO2_emissions_reduction_max_fraction,
+                                            include_climate_in_objective=settings.include_climate_in_objective,
+                                            include_health_in_objective=settings.include_health_in_objective,
+                                            off_grid_flag=settings.off_grid_flag,
+                                            time_steps_per_hour=settings.time_steps_per_hour,
+                                            analysis_years=financial.analysis_years
                                         )
     elseif settings.off_grid_flag 
         if haskey(d, "ElectricUtility")
@@ -158,7 +164,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             outage_end_time_step = settings.time_steps_per_hour * 8760, 
                                             latitude=site.latitude, longitude=site.longitude, 
                                             time_steps_per_hour=settings.time_steps_per_hour,
-                                            off_grid_flag=settings.off_grid_flag,
+                                            off_grid_flag=settings.off_grid_flag
                                         ) 
     end
         
