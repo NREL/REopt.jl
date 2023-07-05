@@ -143,7 +143,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             include_climate_in_objective=settings.include_climate_in_objective,
                                             include_health_in_objective=settings.include_health_in_objective,
                                             off_grid_flag=settings.off_grid_flag,
-                                            time_steps_per_hour=settings.time_steps_per_hour
+                                            time_steps_per_hour=settings.time_steps_per_hour,
+                                            analysis_years=financial.analysis_years
                                         )
     elseif !(settings.off_grid_flag)
         electric_utility = ElectricUtility(; latitude=site.latitude, longitude=site.longitude, 
