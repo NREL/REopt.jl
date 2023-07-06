@@ -60,7 +60,7 @@
     emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom CO2 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour)
 
     # Used with Climate Options 2 or 3: Annual percent decrease in CO2 emissions factors
-    emissions_factor_CO2_decrease_fraction::Real = co2_from_avert || length(emissions_factor_series_lb_CO2_per_kwh) > 0  ? 0.01174 : 0 , # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase. # TODO: update with 2022 data
+    emissions_factor_CO2_decrease_fraction::Real = co2_from_avert || length(emissions_factor_series_lb_CO2_per_kwh) > 0  ? 0.02163 : 0 , # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase.
 
     ### Grid Health Emissions Inputs ###
     # Health Option 1 (Default): Use health emissions data from the EPA's AVERT based on the AVERT emissions region and specify annual percent decrease
@@ -72,9 +72,9 @@
     emissions_factor_series_lb_PM25_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom PM2.5 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour)
 
     # Used with Health Options 1 or 2: Annual percent decrease in health emissions factors: 
-    emissions_factor_NOx_decrease_fraction::Real = 0.01174, #TODO: Update these 
-    emissions_factor_SO2_decrease_fraction::Real = 0.01174,
-    emissions_factor_PM25_decrease_fraction::Real = 0.01174
+    emissions_factor_NOx_decrease_fraction::Real = 0.02163, 
+    emissions_factor_SO2_decrease_fraction::Real = 0.02163,
+    emissions_factor_PM25_decrease_fraction::Real = 0.02163
 ```
 
 !!! note "Outage modeling"
@@ -177,7 +177,7 @@ struct ElectricUtility
         emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom CO2 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour)
 
         # Used with Climate Options 2 or 3: Annual percent decrease in CO2 emissions factors
-        emissions_factor_CO2_decrease_fraction::Real = co2_from_avert || length(emissions_factor_series_lb_CO2_per_kwh) > 0  ? 0.01174 : 0 , # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase. # TODO: update with 2022 data
+        emissions_factor_CO2_decrease_fraction::Real = co2_from_avert || length(emissions_factor_series_lb_CO2_per_kwh) > 0  ? 0.02163 : 0 , # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase. # TODO: update with 2022 data
 
         ### Grid Health Emissions Inputs ###
         # Health Option 1 (Default): Use health emissions data from the EPA's AVERT based on the AVERT emissions region and specify annual percent decrease
@@ -189,9 +189,9 @@ struct ElectricUtility
         emissions_factor_series_lb_PM25_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom PM2.5 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour)
 
         # Used with Health Options 1 or 2: Annual percent decrease in health emissions factors: 
-        emissions_factor_NOx_decrease_fraction::Real = 0.01174, #TODO: Update these 
-        emissions_factor_SO2_decrease_fraction::Real = 0.01174,
-        emissions_factor_PM25_decrease_fraction::Real = 0.01174,
+        emissions_factor_NOx_decrease_fraction::Real = 0.02163, #TODO: Update these 
+        emissions_factor_SO2_decrease_fraction::Real = 0.02163,
+        emissions_factor_PM25_decrease_fraction::Real = 0.02163,
 
         # fields from other models needed for validation
         CO2_emissions_reduction_min_fraction::Union{Real, Nothing} = nothing, # passed from Site
@@ -522,17 +522,17 @@ function cambium_emissions_profile(; scenario::String,
 
     payload=Dict(
             "project_uuid" => project_uuid,
-            "scenario" => scenario, # Only the mid-case is currently available for testing
-            "location_type" => location_type,  # Nations, States, Balancing Areas (GEA Regions is not currently working)
-            # "location" => "Colorado", # Contiguous United States, Colorado, Kansas, p33, p34 (GEA Regions is not currently working)
+            "scenario" => scenario, # Only the Mid-case is currently available for testing?
+            "location_type" => location_type,  # Nations, States, Balancing Areas 
+            # "location" => "Colorado", # Contiguous United States, Colorado, Kansas, p33, p34 
             "latitude" => string(round(latitude, digits=3)),
             "longitude" => string(round(longitude, digits=3)), 
-            "start_year" => string(start_year), # biennial from 2022-2050
+            "start_year" => string(start_year), # biennial from 2022-2050 (data year covers nominal year and years proceeding; e.g., 2040 values cover time range starting in 2036.)
             "lifetime" => string(lifetime), # Integer 1 or greater
-            "discount_rate" => "0.0", # Zero = simple average
+            "discount_rate" => "0.0", # Zero = simple average (a pwf with discount rate gets applied to projected CO2 costs, but not masses.)
             "time_type" => "hourly", # hourly or annual
             "metric_col" => metric_col,
-            "smoothing_method" => "none", # rolling or none (only applicable to hourly queries)
+            "smoothing_method" => "rolling", # rolling or none (only applicable to hourly queries)
             "gwp" => "100yrAR6", # Global warming potential values. Default: "100yrAR6". Options: "100yrAR5", "20yrAR5", "100yrAR6", "20yrAR6" or a custom tuple [1,10.0,100] with GWP values for [CO2, CH4, N2O]
             "grid_level" => "enduse", # enduse or busbar
             "ems_mass_units" => "lb" # lb or kg
@@ -548,9 +548,7 @@ function cambium_emissions_profile(; scenario::String,
         if time_steps_per_hour > 1
             co2_emissions = repeat(co2_emissions, inner=time_steps_per_hour)
         end
-
-        # print("\n\n", response, "\n\n")
-        
+     
         response_dict = Dict{String, Any}(
             "description" => "Hourly CO2 (or CO2e) grid emissions factors for applicable Cambium location and location_type.",
             "units" => "Pounds emissions per kWh",
