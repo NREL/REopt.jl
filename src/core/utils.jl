@@ -258,6 +258,12 @@ function dictkeys_tosymbols(d::Dict)
                 end
             end
         end
+        if k in ["generator_operational_availability", "generator_failure_to_start", "generator_mean_time_to_failure", 
+                                "num_generators", "generator_size_kw", "fuel_limit", "fuel_limit_is_per_generator", 
+                                "generator_fuel_intercept_per_hr", "generator_fuel_burn_rate_per_kwh"] &&
+                                !(typeof(v) <: Array)
+            v = [v]
+        end
         d2[Symbol(k)] = v
     end
     return d2
