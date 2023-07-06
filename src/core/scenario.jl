@@ -131,7 +131,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                             )
     else
         financial = Financial(; latitude=site.latitude, longitude=site.longitude,
-                                off_grid_flag = settings.off_grid_flag
+                                off_grid_flag = settings.off_grid_flag,
+                                include_health_in_objective = settings.include_health_in_objective
                             )
     end
 
