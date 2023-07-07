@@ -823,9 +823,7 @@ Return a dictionary of inputs required for backup reliability calculations.
 """
 function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dict())::Dict
 
-    @info r["num_generators"]
     r2 = dictkeys_tosymbols(r)
-    @info r2[:num_generators]
     zero_array = zeros(length(p.time_steps))
     r2[:critical_loads_kw] = p.s.electric_load.critical_loads_kw
 
@@ -1434,7 +1432,6 @@ Possible keys in r:
 """
 function backup_reliability(d::Dict, p::REoptInputs, r::Dict)
     reliability_inputs = backup_reliability_reopt_inputs(d=d, p=p, r=r)
-    @info reliability_inputs[:num_generators]
     cumulative_results, fuel_survival, fuel_used = return_backup_reliability(; reliability_inputs... )
     process_reliability_results(cumulative_results, fuel_survival, fuel_used)
 end
