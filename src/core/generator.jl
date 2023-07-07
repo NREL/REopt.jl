@@ -30,10 +30,11 @@
 """
 `Generator` is an optional REopt input with the following keys and default values:
 ```julia
+    only_runs_during_grid_outage::Bool = true,
     existing_kw::Real = 0,
     min_kw::Real = 0,
     max_kw::Real = 1.0e6,
-    installed_cost_per_kw::Real = 650.0,
+    installed_cost_per_kw::Real = only_runs_during_grid_outage ? 650.0 : 800.0,
     om_cost_per_kw::Real = off_grid_flag ? 20.0 : 10.0,
     om_cost_per_kwh::Real = 0.0,
     fuel_cost_per_gallon::Real = 3.0,
@@ -42,7 +43,6 @@
     fuel_avail_gal::Real = off_grid_flag ? 1.0e9 : 660.0,
     fuel_higher_heating_value_kwh_per_gal::Real = 40.7,
     min_turn_down_fraction::Real = off_grid_flag ? 0.15 : 0.0,
-    only_runs_during_grid_outage::Bool = true,
     sells_energy_back_to_grid::Bool = false,
     can_net_meter::Bool = false,
     can_wholesale::Bool = false,
@@ -125,10 +125,11 @@ struct Generator <: AbstractGenerator
     function Generator(;
         off_grid_flag::Bool = false,
         analysis_years::Int = 25, 
+        only_runs_during_grid_outage::Bool = true,
         existing_kw::Real = 0,
         min_kw::Real = 0,
         max_kw::Real = 1.0e6,
-        installed_cost_per_kw::Real = 650.0,
+        installed_cost_per_kw::Real = only_runs_during_grid_outage ? 650.0 : 800.0,
         om_cost_per_kw::Real= off_grid_flag ? 20.0 : 10.0,
         om_cost_per_kwh::Real = 0.0,
         fuel_cost_per_gallon::Real = 3.0,
@@ -137,7 +138,6 @@ struct Generator <: AbstractGenerator
         fuel_avail_gal::Real = off_grid_flag ? 1.0e9 : 660.0,
         fuel_higher_heating_value_kwh_per_gal::Real = KWH_PER_GAL_DIESEL,
         min_turn_down_fraction::Real = off_grid_flag ? 0.15 : 0.0,
-        only_runs_during_grid_outage::Bool = true,
         sells_energy_back_to_grid::Bool = false,
         can_net_meter::Bool = false,
         can_wholesale::Bool = false,
