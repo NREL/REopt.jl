@@ -21,6 +21,7 @@
         "federal_rebate_per_kw": 350.0
     },
     "Generator": {
+        "installed_cost_per_kw": 500.0,
         "min_kw": 200,
         "max_kw": 200
     },
