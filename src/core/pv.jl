@@ -33,12 +33,12 @@
     array_type::Int=1, # PV Watts array type (0: Ground Mount Fixed (Open Rack); 1: Rooftop, Fixed; 2: Ground Mount 1-Axis Tracking; 3 : 1-Axis Backtracking; 4: Ground Mount, 2-Axis Tracking)
     tilt::Real= array_type == 1 ? 10 : abs(latitude), # tilt = 10 deg for rooftop systems, abs(lat) for ground-mount
     module_type::Int=0, # PV module type (0: Standard; 1: Premium; 2: Thin Film)
-    losses::Real=0.14,
+    losses::Real=0.14, # System losses
     azimuth::Real = latitude≥0 ? 180 : 0, # set azimuth to zero for southern hemisphere
-    gcr::Real=0.4,
-    radius::Int=0,
-    name::String="PV",
-    location::String="both",
+    gcr::Real=0.4,  # Ground coverage ratio
+    radius::Int=0, # Radius, in miles, to use when searching for the closest climate data station. Use zero to use the closest station regardless of the distance
+    name::String="PV", # for use with multiple pvs 
+    location::String="both", # one of ["roof", "ground", "both"]
     existing_kw::Real=0,
     min_kw::Real=0,
     max_kw::Real=1.0e9,
@@ -82,7 +82,7 @@
     If `azimuth` is not provided, then it is set to 180 if the site is in the northern hemisphere and 0 if in the southern hemisphere.
 
 """
-struct PV <: AbstractTech
+mutable struct PV <: AbstractTech
     tilt
     array_type
     module_type
@@ -151,7 +151,7 @@ struct PV <: AbstractTech
         acres_per_kw::Real=6e-3,
         inv_eff::Real=0.96,
         dc_ac_ratio::Real=1.2,
-        production_factor_series::Union{Nothing, Array{Real,1}} = nothing,
+        production_factor_series::Union{Nothing, Array{<:Real,1}} = nothing,
         federal_itc_fraction::Real = 0.3,
         federal_rebate_per_kw::Real = 0.0,
         state_ibi_fraction::Real = 0.0,
