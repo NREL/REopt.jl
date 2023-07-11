@@ -53,6 +53,7 @@
     "critical_load_fraction": 0.1
   },
   "Generator": {
+    "installed_cost_per_kw": 500.0,
 	  "max_kw": 0.0
   },
   "Financial": {

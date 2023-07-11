@@ -101,6 +101,7 @@
             0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05]
     },
     "Generator": {
+        "installed_cost_per_kw": 500.0,
         "size_kw": 30,
         "only_runs_during_grid_outage": false
     },
