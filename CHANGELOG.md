@@ -25,7 +25,11 @@ Classify the change according to the following categories:
 
 ## Develop - 2023-06-26
 ### Changed
-- In `electric_utility.jl` error when user-provided emissions series does not match timestep per hour, as is done in other cases of incorrect user-provided data. 
+- In `electric_utility.jl`, error when user-provided emissions series does not match timestep per hour, as is done in other cases of incorrect user-provided data. 
+- Update default `emissions_factor_XXX_decrease_fraction` (where XXX is CO2, NOx, SO2, and PM2.5) from 0.01174 to 0.02163 based on Cambium 2022 Mid-Case scenario, LRMER CO2e (Combustion+Precombustion) 2024-2049 projected values. CO2 projected decrease defaults to 0 if Cambium data are used for CO2 (Cambium API call will levelize values).
+
+### Fixed 
+- Adjust grid emissions profiles for day of week alignment with load_year
 ## v0.32.3
 ### Fixed
 - Calculate **num_battery_bins** default in `backup_reliability.jl` based on battery duration to prevent significant discretization error (and add test)

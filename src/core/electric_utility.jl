@@ -57,7 +57,7 @@
     co2_from_avert::Bool = false, # Default is to use Cambium data for CO2 grid emissions. Set to `true` to instead use data from the EPA's AVERT database. 
 
     # Climate Option 3: Provide your own custom emissions factors for CO2 and specify annual percent decrease  
-    emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom CO2 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour)
+    emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom CO2 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour). Ensure emissions year aligns with load year.
 
     # Used with Climate Options 2 or 3: Annual percent decrease in CO2 emissions factors
     emissions_factor_CO2_decrease_fraction::Real = co2_from_avert || length(emissions_factor_series_lb_CO2_per_kwh) > 0  ? 0.02163 : 0 , # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase.
@@ -67,9 +67,9 @@
     avert_emissions_region::String = "", # AVERT emissions region. Default is based on location, or can be overriden by providing region here.
 
     # Health Option 2: Provide your own custom emissions factors for health emissions and specify annual percent decrease:
-    emissions_factor_series_lb_NOx_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom NOx emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour)
-    emissions_factor_series_lb_SO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom SO2 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour)
-    emissions_factor_series_lb_PM25_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom PM2.5 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour)
+    emissions_factor_series_lb_NOx_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom NOx emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour). Ensure emissions year aligns with load year.
+    emissions_factor_series_lb_SO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom SO2 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour). Ensure emissions year aligns with load year.
+    emissions_factor_series_lb_PM25_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom PM2.5 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour). Ensure emissions year aligns with load year.
 
     # Used with Health Options 1 or 2: Annual percent decrease in health emissions factors: 
     emissions_factor_NOx_decrease_fraction::Real = 0.02163, 
@@ -143,11 +143,20 @@ struct ElectricUtility
 
 
     function ElectricUtility(;
+
+        # Fields from other models
         latitude::Union{Nothing,Real} = nothing, # Passed from Site
         longitude::Union{Nothing,Real} = nothing, # Passed from Site
         off_grid_flag::Bool = false, # Passed from Settings
         analysis_years::Int = 25, # Passed from Financial
         time_steps_per_hour::Int = 1, # Passed from Settings
+        CO2_emissions_reduction_min_fraction::Union{Real, Nothing} = nothing, # passed from Site
+        CO2_emissions_reduction_max_fraction::Union{Real, Nothing} = nothing, # passed from Site
+        include_climate_in_objective::Bool = false, # passed from Settings
+        include_health_in_objective::Bool = false, # passed from Settings
+        load_year::Int = 2017, # Passed from ElectricLoad
+
+        # Inputs for ElectricUtility
         net_metering_limit_kw::Real = 0, # Upper limit on the total capacity of technologies that can participate in net metering agreement.
         interconnection_limit_kw::Real = 1.0e9,
         outage_start_time_step::Int=0,  # for modeling a single outage, with critical load spliced into the baseline load ...
@@ -192,12 +201,6 @@ struct ElectricUtility
         emissions_factor_NOx_decrease_fraction::Real = 0.02163, #TODO: Update these 
         emissions_factor_SO2_decrease_fraction::Real = 0.02163,
         emissions_factor_PM25_decrease_fraction::Real = 0.02163,
-
-        # fields from other models needed for validation
-        CO2_emissions_reduction_min_fraction::Union{Real, Nothing} = nothing, # passed from Site
-        CO2_emissions_reduction_max_fraction::Union{Real, Nothing} = nothing, # passed from Site
-        include_climate_in_objective::Bool = false, # passed from Settings
-        include_health_in_objective::Bool = false # passed from Settings
         )
 
         is_MPC = isnothing(latitude) || isnothing(longitude)
@@ -229,25 +232,34 @@ struct ElectricUtility
                 else # if not user-provided, get emissions factors from AVERT and/or Cambium
                     if ekey == "CO2" && co2_from_avert == false # Use Cambium for CO2
                         try
-                            emissions_series_dict[ekey] = cambium_emissions_profile(
-                                    scenario=cambium_scenario, 
-                                    location_type=cambium_location_type, 
-                                    latitude=latitude, 
-                                    longitude=longitude,
-                                    start_year=cambium_start_year,
-                                    lifetime=cambium_levelization_years,
-                                    metric_col=cambium_metric_col,
-                                    time_steps_per_hour=time_steps_per_hour
-                            )["emissions_factor_series_lb_CO2_per_kwh"]
+                            emissions_series_dict[ekey] = cambium_emissions_profile( # Adjusted for day of week alignment with load
+                                    scenario = cambium_scenario, 
+                                    location_type = cambium_location_type, 
+                                    latitude = latitude, 
+                                    longitude = longitude,
+                                    start_year = cambium_start_year,
+                                    lifetime = cambium_levelization_years,
+                                    metric_col = cambium_metric_col,
+                                    time_steps_per_hour = time_steps_per_hour,
+                                    load_year = load_year,
+                                    emissions_year = 2017
+                            )["emissions_factor_series_lb_CO2_per_kwh"] 
                         catch
                             throw(@error("Could not look up Cambium emissions profile from point ($(latitude), $(longitude)).
                             Location is likely outside continental US or something went wrong with the Cambium API request. Set co2_from_avert = true to use AVERT data instead."))
                         end
-                    else # Else use AVERT 
-                        emissions_series_dict[ekey] = avert_emissions_series(ekey, region_abbr, time_steps_per_hour=time_steps_per_hour)
+                    else # otherwise use AVERT
+                        avert_data_year = 2021 # Must update when AVERT data are updated (TODO: Move to inputs?)
+                        emissions_series_dict[ekey] = avert_emissions_profiles(
+                                                        latitude = latitude,
+                                                        longitude = longitude,
+                                                        time_steps_per_hour = time_steps_per_hour,
+                                                        load_year = load_year,
+                                                        avert_data_year = avert_data_year
+                                                        )["emissions_factor_series_lb_"*ekey*"_per_kwh"]
                     end
 
-                    print("\n\n", ekey, emissions_series_dict[ekey][1:10] )
+                    # print("\n\n", ekey, emissions_series_dict[ekey][1:10] )
                     
                     # Handle missing emissions inputs (due to failed lookup and not provided by user)
                     if isnothing(emissions_series_dict[ekey])
@@ -393,26 +405,6 @@ function avert_region_abbreviation(latitude, longitude)
     end
 end
 
-function avert_emissions_series(pollutant, region_abbr; time_steps_per_hour=1)
-    if isnothing(region_abbr)
-        return nothing
-    end
-    # Columns 1 and 2 do not contain AVERT region information, so skip them
-    # TODO: Update to latest AVERT data? 
-    avert_df = readdlm(joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "AVERT_2021_$(pollutant)_lb_per_kwh.csv"), ',')[:, 3:end]
-
-    try
-        # Find col index for region, and then row 1 does not contain AVERT data so skip that.
-        emissions_profile = round.(avert_df[2:end,findfirst(x -> x == region_abbr, avert_df[1,:])], digits=6)
-        if time_steps_per_hour > 1
-            emissions_profile = repeat(emissions_profile,inner=time_steps_per_hour)
-        end
-        return emissions_profile
-    catch
-        return nothing
-    end
-end
-
 function region_abbr_to_name(region_abbr)
     lookup = Dict(
         "CA" => "California",
@@ -460,15 +452,16 @@ function region_name_to_abbr(region_name)
 end
 
 """
-    avert_emissions_profiles(; latitude::Real, longitude::Real, time_steps_per_hour::Int=1)
+    avert_emissions_profiles(; latitude::Real, longitude::Real, time_steps_per_hour::Int=1, load_year::Int=2017, avert_data_year::Int=2021)
 
 This function gets CO2, NOx, SO2, and PM2.5 grid emission rate profiles (1-year time series) from the AVERT dataset.
+Returned emissions profile is adjusted for day of week alignment with load_year.
     
 This function is used for the /emissions_profile endpoint in the REopt API, in particular 
     for the webtool to display grid emissions defaults before running REopt, 
     but is also generally an external way to access AVERT data without running REopt.
 """
-function avert_emissions_profiles(; latitude::Real, longitude::Real, time_steps_per_hour::Int=1)
+function avert_emissions_profiles(; latitude::Real, longitude::Real, time_steps_per_hour::Int=1, load_year::Int=2017, avert_data_year::Int=2021)
     avert_region_abbr, avert_meters_to_region = avert_region_abbreviation(latitude, longitude)
     avert_emissions_region = region_abbr_to_name(avert_region_abbr)
     if isnothing(avert_region_abbr)
@@ -483,11 +476,21 @@ function avert_emissions_profiles(; latitude::Real, longitude::Real, time_steps_
         "avert_region_abbr" => avert_region_abbr,
         "avert_region" => avert_emissions_region,
         "units" => "Pounds emissions per kWh",
-        "description" => "Regional hourly grid emissions factors for applicable EPA AVERT region.",
+        "description" => "Regional hourly grid emissions factors for applicable EPA AVERT region, adjusted to align days of week with load year $(load_year).",
         "avert_meters_to_region" => avert_meters_to_region
     )
     for ekey in ["CO2", "NOx", "SO2", "PM25"]
-        response_dict["emissions_factor_series_lb_"*ekey*"_per_kwh"] = avert_emissions_series(ekey, avert_region_abbr, time_steps_per_hour=time_steps_per_hour)
+        # Columns 1 and 2 do not contain AVERT region information, so skip them. # TODO: Update to latest AVERT data?
+        avert_df = readdlm(joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "AVERT_$(avert_data_year)_$(ekey)_lb_per_kwh.csv"), ',')[:, 3:end]
+        # Find col index for region. Row 1 does not contain AVERT data so skip that.
+        emissions_profile_unadjusted = round.(avert_df[2:end,findfirst(x -> x == avert_region_abbr, avert_df[1,:])], digits=6)
+        # Adjust for day of week alignment with load
+        ef_profile_adjusted = align_emission_with_load_year(load_year=load_year, emissions_year=avert_data_year, emissions_profile=emissions_profile_unadjusted) 
+        # Adjust for non-hourly timesteps 
+        if time_steps_per_hour > 1
+            ef_profile_adjusted = repeat(ef_profile_adjusted,inner=time_steps_per_hour)
+        end
+        response_dict["emissions_factor_series_lb_"*ekey*"_per_kwh"] = ef_profile_adjusted
     end
     return response_dict
 end
@@ -500,9 +503,12 @@ end
                                 start_year::Int,
                                 lifetime::Int,
                                 metric_col::String,
-                                time_steps_per_hour::Int=1)
+                                time_steps_per_hour::Int=1,
+                                load_year::Int=2017,
+                                emissions_year::Int=2017)
 
 This function gets levelized grid CO2 or CO2e emission rate profiles (1-year time series) from the Cambium dataset.
+The returned profiles are adjusted for day of week alignment with the provided "load_year" (Cambium profiles always start on a Sunday.)
     
 This function is also used for the /cambium_emissions_profile endpoint in the REopt API, in particular for the webtool to display grid emissions defaults before running REopt.
 """
@@ -513,9 +519,12 @@ function cambium_emissions_profile(; scenario::String,
                                     start_year::Int,
                                     lifetime::Int,
                                     metric_col::String,
-                                    time_steps_per_hour::Int=1)
+                                    time_steps_per_hour::Int=1,
+                                    load_year::Int=2017,
+                                    emissions_year::Int=2017
+                                    )
 
-    print("\nMade it here!! \n")
+    # print("\nMade it here! \n")
 
     url = "https://scenarioviewer.nrel.gov/api/get-levelized/" # Production 
     project_uuid = "82460f06-548c-4954-b2d9-b84ba92d63e2" 
@@ -532,7 +541,7 @@ function cambium_emissions_profile(; scenario::String,
             "discount_rate" => "0.0", # Zero = simple average (a pwf with discount rate gets applied to projected CO2 costs, but not masses.)
             "time_type" => "hourly", # hourly or annual
             "metric_col" => metric_col,
-            "smoothing_method" => "rolling", # rolling or none (only applicable to hourly queries)
+            "smoothing_method" => "rolling", # rolling or none (only applicable to hourly queries) # TODO: decide if rolling or none is best
             "gwp" => "100yrAR6", # Global warming potential values. Default: "100yrAR6". Options: "100yrAR5", "20yrAR5", "100yrAR6", "20yrAR6" or a custom tuple [1,10.0,100] with GWP values for [CO2, CH4, N2O]
             "grid_level" => "enduse", # enduse or busbar
             "ems_mass_units" => "lb" # lb or kg
@@ -541,16 +550,22 @@ function cambium_emissions_profile(; scenario::String,
     try
         r = HTTP.post(url, [], HTTP.Form(payload))
         response = JSON.parse(String(r.body))
+        # print("\n", response["status"], "\n")
         # status = response["status"]
         output = response["message"]
         
         co2_emissions = output["values"] ./ 1000 # [lb / MWh] --> [lb / kWh]
+        
+        # print("\n\nco2_emissions[1:10]: ", co2_emissions[1:10])
+        # Align day of week of emissions and load profiles (Cambium data starts on Sundays so assuming emissions_year=2017)
+        co2_emissions = align_emission_with_load_year(load_year=load_year,emissions_year=emissions_year,emissions_profile=co2_emissions) 
+        
         if time_steps_per_hour > 1
             co2_emissions = repeat(co2_emissions, inner=time_steps_per_hour)
         end
      
         response_dict = Dict{String, Any}(
-            "description" => "Hourly CO2 (or CO2e) grid emissions factors for applicable Cambium location and location_type.",
+            "description" => "Hourly CO2 (or CO2e) grid emissions factors for applicable Cambium location and location_type, adjusted to align with load year $(load_year).",
             "units" => "Pounds emissions per kWh",
             "location" => output["location"],
             "metric_col" => output["metric_col"], 
@@ -565,4 +580,22 @@ function cambium_emissions_profile(; scenario::String,
                 Location is likely outside continental US or something went wrong with the Cambium API request."
             )
     end
+end
+
+function align_emission_with_load_year(; load_year::Int, emissions_year::Int, emissions_profile::Array{<:Real,1})
+    
+    ef_start_day = dayofweek(Date(emissions_year,1,1)) # Monday = 1; Sunday = 7
+    load_start_day = dayofweek(Date(load_year,1,1)) 
+    
+    if ef_start_day == load_start_day
+        emissions_profile_adj = emissions_profile
+    elseif ef_start_day < load_start_day # wrap first few ef days to end
+        wrap_days = emissions_profile[1:24*(load_start_day-ef_start_day)]
+        emissions_profile_adj = append!(emissions_profile[24*(load_start_day-ef_start_day)+1:end],wrap_days)
+    else # ef_start_day > load_start_day; wrap last few ef days to start 
+        wrap_days = emissions_profile[(8760-24*(ef_start_day-load_start_day))+1:end]
+        emissions_profile_adj = append!(wrap_days,emissions_profile[1:8760-24*(ef_start_day-load_start_day)])
+    end
+
+    return emissions_profile_adj
 end
