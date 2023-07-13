@@ -120,6 +120,7 @@
 struct ElectricUtility
     avert_emissions_region::String # AVERT emissions region
     distance_to_avert_emissions_region_meters::Real
+    cambium_emissions_region::String # Determined by location (lat long) and cambium_location_type
     emissions_factor_series_lb_CO2_per_kwh::Array{<:Real,1}
     emissions_factor_series_lb_NOx_per_kwh::Array{<:Real,1}
     emissions_factor_series_lb_SO2_per_kwh::Array{<:Real,1}
@@ -186,7 +187,7 @@ struct ElectricUtility
         emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom CO2 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour)
 
         # Used with Climate Options 2 or 3: Annual percent decrease in CO2 emissions factors
-        emissions_factor_CO2_decrease_fraction::Real = co2_from_avert || length(emissions_factor_series_lb_CO2_per_kwh) > 0  ? 0.02163 : 0 , # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase. # TODO: update with 2022 data
+        emissions_factor_CO2_decrease_fraction::Real = co2_from_avert || length(emissions_factor_series_lb_CO2_per_kwh) > 0  ? 0.02163 : 0 , # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase.
 
         ### Grid Health Emissions Inputs ###
         # Health Option 1 (Default): Use health emissions data from the EPA's AVERT based on the AVERT emissions region and specify annual percent decrease
@@ -198,12 +199,14 @@ struct ElectricUtility
         emissions_factor_series_lb_PM25_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom PM2.5 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour)
 
         # Used with Health Options 1 or 2: Annual percent decrease in health emissions factors: 
-        emissions_factor_NOx_decrease_fraction::Real = 0.02163, #TODO: Update these 
+        emissions_factor_NOx_decrease_fraction::Real = 0.02163, 
         emissions_factor_SO2_decrease_fraction::Real = 0.02163,
         emissions_factor_PM25_decrease_fraction::Real = 0.02163,
         )
 
         is_MPC = isnothing(latitude) || isnothing(longitude)
+        cambium_emissions_region = "NA - Cambium data not used for climate emissions" # will be overwritten if Cambium is used
+
         if !is_MPC
             # Get AVERT emissions region
             if avert_emissions_region == ""
@@ -232,7 +235,7 @@ struct ElectricUtility
                 else # if not user-provided, get emissions factors from AVERT and/or Cambium
                     if ekey == "CO2" && co2_from_avert == false # Use Cambium for CO2
                         try
-                            emissions_series_dict[ekey] = cambium_emissions_profile( # Adjusted for day of week alignment with load
+                            cambium_response_dict = cambium_emissions_profile( # Adjusted for day of week alignment with load
                                     scenario = cambium_scenario, 
                                     location_type = cambium_location_type, 
                                     latitude = latitude, 
@@ -243,7 +246,9 @@ struct ElectricUtility
                                     time_steps_per_hour = time_steps_per_hour,
                                     load_year = load_year,
                                     emissions_year = 2017
-                            )["emissions_factor_series_lb_CO2_per_kwh"] 
+                            )
+                            emissions_series_dict[ekey] = cambium_response_dict["emissions_factor_series_lb_CO2_per_kwh"]
+                            cambium_emissions_region = cambium_response_dict["location"]
                         catch
                             throw(@error("Could not look up Cambium emissions profile from point ($(latitude), $(longitude)).
                             Location is likely outside continental US or something went wrong with the Cambium API request. Set co2_from_avert = true to use AVERT data instead."))
@@ -306,6 +311,7 @@ struct ElectricUtility
         new(
             is_MPC ? "" : avert_emissions_region,
             is_MPC || isnothing(meters_to_region) ? typemax(Int64) : meters_to_region,
+            cambium_emissions_region,
             is_MPC ? Float64[] : emissions_series_dict["CO2"],
             is_MPC ? Float64[] : emissions_series_dict["NOx"],
             is_MPC ? Float64[] : emissions_series_dict["SO2"],
@@ -524,23 +530,21 @@ function cambium_emissions_profile(; scenario::String,
                                     emissions_year::Int=2017
                                     )
 
-    # print("\nMade it here! \n")
-
     url = "https://scenarioviewer.nrel.gov/api/get-levelized/" # Production 
-    project_uuid = "82460f06-548c-4954-b2d9-b84ba92d63e2" 
+    project_uuid = "82460f06-548c-4954-b2d9-b84ba92d63e2" # Cambium 2022 
 
     payload=Dict(
             "project_uuid" => project_uuid,
             "scenario" => scenario, # Only the Mid-case is currently available for testing?
-            "location_type" => location_type,  # Nations, States, Balancing Areas 
+            "location_type" => location_type,  # Nations, States, GEA Regions, Balancing Areas (Default: States)
             # "location" => "Colorado", # Contiguous United States, Colorado, Kansas, p33, p34 
             "latitude" => string(round(latitude, digits=3)),
             "longitude" => string(round(longitude, digits=3)), 
             "start_year" => string(start_year), # biennial from 2022-2050 (data year covers nominal year and years proceeding; e.g., 2040 values cover time range starting in 2036.)
-            "lifetime" => string(lifetime), # Integer 1 or greater
+            "lifetime" => string(lifetime), # Integer 1 or greater (Default 25 yrs)
             "discount_rate" => "0.0", # Zero = simple average (a pwf with discount rate gets applied to projected CO2 costs, but not masses.)
             "time_type" => "hourly", # hourly or annual
-            "metric_col" => metric_col,
+            "metric_col" => metric_col, # lrmer_co2e
             "smoothing_method" => "rolling", # rolling or none (only applicable to hourly queries) # TODO: decide if rolling or none is best
             "gwp" => "100yrAR6", # Global warming potential values. Default: "100yrAR6". Options: "100yrAR5", "20yrAR5", "100yrAR6", "20yrAR6" or a custom tuple [1,10.0,100] with GWP values for [CO2, CH4, N2O]
             "grid_level" => "enduse", # enduse or busbar

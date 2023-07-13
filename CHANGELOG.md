@@ -25,8 +25,9 @@ Classify the change according to the following categories:
 
 ## Develop - 2023-06-26
 ### Changed
-- In `electric_utility.jl`, error when user-provided emissions series does not match timestep per hour, as is done in other cases of incorrect user-provided data. 
+- In `src/core/electric_utility.jl`, error when user-provided emissions series does not match timestep per hour, as is done in other cases of incorrect user-provided data. 
 - Update default `emissions_factor_XXX_decrease_fraction` (where XXX is CO2, NOx, SO2, and PM2.5) from 0.01174 to 0.02163 based on Cambium 2022 Mid-Case scenario, LRMER CO2e (Combustion+Precombustion) 2024-2049 projected values. CO2 projected decrease defaults to 0 if Cambium data are used for CO2 (Cambium API call will levelize values).
+- Change default source for CO2 grid emissions values to NREL's Cambium Database (by default: CO2e, long-run marginal emissions rates levelized (averaged) over the analysis period, assuming start year 2024). Add call to Cambium API in `src/core/electric_utility.jl`. Include option for user to use AVERT data for CO2. 
 
 ### Fixed 
 - Adjust grid emissions profiles for day of week alignment with load_year
