@@ -20,7 +20,6 @@ else
     so still at least need JULIA_NUM_THREADS=2
 
 """
-# TODO allow empty vector for size_scale to bypass multiple solutions while leveraging results summary stuff (currently errors with []=Vector[Any])
 function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vector{Float64}}, ms::AbstractVector{T}; 
                                     parallel=false, resilience=false, outage_start_hour=1, outage_duration_hours=0) where T <: JuMP.AbstractModel
     # Load in input_data from .json to dictionary
@@ -60,8 +59,10 @@ function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vec
     else
         simresults = Dict()
     end
-    results_all = Dict("optimal" => results_dict)
     results_summary = Dict("optimal" => get_multi_solutions_results_summary(results_dict, p, ms[2], techs_sized, simresults, outage_start_hour, outage_duration_hours))
+    # Add custom resilience output to results_all, per Eaton's request
+    results_dict["resilience"] = results_summary["optimal"]["resilience"]
+    results_all = Dict("optimal" => results_dict)
 
     # Now create number of inputs based on the # of techs sized in optimal case
     ps = []
@@ -116,7 +117,6 @@ function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vec
         if typeof(rs_solns[i]) <: Dict
             local results_dict = REopt.combine_results(p[2], rs[1], rs_solns[i], bau_inputs.s)
             results_dict["Financial"] = merge(results_dict["Financial"], REopt.proforma_results(p[2], results_dict))
-            results_all[p[1]] = results_dict
             if resilience
                 simresults = simulate_outages(rs_solns[i], p[2])
             else
@@ -124,6 +124,8 @@ function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vec
             end
             # Build results summary, a select number of outputs for Eaton
             results_summary[p[1]] = get_multi_solutions_results_summary(results_dict, p[2], ms[n], techs_sized, simresults, outage_start_hour, outage_duration_hours)
+            results_dict["resilience"] = results_summary[p[1]]["resilience"]
+            results_all[p[1]] = results_dict
         else
             @warn "REopt did not solve successully (infeasible) for extra run number $i"
             results_all[p[1]] = Dict("status"=>Dict("error" => "infeasible"))
