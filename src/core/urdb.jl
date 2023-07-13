@@ -270,6 +270,9 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
 
         for month in range(1, stop=12)
             n_days = daysinmonth(Date(string(year) * "-" * string(month)))
+            if month == 2 && isleapyear(year)
+                n_days -= 1
+            end
 
             for day in range(1, stop=n_days)
 
