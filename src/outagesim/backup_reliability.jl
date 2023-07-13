@@ -744,35 +744,13 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         # prime_kw = get(get(d, "CHP", Dict()), "size_kw", 0)
     end
     
-    #TODO: 1) add parsing of chp/prime gen from reopt results; 
+    #TODO: add parsing of chp/prime gen from reopt results
 
     num_generators = get!(r2, :num_generators, [1]*length(get(r2, :generator_size_kw, [nothing])))
     if length(get(r2, :generator_size_kw, [nothing])) != length(num_generators)
         throw(@error("Input num_generators must be the same length as generator_size_kw or a scalar if generator_size_kw not provided."))
     end
     generator_size_kw = get!(r2, :generator_size_kw, replace!([diesel_kw] ./ num_generators, Inf => 0))
-    
-    # If gen capacity is 0 then base on diesel_kw
-    # If num_generators is zero then either set to 1 if no generator_size_kw provided or base on ceiling(diesel_kw / generator_size_kw)
-    # generator_size_kw = get(r, "generator_size_kw", [diesel_kw]) #get(r, "generator_size_kw", [diesel_kw, prime_kw])
-    # num_generators = get(r, "num_generators", [1])
-    # if !(typeof(generator_size_kw) <: Vector)
-    #     if generator_size_kw < 0.1
-    #         if num_generators == 0
-    #             generator_size_kw = diesel_kw
-    #             num_generators = 1
-    #         else
-    #             generator_size_kw = diesel_kw / num_generators
-    #         end
-    #     elseif num_generators == 0
-    #         num_generators = ceil(Int, diesel_kw / generator_size_kw)
-    #     end
-    # else
-    #     nt = length(num_generators)
-    #     if length(generator_size_kw) != nt
-    #         generator_size_kw = [diesel_kw / sum(num_generators) for _ in 1:nt]
-    #     end
-    # end
 
     return r2
 end
