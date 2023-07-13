@@ -27,28 +27,6 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-"""
-    transition_prob(start_gen::Vector{Int}, end_gen::Vector{Int}, fail_prob::Real)
-
-Return a vector of the probability of ``y`` generators working at the end of the period given ``x`` generators are working at the start of the period
-and given a failure rate of ``fail_prob``. ``x`` = ``start_gen[i]`` and ``y`` = ``end_gen[i]`` for each i in the length of start gen. 
-Start gen and end gen need to be the same length.
-
-Function used to create transition probabilities in Markov matrix.
-
-# Examples
-```repl-julia
-julia> transition_prob([1, 2, 3, 4], [0, 1, 2, 3], fail_prob=0.5)
-4-element Vector{Float64}:
- 0.5
- 0.5
- 0.375
- 0.25
-```
-"""
-function transition_prob(start_gen::Vector{Int}, end_gen::Vector{Int}, fail_prob_vec::Real)::Vector{Float64} 
-    return binomial.(start_gen, end_gen).*(1-fail_prob_vec).^(end_gen).*(fail_prob_vec).^(start_gen-end_gen)
-end
 
 """
 transition_prob(start_gen::Vector{Int}, end_gen::Vector{Int}, fail_prob_vec::Vector{<:Real})::Vector{Float64}
@@ -84,33 +62,6 @@ function transition_prob(start_gen::Vector, end_gen::Vector, fail_prob_vec::Vect
     return .*(transitions...)
 end
 
-
-"""
-    markov_matrix(num_generators::Int, fail_prob::Real)
-
-Return a ``num_generators``+1 by ``num_generators``+1 matrix of transition probabilities of going from n (row) to n' (column) given probability ``fail_prob``
-
-Row n denotes starting with n-1 generators, with the first row denoting zero working generators. Column n' denots ending with n'-1 generators.
-
-
-# Examples
-```repl-julia
-julia> markov_matrix(2, 0.1)
-3×3 Matrix{Float64}:
- 1.0   0.0   0.0
- 0.1   0.9   0.0
- 0.01  0.18  0.81
-```
-"""
-function markov_matrix(num_generators::Int, fail_prob::Real)::Matrix{Float64} 
-    #Creates Markov matrix for generator transition probabilities
-    M = reshape(transition_prob(repeat(0:num_generators, outer = num_generators + 1), 
-                                repeat(0:num_generators, inner = num_generators+1), 
-                                fail_prob), 
-                num_generators+1, num_generators+1)
-    replace!(M, NaN => 0)
-    return M
-end
 
 """
     markov_matrix(num_generators::Vector{Int}, fail_prob_vec::Vector{<:Real})::Matrix{Float64} 
@@ -156,34 +107,7 @@ function markov_matrix(num_generators::Vector{Int}, fail_prob_vec::Vector{<:Real
     replace!(M, NaN => 0)
     return M
 end
-"""
-    starting_probabilities(num_generators::Int, generator_operational_availability::Real, generator_failure_to_start::Real)::Matrix{Float64}
 
-Return a 1 by ``num_generators`` + 1 matrix (row vector) of the probability that each number of generators
-is both operationally available (``generator_operational_availability``) and avoids a Failure to Start (``failure_to_start``) 
-in an inital time step
-
-The first element denotes no generators successfully starts and element n denotes n-1 generators start
-
-# Arguments
-- `num_generators::Int`: the number of generators 
-- `generator_operational_availability::Real`: Operational Availability. The chance that a generator will be available (not down for maintenance) at the start of the outage
-- `generator_failure_to_start::Real`: Failure to Start. The chance that a generator fails to successfully start and take load.
-
-# Examples
-```repl-julia
-julia> starting_probabilities(2, 0.99, 0.05)
-1×3 Matrix{Float64}:
- 0.00354025  0.11192  0.88454
-```
-"""
-function starting_probabilities(num_generators::Int, generator_operational_availability::Real, generator_failure_to_start::Real)::Matrix{Float64} 
-    starting_vec = markov_matrix(
-        num_generators, 
-        (1 - generator_operational_availability) + (generator_failure_to_start * generator_operational_availability)
-    )[end, :] 
-    return reshape(starting_vec, 1, length(starting_vec))
-end
 
 """
     starting_probabilities(num_generators::Vector{Int}, generator_operational_availability::Vector{<:Real}, generator_failure_to_start::Vector{<:Real})::Matrix{Float64}
@@ -249,24 +173,6 @@ function bin_battery_charge(batt_soc_kwh::Vector, num_bins::Int, battery_size_kw
     return min.(num_bins, round.(batt_soc_kwh./bin_size).+1)
 end
 
-"""
-    generator_output(num_generators::Int, generator_size_kw::Real)::Vector{Float64} 
-
-Return a ``num_generators``+1 length vector of maximum generator capacity given 0 to ``num_generators`` are available
-# Examples
-```repl-julia
-julia>  generator_output(3, 250)
-6-element Vector{Int64}:
-0
-250
-500
-750
-```
-"""
-function generator_output(num_generators::Int, generator_size_kw::Real)::Vector{Float64} 
-    #Returns vector of maximum generator output
-    return collect(0:num_generators).*generator_size_kw
-end
 
 """
     generator_output(num_generators::Vector{Int}, generator_size_kw::Vector{<:Real})::Vector{Float64} 
@@ -303,44 +209,6 @@ function generator_output(num_generators::Vector{Int}, generator_size_kw::Vector
     return vec([sum(gw[i] * generator_size_kw[i] for i in eachindex(generator_size_kw)) for gw in num_generators_working])
 end
 
-"""
-    get_maximum_generation(battery_size_kw::Real, generator_size_kw::Real, bin_size::Real, 
-                           num_bins::Int, num_generators::Int, battery_discharge_efficiency::Real)::Matrix{Float64}
-
-Return a matrix of maximum total system output.
-
-Rows denote battery state of charge bin and columns denote number of available generators, with the first column denoting zero available generators.
-
-# Arguments
-- `battery_size_kw::Real`: battery inverter size
-- `generator_size_kw::Real`: maximum output from single generator. 
-- `bin_size::Real`: size of discretized battery soc bin. is equal to battery_size_kwh / (num_bins - 1) 
-- `num_bins::Int`: number of battery bins. 
-- `num_generators::Int`: number of generators in microgrid.
-- `battery_discharge_efficiency::Real`: battery_discharge_efficiency = battery_discharge / battery_reduction_in_soc
-
-# Examples
-```repl-julia
-julia>  get_maximum_generation(1000, 750, 250, 5, 3, 1.0)
-5×4 Matrix{Float64}:
-    0.0   750.0  1500.0  2250.0
-  250.0  1000.0  1750.0  2500.0
-  500.0  1250.0  2000.0  2750.0
-  750.0  1500.0  2250.0  3000.0
- 1000.0  1750.0  2500.0  3250.0
-```
-"""
-function get_maximum_generation(battery_size_kw::Real, generator_size_kw::Real, bin_size::Real, 
-                   num_bins::Int, num_generators::Int, battery_discharge_efficiency::Real)::Matrix{Float64}
-    #Returns a matrix of maximum generation (rows denote number of generators starting at 0, columns denote battery bin)
-    N = num_generators + 1
-    M = num_bins
-    max_system_output = zeros(M, N) 
-    for i in 1:M
-       max_system_output[i, :] = generator_output(num_generators, generator_size_kw) .+ min(battery_size_kw, (i-1)*bin_size*battery_discharge_efficiency)
-    end
-    return max_system_output
-end
 
 """
     get_maximum_generation(battery_size_kw::Real, generator_size_kw::Vector{<:Real}, bin_size::Real, 
