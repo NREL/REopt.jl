@@ -23,6 +23,9 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2023-07-13
+### Changed
+- Refactored `backup_reliability.jl` to enable easier development: added conversion of all scalar generator inputs to vectors in `dictkeys_to_symbols` and reduced each functions with two versions (one with scalar and one with vector generator arguments) to a single version
 
 ## Develop - 2023-06-21
 ### Changed
