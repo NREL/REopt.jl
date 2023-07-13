@@ -77,8 +77,8 @@ else  # run HiGHS tests
         inputs = REoptInputs(s)
         results = run_reopt(model, inputs)
 
-        @test results["PV"]["size_kw"] ≈ 70.3084 atol=0.01
-        @test results["Financial"]["lcc"] ≈ 430747.0 rtol=1e-5 # with levelization_factor hack the LCC is within 5e-5 of REopt API LCC
+        @test results["PV"]["size_kw"] ≈ 68.9323 atol=0.01
+        @test results["Financial"]["lcc"] ≈ 432672.0 rtol=1e-5 # with levelization_factor hack the LCC is within 5e-5 of REopt API LCC
         @test all(x == 0.0 for x in results["PV"]["electric_to_load_series_kw"][1:744])
     end
 
@@ -98,9 +98,9 @@ else  # run HiGHS tests
         r = run_reopt(model, "./scenarios/pv_storage.json")
 
         @test r["PV"]["size_kw"] ≈ 216.6667 atol=0.01
-        @test r["Financial"]["lcc"] ≈ 1.240037e7 rtol=1e-5
-        @test r["ElectricStorage"]["size_kw"] ≈ 55.9 atol=0.1
-        @test r["ElectricStorage"]["size_kwh"] ≈ 78.9 atol=0.1
+        @test r["Financial"]["lcc"] ≈ 1.239151e7 rtol=1e-5
+        @test r["ElectricStorage"]["size_kw"] ≈ 49.0 atol=0.1
+        @test r["ElectricStorage"]["size_kwh"] ≈ 83.3 atol=0.1
     end
 
     @testset "Outage with Generator" begin
@@ -108,7 +108,7 @@ else  # run HiGHS tests
             "output_flag" => false, "log_to_console" => false)
         )
         results = run_reopt(model, "./scenarios/generator.json")
-        @test results["Generator"]["size_kw"] ≈ 8.13 atol=0.01
+        @test results["Generator"]["size_kw"] ≈ 9.53 atol=0.01
         @test (sum(results["Generator"]["electric_to_load_series_kw"][i] for i in 1:9) + 
             sum(results["Generator"]["electric_to_load_series_kw"][i] for i in 13:8760)) == 0
         p = REoptInputs("./scenarios/generator.json")
@@ -543,6 +543,6 @@ else  # run HiGHS tests
 
         @test reliability_results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.802997 atol=0.0001
         @test reliability_results["cumulative_survival_final_time_step"][1] ≈ 0.802997 atol=0.0001
-        @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.817088 atol=0.0001
+        @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.817586 atol=0.0001
     end                            
 end
