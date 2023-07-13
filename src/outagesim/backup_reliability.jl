@@ -493,8 +493,8 @@ function gen_only_survival_single_start_time(
 end
 
 """
-    survival_with_battery(;net_critical_loads_kw::Vector, battery_starting_soc_kwh::Vector, generator_operational_availability::Real, generator_failure_to_start::Real, 
-                        generator_mean_time_to_failure::Real, num_generators::Int, generator_size_kw::Real, battery_size_kwh::Real, battery_size_kw::Real, num_bins::Int, 
+    survival_with_battery(;net_critical_loads_kw::Vector, battery_starting_soc_kwh::Vector, generator_operational_availability::Vector{<:Real}, generator_failure_to_start::Vector{<:Real}, 
+                        generator_mean_time_to_failure::Vector{<:Real}, num_generators::Vector{Int}, generator_size_kw::Vector{<:Real}, battery_size_kwh::Real, battery_size_kw::Real, num_bins::Int, 
                         max_outage_duration::Int, battery_charge_efficiency::Real, battery_discharge_efficiency::Real, marginal_survival::Bool = false, time_steps_per_hour::Real = 1)::Matrix{Float64} 
 
 Return a matrix of probability of survival with rows denoting outage start and columns denoting outage duration
@@ -506,13 +506,13 @@ if ``marginal_survival`` = false then result is chance of surviving up to and in
 # Arguments
 - `net_critical_loads_kw::Vector`: Vector of system critical loads minus solar generation.
 - `battery_starting_soc_kwh::Vector`: Vector of battery charge (kwh) for each time step of year. 
-- `generator_operational_availability::Real`: Operational Availability of backup generators.
-- `generator_failure_to_start::Real`: Probability of generator Failure to Start and support load. 
-- `generator_mean_time_to_failure::Real`: Average number of time steps between failures. 1/MTTF (failure to run probability). 
-- `num_generators::Int`: number of generators in microgrid.
-- `generator_size_kw::Real`: size of generator.
-- `battery_size_kwh::Real`: energy capacity of battery system.
-- `battery_size_kw::Real`: battery system inverter size.
+- `generator_operational_availability::Vector{<:Real}`: Operational Availability of backup generators.
+- `generator_failure_to_start::Vector{<:Real}`: Probability of generator Failure to Start and support load. 
+- `generator_mean_time_to_failure::Vector{<:Real}`: Average number of time steps between failures. 1/MTTF (failure to run probability). 
+- `num_generators::Vector{Int}`: number of generators in microgrid.
+- `generator_size_kw::Vector{<:Real}`: size of generator.
+- `battery_size_kwh::Vector{<:Real}`: energy capacity of battery system.
+- `battery_size_kw::Vector{<:Real}`: battery system inverter size.
 - `num_battery_bins::Int`: number of battery bins. 
 - `max_outage_duration::Int`: maximum outage duration in time steps (time step is generally hourly but could be other values such as 15 minutes).
 - `battery_charge_efficiency::Real`: battery_charge_efficiency = increase_in_soc_kwh / grid_input_kwh 
