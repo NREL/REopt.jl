@@ -698,8 +698,6 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
     r2[:time_steps_per_hour] = 1 / p.hours_per_time_step
     microgrid_only = get(r, "microgrid_only", false)
 
-    # convert_gen_inputs_to_vectors!(r2)
-
     if haskey(d, "PV") && !(
             microgrid_only && 
             !Bool(get(d, "PV_upgraded", false)) #TODO: PV_upgraded doesn't exist anymore and would be in Outages anyway
@@ -814,8 +812,6 @@ function backup_reliability_inputs(;r::Dict)::Dict
 
     invalid_args = String[]
     r2 = dictkeys_tosymbols(r)
-
-    # convert_gen_inputs_to_vectors!(r2)
 
     if haskey(r2, :num_generators)
         num_gen_types = length(r2[:num_generators])
@@ -1324,16 +1320,4 @@ function num_battery_bins_default(size_kw::Real, size_kwh::Real)::Int
         duration = size_kwh / size_kw
         return Int(duration * 20)
     end
-end
-     
-function convert_gen_inputs_to_vectors!(r::Dict{Symbol,Any})::Dict
-    generator_inputs = [:generator_operational_availability, :generator_failure_to_start, :generator_mean_time_to_failure, 
-                        :num_generators, :generator_size_kw, :fuel_limit, :fuel_limit_is_per_generator, 
-                        :generator_fuel_intercept_per_hr, :generator_fuel_burn_rate_per_kwh]
-    for g in generator_inputs
-        if haskey(r, g) && typeof(r[g])<:Real
-            r[g] = [r[g]]
-        end
-    end
-    return r
 end
