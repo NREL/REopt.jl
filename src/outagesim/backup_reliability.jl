@@ -245,7 +245,7 @@ function starting_probabilities(num_generators::Vector{Int}, generator_operation
 end
 
 """
-    bin_battery_charge(batt_soc::Vector, num_bins::Int, battery_size_kwh::Real)::Vector{Int}
+    bin_storage_charge(batt_soc::Vector, num_bins::Int, battery_size_kwh::Real)::Vector{Int}
 
 Return a vector the same length as ``batt_soc`` of discritized battery charge bins
 
@@ -259,7 +259,7 @@ Values are rounded to nearest bin.
 
 # Examples
 ```repl-julia
-julia>  bin_battery_charge([30, 100, 170.5, 250, 251, 1000], 11, 1000)
+julia>  bin_storage_charge([30, 100, 170.5, 250, 251, 1000], 11, 1000)
 6-element Vector{Int64}:
   1
   2
@@ -775,7 +775,7 @@ function survival_with_storage(;
     battery_bin_size = battery_size_kwh / (num_battery_bins-1)
      
     #bin initial battery 
-    starting_battery_bins = bin_battery_charge(battery_starting_soc_kwh, num_battery_bins, battery_size_kwh)
+    starting_battery_bins = bin_storage_charge(battery_starting_soc_kwh, num_battery_bins, battery_size_kwh)
     #Size of state space in generator dimension 
     if length(num_generators) == 1
         N = num_generators + 1
