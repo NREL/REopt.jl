@@ -169,11 +169,12 @@ function get_multi_solutions_results_summary(results::Dict, p::REoptInputs, m::J
         num_outage_time_steps = outage_duration_hours * p.s.settings.time_steps_per_hour
         
         # Get BAU and Optimal outage lost load and cost for every hour of the year to get average and max values
-        BAUOutageLostLoadKWH = Array{Float64}(undef, 8760 * p.s.settings.time_steps_per_hour)
-        BAUOutageCost = Array{Float64}(undef, 8760 * p.s.settings.time_steps_per_hour)
-        OptimalOutageLostLoadKWH = Array{Float64}(undef, 8760 * p.s.settings.time_steps_per_hour)
-        OptimalOutageCost = Array{Float64}(undef, 8760 * p.s.settings.time_steps_per_hour)
-        for tz in 1:((8760-outage_duration_hours) * p.s.settings.time_steps_per_hour)  # Avoid wrapping around the year
+        last_time_step = 8760-outage_duration_hours  # Avoid wrapping around the year
+        BAUOutageLostLoadKWH = Array{Float64}(undef, last_time_step * p.s.settings.time_steps_per_hour)
+        BAUOutageCost = Array{Float64}(undef, last_time_step * p.s.settings.time_steps_per_hour)
+        OptimalOutageLostLoadKWH = Array{Float64}(undef, last_time_step * p.s.settings.time_steps_per_hour)
+        OptimalOutageCost = Array{Float64}(undef, last_time_step * p.s.settings.time_steps_per_hour)
+        for tz in 1:(last_time_step * p.s.settings.time_steps_per_hour)
             BAUOutageLostLoadKWH[tz] = sum(p.s.electric_load.critical_loads_kw[tz+ts-1] / p.s.settings.time_steps_per_hour
                                         for ts in 1:num_outage_time_steps; init=0.0)
             BAUOutageCost[tz] = sum(p.value_of_lost_load_per_kwh[tz+ts-1] * p.s.electric_load.critical_loads_kw[tz+ts-1] / p.s.settings.time_steps_per_hour
