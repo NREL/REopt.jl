@@ -49,8 +49,8 @@
     cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions). Default: "Mid-case".
         ## Options: ["Mid-case", "Low Renewable Energy and Battery Costs", "High Renewable Energy and Battery Costs", "Electricifcation", "Low Natural Gas Price", "High Natural Gas Price", "Mid-case with 95% Decarbonization by 2050", "Mid-case with 100% Decarbonization by 2035", "Mid-case (with tax credit phaseout)", "Low Renewable Energy and Battery Costs (with tax credit phaseout)"]     
     cambium_location_type::String =  "States", # Geographic boundary at which emissions are calculated. Default: "States". Options: ["Nations", "GEA Regions", "States", "Balancing Areas"] # TODO: some may not work 
-    cambium_metric_col::String =  "lrmer_co2e", # Emissions metric. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
-    cambium_start_year::Int = 2024, # First year of operation of system. Default: 2024 # Options: any year now through 2050.
+    cambium_metric_col::String =  "lrmer_co2e", # Emissions metric used. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
+    cambium_start_year::Int = 2024, # First year of operation of system. Emissions will be levelized starting in this year for the duration of cambium_levelization_years.  Default: 2024 # Options: any year 2023 through 2050.
     cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions will be averaged over this period. Default: analysis_years (from Financial struct)
 
     # Climate Option 2: Use CO2 emissions data from the EPA's AVERT based on the AVERT emissions region and specify annual percent decrease
@@ -206,7 +206,7 @@ struct ElectricUtility
 
         is_MPC = isnothing(latitude) || isnothing(longitude)
         cambium_emissions_region = "NA - Cambium data not used for climate emissions" # will be overwritten if Cambium is used
-
+        
         if !is_MPC
             # Get AVERT emissions region
             if avert_emissions_region == ""
@@ -234,6 +234,10 @@ struct ElectricUtility
                     throw(@error("The provided ElectricUtility emissions factor series for $(ekey) does not match the time_steps_per_hour."))
                 else # if not user-provided, get emissions factors from AVERT and/or Cambium
                     if ekey == "CO2" && co2_from_avert == false # Use Cambium for CO2
+                        if cambium_start_year < 2023 || cambium_start_year > 2050
+                            @warn("The cambium_start_year must be between 2023 and 2050. Setting to cambium_start_year to 2024.")
+                            cambium_start_year = 2024
+                        end
                         try
                             cambium_response_dict = cambium_emissions_profile( # Adjusted for day of week alignment with load
                                     scenario = cambium_scenario, 
@@ -552,6 +556,8 @@ function cambium_emissions_profile(; scenario::String,
     )
 
     try
+        print("\n\n***CALLING CAMBIUM API***\n\n")
+
         r = HTTP.post(url, [], HTTP.Form(payload))
         response = JSON.parse(String(r.body))
         # print("\n", response["status"], "\n")
