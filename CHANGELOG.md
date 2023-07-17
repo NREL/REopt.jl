@@ -23,6 +23,9 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop 
+### Fixed
+- Don't double add adjustments to urdb rates with non-standard units 
 
 ## Develop - 2023-06-21
 ### Changed
