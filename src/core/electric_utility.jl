@@ -52,6 +52,7 @@
     cambium_metric_col::String =  "lrmer_co2e", # Emissions metric used. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
     cambium_start_year::Int = 2024, # First year of operation of system. Emissions will be levelized starting in this year for the duration of cambium_levelization_years.  Default: 2024 # Options: any year 2023 through 2050.
     cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions will be averaged over this period. Default: analysis_years (from Financial struct)
+    cambium_grid_level::String = "enduse", # Busbar refers to point where bulk generating station connects to grid; enduse refers to point of consumption (includes distribution loss rate)
 
     # Climate Option 2: Use CO2 emissions data from the EPA's AVERT based on the AVERT emissions region and specify annual percent decrease
     co2_from_avert::Bool = false, # Default is to use Cambium data for CO2 grid emissions. Set to `true` to instead use data from the EPA's AVERT database. 
@@ -179,6 +180,7 @@ struct ElectricUtility
         cambium_metric_col::String =  "lrmer_co2e", # Emissions metric. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
         cambium_start_year::Int = 2024, # First year of operation of system. Default: 2024 # Options: any year now through 2050.
         cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions will be averaged over this period. Default: analysis_years (from Financial struct)
+        cambium_grid_level::String = "enduse", # Busbar refers to point where bulk generating station connects to grid; enduse refers to point of consumption (includes distribution loss rate)
 
         # Climate Option 2: Use CO2 emissions data from the EPA's AVERT based on the AVERT emissions region and specify annual percent decrease
         co2_from_avert::Bool = false, # Default is to use Cambium data for CO2 grid emissions. Set to `true` to instead use data from the EPA's AVERT database. 
@@ -249,7 +251,8 @@ struct ElectricUtility
                                     metric_col = cambium_metric_col,
                                     time_steps_per_hour = time_steps_per_hour,
                                     load_year = load_year,
-                                    emissions_year = 2017
+                                    emissions_year = 2017,
+                                    grid_level = cambium_grid_level
                             )
                             emissions_series_dict[ekey] = cambium_response_dict["emissions_factor_series_lb_CO2_per_kwh"]
                             cambium_emissions_region = cambium_response_dict["location"]
@@ -515,7 +518,8 @@ end
                                 metric_col::String,
                                 time_steps_per_hour::Int=1,
                                 load_year::Int=2017,
-                                emissions_year::Int=2017)
+                                emissions_year::Int=2017,
+                                grid_level::String)
 
 This function gets levelized grid CO2 or CO2e emission rate profiles (1-year time series) from the Cambium dataset.
 The returned profiles are adjusted for day of week alignment with the provided "load_year" (Cambium profiles always start on a Sunday.)
@@ -531,7 +535,8 @@ function cambium_emissions_profile(; scenario::String,
                                     metric_col::String,
                                     time_steps_per_hour::Int=1,
                                     load_year::Int=2017,
-                                    emissions_year::Int=2017
+                                    emissions_year::Int=2017,
+                                    grid_level::String
                                     )
 
     url = "https://scenarioviewer.nrel.gov/api/get-levelized/" # Production 
@@ -551,7 +556,7 @@ function cambium_emissions_profile(; scenario::String,
             "metric_col" => metric_col, # lrmer_co2e
             "smoothing_method" => "rolling", # rolling or none (only applicable to hourly queries) # TODO: decide if rolling or none is best
             "gwp" => "100yrAR6", # Global warming potential values. Default: "100yrAR6". Options: "100yrAR5", "20yrAR5", "100yrAR6", "20yrAR6" or a custom tuple [1,10.0,100] with GWP values for [CO2, CH4, N2O]
-            "grid_level" => "enduse", # enduse or busbar
+            "grid_level" => grid_level, # enduse or busbar 
             "ems_mass_units" => "lb" # lb or kg
     )
 
