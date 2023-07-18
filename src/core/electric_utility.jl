@@ -52,7 +52,7 @@
     cambium_metric_col::String =  "lrmer_co2e", # Emissions metric used. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
     cambium_start_year::Int = 2024, # First year of operation of system. Emissions will be levelized starting in this year for the duration of cambium_levelization_years.  Default: 2024 # Options: any year 2023 through 2050.
     cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions will be averaged over this period. Default: analysis_years (from Financial struct)
-    cambium_grid_level::String = "enduse", # Busbar refers to point where bulk generating station connects to grid; enduse refers to point of consumption (includes distribution loss rate)
+    cambium_grid_level::String = "enduse", # Busbar refers to point where bulk generating stations connect to grid; enduse refers to point of consumption (includes distribution loss rate)
 
     # Climate Option 2: Use CO2 emissions data from the EPA's AVERT based on the AVERT emissions region and specify annual percent decrease
     co2_from_avert::Bool = false, # Default is to use Cambium data for CO2 grid emissions. Set to `true` to instead use data from the EPA's AVERT database. 
@@ -233,7 +233,12 @@ struct ElectricUtility
                 elseif length(eseries) / time_steps_per_hour ≈ 8760  # user provided array with correct length
                     emissions_series_dict[ekey] = eseries
                 elseif length(eseries) > 1 && !(length(eseries) / time_steps_per_hour ≈ 8760)  # user provided array with incorrect length
-                    throw(@error("The provided ElectricUtility emissions factor series for $(ekey) does not match the time_steps_per_hour."))
+                    if length(eseries) == 8760
+                        emissions_series_dict[ekey] = repeat(eseries,inner=time_steps_per_hour)
+                        @warn("8760 emissions series has been adjusted to align with time_steps_per_hour of $(time_steps_per_hour).")
+                    else
+                        throw(@error("The provided ElectricUtility emissions factor series for $(ekey) does not match the time_steps_per_hour."))
+                    end
                 else # if not user-provided, get emissions factors from AVERT and/or Cambium
                     if ekey == "CO2" && co2_from_avert == false # Use Cambium for CO2
                         if cambium_start_year < 2023 || cambium_start_year > 2050
