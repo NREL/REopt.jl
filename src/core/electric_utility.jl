@@ -235,7 +235,7 @@ struct ElectricUtility
                 elseif length(eseries) > 1 && !(length(eseries) / time_steps_per_hour ≈ 8760)  # user provided array with incorrect length
                     if length(eseries) == 8760
                         emissions_series_dict[ekey] = repeat(eseries,inner=time_steps_per_hour)
-                        @warn("8760 emissions series has been adjusted to align with time_steps_per_hour of $(time_steps_per_hour).")
+                        @warn("Emissions series for $(ekey) has been adjusted to align with time_steps_per_hour of $(time_steps_per_hour).")
                     else
                         throw(@error("The provided ElectricUtility emissions factor series for $(ekey) does not match the time_steps_per_hour."))
                     end
