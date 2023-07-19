@@ -28,9 +28,21 @@ Classify the change according to the following categories:
 - In `src/core/electric_utility.jl`, error when user-provided emissions series does not match timestep per hour, as is done in other cases of incorrect user-provided data. 
 - Update default `emissions_factor_XXX_decrease_fraction` (where XXX is CO2, NOx, SO2, and PM2.5) from 0.01174 to 0.02163 based on Cambium 2022 Mid-Case scenario, LRMER CO2e (Combustion+Precombustion) 2024-2049 projected values. CO2 projected decrease defaults to 0 if Cambium data are used for CO2 (Cambium API call will levelize values).
 - Change default source for CO2 grid emissions values to NREL's Cambium Database (by default: CO2e, long-run marginal emissions rates levelized (averaged) over the analysis period, assuming start year 2024). Add call to Cambium API in `src/core/electric_utility.jl`. Include option for user to use AVERT data for CO2. 
+### Added
+- In `src/REopt.jl`, added **cambium_emissions_profile** as an export for use via the REopt_API. 
 
 ### Fixed 
 - Adjust grid emissions profiles for day of week alignment with load_year
+## v0.32.4
+### Changed
+- Consolidated PVWatts API calls to 1 call (previously 3 separate calls existed). API call occurs in `src/core/utils.jl/call_pvwatts_api()`. This function is called for PV in `src/core/production_factor.jl/get_production_factor(PV)` and for GHP in `src/core/scenario.jl`. If GHP and PV are evaluated together, the GHP PVWatts call for ambient temperature is also used to assign the pv.production_factor_series in Scenario.jl so that the PVWatts API does not get called again downstream in `get_production_factor(PV)`.  
+- In `src/core/utils.jl/call_pvwatts_api()`, updated NSRDB bounds used in PVWatts query (now includes southern New Zealand)
+- Updated PV Watts version from v6 to v8. PVWatts V8 updates the weather data to 2020 TMY data from the NREL NSRDB for locations covered by the database. (The NSRDB weather data used in PVWatts V6 is from around 2015.) See other differences at https://developer.nrel.gov/docs/solar/pvwatts/.
+- Made PV struct mutable: This allows for assigning pv.production_factor_series when calling PVWatts for GHP, to avoid a extra PVWatts calls later.
+### Fixed
+- Issue with using a leap year with a URDB rate - the URDB rate was creating energy_rate of length 8784 instead of intended 8760
+- Don't double add adjustments to urdb rates with non-standard units 
+
 ## v0.32.3
 ### Fixed
 - Calculate **num_battery_bins** default in `backup_reliability.jl` based on battery duration to prevent significant discretization error (and add test)
