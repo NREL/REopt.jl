@@ -21,6 +21,9 @@
       "blended_annual_energy_rate": 0.3,
       "blended_annual_demand_rate": 20.0
     },
+    "ElectricUtility" : {
+      "co2_from_avert" : true
+    },
     "PV": [
         {
           "name": "ground",

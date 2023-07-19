@@ -7,7 +7,8 @@
     },
     "ElectricUtility": {
         "outage_start_time_step": 10,
-        "outage_end_time_step": 12
+        "outage_end_time_step": 12,
+        "co2_from_avert": true
     },
     "Generator": {
         "max_kw": 500.0,

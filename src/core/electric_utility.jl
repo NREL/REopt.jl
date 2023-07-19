@@ -538,10 +538,10 @@ function cambium_emissions_profile(; scenario::String,
                                     start_year::Int,
                                     lifetime::Int,
                                     metric_col::String,
+                                    grid_level::String,
                                     time_steps_per_hour::Int=1,
                                     load_year::Int=2017,
-                                    emissions_year::Int=2017,
-                                    grid_level::String
+                                    emissions_year::Int=2017
                                     )
 
     url = "https://scenarioviewer.nrel.gov/api/get-levelized/" # Production 
@@ -589,8 +589,7 @@ function cambium_emissions_profile(; scenario::String,
             "units" => "Pounds emissions per kWh",
             "location" => output["location"],
             "metric_col" => output["metric_col"], 
-            "emissions_factor_series_lb_CO2_per_kwh" => co2_emissions
-            # TODO: Report back other inputs or leave as-is? 
+            "emissions_factor_series_lb_CO2_per_kwh" => co2_emissions 
         )
         return response_dict
     catch

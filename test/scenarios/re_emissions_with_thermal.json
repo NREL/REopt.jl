@@ -49,7 +49,8 @@
   },
   "ElectricUtility": {
     "net_metering_limit_kw": 0.0,
-    "interconnection_limit_kw": 100000000.0
+    "interconnection_limit_kw": 100000000.0,
+    "co2_from_avert": true
   },
   "PV": {
     "existing_kw": 10.0,

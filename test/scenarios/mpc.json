@@ -28,6 +28,9 @@
             0.0
         ]
     },
+    "ElectricUtility" : {
+        "co2_from_avert" : true
+    },
     "ElectricStorage": {
         "size_kw": 30.0,
         "size_kwh": 60.0,

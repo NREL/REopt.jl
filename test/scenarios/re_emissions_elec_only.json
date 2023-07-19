@@ -111,7 +111,8 @@
   },
   "ElectricUtility": {
     "net_metering_limit_kw": 1000.0,
-    "interconnection_limit_kw": 100000000.0
+    "interconnection_limit_kw": 100000000.0,
+    "co2_from_avert": true
   },
   "ElectricTariff": {
     "add_monthly_rates_to_urdb_rate": false,

@@ -19,7 +19,8 @@
         "urdb_label": "5e1676e95457a3f87673e3b0"
     },
     "ElectricUtility": {
-        "net_metering_limit_kw": 0.0
+        "net_metering_limit_kw": 0.0,
+        "co2_from_avert" : true
     },
     "SpaceHeatingLoad": {
         "doe_reference_name": "Hospital"

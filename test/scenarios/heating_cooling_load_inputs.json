@@ -21,6 +21,9 @@
     },
     "ExistingChiller": {
     },
+    "ElectricUtility" : {
+        "co2_from_avert" : true
+    },
     "ExistingBoiler": {
         "fuel_cost_per_mmbtu": [11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11],
         "efficiency": 0.72,

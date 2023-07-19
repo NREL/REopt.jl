@@ -29,6 +29,9 @@
         "fuel_cost_per_mmbtu": 10.0,
         "efficiency": 0.95
     },
+    "ElectricUtility" : {
+        "co2_from_avert" : true
+    },
     "CHP": {
         "prime_mover": "recip_engine",
         "fuel_cost_per_mmbtu": 10.0,
