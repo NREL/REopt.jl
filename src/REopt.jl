@@ -50,6 +50,7 @@ export
     simulated_load,
     get_absorption_chiller_defaults,
     avert_emissions_profiles,
+    cambium_emissions_profile,
     easiur_data
 
 import HTTP
