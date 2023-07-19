@@ -72,6 +72,7 @@ else  # run HiGHS tests
         data["ElectricTariff"]["wholesale_rate"] =
             append!(repeat([jan_rate + 0.1], 31 * 24), repeat([0.0], 8760 - 31*24))
         data["ElectricTariff"]["monthly_demand_rates"] = repeat([0], 12)
+        data["ElectricUtility"] = Dict("co2_from_avert" => true)
 
         s = Scenario(data)
         inputs = REoptInputs(s)
