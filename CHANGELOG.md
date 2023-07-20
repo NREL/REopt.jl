@@ -23,8 +23,11 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop
+### Fixed
+- Corrected `Generator` **installed_cost_per_kw** from 500 to 650 if **only_runs_during_grid_outage** is _true_ or 800 if _false_
 
-## Develop - 2023-06-21
+## v0.32.4
 ### Changed
 - Consolidated PVWatts API calls to 1 call (previously 3 separate calls existed). API call occurs in `src/core/utils.jl/call_pvwatts_api()`. This function is called for PV in `src/core/production_factor.jl/get_production_factor(PV)` and for GHP in `src/core/scenario.jl`. If GHP and PV are evaluated together, the GHP PVWatts call for ambient temperature is also used to assign the pv.production_factor_series in Scenario.jl so that the PVWatts API does not get called again downstream in `get_production_factor(PV)`.  
 - In `src/core/utils.jl/call_pvwatts_api()`, updated NSRDB bounds used in PVWatts query (now includes southern New Zealand)
@@ -32,7 +35,7 @@ Classify the change according to the following categories:
 - Made PV struct mutable: This allows for assigning pv.production_factor_series when calling PVWatts for GHP, to avoid a extra PVWatts calls later.
 ### Fixed
 - Issue with using a leap year with a URDB rate - the URDB rate was creating energy_rate of length 8784 instead of intended 8760
-- Corrected `Generator` **installed_cost_per_kw** from 500 to 650 if **only_runs_during_grid_outage** is _true_ or 800 if _false_
+- Don't double add adjustments to urdb rates with non-standard units 
 
 ## v0.32.3
 ### Fixed
