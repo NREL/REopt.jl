@@ -411,8 +411,10 @@ end
 """
     storage_bin_shift(excess_generation_kw::Vector{<:Real}, bin_size::Real,
                                 charge_size_kw::Real, discharge_size_kw::Real,
-                                charge_efficiency::Real, discharge_efficiency::Real)::Vector{Int} 
-Return a vector of number of bins storage (electric or H2) is shifted by, where each element of the vector corresponds to the number of working generators
+                                charge_efficiency::Real, discharge_efficiency::Real)::Tuple{Vector{Int},Vector{<:Real}}
+Return a tuple containing:
+- A vector of number of bins storage (electric or H2) is shifted by, where each index of the vector corresponds to the number of working generators
+- A vector of kW remaining from argument excess_generation_kw after storage shift due to (dis)charge limits, where each index of the vector corresponds to the number of working generators
 
 Bins are the discritized storage kWh size, with the first bin denoting empty and the last bin denoting full. Thus, if there are 101 bins, then each bin denotes 
 a one percent difference in SOC. The storage will attempt to dispatch to meet critical loads not met by other generation sources, and will charge from excess generation. 
@@ -430,32 +432,31 @@ julia>
 excess_generation_kw = [-500, -120, 0, 50, 175, 400]
 bin_size = 100
 battery_size_kw = 300
-storage_bin_shift(excess_generation_kw, bin_size, battery_size_kw, 1, 1)
-7-element Vector{Int64}:
- -3
- -1
-  0
-  0
-  0
-  2
-  3
+storage_bin_shift(excess_generation_kw, bin_size, battery_size_kw, battery_size_kw, 1, 1)
+([-3, -1, 0, 0, 2, 3], [-200, 0, 0, 0, 0, 100])
   ```
 """
 function storage_bin_shift(excess_generation_kw::Vector{<:Real}, bin_size::Real,
                                 charge_size_kw::Real, discharge_size_kw::Real,
-                                charge_efficiency::Real, discharge_efficiency::Real)::Vector{Int} 
+                                charge_efficiency::Real, discharge_efficiency::Real)::Tuple{Vector{Int},Vector{<:Real}}
     #Determines how many bins to shift storage SOC by
     #Lose energy charging battery/producing H2 and use more energy discharging battery/using H2
     
-    #Cannot charge or discharge more than power rating
-    excess_generation_kw[excess_generation_kw .> charge_size_kw] .= charge_size_kw
-    excess_generation_kw[excess_generation_kw .< -discharge_size_kw] .= -discharge_size_kw
-    #Account for (dis)charge efficiency
-    excess_generation_kw[excess_generation_kw .> 0] = excess_generation_kw[excess_generation_kw .> 0] .* charge_efficiency
-    excess_generation_kw[excess_generation_kw .< 0] = excess_generation_kw[excess_generation_kw .< 0] ./ discharge_efficiency
+    if charge_size_kw == 0 || discharge_size_kw == 0 || bin_size == 0
+        return zeros(length(excess_generation_kw)), excess_generation_kw
+    end
 
-    shift = round.(excess_generation_kw ./ bin_size)
-    return shift
+    kw_to_storage = copy(excess_generation_kw)
+    #Cannot charge or discharge more than power rating
+    kw_to_storage[kw_to_storage .> charge_size_kw] .= charge_size_kw
+    kw_to_storage[kw_to_storage .< -discharge_size_kw] .= -discharge_size_kw
+    #Account for (dis)charge efficiency
+    kw_to_storage[kw_to_storage .> 0] = kw_to_storage[kw_to_storage .> 0] .* charge_efficiency
+    kw_to_storage[kw_to_storage .< 0] = kw_to_storage[kw_to_storage .< 0] ./ discharge_efficiency
+
+    shift = round.(kw_to_storage ./ bin_size)
+    remaining_kw = excess_generation_kw .- kw_to_storage
+    return shift, remaining_kw
 end
 
 """
@@ -477,27 +478,27 @@ gen_battery_prob_matrix
  0.0  0.0 0.3 0.7
 ```
 """
-function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Matrix, shift_vector::Vector{Int})
-    M = size(gen_storage_prob_matrix, 2)
+# function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Matrix, shift_vector::Vector{Int})
+#     M = size(gen_storage_prob_matrix, 2)
 
-    for i in 1:length(shift_vector) 
-        s = shift_vector[i]
-        if s < 0 
-            #TODO figure out why implementation of cirshift! is working locally but not on server
-            # circshift!(view(gen_storage_prob_matrix, i, :), s)
-            gen_storage_prob_matrix[i, :] = circshift(view(gen_storage_prob_matrix, i, :), s)
-            gen_storage_prob_matrix[i, 1] += sum(view(gen_storage_prob_matrix, i, max(2,M+s+1):M))
-            gen_storage_prob_matrix[i, max(2,M+s+1):M] .= 0
-        elseif s > 0
-            # circshift!(view(gen_storage_prob_matrix, i, :), s)
-            gen_storage_prob_matrix[i, :] = circshift(view(gen_storage_prob_matrix, i, :), s)
-            gen_storage_prob_matrix[i, end] += sum(view(gen_storage_prob_matrix, i, 1:min(s,M-1)))
-            gen_storage_prob_matrix[i, 1:min(s,M-1)] .= 0
-        end
-    end
-end
+#     for i in 1:length(shift_vector) 
+#         s = shift_vector[i]
+#         if s < 0 
+#             #TODO figure out why implementation of cirshift! is working locally but not on server
+#             # circshift!(view(gen_storage_prob_matrix, i, :), s)
+#             gen_storage_prob_matrix[i, :] = circshift(view(gen_storage_prob_matrix, i, :), s)
+#             gen_storage_prob_matrix[i, 1] += sum(view(gen_storage_prob_matrix, i, max(2,M+s+1):M))
+#             gen_storage_prob_matrix[i, max(2,M+s+1):M] .= 0
+#         elseif s > 0
+#             # circshift!(view(gen_storage_prob_matrix, i, :), s)
+#             gen_storage_prob_matrix[i, :] = circshift(view(gen_storage_prob_matrix, i, :), s)
+#             gen_storage_prob_matrix[i, end] += sum(view(gen_storage_prob_matrix, i, 1:min(s,M-1)))
+#             gen_storage_prob_matrix[i, 1:min(s,M-1)] .= 0
+#         end
+#     end
+# end
 
-function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Matrix, 
+function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Array, 
                                         excess_generation_kw::Vector{<:Real}, 
                                         battery_bin_size::Real,
                                         battery_size_kw::Real,
@@ -508,10 +509,11 @@ function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Matrix,
                                         H2_discharge_size_kw::Real,
                                         H2_charge_efficiency::Real,
                                         H2_discharge_efficiency::Real)
+
     M_b = size(gen_storage_prob_matrix, 2)
     M_H2 = size(gen_storage_prob_matrix, 3)
 
-    battery_shift = storage_bin_shift(
+    battery_shift, remaining_kw_after_batt_shift = storage_bin_shift(
                 excess_generation_kw, 
                 battery_bin_size, 
                 battery_size_kw, 
@@ -519,23 +521,60 @@ function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Matrix,
                 battery_charge_efficiency, 
                 battery_discharge_efficiency
             )
-    for i in 1:length(shift_vector) 
-        s = battery_shift[i]
-        if s < 0 
-            #TODO figure out why implementation of cirshift! is working locally but not on server
-            gen_storage_prob_matrix[i, :] = circshift(view(gen_storage_prob_matrix, i, :), s)
-            shift_wrap_around = max(2,M+s+1):M
-            #Before zeroing out, calculate unmet kwh in each maxed out state.
-            #Will use this and associated probs to calculate of kwh that H2 must try to meet.
-            unmet_kwh[i, shift_wrap_around] = [(m-M+1) * bin_size for m in shift_wrap_around]
-            unmet_states_probs[i, :] = view(gen_storage_prob_matrix, i, :)
-            #
-            gen_storage_prob_matrix[i, 1] += sum(view(gen_storage_prob_matrix, i, max(2,M+s+1):M))
-            gen_storage_prob_matrix[i, max(2,M+s+1):M] .= 0
-        elseif s > 0
-            gen_storage_prob_matrix[i, :] = circshift(view(gen_storage_prob_matrix, i, :), s)
-            gen_storage_prob_matrix[i, end] += sum(view(gen_storage_prob_matrix, i, 1:min(s,M-1)))
-            gen_storage_prob_matrix[i, 1:min(s,M-1)] .= 0
+
+    for i_gen in 1:length(battery_shift) 
+        s_b = battery_shift[i_gen]
+        if s_b != 0
+            for i_H2 in 1:M_H2
+                gen_storage_prob_matrix[i_gen, :, i_H2] = circshift(view(gen_storage_prob_matrix, i_gen, :, i_H2), s_b)
+            end
+            # could reduce to:
+            # wrap_indices_b = s_b < 0 ? max(2,M_b+s_b+1):M_b : 1:min(s_b,M_b-1)
+            # excess_kwh = battery_bin_size .* (collect(wrap_indices_b) .- (s_b < 0 ? (M_b + 1) : 0))
+            excess_kwh = Vector{Float64}(undef,0)
+            if s_b < 0
+                wrap_indices_b = max(2,M_b+s_b+1):M_b
+                excess_kw = remaining_kw_after_batt_shift[i_gen] .+ battery_bin_size .* (collect(wrap_indices_b) .- (M_b + 1)) #negative values, actually unmet kwh
+
+                # #for debugging
+                # gen_storage_prob_matrix[i_gen, 1, 1] += sum(view(gen_storage_prob_matrix, i_gen, max(2,M_b+s_b+1):M_b, :))
+                # gen_storage_prob_matrix[i_gen, max(2,M_b+s_b+1):M_b, :] .= 0
+            elseif s_b > 0
+                wrap_indices_b = 1:min(s_b,M_b-1)
+                excess_kw = remaining_kw_after_batt_shift[i_gen] .+ battery_bin_size .* collect(wrap_indices_b) #positive values
+
+                # #for debugging
+                # gen_storage_prob_matrix[i_gen, end, 1] += sum(view(gen_storage_prob_matrix, i_gen, 1:min(s_b,M_b-1), :))
+                # gen_storage_prob_matrix[i_gen, 1:min(s_b,M_b-1), :] .= 0
+            end
+            H2_shift, remaining_kw_after_H2_shift = storage_bin_shift(
+                    excess_kw, 
+                    H2_bin_size, 
+                    H2_charge_size_kw, 
+                    H2_discharge_size_kw,
+                    H2_charge_efficiency, 
+                    H2_discharge_efficiency
+                )
+            for (i_shift, i_b) in enumerate(wrap_indices_b)
+                s_H2 = H2_shift[i_shift]
+                gen_storage_prob_matrix[i_gen, i_b, :] = circshift(view(gen_storage_prob_matrix, i_gen, i_b, :), s_H2)
+                if s_H2 < 0
+                    wrap_indices_H2 = max(2,M_H2+s_H2+1):M_H2
+                    gen_storage_prob_matrix[i_gen, i_b, 1] += sum(view(gen_storage_prob_matrix, i_gen, i_b, wrap_indices_H2))
+                    gen_storage_prob_matrix[i_gen, wrap_indices_H2] .= 0
+                elseif s_H2 > 0
+                    wrap_indices_H2 = 1:min(s_H2,M_H2-1)
+                    gen_storage_prob_matrix[i_gen, i_b, end] += sum(view(gen_storage_prob_matrix, i_gen, i_b, wrap_indices_H2))
+                    gen_storage_prob_matrix[i_gen, wrap_indices_H2] .= 0
+                end
+            end
+            if s_b < 0
+                gen_storage_prob_matrix[i_gen, 1, :] .+= sum(view(gen_storage_prob_matrix, i_gen, wrap_indices_b, :), dims=1)
+                gen_storage_prob_matrix[i_gen, wrap_indices_b, :] .= 0
+            elseif s_b > 0
+                gen_storage_prob_matrix[i_gen, end, :] .+= sum(view(gen_storage_prob_matrix, i_gen, wrap_indices_b, :), dims=1)
+                gen_storage_prob_matrix[i_gen, wrap_indices_b, :] .= 0
+            end
         end
     end
 end
@@ -855,31 +894,30 @@ function survival_with_storage_single_start_time(
         end
 
         #Update generation battery probability matrix to account for battery shifting
-        shift_gen_storage_prob_matrix!(
-            gen_battery_prob_matrix_array[gen_matrix_counter_end], 
-            storage_bin_shift(
-                (generator_production .- net_critical_loads_kw[h]) / time_steps_per_hour, 
-                battery_bin_size, 
-                battery_size_kw, 
-                battery_size_kw,
-                battery_charge_efficiency, 
-                battery_discharge_efficiency
-            )
-        )
-        # For later, using new shift_gen_storage_prob_matrix!()
         # shift_gen_storage_prob_matrix!(
-        #     gen_battery_prob_matrix_array[gen_matrix_counter_end],
-        #     (generator_production .- net_critical_loads_kw[h]) / time_steps_per_hour,
-        #     battery_bin_size,#TODO: don't need all three of bin size, size, and num bins
-        #     battery_size_kw,
-        #     battery_charge_efficiency, 
-        #     battery_discharge_efficiency,
-        #     0,#TODO: use these args
-        #     0,
-        #     0,
-        #     0,
-        #     0
+        #     gen_battery_prob_matrix_array[gen_matrix_counter_end], 
+        #     storage_bin_shift(
+        #         (generator_production .- net_critical_loads_kw[h]) / time_steps_per_hour, 
+        #         battery_bin_size, 
+        #         battery_size_kw, 
+        #         battery_size_kw,
+        #         battery_charge_efficiency, 
+        #         battery_discharge_efficiency
+        #     )
         # )
+        shift_gen_storage_prob_matrix!(
+            reshape(gen_battery_prob_matrix_array[gen_matrix_counter_end], N, M_b, 1),
+            (generator_production .- net_critical_loads_kw[h]) / time_steps_per_hour,
+            battery_bin_size,#TODO: don't need all three of bin size, size, and num bins
+            battery_size_kw,
+            battery_charge_efficiency, 
+            battery_discharge_efficiency,
+            0,#TODO: use these args
+            0,
+            0,
+            0,
+            0
+        )
     end
     return return_survival_chance_vector
 end
