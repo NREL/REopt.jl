@@ -460,44 +460,59 @@ function storage_bin_shift(excess_generation_kw::Vector{<:Real}, bin_size::Real,
 end
 
 """
-    shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Matrix, shift_vector::Vector{Int})
-
-Updates ``gen_storage_prob_matrix`` in place to account for change in battery state of charge bin
-
-shifts probabiilities in column i by ``shift_vector``[i] positions, accounting for accumulation at 0 or full soc   
+    shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Array, 
+                                    excess_generation_kw::Vector{<:Real}, 
+                                    battery_bin_size::Real,
+                                    battery_size_kw::Real,
+                                    battery_charge_efficiency::Real, 
+                                    battery_discharge_efficiency::Real,
+                                    H2_bin_size::Real,
+                                    H2_charge_size_kw::Real,
+                                    H2_discharge_size_kw::Real,
+                                    H2_charge_efficiency::Real,
+                                    H2_discharge_efficiency::Real)
+Updates ``gen_storage_prob_matrix`` in place to account for change in battery and H2 storage state of charge bins.
+Based on the net power available (excess_generation_kw), shifts elements along the battery 
+and H2 storage SOC dimensions (dims 2 and 3), accounting for accumulation at 0 or full soc.
 
 #Examples
 ```repl-julia
-gen_storage_prob_matrix = [0.6 0.2 0.1 0.1;
-                           0.3 0.3 0.2 0.2]
-shift_vector = [-1, 2]
-shift_gen_storage_prob_matrix!(gen_storage_prob_matrix, shift_vector)
-gen_battery_prob_matrix
-2x4 Matrix{Float64}:
- 0.8  0.1 0.1 0.0
- 0.0  0.0 0.3 0.7
+gen_storage_prob_matrix = Array{Float64}(undef,2,4,3)
+gen_storage_prob_matrix[1,:,:] = [0.1 0.0 0.0;
+                            0.0 0.3 0.0;
+                            0.0 0.0 0.0;
+                            0.0 0.0 0.1]
+gen_storage_prob_matrix[2,:,:] = [0.0 0.0 0.2;
+                            0.0 0.0 0.1;
+                            0.0 0.0 0.0;
+                            0.0 0.2 0.0]
+excess_generation_kw = [-2, 6]
+battery_bin_size = 1
+battery_size_kw = 2
+battery_charge_efficiency = 1
+battery_discharge_efficiency = 1
+H2_bin_size = 1
+H2_charge_size_kw = 1
+H2_discharge_size_kw = 1
+H2_charge_efficiency = 1
+H2_discharge_efficiency = 1
+shift_gen_storage_prob_matrix!(gen_storage_prob_matrix, excess_generation_kw, battery_bin_size, 
+                            battery_size_kw, battery_charge_efficiency, battery_discharge_efficiency, 
+                            H2_bin_size, H2_charge_size_kw, H2_discharge_size_kw, 
+                            H2_charge_efficiency, H2_discharge_efficiency)
+gen_storage_prob_matrix
+2×4×3 Array{Float64, 3}:
+[:, :, 1] =
+ 0.4  0.0  0.0  0.0
+ 0.0  0.0  0.0  0.0
+[:, :, 2] =
+ 0.0  0.0  0.0  0.0
+ 0.0  0.0  0.0  0.0
+[:, :, 3] =
+ 0.0  0.1  0.0  0.0
+ 0.0  0.0  0.2  0.3
 ```
 """
-# function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Matrix, shift_vector::Vector{Int})
-#     M = size(gen_storage_prob_matrix, 2)
-
-#     for i in 1:length(shift_vector) 
-#         s = shift_vector[i]
-#         if s < 0 
-#             #TODO figure out why implementation of cirshift! is working locally but not on server
-#             # circshift!(view(gen_storage_prob_matrix, i, :), s)
-#             gen_storage_prob_matrix[i, :] = circshift(view(gen_storage_prob_matrix, i, :), s)
-#             gen_storage_prob_matrix[i, 1] += sum(view(gen_storage_prob_matrix, i, max(2,M+s+1):M))
-#             gen_storage_prob_matrix[i, max(2,M+s+1):M] .= 0
-#         elseif s > 0
-#             # circshift!(view(gen_storage_prob_matrix, i, :), s)
-#             gen_storage_prob_matrix[i, :] = circshift(view(gen_storage_prob_matrix, i, :), s)
-#             gen_storage_prob_matrix[i, end] += sum(view(gen_storage_prob_matrix, i, 1:min(s,M-1)))
-#             gen_storage_prob_matrix[i, 1:min(s,M-1)] .= 0
-#         end
-#     end
-# end
-
 function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Array, 
                                         excess_generation_kw::Vector{<:Real}, 
                                         battery_bin_size::Real,
@@ -535,17 +550,9 @@ function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Array,
             if s_b < 0
                 wrap_indices_b = max(2,M_b+s_b+1):M_b
                 excess_kw = remaining_kw_after_batt_shift[i_gen] .+ battery_bin_size .* (collect(wrap_indices_b) .- (M_b + 1)) #negative values, actually unmet kwh
-
-                # #for debugging
-                # gen_storage_prob_matrix[i_gen, 1, 1] += sum(view(gen_storage_prob_matrix, i_gen, max(2,M_b+s_b+1):M_b, :))
-                # gen_storage_prob_matrix[i_gen, max(2,M_b+s_b+1):M_b, :] .= 0
             elseif s_b > 0
                 wrap_indices_b = 1:min(s_b,M_b-1)
                 excess_kw = remaining_kw_after_batt_shift[i_gen] .+ battery_bin_size .* collect(wrap_indices_b) #positive values
-
-                # #for debugging
-                # gen_storage_prob_matrix[i_gen, end, 1] += sum(view(gen_storage_prob_matrix, i_gen, 1:min(s_b,M_b-1), :))
-                # gen_storage_prob_matrix[i_gen, 1:min(s_b,M_b-1), :] .= 0
             end
             H2_shift, remaining_kw_after_H2_shift = storage_bin_shift(
                     excess_kw, 
@@ -561,18 +568,18 @@ function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Array,
                 if s_H2 < 0
                     wrap_indices_H2 = max(2,M_H2+s_H2+1):M_H2
                     gen_storage_prob_matrix[i_gen, i_b, 1] += sum(view(gen_storage_prob_matrix, i_gen, i_b, wrap_indices_H2))
-                    gen_storage_prob_matrix[i_gen, wrap_indices_H2] .= 0
+                    gen_storage_prob_matrix[i_gen, i_b, wrap_indices_H2] .= 0
                 elseif s_H2 > 0
                     wrap_indices_H2 = 1:min(s_H2,M_H2-1)
                     gen_storage_prob_matrix[i_gen, i_b, end] += sum(view(gen_storage_prob_matrix, i_gen, i_b, wrap_indices_H2))
-                    gen_storage_prob_matrix[i_gen, wrap_indices_H2] .= 0
+                    gen_storage_prob_matrix[i_gen, i_b, wrap_indices_H2] .= 0
                 end
             end
             if s_b < 0
-                gen_storage_prob_matrix[i_gen, 1, :] .+= sum(view(gen_storage_prob_matrix, i_gen, wrap_indices_b, :), dims=1)
+                gen_storage_prob_matrix[i_gen, 1, :] .+= vec(sum(view(gen_storage_prob_matrix, i_gen, wrap_indices_b, :), dims=1))
                 gen_storage_prob_matrix[i_gen, wrap_indices_b, :] .= 0
             elseif s_b > 0
-                gen_storage_prob_matrix[i_gen, end, :] .+= sum(view(gen_storage_prob_matrix, i_gen, wrap_indices_b, :), dims=1)
+                gen_storage_prob_matrix[i_gen, end, :] .+= vec(sum(view(gen_storage_prob_matrix, i_gen, wrap_indices_b, :), dims=1))
                 gen_storage_prob_matrix[i_gen, wrap_indices_b, :] .= 0
             end
         end
