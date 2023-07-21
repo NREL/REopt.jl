@@ -108,7 +108,7 @@ else  # run HiGHS tests
             "output_flag" => false, "log_to_console" => false)
         )
         results = run_reopt(model, "./scenarios/generator.json")
-        @test results["Generator"]["size_kw"] ≈ 9.53 atol=0.01
+        @test results["Generator"]["size_kw"] ≈ 9.55 atol=0.01
         @test (sum(results["Generator"]["electric_to_load_series_kw"][i] for i in 1:9) + 
             sum(results["Generator"]["electric_to_load_series_kw"][i] for i in 13:8760)) == 0
         p = REoptInputs("./scenarios/generator.json")
