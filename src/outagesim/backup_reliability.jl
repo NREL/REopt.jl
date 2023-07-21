@@ -543,17 +543,9 @@ function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Array,
             for i_H2 in 1:M_H2
                 gen_storage_prob_matrix[i_gen, :, i_H2] = circshift(view(gen_storage_prob_matrix, i_gen, :, i_H2), s_b)
             end
-            # could reduce to:
-            # wrap_indices_b = s_b < 0 ? max(2,M_b+s_b+1):M_b : 1:min(s_b,M_b-1)
-            # excess_kwh = battery_bin_size .* (collect(wrap_indices_b) .- (s_b < 0 ? (M_b + 1) : 0))
-            excess_kwh = Vector{Float64}(undef,0)
-            if s_b < 0
-                wrap_indices_b = max(2,M_b+s_b+1):M_b
-                excess_kw = remaining_kw_after_batt_shift[i_gen] .+ battery_bin_size .* (collect(wrap_indices_b) .- (M_b + 1)) #negative values, actually unmet kwh
-            elseif s_b > 0
-                wrap_indices_b = 1:min(s_b,M_b-1)
-                excess_kw = remaining_kw_after_batt_shift[i_gen] .+ battery_bin_size .* collect(wrap_indices_b) #positive values
-            end
+            wrap_indices_b = s_b < 0 ? (max(2,M_b+s_b+1):M_b) : (1:min(s_b,M_b-1))
+            accumulate_index_b = s_b < 0 ? 1 : M_b
+            excess_kw = remaining_kw_after_batt_shift[i_gen] .+ battery_bin_size .* (collect(wrap_indices_b) .- (s_b < 0 ? (M_b + 1) : 0)) #negative values if unmet kw
             H2_shift, remaining_kw_after_H2_shift = storage_bin_shift(
                     excess_kw, 
                     H2_bin_size, 
@@ -564,24 +556,16 @@ function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Array,
                 )
             for (i_shift, i_b) in enumerate(wrap_indices_b)
                 s_H2 = H2_shift[i_shift]
-                gen_storage_prob_matrix[i_gen, i_b, :] = circshift(view(gen_storage_prob_matrix, i_gen, i_b, :), s_H2)
-                if s_H2 < 0
-                    wrap_indices_H2 = max(2,M_H2+s_H2+1):M_H2
-                    gen_storage_prob_matrix[i_gen, i_b, 1] += sum(view(gen_storage_prob_matrix, i_gen, i_b, wrap_indices_H2))
-                    gen_storage_prob_matrix[i_gen, i_b, wrap_indices_H2] .= 0
-                elseif s_H2 > 0
-                    wrap_indices_H2 = 1:min(s_H2,M_H2-1)
-                    gen_storage_prob_matrix[i_gen, i_b, end] += sum(view(gen_storage_prob_matrix, i_gen, i_b, wrap_indices_H2))
+                if s_H2 != 0
+                    gen_storage_prob_matrix[i_gen, i_b, :] = circshift(view(gen_storage_prob_matrix, i_gen, i_b, :), s_H2)
+                    wrap_indices_H2 = s_H2 < 0 ? (max(2,M_H2+s_H2+1):M_H2) : (1:min(s_H2,M_H2-1))
+                    accumulate_index_H2 = s_H2 < 0 ? 1 : M_H2
+                    gen_storage_prob_matrix[i_gen, i_b, accumulate_index_H2] += sum(view(gen_storage_prob_matrix, i_gen, i_b, wrap_indices_H2))
                     gen_storage_prob_matrix[i_gen, i_b, wrap_indices_H2] .= 0
                 end
             end
-            if s_b < 0
-                gen_storage_prob_matrix[i_gen, 1, :] .+= vec(sum(view(gen_storage_prob_matrix, i_gen, wrap_indices_b, :), dims=1))
-                gen_storage_prob_matrix[i_gen, wrap_indices_b, :] .= 0
-            elseif s_b > 0
-                gen_storage_prob_matrix[i_gen, end, :] .+= vec(sum(view(gen_storage_prob_matrix, i_gen, wrap_indices_b, :), dims=1))
-                gen_storage_prob_matrix[i_gen, wrap_indices_b, :] .= 0
-            end
+            gen_storage_prob_matrix[i_gen, accumulate_index_b, :] .+= vec(sum(view(gen_storage_prob_matrix, i_gen, wrap_indices_b, :), dims=1))
+            gen_storage_prob_matrix[i_gen, wrap_indices_b, :] .= 0
         end
     end
 end
