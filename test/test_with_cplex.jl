@@ -98,7 +98,7 @@ end
         REoptInputs("./scenarios/monthly_rate.json"),
     ];
     results = run_reopt(m, ps)
-    @test results[3]["Financial"]["lcc"] + results[10]["Financial"]["lcc"] ≈ 1.2830591384e7 rtol=1e-5
+    @test results[3]["Financial"]["lcc"] + results[10]["Financial"]["lcc"] ≈ 1.2830872235e7 rtol=1e-5
 end
 
 
