@@ -355,7 +355,7 @@ function add_elec_utility_expressions(m, p; _n="")
 
     if !isempty(p.s.electric_tariff.tou_demand_rates)
         m[Symbol("DemandTOUCharges"*_n)] = @expression(m, 
-            p.pwf_e * sum( p.s.electric_tariff.tou_demand_rates[r] * m[Symbol("dvPeakDemandTOU"*_n)][r, tier] 
+            p.pwf_e * sum( p.s.electric_tariff.tou_demand_rates[r,tier] * m[Symbol("dvPeakDemandTOU"*_n)][r, tier] 
             for r in p.ratchets, tier in 1:p.s.electric_tariff.n_tou_demand_tiers)
         )
     else

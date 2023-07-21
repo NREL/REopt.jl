@@ -455,7 +455,7 @@ function parse_urdb_tou_demand(d::Dict; year::Int, n_tiers::Int, time_steps_per_
     end
     n_periods = length(d["demandratestructure"])
     ratchet_time_steps = Array[]
-    rates_vec = Float64[]  # array(ratchet_num, tier), reshape later
+    rates_vec = zeros(0, n_tiers)  # store demand charge by tier per ratchet per row
     n_ratchets = 0  # counter
 
     for month in range(1, stop=12)
@@ -464,15 +464,15 @@ function parse_urdb_tou_demand(d::Dict; year::Int, n_tiers::Int, time_steps_per_
             if length(time_steps) > 0  # can be zero! not every month contains same number of periods
                 n_ratchets += 1
                 append!(ratchet_time_steps, [time_steps])
+                rates_vec = [rates_vec ; zeros(1, n_tiers)]
                 for (t, tier) in enumerate(d["demandratestructure"][period])
-                    append!(rates_vec, round(get(tier, "rate", 0.0) + get(tier, "adj", 0.0), digits=6))
+                    rates_vec[end, t] = round(get(tier, "rate", 0.0) + get(tier, "adj", 0.0), digits=6)
                 end
             end
         end
     end
-    rates = reshape(rates_vec, (:, n_tiers))  # Array{Float64,2}
     ratchet_time_steps = convert(Array{Array{Int64,1},1}, ratchet_time_steps)
-    return ratchet_time_steps, rates
+    return ratchet_time_steps, rates_vec
 end
 
 
