@@ -46,6 +46,40 @@ elseif "CPLEX" in ARGS
 
 else  # run HiGHS tests
 
+    @testset "Debug H2 in backup_reliability" begin
+        gen_storage_prob_matrix = Array{Float64}(undef,2,4,3)
+        gen_storage_prob_matrix[1,:,:] = [0.1 0.0 0.0;
+                                    0.0 0.3 0.0;
+                                    0.0 0.0 0.0;
+                                    0.0 0.0 0.1]
+        gen_storage_prob_matrix[2,:,:] = [0.0 0.0 0.2;
+                                    0.0 0.0 0.1;
+                                    0.0 0.0 0.0;
+                                    0.0 0.2 0.0]
+        excess_generation_kw = [-2, 6]
+        battery_bin_size = 1
+        battery_size_kw = 2
+        battery_charge_efficiency = 1
+        battery_discharge_efficiency = 1
+        H2_bin_size = 1
+        H2_charge_size_kw = 1
+        H2_discharge_size_kw = 1
+        H2_charge_efficiency = 1
+        H2_discharge_efficiency = 1
+        shift_gen_storage_prob_matrix!(gen_storage_prob_matrix, excess_generation_kw, battery_bin_size, 
+                                    battery_size_kw, battery_charge_efficiency, battery_discharge_efficiency, 
+                                    H2_bin_size, H2_charge_size_kw, H2_discharge_size_kw, 
+                                    H2_charge_efficiency, H2_discharge_efficiency)
+        @test gen_storage_prob_matrix[1,:,:] ≈ [0.4 0.0 0.0;
+                                                0.0 0.0 0.1;
+                                                0.0 0.0 0.0;
+                                                0.0 0.0 0.0] atol = 0.00001
+        @test gen_storage_prob_matrix[2,:,:] ≈ [0.0 0.0 0.0;
+                                                0.0 0.0 0.0;
+                                                0.0 0.0 0.2;
+                                                0.0 0.0 0.3] atol = 0.00001
+    end
+
     # @testset "Inputs" begin
     #     @testset "hybrid profile" begin
     #         electric_load = REopt.ElectricLoad(; 
