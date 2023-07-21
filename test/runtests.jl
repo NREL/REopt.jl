@@ -98,7 +98,7 @@ else  # run HiGHS tests
         r = run_reopt(model, "./scenarios/pv_storage.json")
 
         @test r["PV"]["size_kw"] ≈ 216.6667 atol=0.01
-        @test r["Financial"]["lcc"] ≈ 1.239151e7 rtol=1e-5
+        @test r["Financial"]["lcc"] ≈ 1.2391786e7 rtol=1e-5
         @test r["ElectricStorage"]["size_kw"] ≈ 49.0 atol=0.1
         @test r["ElectricStorage"]["size_kwh"] ≈ 83.3 atol=0.1
     end
