@@ -24,6 +24,8 @@ Classify the change according to the following categories:
     ### Removed
 
 ## Develop
+### Changed
+- Changed unit test expected values due to update to PVWatts v8, which slightly changed expected PV production factors.
 ### Fixed
 - Corrected `Generator` **installed_cost_per_kw** from 500 to 650 if **only_runs_during_grid_outage** is _true_ or 800 if _false_
 
