@@ -40,7 +40,7 @@ function add_compressor_constraints(m, p; _n="")
         @constraint(m, [ts in p.time_steps], 
             sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.compressor)
             ==
-            sum(m[Symbol("dvProductionToStorage"*_n)][b,ts] for b in p.s.storage.types.hydrogen_hp) 
+            sum(m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for b in p.s.storage.types.hydrogen_hp, t in p.techs.elec) 
         )
         @constraint(m, [ts in p.time_steps_with_grid], 
             sum(p.s.compressor.efficiency_kwh_per_kg * p.production_factor[t, ts] * p.levelization_factor[t] * 
@@ -64,11 +64,11 @@ end
 function add_electrolyzer_constraints(m, p; _n="") 
 
 	##Constraint: Compressor takes hydrogen from LP storage to charge HP storage while consuming electricity
-    if !isempty(t in p.techs.electrolyzer)
+    if !isempty(p.techs.electrolyzer)
         @constraint(m, [ts in p.time_steps], 
             sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.electrolyzer)
             ==
-            sum(m[Symbol("dvProductionToStorage"*_n)][b,ts] for b in p.s.storage.types.hydrogen_lp) 
+            sum(m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for b in p.s.storage.types.hydrogen_lp, t in p.techs.elec) 
         )
         @constraint(m, [ts in p.time_steps_with_grid], 
             sum(p.s.electrolyzer.efficiency_kwh_per_kg * p.production_factor[t, ts] * p.levelization_factor[t] * 

@@ -207,14 +207,14 @@ function Techs(s::Scenario)
     thermal_techs = union(heating_techs, boiler_techs, chp_techs, cooling_techs)
     fuel_burning_techs = union(gentechs, boiler_techs, chp_techs)
 
-    if s.electrolyzer.max_kw > 0
+    if !isnothing(s.electrolyzer)
         push!(all_techs, "Electrolyzer")
         push!(electrolyzer_techs, "Electrolyzer")
     end
 
-    if s.compressor.max_kw > 0
+    if !isnothing(s.compressor)
         push!(all_techs, "Compressor")
-        push!(electrolyzer_techs, "Compressor")
+        push!(compressor_techs, "Compressor")
     end
 
     Techs(

@@ -52,6 +52,8 @@ struct Scenario <: AbstractScenario
     space_heating_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     steam_turbine::Union{SteamTurbine, Nothing}
+    electrolyzer::Union{Electrolyzer, Nothing}
+    compressor::Union{Compressor, Nothing}
 end
 
 """
@@ -235,6 +237,16 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         hydrogen_load = HydrogenLoad(; loads_kg=zeros(8760*settings.time_steps_per_hour),
                                             time_steps_per_hour=settings.time_steps_per_hour
                                         )
+    end
+
+    electrolyzer = nothing
+    compressor = nothing
+    if haskey(d, "Electrolyzer")
+        electrolyzer = Electrolyzer(; dictkeys_tosymbols(d["Electrolyzer"])...)
+    end
+
+    if haskey(d, "Compressor")
+        compressor = Compressor(; dictkeys_tosymbols(d["Compressor"])...)
     end
 
     max_heat_demand_kw = 0.0
@@ -596,7 +608,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         ghp_option_list,
         space_heating_thermal_load_reduction_with_ghp_kw,
         cooling_thermal_load_reduction_with_ghp_kw,
-        steam_turbine
+        steam_turbine,
+        electrolyzer,
+        compressor
     )
 end
 
