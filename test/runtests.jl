@@ -72,7 +72,6 @@ else  # run HiGHS tests
         data["ElectricTariff"]["wholesale_rate"] =
             append!(repeat([jan_rate + 0.1], 31 * 24), repeat([0.0], 8760 - 31*24))
         data["ElectricTariff"]["monthly_demand_rates"] = repeat([0], 12)
-        data["ElectricUtility"] = Dict("co2_from_avert" => true)
 
         s = Scenario(data)
         inputs = REoptInputs(s)
@@ -180,22 +179,22 @@ else  # run HiGHS tests
         4. Coordinate pair > 5 miles from US border
         5. Coordinate pair >> 5 miles from US border
         """
-        (r, d) = REopt.region_abbreviation(65.27661752129738, -149.59278391820223)
+        (r, d) = REopt.avert_region_abbreviation(65.27661752129738, -149.59278391820223)
         @test r == "AKGD"
-        (r, d) = REopt.region_abbreviation(21.45440792261567, -157.93648793163402)
+        (r, d) = REopt.avert_region_abbreviation(21.45440792261567, -157.93648793163402)
         @test r == "HIOA"
-        (r, d) = REopt.region_abbreviation(19.686877556659436, -155.4223641905743)
+        (r, d) = REopt.avert_region_abbreviation(19.686877556659436, -155.4223641905743)
         @test r == "HIMS"
-        (r, d) = REopt.region_abbreviation(39.86357200140234, -104.67953917092028)
+        (r, d) = REopt.avert_region_abbreviation(39.86357200140234, -104.67953917092028)
         @test r == "RM"
         @test d ≈ 0.0 atol=1
-        (r, d) = REopt.region_abbreviation(47.49137892652077, -69.3240287592685)
+        (r, d) = REopt.avert_region_abbreviation(47.49137892652077, -69.3240287592685)
         @test r == "NE"
         @test d ≈ 7986 atol=1
-        (r, d) = REopt.region_abbreviation(47.50448307102053, -69.34882434376593)
+        (r, d) = REopt.avert_region_abbreviation(47.50448307102053, -69.34882434376593)
         @test r === nothing
         @test d ≈ 10297 atol=1
-        (r, d) = REopt.region_abbreviation(55.860334445251354, -4.286554357755312)
+        (r, d) = REopt.avert_region_abbreviation(55.860334445251354, -4.286554357755312)
         @test r === nothing
     end
 

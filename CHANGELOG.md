@@ -32,7 +32,8 @@ Classify the change according to the following categories:
 - In `src/REopt.jl`, added **cambium_emissions_profile** as an export for use via the REopt_API. 
 
 ### Fixed 
-- Adjust grid emissions profiles for day of week alignment with load_year
+- Adjust grid emissions profiles for day of week alignment with load_year.
+- In `test_with_xpress.jl`, updated "Emissions and Renewable Energy Percent" expected values to account for load year adjustment. 
 ## Develop
 ### Changed
 - Changed unit test expected values due to update to PVWatts v8, which slightly changed expected PV production factors.

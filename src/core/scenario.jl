@@ -173,7 +173,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             outage_end_time_step = settings.time_steps_per_hour * 8760, 
                                             latitude=site.latitude, longitude=site.longitude, 
                                             time_steps_per_hour=settings.time_steps_per_hour,
-                                            off_grid_flag=settings.off_grid_flag
+                                            off_grid_flag=settings.off_grid_flag,
+                                            emissions_factor_series_lb_CO2_per_kwh = 0,
+                                            emissions_factor_series_lb_NOx_per_kwh = 0,
+                                            emissions_factor_series_lb_SO2_per_kwh = 0,
+                                            emissions_factor_series_lb_PM25_per_kwh = 0
                                         ) 
     end
         

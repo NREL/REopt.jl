@@ -43,7 +43,7 @@ check to make sure that PV does NOT export unless the site load is met first for
     data["ElectricTariff"]["wholesale_rate"] =
         append!(repeat([jan_rate + 0.1], 31 * 24), repeat([0.0], 8760 - 31*24))
     data["ElectricTariff"]["monthly_demand_rates"] = repeat([0], 12)
-    data["ElectricUtility"] = Dict("allow_simultaneous_export_import" => false, "co2_from_avert" => true)
+    data["ElectricUtility"]["allow_simultaneous_export_import"] = false
 
     s = Scenario(data)
     inputs = REoptInputs(s)
