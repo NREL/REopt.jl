@@ -262,11 +262,12 @@ struct ElectricUtility
                             emissions_series_dict[ekey] = cambium_response_dict["emissions_factor_series_lb_CO2_per_kwh"]
                             cambium_emissions_region = cambium_response_dict["location"]
                         catch
-                            throw(@error("Could not look up Cambium emissions profile from point ($(latitude), $(longitude)).
-                            Location is likely outside continental US or something went wrong with the Cambium API request. Set co2_from_avert = true to use AVERT data instead."))
+                            @warn("Could not look up Cambium emissions profile from point ($(latitude), $(longitude)).
+                            Location is likely outside continental US or something went wrong with the Cambium API request. Setting ")
+                            emissions_series_dict[ekey] = zeros(Float64, 8760*time_steps_per_hour) 
                         end
                     else # otherwise use AVERT
-                        if region_abbr != ""
+                        if !isnothing(region_abbr)
                             avert_data_year = 2021 # Must update when AVERT data are updated (TODO: Move to inputs?)
                             emissions_series_dict[ekey] = avert_emissions_profiles(
                                                             latitude = latitude,
@@ -276,7 +277,7 @@ struct ElectricUtility
                                                             avert_data_year = avert_data_year
                                                             )["emissions_factor_series_lb_"*ekey*"_per_kwh"]
                         else
-                            emissions_series_dict[ekey] = [0 for i in range(1,8760*time_steps_per_hour)] # Warnings will happen in avert_emissions_profiles
+                            emissions_series_dict[ekey] = zeros(Float64, 8760*time_steps_per_hour) # Warnings will happen in avert_emissions_profiles
                         end
                     end
 

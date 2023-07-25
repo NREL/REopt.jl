@@ -72,7 +72,7 @@ function find_ashrae_zone_city(lat, lon; get_zone=false)
 		end
 	end
     if isnothing(archgdal_city)
-        @warn "Could not find latitude/longitude in U.S. Using geometrically nearest city."
+        @warn "Could not find latitude/longitude in U.S. Using geometrically nearest city to determine CRB region."
     elseif !get_zone
         return archgdal_city
     end
