@@ -232,7 +232,25 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
 	for b in p.s.storage.types.all
-		if p.s.storage.attr[b].max_kw == 0 || p.s.storage.attr[b].max_kwh == 0
+
+		if b in p.s.storage.types.hydrogen
+			if p.s.storage.attr[b].max_kg == 0
+				@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
+				@constraint(m, m[:dvStorageEnergy][b] == 0)
+				@constraint(m, [ts in p.time_steps], m[:dvDischargeFromStorage][b, ts] == 0)
+				@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
+				@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
+					m[:dvProductionToStorage][b, t, ts] == 0)
+			else
+				add_hydrogen_storage_size_constraints(m, p, b)
+				add_general_storage_dispatch_constraints(m, p, b)
+				if b in p.s.storage.types.hydrogen_lp
+					add_lp_hydrogen_storage_dispatch_constraints(m, p, b)
+				elseif b in p.s.storage.types.hydrogen_hp
+					add_hp_hydrogen_storage_dispatch_constraints(m, p, b)
+				end
+			end
+		elseif p.s.storage.attr[b].max_kw == 0 || p.s.storage.attr[b].max_kwh == 0
 			@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
 			@constraint(m, m[:dvStorageEnergy][b] == 0)
 			@constraint(m, [ts in p.time_steps], m[:dvDischargeFromStorage][b, ts] == 0)
@@ -251,10 +269,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 				add_hot_thermal_storage_dispatch_constraints(m, p, b)
 			elseif b in p.s.storage.types.cold
 				add_cold_thermal_storage_dispatch_constraints(m, p, b)
-			elseif b in p.s.storage.types.hydrogen_lp
-				add_lp_hydrogen_storage_dispatch_constraints(m, p, b)
-			elseif b in p.s.storage.types.hydrogen_hp
-				add_hp_hydrogen_storage_dispatch_constraints(m, p, b)
 			else
 				throw(@error("Invalid storage does not fall in a thermal or electrical set"))
 			end
@@ -262,6 +276,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
 	if any(max_kw->max_kw > 0, (p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec))
+		add_storage_sum_constraints(m, p)
+	elseif any(max_kg->max_kg > 0, (p.s.storage.attr[b].max_kg for b in p.s.storage.types.hydrogen))
 		add_storage_sum_constraints(m, p)
 	end
 
@@ -394,7 +410,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	
 	@expression(m, TotalStorageCapCosts, p.third_party_factor * (
 		sum( p.s.storage.attr[b].net_present_cost_per_kw * m[:dvStoragePower][b] for b in p.s.storage.types.elec) + 
-		sum( p.s.storage.attr[b].net_present_cost_per_kwh * m[:dvStorageEnergy][b] for b in p.s.storage.types.all )
+		sum( p.s.storage.attr[b].net_present_cost_per_kwh * m[:dvStorageEnergy][b] for b in p.s.storage.types.nonhydrogen) + 
+		sum( p.s.storage.attr[b].net_present_cost_per_kg * m[:dvStorageEnergy][b] for b in p.s.storage.types.hydrogen)
 	))
 	
 	@expression(m, TotalPerUnitSizeOMCosts, p.third_party_factor * p.pwf_om *

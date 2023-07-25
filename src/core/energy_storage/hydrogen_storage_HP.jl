@@ -52,7 +52,7 @@ Base.@kwdef struct HydrogenStorageHPDefaults
     soc_min_fraction::Float64 = 0.05
     soc_init_fraction::Float64 = 0.5
     installed_cost_per_kg::Real = 1500.0
-    replace_cost_per_kg:Real = 1000.0
+    replace_cost_per_kg::Real = 1000.0
     replacement_year::Int = 25
     macrs_option_years::Int = 7
     macrs_bonus_fraction::Float64 = 0.8
@@ -112,7 +112,7 @@ struct HydrogenStorageHP <: AbstractHydrogenStorage
             s.soc_min_fraction,
             s.soc_init_fraction,
             s.installed_cost_per_kg,
-            replace_cost_per_kg,
+            s.replace_cost_per_kg,
             s.replacement_year,
             s.macrs_option_years,
             s.macrs_bonus_fraction,

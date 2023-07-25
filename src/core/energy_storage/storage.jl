@@ -59,6 +59,7 @@ mutable struct StorageTypes
     hydrogen::Vector{String}
     hydrogen_lp::Vector{String}
     hydrogen_hp::Vector{String}
+    nonhydrogen::Vector{String}
 
     function StorageTypes()
         new(
@@ -81,16 +82,16 @@ mutable struct StorageTypes
         hydrogen_storage = String[]
         hydrogen_lp_storage = String[]
         hydrogen_hp_storage = String[]
-
+        non_hydrogen_storage = String[]
+        
         for (k,v) in d
-            if v.max_kw > 0.0 && v.max_kwh > 0.0
 
-                push!(all_storage, k)
+            if typeof(v) <: AbstractHydrogenStorage
 
-                if typeof(v) <: AbstractElectricStorage
-                    push!(elec_storage, k)
+                if v.max_kg > 0.0
 
-                elseif typeof(v) <: AbstractHydrogenStorage
+                    push!(all_storage, k)
+
                     if occursin("LP", k)
                         push!(hydrogen_lp_storage, k)
                     elseif occursin("HP", k)
@@ -99,14 +100,26 @@ mutable struct StorageTypes
                         throw(@error("Hydrogen Storage not labeled as LP or HP."))
                     end
 
-                elseif typeof(v) <: ThermalStorage
-                    if occursin("Hot", k)
-                        push!(hot_storage, k)
-                    elseif occursin("Cold", k)
-                        push!(cold_storage, k)
-                    else
-                        throw(@error("Thermal Storage not labeled as Hot or Cold."))
+                end
+            else
+                if v.max_kw > 0.0 && v.max_kwh > 0.0
+
+                    push!(all_storage, k)
+                    push!(non_hydrogen_storage, k)
+
+                    if typeof(v) <: AbstractElectricStorage
+                        push!(elec_storage, k)
+
+                    elseif typeof(v) <: ThermalStorage
+                        if occursin("Hot", k)
+                            push!(hot_storage, k)
+                        elseif occursin("Cold", k)
+                            push!(cold_storage, k)
+                        else
+                            throw(@error("Thermal Storage not labeled as Hot or Cold."))
+                        end
                     end
+
                 end
             end
         end
@@ -122,7 +135,8 @@ mutable struct StorageTypes
             cold_storage,
             hydrogen_storage,
             hydrogen_lp_storage,
-            hydrogen_hp_storage
+            hydrogen_hp_storage,
+            non_hydrogen_storage
         )
     end
 end

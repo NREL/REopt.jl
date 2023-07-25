@@ -51,6 +51,29 @@ function add_storage_size_constraints(m, p, b; _n="")
     )
 end
 
+function add_hydrogen_storage_size_constraints(m, p, b; _n="")
+    # TODO add formal types for storage (i.e. "b")
+
+	# Constraint (4b)-1: Lower bound on Storage Energy Capacity
+	@constraint(m,
+        m[Symbol("dvStorageEnergy"*_n)][b] >= p.s.storage.attr[b].min_kg
+    )
+
+	# Constraint (4b)-2: Upper bound on Storage Energy Capacity
+	@constraint(m,
+        m[Symbol("dvStorageEnergy"*_n)][b] <= p.s.storage.attr[b].max_kg
+    )
+
+	# # Constraint (4c)-1: Lower bound on Storage Power Capacity
+	# @constraint(m,
+    #     m[Symbol("dvStoragePower"*_n)][b] >= p.s.storage.attr[b].min_kw
+    # )
+
+	# # Constraint (4c)-2: Upper bound on Storage Power Capacity
+	# @constraint(m,
+    #     m[Symbol("dvStoragePower"*_n)][b] <= p.s.storage.attr[b].max_kw
+    # )
+end
 
 function add_general_storage_dispatch_constraints(m, p, b; _n="")
     # Constraint (4a): initial state of charge
