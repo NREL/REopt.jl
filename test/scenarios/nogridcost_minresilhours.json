@@ -60,6 +60,8 @@
     "critical_load_fraction": 1
   },
   "Generator": {
+    "fuel_avail_gal": 660,
+    "installed_cost_per_kw": 500.0
   },
   "Financial": {
     "value_of_lost_load_per_kwh": 0.001,
