@@ -293,14 +293,10 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
                     else
                         tier_use = tier
                     end
-                    if non_kwh_units
-                        rate = rate_average
-                        total_rate = rate 
-                    else
-                        rate = get(d["energyratestructure"][period][tier_use], "rate", 0)
-                        total_rate = rate + get(d["energyratestructure"][period][tier_use], "adj", 0)
-                    end
-                    
+                    total_rate = non_kwh_units ? 
+                                rate_average : 
+                                (get(d["energyratestructure"][period][tier_use], "rate", 0) + 
+                                get(d["energyratestructure"][period][tier_use], "adj", 0)) 
                     sell = get(d["energyratestructure"][period][tier_use], "sell", 0)
 
                     for step in range(1, stop=time_steps_per_hour)  # repeat hourly rates intrahour
