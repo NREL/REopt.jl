@@ -283,7 +283,7 @@ function MPCGenerator(;
     fuel_cost_per_gallon::Real = 3.0,
     electric_efficiency_full_load::Real = 0.3233,
     electric_efficiency_half_load::Real = electric_efficiency_full_load,
-    fuel_avail_gal::Real = 660.0,
+    fuel_avail_gal::Real = 1.0e9,
     fuel_higher_heating_value_kwh_per_gal::Real = KWH_PER_GAL_DIESEL,
     min_turn_down_fraction::Real = 0.0,  # TODO change this to non-zero value
     only_runs_during_grid_outage::Bool = true,
@@ -310,7 +310,7 @@ struct MPCGenerator <: AbstractGenerator
         fuel_cost_per_gallon::Real = 3.0,
         electric_efficiency_full_load::Real = 0.3233,
         electric_efficiency_half_load::Real = electric_efficiency_full_load,
-        fuel_avail_gal::Real = 660.0,
+        fuel_avail_gal::Real = 1.0e9,
         fuel_higher_heating_value_kwh_per_gal::Real = KWH_PER_GAL_DIESEL,
         min_turn_down_fraction::Real = 0.0,  # TODO change this to non-zero value
         only_runs_during_grid_outage::Bool = true,
