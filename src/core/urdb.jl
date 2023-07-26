@@ -99,7 +99,7 @@ function URDBrate(urdb_response::Dict, year::Int; time_steps_per_hour=1)
     n_monthly_demand_tiers, monthly_demand_tier_limits, monthly_demand_rates,
       n_tou_demand_tiers, tou_demand_tier_limits, tou_demand_rates, tou_demand_ratchet_time_steps =
       parse_demand_rates(urdb_response, year, time_steps_per_hour=time_steps_per_hour)
-
+    
     energy_rates, energy_tier_limits, n_energy_tiers, sell_rates = 
         parse_urdb_energy_costs(urdb_response, year; time_steps_per_hour=time_steps_per_hour)
 
@@ -270,6 +270,9 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
 
         for month in range(1, stop=12)
             n_days = daysinmonth(Date(string(year) * "-" * string(month)))
+            if month == 2 && isleapyear(year)
+                n_days -= 1
+            end
 
             for day in range(1, stop=n_days)
 
@@ -290,12 +293,10 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
                     else
                         tier_use = tier
                     end
-                    if non_kwh_units
-                        rate = rate_average
-                    else
-                        rate = get(d["energyratestructure"][period][tier_use], "rate", 0)
-                    end
-                    total_rate = rate + get(d["energyratestructure"][period][tier_use], "adj", 0)
+                    total_rate = non_kwh_units ? 
+                                rate_average : 
+                                (get(d["energyratestructure"][period][tier_use], "rate", 0) + 
+                                get(d["energyratestructure"][period][tier_use], "adj", 0)) 
                     sell = get(d["energyratestructure"][period][tier_use], "sell", 0)
 
                     for step in range(1, stop=time_steps_per_hour)  # repeat hourly rates intrahour
