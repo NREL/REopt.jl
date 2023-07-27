@@ -510,12 +510,6 @@ else  # run HiGHS tests
         @test sum(s.electric_load.loads_kw[1:5]) + sum(s.electric_load.loads_kw[23:24]) == 0.0
         @test sum(s.electric_load.loads_kw[6:22]) / sum(s.electric_load.loads_kw) - 1/365 ≈ 0.0 atol=0.000001
     end
-
-        removed Wind test for two reasons
-    1. reduce WindToolKit calls in tests
-    2. HiGHS does not support SOS or indicator constraints, which are needed for export constraints
-
-    @testset "Minimize Unserved Load" is too slow with Cbc (killed after 8 hours)
     
     @testset "Simulated load function consistency with REoptInputs.s (Scenario)" begin
         """
@@ -589,4 +583,11 @@ else  # run HiGHS tests
         @test sim_electric_kw ≈ s.electric_load.loads_kw atol=0.1
         @test sim_cooling_ton ≈ s.cooling_load.loads_kw_thermal ./ REopt.KWH_THERMAL_PER_TONHOUR atol=0.1    
     end
+
+    # removed Wind test for two reasons
+    # 1. reduce WindToolKit calls in tests
+    # 2. HiGHS does not support SOS or indicator constraints, which are needed for export constraints
+
+    # @testset "Minimize Unserved Load" is too slow with Cbc (killed after 8 hours)
+
 end
