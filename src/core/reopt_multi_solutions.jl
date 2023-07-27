@@ -21,16 +21,41 @@ else
 
 """
 function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vector{Float64}}, ms::AbstractVector{T}; 
-                                    parallel=false, resilience=false, outage_start_hour=1, outage_duration_hours=0) where T <: JuMP.AbstractModel
+                                    parallel=false, resilience=false, outage_start_hour=1, outage_duration_hours=0,
+                                    state="") where T <: JuMP.AbstractModel
     # Load in input_data from .json to dictionary
     input_data = JSON.parsefile(fp)
+    # Count number of JuMP models used
+    ms_count = 1
+    # Decide which state incentives to apply
+    if !isempty(state) && haskey(input_data, "PV")
+        tech = "PV"
+        reopt_inputs_scenarios = REopt.get_incentives_scenarios(input_data; state_abbr=state, tech=tech)
+        results_scenarios = Dict()
+        best_incentives = ""
+        for (i, scenario) in enumerate(keys(reopt_inputs_scenarios))
+            s = Scenario(reopt_inputs_scenarios[scenario])
+            inputs = REoptInputs(s)
+            m = ms[i]
+            ms_count += 1
+            results_scenarios[scenario] = run_reopt(m, inputs)
+            if i == 1
+                best_incentives = scenario
+            elseif results_scenarios[scenario]["Financial"]["lcc"] < results_scenarios[best_incentives]["Financial"]["lcc"]
+                best_incentives = scenario
+            end
+        end
+        input_data = reopt_inputs_scenarios[best_incentives]
+    end
+    
     # Create optimal and BAU inputs structs for initial 2 runs
     s = Scenario(input_data)
     p = REoptInputs(s)
     bau_inputs = BAUInputs(p)
     # Note, ms[1] and rs[1] are for the BAU case which we'll need to combine with all other solutions too
     # and ms[2] and rs[2] are for the optimal case
-    inputs = ((ms[1], bau_inputs), (ms[2], p))
+    inputs = ((ms[ms_count], bau_inputs), (ms[ms_count+1], p))
+    ms_count += 2
     rs = Any[0, 0]
     Threads.@threads for i = 1:2
         rs[i] = run_reopt(inputs[i])
@@ -59,7 +84,7 @@ function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vec
     else
         simresults = Dict()
     end
-    results_summary = Dict("optimal" => get_multi_solutions_results_summary(results_dict, p, ms[2], techs_sized, simresults, outage_start_hour, outage_duration_hours))
+    results_summary = Dict("optimal" => get_multi_solutions_results_summary(results_dict, p, ms[ms_count-1], techs_sized, simresults, outage_start_hour, outage_duration_hours))
     # Add custom resilience output to results_all, per Eaton's request
     results_dict["resilience"] = results_summary["optimal"]["resilience"]
     results_all = Dict("optimal" => results_dict)
@@ -100,19 +125,19 @@ function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vec
     if parallel
         Threads.@threads for i in 1:n_solutions  # Threads doesn't like enumerate with for loop
             # JuMP model index starts at 3 because 1 and 2 were used by BAU and optimal sceanarios
-            n = 2 + i
+            n = ms_count + (i - 1)
             rs_solns[i] = run_reopt((ms[n], ps[i][2]))
         end
     else
         for i in eachindex(rs_solns)
-            n = 2 + i
+            n = ms_count + (i - 1)
             rs_solns[i] = run_reopt((ms[n], ps[i][2]))
         end
     end
     
     # Combine BAU with each extra solution and get results summary
     for (i, p) in enumerate(ps)
-        n = 2 + i
+        n = ms_count + (i-1)
         # Combine with BAU to get e.g. NPV
         if typeof(rs_solns[i]) <: Dict
             local results_dict = REopt.combine_results(p[2], rs[1], rs_solns[i], bau_inputs.s)
