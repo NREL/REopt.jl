@@ -584,12 +584,14 @@ function cambium_emissions_profile(; scenario::String,
         # print("\n\nco2_emissions[1:10]: ", co2_emissions[1:10])
         
         ## TEMPORARY FAKE EMISSIONS 
-        lds_day1 = [1 for i in range(1,24)]
-        lds_day2 = [2 for i in range(1,24)]
-        lds_day3 = [3 for i in range(1,24)]
-        lds_rest = [0 for i in range(1,8760-24*5)]
+        lds_day1 = [1.0 for i in range(1,24)]
+        lds_day2 = [2.0 for i in range(1,24)]
+        lds_day3 = [3.0 for i in range(1,24)]
+        lds_rest = [0.0 for i in range(1,8760-24*5)]
         lds_end = [0.05 for i in range(1,48)]
         co2_emissions = append!(lds_day1,lds_day2,lds_day3,lds_rest,lds_end)
+        #print("\n\nco2_emissions[1:10]: ", co2_emissions[1:10])
+        
 
         # Align day of week of emissions and load profiles (Cambium data starts on Sundays so assuming emissions_year=2017)
         co2_emissions = align_emission_with_load_year(load_year=load_year,emissions_year=emissions_year,emissions_profile=co2_emissions) 
@@ -601,8 +603,8 @@ function cambium_emissions_profile(; scenario::String,
         response_dict = Dict{String, Any}(
             "description" => "Hourly CO2 (or CO2e) grid emissions factors for applicable Cambium location and location_type, adjusted to align with load year $(load_year).",
             "units" => "Pounds emissions per kWh",
-            "location" => output["location"],
-            "metric_col" => output["metric_col"], 
+            "location" => "Test Location", # TEMPORARILY REMOVED output["location"],
+            "metric_col" => "Test Metric Col", # TEMPORARILY REMOVEDoutput["metric_col"], 
             "emissions_factor_series_lb_CO2_per_kwh" => co2_emissions 
         )
         return response_dict
