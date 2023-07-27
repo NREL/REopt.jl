@@ -573,15 +573,24 @@ function cambium_emissions_profile(; scenario::String,
     try
         print("\n\n***CALLING CAMBIUM API***\n\n")
 
-        r = HTTP.post(url, [], HTTP.Form(payload))
-        response = JSON.parse(String(r.body))
-        # print("\n", response["status"], "\n")
-        # status = response["status"]
-        output = response["message"]
+        ### Temporarily avoiding API call for UI testing ## 
+        # r = HTTP.post(url, [], HTTP.Form(payload))
+        # response = JSON.parse(String(r.body))
+        # # print("\n", response["status"], "\n")
+        # output = response["message"]
         
-        co2_emissions = output["values"] ./ 1000 # [lb / MWh] --> [lb / kWh]
+        # co2_emissions = output["values"] ./ 1000 # [lb / MWh] --> [lb / kWh]
         
         # print("\n\nco2_emissions[1:10]: ", co2_emissions[1:10])
+        
+        ## TEMPORARY FAKE EMISSIONS 
+        lds_day1 = [1 for i in range(1,24)]
+        lds_day2 = [2 for i in range(1,24)]
+        lds_day3 = [3 for i in range(1,24)]
+        lds_rest = [0 for i in range(1,8760-24*5)]
+        lds_end = [0.05 for i in range(1,48)]
+        co2_emissions = append!(lds_day1,lds_day2,lds_day3,lds_rest,lds_end)
+
         # Align day of week of emissions and load profiles (Cambium data starts on Sundays so assuming emissions_year=2017)
         co2_emissions = align_emission_with_load_year(load_year=load_year,emissions_year=emissions_year,emissions_profile=co2_emissions) 
         
