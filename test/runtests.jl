@@ -79,7 +79,7 @@ else  # run HiGHS tests
                                                 0.0 0.0 0.2;
                                                 0.0 0.0 0.3] atol = 0.00001
     end
-
+    
     @testset "Backup Generator Reliability" begin
 
         @testset "Compare backup_reliability and simulate_outages" begin
