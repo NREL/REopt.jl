@@ -10,6 +10,7 @@
         "outage_end_time_step": 12
     },
     "Generator": {
+        "installed_cost_per_kw": 500.0,
         "max_kw": 500.0,
         "fuel_avail_gal": 125.0,
         "min_turn_down_fraction": 0.0,
