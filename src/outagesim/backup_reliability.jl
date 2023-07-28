@@ -706,7 +706,7 @@ function survival_with_storage(;
 
     Threads.@threads for t = 1:t_max
         survival_probability_matrix[t, :] = survival_with_storage_single_start_time(t, 
-        net_critical_loads_kw, battery_size_kw, max_outage_duration, battery_charge_efficiency,
+        net_critical_loads_kw, max_outage_duration, battery_size_kw, battery_charge_efficiency,
         battery_discharge_efficiency, num_battery_bins, N, starting_gens, generator_production,
         generator_markov_matrix, maximum_generation, t_max, starting_battery_bins, battery_bin_size, marginal_survival, time_steps_per_hour)
     end
@@ -715,9 +715,8 @@ end
 
 
 """
-survival_with_storage_single_start_time(t::Int, net_critical_loads_kw::Vector, 
-    generator_size_kw::Vector{<:Real}, 
-    max_outage_duration::Int, battery_charge_efficiency::Real, battery_discharge_efficiency::Real, M::Int, N::Int,
+survival_with_storage_single_start_time(t::Int, net_critical_loads_kw::Vector, max_outage_duration::Int, 
+    generator_size_kw::Vector{<:Real}, battery_charge_efficiency::Real, battery_discharge_efficiency::Real, M::Int, N::Int,
     starting_gens::Vector{Float64}, generator_production::Vector{Float64}, generator_markov_matrix::Matrix{Float64},
     maximum_generation::Matrix{Float64}, t_max::Int, starting_battery_bins::Vector{Int}, bin_size::Real, marginal_survival::Bool, time_steps_per_hour::Real)::Vector{Float64}
 
@@ -727,8 +726,8 @@ Return a vector of probability of survival with for all outage durations given o
 function survival_with_storage_single_start_time(
     t::Int, 
     net_critical_loads_kw::Vector, 
-    battery_size_kw::Real, 
     max_outage_duration::Int, 
+    battery_size_kw::Real, 
     battery_charge_efficiency::Real,
     battery_discharge_efficiency::Real,
     M_b::Int,
