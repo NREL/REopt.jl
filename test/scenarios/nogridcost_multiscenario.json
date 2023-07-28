@@ -53,6 +53,8 @@
     "critical_load_fraction": 0.1
   },
   "Generator": {
+    "fuel_avail_gal": 660,
+    "installed_cost_per_kw": 500.0,
 	  "max_kw": 0.0
   },
   "Financial": {
