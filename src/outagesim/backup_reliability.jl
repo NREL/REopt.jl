@@ -229,42 +229,69 @@ end
 
 
 """
-    get_maximum_generation(battery_size_kw::Real, generator_size_kw::Vector{<:Real}, bin_size::Real, 
-        num_bins::Int, num_generators::Vector{Int}, battery_discharge_efficiency::Real)::Matrix{Float64}
+    get_maximum_generation(battery_size_kw::Real, H2_size_kw::Real, generator_size_kw::Vector{<:Real}, 
+        battery_bin_size::Real, battery_num_bins::Int, H2_bin_size::Real, H2_num_bins::Int, num_generators::Vector{Int}, 
+        battery_discharge_efficiency::Real, H2_discharge_efficiency::Real)::Array{Float64,3}
 
 Maximum generation calculation for multiple generator types
-Return a matrix of maximum total system output.
+Return an array of maximum total system output.
 
-Columns denote battery state of charge bin and rows denote number of available generators, with the first column denoting zero available generators.
+The first dimension denotes available generators, the second dimension battery state of charge bin, and the third H2 state of charge bin.
 
 # Arguments
 - `battery_size_kw::Real`: battery inverter size
+- `H2_size_kw::Real`: hydrogen fuel cell output size
 - `generator_size_kw::Vector{Real}`: maximum output from single generator for each generator type. 
-- `bin_size::Real`: size of discretized battery soc bin. is equal to battery_size_kwh / (num_bins - 1) 
-- `num_bins::Int`: number of battery bins. 
+- `battery_bin_size::Real`: size of discretized battery SOC bin, equal to battery_size_kwh / (battery_num_bins - 1) 
+- `battery_num_bins::Int`: number of battery bins
+- `H2_bin_size::Real`: size of discretized H2 storage SOC bin, equal to H2_size_kw / (H2_num_bins - 1) 
+- `H2_num_bins::Int`: number of H2 storage bins
 - `num_generators::Vector{Int}`: number of generators by type in microgrid.
-- `battery_discharge_efficiency::Real`: battery_discharge_efficiency = battery_discharge / battery_reduction_in_soc
+- `battery_discharge_efficiency::Real`: battery_discharge_efficiency = battery discharge / reduction in battery SOC
+- `H2_discharge_efficiency::Real`: H2_discharge_efficiency = H2 discharge / reduction in H2 SOC
 
 # Examples
 ```repl-julia
-julia>  get_maximum_generation(200, [50, 125], 100, 3, [2, 1], 0.98)
-6x3 Matrix{Float64}:
- 0.0   98.0  196.0 
- 50.0  148.0  246.0 
- 100.0  198.0  296.0 
- 125.0  223.0  321.0
- 175.0  273.0  371.0
- 225.0  323.0  421.0
+julia>  get_maximum_generation(100, 100, [50, 125], 50, 5, 400, 3, [2, 1], 0.98, 0.9)
+6×5×3 Array{Float64, 3}:
+[:, :, 1] =
+   0.0   49.0   98.0  100.0  100.0
+  50.0   99.0  148.0  150.0  150.0
+ 100.0  149.0  198.0  200.0  200.0
+ 125.0  174.0  223.0  225.0  225.0
+ 175.0  224.0  273.0  275.0  275.0
+ 225.0  274.0  323.0  325.0  325.0
+
+[:, :, 2] =
+ 100.0  149.0  198.0  200.0  200.0
+ 150.0  199.0  248.0  250.0  250.0
+ 200.0  249.0  298.0  300.0  300.0
+ 225.0  274.0  323.0  325.0  325.0
+ 275.0  324.0  373.0  375.0  375.0
+ 325.0  374.0  423.0  425.0  425.0
+
+[:, :, 3] =
+ 100.0  149.0  198.0  200.0  200.0
+ 150.0  199.0  248.0  250.0  250.0
+ 200.0  249.0  298.0  300.0  300.0
+ 225.0  274.0  323.0  325.0  325.0
+ 275.0  324.0  373.0  375.0  375.0
+ 325.0  374.0  423.0  425.0  425.0
 ```
 """
-function get_maximum_generation(battery_size_kw::Real, generator_size_kw::Vector{<:Real}, bin_size::Real, 
-    num_bins::Int, num_generators::Vector{Int}, battery_discharge_efficiency::Real)::Matrix{Float64}
-    #Returns a matrix of maximum generation (rows denote number of generators starting at 0, columns denote battery bin)
+function get_maximum_generation(battery_size_kw::Real, H2_size_kw::Real, generator_size_kw::Vector{<:Real}, 
+    battery_bin_size::Real, battery_num_bins::Int, H2_bin_size::Real, H2_num_bins::Int, num_generators::Vector{Int}, 
+    battery_discharge_efficiency::Real, H2_discharge_efficiency::Real)::Array{Float64,3}
     N = prod(num_generators .+ 1)
-    M = num_bins
-    max_system_output = zeros(N, M)
-    for i in 1:M
-        max_system_output[:, i] = generator_output(num_generators, generator_size_kw) .+ min(battery_size_kw, (i-1)*bin_size*battery_discharge_efficiency)
+    M_b = battery_num_bins
+    M_H2 = H2_num_bins
+    max_system_output = zeros(N, M_b, M_H2)
+    for i_b in 1:M_b
+        for i_H2 in 1:M_H2
+            max_system_output[:, i_b, i_H2] = generator_output(num_generators, generator_size_kw) .+ 
+                                            min(battery_size_kw, (i_b-1)*battery_bin_size*battery_discharge_efficiency) .+ 
+                                            min(H2_size_kw, (i_H2-1)*H2_bin_size*H2_discharge_efficiency)
+        end
     end
     return max_system_output
 end
@@ -674,7 +701,7 @@ function survival_with_storage(;
     #initialize vectors and matrices
     generator_markov_matrix = markov_matrix(num_generators, 1 ./ generator_mean_time_to_failure) 
     generator_production = generator_output(num_generators, generator_size_kw)
-    maximum_generation = get_maximum_generation(battery_size_kw, generator_size_kw, battery_bin_size, num_battery_bins, num_generators, battery_discharge_efficiency)
+    maximum_generation = get_maximum_generation(battery_size_kw, 0.0, generator_size_kw, battery_bin_size, num_battery_bins, 0.0, 1, num_generators, battery_discharge_efficiency, 1)
     starting_gens = starting_probabilities(num_generators, generator_operational_availability, generator_failure_to_start) 
 
     Threads.@threads for t = 1:t_max
@@ -709,7 +736,7 @@ function survival_with_storage_single_start_time(
     starting_gens::Vector{Float64},
     generator_production::Vector{Float64},
     generator_markov_matrix::Matrix{Float64},
-    maximum_generation::Matrix{Float64},
+    maximum_generation::Array{Float64,3},
     t_max::Int,
     starting_battery_bins::Vector{Int},
     battery_bin_size::Real,
