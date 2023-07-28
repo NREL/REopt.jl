@@ -1,4 +1,4 @@
-# Really only meaningful incentives for PV for relevant techs; none for fuel cells or battery
+# Really only meaningful incentives for PV for relevant techs; none for battery, couple for fuel cells
 # The program description sometimes describes that the parameters do not fully define the program constraints, 
 # e.g. the DC production incentive of $0.5/kWh has a tiered value after 2023, and only applies to 10 kW or less, but
 # the parameter_set_id does not have a parameter of source=System, qualifier=max, and units=kW

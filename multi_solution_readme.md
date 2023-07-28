@@ -21,6 +21,19 @@ The `resilience` key in the results summary gets populated with the following in
     "Specified outage cost savings as percent of annual utility bill"  # The value of avoided lost load as a percent of the annual electric bill
 ```
 
+## Incentives
+Incentives are pulled from the data/incentives/DSIRE.db database for the specified kwarg `state` (e.g. = "CO" for Colorado) in the `run_reopt_multi_solutions()` function. 
+
+**The user must now input a kwarg for `state` into the `run_reopt_multi_solutions()` to evaluate the state incentives.
+
+Incentives are filtered by those that apply to the entire state and have an end date of later than today or Null. The availability of Net metering is found and applied, as well as the following three incentives to choose from:
+1. Capacity-based rebate ($/kW)
+2. Production incentive ($/kWh)
+3. Percent-of-cost based state tax credit (% of installed cost)
+REopt is run with any of these three incentive options which are avaialable, and the one that produces the lowest lifecycle cost of energy is chosen. All of the solutions are then run with the best incentives option.
+
+If REopt identified a state incentive to use, the user should verify that that incentive program is available.
+
 # Example use-case for multi-solutions
 ### Specify path to input file:
 `fp = "scenarios/eaton_multi.json"`
@@ -29,8 +42,10 @@ The `resilience` key in the results summary gets populated with the following in
 `size_scale = [0.8, 1.2]`
 ### Need to know the maximum number of JuMP models to create, so first identify the number of technologies considered. So for the eaton_multi.json scenario with PV and Battery (ElectricStorage):
 `n_techs = 2`
+# Incentives scenarios, max 3 for 1. capacity-based, 2. production-based, and 3. percent cost based incentives to choose from
+`n_incentives_scenarios = 3`
 ### This equation uses 2 for optimal+BAU plus however many scenario combinations are possible:
-`max_models = 2 + length(size_scale) * n_techs`
+`max_models = 2 + length(size_scale) * n_techs + n_incentives_scenarios`
 ### Define an array of models of length `max_models` along with the specified solver and desired parameters:
 `ms = [Model(optimizer_with_attributes(HiGHS.Optimizer, 
     "output_flag" => false, "mip_rel_gap" => 0.001, "log_to_console" => true)) for _ in 1:max_models]`
@@ -41,7 +56,7 @@ The `resilience` key in the results summary gets populated with the following in
 `results_all, results_summary = REopt.run_reopt_multi_solutions(fp, size_scale, ms; parallel=false)`
 
 ### Parallel runs with resilience, requiring multiple cores for the multiple threads (see function docstring for more information):
-`results_all, results_summary = REopt.run_reopt_multi_solutions(fp, size_scale, ms; parallel=true,  resilience=true, outage_start_hour=4000, outage_duration_hours=10)`
+`results_all, results_summary = REopt.run_reopt_multi_solutions(fp, size_scale, ms; parallel=true,  resilience=true, outage_start_hour=4000, outage_duration_hours=10, state="CO")`
 
 ### Here is an example `results_summary` output for `PV` and Battery (`ElectricStorage`) with `resilience=true`:
 ```
