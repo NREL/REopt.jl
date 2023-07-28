@@ -742,11 +742,11 @@ function survival_with_storage_single_start_time(
     marginal_survival::Bool, 
     time_steps_per_hour::Real)::Vector{Float64}
 
-    gen_battery_prob_matrix_array = [zeros(N, M_b), zeros(N, M_b)]
-    gen_battery_prob_matrix_array[1][:, starting_battery_bins[t]] = starting_gens
-    gen_battery_prob_matrix_array[2][:, starting_battery_bins[t]] = starting_gens
+    gen_battery_prob_matrix_array = [zeros(N, M_b, 1), zeros(N, M_b, 1)]
+    gen_battery_prob_matrix_array[1][:, starting_battery_bins[t], 1] = starting_gens
+    gen_battery_prob_matrix_array[2][:, starting_battery_bins[t], 1] = starting_gens
     return_survival_chance_vector = zeros(max_outage_duration)
-    survival = ones(N, M_b)
+    survival = ones(N, M_b, 1)
 
     for d in 1:max_outage_duration 
         h = mod(t + d - 2, t_max) + 1 #determines index accounting for looping around year
@@ -757,7 +757,7 @@ function survival_with_storage_single_start_time(
         #This is a more memory efficient way of implementing gen_battery_prob_matrix *= generator_markov_matrix
         gen_matrix_counter_start = ((d-1) % 2) + 1 
         gen_matrix_counter_end = (d % 2) + 1 
-        mul!(gen_battery_prob_matrix_array[gen_matrix_counter_end], generator_markov_matrix, gen_battery_prob_matrix_array[gen_matrix_counter_start])
+        mul!(view(gen_battery_prob_matrix_array[gen_matrix_counter_end],:,:,1), generator_markov_matrix, view(gen_battery_prob_matrix_array[gen_matrix_counter_start],:,:,1))
 
         if marginal_survival == false
             # @timeit to "survival chance" gen_battery_prob_matrix_array[gen_matrix_counter_end] = gen_battery_prob_matrix_array[gen_matrix_counter_end] .* survival 
@@ -780,7 +780,7 @@ function survival_with_storage_single_start_time(
         #     )
         # )
         shift_gen_storage_prob_matrix!(
-            reshape(gen_battery_prob_matrix_array[gen_matrix_counter_end], N, M_b, 1),
+            gen_battery_prob_matrix_array[gen_matrix_counter_end],
             (generator_production .- net_critical_loads_kw[h]) / time_steps_per_hour,
             battery_bin_size,#TODO: don't need all three of bin size, size, and num bins
             battery_size_kw,
