@@ -46,23 +46,24 @@ function add_hydrogen_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
 
     r["load_series_kg"] = p.s.hydrogen_load.loads_kg
     r["critical_load_series_kg"] = p.s.hydrogen_load.critical_loads_kg
-    r["annual_calculated_kg"] = round(
-        sum(r["load_series_kg"]) / p.s.settings.time_steps_per_hour, digits=2
-    )
+    r["annual_calculated_kg"] = round(sum(r["load_series_kg"]), digits=2)
+    # r["annual_calculated_kg"] = round(
+    #     sum(r["load_series_kg"]) / p.s.settings.time_steps_per_hour, digits=2
+    # )
     
     d["HydrogenLoad"] = r
     nothing
 end
 
 
-function add_hydrogen_load_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
-    # Adds the `HydrogenLoad` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
-    # Note: the node number is an empty string if evaluating a single `Site`.
+# function add_hydrogen_load_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
+#     # Adds the `HydrogenLoad` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+#     # Note: the node number is an empty string if evaluating a single `Site`.
 
-    r = Dict{String, Any}()
+#     r = Dict{String, Any}()
 
-    r["load_series_kg"] = p.s.hydrogen_load.loads_kg
+#     r["load_series_kg"] = p.s.hydrogen_load.loads_kg
     
-    d["HydrogenLoad"] = r
-    nothing
-end
+#     d["HydrogenLoad"] = r
+#     nothing
+# end

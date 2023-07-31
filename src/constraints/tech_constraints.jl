@@ -59,6 +59,18 @@ function add_tech_size_constraints(m, p; _n="")
             m[Symbol("dvRatedProduction"*_n)][t,ts]  <= m[:dvSize][t]
         )
     end  
+
+    if !isempty(p.techs.electrolyzer)
+        @constraint(m, [t in p.techs.electrolyzer, ts in p.time_steps],
+            m[Symbol("dvRatedProduction"*_n)][t,ts]  <= m[:dvSize][t]
+        )
+    end  
+
+    if !isempty(p.techs.compressor)
+        @constraint(m, [t in p.techs.compressor, ts in p.time_steps],
+            m[Symbol("dvRatedProduction"*_n)][t,ts]  <= m[:dvSize][t]
+        )
+    end  
 end
 
 
