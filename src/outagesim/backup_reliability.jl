@@ -493,6 +493,7 @@ function prob_matrix_update!(prob_matrix, survival)
     end
 end
 
+
 """
     survival_gen_only(;critical_load::Vector, generator_operational_availability::Real, generator_failure_to_start::Real, generator_mean_time_to_failure::Real, num_generators::Int,
                                 generator_size_kw::Real, max_outage_duration::Int, marginal_survival = false)::Matrix{Float64}
@@ -707,8 +708,8 @@ function survival_with_storage(;
     Threads.@threads for t = 1:t_max
         survival_probability_matrix[t, :] = survival_with_storage_single_start_time(t, 
         net_critical_loads_kw, max_outage_duration, battery_size_kw, battery_charge_efficiency,
-        battery_discharge_efficiency, num_battery_bins, N, starting_gens, generator_production,
-        generator_markov_matrix, maximum_generation, t_max, starting_battery_bins, battery_bin_size, marginal_survival, time_steps_per_hour)
+        battery_discharge_efficiency, 0, 0, 0, 0, num_battery_bins, 1, N, starting_gens, generator_production,
+        generator_markov_matrix, maximum_generation, t_max, starting_battery_bins, battery_bin_size, ones(8760), 0, marginal_survival, time_steps_per_hour)
     end
     return survival_probability_matrix
 end
@@ -730,7 +731,12 @@ function survival_with_storage_single_start_time(
     battery_size_kw::Real, 
     battery_charge_efficiency::Real,
     battery_discharge_efficiency::Real,
+    H2_electrolyzer_size_kw::Real, 
+    H2_fuelcell_size_kw::Real, 
+    H2_charge_efficiency::Real,
+    H2_discharge_efficiency::Real,
     M_b::Int,
+    M_H2::Int,
     N::Int,
     starting_gens::Vector{Float64},
     generator_production::Vector{Float64},
@@ -739,14 +745,16 @@ function survival_with_storage_single_start_time(
     t_max::Int,
     starting_battery_bins::Vector{Int},
     battery_bin_size::Real,
+    starting_H2_bins::Vector{Int},
+    H2_bin_size::Real,
     marginal_survival::Bool, 
     time_steps_per_hour::Real)::Vector{Float64}
 
-    gen_battery_prob_matrix_array = [zeros(N, M_b, 1), zeros(N, M_b, 1)]
-    gen_battery_prob_matrix_array[1][:, starting_battery_bins[t], 1] = starting_gens
-    gen_battery_prob_matrix_array[2][:, starting_battery_bins[t], 1] = starting_gens
+    gen_battery_prob_matrix_array = [zeros(N, M_b, M_H2), zeros(N, M_b, M_H2)]
+    gen_battery_prob_matrix_array[1][:, starting_battery_bins[t], starting_H2_bins[t]] = starting_gens
+    gen_battery_prob_matrix_array[2][:, starting_battery_bins[t], starting_H2_bins[t]] = starting_gens
     return_survival_chance_vector = zeros(max_outage_duration)
-    survival = ones(N, M_b, 1)
+    survival = ones(N, M_b, M_H2)
 
     for d in 1:max_outage_duration 
         h = mod(t + d - 2, t_max) + 1 #determines index accounting for looping around year
@@ -757,7 +765,9 @@ function survival_with_storage_single_start_time(
         #This is a more memory efficient way of implementing gen_battery_prob_matrix *= generator_markov_matrix
         gen_matrix_counter_start = ((d-1) % 2) + 1 
         gen_matrix_counter_end = (d % 2) + 1 
-        mul!(view(gen_battery_prob_matrix_array[gen_matrix_counter_end],:,:,1), generator_markov_matrix, view(gen_battery_prob_matrix_array[gen_matrix_counter_start],:,:,1))
+        for i_H2 in 1:M_H2
+            mul!(view(gen_battery_prob_matrix_array[gen_matrix_counter_end],:,:,i_H2), generator_markov_matrix, view(gen_battery_prob_matrix_array[gen_matrix_counter_start],:,:,i_H2))
+        end
 
         if marginal_survival == false
             # @timeit to "survival chance" gen_battery_prob_matrix_array[gen_matrix_counter_end] = gen_battery_prob_matrix_array[gen_matrix_counter_end] .* survival 
@@ -786,11 +796,11 @@ function survival_with_storage_single_start_time(
             battery_size_kw,
             battery_charge_efficiency, 
             battery_discharge_efficiency,
-            0,#TODO: use these args
-            0,
-            0,
-            0,
-            0
+            H2_bin_size,
+            H2_electrolyzer_size_kw, 
+            H2_fuelcell_size_kw, 
+            H2_charge_efficiency,
+            H2_discharge_efficiency
         )
     end
     return return_survival_chance_vector
