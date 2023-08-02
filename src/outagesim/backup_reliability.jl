@@ -1031,43 +1031,62 @@ function backup_reliability_inputs(;r::Dict)::Dict
 end
 
 """
-    backup_reliability_single_run(; critical_loads_kw::Vector, generator_operational_availability::Vector{<:Real} = [0.995], generator_failure_to_start::Vector{<:Real} = [0.0094], 
-        generator_mean_time_to_failure::Vector{<:Real} = [1100], num_generators::Vector{Int} = [1], generator_size_kw::Vector{<:Real} = [0.0], num_battery_bins::Int = 101, max_outage_duration::Int = 96,
-        battery_size_kw::Real = 0.0, battery_size_kwh::Real = 0.0, battery_charge_efficiency::Real = 0.948, battery_discharge_efficiency::Real = 0.948, time_steps_per_hour::Real = 1)::Matrix
+    backup_reliability_single_run(; critical_loads_kw::Vector, generator_operational_availability::Vector{<:Real} = [0.995], 
+        generator_failure_to_start::Vector{<:Real} = [0.0094], generator_mean_time_to_failure::Vector{<:Real} = [1100], 
+        num_generators::Vector{Int} = [1], generator_size_kw::Vector{<:Real} = [0.0], max_outage_duration::Int = 96, 
+        battery_starting_soc_kwh::Vector=[], battery_size_kw::Real = 0.0, battery_size_kwh::Real = 0.0, 
+        num_battery_bins::Int = 101, battery_charge_efficiency::Real = 0.948, battery_discharge_efficiency::Real = 0.948, 
+        H2_starting_soc_kwh::Vector = [], H2_electrolyzer_size_kw::Real = 0.0, H2_fuelcell_size_kw::Real = 0.0, 
+        H2_size_kwh::Real = 0.0, num_H2_bins = 1, H2_charge_efficiency::Real = 1.0, H2_discharge_efficiency::Real = 1.0
+        time_steps_per_hour::Real = 1)::Matrix
 
 Return an array of backup reliability calculations. Inputs can be unpacked from backup_reliability_inputs() dictionary
 # Arguments
 -net_critical_loads_kw::Vector                     Vector of net critical loads                     
--battery_starting_soc_kwh::Vector   = []           Battery kWh state of charge time series during normal grid-connected usage
 -generator_operational_availability::Vector{<:Real}    = [0.995]         Fraction of year generators not down for maintenance
 -generator_failure_to_start::Vector{<:Real}            = [0.0094]        Chance of generator starting given outage
 -generator_mean_time_to_failure::Vector{<:Real}        = [1100]          Average number of time steps between a generator's failures. 1/(failure to run probability). 
 -num_generators::Vector{Int}                            = [1]             Number of generators
 -generator_size_kw::Vector{<:Real}                     = [0.0]           Backup generator capacity
--num_battery_bins::Int              = num_battery_bins_default(battery_size_kw,battery_size_kwh)     Number of bins for discretely modeling battery state of charge
 -max_outage_duration::Int           = 96           Maximum outage duration modeled
+-battery_starting_soc_kwh::Vector   = []           Battery kWh state of charge time series during normal grid-connected usage
 -battery_size_kw::Real              = 0.0          Battery kW of power capacity
 -battery_size_kwh::Real             = 0.0          Battery kWh of energy capacity
+-num_battery_bins::Int              = num_battery_bins_default(battery_size_kw,battery_size_kwh)     Number of bins for discretely modeling battery state of charge
 -battery_charge_efficiency::Real    = 0.948        Efficiency of charging battery
 -battery_discharge_efficiency::Real = 0.948        Efficiency of discharging battery
+-H2_starting_soc_kwh::Vector        = []           H2 kWh state of charge time series during normal grid-connected usage
+-H2_electrolyzer_size_kw::Real      = 0.0,         H2 system electrolyzer power capacity
+-H2_fuelcell_size_kw::Real          = 0.0,         H2 system fuel cell power capacity
+-H2_size_kwh::Real                  = 0.0,         H2 storage kWh of energy capacity
+-num_H2_bins                        = num_battery_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kwh),     Number of bins for discretely modeling battery state of charge
+-H2_charge_efficiency::Real         = 1.0,         Efficiency of charging H2 system
+-H2_discharge_efficiency::Real      = 1.0,         Efficiency of discharging H2 system
 -time_steps_per_hour::Real          = 1            Used to determine amount battery gets shifted.
 ```
 """
 function backup_reliability_single_run(; 
     net_critical_loads_kw::Vector, 
-    battery_starting_soc_kwh::Vector = [],
     generator_operational_availability::Vector{<:Real} = [0.995], 
     generator_failure_to_start::Vector{<:Real} = [0.0094], 
     generator_mean_time_to_failure::Vector{<:Real} = [1100], 
     num_generators::Vector{Int} = [1], 
     generator_size_kw::Vector{<:Real} = [0.0], 
     max_outage_duration::Int = 96,
+    battery_starting_soc_kwh::Vector = [],
     battery_size_kw::Real = 0.0,
     battery_size_kwh::Real = 0.0,
     num_battery_bins::Int = num_battery_bins_default(battery_size_kw,battery_size_kwh),
     battery_charge_efficiency::Real = 0.948, 
     battery_discharge_efficiency::Real = 0.948,
-    time_steps_per_hour::Real = 1,
+    H2_starting_soc_kwh::Vector = [],
+    H2_electrolyzer_size_kw::Real=0.0,
+    H2_fuelcell_size_kw::Real=0.0,
+    H2_size_kwh::Real=0.0,
+    num_H2_bins=num_battery_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kwh),
+    H2_charge_efficiency::Real=1.0,
+    H2_discharge_efficiency::Real=1.0,
+    time_steps_per_hour::Real = 1.0,
     kwargs...)::Matrix
      
     #No reliability calculations if no outage duration
@@ -1089,7 +1108,7 @@ function backup_reliability_single_run(;
         return survival_with_storage(
                 net_critical_loads_kw=net_critical_loads_kw,
                 battery_starting_soc_kwh=battery_starting_soc_kwh, 
-                H2_starting_soc_kwh=[], 
+                H2_starting_soc_kwh=H2_starting_soc_kwh, 
                 generator_operational_availability=generator_operational_availability, 
                 generator_failure_to_start=generator_failure_to_start, 
                 generator_mean_time_to_failure=generator_mean_time_to_failure,
@@ -1097,16 +1116,16 @@ function backup_reliability_single_run(;
                 generator_size_kw=generator_size_kw, 
                 battery_size_kw=battery_size_kw,
                 battery_size_kwh=battery_size_kwh,
-                H2_electrolyzer_size_kw=0,
-                H2_fuelcell_size_kw=0,
-                H2_size_kwh=0,
+                H2_electrolyzer_size_kw=H2_electrolyzer_size_kw,
+                H2_fuelcell_size_kw=H2_fuelcell_size_kw,
+                H2_size_kwh=H2_size_kwh,
                 num_battery_bins=num_battery_bins,
-                num_H2_bins=1,
+                num_H2_bins=num_H2_bins,
                 max_outage_duration=max_outage_duration, 
                 battery_charge_efficiency=battery_charge_efficiency,
                 battery_discharge_efficiency=battery_discharge_efficiency,
-                H2_charge_efficiency=1,
-                H2_discharge_efficiency=1,
+                H2_charge_efficiency=H2_charge_efficiency,
+                H2_discharge_efficiency=H2_discharge_efficiency,
                 marginal_survival = false,
                 time_steps_per_hour = time_steps_per_hour
             )
