@@ -926,8 +926,8 @@ Return a dictionary of inputs required for backup reliability calculations.
     -pv_operational_availability::Real = 0.98                                   Likelihood PV will be available at start of outage    -battery_size_kw::Real                                  Battery capacity. If no battery installed then PV disconnects from system during outage
     -battery_size_kwh::Real                                                     Battery energy storage capacity
     -battery_size_kw::Real                                                      Battery power capacity
-    -charge_efficiency::Real                                                    Battery charge efficiency
-    -discharge_efficiency::Real                                                 Battery discharge efficiency
+    -battery_charge_efficiency::Real                                            Battery charge efficiency
+    -battery_discharge_efficiency::Real                                         Battery discharge efficiency
     -battery_starting_soc_series_fraction                                       Battery state of charge in each time step (if not input then defaults to battery size)
     -battery_minimum_soc_fraction = 0.0                                         The minimum battery state of charge (represented as a fraction) allowed during outages.
     -generator_operational_availability::Union{Real, Vector{<:Real}} = 0.995    Likelihood generator being available in given time step
@@ -1448,6 +1448,7 @@ Possible keys in r:
     -num_battery_bins::Int = depends on battery sizing      Number of bins for discretely modeling battery state of charge
     -battery_operational_availability::Real = 0.97          Likelihood battery will be available at start of outage       
     -pv_operational_availability::Real = 0.98               Likelihood PV will be available at start of outage
+    -H2_operational_availability::Real = 1.0                Likelihood H2 system will be available at start of outage       
     -max_outage_duration::Int = 96                          Maximum outage duration modeled
     -microgrid_only::Bool = false                           Determines how generator, PV, and battery act during islanded mode
 
@@ -1471,19 +1472,29 @@ Possible keys in r:
 -microgrid_only::Bool                                   Boolean to check if only microgrid runs during grid outage (defaults to false)
 -chp_size_kw::Real                                      CHP capacity. 
 -pv_size_kw::Real                                       Size of PV System
--pv_production_factor_series::Array                     PV production factor per time step (required if pv_size_kw in dictionary)
+-pv_production_factor_series::Vector                    PV production factor per time step (required if pv_size_kw in dictionary)
 -pv_migrogrid_upgraded::Bool                            If true then PV runs during outage if microgrid_only = TRUE (defaults to false)
+-pv_operational_availability::Real = 0.98               Likelihood PV will be available at start of outage
+-battery_operational_availability::Real = 0.97          Likelihood battery will be available at start of outage       
 -battery_size_kw::Real                                  Battery capacity. If no battery installed then PV disconnects from system during outage
 -battery_size_kwh::Real                                 Battery energy storage capacity
--charge_efficiency::Real                                Battery charge efficiency
--discharge_efficiency::Real                             Battery discharge efficiency
--battery_starting_soc_series_fraction::Array            Battery percent state of charge time series during normal grid-connected usage
+-battery_charge_efficiency::Real                        Battery charge efficiency
+-battery_discharge_efficiency::Real                     Battery discharge efficiency
+-battery_starting_soc_series_fraction::Vector           Battery percent state of charge time series during normal grid-connected usage
 -generator_failure_to_start::Real = 0.0094              Chance of generator starting given outage
 -generator_mean_time_to_failure::Real = 1100            Average number of time steps between a generator's failures. 1/(failure to run probability). 
 -num_generators::Int = 1                                Number of generators. 
 -generator_size_kw::Real = 0.0                          Backup generator capacity. 
 -num_battery_bins::Int = num_storage_bins_default(r[:battery_size_kw],r[:battery_size_kwh])     Number of bins for discretely modeling battery state of charge
 -max_outage_duration::Int = 96                          Maximum outage duration modeled
+-H2_operational_availability::Real = 1.0                Likelihood H2 system will be available at start of outage       
+-H2_starting_soc_series_fraction::Vector= []            H2 kWh state of charge time series during normal grid-connected usage
+-H2_electrolyzer_size_kw::Real          = 0.0,          H2 system electrolyzer power capacity
+-H2_fuelcell_size_kw::Real              = 0.0,          H2 system fuel cell power capacity
+-H2_size_kwh::Real                      = 0.0,          H2 storage kWh of energy capacity
+-num_H2_bins                            = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kwh),     Number of bins for discretely modeling battery state of charge
+-H2_charge_efficiency::Real             = 1.0,          Efficiency of charging H2 system
+-H2_discharge_efficiency::Real          = 1.0,          Efficiency of discharging H2 system
 
 """
 function backup_reliability(r::Dict)
