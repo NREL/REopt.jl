@@ -161,11 +161,12 @@ function starting_probabilities(num_generators::Vector{Int}, generator_operation
 end
 
 """
-    bin_storage_charge(batt_soc::Vector, num_bins::Int, battery_size_kwh::Real)::Vector{Int}
+    bin_storage_charge(storage_soc_kwh::Vector, num_bins::Int, storage_size_kwh::Real)::Vector{Int}
 
-Return a vector the same length as ``batt_soc`` of discritized battery charge bins
+Return a vector the same length as ``storage_soc_kwh`` of discritized battery charge bins,
+or a ones vector of length 8760 if storage_soc_kwh is empty or num_bins ==1.
 
-The first bin denotes zero battery charge, and each additional bin has size of ``battery_size_kwh``/(``num_bins``-1)
+The first bin denotes zero battery charge, and each additional bin has size of ``storage_size_kwh``/(``num_bins``-1)
 Values are rounded to nearest bin.
 
 # Arguments
@@ -187,6 +188,9 @@ julia>  bin_storage_charge([30, 100, 170.5, 250, 251, 1000], 11, 1000)
 """
 function bin_storage_charge(storage_soc_kwh::Vector, num_bins::Int, storage_size_kwh::Real)::Vector{Int}  
     #Bins battery into discrete portions. Zero is one of the bins. 
+    if isempty(storage_soc_kwh) || num_bins == 1
+        return ones(Int64,8760)
+    end
     bin_size = storage_size_kwh / (num_bins-1)
     return min.(num_bins, round.(storage_soc_kwh./bin_size).+1)
 end
@@ -674,6 +678,7 @@ julia> survival_with_storage(net_critical_loads_kw=net_critical_loads_kw, batter
 function survival_with_storage(;
     net_critical_loads_kw::Vector, 
     battery_starting_soc_kwh::Vector, 
+    H2_starting_soc_kwh::Vector,
     generator_operational_availability::Vector{<:Real}, 
     generator_failure_to_start::Vector{<:Real},
     generator_mean_time_to_failure::Vector{<:Real},
@@ -681,10 +686,16 @@ function survival_with_storage(;
     generator_size_kw::Vector{<:Real}, 
     battery_size_kwh::Real, 
     battery_size_kw::Real, 
+    H2_electrolyzer_size_kw::Real, 
+    H2_fuelcell_size_kw::Real, 
+    H2_size_kwh::Real, 
     num_battery_bins::Int, 
+    num_H2_bins::Int, 
     max_outage_duration::Int, 
     battery_charge_efficiency::Real,
     battery_discharge_efficiency::Real,
+    H2_charge_efficiency::Real,
+    H2_discharge_efficiency::Real,
     marginal_survival::Bool = false,
     time_steps_per_hour::Real = 1)::Matrix{Float64} 
 
@@ -692,9 +703,11 @@ function survival_with_storage(;
     
     #bin size is battery storage divided by num bins-1 because zero is also a bin
     battery_bin_size = battery_size_kwh / (num_battery_bins-1)
+    H2_bin_size = H2_size_kwh / (num_H2_bins-1)
      
-    #bin initial battery 
+    #bin initial battery and H2 storage
     starting_battery_bins = bin_storage_charge(battery_starting_soc_kwh, num_battery_bins, battery_size_kwh)
+    starting_H2_bins = bin_storage_charge(H2_starting_soc_kwh, num_H2_bins, H2_size_kwh)
     #Size of generators state dimension
     N = prod(num_generators .+ 1)
     #Initialize survival probability matrix
@@ -708,8 +721,8 @@ function survival_with_storage(;
     Threads.@threads for t = 1:t_max
         survival_probability_matrix[t, :] = survival_with_storage_single_start_time(t, 
         net_critical_loads_kw, max_outage_duration, battery_size_kw, battery_charge_efficiency,
-        battery_discharge_efficiency, 0, 0, 0, 0, num_battery_bins, 1, N, starting_gens, generator_production,
-        generator_markov_matrix, maximum_generation, t_max, starting_battery_bins, battery_bin_size, ones(Int64,8760), 0, marginal_survival, time_steps_per_hour)
+        battery_discharge_efficiency, H2_electrolyzer_size_kw, H2_fuelcell_size_kw, H2_charge_efficiency, H2_discharge_efficiency, num_battery_bins, num_H2_bins, N, starting_gens, generator_production,
+        generator_markov_matrix, maximum_generation, t_max, starting_battery_bins, battery_bin_size, starting_H2_bins, H2_bin_size, marginal_survival, time_steps_per_hour)
     end
     return survival_probability_matrix
 end
@@ -1075,6 +1088,7 @@ function backup_reliability_single_run(;
         return survival_with_storage(
                 net_critical_loads_kw=net_critical_loads_kw,
                 battery_starting_soc_kwh=battery_starting_soc_kwh, 
+                H2_starting_soc_kwh=[], 
                 generator_operational_availability=generator_operational_availability, 
                 generator_failure_to_start=generator_failure_to_start, 
                 generator_mean_time_to_failure=generator_mean_time_to_failure,
@@ -1082,10 +1096,16 @@ function backup_reliability_single_run(;
                 generator_size_kw=generator_size_kw, 
                 battery_size_kw=battery_size_kw,
                 battery_size_kwh=battery_size_kwh,
+                H2_electrolyzer_size_kw=0,
+                H2_fuelcell_size_kw=0,
+                H2_size_kwh=0,
                 num_battery_bins=num_battery_bins,
+                num_H2_bins=1,
                 max_outage_duration=max_outage_duration, 
                 battery_charge_efficiency=battery_charge_efficiency,
                 battery_discharge_efficiency=battery_discharge_efficiency,
+                H2_charge_efficiency=1,
+                H2_discharge_efficiency=1,
                 marginal_survival = false,
                 time_steps_per_hour = time_steps_per_hour
             )
