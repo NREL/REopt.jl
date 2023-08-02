@@ -1052,14 +1052,14 @@ Return an array of backup reliability calculations. Inputs can be unpacked from 
 -battery_starting_soc_kwh::Vector   = []           Battery kWh state of charge time series during normal grid-connected usage
 -battery_size_kw::Real              = 0.0          Battery kW of power capacity
 -battery_size_kwh::Real             = 0.0          Battery kWh of energy capacity
--num_battery_bins::Int              = num_battery_bins_default(battery_size_kw,battery_size_kwh)     Number of bins for discretely modeling battery state of charge
+-num_battery_bins::Int              = num_storage_bins_default(battery_size_kw,battery_size_kwh)     Number of bins for discretely modeling battery state of charge
 -battery_charge_efficiency::Real    = 0.948        Efficiency of charging battery
 -battery_discharge_efficiency::Real = 0.948        Efficiency of discharging battery
 -H2_starting_soc_kwh::Vector        = []           H2 kWh state of charge time series during normal grid-connected usage
 -H2_electrolyzer_size_kw::Real      = 0.0,         H2 system electrolyzer power capacity
 -H2_fuelcell_size_kw::Real          = 0.0,         H2 system fuel cell power capacity
 -H2_size_kwh::Real                  = 0.0,         H2 storage kWh of energy capacity
--num_H2_bins                        = num_battery_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kwh),     Number of bins for discretely modeling battery state of charge
+-num_H2_bins                        = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kwh),     Number of bins for discretely modeling battery state of charge
 -H2_charge_efficiency::Real         = 1.0,         Efficiency of charging H2 system
 -H2_discharge_efficiency::Real      = 1.0,         Efficiency of discharging H2 system
 -time_steps_per_hour::Real          = 1            Used to determine amount battery gets shifted.
@@ -1076,16 +1076,16 @@ function backup_reliability_single_run(;
     battery_starting_soc_kwh::Vector = [],
     battery_size_kw::Real = 0.0,
     battery_size_kwh::Real = 0.0,
-    num_battery_bins::Int = num_battery_bins_default(battery_size_kw,battery_size_kwh),
+    num_battery_bins::Int = num_storage_bins_default(battery_size_kw,battery_size_kwh),
     battery_charge_efficiency::Real = 0.948, 
     battery_discharge_efficiency::Real = 0.948,
     H2_starting_soc_kwh::Vector = [],
-    H2_electrolyzer_size_kw::Real=0.0,
-    H2_fuelcell_size_kw::Real=0.0,
-    H2_size_kwh::Real=0.0,
-    num_H2_bins=num_battery_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kwh),
-    H2_charge_efficiency::Real=1.0,
-    H2_discharge_efficiency::Real=1.0,
+    H2_electrolyzer_size_kw::Real = 0.0,
+    H2_fuelcell_size_kw::Real = 0.0,
+    H2_size_kwh::Real = 0.0,
+    num_H2_bins = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kwh),
+    H2_charge_efficiency::Real = 1.0,
+    H2_discharge_efficiency::Real = 1.0,
     time_steps_per_hour::Real = 1.0,
     kwargs...)::Matrix
      
@@ -1482,7 +1482,7 @@ Possible keys in r:
 -generator_mean_time_to_failure::Real = 1100            Average number of time steps between a generator's failures. 1/(failure to run probability). 
 -num_generators::Int = 1                                Number of generators. 
 -generator_size_kw::Real = 0.0                          Backup generator capacity. 
--num_battery_bins::Int = num_battery_bins_default(r[:battery_size_kw],r[:battery_size_kwh])     Number of bins for discretely modeling battery state of charge
+-num_battery_bins::Int = num_storage_bins_default(r[:battery_size_kw],r[:battery_size_kwh])     Number of bins for discretely modeling battery state of charge
 -max_outage_duration::Int = 96                          Maximum outage duration modeled
 
 """
@@ -1493,7 +1493,7 @@ function backup_reliability(r::Dict)
 end
 
 
-function num_battery_bins_default(size_kw::Real, size_kwh::Real)::Int
+function num_storage_bins_default(size_kw::Real, size_kwh::Real)::Int
     if size_kw == 0
         return 1
     else
