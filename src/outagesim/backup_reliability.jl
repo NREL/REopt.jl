@@ -728,9 +728,12 @@ end
 
 """
 survival_with_storage_single_start_time(t::Int, net_critical_loads_kw::Vector, max_outage_duration::Int, 
-    generator_size_kw::Vector{<:Real}, battery_charge_efficiency::Real, battery_discharge_efficiency::Real, M::Int, N::Int,
-    starting_gens::Vector{Float64}, generator_production::Vector{Float64}, generator_markov_matrix::Matrix{Float64},
-    maximum_generation::Matrix{Float64}, t_max::Int, starting_battery_bins::Vector{Int}, bin_size::Real, marginal_survival::Bool, time_steps_per_hour::Real)::Vector{Float64}
+    generator_size_kw::Vector{<:Real}, battery_charge_efficiency::Real, battery_discharge_efficiency::Real, 
+    H2_electrolyzer_size_kw::Real, H2_fuelcell_size_kw::Real, H2_charge_efficiency::Real, 
+    H2_discharge_efficiency::Real, M_b::Int, M_H2::Int, N::Int, starting_gens::Vector{Float64}, 
+    generator_production::Vector{Float64}, generator_markov_matrix::Matrix{Float64}, maximum_generation::Matrix{Float64}, 
+    t_max::Int, starting_battery_bins::Vector{Int}, battery_bin_size::Real, starting_H2_bins::Vector{Int}, 
+    H2_bin_size::Real, marginal_survival::Bool, time_steps_per_hour::Real)::Vector{Float64}
 
 Return a vector of probability of survival with for all outage durations given outages start time t. 
     Function is for internal loop of survival_with_storage
