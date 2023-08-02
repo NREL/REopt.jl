@@ -616,9 +616,11 @@ function gen_only_survival_single_start_time(
 end
 
 """
-    survival_with_storage(;net_critical_loads_kw::Vector, battery_starting_soc_kwh::Vector, generator_operational_availability::Vector{<:Real}, generator_failure_to_start::Vector{<:Real}, 
+    survival_with_storage(;net_critical_loads_kw::Vector, battery_starting_soc_kwh::Vector, H2_starting_soc_kwh::Vector, generator_operational_availability::Vector{<:Real}, generator_failure_to_start::Vector{<:Real}, 
                         generator_mean_time_to_failure::Vector{<:Real}, num_generators::Vector{Int}, generator_size_kw::Vector{<:Real}, battery_size_kwh::Real, battery_size_kw::Real, num_bins::Int, 
-                        max_outage_duration::Int, battery_charge_efficiency::Real, battery_discharge_efficiency::Real, marginal_survival::Bool = false, time_steps_per_hour::Real = 1)::Matrix{Float64} 
+                        H2_size_kwh::Real, H2_electrolyzer_size_kw::Real, H2_fuelcell_size_kw::Real, num_H2_bins::Int, max_outage_duration::Int, 
+                        battery_charge_efficiency::Real, battery_discharge_efficiency::Real, H2_charge_efficiency::Real, H2_discharge_efficiency::Real, 
+                        marginal_survival::Bool = false, time_steps_per_hour::Real = 1)::Matrix{Float64} 
 
 Return a matrix of probability of survival with rows denoting outage start and columns denoting outage duration
 
@@ -629,6 +631,7 @@ if ``marginal_survival`` = false then result is chance of surviving up to and in
 # Arguments
 - `net_critical_loads_kw::Vector`: Vector of system critical loads minus solar generation.
 - `battery_starting_soc_kwh::Vector`: Vector of battery charge (kwh) for each time step of year. 
+- `H2_starting_soc_kwh::Vector`: Vector of H2 storage charge (kwh) for each time step of year. 
 - `generator_operational_availability::Vector{<:Real}`: Operational Availability of backup generators.
 - `generator_failure_to_start::Vector{<:Real}`: Probability of generator Failure to Start and support load. 
 - `generator_mean_time_to_failure::Vector{<:Real}`: Average number of time steps between failures. 1/MTTF (failure to run probability). 
@@ -637,9 +640,15 @@ if ``marginal_survival`` = false then result is chance of surviving up to and in
 - `battery_size_kwh::Vector{<:Real}`: energy capacity of battery system.
 - `battery_size_kw::Vector{<:Real}`: battery system inverter size.
 - `num_battery_bins::Int`: number of battery bins. 
+- `H2_size_kwh::Real`: energy capacity of H2 storage system.
+- `H2_electrolyzer_size_kw::Real`: H2 system electrolyzer size.
+- `H2_fuelcell_size_kw::Real`: H2 system fuel cell size.
+- `num_H2_bins::Int`: number of H2 storage bins.
 - `max_outage_duration::Int`: maximum outage duration in time steps (time step is generally hourly but could be other values such as 15 minutes).
-- `battery_charge_efficiency::Real`: battery_charge_efficiency = increase_in_soc_kwh / grid_input_kwh 
-- `battery_discharge_efficiency::Real`: battery_discharge_efficiency = battery_discharge / battery_reduction_in_soc
+- `battery_charge_efficiency::Real`: battery_charge_efficiency = increase in SOC / charge input to battery
+- `battery_discharge_efficiency::Real`: battery_discharge_efficiency = discharge from battery / reduction in SOC
+- `H2_charge_efficiency::Real`: H2_charge_efficiency = increase in SOC / charge input to H2 system
+- `H2_discharge_efficiency::Real`: H2_discharge_efficiency = discharge from H2 system / reduction in SOC
 - `marginal_survival::Bool`: indicates whether results are probability of survival in given outage time step or probability of surviving up to and including time step.
 
 # Examples
@@ -654,20 +663,9 @@ julia> survival_with_storage(net_critical_loads_kw=net_critical_loads_kw, batter
                             generator_operational_availability=generator_operational_availability, generator_failure_to_start=failure_to_start, 
                             generator_mean_time_to_failure=MTTF, num_generators=num_generators, generator_size_kw=generator_size_kw, 
                             battery_size_kwh=battery_size_kwh, battery_size_kw = battery_size_kw, num_battery_bins=num_battery_bins, 
+                            H2_starting_soc_kwh=[], H2_size_kwh=0, H2_electrolyzer_size_kw=0, H2_fuelcell_size_kw=0, num_H2_bins=1,
                             max_outage_duration=max_outage_duration, battery_charge_efficiency=battery_charge_efficiency, 
-                            battery_discharge_efficiency=battery_discharge_efficiency, marginal_survival = true)
-4×3 Matrix{Float64}:
-1.0   0.8704  0.557056
-0.96  0.6144  0.77824
-0.96  0.896   0.8192
-1.0   0.96    0.761856
-
-julia> survival_with_storage(net_critical_loads_kw=net_critical_loads_kw, battery_starting_soc_kwh=battery_starting_soc_kwh, 
-                            generator_operational_availability=generator_operational_availability, generator_failure_to_start=failure_to_start, 
-                            generator_mean_time_to_failure=MTTF, num_generators=num_generators, generator_size_kw=generator_size_kw, 
-                            battery_size_kwh=battery_size_kwh, battery_size_kw = battery_size_kw, num_battery_bins=num_battery_bins, 
-                            max_outage_duration=max_outage_duration, battery_charge_efficiency=battery_charge_efficiency, 
-                            battery_discharge_efficiency=battery_discharge_efficiency, marginal_survival = false)
+                            battery_discharge_efficiency=battery_discharge_efficiency, H2_charge_efficiency=1, H2_discharge_efficiency=1, marginal_survival = false)
 4×3 Matrix{Float64}:
 1.0   0.8704  0.557056
 0.96  0.6144  0.57344
@@ -686,10 +684,10 @@ function survival_with_storage(;
     generator_size_kw::Vector{<:Real}, 
     battery_size_kwh::Real, 
     battery_size_kw::Real, 
+    num_battery_bins::Int, 
+    H2_size_kwh::Real, 
     H2_electrolyzer_size_kw::Real, 
     H2_fuelcell_size_kw::Real, 
-    H2_size_kwh::Real, 
-    num_battery_bins::Int, 
     num_H2_bins::Int, 
     max_outage_duration::Int, 
     battery_charge_efficiency::Real,
