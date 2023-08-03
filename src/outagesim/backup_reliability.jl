@@ -1298,8 +1298,6 @@ function return_backup_reliability(;
     H2_size_kwh::Real = 0.0,
     kwargs...)
 
-    
-    
     if haskey(kwargs, :pv_kw_ac_time_series)
         pv_included = true
         net_critical_loads_kw = critical_loads_kw - kwargs[:pv_kw_ac_time_series]
@@ -1410,6 +1408,9 @@ function return_backup_reliability(;
                 net_critical_loads_kw = system["net_critical_loads_kw"],
                 battery_size_kw = system["battery_size_kw"],
                 battery_size_kwh = system["battery_size_kwh"],
+                H2_electrolyzer_size_kw = system["H2_electrolyzer_size_kw"],
+                H2_fuelcell_size_kw = system["H2_fuelcell_size_kw"],
+                H2_size_kwh = system["H2_size_kwh"],
                 kwargs...)
             #If no results then add results, else append to them
             if length(results_no_fuel_limit) == 0
