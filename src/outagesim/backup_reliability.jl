@@ -1286,6 +1286,9 @@ function return_backup_reliability(;
     pv_can_dispatch_without_battery::Bool = false,
     battery_size_kw::Real = 0.0,
     battery_size_kwh::Real = 0.0,
+    H2_electrolyzer_size_kw::Real = 0.0,
+    H2_fuelcell_size_kw::Real = 0.0,
+    H2_size_kwh::Real = 0.0,
     kwargs...)
 
     
@@ -1304,22 +1307,66 @@ function return_backup_reliability(;
             "probability" => 1,
             "net_critical_loads_kw" => critical_loads_kw,
             "battery_size_kw" => 0,
-            "battery_size_kwh" => 0),
+            "battery_size_kwh" => 0,
+            "H2_electrolyzer_size_kw" => 0,
+            "H2_fuelcell_size_kw" => 0,
+            "H2_size_kwh" => 0),
         "gen_pv_battery" => Dict(
             "probability" => 0,
             "net_critical_loads_kw" => net_critical_loads_kw,
             "battery_size_kw" => battery_size_kw,
-            "battery_size_kwh" => battery_size_kwh),
+            "battery_size_kwh" => battery_size_kwh,
+            "H2_electrolyzer_size_kw" => 0,
+            "H2_fuelcell_size_kw" => 0,
+            "H2_size_kwh" => 0),
         "gen_battery" => Dict(
             "probability" => 0,
             "net_critical_loads_kw" => critical_loads_kw,
             "battery_size_kw" => battery_size_kw,
-            "battery_size_kwh" => battery_size_kwh),
+            "battery_size_kwh" => battery_size_kwh,
+            "H2_electrolyzer_size_kw" => 0,
+            "H2_fuelcell_size_kw" => 0,
+            "H2_size_kwh" => 0),
         "gen_pv" => Dict(
             "probability" => 0,
             "net_critical_loads_kw" => net_critical_loads_kw,
             "battery_size_kw" => 0,
-            "battery_size_kwh" => 0)
+            "battery_size_kwh" => 0,
+            "H2_electrolyzer_size_kw" => 0,
+            "H2_fuelcell_size_kw" => 0,
+            "H2_size_kwh" => 0),
+        "gen_H2" => Dict(
+            "probability" => 0,
+            "net_critical_loads_kw" => critical_loads_kw,
+            "battery_size_kw" => 0,
+            "battery_size_kwh" => 0,
+            "H2_electrolyzer_size_kw" => H2_electrolyzer_size_kw,
+            "H2_fuelcell_size_kw" => H2_fuelcell_size_kw,
+            "H2_size_kwh" => H2_size_kwh),
+        "gen_pv_battery_H2" => Dict(
+            "probability" => 0,
+            "net_critical_loads_kw" => net_critical_loads_kw,
+            "battery_size_kw" => battery_size_kw,
+            "battery_size_kwh" => battery_size_kwh,
+            "H2_electrolyzer_size_kw" => H2_electrolyzer_size_kw,
+            "H2_fuelcell_size_kw" => H2_fuelcell_size_kw,
+            "H2_size_kwh" => H2_size_kwh),
+        "gen_battery_H2" => Dict(
+            "probability" => 0,
+            "net_critical_loads_kw" => critical_loads_kw,
+            "battery_size_kw" => battery_size_kw,
+            "battery_size_kwh" => battery_size_kwh,
+            "H2_electrolyzer_size_kw" => H2_electrolyzer_size_kw,
+            "H2_fuelcell_size_kw" => H2_fuelcell_size_kw,
+            "H2_size_kwh" => H2_size_kwh),
+        "gen_pv_H2" => Dict(
+            "probability" => 0,
+            "net_critical_loads_kw" => net_critical_loads_kw,
+            "battery_size_kw" => 0,
+            "battery_size_kwh" => 0,
+            "H2_electrolyzer_size_kw" => H2_electrolyzer_size_kw,
+            "H2_fuelcell_size_kw" => H2_fuelcell_size_kw,
+            "H2_size_kwh" => H2_size_kwh)
     )
     #Sets probabilities for each potential system configuration
     if battery_size_kw > 0 && pv_included
