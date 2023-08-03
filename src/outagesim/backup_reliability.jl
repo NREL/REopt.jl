@@ -1266,14 +1266,13 @@ end
 
 """
     return_backup_reliability(; critical_loads_kw::Vector, battery_operational_availability::Real = 0.97,
-            pv_operational_availability::Real = 0.98, pv_kw_ac_time_series::Vector = [],
+            pv_operational_availability::Real = 0.98,
             pv_can_dispatch_without_battery::Bool = false, kwargs...)
 Return an array of backup reliability calculations, accounting for operational availability of PV and battery. 
 # Arguments
 -critical_loads_kw::Vector                          Vector of critical loads
 -battery_operational_availability::Real = 1.0       Likelihood battery will be available at start of outage       
 -pv_operational_availability::Real      = 0.98      Likelihood PV will be available at start of outage
--pv_kw_ac_time_series::Vector = []                  timeseries of PV dispatch
 -pv_can_dispatch_without_battery::Bool  = false     Boolian determining whether net load subtracts PV if battery is unavailable.
 -battery_size_kw::Real                  = 0.0       Battery kW of power capacity
 -battery_size_kwh::Real                 = 0.0       Battery kWh of energy capacity
