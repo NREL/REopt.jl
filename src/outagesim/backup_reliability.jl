@@ -1266,16 +1266,22 @@ end
 
 """
     return_backup_reliability(; critical_loads_kw::Vector, battery_operational_availability::Real = 0.97,
-            pv_operational_availability::Real = 0.98,
-            pv_can_dispatch_without_storage::Bool = false, kwargs...)
+            pv_operational_availability::Real = 0.98, H2_operational_availability::Real = 1.0
+            pv_can_dispatch_without_storage::Bool = false, battery_size_kw::Real = 0.0,
+            battery_size_kwh::Real = 0.0, H2_electrolyzer_size_kw::Real = 0.0,
+            H2_fuelcell_size_kw::Real = 0.0, H2_size_kwh::Real = 0.0, kwargs...)
 Return an array of backup reliability calculations, accounting for operational availability of PV and battery. 
 # Arguments
 -critical_loads_kw::Vector                          Vector of critical loads
 -battery_operational_availability::Real = 1.0       Likelihood battery will be available at start of outage       
 -pv_operational_availability::Real      = 0.98      Likelihood PV will be available at start of outage
+-H2_operational_availability::Real      = 1.0      `Likelihood H2 system will be available at start of outage
 -pv_can_dispatch_without_storage::Bool  = false     Boolian determining whether net load subtracts PV if storage is unavailable.
 -battery_size_kw::Real                  = 0.0       Battery kW of power capacity
 -battery_size_kwh::Real                 = 0.0       Battery kWh of energy capacity
+-H2_electrolyzer_size_kw::Real          = 0.0       H2 electrolyzer kW power capacity
+-H2_fuelcell_size_kw::Real              = 0.0       H2 fuel cell kW power capacity
+-H2_size_kwh::Real                      = 0.0       H2 storage kWh of energy capacity
 -kwargs::Dict                                       Dictionary of additional inputs.  
 ```
 """
@@ -1283,6 +1289,7 @@ function return_backup_reliability(;
     critical_loads_kw::Vector, 
     battery_operational_availability::Real = 0.97,
     pv_operational_availability::Real = 0.98,
+    H2_operational_availability::Real = 1.0,
     pv_can_dispatch_without_storage::Bool = false,
     battery_size_kw::Real = 0.0,
     battery_size_kwh::Real = 0.0,
