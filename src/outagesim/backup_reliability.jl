@@ -1267,13 +1267,13 @@ end
 """
     return_backup_reliability(; critical_loads_kw::Vector, battery_operational_availability::Real = 0.97,
             pv_operational_availability::Real = 0.98,
-            pv_can_dispatch_without_battery::Bool = false, kwargs...)
+            pv_can_dispatch_without_storage::Bool = false, kwargs...)
 Return an array of backup reliability calculations, accounting for operational availability of PV and battery. 
 # Arguments
 -critical_loads_kw::Vector                          Vector of critical loads
 -battery_operational_availability::Real = 1.0       Likelihood battery will be available at start of outage       
 -pv_operational_availability::Real      = 0.98      Likelihood PV will be available at start of outage
--pv_can_dispatch_without_battery::Bool  = false     Boolian determining whether net load subtracts PV if battery is unavailable.
+-pv_can_dispatch_without_storage::Bool  = false     Boolian determining whether net load subtracts PV if storage is unavailable.
 -battery_size_kw::Real                  = 0.0       Battery kW of power capacity
 -battery_size_kwh::Real                 = 0.0       Battery kWh of energy capacity
 -kwargs::Dict                                       Dictionary of additional inputs.  
@@ -1283,7 +1283,7 @@ function return_backup_reliability(;
     critical_loads_kw::Vector, 
     battery_operational_availability::Real = 0.97,
     pv_operational_availability::Real = 0.98,
-    pv_can_dispatch_without_battery::Bool = false,
+    pv_can_dispatch_without_storage::Bool = false,
     battery_size_kw::Real = 0.0,
     battery_size_kwh::Real = 0.0,
     H2_electrolyzer_size_kw::Real = 0.0,
@@ -1374,7 +1374,7 @@ function return_backup_reliability(;
             battery_operational_availability * pv_operational_availability
         system_characteristics["gen_battery"]["probability"] = 
             battery_operational_availability * (1 - pv_operational_availability)
-        if pv_can_dispatch_without_battery
+        if pv_can_dispatch_without_storage
             system_characteristics["gen_pv"]["probability"] = 
                 (1 - battery_operational_availability) * pv_operational_availability
             system_characteristics["gen"]["probability"] = 
@@ -1389,7 +1389,7 @@ function return_backup_reliability(;
             battery_operational_availability
         system_characteristics["gen"]["probability"] = 
             (1 - battery_operational_availability)
-    elseif pv_included && pv_can_dispatch_without_battery
+    elseif pv_included && pv_can_dispatch_without_storage
         system_characteristics["gen_pv"]["probability"] = 
             pv_operational_availability
         system_characteristics["gen"]["probability"] = 
