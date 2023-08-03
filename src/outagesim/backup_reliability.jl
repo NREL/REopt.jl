@@ -1309,7 +1309,9 @@ function return_backup_reliability(;
     #Four systems are 1) no PV + no battery, 2) PV + battery, 3) PV + no battery, and 4) no PV + battery
     system_characteristics = Dict(
         "gen" => Dict(
-            "probability" => 1,
+            "probability" => (pv_included && pv_can_dispatch_without_storage ? 1 - pv_operational_availability : 1) *
+                            (battery_size_kwh > 0 ? 1 - battery_operational_availability : 1) *
+                            (H2_size_kwh > 0 ? 1 - H2_operational_availability : 1),
             "net_critical_loads_kw" => critical_loads_kw,
             "battery_size_kw" => 0,
             "battery_size_kwh" => 0,
@@ -1317,7 +1319,9 @@ function return_backup_reliability(;
             "H2_fuelcell_size_kw" => 0,
             "H2_size_kwh" => 0),
         "gen_pv_battery" => Dict(
-            "probability" => 0,
+            "probability" => pv_included * pv_operational_availability *
+                            (battery_size_kwh > 0) * battery_operational_availability *
+                            (H2_size_kwh > 0 ? 1 - H2_operational_availability : 1),
             "net_critical_loads_kw" => net_critical_loads_kw,
             "battery_size_kw" => battery_size_kw,
             "battery_size_kwh" => battery_size_kwh,
@@ -1325,7 +1329,9 @@ function return_backup_reliability(;
             "H2_fuelcell_size_kw" => 0,
             "H2_size_kwh" => 0),
         "gen_battery" => Dict(
-            "probability" => 0,
+            "probability" => (pv_included ? 1 - pv_operational_availability : 1) *
+                            (battery_size_kwh > 0) * battery_operational_availability *
+                            (H2_size_kwh > 0 ? 1 - H2_operational_availability : 1),
             "net_critical_loads_kw" => critical_loads_kw,
             "battery_size_kw" => battery_size_kw,
             "battery_size_kwh" => battery_size_kwh,
@@ -1333,7 +1339,9 @@ function return_backup_reliability(;
             "H2_fuelcell_size_kw" => 0,
             "H2_size_kwh" => 0),
         "gen_pv" => Dict(
-            "probability" => 0,
+            "probability" => (pv_included && pv_can_dispatch_without_storage) * pv_operational_availability *
+                            (battery_size_kwh > 0 ? 1 - battery_operational_availability : 1) *
+                            (H2_size_kwh > 0 ? 1 - H2_operational_availability : 1),
             "net_critical_loads_kw" => net_critical_loads_kw,
             "battery_size_kw" => 0,
             "battery_size_kwh" => 0,
@@ -1341,7 +1349,9 @@ function return_backup_reliability(;
             "H2_fuelcell_size_kw" => 0,
             "H2_size_kwh" => 0),
         "gen_H2" => Dict(
-            "probability" => 0,
+            "probability" => (pv_included ? 1 - pv_operational_availability : 1) *
+                            (battery_size_kwh > 0 ? battery_operational_availability : 1) *
+                            (H2_size_kwh > 0) * H2_operational_availability,
             "net_critical_loads_kw" => critical_loads_kw,
             "battery_size_kw" => 0,
             "battery_size_kwh" => 0,
@@ -1349,7 +1359,9 @@ function return_backup_reliability(;
             "H2_fuelcell_size_kw" => H2_fuelcell_size_kw,
             "H2_size_kwh" => H2_size_kwh),
         "gen_pv_battery_H2" => Dict(
-            "probability" => 0,
+            "probability" => pv_included * pv_operational_availability *
+                            (battery_size_kwh > 0) * battery_operational_availability *
+                            (H2_size_kwh > 0) * H2_operational_availability,
             "net_critical_loads_kw" => net_critical_loads_kw,
             "battery_size_kw" => battery_size_kw,
             "battery_size_kwh" => battery_size_kwh,
@@ -1357,7 +1369,9 @@ function return_backup_reliability(;
             "H2_fuelcell_size_kw" => H2_fuelcell_size_kw,
             "H2_size_kwh" => H2_size_kwh),
         "gen_battery_H2" => Dict(
-            "probability" => 0,
+            "probability" => (pv_included ? 1 - pv_operational_availability : 1) *
+                            (battery_size_kwh > 0) * battery_operational_availability *
+                            (H2_size_kwh > 0) * H2_operational_availability,
             "net_critical_loads_kw" => critical_loads_kw,
             "battery_size_kw" => battery_size_kw,
             "battery_size_kwh" => battery_size_kwh,
@@ -1365,7 +1379,9 @@ function return_backup_reliability(;
             "H2_fuelcell_size_kw" => H2_fuelcell_size_kw,
             "H2_size_kwh" => H2_size_kwh),
         "gen_pv_H2" => Dict(
-            "probability" => 0,
+            "probability" => (pv_included ? 1 - pv_operational_availability : 1) *
+                            (battery_size_kwh > 0 ? battery_operational_availability : 1) *
+                            (H2_size_kwh > 0) * H2_operational_availability,
             "net_critical_loads_kw" => net_critical_loads_kw,
             "battery_size_kw" => 0,
             "battery_size_kwh" => 0,
@@ -1373,33 +1389,33 @@ function return_backup_reliability(;
             "H2_fuelcell_size_kw" => H2_fuelcell_size_kw,
             "H2_size_kwh" => H2_size_kwh)
     )
-    #Sets probabilities for each potential system configuration
-    if battery_size_kw > 0 && pv_included
-        system_characteristics["gen_pv_battery"]["probability"] = 
-            battery_operational_availability * pv_operational_availability
-        system_characteristics["gen_battery"]["probability"] = 
-            battery_operational_availability * (1 - pv_operational_availability)
-        if pv_can_dispatch_without_storage
-            system_characteristics["gen_pv"]["probability"] = 
-                (1 - battery_operational_availability) * pv_operational_availability
-            system_characteristics["gen"]["probability"] = 
-                (1 - battery_operational_availability) * (1 - pv_operational_availability)
-        else
-            #gen_pv probability stays zero and that case is combined with gen only
-            system_characteristics["gen"]["probability"] = 
-                (1 - battery_operational_availability) 
-        end
-    elseif battery_size_kw > 0
-        system_characteristics["gen_battery"]["probability"] = 
-            battery_operational_availability
-        system_characteristics["gen"]["probability"] = 
-            (1 - battery_operational_availability)
-    elseif pv_included && pv_can_dispatch_without_storage
-        system_characteristics["gen_pv"]["probability"] = 
-            pv_operational_availability
-        system_characteristics["gen"]["probability"] = 
-            (1 - pv_operational_availability)
-    end
+    # #Sets probabilities for each potential system configuration
+    # if battery_size_kw > 0 && pv_included
+    #     system_characteristics["gen_pv_battery"]["probability"] = 
+    #         battery_operational_availability * pv_operational_availability * (1 - H2_operational_availability)
+    #     system_characteristics["gen_battery"]["probability"] = 
+    #         battery_operational_availability * (1 - pv_operational_availability) * (1 - H2_operational_availability)
+    #     if pv_can_dispatch_without_storage
+    #         system_characteristics["gen_pv"]["probability"] = 
+    #             (1 - battery_operational_availability) * pv_operational_availability * (1 - H2_operational_availability)
+    #         system_characteristics["gen"]["probability"] = 
+    #             (1 - battery_operational_availability) * (1 - pv_operational_availability) * (1 - H2_operational_availability)
+    #     else
+    #         #gen_pv probability stays zero and that case is combined with gen only
+    #         system_characteristics["gen"]["probability"] = 
+    #             (1 - battery_operational_availability) * (1 - H2_operational_availability)
+    #     end
+    # elseif battery_size_kw > 0
+    #     system_characteristics["gen_battery"]["probability"] = 
+    #         battery_operational_availability * (1 - H2_operational_availability)
+    #     system_characteristics["gen"]["probability"] = 
+    #         (1 - battery_operational_availability) * (1 - H2_operational_availability)
+    # elseif pv_included && pv_can_dispatch_without_storage
+    #     system_characteristics["gen_pv"]["probability"] = 
+    #         pv_operational_availability * (1 - H2_operational_availability)
+    #     system_characteristics["gen"]["probability"] = 
+    #         (1 - pv_operational_availability) * (1 - H2_operational_availability)
+    # end
 
     results_no_fuel_limit = []
     for (description, system) in system_characteristics
