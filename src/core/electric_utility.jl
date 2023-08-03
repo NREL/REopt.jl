@@ -100,13 +100,13 @@
 
     **Climate Emissions**
     - For sites in the contiguous United States: 
-        - Default climate-related emissions factors (CO2e) come from NREL's Cambium database (Current version: 2022)
-            - By default, REopt uses *levelized long-run marginal emission rates for CO2-equivalent emissions* for the state in which the site is located. ## TODO check is BA's work and if not, use state's or GEAs. 
-                The emissions rates are levelized over the analysis period (e.g., from 2023 through 2047 for a 25-year analysis)
+        - Default climate-related emissions factors come from NREL's Cambium database (Current version: 2022)
+            - By default, REopt uses *levelized long-run marginal emission rates for CO2-equivalent (CO2e) emissions* for the state in which the site is located. 
+                By default, the emissions rates are levelized over the analysis period (e.g., from 2024 through 2048 for a 25-year analysis)
             - The inputs to the Cambium API request can be modified by the user based on emissions accounting needs (e.g., can change "lifetime" to 1 to analyze a single year's emissions)
             - Note for analysis periods extending beyond 2050: Values beyond 2050 are estimated with the 2050 values. Analysts are advised to use caution when selecting values that place significant weight on 2050 (e.g., greater than 50%)
         - Users can alternatively choose to use emissions factors from the EPA's AVERT by setting `co2_from_avert` to `true`
-    - For Alaska and HI: Climate-related emissions rates for AK and HI come from... 
+    - For Alaska and HI: Grid CO2e emissions rates for AK and HI come from the eGRID database. These are single values repeated throughout the year. The default annual emissions_factor_CO2_decrease_fraction will be applied to this rate to account for future greening of the grid.   
     - For sites outside of the United States: We currently do not have default grid emissions rates for sites outside of the U.S. For these sites, users must supply custom emissions factor series (e.g., emissions_factor_series_lb_CO2_per_kwh) and projected emissions decreases (e.g., emissions_factor_CO2_decrease_fraction). 
 
     **Health Emissions**
