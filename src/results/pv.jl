@@ -97,12 +97,12 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 
         if !isempty(p.techs.electrolyzer)
             PVtoElectrolyzer = (m[Symbol("dvProductionToElectrolyzer"*_n)][t, ts] for ts in p.time_steps)
-            r["to_electrolyzer_series_kw"] = round.(value.(PVtoElectrolyzer), digits=3)
+            r["electric_to_electrolyzer_series_kw"] = round.(value.(PVtoElectrolyzer), digits=3)
         end
 
         if !isempty(p.techs.compressor)
             PVtoCompressor = (m[Symbol("dvProductionToCompressor"*_n)][t, ts] for ts in p.time_steps)
-            r["to_compressor_series_kw"] = round.(value.(PVtoCompressor), digits=3)
+            r["electric_to_compressor_series_kw"] = round.(value.(PVtoCompressor), digits=3)
         end
         
         d[t] = r

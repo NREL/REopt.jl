@@ -96,7 +96,7 @@ struct Electrolyzer <: AbstractElectrolyzer
         installed_cost_per_kw = 15782.5,
         om_cost_per_kw = 631.3,
         om_cost_per_kg = 0,
-        efficiency_kwh_per_kg = 3.5,
+        efficiency_kwh_per_kg = 54.6,
         macrs_option_years = 7,
         macrs_bonus_fraction = 0.0,
         macrs_itc_reduction = 0.5,
