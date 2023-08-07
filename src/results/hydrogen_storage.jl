@@ -41,18 +41,20 @@ function add_hydrogen_storage_lp_results(m::JuMP.AbstractModel, p::REoptInputs, 
     r = Dict{String, Any}()
     r["size_kg"] = round(value(m[Symbol("dvStorageEnergy"*_n)][b]), digits=2)
 
-    if r["size_kg"] != 0
-    	soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
-        r["soc_series_fraction"] = round.(value.(soc) ./ r["size_kg"], digits=3)
+    # if r["size_kg"] != 0
 
-        discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
-        r["storage_to_compressor_series_kg"] = round.(value.(discharge), digits=3)
+    soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
+    r["soc_series_fraction"] = round.(value.(soc) ./ r["size_kg"], digits=3)
 
-        r["initial_capital_cost"] = r["size_kg"] * p.s.storage.attr[b].installed_cost_per_kg
-    else
-        r["soc_series_fraction"] = []
-        r["storage_to_compressor_series_kg"] = []
-    end
+    discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
+    r["storage_to_compressor_series_kg"] = round.(value.(discharge), digits=3)
+
+    r["initial_capital_cost"] = round(r["size_kg"] * p.s.storage.attr[b].installed_cost_per_kg, digits = 2)
+
+    # else
+    #     r["soc_series_fraction"] = []
+    #     r["storage_to_compressor_series_kg"] = []
+    # end
 
     d[b] = r
     nothing
@@ -61,22 +63,23 @@ end
 function add_hydrogen_storage_hp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::String; _n="")
     # Adds the `Storage` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
     # Note: the node number is an empty string if evaluating a single `Site`.
-
     r = Dict{String, Any}()
     r["size_kg"] = round(value(m[Symbol("dvStorageEnergy"*_n)][b]), digits=2)
 
-    if r["size_kg"] != 0
-    	soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
-        r["soc_series_fraction"] = round.(value.(soc) ./ r["size_kg"], digits=3)
+    # if r["size_kg"] != 0
 
-        discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
-        r["storage_to_h2_load_series_kg"] = round.(value.(discharge), digits=3)
+    soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
+    r["soc_series_fraction"] = round.(value.(soc) ./ r["size_kg"], digits=3)
 
-        r["initial_capital_cost"] = r["size_kg"] * p.s.storage.attr[b].installed_cost_per_kg
-    else
-        r["soc_series_fraction"] = []
-        r["storage_to_h2_load_series_kg"] = []
-    end
+    discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
+    r["storage_to_h2_load_series_kg"] = round.(value.(discharge), digits=3)
+
+    r["initial_capital_cost"] = round(r["size_kg"] * p.s.storage.attr[b].installed_cost_per_kg, digits = 2)
+
+    # else
+    #     r["soc_series_fraction"] = []
+    #     r["storage_to_h2_load_series_kg"] = []
+    # end
 
     d[b] = r
     nothing

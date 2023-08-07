@@ -44,24 +44,22 @@
 function add_compressor_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     # Adds the `Compressor` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
     # Note: the node number is an empty string if evaluating a single `Site`.
-    print()
+
     r = Dict{String, Any}()
     r["size_kw"] = round(value(m[Symbol("dvSize"*_n)]["Compressor"]), digits=4)
 
     CompressorConsumption = @expression(m, [ts in p.time_steps],
-                                sum(m[Symbol("dvProductionToCompressor"*_n)][t, ts] for t in p.techs.elec)
-                                + m[Symbol("dvGridToCompressor"*_n)][ts]
-                                + sum(m[Symbol("dvStorageToCompressor"*_n)][b, ts] for b in p.s.storage.types.elec) 
+                                sum(p.production_factor[t, ts] * p.levelization_factor[t] * 
+                                m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.compressor)
                             )
     r["electricity_consumed_series_kw"] = round.(value.(CompressorConsumption), digits=3)
     r["year_one_electricity_consumed_kwh"] = round(sum(r["electricity_consumed_series_kw"]), digits=2)
 
     CompressorProduction = @expression(m, [ts in p.time_steps],
-                                sum(p.s.compressor.efficiency_kwh_per_kg * p.production_factor[t, ts] * p.levelization_factor[t] * 
-                                m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.compressor)
+                                sum(m[Symbol("dvProductionToStorage"*_n)]["HydrogenStorageHP", t, ts] for t in p.techs.compressor)
                             )
     r["hydrogen_compressed_series_kg"] = round.(value.(CompressorProduction), digits=3)
-    r["year_one_hydrogen_compressed_kg"] = round(sum(r["hydrogen_compressed_series_kg"]), digits=2)
+    r["year_one_hydrogen_compressed_kg"] = round(sum(r["hydrogen_compressed_series_kg"]), digits=2)                      
 
     # PVPerUnitSizeOMCosts = p.om_cost_per_kw[t] * p.pwf_om * m[Symbol("dvSize"*_n)][t]
     # r["lifecycle_om_cost_after_tax"] = round(value(PVPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_rate_fraction), digits=0)

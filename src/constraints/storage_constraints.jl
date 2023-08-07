@@ -255,7 +255,8 @@ function add_storage_sum_constraints(m, p; _n="")
 end
 
 function add_hp_hydrogen_storage_dispatch_constraints(m, p, b; _n="")
-				
+
+    # @constraint(m, m[Symbol("dvStoredEnergy"*_n)][b, 3] == 10)
 	# Constraint
 	@constraint(m, [ts in p.time_steps],
         m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  

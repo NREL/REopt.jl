@@ -211,7 +211,6 @@ function add_thermal_load_constraints(m, p; _n="")
 end
 
 function add_hydrogen_load_balance_constraints(m, p; _n="") 
-
 	##Constraint: Hydrogen load can only be served from high pressure storage
     if !isempty(p.s.storage.types.hydrogen_hp)
         @constraint(m, [ts in p.time_steps], 
