@@ -1582,3 +1582,99 @@ function num_storage_bins_default(size_kw::Real, size_kwh::Real)::Int
         return Int(duration * 20)
     end
 end
+
+
+function system_characteristics_new(pv_included, pv_can_dispatch_without_storage, battery_size_kwh, H2_size_kwh)
+    pv_operational_availability = 0.8
+    battery_operational_availability = 0.9
+    H2_operational_availability = 0.7
+    system_characteristics = Dict(
+        "gen" => (pv_included && pv_can_dispatch_without_storage ? 1 - pv_operational_availability : 1) *
+                            (battery_size_kwh > 0 ? 1 - battery_operational_availability : 1) *
+                            (H2_size_kwh > 0 ? 1 - H2_operational_availability : 1),
+        "gen_pv_battery" => pv_included * pv_operational_availability *
+                            (battery_size_kwh > 0) * battery_operational_availability *
+                            (H2_size_kwh > 0 ? 1 - H2_operational_availability : 1),
+        "gen_battery" => (pv_included ? 1 - pv_operational_availability : 1) *
+                            (battery_size_kwh > 0) * battery_operational_availability *
+                            (H2_size_kwh > 0 ? 1 - H2_operational_availability : 1),
+        "gen_pv" => (pv_included && pv_can_dispatch_without_storage) * pv_operational_availability *
+                            (battery_size_kwh > 0 ? 1 - battery_operational_availability : 1) *
+                            (H2_size_kwh > 0 ? 1 - H2_operational_availability : 1),
+        "gen_H2" => (pv_included ? 1 - pv_operational_availability : 1) *
+                            (battery_size_kwh > 0 ? 1 - battery_operational_availability : 1) *
+                            (H2_size_kwh > 0) * H2_operational_availability,
+        "gen_pv_battery_H2" => pv_included * pv_operational_availability *
+                            (battery_size_kwh > 0) * battery_operational_availability *
+                            (H2_size_kwh > 0) * H2_operational_availability,
+        "gen_battery_H2" => (pv_included ? 1 - pv_operational_availability : 1) *
+                            (battery_size_kwh > 0) * battery_operational_availability *
+                            (H2_size_kwh > 0) * H2_operational_availability,
+        "gen_pv_H2" => pv_included * pv_operational_availability *
+                            (battery_size_kwh > 0 ? 1 - battery_operational_availability : 1) *
+                            (H2_size_kwh > 0) * H2_operational_availability
+    )
+    return system_characteristics
+end
+
+function system_characteristics_old(pv_included, pv_can_dispatch_without_storage, battery_size_kwh, H2_size_kwh)
+    pv_operational_availability = 0.8
+    battery_operational_availability = 0.9
+    H2_operational_availability = 0.7
+    system_characteristics = Dict(
+        "gen" => 1.0,
+        "gen_pv_battery" => 0.0,
+        "gen_battery" => 0.0,
+        "gen_pv" => 0.0,
+        "gen_H2" => 0.0,
+        "gen_pv_battery_H2" => 0.0,
+        "gen_battery_H2" => 0.0,
+        "gen_pv_H2" => 0.0
+    )
+    #Sets probabilities for each potential system configuration
+    if battery_size_kwh > 0 && pv_included
+        system_characteristics["gen_pv_battery"] = 
+            battery_operational_availability * pv_operational_availability * (H2_size_kwh>0 ? 1 - H2_operational_availability : 1)
+        system_characteristics["gen_battery"] = 
+            battery_operational_availability * (1 - pv_operational_availability) * (H2_size_kwh>0 ? 1 - H2_operational_availability : 1)
+        system_characteristics["gen_pv_battery_H2"] = 
+            battery_operational_availability * pv_operational_availability * (H2_size_kwh>0 ? H2_operational_availability : 0)
+        system_characteristics["gen_battery_H2"] = 
+            battery_operational_availability * (1 - pv_operational_availability) * (H2_size_kwh>0 ? H2_operational_availability : 0)
+        system_characteristics["gen_pv_H2"] = 
+            (1 - battery_operational_availability) * pv_operational_availability * (H2_size_kwh>0 ? H2_operational_availability : 0)
+        if pv_can_dispatch_without_storage
+            system_characteristics["gen_pv"] = 
+                (1 - battery_operational_availability) * pv_operational_availability * (H2_size_kwh>0 ? 1 - H2_operational_availability : 1)
+            system_characteristics["gen"] = 
+                (1 - battery_operational_availability) * (1 - pv_operational_availability) * (H2_size_kwh>0 ? 1 - H2_operational_availability : 1)
+            system_characteristics["gen_H2"] = 
+                (1 - battery_operational_availability) * (1 - pv_operational_availability) * (H2_size_kwh>0 ? H2_operational_availability : 0)
+        else
+            #gen_pv probability stays zero and that case is combined with gen only
+            system_characteristics["gen"] = 
+                (1 - battery_operational_availability) * (H2_size_kwh>0 ? 1 - H2_operational_availability : 1)
+            system_characteristics["gen_H2"] = 
+                (1 - battery_operational_availability) * (H2_size_kwh>0 ? H2_operational_availability : 0)
+        end
+    elseif battery_size_kwh > 0
+        system_characteristics["gen_battery"] = 
+            battery_operational_availability
+        system_characteristics["gen"] = 
+            (1 - battery_operational_availability)
+        system_characteristics["gen_battery_H2"] = 
+            battery_operational_availability * (H2_size_kwh>0 ? H2_operational_availability : 0)
+        system_characteristics["gen_H2"] = 
+            (1 - battery_operational_availability) * (H2_size_kwh>0 ? H2_operational_availability : 0)
+    elseif pv_included && pv_can_dispatch_without_storage
+        system_characteristics["gen_pv"] = 
+            pv_operational_availability
+        system_characteristics["gen"] = 
+            (1 - pv_operational_availability)
+        system_characteristics["gen_pv_H2"] = 
+            pv_operational_availability * (H2_size_kwh>0 ? H2_operational_availability : 0)
+        system_characteristics["gen_H2"] = 
+            (1 - pv_operational_availability) * (H2_size_kwh>0 ? H2_operational_availability : 0)
+    end
+    return system_characteristics
+end
