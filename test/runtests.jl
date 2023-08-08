@@ -46,7 +46,19 @@ elseif "CPLEX" in ARGS
 
 else  # run HiGHS tests
 
-    @testset "Debug H2 in backup_reliability" begin
+    @testset "Temp test dev H2 in backup_reliability" begin
+        for pv_included in [true, false]
+            for pv_can_dispatch_without_storage in [true, false]
+                for battery_size_kwh in [1000,0]
+                    for H2_size_kwh in [1000,0]
+                        new = system_characteristics_new(pv_included, pv_can_dispatch_without_storage, battery_size_kwh, H2_size_kwh)
+                        old = system_characteristics_old(pv_included, pv_can_dispatch_without_storage, battery_size_kwh, H2_size_kwh)
+                        @test new == old
+                    end
+                end
+            end
+        end
+
         gen_storage_prob_matrix = Array{Float64}(undef,2,4,3)
         gen_storage_prob_matrix[1,:,:] = [0.1 0.0 0.0;
                                     0.0 0.3 0.0;
