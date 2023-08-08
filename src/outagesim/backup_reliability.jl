@@ -997,17 +997,18 @@ function backup_reliability_inputs(;r::Dict)::Dict
         end
     end
 
-    if haskey(r2, :battery_size_kw)
+    if haskey(r2, :battery_size_kw) != haskey(r2, :battery_size_kw)
+        push!(invalid_args, "Either both or neither of battery_size_kw and battery_size_kw inputs must be provided.")
+    elseif haskey(r2, :battery_size_kwh)
         if !microgrid_only || Bool(get(r2, :storage_microgrid_upgraded, false))
-            #check if minimum state of charge added. If so, then change battery size to effective size, and reduce starting SOC accordingly
             if haskey(r2, :battery_starting_soc_series_fraction) 
                 init_soc = r2[:battery_starting_soc_series_fraction]
             else
-                @warn("No battery soc series provided to reliability inputs. Assuming battery fully charged at start of outage.")
+                @warn("No battery SOC series provided to reliability inputs. Assuming battery fully charged at start of outage.")
                 init_soc = ones(length(r2[:critical_loads_kw]))
             end
             r2[:battery_starting_soc_kwh] = init_soc .* r2[:battery_size_kwh]
-            
+            #check if minimum state of charge added. If so, then change battery size to effective size, and reduce starting SOC accordingly
             if haskey(r2, :battery_minimum_soc_fraction) 
                 battery_minimum_soc_kwh = r2[:battery_size_kwh] * r2[:battery_minimum_soc_fraction]
                 r2[:battery_size_kwh] -= battery_minimum_soc_kwh
@@ -1016,9 +1017,28 @@ function backup_reliability_inputs(;r::Dict)::Dict
                 end
                 r2[:battery_starting_soc_kwh] .-= battery_minimum_soc_kwh
             end
-            
-            if !haskey(r2, :battery_size_kwh)
-                push!(invalid_args, "Battery kW provided to reliability inputs but no kWh provided.")
+        end
+    end
+
+    if haskey(r2, :H2_electrolyzer_size_kw) != haskey(r2, :H2_fuelcell_size_kw) || haskey(r2, :H2_electrolyzer_size_kw) != haskey(r2, :H2_size_kwh)
+        push!(invalid_args, "Either all or none of H2_electrolyzer_size_kw, H2_fuelcell_size_kw, and H2_size_kwh inputs must be provided.")
+    elseif haskey(r2, :H2_size_kwh)
+        if !microgrid_only || Bool(get(r2, :H2_microgrid_upgraded, false))
+            if haskey(r2, :H2_starting_soc_series_fraction) 
+                init_soc = r2[:H2_starting_soc_series_fraction]
+            else
+                @warn("No H2 storage SOC series provided to reliability inputs. Assuming H2 storage fully charged at start of outage.")
+                init_soc = ones(length(r2[:critical_loads_kw]))
+            end
+            r2[:H2_starting_soc_kwh] = init_soc .* r2[:H2_size_kwh]
+            #check if minimum state of charge added. If so, then change storage size to effective size, and reduce starting SOC accordingly
+            if haskey(r2, :H2_minimum_soc_fraction) 
+                H2_minimum_soc_kwh = r2[:H2_size_kwh] * r2[:H2_starting_soc_series_fraction] #TODO: H2_starting_soc_series_fraction could not exist
+                r2[:H2_size_kwh] -= H2_minimum_soc_kwh
+                if minimum(r2[:H2_starting_soc_kwh]) < H2_minimum_soc_kwh
+                    @warn("Some H2 storage starting states of charge are less than the provided minimum state of charge.")
+                end
+                r2[:H2_starting_soc_kwh] .-= H2_minimum_soc_kwh
             end
         end
     end
