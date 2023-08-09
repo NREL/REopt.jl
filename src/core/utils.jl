@@ -183,7 +183,7 @@ function dictkeys_tosymbols(d::Dict)
             "emissions_factor_series_lb_SO2_per_kwh",
             "emissions_factor_series_lb_PM25_per_kwh",
             #for ERP
-            "pv_production_factor_series", "battery_starting_soc_series_fraction"
+            "pv_production_factor_series", "battery_starting_soc_series_fraction", "H2_starting_soc_series_fraction"
         ] && !isnothing(v)
             try
                 v = convert(Array{Real, 1}, v)
