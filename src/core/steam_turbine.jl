@@ -104,8 +104,10 @@ function SteamTurbine(d::Dict; avg_boiler_fuel_load_mmbtu_per_hour::Union{Float6
     )
 
     # set all missing default values in custom_chp_inputs
-    defaults = get_steam_turbine_defaults_size_class(;avg_boiler_fuel_load_mmbtu_per_hour=avg_boiler_fuel_load_mmbtu_per_hour, 
+    stm_defaults_response = get_steam_turbine_defaults_size_class(;avg_boiler_fuel_load_mmbtu_per_hour=avg_boiler_fuel_load_mmbtu_per_hour, 
                                             size_class=st.size_class)
+    
+    defaults = stm_defaults_response["default_inputs"]
     for (k, v) in custom_st_inputs
         if isnan(v)
             if !(k == :inlet_steam_temperature_degF && !isnan(st.inlet_steam_superheat_degF))
