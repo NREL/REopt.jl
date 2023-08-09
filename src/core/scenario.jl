@@ -503,7 +503,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 @info "GhpGhx.jl model solved" #with status $(results["status"])."
                 ghp_inputs_removed_ghpghx_params = deepcopy(d["GHP"])
                 for param in ["ghpghx_inputs", "ghpghx_responses", "ghpghx_response_uuids"]
-                    if haskey(d["GHP"], param)    
+                    if haskey(ghp_inputs_removed_ghpghx_params, param)    
                         pop!(ghp_inputs_removed_ghpghx_params, param)
                     end
                 end                    
