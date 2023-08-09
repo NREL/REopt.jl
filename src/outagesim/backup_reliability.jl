@@ -1002,7 +1002,7 @@ function backup_reliability_inputs(;r::Dict)::Dict
     elseif haskey(r2, :battery_size_kwh)
         if !microgrid_only || Bool(get(r2, :storage_microgrid_upgraded, false))
             if haskey(r2, :battery_starting_soc_series_fraction) 
-                init_soc = r2[:battery_starting_soc_series_fraction]
+                init_soc = pop!(r2,:battery_starting_soc_series_fraction)
             else
                 @warn("No battery SOC series provided to reliability inputs. Assuming battery fully charged at start of outage.")
                 init_soc = ones(length(r2[:critical_loads_kw]))
@@ -1010,7 +1010,7 @@ function backup_reliability_inputs(;r::Dict)::Dict
             r2[:battery_starting_soc_kwh] = init_soc .* r2[:battery_size_kwh]
             #check if minimum state of charge added. If so, then change battery size to effective size, and reduce starting SOC accordingly
             if haskey(r2, :battery_minimum_soc_fraction) 
-                battery_minimum_soc_kwh = r2[:battery_size_kwh] * r2[:battery_minimum_soc_fraction]
+                battery_minimum_soc_kwh = r2[:battery_size_kwh] * pop!(r2,:battery_minimum_soc_fraction)
                 r2[:battery_size_kwh] -= battery_minimum_soc_kwh
                 if minimum(r2[:battery_starting_soc_kwh]) < battery_minimum_soc_kwh
                     @warn("Some battery starting states of charge are less than the provided minimum state of charge.")
@@ -1025,7 +1025,7 @@ function backup_reliability_inputs(;r::Dict)::Dict
     elseif haskey(r2, :H2_size_kwh)
         if !microgrid_only || Bool(get(r2, :H2_microgrid_upgraded, false))
             if haskey(r2, :H2_starting_soc_series_fraction) 
-                init_soc = r2[:H2_starting_soc_series_fraction]
+                init_soc = pop!(r2,:H2_starting_soc_series_fraction)
             else
                 @warn("No H2 storage SOC series provided to reliability inputs. Assuming H2 storage fully charged at start of outage.")
                 init_soc = ones(length(r2[:critical_loads_kw]))
@@ -1033,7 +1033,7 @@ function backup_reliability_inputs(;r::Dict)::Dict
             r2[:H2_starting_soc_kwh] = init_soc .* r2[:H2_size_kwh]
             #check if minimum state of charge added. If so, then change storage size to effective size, and reduce starting SOC accordingly
             if haskey(r2, :H2_minimum_soc_fraction) 
-                H2_minimum_soc_kwh = r2[:H2_size_kwh] * r2[:H2_minimum_soc_fraction]
+                H2_minimum_soc_kwh = r2[:H2_size_kwh] * pop!(r2,:H2_minimum_soc_fraction)
                 r2[:H2_size_kwh] -= H2_minimum_soc_kwh
                 if minimum(r2[:H2_starting_soc_kwh]) < H2_minimum_soc_kwh
                     @warn("Some H2 storage starting states of charge are less than the provided minimum state of charge.")
