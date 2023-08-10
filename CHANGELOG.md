@@ -23,7 +23,7 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop 2023-08-08
+## Develop 2023-08-09
 ### Changed
 - Updated `get_existing_chiller_cop` function to accept scalar values instead of vectors to allow for faster API transactions.
 ## v0.32.4
@@ -38,6 +38,7 @@ Classify the change according to the following categories:
 - Issue with using a leap year with a URDB rate - the URDB rate was creating energy_rate of length 8784 instead of intended 8760
 - Don't double add adjustments to urdb rates with non-standard units
 - Corrected `Generator` **installed_cost_per_kw** from 500 to 650 if **only_runs_during_grid_outage** is _true_ or 800 if _false_
+- Corrected `SteamTurbine` defaults population from `get_steam_turbine_defaults_size_class()`
 
 ## v0.32.3
 ### Fixed
