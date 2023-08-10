@@ -240,7 +240,7 @@ struct ElectricUtility
                         throw(@error("The provided ElectricUtility emissions factor series for $(ekey) does not match the time_steps_per_hour."))
                     end
                 else # if not user-provided, get emissions factors from AVERT and/or Cambium
-                    if ekey == "CO2" && co2_from_avert == false # Use Cambium for CO2
+                    if ekey == "CO2" && co2_from_avert == false && region_abbr ∉ ["AKGD","HIMS","HIOA"]  # Use Cambium for CO2 unless AK or HI 
                         if cambium_start_year < 2023 || cambium_start_year > 2050
                             @warn("The cambium_start_year must be between 2023 and 2050. Setting to cambium_start_year to 2024.")
                             cambium_start_year = 2024
@@ -405,7 +405,7 @@ function avert_region_abbreviation(latitude, longitude)
         end
     catch
         @warn "Could not look up AVERT emissions region closest to point ($(latitude), $(longitude)). Location is
-        likely invalid or well outside continental US, AK and HI." # TODO: what happens if cannot look this up? 
+        likely invalid or well outside continental US, AK and HI. Grid emissions assumed to be zero."
         return abbr, meters_to_region #nothing, nothing
     end
 
