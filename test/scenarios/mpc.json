@@ -104,6 +104,7 @@
             0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05]
     },
     "Generator": {
+        "fuel_avail_gal": 660,
         "size_kw": 30,
         "only_runs_during_grid_outage": false
     },
