@@ -215,9 +215,13 @@ This function returns the default value for ExistingChiller.cop based on:
     1. No information about load, returns average of lower and higher cop default values (`cop_unknown_thermal`)
     2. If the cooling electric `max_load_kw` is known, we first guess the thermal load profile using `cop_unknown_thermal`,
         and then we use the default logic to determine the `existing_chiller_cop` based on the peak thermal load with a thermal factor multiplier.
-    3. If the cooling thermal `max_load_kw_thermal` is known, same as 2. but we don't have to guess the cop to convert electric to thermal load first.
+    3. If the cooling thermal `max_load_kw_thermal` is known, sa    me as 2. but we don't have to guess the cop to convert electric to thermal load first.
 """
-function get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_on_peak_load=nothing, max_load_kw=nothing, max_load_kw_thermal=nothing)
+function get_existing_chiller_default_cop(; 
+            existing_chiller_max_thermal_factor_on_peak_load::Union{Real, Nothing}=nothing, 
+            max_load_kw::Union{Real, Nothing}=nothing, 
+            max_load_kw_thermal::Union{Real, Nothing}=nothing)
+    print("Exsiting CHILLER CALLED")
     cop_less_than_100_ton = 4.40
     cop_more_than_100_ton = 4.69
     cop_unknown_thermal = (cop_less_than_100_ton + cop_more_than_100_ton) / 2.0
@@ -228,10 +232,13 @@ function get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_
         max_cooling_load_ton = max_load_kw / KWH_THERMAL_PER_TONHOUR * cop_unknown_thermal
     end
     if isnothing(max_cooling_load_ton) || isnothing(existing_chiller_max_thermal_factor_on_peak_load)
+        print("RETURNING UNKNOWN")
         return cop_unknown_thermal
     elseif max_cooling_load_ton * existing_chiller_max_thermal_factor_on_peak_load < 100.0
+        print("RETURNING LT")
         return cop_less_than_100_ton
     else
+        print("RETURNING GT")
         return cop_more_than_100_ton
     end
 end
