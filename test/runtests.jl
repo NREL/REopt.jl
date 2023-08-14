@@ -240,6 +240,85 @@ else  # run HiGHS tests
         @test sum(s.electric_load.loads_kw[1:5]) + sum(s.electric_load.loads_kw[23:24]) == 0.0
         @test sum(s.electric_load.loads_kw[6:22]) / sum(s.electric_load.loads_kw) - 1/365 ≈ 0.0 atol=0.000001
     end
+    
+    # removed Wind test for two reasons
+    # 1. reduce WindToolKit calls in tests
+    # 2. HiGHS does not support SOS or indicator constraints, which are needed for export constraints
+
+    # @testset "Minimize Unserved Load" is too slow with Cbc (killed after 8 hours)
+    
+    @testset "Simulated load function consistency with REoptInputs.s (Scenario)" begin
+        """
+
+        This tests the consistency between getting DOE commercial reference building (CRB) load data
+            from the simulated_load function and the processing of REoptInputs.s (Scenario struct).
+                
+        The simulated_load function is used for the /simulated_load endpoint in the REopt API,
+            in particular for the webtool/UI to display loads before running REopt, but is also generally
+            an external way to access CRB load data without running REopt.
+
+        One particular test specifically for the webtool/UI is for the heating load because there is just a 
+            single heating load instead of separated space heating and domestic hot water loads.
+        
+        """
+        input_data = JSON.parsefile("./scenarios/simulated_load.json")
+        
+        input_data["ElectricLoad"] = Dict([("blended_doe_reference_names", ["Hospital", "FlatLoad_16_5"]),
+                                        ("blended_doe_reference_percents", [0.2, 0.8])
+                                    ])
+        
+        input_data["CoolingLoad"] = Dict([("blended_doe_reference_names", ["LargeOffice", "FlatLoad"]),
+                                        ("blended_doe_reference_percents", [0.5, 0.5])
+                                    ])
+        
+        # Heating load from the UI will call the /simulated_load endpoint first to parse single heating mmbtu into separate Space and DHW mmbtu
+        annual_mmbtu = 10000.0
+        doe_reference_name_heating = ["LargeOffice", "FlatLoad"]
+        percent_share_heating = [0.3, 0.7]
+        
+        d_sim_load_heating = Dict([("latitude", input_data["Site"]["latitude"]),
+                                    ("longitude", input_data["Site"]["longitude"]),
+                                    ("load_type", "heating"),  # since annual_tonhour is not given
+                                    ("doe_reference_name", doe_reference_name_heating),
+                                    ("percent_share", percent_share_heating),
+                                    ("annual_mmbtu", annual_mmbtu)
+                                    ])
+        
+        sim_load_response_heating = simulated_load(d_sim_load_heating)                            
+        
+        input_data["SpaceHeatingLoad"] = Dict([("blended_doe_reference_names", doe_reference_name_heating),
+                                        ("blended_doe_reference_percents", percent_share_heating),
+                                        ("annual_mmbtu", sim_load_response_heating["space_annual_mmbtu"])
+                                    ])
+        
+        input_data["DomesticHotWaterLoad"] = Dict([("blended_doe_reference_names", doe_reference_name_heating),
+                                        ("blended_doe_reference_percents", percent_share_heating),
+                                        ("annual_mmbtu", sim_load_response_heating["dhw_annual_mmbtu"])
+                                    ])
+        
+        s = Scenario(input_data)
+        inputs = REoptInputs(s)
+        
+        # Call simulated_load function to check cooling
+        d_sim_load_elec_and_cooling = Dict([("latitude", input_data["Site"]["latitude"]),
+                                            ("longitude", input_data["Site"]["longitude"]),
+                                            ("load_type", "electric"),  # since annual_tonhour is not given
+                                            ("doe_reference_name", input_data["ElectricLoad"]["blended_doe_reference_names"]),
+                                            ("percent_share", input_data["ElectricLoad"]["blended_doe_reference_percents"]),
+                                            ("cooling_doe_ref_name", input_data["CoolingLoad"]["blended_doe_reference_names"]),
+                                            ("cooling_pct_share", input_data["CoolingLoad"]["blended_doe_reference_percents"]),                    
+                                            ])
+        
+        sim_load_response_elec_and_cooling = simulated_load(d_sim_load_elec_and_cooling)
+        sim_electric_kw = sim_load_response_elec_and_cooling["loads_kw"]
+        sim_cooling_ton = sim_load_response_elec_and_cooling["cooling_defaults"]["loads_ton"]
+        
+        total_heating_fuel_load_reopt_inputs = (s.space_heating_load.loads_kw + s.dhw_load.loads_kw) ./ REopt.KWH_PER_MMBTU ./ REopt.EXISTING_BOILER_EFFICIENCY
+        @test sim_load_response_heating["loads_mmbtu_per_hour"] ≈ round.(total_heating_fuel_load_reopt_inputs, digits=3) atol=0.001
+        
+        @test sim_electric_kw ≈ s.electric_load.loads_kw atol=0.1
+        @test sim_cooling_ton ≈ s.cooling_load.loads_kw_thermal ./ REopt.KWH_THERMAL_PER_TONHOUR atol=0.1    
+    end
 
     @testset "Backup Generator Reliability" begin
 
@@ -466,83 +545,4 @@ else  # run HiGHS tests
         @test reliability_results["cumulative_survival_final_time_step"][1] ≈ 0.802997 atol=0.0001
         @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.817586 atol=0.0001
     end                            
-
-    # removed Wind test for two reasons
-    # 1. reduce WindToolKit calls in tests
-    # 2. HiGHS does not support SOS or indicator constraints, which are needed for export constraints
-
-    # @testset "Minimize Unserved Load" is too slow with Cbc (killed after 8 hours)
-    
-    @testset "Simulated load function consistency with REoptInputs.s (Scenario)" begin
-        """
-
-        This tests the consistency between getting DOE commercial reference building (CRB) load data
-            from the simulated_load function and the processing of REoptInputs.s (Scenario struct).
-                
-        The simulated_load function is used for the /simulated_load endpoint in the REopt API,
-            in particular for the webtool/UI to display loads before running REopt, but is also generally
-            an external way to access CRB load data without running REopt.
-
-        One particular test specifically for the webtool/UI is for the heating load because there is just a 
-            single heating load instead of separated space heating and domestic hot water loads.
-        
-        """
-        input_data = JSON.parsefile("./scenarios/simulated_load.json")
-        
-        input_data["ElectricLoad"] = Dict([("blended_doe_reference_names", ["Hospital", "FlatLoad_16_5"]),
-                                        ("blended_doe_reference_percents", [0.2, 0.8])
-                                    ])
-        
-        input_data["CoolingLoad"] = Dict([("blended_doe_reference_names", ["LargeOffice", "FlatLoad"]),
-                                        ("blended_doe_reference_percents", [0.5, 0.5])
-                                    ])
-        
-        # Heating load from the UI will call the /simulated_load endpoint first to parse single heating mmbtu into separate Space and DHW mmbtu
-        annual_mmbtu = 10000.0
-        doe_reference_name_heating = ["LargeOffice", "FlatLoad"]
-        percent_share_heating = [0.3, 0.7]
-        
-        d_sim_load_heating = Dict([("latitude", input_data["Site"]["latitude"]),
-                                    ("longitude", input_data["Site"]["longitude"]),
-                                    ("load_type", "heating"),  # since annual_tonhour is not given
-                                    ("doe_reference_name", doe_reference_name_heating),
-                                    ("percent_share", percent_share_heating),
-                                    ("annual_mmbtu", annual_mmbtu)
-                                    ])
-        
-        sim_load_response_heating = simulated_load(d_sim_load_heating)                            
-        
-        input_data["SpaceHeatingLoad"] = Dict([("blended_doe_reference_names", doe_reference_name_heating),
-                                        ("blended_doe_reference_percents", percent_share_heating),
-                                        ("annual_mmbtu", sim_load_response_heating["space_annual_mmbtu"])
-                                    ])
-        
-        input_data["DomesticHotWaterLoad"] = Dict([("blended_doe_reference_names", doe_reference_name_heating),
-                                        ("blended_doe_reference_percents", percent_share_heating),
-                                        ("annual_mmbtu", sim_load_response_heating["dhw_annual_mmbtu"])
-                                    ])
-        
-        s = Scenario(input_data)
-        inputs = REoptInputs(s)
-        
-        # Call simulated_load function to check cooling
-        d_sim_load_elec_and_cooling = Dict([("latitude", input_data["Site"]["latitude"]),
-                                            ("longitude", input_data["Site"]["longitude"]),
-                                            ("load_type", "electric"),  # since annual_tonhour is not given
-                                            ("doe_reference_name", input_data["ElectricLoad"]["blended_doe_reference_names"]),
-                                            ("percent_share", input_data["ElectricLoad"]["blended_doe_reference_percents"]),
-                                            ("cooling_doe_ref_name", input_data["CoolingLoad"]["blended_doe_reference_names"]),
-                                            ("cooling_pct_share", input_data["CoolingLoad"]["blended_doe_reference_percents"]),                    
-                                            ])
-        
-        sim_load_response_elec_and_cooling = simulated_load(d_sim_load_elec_and_cooling)
-        sim_electric_kw = sim_load_response_elec_and_cooling["loads_kw"]
-        sim_cooling_ton = sim_load_response_elec_and_cooling["cooling_defaults"]["loads_ton"]
-        
-        total_heating_fuel_load_reopt_inputs = (s.space_heating_load.loads_kw + s.dhw_load.loads_kw) ./ REopt.KWH_PER_MMBTU ./ REopt.EXISTING_BOILER_EFFICIENCY
-        @test sim_load_response_heating["loads_mmbtu_per_hour"] ≈ round.(total_heating_fuel_load_reopt_inputs, digits=3) atol=0.001
-        
-        @test sim_electric_kw ≈ s.electric_load.loads_kw atol=0.1
-        @test sim_cooling_ton ≈ s.cooling_load.loads_kw_thermal ./ REopt.KWH_THERMAL_PER_TONHOUR atol=0.1    
-    end
 end
