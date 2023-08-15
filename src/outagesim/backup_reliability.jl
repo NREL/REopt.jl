@@ -832,7 +832,7 @@ Return a dictionary of inputs required for backup reliability calculations.
     -generator_operational_availability::Union{Real, Vector{<:Real}} = 0.995    Fraction of year generators not down for maintenance
     -generator_failure_to_start::Union{Real, Vector{<:Real}} = 0.0094           Chance of generator starting given outage
     -generator_mean_time_to_failure::Union{Real, Vector{<:Real}} = 1100         Average number of time steps between a generator's failures. 1/(failure to run probability). 
-    -num_generators::Union{Int, Vector{Int}} = 1                                                    Number of generators. 
+    -num_generators::Union{Int, Vector{Int}} = 1                                Number of generators. 
     -generator_size_kw::Union{Real, Vector{<:Real}} = 0.0                       Backup generator capacity. 
     -num_battery_bins::Int                                                      Number of bins for discretely modeling battery state of charge
     -max_outage_duration::Int = 96                                              Maximum outage time step modeled
@@ -842,6 +842,8 @@ Return a dictionary of inputs required for backup reliability calculations.
     -generator_fuel_intercept_per_hr::Union{Real, Vector{<:Real}} = 0.0         Amount of fuel burned each time step while idling. Fuel units should be consistent with fuel_limit and generator_fuel_burn_rate_per_kwh.
     -fuel_limit_is_per_generator::Union{Bool, Vector{Bool}} = false             Boolean to determine whether fuel limit is given per generator or per generator type
     -generator_fuel_burn_rate_per_kwh::Union{Real, Vector{<:Real}} = 0.076      Amount of fuel used per kWh generated. Fuel units should be consistent with fuel_limit and generator_fuel_intercept_per_hr.
+    -num_H2_bins::Int                                                           Number of bins for discretely modeling battery state of charge
+    -H2_minimum_soc_fraction::Real = 0.0                                        The minimum H2 state of charge (represented as a fraction) allowed during outages
 """
 function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dict())::Dict
 
@@ -943,11 +945,11 @@ Return a dictionary of inputs required for backup reliability calculations.
     -generator_fuel_burn_rate_per_kwh::Union{Real, Vector{<:Real}} = 0.076      Amount of fuel used per kWh generated. Fuel units should be consistent with fuel_limit and generator_fuel_intercept_per_hr.
     -H2_operational_availability::Real = 1.0                                    Likelihood H2 system will be available at start of outage       
     -H2_starting_soc_series_fraction::Vector= []                                H2 kWh state of charge time series during normal grid-connected usage
-    -H2_minimum_soc_fraction                = 0.0                               The minimum H2 state of charge (represented as a fraction) allowed during outages
+    -H2_minimum_soc_fraction::Real          = 0.0                               The minimum H2 state of charge (represented as a fraction) allowed during outages
     -H2_electrolyzer_size_kw::Real          = 0.0,                              H2 system electrolyzer power capacity
     -H2_fuelcell_size_kw::Real              = 0.0,                              H2 system fuel cell power capacity
     -H2_size_kwh::Real                      = 0.0,                              H2 storage kWh of energy capacity
-    -num_H2_bins                            = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kwh),     Number of bins for discretely modeling battery state of charge
+    -num_H2_bins::Int                       = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kwh),     Number of bins for discretely modeling battery state of charge
     -H2_charge_efficiency::Real             = 1.0,                              Efficiency of charging H2 system
     -H2_discharge_efficiency::Real          = 1.0,                              Efficiency of discharging H2 system
 
@@ -1588,11 +1590,11 @@ Possible keys in r:
 -max_outage_duration::Int = 96                          Maximum outage duration modeled
 -H2_operational_availability::Real = 1.0                Likelihood H2 system will be available at start of outage       
 -H2_starting_soc_series_fraction::Vector= []            H2 kWh state of charge time series during normal grid-connected usage
--H2_minimum_soc_fraction                = 0.0           The minimum H2 state of charge (represented as a fraction) allowed during outages
+-H2_minimum_soc_fraction::Real          = 0.0           The minimum H2 state of charge (represented as a fraction) allowed during outages
 -H2_electrolyzer_size_kw::Real          = 0.0,          H2 system electrolyzer power capacity
 -H2_fuelcell_size_kw::Real              = 0.0,          H2 system fuel cell power capacity
 -H2_size_kwh::Real                      = 0.0,          H2 storage kWh of energy capacity
--num_H2_bins                            = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kwh),     Number of bins for discretely modeling battery state of charge
+-num_H2_bins::Int                       = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kwh),     Number of bins for discretely modeling battery state of charge
 -H2_charge_efficiency::Real             = 1.0,          Efficiency of charging H2 system
 -H2_discharge_efficiency::Real          = 1.0,          Efficiency of discharging H2 system
 
