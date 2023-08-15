@@ -943,6 +943,7 @@ Return a dictionary of inputs required for backup reliability calculations.
     -generator_fuel_burn_rate_per_kwh::Union{Real, Vector{<:Real}} = 0.076      Amount of fuel used per kWh generated. Fuel units should be consistent with fuel_limit and generator_fuel_intercept_per_hr.
     -H2_operational_availability::Real = 1.0                                    Likelihood H2 system will be available at start of outage       
     -H2_starting_soc_series_fraction::Vector= []                                H2 kWh state of charge time series during normal grid-connected usage
+    -H2_minimum_soc_fraction                = 0.0                               The minimum H2 state of charge (represented as a fraction) allowed during outages
     -H2_electrolyzer_size_kw::Real          = 0.0,                              H2 system electrolyzer power capacity
     -H2_fuelcell_size_kw::Real              = 0.0,                              H2 system fuel cell power capacity
     -H2_size_kwh::Real                      = 0.0,                              H2 storage kWh of energy capacity
@@ -1587,6 +1588,7 @@ Possible keys in r:
 -max_outage_duration::Int = 96                          Maximum outage duration modeled
 -H2_operational_availability::Real = 1.0                Likelihood H2 system will be available at start of outage       
 -H2_starting_soc_series_fraction::Vector= []            H2 kWh state of charge time series during normal grid-connected usage
+-H2_minimum_soc_fraction                = 0.0           The minimum H2 state of charge (represented as a fraction) allowed during outages
 -H2_electrolyzer_size_kw::Real          = 0.0,          H2 system electrolyzer power capacity
 -H2_fuelcell_size_kw::Real              = 0.0,          H2 system fuel cell power capacity
 -H2_size_kwh::Real                      = 0.0,          H2 storage kWh of energy capacity
