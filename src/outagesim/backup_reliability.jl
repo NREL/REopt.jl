@@ -877,16 +877,31 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
 
         #ERP tool uses effective battery size so need to subtract minimum SOC
         battery_size_kwh = get(d["ElectricStorage"], "size_kwh", 0)
-        
-
         init_soc = get(d["ElectricStorage"], "soc_series_fraction", [])
         battery_starting_soc_kwh = init_soc .* battery_size_kwh
-        
         battery_minimum_soc_kwh = battery_size_kwh * get(r2, :battery_minimum_soc_fraction, 0)
         r2[:battery_size_kwh] = battery_size_kwh - battery_minimum_soc_kwh
         r2[:battery_starting_soc_kwh] = battery_starting_soc_kwh .- battery_minimum_soc_kwh
         if minimum(r2[:battery_starting_soc_kwh]) < 0
             @warn("Some battery starting states of charge are less than the provided minimum state of charge.")
+        end
+    end
+
+    if haskey(d, "HydrogenStorageLP") && haskey(d, "Compressor") && haskey(d, "Electrolyzer") #TODO: condition on H2 upgraded into microgrid like with storage above?
+        r2[:H2_charge_efficiency] = p.s.storage.attr["HydrogenStorageLP"].charge_efficiency
+        r2[:H2_discharge_efficiency] = p.s.storage.attr["HydrogenStorageLP"].discharge_efficiency
+        r2[:H2_electrolyzer_size_kw] = get(d["Electrolyzer"], "size_kw", 0)
+        r2[:H2_fuelcell_size_kw] = get(d["Compressor"], "size_kw", 0)
+
+        #ERP tool uses effective storage size so need to subtract minimum SOC
+        H2_size_kwh = get(d["HydrogenStorageLP"], "size_kwh", 0)
+        init_soc = get(d["HydrogenStorageLP"], "soc_series_fraction", [])
+        H2_starting_soc_kwh = init_soc .* H2_size_kwh
+        H2_minimum_soc_kwh = H2_size_kwh * get(r2, :H2_minimum_soc_fraction, 0)
+        r2[:H2_size_kwh] = H2_size_kwh - H2_minimum_soc_kwh
+        r2[:H2_starting_soc_kwh] = H2_starting_soc_kwh .- H2_minimum_soc_kwh
+        if minimum(r2[:H2_starting_soc_kwh]) < 0
+            @warn("Some hydrogen storage starting states of charge are less than the provided minimum state of charge.")
         end
     end
     
