@@ -51,7 +51,7 @@ export
     get_absorption_chiller_defaults,
     avert_emissions_profiles,
     cambium_emissions_profile,
-    easiur_data
+    easiur_data,
     get_existing_chiller_default_cop
 
 import HTTP
