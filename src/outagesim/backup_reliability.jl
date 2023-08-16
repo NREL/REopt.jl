@@ -844,6 +844,9 @@ Return a dictionary of inputs required for backup reliability calculations.
     -generator_fuel_burn_rate_per_kwh::Union{Real, Vector{<:Real}} = 0.076      Amount of fuel used per kWh generated. Fuel units should be consistent with fuel_limit and generator_fuel_intercept_per_hr.
     -num_H2_bins::Int                                                           Number of bins for discretely modeling battery state of charge
     -H2_minimum_soc_fraction::Real = 0.0                                        The minimum H2 state of charge (represented as a fraction) allowed during outages
+    -H2_operational_availability::Real = 1.0                                    Likelihood H2 system will be available at start of outage       
+    -pv_operational_availability::Real = 0.98                                   Likelihood PV will be available at start of outage
+    -battery_operational_availability::Real = 0.97                              Likelihood battery will be available at start of outage       
 """
 function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dict())::Dict
 
@@ -940,7 +943,7 @@ Return a dictionary of inputs required for backup reliability calculations.
     -pv_production_factor_series::Array                                         PV production factor per time step (required if pv_size_kw in dictionary)
     -pv_migrogrid_upgraded::Bool                                                If true then PV runs during outage if microgrid_only = TRUE (defaults to false)
     -battery_operational_availability::Real = 0.97                              Likelihood battery will be available at start of outage       
-    -pv_operational_availability::Real = 0.98                                   Likelihood PV will be available at start of outage    -battery_size_kw::Real                                  Battery capacity. If no battery installed then PV disconnects from system during outage
+    -pv_operational_availability::Real = 0.98                                   Likelihood PV will be available at start of outage    
     -battery_size_kwh::Real                                                     Battery energy storage capacity
     -battery_size_kw::Real                                                      Battery power capacity
     -battery_charge_efficiency::Real                                            Battery charge efficiency
