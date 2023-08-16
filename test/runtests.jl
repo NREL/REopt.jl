@@ -47,25 +47,55 @@ elseif "CPLEX" in ARGS
 else  # run HiGHS tests
 
     @testset "Temp test dev H2 in backup_reliability" begin
-        inputs = Dict(
-            "critical_loads_kw" => [1,2,1,1], 
+        reopt_inputs = Dict(
+            "Site" => Dict(
+                "longitude" => -106.42077256104001,
+                "latitude" => 31.810468380036337
+            ),
+            "ElectricStorage" => Dict(
+                "min_kw" => 2000,
+                "max_kw" => 2000,
+                "min_kwh" => 10000,
+                "max_kwh" => 10000
+            ),
+            "Generator" => Dict(
+                "min_kw" => 2000,
+                "max_kw" => 2000
+            ),
+            "PV" => Dict(
+                "min_kw" => 4000,
+                "max_kw" => 4000
+            ),
+            "ElectricLoad" => Dict(
+                "doe_reference_name" => "FlatLoad",
+                "annual_kwh" => 175200000.0,
+                "critical_load_fraction" => 0.2
+            ),
+            "ElectricTariff" => Dict(
+                "urdb_label" => "5ed6c1a15457a3367add15ae"
+            )
+        )
+        p = REoptInputs(reopt_inputs)
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+            "output_flag" => false, "log_to_console" => false)
+        )
+        reopt_results = run_reopt(model, p)
+        reopt_results["Electrolyzer"] = Dict("size_kw"=>1000)
+        reopt_results["Compressor"] = Dict("size_kw"=>2000)
+        reopt_results["HydrogenStorageLP"] = Dict("size_kwh"=>20000, "soc_series_fraction"=>0.5*ones(8760))
+        erp_inputs = Dict(
             "generator_operational_availability" => 1, 
             "generator_failure_to_start" => 0.0,
             "generator_mean_time_to_failure" => 5, 
             "num_generators" => 2, 
-            "generator_size_kw" => 1, 
             "max_outage_duration" => 3, 
-            "battery_size_kw" => 3, 
-            "battery_size_kwh" => 6,
             "battery_minimum_soc_fraction" => 1/3,
-            "battery_starting_soc_series_fraction" => [0.5, 0.5, 0.5, 0.5],
-            "H2_electrolyzer_size_kw" => 1, 
-            "H2_fuelcell_size_kw" => 2, 
-            "H2_size_kwh" => 10,
-            "H2_minimum_soc_fraction" => 0.2,
-            "H2_starting_soc_series_fraction" => [0.8, 0.8, 0.8, 0.8]
+            "H2_minimum_soc_fraction" => 0.2
         )
-        inputs_processed = backup_reliability_inputs(r=inputs)
+        inputs_processed = backup_reliability_reopt_inputs(d=reopt_results, p=p, r=erp_inputs)
+        pop!(inputs_processed, :pv_kw_ac_time_series)
+        pop!(inputs_processed, :critical_loads_kw)
+        pop!(inputs_processed, :battery_starting_soc_kwh)
         @info inputs_processed
 
         # for pv_included in [true, false]
