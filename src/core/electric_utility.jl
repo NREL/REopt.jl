@@ -218,7 +218,7 @@ struct ElectricUtility
                 region_abbr = region_name_to_abbr(avert_emissions_region)
                 meters_to_region = 0
             end
-            
+            # Get all grid emissions series
             emissions_series_dict = Dict{String, Union{Nothing,Array{<:Real,1}}}()
             for (eseries, ekey) in [
                 (emissions_factor_series_lb_CO2_per_kwh, "CO2"),
@@ -243,7 +243,7 @@ struct ElectricUtility
                     if ekey == "CO2" && co2_from_avert == false && region_abbr ∉ ["AKGD","HIMS","HIOA"]  # Use Cambium for CO2 unless AK or HI 
                         if cambium_start_year < 2023 || cambium_start_year > 2050
                             @warn("The cambium_start_year must be between 2023 and 2050. Setting to cambium_start_year to 2024.")
-                            cambium_start_year = 2024
+                            cambium_start_year = 2024 # Update annually 
                         end
                         try
                             cambium_response_dict = cambium_emissions_profile( # Adjusted for day of week alignment with load
@@ -263,12 +263,12 @@ struct ElectricUtility
                             cambium_emissions_region = cambium_response_dict["location"]
                         catch
                             @warn("Could not look up Cambium emissions profile from point ($(latitude), $(longitude)).
-                            Location is likely outside continental US or something went wrong with the Cambium API request. Setting ")
+                            Location is likely outside continental US or something went wrong with the Cambium API request. Setting CO2 emissions to zero.")
                             emissions_series_dict[ekey] = zeros(Float64, 8760*time_steps_per_hour) 
                         end
                     else # otherwise use AVERT
                         if !isnothing(region_abbr)
-                            avert_data_year = 2021 # Must update when AVERT data are updated (TODO: Move to inputs?)
+                            avert_data_year = 2021 # Must update when AVERT data are updated
                             emissions_series_dict[ekey] = avert_emissions_profiles(
                                                             latitude = latitude,
                                                             longitude = longitude,
