@@ -32,7 +32,7 @@
 ```julia
     net_metering_limit_kw::Real = 0, # Upper limit on the total capacity of technologies that can participate in net metering agreement.
     interconnection_limit_kw::Real = 1.0e9, # Limit on total electric system capacity size that can be interconnected to the grid 
-    allow_simultaneous_export_import::Bool = true,  # if true the site has two meters (in effect)
+    allow_simultaneous_export_import::Bool = true,  # if true the site has two meters (in effect). Set to false if the export rate is greater than the cost of energy (otherwise, REopt will export before meeting site load).
     
     # Single Outage Modeling Inputs (Outage Modeling Option 1)
     outage_start_time_step::Int=0,  # for modeling a single outage, with critical load spliced into the baseline load ...
