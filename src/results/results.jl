@@ -144,6 +144,7 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("Financial", "lifecycle_emissions_cost_health"),
         ("Financial", "lifecycle_om_costs_before_tax"),
         ("Financial", "lifecycle_om_costs_after_tax"),
+        ("Financial", "lifecycle_outage_cost"),
         ("Financial", "year_one_om_costs_before_tax"),
         ("ElectricTariff", "year_one_energy_cost_before_tax"),
         ("ElectricTariff", "year_one_demand_cost_before_tax"),
