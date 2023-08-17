@@ -110,15 +110,11 @@ function SteamTurbine(d::Dict; avg_boiler_fuel_load_mmbtu_per_hour::Union{Float6
     
     defaults = stm_defaults_response["default_inputs"]
     for (k, v) in custom_st_inputs
-        if k == :size_class && isnothing(v)
-            setproperty!(st, k, defaults[string(k)])
+        if k == :size_class && isnothing(v) # size class is outside "default_inputs" key.
+            setproperty!(st, k, stm_defaults_response[string(k)])
         elseif isnan(v)
             if !(k == :inlet_steam_temperature_degF && !isnan(st.inlet_steam_superheat_degF))
-                try
-                    setproperty!(st, k, defaults[string(k)])
-                catch
-                    setproperty!(st, k, defaults["default_inputs"][string(k)])
-                end
+                setproperty!(st, k, defaults[string(k)])
             else
                 @warn("Steam turbine inlet temperature will be calculated from inlet pressure and specified superheat")
             end
