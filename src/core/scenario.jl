@@ -544,8 +544,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
 
     electric_heater = nothing
-    if haskey(d, "ElectricHeater" && d["ElectricHeater"]["max_kw"] > 0.0)
-        electric_heater = ElectricHeater(; dictkeys_tosymbols(d["ElectricHeater"]))
+    if haskey(d, "ElectricHeater") && d["ElectricHeater"]["max_kw"] > 0.0
+        electric_heater = ElectricHeater(;dictkeys_tosymbols(d["ElectricHeater"])...)
     end
 
     return Scenario(
@@ -571,7 +571,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         ghp_option_list,
         space_heating_thermal_load_reduction_with_ghp_kw,
         cooling_thermal_load_reduction_with_ghp_kw,
-        steam_turbine
+        steam_turbine,
+        electric_heater
     )
 end
 
