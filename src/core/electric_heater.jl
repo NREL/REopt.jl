@@ -28,7 +28,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 
-struct ElectricHeater <: AbstractThermalTech
+Base.@kwdef struct ElectricHeater <: AbstractThermalTech
     min_kw::Real
     max_kw::Real
     installed_cost_per_kw::Real
@@ -64,13 +64,13 @@ function ElectricHeater(;
 function ElectricHeater(;
         min_kw::Real = 0.0,
         max_kw::Real = BIG_NUMBER,
-        installed_cost_per_kw::Union{Real, nothing} = nothing,
-        om_cost_per_kw::Union{Real, nothing} = nothing,
-        om_cost_per_kwh::Union{Real, nothing} = nothing,
+        installed_cost_per_kw::Union{Real, Nothing} = nothing,
+        om_cost_per_kw::Union{Real, Nothing} = nothing,
+        om_cost_per_kwh::Union{Real, Nothing} = nothing,
         macrs_option_years::Int = 0,
         macrs_bonus_fraction::Real = 0.0,
-        can_supply_steam_turbine::Union{Bool, nothing} = nothing,
-        cop_heating::Union{Bool, nothing} = nothing
+        can_supply_steam_turbine::Union{Bool, Nothing} = nothing,
+        cop_heating::Union{Bool, Nothing} = nothing
     )
 
     defaults = get_electric_heater_defaults()
@@ -104,6 +104,8 @@ function ElectricHeater(;
         cop_heating
     )
 end
+
+
 
 """
 function get_electric_heater_defaults()
