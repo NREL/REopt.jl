@@ -1194,20 +1194,26 @@ fuel_use(; net_critical_loads_kw::Vector, num_generators::Vector{Int} = [1], gen
 -The total fuel used, if no components fail.
 
 # Arguments
--net_critical_loads_kw::Vector                                              vector of net critical loads
--num_generators::Vector{Int} = [1],                               number of backup generators of each type
+-net_critical_loads_kw::Vector                                   vector of net critical loads
+-num_generators::Vector{Int} = [1],                              number of backup generators of each type
 -generator_size_kw::Vector{<:Real} = [0.0],                      capacity of each generator type
 -fuel_limit:Vector{<:Real} = [1e9]                               Amount of fuel available, either by generator type or per generator, depending on fuel_limit_is_per_generator. Change generator_fuel_burn_rate_per_kwh for different fuel efficiencies. Fuel units should be consistent with generator_fuel_intercept_per_hr and generator_fuel_burn_rate_per_kwh.
--generator_fuel_intercept_per_hr::Vector{<:Real} = [0.0]        Amount of fuel burned each time step while idling. Fuel units should be consistent with fuel_limit and generator_fuel_burn_rate_per_kwh.
+-generator_fuel_intercept_per_hr::Vector{<:Real} = [0.0]         Amount of fuel burned each time step while idling. Fuel units should be consistent with fuel_limit and generator_fuel_burn_rate_per_kwh.
 -fuel_limit_is_per_generator::Vector{Bool} = [false]             Boolean to determine whether fuel limit is given per generator or per generator type
 -generator_fuel_burn_rate_per_kwh::Vector{<:Real} = [0.076]      Amount of fuel used per kWh generated. Fuel units should be consistent with fuel_limit and generator_fuel_intercept_per_hr.
--max_outage_duration::Int = 96,                                             maximum outage duration
--battery_starting_soc_kwh::Vector = [],                                     battery time series of starting charge
--battery_size_kw::Real = 0.0,                                               inverter capacity of battery
--battery_size_kwh::Real = 0.0,                                              energy capacity of battery
--battery_charge_efficiency::Real = 0.948,                                   battery charging efficiency
--battery_discharge_efficiency::Real = 0.948,                                battery discharge efficiency
--time_steps_per_hour::Real = 1,                                             number of time steps per hour
+-max_outage_duration::Int = 96,                                  maximum outage duration
+-battery_starting_soc_kwh::Vector = [],                          battery time series of starting charge
+-battery_size_kw::Real = 0.0,                                    inverter capacity of battery
+-battery_size_kwh::Real = 0.0,                                   energy capacity of battery
+-battery_charge_efficiency::Real = 0.948,                        battery charging efficiency
+-battery_discharge_efficiency::Real = 0.948,                     battery discharge efficiency
+-H2_starting_soc_kwh::Vector = [],                               H2 time series of starting charge
+-H2_electrolyzer_size_kw::Real = 0.0,                            H2 electrolyzer power capacity
+-H2_fuelcell_size_kw::Real = 0.0,                                H2 fuel cell power capacity
+-H2_size_kwh::Real = 0.0,                                        H2 storage energy capacity
+-H2_charge_efficiency::Real = 1.0,                               H2 system charging efficiency
+-H2_discharge_efficiency::Real = 1.0,                            H2 system discharge efficiency
+-time_steps_per_hour::Real = 1,                                  number of time steps per hour
 
 ```
 """
@@ -1225,6 +1231,12 @@ function fuel_use(;
     battery_size_kwh::Real = 0.0,
     battery_charge_efficiency::Real = 0.948, 
     battery_discharge_efficiency::Real = 0.948,
+    H2_starting_soc_kwh::Vector = [],
+    H2_electrolyzer_size_kw::Real = 0.0,
+    H2_fuelcell_size_kw::Real = 0.0,
+    H2_size_kwh::Real = 0.0,
+    H2_charge_efficiency::Real = 1.0, 
+    H2_discharge_efficiency::Real = 1.0,
     time_steps_per_hour::Real = 1,
     kwargs...
     )::Tuple{Matrix{Int}, Matrix{Float64}}
@@ -1254,7 +1266,8 @@ function fuel_use(;
     survival_matrix = zeros(t_max, max_outage_duration) 
     fuel_used = zeros(t_max, length(fuel_limit))
 
-    battery_included = battery_size_kw > 0
+    battery_included = battery_size_kwh > 0
+    H2_included = H2_size_kwh > 0
 
     for t in 1:t_max
         fuel_remaining = copy(fuel_limit)
@@ -1262,17 +1275,35 @@ function fuel_use(;
         if battery_included 
             battery_soc_kwh = battery_starting_soc_kwh[t]
         end
+        if H2_included 
+            H2_soc_kwh = H2_starting_soc_kwh[t]
+        end
 
         for d in 1:max_outage_duration
             h = mod(t + d - 2, t_max) + 1 #determines index accounting for looping around year
             load_kw = net_critical_loads_kw[h]
             
-            if (load_kw < 0) && battery_included && (battery_soc_kwh < battery_size_kwh)  # load is met
-                battery_soc_kwh += minimum([
-                    battery_size_kwh - battery_soc_kwh,     # room available
-                    battery_size_kw / time_steps_per_hour * battery_charge_efficiency,  # inverter capacity
-                    -load_kw / time_steps_per_hour * battery_charge_efficiency  # excess energy
-                ])
+            if (load_kw < 0) # can charge storage if exists
+                if battery_included && (battery_soc_kwh < battery_size_kwh)
+                
+                    battery_kwh_change = minimum([
+                        battery_size_kwh - battery_soc_kwh,     # room available
+                        battery_size_kw / time_steps_per_hour * battery_charge_efficiency,  # inverter capacity
+                        -load_kw / time_steps_per_hour * battery_charge_efficiency  # excess energy
+                    ])
+                    battery_soc_kwh += battery_kwh_change
+                    load_kw += battery_kwh_change
+                end
+                if H2_included && (H2_soc_kwh < H2_size_kwh)
+                    H2_kwh_change = minimum([
+                        H2_size_kwh - H2_soc_kwh,     # room available
+                        H2_electrolyzer_size_kw / time_steps_per_hour * H2_charge_efficiency,  # charge capacity
+                        -load_kw / time_steps_per_hour * H2_charge_efficiency  # excess energy
+                    ])
+                    H2_soc_kwh += H2_kwh_change
+                    #Don't need to update load_kw again because not used after this except checking for positive which can't happen here
+                    #load_kw += H2_kwh_change
+                end
             else  # check if we can meet load with generator then storage
                 for i in eachindex(fuel_remaining)
                     remaining_gen = sum(total_generator_capacity_kw[i:end])
@@ -1299,6 +1330,15 @@ function fuel_use(;
                         ])
                     load_kw -= battery_dispatch
                     battery_soc_kwh -= battery_dispatch  / (time_steps_per_hour * battery_discharge_efficiency)
+                end
+                if H2_included
+                    H2_dispatch = minimum([
+                            load_kw, 
+                            H2_soc_kwh * time_steps_per_hour * H2_discharge_efficiency, 
+                            H2_fuelcell_size_kw
+                        ])
+                    load_kw -= H2_dispatch
+                    H2_soc_kwh -= H2_dispatch  / (time_steps_per_hour * H2_discharge_efficiency)
                 end
             end
             if (d > 1 && survival_matrix[t, d-1] == 0) || round(load_kw, digits=5) > 0  # failed to meet load in this time step or any previous
