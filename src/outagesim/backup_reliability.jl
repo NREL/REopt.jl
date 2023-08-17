@@ -844,7 +844,7 @@ Return a dictionary of inputs required for backup reliability calculations.
     -generator_fuel_burn_rate_per_kwh::Union{Real, Vector{<:Real}} = 0.076      Amount of fuel used per kWh generated. Fuel units should be consistent with fuel_limit and generator_fuel_intercept_per_hr.
     -num_H2_bins::Int                                                           Number of bins for discretely modeling battery state of charge
     -H2_minimum_soc_fraction::Real = 0.0                                        The minimum H2 state of charge (represented as a fraction) allowed during outages
-    -H2_operational_availability::Real = 1.0                                    Likelihood H2 system will be available at start of outage       
+    -H2_operational_availability::Real = 0.97                                   Likelihood H2 system will be available at start of outage       
     -pv_operational_availability::Real = 0.98                                   Likelihood PV will be available at start of outage
     -battery_operational_availability::Real = 0.97                              Likelihood battery will be available at start of outage       
 """
@@ -891,8 +891,8 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
     end
 
     if haskey(d, "HydrogenStorageLP") && haskey(d, "Compressor") && haskey(d, "Electrolyzer") #TODO: condition on H2 upgraded into microgrid like with storage above?
-        r2[:H2_charge_efficiency] = 0.8#p.s.storage.attr["HydrogenStorageLP"].charge_efficiency
-        r2[:H2_discharge_efficiency] = 0.7#p.s.storage.attr["HydrogenStorageLP"].discharge_efficiency
+        r2[:H2_charge_efficiency] = p.s.storage.attr["ElectricStorage"].charge_efficiency#p.s.storage.attr["HydrogenStorageLP"].charge_efficiency
+        r2[:H2_discharge_efficiency] = p.s.storage.attr["ElectricStorage"].discharge_efficiency#p.s.storage.attr["HydrogenStorageLP"].discharge_efficiency
         r2[:H2_electrolyzer_size_kw] = get(d["Electrolyzer"], "size_kw", 0)
         r2[:H2_fuelcell_size_kw] = get(d["Compressor"], "size_kw", 0)
 
@@ -961,15 +961,15 @@ Return a dictionary of inputs required for backup reliability calculations.
     -generator_fuel_intercept_per_hr::Union{Real, Vector{<:Real}} = 0.0         Amount of fuel burned each time step while idling. Fuel units should be consistent with fuel_limit and generator_fuel_burn_rate_per_kwh.
     -fuel_limit_is_per_generator::Union{Real, Vector{<:Real}} = false           Boolean to determine whether fuel limit is given per generator or per generator type
     -generator_fuel_burn_rate_per_kwh::Union{Real, Vector{<:Real}} = 0.076      Amount of fuel used per kWh generated. Fuel units should be consistent with fuel_limit and generator_fuel_intercept_per_hr.
-    -H2_operational_availability::Real = 1.0                                    Likelihood H2 system will be available at start of outage       
+    -H2_operational_availability::Real = 0.97                                   Likelihood H2 system will be available at start of outage       
     -H2_starting_soc_series_fraction::Vector= []                                H2 kWh state of charge time series during normal grid-connected usage
     -H2_minimum_soc_fraction::Real          = 0.0                               The minimum H2 state of charge (represented as a fraction) allowed during outages
     -H2_electrolyzer_size_kw::Real          = 0.0,                              H2 system electrolyzer power capacity
     -H2_fuelcell_size_kw::Real              = 0.0,                              H2 system fuel cell power capacity
     -H2_size_kwh::Real                      = 0.0,                              H2 storage kWh of energy capacity
     -num_H2_bins::Int                       = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kwh),     Number of bins for discretely modeling battery state of charge
-    -H2_charge_efficiency::Real             = 1.0,                              Efficiency of charging H2 system
-    -H2_discharge_efficiency::Real          = 1.0,                              Efficiency of discharging H2 system
+    -H2_charge_efficiency::Real             = 0.948,                            Efficiency of charging H2 system
+    -H2_discharge_efficiency::Real          = 0.948,                            Efficiency of discharging H2 system
 
 #Examples
 ```repl-julia
@@ -1086,7 +1086,7 @@ end
         battery_starting_soc_kwh::Vector=[], battery_size_kw::Real = 0.0, battery_size_kwh::Real = 0.0, 
         num_battery_bins::Int = 101, battery_charge_efficiency::Real = 0.948, battery_discharge_efficiency::Real = 0.948, 
         H2_starting_soc_kwh::Vector = [], H2_electrolyzer_size_kw::Real = 0.0, H2_fuelcell_size_kw::Real = 0.0, 
-        H2_size_kwh::Real = 0.0, num_H2_bins = 1, H2_charge_efficiency::Real = 1.0, H2_discharge_efficiency::Real = 1.0
+        H2_size_kwh::Real = 0.0, num_H2_bins = 1, H2_charge_efficiency::Real = 0.948, H2_discharge_efficiency::Real = 1.0
         time_steps_per_hour::Real = 1)::Matrix
 
 Return an array of backup reliability calculations. Inputs can be unpacked from backup_reliability_inputs() dictionary
@@ -1109,8 +1109,8 @@ Return an array of backup reliability calculations. Inputs can be unpacked from 
 -H2_fuelcell_size_kw::Real          = 0.0,         H2 system fuel cell power capacity
 -H2_size_kwh::Real                  = 0.0,         H2 storage kWh of energy capacity
 -num_H2_bins                        = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kwh),     Number of bins for discretely modeling battery state of charge
--H2_charge_efficiency::Real         = 1.0,         Efficiency of charging H2 system
--H2_discharge_efficiency::Real      = 1.0,         Efficiency of discharging H2 system
+-H2_charge_efficiency::Real         = 0.948,       Efficiency of charging H2 system
+-H2_discharge_efficiency::Real      = 0.948,       Efficiency of discharging H2 system
 -time_steps_per_hour::Real          = 1            Used to determine amount battery gets shifted.
 ```
 """
@@ -1133,8 +1133,8 @@ function backup_reliability_single_run(;
     H2_fuelcell_size_kw::Real = 0.0,
     H2_size_kwh::Real = 0.0,
     num_H2_bins = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kwh),
-    H2_charge_efficiency::Real = 1.0,
-    H2_discharge_efficiency::Real = 1.0,
+    H2_charge_efficiency::Real = 0.948,
+    H2_discharge_efficiency::Real = 0.948,
     time_steps_per_hour::Real = 1.0,
     kwargs...)::Matrix
      
@@ -1211,8 +1211,8 @@ fuel_use(; net_critical_loads_kw::Vector, num_generators::Vector{Int} = [1], gen
 -H2_electrolyzer_size_kw::Real = 0.0,                            H2 electrolyzer power capacity
 -H2_fuelcell_size_kw::Real = 0.0,                                H2 fuel cell power capacity
 -H2_size_kwh::Real = 0.0,                                        H2 storage energy capacity
--H2_charge_efficiency::Real = 1.0,                               H2 system charging efficiency
--H2_discharge_efficiency::Real = 1.0,                            H2 system discharge efficiency
+-H2_charge_efficiency::Real = 0.948,                             H2 system charging efficiency
+-H2_discharge_efficiency::Real = 0.948,                          H2 system discharge efficiency
 -time_steps_per_hour::Real = 1,                                  number of time steps per hour
 
 ```
@@ -1235,8 +1235,8 @@ function fuel_use(;
     H2_electrolyzer_size_kw::Real = 0.0,
     H2_fuelcell_size_kw::Real = 0.0,
     H2_size_kwh::Real = 0.0,
-    H2_charge_efficiency::Real = 1.0, 
-    H2_discharge_efficiency::Real = 1.0,
+    H2_charge_efficiency::Real = 0.948, 
+    H2_discharge_efficiency::Real = 0.948,
     time_steps_per_hour::Real = 1,
     kwargs...
     )::Tuple{Matrix{Int}, Matrix{Float64}}
@@ -1355,7 +1355,7 @@ end
 
 """
     return_backup_reliability(; critical_loads_kw::Vector, battery_operational_availability::Real = 0.97,
-            pv_operational_availability::Real = 0.98, H2_operational_availability::Real = 1.0
+            pv_operational_availability::Real = 0.98, H2_operational_availability::Real = 0.97
             pv_can_dispatch_without_storage::Bool = false, battery_size_kw::Real = 0.0,
             battery_size_kwh::Real = 0.0, H2_electrolyzer_size_kw::Real = 0.0,
             H2_fuelcell_size_kw::Real = 0.0, H2_size_kwh::Real = 0.0, kwargs...)
@@ -1364,7 +1364,7 @@ Return an array of backup reliability calculations, accounting for operational a
 -critical_loads_kw::Vector                          Vector of critical loads
 -battery_operational_availability::Real = 1.0       Likelihood battery will be available at start of outage       
 -pv_operational_availability::Real      = 0.98      Likelihood PV will be available at start of outage
--H2_operational_availability::Real      = 1.0      `Likelihood H2 system will be available at start of outage
+-H2_operational_availability::Real      = 0.97      `Likelihood H2 system will be available at start of outage
 -pv_can_dispatch_without_storage::Bool  = false     Boolian determining whether net load subtracts PV if storage is unavailable.
 -battery_size_kw::Real                  = 0.0       Battery kW of power capacity
 -battery_size_kwh::Real                 = 0.0       Battery kWh of energy capacity
@@ -1378,7 +1378,7 @@ function return_backup_reliability(;
     critical_loads_kw::Vector, 
     battery_operational_availability::Real = 0.97,
     pv_operational_availability::Real = 0.98,
-    H2_operational_availability::Real = 1.0,
+    H2_operational_availability::Real = 0.97,
     pv_can_dispatch_without_storage::Bool = false,
     battery_size_kw::Real = 0.0,
     battery_size_kwh::Real = 0.0,
@@ -1386,6 +1386,11 @@ function return_backup_reliability(;
     H2_fuelcell_size_kw::Real = 0.0,
     H2_size_kwh::Real = 0.0,
     kwargs...)
+    @info "battery_size_kwh"
+    @info battery_size_kwh
+    @info "H2_size_kwh"
+    @info H2_size_kwh
+    
 
     if haskey(kwargs, :pv_kw_ac_time_series)
         pv_included = true
@@ -1607,7 +1612,7 @@ Possible keys in r:
     -num_battery_bins::Int = depends on battery sizing      Number of bins for discretely modeling battery state of charge
     -battery_operational_availability::Real = 0.97          Likelihood battery will be available at start of outage       
     -pv_operational_availability::Real = 0.98               Likelihood PV will be available at start of outage
-    -H2_operational_availability::Real = 1.0                Likelihood H2 system will be available at start of outage       
+    -H2_operational_availability::Real = 0.97               Likelihood H2 system will be available at start of outage       
     -max_outage_duration::Int = 96                          Maximum outage duration modeled
     -microgrid_only::Bool = false                           Determines how generator, PV, and battery act during islanded mode
 
@@ -1646,15 +1651,15 @@ Possible keys in r:
 -generator_size_kw::Real = 0.0                          Backup generator capacity. 
 -num_battery_bins::Int = num_storage_bins_default(r[:battery_size_kw],r[:battery_size_kwh])     Number of bins for discretely modeling battery state of charge
 -max_outage_duration::Int = 96                          Maximum outage duration modeled
--H2_operational_availability::Real = 1.0                Likelihood H2 system will be available at start of outage       
+-H2_operational_availability::Real = 0.97               Likelihood H2 system will be available at start of outage       
 -H2_starting_soc_series_fraction::Vector= []            H2 kWh state of charge time series during normal grid-connected usage
 -H2_minimum_soc_fraction::Real          = 0.0           The minimum H2 state of charge (represented as a fraction) allowed during outages
 -H2_electrolyzer_size_kw::Real          = 0.0,          H2 system electrolyzer power capacity
 -H2_fuelcell_size_kw::Real              = 0.0,          H2 system fuel cell power capacity
 -H2_size_kwh::Real                      = 0.0,          H2 storage kWh of energy capacity
 -num_H2_bins::Int                       = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kwh),     Number of bins for discretely modeling battery state of charge
--H2_charge_efficiency::Real             = 1.0,          Efficiency of charging H2 system
--H2_discharge_efficiency::Real          = 1.0,          Efficiency of discharging H2 system
+-H2_charge_efficiency::Real             = 0.948,        Efficiency of charging H2 system
+-H2_discharge_efficiency::Real          = 0.948,        Efficiency of discharging H2 system
 
 """
 function backup_reliability(r::Dict)
