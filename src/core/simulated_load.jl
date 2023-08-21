@@ -345,7 +345,65 @@ function simulated_load(d::Dict)
         end
         if isnothing(doe_reference_name)
             throw(@error("Please supply a doe_reference_name and optional scaling parameters (annual_tonhour or monthly_tonhour)."))
-        end            
+        end
+        
+        # Get the default cooling load (used when we want cooling load without annual_tonhour input)
+        if !isnothing(cooling_doe_ref_name)
+            # Build dependent inputs for cooling load
+            elec_load_inputs = Dict{Symbol, Any}()
+            if typeof(doe_reference_name) <: Vector{} && length(doe_reference_name) > 1
+                elec_load_inputs[:blended_doe_reference_names] = doe_reference_name
+                elec_load_inputs[:blended_doe_reference_percents] = percent_share_list
+            else
+                elec_load_inputs[:doe_reference_name] = doe_reference_name[1]
+            end
+
+            electric_load = ElectricLoad(; elec_load_inputs...,
+                                    latitude=latitude,
+                                    longitude=longitude,
+                                    annual_kwh=annual_kwh,
+                                    monthly_totals_kwh=monthly_totals_kwh
+                                )
+
+            cooling_load_inputs = Dict{Symbol, Any}()
+            if typeof(cooling_doe_ref_name) <: Vector{} && length(cooling_doe_ref_name) > 1
+                cooling_load_inputs[:blended_doe_reference_names] = cooling_doe_ref_name
+                cooling_load_inputs[:blended_doe_reference_percents] = cooling_pct_share_list
+            else
+                cooling_load_inputs[:doe_reference_name] = cooling_doe_ref_name[1]
+            end
+            cooling_load = CoolingLoad(; cooling_load_inputs...,
+                                        city=electric_load.city,
+                                        latitude=latitude,
+                                        longitude=longitude,
+                                        site_electric_load_profile=electric_load.loads_kw,
+                                        existing_chiller_cop=chiller_cop,
+                                        existing_chiller_max_thermal_factor_on_peak_load=max_thermal_factor_on_peak_load
+                                )
+
+            if length(cooling_doe_ref_name) > 1
+                modified_fraction = []
+                for (i, building) in enumerate(cooling_doe_ref_name)
+                    default_fraction = get_default_fraction_of_total_electric(electric_load.city, building, latitude, longitude, electric_load.year)
+                    modified_fraction = default_fraction * cooling_pct_share_list[i] / 100.0
+                end
+            else
+                modified_fraction = get_default_fraction_of_total_electric(electric_load.city, cooling_doe_ref_name[1], latitude, longitude, electric_load.year)
+            end
+
+            cooling_load_thermal_ton = round.(cooling_load.loads_kw_thermal ./ KWH_THERMAL_PER_TONHOUR, digits=3)
+            cooling_defaults_dict = Dict([
+                                        ("loads_ton", cooling_load_thermal_ton),
+                                        ("annual_tonhour", sum(cooling_load_thermal_ton)),
+                                        ("chiller_cop", round(cooling_load.existing_chiller_cop, digits=3)),
+                                        ("min_ton", minimum(cooling_load_thermal_ton)),
+                                        ("mean_ton", sum(cooling_load_thermal_ton) / length(cooling_load_thermal_ton)),
+                                        ("max_ton", maximum(cooling_load_thermal_ton)),
+                                        ("fraction_of_total_electric_profile", round.(modified_fraction, digits=9))
+                                        ])
+        else
+            cooling_defaults_dict = Dict()
+        end
 
         # First check if one of the "fraction" inputs were given, which supersedes doe_reference_name
         annual_fraction = get(d, "annual_fraction", nothing)
@@ -357,7 +415,8 @@ function simulated_load(d::Dict)
                 ("min_fraction", round(minimum(cooling_fraction_series), digits=3)),
                 ("mean_fraction", round(sum(cooling_fraction_series) / len(cooling_fraction_series), digits=3)),
                 ("max_fraction", round(maximum(cooling_fraction_series), digits=3)),
-                    ])
+                ("cooling_defaults", cooling_defaults_dict)
+                 ])
             return response
         end
         monthly_fraction = get(d, "monthly_fraction", Real[])
@@ -387,6 +446,7 @@ function simulated_load(d::Dict)
                 ("min_fraction", round(minimum(fraction_series), digits=3)),
                 ("mean_fraction", round(sum(fraction_series) / length(fraction_series), digits=3)),
                 ("max_fraction", round(maximum(fraction_series), digits=3)),
+                ("cooling_defaults", cooling_defaults_dict)
                 ])
             return response
         end
@@ -441,6 +501,7 @@ function simulated_load(d::Dict)
                 ("min_ton", round(minimum(cooling_load_series), digits=3)),
                 ("mean_ton", round(sum(cooling_load_series) / length(cooling_load_series), digits=3)),
                 ("max_ton", round(maximum(cooling_load_series), digits=3)),
+                ("cooling_defaults", cooling_defaults_dict)
                 ])
             return response
         else
