@@ -1143,7 +1143,7 @@ function backup_reliability_single_run(;
     if max_outage_duration == 0
         return []
     
-    elseif battery_size_kw < 0.1
+    elseif battery_size_kwh < 0.1 && H2_size_kwh < 0.1
         return survival_gen_only(
                 net_critical_loads_kw=net_critical_loads_kw,
                 generator_operational_availability=generator_operational_availability, 
