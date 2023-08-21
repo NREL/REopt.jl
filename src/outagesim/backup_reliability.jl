@@ -286,6 +286,7 @@ julia>  get_maximum_generation(100, 100, [50, 125], 50, 5, 400, 3, [2, 1], 0.98,
 function get_maximum_generation(battery_size_kw::Real, H2_size_kw::Real, generator_size_kw::Vector{<:Real}, 
     battery_bin_size::Real, battery_num_bins::Int, H2_bin_size::Real, H2_num_bins::Int, num_generators::Vector{Int}, 
     battery_discharge_efficiency::Real, H2_discharge_efficiency::Real)::Array{Float64,3}
+
     N = prod(num_generators .+ 1)
     M_b = battery_num_bins
     M_H2 = H2_num_bins
@@ -713,7 +714,7 @@ function survival_with_storage(;
     #initialize vectors and matrices
     generator_markov_matrix = markov_matrix(num_generators, 1 ./ generator_mean_time_to_failure) 
     generator_production = generator_output(num_generators, generator_size_kw)
-    maximum_generation = get_maximum_generation(battery_size_kw, 0.0, generator_size_kw, battery_bin_size, num_battery_bins, 0.0, 1, num_generators, battery_discharge_efficiency, 1)
+    maximum_generation = get_maximum_generation(battery_size_kw, H2_fuelcell_size_kw, generator_size_kw, battery_bin_size, num_battery_bins, H2_bin_size, num_H2_bins, num_generators, battery_discharge_efficiency, H2_discharge_efficiency)
     starting_gens = starting_probabilities(num_generators, generator_operational_availability, generator_failure_to_start) 
 
     Threads.@threads for t = 1:t_max
