@@ -23,6 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop 2023-08-21
+### Added
+- Added cooling defaults to response dictionary returned by **simulated_load** when **load_type == "cooling"**
+
 ## v0.32.6
 ### Changed
 - Required **fuel_cost_per_mmbtu** for modeling **Boiler** tech, otherwise throw a handled error.
