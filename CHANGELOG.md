@@ -23,6 +23,11 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.32.6
+### Changed
+- Required **fuel_cost_per_mmbtu** for modeling **Boiler** tech, otherwise throw a handled error.
+### Fixed
+- Additional **SteamTurbine** defaults processing updates and bug fixes
 
 ## v0.32.5
 ### Changed
