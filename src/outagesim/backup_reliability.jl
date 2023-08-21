@@ -701,8 +701,8 @@ function survival_with_storage(;
     t_max = length(net_critical_loads_kw)
     
     #bin size is battery storage divided by num bins-1 because zero is also a bin
-    battery_bin_size = battery_size_kwh / (num_battery_bins-1)
-    H2_bin_size = H2_size_kwh / (num_H2_bins-1)
+    battery_bin_size = battery_size_kwh / max(1,num_battery_bins-1)
+    H2_bin_size = H2_size_kwh / max(1,num_H2_bins-1)
      
     #bin initial battery and H2 storage
     starting_battery_bins = bin_storage_charge(battery_starting_soc_kwh, num_battery_bins, battery_size_kwh)
