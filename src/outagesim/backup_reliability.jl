@@ -1445,7 +1445,7 @@ function return_backup_reliability(;
             "H2_size_kwh" => 0),
         "gen_H2" => Dict(
             "probability" => (pv_included ? 1 - pv_operational_availability : 1) *
-                            (battery_size_kwh > 0 ? battery_operational_availability : 1) *
+                            (battery_size_kwh > 0 ? 1 - battery_operational_availability : 1) *
                             (H2_size_kwh > 0) * H2_operational_availability,
             "net_critical_loads_kw" => critical_loads_kw,
             "battery_size_kw" => 0,
@@ -1474,8 +1474,8 @@ function return_backup_reliability(;
             "H2_fuelcell_size_kw" => H2_fuelcell_size_kw,
             "H2_size_kwh" => H2_size_kwh),
         "gen_pv_H2" => Dict(
-            "probability" => (pv_included ? 1 - pv_operational_availability : 1) *
-                            (battery_size_kwh > 0 ? battery_operational_availability : 1) *
+            "probability" => pv_included * pv_operational_availability *
+                            (battery_size_kwh > 0 ? 1 - battery_operational_availability : 1) *
                             (H2_size_kwh > 0) * H2_operational_availability,
             "net_critical_loads_kw" => net_critical_loads_kw,
             "battery_size_kw" => 0,
