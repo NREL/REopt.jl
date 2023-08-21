@@ -432,34 +432,36 @@ function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Array,
 
     for i_gen in 1:length(battery_shift) 
         s_b = battery_shift[i_gen]
+        excess_kw = remaining_kw_after_batt_shift[i_gen]*ones(M_b)
+        wrap_indices_b = s_b < 0 ? (max(2,M_b+s_b+1):M_b) : (1:min(s_b,M_b-1))
+        accumulate_index_b = s_b < 0 ? 1 : M_b
         if s_b != 0
             for i_H2 in 1:M_H2
                 gen_storage_prob_matrix[i_gen, :, i_H2] = circshift(view(gen_storage_prob_matrix, i_gen, :, i_H2), s_b)
             end
-            wrap_indices_b = s_b < 0 ? (max(2,M_b+s_b+1):M_b) : (1:min(s_b,M_b-1))
-            accumulate_index_b = s_b < 0 ? 1 : M_b
-            excess_kw = remaining_kw_after_batt_shift[i_gen] .+ battery_bin_size .* (collect(wrap_indices_b) .- (s_b < 0 ? (M_b + 1) : 0)) #negative values if unmet kw
-            H2_shift, remaining_kw_after_H2_shift = storage_bin_shift(
-                    excess_kw, 
-                    H2_bin_size, 
-                    H2_charge_size_kw, 
-                    H2_discharge_size_kw,
-                    H2_charge_efficiency, 
-                    H2_discharge_efficiency
-                )
-            for (i_shift, i_b) in enumerate(wrap_indices_b)
-                s_H2 = H2_shift[i_shift]
-                if s_H2 != 0
-                    gen_storage_prob_matrix[i_gen, i_b, :] = circshift(view(gen_storage_prob_matrix, i_gen, i_b, :), s_H2)
-                    wrap_indices_H2 = s_H2 < 0 ? (max(2,M_H2+s_H2+1):M_H2) : (1:min(s_H2,M_H2-1))
-                    accumulate_index_H2 = s_H2 < 0 ? 1 : M_H2
-                    gen_storage_prob_matrix[i_gen, i_b, accumulate_index_H2] += sum(view(gen_storage_prob_matrix, i_gen, i_b, wrap_indices_H2))
-                    gen_storage_prob_matrix[i_gen, i_b, wrap_indices_H2] .= 0
-                end
-            end
-            gen_storage_prob_matrix[i_gen, accumulate_index_b, :] .+= vec(sum(view(gen_storage_prob_matrix, i_gen, wrap_indices_b, :), dims=1))
-            gen_storage_prob_matrix[i_gen, wrap_indices_b, :] .= 0
+            excess_kw[wrap_indices_b] += battery_bin_size .* (collect(wrap_indices_b) .- (s_b < 0 ? (M_b + 1) : 0)) #negative values if unmet kw
+            #TODO: extend excess_kw to full batt dim (second term is just 0s in not wrap_indices_b indices
         end
+        H2_shift, remaining_kw_after_H2_shift = storage_bin_shift(
+                excess_kw, 
+                H2_bin_size, 
+                H2_charge_size_kw, 
+                H2_discharge_size_kw,
+                H2_charge_efficiency, 
+                H2_discharge_efficiency
+            )
+        for i_b in 1:M_b
+            s_H2 = H2_shift[i_b]
+            if s_H2 != 0
+                gen_storage_prob_matrix[i_gen, i_b, :] = circshift(view(gen_storage_prob_matrix, i_gen, i_b, :), s_H2)
+                wrap_indices_H2 = s_H2 < 0 ? (max(2,M_H2+s_H2+1):M_H2) : (1:min(s_H2,M_H2-1))
+                accumulate_index_H2 = s_H2 < 0 ? 1 : M_H2
+                gen_storage_prob_matrix[i_gen, i_b, accumulate_index_H2] += sum(view(gen_storage_prob_matrix, i_gen, i_b, wrap_indices_H2))
+                gen_storage_prob_matrix[i_gen, i_b, wrap_indices_H2] .= 0
+            end
+        end
+        gen_storage_prob_matrix[i_gen, accumulate_index_b, :] .+= vec(sum(view(gen_storage_prob_matrix, i_gen, wrap_indices_b, :), dims=1))
+        gen_storage_prob_matrix[i_gen, wrap_indices_b, :] .= 0
     end
 end
 
@@ -807,7 +809,7 @@ function survival_with_storage_single_start_time(
         shift_gen_storage_prob_matrix!(
             gen_battery_prob_matrix_array[gen_matrix_counter_end],
             (generator_production .- net_critical_loads_kw[h]) / time_steps_per_hour,
-            battery_bin_size,#TODO: don't need all three of bin size, size, and num bins
+            battery_bin_size,
             battery_size_kw,
             battery_charge_efficiency, 
             battery_discharge_efficiency,
@@ -818,6 +820,7 @@ function survival_with_storage_single_start_time(
             H2_discharge_efficiency
         )
     end
+
     return return_survival_chance_vector
 end
 
