@@ -170,7 +170,6 @@ function Techs(s::Scenario)
     if !isnothing(s.electric_heater)
         push!(all_techs, "ElectricHeater")
         push!(heating_techs, "ElectricHeater")
-        push!(steam_turbines, "ElectricHeater")
         push!(electric_heaters, "ElectricHeater")
     end
 
