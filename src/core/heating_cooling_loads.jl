@@ -736,7 +736,7 @@ function BuiltInDomesticHotWaterLoad(
         annual_mmbtu *= addressable_load_fraction     
     end
     if length(monthly_mmbtu) == 12
-        monthly_mmbtu = convert(Vector{Real}, monthly_mmbtu) .* addressable_load_fraction
+        monthly_mmbtu = monthly_mmbtu .* addressable_load_fraction
     end
     built_in_load("domestic_hot_water", city, buildingtype, year, annual_mmbtu, monthly_mmbtu)
 end
@@ -1075,7 +1075,7 @@ function BuiltInSpaceHeatingLoad(
         annual_mmbtu *= addressable_load_fraction
     end
     if length(monthly_mmbtu) == 12
-        monthly_mmbtu = convert(Vector{Real}, monthly_mmbtu) .* addressable_load_fraction
+        monthly_mmbtu = monthly_mmbtu .* addressable_load_fraction
     end
     built_in_load("space_heating", city, buildingtype, year, annual_mmbtu, monthly_mmbtu)
 end
