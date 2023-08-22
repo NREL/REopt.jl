@@ -33,11 +33,10 @@ struct ElectricHeater <: AbstractThermalTech
     max_kw::Real
     installed_cost_per_kw::Real
     om_cost_per_kw::Real
-    om_cost_per_kwh::Real
     macrs_option_years::Int
     macrs_bonus_fraction::Real
     can_supply_steam_turbine::Bool
-    cop_heating::Real
+    heating_cop::Real
 end
 
 
@@ -54,7 +53,6 @@ function ElectricHeater(;
     max_kw::Real = BIG_NUMBER, # Maximum thermal power size
     installed_cost_per_kw::Union{Real, nothing} = nothing, # Thermal power-based cost
     om_cost_per_kw::Union{Real, nothing} = nothing, # Thermal power-based fixed O&M cost
-    om_cost_per_kwh::Union{Real, nothing} = nothing, # Thermal energy-based variable O&M cost
     macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
     can_supply_steam_turbine::Union{Bool, nothing} = nothing # If the boiler can supply steam to the steam turbine for electric production
@@ -66,11 +64,10 @@ function ElectricHeater(;
         max_kw::Real = BIG_NUMBER,
         installed_cost_per_kw::Union{Real, Nothing} = nothing,
         om_cost_per_kw::Union{Real, Nothing} = nothing,
-        om_cost_per_kwh::Union{Real, Nothing} = nothing,
         macrs_option_years::Int = 0,
         macrs_bonus_fraction::Real = 0.0,
         can_supply_steam_turbine::Union{Bool, Nothing} = nothing,
-        cop_heating::Union{Real, Nothing} = nothing
+        heating_cop::Union{Real, Nothing} = nothing
     )
 
     defaults = get_electric_heater_defaults()
@@ -82,14 +79,11 @@ function ElectricHeater(;
     if isnothing(om_cost_per_kw)
         om_cost_per_kw = defaults["om_cost_per_kw"]
     end
-    if isnothing(om_cost_per_kwh)
-        om_cost_per_kwh = defaults["om_cost_per_kwh"]
-    end
     if isnothing(can_supply_steam_turbine)
         can_supply_steam_turbine = defaults["can_supply_steam_turbine"]
     end
-    if isnothing(cop_heating)
-        cop_heating = defaults["cop_heating"]
+    if isnothing(heating_cop)
+        heating_cop = defaults["heating_cop"]
     end
 
     ElectricHeater(
@@ -97,11 +91,10 @@ function ElectricHeater(;
         max_kw,
         installed_cost_per_kw,
         om_cost_per_kw,
-        om_cost_per_kwh,
         macrs_option_years,
         macrs_bonus_fraction,
         can_supply_steam_turbine,
-        cop_heating
+        heating_cop
     )
 end
 
