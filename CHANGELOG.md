@@ -36,11 +36,21 @@ Classify the change according to the following categories:
 - In `test_with_xpress.jl`, updated "Emissions and Renewable Energy Percent" expected values to account for load year adjustment. 
 
 ## Develop 2023-08-09
+## v0.32.6
+### Changed
+- Required **fuel_cost_per_mmbtu** for modeling **Boiler** tech, otherwise throw a handled error.
+### Fixed
+- Additional **SteamTurbine** defaults processing updates and bug fixes
+
+## v0.32.5
 ### Changed
 - Updated `get_existing_chiller_cop` function to accept scalar values instead of vectors to allow for faster API transactions.
+- Refactored `backup_reliability.jl` to enable easier development: added conversion of all scalar generator inputs to vectors in `dictkeys_to_symbols` and reduced each functions with two versions (one with scalar and one with vector generator arguments) to a single version
+- Simplify generator sizing logic in function `backup_reliability_reopt_inputs` (if user sets `generator_size_kw` or `num_generators`to 0, don't override based on REopt solution) and add a validation error
 ### Fixed
 - Steamturbine defaults processing
 - simulated_load monthly values processing
+- Fixed incorrect name when accessing result field `Outages` **generator_microgrid_size_kw** in `outag_simulator.jl`
 
 ## v0.32.4
 ### Changed
