@@ -400,12 +400,13 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
     end
 
     fn_2005 = joinpath(EASIUR_data_lib,"sc_8.6MVSL_$(stack)_pop2005.hdf5")
-    ret_map = JLD.load(fn_2005)
+    ret_map = JLD.load(fn_2005) 
+
     if pop_year != 2005
         fn_growth = joinpath(EASIUR_data_lib,"sc_growth_rate_pop2005_pop2040_$(stack).hdf5")
-        map_rate = JLD.load(fn_growth)
+        map_rate = JLD.load(fn_growth) 
         for (k,v) in map_rate
-            setindex!(ret_map, v .* (v.^(pop_year - 2005)), k)
+            setindex!(ret_map, ret_map[k] .* (v.^(pop_year - 2005)), k)
         end
     end
     if income_year != 2005
