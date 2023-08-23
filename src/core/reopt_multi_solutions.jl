@@ -45,7 +45,9 @@ function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vec
                 best_incentives = scenario
             end
         end
-        input_data = reopt_inputs_scenarios[best_incentives]
+        if !isempty(best_incentives)
+            input_data = reopt_inputs_scenarios[best_incentives]
+        end
     end
     
     # Create optimal and BAU inputs structs for initial 2 runs
