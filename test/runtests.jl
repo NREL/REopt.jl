@@ -287,30 +287,8 @@ else  # run HiGHS tests
                 "H2_charge_efficiency" => 1,
                 "H2_discharge_efficiency" => 1,
                 "H2_minimum_soc_fraction" => 0.5)
-
-            #Given outage starts in time period 1
-            #____________________________________
-            #Outage hour 1:
-            #2 generators:         Prob = 0.64,     Battery = 2, Survived
-            #1 generator:          Prob = 0.32,     Battery = 1, Survived
-            #0 generator:          Prob = 0.04,     Battery = 0, Survived
-            #Survival Probability 1.0
-
-            #Outage hour 2:
-            #2 generators:         Prob = 0.4096,   Battery = 2, Survived
-            #2 gen -> 1 gen:       Prob = 0.2048,   Battery = 1, Survived
-            #1 gen -> 1 gen:       Prob = 0.256,    Battery = 0, Survived
-            #0 generators:         Prob = 0.1296,   Battery = -1, Failed
-            #Survival Probability: 0.8704
-
-            #Outage hour 3:
-            #2 generators:         Prob = 0.262144, Battery = 0, Survived
-            #2 gen -> 2 -> 1       Prob = 0.131072, Battery = 1, Survived
-            #2 gen -> 1 -> 1       Prob = 0.16384,  Battery = 0, Survived
-            #1 gen -> 1 -> 1       Prob = 0.2048,   Battery = -1, Failed
-            #0 generators          Prob = 0.238144, Battery = -1, Failed
-            #Survival Probability: 0.557056        
-            @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.557056
+     
+            @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"] ≈ [0.557056, 0.57344, 0.8192, 0.761856]
 
             #Test multiple generator types
             input_dict = Dict(
@@ -485,145 +463,155 @@ else  # run HiGHS tests
     #         end
     #     end
 
-    #     # Test survival with no generator decreasing and same as with generator but no fuel
-    #     reliability_inputs = Dict(
-    #         "critical_loads_kw" => 200 .* (2 .+ sin.(collect(1:8760)*2*pi/24)),
-    #         "num_generators" => 0,
-    #         "generator_size_kw" => 312.0,
-    #         "fuel_limit" => 0.0,
-    #         "max_outage_duration" => 10,
-    #         "battery_size_kw" => 428.0,
-    #         "battery_size_kwh" => 1585.0,
-    #         "num_battery_bins" => 5
-    #     )
-    #     reliability_results1 = backup_reliability(reliability_inputs)
-    #     reliability_inputs["generator_size_kw"] = 0
-    #     reliability_inputs["fuel_limit"] = 1e10
-    #     reliability_results2 = backup_reliability(reliability_inputs)
-    #     for i in 1:reliability_inputs["max_outage_duration"]
-    #         if i != 1
-    #             @test reliability_results1["mean_fuel_survival_by_duration"][i] <= reliability_results1["mean_fuel_survival_by_duration"][i-1]
-    #             @test reliability_results1["mean_cumulative_survival_by_duration"][i] <= reliability_results1["mean_cumulative_survival_by_duration"][i-1]
+    #     @testset "Test that survival decreasing with no generator or with generator but no fuel" begin
+    #         reliability_inputs = Dict(
+    #             "critical_loads_kw" => 200 .* (2 .+ sin.(collect(1:8760)*2*pi/24)),
+    #             "num_generators" => 0,
+    #             "generator_size_kw" => 312.0,
+    #             "fuel_limit" => 0.0,
+    #             "max_outage_duration" => 10,
+    #             "battery_size_kw" => 428.0,
+    #             "battery_size_kwh" => 1585.0,
+    #             "num_battery_bins" => 5
+    #         )
+    #         reliability_results1 = backup_reliability(reliability_inputs)
+    #         reliability_inputs["generator_size_kw"] = 0
+    #         reliability_inputs["fuel_limit"] = 1e10
+    #         reliability_results2 = backup_reliability(reliability_inputs)
+    #         for i in 1:reliability_inputs["max_outage_duration"]
+    #             if i != 1
+    #                 @test reliability_results1["mean_fuel_survival_by_duration"][i] <= reliability_results1["mean_fuel_survival_by_duration"][i-1]
+    #                 @test reliability_results1["mean_cumulative_survival_by_duration"][i] <= reliability_results1["mean_cumulative_survival_by_duration"][i-1]
+    #             end
+    #             @test reliability_results2["mean_fuel_survival_by_duration"][i] == reliability_results1["mean_fuel_survival_by_duration"][i]
     #         end
-    #         @test reliability_results2["mean_fuel_survival_by_duration"][i] == reliability_results1["mean_fuel_survival_by_duration"][i]
     #     end
 
-    #     #test fuel limit
-    #     input_dict = JSON.parsefile("./scenarios/erp_fuel_limit_inputs.json")
-    #     results = backup_reliability(input_dict)
-    #     @test results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 1
-    #     @test results["cumulative_survival_final_time_step"][1] ≈ 1
-
-    #     input_dict = Dict(
-    #         "critical_loads_kw" => [1,2,2,1],
-    #         "battery_starting_soc_series_fraction" => [0.75,0.75,0.75,0.75],
-    #         "max_outage_duration" => 3,
-    #         "num_generators" => 2, "generator_size_kw" => 1,
-    #         "generator_operational_availability" => 1,
-    #         "generator_failure_to_start" => 0.0,
-    #         "generator_mean_time_to_failure" => 5,
-    #         "battery_operational_availability" => 1,
-    #         "num_battery_bins" => 3,
-    #         "battery_size_kwh" => 4,
-    #         "battery_size_kw" => 1,
-    #         "battery_charge_efficiency" => 1,
-    #         "battery_discharge_efficiency" => 1,
-    #         "battery_minimum_soc_fraction" => 0.5)
-        
-
-    #     #Given outage starts in time period 1
-    #     #____________________________________
-    #     #Outage hour 1:
-    #     #2 generators:         Prob = 0.64,     Battery = 2, Survived
-    #     #1 generator:          Prob = 0.32,     Battery = 1, Survived
-    #     #0 generator:          Prob = 0.04,     Battery = 0, Survived
-    #     #Survival Probability 1.0
-
-    #     #Outage hour 2:
-    #     #2 generators:         Prob = 0.4096,   Battery = 2, Survived
-    #     #2 gen -> 1 gen:       Prob = 0.2048,   Battery = 1, Survived
-    #     #1 gen -> 1 gen:       Prob = 0.256,    Battery = 0, Survived
-    #     #0 generators:         Prob = 0.1296,   Battery = -1, Failed
-    #     #Survival Probability: 0.8704
-
-    #     #Outage hour 3:
-    #     #2 generators:         Prob = 0.262144, Battery = 0, Survived
-    #     #2 gen -> 2 -> 1       Prob = 0.131072, Battery = 1, Survived
-    #     #2 gen -> 1 -> 1       Prob = 0.16384,  Battery = 0, Survived
-    #     #1 gen -> 1 -> 1       Prob = 0.2048,   Battery = -1, Failed
-    #     #0 generators          Prob = 0.238144, Battery = -1, Failed
-    #     #Survival Probability: 0.557056        
-    #     @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.557056
-
-    #     #Test multiple generator types
-    #     input_dict = Dict(
-    #         "critical_loads_kw" => [1,2,2,1], 
-    #         "battery_starting_soc_series_fraction" => [0.5,0.5,0.5,0.5],
-    #         "max_outage_duration" => 3,
-    #         "num_generators" => [1,1],
-    #         "generator_size_kw" => [1,1],
-    #         "generator_operational_availability" => [1,1],
-    #         "generator_failure_to_start" => [0.0, 0.0],
-    #         "generator_mean_time_to_failure" => [5, 5], 
-    #         "battery_operational_availability" => 1.0,
-    #         "num_battery_bins" => 3,
-    #         "battery_size_kwh" => 2,
-    #         "battery_size_kw" => 1,
-    #         "battery_charge_efficiency" => 1,
-    #         "battery_discharge_efficiency" => 1,
-    #         "battery_minimum_soc_fraction" => 0)
-
-    #     @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.557056
-
-    #     #8760 of flat load. Battery can survive 4 hours. 
-    #     #Survival after 24 hours should be chance of generator surviving 20 or more hours
-    #     input_dict = Dict(
-    #         "critical_loads_kw" => 100 .* ones(8760),
-    #         "max_outage_duration" => 24,
-    #         "num_generators" => 1,
-    #         "generator_size_kw" => 100,
-    #         "generator_operational_availability" => 0.98,
-    #         "generator_failure_to_start" => 0.1,
-    #         "generator_mean_time_to_failure" => 100,
-    #         "battery_operational_availability" => 1.0,
-    #         "num_battery_bins" => 101,
-    #         "battery_size_kwh" => 400,
-    #         "battery_size_kw" => 100,
-    #         "battery_charge_efficiency" => 1,
-    #         "battery_discharge_efficiency" => 1,
-    #         "battery_minimum_soc_fraction" => 0)
-
-    #     reliability_results = backup_reliability(input_dict)
-    #     @test reliability_results["unlimited_fuel_mean_cumulative_survival_by_duration"][24] ≈ (0.99^20)*(0.9*0.98) atol=0.00001
-
-    #     #More realistic case of hospital load with 2 generators, PV, and battery
-    #     reliability_inputs = JSON.parsefile("./scenarios/backup_reliability_inputs.json")
-    #     reliability_results = backup_reliability(reliability_inputs)
-    #     @test reliability_results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.858756 atol=0.0001
-    #     @test reliability_results["cumulative_survival_final_time_step"][1] ≈ 0.858756 atol=0.0001
-    #     @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.904242 atol=0.0001#0.833224
-        
-    #     for input_key in [
-    #                 "generator_size_kw",
-    #                 "battery_size_kw",
-    #                 "battery_size_kwh",
-    #                 "pv_size_kw",
-    #                 "critical_loads_kw",
-    #                 "pv_production_factor_series"
-    #             ]
-    #         delete!(reliability_inputs, input_key)
+    #     @testset "Test fuel limit" begin
+    #         input_dict = JSON.parsefile("./scenarios/erp_fuel_limit_inputs.json")
+    #         results = backup_reliability(input_dict)
+    #         @test results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 1
+    #         @test results["cumulative_survival_final_time_step"][1] ≈ 1
     #     end
 
-    #     model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-    #         "output_flag" => false, "log_to_console" => false)
-    #     )
-    #     p = REoptInputs("./scenarios/backup_reliability_reopt_inputs.json")
-    #     results = run_reopt(model, p)
-    #     reliability_results = backup_reliability(results, p, reliability_inputs)
+    #     @testset "Test small scenario where we can calculate expected result" begin
+    #         input_dict = Dict(
+    #             "critical_loads_kw" => [1,2,2,1],
+    #             "battery_starting_soc_series_fraction" => [0.75,0.75,0.75,0.75],
+    #             "max_outage_duration" => 3,
+    #             "num_generators" => 2, "generator_size_kw" => 1,
+    #             "generator_operational_availability" => 1,
+    #             "generator_failure_to_start" => 0.0,
+    #             "generator_mean_time_to_failure" => 5,
+    #             "battery_operational_availability" => 1,
+    #             "num_battery_bins" => 3,
+    #             "battery_size_kwh" => 4,
+    #             "battery_size_kw" => 1,
+    #             "battery_charge_efficiency" => 1,
+    #             "battery_discharge_efficiency" => 1,
+    #             "battery_minimum_soc_fraction" => 0.5)
+            
+    #         #Given outage starts in time period:                  1  2  3  4
+    #         #(Battery bin of - means failed)
+    #         #____________________________________
+    #         #Outage hour 1:
+    #         #2 generators:         Prob = 0.64,     Battery bin = 3  2  2  3
+    #         #1 generator:          Prob = 0.32,     Battery bin = 2  1  1  2
+    #         #0 generator:          Prob = 0.04,     Battery bin = 1  -  -  1
+    #         #Survival Probability: 1.0  0.98  0.98  1.0
 
-    #     @test reliability_results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.802997 atol=0.0001
-    #     @test reliability_results["cumulative_survival_final_time_step"][1] ≈ 0.802997 atol=0.0001
-    #     @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.817586 atol=0.0001
+    #         #Outage hour 2:
+    #         #2 generators:         Prob = 0.4096,   Battery bin = 3  2  3  3
+    #         #2 gen -> 1 gen:       Prob = 0.2048,   Battery bin = 2  1  2  3
+    #         #2 gen -> 0 gen:       Prob = 0.0256,   Battery bin = 1  -  1  2
+    #         #1 gen -> 1 gen:       Prob = 0.256,    Battery bin = 1  -  1  2
+    #         #1 gen -> 0 gen:       Prob = 0.064,    Battery bin = -  -  -  1
+    #         #other 0 generators:   Prob = 0.04,     Battery bin = -  -  -  -
+    #         #Survival Probability: 0.896  0.6144  0.896  0.96
+
+    #         #Outage hour 3:
+    #         #2 generators:         Prob = 0.262144, Battery bin = 3  2  3  3
+    #         #2 gen -> 2 -> 1       Prob = 0.131072, Battery bin = 2  2  3  2
+    #         #2 gen -> 2 -> 0       Prob = 0.016384, Battery bin = -  1  2  - (fails b/c of kw limit not kwh)
+    #         #2 gen -> 1 -> 1       Prob = 0.16384,  Battery bin = 1  1  2  2
+    #         #2 gen -> 1 -> 0       Prob = 0.04096,  Battery bin = -  -  1  - (4th one b/c of kw limit not kwh)
+    #         #1 gen -> 1 -> 1       Prob = 0.2048,   Battery bin = -  -  1  1
+    #         #other 0 generators    Prob = 0.1808,   Battery bin = -  -  -  -
+    #         #Survival Probability: 0.557056 0.57344  0.8192  0.761856
+   
+    #         @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"] ≈ [0.557056 0.57344  0.8192  0.761856]
+
+    #         #Test multiple generator types
+    #         input_dict = Dict(
+    #             "critical_loads_kw" => [1,2,2,1], 
+    #             "battery_starting_soc_series_fraction" => [0.5,0.5,0.5,0.5],
+    #             "max_outage_duration" => 3,
+    #             "num_generators" => [1,1],
+    #             "generator_size_kw" => [1,1],
+    #             "generator_operational_availability" => [1,1],
+    #             "generator_failure_to_start" => [0.0, 0.0],
+    #             "generator_mean_time_to_failure" => [5, 5], 
+    #             "battery_operational_availability" => 1.0,
+    #             "num_battery_bins" => 3,
+    #             "battery_size_kwh" => 2,
+    #             "battery_size_kw" => 1,
+    #             "battery_charge_efficiency" => 1,
+    #             "battery_discharge_efficiency" => 1,
+    #             "battery_minimum_soc_fraction" => 0)
+
+    #         @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.557056
+
+    #         #8760 of flat load. Battery can survive 4 hours. 
+    #         #Survival after 24 hours should be chance of generator surviving 20 or more hours
+    #         input_dict = Dict(
+    #             "critical_loads_kw" => 100 .* ones(8760),
+    #             "max_outage_duration" => 24,
+    #             "num_generators" => 1,
+    #             "generator_size_kw" => 100,
+    #             "generator_operational_availability" => 0.98,
+    #             "generator_failure_to_start" => 0.1,
+    #             "generator_mean_time_to_failure" => 100,
+    #             "battery_operational_availability" => 1.0,
+    #             "num_battery_bins" => 101,
+    #             "battery_size_kwh" => 400,
+    #             "battery_size_kw" => 100,
+    #             "battery_charge_efficiency" => 1,
+    #             "battery_discharge_efficiency" => 1,
+    #             "battery_minimum_soc_fraction" => 0)
+
+    #         reliability_results = backup_reliability(input_dict)
+    #         @test reliability_results["unlimited_fuel_mean_cumulative_survival_by_duration"][24] ≈ (0.99^20)*(0.9*0.98) atol=0.00001
+    #     end
+
+    #     @testset "More realistic case of hospital load with 2 generators, PV, and battery" begin
+    #         reliability_inputs = JSON.parsefile("./scenarios/backup_reliability_inputs.json")
+    #         reliability_results = backup_reliability(reliability_inputs)
+    #         @test reliability_results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.858756 atol=0.0001
+    #         @test reliability_results["cumulative_survival_final_time_step"][1] ≈ 0.858756 atol=0.0001
+    #         @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.904242 atol=0.0001#0.833224
+            
+    #         for input_key in [
+    #                     "generator_size_kw",
+    #                     "battery_size_kw",
+    #                     "battery_size_kwh",
+    #                     "pv_size_kw",
+    #                     "critical_loads_kw",
+    #                     "pv_production_factor_series"
+    #                 ]
+    #             delete!(reliability_inputs, input_key)
+    #         end
+
+    #         model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+    #             "output_flag" => false, "log_to_console" => false)
+    #         )
+    #         p = REoptInputs("./scenarios/backup_reliability_reopt_inputs.json")
+    #         results = run_reopt(model, p)
+    #         reliability_results = backup_reliability(results, p, reliability_inputs)
+
+    #         @test reliability_results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.802997 atol=0.0001
+    #         @test reliability_results["cumulative_survival_final_time_step"][1] ≈ 0.802997 atol=0.0001
+    #         @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.817586 atol=0.0001
+    #     end
     # end                            
 
     # @testset "Inputs" begin
