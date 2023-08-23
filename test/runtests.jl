@@ -81,7 +81,7 @@ else  # run HiGHS tests
         # )
         # reopt_results = run_reopt(model, p)
         # reopt_results["Electrolyzer"] = Dict("size_kw"=>1000)
-        # reopt_results["Compressor"] = Dict("size_kw"=>2000)
+        # reopt_results["HydrogenFuelCell"] = Dict("size_kw"=>2000)
         # reopt_results["HydrogenStorageLP"] = Dict("size_kwh"=>20000, "soc_series_fraction"=>0.5*ones(8760))
         # erp_inputs = Dict(
         #     "generator_operational_availability" => 1, 
@@ -147,7 +147,7 @@ else  # run HiGHS tests
 
         function change_batt_to_h2_in_reopt_results!(results)
             results["Electrolyzer"] = Dict("size_kw"=>results["ElectricStorage"]["size_kw"])
-            results["Compressor"] = Dict("size_kw"=>results["ElectricStorage"]["size_kw"])
+            results["HydrogenFuelCell"] = Dict("size_kw"=>results["ElectricStorage"]["size_kw"])
             results["HydrogenStorageLP"] = Dict(
                 "size_kw"=>results["ElectricStorage"]["size_kwh"], 
                 "soc_series_fraction"=>results["ElectricStorage"]["soc_series_fraction"]
