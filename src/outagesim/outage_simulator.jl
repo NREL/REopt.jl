@@ -295,7 +295,7 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
         diesel_kw = get(d["Generator"], "size_kw", 0)
     end
     if microgrid_only
-        diesel_kw = get(d["Outages"], "Generator_mg_kw", 0)
+        diesel_kw = get(d["Outages"], "generator_microgrid_size_kw", 0)
     end
 
 	fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr = generator_fuel_slope_and_intercept(

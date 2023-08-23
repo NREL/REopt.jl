@@ -23,6 +23,42 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.32.6
+### Changed
+- Required **fuel_cost_per_mmbtu** for modeling **Boiler** tech, otherwise throw a handled error.
+### Fixed
+- Additional **SteamTurbine** defaults processing updates and bug fixes
+
+## v0.32.5
+### Changed
+- Updated `get_existing_chiller_cop` function to accept scalar values instead of vectors to allow for faster API transactions.
+- Refactored `backup_reliability.jl` to enable easier development: added conversion of all scalar generator inputs to vectors in `dictkeys_to_symbols` and reduced each functions with two versions (one with scalar and one with vector generator arguments) to a single version
+- Simplify generator sizing logic in function `backup_reliability_reopt_inputs` (if user sets `generator_size_kw` or `num_generators`to 0, don't override based on REopt solution) and add a validation error
+### Fixed
+- Steamturbine defaults processing
+- simulated_load monthly values processing
+- Fixed incorrect name when accessing result field `Outages` **generator_microgrid_size_kw** in `outag_simulator.jl`
+
+## v0.32.4
+### Changed
+- Consolidated PVWatts API calls to 1 call (previously 3 separate calls existed). API call occurs in `src/core/utils.jl/call_pvwatts_api()`. This function is called for PV in `src/core/production_factor.jl/get_production_factor(PV)` and for GHP in `src/core/scenario.jl`. If GHP and PV are evaluated together, the GHP PVWatts call for ambient temperature is also used to assign the pv.production_factor_series in Scenario.jl so that the PVWatts API does not get called again downstream in `get_production_factor(PV)`.  
+- In `src/core/utils.jl/call_pvwatts_api()`, updated NSRDB bounds used in PVWatts query (now includes southern New Zealand)
+- Updated PV Watts version from v6 to v8. PVWatts V8 updates the weather data to 2020 TMY data from the NREL NSRDB for locations covered by the database. (The NSRDB weather data used in PVWatts V6 is from around 2015.) See other differences at https://developer.nrel.gov/docs/solar/pvwatts/.
+- Made PV struct mutable: This allows for assigning pv.production_factor_series when calling PVWatts for GHP, to avoid a extra PVWatts calls later.
+- Changed unit test expected values due to update to PVWatts v8, which slightly changed expected PV production factors.
+- Changed **fuel_avail_gal** default to 1e9 for on-grid scenarios (same as off-grid)
+### Fixed
+- Issue with using a leap year with a URDB rate - the URDB rate was creating energy_rate of length 8784 instead of intended 8760
+- Don't double add adjustments to urdb rates with non-standard units
+- Corrected `Generator` **installed_cost_per_kw** from 500 to 650 if **only_runs_during_grid_outage** is _true_ or 800 if _false_
+- Corrected `SteamTurbine` defaults population from `get_steam_turbine_defaults_size_class()`
+
+## v0.32.3
+### Fixed
+- Calculate **num_battery_bins** default in `backup_reliability.jl` based on battery duration to prevent significant discretization error (and add test)
+- Account for battery (dis)charge efficiency after capping power in/out in `battery_bin_shift()`
+- Remove _try_ _catch_ in `backup_reliability(d::Dict, p::REoptInputs, r::Dict)` so can see where error was thrown
+
 ## v0.32.2
 ### Fixed
 - Fixed bug in multiple PVs pv_to_location dictionary creation. 
