@@ -71,7 +71,7 @@ function Boiler(;
         min_mmbtu_per_hour::Real = 0.0,
         max_mmbtu_per_hour::Real = 0.0,
         efficiency::Real = 0.8,
-        fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
+        fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [], # REQUIRED. Can be a scalar, a list of 12 monthly values, or a time series of values for every time step
         time_steps_per_hour::Int = 1,  # passed from Settings
         macrs_option_years::Int = 0,
         macrs_bonus_fraction::Real = 0.0,
@@ -82,6 +82,10 @@ function Boiler(;
         can_supply_steam_turbine::Bool = true
         # emissions_factor_lb_CO2_per_mmbtu::Real,
     )
+
+    if isempty(fuel_cost_per_mmbtu)
+        throw(@error("The Boiler.fuel_cost_per_mmbtu is a required input when modeling a heating load which is served by the Boiler in the optimal case"))
+    end
 
     min_kw = min_mmbtu_per_hour * KWH_PER_MMBTU
     max_kw = max_mmbtu_per_hour * KWH_PER_MMBTU
