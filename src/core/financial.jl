@@ -249,9 +249,6 @@ function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
     EASIUR_data = nothing
     try
         EASIUR_data = get_EASIUR2005(type, pop_year=2020, income_year=2020, dollar_year=2010)
-        if type == "p150"
-            print("\nEASIUR_data['NOX_Annual']: ", EASIUR_data["NOX_Annual"][10,10], "\n")
-        end
     catch e
         @warn "Could not look up EASIUR health costs from point ($latitude,$longitude). {$e}"
         return nothing
@@ -509,5 +506,3 @@ function easiur_data(; latitude::Real, longitude::Real, inflation::Real)
         end
         return response_dict
 end
-
-print("\nTEST!!!: ", easiur_data(;latitude=30.2672,longitude=-97.7431,inflation=0.025)["NOx_grid_cost_per_tonne"])
