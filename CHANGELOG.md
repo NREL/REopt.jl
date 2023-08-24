@@ -23,8 +23,13 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.32.6
+### Changed
+- Required **fuel_cost_per_mmbtu** for modeling **Boiler** tech, otherwise throw a handled error.
+### Fixed
+- Additional **SteamTurbine** defaults processing updates and bug fixes
 
-## Develop 2023-08-09
+## v0.32.5
 ### Changed
 - Updated `get_existing_chiller_cop` function to accept scalar values instead of vectors to allow for faster API transactions.
 - Refactored `backup_reliability.jl` to enable easier development: added conversion of all scalar generator inputs to vectors in `dictkeys_to_symbols` and reduced each functions with two versions (one with scalar and one with vector generator arguments) to a single version
