@@ -1,6 +1,6 @@
 {
-    "installed_cost_per_kw": 500,
-    "om_cost_per_kw": 60,
+    "installed_cost_per_mmbtu_per_hour": 115686,
+    "om_cost_per_mmbtu_per_hour": 0.0,
     "macrs_option_years": 0,
     "macrs_bonus_fraction": 0.0,
     "can_supply_steam_turbine": false,
