@@ -300,6 +300,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			m[:TotalTechCapCosts] += sum(p.s.chp.supplementary_firing_capital_cost_per_kw * m[:dvSupplementaryFiringSize][t] for t in p.techs.chp)
         end
 
+		if !isempty(p.techs.heating)
+			add_heating_tech_constraints(m, p)
+		end
+
         if !isempty(p.techs.boiler)
             add_boiler_tech_constraints(m, p)
 			m[:TotalPerUnitProdOMCosts] += m[:TotalBoilerPerUnitProdOMCosts]
