@@ -127,6 +127,10 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     if "SteamTurbine" in p.techs.all
         add_steam_turbine_results(m, p, d; _n)
     end
+
+    if !isnothing(p.s.electric_heater)
+        add_electric_heater_results(m, p, d; _n)
+    end
     
     return d
 end
