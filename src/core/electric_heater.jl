@@ -73,19 +73,12 @@ function ElectricHeater(;
 
     defaults = get_electric_heater_defaults()
 
-    min_kw = min_mmbtu_per_hour * KWH_PER_MMBTU
-    max_kw = max_mmbtu_per_hour * KWH_PER_MMBTU
-
-    # Convert cost basis of mmbtu/mmbtu_per_hour to kwh/kw
-    installed_cost_per_kw = installed_cost_per_mmbtu_per_hour / KWH_PER_MMBTU
-    om_cost_per_kw = om_cost_per_mmbtu_per_hour / KWH_PER_MMBTU
-
     # populate defaults as needed
-    if isnothing(installed_cost_per_kw)
-        installed_cost_per_kw = defaults["installed_cost_per_kw"]
+    if isnothing(installed_cost_per_mmbtu_per_hour)
+        installed_cost_per_mmbtu_per_hour = defaults["installed_cost_per_mmbtu_per_hour"]
     end
-    if isnothing(om_cost_per_kw)
-        om_cost_per_kw = defaults["om_cost_per_kw"]
+    if isnothing(om_cost_per_mmbtu_per_hour)
+        om_cost_per_mmbtu_per_hour = defaults["om_cost_per_mmbtu_per_hour"]
     end
     if isnothing(can_supply_steam_turbine)
         can_supply_steam_turbine = defaults["can_supply_steam_turbine"]
@@ -94,6 +87,15 @@ function ElectricHeater(;
         heating_cop = defaults["heating_cop"]
     end
 
+    # Convert max sizes, cost factors from mmbtu_per_hour to kw
+    min_kw = min_mmbtu_per_hour * KWH_PER_MMBTU
+    max_kw = max_mmbtu_per_hour * KWH_PER_MMBTU
+
+    
+    installed_cost_per_kw = installed_cost_per_mmbtu_per_hour / KWH_PER_MMBTU
+    om_cost_per_kw = om_cost_per_mmbtu_per_hour / KWH_PER_MMBTU
+
+    
     ElectricHeater(
         min_kw,
         max_kw,
