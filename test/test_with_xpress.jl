@@ -1590,7 +1590,7 @@ end
     results = run_reopt(m, p)
 
     #first run: Boiler produces the required heat instead of the electric heater - electric heater should not be purchased
-    @test results["ElectricHeater"]["size_kw"] ≈ 0.0 atol=0.1
+    @test results["ElectricHeater"]["size_mmbtu_per_hour"] ≈ 0.0 atol=0.1
     @test results["ElectricHeater"]["annual_thermal_production_mmbtu"] ≈ 0.0 atol=0.1
     @test results["ElectricHeater"]["annual_electric_consumption_kwh"] ≈ 0.0 atol=0.1
     @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ 87600.0 atol=0.1
