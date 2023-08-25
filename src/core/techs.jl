@@ -199,6 +199,9 @@ function Techs(s::Scenario)
         push!(all_techs, "ElectricHeater")
         push!(heating_techs, "ElectricHeater")
         push!(electric_heaters, "ElectricHeater")
+        if s.electric_heater.can_supply_steam_turbine
+            push!(techs_can_supply_steam_turbine, "ElectricHeater")
+        end
     end
 
     if s.settings.off_grid_flag
