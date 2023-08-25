@@ -56,6 +56,7 @@ function ElectricHeater(;
     macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
     can_supply_steam_turbine::Union{Bool, nothing} = nothing # If the boiler can supply steam to the steam turbine for electric production
+    heating_cop::Union{Real, nothing} = nothing # COP of the heating (i.e., thermal produced / electricity consumed)
 )
 ```
 """
@@ -63,7 +64,7 @@ function ElectricHeater(;
         min_mmbtu_per_hour::Real = 0.0,
         max_mmbtu_per_hour::Real = BIG_NUMBER,
         installed_cost_per_mmbtu_per_hour::Union{Real, Nothing} = nothing,
-        om_cost_per_kw::Union{Real, Nothing} = nothing,
+        om_cost_per_mmbtu_per_hour::Union{Real, Nothing} = nothing,
         macrs_option_years::Int = 0,
         macrs_bonus_fraction::Real = 0.0,
         can_supply_steam_turbine::Union{Bool, Nothing} = nothing,
