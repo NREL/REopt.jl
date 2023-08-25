@@ -180,6 +180,7 @@ include("results/chp.jl")
 include("results/flexible_hvac.jl")
 include("results/ghp.jl")
 include("results/steam_turbine.jl")
+include("results/electric_heater.jl")
 include("results/heating_cooling_load.jl")
 
 include("core/reopt.jl")

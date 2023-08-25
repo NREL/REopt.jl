@@ -78,12 +78,6 @@ function add_electric_heater_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     )
 	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(ElectricHeaterToLoad / KWH_PER_MMBTU), digits=3)
 
-    lifecycle_fuel_cost = p.pwf_fuel["ElectricHeater"] * value(
-        sum(m[:dvFuelUsage]["ElectricHeater", ts] * p.fuel_cost_per_kwh["ElectricHeater"][ts] for ts in p.time_steps)
-    )
-	r["lifecycle_fuel_cost_after_tax"] = round(lifecycle_fuel_cost * (1 - p.s.financial.offtaker_tax_rate_fraction), digits=3)
-	r["year_one_fuel_cost_before_tax"] = round(lifecycle_fuel_cost / p.pwf_fuel["ElectricHeater"], digits=3)
-
     d["ElectricHeater"] = r
 	nothing
 end
