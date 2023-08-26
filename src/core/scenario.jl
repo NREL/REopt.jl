@@ -600,7 +600,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
 
     electric_heater = nothing
-    if haskey(d, "ElectricHeater") && d["ElectricHeater"]["max_kw"] > 0.0
+    if haskey(d, "ElectricHeater") && d["ElectricHeater"]["max_mmbtu_per_hour"] > 0.0
         electric_heater = ElectricHeater(;dictkeys_tosymbols(d["ElectricHeater"])...)
     end
 
