@@ -1699,7 +1699,7 @@ end
     results = run_reopt(m, p)
 
     annual_thermal_prod = 0.8 * 8760  #80% efficient boiler --> 0.8 MMBTU of heat load per hour
-    annual_electric_heater_consumption = annual_thermal_prod * KWH_PER_MMBTU  #1.0 COP
+    annual_electric_heater_consumption = annual_thermal_prod * REopt.KWH_PER_MMBTU  #1.0 COP
     annual_energy_supplied = 87600 + annual_electric_heater_consumption
 
     #Second run: ElectricHeater produces the required heat with free electricity
