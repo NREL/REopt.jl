@@ -1596,7 +1596,7 @@ end
     @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ 87600.0 atol=0.1
     
     d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = 100
-    d["ElectricHeater"]["installed_cost_per_kw"] = 1.0
+    d["ElectricHeater"]["installed_cost_per_mmbtu_per_hour"] = 1.0
     d["ElectricTariff"]["monthly_energy_rates"] = [0,0,0,0,0,0,0,0,0,0,0,0]
     s = Scenario(d)
     p = REoptInputs(s)
