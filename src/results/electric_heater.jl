@@ -51,7 +51,7 @@ function add_electric_heater_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
         p.hours_per_time_step * sum(m[:dvThermalProduction][t,ts] / p.heating_cop[t] 
         for t in p.techs.electric_heater))
     r["electric_consumption_series_kw"] = round.(value.(ElectricHeaterElectricConsumptionSeries), digits=3)
-    r["annual_electric_consumption_kwh"] = round(sum(r["electric_consumption_series_kw"]), digits=3)
+    r["annual_electric_consumption_kwh"] = sum(r["electric_consumption_series_kw"])
 
 	r["thermal_production_series_mmbtu_per_hour"] = 
         round.(value.(m[:dvThermalProduction]["ElectricHeater", ts] for ts in p.time_steps) / KWH_PER_MMBTU, digits=5)
@@ -64,7 +64,7 @@ function add_electric_heater_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     else
         ElectricHeaterToHotTESKW = zeros(length(p.time_steps))
     end
-	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(ElectricHeaterToHotTESKW / KWH_PER_MMBTU), digits=3)
+	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(ElectricHeaterToHotTESKW) / KWH_PER_MMBTU, digits=3)
 
     if !isempty(p.techs.steam_turbine) && p.s.electric_heater.can_supply_steam_turbine
         @expression(m, ElectricHeaterToSteamTurbine[ts in p.time_steps], m[:dvThermalToSteamTurbine]["ElectricHeater",ts])
@@ -76,7 +76,7 @@ function add_electric_heater_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
 	ElectricHeaterToLoad = @expression(m, [ts in p.time_steps],
 		m[:dvThermalProduction]["ElectricHeater", ts] - ElectricHeaterToHotTESKW[ts] - ElectricHeaterToSteamTurbine[ts]
     )
-	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(ElectricHeaterToLoad / KWH_PER_MMBTU), digits=3)
+	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(ElectricHeaterToLoad) / KWH_PER_MMBTU, digits=3)
 
     d["ElectricHeater"] = r
 	nothing
