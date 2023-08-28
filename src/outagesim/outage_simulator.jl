@@ -1,63 +1,178 @@
-function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diesel_min_turndown, 
-                         batt_kwh, batt_kw, batt_roundtrip_efficiency, n_time_steps, n_steps_per_hour, batt_soc_kwh, crit_load)
-    
-    fuel_available_init = fuel_available
-    batt_soc_kwh_init = batt_soc_kwh  # SOC is now directly in kWh
+# *********************************************************************************
+# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met
+#
+# Redistributions of source code must retain the above copyright notice, this list
+# of conditions and the following disclaimer.
+#
+# Redistributions in binary form must reproduce the above copyright notice, this
+# list of conditions and the following disclaimer in the documentation and/or other
+# materials provided with the distribution.
+#
+# Neither the name of the copyright holder nor the names of its contributors may be
+# used to endorse or promote products derived from this software without specific
+# prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+# OF THE POSSIBILITY OF SUCH DAMAGE.
+# *********************************************************************************
 
-    outage_sims = [143]
+
+function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diesel_min_turndown, batt_kwh, batt_kw,
+                    batt_roundtrip_efficiency, n_time_steps, n_steps_per_hour, batt_soc_kwh, crit_load)
+    """
+    Determine how long the critical load can be met with gas generator and energy storage.
+    :param init_time_step: Int, initial time step
+    :param diesel_kw: float, generator capacity
+    :param fuel_available: float, gallons
+    :param b: float, diesel fuel burn rate intercept coefficient (y = m*x + b)  [gal/hr]
+    :param m: float, diesel fuel burn rate slope (y = m*x + b)  [gal/kWh]
+    :param diesel_min_turndown:
+    :param batt_kwh: float, battery capacity
+    :param batt_kw: float, battery inverter capacity (AC rating)
+    :param batt_roundtrip_efficiency:
+    :param batt_soc_kwh: float, battery state of charge in kWh
+    :param n_time_steps: Int, number of time steps in a year
+    :param n_steps_per_hour: Int, number of time steps per hour
+    :param crit_load: list of float, load after DER (PV, Wind, ...)
+    :return: float, number of hours that the critical load can be met using load following
+    """
+    fuel_available_init = fuel_available
+
+    # Initialize a battery SOC array with the initial SOC values
+    updated_soc_array = deepcopy(batt_soc_kwh .* round(batt_kwh))
+
+    outage_sims = []  # Example timestep for debugging
+
     for i in 0:(n_time_steps - 1)
         t = (init_time_step - 1 + i) % n_time_steps + 1  # for wrapping around end of year
         load_kw = crit_load[t]
+
+        # Use the SOC from the updated_soc_array for the current timestep
+        batt_soc_kwh_init = updated_soc_array[t]
         
-        # Debugging for the specified initial timesteps
-        if init_time_step in outage_sims
-            println("======= Timestep $t =======")
-            println("Initial Battery SOC (kWh): $batt_soc_kwh_init")
-            println("Initial Fuel Available (L): $fuel_available_init")
-            println("Load (kW): $load_kw")
+        # # Debugging for the specified initial timesteps
+        # if init_time_step in outage_sims
+        #     println("======= Timestep $t =======")
+        #     println("Initial Battery SOC (kWh): $batt_soc_kwh_init")
+        #     println("Initial Fuel Available (L): $fuel_available_init")
+        #     println("Load (kW): $load_kw")
+        # end
+
+        # If the load is negative or zero, charge the battery
+        if load_kw <= 0
+            potential_gen_kw = diesel_kw  # Generator can output up to its maximum capacity
+            actual_gen_kw = min(potential_gen_kw, (fuel_available_init * n_steps_per_hour - b) / m)
+            fuel_available_init -= (m * actual_gen_kw + b) / n_steps_per_hour
+            
+            # Charge the battery with this generation
+            potential_charge_kwh = actual_gen_kw / n_steps_per_hour * batt_roundtrip_efficiency
+            actual_charge_kwh = min(batt_kwh - batt_soc_kwh_init, potential_charge_kwh)
+            batt_soc_kwh_init += actual_charge_kwh
+            
+            # init_time_step in outage_sims && println("Charging battery. New SOC (kWh): $batt_soc_kwh_init, Fuel Used: $((m * actual_gen_kw + b) / n_steps_per_hour), Remaining Fuel (L): $fuel_available_init")
+            # After all the operations for the current timestep are done, update the SOC array for the next timestep
+            next_t = (t % n_time_steps) + 1  # Calculate next timestep, wrapping around if needed
+            updated_soc_array[next_t] = batt_soc_kwh_init
+
+            continue # Skip to the next timestep
         end
         
-        # Calculate generator contribution
+        # Calculate generator contribution for positive load
         fuel_needed = (m * max(load_kw, diesel_min_turndown * diesel_kw) + b) / n_steps_per_hour
 
         if fuel_needed <= fuel_available_init
             generator_contribution = min(diesel_kw, load_kw)
             load_kw -= generator_contribution
             fuel_available_init -= (m * generator_contribution + b) / n_steps_per_hour
-            init_time_step in outage_sims && println("Generator meets load. Remaining Load (kW): $load_kw, Fuel Used: $((m * generator_contribution + b) / n_steps_per_hour), Remaining Fuel (L): $fuel_available_init")
+            # init_time_step in outage_sims && println("Generator meets load. Remaining Load (kW): $load_kw, Fuel Used: $((m * generator_contribution + b) / n_steps_per_hour), Remaining Fuel (L): $fuel_available_init")
         else
             generator_contribution = max(0, (fuel_available_init * n_steps_per_hour - b) / m)
             load_kw -= generator_contribution
             fuel_available_init = 0
-            init_time_step in outage_sims && println("Generator partially meets load. Remaining Load (kW): $load_kw, All fuel used.")
+            # init_time_step in outage_sims && println("Generator partially meets load. Remaining Load (kW): $load_kw, All fuel used.")
         end
 
-        # Charge the battery with any excess generation
-        excess_gen_kw = diesel_kw - generator_contribution
-        batt_soc_kwh_init += excess_gen_kw / n_steps_per_hour * batt_roundtrip_efficiency
-        batt_soc_kwh_init = min(batt_soc_kwh_init, batt_kwh)
+        # Calculate excess generation only if there's fuel available
+        if fuel_available_init > 0
+            excess_gen_kw = diesel_kw - generator_contribution
+            batt_soc_kwh_init += excess_gen_kw / n_steps_per_hour * batt_roundtrip_efficiency
+            batt_soc_kwh_init = min(batt_soc_kwh_init, batt_kwh)
+        end
 
         # Battery provides the remaining load
         if batt_soc_kwh_init * n_steps_per_hour >= load_kw
             batt_soc_kwh_init -= load_kw / n_steps_per_hour
             load_kw = 0
-            init_time_step in outage_sims && println("Battery meets remaining load. New SOC (kWh): $batt_soc_kwh_init")
+            # init_time_step in outage_sims && println("Battery meets remaining load. New SOC (kWh): $batt_soc_kwh_init")
         else
             load_kw -= batt_soc_kwh_init * n_steps_per_hour
-            init_time_step in outage_sims && println("Battery partially meets load. SOC before depletion (kWh): $batt_soc_kwh_init")
+            # init_time_step in outage_sims && println("Battery partially meets load. SOC before depletion (kWh): $batt_soc_kwh_init")
             batt_soc_kwh_init = 0
-            init_time_step in outage_sims && println("Battery is empty. Remaining Load (kW): $load_kw")
+            # init_time_step in outage_sims && println("Battery is empty. Remaining Load (kW): $load_kw")
         end
 
         if round(load_kw, digits=5) > 0
-            init_time_step in outage_sims && println("System outage. Duration till outage: $(i / n_steps_per_hour) hours")
+            # init_time_step in outage_sims && println("System outage. Duration till outage: $(i / n_steps_per_hour) hours")
             return i / n_steps_per_hour
         end
+
+        # After all the operations for the current timestep are done, update the SOC array for the next timestep
+        next_t = (t % n_time_steps) + 1  # Calculate next timestep, wrapping around if needed
+        updated_soc_array[next_t] = batt_soc_kwh_init
     end
 
     return n_time_steps / n_steps_per_hour
-end 
+end
 
+
+"""
+    simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[], critical_loads_kw=[], 
+        wind_kw_ac_hourly=[], batt_roundtrip_efficiency=0.829, diesel_kw=0, fuel_available=0, b=0, m=0, 
+        diesel_min_turndown=0.3
+    )
+
+Time series simulation of outages starting at every time step of the year. Used to calculate how many time steps the 
+critical load can be met in every outage, which in turn is used to determine probabilities of meeting the critical load.
+
+# Arguments
+- `batt_kwh`: float, battery storage capacity
+- `batt_kw`: float, battery inverter capacity
+- `pv_kw_ac_hourly`: list of floats, AC production of PV system
+- `init_soc`: list of floats between 0 and 1 inclusive, initial state-of-charge
+- `critical_loads_kw`: list of floats
+- `wind_kw_ac_hourly`: list of floats, AC production of wind turbine
+- `batt_roundtrip_efficiency`: roundtrip battery efficiency
+- `diesel_kw`: float, diesel generator capacity
+- `fuel_available`: float, gallons of diesel fuel available
+- `b`: float, diesel fuel burn rate intercept coefficient (y = m*x + b*rated_capacity)  [gal/kwh/kw]
+- `m`: float, diesel fuel burn rate slope (y = m*x + b*rated_capacity)  [gal/kWh]
+- `diesel_min_turndown`: minimum generator turndown in fraction of generator capacity (0 to 1)
+
+Returns a dict
+```
+    "resilience_by_time_step": vector of time steps that critical load is met for outage starting in every time step,
+    "resilience_hours_min": minimum of "resilience_by_time_step",
+    "resilience_hours_max": maximum of "resilience_by_time_step",
+    "resilience_hours_avg": average of "resilience_by_time_step",
+    "outage_durations": vector of integers for outage durations with non zero probability of survival,
+    "probs_of_surviving": vector of probabilities corresponding to the "outage_durations",
+    "probs_of_surviving_by_month": vector of probabilities calculated on a monthly basis,
+    "probs_of_surviving_by_hour_of_the_day":vector of probabilities calculated on a hour-of-the-day basis,
+}
+```
+"""
 function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[], critical_loads_kw=[], wind_kw_ac_hourly=[],
                      batt_roundtrip_efficiency=0.829, diesel_kw=0, fuel_available=0, b=0, m=0, diesel_min_turndown=0.3)
     n_time_steps = length(critical_loads_kw)
@@ -76,6 +191,7 @@ function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[
                 "resilience_hours_avg" => 0,
                 "outage_durations" => Int[],
                 "probs_of_surviving" => Float64[],
+                "critical_lds" => Float64[],
             )
         end
     end
@@ -101,14 +217,63 @@ function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[
             batt_roundtrip_efficiency = batt_roundtrip_efficiency,
             n_time_steps = n_time_steps,
             n_steps_per_hour = n_steps_per_hour,
-            batt_soc_kwh = init_soc[time_step] * batt_kwh,
+            batt_soc_kwh = init_soc,
             crit_load = load_minus_der
         )
     end
-    results = process_results(r, n_time_steps)
+    results = process_results(r, n_time_steps, load_minus_der)
     return results
 end
 
+function process_results(r, n_time_steps, critical_lds)
+
+    r_min = minimum(r)
+    r_max = maximum(r)
+    r_avg = round((float(sum(r)) / float(length(r))), digits=2)
+
+    x_vals = collect(range(1, stop=Int(floor(r_max)+1)))
+    y_vals = Array{Float64, 1}()
+
+    for hrs in x_vals
+        push!(y_vals, round(sum([h >= hrs ? 1 : 0 for h in r]) / n_time_steps, 
+                            digits=4))
+    end
+    return Dict(
+        "resilience_by_time_step" => r,
+        "resilience_hours_min" => r_min,
+        "resilience_hours_max" => r_max,
+        "resilience_hours_avg" => r_avg,
+        "outage_durations" => x_vals,
+        "probs_of_surviving" => y_vals,
+        "critical_lds" => critical_lds
+    )
+end
+
+"""
+    simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
+
+Time series simulation of outages starting at every time step of the year. Used to calculate how many time steps the 
+critical load can be met in every outage, which in turn is used to determine probabilities of meeting the critical load.
+
+# Arguments
+- `d`::Dict from `reopt_results`
+- `p`::REoptInputs the inputs that generated the Dict from `reopt_results`
+- `microgrid_only`::Bool whether or not to simulate only the optimal microgrid capacities or the total capacities. This input is only relevant when modeling multiple outages.
+
+Returns a dict
+```julia
+{
+    "resilience_by_time_step": vector of time steps that critical load is met for outage starting in every time step,
+    "resilience_hours_min": minimum of "resilience_by_time_step",
+    "resilience_hours_max": maximum of "resilience_by_time_step",
+    "resilience_hours_avg": average of "resilience_by_time_step",
+    "outage_durations": vector of integers for outage durations with non zero probability of survival,
+    "probs_of_surviving": vector of probabilities corresponding to the "outage_durations",
+    "probs_of_surviving_by_month": vector of probabilities calculated on a monthly basis,
+    "probs_of_surviving_by_hour_of_the_day":vector of probabilities calculated on a hour-of-the-day basis,
+}
+```
+"""
 function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
     batt_roundtrip_efficiency = (p.s.storage.attr["ElectricStorage"].charge_efficiency *
                                 p.s.storage.attr["ElectricStorage"].discharge_efficiency)
@@ -137,6 +302,7 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
     batt_kwh = 0
     batt_kw = 0
     init_soc = zeros(length(p.time_steps))
+
     if "ElectricStorage" in keys(d)
         batt_kwh = get(d["ElectricStorage"], "size_kwh", 0)
         batt_kw = get(d["ElectricStorage"], "size_kw", 0)
@@ -175,28 +341,5 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
         b = fuel_intercept_gal_per_hr,
         m = fuel_slope_gal_per_kwhe, 
         diesel_min_turndown = p.s.generator.min_turn_down_fraction
-    )
-end
-
-function process_results(r, n_time_steps)
-
-    r_min = minimum(r)
-    r_max = maximum(r)
-    r_avg = round((float(sum(r)) / float(length(r))), digits=2)
-
-    x_vals = collect(range(1, stop=Int(floor(r_max)+1)))
-    y_vals = Array{Float64, 1}()
-
-    for hrs in x_vals
-        push!(y_vals, round(sum([h >= hrs ? 1 : 0 for h in r]) / n_time_steps, 
-                            digits=4))
-    end
-    return Dict(
-        "resilience_by_time_step" => r,
-        "resilience_hours_min" => r_min,
-        "resilience_hours_max" => r_max,
-        "resilience_hours_avg" => r_avg,
-        "outage_durations" => x_vals,
-        "probs_of_surviving" => y_vals,
     )
 end
