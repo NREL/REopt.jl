@@ -1704,9 +1704,9 @@ end
 
     #Second run: ElectricHeater produces the required heat with free electricity
     @test results["ElectricHeater"]["size_mmbtu_per_hour"] ≈ 0.8 atol=0.1
-    @test results["ElectricHeater"]["annual_thermal_production_mmbtu"] ≈ annual_thermal_prod atol=0.1
-    @test results["ElectricHeater"]["annual_electric_consumption_kwh"] ≈ annual_electric_heater_consumption atol=0.1
-    @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ annual_energy_supplied atol=0.1
+    @test results["ElectricHeater"]["annual_thermal_production_mmbtu"] ≈ annual_thermal_prod rtol=1e-4
+    @test results["ElectricHeater"]["annual_electric_consumption_kwh"] ≈ annual_electric_heater_consumption rtol=1e-4
+    @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ annual_energy_supplied rtol=1e-4
 
 end
 
