@@ -33,6 +33,8 @@ function add_expressions(m::JuMP.AbstractModel, ps::Array{REoptInputs{Scenario},
                 m[Symbol("dvProductionToGrid"*_n)][t,u,ts] 
                 for t in p.techs.elec, u in p.export_bins_by_tech[t]
             )
+
+            
         )
     end
 end
@@ -51,8 +53,10 @@ end
 
 
 function LDF.constrain_loads(m::JuMP.AbstractModel, p::LDF.Inputs, ps::Array{REoptInputs{Scenario}, 1})
-    reopt_nodes = [p.s.site.node for p in ps]
-
+    reopt_nodes =  [p.s.site.node for p in ps] 
+    print("\n Debugging: PRINTING DATA FROM THE CONSTRAIN_LOADS FUNCTION")
+    print("\n reopt_nodes:") 
+    print(reopt_nodes) 
     Pⱼ = m[:Pⱼ]
     Qⱼ = m[:Qⱼ]
     # positive values are injections
@@ -60,6 +64,8 @@ function LDF.constrain_loads(m::JuMP.AbstractModel, p::LDF.Inputs, ps::Array{REo
     for j in p.busses
         if j in keys(p.Pload)
             if parse(Int, j) in reopt_nodes
+                print() 
+                print(Int)
                 @constraint(m, [t in 1:p.Ntimesteps],
                     Pⱼ[j,t] == 1e3/p.Sbase * (  # 1e3 b/c REopt values in kW
                         m[Symbol("TotalExport_" * j)][t]
