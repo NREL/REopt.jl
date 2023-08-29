@@ -351,6 +351,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             add_compressor_constraints(m, p)
 			add_hydrogen_load_balance_constraints(m, p)
         end
+
+		if !isempty(p.techs.fuel_cell)
+            add_fuel_cell_constraints(m, p)
+        end
 		
         if !isempty(p.techs.pbi)
             @warn "Adding binary variable(s) to model production based incentives"

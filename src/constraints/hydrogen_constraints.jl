@@ -67,7 +67,7 @@ end
 
 function add_electrolyzer_constraints(m, p; _n="") 
 
-	##Constraint: Compressor takes hydrogen from LP storage to charge HP storage while consuming electricity
+	##Constraint: Electrolyzer takes electricity from technologies and grid to charge LP storage
     if !isempty(p.techs.electrolyzer)
         # @constraint(m, [ts in p.time_steps], 
         #     sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.electrolyzer)
@@ -97,31 +97,12 @@ function add_electrolyzer_constraints(m, p; _n="")
 
 end
 
-# function add_production_constraints(m, p; _n="")
-# 	# Constraint (4d): Electrical production sent to storage or export must be less than technology's rated production
-#     if isempty(p.s.electric_tariff.export_bins)
-#         @constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
-#             sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec)  
-#             + m[Symbol("dvCurtail"*_n)][t, ts]
-#             <= 
-#             p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t, ts]
-#         )
-#     else
-#         @constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
-#             sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec)  
-#             + m[Symbol("dvCurtail"*_n)][t, ts]
-#             + sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for u in p.export_bins_by_tech[t])
-#             <= 
-#             p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t, ts]
-#         )
-#     end
-
-# 	# Constraint (4e): Electrical production sent to storage or curtailed must be less than technology's rated production - no grid
-# 	@constraint(m, [t in p.techs.elec, ts in p.time_steps_without_grid],
-#         sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec)
-#         + m[Symbol("dvCurtail"*_n)][t, ts]  
-#         <= 
-#         p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t, ts]
-# 	)
-
-# end
+function add_fuel_cell_constraints(m, p; _n="")
+    ##Constraint: Fuel Cell takes hydrogen from LP storage to produce electricity
+    if !isempty(p.techs.fuel_cell)
+        @constraint(m, [ts in p.time_steps], 
+            sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.hydrogen_lp) * p.s.fuel_cell.electric_efficiency_full_load 
+            ==
+            sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.fuel_cell)    
+        )
+end

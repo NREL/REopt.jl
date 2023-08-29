@@ -54,6 +54,7 @@ struct Scenario <: AbstractScenario
     steam_turbine::Union{SteamTurbine, Nothing}
     electrolyzer::Union{Electrolyzer, Nothing}
     compressor::Union{Compressor, Nothing}
+    fuel_cell::Union{FuelCell, Nothing}
 end
 
 """
@@ -80,6 +81,9 @@ A Scenario struct can contain the following keys:
 - [AbsorptionChiller](@ref) (optional)
 - [GHP](@ref) (optional, can be Array)
 - [SteamTurbine](@ref) (optional)
+- [Electrolyzer](@ref) (optional)
+- [Compressor](@ref) (optional)
+- [FuelCell](@ref) (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
 
@@ -241,12 +245,17 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     electrolyzer = nothing
     compressor = nothing
+    fuel_cell = nothing
     if haskey(d, "Electrolyzer")
         electrolyzer = Electrolyzer(; dictkeys_tosymbols(d["Electrolyzer"])...)
     end
 
     if haskey(d, "Compressor")
         compressor = Compressor(; dictkeys_tosymbols(d["Compressor"])...)
+    end
+
+    if haskey(d, "FuelCell")
+        fuel_cell = FuelCell(; dictkeys_tosymbols(d["FuelCell"])...)
     end
 
     max_heat_demand_kw = 0.0
@@ -610,7 +619,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         cooling_thermal_load_reduction_with_ghp_kw,
         steam_turbine,
         electrolyzer,
-        compressor
+        compressor,
+        fuel_cell
     )
 end
 

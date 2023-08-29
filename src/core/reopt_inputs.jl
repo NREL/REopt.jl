@@ -387,6 +387,11 @@ function setup_tech_inputs(s::AbstractScenario)
             techs_by_exportbin, techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs)
     end
 
+    if "FuelCell" in techs.all
+        setup_fuel_cell_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor, 
+            techs_by_exportbin, techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs)
+    end
+
     return techs, pv_to_location, maxsize_pv_locations, pvlocations, 
     production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
     seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
@@ -622,6 +627,26 @@ function setup_compressor_inputs(s::AbstractScenario, max_sizes, min_sizes, exis
     fillin_techs_by_exportbin(techs_by_exportbin, s.compressor, "Compressor")
     if !s.compressor.can_curtail
         push!(techs.no_curtail, "Compressor")
+    end
+    return nothing
+end
+
+function setup_fuel_cell_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes,
+    cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin,
+    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs
+    )
+    max_sizes["FuelCell"] = s.fuel_cell.max_kw
+    min_sizes["FuelCell"] = s.fuel_cell.min_kw
+    existing_sizes["FuelCell"] = 0.0
+    
+    update_cost_curve!(s.fuel_cell, "FuelCell", s.financial,
+        cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
+    )
+    om_cost_per_kw["FuelCell"] = s.fuel_cell.om_cost_per_kw
+    production_factor["FuelCell", :] = get_production_factor(s.fuel_cell; s.settings.time_steps_per_hour)
+    fillin_techs_by_exportbin(techs_by_exportbin, s.fuel_cell, "FuelCell")
+    if !s.fuel_cell.can_curtail
+        push!(techs.no_curtail, "FuelCell")
     end
     return nothing
 end

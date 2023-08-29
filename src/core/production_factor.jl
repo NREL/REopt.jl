@@ -89,6 +89,9 @@ function get_production_factor(g::AbstractCompressor; time_steps_per_hour::Int=1
     return ones(8760 * time_steps_per_hour)
 end
 
+function get_production_factor(g::AbstractFuelCell; time_steps_per_hour::Int=1)
+    return ones(8760 * time_steps_per_hour)
+end
 
 """
     get_production_factor(wind::Wind, latitude::Real, longitude::Real)
