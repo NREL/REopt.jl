@@ -53,50 +53,59 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
         load_kw = crit_load[t]
 
         if load_kw < 0  # load is met
-            if batt_soc_kwh < batt_kwh  # charge battery if there's room in the battery
+            if batt_soc_kwh < batt_kwh  # charge battery with DERs if there's room in the battery
                 batt_soc_kwh += minimum([
                     batt_kwh - batt_soc_kwh,     # room available
                     batt_kw / n_steps_per_hour * batt_roundtrip_efficiency,  # inverter capacity
-                    -load_kw / n_steps_per_hour * batt_roundtrip_efficiency,  # excess energy
+                    -load_kw / n_steps_per_hour * batt_roundtrip_efficiency,  # excess energy from DERs
                 ])
             end
 
-        else  # check if we can meet load with generator then storage
-            fuel_needed = (m * maximum([load_kw, diesel_min_turndown * diesel_kw]) + b) / n_steps_per_hour
-            # (gal/kWh * kW + gal/hr) * hr = gal
-            if load_kw <= diesel_kw && fuel_needed <= fuel_available  # diesel can meet load
-                fuel_available -= fuel_needed
-                if load_kw < diesel_min_turndown * diesel_kw  # extra generation goes to battery
-                    if batt_soc_kwh < batt_kwh  # charge battery if there's room in the battery
-                        batt_soc_kwh += minimum([
-                            batt_kwh - batt_soc_kwh,     # room available
-                            batt_kw / n_steps_per_hour * batt_roundtrip_efficiency,  # inverter capacity
-                            (diesel_min_turndown * diesel_kw - load_kw) / n_steps_per_hour * batt_roundtrip_efficiency  # excess energy
-                        ])
-                    end
-                end
+        else  # check if we can meet load with storage then generator
+            avail_batt_kw = minimum([batt_kw, batt_soc_kwh * n_steps_per_hour])
+            if avail_batt_kw >= load_kw # battery can meet full load 
+                batt_soc_kwh = maximum([0, batt_soc_kwh - load_kw / n_steps_per_hour])
                 load_kw = 0
+            else # battery can meet partial load, generator meets the rest
+                batt_soc_kwh = maximum([0, batt_soc_kwh - avail_batt_kw / n_steps_per_hour]) 
+                load_kw -= avail_batt_kw
 
-            else  # diesel can meet part or no load
-                if fuel_needed > fuel_available && load_kw <= diesel_kw  # tank is limiting factor
-                    load_kw -= maximum([0, (fuel_available * n_steps_per_hour - b) / m])  # (gal/hr - gal/hr) * kWh/gal = kW
-                    fuel_available = 0
-
-                elseif fuel_needed <= fuel_available && load_kw > diesel_kw  # diesel capacity is limiting factor
-                    load_kw -= diesel_kw
-                    # run diesel gen at max output
-                    fuel_available = maximum([0, fuel_available - (diesel_kw * m + b) / n_steps_per_hour])
-                                                                # (kW * gal/kWh + gal/hr) * hr = gal
-                else  # fuel_needed > fuel_available && load_kw > diesel_kw  # limited by fuel and diesel capacity
-                    # run diesel at full capacity and drain tank
-                    load_kw -= minimum([diesel_kw, maximum([0, (fuel_available * n_steps_per_hour - b) / m])])
-                    fuel_available = 0
-                end
-
-                if minimum([batt_kw, batt_soc_kwh * n_steps_per_hour]) >= load_kw  # battery can carry balance
-                    # prevent battery charge from going negative
-                    batt_soc_kwh = maximum([0, batt_soc_kwh - load_kw / n_steps_per_hour])
+                fuel_needed = (m * maximum([load_kw, diesel_min_turndown * diesel_kw]) + b) / n_steps_per_hour
+                # (gal/kWh * kW + gal/hr) * hr = gal
+                if load_kw <= diesel_kw && fuel_needed <= fuel_available  # diesel can meet load
+                    fuel_available -= fuel_needed
+                    if load_kw < diesel_min_turndown * diesel_kw  # extra generation goes to battery
+                        if batt_soc_kwh < batt_kwh  # charge battery if there's room in the battery
+                            batt_soc_kwh += minimum([
+                                batt_kwh - batt_soc_kwh,     # room available
+                                batt_kw / n_steps_per_hour * batt_roundtrip_efficiency,  # inverter capacity
+                                (diesel_min_turndown * diesel_kw - load_kw) / n_steps_per_hour * batt_roundtrip_efficiency  # excess energy
+                            ])
+                        end
+                    end
                     load_kw = 0
+
+                else  # diesel can meet part or no load
+                    if fuel_needed > fuel_available && load_kw <= diesel_kw  # tank is limiting factor
+                        load_kw -= maximum([0, (fuel_available * n_steps_per_hour - b) / m])  # (gal/hr - gal/hr) * kWh/gal = kW
+                        fuel_available = 0
+
+                    elseif fuel_needed <= fuel_available && load_kw > diesel_kw  # diesel capacity is limiting factor
+                        load_kw -= diesel_kw
+                        # run diesel gen at max output
+                        fuel_available = maximum([0, fuel_available - (diesel_kw * m + b) / n_steps_per_hour])
+                                                                    # (kW * gal/kWh + gal/hr) * hr = gal
+                    else  # fuel_needed > fuel_available && load_kw > diesel_kw  # limited by fuel and diesel capacity
+                        # run diesel at full capacity and drain tank
+                        load_kw -= minimum([diesel_kw, maximum([0, (fuel_available * n_steps_per_hour - b) / m])])
+                        fuel_available = 0
+                    end
+
+                    if minimum([batt_kw, batt_soc_kwh * n_steps_per_hour]) >= load_kw  # battery can carry balance
+                        # prevent battery charge from going negative
+                        batt_soc_kwh = maximum([0, batt_soc_kwh - load_kw / n_steps_per_hour])
+                        load_kw = 0
+                    end
                 end
             end
         end
