@@ -51,7 +51,7 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
     ### Initialize a battery SOC array with the initial SOC values
     updated_soc_array = deepcopy(batt_soc_kwh .* round(batt_kwh))
 
-    outage_sims = [6539]  # Example timestep for debugging
+    # outage_sims = [6539]  # Example timestep for debugging
 
     for i in 0:(n_time_steps - 1)
         t = (init_time_step - 1 + i) % n_time_steps + 1  # for wrapping around end of year
@@ -60,13 +60,13 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
         ### Use the SOC from the updated_soc_array for the current timestep
         batt_soc_kwh_init = updated_soc_array[t]
         
-        ## Debugging for the specified initial timesteps
-        if init_time_step in outage_sims
-            println("======= Timestep $t =======")
-            println("Initial Battery SOC (kWh): $batt_soc_kwh_init")
-            println("Initial Fuel Available (L): $fuel_available_init")
-            println("Load (kW): $load_kw")
-        end
+        # ## Debugging for the specified initial timesteps
+        # if init_time_step in outage_sims
+        #     println("======= Timestep $t =======")
+        #     println("Initial Battery SOC (kWh): $batt_soc_kwh_init")
+        #     println("Initial Fuel Available (L): $fuel_available_init")
+        #     println("Load (kW): $load_kw")
+        # end
 
         ### If the load is negative or zero, charge the battery
         if load_kw <= 0
@@ -79,7 +79,7 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
             if actual_charge_kwh > 0
                 batt_soc_kwh_init += actual_charge_kwh
                 soc_updated = true
-                init_time_step in outage_sims && println("Charging battery with excess energy. New SOC (kWh): $batt_soc_kwh_init")
+                # init_time_step in outage_sims && println("Charging battery with excess energy. New SOC (kWh): $batt_soc_kwh_init")
             end
             
             ### Only use generator if battery is not full
@@ -94,7 +94,7 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
                 if actual_charge_kwh > 0
                     batt_soc_kwh_init += actual_charge_kwh
                     soc_updated = true
-                    init_time_step in outage_sims && println("Charging battery with Generator. New SOC (kWh): $batt_soc_kwh_init, Fuel Used: $((m * actual_gen_kw + b) / n_steps_per_hour), Remaining Fuel (L): $fuel_available_init")
+                    # init_time_step in outage_sims && println("Charging battery with Generator. New SOC (kWh): $batt_soc_kwh_init, Fuel Used: $((m * actual_gen_kw + b) / n_steps_per_hour), Remaining Fuel (L): $fuel_available_init")
                 end
 
                 ### Update fuel only if generator was actually used
@@ -105,7 +105,7 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
             
             ### Cap at max capacity
             batt_soc_kwh_init = min(batt_soc_kwh_init, batt_kwh)
-            init_time_step in outage_sims && println("Final Charge. New SOC (kWh): $batt_soc_kwh_init")
+            # init_time_step in outage_sims && println("Final Charge. New SOC (kWh): $batt_soc_kwh_init")
 
             ### After all the operations for the current timestep are done, update the SOC array for the next timestep only if SOC was actually updated
             next_t = (t % n_time_steps) + 1  # Calculate next timestep, wrapping around if needed
@@ -145,16 +145,16 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
             actual_batt_output_kwh = load_kw / n_steps_per_hour
             batt_soc_kwh_init -= actual_batt_output_kwh
             load_kw = 0
-            init_time_step in outage_sims && println("Battery meets remaining load. New SOC (kWh): $batt_soc_kwh_init")
+            # init_time_step in outage_sims && println("Battery meets remaining load. New SOC (kWh): $batt_soc_kwh_init")
         else
             actual_batt_output_kwh = max_batt_output_kwh
             batt_soc_kwh_init -= actual_batt_output_kwh
             load_kw -= actual_batt_output_kwh * n_steps_per_hour
-            init_time_step in outage_sims && println("Battery partially meets load but it is now depleted. New SOC (kWh): $batt_soc_kwh_init, Remaining Load (kW): $load_kw")
+            # init_time_step in outage_sims && println("Battery partially meets load but it is now depleted. New SOC (kWh): $batt_soc_kwh_init, Remaining Load (kW): $load_kw")
         end
 
         if round(load_kw, digits=5) > 0
-            init_time_step in outage_sims && println("Outage Occurs. Outage occured after: $(i / n_steps_per_hour) hours")
+            # init_time_step in outage_sims && println("Outage Occurs. Outage occured after: $(i / n_steps_per_hour) hours")
             return i / n_steps_per_hour
         end
 
