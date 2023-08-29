@@ -68,7 +68,7 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
         #     println("Load (kW): $load_kw")
         # end
 
-        # ##If the load is negative or zero, charge the battery
+        ### If the load is negative or zero, charge the battery
         if load_kw <= 0
             potential_gen_kw = diesel_kw  # Generator can output up to its maximum capacity
             actual_gen_kw = min(potential_gen_kw, (fuel_available_init * n_steps_per_hour - b) / m)
@@ -80,6 +80,7 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
             batt_soc_kwh_init += actual_charge_kwh
             
             # init_time_step in outage_sims && println("Charging battery. New SOC (kWh): $batt_soc_kwh_init, Fuel Used: $((m * actual_gen_kw + b) / n_steps_per_hour), Remaining Fuel (L): $fuel_available_init")
+            
             ### After all the operations for the current timestep are done, update the SOC array for the next timestep
             next_t = (t % n_time_steps) + 1  # Calculate next timestep, wrapping around if needed
             updated_soc_array[next_t] = Int64(floor(batt_soc_kwh_init))
@@ -87,7 +88,7 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
             continue ### Skip to the next timestep
         end
         
-        # Calculate generator contribution for positive load
+        ### Calculate generator contribution for positive load
         fuel_needed = (m * max(load_kw, diesel_min_turndown * diesel_kw) + b) / n_steps_per_hour
 
         if fuel_needed <= fuel_available_init
