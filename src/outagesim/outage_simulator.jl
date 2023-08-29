@@ -48,19 +48,19 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
     """
     fuel_available_init = fuel_available
 
-    # Initialize a battery SOC array with the initial SOC values
+    ### Initialize a battery SOC array with the initial SOC values
     updated_soc_array = deepcopy(batt_soc_kwh .* round(batt_kwh))
 
-    # outage_sims = []  # Example timestep for debugging
+    # outage_sims = [6539]  # Example timestep for debugging
 
     for i in 0:(n_time_steps - 1)
         t = (init_time_step - 1 + i) % n_time_steps + 1  # for wrapping around end of year
         load_kw = crit_load[t]
 
-        # Use the SOC from the updated_soc_array for the current timestep
+        ### Use the SOC from the updated_soc_array for the current timestep
         batt_soc_kwh_init = updated_soc_array[t]
         
-        # # Debugging for the specified initial timesteps
+        ### Debugging for the specified initial timesteps
         # if init_time_step in outage_sims
         #     println("======= Timestep $t =======")
         #     println("Initial Battery SOC (kWh): $batt_soc_kwh_init")
@@ -68,23 +68,23 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
         #     println("Load (kW): $load_kw")
         # end
 
-        # If the load is negative or zero, charge the battery
+        # ##If the load is negative or zero, charge the battery
         if load_kw <= 0
             potential_gen_kw = diesel_kw  # Generator can output up to its maximum capacity
             actual_gen_kw = min(potential_gen_kw, (fuel_available_init * n_steps_per_hour - b) / m)
             fuel_available_init -= (m * actual_gen_kw + b) / n_steps_per_hour
             
-            # Charge the battery with this generation
+            ### Charge the battery with this generation
             potential_charge_kwh = actual_gen_kw / n_steps_per_hour * batt_roundtrip_efficiency
             actual_charge_kwh = min(batt_kwh - batt_soc_kwh_init, potential_charge_kwh)
             batt_soc_kwh_init += actual_charge_kwh
             
             # init_time_step in outage_sims && println("Charging battery. New SOC (kWh): $batt_soc_kwh_init, Fuel Used: $((m * actual_gen_kw + b) / n_steps_per_hour), Remaining Fuel (L): $fuel_available_init")
-            # After all the operations for the current timestep are done, update the SOC array for the next timestep
+            ### After all the operations for the current timestep are done, update the SOC array for the next timestep
             next_t = (t % n_time_steps) + 1  # Calculate next timestep, wrapping around if needed
             updated_soc_array[next_t] = Int64(floor(batt_soc_kwh_init))
 
-            continue # Skip to the next timestep
+            continue ### Skip to the next timestep
         end
         
         # Calculate generator contribution for positive load
@@ -102,14 +102,14 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
             # init_time_step in outage_sims && println("Generator partially meets load. Remaining Load (kW): $load_kw, All fuel used.")
         end
 
-        # Calculate excess generation only if there's fuel available
+        ### Calculate excess generation only if there's fuel available
         if fuel_available_init > 0
             excess_gen_kw = diesel_kw - generator_contribution
             batt_soc_kwh_init += excess_gen_kw / n_steps_per_hour * batt_roundtrip_efficiency
             batt_soc_kwh_init = min(batt_soc_kwh_init, batt_kwh)
         end
 
-        # Battery provides the remaining load
+        ### Battery provides the remaining load
         max_batt_output_kwh = batt_kw / n_steps_per_hour  # Maximum output of the battery in kWh for the current time step
         if batt_soc_kwh_init >= max_batt_output_kwh
             actual_batt_output_kwh = min(max_batt_output_kwh, load_kw / n_steps_per_hour)
@@ -128,8 +128,8 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
             return i / n_steps_per_hour
         end
 
-        # After all the operations for the current timestep are done, update the SOC array for the next timestep
-        next_t = (t % n_time_steps) + 1  # Calculate next timestep, wrapping around if needed
+        ### After all the operations for the current timestep are done, update the SOC array for the next timestep
+        next_t = (t % n_time_steps) + 1  ### Calculate next timestep, wrapping around if needed
         updated_soc_array[next_t] = batt_soc_kwh_init
     end
 
@@ -191,7 +191,7 @@ function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[
                 "resilience_hours_avg" => 0,
                 "outage_durations" => Int[],
                 "probs_of_surviving" => Float64[],
-                "critical_lds" => Float64[],
+                "critical_loads" => Float64[],
             )
         end
     end
