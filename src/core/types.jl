@@ -43,6 +43,7 @@ abstract type AbstractGHP <: AbstractTech end
 abstract type AbstractSteamTurbine <: AbstractTech end
 abstract type AbstractElectrolyzer <: AbstractTech end
 abstract type AbstractCompressor <: AbstractTech end
+abstract type AbstractFuelCell <: AbstractTech end
 
 
 """
@@ -82,6 +83,7 @@ mutable struct Techs
     gen::Vector{String}
     electrolyzer::Vector{String}
     compressor::Vector{String}
+    fuel_cell::Vector{String}
     pbi::Vector{String}
     no_curtail::Vector{String}
     no_turndown::Vector{String}

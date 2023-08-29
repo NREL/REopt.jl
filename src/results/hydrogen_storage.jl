@@ -31,7 +31,8 @@
 `HydrogenStorageLP` and `HydrogenStorageHP` results keys:
 - `size_kg` Optimal inverter capacity
 - `soc_series_fraction` Vector of normalized (0-1) state of charge values over the first year
-- `storage_to_compressor_series_kw` Vector of power used to meet load over the first year
+- `storage_to_compressor_series_kg` Vector of power used to meet load over the first year
+- `storage_to_fuel_cell_series_kg` Vector of power used to meet load over the first year
 - `initial_capital_cost` Upfront capital cost for the hydrogen storage tank
 """
 function add_hydrogen_storage_lp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::String; _n="")

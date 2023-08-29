@@ -54,6 +54,7 @@ function Techs(p::REoptInputs, s::BAUScenario)
     techs_can_supply_steam_turbine = String[]
     electrolyzer_techs = String[]
     compressor_techs = String[] 
+    fuel_cell_techs = String[]
 
     if p.s.generator.existing_kw > 0
         push!(all_techs, "Generator")
@@ -83,6 +84,7 @@ function Techs(p::REoptInputs, s::BAUScenario)
         gentechs,
         electrolyzer_techs,
         compressor_techs,
+        fuel_cell_techs,
         pbi_techs,
         techs_no_curtail,
         techs_no_turndown,
@@ -134,6 +136,7 @@ function Techs(s::Scenario)
     techs_can_supply_steam_turbine = String[]    
     electrolyzer_techs = String[]
     compressor_techs = String[] 
+    fuel_cell_techs = String[]
 
     if s.wind.max_kw > 0
         push!(all_techs, "Wind")
@@ -216,6 +219,11 @@ function Techs(s::Scenario)
         push!(all_techs, "Compressor")
         push!(compressor_techs, "Compressor")
     end
+    
+    if !isnothing(s.fuel_cell)
+        push!(all_techs, "FuelCell")
+        push!(fuel_cell_techs, "FuelCell")
+    end
 
     Techs(
         all_techs,
@@ -224,6 +232,7 @@ function Techs(s::Scenario)
         gentechs,
         electrolyzer_techs,
         compressor_techs,
+        fuel_cell_techs,
         pbi_techs,
         techs_no_curtail,
         techs_no_turndown,

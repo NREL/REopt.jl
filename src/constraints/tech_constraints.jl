@@ -70,7 +70,13 @@ function add_tech_size_constraints(m, p; _n="")
         @constraint(m, [t in p.techs.compressor, ts in p.time_steps],
             m[Symbol("dvRatedProduction"*_n)][t,ts]  <= m[:dvSize][t]
         )
-    end  
+    end
+    
+    if !isempty(p.techs.fuel_cell)
+        @constraint(m, [t in p.techs.fuel_cell, ts in p.time_steps],
+            m[Symbol("dvRatedProduction"*_n)][t,ts]  <= m[:dvSize][t]
+        )
+    end
 end
 
 

@@ -27,15 +27,16 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
+
 """
-`Electrolyzer` is an optional REopt input with the following keys and default values:
+`Fuel Cell` is an optional REopt input with the following keys and default values:
 ```julia
     min_kw = 0.0,
     max_kw = 1.0e9,
     installed_cost_per_kw = 5000,
-    om_cost_per_kw = 631.3,
-    om_cost_per_kg = 0.0,
-    efficiency_kwh_per_kg = 3.5,
+    om_cost_per_kw = 50,
+    om_cost_per_kWh = 0.0,
+    electric_efficiency_full_load = 0.425,
     macrs_option_years = 7,
     macrs_bonus_fraction = 0.0,
     macrs_itc_reduction = 0.5,
@@ -57,16 +58,16 @@
     can_wholesale = false,
     can_export_beyond_nem_limit = false,
     can_curtail = false,
-    min_turn_down_pct = 0.9
+    min_turn_down_pct = 0.3
 ```
 """
-struct Electrolyzer <: AbstractElectrolyzer
+struct FuelCell <: AbstractFuelCell
     min_kw::Real
     max_kw::Real
     installed_cost_per_kw::Real
     om_cost_per_kw::Real
-    om_cost_per_kg::Real
-    efficiency_kwh_per_kg::Real
+    om_cost_per_kWh::Real
+    electric_efficiency_full_load::Real
     macrs_option_years::Int
     macrs_bonus_fraction::Real
     macrs_itc_reduction::Real
@@ -90,13 +91,13 @@ struct Electrolyzer <: AbstractElectrolyzer
     can_curtail::Bool
     min_turn_down_pct::Real
 
-    function Electrolyzer(;
+    function FuelCell(;
         min_kw = 0.0,
         max_kw = 1.0e9,
-        installed_cost_per_kw = 15782.5,
-        om_cost_per_kw = 631.3,
-        om_cost_per_kg = 0,
-        efficiency_kwh_per_kg = 54.6,
+        installed_cost_per_kw = 5000,
+        om_cost_per_kw = 50,
+        om_cost_per_kWh = 0,
+        electric_efficiency_full_load = 0.425,
         macrs_option_years = 7,
         macrs_bonus_fraction = 0.0,
         macrs_itc_reduction = 0.5,
@@ -118,7 +119,7 @@ struct Electrolyzer <: AbstractElectrolyzer
         can_wholesale = false,
         can_export_beyond_nem_limit = false,
         can_curtail= false,
-        min_turn_down_pct = 0.9
+        min_turn_down_pct = 0.3
         )
       
         new(
@@ -126,8 +127,8 @@ struct Electrolyzer <: AbstractElectrolyzer
             max_kw,
             installed_cost_per_kw,
             om_cost_per_kw,
-            om_cost_per_kg,
-            efficiency_kwh_per_kg,
+            om_cost_per_kWh,
+            electric_efficiency_full_load,
             macrs_option_years,
             macrs_bonus_fraction,
             macrs_itc_reduction,
