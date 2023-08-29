@@ -70,22 +70,35 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
 
         ### If the load is negative or zero, charge the battery
         if load_kw <= 0
-            potential_gen_kw = diesel_kw  # Generator can output up to its maximum capacity
-            actual_gen_kw = min(potential_gen_kw, (fuel_available_init * n_steps_per_hour - b) / m)
-            fuel_available_init -= (m * actual_gen_kw + b) / n_steps_per_hour
-            
-            ### Charge the battery with this generation
-            potential_charge_kwh = actual_gen_kw / n_steps_per_hour * batt_roundtrip_efficiency
-            actual_charge_kwh = min(batt_kwh - batt_soc_kwh_init, potential_charge_kwh)
+            ### First, charge the battery with the excess energy from the negative load
+            excess_energy_kwh = -load_kw / n_steps_per_hour  # Convert kW to kWh for this timestep
+            actual_charge_kwh = min(batt_kwh - batt_soc_kwh_init, excess_energy_kwh)
             batt_soc_kwh_init += actual_charge_kwh
             
-            # init_time_step in outage_sims && println("Charging battery. New SOC (kWh): $batt_soc_kwh_init, Fuel Used: $((m * actual_gen_kw + b) / n_steps_per_hour), Remaining Fuel (L): $fuel_available_init")
+            ### Only use generator if battery is not full
+            if batt_soc_kwh_init < batt_kwh
+                potential_gen_kw = diesel_kw  # Generator can output up to its maximum capacity
+                actual_gen_kw = min(potential_gen_kw, (fuel_available_init * n_steps_per_hour - b) / m)
+                
+                ### Charge the battery with this generation
+                potential_charge_kwh = actual_gen_kw / n_steps_per_hour * batt_roundtrip_efficiency
+                actual_charge_kwh = min(batt_kwh - batt_soc_kwh_init, potential_charge_kwh)
+                batt_soc_kwh_init += actual_charge_kwh
+
+                ### Update fuel only if generator was actually used
+                if actual_gen_kw > 0
+                    fuel_available_init -= (m * actual_gen_kw + b) / n_steps_per_hour
+                end
+            end
             
+            ### Cap at max capacity
+            batt_soc_kwh_init = min(batt_soc_kwh_init, batt_kwh)
+
             ### After all the operations for the current timestep are done, update the SOC array for the next timestep
             next_t = (t % n_time_steps) + 1  # Calculate next timestep, wrapping around if needed
             updated_soc_array[next_t] = Int64(floor(batt_soc_kwh_init))
 
-            continue ### Skip to the next timestep
+            continue  ### Skip to the next timestep
         end
         
         ### Calculate generator contribution for positive load
