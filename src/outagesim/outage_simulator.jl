@@ -27,8 +27,6 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
-
-
 function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diesel_min_turndown, batt_kwh, batt_kw,
                     batt_roundtrip_efficiency, n_time_steps, n_steps_per_hour, batt_soc_kwh, crit_load)
     """
@@ -53,7 +51,7 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
     # Initialize a battery SOC array with the initial SOC values
     updated_soc_array = deepcopy(batt_soc_kwh .* round(batt_kwh))
 
-    outage_sims = []  # Example timestep for debugging
+    # outage_sims = []  # Example timestep for debugging
 
     for i in 0:(n_time_steps - 1)
         t = (init_time_step - 1 + i) % n_time_steps + 1  # for wrapping around end of year
@@ -84,7 +82,7 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
             # init_time_step in outage_sims && println("Charging battery. New SOC (kWh): $batt_soc_kwh_init, Fuel Used: $((m * actual_gen_kw + b) / n_steps_per_hour), Remaining Fuel (L): $fuel_available_init")
             # After all the operations for the current timestep are done, update the SOC array for the next timestep
             next_t = (t % n_time_steps) + 1  # Calculate next timestep, wrapping around if needed
-            updated_soc_array[next_t] = batt_soc_kwh_init
+            updated_soc_array[next_t] = Int64(floor(batt_soc_kwh_init))
 
             continue # Skip to the next timestep
         end
@@ -245,7 +243,7 @@ function process_results(r, n_time_steps, critical_lds)
         "resilience_hours_avg" => r_avg,
         "outage_durations" => x_vals,
         "probs_of_surviving" => y_vals,
-        "critical_lds" => critical_lds
+        "critical_loads" => critical_lds
     )
 end
 
