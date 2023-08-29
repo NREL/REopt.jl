@@ -347,6 +347,12 @@ function simulated_load(d::Dict)
             throw(@error("Please supply a doe_reference_name and optional scaling parameters (annual_tonhour or monthly_tonhour)."))
         end
         
+        city = get(d, "city", nothing)
+        if isnothing(city)
+            city = find_ashrae_zone_city(latitude, longitude)
+        end
+        year = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : 2022
+
         elec_load_inputs = Dict{Symbol, Any}()
         # Get the default cooling load (used when we want cooling load without annual_tonhour input) - using the cooling doe reference name
         # Get the default electric load for the building(s), used for fractions
@@ -362,6 +368,7 @@ function simulated_load(d::Dict)
                                 latitude=latitude,
                                 longitude=longitude,
                                 annual_kwh=nothing,
+                                year=year,
                                 monthly_totals_kwh=Real[]
                             )
 
@@ -377,11 +384,7 @@ function simulated_load(d::Dict)
             cooling_load_inputs[:doe_reference_name] = cooling_doe_ref_name[1]
         end
 
-        city = get(d, "city", nothing)
-        if isnothing(city)
-            city = find_ashrae_zone_city(latitude, longitude)
-        end
-        year = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : 2022
+        
 
         annual_tonhour = get(d, "annual_tonhour", nothing)
         monthly_tonhour = get(d, "monthly_tonhour", Real[])
