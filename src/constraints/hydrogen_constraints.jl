@@ -105,4 +105,5 @@ function add_fuel_cell_constraints(m, p; _n="")
             ==
             sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.fuel_cell)    
         )
+    end
 end
