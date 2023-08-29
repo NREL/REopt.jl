@@ -110,9 +110,11 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
         end
 
         # Battery provides the remaining load
-        if batt_soc_kwh_init * n_steps_per_hour >= load_kw
-            batt_soc_kwh_init -= load_kw / n_steps_per_hour
-            load_kw = 0
+        max_batt_output_kwh = batt_kw / n_steps_per_hour  # Maximum output of the battery in kWh for the current time step
+        if batt_soc_kwh_init >= max_batt_output_kwh
+            actual_batt_output_kwh = min(max_batt_output_kwh, load_kw / n_steps_per_hour)
+            batt_soc_kwh_init -= actual_batt_output_kwh
+            load_kw -= actual_batt_output_kwh * n_steps_per_hour
             # init_time_step in outage_sims && println("Battery meets remaining load. New SOC (kWh): $batt_soc_kwh_init")
         else
             load_kw -= batt_soc_kwh_init * n_steps_per_hour
