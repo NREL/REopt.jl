@@ -349,21 +349,22 @@ function simulated_load(d::Dict)
         
         # Get the default cooling load (used when we want cooling load without annual_tonhour input)
         if !isnothing(cooling_doe_ref_name)
-            # Build dependent inputs for cooling load
-            elec_load_inputs = Dict{Symbol, Any}()
-            if typeof(doe_reference_name) <: Vector{} && length(doe_reference_name) > 1
-                elec_load_inputs[:blended_doe_reference_names] = doe_reference_name
-                elec_load_inputs[:blended_doe_reference_percents] = percent_share_list
-            else
-                elec_load_inputs[:doe_reference_name] = doe_reference_name[1]
-            end
+        # Get the default cooling load (used when we want cooling load without annual_tonhour input) - using the cooling doe reference name
+        # Get the default electric load for the building(s), used for fractions
+        if typeof(doe_reference_name) <: Vector{} && length(doe_reference_name) > 1
+            elec_load_inputs[:blended_doe_reference_names] = doe_reference_name
+            elec_load_inputs[:blended_doe_reference_percents] = percent_share_list
+        else
+            elec_load_inputs[:doe_reference_name] = doe_reference_name[1]
+        end
 
-            electric_load = ElectricLoad(; elec_load_inputs...,
-                                    latitude=latitude,
-                                    longitude=longitude,
-                                    annual_kwh=annual_kwh,
-                                    monthly_totals_kwh=monthly_totals_kwh
-                                )
+        electric_load = ElectricLoad(; elec_load_inputs...,
+                                city=city,
+                                latitude=latitude,
+                                longitude=longitude,
+                                annual_kwh=nothing,
+                                monthly_totals_kwh=Real[]
+                            )
 
             cooling_load_inputs = Dict{Symbol, Any}()
             if typeof(cooling_doe_ref_name) <: Vector{} && length(cooling_doe_ref_name) > 1
