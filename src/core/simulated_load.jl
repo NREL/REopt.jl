@@ -347,8 +347,6 @@ function simulated_load(d::Dict)
             throw(@error("Please supply a doe_reference_name and optional scaling parameters (annual_tonhour or monthly_tonhour)."))
         end
         
-        # Get the default cooling load (used when we want cooling load without annual_tonhour input)
-        if !isnothing(cooling_doe_ref_name)
         # Get the default cooling load (used when we want cooling load without annual_tonhour input) - using the cooling doe reference name
         # Get the default electric load for the building(s), used for fractions
         if typeof(doe_reference_name) <: Vector{} && length(doe_reference_name) > 1
@@ -381,6 +379,9 @@ function simulated_load(d::Dict)
                                         existing_chiller_cop=chiller_cop,
                                         existing_chiller_max_thermal_factor_on_peak_load=max_thermal_factor_on_peak_load
                                 )
+        if isnothing(cooling_doe_ref_name)
+            cooling_doe_ref_name = doe_reference_name
+        end 
 
             if length(cooling_doe_ref_name) > 1
                 modified_fraction = []
