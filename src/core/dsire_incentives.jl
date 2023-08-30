@@ -10,6 +10,9 @@
 
 # Some states have a 100% of cost incentive, which is not realistic so need to look into those
 
+# Net metering - this assigns net metering, but only if it's available state-wide, and
+# assigns an arbitrary high net metering limit (kW) because there is no parameter_set for net metering
+
 # TODO these data from DSIRE are not directly used in REopt, but need to be post-processed
 #   with the incentives to modify the REopt inputs, e.g. convert 
 # max_percent_of_cost  # Convert to state_ibi_max (dollars) (how???)
@@ -67,8 +70,9 @@ function get_incentives_scenarios(reopt_inputs::Dict; state_abbr::String="", tec
         if !isempty(basis)
             # Assign REopt inputs from DSIRE.db data for that program
             program_data = inputs_map[basis*"_based"]
+            reopt_inputs_to_assign[basis]["incentive_program_name"] = state_incentive_program_data[program]["name"]
             for key in keys(program_data)
-                if key in keys(state_incentive_program_data[program])
+                if key in setdiff(keys(state_incentive_program_data[program]), ["name"])
                     # Skipping unused keys for now
                     reopt_inputs_to_assign[basis][program_data[key]] = state_incentive_program_data[program][key]
                 end
@@ -85,6 +89,7 @@ function get_incentives_scenarios(reopt_inputs::Dict; state_abbr::String="", tec
     reopt_inputs_scenarios = Dict()
     for basis in keys(reopt_inputs_to_assign)
         reopt_inputs_scenarios[basis] = deepcopy(reopt_inputs)
+        reopt_inputs_scenarios[basis]["incentive_program_name"] = reopt_inputs_to_assign[basis]["incentive_program_name"]
         for input in keys(reopt_inputs_to_assign[basis])
             reopt_inputs_scenarios[basis][tech][input] = reopt_inputs_to_assign[basis][input]
         end
@@ -131,6 +136,7 @@ function get_incentive_data(db::SQLite.DB; state_abbr::String="", tech::String="
     for set_id in unique(parameters[!, "parameter_set_id"])
         program_id = parameter_set[parameter_set[!, "id"].==set_id, "program_id"][1]
         data[program_id] = Dict()
+        data[program_id]["name"] = state_programs[state_programs[!, "id"].==program_id, "name"][1]
         param_sub = parameters[parameters.parameter_set_id.==set_id, :]
         for param in eachrow(param_sub)
             if !ismissing(param["units"]) && !ismissing(param["source"])

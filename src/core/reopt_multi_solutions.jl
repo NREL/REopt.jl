@@ -28,12 +28,15 @@ function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vec
     # Count number of JuMP models used
     ms_count = 1
     # Decide which state incentives to apply
+    best_incentive_program_name = "None"
     if !isempty(state) && haskey(input_data, "PV")
         tech = "PV"
         reopt_inputs_scenarios = REopt.get_incentives_scenarios(input_data; state_abbr=state, tech=tech)
         results_scenarios = Dict()
         best_incentives = ""
         for (i, scenario) in enumerate(keys(reopt_inputs_scenarios))
+            incentive_name = pop!(reopt_inputs_scenarios[scenario], "incentive_program_name")
+            delete!(get(reopt_inputs_scenarios[scenario], "PV", Dict()), "incentive_program_name")
             s = Scenario(reopt_inputs_scenarios[scenario])
             inputs = REoptInputs(s)
             m = ms[i]
@@ -41,12 +44,15 @@ function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vec
             results_scenarios[scenario] = run_reopt(m, inputs)
             if i == 1
                 best_incentives = scenario
+                best_incentive_program_name = incentive_name
             elseif results_scenarios[scenario]["Financial"]["lcc"] < results_scenarios[best_incentives]["Financial"]["lcc"]
                 best_incentives = scenario
+                best_incentive_program_name = incentive_name
             end
         end
         if !isempty(best_incentives)
             input_data = reopt_inputs_scenarios[best_incentives]
+            delete!(input_data, "incentive_program_name")
         end
     end
     
@@ -87,6 +93,7 @@ function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vec
         simresults = Dict()
     end
     results_summary = Dict("optimal" => get_multi_solutions_results_summary(results_dict, p, ms[ms_count-1], techs_sized, simresults, outage_start_hour, outage_duration_hours))
+    results_summary["incentive_used"] = Dict("best_incentive_program_name" => best_incentive_program_name)
     # Add custom resilience output to results_all, per Eaton's request
     results_dict["resilience"] = results_summary["optimal"]["resilience"]
     results_all = Dict("optimal" => results_dict)
