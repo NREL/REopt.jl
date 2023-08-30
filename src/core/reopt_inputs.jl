@@ -1004,23 +1004,26 @@ function setup_ghp_inputs(s::AbstractScenario, time_steps, time_steps_without_gr
     ghp_electric_consumption_kw = zeros(num, length(time_steps))
     if num > 0
         require_ghp_purchase = s.ghp_option_list[1].require_ghp_purchase  # This does not change with the number of options
+       
         for (i, option) in enumerate(s.ghp_option_list)
-            ghp_cap_cost_slope, ghp_cap_cost_x, ghp_cap_cost_yint, ghp_n_segments = cost_curve(option, s.financial)
-            ghp_size_ton = option.heatpump_capacity_ton
-            seg = 0
-            if ghp_size_ton <= ghp_cap_cost_x[1]
-                seg = 1
-            elseif ghp_size_ton > ghp_cap_cost_x[end]
-                seg = ghp_n_segments
-            else
-                for n in 2:(ghp_n_segments+1)
-                    if (ghp_size_ton > ghp_cap_cost_x[n-1]) && (ghp_size_ton <= ghp_cap_cost_x[n])
-                        seg = n
-                        break
-                    end
-                end
+            if option.heat_pump_configuration == "WSHP"
+                fixed_cost, variable_cost = get_ghp_installed_cost(option, s.financial, option.heatpump_capacity_ton)
+                ghp_installed_cost[i] = fixed_cost + variable_cost
+
+            elseif option.heat_pump_configuration == "WWHP"
+                temp = option.installed_cost_per_kw
+                option.installed_cost_per_kw = option.wwhp_heating_pump_installed_cost_curve
+                fixed_cost_heating, variable_cost_heating = get_ghp_installed_cost(option, s.financial, option.wwhp_heating_pump_capacity_ton)
+                ghp_installed_cost_heating = 0.5 * fixed_cost_heating + variable_cost_heating
+                
+                option.installed_cost_per_kw = option.wwhp_cooling_pump_installed_cost_curve
+                fixed_cost_cooling, variable_cost_cooling = get_ghp_installed_cost(option, s.financial, option.wwhp_cooling_pump_capacity_ton)
+                option.installed_cost_per_kw = temp
+                ghp_installed_cost_cooling = 0.5 * fixed_cost_cooling + variable_cost_cooling
+
+                ghp_installed_cost[i] = ghp_installed_cost_heating + ghp_installed_cost_cooling
             end
-            ghp_installed_cost[i] = ghp_cap_cost_yint[seg-1] + ghp_size_ton * ghp_cap_cost_slope[seg-1]
+
             ghp_om_cost_year_one[i] = option.om_cost_year_one
             heating_thermal_load = s.space_heating_load.loads_kw + s.dhw_load.loads_kw
             # Using minimum of thermal load and ghp-serving load to avoid small negative net loads
@@ -1061,4 +1064,26 @@ function setup_operating_reserve_fraction(s::AbstractScenario, techs_operating_r
     techs_operating_reserve_req_fraction["Wind"] = s.wind.operating_reserve_required_fraction
 
     return nothing
+end
+
+function get_ghp_installed_cost(option::AbstractTech, financial::Financial, ghp_size_ton::Float64)
+
+    ghp_cap_cost_slope, ghp_cap_cost_x, ghp_cap_cost_yint, ghp_n_segments = cost_curve(option, financial)
+    seg = 0
+    if ghp_size_ton <= ghp_cap_cost_x[1]
+        seg = 2
+    elseif ghp_size_ton > ghp_cap_cost_x[end]
+        seg = ghp_n_segments+1
+    else
+        for n in 2:(ghp_n_segments+1)
+            if (ghp_size_ton > ghp_cap_cost_x[n-1]) && (ghp_size_ton <= ghp_cap_cost_x[n])
+                seg = n
+                break
+            end
+        end
+    end
+    fixed_cost = ghp_cap_cost_yint[seg-1] 
+    variable_cost = ghp_size_ton * ghp_cap_cost_slope[seg-1]
+
+    return fixed_cost, variable_cost
 end

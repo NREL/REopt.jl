@@ -87,6 +87,8 @@ struct with outer constructor:
 Base.@kwdef mutable struct GHP <: AbstractGHP
     require_ghp_purchase::Union{Bool, Int64} = false  # 0 = false, 1 = true
     installed_cost_heatpump_per_ton::Float64 = 1075.0
+    installed_cost_wwhp_heating_pump_per_ton::Float64 = 1075.0
+    installed_cost_wwhp_cooling_pump_per_ton::Float64 = 1075.0
     heatpump_capacity_sizing_factor_on_peak_load::Float64 = 1.1
     installed_cost_ghx_per_ft::Float64 = 14.0
     installed_cost_building_hydronic_loop_per_sqft = 1.70
@@ -119,11 +121,16 @@ Base.@kwdef mutable struct GHP <: AbstractGHP
     cooling_thermal_kw::Vector{Float64} = []
     yearly_electric_consumption_kw::Vector{Float64} = []
     peak_combined_heatpump_thermal_ton::Float64 = NaN
+    heat_pump_configuration::String = ""
 
     # Intermediate parameters for cost processing
     tech_sizes_for_cost_curve::Union{Float64, AbstractVector{Float64}} = NaN
     installed_cost_per_kw::Union{Float64, AbstractVector{Float64}} = NaN
-    heatpump_capacity_ton::Float64 = NaN
+    wwhp_heating_pump_installed_cost_curve::Union{Float64, AbstractVector{Float64}} = NaN
+    wwhp_cooling_pump_installed_cost_curve::Union{Float64, AbstractVector{Float64}} = NaN
+    heatpump_capacity_ton::Float64 = 0
+    wwhp_heating_pump_capacity_ton::Float64 = 0
+    wwhp_cooling_pump_capacity_ton::Float64 = 0
 
     # Process and populate these parameters needed more directly by the model
     om_cost_year_one::Float64 = NaN
@@ -136,6 +143,7 @@ function GHP(response::Dict, d::Dict)
     ghp.heating_thermal_kw = response["inputs"]["heating_thermal_load_mmbtu_per_hr"] * KWH_PER_MMBTU
     ghp.cooling_thermal_kw = response["inputs"]["cooling_thermal_load_ton"] * KWH_THERMAL_PER_TONHOUR
     # Outputs of GhpGhx.jl
+    ghp.heat_pump_configuration = response["outputs"]["heat_pump_configuration"]
     ghp.yearly_electric_consumption_kw = response["outputs"]["yearly_total_electric_consumption_series_kw"]
     ghp.peak_combined_heatpump_thermal_ton = response["outputs"]["peak_combined_heatpump_thermal_ton"]
 
@@ -167,7 +175,13 @@ function setup_installed_cost_curve!(ghp::GHP, response::Dict)
     big_number = 1.0e10
     # GHX and GHP sizing metrics for cost calculations
     total_ghx_ft = response["outputs"]["number_of_boreholes"] * response["outputs"]["length_boreholes_ft"]
-    heatpump_peak_ton = response["outputs"]["peak_combined_heatpump_thermal_ton"]
+    
+    if ghp.heat_pump_configuration == "WSHP"
+        heatpump_peak_ton = response["outputs"]["peak_combined_heatpump_thermal_ton"]
+    elseif ghp.heat_pump_configuration == "WWHP"
+        wwhp_heating_pump_peak_ton = response["outputs"]["peak_heating_heatpump_thermal_ton"]
+        wwhp_cooling_pump_peak_ton = response["outputs"]["peak_cooling_heatpump_thermal_ton"]
+    end
 
     # Use initial cost curve to leverage existing incentives-based cost curve method in data_manager
     # The GHX and hydronic loop cost are the y-intercepts ([$]) of the cost for each design
@@ -179,14 +193,27 @@ function setup_installed_cost_curve!(ghp::GHP, response::Dict)
     #   the initial slope is based on the heat pump size (e.g. $/ton) of the cost curve for
     #   building a rebate-based cost curve if there are less-than big_number maximum incentives
     ghp.tech_sizes_for_cost_curve = [0.0, big_number]
-    ghp.installed_cost_per_kw = [ghx_cost + hydronic_loop_cost, 
-                                        ghp.installed_cost_heatpump_per_ton]
+
+    if ghp.heat_pump_configuration == "WSHP"
+        ghp.installed_cost_per_kw = [ghx_cost + hydronic_loop_cost, 
+                                            ghp.installed_cost_heatpump_per_ton]
+    elseif ghp.heat_pump_configuration == "WWHP"
+        ghp.wwhp_heating_pump_installed_cost_curve = [ghx_cost + hydronic_loop_cost, 
+                                                            ghp.installed_cost_wwhp_heating_pump_per_ton]
+        ghp.wwhp_cooling_pump_installed_cost_curve = [ghx_cost + hydronic_loop_cost,  
+                                                            ghp.installed_cost_wwhp_cooling_pump_per_ton]
+    end
 
     # Using a separate call to _get_REopt_cost_curve in data_manager for "ghp" (not included in "available_techs")
     #    and then use the value below for heat pump capacity to calculate the final absolute cost for GHP
 
-    # Use this with the cost curve to determine absolute cost
-    ghp.heatpump_capacity_ton = heatpump_peak_ton * ghp.heatpump_capacity_sizing_factor_on_peak_load
+    if ghp.heat_pump_configuration == "WSHP"
+        # Use this with the cost curve to determine absolute cost
+        ghp.heatpump_capacity_ton = heatpump_peak_ton * ghp.heatpump_capacity_sizing_factor_on_peak_load
+    elseif ghp.heat_pump_configuration == "WWHP"
+        ghp.wwhp_heating_pump_capacity_ton = wwhp_heating_pump_peak_ton * ghp.heatpump_capacity_sizing_factor_on_peak_load
+        ghp.wwhp_cooling_pump_capacity_ton = wwhp_cooling_pump_peak_ton * ghp.heatpump_capacity_sizing_factor_on_peak_load
+    end
 end
 
 function setup_om_cost!(ghp::GHP)
