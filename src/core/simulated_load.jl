@@ -394,8 +394,8 @@ function simulated_load(d::Dict)
             city=city,
             latitude=latitude,
             longitude=longitude,
-            annual_tonhour=annual_tonhour,
-            monthly_tonhour=monthly_tonhour,
+            annual_tonhour=nothing,
+            monthly_tonhour=Real[],
             existing_chiller_cop=chiller_cop,
             existing_chiller_max_thermal_factor_on_peak_load=max_thermal_factor_on_peak_load,
             site_electric_load_profile = electric_load.loads_kw
