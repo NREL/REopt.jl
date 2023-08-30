@@ -86,7 +86,7 @@ function get_incentives_scenarios(reopt_inputs::Dict; state_abbr::String="", tec
     #     # println(e.msg)
     # end
 
-    reopt_inputs_scenarios = Dict()
+    reopt_inputs_scenarios = Dict() 
     for basis in keys(reopt_inputs_to_assign)
         reopt_inputs_scenarios[basis] = deepcopy(reopt_inputs)
         reopt_inputs_scenarios[basis]["incentive_program_name"] = reopt_inputs_to_assign[basis]["incentive_program_name"]
@@ -103,6 +103,9 @@ function get_incentives_scenarios(reopt_inputs::Dict; state_abbr::String="", tec
             end
         end
     end
+
+    # Report if net metering was enabled from DSIRE, for knowledge
+    reopt_inputs_scenarios["net_metering_from_dsire"] = can_net_meter ? "true" : "false"
 
     return reopt_inputs_scenarios
 end

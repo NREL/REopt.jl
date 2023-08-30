@@ -29,9 +29,11 @@ function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vec
     ms_count = 1
     # Decide which state incentives to apply
     best_incentive_program_name = "None"
+    net_metering_from_dsire = "false"
     if !isempty(state) && haskey(input_data, "PV")
         tech = "PV"
         reopt_inputs_scenarios = REopt.get_incentives_scenarios(input_data; state_abbr=state, tech=tech)
+        net_metering_from_dsire = pop!(reopt_inputs_scenarios, "net_metering_from_dsire")
         results_scenarios = Dict()
         best_incentives = ""
         for (i, scenario) in enumerate(keys(reopt_inputs_scenarios))
@@ -93,7 +95,8 @@ function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vec
         simresults = Dict()
     end
     results_summary = Dict("optimal" => get_multi_solutions_results_summary(results_dict, p, ms[ms_count-1], techs_sized, simresults, outage_start_hour, outage_duration_hours))
-    results_summary["incentive_used"] = Dict("best_incentive_program_name" => best_incentive_program_name)
+    results_summary["incentive_used"] = Dict("best_incentive_program_name" => best_incentive_program_name,
+                                            "net_metering_from_dsire" => net_metering_from_dsire)
     # Add custom resilience output to results_all, per Eaton's request
     results_dict["resilience"] = results_summary["optimal"]["resilience"]
     results_all = Dict("optimal" => results_dict)
