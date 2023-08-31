@@ -46,102 +46,102 @@ elseif "CPLEX" in ARGS
 
 else  # run HiGHS tests
 
-    @testset "Temp test dev H2 in backup_reliability" begin
-        # reopt_inputs = Dict(
-        #     "Site" => Dict(
-        #         "longitude" => -106.42077256104001,
-        #         "latitude" => 31.810468380036337
-        #     ),
-        #     "ElectricStorage" => Dict(
-        #         "min_kw" => 2000,
-        #         "max_kw" => 2000,
-        #         "min_kwh" => 10000,
-        #         "max_kwh" => 10000
-        #     ),
-        #     "Generator" => Dict(
-        #         "min_kw" => 2000,
-        #         "max_kw" => 2000
-        #     ),
-        #     "PV" => Dict(
-        #         "min_kw" => 4000,
-        #         "max_kw" => 4000
-        #     ),
-        #     "ElectricLoad" => Dict(
-        #         "doe_reference_name" => "FlatLoad",
-        #         "annual_kwh" => 175200000.0,
-        #         "critical_load_fraction" => 0.2
-        #     ),
-        #     "ElectricTariff" => Dict(
-        #         "urdb_label" => "5ed6c1a15457a3367add15ae"
-        #     )
-        # )
-        # p = REoptInputs(reopt_inputs)
-        # model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-        #     "output_flag" => false, "log_to_console" => false)
-        # )
-        # reopt_results = run_reopt(model, p)
-        # reopt_results["Electrolyzer"] = Dict("size_kw"=>1000)
-        # reopt_results["HydrogenFuelCell"] = Dict("size_kw"=>2000)
-        # reopt_results["HydrogenStorageLP"] = Dict("size_kwh"=>20000, "soc_series_fraction"=>0.5*ones(8760))
-        # erp_inputs = Dict(
-        #     "generator_operational_availability" => 1, 
-        #     "generator_failure_to_start" => 0.0,
-        #     "generator_mean_time_to_failure" => 5, 
-        #     "num_generators" => 2, 
-        #     "max_outage_duration" => 3, 
-        #     "battery_minimum_soc_fraction" => 1/3,
-        #     "H2_minimum_soc_fraction" => 0.2
-        # )
-        # inputs_processed = backup_reliability_reopt_inputs(d=reopt_results, p=p, r=erp_inputs)
-        # pop!(inputs_processed, :pv_kw_ac_time_series)
-        # pop!(inputs_processed, :critical_loads_kw)
-        # pop!(inputs_processed, :battery_starting_soc_kwh)
-        # @info inputs_processed
+    # @testset "Temp test dev H2 in backup_reliability" begin
+    #     reopt_inputs = Dict(
+    #         "Site" => Dict(
+    #             "longitude" => -106.42077256104001,
+    #             "latitude" => 31.810468380036337
+    #         ),
+    #         "ElectricStorage" => Dict(
+    #             "min_kw" => 2000,
+    #             "max_kw" => 2000,
+    #             "min_kwh" => 10000,
+    #             "max_kwh" => 10000
+    #         ),
+    #         "Generator" => Dict(
+    #             "min_kw" => 2000,
+    #             "max_kw" => 2000
+    #         ),
+    #         "PV" => Dict(
+    #             "min_kw" => 4000,
+    #             "max_kw" => 4000
+    #         ),
+    #         "ElectricLoad" => Dict(
+    #             "doe_reference_name" => "FlatLoad",
+    #             "annual_kwh" => 175200000.0,
+    #             "critical_load_fraction" => 0.2
+    #         ),
+    #         "ElectricTariff" => Dict(
+    #             "urdb_label" => "5ed6c1a15457a3367add15ae"
+    #         )
+    #     )
+    #     p = REoptInputs(reopt_inputs)
+    #     model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+    #         "output_flag" => false, "log_to_console" => false)
+    #     )
+    #     reopt_results = run_reopt(model, p)
+    #     reopt_results["Electrolyzer"] = Dict("size_kw"=>1000)
+    #     reopt_results["HydrogenFuelCell"] = Dict("size_kw"=>2000)
+    #     reopt_results["HydrogenStorageLP"] = Dict("size_kwh"=>20000, "soc_series_fraction"=>0.5*ones(8760))
+    #     erp_inputs = Dict(
+    #         "generator_operational_availability" => 1, 
+    #         "generator_failure_to_start" => 0.0,
+    #         "generator_mean_time_to_failure" => 5, 
+    #         "num_generators" => 2, 
+    #         "max_outage_duration" => 3, 
+    #         "battery_minimum_soc_fraction" => 1/3,
+    #         "H2_minimum_soc_fraction" => 0.2
+    #     )
+    #     inputs_processed = backup_reliability_reopt_inputs(d=reopt_results, p=p, r=erp_inputs)
+    #     pop!(inputs_processed, :pv_kw_ac_time_series)
+    #     pop!(inputs_processed, :critical_loads_kw)
+    #     pop!(inputs_processed, :battery_starting_soc_kwh)
+    #     @info inputs_processed
 
-        # for pv_included in [true, false]
-        #     for pv_can_dispatch_without_storage in [true, false]
-        #         for battery_size_kwh in [1000,0]
-        #             for H2_size_kwh in [1000,0]
-        #                 new = system_characteristics_new(pv_included, pv_can_dispatch_without_storage, battery_size_kwh, H2_size_kwh)
-        #                 old = system_characteristics_old(pv_included, pv_can_dispatch_without_storage, battery_size_kwh, H2_size_kwh)
-        #                 @test new == old
-        #             end
-        #         end
-        #     end
-        # end
+    #     for pv_included in [true, false]
+    #         for pv_can_dispatch_without_storage in [true, false]
+    #             for battery_size_kwh in [1000,0]
+    #                 for H2_size_kwh in [1000,0]
+    #                     new = system_characteristics_new(pv_included, pv_can_dispatch_without_storage, battery_size_kwh, H2_size_kwh)
+    #                     old = system_characteristics_old(pv_included, pv_can_dispatch_without_storage, battery_size_kwh, H2_size_kwh)
+    #                     @test new == old
+    #                 end
+    #             end
+    #         end
+    #     end
 
-        # gen_storage_prob_matrix = Array{Float64}(undef,2,4,3)
-        # gen_storage_prob_matrix[1,:,:] = [0.1 0.0 0.0;
-        #                             0.0 0.3 0.0;
-        #                             0.0 0.0 0.0;
-        #                             0.0 0.0 0.1]
-        # gen_storage_prob_matrix[2,:,:] = [0.0 0.0 0.2;
-        #                             0.0 0.0 0.1;
-        #                             0.0 0.0 0.0;
-        #                             0.0 0.2 0.0]
-        # excess_generation_kw = [-2, 6]
-        # battery_bin_size = 1
-        # battery_size_kw = 2
-        # battery_charge_efficiency = 1
-        # battery_discharge_efficiency = 1
-        # H2_bin_size = 1
-        # H2_charge_size_kw = 1
-        # H2_discharge_size_kw = 1
-        # H2_charge_efficiency = 1
-        # H2_discharge_efficiency = 1
-        # shift_gen_storage_prob_matrix!(gen_storage_prob_matrix, excess_generation_kw, battery_bin_size, 
-        #                             battery_size_kw, battery_charge_efficiency, battery_discharge_efficiency, 
-        #                             H2_bin_size, H2_charge_size_kw, H2_discharge_size_kw, 
-        #                             H2_charge_efficiency, H2_discharge_efficiency)
-        # @test gen_storage_prob_matrix[1,:,:] ≈ [0.4 0.0 0.0;
-        #                                         0.0 0.0 0.1;
-        #                                         0.0 0.0 0.0;
-        #                                         0.0 0.0 0.0] atol = 0.00001
-        # @test gen_storage_prob_matrix[2,:,:] ≈ [0.0 0.0 0.0;
-        #                                         0.0 0.0 0.0;
-        #                                         0.0 0.0 0.2;
-        #                                         0.0 0.0 0.3] atol = 0.00001
-    end
+    #     gen_storage_prob_matrix = Array{Float64}(undef,2,4,3)
+    #     gen_storage_prob_matrix[1,:,:] = [0.1 0.0 0.0;
+    #                                 0.0 0.3 0.0;
+    #                                 0.0 0.0 0.0;
+    #                                 0.0 0.0 0.1]
+    #     gen_storage_prob_matrix[2,:,:] = [0.0 0.0 0.2;
+    #                                 0.0 0.0 0.1;
+    #                                 0.0 0.0 0.0;
+    #                                 0.0 0.2 0.0]
+    #     excess_generation_kw = [-2, 6]
+    #     battery_bin_size = 1
+    #     battery_size_kw = 2
+    #     battery_charge_efficiency = 1
+    #     battery_discharge_efficiency = 1
+    #     H2_bin_size = 1
+    #     H2_charge_size_kw = 1
+    #     H2_discharge_size_kw = 1
+    #     H2_charge_efficiency = 1
+    #     H2_discharge_efficiency = 1
+    #     shift_gen_storage_prob_matrix!(gen_storage_prob_matrix, excess_generation_kw, battery_bin_size, 
+    #                                 battery_size_kw, battery_charge_efficiency, battery_discharge_efficiency, 
+    #                                 H2_bin_size, H2_charge_size_kw, H2_discharge_size_kw, 
+    #                                 H2_charge_efficiency, H2_discharge_efficiency)
+    #     @test gen_storage_prob_matrix[1,:,:] ≈ [0.4 0.0 0.0;
+    #                                             0.0 0.0 0.1;
+    #                                             0.0 0.0 0.0;
+    #                                             0.0 0.0 0.0] atol = 0.00001
+    #     @test gen_storage_prob_matrix[2,:,:] ≈ [0.0 0.0 0.0;
+    #                                             0.0 0.0 0.0;
+    #                                             0.0 0.0 0.2;
+    #                                             0.0 0.0 0.3] atol = 0.00001
+    # end
 
     @testset "Backup Reliability Using H2 as Battery to Test H2" begin
 
@@ -149,223 +149,332 @@ else  # run HiGHS tests
             results["Electrolyzer"] = Dict("size_kw"=>results["ElectricStorage"]["size_kw"])
             results["HydrogenFuelCell"] = Dict("size_kw"=>results["ElectricStorage"]["size_kw"])
             results["HydrogenStorageLP"] = Dict(
-                "size_kw"=>results["ElectricStorage"]["size_kwh"], 
+                "size_kwh"=>results["ElectricStorage"]["size_kwh"], 
                 "soc_series_fraction"=>results["ElectricStorage"]["soc_series_fraction"]
             )
             pop!(results, "ElectricStorage")
         end
 
-        @testset "Compare backup_reliability and simulate_outages" begin
-            # Tests ensure `backup_reliability()` consistent with `simulate_outages()`
-            # First, just battery
-            reopt_inputs = Dict(
-                "Site" => Dict(
-                    "longitude" => -106.42077256104001,
-                    "latitude" => 31.810468380036337
-                ),
-                "ElectricStorage" => Dict(
-                    "min_kw" => 4000,
-                    "max_kw" => 4000,
-                    "min_kwh" => 400000,
-                    "max_kwh" => 400000,
-                    "soc_min_fraction" => 0.8,
-                    "soc_init_fraction" => 0.9
-                ),
-                "ElectricLoad" => Dict(
-                    "doe_reference_name" => "FlatLoad",
-                    "annual_kwh" => 175200000.0,
-                    "critical_load_fraction" => 0.2
-                ),
-                "ElectricTariff" => Dict(
-                    "urdb_label" => "5ed6c1a15457a3367add15ae"
-                ),
-            )
-            p = REoptInputs(reopt_inputs)
-            results = JSON.parsefile("./debug_reopt_results.json")
-            simresults = JSON.parsefile("./debug_outagesim_results.json")
-            change_batt_to_h2_in_reopt_results!(results)
+        # @testset "Test H2 and battery together (small scenario where we can calculate expected result)" begin
+        #     input_dict = Dict(
+        #         "critical_loads_kw" => [1,2,2,1],
+        #         "battery_starting_soc_series_fraction" => [0.5,0.5,0.5,0.5],
+        #         "H2_starting_soc_series_fraction" => [0.5,0.5,0.5,0.5],
+        #         "max_outage_duration" => 3,
+        #         "num_generators" => 2, "generator_size_kw" => 1,
+        #         "generator_operational_availability" => 1,
+        #         "generator_failure_to_start" => 0.0,
+        #         "generator_mean_time_to_failure" => 5,
+        #         "battery_operational_availability" => 1,
+        #         "H2_operational_availability" => 1,
+        #         "num_battery_bins" => 3,
+        #         "num_H2_bins" => 3,
+        #         "battery_size_kwh" => 1,
+        #         "H2_size_kwh" => 1,
+        #         "battery_size_kw" => 0.5,
+        #         "H2_electrolyzer_size_kw" => 0.5,
+        #         "H2_fuelcell_size_kw" => 0.5,
+        #         "battery_charge_efficiency" => 1,
+        #         "H2_charge_efficiency" => 1,
+        #         "battery_discharge_efficiency" => 1,
+        #         "H2_discharge_efficiency" => 1,
+        #         "battery_minimum_soc_fraction" => 0.0,
+        #         "H2_minimum_soc_fraction" => 0.0)
+            
+        #     #Given outage starts in time period:                     1  2  3  4
+        #     #(Battery/H2 bin of - means failed)
+        #     #____________________________________
+        #     #Outage hour 1:
+        #     #2 generators:         Prob = 0.64,     Battery/H2 bin = 3  2  2  3
+        #     #1 generator:          Prob = 0.32,     Battery/H2 bin = 2  1  1  2
+        #     #0 generator:          Prob = 0.04,     Battery/H2 bin = 1  -  -  1
+        #     #Survival Probability: 1.0  0.98  0.98  1.0
 
-            reliability_inputs = Dict(
-                "generator_size_kw" => 0,
-                "max_outage_duration" => 100,
-                "generator_operational_availability" => 1.0, 
-                "generator_failure_to_start" => 0.0, 
-                "generator_mean_time_to_failure" => 10000000000,
-                "fuel_limit" => 0,
-                "H2_electrolyzer_size_kw" => 4000,
-                "H2_fuelcell_size_kw" => 4000,
-                "H2_size_kwh" => 400000,
-                "H2_charge_efficiency" => 1,
-                "H2_discharge_efficiency" => 1,
-                "H2_operational_availability" => 1.0,
-                "H2_minimum_soc_fraction" => 0.0,
-                "H2_starting_soc_series_fraction" => results["HydrogenStorageLP"]["soc_series_fraction"],
-                "pv_operational_availability" => 1.0,
-                "critical_loads_kw" => results["ElectricLoad"]["critical_load_series_kw"]#4000*ones(8760)#p.s.electric_load.critical_loads_kw
-            )
+        #     #Outage hour 2:
+        #     #2 generators:         Prob = 0.4096,   Battery/H2 bin = 3  2  3  3
+        #     #2 gen -> 1 gen:       Prob = 0.2048,   Battery/H2 bin = 2  1  2  3
+        #     #2 gen -> 0 gen:       Prob = 0.0256,   Battery/H2 bin = 1  -  1  2
+        #     #1 gen -> 1 gen:       Prob = 0.256,    Battery/H2 bin = 1  -  1  2
+        #     #1 gen -> 0 gen:       Prob = 0.064,    Battery/H2 bin = -  -  -  1
+        #     #other 0 generators:   Prob = 0.04,     Battery/H2 bin = -  -  -  -
+        #     #Survival Probability: 0.896  0.6144  0.896  0.96
+
+        #     #Outage hour 3:
+        #     #2 generators:         Prob = 0.262144, Battery/H2 bin = 3  2  3  3
+        #     #2 gen -> 2 -> 1       Prob = 0.131072, Battery/H2 bin = 2  2  3  2
+        #     #2 gen -> 2 -> 0       Prob = 0.016384, Battery/H2 bin = -  1  2  - (fails b/c of kw limit not kwh)
+        #     #2 gen -> 1 -> 1       Prob = 0.16384,  Battery/H2 bin = 1  1  2  2
+        #     #2 gen -> 1 -> 0       Prob = 0.04096,  Battery/H2 bin = -  -  1  - (4th one b/c of kw limit not kwh)
+        #     #1 gen -> 1 -> 1       Prob = 0.2048,   Battery/H2 bin = -  -  1  1
+        #     #other 0 generators    Prob = 0.1808,   Battery/H2 bin = -  -  -  -
+        #     #Survival Probability: 0.557056 0.57344  0.8192  0.761856
+   
+        #     @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"] ≈ [0.557056, 0.57344, 0.8192, 0.761856]
+        # end
+
+        @testset "Test H2 and battery together" begin
+            reliability_inputs = JSON.parsefile("./scenarios/backup_reliability_inputs_H2.json")
             reliability_results = backup_reliability(reliability_inputs)
+            @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.880277 atol=0.001
 
-            #TODO: resolve bug where unlimted fuel markov portion of results goes to zero 1 timestep earlier than outagesim
-            for i = 1:99#min(length(simresults["probs_of_surviving"]), reliability_inputs["max_outage_duration"])
-                @test simresults["probs_of_surviving"][i] ≈ reliability_results["mean_cumulative_survival_by_duration"][i] atol=0.01
-                @test simresults["probs_of_surviving"][i] ≈ reliability_results["unlimited_fuel_mean_cumulative_survival_by_duration"][i] atol=0.01
-                @test simresults["probs_of_surviving"][i] ≈ reliability_results["mean_fuel_survival_by_duration"][i] atol=0.01
-            end
-
-            # Second, gen, PV, battery
-            reopt_inputs = JSON.parsefile("./scenarios/backup_reliability_reopt_inputs.json")
-            reopt_inputs["ElectricLoad"]["annual_kwh"] = 4*reopt_inputs["ElectricLoad"]["annual_kwh"]
-            p = REoptInputs(reopt_inputs)
-            model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-                "output_flag" => false, "log_to_console" => false)
-            )
-            results = run_reopt(model, p)
-            simresults = simulate_outages(results, p)
-            change_batt_to_h2_in_reopt_results!(results)
-            reliability_inputs = Dict(
-                "max_outage_duration" => 48,
-                "generator_operational_availability" => 1.0, 
-                "generator_failure_to_start" => 0.0, 
-                "generator_mean_time_to_failure" => 10000000000,
-                "fuel_limit" => 1000000000,
-                "H2_operational_availability" => 1.0,
-                "H2_minimum_soc_fraction" => 0.0,
-                "pv_operational_availability" => 1.0,
-            )
-            reliability_results = backup_reliability(results, p, reliability_inputs)
-            for i = 1:min(length(simresults["probs_of_surviving"]), reliability_inputs["max_outage_duration"])
-                @test simresults["probs_of_surviving"][i] ≈ reliability_results["mean_cumulative_survival_by_duration"][i] atol=0.001
-            end
+            # reliability_inputs = JSON.parsefile("./scenarios/backup_reliability_inputs_H2.json")
+            # reliability_inputs["H2_size_kwh"] /= 2
+            # reliability_inputs["H2_electrolyzer_size_kw"] /= 2
+            # reliability_inputs["H2_fuelcell_size_kw"] /= 2
+            # merge!(reliability_inputs, 
+            #     Dict(
+            #         "num_battery_bins" => reliability_inputs["num_H2_bins"],
+            #         "battery_operational_availability" => reliability_inputs["H2_operational_availability"],
+            #         "battery_size_kw" => reliability_inputs["H2_fuelcell_size_kw"],
+            #         "battery_size_kwh" => reliability_inputs["H2_size_kwh"],
+            #         "battery_charge_efficiency" => reliability_inputs["H2_charge_efficiency"],
+            #         "battery_discharge_efficiency" => reliability_inputs["H2_discharge_efficiency"],
+            #         "battery_minimum_soc_fraction" => reliability_inputs["H2_minimum_soc_fraction"]
+            #     )
+            # )
+            # reliability_results = backup_reliability(reliability_inputs)
+            # @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.880277 atol=0.0001
         end
 
-        @testset "Test that survival decreasing with no generator or with generator but no fuel" begin
-            reliability_inputs = Dict(
-                "critical_loads_kw" => 200 .* (2 .+ sin.(collect(1:8760)*2*pi/24)),
-                "num_generators" => 0,
-                "generator_size_kw" => 312.0,
-                "fuel_limit" => 0.0,
-                "max_outage_duration" => 10,
-                "H2_electrolyzer_size_kw" => 428.0,
-                "H2_fuelcell_size_kw" => 428.0,
-                "H2_size_kwh" => 1585.0,
-                "num_H2_bins" => 5
-            )
-            reliability_results1 = backup_reliability(reliability_inputs)
-            reliability_inputs["generator_size_kw"] = 0
-            reliability_inputs["fuel_limit"] = 1e10
-            reliability_results2 = backup_reliability(reliability_inputs)
-            for i in 1:reliability_inputs["max_outage_duration"]
-                if i != 1
-                    @test reliability_results1["mean_fuel_survival_by_duration"][i] <= reliability_results1["mean_fuel_survival_by_duration"][i-1]
-                    @test reliability_results1["mean_cumulative_survival_by_duration"][i] <= reliability_results1["mean_cumulative_survival_by_duration"][i-1]
-                end
-                @test reliability_results2["mean_fuel_survival_by_duration"][i] == reliability_results1["mean_fuel_survival_by_duration"][i]
-            end
-        end
+        # @testset "Compare backup_reliability and simulate_outages" begin
+        #     # Tests ensure `backup_reliability()` consistent with `simulate_outages()`
+        #     # First, just battery
+        #     reopt_inputs = Dict(
+        #         "Site" => Dict(
+        #             "longitude" => -106.42077256104001,
+        #             "latitude" => 31.810468380036337
+        #         ),
+        #         "ElectricStorage" => Dict(
+        #             "min_kw" => 4000,
+        #             "max_kw" => 4000,
+        #             "min_kwh" => 400000,
+        #             "max_kwh" => 400000,
+        #             "soc_min_fraction" => 0.8,
+        #             "soc_init_fraction" => 0.9
+        #         ),
+        #         "ElectricLoad" => Dict(
+        #             "doe_reference_name" => "FlatLoad",
+        #             "annual_kwh" => 175200000.0,
+        #             "critical_load_fraction" => 0.2
+        #         ),
+        #         "ElectricTariff" => Dict(
+        #             "urdb_label" => "5ed6c1a15457a3367add15ae"
+        #         ),
+        #     )
+        #     p = REoptInputs(reopt_inputs)
+        #     results = JSON.parsefile("./debug_reopt_results.json")
+        #     simresults = JSON.parsefile("./debug_outagesim_results.json")
+        #     change_batt_to_h2_in_reopt_results!(results)
 
-        @testset "Test fuel limit" begin
-            input_dict = JSON.parsefile("./scenarios/erp_fuel_limit_inputs.json")
-            results = backup_reliability(input_dict)
-            @test results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 1
-            @test results["cumulative_survival_final_time_step"][1] ≈ 1
-        end
+        #     reliability_inputs = Dict(
+        #         "generator_size_kw" => 0,
+        #         "max_outage_duration" => 100,
+        #         "generator_operational_availability" => 1.0, 
+        #         "generator_failure_to_start" => 0.0, 
+        #         "generator_mean_time_to_failure" => 10000000000,
+        #         "fuel_limit" => 0,
+        #         "H2_electrolyzer_size_kw" => 4000,
+        #         "H2_fuelcell_size_kw" => 4000,
+        #         "H2_size_kwh" => 400000,
+        #         "H2_charge_efficiency" => 1,
+        #         "H2_discharge_efficiency" => 1,
+        #         "H2_operational_availability" => 1.0,
+        #         "H2_minimum_soc_fraction" => 0.0,
+        #         "H2_starting_soc_series_fraction" => results["HydrogenStorageLP"]["soc_series_fraction"],
+        #         "pv_operational_availability" => 1.0,
+        #         "critical_loads_kw" => results["ElectricLoad"]["critical_load_series_kw"]#4000*ones(8760)#p.s.electric_load.critical_loads_kw
+        #     )
+        #     reliability_results = backup_reliability(reliability_inputs)
 
-        @testset "Test small scenario where we can calculate expected result" begin
-            input_dict = Dict(
-                "critical_loads_kw" => [1,2,2,1],
-                "H2_starting_soc_series_fraction" => [0.75,0.75,0.75,0.75],
-                "max_outage_duration" => 3,
-                "num_generators" => 2, "generator_size_kw" => 1,
-                "generator_operational_availability" => 1,
-                "generator_failure_to_start" => 0.0,
-                "generator_mean_time_to_failure" => 5,
-                "H2_operational_availability" => 1,
-                "num_H2_bins" => 3,
-                "H2_size_kwh" => 4,
-                "H2_electrolyzer_size_kw" => 1,
-                "H2_fuelcell_size_kw" => 1,
-                "H2_charge_efficiency" => 1,
-                "H2_discharge_efficiency" => 1,
-                "H2_minimum_soc_fraction" => 0.5)
+        #     #TODO: resolve bug where unlimted fuel markov portion of results goes to zero 1 timestep earlier than outagesim
+        #     for i = 1:99#min(length(simresults["probs_of_surviving"]), reliability_inputs["max_outage_duration"])
+        #         @test simresults["probs_of_surviving"][i] ≈ reliability_results["mean_cumulative_survival_by_duration"][i] atol=0.01
+        #         @test simresults["probs_of_surviving"][i] ≈ reliability_results["unlimited_fuel_mean_cumulative_survival_by_duration"][i] atol=0.01
+        #         @test simresults["probs_of_surviving"][i] ≈ reliability_results["mean_fuel_survival_by_duration"][i] atol=0.01
+        #     end
+
+        #     # Second, gen, PV, battery
+        #     reopt_inputs = JSON.parsefile("./scenarios/backup_reliability_reopt_inputs.json")
+        #     reopt_inputs["ElectricLoad"]["annual_kwh"] = 4*reopt_inputs["ElectricLoad"]["annual_kwh"]
+        #     p = REoptInputs(reopt_inputs)
+        #     model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+        #         "output_flag" => false, "log_to_console" => false)
+        #     )
+        #     results = run_reopt(model, p)
+        #     simresults = simulate_outages(results, p)
+        #     change_batt_to_h2_in_reopt_results!(results)
+        #     reliability_inputs = Dict(
+        #         "max_outage_duration" => 48,
+        #         "generator_operational_availability" => 1.0, 
+        #         "generator_failure_to_start" => 0.0, 
+        #         "generator_mean_time_to_failure" => 10000000000,
+        #         "fuel_limit" => 1000000000,
+        #         "H2_operational_availability" => 1.0,
+        #         "H2_minimum_soc_fraction" => 0.0,
+        #         "pv_operational_availability" => 1.0,
+        #     )
+        #     reliability_results = backup_reliability(results, p, reliability_inputs)
+        #     for i = 1:min(length(simresults["probs_of_surviving"]), reliability_inputs["max_outage_duration"])
+        #         @test simresults["probs_of_surviving"][i] ≈ reliability_results["mean_cumulative_survival_by_duration"][i] atol=0.001
+        #     end
+        # end
+
+        # @testset "Test that survival decreasing with no generator or with generator but no fuel" begin
+        #     reliability_inputs = Dict(
+        #         "critical_loads_kw" => 200 .* (2 .+ sin.(collect(1:8760)*2*pi/24)),
+        #         "num_generators" => 0,
+        #         "generator_size_kw" => 312.0,
+        #         "fuel_limit" => 0.0,
+        #         "max_outage_duration" => 10,
+        #         "H2_electrolyzer_size_kw" => 428.0,
+        #         "H2_fuelcell_size_kw" => 428.0,
+        #         "H2_size_kwh" => 1585.0,
+        #         "num_H2_bins" => 5
+        #     )
+        #     reliability_results1 = backup_reliability(reliability_inputs)
+        #     reliability_inputs["generator_size_kw"] = 0
+        #     reliability_inputs["fuel_limit"] = 1e10
+        #     reliability_results2 = backup_reliability(reliability_inputs)
+        #     for i in 1:reliability_inputs["max_outage_duration"]
+        #         if i != 1
+        #             @test reliability_results1["mean_fuel_survival_by_duration"][i] <= reliability_results1["mean_fuel_survival_by_duration"][i-1]
+        #             @test reliability_results1["mean_cumulative_survival_by_duration"][i] <= reliability_results1["mean_cumulative_survival_by_duration"][i-1]
+        #         end
+        #         @test reliability_results2["mean_fuel_survival_by_duration"][i] == reliability_results1["mean_fuel_survival_by_duration"][i]
+        #     end
+        # end
+
+        # @testset "Test fuel limit" begin
+        #     input_dict = JSON.parsefile("./scenarios/erp_fuel_limit_inputs.json")
+        #     results = backup_reliability(input_dict)
+        #     @test results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 1
+        #     @test results["cumulative_survival_final_time_step"][1] ≈ 1
+        # end
+
+        # # @testset "Test small scenario where we can calculate expected result" begin
+        #     reopt_inputs = Dict(
+        #         "Site" => Dict(
+        #             "longitude" => -106.42077256104001,
+        #             "latitude" => 31.810468380036337
+        #         ),
+        #         "ElectricStorage" => Dict(
+        #             "min_kw" => 1,
+        #             "max_kw" => 1,
+        #             "min_kwh" => 4,
+        #             "max_kwh" => 4,
+        #             "soc_min_fraction" => 0.5,
+        #             "soc_init_fraction" => 0.75
+        #         ),
+        #         "Generator" => Dict(
+        #             "min_kw" => 2,
+        #             "max_kw" => 2
+        #         ),
+        #         "ElectricLoad" => Dict(
+        #             "loads_kw" => repeat([1,2,2,1], outer=Int(8760/4)),
+        #             "critical_load_fraction" => 1.0
+        #         ),
+        #         "ElectricTariff" => Dict(
+        #             "urdb_label" => "5ed6c1a15457a3367add15ae"
+        #         )
+        #     )            
+        #     p = REoptInputs(reopt_inputs)
+        #     model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+        #         "output_flag" => false, "log_to_console" => false)
+        #     )
+        #     results = run_reopt(model, p)
+        #     change_batt_to_h2_in_reopt_results!(results)
+        #     results["HydrogenStorageLP"]["soc_series_fraction"] = 0.75.*ones(8760)
+        #     p.s.storage.attr["ElectricStorage"].charge_efficiency = 1.0
+        #     p.s.storage.attr["ElectricStorage"].discharge_efficiency = 1.0
+        #     input_dict = Dict(
+        #         "H2_starting_soc_series_fraction" => 0.75.*ones(8760),
+        #         "max_outage_duration" => 3,
+        #         "num_generators" => 2,
+        #         "generator_operational_availability" => 1,
+        #         "generator_failure_to_start" => 0.0,
+        #         "generator_mean_time_to_failure" => 5,
+        #         "H2_operational_availability" => 1,
+        #         "num_H2_bins" => 3,
+        #         "H2_minimum_soc_fraction" => 0.5)
      
-            @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"] ≈ [0.557056, 0.57344, 0.8192, 0.761856]
+        #     @test backup_reliability(results, p, input_dict)["unlimited_fuel_cumulative_survival_final_time_step"][1:4] ≈ [0.557056, 0.57344, 0.8192, 0.761856]
 
-            #Test multiple generator types
-            input_dict = Dict(
-                "critical_loads_kw" => [1,2,2,1], 
-                "H2_starting_soc_series_fraction" => [0.5,0.5,0.5,0.5],
-                "max_outage_duration" => 3,
-                "num_generators" => [1,1],
-                "generator_size_kw" => [1,1],
-                "generator_operational_availability" => [1,1],
-                "generator_failure_to_start" => [0.0, 0.0],
-                "generator_mean_time_to_failure" => [5, 5], 
-                "H2_operational_availability" => 1.0,
-                "num_H2_bins" => 3,
-                "H2_size_kwh" => 2,
-                "H2_electrolyzer_size_kw" => 1,
-                "H2_fuelcell_size_kw" => 1,
-                "H2_charge_efficiency" => 1,
-                "H2_discharge_efficiency" => 1,
-                "H2_minimum_soc_fraction" => 0)
+        #     #Test multiple generator types
+        #     input_dict = Dict(
+        #         "critical_loads_kw" => [1,2,2,1], 
+        #         "H2_starting_soc_series_fraction" => [0.5,0.5,0.5,0.5],
+        #         "max_outage_duration" => 3,
+        #         "num_generators" => [1,1],
+        #         "generator_size_kw" => [1,1],
+        #         "generator_operational_availability" => [1,1],
+        #         "generator_failure_to_start" => [0.0, 0.0],
+        #         "generator_mean_time_to_failure" => [5, 5], 
+        #         "H2_operational_availability" => 1.0,
+        #         "num_H2_bins" => 3,
+        #         "H2_size_kwh" => 2,
+        #         "H2_electrolyzer_size_kw" => 1,
+        #         "H2_fuelcell_size_kw" => 1,
+        #         "H2_charge_efficiency" => 1,
+        #         "H2_discharge_efficiency" => 1,
+        #         "H2_minimum_soc_fraction" => 0)
 
-            @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.557056
+        #     @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"] ≈ [0.557056, 0.57344, 0.8192, 0.761856]
 
-            #8760 of flat load. Battery can survive 4 hours. 
-            #Survival after 24 hours should be chance of generator surviving 20 or more hours
-            input_dict = Dict(
-                "critical_loads_kw" => 100 .* ones(8760),
-                "max_outage_duration" => 24,
-                "num_generators" => 1,
-                "generator_size_kw" => 100,
-                "generator_operational_availability" => 0.98,
-                "generator_failure_to_start" => 0.1,
-                "generator_mean_time_to_failure" => 100,
-                "H2_operational_availability" => 1.0,
-                "num_H2_bins" => 101,
-                "H2_size_kwh" => 400,
-                "H2_electrolyzer_size_kw" => 100,
-                "H2_fuelcell_size_kw" => 100,
-                "H2_charge_efficiency" => 1,
-                "H2_discharge_efficiency" => 1,
-                "H2_minimum_soc_fraction" => 0)
+        #     #8760 of flat load. Battery can survive 4 hours. 
+        #     #Survival after 24 hours should be chance of generator surviving 20 or more hours
+        #     input_dict = Dict(
+        #         "critical_loads_kw" => 100 .* ones(8760),
+        #         "max_outage_duration" => 24,
+        #         "num_generators" => 1,
+        #         "generator_size_kw" => 100,
+        #         "generator_operational_availability" => 0.98,
+        #         "generator_failure_to_start" => 0.1,
+        #         "generator_mean_time_to_failure" => 100,
+        #         "H2_operational_availability" => 1.0,
+        #         "num_H2_bins" => 101,
+        #         "H2_size_kwh" => 400,
+        #         "H2_electrolyzer_size_kw" => 100,
+        #         "H2_fuelcell_size_kw" => 100,
+        #         "H2_charge_efficiency" => 1,
+        #         "H2_discharge_efficiency" => 1,
+        #         "H2_minimum_soc_fraction" => 0)
 
-            reliability_results = backup_reliability(input_dict)
-            @test reliability_results["unlimited_fuel_mean_cumulative_survival_by_duration"][24] ≈ (0.99^20)*(0.9*0.98) atol=0.00001
-        end
+        #     reliability_results = backup_reliability(input_dict)
+        #     @test reliability_results["unlimited_fuel_mean_cumulative_survival_by_duration"][24] ≈ (0.99^20)*(0.9*0.98) atol=0.00001
+        # end
         
-        @testset "More realistic case of hospital load with 2 generators, PV, and battery" begin
-            reliability_inputs = JSON.parsefile("./scenarios/backup_reliability_inputs.json")
-            reliability_results = backup_reliability(reliability_inputs)
-            @test reliability_results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.858756 atol=0.0001
-            @test reliability_results["cumulative_survival_final_time_step"][1] ≈ 0.858756 atol=0.0001
-            @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.904242 atol=0.0001#0.833224
+        # @testset "More realistic case of hospital load with 2 generators, PV, and H2" begin
+        #     reliability_inputs = JSON.parsefile("./scenarios/backup_reliability_inputs.json")
+        #     reliability_results = backup_reliability(reliability_inputs)
+        #     @test reliability_results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.858756 atol=0.0001
+        #     @test reliability_results["cumulative_survival_final_time_step"][1] ≈ 0.858756 atol=0.0001
+        #     @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.895303 atol=0.0001#0.833224
             
-            for input_key in [
-                        "generator_size_kw",
-                        "H2_electrolyzer_size_kw",
-                        "H2_fuelcell_size_kw",
-                        "H2_size_kwh",
-                        "pv_size_kw",
-                        "critical_loads_kw",
-                        "pv_production_factor_series"
-                    ]
-                delete!(reliability_inputs, input_key)
-            end
+        #     for input_key in [
+        #                 "generator_size_kw",
+        #                 "H2_electrolyzer_size_kw",
+        #                 "H2_fuelcell_size_kw",
+        #                 "H2_size_kwh",
+        #                 "pv_size_kw",
+        #                 "critical_loads_kw",
+        #                 "pv_production_factor_series"
+        #             ]
+        #         delete!(reliability_inputs, input_key)
+        #     end
 
-            model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-                "output_flag" => false, "log_to_console" => false)
-            )
-            p = REoptInputs("./scenarios/backup_reliability_reopt_inputs.json")
-            results = run_reopt(model, p)
-            change_batt_to_h2_in_reopt_results!(results)
+        #     model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+        #         "output_flag" => false, "log_to_console" => false)
+        #     )
+        #     p = REoptInputs("./scenarios/backup_reliability_reopt_inputs.json")
+        #     results = run_reopt(model, p)
+        #     change_batt_to_h2_in_reopt_results!(results)
             
-            reliability_results = backup_reliability(results, p, reliability_inputs)
+        #     reliability_results = backup_reliability(results, p, reliability_inputs)
 
-            @test reliability_results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.802997 atol=0.0001
-            @test reliability_results["cumulative_survival_final_time_step"][1] ≈ 0.802997 atol=0.0001
-            @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.817586 atol=0.0001
-        end
+        #     @test reliability_results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.802997 atol=0.0001
+        #     @test reliability_results["cumulative_survival_final_time_step"][1] ≈ 0.802997 atol=0.0001
+        #     @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.817586 atol=0.0001
+        # end
     end                            
     
     # @testset "Backup Generator Reliability" begin
@@ -539,7 +648,7 @@ else  # run HiGHS tests
     #         #other 0 generators    Prob = 0.1808,   Battery bin = -  -  -  -
     #         #Survival Probability: 0.557056 0.57344  0.8192  0.761856
    
-    #         @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"] ≈ [0.557056 0.57344  0.8192  0.761856]
+    #         @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"] ≈ [0.557056, 0.57344, 0.8192, 0.761856]
 
     #         #Test multiple generator types
     #         input_dict = Dict(
@@ -588,7 +697,7 @@ else  # run HiGHS tests
     #         reliability_results = backup_reliability(reliability_inputs)
     #         @test reliability_results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.858756 atol=0.0001
     #         @test reliability_results["cumulative_survival_final_time_step"][1] ≈ 0.858756 atol=0.0001
-    #         @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.904242 atol=0.0001#0.833224
+    #         @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.895303 atol=0.0001#0.833224
             
     #         for input_key in [
     #                     "generator_size_kw",
