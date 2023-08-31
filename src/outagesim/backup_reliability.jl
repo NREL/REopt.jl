@@ -577,8 +577,8 @@ function survival_gen_only(;
 end
 
 """
-    survival_gen_only_single_start_time(t::Int, starting_gens::Vector{Float64}, net_critical_loads_kw::Vector{Real}, generator_production::Vector{Float64}, 
-    generator_markov_matrix::Matrix{Float64}, max_outage_duration::Int, t_max::Int, marginal_survival::Bool)::Vector{Float64}
+    gen_only_survival_single_start_time(t::Int, starting_gens::Vector{Float64}, net_critical_loads_kw::Vector{Real}, generator_production::Vector{Float64}, 
+                                    generator_markov_matrix::Matrix{Float64}, max_outage_duration::Int, t_max::Int, marginal_survival::Bool)::Vector{Float64}
 
 Return a vector of probability of survival with for all outage durations given outages start time t. 
     Function is for internal loop of survival_gen_only
@@ -709,6 +709,7 @@ function survival_with_storage(;
     #bin initial battery and H2 storage
     starting_battery_bins = bin_storage_charge(battery_starting_soc_kwh, num_battery_bins, battery_size_kwh)
     starting_H2_bins = bin_storage_charge(H2_starting_soc_kwh, num_H2_bins, H2_size_kwh)
+
     #Size of generators state dimension
     N = prod(num_generators .+ 1)
     #Initialize survival probability matrix
@@ -1286,7 +1287,7 @@ function fuel_use(;
         for d in 1:max_outage_duration
             h = mod(t + d - 2, t_max) + 1 #determines index accounting for looping around year
             load_kw = net_critical_loads_kw[h]
-            
+        
             if (load_kw < 0) # can charge storage if exists
                 if battery_included && (battery_soc_kwh < battery_size_kwh)
                 
@@ -1305,8 +1306,7 @@ function fuel_use(;
                         -load_kw / time_steps_per_hour * H2_charge_efficiency  # excess energy
                     ])
                     H2_soc_kwh += H2_kwh_change
-                    #Don't need to update load_kw again because not used after this except checking for positive which can't happen here
-                    #load_kw += H2_kwh_change
+                    load_kw += H2_kwh_change #Don't actually need to update load_kw again because not used after this except checking for positive which can't happen here
                 end
             else  # check if we can meet load with generator then storage
                 for i in eachindex(fuel_remaining)
@@ -1345,6 +1345,7 @@ function fuel_use(;
                     H2_soc_kwh -= H2_dispatch  / (time_steps_per_hour * H2_discharge_efficiency)
                 end
             end
+
             if (d > 1 && survival_matrix[t, d-1] == 0) || round(load_kw, digits=5) > 0  # failed to meet load in this time step or any previous
                 survival_matrix[t, d] = 0
             else
@@ -1390,12 +1391,7 @@ function return_backup_reliability(;
     H2_fuelcell_size_kw::Real = 0.0,
     H2_size_kwh::Real = 0.0,
     kwargs...)
-    @info "battery_size_kwh"
-    @info battery_size_kwh
-    @info "H2_size_kwh"
-    @info H2_size_kwh
     
-
     if haskey(kwargs, :pv_kw_ac_time_series)
         pv_included = true
         net_critical_loads_kw = critical_loads_kw - kwargs[:pv_kw_ac_time_series]
@@ -1518,7 +1514,8 @@ function return_backup_reliability(;
     results_no_fuel_limit = []
     for (description, system) in system_characteristics
         if system["probability"] != 0
-            run_survival_probs = backup_reliability_single_run(;
+            println(description)
+            run_survival_probs = @time backup_reliability_single_run(;
                 net_critical_loads_kw = system["net_critical_loads_kw"],
                 battery_size_kw = system["battery_size_kw"],
                 battery_size_kwh = system["battery_size_kwh"],
@@ -1536,7 +1533,11 @@ function return_backup_reliability(;
         end
     end
 
-    fuel_survival, fuel_used = fuel_use(; net_critical_loads_kw = net_critical_loads_kw, battery_size_kw=battery_size_kw, battery_size_kwh=battery_size_kwh, kwargs...)
+    fuel_survival, fuel_used = @time fuel_use(; net_critical_loads_kw = net_critical_loads_kw, 
+                                    battery_size_kw=battery_size_kw, battery_size_kwh=battery_size_kwh, 
+                                    H2_electrolyzer_size_kw=H2_electrolyzer_size_kw, 
+                                    H2_fuelcell_size_kw=H2_fuelcell_size_kw, 
+                                    H2_size_kwh=H2_size_kwh, kwargs...)
     return results_no_fuel_limit, fuel_survival, fuel_used
 end
 
