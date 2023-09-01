@@ -26,6 +26,10 @@ Classify the change according to the following categories:
 ## Develop 2023-09-01
 ### Added
 - Added new heating technology `ElectricHeater`.
+### Changed
+- Divided decision variable `dvThermalProduction` into `dvHeatingProduction` and `dvCoolingProduction` depending on type of thermal production.
+- Changed name of `dvThermalProductionYIntercept` to `dvHeatingProductionYIntercept`.
+
 ## v0.32.6
 ### Changed
 - Required **fuel_cost_per_mmbtu** for modeling **Boiler** tech, otherwise throw a handled error.
