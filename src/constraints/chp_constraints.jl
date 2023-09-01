@@ -74,23 +74,23 @@ function add_chp_thermal_production_constraints(m, p; _n="")
     thermal_prod_slope = (thermal_prod_full_load - thermal_prod_half_load) / (1.0 - 0.5)  # [kWt/kWe]
     thermal_prod_intercept = thermal_prod_full_load - thermal_prod_slope * 1.0  # [kWt/kWe_rated
 
-    # Conditionally add dvThermalProductionYIntercept if coefficient p.s.chpThermalProdIntercept is greater than ~zero
+    # Conditionally add dvHeatingProductionYIntercept if coefficient p.s.chpThermalProdIntercept is greater than ~zero
     if thermal_prod_intercept > 1.0E-7
-        dv = "dvThermalProductionYIntercept"*_n
+        dv = "dvHeatingProductionYIntercept"*_n
         m[Symbol(dv)] = @variable(m, [p.techs.chp, p.time_steps], base_name=dv, lower_bound=0)
 
         #Constraint (2a-1): Upper Bounds on Thermal Production Y-Intercept
         @constraint(m, CHPYInt2a1Con[t in p.techs.chp, ts in p.time_steps],
-            m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts] <= thermal_prod_intercept * m[Symbol("dvSize"*_n)][t]
+            m[Symbol("dvHeatingProductionYIntercept"*_n)][t,ts] <= thermal_prod_intercept * m[Symbol("dvSize"*_n)][t]
         )
         # Constraint (2a-2): Upper Bounds on Thermal Production Y-Intercept
         @constraint(m, CHPYInt2a2Con[t in p.techs.chp, ts in p.time_steps],
-            m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts] <= thermal_prod_intercept * p.s.chp.max_kw 
+            m[Symbol("dvHeatingProductionYIntercept"*_n)][t,ts] <= thermal_prod_intercept * p.s.chp.max_kw 
             * m[Symbol("binCHPIsOnInTS"*_n)][t,ts]
         )
         #Constraint (2b): Lower Bounds on Thermal Production Y-Intercept
         @constraint(m, CHPYInt2bCon[t in p.techs.chp, ts in p.time_steps],
-            m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts] >= thermal_prod_intercept * m[Symbol("dvSize"*_n)][t] 
+            m[Symbol("dvHeatingProductionYIntercept"*_n)][t,ts] >= thermal_prod_intercept * m[Symbol("dvSize"*_n)][t] 
             - thermal_prod_intercept * p.s.chp.max_kw * (1 - m[Symbol("binCHPIsOnInTS"*_n)][t,ts])
         )
         # Constraint (2c): Thermal Production of CHP
@@ -98,7 +98,7 @@ function add_chp_thermal_production_constraints(m, p; _n="")
         @constraint(m, CHPThermalProductionCon[t in p.techs.chp, ts in p.time_steps],
             m[Symbol("dvThermalProduction"*_n)][t,ts] ==
             thermal_prod_slope * p.production_factor[t,ts] * m[Symbol("dvRatedProduction"*_n)][t,ts] 
-            + m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts] +
+            + m[Symbol("dvHeatingProductionYIntercept"*_n)][t,ts] +
             m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
         )
     else
@@ -126,7 +126,7 @@ function add_chp_supplementary_firing_constraints(m, p; _n="")
     # Constrain upper limit of dvSupplementaryThermalProduction, using auxiliary variable for (size * useSupplementaryFiring)
     @constraint(m, CHPSupplementaryFireCon[t in p.techs.chp, ts in p.time_steps],
                 m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] <=
-                (p.s.chp.supplementary_firing_max_steam_ratio - 1.0) * p.production_factor[t,ts] * (thermal_prod_slope * m[Symbol("dvSupplementaryFiringSize"*_n)][t] + m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts])
+                (p.s.chp.supplementary_firing_max_steam_ratio - 1.0) * p.production_factor[t,ts] * (thermal_prod_slope * m[Symbol("dvSupplementaryFiringSize"*_n)][t] + m[Symbol("dvHeatingProductionYIntercept"*_n)][t,ts])
                 )
     # Constrain lower limit of 0 if CHP tech is off
     @constraint(m, NoCHPSupplementaryFireOffCon[t in p.techs.chp, ts in p.time_steps],
