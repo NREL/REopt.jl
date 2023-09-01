@@ -34,7 +34,7 @@ function steam_turbine_thermal_input(m, p; _n="")
     if isempty(p.s.storage.types.hot)
         @constraint(m, SupplySteamTurbineProductionLimit[t in p.techs.can_supply_steam_turbine, ts in p.time_steps],
                     m[Symbol("dvThermalToSteamTurbine"*_n)][t,ts] <=
-                    m[Symbol("dvThermalProduction"*_n)][t,ts]
+                    m[Symbol("dvHeatingProduction"*_n)][t,ts]
         )
     end
 end
@@ -42,7 +42,7 @@ end
 function steam_turbine_production_constraints(m, p; _n="")
     # Constraint Steam Turbine Thermal Production
     @constraint(m, SteamTurbineThermalProductionCon[t in p.techs.steam_turbine, ts in p.time_steps],
-                m[Symbol("dvThermalProduction"*_n)][t,ts] == p.s.steam_turbine.thermal_produced_to_thermal_consumed_ratio * sum(m[Symbol("dvThermalToSteamTurbine"*_n)][tst,ts] for tst in p.techs.can_supply_steam_turbine)
+                m[Symbol("dvHeatingProduction"*_n)][t,ts] == p.s.steam_turbine.thermal_produced_to_thermal_consumed_ratio * sum(m[Symbol("dvThermalToSteamTurbine"*_n)][tst,ts] for tst in p.techs.can_supply_steam_turbine)
                 )
     # Constraint Steam Turbine Electric Production
     @constraint(m, SteamTurbineElectricProductionCon[t in p.techs.steam_turbine, ts in p.time_steps],

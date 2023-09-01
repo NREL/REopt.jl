@@ -45,24 +45,24 @@ function add_existing_chiller_results(m::JuMP.AbstractModel, p::REoptInputs, d::
 	r["thermal_to_storage_series_ton"] = round.(value.(ELECCHLtoTES / KWH_THERMAL_PER_TONHOUR), digits=3)   
 
 	@expression(m, ELECCHLtoLoad[ts in p.time_steps],
-		sum(m[:dvThermalProduction]["ExistingChiller", ts])
+		sum(m[:dvCoolingProduction]["ExistingChiller", ts])
 			- ELECCHLtoTES[ts]
     )
 	r["thermal_to_load_series_ton"] = round.(value.(ELECCHLtoLoad / KWH_THERMAL_PER_TONHOUR).data, digits=3)
 
 	@expression(m, ELECCHLElecConsumptionSeries[ts in p.time_steps],
-		sum(m[:dvThermalProduction]["ExistingChiller", ts] / p.cop["ExistingChiller"])
+		sum(m[:dvCoolingProduction]["ExistingChiller", ts] / p.cop["ExistingChiller"])
     )
 	r["electric_consumption_series_kw"] = round.(value.(ELECCHLElecConsumptionSeries).data, digits=3)
 
 	@expression(m, Year1ELECCHLElecConsumption,
-		p.hours_per_time_step * sum(m[:dvThermalProduction]["ExistingChiller", ts] / p.cop["ExistingChiller"]
+		p.hours_per_time_step * sum(m[:dvCoolingProduction]["ExistingChiller", ts] / p.cop["ExistingChiller"]
 			for ts in p.time_steps)
     )
 	r["annual_electric_consumption_kwh"] = round(value(Year1ELECCHLElecConsumption), digits=3)
 
 	@expression(m, Year1ELECCHLThermalProd,
-		p.hours_per_time_step * sum(m[:dvThermalProduction]["ExistingChiller", ts]
+		p.hours_per_time_step * sum(m[:dvCoolingProduction]["ExistingChiller", ts]
 			for ts in p.time_steps)
     )
 	r["annual_thermal_production_tonhour"] = round(value(Year1ELECCHLThermalProd / KWH_THERMAL_PER_TONHOUR), digits=3)

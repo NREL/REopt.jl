@@ -96,14 +96,14 @@ function add_chp_thermal_production_constraints(m, p; _n="")
         # Constraint (2c): Thermal Production of CHP
         # Note: p.HotWaterAmbientFactor[t,ts] * p.HotWaterThermalFactor[t,ts] removed from this but present in math
         @constraint(m, CHPThermalProductionCon[t in p.techs.chp, ts in p.time_steps],
-            m[Symbol("dvThermalProduction"*_n)][t,ts] ==
+            m[Symbol("dvHeatingProduction"*_n)][t,ts] ==
             thermal_prod_slope * p.production_factor[t,ts] * m[Symbol("dvRatedProduction"*_n)][t,ts] 
             + m[Symbol("dvHeatingProductionYIntercept"*_n)][t,ts] +
             m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
         )
     else
         @constraint(m, CHPThermalProductionConLinear[t in p.techs.chp, ts in p.time_steps],
-            m[Symbol("dvThermalProduction"*_n)][t,ts] ==
+            m[Symbol("dvHeatingProduction"*_n)][t,ts] ==
             thermal_prod_slope * p.production_factor[t,ts] * m[Symbol("dvRatedProduction"*_n)][t,ts] +
             m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
         )        
