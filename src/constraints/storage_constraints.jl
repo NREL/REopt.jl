@@ -137,12 +137,12 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
 		if !isempty(p.techs.steam_turbine) && (t in p.techs.can_supply_steam_turbine)
             @constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
                     m[Symbol("dvProductionToStorage"*_n)][b,t,ts] + m[Symbol("dvThermalToSteamTurbine"*_n)][t,ts]  <=
-                    m[Symbol("dvThermalProduction"*_n)][t,ts]
+                    m[Symbol("dvHeatingProduction"*_n)][t,ts]
                     )
         else
             @constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
                     m[Symbol("dvProductionToStorage"*_n)][b,t,ts]  <=
-                    m[Symbol("dvThermalProduction"*_n)][t,ts]
+                    m[Symbol("dvHeatingProduction"*_n)][t,ts]
                     )
         end
     end
@@ -150,7 +150,7 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
     # Constraint (4f)-1b: SteamTurbineTechs
 	if !isempty(p.techs.steam_turbine)
 		@constraint(m, SteamTurbineTechProductionFlowCon[b in p.s.storage.types.hot, t in p.techs.steam_turbine, ts in p.time_steps],
-			m[Symbol("dvProductionToStorage"*_n)][b,t,ts] <=  m[Symbol("dvThermalProduction"*_n)][t,ts]
+			m[Symbol("dvProductionToStorage"*_n)][b,t,ts] <=  m[Symbol("dvHeatingProduction"*_n)][t,ts]
 			)
 	end
 
@@ -159,12 +159,12 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
 		if !isempty(p.techs.steam_turbine) && p.s.chp.can_supply_steam_turbine
             @constraint(m, CHPTechProductionFlowCon[b in p.s.storage.types.hot, t in p.techs.chp, ts in p.time_steps],
                     m[Symbol("dvProductionToStorage"*_n)][b,t,ts] + m[Symbol("dvProductionToWaste"*_n)][t,ts] + m[Symbol("dvThermalToSteamTurbine"*_n)][t,ts] <=
-                    m[Symbol("dvThermalProduction"*_n)][t,ts]
+                    m[Symbol("dvHeatingProduction"*_n)][t,ts]
                     )
         else
             @constraint(m, CHPTechProductionFlowCon[b in p.s.storage.types.hot, t in p.techs.chp, ts in p.time_steps],
                     m[Symbol("dvProductionToStorage"*_n)][b,t,ts] + m[Symbol("dvProductionToWaste"*_n)][t,ts] <=
-                    m[Symbol("dvThermalProduction"*_n)][t,ts]
+                    m[Symbol("dvHeatingProduction"*_n)][t,ts]
                     )
         end
 	end
@@ -194,7 +194,7 @@ function add_cold_thermal_storage_dispatch_constraints(m, p, b; _n="")
 	if !isempty(p.techs.cooling)
 		@constraint(m, CoolingTechProductionFlowCon[b in p.s.storage.types.cold, t in p.techs.cooling, ts in p.time_steps],
     	        m[Symbol("dvProductionToStorage"*_n)][b,t,ts]  <=
-				m[Symbol("dvThermalProduction"*_n)][t,ts]
+				m[Symbol("dvCoolingProduction"*_n)][t,ts]
 				)
 	end
 
