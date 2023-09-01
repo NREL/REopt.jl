@@ -36,7 +36,7 @@ struct ElectricHeater <: AbstractThermalTech
     macrs_option_years::Int
     macrs_bonus_fraction::Real
     can_supply_steam_turbine::Bool
-    heating_cop::Real
+    cop::Real
 end
 
 
@@ -56,7 +56,7 @@ function ElectricHeater(;
     macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
     can_supply_steam_turbine::Union{Bool, nothing} = nothing # If the boiler can supply steam to the steam turbine for electric production
-    heating_cop::Union{Real, nothing} = nothing # COP of the heating (i.e., thermal produced / electricity consumed)
+    cop::Union{Real, nothing} = nothing # COP of the heating (i.e., thermal produced / electricity consumed)
 )
 ```
 """
@@ -68,7 +68,7 @@ function ElectricHeater(;
         macrs_option_years::Int = 0,
         macrs_bonus_fraction::Real = 0.0,
         can_supply_steam_turbine::Union{Bool, Nothing} = nothing,
-        heating_cop::Union{Real, Nothing} = nothing
+        cop::Union{Real, Nothing} = nothing
     )
 
     defaults = get_electric_heater_defaults()
@@ -83,8 +83,8 @@ function ElectricHeater(;
     if isnothing(can_supply_steam_turbine)
         can_supply_steam_turbine = defaults["can_supply_steam_turbine"]
     end
-    if isnothing(heating_cop)
-        heating_cop = defaults["heating_cop"]
+    if isnothing(cop)
+        cop = defaults["cop"]
     end
 
     # Convert max sizes, cost factors from mmbtu_per_hour to kw
@@ -104,7 +104,7 @@ function ElectricHeater(;
         macrs_option_years,
         macrs_bonus_fraction,
         can_supply_steam_turbine,
-        heating_cop
+        cop
     )
 end
 

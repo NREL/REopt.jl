@@ -4,5 +4,5 @@
     "macrs_option_years": 0,
     "macrs_bonus_fraction": 0.0,
     "can_supply_steam_turbine": false,
-    "heating_cop": 1.0
+    "cop": 1.0
 }
