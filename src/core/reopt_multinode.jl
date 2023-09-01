@@ -69,8 +69,17 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 		dv = "binGenIsOnInTS"*_n
 		m[Symbol(dv)] = @variable(m, [p.techs.gen, 0:p.time_steps[end]], base_name=dv, lower_bound=0)
 	
-
-        if !isempty(p.s.electric_tariff.export_bins)
+		# Add the new variables to allow the battery to export to the grid
+		dv = "dvStorageToGrid"*_n
+		m[Symbol(dv)] = @variable(m, [p.time_steps], base_name=dv, lower_bound=0) # export of energy from storage to the grid
+		
+		dv = "dvBattCharge_binary"*_n
+		m[Symbol(dv)] = @variable(m, [p.time_steps], base_name=dv, Bin) # Binary for battery charge
+		
+		dv = "dvBattDischarge_binary"*_n
+		m[Symbol(dv)] = @variable(m, [p.time_steps], base_name=dv, Bin) # Binary for battery discharge
+		
+		if !isempty(p.s.electric_tariff.export_bins)
             dv = "dvProductionToGrid"*_n
             m[Symbol(dv)] = @variable(m, [p.techs.elec, p.s.electric_tariff.export_bins, p.time_steps], base_name=dv, lower_bound=0)
         end
@@ -136,6 +145,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 
 			# Utility Bill, tax deductible for offtaker, including export benefit
 			m[Symbol("TotalElecBill"*_n)] * (1 - p.s.financial.offtaker_tax_rate_fraction)
+			#+ (sum(m[Symbol("dvStorageToGrid"*_n)][ts]*9000 for ts in p.time_steps)) # added this line temporarily for debugging purposes
 		);
     end
 end
@@ -160,7 +170,8 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
                             m[Symbol("dvProductionToStorage"*_n)][b, t, ts] == 0)
                 @constraint(m, [ts in p.time_steps], m[Symbol("dvDischargeFromStorage"*_n)][b, ts] == 0)
                 @constraint(m, [ts in p.time_steps], m[Symbol("dvGridToStorage"*_n)][b, ts] == 0)
-            else
+				@constraint(m, [ts in p.time_steps], m[Symbol("dvStorageToGrid"*_n)][b, ts] == 0)
+            else 
                 add_storage_size_constraints(m, p, b; _n=_n)
                 add_general_storage_dispatch_constraints(m, p, b; _n=_n)
 				if b in p.s.storage.types.elec
@@ -226,7 +237,7 @@ function add_objective!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 	end  # TODO need to handle different hours_per_time_step?
 	nothing
 end
-
+#=
 function build_reopt_outagesimulator!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) where T <: AbstractScenario
 	# note: this function is modelled after the build_reopt! function above
 		# however, this function is for building a reopt model for testing if an outage can be survived
@@ -439,6 +450,7 @@ function build_reopt_outagesimulator!(m::JuMP.AbstractModel, ps::AbstractVector{
 		
 
 end 
+=#
 
 function run_reopt(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) where T <: AbstractScenario
 

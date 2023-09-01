@@ -594,6 +594,9 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvProductionToStorage[p.s.storage.types.all, p.techs.all, p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
 		dvDischargeFromStorage[p.s.storage.types.all, p.time_steps] >= 0 # Power discharged from storage system b [kW]
 		dvGridToStorage[p.s.storage.types.elec, p.time_steps] >= 0 # Electrical power delivered to storage by the grid [kW]
+		dvStorageToGrid[p.StorageSalesTiers, p.time_steps] >= 0 # export of energy from storage to the grid
+		
+		
 		dvStoredEnergy[p.s.storage.types.all, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
 		dvStoragePower[p.s.storage.types.all] >= 0   # Power capacity of storage system b [kW]
 		dvStorageEnergy[p.s.storage.types.all] >= 0   # Energy capacity of storage system b [kWh]
@@ -602,6 +605,15 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		MinChargeAdder >= 0
         binGHP[p.ghp_options], Bin  # Can be <= 1 if require_ghp_purchase=0, and is ==1 if require_ghp_purchase=1
 	end
+
+	# Additional variables for exporting storage energy to the grid
+	dv = "dvBattCharge_binary" 
+	m[Symbol(dv)] = @variable(m, [0:p.time_steps[end]], base_name=dv, Bin) # Binary for battery charge
+	
+	dv = "dvBattDischarge_binary"
+	m[Symbol(dv)] = @variable(m, [0:p.time_steps[end]], base_name=dv, Bin) # Binary for battery discharge
+	
+	
 
 	if !isempty(p.techs.gen)  # Problem becomes a MILP
 		@warn "Adding binary variable to model gas generator. Some solvers are very slow with integer variables."
