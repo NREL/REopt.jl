@@ -23,6 +23,9 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop 2023-09-01
+### Added
+- Added new heating technology `ElectricHeater`.
 ## v0.32.6
 ### Changed
 - Required **fuel_cost_per_mmbtu** for modeling **Boiler** tech, otherwise throw a handled error.
