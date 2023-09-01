@@ -812,7 +812,7 @@ function setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, o
     max_sizes["ElectricHeater"] = s.electric_heater.max_kw
     min_sizes["ElectricHeater"] = s.electric_heater.min_kw
     om_cost_per_kw["ElectricHeater"] = s.electric_heater.om_cost_per_kw
-    heating_cop["ElectricHeater"] = s.electric_heater.heating_cop
+    heating_cop["ElectricHeater"] = s.electric_heater.cop
 
     if s.electric_heater.macrs_option_years in [5, 7]
         cap_cost_slope["ElectricHeater"] = effective_cost(;
