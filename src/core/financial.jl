@@ -264,9 +264,9 @@ function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
     USD_2010_to_2020 = 1.246
     try
         costs_per_tonne = Dict(
-            "NOx" => EASIUR_data["NOX_Annual"][x - 1, y - 1] .* USD_2010_to_2020,
-            "SO2" => EASIUR_data["SO2_Annual"][x - 1, y - 1] .* USD_2010_to_2020,
-            "PM25" => EASIUR_data["PEC_Annual"][x - 1, y - 1] .* USD_2010_to_2020
+            "NOx" => EASIUR_data["NOX_Annual"][x, y] .* USD_2010_to_2020,
+            "SO2" => EASIUR_data["SO2_Annual"][x, y] .* USD_2010_to_2020,
+            "PM25" => EASIUR_data["PEC_Annual"][x, y] .* USD_2010_to_2020
         )
         return costs_per_tonne
     catch
@@ -400,12 +400,13 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
     end
 
     fn_2005 = joinpath(EASIUR_data_lib,"sc_8.6MVSL_$(stack)_pop2005.hdf5")
-    ret_map = JLD.load(fn_2005)
+    ret_map = JLD.load(fn_2005) 
+
     if pop_year != 2005
         fn_growth = joinpath(EASIUR_data_lib,"sc_growth_rate_pop2005_pop2040_$(stack).hdf5")
-        map_rate = JLD.load(fn_growth)
+        map_rate = JLD.load(fn_growth) 
         for (k,v) in map_rate
-            setindex!(ret_map, v .* (v.^(pop_year - 2005)), k)
+            setindex!(ret_map, ret_map[k] .* (v.^(pop_year - 2005)), k)
         end
     end
     if income_year != 2005
