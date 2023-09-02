@@ -23,6 +23,11 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.32.7
+### Fixed
+- Bugs in EASIUR health cost calcs
+- Type handling for CoolingLoad monthly_tonhour input
+
 ## v0.32.6
 ### Changed
 - Required **fuel_cost_per_mmbtu** for modeling **Boiler** tech, otherwise throw a handled error.
