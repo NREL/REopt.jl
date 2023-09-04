@@ -47,6 +47,20 @@ elseif "CPLEX" in ARGS
 else  # run HiGHS tests
 
     # @testset "Temp test dev H2 in backup_reliability" begin
+    #     battery_size_kw=100
+    #     H2_size_kw=150
+    #     generator_size_kw=50
+    #     num_generators=2
+    #     battery_bin_size=5
+    #     battery_num_bins=100
+    #     H2_bin_size=5
+    #     H2_num_bins=150
+    #     battery_discharge_efficiency=.95
+    #     H2_discharge_efficiency=.9
+    #     @info get_maximum_generation(battery_size_kw=battery_size_kw, H2_size_kw=H2_size_kw, generator_size_kw=generator_size_kw, 
+    #                 battery_bin_size=battery_bin_size, battery_num_bins=battery_num_bins, H2_bin_size=H2_bin_size, H2_num_bins=H2_num_bins, num_generators=num_generators, 
+    #                 battery_discharge_efficiency=battery_discharge_efficiency, H2_discharge_efficiency=H2_discharge_efficiency)
+
     #     reopt_inputs = Dict(
     #         "Site" => Dict(
     #             "longitude" => -106.42077256104001,
@@ -214,26 +228,22 @@ else  # run HiGHS tests
 
         @testset "Test H2 and battery together" begin
             reliability_inputs = JSON.parsefile("./scenarios/backup_reliability_inputs_H2.json")
-            reliability_results = backup_reliability(reliability_inputs)
-            @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.880277 atol=0.001
-
-            # reliability_inputs = JSON.parsefile("./scenarios/backup_reliability_inputs_H2.json")
-            # reliability_inputs["H2_size_kwh"] /= 2
-            # reliability_inputs["H2_electrolyzer_size_kw"] /= 2
-            # reliability_inputs["H2_fuelcell_size_kw"] /= 2
-            # merge!(reliability_inputs, 
-            #     Dict(
-            #         "num_battery_bins" => reliability_inputs["num_H2_bins"],
-            #         "battery_operational_availability" => reliability_inputs["H2_operational_availability"],
-            #         "battery_size_kw" => reliability_inputs["H2_fuelcell_size_kw"],
-            #         "battery_size_kwh" => reliability_inputs["H2_size_kwh"],
-            #         "battery_charge_efficiency" => reliability_inputs["H2_charge_efficiency"],
-            #         "battery_discharge_efficiency" => reliability_inputs["H2_discharge_efficiency"],
-            #         "battery_minimum_soc_fraction" => reliability_inputs["H2_minimum_soc_fraction"]
-            #     )
-            # )
-            # reliability_results = backup_reliability(reliability_inputs)
-            # @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.880277 atol=0.0001
+            reliability_results1 = backup_reliability(reliability_inputs)
+            reliability_inputs = JSON.parsefile("./scenarios/backup_reliability_inputs_H2.json")
+            reliability_inputs["H2_size_kwh"] /= 2
+            merge!(reliability_inputs, 
+                Dict(
+                    "num_battery_bins" => reliability_inputs["num_H2_bins"],
+                    "battery_operational_availability" => reliability_inputs["H2_operational_availability"],
+                    "battery_size_kw" => reliability_inputs["H2_fuelcell_size_kw"],
+                    "battery_size_kwh" => reliability_inputs["H2_size_kwh"],
+                    "battery_charge_efficiency" => reliability_inputs["H2_charge_efficiency"],
+                    "battery_discharge_efficiency" => reliability_inputs["H2_discharge_efficiency"],
+                    "battery_minimum_soc_fraction" => reliability_inputs["H2_minimum_soc_fraction"]
+                )
+            )
+            reliability_results2 = backup_reliability(reliability_inputs)
+            @test reliability_results1["mean_cumulative_survival_final_time_step"] ≈ reliability_results2["mean_cumulative_survival_final_time_step"] atol=0.01 #some difference expected due to SOC discretization
         end
 
         # @testset "Compare backup_reliability and simulate_outages" begin
