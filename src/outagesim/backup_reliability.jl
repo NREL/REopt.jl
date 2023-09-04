@@ -1514,7 +1514,6 @@ function return_backup_reliability(;
     results_no_fuel_limit = []
     for (description, system) in system_characteristics
         if system["probability"] != 0
-            println(description)
             run_survival_probs = @time backup_reliability_single_run(;
                 net_critical_loads_kw = system["net_critical_loads_kw"],
                 battery_size_kw = system["battery_size_kw"],
