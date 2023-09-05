@@ -51,6 +51,47 @@ function add_fuel_cell_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     r = Dict{String, Any}()
     r["size_kw"] = round(value(m[Symbol("dvSize"*_n)]["FuelCell"]), digits=4)
 
+    for t in p.techs.fuel_cell
+        FuelCellConsumption = @expression(m, [ts in p.time_steps],
+                                sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.hydrogen_lp)
+                                )
+        
+        r["hydrogen_consumed_series_kg"] = round.(value.(FuelCellConsumption), digits=3)
+        r["year_one_hydrogen_consumed_kg"] = round(sum(r["hydrogen_consumed_series_kg"]), digits=2)
+
+        if !isempty(p.s.storage.types.elec)
+            FuelCelltoBatt = (sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) for ts in p.time_steps)
+        else
+            FuelCelltoBatt = repeat([0], length(p.time_steps))
+        end
+        r["electric_to_storage_series_kw"] = round.(value.(FuelCelltoBatt), digits=3)
+
+        r["electric_to_grid_series_kw"] = zeros(size(r["electric_to_storage_series_kw"]))
+        r["annual_energy_exported_kwh"] = 0.0
+        if !isempty(p.s.electric_tariff.export_bins)
+            FuelCelltoGrid = @expression(m, [ts in p.time_steps],
+                    sum(m[:dvProductionToGrid][t, u, ts] for u in p.export_bins_by_tech[t]))
+            r["electric_to_grid_series_kw"] = round.(value.(FuelCelltoGrid), digits=3).data
+
+            r["annual_energy_exported_kwh"] = round(
+                sum(r["electric_to_grid_series_kw"]) * p.hours_per_time_step, digits=0)
+        end
+
+        FuelCelltoCUR = (m[Symbol("dvCurtail"*_n)][t, ts] for ts in p.time_steps)
+        r["electric_curtailed_series_kw"] = round.(value.(FuelCelltoCUR), digits=3)
+        FuelCelltoLoad = (m[Symbol("dvRatedProduction"*_n)][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
+                    - r["electric_curtailed_series_kw"][ts]
+                    - r["electric_to_grid_series_kw"][ts]
+                    - r["electric_to_storage_series_kw"][ts] for ts in p.time_steps
+        )
+        r["electric_to_load_series_kw"] = round.(value.(FuelCelltoLoad), digits=3)
+        Year1FuelCellProd = (sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] for ts in p.time_steps) * p.hours_per_time_step)
+        r["year_one_energy_produced_kwh"] = round(value(Year1FuelCellProd), digits=0)
+        r["annual_energy_produced_kwh"] = round(r["year_one_energy_produced_kwh"] * p.levelization_factor[t], digits=2)
+        FuelCellPerUnitSizeOMCosts = p.om_cost_per_kw[t] * p.pwf_om * m[Symbol("dvSize"*_n)][t]
+        r["lifecycle_om_cost_after_tax"] = round(value(FuelCellPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_rate_fraction), digits=0)
+    end
+
     d["FuelCell"] = r
 
 end
