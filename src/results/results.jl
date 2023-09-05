@@ -137,6 +137,10 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         add_hydrogen_load_results(m, p, d; _n)
     end
 
+    if !isempty(p.techs.fuel_cell)
+        add_fuel_cell_results(m, p, d; _n)
+    end
+
     for b in p.s.storage.types.hydrogen
         if p.s.storage.attr[b].max_kg > 0
             if b in p.s.storage.types.hydrogen_lp

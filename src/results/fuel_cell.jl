@@ -51,6 +51,6 @@ function add_fuel_cell_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     r = Dict{String, Any}()
     r["size_kw"] = round(value(m[Symbol("dvSize"*_n)]["FuelCell"]), digits=4)
 
-    d["Compressor"] = r
+    d["FuelCell"] = r
 
 end

@@ -222,6 +222,7 @@ function Techs(s::Scenario)
     
     if !isnothing(s.fuel_cell)
         push!(all_techs, "FuelCell")
+        push!(elec, "FuelCell")
         push!(fuel_cell_techs, "FuelCell")
     end
 
