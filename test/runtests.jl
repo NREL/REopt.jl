@@ -368,21 +368,9 @@ else  # run HiGHS tests
                 ),
             )
             p = REoptInputs(reopt_inputs)
-            # model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-            #     "output_flag" => false, "log_to_console" => false)
-            # )
-            # results = run_reopt(model, p)
-            # # simresults = simulate_outages(results, p)
-            # open("debug_reopt_results.json","w") do f
-            #     JSON.print(f, results)
-            # end
-            # open("debug_outagesim_results.json","w") do f
-            #     JSON.print(f, simresults)
-            # end
-
-            # uncomment after first run:
-            results = JSON.parsefile("./debug_reopt_results.json")
-            simresults = JSON.parsefile("./debug_outagesim_results.json")
+            # REopt optimization and outage simulator results for above inputs saved in the following files:
+            results = JSON.parsefile("./erp_outagesim_comparison_1_reopt_results.json")
+            simresults = JSON.parsefile("./erp_outagesim_comparison_1_outagesim_results.json")
             
             reliability_inputs = Dict(
                 "generator_size_kw" => 0,
@@ -421,11 +409,10 @@ else  # run HiGHS tests
             reopt_inputs = JSON.parsefile("./scenarios/backup_reliability_reopt_inputs.json")
             reopt_inputs["ElectricLoad"]["annual_kwh"] = 4*reopt_inputs["ElectricLoad"]["annual_kwh"]
             p = REoptInputs(reopt_inputs)
-            model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-                "output_flag" => false, "log_to_console" => false)
-            )
-            results = run_reopt(model, p)
-            simresults = simulate_outages(results, p)
+            # REopt optimization and outage simulator results for above inputs saved in the following files:
+            results = JSON.parsefile("./erp_outagesim_comparison_2_reopt_results.json")
+            simresults = JSON.parsefile("./erp_outagesim_comparison_2_outagesim_results.json")
+
             reliability_inputs = Dict(
                 "max_outage_duration" => 48,
                 "generator_operational_availability" => 1.0, 
