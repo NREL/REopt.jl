@@ -795,18 +795,6 @@ function survival_with_storage_single_start_time(
             return_survival_chance_vector[d] = survival_chance_mult(gen_battery_prob_matrix_array[gen_matrix_counter_end], survival)
         end
 
-        #Update generation battery probability matrix to account for battery shifting
-        # shift_gen_storage_prob_matrix!(
-        #     gen_battery_prob_matrix_array[gen_matrix_counter_end], 
-        #     storage_bin_shift(
-        #         (generator_production .- net_critical_loads_kw[h]) / time_steps_per_hour, 
-        #         battery_bin_size, 
-        #         battery_size_kw, 
-        #         battery_size_kw,
-        #         battery_charge_efficiency, 
-        #         battery_discharge_efficiency
-        #     )
-        # )
         shift_gen_storage_prob_matrix!(
             gen_battery_prob_matrix_array[gen_matrix_counter_end],
             (generator_production .- net_critical_loads_kw[h]) / time_steps_per_hour,
