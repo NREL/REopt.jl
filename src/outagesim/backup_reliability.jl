@@ -1483,33 +1483,6 @@ function return_backup_reliability(;
             "H2_fuelcell_size_kw" => H2_fuelcell_size_kw,
             "H2_size_kwh" => H2_size_kwh)
     )
-    # #Sets probabilities for each potential system configuration
-    # if battery_size_kw > 0 && pv_included
-    #     system_characteristics["gen_pv_battery"]["probability"] = 
-    #         battery_operational_availability * pv_operational_availability * (1 - H2_operational_availability)
-    #     system_characteristics["gen_battery"]["probability"] = 
-    #         battery_operational_availability * (1 - pv_operational_availability) * (1 - H2_operational_availability)
-    #     if pv_can_dispatch_without_storage
-    #         system_characteristics["gen_pv"]["probability"] = 
-    #             (1 - battery_operational_availability) * pv_operational_availability * (1 - H2_operational_availability)
-    #         system_characteristics["gen"]["probability"] = 
-    #             (1 - battery_operational_availability) * (1 - pv_operational_availability) * (1 - H2_operational_availability)
-    #     else
-    #         #gen_pv probability stays zero and that case is combined with gen only
-    #         system_characteristics["gen"]["probability"] = 
-    #             (1 - battery_operational_availability) * (1 - H2_operational_availability)
-    #     end
-    # elseif battery_size_kw > 0
-    #     system_characteristics["gen_battery"]["probability"] = 
-    #         battery_operational_availability * (1 - H2_operational_availability)
-    #     system_characteristics["gen"]["probability"] = 
-    #         (1 - battery_operational_availability) * (1 - H2_operational_availability)
-    # elseif pv_included && pv_can_dispatch_without_storage
-    #     system_characteristics["gen_pv"]["probability"] = 
-    #         pv_operational_availability * (1 - H2_operational_availability)
-    #     system_characteristics["gen"]["probability"] = 
-    #         (1 - pv_operational_availability) * (1 - H2_operational_availability)
-    # end
 
     results_no_fuel_limit = []
     for (description, system) in system_characteristics
