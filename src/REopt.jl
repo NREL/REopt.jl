@@ -55,7 +55,8 @@ export
     simulated_load,
     get_absorption_chiller_defaults,
     emissions_profiles,
-    easiur_data
+    easiur_data,
+    get_existing_chiller_default_cop
 
 import HTTP
 import JSON
@@ -143,9 +144,15 @@ include("core/wind.jl")
 include("core/energy_storage/storage.jl")
 include("core/energy_storage/electric_storage.jl")
 include("core/energy_storage/thermal_storage.jl")
+include("core/energy_storage/hydrogen_storage_LP.jl")
+include("core/energy_storage/hydrogen_storage_HP.jl")
+include("core/electrolyzer.jl")
+include("core/compressor.jl")
+include("core/fuel_cell.jl")
 include("core/generator.jl")
 include("core/doe_commercial_reference_building_loads.jl")
 include("core/electric_load.jl")
+include("core/hydrogen_load.jl")
 include("core/existing_boiler.jl")
 include("core/boiler.jl")
 include("core/existing_chiller.jl")
@@ -183,6 +190,7 @@ include("constraints/ghp_constraints.jl")
 include("constraints/steam_turbine_constraints.jl")
 include("constraints/renewable_energy_constraints.jl")
 include("constraints/emissions_constraints.jl")
+include("constraints/hydrogen_constraints.jl")
 
 include("mpc/structs.jl")
 include("mpc/scenario.jl")
@@ -212,6 +220,11 @@ include("results/flexible_hvac.jl")
 include("results/ghp.jl")
 include("results/steam_turbine.jl")
 include("results/heating_cooling_load.jl")
+include("results/hydrogen_load.jl")
+include("results/hydrogen_storage.jl")
+include("results/electrolyzer.jl")
+include("results/compressor.jl")
+include("results/fuel_cell.jl")
 
 include("core/reopt.jl")
 include("core/reopt_multinode.jl")

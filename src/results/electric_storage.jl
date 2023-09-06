@@ -71,6 +71,16 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
                 ))
             end
          end
+
+        if !isempty(p.techs.electrolyzer)
+            BattToElectrolyzer = (m[Symbol("dvStorageToElectrolyzer"*_n)][b, ts] for ts in p.time_steps)
+            r["storage_to_electrolyzer_series_kw"] = round.(value.(BattToElectrolyzer), digits=3)
+        end
+
+        if !isempty(p.techs.compressor)
+            BattToCompressor = (m[Symbol("dvStorageToCompressor"*_n)][b, ts] for ts in p.time_steps)
+            r["storage_to_compressor_series_kw"] = round.(value.(BattToCompressor), digits=3)
+        end
     else
         r["soc_series_fraction"] = []
         r["storage_to_load_series_kw"] = []

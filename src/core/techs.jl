@@ -52,6 +52,9 @@ function Techs(p::REoptInputs, s::BAUScenario)
     absorption_chillers = String[]
     steam_turbines = String[]
     techs_can_supply_steam_turbine = String[]
+    electrolyzer_techs = String[]
+    compressor_techs = String[] 
+    fuel_cell_techs = String[]
 
     if p.s.generator.existing_kw > 0
         push!(all_techs, "Generator")
@@ -79,6 +82,9 @@ function Techs(p::REoptInputs, s::BAUScenario)
         elec,
         pvtechs,
         gentechs,
+        electrolyzer_techs,
+        compressor_techs,
+        fuel_cell_techs,
         pbi_techs,
         techs_no_curtail,
         techs_no_turndown,
@@ -128,6 +134,9 @@ function Techs(s::Scenario)
     absorption_chillers = String[]
     steam_turbines = String[]
     techs_can_supply_steam_turbine = String[]    
+    electrolyzer_techs = String[]
+    compressor_techs = String[] 
+    fuel_cell_techs = String[]
 
     if s.wind.max_kw > 0
         push!(all_techs, "Wind")
@@ -201,11 +210,30 @@ function Techs(s::Scenario)
     thermal_techs = union(heating_techs, boiler_techs, chp_techs, cooling_techs)
     fuel_burning_techs = union(gentechs, boiler_techs, chp_techs)
 
+    if !isnothing(s.electrolyzer)
+        push!(all_techs, "Electrolyzer")
+        push!(electrolyzer_techs, "Electrolyzer")
+    end
+
+    if !isnothing(s.compressor)
+        push!(all_techs, "Compressor")
+        push!(compressor_techs, "Compressor")
+    end
+    
+    if !isnothing(s.fuel_cell)
+        push!(all_techs, "FuelCell")
+        push!(elec, "FuelCell")
+        push!(fuel_cell_techs, "FuelCell")
+    end
+
     Techs(
         all_techs,
         elec,
         pvtechs,
         gentechs,
+        electrolyzer_techs,
+        compressor_techs,
+        fuel_cell_techs,
         pbi_techs,
         techs_no_curtail,
         techs_no_turndown,

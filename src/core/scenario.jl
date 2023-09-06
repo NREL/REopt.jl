@@ -38,6 +38,7 @@ struct Scenario <: AbstractScenario
     electric_utility::ElectricUtility
     financial::Financial
     generator::Generator
+    hydrogen_load::HydrogenLoad
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
     cooling_load::CoolingLoad
@@ -51,6 +52,9 @@ struct Scenario <: AbstractScenario
     space_heating_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     steam_turbine::Union{SteamTurbine, Nothing}
+    electrolyzer::Union{Electrolyzer, Nothing}
+    compressor::Union{Compressor, Nothing}
+    fuel_cell::Union{FuelCell, Nothing}
 end
 
 """
@@ -66,6 +70,7 @@ A Scenario struct can contain the following keys:
 - [ElectricStorage](@ref) (optional)
 - [ElectricUtility](@ref) (optional)
 - [Generator](@ref) (optional)
+- [HydrogenLoad](@ref) (optional)
 - [DomesticHotWaterLoad](@ref) (optional)
 - [SpaceHeatingLoad](@ref) (optional)
 - [ExistingBoiler](@ref) (optional)
@@ -76,6 +81,9 @@ A Scenario struct can contain the following keys:
 - [AbsorptionChiller](@ref) (optional)
 - [GHP](@ref) (optional, can be Array)
 - [SteamTurbine](@ref) (optional)
+- [Electrolyzer](@ref) (optional)
+- [Compressor](@ref) (optional)
+- [FuelCell](@ref) (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
 
@@ -178,6 +186,15 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         params = ColdThermalStorageDefaults(; dictkeys_tosymbols(d["ColdThermalStorage"])...)
         storage_structs["ColdThermalStorage"] = ThermalStorage(params, financial, settings.time_steps_per_hour)
     end
+    if haskey(d, "HydrogenStorageLP")
+        params = dictkeys_tosymbols(d["HydrogenStorageLP"])
+        storage_structs["HydrogenStorageLP"] = HydrogenStorageLP(params, financial)
+    end
+    if haskey(d, "HydrogenStorageHP")
+        params = dictkeys_tosymbols(d["HydrogenStorageHP"])
+        storage_structs["HydrogenStorageHP"] = HydrogenStorageHP(params, financial)
+    end
+        
     storage = Storage(storage_structs)
 
     electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
@@ -214,6 +231,31 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         generator = Generator(; dictkeys_tosymbols(d["Generator"])..., off_grid_flag=settings.off_grid_flag, analysis_years=financial.analysis_years)
     else
         generator = Generator(; max_kw=0)
+    end
+
+    if haskey(d, "HydrogenLoad") 
+        hydrogen_load = HydrogenLoad(; dictkeys_tosymbols(d["HydrogenLoad"])..., 
+                                          time_steps_per_hour=settings.time_steps_per_hour
+                                        )
+    else
+        hydrogen_load = HydrogenLoad(; loads_kg=zeros(8760*settings.time_steps_per_hour),
+                                            time_steps_per_hour=settings.time_steps_per_hour
+                                        )
+    end
+
+    electrolyzer = nothing
+    compressor = nothing
+    fuel_cell = nothing
+    if haskey(d, "Electrolyzer")
+        electrolyzer = Electrolyzer(; dictkeys_tosymbols(d["Electrolyzer"])...)
+    end
+
+    if haskey(d, "Compressor")
+        compressor = Compressor(; dictkeys_tosymbols(d["Compressor"])...)
+    end
+
+    if haskey(d, "FuelCell")
+        fuel_cell = FuelCell(; dictkeys_tosymbols(d["FuelCell"])...)
     end
 
     max_heat_demand_kw = 0.0
@@ -288,14 +330,14 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 if haskey(d, "ExistingChiller")
                     if !haskey(d["ExistingChiller"], "cop")
                         d["ExistingChiller"]["cop"] = get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_on_peak_load=1.25, 
-                                                                                        loads_kw=nothing, 
-                                                                                        loads_kw_thermal=chiller_inputs[:loads_kw_thermal])
+                                                                                max_load_kw=nothing, 
+                                                                                max_load_kw_thermal=maximum(chiller_inputs[:loads_kw_thermal]))
                     end 
                     chiller_inputs = merge(chiller_inputs, dictkeys_tosymbols(d["ExistingChiller"]))
                 else
                     chiller_inputs[:cop] = get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_on_peak_load=1.25, 
-                                                                                loads_kw=nothing, 
-                                                                                loads_kw_thermal=chiller_inputs[:loads_kw_thermal])
+                                                                                max_load_kw=nothing, 
+                                                                                max_load_kw_thermal=maximum(chiller_inputs[:loads_kw_thermal]))
                 end              
                 existing_chiller = ExistingChiller(; chiller_inputs...)
             end
@@ -552,6 +594,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         electric_utility, 
         financial,
         generator,
+        hydrogen_load,
         dhw_load,
         space_heating_load,
         cooling_load,
@@ -564,7 +607,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         ghp_option_list,
         space_heating_thermal_load_reduction_with_ghp_kw,
         cooling_thermal_load_reduction_with_ghp_kw,
-        steam_turbine
+        steam_turbine,
+        electrolyzer,
+        compressor,
+        fuel_cell
     )
 end
 

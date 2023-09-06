@@ -232,7 +232,25 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
 	for b in p.s.storage.types.all
-		if p.s.storage.attr[b].max_kw == 0 || p.s.storage.attr[b].max_kwh == 0
+
+		if b in p.s.storage.types.hydrogen
+			if p.s.storage.attr[b].max_kg == 0
+				@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
+				@constraint(m, m[:dvStorageEnergy][b] == 0)
+				@constraint(m, [ts in p.time_steps], m[:dvDischargeFromStorage][b, ts] == 0)
+				@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
+				@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
+					m[:dvProductionToStorage][b, t, ts] == 0)
+			else
+				add_hydrogen_storage_size_constraints(m, p, b)
+				add_general_storage_dispatch_constraints(m, p, b)
+				if b in p.s.storage.types.hydrogen_lp
+					add_lp_hydrogen_storage_dispatch_constraints(m, p, b)
+				elseif b in p.s.storage.types.hydrogen_hp
+					add_hp_hydrogen_storage_dispatch_constraints(m, p, b)
+				end
+			end
+		elseif p.s.storage.attr[b].max_kw == 0 || p.s.storage.attr[b].max_kwh == 0
 			@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
 			@constraint(m, m[:dvStorageEnergy][b] == 0)
 			@constraint(m, [ts in p.time_steps], m[:dvDischargeFromStorage][b, ts] == 0)
@@ -258,6 +276,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
 	if any(max_kw->max_kw > 0, (p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec))
+		add_storage_sum_constraints(m, p)
+	elseif any(max_kg->max_kg > 0, (p.s.storage.attr[b].max_kg for b in p.s.storage.types.hydrogen))
 		add_storage_sum_constraints(m, p)
 	end
 
@@ -323,6 +343,19 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             m[:TotalPerUnitProdOMCosts] += m[:TotalSteamTurbinePerUnitProdOMCosts]
         end
 
+		if !isempty(p.techs.electrolyzer)
+            add_electrolyzer_constraints(m, p)
+        end
+
+		if !isempty(p.techs.compressor)
+            add_compressor_constraints(m, p)
+			add_hydrogen_load_balance_constraints(m, p)
+        end
+
+		if !isempty(p.techs.fuel_cell)
+            add_fuel_cell_constraints(m, p)
+        end
+		
         if !isempty(p.techs.pbi)
             @warn "Adding binary variable(s) to model production based incentives"
             add_prod_incent_vars_and_constraints(m, p)
@@ -381,7 +414,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	
 	@expression(m, TotalStorageCapCosts, p.third_party_factor * (
 		sum( p.s.storage.attr[b].net_present_cost_per_kw * m[:dvStoragePower][b] for b in p.s.storage.types.elec) + 
-		sum( p.s.storage.attr[b].net_present_cost_per_kwh * m[:dvStorageEnergy][b] for b in p.s.storage.types.all )
+		sum( p.s.storage.attr[b].net_present_cost_per_kwh * m[:dvStorageEnergy][b] for b in p.s.storage.types.nonhydrogen) + 
+		sum( p.s.storage.attr[b].net_present_cost_per_kg * m[:dvStorageEnergy][b] for b in p.s.storage.types.hydrogen)
 	))
 	
 	@expression(m, TotalPerUnitSizeOMCosts, p.third_party_factor * p.pwf_om *
@@ -593,10 +627,16 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvCurtail[p.techs.all, p.time_steps] >= 0  # [kW]
 		dvProductionToStorage[p.s.storage.types.all, p.techs.all, p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
 		dvDischargeFromStorage[p.s.storage.types.all, p.time_steps] >= 0 # Power discharged from storage system b [kW]
+		dvProductionToElectrolyzer[p.techs.elec, p.time_steps] >= 0
+		dvProductionToCompressor[p.techs.elec, p.time_steps] >= 0
 		dvGridToStorage[p.s.storage.types.elec, p.time_steps] >= 0 # Electrical power delivered to storage by the grid [kW]
+		dvGridToElectrolyzer[p.time_steps] >= 0
+		dvGridToCompressor[p.time_steps] >= 0
 		dvStoredEnergy[p.s.storage.types.all, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
 		dvStoragePower[p.s.storage.types.all] >= 0   # Power capacity of storage system b [kW]
 		dvStorageEnergy[p.s.storage.types.all] >= 0   # Energy capacity of storage system b [kWh]
+		dvStorageToElectrolyzer[p.s.storage.types.elec, p.time_steps] >= 0
+		dvStorageToCompressor[p.s.storage.types.elec, p.time_steps] >= 0
 		dvPeakDemandTOU[p.ratchets, 1:p.s.electric_tariff.n_tou_demand_tiers] >= 0  # Peak electrical power demand during ratchet r [kW]
 		dvPeakDemandMonth[p.months, 1:p.s.electric_tariff.n_monthly_demand_tiers] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0

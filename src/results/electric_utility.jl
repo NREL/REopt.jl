@@ -77,6 +77,16 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
     r["electric_to_load_series_kw"] = round.(value.(GridToLoad), digits=3)
     r["electric_to_storage_series_kw"] = round.(value.(GridToBatt), digits=3)
 
+    if !isempty(p.techs.electrolyzer)
+        GridToElectrolyzer = (m[Symbol("dvGridToElectrolyzer"*_n)][ts] for ts in p.time_steps)
+        r["electric_to_electrolyzer_series_kw"] = round.(value.(GridToElectrolyzer), digits=3)
+    end
+
+    if !isempty(p.techs.compressor)
+        GridToCompressor = (m[Symbol("dvGridToCompressor"*_n)][ts] for ts in p.time_steps)
+        r["electric_to_compressor_series_kw"] = round.(value.(GridToCompressor), digits=3)
+    end
+
     if _n=="" #only output emissions results if not a multinode model
         r["annual_emissions_tonnes_CO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2]*TONNE_PER_LB), digits=2)
         r["annual_emissions_tonnes_NOx"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx]*TONNE_PER_LB), digits=2)
