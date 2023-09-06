@@ -48,7 +48,7 @@ else  # run HiGHS tests
     @testset "Backup Generator Reliability" begin
         function change_batt_to_h2_in_reopt_results!(results)
             results["Electrolyzer"] = Dict("size_kw"=>results["ElectricStorage"]["size_kw"])
-            results["HydrogenFuelCell"] = Dict("size_kw"=>results["ElectricStorage"]["size_kw"])
+            results["FuelCell"] = Dict("size_kw"=>results["ElectricStorage"]["size_kw"])
             results["HydrogenStorageLP"] = Dict(
                 "size_kwh"=>results["ElectricStorage"]["size_kwh"], 
                 "soc_series_fraction"=>results["ElectricStorage"]["soc_series_fraction"]
