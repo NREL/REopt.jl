@@ -46,8 +46,6 @@ export
     build_mpc!, 
     backup_reliability,
     shift_gen_storage_prob_matrix!,
-    system_characteristics_new,
-    system_characteristics_old,
     backup_reliability_reopt_inputs,
     get_maximum_generation,
     get_chp_defaults_prime_mover_size_class,
