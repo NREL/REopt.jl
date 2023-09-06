@@ -659,6 +659,14 @@ end
     # TODO test for tiered TOU demand rates
 end
 
+@testset "EASIUR" begin
+    d = JSON.parsefile("./scenarios/pv.json")
+    d["Site"]["latitude"] = 30.2672
+    d["Site"]["longitude"] = -97.7431
+    scen = Scenario(d)
+    @test scen.financial.NOx_grid_cost_per_tonne ≈ 4534.032470 atol=0.1
+end
+
 @testset "Wind" begin
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     d = JSON.parsefile("./scenarios/wind.json")
@@ -799,7 +807,7 @@ end
     # When the user specifies inputs["ExistingChiller"]["cop"], this changes the **electric** consumption of the chiller to meet that cooling thermal load
     crb_cop = REopt.get_existing_chiller_default_cop(;
                                                     existing_chiller_max_thermal_factor_on_peak_load=s.existing_chiller.max_thermal_factor_on_peak_load,
-                                                    loads_kw_thermal=s.cooling_load.loads_kw_thermal)
+                                                    max_load_kw_thermal=maximum(s.cooling_load.loads_kw_thermal))
     cooling_thermal_load_tonhour_total = 1427329.0 * crb_cop / REopt.KWH_THERMAL_PER_TONHOUR  # From CRB models, in heating_cooling_loads.jl, BuiltInCoolingLoad data for location (SanFrancisco Hospital)
     cooling_electric_load_total_mod_cop_kwh = cooling_thermal_load_tonhour_total / inputs.s.existing_chiller.cop * REopt.KWH_THERMAL_PER_TONHOUR
 
