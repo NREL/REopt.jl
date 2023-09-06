@@ -314,9 +314,9 @@ a one percent difference in SOC. The storage will attempt to dispatch to meet cr
 
 # Arguments
 - `excess_generation_kw::Vector`: maximum generator output minus net critical load for each number of working generators
-- `bin_size::Real`: size of battery bin
+- `bin_size::Real`: size of storage bin
 - `size_kw::Real`: inverter size
-- `charge_efficiency::Real`: charge_efficiency = increase in SOC / kWh in 
+- `charge_efficiency::Real`: charge_efficiency = increase in SOC / kWh in
 - `discharge_efficiency::Real`: discharge_efficiency = kWh out / reduction in SOC
 
 #Examples
@@ -339,17 +339,20 @@ function storage_bin_shift(excess_generation_kw::Vector{<:Real}, bin_size::Real,
         return zeros(length(excess_generation_kw)), excess_generation_kw
     end
 
-    kw_to_storage = copy(excess_generation_kw)
+    to_from_storage = copy(excess_generation_kw) # positive if charges storage, negative if discharges
     #Cannot charge or discharge more than power rating
-    kw_to_storage[kw_to_storage .> charge_size_kw] .= charge_size_kw
-    kw_to_storage[kw_to_storage .< -discharge_size_kw] .= -discharge_size_kw
-    #Account for (dis)charge efficiency
-    kw_to_storage[kw_to_storage .> 0] = kw_to_storage[kw_to_storage .> 0] .* charge_efficiency
-    kw_to_storage[kw_to_storage .< 0] = kw_to_storage[kw_to_storage .< 0] ./ discharge_efficiency
+    to_from_storage[to_from_storage .> charge_size_kw] .= charge_size_kw
+    to_from_storage[to_from_storage .< -discharge_size_kw] .= -discharge_size_kw
 
-    shift = round.(kw_to_storage ./ bin_size)
-    remaining_kw = excess_generation_kw .- kw_to_storage
-    return shift, remaining_kw
+    #The power in/out of storage before accounting for (dis)charge efficiency is the change in net generation
+    excess_generation_kw .-= to_from_storage
+
+    #Account for (dis)charge efficiency
+    to_from_storage[to_from_storage .> 0] = to_from_storage[to_from_storage .> 0] .* charge_efficiency
+    to_from_storage[to_from_storage .< 0] = to_from_storage[to_from_storage .< 0] ./ discharge_efficiency
+
+    shift = round.(to_from_storage ./ bin_size)
+    return shift, excess_generation_kw
 end
 
 """
