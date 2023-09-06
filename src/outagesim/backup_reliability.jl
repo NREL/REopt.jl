@@ -351,6 +351,7 @@ function storage_bin_shift(excess_generation_kw::Vector{<:Real}, bin_size::Real,
     to_from_storage[to_from_storage .> 0] = to_from_storage[to_from_storage .> 0] .* charge_efficiency
     to_from_storage[to_from_storage .< 0] = to_from_storage[to_from_storage .< 0] ./ discharge_efficiency
 
+
     shift = round.(to_from_storage ./ bin_size)
     return shift, excess_generation_kw
 end
@@ -442,8 +443,11 @@ function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Array,
             for i_H2 in 1:M_H2
                 gen_storage_prob_matrix[i_gen, :, i_H2] = circshift(view(gen_storage_prob_matrix, i_gen, :, i_H2), s_b)
             end
-            excess_kw[wrap_indices_b] += battery_bin_size .* (collect(wrap_indices_b) .- (s_b < 0 ? (M_b + 1) : 0)) #negative values if unmet kw
-            #TODO: extend excess_kw to full batt dim (second term is just 0s in not wrap_indices_b indices
+            if s_b < 0 #discharge
+                excess_kw[wrap_indices_b] += (battery_bin_size * battery_discharge_efficiency) .* (collect(wrap_indices_b) .- (M_b + 1))
+            else #charge
+                excess_kw[wrap_indices_b] += (battery_bin_size / battery_charge_efficiency) .* collect(wrap_indices_b) #negative values if unmet kw
+            end
         end
         H2_shift, remaining_kw_after_H2_shift = storage_bin_shift(
                 excess_kw, 
