@@ -891,8 +891,9 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
     end
 
     if haskey(d, "HydrogenStorageLP") && haskey(d, "FuelCell") && haskey(d, "Electrolyzer") #TODO: condition on H2 upgraded into microgrid like with storage above?
-        r2[:H2_charge_efficiency_kg_per_kwh] = p.s.storage.attr["HydrogenStorageLP"].charge_efficiency
-        r2[:H2_discharge_efficiency_kwh_per_kg] = p.s.storage.attr["HydrogenStorageLP"].discharge_efficiency
+        #TODO: get efficiencies from HydrogenStorageLP, FuelCell, and Electrolyzer models
+        r2[:H2_charge_efficiency_kg_per_kwh] = p.s.storage.attr["ElectricStorage"].charge_efficiency#p.s.storage.attr["HydrogenStorageLP"].charge_efficiency
+        r2[:H2_discharge_efficiency_kwh_per_kg] = p.s.storage.attr["ElectricStorage"].discharge_efficiency#p.s.storage.attr["HydrogenStorageLP"].discharge_efficiency
         r2[:H2_electrolyzer_size_kw] = get(d["Electrolyzer"], "size_kw", 0)
         r2[:H2_fuelcell_size_kw] = get(d["FuelCell"], "size_kw", 0)
 
