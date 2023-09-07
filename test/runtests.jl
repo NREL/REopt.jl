@@ -131,8 +131,8 @@ else  # run HiGHS tests
             )
             p = REoptInputs(reopt_inputs)
             # REopt optimization and outage simulator results for above inputs saved in the following files:
-            results = JSON.parsefile("./erp_outagesim_comparison_1_reopt_results.json")
-            simresults = JSON.parsefile("./erp_outagesim_comparison_1_outagesim_results.json")
+            results = JSON.parsefile("./erp_outagesim_comparison_1_batt_reopt_results.json")
+            simresults = JSON.parsefile("./erp_outagesim_comparison_1_batt_outagesim_results.json")
             
             reliability_inputs = Dict(
                 "generator_size_kw" => 0,
@@ -181,8 +181,8 @@ else  # run HiGHS tests
             reopt_inputs["ElectricLoad"]["annual_kwh"] = 4*reopt_inputs["ElectricLoad"]["annual_kwh"]
             p = REoptInputs(reopt_inputs)
             # REopt optimization and outage simulator results for above inputs saved in the following files:
-            results = JSON.parsefile("./erp_outagesim_comparison_2_reopt_results.json")
-            simresults = JSON.parsefile("./erp_outagesim_comparison_2_outagesim_results.json")
+            results = JSON.parsefile("./erp_outagesim_comparison_2_batt_reopt_results.json")
+            simresults = JSON.parsefile("./erp_outagesim_comparison_2_batt_outagesim_results.json")
 
             reliability_inputs = Dict(
                 "max_outage_duration" => 48,
