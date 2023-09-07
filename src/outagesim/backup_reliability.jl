@@ -364,8 +364,8 @@ end
                                     battery_charge_efficiency_kwh_per_kwh::Real, 
                                     battery_discharge_efficiency_kwh_per_kwh::Real,
                                     H2_bin_size_kg::Real,
-                                    H2_charge_size_kw::Real,
-                                    H2_discharge_size_kw::Real,
+                                    H2_electrolyzer_size_kw::Real,
+                                    H2_fuelcell_size_kw::Real,
                                     H2_charge_efficiency_kg_per_kwh::Real,
                                     H2_discharge_efficiency_kwh_per_kg::Real)
 Updates ``gen_storage_prob_matrix`` in place to account for change in battery and H2 storage state of charge bins.
@@ -389,13 +389,13 @@ battery_size_kw = 2
 battery_charge_efficiency_kwh_per_kwh = 1
 battery_discharge_efficiency_kwh_per_kwh = 1
 H2_bin_size_kg = 1
-H2_charge_size_kw = 1
-H2_discharge_size_kw = 1
+H2_electrolyzer_size_kw = 1
+H2_fuelcell_size_kw = 1
 H2_charge_efficiency_kg_per_kwh = 1
 H2_discharge_efficiency_kwh_per_kg = 1
 shift_gen_storage_prob_matrix!(gen_storage_prob_matrix, excess_generation_kw, battery_bin_size_kwh, 
                             battery_size_kw, battery_charge_efficiency_kwh_per_kwh, battery_discharge_efficiency_kwh_per_kwh, 
-                            H2_bin_size_kg, H2_charge_size_kw, H2_discharge_size_kw, 
+                            H2_bin_size_kg, H2_electrolyzer_size_kw, H2_fuelcell_size_kw, 
                             H2_charge_efficiency_kg_per_kwh, H2_discharge_efficiency_kwh_per_kg)
 gen_storage_prob_matrix
 2×4×3 Array{Float64, 3}:
@@ -417,8 +417,8 @@ function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Array,
                                         battery_charge_efficiency_kwh_per_kwh::Real, 
                                         battery_discharge_efficiency_kwh_per_kwh::Real,
                                         H2_bin_size_kg::Real,
-                                        H2_charge_size_kw::Real,
-                                        H2_discharge_size_kw::Real,
+                                        H2_electrolyzer_size_kw::Real,
+                                        H2_fuelcell_size_kw::Real,
                                         H2_charge_efficiency_kg_per_kwh::Real,
                                         H2_discharge_efficiency_kwh_per_kg::Real)
 
@@ -452,8 +452,8 @@ function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Array,
         H2_shift, remaining_kw_after_H2_shift = storage_bin_shift(
                 excess_kw, 
                 H2_bin_size_kg, 
-                H2_charge_size_kw, 
-                H2_discharge_size_kw,
+                H2_electrolyzer_size_kw, 
+                H2_fuelcell_size_kw,
                 H2_charge_efficiency_kg_per_kwh, 
                 H2_discharge_efficiency_kwh_per_kg
             )
