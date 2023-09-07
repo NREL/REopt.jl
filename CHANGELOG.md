@@ -36,6 +36,11 @@ Classify the change according to the following categories:
 - In `test_with_xpress.jl`, updated "Emissions and Renewable Energy Percent" expected values to account for load year adjustment. 
 
 ## Develop 2023-08-09
+## v0.32.7
+### Fixed
+- Bugs in EASIUR health cost calcs
+- Type handling for CoolingLoad monthly_tonhour input
+
 ## v0.32.6
 ### Changed
 - Required **fuel_cost_per_mmbtu** for modeling **Boiler** tech, otherwise throw a handled error.

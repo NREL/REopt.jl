@@ -659,6 +659,14 @@ end
     # TODO test for tiered TOU demand rates
 end
 
+@testset "EASIUR" begin
+    d = JSON.parsefile("./scenarios/pv.json")
+    d["Site"]["latitude"] = 30.2672
+    d["Site"]["longitude"] = -97.7431
+    scen = Scenario(d)
+    @test scen.financial.NOx_grid_cost_per_tonne ≈ 4534.032470 atol=0.1
+end
+
 @testset "Wind" begin
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     d = JSON.parsefile("./scenarios/wind.json")
