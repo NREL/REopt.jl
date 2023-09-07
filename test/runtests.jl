@@ -50,23 +50,29 @@ else  # run HiGHS tests
             results["Electrolyzer"] = Dict("size_kw"=>results["ElectricStorage"]["size_kw"])
             results["FuelCell"] = Dict("size_kw"=>results["ElectricStorage"]["size_kw"])
             results["HydrogenStorageLP"] = Dict(
-                "size_kwh"=>results["ElectricStorage"]["size_kwh"], 
+                "size_kg"=>results["ElectricStorage"]["size_kwh"], 
                 "soc_series_fraction"=>results["ElectricStorage"]["soc_series_fraction"]
             )
             pop!(results, "ElectricStorage")
         end
 
         function change_batt_to_h2_in_backup_reliability_inputs!(inputs)
-            for (key, val) in inputs
-                if occursin("battery", key)
-                    pop!(inputs, key)
-                    if key == "battery_size_kw"
-                        inputs["H2_fuelcell_size_kw"] = val
-                        inputs["H2_electrolyzer_size_kw"] = val
-                    else
-                        inputs[replace(key, "battery"=>"H2")] = val
-                    end
+            key_mapping = Dict("H2_operational_availability" => "battery_operational_availability",
+                                "H2_size_kg" => "battery_size_kwh",
+                                "H2_fuelcell_size_kw" => "battery_size_kw",
+                                "H2_electrolyzer_size_kw" => "battery_size_kw",
+                                "H2_charge_efficiency_kg_per_kwh" => "battery_charge_efficiency_kwh_per_kwh",
+                                "H2_discharge_efficiency_kwh_per_kg" => "battery_discharge_efficiency_kwh_per_kwh",
+                                "H2_starting_soc_series_fraction" => "battery_starting_soc_series_fraction",
+                                "H2_minimum_soc_fraction" => "battery_minimum_soc_fraction",
+                                "num_H2_bins" => "num_battery_bins")   
+            for (H2_key, batt_key) in key_mapping
+                if batt_key in keys(inputs)
+                    inputs[H2_key] = inputs[batt_key]
                 end
+            end
+            for batt_key in values(key_mapping)
+                pop!(inputs, batt_key, nothing)
             end
         end
 
@@ -109,8 +115,8 @@ else  # run HiGHS tests
                 "fuel_limit" => 0,
                 "battery_size_kw" => 4000,
                 "battery_size_kwh" => 400000,
-                "battery_charge_efficiency" => 1,
-                "battery_discharge_efficiency" => 1,
+                "battery_charge_efficiency_kwh_per_kwh" => 1,
+                "battery_discharge_efficiency_kwh_per_kwh" => 1,
                 "battery_operational_availability" => 1.0,
                 "battery_minimum_soc_fraction" => 0.0,
                 "battery_starting_soc_series_fraction" => results["ElectricStorage"]["soc_series_fraction"],
@@ -235,8 +241,8 @@ else  # run HiGHS tests
                 "num_battery_bins" => 3,
                 "battery_size_kwh" => 4,
                 "battery_size_kw" => 1,
-                "battery_charge_efficiency" => 1,
-                "battery_discharge_efficiency" => 1,
+                "battery_charge_efficiency_kwh_per_kwh" => 1,
+                "battery_discharge_efficiency_kwh_per_kwh" => 1,
                 "battery_minimum_soc_fraction" => 0.5)
             @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"] ≈ [0.557056, 0.57344, 0.8192, 0.761856]
             change_batt_to_h2_in_backup_reliability_inputs!(input_dict)
@@ -256,8 +262,8 @@ else  # run HiGHS tests
                 "num_battery_bins" => 3,
                 "battery_size_kwh" => 2,
                 "battery_size_kw" => 1,
-                "battery_charge_efficiency" => 1,
-                "battery_discharge_efficiency" => 1,
+                "battery_charge_efficiency_kwh_per_kwh" => 1,
+                "battery_discharge_efficiency_kwh_per_kwh" => 1,
                 "battery_minimum_soc_fraction" => 0)
             @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"] ≈ [0.557056, 0.57344, 0.8192, 0.761856]
             change_batt_to_h2_in_backup_reliability_inputs!(input_dict)
@@ -363,14 +369,14 @@ else  # run HiGHS tests
                     "num_battery_bins" => 3,
                     "num_H2_bins" => 3,
                     "battery_size_kwh" => 1,
-                    "H2_size_kwh" => 1,
+                    "H2_size_kg" => 1,
                     "battery_size_kw" => 0.5,
                     "H2_electrolyzer_size_kw" => 0.5,
                     "H2_fuelcell_size_kw" => 0.5,
-                    "battery_charge_efficiency" => 1,
-                    "H2_charge_efficiency" => 1,
-                    "battery_discharge_efficiency" => 1,
-                    "H2_discharge_efficiency" => 1,
+                    "battery_charge_efficiency_kwh_per_kwh" => 1,
+                    "H2_charge_efficiency_kg_per_kwh" => 1,
+                    "battery_discharge_efficiency_kwh_per_kwh" => 1,
+                    "H2_discharge_efficiency_kwh_per_kg" => 1,
                     "battery_minimum_soc_fraction" => 0.0,
                     "H2_minimum_soc_fraction" => 0.0)
                 
@@ -405,24 +411,24 @@ else  # run HiGHS tests
                 @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"] ≈ [0.557056, 0.57344, 0.8192, 0.761856]
             end
             
-            @testset "More complex scenario (compare battery+H2 system that should have same resilience as other battery only system" begin
+            @testset "More complex scenario (compare battery+H2 system that should have same resilience as other H2 only system" begin
                 reliability_inputs = JSON.parsefile("./scenarios/backup_reliability_inputs_H2.json")
-                reliability_results_batt = backup_reliability(reliability_inputs)
+                reliability_results_H2 = backup_reliability(reliability_inputs)
                 reliability_inputs = JSON.parsefile("./scenarios/backup_reliability_inputs_H2.json")
-                reliability_inputs["H2_size_kwh"] /= 2
+                reliability_inputs["H2_size_kg"] /= 2
                 merge!(reliability_inputs, 
                     Dict(
                         "num_battery_bins" => reliability_inputs["num_H2_bins"],
                         "battery_operational_availability" => reliability_inputs["H2_operational_availability"],
                         "battery_size_kw" => reliability_inputs["H2_fuelcell_size_kw"],
-                        "battery_size_kwh" => reliability_inputs["H2_size_kwh"],
-                        "battery_charge_efficiency" => reliability_inputs["H2_charge_efficiency"],
-                        "battery_discharge_efficiency" => reliability_inputs["H2_discharge_efficiency"],
+                        "battery_size_kwh" => reliability_inputs["H2_size_kg"],
+                        "battery_charge_efficiency_kwh_per_kwh" => reliability_inputs["H2_charge_efficiency_kg_per_kwh"],
+                        "battery_discharge_efficiency_kwh_per_kwh" => reliability_inputs["H2_discharge_efficiency_kwh_per_kg"],
                         "battery_minimum_soc_fraction" => reliability_inputs["H2_minimum_soc_fraction"]
                     )
                 )
                 reliability_results_both = backup_reliability(reliability_inputs)
-                @test reliability_results_batt["mean_cumulative_survival_final_time_step"] ≈ reliability_results_both["mean_cumulative_survival_final_time_step"] atol=0.01 #some difference expected due to SOC discretization
+                @test reliability_results_H2["mean_cumulative_survival_final_time_step"] ≈ reliability_results_both["mean_cumulative_survival_final_time_step"] atol=0.01 #some difference expected due to SOC discretization
             end
         end
     end                            
