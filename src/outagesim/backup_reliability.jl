@@ -968,9 +968,9 @@ Return a dictionary of inputs required for backup reliability calculations.
     -H2_electrolyzer_size_kw::Real              = 0.0,                          H2 system electrolyzer power capacity
     -H2_fuelcell_size_kw::Real                  = 0.0,                          H2 system fuel cell power capacity
     -H2_size_kg::Real                           = 0.0,                          H2 storage kWh of energy capacity
-    -num_H2_bins::Int                           = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kg/H2_charge_efficiency_kg_per_kwh),     Number of bins for discretely modeling battery state of charge
     -H2_charge_efficiency_kg_per_kwh::Real      = 0.948,                        Efficiency of charging H2 system
     -H2_discharge_efficiency_kwh_per_kg::Real   = 0.948,                        Efficiency of discharging H2 system
+    -num_H2_bins::Int                           = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kg/H2_charge_efficiency_kg_per_kwh),     Number of bins for discretely modeling battery state of charge
 
 #Examples
 ```repl-julia
@@ -1109,9 +1109,9 @@ Return an array of backup reliability calculations. Inputs can be unpacked from 
 -H2_electrolyzer_size_kw::Real      = 0.0,         H2 system electrolyzer power capacity
 -H2_fuelcell_size_kw::Real          = 0.0,         H2 system fuel cell power capacity
 -H2_size_kg::Real                   = 0.0,         H2 storage kWh of energy capacity
--num_H2_bins                        = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kg/H2_charge_efficiency_kg_per_kwh),     Number of bins for discretely modeling battery state of charge
 -H2_charge_efficiency_kg_per_kwh::Real         = 0.948,       Efficiency of charging H2 system
 -H2_discharge_efficiency_kwh_per_kg::Real      = 0.948,       Efficiency of discharging H2 system
+-num_H2_bins                        = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kg/H2_charge_efficiency_kg_per_kwh),     Number of bins for discretely modeling battery state of charge
 -time_steps_per_hour::Real          = 1            Used to determine amount battery gets shifted.
 ```
 """
@@ -1133,9 +1133,9 @@ function backup_reliability_single_run(;
     H2_electrolyzer_size_kw::Real = 0.0,
     H2_fuelcell_size_kw::Real = 0.0,
     H2_size_kg::Real = 0.0,
-    num_H2_bins = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kg/H2_charge_efficiency_kg_per_kwh),
     H2_charge_efficiency_kg_per_kwh::Real = 0.948,
     H2_discharge_efficiency_kwh_per_kg::Real = 0.948,
+    num_H2_bins = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kg/H2_charge_efficiency_kg_per_kwh),
     time_steps_per_hour::Real = 1.0,
     kwargs...)::Matrix
      
@@ -1630,9 +1630,9 @@ Possible keys in r:
 -H2_electrolyzer_size_kw::Real              = 0.0,      H2 system electrolyzer power capacity
 -H2_fuelcell_size_kw::Real                  = 0.0,      H2 system fuel cell power capacity
 -H2_size_kg::Real                           = 0.0,      H2 storage kWh of energy capacity
--num_H2_bins::Int                           = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kg/H2_charge_efficiency_kg_per_kwh),     Number of bins for discretely modeling battery state of charge
 -H2_charge_efficiency_kg_per_kwh::Real      = 0.948,    Efficiency of charging H2 system
 -H2_discharge_efficiency_kwh_per_kg::Real   = 0.948,    Efficiency of discharging H2 system
+-num_H2_bins::Int                           = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kg/H2_charge_efficiency_kg_per_kwh),     Number of bins for discretely modeling battery state of charge
 
 """
 function backup_reliability(r::Dict)
