@@ -76,6 +76,34 @@ else  # run HiGHS tests
             end
         end
 
+        function change_batt_to_h2_in_reopt_inputs!(inputs)
+            if "ElectricStorage" in keys(inputs)
+                inputs["HydrogenStorageLP"] = Dict(H2_key => batt_key
+                    for (H2_key, batt_key) in Dict(
+                        "min_kg"=>"min_kwh",
+                        "max_kg"=>"max_kwh",
+                        "soc_min_fraction"=>"soc_min_fraction",
+                        "soc_init_fraction"=>"soc_init_fraction"
+                    )
+                )
+                inputs["Electrolyzer"] = Dict(H2_key => batt_key
+                    for (H2_key, batt_key) in Dict(
+                        "min_kw"=>"min_kw",
+                        "max_kw"=>"max_kw",
+                        "efficiency_kwh_per_kg"=>"charge_efficiency"
+                    )
+                )
+                inputs["FuelCell"] = Dict(H2_key => batt_key
+                    for (H2_key, batt_key) in Dict(
+                        "min_kw"=>"min_kw",
+                        "max_kw"=>"max_kw",
+                        "electric_efficiency_full_load"=>"discharge_efficiency"
+                    )
+                )
+                pop!(inputs, "ElectricStorage")
+            end
+        end
+
         @testset "Compare backup_reliability and simulate_outages" begin
             # Tests ensure `backup_reliability()` consistent with `simulate_outages()`
             # First, just battery
@@ -121,11 +149,20 @@ else  # run HiGHS tests
                 "battery_minimum_soc_fraction" => 0.0,
                 "battery_starting_soc_series_fraction" => results["ElectricStorage"]["soc_series_fraction"],
                 "pv_operational_availability" => 1.0,
-                "critical_loads_kw" => results["ElectricLoad"]["critical_load_series_kw"]#4000*ones(8760)#p.s.electric_load.critical_loads_kw
+                "critical_loads_kw" => results["ElectricLoad"]["critical_load_series_kw"]
             )
             reliability_results_batt = backup_reliability(reliability_inputs)
 
-            change_batt_to_h2_in_reopt_results!(results)
+            # change_batt_to_h2_in_reopt_results!(results)
+            change_batt_to_h2_in_reopt_inputs!(reopt_inputs)
+            p = REoptInputs(reopt_inputs)
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+                "output_flag" => false, "log_to_console" => false)
+            )
+            results = run_reopt(model, p)
+            open("erp_outagesim_comparison_1_H2_reopt_results.json","w") do f
+                JSON.print(f, results)
+            end
             change_batt_to_h2_in_backup_reliability_inputs!(reliability_inputs)
             reliability_results_H2 = backup_reliability(reliability_inputs)
 
@@ -159,7 +196,16 @@ else  # run HiGHS tests
             )
             reliability_results_batt = backup_reliability(results, p, reliability_inputs)
 
-            change_batt_to_h2_in_reopt_results!(results)
+            # change_batt_to_h2_in_reopt_results!(results)
+            change_batt_to_h2_in_reopt_inputs!(reopt_inputs)
+            p = REoptInputs(reopt_inputs)
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+                "output_flag" => false, "log_to_console" => false)
+            )
+            results = run_reopt(model, p)
+            open("erp_outagesim_comparison_2_H2_reopt_results.json","w") do f
+                JSON.print(f, results)
+            end
             change_batt_to_h2_in_backup_reliability_inputs!(reliability_inputs)
             reliability_results_H2 = backup_reliability(results, p, reliability_inputs)
 
