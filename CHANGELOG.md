@@ -23,12 +23,17 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop 2023-09-01
+## Develop 2023-09-08
 ### Added
 - Added new heating technology `ElectricHeater`.
 ### Changed
 - Divided decision variable `dvThermalProduction` into `dvHeatingProduction` and `dvCoolingProduction` depending on type of thermal production.
 - Changed name of `dvThermalProductionYIntercept` to `dvHeatingProductionYIntercept`.
+
+## v0.32.7
+### Fixed
+- Bugs in EASIUR health cost calcs
+- Type handling for CoolingLoad monthly_tonhour input
 
 ## v0.32.6
 ### Changed
