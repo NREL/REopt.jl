@@ -98,12 +98,5 @@ function add_electrolyzer_constraints(m, p; _n="")
 end
 
 function add_fuel_cell_constraints(m, p; _n="")
-    ##Constraint: Fuel Cell takes hydrogen from LP storage to produce electricity
-    #if !isempty(p.techs.fuel_cell)
-    #    @constraint(m, [ts in p.time_steps], 
-    #        sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.hydrogen_lp) * p.s.fuel_cell.electric_efficiency_full_load 
-    #        ==
-    #        sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.fuel_cell)    
-    #    )
-    #end
+    #placeholder
 end
