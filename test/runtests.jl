@@ -78,27 +78,27 @@ else  # run HiGHS tests
 
         function change_batt_to_h2_in_reopt_inputs!(inputs)
             if "ElectricStorage" in keys(inputs)
-                inputs["HydrogenStorageLP"] = Dict(H2_key => batt_key
+                inputs["HydrogenStorageLP"] = Dict(H2_key => inputs["ElectricStorage"][batt_key]
                     for (H2_key, batt_key) in Dict(
                         "min_kg"=>"min_kwh",
                         "max_kg"=>"max_kwh",
                         "soc_min_fraction"=>"soc_min_fraction",
                         "soc_init_fraction"=>"soc_init_fraction"
-                    )
+                    ) if batt_key in keys(inputs["ElectricStorage"])
                 )
-                inputs["Electrolyzer"] = Dict(H2_key => batt_key
+                inputs["Electrolyzer"] = Dict(H2_key => inputs["ElectricStorage"][batt_key]
                     for (H2_key, batt_key) in Dict(
                         "min_kw"=>"min_kw",
                         "max_kw"=>"max_kw",
                         "efficiency_kwh_per_kg"=>"charge_efficiency"
-                    )
+                    ) if batt_key in keys(inputs["ElectricStorage"])
                 )
-                inputs["FuelCell"] = Dict(H2_key => batt_key
+                inputs["FuelCell"] = Dict(H2_key => inputs["ElectricStorage"][batt_key]
                     for (H2_key, batt_key) in Dict(
                         "min_kw"=>"min_kw",
                         "max_kw"=>"max_kw",
                         "electric_efficiency_full_load"=>"discharge_efficiency"
-                    )
+                    ) if batt_key in keys(inputs["ElectricStorage"])
                 )
                 pop!(inputs, "ElectricStorage")
             end
@@ -127,7 +127,7 @@ else  # run HiGHS tests
                 ),
                 "ElectricTariff" => Dict(
                     "urdb_label" => "5ed6c1a15457a3367add15ae"
-                ),
+                )
             )
             p = REoptInputs(reopt_inputs)
             # REopt optimization and outage simulator results for above inputs saved in the following files:
@@ -155,6 +155,9 @@ else  # run HiGHS tests
 
             # change_batt_to_h2_in_reopt_results!(results)
             change_batt_to_h2_in_reopt_inputs!(reopt_inputs)
+            open("debug_reopt_inputs.json","w") do f
+                JSON.print(f, reopt_inputs)
+            end
             p = REoptInputs(reopt_inputs)
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
                 "output_flag" => false, "log_to_console" => false)
