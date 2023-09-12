@@ -64,13 +64,17 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
     
     if !isempty(p.s.storage.types.elec)
         GridToLoad = (sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) 
-                  - sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec) 
+                  - sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec)
+                  - sum(m[Symbol("dvGridToElectrolyzer"*_n)][ts])
+                  - sum(m[Symbol("dvGridToCompressor"*_n)][ts])
                   for ts in p.time_steps)
         GridToBatt = (sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec) 
                 for ts in p.time_steps)
     else
         GridToLoad = (sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) 
-                  for ts in p.time_steps)
+                    - sum(m[Symbol("dvGridToElectrolyzer"*_n)][ts])
+                    - sum(m[Symbol("dvGridToCompressor"*_n)][ts])
+                    for ts in p.time_steps)
         GridToBatt = zeros(length(p.time_steps))
     end
     
