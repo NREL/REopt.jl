@@ -1,0 +1,10 @@
+{
+    "H2_minimum_soc_fraction": 0.0,
+    "max_outage_duration": 48,
+    "generator_failure_to_start": 0.0,
+    "generator_mean_time_to_failure": 10000000000,
+    "pv_operational_availability": 1.0,
+    "generator_operational_availability": 1.0,
+    "H2_operational_availability": 1.0,
+    "fuel_limit": 1000000000
+}
