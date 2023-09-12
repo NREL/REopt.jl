@@ -300,7 +300,7 @@ function add_lp_hydrogen_storage_dispatch_constraints(m, p, b; _n="")
 	@constraint(m, [b in p.s.storage.types.hydrogen_lp, ts in p.time_steps],
         sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts]) == 
             sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] / p.s.compressor.efficiency_kwh_per_kg for t in p.techs.compressor)
-            + sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] / p.s.fuel_cell.electric_efficiency_full_load for t in p.techs.fuel_cell)
+            + sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] / p.s.fuel_cell.efficiency_kwh_per_kg for t in p.techs.fuel_cell)
 	)
 
 	# Constraint
