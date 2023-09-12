@@ -335,10 +335,7 @@ else  # run HiGHS tests
                 )
             )            
             p = REoptInputs(reopt_inputs)
-            model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-                "output_flag" => false, "log_to_console" => false)
-            )
-            results = run_reopt(model, p)
+            results = JSON.parsefile("./scenario/erp_simple_test_reopt_results.json")
             results["ElectricStorage"]["soc_series_fraction"] = ones(8760)
             input_dict = Dict(
                 "max_outage_duration" => 24,
@@ -371,11 +368,9 @@ else  # run HiGHS tests
                 delete!(reliability_inputs, input_key)
             end
 
-            model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-                "output_flag" => false, "log_to_console" => false)
-            )
             p = REoptInputs("./scenarios/backup_reliability_reopt_inputs.json")
-            results = run_reopt(model, p)
+            results = JSON.parsefile("./scenario/erp_complex_test_reopt_results.json")
+
             reliability_results = backup_reliability(results, p, reliability_inputs)
 
             @test reliability_results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.802997 atol=0.001
