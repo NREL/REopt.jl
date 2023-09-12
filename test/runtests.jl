@@ -133,14 +133,8 @@ else  # run HiGHS tests
             )
             p = REoptInputs(reopt_inputs)
             # REopt optimization and outage simulator results for above inputs saved in the following files:
-            results = JSON.parsefile("./erp_outagesim_comparison_1_batt_reopt_results.json")
-            simresults = JSON.parsefile("./erp_outagesim_comparison_1_batt_outagesim_results.json")
-            open("erp_outagesim_comparison_1_batt_reopt_results.json","w") do f
-                JSON.print(f, results, 4)
-            end
-            open("erp_outagesim_comparison_1_batt_outagesim_results.json","w") do f
-                JSON.print(f, simresults, 4)
-            end
+            results = JSON.parsefile("./scenarios/erp_outagesim_comparison_1_batt_reopt_results.json")
+            simresults = JSON.parsefile("./scenarios/erp_outagesim_comparison_1_batt_outagesim_results.json")
             
             reliability_inputs = Dict(
                 "generator_size_kw" => 0,
@@ -163,13 +157,9 @@ else  # run HiGHS tests
 
             change_batt_to_h2_in_reopt_inputs!(reopt_inputs)
             p = REoptInputs(reopt_inputs)
-            model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-                "output_flag" => false, "log_to_console" => false)
-            )
-            results = run_reopt(model, p)
-            open("erp_outagesim_comparison_1_H2_reopt_results.json","w") do f
-                JSON.print(f, results, 4)
-            end
+            # REopt optimization results for above inputs saved in the following file:
+            results = JSON.parsefile("./scenarios/erp_outagesim_comparison_1_H2_reopt_results.json")
+
             change_batt_to_h2_in_backup_reliability_inputs!(reliability_inputs)
             reliability_results_H2 = backup_reliability(reliability_inputs)
 
@@ -188,14 +178,8 @@ else  # run HiGHS tests
             reopt_inputs["ElectricLoad"]["annual_kwh"] = 4*reopt_inputs["ElectricLoad"]["annual_kwh"]
             p = REoptInputs(reopt_inputs)
             # REopt optimization and outage simulator results for above inputs saved in the following files:
-            results = JSON.parsefile("./erp_outagesim_comparison_2_batt_reopt_results.json")
-            simresults = JSON.parsefile("./erp_outagesim_comparison_2_batt_outagesim_results.json")
-            open("erp_outagesim_comparison_2_batt_reopt_results.json","w") do f
-                JSON.print(f, results, 4)
-            end
-            open("erp_outagesim_comparison_2_batt_outagesim_results.json","w") do f
-                JSON.print(f, simresults, 4)
-            end
+            results = JSON.parsefile("./scenarios/erp_outagesim_comparison_2_batt_reopt_results.json")
+            simresults = JSON.parsefile("./scenarios/erp_outagesim_comparison_2_batt_outagesim_results.json")
 
             reliability_inputs = Dict(
                 "max_outage_duration" => 48,
@@ -211,20 +195,10 @@ else  # run HiGHS tests
 
             change_batt_to_h2_in_reopt_inputs!(reopt_inputs)
             p = REoptInputs(reopt_inputs)
-            open("debug_reopt_inputs.json","w") do f
-                JSON.print(f, reopt_inputs, 4)
-            end
-            model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-                "output_flag" => false, "log_to_console" => false)
-            )
-            results = run_reopt(model, p)
-            open("erp_outagesim_comparison_2_H2_reopt_results.json","w") do f
-                JSON.print(f, results, 4)
-            end
+            # REopt optimization results for above inputs saved in the following file:
+            results = JSON.parsefile("./scenarios/erp_outagesim_comparison_2_H2_reopt_results.json")
+
             change_batt_to_h2_in_backup_reliability_inputs!(reliability_inputs)
-            open("debug_erp_inputs.json","w") do f
-                JSON.print(f, reliability_inputs, 4)
-            end
             reliability_results_H2 = backup_reliability(results, p, reliability_inputs)
 
             for i = 1:min(length(simresults["probs_of_surviving"]), reliability_inputs["max_outage_duration"])
