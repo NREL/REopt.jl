@@ -895,6 +895,7 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         r2[:H2_charge_efficiency_kg_per_kwh] = p.s.electrolyzer.efficiency_kwh_per_kg
         r2[:H2_discharge_efficiency_kwh_per_kg] = p.s.fuel_cell.electric_efficiency_full_load
         r2[:H2_fuelcell_size_kw] = get(d["FuelCell"], "size_kw", 0)
+        r2[:H2_electrolyzer_size_kw] = get(d["Electrolyzer"], "size_kw", 0)
 
         #ERP tool uses effective storage size so need to subtract minimum SOC
         H2_size_kg = get(d["HydrogenStorageLP"], "size_kg", 0)
