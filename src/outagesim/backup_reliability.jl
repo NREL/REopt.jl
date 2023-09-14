@@ -1212,7 +1212,9 @@ function process_reliability_results(cumulative_results::Matrix, fuel_survival::
     total_cumulative_duration_means = round.(vec(mean(cumulative_results .* fuel_survival, dims = 1)), digits=6)
     total_cumulative_duration_mins = round.(vec(minimum(cumulative_results .* fuel_survival, dims = 1)), digits=6)
     total_cumulative_final_resilience = round.(cumulative_results[:,end] .* fuel_survival[:,end], digits=6)
-
+    max_fuel = maximum(fuel_used)
+    min_fuel = minimum(fuel_used)
+    
     total_cumulative_final_resilience_mean = round(mean(total_cumulative_final_resilience), digits=6)
     time_steps_per_hour = length(total_cumulative_final_resilience)/8760
     if time_steps_per_hour < 1
@@ -1240,13 +1242,14 @@ function process_reliability_results(cumulative_results::Matrix, fuel_survival::
         "cumulative_survival_final_time_step" => total_cumulative_final_resilience,
 
         "mean_cumulative_survival_final_time_step" => total_cumulative_final_resilience_mean,
-        
         "monthly_min_cumulative_survival_final_time_step" => calc_monthly_quartiles ? total_cumulative_final_resilience_monthly[:,1] : [],
         "monthly_lower_quartile_cumulative_survival_final_time_step" => calc_monthly_quartiles ? total_cumulative_final_resilience_monthly[:,2] : [],
         "monthly_median_cumulative_survival_final_time_step" => calc_monthly_quartiles ? total_cumulative_final_resilience_monthly[:,3] : [],
         "monthly_upper_quartile_cumulative_survival_final_time_step" => calc_monthly_quartiles ? total_cumulative_final_resilience_monthly[:,4] : [],
-        "monthly_max_cumulative_survival_final_time_step" => calc_monthly_quartiles ? total_cumulative_final_resilience_monthly[:,5] : []
-    )
+        "monthly_max_cumulative_survival_final_time_step" => calc_monthly_quartiles ? total_cumulative_final_resilience_monthly[:,5] : [],
+        "max_fuel_used" => max_fuel,
+        "min_fuel_used" => min_fuel,
+        )
 end
 
 
@@ -1318,6 +1321,6 @@ function num_battery_bins_default(size_kw::Real, size_kwh::Real)::Int
         return 1
     else
         duration = size_kwh / size_kw
-        return Int(duration * 20)
+        return Int(round(duration * 20)) #change to prevent InexactError: Int64(2.4494680851063833)
     end
 end
