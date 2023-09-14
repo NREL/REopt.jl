@@ -1318,6 +1318,6 @@ function num_battery_bins_default(size_kw::Real, size_kwh::Real)::Int
         return 1
     else
         duration = size_kwh / size_kw
-        return Int(duration * 20)
+        return round(Int, duration * 20)
     end
 end
