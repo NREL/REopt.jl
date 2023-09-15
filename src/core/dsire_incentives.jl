@@ -97,9 +97,9 @@ function get_incentives_scenarios(reopt_inputs::Dict; state_abbr::String="", tec
         if can_net_meter
             reopt_inputs_scenarios[basis][tech]["can_net_meter"] = can_net_meter  # Just to make sure it's true even though some techs default to true
             if haskey(reopt_inputs_scenarios[basis], "ElectricUtility")
-                reopt_inputs_scenarios[basis]["ElectricUtility"]["net_metering_limit_kw"] = 99999.0
+                reopt_inputs_scenarios[basis]["ElectricUtility"]["net_metering_limit_kw"] = 1.0E9
             else
-                reopt_inputs_scenarios[basis]["ElectricUtility"] = Dict("net_metering_limit_kw" => 99999.0)
+                reopt_inputs_scenarios[basis]["ElectricUtility"] = Dict("net_metering_limit_kw" => 1.0E9)
             end
         end
     end

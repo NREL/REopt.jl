@@ -32,7 +32,7 @@ Incentives are filtered by those that apply to the entire state and have an end 
 3. Percent-of-cost based state tax credit (% of installed cost)
 REopt is run with any of these three incentive options which are avaialable, and the one that produces the lowest lifecycle cost of energy is chosen. All of the solutions are then run with the best incentives option.
 
-If REopt identified a state incentive to use, the `incentive_used` key at the top level of the `results_summary` will contain the `best_incentive_program_name` (`None` if none where found) and if net metering was enabled from the DSIRE database from `net_metering_from_dsire`. The user should verify that that incentive program is available.
+If REopt identified a state incentive to use, the `incentive_used` key at the top level of the `results_summary` will contain the `best_incentive_program_name` (`None` if none where found) and if net metering was enabled from the DSIRE database from `net_metering_from_dsire`. The user should verify that that incentive program is available and what the net metering capacity (kW) limit is. Because the net meter capacity limit is not retrieved from the DSIRE database, an arbitrarily large number is used for the net metering limit if net metering is available.
 
 # Example use-case for multi-solutions
 ### Specify path to input file:
