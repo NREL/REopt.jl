@@ -153,7 +153,7 @@ end
 
 function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) where T <: AbstractScenario
     add_variables!(m, ps)
-    @warn "Outages are not currently modeled in multinode mode. Use the multinode outage simulator instead."
+    @warn "Outages are not currently modeled in multinode mode. Use the multinode outage simulator instead or limit power from the substation using LinDistFlow."
     #@warn "Diesel generators are not currently modeled in multinode mode."
 	@warn "Emissions and renewable energy fractions are not currently modeling in multinode mode."
     for p in ps
@@ -162,6 +162,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
 		
 
         for b in p.s.storage.types.all
+		#b = "ElectricStorage"
             if p.s.storage.attr[b].max_kw == 0 || p.s.storage.attr[b].max_kwh == 0
                 @constraint(m, [ts in p.time_steps], m[Symbol("dvStoredEnergy"*_n)][b, ts] == 0)
                 @constraint(m, m[Symbol("dvStorageEnergy"*_n)][b] == 0)
@@ -170,7 +171,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
                             m[Symbol("dvProductionToStorage"*_n)][b, t, ts] == 0)
                 @constraint(m, [ts in p.time_steps], m[Symbol("dvDischargeFromStorage"*_n)][b, ts] == 0)
                 @constraint(m, [ts in p.time_steps], m[Symbol("dvGridToStorage"*_n)][b, ts] == 0)
-				@constraint(m, [ts in p.time_steps], m[Symbol("dvStorageToGrid"*_n)][b, ts] == 0)
+				@constraint(m, [ts in p.time_steps], m[Symbol("dvStorageToGrid"*_n)][ts] == 0)
             else 
                 add_storage_size_constraints(m, p, b; _n=_n)
                 add_general_storage_dispatch_constraints(m, p, b; _n=_n)
