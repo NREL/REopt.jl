@@ -86,18 +86,20 @@ else  # run HiGHS tests
                         "soc_init_fraction"=>"soc_init_fraction"
                     ) if batt_key in keys(inputs["ElectricStorage"])
                 )
-                inputs["Electrolyzer"] = Dict(H2_key => inputs["ElectricStorage"][batt_key]
-                    for (H2_key, batt_key) in Dict(
-                        "min_kw"=>"min_kw",
-                        "max_kw"=>"max_kw",
-                        "efficiency_kwh_per_kg"=>"charge_efficiency"
-                    ) if batt_key in keys(inputs["ElectricStorage"])
+                inputs["Electrolyzer"] = merge(
+                    Dict(H2_key => inputs["ElectricStorage"][batt_key]
+                        for (H2_key, batt_key) in Dict(
+                            "min_kw"=>"min_kw",
+                            "max_kw"=>"max_kw",
+                        ) if batt_key in keys(inputs["ElectricStorage"])
+                    ),
+                    Dict("efficiency_kwh_per_kg" => 1.0/inputs["ElectricStorage"]["charge_efficiency"])
                 )
                 inputs["FuelCell"] = Dict(H2_key => inputs["ElectricStorage"][batt_key]
                     for (H2_key, batt_key) in Dict(
                         "min_kw"=>"min_kw",
                         "max_kw"=>"max_kw",
-                        "electric_efficiency_full_load"=>"discharge_efficiency"
+                        "efficiency_kwh_per_kg"=>"discharge_efficiency"
                     ) if batt_key in keys(inputs["ElectricStorage"])
                 )
                 pop!(inputs, "ElectricStorage")
@@ -335,7 +337,7 @@ else  # run HiGHS tests
                 )
             )            
             p = REoptInputs(reopt_inputs)
-            results = JSON.parsefile("./scenario/erp_simple_test_reopt_results.json")
+            results = JSON.parsefile("./scenarios/erp_simple_test_reopt_results.json")
             results["ElectricStorage"]["soc_series_fraction"] = ones(8760)
             input_dict = Dict(
                 "max_outage_duration" => 24,
@@ -369,7 +371,7 @@ else  # run HiGHS tests
             end
 
             p = REoptInputs("./scenarios/backup_reliability_reopt_inputs.json")
-            results = JSON.parsefile("./scenario/erp_complex_test_reopt_results.json")
+            results = JSON.parsefile("./scenarios/erp_complex_test_reopt_results.json")
 
             reliability_results = backup_reliability(results, p, reliability_inputs)
 
