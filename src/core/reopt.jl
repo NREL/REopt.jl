@@ -345,11 +345,29 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 		if !isempty(p.techs.electrolyzer)
             add_electrolyzer_constraints(m, p)
+		else
+			@constraint(m, [t in p.techs.elec, ts in p.time_steps],
+					m[:dvProductionToElectrolyzer][t, ts] == 0)
+			@constraint(m, [ts in p.time_steps], m[:dvGridToElectrolyzer][ts] == 0)
+			@constraint(m, [b in p.s.storage.types.elec, ts in p.time_steps],
+					m[:dvStorageToElectrolyzer][b, ts] == 0)
+
+			@constraint(m, [t in p.techs.elec, ts in p.time_steps],
+					m[:dvProductionToCompressor][t, ts] == 0)
+			@constraint(m, [ts in p.time_steps], m[:dvGridToCompressor][ts] == 0)
+			@constraint(m, [b in p.s.storage.types.elec, ts in p.time_steps],
+					m[:dvStorageToCompressor][b, ts] == 0)
         end
 
 		if !isempty(p.techs.compressor)
             add_compressor_constraints(m, p)
 			add_hydrogen_load_balance_constraints(m, p)
+		else
+			@constraint(m, [t in p.techs.elec, ts in p.time_steps],
+					m[:dvProductionToCompressor][t, ts] == 0)
+			@constraint(m, [ts in p.time_steps], m[:dvGridToCompressor][ts] == 0)
+			@constraint(m, [b in p.s.storage.types.elec, ts in p.time_steps],
+					m[:dvStorageToCompressor][b, ts] == 0)
         end
 
 		if !isempty(p.techs.fuel_cell)

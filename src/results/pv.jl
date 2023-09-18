@@ -80,12 +80,26 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
                 sum(r["electric_to_grid_series_kw"]) * p.hours_per_time_step, digits=0)
         end
 
+        r["electric_to_electrolyzer_series_kw"] = zeros(size(r["electric_to_storage_series_kw"]))
+        if !isempty(p.techs.electrolyzer)
+            PVtoElectrolyzer = (m[Symbol("dvProductionToElectrolyzer"*_n)][t, ts] for ts in p.time_steps)
+            r["electric_to_electrolyzer_series_kw"] = round.(value.(PVtoElectrolyzer), digits=3)
+        end
+
+        r["electric_to_compressor_series_kw"] = zeros(size(r["electric_to_storage_series_kw"]))
+        if !isempty(p.techs.compressor)
+            PVtoCompressor = (m[Symbol("dvProductionToCompressor"*_n)][t, ts] for ts in p.time_steps)
+            r["electric_to_compressor_series_kw"] = round.(value.(PVtoCompressor), digits=3)
+        end
+
 		PVtoCUR = (m[Symbol("dvCurtail"*_n)][t, ts] for ts in p.time_steps)
 		r["electric_curtailed_series_kw"] = round.(value.(PVtoCUR), digits=3)
 		PVtoLoad = (m[Symbol("dvRatedProduction"*_n)][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
 					- r["electric_curtailed_series_kw"][ts]
 					- r["electric_to_grid_series_kw"][ts]
-					- r["electric_to_storage_series_kw"][ts] for ts in p.time_steps
+					- r["electric_to_storage_series_kw"][ts]
+                    - r["electric_to_electrolyzer_series_kw"][ts]
+                    - r["electric_to_compressor_series_kw"][ts] for ts in p.time_steps
 		)
 		r["electric_to_load_series_kw"] = round.(value.(PVtoLoad), digits=3)
 		Year1PvProd = (sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] for ts in p.time_steps) * p.hours_per_time_step)
@@ -95,16 +109,6 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 		r["lifecycle_om_cost_after_tax"] = round(value(PVPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_rate_fraction), digits=0)
         r["lcoe_per_kwh"] = calculate_lcoe(p, r, get_pv_by_name(t, p.s.pvs))
 
-        if !isempty(p.techs.electrolyzer)
-            PVtoElectrolyzer = (m[Symbol("dvProductionToElectrolyzer"*_n)][t, ts] for ts in p.time_steps)
-            r["electric_to_electrolyzer_series_kw"] = round.(value.(PVtoElectrolyzer), digits=3)
-        end
-
-        if !isempty(p.techs.compressor)
-            PVtoCompressor = (m[Symbol("dvProductionToCompressor"*_n)][t, ts] for ts in p.time_steps)
-            r["electric_to_compressor_series_kw"] = round.(value.(PVtoCompressor), digits=3)
-        end
-        
         d[t] = r
 	end
     nothing
