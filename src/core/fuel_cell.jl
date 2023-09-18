@@ -36,7 +36,7 @@
     installed_cost_per_kw = 5000,
     om_cost_per_kw = 50,
     om_cost_per_kwh = 0.0,
-    electric_efficiency_full_load = 0.425,
+    efficiency_kwh_per_kg = 16.745,
     macrs_option_years = 7,
     macrs_bonus_fraction = 0.0,
     macrs_itc_reduction = 0.5,
@@ -67,7 +67,7 @@ struct FuelCell <: AbstractFuelCell
     installed_cost_per_kw::Real
     om_cost_per_kw::Real
     om_cost_per_kwh::Real
-    electric_efficiency_full_load::Real
+    efficiency_kwh_per_kg::Real
     macrs_option_years::Int
     macrs_bonus_fraction::Real
     macrs_itc_reduction::Real
@@ -97,7 +97,7 @@ struct FuelCell <: AbstractFuelCell
         installed_cost_per_kw = 5000,
         om_cost_per_kw = 50,
         om_cost_per_kwh = 0,
-        electric_efficiency_full_load = 0.425,
+        efficiency_kwh_per_kg = 16.745,
         macrs_option_years = 7,
         macrs_bonus_fraction = 0.0,
         macrs_itc_reduction = 0.5,
@@ -128,7 +128,7 @@ struct FuelCell <: AbstractFuelCell
             installed_cost_per_kw,
             om_cost_per_kw,
             om_cost_per_kwh,
-            electric_efficiency_full_load,
+            efficiency_kwh_per_kg,
             macrs_option_years,
             macrs_bonus_fraction,
             macrs_itc_reduction,
