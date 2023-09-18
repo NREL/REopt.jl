@@ -35,7 +35,7 @@
     max_kw = 1.0e9,
     installed_cost_per_kw = 5000,
     om_cost_per_kw = 50,
-    om_cost_per_kWh = 0.0,
+    om_cost_per_kwh = 0.0,
     efficiency_kwh_per_kg = 16.745,
     macrs_option_years = 7,
     macrs_bonus_fraction = 0.0,
@@ -66,7 +66,7 @@ struct FuelCell <: AbstractFuelCell
     max_kw::Real
     installed_cost_per_kw::Real
     om_cost_per_kw::Real
-    om_cost_per_kWh::Real
+    om_cost_per_kwh::Real
     efficiency_kwh_per_kg::Real
     macrs_option_years::Int
     macrs_bonus_fraction::Real
@@ -96,7 +96,7 @@ struct FuelCell <: AbstractFuelCell
         max_kw = 1.0e9,
         installed_cost_per_kw = 5000,
         om_cost_per_kw = 50,
-        om_cost_per_kWh = 0,
+        om_cost_per_kwh = 0,
         efficiency_kwh_per_kg = 16.745,
         macrs_option_years = 7,
         macrs_bonus_fraction = 0.0,
@@ -127,7 +127,7 @@ struct FuelCell <: AbstractFuelCell
             max_kw,
             installed_cost_per_kw,
             om_cost_per_kw,
-            om_cost_per_kWh,
+            om_cost_per_kwh,
             efficiency_kwh_per_kg,
             macrs_option_years,
             macrs_bonus_fraction,
