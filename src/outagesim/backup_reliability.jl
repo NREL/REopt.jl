@@ -1119,6 +1119,8 @@ function return_backup_reliability(;
     battery_operational_availability::Real = 0.97,
     pv_operational_availability::Real = 0.98,
     pv_can_dispatch_without_battery::Bool = false,
+    wind_operational_availability::Real = 0.97,
+    wind_can_dispatch_without_battery::Bool = false,
     battery_size_kw::Real = 0.0,
     battery_size_kwh::Real = 0.0,
     kwargs...)
