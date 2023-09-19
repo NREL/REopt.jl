@@ -1202,56 +1202,7 @@ function return_backup_reliability(;
             "battery_size_kw" => 0,
             "battery_size_kwh" => 0)
     )
-    # system_characteristics = Dict(
-    #     "gen" => Dict(
-    #         "probability" => 1,
-    #         "net_critical_loads_kw" => critical_loads_kw,
-    #         "battery_size_kw" => 0,
-    #         "battery_size_kwh" => 0),
-    #     "gen_pv_battery" => Dict(
-    #         "probability" => 0,
-    #         "net_critical_loads_kw" => net_critical_loads_kw,
-    #         "battery_size_kw" => battery_size_kw,
-    #         "battery_size_kwh" => battery_size_kwh),
-    #     "gen_battery" => Dict(
-    #         "probability" => 0,
-    #         "net_critical_loads_kw" => critical_loads_kw,
-    #         "battery_size_kw" => battery_size_kw,
-    #         "battery_size_kwh" => battery_size_kwh),
-    #     "gen_pv" => Dict(
-    #         "probability" => 0,
-    #         "net_critical_loads_kw" => net_critical_loads_kw,
-    #         "battery_size_kw" => 0,
-    #         "battery_size_kwh" => 0)
-    # )
-    # #Sets probabilities for each potential system configuration
-    # if battery_size_kw > 0 && pv_included
-    #     system_characteristics["gen_pv_battery"]["probability"] = 
-    #         battery_operational_availability * pv_operational_availability
-    #     system_characteristics["gen_battery"]["probability"] = 
-    #         battery_operational_availability * (1 - pv_operational_availability)
-    #     if pv_can_dispatch_without_battery
-    #         system_characteristics["gen_pv"]["probability"] = 
-    #             (1 - battery_operational_availability) * pv_operational_availability
-    #         system_characteristics["gen"]["probability"] = 
-    #             (1 - battery_operational_availability) * (1 - pv_operational_availability)
-    #     else
-    #         #gen_pv probability stays zero and that case is combined with gen only
-    #         system_characteristics["gen"]["probability"] = 
-    #             (1 - battery_operational_availability) 
-    #     end
-    # elseif battery_size_kw > 0
-    #     system_characteristics["gen_battery"]["probability"] = 
-    #         battery_operational_availability
-    #     system_characteristics["gen"]["probability"] = 
-    #         (1 - battery_operational_availability)
-    # elseif pv_included && pv_can_dispatch_without_battery
-    #     system_characteristics["gen_pv"]["probability"] = 
-    #         pv_operational_availability
-    #     system_characteristics["gen"]["probability"] = 
-    #         (1 - pv_operational_availability)
-    # end
-
+    
     results_no_fuel_limit = []
     for (description, system) in system_characteristics
         if system["probability"] != 0
