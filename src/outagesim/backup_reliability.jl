@@ -1124,13 +1124,18 @@ function return_backup_reliability(;
     kwargs...)
 
     
-    
+    net_critical_loads_kw = critical_loads_kw
     if haskey(kwargs, :pv_kw_ac_time_series)
         pv_included = true
-        net_critical_loads_kw = critical_loads_kw - kwargs[:pv_kw_ac_time_series]
+        net_critical_loads_kw -= kwargs[:pv_kw_ac_time_series]
     else
-        net_critical_loads_kw = critical_loads_kw
         pv_included = false
+    end
+    if haskey(kwargs, :wind_kw_ac_time_series)
+        wind_included = true
+        net_critical_loads_kw -= kwargs[:wind_kw_ac_time_series]
+    else
+        wind_included = false
     end
     
     #Four systems are 1) no PV + no battery, 2) PV + battery, 3) PV + no battery, and 4) no PV + battery
