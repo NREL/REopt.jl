@@ -1235,7 +1235,7 @@ function return_backup_reliability(;
         end
     end
 
-    fuel_survival, fuel_used = fuel_use(; net_critical_loads_kw = net_critical_loads_kw, battery_size_kw=battery_size_kw, battery_size_kwh=battery_size_kwh, kwargs...)
+    fuel_survival, fuel_used = fuel_use(; net_critical_loads_kw = net_critical_loads_pv_wind, battery_size_kw=battery_size_kw, battery_size_kwh=battery_size_kwh, kwargs...)
     return results_no_fuel_limit, fuel_survival, fuel_used
 end
 
