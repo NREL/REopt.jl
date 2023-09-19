@@ -524,12 +524,11 @@ else  # run HiGHS tests
                 
         # Test gens+pv+wind+batt with 3 arg version of backup_reliability
         # Attention! REopt optimization results are presaved in erp_gens_batt_pv_wind_reopt_results.json
-        # If you modify backup_reliability_reopt_inputs.json, you must add:
+        # If you modify backup_reliability_reopt_inputs.json, you must add this before JSON.parsefile:
         # results = run_reopt(model, p)
         # open("scenarios/erp_gens_batt_pv_wind_reopt_results.json","w") do f
         #     JSON.print(f, results, 4)
         # end
-        reopt_inputs = JSON.parsefile("./scenarios/backup_reliability_reopt_inputs.json") # note: the wind prod series in here is actually a PV profile (to in order to test a wind scenario that should give same results as an existing PV one)
         for input_key in [
                     "generator_size_kw",
                     "battery_size_kw",
@@ -542,10 +541,8 @@ else  # run HiGHS tests
                 ]
             delete!(reliability_inputs, input_key)
         end
-        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-            "output_flag" => false, "log_to_console" => false)
-        )
-        p = REoptInputs(reopt_inputs)
+        # note: the wind prod series in backup_reliability_reopt_inputs.json is actually a PV profile (to in order to test a wind scenario that should give same results as an existing PV one)
+        p = REoptInputs("./scenarios/backup_reliability_reopt_inputs.json")
         results = JSON.parsefile("./scenarios/erp_gens_batt_pv_wind_reopt_results.json")
         reliability_results = backup_reliability(results, p, reliability_inputs)
 
