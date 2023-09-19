@@ -233,3 +233,11 @@ function assign_thermal_factor!(d::Dict, heating_or_cooling::String)
     # Return this data for informational purposes
     return nearest_city, climate_zone
 end
+
+function call_ghpghx(ghpghx_inputs::Dict)
+    # Call GhpGhx.jl to size GHP and GHX
+    results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
+    # Create a dictionary of the results data needed for REopt
+    ghpghx_results = GhpGhx.get_results_for_reopt(results, inputs_params)
+    return ghpghx_results
+end
