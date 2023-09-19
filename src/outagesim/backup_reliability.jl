@@ -1160,8 +1160,8 @@ function return_backup_reliability(;
     
     system_characteristics = Dict(
         "gen" => Dict(
-            "probability" => (pv_included && pv_can_dispatch_without_storage ? 1 - pv_operational_availability : 1) *
-                            (wind_included && wind_can_dispatch_without_storage ? 1 - wind_operational_availability : 1) *
+            "probability" => (pv_included && pv_can_dispatch_without_battery ? 1 - pv_operational_availability : 1) *
+                            (wind_included && wind_can_dispatch_without_battery ? 1 - wind_operational_availability : 1) *
                             (battery_size_kwh > 0 ? 1 - battery_operational_availability : 1),
             "net_critical_loads_kw" => critical_loads_kw,
             "battery_size_kw" => 0,
@@ -1181,15 +1181,15 @@ function return_backup_reliability(;
             "battery_size_kw" => battery_size_kw,
             "battery_size_kwh" => battery_size_kwh),
         "gen_pv" => Dict(
-            "probability" => (pv_included && pv_can_dispatch_without_storage) * pv_operational_availability *
-                            (wind_included && wind_can_dispatch_without_storage ? 1 - wind_operational_availability : 1) *
+            "probability" => (pv_included && pv_can_dispatch_without_battery) * pv_operational_availability *
+                            (wind_included && wind_can_dispatch_without_battery ? 1 - wind_operational_availability : 1) *
                             (battery_size_kwh > 0 ? 1 - battery_operational_availability : 1),
             "net_critical_loads_kw" => net_critical_loads_pv,
             "battery_size_kw" => 0,
             "battery_size_kwh" => 0),
         "gen_wind" => Dict(
-            "probability" => (pv_included && pv_can_dispatch_without_storage ? 1 - pv_operational_availability : 1) *
-                            (wind_included && wind_can_dispatch_without_storage) * wind_operational_availability *
+            "probability" => (pv_included && pv_can_dispatch_without_battery ? 1 - pv_operational_availability : 1) *
+                            (wind_included && wind_can_dispatch_without_battery) * wind_operational_availability *
                             (battery_size_kwh > 0 ? 1 - battery_operational_availability : 1),
             "net_critical_loads_kw" => net_critical_loads_wind,
             "battery_size_kw" => 0,
@@ -1209,8 +1209,8 @@ function return_backup_reliability(;
             "battery_size_kw" => battery_size_kw,
             "battery_size_kwh" => battery_size_kwh),
         "gen_pv_wind" => Dict(
-            "probability" => (pv_included && pv_can_dispatch_without_storage) * pv_operational_availability *
-                            (wind_included && wind_can_dispatch_without_storage) * wind_operational_availability *
+            "probability" => (pv_included && pv_can_dispatch_without_battery) * pv_operational_availability *
+                            (wind_included && wind_can_dispatch_without_battery) * wind_operational_availability *
                             (battery_size_kwh > 0 ? 1 - battery_operational_availability : 1),
             "net_critical_loads_kw" => net_critical_loads_pv_wind,
             "battery_size_kw" => 0,
