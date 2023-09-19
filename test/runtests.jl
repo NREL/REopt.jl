@@ -515,30 +515,29 @@ else  # run HiGHS tests
         reliability_results = backup_reliability(input_dict)
         @test reliability_results["unlimited_fuel_mean_cumulative_survival_by_duration"][24] ≈ (0.99^20)*(0.9*0.98) atol=0.00001
 
-        #More complex case of hospital load with 2 generators, PV or wind, and battery
+        #More complex case of hospital load with 2 generators, PV, wind, and battery
         reliability_inputs = JSON.parsefile("./scenarios/backup_reliability_inputs.json")
         reliability_results = backup_reliability(reliability_inputs)
         @test reliability_results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.858756 atol=0.0001
         @test reliability_results["cumulative_survival_final_time_step"][1] ≈ 0.858756 atol=0.0001
         @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.904242 atol=0.0001#0.833224
-        
-        # Equivalent with wind
-        reliability_inputs["wind_operational_availability"] = pop!(reliability_inputs, "pv_operational_availability")
-        reliability_inputs["wind_size_kw"] = pop!(reliability_inputs, "pv_size_kw")
-        reliability_inputs["wind_production_factor_series"] = pop!(reliability_inputs, "pv_production_factor_series")
-        reliability_results = backup_reliability(reliability_inputs)
-        @test reliability_results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.858756 atol=0.0001
-        @test reliability_results["cumulative_survival_final_time_step"][1] ≈ 0.858756 atol=0.0001
-        @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.904242 atol=0.0001#0.833224
-        
-        # Test wind with 3 arg version of backup_reliability
+                
+        # Test gens+pv+wind+batt with 3 arg version of backup_reliability
+        # Attention! REopt optimization results are presaved in erp_gens_batt_pv_wind_reopt_results.json
+        # If you modify backup_reliability_reopt_inputs.json, you must add:
+        # results = run_reopt(model, p)
+        # open("scenarios/erp_gens_batt_pv_wind_reopt_results.json","w") do f
+        #     JSON.print(f, results, 4)
+        # end
         reopt_inputs = JSON.parsefile("./scenarios/backup_reliability_reopt_inputs.json") # note: the wind prod series in here is actually a PV profile (to in order to test a wind scenario that should give same results as an existing PV one)
         for input_key in [
                     "generator_size_kw",
                     "battery_size_kw",
                     "battery_size_kwh",
+                    "pv_size_kw",
                     "wind_size_kw",
                     "critical_loads_kw",
+                    "pv_production_factor_series",
                     "wind_production_factor_series"
                 ]
             delete!(reliability_inputs, input_key)
@@ -547,12 +546,11 @@ else  # run HiGHS tests
             "output_flag" => false, "log_to_console" => false)
         )
         p = REoptInputs(reopt_inputs)
-        results = JSON.parsefile("./scenarios/erp_wind_reopt_results.json")
+        results = JSON.parsefile("./scenarios/erp_gens_batt_pv_wind_reopt_results.json")
         reliability_results = backup_reliability(results, p, reliability_inputs)
 
         @test reliability_results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.802997 atol=0.0001
         @test reliability_results["cumulative_survival_final_time_step"][1] ≈ 0.802997 atol=0.0001
         @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.817586 atol=0.001
-
     end                            
 end
