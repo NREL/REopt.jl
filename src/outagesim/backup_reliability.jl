@@ -829,6 +829,20 @@ function backup_reliability_inputs(;r::Dict)::Dict
 
     microgrid_only = get(r2, :microgrid_only, false)
 
+    wind_size_kw = get(r2, :wind_size_kw, 0.0) 
+    if wind_size_kw > 0
+        if haskey(r2, :wind_production_factor_series)
+            if length(r2[:wind_production_factor_series]) != length(r2[:critical_loads_kw])
+                push!(invalid_args, "The lengths of wind_production_factor_series and critical_loads_kw do not match.")
+            end
+            if !microgrid_only || Bool(get(r2, :wind_migrogrid_upgraded, false))
+                r2[:wind_kw_ac_time_series] = wind_size_kw .* r2[:wind_production_factor_series]
+            end
+        else
+            push!(invalid_args, "Non-zero wind_size_kw is included in inputs but no wind_production_factor_series is provided.")
+        end
+    end
+
     pv_size_kw = get(r2, :pv_size_kw, 0.0) 
     if pv_size_kw > 0
         if haskey(r2, :pv_production_factor_series)
