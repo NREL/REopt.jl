@@ -474,6 +474,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         
         for i in 1:number_of_ghpghx
             ghpghx_inputs = d["GHP"]["ghpghx_inputs"][i]
+
             d["GHP"]["ghpghx_inputs"][i]["ambient_temperature_f"] = ambient_temp_degF
             # Only SpaceHeating portion of Heating Load gets served by GHP, unless allowed by can_serve_dhw
             if get(ghpghx_inputs, "heating_thermal_load_mmbtu_per_hr", []) in [nothing, []]
@@ -486,6 +487,46 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
                 ghpghx_inputs["cooling_thermal_load_ton"] = (cooling_load.loads_kw_thermal - cooling_thermal_load_reduction_with_ghp_kw)  / KWH_THERMAL_PER_TONHOUR
             end
+
+            ## Deal with hybrid
+            hybrid_ghx_sizing_method = get(ghpghx_inputs, "hybrid_ghx_sizing_method", nothing)
+
+            if hybrid_ghx_sizing_method == "Automatic"
+                determine_heat_cool_post = deepcopy(ghpghx_inputs)
+                determine_heat_cool_post["simulation_years"] = 2
+                determine_heat_cool_post["max_sizing_iterations"] = 1
+
+                # Call GhpGhx.jl to size GHP and GHX
+                @info "Starting GhpGhx.jl for automatic hybrid GHX sizing"
+                determine_heat_cool_results_resp_dict = call_ghpghx(ghpghx_inputs)
+                @info "Automatic hybrid GHX sizing complete using GhpGhx.jl"
+
+                temp_diff = determine_heat_cool_results_resp_dict["outputs"]["end_of_year_ghx_lft_f"][1] - determine_heat_cool_results_resp_dict["outputs"]["end_of_year_ghx_lft_f"][0]
+
+                hybrid_sizing_flag = 1.0 # non hybrid
+                if temp_diff > 0
+                    hybrid_sizing_flag = -2.0 #heating
+                elseif temp_diff < 0
+                    hybrid_sizing_flag = -1.0 #cooling
+                else
+                    #TODO what if temp_diff equal to 0?
+                    nothing
+                end
+                ghpghx_inputs["hybrid_sizing_flag"] = hybrid_sizing_flag
+
+            elseif hybrid_ghx_sizing_method == "Fractional"
+                ghpghx_inputs["hybrid_sizing_flag"] = get(ghpghx_inputs, "hybrid_ghx_sizing_fraction", 0.6)
+            else
+                @warn "Unknown hybrid GHX sizing model provided"
+            end
+
+            aux_heater_type = get(d["GHP"], "aux_heater_type", nothing)
+            if aux_heater_type == "electric"
+                ghpghx_inputs["is_heating_electric"] = true
+            else
+                ghpghx_inputs["is_heating_electric"] = false
+            end
+
             # This code calls GhpGhx.jl module functions and is only available if we load in the GhpGhx package
             try            
                 # Update ground thermal conductivity based on climate zone if not user-input
@@ -494,13 +535,13 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     nearest_city, climate_zone = find_ashrae_zone_city(d["Site"]["latitude"], d["Site"]["longitude"]; get_zone=true)
                     ghpghx_inputs["ground_thermal_conductivity_btu_per_hr_ft_f"] = k_by_zone[climate_zone]
                 end
+
                 # Call GhpGhx.jl to size GHP and GHX
-                @info "Starting GhpGhx.jl" #with timeout of $(timeout) seconds..."
-                results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
-                # Create a dictionary of the results data needed for REopt
-                ghpghx_results = GhpGhx.get_results_for_reopt(results, inputs_params)
-                ghpghx_response = Dict([("inputs", ghpghx_inputs), ("outputs", ghpghx_results)])
+                @info "Starting GhpGhx.jl"
+                ghpghx_results = call_ghpghx(ghpghx_inputs)
                 @info "GhpGhx.jl model solved" #with status $(results["status"])."
+
+                ghpghx_response = Dict([("inputs", ghpghx_inputs), ("outputs", ghpghx_results)])
                 ghp_inputs_removed_ghpghx_params = deepcopy(d["GHP"])
                 for param in ["ghpghx_inputs", "ghpghx_responses", "ghpghx_response_uuids"]
                     if haskey(d["GHP"], param)    
