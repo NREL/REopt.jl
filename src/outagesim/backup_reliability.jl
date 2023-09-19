@@ -702,6 +702,7 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
             microgrid_only && 
             !Bool(get(d, "PV_upgraded", false)) #TODO: PV_upgraded doesn't exist anymore and would be in Outages anyway
         ) 
+        #TODO: handle possibility of multiple PVs
         pv_kw_ac_time_series = (
             get(d["PV"], "electric_to_storage_series_kw", zero_array)
             + get(d["PV"], "electric_curtailed_series_kw", zero_array)
@@ -709,6 +710,19 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
             + get(d["PV"], "electric_to_grid_series_kw", zero_array)
         )
         r2[:pv_kw_ac_time_series] = pv_kw_ac_time_series
+    end
+
+    if haskey(d, "Wind") && !(
+            microgrid_only && 
+            !Bool(get(d, "Wind_upgraded", false)) #TODO: Wind_upgraded doesn't exist anymore and would be in Outages anyway
+        ) 
+        wind_kw_ac_time_series = (
+            get(d["Wind"], "electric_to_storage_series_kw", zero_array)
+            + get(d["Wind"], "electric_curtailed_series_kw", zero_array)
+            + get(d["Wind"], "electric_to_load_series_kw", zero_array)
+            + get(d["Wind"], "electric_to_grid_series_kw", zero_array)
+        )
+        r2[:wind_kw_ac_time_series] = wind_kw_ac_time_series
     end
 
     if haskey(d, "ElectricStorage") && !(
