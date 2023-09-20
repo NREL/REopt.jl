@@ -59,8 +59,9 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["year_one_om_cost_before_tax"] = round(value(per_unit_size_om) / (p.pwf_om * p.third_party_factor), digits=0)
 
 	if !isempty(p.s.storage.types.elec)
-		WindToStorage = @expression(m, [ts in p.time_steps],
-			sum(m[:dvProductionToStorage][b, t, ts] for b in p.s.storage.types.elec))
+		WindToStorage = (sum(m[:dvProductionToStorage][b, t, ts] for b in p.s.storage.types.elec) for ts in p.time_steps)
+		PVtoBatt = (sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) for ts in p.time_steps)
+
 	else
 		WindToStorage = zeros(length(p.time_steps))
 	end
@@ -68,9 +69,8 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 
     r["annual_energy_exported_kwh"] = 0.0
     if !isempty(p.s.electric_tariff.export_bins)
-        WindToGrid = @expression(m, [ts in p.time_steps],
-                sum(m[:dvProductionToGrid][t, u, ts] for u in p.export_bins_by_tech[t]))
-        r["electric_to_grid_series_kw"] = round.(value.(WindToGrid), digits=3).data
+        WindToGrid = (sum(m[:dvProductionToGrid][t, u, ts] for u in p.export_bins_by_tech[t]) for ts in p.time_steps)
+        r["electric_to_grid_series_kw"] = round.(value.(WindToGrid), digits=3)
         r["annual_energy_exported_kwh"] = round(
             sum(r["electric_to_grid_series_kw"]) * p.hours_per_time_step, digits=0)
 	else
