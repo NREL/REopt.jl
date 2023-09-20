@@ -98,5 +98,10 @@ function add_electrolyzer_constraints(m, p; _n="")
 end
 
 function add_fuel_cell_constraints(m, p; _n="")
-    #placeholder
+    @constraint(m, [ts in p.time_steps], 
+        (p.hours_per_time_step * sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.fuel_cell))
+        / p.s.fuel_cell.efficiency_kwh_per_kg 
+        ==
+        sum(m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for b in p.s.storage.types.hydrogen_lp, t in p.techs.fuel_cell) 
+    )
 end
