@@ -498,6 +498,25 @@ end
     @test results["Financial"]["lcc"] ≈ 6.71661825335e7 rtol=0.001
 end
 
+@testset "Outages with Wind and supply-to-load no greater than critical load" begin
+    input_data = JSON.parsefile("./scenarios/wind_outages.json")
+    s = Scenario(input_data)
+    inputs = REoptInputs(s)
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+    results = run_reopt([m1,m2], inputs)
+
+    # Check that supply-to-load is equal to critical load during outages, including wind
+    supply_to_load = results["Outages"]["storage_discharge_series_kw"] .+ results["Outages"]["wind_to_load_series_kw"]
+    supply_to_load = [supply_to_load[:,:,i][1] for i in eachindex(supply_to_load)]
+    demand = results["Outages"]["critical_loads_per_outage_series_kw"][1]
+    check = .≈(supply, demand, atol=0.001)
+    @test !(0 in check)
+
+    # Check that the soc_series_fraction is the same length as the storage_discharge_series_kw
+    @test size(results["Outages"]["soc_series_fraction"]) == size(results["Outages"]["storage_discharge_series_kw"])
+end
+
 @testset "Multiple Sites" begin
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     ps = [
