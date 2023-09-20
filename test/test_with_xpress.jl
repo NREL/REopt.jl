@@ -509,8 +509,8 @@ end
     # Check that supply-to-load is equal to critical load during outages, including wind
     supply_to_load = results["Outages"]["storage_discharge_series_kw"] .+ results["Outages"]["wind_to_load_series_kw"]
     supply_to_load = [supply_to_load[:,:,i][1] for i in eachindex(supply_to_load)]
-    demand = results["Outages"]["critical_loads_per_outage_series_kw"][1]
-    check = .≈(supply, demand, atol=0.001)
+    critical_load = results["Outages"]["critical_loads_per_outage_series_kw"][1]
+    check = .≈(supply_to_load, critical_load, atol=0.001)
     @test !(0 in check)
 
     # Check that the soc_series_fraction is the same length as the storage_discharge_series_kw
