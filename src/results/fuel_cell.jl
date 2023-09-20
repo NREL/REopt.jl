@@ -52,10 +52,12 @@ function add_fuel_cell_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     r["size_kw"] = round(value(m[Symbol("dvSize"*_n)]["FuelCell"]), digits=4)
 
     for t in p.techs.fuel_cell
+
         FuelCellConsumption = @expression(m, [ts in p.time_steps],
-                                sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.hydrogen_lp)
+                                p.production_factor[t, ts] * p.levelization_factor[t] * 
+                                m[Symbol("dvRatedProduction"*_n)][t,ts] / p.s.fuel_cell.efficiency_kwh_per_kg
                                 )
-        
+
         r["hydrogen_consumed_series_kg"] = round.(value.(FuelCellConsumption), digits=3)
         r["year_one_hydrogen_consumed_kg"] = round(sum(r["hydrogen_consumed_series_kg"]), digits=2)
 
