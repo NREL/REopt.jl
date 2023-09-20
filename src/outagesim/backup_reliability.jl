@@ -772,8 +772,8 @@ Return a dictionary of inputs required for backup reliability calculations.
     -pv_operational_availability::Real = 0.98                                   Likelihood PV will be available at start of outage    -battery_size_kw::Real                                  Battery capacity. If no battery installed then PV disconnects from system during outage
     -battery_size_kwh::Real                                                     Battery energy storage capacity
     -battery_size_kw::Real                                                      Battery power capacity
-    -charge_efficiency::Real                                                    Battery charge efficiency
-    -discharge_efficiency::Real                                                 Battery discharge efficiency
+    -battery_charge_efficiency::Real                                            Battery charge efficiency
+    -battery_discharge_efficiency::Real                                         Battery discharge efficiency
     -battery_starting_soc_series_fraction                                       Battery state of charge in each time step (if not input then defaults to battery size)
     -battery_minimum_soc_fraction = 0.0                                         The minimum battery state of charge (represented as a fraction) allowed during outages.
     -generator_operational_availability::Union{Real, Vector{<:Real}} = 0.995    Likelihood generator being available in given time step
@@ -1295,8 +1295,8 @@ Possible keys in r:
 -pv_migrogrid_upgraded::Bool                            If true then PV runs during outage if microgrid_only = TRUE (defaults to false)
 -battery_size_kw::Real                                  Battery capacity. If no battery installed then PV disconnects from system during outage
 -battery_size_kwh::Real                                 Battery energy storage capacity
--charge_efficiency::Real                                Battery charge efficiency
--discharge_efficiency::Real                             Battery discharge efficiency
+-battery_charge_efficiency::Real                        Battery charge efficiency
+-battery_discharge_efficiency::Real                     Battery discharge efficiency
 -battery_starting_soc_series_fraction::Array            Battery percent state of charge time series during normal grid-connected usage
 -generator_failure_to_start::Real = 0.0094              Chance of generator starting given outage
 -generator_mean_time_to_failure::Real = 1100            Average number of time steps between a generator's failures. 1/(failure to run probability). 
