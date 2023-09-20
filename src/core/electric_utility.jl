@@ -78,6 +78,7 @@ struct ElectricUtility
     function ElectricUtility(;
         latitude::Union{Nothing,Real} = nothing,
         longitude::Union{Nothing,Real} = nothing,
+        min_resil_time_steps::Int = 0,
         off_grid_flag::Bool = false,
         time_steps_per_hour::Int = 1,
         net_metering_limit_kw::Real = 0,
@@ -156,6 +157,9 @@ struct ElectricUtility
             end
         end
         
+        if min_resil_time_steps > max(outage_durations)
+            throw(@error("Site input min_resil_time_steps cannot be greater than the maximum value in ElectricUtility input outage_durations"))
+        end
         if (!isempty(outage_start_time_steps) && isempty(outage_durations)) || (isempty(outage_start_time_steps) && !isempty(outage_durations))
             throw(@error("ElectricUtility inputs outage_start_time_steps and outage_durations must both be provided to model multiple outages"))
         end
