@@ -30,6 +30,8 @@
 - `chp_to_load_series_kw` Array of CHP power used to meet load in every outage modeled.
 - `chp_fuel_used_per_outage_mmbtu` Array of fuel used in every outage modeled, summed over all CHPs.
 - `microgrid_upgrade_capital_cost` Total capital cost of including technologies in the microgrid
+- `critical_loads_per_outage_series_kw` Critical load series in every outage modeled
+- `soc_series_fraction` ElectricStorage state of charge series in every outage modeled
 
 !!! warn
 	The output keys for "Outages" are subject to change.
@@ -72,11 +74,22 @@ function add_outage_results(m, p, d::Dict)
 	r["unserved_load_per_outage_kwh"] = round.(unserved_load_per_outage, digits=2)
 	r["storage_microgrid_upgrade_cost"] = value(m[:dvMGStorageUpgradeCost])
 	r["microgrid_upgrade_capital_cost"] = r["storage_microgrid_upgrade_cost"]
+    _n = ""
 	if !isempty(p.s.storage.types.elec) && Bool(round(value(m[:binMGStorageUsed]), digits=0))
 		r["storage_discharge_series_kw"] = value.(m[:dvMGDischargeFromStorage]).data
+        electric_storage_energy_capacity_kwh = round(value(m[Symbol("dvStorageEnergy"*_n)]["ElectricStorage"]), digits=2)
+        r["soc_series_fraction"] = round.(value.(m[:dvMGStoredEnergy][:,:,1:end]).data ./ electric_storage_energy_capacity_kwh, digits=3)
 	else
-		r["storage_discharge_series_kw"] = []
+		r["storage_discharge_series_kw"] = value.(m[:dvMGDischargeFromStorage]).data
+        r["soc_series_fraction"] = round.(value.(m[:dvMGStoredEnergy][:,:,1:end]).data, digits=3)  # Will be zeros
 	end
+    
+    r["critical_loads_per_outage_series_kw"] = Matrix{Array{Float64}}(undef, S, T)
+    for s in p.s.electric_utility.scenarios
+        for (t, tz) in enumerate(p.s.electric_utility.outage_start_time_steps)
+            r["critical_loads_per_outage_series_kw"][s,t] = [p.s.electric_load.critical_loads_kw[tz+ts-1] for ts in 1:p.s.electric_utility.outage_durations[s]]
+        end
+    end
 
 	for (tech_type_name, tech_set) in [("pv", p.techs.pv), ("wind", "Wind" in p.techs.elec ? ["Wind"] : String[]), ("generator", p.techs.gen), ("chp", p.techs.chp)]
 		if !isempty(tech_set)
