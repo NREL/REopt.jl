@@ -23,6 +23,12 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.33.1
+### Added
+- Add timeseries operating reserve outputs for each tech for off-grid only
+### Changed
+- Change units for total timeseries operating reserves required and provided to kW (from kWh)
+
 ## v0.33.0
 ### Added
 - Functionality to evaluate scenarios with Wind can in the ERP (`backup_reliability`)
