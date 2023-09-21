@@ -12,6 +12,7 @@
 - `electric_curtailed_series_kw` Vector of power curtailed over the first year
 - `annual_energy_exported_kwh` Average annual energy exported to the grid
 - `production_factor_series` PV production factor in each time step, either provided by user or obtained from PVWatts
+- `operating_reserve_provided_series_kw` For offgrid analyses: operating reserve provided by PV in each time step
 
 !!! warn
     The key(s) used to access PV outputs in the results dictionary is determined by the `PV.name` value to allow for modeling multiple PV options. (The default `PV.name` is "PV".)
@@ -66,6 +67,9 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 		PVPerUnitSizeOMCosts = p.om_cost_per_kw[t] * p.pwf_om * m[Symbol("dvSize"*_n)][t]
 		r["lifecycle_om_cost_after_tax"] = round(value(PVPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_rate_fraction), digits=0)
         r["lcoe_per_kwh"] = calculate_lcoe(p, r, get_pv_by_name(t, p.s.pvs))
+        if p.s.settings.off_grid_flag
+            r["operating_reserve_provided_series_kw"] = value.(m[Symbol("dvOpResFromTechs"*_n)][t,ts] for ts in p.time_steps)
+        end
         d[t] = r
 	end
     nothing
