@@ -701,7 +701,8 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
     r2[:time_steps_per_hour] = 1 / p.hours_per_time_step
     microgrid_only = get(r, "microgrid_only", false)
 
-    if haskey(d, "PV") && (
+    if haskey(d, "PV") && 
+        (
             !microgrid_only ||
             !haskey(d, "Outages") ||
             get(d["Outages"], "pv_microgrid_size_kw", 0) > 0
@@ -713,7 +714,8 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
             get(d["PV"], "size_kw", 0.0)
         ) .* get(d["PV"], "production_factor_series", zero_array)
     end
-    if haskey(d, "Wind") && (
+    if haskey(d, "Wind") && 
+        (
             !microgrid_only ||
             !haskey(d, "Outages") ||
             get(d["Outages"], "wind_microgrid_size_kw", 0) > 0
@@ -748,12 +750,18 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         end
     end
     
-    if microgrid_only
-        diesel_kw = get(get(d, "Outages", Dict()), "generator_microgrid_size_kw", 0)
-        # prime_kw = get(get(d, "Outages", Dict()), "chp_microgrid_size_kw", 0)
+    if haskey(d, "Generator") && (
+        !microgrid_only ||
+        !haskey(d, "Outages") ||
+        get(d["Outages"], "generator_microgrid_size_kw", 0) > 0
+    )
+        diesel_kw = get(
+            get(d, "Outages", Dict()), 
+            "generator_microgrid_size_kw", 
+            get(d["Generator"], "size_kw", 0.0)
+        )
     else
-        diesel_kw = get(get(d, "Generator", Dict()), "size_kw", 0)
-        # prime_kw = get(get(d, "CHP", Dict()), "size_kw", 0)
+        diesel_kw = 0.0
     end
     
     #TODO: add parsing of chp/prime gen from reopt results
