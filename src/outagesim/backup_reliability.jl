@@ -749,7 +749,6 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
             @warn("Some battery starting states of charge are less than the provided minimum state of charge.")
         end
     end
-    
     diesel_kw = (
             haskey(d, "Generator") && 
             (
@@ -762,6 +761,20 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
             get(d, "Outages", Dict()), 
             "generator_microgrid_size_kw", 
             get(d["Generator"], "size_kw", 0.0)
+        ) : 
+        0.0
+    prime_kw = (
+            haskey(d, "CHP") && 
+            (
+                !microgrid_only ||
+                !haskey(d, "Outages") ||
+                get(d["Outages"], "chp_microgrid_size_kw", 0) > 0
+            )
+        ) ? 
+        get(
+            get(d, "Outages", Dict()), 
+            "chp_microgrid_size_kw", 
+            get(d["CHP"], "size_kw", 0.0)
         ) : 
         0.0
     
