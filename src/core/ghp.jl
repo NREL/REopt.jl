@@ -84,6 +84,9 @@ struct with outer constructor:
     om_cost_year_one::Float64 = NaN
 ```
 """
+
+
+
 Base.@kwdef mutable struct GHP <: AbstractGHP
     require_ghp_purchase::Union{Bool, Int64} = false  # 0 = false, 1 = true
     installed_cost_heatpump_per_ton::Float64 = 1075.0
@@ -96,6 +99,12 @@ Base.@kwdef mutable struct GHP <: AbstractGHP
     cooling_efficiency_thermal_factor::Float64 = NaN # Default depends on building and location
     ghpghx_response::Dict = Dict()
     can_serve_dhw::Bool = false
+
+    aux_heater_type::String = "electric"
+    hybrid_ghx_sizing_method::Bool = false
+    aux_heater_installed_cost_per_mmbtu_per_hr::Float64 = 26000.00
+    aux_cooler_installed_cost_per_ton::Float64 = 400.00
+    aux_unit_capacity_sizing_factor_on_peak_load::Float64 = 1.2
 
     macrs_option_years::Int = 5
     macrs_bonus_fraction::Float64 = 0.8
@@ -132,6 +141,19 @@ end
 
 function GHP(response::Dict, d::Dict)
     ghp = GHP(; ghpghx_response = response, dictkeys_tosymbols(d)...)
+    
+    if !(0 <= ghp.aux_cooler_installed_cost_per_ton <= 1.0e6)
+        @error "out of bounds aux_cooler_installed_cost_per_ton"
+    end
+
+    if !(0 <= ghp.aux_heater_installed_cost_per_mmbtu_per_hr <= 1.0e6)
+        @error "out of bounds aux_heater_installed_cost_per_mmbtu_per_hr"
+    end
+
+    if !(1.0 <= ghp.aux_unit_capacity_sizing_factor_on_peak_load <= 5.0)
+        @error "out of bounds aux_unit_capacity_sizing_factor_on_peak_load"
+    end
+
     # Inputs of GhpGhx.jl, which are still needed in REopt
     ghp.heating_thermal_kw = response["inputs"]["heating_thermal_load_mmbtu_per_hr"] * KWH_PER_MMBTU
     ghp.cooling_thermal_kw = response["inputs"]["cooling_thermal_load_ton"] * KWH_THERMAL_PER_TONHOUR
@@ -174,13 +196,25 @@ function setup_installed_cost_curve!(ghp::GHP, response::Dict)
     ghx_cost = total_ghx_ft * ghp.installed_cost_ghx_per_ft
     hydronic_loop_cost = ghp.building_sqft * ghp.installed_cost_building_hydronic_loop_per_sqft
 
+    aux_heater_cost = 0.0
+    aux_cooler_cost = 0.0
+    if ghp.hybrid_ghx_sizing_method
+        aux_heater_cost = ghp.aux_heater_installed_cost_per_mmbtu_per_hr*
+        response["outputs"]["peak_aux_heater_thermal_production_mmbtu_per_hour"]*
+        ghp.aux_unit_capacity_sizing_factor_on_peak_load
+        
+        aux_cooler_cost = ghp.aux_cooler_installed_cost_per_ton*
+        response["outputs"]["peak_aux_cooler_thermal_production_ton"]*
+        ghp.aux_unit_capacity_sizing_factor_on_peak_load
+    end
+
     # The DataManager._get_REopt_cost_curve method expects at least a two-point tech_sizes_for_cost_curve to
     #   to use the first value of installed_cost_per_kw as an absolute $ value and
     #   the initial slope is based on the heat pump size (e.g. $/ton) of the cost curve for
     #   building a rebate-based cost curve if there are less-than big_number maximum incentives
     ghp.tech_sizes_for_cost_curve = [0.0, big_number]
-    ghp.installed_cost_per_kw = [ghx_cost + hydronic_loop_cost, 
-                                        ghp.installed_cost_heatpump_per_ton]
+    ghp.installed_cost_per_kw = [ghx_cost + hydronic_loop_cost + aux_cooler_cost + aux_heater_cost, 
+                                ghp.installed_cost_heatpump_per_ton]
 
     # Using a separate call to _get_REopt_cost_curve in data_manager for "ghp" (not included in "available_techs")
     #    and then use the value below for heat pump capacity to calculate the final absolute cost for GHP
@@ -193,7 +227,6 @@ function setup_om_cost!(ghp::GHP)
     # O&M Cost
     ghp.om_cost_year_one = ghp.building_sqft * ghp.om_cost_per_sqft_year
 end
-
 
 function assign_thermal_factor!(d::Dict, heating_or_cooling::String)
     if heating_or_cooling == "space_heating"

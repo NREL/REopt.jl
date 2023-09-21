@@ -445,7 +445,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         space_heating_thermal_load_reduction_with_ghp_kw = space_heating_load.loads_kw * (1.0 - d["GHP"]["space_heating_efficiency_thermal_factor"])
         cooling_thermal_load_reduction_with_ghp_kw = cooling_load.loads_kw_thermal * (1.0 - d["GHP"]["cooling_efficiency_thermal_factor"])
     end
+    
     # Call GhpGhx.jl module if only ghpghx_inputs is given, otherwise use ghpghx_responses
+    ghp_option_list = []
     if eval_ghp && !(get_ghpghx_from_input)
         if get(d["GHP"], "ghpghx_inputs", nothing) in [nothing, []]
             number_of_ghpghx = 1
@@ -491,6 +493,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             ## Deal with hybrid
             hybrid_ghx_sizing_method = get(ghpghx_inputs, "hybrid_ghx_sizing_method", nothing)
 
+            hybrid_ghx_sizing_flag = false
             if hybrid_ghx_sizing_method == "Automatic"
                 determine_heat_cool_post = deepcopy(ghpghx_inputs)
                 determine_heat_cool_post["simulation_years"] = 2
@@ -506,25 +509,38 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 hybrid_sizing_flag = 1.0 # non hybrid
                 if temp_diff > 0
                     hybrid_sizing_flag = -2.0 #heating
+                    hybrid_ghx_sizing_flag = true
                 elseif temp_diff < 0
                     hybrid_sizing_flag = -1.0 #cooling
+                    hybrid_ghx_sizing_flag = true
                 else
-                    #TODO what if temp_diff equal to 0?
-                    nothing
+                    # non hybrid if exactly 0.
+                    hybrid_sizing_flag = 1.0
                 end
                 ghpghx_inputs["hybrid_sizing_flag"] = hybrid_sizing_flag
 
             elseif hybrid_ghx_sizing_method == "Fractional"
+                hybrid_ghx_sizing_flag = true
                 ghpghx_inputs["hybrid_sizing_flag"] = get(ghpghx_inputs, "hybrid_ghx_sizing_fraction", 0.6)
             else
                 @warn "Unknown hybrid GHX sizing model provided"
             end
 
-            aux_heater_type = get(d["GHP"], "aux_heater_type", nothing)
-            if aux_heater_type == "electric"
-                ghpghx_inputs["is_heating_electric"] = true
+            # set ghp tech sizing method
+            if !hybrid_ghx_sizing_flag
+                d["GHP"]["hybrid_ghx_sizing_method"] = false
             else
-                ghpghx_inputs["is_heating_electric"] = false
+                d["GHP"]["hybrid_ghx_sizing_method"] = true
+            end
+
+            aux_heater_type = get(d["GHP"], "aux_heater_type", nothing)
+            if !isnothing(aux_heater_type)
+                if aux_heater_type == "electric"
+                    ghpghx_inputs["is_heating_electric"] = true
+                else
+                    @warn "Unknown auxillary heater type provided"
+                    ghpghx_inputs["is_heating_electric"] = false
+                end
             end
 
             # This code calls GhpGhx.jl module functions and is only available if we load in the GhpGhx package
@@ -553,7 +569,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 # open("scenarios/ghpghx_response.json","w") do f
                 #     JSON.print(f, ghpghx_response)
                 # end
-            catch
+            catch e
+                @info e
                 throw(@error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
                     loaded (using GhpGhx) to the active Julia environment"))
             end                
