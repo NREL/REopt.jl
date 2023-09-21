@@ -750,19 +750,20 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         end
     end
     
-    if haskey(d, "Generator") && (
-        !microgrid_only ||
-        !haskey(d, "Outages") ||
-        get(d["Outages"], "generator_microgrid_size_kw", 0) > 0
-    )
-        diesel_kw = get(
+    diesel_kw = (
+            haskey(d, "Generator") && 
+            (
+                !microgrid_only ||
+                !haskey(d, "Outages") ||
+                get(d["Outages"], "generator_microgrid_size_kw", 0) > 0
+            )
+        ) ? 
+        get(
             get(d, "Outages", Dict()), 
             "generator_microgrid_size_kw", 
             get(d["Generator"], "size_kw", 0.0)
-        )
-    else
-        diesel_kw = 0.0
-    end
+        ) : 
+        0.0
     
     #TODO: add parsing of chp/prime gen from reopt results
 
