@@ -701,10 +701,11 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
     r2[:time_steps_per_hour] = 1 / p.hours_per_time_step
     microgrid_only = get(r, "microgrid_only", false)
 
-    if haskey(d, "PV") && !(
-            microgrid_only && 
-            !Bool(get(d, "PV_upgraded", false)) #TODO: PV_upgraded doesn't exist anymore and would be in Outages anyway
-        ) 
+    if haskey(d, "PV") && (
+            !microgrid_only ||
+            !haskey(d, "Outages") ||
+            get(d["Outages"], "pv_microgrid_size_kw", 0) > 0
+        )
         #TODO: handle possibility of multiple PVs
         pv_kw_ac_time_series = (
             get(d["PV"], "electric_to_storage_series_kw", zero_array)
@@ -714,11 +715,12 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         )
         r2[:pv_kw_ac_time_series] = pv_kw_ac_time_series
     end
+    if haskey(d, "Wind") && (
+            !microgrid_only ||
+            !haskey(d, "Outages") ||
+            get(d["Outages"], "wind_microgrid_size_kw", 0) > 0
+        )
 
-    if haskey(d, "Wind") && !(
-            microgrid_only && 
-            !Bool(get(d, "Wind_upgraded", false)) #TODO: Wind_upgraded doesn't exist anymore and would be in Outages anyway
-        ) 
         wind_kw_ac_time_series = (
             get(d["Wind"], "electric_to_storage_series_kw", zero_array)
             + get(d["Wind"], "electric_curtailed_series_kw", zero_array)
@@ -727,10 +729,10 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         )
         r2[:wind_kw_ac_time_series] = wind_kw_ac_time_series
     end
-
-    if haskey(d, "ElectricStorage") && !(
-        microgrid_only && 
-        !Bool(get(d, "Storage_upgraded", false)) #TODO: Storage_upgraded doesn't exist anymore and would be in Outages anyway
+    if haskey(d, "ElectricStorage") && (
+        !microgrid_only ||
+        !haskey(d, "Outages") ||
+        Bool(get(d["Outages"], "electric_storage_microgrid_upgraded", false))
     )
         r2[:battery_charge_efficiency] = p.s.storage.attr["ElectricStorage"].charge_efficiency
         r2[:battery_discharge_efficiency] = p.s.storage.attr["ElectricStorage"].discharge_efficiency
@@ -837,7 +839,6 @@ function backup_reliability_inputs(;r::Dict)::Dict
     if haskey(r2, :num_generators)
         num_gen_types = length(r2[:num_generators])
         if !haskey(r2, :fuel_limit)
-            #If multiple generators and no fuel input, then remove fuel constraint
             r2[:fuel_limit] = [1e9 for _ in 1:num_gen_types]
         end 
         if !haskey(r2, :generator_fuel_intercept_per_hr)
