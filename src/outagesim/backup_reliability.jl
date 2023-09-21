@@ -861,11 +861,15 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
             microgrid_only && 
             !Bool(get(d, "PV_upgraded", false)) #TODO: PV_upgraded doesn't exist anymore and would be in Outages anyway
         ) 
+	pv = d["PV"]
+	if isa(d["PV"], Vector)
+		pv = d["PV"][1]
+	end
         pv_kw_ac_time_series = (
-            get(d["PV"], "electric_to_storage_series_kw", zero_array)
-            + get(d["PV"], "electric_curtailed_series_kw", zero_array)
-            + get(d["PV"], "electric_to_load_series_kw", zero_array)
-            + get(d["PV"], "electric_to_grid_series_kw", zero_array)
+            get(pv, "electric_to_storage_series_kw", zero_array)
+            + get(pv, "electric_curtailed_series_kw", zero_array)
+            + get(pv, "electric_to_load_series_kw", zero_array)
+            + get(pv, "electric_to_grid_series_kw", zero_array)
         )
         r2[:pv_kw_ac_time_series] = pv_kw_ac_time_series
     end
