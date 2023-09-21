@@ -445,9 +445,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         space_heating_thermal_load_reduction_with_ghp_kw = space_heating_load.loads_kw * (1.0 - d["GHP"]["space_heating_efficiency_thermal_factor"])
         cooling_thermal_load_reduction_with_ghp_kw = cooling_load.loads_kw_thermal * (1.0 - d["GHP"]["cooling_efficiency_thermal_factor"])
     end
-    
     # Call GhpGhx.jl module if only ghpghx_inputs is given, otherwise use ghpghx_responses
-    ghp_option_list = []
     if eval_ghp && !(get_ghpghx_from_input)
         if get(d["GHP"], "ghpghx_inputs", nothing) in [nothing, []]
             number_of_ghpghx = 1
@@ -476,7 +474,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         
         for i in 1:number_of_ghpghx
             ghpghx_inputs = d["GHP"]["ghpghx_inputs"][i]
-
             d["GHP"]["ghpghx_inputs"][i]["ambient_temperature_f"] = ambient_temp_degF
             # Only SpaceHeating portion of Heating Load gets served by GHP, unless allowed by can_serve_dhw
             if get(ghpghx_inputs, "heating_thermal_load_mmbtu_per_hr", []) in [nothing, []]
@@ -490,59 +487,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 ghpghx_inputs["cooling_thermal_load_ton"] = (cooling_load.loads_kw_thermal - cooling_thermal_load_reduction_with_ghp_kw)  / KWH_THERMAL_PER_TONHOUR
             end
 
-            ## Deal with hybrid
-            hybrid_ghx_sizing_method = get(ghpghx_inputs, "hybrid_ghx_sizing_method", nothing)
-
-            hybrid_ghx_sizing_flag = false
-            if hybrid_ghx_sizing_method == "Automatic"
-                determine_heat_cool_post = deepcopy(ghpghx_inputs)
-                determine_heat_cool_post["simulation_years"] = 2
-                determine_heat_cool_post["max_sizing_iterations"] = 1
-
-                # Call GhpGhx.jl to size GHP and GHX
-                @info "Starting GhpGhx.jl for automatic hybrid GHX sizing"
-                determine_heat_cool_results_resp_dict = call_ghpghx(ghpghx_inputs)
-                @info "Automatic hybrid GHX sizing complete using GhpGhx.jl"
-
-                temp_diff = determine_heat_cool_results_resp_dict["outputs"]["end_of_year_ghx_lft_f"][1] - determine_heat_cool_results_resp_dict["outputs"]["end_of_year_ghx_lft_f"][0]
-
-                hybrid_sizing_flag = 1.0 # non hybrid
-                if temp_diff > 0
-                    hybrid_sizing_flag = -2.0 #heating
-                    hybrid_ghx_sizing_flag = true
-                elseif temp_diff < 0
-                    hybrid_sizing_flag = -1.0 #cooling
-                    hybrid_ghx_sizing_flag = true
-                else
-                    # non hybrid if exactly 0.
-                    hybrid_sizing_flag = 1.0
-                end
-                ghpghx_inputs["hybrid_sizing_flag"] = hybrid_sizing_flag
-
-            elseif hybrid_ghx_sizing_method == "Fractional"
-                hybrid_ghx_sizing_flag = true
-                ghpghx_inputs["hybrid_sizing_flag"] = get(ghpghx_inputs, "hybrid_ghx_sizing_fraction", 0.6)
-            else
-                @warn "Unknown hybrid GHX sizing model provided"
-            end
-
-            # set ghp tech sizing method
-            if !hybrid_ghx_sizing_flag
-                d["GHP"]["hybrid_ghx_sizing_method"] = false
-            else
-                d["GHP"]["hybrid_ghx_sizing_method"] = true
-            end
-
-            aux_heater_type = get(d["GHP"], "aux_heater_type", nothing)
-            if !isnothing(aux_heater_type)
-                if aux_heater_type == "electric"
-                    ghpghx_inputs["is_heating_electric"] = true
-                else
-                    @warn "Unknown auxillary heater type provided"
-                    ghpghx_inputs["is_heating_electric"] = false
-                end
-            end
-
             # This code calls GhpGhx.jl module functions and is only available if we load in the GhpGhx package
             try            
                 # Update ground thermal conductivity based on climate zone if not user-input
@@ -551,6 +495,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     nearest_city, climate_zone = find_ashrae_zone_city(d["Site"]["latitude"], d["Site"]["longitude"]; get_zone=true)
                     ghpghx_inputs["ground_thermal_conductivity_btu_per_hr_ft_f"] = k_by_zone[climate_zone]
                 end
+
+                aux_heater_type = get(d["GHP"], "aux_heater_type", nothing)
+                ghpghx_inputs, is_ghx_hybrid = handle_hybrid_ghp(ghpghx_inputs, aux_heater_type)
+                d["GHP"]["is_ghx_hybrid"] = is_ghx_hybrid
 
                 # Call GhpGhx.jl to size GHP and GHX
                 @info "Starting GhpGhx.jl"
