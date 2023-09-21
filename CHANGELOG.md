@@ -23,6 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.33.0
+### Added
+- Functionality to evaluate scenarios with Wind can in the ERP (`backup_reliability`)
+
 ## v0.32.7
 ### Fixed
 - Bugs in EASIUR health cost calcs
