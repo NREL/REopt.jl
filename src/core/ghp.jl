@@ -101,7 +101,7 @@ Base.@kwdef mutable struct GHP <: AbstractGHP
     can_serve_dhw::Bool = false
 
     aux_heater_type::String = "electric"
-    hybrid_ghx_sizing_method::Bool = false
+    is_ghx_hybrid::Bool = false
     aux_heater_installed_cost_per_mmbtu_per_hr::Float64 = 26000.00
     aux_cooler_installed_cost_per_ton::Float64 = 400.00
     aux_unit_capacity_sizing_factor_on_peak_load::Float64 = 1.2
@@ -198,7 +198,7 @@ function setup_installed_cost_curve!(ghp::GHP, response::Dict)
 
     aux_heater_cost = 0.0
     aux_cooler_cost = 0.0
-    if ghp.hybrid_ghx_sizing_method
+    if ghp.is_ghx_hybrid
         aux_heater_cost = ghp.aux_heater_installed_cost_per_mmbtu_per_hr*
         response["outputs"]["peak_aux_heater_thermal_production_mmbtu_per_hour"]*
         ghp.aux_unit_capacity_sizing_factor_on_peak_load
@@ -273,4 +273,62 @@ function call_ghpghx(ghpghx_inputs::Dict)
     # Create a dictionary of the results data needed for REopt
     ghpghx_results = GhpGhx.get_results_for_reopt(results, inputs_params)
     return ghpghx_results
+end
+
+function handle_hybrid_ghp(ghpghx_inputs::Dict,aux_heater_type::Union{String, Nothing})
+
+    ## Deal with hybrid
+    hybrid_ghx_sizing_method = get(ghpghx_inputs, "hybrid_ghx_sizing_method", nothing)
+
+    hybrid_ghx_sizing_flag = false
+    if hybrid_ghx_sizing_method == "Automatic"
+        determine_heat_cool_post = deepcopy(ghpghx_inputs)
+        determine_heat_cool_post["simulation_years"] = 2
+        determine_heat_cool_post["max_sizing_iterations"] = 1
+
+        # Call GhpGhx.jl to size GHP and GHX
+        @info "Starting GhpGhx.jl for automatic hybrid GHX sizing"
+        determine_heat_cool_results_resp_dict = call_ghpghx(determine_heat_cool_post)
+        @info "Automatic hybrid GHX sizing complete using GhpGhx.jl"
+
+        temp_diff = determine_heat_cool_results_resp_dict["end_of_year_ghx_lft_f"][2] \
+        - determine_heat_cool_results_resp_dict["end_of_year_ghx_lft_f"][1]
+
+        hybrid_sizing_flag = 1.0 # non hybrid
+        if temp_diff > 0
+            hybrid_sizing_flag = -2.0 #heating
+            hybrid_ghx_sizing_flag = true
+        elseif temp_diff < 0
+            hybrid_sizing_flag = -1.0 #cooling
+            hybrid_ghx_sizing_flag = true
+        else
+            # non hybrid if exactly 0.
+            hybrid_sizing_flag = 1.0
+        end
+        ghpghx_inputs["hybrid_sizing_flag"] = hybrid_sizing_flag
+
+    elseif hybrid_ghx_sizing_method == "Fractional"
+        hybrid_ghx_sizing_flag = true
+        ghpghx_inputs["hybrid_sizing_flag"] = get(ghpghx_inputs, "hybrid_ghx_sizing_fraction", 0.6)
+    else
+        @warn "Unknown hybrid GHX sizing model provided"
+    end
+
+    # set ghp tech sizing method
+    is_ghx_hybrid = false
+    if !hybrid_ghx_sizing_flag
+        is_ghx_hybrid = false
+    else
+        is_ghx_hybrid = true
+    end
+
+    if !isnothing(aux_heater_type)
+        if aux_heater_type == "electric"
+            ghpghx_inputs["is_heating_electric"] = true
+        else
+            @warn "Unknown auxillary heater type provided"
+            ghpghx_inputs["is_heating_electric"] = false
+        end
+    end
+    return ghpghx_inputs, is_ghx_hybrid
 end
