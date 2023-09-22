@@ -79,8 +79,8 @@ function add_outage_results(m, p, d::Dict)
         electric_storage_energy_capacity_kwh = round(sum(value(m[Symbol("dvStorageEnergy")][b]) for b in p.s.storage.types.elec), digits=2)
         r["soc_series_fraction"] = round.(value.(m[:dvMGStoredEnergy][:,:,1:end]).data ./ electric_storage_energy_capacity_kwh, digits=3)
 	else
-		r["storage_discharge_series_kw"] = value.(m[:dvMGDischargeFromStorage]).data
-        r["soc_series_fraction"] = round.(value.(m[:dvMGStoredEnergy][:,:,1:end]).data, digits=3)  # Will be zeros
+		r["storage_discharge_series_kw"] = []
+        r["soc_series_fraction"] = []
 	end
     
     r["critical_loads_per_outage_series_kw"] = Matrix{Array{Float64}}(undef, S, T)
