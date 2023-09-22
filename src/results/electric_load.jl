@@ -6,8 +6,8 @@
 - `annual_calculated_kwh` sum of the `load_series_kw`
 - `offgrid_load_met_series_kw` vector of electric load met by generation techs, for off-grid scenarios only
 - `offgrid_load_met_fraction` percentage of total electric load met on an annual basis, for off-grid scenarios only
-- `offgrid_annual_oper_res_required_series_kwh` , total operating reserves required (for load and techs) on an annual basis, for off-grid scenarios only
-- `offgrid_annual_oper_res_provided_series_kwh` , total operating reserves provided on an annual basis, for off-grid scenarios only
+- `offgrid_annual_oper_res_required_series_kw` , total operating reserves required (for load and techs) on an annual basis, for off-grid scenarios only
+- `offgrid_annual_oper_res_provided_series_kw` , total operating reserves provided on an annual basis, for off-grid scenarios only
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
 	REopt performs load balances using average annual production values for technologies that include degradation. 
