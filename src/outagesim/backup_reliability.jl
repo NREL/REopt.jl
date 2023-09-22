@@ -708,11 +708,19 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
             get(d["Outages"], "pv_microgrid_size_kw", 0) > 0
         )
         #TODO: handle possibility of multiple PVs
-        r2[:pv_kw_ac_time_series] = get(
-            get(d, "Outages", Dict()), 
-            "pv_microgrid_size_kw", 
-            get(d["PV"], "size_kw", 0.0)
-        ) .* get(d["PV"], "production_factor_series", zero_array)
+        pv_kw_ac_time_series = (
+            get(d["PV"], "electric_to_storage_series_kw", zero_array)
+            + get(d["PV"], "electric_curtailed_series_kw", zero_array)
+            + get(d["PV"], "electric_to_load_series_kw", zero_array)
+            + get(d["PV"], "electric_to_grid_series_kw", zero_array)
+        )
+        r2[:pv_kw_ac_time_series] = pv_kw_ac_time_series .* (
+                get(
+                    get(d, "Outages", Dict()), 
+                    "pv_microgrid_size_kw", 
+                    get(d["PV"], "size_kw", 0.0)
+                ) / get(d["PV"], "size_kw", 1.0)
+            )
     end
     if haskey(d, "Wind") && 
         (
@@ -720,11 +728,19 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
             !haskey(d, "Outages") ||
             get(d["Outages"], "wind_microgrid_size_kw", 0) > 0
         )
-        r2[:wind_kw_ac_time_series] = get(
-            get(d, "Outages", Dict()), 
-            "wind_microgrid_size_kw", 
-            get(d["Wind"], "size_kw", 0.0)
-        ) .* get(d["Wind"], "production_factor_series", zero_array)
+        wind_kw_ac_time_series = (
+            get(d["Wind"], "electric_to_storage_series_kw", zero_array)
+            + get(d["Wind"], "electric_curtailed_series_kw", zero_array)
+            + get(d["Wind"], "electric_to_load_series_kw", zero_array)
+            + get(d["Wind"], "electric_to_grid_series_kw", zero_array)
+        )
+        r2[:wind_kw_ac_time_series] = wind_kw_ac_time_series .* (
+            get(
+                get(d, "Outages", Dict()), 
+                "wind_microgrid_size_kw", 
+                get(d["Wind"], "size_kw", 0.0)
+            ) / get(d["Wind"], "size_kw", 1.0)
+        )
     end
     if haskey(d, "ElectricStorage") && (
         !microgrid_only ||
