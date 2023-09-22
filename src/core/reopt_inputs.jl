@@ -151,7 +151,7 @@ function REoptInputs(s::AbstractScenario)
 
     time_steps = 1:length(s.electric_load.loads_kw)
     hours_per_time_step = 1 / s.settings.time_steps_per_hour
-    techs, pv_to_location, maxsize_pv_locations, pvlocations, 
+    techs, pv_to_location, maxsize_pv_locations, pvlocations,
         production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
         seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
         tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
@@ -349,7 +349,7 @@ function setup_tech_inputs(s::AbstractScenario)
         setup_operating_reserve_fraction(s, techs_operating_reserve_req_fraction)
     end
 
-    return techs, pv_to_location, maxsize_pv_locations, pvlocations, 
+    return techs, pv_to_location, maxsize_pv_locations, pvlocations,
     production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
     seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
     tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
@@ -435,7 +435,7 @@ end
 
 function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
     existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor,
-    pvlocations, pv_to_location, maxsize_pv_locations, 
+    pvlocations, pv_to_location, maxsize_pv_locations,
     segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, 
     techs_by_exportbin, techs)
 
@@ -444,7 +444,7 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
     roof_max_kw, land_max_kw = 1.0e5, 1.0e5
 
     for pv in s.pvs        
-        production_factor[pv.name, :] = get_production_factor(pv, s.site.latitude, s.site.longitude; 
+        production_factor[pv.name, :], pv_station_distance_km = get_production_factor(pv, s.site.latitude, s.site.longitude; 
             time_steps_per_hour=s.settings.time_steps_per_hour)
         for location in pvlocations
             if pv.location == String(location) # Must convert symbol to string

@@ -432,12 +432,12 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             # By assigning pv.production_factor_series here, it will skip the PVWatts call in get_production_factor(PV) call from reopt_input.jl
             if !isempty(pvs)
                 for pv in pvs
-                    pv.production_factor_series, ambient_temp_celcius = call_pvwatts_api(site.latitude, site.longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
+                    pv.production_factor_series, ambient_temp_celcius, pv_station_distance_km = call_pvwatts_api(site.latitude, site.longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
                         array_type=pv.array_type, losses=round(pv.losses*100, digits=3), dc_ac_ratio=pv.dc_ac_ratio,
                         gcr=pv.gcr, inv_eff=pv.inv_eff*100, timeframe="hourly", radius=pv.radius, time_steps_per_hour=settings.time_steps_per_hour)
                 end
             else
-                pv_prodfactor, ambient_temp_celcius = call_pvwatts_api(site.latitude, site.longitude; time_steps_per_hour=settings.time_steps_per_hour)    
+                pv_prodfactor, ambient_temp_celcius, pv_station_distance_km = call_pvwatts_api(site.latitude, site.longitude; time_steps_per_hour=settings.time_steps_per_hour)    
             end
             ambient_temp_degF = ambient_temp_celcius * 1.8 .+ 32.0
         else
