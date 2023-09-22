@@ -83,10 +83,12 @@ function add_outage_results(m, p, d::Dict)
         r["soc_series_fraction"] = []
 	end
     
-    r["critical_loads_per_outage_series_kw"] = Matrix{Array{Float64}}(undef, S, T)
-    for s in p.s.electric_utility.scenarios
+    r["critical_loads_per_outage_series_kw"] = zeros(S, T, TS)
+    for ts in p.s.electric_utility.outage_time_steps
         for (t, tz) in enumerate(p.s.electric_utility.outage_start_time_steps)
-            r["critical_loads_per_outage_series_kw"][s,t] = [p.s.electric_load.critical_loads_kw[tz+ts-1] for ts in 1:p.s.electric_utility.outage_durations[s]]
+            for s in p.s.electric_utility.scenarios
+                r["critical_loads_per_outage_series_kw"][s,t,ts] = p.s.electric_load.critical_loads_kw[tz+ts-1]
+            end
         end
     end
 
