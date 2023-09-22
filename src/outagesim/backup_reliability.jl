@@ -749,43 +749,76 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
             @warn("Some battery starting states of charge are less than the provided minimum state of charge.")
         end
     end
-    diesel_kw = (
-            haskey(d, "Generator") && 
-            (
-                !microgrid_only ||
-                !haskey(d, "Outages") ||
-                get(d["Outages"], "generator_microgrid_size_kw", 0) > 0
-            )
-        ) ? 
-        get(
-            get(d, "Outages", Dict()), 
-            "generator_microgrid_size_kw", 
-            get(d["Generator"], "size_kw", 0.0)
-        ) : 
-        0.0
-    prime_kw = (
-            haskey(d, "CHP") && 
-            (
-                !microgrid_only ||
-                !haskey(d, "Outages") ||
-                get(d["Outages"], "chp_microgrid_size_kw", 0) > 0
-            )
-        ) ? 
-        get(
-            get(d, "Outages", Dict()), 
-            "chp_microgrid_size_kw", 
-            get(d["CHP"], "size_kw", 0.0)
-        ) : 
-        0.0
-    
-    #TODO: add parsing of chp/prime gen from reopt results
 
-    num_generators = get!(r2, :num_generators, [1]*length(get(r2, :generator_size_kw, [nothing])))
-    if length(get(r2, :generator_size_kw, [nothing])) != length(num_generators)
-        throw(@error("Input num_generators must be the same length as generator_size_kw or a scalar if generator_size_kw not provided."))
+    if haskey(r2, :generator_size_kw)
+        @warn("Input generator_size_kw provided. Generator and CHP from REopt optimization results/inputs will be ignored.")
+        num_gen_types = length(get!(r2, :num_generators, [1]*length(get(r2, :generator_size_kw, [nothing]))))
+        if length(get(r2, :generator_size_kw, [nothing])) != num_gen_types
+            throw(@error("Input num_generators must be the same length as generator_size_kw."))
+        end
+        get!(r2, :fuel_limit, [1e9 for _ in 1:num_gen_types])
+        get!(r2, :generator_fuel_intercept_per_hr, [0.0 for _ in 1:num_gen_types])
+        get!(r2, :generator_fuel_burn_rate_per_kwh, [0.076 for _ in 1:num_gen_types]) 
+    else
+        if haskey(d, "Generator") && haskey(d, "CHP")
+            # Can't determine which user inputs correspond to diesel vs prime. 
+            # This issue will go away when nested structure of ERP inputs that 
+            # we switched to in the API is extended to REopt.jl.
+            throw(@error("Simulating scenarios using backup_reliability(d::Dict, p::REoptInputs, r::Dict) when the REopt results Dict d includes Generator and CHP is not yet supported. Use backup_reliability(r::Dict) instead."))
+        end
+        diesel_kw = (
+                haskey(d, "Generator") && 
+                (
+                    !microgrid_only ||
+                    !haskey(d, "Outages") ||
+                    get(d["Outages"], "generator_microgrid_size_kw", 0) > 0
+                )
+            ) ? 
+            get(
+                get(d, "Outages", Dict()), 
+                "generator_microgrid_size_kw", 
+                get(d["Generator"], "size_kw", 0.0)
+            ) : 
+            0.0
+        prime_kw = (
+                haskey(d, "CHP") && 
+                (
+                    !microgrid_only ||
+                    !haskey(d, "Outages") ||
+                    get(d["Outages"], "chp_microgrid_size_kw", 0) > 0
+                )
+            ) ? 
+            get(
+                get(d, "Outages", Dict()), 
+                "chp_microgrid_size_kw", 
+                get(d["CHP"], "size_kw", 0.0)
+            ) : 
+            0.0
+        if length(get!(r2, :num_generators, [1])) != 1
+            throw(@error("Input num_generators must have a length of 1 to match the number of generator types in the scenario."))
+        end
+        r2[:generator_size_kw] = replace!([diesel_kw + prime_kw] ./ r2[:num_generators], Inf => 0) # at least one gen kw will be 0 because of error thrown above
+        if diesel_kw > 0
+            fuel_slope, fuel_intercept = generator_fuel_slope_and_intercept(
+                electric_efficiency_full_load=p.s.generator.electric_efficiency_full_load, 
+                electric_efficiency_half_load=p.s.generator.electric_efficiency_half_load,
+                fuel_higher_heating_value_kwh_per_gal=p.s.generator.fuel_higher_heating_value_kwh_per_gal
+	        )
+            r2[:generator_fuel_burn_rate_per_kwh] = [fuel_slope]
+            r2[:generator_fuel_intercept_per_hr] = [fuel_intercept]
+            r2[:fuel_limit] = [p.s.generator.fuel_avail_gal]
+        end
+        if prime_kw > 0
+            fuel_slope, fuel_intercept = generator_fuel_slope_and_intercept(
+                electric_efficiency_full_load=p.s.chp.electric_efficiency_full_load, 
+                electric_efficiency_half_load=p.s.chp.electric_efficiency_half_load,
+                fuel_higher_heating_value_kwh_per_gal=p.s.chp.fuel_higher_heating_value_kwh_per_gal
+	        )
+            r2[:generator_fuel_burn_rate_per_kwh] = [fuel_slope]
+            r2[:generator_fuel_intercept_per_hr] = [fuel_intercept]
+            r2[:fuel_limit] = [1e9]
+        end
     end
-    generator_size_kw = get!(r2, :generator_size_kw, replace!([diesel_kw] ./ num_generators, Inf => 0))
-
     return r2
 end
 
@@ -853,17 +886,11 @@ function backup_reliability_inputs(;r::Dict)::Dict
     invalid_args = String[]
     r2 = dictkeys_tosymbols(r)
 
-    if haskey(r2, :num_generators)
-        num_gen_types = length(r2[:num_generators])
-        if !haskey(r2, :fuel_limit)
-            r2[:fuel_limit] = [1e9 for _ in 1:num_gen_types]
-        end 
-        if !haskey(r2, :generator_fuel_intercept_per_hr)
-            r2[:generator_fuel_intercept_per_hr] = [0.0 for _ in 1:num_gen_types]
-        end
-        if !haskey(r2, :generator_fuel_burn_rate_per_kwh)
-            r2[:generator_fuel_burn_rate_per_kwh] = [0.076 for _ in 1:num_gen_types]
-        end
+    if haskey(r2, :generator_size_kw)
+        num_gen_types = length(r2[:generator_size_kw])
+        get!(r2, :fuel_limit, [1e9 for _ in 1:num_gen_types])
+        get!(r2, :generator_fuel_intercept_per_hr, [0.0 for _ in 1:num_gen_types])
+        get!(r2, :generator_fuel_burn_rate_per_kwh, [0.076 for _ in 1:num_gen_types]) 
     end
 
     microgrid_only = get(r2, :microgrid_only, false)
