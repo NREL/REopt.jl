@@ -12,11 +12,11 @@
 - `pv_to_storage_series_kw` Array of PV power sent to the battery in every outage modeled.
 - `pv_curtailed_series_kw` Array of PV curtailed in every outage modeled.
 - `pv_to_load_series_kw` Array of PV power used to meet load in every outage modeled.
-- `wind_microgrid_size_kw` Optimal microgrid PV capacity. Note that the name `PV` can change based on user provided `PV.name`.
-- `wind_microgrid_upgrade_cost` The cost to include the PV system in the microgrid.
-- `wind_to_storage_series_kw` Array of PV power sent to the battery in every outage modeled.
-- `wind_curtailed_series_kw` Array of PV curtailed in every outage modeled.
-- `wind_to_load_series_kw` Array of PV power used to meet load in every outage modeled.
+- `wind_microgrid_size_kw` Optimal microgrid Wind capacity.
+- `wind_microgrid_upgrade_cost` The cost to include the Wind system in the microgrid.
+- `wind_to_storage_series_kw` Array of Wind power sent to the battery in every outage modeled.
+- `wind_curtailed_series_kw` Array of Wind curtailed in every outage modeled.
+- `wind_to_load_series_kw` Array of Wind power used to meet load in every outage modeled.
 - `generator_microgrid_size_kw` Optimal microgrid Generator capacity. Note that the name `Generator` can change based on user provided `Generator.name`.
 - `generator_microgrid_upgrade_cost` The cost to include the Generator system in the microgrid.
 - `generator_to_storage_series_kw` Array of Generator power sent to the battery in every outage modeled.
