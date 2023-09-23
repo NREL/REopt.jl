@@ -474,22 +474,20 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         
         for i in 1:number_of_ghpghx
             ghpghx_inputs = d["GHP"]["ghpghx_inputs"][i]
-            determine_heat_cool_json = d["GHP"]["ghpghx_inputs"][i]
             d["GHP"]["ghpghx_inputs"][i]["ambient_temperature_f"] = ambient_temp_degF
             # Only SpaceHeating portion of Heating Load gets served by GHP, unless allowed by can_serve_dhw
             if get(ghpghx_inputs, "heating_thermal_load_mmbtu_per_hr", []) in [nothing, []]
                 if haskey(d["GHP"], "can_serve_dhw") && d["GHP"]["can_serve_dhw"]
                     ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = (space_heating_load.loads_kw + dhw_load.loads_kw - space_heating_thermal_load_reduction_with_ghp_kw)  / KWH_PER_MMBTU
-                    determine_heat_cool_json["heating_thermal_load_mmbtu_per_hr"] = (space_heating_load.loads_kw + dhw_load.loads_kw - space_heating_thermal_load_reduction_with_ghp_kw)  / KWH_PER_MMBTU
+                    # determine_heat_cool_json["heating_thermal_load_mmbtu_per_hr"] = (space_heating_load.loads_kw + dhw_load.loads_kw - space_heating_thermal_load_reduction_with_ghp_kw)  / KWH_PER_MMBTU
                 else
                     ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = (space_heating_load.loads_kw - space_heating_thermal_load_reduction_with_ghp_kw) / KWH_PER_MMBTU
-                    determine_heat_cool_json["heating_thermal_load_mmbtu_per_hr"] = (space_heating_load.loads_kw - space_heating_thermal_load_reduction_with_ghp_kw) / KWH_PER_MMBTU
-                    
+                    # determine_heat_cool_json["heating_thermal_load_mmbtu_per_hr"] = (space_heating_load.loads_kw - space_heating_thermal_load_reduction_with_ghp_kw) / KWH_PER_MMBTU
                 end
             end
             if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
                 ghpghx_inputs["cooling_thermal_load_ton"] = (cooling_load.loads_kw_thermal - cooling_thermal_load_reduction_with_ghp_kw)  / KWH_THERMAL_PER_TONHOUR
-                determine_heat_cool_json["cooling_thermal_load_ton"] = (cooling_load.loads_kw_thermal - cooling_thermal_load_reduction_with_ghp_kw)  / KWH_THERMAL_PER_TONHOUR
+                # determine_heat_cool_json["cooling_thermal_load_ton"] = (cooling_load.loads_kw_thermal - cooling_thermal_load_reduction_with_ghp_kw)  / KWH_THERMAL_PER_TONHOUR
             end
 
             # Update ground thermal conductivity based on climate zone if not user-input
@@ -497,12 +495,14 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 k_by_zone = deepcopy(GhpGhx.ground_k_by_climate_zone)
                 nearest_city, climate_zone = find_ashrae_zone_city(d["Site"]["latitude"], d["Site"]["longitude"]; get_zone=true)
                 ghpghx_inputs["ground_thermal_conductivity_btu_per_hr_ft_f"] = k_by_zone[climate_zone]
-                determine_heat_cool_json["ground_thermal_conductivity_btu_per_hr_ft_f"] = k_by_zone[climate_zone]
+                # determine_heat_cool_json["ground_thermal_conductivity_btu_per_hr_ft_f"] = k_by_zone[climate_zone]
             end
 
             aux_heater_type = get(d["GHP"], "aux_heater_type", nothing)
             
             ## Deal with hybrid
+            determine_heat_cool_json = nothing
+            determine_heat_cool_json = copy(ghpghx_inputs)
             hybrid_ghx_sizing_method = get(determine_heat_cool_json, "hybrid_ghx_sizing_method", nothing)
 
             is_ghx_hybrid = false
@@ -511,12 +511,13 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             is_heating_electric = nothing
 
             if hybrid_ghx_sizing_method == "Automatic"
-                determine_heat_cool_json["simulation_years"] = 2
-                determine_heat_cool_json["max_sizing_iterations"] = 1
 
                 # Call GhpGhx.jl to size GHP and GHX
                 determine_heat_cool_results_resp_dict = Dict()
                 try
+                    determine_heat_cool_json["simulation_years"] = 2
+                    determine_heat_cool_json["max_sizing_iterations"] = 1
+
                     # Call GhpGhx.jl to size GHP and GHX
                     @info "Starting GhpGhx.jl for automatic hybrid GHX sizing"
                     # Call GhpGhx.jl to size GHP and GHX
