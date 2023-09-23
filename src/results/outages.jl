@@ -72,9 +72,10 @@ function add_outage_results(m, p, d::Dict)
 		# instead of all ts b/c dvUnservedLoad has unused values in third dimension
 	end
 	r["unserved_load_per_outage_kwh"] = round.(unserved_load_per_outage, digits=2)
+	r["electric_storage_microgrid_upgraded"] = Bool(round(value(m[:binMGStorageUsed]), digits=0))
 	r["storage_microgrid_upgrade_cost"] = value(m[:dvMGStorageUpgradeCost])
 	r["microgrid_upgrade_capital_cost"] = r["storage_microgrid_upgrade_cost"]
-	if !isempty(p.s.storage.types.elec) && Bool(round(value(m[:binMGStorageUsed]), digits=0))
+	if !isempty(p.s.storage.types.elec) && r["electric_storage_microgrid_upgraded"]
 		r["storage_discharge_series_kw"] = value.(m[:dvMGDischargeFromStorage]).data
         electric_storage_energy_capacity_kwh = round(sum(value(m[Symbol("dvStorageEnergy")][b]) for b in p.s.storage.types.elec), digits=2)
         r["soc_series_fraction"] = round.(value.(m[:dvMGStoredEnergy][:,:,1:end]).data ./ electric_storage_energy_capacity_kwh, digits=3)
