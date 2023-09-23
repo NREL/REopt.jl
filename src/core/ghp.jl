@@ -92,6 +92,8 @@ Base.@kwdef mutable struct GHP <: AbstractGHP
     installed_cost_heatpump_per_ton::Float64 = 1075.0
     heatpump_capacity_sizing_factor_on_peak_load::Float64 = 1.1
     installed_cost_ghx_per_ft::Float64 = 14.0
+    ghx_useful_life_years::Int = 50
+    ghx_only_capital_cost::Union{Float64, Nothing} = nothing # overwritten afterwards
     installed_cost_building_hydronic_loop_per_sqft = 1.70
     om_cost_per_sqft_year::Float64 = -0.51
     building_sqft::Float64 # Required input
@@ -136,6 +138,9 @@ Base.@kwdef mutable struct GHP <: AbstractGHP
 
     # Process and populate these parameters needed more directly by the model
     om_cost_year_one::Float64 = NaN
+
+    # Account for expenses avoided by addition of GHP.
+    avoided_capex_by_ghp_present_value::Float64 = 0.0
 end
 
 
@@ -193,8 +198,13 @@ function setup_installed_cost_curve!(ghp::GHP, response::Dict)
 
     # Use initial cost curve to leverage existing incentives-based cost curve method in data_manager
     # The GHX and hydronic loop cost are the y-intercepts ([$]) of the cost for each design
-    ghx_cost = total_ghx_ft * ghp.installed_cost_ghx_per_ft
     hydronic_loop_cost = ghp.building_sqft * ghp.installed_cost_building_hydronic_loop_per_sqft
+
+    if isnothing(ghp.ghx_only_capital_cost)
+        ghp.ghx_only_capital_cost = total_ghx_ft * ghp.installed_cost_ghx_per_ft
+    else
+        @info "Using user provided GHX costs, please validate that this is intentional"
+    end
 
     aux_heater_cost = 0.0
     aux_cooler_cost = 0.0

@@ -272,7 +272,9 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	m[:TotalCHPStandbyCharges] = 0
 	m[:OffgridOtherCapexAfterDepr] = 0.0
     m[:GHPCapCosts] = 0.0
-    m[:GHPOMCosts] = 0.0   
+    m[:GHPOMCosts] = 0.0
+	m[:AvoidedCapexByGHP] = 0.0
+	m[:ResidualGHXCapCost] = 0.0
 
 	if !isempty(p.techs.all)
 		add_tech_size_constraints(m, p)
@@ -474,7 +476,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_rate_fraction) +
 
 		# Additional capital costs, depreciable (only applies when `off_grid_flag` is true)
-		m[:OffgridOtherCapexAfterDepr]
+		m[:OffgridOtherCapexAfterDepr] -
+
+		# Subtract capital expenditures avoided by inclusion of GHP and residual present value of GHX.
+		m[:AvoidedCapexByGHP] - m[:ResidualGHXCapCost]
 
 	);
 	if !isempty(p.s.electric_utility.outage_durations)
