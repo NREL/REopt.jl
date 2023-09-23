@@ -23,7 +23,7 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 
     r = Dict{String, Any}()
     t = "Wind"
-	r["production_factor_series"] = p.production_factor[t, :]
+	r["production_factor_series"] = Vector(p.production_factor[t, :])
 	per_unit_size_om = @expression(m, p.third_party_factor * p.pwf_om * m[:dvSize][t] * p.om_cost_per_kw[t])
 
 	r["size_kw"] = round(value(m[:dvSize][t]), digits=2)
