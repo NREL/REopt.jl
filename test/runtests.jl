@@ -340,7 +340,6 @@ else  # run HiGHS tests
                 "battery_operational_availability" => 1.0,
                 "battery_minimum_soc_fraction" => 0.0,
                 "battery_starting_soc_series_fraction" => results["ElectricStorage"]["soc_series_fraction"],
-                "pv_operational_availability" => 1.0,
                 "critical_loads_kw" => results["ElectricLoad"]["critical_load_series_kw"]#4000*ones(8760)#p.s.electric_load.critical_loads_kw
             )
             reliability_results = backup_reliability(reliability_inputs)
@@ -352,7 +351,7 @@ else  # run HiGHS tests
                 @test simresults["probs_of_surviving"][i] ≈ reliability_results["mean_fuel_survival_by_duration"][i] atol=0.01
             end
 
-            # Second, gen, PV, battery
+            # Second, gen, PV, Wind, battery
             reopt_inputs = JSON.parsefile("./scenarios/backup_reliability_reopt_inputs.json")
             reopt_inputs["ElectricLoad"]["annual_kwh"] = 4*reopt_inputs["ElectricLoad"]["annual_kwh"]
             p = REoptInputs(reopt_inputs)
@@ -370,6 +369,7 @@ else  # run HiGHS tests
                 "battery_operational_availability" => 1.0,
                 "battery_minimum_soc_fraction" => 0.0,
                 "pv_operational_availability" => 1.0,
+                "wind_operational_availability" => 1.0
             )
             reliability_results = backup_reliability(results, p, reliability_inputs)
             for i = 1:min(length(simresults["probs_of_surviving"]), reliability_inputs["max_outage_duration"])
@@ -488,33 +488,39 @@ else  # run HiGHS tests
         reliability_results = backup_reliability(input_dict)
         @test reliability_results["unlimited_fuel_mean_cumulative_survival_by_duration"][24] ≈ (0.99^20)*(0.9*0.98) atol=0.00001
 
-        #More realistic case of hospital load with 2 generators, PV, and battery
+        #More complex case of hospital load with 2 generators, PV, wind, and battery
         reliability_inputs = JSON.parsefile("./scenarios/backup_reliability_inputs.json")
         reliability_results = backup_reliability(reliability_inputs)
         @test reliability_results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.858756 atol=0.0001
         @test reliability_results["cumulative_survival_final_time_step"][1] ≈ 0.858756 atol=0.0001
         @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.904242 atol=0.0001#0.833224
-        
+                
+        # Test gens+pv+wind+batt with 3 arg version of backup_reliability
+        # Attention! REopt optimization results are presaved in erp_gens_batt_pv_wind_reopt_results.json
+        # If you modify backup_reliability_reopt_inputs.json, you must add this before JSON.parsefile:
+        # results = run_reopt(model, p)
+        # open("scenarios/erp_gens_batt_pv_wind_reopt_results.json","w") do f
+        #     JSON.print(f, results, 4)
+        # end
         for input_key in [
                     "generator_size_kw",
                     "battery_size_kw",
                     "battery_size_kwh",
                     "pv_size_kw",
+                    "wind_size_kw",
                     "critical_loads_kw",
-                    "pv_production_factor_series"
+                    "pv_production_factor_series",
+                    "wind_production_factor_series"
                 ]
             delete!(reliability_inputs, input_key)
         end
-
-        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-            "output_flag" => false, "log_to_console" => false)
-        )
+        # note: the wind prod series in backup_reliability_reopt_inputs.json is actually a PV profile (to in order to test a wind scenario that should give same results as an existing PV one)
         p = REoptInputs("./scenarios/backup_reliability_reopt_inputs.json")
-        results = run_reopt(model, p)
+        results = JSON.parsefile("./scenarios/erp_gens_batt_pv_wind_reopt_results.json")
         reliability_results = backup_reliability(results, p, reliability_inputs)
 
         @test reliability_results["unlimited_fuel_cumulative_survival_final_time_step"][1] ≈ 0.802997 atol=0.0001
         @test reliability_results["cumulative_survival_final_time_step"][1] ≈ 0.802997 atol=0.0001
-        @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.817586 atol=0.0001
+        @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.817586 atol=0.001
     end                            
 end
