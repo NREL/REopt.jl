@@ -223,7 +223,7 @@ function setup_installed_cost_curve!(ghp::GHP, response::Dict)
     #   the initial slope is based on the heat pump size (e.g. $/ton) of the cost curve for
     #   building a rebate-based cost curve if there are less-than big_number maximum incentives
     ghp.tech_sizes_for_cost_curve = [0.0, big_number]
-    ghp.installed_cost_per_kw = [ghx_cost + hydronic_loop_cost + aux_cooler_cost + aux_heater_cost, 
+    ghp.installed_cost_per_kw = [ghp.ghx_only_capital_cost + hydronic_loop_cost + aux_cooler_cost + aux_heater_cost, 
                                 ghp.installed_cost_heatpump_per_ton]
 
     # Using a separate call to _get_REopt_cost_curve in data_manager for "ghp" (not included in "available_techs")

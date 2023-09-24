@@ -143,6 +143,9 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     ghp_electric_consumption_kw::Array{Float64,2}  # Array of electric load profiles consumed by GHP
     ghp_installed_cost::Array{Float64,1}  # Array of installed cost for GHP options
     ghp_om_cost_year_one::Array{Float64,1}  # Array of O&M cost for GHP options
+    avoided_capex_by_ghp_present_value::Array{Float64,1} # HVAC upgrade costs avoided
+    ghx_useful_life_years::Array{Float64,1} # GHX useful life years
+    ghx_residual_value::Array{Float64,1} # Residual value of each GHX options
     tech_renewable_energy_fraction::Dict{String, <:Real} # (techs)
     tech_emissions_factors_CO2::Dict{String, <:Real} # (techs)
     tech_emissions_factors_NOx::Dict{String, <:Real} # (techs)
@@ -1035,7 +1038,7 @@ function setup_ghp_inputs(s::AbstractScenario, time_steps, time_steps_without_gr
             (
                 (option.ghx_useful_life_years - s.financial.analysis_years)/option.ghx_useful_life_years
             )/(
-                (1+s.offtaker_discount_rate_fraction)^s.financial.analysis_years
+                (1+s.financial.offtaker_discount_rate_fraction)^s.financial.analysis_years
             )
 
             heating_thermal_load = s.space_heating_load.loads_kw + s.dhw_load.loads_kw
