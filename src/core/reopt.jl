@@ -230,9 +230,26 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             end
         end
 	end
-
-	for b in p.s.storage.types.all
+	
+	@info "DEBUGGING COMMENTS STARTING HERE"
+	@info "****** p.s.Storage is:" p.s.storage
+	@info "****** p.s.storage.types is:" p.s.storage.types
+	# Key issue (I think): p.s.storage.types.all doesn't contain "ElectricStorage"
+		# For the constraints to be applied below for Electric Storage, I believe p.s.storage.types.all should contain "ElectricStorage"
+	@info "****** p.s.storage.types.all is:" p.s.storage.types.all
+	@info "****** p.s.storage.types.elec is:" p.s.storage.types.elec
+	@info "****** p.s.storage.attr[ElectricStorage(with quotes)] is: " p.s.storage.attr["ElectricStorage"]
+	
+	for b in p.s.storage.types.all 
+	# Possible fix: 
+	#for b in keys(p.s.storage.attr)
+		# print every element in p.s.storage.types.all
+		@info "********the b in the for loop is:" b
+		
 		if p.s.storage.attr[b].max_kw == 0 || p.s.storage.attr[b].max_kwh == 0
+			# note:
+				# this command prints out the ElectricStorage parameters:  p.s.storage.attr["ElectricStorage"]
+			@info "Debugging comment: The storage kW or kWh has a maximum size of 0"
 			@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
 			@constraint(m, m[:dvStorageEnergy][b] == 0)
 			@constraint(m, [ts in p.time_steps], m[:dvDischargeFromStorage][b, ts] == 0)
@@ -242,10 +259,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 				@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
 						m[:dvProductionToStorage][b, t, ts] == 0)
 			end
-		else
+		else 
+			@info "Debugging comment: The storage kw and kWh have a maximum greater than 0"
 			add_storage_size_constraints(m, p, b)
 			add_general_storage_dispatch_constraints(m, p, b)
+			# The p.s.storage.types.elec also doesn't contain ElectricStorage
 			if b in p.s.storage.types.elec
+			# Partial fix:
+			#if b == "ElectricStorage"
 				add_elec_storage_dispatch_constraints(m, p, b)
 			elseif b in p.s.storage.types.hot
 				add_hot_thermal_storage_dispatch_constraints(m, p, b)
