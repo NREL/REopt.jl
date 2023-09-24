@@ -50,10 +50,13 @@ function add_ghp_constraints(m, p; _n="")
     end
 
     m[:AvoidedCapexByGHP] = @expression(m,
-        sum(p.avoided_capex_by_ghp_present_value[g]*m[Symbol("binGHP"*_n)][g])
-        for g in p.ghp_options)
+        sum(p.avoided_capex_by_ghp_present_value[g] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
+    )
+    @info "check1"
 
     m[:ResidualGHXCapCost] = @expression(m,
-        sum(p.ghx_residual_value[g]*m[Symbol("binGHP"*_n)][g])
-        for g in p.ghp_options)
+        sum(p.ghx_residual_value[g] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
+    )
+    
+    @info "check2"
 end
