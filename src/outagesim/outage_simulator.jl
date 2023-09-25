@@ -284,7 +284,7 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
         batt_kw = get(d["ElectricStorage"], "size_kw", 0)
         init_soc = get(d["ElectricStorage"], "soc_series_fraction", zeros(length(p.time_steps)))
     end
-    if microgrid_only && !Bool(get(d["Outages"], "storage_upgraded", false))
+    if microgrid_only && !Bool(get(d["Outages"], "electric_storage_microgrid_upgraded", false))
         batt_kwh = 0
         batt_kw = 0
         init_soc = zeros(length(p.time_steps))
