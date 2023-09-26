@@ -536,7 +536,7 @@ function cambium_emissions_profile(; scenario::String,
             "discount_rate" => "0.0", # Zero = simple average (a pwf with discount rate gets applied to projected CO2 costs, but not masses.)
             "time_type" => "hourly", # hourly or annual
             "metric_col" => metric_col, # lrmer_co2e
-            "smoothing_method" => "rolling", # rolling or none (only applicable to hourly queries) # TODO: decide if rolling or none is best
+            "smoothing_method" => "rolling", # rolling or none (only applicable to hourly queries). "rolling" best with TMY data; "none" best if 2012 weather data used.
             "gwp" => "100yrAR6", # Global warming potential values. Default: "100yrAR6". Options: "100yrAR5", "20yrAR5", "100yrAR6", "20yrAR6" or a custom tuple [1,10.0,100] with GWP values for [CO2, CH4, N2O]
             "grid_level" => grid_level, # enduse or busbar 
             "ems_mass_units" => "lb" # lb or kg
@@ -545,26 +545,14 @@ function cambium_emissions_profile(; scenario::String,
     try
         print("\n\n***CALLING CAMBIUM API***\n\n")
 
-        ### Temporarily avoiding API call for UI testing ## 
-        # r = HTTP.post(url, [], HTTP.Form(payload))
-        # response = JSON.parse(String(r.body))
-        # # print("\n", response["status"], "\n")
-        # output = response["message"]
-        
-        # co2_emissions = output["values"] ./ 1000 # [lb / MWh] --> [lb / kWh]
+        r = HTTP.get(url; query=payload) 
+        response = JSON.parse(String(r.body))
+        # print("\n", response["status"], "\n")
+        output = response["message"]
+        co2_emissions = output["values"] ./ 1000 # [lb / MWh] --> [lb / kWh]
         
         # print("\n\nco2_emissions[1:10]: ", co2_emissions[1:10])
         
-        ## TEMPORARY FAKE EMISSIONS 
-        lds_day1 = [1.0 for i in range(1,24)]
-        lds_day2 = [2.0 for i in range(1,24)]
-        lds_day3 = [3.0 for i in range(1,24)]
-        lds_rest = [0.0 for i in range(1,8760-24*5)]
-        lds_end = [0.05 for i in range(1,48)]
-        co2_emissions = append!(lds_day1,lds_day2,lds_day3,lds_rest,lds_end)
-        #print("\n\nco2_emissions[1:10]: ", co2_emissions[1:10])
-        
-
         # Align day of week of emissions and load profiles (Cambium data starts on Sundays so assuming emissions_year=2017)
         co2_emissions = align_emission_with_load_year(load_year=load_year,emissions_year=emissions_year,emissions_profile=co2_emissions) 
         
@@ -575,8 +563,8 @@ function cambium_emissions_profile(; scenario::String,
         response_dict = Dict{String, Any}(
             "description" => "Hourly CO2 (or CO2e) grid emissions factors for applicable Cambium location and location_type, adjusted to align with load year $(load_year).",
             "units" => "Pounds emissions per kWh",
-            "location" => "Test Location", # TEMPORARILY REMOVED output["location"],
-            "metric_col" => "Test Metric Col", # TEMPORARILY REMOVEDoutput["metric_col"], 
+            "location" => output["location"],
+            "metric_col" => output["metric_col"], 
             "emissions_factor_series_lb_CO2_per_kwh" => co2_emissions 
         )
         return response_dict
