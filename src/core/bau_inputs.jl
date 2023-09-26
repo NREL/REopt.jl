@@ -102,7 +102,8 @@ function BAUInputs(p::REoptInputs)
     ghp_options, require_ghp_purchase, ghp_heating_thermal_load_served_kw, 
         ghp_cooling_thermal_load_served_kw, space_heating_thermal_load_reduction_with_ghp_kw, 
         cooling_thermal_load_reduction_with_ghp_kw, ghp_electric_consumption_kw, 
-        ghp_installed_cost, ghp_om_cost_year_one = setup_ghp_inputs(bau_scenario, p.time_steps, p.time_steps_without_grid)    
+        ghp_installed_cost, ghp_om_cost_year_one, avoided_capex_by_ghp_present_value,
+        ghx_useful_life_years, ghx_residual_value = setup_ghp_inputs(bau_scenario, p.time_steps, p.time_steps_without_grid)    
 
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
     for t in techs.elec
@@ -175,7 +176,10 @@ function BAUInputs(p::REoptInputs)
         cooling_thermal_load_reduction_with_ghp_kw,
         ghp_electric_consumption_kw,
         ghp_installed_cost,
-        ghp_om_cost_year_one,        
+        ghp_om_cost_year_one,
+        avoided_capex_by_ghp_present_value,
+        ghx_useful_life_years,
+        ghx_residual_value,
         tech_renewable_energy_fraction, 
         tech_emissions_factors_CO2, 
         tech_emissions_factors_NOx, 

@@ -39,10 +39,12 @@ function add_ghp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
         @expression(m, CoolingThermalReductionWithGHP[ts in p.time_steps],
 		    sum(p.cooling_thermal_load_reduction_with_ghp_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options))
         r["cooling_thermal_load_reduction_with_ghp_ton"] = round.(value.(CoolingThermalReductionWithGHP) ./ KWH_THERMAL_PER_TONHOUR, digits=3)
+        r["ghx_residual_value_present_value"] = value(m[:ResidualGHXCapCost])
     else
         r["ghpghx_chosen_outputs"] = Dict()
         r["space_heating_thermal_load_reduction_with_ghp_mmbtu_per_hour"] = zeros(length(p.time_steps))
         r["cooling_thermal_load_reduction_with_ghp_ton"] = zeros(length(p.time_steps))
+        r["ghx_residual_value_present_value"] = 0.0
     end
     d["GHP"] = r
     nothing

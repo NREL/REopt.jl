@@ -115,6 +115,9 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     ghp_electric_consumption_kw::Array{Float64,2}  # Array of electric load profiles consumed by GHP
     ghp_installed_cost::Array{Float64,1}  # Array of installed cost for GHP options
     ghp_om_cost_year_one::Array{Float64,1}  # Array of O&M cost for GHP options
+    avoided_capex_by_ghp_present_value::Array{Float64,1} # HVAC upgrade costs avoided
+    ghx_useful_life_years::Array{Float64,1} # GHX useful life years
+    ghx_residual_value::Array{Float64,1} # Residual value of each GHX options
     tech_renewable_energy_fraction::Dict{String, <:Real} # (techs)
     tech_emissions_factors_CO2::Dict{String, <:Real} # (techs)
     tech_emissions_factors_NOx::Dict{String, <:Real} # (techs)
@@ -175,7 +178,8 @@ function REoptInputs(s::AbstractScenario)
     ghp_options, require_ghp_purchase, ghp_heating_thermal_load_served_kw, 
         ghp_cooling_thermal_load_served_kw, space_heating_thermal_load_reduction_with_ghp_kw, 
         cooling_thermal_load_reduction_with_ghp_kw, ghp_electric_consumption_kw, 
-        ghp_installed_cost, ghp_om_cost_year_one = setup_ghp_inputs(s, time_steps, time_steps_without_grid)
+        ghp_installed_cost, ghp_om_cost_year_one, avoided_capex_by_ghp_present_value,
+        ghx_useful_life_years, ghx_residual_value = setup_ghp_inputs(s, time_steps, time_steps_without_grid)
 
     if any(pv.existing_kw > 0 for pv in s.pvs)
         adjust_load_profile(s, production_factor)
@@ -232,6 +236,9 @@ function REoptInputs(s::AbstractScenario)
         ghp_electric_consumption_kw,
         ghp_installed_cost,
         ghp_om_cost_year_one,
+        avoided_capex_by_ghp_present_value,
+        ghx_useful_life_years,
+        ghx_residual_value,
         tech_renewable_energy_fraction, 
         tech_emissions_factors_CO2, 
         tech_emissions_factors_NOx, 
@@ -974,6 +981,9 @@ function setup_ghp_inputs(s::AbstractScenario, time_steps, time_steps_without_gr
     cooling_thermal_load_reduction_with_ghp_kw = zeros(num, length(time_steps))
     ghp_cooling_thermal_load_served_kw = zeros(num, length(time_steps))        
     ghp_electric_consumption_kw = zeros(num, length(time_steps))
+    avoided_capex_by_ghp_present_value = Vector{Float64}(undef, num)
+    ghx_useful_life_years = Vector{Float64}(undef, num)
+    ghx_residual_value = Vector{Float64}(undef, num)
     if num > 0
         require_ghp_purchase = s.ghp_option_list[1].require_ghp_purchase  # This does not change with the number of options
        
@@ -997,6 +1007,15 @@ function setup_ghp_inputs(s::AbstractScenario, time_steps, time_steps_without_gr
             end
 
             ghp_om_cost_year_one[i] = option.om_cost_year_one
+            avoided_capex_by_ghp_present_value[i] = option.avoided_capex_by_ghp_present_value
+            ghx_useful_life_years[i] = option.ghx_useful_life_years
+            ghx_residual_value[i] = option.ghx_only_capital_cost*
+            (
+                (option.ghx_useful_life_years - s.financial.analysis_years)/option.ghx_useful_life_years
+            )/(
+                (1+s.financial.offtaker_discount_rate_fraction)^s.financial.analysis_years
+            )
+
             heating_thermal_load = s.space_heating_load.loads_kw + s.dhw_load.loads_kw
             # Using minimum of thermal load and ghp-serving load to avoid small negative net loads
             for j in time_steps
@@ -1024,7 +1043,8 @@ function setup_ghp_inputs(s::AbstractScenario, time_steps, time_steps_without_gr
     return ghp_options, require_ghp_purchase, ghp_heating_thermal_load_served_kw, 
     ghp_cooling_thermal_load_served_kw, space_heating_thermal_load_reduction_with_ghp_kw, 
     cooling_thermal_load_reduction_with_ghp_kw, ghp_electric_consumption_kw, 
-    ghp_installed_cost, ghp_om_cost_year_one
+    ghp_installed_cost, ghp_om_cost_year_one, avoided_capex_by_ghp_present_value,
+    ghx_useful_life_years, ghx_residual_value
 end
 
 function setup_operating_reserve_fraction(s::AbstractScenario, techs_operating_reserve_req_fraction)
