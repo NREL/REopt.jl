@@ -13,6 +13,8 @@ struct with outer constructor:
 ```julia
     require_ghp_purchase::Union{Bool, Int64} = false  # 0 = false, 1 = true
     installed_cost_heatpump_per_ton::Float64 = 1075.0
+    installed_cost_wwhp_heating_pump_per_ton::Float64 = 700.0
+    installed_cost_wwhp_cooling_pump_per_ton::Float64 = 700.0
     heatpump_capacity_sizing_factor_on_peak_load::Float64 = 1.1
     installed_cost_ghx_per_ft::Float64 = 14.0
     installed_cost_building_hydronic_loop_per_sqft = 1.70
