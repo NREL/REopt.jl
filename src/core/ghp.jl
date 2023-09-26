@@ -213,12 +213,12 @@ function setup_installed_cost_curve!(ghp::GHP, response::Dict)
     ghp.tech_sizes_for_cost_curve = [0.0, big_number]
 
     if ghp.heat_pump_configuration == "WSHP"
-        ghp.installed_cost_per_kw = [ghx_cost + hydronic_loop_cost + aux_cooler_cost + aux_heater_cost, 
+        ghp.installed_cost_per_kw = [ghp.ghx_only_capital_cost + hydronic_loop_cost + aux_cooler_cost + aux_heater_cost, 
                                             ghp.installed_cost_heatpump_per_ton]
     elseif ghp.heat_pump_configuration == "WWHP"
-        ghp.wwhp_heating_pump_installed_cost_curve = [ghx_cost + aux_cooler_cost + aux_heater_cost, 
+        ghp.wwhp_heating_pump_installed_cost_curve = [ghp.ghx_only_capital_cost + aux_cooler_cost + aux_heater_cost, 
                                                             ghp.installed_cost_wwhp_heating_pump_per_ton]
-        ghp.wwhp_cooling_pump_installed_cost_curve = [ghx_cost + aux_cooler_cost + aux_heater_cost,  
+        ghp.wwhp_cooling_pump_installed_cost_curve = [ghp.ghx_only_capital_cost + aux_cooler_cost + aux_heater_cost,  
                                                             ghp.installed_cost_wwhp_cooling_pump_per_ton]
     end
 
