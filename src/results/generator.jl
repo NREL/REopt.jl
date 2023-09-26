@@ -13,6 +13,7 @@
 - `electric_to_grid_series_kw` Vector of power sent to grid in an average year
 - `electric_to_load_series_kw` Vector of power sent to load in an average year
 - `annual_energy_produced_kwh` Average annual energy produced over analysis period
+- `operating_reserve_provided_series_kw` For offgrid analyses: operating reserve provided by generator in each time step
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
 	REopt performs load balances using average annual production values for technologies that include degradation. 
@@ -68,6 +69,12 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 			for t in p.techs.gen, ts in p.time_steps)
 	)
 	r["annual_energy_produced_kwh"] = round(value(AverageGenProd), digits=0)
+
+	if p.s.settings.off_grid_flag
+		GeneratorOR = @expression(m, [ts in p.time_steps],
+			sum(m[:dvOpResFromTechs][t,ts] for t in p.techs.gen))
+		r["operating_reserve_provided_series_kw"] = round.(value.(GeneratorOR), digits=3)
+    end
     
 	d["Generator"] = r
     nothing
@@ -117,7 +124,7 @@ function add_generator_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n=
 			for t in p.techs.gen, ts in p.time_steps)
 	)
 	r["energy_produced_kwh"] = round(value(Year1GenProd), digits=0)
-    
+
 	d["Generator"] = r
     nothing
 end

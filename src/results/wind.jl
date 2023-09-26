@@ -12,6 +12,7 @@
 - `lcoe_per_kwh` Levelized Cost of Energy produced by the PV system
 - `electric_curtailed_series_kw` Vector of power curtailed over an average year
 - `production_factor_series` Wind production factor in each time step, either provided by user or obtained from SAM
+- `operating_reserve_provided_series_kw` For offgrid analyses: operating reserve provided by wind in each time step
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
 	REopt performs load balances using average annual production values for technologies that include degradation. 
@@ -66,6 +67,11 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["annual_energy_produced_kwh"] = round(value(AvgWindProd), digits=0)
 
     r["lcoe_per_kwh"] = calculate_lcoe(p, r, p.s.wind)
+
+	if p.s.settings.off_grid_flag
+		r["operating_reserve_provided_series_kw"] = value.(m[Symbol("dvOpResFromTechs"*_n)][t,ts] for ts in p.time_steps)
+	end
+
 	d[t] = r
     nothing
 end

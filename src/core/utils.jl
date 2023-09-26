@@ -363,6 +363,7 @@ end
 This calls the PVWatts API and returns both:
  - PV production factor
  - Ambient outdoor air dry bulb temperature profile [Celcius] 
+ - pv_station_distance_km
 """
 function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimuth=180, module_type=0, array_type=1, 
     losses=14, dc_ac_ratio=1.2, gcr=0.4, inv_eff=96, timeframe="hourly", radius=0, time_steps_per_hour=1)
@@ -394,6 +395,7 @@ function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimut
         # Get both possible data of interest
         watts = collect(get(response["outputs"], "ac", []) / 1000)  # scale to 1 kW system (* 1 kW / 1000 W)
         tamb_celcius = collect(get(response["outputs"], "tamb", []))  # Celcius
+        pv_station_distance_km = response["station_info"]["distance"] / 1000 # Distance between the input location and the climate station. (meters)
         # Validate outputs
         if length(watts) != 8760
             throw(@error("PVWatts did not return a valid prodfactor. Got $watts"))
@@ -407,7 +409,7 @@ function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimut
             watts = repeat(watts, inner=time_steps_per_hour)
             tamb_celcius = repeat(tamb_celcius, inner=time_steps_per_hour)
         end
-        return watts, tamb_celcius
+        return watts, tamb_celcius, pv_station_distance_km
     catch e
         throw(@error("Error occurred when calling PVWatts: $e"))
     end

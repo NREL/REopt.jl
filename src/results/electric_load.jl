@@ -6,8 +6,8 @@
 - `annual_calculated_kwh` sum of the `load_series_kw`
 - `offgrid_load_met_series_kw` vector of electric load met by generation techs, for off-grid scenarios only
 - `offgrid_load_met_fraction` percentage of total electric load met on an annual basis, for off-grid scenarios only
-- `offgrid_annual_oper_res_required_series_kwh` , total operating reserves required (for load and techs) on an annual basis, for off-grid scenarios only
-- `offgrid_annual_oper_res_provided_series_kwh` , total operating reserves provided on an annual basis, for off-grid scenarios only
+- `offgrid_annual_oper_res_required_series_kw` , total operating reserves required (for load and techs) on an annual basis, for off-grid scenarios only
+- `offgrid_annual_oper_res_provided_series_kw` , total operating reserves provided on an annual basis, for off-grid scenarios only
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
 	REopt performs load balances using average annual production values for technologies that include degradation. 
@@ -33,8 +33,8 @@ function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
                 sum(p.s.electric_load.critical_loads_kw))
         r["offgrid_load_met_fraction"] = round(value(LoadMetPct), digits=6)
         
-        r["offgrid_annual_oper_res_required_series_kwh"] = round.(value.(m[:OpResRequired][ts] for ts in p.time_steps_without_grid), digits=3)
-        r["offgrid_annual_oper_res_provided_series_kwh"] = round.(value.(m[:OpResProvided][ts] for ts in p.time_steps_without_grid), digits=3)
+        r["offgrid_annual_oper_res_required_series_kw"] = round.(value.(m[:OpResRequired][ts] for ts in p.time_steps_without_grid), digits=3)
+        r["offgrid_annual_oper_res_provided_series_kw"] = round.(value.(m[:OpResProvided][ts] for ts in p.time_steps_without_grid), digits=3)
     end
     
     d["ElectricLoad"] = r

@@ -43,6 +43,9 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
                 ))
             end
          end
+        if p.s.settings.off_grid_flag
+            r["operating_reserve_provided_series_kw"] = value.(m[Symbol("dvOpResFromBatt"*_n)][b,ts] for ts in p.time_steps)
+        end
     else
         r["soc_series_fraction"] = []
         r["storage_to_load_series_kw"] = []

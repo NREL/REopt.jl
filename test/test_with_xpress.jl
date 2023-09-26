@@ -228,7 +228,7 @@ end
         =#
 
         # Austin, TX -> existing_chiller and existing_boiler added with FlexibleHVAC
-        pf, tamb = REopt.call_pvwatts_api(30.2672, -97.7431);
+        pf, tamb, dist = REopt.call_pvwatts_api(30.2672, -97.7431);
         R = 0.00025  # K/kW
         C = 1e5   # kJ/K
         # the starting scenario has flat fuel and electricty costs
@@ -1094,7 +1094,7 @@ end
     # Test outputs
     @test r["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ 0 # no interaction with grid
     @test r["Financial"]["lifecycle_offgrid_other_capital_costs"] ≈ 2617.092 atol=0.01 # Check straight line depreciation calc
-    @test sum(r["ElectricLoad"]["offgrid_annual_oper_res_provided_series_kwh"]) >= sum(r["ElectricLoad"]["offgrid_annual_oper_res_required_series_kwh"]) # OR provided >= required
+    @test sum(r["ElectricLoad"]["offgrid_annual_oper_res_provided_series_kw"]) >= sum(r["ElectricLoad"]["offgrid_annual_oper_res_required_series_kw"]) # OR provided >= required
     @test r["ElectricLoad"]["offgrid_load_met_fraction"] >= scen.electric_load.min_load_met_annual_fraction
     @test r["PV"]["size_kw"] ≈ 5050.0
     f = r["Financial"]
@@ -1159,7 +1159,7 @@ end
 
     windOR = sum(results["Wind"]["electric_to_load_series_kw"]  * post["Wind"]["operating_reserve_required_fraction"])
     loadOR = sum(post["ElectricLoad"]["loads_kw"] * scen.electric_load.operating_reserve_required_fraction)
-    @test sum(results["ElectricLoad"]["offgrid_annual_oper_res_required_series_kwh"]) ≈ loadOR  + windOR atol=1.0
+    @test sum(results["ElectricLoad"]["offgrid_annual_oper_res_required_series_kw"]) ≈ loadOR  + windOR atol=1.0
 
 end
 
