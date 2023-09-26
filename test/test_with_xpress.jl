@@ -1172,7 +1172,8 @@ end
     3. GHP serves only the SpaceHeatingLoad by default unless it is allowed to serve DHW
     4. GHP serves all the Cooling load
     5. Input of a custom COP map for GHP and check the GHP performance to make sure it's using it correctly
-    
+    6. Hybrid GHP capability functions as expected
+
     """
     # Load base inputs
     input_data = JSON.parsefile("scenarios/ghp_inputs.json")
@@ -1244,6 +1245,24 @@ end
     # Average COP which includes pump power should be lower than Heat Pump only COP specified by the map
     @test heating_cop_avg <= 4.0
     @test cooling_cop_avg <= 8.0
+
+    # Load base inputs
+    input_data = JSON.parsefile("scenarios/ghp_inputs.json")
+
+    d["GHP"]["ghpghx_inputs"][1]["hybrid_ghx_sizing_method"] = "Automatic"
+    d["GHP"]["avoided_capex_by_ghp_present_value"] = 1.0e6
+    d["GHP"]["ghx_useful_life_years"] = 35
+
+    inputs = REoptInputs(input_data)
+    # analysis period 25 years, ghx life 35 years, discount rate 8.3%
+    calculated_ghx_residual_value = (inputs.s.ghp_option_list[1].ghx_only_capital_cost)*((35-25)/35)/((1+0.083)^25)
+
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    results = run_reopt([m1,m2], inputs)
+
+    @test results["GHP"]["ghx_residual_value_present_value"] ≈ calculated_ghx_residual_value atol=0.1
+    @test inputs.s.ghp_option_list[1].is_ghx_hybrid = true
 end
 
 @testset "Emissions and Renewable Energy Percent" begin

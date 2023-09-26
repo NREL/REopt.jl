@@ -1009,11 +1009,13 @@ function setup_ghp_inputs(s::AbstractScenario, time_steps, time_steps_without_gr
             ghp_om_cost_year_one[i] = option.om_cost_year_one
             avoided_capex_by_ghp_present_value[i] = option.avoided_capex_by_ghp_present_value
             ghx_useful_life_years[i] = option.ghx_useful_life_years
+            # ownership guided residual value determination
+            discount_rate = (1 - 1*s.financial.third_party_ownership)*s.financial.offtaker_discount_rate_fraction + s.financial.third_party_ownership*s.financial.owner_discount_rate_fraction
             ghx_residual_value[i] = option.ghx_only_capital_cost*
             (
                 (option.ghx_useful_life_years - s.financial.analysis_years)/option.ghx_useful_life_years
             )/(
-                (1+s.financial.offtaker_discount_rate_fraction)^s.financial.analysis_years
+                (1 + discount_rate)^s.financial.analysis_years
             )
 
             heating_thermal_load = s.space_heating_load.loads_kw + s.dhw_load.loads_kw
