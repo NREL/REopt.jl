@@ -23,6 +23,22 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.33.0
+### Added
+- Functionality to evaluate scenarios with Wind can in the ERP (`backup_reliability`)
+- Dispatch data for outages: Wind, ElectricStorage SOC, and critical load
+### Fixed
+- Fix `backup_reliability_reopt_inputs(d, p, r)` so doesn't ignore `CHP` from REopt scenario
+- In `backup_reliability_reopt_inputs(d, p, r)`, get `Generator` and `CHP` fuel related values from REopt results _Dict_ d and `REoptInputs` _struct_ p, unless the user overrides the REopt results by providing **generator_size_kw**
+- Remove use of non-existent **tech_upgraded** `Outages` outputs, using **tech_microgrid_size_kw** instead
+- Added missing **electric_storage_microgrid_upgraded** to `Outages` results
+- Fix bug causing _InexactError_ in `num_battery_bins_default`
+- Update docstrings in `backup_reliability.jl`
+- Avoid supply > critical load during outages by changing load balance to ==
+### Changed
+- Updated REopt license
+- Changed `backup_reliability` results key from **fuel_outage_survival_final_time_step** to **fuel_survival_final_time_step** for consistency with other keys
+
 ## v0.32.7
 ### Fixed
 - Bugs in EASIUR health cost calcs
