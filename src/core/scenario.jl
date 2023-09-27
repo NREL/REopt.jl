@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 struct Scenario <: AbstractScenario
     settings::Settings
     site::Site
@@ -288,14 +260,14 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 if haskey(d, "ExistingChiller")
                     if !haskey(d["ExistingChiller"], "cop")
                         d["ExistingChiller"]["cop"] = get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_on_peak_load=1.25, 
-                                                                                        loads_kw=nothing, 
-                                                                                        loads_kw_thermal=chiller_inputs[:loads_kw_thermal])
+                                                                                max_load_kw=nothing, 
+                                                                                max_load_kw_thermal=maximum(chiller_inputs[:loads_kw_thermal]))
                     end 
                     chiller_inputs = merge(chiller_inputs, dictkeys_tosymbols(d["ExistingChiller"]))
                 else
                     chiller_inputs[:cop] = get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_on_peak_load=1.25, 
-                                                                                loads_kw=nothing, 
-                                                                                loads_kw_thermal=chiller_inputs[:loads_kw_thermal])
+                                                                                max_load_kw=nothing, 
+                                                                                max_load_kw_thermal=maximum(chiller_inputs[:loads_kw_thermal]))
                 end              
                 existing_chiller = ExistingChiller(; chiller_inputs...)
             end
@@ -454,37 +426,27 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             number_of_ghpghx = length(d["GHP"]["ghpghx_inputs"])
         end
         # Call PVWatts for hourly dry-bulb outdoor air temperature
-        ambient_temperature_f = []
+        ambient_temp_degF = []
         if !haskey(d["GHP"]["ghpghx_inputs"][1], "ambient_temperature_f") || isempty(d["GHP"]["ghpghx_inputs"][1]["ambient_temperature_f"])
-            url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
-                    "&lat=", d["Site"]["latitude"] , "&lon=", d["Site"]["longitude"], "&tilt=", d["Site"]["latitude"],
-                    "&system_capacity=1", "&azimuth=", 180, "&module_type=", 0,
-                    "&array_type=", 0, "&losses=", 0.14, "&dc_ac_ratio=", 1.1,
-                    "&gcr=", 0.4, "&inv_eff=", 99, "&timeframe=", "hourly", "&dataset=nsrdb",
-                    "&radius=", 100)
-            try
-                @info "Querying PVWatts for ambient temperature"
-                r = HTTP.get(url)
-                response = JSON.parse(String(r.body))
-                if r.status != 200
-                    throw(@error("Bad response from PVWatts: $(response["errors"])"))
+            # If PV is evaluated and we need to call PVWatts for ambient temperature, assign PV production factor here too with the same call
+            # By assigning pv.production_factor_series here, it will skip the PVWatts call in get_production_factor(PV) call from reopt_input.jl
+            if !isempty(pvs)
+                for pv in pvs
+                    pv.production_factor_series, ambient_temp_celcius = call_pvwatts_api(site.latitude, site.longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
+                        array_type=pv.array_type, losses=round(pv.losses*100, digits=3), dc_ac_ratio=pv.dc_ac_ratio,
+                        gcr=pv.gcr, inv_eff=pv.inv_eff*100, timeframe="hourly", radius=pv.radius, time_steps_per_hour=settings.time_steps_per_hour)
                 end
-                @info "PVWatts success."
-                temp_c = get(response["outputs"], "tamb", [])
-                if length(temp_c) != 8760 || isempty(temp_c)
-                    throw(@error("PVWatts did not return a valid temperature profile. Got $temp_c"))
-                end
-                ambient_temperature_f = temp_c * 1.8 .+ 32.0
-            catch e
-                throw(@error("Error occurred when calling PVWatts: $e"))
+            else
+                pv_prodfactor, ambient_temp_celcius = call_pvwatts_api(site.latitude, site.longitude; time_steps_per_hour=settings.time_steps_per_hour)    
             end
+            ambient_temp_degF = ambient_temp_celcius * 1.8 .+ 32.0
         else
-            ambient_temperature_f = d["GHP"]["ghpghx_inputs"][1]["ambient_temperature_f"]
+            ambient_temp_degF = d["GHP"]["ghpghx_inputs"][1]["ambient_temperature_f"]
         end
         
         for i in 1:number_of_ghpghx
             ghpghx_inputs = d["GHP"]["ghpghx_inputs"][i]
-            d["GHP"]["ghpghx_inputs"][i]["ambient_temperature_f"] = ambient_temperature_f
+            d["GHP"]["ghpghx_inputs"][i]["ambient_temperature_f"] = ambient_temp_degF
             # Only SpaceHeating portion of Heating Load gets served by GHP, unless allowed by can_serve_dhw
             if get(ghpghx_inputs, "heating_thermal_load_mmbtu_per_hr", []) in [nothing, []]
                 if haskey(d["GHP"], "can_serve_dhw") && d["GHP"]["can_serve_dhw"]

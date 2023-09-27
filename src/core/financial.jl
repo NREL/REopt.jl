@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `Financial` is an optional REopt input with the following keys and default values:
 ```julia
@@ -264,9 +236,9 @@ function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
     USD_2010_to_2020 = 1.246
     try
         costs_per_tonne = Dict(
-            "NOx" => EASIUR_data["NOX_Annual"][x - 1, y - 1] .* USD_2010_to_2020,
-            "SO2" => EASIUR_data["SO2_Annual"][x - 1, y - 1] .* USD_2010_to_2020,
-            "PM25" => EASIUR_data["PEC_Annual"][x - 1, y - 1] .* USD_2010_to_2020
+            "NOx" => EASIUR_data["NOX_Annual"][x, y] .* USD_2010_to_2020,
+            "SO2" => EASIUR_data["SO2_Annual"][x, y] .* USD_2010_to_2020,
+            "PM25" => EASIUR_data["PEC_Annual"][x, y] .* USD_2010_to_2020
         )
         return costs_per_tonne
     catch
@@ -400,12 +372,13 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
     end
 
     fn_2005 = joinpath(EASIUR_data_lib,"sc_8.6MVSL_$(stack)_pop2005.hdf5")
-    ret_map = JLD.load(fn_2005)
+    ret_map = JLD.load(fn_2005) 
+
     if pop_year != 2005
         fn_growth = joinpath(EASIUR_data_lib,"sc_growth_rate_pop2005_pop2040_$(stack).hdf5")
-        map_rate = JLD.load(fn_growth)
+        map_rate = JLD.load(fn_growth) 
         for (k,v) in map_rate
-            setindex!(ret_map, v .* (v.^(pop_year - 2005)), k)
+            setindex!(ret_map, ret_map[k] .* (v.^(pop_year - 2005)), k)
         end
     end
     if income_year != 2005
