@@ -117,9 +117,9 @@ function simulated_load(d::Dict)
         # Monthly loads (default is empty list)
         monthly_totals_kwh = get(d, "monthly_totals_kwh", Real[])
         if !isempty(monthly_totals_kwh)
-            if length(monthly_totals_kwh != 12)
+            if length(monthly_totals_kwh) != 12
                 throw(@error("monthly_totals_kwh must contain a value for each of the 12 months"))
-            end                  
+            end
             bad_index = []
             for (i, kwh) in enumerate(monthly_totals_kwh)
                 if isnothing(kwh)
@@ -398,7 +398,7 @@ function simulated_load(d::Dict)
             # Monthly loads (default is empty list)
             monthly_tonhour = get(d, "monthly_tonhour", Real[])
             if !isempty(monthly_tonhour)
-                if length(monthly_tonhour != 12)
+                if length(monthly_tonhour) != 12
                     throw(@error("monthly_tonhour must contain a value for each of the 12 months"))
                 end                    
                 bad_index = []
