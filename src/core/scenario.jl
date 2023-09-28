@@ -458,36 +458,116 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
                 ghpghx_inputs["cooling_thermal_load_ton"] = (cooling_load.loads_kw_thermal - cooling_thermal_load_reduction_with_ghp_kw)  / KWH_THERMAL_PER_TONHOUR
             end
-            # This code calls GhpGhx.jl module functions and is only available if we load in the GhpGhx package
-            try            
-                # Update ground thermal conductivity based on climate zone if not user-input
-                if isnothing(get(ghpghx_inputs, "ground_thermal_conductivity_btu_per_hr_ft_f", nothing))
-                    k_by_zone = deepcopy(GhpGhx.ground_k_by_climate_zone)
-                    nearest_city, climate_zone = find_ashrae_zone_city(d["Site"]["latitude"], d["Site"]["longitude"]; get_zone=true)
-                    ghpghx_inputs["ground_thermal_conductivity_btu_per_hr_ft_f"] = k_by_zone[climate_zone]
-                end
+
+            # Update ground thermal conductivity based on climate zone if not user-input
+            if isnothing(get(ghpghx_inputs, "ground_thermal_conductivity_btu_per_hr_ft_f", nothing))
+                k_by_zone = deepcopy(GhpGhx.ground_k_by_climate_zone)
+                nearest_city, climate_zone = find_ashrae_zone_city(d["Site"]["latitude"], d["Site"]["longitude"]; get_zone=true)
+                ghpghx_inputs["ground_thermal_conductivity_btu_per_hr_ft_f"] = k_by_zone[climate_zone]
+            end
+
+            aux_heater_type = get(d["GHP"], "aux_heater_type", nothing)
+            
+            ## Deal with hybrid
+            hybrid_ghx_sizing_method = get(ghpghx_inputs, "hybrid_ghx_sizing_method", nothing)
+
+            is_ghx_hybrid = false
+            hybrid_ghx_sizing_fraction = nothing
+            hybrid_sizing_flag = nothing
+            is_heating_electric = nothing
+
+            if hybrid_ghx_sizing_method == "Automatic"
+
                 # Call GhpGhx.jl to size GHP and GHX
-                @info "Starting GhpGhx.jl" #with timeout of $(timeout) seconds..."
+                determine_heat_cool_results_resp_dict = Dict()
+                try
+                    ghpghx_inputs["hybrid_auto_ghx_sizing_flag"] = true
+
+                    # Call GhpGhx.jl to size GHP and GHX
+                    @info "Starting GhpGhx.jl for automatic hybrid GHX sizing"
+                    # Call GhpGhx.jl to size GHP and GHX
+                    results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
+                    # Create a dictionary of the results data needed for REopt
+                    determine_heat_cool_results_resp_dict = GhpGhx.get_results_for_reopt(results, inputs_params)
+                    @info "Automatic hybrid GHX sizing complete using GhpGhx.jl"
+                catch e
+                    @info e
+                    throw(@error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
+                        loaded (using GhpGhx) to the active Julia environment"))
+                end
+
+                temp_diff = determine_heat_cool_results_resp_dict["end_of_year_ghx_lft_f"][2] \
+                - determine_heat_cool_results_resp_dict["end_of_year_ghx_lft_f"][1]
+
+                hybrid_sizing_flag = 1.0 # non hybrid
+                if temp_diff > 0
+                    hybrid_sizing_flag = -2.0 #heating
+                    is_ghx_hybrid = true
+                elseif temp_diff < 0
+                    hybrid_sizing_flag = -1.0 #cooling
+                    is_ghx_hybrid = true
+                else
+                    # non hybrid if exactly 0.
+                    hybrid_sizing_flag = 1.0
+                end
+                ghpghx_inputs["hybrid_auto_ghx_sizing_flag"] = false
+
+            elseif hybrid_ghx_sizing_method == "Fractional"
+                is_ghx_hybrid = true
+                hybrid_ghx_sizing_fraction = get(ghpghx_inputs, "hybrid_ghx_sizing_fraction", 0.6)
+            else
+                @warn "Unknown hybrid GHX sizing model provided"
+            end
+
+            if !isnothing(aux_heater_type)
+                if aux_heater_type == "electric"
+                    is_heating_electric = true
+                else
+                    @warn "Unknown auxillary heater type provided"
+                    is_heating_electric = false
+                end
+            end
+
+            d["GHP"]["is_ghx_hybrid"] = is_ghx_hybrid
+            if !isnothing(hybrid_sizing_flag)
+                ghpghx_inputs["hybrid_sizing_flag"] = hybrid_sizing_flag
+            end
+            if !isnothing(hybrid_ghx_sizing_fraction)
+                ghpghx_inputs["hybrid_ghx_sizing_fraction"] = hybrid_ghx_sizing_fraction
+            end
+            if !isnothing(is_heating_electric)
+                ghpghx_inputs["is_heating_electric"] = is_heating_electric
+            end
+
+            ghpghx_results = Dict()
+            try
+                # Call GhpGhx.jl to size GHP and GHX
+                @info "Starting GhpGhx.jl"
+                # Call GhpGhx.jl to size GHP and GHX
                 results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
                 # Create a dictionary of the results data needed for REopt
                 ghpghx_results = GhpGhx.get_results_for_reopt(results, inputs_params)
-                ghpghx_response = Dict([("inputs", ghpghx_inputs), ("outputs", ghpghx_results)])
                 @info "GhpGhx.jl model solved" #with status $(results["status"])."
-                ghp_inputs_removed_ghpghx_params = deepcopy(d["GHP"])
-                for param in ["ghpghx_inputs", "ghpghx_responses", "ghpghx_response_uuids"]
-                    if haskey(d["GHP"], param)    
-                        pop!(ghp_inputs_removed_ghpghx_params, param)
-                    end
-                end                    
-                append!(ghp_option_list, [GHP(ghpghx_response, ghp_inputs_removed_ghpghx_params)])
-                # Print out ghpghx_response for loading into a future run without running GhpGhx.jl again
-                # open("scenarios/ghpghx_response.json","w") do f
-                #     JSON.print(f, ghpghx_response)
-                # end
-            catch
+            catch e
+                @info e
                 throw(@error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
-                    loaded (using GhpGhx) to the active Julia environment"))
-            end                
+                    loaded (using GhpGhx) to the active Julia environment, or an error occurred during the call 
+                    to the GhpGhx.jl package."))
+            end
+
+            ghpghx_response = Dict([("inputs", ghpghx_inputs), ("outputs", ghpghx_results)])
+            write("ghpghx_hybrid_results.json", JSON.json(ghpghx_response))
+            ghp_inputs_removed_ghpghx_params = deepcopy(d["GHP"])
+            for param in ["ghpghx_inputs", "ghpghx_responses", "ghpghx_response_uuids"]
+                if haskey(d["GHP"], param)    
+                    pop!(ghp_inputs_removed_ghpghx_params, param)
+                end
+            end                    
+            append!(ghp_option_list, [GHP(ghpghx_response, ghp_inputs_removed_ghpghx_params)])
+            # Print out ghpghx_response for loading into a future run without running GhpGhx.jl again
+            # open("scenarios/ghpghx_response.json","w") do f
+            #     JSON.print(f, ghpghx_response)
+            # end                
         end
     # If ghpghx_responses is included in inputs, do NOT run GhpGhx.jl model and use already-run ghpghx result as input to REopt
     elseif eval_ghp && get_ghpghx_from_input
@@ -497,6 +577,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             pop!(ghp_inputs_removed_ghpghx_responses, "ghpghx_inputs")
         end
         for ghpghx_response in get(d["GHP"], "ghpghx_responses", [])
+            if get(ghpghx_response["inputs"], "hybrid_ghx_sizing_method", nothing) in ["Automatic", "Fractional"]
+                ghp_inputs_removed_ghpghx_responses["is_ghx_hybrid"] = true
+            end
             append!(ghp_option_list, [GHP(ghpghx_response, ghp_inputs_removed_ghpghx_responses)])
         end
     end

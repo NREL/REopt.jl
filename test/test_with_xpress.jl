@@ -1172,7 +1172,8 @@ end
     3. GHP serves only the SpaceHeatingLoad by default unless it is allowed to serve DHW
     4. GHP serves all the Cooling load
     5. Input of a custom COP map for GHP and check the GHP performance to make sure it's using it correctly
-    
+    6. Hybrid GHP capability functions as expected
+
     """
     # Load base inputs
     input_data = JSON.parsefile("scenarios/ghp_inputs.json")
@@ -1244,6 +1245,68 @@ end
     # Average COP which includes pump power should be lower than Heat Pump only COP specified by the map
     @test heating_cop_avg <= 4.0
     @test cooling_cop_avg <= 8.0
+
+    ## Hybrid GHP validation.
+    # Load base inputs
+    input_data = JSON.parsefile("scenarios/ghp_inputs.json")
+
+    input_data["GHP"]["ghpghx_inputs"][1]["hybrid_ghx_sizing_method"] = "Automatic"
+    input_data["GHP"]["avoided_capex_by_ghp_present_value"] = 1.0e6
+    input_data["GHP"]["ghx_useful_life_years"] = 35
+    input_data["GHP"]["ghpghx_responses"] = [JSON.parsefile("scenarios/ghpghx_hybrid_results.json")]
+
+    inputs = REoptInputs(input_data)
+
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    results = run_reopt([m1,m2], inputs)
+
+    pop!(input_data["GHP"], "ghpghx_inputs")
+    pop!(input_data["GHP"], "ghpghx_responses")
+    ghp_obj = REopt.GHP(JSON.parsefile("scenarios/ghpghx_hybrid_results.json"), input_data["GHP"])
+
+    # Create GHP REopt object for results validation.
+    # analysis period 25 years, ghx life 35 years, discount rate 8.3%
+    calculated_ghx_residual_value = ghp_obj.ghx_only_capital_cost*
+    (
+        (ghp_obj.ghx_useful_life_years - inputs.s.financial.analysis_years)/ghp_obj.ghx_useful_life_years
+    )/(
+        (1 + inputs.s.financial.offtaker_discount_rate_fraction)^inputs.s.financial.analysis_years
+    )
+    
+    @test results["GHP"]["ghx_residual_value_present_value"] ≈ calculated_ghx_residual_value atol=0.1
+    @test inputs.s.ghp_option_list[1].is_ghx_hybrid = true
+
+    # Test centralized GHP cost calculations
+    input_data_wwhp = JSON.parsefile("scenarios/ghp_inputs_wwhp.json")
+    response_wwhp = JSON.parsefile("scenarios/ghpghx_response_wwhp.json")
+    input_data_wwhp["GHP"]["ghpghx_responses"] = [response_wwhp]
+
+    s_wwhp = Scenario(input_data_wwhp)
+    inputs_wwhp = REoptInputs(s_wwhp)
+    m3 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    results_wwhp = run_reopt(m3, inputs_wwhp)
+
+
+    heating_hp_cost = input_data_wwhp["GHP"]["installed_cost_wwhp_heating_pump_per_ton"] * 
+                        input_data_wwhp["GHP"]["heatpump_capacity_sizing_factor_on_peak_load"] *
+                        results_wwhp["GHP"]["ghpghx_chosen_outputs"]["peak_heating_heatpump_thermal_ton"]
+
+    cooling_hp_cost = input_data_wwhp["GHP"]["installed_cost_wwhp_cooling_pump_per_ton"] * 
+                        input_data_wwhp["GHP"]["heatpump_capacity_sizing_factor_on_peak_load"] *
+                        results_wwhp["GHP"]["ghpghx_chosen_outputs"]["peak_cooling_heatpump_thermal_ton"]
+
+    ghx_cost = input_data_wwhp["GHP"]["installed_cost_ghx_per_ft"] * 
+                results_wwhp["GHP"]["ghpghx_chosen_outputs"]["number_of_boreholes"] * 
+                results_wwhp["GHP"]["ghpghx_chosen_outputs"]["length_boreholes_ft"]
+
+    # CAPEX reduction factor for 30% ITC, 5-year MACRS, assuming 26% tax rate and 8.3% discount
+    capex_reduction_factor = 0.455005797
+
+    calculated_ghp_capex = (heating_hp_cost + cooling_hp_cost + ghx_cost) * (1 - capex_reduction_factor)
+
+    reopt_ghp_capex = results_wwhp["Financial"]["lifecycle_capital_costs"]
+    @test calculated_ghp_capex ≈ reopt_ghp_capex atol=300
 end
 
 @testset "Emissions and Renewable Energy Percent" begin
