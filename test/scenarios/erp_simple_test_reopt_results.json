@@ -17532,7 +17532,7 @@
         "errors": [],
         "warnings": [
             [
-                "core_reopt.jl_665",
+                "core_reopt.jl_652",
                 [
                     "Adding binary variable to model gas generator. Some solvers are very slow with integer variables."
                 ]
@@ -78964,5 +78964,5 @@
         "year_one_om_costs_after_tax": 740.0,
         "lifecycle_chp_standby_cost_after_tax": 0.0
     },
-    "solver_seconds": 2.752
+    "solver_seconds": 6.136
 }
