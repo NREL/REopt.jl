@@ -32,11 +32,11 @@
 
 ```julia
     min_kg::Real = 0.0
-    max_kg::Real = 1.0e9
+    max_kg::Real = 1.0e6
     soc_min_fraction::Float64 = 0.05
-    soc_init_fraction::Float64 = 0.5
-    installed_cost_per_kg::Real = 1500.0
-    replace_cost_per_kg::Real = 1000.0
+    soc_init_fraction::Float64 = 0.05
+    installed_cost_per_kg::Real = 500.0
+    replace_cost_per_kg::Real = 300.0
     replacement_year::Int = 25
     macrs_option_years::Int = 7
     macrs_bonus_fraction::Float64 = 0.8
@@ -51,8 +51,8 @@ Base.@kwdef struct HydrogenStorageLPDefaults
     max_kg::Real = 1.0e6
     soc_min_fraction::Float64 = 0.05
     soc_init_fraction::Float64 = 0.05
-    installed_cost_per_kg::Real = 1500.0
-    replace_cost_per_kg::Real = 1000.0
+    installed_cost_per_kg::Real = 500.0
+    replace_cost_per_kg::Real = 300.0
     replacement_year::Int = 25
     macrs_option_years::Int = 7
     macrs_bonus_fraction::Float64 = 0.8
