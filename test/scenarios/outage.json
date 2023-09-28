@@ -13,7 +13,10 @@
         "existing_kw": 0.0,
         "min_turn_down_fraction": 0.0,
         "only_runs_during_grid_outage": true,
-        "sells_energy_back_to_grid": false
+        "sells_energy_back_to_grid": false,
+        "om_cost_per_kw": 10.0,
+        "fuel_cost_per_gallon": 3.0,
+        "electric_efficiency_full_load": 0.3233
     },
     "CHP": {
         "thermal_efficiency_full_load": 0.0,
@@ -60,6 +63,10 @@
         "owner_discount_rate_fraction": 0.1,
         "offtaker_discount_rate_fraction": 0.03,
         "elec_cost_escalation_rate_fraction": 0.023,
-        "microgrid_upgrade_cost_fraction": 0.3
+        "microgrid_upgrade_cost_fraction": 0.3,
+        "existing_boiler_fuel_cost_escalation_rate_fraction": 0.034, 
+        "boiler_fuel_cost_escalation_rate_fraction": 0.034,
+        "chp_fuel_cost_escalation_rate_fraction": 0.034,
+        "generator_fuel_cost_escalation_rate_fraction": 0.027
     }
 }

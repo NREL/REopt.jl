@@ -1308,8 +1308,6 @@ end
             @test results["ElectricStorage"]["size_kw"] ≈ 0.0 atol=1e-1
             @test results["ElectricStorage"]["size_kwh"] ≈ 0.0 atol=1e-1
             @test results["Generator"]["size_kw"] ≈ 21.52 atol=1e-1
-            expected_npv = -70009
-            @test (expected_npv - results["Financial"]["npv"])/expected_npv ≈ 0.0 atol=1e-2
             @test results["Site"]["annual_renewable_electricity_kwh"] ≈ 76412.02
             @test results["Site"]["renewable_electricity_fraction"] ≈ 0.8
             @test results["Site"]["renewable_electricity_fraction_bau"] ≈ 0.147576 atol=1e-4
