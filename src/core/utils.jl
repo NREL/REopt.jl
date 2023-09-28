@@ -157,7 +157,7 @@ function dictkeys_tosymbols(d::Dict)
             "monthly_mmbtu", "monthly_tonhour",
             #for ERP
             "pv_production_factor_series", "wind_production_factor_series",
-            "battery_starting_soc_series_fraction", "H2_starting_soc_series_fraction"
+            "battery_starting_soc_series_fraction", "H2_starting_soc_series_fraction",
             "monthly_mmbtu", "monthly_tonhour"
         ] && !isnothing(v)
             try

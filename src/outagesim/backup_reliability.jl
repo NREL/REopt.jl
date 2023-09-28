@@ -858,10 +858,6 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
     r2[:time_steps_per_hour] = 1 / p.hours_per_time_step
     microgrid_only = get(r, "microgrid_only", false)
 
-    if haskey(d, "PV") && !(
-            microgrid_only && 
-            !Bool(get(d, "PV_upgraded", false)) #TODO: PV_upgraded doesn't exist anymore and would be in Outages anyway
-        ) 
     if haskey(d, "PV") && 
         (
             !microgrid_only ||
@@ -1550,7 +1546,7 @@ function return_backup_reliability(;
             "H2_fuelcell_size_kw" => 0,
             "H2_size_kg" => 0),
         "gen_pv_battery" => Dict(
-            "probability" => system_characteristics_probability(PV=true, wind=false, battery=trie, H2=false),
+            "probability" => system_characteristics_probability(PV=true, wind=false, battery=true, H2=false),
             "net_critical_loads_kw" => net_critical_loads_pv,
             "battery_size_kw" => battery_size_kw,
             "battery_size_kwh" => battery_size_kwh,
@@ -1639,7 +1635,7 @@ function return_backup_reliability(;
             "H2_size_kg" => H2_size_kg),
         "gen_wind_H2" => Dict(
             "probability" => system_characteristics_probability(PV=false, wind=true, battery=false, H2=true),
-            "net_critical_loads_kw" => critical_loads_wind,
+            "net_critical_loads_kw" => net_critical_loads_wind,
             "battery_size_kw" => 0,
             "battery_size_kwh" => 0,
             "H2_electrolyzer_size_kw" => H2_electrolyzer_size_kw,
@@ -1655,7 +1651,7 @@ function return_backup_reliability(;
             "H2_size_kg" => H2_size_kg),
         "gen_battery_wind_H2" => Dict(
             "probability" => system_characteristics_probability(PV=false, wind=true, battery=true, H2=true),
-            "net_critical_loads_kw" => critical_loads_wind,
+            "net_critical_loads_kw" => net_critical_loads_wind,
             "battery_size_kw" => battery_size_kw,
             "battery_size_kwh" => battery_size_kwh,
             "H2_electrolyzer_size_kw" => H2_electrolyzer_size_kw,
