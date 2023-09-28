@@ -213,25 +213,27 @@ function setup_installed_cost_curve!(ghp::GHP, response::Dict)
     ghp.tech_sizes_for_cost_curve = [0.0, big_number]
 
     if ghp.heat_pump_configuration == "WSHP"
-        ghp.installed_cost_per_kw = [ghp.ghx_only_capital_cost + hydronic_loop_cost + aux_cooler_cost + aux_heater_cost, 
-                                            ghp.installed_cost_heatpump_per_ton]
-    elseif ghp.heat_pump_configuration == "WWHP"
-        ghp.wwhp_heating_pump_installed_cost_curve = [ghp.ghx_only_capital_cost + aux_cooler_cost + aux_heater_cost, 
-                                                            ghp.installed_cost_wwhp_heating_pump_per_ton]
-        ghp.wwhp_cooling_pump_installed_cost_curve = [ghp.ghx_only_capital_cost + aux_cooler_cost + aux_heater_cost,  
-                                                            ghp.installed_cost_wwhp_cooling_pump_per_ton]
-    end
-
-    # Using a separate call to _get_REopt_cost_curve in data_manager for "ghp" (not included in "available_techs")
-    #    and then use the value below for heat pump capacity to calculate the final absolute cost for GHP
-
-    if ghp.heat_pump_configuration == "WSHP"
         # Use this with the cost curve to determine absolute cost
         ghp.heatpump_capacity_ton = heatpump_peak_ton * ghp.heatpump_capacity_sizing_factor_on_peak_load
     elseif ghp.heat_pump_configuration == "WWHP"
         ghp.wwhp_heating_pump_capacity_ton = wwhp_heating_pump_peak_ton * ghp.heatpump_capacity_sizing_factor_on_peak_load
         ghp.wwhp_cooling_pump_capacity_ton = wwhp_cooling_pump_peak_ton * ghp.heatpump_capacity_sizing_factor_on_peak_load
     end
+
+    # Using a separate call to _get_REopt_cost_curve in data_manager for "ghp" (not included in "available_techs")
+    #    and then use the value above for heat pump capacity to calculate the final absolute cost for GHP
+
+    if ghp.heat_pump_configuration == "WSHP"
+        ghp.installed_cost_per_kw = [0, (ghp.ghx_only_capital_cost + hydronic_loop_cost + aux_cooler_cost + aux_heater_cost) / 
+                                        ghp.heatpump_capacity_ton + ghp.installed_cost_heatpump_per_ton]
+    elseif ghp.heat_pump_configuration == "WWHP"
+        # Divide by two to avoid double counting non-heatpump costs
+        ghp.wwhp_heating_pump_installed_cost_curve = [0, (ghp.ghx_only_capital_cost + aux_cooler_cost + aux_heater_cost) / 2 /
+                                                          ghp.wwhp_heating_pump_capacity_ton + ghp.installed_cost_wwhp_heating_pump_per_ton]
+        ghp.wwhp_cooling_pump_installed_cost_curve = [0, (ghp.ghx_only_capital_cost + aux_cooler_cost + aux_heater_cost) / 2 /
+                                                          ghp.wwhp_cooling_pump_capacity_ton + ghp.installed_cost_wwhp_cooling_pump_per_ton]
+    end
+
 end
 
 function setup_om_cost!(ghp::GHP)
