@@ -33,14 +33,14 @@
 ```julia
     min_kw = 0.0,
     max_kw = 1.0e9,
-    installed_cost_per_kw = 5000,
-    om_cost_per_kw = 50,
-    om_cost_per_kwh = 0.0,
+    installed_cost_per_kw = 1320,
+    om_cost_per_kw = 12.8,
+    om_cost_per_kwh = 0.0013,
     efficiency_kwh_per_kg = 16.745,
     macrs_option_years = 7,
-    macrs_bonus_fraction = 0.0,
+    macrs_bonus_fraction = 0.8,
     macrs_itc_reduction = 0.5,
-    federal_itc_fraction = 0,
+    federal_itc_fraction = 0.3,
     federal_rebate_per_kw = 0.0,
     state_ibi_fraction = 0.0,
     state_ibi_max = 1.0e10,
@@ -57,8 +57,8 @@
     can_net_meter = false,
     can_wholesale = false,
     can_export_beyond_nem_limit = false,
-    can_curtail = false,
-    min_turn_down_pct = 0.3
+    can_curtail= false,
+    min_turn_down_pct = 0.2
 ```
 """
 struct FuelCell <: AbstractFuelCell
@@ -94,14 +94,14 @@ struct FuelCell <: AbstractFuelCell
     function FuelCell(;
         min_kw = 0.0,
         max_kw = 1.0e9,
-        installed_cost_per_kw = 5000,
-        om_cost_per_kw = 50,
-        om_cost_per_kwh = 0,
+        installed_cost_per_kw = 1320,
+        om_cost_per_kw = 12.8,
+        om_cost_per_kwh = 0.0013,
         efficiency_kwh_per_kg = 16.745,
         macrs_option_years = 7,
-        macrs_bonus_fraction = 0.0,
+        macrs_bonus_fraction = 0.8,
         macrs_itc_reduction = 0.5,
-        federal_itc_fraction = 0.0,
+        federal_itc_fraction = 0.3,
         federal_rebate_per_kw = 0.0,
         state_ibi_fraction = 0.0,
         state_ibi_max = 1.0e10,
@@ -119,7 +119,7 @@ struct FuelCell <: AbstractFuelCell
         can_wholesale = false,
         can_export_beyond_nem_limit = false,
         can_curtail= false,
-        min_turn_down_pct = 0.3
+        min_turn_down_pct = 0.2
         )
       
         new(
