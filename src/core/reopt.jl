@@ -319,6 +319,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 		if !isempty(p.techs.electrolyzer)
             add_electrolyzer_constraints(m, p)
+			m[:TotalPerUnitProdOMCosts] += m[:TotalElectrolyzerPerUnitProdOMCosts]
 		else
 			@constraint(m, [t in p.techs.elec, ts in p.time_steps],
 					m[:dvProductionToElectrolyzer][t, ts] == 0)
@@ -358,6 +359,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 		if !isempty(p.techs.fuel_cell)
             add_fuel_cell_constraints(m, p)
+			m[:TotalPerUnitProdOMCosts] += m[:TotalFuelCellPerUnitProdOMCosts]
 		else
 			@constraint(m, [t in p.techs.fuel_cell, ts in p.time_steps],
 				m[:dvRatedProduction][t,ts] == 0)
