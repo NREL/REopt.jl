@@ -153,7 +153,7 @@ function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.Abst
 			end
 			return results_dict
 		else
-			return rs
+			throw(@error("REopt scenarios solved either with errors of non-optimal solutions."))
 		end
 	catch e
 		if isnothing(e) # Error thrown by REopt

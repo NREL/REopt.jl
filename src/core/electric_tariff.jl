@@ -361,7 +361,7 @@ function get_tier_with_lowest_energy_rate(u::URDBrate)
     """
     #TODO: can eliminate if else if confirm that u.energy_rates is always 2D
     if length(u.energy_tier_limits) > 1
-        return argmin(sum(u.energy_rates, dims=1))
+        return argmin(vec(sum(u.energy_rates, dims=1)))
     else
         return 1
     end

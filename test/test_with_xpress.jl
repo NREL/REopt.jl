@@ -1246,23 +1246,35 @@ end
     @test heating_cop_avg <= 4.0
     @test cooling_cop_avg <= 8.0
 
-    # # Load base inputs
-    # input_data = JSON.parsefile("scenarios/ghp_inputs.json")
+    ## Hybrid GHP validation.
+    # Load base inputs
+    input_data = JSON.parsefile("scenarios/ghp_inputs.json")
 
-    # input_data["GHP"]["ghpghx_inputs"][1]["hybrid_ghx_sizing_method"] = "Automatic"
-    # input_data["GHP"]["avoided_capex_by_ghp_present_value"] = 1.0e6
-    # input_data["GHP"]["ghx_useful_life_years"] = 35
+    input_data["GHP"]["ghpghx_inputs"][1]["hybrid_ghx_sizing_method"] = "Automatic"
+    input_data["GHP"]["avoided_capex_by_ghp_present_value"] = 1.0e6
+    input_data["GHP"]["ghx_useful_life_years"] = 35
+    input_data["GHP"]["ghpghx_responses"] = [JSON.parsefile("ghpghx_hybrid_results.json")]
 
-    # inputs = REoptInputs(input_data)
-    # # analysis period 25 years, ghx life 35 years, discount rate 8.3%
-    # calculated_ghx_residual_value = (inputs.s.ghp_option_list[1].ghx_only_capital_cost)*((35-25)/35)/((1+0.083)^25)
+    inputs = REoptInputs(input_data)
 
-    # m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
-    # m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
-    # results = run_reopt([m1,m2], inputs)
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    results = run_reopt([m1,m2], inputs)
 
-    # @test results["GHP"]["ghx_residual_value_present_value"] ≈ calculated_ghx_residual_value atol=0.1
-    # @test inputs.s.ghp_option_list[1].is_ghx_hybrid = true
+    pop!(input_data["GHP"], "ghpghx_inputs")
+    pop!(input_data["GHP"], "ghpghx_responses")
+    ghp_obj = REopt.GHP(JSON.parsefile("ghpghx_hybrid_results.json"), input_data["GHP"])
+
+    # Create GHP REopt object for results validation.
+    # analysis period 25 years, ghx life 35 years, discount rate 8.3%
+    calculated_ghx_residual_value = (ghp_obj.ghx_only_capital_cost)*(
+        (ghp_obj.ghx_useful_life_years-inputs.s.financial.analysis_years)/ghp_obj.ghx_useful_life_years)
+        /(
+            (1+inputs.s.financial.offtaker_discount_rate_fraction)^inputs.s.financial.analysis_years
+        )
+
+    @test results["GHP"]["ghx_residual_value_present_value"] ≈ calculated_ghx_residual_value atol=0.1
+    @test inputs.s.ghp_option_list[1].is_ghx_hybrid = true
 end
 
 @testset "Emissions and Renewable Energy Percent" begin
