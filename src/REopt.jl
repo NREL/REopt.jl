@@ -20,6 +20,8 @@ export
     shift_gen_storage_prob_matrix!,
     backup_reliability_reopt_inputs,
     get_maximum_generation,
+    system_char_old,
+    system_char_new,
     get_chp_defaults_prime_mover_size_class,
     get_steam_turbine_defaults_size_class,
     simulated_load,
