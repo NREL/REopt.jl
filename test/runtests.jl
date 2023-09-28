@@ -106,15 +106,12 @@ else  # run HiGHS tests
                 )
             )
             p = REoptInputs(reopt_inputs)
-            model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-                "output_flag" => false, "log_to_console" => false)
-            )
-            results = run_reopt(model, p)
-            open("scenarios/erp_outagesim_comparison_1_batt_reopt_results.json","w") do f
-                JSON.print(f, results, 4)
-            end
             # REopt optimization and outage simulator results for above inputs saved in the following files:
             results = JSON.parsefile("./scenarios/erp_outagesim_comparison_1_batt_reopt_results.json")
+            simresults = simulate_outages(results, p)
+            open("erp_outagesim_comparison_1_batt_outagesim_results.json","w") do f
+                JSON.print(f, simresults, 4)
+            end
             simresults = JSON.parsefile("./scenarios/erp_outagesim_comparison_1_batt_outagesim_results.json")
             
             reliability_inputs = Dict(
@@ -137,13 +134,6 @@ else  # run HiGHS tests
     
             change_batt_to_h2_in_reopt_inputs!(reopt_inputs)
             p = REoptInputs(reopt_inputs)
-            model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-                "output_flag" => false, "log_to_console" => false)
-            )
-            results = run_reopt(model, p)
-            open("scenarios/erp_outagesim_comparison_1_H2_reopt_results.json","w") do f
-                JSON.print(f, results, 4)
-            end
             # REopt optimization results for above inputs saved in the following file:
             results = JSON.parsefile("./scenarios/erp_outagesim_comparison_1_H2_reopt_results.json")
     
@@ -164,15 +154,12 @@ else  # run HiGHS tests
             reopt_inputs = JSON.parsefile("./scenarios/backup_reliability_reopt_inputs.json")
             reopt_inputs["ElectricLoad"]["annual_kwh"] = 4*reopt_inputs["ElectricLoad"]["annual_kwh"]
             p = REoptInputs(reopt_inputs)
-            model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-                "output_flag" => false, "log_to_console" => false)
-            )
-            results = run_reopt(model, p)
-            open("scenarios/erp_outagesim_comparison_2_batt_reopt_results.json","w") do f
-                JSON.print(f, results, 4)
-            end
             # REopt optimization and outage simulator results for above inputs saved in the following files:
             results = JSON.parsefile("./scenarios/erp_outagesim_comparison_2_batt_reopt_results.json")
+            simresults = simulate_outages(results, p)
+            open("erp_outagesim_comparison_2_batt_outagesim_results.json","w") do f
+                JSON.print(f, simresults, 4)
+            end
             simresults = JSON.parsefile("./scenarios/erp_outagesim_comparison_2_batt_outagesim_results.json")
     
             reliability_inputs = Dict(
@@ -190,13 +177,6 @@ else  # run HiGHS tests
     
             change_batt_to_h2_in_reopt_inputs!(reopt_inputs)
             p = REoptInputs(reopt_inputs)
-            model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-                "output_flag" => false, "log_to_console" => false)
-            )
-            results = run_reopt(model, p)
-            open("scenarios/erp_outagesim_comparison_2_H2_reopt_results.json","w") do f
-                JSON.print(f, results, 4)
-            end
             # REopt optimization results for above inputs saved in the following file:
             results = JSON.parsefile("./scenarios/erp_outagesim_comparison_2_H2_reopt_results.json")
     
