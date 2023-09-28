@@ -1276,6 +1276,37 @@ end
     
     @test results["GHP"]["ghx_residual_value_present_value"] ≈ calculated_ghx_residual_value atol=0.1
     @test inputs.s.ghp_option_list[1].is_ghx_hybrid = true
+
+    # Test centralized GHP cost calculations
+    input_data_wwhp = JSON.parsefile("scenarios/ghp_inputs_wwhp.json")
+    response_wwhp = JSON.parsefile("scenarios/ghpghx_response_wwhp.json")
+    input_data_wwhp["GHP"]["ghpghx_responses"] = [response_wwhp]
+
+    s_wwhp = Scenario(input_data_wwhp)
+    inputs_wwhp = REoptInputs(s_wwhp)
+    m3 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    results_wwhp = run_reopt(m3, inputs_wwhp)
+
+
+    heating_hp_cost = input_data_wwhp["GHP"]["installed_cost_wwhp_heating_pump_per_ton"] * 
+                        input_data_wwhp["GHP"]["heatpump_capacity_sizing_factor_on_peak_load"] *
+                        results_wwhp["GHP"]["ghpghx_chosen_outputs"]["peak_heating_heatpump_thermal_ton"]
+
+    cooling_hp_cost = input_data_wwhp["GHP"]["installed_cost_wwhp_cooling_pump_per_ton"] * 
+                        input_data_wwhp["GHP"]["heatpump_capacity_sizing_factor_on_peak_load"] *
+                        results_wwhp["GHP"]["ghpghx_chosen_outputs"]["peak_cooling_heatpump_thermal_ton"]
+
+    ghx_cost = input_data_wwhp["GHP"]["installed_cost_ghx_per_ft"] * 
+                results_wwhp["GHP"]["ghpghx_chosen_outputs"]["number_of_boreholes"] * 
+                results_wwhp["GHP"]["ghpghx_chosen_outputs"]["length_boreholes_ft"]
+
+    # CAPEX reduction factor for 30% ITC, 5-year MACRS, assuming 26% tax rate and 8.3% discount
+    capex_reduction_factor = 0.455005797
+
+    calculated_ghp_capex = (heating_hp_cost + cooling_hp_cost + ghx_cost) * (1 - capex_reduction_factor)
+
+    reopt_ghp_capex = results_wwhp["Financial"]["lifecycle_capital_costs"]
+    @test calculated_ghp_capex ≈ reopt_ghp_capex atol=300
 end
 
 @testset "Emissions and Renewable Energy Percent" begin
