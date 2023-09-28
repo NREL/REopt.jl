@@ -1267,12 +1267,13 @@ end
 
     # Create GHP REopt object for results validation.
     # analysis period 25 years, ghx life 35 years, discount rate 8.3%
-    calculated_ghx_residual_value = (ghp_obj.ghx_only_capital_cost)*(
-        (ghp_obj.ghx_useful_life_years-inputs.s.financial.analysis_years)/ghp_obj.ghx_useful_life_years)
-        /(
-            (1+inputs.s.financial.offtaker_discount_rate_fraction)^inputs.s.financial.analysis_years
-        )
-
+    calculated_ghx_residual_value = ghp_obj.ghx_only_capital_cost*
+    (
+        (ghp_obj.ghx_useful_life_years - inputs.s.financial.analysis_years)/ghp_obj.ghx_useful_life_years
+    )/(
+        (1 + inputs.s.financial.offtaker_discount_rate_fraction)^inputs.s.financial.analysis_years
+    )
+    
     @test results["GHP"]["ghx_residual_value_present_value"] ≈ calculated_ghx_residual_value atol=0.1
     @test inputs.s.ghp_option_list[1].is_ghx_hybrid = true
 end
