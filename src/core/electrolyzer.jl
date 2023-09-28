@@ -32,14 +32,14 @@
 ```julia
     min_kw = 0.0,
     max_kw = 1.0e9,
-    installed_cost_per_kw = 5000,
-    om_cost_per_kw = 631.3,
-    om_cost_per_kg = 0.0,
-    efficiency_kwh_per_kg = 54.6,
+    installed_cost_per_kw = 1500,
+    om_cost_per_kw = 12.8,
+    om_cost_per_kwh = 0.006,
+    efficiency_kwh_per_kg = 54.3,
     macrs_option_years = 7,
-    macrs_bonus_fraction = 0.0,
+    macrs_bonus_fraction = 0.8,
     macrs_itc_reduction = 0.5,
-    federal_itc_fraction = 0,
+    federal_itc_fraction = 0.3,
     federal_rebate_per_kw = 0.0,
     state_ibi_fraction = 0.0,
     state_ibi_max = 1.0e10,
@@ -56,8 +56,8 @@
     can_net_meter = false,
     can_wholesale = false,
     can_export_beyond_nem_limit = false,
-    can_curtail = false,
-    min_turn_down_pct = 0.9
+    can_curtail= false,
+    min_turn_down_fraction = 0.2
 ```
 """
 struct Electrolyzer <: AbstractElectrolyzer
@@ -65,7 +65,7 @@ struct Electrolyzer <: AbstractElectrolyzer
     max_kw::Real
     installed_cost_per_kw::Real
     om_cost_per_kw::Real
-    om_cost_per_kg::Real
+    om_cost_per_kwh::Real
     efficiency_kwh_per_kg::Real
     macrs_option_years::Int
     macrs_bonus_fraction::Real
@@ -88,19 +88,19 @@ struct Electrolyzer <: AbstractElectrolyzer
     can_wholesale::Bool
     can_export_beyond_nem_limit::Bool
     can_curtail::Bool
-    min_turn_down_pct::Real
+    min_turn_down_fraction::Real
 
     function Electrolyzer(;
         min_kw = 0.0,
         max_kw = 1.0e9,
-        installed_cost_per_kw = 15782.5,
-        om_cost_per_kw = 631.3,
-        om_cost_per_kg = 0,
-        efficiency_kwh_per_kg = 54.6,
+        installed_cost_per_kw = 1500,
+        om_cost_per_kw = 12.8,
+        om_cost_per_kwh = 0.006,
+        efficiency_kwh_per_kg = 54.3,
         macrs_option_years = 7,
-        macrs_bonus_fraction = 0.0,
+        macrs_bonus_fraction = 0.8,
         macrs_itc_reduction = 0.5,
-        federal_itc_fraction = 0.0,
+        federal_itc_fraction = 0.3,
         federal_rebate_per_kw = 0.0,
         state_ibi_fraction = 0.0,
         state_ibi_max = 1.0e10,
@@ -118,7 +118,7 @@ struct Electrolyzer <: AbstractElectrolyzer
         can_wholesale = false,
         can_export_beyond_nem_limit = false,
         can_curtail= false,
-        min_turn_down_pct = 0.9
+        min_turn_down_fraction = 0.2
         )
       
         new(
@@ -126,7 +126,7 @@ struct Electrolyzer <: AbstractElectrolyzer
             max_kw,
             installed_cost_per_kw,
             om_cost_per_kw,
-            om_cost_per_kg,
+            om_cost_per_kwh,
             efficiency_kwh_per_kg,
             macrs_option_years,
             macrs_bonus_fraction,
@@ -149,7 +149,7 @@ struct Electrolyzer <: AbstractElectrolyzer
             can_wholesale,
             can_export_beyond_nem_limit,
             can_curtail,
-            min_turn_down_pct
+            min_turn_down_fraction
         )
     end
 end
