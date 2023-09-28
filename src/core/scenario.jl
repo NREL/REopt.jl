@@ -556,7 +556,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             end
 
             ghpghx_response = Dict([("inputs", ghpghx_inputs), ("outputs", ghpghx_results)])
-            write("ghpghx_hybrid_results.json", JSON.json(ghpghx_response))
             ghp_inputs_removed_ghpghx_params = deepcopy(d["GHP"])
             for param in ["ghpghx_inputs", "ghpghx_responses", "ghpghx_response_uuids"]
                 if haskey(d["GHP"], param)    
