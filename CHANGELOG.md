@@ -23,6 +23,18 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.34.0
+### Added
+- Ability to run hybrid GHX sizing using **GhpGhx.jl** (automatic and fractional sizing)
+- Added financial inputs for **GHP** and updated objective and results to reflect these changes
+- Added central plant **GHP**
+### Fixed
+- Fix output of `get_tier_with_lowest_energy_rate(u::URDBrate)` to return an index and not cartesian coordinates for multi-tier energy rates.
+- Updated **GHP** cost curve calculations so incentives apply to all GHP components
+
+### Changed
+- If a `REoptInputs` object solves with termination status infeasible, altert user and return a dictionary insteadof JuMP model
+
 ## v0.33.0
 ### Added
 - Functionality to evaluate scenarios with Wind can in the ERP (`backup_reliability`)
