@@ -1253,7 +1253,7 @@ end
     input_data["GHP"]["ghpghx_inputs"][1]["hybrid_ghx_sizing_method"] = "Automatic"
     input_data["GHP"]["avoided_capex_by_ghp_present_value"] = 1.0e6
     input_data["GHP"]["ghx_useful_life_years"] = 35
-    input_data["GHP"]["ghpghx_responses"] = [JSON.parsefile("ghpghx_hybrid_results.json")]
+    input_data["GHP"]["ghpghx_responses"] = [JSON.parsefile("scenarios/ghpghx_hybrid_results.json")]
 
     inputs = REoptInputs(input_data)
 
@@ -1263,7 +1263,7 @@ end
 
     pop!(input_data["GHP"], "ghpghx_inputs")
     pop!(input_data["GHP"], "ghpghx_responses")
-    ghp_obj = REopt.GHP(JSON.parsefile("ghpghx_hybrid_results.json"), input_data["GHP"])
+    ghp_obj = REopt.GHP(JSON.parsefile("scenarios/ghpghx_hybrid_results.json"), input_data["GHP"])
 
     # Create GHP REopt object for results validation.
     # analysis period 25 years, ghx life 35 years, discount rate 8.3%
