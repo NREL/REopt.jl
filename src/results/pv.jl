@@ -30,7 +30,7 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 
     for t in p.techs.pv
         r = Dict{String, Any}()
-        r["production_factor_series"] = p.production_factor[t, :]
+        r["production_factor_series"] = Vector(p.production_factor[t, :])
 		r["size_kw"] = round(value(m[Symbol("dvSize"*_n)][t]), digits=4)
 
 		# NOTE: must use anonymous expressions in this loop to overwrite values for cases with multiple PV
