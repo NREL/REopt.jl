@@ -866,8 +866,8 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         )
         #TODO: more correct and robust handling of multiple PVs than the following
         pv = d["PV"]
-        if isa(d["PV"], Vector)
-            pv = d["PV"][1]
+        if isa(pv, Vector)
+            pv = pv[1]
         end
         pv_kw_ac_time_series = (
             get(pv, "electric_to_storage_series_kw", zero_array)
@@ -879,8 +879,8 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
                 get(
                     get(d, "Outages", Dict()), 
                     "pv_microgrid_size_kw", 
-                    get(d["PV"], "size_kw", 0.0)
-                ) / get(d["PV"], "size_kw", 1.0)
+                    get(pv, "size_kw", 0.0)
+                ) / get(pv, "size_kw", 1.0)
             )
     end
     if haskey(d, "Wind") && 
