@@ -265,8 +265,8 @@ struct CoolingLoad
         time_steps_per_hour::Int = 1,
         latitude::Float64=0.0,
         longitude::Float64=0.0,
-        existing_chiller_cop::Union{Real, Nothing} = nothing,
-        existing_chiller_max_thermal_factor_on_peak_load::Union{Real, Nothing}= nothing
+        existing_chiller_cop::Union{Real, Nothing} = nothing, # Passed from ExistingChiller or set to a default
+        existing_chiller_max_thermal_factor_on_peak_load::Union{Real, Nothing}= nothing # Passed from ExistingChiller or set to a default
     )
         # determine the timeseries of loads_kw_thermal
         loads_kw_thermal = nothing
