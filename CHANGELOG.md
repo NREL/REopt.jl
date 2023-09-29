@@ -48,6 +48,18 @@ Classify the change according to the following categories:
   - Fixed O&M ($/kW/yr): **Generator** **om_cost_per_kw** Grid connected: 10 Off-grid: 20 --> Grid connected: 20 Off-grid: 10
   - System capital cost ($/kW) by Class: **Wind** **size_class_to_installed_cost**	residential - 5675 commercial - 4300 medium - 2766 large - 2239 --> residential - 6339 commercial - 4760 medium - 3137 large - 2386
   - O&M cost ($/kW/year): **Wind** **om_cost_per_kw** 35 --> 36
+## v0.34.0
+### Added
+- Ability to run hybrid GHX sizing using **GhpGhx.jl** (automatic and fractional sizing)
+- Added financial inputs for **GHP** and updated objective and results to reflect these changes
+- Added central plant **GHP**
+### Fixed
+- Fix output of `get_tier_with_lowest_energy_rate(u::URDBrate)` to return an index and not cartesian coordinates for multi-tier energy rates.
+- Updated **GHP** cost curve calculations so incentives apply to all GHP components
+
+### Changed
+- If a `REoptInputs` object solves with termination status infeasible, altert user and return a dictionary insteadof JuMP model
+
 ## v0.33.0
 ### Added
 - Functionality to evaluate scenarios with Wind can in the ERP (`backup_reliability`)
