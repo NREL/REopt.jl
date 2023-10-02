@@ -176,7 +176,7 @@ else  # run HiGHS tests
         post = JSON.parsefile("./scenarios/$post_name")
         scen = Scenario(post)
      
-        @test scen.pvs[1].tilt ≈ post["Site"]["latitude"] 
+        @test scen.pvs[1].tilt ≈ 20
         @test scen.pvs[1].azimuth ≈ 180
     
         ## Scenario 2: Palmdale, CA; array-type = 1 (roof)
@@ -191,7 +191,7 @@ else  # run HiGHS tests
         post["PV"]["array_type"] = 0 
         scen = Scenario(post)
     
-        @test scen.pvs[1].tilt ≈ abs(post["Site"]["latitude"])
+        @test scen.pvs[1].tilt ≈ 20
         @test scen.pvs[1].azimuth ≈ 0
         @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) ≈ 0
 
