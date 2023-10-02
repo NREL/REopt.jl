@@ -1267,19 +1267,19 @@ end
     (inputs.s.ghp_option_list[1].building_sqft*
     inputs.s.ghp_option_list[1].installed_cost_building_hydronic_loop_per_sqft))
 
-    @test results["Financial"]["initial_capital_costs"] = calculated_ghp_capital_costs atol=0.1
+    @test results["Financial"]["initial_capital_costs"] ≈ calculated_ghp_capital_costs atol=0.1
     
     calculated_om_costs = inputs.s.ghp_option_list[1].building_sqft*
     inputs.s.ghp_option_list[1].om_cost_per_sqft_year * inputs.third_party_factor * inputs.pwf_om
 
-    @test results["Financial"]["lifecycle_om_costs_before_tax"] = calculated_om_costs atol=0.1
+    @test results["Financial"]["lifecycle_om_costs_before_tax"] ≈ calculated_om_costs atol=0.1
 
     calc_om_cost_after_tax = calculated_om_costs*(1-inputs.s.financial.owner_tax_rate_fraction)
-    @test results["Financial"]["lifecycle_om_costs_after_tax"] = calc_om_cost_after_tax atol=0.1
+    @test results["Financial"]["lifecycle_om_costs_after_tax"] ≈ calc_om_cost_after_tax atol=0.1
 
-    # @test r["lifecycle_capital_costs_plus_om_after_tax"] = results["Financial"]["initial_capital_costs"]*0.7 + calc_om_cost_after_tax atol=5
+    # @test r["lifecycle_capital_costs_plus_om_after_tax"] ≈ results["Financial"]["initial_capital_costs"]*0.7 + calc_om_cost_after_tax atol=5
 
-    # @test results["Financial"]["lifecycle_capital_costs"] = results["Financial"]["initial_capital_costs"]*0.7 atol=5
+    # @test results["Financial"]["lifecycle_capital_costs"] ≈ results["Financial"]["initial_capital_costs"]*0.7 atol=5
 
     ## Hybrid
     pop!(d["GHP"], "ghpghx_responses")
