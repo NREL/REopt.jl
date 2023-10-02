@@ -33,8 +33,8 @@
     emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom CO2 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour). Ensure emissions year aligns with load year.
 
     # Used with Climate Options 2 or 3: Annual percent decrease in CO2 emissions factors
-    emissions_factor_CO2_decrease_fraction::Real = co2_from_avert || length(emissions_factor_series_lb_CO2_per_kwh) > 0  ? 0.02163 : 0 , # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase.
-
+    emissions_factor_CO2_decrease_fraction::Union{Nothing, Real} = co2_from_avert || length(emissions_factor_series_lb_CO2_per_kwh) > 0  ? 0.02163 : nothing , # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase.
+    
     ### Grid Health Emissions Inputs ###
     # Health Option 1 (Default): Use health emissions data from the EPA's AVERT based on the AVERT emissions region and specify annual percent decrease
     avert_emissions_region::String = "", # AVERT emissions region. Default is based on location, or can be overriden by providing region here.
@@ -161,7 +161,7 @@ struct ElectricUtility
         emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom CO2 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour)
 
         # Used with Climate Options 2 or 3: Annual percent decrease in CO2 emissions factors
-        emissions_factor_CO2_decrease_fraction::Real = co2_from_avert || length(emissions_factor_series_lb_CO2_per_kwh) > 0  ? 0.02163 : 0 , # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase.
+        emissions_factor_CO2_decrease_fraction::Union{Nothing, Real} = co2_from_avert || length(emissions_factor_series_lb_CO2_per_kwh) > 0  ? 0.02163 : nothing , # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase.
 
         ### Grid Health Emissions Inputs ###
         # Health Option 1 (Default): Use health emissions data from the EPA's AVERT based on the AVERT emissions region and specify annual percent decrease
@@ -190,6 +190,19 @@ struct ElectricUtility
                 region_abbr = region_name_to_abbr(avert_emissions_region)
                 meters_to_region = 0
             end
+            # Warnings 
+            if co2_from_avert && length(emissions_factor_series_lb_CO2_per_kwh) > 0
+                @warn("You set co2_from_avert = true and provided values for emissions_factor_series_lb_CO2_per_kwh. REopt will use provided values for emissions_factor_series_lb_CO2_per_kwh.")
+            elseif !co2_from_avert && region_abbr ∈ ["AKGD","HIMS","HIOA"] && length(emissions_factor_series_lb_CO2_per_kwh) == 0
+                co2_from_avert = true # Must use "avert" data (actually eGRID) because AK and HI are not in Cambium
+                if isnothing(emissions_factor_CO2_decrease_fraction)
+                    emissions_factor_CO2_decrease_fraction = 0.02163
+                end
+                @warn("Using $(region_abbr) eGRID data for all grid emissions factors and emissions_factor_CO2_decrease_fraction = $(emissions_factor_CO2_decrease_fraction).")
+            elseif isnothing(emissions_factor_CO2_decrease_fraction) 
+                emissions_factor_CO2_decrease_fraction = 0.0 # For Cambium data and if not user-provided
+            end
+
             # Get all grid emissions series
             emissions_series_dict = Dict{String, Union{Nothing,Array{<:Real,1}}}()
             for (eseries, ekey) in [
@@ -212,13 +225,13 @@ struct ElectricUtility
                         throw(@error("The provided ElectricUtility emissions factor series for $(ekey) does not match the time_steps_per_hour."))
                     end
                 else # if not user-provided, get emissions factors from AVERT and/or Cambium
-                    if ekey == "CO2" && co2_from_avert == false && region_abbr ∉ ["AKGD","HIMS","HIOA"]  # Use Cambium for CO2 unless AK or HI 
+                    if ekey == "CO2" && co2_from_avert == false # Use Cambium for CO2 
                         if cambium_start_year < 2023 || cambium_start_year > 2050
                             @warn("The cambium_start_year must be between 2023 and 2050. Setting to cambium_start_year to 2024.")
-                            cambium_start_year = 2024 # Update annually 
+                            cambium_start_year = 2024 # Must update annually 
                         end
                         try
-                            cambium_response_dict = cambium_emissions_profile( # Adjusted for day of week alignment with load
+                            cambium_response_dict = cambium_emissions_profile( # Adjusted for day of week alignment with load and time_steps_per_hour
                                     scenario = cambium_scenario, 
                                     location_type = cambium_location_type, 
                                     latitude = latitude, 
@@ -228,14 +241,14 @@ struct ElectricUtility
                                     metric_col = cambium_metric_col,
                                     time_steps_per_hour = time_steps_per_hour,
                                     load_year = load_year,
-                                    emissions_year = 2017,
+                                    emissions_year = 2017, # because Cambium data always starts on a Sunday
                                     grid_level = cambium_grid_level
                             )
                             emissions_series_dict[ekey] = cambium_response_dict["emissions_factor_series_lb_CO2_per_kwh"]
                             cambium_emissions_region = cambium_response_dict["location"]
                         catch
                             @warn("Could not look up Cambium emissions profile from point ($(latitude), $(longitude)).
-                            Location is likely outside continental US or something went wrong with the Cambium API request. Setting CO2 emissions to zero.")
+                            Location is likely outside contiguous US or something went wrong with the Cambium API request. Setting CO2 emissions to zero.")
                             emissions_series_dict[ekey] = zeros(Float64, 8760*time_steps_per_hour) 
                         end
                     else # otherwise use AVERT
@@ -253,8 +266,6 @@ struct ElectricUtility
                         end
                     end
 
-                    # print("\n\n", ekey, emissions_series_dict[ekey][1:10] )
-                    
                     # Handle missing emissions inputs (due to failed lookup and not provided by user)
                     if isnothing(emissions_series_dict[ekey])
                         @warn "Cannot find hourly $(ekey) emissions for region $(region_abbr). Setting emissions to zero."
@@ -263,10 +274,10 @@ struct ElectricUtility
                                             !isnothing(CO2_emissions_reduction_max_fraction) || 
                                             include_climate_in_objective)
                             throw(@error("To include CO2 costs in the objective function or enforce emissions reduction constraints, 
-                                you must either enter custom CO2 grid emissions factors or a site location within the continental U.S."))
+                                you must either enter custom CO2 grid emissions factors or a site location within the U.S."))
                         elseif ekey in ["NOx", "SO2", "PM25"] && !off_grid_flag && include_health_in_objective
                             throw(@error("To include health costs in the objective function, you must either enter custom health 
-                                grid emissions factors or a site location within the continental U.S."))
+                                grid emissions factors or a site location within the contiguous U.S."))
                         end
                         emissions_series_dict[ekey] = zeros(8760*time_steps_per_hour)
                     end
@@ -531,9 +542,9 @@ function cambium_emissions_profile(; scenario::String,
             # "location" => "Colorado", # Contiguous United States, Colorado, Kansas, p33, p34 
             "latitude" => string(round(latitude, digits=3)),
             "longitude" => string(round(longitude, digits=3)), 
-            "start_year" => string(start_year), # biennial from 2022-2050 (data year covers nominal year and years proceeding; e.g., 2040 values cover time range starting in 2036.)
+            "start_year" => string(start_year), # biennial from 2022-2050 (data year covers nominal year and years proceeding; e.g., 2040 values cover time range starting in 2036)
             "lifetime" => string(lifetime), # Integer 1 or greater (Default 25 yrs)
-            "discount_rate" => "0.0", # Zero = simple average (a pwf with discount rate gets applied to projected CO2 costs, but not masses.)
+            "discount_rate" => "0.0", # Zero = simple average (a pwf with discount rate gets applied to projected CO2 costs, but not quantity.)
             "time_type" => "hourly", # hourly or annual
             "metric_col" => metric_col, # lrmer_co2e
             "smoothing_method" => "rolling", # rolling or none (only applicable to hourly queries). "rolling" best with TMY data; "none" best if 2012 weather data used.
@@ -572,7 +583,7 @@ function cambium_emissions_profile(; scenario::String,
         return Dict{String, Any}(
                 "error"=>
                 "Could not look up Cambium emissions profile from point ($(latitude), $(longitude)).
-                Location is likely outside continental US or something went wrong with the Cambium API request."
+                Location is likely outside contiguous US or something went wrong with the Cambium API request."
             )
     end
 end
