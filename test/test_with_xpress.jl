@@ -1245,11 +1245,44 @@ end
     # Average COP which includes pump power should be lower than Heat Pump only COP specified by the map
     @test heating_cop_avg <= 4.0
     @test cooling_cop_avg <= 8.0
+end
 
+@testset "Hybrid GHX and GHP calculated costs validation" begin
     ## Hybrid GHP validation.
     # Load base inputs
-    input_data = JSON.parsefile("scenarios/ghp_inputs.json")
+    input_data = JSON.parsefile("scenarios/ghp_financial_hybrid.json")
 
+    inputs = REoptInputs(input_data)
+
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    results = run_reopt([m1,m2], inputs)
+
+    calculated_ghp_capita_costs = input_data["GHP"]["ghpghx_responses"][1]["outputs"]["number_of_boreholes"]*
+    input_data["GHP"]["ghpghx_responses"][1]["outputs"]["length_boreholes_ft"]*
+    inputs.s.ghp_option_list[1].installed_cost_ghx_per_ft+
+    inputs.s.ghp_option_list[1].installed_cost_heatpump_per_ton*
+    input_data["GHP"]["ghpghx_responses"][1]["outputs"]["peak_combined_heatpump_thermal_ton"]*
+    inputs.s.ghp_option_list[1].heatpump_capacity_sizing_factor_on_peak_load+
+    inputs.s.ghp_option_list[1].building_sqft*
+    inputs.s.ghp_option_list[1].installed_cost_building_hydronic_loop_per_sqft
+
+    @test results["Financial"]["initial_capital_costs"] = calculated_ghp_final_costs atol=0.1
+    
+    calculated_om_costs = inputs.s.ghp_option_list[1].building_sqft*
+    inputs.s.ghp_option_list[1].om_cost_per_sqft_year * inputs.third_party_factor * inputs.pwf_om
+
+    @test results["Financial"]["lifecycle_om_costs_before_tax"] = calculated_om_costs atol=0.1
+
+    calc_om_cost_after_tax = calculated_om_costs*(1-inputs.s.financial.owner_tax_rate_fraction)
+    @test results["Financial"]["lifecycle_om_costs_after_tax"] = calc_om_cost_after_tax atol=0.1
+
+    @test r["lifecycle_capital_costs_plus_om_after_tax"] = results["Financial"]["initial_capital_costs"]*0.7 + calc_om_cost_after_tax atol=5
+
+    @test results["Financial"]["lifecycle_capital_costs"] = results["Financial"]["initial_capital_costs"]*0.7 atol=5
+
+    ## Hybrid
+    pop!(d["GHP"], "ghpghx_responses")
     input_data["GHP"]["ghpghx_inputs"][1]["hybrid_ghx_sizing_method"] = "Automatic"
     input_data["GHP"]["avoided_capex_by_ghp_present_value"] = 1.0e6
     input_data["GHP"]["ghx_useful_life_years"] = 35
@@ -1261,8 +1294,8 @@ end
     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
     results = run_reopt([m1,m2], inputs)
 
-    pop!(input_data["GHP"], "ghpghx_inputs")
-    pop!(input_data["GHP"], "ghpghx_responses")
+    pop!(input_data["GHP"], "ghpghx_inputs", nothing)
+    pop!(input_data["GHP"], "ghpghx_responses", nothing)
     ghp_obj = REopt.GHP(JSON.parsefile("scenarios/ghpghx_hybrid_results.json"), input_data["GHP"])
 
     # Create GHP REopt object for results validation.
