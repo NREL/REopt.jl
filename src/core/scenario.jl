@@ -576,8 +576,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             pop!(ghp_inputs_removed_ghpghx_responses, "ghpghx_inputs")
         end
         for ghpghx_response in get(d["GHP"], "ghpghx_responses", [])
-            if get(ghpghx_response["inputs"], "hybrid_ghx_sizing_method", nothing) in ["Automatic", "Fractional"]
-                ghp_inputs_removed_ghpghx_responses["is_ghx_hybrid"] = true
+            if haskey(ghpghx_response, "inputs")
+                if get(ghpghx_response["inputs"], "hybrid_ghx_sizing_method", nothing) in ["Automatic", "Fractional"]
+                    ghp_inputs_removed_ghpghx_responses["is_ghx_hybrid"] = true
+                end
             end
             append!(ghp_option_list, [GHP(ghpghx_response, ghp_inputs_removed_ghpghx_responses)])
         end

@@ -93,6 +93,7 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     r["year_one_om_costs_after_tax"] = r["lifecycle_om_costs_after_tax"] / (p.pwf_om * p.third_party_factor)
 
     r["lifecycle_capital_costs_plus_om_after_tax"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)] + m[Symbol("GHPCapCosts"*_n)]) + r["lifecycle_om_costs_after_tax"]
+    
     r["lifecycle_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)] + m[Symbol("GHPCapCosts"*_n)])
     
     r["initial_capital_costs"] = initial_capex(m, p; _n=_n)
@@ -195,10 +196,12 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 
         for option in enumerate(p.s.ghp_option_list)
 
-            if option[2].wwhp_cooling_pump_installed_cost_curve === NaN && option[2].wwhp_heating_pump_installed_cost_curve === NaN
+            if option[2].heat_pump_configuration == "WSHP"
                 initial_capex += option[2].installed_cost_per_kw[2]*option[2].heatpump_capacity_ton*value(m[Symbol("binGHP"*_n)][option[1]])
-            else
+            elseif option[2].heat_pump_configuration == "WWHP"
                 initial_capex += (option[2].wwhp_heating_pump_installed_cost_curve[2]*option[2].wwhp_heating_pump_capacity_ton + option[2].wwhp_cooling_pump_installed_cost_curve[2]*option[2].wwhp_cooling_pump_capacity_ton)*value(m[Symbol("binGHP"*_n)][option[1]])
+            else
+                @warn "Unknown heat pump configuration provided, excluding GHP costs from initial capital costs."
             end
         end
     end
