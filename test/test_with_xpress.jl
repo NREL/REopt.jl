@@ -1282,7 +1282,7 @@ end
     # @test results["Financial"]["lifecycle_capital_costs"] ≈ results["Financial"]["initial_capital_costs"]*0.7 atol=5
 
     ## Hybrid
-    pop!(d["GHP"], "ghpghx_responses")
+    pop!(input_data["GHP"], "ghpghx_responses")
     input_data["GHP"]["ghpghx_inputs"][1]["hybrid_ghx_sizing_method"] = "Automatic"
     input_data["GHP"]["avoided_capex_by_ghp_present_value"] = 1.0e6
     input_data["GHP"]["ghx_useful_life_years"] = 35
