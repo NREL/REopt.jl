@@ -1252,6 +1252,15 @@ end
     # Load base inputs
     input_data = JSON.parsefile("scenarios/ghp_financial_hybrid.json")
 
+    input_data["GHP"]["macrs_option_years"] = 0
+    input_data["GHP"]["macrs_bonus_fraction"] = 0.0
+    input_data["GHP"]["macrs_itc_reduction"] = 0.0
+    input_data["GHP"]["federal_itc_fraction"] = 0.3
+
+    input_data["Financial"] = Dict()
+    input_data["Financial"]["offtaker_tax_rate_fraction"] = 0.0
+    input_data["Financial"]["offtaker_discount_rate_fraction"] = 0.0
+
     inputs = REoptInputs(input_data)
 
     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
@@ -1275,11 +1284,11 @@ end
     @test results["Financial"]["lifecycle_om_costs_before_tax"] ≈ calculated_om_costs atol=0.1
 
     calc_om_cost_after_tax = calculated_om_costs*(1-inputs.s.financial.owner_tax_rate_fraction)
-    @test results["Financial"]["lifecycle_om_costs_after_tax"] ≈ calc_om_cost_after_tax atol=0.1
+    @test results["Financial"]["lifecycle_om_costs_after_tax"] - calc_om_cost_after_tax < 0.0001
 
-    # @test r["lifecycle_capital_costs_plus_om_after_tax"] ≈ results["Financial"]["initial_capital_costs"]*0.7 + calc_om_cost_after_tax atol=5
+    @test abs(results["Financial"]["lifecycle_capital_costs_plus_om_after_tax"] - (calc_om_cost_after_tax + 0.7*results["Financial"]["initial_capital_costs"])) < 150.0
 
-    # @test results["Financial"]["lifecycle_capital_costs"] ≈ results["Financial"]["initial_capital_costs"]*0.7 atol=5
+    @test abs(results["Financial"]["lifecycle_capital_costs"] - 0.7*results["Financial"]["initial_capital_costs"]) < 150.0
 
     ## Hybrid
     pop!(input_data["GHP"], "ghpghx_responses")
