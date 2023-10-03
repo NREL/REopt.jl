@@ -133,6 +133,11 @@ function proforma_results(p::REoptInputs, d::Dict)
         m.om_series_bau += escalate_om(annual_om_bau)
     end
 
+    # calculate Generator o+m costs, incentives, and depreciation
+    if "GHP" in keys(d) && d["GHP"]["ghp_option_chosen"] > 0
+        update_metrics(m, p, d["GHP"]["size_heat_pump_ton"], d["GHP"]["ghp_option_chosen"])
+    end
+
     # Optimal Case calculations
     electricity_bill_series = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax"])
     export_credit_series = escalate_elec(d["ElectricTariff"]["year_one_export_benefit_before_tax"])
@@ -359,6 +364,69 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
     nothing
 end
 
+# GPH specific, use kW terminology to represent tons
+function update_metrics(m::Metrics, p::REoptInputs, new_kw::Float64, ghp_option_chosen::Int)
+    
+    tech = p.s.ghp_option_list[ghp_option_chosen]
+    capital_cost = tech.installed_cost_per_kw[2]*new_kw # install cost without incentives
+
+    # owner is responsible for both new and existing PV maintenance in optimal case
+    annual_om = tech.om_cost_year_one
+
+    years = p.s.financial.analysis_years
+    escalate_om(val) = [val * (1 + p.s.financial.om_cost_escalation_rate_fraction)^yr for yr in 1:years]
+    m.om_series += escalate_om(annual_om)
+    m.om_series_bau += escalate_om(-1 * 0);
+
+    # incentive calculations, in the spreadsheet utility incentives are applied first
+    utility_ibi = minimum([capital_cost * tech.utility_ibi_fraction, tech.utility_ibi_max])
+    utility_cbi = minimum([new_kw * tech.utility_rebate_per_kw, tech.utility_rebate_max])
+    state_ibi = minimum([(capital_cost - utility_ibi - utility_cbi) * tech.state_ibi_fraction, tech.state_ibi_max])
+    state_cbi = minimum([new_kw * tech.state_rebate_per_kw, tech.state_rebate_max])
+    federal_cbi = new_kw * tech.federal_rebate_per_kw
+    ibi = utility_ibi + state_ibi
+    cbi = utility_cbi + federal_cbi + state_cbi
+    m.total_ibi_and_cbi += ibi + cbi
+
+    # Production-based incentives
+    pbi_series = Float64[]
+    pbi_series_bau = Float64[]
+    for yr in range(0, stop=years-1)
+        push!(pbi_series, 0.0)
+        push!(pbi_series_bau, 0.0)
+    end
+    m.total_pbi += pbi_series
+    m.total_pbi_bau += pbi_series_bau;
+
+    # Federal ITC 
+    # NOTE: bug in v1 has the ITC within the `if tech.macrs_option_years in [5 ,7]` block.
+    # NOTE: bug in v1 reduces the federal_itc_basis with the federal_cbi, which is incorrect
+    federal_itc_basis = capital_cost - state_ibi - utility_ibi - state_cbi - utility_cbi
+    federal_itc_amount = tech.federal_itc_fraction * federal_itc_basis
+    m.federal_itc += federal_itc_amount
+
+    # Depreciation
+    if tech.macrs_option_years in [5 ,7]
+        schedule = []
+        if tech.macrs_option_years == 5
+            schedule = p.s.financial.macrs_five_year
+        elseif tech.macrs_option_years == 7
+            schedule = p.s.financial.macrs_seven_year
+        end
+
+        macrs_bonus_basis = federal_itc_basis - federal_itc_basis * tech.federal_itc_fraction * tech.macrs_itc_reduction
+        macrs_basis = macrs_bonus_basis * (1 - tech.macrs_bonus_fraction)
+
+        depreciation_schedule = zeros(years)
+        for (i, r) in enumerate(schedule)
+            if i < length(depreciation_schedule)
+                depreciation_schedule[i] = macrs_basis * r
+            end
+        end
+        depreciation_schedule[1] += (tech.macrs_bonus_fraction * macrs_bonus_basis)
+        m.total_depreciation += depreciation_schedule
+    end
+end
 
 function npv(cashflows::AbstractArray{<:Real, 1}, rate::Real)
     years = collect(0:length(cashflows)-1)
