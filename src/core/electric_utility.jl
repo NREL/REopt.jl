@@ -34,7 +34,7 @@
 
     # Used with Climate Options 2 or 3: Annual percent decrease in CO2 emissions factors
     emissions_factor_CO2_decrease_fraction::Union{Nothing, Real} = co2_from_avert || length(emissions_factor_series_lb_CO2_per_kwh) > 0  ? 0.02163 : nothing , # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase.
-    
+
     ### Grid Health Emissions Inputs ###
     # Health Option 1 (Default): Use health emissions data from the EPA's AVERT based on the AVERT emissions region and specify annual percent decrease
     avert_emissions_region::String = "", # AVERT emissions region. Default is based on location, or can be overriden by providing region here.
@@ -211,7 +211,9 @@ struct ElectricUtility
                 (emissions_factor_series_lb_SO2_per_kwh, "SO2"),
                 (emissions_factor_series_lb_PM25_per_kwh, "PM25")
             ]
-                if typeof(eseries) <: Real  # user provided scalar value
+                if off_grid_flag # no grid emissions for off-grid
+                    emissions_series_dict[ekey] = zeros(Float64, 8760*time_steps_per_hour)
+                elseif typeof(eseries) <: Real  # user provided scalar value
                     emissions_series_dict[ekey] = repeat([eseries], 8760*time_steps_per_hour)
                 elseif length(eseries) == 1  # user provided array of one value
                     emissions_series_dict[ekey] = repeat(eseries, 8760*time_steps_per_hour)
@@ -269,13 +271,13 @@ struct ElectricUtility
                     # Handle missing emissions inputs (due to failed lookup and not provided by user)
                     if isnothing(emissions_series_dict[ekey])
                         @warn "Cannot find hourly $(ekey) emissions for region $(region_abbr). Setting emissions to zero."
-                        if ekey == "CO2" && !off_grid_flag && 
-                                            (!isnothing(CO2_emissions_reduction_min_fraction) || 
-                                            !isnothing(CO2_emissions_reduction_max_fraction) || 
-                                            include_climate_in_objective)
+                        if ekey == "CO2" && 
+                                        (!isnothing(CO2_emissions_reduction_min_fraction) || 
+                                        !isnothing(CO2_emissions_reduction_max_fraction) || 
+                                        include_climate_in_objective)
                             throw(@error("To include CO2 costs in the objective function or enforce emissions reduction constraints, 
                                 you must either enter custom CO2 grid emissions factors or a site location within the U.S."))
-                        elseif ekey in ["NOx", "SO2", "PM25"] && !off_grid_flag && include_health_in_objective
+                        elseif ekey in ["NOx", "SO2", "PM25"] && include_health_in_objective
                             throw(@error("To include health costs in the objective function, you must either enter custom health 
                                 grid emissions factors or a site location within the contiguous U.S."))
                         end
@@ -562,8 +564,6 @@ function cambium_emissions_profile(; scenario::String,
         output = response["message"]
         co2_emissions = output["values"] ./ 1000 # [lb / MWh] --> [lb / kWh]
         
-        # print("\n\nco2_emissions[1:10]: ", co2_emissions[1:10])
-        
         # Align day of week of emissions and load profiles (Cambium data starts on Sundays so assuming emissions_year=2017)
         co2_emissions = align_emission_with_load_year(load_year=load_year,emissions_year=emissions_year,emissions_profile=co2_emissions) 
         
@@ -595,12 +595,11 @@ function align_emission_with_load_year(; load_year::Int, emissions_year::Int, em
     
     if ef_start_day == load_start_day
         emissions_profile_adj = emissions_profile
-    elseif ef_start_day < load_start_day # wrap first few ef days to end
-        wrap_days = emissions_profile[1:24*(load_start_day-ef_start_day)]
-        emissions_profile_adj = append!(emissions_profile[24*(load_start_day-ef_start_day)+1:end],wrap_days)
-    else # ef_start_day > load_start_day; wrap last few ef days to start 
-        wrap_days = emissions_profile[(8760-24*(ef_start_day-load_start_day))+1:end]
-        emissions_profile_adj = append!(wrap_days,emissions_profile[1:8760-24*(ef_start_day-load_start_day)])
+    else
+        # Example: Emissions year = 2017; ef_start_day = 7 (Sunday). Load year = 2021; load_start_day = 5 (Fri)
+        cut_days = 7+(load_start_day-ef_start_day) # Ex: = 7+(5-7) = 5 --> cut Sun, Mon, Tues, Wed, Thurs
+        wrap_ts = emissions_profile[25:24+24*cut_days] # Ex: = emissions_profile[25:144] wrap Mon-Fri to end
+        emissions_profile_adj = append!(emissions_profile[24*cut_days+1:end],wrap_ts) # Ex: now starts on Fri and end Fri to align with 2021 cal
     end
 
     return emissions_profile_adj
