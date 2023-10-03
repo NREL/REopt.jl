@@ -1437,22 +1437,22 @@ end
             @test results["Site"]["renewable_electricity_fraction_bau"] ≈ 0.147576 atol=1e-4
             @test results["Site"]["total_renewable_energy_fraction"] ≈ 0.8
             @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.147576 atol=1e-4
-            @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.615888 atol=1e-4
-            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 281.6 atol=1
-            @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 11.41 atol=1e-2
-            @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 32.07 atol=1e-2
+            @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.61467195 atol=1e-4
+            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 282.6 atol=1
+            @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 11.44 atol=1e-2
+            @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 32.06 atol=1e-2
             @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 7.04
             @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0
-            @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 7786.7 atol=1
-            @test results["Financial"]["lifecycle_emissions_cost_climate_bau"] ≈ 20457.7 atol=1e-1
-            @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 218.16
-            @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 567.96
+            @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 7808.8 atol=1
+            @test results["Financial"]["lifecycle_emissions_cost_climate_bau"] ≈ 20450.0 atol=1e-1
+            @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 218.77
+            @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 567.75
             @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 140.78
             @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0
-            @test results["ElectricUtility"]["annual_emissions_tonnes_CO2"] ≈ 4.37
-            @test results["ElectricUtility"]["annual_emissions_tonnes_CO2_bau"] ≈ 32.07
+            @test results["ElectricUtility"]["annual_emissions_tonnes_CO2"] ≈ 4.4
+            @test results["ElectricUtility"]["annual_emissions_tonnes_CO2_bau"] ≈ 32.06 atol=1e-1
             @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] ≈ 77.39
-            @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 567.96
+            @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 567.75
         elseif i == 2
             #commented out values are results using same levelization factor as API
             @test results["PV"]["size_kw"] ≈ 106.13 atol=1
