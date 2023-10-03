@@ -1290,6 +1290,8 @@ end
 
     @test abs(results["Financial"]["lifecycle_capital_costs"] - 0.7*results["Financial"]["initial_capital_costs"]) < 150.0
 
+    @test haskey(results["ExistingBoiler"], "year_one_fuel_cost_before_tax_bau")
+
     ## Hybrid
     pop!(input_data["GHP"], "ghpghx_responses")
     input_data["GHP"]["ghpghx_inputs"][1]["hybrid_ghx_sizing_method"] = "Automatic"
