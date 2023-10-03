@@ -153,6 +153,7 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("FlexibleHVAC", "temperatures_degC_node_by_time"),
         ("ExistingBoiler", "lifecycle_fuel_cost_after_tax"),
         ("ExistingBoiler", "year_one_fuel_cost_before_tax"),
+        ("ExistingBoiler", "annual_thermal_production_mmbtu"),
         ("Site", "annual_renewable_electricity_kwh"),
         ("Site", "renewable_electricity_fraction"),
         ("Site", "total_renewable_energy_fraction"),
