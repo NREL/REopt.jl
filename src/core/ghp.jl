@@ -76,7 +76,7 @@ Base.@kwdef mutable struct GHP <: AbstractGHP
     space_heating_efficiency_thermal_factor::Float64 = NaN  # Default depends on building and location
     cooling_efficiency_thermal_factor::Float64 = NaN # Default depends on building and location
     ghpghx_response::Dict = Dict()
-    can_serve_dhw::Bool = false
+    can_serve_dhw::Bool = false  # If this default changes, must change conditional in scenario.jl for sending loads to GhpGhx.jl
 
     aux_heater_type::String = "electric"
     is_ghx_hybrid::Bool = false
