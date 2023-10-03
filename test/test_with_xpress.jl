@@ -1343,10 +1343,10 @@ end
     scen = Scenario(post)
 
     @test scen.electric_utility.cambium_emissions_region == "Colorado"
-    @test mean(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) ≈ 0.38046 rtol=1e-5
+    @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) / 8760 ≈ 0.38046 rtol=1e-5
     @test scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh[1] ≈ 0.66672 rtol=1e-5 # Should start on Friday
     @test scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh[8760] ≈ 0.64833465 rtol=1e-5 # Should end on Friday 
-    @test mean(scen.electric_utility.emissions_factor_series_lb_SO2_per_kwh) ≈ 0.000592455 rtol=1e-5 # check avg from AVERT data for RM region
+    @test sum(scen.electric_utility.emissions_factor_series_lb_SO2_per_kwh) / 8760 ≈ 0.000592455 rtol=1e-5 # check avg from AVERT data for RM region
     @test scen.electric_utility.emissions_factor_CO2_decrease_fraction ≈ 0 atol=1e-5
     @test scen.electric_utility.emissions_factor_SO2_decrease_fraction ≈ 0.02163
 
@@ -1356,7 +1356,7 @@ end
     post["Site"]["longitude"] = cities[city][2]
     scen = Scenario(post)
 
-    @test mean(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) ≈ 1.40636 rtol=1e-5 # check data from eGRID (AVERT data file) usd
+    @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) / 8760 ≈ 1.40636 rtol=1e-5 # check data from eGRID (AVERT data file) usd
     @test scen.electric_utility.emissions_factor_CO2_decrease_fraction ≈ 0.02163 # should get updated
 
     # 3) International location
@@ -1451,7 +1451,7 @@ end
             @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0
             @test results["ElectricUtility"]["annual_emissions_tonnes_CO2"] ≈ 4.4
             @test results["ElectricUtility"]["annual_emissions_tonnes_CO2_bau"] ≈ 32.06 atol=1e-1
-            @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] ≈ 77.39
+            @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] ≈ 78.0
             @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 567.75
         elseif i == 2
             #commented out values are results using same levelization factor as API
@@ -1465,7 +1465,7 @@ end
             @test (expected_npv - results["Financial"]["npv"])/expected_npv ≈ 0.0 atol=1e-3
             # Renewable energy
             @test results["Site"]["renewable_electricity_fraction"] ≈ 0.783298 atol=1e-3
-            @test results["Site"]["annual_renewable_electricity_kwh"] ≈ 78329.85 atol=10
+            @test results["Site"]["annual_renewable_electricity_kwh"] ≈ 78373.4 atol=10
             @test results["Site"]["renewable_electricity_fraction_bau"] ≈ 0.132118 atol=1e-3 #0.1354 atol=1e-3
             @test results["Site"]["annual_renewable_electricity_kwh_bau"] ≈ 13211.78 atol=10 # 13542.62 atol=10
             @test results["Site"]["total_renewable_energy_fraction"] ≈ 0.783298 atol=1e-3
@@ -1477,8 +1477,8 @@ end
             @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 70.99 atol=1
             @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
             @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0 atol=1 # 0.0
-            @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 9097.38 atol=1
-            @test results["Financial"]["lifecycle_emissions_cost_climate_bau"] ≈ 45486.91 atol=1
+            @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 9100.02 atol=1
+            @test results["Financial"]["lifecycle_emissions_cost_climate_bau"] ≈ 45500.08 atol=1
             @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 252.92 atol=1
             @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 1262.84 atol=1
             @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
