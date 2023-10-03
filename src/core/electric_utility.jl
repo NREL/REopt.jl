@@ -192,13 +192,15 @@ struct ElectricUtility
             end
             # Warnings 
             if co2_from_avert && length(emissions_factor_series_lb_CO2_per_kwh) > 0
-                @warn("You set co2_from_avert = true and provided values for emissions_factor_series_lb_CO2_per_kwh. REopt will use provided values for emissions_factor_series_lb_CO2_per_kwh.")
+                @warn("You set co2_from_avert = true and provided values for emissions_factor_series_lb_CO2_per_kwh. REopt will use the provided values for emissions_factor_series_lb_CO2_per_kwh.")
             elseif !co2_from_avert && region_abbr ∈ ["AKGD","HIMS","HIOA"] && length(emissions_factor_series_lb_CO2_per_kwh) == 0
                 co2_from_avert = true # Must use "avert" data (actually eGRID) because AK and HI are not in Cambium
                 if isnothing(emissions_factor_CO2_decrease_fraction)
                     emissions_factor_CO2_decrease_fraction = 0.02163
+                    @warn("Using eGRID data for region $(region_abbr) for all grid emissions factors and setting emissions_factor_CO2_decrease_fraction = $(emissions_factor_CO2_decrease_fraction).")
+                else
+                    @warn("Using eGRID data for region $(region_abbr) for all grid emissions factors.")
                 end
-                @warn("Using $(region_abbr) eGRID data for all grid emissions factors and emissions_factor_CO2_decrease_fraction = $(emissions_factor_CO2_decrease_fraction).")
             elseif isnothing(emissions_factor_CO2_decrease_fraction) 
                 emissions_factor_CO2_decrease_fraction = 0.0 # For Cambium data and if not user-provided
             end
@@ -556,11 +558,8 @@ function cambium_emissions_profile(; scenario::String,
     )
 
     try
-        print("\n\n***CALLING CAMBIUM API***\n\n")
-
         r = HTTP.get(url; query=payload) 
-        response = JSON.parse(String(r.body))
-        # print("\n", response["status"], "\n")
+        response = JSON.parse(String(r.body)) # contains response["status"]
         output = response["message"]
         co2_emissions = output["values"] ./ 1000 # [lb / MWh] --> [lb / kWh]
         
