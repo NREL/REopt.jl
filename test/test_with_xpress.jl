@@ -1252,15 +1252,6 @@ end
     # Load base inputs
     input_data = JSON.parsefile("scenarios/ghp_financial_hybrid.json")
 
-    input_data["GHP"]["macrs_option_years"] = 0
-    input_data["GHP"]["macrs_bonus_fraction"] = 0.0
-    input_data["GHP"]["macrs_itc_reduction"] = 0.0
-    input_data["GHP"]["federal_itc_fraction"] = 0.3
-
-    input_data["Financial"] = Dict()
-    input_data["Financial"]["offtaker_tax_rate_fraction"] = 0.0
-    input_data["Financial"]["offtaker_discount_rate_fraction"] = 0.0
-
     inputs = REoptInputs(input_data)
 
     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
@@ -1290,14 +1281,16 @@ end
 
     @test abs(results["Financial"]["lifecycle_capital_costs"] - 0.7*results["Financial"]["initial_capital_costs"]) < 150.0
 
+    @test abs(results["Financial"]["npv"] - 840621) < 1.0,
+    @test results["Financial"]["simple_payback_years"] - 5.09 < 0.1,
+    @test results["Financial"]["internal_rate_of_return"] - 0.18 < 0.01
+
     @test haskey(results["ExistingBoiler"], "year_one_fuel_cost_before_tax_bau")
 
     ## Hybrid
-    pop!(input_data["GHP"], "ghpghx_responses")
-    input_data["GHP"]["ghpghx_inputs"][1]["hybrid_ghx_sizing_method"] = "Automatic"
+    input_data["GHP"]["ghpghx_responses"] = [JSON.parsefile("scenarios/ghpghx_hybrid_results.json")]
     input_data["GHP"]["avoided_capex_by_ghp_present_value"] = 1.0e6
     input_data["GHP"]["ghx_useful_life_years"] = 35
-    input_data["GHP"]["ghpghx_responses"] = [JSON.parsefile("scenarios/ghpghx_hybrid_results.json")]
 
     inputs = REoptInputs(input_data)
 
@@ -1309,8 +1302,6 @@ end
     pop!(input_data["GHP"], "ghpghx_responses", nothing)
     ghp_obj = REopt.GHP(JSON.parsefile("scenarios/ghpghx_hybrid_results.json"), input_data["GHP"])
 
-    # Create GHP REopt object for results validation.
-    # analysis period 25 years, ghx life 35 years, discount rate 8.3%
     calculated_ghx_residual_value = ghp_obj.ghx_only_capital_cost*
     (
         (ghp_obj.ghx_useful_life_years - inputs.s.financial.analysis_years)/ghp_obj.ghx_useful_life_years
