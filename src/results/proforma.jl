@@ -365,10 +365,16 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
 end
 
 function update_ghp_metrics(m::REopt.Metrics, p::REoptInputs, tech::REopt.AbstractTech, tech_name::String, results::Dict, third_party::Bool)
-    total_kw = results[tech_name]["size_heat_pump_ton"]
-    existing_kw = :existing_kw in fieldnames(typeof(tech)) ? tech.existing_kw : 0
-    new_kw = total_kw - existing_kw
-    capital_cost = new_kw * tech.installed_cost_per_kw[2]
+    if tech.heat_pump_configuration == "WWHP"
+        total_heating_kw = results[tech_name]["size_wwhp_heating_pump_ton"]
+        total_cooling_kw = results[tech_name]["size_wwhp_cooling_pump_ton"]
+        new_kw = (total_heating_kw + total_cooling_kw) / 2.0  # WIP workaround, not ideal
+        capital_cost = total_heating_kw * tech.wwhp_heating_pump_installed_cost_curve[2] + 
+                        total_cooling_kw * tech.wwhp_cooling_pump_installed_cost_curve[2]
+    else
+        new_kw = results[tech_name]["size_heat_pump_ton"]
+        capital_cost = new_kw * tech.installed_cost_per_kw[2]
+    end
 
     # building specific OM costs
     annual_om = -1 * tech.building_sqft*tech.om_cost_per_sqft_year
