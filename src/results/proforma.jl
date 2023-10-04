@@ -133,9 +133,9 @@ function proforma_results(p::REoptInputs, d::Dict)
         m.om_series_bau += escalate_om(annual_om_bau)
     end
 
-    # calculate Generator o+m costs, incentives, and depreciation
+    # calculate GHP incentives, and depreciation
     if "GHP" in keys(d) && d["GHP"]["ghp_option_chosen"] > 0
-        update_metrics(m, p, d["GHP"]["size_heat_pump_ton"], d["GHP"]["ghp_option_chosen"])
+        update_ghp_metrics(m, p, p.s.ghp_option_list[d["GHP"]["ghp_option_chosen"]], "GHP", d, third_party)
     end
 
     # Optimal Case calculations
@@ -364,19 +364,19 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
     nothing
 end
 
-# GPH specific, use kW terminology to represent tons
-function update_metrics(m::Metrics, p::REoptInputs, new_kw::Float64, ghp_option_chosen::Int)
+function update_ghp_metrics(m::REopt.Metrics, p::REoptInputs, tech::REopt.AbstractTech, tech_name::String, results::Dict, third_party::Bool)
+    total_kw = results[tech_name]["size_heat_pump_ton"]
+    existing_kw = :existing_kw in fieldnames(typeof(tech)) ? tech.existing_kw : 0
+    new_kw = total_kw - existing_kw
+    capital_cost = new_kw * tech.installed_cost_per_kw[2]
+
+    # building specific OM costs
+    annual_om = -1 * tech.building_sqft*tech.om_cost_per_sqft_year
     
-    tech = p.s.ghp_option_list[ghp_option_chosen]
-    capital_cost = tech.installed_cost_per_kw[2]*new_kw # install cost without incentives
-
-    # owner is responsible for both new and existing PV maintenance in optimal case
-    annual_om = tech.om_cost_year_one
-
     years = p.s.financial.analysis_years
     escalate_om(val) = [val * (1 + p.s.financial.om_cost_escalation_rate_fraction)^yr for yr in 1:years]
     m.om_series += escalate_om(annual_om)
-    m.om_series_bau += escalate_om(-1 * 0);
+    m.om_series_bau += escalate_om(0)
 
     # incentive calculations, in the spreadsheet utility incentives are applied first
     utility_ibi = minimum([capital_cost * tech.utility_ibi_fraction, tech.utility_ibi_max])
@@ -391,12 +391,14 @@ function update_metrics(m::Metrics, p::REoptInputs, new_kw::Float64, ghp_option_
     # Production-based incentives
     pbi_series = Float64[]
     pbi_series_bau = Float64[]
+    # existing_energy_bau = third_party ? get(results[tech_name], "year_one_energy_produced_kwh_bau", 0) : 0
+    # year_one_energy = "year_one_energy_produced_kwh" in keys(results[tech_name]) ? results[tech_name]["year_one_energy_produced_kwh"] : results[tech_name]["annual_energy_produced_kwh"]
     for yr in range(0, stop=years-1)
         push!(pbi_series, 0.0)
         push!(pbi_series_bau, 0.0)
     end
     m.total_pbi += pbi_series
-    m.total_pbi_bau += pbi_series_bau;
+    m.total_pbi_bau += pbi_series_bau
 
     # Federal ITC 
     # NOTE: bug in v1 has the ITC within the `if tech.macrs_option_years in [5 ,7]` block.
@@ -426,6 +428,7 @@ function update_metrics(m::Metrics, p::REoptInputs, new_kw::Float64, ghp_option_
         depreciation_schedule[1] += (tech.macrs_bonus_fraction * macrs_bonus_basis)
         m.total_depreciation += depreciation_schedule
     end
+    nothing
 end
 
 function npv(cashflows::AbstractArray{<:Real, 1}, rate::Real)
