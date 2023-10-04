@@ -61,10 +61,10 @@ end
         data_cost_curve["CHP"]["fuel_cost_per_mmbtu"] = 8.0
         data_cost_curve["CHP"]["min_kw"] = 0
         data_cost_curve["CHP"]["min_allowable_kw"] = 555.5
-        data_cost_curve["CHP"]["max_kw"] = 1000
+        data_cost_curve["CHP"]["max_kw"] = 555.51
         data_cost_curve["CHP"]["installed_cost_per_kw"] = 1800.0
         data_cost_curve["CHP"]["installed_cost_per_kw"] = [2300.0, 1800.0, 1500.0]
-        data_cost_curve["CHP"]["tech_sizes_for_cost_curve"] = [100.0, 300.0, 555.51]
+        data_cost_curve["CHP"]["tech_sizes_for_cost_curve"] = [100.0, 300.0, 1140.0]
     
         data_cost_curve["CHP"]["federal_itc_fraction"] = 0.1
         data_cost_curve["CHP"]["macrs_option_years"] = 0
