@@ -23,6 +23,12 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.35.1
+### Fixed
+- Add GHP to proforma metrics for when GHP is evaluated (should have been there)
+###
+- Add different BAU outputs for heating and cooling systems
+
 ## v0.35.0
 ### Changed
 - ANNUAL UPDATE TO DEFAULT VALUES. Changes outlined below with (old value) --> (new value). See user manual for references. 
