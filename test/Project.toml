@@ -6,3 +6,9 @@ JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Xpress = "9e70acf3-d6c9-5be6-b5bd-4e2c73e3e054"
+
+[compat]
+HiGHS = "1.7.3"
+JSON = "0.21"
+JuMP = "1"
+Xpress = "0.16
