@@ -23,10 +23,16 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.36.0 (pre-release)
+### Changed
+- Updated the package dependencies to be compatible with recent changes to HiGHS (for testing) and MathOptInterface
+### Fixed
+- The present worth factor for fuel (pwf_fuel) was not properly multiplying for lifecycle fuel costs
+
 ## v0.35.1
 ### Fixed
 - Add GHP to proforma metrics for when GHP is evaluated (should have been there)
-###
+### Added
 - Add different BAU outputs for heating and cooling systems
 
 ## v0.35.0
