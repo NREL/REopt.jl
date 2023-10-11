@@ -23,6 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop 2023-10-11
+### Changed
+- Changed default values by prime mover for CHP technologies in `data/chp/chp_defaults.json`.  See user manual for details by prime mover and size class. 
+ 
 ## v0.35.1
 ### Fixed
 - Add GHP to proforma metrics for when GHP is evaluated (should have been there)
