@@ -24,7 +24,7 @@ Classify the change according to the following categories:
     ### Removed
 
 
-## v0.36.0 (pre-release)
+## v0.36.0
 ### Changed
 - Changed default values by prime mover for CHP technologies in `data/chp/chp_defaults.json`.  See user manual for details by prime mover and size class.
 - Updated the package dependencies to be compatible with recent changes to HiGHS (for testing) and MathOptInterface
