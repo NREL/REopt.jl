@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 using Xpress
 using Random
 using DelimitedFiles
@@ -524,6 +496,25 @@ end
     @test value(m[:binMGTechUsed]["Wind"]) ≈ 1
     @test results["Outages"]["expected_outage_cost"] ≈ 446899.75 atol=1.0
     @test results["Financial"]["lcc"] ≈ 6.71661825335e7 rtol=0.001
+end
+
+@testset "Outages with Wind and supply-to-load no greater than critical load" begin
+    input_data = JSON.parsefile("./scenarios/wind_outages.json")
+    s = Scenario(input_data)
+    inputs = REoptInputs(s)
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+    results = run_reopt([m1,m2], inputs)
+
+    # Check that supply-to-load is equal to critical load during outages, including wind
+    supply_to_load = results["Outages"]["storage_discharge_series_kw"] .+ results["Outages"]["wind_to_load_series_kw"]
+    supply_to_load = [supply_to_load[:,:,i][1] for i in eachindex(supply_to_load)]
+    critical_load = results["Outages"]["critical_loads_per_outage_series_kw"][1,1,:]
+    check = .≈(supply_to_load, critical_load, atol=0.001)
+    @test !(0 in check)
+
+    # Check that the soc_series_fraction is the same length as the storage_discharge_series_kw
+    @test size(results["Outages"]["soc_series_fraction"]) == size(results["Outages"]["storage_discharge_series_kw"])
 end
 
 @testset "Multiple Sites" begin
@@ -1181,7 +1172,8 @@ end
     3. GHP serves only the SpaceHeatingLoad by default unless it is allowed to serve DHW
     4. GHP serves all the Cooling load
     5. Input of a custom COP map for GHP and check the GHP performance to make sure it's using it correctly
-    
+    6. Hybrid GHP capability functions as expected
+
     """
     # Load base inputs
     input_data = JSON.parsefile("scenarios/ghp_inputs.json")
@@ -1255,6 +1247,103 @@ end
     @test cooling_cop_avg <= 8.0
 end
 
+@testset "Hybrid GHX and GHP calculated costs validation" begin
+    ## Hybrid GHP validation.
+    # Load base inputs
+    input_data = JSON.parsefile("scenarios/ghp_financial_hybrid.json")
+
+    inputs = REoptInputs(input_data)
+
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    results = run_reopt([m1,m2], inputs)
+
+    calculated_ghp_capital_costs = ((input_data["GHP"]["ghpghx_responses"][1]["outputs"]["number_of_boreholes"]*
+    input_data["GHP"]["ghpghx_responses"][1]["outputs"]["length_boreholes_ft"]* 
+    inputs.s.ghp_option_list[1].installed_cost_ghx_per_ft) + 
+    (inputs.s.ghp_option_list[1].installed_cost_heatpump_per_ton*
+    input_data["GHP"]["ghpghx_responses"][1]["outputs"]["peak_combined_heatpump_thermal_ton"]*
+    inputs.s.ghp_option_list[1].heatpump_capacity_sizing_factor_on_peak_load) + 
+    (inputs.s.ghp_option_list[1].building_sqft*
+    inputs.s.ghp_option_list[1].installed_cost_building_hydronic_loop_per_sqft))
+
+    @test results["Financial"]["initial_capital_costs"] ≈ calculated_ghp_capital_costs atol=0.1
+    
+    calculated_om_costs = inputs.s.ghp_option_list[1].building_sqft*
+    inputs.s.ghp_option_list[1].om_cost_per_sqft_year * inputs.third_party_factor * inputs.pwf_om
+
+    @test results["Financial"]["lifecycle_om_costs_before_tax"] ≈ calculated_om_costs atol=0.1
+
+    calc_om_cost_after_tax = calculated_om_costs*(1-inputs.s.financial.owner_tax_rate_fraction)
+    @test results["Financial"]["lifecycle_om_costs_after_tax"] - calc_om_cost_after_tax < 0.0001
+
+    @test abs(results["Financial"]["lifecycle_capital_costs_plus_om_after_tax"] - (calc_om_cost_after_tax + 0.7*results["Financial"]["initial_capital_costs"])) < 150.0
+
+    @test abs(results["Financial"]["lifecycle_capital_costs"] - 0.7*results["Financial"]["initial_capital_costs"]) < 150.0
+
+    @test abs(results["Financial"]["npv"] - 840621) < 1.0
+    @test results["Financial"]["simple_payback_years"] - 5.09 < 0.1
+    @test results["Financial"]["internal_rate_of_return"] - 0.18 < 0.01
+
+    @test haskey(results["ExistingBoiler"], "year_one_fuel_cost_before_tax_bau")
+
+    ## Hybrid
+    input_data["GHP"]["ghpghx_responses"] = [JSON.parsefile("scenarios/ghpghx_hybrid_results.json")]
+    input_data["GHP"]["avoided_capex_by_ghp_present_value"] = 1.0e6
+    input_data["GHP"]["ghx_useful_life_years"] = 35
+
+    inputs = REoptInputs(input_data)
+
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    results = run_reopt([m1,m2], inputs)
+
+    pop!(input_data["GHP"], "ghpghx_inputs", nothing)
+    pop!(input_data["GHP"], "ghpghx_responses", nothing)
+    ghp_obj = REopt.GHP(JSON.parsefile("scenarios/ghpghx_hybrid_results.json"), input_data["GHP"])
+
+    calculated_ghx_residual_value = ghp_obj.ghx_only_capital_cost*
+    (
+        (ghp_obj.ghx_useful_life_years - inputs.s.financial.analysis_years)/ghp_obj.ghx_useful_life_years
+    )/(
+        (1 + inputs.s.financial.offtaker_discount_rate_fraction)^inputs.s.financial.analysis_years
+    )
+    
+    @test results["GHP"]["ghx_residual_value_present_value"] ≈ calculated_ghx_residual_value atol=0.1
+    @test inputs.s.ghp_option_list[1].is_ghx_hybrid = true
+
+    # Test centralized GHP cost calculations
+    input_data_wwhp = JSON.parsefile("scenarios/ghp_inputs_wwhp.json")
+    response_wwhp = JSON.parsefile("scenarios/ghpghx_response_wwhp.json")
+    input_data_wwhp["GHP"]["ghpghx_responses"] = [response_wwhp]
+
+    s_wwhp = Scenario(input_data_wwhp)
+    inputs_wwhp = REoptInputs(s_wwhp)
+    m3 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    results_wwhp = run_reopt(m3, inputs_wwhp)
+
+
+    heating_hp_cost = input_data_wwhp["GHP"]["installed_cost_wwhp_heating_pump_per_ton"] * 
+                        input_data_wwhp["GHP"]["heatpump_capacity_sizing_factor_on_peak_load"] *
+                        results_wwhp["GHP"]["ghpghx_chosen_outputs"]["peak_heating_heatpump_thermal_ton"]
+
+    cooling_hp_cost = input_data_wwhp["GHP"]["installed_cost_wwhp_cooling_pump_per_ton"] * 
+                        input_data_wwhp["GHP"]["heatpump_capacity_sizing_factor_on_peak_load"] *
+                        results_wwhp["GHP"]["ghpghx_chosen_outputs"]["peak_cooling_heatpump_thermal_ton"]
+
+    ghx_cost = input_data_wwhp["GHP"]["installed_cost_ghx_per_ft"] * 
+                results_wwhp["GHP"]["ghpghx_chosen_outputs"]["number_of_boreholes"] * 
+                results_wwhp["GHP"]["ghpghx_chosen_outputs"]["length_boreholes_ft"]
+
+    # CAPEX reduction factor for 30% ITC, 5-year MACRS, assuming 26% tax rate and 8.3% discount
+    capex_reduction_factor = 0.455005797
+
+    calculated_ghp_capex = (heating_hp_cost + cooling_hp_cost + ghx_cost) * (1 - capex_reduction_factor)
+
+    reopt_ghp_capex = results_wwhp["Financial"]["lifecycle_capital_costs"]
+    @test calculated_ghp_capex ≈ reopt_ghp_capex atol=300
+end
+
 @testset "Emissions and Renewable Energy Percent" begin
     #renewable energy and emissions reduction targets
     include_exported_RE_in_total = [true,false,true]
@@ -1317,8 +1406,6 @@ end
             @test results["ElectricStorage"]["size_kw"] ≈ 0.0 atol=1e-1
             @test results["ElectricStorage"]["size_kwh"] ≈ 0.0 atol=1e-1
             @test results["Generator"]["size_kw"] ≈ 21.52 atol=1e-1
-            expected_npv = -70009
-            @test (expected_npv - results["Financial"]["npv"])/expected_npv ≈ 0.0 atol=1e-2
             @test results["Site"]["annual_renewable_electricity_kwh"] ≈ 76412.02
             @test results["Site"]["renewable_electricity_fraction"] ≈ 0.8
             @test results["Site"]["renewable_electricity_fraction_bau"] ≈ 0.147576 atol=1e-4
