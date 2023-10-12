@@ -311,14 +311,14 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     chp = nothing
     chp_prime_mover = nothing
     if haskey(d, "CHP")
-        if !isnothing(existing_boiler)
+        if !isnothing(existing_boiler) && get(d["CHP"], "thermal_efficiency_full_load", 0.5) > 0.0
             total_fuel_heating_load_mmbtu_per_hour = (space_heating_load.loads_kw + dhw_load.loads_kw) / existing_boiler.efficiency / KWH_PER_MMBTU
             avg_boiler_fuel_load_mmbtu_per_hour = sum(total_fuel_heating_load_mmbtu_per_hour) / length(total_fuel_heating_load_mmbtu_per_hour)
             chp = CHP(d["CHP"]; 
                     avg_boiler_fuel_load_mmbtu_per_hour = avg_boiler_fuel_load_mmbtu_per_hour,
                     existing_boiler = existing_boiler,
                     electric_load_series_kw = electric_load.loads_kw)
-        else # Only if modeling CHP without heating_load and existing_boiler (for electric-only CHP)
+        else # Only if modeling CHP without heating_load and existing_boiler (for prime generator, electric-only)
             chp = CHP(d["CHP"],
                     electric_load_series_kw = electric_load.loads_kw)
         end
