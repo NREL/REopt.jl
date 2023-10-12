@@ -280,6 +280,9 @@ function get_prime_mover_defaults(prime_mover::String, boiler_type::String, size
         else
             prime_mover_defaults[key] = pmds[prime_mover][key][size_class+1]
         end
+        if key in ["installed_cost_per_kw", "om_cost_per_kwh"] && is_electric_only
+            prime_mover_defaults[key] *= 0.75
+        end
     end
     pmds = nothing
 
