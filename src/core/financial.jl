@@ -1,46 +1,18 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `Financial` is an optional REopt input with the following keys and default values:
 ```julia
     om_cost_escalation_rate_fraction::Real = 0.025,
-    elec_cost_escalation_rate_fraction::Real = 0.019,
-    existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.034, 
-    boiler_fuel_cost_escalation_rate_fraction::Real = 0.034,
-    chp_fuel_cost_escalation_rate_fraction::Real = 0.034,
-    generator_fuel_cost_escalation_rate_fraction::Real = 0.027,
-    offtaker_tax_rate_fraction::Real = 0.26,
-    offtaker_discount_rate_fraction::Real = 0.0564,
+    elec_cost_escalation_rate_fraction::Real = 0.017,
+    existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.015, 
+    boiler_fuel_cost_escalation_rate_fraction::Real = 0.015,
+    chp_fuel_cost_escalation_rate_fraction::Real = 0.015,
+    generator_fuel_cost_escalation_rate_fraction::Real = 0.012,
+    offtaker_tax_rate_fraction::Real = 0.26, # combined state and federal tax rate
+    offtaker_discount_rate_fraction::Real = 0.0638,
     third_party_ownership::Bool = false,
-    owner_tax_rate_fraction::Real = 0.26,
-    owner_discount_rate_fraction::Real = 0.0564,
+    owner_tax_rate_fraction::Real = 0.26, # combined state and federal tax rate
+    owner_discount_rate_fraction::Real = 0.0638,
     analysis_years::Int = 25,
     value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00, #only applies to multiple outage modeling
     microgrid_upgrade_cost_fraction::Real = 0.0
@@ -105,16 +77,16 @@ struct Financial
     function Financial(;
         off_grid_flag::Bool = false,
         om_cost_escalation_rate_fraction::Real = 0.025,
-        elec_cost_escalation_rate_fraction::Real = 0.019,
-        existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.034,
-        boiler_fuel_cost_escalation_rate_fraction::Real = 0.034,
-        chp_fuel_cost_escalation_rate_fraction::Real = 0.034,
-        generator_fuel_cost_escalation_rate_fraction::Real = 0.027,
-        offtaker_tax_rate_fraction::Real = 0.26,
-        offtaker_discount_rate_fraction::Real = 0.0564,
+        elec_cost_escalation_rate_fraction::Real = 0.017,
+        existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.015,
+        boiler_fuel_cost_escalation_rate_fraction::Real = 0.015,
+        chp_fuel_cost_escalation_rate_fraction::Real = 0.015,
+        generator_fuel_cost_escalation_rate_fraction::Real = 0.012,
+        offtaker_tax_rate_fraction::Real = 0.257,
+        offtaker_discount_rate_fraction::Real = 0.0638,
         third_party_ownership::Bool = false,
-        owner_tax_rate_fraction::Real = 0.26,
-        owner_discount_rate_fraction::Real = 0.0564,
+        owner_tax_rate_fraction::Real = 0.257,
+        owner_discount_rate_fraction::Real = 0.0638,
         analysis_years::Int = 25,
         value_of_lost_load_per_kwh::Union{Array{<:Real,1}, Real} = 1.00, #only applies to multiple outage modeling
         microgrid_upgrade_cost_fraction::Real = 0.0,

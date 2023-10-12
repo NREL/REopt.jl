@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 # https://discourse.julialang.org/t/vector-of-matrices-vs-multidimensional-arrays/9602/5
 # 5d2360465457a3f77ddc131e has TOU demand
 # 59bc22705457a3372642da67 has monthly tiered demand (no TOU demand)
@@ -95,6 +67,15 @@ process URDB response dict, parse into reopt inputs, return URDBrate struct.
 function URDBrate(urdb_response::Dict, year::Int; time_steps_per_hour=1)
 
     demand_min = get(urdb_response, "peakkwcapacitymin", 0.0)  # TODO add check for site min demand against tariff?
+
+    # Convert matrix to array if needed
+    possible_matrix = ["demandratestructure", "flatdemandstructure", "demandweekdayschedule", 
+        "demandweekendschedule", "energyratestructure", "energyweekdayschedule", "energyweekendschedule"]
+    for param in possible_matrix
+        if typeof(get(urdb_response, param, nothing)) <: AbstractMatrix
+            urdb_response[param] = convert_matrix_to_array(urdb_response[param])
+        end
+    end
 
     n_monthly_demand_tiers, monthly_demand_tier_limits, monthly_demand_rates,
       n_tou_demand_tiers, tou_demand_tier_limits, tou_demand_rates, tou_demand_ratchet_time_steps =
@@ -312,6 +293,15 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
     return energy_rates, energy_tier_limits_kwh, n_energy_tiers, sell_rates
 end
 
+"""
+    convert_matrix_to_array(M::AbstractMatrix)
+
+Convert an unexpected type::Matrix from URDB into an Array
+    - Observed while using REopt.jl with PyJulia/PyCall
+"""
+function convert_matrix_to_array(M::AbstractMatrix)
+    return [M[r,:] for r in 1:size(M,1)]
+end
 
 """
     parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
@@ -320,7 +310,6 @@ Parse monthly ("flat") and TOU demand rates
     can modify URDB dict when there is inconsistent numbers of tiers in rate structures
 """
 function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
-
     if haskey(d, "flatdemandstructure")
         scrub_urdb_demand_tiers!(d["flatdemandstructure"])
         monthly_demand_tier_limits = parse_urdb_demand_tiers(d["flatdemandstructure"])
