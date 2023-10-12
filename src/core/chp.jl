@@ -35,6 +35,7 @@ conflict_res_min_allowable_fraction_of_max = 0.25
     standby_rate_per_kw_per_month::Float64 = 0.0 # Standby rate charged to CHP based on CHP electric power size
     reduces_demand_charges::Bool = true # Boolean indicator if CHP does not reduce demand charges 
     can_supply_steam_turbine::Bool=false # If CHP can supply steam to the steam turbine for electric production 
+    is_electric_only::Bool = false # If CHP is a prime generator that does not supply heat
 
     macrs_option_years::Int = 5
     macrs_bonus_fraction::Float64 = 0.8
@@ -103,6 +104,7 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     standby_rate_per_kw_per_month::Float64 = 0.0
     reduces_demand_charges::Bool = true
     can_supply_steam_turbine::Bool = false
+    is_electric_only::Bool = false
 
     macrs_option_years::Int = 5
     macrs_bonus_fraction::Float64 = 0.8
