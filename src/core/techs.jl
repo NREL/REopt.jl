@@ -25,6 +25,8 @@ function Techs(p::REoptInputs, s::BAUScenario)
     steam_turbines = String[]
     techs_can_supply_steam_turbine = String[]
     electric_heaters = String[]
+    techs_can_supply_space_heating = String[]
+    techs_can_supply_dhw = String[]
 
     if p.s.generator.existing_kw > 0
         push!(all_techs, "Generator")
@@ -68,7 +70,9 @@ function Techs(p::REoptInputs, s::BAUScenario)
         absorption_chillers,
         steam_turbines,
         techs_can_supply_steam_turbine,
-        electric_heaters        
+        electric_heaters,
+        techs_can_supply_space_heating,
+        techs_can_supply_dhw
     )
 end
 
@@ -102,7 +106,9 @@ function Techs(s::Scenario)
     absorption_chillers = String[]
     steam_turbines = String[]
     techs_can_supply_steam_turbine = String[]
-    electric_heaters = String[]    
+    electric_heaters = String[]   
+    techs_can_supply_space_heating = String[]
+    techs_can_supply_dhw = String[] 
 
     if s.wind.max_kw > 0
         push!(all_techs, "Wind")
@@ -129,7 +135,13 @@ function Techs(s::Scenario)
         push!(boiler_techs, "ExistingBoiler")
         if s.existing_boiler.can_supply_steam_turbine
             push!(techs_can_supply_steam_turbine, "ExistingBoiler")
-        end           
+        end   
+        if s.existing_boiler.can_supply_space_heating
+            push!(techs_can_supply_space_heating, "ExistingBoiler")
+        end
+        if s.existing_boiler.can_supply_dhw
+            push!(techs_can_supply_dhw, "ExistingBoiler")
+        end        
     end
 
     if !isnothing(s.boiler)
@@ -139,6 +151,12 @@ function Techs(s::Scenario)
         if s.boiler.can_supply_steam_turbine
             push!(techs_can_supply_steam_turbine, "Boiler")
         end        
+        if s.boiler.can_supply_space_heating
+            push!(techs_can_supply_space_heating, "Boiler")
+        end
+        if s.boiler.can_supply_dhw
+            push!(techs_can_supply_dhw, "Boiler")
+        end
     end
     
     if !isnothing(s.chp)
@@ -147,6 +165,12 @@ function Techs(s::Scenario)
         push!(chp_techs, "CHP")
         if s.chp.can_supply_steam_turbine
             push!(techs_can_supply_steam_turbine, "CHP")
+        end
+        if s.chp.can_supply_space_heating
+            push!(techs_can_supply_space_heating, "CHP")
+        end
+        if s.chp.can_supply_dhw
+            push!(techs_can_supply_dhw, "CHP")
         end
     end
 
@@ -165,6 +189,12 @@ function Techs(s::Scenario)
         push!(elec, "SteamTurbine")
         push!(heating_techs, "SteamTurbine")
         push!(steam_turbines, "SteamTurbine")
+        if s.steam_turbine.can_supply_space_heating
+            push!(techs_can_supply_space_heating, "SteamTurbine")
+        end
+        if s.steam_turbine.can_supply_dhw
+            push!(techs_can_supply_dhw, "SteamTurbine")
+        end
     end    
 
     if !isnothing(s.electric_heater)
@@ -173,6 +203,12 @@ function Techs(s::Scenario)
         push!(electric_heaters, "ElectricHeater")
         if s.electric_heater.can_supply_steam_turbine
             push!(techs_can_supply_steam_turbine, "ElectricHeater")
+        end
+        if s.electric_heater.can_supply_space_heating
+            push!(techs_can_supply_space_heating, "ElectricHeater")
+        end
+        if s.electric_heater.can_supply_dhw
+            push!(techs_can_supply_dhw, "ElectricHeater")
         end
     end
 
@@ -206,7 +242,9 @@ function Techs(s::Scenario)
         absorption_chillers,
         steam_turbines,
         techs_can_supply_steam_turbine,
-        electric_heaters
+        electric_heaters,
+        techs_can_supply_space_heating,
+        techs_can_supply_dhw
     )
 end
 
