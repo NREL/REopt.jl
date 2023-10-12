@@ -467,6 +467,13 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
         prime_mover_defaults["min_allowable_kw"] = chp_max_size_kw * conflict_res_min_allowable_fraction_of_max
     end
 
+    federal_itc_fraction = 0.3
+    # Add ITC fraction 
+    if is_electric_only && prime_mover in ["recip_engine", "combustion_turbine"]
+        federal_itc_fraction = 0.0
+    end
+    prime_mover_defaults["federal_itc_fraction"] = federal_itc_fraction
+
     response = Dict([
         ("prime_mover", prime_mover),
         ("size_class", size_class),
