@@ -426,31 +426,17 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
     # If size class is not specified, heuristic sizing based on avg thermal load and size class 0 efficiencies
     elseif isnothing(size_class) && !isnothing(chp_elec_size_heuristic_kw)
         # With heuristic size, find the suggested size class
-        if chp_elec_size_heuristic_kw < class_bounds[2][2]
-            # If smaller than the upper bound of the smallest class, assign the smallest class
-            size_class = 1
-        elseif chp_elec_size_heuristic_kw >= class_bounds[n_classes][1]
-            # If larger than or equal to the lower bound of the largest class, assign the largest class
-            size_class = n_classes - 1 # Size classes are zero-indexed
-        else
-            # For middle size classes
-            for sc in 3:(n_classes-1)
-                if chp_elec_size_heuristic_kw >= class_bounds[sc][1] && 
-                    chp_elec_size_heuristic_kw < class_bounds[sc][2]
-                    size_class = sc - 1
-                    break
-                end
-            end
-        end
+        size_class = get_size_class_from_size(chp_elec_size_heuristic_kw, class_bounds, n_classes)
     else
         size_class = 0
     end
 
-    # Recalculate heuristic size and max size based on updated size_class
+    # Recalculate heuristic size, size_class if changed, and max size based on updated size_class
     if recalc_heuristic_flag
         chp_elec_size_heuristic_kw = get_heuristic_chp_size_kw(prime_mover_defaults_all, avg_boiler_fuel_load_mmbtu_per_hour, 
                                         prime_mover, size_class, hot_water_or_steam, boiler_effic)
         chp_max_size_kw = 2 * chp_elec_size_heuristic_kw
+        size_class = get_size_class_from_size(chp_elec_size_heuristic_kw, class_bounds, n_classes)
     end
 
     prime_mover_defaults = get_prime_mover_defaults(prime_mover, hot_water_or_steam, size_class, prime_mover_defaults_all)
@@ -481,4 +467,24 @@ function get_heuristic_chp_size_kw(prime_mover_defaults_all, avg_boiler_fuel_loa
     chp_elec_size_heuristic_kw = chp_fuel_rate_mmbtu_per_hr * elec_effic * KWH_PER_MMBTU
     
     return chp_elec_size_heuristic_kw
+end
+
+function get_size_class_from_size(chp_elec_size_heuristic_kw, class_bounds, n_classes)
+    if chp_elec_size_heuristic_kw < class_bounds[2][2]
+        # If smaller than the upper bound of the smallest class, assign the smallest class
+        size_class = 1
+    elseif chp_elec_size_heuristic_kw >= class_bounds[n_classes][1]
+        # If larger than or equal to the lower bound of the largest class, assign the largest class
+        size_class = n_classes - 1 # Size classes are zero-indexed
+    else
+        # For middle size classes
+        for sc in 3:(n_classes-1)
+            if chp_elec_size_heuristic_kw >= class_bounds[sc][1] && 
+                chp_elec_size_heuristic_kw < class_bounds[sc][2]
+                size_class = sc - 1
+                break
+            end
+        end
+    end
+    return size_class
 end
