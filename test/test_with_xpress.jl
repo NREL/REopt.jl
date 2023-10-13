@@ -960,6 +960,9 @@ end
     @test round(sum(inputs.s.cooling_load.loads_kw_thermal) / REopt.KWH_THERMAL_PER_TONHOUR, digits=0) ≈ annual_tonhour atol=1.0 
     
     input_data["CHP"]["is_electric_only"] = true
+    input_data["ElectricLoad"] = Dict("doe_reference_name" => "FlatLoad_16_7")
+    input_data["ElectricTariff"] = Dict("blended_annual_energy_rate" => 0.06,
+                                        "blended_annual_demand_rate" => 0.0  )
     s = Scenario(input_data)
     inputs = REoptInputs(s)
     @test inputs.s.chp.om_cost_per_kwh ≈ (0.75*0.0145) atol=0.0001
