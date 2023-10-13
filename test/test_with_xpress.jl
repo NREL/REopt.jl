@@ -958,6 +958,12 @@ end
     inputs = REoptInputs(s)
 
     @test round(sum(inputs.s.cooling_load.loads_kw_thermal) / REopt.KWH_THERMAL_PER_TONHOUR, digits=0) ≈ annual_tonhour atol=1.0 
+    
+    input_data["CHP"]["is_electric_only"] = true
+    s = Scenario(input_data)
+    inputs = REoptInputs(s)
+    @test inputs.s.chp.om_cost_per_kwh ≈ (0.75*0.0145) atol=0.0001
+    @test inputs.s.chp.federal_itc_fraction ≈ 0.0 atol=0.0001
 end
 
 @testset "Hybrid/blended heating and cooling loads" begin
