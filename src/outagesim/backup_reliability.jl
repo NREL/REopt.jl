@@ -853,15 +853,6 @@ function survival_with_storage_single_start_time(
             return_survival_chance_vector[d] = survival_chance_mult(gen_battery_prob_matrix_array[gen_matrix_counter_end], survival)
         end
 
-        storage_leakage!(gen_battery_prob_matrix_array[gen_matrix_counter_end],
-                        0.0,
-                        battery_bin_size_kwh,
-                        battery_size_kw,
-                        0.0,
-                        H2_bin_size_kg,
-                        H2_electrolyzer_size_kw, 
-                        H2_fuelcell_size_kw)
-
         shift_gen_storage_prob_matrix!(
             gen_battery_prob_matrix_array[gen_matrix_counter_end],
             (generator_production .- net_critical_loads_kw[h]) / time_steps_per_hour,
@@ -875,6 +866,15 @@ function survival_with_storage_single_start_time(
             H2_charge_efficiency_kg_per_kwh,
             H2_discharge_efficiency_kwh_per_kg
         )
+
+        storage_leakage!(gen_battery_prob_matrix_array[gen_matrix_counter_end],
+                        0.0,
+                        battery_bin_size_kwh,
+                        battery_size_kw,
+                        0.0,
+                        H2_bin_size_kg,
+                        H2_electrolyzer_size_kw, 
+                        H2_fuelcell_size_kw)
     end
 
     return return_survival_chance_vector
