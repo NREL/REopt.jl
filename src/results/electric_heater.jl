@@ -48,13 +48,13 @@ function add_electric_heater_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     r = Dict{String, Any}()
     r["size_mmbtu_per_hour"] = round(value(m[Symbol("dvSize"*_n)]["ElectricHeater"]) / KWH_PER_MMBTU, digits=3)
     @expression(m, ElectricHeaterElectricConsumptionSeries[ts in p.time_steps],
-        p.hours_per_time_step * sum(m[:dvHeatingProduction][t,ts] / p.heating_cop[t] 
-        for t in p.techs.electric_heater))
+        p.hours_per_time_step * sum(m[:dvHeatingProduction][t,q,ts] for q in p.heating_loads) / p.heating_cop[t] 
+        for q in p.heating_loads, t in p.techs.electric_heater))
     r["electric_consumption_series_kw"] = round.(value.(ElectricHeaterElectricConsumptionSeries), digits=3)
     r["annual_electric_consumption_kwh"] = sum(r["electric_consumption_series_kw"])
 
 	r["thermal_production_series_mmbtu_per_hour"] = 
-        round.(value.(m[:dvHeatingProduction]["ElectricHeater", ts] for ts in p.time_steps) / KWH_PER_MMBTU, digits=5)
+        round.(sum(value.(m[:dvHeatingProduction]["ElectricHeater", q, ts] for q in p.heating_loads), ts in p.time_steps) / KWH_PER_MMBTU, digits=5)
 	r["annual_thermal_production_mmbtu"] = round(sum(r["thermal_production_series_mmbtu_per_hour"]), digits=3)
 
 	if !isempty(p.s.storage.types.hot)
@@ -74,7 +74,7 @@ function add_electric_heater_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     r["thermal_to_steamturbine_series_mmbtu_per_hour"] = round.(value.(ElectricHeaterToSteamTurbine), digits=3)
 
 	ElectricHeaterToLoad = @expression(m, [ts in p.time_steps],
-		m[:dvHeatingProduction]["ElectricHeater", ts] - ElectricHeaterToHotTESKW[ts] - ElectricHeaterToSteamTurbine[ts]
+		sum(m[:dvHeatingProduction]["ElectricHeater", q, ts] for q in p.heating_loads) - ElectricHeaterToHotTESKW[ts] - ElectricHeaterToSteamTurbine[ts]
     )
 	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(ElectricHeaterToLoad / KWH_PER_MMBTU), digits=3)
 

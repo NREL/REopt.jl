@@ -120,8 +120,8 @@ function add_re_tot_calcs(m::JuMP.AbstractModel, p::REoptInputs)
 
 		# Renewable heat (RE steam/hot water heat that is not being used to generate electricity)
 		AnnualREHeatkWh = @expression(m,p.hours_per_time_step*(
-				sum(m[:dvHeatingProduction][t,ts] * p.tech_renewable_energy_fraction[t] for t in union(p.techs.heating, p.techs.chp), ts in p.time_steps) #total RE heat generation (excl steam turbine, GHP)
-				- sum(m[:dvProductionToWaste][t,ts]* p.tech_renewable_energy_fraction[t] for t in p.techs.chp, ts in p.time_steps) #minus CHP waste heat
+				sum(m[:dvHeatingProduction][t,q,ts] * p.tech_renewable_energy_fraction[t] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads, ts in p.time_steps) #total RE heat generation (excl steam turbine, GHP)
+				- sum(m[:dvProductionToWaste][t,q,ts]* p.tech_renewable_energy_fraction[t] for t in p.techs.chp, q in p.heating_loads, ts in p.time_steps) #minus CHP waste heat
 				+ sum(m[:dvSupplementaryThermalProduction][t,ts] * p.tech_renewable_energy_fraction[t] for t in p.techs.chp, ts in p.time_steps) # plus CHP supplemental firing thermal generation
 				- sum(m[:dvProductionToStorage][b,t,ts]*p.tech_renewable_energy_fraction[t]*(1-p.s.storage.attr[b].charge_efficiency*p.s.storage.attr[b].discharge_efficiency) for t in union(p.techs.heating, p.techs.chp), b in p.s.storage.types.thermal, ts in p.time_steps) #minus thermal storage losses, note does not account for p.DecayRate
 			)
@@ -131,8 +131,8 @@ function add_re_tot_calcs(m::JuMP.AbstractModel, p::REoptInputs)
 
 		# Total heat (steam/hot water heat that is not being used to generate electricity)
 		AnnualHeatkWh = @expression(m,p.hours_per_time_step*(
-				sum(m[:dvHeatingProduction][t,ts] for t in union(p.techs.heating, p.techs.chp), ts in p.time_steps) #total heat generation (need to see how GHP fits into this)
-				- sum(m[:dvProductionToWaste][t,ts] for t in p.techs.chp, ts in p.time_steps) #minus CHP waste heat
+				sum(m[:dvHeatingProduction][t,q,ts] for t in union(p.techs.heating, q in p.heating_loads, p.techs.chp), ts in p.time_steps) #total heat generation (need to see how GHP fits into this)
+				- sum(m[:dvProductionToWaste][t,q,ts] for t in p.techs.chp, q in p.heating_loads, ts in p.time_steps) #minus CHP waste heat
 				+ sum(m[:dvSupplementaryThermalProduction][t,ts] for t in p.techs.chp, ts in p.time_steps) # plus CHP supplemental firing thermal generation
 				- sum(m[:dvProductionToStorage][b,t,ts]*(1-p.s.storage.attr[b].charge_efficiency*p.s.storage.attr[b].discharge_efficiency) for t in union(p.techs.heating, p.techs.chp), b in p.s.storage.types.thermal, ts in p.time_steps) #minus thermal storage losses
 			)

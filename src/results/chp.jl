@@ -39,8 +39,8 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["annual_electric_production_kwh"] = round(value(Year1CHPElecProd), digits=3)
 	
 	@expression(m, CHPThermalProdKW[ts in p.time_steps],
-		sum(m[Symbol("dvHeatingProduction"*_n)][t,ts] + m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] - 
-			m[Symbol("dvProductionToWaste"*_n)][t,ts] for t in p.techs.chp))
+		sum(value.(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads) + m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] - 
+		sum(value.(m[Symbol("dvProductionToWaste"*_n)][t,q,ts] for q in p.heating_loads)) for t in p.techs.chp))
 
 	r["thermal_production_series_mmbtu_per_hour"] = round.(value.(CHPThermalProdKW) / KWH_PER_MMBTU, digits=5)
 	
@@ -86,7 +86,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     end	
     r["thermal_to_steamturbine_series_mmbtu_per_hour"] = round.(value.(CHPToSteamTurbineKW) / KWH_PER_MMBTU, digits=5)
     @expression(m, CHPThermalToLoadKW[ts in p.time_steps],
-        sum(m[Symbol("dvHeatingProduction"*_n)][t,ts] + m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
+        sum(sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads) + m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
             for t in p.techs.chp) - CHPtoHotTES[ts] - CHPToSteamTurbineKW[ts] - CHPThermalToWasteKW[ts])
     r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(CHPThermalToLoadKW) / KWH_PER_MMBTU, digits=5)
 	r["year_one_fuel_cost_before_tax"] = round(value(m[:TotalCHPFuelCosts] / p.pwf_fuel["CHP"]), digits=3)                

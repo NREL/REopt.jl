@@ -10,7 +10,7 @@ function add_boiler_tech_constraints(m, p; _n="")
     # Constraint (1e): Total Fuel burn for Boiler
     @constraint(m, [t in p.techs.boiler, ts in p.time_steps],
         m[:dvFuelUsage][t,ts] == p.hours_per_time_step * (
-            m[Symbol("dvHeatingProduction"*_n)][t,ts] / p.boiler_efficiency[t]
+            sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads) / p.boiler_efficiency[t]
         )
     )
 
@@ -26,7 +26,7 @@ end
 function add_heating_tech_constraints(m, p; _n="")
     # Constraint (7_heating_prod_size): Production limit based on size for non-electricity-producing heating techs
     @constraint(m, [t in setdiff(p.techs.heating, p.techs.elec), ts in p.time_steps],
-        m[Symbol("dvHeatingProduction"*_n)][t,ts] <= m[Symbol("dvSize"*_n)][t]
+        sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads)  <= m[Symbol("dvSize"*_n)][t]
     )
 end
 
