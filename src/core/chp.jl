@@ -378,7 +378,7 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
     # and estimate max size based on 2x the heuristic size
     recalc_heuristic_flag = false
     boiler_effic = NaN
-    if !isnothing(avg_boiler_fuel_load_mmbtu_per_hour)
+    if !isnothing(avg_boiler_fuel_load_mmbtu_per_hour) && !is_electric_only
         if isnothing(prime_mover)
             if avg_boiler_fuel_load_mmbtu_per_hour <= avg_boiler_fuel_load_under_recip_over_ct[hot_water_or_steam]
                 prime_mover = "recip_engine"  # Must make an initial guess at prime_mover to use those thermal and electric efficiency params to convert to size
@@ -400,8 +400,8 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
         chp_elec_size_heuristic_kw = get_heuristic_chp_size_kw(prime_mover_defaults_all, avg_boiler_fuel_load_mmbtu_per_hour, 
                                         prime_mover, size_class_calc, hot_water_or_steam, boiler_effic)
         chp_max_size_kw = 2 * chp_elec_size_heuristic_kw
-    # Calculate heuristic CHP size based on average electric load, and max size based on peak electric load
-    elseif is_electric_only && !isnothing(avg_electric_load_kw) && !isnothing(max_electric_load_kw)
+    # If available, calculate heuristic CHP size based on average electric load, and max size based on peak electric load
+    elseif !isnothing(avg_electric_load_kw) && !isnothing(max_electric_load_kw)
         chp_elec_size_heuristic_kw = avg_electric_load_kw
         chp_max_size_kw = max_electric_load_kw
     else
