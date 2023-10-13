@@ -472,6 +472,57 @@ function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Array,
     end
 end
 
+function storage_leakage!(gen_storage_prob_matrix,
+                        battery_leakage_fraction_per_ts,
+                        battery_bin_size_kwh,
+                        battery_size_kw,
+                        H2_leakage_fraction_per_ts,
+                        H2_bin_size_kg,
+                        H2_electrolyzer_size_kw, 
+                        H2_fuelcell_size_kw)
+
+    M_b = size(gen_storage_prob_matrix, 2)
+    M_H2 = size(gen_storage_prob_matrix, 3)
+
+    #Calculate leakages
+    leakage_b = collect(0:M_b-1) .* (battery_bin_size_kwh * battery_leakage_fraction_per_ts)
+    leakage_H2 = collect(0:M_H2-1) .* (H2_bin_size_kg * H2_leakage_fraction_per_ts)
+
+    #Calculate leakage shifts
+    battery_shift, remaining_kw_after_batt_shift = storage_bin_shift(
+        -leakage_b, 
+        battery_bin_size_kwh, 
+        battery_size_kw, 
+        battery_size_kw,
+        1, 
+        1
+    )
+    H2_shift, remaining_kw_after_H2_shift = storage_bin_shift(
+        -leakage_H2, 
+        H2_bin_size_kg, 
+        H2_electrolyzer_size_kw, 
+        H2_fuelcell_size_kw,
+        1, 
+        1
+    )
+
+    #Apply leakage shifts
+    for i_b in 2:M_b
+        s_b = battery_shift[i_b]
+        if s_b != 0
+            gen_storage_prob_matrix[:,max(1,i_b+s_b),:] += gen_storage_prob_matrix[:,i_b,:]
+            gen_storage_prob_matrix[:,i_b,:] .= 0
+        end
+    end
+    for i_H2 in 2:M_H2
+        s_H2 = H2_shift[i_H2]
+        if s_H2 != 0
+            gen_storage_prob_matrix[:,:,max(1,i_H2+s_H2)] += gen_storage_prob_matrix[:,:,i_H2]
+            gen_storage_prob_matrix[:,:,i_H2] .= 0
+        end
+    end
+end
+
 """
 update_survival!(survival, maximum_generation, net_critical_loads_kw_at_time_h)::Matrix{Int}
 
@@ -801,6 +852,15 @@ function survival_with_storage_single_start_time(
         else
             return_survival_chance_vector[d] = survival_chance_mult(gen_battery_prob_matrix_array[gen_matrix_counter_end], survival)
         end
+
+        storage_leakage!(gen_battery_prob_matrix_array[gen_matrix_counter_end],
+                        0.0,
+                        battery_bin_size_kwh,
+                        battery_size_kw,
+                        0.0,
+                        H2_bin_size_kg,
+                        H2_electrolyzer_size_kw, 
+                        H2_fuelcell_size_kw)
 
         shift_gen_storage_prob_matrix!(
             gen_battery_prob_matrix_array[gen_matrix_counter_end],
