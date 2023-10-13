@@ -254,43 +254,6 @@ else  # run HiGHS tests
             #1 generator:          Prob = 0.32,     Battery bin = 2  1  1  2
             #0 generator:          Prob = 0.04,     Battery bin = 1  -  -  1
             #Survival Probability: 1.0  0.98  0.98  1.0
-            #Leakage:
-            #2 generators:         Prob = 0.64,     Battery bin = 2  1  1  2
-            #1 generator:          Prob = 0.32,     Battery bin = 1  1  1  1
-            #0 generator:          Prob = 0.04,     Battery bin = 1  -  -  1
-    
-            #Outage hour 2:
-            #2 generators:         Prob = 0.4096,   Battery bin = 2  2  2  3
-            #2 gen -> 1 gen:       Prob = 0.2048,   Battery bin = 1  -  1  2
-            #2 gen -> 0 gen:       Prob = 0.0256,   Battery bin = -  -  -  1
-            #1 gen -> 1 gen:       Prob = 0.256,    Battery bin = -  -  1  1
-            #1 gen -> 0 gen:       Prob = 0.064,    Battery bin = -  -  -  -
-            #other 0 generators:   Prob = 0.04,     Battery bin = -  -  -  -
-            #Survival Probability: 0.896  0.6144  0.896  0.96
-            #Leakage:
-            #2 generators:         Prob = 0.4096,   Battery bin = 1  1  1  2
-            #2 gen -> 1 gen:       Prob = 0.2048,   Battery bin = 1  -  1  1
-            #2 gen -> 0 gen:       Prob = 0.0256,   Battery bin = -  -  -  1
-            #1 gen -> 1 gen:       Prob = 0.256,    Battery bin = -  -  1  1
-            #1 gen -> 0 gen:       Prob = 0.064,    Battery bin = -  -  -  -
-            #other 0 generators:   Prob = 0.04,     Battery bin = -  -  -  -
-    
-            #Outage hour 3:
-            #2 generators:         Prob = 0.262144, Battery bin = 1  2  2  2
-            #2 gen -> 2 -> 1       Prob = 0.131072, Battery bin = -  1  1  1
-            #2 gen -> 2 -> 0       Prob = 0.016384, Battery bin = -  -  -  - 
-            #2 gen -> 1 -> 1       Prob = 0.16384,  Battery bin = -  -  1  -
-            #2 gen -> 1 -> 0       Prob = 0.04096,  Battery bin = -  -  -  - 
-            #1 gen -> 1 -> 1       Prob = 0.2048,   Battery bin = -  -  1  -
-            #other 0 generators    Prob = 0.1808,   Battery bin = -  -  -  -
-            #Survival Probability: 0.262144 0.393216  0.761856  0.393216
-
-            #____________________________________
-            #Outage hour 1:
-            #2 generators:         Prob = 0.64,     Battery bin = 3  2  2  3
-            #1 generator:          Prob = 0.32,     Battery bin = 2  1  1  2
-            #0 generator:          Prob = 0.04,     Battery bin = 1  -  -  1
-            #Survival Probability: 1.0  0.98  0.98  1.0
     
             #Outage hour 2:
             #2 generators:         Prob = 0.4096,   Battery bin = 3  2  3  3
@@ -324,12 +287,68 @@ else  # run HiGHS tests
                 "battery_size_kw" => 1,
                 "battery_charge_efficiency_kwh_per_kwh" => 1,
                 "battery_discharge_efficiency_kwh_per_kwh" => 1,
+                "battery_minimum_soc_fraction" => 0.5)
+            @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"] ≈ [0.557056, 0.57344, 0.8192, 0.761856]
+            change_batt_to_h2_in_backup_reliability_inputs!(input_dict)
+            @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"] ≈ [0.557056, 0.57344, 0.8192, 0.761856]
+    
+            #Test with extreme leakage rate
+            #____________________________________
+            #Outage hour 1:
+            #2 generators:         Prob = 0.64,     Battery bin = 3  2  2  3
+            #1 generator:          Prob = 0.32,     Battery bin = 2  1  1  2
+            #0 generator:          Prob = 0.04,     Battery bin = 1  -  -  1
+            #Survival Probability: 1.0  0.98  0.98  1.0
+            #Leakage:
+            #2 generators:         Prob = 0.64,     Battery bin = 2  1  1  2
+            #1 generator:          Prob = 0.32,     Battery bin = 1  1  1  1
+            #0 generator:          Prob = 0.04,     Battery bin = 1  -  -  1
+    
+            #Outage hour 2:
+            #2 generators:         Prob = 0.4096,   Battery bin = 2  2  2  3
+            #2 gen -> 1 gen:       Prob = 0.2048,   Battery bin = 1  -  1  2
+            #2 gen -> 0 gen:       Prob = 0.0256,   Battery bin = -  -  -  1
+            #1 gen -> 1 gen:       Prob = 0.256,    Battery bin = -  -  1  1
+            #1 gen -> 0 gen:       Prob = 0.064,    Battery bin = -  -  -  -
+            #other 0 generators:   Prob = 0.04,     Battery bin = -  -  -  -
+            #Survival Probability: 0.896  0.6144  0.896  0.96
+            #Leakage:
+            #2 generators:         Prob = 0.4096,   Battery bin = 1  1  1  2
+            #2 gen -> 1 gen:       Prob = 0.2048,   Battery bin = 1  -  1  1
+            #2 gen -> 0 gen:       Prob = 0.0256,   Battery bin = -  -  -  1
+            #1 gen -> 1 gen:       Prob = 0.256,    Battery bin = -  -  1  1
+            #1 gen -> 0 gen:       Prob = 0.064,    Battery bin = -  -  -  -
+            #other 0 generators:   Prob = 0.04,     Battery bin = -  -  -  -
+    
+            #Outage hour 3:
+            #2 generators:         Prob = 0.262144, Battery bin = 1  2  2  2
+            #2 gen -> 2 -> 1       Prob = 0.131072, Battery bin = -  1  1  1
+            #2 gen -> 2 -> 0       Prob = 0.016384, Battery bin = -  -  -  - 
+            #2 gen -> 1 -> 1       Prob = 0.16384,  Battery bin = -  -  1  -
+            #2 gen -> 1 -> 0       Prob = 0.04096,  Battery bin = -  -  -  - 
+            #1 gen -> 1 -> 1       Prob = 0.2048,   Battery bin = -  -  1  -
+            #other 0 generators    Prob = 0.1808,   Battery bin = -  -  -  -
+            #Survival Probability: 0.262144 0.393216  0.761856  0.393216
+            input_dict = Dict(
+                "critical_loads_kw" => [1,2,2,1],
+                "battery_starting_soc_series_fraction" => [0.75,0.75,0.75,0.75],
+                "max_outage_duration" => 3,
+                "num_generators" => 2, "generator_size_kw" => 1,
+                "generator_operational_availability" => 1,
+                "generator_failure_to_start" => 0.0,
+                "generator_mean_time_to_failure" => 5,
+                "battery_operational_availability" => 1,
+                "num_battery_bins" => 3,
+                "battery_size_kwh" => 4,
+                "battery_size_kw" => 1,
+                "battery_charge_efficiency_kwh_per_kwh" => 1,
+                "battery_discharge_efficiency_kwh_per_kwh" => 1,
                 "battery_minimum_soc_fraction" => 0.5,
                 "battery_leakage_fraction_per_ts" => 0.7)
-            @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"] ≈ [0.262144, 0.393216,  0.761856,  0.393216]#[0.557056, 0.57344, 0.8192, 0.761856]
+            @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"] ≈ [0.262144, 0.393216,  0.761856,  0.393216]
             change_batt_to_h2_in_backup_reliability_inputs!(input_dict)
-            @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"] ≈ [0.262144, 0.393216,  0.761856,  0.393216]#[0.557056, 0.57344, 0.8192, 0.761856]
-    
+            @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"] ≈ [0.262144, 0.393216,  0.761856,  0.393216]
+
             #Test multiple generator types
             input_dict = Dict(
                 "critical_loads_kw" => [1,2,2,1], 
