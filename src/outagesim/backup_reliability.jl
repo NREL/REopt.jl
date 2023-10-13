@@ -710,6 +710,8 @@ if ``marginal_survival`` = false then result is chance of surviving up to and in
 - `battery_discharge_efficiency_kwh_per_kwh::Real`: battery_discharge_efficiency_kwh_per_kwh = discharge from battery / reduction in SOC
 - `H2_charge_efficiency_kg_per_kwh::Real`: H2_charge_efficiency_kg_per_kwh = increase in SOC / charge input to H2 system
 - `H2_discharge_efficiency_kwh_per_kg::Real`: H2_discharge_efficiency_kwh_per_kg = discharge from H2 system / reduction in SOC
+- `battery_leakage_fraction_per_ts::Real`: Fraction of battery charge that is lost due to leakage each time step
+- `H2_leakage_fraction_per_ts::Real`: Fraction of H2 charge that is lost due to leakage each time step
 - `marginal_survival::Bool`: indicates whether results are probability of survival in given outage time step or probability of surviving up to and including time step.
 
 # Examples
@@ -719,6 +721,7 @@ Chance of 2 generators failing is 0.04 in time step 1, 0.1296 by time step 2, an
 julia> net_critical_loads_kw = [1,2,2,1]; battery_starting_soc_kwh = [1,1,1,1];  max_outage_duration = 3;
 julia> num_generators = 2; generator_size_kw = 1; generator_operational_availability = 1; failure_to_start = 0.0; MTTF = 0.2;
 julia> num_battery_bins = 3; battery_size_kwh = 2; battery_size_kw = 1;  battery_charge_efficiency_kwh_per_kwh = 1; battery_discharge_efficiency_kwh_per_kwh = 1;
+julia> battery_leakage_fraction_per_ts = 0.0; H2_leakage_fraction_per_ts = 0.0; 
 
 julia> survival_with_storage(net_critical_loads_kw=net_critical_loads_kw, battery_starting_soc_kwh=battery_starting_soc_kwh, 
                             generator_operational_availability=generator_operational_availability, generator_failure_to_start=failure_to_start, 
@@ -726,7 +729,8 @@ julia> survival_with_storage(net_critical_loads_kw=net_critical_loads_kw, batter
                             battery_size_kwh=battery_size_kwh, battery_size_kw = battery_size_kw, num_battery_bins=num_battery_bins, 
                             H2_starting_soc_kwh=[], H2_size_kg=0, H2_electrolyzer_size_kw=0, H2_fuelcell_size_kw=0, num_H2_bins=1,
                             max_outage_duration=max_outage_duration, battery_charge_efficiency_kwh_per_kwh=battery_charge_efficiency_kwh_per_kwh, 
-                            battery_discharge_efficiency_kwh_per_kwh=battery_discharge_efficiency_kwh_per_kwh, H2_charge_efficiency_kg_per_kwh=1, H2_discharge_efficiency_kwh_per_kg=1, marginal_survival = false)
+                            battery_discharge_efficiency_kwh_per_kwh=battery_discharge_efficiency_kwh_per_kwh, H2_charge_efficiency_kg_per_kwh=1, H2_discharge_efficiency_kwh_per_kg=1, 
+                            battery_leakage_fraction_per_ts=battery_leakage_fraction_per_ts, H2_leakage_fraction_per_ts=H2_leakage_fraction_per_ts, marginal_survival = false)
 4×3 Matrix{Float64}:
 1.0   0.8704  0.557056
 0.96  0.6144  0.57344
@@ -795,8 +799,8 @@ end
 """
 survival_with_storage_single_start_time(t::Int, net_critical_loads_kw::Vector, max_outage_duration::Int, 
     generator_size_kw::Vector{<:Real}, battery_charge_efficiency_kwh_per_kwh::Real, battery_discharge_efficiency_kwh_per_kwh::Real, 
-    H2_electrolyzer_size_kw::Real, H2_fuelcell_size_kw::Real, H2_charge_efficiency_kg_per_kwh::Real, 
-    H2_discharge_efficiency_kwh_per_kg::Real, M_b::Int, M_H2::Int, N::Int, starting_gens::Vector{Float64}, 
+    battery_leakage_fraction_per_ts::Real, H2_electrolyzer_size_kw::Real, H2_fuelcell_size_kw::Real, H2_charge_efficiency_kg_per_kwh::Real, 
+    H2_discharge_efficiency_kwh_per_kg::Real, H2_leakage_fraction_per_ts::Real, M_b::Int, M_H2::Int, N::Int, starting_gens::Vector{Float64}, 
     generator_production::Vector{Float64}, generator_markov_matrix::Matrix{Float64}, maximum_generation::Matrix{Float64}, 
     t_max::Int, starting_battery_bins::Vector{Int}, battery_bin_size_kwh::Real, starting_H2_bins::Vector{Int}, 
     H2_bin_size_kg::Real, marginal_survival::Bool, time_steps_per_hour::Real)::Vector{Float64}
@@ -874,10 +878,10 @@ function survival_with_storage_single_start_time(
         )
 
         storage_leakage!(gen_battery_prob_matrix_array[gen_matrix_counter_end],
-                        0.0,
+                        battery_leakage_fraction_per_ts,
                         battery_bin_size_kwh,
                         battery_size_kw,
-                        0.0,
+                        H2_leakage_fraction_per_ts,
                         H2_bin_size_kg,
                         H2_electrolyzer_size_kw, 
                         H2_fuelcell_size_kw)
@@ -1272,12 +1276,14 @@ Return an array of backup reliability calculations. Inputs can be unpacked from 
 -num_battery_bins::Int              = num_storage_bins_default(battery_size_kw,battery_size_kwh)     Number of bins for discretely modeling battery state of charge
 -battery_charge_efficiency_kwh_per_kwh::Real    = 0.948        Efficiency of charging battery
 -battery_discharge_efficiency_kwh_per_kwh::Real = 0.948        Efficiency of discharging battery
+-battery_leakage_fraction_per_ts::Real          = 0.0,         Fraction of battery charge that is lost due to leakage each time step
 -H2_starting_soc_kwh::Vector        = []           H2 kWh state of charge time series during normal grid-connected usage
 -H2_electrolyzer_size_kw::Real      = 0.0,         H2 system electrolyzer power capacity
 -H2_fuelcell_size_kw::Real          = 0.0,         H2 system fuel cell power capacity
 -H2_size_kg::Real                   = 0.0,         H2 storage kWh of energy capacity
 -H2_charge_efficiency_kg_per_kwh::Real         = 1.0/54.6,    Efficiency of charging H2 system
 -H2_discharge_efficiency_kwh_per_kg::Real      = 16.745,      Efficiency of discharging H2 system
+-H2_leakage_fraction_per_ts::Real   = 0.0,         Fraction of H2 charge that is lost due to leakage each time step
 -num_H2_bins                        = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kg/H2_charge_efficiency_kg_per_kwh),     Number of bins for discretely modeling battery state of charge
 -time_steps_per_hour::Real          = 1            Used to determine amount battery gets shifted.
 ```
