@@ -127,6 +127,17 @@ function BAUInputs(p::REoptInputs)
     end
     setup_bau_emissions_inputs(p, bau_scenario, generator_fuel_use_gal)
 
+    heating_loads = Vector{String}()
+    heating_loads_kw = Dict{String, Array{Real,1}}()
+    if !isnothing(s.dhw_load)
+        push!(heating_loads, "DomesticHotWater")
+        heating_loads_kw["DomesticHotWater"] = s.dhw_load.loads_kw
+    end
+    if !isnothing(s.space_heating_load)
+        push!(heating_loads, "SpaceHeating")
+        heating_loads_kw["SpaceHeating"] = s.space_heating_load.loads_kw
+    end
+
     REoptInputs(
         bau_scenario,
         techs,
@@ -187,7 +198,9 @@ function BAUInputs(p::REoptInputs)
         tech_emissions_factors_SO2, 
         tech_emissions_factors_PM25,
         p.techs_operating_reserve_req_fraction,
-        heating_cop
+        heating_cop,
+        heating_loads,
+        heating_loads_kw
     )
 end
 

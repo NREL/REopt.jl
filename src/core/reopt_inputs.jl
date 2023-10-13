@@ -127,8 +127,8 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     tech_emissions_factors_PM25::Dict{String, <:Real} # (techs)
     techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
     heating_cop::Dict{String, <:Real} # (techs.electric_heater)
-    heating_loads::Array{String,1} # list of heating loads
-    heating_loads_kw::Dict{String, <:Real} # (heating_loads)
+    heating_loads::Vector{String} # list of heating loads
+    heating_loads_kw::Dict{String, Array{Real,1}} # (heating_loads)
 end
 
 
@@ -191,8 +191,8 @@ function REoptInputs(s::AbstractScenario)
         adjust_load_profile(s, production_factor)
     end
 
-    heating_loads = String[]
-    heating_loads_kw = Dict{String, <:Real}()
+    heating_loads = Vector{String}()
+    heating_loads_kw = Dict{String, Array{Real,1}}()
     if !isnothing(s.dhw_load)
         push!(heating_loads, "DomesticHotWater")
         heating_loads_kw["DomesticHotWater"] = s.dhw_load.loads_kw
@@ -262,7 +262,9 @@ function REoptInputs(s::AbstractScenario)
         tech_emissions_factors_SO2, 
         tech_emissions_factors_PM25,
         techs_operating_reserve_req_fraction,
-        heating_cop 
+        heating_cop,
+        heating_loads,
+        heating_loads_kw 
     )
 end
 
