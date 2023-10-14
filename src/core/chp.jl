@@ -433,10 +433,10 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
     
     # Recalculate heuristic size, size_class if changed, and max size based on updated size_class
     if recalc_heuristic_flag
+        size_class = get_size_class_from_size(chp_elec_size_heuristic_kw, class_bounds, n_classes)
         chp_elec_size_heuristic_kw = get_heuristic_chp_size_kw(prime_mover_defaults_all, avg_boiler_fuel_load_mmbtu_per_hour, 
                                         prime_mover, size_class, hot_water_or_steam, boiler_effic)
         chp_max_size_kw = 2 * chp_elec_size_heuristic_kw
-        size_class = get_size_class_from_size(chp_elec_size_heuristic_kw, class_bounds, n_classes)
     end
 
     prime_mover_defaults = get_prime_mover_defaults(prime_mover, hot_water_or_steam, size_class, prime_mover_defaults_all)
