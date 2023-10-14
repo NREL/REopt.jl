@@ -430,7 +430,7 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
     else
         size_class = 0
     end
-
+    
     # Recalculate heuristic size, size_class if changed, and max size based on updated size_class
     if recalc_heuristic_flag
         chp_elec_size_heuristic_kw = get_heuristic_chp_size_kw(prime_mover_defaults_all, avg_boiler_fuel_load_mmbtu_per_hour, 
@@ -461,6 +461,10 @@ end
 function get_heuristic_chp_size_kw(prime_mover_defaults_all, avg_boiler_fuel_load_mmbtu_per_hour, 
                                 prime_mover, size_class, hot_water_or_steam, boiler_effic)
     therm_effic = prime_mover_defaults_all[prime_mover]["thermal_efficiency_full_load"][hot_water_or_steam][size_class+1]
+    if therm_effic == 0.0
+        throw(@error("Error trying to calculate heuristic CHP size based on average thermal load because the 
+                    thermal efficiency of prime mover $prime_mover for generating $hot_water_or_steam is 0.0"))
+    end
     elec_effic = prime_mover_defaults_all[prime_mover]["electric_efficiency_full_load"][size_class+1]
     avg_heating_thermal_load_mmbtu_per_hr = avg_boiler_fuel_load_mmbtu_per_hour * boiler_effic
     chp_fuel_rate_mmbtu_per_hr = avg_heating_thermal_load_mmbtu_per_hr / therm_effic
