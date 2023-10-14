@@ -191,9 +191,12 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     max_heat_demand_kw = 0.0
     if haskey(d, "DomesticHotWaterLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["DomesticHotWaterLoad"])
+        # Pass in ExistingBoiler.efficiency to inform fuel to thermal conversion for heating load
+        existing_boiler_efficiency = get_existing_boiler_efficiency(d)
         dhw_load = DomesticHotWaterLoad(; dictkeys_tosymbols(d["DomesticHotWaterLoad"])...,
                                           latitude=site.latitude, longitude=site.longitude, 
-                                          time_steps_per_hour=settings.time_steps_per_hour
+                                          time_steps_per_hour=settings.time_steps_per_hour,
+                                          existing_boiler_efficiency = existing_boiler_efficiency
                                         )
         max_heat_demand_kw = maximum(dhw_load.loads_kw)
     else
@@ -205,9 +208,12 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                     
     if haskey(d, "SpaceHeatingLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["SpaceHeatingLoad"])
+        # Pass in ExistingBoiler.efficiency to inform fuel to thermal conversion for heating load
+        existing_boiler_efficiency = get_existing_boiler_efficiency(d)
         space_heating_load = SpaceHeatingLoad(; dictkeys_tosymbols(d["SpaceHeatingLoad"])...,
                                                 latitude=site.latitude, longitude=site.longitude, 
-                                                time_steps_per_hour=settings.time_steps_per_hour
+                                                time_steps_per_hour=settings.time_steps_per_hour,
+                                                existing_boiler_efficiency = existing_boiler_efficiency
                                               )
         
         max_heat_demand_kw = maximum(space_heating_load.loads_kw .+ max_heat_demand_kw)
@@ -650,3 +656,16 @@ function add_doe_reference_names_from_elec_to_thermal_loads(elec::Dict, thermal:
     end
 end
 
+function get_existing_boiler_efficiency(d)
+    existing_boiler_temp = ExistingBoiler(;fuel_cost_per_mmbtu=1.0)
+    default_production_type = existing_boiler_temp.production_type
+    # TODO make this a function for DRY for DHW and SpaceHeating
+    if haskey(d, "ExistingBoiler")
+        existing_boiler_production_type = get(d["ExistingBoiler"], "production_type", default_production_type)
+        existing_boiler_efficiency = get(d["ExistingBoiler"], "efficiency", existing_boiler_efficiency_defaults[existing_boiler_production_type])
+    else
+        existing_boiler_efficiency = existing_boiler_efficiency_defaults[default_production_type]
+    end  
+
+    return existing_boiler_efficiency
+end
