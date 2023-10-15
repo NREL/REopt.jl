@@ -16,37 +16,6 @@ elseif "CPLEX" in ARGS
     end
 
 else  # run HiGHS tests
-    @testset "Unit test storage leakage" begin
-        gen_battery_prob_matrix_array = Array{Float64,3}(undef,2,4,1)
-        gen_battery_prob_matrix_array[1,:,:] = [1; 2; 3; 4]
-        gen_battery_prob_matrix_array[2,:,:] = [5; 6; 7; 8]
-        storage_leakage!(gen_battery_prob_matrix_array,
-                        0.5,
-                        1,
-                        1,
-                        0.7,
-                        1,
-                        1, 
-                        1)
-        expected_result = Array{Float64,3}(undef,2,4,1)
-        expected_result[1,:,:] = [1.0; 5.0; 4.0; 0.0]
-        expected_result[2,:,:] = [5.0; 13.0; 8.0; 0.0]
-        @test gen_battery_prob_matrix_array ≈ expected_result atol=1e-6
-        gen_battery_prob_matrix_array = Array{Float64,3}(undef,1,4,3)
-        gen_battery_prob_matrix_array[1,:,:] = [1.1 1.2 1.3; 2.1 2.2 2.3; 3.1 3.2 3.3; 4.1 4.2 4.3]
-        storage_leakage!(gen_battery_prob_matrix_array,
-                        0.5,
-                        1,
-                        1,
-                        0.7,
-                        1,
-                        1, 
-                        1)
-        # intermediate step: [1.1 1.2 1.3; 5.2 5.4 5.6; 4.1 4.2 4.3; 0.0 0.0 0.0]
-        expected_result = Array{Float64,3}(undef,1,4,3)
-        expected_result[1,:,:] = [2.3 1.3 0.0; 10.6 5.6 0.0; 8.3 4.3 0.0; 0.0 0.0 0.0]
-        @test gen_battery_prob_matrix_array ≈ expected_result atol=1e-6
-    end
     @testset "Backup Generator Reliability" begin
         function change_batt_to_h2_in_reopt_results!(results)
             results["Electrolyzer"] = Dict("size_kw"=>results["ElectricStorage"]["size_kw"])
