@@ -477,9 +477,7 @@ else  # run HiGHS tests
                     "battery_discharge_efficiency_kwh_per_kwh" => 1,
                     "H2_discharge_efficiency_kwh_per_kg" => 1,
                     "battery_minimum_soc_fraction" => 0.0,
-                    "H2_minimum_soc_fraction" => 0.0,
-                    "battery_leakage_fraction_per_ts" => 0.7,
-                    "H2_leakage_fraction_per_ts" => 0.7)
+                    "H2_minimum_soc_fraction" => 0.0)
                 
                 #Given outage starts in time period:                     1  2  3  4
                 #(Battery/H2 bin of - means failed)
