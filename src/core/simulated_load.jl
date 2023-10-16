@@ -270,12 +270,12 @@ function simulated_load(d::Dict)
         default_space_heating_load = SpaceHeatingLoad(; heating_load_inputs...,
                                                         latitude=latitude, 
                                                         longitude=longitude,
-                                                        boiler_efficiency
+                                                        existing_boiler_efficiency=boiler_efficiency
                                                     )
         default_dhw_load = DomesticHotWaterLoad(; heating_load_inputs...,
                                                     latitude=latitude, 
                                                     longitude=longitude,
-                                                    boiler_efficiency
+                                                    existing_boiler_efficiency=boiler_efficiency
                                                 )
         space_heating_annual_mmbtu = nothing
         dhw_annual_mmbtu = nothing
@@ -301,7 +301,7 @@ function simulated_load(d::Dict)
                                                 longitude=longitude,
                                                 annual_mmbtu=space_heating_annual_mmbtu,
                                                 monthly_mmbtu=space_heating_monthly_mmbtu,
-                                                boiler_efficiency
+                                                existing_boiler_efficiency=boiler_efficiency
                                             )
 
         dhw_load = DomesticHotWaterLoad(; heating_load_inputs...,
@@ -309,7 +309,7 @@ function simulated_load(d::Dict)
                                             longitude=longitude,
                                             annual_mmbtu=dhw_annual_mmbtu,
                                             monthly_mmbtu=dhw_monthly_mmbtu,
-                                            boiler_efficiency
+                                            existing_boiler_efficiency=boiler_efficiency
                                         )                                              
 
         space_load_series = space_heating_load.loads_kw ./ boiler_efficiency ./ KWH_PER_MMBTU
