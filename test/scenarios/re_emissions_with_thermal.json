@@ -94,7 +94,7 @@
   },
   "CHP": {
     "prime_mover": "recip_engine",
-    "size_class": 2,
+    "size_class": 4,
     "min_kw": 200.0,
     "min_allowable_kw":0.0,
     "max_kw": 200.0,
