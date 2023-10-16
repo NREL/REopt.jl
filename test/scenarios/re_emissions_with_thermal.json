@@ -7,8 +7,8 @@
     "longitude": -122.45
   },
   "ExistingBoiler": {
-    "production_type": "steam",
-    "efficiency": 0.8,
+    "production_type": "hot_water",
+    "efficiency": 0.75,
     "fuel_type": "natural_gas",
     "fuel_cost_per_mmbtu": 10.0
   },
@@ -94,7 +94,7 @@
   },
   "CHP": {
     "prime_mover": "recip_engine",
-    "size_class": 4,
+    "size_class": 2,
     "min_kw": 200.0,
     "min_allowable_kw":0.0,
     "max_kw": 200.0,
