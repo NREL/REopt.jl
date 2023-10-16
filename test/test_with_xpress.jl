@@ -1531,11 +1531,11 @@ end
     input_data["ElectricLoad"]["doe_reference_name"] = building
     input_data["SpaceHeatingLoad"]["doe_reference_name"] = building
     input_data["DomesticHotWaterLoad"]["doe_reference_name"] = building
-    elec_load = REopt.ElectricLoad(latitude=latitude, longitude=longitude, doe_reference_name=building, existing_boiler_efficiency=input_data["ExistingBoiler"]["efficiency"])
+    elec_load = REopt.ElectricLoad(latitude=latitude, longitude=longitude, doe_reference_name=building)
     input_data["ElectricLoad"]["annual_kwh"] = elec_load_multiplier * sum(elec_load.loads_kw)
     space_load = REopt.SpaceHeatingLoad(latitude=latitude, longitude=longitude, doe_reference_name=building, existing_boiler_efficiency=input_data["ExistingBoiler"]["efficiency"])
     input_data["SpaceHeatingLoad"]["annual_mmbtu"] = heat_load_multiplier * space_load.annual_mmbtu / input_data["ExistingBoiler"]["efficiency"]
-    dhw_load = REopt.DomesticHotWaterLoad(latitude=latitude, longitude=longitude, doe_reference_name=building)
+    dhw_load = REopt.DomesticHotWaterLoad(latitude=latitude, longitude=longitude, doe_reference_name=building, existing_boiler_efficiency=input_data["ExistingBoiler"]["efficiency"])
     input_data["DomesticHotWaterLoad"]["annual_mmbtu"] = heat_load_multiplier * dhw_load.annual_mmbtu / input_data["ExistingBoiler"]["efficiency"]
     s = Scenario(input_data)
     inputs = REoptInputs(s)
