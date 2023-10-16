@@ -915,15 +915,16 @@ end
     # Check that without heating load or max_kw input, CHP.max_kw gets set based on peak electric load
     @test inputs.s.chp.max_kw ≈ maximum(inputs.s.electric_load.loads_kw) atol=0.01
 
-    input_data["SpaceHeatingLoad"] = Dict{Any, Any}("monthly_mmbtu" => repeat([500.0], 12))
-    input_data["DomesticHotWaterLoad"] = Dict{Any, Any}("monthly_mmbtu" => repeat([500.0], 12))
+    input_data["SpaceHeatingLoad"] = Dict{Any, Any}("monthly_mmbtu" => repeat([1000.0], 12))
+    input_data["DomesticHotWaterLoad"] = Dict{Any, Any}("monthly_mmbtu" => repeat([1000.0], 12))
     input_data["CoolingLoad"] = Dict{Any, Any}("monthly_fractions_of_electric_load" => repeat([0.1], 12))
 
     s = Scenario(input_data)
     inputs = REoptInputs(s)
+
     #Test CHP defaults use average fuel load, size class changes to 3
-    @test inputs.s.chp.min_allowable_kw ≈ 250.0 atol=0.1
-    @test inputs.s.chp.om_cost_per_kwh ≈ 0.0185 atol=0.0001
+    @test inputs.s.chp.min_allowable_kw ≈ 125.0 atol=0.1
+    @test inputs.s.chp.om_cost_per_kwh ≈ 0.021 atol=0.0001
     #Update CHP prime_mover and test new defaults
     input_data["CHP"]["prime_mover"] = "combustion_turbine"
     input_data["CHP"]["size_class"] = 1
@@ -938,7 +939,7 @@ end
 
     total_heating_fuel_load_mmbtu = (sum(inputs.s.space_heating_load.loads_kw) + 
                                     sum(inputs.s.dhw_load.loads_kw)) / input_data["ExistingBoiler"]["efficiency"] / REopt.KWH_PER_MMBTU
-    @test round(total_heating_fuel_load_mmbtu, digits=0) ≈ 12000 atol=1.0
+    @test round(total_heating_fuel_load_mmbtu, digits=0) ≈ 24000 atol=1.0
     total_chiller_electric_consumption = sum(inputs.s.cooling_load.loads_kw_thermal) / inputs.s.cooling_load.existing_chiller_cop
     @test round(total_chiller_electric_consumption, digits=0) ≈ 775282 atol=1.0
 
@@ -965,7 +966,7 @@ end
     s = Scenario(input_data)
     inputs = REoptInputs(s)
 
-@test round(sum(inputs.s.cooling_load.loads_kw_thermal) / REopt.KWH_THERMAL_PER_TONHOUR, digits=0) ≈ annual_tonhour atol=1.0 
+    @test round(sum(inputs.s.cooling_load.loads_kw_thermal) / REopt.KWH_THERMAL_PER_TONHOUR, digits=0) ≈ annual_tonhour atol=1.0 
 end
 
 @testset "Hybrid/blended heating and cooling loads" begin

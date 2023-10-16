@@ -8,11 +8,11 @@
     },
     "SpaceHeatingLoad": {
         "doe_reference_name": "LargeOffice",
-        "annual_mmbtu": 2500
+        "annual_mmbtu": 5000
     },
     "DomesticHotWaterLoad": {
         "doe_reference_name": "LargeOffice",
-        "annual_mmbtu": 2500
+        "annual_mmbtu": 5000
     },    
     "CoolingLoad": {
         "doe_reference_name": "LargeOffice"
