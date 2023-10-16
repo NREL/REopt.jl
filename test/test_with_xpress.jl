@@ -874,14 +874,22 @@ end
     s = Scenario(input_data)
     inputs = REoptInputs(s)
 
-    # Heating
-    # Heating load data from CRB models is **fuel**; we convert fuel to thermal using a constant/fixed REopt.EXISTING_BOILER_EFFICIENCY,
-    #   so the thermal load is always the same for a standard CRB
-    # The **fuel** consumption to serve that thermal load may change if the user inputs a different ExistingBoiler["efficiency"]
+    # Heating load is input as **fuel**, not thermal 
+    # If boiler efficiency is not input, we use REopt.EXISTING_BOILER_EFFICIENCY to convert fuel to thermal
+    expected_fuel = input_data["SpaceHeatingLoad"]["annual_mmbtu"] + input_data["DomesticHotWaterLoad"]["annual_mmbtu"]
     total_boiler_heating_thermal_load_mmbtu = (sum(inputs.s.space_heating_load.loads_kw) + sum(inputs.s.dhw_load.loads_kw)) / REopt.KWH_PER_MMBTU
-    @test round(total_boiler_heating_thermal_load_mmbtu, digits=0) ≈ 2904 * REopt.EXISTING_BOILER_EFFICIENCY atol=1.0  # The input load is **fuel**, not thermal
+    @test round(total_boiler_heating_thermal_load_mmbtu, digits=0) ≈ expected_fuel * REopt.EXISTING_BOILER_EFFICIENCY atol=1.0
     total_boiler_heating_fuel_load_mmbtu = total_boiler_heating_thermal_load_mmbtu / inputs.s.existing_boiler.efficiency
-    @test round(total_boiler_heating_fuel_load_mmbtu, digits=0) ≈ 2904 * REopt.EXISTING_BOILER_EFFICIENCY / inputs.s.existing_boiler.efficiency atol=1.0
+    @test round(total_boiler_heating_fuel_load_mmbtu, digits=0) ≈ expected_fuel * REopt.EXISTING_BOILER_EFFICIENCY / inputs.s.existing_boiler.efficiency atol=1.0
+    # If boiler efficiency is input, use that with annual or monthly mmbtu input to convert fuel to thermal
+    input_data["ExistingBoiler"]["efficiency"] = 0.72
+    s = Scenario(input_data)
+    inputs = REoptInputs(s)
+    total_boiler_heating_thermal_load_mmbtu = (sum(inputs.s.space_heating_load.loads_kw) + sum(inputs.s.dhw_load.loads_kw)) / REopt.KWH_PER_MMBTU
+    @test round(total_boiler_heating_thermal_load_mmbtu, digits=0) ≈ expected_fuel * input_data["ExistingBoiler"]["efficiency"] atol=1.0
+    total_boiler_heating_fuel_load_mmbtu = total_boiler_heating_thermal_load_mmbtu / inputs.s.existing_boiler.efficiency
+    @test round(total_boiler_heating_fuel_load_mmbtu, digits=0) ≈ expected_fuel * input_data["ExistingBoiler"]["efficiency"] / inputs.s.existing_boiler.efficiency atol=1.0
+
     # The expected cooling load is based on the default **fraction of total electric** profile for the doe_reference_name when annual_tonhour is NOT input
     #    the 320540.0 kWh number is from the default LargeOffice fraction of total electric profile applied to the Hospital default total electric profile
     total_chiller_electric_consumption = sum(inputs.s.cooling_load.loads_kw_thermal) / inputs.s.existing_chiller.cop
@@ -929,7 +937,7 @@ end
     @test inputs.s.chp.om_cost_per_kwh ≈ 0.014499999999999999 atol=0.0001
 
     total_heating_fuel_load_mmbtu = (sum(inputs.s.space_heating_load.loads_kw) + 
-                                    sum(inputs.s.dhw_load.loads_kw)) / REopt.EXISTING_BOILER_EFFICIENCY / REopt.KWH_PER_MMBTU
+                                    sum(inputs.s.dhw_load.loads_kw)) / input_data["ExistingBoiler"]["efficiency"] / REopt.KWH_PER_MMBTU
     @test round(total_heating_fuel_load_mmbtu, digits=0) ≈ 12000 atol=1.0
     total_chiller_electric_consumption = sum(inputs.s.cooling_load.loads_kw_thermal) / inputs.s.cooling_load.existing_chiller_cop
     @test round(total_chiller_electric_consumption, digits=0) ≈ 775282 atol=1.0
@@ -942,7 +950,7 @@ end
     inputs = REoptInputs(s)
 
     total_heating_fuel_load_mmbtu = (sum(inputs.s.space_heating_load.loads_kw) + 
-                                    sum(inputs.s.dhw_load.loads_kw)) / REopt.EXISTING_BOILER_EFFICIENCY / REopt.KWH_PER_MMBTU
+                                    sum(inputs.s.dhw_load.loads_kw)) / input_data["ExistingBoiler"]["efficiency"] / REopt.KWH_PER_MMBTU
     @test round(total_heating_fuel_load_mmbtu, digits=0) ≈ 8760 atol=0.1
     @test round(sum(inputs.s.cooling_load.loads_kw_thermal) / inputs.s.cooling_load.existing_chiller_cop, digits=0) ≈ 77528.0 atol=1.0
 
@@ -957,7 +965,7 @@ end
     s = Scenario(input_data)
     inputs = REoptInputs(s)
 
-    @test round(sum(inputs.s.cooling_load.loads_kw_thermal) / REopt.KWH_THERMAL_PER_TONHOUR, digits=0) ≈ annual_tonhour atol=1.0 
+@test round(sum(inputs.s.cooling_load.loads_kw_thermal) / REopt.KWH_THERMAL_PER_TONHOUR, digits=0) ≈ annual_tonhour atol=1.0 
 end
 
 @testset "Hybrid/blended heating and cooling loads" begin
