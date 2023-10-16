@@ -26,7 +26,7 @@ Classify the change according to the following categories:
 
 ## v0.36.0 (pre-release)
 ### Changed
-- Changed default values by prime mover for CHP technologies in `data/chp/chp_defaults.json`.  See user manual for details by prime mover and size class.
+- Changed default values by prime mover for CHP technologies in `data/chp/chp_defaults.json`, including prime generators which only produce electricity.  See user manual for details by prime mover and size class.
 - Updated the package dependencies to be compatible with recent changes to HiGHS (for testing) and MathOptInterface
 ### Fixed
 - The present worth factor for fuel (pwf_fuel) was not properly multiplying for lifecycle fuel costs
