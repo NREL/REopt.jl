@@ -164,7 +164,8 @@ function CHP(d::Dict;
         :thermal_efficiency_full_load => chp.thermal_efficiency_full_load,
         :min_allowable_kw => chp.min_allowable_kw,
         :cooling_thermal_factor => chp.cooling_thermal_factor,
-        :min_turn_down_fraction => chp.min_turn_down_fraction 
+        :min_turn_down_fraction => chp.min_turn_down_fraction,
+        :federal_itc_fraction => chp.federal_itc_fraction 
     )
 
     # Installed cost input validation
@@ -246,6 +247,12 @@ function CHP(d::Dict;
 
     if isnothing(chp.size_class)
         chp.size_class = chp_defaults_response["size_class"]
+    end
+
+    #if chp_defaults not used to update federal_itc_fraction, use default of 0.3
+    if isnan(chp.federal_itc_fraction)
+        @warn "CHP.federal_itc_fraction and CHP.prime mover are not provided, so setting federal_itc_fraction to 0.3"
+        setproperty!(chp, :federal_itc_fraction, 0.3)
     end
 
     return chp
