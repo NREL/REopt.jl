@@ -202,7 +202,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     else
         dhw_load = DomesticHotWaterLoad(; 
             fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
-            time_steps_per_hour=settings.time_steps_per_hour
+            time_steps_per_hour=settings.time_steps_per_hour,
+            existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
         )
     end
                                     
@@ -220,7 +221,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     else
         space_heating_load = SpaceHeatingLoad(; 
             fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
-            time_steps_per_hour=settings.time_steps_per_hour
+            time_steps_per_hour=settings.time_steps_per_hour,
+            existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
         )
     end
 
@@ -659,7 +661,6 @@ end
 function get_existing_boiler_efficiency(d)
     existing_boiler_temp = ExistingBoiler(;fuel_cost_per_mmbtu=1.0)
     default_production_type = existing_boiler_temp.production_type
-    # TODO make this a function for DRY for DHW and SpaceHeating
     if haskey(d, "ExistingBoiler")
         existing_boiler_production_type = get(d["ExistingBoiler"], "production_type", default_production_type)
         existing_boiler_efficiency = get(d["ExistingBoiler"], "efficiency", existing_boiler_efficiency_defaults[existing_boiler_production_type])
