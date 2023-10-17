@@ -37,6 +37,10 @@ Classify the change according to the following categories:
 
 ## Develop 2023-08-09
 
+## Develop -- 2023-10-13
+### Fixed
+- Bug fix for user-supplied 8760 WHL rates with tiered energy rate
+
 ## v0.36.0 (pre-release)
 ### Changed
 - Changed default values by prime mover for CHP technologies in `data/chp/chp_defaults.json`.  See user manual for details by prime mover and size class.

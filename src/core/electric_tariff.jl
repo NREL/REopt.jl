@@ -294,11 +294,11 @@ function ElectricTariff(;
     - if NEM then set ExportRate[:Nem, :] to energy_rate[tier_with_lowest_energy_rate, :]
     - user can provide either scalar wholesale rate or vector of time_steps, 
     =#
-    whl_rate = create_export_rate(wholesale_rate, length(energy_rates), time_steps_per_hour)
+    whl_rate = create_export_rate(wholesale_rate, length(energy_rates[:,1]), time_steps_per_hour)
     if !isnothing(u) && sum(u.sell_rates) < 0
         whl_rate += u.sell_rates
     end
-    exc_rate = create_export_rate(export_rate_beyond_net_metering_limit, length(energy_rates), time_steps_per_hour)
+    exc_rate = create_export_rate(export_rate_beyond_net_metering_limit, length(energy_rates[:,1]), time_steps_per_hour)
     
     if !NEM & (sum(whl_rate) >= 0) # no NEM or WHL 
         export_rates = Dict{Symbol, AbstractArray}()
