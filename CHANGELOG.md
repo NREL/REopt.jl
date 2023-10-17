@@ -23,10 +23,13 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop 2023-10-17
+### Added
+- Added Bool attribute `is_electric_only` to CHP; if true, default installed and O&M costs are reduced by 25% and, for the reciprocating engine and combustion turbine prime movers, the federal ITC fraction is reduced to zero.
 
 ## v0.36.0 (pre-release)
 ### Changed
-- Changed default values by prime mover for CHP technologies in `data/chp/chp_defaults.json`, including prime generators which only produce electricity.  See user manual for details by prime mover and size class.
+- Changed default values by prime mover for CHP technologies in `data/chp/chp_defaults.json`.  See user manual for details by prime mover and size class.
 - Updated the package dependencies to be compatible with recent changes to HiGHS (for testing) and MathOptInterface
 ### Fixed
 - The present worth factor for fuel (pwf_fuel) was not properly multiplying for lifecycle fuel costs
