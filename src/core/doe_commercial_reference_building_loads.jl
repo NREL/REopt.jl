@@ -45,7 +45,7 @@ function find_ashrae_zone_city(lat, lon; get_zone=false)
 	end
     if isnothing(archgdal_city)
         @warn "Could not find latitude/longitude in U.S. Using geometrically nearest city."
-    elseif !get_zone
+    elseif !get_zone && !(archgdal_city == "LosAngeles")
         return archgdal_city
     end
     cities = [
