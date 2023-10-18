@@ -969,11 +969,11 @@ end
     
     # Test for prime generator CHP inputs (electric only)
     # First get CHP cost to compare later with prime generator
-    input_data_chp["ElectricLoad"] = Dict("doe_reference_name" => "FlatLoad",
+    input_data["ElectricLoad"] = Dict("doe_reference_name" => "FlatLoad",
                                         "annual_kwh" => 876000)
-    input_data_chp["ElectricTariff"] = Dict("blended_annual_energy_rate" => 0.06,
+    input_data["ElectricTariff"] = Dict("blended_annual_energy_rate" => 0.06,
                                         "blended_annual_demand_rate" => 0.0  )
-    s_chp = Scenario(input_data_chp)
+    s_chp = Scenario(input_data)
     inputs_chp = REoptInputs(s)
     installed_cost_chp = s_chp.chp.installed_cost_per_kw
 
