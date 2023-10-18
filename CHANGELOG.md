@@ -23,6 +23,11 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+# develop 2023-10-17
+### Changed
+- Update `CHP.size_class` after heuristic size is determined based on size_class=0 guess (not input)
+### Fixed
+- Use the user-input `ExistingBoiler.efficiency` value for converting fuel input to thermal to preserve annual fuel energy input
 
 ## Develop -- 2023-10-13
 ### Fixed

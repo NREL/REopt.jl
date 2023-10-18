@@ -266,13 +266,16 @@ function simulated_load(d::Dict)
         end
 
         # Split up the single heating fuel input for space + dhw annual_mmbtu or monthly_mmbtu into CRB profile split
+        boiler_efficiency = get(d, "boiler_efficiency", EXISTING_BOILER_EFFICIENCY)
         default_space_heating_load = SpaceHeatingLoad(; heating_load_inputs...,
                                                         latitude=latitude, 
-                                                        longitude=longitude
+                                                        longitude=longitude,
+                                                        existing_boiler_efficiency=boiler_efficiency
                                                     )
         default_dhw_load = DomesticHotWaterLoad(; heating_load_inputs...,
                                                     latitude=latitude, 
-                                                    longitude=longitude
+                                                    longitude=longitude,
+                                                    existing_boiler_efficiency=boiler_efficiency
                                                 )
         space_heating_annual_mmbtu = nothing
         dhw_annual_mmbtu = nothing
@@ -297,20 +300,22 @@ function simulated_load(d::Dict)
                                                 latitude=latitude, 
                                                 longitude=longitude,
                                                 annual_mmbtu=space_heating_annual_mmbtu,
-                                                monthly_mmbtu=space_heating_monthly_mmbtu
+                                                monthly_mmbtu=space_heating_monthly_mmbtu,
+                                                existing_boiler_efficiency=boiler_efficiency
                                             )
 
         dhw_load = DomesticHotWaterLoad(; heating_load_inputs...,
                                             latitude=latitude, 
                                             longitude=longitude,
                                             annual_mmbtu=dhw_annual_mmbtu,
-                                            monthly_mmbtu=dhw_monthly_mmbtu
+                                            monthly_mmbtu=dhw_monthly_mmbtu,
+                                            existing_boiler_efficiency=boiler_efficiency
                                         )                                              
 
-        space_load_series = space_heating_load.loads_kw ./ EXISTING_BOILER_EFFICIENCY ./ KWH_PER_MMBTU
-        dhw_load_series = dhw_load.loads_kw ./ EXISTING_BOILER_EFFICIENCY ./ KWH_PER_MMBTU
+        space_load_series = space_heating_load.loads_kw ./ boiler_efficiency ./ KWH_PER_MMBTU
+        dhw_load_series = dhw_load.loads_kw ./ boiler_efficiency ./ KWH_PER_MMBTU
         total_load_series = space_load_series + dhw_load_series
-        total_heating_annual_mmbtu = (space_heating_load.annual_mmbtu + dhw_load.annual_mmbtu) / EXISTING_BOILER_EFFICIENCY
+        total_heating_annual_mmbtu = (space_heating_load.annual_mmbtu + dhw_load.annual_mmbtu) / boiler_efficiency
 
         response = Dict([
             ("loads_mmbtu_per_hour", round.(total_load_series, digits=3)),
@@ -319,12 +324,12 @@ function simulated_load(d::Dict)
             ("mean_mmbtu_per_hour", round(sum(total_load_series) / length(total_load_series), digits=3)),
             ("max_mmbtu_per_hour", round(maximum(total_load_series), digits=3)),
             ("space_loads_mmbtu_per_hour", round.(space_load_series, digits=3)),
-            ("space_annual_mmbtu", round(space_heating_load.annual_mmbtu / EXISTING_BOILER_EFFICIENCY, digits=3)),
+            ("space_annual_mmbtu", round(space_heating_load.annual_mmbtu / boiler_efficiency, digits=3)),
             ("space_min_mmbtu_per_hour", round(minimum(space_load_series), digits=3)),
             ("space_mean_mmbtu_per_hour", round(sum(space_load_series) / length(space_load_series), digits=3)),
             ("space_max_mmbtu_per_hour", round(maximum(space_load_series), digits=3)),
             ("dhw_loads_mmbtu_per_hour", round.(dhw_load_series, digits=3)),
-            ("dhw_annual_mmbtu", round(dhw_load.annual_mmbtu / EXISTING_BOILER_EFFICIENCY, digits=3)),
+            ("dhw_annual_mmbtu", round(dhw_load.annual_mmbtu / boiler_efficiency, digits=3)),
             ("dhw_min_mmbtu_per_hour", round(minimum(dhw_load_series), digits=3)),
             ("dhw_mean_mmbtu_per_hour", round(sum(dhw_load_series) / length(dhw_load_series), digits=3)),
             ("dhw_max_mmbtu_per_hour", round(maximum(dhw_load_series), digits=3)),  
