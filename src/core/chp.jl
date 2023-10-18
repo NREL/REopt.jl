@@ -155,13 +155,18 @@ function CHP(d::Dict;
 
     @assert chp.fuel_type in FUEL_TYPES
 
+    thermal_eff = chp.thermal_efficiency_full_load
+    if chp.is_electric_only
+        thermal_eff = 0.0
+    end
+
     # These inputs are set based on prime_mover and size_class
     custom_chp_inputs = Dict{Symbol, Any}(
         :installed_cost_per_kw => chp.installed_cost_per_kw, 
         :tech_sizes_for_cost_curve => chp.tech_sizes_for_cost_curve, 
         :om_cost_per_kwh => chp.om_cost_per_kwh, 
         :electric_efficiency_full_load => chp.electric_efficiency_full_load,
-        :thermal_efficiency_full_load => chp.thermal_efficiency_full_load,
+        :thermal_efficiency_full_load => thermal_eff,
         :min_allowable_kw => chp.min_allowable_kw,
         :cooling_thermal_factor => chp.cooling_thermal_factor,
         :min_turn_down_fraction => chp.min_turn_down_fraction,
