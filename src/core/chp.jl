@@ -260,6 +260,16 @@ function CHP(d::Dict;
         setproperty!(chp, :federal_itc_fraction, 0.3)
     end
 
+    if chp.is_electric_only && (chp.thermal_efficiency_full_load > 0.0)
+        @warn "CHP.thermal_efficiency_full_load is greater than zero but chp.is_electric_only is selected, so setting chp.thermal_efficiency_full_load to zero."
+        setproperty!(chp, :thermal_efficiency_full_load, 0.0)
+    end
+
+    if chp.is_electric_only && (chp.thermal_efficiency_half_load > 0.0)
+        @warn "CHP.thermal_efficiency_half_load is greater than zero but chp.is_electric_only is selected, so setting chp.thermal_efficiency_half_load to zero."
+        setproperty!(chp, :thermal_efficiency_half_load, 0.0)
+    end
+
     return chp
 end
 
