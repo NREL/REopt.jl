@@ -291,7 +291,11 @@ function get_prime_mover_defaults(prime_mover::String, boiler_type::String, size
     # Since size_class=0 is the first entry in the one-based indexed arrays in Julia, we need to add 1 for indexing
     for key in keys(pmds[prime_mover])
         if key in ["thermal_efficiency_full_load", "thermal_efficiency_half_load"]
-            prime_mover_defaults[key] = pmds[prime_mover][key][boiler_type][size_class+1]
+            if is_electric_only
+                prime_mover_defaults[key] = 0.0
+            else
+                prime_mover_defaults[key] = pmds[prime_mover][key][boiler_type][size_class+1]
+            end
         elseif key == "unavailability_periods"
             prime_mover_defaults[key] = convert(Vector{Dict}, pmds[prime_mover][key])
         else
