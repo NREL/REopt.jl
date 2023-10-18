@@ -148,6 +148,10 @@ mutable struct PV <: AbstractTech
         dc_coupled_with_electric_storage::Bool = false
         )
 
+        if dc_coupled_with_electric_storage
+            @warn "PV inv_eff will be ignored because dc_coupled_with_electric_storage=true. The inverter of the DC coupled PV and electric storage system will be defined by ElectricStorage inverter_efficiency_fraction and rectifier_efficiency_fraction."
+        end
+
         if !(off_grid_flag) && !(operating_reserve_required_fraction == 0.0)
             @warn "PV operating_reserve_required_fraction applies only when true. Setting operating_reserve_required_fraction to 0.0 for this on-grid analysis."
             operating_reserve_required_fraction = 0.0
