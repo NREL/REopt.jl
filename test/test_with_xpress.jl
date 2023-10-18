@@ -967,15 +967,30 @@ end
 
     @test round(sum(inputs.s.cooling_load.loads_kw_thermal) / REopt.KWH_THERMAL_PER_TONHOUR, digits=0) ≈ annual_tonhour atol=1.0 
     
+    # Test for prime generator CHP inputs (electric only)
+    # First get CHP cost to compare later with prime generator
+    input_data_chp["ElectricLoad"] = Dict("doe_reference_name" => "FlatLoad",
+                                        "annual_kwh" => 876000)
+    input_data_chp["ElectricTariff"] = Dict("blended_annual_energy_rate" => 0.06,
+                                        "blended_annual_demand_rate" => 0.0  )
+    s_chp = Scenario(input_data_chp)
+    inputs_chp = REoptInputs(s)
+    installed_cost_chp = s_chp.chp.installed_cost_per_kw
+
+    # Now get prime generator (electric only)
     input_data["CHP"]["is_electric_only"] = true
-    input_data["ElectricLoad"] = Dict("doe_reference_name" => "FlatLoad",
-                                    "annual_kwh" => 876000)
-    input_data["ElectricTariff"] = Dict("blended_annual_energy_rate" => 0.06,
-                                    "blended_annual_demand_rate" => 0.0  )
+    delete!(input_data["CHP"], "max_kw")
     s = Scenario(input_data)
     inputs = REoptInputs(s)
+    # Costs are 75% of CHP
+    @test inputs.s.chp.installed_cost_per_kw ≈ (0.75*installed_cost_chp) atol=1.0
     @test inputs.s.chp.om_cost_per_kwh ≈ (0.75*0.0145) atol=0.0001
     @test inputs.s.chp.federal_itc_fraction ≈ 0.0 atol=0.0001
+    # Thermal efficiency set to zero
+    @test inputs.s.chp.thermal_efficiency_full_load == 0
+    @test inputs.s.chp.thermal_efficiency_half_load == 0
+    # Max size based on electric load, not heating load
+    @test inputs.s.chp.max_kw ≈ maximum(inputs.s.electric_load.loads_kw) atol=0.001    
 end
 
 @testset "Hybrid/blended heating and cooling loads" begin
