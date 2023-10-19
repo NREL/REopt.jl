@@ -1,7 +1,8 @@
 {
     "Settings":{
         "time_steps_per_hour": 1,
-        "off_grid_flag": true
+        "off_grid_flag": true,
+        "add_soc_incentive": false
     },
     "Site": {
         "longitude": -118.1164613,
@@ -16,7 +17,8 @@
         "tilt": 34.579,
         "federal_rebate_per_kw": 350,
         "operating_reserve_required_fraction": 0.25,
-        "production_incentive_per_kwh": 0.05
+        "production_incentive_per_kwh": 0.05,
+        "om_cost_per_kw": 17.0
     },
     "Generator": {
         "installed_cost_per_kw": 700,
@@ -25,7 +27,9 @@
         "replacement_year": 10,
         "replace_cost_per_kw": 700,
         "electric_efficiency_full_load": 0.3232898,
-        "electric_efficiency_half_load": 0.3232898
+        "electric_efficiency_half_load": 0.3232898,
+        "om_cost_per_kw": 20.0,
+        "fuel_cost_per_gallon": 3.0
     },
     "ElectricLoad": {
         "doe_reference_name": "RetailStore",

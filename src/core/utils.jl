@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 function annuity(years::Int, rate_escalation::Real, rate_discount::Real)
     """
         this formulation assumes cost growth in first period
@@ -183,7 +155,9 @@ function dictkeys_tosymbols(d::Dict)
             "emissions_factor_series_lb_SO2_per_kwh",
             "emissions_factor_series_lb_PM25_per_kwh",
             #for ERP
-            "pv_production_factor_series", "battery_starting_soc_series_fraction"
+            "pv_production_factor_series", "wind_production_factor_series",
+            "battery_starting_soc_series_fraction",
+            "monthly_mmbtu", "monthly_tonhour"
         ] && !isnothing(v)
             try
                 v = convert(Array{Real, 1}, v)
@@ -257,6 +231,12 @@ function dictkeys_tosymbols(d::Dict)
                     throw(@error("Unable to convert $k to a Array{Int64, 1} or Int"))
                 end
             end
+        end
+        if k in ["generator_operational_availability", "generator_failure_to_start", "generator_mean_time_to_failure", 
+                                "num_generators", "generator_size_kw", "fuel_limit", "fuel_limit_is_per_generator", 
+                                "generator_fuel_intercept_per_hr", "generator_fuel_burn_rate_per_kwh"] &&
+                                !(typeof(v) <: Array)
+            v = [v]
         end
         d2[Symbol(k)] = v
     end

@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 using Xpress
 using Random
 using DelimitedFiles
@@ -89,7 +61,7 @@ end
         data_cost_curve["CHP"]["fuel_cost_per_mmbtu"] = 8.0
         data_cost_curve["CHP"]["min_kw"] = 0
         data_cost_curve["CHP"]["min_allowable_kw"] = 555.5
-        data_cost_curve["CHP"]["max_kw"] = 1000
+        data_cost_curve["CHP"]["max_kw"] = 555.51
         data_cost_curve["CHP"]["installed_cost_per_kw"] = 1800.0
         data_cost_curve["CHP"]["installed_cost_per_kw"] = [2300.0, 1800.0, 1500.0]
         data_cost_curve["CHP"]["tech_sizes_for_cost_curve"] = [100.0, 300.0, 1140.0]
@@ -221,9 +193,9 @@ end
         @test results["CHP"]["annual_electric_production_kwh"] ≈ 800*8760 rtol=1e-5
         @test results["CHP"]["annual_thermal_production_mmbtu"] ≈ 800*(0.4418/0.3573)*8760/293.07107 rtol=1e-5
         @test results["ElectricTariff"]["lifecycle_demand_cost_after_tax"] == 0
-        @test results["HeatingLoad"]["annual_calculated_total_heating_thermal_load_mmbtu"] == 12.0 * 8760 * REopt.EXISTING_BOILER_EFFICIENCY
-        @test results["HeatingLoad"]["annual_calculated_dhw_thermal_load_mmbtu"] == 6.0 * 8760 * REopt.EXISTING_BOILER_EFFICIENCY
-        @test results["HeatingLoad"]["annual_calculated_space_heating_thermal_load_mmbtu"] == 6.0 * 8760 * REopt.EXISTING_BOILER_EFFICIENCY
+        @test results["HeatingLoad"]["annual_calculated_total_heating_thermal_load_mmbtu"] == 12.0 * 8760 * data["ExistingBoiler"]["efficiency"]
+        @test results["HeatingLoad"]["annual_calculated_dhw_thermal_load_mmbtu"] == 6.0 * 8760 * data["ExistingBoiler"]["efficiency"]
+        @test results["HeatingLoad"]["annual_calculated_space_heating_thermal_load_mmbtu"] == 6.0 * 8760 * data["ExistingBoiler"]["efficiency"]
     
         #part 2: supplementary firing used when more efficient than the boiler and low-cost; demand charges not reduced by CHP
         data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10
@@ -233,8 +205,8 @@ end
         s = Scenario(data)
         inputs = REoptInputs(s)
         results = run_reopt(m2, inputs)
-        @test results["CHP"]["size_supplemental_firing_kw"] ≈ 278.73 atol=0.1
-        @test results["CHP"]["annual_thermal_production_mmbtu"] ≈ 138624 rtol=1e-5
+        @test results["CHP"]["size_supplemental_firing_kw"] ≈ 321.71 atol=0.1
+        @test results["CHP"]["annual_thermal_production_mmbtu"] ≈ 149136.6 rtol=1e-5
         @test results["ElectricTariff"]["lifecycle_demand_cost_after_tax"] ≈ 5212.7 rtol=1e-5
     end
 end
@@ -464,7 +436,7 @@ end
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
     r = run_reopt(m, d)
-    @test round(sum(r["ElectricStorage"]["soc_series_fraction"]), digits=2) / 8760 >= 0.72
+    @test round(sum(r["ElectricStorage"]["soc_series_fraction"]), digits=2) / 8760 >= 0.7199
 end
 
 @testset "Outage with Generator, outage simulator, BAU critical load outputs" begin
@@ -493,7 +465,7 @@ end
     @test value(m[:binMGTechUsed]["CHP"]) ≈ 1
     @test value(m[:binMGTechUsed]["PV"]) ≈ 1
     @test value(m[:binMGStorageUsed]) ≈ 1
-    @test results["Financial"]["lcc"] ≈ 6.82164056207e7 atol=5e4
+    @test results["Financial"]["lcc"] ≈ 6.83746678985e7 atol=5e4
 
     #=
     Scenario with $0.001/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
@@ -514,7 +486,7 @@ end
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
     results = run_reopt(m, "./scenarios/outages_gen_pv_stor.json")
     @test results["Outages"]["expected_outage_cost"] ≈ 3.54476923e6 atol=10
-    @test results["Financial"]["lcc"] ≈ 8.6413594727e7 atol=100
+    @test results["Financial"]["lcc"] ≈ 8.6413594727e7 rtol=0.001
 
     # Scenario with generator, PV, wind, electric storage
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
@@ -524,6 +496,25 @@ end
     @test value(m[:binMGTechUsed]["Wind"]) ≈ 1
     @test results["Outages"]["expected_outage_cost"] ≈ 446899.75 atol=1.0
     @test results["Financial"]["lcc"] ≈ 6.71661825335e7 rtol=0.001
+end
+
+@testset "Outages with Wind and supply-to-load no greater than critical load" begin
+    input_data = JSON.parsefile("./scenarios/wind_outages.json")
+    s = Scenario(input_data)
+    inputs = REoptInputs(s)
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+    results = run_reopt([m1,m2], inputs)
+
+    # Check that supply-to-load is equal to critical load during outages, including wind
+    supply_to_load = results["Outages"]["storage_discharge_series_kw"] .+ results["Outages"]["wind_to_load_series_kw"]
+    supply_to_load = [supply_to_load[:,:,i][1] for i in eachindex(supply_to_load)]
+    critical_load = results["Outages"]["critical_loads_per_outage_series_kw"][1,1,:]
+    check = .≈(supply_to_load, critical_load, atol=0.001)
+    @test !(0 in check)
+
+    # Check that the soc_series_fraction is the same length as the storage_discharge_series_kw
+    @test size(results["Outages"]["soc_series_fraction"]) == size(results["Outages"]["storage_discharge_series_kw"])
 end
 
 @testset "Multiple Sites" begin
@@ -657,6 +648,14 @@ end
     # results = run_reopt(m, inputs)
 
     # TODO test for tiered TOU demand rates
+end
+
+@testset "EASIUR" begin
+    d = JSON.parsefile("./scenarios/pv.json")
+    d["Site"]["latitude"] = 30.2672
+    d["Site"]["longitude"] = -97.7431
+    scen = Scenario(d)
+    @test scen.financial.NOx_grid_cost_per_tonne ≈ 4534.032470 atol=0.1
 end
 
 @testset "Wind" begin
@@ -799,16 +798,15 @@ end
     # When the user specifies inputs["ExistingChiller"]["cop"], this changes the **electric** consumption of the chiller to meet that cooling thermal load
     crb_cop = REopt.get_existing_chiller_default_cop(;
                                                     existing_chiller_max_thermal_factor_on_peak_load=s.existing_chiller.max_thermal_factor_on_peak_load,
-                                                    loads_kw_thermal=s.cooling_load.loads_kw_thermal)
+                                                    max_load_kw_thermal=maximum(s.cooling_load.loads_kw_thermal))
     cooling_thermal_load_tonhour_total = 1427329.0 * crb_cop / REopt.KWH_THERMAL_PER_TONHOUR  # From CRB models, in heating_cooling_loads.jl, BuiltInCoolingLoad data for location (SanFrancisco Hospital)
     cooling_electric_load_total_mod_cop_kwh = cooling_thermal_load_tonhour_total / inputs.s.existing_chiller.cop * REopt.KWH_THERMAL_PER_TONHOUR
 
     #Test cooling load results
     @test round(cooling_thermal_load_tonhour_total, digits=1) ≈ results["CoolingLoad"]["annual_calculated_tonhour"] atol=1.0
     
-    # Annual heating **thermal** energy load of CRB is based on annual boiler fuel energy (from CRB models) and assumed const EXISTING_BOILER_EFFICIENCY
-    # When the user specifies inputs["ExistingBoiler"]["efficiency"], this changes the **fuel** consumption of the boiler to meet that heating thermal load
-    boiler_thermal_load_mmbtu_total = (671.40531 + 11570.9155) * REopt.EXISTING_BOILER_EFFICIENCY # From CRB models, in heating_cooling_loads.jl, BuiltInDomesticHotWaterLoad + BuiltInSpaceHeatingLoad data for location (SanFrancisco Hospital)
+    # Convert fuel input to thermal using user input boiler efficiency
+    boiler_thermal_load_mmbtu_total = (671.40531 + 11570.9155) * input_data["ExistingBoiler"]["efficiency"] # From CRB models, in heating_cooling_loads.jl, BuiltInDomesticHotWaterLoad + BuiltInSpaceHeatingLoad data for location (SanFrancisco Hospital)
     boiler_fuel_consumption_total_mod_efficiency = boiler_thermal_load_mmbtu_total / inputs.s.existing_boiler.efficiency
 
     # Cooling outputs
@@ -875,14 +873,22 @@ end
     s = Scenario(input_data)
     inputs = REoptInputs(s)
 
-    # Heating
-    # Heating load data from CRB models is **fuel**; we convert fuel to thermal using a constant/fixed REopt.EXISTING_BOILER_EFFICIENCY,
-    #   so the thermal load is always the same for a standard CRB
-    # The **fuel** consumption to serve that thermal load may change if the user inputs a different ExistingBoiler["efficiency"]
+    # Heating load is input as **fuel**, not thermal 
+    # If boiler efficiency is not input, we use REopt.EXISTING_BOILER_EFFICIENCY to convert fuel to thermal
+    expected_fuel = input_data["SpaceHeatingLoad"]["annual_mmbtu"] + input_data["DomesticHotWaterLoad"]["annual_mmbtu"]
     total_boiler_heating_thermal_load_mmbtu = (sum(inputs.s.space_heating_load.loads_kw) + sum(inputs.s.dhw_load.loads_kw)) / REopt.KWH_PER_MMBTU
-    @test round(total_boiler_heating_thermal_load_mmbtu, digits=0) ≈ 2904 * REopt.EXISTING_BOILER_EFFICIENCY atol=1.0  # The input load is **fuel**, not thermal
+    @test round(total_boiler_heating_thermal_load_mmbtu, digits=0) ≈ expected_fuel * REopt.EXISTING_BOILER_EFFICIENCY atol=1.0
     total_boiler_heating_fuel_load_mmbtu = total_boiler_heating_thermal_load_mmbtu / inputs.s.existing_boiler.efficiency
-    @test round(total_boiler_heating_fuel_load_mmbtu, digits=0) ≈ 2904 * REopt.EXISTING_BOILER_EFFICIENCY / inputs.s.existing_boiler.efficiency atol=1.0
+    @test round(total_boiler_heating_fuel_load_mmbtu, digits=0) ≈ expected_fuel * REopt.EXISTING_BOILER_EFFICIENCY / inputs.s.existing_boiler.efficiency atol=1.0
+    # If boiler efficiency is input, use that with annual or monthly mmbtu input to convert fuel to thermal
+    input_data["ExistingBoiler"]["efficiency"] = 0.72
+    s = Scenario(input_data)
+    inputs = REoptInputs(s)
+    total_boiler_heating_thermal_load_mmbtu = (sum(inputs.s.space_heating_load.loads_kw) + sum(inputs.s.dhw_load.loads_kw)) / REopt.KWH_PER_MMBTU
+    @test round(total_boiler_heating_thermal_load_mmbtu, digits=0) ≈ expected_fuel * input_data["ExistingBoiler"]["efficiency"] atol=1.0
+    total_boiler_heating_fuel_load_mmbtu = total_boiler_heating_thermal_load_mmbtu / inputs.s.existing_boiler.efficiency
+    @test round(total_boiler_heating_fuel_load_mmbtu, digits=0) ≈ expected_fuel * input_data["ExistingBoiler"]["efficiency"] / inputs.s.existing_boiler.efficiency atol=1.0
+
     # The expected cooling load is based on the default **fraction of total electric** profile for the doe_reference_name when annual_tonhour is NOT input
     #    the 320540.0 kWh number is from the default LargeOffice fraction of total electric profile applied to the Hospital default total electric profile
     total_chiller_electric_consumption = sum(inputs.s.cooling_load.loads_kw_thermal) / inputs.s.existing_chiller.cop
@@ -890,7 +896,7 @@ end
 
     #Test CHP defaults use average fuel load, size class 2 for recip_engine 
     @test inputs.s.chp.min_allowable_kw ≈ 50.0 atol=0.01
-    @test inputs.s.chp.om_cost_per_kwh ≈ 0.0225 atol=0.0001
+    @test inputs.s.chp.om_cost_per_kwh ≈ 0.0235 atol=0.0001
 
     delete!(input_data, "SpaceHeatingLoad")
     delete!(input_data, "DomesticHotWaterLoad")
@@ -908,30 +914,31 @@ end
     # Check that without heating load or max_kw input, CHP.max_kw gets set based on peak electric load
     @test inputs.s.chp.max_kw ≈ maximum(inputs.s.electric_load.loads_kw) atol=0.01
 
-    input_data["SpaceHeatingLoad"] = Dict{Any, Any}("monthly_mmbtu" => repeat([500.0], 12))
-    input_data["DomesticHotWaterLoad"] = Dict{Any, Any}("monthly_mmbtu" => repeat([500.0], 12))
+    input_data["SpaceHeatingLoad"] = Dict{Any, Any}("monthly_mmbtu" => repeat([1000.0], 12))
+    input_data["DomesticHotWaterLoad"] = Dict{Any, Any}("monthly_mmbtu" => repeat([1000.0], 12))
     input_data["CoolingLoad"] = Dict{Any, Any}("monthly_fractions_of_electric_load" => repeat([0.1], 12))
 
     s = Scenario(input_data)
     inputs = REoptInputs(s)
+
     #Test CHP defaults use average fuel load, size class changes to 3
-    @test inputs.s.chp.min_allowable_kw ≈ 315.0 atol=0.1
-    @test inputs.s.chp.om_cost_per_kwh ≈ 0.02 atol=0.0001
+    @test inputs.s.chp.min_allowable_kw ≈ 125.0 atol=0.1
+    @test inputs.s.chp.om_cost_per_kwh ≈ 0.021 atol=0.0001
     #Update CHP prime_mover and test new defaults
     input_data["CHP"]["prime_mover"] = "combustion_turbine"
     input_data["CHP"]["size_class"] = 1
     # Set max_kw higher than peak electric load so min_allowable_kw doesn't get assigned to max_kw
-    input_data["CHP"]["max_kw"] = 1000.0
+    input_data["CHP"]["max_kw"] = 2500.0
 
     s = Scenario(input_data)
     inputs = REoptInputs(s)
 
-    @test inputs.s.chp.min_allowable_kw ≈ 950.0 atol=0.1
+    @test inputs.s.chp.min_allowable_kw ≈ 2000.0 atol=0.1
     @test inputs.s.chp.om_cost_per_kwh ≈ 0.014499999999999999 atol=0.0001
 
     total_heating_fuel_load_mmbtu = (sum(inputs.s.space_heating_load.loads_kw) + 
-                                    sum(inputs.s.dhw_load.loads_kw)) / REopt.EXISTING_BOILER_EFFICIENCY / REopt.KWH_PER_MMBTU
-    @test round(total_heating_fuel_load_mmbtu, digits=0) ≈ 12000 atol=1.0
+                                    sum(inputs.s.dhw_load.loads_kw)) / input_data["ExistingBoiler"]["efficiency"] / REopt.KWH_PER_MMBTU
+    @test round(total_heating_fuel_load_mmbtu, digits=0) ≈ 24000 atol=1.0
     total_chiller_electric_consumption = sum(inputs.s.cooling_load.loads_kw_thermal) / inputs.s.cooling_load.existing_chiller_cop
     @test round(total_chiller_electric_consumption, digits=0) ≈ 775282 atol=1.0
 
@@ -943,7 +950,7 @@ end
     inputs = REoptInputs(s)
 
     total_heating_fuel_load_mmbtu = (sum(inputs.s.space_heating_load.loads_kw) + 
-                                    sum(inputs.s.dhw_load.loads_kw)) / REopt.EXISTING_BOILER_EFFICIENCY / REopt.KWH_PER_MMBTU
+                                    sum(inputs.s.dhw_load.loads_kw)) / input_data["ExistingBoiler"]["efficiency"] / REopt.KWH_PER_MMBTU
     @test round(total_heating_fuel_load_mmbtu, digits=0) ≈ 8760 atol=0.1
     @test round(sum(inputs.s.cooling_load.loads_kw_thermal) / inputs.s.cooling_load.existing_chiller_cop, digits=0) ≈ 77528.0 atol=1.0
 
@@ -959,6 +966,31 @@ end
     inputs = REoptInputs(s)
 
     @test round(sum(inputs.s.cooling_load.loads_kw_thermal) / REopt.KWH_THERMAL_PER_TONHOUR, digits=0) ≈ annual_tonhour atol=1.0 
+    
+    # Test for prime generator CHP inputs (electric only)
+    # First get CHP cost to compare later with prime generator
+    input_data["ElectricLoad"] = Dict("doe_reference_name" => "FlatLoad",
+                                        "annual_kwh" => 876000)
+    input_data["ElectricTariff"] = Dict("blended_annual_energy_rate" => 0.06,
+                                        "blended_annual_demand_rate" => 0.0  )
+    s_chp = Scenario(input_data)
+    inputs_chp = REoptInputs(s)
+    installed_cost_chp = s_chp.chp.installed_cost_per_kw
+
+    # Now get prime generator (electric only)
+    input_data["CHP"]["is_electric_only"] = true
+    delete!(input_data["CHP"], "max_kw")
+    s = Scenario(input_data)
+    inputs = REoptInputs(s)
+    # Costs are 75% of CHP
+    @test inputs.s.chp.installed_cost_per_kw ≈ (0.75*installed_cost_chp) atol=1.0
+    @test inputs.s.chp.om_cost_per_kwh ≈ (0.75*0.0145) atol=0.0001
+    @test inputs.s.chp.federal_itc_fraction ≈ 0.0 atol=0.0001
+    # Thermal efficiency set to zero
+    @test inputs.s.chp.thermal_efficiency_full_load == 0
+    @test inputs.s.chp.thermal_efficiency_half_load == 0
+    # Max size based on electric load, not heating load
+    @test inputs.s.chp.max_kw ≈ maximum(inputs.s.electric_load.loads_kw) atol=0.001    
 end
 
 @testset "Hybrid/blended heating and cooling loads" begin
@@ -1173,7 +1205,8 @@ end
     3. GHP serves only the SpaceHeatingLoad by default unless it is allowed to serve DHW
     4. GHP serves all the Cooling load
     5. Input of a custom COP map for GHP and check the GHP performance to make sure it's using it correctly
-    
+    6. Hybrid GHP capability functions as expected
+
     """
     # Load base inputs
     input_data = JSON.parsefile("scenarios/ghp_inputs.json")
@@ -1247,6 +1280,103 @@ end
     @test cooling_cop_avg <= 8.0
 end
 
+@testset "Hybrid GHX and GHP calculated costs validation" begin
+    ## Hybrid GHP validation.
+    # Load base inputs
+    input_data = JSON.parsefile("scenarios/ghp_financial_hybrid.json")
+
+    inputs = REoptInputs(input_data)
+
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    results = run_reopt([m1,m2], inputs)
+
+    calculated_ghp_capital_costs = ((input_data["GHP"]["ghpghx_responses"][1]["outputs"]["number_of_boreholes"]*
+    input_data["GHP"]["ghpghx_responses"][1]["outputs"]["length_boreholes_ft"]* 
+    inputs.s.ghp_option_list[1].installed_cost_ghx_per_ft) + 
+    (inputs.s.ghp_option_list[1].installed_cost_heatpump_per_ton*
+    input_data["GHP"]["ghpghx_responses"][1]["outputs"]["peak_combined_heatpump_thermal_ton"]*
+    inputs.s.ghp_option_list[1].heatpump_capacity_sizing_factor_on_peak_load) + 
+    (inputs.s.ghp_option_list[1].building_sqft*
+    inputs.s.ghp_option_list[1].installed_cost_building_hydronic_loop_per_sqft))
+
+    @test results["Financial"]["initial_capital_costs"] ≈ calculated_ghp_capital_costs atol=0.1
+    
+    calculated_om_costs = inputs.s.ghp_option_list[1].building_sqft*
+    inputs.s.ghp_option_list[1].om_cost_per_sqft_year * inputs.third_party_factor * inputs.pwf_om
+
+    @test results["Financial"]["lifecycle_om_costs_before_tax"] ≈ calculated_om_costs atol=0.1
+
+    calc_om_cost_after_tax = calculated_om_costs*(1-inputs.s.financial.owner_tax_rate_fraction)
+    @test results["Financial"]["lifecycle_om_costs_after_tax"] - calc_om_cost_after_tax < 0.0001
+
+    @test abs(results["Financial"]["lifecycle_capital_costs_plus_om_after_tax"] - (calc_om_cost_after_tax + 0.7*results["Financial"]["initial_capital_costs"])) < 150.0
+
+    @test abs(results["Financial"]["lifecycle_capital_costs"] - 0.7*results["Financial"]["initial_capital_costs"]) < 150.0
+
+    @test abs(results["Financial"]["npv"] - 840621) < 1.0
+    @test results["Financial"]["simple_payback_years"] - 5.09 < 0.1
+    @test results["Financial"]["internal_rate_of_return"] - 0.18 < 0.01
+
+    @test haskey(results["ExistingBoiler"], "year_one_fuel_cost_before_tax_bau")
+
+    ## Hybrid
+    input_data["GHP"]["ghpghx_responses"] = [JSON.parsefile("scenarios/ghpghx_hybrid_results.json")]
+    input_data["GHP"]["avoided_capex_by_ghp_present_value"] = 1.0e6
+    input_data["GHP"]["ghx_useful_life_years"] = 35
+
+    inputs = REoptInputs(input_data)
+
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    results = run_reopt([m1,m2], inputs)
+
+    pop!(input_data["GHP"], "ghpghx_inputs", nothing)
+    pop!(input_data["GHP"], "ghpghx_responses", nothing)
+    ghp_obj = REopt.GHP(JSON.parsefile("scenarios/ghpghx_hybrid_results.json"), input_data["GHP"])
+
+    calculated_ghx_residual_value = ghp_obj.ghx_only_capital_cost*
+    (
+        (ghp_obj.ghx_useful_life_years - inputs.s.financial.analysis_years)/ghp_obj.ghx_useful_life_years
+    )/(
+        (1 + inputs.s.financial.offtaker_discount_rate_fraction)^inputs.s.financial.analysis_years
+    )
+    
+    @test results["GHP"]["ghx_residual_value_present_value"] ≈ calculated_ghx_residual_value atol=0.1
+    @test inputs.s.ghp_option_list[1].is_ghx_hybrid = true
+
+    # Test centralized GHP cost calculations
+    input_data_wwhp = JSON.parsefile("scenarios/ghp_inputs_wwhp.json")
+    response_wwhp = JSON.parsefile("scenarios/ghpghx_response_wwhp.json")
+    input_data_wwhp["GHP"]["ghpghx_responses"] = [response_wwhp]
+
+    s_wwhp = Scenario(input_data_wwhp)
+    inputs_wwhp = REoptInputs(s_wwhp)
+    m3 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    results_wwhp = run_reopt(m3, inputs_wwhp)
+
+
+    heating_hp_cost = input_data_wwhp["GHP"]["installed_cost_wwhp_heating_pump_per_ton"] * 
+                        input_data_wwhp["GHP"]["heatpump_capacity_sizing_factor_on_peak_load"] *
+                        results_wwhp["GHP"]["ghpghx_chosen_outputs"]["peak_heating_heatpump_thermal_ton"]
+
+    cooling_hp_cost = input_data_wwhp["GHP"]["installed_cost_wwhp_cooling_pump_per_ton"] * 
+                        input_data_wwhp["GHP"]["heatpump_capacity_sizing_factor_on_peak_load"] *
+                        results_wwhp["GHP"]["ghpghx_chosen_outputs"]["peak_cooling_heatpump_thermal_ton"]
+
+    ghx_cost = input_data_wwhp["GHP"]["installed_cost_ghx_per_ft"] * 
+                results_wwhp["GHP"]["ghpghx_chosen_outputs"]["number_of_boreholes"] * 
+                results_wwhp["GHP"]["ghpghx_chosen_outputs"]["length_boreholes_ft"]
+
+    # CAPEX reduction factor for 30% ITC, 5-year MACRS, assuming 26% tax rate and 8.3% discount
+    capex_reduction_factor = 0.455005797
+
+    calculated_ghp_capex = (heating_hp_cost + cooling_hp_cost + ghx_cost) * (1 - capex_reduction_factor)
+
+    reopt_ghp_capex = results_wwhp["Financial"]["lifecycle_capital_costs"]
+    @test calculated_ghp_capex ≈ reopt_ghp_capex atol=300
+end
+
 @testset "Emissions and Renewable Energy Percent" begin
     #renewable energy and emissions reduction targets
     include_exported_RE_in_total = [true,false,true]
@@ -1309,8 +1439,6 @@ end
             @test results["ElectricStorage"]["size_kw"] ≈ 0.0 atol=1e-1
             @test results["ElectricStorage"]["size_kwh"] ≈ 0.0 atol=1e-1
             @test results["Generator"]["size_kw"] ≈ 21.52 atol=1e-1
-            expected_npv = -70009
-            @test (expected_npv - results["Financial"]["npv"])/expected_npv ≈ 0.0 atol=1e-2
             @test results["Site"]["annual_renewable_electricity_kwh"] ≈ 76412.02
             @test results["Site"]["renewable_electricity_fraction"] ≈ 0.8
             @test results["Site"]["renewable_electricity_fraction_bau"] ≈ 0.147576 atol=1e-4
@@ -1351,7 +1479,7 @@ end
             @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.132118 atol=1e-3 # 0.1354 atol=1e-3
             # CO2 emissions - totals ≈  from grid, from fuelburn, ER, $/tCO2 breakeven
             @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.8 atol=1e-3 # 0.8
-            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 374.02125 atol=1e-1
+            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 373.9 atol=1e-1
             @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 14.2 atol=1
             @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 70.99 atol=1
             @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
@@ -1430,9 +1558,9 @@ end
     input_data["DomesticHotWaterLoad"]["doe_reference_name"] = building
     elec_load = REopt.ElectricLoad(latitude=latitude, longitude=longitude, doe_reference_name=building)
     input_data["ElectricLoad"]["annual_kwh"] = elec_load_multiplier * sum(elec_load.loads_kw)
-    space_load = REopt.SpaceHeatingLoad(latitude=latitude, longitude=longitude, doe_reference_name=building)
+    space_load = REopt.SpaceHeatingLoad(latitude=latitude, longitude=longitude, doe_reference_name=building, existing_boiler_efficiency=input_data["ExistingBoiler"]["efficiency"])
     input_data["SpaceHeatingLoad"]["annual_mmbtu"] = heat_load_multiplier * space_load.annual_mmbtu / input_data["ExistingBoiler"]["efficiency"]
-    dhw_load = REopt.DomesticHotWaterLoad(latitude=latitude, longitude=longitude, doe_reference_name=building)
+    dhw_load = REopt.DomesticHotWaterLoad(latitude=latitude, longitude=longitude, doe_reference_name=building, existing_boiler_efficiency=input_data["ExistingBoiler"]["efficiency"])
     input_data["DomesticHotWaterLoad"]["annual_mmbtu"] = heat_load_multiplier * dhw_load.annual_mmbtu / input_data["ExistingBoiler"]["efficiency"]
     s = Scenario(input_data)
     inputs = REoptInputs(s)
@@ -1501,7 +1629,7 @@ end
     # Add CHP 
     input_data["CHP"] = Dict{Any, Any}([
                         ("prime_mover", "recip_engine"),
-                        ("size_class", 1),
+                        ("size_class", 4),
                         ("min_kw", 250.0),
                         ("min_allowable_kw", 0.0),
                         ("max_kw", 250.0),
@@ -1555,7 +1683,7 @@ end
     
     # BAU boiler loads
     load_boiler_fuel = s.space_heating_load.loads_kw / input_data["ExistingBoiler"]["efficiency"] ./ REopt.KWH_PER_MMBTU
-    load_boiler_thermal = load_boiler_fuel .* REopt.EXISTING_BOILER_EFFICIENCY
+    load_boiler_thermal = load_boiler_fuel .* input_data["ExistingBoiler"]["efficiency"]
     
     # Fuel/thermal **consumption**
     boiler_fuel = results["ExistingBoiler"]["fuel_consumption_series_mmbtu_per_hour"]
@@ -1566,7 +1694,7 @@ end
     # Check that all thermal supply to load meets the BAU load plus AbsorptionChiller load which is not explicitly tracked
     alltechs_thermal_to_load_total = sum([sum(tech_to_thermal_load[tech]["load"]) for tech in thermal_techs]) + sum(hottes_to_load)
     thermal_load_total = sum(load_boiler_thermal) + sum(absorptionchiller_thermal_in)
-    @test alltechs_thermal_to_load_total ≈ thermal_load_total atol=0.02
+    @test alltechs_thermal_to_load_total ≈ thermal_load_total rtol=1e-5
     
     # Check that all thermal to steam turbine is equal to steam turbine thermal consumption
     alltechs_thermal_to_steamturbine_total = sum([sum(tech_to_thermal_load[tech]["steamturbine"]) for tech in ["ExistingBoiler", "CHP"]])

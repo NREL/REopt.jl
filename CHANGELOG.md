@@ -23,6 +23,104 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+
+# develop 2023-10-17
+### Added
+- Added Bool attribute `is_electric_only` to CHP; if true, default installed and O&M costs are reduced by 25% and, for the reciprocating engine and combustion turbine prime movers, the federal ITC fraction is reduced to zero.
+- Las Vegas CRB data was missing from ElectricLoad, but the climate_cities.shp file does not distinguish between Las Angeles and Las Vegas
+### Changed
+- Update `CHP.size_class` after heuristic size is determined based on size_class=0 guess (not input)
+### Fixed
+- Use the user-input `ExistingBoiler.efficiency` value for converting fuel input to thermal to preserve annual fuel energy input
+- Bug fix for user-supplied 8760 WHL rates with tiered energy rate
+
+## v0.36.0
+### Changed
+- Changed default values by prime mover for CHP technologies in `data/chp/chp_defaults.json`.  See user manual for details by prime mover and size class.
+- Updated the package dependencies to be compatible with recent changes to HiGHS (for testing) and MathOptInterface
+### Fixed
+- The present worth factor for fuel (pwf_fuel) was not properly multiplying for lifecycle fuel costs
+
+## v0.35.1
+### Fixed
+- Add GHP to proforma metrics for when GHP is evaluated (should have been there)
+### Added
+- Add different BAU outputs for heating and cooling systems
+
+## v0.35.0
+### Changed
+- ANNUAL UPDATE TO DEFAULT VALUES. Changes outlined below with (old value) --> (new value). See user manual for references. 
+  - Owner Discount rate, nominal (%): : **Financial** **owner_discount_rate_fraction** 0.0564	--> 0.0638
+  - Offtaker Discount rate, nominal (%): **Financial**  **offtaker_discount_rate_fraction** 0.0564 --> 0.0638
+  - Electricity cost escalation rate, nominal (%): **Financial** **elec_cost_escalation_rate_fraction** 0.019	--> 0.017
+  - Existing boiler fuel cost escalation rate, nominal (%): **Financial**  **existing_boiler_fuel_cost_escalation_rate_fraction**	0.034	--> 0.015
+  - Boiler fuel cost escalation rate, nominal (%): **Financial** **boiler_fuel_cost_escalation_rate_fraction**	0.034	--> 0.015
+  - CHP fuel cost escalation rate, nominal (%): **Financial**  **chp_fuel_cost_escalation_rate_fraction**	0.034	--> 0.015
+  - Generator fuel cost escalation rate, nominal (%): **Financial**  **generator_fuel_cost_escalation_rate_fraction**	0.027	--> 0.012
+  - Array tilt – Ground mount, Fixed: **PV** **tilt** latitude	--> 20
+  - O&M cost ($/kW/year): **PV** **om_cost_per_kw**	17	--> 18
+  - System capital cost ($/kW): **PV** **installed_cost_per_kw**	1592	--> 1790
+  - Energy capacity cost ($/kWh): **ElectricStorage** **installed_cost_per_kwh**	388	--> 455
+  - Power capacity cost ($/kW): **ElectricStorage**	**installed_cost_per_kw**	775	--> 910
+  - Energy capacity replacement cost ($/kWh): **ElectricStorage** **replace_cost_per_kwh**	220	--> 318
+  - Power capacity replacement cost ($/kW): **ElectricStorage**	**replace_cost_per_kw**	440	--> 715
+  - Fuel burn rate by generator capacity (gal/kWh): **Generator** **fuel_slope_gal_per_kwh**	0.076	--> removed and replaced with full and half-load efficiencies
+  - Electric efficiency at 100% load (% HHV-basis): **Generator** **electric_efficiency_full_load**	N/A - new input	--> 0.322
+  - Electric efficiency at 50% load (% HHV-basis): **Generator** **electric_efficiency_half_load**	N/A - new input	--> 0.322
+  - Generator fuel higher heating value (HHV): **Generator** **fuel_higher_heating_value_kwh_per_gal**	N/A - new input	--> 40.7
+  - System capital cost ($/kW): **Generator**  **installed_cost_per_kw** 500	--> $650 if the generator only runs during outages; $800 if it is allowed to run parallel with the grid; $880 for off-grid
+  - Fixed O&M ($/kW/yr): **Generator** **om_cost_per_kw** Grid connected: 10 Off-grid: 20 --> Grid connected: 20 Off-grid: 10
+  - System capital cost ($/kW) by Class: **Wind** **size_class_to_installed_cost**	residential - 5675 commercial - 4300 medium - 2766 large - 2239 --> residential - 6339 commercial - 4760 medium - 3137 large - 2386
+  - O&M cost ($/kW/year): **Wind** **om_cost_per_kw** 35 --> 36
+ 
+## v0.34.0
+### Added
+- Ability to run hybrid GHX sizing using **GhpGhx.jl** (automatic and fractional sizing)
+- Added financial inputs for **GHP** and updated objective and results to reflect these changes
+- Added central plant **GHP**
+### Fixed
+- Fix output of `get_tier_with_lowest_energy_rate(u::URDBrate)` to return an index and not cartesian coordinates for multi-tier energy rates.
+- Updated **GHP** cost curve calculations so incentives apply to all GHP components
+### Changed
+- If a `REoptInputs` object solves with termination status infeasible, altert user and return a dictionary insteadof JuMP model
+
+## v0.33.0
+### Added
+- Functionality to evaluate scenarios with Wind can in the ERP (`backup_reliability`)
+- Dispatch data for outages: Wind, ElectricStorage SOC, and critical load
+### Fixed
+- Fix `backup_reliability_reopt_inputs(d, p, r)` so doesn't ignore `CHP` from REopt scenario
+- In `backup_reliability_reopt_inputs(d, p, r)`, get `Generator` and `CHP` fuel related values from REopt results _Dict_ d and `REoptInputs` _struct_ p, unless the user overrides the REopt results by providing **generator_size_kw**
+- Remove use of non-existent **tech_upgraded** `Outages` outputs, using **tech_microgrid_size_kw** instead
+- Added missing **electric_storage_microgrid_upgraded** to `Outages` results
+- Fix bug causing _InexactError_ in `num_battery_bins_default`
+- Update docstrings in `backup_reliability.jl`
+- Avoid supply > critical load during outages by changing load balance to ==
+### Changed
+- Updated REopt license
+- Changed `backup_reliability` results key from **fuel_outage_survival_final_time_step** to **fuel_survival_final_time_step** for consistency with other keys
+
+## v0.32.7
+### Fixed
+- Bugs in EASIUR health cost calcs
+- Type handling for CoolingLoad monthly_tonhour input
+
+## v0.32.6
+### Changed
+- Required **fuel_cost_per_mmbtu** for modeling **Boiler** tech, otherwise throw a handled error.
+### Fixed
+- Additional **SteamTurbine** defaults processing updates and bug fixes
+
+## v0.32.5
+### Changed
+- Updated `get_existing_chiller_cop` function to accept scalar values instead of vectors to allow for faster API transactions.
+- Refactored `backup_reliability.jl` to enable easier development: added conversion of all scalar generator inputs to vectors in `dictkeys_to_symbols` and reduced each functions with two versions (one with scalar and one with vector generator arguments) to a single version
+- Simplify generator sizing logic in function `backup_reliability_reopt_inputs` (if user sets `generator_size_kw` or `num_generators`to 0, don't override based on REopt solution) and add a validation error
+### Fixed
+- Steamturbine defaults processing
+- simulated_load monthly values processing
+- Fixed incorrect name when accessing result field `Outages` **generator_microgrid_size_kw** in `outag_simulator.jl`
+
 ## v0.32.4
 ### Changed
 - Consolidated PVWatts API calls to 1 call (previously 3 separate calls existed). API call occurs in `src/core/utils.jl/call_pvwatts_api()`. This function is called for PV in `src/core/production_factor.jl/get_production_factor(PV)` and for GHP in `src/core/scenario.jl`. If GHP and PV are evaluated together, the GHP PVWatts call for ambient temperature is also used to assign the pv.production_factor_series in Scenario.jl so that the PVWatts API does not get called again downstream in `get_production_factor(PV)`.  
@@ -35,6 +133,7 @@ Classify the change according to the following categories:
 - Issue with using a leap year with a URDB rate - the URDB rate was creating energy_rate of length 8784 instead of intended 8760
 - Don't double add adjustments to urdb rates with non-standard units
 - Corrected `Generator` **installed_cost_per_kw** from 500 to 650 if **only_runs_during_grid_outage** is _true_ or 800 if _false_
+- Corrected `SteamTurbine` defaults population from `get_steam_turbine_defaults_size_class()`
 
 ## v0.32.3
 ### Fixed
