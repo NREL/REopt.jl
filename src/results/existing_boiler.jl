@@ -48,7 +48,25 @@ function add_existing_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
 		sum(value.(m[:dvHeatingProduction]["ExistingBoiler",q,ts] for q in p.heating_loads)) - BoilerToHotTESKW[ts] - BoilerToSteamTurbineKW[ts]
     )
 	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(BoilerToLoadKW ./ KWH_PER_MMBTU), digits=5)
-
+    
+    if "DomesticHotWater" in p.heating_loads && "ExistingBoiler" in p.techs.can_supply_dhw
+        @expression(m, BoilerToDHWKW[ts in p.time_steps], 
+            m[:dvThermalProduction]["ExistingBoiler","DomesticHotWater",ts] #- BoilerToHotTESKW[ts] - BoilerToSteamTurbineKW[ts]
+        )
+    else
+        @expression(m, BoilerToDHWKW[ts in p.time_steps], 0.0)
+    end
+    r["thermal_to_dhw_load_series_mmbtu_per_hour"] = round.(value.(BoilerToDHWKW ./ KWH_PER_MMBTU), digits=5)
+    
+    if "SpaceHeating" in p.heating_loads && "ExistingBoiler" in p.techs.can_supply_space_heating
+        @expression(m, BoilerToSpaceHeatingKW[ts in p.time_steps], 
+            m[:dvThermalProduction]["ExistingBoiler","SpaceHeating",ts] #- BoilerToHotTESKW[ts] - BoilerToSteamTurbineKW[ts]
+        )
+    else
+        @expression(m, BoilerToSpaceHeatingKW[ts in p.time_steps], 0.0)
+    end
+    r["thermal_to_space_heating_load_series_mmbtu_per_hour"] = round.(value.(BoilerToSpaceHeatingKW ./ KWH_PER_MMBTU), digits=5)
+    
     m[:TotalExistingBoilerFuelCosts] = @expression(m, p.pwf_fuel["ExistingBoiler"] *
         sum(m[:dvFuelUsage]["ExistingBoiler", ts] * p.fuel_cost_per_kwh["ExistingBoiler"][ts] for ts in p.time_steps)
     )
