@@ -62,9 +62,14 @@ function Techs(p::REoptInputs, s::BAUScenario)
     fuel_burning_techs = union(gentechs, boiler_techs, chp_techs)
     thermal_techs = union(heating_techs, boiler_techs, cooling_techs)
 
+    dc_couple_with_stor = String[pv.name for pv in s.pvs if pv.dc_coupled_with_electric_storage]
+    ac_couple_with_stor = setdiff(elec, dc_couple_with_stor)
+
     Techs(
         all_techs,
         elec,
+        dc_couple_with_stor,
+        ac_couple_with_stor,
         pvtechs,
         gentechs,
         pbi_techs,
@@ -339,10 +344,15 @@ function Techs(s::Scenario)
             throw(@error("ExisitingChiller.retire_in_optimal is true, but no other technologies can meet cooling load."))
         end 
     end
+    
+    dc_couple_with_stor = String[pv.name for pv in s.pvs if pv.dc_coupled_with_electric_storage]
+    ac_couple_with_stor = setdiff(elec, dc_couple_with_stor)
 
     Techs(
         all_techs,
         elec,
+        dc_couple_with_stor,
+        ac_couple_with_stor,
         pvtechs,
         gentechs,
         pbi_techs,
@@ -393,6 +403,8 @@ function Techs(s::MPCScenario)
 
     Techs(
         all_techs,
+        all_techs,
+        String[],
         all_techs,
         pvtechs,
         gentechs,
