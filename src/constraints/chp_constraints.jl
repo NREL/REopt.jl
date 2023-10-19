@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 function add_chp_fuel_burn_constraints(m, p; _n="")
     # Fuel burn slope and intercept
     fuel_burn_full_load = 1.0 / p.s.chp.electric_efficiency_full_load  # [kWt/kWe]
@@ -35,8 +7,8 @@ function add_chp_fuel_burn_constraints(m, p; _n="")
     fuel_burn_intercept = fuel_burn_full_load - fuel_burn_slope * 1.0  # [kWt/kWe_rated]
 
     # Fuel cost
-    m[:TotalCHPFuelCosts] = @expression(m, p.pwf_fuel[t] *
-        sum(m[:dvFuelUsage][t, ts] * p.fuel_cost_per_kwh[t][ts] for t in p.techs.chp, ts in p.time_steps)
+    m[:TotalCHPFuelCosts] = @expression(m, 
+        sum(p.pwf_fuel[t] * m[:dvFuelUsage][t, ts] * p.fuel_cost_per_kwh[t][ts] for t in p.techs.chp, ts in p.time_steps)
     )      
     # Conditionally add dvFuelBurnYIntercept if coefficient p.FuelBurnYIntRate is greater than ~zero
     if fuel_burn_intercept > 1.0E-7

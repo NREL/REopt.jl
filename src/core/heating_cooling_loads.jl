@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `DomesticHotWaterLoad` is an optional REopt input with the following keys and default values:
 ```julia
@@ -36,7 +8,8 @@
     addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}} = 1.0,  # Fraction of input fuel load which is addressable by heating technologies. Can be a scalar or vector with length aligned with use of monthly_mmbtu or fuel_loads_mmbtu_per_hour.
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
-    fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[] # Vector of hot water fuel loads [mmbtu/hour]. Length must equal 8760 * `Settings.time_steps_per_hour`
+    fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[], # Vector of hot water fuel loads [mmbtu/hour]. Length must equal 8760 * `Settings.time_steps_per_hour`
+    existing_boiler_efficiency::Real = NaN
 ```
 
 There are many ways in which a DomesticHotWaterLoad can be defined:
@@ -64,7 +37,8 @@ struct DomesticHotWaterLoad
         fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
         time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
         latitude::Real = 0.0,
-        longitude::Real = 0.0
+        longitude::Real = 0.0,
+        existing_boiler_efficiency::Real = NaN
     )
         if length(fuel_loads_mmbtu_per_hour) > 0
 
@@ -72,7 +46,7 @@ struct DomesticHotWaterLoad
                 throw(@error("Provided DomesticHotWaterLoad `fuel_loads_mmbtu_per_hour` does not match the time_steps_per_hour."))
             end
 
-            loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY) .* addressable_load_fraction
+            loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * existing_boiler_efficiency) .* addressable_load_fraction
 
             if !isempty(doe_reference_name) || length(blended_doe_reference_names) > 0
                 @warn "DomesticHotWaterLoad `fuel_loads_mmbtu_per_hour` was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
@@ -91,7 +65,7 @@ struct DomesticHotWaterLoad
                 end
             end
             
-            loads_kw = BuiltInDomesticHotWaterLoad(city, doe_reference_name, latitude, longitude, 2017, addressable_load_fraction, annual_mmbtu, monthly_mmbtu)
+            loads_kw = BuiltInDomesticHotWaterLoad(city, doe_reference_name, latitude, longitude, 2017, addressable_load_fraction, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency)
             if length(blended_doe_reference_names) > 0
                 @warn "DomesticHotWaterLoad doe_reference_name was provided, so blended_doe_reference_names will be ignored."
             end
@@ -99,7 +73,8 @@ struct DomesticHotWaterLoad
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
             loads_kw = blend_and_scale_doe_profiles(BuiltInDomesticHotWaterLoad, latitude, longitude, 2017, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
-                                                    annual_mmbtu, monthly_mmbtu, addressable_load_fraction)
+                                                    annual_mmbtu, monthly_mmbtu, addressable_load_fraction,
+                                                    existing_boiler_efficiency)
         else
             throw(@error("Cannot construct DomesticHotWaterLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
                 [doe_reference_name, city], or [blended_doe_reference_names, blended_doe_reference_percents, city]."))
@@ -127,7 +102,8 @@ end
     addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}} = 1.0,  # Fraction of input fuel load which is addressable by heating technologies. Can be a scalar or vector with length aligned with use of monthly_mmbtu or fuel_loads_mmbtu_per_hour.
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
-    fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[] # Vector of space heating fuel loads [mmbtu/hr]. Length must equal 8760 * `Settings.time_steps_per_hour`
+    fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[], # Vector of space heating fuel loads [mmbtu/hr]. Length must equal 8760 * `Settings.time_steps_per_hour`
+    existing_boiler_efficiency::Real = NaN
 ```
 
 There are many ways to define a `SpaceHeatingLoad`:
@@ -166,7 +142,8 @@ struct SpaceHeatingLoad
         fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
         time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
         latitude::Real = 0.0,
-        longitude::Real = 0.0
+        longitude::Real = 0.0,
+        existing_boiler_efficiency::Real = NaN
     )
         if length(fuel_loads_mmbtu_per_hour) > 0
 
@@ -174,14 +151,14 @@ struct SpaceHeatingLoad
                 throw(@error("Provided space heating load does not match the time_steps_per_hour."))
             end
 
-            loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * EXISTING_BOILER_EFFICIENCY) .* addressable_load_fraction
+            loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * existing_boiler_efficiency) .* addressable_load_fraction
 
             if !isempty(doe_reference_name) || length(blended_doe_reference_names) > 0
                 @warn "SpaceHeatingLoad fuel_loads_mmbtu_per_hour was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
             end
 
         elseif !isempty(doe_reference_name)
-            loads_kw = BuiltInSpaceHeatingLoad(city, doe_reference_name, latitude, longitude, 2017, addressable_load_fraction, annual_mmbtu, monthly_mmbtu)
+            loads_kw = BuiltInSpaceHeatingLoad(city, doe_reference_name, latitude, longitude, 2017, addressable_load_fraction, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency)
             if length(blended_doe_reference_names) > 0
                 @warn "SpaceHeatingLoad doe_reference_name was provided, so blended_doe_reference_names will be ignored."
             end
@@ -189,7 +166,8 @@ struct SpaceHeatingLoad
             length(blended_doe_reference_names) == length(blended_doe_reference_percents)
             loads_kw = blend_and_scale_doe_profiles(BuiltInSpaceHeatingLoad, latitude, longitude, 2017, 
                                                     blended_doe_reference_names, blended_doe_reference_percents, city, 
-                                                    annual_mmbtu, monthly_mmbtu, addressable_load_fraction)
+                                                    annual_mmbtu, monthly_mmbtu, addressable_load_fraction,
+                                                    existing_boiler_efficiency)
         else
             throw(@error("Cannot construct BuiltInSpaceHeatingLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
                 [doe_reference_name, city], or [blended_doe_reference_names, blended_doe_reference_percents, city]."))
@@ -209,23 +187,23 @@ end
 
 """
 function get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_on_peak_load=nothing, 
-                                            loads_kw=nothing, 
-                                            loads_kw_thermal=nothing)
+                                            max_load_kw=nothing, 
+                                            max_load_kw_thermal=nothing)
 This function returns the default value for ExistingChiller.cop based on:
     1. No information about load, returns average of lower and higher cop default values (`cop_unknown_thermal`)
-    2. If the cooling electric `loads_kw` is known, we first guess the thermal load profile using `cop_unknown_thermal`,
+    2. If the cooling electric `max_load_kw` is known, we first guess the thermal load profile using `cop_unknown_thermal`,
         and then we use the default logic to determine the `existing_chiller_cop` based on the peak thermal load with a thermal factor multiplier.
-    3. If the cooling thermal `loads_kw_thermal` is known, same as 2. but we don't have to guess the cop to convert electric to thermal load first.
+    3. If the cooling thermal `max_load_kw_thermal` is known, same as 2. but we don't have to guess the cop to convert electric to thermal load first.
 """
-function get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_on_peak_load=nothing, loads_kw=nothing, loads_kw_thermal=nothing)
+function get_existing_chiller_default_cop(; existing_chiller_max_thermal_factor_on_peak_load=nothing, max_load_kw=nothing, max_load_kw_thermal=nothing)
     cop_less_than_100_ton = 4.40
     cop_more_than_100_ton = 4.69
     cop_unknown_thermal = (cop_less_than_100_ton + cop_more_than_100_ton) / 2.0
     max_cooling_load_ton = nothing
-    if !isnothing(loads_kw_thermal)
-        max_cooling_load_ton = maximum(loads_kw_thermal) / KWH_THERMAL_PER_TONHOUR
-    elseif !isnothing(loads_kw)
-        max_cooling_load_ton = maximum(loads_kw) / KWH_THERMAL_PER_TONHOUR * cop_unknown_thermal
+    if !isnothing(max_load_kw_thermal)
+        max_cooling_load_ton = max_load_kw_thermal / KWH_THERMAL_PER_TONHOUR
+    elseif !isnothing(max_load_kw)
+        max_cooling_load_ton = max_load_kw / KWH_THERMAL_PER_TONHOUR * cop_unknown_thermal
     end
     if isnothing(max_cooling_load_ton) || isnothing(existing_chiller_max_thermal_factor_on_peak_load)
         return cop_unknown_thermal
@@ -293,8 +271,8 @@ struct CoolingLoad
         time_steps_per_hour::Int = 1,
         latitude::Float64=0.0,
         longitude::Float64=0.0,
-        existing_chiller_cop::Union{Real, Nothing} = nothing,
-        existing_chiller_max_thermal_factor_on_peak_load::Union{Real, Nothing}= nothing
+        existing_chiller_cop::Union{Real, Nothing} = nothing, # Passed from ExistingChiller or set to a default
+        existing_chiller_max_thermal_factor_on_peak_load::Union{Real, Nothing}= nothing # Passed from ExistingChiller or set to a default
     )
         # determine the timeseries of loads_kw_thermal
         loads_kw_thermal = nothing
@@ -366,7 +344,7 @@ struct CoolingLoad
             elseif (!isempty(doe_reference_name) || !isempty(blended_doe_reference_names)) || isnothing(existing_chiller_cop)
                 # Generated loads_kw (electric) above based on the building's default fraction of electric profile
                 chiller_cop = get_existing_chiller_default_cop(;existing_chiller_max_thermal_factor_on_peak_load=existing_chiller_max_thermal_factor_on_peak_load, 
-                                        loads_kw=loads_kw)
+                                        max_load_kw=maximum(loads_kw))
             else
                 chiller_cop = existing_chiller_cop
             end
@@ -376,7 +354,7 @@ struct CoolingLoad
         # Now that cooling thermal loads_kw_thermal is known, update existing_chiller_cop if it was not input
         if isnothing(existing_chiller_cop)
             existing_chiller_cop = get_existing_chiller_default_cop(;existing_chiller_max_thermal_factor_on_peak_load=existing_chiller_max_thermal_factor_on_peak_load, 
-                                        loads_kw_thermal=loads_kw_thermal)
+                                        max_load_kw_thermal=maximum(loads_kw_thermal))
         end
 
         if length(loads_kw_thermal) < 8760*time_steps_per_hour
@@ -411,7 +389,8 @@ function BuiltInDomesticHotWaterLoad(
     year::Int,
     addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}},
     annual_mmbtu::Union{Real, Nothing}=nothing,
-    monthly_mmbtu::Vector{<:Real}=Real[]
+    monthly_mmbtu::Vector{<:Real}=Real[],
+    existing_boiler_efficiency::Union{Real, Nothing}=nothing
     )
     dhw_annual_mmbtu = Dict(
         "Miami" => Dict(
@@ -733,12 +712,13 @@ function BuiltInDomesticHotWaterLoad(
             annual_mmbtu = dhw_annual_mmbtu[city][buildingtype]
         end
     else
-        annual_mmbtu *= addressable_load_fraction     
+        annual_mmbtu *= addressable_load_fraction
     end
     if length(monthly_mmbtu) == 12
-        monthly_mmbtu = convert(Vector{Real}, monthly_mmbtu) .* addressable_load_fraction
+        monthly_mmbtu = monthly_mmbtu .* addressable_load_fraction
     end
-    built_in_load("domestic_hot_water", city, buildingtype, year, annual_mmbtu, monthly_mmbtu)
+    built_in_load("domestic_hot_water", city, buildingtype, year, annual_mmbtu, monthly_mmbtu, 
+                    existing_boiler_efficiency)
 end
 
 
@@ -750,7 +730,8 @@ function BuiltInSpaceHeatingLoad(
     year::Int,
     addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}},    
     annual_mmbtu::Union{Real, Nothing}=nothing,
-    monthly_mmbtu::Vector{<:Real}=Real[]
+    monthly_mmbtu::Vector{<:Real}=Real[],
+    existing_boiler_efficiency::Union{Real, Nothing}=nothing
     )
     spaceheating_annual_mmbtu = Dict(
         "Miami" => Dict(
@@ -1075,9 +1056,10 @@ function BuiltInSpaceHeatingLoad(
         annual_mmbtu *= addressable_load_fraction
     end
     if length(monthly_mmbtu) == 12
-        monthly_mmbtu = convert(Vector{Real}, monthly_mmbtu) .* addressable_load_fraction
+        monthly_mmbtu = monthly_mmbtu .* addressable_load_fraction
     end
-    built_in_load("space_heating", city, buildingtype, year, annual_mmbtu, monthly_mmbtu)
+    built_in_load("space_heating", city, buildingtype, year, annual_mmbtu, monthly_mmbtu, 
+                    existing_boiler_efficiency)
 end
 
 
