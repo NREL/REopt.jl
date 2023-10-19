@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
     REoptInputs
 
@@ -143,6 +115,9 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     ghp_electric_consumption_kw::Array{Float64,2}  # Array of electric load profiles consumed by GHP
     ghp_installed_cost::Array{Float64,1}  # Array of installed cost for GHP options
     ghp_om_cost_year_one::Array{Float64,1}  # Array of O&M cost for GHP options
+    avoided_capex_by_ghp_present_value::Array{Float64,1} # HVAC upgrade costs avoided
+    ghx_useful_life_years::Array{Float64,1} # GHX useful life years
+    ghx_residual_value::Array{Float64,1} # Residual value of each GHX options
     tech_renewable_energy_fraction::Dict{String, <:Real} # (techs)
     tech_emissions_factors_CO2::Dict{String, <:Real} # (techs)
     tech_emissions_factors_NOx::Dict{String, <:Real} # (techs)
@@ -203,7 +178,8 @@ function REoptInputs(s::AbstractScenario)
     ghp_options, require_ghp_purchase, ghp_heating_thermal_load_served_kw, 
         ghp_cooling_thermal_load_served_kw, space_heating_thermal_load_reduction_with_ghp_kw, 
         cooling_thermal_load_reduction_with_ghp_kw, ghp_electric_consumption_kw, 
-        ghp_installed_cost, ghp_om_cost_year_one = setup_ghp_inputs(s, time_steps, time_steps_without_grid)
+        ghp_installed_cost, ghp_om_cost_year_one, avoided_capex_by_ghp_present_value,
+        ghx_useful_life_years, ghx_residual_value = setup_ghp_inputs(s, time_steps, time_steps_without_grid)
 
     if any(pv.existing_kw > 0 for pv in s.pvs)
         adjust_load_profile(s, production_factor)
@@ -260,6 +236,9 @@ function REoptInputs(s::AbstractScenario)
         ghp_electric_consumption_kw,
         ghp_installed_cost,
         ghp_om_cost_year_one,
+        avoided_capex_by_ghp_present_value,
+        ghx_useful_life_years,
+        ghx_residual_value,
         tech_renewable_energy_fraction, 
         tech_emissions_factors_CO2, 
         tech_emissions_factors_NOx, 
@@ -1002,26 +981,43 @@ function setup_ghp_inputs(s::AbstractScenario, time_steps, time_steps_without_gr
     cooling_thermal_load_reduction_with_ghp_kw = zeros(num, length(time_steps))
     ghp_cooling_thermal_load_served_kw = zeros(num, length(time_steps))        
     ghp_electric_consumption_kw = zeros(num, length(time_steps))
+    avoided_capex_by_ghp_present_value = Vector{Float64}(undef, num)
+    ghx_useful_life_years = Vector{Float64}(undef, num)
+    ghx_residual_value = Vector{Float64}(undef, num)
     if num > 0
         require_ghp_purchase = s.ghp_option_list[1].require_ghp_purchase  # This does not change with the number of options
+       
         for (i, option) in enumerate(s.ghp_option_list)
-            ghp_cap_cost_slope, ghp_cap_cost_x, ghp_cap_cost_yint, ghp_n_segments = cost_curve(option, s.financial)
-            ghp_size_ton = option.heatpump_capacity_ton
-            seg = 0
-            if ghp_size_ton <= ghp_cap_cost_x[1]
-                seg = 1
-            elseif ghp_size_ton > ghp_cap_cost_x[end]
-                seg = ghp_n_segments
-            else
-                for n in 2:(ghp_n_segments+1)
-                    if (ghp_size_ton > ghp_cap_cost_x[n-1]) && (ghp_size_ton <= ghp_cap_cost_x[n])
-                        seg = n
-                        break
-                    end
-                end
+            if option.heat_pump_configuration == "WSHP"
+                fixed_cost, variable_cost = get_ghp_installed_cost(option, s.financial, option.heatpump_capacity_ton)
+                ghp_installed_cost[i] = fixed_cost + variable_cost
+
+            elseif option.heat_pump_configuration == "WWHP"
+                temp = option.installed_cost_per_kw
+                option.installed_cost_per_kw = option.wwhp_heating_pump_installed_cost_curve
+                fixed_cost_heating, variable_cost_heating = get_ghp_installed_cost(option, s.financial, option.wwhp_heating_pump_capacity_ton)
+                ghp_installed_cost_heating = 0.5 * fixed_cost_heating + variable_cost_heating
+                
+                option.installed_cost_per_kw = option.wwhp_cooling_pump_installed_cost_curve
+                fixed_cost_cooling, variable_cost_cooling = get_ghp_installed_cost(option, s.financial, option.wwhp_cooling_pump_capacity_ton)
+                option.installed_cost_per_kw = temp
+                ghp_installed_cost_cooling = 0.5 * fixed_cost_cooling + variable_cost_cooling
+
+                ghp_installed_cost[i] = ghp_installed_cost_heating + ghp_installed_cost_cooling
             end
-            ghp_installed_cost[i] = ghp_cap_cost_yint[seg-1] + ghp_size_ton * ghp_cap_cost_slope[seg-1]
+
             ghp_om_cost_year_one[i] = option.om_cost_year_one
+            avoided_capex_by_ghp_present_value[i] = option.avoided_capex_by_ghp_present_value
+            ghx_useful_life_years[i] = option.ghx_useful_life_years
+            # ownership guided residual value determination
+            discount_rate = (1 - 1*s.financial.third_party_ownership)*s.financial.offtaker_discount_rate_fraction + s.financial.third_party_ownership*s.financial.owner_discount_rate_fraction
+            ghx_residual_value[i] = option.ghx_only_capital_cost*
+            (
+                (option.ghx_useful_life_years - s.financial.analysis_years)/option.ghx_useful_life_years
+            )/(
+                (1 + discount_rate)^s.financial.analysis_years
+            )
+
             heating_thermal_load = s.space_heating_load.loads_kw + s.dhw_load.loads_kw
             # Using minimum of thermal load and ghp-serving load to avoid small negative net loads
             for j in time_steps
@@ -1049,7 +1045,8 @@ function setup_ghp_inputs(s::AbstractScenario, time_steps, time_steps_without_gr
     return ghp_options, require_ghp_purchase, ghp_heating_thermal_load_served_kw, 
     ghp_cooling_thermal_load_served_kw, space_heating_thermal_load_reduction_with_ghp_kw, 
     cooling_thermal_load_reduction_with_ghp_kw, ghp_electric_consumption_kw, 
-    ghp_installed_cost, ghp_om_cost_year_one
+    ghp_installed_cost, ghp_om_cost_year_one, avoided_capex_by_ghp_present_value,
+    ghx_useful_life_years, ghx_residual_value
 end
 
 function setup_operating_reserve_fraction(s::AbstractScenario, techs_operating_reserve_req_fraction)
@@ -1061,4 +1058,26 @@ function setup_operating_reserve_fraction(s::AbstractScenario, techs_operating_r
     techs_operating_reserve_req_fraction["Wind"] = s.wind.operating_reserve_required_fraction
 
     return nothing
+end
+
+function get_ghp_installed_cost(option::AbstractTech, financial::Financial, ghp_size_ton::Float64)
+
+    ghp_cap_cost_slope, ghp_cap_cost_x, ghp_cap_cost_yint, ghp_n_segments = cost_curve(option, financial)
+    seg = 0
+    if ghp_size_ton <= ghp_cap_cost_x[1]
+        seg = 2
+    elseif ghp_size_ton > ghp_cap_cost_x[end]
+        seg = ghp_n_segments+1
+    else
+        for n in 2:(ghp_n_segments+1)
+            if (ghp_size_ton > ghp_cap_cost_x[n-1]) && (ghp_size_ton <= ghp_cap_cost_x[n])
+                seg = n
+                break
+            end
+        end
+    end
+    fixed_cost = ghp_cap_cost_yint[seg-1] 
+    variable_cost = ghp_size_ton * ghp_cap_cost_slope[seg-1]
+
+    return fixed_cost, variable_cost
 end

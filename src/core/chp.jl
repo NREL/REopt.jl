@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 
 prime_movers = ["recip_engine", "micro_turbine", "combustion_turbine", "fuel_cell"]
 conflict_res_min_allowable_fraction_of_max = 0.25
@@ -454,31 +426,22 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
     # If size class is not specified, heuristic sizing based on avg thermal load and size class 0 efficiencies
     elseif isnothing(size_class) && !isnothing(chp_elec_size_heuristic_kw)
         # With heuristic size, find the suggested size class
-        if chp_elec_size_heuristic_kw < class_bounds[2][2]
-            # If smaller than the upper bound of the smallest class, assign the smallest class
-            size_class = 1
-        elseif chp_elec_size_heuristic_kw >= class_bounds[n_classes][1]
-            # If larger than or equal to the lower bound of the largest class, assign the largest class
-            size_class = n_classes - 1 # Size classes are zero-indexed
-        else
-            # For middle size classes
-            for sc in 3:(n_classes-1)
-                if chp_elec_size_heuristic_kw >= class_bounds[sc][1] && 
-                    chp_elec_size_heuristic_kw < class_bounds[sc][2]
-                    size_class = sc - 1
-                    break
-                end
-            end
-        end
+        size_class = get_size_class_from_size(chp_elec_size_heuristic_kw, class_bounds, n_classes)
     else
         size_class = 0
     end
 
-    # Recalculate heuristic size and max size based on updated size_class
+    # Recalculate heuristic size based on updated size_class, and iterate if 
+    #    necessary if size_class changes after recalc
     if recalc_heuristic_flag
-        chp_elec_size_heuristic_kw = get_heuristic_chp_size_kw(prime_mover_defaults_all, avg_boiler_fuel_load_mmbtu_per_hour, 
-                                        prime_mover, size_class, hot_water_or_steam, boiler_effic)
-        chp_max_size_kw = 2 * chp_elec_size_heuristic_kw
+        size_class_last = [0]
+        while !(size_class in size_class_last)
+            append!(size_class_last, size_class)
+            chp_elec_size_heuristic_kw = get_heuristic_chp_size_kw(prime_mover_defaults_all, avg_boiler_fuel_load_mmbtu_per_hour, 
+            prime_mover, size_class, hot_water_or_steam, boiler_effic)
+            chp_max_size_kw = 2 * chp_elec_size_heuristic_kw
+            size_class = get_size_class_from_size(chp_elec_size_heuristic_kw, class_bounds, n_classes)            
+        end
     end
 
     prime_mover_defaults = get_prime_mover_defaults(prime_mover, hot_water_or_steam, size_class, prime_mover_defaults_all)
@@ -503,10 +466,34 @@ end
 function get_heuristic_chp_size_kw(prime_mover_defaults_all, avg_boiler_fuel_load_mmbtu_per_hour, 
                                 prime_mover, size_class, hot_water_or_steam, boiler_effic)
     therm_effic = prime_mover_defaults_all[prime_mover]["thermal_efficiency_full_load"][hot_water_or_steam][size_class+1]
+    if therm_effic == 0.0
+        throw(@error("Error trying to calculate heuristic CHP size based on average thermal load because the 
+                    thermal efficiency of prime mover $prime_mover for generating $hot_water_or_steam is 0.0"))
+    end
     elec_effic = prime_mover_defaults_all[prime_mover]["electric_efficiency_full_load"][size_class+1]
     avg_heating_thermal_load_mmbtu_per_hr = avg_boiler_fuel_load_mmbtu_per_hour * boiler_effic
     chp_fuel_rate_mmbtu_per_hr = avg_heating_thermal_load_mmbtu_per_hr / therm_effic
     chp_elec_size_heuristic_kw = chp_fuel_rate_mmbtu_per_hr * elec_effic * KWH_PER_MMBTU
     
     return chp_elec_size_heuristic_kw
+end
+
+function get_size_class_from_size(chp_elec_size_heuristic_kw, class_bounds, n_classes)
+    if chp_elec_size_heuristic_kw < class_bounds[2][2]
+        # If smaller than the upper bound of the smallest class, assign the smallest class
+        size_class = 1
+    elseif chp_elec_size_heuristic_kw >= class_bounds[n_classes][1]
+        # If larger than or equal to the lower bound of the largest class, assign the largest class
+        size_class = n_classes - 1 # Size classes are zero-indexed
+    else
+        # For middle size classes
+        for sc in 3:(n_classes-1)
+            if chp_elec_size_heuristic_kw >= class_bounds[sc][1] && 
+                chp_elec_size_heuristic_kw < class_bounds[sc][2]
+                size_class = sc - 1
+                break
+            end
+        end
+    end
+    return size_class
 end

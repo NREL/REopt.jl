@@ -1,48 +1,20 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `Generator` is an optional REopt input with the following keys and default values:
 ```julia
+    only_runs_during_grid_outage::Bool = true,
     existing_kw::Real = 0,
     min_kw::Real = 0,
     max_kw::Real = 1.0e6,
-    installed_cost_per_kw::Real = 500.0,
-    om_cost_per_kw::Real = off_grid_flag ? 20.0 : 10.0,
+    installed_cost_per_kw::Real = off_grid_flag ? 880 : only_runs_during_grid_outage ? 650.0 : 800.0,
+    om_cost_per_kw::Real = off_grid_flag ? 10.0 : 20.0,
     om_cost_per_kwh::Real = 0.0,
-    fuel_cost_per_gallon::Real = 3.0,
-    electric_efficiency_full_load::Real = 0.3233,
+    fuel_cost_per_gallon::Real = 3.61,
+    electric_efficiency_full_load::Real = 0.322,
     electric_efficiency_half_load::Real = electric_efficiency_full_load,
-    fuel_avail_gal::Real = off_grid_flag ? 1.0e9 : 660.0,
+    fuel_avail_gal::Real = 1.0e9,
     fuel_higher_heating_value_kwh_per_gal::Real = 40.7,
     min_turn_down_fraction::Real = off_grid_flag ? 0.15 : 0.0,
-    only_runs_during_grid_outage::Bool = true,
     sells_energy_back_to_grid::Bool = false,
     can_net_meter::Bool = false,
     can_wholesale::Bool = false,
@@ -125,19 +97,19 @@ struct Generator <: AbstractGenerator
     function Generator(;
         off_grid_flag::Bool = false,
         analysis_years::Int = 25, 
+        only_runs_during_grid_outage::Bool = true,
         existing_kw::Real = 0,
         min_kw::Real = 0,
         max_kw::Real = 1.0e6,
-        installed_cost_per_kw::Real = 500.0,
-        om_cost_per_kw::Real= off_grid_flag ? 20.0 : 10.0,
+        installed_cost_per_kw::Real = off_grid_flag ? 880 : only_runs_during_grid_outage ? 650.0 : 800.0,
+        om_cost_per_kw::Real= off_grid_flag ? 10.0 : 20.0,
         om_cost_per_kwh::Real = 0.0,
-        fuel_cost_per_gallon::Real = 3.0,
-        electric_efficiency_full_load::Real = 0.3233,
+        fuel_cost_per_gallon::Real = 3.61,
+        electric_efficiency_full_load::Real = 0.322,
         electric_efficiency_half_load::Real = electric_efficiency_full_load,
-        fuel_avail_gal::Real = off_grid_flag ? 1.0e9 : 660.0,
+        fuel_avail_gal::Real = 1.0e9,
         fuel_higher_heating_value_kwh_per_gal::Real = KWH_PER_GAL_DIESEL,
         min_turn_down_fraction::Real = off_grid_flag ? 0.15 : 0.0,
-        only_runs_during_grid_outage::Bool = true,
         sells_energy_back_to_grid::Bool = false,
         can_net_meter::Bool = false,
         can_wholesale::Bool = false,
