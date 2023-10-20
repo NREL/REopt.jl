@@ -124,7 +124,8 @@ else  # run HiGHS tests
                 "battery_operational_availability" => 1.0,
                 "battery_minimum_soc_fraction" => 0.0,
                 "battery_starting_soc_series_fraction" => results["ElectricStorage"]["soc_series_fraction"],
-                "critical_loads_kw" => results["ElectricLoad"]["critical_load_series_kw"]
+                "critical_loads_kw" => results["ElectricLoad"]["critical_load_series_kw"],
+                "battery_leakage_fraction_per_ts" => 0.0
             )
             reliability_results_batt = backup_reliability(reliability_inputs)
     
@@ -163,7 +164,8 @@ else  # run HiGHS tests
                 "battery_operational_availability" => 1.0,
                 "battery_minimum_soc_fraction" => 0.0,
                 "pv_operational_availability" => 1.0,
-                "wind_operational_availability" => 1.0
+                "wind_operational_availability" => 1.0,
+                "battery_leakage_fraction_per_ts" => 0.0
             )
             reliability_results_batt = backup_reliability(results, p, reliability_inputs)
     
@@ -190,7 +192,8 @@ else  # run HiGHS tests
                 "max_outage_duration" => 10,
                 "battery_size_kw" => 428.0,
                 "battery_size_kwh" => 1585.0,
-                "num_battery_bins" => 5
+                "num_battery_bins" => 5,
+                "battery_leakage_fraction_per_ts" => 0.0
             )
             reliability_results1 = backup_reliability(reliability_inputs)
             reliability_inputs["generator_size_kw"] = 0
@@ -255,7 +258,8 @@ else  # run HiGHS tests
                 "battery_size_kw" => 1,
                 "battery_charge_efficiency_kwh_per_kwh" => 1,
                 "battery_discharge_efficiency_kwh_per_kwh" => 1,
-                "battery_minimum_soc_fraction" => 0.5)
+                "battery_minimum_soc_fraction" => 0.5,
+                "battery_leakage_fraction_per_ts" => 0.0)
             @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"] ≈ [0.557056, 0.57344, 0.8192, 0.761856]
             change_batt_to_h2_in_backup_reliability_inputs!(input_dict)
             @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"] ≈ [0.557056, 0.57344, 0.8192, 0.761856]
@@ -333,7 +337,8 @@ else  # run HiGHS tests
                 "battery_size_kw" => 1,
                 "battery_charge_efficiency_kwh_per_kwh" => 1,
                 "battery_discharge_efficiency_kwh_per_kwh" => 1,
-                "battery_minimum_soc_fraction" => 0)
+                "battery_minimum_soc_fraction" => 0,
+                "battery_leakage_fraction_per_ts" => 0.0)
             @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"] ≈ [0.557056, 0.57344, 0.8192, 0.761856]
             change_batt_to_h2_in_backup_reliability_inputs!(input_dict)
             @test backup_reliability(input_dict)["unlimited_fuel_cumulative_survival_final_time_step"] ≈ [0.557056, 0.57344, 0.8192, 0.761856]
@@ -376,7 +381,8 @@ else  # run HiGHS tests
                 "generator_mean_time_to_failure" => 100,
                 "battery_operational_availability" => 1.0,
                 "num_battery_bins" => 101,
-                "battery_minimum_soc_fraction" => 0)
+                "battery_minimum_soc_fraction" => 0,
+                "battery_leakage_fraction_per_ts" => 0.0)
             reliability_results = backup_reliability(results, p, input_dict)
             @test reliability_results["unlimited_fuel_mean_cumulative_survival_by_duration"][24] ≈ (0.99^20)*(0.9*0.98) atol=0.00001
         end
@@ -446,7 +452,9 @@ else  # run HiGHS tests
                     "battery_discharge_efficiency_kwh_per_kwh" => 1,
                     "H2_discharge_efficiency_kwh_per_kg" => 1,
                     "battery_minimum_soc_fraction" => 0.0,
-                    "H2_minimum_soc_fraction" => 0.0)
+                    "H2_minimum_soc_fraction" => 0.0,
+                    "battery_leakage_fraction_per_ts" => 0.0,
+                    "H2_leakage_fraction_per_ts" => 0.0)
                 
                 #Given outage starts in time period:                     1  2  3  4
                 #(Battery/H2 bin of - means failed)

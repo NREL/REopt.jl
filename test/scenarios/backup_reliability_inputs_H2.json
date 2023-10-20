@@ -13,6 +13,7 @@
  "H2_charge_efficiency_kg_per_kwh": 0.948,
  "H2_discharge_efficiency_kwh_per_kg": 0.948,
  "H2_minimum_soc_fraction": 0.0,
+ "H2_leakage_fraction_per_ts": 0.0,
  "pv_operational_availability": 1.0,
  "pv_size_kw" : 255.0,
  "critical_loads_kw": [

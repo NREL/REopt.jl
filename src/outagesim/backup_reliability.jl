@@ -918,8 +918,8 @@ Return a dictionary of inputs required for backup reliability calculations.
     -battery_operational_availability::Real = 0.97                              Likelihood battery will be available at start of outage       
     -pv_operational_availability::Real = 0.98                                   Likelihood PV will be available at start of outage
     -wind_operational_availability::Real = 0.97                                 Likelihood Wind will be available at start of outage
-    -battery_leakage_fraction_per_ts::Real = 0.0                                Fraction of battery charge that is lost due to leakage each time step
-    -H2_leakage_fraction_per_ts::Real = 0.0                                     Fraction of H2 charge that is lost due to leakage each time step
+    -battery_leakage_fraction_per_ts::Real = 1.27e-3                            Fraction of battery charge that is lost due to leakage each time step
+    -H2_leakage_fraction_per_ts::Real = 2.81e-5                                 Fraction of H2 charge that is lost due to leakage each time step
 
 """
 function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dict())::Dict
@@ -1276,14 +1276,14 @@ Return an array of backup reliability calculations. Inputs can be unpacked from 
 -num_battery_bins::Int              = num_storage_bins_default(battery_size_kw,battery_size_kwh)     Number of bins for discretely modeling battery state of charge
 -battery_charge_efficiency_kwh_per_kwh::Real    = 0.948        Efficiency of charging battery
 -battery_discharge_efficiency_kwh_per_kwh::Real = 0.948        Efficiency of discharging battery
--battery_leakage_fraction_per_ts::Real          = 0.0,         Fraction of battery charge that is lost due to leakage each time step
+-battery_leakage_fraction_per_ts::Real          = 1.268e-3,    Fraction of battery charge that is lost due to leakage each time step
 -H2_starting_soc_kwh::Vector        = []           H2 kWh state of charge time series during normal grid-connected usage
 -H2_electrolyzer_size_kw::Real      = 0.0,         H2 system electrolyzer power capacity
 -H2_fuelcell_size_kw::Real          = 0.0,         H2 system fuel cell power capacity
 -H2_size_kg::Real                   = 0.0,         H2 storage kWh of energy capacity
 -H2_charge_efficiency_kg_per_kwh::Real         = 1.0/54.6,    Efficiency of charging H2 system
 -H2_discharge_efficiency_kwh_per_kg::Real      = 16.745,      Efficiency of discharging H2 system
--H2_leakage_fraction_per_ts::Real   = 0.0,         Fraction of H2 charge that is lost due to leakage each time step
+-H2_leakage_fraction_per_ts::Real   = 2.81e-5,     Fraction of H2 charge that is lost due to leakage each time step
 -num_H2_bins                        = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kg/H2_charge_efficiency_kg_per_kwh),     Number of bins for discretely modeling battery state of charge
 -time_steps_per_hour::Real          = 1            Used to determine amount battery gets shifted.
 ```
@@ -1302,14 +1302,14 @@ function backup_reliability_single_run(;
     num_battery_bins::Int = num_storage_bins_default(battery_size_kw,battery_size_kwh),
     battery_charge_efficiency_kwh_per_kwh::Real = 0.948, 
     battery_discharge_efficiency_kwh_per_kwh::Real = 0.948,
-    battery_leakage_fraction_per_ts::Real = 0.0,
+    battery_leakage_fraction_per_ts::Real = 1.268e-3,
     H2_starting_soc_kwh::Vector = [],
     H2_electrolyzer_size_kw::Real = 0.0,
     H2_fuelcell_size_kw::Real = 0.0,
     H2_size_kg::Real = 0.0,
     H2_charge_efficiency_kg_per_kwh::Real = 1.0/54.6,
     H2_discharge_efficiency_kwh_per_kg::Real = 16.745,
-    H2_leakage_fraction_per_ts::Real = 0.0,
+    H2_leakage_fraction_per_ts::Real = 2.81e-5,
     num_H2_bins = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kg/H2_charge_efficiency_kg_per_kwh),
     time_steps_per_hour::Real = 1.0,
     kwargs...)::Matrix
@@ -1878,7 +1878,7 @@ Possible keys in r:
 -battery_charge_efficiency_kwh_per_kwh::Real            Battery charge efficiency
 -battery_discharge_efficiency_kwh_per_kwh::Real         Battery discharge efficiency
 -battery_starting_soc_series_fraction::Vector           Battery percent state of charge time series during normal grid-connected usage
--battery_leakage_fraction_per_ts::Real = 0.0            Fraction of battery charge that is lost due to leakage each time step
+-battery_leakage_fraction_per_ts::Real = 1.268e-3       Fraction of battery charge that is lost due to leakage each time step
 -generator_failure_to_start::Real = 0.0094              Chance of generator starting given outage
 -generator_mean_time_to_failure::Real = 1100            Average number of time steps between a generator's failures. 1/(failure to run probability). 
 -num_generators::Int = 1                                Number of generators. 
@@ -1893,7 +1893,7 @@ Possible keys in r:
 -H2_size_kg::Real                           = 0.0,      H2 storage kWh of energy capacity
 -H2_charge_efficiency_kg_per_kwh::Real      = 1.0/54.6, Efficiency of charging H2 system
 -H2_discharge_efficiency_kwh_per_kg::Real   = 16.745,   Efficiency of discharging H2 system
--H2_leakage_fraction_per_ts::Real           = 0.0       Fraction of H2 charge that is lost due to leakage each time step
+-H2_leakage_fraction_per_ts::Real           = 2.81e-5   Fraction of H2 charge that is lost due to leakage each time step
 -num_H2_bins::Int                           = num_storage_bins_default(min(H2_electrolyzer_size_kw, H2_fuelcell_size_kw),H2_size_kg/H2_charge_efficiency_kg_per_kwh),     Number of bins for discretely modeling battery state of charge
 
 """
