@@ -361,7 +361,7 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
                                                 boiler_efficiency::Union{Float64, Nothing}=nothing,
                                                 avg_electric_load_kw::Union{Float64, Nothing}=nothing,
                                                 max_electric_load_kw::Union{Float64, Nothing}=nothing,
-                                                is_electric_only::Bool=false)
+                                                is_electric_only::Union{Bool, Nothing}=nothing)
     
     prime_mover_defaults_all = JSON.parsefile(joinpath(@__DIR__, "..", "..", "data", "chp", "chp_defaults.json"))
     avg_boiler_fuel_load_under_recip_over_ct = Dict([("hot_water", 27.0), ("steam", 7.0)])  # [MMBtu/hr] Based on external calcs for size versus production by prime_mover type
@@ -393,6 +393,11 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
         if size_class < 0 || size_class > (n_classes-1)
             throw(@error("The size class $size_class input is outside the valid range of 0 to $(n_classes-1) for prime_mover $prime_mover"))
         end
+    end
+
+    # Default value fo is_electric_only = False
+    if isnothing(is_electric_only)
+        is_electric_only = false
     end
 
     # Calculate heuristic CHP size based on average thermal load, using the default size class efficiency data
