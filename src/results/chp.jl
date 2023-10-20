@@ -89,6 +89,30 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
         sum(sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads) + m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
             for t in p.techs.chp) - CHPtoHotTES[ts] - CHPToSteamTurbineKW[ts] - CHPThermalToWasteKW[ts])
     r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(CHPThermalToLoadKW) / KWH_PER_MMBTU, digits=5)
+
+	CHPToLoadKW = @expression(m, [ts in p.time_steps],
+		sum(value.(m[:dvHeatingProduction]["CHP",q,ts] for q in p.heating_loads)) - CHPToHotTESKW[ts] - CHPToSteamTurbineKW[ts]
+    )
+	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(CHPThermalToLoadKW ./ KWH_PER_MMBTU), digits=5)
+    
+    if "DomesticHotWater" in p.heating_loads && "CHP" in p.techs.can_supply_dhw
+        @expression(m, CHPToDHWKW[ts in p.time_steps], 
+            m[:dvThermalProduction]["CHP","DomesticHotWater",ts] #- CHPToHotTESKW[ts] - CHPToSteamTurbineKW[ts]
+        )
+    else
+        @expression(m, CHPToDHWKW[ts in p.time_steps], 0.0)
+    end
+    r["thermal_to_dhw_load_series_mmbtu_per_hour"] = round.(value.(CHPToDHWKW ./ KWH_PER_MMBTU), digits=5)
+    
+    if "SpaceHeating" in p.heating_loads && "CHP" in p.techs.can_supply_space_heating
+        @expression(m, CHPToSpaceHeatingKW[ts in p.time_steps], 
+            m[:dvThermalProduction]["CHP","SpaceHeating",ts] #- CHPToHotTESKW[ts] - CHPToSteamTurbineKW[ts]
+        )
+    else
+        @expression(m, CHPToSpaceHeatingKW[ts in p.time_steps], 0.0)
+    end
+    r["thermal_to_space_heating_load_series_mmbtu_per_hour"] = round.(value.(CHPToSpaceHeatingKW ./ KWH_PER_MMBTU), digits=5)
+
 	r["year_one_fuel_cost_before_tax"] = round(value(m[:TotalCHPFuelCosts] / p.pwf_fuel["CHP"]), digits=3)                
 	r["lifecycle_fuel_cost_after_tax"] = round(value(m[:TotalCHPFuelCosts]) * p.s.financial.offtaker_tax_rate_fraction, digits=3)
 	#Standby charges and hourly O&M
