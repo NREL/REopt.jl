@@ -99,6 +99,7 @@ function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vec
                                             "net_metering_from_dsire" => net_metering_from_dsire)
     # Add custom resilience output to results_all, per Eaton's request
     results_dict["resilience"] = results_summary["optimal"]["resilience"]
+    results_dict["incentive_used"] = results_summary["incentive_used"]
     results_all = Dict("optimal" => results_dict)
 
     # Now create number of inputs based on the # of techs sized in optimal case
