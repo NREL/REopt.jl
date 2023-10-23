@@ -491,7 +491,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             d["GHP"]["ghpghx_inputs"][i]["ambient_temperature_f"] = ambient_temp_degF
             # Only SpaceHeating portion of Heating Load gets served by GHP, unless allowed by can_serve_dhw
             if get(ghpghx_inputs, "heating_thermal_load_mmbtu_per_hr", []) in [nothing, []]
-                if haskey(d["GHP"], "can_serve_dhw") && d["GHP"]["can_serve_dhw"]
+                if get(d["GHP"], "can_serve_dhw", false)  # This is assuming the default stays false
                     ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = (space_heating_load.loads_kw + dhw_load.loads_kw - space_heating_thermal_load_reduction_with_ghp_kw)  / KWH_PER_MMBTU
                 else
                     ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = (space_heating_load.loads_kw - space_heating_thermal_load_reduction_with_ghp_kw) / KWH_PER_MMBTU
@@ -618,8 +618,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             pop!(ghp_inputs_removed_ghpghx_responses, "ghpghx_inputs")
         end
         for ghpghx_response in get(d["GHP"], "ghpghx_responses", [])
-            if get(ghpghx_response["inputs"], "hybrid_ghx_sizing_method", nothing) in ["Automatic", "Fractional"]
-                ghp_inputs_removed_ghpghx_responses["is_ghx_hybrid"] = true
+            if haskey(ghpghx_response, "inputs")
+                if get(ghpghx_response["inputs"], "hybrid_ghx_sizing_method", nothing) in ["Automatic", "Fractional"]
+                    ghp_inputs_removed_ghpghx_responses["is_ghx_hybrid"] = true
+                end
             end
             append!(ghp_option_list, [GHP(ghpghx_response, ghp_inputs_removed_ghpghx_responses)])
         end

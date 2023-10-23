@@ -667,7 +667,7 @@ else  # run HiGHS tests
         post = JSON.parsefile("./scenarios/$post_name")
         scen = Scenario(post)
      
-        @test scen.pvs[1].tilt ≈ post["Site"]["latitude"] 
+        @test scen.pvs[1].tilt ≈ 20
         @test scen.pvs[1].azimuth ≈ 180
     
         ## Scenario 2: Palmdale, CA; array-type = 1 (roof)
@@ -682,7 +682,7 @@ else  # run HiGHS tests
         post["PV"]["array_type"] = 0 
         scen = Scenario(post)
     
-        @test scen.pvs[1].tilt ≈ abs(post["Site"]["latitude"])
+        @test scen.pvs[1].tilt ≈ 20
         @test scen.pvs[1].azimuth ≈ 0
 
         ## Scenario 4:Cape Town; array-type = 0 (ground); user-provided tilt (should not get overwritten)

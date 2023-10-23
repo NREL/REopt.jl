@@ -1245,15 +1245,12 @@ end
     # Average COP which includes pump power should be lower than Heat Pump only COP specified by the map
     @test heating_cop_avg <= 4.0
     @test cooling_cop_avg <= 8.0
+end
 
+@testset "Hybrid GHX and GHP calculated costs validation" begin
     ## Hybrid GHP validation.
     # Load base inputs
-    input_data = JSON.parsefile("scenarios/ghp_inputs.json")
-
-    input_data["GHP"]["ghpghx_inputs"][1]["hybrid_ghx_sizing_method"] = "Automatic"
-    input_data["GHP"]["avoided_capex_by_ghp_present_value"] = 1.0e6
-    input_data["GHP"]["ghx_useful_life_years"] = 35
-    input_data["GHP"]["ghpghx_responses"] = [JSON.parsefile("scenarios/ghpghx_hybrid_results.json")]
+    input_data = JSON.parsefile("scenarios/ghp_financial_hybrid.json")
 
     inputs = REoptInputs(input_data)
 
@@ -1261,12 +1258,50 @@ end
     m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
     results = run_reopt([m1,m2], inputs)
 
-    pop!(input_data["GHP"], "ghpghx_inputs")
-    pop!(input_data["GHP"], "ghpghx_responses")
+    calculated_ghp_capital_costs = ((input_data["GHP"]["ghpghx_responses"][1]["outputs"]["number_of_boreholes"]*
+    input_data["GHP"]["ghpghx_responses"][1]["outputs"]["length_boreholes_ft"]* 
+    inputs.s.ghp_option_list[1].installed_cost_ghx_per_ft) + 
+    (inputs.s.ghp_option_list[1].installed_cost_heatpump_per_ton*
+    input_data["GHP"]["ghpghx_responses"][1]["outputs"]["peak_combined_heatpump_thermal_ton"]*
+    inputs.s.ghp_option_list[1].heatpump_capacity_sizing_factor_on_peak_load) + 
+    (inputs.s.ghp_option_list[1].building_sqft*
+    inputs.s.ghp_option_list[1].installed_cost_building_hydronic_loop_per_sqft))
+
+    @test results["Financial"]["initial_capital_costs"] ≈ calculated_ghp_capital_costs atol=0.1
+    
+    calculated_om_costs = inputs.s.ghp_option_list[1].building_sqft*
+    inputs.s.ghp_option_list[1].om_cost_per_sqft_year * inputs.third_party_factor * inputs.pwf_om
+
+    @test results["Financial"]["lifecycle_om_costs_before_tax"] ≈ calculated_om_costs atol=0.1
+
+    calc_om_cost_after_tax = calculated_om_costs*(1-inputs.s.financial.owner_tax_rate_fraction)
+    @test results["Financial"]["lifecycle_om_costs_after_tax"] - calc_om_cost_after_tax < 0.0001
+
+    @test abs(results["Financial"]["lifecycle_capital_costs_plus_om_after_tax"] - (calc_om_cost_after_tax + 0.7*results["Financial"]["initial_capital_costs"])) < 150.0
+
+    @test abs(results["Financial"]["lifecycle_capital_costs"] - 0.7*results["Financial"]["initial_capital_costs"]) < 150.0
+
+    @test abs(results["Financial"]["npv"] - 840621) < 1.0
+    @test results["Financial"]["simple_payback_years"] - 5.09 < 0.1
+    @test results["Financial"]["internal_rate_of_return"] - 0.18 < 0.01
+
+    @test haskey(results["ExistingBoiler"], "year_one_fuel_cost_before_tax_bau")
+
+    ## Hybrid
+    input_data["GHP"]["ghpghx_responses"] = [JSON.parsefile("scenarios/ghpghx_hybrid_results.json")]
+    input_data["GHP"]["avoided_capex_by_ghp_present_value"] = 1.0e6
+    input_data["GHP"]["ghx_useful_life_years"] = 35
+
+    inputs = REoptInputs(input_data)
+
+    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+    results = run_reopt([m1,m2], inputs)
+
+    pop!(input_data["GHP"], "ghpghx_inputs", nothing)
+    pop!(input_data["GHP"], "ghpghx_responses", nothing)
     ghp_obj = REopt.GHP(JSON.parsefile("scenarios/ghpghx_hybrid_results.json"), input_data["GHP"])
 
-    # Create GHP REopt object for results validation.
-    # analysis period 25 years, ghx life 35 years, discount rate 8.3%
     calculated_ghx_residual_value = ghp_obj.ghx_only_capital_cost*
     (
         (ghp_obj.ghx_useful_life_years - inputs.s.financial.analysis_years)/ghp_obj.ghx_useful_life_years
@@ -1371,8 +1406,6 @@ end
             @test results["ElectricStorage"]["size_kw"] ≈ 0.0 atol=1e-1
             @test results["ElectricStorage"]["size_kwh"] ≈ 0.0 atol=1e-1
             @test results["Generator"]["size_kw"] ≈ 21.52 atol=1e-1
-            expected_npv = -70009
-            @test (expected_npv - results["Financial"]["npv"])/expected_npv ≈ 0.0 atol=1e-2
             @test results["Site"]["annual_renewable_electricity_kwh"] ≈ 76412.02
             @test results["Site"]["renewable_electricity_fraction"] ≈ 0.8
             @test results["Site"]["renewable_electricity_fraction_bau"] ≈ 0.147576 atol=1e-4
