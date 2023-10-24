@@ -123,7 +123,8 @@ function add_degradation(m, p; b="ElectricStorage")
         # -> linearize the product of binSOHIndicatorChange & m[:dvStorageEnergy][b]
         @constraint(m, [mth in months], m[:dvSOHChangeTimesEnergy][mth] >= m[:dvStorageEnergy][b] - bigM_StorageEnergy * (1 - m[:binSOHIndicatorChange][mth]))
         @constraint(m, [mth in months], m[:dvSOHChangeTimesEnergy][mth] <= m[:dvStorageEnergy][b] + bigM_StorageEnergy * (1 - m[:binSOHIndicatorChange][mth]))
-
+        @constraint(m, [mth in months], m[:dvSOHChangeTimesEnergy][mth] <= bigM_StorageEnergy * m[:binSOHIndicatorChange][mth])
+        
         replacement_costs = zeros(length(months))  # initialize cost coefficients
         residual_values = zeros(length(months))  # initialize cost coefficients for residual_value
         N = 365*p.s.financial.analysis_years # number of days
