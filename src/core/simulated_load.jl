@@ -280,13 +280,17 @@ function simulated_load(d::Dict)
         space_heating_annual_mmbtu = nothing
         dhw_annual_mmbtu = nothing
         space_heating_monthly_mmbtu = Real[]
+        space_heating_monthly_fuel_mmbtu = Real[]
         dhw_monthly_mmbtu = Real[]
+        dhw_monthly_fuel_mmbtu = Real[]
         if !isempty(monthly_mmbtu)    
             space_heating_monthly_energy = get_monthly_energy(default_space_heating_load.loads_kw)
             dhw_monthly_energy = get_monthly_energy(default_dhw_load.loads_kw)
             space_heating_fraction_monthly = space_heating_monthly_energy ./ (space_heating_monthly_energy + dhw_monthly_energy)
             space_heating_monthly_mmbtu = monthly_mmbtu .* space_heating_fraction_monthly
+            space_heating_monthly_fuel_mmbtu = space_heating_monthly_mmbtu / boiler_efficiency
             dhw_monthly_mmbtu = monthly_mmbtu - space_heating_monthly_mmbtu
+            dhw_monthly_fuel_mmbtu = dhw_monthly_mmbtu / boiler_efficiency
         elseif !isnothing(annual_mmbtu)
             total_heating_annual_mmbtu = default_space_heating_load.annual_mmbtu + default_dhw_load.annual_mmbtu
             space_heating_fraction = default_space_heating_load.annual_mmbtu / total_heating_annual_mmbtu
@@ -328,11 +332,13 @@ function simulated_load(d::Dict)
             ("space_min_mmbtu_per_hour", round(minimum(space_load_series), digits=3)),
             ("space_mean_mmbtu_per_hour", round(sum(space_load_series) / length(space_load_series), digits=3)),
             ("space_max_mmbtu_per_hour", round(maximum(space_load_series), digits=3)),
+            ("space_monthly_mmbtu", round.(space_heating_monthly_fuel_mmbtu, digits=3)),
             ("dhw_loads_mmbtu_per_hour", round.(dhw_load_series, digits=3)),
             ("dhw_annual_mmbtu", round(dhw_load.annual_mmbtu / boiler_efficiency, digits=3)),
             ("dhw_min_mmbtu_per_hour", round(minimum(dhw_load_series), digits=3)),
             ("dhw_mean_mmbtu_per_hour", round(sum(dhw_load_series) / length(dhw_load_series), digits=3)),
-            ("dhw_max_mmbtu_per_hour", round(maximum(dhw_load_series), digits=3)),  
+            ("dhw_max_mmbtu_per_hour", round(maximum(dhw_load_series), digits=3)),
+            ("dhw_monthly_mmbtu", round.(dhw_monthly_fuel_mmbtu, digits=3)),
         ])
 
         return response
