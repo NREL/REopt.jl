@@ -288,9 +288,9 @@ function simulated_load(d::Dict)
             dhw_monthly_energy = get_monthly_energy(default_dhw_load.loads_kw)
             space_heating_fraction_monthly = space_heating_monthly_energy ./ (space_heating_monthly_energy + dhw_monthly_energy)
             space_heating_monthly_mmbtu = monthly_mmbtu .* space_heating_fraction_monthly
-            space_heating_monthly_fuel_mmbtu = space_heating_monthly_mmbtu / boiler_efficiency
+            space_heating_monthly_fuel_mmbtu = space_heating_monthly_mmbtu .* addressable_load_fraction
             dhw_monthly_mmbtu = monthly_mmbtu - space_heating_monthly_mmbtu
-            dhw_monthly_fuel_mmbtu = dhw_monthly_mmbtu / boiler_efficiency
+            dhw_monthly_fuel_mmbtu = dhw_monthly_mmbtu .* addressable_load_fraction
         elseif !isnothing(annual_mmbtu)
             total_heating_annual_mmbtu = default_space_heating_load.annual_mmbtu + default_dhw_load.annual_mmbtu
             space_heating_fraction = default_space_heating_load.annual_mmbtu / total_heating_annual_mmbtu
