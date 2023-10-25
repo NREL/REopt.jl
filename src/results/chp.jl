@@ -95,18 +95,18 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     )
 	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(CHPThermalToLoadKW ./ KWH_PER_MMBTU), digits=5)
     
-    if "DomesticHotWater" in p.heating_loads && "CHP" in p.techs.can_supply_dhw
+    if "DomesticHotWater" in p.heating_loads && p.s.chp.can_serve_dhw
         @expression(m, CHPToDHWKW[ts in p.time_steps], 
-            m[:dvThermalProduction]["CHP","DomesticHotWater",ts] #- CHPToHotTESKW[ts] - CHPToSteamTurbineKW[ts]
+            m[:dvHeatingProduction]["CHP","DomesticHotWater",ts] #- CHPToHotTESKW[ts] - CHPToSteamTurbineKW[ts]
         )
     else
         @expression(m, CHPToDHWKW[ts in p.time_steps], 0.0)
     end
     r["thermal_to_dhw_load_series_mmbtu_per_hour"] = round.(value.(CHPToDHWKW ./ KWH_PER_MMBTU), digits=5)
     
-    if "SpaceHeating" in p.heating_loads && "CHP" in p.techs.can_supply_space_heating
+    if "SpaceHeating" in p.heating_loads && p.s.chp.can_serve_space_heating
         @expression(m, CHPToSpaceHeatingKW[ts in p.time_steps], 
-            m[:dvThermalProduction]["CHP","SpaceHeating",ts] #- CHPToHotTESKW[ts] - CHPToSteamTurbineKW[ts]
+            m[:dvHeatingProduction]["CHP","SpaceHeating",ts] #- CHPToHotTESKW[ts] - CHPToSteamTurbineKW[ts]
         )
     else
         @expression(m, CHPToSpaceHeatingKW[ts in p.time_steps], 0.0)

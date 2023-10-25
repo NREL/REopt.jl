@@ -78,18 +78,18 @@ function add_electric_heater_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     )
 	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(ElectricHeaterToLoad / KWH_PER_MMBTU), digits=3)
 
-    if "DomesticHotWater" in p.heating_loads && "ElectricHeater" in p.techs.can_supply_dhw
+    if "DomesticHotWater" in p.heating_loads && p.s.electric_heater.can_serve_dhw
         @expression(m, ElectricHeaterToDHWKW[ts in p.time_steps], 
-            m[:dvThermalProduction]["ElectricHeater","DomesticHotWater",ts] #- ElectricHeaterToHotTESKW[ts] - ElectricHeaterToSteamTurbineKW[ts]
+            m[:dvHeatingProduction]["ElectricHeater","DomesticHotWater",ts] #- ElectricHeaterToHotTESKW[ts] - ElectricHeaterToSteamTurbineKW[ts]
         )
     else
         @expression(m, ElectricHeaterToDHWKW[ts in p.time_steps], 0.0)
     end
     r["thermal_to_dhw_load_series_mmbtu_per_hour"] = round.(value.(ElectricHeaterToDHWKW ./ KWH_PER_MMBTU), digits=5)
     
-    if "SpaceHeating" in p.heating_loads && "ElectricHeater" in p.techs.can_supply_space_heating
+    if "SpaceHeating" in p.heating_loads && p.s.electric_heater.can_serve_space_heating
         @expression(m, ElectricHeaterToSpaceHeatingKW[ts in p.time_steps], 
-            m[:dvThermalProduction]["ElectricHeater","SpaceHeating",ts] #- ElectricHeaterToHotTESKW[ts] - ElectricHeaterToSteamTurbineKW[ts]
+            m[:dvHeatingProduction]["ElectricHeater","SpaceHeating",ts] #- ElectricHeaterToHotTESKW[ts] - ElectricHeaterToSteamTurbineKW[ts]
         )
     else
         @expression(m, ElectricHeaterToSpaceHeatingKW[ts in p.time_steps], 0.0)
