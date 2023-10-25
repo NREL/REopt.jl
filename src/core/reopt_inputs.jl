@@ -129,6 +129,7 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     heating_cop::Dict{String, <:Real} # (techs.electric_heater)
     heating_loads::Vector{String} # list of heating loads
     heating_loads_kw::Dict{String, Array{Real,1}} # (heating_loads)
+    heating_loads_served_by_tes::Dict{String, Array{String,1}} # ("HotThermalStorage" or empty)
 end
 
 
@@ -200,6 +201,19 @@ function REoptInputs(s::AbstractScenario)
     if !isnothing(s.space_heating_load)
         push!(heating_loads, "SpaceHeating")
         heating_loads_kw["SpaceHeating"] = s.space_heating_load.loads_kw
+    end
+
+    heating_loads_served_by_tes = Dict{String,Array{String,1}}()
+    if !isempty(s.storage.types.hot)
+        for b in s.storage.types.hot
+            heating_loads_served_by_tes[b] = String[]
+            if storage.attr[b].can_serve_dhw 
+                push!(heating_loads_served_by_tes[b],"DomesticHotWater")
+            end
+            if storage.attr[b].can_serve_space_heating
+                push!(heating_loads_served_by_tes[b],"SpaceHeating")
+            end
+        end
     end
 
     REoptInputs(

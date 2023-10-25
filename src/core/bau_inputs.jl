@@ -138,6 +138,8 @@ function BAUInputs(p::REoptInputs)
         heating_loads_kw["SpaceHeating"] = s.space_heating_load.loads_kw
     end
 
+    heating_loads_served_by_tes = Dict{String,Array{String,1}}()
+
     REoptInputs(
         bau_scenario,
         techs,
@@ -200,7 +202,8 @@ function BAUInputs(p::REoptInputs)
         p.techs_operating_reserve_req_fraction,
         heating_cop,
         heating_loads,
-        heating_loads_kw
+        heating_loads_kw,
+        heating_loads_served_by_tes
     )
 end
 
