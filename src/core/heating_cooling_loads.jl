@@ -42,13 +42,13 @@ struct DomesticHotWaterLoad
     )
 
         if length(addressable_load_fraction) > 1
-            if length(addressable_load_fraction) != length(fuel_loads_mmbtu_per_hour)
+            if !isempty(fuel_loads_mmbtu_per_hour) && length(addressable_load_fraction) != length(fuel_loads_mmbtu_per_hour)
                 throw(@error("`addressable_load_fraction` must be a scalar or an array of length `fuel_loads_mmbtu_per_hour`"))
             end
             if !isempty(monthly_mmbtu) && length(addressable_load_fraction) != 12
                 throw(@error("`addressable_load_fraction` must be a scalar or an array of length 12 if `monthly_mmbtu` is input"))
             end
-            addressable_load_fraction = convert(Array{Real}, addressable_load_fraction)
+            addressable_load_fraction = convert(Vector{Real}, addressable_load_fraction)
         end
     
         if length(fuel_loads_mmbtu_per_hour) > 0
@@ -146,13 +146,13 @@ struct SpaceHeatingLoad
     )
 
         if length(addressable_load_fraction) > 1
-            if length(addressable_load_fraction) != length(fuel_loads_mmbtu_per_hour)
+            if !isempty(fuel_loads_mmbtu_per_hour) && length(addressable_load_fraction) != length(fuel_loads_mmbtu_per_hour)
                 throw(@error("`addressable_load_fraction` must be a scalar or an array of length `fuel_loads_mmbtu_per_hour`"))
             end
             if !isempty(monthly_mmbtu) && length(addressable_load_fraction) != 12
                 throw(@error("`addressable_load_fraction` must be a scalar or an array of length 12 if `monthly_mmbtu` is input"))
             end
-            addressable_load_fraction = convert(Array{Real}, addressable_load_fraction)
+            addressable_load_fraction = convert(Vector{Real}, addressable_load_fraction)
         end
 
         if length(fuel_loads_mmbtu_per_hour) > 0
