@@ -40,6 +40,17 @@ struct DomesticHotWaterLoad
         longitude::Real = 0.0,
         existing_boiler_efficiency::Real = NaN
     )
+
+        if length(addressable_load_fraction) > 1
+            if length(addressable_load_fraction) != length(fuel_loads_mmbtu_per_hour)
+                throw(@error("`addressable_load_fraction` must be a scalar or an array of length `fuel_loads_mmbtu_per_hour`"))
+            end
+            if !isempty(monthly_mmbtu) && length(addressable_load_fraction) != 12
+                throw(@error("`addressable_load_fraction` must be a scalar or an array of length 12 if `monthly_mmbtu` is input"))
+            end
+            addressable_load_fraction = convert(Array{Real}, addressable_load_fraction)
+        end
+    
         if length(fuel_loads_mmbtu_per_hour) > 0
 
             if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
@@ -52,19 +63,7 @@ struct DomesticHotWaterLoad
                 @warn "DomesticHotWaterLoad `fuel_loads_mmbtu_per_hour` was provided, so doe_reference_name and/or blended_doe_reference_names will be ignored."
             end
 
-            if length(addressable_load_fraction) > 1
-                if length(addressable_load_fraction) != length(fuel_loads_mmbtu_per_hour)
-                    throw(@error("`addressable_load_fraction` must be a scalar or an array of length `fuel_loads_mmbtu_per_hour`"))
-                end
-            end
-
         elseif !isempty(doe_reference_name)
-            if length(addressable_load_fraction) > 1
-                if !isempty(monthly_mmbtu) && length(addressable_load_fraction) != 12
-                    throw(@error("`addressable_load_fraction` must be a scalar or an array of length 12 if `monthly_mmbtu` is input"))
-                end
-            end
-            
             loads_kw = BuiltInDomesticHotWaterLoad(city, doe_reference_name, latitude, longitude, 2017, addressable_load_fraction, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency)
             if length(blended_doe_reference_names) > 0
                 @warn "DomesticHotWaterLoad doe_reference_name was provided, so blended_doe_reference_names will be ignored."
@@ -145,6 +144,17 @@ struct SpaceHeatingLoad
         longitude::Real = 0.0,
         existing_boiler_efficiency::Real = NaN
     )
+
+        if length(addressable_load_fraction) > 1
+            if length(addressable_load_fraction) != length(fuel_loads_mmbtu_per_hour)
+                throw(@error("`addressable_load_fraction` must be a scalar or an array of length `fuel_loads_mmbtu_per_hour`"))
+            end
+            if !isempty(monthly_mmbtu) && length(addressable_load_fraction) != 12
+                throw(@error("`addressable_load_fraction` must be a scalar or an array of length 12 if `monthly_mmbtu` is input"))
+            end
+            addressable_load_fraction = convert(Array{Real}, addressable_load_fraction)
+        end
+
         if length(fuel_loads_mmbtu_per_hour) > 0
 
             if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
