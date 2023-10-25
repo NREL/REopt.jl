@@ -7,10 +7,12 @@
         "doe_reference_name": "Hospital"
     },
     "SpaceHeatingLoad": {
-        "doe_reference_name": "LargeOffice"
+        "doe_reference_name": "LargeOffice",
+        "annual_mmbtu": 5000
     },
     "DomesticHotWaterLoad": {
-        "doe_reference_name": "LargeOffice"
+        "doe_reference_name": "LargeOffice",
+        "annual_mmbtu": 5000
     },    
     "CoolingLoad": {
         "doe_reference_name": "LargeOffice"
@@ -26,8 +28,7 @@
     },
     "ExistingBoiler": {
         "fuel_cost_per_mmbtu": [11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11],
-        "efficiency": 0.72,
-        "production_type": "steam"
+        "production_type": "hot_water"
     },
     "PV": {
         "max_kw": 0
