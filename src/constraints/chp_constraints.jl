@@ -138,7 +138,7 @@ function add_chp_hourly_om_charges(m, p; _n="")
     #Constraint CHP-hourly-om-a: om per hour, per time step >= per_unit_size_cost * size for when on, >= zero when off
 	@constraint(m, CHPHourlyOMBySizeA[t in p.techs.chp, ts in p.time_steps],
         p.s.chp.om_cost_per_hr_per_kw_rated * m[Symbol("dvSize"*_n)][t] -
-        p.max_size[t] * p.s.chp.om_cost_per_hr_per_kw_rated * (1-m[Symbol("binCHPIsOnInTS"*_n)][t,ts])
+        p.s.chp.max_kw * p.s.chp.om_cost_per_hr_per_kw_rated * (1-m[Symbol("binCHPIsOnInTS"*_n)][t,ts])
             <= m[Symbol("dvOMByHourBySizeCHP"*_n)][t, ts]
     )
 	#Constraint CHP-hourly-om-b: om per hour, per time step <= per_unit_size_cost * size for each hour
@@ -148,7 +148,7 @@ function add_chp_hourly_om_charges(m, p; _n="")
     )
 	#Constraint CHP-hourly-om-c: om per hour, per time step <= zero when off, <= per_unit_size_cost*max_size
 	@constraint(m, CHPHourlyOMBySizeC[t in p.techs.chp, ts in p.time_steps],
-        p.max_size[t] * p.s.chp.om_cost_per_hr_per_kw_rated * m[Symbol("binCHPIsOnInTS"*_n)][t,ts]
+        p.s.chp.max_kw * p.s.chp.om_cost_per_hr_per_kw_rated * m[Symbol("binCHPIsOnInTS"*_n)][t,ts]
             >= m[Symbol("dvOMByHourBySizeCHP"*_n)][t, ts]
     )
     
