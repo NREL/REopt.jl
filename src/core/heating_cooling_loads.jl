@@ -5,7 +5,7 @@
     doe_reference_name::String = "",
     blended_doe_reference_names::Array{String, 1} = String[],
     blended_doe_reference_percents::Array{<:Real,1} = Real[],
-    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}} = 1.0,  # Fraction of input fuel load which is addressable by heating technologies. Can be a scalar or vector with length aligned with use of monthly_mmbtu or fuel_loads_mmbtu_per_hour.
+    addressable_load_fraction::Any = 1.0,  # Fraction of input fuel load which is addressable by heating technologies. Can be a scalar or vector with length aligned with use of monthly_mmbtu or fuel_loads_mmbtu_per_hour.
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
     fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[], # Vector of hot water fuel loads [mmbtu/hour]. Length must equal 8760 * `Settings.time_steps_per_hour`
@@ -102,7 +102,7 @@ end
     doe_reference_name::String = "",
     blended_doe_reference_names::Array{String, 1} = String[],
     blended_doe_reference_percents::Array{<:Real,1} = Real[],
-    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}} = 1.0,  # Fraction of input fuel load which is addressable by heating technologies. Can be a scalar or vector with length aligned with use of monthly_mmbtu or fuel_loads_mmbtu_per_hour.
+    addressable_load_fraction::Any = 1.0,  # Fraction of input fuel load which is addressable by heating technologies. Can be a scalar or vector with length aligned with use of monthly_mmbtu or fuel_loads_mmbtu_per_hour.
     annual_mmbtu::Union{Real, Nothing} = nothing,
     monthly_mmbtu::Array{<:Real,1} = Real[],
     fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[], # Vector of space heating fuel loads [mmbtu/hr]. Length must equal 8760 * `Settings.time_steps_per_hour`
