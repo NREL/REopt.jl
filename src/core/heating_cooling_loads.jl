@@ -33,7 +33,7 @@ struct DomesticHotWaterLoad
         blended_doe_reference_percents::Array{<:Real,1} = Real[],
         annual_mmbtu::Union{Real, Nothing} = nothing,
         monthly_mmbtu::Array{<:Real,1} = Real[],
-        addressable_load_fraction::Union{<:Real, AbstractVector{Union{Any,<:Real}}} = 1.0,
+        addressable_load_fraction::Union{<:Real, Vector{Any}, Vector{<:Real}} = 1.0,
         fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
         time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
         latitude::Real = 0.0,
@@ -137,7 +137,7 @@ struct SpaceHeatingLoad
         blended_doe_reference_percents::Array{<:Real,1} = Real[],
         annual_mmbtu::Union{Real, Nothing} = nothing,
         monthly_mmbtu::Array{<:Real,1} = Real[],
-        addressable_load_fraction::Union{<:Real, AbstractVector{Union{Any,<:Real}}} = 1.0,
+        addressable_load_fraction::Union{<:Real, Vector{Any}, Vector{<:Real}} = 1.0,
         fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
         time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
         latitude::Real = 0.0,
