@@ -33,7 +33,7 @@ struct DomesticHotWaterLoad
         blended_doe_reference_percents::Array{<:Real,1} = Real[],
         annual_mmbtu::Union{Real, Nothing} = nothing,
         monthly_mmbtu::Array{<:Real,1} = Real[],
-        addressable_load_fraction::Union{<:Real, Vector{Any}, Vector{<:Real}} = 1.0,
+        addressable_load_fraction::Any = 1.0,
         fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
         time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
         latitude::Real = 0.0,
@@ -49,6 +49,8 @@ struct DomesticHotWaterLoad
                 throw(@error("`addressable_load_fraction` must be a scalar or an array of length 12 if `monthly_mmbtu` is input"))
             end
             addressable_load_fraction = convert(Vector{Real}, addressable_load_fraction)
+        else
+            addressable_load_fraction = convert(Real, addressable_load_fraction)
         end
     
         if length(fuel_loads_mmbtu_per_hour) > 0
@@ -137,7 +139,7 @@ struct SpaceHeatingLoad
         blended_doe_reference_percents::Array{<:Real,1} = Real[],
         annual_mmbtu::Union{Real, Nothing} = nothing,
         monthly_mmbtu::Array{<:Real,1} = Real[],
-        addressable_load_fraction::Union{<:Real, Vector{Any}, Vector{<:Real}} = 1.0,
+        addressable_load_fraction::Any = 1.0,
         fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
         time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
         latitude::Real = 0.0,
@@ -153,6 +155,8 @@ struct SpaceHeatingLoad
                 throw(@error("`addressable_load_fraction` must be a scalar or an array of length 12 if `monthly_mmbtu` is input"))
             end
             addressable_load_fraction = convert(Vector{Real}, addressable_load_fraction)
+        else
+            addressable_load_fraction = convert(Real, addressable_load_fraction)            
         end
 
         if length(fuel_loads_mmbtu_per_hour) > 0
