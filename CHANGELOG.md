@@ -24,7 +24,7 @@ Classify the change according to the following categories:
     ### Removed
 
 
-# develop 2023-10-17
+# develop 2023-10-26
 ### Added
 - Added Bool attribute `is_electric_only` to CHP; if true, default installed and O&M costs are reduced by 25% and, for the reciprocating engine and combustion turbine prime movers, the federal ITC fraction is reduced to zero.
 - Las Vegas CRB data was missing from ElectricLoad, but the climate_cities.shp file does not distinguish between Las Angeles and Las Vegas
@@ -32,6 +32,7 @@ Classify the change according to the following categories:
 - Update `CHP.size_class` after heuristic size is determined based on size_class=0 guess (not input)
 ### Fixed
 - Use the user-input `ExistingBoiler.efficiency` value for converting fuel input to thermal to preserve annual fuel energy input
+- Fix heating loads monthly_mmbtu and addressable_load_fraction handling (type issues mostly)
 - Bug fix for user-supplied 8760 WHL rates with tiered energy rate
 
 ## v0.36.0
