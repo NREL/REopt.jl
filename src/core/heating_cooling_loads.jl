@@ -49,6 +49,8 @@ struct DomesticHotWaterLoad
                 throw(@error("`addressable_load_fraction` must be a scalar or an array of length 12 if `monthly_mmbtu` is input"))
             end
             addressable_load_fraction = convert(Vector{Real}, addressable_load_fraction)
+        elseif typeof(addressable_load_fraction) <: Vector{}
+            addressable_load_fraction = convert(Real, addressable_load_fraction[1])            
         else
             addressable_load_fraction = convert(Real, addressable_load_fraction)
         end
@@ -155,6 +157,8 @@ struct SpaceHeatingLoad
                 throw(@error("`addressable_load_fraction` must be a scalar or an array of length 12 if `monthly_mmbtu` is input"))
             end
             addressable_load_fraction = convert(Vector{Real}, addressable_load_fraction)
+        elseif typeof(addressable_load_fraction) <: Vector{}
+            addressable_load_fraction = convert(Real, addressable_load_fraction[1])  
         else
             addressable_load_fraction = convert(Real, addressable_load_fraction)            
         end
