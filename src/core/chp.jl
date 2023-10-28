@@ -229,7 +229,7 @@ function CHP(d::Dict;
         chp.electric_efficiency_half_load = chp.electric_efficiency_full_load
     end
     if isnan(chp.thermal_efficiency_half_load)
-        chp.thermal_efficiency_half_load = chp.electric_efficiency_full_load
+        chp.thermal_efficiency_half_load = chp.thermal_efficiency_full_load
     end
 
     if isnan(chp.max_kw)
