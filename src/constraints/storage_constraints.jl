@@ -70,7 +70,7 @@ function add_general_storage_dispatch_constraints(m, p, b; _n="")
 
     #Constraint (4j): Dispatch from storage is no greater than power capacity
 	@constraint(m, [ts in p.time_steps],
-        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] + m[Symbol("dvStorageToGrid"*_n)][ts]
+        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] + m[Symbol("dvStorageToGrid"*_n)][b,ts]
     )
 
 end
@@ -83,7 +83,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
         m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  
             sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) 
             + p.s.storage.attr[b].grid_charge_efficiency * m[Symbol("dvGridToStorage"*_n)][b, ts] 
-            - ((m[Symbol("dvDischargeFromStorage"*_n)][b,ts] + m[Symbol("dvStorageToGrid"*_n)][ts])/ p.s.storage.attr[b].discharge_efficiency)
+            - ((m[Symbol("dvDischargeFromStorage"*_n)][b,ts] + m[Symbol("dvStorageToGrid"*_n)][b,ts])/ p.s.storage.attr[b].discharge_efficiency)
         )
 	)
 
@@ -103,12 +103,12 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
 	
 	#Constraint (4k)-alt: Dispatch to and from electrical storage is no greater than power capacity
 	@constraint(m, [ts in p.time_steps_with_grid],
-        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] + m[Symbol("dvStorageToGrid"*_n)][ts] +
+        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] + m[Symbol("dvStorageToGrid"*_n)][b,ts] +
             sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) + m[Symbol("dvGridToStorage"*_n)][b, ts]
     )
 	#Dispatch from electrical storage is no greater than power capacity 
     @constraint(m, [ts in p.time_steps_without_grid],
-    m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b,ts] + m[Symbol("dvStorageToGrid"*_n)][ts])
+    m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b,ts] + m[Symbol("dvStorageToGrid"*_n)][b,ts])
         
 
 	#Constraint (4l)-alt: Dispatch from electrical storage is no greater than power capacity (no grid connection)
@@ -139,7 +139,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
                    sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) <=
                    p.s.storage.attr[b].max_kw * m[Symbol("dvBattCharge_binary"*_n)][ts])
     @constraint(m, [ts in p.time_steps], 
-                   m[Symbol("dvStorageToGrid"*_n)][ts] +
+                   m[Symbol("dvStorageToGrid"*_n)][b,ts] +
                    m[Symbol("dvDischargeFromStorage"*_n)][b, ts] <= 
                    p.s.storage.attr[b].max_kw * m[Symbol("dvBattDischarge_binary"*_n)][ts])
     
@@ -147,14 +147,14 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
     #=
     @constraint(m, [ts in p.time_steps],
                 sum(m[Symbol("dvDischargeFromStorage"*_n)][b, ts]) >=
-                sum(m[Symbol("dvStorageToGrid"*_n)][ts])  
+                sum(m[Symbol("dvStorageToGrid"*_n)][b,ts])  
                     )
     =#
     # Option for preventing the storage from exporting to the grid
     #= 
     for ts in p.time_steps
         for u in p.StorageSalesTiers
-            fix(m["dvStorageToGrid"*_n][ts], 0.0, force = true)
+            fix(m["dvStorageToGrid"*_n][b,ts], 0.0, force = true)
         end
     end  
     =#

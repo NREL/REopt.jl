@@ -33,7 +33,7 @@ function add_expressions(m::JuMP.AbstractModel, ps::Array{REoptInputs{Scenario},
                 m[Symbol("dvProductionToGrid"*_n)][t,u,ts] 
                 for t in p.techs.elec, u in p.export_bins_by_tech[t]
             )
-            + m[Symbol("dvStorageToGrid"*_n)][ts] # added this line to include battery export in the total export
+            + sum(m[Symbol("dvStorageToGrid"*_n)][b,ts] for b in p.s.storage.types.all )# added this line to include battery export in the total export
 
             
         )

@@ -16,17 +16,20 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 		"dvStorageEnergy",
 	]
 	dvs_idx_on_storagetypes_time_steps = String[
-		"dvDischargeFromStorage"
+		"dvDischargeFromStorage",
+		"dvStorageToGrid",
 	]
 	for p in ps
 		_n = string("_", p.s.site.node)
 
 		# Temporary fix:
+		
 		if "ElectricStorage" in keys(p.s.storage.attr)
 			@info "** Temporary fix: Adding ElectricStorage to p.s.storage.types.all and p.s.storage.types.elec, for site node: " p.s.site.node
 			p.s.storage.types.all = ["ElectricStorage"] #[keys(p.s.storage.attr)]
 			p.s.storage.types.elec = ["ElectricStorage"]  #[keys(p.s.storage.attr)]
 		end 
+		
 		# End of temporary fix
 
 		for dv in dvs_idx_on_techs
@@ -40,13 +43,14 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 		end
 
 		for dv in dvs_idx_on_storagetypes
-			x = dv*_n
+			x = dv*_n 
 			m[Symbol(x)] = @variable(m, [p.s.storage.types.elec], base_name=x, lower_bound=0)
-		end
+		end 
 
 		for dv in dvs_idx_on_storagetypes_time_steps
-			x = dv*_n
+			x = dv*_n 
 			m[Symbol(x)] = @variable(m, [p.s.storage.types.all, p.time_steps], base_name=x, lower_bound=0)
+			# add in the definition 
 		end
 
 		dv = "dvGridToStorage"*_n
@@ -79,8 +83,8 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 		m[Symbol(dv)] = @variable(m, [p.techs.gen, 0:p.time_steps[end]], base_name=dv, lower_bound=0)
 	
 		# Add the new variables to allow the battery to export to the grid
-		dv = "dvStorageToGrid"*_n
-		m[Symbol(dv)] = @variable(m, [p.time_steps], base_name=dv, lower_bound=0) # export of energy from storage to the grid
+		#dv = "dvStorageToGrid"*_n 
+		#m[Symbol(dv)] = @variable(m, [p.time_steps], base_name=dv, lower_bound=0) # export of energy from storage to the grid
 		
 		dv = "dvBattCharge_binary"*_n
 		m[Symbol(dv)] = @variable(m, [p.time_steps], base_name=dv, Bin) # Binary for battery charge
@@ -168,7 +172,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
     for p in ps
         _n = string("_", p.s.site.node)
 		
-		@info "** p.s.storage is: " p.s.storage
+		@info "** p.s.storage is: " p.s.storage 
 		@info "** p.s.storage.types is: " p.s.storage.types
 		@info "** p.s.storage.types.all is: " p.s.storage.types.all
 		@info "** p.s.storage.types.elec is: " p.s.storage.types.elec
@@ -176,9 +180,9 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
 		@info "** keys(p.s.storage.attr) is: " keys(p.s.storage.attr)
 		@info "** p.s.storage.attr[ElectricStorage(with quotes)] is: " p.s.storage.attr["ElectricStorage"]
 
-        #for b in p.s.storage.types.all
+        for b in p.s.storage.types.all
 		# Temporary fix:
-		for b in keys(p.s.storage.attr)
+		#for b in keys(p.s.storage.attr)
 			@info "** Applying constraints to storage type: " b
             if p.s.storage.attr[b].max_kw == 0 || p.s.storage.attr[b].max_kwh == 0
                 @info "** The battery input size was 0 kW or 0 kWh, so the battery will not be used"
@@ -189,14 +193,14 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
                             m[Symbol("dvProductionToStorage"*_n)][b, t, ts] == 0)
                 @constraint(m, [ts in p.time_steps], m[Symbol("dvDischargeFromStorage"*_n)][b, ts] == 0)
                 @constraint(m, [ts in p.time_steps], m[Symbol("dvGridToStorage"*_n)][b, ts] == 0)
-				@constraint(m, [ts in p.time_steps], m[Symbol("dvStorageToGrid"*_n)][ts] == 0)
+				@constraint(m, [ts in p.time_steps], m[Symbol("dvStorageToGrid"*_n)][b,ts] == 0)
             else 
 				@info "** The battery constraints are being applied"
                 add_storage_size_constraints(m, p, b; _n=_n)
                 add_general_storage_dispatch_constraints(m, p, b; _n=_n)
-				#if b in p.s.storage.types.elec
+				if b in p.s.storage.types.elec
 				#Temporary fix:
-				if b == "ElectricStorage" 
+				#if b == "ElectricStorage" 
 					@info "** adding electric storage dispatch constraints"
 					add_elec_storage_dispatch_constraints(m, p, b; _n=_n)
 				elseif b in p.s.storage.types.hot

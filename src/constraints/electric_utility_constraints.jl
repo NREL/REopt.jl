@@ -118,12 +118,18 @@ function add_export_constraints(m, p; _n="")
 
         if typeof(binNEM) <: Real  # no need for wholesale binary
             binWHL = 1
-            print("\n Debugging: New wholesale rate is being applied")
+            print("\n Debugging: New wholesale rate is being applied***")
+            for b in p.s.storage.types.all
+                println(b)
+            end
             WHL_benefit = @expression(m, p.pwf_e * p.hours_per_time_step *
-                  ((sum(m[Symbol("dvStorageToGrid"*_n)][ts]*p.s.electric_tariff.export_rates[:WHL][ts] for ts in p.time_steps)) + 
-                   sum(sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
+                  (
+                    sum(sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvStorageToGrid"*_n)][b, ts] 
+                        for b in p.s.storage.types.all) for ts in p.time_steps) + 
+                   
+                    sum(sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
                          for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
-                )
+                  )
                 # original code:
                     #WHL_benefit = @expression(m, p.pwf_e * p.hours_per_time_step *
                     #          sum( sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 

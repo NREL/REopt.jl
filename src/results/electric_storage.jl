@@ -73,7 +73,7 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
          end
          # report the exported electricity from the battery:
          
-         BattExport = (m[Symbol("dvStorageToGrid"*_n)][ts] for ts in p.time_steps)
+         BattExport = (m[Symbol("dvStorageToGrid"*_n)]["ElectricStorage",ts] for ts in p.time_steps)
          r["storage_to_grid_series_kw"] = round.(value.(BattExport), digits = 3)
 
     else
