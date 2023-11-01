@@ -48,7 +48,7 @@ function add_hydrogen_storage_lp_results(m::JuMP.AbstractModel, p::REoptInputs, 
     r["soc_series_fraction"] = round.(value.(soc) ./ r["size_kg"], digits=6)
 
     discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
-    r["storage_to_compressor_series_kg"] = round.(value.(discharge), digits=3)
+    r["discharge_from_storage_series_kg"] = round.(value.(discharge), digits=3)
 
     r["initial_capital_cost"] = round(r["size_kg"] * p.s.storage.attr[b].installed_cost_per_kg, digits = 2)
 
