@@ -44,6 +44,7 @@
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kg::Real = 0.0
     minimum_avg_soc_fraction::Float64 = 0.0
+    daily_leakage_fraction::Float64 = 0.0
 ```
 """
 Base.@kwdef struct HydrogenStorageHPDefaults
@@ -60,6 +61,7 @@ Base.@kwdef struct HydrogenStorageHPDefaults
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kg::Real = 0.0
     minimum_avg_soc_fraction::Float64 = 0.0
+    daily_leakage_fraction::Float64 = 0.0
 end
 
 
@@ -84,6 +86,7 @@ struct HydrogenStorageHP <: AbstractHydrogenStorage
     total_rebate_per_kg::Real
     net_present_cost_per_kg::Real
     minimum_avg_soc_fraction::Float64
+    daily_leakage_fraction::Float64
 
     function HydrogenStorageHP(d::Dict, f::Financial)  
         s = HydrogenStorageHPDefaults(;d...)
@@ -120,7 +123,8 @@ struct HydrogenStorageHP <: AbstractHydrogenStorage
             s.total_itc_fraction,
             s.total_rebate_per_kg,
             net_present_cost_per_kg,
-            s.minimum_avg_soc_fraction
+            s.minimum_avg_soc_fraction,
+            s.daily_leakage_fraction
         )
     end
 end

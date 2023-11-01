@@ -45,7 +45,7 @@ function add_hydrogen_storage_lp_results(m::JuMP.AbstractModel, p::REoptInputs, 
     # if r["size_kg"] != 0
 
     soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
-    r["soc_series_fraction"] = round.(value.(soc) ./ r["size_kg"], digits=3)
+    r["soc_series_fraction"] = round.(value.(soc) ./ r["size_kg"], digits=6)
 
     discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
     r["storage_to_compressor_series_kg"] = round.(value.(discharge), digits=3)

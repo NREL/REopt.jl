@@ -26,7 +26,7 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
 
     if r["size_kwh"] != 0
     	soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
-        r["soc_series_fraction"] = round.(value.(soc) ./ r["size_kwh"], digits=3)
+        r["soc_series_fraction"] = round.(value.(soc) ./ r["size_kwh"], digits=6)
 
         discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
         r["storage_to_load_series_kw"] = round.(value.(discharge), digits=3)

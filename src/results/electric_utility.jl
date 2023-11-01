@@ -55,7 +55,7 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
 
     if !isempty(p.techs.electrolyzer)
         GridToElectrolyzer = (m[Symbol("dvGridToElectrolyzer"*_n)][ts] for ts in p.time_steps)
-        r["electric_to_electrolyzer_series_kw"] = round.(value.(GridToElectrolyzer), digits=3)
+        r["electric_to_electrolyzer_series_kw"] = round.(value.(GridToElectrolyzer), digits=6)
     end
 
     if !isempty(p.techs.compressor)

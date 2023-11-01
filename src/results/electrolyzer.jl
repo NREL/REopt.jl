@@ -52,13 +52,13 @@ function add_electrolyzer_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict
                                 sum(p.production_factor[t, ts] * p.levelization_factor[t] * 
                                 m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.electrolyzer)
                             )
-    r["electricity_consumed_series_kw"] = round.(value.(ElectrolyzerConsumption), digits=3)
+    r["electricity_consumed_series_kw"] = round.(value.(ElectrolyzerConsumption), digits=6)
     r["year_one_electricity_consumed_kwh"] = round(sum(r["electricity_consumed_series_kw"]), digits=2)
 
     ElectrolyzerProduction = @expression(m, [ts in p.time_steps],
                             sum(m[Symbol("dvProductionToStorage"*_n)]["HydrogenStorageLP", t, ts] for t in p.techs.electrolyzer)
                         )
-    r["hydrogen_produced_series_kg"] = round.(value.(ElectrolyzerProduction), digits=3)
+    r["hydrogen_produced_series_kg"] = round.(value.(ElectrolyzerProduction), digits=6)
     r["year_one_hydrogen_produced_kg"] = round(sum(r["hydrogen_produced_series_kg"]), digits=2)
 
     # PVPerUnitSizeOMCosts = p.om_cost_per_kw[t] * p.pwf_om * m[Symbol("dvSize"*_n)][t]

@@ -82,6 +82,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
             - m[Symbol("dvStorageToElectrolyzer"*_n)][b,ts] / p.s.storage.attr[b].discharge_efficiency
             - m[Symbol("dvStorageToCompressor"*_n)][b,ts] / p.s.storage.attr[b].discharge_efficiency
         )
+        - ((p.s.storage.attr[b].daily_leakage_fraction/24/p.hours_per_time_step) * m[Symbol("dvStoredEnergy"*_n)][b, ts])
 	)
 
 	# Constraint (4h): state-of-charge for electrical storage - no grid
@@ -92,6 +93,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
             - m[Symbol("dvStorageToElectrolyzer"*_n)][b, ts] / p.s.storage.attr[b].discharge_efficiency
             - m[Symbol("dvStorageToCompressor"*_n)][b, ts] / p.s.storage.attr[b].discharge_efficiency
         )
+        - ((p.s.storage.attr[b].daily_leakage_fraction/24/p.hours_per_time_step) * m[Symbol("dvStoredEnergy"*_n)][b, ts])
     )
 
 	# Constraint (4i)-1: Dispatch to electrical storage is no greater than power capacity
@@ -235,6 +237,7 @@ function add_hp_hydrogen_storage_dispatch_constraints(m, p, b; _n="")
             sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.compressor) 
             - m[Symbol("dvDischargeFromStorage"*_n)][b,ts]
         )
+        - ((p.s.storage.attr[b].daily_leakage_fraction/24/p.hours_per_time_step) * m[Symbol("dvStoredEnergy"*_n)][b, ts])
 	)
 
 	# Constraint
@@ -266,6 +269,7 @@ function add_lp_hydrogen_storage_dispatch_constraints(m, p, b; _n="")
             sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.electrolyzer) 
             - m[Symbol("dvDischargeFromStorage"*_n)][b,ts]
         )
+        - ((p.s.storage.attr[b].daily_leakage_fraction/24/p.hours_per_time_step) * m[Symbol("dvStoredEnergy"*_n)][b, ts])
 	)
 
     # Constraint
