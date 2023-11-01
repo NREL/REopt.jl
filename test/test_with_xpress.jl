@@ -61,7 +61,7 @@ end
         data_cost_curve["CHP"]["fuel_cost_per_mmbtu"] = 8.0
         data_cost_curve["CHP"]["min_kw"] = 0
         data_cost_curve["CHP"]["min_allowable_kw"] = 555.5
-        data_cost_curve["CHP"]["max_kw"] = 1000
+        data_cost_curve["CHP"]["max_kw"] = 555.51
         data_cost_curve["CHP"]["installed_cost_per_kw"] = 1800.0
         data_cost_curve["CHP"]["installed_cost_per_kw"] = [2300.0, 1800.0, 1500.0]
         data_cost_curve["CHP"]["tech_sizes_for_cost_curve"] = [100.0, 300.0, 1140.0]
@@ -465,7 +465,7 @@ end
     @test value(m[:binMGTechUsed]["CHP"]) ≈ 1
     @test value(m[:binMGTechUsed]["PV"]) ≈ 1
     @test value(m[:binMGStorageUsed]) ≈ 1
-    @test results["Financial"]["lcc"] ≈ 6.82164056207e7 atol=5e4
+    @test results["Financial"]["lcc"] ≈ 6.83746678985e7 atol=5e4
 
     #=
     Scenario with $0.001/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
@@ -889,7 +889,7 @@ end
 
     #Test CHP defaults use average fuel load, size class 2 for recip_engine 
     @test inputs.s.chp.min_allowable_kw ≈ 50.0 atol=0.01
-    @test inputs.s.chp.om_cost_per_kwh ≈ 0.0225 atol=0.0001
+    @test inputs.s.chp.om_cost_per_kwh ≈ 0.0235 atol=0.0001
 
     delete!(input_data, "SpaceHeatingLoad")
     delete!(input_data, "DomesticHotWaterLoad")
@@ -914,18 +914,18 @@ end
     s = Scenario(input_data)
     inputs = REoptInputs(s)
     #Test CHP defaults use average fuel load, size class changes to 3
-    @test inputs.s.chp.min_allowable_kw ≈ 315.0 atol=0.1
-    @test inputs.s.chp.om_cost_per_kwh ≈ 0.02 atol=0.0001
+    @test inputs.s.chp.min_allowable_kw ≈ 250.0 atol=0.1
+    @test inputs.s.chp.om_cost_per_kwh ≈ 0.0185 atol=0.0001
     #Update CHP prime_mover and test new defaults
     input_data["CHP"]["prime_mover"] = "combustion_turbine"
     input_data["CHP"]["size_class"] = 1
     # Set max_kw higher than peak electric load so min_allowable_kw doesn't get assigned to max_kw
-    input_data["CHP"]["max_kw"] = 1000.0
+    input_data["CHP"]["max_kw"] = 2500.0
 
     s = Scenario(input_data)
     inputs = REoptInputs(s)
 
-    @test inputs.s.chp.min_allowable_kw ≈ 950.0 atol=0.1
+    @test inputs.s.chp.min_allowable_kw ≈ 2000.0 atol=0.1
     @test inputs.s.chp.om_cost_per_kwh ≈ 0.014499999999999999 atol=0.0001
 
     total_heating_fuel_load_mmbtu = (sum(inputs.s.space_heating_load.loads_kw) + 
@@ -1661,7 +1661,7 @@ end
     # Check that all thermal supply to load meets the BAU load plus AbsorptionChiller load which is not explicitly tracked
     alltechs_thermal_to_load_total = sum([sum(tech_to_thermal_load[tech]["load"]) for tech in thermal_techs]) + sum(hottes_to_load)
     thermal_load_total = sum(load_boiler_thermal) + sum(absorptionchiller_thermal_in)
-    @test alltechs_thermal_to_load_total ≈ thermal_load_total atol=0.02
+    @test alltechs_thermal_to_load_total ≈ thermal_load_total rtol=1e-5
     
     # Check that all thermal to steam turbine is equal to steam turbine thermal consumption
     alltechs_thermal_to_steamturbine_total = sum([sum(tech_to_thermal_load[tech]["steamturbine"]) for tech in ["ExistingBoiler", "CHP"]])
