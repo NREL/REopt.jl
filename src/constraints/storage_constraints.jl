@@ -108,35 +108,35 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
 	for t in p.techs.boiler
 		if !isempty(p.techs.steam_turbine) && (t in p.techs.can_supply_steam_turbine)
             @constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
-                    m[Symbol("dvProductionToStorage"*_n)][b,t,ts] + m[Symbol("dvThermalToSteamTurbine"*_n)][t,ts]  <=
-                    sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads)
+                    m[Symbol("dvHeatToStorage"*_n)][b,t,ts] + m[Symbol("dvThermalToSteamTurbine"*_n)][t,q,ts]  <=
+                    m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
                     )
         else
-            @constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
-                    m[Symbol("dvProductionToStorage"*_n)][b,t,ts]  <=
-                    sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads)
+            @constraint(m, [b in p.s.storage.types.hot, q in p.heating_loads, ts in p.time_steps],
+                    m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts]  <=
+                    m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
                     )
         end
     end
 
     # Constraint (4f)-1b: SteamTurbineTechs
 	if !isempty(p.techs.steam_turbine)
-		@constraint(m, SteamTurbineTechProductionFlowCon[b in p.s.storage.types.hot, t in p.techs.steam_turbine, ts in p.time_steps],
-			m[Symbol("dvProductionToStorage"*_n)][b,t,ts] <=  sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads)
+		@constraint(m, SteamTurbineTechProductionFlowCon[b in p.s.storage.types.hot, t in p.techs.steam_turbine, q in p.heating_loads, ts in p.time_steps],
+			m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] <=  m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
 			)
 	end
 
     # # Constraint (4g): CHP Thermal production sent to storage or grid must be less than technology's rated production
 	if !isempty(p.techs.chp)
 		if !isempty(p.techs.steam_turbine) && p.s.chp.can_supply_steam_turbine
-            @constraint(m, CHPTechProductionFlowCon[b in p.s.storage.types.hot, t in p.techs.chp, ts in p.time_steps],
-                    m[Symbol("dvProductionToStorage"*_n)][b,t,ts] + sum(m[Symbol("dvProductionToWaste"*_n)][t,q,ts] for q in p.heating_loads) + m[Symbol("dvThermalToSteamTurbine"*_n)][t,ts] <=
-                    sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads)
+            @constraint(m, CHPTechProductionFlowCon[b in p.s.storage.types.hot, t in p.techs.chp, q in p.heating_loads, ts in p.time_steps],
+                    m[Symbol("dvHeatToStorage"*_n)][b,tq,ts] + m[Symbol("dvProductionToWaste"*_n)][t,q,ts] + m[Symbol("dvThermalToSteamTurbine"*_n)][t,q,ts] <=
+                    m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
                     )
         else
-            @constraint(m, CHPTechProductionFlowCon[b in p.s.storage.types.hot, t in p.techs.chp, ts in p.time_steps],
-                    m[Symbol("dvProductionToStorage"*_n)][b,t,ts] + sum(m[Symbol("dvProductionToWaste"*_n)][t,q,ts] for q in p.heating_loads)  <=
-                    sum(m[Symbol("dvProductionToWaste"*_n)][t,q,ts] for q in p.heating_loads) 
+            @constraint(m, CHPTechProductionFlowCon[b in p.s.storage.types.hot, t in p.techs.chp, q in p.heating_loads, ts in p.time_steps],
+                    m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] + m[Symbol("dvProductionToWaste"*_n)][t,q,ts]  <=
+                    m[Symbol("dvProductionToWaste"*_n)][t,q,ts]
                     )
         end
 	end
@@ -144,8 +144,8 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
     # Constraint (4j)-1: Reconcile state-of-charge for (hot) thermal storage
 	@constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
     m[Symbol("dvStoredEnergy"*_n)][b,ts] == m[Symbol("dvStoredEnergy"*_n)][b,ts-1] + (1/p.s.settings.time_steps_per_hour) * (
-        sum( p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in union(p.techs.heating, p.techs.chp)) -
-        m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.s.storage.attr[b].discharge_efficiency -
+        p.s.storage.attr[b].charge_efficiency * sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads) -
+        sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for q in p.heating_loads) / p.s.storage.attr[b].discharge_efficiency -
         p.s.storage.attr[b].thermal_decay_rate_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
         )
     )
@@ -153,8 +153,9 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
     #Constraint (4n)-1: Dispatch to and from thermal storage is no greater than power capacity
 	@constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
         m[Symbol("dvStoragePower"*_n)][b] >= 
-        m[Symbol("dvDischargeFromStorage"*_n)][b,ts] + 
-        sum(m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in union(p.techs.heating, p.techs.chp))
+        sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] + 
+        sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp))
+        for q in p.heating_loads)
     )
     # TODO missing thermal storage constraints from API ???
 
