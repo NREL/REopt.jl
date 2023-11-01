@@ -207,10 +207,10 @@ function REoptInputs(s::AbstractScenario)
     if !isempty(s.storage.types.hot)
         for b in s.storage.types.hot
             heating_loads_served_by_tes[b] = String[]
-            if storage.attr[b].can_serve_dhw 
+            if s.storage.attr[b].can_serve_dhw 
                 push!(heating_loads_served_by_tes[b],"DomesticHotWater")
             end
-            if storage.attr[b].can_serve_space_heating
+            if s.storage.attr[b].can_serve_space_heating
                 push!(heating_loads_served_by_tes[b],"SpaceHeating")
             end
         end
@@ -278,7 +278,8 @@ function REoptInputs(s::AbstractScenario)
         techs_operating_reserve_req_fraction,
         heating_cop,
         heating_loads,
-        heating_loads_kw 
+        heating_loads_kw,
+        heating_loads_served_by_tes
     )
 end
 
