@@ -40,7 +40,7 @@ function add_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="
 	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(BoilerToHotTESKW / KWH_PER_MMBTU), digits=3)
 
     if !isempty(p.techs.steam_turbine) && p.s.boiler.can_supply_steam_turbine
-        @expression(m, BoilerToSteamTurbine[ts in p.time_steps], m[:dvThermalToSteamTurbine]["Boiler",ts])
+        @expression(m, BoilerToSteamTurbine[ts in p.time_steps], sum(m[:dvThermalToSteamTurbine]["Boiler",q,ts] for q in p.heating_loads))
     else
         BoilerToSteamTurbine = zeros(length(p.time_steps))
     end
