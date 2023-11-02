@@ -13,7 +13,7 @@ function add_chp_fuel_burn_constraints(m, p; _n="")
     # Conditionally add dvFuelBurnYIntercept if coefficient p.FuelBurnYIntRate is greater than ~zero
     if abs(fuel_burn_intercept) > 1.0E-7
         dv = "dvFuelBurnYIntercept"*_n
-        m[Symbol(dv)] = @variable(m, [p.techs.chp, p.time_steps], base_name=dv, lower_bound=0)
+        m[Symbol(dv)] = @variable(m, [p.techs.chp, p.time_steps], base_name=dv)
 
         #Constraint (1c1): Total Fuel burn for CHP **with** y-intercept fuel burn and supplementary firing
         @constraint(m, CHPFuelBurnCon[t in p.techs.chp, ts in p.time_steps],
