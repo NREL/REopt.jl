@@ -145,7 +145,7 @@ function add_MG_CHP_fuel_burn_constraints(m, p; _n="")
     fuel_burn_intercept = fuel_burn_full_load - fuel_burn_slope * 1.0  # [kWt/kWe_rated]
   
     # Conditionally add dvFuelBurnYIntercept if coefficient p.FuelBurnYIntRate is greater than ~zero
-    if fuel_burn_intercept > 1.0E-7
+    if abs(fuel_burn_intercept) > 1.0E-7
         #Constraint (1c1): Total Fuel burn for CHP **with** y-intercept fuel burn and supplementary firing
         @constraint(m, MGCHPFuelBurnCon[t in p.techs.chp, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps],
             m[Symbol("dvMGFuelUsed"*_n)][t,s,tz]  == p.hours_per_time_step * (
@@ -297,7 +297,8 @@ end
 
 
 function add_cannot_have_MG_with_only_PVwind_constraints(m, p)
-    renewable_techs = setdiff(p.techs.elec, p.techs.gen)
+    dispatchable_techs = union(p.techs.gen, p.techs.chp)
+    renewable_techs = setdiff(p.techs.elec, dispatchable_techs)
     # can't "turn down" renewable_techs
     if !isempty(renewable_techs)
         @constraint(m, [t in renewable_techs, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
@@ -306,9 +307,9 @@ function add_cannot_have_MG_with_only_PVwind_constraints(m, p)
         @constraint(m, [t in renewable_techs, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
             !m[:binMGTechUsed][t] => { m[:dvMGRatedProduction][t, s, tz, ts] <= 0 }
         )
-        if !isempty(p.techs.gen) # PV or Wind alone cannot be used for a MG
+        if !isempty(dispatchable_techs) # PV or Wind alone cannot be used for a MG
             @constraint(m, [t in renewable_techs, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-                m[:binMGTechUsed][t] => { sum(m[:binMGTechUsed][tek] for tek in p.techs.gen) + m[:binMGStorageUsed] >= 1 }
+                m[:binMGTechUsed][t] => { sum(m[:binMGTechUsed][tek] for tek in dispatchable_techs) + m[:binMGStorageUsed] >= 1 }
             )
         else
             @constraint(m, [t in renewable_techs, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
