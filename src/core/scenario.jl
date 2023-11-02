@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 struct Scenario <: AbstractScenario
     settings::Settings
     site::Site
@@ -219,30 +191,38 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     max_heat_demand_kw = 0.0
     if haskey(d, "DomesticHotWaterLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["DomesticHotWaterLoad"])
+        # Pass in ExistingBoiler.efficiency to inform fuel to thermal conversion for heating load
+        existing_boiler_efficiency = get_existing_boiler_efficiency(d)
         dhw_load = DomesticHotWaterLoad(; dictkeys_tosymbols(d["DomesticHotWaterLoad"])...,
                                           latitude=site.latitude, longitude=site.longitude, 
-                                          time_steps_per_hour=settings.time_steps_per_hour
+                                          time_steps_per_hour=settings.time_steps_per_hour,
+                                          existing_boiler_efficiency = existing_boiler_efficiency
                                         )
         max_heat_demand_kw = maximum(dhw_load.loads_kw)
     else
         dhw_load = DomesticHotWaterLoad(; 
             fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
-            time_steps_per_hour=settings.time_steps_per_hour
+            time_steps_per_hour=settings.time_steps_per_hour,
+            existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
         )
     end
                                     
     if haskey(d, "SpaceHeatingLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["SpaceHeatingLoad"])
+        # Pass in ExistingBoiler.efficiency to inform fuel to thermal conversion for heating load
+        existing_boiler_efficiency = get_existing_boiler_efficiency(d)
         space_heating_load = SpaceHeatingLoad(; dictkeys_tosymbols(d["SpaceHeatingLoad"])...,
                                                 latitude=site.latitude, longitude=site.longitude, 
-                                                time_steps_per_hour=settings.time_steps_per_hour
+                                                time_steps_per_hour=settings.time_steps_per_hour,
+                                                existing_boiler_efficiency = existing_boiler_efficiency
                                               )
         
         max_heat_demand_kw = maximum(space_heating_load.loads_kw .+ max_heat_demand_kw)
     else
         space_heating_load = SpaceHeatingLoad(; 
             fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
-            time_steps_per_hour=settings.time_steps_per_hour
+            time_steps_per_hour=settings.time_steps_per_hour,
+            existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
         )
     end
 
@@ -339,14 +319,15 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     chp = nothing
     chp_prime_mover = nothing
     if haskey(d, "CHP")
-        if !isnothing(existing_boiler)
+        electric_only = get(d["CHP"], "is_electric_only", false) || get(d["CHP"], "thermal_efficiency_full_load", 0.5) == 0.0
+        if !isnothing(existing_boiler) && !electric_only
             total_fuel_heating_load_mmbtu_per_hour = (space_heating_load.loads_kw + dhw_load.loads_kw) / existing_boiler.efficiency / KWH_PER_MMBTU
             avg_boiler_fuel_load_mmbtu_per_hour = sum(total_fuel_heating_load_mmbtu_per_hour) / length(total_fuel_heating_load_mmbtu_per_hour)
             chp = CHP(d["CHP"]; 
                     avg_boiler_fuel_load_mmbtu_per_hour = avg_boiler_fuel_load_mmbtu_per_hour,
                     existing_boiler = existing_boiler,
                     electric_load_series_kw = electric_load.loads_kw)
-        else # Only if modeling CHP without heating_load and existing_boiler (for electric-only CHP)
+        else # Only if modeling CHP without heating_load and existing_boiler (for prime generator, electric-only)
             chp = CHP(d["CHP"],
                     electric_load_series_kw = electric_load.loads_kw)
         end
@@ -477,7 +458,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             d["GHP"]["ghpghx_inputs"][i]["ambient_temperature_f"] = ambient_temp_degF
             # Only SpaceHeating portion of Heating Load gets served by GHP, unless allowed by can_serve_dhw
             if get(ghpghx_inputs, "heating_thermal_load_mmbtu_per_hr", []) in [nothing, []]
-                if haskey(d["GHP"], "can_serve_dhw") && d["GHP"]["can_serve_dhw"]
+                if get(d["GHP"], "can_serve_dhw", false)  # This is assuming the default stays false
                     ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = (space_heating_load.loads_kw + dhw_load.loads_kw - space_heating_thermal_load_reduction_with_ghp_kw)  / KWH_PER_MMBTU
                 else
                     ghpghx_inputs["heating_thermal_load_mmbtu_per_hr"] = (space_heating_load.loads_kw - space_heating_thermal_load_reduction_with_ghp_kw) / KWH_PER_MMBTU
@@ -486,36 +467,115 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             if get(ghpghx_inputs, "cooling_thermal_load_ton", []) in [nothing, []]
                 ghpghx_inputs["cooling_thermal_load_ton"] = (cooling_load.loads_kw_thermal - cooling_thermal_load_reduction_with_ghp_kw)  / KWH_THERMAL_PER_TONHOUR
             end
-            # This code calls GhpGhx.jl module functions and is only available if we load in the GhpGhx package
-            try            
-                # Update ground thermal conductivity based on climate zone if not user-input
-                if isnothing(get(ghpghx_inputs, "ground_thermal_conductivity_btu_per_hr_ft_f", nothing))
-                    k_by_zone = deepcopy(GhpGhx.ground_k_by_climate_zone)
-                    nearest_city, climate_zone = find_ashrae_zone_city(d["Site"]["latitude"], d["Site"]["longitude"]; get_zone=true)
-                    ghpghx_inputs["ground_thermal_conductivity_btu_per_hr_ft_f"] = k_by_zone[climate_zone]
-                end
+
+            # Update ground thermal conductivity based on climate zone if not user-input
+            if isnothing(get(ghpghx_inputs, "ground_thermal_conductivity_btu_per_hr_ft_f", nothing))
+                k_by_zone = deepcopy(GhpGhx.ground_k_by_climate_zone)
+                nearest_city, climate_zone = find_ashrae_zone_city(d["Site"]["latitude"], d["Site"]["longitude"]; get_zone=true)
+                ghpghx_inputs["ground_thermal_conductivity_btu_per_hr_ft_f"] = k_by_zone[climate_zone]
+            end
+
+            aux_heater_type = get(d["GHP"], "aux_heater_type", nothing)
+            
+            ## Deal with hybrid
+            hybrid_ghx_sizing_method = get(ghpghx_inputs, "hybrid_ghx_sizing_method", nothing)
+
+            is_ghx_hybrid = false
+            hybrid_ghx_sizing_fraction = nothing
+            hybrid_sizing_flag = nothing
+            is_heating_electric = nothing
+
+            if hybrid_ghx_sizing_method == "Automatic"
+
                 # Call GhpGhx.jl to size GHP and GHX
-                @info "Starting GhpGhx.jl" #with timeout of $(timeout) seconds..."
+                determine_heat_cool_results_resp_dict = Dict()
+                try
+                    ghpghx_inputs["hybrid_auto_ghx_sizing_flag"] = true
+
+                    # Call GhpGhx.jl to size GHP and GHX
+                    @info "Starting GhpGhx.jl for automatic hybrid GHX sizing"
+                    # Call GhpGhx.jl to size GHP and GHX
+                    results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
+                    # Create a dictionary of the results data needed for REopt
+                    determine_heat_cool_results_resp_dict = GhpGhx.get_results_for_reopt(results, inputs_params)
+                    @info "Automatic hybrid GHX sizing complete using GhpGhx.jl"
+                catch e
+                    @info e
+                    throw(@error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
+                        loaded (using GhpGhx) to the active Julia environment"))
+                end
+
+                temp_diff = determine_heat_cool_results_resp_dict["end_of_year_ghx_lft_f"][2] \
+                - determine_heat_cool_results_resp_dict["end_of_year_ghx_lft_f"][1]
+
+                hybrid_sizing_flag = 1.0 # non hybrid
+                if temp_diff > 0
+                    hybrid_sizing_flag = -2.0 #heating
+                    is_ghx_hybrid = true
+                elseif temp_diff < 0
+                    hybrid_sizing_flag = -1.0 #cooling
+                    is_ghx_hybrid = true
+                else
+                    # non hybrid if exactly 0.
+                    hybrid_sizing_flag = 1.0
+                end
+                ghpghx_inputs["hybrid_auto_ghx_sizing_flag"] = false
+
+            elseif hybrid_ghx_sizing_method == "Fractional"
+                is_ghx_hybrid = true
+                hybrid_ghx_sizing_fraction = get(ghpghx_inputs, "hybrid_ghx_sizing_fraction", 0.6)
+            else
+                @warn "Unknown hybrid GHX sizing model provided"
+            end
+
+            if !isnothing(aux_heater_type)
+                if aux_heater_type == "electric"
+                    is_heating_electric = true
+                else
+                    @warn "Unknown auxillary heater type provided"
+                    is_heating_electric = false
+                end
+            end
+
+            d["GHP"]["is_ghx_hybrid"] = is_ghx_hybrid
+            if !isnothing(hybrid_sizing_flag)
+                ghpghx_inputs["hybrid_sizing_flag"] = hybrid_sizing_flag
+            end
+            if !isnothing(hybrid_ghx_sizing_fraction)
+                ghpghx_inputs["hybrid_ghx_sizing_fraction"] = hybrid_ghx_sizing_fraction
+            end
+            if !isnothing(is_heating_electric)
+                ghpghx_inputs["is_heating_electric"] = is_heating_electric
+            end
+
+            ghpghx_results = Dict()
+            try
+                # Call GhpGhx.jl to size GHP and GHX
+                @info "Starting GhpGhx.jl"
+                # Call GhpGhx.jl to size GHP and GHX
                 results, inputs_params = GhpGhx.ghp_model(ghpghx_inputs)
                 # Create a dictionary of the results data needed for REopt
                 ghpghx_results = GhpGhx.get_results_for_reopt(results, inputs_params)
-                ghpghx_response = Dict([("inputs", ghpghx_inputs), ("outputs", ghpghx_results)])
                 @info "GhpGhx.jl model solved" #with status $(results["status"])."
-                ghp_inputs_removed_ghpghx_params = deepcopy(d["GHP"])
-                for param in ["ghpghx_inputs", "ghpghx_responses", "ghpghx_response_uuids"]
-                    if haskey(d["GHP"], param)    
-                        pop!(ghp_inputs_removed_ghpghx_params, param)
-                    end
-                end                    
-                append!(ghp_option_list, [GHP(ghpghx_response, ghp_inputs_removed_ghpghx_params)])
-                # Print out ghpghx_response for loading into a future run without running GhpGhx.jl again
-                # open("scenarios/ghpghx_response.json","w") do f
-                #     JSON.print(f, ghpghx_response)
-                # end
-            catch
+            catch e
+                @info e
                 throw(@error("The GhpGhx package was not added (add https://github.com/NREL/GhpGhx.jl) or 
-                    loaded (using GhpGhx) to the active Julia environment"))
-            end                
+                    loaded (using GhpGhx) to the active Julia environment, or an error occurred during the call 
+                    to the GhpGhx.jl package."))
+            end
+
+            ghpghx_response = Dict([("inputs", ghpghx_inputs), ("outputs", ghpghx_results)])
+            ghp_inputs_removed_ghpghx_params = deepcopy(d["GHP"])
+            for param in ["ghpghx_inputs", "ghpghx_responses", "ghpghx_response_uuids"]
+                if haskey(d["GHP"], param)    
+                    pop!(ghp_inputs_removed_ghpghx_params, param)
+                end
+            end                    
+            append!(ghp_option_list, [GHP(ghpghx_response, ghp_inputs_removed_ghpghx_params)])
+            # Print out ghpghx_response for loading into a future run without running GhpGhx.jl again
+            # open("scenarios/ghpghx_response.json","w") do f
+            #     JSON.print(f, ghpghx_response)
+            # end                
         end
     # If ghpghx_responses is included in inputs, do NOT run GhpGhx.jl model and use already-run ghpghx result as input to REopt
     elseif eval_ghp && get_ghpghx_from_input
@@ -525,6 +585,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             pop!(ghp_inputs_removed_ghpghx_responses, "ghpghx_inputs")
         end
         for ghpghx_response in get(d["GHP"], "ghpghx_responses", [])
+            if haskey(ghpghx_response, "inputs")
+                if get(ghpghx_response["inputs"], "hybrid_ghx_sizing_method", nothing) in ["Automatic", "Fractional"]
+                    ghp_inputs_removed_ghpghx_responses["is_ghx_hybrid"] = true
+                end
+            end
             append!(ghp_option_list, [GHP(ghpghx_response, ghp_inputs_removed_ghpghx_responses)])
         end
     end
@@ -594,3 +659,15 @@ function add_doe_reference_names_from_elec_to_thermal_loads(elec::Dict, thermal:
     end
 end
 
+function get_existing_boiler_efficiency(d)
+    existing_boiler_temp = ExistingBoiler(;fuel_cost_per_mmbtu=1.0)
+    default_production_type = existing_boiler_temp.production_type
+    if haskey(d, "ExistingBoiler")
+        existing_boiler_production_type = get(d["ExistingBoiler"], "production_type", default_production_type)
+        existing_boiler_efficiency = get(d["ExistingBoiler"], "efficiency", existing_boiler_efficiency_defaults[existing_boiler_production_type])
+    else
+        existing_boiler_efficiency = existing_boiler_efficiency_defaults[default_production_type]
+    end  
+
+    return existing_boiler_efficiency
+end
