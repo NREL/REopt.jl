@@ -11,7 +11,7 @@ function add_chp_fuel_burn_constraints(m, p; _n="")
         sum(p.pwf_fuel[t] * m[:dvFuelUsage][t, ts] * p.fuel_cost_per_kwh[t][ts] for t in p.techs.chp, ts in p.time_steps)
     )      
     # Conditionally add dvFuelBurnYIntercept if coefficient p.FuelBurnYIntRate is greater than ~zero
-    if fuel_burn_intercept > 1.0E-7
+    if abs(fuel_burn_intercept) > 1.0E-7
         dv = "dvFuelBurnYIntercept"*_n
         m[Symbol(dv)] = @variable(m, [p.techs.chp, p.time_steps], base_name=dv, lower_bound=0)
 
@@ -47,9 +47,9 @@ function add_chp_thermal_production_constraints(m, p; _n="")
     thermal_prod_intercept = thermal_prod_full_load - thermal_prod_slope * 1.0  # [kWt/kWe_rated
 
     # Conditionally add dvThermalProductionYIntercept if coefficient p.s.chpThermalProdIntercept is greater than ~zero
-    if thermal_prod_intercept > 1.0E-7
+    if abs(thermal_prod_intercept) > 1.0E-7
         dv = "dvThermalProductionYIntercept"*_n
-        m[Symbol(dv)] = @variable(m, [p.techs.chp, p.time_steps], base_name=dv, lower_bound=0)
+        m[Symbol(dv)] = @variable(m, [p.techs.chp, p.time_steps], base_name=dv)
 
         #Constraint (2a-1): Upper Bounds on Thermal Production Y-Intercept
         @constraint(m, CHPYInt2a1Con[t in p.techs.chp, ts in p.time_steps],
