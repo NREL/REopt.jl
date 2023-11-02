@@ -297,7 +297,7 @@ end
 
 
 function add_cannot_have_MG_with_only_PVwind_constraints(m, p)
-    renewable_techs = setdiff(p.techs.elec, p.techs.gen)
+    renewable_techs = setdiff(p.techs.elec, p.techs.gen, p.techs.chp)
     # can't "turn down" renewable_techs
     if !isempty(renewable_techs)
         @constraint(m, [t in renewable_techs, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
