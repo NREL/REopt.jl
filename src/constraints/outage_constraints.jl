@@ -217,11 +217,6 @@ function add_binMGCHPIsOnInTS_constraints(m, p; _n="")
         !m[:binMGCHPIsOnInTS][s, tz, ts] => { m[:dvMGRatedProduction][t, s, tz, ts] <= 0 }
     )
     @constraint(m, [t in p.techs.chp, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-        m[:binMGCHPIsOnInTS][s, tz, ts] => { 
-            m[:dvMGRatedProduction][t, s, tz, ts] >= p.s.chp.min_turn_down_fraction * m[:dvMGsize][t]
-        }
-    )
-    @constraint(m, [t in p.techs.chp, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
         m[:binMGTechUsed][t] >= m[:binMGCHPIsOnInTS][s, tz, ts]
     )
     # TODO? make binMGCHPIsOnInTS indexed on p.techs.chp    
