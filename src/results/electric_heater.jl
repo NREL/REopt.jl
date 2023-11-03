@@ -61,7 +61,7 @@ function add_electric_heater_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
 
 	if !isempty(p.s.storage.types.hot)
         @expression(m, ElectricHeaterToHotTESKW[ts in p.time_steps],
-		    sum(m[:dvProductionToStorage][b,"ElectricHeater",ts] for b in p.s.storage.types.hot)
+		    sum(m[:dvHeatToStorage][b,"ElectricHeater",q,ts] for b in p.s.storage.types.hot, q in p.heating_loads)
             )
     else
         ElectricHeaterToHotTESKW = zeros(length(p.time_steps))

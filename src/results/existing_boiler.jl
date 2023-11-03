@@ -29,7 +29,7 @@ function add_existing_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
 
 	if !isempty(p.s.storage.types.hot)
         @expression(m, BoilerToHotTESKW[ts in p.time_steps],
-		    sum(m[:dvProductionToStorage][b,"ExistingBoiler",ts] for b in p.s.storage.types.hot)
+		    sum(m[:dvHeatToStorage][b,"ExistingBoiler",q,ts] for b in p.s.storage.types.hot, q in p.heating_loads)
             )
     else
         BoilerToHotTESKW = zeros(length(p.time_steps))
