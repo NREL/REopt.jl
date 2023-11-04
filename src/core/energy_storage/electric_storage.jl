@@ -136,6 +136,7 @@ end
 `ElectricStorage` is an optional optional REopt input with the following keys and default values:
 
 ```julia
+    battery_hour::Real = 4.0
     min_kw::Real = 0.0
     max_kw::Real = 1.0e4
     min_kwh::Real = 0.0
@@ -168,6 +169,7 @@ end
 """
 Base.@kwdef struct ElectricStorageDefaults
     off_grid_flag::Bool = false
+    battery_hour::Real = 4.0
     min_kw::Real = 0.0
     max_kw::Real = 1.0e4
     min_kwh::Real = 0.0
@@ -206,6 +208,7 @@ Construct ElectricStorage struct from Dict with keys-val pairs from the
 REopt ElectricStorage and Financial inputs.
 """
 struct ElectricStorage <: AbstractElectricStorage
+    battery_hour::Real
     min_kw::Real
     max_kw::Real
     min_kwh::Real
@@ -293,6 +296,7 @@ struct ElectricStorage <: AbstractElectricStorage
         end
     
         return new(
+            s.battery_hour,
             s.min_kw,
             s.max_kw,
             s.min_kwh,
