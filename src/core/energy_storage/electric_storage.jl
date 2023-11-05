@@ -169,7 +169,6 @@ end
 """
 Base.@kwdef struct ElectricStorageDefaults
     off_grid_flag::Bool = false
-    battery_hour::Real = 4.0
     min_kw::Real = 0.0
     max_kw::Real = 1.0e4
     min_kwh::Real = 0.0
@@ -198,6 +197,7 @@ Base.@kwdef struct ElectricStorageDefaults
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
+    battery_hour::Real = 8.0
 end
 
 
@@ -208,7 +208,6 @@ Construct ElectricStorage struct from Dict with keys-val pairs from the
 REopt ElectricStorage and Financial inputs.
 """
 struct ElectricStorage <: AbstractElectricStorage
-    battery_hour::Real
     min_kw::Real
     max_kw::Real
     min_kwh::Real
@@ -239,6 +238,7 @@ struct ElectricStorage <: AbstractElectricStorage
     model_degradation::Bool
     degradation::Degradation
     minimum_avg_soc_fraction::Float64
+    battery_hour::Real
 
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
@@ -296,7 +296,6 @@ struct ElectricStorage <: AbstractElectricStorage
         end
     
         return new(
-            s.battery_hour,
             s.min_kw,
             s.max_kw,
             s.min_kwh,
@@ -326,7 +325,8 @@ struct ElectricStorage <: AbstractElectricStorage
             net_present_cost_per_kwh,
             s.model_degradation,
             degr,
-            s.minimum_avg_soc_fraction
+            s.minimum_avg_soc_fraction,
+            s.battery_hour
         )
     end
 end

@@ -22,10 +22,11 @@ function add_storage_size_constraints(m, p, b; _n="")
         m[Symbol("dvStoragePower"*_n)][b] <= p.s.storage.attr[b].max_kw
     )
 
-        # Constraint (4c)-3: Limit Storage Energy Capacity to at Most 8 Hour Duration
+	# Constraint (4c)-3: Limit on Storage Energy Capacity based on Duration Hours
 	@constraint(m,
-    m[Symbol("dvStorageEnergy"*_n)][b] <= p.s.storage.attr[b].max_kw * p.s.storage.attr[b].battery_hour
-)
+    m[Symbol("dvStorageEnergy"*_n)][b] <= m[Symbol("dvStoragePower"*_n)][b] * p.s.storage.attr[b].battery_hour
+    )
+
 end
 
 
