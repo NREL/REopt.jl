@@ -171,7 +171,7 @@ Base.@kwdef struct ElectricStorageDefaults
     min_kw::Real = 0.0
     max_kw::Real = 1.0e4
     min_kwh::Real = 0.0
-    max_kwh::Real = max_kw.*4
+    max_kwh::Real = 1.0e6
     internal_efficiency_fraction::Float64 = 0.975
     inverter_efficiency_fraction::Float64 = 0.96
     rectifier_efficiency_fraction::Float64 = 0.96
