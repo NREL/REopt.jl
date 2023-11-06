@@ -1,9 +1,9 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
-function add_dv_UnservedLoad_constraints(m,p)
-    # effective load balance (with slack in dvUnservedLoad)
+function add_dv_UnservedLoad_constraints(m,p,unavailability)
+    # Effective load balance
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
         m[:dvUnservedLoad][s, tz, ts] == p.s.electric_load.critical_loads_kw[tz+ts-1]
-        - sum(  m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] * p.levelization_factor[t]
+        - sum(  m[:dvMGRatedProduction][t, s, tz, ts] * (p.production_factor[t, tz+ts-1] + unavailability[t][tz+ts-1]) * p.levelization_factor[t]
               - m[:dvMGProductionToStorage][t, s, tz, ts] - m[:dvMGCurtail][t, s, tz, ts]
             for t in p.techs.elec
         )
@@ -76,12 +76,12 @@ function add_MG_size_constraints(m,p)
 end
 
 
-function add_MG_production_constraints(m,p)
+function add_MG_production_constraints(m,p,unavailability)
 
 	# Electrical production sent to storage or export must be less than technology's rated production
 	@constraint(m, [t in p.techs.elec, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
 		m[:dvMGProductionToStorage][t, s, tz, ts] + m[:dvMGCurtail][t, s, tz, ts] <=
-		p.production_factor[t, tz+ts-1] * p.levelization_factor[t] * m[:dvMGRatedProduction][t, s, tz, ts]
+		(p.production_factor[t, tz+ts-1] + unavailability[t][tz+ts-1]) * p.levelization_factor[t] * m[:dvMGRatedProduction][t, s, tz, ts]
     )
 
     @constraint(m, [t in p.techs.elec, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps], 
@@ -150,7 +150,7 @@ function add_MG_CHP_fuel_burn_constraints(m, p; _n="")
         @constraint(m, MGCHPFuelBurnCon[t in p.techs.chp, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps],
             m[Symbol("dvMGFuelUsed"*_n)][t,s,tz]  == p.hours_per_time_step * (
                 m[Symbol("dvMGCHPFuelBurnYIntercept"*_n)][s,tz] +
-                sum(p.production_factor[t,tz+ts-1] * fuel_burn_slope * m[Symbol("dvMGRatedProduction"*_n)][t,s,tz,ts]
+                sum(fuel_burn_slope * m[Symbol("dvMGRatedProduction"*_n)][t,s,tz,ts]
                     for ts in 1:p.s.electric_utility.outage_durations[s]))
         )
 
@@ -164,7 +164,7 @@ function add_MG_CHP_fuel_burn_constraints(m, p; _n="")
         #Constraint (1c2): Total Fuel burn for CHP **without** y-intercept fuel burn
         @constraint(m, MGCHPFuelBurnConLinear[t in p.techs.chp, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps],
             m[Symbol("dvMGFuelUsed"*_n)][t,s,tz]  == p.hours_per_time_step *
-                sum(p.production_factor[t,tz+ts-1] * fuel_burn_slope * m[Symbol("dvMGRatedProduction"*_n)][t,s,tz,ts]
+                sum(fuel_burn_slope * m[Symbol("dvMGRatedProduction"*_n)][t,s,tz,ts]
                 for ts in 1:p.s.electric_utility.outage_durations[s])
         )
     end 
