@@ -23,6 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.37.2
+### Changed
+- Do not enforce `CHP.min_turn_down_fraction` for outages
+
 ## v0.37.1
 ### Fixed
 - CHP-only for multiple/stochastic outages
