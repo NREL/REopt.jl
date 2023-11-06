@@ -12,6 +12,7 @@ struct Scenario <: AbstractScenario
     generator::Generator
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
+    process_heat_load::ProcessHeatLoad
     cooling_load::CoolingLoad
     existing_boiler::Union{ExistingBoiler, Nothing}
     boiler::Union{Boiler, Nothing}
@@ -41,6 +42,7 @@ A Scenario struct can contain the following keys:
 - [Generator](@ref) (optional)
 - [DomesticHotWaterLoad](@ref) (optional)
 - [SpaceHeatingLoad](@ref) (optional)
+- [ProcessHeatLoad](@ref) (optional)
 - [ExistingBoiler](@ref) (optional)
 - [Boiler](@ref) (optional)
 - [CHP](@ref) (optional)
@@ -225,6 +227,17 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
             time_steps_per_hour=settings.time_steps_per_hour,
             existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
+        )
+    end
+
+    if haskey(d, "ProcessHeatLoad")
+        process_heat_load = ProcessHeatLoad(; dictkeys_tosymbols(d["ProcessHeatLoad"]),
+            time_steps_per_hour=settings.time_steps_per_hour    
+        )
+    else
+        process_heat_load = ProcessHeatLoad(;
+            heat_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
+            time_steps_per_hour=settings.time_steps_per_hour
         )
     end
 
@@ -626,6 +639,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         generator,
         dhw_load,
         space_heating_load,
+        process_heat_load,
         cooling_load,
         existing_boiler,
         boiler,

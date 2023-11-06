@@ -136,6 +136,7 @@ function BAUScenario(s::Scenario)
         generator,
         s.dhw_load,
         s.space_heating_load,
+        s.process_heat_load,
         s.existing_boiler,
         s.existing_chiller,
         outage_outputs,
