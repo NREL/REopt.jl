@@ -123,7 +123,7 @@ function add_MG_Gen_fuel_burn_constraints(m,p)
 
     # fuel cost = gallons * $/gal for each tech, outage
     @expression(m, MGFuelCost[t in p.techs.gen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps],
-        m[:dvMGFuelUsed][t, s, tz] * p.s.generator.fuel_cost_per_gallon
+        m[:dvMGFuelUsed][t, s, tz] * p.s.generator.fuel_cost_per_gallon # why not: * p.pwf_fuel[t] ?
     )
     
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps],
@@ -179,7 +179,7 @@ function add_MG_CHP_fuel_burn_constraints(m, p; _n="")
 
     # fuel cost = kWh * $/kWh
     @expression(m, MGCHPFuelCost[t in p.techs.chp, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps],
-        m[:dvMGFuelUsed][t, s, tz] * p.fuel_cost_per_kwh[t][tz]
+        m[:dvMGFuelUsed][t, s, tz] * p.fuel_cost_per_kwh[t][tz] # why not: * p.pwf_fuel[t] ?
     )
     
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps],
