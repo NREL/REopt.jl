@@ -23,6 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.37.4
+### Fixed
+- Include `year` in creation of electric-only CHP for unavailability profile
+
 ## v0.37.3
 ### Changed
 - Ignore `CHP` unavailability during stochastic, multiple outages; this is consistent with deterministic single outage
