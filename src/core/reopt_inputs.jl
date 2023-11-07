@@ -202,6 +202,10 @@ function REoptInputs(s::AbstractScenario)
         push!(heating_loads, "SpaceHeating")
         heating_loads_kw["SpaceHeating"] = s.space_heating_load.loads_kw
     end
+    if !isnothing(s.space_heating_load)
+        push!(heating_loads, "ProcessHeat")
+        heating_loads_kw["ProcessHeat"] = s.process_heat_load.loads_kw
+    end
 
     heating_loads_served_by_tes = Dict{String,Array{String,1}}()
     if !isempty(s.storage.types.hot)
@@ -212,6 +216,9 @@ function REoptInputs(s::AbstractScenario)
             end
             if s.storage.attr[b].can_serve_space_heating
                 push!(heating_loads_served_by_tes[b],"SpaceHeating")
+            end
+            if s.storage.attr[b].can_serve_process_heat
+                push!(heating_loads_served_by_tes[b],"ProcessHeat")
             end
         end
     end

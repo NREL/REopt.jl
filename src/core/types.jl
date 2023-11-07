@@ -44,6 +44,7 @@ mutable struct Techs
     electric_heater::Vector{String}    
     can_serve_dhw::Vector{String}
     can_serve_space_heating::Vector{String}
+    can_serve_process_heat::Vector{String}
 end
 ```
 """
@@ -71,4 +72,5 @@ mutable struct Techs
     electric_heater::Vector{String}
     can_serve_dhw::Vector{String}
     can_serve_space_heating::Vector{String}
+    can_serve_process_heat::Vector{String}
 end

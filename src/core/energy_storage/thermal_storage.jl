@@ -84,6 +84,7 @@ Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults
     total_rebate_per_kwh::Float64 = 0.0
     can_serve_dhw::Bool = true
     can_serve_space_heating::Bool = true
+    can_serve_process_heat::Bool = false
 end
 
 
@@ -165,7 +166,7 @@ struct ColdThermalStorage <: AbstractThermalStorage
             charge_efficiency,
             discharge_efficiency,
             net_present_cost_per_kwh,
-            om_cost_per_kwh,
+            om_cost_per_kwh
         )
     end
 end
@@ -202,6 +203,7 @@ struct HotThermalStorage <: AbstractThermalStorage
     om_cost_per_kwh::Float64
     can_serve_dhw::Bool
     can_serve_space_heating::Bool
+    can_serve_process_heat::Bool
 
     function HotThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
          
@@ -252,7 +254,8 @@ struct HotThermalStorage <: AbstractThermalStorage
             net_present_cost_per_kwh,
             om_cost_per_kwh,
             s.can_serve_dhw,
-            s.can_serve_space_heating
+            s.can_serve_space_heating,
+            s.can_serve_process_heat
         )
     end
 end

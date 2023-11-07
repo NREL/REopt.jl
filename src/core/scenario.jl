@@ -231,7 +231,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
 
     if haskey(d, "ProcessHeatLoad")
-        process_heat_load = ProcessHeatLoad(; dictkeys_tosymbols(d["ProcessHeatLoad"]),
+        process_heat_load = ProcessHeatLoad(; dictkeys_tosymbols(d["ProcessHeatLoad"])...,
             time_steps_per_hour=settings.time_steps_per_hour    
         )
     else
@@ -301,6 +301,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
             if haskey(d, "DomesticHotWaterLoad")
                 @warn "Not using DomesticHotWaterLoad because FlexibleHVAC was provided."
+            end
+
+            if haskey(d, "ProcessHeatLoad")
+                @warn "Not using ProcessHeatLoad because FlexibleHVAC was provided."
             end
 
             if haskey(d, "CoolingLoad")

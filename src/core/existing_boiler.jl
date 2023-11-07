@@ -18,6 +18,7 @@ struct ExistingBoiler <: AbstractThermalTech  # useful to create AbstractHeating
     emissions_factor_lb_PM25_per_mmbtu::Real
     can_serve_dhw::Bool
     can_serve_space_heating::Bool
+    can_serve_process_heat::Bool
 end
 
 
@@ -36,8 +37,9 @@ end
     emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0),
     emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0),
     emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0)
-    can_serve_dhw::Bool = true # If CHP can supply heat to the domestic hot water load
-    can_serve_space_heating::Bool = true # IF CHP can supply heat to the space heating load
+    can_serve_dhw::Bool = true # If ExistingBoiler can supply heat to the domestic hot water load
+    can_serve_space_heating::Bool = true # If ExistingBoiler can supply heat to the space heating load
+    can_serve_process_heat::Bool = true # If ExistingBoiler can supply heat to the space heating load
 ```
 
 !!! note "Max ExistingBoiler size" 
@@ -78,7 +80,8 @@ function ExistingBoiler(;
     emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0),
     time_steps_per_hour::Int = 1,
     can_serve_dhw::Bool = true,
-    can_serve_space_heating::Bool = true
+    can_serve_space_heating::Bool = true,
+    can_serve_process_heat::Bool = true
 )
     @assert fuel_type in FUEL_TYPES
     @assert production_type in ["steam", "hot_water"]
@@ -106,6 +109,7 @@ function ExistingBoiler(;
         emissions_factor_lb_SO2_per_mmbtu,
         emissions_factor_lb_PM25_per_mmbtu,
         can_serve_dhw,
-        can_serve_space_heating
+        can_serve_space_heating,
+        can_serve_process_heat
     )
 end

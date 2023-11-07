@@ -27,6 +27,7 @@ function Techs(p::REoptInputs, s::BAUScenario)
     electric_heaters = String[]
     techs_can_serve_space_heating = String[]
     techs_can_serve_dhw = String[]
+    tech_can_serve_process_heat = String[]
 
     if p.s.generator.existing_kw > 0
         push!(all_techs, "Generator")
@@ -72,7 +73,8 @@ function Techs(p::REoptInputs, s::BAUScenario)
         techs_can_supply_steam_turbine,
         electric_heaters,
         techs_can_serve_space_heating,
-        techs_can_serve_dhw
+        techs_can_serve_dhw,
+        tech_can_serve_process_heat
     )
 end
 
@@ -109,6 +111,7 @@ function Techs(s::Scenario)
     electric_heaters = String[]   
     techs_can_serve_space_heating = String[]
     techs_can_serve_dhw = String[] 
+    techs_can_serve_process_heat = String[]
 
     if s.wind.max_kw > 0
         push!(all_techs, "Wind")
@@ -141,7 +144,10 @@ function Techs(s::Scenario)
         end
         if s.existing_boiler.can_serve_dhw
             push!(techs_can_serve_dhw, "ExistingBoiler")
-        end        
+        end       
+        if s.existing_boiler.can_serve_process_heat
+            push!(techs_can_serve_process_heat, "ExistingBoiler")
+        end   
     end
 
     if !isnothing(s.boiler)
@@ -157,6 +163,9 @@ function Techs(s::Scenario)
         if s.boiler.can_serve_dhw
             push!(techs_can_serve_dhw, "Boiler")
         end
+        if s.boiler.can_serve_process_heat
+            push!(techs_can_serve_process_heat, "Boiler")
+        end
     end
     
     if !isnothing(s.chp)
@@ -171,6 +180,9 @@ function Techs(s::Scenario)
         end
         if s.chp.can_serve_dhw
             push!(techs_can_serve_dhw, "CHP")
+        end
+        if s.chp.can_serve_process_heat
+            push!(techs_can_serve_process_heat, "CHP")
         end
     end
 
@@ -195,6 +207,9 @@ function Techs(s::Scenario)
         if s.steam_turbine.can_serve_dhw
             push!(techs_can_serve_dhw, "SteamTurbine")
         end
+        if s.steam_turbine.can_serve_process_heat
+            push!(techs_can_serve_process_heat, "SteamTurbine")
+        end
     end    
 
     if !isnothing(s.electric_heater)
@@ -209,6 +224,9 @@ function Techs(s::Scenario)
         end
         if s.electric_heater.can_serve_dhw
             push!(techs_can_serve_dhw, "ElectricHeater")
+        end
+        if s.electric_heater.can_serve_process_heat
+            push!(techs_can_serve_process_heat, "ElectricHeater")
         end
     end
 
@@ -244,7 +262,8 @@ function Techs(s::Scenario)
         techs_can_supply_steam_turbine,
         electric_heaters,
         techs_can_serve_space_heating,
-        techs_can_serve_dhw
+        techs_can_serve_dhw,
+        techs_can_serve_process_heat
     )
 end
 
@@ -276,6 +295,7 @@ function Techs(s::MPCScenario)
         String[],
         String[],
         techs_no_turndown,
+        String[],
         String[],
         String[],
         String[],
