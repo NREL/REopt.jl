@@ -330,7 +330,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     year = electric_load.year)
         else # Only if modeling CHP without heating_load and existing_boiler (for prime generator, electric-only)
             chp = CHP(d["CHP"],
-                    electric_load_series_kw = electric_load.loads_kw)
+                    electric_load_series_kw = electric_load.loads_kw,
+                    year = electric_load.year)
         end
         chp_prime_mover = chp.prime_mover
     end
