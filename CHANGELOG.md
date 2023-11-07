@@ -23,6 +23,11 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+
+## Develop 2023-11-07
+### Fixed
+- Fixed AVERT emissions profiles for NOx. Were previously the same as the SO2 profiles.
+
 ## v0.37.3
 ### Changed
 - Ignore `CHP` unavailability during stochastic, multiple outages; this is consistent with deterministic single outage
