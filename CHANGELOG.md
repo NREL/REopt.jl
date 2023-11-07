@@ -27,6 +27,9 @@ Classify the change according to the following categories:
 ## Develop 2023-11-07
 ### Fixed
 - Fixed AVERT emissions profiles for NOx. Were previously the same as the SO2 profiles.
+## v0.37.4
+### Fixed
+- Include `year` in creation of electric-only CHP for unavailability profile
 
 ## v0.37.3
 ### Changed
