@@ -23,7 +23,7 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop 11-06-2023
+## v0.37.3
 ### Changed
 - Ignore `CHP` unavailability during stochastic, multiple outages; this is consistent with deterministic single outage
 
