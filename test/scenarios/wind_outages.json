@@ -1,0 +1,32 @@
+{
+    "ElectricLoad": {
+        "annual_kwh": 10000000,
+        "doe_reference_name": "MediumOffice"
+    },
+    "Site": {
+        "latitude": 39.91065, 
+        "longitude": -105.2348,
+        "min_resil_time_steps": 10
+    },
+    "Wind": {
+        "installed_cost_per_kw": 1874,
+        "om_cost_per_kw": 35,
+        "macrs_bonus_fraction": 0.0,
+        "min_kw": 5000,
+        "max_kw": 5000,
+        "size_class": "large"
+    },
+    "ElectricStorage": {},    
+    "Financial": {
+        "value_of_lost_load_per_kwh": 0.0,
+        "microgrid_upgrade_cost_fraction": 0.0
+    },
+    "ElectricTariff": {
+        "monthly_demand_rates": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        "monthly_energy_rates": [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2]
+    },
+    "ElectricUtility": {
+        "outage_start_time_steps": [5100],
+        "outage_durations": [10]
+    }
+}
