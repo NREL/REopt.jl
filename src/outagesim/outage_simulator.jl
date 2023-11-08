@@ -309,6 +309,12 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
         fuel_higher_heating_value_kwh_per_gal = p.s.generator.fuel_higher_heating_value_kwh_per_gal
 	)
 
+    if "CHP" in keys(d)
+        chp_kw = get(d["CHP"], "size_kw", 0.0)
+    else
+        chp_kw = 0.0
+    end
+
     simulate_outages(;
         batt_kwh = batt_kwh, 
         batt_kw = batt_kw, 
@@ -321,6 +327,7 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
         fuel_available = p.s.generator.fuel_avail_gal,
         b = fuel_intercept_gal_per_hr,
         m = fuel_slope_gal_per_kwhe, 
-        diesel_min_turndown = p.s.generator.min_turn_down_fraction
+        diesel_min_turndown = p.s.generator.min_turn_down_fraction,
+        chp_kw = chp_kw
     )
 end
