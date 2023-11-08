@@ -114,7 +114,7 @@ end
 """
     simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[], critical_loads_kw=[], 
         wind_kw_ac_hourly=[], batt_roundtrip_efficiency=0.829, diesel_kw=0, fuel_available=0, b=0, m=0, 
-        diesel_min_turndown=0.3
+        diesel_min_turndown=0.3, chp_kw=0.0
     )
 
 Time series simulation of outages starting at every time step of the year. Used to calculate how many time steps the 
@@ -310,7 +310,7 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
 	)
 
     if "CHP" in keys(d)
-        chp_kw = get(d["CHP"], "size_kw", 0.0)
+        chp_kw = d["CHP"]["size_kw"]
     else
         chp_kw = 0.0
     end
