@@ -30,7 +30,7 @@
 
 
 function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diesel_min_turndown, batt_kwh, batt_kw,
-                    batt_roundtrip_efficiency, n_time_steps, n_steps_per_hour, batt_soc_kwh, crit_load)
+                    batt_roundtrip_efficiency, n_time_steps, n_steps_per_hour, batt_soc_kwh, crit_load, chp_kw)
     """
     Determine how long the critical load can be met with gas generator and energy storage.
     :param init_time_step: Int, initial time step
@@ -46,11 +46,12 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
     :param n_time_steps: Int, number of time steps in a year
     :param n_steps_per_hour: Int, number of time steps per hour
     :param crit_load: list of float, load after DER (PV, Wind, ...)
+    :param chp_kw: float, CHP system size
     :return: float, number of hours that the critical load can be met using load following
     """
     for i in 0:n_time_steps-1
         t = (init_time_step - 1 + i) % n_time_steps + 1  # for wrapping around end of year
-        load_kw = crit_load[t]
+        load_kw = crit_load[t] - chp_kw #assume CHP will first meet load, then charge battery as needed
 
         if load_kw < 0  # load is met
             if batt_soc_kwh < batt_kwh  # charge battery if there's room in the battery
@@ -132,6 +133,7 @@ critical load can be met in every outage, which in turn is used to determine pro
 - `b`: float, diesel fuel burn rate intercept coefficient (y = m*x + b*rated_capacity)  [gal/kwh/kw]
 - `m`: float, diesel fuel burn rate slope (y = m*x + b*rated_capacity)  [gal/kWh]
 - `diesel_min_turndown`: minimum generator turndown in fraction of generator capacity (0 to 1)
+- `chp_kw`: CHP system size (kW)
 
 Returns a dict
 ```
@@ -147,7 +149,7 @@ Returns a dict
 ```
 """
 function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[], critical_loads_kw=[], wind_kw_ac_hourly=[],
-                     batt_roundtrip_efficiency=0.829, diesel_kw=0, fuel_available=0, b=0, m=0, diesel_min_turndown=0.3,
+                     batt_roundtrip_efficiency=0.829, diesel_kw=0, fuel_available=0, b=0, m=0, diesel_min_turndown=0.3, chp_kw=0.0
                      )
     n_time_steps = length(critical_loads_kw)
     n_steps_per_hour = Int(n_time_steps / 8760)
@@ -194,7 +196,8 @@ function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[
             n_time_steps = n_time_steps,
             n_steps_per_hour = n_steps_per_hour,
             batt_soc_kwh = init_soc[time_step] * batt_kwh,
-            crit_load = load_minus_der
+            crit_load = load_minus_der,
+            chp_kw=chp_kw
         )
     end
     results = process_results(r, n_time_steps)
