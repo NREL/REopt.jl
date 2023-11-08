@@ -14,6 +14,7 @@ struct Boiler <: AbstractThermalTech
     can_supply_steam_turbine::Bool
     can_serve_dhw::Bool
     can_serve_space_heating::Bool
+    can_serve_process_heat::Bool
 end
 
 

@@ -129,13 +129,17 @@ function BAUInputs(p::REoptInputs)
 
     heating_loads = Vector{String}()
     heating_loads_kw = Dict{String, Array{Real,1}}()
-    if !isnothing(s.dhw_load)
+    if !isnothing(p.s.dhw_load)
         push!(heating_loads, "DomesticHotWater")
-        heating_loads_kw["DomesticHotWater"] = s.dhw_load.loads_kw
+        heating_loads_kw["DomesticHotWater"] = p.s.dhw_load.loads_kw
     end
-    if !isnothing(s.space_heating_load)
+    if !isnothing(p.s.space_heating_load)
         push!(heating_loads, "SpaceHeating")
-        heating_loads_kw["SpaceHeating"] = s.space_heating_load.loads_kw
+        heating_loads_kw["SpaceHeating"] = p.s.space_heating_load.loads_kw
+    end
+    if !isnothing(p.s.process_heat_load)
+        push!(heating_loads, "ProcessHeat")
+        heating_loads_kw["ProcessHeat"] = p.s.process_heat_load.loads_kw
     end
 
     heating_loads_served_by_tes = Dict{String,Array{String,1}}()

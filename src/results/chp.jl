@@ -39,8 +39,8 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["annual_electric_production_kwh"] = round(value(Year1CHPElecProd), digits=3)
 	
 	@expression(m, CHPThermalProdKW[ts in p.time_steps],
-		sum(value.(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads) + m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] - 
-		sum(value.(m[Symbol("dvProductionToWaste"*_n)][t,q,ts] for q in p.heating_loads)) for t in p.techs.chp))
+		sum(sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] - m[Symbol("dvProductionToWaste"*_n)][t,q,ts] for q in p.heating_loads) + 
+		m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] for t in p.techs.chp))
 
 	r["thermal_production_series_mmbtu_per_hour"] = round.(value.(CHPThermalProdKW) / KWH_PER_MMBTU, digits=5)
 	
@@ -70,14 +70,14 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["electric_to_load_series_kw"] = round.(value.(CHPtoLoad), digits=3)
 	# Thermal dispatch breakdown
     if !isempty(p.s.storage.types.hot)
-		@expression(m, CHPtoHotTES[ts in p.time_steps],
+		@expression(m, CHPToHotTES[ts in p.time_steps],
 			sum(m[Symbol("dvHeatToStorage"*_n)]["HotThermalStorage",t,q,ts] for t in p.techs.chp, q in p.heating_loads))
-			@expression(m, CHPtoHotTESByQuality[q in p.heating_loads, ts in p.time_steps], sum(m[Symbol("dvHeatToStorage"*_n)]["HotThermalStorage",t,q,ts] for t in p.techs.chp))
+			@expression(m, CHPToHotTESByQuality[q in p.heating_loads, ts in p.time_steps], sum(m[Symbol("dvHeatToStorage"*_n)]["HotThermalStorage",t,q,ts] for t in p.techs.chp))
 	else 
-		CHPtoHotTES = zeros(length(p.time_steps))
-		@expression(m, CHPtoHotTESByQuality[q in p.heating_loads, ts in p.time_steps], 0.0)
+		@expression(m, CHPToHotTES[ts in p.time_steps], 0.0)
+		@expression(m, CHPToHotTESByQuality[q in p.heating_loads, ts in p.time_steps], 0.0)
 	end
-	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(CHPtoHotTES / KWH_PER_MMBTU), digits=5)
+	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(CHPToHotTES / KWH_PER_MMBTU), digits=5)
 	@expression(m, CHPThermalToWasteKW[ts in p.time_steps],
 		sum(m[Symbol("dvProductionToWaste"*_n)][t,q,ts] for q in p.heating_loads, t in p.techs.chp))
 		@expression(m, CHPThermalToWasteByQualityKW[q in p.heating_loads, ts in p.time_steps],
@@ -93,17 +93,17 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r["thermal_to_steamturbine_series_mmbtu_per_hour"] = round.(value.(CHPToSteamTurbineKW) / KWH_PER_MMBTU, digits=5)
     @expression(m, CHPThermalToLoadKW[ts in p.time_steps],
         sum(sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads) + m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
-            for t in p.techs.chp) - CHPtoHotTES[ts] - CHPToSteamTurbineKW[ts] - CHPThermalToWasteKW[ts])
+            for t in p.techs.chp) - CHPToHotTES[ts] - CHPToSteamTurbineKW[ts] - CHPThermalToWasteKW[ts])
     r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(CHPThermalToLoadKW ./ KWH_PER_MMBTU), digits=5)
 
 	CHPToLoadKW = @expression(m, [ts in p.time_steps],
-		sum(value.(m[:dvHeatingProduction]["CHP",q,ts] for q in p.heating_loads)) - CHPToHotTESKW[ts] - CHPToSteamTurbineKW[ts]
+		sum(value.(m[:dvHeatingProduction]["CHP",q,ts] for q in p.heating_loads)) - CHPToHotTES[ts] - CHPToSteamTurbineKW[ts]
     )
 	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(CHPThermalToLoadKW ./ KWH_PER_MMBTU), digits=5)
     
     if "DomesticHotWater" in p.heating_loads && p.s.chp.can_serve_dhw
         @expression(m, CHPToDHWKW[ts in p.time_steps], 
-            m[:dvHeatingProduction]["CHP","DomesticHotWater",ts] - CHPtoHotTESByQuality["DomesticHotWater",ts] - CHPToSteamTurbineByQualityKW["DomesticHotWater",ts] - CHPThermalToWasteByQualityKW["DomesticHotWater",ts]
+            m[:dvHeatingProduction]["CHP","DomesticHotWater",ts] - CHPToHotTESByQuality["DomesticHotWater",ts] - CHPToSteamTurbineByQualityKW["DomesticHotWater",ts] - CHPThermalToWasteByQualityKW["DomesticHotWater",ts]
         )
     else
         @expression(m, CHPToDHWKW[ts in p.time_steps], 0.0)
@@ -112,7 +112,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     
     if "SpaceHeating" in p.heating_loads && p.s.chp.can_serve_space_heating
         @expression(m, CHPToSpaceHeatingKW[ts in p.time_steps], 
-            m[:dvHeatingProduction]["CHP","SpaceHeating",ts] - CHPtoHotTESByQuality["SpaceHeating",ts] - CHPToSteamTurbineByQualityKW["SpaceHeating",ts] - CHPThermalToWasteByQualityKW["SpaceHeating",ts]
+            m[:dvHeatingProduction]["CHP","SpaceHeating",ts] - CHPToHotTESByQuality["SpaceHeating",ts] - CHPToSteamTurbineByQualityKW["SpaceHeating",ts] - CHPThermalToWasteByQualityKW["SpaceHeating",ts]
         )
     else
         @expression(m, CHPToSpaceHeatingKW[ts in p.time_steps], 0.0)
@@ -121,7 +121,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     
     if "ProcessHeat" in p.heating_loads && p.s.chp.can_serve_space_heating
         @expression(m, CHPToProcessHeatKW[ts in p.time_steps], 
-            m[:dvHeatingProduction]["CHP","ProcessHeat",ts] - CHPtoHotTESByQuality["ProcessHeat",ts] - CHPToSteamTurbineByQualityKW["ProcessHeat",ts] - CHPThermalToWasteByQualityKW["ProcessHeat",ts]
+            m[:dvHeatingProduction]["CHP","ProcessHeat",ts] - CHPToHotTESByQuality["ProcessHeat",ts] - CHPToSteamTurbineByQualityKW["ProcessHeat",ts] - CHPThermalToWasteByQualityKW["ProcessHeat",ts]
         )
     else
         @expression(m, CHPToProcessHeatKW[ts in p.time_steps], 0.0)

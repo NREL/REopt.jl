@@ -136,7 +136,7 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
         else
             @constraint(m, CHPTechProductionFlowCon[b in p.s.storage.types.hot, t in p.techs.chp, q in p.heating_loads, ts in p.time_steps],
                     m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] + m[Symbol("dvProductionToWaste"*_n)][t,q,ts]  <=
-                    m[Symbol("dvProductionToWaste"*_n)][t,q,ts]
+                    m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
                     )
         end
 	end

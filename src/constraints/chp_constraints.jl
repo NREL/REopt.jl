@@ -47,9 +47,9 @@ function add_chp_thermal_production_constraints(m, p; _n="")
     thermal_prod_intercept = thermal_prod_full_load - thermal_prod_slope * 1.0  # [kWt/kWe_rated
 
 
-    # Conditionally add dvThermalProductionYIntercept if coefficient p.s.chpThermalProdIntercept is greater than ~zero
+    # Conditionally add dvHeatingProductionYIntercept if coefficient p.s.chpThermalProdIntercept is greater than ~zero
     if abs(thermal_prod_intercept) > 1.0E-7
-        dv = "dvThermalProductionYIntercept"*_n
+        dv = "dvHeatingProductionYIntercept"*_n
         m[Symbol(dv)] = @variable(m, [p.techs.chp, p.time_steps], base_name=dv)
 
         #Constraint (2a-1): Upper Bounds on Thermal Production Y-Intercept

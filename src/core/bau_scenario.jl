@@ -25,6 +25,7 @@ struct BAUScenario <: AbstractScenario
     generator::Generator
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
+    process_heat_load::ProcessHeatLoad
     existing_boiler::Union{ExistingBoiler, Nothing}
     existing_chiller::Union{ExistingChiller, Nothing}
     outage_outputs::OutageOutputs
