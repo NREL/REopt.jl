@@ -85,10 +85,10 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["thermal_curtailed_series_mmbtu_per_hour"] = round.(value.(CHPThermalToWasteKW) / KWH_PER_MMBTU, digits=5)
     if !isempty(p.techs.steam_turbine) && p.s.chp.can_supply_steam_turbine
         @expression(m, CHPToSteamTurbineKW[ts in p.time_steps], sum(m[Symbol("dvThermalToSteamTurbine"*_n)][t,q,ts] for t in p.techs.chp, q in p.heating_loads))
-		@expression(m, CHPToSteamTurbineKWByQuality[q in p.heating_loads, ts in p.time_steps], sum(m[Symbol("dvThermalToSteamTurbine"*_n)][t,q,ts] for t in p.techs.chp))
+		@expression(m, CHPToSteamTurbineByQualityKW[q in p.heating_loads, ts in p.time_steps], sum(m[Symbol("dvThermalToSteamTurbine"*_n)][t,q,ts] for t in p.techs.chp))
 	else
         CHPToSteamTurbineKW = zeros(length(p.time_steps))
-		@expression(m, CHPToSteamTurbineKWByQuality[q in p.heating_loads, ts in p.time_steps], 0.0)
+		@expression(m, CHPToSteamTurbineByQualityKW[q in p.heating_loads, ts in p.time_steps], 0.0)
     end	
     r["thermal_to_steamturbine_series_mmbtu_per_hour"] = round.(value.(CHPToSteamTurbineKW) / KWH_PER_MMBTU, digits=5)
     @expression(m, CHPThermalToLoadKW[ts in p.time_steps],
@@ -103,7 +103,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     
     if "DomesticHotWater" in p.heating_loads && p.s.chp.can_serve_dhw
         @expression(m, CHPToDHWKW[ts in p.time_steps], 
-            m[:dvHeatingProduction]["CHP","DomesticHotWater",ts] - CHPtoHotTESByQuality["DomesticHotWater",ts] - CHPToSteamTurbineByQualityKW["DomesticHotWater",ts] - CHPThermalToWasteByQualityKW\\["DomesticHotWater",ts]
+            m[:dvHeatingProduction]["CHP","DomesticHotWater",ts] - CHPtoHotTESByQuality["DomesticHotWater",ts] - CHPToSteamTurbineByQualityKW["DomesticHotWater",ts] - CHPThermalToWasteByQualityKW["DomesticHotWater",ts]
         )
     else
         @expression(m, CHPToDHWKW[ts in p.time_steps], 0.0)

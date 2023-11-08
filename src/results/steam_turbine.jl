@@ -62,7 +62,7 @@ function add_steam_turbine_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
     if !isempty(p.s.storage.types.hot)
 		@expression(m, SteamTurbinetoHotTESKW[ts in p.time_steps],
 			sum(m[Symbol("dvProductionToStorage"*_n)]["HotThermalStorage",t,ts] for t in p.techs.steam_turbine))
-		@expression(m, SteamTurbinetoHotTESKWByQuality[ts in p.time_steps],
+		@expression(m, SteamTurbinetoHotTESByQualityKW[ts in p.time_steps],
 			sum(m[Symbol("dvProductionToStorage"*_n)]["HotThermalStorage",t,ts] for t in p.techs.steam_turbine))
 	else
 		SteamTurbinetoHotTESKW = zeros(length(p.time_steps))
@@ -74,7 +74,7 @@ function add_steam_turbine_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
 	
 	if "DomesticHotWater" in p.heating_loads && p.s.steam_turbine.can_serve_dhw
         @expression(m, SteamTurbineToDHWKW[ts in p.time_steps], 
-            m[:dvHeatingProduction]["SteamTurbine","DomesticHotWater",ts] - SteamTurbineToHotTESKWbyQuality["DomesticHotWater",ts] 
+            m[:dvHeatingProduction]["SteamTurbine","DomesticHotWater",ts] - SteamTurbineToHotTESByQualityKW["DomesticHotWater",ts] 
         )
     else
         @expression(m, SteamTurbineToDHWKW[ts in p.time_steps], 0.0)
@@ -83,7 +83,7 @@ function add_steam_turbine_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
     
     if "SpaceHeating" in p.heating_loads && p.s.steam_turbine.can_serve_space_heating
         @expression(m, SteamTurbineToSpaceHeatingKW[ts in p.time_steps], 
-            m[:dvHeatingProduction]["SteamTurbine","SpaceHeating",ts] - SteamTurbineToHotTESKWbyQuality["SpaceHeating",ts] 
+            m[:dvHeatingProduction]["SteamTurbine","SpaceHeating",ts] - SteamTurbineToHotTESByQualityKW["SpaceHeating",ts] 
         )
     else
         @expression(m, SteamTurbineToSpaceHeatingKW[ts in p.time_steps], 0.0)
@@ -92,7 +92,7 @@ function add_steam_turbine_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
     
     if "ProcessHeat" in p.heating_loads && p.s.steam_turbine.can_serve_space_heating
         @expression(m, SteamTurbineToProcessHeatKW[ts in p.time_steps], 
-            m[:dvHeatingProduction]["SteamTurbine","ProcessHeat",ts] - SteamTurbineToHotTESKWbyQuality["ProcessHeat",ts] 
+            m[:dvHeatingProduction]["SteamTurbine","ProcessHeat",ts] - SteamTurbineToHotTESByQualityKW["ProcessHeat",ts] 
         )
     else
         @expression(m, SteamTurbineToProcessHeatKW[ts in p.time_steps], 0.0)
