@@ -35,6 +35,7 @@
     - Helena
     - Houston
     - LosAngeles
+    - LasVegas
     - Miami
     - Minneapolis
     - Phoenix
@@ -380,6 +381,25 @@ function BuiltInElectricLoad(
             "warehouse" => 182085,
             "flatload" => 500000
         ),
+        "LasVegas" => Dict(
+            "retailstore" => 552267,
+            "largehotel" => 2751152,
+            "mediumoffice" => 959668,
+            "stripmall" => 546209,
+            "primaryschool" => 1196111,
+            "warehouse" => 235888,
+            "smalloffice" => 95801,
+            "supermarket" => 2001224,
+            "midriseapartment" => 332312,
+            "fullservicerest" => 372350,
+            "outpatient" => 1782941,
+            "fastfoodrest" => 208062,
+            "smallhotel" => 818012,
+            "largeoffice" => 6750393,
+            "secondaryschool" => 3112938,
+            "hospital" => 9011047,
+            "flatload" => 1920398
+        ),        
         "Miami" => Dict(
             "fastfoodrest" => 224494,
             "fullservicerest" => 448713,

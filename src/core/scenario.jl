@@ -193,30 +193,38 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     max_heat_demand_kw = 0.0
     if haskey(d, "DomesticHotWaterLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["DomesticHotWaterLoad"])
+        # Pass in ExistingBoiler.efficiency to inform fuel to thermal conversion for heating load
+        existing_boiler_efficiency = get_existing_boiler_efficiency(d)
         dhw_load = DomesticHotWaterLoad(; dictkeys_tosymbols(d["DomesticHotWaterLoad"])...,
                                           latitude=site.latitude, longitude=site.longitude, 
-                                          time_steps_per_hour=settings.time_steps_per_hour
+                                          time_steps_per_hour=settings.time_steps_per_hour,
+                                          existing_boiler_efficiency = existing_boiler_efficiency
                                         )
         max_heat_demand_kw = maximum(dhw_load.loads_kw)
     else
         dhw_load = DomesticHotWaterLoad(; 
             fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
-            time_steps_per_hour=settings.time_steps_per_hour
+            time_steps_per_hour=settings.time_steps_per_hour,
+            existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
         )
     end
                                     
     if haskey(d, "SpaceHeatingLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["SpaceHeatingLoad"])
+        # Pass in ExistingBoiler.efficiency to inform fuel to thermal conversion for heating load
+        existing_boiler_efficiency = get_existing_boiler_efficiency(d)
         space_heating_load = SpaceHeatingLoad(; dictkeys_tosymbols(d["SpaceHeatingLoad"])...,
                                                 latitude=site.latitude, longitude=site.longitude, 
-                                                time_steps_per_hour=settings.time_steps_per_hour
+                                                time_steps_per_hour=settings.time_steps_per_hour,
+                                                existing_boiler_efficiency = existing_boiler_efficiency
                                               )
         
         max_heat_demand_kw = maximum(space_heating_load.loads_kw .+ max_heat_demand_kw)
     else
         space_heating_load = SpaceHeatingLoad(; 
             fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
-            time_steps_per_hour=settings.time_steps_per_hour
+            time_steps_per_hour=settings.time_steps_per_hour,
+            existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
         )
     end
 
@@ -313,16 +321,19 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     chp = nothing
     chp_prime_mover = nothing
     if haskey(d, "CHP")
-        if !isnothing(existing_boiler)
+        electric_only = get(d["CHP"], "is_electric_only", false) || get(d["CHP"], "thermal_efficiency_full_load", 0.5) == 0.0
+        if !isnothing(existing_boiler) && !electric_only
             total_fuel_heating_load_mmbtu_per_hour = (space_heating_load.loads_kw + dhw_load.loads_kw) / existing_boiler.efficiency / KWH_PER_MMBTU
             avg_boiler_fuel_load_mmbtu_per_hour = sum(total_fuel_heating_load_mmbtu_per_hour) / length(total_fuel_heating_load_mmbtu_per_hour)
             chp = CHP(d["CHP"]; 
                     avg_boiler_fuel_load_mmbtu_per_hour = avg_boiler_fuel_load_mmbtu_per_hour,
                     existing_boiler = existing_boiler,
-                    electric_load_series_kw = electric_load.loads_kw)
-        else # Only if modeling CHP without heating_load and existing_boiler (for electric-only CHP)
+                    electric_load_series_kw = electric_load.loads_kw,
+                    year = electric_load.year)
+        else # Only if modeling CHP without heating_load and existing_boiler (for prime generator, electric-only)
             chp = CHP(d["CHP"],
-                    electric_load_series_kw = electric_load.loads_kw)
+                    electric_load_series_kw = electric_load.loads_kw,
+                    year = electric_load.year)
         end
         chp_prime_mover = chp.prime_mover
     end
@@ -658,3 +669,15 @@ function add_doe_reference_names_from_elec_to_thermal_loads(elec::Dict, thermal:
     end
 end
 
+function get_existing_boiler_efficiency(d)
+    existing_boiler_temp = ExistingBoiler(;fuel_cost_per_mmbtu=1.0)
+    default_production_type = existing_boiler_temp.production_type
+    if haskey(d, "ExistingBoiler")
+        existing_boiler_production_type = get(d["ExistingBoiler"], "production_type", default_production_type)
+        existing_boiler_efficiency = get(d["ExistingBoiler"], "efficiency", existing_boiler_efficiency_defaults[existing_boiler_production_type])
+    else
+        existing_boiler_efficiency = existing_boiler_efficiency_defaults[default_production_type]
+    end  
+
+    return existing_boiler_efficiency
+end
