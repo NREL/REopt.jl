@@ -1094,7 +1094,7 @@ function get_unavailability_by_tech(s::AbstractScenario, techs::Techs, time_step
             unavailability["CHP"] = [s.chp.unavailability_hourly[i] for i in 1:8760 for _ in 1:s.settings.time_steps_per_hour]
         end
     else
-        unavailability = Dict()
+        unavailability = Dict(""=>Float64[])
     end
     return unavailability
 end
