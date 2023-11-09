@@ -23,6 +23,52 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+
+## Develop 2023-11-07
+### Fixed
+- Fixed AVERT emissions profiles for NOx. Were previously the same as the SO2 profiles. AVERT emissions profiles are currently generated from AVERT v3.2 https://www.epa.gov/avert/download-avert. See REopt User Manual for more information.
+## v0.37.4
+### Fixed
+- Include `year` in creation of electric-only CHP for unavailability profile
+
+## v0.37.3
+### Changed
+- Ignore `CHP` unavailability during stochastic, multiple outages; this is consistent with deterministic single outage
+
+## v0.37.2
+### Changed
+- Do not enforce `CHP.min_turn_down_fraction` for outages
+
+## v0.37.1
+### Fixed
+- CHP-only for multiple/stochastic outages
+- Allow negative fuel_burn and thermal_prod intercepts for CPH
+- Correct after_tax CHP results
+
+## v0.37.0
+### Added
+- Added Bool attribute `is_electric_only` to CHP; if true, default installed and O&M costs are reduced by 25% and, for the reciprocating engine and combustion turbine prime movers, the federal ITC fraction is reduced to zero.
+- Las Vegas CRB data was missing from ElectricLoad, but the climate_cities.shp file does not distinguish between Las Angeles and Las Vegas
+### Changed
+- Update `CHP.size_class` after heuristic size is determined based on size_class=0 guess (not input)
+### Fixed
+- Use the user-input `ExistingBoiler.efficiency` value for converting fuel input to thermal to preserve annual fuel energy input
+- Fix heating loads monthly_mmbtu and addressable_load_fraction handling (type issues mostly)
+- Bug fix for user-supplied 8760 WHL rates with tiered energy rate
+
+## v0.36.0
+### Changed
+- Changed default values by prime mover for CHP technologies in `data/chp/chp_defaults.json`.  See user manual for details by prime mover and size class.
+- Updated the package dependencies to be compatible with recent changes to HiGHS (for testing) and MathOptInterface
+### Fixed
+- The present worth factor for fuel (pwf_fuel) was not properly multiplying for lifecycle fuel costs
+
+## v0.35.1
+### Fixed
+- Add GHP to proforma metrics for when GHP is evaluated (should have been there)
+### Added
+- Add different BAU outputs for heating and cooling systems
+
 ## v0.35.0
 ### Changed
 - ANNUAL UPDATE TO DEFAULT VALUES. Changes outlined below with (old value) --> (new value). See user manual for references. 
@@ -48,6 +94,7 @@ Classify the change according to the following categories:
   - Fixed O&M ($/kW/yr): **Generator** **om_cost_per_kw** Grid connected: 10 Off-grid: 20 --> Grid connected: 20 Off-grid: 10
   - System capital cost ($/kW) by Class: **Wind** **size_class_to_installed_cost**	residential - 5675 commercial - 4300 medium - 2766 large - 2239 --> residential - 6339 commercial - 4760 medium - 3137 large - 2386
   - O&M cost ($/kW/year): **Wind** **om_cost_per_kw** 35 --> 36
+ 
 ## v0.34.0
 ### Added
 - Ability to run hybrid GHX sizing using **GhpGhx.jl** (automatic and fractional sizing)
@@ -56,7 +103,6 @@ Classify the change according to the following categories:
 ### Fixed
 - Fix output of `get_tier_with_lowest_energy_rate(u::URDBrate)` to return an index and not cartesian coordinates for multi-tier energy rates.
 - Updated **GHP** cost curve calculations so incentives apply to all GHP components
-
 ### Changed
 - If a `REoptInputs` object solves with termination status infeasible, altert user and return a dictionary insteadof JuMP model
 
