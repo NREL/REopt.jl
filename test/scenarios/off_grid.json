@@ -1,7 +1,8 @@
 {
     "Settings":{
         "time_steps_per_hour": 1,
-        "off_grid_flag": true
+        "off_grid_flag": true,
+        "add_soc_incentive": false
     },
     "Site": {
         "longitude": -118.1164613,

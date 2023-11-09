@@ -153,7 +153,7 @@ function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.Abst
 			end
 			return results_dict
 		else
-			throw(@error("REopt scenarios solved either with errors of non-optimal solutions."))
+			throw(@error("REopt scenarios solved either with errors or non-optimal solutions."))
 		end
 	catch e
 		if isnothing(e) # Error thrown by REopt
@@ -365,9 +365,13 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	add_elec_utility_expressions(m, p)
 
 	if !isempty(p.s.electric_utility.outage_durations)
-		add_dv_UnservedLoad_constraints(m,p)
+		unavailability = Dict(tech => zeros(length(p.time_steps)) for tech in p.techs.elec)
+        if !isempty(p.techs.chp)
+            unavailability["CHP"] = [p.s.chp.unavailability_hourly[i] for i in 1:8760 for _ in 1:p.s.settings.time_steps_per_hour]
+        end
+        add_dv_UnservedLoad_constraints(m,p,unavailability)
 		add_outage_cost_constraints(m,p)
-		add_MG_production_constraints(m,p)
+		add_MG_production_constraints(m,p,unavailability)
 		if !isempty(p.s.storage.types.elec)
 			add_MG_storage_dispatch_constraints(m,p)
 		else
@@ -375,7 +379,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 		add_cannot_have_MG_with_only_PVwind_constraints(m,p)
 		add_MG_size_constraints(m,p)
-		0
+		
 		m[:ExpectedMGFuelCost] = 0
         if !isempty(p.techs.gen)
 			add_MG_Gen_fuel_burn_constraints(m,p)

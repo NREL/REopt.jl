@@ -173,7 +173,7 @@ function MPCElectricTariff(d::Dict)
     if !isnothing(export_rates)
         export_rates = convert(Vector{Real}, export_rates)
     end
-    whl_rate = create_export_rate(export_rates, length(energy_rates), 1)
+    whl_rate = create_export_rate(export_rates, length(energy_rates[:,1]), 1)
 
     if !NEM & (sum(whl_rate) >= 0)
         export_rates = DenseAxisArray{Array{Float64,1}}(undef, [])

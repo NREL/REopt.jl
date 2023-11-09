@@ -7,13 +7,13 @@ function add_chp_fuel_burn_constraints(m, p; _n="")
     fuel_burn_intercept = fuel_burn_full_load - fuel_burn_slope * 1.0  # [kWt/kWe_rated]
 
     # Fuel cost
-    m[:TotalCHPFuelCosts] = @expression(m, p.pwf_fuel[t] *
-        sum(m[:dvFuelUsage][t, ts] * p.fuel_cost_per_kwh[t][ts] for t in p.techs.chp, ts in p.time_steps)
+    m[:TotalCHPFuelCosts] = @expression(m, 
+        sum(p.pwf_fuel[t] * m[:dvFuelUsage][t, ts] * p.fuel_cost_per_kwh[t][ts] for t in p.techs.chp, ts in p.time_steps)
     )      
     # Conditionally add dvFuelBurnYIntercept if coefficient p.FuelBurnYIntRate is greater than ~zero
-    if fuel_burn_intercept > 1.0E-7
+    if abs(fuel_burn_intercept) > 1.0E-7
         dv = "dvFuelBurnYIntercept"*_n
-        m[Symbol(dv)] = @variable(m, [p.techs.chp, p.time_steps], base_name=dv, lower_bound=0)
+        m[Symbol(dv)] = @variable(m, [p.techs.chp, p.time_steps], base_name=dv)
 
         #Constraint (1c1): Total Fuel burn for CHP **with** y-intercept fuel burn and supplementary firing
         @constraint(m, CHPFuelBurnCon[t in p.techs.chp, ts in p.time_steps],
@@ -47,9 +47,9 @@ function add_chp_thermal_production_constraints(m, p; _n="")
     thermal_prod_intercept = thermal_prod_full_load - thermal_prod_slope * 1.0  # [kWt/kWe_rated
 
     # Conditionally add dvThermalProductionYIntercept if coefficient p.s.chpThermalProdIntercept is greater than ~zero
-    if thermal_prod_intercept > 1.0E-7
+    if abs(thermal_prod_intercept) > 1.0E-7
         dv = "dvThermalProductionYIntercept"*_n
-        m[Symbol(dv)] = @variable(m, [p.techs.chp, p.time_steps], base_name=dv, lower_bound=0)
+        m[Symbol(dv)] = @variable(m, [p.techs.chp, p.time_steps], base_name=dv)
 
         #Constraint (2a-1): Upper Bounds on Thermal Production Y-Intercept
         @constraint(m, CHPYInt2a1Con[t in p.techs.chp, ts in p.time_steps],
@@ -138,7 +138,7 @@ function add_chp_hourly_om_charges(m, p; _n="")
     #Constraint CHP-hourly-om-a: om per hour, per time step >= per_unit_size_cost * size for when on, >= zero when off
 	@constraint(m, CHPHourlyOMBySizeA[t in p.techs.chp, ts in p.time_steps],
         p.s.chp.om_cost_per_hr_per_kw_rated * m[Symbol("dvSize"*_n)][t] -
-        p.max_size[t] * p.s.chp.om_cost_per_hr_per_kw_rated * (1-m[Symbol("binCHPIsOnInTS"*_n)][t,ts])
+        p.s.chp.max_kw * p.s.chp.om_cost_per_hr_per_kw_rated * (1-m[Symbol("binCHPIsOnInTS"*_n)][t,ts])
             <= m[Symbol("dvOMByHourBySizeCHP"*_n)][t, ts]
     )
 	#Constraint CHP-hourly-om-b: om per hour, per time step <= per_unit_size_cost * size for each hour
@@ -148,7 +148,7 @@ function add_chp_hourly_om_charges(m, p; _n="")
     )
 	#Constraint CHP-hourly-om-c: om per hour, per time step <= zero when off, <= per_unit_size_cost*max_size
 	@constraint(m, CHPHourlyOMBySizeC[t in p.techs.chp, ts in p.time_steps],
-        p.max_size[t] * p.s.chp.om_cost_per_hr_per_kw_rated * m[Symbol("binCHPIsOnInTS"*_n)][t,ts]
+        p.s.chp.max_kw * p.s.chp.om_cost_per_hr_per_kw_rated * m[Symbol("binCHPIsOnInTS"*_n)][t,ts]
             >= m[Symbol("dvOMByHourBySizeCHP"*_n)][t, ts]
     )
     
