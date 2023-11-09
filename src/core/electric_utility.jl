@@ -156,6 +156,9 @@ struct ElectricUtility
             end
         end
         
+        if !isempty(outage_durations) && min_resil_time_steps > maximum(outage_durations)
+            throw(@error("Site input min_resil_time_steps cannot be greater than the maximum value in ElectricUtility input outage_durations"))
+        end
         if (!isempty(outage_start_time_steps) && isempty(outage_durations)) || (isempty(outage_start_time_steps) && !isempty(outage_durations))
             throw(@error("ElectricUtility inputs outage_start_time_steps and outage_durations must both be provided to model multiple outages"))
         end
