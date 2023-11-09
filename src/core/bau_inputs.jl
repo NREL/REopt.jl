@@ -126,6 +126,8 @@ function BAUInputs(p::REoptInputs)
     end
     setup_bau_emissions_inputs(p, bau_scenario, generator_fuel_use_gal)
 
+    unavailability = get_unavailability_by_tech(p.s, techs, p.time_steps)
+
     REoptInputs(
         bau_scenario,
         techs,
@@ -185,7 +187,8 @@ function BAUInputs(p::REoptInputs)
         tech_emissions_factors_NOx, 
         tech_emissions_factors_SO2, 
         tech_emissions_factors_PM25,
-        p.techs_operating_reserve_req_fraction
+        p.techs_operating_reserve_req_fraction,
+        unavailability
     )
 end
 
