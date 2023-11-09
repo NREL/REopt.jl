@@ -61,6 +61,7 @@ struct REoptInputs <: AbstractInputs
     tech_emissions_factors_SO2::Dict{String, <:Real} # (techs)
     tech_emissions_factors_PM25::Dict{String, <:Real} # (techs)
     techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
+    unavailability::Dict{String, Array{Float64,1}}  # Dict by tech of unavailability profile
 end
 ```
 """
@@ -124,6 +125,7 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     tech_emissions_factors_SO2::Dict{String, <:Real} # (techs)
     tech_emissions_factors_PM25::Dict{String, <:Real} # (techs)
     techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
+    unavailability::Dict{String, Array{Float64,1}} # (techs.elec)
 end
 
 
@@ -185,6 +187,8 @@ function REoptInputs(s::AbstractScenario)
         adjust_load_profile(s, production_factor)
     end
 
+    unavailability = get_unavailability_by_tech(s, techs, time_steps)
+
     REoptInputs(
         s,
         techs,
@@ -244,7 +248,8 @@ function REoptInputs(s::AbstractScenario)
         tech_emissions_factors_NOx, 
         tech_emissions_factors_SO2, 
         tech_emissions_factors_PM25,
-        techs_operating_reserve_req_fraction 
+        techs_operating_reserve_req_fraction,
+        unavailability 
     )
 end
 
@@ -1080,4 +1085,16 @@ function get_ghp_installed_cost(option::AbstractTech, financial::Financial, ghp_
     variable_cost = ghp_size_ton * ghp_cap_cost_slope[seg-1]
 
     return fixed_cost, variable_cost
+end
+
+function get_unavailability_by_tech(s::AbstractScenario, techs::Techs, time_steps)
+    if !isempty(techs.elec)
+        unavailability = Dict(tech => zeros(length(time_steps)) for tech in techs.elec)
+        if !isempty(techs.chp)
+            unavailability["CHP"] = [s.chp.unavailability_hourly[i] for i in 1:8760 for _ in 1:s.settings.time_steps_per_hour]
+        end
+    else
+        unavailability = Dict()
+    end
+    return unavailability
 end
