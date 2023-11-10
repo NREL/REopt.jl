@@ -197,7 +197,7 @@ Base.@kwdef struct ElectricStorageDefaults
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
-    battery_hour::Real = 8.0
+    battery_hour::Real = 35.0
 end
 
 
