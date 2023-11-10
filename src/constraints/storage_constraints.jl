@@ -105,7 +105,7 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
 
     # # Constraint (4f)-1: (Hot) Thermal production sent to storage or grid must be less than technology's rated production
 	# # Constraint (4f)-1a: BoilerTechs
-	for t in union(p.techs.boiler, p.techs.electric_heater)
+	for t in p.techs.boiler
 		if !isempty(p.techs.steam_turbine) && (t in p.techs.can_supply_steam_turbine)
             @constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
                     m[Symbol("dvHeatToStorage"*_n)][b,t,ts] + m[Symbol("dvThermalToSteamTurbine"*_n)][t,q,ts]  <=
@@ -116,6 +116,22 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
                     m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts]  <=
                     m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
                     )
+        end
+    end
+
+    if !isempty(p.techs.electric_heater)
+        for t in p.techs.electric_heater
+            if !isempty(p.techs.steam_turbine) && (t in p.techs.can_supply_steam_turbine)
+                @constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
+                        m[Symbol("dvProductionToStorage"*_n)][b,t,ts] + m[Symbol("dvThermalToSteamTurbine"*_n)][t,ts]  <=
+                        m[Symbol("dvThermalProduction"*_n)][t,ts]
+                        )
+            else
+                @constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
+                        m[Symbol("dvProductionToStorage"*_n)][b,t,ts]  <=
+                        m[Symbol("dvThermalProduction"*_n)][t,ts]
+                        )
+            end
         end
     end
 
