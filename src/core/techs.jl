@@ -62,7 +62,7 @@ function Techs(p::REoptInputs, s::BAUScenario)
     fuel_burning_techs = union(gentechs, boiler_techs, chp_techs)
     thermal_techs = union(heating_techs, boiler_techs, cooling_techs)
 
-    dc_couple_with_stor = String[pv.name for pv in s.pvs if pv.dc_coupled_with_electric_storage]
+    dc_couple_with_stor = String[pv.name for pv in s.pvs if pv.dc_coupled_with_storage]
     ac_couple_with_stor = setdiff(elec, dc_couple_with_stor)
 
     Techs(
@@ -345,7 +345,7 @@ function Techs(s::Scenario)
         end 
     end
     
-    dc_couple_with_stor = String[pv.name for pv in s.pvs if pv.dc_coupled_with_electric_storage]
+    dc_couple_with_stor = String[pv.name for pv in s.pvs if pv.dc_coupled_with_storage]
     ac_couple_with_stor = setdiff(elec, dc_couple_with_stor)
 
     Techs(

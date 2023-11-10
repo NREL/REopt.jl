@@ -513,7 +513,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     pv.production_factor_series, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
                                                                                         array_type=pv.array_type, losses=round(pv.losses*100, digits=3), dc_ac_ratio=pv.dc_ac_ratio,
                                                                                         gcr=pv.gcr, inv_eff=pv.inv_eff*100, timeframe="hourly", radius=pv.radius, 
-                                                                                        time_steps_per_hour=settings.time_steps_per_hour, dc_coupled_with_electric_storage=pv.dc_coupled_with_electric_storage)
+                                                                                        time_steps_per_hour=settings.time_steps_per_hour, dc_coupled_with_storage=pv.dc_coupled_with_storage)
                 end
             else
                 pv_prodfactor, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; time_steps_per_hour=settings.time_steps_per_hour)    
