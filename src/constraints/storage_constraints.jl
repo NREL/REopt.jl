@@ -107,8 +107,8 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
 	# # Constraint (4f)-1a: BoilerTechs
 	for t in p.techs.boiler
 		if !isempty(p.techs.steam_turbine) && (t in p.techs.can_supply_steam_turbine)
-            @constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
-                    m[Symbol("dvHeatToStorage"*_n)][b,t,ts] + m[Symbol("dvThermalToSteamTurbine"*_n)][t,q,ts]  <=
+            @constraint(m, [b in p.s.storage.types.hot, q in p.heating_loads, ts in p.time_steps],
+                    m[Symbol("dHeatToStorage"*_n)][b,t,q,ts] + m[Symbol("dvThermalToSteamTurbine"*_n)][t,q,ts]  <=
                     m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
                     )
         else
@@ -122,14 +122,14 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
     if !isempty(p.techs.electric_heater)
         for t in p.techs.electric_heater
             if !isempty(p.techs.steam_turbine) && (t in p.techs.can_supply_steam_turbine)
-                @constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
-                        m[Symbol("dvProductionToStorage"*_n)][b,t,ts] + m[Symbol("dvThermalToSteamTurbine"*_n)][t,ts]  <=
-                        m[Symbol("dvThermalProduction"*_n)][t,ts]
+                @constraint(m, [b in p.s.storage.types.hot, q in p.heating_loads, ts in p.time_steps],
+                        m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] + m[Symbol("dvThermalToSteamTurbine"*_n)][t,q,ts]  <=
+                        m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
                         )
             else
-                @constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
-                        m[Symbol("dvProductionToStorage"*_n)][b,t,ts]  <=
-                        m[Symbol("dvThermalProduction"*_n)][t,ts]
+                @constraint(m, [b in p.s.storage.types.hot, q in p.heating_loads, ts in p.time_steps],
+                        m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts]  <=
+                        m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
                         )
             end
         end
