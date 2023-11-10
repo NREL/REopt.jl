@@ -108,12 +108,6 @@ function add_dc_coupled_tech_elec_storage_constraints(m, p, b)
 	@constraint(m,
         m[:dvDCCoupledTechStorageInverterSize][b] >= m[:dvStoragePower][b]
     )
-    
-    # Constraint (4d)-2: Don't let AC coupled elec techs charge battery. 
-    # Future development could make this an option by adding a bool input and creating the set p.techs.elec_cannot_charge_stor that is different than p.techs.ac_couple_with_stor
-    @constraint(m, [t in p.techs.ac_couple_with_stor, ts in ts in p.time_steps],
-        m[:dvProductionToStorage][b,t,ts] == 0
-    )
 end
 
 function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
