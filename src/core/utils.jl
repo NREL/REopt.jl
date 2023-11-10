@@ -359,13 +359,13 @@ end
 
 """
     call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimuth=180, module_type=0, array_type=1, 
-        losses=14, dc_ac_ratio=1.2, gcr=0.4, inv_eff=96, timeframe="hourly", radius=0, time_steps_per_hour=1, dc_coupled_with_electric_storage=false)
+        losses=14, dc_ac_ratio=1.2, gcr=0.4, inv_eff=96, timeframe="hourly", radius=0, time_steps_per_hour=1, dc_coupled_with_storage=false)
 This calls the PVWatts API and returns both:
  - PV production factor
  - Ambient outdoor air dry bulb temperature profile [Celcius] 
 """
 function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimuth=180, module_type=0, array_type=1, 
-    losses=14, dc_ac_ratio=1.2, gcr=0.4, inv_eff=96, timeframe="hourly", radius=0, time_steps_per_hour=1, dc_coupled_with_electric_storage = false)
+    losses=14, dc_ac_ratio=1.2, gcr=0.4, inv_eff=96, timeframe="hourly", radius=0, time_steps_per_hour=1, dc_coupled_with_storage = false)
     # Check if site is beyond the bounds of the NRSDB TMY dataset. If so, use the international dataset.
     dataset = "nsrdb"
     if longitude < -179.5 || longitude > -21.0 || latitude < -21.5 || latitude > 60.0
@@ -392,7 +392,7 @@ function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimut
         end
         @info "PVWatts success."
         # Get both possible data of interest
-        pv_profile_key = dc_coupled_with_electric_storage ? "dc" : "ac"
+        pv_profile_key = dc_coupled_with_storage ? "dc" : "ac"
         watts = collect(get(response["outputs"], pv_profile_key, []) / 1000)  # scale to 1 kW system (* 1 kW / 1000 W)
         tamb_celcius = collect(get(response["outputs"], "tamb", []))  # Celcius
         # Validate outputs
