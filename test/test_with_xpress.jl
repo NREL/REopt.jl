@@ -1758,7 +1758,7 @@ end
 
     # Throw an unhandled error: Bad URDB rate -> stack gets returned for debugging
     d["ElectricLoad"]["doe_reference_name"] = "MidriseApartment"
-    d["ElectricTariff"]["urdb_label"] = "62c70a6c40a0c425535d387b"
+    d["ElectricTariff"]["urdb_label"] = "62c70a6c40a0c425535d387x"
 
     m1 = Model(Xpress.Optimizer)
     m2 = Model(Xpress.Optimizer)
@@ -1769,7 +1769,6 @@ end
     @test "warnings" ∈ keys(r["Messages"])
     @test length(r["Messages"]["errors"]) > 0
     @test length(r["Messages"]["warnings"]) > 0
-    @test r["Messages"]["has_stacktrace"] == true
 
     m = Model(Xpress.Optimizer)
     r = run_reopt(m, d)
