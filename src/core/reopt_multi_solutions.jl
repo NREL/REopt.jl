@@ -29,6 +29,8 @@ function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vec
     ms_count = 1
     # Decide which state incentives to apply
     best_incentive_program_name = "None"
+    incentive_type = "None"
+    incentive_value = 0.0
     net_metering_from_dsire = "false"
     if !isempty(state) && haskey(input_data, "PV")
         tech = "PV"
@@ -38,7 +40,11 @@ function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vec
         best_incentives = ""
         for (i, scenario) in enumerate(keys(reopt_inputs_scenarios))
             incentive_name = pop!(reopt_inputs_scenarios[scenario], "incentive_program_name")
+            incentive_type = pop!(reopt_inputs_scenarios[scenario], "type")
+            incentive_value = pop!(reopt_inputs_scenarios[scenario], "value")
             delete!(get(reopt_inputs_scenarios[scenario], "PV", Dict()), "incentive_program_name")
+            delete!(get(reopt_inputs_scenarios[scenario], "PV", Dict()), "type")
+            delete!(get(reopt_inputs_scenarios[scenario], "PV", Dict()), "value")
             s = Scenario(reopt_inputs_scenarios[scenario])
             inputs = REoptInputs(s)
             m = ms[i]
@@ -96,7 +102,10 @@ function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vec
     end
     results_summary = Dict("optimal" => get_multi_solutions_results_summary(results_dict, p, ms[ms_count-1], techs_sized, simresults, outage_start_hour, outage_duration_hours))
     results_summary["incentive_used"] = Dict("best_incentive_program_name" => best_incentive_program_name,
-                                            "net_metering_from_dsire" => net_metering_from_dsire)
+                                            "net_metering_from_dsire" => net_metering_from_dsire,
+                                            "state" => state,
+                                            "type" => incentive_type,
+                                            "value" => incentive_value)
     # Add custom resilience output to results_all, per Eaton's request
     results_dict["resilience"] = results_summary["optimal"]["resilience"]
     results_dict["incentive_used"] = results_summary["incentive_used"]

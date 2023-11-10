@@ -70,11 +70,15 @@ function get_incentives_scenarios(reopt_inputs::Dict; state_abbr::String="", tec
         if !isempty(basis)
             # Assign REopt inputs from DSIRE.db data for that program
             program_data = inputs_map[basis*"_based"]
-            reopt_inputs_to_assign[basis]["incentive_program_name"] = state_incentive_program_data[program]["name"]
+            reopt_inputs_to_assign[basis]["incentive_program_name"] = state_incentive_program_data[program]["name"] 
             for key in keys(program_data)
                 if key in setdiff(keys(state_incentive_program_data[program]), ["name"])
                     # Skipping unused keys for now
                     reopt_inputs_to_assign[basis][program_data[key]] = state_incentive_program_data[program][key]
+                    if occursin("based_incentive", key)
+                        reopt_inputs_to_assign[basis]["type"] = key
+                        reopt_inputs_to_assign[basis]["value"] = state_incentive_program_data[program][key]
+                    end
                 end
             end
         end
@@ -90,6 +94,8 @@ function get_incentives_scenarios(reopt_inputs::Dict; state_abbr::String="", tec
     for basis in keys(reopt_inputs_to_assign)
         reopt_inputs_scenarios[basis] = deepcopy(reopt_inputs)
         reopt_inputs_scenarios[basis]["incentive_program_name"] = reopt_inputs_to_assign[basis]["incentive_program_name"]
+        reopt_inputs_scenarios[basis]["type"] = reopt_inputs_to_assign[basis]["type"]
+        reopt_inputs_scenarios[basis]["value"] = reopt_inputs_to_assign[basis]["value"]
         for input in keys(reopt_inputs_to_assign[basis])
             reopt_inputs_scenarios[basis][tech][input] = reopt_inputs_to_assign[basis][input]
         end
