@@ -144,17 +144,26 @@ function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.Abst
 		Threads.@threads for i = 1:2
 			rs[i] = run_reopt(inputs[i])
 		end
-		if typeof(rs[1]) <: Dict && typeof(rs[2]) <: Dict && rs[1]["status"] != "error" && rs[2]["status"] != "error"
-			# TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
-			results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
-			results_dict["Financial"] = merge(results_dict["Financial"], proforma_results(p, results_dict))
-			if !isempty(p.techs.pv)
-				organize_multiple_pv_results(p, results_dict)
-			end
-			return results_dict
-		else
-			throw(@error("REopt scenarios solved either with errors of non-optimal solutions."))
+		if !(typeof(rs[1]) <: Dict && typeof(rs[2]) <: Dict)
+			failed_scenarios = typeof(rs[1]) <: Dict ? "with-DERs scenario" : (typeof(rs[2]) <: Dict ? "business-as-usual scenario" : "scenarios")
+			throw(@error(string("REopt ", failed_scenarios," solved with non-optimal solution.")))
 		end
+		if rs[1]["status"] == "error"
+			if rs[2]["status"] == "error"
+				merge!(rs[1]["Messages"]["errors"], rs[2]["Messages"]["errors"])
+				merge!(rs[1]["Messages"]["warnings"], rs[2]["Messages"]["warnings"])
+			end
+			return rs[1]
+		elseif rs[2]["status"] == "error"
+			return rs[2]
+		end
+		# TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
+		results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
+		results_dict["Financial"] = merge(results_dict["Financial"], proforma_results(p, results_dict))
+		if !isempty(p.techs.pv)
+			organize_multiple_pv_results(p, results_dict)
+		end
+		return results_dict
 	catch e
 		if isnothing(e) # Error thrown by REopt
 			handle_errors()
@@ -544,7 +553,6 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 		if organize_pvs && !isempty(p.techs.pv)  # do not want to organize_pvs when running BAU case in parallel b/c then proform code fails
 			organize_multiple_pv_results(p, results)
 		end
-
 		# add error messages (if any) and warnings to results dict
 		results["Messages"] = logger_to_dict()
 
