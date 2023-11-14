@@ -5,8 +5,12 @@ using HiGHS
 using JSON
 using REopt
 
+if "Debug" in ARGS
+    @testset "debugging_tests" begin
+        include("debugging_tests.jl")
+    end
 
-if "Xpress" in ARGS
+elseif "Xpress" in ARGS
     @testset "test_with_xpress" begin
         include("test_with_xpress.jl")
     end
