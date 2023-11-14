@@ -130,8 +130,8 @@ end
 
 function add_dc_coupled_tech_elec_storage_constraints(m, p, b; _n="")
 	# Constraint (4d)-1: Lower bound on DC coupled PV and battery inverter power capacity
-	@constraint(m,
-        m[:dvDCCoupledTechStorageInverterSize][b] >= m[:dvStoragePower][b]
+    @constraint(m, [ts in p.time_steps],
+        m[Symbol("dvDCCoupledTechStorageInverterSize"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b,ts] + sum(m[Symbol("dvProductionToGrid"*_n)][t,u,ts] for t in p.techs.dc_couple_with_stor, u in p.export_bins_by_tech[t])
     )
 end
 
