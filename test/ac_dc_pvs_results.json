@@ -1,0 +1,44 @@
+{
+    "Messages": {
+        "errors": [
+            [
+                "KeyError(:dvProductionToGrid)",
+                [
+                    "getindex(m::Model, name::Symbol) at JuMP.jl:918",
+                    "macro expansion at rewrite_generic.jl:268 [inlined]",
+                    "macro expansion at rewrite.jl:321 [inlined]",
+                    "macro expansion at macros.jl:710 [inlined]",
+                    "(::REopt.var\"#318#319\"{String, REoptInputs{Scenario}, String, Model})(ts::Int64) at macro.jl:301",
+                    "#87 at container.jl:124 [inlined]",
+                    "iterate at generator.jl:47 [inlined]",
+                    "collect(itr::Base.Generator{JuMP.Containers.VectorizedProductIterator{Tuple{UnitRange{Int64}}}, JuMP.Containers.var\"#87#89\"{REopt.var\"#318#319\"{String, REoptInputs{Scenario}, String, Model}}}) at array.jl:787",
+                    "map(f::Function, A::JuMP.Containers.VectorizedProductIterator{Tuple{UnitRange{Int64}}}) at abstractarray.jl:2961",
+                    "container(f::Function, indices::JuMP.Containers.VectorizedProductIterator{Tuple{UnitRange{Int64}}}, ::Type{JuMP.Containers.DenseAxisArray}, names::Vector{Any}) at container.jl:123",
+                    "container(f::Function, indices::JuMP.Containers.VectorizedProductIterator{Tuple{UnitRange{Int64}}}, #unused#::Type{JuMP.Containers.AutoContainerType}, names::Vector{Any}) at container.jl:75",
+                    "macro expansion at macros.jl:1211 [inlined]",
+                    "add_dc_coupled_tech_elec_storage_constraints(m::Model, p::REoptInputs{Scenario}, b::String; _n::String) at storage_constraints.jl:108",
+                    "add_dc_coupled_tech_elec_storage_constraints at storage_constraints.jl:106 [inlined]",
+                    "build_reopt!(m::Model, p::REoptInputs{Scenario}) at reopt.jl:232",
+                    "run_reopt(m::Model, p::REoptInputs{Scenario}; organize_pvs::Bool) at reopt.jl:528",
+                    "run_reopt at reopt.jl:525 [inlined]",
+                    "run_reopt at reopt.jl:91 [inlined]",
+                    "macro expansion at reopt.jl:145 [inlined]",
+                    "(::REopt.var\"#8659#threadsfor_fun#981\"{REopt.var\"#8659#threadsfor_fun#980#982\"{Vector{Any}, Tuple{Tuple{Model, REoptInputs{BAUScenario}}, Tuple{Model, REoptInputs{Scenario}}}, UnitRange{Int64}}})(tid::Int64; onethread::Bool) at threadingconstructs.jl:84",
+                    "#8659#threadsfor_fun at threadingconstructs.jl:51 [inlined]",
+                    "(::Base.Threads.var\"#1#2\"{REopt.var\"#8659#threadsfor_fun#981\"{REopt.var\"#8659#threadsfor_fun#980#982\"{Vector{Any}, Tuple{Tuple{Model, REoptInputs{BAUScenario}}, Tuple{Model, REoptInputs{Scenario}}}, UnitRange{Int64}}}, Int64})() at threadingconstructs.jl:30"
+                ]
+            ]
+        ],
+        "has_stacktrace": true,
+        "warnings": [
+            [
+                "core_pv.jl_152",
+                [
+                    "PV inv_eff will be ignored because dc_coupled_with_storage=true. The inverter of the DC coupled PV and electric storage system will be defined by ElectricStorage inverter_efficiency_fraction and rectifier_efficiency_fraction.",
+                    "PV inv_eff will be ignored because dc_coupled_with_storage=true. The inverter of the DC coupled PV and electric storage system will be defined by ElectricStorage inverter_efficiency_fraction and rectifier_efficiency_fraction."
+                ]
+            ]
+        ]
+    },
+    "status": "error"
+}

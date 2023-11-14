@@ -29,9 +29,7 @@
         {
           "name": "ground",
           "dc_coupled_with_storage": true,
-          "existing_kw": 5.0,
-          "min_kw": 10.0,
-          "max_kw": 10.0,
+          "existing_kw": 40.0,
           "installed_cost_per_kw": 1600.0,
           "om_cost_per_kw": 16.0,
           "macrs_option_years": 5,
@@ -51,9 +49,7 @@
         },
         {
           "name": "roof_west",
-          "existing_kw": 5.0,
-          "min_kw": 2.0,
-          "max_kw": 2.0,
+          "existing_kw": 30.0,
           "installed_cost_per_kw": 1600.0,
           "om_cost_per_kw": 16.0,
           "macrs_option_years": 5,
@@ -74,8 +70,6 @@
         {
           "name": "roof_east",
           "existing_kw": 0.0,
-          "min_kw": 4.0,
-          "max_kw": 4.0,
           "installed_cost_per_kw": 1600.0,
           "om_cost_per_kw": 16.0,
           "macrs_option_years": 5,

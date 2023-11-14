@@ -10,21 +10,24 @@ using DelimitedFiles
         JSON.print(f, results, 4)
     end   
 
-    @test results["ElectricStorage"]["size_kw"] ≈ 8.5 atol=0.1
-    @test results["ElectricStorage"]["size_kwh"] ≈ 19.09 atol=0.1
+    @test results["ElectricStorage"]["size_kw"] ≈ 17.01 atol=0.1
+    @test results["ElectricStorage"]["size_kwh"] ≈ 32.76 atol=0.1
+    @test results["ElectricStorage"]["dc_couple_inverter_size_kw"] ≈ 17.01 atol=0.1
 
     ground_pv = results["PV"][findfirst(pv -> pv["name"] == "ground", results["PV"])]
     roof_west = results["PV"][findfirst(pv -> pv["name"] == "roof_west", results["PV"])]
     roof_east = results["PV"][findfirst(pv -> pv["name"] == "roof_east", results["PV"])]
 
-    @test ground_pv["size_kw"] ≈ 15 atol=0.1
-    @test roof_west["size_kw"] ≈ 7 atol=0.1
-    @test roof_east["size_kw"] ≈ 4 atol=0.1
-    @test ground_pv["lifecycle_om_cost_after_tax_bau"] ≈ 782.0 atol=0.1
-    @test roof_west["lifecycle_om_cost_after_tax_bau"] ≈ 782.0 atol=0.1
-    @test ground_pv["annual_energy_produced_kwh_bau"] ≈ 8933.09 atol=0.1
-    @test roof_west["annual_energy_produced_kwh_bau"] ≈ 7656.11 atol=0.1
-    @test ground_pv["annual_energy_produced_kwh"] ≈ 26799.26 atol=0.1
-    @test roof_west["annual_energy_produced_kwh"] ≈ 10719.51 atol=0.1
-    @test roof_east["annual_energy_produced_kwh"] ≈ 6685.95 atol=0.1
+    @test ground_pv["size_kw"] ≈ 81.6667 atol=0.1
+    @test roof_west["size_kw"] ≈ 30.0 atol=0.1
+    @test roof_east["size_kw"] ≈ 10.0 atol=0.1
+    @test ground_pv["lifecycle_om_cost_after_tax_bau"] ≈ 6256.0 atol=0.1
+    @test roof_west["lifecycle_om_cost_after_tax_bau"] ≈ 4692.0 atol=0.1
+    @test ground_pv["annual_energy_produced_kwh_bau"] ≈ 71463.73 atol=0.1
+    @test roof_west["annual_energy_produced_kwh_bau"] ≈ 45938.58 atol=0.1
+    @test ground_pv["annual_energy_produced_kwh"] ≈ 145904.83 atol=0.1
+    @test roof_west["annual_energy_produced_kwh"] ≈ 45938.58 atol=0.1
+    @test roof_east["annual_energy_produced_kwh"] ≈ 16714.41 atol=0.1
+    @test sum(roof_west["electric_to_storage_series_kw"]) ≈ 0 atol=0.1
+    @test sum(roof_east["electric_to_storage_series_kw"]) ≈ 0 atol=0.1
 end
