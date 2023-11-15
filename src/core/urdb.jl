@@ -117,7 +117,7 @@ end
 
 #TODO: refactor two download_urdb to reduce duplicated code
 function download_urdb(urdb_label::String; version::Int=8)
-    url = string("https://api.openei.org/utility_rates", "?api_key=", urdb_key,
+    url = string("https://api.openei.org/utility_rates", "?api_key=", ENV["URDB_API_KEY"],
                 "&version=", version , "&format=json", "&detail=full",
                 "&getpage=", urdb_label
     )
@@ -146,7 +146,7 @@ end
 
 
 function download_urdb(util_name::String, rate_name::String; version::Int=8)
-    url = string("https://api.openei.org/utility_rates", "?api_key=", urdb_key,
+    url = string("https://api.openei.org/utility_rates", "?api_key=", ENV["URDB_API_KEY"],
                 "&version=", version , "&format=json", "&detail=full",
                 "&ratesforutility=", replace(util_name, "&" => "%26")
     )

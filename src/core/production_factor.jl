@@ -65,7 +65,7 @@ function get_production_factor(wind::Wind, latitude::Real, longitude::Real, time
 
         for height in heights_for_sam
             url = string("https://developer.nrel.gov/api/wind-toolkit/v2/wind/wtk-srw-download", 
-                "?api_key=", nrel_developer_key,
+                "?api_key=", ENV["NREL_DEVELOPER_API_KEY"],
                 "&lat=", latitude , "&lon=", longitude, 
                 "&hubheight=", Int(height), "&year=", 2012
             )
