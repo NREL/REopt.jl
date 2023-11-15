@@ -36,8 +36,6 @@ jobs:
         - name: Decrypt
           env:
             TRANSCRYPT_PASSWORD: ${{ secrets.TRANSCRYPT_PASSWORD }}
-            NREL_DEVELOPER_API_KEY: gAfosXcQ9Ldfw3qXqvKVb7PxMEkYigozmC9R3mXQ
-            URDB_API_KEY: 2qt5uihpKXdywTj3uMIhBewxY9K4eNjpRje1JUPL
           run: ./.github/scripts/decrypt.sh 
         - name: Build containers
           run: docker-compose up -d
