@@ -22,5 +22,4 @@ RUN printf 's\n\nn\n\n.\n\n\n' | ./install.sh >> license_info.txt;
 WORKDIR /opt/reopt/
 COPY . .
 
-
 CMD ["bash"]
