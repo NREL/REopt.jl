@@ -22,4 +22,7 @@ RUN printf 's\n\nn\n\n.\n\n\n' | ./install.sh >> license_info.txt;
 WORKDIR /opt/reopt/
 COPY . .
 
+ENV NREL_DEVELOPER_API_KEY=gAfosXcQ9Ldfw3qXqvKVb7PxMEkYigozmC9R3mXQ
+ENV URDB_API_KEY=2qt5uihpKXdywTj3uMIhBewxY9K4eNjpRje1JUPL
+
 CMD ["bash"]
