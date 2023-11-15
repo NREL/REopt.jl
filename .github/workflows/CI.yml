@@ -22,6 +22,9 @@ jobs:
           version: ${{ matrix.julia-version }}
       - uses: julia-actions/julia-buildpkg@latest
       # - uses: mxschmitt/action-tmate@v3  # for interactive debugging
+        env:
+          NREL_DEVELOPER_API_KEY: gAfosXcQ9Ldfw3qXqvKVb7PxMEkYigozmC9R3mXQ
+          URDB_API_KEY: 2qt5uihpKXdywTj3uMIhBewxY9K4eNjpRje1JUPL        
       - run: julia --project=. -e 'using Pkg; Pkg.activate("test"); Pkg.rm("Xpress"); Pkg.activate("."); using TestEnv; TestEnv.activate(); cd("test"); include("runtests.jl")'
         shell: bash
 
@@ -33,6 +36,8 @@ jobs:
         - name: Decrypt
           env:
             TRANSCRYPT_PASSWORD: ${{ secrets.TRANSCRYPT_PASSWORD }}
+            NREL_DEVELOPER_API_KEY: gAfosXcQ9Ldfw3qXqvKVb7PxMEkYigozmC9R3mXQ
+            URDB_API_KEY: 2qt5uihpKXdywTj3uMIhBewxY9K4eNjpRje1JUPL
           run: ./.github/scripts/decrypt.sh 
         - name: Build containers
           run: docker-compose up -d
