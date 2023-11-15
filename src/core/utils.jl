@@ -375,7 +375,7 @@ function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimut
             end
         end
     end
-    url = string("https://developer.nrel.gov/api/pvwatts/v8.json", "?api_key=", nrel_developer_key,
+    url = string("https://developer.nrel.gov/api/pvwatts/v8.json", "?api_key=", ENV["NREL_DEVELOPER_API_KEY"],
         "&lat=", latitude , "&lon=", longitude, "&tilt=", tilt,
         "&system_capacity=1", "&azimuth=", azimuth, "&module_type=", module_type,
         "&array_type=", array_type, "&losses=", losses, "&dc_ac_ratio=", dc_ac_ratio,
