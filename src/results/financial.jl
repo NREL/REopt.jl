@@ -13,7 +13,7 @@
 - `lifecycle_offgrid_other_annual_costs_after_tax` LCC component. Present value of offgrid_other_annual_costs over the analysis period, after tax. 
 - `lifecycle_offgrid_other_capital_costs` LCC component. Equal to offgrid_other_capital_costs with straight line depreciation applied over analysis period. The depreciation expense is assumed to reduce the owner's taxable income.
 - `lifecycle_outage_cost` LCC component. Expected outage cost. 
-- `lifecycle_MG_upgrade_and_fuel_cost` LCC component. Cost to upgrade generation and storage technologies to be included in microgrid, plus present value of microgrid fuel costs.
+- `lifecycle_MG_upgrade_and_fuel_cost` LCC component. Cost to upgrade generation and storage technologies to be included in microgrid, plus expected microgrid fuel costs, assuming outages occur in first year with specified probabilities.
 - `lifecycle_om_costs_before_tax` Present value of all O&M costs, before tax.
 - `year_one_om_costs_before_tax` Year one O&M costs, before tax.
 - `year_one_om_costs_after_tax` Year one O&M costs, after tax.

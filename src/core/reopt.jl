@@ -371,7 +371,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	add_elec_utility_expressions(m, p)
 
 	if !isempty(p.s.electric_utility.outage_durations)
-		add_dv_UnservedLoad_constraints(m,p)
+        add_dv_UnservedLoad_constraints(m,p)
 		add_outage_cost_constraints(m,p)
 		add_MG_production_constraints(m,p)
 		if !isempty(p.s.storage.types.elec)
@@ -381,7 +381,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 		add_cannot_have_MG_with_only_PVwind_constraints(m,p)
 		add_MG_size_constraints(m,p)
-		0
+		
 		m[:ExpectedMGFuelCost] = 0
         if !isempty(p.techs.gen)
 			add_MG_Gen_fuel_burn_constraints(m,p)
