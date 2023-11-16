@@ -68,6 +68,15 @@ function URDBrate(urdb_response::Dict, year::Int; time_steps_per_hour=1)
 
     demand_min = get(urdb_response, "peakkwcapacitymin", 0.0)  # TODO add check for site min demand against tariff?
 
+    # Convert matrix to array if needed
+    possible_matrix = ["demandratestructure", "flatdemandstructure", "demandweekdayschedule", 
+        "demandweekendschedule", "energyratestructure", "energyweekdayschedule", "energyweekendschedule"]
+    for param in possible_matrix
+        if typeof(get(urdb_response, param, nothing)) <: AbstractMatrix
+            urdb_response[param] = convert_matrix_to_array(urdb_response[param])
+        end
+    end
+
     n_monthly_demand_tiers, monthly_demand_tier_limits, monthly_demand_rates,
       n_tou_demand_tiers, tou_demand_tier_limits, tou_demand_rates, tou_demand_ratchet_time_steps =
       parse_demand_rates(urdb_response, year, time_steps_per_hour=time_steps_per_hour)
@@ -284,6 +293,15 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
     return energy_rates, energy_tier_limits_kwh, n_energy_tiers, sell_rates
 end
 
+"""
+    convert_matrix_to_array(M::AbstractMatrix)
+
+Convert an unexpected type::Matrix from URDB into an Array
+    - Observed while using REopt.jl with PyJulia/PyCall
+"""
+function convert_matrix_to_array(M::AbstractMatrix)
+    return [M[r,:] for r in 1:size(M,1)]
+end
 
 """
     parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
@@ -292,7 +310,6 @@ Parse monthly ("flat") and TOU demand rates
     can modify URDB dict when there is inconsistent numbers of tiers in rate structures
 """
 function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
-
     if haskey(d, "flatdemandstructure")
         scrub_urdb_demand_tiers!(d["flatdemandstructure"])
         monthly_demand_tier_limits = parse_urdb_demand_tiers(d["flatdemandstructure"])
@@ -343,7 +360,7 @@ function scrub_urdb_demand_tiers!(A::Array)
                 rate_new = rate
                 last_tier = rate[n_tiers_in_period]
                 for j in range(1, stop=n_tiers - n_tiers_in_period)
-                    append!(rate_new, last_tier)
+                    append!(rate_new, [last_tier])
                 end
                 A[i] = rate_new
             end
@@ -371,7 +388,7 @@ function parse_urdb_demand_tiers(A::Array; bigM=1.0e8)
     demand_maxes = Float64[]
     for period in range(1, stop=length(A))
         demand_max = Float64[]
-        for tier in A[period]
+        for tier in A[period] 
             append!(demand_max, get(tier, "max", bigM))
         end
         demand_tiers[period] = demand_max
