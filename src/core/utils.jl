@@ -375,6 +375,7 @@ function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimut
             end
         end
     end
+    check_api_key()
     url = string("https://developer.nrel.gov/api/pvwatts/v8.json", "?api_key=", ENV["NREL_DEVELOPER_API_KEY"],
         "&lat=", latitude , "&lon=", longitude, "&tilt=", tilt,
         "&system_capacity=1", "&azimuth=", azimuth, "&module_type=", module_type,
@@ -502,4 +503,12 @@ end
 
 function convert_temp_degF_to_Kelvin(degF::Float64)
     return (degF - 32) * 5.0 / 9.0 + 273.15
+end
+
+function check_api_key()
+    if isempty(get(ENV, "NREL_DEVELOPER_API_KEY", ""))
+        throw(@error("No NREL Developer API Key provided when trying to call PVWatts or Wind Toolkit.
+                    Within your Julia environment, specify ENV['NREL_DEVELOPER_API_KEY']='your API key'
+                    See https://nrel.github.io/REopt.jl/dev/ for more information."))
+    end
 end
