@@ -23,6 +23,9 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop (v0.38.0)
+### Changed
+- Require NREL Developer API Key set as ENV["NREL_DEVELOPER_API_KEY"] = 'your API key' for PVWatts and Wind Toolkit
 
 ## v0.37.5
 ### Fixed
@@ -30,6 +33,7 @@ Classify the change according to the following categories:
 - Fix setting of equal demand tiers in scrub_urdb_demand_tiers!, which was previously causing an error. 
 - When calling REopt.jl from a python environment using PyJulia and PyCall, some urdb_response fields get converted from a list-of-lists to a matrix type, when REopt.jl expects an array type. This fix adds checks on the type for two urdb_response fields and converts them to an array if needed.
 - Update the outages dispatch results to align with CHP availability during outages
+
 ## v0.37.4
 ### Fixed
 - Include `year` in creation of electric-only CHP for unavailability profile
