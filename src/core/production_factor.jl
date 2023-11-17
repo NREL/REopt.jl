@@ -35,7 +35,7 @@ function get_production_factor(wind::Wind, latitude::Real, longitude::Real, time
     if !(isnothing(wind.production_factor_series))
         return wind.production_factor_series
     end
-
+    check_api_key()
     resources = []
     heights_for_sam = [wind.hub_height]
 
