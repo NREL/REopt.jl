@@ -24,10 +24,12 @@ Classify the change according to the following categories:
     ### Removed
 
 
-## Develop 2023-11-07
+## v0.37.5
 ### Fixed
 - Fixed AVERT emissions profiles for NOx. Were previously the same as the SO2 profiles. AVERT emissions profiles are currently generated from AVERT v3.2 https://www.epa.gov/avert/download-avert. See REopt User Manual for more information.
 - Fix setting of equal demand tiers in scrub_urdb_demand_tiers!, which was previously causing an error. 
+- When calling REopt.jl from a python environment using PyJulia and PyCall, some urdb_response fields get converted from a list-of-lists to a matrix type, when REopt.jl expects an array type. This fix adds checks on the type for two urdb_response fields and converts them to an array if needed.
+- Update the outages dispatch results to align with CHP availability during outages
 ## v0.37.4
 ### Fixed
 - Include `year` in creation of electric-only CHP for unavailability profile
