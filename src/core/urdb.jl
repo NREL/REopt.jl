@@ -3,7 +3,7 @@
 # 5d2360465457a3f77ddc131e has TOU demand
 # 59bc22705457a3372642da67 has monthly tiered demand (no TOU demand)
 
-const urdb_api_key::String = get(ENV, "URDB_API_KEY", "2qt5uihpKXdywTj3uMIhBewxY9K4eNjpRje1JUPL")
+const urdb_api_key = get(ENV, "URDB_API_KEY", "2qt5uihpKXdywTj3uMIhBewxY9K4eNjpRje1JUPL")
 
 """
     Base.@kwdef struct URDBrate
