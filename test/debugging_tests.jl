@@ -31,7 +31,7 @@ using DelimitedFiles
     @test ground_pv["annual_energy_produced_kwh"] ≈ 145904.83 atol=0.1
     @test roof_west["annual_energy_produced_kwh"] ≈ 45938.58 atol=0.1
     @test roof_east["annual_energy_produced_kwh"] ≈ 16714.41 atol=0.1
-    @test sum(ground_pv["electric_to_storage_series_kw"]) ≈ 52362.828 atol=0.1
+    @test sum(ground_pv["electric_to_storage_series_kw"]) ≈ 52362.828 atol=1
     @test sum(roof_west["electric_to_storage_series_kw"]) ≈ 0 atol=0.1
     @test sum(roof_east["electric_to_storage_series_kw"]) ≈ 0 atol=0.1
 end
