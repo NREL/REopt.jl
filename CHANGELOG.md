@@ -23,6 +23,11 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.38.1
+### Fixed
+- Fix CHP standby charge modeling - bad reference to pwf_e
+- Avoid breaking backward compatibility with type declaration of (global) const urdb_api_key
+
 ## v0.38.0
 ### Changed
 - Require NREL Developer API Key set as ENV["NREL_DEVELOPER_API_KEY"] = 'your API key' for PVWatts and Wind Toolkit
