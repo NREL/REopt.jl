@@ -7,7 +7,7 @@
     },
     "ElectricUtility": {
         "outage_start_time_step": 10,
-        "outage_end_time_step": 100
+        "outage_end_time_step": 12
     },
     "Generator": {
         "installed_cost_per_kw": 500.0,
@@ -21,7 +21,6 @@
         "sells_energy_back_to_grid": false
     },
     "PV": {
-        "dc_coupled_with_storage": true,
         "existing_kw": 100,
         "max_kw": 0,
         "macrs_bonus_fraction": 0.4,
