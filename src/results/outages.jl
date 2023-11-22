@@ -146,7 +146,7 @@ function add_outage_results(m, p, d::Dict)
 				sum(
 					(
 						value.(
-							m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] * p.levelization_factor[t]
+							m[:dvMGRatedProduction][t, s, tz, ts] * (p.production_factor[t, tz+ts-1] + p.unavailability[t][tz+ts-1]) * p.levelization_factor[t]
 							- m[:dvMGCurtail][t, s, tz, ts]
 							- m[:dvMGProductionToStorage][t, s, tz, ts]
 							for s in p.s.electric_utility.scenarios,

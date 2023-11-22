@@ -21,6 +21,7 @@ conflict_res_min_allowable_fraction_of_max = 0.25
     min_allowable_kw::Float64 = NaN # Minimum CHP size (based on electric) that still allows the model to choose zero (e.g. no CHP system)
     cooling_thermal_factor::Float64 = NaN  # only needed with cooling load
     unavailability_periods::AbstractVector{Dict} = Dict[] # CHP unavailability periods for scheduled and unscheduled maintenance, list of dictionaries with keys of "['month', 'start_week_of_month', 'start_day_of_week', 'start_hour', 'duration_hours'] all values are one-indexed and start_day_of_week uses 1 for Monday, 7 for Sunday
+    unavailability_hourly::AbstractVector{Int64} = Int64[] # Hourly 8760 profile of unavailability (1) and availability (0)
 
     # Optional inputs:
     size_class::Union{Int, Nothing} = nothing # CHP size class for using appropriate default inputs, with size_class=0 using an average of all other size class data 
@@ -87,6 +88,7 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     cooling_thermal_factor::Float64 = NaN  # only needed with cooling load
     min_turn_down_fraction::Float64 = NaN
     unavailability_periods::AbstractVector{Dict} = Dict[]
+    unavailability_hourly::AbstractVector{Int64} = Int64[]
     federal_itc_fraction::Float64 = NaN # depends on prime mover and is_electric_only
 
     # Optional inputs:
@@ -138,7 +140,8 @@ end
 function CHP(d::Dict; 
             avg_boiler_fuel_load_mmbtu_per_hour::Union{Float64, Nothing}=nothing, 
             existing_boiler::Union{ExistingBoiler, Nothing}=nothing,
-            electric_load_series_kw::Array{<:Real,1}=Real[])
+            electric_load_series_kw::Array{<:Real,1}=Real[],
+            year::Int64=2017)
     # If array inputs are coming from Julia JSON.parsefile (reader), they have type Vector{Any}; convert to expected type here
     for (k,v) in d
         if typeof(v) <: AbstractVector{Any} && k != "unavailability_periods"
@@ -229,7 +232,7 @@ function CHP(d::Dict;
         chp.electric_efficiency_half_load = chp.electric_efficiency_full_load
     end
     if isnan(chp.thermal_efficiency_half_load)
-        chp.thermal_efficiency_half_load = chp.electric_efficiency_full_load
+        chp.thermal_efficiency_half_load = chp.thermal_efficiency_full_load
     end
 
     if isnan(chp.max_kw)
@@ -244,6 +247,7 @@ function CHP(d::Dict;
     if isempty(chp.unavailability_periods)
         chp.unavailability_periods = defaults["unavailability_periods"]
     end
+    chp.unavailability_hourly = generate_year_profile_hourly(year, chp.unavailability_periods)
 
     if isnothing(chp.size_class)
         chp.size_class = chp_defaults_response["size_class"]
@@ -361,7 +365,7 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
                                                 boiler_efficiency::Union{Float64, Nothing}=nothing,
                                                 avg_electric_load_kw::Union{Float64, Nothing}=nothing,
                                                 max_electric_load_kw::Union{Float64, Nothing}=nothing,
-                                                is_electric_only::Bool=false)
+                                                is_electric_only::Union{Bool, Nothing}=nothing)
     
     prime_mover_defaults_all = JSON.parsefile(joinpath(@__DIR__, "..", "..", "data", "chp", "chp_defaults.json"))
     avg_boiler_fuel_load_under_recip_over_ct = Dict([("hot_water", 27.0), ("steam", 7.0)])  # [MMBtu/hr] Based on external calcs for size versus production by prime_mover type
@@ -393,6 +397,11 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
         if size_class < 0 || size_class > (n_classes-1)
             throw(@error("The size class $size_class input is outside the valid range of 0 to $(n_classes-1) for prime_mover $prime_mover"))
         end
+    end
+
+    # Default value of is_electric_only is False
+    if isnothing(is_electric_only)
+        is_electric_only = false
     end
 
     # Calculate heuristic CHP size based on average thermal load, using the default size class efficiency data
