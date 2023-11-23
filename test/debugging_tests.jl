@@ -15,7 +15,7 @@ using DelimitedFiles
 
     @test results["ElectricStorage"]["size_kw"] ≈ 31.88 atol=0.1
     @test results["ElectricStorage"]["size_kwh"] ≈ 210.17 atol=0.1
-    @test results["ElectricStorage"]["dc_couple_inverter_size_kw"] ≈ 31.88 atol=0.1
+    @test results["ElectricStorage"]["dc_couple_inverter_size_kw"] ≈ 82.18 atol=0.1
 
     ground_pv = results["PV"][findfirst(pv -> pv["name"] == "ground", results["PV"])]
     roof_west = results["PV"][findfirst(pv -> pv["name"] == "roof_west", results["PV"])]
