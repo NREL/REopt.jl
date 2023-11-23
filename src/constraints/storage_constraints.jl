@@ -131,14 +131,21 @@ end
 function add_dc_coupled_tech_elec_storage_constraints(m, p, b; _n="")
 	# Constraint (4d)-1: Lower bound on DC coupled PV and battery inverter power capacity
     @constraint(m, [ts in p.time_steps],
-        m[Symbol("dvDCCoupledTechStorageInverterSize"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b,ts] + sum(m[Symbol("dvProductionToGrid"*_n)][t,u,ts] for t in p.techs.dc_couple_with_stor, u in p.export_bins_by_tech[t])
+        # m[Symbol("dvDCCoupledTechStorageInverterSize"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b,ts] + sum(m[Symbol("dvProductionToGrid"*_n)][t,u,ts] for t in p.techs.dc_couple_with_stor, u in p.export_bins_by_tech[t])
+        m[Symbol("dvDCCoupledTechStorageInverterSize"*_n)][b] >= 
+        m[Symbol("dvDischargeFromStorage"*_n)][b,ts]
+        + sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts]
+        - sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec)
+        - m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.dc_couple_with_stor) 
     )
 
     # Constraint (4d)-2: Don't let AC coupled elec techs charge battery. 
     # Future development could make this an option by adding a bool input and creating the set p.techs.elec_cannot_charge_stor that is different than p.techs.ac_couple_with_stor
-    @constraint(m, [t in p.techs.ac_couple_with_stor, ts in p.time_steps],
-        m[:dvProductionToStorage][b,t,ts] == 0
-    )
+    for ts in p.time_steps
+        for t in p.techs.ac_couple_with_stor
+            fix(m[:dvProductionToStorage][b,t,ts], 0.0, force=true)
+        end
+    end
 end
 
 function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
