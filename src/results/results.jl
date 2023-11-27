@@ -118,8 +118,6 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("Financial", "lifecycle_om_costs_after_tax"),
         ("Financial", "year_one_om_costs_before_tax"),
         ("Financial", "lifecycle_fuel_costs_after_tax"),
-        ("Financial", "lifecycle_generation_tech_capital_costs"),
-        ("Financial", "lifecycle_storage_capital_costs"),
         ("Financial", "lifecycle_chp_standby_cost_after_tax"),
         ("Financial", "lifecycle_elecbill_after_tax"),
         ("Financial", "lifecycle_production_incentive_after_tax"),
