@@ -105,6 +105,7 @@ struct ElectricUtility
         # fields from other models needed for validation
         CO2_emissions_reduction_min_fraction::Union{Real, Nothing} = nothing, # passed from Site
         CO2_emissions_reduction_max_fraction::Union{Real, Nothing} = nothing, # passed from Site
+        min_resil_time_steps::Int=0, # passed from Site
         include_climate_in_objective::Bool = false, # passed from Settings
         include_health_in_objective::Bool = false # passed from Settings
         )
