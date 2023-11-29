@@ -112,6 +112,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             latitude=site.latitude, longitude=site.longitude, 
                                             CO2_emissions_reduction_min_fraction=site.CO2_emissions_reduction_min_fraction,
                                             CO2_emissions_reduction_max_fraction=site.CO2_emissions_reduction_max_fraction,
+                                            min_resil_time_steps=site.min_resil_time_steps,
                                             include_climate_in_objective=settings.include_climate_in_objective,
                                             include_health_in_objective=settings.include_health_in_objective,
                                             off_grid_flag=settings.off_grid_flag,
