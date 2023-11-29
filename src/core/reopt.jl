@@ -280,7 +280,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             m[:TotalPerUnitHourOMCosts] += m[:TotalHourlyCHPOMCosts]
 
 			if p.s.chp.standby_rate_per_kw_per_month > 1.0e-7
-				m[:TotalCHPStandbyCharges] += sum(p.s.financial.pwf_e * 12 * p.s.chp.standby_rate_per_kw_per_month * m[:dvSize][t] for t in p.techs.chp)
+				m[:TotalCHPStandbyCharges] += sum(p.pwf_e * 12 * p.s.chp.standby_rate_per_kw_per_month * m[:dvSize][t] for t in p.techs.chp)
 			end
 
 			m[:TotalTechCapCosts] += sum(p.s.chp.supplementary_firing_capital_cost_per_kw * m[:dvSupplementaryFiringSize][t] for t in p.techs.chp)
@@ -381,13 +381,9 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	add_elec_utility_expressions(m, p)
 
 	if !isempty(p.s.electric_utility.outage_durations)
-		unavailability = Dict(tech => zeros(length(p.time_steps)) for tech in p.techs.elec)
-        if !isempty(p.techs.chp)
-            unavailability["CHP"] = [p.s.chp.unavailability_hourly[i] for i in 1:8760 for _ in 1:p.s.settings.time_steps_per_hour]
-        end
-        add_dv_UnservedLoad_constraints(m,p,unavailability)
+        add_dv_UnservedLoad_constraints(m,p)
 		add_outage_cost_constraints(m,p)
-		add_MG_production_constraints(m,p,unavailability)
+		add_MG_production_constraints(m,p)
 		if !isempty(p.s.storage.types.elec)
 			add_MG_storage_dispatch_constraints(m,p)
 		else

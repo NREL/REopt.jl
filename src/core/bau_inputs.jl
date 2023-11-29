@@ -143,6 +143,7 @@ function BAUInputs(p::REoptInputs)
     end
 
     heating_loads_served_by_tes = Dict{String,Array{String,1}}()
+    unavailability = get_unavailability_by_tech(p.s, techs, p.time_steps)
 
     REoptInputs(
         bau_scenario,
@@ -207,7 +208,8 @@ function BAUInputs(p::REoptInputs)
         heating_cop,
         heating_loads,
         heating_loads_kw,
-        heating_loads_served_by_tes
+        heating_loads_served_by_tes,
+        unavailability
     )
 end
 
