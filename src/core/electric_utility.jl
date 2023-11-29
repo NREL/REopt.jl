@@ -25,6 +25,7 @@
 ```
 
 !!! note "Outage modeling"
+    # Indexing
     Outage indexing begins at 1 (not 0) and the outage is inclusive of the outage end time step. 
     For instance, to model a 3-hour outage from 12AM to 3AM on Jan 1, outage_start_time_step = 1 and outage_end_time_step = 3.
     To model a 1-hour outage from 6AM to 7AM on Jan 1, outage_start_time_step = 7 and outage_end_time_step = 7.
@@ -116,6 +117,7 @@ struct ElectricUtility
         # fields from other models needed for validation
         CO2_emissions_reduction_min_fraction::Union{Real, Nothing} = nothing, # passed from Site
         CO2_emissions_reduction_max_fraction::Union{Real, Nothing} = nothing, # passed from Site
+        min_resil_time_steps::Int=0, # passed from Site
         include_climate_in_objective::Bool = false, # passed from Settings
         include_health_in_objective::Bool = false # passed from Settings
         )
@@ -167,6 +169,9 @@ struct ElectricUtility
             end
         end
         
+        if !isempty(outage_durations) && min_resil_time_steps > maximum(outage_durations)
+            throw(@error("Site input min_resil_time_steps cannot be greater than the maximum value in ElectricUtility input outage_durations"))
+        end
         if (!isempty(outage_start_time_steps) && isempty(outage_durations)) || (isempty(outage_start_time_steps) && !isempty(outage_durations))
             throw(@error("ElectricUtility inputs outage_start_time_steps and outage_durations must both be provided to model multiple outages"))
         end
