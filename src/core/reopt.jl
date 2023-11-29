@@ -268,7 +268,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             m[:TotalPerUnitHourOMCosts] += m[:TotalHourlyCHPOMCosts]
 
 			if p.s.chp.standby_rate_per_kw_per_month > 1.0e-7
-				m[:TotalCHPStandbyCharges] += sum(p.s.financial.pwf_e * 12 * p.s.chp.standby_rate_per_kw_per_month * m[:dvSize][t] for t in p.techs.chp)
+				m[:TotalCHPStandbyCharges] += sum(p.pwf_e * 12 * p.s.chp.standby_rate_per_kw_per_month * m[:dvSize][t] for t in p.techs.chp)
 			end
 
 			m[:TotalTechCapCosts] += sum(p.s.chp.supplementary_firing_capital_cost_per_kw * m[:dvSupplementaryFiringSize][t] for t in p.techs.chp)
