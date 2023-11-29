@@ -27,6 +27,9 @@ Classify the change according to the following categories:
 ### Added
 - Added new technology `ElectricHeater` which uses electricity as input and provides heating as output; load balancing constraints have been updated accordingly
 
+### Fixed
+- Don't allow **Site** **min_resil_time_steps** input to be greater than the maximum value element in **ElectricUtility** **outage_durations**
+
 ## v0.38.1
 ### Fixed
 - Fix CHP standby charge modeling - bad reference to pwf_e
