@@ -75,6 +75,6 @@ function add_gen_constraints(m, p)
         m[:dvRatedProduction][t, ts] for t in p.techs.gen, ts in p.time_steps)
     )
     m[:TotalGenFuelCosts] = @expression(m,
-		sum(p.pwf_fuel[t] * m[:dvFuelUsage][t,ts] * p.fuel_cost_per_kwh[t][ts] for t in p.techs.gen, ts in p.time_steps)
+        sum(p.pwf_fuel[t] * m[:dvFuelUsage][t,ts] * p.fuel_cost_per_kwh[t][ts] for t in p.techs.gen, ts in p.time_steps)
     )
 end

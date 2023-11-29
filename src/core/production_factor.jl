@@ -47,7 +47,7 @@ function get_production_factor(wind::Wind, latitude::Real, longitude::Real, time
     if !(isnothing(wind.production_factor_series))
         return wind.production_factor_series
     end
-
+    check_api_key()
     resources = []
     heights_for_sam = [wind.hub_height]
 
@@ -77,7 +77,7 @@ function get_production_factor(wind::Wind, latitude::Real, longitude::Real, time
 
         for height in heights_for_sam
             url = string("https://developer.nrel.gov/api/wind-toolkit/v2/wind/wtk-srw-download", 
-                "?api_key=", nrel_developer_key,
+                "?api_key=", ENV["NREL_DEVELOPER_API_KEY"],
                 "&lat=", latitude , "&lon=", longitude, 
                 "&hubheight=", Int(height), "&year=", 2012
             )
@@ -284,11 +284,11 @@ scheduled (mostly off-peak) and "unscheduled" (on-peak) maintenance.
 Note: this same prod_factor should be applied to electric and thermal production
 """
 function get_production_factor(chp::AbstractCHP, year::Int=2017, outage_start_time_step::Int=0, outage_end_time_step::Int=0, ts_per_hour::Int=1)
-    unavailability_hourly = generate_year_profile_hourly(year, chp.unavailability_periods)
+    
+    prod_factor = [1.0 - chp.unavailability_hourly[i] for i in 1:8760 for _ in 1:ts_per_hour]
 
-    prod_factor = [1.0 - unavailability_hourly[i] for i in 1:8760 for _ in 1:ts_per_hour]
-
-    # Ignore unavailability in time_step if it intersects with an outage interval
+    # Ignore unavailability in time_step if it intersects with an outage interval(s)
+    # This is handled differently with multiple/stochastic outages to preserve economic-impact of
     if outage_start_time_step != 0 && outage_end_time_step != 0
         prod_factor[outage_start_time_step:outage_end_time_step] .= ones(outage_end_time_step - outage_start_time_step + 1)
     end
