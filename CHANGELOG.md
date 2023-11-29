@@ -25,9 +25,19 @@ Classify the change according to the following categories:
 
 ## Develop
 ### Fixed
+- Don't allow **Site** **min_resil_time_steps** input to be greater than the maximum value element in **ElectricUtility** **outage_durations**
 - When calculating CHP fuel intercept and slope, use 1 for the HHV because CHP fuel measured in units of kWh, instead of using non-existent **CHP.fuel_higher_heating_value_kwh_per_gal**
 ### Changed
 - Renamed function `generator_fuel_slope_and_intercept` to `fuel_slope_and_intercept` and generalize to not be specific to diesel measured in units of gal
+
+## v0.38.1
+### Fixed
+- Fix CHP standby charge modeling - bad reference to pwf_e
+- Avoid breaking backward compatibility with type declaration of (global) const urdb_api_key
+
+## v0.38.0
+### Changed
+- Require NREL Developer API Key set as ENV["NREL_DEVELOPER_API_KEY"] = 'your API key' for PVWatts and Wind Toolkit
 
 ## v0.37.5
 ### Fixed
@@ -35,6 +45,7 @@ Classify the change according to the following categories:
 - Fix setting of equal demand tiers in scrub_urdb_demand_tiers!, which was previously causing an error. 
 - When calling REopt.jl from a python environment using PyJulia and PyCall, some urdb_response fields get converted from a list-of-lists to a matrix type, when REopt.jl expects an array type. This fix adds checks on the type for two urdb_response fields and converts them to an array if needed.
 - Update the outages dispatch results to align with CHP availability during outages
+
 ## v0.37.4
 ### Fixed
 - Include `year` in creation of electric-only CHP for unavailability profile
