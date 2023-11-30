@@ -88,11 +88,22 @@ struct ElectricUtility
 
 
     function ElectricUtility(;
-        latitude::Union{Nothing,Real} = nothing,
-        longitude::Union{Nothing,Real} = nothing,
-        off_grid_flag::Bool = false,
-        time_steps_per_hour::Int = 1,
-        net_metering_limit_kw::Real = 0,
+
+        # Fields from other models
+        latitude::Union{Nothing,Real} = nothing, # Passed from Site
+        longitude::Union{Nothing,Real} = nothing, # Passed from Site
+        off_grid_flag::Bool = false, # Passed from Settings
+        analysis_years::Int = 25, # Passed from Financial
+        time_steps_per_hour::Int = 1, # Passed from Settings
+        CO2_emissions_reduction_min_fraction::Union{Real, Nothing} = nothing, # passed from Site
+        CO2_emissions_reduction_max_fraction::Union{Real, Nothing} = nothing, # passed from Site
+        min_resil_time_steps::Int=0, # passed from Site
+        include_climate_in_objective::Bool = false, # passed from Settings
+        include_health_in_objective::Bool = false, # passed from Settings
+        load_year::Int = 2017, # Passed from ElectricLoad
+
+        # Inputs for ElectricUtility
+        net_metering_limit_kw::Real = 0, # Upper limit on the total capacity of technologies that can participate in net metering agreement.
         interconnection_limit_kw::Real = 1.0e9,
         outage_start_time_step::Int=0,  # for modeling a single outage, with critical load spliced into the baseline load ...
         outage_end_time_step::Int=0,  # ... utiltity production_factor = 0 during the outage
