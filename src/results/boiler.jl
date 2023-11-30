@@ -51,7 +51,7 @@ function add_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="
     r["thermal_to_steamturbine_series_mmbtu_per_hour"] = round.(value.(NewBoilerToSteamTurbine), digits=3)
 
 	BoilerToLoad = @expression(m, [ts in p.time_steps],
-		sum(value.(m[:dvHeatingProduction]["Boiler", q, ts]) for q in p.heating_loads) - NewBoilerToHotTESKW[ts] - NewBoilerToHotTESKW[ts]
+		sum(value.(m[:dvHeatingProduction]["Boiler", q, ts]) for q in p.heating_loads) - NewBoilerToHotTESKW[ts] - NewBoilerToSteamTurbine[ts] 
     )
 	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(BoilerToLoad / KWH_PER_MMBTU), digits=3)
 
@@ -71,7 +71,7 @@ function add_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="
     else
         @expression(m, NewBoilerToSpaceHeatingKW[ts in p.time_steps], 0.0)
     end
-    r["thermal_to_space_heating_load_series_mmbtu_per_hour"] = round.(value.(BoilerToSpaceHeatingKW ./ KWH_PER_MMBTU), digits=5)
+    r["thermal_to_space_heating_load_series_mmbtu_per_hour"] = round.(value.(NewBoilerToSpaceHeatingKW ./ KWH_PER_MMBTU), digits=5)
     
     if "ProcessHeat" in p.heating_loads && p.s.boiler.can_serve_space_heating
         @expression(m, NewBoilerToProcessHeatKW[ts in p.time_steps], 
