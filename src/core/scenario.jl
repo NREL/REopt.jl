@@ -119,6 +119,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             latitude=site.latitude, longitude=site.longitude, 
                                             CO2_emissions_reduction_min_fraction=site.CO2_emissions_reduction_min_fraction,
                                             CO2_emissions_reduction_max_fraction=site.CO2_emissions_reduction_max_fraction,
+                                            min_resil_time_steps=site.min_resil_time_steps,
                                             include_climate_in_objective=settings.include_climate_in_objective,
                                             include_health_in_objective=settings.include_health_in_objective,
                                             off_grid_flag=settings.off_grid_flag,
@@ -341,10 +342,12 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             chp = CHP(d["CHP"]; 
                     avg_boiler_fuel_load_mmbtu_per_hour = avg_boiler_fuel_load_mmbtu_per_hour,
                     existing_boiler = existing_boiler,
-                    electric_load_series_kw = electric_load.loads_kw)
+                    electric_load_series_kw = electric_load.loads_kw,
+                    year = electric_load.year)
         else # Only if modeling CHP without heating_load and existing_boiler (for prime generator, electric-only)
             chp = CHP(d["CHP"],
-                    electric_load_series_kw = electric_load.loads_kw)
+                    electric_load_series_kw = electric_load.loads_kw,
+                    year = electric_load.year)
         end
         chp_prime_mover = chp.prime_mover
     end

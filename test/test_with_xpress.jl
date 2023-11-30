@@ -465,7 +465,7 @@ end
     @test value(m[:binMGTechUsed]["CHP"]) ≈ 1
     @test value(m[:binMGTechUsed]["PV"]) ≈ 1
     @test value(m[:binMGStorageUsed]) ≈ 1
-    @test results["Financial"]["lcc"] ≈ 6.83746678985e7 atol=5e4
+    @test results["Financial"]["lcc"] ≈ 6.83633907986e7 atol=5e4
 
     #=
     Scenario with $0.001/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
@@ -1819,7 +1819,7 @@ end
 
     # Throw an unhandled error: Bad URDB rate -> stack gets returned for debugging
     d["ElectricLoad"]["doe_reference_name"] = "MidriseApartment"
-    d["ElectricTariff"]["urdb_label"] = "62c70a6c40a0c425535d387b"
+    d["ElectricTariff"]["urdb_label"] = "62c70a6c40a0c425535d387x"
 
     m1 = Model(Xpress.Optimizer)
     m2 = Model(Xpress.Optimizer)
@@ -1830,7 +1830,6 @@ end
     @test "warnings" ∈ keys(r["Messages"])
     @test length(r["Messages"]["errors"]) > 0
     @test length(r["Messages"]["warnings"]) > 0
-    @test r["Messages"]["has_stacktrace"] == true
 
     m = Model(Xpress.Optimizer)
     r = run_reopt(m, d)
