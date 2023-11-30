@@ -47,9 +47,36 @@ function add_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="
     r["thermal_to_steamturbine_series_mmbtu_per_hour"] = round.(value.(BoilerToSteamTurbine), digits=3)
 
 	BoilerToLoad = @expression(m, [ts in p.time_steps],
-		m[:dvThermalProduction]["Boiler", ts] - BoilerToHotTESKW[ts] - BoilerToSteamTurbine[ts]
+		sum(value.(m[:dvHeatingProduction]["Boiler", q, ts]) for q in p.heating_loads) - NewBoilerToHotTESKW[ts] - NewBoilerToSteamTurbine[ts] 
     )
 	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(BoilerToLoad / KWH_PER_MMBTU), digits=3)
+
+    if "DomesticHotWater" in p.heating_loads && p.s.boiler.can_serve_dhw
+        @expression(m, NewBoilerToDHWKW[ts in p.time_steps], 
+            m[:dvHeatingProduction]["Boiler","DomesticHotWater",ts] - NewBoilerToHotTESByQuality["DomesticHotWater",ts] - NewBoilerToSteamTurbineByQuality["DomesticHotWater",ts]
+        )
+    else
+        @expression(m, NewBoilerToDHWKW[ts in p.time_steps], 0.0)
+    end
+    r["thermal_to_dhw_load_series_mmbtu_per_hour"] = round.(value.(NewBoilerToDHWKW ./ KWH_PER_MMBTU), digits=5)
+    
+    if "SpaceHeating" in p.heating_loads && p.s.boiler.can_serve_space_heating
+        @expression(m, NewBoilerToSpaceHeatingKW[ts in p.time_steps], 
+            m[:dvHeatingProduction]["Boiler","SpaceHeating",ts] - NewBoilerToHotTESByQuality["SpaceHeating",ts] - NewBoilerToSteamTurbineByQuality["SpaceHeating",ts]
+        )
+    else
+        @expression(m, NewBoilerToSpaceHeatingKW[ts in p.time_steps], 0.0)
+    end
+    r["thermal_to_space_heating_load_series_mmbtu_per_hour"] = round.(value.(NewBoilerToSpaceHeatingKW ./ KWH_PER_MMBTU), digits=5)
+    
+    if "ProcessHeat" in p.heating_loads && p.s.boiler.can_serve_space_heating
+        @expression(m, NewBoilerToProcessHeatKW[ts in p.time_steps], 
+            m[:dvHeatingProduction]["Boiler","ProcessHeat",ts] - NewBoilerToHotTESByQuality["ProcessHeat",ts] - NewBoilerToSteamTurbineByQuality["ProcessHeat",ts]
+        )
+    else
+        @expression(m, NewBoilerToProcessHeatKW[ts in p.time_steps], 0.0)
+    end
+    r["thermal_to_process_heat_load_series_mmbtu_per_hour"] = round.(value.(NewBoilerToProcessHeatKW ./ KWH_PER_MMBTU), digits=5)
 
     lifecycle_fuel_cost = p.pwf_fuel["Boiler"] * value(
         sum(m[:dvFuelUsage]["Boiler", ts] * p.fuel_cost_per_kwh["Boiler"][ts] for ts in p.time_steps)
