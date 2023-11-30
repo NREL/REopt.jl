@@ -27,6 +27,10 @@ Classify the change according to the following categories:
 ### Added 
 - Added the following output to BAU outputs:  lifecycle_chp_standby_cost_after_tax, lifecycle_elecbill_after_tax, lifecycle_production_incentive_after_tax, lifecycle_outage_cost, lifecycle_MG_upgrade_and_fuel_cost
 
+## Develop
+### Fixed
+- Don't allow **Site** **min_resil_time_steps** input to be greater than the maximum value element in **ElectricUtility** **outage_durations**
+
 ## v0.38.1
 ### Fixed
 - Fix CHP standby charge modeling - bad reference to pwf_e
