@@ -61,14 +61,46 @@ function add_steam_turbine_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
 	r["electric_to_load_series_kw"] = round.(value.(SteamTurbinetoLoad), digits=3)
     if !isempty(p.s.storage.types.hot)
 		@expression(m, SteamTurbinetoHotTESKW[ts in p.time_steps],
-			sum(m[Symbol("dvProductionToStorage"*_n)]["HotThermalStorage",t,ts] for t in p.techs.steam_turbine))
+			sum(m[Symbol("dvHeatToStorage"*_n)]["HotThermalStorage",t,q,ts] for q in p.heating_loads, t in p.techs.steam_turbine))
+		@expression(m, SteamTurbineToHotTESByQualityKW[q in p.heating_loads, ts in p.time_steps],
+			sum(m[Symbol("dvHeatToStorage"*_n)]["HotThermalStorage",t,q,ts] for t in p.techs.steam_turbine))
 	else
 		SteamTurbinetoHotTESKW = zeros(length(p.time_steps))
+		@expression(m, SteamTurbineToHotTESByQualityKW[q in p.heating_loads, ts in p.time_steps], 0.0)
 	end
 	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(SteamTurbinetoHotTESKW) ./ KWH_PER_MMBTU, digits=5)
 	@expression(m, SteamTurbineThermalToLoadKW[ts in p.time_steps],
 		sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in p.techs.steam_turbine) - SteamTurbinetoHotTESKW[ts])
 	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(SteamTurbineThermalToLoadKW) ./ KWH_PER_MMBTU, digits=5)
+	
+	if "DomesticHotWater" in p.heating_loads && p.s.steam_turbine.can_serve_dhw
+        @expression(m, SteamTurbineToDHWKW[ts in p.time_steps], 
+            m[Symbol("dvHeatingProduction"*_n)]["SteamTurbine","DomesticHotWater",ts] - SteamTurbineToHotTESByQualityKW["DomesticHotWater",ts] 
+        )
+    else
+        @expression(m, SteamTurbineToDHWKW[ts in p.time_steps], 0.0)
+    end
+    r["thermal_to_dhw_load_series_mmbtu_per_hour"] = round.(value.(SteamTurbineToDHWKW ./ KWH_PER_MMBTU), digits=5)
+    
+    if "SpaceHeating" in p.heating_loads && p.s.steam_turbine.can_serve_space_heating
+        @expression(m, SteamTurbineToSpaceHeatingKW[ts in p.time_steps], 
+            m[Symbol("dvHeatingProduction"*_n)]["SteamTurbine","SpaceHeating",ts] - SteamTurbineToHotTESByQualityKW["SpaceHeating",ts] 
+        )
+    else
+        @expression(m, SteamTurbineToSpaceHeatingKW[ts in p.time_steps], 0.0)
+    end
+    r["thermal_to_space_heating_load_series_mmbtu_per_hour"] = round.(value.(SteamTurbineToSpaceHeatingKW ./ KWH_PER_MMBTU), digits=5)
+    
+    if "ProcessHeat" in p.heating_loads && p.s.steam_turbine.can_serve_space_heating
+        @expression(m, SteamTurbineToProcessHeatKW[ts in p.time_steps], 
+            m[Symbol("dvHeatingProduction"*_n)]["SteamTurbine","ProcessHeat",ts] - SteamTurbineToHotTESByQualityKW["ProcessHeat",ts] 
+        )
+    else
+        @expression(m, SteamTurbineToProcessHeatKW[ts in p.time_steps], 0.0)
+    end
+    r["thermal_to_process_heat_load_series_mmbtu_per_hour"] = round.(value.(SteamTurbineToProcessHeatKW ./ KWH_PER_MMBTU), digits=5)
+
+	
 	d["SteamTurbine"] = r
 	nothing
 end
