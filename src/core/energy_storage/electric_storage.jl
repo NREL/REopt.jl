@@ -136,7 +136,6 @@ end
 `ElectricStorage` is an optional optional REopt input with the following keys and default values:
 
 ```julia
-    battery_hour::Real = 4.0
     min_kw::Real = 0.0
     max_kw::Real = 1.0e4
     min_kwh::Real = 0.0
@@ -165,6 +164,7 @@ end
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
+    battery_hour::Real = 30.0
 ```
 """
 Base.@kwdef struct ElectricStorageDefaults
@@ -197,7 +197,7 @@ Base.@kwdef struct ElectricStorageDefaults
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
-    battery_hour::Real = 8.0
+    battery_hour::Real = 30.0
 end
 
 
