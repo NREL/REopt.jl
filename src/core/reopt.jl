@@ -636,7 +636,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
     if !isempty(p.techs.steam_turbine)
-        @variable(m, dvThermalToSteamTurbine[p.techs.can_supply_steam_turbine, q in p.heating_loads, p.time_steps] >= 0)
+        @variable(m, dvThermalToSteamTurbine[p.techs.can_supply_steam_turbine, p.heating_loads, p.time_steps] >= 0)
     end
 
 	if !isempty(p.s.electric_utility.outage_durations) # add dvUnserved Load if there is at least one outage
