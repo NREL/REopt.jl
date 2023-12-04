@@ -23,34 +23,13 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop 2023-12-04
+### Added
+- Added new technology `ElectricHeater` which uses electricity as input and provides heating as output; load balancing constraints have been updated accordingly
+
 ## v0.38.2
 ### Added 
 - Added the following BAU outputs:  lifecycle_chp_standby_cost_after_tax, lifecycle_elecbill_after_tax, lifecycle_production_incentive_after_tax, lifecycle_outage_cost, lifecycle_MG_upgrade_and_fuel_cost
-### Fixed
-- Don't allow **Site** **min_resil_time_steps** input to be greater than the maximum value element in **ElectricUtility** **outage_durations**
-
-## v0.38.1
-### Fixed
-- Fix CHP standby charge modeling - bad reference to pwf_e
-- Avoid breaking backward compatibility with type declaration of (global) const urdb_api_key
-
-## v0.38.0
-### Changed
-- Require NREL Developer API Key set as ENV["NREL_DEVELOPER_API_KEY"] = 'your API key' for PVWatts and Wind Toolkit
-
-## v0.37.5
-### Fixed
-- Fixed AVERT emissions profiles for NOx. Were previously the same as the SO2 profiles. AVERT emissions profiles are currently generated from AVERT v3.2 https://www.epa.gov/avert/download-avert. See REopt User Manual for more information.
-- Fix setting of equal demand tiers in scrub_urdb_demand_tiers!, which was previously causing an error. 
-- When calling REopt.jl from a python environment using PyJulia and PyCall, some urdb_response fields get converted from a list-of-lists to a matrix type, when REopt.jl expects an array type. This fix adds checks on the type for two urdb_response fields and converts them to an array if needed.
-- Update the outages dispatch results to align with CHP availability during outages
-
-## Develop 2023-08-09
-## Develop
-### Fixed
-- Don't allow **Site** **min_resil_time_steps** input to be greater than the maximum value element in **ElectricUtility** **outage_durations**
-
-## Develop
 ### Fixed
 - Don't allow **Site** **min_resil_time_steps** input to be greater than the maximum value element in **ElectricUtility** **outage_durations**
 
