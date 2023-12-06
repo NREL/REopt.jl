@@ -60,9 +60,6 @@ function BAUInputs(p::REoptInputs)
         levelization_factor[pvname] = p.levelization_factor[pvname]
         cap_cost_slope[pvname] = 0.0
         tech_renewable_energy_fraction[pvname] = 1.0
-        if pvname in p.techs.pbi
-            push!(pbi_techs, pvname)
-        end
         pv = get_pv_by_name(pvname, p.s.pvs)
         fillin_techs_by_exportbin(techs_by_exportbin, pv, pv.name)
         if !pv.can_curtail
@@ -78,14 +75,13 @@ function BAUInputs(p::REoptInputs)
         om_cost_per_kw["Generator"] = p.s.generator.om_cost_per_kw
         production_factor["Generator", :] = p.production_factor["Generator", :]
         fillin_techs_by_exportbin(techs_by_exportbin, p.s.generator, "Generator")
-        if "Generator" in p.techs.pbi
-            push!(pbi_techs, "Generator")
-        end
         if !p.s.generator.can_curtail
             push!(techs.no_curtail, "Generator")
         end
         fuel_cost_per_kwh["Generator"] = p.fuel_cost_per_kwh["Generator"]        
     end
+
+    pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(bau_scenario, techs)
 
     if "ExistingBoiler" in techs.all
         setup_existing_boiler_inputs(bau_scenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
@@ -164,10 +160,10 @@ function BAUInputs(p::REoptInputs)
         seg_min_size,
         seg_max_size,
         seg_yint,
-        p.pbi_pwf, 
-        p.pbi_max_benefit, 
-        p.pbi_max_kw, 
-        p.pbi_benefit_per_kwh,
+        pbi_pwf, 
+        pbi_max_benefit, 
+        pbi_max_kw, 
+        pbi_benefit_per_kwh,
         boiler_efficiency,
         fuel_cost_per_kwh,
         ghp_options,
