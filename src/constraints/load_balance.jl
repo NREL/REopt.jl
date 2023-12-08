@@ -17,6 +17,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
             + m[Symbol("dvGridToElectrolyzer"*_n)][ts]
             + m[Symbol("dvGridToCompressor"*_n)][ts]
             + sum(m[Symbol("dvThermalProduction"*_n)][t, ts] / p.cop[t] for t in p.techs.cooling)
+            + sum(m[Symbol("dvThermalProduction"*_n)][t,ts] / p.heating_cop[t] for t in p.techs.electric_heater)
             + p.s.electric_load.loads_kw[ts]
             - p.s.cooling_load.loads_kw_thermal[ts] / p.cop["ExistingChiller"]
             + sum(p.ghp_electric_consumption_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
@@ -36,6 +37,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
             + m[Symbol("dvGridToElectrolyzer"*_n)][ts]
             + m[Symbol("dvGridToCompressor"*_n)][ts]
             + sum(m[Symbol("dvThermalProduction"*_n)][t, ts] / p.cop[t] for t in p.techs.cooling)
+            + sum(m[Symbol("dvThermalProduction"*_n)][t,ts] / p.heating_cop[t] for t in p.techs.electric_heater)
             + p.s.electric_load.loads_kw[ts]
             - p.s.cooling_load.loads_kw_thermal[ts] / p.cop["ExistingChiller"]
             + sum(p.ghp_electric_consumption_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)

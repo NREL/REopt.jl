@@ -99,6 +99,10 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     if "SteamTurbine" in p.techs.all
         add_steam_turbine_results(m, p, d; _n)
     end
+
+    if !isempty(p.techs.electric_heater)
+        add_electric_heater_results(m, p, d; _n)
+    end
     
     if !isempty(p.techs.electrolyzer)
         add_electrolyzer_results(m, p, d; _n)
