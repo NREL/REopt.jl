@@ -226,10 +226,11 @@ function get_multi_solutions_results_summary(results::Dict, p::REoptInputs, m::J
                                         for ts in 1:num_outage_time_steps; init=0.0)
             BAUOutageCost[tz] = sum(p.value_of_lost_load_per_kwh[tz+ts-1] * p.s.electric_load.critical_loads_kw[tz+ts-1] / p.s.settings.time_steps_per_hour
                                     for ts in 1:num_outage_time_steps; init=0.0)
+            resil_by_time_step = simresults["resilience_by_time_step"][tz] * p.s.settings.time_steps_per_hour
             OptimalOutageLostLoadKWH[tz] = sum(p.s.electric_load.critical_loads_kw[tz+ts-1] / p.s.settings.time_steps_per_hour
-                                                for ts in (convert(Int, simresults["resilience_by_time_step"][tz])+1):outage_duration_hours; init=0.0)
+                                                for ts in (convert(Int, resil_by_time_step)+1):outage_duration_hours; init=0.0)
             OptimalOutageCost[tz] = sum(p.value_of_lost_load_per_kwh[tz+ts-1] * p.s.electric_load.critical_loads_kw[tz+ts-1] / p.s.settings.time_steps_per_hour
-                                                for ts in (convert(Int, simresults["resilience_by_time_step"][tz])+1):outage_duration_hours; init=0.0)                                                    
+                                                for ts in (convert(Int, resil_by_time_step)+1):outage_duration_hours; init=0.0)                                                    
         end
         avg_lost_load_bau_kwh = sum(BAUOutageLostLoadKWH) / length(BAUOutageLostLoadKWH)
         avg_year_one_outage_cost_bau = sum(BAUOutageCost) / length(BAUOutageCost)
