@@ -27,6 +27,7 @@ function BAUInputs(p::REoptInputs)
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
     cop = Dict(t => 0.0 for t in techs.cooling)
     thermal_cop = Dict{String, Float64}()
+    heating_cop = Dict{String, Float64}()
     production_factor = DenseAxisArray{Float64}(undef, techs.all, p.time_steps)
     tech_renewable_energy_fraction = Dict(t => 0.0 for t in techs.all)
     # !!! note: tech_emissions_factors are in lb / kWh of fuel burned (gets multiplied by kWh of fuel burned, not kWh electricity consumption, ergo the use of the HHV instead of fuel slope)
@@ -188,6 +189,7 @@ function BAUInputs(p::REoptInputs)
         tech_emissions_factors_SO2, 
         tech_emissions_factors_PM25,
         p.techs_operating_reserve_req_fraction,
+        heating_cop,
         unavailability
     )
 end
