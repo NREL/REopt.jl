@@ -23,7 +23,7 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop 2023-12-04
+## v0.39.0
 ### Added
 - Added new technology `ElectricHeater` which uses electricity as input and provides heating as output; load balancing constraints have been updated accordingly
 
