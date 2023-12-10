@@ -24,17 +24,3 @@ jobs:
       # - uses: mxschmitt/action-tmate@v3  # for interactive debugging
       - run: julia --project=. -e 'using Pkg; Pkg.activate("test"); Pkg.rm("Xpress"); Pkg.activate("."); using TestEnv; TestEnv.activate(); cd("test"); include("runtests.jl")'
         shell: bash
-
-  xpresstests:
-      runs-on: ubuntu-latest
-
-      steps:
-        - uses: actions/checkout@v2
-        - name: Decrypt
-          env:
-            TRANSCRYPT_PASSWORD: ${{ secrets.TRANSCRYPT_PASSWORD }}
-          run: ./.github/scripts/decrypt.sh 
-        - name: Build containers
-          run: docker-compose up -d
-        - name: Execute tests in container
-          run: docker exec jul julia --project=. -e 'import Pkg; Pkg.test("REopt"; test_args=["Xpress"])'

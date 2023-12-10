@@ -99,7 +99,6 @@ const FUEL_DEFAULTS = Dict(
 
 include("logging.jl")
 
-include("keys.jl")
 include("core/types.jl")
 include("core/utils.jl")
 
@@ -127,6 +126,7 @@ include("core/electric_tariff.jl")
 include("core/chp.jl")
 include("core/ghp.jl")
 include("core/steam_turbine.jl")
+include("core/electric_heater.jl")
 include("core/scenario.jl")
 include("core/bau_scenario.jl")
 include("core/reopt_inputs.jl")
@@ -179,6 +179,7 @@ include("results/chp.jl")
 include("results/flexible_hvac.jl")
 include("results/ghp.jl")
 include("results/steam_turbine.jl")
+include("results/electric_heater.jl")
 include("results/heating_cooling_load.jl")
 
 include("core/reopt.jl")

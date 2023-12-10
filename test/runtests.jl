@@ -4,7 +4,8 @@ using JuMP
 using HiGHS
 using JSON
 using REopt
-
+using DotEnv
+DotEnv.config()
 
 if "Xpress" in ARGS
     @testset "test_with_xpress" begin
