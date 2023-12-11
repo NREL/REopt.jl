@@ -527,8 +527,7 @@ else  # run HiGHS tests
     end
 
     @testset "January Export Rates" begin
-        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-            "output_flag" => false, "log_to_console" => false)
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false)
         )
         data = JSON.parsefile("./scenarios/monthly_rate.json")
 
@@ -548,8 +547,7 @@ else  # run HiGHS tests
     end
 
     @testset "Blended tariff" begin
-        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-            "output_flag" => false, "log_to_console" => false)
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false)
         )
         results = run_reopt(model, "./scenarios/no_techs.json")
         @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ 1000.0
@@ -557,8 +555,7 @@ else  # run HiGHS tests
     end
 
     @testset "Solar and Storage" begin
-        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-            "output_flag" => false, "log_to_console" => false)
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false)
         )
         r = run_reopt(model, "./scenarios/pv_storage.json")
 
@@ -569,8 +566,7 @@ else  # run HiGHS tests
     end
 
     @testset "Outage with Generator" begin
-        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-            "output_flag" => false, "log_to_console" => false)
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false)
         )
         results = run_reopt(model, "./scenarios/generator.json")
         @test results["Generator"]["size_kw"] ≈ 9.55 atol=0.01
@@ -583,8 +579,7 @@ else  # run HiGHS tests
 
     # TODO test MPC with outages
     @testset "MPC" begin
-        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-            "output_flag" => false, "log_to_console" => false)
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false)
         )
         r = run_mpc(model, "./scenarios/mpc.json")
         @test maximum(r["ElectricUtility"]["to_load_series_kw"][1:15]) <= 98.0 
@@ -594,8 +589,7 @@ else  # run HiGHS tests
 
     @testset "MPC Multi-node" begin
         # not doing much yet; just testing that two identical sites have the same costs
-        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-            "output_flag" => false, "log_to_console" => false)
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false)
         )
         ps = MPCInputs[]
         push!(ps, MPCInputs("./scenarios/mpc_multinode1.json"));
@@ -611,8 +605,7 @@ else  # run HiGHS tests
         when using the hardcoded levelization_factor in this package's REoptInputs function.
         The two LCC's matched within 0.00005%. (The Julia pkg LCC is 1.0971991e7)
         """
-        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-            "output_flag" => false, "log_to_console" => false)
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false)
         )
         results = run_reopt(model, "./scenarios/incentives.json")
         @test results["Financial"]["lcc"] ≈ 1.096852612e7 atol=1e4  
@@ -622,8 +615,7 @@ else  # run HiGHS tests
         d = JSON.parsefile("scenarios/no_techs.json")
         d["ElectricLoad"] = Dict("loads_kw" => repeat([1.0], 35040))
         d["Settings"] = Dict("time_steps_per_hour" => 4)
-        model = Model(optimizer_with_attributes(HiGHS.Optimizer, 
-            "output_flag" => false, "log_to_console" => false)
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false)
         )
         results = run_reopt(model, d)
         @test results["ElectricLoad"]["annual_calculated_kwh"] ≈ 8760
@@ -1013,7 +1005,7 @@ else  # run HiGHS tests
     
     @testset "Heating loads and addressable load fraction" begin
         # Default LargeOffice CRB with SpaceHeatingLoad and DomesticHotWaterLoad are served by ExistingBoiler
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         results = run_reopt(m, "./scenarios/thermal_load.json")
     
         @test round(results["ExistingBoiler"]["annual_fuel_consumption_mmbtu"], digits=0) ≈ 2904
@@ -1026,7 +1018,7 @@ else  # run HiGHS tests
         data["SpaceHeatingLoad"]["addressable_load_fraction"] = 0.8
         s = Scenario(data)
         inputs = REoptInputs(s)
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         results = run_reopt(m, inputs)
         @test round(results["ExistingBoiler"]["annual_fuel_consumption_mmbtu"], digits=0) ≈ 8760 * (0.5 * 0.6 + 0.5 * 0.8)
         
@@ -1052,7 +1044,7 @@ else  # run HiGHS tests
             data_sizing = JSON.parsefile("./scenarios/chp_sizing.json")
             s = Scenario(data_sizing)
             inputs = REoptInputs(s)
-            m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
             results = run_reopt(m, inputs)
         
             @test round(results["CHP"]["size_kw"], digits=0) ≈ 468.7 atol=1.0
@@ -1103,7 +1095,7 @@ else  # run HiGHS tests
         
             s = Scenario(data_cost_curve)
             inputs = REoptInputs(s)
-            m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
             results = run_reopt(m, inputs)
         
             init_capex_total_expected = init_capex_chp_expected + init_capex_pv_expected
@@ -1158,7 +1150,7 @@ else  # run HiGHS tests
         
             s = Scenario(data)
             inputs = REoptInputs(s)
-            m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
             results = run_reopt(m, inputs)
         
             tot_elec_load = results["ElectricLoad"]["load_series_kw"]
@@ -1191,7 +1183,7 @@ else  # run HiGHS tests
             data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([6.0], 8760)
             data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([6.0], 8760)
             #part 1: supplementary firing not used when less efficient than the boiler and expensive 
-            m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             s = Scenario(data)
             inputs = REoptInputs(s)
             results = run_reopt(m1, inputs)
@@ -1208,7 +1200,7 @@ else  # run HiGHS tests
             data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10
             data["CHP"]["reduces_demand_charges"] = false
             data["ExistingBoiler"]["efficiency"] = 0.85
-            m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             s = Scenario(data)
             inputs = REoptInputs(s)
             results = run_reopt(m2, inputs)
@@ -1254,8 +1246,8 @@ else  # run HiGHS tests
                 "exogenous_inputs" => u
             )
     
-            m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-            m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             r = run_reopt([m1,m2], d)
             @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
             @test r["Financial"]["npv"] == 0
@@ -1263,8 +1255,8 @@ else  # run HiGHS tests
             # put in a time varying fuel cost, which should make purchasing the FlexibleHVAC system economical
             # with flat ElectricTariff the ExistingChiller does not benefit from FlexibleHVAC
             d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = rand(Float64, (8760))*(50-5).+5;
-            m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-            m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             r = run_reopt([m1,m2], d)
             # all of the savings are from the ExistingBoiler fuel costs
             @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === true
@@ -1273,8 +1265,8 @@ else  # run HiGHS tests
     
             # now increase the FlexibleHVAC installed_cost to the fuel costs savings + 100 and expect that the FlexibleHVAC is not purchased
             d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + 100
-            m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-            m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             r = run_reopt([m1,m2], d)
             @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
             @test r["Financial"]["npv"] == 0
@@ -1282,8 +1274,8 @@ else  # run HiGHS tests
             # add TOU ElectricTariff and expect to benefit from using ExistingChiller intelligently
             d["ElectricTariff"] = Dict("urdb_label" => "5ed6c1a15457a3367add15ae")
     
-            m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-            m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             r = run_reopt([m1,m2], d)
     
             elec_cost_savings = r["ElectricTariff"]["lifecycle_demand_cost_after_tax_bau"] + 
@@ -1297,8 +1289,8 @@ else  # run HiGHS tests
             # now increase the FlexibleHVAC installed_cost to the fuel costs savings + elec_cost_savings 
             # + 100 and expect that the FlexibleHVAC is not purchased
             d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + elec_cost_savings + 100
-            m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-            m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             r = run_reopt([m1,m2], d)
             @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
             @test r["Financial"]["npv"] == 0
@@ -1311,7 +1303,7 @@ else  # run HiGHS tests
     check to make sure that PV does NOT export unless the site load is met first for the month of January.
     =#
     @testset "Do not allow_simultaneous_export_import" begin
-        model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         data = JSON.parsefile("./scenarios/monthly_rate.json")
 
         # create wholesale_rate with compensation in January > retail rate
@@ -1330,8 +1322,8 @@ else  # run HiGHS tests
     end
 
     @testset "Solar and ElectricStorage w/BAU and degradation" begin
-        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+        m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         d = JSON.parsefile("scenarios/pv_storage.json");
         d["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
         results = run_reopt([m1,m2], d)
@@ -1350,14 +1342,14 @@ else  # run HiGHS tests
         # using default augmentation battery maintenance strategy
         avg_soc_no_degr = sum(results["ElectricStorage"]["soc_series_fraction"]) / 8760
         d["ElectricStorage"]["model_degradation"] = true
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         r_degr = run_reopt(m, d)
         avg_soc_degr = sum(r_degr["ElectricStorage"]["soc_series_fraction"]) / 8760
         @test avg_soc_no_degr > avg_soc_degr
 
         # test the replacement strategy
         d["ElectricStorage"]["degradation"] = Dict("maintenance_strategy" => "replacement")
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
         r = run_reopt(m, d)
         #optimal SOH at end of horizon is 80\% to prevent any replacement
@@ -1370,15 +1362,15 @@ else  # run HiGHS tests
 
         # test minimum_avg_soc_fraction
         d["ElectricStorage"]["minimum_avg_soc_fraction"] = 0.72
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
         r = run_reopt(m, d)
         @test round(sum(r["ElectricStorage"]["soc_series_fraction"]), digits=2) / 8760 >= 0.7199
     end
 
     @testset "Outage with Generator, outage simulator, BAU critical load outputs" begin
-        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+        m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         p = REoptInputs("./scenarios/generator.json")
         results = run_reopt([m1,m2], p)
         @test results["Generator"]["size_kw"] ≈ 9.55 atol=0.01
@@ -1393,7 +1385,7 @@ else  # run HiGHS tests
 
     @testset "Minimize Unserved Load" begin
             
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
         results = run_reopt(m, "./scenarios/outage.json")
 
         @test results["Outages"]["expected_outage_cost"] ≈ 0
@@ -1408,25 +1400,25 @@ else  # run HiGHS tests
         Scenario with $0.001/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
         - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
         =#
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         results = run_reopt(m, "./scenarios/nogridcost_minresilhours.json")
         @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 12
         
         # testing dvUnserved load, which would output 100 kWh for this scenario before output fix
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         results = run_reopt(m, "./scenarios/nogridcost_multiscenario.json")
         @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 60
         @test results["Outages"]["expected_outage_cost"] ≈ 485.43270 atol=1.0e-5  #avg duration (3h) * load per time step (10) * present worth factor (16.18109)
         @test results["Outages"]["max_outage_cost_per_outage_duration"][1] ≈ 161.8109 atol=1.0e-5
 
         # Scenario with generator, PV, electric storage
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         results = run_reopt(m, "./scenarios/outages_gen_pv_stor.json")
         @test results["Outages"]["expected_outage_cost"] ≈ 3.54476923e6 atol=10
         @test results["Financial"]["lcc"] ≈ 8.6413594727e7 rtol=0.001
 
         # Scenario with generator, PV, wind, electric storage
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         results = run_reopt(m, "./scenarios/outages_gen_pv_wind_stor.json")
         @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
         @test value(m[:binMGTechUsed]["PV"]) ≈ 1
@@ -1439,8 +1431,8 @@ else  # run HiGHS tests
         input_data = JSON.parsefile("./scenarios/wind_outages.json")
         s = Scenario(input_data)
         inputs = REoptInputs(s)
-        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
-        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+        m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+        m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
         results = run_reopt([m1,m2], inputs)
 
         # Check that supply-to-load is equal to critical load during outages, including wind
@@ -1455,7 +1447,7 @@ else  # run HiGHS tests
     end
 
     @testset "Multiple Sites" begin
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         ps = [
             REoptInputs("./scenarios/pv_storage.json"),
             REoptInputs("./scenarios/monthly_rate.json"),
@@ -1465,7 +1457,7 @@ else  # run HiGHS tests
     end
 
     @testset "MPC" begin
-        model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         r = run_mpc(model, "./scenarios/mpc.json")
         @test maximum(r["ElectricUtility"]["to_load_series_kw"][1:15]) <= 98.0 
         @test maximum(r["ElectricUtility"]["to_load_series_kw"][16:24]) <= 97.0
@@ -1483,7 +1475,7 @@ else  # run HiGHS tests
         when using the hardcoded levelization_factor in this package's REoptInputs function.
         The two LCC's matched within 0.00005%. (The Julia pkg LCC is  1.0971991e7)
         """
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         results = run_reopt(m, "./scenarios/incentives.json")
         @test results["Financial"]["lcc"] ≈ 1.094596365e7 atol=5e4  
     end
@@ -1491,7 +1483,7 @@ else  # run HiGHS tests
     @testset verbose = true "Rate Structures" begin
 
         @testset "Tiered Energy" begin
-            m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(m, "./scenarios/tiered_rate.json")
             @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ 2342.88
             @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ 24000.0 atol=0.1
@@ -1506,7 +1498,7 @@ else  # run HiGHS tests
             data["ElectricLoad"]["loads_kw"] = ones(8760)
             data["ElectricLoad"]["loads_kw"][8] = 100.0
             inputs = REoptInputs(Scenario(data))        
-            m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(m, inputs)
             # Expected result is 100 kW demand for January, 35% of that for all other months and 
             # with 5x other $10.5/kW cold months and 6x $11.5/kW warm months
@@ -1525,7 +1517,7 @@ else  # run HiGHS tests
             d["ElectricTariff"]["demand_lookback_months"] = [1,0,0,1,0,0,0,0,0,0,0,1] # Jan, April, Dec
             d["ElectricTariff"]["blended_annual_energy_rate"] = 0.01
 
-            m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             r = run_reopt(m, REoptInputs(Scenario(d)))
 
             monthly_peaks = [300,300,300,400,300,500,300,300,300,300,300,300] # 300 = 400*0.75. Sets peak in all months excpet April and June
@@ -1545,7 +1537,7 @@ else  # run HiGHS tests
             d["ElectricTariff"]["blended_annual_energy_rate"] = 0.01
             d["ElectricTariff"]["demand_lookback_range"] = 6
 
-            m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             r = run_reopt(m, REoptInputs(Scenario(d)))
 
             monthly_peaks = [225, 225, 225, 400, 300, 500, 375, 375, 375, 375, 375, 375]
@@ -1555,14 +1547,14 @@ else  # run HiGHS tests
         end
 
         @testset "Blended tariff" begin
-            model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(model, "./scenarios/no_techs.json")
             @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ 1000.0
             @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ 136.99
         end
 
         @testset "Coincident Peak Charges" begin
-            model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(model, "./scenarios/coincident_peak.json")
             @test results["ElectricTariff"]["year_one_coincident_peak_cost_before_tax"] ≈ 15.0
         end
@@ -1570,14 +1562,14 @@ else  # run HiGHS tests
         @testset "URDB sell rate" begin
             #= The URDB contains at least one "Customer generation" tariff that only has a "sell" key in the energyratestructure (the tariff tested here)
             =#
-            model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             p = REoptInputs("./scenarios/URDB_customer_generation.json")
             results = run_reopt(model, p)
             @test results["PV"]["size_kw"] ≈ p.max_sizes["PV"]
         end
 
         # # tiered monthly demand rate  TODO: expected results?
-        # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        # m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         # data = JSON.parsefile("./scenarios/tiered_rate.json")
         # data["ElectricTariff"]["urdb_label"] = "59bc22705457a3372642da67"
         # s = Scenario(data)
@@ -1596,7 +1588,7 @@ else  # run HiGHS tests
     end
 
     @testset "Wind" begin
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         d = JSON.parsefile("./scenarios/wind.json")
         results = run_reopt(m, d)
         @test results["Wind"]["size_kw"] ≈ 3752 atol=0.1
@@ -1616,12 +1608,12 @@ else  # run HiGHS tests
         TODO: will these discrepancies be addressed once NMIL binaries are added?
         =#
 
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         d["Site"]["land_acres"] = 60 # = 2 MW (with 0.03 acres/kW)
         results = run_reopt(m, d)
         @test results["Wind"]["size_kw"] == 2000.0 # Wind should be constrained by land_acres
 
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         d["Wind"]["min_kw"] = 2001 # min_kw greater than land-constrained max should error
         results = run_reopt(m, d)
         @test "errors" ∈ keys(results["Messages"])
@@ -1630,8 +1622,8 @@ else  # run HiGHS tests
     end
 
     @testset "Multiple PVs" begin
-        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+        m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         results = run_reopt([m1,m2], "./scenarios/multiple_pvs.json")
 
         ground_pv = results["PV"][findfirst(pv -> pv["name"] == "ground", results["PV"])]
@@ -1651,7 +1643,7 @@ else  # run HiGHS tests
     end
 
     @testset "Thermal Energy Storage + Absorption Chiller" begin
-        model = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG"=>0))
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         data = JSON.parsefile("./scenarios/thermal_storage.json")
         s = Scenario(data)
         p = REoptInputs(s)
@@ -1728,7 +1720,7 @@ else  # run HiGHS tests
         input_data = JSON.parsefile("./scenarios/heat_cool_energy_balance_inputs.json")
         s = Scenario(input_data)
         inputs = REoptInputs(s)
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
         results = run_reopt(m, inputs)
 
         # Annual cooling **thermal** energy load of CRB is based on annual cooling electric energy (from CRB models) and a conditional COP depending on the peak cooling thermal load
@@ -2028,8 +2020,8 @@ else  # run HiGHS tests
         input_data["DomesticHotWaterLoad"]["annual_mmbtu"] = 0.5 * 8760
         s = Scenario(input_data)
         inputs = REoptInputs(s)
-        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+        m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         results = run_reopt([m1,m2], inputs)
         
         # BAU boiler loads
@@ -2047,7 +2039,7 @@ else  # run HiGHS tests
         ## Scenario 1: Solar, Storage, Fixed Generator
         post_name = "off_grid.json" 
         post = JSON.parsefile("./scenarios/$post_name")
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         r = run_reopt(m, post)
         scen = Scenario(post)
         
@@ -2080,7 +2072,7 @@ else  # run HiGHS tests
         post["ElectricStorage"]["max_kw"] = 0.0
         post["Generator"]["min_turn_down_fraction"] = 0.0
 
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         r = run_reopt(m, post)
 
         # Test generator outputs
@@ -2103,14 +2095,14 @@ else  # run HiGHS tests
         post["ElectricStorage"]["max_kw"] = 0.0
         post["Generator"]["min_turn_down_fraction"] = 0.0
 
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         r = run_reopt(m, post)
 
         # Test generator outputs
         @test typeof(r) == Model # this is true when the model is infeasible
 
         ### Scenario 3: Indonesia. Wind (custom prod) and Generator only
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
         post_name = "wind_intl_offgrid.json" 
         post = JSON.parsefile("./scenarios/$post_name")
         post["ElectricLoad"]["loads_kw"] = [10.0 for i in range(1,8760)]
@@ -2181,7 +2173,7 @@ else  # run HiGHS tests
         s = Scenario(input_data)
         inputs = REoptInputs(s)
         m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
-        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+        m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
         results = run_reopt([m1,m2], inputs)
         
         ghp_option_chosen = results["GHP"]["ghp_option_chosen"]
@@ -2224,8 +2216,8 @@ else  # run HiGHS tests
 
         inputs = REoptInputs(input_data)
 
-        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
-        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+        m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+        m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
         results = run_reopt([m1,m2], inputs)
 
         calculated_ghp_capital_costs = ((input_data["GHP"]["ghpghx_responses"][1]["outputs"]["number_of_boreholes"]*
@@ -2264,8 +2256,8 @@ else  # run HiGHS tests
 
         inputs = REoptInputs(input_data)
 
-        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
-        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+        m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+        m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
         results = run_reopt([m1,m2], inputs)
 
         pop!(input_data["GHP"], "ghpghx_inputs", nothing)
@@ -2289,7 +2281,7 @@ else  # run HiGHS tests
 
         s_wwhp = Scenario(input_data_wwhp)
         inputs_wwhp = REoptInputs(s_wwhp)
-        m3 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+        m3 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
         results_wwhp = run_reopt(m3, inputs_wwhp)
 
 
@@ -2349,8 +2341,8 @@ else  # run HiGHS tests
                 inputs["Generator"]["fuel_avail_gal"] = 1000 
             end
 
-            m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-            m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt([m1, m2], inputs)
 
             if !isnothing(ER_target[i])
@@ -2441,8 +2433,8 @@ else  # run HiGHS tests
                 inputs["ElectricStorage"]["max_kwh"] = results["ElectricStorage"]["size_kwh"]
                 inputs["Financial"]["CO2_cost_per_tonne"] = results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"]
                 inputs["Settings"]["include_climate_in_objective"] = true
-                m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-                m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+                m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 results = run_reopt([m1, m2], inputs)
                 @test results["Financial"]["npv"]/expected_npv ≈ 0 atol=1e-3
                 @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ inputs["Financial"]["CO2_cost_per_tonne"] atol=1e-1
@@ -2501,8 +2493,8 @@ else  # run HiGHS tests
         input_data["DomesticHotWaterLoad"]["annual_mmbtu"] = heat_load_multiplier * dhw_load.annual_mmbtu / input_data["ExistingBoiler"]["efficiency"]
         s = Scenario(input_data)
         inputs = REoptInputs(s)
-        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+        m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         results = run_reopt([m1,m2], inputs)
 
         # The expected values below were directly copied from the REopt_API V2 expected values
@@ -2595,7 +2587,7 @@ else  # run HiGHS tests
         
         s = Scenario(input_data)
         inputs = REoptInputs(s)
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
         results = run_reopt(m, inputs)
         
         thermal_techs = ["ExistingBoiler", "CHP", "SteamTurbine"]
@@ -2651,7 +2643,7 @@ else  # run HiGHS tests
         d["DomesticHotWaterLoad"]["annual_mmbtu"] = 0.5 * 8760
         s = Scenario(d)
         p = REoptInputs(s)
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         results = run_reopt(m, p)
 
         #first run: Boiler produces the required heat instead of the electric heater - electric heater should not be purchased
@@ -2665,7 +2657,7 @@ else  # run HiGHS tests
         d["ElectricTariff"]["monthly_energy_rates"] = [0,0,0,0,0,0,0,0,0,0,0,0]
         s = Scenario(d)
         p = REoptInputs(s)
-        m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         results = run_reopt(m, p)
 
         annual_thermal_prod = 0.8 * 8760  #80% efficient boiler --> 0.8 MMBTU of heat load per hour
@@ -2685,8 +2677,10 @@ else  # run HiGHS tests
         # Throw a handled error
         d = JSON.parsefile("./scenarios/logger.json")
 
-        m1 = Model(Xpress.Optimizer)
-        m2 = Model(Xpress.Optimizer)
+        m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+        "output_flag" => false, "log_to_console" => false)
+        m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, 
+        "output_flag" => false, "log_to_console" => false)
         r = run_reopt([m1,m2], d)
         @test r["status"] == "error"
         @test "Messages" ∈ keys(r)
@@ -2696,7 +2690,7 @@ else  # run HiGHS tests
         @test length(r["Messages"]["warnings"]) > 0
         @test r["Messages"]["has_stacktrace"] == false
 
-        m = Model(Xpress.Optimizer)
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false)
         r = run_reopt(m, d)
         @test r["status"] == "error"
         @test "Messages" ∈ keys(r)
@@ -2709,8 +2703,8 @@ else  # run HiGHS tests
         @test isa(REoptInputs(d), Dict)
 
         # Using filepath
-        n1 = Model(Xpress.Optimizer)
-        n2 = Model(Xpress.Optimizer)
+        n1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false)
+        n2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false)
         r = run_reopt([n1,n2], "./scenarios/logger.json")
         @test r["status"] == "error"
         @test "Messages" ∈ keys(r)
@@ -2719,7 +2713,7 @@ else  # run HiGHS tests
         @test length(r["Messages"]["errors"]) > 0
         @test length(r["Messages"]["warnings"]) > 0
 
-        n = Model(Xpress.Optimizer)
+        n = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false)
         r = run_reopt(n, "./scenarios/logger.json")
         @test r["status"] == "error"
         @test "Messages" ∈ keys(r)
@@ -2732,8 +2726,8 @@ else  # run HiGHS tests
         d["ElectricLoad"]["doe_reference_name"] = "MidriseApartment"
         d["ElectricTariff"]["urdb_label"] = "62c70a6c40a0c425535d387x"
 
-        m1 = Model(Xpress.Optimizer)
-        m2 = Model(Xpress.Optimizer)
+        m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false)
+        m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false)
         r = run_reopt([m1,m2], d)
         @test r["status"] == "error"
         @test "Messages" ∈ keys(r)
@@ -2742,7 +2736,7 @@ else  # run HiGHS tests
         @test length(r["Messages"]["errors"]) > 0
         @test length(r["Messages"]["warnings"]) > 0
 
-        m = Model(Xpress.Optimizer)
+        m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false)
         r = run_reopt(m, d)
         @test r["status"] == "error"
         @test "Messages" ∈ keys(r)
@@ -2755,8 +2749,8 @@ else  # run HiGHS tests
         @test isa(REoptInputs(d), Dict)
 
         # Using filepath
-        n1 = Model(Xpress.Optimizer)
-        n2 = Model(Xpress.Optimizer)
+        n1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false)
+        n2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false)
         r = run_reopt([n1,n2], "./scenarios/logger.json")
         @test r["status"] == "error"
         @test "Messages" ∈ keys(r)
@@ -2765,7 +2759,7 @@ else  # run HiGHS tests
         @test length(r["Messages"]["errors"]) > 0
         @test length(r["Messages"]["warnings"]) > 0
 
-        n = Model(Xpress.Optimizer)
+        n = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false)
         r = run_reopt(n, "./scenarios/logger.json")
         @test r["status"] == "error"
         @test "Messages" ∈ keys(r)
