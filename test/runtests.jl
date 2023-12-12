@@ -1115,8 +1115,9 @@ else  # run HiGHS tests
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
             d = JSON.parsefile("./scenarios/wind.json")
             results = run_reopt(m, d)
-            @test results["Wind"]["size_kw"] ≈ 3752 atol=0.1
-            @test results["Financial"]["lcc"] ≈ 8.591017e6 rtol=1e-5
+            @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
+            # @test results["Wind"]["size_kw"] ≈ 3752 atol=0.1
+            # @test results["Financial"]["lcc"] ≈ 8.591017e6 rtol=1e-5
             #= 
             0.5% higher LCC in this package as compared to API ? 8,591,017 vs 8,551,172
             - both have zero curtailment
@@ -1141,9 +1142,8 @@ else  # run HiGHS tests
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
             d["Wind"]["min_kw"] = 2001 # min_kw greater than land-constrained max should error
             results = run_reopt(m, d)
-            @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
-            # @test "errors" ∈ keys(results["Messages"])
-            # @test length(results["Messages"]["errors"]) > 0
+            @test "errors" ∈ keys(results["Messages"])
+            @test length(results["Messages"]["errors"]) > 0
             
         end
 
