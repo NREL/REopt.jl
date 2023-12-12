@@ -1252,8 +1252,8 @@ else  # run HiGHS tests
                 # put in a time varying fuel cost, which should make purchasing the FlexibleHVAC system economical
                 # with flat ElectricTariff the ExistingChiller does not benefit from FlexibleHVAC
                 d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = rand(Float64, (8760))*(50-5).+5;
-                m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-                m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
+                m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
                 r = run_reopt([m1,m2], d)
                 @test any([occursin("not supported by the solver", msg[1]) for msg in r["Messages"]["errors"]])
                 # all of the savings are from the ExistingBoiler fuel costs
@@ -1263,8 +1263,8 @@ else  # run HiGHS tests
         
                 # now increase the FlexibleHVAC installed_cost to the fuel costs savings + 100 and expect that the FlexibleHVAC is not purchased
                 d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + 100
-                m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-                m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
+                m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
                 r = run_reopt([m1,m2], d)
                 @test any([occursin("not supported by the solver", msg[1]) for msg in r["Messages"]["errors"]])
                 # @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
@@ -1389,7 +1389,7 @@ else  # run HiGHS tests
 
         @testset "Minimize Unserved Load" begin
                 
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
             results = run_reopt(m, "./scenarios/outage.json")
             @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
 
@@ -1405,13 +1405,13 @@ else  # run HiGHS tests
             Scenario with $0.001/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
             - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
             =#
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
             results = run_reopt(m, "./scenarios/nogridcost_minresilhours.json")
             @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
             # @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 12
             
             # testing dvUnserved load, which would output 100 kWh for this scenario before output fix
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
             results = run_reopt(m, "./scenarios/nogridcost_multiscenario.json")
             @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
             # @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 60
@@ -1419,14 +1419,14 @@ else  # run HiGHS tests
             # @test results["Outages"]["max_outage_cost_per_outage_duration"][1] ≈ 161.8109 atol=1.0e-5
 
             # Scenario with generator, PV, electric storage
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
             results = run_reopt(m, "./scenarios/outages_gen_pv_stor.json")
             @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
             # @test results["Outages"]["expected_outage_cost"] ≈ 3.54476923e6 atol=10
             # @test results["Financial"]["lcc"] ≈ 8.6413594727e7 rtol=0.001
 
             # Scenario with generator, PV, wind, electric storage
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
             results = run_reopt(m, "./scenarios/outages_gen_pv_wind_stor.json")
             @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
             # @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
@@ -1440,8 +1440,8 @@ else  # run HiGHS tests
             input_data = JSON.parsefile("./scenarios/wind_outages.json")
             s = Scenario(input_data)
             inputs = REoptInputs(s)
-            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
-            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
             results = run_reopt([m1,m2], inputs)
             @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
 
@@ -1598,7 +1598,7 @@ else  # run HiGHS tests
         end
 
         @testset "Wind" begin
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
             d = JSON.parsefile("./scenarios/wind.json")
             results = run_reopt(m, d)
             @test results["Wind"]["size_kw"] ≈ 3752 atol=0.1
@@ -1618,13 +1618,13 @@ else  # run HiGHS tests
             TODO: will these discrepancies be addressed once NMIL binaries are added?
             =#
 
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
             d["Site"]["land_acres"] = 60 # = 2 MW (with 0.03 acres/kW)
             results = run_reopt(m, d)
             @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
             # @test results["Wind"]["size_kw"] == 2000.0 # Wind should be constrained by land_acres
 
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
             d["Wind"]["min_kw"] = 2001 # min_kw greater than land-constrained max should error
             results = run_reopt(m, d)
             @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
@@ -2114,7 +2114,7 @@ else  # run HiGHS tests
             @test typeof(r) == Model # this is true when the model is infeasible
 
             ### Scenario 3: Indonesia. Wind (custom prod) and Generator only
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
             post_name = "wind_intl_offgrid.json" 
             post = JSON.parsefile("./scenarios/$post_name")
             post["ElectricLoad"]["loads_kw"] = [10.0 for i in range(1,8760)]
@@ -2355,8 +2355,8 @@ else  # run HiGHS tests
                     inputs["Generator"]["fuel_avail_gal"] = 1000 
                 end
 
-                m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-                m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
+                m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
                 results = run_reopt([m1, m2], inputs)
                 @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
 
