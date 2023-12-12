@@ -6,6 +6,9 @@ using JSON
 using REopt
 using DotEnv
 DotEnv.config()
+using Random
+using DelimitedFiles
+Random.seed!(42)
 
 if "Xpress" in ARGS
     @testset "test_with_xpress" begin
