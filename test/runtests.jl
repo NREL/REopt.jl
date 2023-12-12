@@ -2122,19 +2122,18 @@ else  # run HiGHS tests
             post["Wind"]["production_factor_series"] =  reduce(vcat, readdlm("./data/example_wind_prod_factor_kw.csv", '\n', header=true)[1])
 
             results = run_reopt(m, post)
-            @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
+            
+            @test results["ElectricLoad"]["offgrid_load_met_fraction"] >= scen.electric_load.min_load_met_annual_fraction
+            f = results["Financial"]
+            @test f["lifecycle_generation_tech_capital_costs"] + f["lifecycle_storage_capital_costs"] + f["lifecycle_om_costs_after_tax"] +
+                    f["lifecycle_fuel_costs_after_tax"] + f["lifecycle_chp_standby_cost_after_tax"] + f["lifecycle_elecbill_after_tax"] + 
+                    f["lifecycle_offgrid_other_annual_costs_after_tax"] + f["lifecycle_offgrid_other_capital_costs"] + 
+                    f["lifecycle_outage_cost"] + f["lifecycle_MG_upgrade_and_fuel_cost"] - 
+                    f["lifecycle_production_incentive_after_tax"] ≈ f["lcc"] atol=1.0
 
-            # @test results["ElectricLoad"]["offgrid_load_met_fraction"] >= scen.electric_load.min_load_met_annual_fraction
-            # f = results["Financial"]
-            # @test f["lifecycle_generation_tech_capital_costs"] + f["lifecycle_storage_capital_costs"] + f["lifecycle_om_costs_after_tax"] +
-            #         f["lifecycle_fuel_costs_after_tax"] + f["lifecycle_chp_standby_cost_after_tax"] + f["lifecycle_elecbill_after_tax"] + 
-            #         f["lifecycle_offgrid_other_annual_costs_after_tax"] + f["lifecycle_offgrid_other_capital_costs"] + 
-            #         f["lifecycle_outage_cost"] + f["lifecycle_MG_upgrade_and_fuel_cost"] - 
-            #         f["lifecycle_production_incentive_after_tax"] ≈ f["lcc"] atol=1.0
-
-            # windOR = sum(results["Wind"]["electric_to_load_series_kw"]  * post["Wind"]["operating_reserve_required_fraction"])
-            # loadOR = sum(post["ElectricLoad"]["loads_kw"] * scen.electric_load.operating_reserve_required_fraction)
-            # @test sum(results["ElectricLoad"]["offgrid_annual_oper_res_required_series_kwh"]) ≈ loadOR  + windOR atol=1.0
+            windOR = sum(results["Wind"]["electric_to_load_series_kw"]  * post["Wind"]["operating_reserve_required_fraction"])
+            loadOR = sum(post["ElectricLoad"]["loads_kw"] * scen.electric_load.operating_reserve_required_fraction)
+            @test sum(results["ElectricLoad"]["offgrid_annual_oper_res_required_series_kwh"]) ≈ loadOR  + windOR atol=1.0
 
         end
 
@@ -2188,39 +2187,38 @@ else  # run HiGHS tests
             m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
             m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
             results = run_reopt([m1,m2], inputs)
-            @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
             
-            # ghp_option_chosen = results["GHP"]["ghp_option_chosen"]
-            # @test ghp_option_chosen == 2
+            ghp_option_chosen = results["GHP"]["ghp_option_chosen"]
+            @test ghp_option_chosen == 2
 
-            # # Test GHP heating and cooling load reduced
-            # hot_load_reduced_mmbtu = sum(results["GHP"]["space_heating_thermal_load_reduction_with_ghp_mmbtu_per_hour"])
-            # cold_load_reduced_tonhour = sum(results["GHP"]["cooling_thermal_load_reduction_with_ghp_ton"])
-            # @test hot_load_reduced_mmbtu ≈ 1440.00 atol=0.1
-            # @test cold_load_reduced_tonhour ≈ 761382.78 atol=0.1
+            # Test GHP heating and cooling load reduced
+            hot_load_reduced_mmbtu = sum(results["GHP"]["space_heating_thermal_load_reduction_with_ghp_mmbtu_per_hour"])
+            cold_load_reduced_tonhour = sum(results["GHP"]["cooling_thermal_load_reduction_with_ghp_ton"])
+            @test hot_load_reduced_mmbtu ≈ 1440.00 atol=0.1
+            @test cold_load_reduced_tonhour ≈ 761382.78 atol=0.1
 
-            # # Test GHP serving space heating with VAV thermal efficiency improvements
-            # heating_served_mmbtu = sum(s.ghp_option_list[ghp_option_chosen].heating_thermal_kw / REopt.KWH_PER_MMBTU)
-            # expected_heating_served_mmbtu = 12000 * 0.8 * 0.85  # (fuel_mmbtu * boiler_effic * space_heating_efficiency_thermal_factor)
-            # @test round(heating_served_mmbtu, digits=1) ≈ expected_heating_served_mmbtu atol=1.0
+            # Test GHP serving space heating with VAV thermal efficiency improvements
+            heating_served_mmbtu = sum(s.ghp_option_list[ghp_option_chosen].heating_thermal_kw / REopt.KWH_PER_MMBTU)
+            expected_heating_served_mmbtu = 12000 * 0.8 * 0.85  # (fuel_mmbtu * boiler_effic * space_heating_efficiency_thermal_factor)
+            @test round(heating_served_mmbtu, digits=1) ≈ expected_heating_served_mmbtu atol=1.0
             
-            # # Boiler serves all of the DHW load, no DHW thermal reduction due to GHP retrofit
-            # boiler_served_mmbtu = sum(results["ExistingBoiler"]["thermal_production_series_mmbtu_per_hour"])
-            # expected_boiler_served_mmbtu = 3000 * 0.8 # (fuel_mmbtu * boiler_effic)
-            # @test round(boiler_served_mmbtu, digits=1) ≈ expected_boiler_served_mmbtu atol=1.0
+            # Boiler serves all of the DHW load, no DHW thermal reduction due to GHP retrofit
+            boiler_served_mmbtu = sum(results["ExistingBoiler"]["thermal_production_series_mmbtu_per_hour"])
+            expected_boiler_served_mmbtu = 3000 * 0.8 # (fuel_mmbtu * boiler_effic)
+            @test round(boiler_served_mmbtu, digits=1) ≈ expected_boiler_served_mmbtu atol=1.0
             
-            # # LoadProfileChillerThermal cooling thermal is 1/cooling_efficiency_thermal_factor of GHP cooling thermal production
-            # bau_chiller_thermal_tonhour = sum(s.cooling_load.loads_kw_thermal / REopt.KWH_THERMAL_PER_TONHOUR)
-            # ghp_cooling_thermal_tonhour = sum(inputs.ghp_cooling_thermal_load_served_kw[1,:] / REopt.KWH_THERMAL_PER_TONHOUR)
-            # @test round(bau_chiller_thermal_tonhour) ≈ ghp_cooling_thermal_tonhour/0.6 atol=1.0
+            # LoadProfileChillerThermal cooling thermal is 1/cooling_efficiency_thermal_factor of GHP cooling thermal production
+            bau_chiller_thermal_tonhour = sum(s.cooling_load.loads_kw_thermal / REopt.KWH_THERMAL_PER_TONHOUR)
+            ghp_cooling_thermal_tonhour = sum(inputs.ghp_cooling_thermal_load_served_kw[1,:] / REopt.KWH_THERMAL_PER_TONHOUR)
+            @test round(bau_chiller_thermal_tonhour) ≈ ghp_cooling_thermal_tonhour/0.6 atol=1.0
             
-            # # Custom heat pump COP map is used properly
-            # ghp_option_chosen = results["GHP"]["ghp_option_chosen"]
-            # heating_cop_avg = s.ghp_option_list[ghp_option_chosen].ghpghx_response["outputs"]["heating_cop_avg"]
-            # cooling_cop_avg = s.ghp_option_list[ghp_option_chosen].ghpghx_response["outputs"]["cooling_cop_avg"]
-            # # Average COP which includes pump power should be lower than Heat Pump only COP specified by the map
-            # @test heating_cop_avg <= 4.0
-            # @test cooling_cop_avg <= 8.0
+            # Custom heat pump COP map is used properly
+            ghp_option_chosen = results["GHP"]["ghp_option_chosen"]
+            heating_cop_avg = s.ghp_option_list[ghp_option_chosen].ghpghx_response["outputs"]["heating_cop_avg"]
+            cooling_cop_avg = s.ghp_option_list[ghp_option_chosen].ghpghx_response["outputs"]["cooling_cop_avg"]
+            # Average COP which includes pump power should be lower than Heat Pump only COP specified by the map
+            @test heating_cop_avg <= 4.0
+            @test cooling_cop_avg <= 8.0
         end
 
         @testset "Hybrid GHX and GHP calculated costs validation" begin
