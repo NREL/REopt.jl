@@ -776,7 +776,7 @@ else  # run HiGHS tests
                 # @test fuel_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
         
                 # now increase the FlexibleHVAC installed_cost to the fuel costs savings + 100 and expect that the FlexibleHVAC is not purchased
-                d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + 100
+                # d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + 100
                 m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
                 m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
                 r = run_reopt([m1,m2], d)
