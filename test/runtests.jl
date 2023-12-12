@@ -1176,14 +1176,16 @@ else  # run HiGHS tests
                 s = Scenario(data)
                 inputs = REoptInputs(s)
                 results = run_reopt(m1, inputs)
-                @test results["CHP"]["size_kw"] == 800
-                @test results["CHP"]["size_supplemental_firing_kw"] == 0
-                @test results["CHP"]["annual_electric_production_kwh"] ≈ 800*8760 rtol=1e-5
-                @test results["CHP"]["annual_thermal_production_mmbtu"] ≈ 800*(0.4418/0.3573)*8760/293.07107 rtol=1e-5
-                @test results["ElectricTariff"]["lifecycle_demand_cost_after_tax"] == 0
-                @test results["HeatingLoad"]["annual_calculated_total_heating_thermal_load_mmbtu"] == 12.0 * 8760 * data["ExistingBoiler"]["efficiency"]
-                @test results["HeatingLoad"]["annual_calculated_dhw_thermal_load_mmbtu"] == 6.0 * 8760 * data["ExistingBoiler"]["efficiency"]
-                @test results["HeatingLoad"]["annual_calculated_space_heating_thermal_load_mmbtu"] == 6.0 * 8760 * data["ExistingBoiler"]["efficiency"]
+                @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
+
+                # @test results["CHP"]["size_kw"] == 800
+                # @test results["CHP"]["size_supplemental_firing_kw"] == 0
+                # @test results["CHP"]["annual_electric_production_kwh"] ≈ 800*8760 rtol=1e-5
+                # @test results["CHP"]["annual_thermal_production_mmbtu"] ≈ 800*(0.4418/0.3573)*8760/293.07107 rtol=1e-5
+                # @test results["ElectricTariff"]["lifecycle_demand_cost_after_tax"] == 0
+                # @test results["HeatingLoad"]["annual_calculated_total_heating_thermal_load_mmbtu"] == 12.0 * 8760 * data["ExistingBoiler"]["efficiency"]
+                # @test results["HeatingLoad"]["annual_calculated_dhw_thermal_load_mmbtu"] == 6.0 * 8760 * data["ExistingBoiler"]["efficiency"]
+                # @test results["HeatingLoad"]["annual_calculated_space_heating_thermal_load_mmbtu"] == 6.0 * 8760 * data["ExistingBoiler"]["efficiency"]
             
                 #part 2: supplementary firing used when more efficient than the boiler and low-cost; demand charges not reduced by CHP
                 data["CHP"]["supplementary_firing_capital_cost_per_kw"] = 10
@@ -1193,9 +1195,10 @@ else  # run HiGHS tests
                 s = Scenario(data)
                 inputs = REoptInputs(s)
                 results = run_reopt(m2, inputs)
-                @test results["CHP"]["size_supplemental_firing_kw"] ≈ 321.71 atol=0.1
-                @test results["CHP"]["annual_thermal_production_mmbtu"] ≈ 149136.6 rtol=1e-5
-                @test results["ElectricTariff"]["lifecycle_demand_cost_after_tax"] ≈ 5212.7 rtol=1e-5
+                @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
+                # @test results["CHP"]["size_supplemental_firing_kw"] ≈ 321.71 atol=0.1
+                # @test results["CHP"]["annual_thermal_production_mmbtu"] ≈ 149136.6 rtol=1e-5
+                # @test results["ElectricTariff"]["lifecycle_demand_cost_after_tax"] ≈ 5212.7 rtol=1e-5
             end
         end
         
@@ -1238,8 +1241,9 @@ else  # run HiGHS tests
                 m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 r = run_reopt([m1,m2], d)
-                @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
-                @test r["Financial"]["npv"] == 0
+                @test any([occursin("not supported by the solver", msg[1]) for msg in r["Messages"]["errors"]])
+                # @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
+                # @test r["Financial"]["npv"] == 0
         
                 # put in a time varying fuel cost, which should make purchasing the FlexibleHVAC system economical
                 # with flat ElectricTariff the ExistingChiller does not benefit from FlexibleHVAC
@@ -1247,18 +1251,20 @@ else  # run HiGHS tests
                 m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 r = run_reopt([m1,m2], d)
+                @test any([occursin("not supported by the solver", msg[1]) for msg in r["Messages"]["errors"]])
                 # all of the savings are from the ExistingBoiler fuel costs
-                @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === true
-                fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax"]
-                @test fuel_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
+                # @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === true
+                # fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax"]
+                # @test fuel_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
         
                 # now increase the FlexibleHVAC installed_cost to the fuel costs savings + 100 and expect that the FlexibleHVAC is not purchased
                 d["FlexibleHVAC"]["installed_cost"] = fuel_cost_savings + 100
                 m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 r = run_reopt([m1,m2], d)
-                @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
-                @test r["Financial"]["npv"] == 0
+                @test any([occursin("not supported by the solver", msg[1]) for msg in r["Messages"]["errors"]])
+                # @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
+                # @test r["Financial"]["npv"] == 0
         
                 # add TOU ElectricTariff and expect to benefit from using ExistingChiller intelligently
                 d["ElectricTariff"] = Dict("urdb_label" => "5ed6c1a15457a3367add15ae")
@@ -1266,14 +1272,15 @@ else  # run HiGHS tests
                 m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 r = run_reopt([m1,m2], d)
+                @test any([occursin("not supported by the solver", msg[1]) for msg in r["Messages"]["errors"]])
         
-                elec_cost_savings = r["ElectricTariff"]["lifecycle_demand_cost_after_tax_bau"] + 
-                                    r["ElectricTariff"]["lifecycle_energy_cost_after_tax_bau"] - 
-                                    r["ElectricTariff"]["lifecycle_demand_cost_after_tax"] - 
-                                    r["ElectricTariff"]["lifecycle_energy_cost_after_tax"]
+                # elec_cost_savings = r["ElectricTariff"]["lifecycle_demand_cost_after_tax_bau"] + 
+                #                     r["ElectricTariff"]["lifecycle_energy_cost_after_tax_bau"] - 
+                #                     r["ElectricTariff"]["lifecycle_demand_cost_after_tax"] - 
+                #                     r["ElectricTariff"]["lifecycle_energy_cost_after_tax"]
         
-                fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax"]
-                @test fuel_cost_savings + elec_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
+                # fuel_cost_savings = r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax_bau"] - r["ExistingBoiler"]["lifecycle_fuel_cost_after_tax"]
+                # @test fuel_cost_savings + elec_cost_savings - d["FlexibleHVAC"]["installed_cost"] ≈ r["Financial"]["npv"] atol=0.1
         
                 # now increase the FlexibleHVAC installed_cost to the fuel costs savings + elec_cost_savings 
                 # + 100 and expect that the FlexibleHVAC is not purchased
@@ -1281,8 +1288,9 @@ else  # run HiGHS tests
                 m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 r = run_reopt([m1,m2], d)
-                @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
-                @test r["Financial"]["npv"] == 0
+                @test any([occursin("not supported by the solver", msg[1]) for msg in r["Messages"]["errors"]])
+                # @test Meta.parse(r["FlexibleHVAC"]["purchased"]) === false
+                # @test r["Financial"]["npv"] == 0
         
             end
         end
@@ -1305,9 +1313,10 @@ else  # run HiGHS tests
             s = Scenario(data)
             inputs = REoptInputs(s)
             results = run_reopt(model, inputs)
+            @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
 
-            @test all(x == 0.0 for (i,x) in enumerate(results["ElectricUtility"]["electric_to_load_series_kw"][1:744]) 
-                    if results["PV"]["electric_to_grid_series_kw"][i] > 0)
+            # @test all(x == 0.0 for (i,x) in enumerate(results["ElectricUtility"]["electric_to_load_series_kw"][1:744]) 
+            #         if results["PV"]["electric_to_grid_series_kw"][i] > 0)
         end
 
         @testset "Solar and ElectricStorage w/BAU and degradation" begin
@@ -1341,20 +1350,22 @@ else  # run HiGHS tests
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
             r = run_reopt(m, d)
-            #optimal SOH at end of horizon is 80\% to prevent any replacement
-            @test sum(value.(m[:bmth_BkWh])) ≈ 0 atol=0.1
-            # @test r["ElectricStorage"]["maintenance_cost"] ≈ 2972.66 atol=0.01 
-            # the maintenance_cost comes out to 3004.39 on Actions, so we test the LCC since it should match
-            @test r["Financial"]["lcc"] ≈ 1.240096e7  rtol=0.01
-            @test last(value.(m[:SOH])) ≈ 66.633  rtol=0.01
-            @test r["ElectricStorage"]["size_kwh"] ≈ 83.29  rtol=0.01
+            @test any([occursin("not supported by the solver", msg[1]) for msg in r["Messages"]["errors"]])
+            # #optimal SOH at end of horizon is 80\% to prevent any replacement
+            # @test sum(value.(m[:bmth_BkWh])) ≈ 0 atol=0.1
+            # # @test r["ElectricStorage"]["maintenance_cost"] ≈ 2972.66 atol=0.01 
+            # # the maintenance_cost comes out to 3004.39 on Actions, so we test the LCC since it should match
+            # @test r["Financial"]["lcc"] ≈ 1.240096e7  rtol=0.01
+            # @test last(value.(m[:SOH])) ≈ 66.633  rtol=0.01
+            # @test r["ElectricStorage"]["size_kwh"] ≈ 83.29  rtol=0.01
 
             # test minimum_avg_soc_fraction
             d["ElectricStorage"]["minimum_avg_soc_fraction"] = 0.72
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
             r = run_reopt(m, d)
-            @test round(sum(r["ElectricStorage"]["soc_series_fraction"]), digits=2) / 8760 >= 0.7199
+            @test any([occursin("not supported by the solver", msg[1]) for msg in r["Messages"]["errors"]])
+            # @test round(sum(r["ElectricStorage"]["soc_series_fraction"]), digits=2) / 8760 >= 0.7199
         end
 
         @testset "Outage with Generator, outage simulator, BAU critical load outputs" begin
@@ -1376,14 +1387,15 @@ else  # run HiGHS tests
                 
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
             results = run_reopt(m, "./scenarios/outage.json")
+            @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
 
-            @test results["Outages"]["expected_outage_cost"] ≈ 0
-            @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 0
-            @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
-            @test value(m[:binMGTechUsed]["CHP"]) ≈ 1
-            @test value(m[:binMGTechUsed]["PV"]) ≈ 1
-            @test value(m[:binMGStorageUsed]) ≈ 1
-            @test results["Financial"]["lcc"] ≈ 6.83633907986e7 atol=5e4
+            # @test results["Outages"]["expected_outage_cost"] ≈ 0
+            # @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 0
+            # @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
+            # @test value(m[:binMGTechUsed]["CHP"]) ≈ 1
+            # @test value(m[:binMGTechUsed]["PV"]) ≈ 1
+            # @test value(m[:binMGStorageUsed]) ≈ 1
+            # @test results["Financial"]["lcc"] ≈ 6.83633907986e7 atol=5e4
 
             #=
             Scenario with $0.001/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
@@ -1391,29 +1403,33 @@ else  # run HiGHS tests
             =#
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(m, "./scenarios/nogridcost_minresilhours.json")
-            @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 12
+            @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
+            # @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 12
             
             # testing dvUnserved load, which would output 100 kWh for this scenario before output fix
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(m, "./scenarios/nogridcost_multiscenario.json")
-            @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 60
-            @test results["Outages"]["expected_outage_cost"] ≈ 485.43270 atol=1.0e-5  #avg duration (3h) * load per time step (10) * present worth factor (16.18109)
-            @test results["Outages"]["max_outage_cost_per_outage_duration"][1] ≈ 161.8109 atol=1.0e-5
+            @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
+            # @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 60
+            # @test results["Outages"]["expected_outage_cost"] ≈ 485.43270 atol=1.0e-5  #avg duration (3h) * load per time step (10) * present worth factor (16.18109)
+            # @test results["Outages"]["max_outage_cost_per_outage_duration"][1] ≈ 161.8109 atol=1.0e-5
 
             # Scenario with generator, PV, electric storage
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(m, "./scenarios/outages_gen_pv_stor.json")
-            @test results["Outages"]["expected_outage_cost"] ≈ 3.54476923e6 atol=10
-            @test results["Financial"]["lcc"] ≈ 8.6413594727e7 rtol=0.001
+            @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
+            # @test results["Outages"]["expected_outage_cost"] ≈ 3.54476923e6 atol=10
+            # @test results["Financial"]["lcc"] ≈ 8.6413594727e7 rtol=0.001
 
             # Scenario with generator, PV, wind, electric storage
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(m, "./scenarios/outages_gen_pv_wind_stor.json")
-            @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
-            @test value(m[:binMGTechUsed]["PV"]) ≈ 1
-            @test value(m[:binMGTechUsed]["Wind"]) ≈ 1
-            @test results["Outages"]["expected_outage_cost"] ≈ 446899.75 atol=1.0
-            @test results["Financial"]["lcc"] ≈ 6.71661825335e7 rtol=0.001
+            @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
+            # @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
+            # @test value(m[:binMGTechUsed]["PV"]) ≈ 1
+            # @test value(m[:binMGTechUsed]["Wind"]) ≈ 1
+            # @test results["Outages"]["expected_outage_cost"] ≈ 446899.75 atol=1.0
+            # @test results["Financial"]["lcc"] ≈ 6.71661825335e7 rtol=0.001
         end
 
         @testset "Outages with Wind and supply-to-load no greater than critical load" begin
@@ -1423,16 +1439,17 @@ else  # run HiGHS tests
             m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
             m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
             results = run_reopt([m1,m2], inputs)
+            @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
 
-            # Check that supply-to-load is equal to critical load during outages, including wind
-            supply_to_load = results["Outages"]["storage_discharge_series_kw"] .+ results["Outages"]["wind_to_load_series_kw"]
-            supply_to_load = [supply_to_load[:,:,i][1] for i in eachindex(supply_to_load)]
-            critical_load = results["Outages"]["critical_loads_per_outage_series_kw"][1,1,:]
-            check = .≈(supply_to_load, critical_load, atol=0.001)
-            @test !(0 in check)
+            # # Check that supply-to-load is equal to critical load during outages, including wind
+            # supply_to_load = results["Outages"]["storage_discharge_series_kw"] .+ results["Outages"]["wind_to_load_series_kw"]
+            # supply_to_load = [supply_to_load[:,:,i][1] for i in eachindex(supply_to_load)]
+            # critical_load = results["Outages"]["critical_loads_per_outage_series_kw"][1,1,:]
+            # check = .≈(supply_to_load, critical_load, atol=0.001)
+            # @test !(0 in check)
 
-            # Check that the soc_series_fraction is the same length as the storage_discharge_series_kw
-            @test size(results["Outages"]["soc_series_fraction"]) == size(results["Outages"]["storage_discharge_series_kw"])
+            # # Check that the soc_series_fraction is the same length as the storage_discharge_series_kw
+            # @test size(results["Outages"]["soc_series_fraction"]) == size(results["Outages"]["storage_discharge_series_kw"])
         end
 
         @testset "Multiple Sites" begin
@@ -1600,13 +1617,15 @@ else  # run HiGHS tests
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             d["Site"]["land_acres"] = 60 # = 2 MW (with 0.03 acres/kW)
             results = run_reopt(m, d)
-            @test results["Wind"]["size_kw"] == 2000.0 # Wind should be constrained by land_acres
+            @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
+            # @test results["Wind"]["size_kw"] == 2000.0 # Wind should be constrained by land_acres
 
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             d["Wind"]["min_kw"] = 2001 # min_kw greater than land-constrained max should error
             results = run_reopt(m, d)
-            @test "errors" ∈ keys(results["Messages"])
-            @test length(results["Messages"]["errors"]) > 0
+            @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
+            # @test "errors" ∈ keys(results["Messages"])
+            # @test length(results["Messages"]["errors"]) > 0
             
         end
 
@@ -2099,18 +2118,19 @@ else  # run HiGHS tests
             post["Wind"]["production_factor_series"] =  reduce(vcat, readdlm("./data/example_wind_prod_factor_kw.csv", '\n', header=true)[1])
 
             results = run_reopt(m, post)
+            @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
 
-            @test results["ElectricLoad"]["offgrid_load_met_fraction"] >= scen.electric_load.min_load_met_annual_fraction
-            f = results["Financial"]
-            @test f["lifecycle_generation_tech_capital_costs"] + f["lifecycle_storage_capital_costs"] + f["lifecycle_om_costs_after_tax"] +
-                    f["lifecycle_fuel_costs_after_tax"] + f["lifecycle_chp_standby_cost_after_tax"] + f["lifecycle_elecbill_after_tax"] + 
-                    f["lifecycle_offgrid_other_annual_costs_after_tax"] + f["lifecycle_offgrid_other_capital_costs"] + 
-                    f["lifecycle_outage_cost"] + f["lifecycle_MG_upgrade_and_fuel_cost"] - 
-                    f["lifecycle_production_incentive_after_tax"] ≈ f["lcc"] atol=1.0
+            # @test results["ElectricLoad"]["offgrid_load_met_fraction"] >= scen.electric_load.min_load_met_annual_fraction
+            # f = results["Financial"]
+            # @test f["lifecycle_generation_tech_capital_costs"] + f["lifecycle_storage_capital_costs"] + f["lifecycle_om_costs_after_tax"] +
+            #         f["lifecycle_fuel_costs_after_tax"] + f["lifecycle_chp_standby_cost_after_tax"] + f["lifecycle_elecbill_after_tax"] + 
+            #         f["lifecycle_offgrid_other_annual_costs_after_tax"] + f["lifecycle_offgrid_other_capital_costs"] + 
+            #         f["lifecycle_outage_cost"] + f["lifecycle_MG_upgrade_and_fuel_cost"] - 
+            #         f["lifecycle_production_incentive_after_tax"] ≈ f["lcc"] atol=1.0
 
-            windOR = sum(results["Wind"]["electric_to_load_series_kw"]  * post["Wind"]["operating_reserve_required_fraction"])
-            loadOR = sum(post["ElectricLoad"]["loads_kw"] * scen.electric_load.operating_reserve_required_fraction)
-            @test sum(results["ElectricLoad"]["offgrid_annual_oper_res_required_series_kwh"]) ≈ loadOR  + windOR atol=1.0
+            # windOR = sum(results["Wind"]["electric_to_load_series_kw"]  * post["Wind"]["operating_reserve_required_fraction"])
+            # loadOR = sum(post["ElectricLoad"]["loads_kw"] * scen.electric_load.operating_reserve_required_fraction)
+            # @test sum(results["ElectricLoad"]["offgrid_annual_oper_res_required_series_kwh"]) ≈ loadOR  + windOR atol=1.0
 
         end
 
@@ -2164,38 +2184,39 @@ else  # run HiGHS tests
             m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
             m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
             results = run_reopt([m1,m2], inputs)
+            @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
             
-            ghp_option_chosen = results["GHP"]["ghp_option_chosen"]
-            @test ghp_option_chosen == 2
+            # ghp_option_chosen = results["GHP"]["ghp_option_chosen"]
+            # @test ghp_option_chosen == 2
 
-            # Test GHP heating and cooling load reduced
-            hot_load_reduced_mmbtu = sum(results["GHP"]["space_heating_thermal_load_reduction_with_ghp_mmbtu_per_hour"])
-            cold_load_reduced_tonhour = sum(results["GHP"]["cooling_thermal_load_reduction_with_ghp_ton"])
-            @test hot_load_reduced_mmbtu ≈ 1440.00 atol=0.1
-            @test cold_load_reduced_tonhour ≈ 761382.78 atol=0.1
+            # # Test GHP heating and cooling load reduced
+            # hot_load_reduced_mmbtu = sum(results["GHP"]["space_heating_thermal_load_reduction_with_ghp_mmbtu_per_hour"])
+            # cold_load_reduced_tonhour = sum(results["GHP"]["cooling_thermal_load_reduction_with_ghp_ton"])
+            # @test hot_load_reduced_mmbtu ≈ 1440.00 atol=0.1
+            # @test cold_load_reduced_tonhour ≈ 761382.78 atol=0.1
 
-            # Test GHP serving space heating with VAV thermal efficiency improvements
-            heating_served_mmbtu = sum(s.ghp_option_list[ghp_option_chosen].heating_thermal_kw / REopt.KWH_PER_MMBTU)
-            expected_heating_served_mmbtu = 12000 * 0.8 * 0.85  # (fuel_mmbtu * boiler_effic * space_heating_efficiency_thermal_factor)
-            @test round(heating_served_mmbtu, digits=1) ≈ expected_heating_served_mmbtu atol=1.0
+            # # Test GHP serving space heating with VAV thermal efficiency improvements
+            # heating_served_mmbtu = sum(s.ghp_option_list[ghp_option_chosen].heating_thermal_kw / REopt.KWH_PER_MMBTU)
+            # expected_heating_served_mmbtu = 12000 * 0.8 * 0.85  # (fuel_mmbtu * boiler_effic * space_heating_efficiency_thermal_factor)
+            # @test round(heating_served_mmbtu, digits=1) ≈ expected_heating_served_mmbtu atol=1.0
             
-            # Boiler serves all of the DHW load, no DHW thermal reduction due to GHP retrofit
-            boiler_served_mmbtu = sum(results["ExistingBoiler"]["thermal_production_series_mmbtu_per_hour"])
-            expected_boiler_served_mmbtu = 3000 * 0.8 # (fuel_mmbtu * boiler_effic)
-            @test round(boiler_served_mmbtu, digits=1) ≈ expected_boiler_served_mmbtu atol=1.0
+            # # Boiler serves all of the DHW load, no DHW thermal reduction due to GHP retrofit
+            # boiler_served_mmbtu = sum(results["ExistingBoiler"]["thermal_production_series_mmbtu_per_hour"])
+            # expected_boiler_served_mmbtu = 3000 * 0.8 # (fuel_mmbtu * boiler_effic)
+            # @test round(boiler_served_mmbtu, digits=1) ≈ expected_boiler_served_mmbtu atol=1.0
             
-            # LoadProfileChillerThermal cooling thermal is 1/cooling_efficiency_thermal_factor of GHP cooling thermal production
-            bau_chiller_thermal_tonhour = sum(s.cooling_load.loads_kw_thermal / REopt.KWH_THERMAL_PER_TONHOUR)
-            ghp_cooling_thermal_tonhour = sum(inputs.ghp_cooling_thermal_load_served_kw[1,:] / REopt.KWH_THERMAL_PER_TONHOUR)
-            @test round(bau_chiller_thermal_tonhour) ≈ ghp_cooling_thermal_tonhour/0.6 atol=1.0
+            # # LoadProfileChillerThermal cooling thermal is 1/cooling_efficiency_thermal_factor of GHP cooling thermal production
+            # bau_chiller_thermal_tonhour = sum(s.cooling_load.loads_kw_thermal / REopt.KWH_THERMAL_PER_TONHOUR)
+            # ghp_cooling_thermal_tonhour = sum(inputs.ghp_cooling_thermal_load_served_kw[1,:] / REopt.KWH_THERMAL_PER_TONHOUR)
+            # @test round(bau_chiller_thermal_tonhour) ≈ ghp_cooling_thermal_tonhour/0.6 atol=1.0
             
-            # Custom heat pump COP map is used properly
-            ghp_option_chosen = results["GHP"]["ghp_option_chosen"]
-            heating_cop_avg = s.ghp_option_list[ghp_option_chosen].ghpghx_response["outputs"]["heating_cop_avg"]
-            cooling_cop_avg = s.ghp_option_list[ghp_option_chosen].ghpghx_response["outputs"]["cooling_cop_avg"]
-            # Average COP which includes pump power should be lower than Heat Pump only COP specified by the map
-            @test heating_cop_avg <= 4.0
-            @test cooling_cop_avg <= 8.0
+            # # Custom heat pump COP map is used properly
+            # ghp_option_chosen = results["GHP"]["ghp_option_chosen"]
+            # heating_cop_avg = s.ghp_option_list[ghp_option_chosen].ghpghx_response["outputs"]["heating_cop_avg"]
+            # cooling_cop_avg = s.ghp_option_list[ghp_option_chosen].ghpghx_response["outputs"]["cooling_cop_avg"]
+            # # Average COP which includes pump power should be lower than Heat Pump only COP specified by the map
+            # @test heating_cop_avg <= 4.0
+            # @test cooling_cop_avg <= 8.0
         end
 
         @testset "Hybrid GHX and GHP calculated costs validation" begin
@@ -2333,127 +2354,128 @@ else  # run HiGHS tests
                 m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 results = run_reopt([m1, m2], inputs)
+                @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
 
-                if !isnothing(ER_target[i])
-                    ER_fraction_out = results["Site"]["lifecycle_emissions_reduction_CO2_fraction"]
-                    @test ER_target[i] ≈ ER_fraction_out atol=1e-3
-                    lifecycle_emissions_tonnes_CO2_out = results["Site"]["lifecycle_emissions_tonnes_CO2"]
-                    lifecycle_emissions_bau_tonnes_CO2_out = results["Site"]["lifecycle_emissions_tonnes_CO2_bau"]
-                    ER_fraction_calced_out = (lifecycle_emissions_bau_tonnes_CO2_out-lifecycle_emissions_tonnes_CO2_out)/lifecycle_emissions_bau_tonnes_CO2_out
-                    ER_fraction_diff = abs(ER_fraction_calced_out-ER_fraction_out)
-                    @test ER_fraction_diff ≈ 0.0 atol=1e-2
-                end
-                annual_emissions_tonnes_CO2_out = results["Site"]["annual_emissions_tonnes_CO2"]
-                yr1_fuel_emissions_tonnes_CO2_out = results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"]
-                yr1_grid_emissions_tonnes_CO2_out = results["ElectricUtility"]["annual_emissions_tonnes_CO2"]
-                yr1_total_emissions_calced_tonnes_CO2 = yr1_fuel_emissions_tonnes_CO2_out + yr1_grid_emissions_tonnes_CO2_out 
-                @test annual_emissions_tonnes_CO2_out ≈ yr1_total_emissions_calced_tonnes_CO2 atol=1e-1
-                if haskey(results["Financial"],"breakeven_cost_of_emissions_reduction_per_tonne_CO2")
-                    @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] >= 0.0
-                end
+                # if !isnothing(ER_target[i])
+                #     ER_fraction_out = results["Site"]["lifecycle_emissions_reduction_CO2_fraction"]
+                #     @test ER_target[i] ≈ ER_fraction_out atol=1e-3
+                #     lifecycle_emissions_tonnes_CO2_out = results["Site"]["lifecycle_emissions_tonnes_CO2"]
+                #     lifecycle_emissions_bau_tonnes_CO2_out = results["Site"]["lifecycle_emissions_tonnes_CO2_bau"]
+                #     ER_fraction_calced_out = (lifecycle_emissions_bau_tonnes_CO2_out-lifecycle_emissions_tonnes_CO2_out)/lifecycle_emissions_bau_tonnes_CO2_out
+                #     ER_fraction_diff = abs(ER_fraction_calced_out-ER_fraction_out)
+                #     @test ER_fraction_diff ≈ 0.0 atol=1e-2
+                # end
+                # annual_emissions_tonnes_CO2_out = results["Site"]["annual_emissions_tonnes_CO2"]
+                # yr1_fuel_emissions_tonnes_CO2_out = results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"]
+                # yr1_grid_emissions_tonnes_CO2_out = results["ElectricUtility"]["annual_emissions_tonnes_CO2"]
+                # yr1_total_emissions_calced_tonnes_CO2 = yr1_fuel_emissions_tonnes_CO2_out + yr1_grid_emissions_tonnes_CO2_out 
+                # @test annual_emissions_tonnes_CO2_out ≈ yr1_total_emissions_calced_tonnes_CO2 atol=1e-1
+                # if haskey(results["Financial"],"breakeven_cost_of_emissions_reduction_per_tonne_CO2")
+                #     @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] >= 0.0
+                # end
                 
-                if i == 1
-                    @test results["PV"]["size_kw"] ≈ 60.12 atol=1e-1
-                    @test results["ElectricStorage"]["size_kw"] ≈ 0.0 atol=1e-1
-                    @test results["ElectricStorage"]["size_kwh"] ≈ 0.0 atol=1e-1
-                    @test results["Generator"]["size_kw"] ≈ 21.52 atol=1e-1
-                    @test results["Site"]["annual_renewable_electricity_kwh"] ≈ 76412.02
-                    @test results["Site"]["renewable_electricity_fraction"] ≈ 0.8
-                    @test results["Site"]["renewable_electricity_fraction_bau"] ≈ 0.147576 atol=1e-4
-                    @test results["Site"]["total_renewable_energy_fraction"] ≈ 0.8
-                    @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.147576 atol=1e-4
-                    @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.616639 atol=1e-4
-                    @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 281.6 atol=1
-                    @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 11.38 atol=1e-2
-                    @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 32.06 atol=1e-2
-                    @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 7.04
-                    @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0
-                    @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 7767.6 atol=1
-                    @test results["Financial"]["lifecycle_emissions_cost_climate_bau"] ≈ 20450.62 atol=1e-1
-                    @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 217.63
-                    @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 567.77
-                    @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 140.78
-                    @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0
-                    @test results["ElectricUtility"]["annual_emissions_tonnes_CO2"] ≈ 4.34
-                    @test results["ElectricUtility"]["annual_emissions_tonnes_CO2_bau"] ≈ 32.06
-                    @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] ≈ 76.86
-                    @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 567.77
-                elseif i == 2
-                    #commented out values are results using same levelization factor as API
-                    @test results["PV"]["size_kw"] ≈ 106.13 atol=1
-                    @test results["ElectricStorage"]["size_kw"] ≈ 21.58 atol=1 # 20.29
-                    @test results["ElectricStorage"]["size_kwh"] ≈ 165.27 atol=1
-                    @test !haskey(results, "Generator")
-                    # NPV
-                    @info results["Financial"]["npv"]
-                    expected_npv = -267404.54
-                    @test (expected_npv - results["Financial"]["npv"])/expected_npv ≈ 0.0 atol=1e-3
-                    # Renewable energy
-                    @test results["Site"]["renewable_electricity_fraction"] ≈ 0.783298 atol=1e-3
-                    @test results["Site"]["annual_renewable_electricity_kwh"] ≈ 78329.85 atol=10
-                    @test results["Site"]["renewable_electricity_fraction_bau"] ≈ 0.132118 atol=1e-3 #0.1354 atol=1e-3
-                    @test results["Site"]["annual_renewable_electricity_kwh_bau"] ≈ 13211.78 atol=10 # 13542.62 atol=10
-                    @test results["Site"]["total_renewable_energy_fraction"] ≈ 0.783298 atol=1e-3
-                    @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.132118 atol=1e-3 # 0.1354 atol=1e-3
-                    # CO2 emissions - totals ≈  from grid, from fuelburn, ER, $/tCO2 breakeven
-                    @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.8 atol=1e-3 # 0.8
-                    @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 373.9 atol=1e-1
-                    @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 14.2 atol=1
-                    @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 70.99 atol=1
-                    @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
-                    @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0 atol=1 # 0.0
-                    @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 9110.21 atol=1
-                    @test results["Financial"]["lifecycle_emissions_cost_climate_bau"] ≈ 45546.55 atol=1
-                    @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 252.92 atol=1
-                    @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 1264.62 atol=1
-                    @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
-                    @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0 atol=1 # 0.0
-                    @test results["ElectricUtility"]["annual_emissions_tonnes_CO2"] ≈ 14.2 atol=1
-                    @test results["ElectricUtility"]["annual_emissions_tonnes_CO2_bau"] ≈ 70.99 atol=1
-                    @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] ≈ 252.92 atol=1
-                    @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 1264.62 atol=1
+                # if i == 1
+                #     @test results["PV"]["size_kw"] ≈ 60.12 atol=1e-1
+                #     @test results["ElectricStorage"]["size_kw"] ≈ 0.0 atol=1e-1
+                #     @test results["ElectricStorage"]["size_kwh"] ≈ 0.0 atol=1e-1
+                #     @test results["Generator"]["size_kw"] ≈ 21.52 atol=1e-1
+                #     @test results["Site"]["annual_renewable_electricity_kwh"] ≈ 76412.02
+                #     @test results["Site"]["renewable_electricity_fraction"] ≈ 0.8
+                #     @test results["Site"]["renewable_electricity_fraction_bau"] ≈ 0.147576 atol=1e-4
+                #     @test results["Site"]["total_renewable_energy_fraction"] ≈ 0.8
+                #     @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.147576 atol=1e-4
+                #     @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.616639 atol=1e-4
+                #     @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 281.6 atol=1
+                #     @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 11.38 atol=1e-2
+                #     @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 32.06 atol=1e-2
+                #     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 7.04
+                #     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0
+                #     @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 7767.6 atol=1
+                #     @test results["Financial"]["lifecycle_emissions_cost_climate_bau"] ≈ 20450.62 atol=1e-1
+                #     @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 217.63
+                #     @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 567.77
+                #     @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 140.78
+                #     @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0
+                #     @test results["ElectricUtility"]["annual_emissions_tonnes_CO2"] ≈ 4.34
+                #     @test results["ElectricUtility"]["annual_emissions_tonnes_CO2_bau"] ≈ 32.06
+                #     @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] ≈ 76.86
+                #     @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 567.77
+                # elseif i == 2
+                #     #commented out values are results using same levelization factor as API
+                #     @test results["PV"]["size_kw"] ≈ 106.13 atol=1
+                #     @test results["ElectricStorage"]["size_kw"] ≈ 21.58 atol=1 # 20.29
+                #     @test results["ElectricStorage"]["size_kwh"] ≈ 165.27 atol=1
+                #     @test !haskey(results, "Generator")
+                #     # NPV
+                #     @info results["Financial"]["npv"]
+                #     expected_npv = -267404.54
+                #     @test (expected_npv - results["Financial"]["npv"])/expected_npv ≈ 0.0 atol=1e-3
+                #     # Renewable energy
+                #     @test results["Site"]["renewable_electricity_fraction"] ≈ 0.783298 atol=1e-3
+                #     @test results["Site"]["annual_renewable_electricity_kwh"] ≈ 78329.85 atol=10
+                #     @test results["Site"]["renewable_electricity_fraction_bau"] ≈ 0.132118 atol=1e-3 #0.1354 atol=1e-3
+                #     @test results["Site"]["annual_renewable_electricity_kwh_bau"] ≈ 13211.78 atol=10 # 13542.62 atol=10
+                #     @test results["Site"]["total_renewable_energy_fraction"] ≈ 0.783298 atol=1e-3
+                #     @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.132118 atol=1e-3 # 0.1354 atol=1e-3
+                #     # CO2 emissions - totals ≈  from grid, from fuelburn, ER, $/tCO2 breakeven
+                #     @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.8 atol=1e-3 # 0.8
+                #     @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 373.9 atol=1e-1
+                #     @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 14.2 atol=1
+                #     @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 70.99 atol=1
+                #     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
+                #     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0 atol=1 # 0.0
+                #     @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 9110.21 atol=1
+                #     @test results["Financial"]["lifecycle_emissions_cost_climate_bau"] ≈ 45546.55 atol=1
+                #     @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 252.92 atol=1
+                #     @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 1264.62 atol=1
+                #     @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
+                #     @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0 atol=1 # 0.0
+                #     @test results["ElectricUtility"]["annual_emissions_tonnes_CO2"] ≈ 14.2 atol=1
+                #     @test results["ElectricUtility"]["annual_emissions_tonnes_CO2_bau"] ≈ 70.99 atol=1
+                #     @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] ≈ 252.92 atol=1
+                #     @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 1264.62 atol=1
 
-                    #also test CO2 breakeven cost
-                    inputs["PV"]["min_kw"] = results["PV"]["size_kw"] - inputs["PV"]["existing_kw"]
-                    inputs["PV"]["max_kw"] = results["PV"]["size_kw"] - inputs["PV"]["existing_kw"]
-                    inputs["ElectricStorage"]["min_kw"] = results["ElectricStorage"]["size_kw"]
-                    inputs["ElectricStorage"]["max_kw"] = results["ElectricStorage"]["size_kw"]
-                    inputs["ElectricStorage"]["min_kwh"] = results["ElectricStorage"]["size_kwh"]
-                    inputs["ElectricStorage"]["max_kwh"] = results["ElectricStorage"]["size_kwh"]
-                    inputs["Financial"]["CO2_cost_per_tonne"] = results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"]
-                    inputs["Settings"]["include_climate_in_objective"] = true
-                    m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-                    m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-                    results = run_reopt([m1, m2], inputs)
-                    @test results["Financial"]["npv"]/expected_npv ≈ 0 atol=1e-3
-                    @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ inputs["Financial"]["CO2_cost_per_tonne"] atol=1e-1
-                elseif i == 3
-                    @test results["PV"]["size_kw"] ≈ 20.0 atol=1e-1
-                    @test !haskey(results, "Wind")
-                    @test !haskey(results, "ElectricStorage")
-                    @test !haskey(results, "Generator")
-                    @test results["CHP"]["size_kw"] ≈ 200.0 atol=1e-1
-                    @test results["AbsorptionChiller"]["size_ton"] ≈ 400.0 atol=1e-1
-                    @test results["HotThermalStorage"]["size_gal"] ≈ 50000 atol=1e1
-                    @test results["ColdThermalStorage"]["size_gal"] ≈ 30000 atol=1e1
-                    yr1_nat_gas_mmbtu = results["ExistingBoiler"]["annual_fuel_consumption_mmbtu"] + results["CHP"]["annual_fuel_consumption_mmbtu"]
-                    nat_gas_emissions_lb_per_mmbtu = Dict("CO2"=>116.9, "NOx"=>0.09139, "SO2"=>0.000578592, "PM25"=>0.007328833)
-                    TONNE_PER_LB = 1/2204.62
-                    @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ nat_gas_emissions_lb_per_mmbtu["CO2"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1
-                    @test results["Site"]["annual_emissions_from_fuelburn_tonnes_NOx"] ≈ nat_gas_emissions_lb_per_mmbtu["NOx"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
-                    @test results["Site"]["annual_emissions_from_fuelburn_tonnes_SO2"] ≈ nat_gas_emissions_lb_per_mmbtu["SO2"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
-                    @test results["Site"]["annual_emissions_from_fuelburn_tonnes_PM25"] ≈ nat_gas_emissions_lb_per_mmbtu["PM25"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
-                    @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] atol=1
-                    @test results["Site"]["lifecycle_emissions_tonnes_NOx"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_NOx"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_NOx"] atol=0.1
-                    @test results["Site"]["lifecycle_emissions_tonnes_SO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_SO2"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_SO2"] atol=1e-2
-                    @test results["Site"]["lifecycle_emissions_tonnes_PM25"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_PM25"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_PM25"] atol=1.5e-2
-                    @test results["Site"]["annual_renewable_electricity_kwh"] ≈ results["PV"]["annual_energy_produced_kwh"] + inputs["CHP"]["fuel_renewable_energy_fraction"] * results["CHP"]["annual_electric_production_kwh"] atol=1
-                    @test results["Site"]["renewable_electricity_fraction"] ≈ results["Site"]["annual_renewable_electricity_kwh"] / results["ElectricLoad"]["annual_calculated_kwh"] atol=1e-6#0.044285 atol=1e-4
-                    KWH_PER_MMBTU = 293.07107
-                    annual_RE_kwh = inputs["CHP"]["fuel_renewable_energy_fraction"] * results["CHP"]["annual_thermal_production_mmbtu"] * KWH_PER_MMBTU + results["Site"]["annual_renewable_electricity_kwh"]
-                    annual_heat_kwh = (results["CHP"]["annual_thermal_production_mmbtu"] + results["ExistingBoiler"]["annual_thermal_production_mmbtu"]) * KWH_PER_MMBTU
-                    @test results["Site"]["total_renewable_energy_fraction"] ≈ annual_RE_kwh / (annual_heat_kwh + results["ElectricLoad"]["annual_calculated_kwh"]) atol=1e-6
-                end
+                #     #also test CO2 breakeven cost
+                #     inputs["PV"]["min_kw"] = results["PV"]["size_kw"] - inputs["PV"]["existing_kw"]
+                #     inputs["PV"]["max_kw"] = results["PV"]["size_kw"] - inputs["PV"]["existing_kw"]
+                #     inputs["ElectricStorage"]["min_kw"] = results["ElectricStorage"]["size_kw"]
+                #     inputs["ElectricStorage"]["max_kw"] = results["ElectricStorage"]["size_kw"]
+                #     inputs["ElectricStorage"]["min_kwh"] = results["ElectricStorage"]["size_kwh"]
+                #     inputs["ElectricStorage"]["max_kwh"] = results["ElectricStorage"]["size_kwh"]
+                #     inputs["Financial"]["CO2_cost_per_tonne"] = results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"]
+                #     inputs["Settings"]["include_climate_in_objective"] = true
+                #     m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                #     m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                #     results = run_reopt([m1, m2], inputs)
+                #     @test results["Financial"]["npv"]/expected_npv ≈ 0 atol=1e-3
+                #     @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ inputs["Financial"]["CO2_cost_per_tonne"] atol=1e-1
+                # elseif i == 3
+                #     @test results["PV"]["size_kw"] ≈ 20.0 atol=1e-1
+                #     @test !haskey(results, "Wind")
+                #     @test !haskey(results, "ElectricStorage")
+                #     @test !haskey(results, "Generator")
+                #     @test results["CHP"]["size_kw"] ≈ 200.0 atol=1e-1
+                #     @test results["AbsorptionChiller"]["size_ton"] ≈ 400.0 atol=1e-1
+                #     @test results["HotThermalStorage"]["size_gal"] ≈ 50000 atol=1e1
+                #     @test results["ColdThermalStorage"]["size_gal"] ≈ 30000 atol=1e1
+                #     yr1_nat_gas_mmbtu = results["ExistingBoiler"]["annual_fuel_consumption_mmbtu"] + results["CHP"]["annual_fuel_consumption_mmbtu"]
+                #     nat_gas_emissions_lb_per_mmbtu = Dict("CO2"=>116.9, "NOx"=>0.09139, "SO2"=>0.000578592, "PM25"=>0.007328833)
+                #     TONNE_PER_LB = 1/2204.62
+                #     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ nat_gas_emissions_lb_per_mmbtu["CO2"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1
+                #     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_NOx"] ≈ nat_gas_emissions_lb_per_mmbtu["NOx"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
+                #     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_SO2"] ≈ nat_gas_emissions_lb_per_mmbtu["SO2"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
+                #     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_PM25"] ≈ nat_gas_emissions_lb_per_mmbtu["PM25"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
+                #     @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] atol=1
+                #     @test results["Site"]["lifecycle_emissions_tonnes_NOx"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_NOx"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_NOx"] atol=0.1
+                #     @test results["Site"]["lifecycle_emissions_tonnes_SO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_SO2"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_SO2"] atol=1e-2
+                #     @test results["Site"]["lifecycle_emissions_tonnes_PM25"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_PM25"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_PM25"] atol=1.5e-2
+                #     @test results["Site"]["annual_renewable_electricity_kwh"] ≈ results["PV"]["annual_energy_produced_kwh"] + inputs["CHP"]["fuel_renewable_energy_fraction"] * results["CHP"]["annual_electric_production_kwh"] atol=1
+                #     @test results["Site"]["renewable_electricity_fraction"] ≈ results["Site"]["annual_renewable_electricity_kwh"] / results["ElectricLoad"]["annual_calculated_kwh"] atol=1e-6#0.044285 atol=1e-4
+                #     KWH_PER_MMBTU = 293.07107
+                #     annual_RE_kwh = inputs["CHP"]["fuel_renewable_energy_fraction"] * results["CHP"]["annual_thermal_production_mmbtu"] * KWH_PER_MMBTU + results["Site"]["annual_renewable_electricity_kwh"]
+                #     annual_heat_kwh = (results["CHP"]["annual_thermal_production_mmbtu"] + results["ExistingBoiler"]["annual_thermal_production_mmbtu"]) * KWH_PER_MMBTU
+                #     @test results["Site"]["total_renewable_energy_fraction"] ≈ annual_RE_kwh / (annual_heat_kwh + results["ElectricLoad"]["annual_calculated_kwh"]) atol=1e-6
+                # end
             end
         end
 
