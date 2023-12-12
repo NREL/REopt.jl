@@ -866,7 +866,7 @@ else  # run HiGHS tests
             # test the replacement strategy
             d["ElectricStorage"]["degradation"] = Dict("maintenance_strategy" => "replacement")
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
+            set_optimizer_attribute(m, "mip_rel_gap", 0.01)
             r = run_reopt(m, d)
             @test any([occursin("not supported by the solver", msg[1]) for msg in r["Messages"]["errors"]])
             # #optimal SOH at end of horizon is 80\% to prevent any replacement
@@ -880,7 +880,7 @@ else  # run HiGHS tests
             # test minimum_avg_soc_fraction
             d["ElectricStorage"]["minimum_avg_soc_fraction"] = 0.72
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            set_optimizer_attribute(m, "MIPRELSTOP", 0.01)
+            set_optimizer_attribute(m, "mip_rel_gap", 0.01)
             r = run_reopt(m, d)
             @test any([occursin("not supported by the solver", msg[1]) for msg in r["Messages"]["errors"]])
             # @test round(sum(r["ElectricStorage"]["soc_series_fraction"]), digits=2) / 8760 >= 0.7199
@@ -1699,7 +1699,7 @@ else  # run HiGHS tests
             # Call REopt
             s = Scenario(input_data)
             inputs = REoptInputs(s)
-            m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.001, "OUTPUTLOG" => 0))
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
             m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
             results = run_reopt([m1,m2], inputs)
             @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
