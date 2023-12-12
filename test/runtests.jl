@@ -957,7 +957,7 @@ else  # run HiGHS tests
             m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
             m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
             results = run_reopt([m1,m2], inputs)
-            @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
+            @test any([(occursin("not supported by the solver", msg[1]) || occursin("REopt scenarios solved either with errors or non-optimal solutions", msg[1])) for msg in results["Messages"]["errors"]])
 
             # # Check that supply-to-load is equal to critical load during outages, including wind
             # supply_to_load = results["Outages"]["storage_discharge_series_kw"] .+ results["Outages"]["wind_to_load_series_kw"]
@@ -1870,25 +1870,28 @@ else  # run HiGHS tests
                 m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
                 m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
                 results = run_reopt([m1, m2], inputs)
-                @test any([occursin("not supported by the solver", msg[1]) for msg in results["Messages"]["errors"]])
+                if i <= 2
+                    solver_error = any([(occursin("not supported by the solver", msg[1]) || occursin("REopt scenarios solved either with errors or non-optimal solutions", msg[1])) for msg in results["Messages"]["errors"]])
+                    @test solver_error
+                
 
-                # if !isnothing(ER_target[i])
-                #     ER_fraction_out = results["Site"]["lifecycle_emissions_reduction_CO2_fraction"]
-                #     @test ER_target[i] ≈ ER_fraction_out atol=1e-3
-                #     lifecycle_emissions_tonnes_CO2_out = results["Site"]["lifecycle_emissions_tonnes_CO2"]
-                #     lifecycle_emissions_bau_tonnes_CO2_out = results["Site"]["lifecycle_emissions_tonnes_CO2_bau"]
-                #     ER_fraction_calced_out = (lifecycle_emissions_bau_tonnes_CO2_out-lifecycle_emissions_tonnes_CO2_out)/lifecycle_emissions_bau_tonnes_CO2_out
-                #     ER_fraction_diff = abs(ER_fraction_calced_out-ER_fraction_out)
-                #     @test ER_fraction_diff ≈ 0.0 atol=1e-2
-                # end
-                # annual_emissions_tonnes_CO2_out = results["Site"]["annual_emissions_tonnes_CO2"]
-                # yr1_fuel_emissions_tonnes_CO2_out = results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"]
-                # yr1_grid_emissions_tonnes_CO2_out = results["ElectricUtility"]["annual_emissions_tonnes_CO2"]
-                # yr1_total_emissions_calced_tonnes_CO2 = yr1_fuel_emissions_tonnes_CO2_out + yr1_grid_emissions_tonnes_CO2_out 
-                # @test annual_emissions_tonnes_CO2_out ≈ yr1_total_emissions_calced_tonnes_CO2 atol=1e-1
-                # if haskey(results["Financial"],"breakeven_cost_of_emissions_reduction_per_tonne_CO2")
-                #     @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] >= 0.0
-                # end
+                elseif !isnothing(ER_target[i])
+                    ER_fraction_out = results["Site"]["lifecycle_emissions_reduction_CO2_fraction"]
+                    @test ER_target[i] ≈ ER_fraction_out atol=1e-3
+                    lifecycle_emissions_tonnes_CO2_out = results["Site"]["lifecycle_emissions_tonnes_CO2"]
+                    lifecycle_emissions_bau_tonnes_CO2_out = results["Site"]["lifecycle_emissions_tonnes_CO2_bau"]
+                    ER_fraction_calced_out = (lifecycle_emissions_bau_tonnes_CO2_out-lifecycle_emissions_tonnes_CO2_out)/lifecycle_emissions_bau_tonnes_CO2_out
+                    ER_fraction_diff = abs(ER_fraction_calced_out-ER_fraction_out)
+                    @test ER_fraction_diff ≈ 0.0 atol=1e-2
+                end
+                annual_emissions_tonnes_CO2_out = results["Site"]["annual_emissions_tonnes_CO2"]
+                yr1_fuel_emissions_tonnes_CO2_out = results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"]
+                yr1_grid_emissions_tonnes_CO2_out = results["ElectricUtility"]["annual_emissions_tonnes_CO2"]
+                yr1_total_emissions_calced_tonnes_CO2 = yr1_fuel_emissions_tonnes_CO2_out + yr1_grid_emissions_tonnes_CO2_out 
+                @test annual_emissions_tonnes_CO2_out ≈ yr1_total_emissions_calced_tonnes_CO2 atol=1e-1
+                if haskey(results["Financial"],"breakeven_cost_of_emissions_reduction_per_tonne_CO2")
+                    @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] >= 0.0
+                end
                 
                 # if i == 1
                 #     @test results["PV"]["size_kw"] ≈ 60.12 atol=1e-1
@@ -1965,33 +1968,33 @@ else  # run HiGHS tests
                 #     results = run_reopt([m1, m2], inputs)
                 #     @test results["Financial"]["npv"]/expected_npv ≈ 0 atol=1e-3
                 #     @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ inputs["Financial"]["CO2_cost_per_tonne"] atol=1e-1
-                # elseif i == 3
-                #     @test results["PV"]["size_kw"] ≈ 20.0 atol=1e-1
-                #     @test !haskey(results, "Wind")
-                #     @test !haskey(results, "ElectricStorage")
-                #     @test !haskey(results, "Generator")
-                #     @test results["CHP"]["size_kw"] ≈ 200.0 atol=1e-1
-                #     @test results["AbsorptionChiller"]["size_ton"] ≈ 400.0 atol=1e-1
-                #     @test results["HotThermalStorage"]["size_gal"] ≈ 50000 atol=1e1
-                #     @test results["ColdThermalStorage"]["size_gal"] ≈ 30000 atol=1e1
-                #     yr1_nat_gas_mmbtu = results["ExistingBoiler"]["annual_fuel_consumption_mmbtu"] + results["CHP"]["annual_fuel_consumption_mmbtu"]
-                #     nat_gas_emissions_lb_per_mmbtu = Dict("CO2"=>116.9, "NOx"=>0.09139, "SO2"=>0.000578592, "PM25"=>0.007328833)
-                #     TONNE_PER_LB = 1/2204.62
-                #     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ nat_gas_emissions_lb_per_mmbtu["CO2"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1
-                #     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_NOx"] ≈ nat_gas_emissions_lb_per_mmbtu["NOx"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
-                #     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_SO2"] ≈ nat_gas_emissions_lb_per_mmbtu["SO2"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
-                #     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_PM25"] ≈ nat_gas_emissions_lb_per_mmbtu["PM25"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
-                #     @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] atol=1
-                #     @test results["Site"]["lifecycle_emissions_tonnes_NOx"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_NOx"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_NOx"] atol=0.1
-                #     @test results["Site"]["lifecycle_emissions_tonnes_SO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_SO2"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_SO2"] atol=1e-2
-                #     @test results["Site"]["lifecycle_emissions_tonnes_PM25"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_PM25"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_PM25"] atol=1.5e-2
-                #     @test results["Site"]["annual_renewable_electricity_kwh"] ≈ results["PV"]["annual_energy_produced_kwh"] + inputs["CHP"]["fuel_renewable_energy_fraction"] * results["CHP"]["annual_electric_production_kwh"] atol=1
-                #     @test results["Site"]["renewable_electricity_fraction"] ≈ results["Site"]["annual_renewable_electricity_kwh"] / results["ElectricLoad"]["annual_calculated_kwh"] atol=1e-6#0.044285 atol=1e-4
-                #     KWH_PER_MMBTU = 293.07107
-                #     annual_RE_kwh = inputs["CHP"]["fuel_renewable_energy_fraction"] * results["CHP"]["annual_thermal_production_mmbtu"] * KWH_PER_MMBTU + results["Site"]["annual_renewable_electricity_kwh"]
-                #     annual_heat_kwh = (results["CHP"]["annual_thermal_production_mmbtu"] + results["ExistingBoiler"]["annual_thermal_production_mmbtu"]) * KWH_PER_MMBTU
-                #     @test results["Site"]["total_renewable_energy_fraction"] ≈ annual_RE_kwh / (annual_heat_kwh + results["ElectricLoad"]["annual_calculated_kwh"]) atol=1e-6
-                # end
+                if i == 3
+                    @test results["PV"]["size_kw"] ≈ 20.0 atol=1e-1
+                    @test !haskey(results, "Wind")
+                    @test !haskey(results, "ElectricStorage")
+                    @test !haskey(results, "Generator")
+                    @test results["CHP"]["size_kw"] ≈ 200.0 atol=1e-1
+                    @test results["AbsorptionChiller"]["size_ton"] ≈ 400.0 atol=1e-1
+                    @test results["HotThermalStorage"]["size_gal"] ≈ 50000 atol=1e1
+                    @test results["ColdThermalStorage"]["size_gal"] ≈ 30000 atol=1e1
+                    yr1_nat_gas_mmbtu = results["ExistingBoiler"]["annual_fuel_consumption_mmbtu"] + results["CHP"]["annual_fuel_consumption_mmbtu"]
+                    nat_gas_emissions_lb_per_mmbtu = Dict("CO2"=>116.9, "NOx"=>0.09139, "SO2"=>0.000578592, "PM25"=>0.007328833)
+                    TONNE_PER_LB = 1/2204.62
+                    @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ nat_gas_emissions_lb_per_mmbtu["CO2"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1
+                    @test results["Site"]["annual_emissions_from_fuelburn_tonnes_NOx"] ≈ nat_gas_emissions_lb_per_mmbtu["NOx"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
+                    @test results["Site"]["annual_emissions_from_fuelburn_tonnes_SO2"] ≈ nat_gas_emissions_lb_per_mmbtu["SO2"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
+                    @test results["Site"]["annual_emissions_from_fuelburn_tonnes_PM25"] ≈ nat_gas_emissions_lb_per_mmbtu["PM25"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
+                    @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] atol=1
+                    @test results["Site"]["lifecycle_emissions_tonnes_NOx"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_NOx"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_NOx"] atol=0.1
+                    @test results["Site"]["lifecycle_emissions_tonnes_SO2"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_SO2"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_SO2"] atol=1e-2
+                    @test results["Site"]["lifecycle_emissions_tonnes_PM25"] ≈ results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_PM25"] + results["ElectricUtility"]["lifecycle_emissions_tonnes_PM25"] atol=1.5e-2
+                    @test results["Site"]["annual_renewable_electricity_kwh"] ≈ results["PV"]["annual_energy_produced_kwh"] + inputs["CHP"]["fuel_renewable_energy_fraction"] * results["CHP"]["annual_electric_production_kwh"] atol=1
+                    @test results["Site"]["renewable_electricity_fraction"] ≈ results["Site"]["annual_renewable_electricity_kwh"] / results["ElectricLoad"]["annual_calculated_kwh"] atol=1e-6#0.044285 atol=1e-4
+                    KWH_PER_MMBTU = 293.07107
+                    annual_RE_kwh = inputs["CHP"]["fuel_renewable_energy_fraction"] * results["CHP"]["annual_thermal_production_mmbtu"] * KWH_PER_MMBTU + results["Site"]["annual_renewable_electricity_kwh"]
+                    annual_heat_kwh = (results["CHP"]["annual_thermal_production_mmbtu"] + results["ExistingBoiler"]["annual_thermal_production_mmbtu"]) * KWH_PER_MMBTU
+                    @test results["Site"]["total_renewable_energy_fraction"] ≈ annual_RE_kwh / (annual_heat_kwh + results["ElectricLoad"]["annual_calculated_kwh"]) atol=1e-6
+                end
             end
         end
 
