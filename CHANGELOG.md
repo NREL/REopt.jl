@@ -23,6 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop 12-13-2023
+### Fixed
+- Fixed issue with running Wind on Windows: add execute permission for ssc.dll
+
 ## v0.39.0
 ### Added
 - Added new technology `ElectricHeater` which uses electricity as input and provides heating as output; load balancing constraints have been updated accordingly
