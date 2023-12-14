@@ -151,6 +151,7 @@ function get_production_factor(wind::Wind, latitude::Real, longitude::Real, time
         end
 
         global hdl = joinpath(@__DIR__, "..", "sam", libfile)
+        chmod(hdl, filemode(hdl) | 0o755)
         wind_module = @ccall hdl.ssc_module_create("windpower"::Cstring)::Ptr{Cvoid}
         wind_resource = @ccall hdl.ssc_data_create()::Ptr{Cvoid}  # data pointer
         @ccall hdl.ssc_module_exec_set_print(0::Cint)::Cvoid
