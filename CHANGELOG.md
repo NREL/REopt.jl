@@ -31,6 +31,20 @@ Classify the change according to the following categories:
 ### Added
 - Added new technology `ElectricHeater` which uses electricity as input and provides heating as output; load balancing constraints have been updated accordingly
 
+### Fixed 
+- Adjust grid emissions profiles for day of week alignment with load_year.
+- In `test_with_xpress.jl`, updated "Emissions and Renewable Energy Percent" expected values to account for load year adjustment. 
+
+## Develop 2023-08-09
+## Develop
+## Develop 12-13-2023
+### Fixed
+- Fixed issue with running Wind on Windows: add execute permission for ssc.dll
+
+## v0.39.0
+### Added
+- Added new technology `ElectricHeater` which uses electricity as input and provides heating as output; load balancing constraints have been updated accordingly
+
 ## v0.38.2
 ### Added 
 - Added the following BAU outputs:  lifecycle_chp_standby_cost_after_tax, lifecycle_elecbill_after_tax, lifecycle_production_incentive_after_tax, lifecycle_outage_cost, lifecycle_MG_upgrade_and_fuel_cost
