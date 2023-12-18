@@ -12,16 +12,39 @@
     outage_start_time_steps::Array{Int,1}=Int[],  # we minimize the maximum outage cost over outage start times
     outage_durations::Array{Int,1}=Int[],  # one-to-one with outage_probabilities, outage_durations can be a random variable
     outage_probabilities::Array{R,1} where R<:Real = [1.0],
-    # Emissions and renewable energy inputs:
-    emissions_region::String = "", # AVERT emissions region. Default is based on location, or can be overriden by providing region here.
-    emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
-    emissions_factor_series_lb_NOx_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
-    emissions_factor_series_lb_SO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
-    emissions_factor_series_lb_PM25_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # can be scalar or timeseries (aligned with time_steps_per_hour)
-    emissions_factor_CO2_decrease_fraction::Real = 0.01174, # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase.
-    emissions_factor_NOx_decrease_fraction::Real = 0.01174,
-    emissions_factor_SO2_decrease_fraction::Real = 0.01174,
-    emissions_factor_PM25_decrease_fraction::Real = 0.01174
+    
+    ### Grid Climate Emissions Inputs ### 
+    # Climate Option 1 (Default): Use levelized emissions data from NREL's Cambium database by specifying the following fields:
+    cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions). Default: "Mid-case".
+        ## Options: ["Mid-case", "Low Renewable Energy and Battery Costs", "High Renewable Energy and Battery Costs", "Electricifcation", "Low Natural Gas Price", "High Natural Gas Price", "Mid-case with 95% Decarbonization by 2050", "Mid-case with 100% Decarbonization by 2035", "Mid-case (with tax credit phaseout)", "Low Renewable Energy and Battery Costs (with tax credit phaseout)"]     
+    cambium_location_type::String =  "States", # Geographic boundary at which emissions are calculated. Default: "States". Options: ["Nations", "GEA Regions", "States", "Balancing Areas"] # TODO: some may not work 
+    cambium_metric_col::String =  "lrmer_co2e", # Emissions metric used. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
+    cambium_start_year::Int = 2024, # First year of operation of system. Emissions will be levelized starting in this year for the duration of cambium_levelization_years.  Default: 2024 # Options: any year 2023 through 2050.
+    cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions will be averaged over this period. Default: analysis_years (from Financial struct)
+    cambium_grid_level::String = "enduse", # Options: ["enduse", "busbar"]. Busbar refers to point where bulk generating stations connect to grid; enduse refers to point of consumption (includes distribution loss rate). 
+
+    # Climate Option 2: Use CO2 emissions data from the EPA's AVERT based on the AVERT emissions region and specify annual percent decrease
+    co2_from_avert::Bool = false, # Default is to use Cambium data for CO2 grid emissions. Set to `true` to instead use data from the EPA's AVERT database. 
+
+    # Climate Option 3: Provide your own custom emissions factors for CO2 and specify annual percent decrease  
+    emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom CO2 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour). Ensure emissions year aligns with load year.
+
+    # Used with Climate Options 2 or 3: Annual percent decrease in CO2 emissions factors
+    emissions_factor_CO2_decrease_fraction::Union{Nothing, Real} = co2_from_avert || length(emissions_factor_series_lb_CO2_per_kwh) > 0  ? 0.02163 : nothing , # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase.
+
+    ### Grid Health Emissions Inputs ###
+    # Health Option 1 (Default): Use health emissions data from the EPA's AVERT based on the AVERT emissions region and specify annual percent decrease
+    avert_emissions_region::String = "", # AVERT emissions region. Default is based on location, or can be overriden by providing region here.
+
+    # Health Option 2: Provide your own custom emissions factors for health emissions and specify annual percent decrease:
+    emissions_factor_series_lb_NOx_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom NOx emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour). Ensure emissions year aligns with load year.
+    emissions_factor_series_lb_SO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom SO2 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour). Ensure emissions year aligns with load year.
+    emissions_factor_series_lb_PM25_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom PM2.5 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour). Ensure emissions year aligns with load year.
+
+    # Used with Health Options 1 or 2: Annual percent decrease in health emissions factors: 
+    emissions_factor_NOx_decrease_fraction::Real = 0.02163, 
+    emissions_factor_SO2_decrease_fraction::Real = 0.02163,
+    emissions_factor_PM25_decrease_fraction::Real = 0.02163
 ```
 
 !!! note "Outage modeling"
