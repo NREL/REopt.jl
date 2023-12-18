@@ -1415,8 +1415,8 @@ end
     @test scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh[1] ≈ 0.66672 rtol=1e-5 # Should start on Friday
     @test scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh[8760] ≈ 0.64833465 rtol=1e-5 # Should end on Friday 
     @test sum(scen.electric_utility.emissions_factor_series_lb_SO2_per_kwh) / 8760 ≈ 0.000592455 rtol=1e-5 # check avg from AVERT data for RM region
-    @test scen.electric_utility.emissions_factor_CO2_decrease_fraction ≈ 0 atol=1e-5
-    @test scen.electric_utility.emissions_factor_SO2_decrease_fraction ≈ 0.02163
+    @test scen.electric_utility.emissions_factor_CO2_decrease_fraction ≈ 0 atol=1e-5 # should be 0 with Cambium data
+    @test scen.electric_utility.emissions_factor_SO2_decrease_fraction ≈ 0.02163 # should be 2.163% for AVERT data
 
     # 2) AK location
     city = "Fairbanks"
@@ -1424,8 +1424,8 @@ end
     post["Site"]["longitude"] = cities[city][2]
     scen = Scenario(post)
 
-    @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) / 8760 ≈ 1.40636 rtol=1e-5 # check data from eGRID (AVERT data file) usd
-    @test scen.electric_utility.emissions_factor_CO2_decrease_fraction ≈ 0.02163 # should get updated
+    @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) / 8760 ≈ 1.40636 rtol=1e-5 # check data from eGRID (AVERT data file) used
+    @test scen.electric_utility.emissions_factor_CO2_decrease_fraction ≈ 0.02163 # should get updated to this value
 
     # 3) International location
     city = "Santiago"
