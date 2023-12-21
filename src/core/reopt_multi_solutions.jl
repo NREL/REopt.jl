@@ -100,7 +100,7 @@ function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vec
     else
         simresults = Dict()
     end
-    results_summary = Dict("optimal" => get_multi_solutions_results_summary(results_dict, p, ms[ms_count-1], techs_sized, simresults, outage_start_hour, outage_duration_hours))
+    results_summary = Dict("optimal" => get_multi_solutions_results_summary(results_dict, p, ms[ms_count-1], techs_considered, simresults, outage_start_hour, outage_duration_hours))
     results_summary["incentive_used"] = Dict("best_incentive_program_name" => best_incentive_program_name,
                                             "net_metering_from_dsire" => net_metering_from_dsire,
                                             "state" => state,
@@ -119,7 +119,8 @@ function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vec
             
             # Remove techs which were considered but not sized (size=0) in optimal case            
             for t in techs_to_zero
-                delete!(input_data_s, t)
+                # delete!(input_data_s, t)
+                input_data_s[t]["max_kw"] = 0.0
             end
 
             # Force size based on size_scale factor for tech, and set other techs to optimal size
@@ -170,7 +171,7 @@ function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vec
                 simresults = Dict()
             end
             # Build results summary, a select number of outputs for Eaton
-            results_summary[p[1]] = get_multi_solutions_results_summary(results_dict, p[2], ms[n], techs_sized, simresults, outage_start_hour, outage_duration_hours)
+            results_summary[p[1]] = get_multi_solutions_results_summary(results_dict, p[2], ms[n], techs_considered, simresults, outage_start_hour, outage_duration_hours)
             results_dict["resilience"] = results_summary[p[1]]["resilience"]
             results_all[p[1]] = results_dict
         else
@@ -184,14 +185,14 @@ function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vec
 end
 
 """
-    get_multi_solutions_results_summary(results::Dict, p::REoptInputs, m::JuMP.AbstractModel, techs_sized::Vector{String}, simresults::Dict,
+    get_multi_solutions_results_summary(results::Dict, p::REoptInputs, m::JuMP.AbstractModel, techs_considered::Vector{String}, simresults::Dict,
                                         outage_start_hour::Int64, outage_duration_hours::Int64)
 
 Get the results summary dictionary which is a selected number of outputs for Financial, Emissions, and 
 the relevant techs
 
 """
-function get_multi_solutions_results_summary(results::Dict, p::REoptInputs, m::JuMP.AbstractModel, techs_sized::Vector{String}, simresults::Dict,
+function get_multi_solutions_results_summary(results::Dict, p::REoptInputs, m::JuMP.AbstractModel, techs_considered::Vector{String}, simresults::Dict,
                                                 outage_start_hour::Int64, outage_duration_hours::Int64)
     # results_summary always has Financial and emissions, and then add techs as needed
     results_summary = Dict(
@@ -264,7 +265,7 @@ function get_multi_solutions_results_summary(results::Dict, p::REoptInputs, m::J
     end
 
     # Add techs if they have been sized in the optimal case
-    for key in techs_sized
+    for key in techs_considered
         if key == "PV"
             # Note, capital cost is "net" of incentives, and Maintenance cost is year-one
             results_summary["PV"] = 
