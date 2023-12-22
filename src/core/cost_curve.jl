@@ -316,31 +316,31 @@ function cost_curve(tech::AbstractTech, financial::Financial)
             itc_unit_basis = (cap_cost_slope[s] + rebate_federal) / (1 - itc)
         end
 
-        macrs_schedule = [0.0]
-        macrs_bonus_fraction = 0.0
-        macrs_itc_reduction = 0.0
-
-        if tech.macrs_option_years != 0
-            macrs_bonus_fraction = tech.macrs_bonus_fraction
-            macrs_itc_reduction = tech.macrs_itc_reduction
-        end
-        if tech.macrs_option_years == 5
-            macrs_schedule = financial.macrs_five_year
-        end
-        if tech.macrs_option_years == 7
-            macrs_schedule = financial.macrs_seven_year
-        end
-
         replacement_cost = 0.0
         replacement_year = financial.analysis_years
-        if nameof(T) in [:Generator]  # Generator is currently only Tech with replacement year and cost
-            if tech.replacement_year >= financial.analysis_years # assume no replacement in final year of project
+        replace_macrs_schedule = [0.0]
+        replace_macrs_bonus_fraction = 0.0
+        replace_itc = 0.0
+
+        if nameof(T) in [:Generator]  # Generator is currently only Tech with replacement year and cost (battery is not a tech)
+            if tech.replacement_year >= financial.analysis_years # assume no replacement in final year of project or later
                 replacement_cost = 0.0
             else
                 replacement_cost = tech.replace_cost_per_kw
+                if tech.replace_macrs_option_years != 0
+                    replace_macrs_bonus_fraction = tech.replace_macrs_bonus_fraction
+                end
+                if tech.replace_macrs_option_years == 5
+                    replace_macrs_schedule = financial.macrs_five_year
+                end
+                if tech.replace_macrs_option_years == 7
+                    replace_macrs_schedule = financial.macrs_seven_year
+                end
             end
             replacement_year = tech.replacement_year
+            replace_itc = tech.replace_federal_itc_fraction
         end
+        
         updated_slope = effective_cost(;
             itc_basis = itc_unit_basis,  # input tech cost with incentives, but no ITC
             replacement_cost = replacement_cost,
@@ -348,11 +348,16 @@ function cost_curve(tech::AbstractTech, financial::Financial)
             discount_rate = financial.owner_discount_rate_fraction,
             tax_rate = financial.owner_tax_rate_fraction,
             itc = itc,
-            macrs_schedule = macrs_schedule,
-            macrs_bonus_fraction = macrs_bonus_fraction,
-            macrs_itc_reduction = macrs_itc_reduction,
-            rebate_per_kw = rebate_federal
+            macrs_schedule = tech.macrs_option_years == 5 ? financial.macrs_five_year : tech.macrs_option_years == 7 ? financial.macrs_seven_year : [0.0],
+            macrs_bonus_fraction = tech.macrs_option_years != 0 ? tech.macrs_bonus_fraction : 0.0,
+            macrs_itc_reduction = tech.macrs_option_years != 0 ? tech.macrs_itc_reduction : 0.0,
+            rebate_per_kw = rebate_federal,
+            replace_macrs_schedule = replace_macrs_schedule,
+            replace_macrs_bonus_fraction = replace_macrs_bonus_fraction,
+            replace_itc = replace_itc
         )
+        print("\n\nTech in cost_curve fn:", T)
+        print("\nupdated_slope: ", updated_slope, "\n")
         # The way REopt incentives currently work, the federal rebate is the only incentive that doesn't reduce ITC basis
         push!(updated_cap_cost_slope, updated_slope)
     end

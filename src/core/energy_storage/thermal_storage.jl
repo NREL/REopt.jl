@@ -134,9 +134,12 @@ struct ThermalStorage <: AbstractThermalStorage
             discount_rate = f.owner_discount_rate_fraction,
             tax_rate = f.owner_tax_rate_fraction,
             itc = s.total_itc_fraction,
-            macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year,
+            macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : s.macrs_option_years == 5 ? f.macrs_five_year : [0.0],
             macrs_bonus_fraction = s.macrs_bonus_fraction,
-            macrs_itc_reduction = s.macrs_itc_reduction
+            macrs_itc_reduction = s.macrs_itc_reduction,
+            replace_macrs_schedule = [0.0],
+            replace_macrs_bonus_fraction = 0.0,
+            replace_itc = 0.0
         ) - s.total_rebate_per_kwh
     
         return new(

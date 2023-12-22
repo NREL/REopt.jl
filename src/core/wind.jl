@@ -52,7 +52,7 @@
 
 !!! note "Wind resource value inputs"
     Wind resource values are optional (i.e., `wind_meters_per_sec`, `wind_direction_degrees`, `temperature_celsius`, and `pressure_atmospheres`).
-    If not provided then the resource values are downloaded from NREL's Wind Toolkit.
+    If not provided then the resource values are downloaded from NREL's Wind Toolkit, which currently covers the continental U.S.
     These values are passed to SAM to get the turbine production factor.
     
 !!! note "Wind sizing and land constraint" 

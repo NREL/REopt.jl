@@ -21,7 +21,7 @@
     can_export_beyond_nem_limit = false,
     can_curtail::Bool = false,
     macrs_option_years::Int = 0,
-    macrs_bonus_fraction::Real = 1.0,
+    macrs_bonus_fraction::Real = 0.0,
     macrs_itc_reduction::Real = 0.0,
     federal_itc_fraction::Real = 0.0,
     federal_rebate_per_kw::Real = 0.0,
@@ -42,12 +42,17 @@
     emissions_factor_lb_NOx_per_gal::Real = 0.0775544,
     emissions_factor_lb_SO2_per_gal::Real = 0.040020476,
     emissions_factor_lb_PM25_per_gal::Real = 0.0,
-    replacement_year::Int = off_grid_flag ? 10 : analysis_years, 
-    replace_cost_per_kw::Real = off_grid_flag ? installed_cost_per_kw : 0.0
+    replacement_year::Int = off_grid_flag ? 10 : analysis_years, # Project year in which generator capacity will be replaced at a cost of replace_cost_per_kw.
+    replace_cost_per_kw::Real = off_grid_flag ? installed_cost_per_kw : 0.0  # Per kW replacement cost for generator capacity. Replacement costs are considered tax deductible.
+    replace_macrs_option_years::Int = 0,
+    replace_macrs_bonus_fraction::Real = 0.0,
+    replace_federal_itc_fraction::Real = 0.0,
 ```
 
 !!! note "Replacement costs" 
     Generator replacement costs will not be considered if `Generator.replacement_year` >= `Financial.analysis_years`.
+    The Investment Tax Credit (ITC) is applied to replacement costs at `replace_federal_itc_fraction`. MACRS is applied to replacement costs with a first year bonus depreciation of `replace_macrs_bonus_fraction`
+    and a schedule of `replace_macrs_option_years`. 
 
 """
 struct Generator <: AbstractGenerator
@@ -93,8 +98,13 @@ struct Generator <: AbstractGenerator
     emissions_factor_lb_PM25_per_gal
     replacement_year
     replace_cost_per_kw
+    replace_macrs_option_years
+    replace_macrs_bonus_fraction
+    replace_federal_itc_fraction
+    net_present_replace_cost_per_kw
 
     function Generator(;
+        f::Financial, 
         off_grid_flag::Bool = false,
         analysis_years::Int = 25, 
         only_runs_during_grid_outage::Bool = true,
@@ -138,12 +148,26 @@ struct Generator <: AbstractGenerator
         emissions_factor_lb_SO2_per_gal::Real = 0.040020476,
         emissions_factor_lb_PM25_per_gal::Real = 0.0,
         replacement_year::Int = off_grid_flag ? 10 : analysis_years, 
-        replace_cost_per_kw::Real = off_grid_flag ? installed_cost_per_kw : 0.0
+        replace_cost_per_kw::Real = off_grid_flag ? installed_cost_per_kw : 0.0,
+        replace_macrs_option_years::Int = 0,
+        replace_macrs_bonus_fraction::Real = 1.0,
+        replace_federal_itc_fraction::Real = 0.0
     )
 
-        if (replacement_year >= analysis_years) && !(replace_cost_per_kw == 0.0)
+        if (replacement_year >= f.analysis_years) && !(replace_cost_per_kw == 0.0)
             @warn "Generator replacement costs will not be considered because replacement_year >= analysis_years."
         end
+
+        net_present_replace_cost_per_kw = replacement_effective_cost(; # gets used in results/financial.jl
+            replacement_cost =  replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_per_kw,
+            replacement_year = replacement_year,
+            discount_rate = f.owner_discount_rate_fraction, 
+            tax_rate = f.owner_tax_rate_fraction, 
+            macrs_itc_reduction = macrs_itc_reduction,
+            replace_macrs_schedule = replace_macrs_option_years == 7 ? f.macrs_seven_year : replace_macrs_option_years == 5 ? f.macrs_five_year : [0.0],
+            replace_macrs_bonus_fraction = replace_macrs_bonus_fraction,
+            replace_itc = replace_federal_itc_fraction
+        )
 
         new(
             existing_kw,
@@ -187,7 +211,11 @@ struct Generator <: AbstractGenerator
             emissions_factor_lb_SO2_per_gal,
             emissions_factor_lb_PM25_per_gal,
             replacement_year,
-            replace_cost_per_kw
+            replace_cost_per_kw,
+            replace_macrs_option_years,
+            replace_macrs_bonus_fraction,
+            replace_federal_itc_fraction,
+            net_present_replace_cost_per_kw
         )
     end
 end

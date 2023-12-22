@@ -649,7 +649,10 @@ function setup_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost
             macrs_schedule = s.boiler.macrs_option_years == 5 ? s.financial.macrs_five_year : s.financial.macrs_seven_year,
             macrs_bonus_fraction = s.boiler.macrs_bonus_fraction,
             macrs_itc_reduction = 0.0,
-            rebate_per_kw = 0.0
+            rebate_per_kw = 0.0,
+            replace_macrs_schedule = [0.0], # no replacement option 
+            replace_macrs_bonus_fraction = 0.0,
+            replace_itc = 0.0
         )
 
     else
@@ -699,7 +702,10 @@ function setup_absorption_chiller_inputs(s::AbstractScenario, max_sizes, min_siz
             macrs_schedule = s.absorption_chiller.macrs_option_years == 5 ? s.financial.macrs_five_year : s.financial.macrs_seven_year,
             macrs_bonus_fraction = s.absorption_chiller.macrs_bonus_fraction,
             macrs_itc_reduction = 0.0,
-            rebate_per_kw = 0.0
+            rebate_per_kw = 0.0,
+            replace_macrs_schedule = [0.0], # no replacement option 
+            replace_macrs_bonus_fraction = 0.0,
+            replace_itc = 0.0
         )
 
     else
@@ -773,7 +779,10 @@ function setup_steam_turbine_inputs(s::AbstractScenario, max_sizes, min_sizes, c
             macrs_schedule = s.steam_turbine.macrs_option_years == 5 ? s.financial.macrs_five_year : s.financial.macrs_seven_year,
             macrs_bonus_fraction = s.steam_turbine.macrs_bonus_fraction,
             macrs_itc_reduction = 0.0,
-            rebate_per_kw = 0.0
+            rebate_per_kw = 0.0,
+            replace_macrs_schedule = [0.0], # no replacement option 
+            replace_macrs_bonus_fraction = 0.0,
+            replace_itc = 0.0
         )
     else
         cap_cost_slope["SteamTurbine"] = s.steam_turbine.installed_cost_per_kw

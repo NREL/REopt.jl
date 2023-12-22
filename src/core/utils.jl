@@ -82,16 +82,20 @@ function effective_cost(;
     macrs_bonus_fraction::Real, 
     macrs_itc_reduction::Real,
     rebate_per_kw::Real=0.0,
+    replace_macrs_schedule::Array{Float64,1},
+    replace_macrs_bonus_fraction::Real,
+    replace_itc::Real,
     )
 
-    """ effective PV and battery prices with ITC and depreciation
+    """ effective tech prices with ITC and depreciation
         (i) depreciation tax shields are inherently nominal --> no need to account for inflation
         (ii) ITC and bonus depreciation are taken at end of year 1
-        (iii) battery & generator replacement cost: one time capex in user defined year discounted back to t=0 with r_owner
+        (iii) battery & generator replacement cost: one time capex in user defined year discounted back to t=0 with r_owner 
+        (iiia) replacement costs receive same ITC and MACRS treatment as capital costs, but do not get any additional rebates applied
         (iv) Assume that cash incentives reduce ITC basis
         (v) Assume cash incentives are not taxable, (don't affect tax savings from MACRS)
         (vi) Cash incentives should be applied before this function into "itc_basis".
-             This includes all rebates and percentage-based incentives besides the ITC
+             This includes all rebates and percentage-based incentives besides the ITC 
     """
 
     # itc reduces depreciable_basis
@@ -102,9 +106,6 @@ function effective_cost(;
 
     # Assume the ITC and bonus depreciation reduce the depreciable basis ($/kW)
     depr_basis -= bonus_depreciation
-
-    # Calculate replacement cost, discounted to the replacement year accounting for tax deduction
-    replacement = replacement_cost * (1-tax_rate) / ((1 + discount_rate)^replacement_year)
 
     # Compute savings from depreciation and itc in array to capture NPV
     tax_savings_array = [0.0]
@@ -123,8 +124,20 @@ function effective_cost(;
     # Compute the net present value of the tax savings
     tax_savings = npv(discount_rate, tax_savings_array)
 
-    # Adjust cost curve to account for itc and depreciation savings ($/kW)
-    cap_cost_slope = itc_basis - tax_savings + replacement - rebate_per_kw
+    # Compute NPV of replacement costs accounting for ITC and MACRS treatment
+    replacement_cap_cost_slope = replacement_effective_cost(;
+        replacement_cost =  replacement_cost,
+        replacement_year = replacement_year,
+        discount_rate = discount_rate,
+        tax_rate = tax_rate,
+        macrs_itc_reduction = macrs_itc_reduction,
+        replace_macrs_schedule = replace_macrs_schedule,
+        replace_macrs_bonus_fraction = replace_macrs_bonus_fraction,
+        replace_itc = replace_itc,
+    )
+
+    # Adjust cost curve to account for itc and depreciation savings and replacement costs ($/kW)
+    cap_cost_slope = itc_basis - tax_savings - rebate_per_kw + replacement_cap_cost_slope 
 
     # Sanity check
     if cap_cost_slope < 0
@@ -132,6 +145,63 @@ function effective_cost(;
     end
 
     return round(cap_cost_slope, digits=4)
+end
+
+function replacement_effective_cost(;
+    replacement_cost::Real, 
+    replacement_year::Int,
+    discount_rate::Real, 
+    tax_rate::Real,
+    macrs_itc_reduction::Real,
+    replace_macrs_schedule::Array{Float64,1},
+    replace_macrs_bonus_fraction::Real,
+    replace_itc::Real,
+    )
+
+    """ 
+    effective tech replacement costs with ITC and MACRS
+        - Applies benefits of user-specific MACRS and ITC treatment, starting year after replacement cost
+        - Calculates NPV of replacement and benefits (cap_cost_slope of replacement costs)
+    """
+
+    # Replacement: itc reduces replacement depreciable_basis for replacement
+    repl_depr_basis = replacement_cost * (1 - macrs_itc_reduction * replace_itc)
+
+    # Replacement: Bonus depreciation taken from repl tech cost after itc reduction ($/kW)
+    repl_bonus_depreciation = repl_depr_basis * replace_macrs_bonus_fraction
+
+    # Replacement: Assume the ITC and bonus depreciation reduce the replacement depreciable basis ($/kW)
+    repl_depr_basis -= repl_bonus_depreciation
+
+    # Replacement: Calculate replacement cost, discounted to the replacement year (not accounting for tax savings)
+    replacement = replacement_cost / ((1 + discount_rate)^replacement_year)
+
+    # Replacement: Compute savings from depreciation and itc in array to capture NPV
+    repl_tax_savings_array = [0.0 for i in 0:replacement_year] # e.g. if replacement in year 10, depreciation tax savings should start in year 11, which is index 12 in julia
+    for (idx, macrs_rate) in enumerate(replace_macrs_schedule)
+        depreciation_amount = macrs_rate * repl_depr_basis
+        if idx == 1
+            depreciation_amount += repl_bonus_depreciation
+        end
+        taxable_income = depreciation_amount
+        push!(repl_tax_savings_array, taxable_income * tax_rate)
+    end
+
+    # Replacement: Add the replacement ITC to the tax savings (assume occurs year after replacement)
+    repl_tax_savings_array[2+replacement_year] += replacement_cost * replace_itc
+
+    # Replacement: Compute the net present value of the replacement tax savings
+    repl_tax_savings = npv(discount_rate, repl_tax_savings_array)
+
+    # Adjust replacement cost curve to account for itc and depreciation savings ($/kW)
+    repl_cap_cost_slope = replacement - repl_tax_savings
+
+    # Sanity check
+    if repl_cap_cost_slope < 0
+        repl_cap_cost_slope = 0
+    end
+
+    return round(repl_cap_cost_slope, digits=4)
 end
 
 

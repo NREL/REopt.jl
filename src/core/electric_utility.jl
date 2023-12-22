@@ -5,7 +5,7 @@
     net_metering_limit_kw::Real = 0,
     interconnection_limit_kw::Real = 1.0e9, # Limit on total electric system capacity size that can be interconnected to the grid 
     outage_start_time_step::Int=0,  # for modeling a single outage, with critical load spliced into the baseline load ...
-    outage_end_time_step::Int=0,  # ... utiltity production_factor = 0 during the outage
+    outage_end_time_step::Int=0,  # ... utility production_factor = 0 during the outage
     allow_simultaneous_export_import::Bool = true,  # if true the site has two meters (in effect)
     # next 5 variables below used for minimax the expected outage cost,
     # with max taken over outage start time, expectation taken over outage duration
@@ -74,7 +74,7 @@ struct ElectricUtility
     emissions_factor_SO2_decrease_fraction::Real
     emissions_factor_PM25_decrease_fraction::Real
     outage_start_time_step::Int  # for modeling a single outage, with critical load spliced into the baseline load ...
-    outage_end_time_step::Int  # ... utiltity production_factor = 0 during the outage
+    outage_end_time_step::Int  # ... utility production_factor = 0 during the outage
     allow_simultaneous_export_import::Bool  # if true the site has two meters (in effect)
     # next 5 variables below used for minimax the expected outage cost,
     # with max taken over outage start time, expectation taken over outage duration
@@ -95,7 +95,7 @@ struct ElectricUtility
         net_metering_limit_kw::Real = 0,
         interconnection_limit_kw::Real = 1.0e9,
         outage_start_time_step::Int=0,  # for modeling a single outage, with critical load spliced into the baseline load ...
-        outage_end_time_step::Int=0,  # ... utiltity production_factor = 0 during the outage
+        outage_end_time_step::Int=0,  # ... utility production_factor = 0 during the outage
         allow_simultaneous_export_import::Bool=true,  # if true the site has two meters (in effect)
         # next 5 variables below used for minimax the expected outage cost,
         # with max taken over outage start time, expectation taken over outage duration

@@ -16,6 +16,7 @@ end
 
 
 """
+## TODO: Modify! 
     calculate_proforma_metrics(p::REoptInputs, d::Dict)
 
 Recreates the ProForma spreadsheet calculations to get the simple payback period, irr, net present cost (3rd
@@ -69,11 +70,13 @@ function proforma_results(p::REoptInputs, d::Dict)
         storage = p.s.storage.attr["ElectricStorage"]
         total_kw = d["ElectricStorage"]["size_kw"]
         total_kwh = d["ElectricStorage"]["size_kwh"]
-        capital_cost = total_kw * storage.installed_cost_per_kw + total_kwh * storage.installed_cost_per_kwh
-        battery_replacement_year = storage.battery_replacement_year
+        capital_cost = total_kw * storage.installed_cost_per_kw + total_kwh * storage.installed_cost_per_kwh 
+        
+        battery_replacement_year = storage.battery_replacement_year ## TODO: use these somewhere
+        print("\n\nbattery_replacement_year in proforma: ", battery_replacement_year)
         battery_replacement_cost = -1 * ((total_kw * storage.replace_cost_per_kw) + (
-                    total_kwh * storage.replace_cost_per_kwh))
-        m.om_series += [yr != battery_replacement_year ? 0 : battery_replacement_cost for yr in 1:years]
+            total_kwh * storage.replace_cost_per_kwh)) # Future value, without incentives. 
+        ## m.om_series += [yr != battery_replacement_year ? 0 : battery_replacement_cost for yr in 1:years] ## TODO: remove bc already discount to PV? 
 
         # storage only has cbi in the API
         cbi = total_kw * storage.total_rebate_per_kw + total_kwh * storage.total_rebate_per_kwh
@@ -131,6 +134,9 @@ function proforma_results(p::REoptInputs, d::Dict)
 
         m.om_series += escalate_om(annual_om)
         m.om_series_bau += escalate_om(annual_om_bau)
+
+        generator_replacement_year = p.sgenerator.replacement_year ## TODO: use these somewhere
+        generator_replacement_cost_net_present = -1 * (d["Generator"]["size_kw"] * p.s.generator.net_present_replace_cost_per_kw)
     end
 
     # calculate GHP incentives, and depreciation
@@ -161,9 +167,12 @@ function proforma_results(p::REoptInputs, d::Dict)
     operating_expenses_after_tax = (total_operating_expenses - deductable_operating_expenses_series) + 
                                     deductable_operating_expenses_series * (1 - tax_rate_fraction)
     total_cash_incentives = m.total_pbi * (1 - tax_rate_fraction)
+    ## TODO: make sure m.total_depreciation is updated with replacement depreciation (or make separate array for that)
     free_cashflow_without_year_zero = m.total_depreciation * tax_rate_fraction + total_cash_incentives + operating_expenses_after_tax
     free_cashflow_without_year_zero[1] += m.federal_itc
+    # TODO: add in replacement ITC in correct year
     free_cashflow = append!([(-1 * d["Financial"]["initial_capital_costs"]) + m.total_ibi_and_cbi], free_cashflow_without_year_zero)
+    # TODO: append replacement capital cost 
 
     # At this point the logic branches based on third-party ownership or not - see comments    
     if third_party  # get cumulative cashflow for developer
@@ -332,6 +341,8 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
     end
     m.total_pbi += pbi_series
     m.total_pbi_bau += pbi_series_bau
+
+    ## TODO: Add replacements ITC and MACRS calcs here? 
 
     # Federal ITC 
     # NOTE: bug in v1 has the ITC within the `if tech.macrs_option_years in [5 ,7]` block.
