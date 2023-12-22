@@ -1,39 +1,11 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `Wind` is an optional REopt input with the following keys and default values:
 ```julia
     min_kw = 0.0,
     max_kw = 1.0e9,
     installed_cost_per_kw = nothing,
-    om_cost_per_kw = 35.0,
+    om_cost_per_kw = 36.0,
     production_factor_series = nothing, # Optional user-defined production factors. Must be normalized to units of kW-AC/kW-DC nameplate. The series must be one year (January through December) of hourly, 30-minute, or 15-minute generation data.
     size_class = "",
     wind_meters_per_sec = [],
@@ -69,10 +41,10 @@
     If no `installed_cost_per_kw` is provided then it is determined from:
     ```julia
     size_class_to_installed_cost = Dict(
-        "residential"=> 11950.0,
-        "commercial"=> 7390.0,
-        "medium"=> 4440.0,
-        "large"=> 3450.0
+        "residential"=> 6339.0,
+        "commercial"=> 4760.0,
+        "medium"=> 3137.0,
+        "large"=> 2386.0
     )
     ```
     If the `production_factor_series` is not provided then NREL's System Advisor Model (SAM) is used to get the wind turbine 
@@ -130,7 +102,7 @@ struct Wind <: AbstractTech
         min_kw = 0.0,
         max_kw = 1.0e9,
         installed_cost_per_kw = nothing,
-        om_cost_per_kw = 35.0,
+        om_cost_per_kw = 36.0,
         production_factor_series = nothing,
         size_class = "",
         wind_meters_per_sec = [],
@@ -169,10 +141,10 @@ struct Wind <: AbstractTech
             "large"=> 80
         )
         size_class_to_installed_cost = Dict(
-            "residential"=> 5675.0,
-            "commercial"=> 4300.0,
-            "medium"=> 2766.0,
-            "large"=> 2239.0
+            "residential"=> 6339.0,
+            "commercial"=> 4760.0,
+            "medium"=> 3137.0,
+            "large"=> 2386.0
         )
         
         if size_class == ""

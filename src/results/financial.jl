@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `Financial` results keys:
 - `lcc` Optimal lifecycle cost
@@ -40,7 +12,7 @@
 - `lifecycle_offgrid_other_annual_costs_after_tax` LCC component. Present value of offgrid_other_annual_costs over the analysis period, after tax. 
 - `lifecycle_offgrid_other_capital_costs` LCC component. Equal to offgrid_other_capital_costs with straight line depreciation applied over analysis period. The depreciation expense is assumed to reduce the owner's taxable income.
 - `lifecycle_outage_cost` LCC component. Expected outage cost. 
-- `lifecycle_MG_upgrade_and_fuel_cost` LCC component. Cost to upgrade generation and storage technologies to be included in microgrid, plus present value of microgrid fuel costs.
+- `lifecycle_MG_upgrade_and_fuel_cost` LCC component. Cost to upgrade generation and storage technologies to be included in microgrid, plus expected microgrid fuel costs, assuming outages occur in first year with specified probabilities.
 - `lifecycle_om_costs_before_tax` Present value of all O&M costs, before tax.
 - `year_one_om_costs_before_tax` Year one O&M costs, before tax.
 - `year_one_om_costs_after_tax` Year one O&M costs, after tax.
@@ -75,12 +47,19 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     if !(Symbol("TotalPerUnitHourOMCosts"*_n) in keys(m.obj_dict)) # CHP not currently included in multi-node modeling  
         m[Symbol("TotalPerUnitHourOMCosts"*_n)] = 0.0
     end
+    if !(Symbol("GHPOMCosts"*_n) in keys(m.obj_dict)) # CHP not currently included in multi-node modeling  
+        m[Symbol("GHPOMCosts"*_n)] = 0.0
+    end
+    if !(Symbol("GHPCapCosts"*_n) in keys(m.obj_dict)) # GHP not currently included in multi-node modeling  
+        m[Symbol("GHPCapCosts"*_n)] = 0.0
+    end
+
     r["lcc"] = value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)]) - value(m[Symbol("dvComfortLimitViolationCost"*_n)])
     r["lifecycle_om_costs_before_tax"] = value(m[Symbol("TotalPerUnitSizeOMCosts"*_n)] + 
-                                           m[Symbol("TotalPerUnitProdOMCosts"*_n)] + m[Symbol("TotalPerUnitHourOMCosts"*_n)])
+                                           m[Symbol("TotalPerUnitProdOMCosts"*_n)] + m[Symbol("TotalPerUnitHourOMCosts"*_n)] + m[Symbol("GHPOMCosts"*_n)])
     
     ## LCC breakdown: ##
-    r["lifecycle_generation_tech_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)]) # Tech capital costs (including replacements)
+    r["lifecycle_generation_tech_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("GHPCapCosts"*_n)]) # Tech capital costs (including replacements)
     r["lifecycle_storage_capital_costs"] = value(m[Symbol("TotalStorageCapCosts"*_n)]) # Storage capital costs (including replacements)
     r["lifecycle_om_costs_after_tax"] = r["lifecycle_om_costs_before_tax"] * (1 - p.s.financial.owner_tax_rate_fraction)  # Fixed & Variable O&M 
     if !isempty(p.techs.fuel_burning)
@@ -113,9 +92,10 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     r["year_one_om_costs_before_tax"] = r["lifecycle_om_costs_before_tax"] / (p.pwf_om * p.third_party_factor)
     r["year_one_om_costs_after_tax"] = r["lifecycle_om_costs_after_tax"] / (p.pwf_om * p.third_party_factor)
 
-    r["lifecycle_capital_costs_plus_om_after_tax"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)]) +
-        r["lifecycle_om_costs_after_tax"]
-    r["lifecycle_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)])
+    r["lifecycle_capital_costs_plus_om_after_tax"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)] + m[Symbol("GHPCapCosts"*_n)]) + r["lifecycle_om_costs_after_tax"]
+    
+    r["lifecycle_capital_costs"] = value(m[Symbol("TotalTechCapCosts"*_n)] + m[Symbol("TotalStorageCapCosts"*_n)] + m[Symbol("GHPCapCosts"*_n)])
+    
     r["initial_capital_costs"] = initial_capex(m, p; _n=_n)
     future_replacement_cost, present_replacement_cost = replacement_costs_future_and_present(m, p; _n=_n) ## TODO: modify
     r["initial_capital_costs_after_incentives"] = r["lifecycle_capital_costs"] / p.third_party_factor - present_replacement_cost
@@ -211,6 +191,20 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     end
 
     # TODO thermal tech costs
+
+    if !isempty(p.s.ghp_option_list)
+
+        for option in enumerate(p.s.ghp_option_list)
+
+            if option[2].heat_pump_configuration == "WSHP"
+                initial_capex += option[2].installed_cost_per_kw[2]*option[2].heatpump_capacity_ton*value(m[Symbol("binGHP"*_n)][option[1]])
+            elseif option[2].heat_pump_configuration == "WWHP"
+                initial_capex += (option[2].wwhp_heating_pump_installed_cost_curve[2]*option[2].wwhp_heating_pump_capacity_ton + option[2].wwhp_cooling_pump_installed_cost_curve[2]*option[2].wwhp_cooling_pump_capacity_ton)*value(m[Symbol("binGHP"*_n)][option[1]])
+            else
+                @warn "Unknown heat pump configuration provided, excluding GHP costs from initial capital costs."
+            end
+        end
+    end
 
     return initial_capex
 end

@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `Outages` results keys:
 - `expected_outage_cost` The expected outage cost over the random outages modeled.
@@ -40,6 +12,11 @@
 - `pv_to_storage_series_kw` Array of PV power sent to the battery in every outage modeled.
 - `pv_curtailed_series_kw` Array of PV curtailed in every outage modeled.
 - `pv_to_load_series_kw` Array of PV power used to meet load in every outage modeled.
+- `wind_microgrid_size_kw` Optimal microgrid Wind capacity.
+- `wind_microgrid_upgrade_cost` The cost to include the Wind system in the microgrid.
+- `wind_to_storage_series_kw` Array of Wind power sent to the battery in every outage modeled.
+- `wind_curtailed_series_kw` Array of Wind curtailed in every outage modeled.
+- `wind_to_load_series_kw` Array of Wind power used to meet load in every outage modeled.
 - `generator_microgrid_size_kw` Optimal microgrid Generator capacity. Note that the name `Generator` can change based on user provided `Generator.name`.
 - `generator_microgrid_upgrade_cost` The cost to include the Generator system in the microgrid.
 - `generator_to_storage_series_kw` Array of Generator power sent to the battery in every outage modeled.
@@ -53,6 +30,8 @@
 - `chp_to_load_series_kw` Array of CHP power used to meet load in every outage modeled.
 - `chp_fuel_used_per_outage_mmbtu` Array of fuel used in every outage modeled, summed over all CHPs.
 - `microgrid_upgrade_capital_cost` Total capital cost of including technologies in the microgrid
+- `critical_loads_per_outage_series_kw` Critical load series in every outage modeled
+- `soc_series_fraction` ElectricStorage state of charge series in every outage modeled
 
 !!! warn
 	The output keys for "Outages" are subject to change.
@@ -93,15 +72,28 @@ function add_outage_results(m, p, d::Dict)
 		# instead of all ts b/c dvUnservedLoad has unused values in third dimension
 	end
 	r["unserved_load_per_outage_kwh"] = round.(unserved_load_per_outage, digits=2)
+	r["electric_storage_microgrid_upgraded"] = Bool(round(value(m[:binMGStorageUsed]), digits=0))
 	r["storage_microgrid_upgrade_cost"] = value(m[:dvMGStorageUpgradeCost])
 	r["microgrid_upgrade_capital_cost"] = r["storage_microgrid_upgrade_cost"]
-	if !isempty(p.s.storage.types.elec) && Bool(round(value(m[:binMGStorageUsed]), digits=0))
+	if !isempty(p.s.storage.types.elec) && r["electric_storage_microgrid_upgraded"]
 		r["storage_discharge_series_kw"] = value.(m[:dvMGDischargeFromStorage]).data
+        electric_storage_energy_capacity_kwh = round(sum(value(m[Symbol("dvStorageEnergy")][b]) for b in p.s.storage.types.elec), digits=2)
+        r["soc_series_fraction"] = round.(value.(m[:dvMGStoredEnergy][:,:,1:end]).data ./ electric_storage_energy_capacity_kwh, digits=3)
 	else
 		r["storage_discharge_series_kw"] = []
+        r["soc_series_fraction"] = []
 	end
+    
+    r["critical_loads_per_outage_series_kw"] = zeros(S, T, TS)
+    for ts in p.s.electric_utility.outage_time_steps
+        for (t, tz) in enumerate(p.s.electric_utility.outage_start_time_steps)
+            for s in p.s.electric_utility.scenarios
+                r["critical_loads_per_outage_series_kw"][s,t,ts] = p.s.electric_load.critical_loads_kw[tz+ts-1]
+            end
+        end
+    end
 
-	for (tech_type_name, tech_set) in [("pv", p.techs.pv), ("generator", p.techs.gen), ("chp", p.techs.chp)]
+	for (tech_type_name, tech_set) in [("pv", p.techs.pv), ("wind", "Wind" in p.techs.elec ? ["Wind"] : String[]), ("generator", p.techs.gen), ("chp", p.techs.chp)]
 		if !isempty(tech_set)
 			r[tech_type_name * "_microgrid_size_kw"] = round(
 				sum(
@@ -154,7 +146,7 @@ function add_outage_results(m, p, d::Dict)
 				sum(
 					(
 						value.(
-							m[:dvMGRatedProduction][t, s, tz, ts] * p.production_factor[t, tz+ts-1] * p.levelization_factor[t]
+							m[:dvMGRatedProduction][t, s, tz, ts] * (p.production_factor[t, tz+ts-1] + p.unavailability[t][tz+ts-1]) * p.levelization_factor[t]
 							- m[:dvMGCurtail][t, s, tz, ts]
 							- m[:dvMGProductionToStorage][t, s, tz, ts]
 							for s in p.s.electric_utility.scenarios,

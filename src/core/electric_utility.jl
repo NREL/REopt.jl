@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `ElectricUtility` is an optional REopt input with the following keys and default values:
 ```julia
@@ -53,11 +25,23 @@
 ```
 
 !!! note "Outage modeling"
+    # Indexing
     Outage indexing begins at 1 (not 0) and the outage is inclusive of the outage end time step. 
     For instance, to model a 3-hour outage from 12AM to 3AM on Jan 1, outage_start_time_step = 1 and outage_end_time_step = 3.
     To model a 1-hour outage from 6AM to 7AM on Jan 1, outage_start_time_step = 7 and outage_end_time_step = 7.
 
+    # Can use either singular or multiple outage modeling inputs, not both
     Cannot supply singular outage_start(or end)_time_step and multiple outage_start_time_steps. Must use one or the other.
+
+    # Using min_resil_time_steps to ensure critical load is met
+    With multiple outage modeling, the model will choose to meet the critical loads only as cost-optimal. This trade-off depends on cost of not meeting load (see `Financial | value_of_lost_load_per_kwh`) 
+    and the costs of meeting load, such as microgrid upgrade cost (see `Financial | microgrid_upgrade_cost_fraction`), fuel costs, and additional DER capacity. To ensure that REopt recommends a system that can meet 
+    critical loads during a defined outage period, specify this duration using `Site | min_resil_time_steps`.
+
+    # Outage costs will be included in NPV and LCC
+    Note that when using multiple outage modeling, the expected outage cost will be included in the net present value and lifecycle cost calculations (for both the BAU and optimized case). 
+    You can set `Financial | value_of_lost_load_per_kwh` to 0 to ignore these costs. However, doing so will remove incentive for the model to meet critical loads during outages, 
+    and you should therefore consider also specifying `Site | min_resil_time_steps`. You can alternatively post-process results to remove `lifecycle_outage_cost` from the NPV and LCCs.
 
 !!! note "Outages, Emissions, and Renewable Energy Calculations"
     If a single deterministic outage is modeled using outage_start_time_step and outage_end_time_step,
@@ -133,6 +117,7 @@ struct ElectricUtility
         # fields from other models needed for validation
         CO2_emissions_reduction_min_fraction::Union{Real, Nothing} = nothing, # passed from Site
         CO2_emissions_reduction_max_fraction::Union{Real, Nothing} = nothing, # passed from Site
+        min_resil_time_steps::Int=0, # passed from Site
         include_climate_in_objective::Bool = false, # passed from Settings
         include_health_in_objective::Bool = false # passed from Settings
         )
@@ -184,6 +169,9 @@ struct ElectricUtility
             end
         end
         
+        if !isempty(outage_durations) && min_resil_time_steps > maximum(outage_durations)
+            throw(@error("Site input min_resil_time_steps cannot be greater than the maximum value in ElectricUtility input outage_durations"))
+        end
         if (!isempty(outage_start_time_steps) && isempty(outage_durations)) || (isempty(outage_start_time_steps) && !isempty(outage_durations))
             throw(@error("ElectricUtility inputs outage_start_time_steps and outage_durations must both be provided to model multiple outages"))
         end

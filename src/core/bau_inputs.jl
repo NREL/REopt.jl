@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
     BAUInputs(p::REoptInputs)
 
@@ -55,6 +27,7 @@ function BAUInputs(p::REoptInputs)
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
     cop = Dict(t => 0.0 for t in techs.cooling)
     thermal_cop = Dict{String, Float64}()
+    heating_cop = Dict{String, Float64}()
     production_factor = DenseAxisArray{Float64}(undef, techs.all, p.time_steps)
     tech_renewable_energy_fraction = Dict(t => 0.0 for t in techs.all)
     # !!! note: tech_emissions_factors are in lb / kWh of fuel burned (gets multiplied by kWh of fuel burned, not kWh electricity consumption, ergo the use of the HHV instead of fuel slope)
@@ -130,7 +103,8 @@ function BAUInputs(p::REoptInputs)
     ghp_options, require_ghp_purchase, ghp_heating_thermal_load_served_kw, 
         ghp_cooling_thermal_load_served_kw, space_heating_thermal_load_reduction_with_ghp_kw, 
         cooling_thermal_load_reduction_with_ghp_kw, ghp_electric_consumption_kw, 
-        ghp_installed_cost, ghp_om_cost_year_one = setup_ghp_inputs(bau_scenario, p.time_steps, p.time_steps_without_grid)    
+        ghp_installed_cost, ghp_om_cost_year_one, avoided_capex_by_ghp_present_value,
+        ghx_useful_life_years, ghx_residual_value = setup_ghp_inputs(bau_scenario, p.time_steps, p.time_steps_without_grid)    
 
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
     for t in techs.elec
@@ -152,6 +126,8 @@ function BAUInputs(p::REoptInputs)
         generator_fuel_use_gal = 0.0
     end
     setup_bau_emissions_inputs(p, bau_scenario, generator_fuel_use_gal)
+
+    unavailability = get_unavailability_by_tech(p.s, techs, p.time_steps)
 
     REoptInputs(
         bau_scenario,
@@ -203,13 +179,18 @@ function BAUInputs(p::REoptInputs)
         cooling_thermal_load_reduction_with_ghp_kw,
         ghp_electric_consumption_kw,
         ghp_installed_cost,
-        ghp_om_cost_year_one,        
+        ghp_om_cost_year_one,
+        avoided_capex_by_ghp_present_value,
+        ghx_useful_life_years,
+        ghx_residual_value,
         tech_renewable_energy_fraction, 
         tech_emissions_factors_CO2, 
         tech_emissions_factors_NOx, 
         tech_emissions_factors_SO2, 
         tech_emissions_factors_PM25,
-        p.techs_operating_reserve_req_fraction
+        p.techs_operating_reserve_req_fraction,
+        heating_cop,
+        unavailability
     )
 end
 
