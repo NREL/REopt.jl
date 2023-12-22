@@ -270,7 +270,7 @@ struct ElectricUtility
                         end
                     else # otherwise use AVERT
                         if !isnothing(region_abbr)
-                            avert_data_year = 2021 # Must update when AVERT data are updated
+                            avert_data_year = 2022 # Must update when AVERT data are updated
                             emissions_series_dict[ekey] = avert_emissions_profiles(
                                                             latitude = latitude,
                                                             longitude = longitude,
@@ -478,7 +478,7 @@ function region_name_to_abbr(region_name)
 end
 
 """
-    avert_emissions_profiles(; latitude::Real, longitude::Real, time_steps_per_hour::Int=1, load_year::Int=2017, avert_data_year::Int=2021)
+    avert_emissions_profiles(; latitude::Real, longitude::Real, time_steps_per_hour::Int=1, load_year::Int=2017, avert_data_year::Int=2022)
 
 This function gets CO2, NOx, SO2, and PM2.5 grid emission rate profiles (1-year time series) from the AVERT dataset.
 Returned emissions profile is adjusted for day of week alignment with load_year.
@@ -487,7 +487,7 @@ This function is used for the /emissions_profile endpoint in the REopt API, in p
     for the webtool to display grid emissions defaults before running REopt, 
     but is also generally an external way to access AVERT data without running REopt.
 """
-function avert_emissions_profiles(; latitude::Real, longitude::Real, time_steps_per_hour::Int=1, load_year::Int=2017, avert_data_year::Int=2021)
+function avert_emissions_profiles(; latitude::Real, longitude::Real, time_steps_per_hour::Int=1, load_year::Int=2017, avert_data_year::Int=2022)
     avert_region_abbr, avert_meters_to_region = avert_region_abbreviation(latitude, longitude)
     avert_emissions_region = region_abbr_to_name(avert_region_abbr)
     if isnothing(avert_region_abbr)
@@ -506,7 +506,7 @@ function avert_emissions_profiles(; latitude::Real, longitude::Real, time_steps_
         "avert_meters_to_region" => avert_meters_to_region
     )
     for ekey in ["CO2", "NOx", "SO2", "PM25"]
-        # Columns 1 and 2 do not contain AVERT region information, so skip them. # TODO: Update to latest AVERT data?
+        # Columns 1 and 2 do not contain AVERT region information, so skip them.
         avert_df = readdlm(joinpath(@__DIR__, "..", "..", "data", "emissions", "AVERT_Data", "AVERT_$(avert_data_year)_$(ekey)_lb_per_kwh.csv"), ',')[:, 3:end]
         # Find col index for region. Row 1 does not contain AVERT data so skip that.
         emissions_profile_unadjusted = round.(avert_df[2:end,findfirst(x -> x == avert_region_abbr, avert_df[1,:])], digits=6)
