@@ -1381,7 +1381,7 @@ end
     """
     1) Location in contiguous US
         - Correct data from Cambium (returned location and values)
-        - Adjusted for load year vs. Cambium year (which starts on Sunday) vs. AVERT year (2021 currently)
+        - Adjusted for load year vs. Cambium year (which starts on Sunday) vs. AVERT year (2022 currently)
         - co2 pct increase should be zero
     2) HI and AK locations
         - Should use AVERT data and give an "info" message
@@ -1410,6 +1410,7 @@ end
     post["ElectricLoad"]["year"] = 2021 # 2021 First day is Fri
     scen = Scenario(post)
 
+    # TODO: update this test(?) because we updated AVERT data year from 2021 to 2022
     @test scen.electric_utility.cambium_emissions_region == "Colorado"
     @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) / 8760 ≈ 0.38046 rtol=1e-5
     @test scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh[1] ≈ 0.66672 rtol=1e-5 # Should start on Friday

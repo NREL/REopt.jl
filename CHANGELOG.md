@@ -28,6 +28,7 @@ Classify the change according to the following categories:
 - Change default source for CO2 grid emissions values to NREL's Cambium 2022 Database (by default: CO2e, long-run marginal emissions rates levelized (averaged) over the analysis period, assuming start year 2024). Add new emissions inputs and call to Cambium API in `src/core/electric_utility.jl`. Include option for user to use AVERT data for CO2 using **co2_from_avert** boolian. 
 - Update `electric_utility` **emissions_region** to **avert_emissions_region** and **distance_to_emissions_region_meters** to **distance_to_avert_emissions_region_meters**. 
 - Update default `emissions_factor_XXX_decrease_fraction` (where XXX is CO2, NOx, SO2, and PM2.5) from 0.01174 to 0.02163 based on Cambium 2022 Mid-Case scenario, LRMER CO2e (Combustion+Precombustion) 2024-2049 projected values. CO2 projected decrease defaults to 0 if Cambium data are used for CO2 (Cambium API call will levelize values).
+- Update AVERT emissions data to v4.1, which uses Regional Data Files (RDFs) for year 2022. Data is saved in `data/emissions/AVERT_Data`. For Alaska and Hawaii (regions AKGD, HIMS, HIOA), updated eGRID data to eGRID2021 datafile and adjusted CO2 values to CO2e values to align with default used for Cambium data. 
 
 ### Added
 - In `src/REopt.jl`, added **cambium_emissions_profile** as an export for use via the REopt_API. 
