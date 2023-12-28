@@ -1,0 +1,11 @@
+This is a breakdown of testsets that include broken and updated tests due to the migration from Xpress to HiGHS in GitHub Actions.
+
+- CHP sizing: 1 test value updated due to new obtained solution within 1% optimality
+- CHP Supplementary firing and standby: 11 tests broken due to solver incompatibility (indicator constraints) 
+- Single RC Model Heating only: 9 tests broken due to solver incompatibility or tests that use prior results from an incompatible test
+- Do not allow_simultaneous_export_import: 1 test broken due to solver incompatibility
+- Solar and ElectricStorage w/BAU and degradation: 6 tests broken due to solver incompatibility
+- Minimize Unserved Load: 18 tests broken due to solver incompatibility
+- Outages with Wind and supply-to-load no greater than critical load: 2 tests broken due to either incompatibility or infeasibility
+- Wind: 3 tests broken due to incompatibility or infeasibility
+- Emissions and Renewable Energy Percent: ~50 tests broken or skipped due to incompatibility or tests use prior results from an incompatible test
