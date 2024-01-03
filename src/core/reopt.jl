@@ -248,6 +248,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	m[:AvoidedCapexByGHP] = 0.0
 	m[:ResidualGHXCapCost] = 0.0
 	m[:dvHighSOCIncentive] = 0.0
+	m[:dvMinUnservedLoadIncentive] = 0.0
 
 	if !isempty(p.techs.all)
 		add_tech_size_constraints(m, p)
@@ -485,10 +486,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 	if !isempty(p.s.electric_utility.outage_durations)
 		# Incentive to minimize unserved load in each outage, not just the max over outage start times
-		add_to_expression!(
-			Objective, 
-			sum(sum(0.0001 * m[:dvUnservedLoad][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s]) for s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps)
-		)
+		m[:dvMinUnservedLoadIncentive] = sum(sum(0.0001 * m[:dvUnservedLoad][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s]) for s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps)
+		add_to_expression!(Objective, m[:dvMinUnservedLoadIncentive])
 	end
 
 	@objective(m, Min, m[:Objective])
