@@ -25,7 +25,7 @@ Classify the change according to the following categories:
 
 ## Develop 2024-01-03
 ### Fixed
-- Removed SOC incentive from the report **Financial.lcc** value. 
+- Removed SOC and unserved load incentives from the report **Financial.lcc** value. These were relative small values compared to the LCC but could be large in magnitude for big systems. 
   
 ## Develop 2023-12-16
 ### Changed
