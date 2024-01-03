@@ -23,6 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop 2024-01-03
+### Fixed
+- Removed SOC incentive from the report **Financial.lcc** value. 
+  
 ## Develop 2023-12-16
 ### Changed
 - Changed testing suite from using Xpress to using HiGHS, an open-source solver.  This has led to a reduction in the number of tests due to incompatibility with indicator constraints.

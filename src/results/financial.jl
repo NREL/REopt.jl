@@ -54,7 +54,9 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
         m[Symbol("GHPCapCosts"*_n)] = 0.0
     end
 
-    r["lcc"] = value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)]) - value(m[Symbol("dvComfortLimitViolationCost"*_n)])
+    r["lcc"] = (value(m[Symbol("Costs"*_n)]) + 0.0001 * value(m[Symbol("MinChargeAdder"*_n)]) - value(m[Symbol("dvComfortLimitViolationCost"*_n)]) 
+    + value(m[Symbol("dvHighSOCIncentive"*_n)]))
+
     r["lifecycle_om_costs_before_tax"] = value(m[Symbol("TotalPerUnitSizeOMCosts"*_n)] + 
                                            m[Symbol("TotalPerUnitProdOMCosts"*_n)] + m[Symbol("TotalPerUnitHourOMCosts"*_n)] + m[Symbol("GHPOMCosts"*_n)])
     
