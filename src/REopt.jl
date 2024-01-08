@@ -76,10 +76,10 @@ const FUEL_DEFAULTS = Dict(
         "diesel_oil"=>0.0
     ),
     "emissions_factor_lb_CO2_per_mmbtu" => Dict(
-        "natural_gas"=>116.9,
-        "landfill_bio_gas"=>114.8,
-        "propane"=>138.6,
-        "diesel_oil"=>163.1
+        "natural_gas"=>117.03,
+        "landfill_bio_gas"=>115.38,
+        "propane"=>139.16,
+        "diesel_oil"=>163.61
     ),
     "emissions_factor_lb_NOx_per_mmbtu" => Dict(
         "natural_gas"=>0.09139,
