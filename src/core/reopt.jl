@@ -247,7 +247,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     m[:GHPOMCosts] = 0.0
 	m[:AvoidedCapexByGHP] = 0.0
 	m[:ResidualGHXCapCost] = 0.0
-	m[:dvHighSOCIncentive] = 0.0
+	m[:dvSOCIncentive] = 0.0
 	m[:dvMinUnservedLoadIncentive] = 0.0
 
 	if !isempty(p.techs.all)
@@ -479,10 +479,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	# Modify objective with small incentives for SOC and unserved load
 	if !(isempty(p.s.storage.types.elec)) && p.s.settings.add_soc_incentive
 		# Incentive to keep SOC high
-		m[:dvHighSOCIncentive] = sum(
+		m[:dvSOCIncentive] = sum(
 								m[:dvStoredEnergy][b, ts] for b in p.s.storage.types.elec, ts in p.time_steps
 							) / (8760. / p.hours_per_time_step)
-		add_to_expression!(Objective, - m[:dvHighSOCIncentive])
+		add_to_expression!(Objective, - m[:dvSOCIncentive])
 	end
 	if !isempty(p.s.electric_utility.outage_durations)
 		# Incentive to minimize unserved load in each outage, not just the max over outage start times
