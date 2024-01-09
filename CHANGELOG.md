@@ -23,6 +23,12 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.39.1
+### Changed
+- Changed testing suite from using Xpress to using HiGHS, an open-source solver.  This has led to a reduction in the number of tests due to incompatibility with indicator constraints.
+### Fixed
+- Fixed issue with running Wind on Windows: add execute permission for ssc.dll
+
 ## v0.39.0
 ### Added
 - Added new technology `ElectricHeater` which uses electricity as input and provides heating as output; load balancing constraints have been updated accordingly
