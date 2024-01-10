@@ -4,10 +4,10 @@
 - `annual_energy_supplied_kwh` Total energy supplied from the grid in an average year.
 - `electric_to_load_series_kw` Vector of power drawn from the grid to serve load.
 - `electric_to_storage_series_kw` Vector of power drawn from the grid to charge the battery.
-- `annual_emissions_tonnes_CO2` # Total tons of CO2 emissions associated with the site's grid-purchased electricity in an average year. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
-- `annual_emissions_tonnes_NOx` # Total tons of NOx emissions associated with the site's grid-purchased electricity in an average year. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
-- `annual_emissions_tonnes_SO2` # Total tons of SO2 emissions associated with the site's grid-purchased electricity in an average year. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
-- `annual_emissions_tonnes_PM25` # Total tons of PM2.5 emissions associated with the site's grid-purchased electricity in an average year. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
+- `annual_emissions_tonnes_CO2` # Average annual total tons of CO2 emissions associated with the site's grid-purchased electricity. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchases. Otherwise, it accounts for emissions offset from any export to the grid.
+- `annual_emissions_tonnes_NOx` # Average annual total tons of NOx emissions associated with the site's grid-purchased electricity. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchases. Otherwise, it accounts for emissions offset from any export to the grid.
+- `annual_emissions_tonnes_SO2` # Average annual total tons of SO2 emissions associated with the site's grid-purchased electricity. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchases. Otherwise, it accounts for emissions offset from any export to the grid.
+- `annual_emissions_tonnes_PM25` # Average annual total tons of PM25 emissions associated with the site's grid-purchased electricity. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchsaes. Otherwise, it accounts for emissions offset from any export to the grid.
 - `lifecycle_emissions_tonnes_CO2` # Total tons of CO2 emissions associated with the site's grid-purchased electricity over the analysis period. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
 - `lifecycle_emissions_tonnes_NOx` # Total tons of NOx emissions associated with the site's grid-purchased electricity over the analysis period. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
 - `lifecycle_emissions_tonnes_SO2` # Total tons of SO2 emissions associated with the site's grid-purchased electricity over the analysis period. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
@@ -23,6 +23,7 @@
 !!! note "Emissions outputs" 
     By default, REopt uses marginal emissions rates for grid-purchased electricity. Marginal emissions rates are most appropriate for reporting a change in emissions (avoided or increased) rather than emissions totals.
     It is therefore recommended that emissions results from REopt (using default marginal emissions rates) be reported as the difference in emissions between the optimized and BAU case.
+    Note also that the annual_emissions metrics are average annual emissions over the analysis period, accounting for expected changes in future grid emissions. 
 
 """
 function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, d::Dict; _n="")
@@ -51,15 +52,15 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
     r["electric_to_storage_series_kw"] = round.(value.(GridToBatt), digits=3)
 
     if _n=="" #only output emissions results if not a multinode model
-        r["annual_emissions_tonnes_CO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2]*TONNE_PER_LB), digits=2)
-        r["annual_emissions_tonnes_NOx"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx]*TONNE_PER_LB), digits=2)
-        r["annual_emissions_tonnes_SO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2]*TONNE_PER_LB), digits=2)
-        r["annual_emissions_tonnes_PM25"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25]*TONNE_PER_LB), digits=2)
         r["lifecycle_emissions_tonnes_CO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2]*TONNE_PER_LB*p.pwf_grid_emissions["CO2"]), digits=2)
         r["lifecycle_emissions_tonnes_NOx"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx]*TONNE_PER_LB*p.pwf_grid_emissions["NOx"]), digits=2)
         r["lifecycle_emissions_tonnes_SO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2]*TONNE_PER_LB*p.pwf_grid_emissions["SO2"]), digits=2)
         r["lifecycle_emissions_tonnes_PM25"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25]*TONNE_PER_LB*p.pwf_grid_emissions["PM25"]), digits=2)
-        
+        r["annual_emissions_tonnes_CO2"] = r["lifecycle_emissions_tonnes_CO2"] / p.s.financial.analysis_years
+        r["annual_emissions_tonnes_NOx"] = r["lifecycle_emissions_tonnes_NOx"] / p.s.financial.analysis_years
+        r["annual_emissions_tonnes_SO2"] = r["lifecycle_emissions_tonnes_SO2"] / p.s.financial.analysis_years
+        r["annual_emissions_tonnes_PM25"] = r["lifecycle_emissions_tonnes_PM25"] / p.s.financial.analysis_years
+
         r["avert_emissions_region"] = p.s.electric_utility.avert_emissions_region
         r["distance_to_avert_emissions_region_meters"] = p.s.electric_utility.distance_to_avert_emissions_region_meters
         r["cambium_emissions_region"] = p.s.electric_utility.cambium_emissions_region

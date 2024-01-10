@@ -34,7 +34,8 @@ Classify the change according to the following categories:
         "landfill_bio_gas"=>114,8 to 115.38,
         "propane"=>138.6 to 139.16,
         "diesel_oil"=>163.1 to 163.61
-    ),
+    )
+- Changed all `annual` emissions results to simple annual averages (lifecycle emissions divided by analysis_years). This is because the default climate emissions from Cambium are already levelized over the analysis horizon and therefore "year_one" emissions cannot be easily obtained.  
 
 ### Added
 - In `src/REopt.jl`, added **cambium_emissions_profile** as an export for use via the REopt_API. 
