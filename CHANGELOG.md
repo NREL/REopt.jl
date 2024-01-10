@@ -45,9 +45,9 @@ Classify the change according to the following categories:
 - In `test_with_xpress.jl`, updated "Emissions and Renewable Energy Percent" expected values to account for load year adjustment. 
 - In `src/core/electric_utility.jl`, error when user-provided emissions series does not match timestep per hour, as is done in other cases of incorrect user-provided data. 
 
-## Develop 2023-08-09
-## Develop
-## Develop 12-13-2023
+## v0.39.1
+### Changed
+- Changed testing suite from using Xpress to using HiGHS, an open-source solver.  This has led to a reduction in the number of tests due to incompatibility with indicator constraints.
 ### Fixed
 - Fixed issue with running Wind on Windows: add execute permission for ssc.dll
 
