@@ -951,7 +951,7 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
 
     # Emissions pwfs
     pwf_emissions_cost = Dict{String, Float64}()
-    pwf_grid_emissions = Dict{String, Float64}() # used to calculate total grid CO2 lbs
+    pwf_grid_emissions = Dict{String, Float64}() # used to calculate total grid CO2, NOx, SO2, and PM2.5 lbs
     for emissions_type in ["CO2", "NOx", "SO2", "PM25"]
         merge!(pwf_emissions_cost, 
                 Dict(emissions_type*"_grid"=>annuity_two_escalation_rates(

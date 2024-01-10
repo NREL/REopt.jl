@@ -20,7 +20,7 @@
     # Climate Option 1 (Default): Use levelized emissions data from NREL's Cambium database by specifying the following fields:
     cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions). Default: "Mid-case".
         ## Options: ["Mid-case", "Low Renewable Energy and Battery Costs", "High Renewable Energy and Battery Costs", "Electricifcation", "Low Natural Gas Price", "High Natural Gas Price", "Mid-case with 95% Decarbonization by 2050", "Mid-case with 100% Decarbonization by 2035", "Mid-case (with tax credit phaseout)", "Low Renewable Energy and Battery Costs (with tax credit phaseout)"]     
-    cambium_location_type::String =  "States", # Geographic boundary at which emissions are calculated. Default: "States". Options: ["Nations", "GEA Regions", "States", "Balancing Areas"] # TODO: some may not work 
+    cambium_location_type::String =  "States", # Geographic boundary at which emissions are calculated. Default: "States". Options: ["Nations", "GEA Regions", "States"] 
     cambium_metric_col::String =  "lrmer_co2e", # Emissions metric used. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
     cambium_start_year::Int = 2024, # First year of operation of system. Emissions will be levelized starting in this year for the duration of cambium_levelization_years.  Default: 2024 # Options: any year 2023 through 2050.
     cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions will be averaged over this period. Default: analysis_years (from Financial struct)
@@ -161,7 +161,7 @@ struct ElectricUtility
         # Climate Option 1 (Default): Use levelized emissions data from NREL's Cambium database by specifying the following fields:
         cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions). Default: "Mid-case".
             ## Options: ["Mid-case", "Low Renewable Energy and Battery Costs", "High Renewable Energy and Battery Costs", "Electricifcation", "Low Natural Gas Price", "High Natural Gas Price", "Mid-case with 95% Decarbonization by 2050", "Mid-case with 100% Decarbonization by 2035", "Mid-case (with tax credit phaseout)", "Low Renewable Energy and Battery Costs (with tax credit phaseout)"]     
-        cambium_location_type::String =  "States", # Geographic boundary at which emissions are calculated. Default: "States". Options: ["Nations", "GEA Regions", "States", "Balancing Areas"] # TODO: some may not work 
+        cambium_location_type::String =  "States", # Geographic boundary at which emissions are calculated. Default: "States". Options: ["Nations", "GEA Regions", "States"] 
         cambium_metric_col::String =  "lrmer_co2e", # Emissions metric. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
         cambium_start_year::Int = 2024, # First year of operation of system. Default: 2024 # Options: any year now through 2050.
         cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions will be averaged over this period. Default: analysis_years (from Financial struct)
