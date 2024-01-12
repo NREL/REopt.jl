@@ -132,6 +132,7 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     heating_loads_kw::Dict{String, Array{Real,1}} # (heating_loads)
     heating_loads_served_by_tes::Dict{String, Array{String,1}} # ("HotThermalStorage" or empty)
     unavailability::Dict{String, Array{Float64,1}} # (techs.elec)
+    absorption_chillers_using_heating_load::Dict{String,Array{String,1}} # ("AbsorptionChiller" or empty)
 end
 
 
@@ -196,17 +197,35 @@ function REoptInputs(s::AbstractScenario)
 
     heating_loads = Vector{String}()
     heating_loads_kw = Dict{String, Array{Real,1}}()
+    absorption_chillers_using_heating_load = Dict{String,Array{String,1}}()
     if !isnothing(s.dhw_load)
         push!(heating_loads, "DomesticHotWater")
         heating_loads_kw["DomesticHotWater"] = s.dhw_load.loads_kw
+        if !isnothing(s.absorption_chiller) && s.absorption_chiller.heating_load_input == "DomesticHotWater"
+            absorption_chillers_using_heating_load["DomesticHotWater"] = ["AbsorptionChiller"]
+        else
+            absorption_chillers_using_heating_load["DomesticHotWater"] = Vector{String}()
+        end
     end
     if !isnothing(s.space_heating_load)
         push!(heating_loads, "SpaceHeating")
         heating_loads_kw["SpaceHeating"] = s.space_heating_load.loads_kw
+        if !isnothing(s.absorption_chiller) && s.absorption_chiller.heating_load_input == "SpaceHeating"
+            absorption_chillers_using_heating_load["SpaceHeating"] = ["SpaceHeating"]
+        else
+            absorption_chillers_using_heating_load["SpaceHeating"] = Vector{String}()
+        end
+    elseif !isnothing(s.flexible_hvac) && !isnothing(s.existing_boiler)
+        push!(heating_loads, "SpaceHeating")  #add blank space heating load to add dvHeatingProduction for existing boiler
     end
     if !isnothing(s.space_heating_load)
         push!(heating_loads, "ProcessHeat")
         heating_loads_kw["ProcessHeat"] = s.process_heat_load.loads_kw
+        if !isnothing(s.absorption_chiller) && s.absorption_chiller.heating_load_input == "ProcessHeat"
+            absorption_chillers_using_heating_load["ProcessHeat"] = ["ProcessHeat"]
+        else
+            absorption_chillers_using_heating_load["ProcessHeat"] = Vector{String}()
+        end
     end
 
     heating_loads_served_by_tes = Dict{String,Array{String,1}}()
@@ -290,7 +309,8 @@ function REoptInputs(s::AbstractScenario)
         heating_loads,
         heating_loads_kw,
         heating_loads_served_by_tes,
-        unavailability 
+        unavailability,
+        absorption_chillers_using_heating_load
     )
 end
 

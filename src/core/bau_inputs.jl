@@ -129,17 +129,35 @@ function BAUInputs(p::REoptInputs)
 
     heating_loads = Vector{String}()
     heating_loads_kw = Dict{String, Array{Real,1}}()
+    absorption_chillers_using_heating_load = Dict{String,Array{String,1}}()
     if !isnothing(p.s.dhw_load)
         push!(heating_loads, "DomesticHotWater")
         heating_loads_kw["DomesticHotWater"] = p.s.dhw_load.loads_kw
+        if !isnothing(p.s.absorption_chiller) && p.s.absorption_chiller.heating_load_input == "DomesticHotWater"
+            absorption_chillers_using_heating_load["DomesticHotWater"] = ["AbsorptionChiller"]
+        else
+            absorption_chillers_using_heating_load["DomesticHotWater"] = Vector{String}()
+        end
     end
     if !isnothing(p.s.space_heating_load)
         push!(heating_loads, "SpaceHeating")
         heating_loads_kw["SpaceHeating"] = p.s.space_heating_load.loads_kw
+        if !isnothing(p.s.absorption_chiller) && p.s.absorption_chiller.heating_load_input == "SpaceHeating"
+            absorption_chillers_using_heating_load["SpaceHeating"] = ["SpaceHeating"]
+        else
+            absorption_chillers_using_heating_load["SpaceHeating"] = Vector{String}()
+        end
+    elseif !isnothing(p.s.flexible_hvac) && !isnothing(p.s.existing_boiler)
+        push!(heating_loads, "SpaceHeating")  #add blank space heating load to add dvHeatingProduction for existing boiler
     end
-    if !isnothing(p.s.process_heat_load)
+    if !isnothing(p.s.space_heating_load)
         push!(heating_loads, "ProcessHeat")
         heating_loads_kw["ProcessHeat"] = p.s.process_heat_load.loads_kw
+        if !isnothing(p.s.absorption_chiller) && p.s.absorption_chiller.heating_load_input == "ProcessHeat"
+            absorption_chillers_using_heating_load["ProcessHeat"] = ["ProcessHeat"]
+        else
+            absorption_chillers_using_heating_load["ProcessHeat"] = Vector{String}()
+        end
     end
 
     heating_loads_served_by_tes = Dict{String,Array{String,1}}()
@@ -209,7 +227,8 @@ function BAUInputs(p::REoptInputs)
         heating_loads,
         heating_loads_kw,
         heating_loads_served_by_tes,
-        unavailability
+        unavailability,
+        absorption_chillers_using_heating_load
     )
 end
 
