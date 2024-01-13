@@ -64,7 +64,7 @@ function add_re_elec_calcs(m,p)
 				- sum(m[:dvProductionToStorage][b,t,ts]
 					*(1-p.s.storage.attr[b].charge_efficiency*p.s.storage.attr[b].discharge_efficiency)
 					for b in p.s.storage.types.elec)) #minus battery efficiency losses
-				# * p.s.storage.attr["ElectricStorage"].inverter_efficiency_fraction #converted to AC #TODO: uncomment
+				# * (isempty(p.s.storage.types.elec) ? 0 : p.s.storage.attr["ElectricStorage"].inverter_efficiency_fraction) #converted to AC TODO: uncomment
 				* p.tech_renewable_energy_fraction[t]
 				for t in p.techs.dc_couple_with_stor, ts in p.time_steps
 			)	
