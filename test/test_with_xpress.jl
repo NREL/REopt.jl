@@ -1434,7 +1434,6 @@ end
             @test results["ElectricStorage"]["size_kwh"] ≈ 165.27 atol=1
             @test !haskey(results, "Generator")
             # NPV
-            @info results["Financial"]["npv"]
             expected_npv = -267404.54
             @test (expected_npv - results["Financial"]["npv"])/expected_npv ≈ 0.0 atol=1e-3
             # Renewable energy
