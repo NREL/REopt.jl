@@ -2108,7 +2108,8 @@ else  # run HiGHS tests
                                                 ("max_ton", 600.0),
                                                 ("cop_thermal", 0.7),
                                                 ("installed_cost_per_ton", 500.0),
-                                                ("om_cost_per_ton", 0.5)
+                                                ("om_cost_per_ton", 0.5),
+                                                ("heating_load_input", "SpaceHeating")
                                                 ])
             
             # Add Hot TES
