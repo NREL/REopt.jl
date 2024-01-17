@@ -34,7 +34,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 			x = dv*_n
 			m[Symbol(x)] = @variable(m, [p.s.storage.types.elec], base_name=x, lower_bound=0)
 		end
-
+		
 		for dv in dvs_idx_on_storagetypes_time_steps
 			x = dv*_n
 			m[Symbol(x)] = @variable(m, [p.s.storage.types.all, p.time_steps], base_name=x, lower_bound=0)
@@ -84,6 +84,10 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 
         ex_name = "TotalPerUnitProdOMCosts"*_n
 		m[Symbol(ex_name)] = 0
+		
+		ex_name = "dvSOCIncentive"*_n
+		m[Symbol(ex_name)] = @expression(m, sum(sum(m[Symbol("dvStoredEnergy"*_n)][b, ts] 
+			for ts in p.time_steps) for b in p.s.storage.types.elec))
 	
 		add_elec_utility_expressions(m, p; _n=_n)
 	
@@ -181,8 +185,7 @@ function add_objective!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 		@objective(m, Min, sum(m[Symbol(string("Costs_", p.s.site.node))] for p in ps))
 	else # Keep SOC high
 		@objective(m, Min, sum(m[Symbol(string("Costs_", p.s.site.node))] for p in ps)
-        - sum(sum(sum(m[Symbol(string("dvStoredEnergy_", p.s.site.node))][b, ts] 
-            for ts in p.time_steps) for b in p.s.storage.types.elec) for p in ps) / (8760. / ps[1].hours_per_time_step))
+        	- sum(m[Symbol(string("dvSOCIncentive_", p.s.site.node))] for p in ps) / (8760. / ps[1].hours_per_time_step) )
 	end  # TODO need to handle different hours_per_time_step?
 	nothing
 end

@@ -47,6 +47,9 @@ function add_financial_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     if !(Symbol("TotalPerUnitHourOMCosts"*_n) in keys(m.obj_dict)) # CHP not currently included in multi-node modeling  
         m[Symbol("TotalPerUnitHourOMCosts"*_n)] = 0.0
     end
+    if !(Symbol("dvMinUnservedLoadIncentive"*_n) in keys(m.obj_dict)) # Multiple outages not in in multi-node modeling
+        m[Symbol("dvMinUnservedLoadIncentive"*_n)] = 0.0
+    end
     if !(Symbol("GHPOMCosts"*_n) in keys(m.obj_dict)) # CHP not currently included in multi-node modeling  
         m[Symbol("GHPOMCosts"*_n)] = 0.0
     end
