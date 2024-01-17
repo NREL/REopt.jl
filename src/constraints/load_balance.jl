@@ -126,7 +126,7 @@ function add_thermal_load_constraints(m, p; _n="")
                     p.heating_loads_kw[q][ts]
                     + sum(m[Symbol("dvProductionToWaste"*_n)][t,q,ts] for t in p.techs.chp)
                     + sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for b in p.s.storage.types.hot, t in union(p.techs.heating, p.techs.chp))
-                    + sum(m[Symbol("dvCoolingProduction"*_n)][t,ts] / p.thermal_cop[t] for t in p.techs.absorption_chiller)
+                    + sum(m[Symbol("dvCoolingProduction"*_n)][t,ts] / p.thermal_cop[t] for t in p.absorption_chillers_using_heating_load[q])
                     - sum(p.space_heating_thermal_load_reduction_with_ghp_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
                     + sum(m[Symbol("dvThermalToSteamTurbine"*_n)][t,q,ts] for t in p.techs.can_supply_steam_turbine)
                 )
@@ -139,7 +139,7 @@ function add_thermal_load_constraints(m, p; _n="")
                     p.heating_loads_kw[q][ts]
                     + sum(m[Symbol("dvProductionToWaste"*_n)][t,q,ts] for t in p.techs.chp)
                     + sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for b in p.s.storage.types.hot, t in union(p.techs.heating, p.techs.chp))
-                    + sum(m[Symbol("dvCoolingProduction"*_n)][t,ts] / p.thermal_cop[t] for t in p.techs.absorption_chiller)
+                    + sum(m[Symbol("dvCoolingProduction"*_n)][t,ts] / p.thermal_cop[t] for t in p.absorption_chillers_using_heating_load[q])
                     - sum(p.space_heating_thermal_load_reduction_with_ghp_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
                 )
             end
