@@ -28,6 +28,7 @@ Classify the change according to the following categories:
 - Removed SOC and unserved load incentives from the report **Financial.lcc** value. These were relative small values compared to the LCC but could be large in magnitude for big systems. 
   
 ## Develop 2023-12-16
+## v0.39.1
 ### Changed
 - Changed testing suite from using Xpress to using HiGHS, an open-source solver.  This has led to a reduction in the number of tests due to incompatibility with indicator constraints.
 ### Fixed
