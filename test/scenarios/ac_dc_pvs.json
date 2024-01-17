@@ -32,7 +32,7 @@
     },
     "PV": [
         {
-          "name": "ground",
+          "name": "ground1",
           "dc_coupled_with_storage": true,
           "existing_kw": 40.0,
           "installed_cost_per_kw": 1600.0,
@@ -73,7 +73,7 @@
           "location": "roof"
         },
         {
-          "name": "roof_east",
+          "name": "ground2",
           "existing_kw": 0.0,
           "installed_cost_per_kw": 1600.0,
           "om_cost_per_kw": 16.0,
@@ -84,13 +84,13 @@
           "degradation_fraction": 0.005,
           "azimuth": 180.0,
           "losses": 0.14,
-          "array_type": 1,
+          "array_type": 0,
           "module_type": 0,
           "gcr": 0.4,
           "dc_ac_ratio": 1.2,
           "inv_eff": 0.96,
-          "tilt": 10.0,
-          "location": "roof"
+          "tilt": 34.5794343,
+          "location": "ground"
         }
       ]
 }
