@@ -23,6 +23,7 @@ struct Scenario <: AbstractScenario
     space_heating_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     steam_turbine::Union{SteamTurbine, Nothing}
+    electric_heater::Union{ElectricHeater, Nothing}
 end
 
 """
@@ -48,6 +49,7 @@ A Scenario struct can contain the following keys:
 - [AbsorptionChiller](@ref) (optional)
 - [GHP](@ref) (optional, can be Array)
 - [SteamTurbine](@ref) (optional)
+- [ElectricHeater](@ref) (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
 
@@ -112,6 +114,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             latitude=site.latitude, longitude=site.longitude, 
                                             CO2_emissions_reduction_min_fraction=site.CO2_emissions_reduction_min_fraction,
                                             CO2_emissions_reduction_max_fraction=site.CO2_emissions_reduction_max_fraction,
+                                            min_resil_time_steps=site.min_resil_time_steps,
                                             include_climate_in_objective=settings.include_climate_in_objective,
                                             include_health_in_objective=settings.include_health_in_objective,
                                             off_grid_flag=settings.off_grid_flag,
@@ -319,16 +322,19 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     chp = nothing
     chp_prime_mover = nothing
     if haskey(d, "CHP")
-        if !isnothing(existing_boiler) && get(d["CHP"], "thermal_efficiency_full_load", 0.5) > 0.0
+        electric_only = get(d["CHP"], "is_electric_only", false) || get(d["CHP"], "thermal_efficiency_full_load", 0.5) == 0.0
+        if !isnothing(existing_boiler) && !electric_only
             total_fuel_heating_load_mmbtu_per_hour = (space_heating_load.loads_kw + dhw_load.loads_kw) / existing_boiler.efficiency / KWH_PER_MMBTU
             avg_boiler_fuel_load_mmbtu_per_hour = sum(total_fuel_heating_load_mmbtu_per_hour) / length(total_fuel_heating_load_mmbtu_per_hour)
             chp = CHP(d["CHP"]; 
                     avg_boiler_fuel_load_mmbtu_per_hour = avg_boiler_fuel_load_mmbtu_per_hour,
                     existing_boiler = existing_boiler,
-                    electric_load_series_kw = electric_load.loads_kw)
+                    electric_load_series_kw = electric_load.loads_kw,
+                    year = electric_load.year)
         else # Only if modeling CHP without heating_load and existing_boiler (for prime generator, electric-only)
             chp = CHP(d["CHP"],
-                    electric_load_series_kw = electric_load.loads_kw)
+                    electric_load_series_kw = electric_load.loads_kw,
+                    year = electric_load.year)
         end
         chp_prime_mover = chp.prime_mover
     end
@@ -605,6 +611,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         end
     end
 
+    electric_heater = nothing
+    if haskey(d, "ElectricHeater") && d["ElectricHeater"]["max_mmbtu_per_hour"] > 0.0
+        electric_heater = ElectricHeater(;dictkeys_tosymbols(d["ElectricHeater"])...)
+    end
+
     return Scenario(
         settings,
         site, 
@@ -628,7 +639,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         ghp_option_list,
         space_heating_thermal_load_reduction_with_ghp_kw,
         cooling_thermal_load_reduction_with_ghp_kw,
-        steam_turbine
+        steam_turbine,
+        electric_heater
     )
 end
 
