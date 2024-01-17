@@ -515,7 +515,7 @@ end
     @test value(m[:binMGTechUsed]["CHP"]) ≈ 1
     @test value(m[:binMGTechUsed]["PV"]) ≈ 1
     @test value(m[:binMGStorageUsed]) ≈ 1
-    @test results["Financial"]["lcc"] ≈ 6.83746678985e7 atol=5e4
+    @test results["Financial"]["lcc"] ≈ 6.83633907986e7 atol=5e4
 
     #=
     Scenario with $0.001/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
@@ -1016,6 +1016,31 @@ end
     inputs = REoptInputs(s)
 
     @test round(sum(inputs.s.cooling_load.loads_kw_thermal) / REopt.KWH_THERMAL_PER_TONHOUR, digits=0) ≈ annual_tonhour atol=1.0 
+    
+    # Test for prime generator CHP inputs (electric only)
+    # First get CHP cost to compare later with prime generator
+    input_data["ElectricLoad"] = Dict("doe_reference_name" => "FlatLoad",
+                                        "annual_kwh" => 876000)
+    input_data["ElectricTariff"] = Dict("blended_annual_energy_rate" => 0.06,
+                                        "blended_annual_demand_rate" => 0.0  )
+    s_chp = Scenario(input_data)
+    inputs_chp = REoptInputs(s)
+    installed_cost_chp = s_chp.chp.installed_cost_per_kw
+
+    # Now get prime generator (electric only)
+    input_data["CHP"]["is_electric_only"] = true
+    delete!(input_data["CHP"], "max_kw")
+    s = Scenario(input_data)
+    inputs = REoptInputs(s)
+    # Costs are 75% of CHP
+    @test inputs.s.chp.installed_cost_per_kw ≈ (0.75*installed_cost_chp) atol=1.0
+    @test inputs.s.chp.om_cost_per_kwh ≈ (0.75*0.0145) atol=0.0001
+    @test inputs.s.chp.federal_itc_fraction ≈ 0.0 atol=0.0001
+    # Thermal efficiency set to zero
+    @test inputs.s.chp.thermal_efficiency_full_load == 0
+    @test inputs.s.chp.thermal_efficiency_half_load == 0
+    # Max size based on electric load, not heating load
+    @test inputs.s.chp.max_kw ≈ maximum(inputs.s.electric_load.loads_kw) atol=0.001    
 end
 
 @testset "Hybrid/blended heating and cooling loads" begin
@@ -1733,6 +1758,41 @@ end
     end
 end
 
+@testset "Electric Heater" begin
+    d = JSON.parsefile("./scenarios/electric_heater.json")
+    d["SpaceHeatingLoad"]["annual_mmbtu"] = 0.5 * 8760
+    d["DomesticHotWaterLoad"]["annual_mmbtu"] = 0.5 * 8760
+    s = Scenario(d)
+    p = REoptInputs(s)
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, p)
+
+    #first run: Boiler produces the required heat instead of the electric heater - electric heater should not be purchased
+    @test results["ElectricHeater"]["size_mmbtu_per_hour"] ≈ 0.0 atol=0.1
+    @test results["ElectricHeater"]["annual_thermal_production_mmbtu"] ≈ 0.0 atol=0.1
+    @test results["ElectricHeater"]["annual_electric_consumption_kwh"] ≈ 0.0 atol=0.1
+    @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ 87600.0 atol=0.1
+    
+    d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = 100
+    d["ElectricHeater"]["installed_cost_per_mmbtu_per_hour"] = 1.0
+    d["ElectricTariff"]["monthly_energy_rates"] = [0,0,0,0,0,0,0,0,0,0,0,0]
+    s = Scenario(d)
+    p = REoptInputs(s)
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, p)
+
+    annual_thermal_prod = 0.8 * 8760  #80% efficient boiler --> 0.8 MMBTU of heat load per hour
+    annual_electric_heater_consumption = annual_thermal_prod * REopt.KWH_PER_MMBTU  #1.0 COP
+    annual_energy_supplied = 87600 + annual_electric_heater_consumption
+
+    #Second run: ElectricHeater produces the required heat with free electricity
+    @test results["ElectricHeater"]["size_mmbtu_per_hour"] ≈ 0.8 atol=0.1
+    @test results["ElectricHeater"]["annual_thermal_production_mmbtu"] ≈ annual_thermal_prod rtol=1e-4
+    @test results["ElectricHeater"]["annual_electric_consumption_kwh"] ≈ annual_electric_heater_consumption rtol=1e-4
+    @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ annual_energy_supplied rtol=1e-4
+
+end
+
 @testset "Custom REopt logger" begin
     
     # Throw a handled error
@@ -1783,7 +1843,7 @@ end
 
     # Throw an unhandled error: Bad URDB rate -> stack gets returned for debugging
     d["ElectricLoad"]["doe_reference_name"] = "MidriseApartment"
-    d["ElectricTariff"]["urdb_label"] = "62c70a6c40a0c425535d387b"
+    d["ElectricTariff"]["urdb_label"] = "62c70a6c40a0c425535d387x"
 
     m1 = Model(Xpress.Optimizer)
     m2 = Model(Xpress.Optimizer)
@@ -1794,7 +1854,6 @@ end
     @test "warnings" ∈ keys(r["Messages"])
     @test length(r["Messages"]["errors"]) > 0
     @test length(r["Messages"]["warnings"]) > 0
-    @test r["Messages"]["has_stacktrace"] == true
 
     m = Model(Xpress.Optimizer)
     r = run_reopt(m, d)

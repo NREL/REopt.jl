@@ -13,6 +13,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
                 + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.elec)
             + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec)
             + sum(m[Symbol("dvThermalProduction"*_n)][t, ts] / p.cop[t] for t in p.techs.cooling)
+            + sum(m[Symbol("dvThermalProduction"*_n)][t,ts] / p.heating_cop[t] for t in p.techs.electric_heater)
             + p.s.electric_load.loads_kw[ts]
             - p.s.cooling_load.loads_kw_thermal[ts] / p.cop["ExistingChiller"]
             + sum(p.ghp_electric_consumption_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
@@ -28,6 +29,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
                 + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.elec)
             + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec)
             + sum(m[Symbol("dvThermalProduction"*_n)][t, ts] / p.cop[t] for t in p.techs.cooling)
+            + sum(m[Symbol("dvThermalProduction"*_n)][t,ts] / p.heating_cop[t] for t in p.techs.electric_heater)
             + p.s.electric_load.loads_kw[ts]
             - p.s.cooling_load.loads_kw_thermal[ts] / p.cop["ExistingChiller"]
             + sum(p.ghp_electric_consumption_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
@@ -116,7 +118,7 @@ function add_thermal_load_constraints(m, p; _n="")
         if !isempty(p.techs.heating)
             
             if !isempty(p.techs.steam_turbine)
-                @constraint(m, [ts in p.time_steps],
+                @constraint(m, [ts in p.time_steps_with_grid],
                     sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in union(p.techs.heating, p.techs.chp))
                     + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.hot)
                     + sum(p.ghp_heating_thermal_load_served_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
@@ -129,7 +131,7 @@ function add_thermal_load_constraints(m, p; _n="")
                     + sum(m[Symbol("dvThermalToSteamTurbine"*_n)][t,ts] for t in p.techs.can_supply_steam_turbine)
                 )
             else
-                @constraint(m, [ts in p.time_steps],
+                @constraint(m, [ts in p.time_steps_with_grid],
                     sum(m[Symbol("dvThermalProduction"*_n)][t,ts] for t in union(p.techs.heating, p.techs.chp))
                     + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.hot)
                     + sum(p.ghp_heating_thermal_load_served_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)

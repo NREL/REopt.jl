@@ -268,10 +268,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             m[:TotalPerUnitHourOMCosts] += m[:TotalHourlyCHPOMCosts]
 
 			if p.s.chp.standby_rate_per_kw_per_month > 1.0e-7
-				m[:TotalCHPStandbyCharges] += sum(p.s.financial.pwf_e * 12 * p.s.chp.standby_rate_per_kw_per_month * m[:dvSize][t] for t in p.techs.chp)
+				m[:TotalCHPStandbyCharges] += sum(p.pwf_e * 12 * p.s.chp.standby_rate_per_kw_per_month * m[:dvSize][t] for t in p.techs.chp)
 			end
 
 			m[:TotalTechCapCosts] += sum(p.s.chp.supplementary_firing_capital_cost_per_kw * m[:dvSupplementaryFiringSize][t] for t in p.techs.chp)
+        end
+
+        if !isempty(setdiff(p.techs.heating, p.techs.elec))
+            add_heating_tech_constraints(m, p)
         end
 
         if !isempty(p.techs.boiler)
@@ -365,7 +369,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	add_elec_utility_expressions(m, p)
 
 	if !isempty(p.s.electric_utility.outage_durations)
-		add_dv_UnservedLoad_constraints(m,p)
+        add_dv_UnservedLoad_constraints(m,p)
 		add_outage_cost_constraints(m,p)
 		add_MG_production_constraints(m,p)
 		if !isempty(p.s.storage.types.elec)
@@ -375,7 +379,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 		add_cannot_have_MG_with_only_PVwind_constraints(m,p)
 		add_MG_size_constraints(m,p)
-		0
+		
 		m[:ExpectedMGFuelCost] = 0
         if !isempty(p.techs.gen)
 			add_MG_Gen_fuel_burn_constraints(m,p)
