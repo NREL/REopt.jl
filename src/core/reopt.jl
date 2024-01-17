@@ -420,6 +420,15 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:OffgridOtherCapexAfterDepr] = p.s.financial.offgrid_other_capital_costs - offgrid_other_capex_depr_savings 
 	end
 
+	for b in p.s.storage.types.elec
+		if p.s.storage.attr[b].model_degradation
+			add_degradation(m, p; b=b)
+			if p.s.settings.add_soc_incentive # this warning should be tied to IF condition where SOC incentive is added
+				@warn "Settings.add_soc_incentive is set to true and it will incentivize BESS energy levels to be kept high. It could conflict with the battery degradation model and should be disabled."
+			end
+		end
+	end
+
 	#################################  Objective Function   ########################################
 	@expression(m, Costs,
 		# Capital Costs
@@ -469,11 +478,24 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	if p.s.settings.include_health_in_objective
 		add_to_expression!(Costs, m[:Lifecycle_Emissions_Cost_Health])
 	end
+
+	if p.s.settings.include_health_in_objective
+		add_to_expression!(Costs, m[:Lifecycle_Emissions_Cost_Health])
+	end
+
+	has_degr = false
+	for b in p.s.storage.types.elec
+		if p.s.storage.attr[b].model_degradation
+			has_degr = true
+			add_to_expression!(Costs, m[:degr_cost] - m[:residual_value]) # add salvage value to objective in future?
+		end
+	end
 	
 	@expression(m, Objective,
 		m[:Costs]
 	)
-		
+	
+	# We dont want to add this incentive is degradation is being modeled. Should we alter this if condition to handle the conflict, or simply update the warning on line 531 and let the user handle it?
 	if !(isempty(p.s.storage.types.elec)) && p.s.settings.add_soc_incentive
 		# Incentive to keep SOC high
 		add_to_expression!(
@@ -492,23 +514,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	end
 
 	@objective(m, Min, m[:Objective])
-	
-	# if !(isempty(p.s.storage.types.elec)) && p.s.settings.add_soc_incentive # Keep SOC high
-	# 	@objective(m, Min, m[:Costs] - 
-	# 	sum(m[:dvStoredEnergy][b, ts] for b in p.s.storage.types.elec, ts in p.time_steps) /
-	# 		(8760. / p.hours_per_time_step)
-	# 	)
-	
-	# end
-
-	for b in p.s.storage.types.elec
-		if p.s.storage.attr[b].model_degradation
-			add_degradation(m, p; b=b)
-			if p.s.settings.add_soc_incentive
-				@warn "Settings.add_soc_incentive is set to true but no incentive will be added because it conflicts with the battery degradation model."
-			end
-		end
-	end
     
 	nothing
 end
