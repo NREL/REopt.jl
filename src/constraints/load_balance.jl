@@ -121,26 +121,22 @@ function add_thermal_load_constraints(m, p; _n="")
                 @constraint(m, [q in p.heating_loads, ts in p.time_steps_with_grid],
                     sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for t in union(p.techs.heating, p.techs.chp))
                     + sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for b in p.s.storage.types.hot)
-                    + sum(p.ghp_heating_thermal_load_served_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
                     ==
                     p.heating_loads_kw[q][ts]
                     + sum(m[Symbol("dvProductionToWaste"*_n)][t,q,ts] for t in p.techs.chp)
                     + sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for b in p.s.storage.types.hot, t in union(p.techs.heating, p.techs.chp))
                     + sum(m[Symbol("dvCoolingProduction"*_n)][t,ts] / p.thermal_cop[t] for t in p.absorption_chillers_using_heating_load[q])
-                    - sum(p.space_heating_thermal_load_reduction_with_ghp_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
                     + sum(m[Symbol("dvThermalToSteamTurbine"*_n)][t,q,ts] for t in p.techs.can_supply_steam_turbine)
                 )
             else
                 @constraint(m, [q in p.heating_loads, ts in p.time_steps_with_grid],
                     sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for t in union(p.techs.heating, p.techs.chp))
                     + sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for b in p.s.storage.types.hot)
-                    + sum(p.ghp_heating_thermal_load_served_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
                     ==
                     p.heating_loads_kw[q][ts]
                     + sum(m[Symbol("dvProductionToWaste"*_n)][t,q,ts] for t in p.techs.chp)
                     + sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for b in p.s.storage.types.hot, t in union(p.techs.heating, p.techs.chp))
                     + sum(m[Symbol("dvCoolingProduction"*_n)][t,ts] / p.thermal_cop[t] for t in p.absorption_chillers_using_heating_load[q])
-                    - sum(p.space_heating_thermal_load_reduction_with_ghp_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
                 )
             end
 
@@ -152,11 +148,9 @@ function add_thermal_load_constraints(m, p; _n="")
             @constraint(m, [ts in p.time_steps_with_grid],
                 sum(m[Symbol("dvCoolingProduction"*_n)][t,ts] for t in p.techs.cooling)
                 + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.cold)
-                + sum(p.ghp_cooling_thermal_load_served_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
                 ==
                 p.s.cooling_load.loads_kw_thermal[ts]
                 + sum(m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for b in p.s.storage.types.cold, t in p.techs.cooling)
-                - sum(p.cooling_thermal_load_reduction_with_ghp_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
             )
         end
     end
