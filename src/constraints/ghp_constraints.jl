@@ -29,4 +29,30 @@ function add_ghp_constraints(m, p; _n="")
         sum(p.ghx_residual_value[g] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
     )
     
+    if p.s.ghp.can_serve_dhw
+        @constraint(m, GHPDHWCon[ts in p.time_steps],
+            m[Symbol("dvHeatingProduction"*_n)]["GHP","DomesticHotWater",ts] == 
+            sum(p.ghp_heating_thermal_load_served_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
+        )
+
+        @constraint(m, GHPSpaceHeatingCon[ts in p.time_steps],
+            m[Symbol("dvHeatingProduction"*_n)]["GHP","SpaceHeating",ts] == 
+            sum(p.space_heating_thermal_load_reduction_with_ghp_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
+        )
+    else
+        @constraint(m, GHPDHWCon[ts in p.time_steps],
+            m[Symbol("dvHeatingProduction"*_n)]["GHP","DomesticHotWater",ts] == 0.0
+        )
+
+        @constraint(m, GHPSpaceHeatingCon[ts in p.time_steps],
+            m[Symbol("dvHeatingProduction"*_n)]["GHP","SpaceHeating",ts] == 
+            sum((p.space_heating_thermal_load_reduction_with_ghp_kw[g,ts] + p.ghp_heating_thermal_load_served_kw[g,ts]) * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
+        )
+    end
+
+    @constraint(m, GHPCoolingCon[ts in p.time_steps],
+        m[Symbol("dvCoolingProduction"*_n)]["GHP",ts] == 
+        sum((p.cooling_thermal_load_reduction_with_ghp_kw[g,ts] + ghp_cooling_thermal_load_served_kw[g,ts]) * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
+    )
+    
 end
