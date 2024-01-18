@@ -23,6 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop 2024-01-16
+### Fixed
+- In `reopt.jl`, group objective function incentives and avoid directly modifying m[:Costs]. Previously, some of these were incorrectly included in the reported **Financial.lcc**
+
 ## v0.39.1
 ### Changed
 - Change default source for CO2 grid emissions values to NREL's Cambium 2022 Database (by default: CO2e, long-run marginal emissions rates levelized (averaged) over the analysis period, assuming start year 2024). Add new emissions inputs and call to Cambium API in `src/core/electric_utility.jl`. Include option for user to use AVERT data for CO2 using **co2_from_avert** boolian. 
