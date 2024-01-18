@@ -153,6 +153,24 @@ function Techs(s::Scenario)
         end
     end
 
+    if !isnothing(s.ghp)
+        push!(all_techs, "GHP")
+        push!(heating_techs, "GHP")
+        push!(cooling_techs, "GHP")
+        if s.ghp.can_supply_steam_turbine
+            push!(techs_can_supply_steam_turbine, "GHP")
+        end
+        if s.ghp.can_serve_space_heating
+            push!(techs_can_serve_space_heating, "GHP")
+        end
+        if s.ghp.can_serve_dhw
+            push!(techs_can_serve_dhw, "GHP")
+        end
+        if s.ghp.can_serve_process_heat
+            push!(techs_can_serve_process_heat, "GHP")
+        end
+    end
+
     if !isnothing(s.existing_chiller)
         push!(all_techs, "ExistingChiller")
         push!(electric_chillers, "ExistingChiller")
