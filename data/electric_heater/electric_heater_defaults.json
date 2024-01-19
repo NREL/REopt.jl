@@ -1,0 +1,8 @@
+{
+    "installed_cost_per_mmbtu_per_hour": 154902,
+    "om_cost_per_mmbtu_per_hour": 0.0,
+    "macrs_option_years": 0,
+    "macrs_bonus_fraction": 0.0,
+    "can_supply_steam_turbine": false,
+    "cop": 1.0
+}

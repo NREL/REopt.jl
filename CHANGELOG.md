@@ -23,6 +23,66 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.39.1
+### Changed
+- Changed testing suite from using Xpress to using HiGHS, an open-source solver.  This has led to a reduction in the number of tests due to incompatibility with indicator constraints.
+### Fixed
+- Fixed issue with running Wind on Windows: add execute permission for ssc.dll
+
+## v0.39.0
+### Added
+- Added new technology `ElectricHeater` which uses electricity as input and provides heating as output; load balancing constraints have been updated accordingly
+
+## v0.38.2
+### Added 
+- Added the following BAU outputs:  lifecycle_chp_standby_cost_after_tax, lifecycle_elecbill_after_tax, lifecycle_production_incentive_after_tax, lifecycle_outage_cost, lifecycle_MG_upgrade_and_fuel_cost
+### Fixed
+- Don't allow **Site** **min_resil_time_steps** input to be greater than the maximum value element in **ElectricUtility** **outage_durations**
+
+## v0.38.1
+### Fixed
+- Fix CHP standby charge modeling - bad reference to pwf_e
+- Avoid breaking backward compatibility with type declaration of (global) const urdb_api_key
+
+## v0.38.0
+### Changed
+- Require NREL Developer API Key set as ENV["NREL_DEVELOPER_API_KEY"] = 'your API key' for PVWatts and Wind Toolkit
+
+## v0.37.5
+### Fixed
+- Fixed AVERT emissions profiles for NOx. Were previously the same as the SO2 profiles. AVERT emissions profiles are currently generated from AVERT v3.2 https://www.epa.gov/avert/download-avert. See REopt User Manual for more information.
+- Fix setting of equal demand tiers in scrub_urdb_demand_tiers!, which was previously causing an error. 
+- When calling REopt.jl from a python environment using PyJulia and PyCall, some urdb_response fields get converted from a list-of-lists to a matrix type, when REopt.jl expects an array type. This fix adds checks on the type for two urdb_response fields and converts them to an array if needed.
+- Update the outages dispatch results to align with CHP availability during outages
+
+## v0.37.4
+### Fixed
+- Include `year` in creation of electric-only CHP for unavailability profile
+
+## v0.37.3
+### Changed
+- Ignore `CHP` unavailability during stochastic, multiple outages; this is consistent with deterministic single outage
+
+## v0.37.2
+### Changed
+- Do not enforce `CHP.min_turn_down_fraction` for outages
+
+## v0.37.1
+### Fixed
+- CHP-only for multiple/stochastic outages
+- Allow negative fuel_burn and thermal_prod intercepts for CPH
+- Correct after_tax CHP results
+
+## v0.37.0
+### Added
+- Added Bool attribute `is_electric_only` to CHP; if true, default installed and O&M costs are reduced by 25% and, for the reciprocating engine and combustion turbine prime movers, the federal ITC fraction is reduced to zero.
+- Las Vegas CRB data was missing from ElectricLoad, but the climate_cities.shp file does not distinguish between Las Angeles and Las Vegas
+### Changed
+- Update `CHP.size_class` after heuristic size is determined based on size_class=0 guess (not input)
+### Fixed
+- Use the user-input `ExistingBoiler.efficiency` value for converting fuel input to thermal to preserve annual fuel energy input
+- Fix heating loads monthly_mmbtu and addressable_load_fraction handling (type issues mostly)
+- Bug fix for user-supplied 8760 WHL rates with tiered energy rate
 
 ## v0.36.0
 ### Changed
