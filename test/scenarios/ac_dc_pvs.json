@@ -34,7 +34,7 @@
         {
           "name": "ground",
           "dc_coupled_with_storage": true,
-          "existing_kw": 0.0,
+          "existing_kw": 40.0,
           "installed_cost_per_kw": 1600.0,
           "om_cost_per_kw": 16.0,
           "macrs_option_years": 5,
