@@ -25,7 +25,7 @@ Classify the change according to the following categories:
 
 ## Develop 2024-01-16
 ### Fixed
-- In `reopt.jl`, group objective function incentives and avoid directly modifying m[:Costs]. Previously, some of these were incorrectly included in the reported **Financial.lcc**
+- In `reopt.jl`, group objective function incentives (into **ObjectivePenalties**) and avoid directly modifying m[:Costs]. Previously, some of these were incorrectly included in the reported **Financial.lcc**. 
 
 ## v0.39.1
 ### Changed

@@ -267,7 +267,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     m[:GHPOMCosts] = 0.0
 	m[:AvoidedCapexByGHP] = 0.0
 	m[:ResidualGHXCapCost] = 0.0
-	m[:ObjectiveIncentives] = 0.0
+	m[:ObjectivePenalties] = 0.0
 
 	if !isempty(p.techs.all)
 		add_tech_size_constraints(m, p)
@@ -537,21 +537,21 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	
 	## Modify objective with incentives that are not part of the LCC
 	# 1. Comfort limit violation costs
-	m[:ObjectiveIncentives] += m[:dvComfortLimitViolationCost]
+	m[:ObjectivePenalties] += m[:dvComfortLimitViolationCost]
 	# 2. Incentive to keep SOC high
 	if !(isempty(p.s.storage.types.elec)) && p.s.settings.add_soc_incentive
-		m[:ObjectiveIncentives] += -1 * sum(
+		m[:ObjectivePenalties] += -1 * sum(
 				m[:dvStoredEnergy][b, ts] for b in p.s.storage.types.elec, ts in p.time_steps
 			) / (8760. / p.hours_per_time_step)
 	end
 	# 3. Incentive to minimize unserved load in each outage, not just the max over outage start times
 	if !isempty(p.s.electric_utility.outage_durations)
-		m[:ObjectiveIncentives] += sum(sum(0.0001 * m[:dvUnservedLoad][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s]) 
+		m[:ObjectivePenalties] += sum(sum(0.0001 * m[:dvUnservedLoad][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s]) 
 			for s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps)
 	end
 
 	# Set model objective 
-	@objective(m, Min, m[:Costs] + m[:ObjectiveIncentives] )
+	@objective(m, Min, m[:Costs] + m[:ObjectivePenalties] )
 
 	for b in p.s.storage.types.elec
 		if p.s.storage.attr[b].model_degradation
