@@ -1541,7 +1541,7 @@ end
             @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.132118 atol=1e-3 # 0.1354 atol=1e-3
             # CO2 emissions - totals ≈  from grid, from fuelburn, ER, $/tCO2 breakeven
             @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.8 atol=1e-3 # 0.8
-            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 374.450 atol=1e-1
+            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 374.0 atol=1e-1
             @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 14.2 atol=1
             @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 70.99 atol=1
             @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0

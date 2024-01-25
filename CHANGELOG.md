@@ -45,6 +45,9 @@ Classify the change according to the following categories:
 - Adjust grid emissions profiles for day of week alignment with load_year.
 - In `test_with_xpress.jl`, updated "Emissions and Renewable Energy Percent" expected values to account for load year adjustment. 
 - In `src/core/electric_utility.jl`, error when user-provided emissions series does not match timestep per hour, as is done in other cases of incorrect user-provided data. 
+## Develop 2024-01-16
+### Fixed
+- In `reopt.jl`, group objective function incentives (into **ObjectivePenalties**) and avoid directly modifying m[:Costs]. Previously, some of these were incorrectly included in the reported **Financial.lcc**. 
 
 ## v0.39.1
 ### Changed
