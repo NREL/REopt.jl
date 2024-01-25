@@ -662,14 +662,14 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		@variable(m, binNoGridPurchases[p.time_steps], Bin)
 	end
 
-    if !isempty(p.techs.thermal)
-        @variables m begin
-			dvThermalProduction[p.techs.thermal, p.time_steps] >= 0
-			dvSupplementaryThermalProduction[p.techs.chp, p.time_steps] >= 0
-			dvSupplementaryFiringSize[p.techs.chp] >= 0  #X^{\sigma db}_{t}: System size of CHP with supplementary firing [kW]
-		end
+    if !isempty(union(p.techs.heating, p.techs.chp))
+        @variable(m, dvHeatingProduction[union(p.techs.heating, p.techs.chp), p.heating_loads, p.time_steps] >= 0)
+		@variable(m, dvProductionToWaste[union(p.techs.heating, p.techs.chp), p.heating_loads, p.time_steps] >= 0)
         if !isempty(p.techs.chp)
-            @variable(m, dvProductionToWaste[p.techs.chp, p.time_steps] >= 0)
+			@variables m begin
+				dvSupplementaryThermalProduction[p.techs.chp, p.time_steps] >= 0
+				dvSupplementaryFiringSize[p.techs.chp] >= 0  #X^{\sigma db}_{t}: System size of CHP with supplementary firing [kW]
+			end
         end
     end
 
