@@ -98,5 +98,5 @@ function add_ghp_constraints(m, p; _n="")
     # TODO determine whether process heat or steam turbine input is feasible with GHP, or is this sufficient?
     
     @constraint(m, GHPProcessHeatCon[ts in p.time_steps], m[Symbol("dvHeatingProduction"*_n)]["GHP","ProcessHeat",ts] == 0.0)
-
+    @constraint(m, GHPHeatFlowCon[q in p.heating_loads, ts in p.time_steps], m[Symbol("dvProductionToWaste"*_n)]["GHP",q,ts] + sum(m[Symbol("dvHeatToStorage"*_n)][b,"GHP",q,ts] for b in p.s.storage.types.hot) <= m[Symbol("dvHeatingProduction"*_n)]["GHP",q,ts])
 end

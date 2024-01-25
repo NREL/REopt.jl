@@ -618,11 +618,11 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 
     if !isempty(union(p.techs.heating, p.techs.chp))
         @variable(m, dvHeatingProduction[union(p.techs.heating, p.techs.chp), p.heating_loads, p.time_steps] >= 0)
+		@variable(m, dvProductionToWaste[union(p.techs.heating, p.techs.chp), p.heating_loads, p.time_steps] >= 0)
         if !isempty(p.techs.chp)
 			@variables m begin
 				dvSupplementaryThermalProduction[p.techs.chp, p.time_steps] >= 0
 				dvSupplementaryFiringSize[p.techs.chp] >= 0  #X^{\sigma db}_{t}: System size of CHP with supplementary firing [kW]
-				dvProductionToWaste[p.techs.chp, p.heating_loads, p.time_steps] >= 0
 			end
         end
 		if !isempty(p.s.storage.types.hot)
