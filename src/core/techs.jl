@@ -25,6 +25,10 @@ function Techs(p::REoptInputs, s::BAUScenario)
     steam_turbines = String[]
     techs_can_supply_steam_turbine = String[]
     electric_heaters = String[]
+    techs_can_serve_space_heating = String[]
+    techs_can_serve_dhw = String[]
+    tech_can_serve_process_heat = String[]
+    ghp_techs = String[]
 
     if p.s.generator.existing_kw > 0
         push!(all_techs, "Generator")
@@ -71,7 +75,11 @@ function Techs(p::REoptInputs, s::BAUScenario)
         absorption_chillers,
         steam_turbines,
         techs_can_supply_steam_turbine,
-        electric_heaters        
+        electric_heaters,
+        techs_can_serve_space_heating,
+        techs_can_serve_dhw,
+        tech_can_serve_process_heat,
+        ghp_techs
     )
 end
 
@@ -105,7 +113,11 @@ function Techs(s::Scenario)
     absorption_chillers = String[]
     steam_turbines = String[]
     techs_can_supply_steam_turbine = String[]
-    electric_heaters = String[]    
+    electric_heaters = String[]   
+    techs_can_serve_space_heating = String[]
+    techs_can_serve_dhw = String[] 
+    techs_can_serve_process_heat = String[]
+    ghp_techs = String[]
 
     if s.wind.max_kw > 0
         push!(all_techs, "Wind")
@@ -153,31 +165,34 @@ function Techs(s::Scenario)
         end
     end
 
-    if !isnothing(s.ghp)
-        push!(all_techs, "GHP")
+    if !isempty(s.ghp_option_list) && !isnothing(s.ghp_option_list[1])
+        #push!(all_techs, "GHP")  #TODO: refactor GHP so that it's a part of all_techs, potentially adding in things like sizes for the binary options?
         push!(heating_techs, "GHP")
         push!(cooling_techs, "GHP")
-        if s.ghp.can_supply_steam_turbine
+        push!(ghp_techs, "GHP")
+        if any((!isnothing(ghp) && ghp.can_supply_steam_turbine) for ghp in s.ghp_option_list)
             push!(techs_can_supply_steam_turbine, "GHP")
         end
-        if s.ghp.can_serve_space_heating
+        if any(ghp.can_serve_space_heating for ghp in s.ghp_option_list)
             push!(techs_can_serve_space_heating, "GHP")
         end
-        if s.ghp.can_serve_dhw
+        if any(ghp.can_serve_dhw for ghp in s.ghp_option_list)
             push!(techs_can_serve_dhw, "GHP")
         end
-        if s.ghp.can_serve_process_heat
+        if any(ghp.can_serve_process_heat for ghp in s.ghp_option_list)
             push!(techs_can_serve_process_heat, "GHP")
         end
     end
 
     if !isnothing(s.existing_chiller)
         push!(all_techs, "ExistingChiller")
+        push!(cooling_techs, "ExistingChiller")
         push!(electric_chillers, "ExistingChiller")
     end
 
     if !isnothing(s.absorption_chiller)
         push!(all_techs, "AbsorptionChiller")
+        push!(cooling_techs, "AbsorptionChiller")
         push!(absorption_chillers, "AbsorptionChiller")
     end
 
@@ -202,7 +217,6 @@ function Techs(s::Scenario)
         append!(providing_oper_res, pvtechs)
     end
 
-    cooling_techs = union(electric_chillers, absorption_chillers)
     thermal_techs = union(heating_techs, boiler_techs, chp_techs, cooling_techs)
     fuel_burning_techs = union(gentechs, boiler_techs, chp_techs)
 
@@ -246,7 +260,11 @@ function Techs(s::Scenario)
         absorption_chillers,
         steam_turbines,
         techs_can_supply_steam_turbine,
-        electric_heaters
+        electric_heaters,
+        techs_can_serve_space_heating,
+        techs_can_serve_dhw,
+        techs_can_serve_process_heat,
+        ghp_techs
     )
 end
 
@@ -281,6 +299,10 @@ function Techs(s::MPCScenario)
         String[],
         String[],
         techs_no_turndown,
+        String[],
+        String[],
+        String[],
+        String[],
         String[],
         String[],
         String[],
