@@ -23,6 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop 2024-01-16
+### Fixed
+- In `reopt.jl`, group objective function incentives (into **ObjectivePenalties**) and avoid directly modifying m[:Costs]. Previously, some of these were incorrectly included in the reported **Financial.lcc**. 
+
 ## v0.39.1
 ### Changed
 - Changed testing suite from using Xpress to using HiGHS, an open-source solver.  This has led to a reduction in the number of tests due to incompatibility with indicator constraints.
