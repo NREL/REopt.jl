@@ -101,10 +101,14 @@
     "fuel_type": "natural_gas",
     "fuel_cost_per_mmbtu": 8.0,
     "can_supply_steam_turbine": true,
-    "fuel_renewable_energy_fraction": 0.3
+    "fuel_renewable_energy_fraction": 0.3,
+    "can_serve_dhw": true,
+    "can_serve_space_heating": true
   },
   "HotThermalStorage": {
     "min_gal": 50000.0,
-    "max_gal": 50000.0
+    "max_gal": 50000.0,
+    "can_serve_dhw": true,
+    "can_serve_space_heating": true
   }
 }
