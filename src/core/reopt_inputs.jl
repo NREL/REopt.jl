@@ -211,7 +211,7 @@ function REoptInputs(s::AbstractScenario)
         push!(heating_loads, "SpaceHeating")
         heating_loads_kw["SpaceHeating"] = s.space_heating_load.loads_kw
         if !isnothing(s.absorption_chiller) && s.absorption_chiller.heating_load_input == "SpaceHeating"
-            absorption_chillers_using_heating_load["SpaceHeating"] = ["SpaceHeating"]
+            absorption_chillers_using_heating_load["SpaceHeating"] = ["AbsorptionChiller"]
         else
             absorption_chillers_using_heating_load["SpaceHeating"] = Vector{String}()
         end
@@ -222,7 +222,7 @@ function REoptInputs(s::AbstractScenario)
         push!(heating_loads, "ProcessHeat")
         heating_loads_kw["ProcessHeat"] = s.process_heat_load.loads_kw
         if !isnothing(s.absorption_chiller) && s.absorption_chiller.heating_load_input == "ProcessHeat"
-            absorption_chillers_using_heating_load["ProcessHeat"] = ["ProcessHeat"]
+            absorption_chillers_using_heating_load["ProcessHeat"] = ["AbsorptionChiller"]
         else
             absorption_chillers_using_heating_load["ProcessHeat"] = Vector{String}()
         end
@@ -232,13 +232,13 @@ function REoptInputs(s::AbstractScenario)
     if !isempty(s.storage.types.hot)
         for b in s.storage.types.hot
             heating_loads_served_by_tes[b] = String[]
-            if s.storage.attr[b].can_serve_dhw 
+            if s.storage.attr[b].can_serve_dhw && !isnothing(s.dhw_load)
                 push!(heating_loads_served_by_tes[b],"DomesticHotWater")
             end
-            if s.storage.attr[b].can_serve_space_heating
+            if s.storage.attr[b].can_serve_space_heating && !isnothing(s.space_heating_load)
                 push!(heating_loads_served_by_tes[b],"SpaceHeating")
             end
-            if s.storage.attr[b].can_serve_process_heat
+            if s.storage.attr[b].can_serve_process_heat && !isnothing(s.process_heat_load)
                 push!(heating_loads_served_by_tes[b],"ProcessHeat")
             end
         end
