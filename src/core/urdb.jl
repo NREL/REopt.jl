@@ -263,9 +263,9 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
 
                     # NOTE: periods are zero indexed
                     if dayofweek(Date(year, month, day)) < 6  # Monday == 1
-                        period = d["energyweekdayschedule"][month][hour] + 1
+                        period = Int(d["energyweekdayschedule"][month][hour] + 1)
                     else
-                        period = d["energyweekendschedule"][month][hour] + 1
+                        period = Int(d["energyweekendschedule"][month][hour] + 1)
                     end
                     # workaround for cases where there are different numbers of tiers in periods
                     n_tiers_in_period = length(d["energyratestructure"][period])
