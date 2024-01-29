@@ -382,115 +382,22 @@ gen_storage_prob_matrix
  0.0  0.0  0.2  0.3
 ```
 """
-function shift_gen_storage_prob_matrix!(gen_storage_prob_matrix::Array, 
-                                        excess_generation_kw::Vector{<:Real}, 
-                                        battery_bin_size_kwh::Real,
-                                        battery_size_kw::Real,
-                                        battery_charge_efficiency_kwh_per_kwh::Real, 
-                                        battery_discharge_efficiency_kwh_per_kwh::Real,
-                                        H2_bin_size_kg::Real,
-                                        H2_electrolyzer_size_kw::Real,
-                                        H2_fuelcell_size_kw::Real,
-                                        H2_charge_efficiency_kg_per_kwh::Real,
-                                        H2_discharge_efficiency_kwh_per_kg::Real)
-
-    M_b = size(gen_storage_prob_matrix, 2)
-    M_H2 = size(gen_storage_prob_matrix, 3)
-
-    battery_shift, remaining_kw_after_batt_shift = storage_bin_shift(
-                excess_generation_kw, 
-                battery_bin_size_kwh, 
-                battery_size_kw, 
-                battery_size_kw,
-                battery_charge_efficiency_kwh_per_kwh, 
-                battery_discharge_efficiency_kwh_per_kwh
-            )
-
-    for i_gen in 1:length(battery_shift) 
-        s_b = battery_shift[i_gen]
-        excess_kw = remaining_kw_after_batt_shift[i_gen]*ones(M_b)
-        wrap_indices_b = s_b < 0 ? (max(2,M_b+s_b+1):M_b) : (1:min(s_b,M_b-1))
-        accumulate_index_b = s_b < 0 ? 1 : M_b
-        if s_b != 0
-            for i_H2 in 1:M_H2
-                gen_storage_prob_matrix[i_gen, :, i_H2] = circshift(view(gen_storage_prob_matrix, i_gen, :, i_H2), s_b)
-            end
-            if s_b < 0 #discharge
-                excess_kw[wrap_indices_b] += (battery_bin_size_kwh * battery_discharge_efficiency_kwh_per_kwh) .* (collect(wrap_indices_b) .- (M_b + 1))
-            else #charge
-                excess_kw[wrap_indices_b] += (battery_bin_size_kwh / battery_charge_efficiency_kwh_per_kwh) .* collect(wrap_indices_b) #negative values if unmet kw
-            end
-        end
-        H2_shift, remaining_kw_after_H2_shift = storage_bin_shift(
-                excess_kw, 
-                H2_bin_size_kg, 
-                H2_electrolyzer_size_kw, 
-                H2_fuelcell_size_kw,
-                H2_charge_efficiency_kg_per_kwh, 
-                H2_discharge_efficiency_kwh_per_kg
-            )
-        for i_b in 1:M_b
-            s_H2 = H2_shift[i_b]
-            if s_H2 != 0
-                gen_storage_prob_matrix[i_gen, i_b, :] = circshift(view(gen_storage_prob_matrix, i_gen, i_b, :), s_H2)
-                wrap_indices_H2 = s_H2 < 0 ? (max(2,M_H2+s_H2+1):M_H2) : (1:min(s_H2,M_H2-1))
-                accumulate_index_H2 = s_H2 < 0 ? 1 : M_H2
-                gen_storage_prob_matrix[i_gen, i_b, accumulate_index_H2] += sum(view(gen_storage_prob_matrix, i_gen, i_b, wrap_indices_H2))
-                gen_storage_prob_matrix[i_gen, i_b, wrap_indices_H2] .= 0
-            end
-        end
-        gen_storage_prob_matrix[i_gen, accumulate_index_b, :] .+= vec(sum(view(gen_storage_prob_matrix, i_gen, wrap_indices_b, :), dims=1))
-        gen_storage_prob_matrix[i_gen, wrap_indices_b, :] .= 0
-    end
-end
-
-function storage_leakage!(gen_storage_prob_matrix,
-                        battery_leakage_fraction_per_ts,
-                        battery_bin_size_kwh,
-                        battery_size_kw,
-                        H2_leakage_fraction_per_ts,
-                        H2_bin_size_kg,
-                        H2_electrolyzer_size_kw, 
-                        H2_fuelcell_size_kw)
-
-    M_b = size(gen_storage_prob_matrix, 2)
-    M_H2 = size(gen_storage_prob_matrix, 3)
-
-    #Calculate leakages
-    leakage_b = collect(0:M_b-1) .* (battery_bin_size_kwh * battery_leakage_fraction_per_ts)
-    leakage_H2 = collect(0:M_H2-1) .* (H2_bin_size_kg * H2_leakage_fraction_per_ts)
-
-    #Calculate leakage shifts
-    battery_shift, remaining_kw_after_batt_shift = storage_bin_shift(
-        -leakage_b, 
-        battery_bin_size_kwh, 
-        battery_size_kw, 
-        battery_size_kw,
-        1, 
-        1
-    )
-    H2_shift, remaining_kw_after_H2_shift = storage_bin_shift(
-        -leakage_H2, 
-        H2_bin_size_kg, 
-        H2_electrolyzer_size_kw, 
-        H2_fuelcell_size_kw,
-        1, 
-        1
-    )
-
-    #Apply leakage shifts
-    for i_b in 2:M_b
-        s_b = battery_shift[i_b]
-        if s_b != 0
-            gen_storage_prob_matrix[:,max(1,i_b+s_b),:] += gen_storage_prob_matrix[:,i_b,:]
-            gen_storage_prob_matrix[:,i_b,:] .= 0
-        end
-    end
-    for i_H2 in 2:M_H2
-        s_H2 = H2_shift[i_H2]
-        if s_H2 != 0
-            gen_storage_prob_matrix[:,:,max(1,i_H2+s_H2)] += gen_storage_prob_matrix[:,:,i_H2]
-            gen_storage_prob_matrix[:,:,i_H2] .= 0
+function shift_gen_battery_prob_matrix!(gen_battery_prob_matrix::Matrix, shift_vector::Vector{Int})
+    M = size(gen_battery_prob_matrix, 1)
+    
+    for i in eachindex(shift_vector) 
+        s = shift_vector[i]
+        if s < 0 
+            #TODO figure out why implementation of cirshift! is working locally but not on server
+            # circshift!(view(gen_battery_prob_matrix, :, i), s)
+            gen_battery_prob_matrix[:, i] = circshift(view(gen_battery_prob_matrix, :, i), s)
+            gen_battery_prob_matrix[1, i] += sum(view(gen_battery_prob_matrix, max(2,M+s+1):M, i))
+            gen_battery_prob_matrix[max(2,M+s+1):M, i] .= 0
+        elseif s > 0
+            # circshift!(view(gen_battery_prob_matrix, :, i), s)
+            gen_battery_prob_matrix[:, i] = circshift(view(gen_battery_prob_matrix, :, i), s)
+            gen_battery_prob_matrix[end, i] += sum(view(gen_battery_prob_matrix, 1:min(s,M-1), i))
+            gen_battery_prob_matrix[1:min(s,M-1), i] .= 0
         end
     end
 end

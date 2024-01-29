@@ -2159,7 +2159,7 @@ else  # run HiGHS tests
             headers = cop_map_mat_header[2]
             # Generate a "records" style dictionary from the 
             cop_map_list = []
-            for i in 1:length(data[:,1])
+            for i in axes(data,1)
                 dict_record = Dict(name=>data[i, col] for (col, name) in enumerate(headers))
                 push!(cop_map_list, dict_record)
             end
