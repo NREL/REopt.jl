@@ -302,7 +302,7 @@ Convert an unexpected type::Matrix from URDB into an Array
     - Observed while using REopt.jl with PyJulia/PyCall
 """
 function convert_matrix_to_array(M::AbstractMatrix)
-    return [M[r,:] for r in 1:size(M,1)]
+    return [M[r,:] for r in axes(M, 1)]
 end
 
 """
