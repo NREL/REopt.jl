@@ -23,31 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop - 2023-06-26
-### Changed
-- Change default source for CO2 grid emissions values to NREL's Cambium 2022 Database (by default: CO2e, long-run marginal emissions rates levelized (averaged) over the analysis period, assuming start year 2024). Add new emissions inputs and call to Cambium API in `src/core/electric_utility.jl`. Include option for user to use AVERT data for CO2 using **co2_from_avert** boolian. 
-- Update `electric_utility` **emissions_region** to **avert_emissions_region** and **distance_to_emissions_region_meters** to **distance_to_avert_emissions_region_meters**. 
-- Update default `emissions_factor_XXX_decrease_fraction` (where XXX is CO2, NOx, SO2, and PM2.5) from 0.01174 to 0.02163 based on Cambium 2022 Mid-Case scenario, LRMER CO2e (Combustion+Precombustion) 2024-2049 projected values. CO2 projected decrease defaults to 0 if Cambium data are used for CO2 (Cambium API call will levelize values).
-- Update AVERT emissions data to v4.1, which uses Regional Data Files (RDFs) for year 2022. Data is saved in `data/emissions/AVERT_Data`. For Alaska and Hawaii (regions AKGD, HIMS, HIOA), updated eGRID data to eGRID2021 datafile and adjusted CO2 values to CO2e values to align with default used for Cambium data. 
-- Updated default fuel emissions factors from CO2 to CO2-equivalent (CO2e) values. In `src/core/generator.jl`, updated **emissions_factor_lb_CO2_per_gal** from 22.51 to 22.58. In `src/REopt.jl` updated **emissions_factor_lb_CO2_per_mmbtu** => Dict(
-        "natural_gas"=>116.9 to 117.03,
-        "landfill_bio_gas"=>114,8 to 115.38,
-        "propane"=>138.6 to 139.16,
-        "diesel_oil"=>163.1 to 163.61
-    )
-- Changed all `annual` emissions results to simple annual averages (lifecycle emissions divided by analysis_years). This is because the default climate emissions from Cambium are already levelized over the analysis horizon and therefore "year_one" emissions cannot be easily obtained.  
-
-### Added
-- In `src/REopt.jl`, added **cambium_emissions_profile** as an export for use via the REopt_API. 
-- In `src/results/electric_utility.jl` **cambium_emissions_region**
-
-### Fixed 
-- Adjust grid emissions profiles for day of week alignment with load_year.
-- In `test_with_xpress.jl`, updated "Emissions and Renewable Energy Percent" expected values to account for load year adjustment. 
-- In `src/core/electric_utility.jl`, error when user-provided emissions series does not match timestep per hour, as is done in other cases of incorrect user-provided data. 
-## Develop 2024-01-16
+## Develop
 ### Fixed
-- In `reopt.jl`, group objective function incentives (into **ObjectivePenalties**) and avoid directly modifying m[:Costs]. Previously, some of these were incorrectly included in the reported **Financial.lcc**. 
+- Changed instances of indexing using i in 1:length() paradigm to use eachindex() or axes() instead because this is more robust
+- In `src/core/urdb.jl`, ensure values from the "energyweekdayschedule" and "energyweekendschedule" arrays in the URDB response dictionary are converted to _Int_ before being used as indices
 
 ## v0.39.1
 ### Changed
@@ -656,7 +635,7 @@ Other changes:
 - handle missing input key for `year_one_soc_series_pct` in `outage_simulator` 
 - remove erroneous `total_unserved_load = 0` output
 - `dvUnservedLoad` definition was allowing microgrid production to storage and curtailment to be double counted towards meeting critical load
-#### Added
+### Added
 - add `unserved_load_per_outage` output
 
 ## v0.4.1
