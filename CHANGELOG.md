@@ -23,7 +23,253 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop - 2023-02-02
+## Develop 2024-01-16
+### Fixed
+- In `reopt.jl`, group objective function incentives (into **ObjectivePenalties**) and avoid directly modifying m[:Costs]. Previously, some of these were incorrectly included in the reported **Financial.lcc**. 
+### Changed
+- Test commit to check history purge preservation
+
+## v0.39.1
+### Changed
+- Changed testing suite from using Xpress to using HiGHS, an open-source solver.  This has led to a reduction in the number of tests due to incompatibility with indicator constraints.
+### Fixed
+- Fixed issue with running Wind on Windows: add execute permission for ssc.dll
+
+## v0.39.0
+### Added
+- Added new technology `ElectricHeater` which uses electricity as input and provides heating as output; load balancing constraints have been updated accordingly
+
+## v0.38.2
+### Added 
+- Added the following BAU outputs:  lifecycle_chp_standby_cost_after_tax, lifecycle_elecbill_after_tax, lifecycle_production_incentive_after_tax, lifecycle_outage_cost, lifecycle_MG_upgrade_and_fuel_cost
+### Fixed
+- Don't allow **Site** **min_resil_time_steps** input to be greater than the maximum value element in **ElectricUtility** **outage_durations**
+
+## v0.38.1
+### Fixed
+- Fix CHP standby charge modeling - bad reference to pwf_e
+- Avoid breaking backward compatibility with type declaration of (global) const urdb_api_key
+
+## v0.38.0
+### Changed
+- Require NREL Developer API Key set as ENV["NREL_DEVELOPER_API_KEY"] = 'your API key' for PVWatts and Wind Toolkit
+
+## v0.37.5
+### Fixed
+- Fixed AVERT emissions profiles for NOx. Were previously the same as the SO2 profiles. AVERT emissions profiles are currently generated from AVERT v3.2 https://www.epa.gov/avert/download-avert. See REopt User Manual for more information.
+- Fix setting of equal demand tiers in scrub_urdb_demand_tiers!, which was previously causing an error. 
+- When calling REopt.jl from a python environment using PyJulia and PyCall, some urdb_response fields get converted from a list-of-lists to a matrix type, when REopt.jl expects an array type. This fix adds checks on the type for two urdb_response fields and converts them to an array if needed.
+- Update the outages dispatch results to align with CHP availability during outages
+
+## v0.37.4
+### Fixed
+- Include `year` in creation of electric-only CHP for unavailability profile
+
+## v0.37.3
+### Changed
+- Ignore `CHP` unavailability during stochastic, multiple outages; this is consistent with deterministic single outage
+
+## v0.37.2
+### Changed
+- Do not enforce `CHP.min_turn_down_fraction` for outages
+
+## v0.37.1
+### Fixed
+- CHP-only for multiple/stochastic outages
+- Allow negative fuel_burn and thermal_prod intercepts for CPH
+- Correct after_tax CHP results
+
+## v0.37.0
+### Added
+- Added Bool attribute `is_electric_only` to CHP; if true, default installed and O&M costs are reduced by 25% and, for the reciprocating engine and combustion turbine prime movers, the federal ITC fraction is reduced to zero.
+- Las Vegas CRB data was missing from ElectricLoad, but the climate_cities.shp file does not distinguish between Las Angeles and Las Vegas
+### Changed
+- Update `CHP.size_class` after heuristic size is determined based on size_class=0 guess (not input)
+### Fixed
+- Use the user-input `ExistingBoiler.efficiency` value for converting fuel input to thermal to preserve annual fuel energy input
+- Fix heating loads monthly_mmbtu and addressable_load_fraction handling (type issues mostly)
+- Bug fix for user-supplied 8760 WHL rates with tiered energy rate
+
+## v0.36.0
+### Changed
+- Changed default values by prime mover for CHP technologies in `data/chp/chp_defaults.json`.  See user manual for details by prime mover and size class.
+- Updated the package dependencies to be compatible with recent changes to HiGHS (for testing) and MathOptInterface
+### Fixed
+- The present worth factor for fuel (pwf_fuel) was not properly multiplying for lifecycle fuel costs
+
+## v0.35.1
+### Fixed
+- Add GHP to proforma metrics for when GHP is evaluated (should have been there)
+### Added
+- Add different BAU outputs for heating and cooling systems
+
+## v0.35.0
+### Changed
+- ANNUAL UPDATE TO DEFAULT VALUES. Changes outlined below with (old value) --> (new value). See user manual for references. 
+  - Owner Discount rate, nominal (%): : **Financial** **owner_discount_rate_fraction** 0.0564	--> 0.0638
+  - Offtaker Discount rate, nominal (%): **Financial**  **offtaker_discount_rate_fraction** 0.0564 --> 0.0638
+  - Electricity cost escalation rate, nominal (%): **Financial** **elec_cost_escalation_rate_fraction** 0.019	--> 0.017
+  - Existing boiler fuel cost escalation rate, nominal (%): **Financial**  **existing_boiler_fuel_cost_escalation_rate_fraction**	0.034	--> 0.015
+  - Boiler fuel cost escalation rate, nominal (%): **Financial** **boiler_fuel_cost_escalation_rate_fraction**	0.034	--> 0.015
+  - CHP fuel cost escalation rate, nominal (%): **Financial**  **chp_fuel_cost_escalation_rate_fraction**	0.034	--> 0.015
+  - Generator fuel cost escalation rate, nominal (%): **Financial**  **generator_fuel_cost_escalation_rate_fraction**	0.027	--> 0.012
+  - Array tilt – Ground mount, Fixed: **PV** **tilt** latitude	--> 20
+  - O&M cost ($/kW/year): **PV** **om_cost_per_kw**	17	--> 18
+  - System capital cost ($/kW): **PV** **installed_cost_per_kw**	1592	--> 1790
+  - Energy capacity cost ($/kWh): **ElectricStorage** **installed_cost_per_kwh**	388	--> 455
+  - Power capacity cost ($/kW): **ElectricStorage**	**installed_cost_per_kw**	775	--> 910
+  - Energy capacity replacement cost ($/kWh): **ElectricStorage** **replace_cost_per_kwh**	220	--> 318
+  - Power capacity replacement cost ($/kW): **ElectricStorage**	**replace_cost_per_kw**	440	--> 715
+  - Fuel burn rate by generator capacity (gal/kWh): **Generator** **fuel_slope_gal_per_kwh**	0.076	--> removed and replaced with full and half-load efficiencies
+  - Electric efficiency at 100% load (% HHV-basis): **Generator** **electric_efficiency_full_load**	N/A - new input	--> 0.322
+  - Electric efficiency at 50% load (% HHV-basis): **Generator** **electric_efficiency_half_load**	N/A - new input	--> 0.322
+  - Generator fuel higher heating value (HHV): **Generator** **fuel_higher_heating_value_kwh_per_gal**	N/A - new input	--> 40.7
+  - System capital cost ($/kW): **Generator**  **installed_cost_per_kw** 500	--> $650 if the generator only runs during outages; $800 if it is allowed to run parallel with the grid; $880 for off-grid
+  - Fixed O&M ($/kW/yr): **Generator** **om_cost_per_kw** Grid connected: 10 Off-grid: 20 --> Grid connected: 20 Off-grid: 10
+  - System capital cost ($/kW) by Class: **Wind** **size_class_to_installed_cost**	residential - 5675 commercial - 4300 medium - 2766 large - 2239 --> residential - 6339 commercial - 4760 medium - 3137 large - 2386
+  - O&M cost ($/kW/year): **Wind** **om_cost_per_kw** 35 --> 36
+ 
+## v0.34.0
+### Added
+- Ability to run hybrid GHX sizing using **GhpGhx.jl** (automatic and fractional sizing)
+- Added financial inputs for **GHP** and updated objective and results to reflect these changes
+- Added central plant **GHP**
+### Fixed
+- Fix output of `get_tier_with_lowest_energy_rate(u::URDBrate)` to return an index and not cartesian coordinates for multi-tier energy rates.
+- Updated **GHP** cost curve calculations so incentives apply to all GHP components
+### Changed
+- If a `REoptInputs` object solves with termination status infeasible, altert user and return a dictionary insteadof JuMP model
+
+## v0.33.0
+### Added
+- Functionality to evaluate scenarios with Wind can in the ERP (`backup_reliability`)
+- Dispatch data for outages: Wind, ElectricStorage SOC, and critical load
+### Fixed
+- Fix `backup_reliability_reopt_inputs(d, p, r)` so doesn't ignore `CHP` from REopt scenario
+- In `backup_reliability_reopt_inputs(d, p, r)`, get `Generator` and `CHP` fuel related values from REopt results _Dict_ d and `REoptInputs` _struct_ p, unless the user overrides the REopt results by providing **generator_size_kw**
+- Remove use of non-existent **tech_upgraded** `Outages` outputs, using **tech_microgrid_size_kw** instead
+- Added missing **electric_storage_microgrid_upgraded** to `Outages` results
+- Fix bug causing _InexactError_ in `num_battery_bins_default`
+- Update docstrings in `backup_reliability.jl`
+- Avoid supply > critical load during outages by changing load balance to ==
+### Changed
+- Updated REopt license
+- Changed `backup_reliability` results key from **fuel_outage_survival_final_time_step** to **fuel_survival_final_time_step** for consistency with other keys
+
+## v0.32.7
+### Fixed
+- Bugs in EASIUR health cost calcs
+- Type handling for CoolingLoad monthly_tonhour input
+
+## v0.32.6
+### Changed
+- Required **fuel_cost_per_mmbtu** for modeling **Boiler** tech, otherwise throw a handled error.
+### Fixed
+- Additional **SteamTurbine** defaults processing updates and bug fixes
+
+## v0.32.5
+### Changed
+- Updated `get_existing_chiller_cop` function to accept scalar values instead of vectors to allow for faster API transactions.
+- Refactored `backup_reliability.jl` to enable easier development: added conversion of all scalar generator inputs to vectors in `dictkeys_to_symbols` and reduced each functions with two versions (one with scalar and one with vector generator arguments) to a single version
+- Simplify generator sizing logic in function `backup_reliability_reopt_inputs` (if user sets `generator_size_kw` or `num_generators`to 0, don't override based on REopt solution) and add a validation error
+### Fixed
+- Steamturbine defaults processing
+- simulated_load monthly values processing
+- Fixed incorrect name when accessing result field `Outages` **generator_microgrid_size_kw** in `outag_simulator.jl`
+
+## v0.32.4
+### Changed
+- Consolidated PVWatts API calls to 1 call (previously 3 separate calls existed). API call occurs in `src/core/utils.jl/call_pvwatts_api()`. This function is called for PV in `src/core/production_factor.jl/get_production_factor(PV)` and for GHP in `src/core/scenario.jl`. If GHP and PV are evaluated together, the GHP PVWatts call for ambient temperature is also used to assign the pv.production_factor_series in Scenario.jl so that the PVWatts API does not get called again downstream in `get_production_factor(PV)`.  
+- In `src/core/utils.jl/call_pvwatts_api()`, updated NSRDB bounds used in PVWatts query (now includes southern New Zealand)
+- Updated PV Watts version from v6 to v8. PVWatts V8 updates the weather data to 2020 TMY data from the NREL NSRDB for locations covered by the database. (The NSRDB weather data used in PVWatts V6 is from around 2015.) See other differences at https://developer.nrel.gov/docs/solar/pvwatts/.
+- Made PV struct mutable: This allows for assigning pv.production_factor_series when calling PVWatts for GHP, to avoid a extra PVWatts calls later.
+- Changed unit test expected values due to update to PVWatts v8, which slightly changed expected PV production factors.
+- Changed **fuel_avail_gal** default to 1e9 for on-grid scenarios (same as off-grid)
+### Fixed
+- Issue with using a leap year with a URDB rate - the URDB rate was creating energy_rate of length 8784 instead of intended 8760
+- Don't double add adjustments to urdb rates with non-standard units
+- Corrected `Generator` **installed_cost_per_kw** from 500 to 650 if **only_runs_during_grid_outage** is _true_ or 800 if _false_
+- Corrected `SteamTurbine` defaults population from `get_steam_turbine_defaults_size_class()`
+
+## v0.32.3
+### Fixed
+- Calculate **num_battery_bins** default in `backup_reliability.jl` based on battery duration to prevent significant discretization error (and add test)
+- Account for battery (dis)charge efficiency after capping power in/out in `battery_bin_shift()`
+- Remove _try_ _catch_ in `backup_reliability(d::Dict, p::REoptInputs, r::Dict)` so can see where error was thrown
+
+## v0.32.2
+### Fixed
+- Fixed bug in multiple PVs pv_to_location dictionary creation. 
+- Fixed bug in reporting of grid purchase results when multiple energy tiers are present.
+- Fixed bug in TOU demand charge calculation when multiple demand tiers are present.
+
+## v0.32.1
+### Fixed
+- In `backup_reliability.jl`:
+    - Check if generator input is a Vector instead of has length greater than 1
+    - Correct calculation of battery SOC adjustment in `fuel_use()` function
+    - Correct outage time step survival condition in `fuel_use()` function
+- Add test to ensure `backup_reliability()` gives the same results for equivalent scenarios (1. battery only and 2. battery plus generator with no fuel) and that the survival probability decreases monotonically with outage duration
+- Add test to ensure `backup_reliability()` gives the same results as `simulate_outages()` when operational availability inputs are 1, probability of failure to run is 0, and mean time to failure is a very large number.
+
+## v0.32.0
+### Fixed
+- Fixed calculation of `wind_kw_ac_hourly` in `outagesim/outage_simulator.jl`
+- Add  a test of multiple outages that includes wind
+- Add a timeout to PVWatts API call so that if it does not connect within 10 seconds, it will retry. It seems to always work on the first retry.
+
+## v0.31.0
+### Added
+- Created and exported easiur_data function (returns health emissions costs and escalations) for the API to be able to call for it's easiur_costs endpoint
+- Added docstrings for easiur_data and emissions_profiles
+
+## v0.30.0
+### Added
+- `Generator` input **fuel_higher_heating_value_kwh_per_gal**, which defaults to the constant KWH_PER_GAL_DIESEL
+### Changed
+- Added more description to **production_factor_series inputs**
+### Fixed
+- Fixed spelling of degradation_fraction
+- use push! instead of append() for array in core/cost_curve.jl
+- Fixed calculation of batt_roundtrip_efficiency in outage_simulator.jl
+
+## v0.29.0
+### Added
+- Add `CHP` `FuelUsed` and `FuelCost` modeling/tracking for stochastic/multi-outages
+- Add `CHP` outputs for stochastic/multi-outages
+### Changed
+- Made outages output names not dynamic to allow integration into API
+- Add missing units to outages results field names: **unserved_load_series_kw**, **unserved_load_per_outage_kwh**, **generator_fuel_used_per_outage_gal**
+- Default `Financial` field **microgrid_upgrade_cost_fraction** to 0
+- Add conditional logic to make `CHP.min_allowable_kw` 25% of `max_kw` if there is a conflicting relationship 
+- Iterate on calculating `CHP` heuristic size based on average heating load which is also used to set `max_kw` if not given: once `size_class` is determined, recalculate using the efficiency numbers for that `size_class`.
+### Fixed
+- Fix non-handling of cost-curve/segmented techs in stochastic outages
+- Fix issues with `simulated_load.jl` monthly heating energy input to return the heating load profile
+
+## v0.28.1
+### Added
+- `emissions_profiles` function, exported for external use as an endpoint in REopt_API for the webtool/UI
+
+## v0.28.0
+### Changed 
+- Changed Financial **breakeven_cost_of_emissions_reduction_per_tonnes_CO2** to **breakeven_cost_of_emissions_reduction_per_tonne_CO2**
+- Changed `CHP.size_class` to start at 0 instead of 1, consistent with the API, and 0 represents the average of all `size_class`s
+- Change `CHP.max_kw` to be based on either the heuristic sizing from average heating load (if heating) or peak electric load (if no heating, aka Prime Generator in the UI)
+  - The "big_number" for `max_kw` was causing the model to take forever to solve and some erroneous behavior; this is also consistent with the API to limit max_kw to a reasonable number
+### Added 
+- Added previously missing Financial BAU outputs: **lifecycle_om_costs_before_tax**, **lifecycle_om_costs_after_tax**, **year_one_om_costs_before_tax**
+### Fixed
+- Fixed if statement to determing ElectricLoad "year" from && to ||, so that defaults to 2017 if any CRB input is used
+    
+## v0.27.0
+### Added
+- Energy Resilience Performance tool: capability to model limited reliability of backup generators and RE, and calculate survival probability metrics during power outages for a DER scenario
+- Exported `backup_reliability` function to run the reliability based calculations
+### Changed
+- Changed `Generator` inputs **fuel_slope_gal_per_kwh** and **fuel_intercept_gal_per_hr** to **electric_efficiency_full_load** and **electric_efficiency_half_load** to represent the same fuel burn curve in a different way consistent with `CHP`
+
+## v0.26.0
 ### Added 
 - Constraint on wind sizing based on Site.land_acres
 - New Wind input **acres_per_kw**, defaults to 0.03 
