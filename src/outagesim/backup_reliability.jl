@@ -295,7 +295,7 @@ gen_battery_prob_matrix
 function shift_gen_battery_prob_matrix!(gen_battery_prob_matrix::Matrix, shift_vector::Vector{Int})
     M = size(gen_battery_prob_matrix, 1)
     
-    for i in 1:length(shift_vector) 
+    for i in eachindex(shift_vector) 
         s = shift_vector[i]
         if s < 0 
             #TODO figure out why implementation of cirshift! is working locally but not on server
