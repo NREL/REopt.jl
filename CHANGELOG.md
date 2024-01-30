@@ -42,6 +42,9 @@ Classify the change according to the following categories:
 - Added the following BAU outputs:  lifecycle_chp_standby_cost_after_tax, lifecycle_elecbill_after_tax, lifecycle_production_incentive_after_tax, lifecycle_outage_cost, lifecycle_MG_upgrade_and_fuel_cost
 ### Fixed
 - Don't allow **Site** **min_resil_time_steps** input to be greater than the maximum value element in **ElectricUtility** **outage_durations**
+- When calculating CHP fuel intercept and slope, use 1 for the HHV because CHP fuel measured in units of kWh, instead of using non-existent **CHP.fuel_higher_heating_value_kwh_per_gal**
+### Changed
+- Renamed function `generator_fuel_slope_and_intercept` to `fuel_slope_and_intercept` and generalize to not be specific to diesel measured in units of gal
 
 ## v0.38.1
 ### Fixed

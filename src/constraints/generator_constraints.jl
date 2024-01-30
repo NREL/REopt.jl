@@ -1,9 +1,9 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 function add_fuel_burn_constraints(m,p)
-	fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr = generator_fuel_slope_and_intercept(
+	fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr = fuel_slope_and_intercept(
 		electric_efficiency_full_load=p.s.generator.electric_efficiency_full_load, 
 		electric_efficiency_half_load=p.s.generator.electric_efficiency_half_load,
-		fuel_higher_heating_value_kwh_per_gal=p.s.generator.fuel_higher_heating_value_kwh_per_gal
+		fuel_higher_heating_value_kwh_per_unit=p.s.generator.fuel_higher_heating_value_kwh_per_gal
 	)
   	@constraint(m, [t in p.techs.gen, ts in p.time_steps],
 		m[:dvFuelUsage][t, ts] == (fuel_slope_gal_per_kwhe * p.s.generator.fuel_higher_heating_value_kwh_per_gal *
