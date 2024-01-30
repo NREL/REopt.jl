@@ -23,11 +23,9 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop 2024-01-16
-### Fixed
-- In `reopt.jl`, group objective function incentives (into **ObjectivePenalties**) and avoid directly modifying m[:Costs]. Previously, some of these were incorrectly included in the reported **Financial.lcc**. 
-- Changed instances of indexing using i in 1:length() paradigm to use eachindex() or axes() instead because this is more robust
-- In `src/core/urdb.jl`, ensure values from the "energyweekdayschedule" and "energyweekendschedule" arrays in the URDB response dictionary are converted to _Int_ before being used as indices
+## Develop 1/29/2024
+### Changed
+- Test commit to check history purge preservation
 
 ## v0.39.1
 ### Changed
