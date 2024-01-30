@@ -23,6 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop 1/29/2024
+### Changed
+- Test commit to check history purge preservation
+
 ## v0.39.1
 ### Changed
 - Changed testing suite from using Xpress to using HiGHS, an open-source solver.  This has led to a reduction in the number of tests due to incompatibility with indicator constraints.
