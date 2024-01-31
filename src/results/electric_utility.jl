@@ -1,9 +1,9 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `ElectricUtility` results keys:
-- `annual_energy_supplied_kwh` Total energy supplied from the grid in an average year.
-- `electric_to_load_series_kw` Vector of power drawn from the grid to serve load.
-- `electric_to_storage_series_kw` Vector of power drawn from the grid to charge the battery.
+- `annual_energy_supplied_kwh` # Total energy supplied from the grid in an average year.
+- `electric_to_load_series_kw` # Vector of power drawn from the grid to serve load.
+- `electric_to_storage_series_kw` # Vector of power drawn from the grid to charge the battery.
 - `annual_emissions_tonnes_CO2` # Average annual total tons of CO2 emissions associated with the site's grid-purchased electricity. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchases. Otherwise, it accounts for emissions offset from any export to the grid.
 - `annual_emissions_tonnes_NOx` # Average annual total tons of NOx emissions associated with the site's grid-purchased electricity. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchases. Otherwise, it accounts for emissions offset from any export to the grid.
 - `annual_emissions_tonnes_SO2` # Average annual total tons of SO2 emissions associated with the site's grid-purchased electricity. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchases. Otherwise, it accounts for emissions offset from any export to the grid.
