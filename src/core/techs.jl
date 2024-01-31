@@ -27,7 +27,7 @@ function Techs(p::REoptInputs, s::BAUScenario)
     electric_heaters = String[]
     techs_can_serve_space_heating = String[]
     techs_can_serve_dhw = String[]
-    tech_can_serve_process_heat = String[]
+    techs_can_serve_process_heat = String[]
     ghp_techs = String[]
 
     if p.s.generator.existing_kw > 0
@@ -40,6 +40,15 @@ function Techs(p::REoptInputs, s::BAUScenario)
         push!(all_techs, "ExistingBoiler")
         push!(heating_techs, "ExistingBoiler")
         push!(boiler_techs, "ExistingBoiler")
+        if s.existing_boiler.can_serve_space_heating
+            push!(techs_can_serve_space_heating, "ExistingBoiler")
+        end
+        if s.existing_boiler.can_serve_dhw
+            push!(techs_can_serve_dhw, "ExistingBoiler")
+        end       
+        if s.existing_boiler.can_serve_process_heat
+            push!(techs_can_serve_process_heat, "ExistingBoiler")
+        end  
     end
 
     if !isnothing(s.existing_chiller)
@@ -78,7 +87,7 @@ function Techs(p::REoptInputs, s::BAUScenario)
         electric_heaters,
         techs_can_serve_space_heating,
         techs_can_serve_dhw,
-        tech_can_serve_process_heat,
+        techs_can_serve_process_heat,
         ghp_techs
     )
 end
