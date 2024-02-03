@@ -154,6 +154,7 @@ end
     replace_cost_constant::Real = 0.0
     inverter_replacement_year::Int = 10
     battery_replacement_year::Int = 10
+    cost_constant_replacement_year::Int = 10
     macrs_option_years::Int = 7
     macrs_bonus_fraction::Float64 = 0.8
     macrs_itc_reduction::Float64 = 0.5
@@ -188,6 +189,7 @@ Base.@kwdef struct ElectricStorageDefaults
     replace_cost_constant::Real = 0.0
     inverter_replacement_year::Int = 10
     battery_replacement_year::Int = 10
+    cost_constant_replacement_year::Int = 10
     macrs_option_years::Int = 7
     macrs_bonus_fraction::Float64 = 0.8
     macrs_itc_reduction::Float64 = 0.5
@@ -228,7 +230,8 @@ struct ElectricStorage <: AbstractElectricStorage
     replace_cost_constant::Real
     inverter_replacement_year::Int
     battery_replacement_year::Int
-    macrs_option_years::Int
+    cost_constant_replacement_year::Int
+    macrs_option_years::Int 
     macrs_bonus_fraction::Float64
     macrs_itc_reduction::Float64
     total_itc_fraction::Float64
@@ -279,10 +282,13 @@ struct ElectricStorage <: AbstractElectricStorage
             macrs_itc_reduction = s.macrs_itc_reduction
         )
 
+        print("\n***Data for the cost constant")
+        print("\n the replace_cost_constant is: $(s.replace_cost_constant)")
+
         net_present_cost_cost_constant = effective_cost(;
             itc_basis = s.installed_cost_constant,
-            replacement_cost = s.battery_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_constant,
-            replacement_year = s.battery_replacement_year,
+            replacement_cost = s.cost_constant_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_constant,
+            replacement_year = s.cost_constant_replacement_year,
             discount_rate = f.owner_discount_rate_fraction,
             tax_rate = f.owner_tax_rate_fraction,
             itc = s.total_itc_fraction,
@@ -333,6 +339,7 @@ struct ElectricStorage <: AbstractElectricStorage
             replace_cost_constant,
             s.inverter_replacement_year,
             s.battery_replacement_year,
+            s.cost_constant_replacement_year,
             s.macrs_option_years,
             s.macrs_bonus_fraction,
             s.macrs_itc_reduction,
