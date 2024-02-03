@@ -239,6 +239,7 @@ struct ElectricStorage <: AbstractElectricStorage
     grid_charge_efficiency::Float64
     net_present_cost_per_kw::Real
     net_present_cost_per_kwh::Real
+    net_present_cost_cost_constant::Real
     model_degradation::Bool
     degradation::Degradation
     minimum_avg_soc_fraction::Float64
