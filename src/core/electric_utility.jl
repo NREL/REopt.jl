@@ -20,7 +20,7 @@
     # Climate Option 1 (Default): Use levelized emissions data from NREL's Cambium database by specifying the following fields:
     cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions). Default: "Mid-case".
         ## Options: ["Mid-case", "Low Renewable Energy and Battery Costs", "High Renewable Energy and Battery Costs", "Electricifcation", "Low Natural Gas Price", "High Natural Gas Price", "Mid-case with 95% Decarbonization by 2050", "Mid-case with 100% Decarbonization by 2035", "Mid-case (with tax credit phaseout)", "Low Renewable Energy and Battery Costs (with tax credit phaseout)"]     
-    cambium_location_type::String =  "States", # Geographic boundary at which emissions are calculated. Default: "States". Options: ["Nations", "GEA Regions", "States"] 
+    cambium_location_type::String =  "GEA Regions", # Geographic boundary at which emissions are calculated. Default: "GEA Regions". Options: ["Nations", "GEA Regions", "States"] 
     cambium_metric_col::String =  "lrmer_co2e", # Emissions metric used. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
     cambium_start_year::Int = 2024, # First year of operation of system. Emissions will be levelized starting in this year for the duration of cambium_levelization_years.  Default: 2024 # Options: any year 2023 through 2050.
     cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions will be averaged over this period. Default: analysis_years (from Financial struct)
@@ -85,7 +85,7 @@
     **Climate Emissions**
     - For sites in the contiguous United States: 
         - Default climate-related emissions factors come from NREL's Cambium database (Current version: 2022)
-            - By default, REopt uses *levelized long-run marginal emission rates for CO2-equivalent (CO2e) emissions* for the state in which the site is located. 
+            - By default, REopt uses *levelized long-run marginal emission rates for CO2-equivalent (CO2e) emissions* for the region in which the site is located. 
                 By default, the emissions rates are levelized over the analysis period (e.g., from 2024 through 2048 for a 25-year analysis)
             - The inputs to the Cambium API request can be modified by the user based on emissions accounting needs (e.g., can change "lifetime" to 1 to analyze a single year's emissions)
             - Note for analysis periods extending beyond 2050: Values beyond 2050 are estimated with the 2050 values. Analysts are advised to use caution when selecting values that place significant weight on 2050 (e.g., greater than 50%)
@@ -161,7 +161,7 @@ struct ElectricUtility
         # Climate Option 1 (Default): Use levelized emissions data from NREL's Cambium database by specifying the following fields:
         cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions). Default: "Mid-case".
             ## Options: ["Mid-case", "Low Renewable Energy and Battery Costs", "High Renewable Energy and Battery Costs", "Electricifcation", "Low Natural Gas Price", "High Natural Gas Price", "Mid-case with 95% Decarbonization by 2050", "Mid-case with 100% Decarbonization by 2035", "Mid-case (with tax credit phaseout)", "Low Renewable Energy and Battery Costs (with tax credit phaseout)"]     
-        cambium_location_type::String =  "States", # Geographic boundary at which emissions are calculated. Default: "States". Options: ["Nations", "GEA Regions", "States"] 
+        cambium_location_type::String =  "GEA Regions", # Geographic boundary at which emissions are calculated. Default: "GEA Regions". Options: ["Nations", "GEA Regions", "States"] 
         cambium_metric_col::String =  "lrmer_co2e", # Emissions metric. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
         cambium_start_year::Int = 2024, # First year of operation of system. Default: 2024 # Options: any year now through 2050.
         cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions will be averaged over this period. Default: analysis_years (from Financial struct)
@@ -558,8 +558,8 @@ function cambium_emissions_profile(; scenario::String,
     payload=Dict(
             "project_uuid" => project_uuid,
             "scenario" => scenario, # Only the Mid-case is currently available for testing?
-            "location_type" => location_type,  # Nations, States, GEA Regions, Balancing Areas (Default: States)
-            # "location" => "Colorado", # Contiguous United States, Colorado, Kansas, p33, p34 
+            "location_type" => location_type,  # Nations, States, GEA Regions, Balancing Areas (Default: GEA Regions)
+            # "location" => "Colorado", # e.g., Contiguous United States, Colorado, Kansas, p33, p34 
             "latitude" => string(round(latitude, digits=3)),
             "longitude" => string(round(longitude, digits=3)), 
             "start_year" => string(start_year), # biennial from 2022-2050 (data year covers nominal year and years proceeding; e.g., 2040 values cover time range starting in 2036)
