@@ -282,9 +282,6 @@ struct ElectricStorage <: AbstractElectricStorage
             macrs_itc_reduction = s.macrs_itc_reduction
         )
 
-        print("\n***Data for the cost constant")
-        print("\n the replace_cost_constant is: $(s.replace_cost_constant)")
-
         net_present_cost_cost_constant = effective_cost(;
             itc_basis = s.installed_cost_constant,
             replacement_cost = s.cost_constant_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_constant,
