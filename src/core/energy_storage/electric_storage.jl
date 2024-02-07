@@ -164,7 +164,7 @@ end
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
-    battery_hour::Real = 30.0
+    max_duration_hours::Real = 30.0 # Maximum amount of time storage can discharge at its rated power capacity (ratio of ElectricStorage size_kwh to size_kw)
 ```
 """
 Base.@kwdef struct ElectricStorageDefaults
@@ -197,7 +197,7 @@ Base.@kwdef struct ElectricStorageDefaults
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
-    battery_hour::Real = 30.0
+    max_duration_hours::Real = 30.0
 end
 
 
@@ -238,7 +238,7 @@ struct ElectricStorage <: AbstractElectricStorage
     model_degradation::Bool
     degradation::Degradation
     minimum_avg_soc_fraction::Float64
-    battery_hour::Real
+    max_duration_hours::Real
 
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
@@ -326,7 +326,7 @@ struct ElectricStorage <: AbstractElectricStorage
             s.model_degradation,
             degr,
             s.minimum_avg_soc_fraction,
-            s.battery_hour
+            s.max_duration_hours
         )
     end
 end
