@@ -2331,8 +2331,8 @@ else  # run HiGHS tests
             3) International 
                 - all emissions should be zero unless provided
             """
-            m1 = Model(Xpress.Optimizer)
-            m2 = Model(Xpress.Optimizer)
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
         
             post_name = "cambium.json" 
             post = JSON.parsefile("./scenarios/$post_name")
