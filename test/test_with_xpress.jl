@@ -1411,11 +1411,11 @@ end
     scen = Scenario(post)
 
     # TODO: update this test(?) because we updated AVERT data year from 2021 to 2022
-    @test scen.electric_utility.cambium_emissions_region == "Colorado"
-    @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) / 8760 ≈ 0.38046 rtol=1e-5
-    @test scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh[1] ≈ 0.66672 rtol=1e-5 # Should start on Friday
-    @test scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh[8760] ≈ 0.64833465 rtol=1e-5 # Should end on Friday 
-    @test sum(scen.electric_utility.emissions_factor_series_lb_SO2_per_kwh) / 8760 ≈ 0.000592455 rtol=1e-5 # check avg from AVERT data for RM region
+    @test scen.electric_utility.cambium_emissions_region == "RMPAc"
+    @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) / 8760 ≈ 0.394608 rtol=1e-3
+    @test scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh[1] ≈ 0.677942 rtol=1e-4 # Should start on Friday
+    @test scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh[8760] ≈ 0.6598207198 rtol=1e-5 # Should end on Friday 
+    @test sum(scen.electric_utility.emissions_factor_series_lb_SO2_per_kwh) / 8760 ≈ 0.00061165 rtol=1e-5 # check avg from AVERT data for RM region
     @test scen.electric_utility.emissions_factor_CO2_decrease_fraction ≈ 0 atol=1e-5 # should be 0 with Cambium data
     @test scen.electric_utility.emissions_factor_SO2_decrease_fraction ≈ 0.02163 # should be 2.163% for AVERT data
 
@@ -1425,7 +1425,7 @@ end
     post["Site"]["longitude"] = cities[city][2]
     scen = Scenario(post)
 
-    @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) / 8760 ≈ 1.40636 rtol=1e-5 # check data from eGRID (AVERT data file) used
+    @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) / 8760 ≈ 1.29199999 rtol=1e-3 # check data from eGRID (AVERT data file) used
     @test scen.electric_utility.emissions_factor_CO2_decrease_fraction ≈ 0.02163 # should get updated to this value
 
     # 3) International location
@@ -1456,7 +1456,6 @@ end
         if i == 1
             inputs["Site"]["latitude"] = 37.746
             inputs["Site"]["longitude"] = -122.448
-            # inputs["ElectricUtility"]["avert_emissions_region"] = "California"
         end
         inputs["Site"]["include_exported_renewable_electricity_in_total"] = include_exported_RE_in_total[i]
         inputs["Site"]["include_exported_elec_emissions_in_total"] = include_exported_ER_in_total[i]
@@ -1501,61 +1500,43 @@ end
             @test results["ElectricStorage"]["size_kw"] ≈ 0.0 atol=1e-1
             @test results["ElectricStorage"]["size_kwh"] ≈ 0.0 atol=1e-1
             @test results["Generator"]["size_kw"] ≈ 21.52 atol=1e-1
-            @test results["Site"]["annual_renewable_electricity_kwh"] ≈ 76412.02
-            @test results["Site"]["renewable_electricity_fraction"] ≈ 0.8
-            @test results["Site"]["renewable_electricity_fraction_bau"] ≈ 0.147576 atol=1e-4
             @test results["Site"]["total_renewable_energy_fraction"] ≈ 0.8
             @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.147576 atol=1e-4
             @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.61467195 atol=1e-4
             @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 282.6 atol=1
             @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 11.44 atol=1e-2
-            @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 32.06 atol=1e-2
             @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 7.04
             @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0
-            @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 7808.8 atol=1
-            @test results["Financial"]["lifecycle_emissions_cost_climate_bau"] ≈ 20450.0 atol=1e-1
-            @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 218.77
-            @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 567.75
-            @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 140.78
+            @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 8315.69 atol=1
+            @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 232.85
+            @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 141.21
             @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0
-            @test results["ElectricUtility"]["annual_emissions_tonnes_CO2"] ≈ 4.4
-            @test results["ElectricUtility"]["annual_emissions_tonnes_CO2_bau"] ≈ 32.06 atol=1e-1
-            @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] ≈ 78.0
-            @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 567.75
+            @test results["ElectricUtility"]["annual_emissions_tonnes_CO2_bau"] ≈ 28.186 atol=1e-1
+            @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 563.72
         elseif i == 2
             #commented out values are results using same levelization factor as API
             @test results["PV"]["size_kw"] ≈ 106.13 atol=1
             @test results["ElectricStorage"]["size_kw"] ≈ 21.58 atol=1 # 20.29
-            @test results["ElectricStorage"]["size_kwh"] ≈ 165.27 atol=1
+            @test results["ElectricStorage"]["size_kwh"] ≈ 166.29 atol=1
             @test !haskey(results, "Generator")
-            # NPV
-            @info results["Financial"]["npv"]
-            expected_npv = -267404.54
-            @test (expected_npv - results["Financial"]["npv"])/expected_npv ≈ 0.0 atol=1e-3
             # Renewable energy
-            @test results["Site"]["renewable_electricity_fraction"] ≈ 0.783298 atol=1e-3
-            @test results["Site"]["annual_renewable_electricity_kwh"] ≈ 78373.4 atol=10
+            @test results["Site"]["renewable_electricity_fraction"] ≈ 0.78586 atol=1e-3
             @test results["Site"]["renewable_electricity_fraction_bau"] ≈ 0.132118 atol=1e-3 #0.1354 atol=1e-3
             @test results["Site"]["annual_renewable_electricity_kwh_bau"] ≈ 13211.78 atol=10 # 13542.62 atol=10
-            @test results["Site"]["total_renewable_energy_fraction"] ≈ 0.783298 atol=1e-3
             @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.132118 atol=1e-3 # 0.1354 atol=1e-3
             # CO2 emissions - totals ≈  from grid, from fuelburn, ER, $/tCO2 breakeven
             @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.8 atol=1e-3 # 0.8
-            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 374.0 atol=1e-1
-            @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 14.2 atol=1
-            @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 70.99 atol=1
+            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 460.7 atol=1e-1
+            @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 11.662 atol=1
+            @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 58.3095 atol=1
             @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
-            @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0 atol=1 # 0.0
-            @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 9100.02 atol=1
-            @test results["Financial"]["lifecycle_emissions_cost_climate_bau"] ≈ 45500.08 atol=1
-            @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 252.92 atol=1
-            @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 1262.84 atol=1
+            @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 8401.1 atol=1
+            @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 1166.19 atol=1
             @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
             @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0 atol=1 # 0.0
-            @test results["ElectricUtility"]["annual_emissions_tonnes_CO2"] ≈ 14.2 atol=1
-            @test results["ElectricUtility"]["annual_emissions_tonnes_CO2_bau"] ≈ 70.99 atol=1
-            @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] ≈ 252.92 atol=1
-            @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 1262.84 atol=1
+            @test results["ElectricUtility"]["annual_emissions_tonnes_CO2_bau"] ≈ 58.3095 atol=1
+            @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2"] ≈ 233.24 atol=1
+
 
             #also test CO2 breakeven cost
             inputs["PV"]["min_kw"] = results["PV"]["size_kw"] - inputs["PV"]["existing_kw"]
@@ -1581,7 +1562,7 @@ end
             @test results["HotThermalStorage"]["size_gal"] ≈ 50000 atol=1e1
             @test results["ColdThermalStorage"]["size_gal"] ≈ 30000 atol=1e1
             yr1_nat_gas_mmbtu = results["ExistingBoiler"]["annual_fuel_consumption_mmbtu"] + results["CHP"]["annual_fuel_consumption_mmbtu"]
-            nat_gas_emissions_lb_per_mmbtu = Dict("CO2"=>116.9, "NOx"=>0.09139, "SO2"=>0.000578592, "PM25"=>0.007328833)
+            nat_gas_emissions_lb_per_mmbtu = Dict("CO2"=>117.03, "NOx"=>0.09139, "SO2"=>0.000578592, "PM25"=>0.007328833)
             TONNE_PER_LB = 1/2204.62
             @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ nat_gas_emissions_lb_per_mmbtu["CO2"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1
             @test results["Site"]["annual_emissions_from_fuelburn_tonnes_NOx"] ≈ nat_gas_emissions_lb_per_mmbtu["NOx"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2

@@ -272,6 +272,7 @@ struct ElectricUtility
                         if !isnothing(region_abbr)
                             avert_data_year = 2022 # Must update when AVERT data are updated
                             emissions_series_dict[ekey] = avert_emissions_profiles(
+                                                            avert_region_abbr = region_abbr,
                                                             latitude = latitude,
                                                             longitude = longitude,
                                                             time_steps_per_hour = time_steps_per_hour,
@@ -478,17 +479,22 @@ function region_name_to_abbr(region_name)
 end
 
 """
-    avert_emissions_profiles(; latitude::Real, longitude::Real, time_steps_per_hour::Int=1, load_year::Int=2017, avert_data_year::Int=2022)
+    avert_emissions_profiles(; avert_region_abbr::String="", latitude::Real, longitude::Real, time_steps_per_hour::Int=1, load_year::Int=2017, avert_data_year::Int=2022)
 
 This function gets CO2, NOx, SO2, and PM2.5 grid emission rate profiles (1-year time series) from the AVERT dataset.
+    If avert_region_abbr is supplied, this will overwrite the default region that would otherwise be selected using the lat, long.
 Returned emissions profile is adjusted for day of week alignment with load_year.
     
 This function is used for the /emissions_profile endpoint in the REopt API, in particular 
     for the webtool to display grid emissions defaults before running REopt, 
     but is also generally an external way to access AVERT data without running REopt.
 """
-function avert_emissions_profiles(; latitude::Real, longitude::Real, time_steps_per_hour::Int=1, load_year::Int=2017, avert_data_year::Int=2022)
-    avert_region_abbr, avert_meters_to_region = avert_region_abbreviation(latitude, longitude)
+function avert_emissions_profiles(; avert_region_abbr::String="", latitude::Real, longitude::Real, time_steps_per_hour::Int=1, load_year::Int=2017, avert_data_year::Int=2022)
+    if avert_region_abbr == "" # Region not supplied
+        avert_region_abbr, avert_meters_to_region = avert_region_abbreviation(latitude, longitude)
+    else
+        avert_meters_to_region = 0.0
+    end
     avert_emissions_region = region_abbr_to_name(avert_region_abbr)
     if isnothing(avert_region_abbr)
         return Dict{String, Any}(
