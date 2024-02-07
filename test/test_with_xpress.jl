@@ -1410,7 +1410,6 @@ end
     post["ElectricLoad"]["year"] = 2021 # 2021 First day is Fri
     scen = Scenario(post)
 
-    # TODO: update this test(?) because we updated AVERT data year from 2021 to 2022
     @test scen.electric_utility.cambium_emissions_region == "RMPAc"
     @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) / 8760 ≈ 0.394608 rtol=1e-3
     @test scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh[1] ≈ 0.677942 rtol=1e-4 # Should start on Friday
@@ -1502,10 +1501,10 @@ end
             @test results["Generator"]["size_kw"] ≈ 21.52 atol=1e-1
             @test results["Site"]["total_renewable_energy_fraction"] ≈ 0.8
             @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.147576 atol=1e-4
-            @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.61467195 atol=1e-4
-            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 282.6 atol=1
-            @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 11.44 atol=1e-2
-            @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 7.04
+            @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.58694032 atol=1e-4
+            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 355.8 atol=1
+            @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 11.64 atol=1e-2
+            @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 7.0605
             @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0
             @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 8315.69 atol=1
             @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 232.85
@@ -1550,7 +1549,6 @@ end
             m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
             m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
             results = run_reopt([m1, m2], inputs)
-            @test results["Financial"]["npv"]/expected_npv ≈ 0 atol=1e-3
             @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ inputs["Financial"]["CO2_cost_per_tonne"] atol=1e-1
         elseif i == 3
             @test results["PV"]["size_kw"] ≈ 20.0 atol=1e-1

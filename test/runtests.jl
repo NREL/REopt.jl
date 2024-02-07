@@ -2318,6 +2318,67 @@ else  # run HiGHS tests
             @test calculated_ghp_capex ≈ reopt_ghp_capex atol=300
         end
 
+        @testset "Cambium Emissions" begin
+            """
+            1) Location in contiguous US
+                - Correct data from Cambium (returned location and values)
+                - Adjusted for load year vs. Cambium year (which starts on Sunday) vs. AVERT year (2022 currently)
+                - co2 pct increase should be zero
+            2) HI and AK locations
+                - Should use AVERT data and give an "info" message
+                - Adjust for load year vs. AVERT year
+                - co2 pct increase should be the default value unless user provided value 
+            3) International 
+                - all emissions should be zero unless provided
+            """
+            m1 = Model(Xpress.Optimizer)
+            m2 = Model(Xpress.Optimizer)
+        
+            post_name = "cambium.json" 
+            post = JSON.parsefile("./scenarios/$post_name")
+        
+            cities = Dict(
+                "Denver" => (39.7413753050447, -104.99965032911328),
+                "Fairbanks" => (64.84053664406181, -147.71913656313163),
+                "Santiago" => (-33.44485437650408, -70.69031905547853)
+            )
+        
+            # 1) Location in contiguous US
+            city = "Denver"
+            post["Site"]["latitude"] = cities[city][1]
+            post["Site"]["longitude"] = cities[city][2]
+            post["ElectricLoad"]["loads_kw"] = [20 for i in range(1,8760)]
+            post["ElectricLoad"]["year"] = 2021 # 2021 First day is Fri
+            scen = Scenario(post)
+        
+            @test scen.electric_utility.cambium_emissions_region == "RMPAc"
+            @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) / 8760 ≈ 0.394608 rtol=1e-3
+            @test scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh[1] ≈ 0.677942 rtol=1e-4 # Should start on Friday
+            @test scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh[8760] ≈ 0.6598207198 rtol=1e-5 # Should end on Friday 
+            @test sum(scen.electric_utility.emissions_factor_series_lb_SO2_per_kwh) / 8760 ≈ 0.00061165 rtol=1e-5 # check avg from AVERT data for RM region
+            @test scen.electric_utility.emissions_factor_CO2_decrease_fraction ≈ 0 atol=1e-5 # should be 0 with Cambium data
+            @test scen.electric_utility.emissions_factor_SO2_decrease_fraction ≈ 0.02163 # should be 2.163% for AVERT data
+        
+            # 2) AK location
+            city = "Fairbanks"
+            post["Site"]["latitude"] = cities[city][1]
+            post["Site"]["longitude"] = cities[city][2]
+            scen = Scenario(post)
+        
+            @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) / 8760 ≈ 1.29199999 rtol=1e-3 # check that data from eGRID (AVERT data file) is used
+            @test scen.electric_utility.emissions_factor_CO2_decrease_fraction ≈ 0.02163 # should get updated to this value
+        
+            # 3) International location
+            city = "Santiago"
+            post["Site"]["latitude"] = cities[city][1]
+            post["Site"]["longitude"] = cities[city][2]
+            scen = Scenario(post)
+            
+            @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) ≈ 0 
+            @test sum(scen.electric_utility.emissions_factor_series_lb_NOx_per_kwh) ≈ 0 
+        
+        end
+
         @testset "Emissions and Renewable Energy Percent" begin
             #renewable energy and emissions reduction targets
             include_exported_RE_in_total = [true,false,true]
