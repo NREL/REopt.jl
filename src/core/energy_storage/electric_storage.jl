@@ -36,6 +36,10 @@ worth factor is used in two different ways, depending on the `maintenance_strate
     - `replace_cost_per_kwh`
     - `inverter_replacement_year`
     - `battery_replacement_year`
+    - `replace_cost_per_kw`
+    - `replace_cost_per_kwh`
+    - `inverter_replacement_year`
+    - `battery_replacement_year`
     The are replaced by the `maintenance_cost_per_kwh` vector.
 
 !!! note
@@ -309,7 +313,8 @@ struct ElectricStorage <: AbstractElectricStorage
         replace_cost_constant = s.replace_cost_constant
         if s.model_degradation
             if haskey(d, :replace_cost_per_kw) && d[:replace_cost_per_kw] != 0.0 || 
-                haskey(d, :replace_cost_per_kwh) && d[:replace_cost_per_kwh] != 0.0
+                haskey(d, :replace_cost_per_kwh) && d[:replace_cost_per_kwh] != 0.0 ||
+                haskey(d, :replace_cost_constant) && d[:replace_cost_constant] != 0.0
                 @warn "Setting ElectricStorage replacement costs to zero. Using degradation.maintenance_cost_per_kwh instead."
             end
             replace_cost_per_kw = 0.0

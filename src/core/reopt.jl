@@ -358,14 +358,22 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         end
     end
 	
-	# indicator function to say: if the energy capacity is greater than zero, then the dvBatteryIncluded binary is 1
-	@constraint(m, [b in p.s.storage.types.elec],
-		m[:dvBatteryIncluded][b] => {m[:dvStorageEnergy][b] >= 0}) # Question: is the >= actually just a greater-than sign?
-
-	# indicator function to say: if the energy capacity is zero, then the dvBatteryIncluded binary is 0
-	@constraint(m, [b in p.s.storage.types.elec],
-		!m[:dvBatteryIncluded][b] => {m[:dvStorageEnergy][b] == 0})
-
+	# Include the electric storage cost constants only if the installed_cost_constant or the replace_cost_constant is not zero
+	for b in p.s.storage.types.elec
+		if p.s.storage.attr[b].installed_cost_constant != 0 || p.s.storage.attr[b].replace_cost_constant != 0
+			@warn "Adding indicator constraints for the electric storage cost constant. Not all solvers support indicators"
+			# indicator constraint to say: if the energy capacity is greater than zero, then the dvBatteryIncluded binary is 1
+			@constraint(m, [b in p.s.storage.types.elec],
+				m[:dvBatteryIncluded][b] => {m[:dvStorageEnergy][b] >= 0}) # Question: is the >= actually just a greater-than sign?
+				
+			# indicator constraint to say: if the energy capacity is zero, then the dvBatteryIncluded binary is 0
+			@constraint(m, [b in p.s.storage.types.elec],
+				!m[:dvBatteryIncluded][b] => {m[:dvStorageEnergy][b] == 0})
+		else
+			m[:dvBatteryIncluded][b] == 0
+		end
+	end
+	
 	@expression(m, TotalStorageCapCosts, p.third_party_factor * (
 		sum( p.s.storage.attr[b].net_present_cost_per_kw * m[:dvStoragePower][b] for b in p.s.storage.types.elec) + 
 		sum( p.s.storage.attr[b].net_present_cost_per_kwh * m[:dvStorageEnergy][b] for b in p.s.storage.types.all ) +
@@ -574,7 +582,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvPeakDemandMonth[p.months, 1:p.s.electric_tariff.n_monthly_demand_tiers] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0
         binGHP[p.ghp_options], Bin  # Can be <= 1 if require_ghp_purchase=0, and is ==1 if require_ghp_purchase=1
-		dvBatteryIncluded[p.s.storage.types.all], Bin # 0 if no battery is included, 1 if battery is included
+		dvBatteryIncluded[p.s.storage.types.elec], Bin # 0 if no battery is included, 1 if battery is included
 	end
 
 	if !isempty(p.techs.gen)  # Problem becomes a MILP
