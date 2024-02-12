@@ -13,7 +13,7 @@ Random.seed!(42)
 if "Xpress" in ARGS
     @testset "test_with_xpress" begin
         @test true  #skipping Xpress while import to HiGHS takes place
-        #include("test_with_xpress.jl")
+        include("test_with_xpress.jl")
     end
 
 elseif "CPLEX" in ARGS
@@ -99,8 +99,8 @@ else  # run HiGHS tests
         @test results["Financial"]["lcc_bau"] ≈ 1.27663e7 rtol=1e-5
         @test results["ElectricStorage"]["size_kw"] ≈ 49.05 atol=0.1
         @test results["ElectricStorage"]["size_kwh"] ≈ 83.32 atol=0.1
-        @test results["Financial"]["initial_capital_costs"] = UpfrontCosts_NoIncentive rtol=1e-5
-        @test results["Financial"]["lifecycle_storage_capital_costs"] = 74203.0768 rtol=1e-5
+        @test results["Financial"]["initial_capital_costs"] ≈ UpfrontCosts_NoIncentive rtol=1e-5
+        @test results["Financial"]["lifecycle_storage_capital_costs"] ≈ 74203.0768 rtol=1e-5
     
     end 
     
