@@ -93,6 +93,7 @@ else  # run HiGHS tests
                                    d["ElectricStorage"]["installed_cost_constant"] +
                                    (results["PV"]["size_kw"]*d["PV"]["installed_cost_per_kw"])
     
+        @test results["PV"]["size_kw"] ≈ 216.667 atol=0.01 
         @test results["PV"]["lcoe_per_kwh"] ≈ 0.0469 atol = 0.001 
         @test results["Financial"]["lcc"] ≈ 1.23918e7 rtol=1e-5 
         @test results["Financial"]["lcc_bau"] ≈ 1.27663e7 rtol=1e-5 
