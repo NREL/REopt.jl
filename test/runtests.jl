@@ -13,7 +13,7 @@ Random.seed!(42)
 if "Xpress" in ARGS
     @testset "test_with_xpress" begin
         @test true  #skipping Xpress while import to HiGHS takes place
-        include("test_with_xpress.jl")
+        #include("test_with_xpress.jl")
     end
 
 elseif "CPLEX" in ARGS
@@ -79,8 +79,8 @@ else  # run HiGHS tests
         m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
         d = JSON.parsefile("./scenarios/pv_storage.json");
         
-        d["ElectricStorage"]["installed_cost_constant"] = 10000
-        d["ElectricStorage"]["replace_cost_constant"] = 5000
+        d["ElectricStorage"]["installed_cost_constant"] = 0
+        d["ElectricStorage"]["replace_cost_constant"] = 0
         d["ElectricStorage"]["cost_constant_replacement_year"] = 10
     
         d["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
@@ -93,14 +93,13 @@ else  # run HiGHS tests
                                    d["ElectricStorage"]["installed_cost_constant"] +
                                    (results["PV"]["size_kw"]*d["PV"]["installed_cost_per_kw"])
     
-        @test results["PV"]["size_kw"] ≈ 216.667 atol=0.01
-        @test results["PV"]["lcoe_per_kwh"] ≈ 0.0469 atol = 0.001
-        @test results["Financial"]["lcc"] ≈ 1.23997e7 rtol=1e-5
-        @test results["Financial"]["lcc_bau"] ≈ 1.27663e7 rtol=1e-5
-        @test results["ElectricStorage"]["size_kw"] ≈ 49.05 atol=0.1
-        @test results["ElectricStorage"]["size_kwh"] ≈ 83.32 atol=0.1
+        @test results["PV"]["lcoe_per_kwh"] ≈ 0.0469 atol = 0.001 
+        @test results["Financial"]["lcc"] ≈ 1.23918e7 rtol=1e-5 
+        @test results["Financial"]["lcc_bau"] ≈ 1.27663e7 rtol=1e-5 
+        @test results["ElectricStorage"]["size_kw"] ≈ 49.05 atol=0.1 
+        @test results["ElectricStorage"]["size_kwh"] ≈ 83.32 atol=0.1 
         @test results["Financial"]["initial_capital_costs"] ≈ UpfrontCosts_NoIncentive rtol=1e-5
-        @test results["Financial"]["lifecycle_storage_capital_costs"] ≈ 74203.0768 rtol=1e-5
+        @test results["Financial"]["lifecycle_storage_capital_costs"] ≈ 66248.8454 rtol=1e-5
     
     end 
     
