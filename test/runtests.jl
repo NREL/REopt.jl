@@ -75,8 +75,8 @@ else  # run HiGHS tests
     end
 
     @testset "Solar and ElectricStorage w/ ElectricStorage cost constants" begin
-        m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+        m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+        m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         d = JSON.parsefile("./scenarios/pv_storage.json");
         
         d["ElectricStorage"]["installed_cost_constant"] = 0
@@ -95,8 +95,8 @@ else  # run HiGHS tests
     
         @test results["PV"]["size_kw"] ≈ 216.667 atol=0.01 
         @test results["PV"]["lcoe_per_kwh"] ≈ 0.0469 atol = 0.001 
-        @test results["Financial"]["lcc"] ≈ 1.23918e7 rtol=1e-5 
-        @test results["Financial"]["lcc_bau"] ≈ 1.27663e7 rtol=1e-5 
+        @test results["Financial"]["lcc"] ≈ 1.23917861648e7 rtol=1e-5 
+        @test results["Financial"]["lcc_bau"] ≈ 1.27663970441e7 rtol=1e-5 
         @test results["ElectricStorage"]["size_kw"] ≈ 49.05 atol=0.1 
         @test results["ElectricStorage"]["size_kwh"] ≈ 83.32 atol=0.1 
         @test results["Financial"]["initial_capital_costs"] ≈ UpfrontCosts_NoIncentive rtol=1e-5
