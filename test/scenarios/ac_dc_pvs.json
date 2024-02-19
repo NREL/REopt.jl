@@ -15,7 +15,9 @@
     "ElectricLoad": {
       "doe_reference_name": "RetailStore",
       "annual_kwh": 1000000.0,
-      "year": 2017
+      "year": 2017,
+      "loads_kw_is_net": false,
+      "critical_loads_kw_is_net": false
     },
     "ElectricTariff": {
       "blended_annual_energy_rate": 0.3,
@@ -34,7 +36,7 @@
         {
           "name": "ground",
           "dc_coupled_with_storage": true,
-          "existing_kw": 0.0,
+          "existing_kw": 40.0,
           "installed_cost_per_kw": 1600.0,
           "om_cost_per_kw": 16.0,
           "macrs_option_years": 5,
