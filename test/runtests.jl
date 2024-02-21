@@ -666,7 +666,13 @@ else  # run HiGHS tests
     
         @test scen.pvs[1].tilt ≈ 20 # Correct tilt value for array_type = 1
     
-        ## Scenario 3: Cape Town; array-type = 0 (ground)
+        ## Scenario 3: Palmdale, CA; array-type = 2 (axis-tracking)
+        post["PV"]["array_type"] = 2
+        scen = Scenario(post)
+    
+        @test scen.pvs[1].tilt ≈ 0 # Correct tilt value for array_type = 2
+    
+        ## Scenario 4: Cape Town; array-type = 0 (ground)
         post["Site"]["latitude"] = -33.974732
         post["Site"]["longitude"] = 19.130050
         post["PV"]["array_type"] = 0 
@@ -675,12 +681,14 @@ else  # run HiGHS tests
         @test scen.pvs[1].tilt ≈ 20
         @test scen.pvs[1].azimuth ≈ 0
     
-        ## Scenario 4: Cape Town; array-type = 0 (ground); user-provided tilt (should not get overwritten)
+        ## Scenario 5: Cape Town; array-type = 0 (ground); user-provided tilt (should not get overwritten)
         post["PV"]["tilt"] = 17
         scen = Scenario(post)
         @test scen.pvs[1].tilt ≈ 17
-
+    
+    
     end    
+     
     
 
     @testset "AlternativeFlatLoads" begin
