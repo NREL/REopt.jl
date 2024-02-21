@@ -13,7 +13,7 @@ Random.seed!(42)
 if "Xpress" in ARGS
     @testset "test_with_xpress" begin
         @test true  #skipping Xpress while import to HiGHS takes place
-        #include("test_with_xpress.jl")
+        # include("test_with_xpress.jl")
     end
 
 elseif "CPLEX" in ARGS
@@ -664,9 +664,9 @@ else  # run HiGHS tests
         post["PV"]["array_type"] = 1 
         scen = Scenario(post)
     
-        @test scen.pvs[1].tilt ≈ 10
+        @test scen.pvs[1].tilt ≈ 20 # Correct tilt value for array_type = 1
     
-        ## Scenario 3:Cape Town; array-type = 0 (ground)
+        ## Scenario 3: Cape Town; array-type = 0 (ground)
         post["Site"]["latitude"] = -33.974732
         post["Site"]["longitude"] = 19.130050
         post["PV"]["array_type"] = 0 
@@ -674,12 +674,18 @@ else  # run HiGHS tests
     
         @test scen.pvs[1].tilt ≈ 20
         @test scen.pvs[1].azimuth ≈ 0
-
-        ## Scenario 4:Cape Town; array-type = 0 (ground); user-provided tilt (should not get overwritten)
+    
+        ## Scenario 4: Cape Town; array-type = 0 (ground); user-provided tilt (should not get overwritten)
         post["PV"]["tilt"] = 17
         scen = Scenario(post)
         @test scen.pvs[1].tilt ≈ 17
-    end
+    
+        ## Scenario 5: Test for tilt = 0 for array types other than 0 and 1
+        post["PV"]["array_type"] = 3 
+        scen = Scenario(post)
+        @test scen.pvs[1].tilt ≈ 0
+    end    
+    
 
     @testset "AlternativeFlatLoads" begin
         input_data = JSON.parsefile("./scenarios/flatloads.json")
