@@ -103,6 +103,10 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     if !isempty(p.techs.electric_heater)
         add_electric_heater_results(m, p, d; _n)
     end
+
+    if !isempty(p.techs.ashp)
+        add_ashp_results(m, p, d; _n)
+    end
     
     return d
 end
