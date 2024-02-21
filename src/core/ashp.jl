@@ -106,5 +106,5 @@ ashp_defaults::Dict -- Dictionary containing defaults for ASHP
 """
 function get_ashp_defaults()
     ashp_defaults = JSON.parsefile(joinpath(dirname(@__FILE__), "..", "..", "data", "ashp", "ashp_defaults.json"))
-    return eh_defaults
+    return ashp_defaults
 end
