@@ -22,6 +22,10 @@ Classify the change according to the following categories:
     ### Fixed
     ### Deprecated
     ### Removed
+## Develop 2024-02-21
+### Changed
+- In `core/pv.jl` according to the PVWatts guidelines, the default `tilt` angle for a fixed array should be 20 degrees, irrespective of it being a rooftop or ground-mounted (open-rack) system. By default the `tilt` will be set to 20 degrees for ground-mount and rooftop, and 0 degrees for axis-tracking (`array_type = 3 or 4`)
+
 
 ## Develop 2024-02-08
 ### Changed
