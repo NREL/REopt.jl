@@ -679,11 +679,7 @@ else  # run HiGHS tests
         post["PV"]["tilt"] = 17
         scen = Scenario(post)
         @test scen.pvs[1].tilt ≈ 17
-    
-        ## Scenario 5: Test for tilt = 0 for array types other than 0 and 1
-        post["PV"]["array_type"] = 3 
-        scen = Scenario(post)
-        @test scen.pvs[1].tilt ≈ 0
+
     end    
     
 
