@@ -1,10 +1,10 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
-using Xpress
+using HiGHS
 using DelimitedFiles
 
 @testset "AC and DC PVs" begin
-    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    m1 = Model(optimizer_with_attributes(HiGHS.Optimizer))
+    m2 = Model(optimizer_with_attributes(HiGHS.Optimizer))
     inputs = JSON.parsefile("./scenarios/ac_dc_pvs.json")
     inputs["ElectricTariff"]["tou_energy_rates_per_kwh"] = repeat(cat(0.2*ones(15), 0.4*ones(5), 0.2*ones(4), dims=1), outer=365)
 
