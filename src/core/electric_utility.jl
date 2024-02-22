@@ -18,12 +18,12 @@
     
     ### Grid Climate Emissions Inputs ### 
     # Climate Option 1 (Default): Use levelized emissions data from NREL's Cambium database by specifying the following fields:
-    cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions). Default: "Mid-case".
-        ## Options: ["Mid-case", "Low Renewable Energy and Battery Costs", "High Renewable Energy and Battery Costs", "Electricifcation", "Low Natural Gas Price", "High Natural Gas Price", "Mid-case with 95% Decarbonization by 2050", "Mid-case with 100% Decarbonization by 2035", "Mid-case (with tax credit phaseout)", "Low Renewable Energy and Battery Costs (with tax credit phaseout)"]     
-    cambium_location_type::String =  "GEA Regions", # Geographic boundary at which emissions are calculated. Default: "GEA Regions". Options: ["Nations", "GEA Regions", "States"] 
+    cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions).
+        ## Options: ["Mid-case",  "Mid-case with tax credit expiration",  "Low renewable energy cost", "Low renewable energy cost with tax credit expiration",   "High renewable energy cost", "High electrification",  "Low natrual gas prices", "High natrual gas prices", "Mid-case with 95% decarbonization by 2050",  "Mid-case with 100% decarbonization by 2035"]
+    cambium_location_type::String =  "GEA Regions", # Geographic boundary at which emissions are calculated. Options: ["Nations", "GEA Regions", "States"] 
     cambium_metric_col::String =  "lrmer_co2e", # Emissions metric used. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
-    cambium_start_year::Int = 2024, # First year of operation of system. Emissions will be levelized starting in this year for the duration of cambium_levelization_years.  Default: 2024 # Options: any year 2023 through 2050.
-    cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions will be averaged over this period. Default: analysis_years (from Financial struct)
+    cambium_start_year::Int = 2024, # First year of operation of system. Emissions will be levelized starting in this year for the duration of cambium_levelization_years. # Options: any year 2023 through 2050.
+    cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions will be averaged over this period.
     cambium_grid_level::String = "enduse", # Options: ["enduse", "busbar"]. Busbar refers to point where bulk generating stations connect to grid; enduse refers to point of consumption (includes distribution loss rate). 
 
     # Climate Option 2: Use CO2 emissions data from the EPA's AVERT based on the AVERT emissions region and specify annual percent decrease
@@ -159,12 +159,12 @@ struct ElectricUtility
         
         ### Grid Climate Emissions Inputs ### 
         # Climate Option 1 (Default): Use levelized emissions data from NREL's Cambium database by specifying the following fields:
-        cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions). Default: "Mid-case".
-            ## Options: ["Mid-case", "Low Renewable Energy and Battery Costs", "High Renewable Energy and Battery Costs", "Electricifcation", "Low Natural Gas Price", "High Natural Gas Price", "Mid-case with 95% Decarbonization by 2050", "Mid-case with 100% Decarbonization by 2035", "Mid-case (with tax credit phaseout)", "Low Renewable Energy and Battery Costs (with tax credit phaseout)"]     
-        cambium_location_type::String =  "GEA Regions", # Geographic boundary at which emissions are calculated. Default: "GEA Regions". Options: ["Nations", "GEA Regions", "States"] 
+        cambium_scenario::String = "Mid-case", # Cambium Scenario for evolution of electricity sector (see Cambium documentation for descriptions). 
+            ## Options: ["Mid-case",  "Mid-case with tax credit expiration",  "Low renewable energy cost", "Low renewable energy cost with tax credit expiration",   "High renewable energy cost", "High electrification",  "Low natrual gas prices", "High natrual gas prices", "Mid-case with 95% decarbonization by 2050",  "Mid-case with 100% decarbonization by 2035"]
+        cambium_location_type::String =  "GEA Regions", # Geographic boundary at which emissions are calculated. Options: ["Nations", "GEA Regions", "States"] 
         cambium_metric_col::String =  "lrmer_co2e", # Emissions metric. Default: "lrmer_co2e" - Long-run marginal emissions rate for CO2-equivalant, combined combustion and pre-combustion emissions rates. Options: See metric definitions and names in the Cambium documentation
-        cambium_start_year::Int = 2024, # First year of operation of system. Default: 2024 # Options: any year now through 2050.
-        cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions will be averaged over this period. Default: analysis_years (from Financial struct)
+        cambium_start_year::Int = 2024, # First year of operation of system. # Options: any year now through 2050.
+        cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions will be averaged over this period. 
         cambium_grid_level::String = "enduse", # Busbar refers to point where bulk generating station connects to grid; enduse refers to point of consumption (includes distribution loss rate)
 
         # Climate Option 2: Use CO2 emissions data from the EPA's AVERT based on the AVERT emissions region and specify annual percent decrease
@@ -563,8 +563,8 @@ function cambium_emissions_profile(; scenario::String,
 
     payload=Dict(
             "project_uuid" => project_uuid,
-            "scenario" => scenario, # Only the Mid-case is currently available for testing?
-            "location_type" => location_type,  # Nations, States, GEA Regions, Balancing Areas (Default: GEA Regions)
+            "scenario" => scenario,
+            "location_type" => location_type,  # Nations, States, GEA Regions (Default: GEA Regions)
             # "location" => "Colorado", # e.g., Contiguous United States, Colorado, Kansas, p33, p34 
             "latitude" => string(round(latitude, digits=3)),
             "longitude" => string(round(longitude, digits=3)), 
