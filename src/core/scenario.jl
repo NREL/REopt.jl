@@ -25,6 +25,7 @@ struct Scenario <: AbstractScenario
     cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     steam_turbine::Union{SteamTurbine, Nothing}
     electric_heater::Union{ElectricHeater, Nothing}
+    ashp::Union{ASHP, Nothing}
 end
 
 """
@@ -633,6 +634,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         electric_heater = ElectricHeater(;dictkeys_tosymbols(d["ElectricHeater"])...)
     end
 
+    ashp = nothing
+    if haskey(d, "ASHP") && d["ASHP"]["max_mmbtu_per_hour"] > 0.0
+        ashp = ASHP(;dictkeys_tosymbols(d["ASHP"])...)
+    end
+
     return Scenario(
         settings,
         site, 
@@ -658,7 +664,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         space_heating_thermal_load_reduction_with_ghp_kw,
         cooling_thermal_load_reduction_with_ghp_kw,
         steam_turbine,
-        electric_heater
+        electric_heater,
+        ashp
     )
 end
 

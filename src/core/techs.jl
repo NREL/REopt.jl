@@ -29,6 +29,7 @@ function Techs(p::REoptInputs, s::BAUScenario)
     techs_can_serve_dhw = String[]
     techs_can_serve_process_heat = String[]
     ghp_techs = String[]
+    ashp_techs = String[]
 
     if p.s.generator.existing_kw > 0
         push!(all_techs, "Generator")
@@ -85,7 +86,8 @@ function Techs(p::REoptInputs, s::BAUScenario)
         techs_can_serve_space_heating,
         techs_can_serve_dhw,
         techs_can_serve_process_heat,
-        ghp_techs
+        ghp_techs,
+        ashp_techs
     )
 end
 
@@ -124,6 +126,7 @@ function Techs(s::Scenario)
     techs_can_serve_dhw = String[] 
     techs_can_serve_process_heat = String[]
     ghp_techs = String[]
+    ashp_techs = String[]
 
     if s.wind.max_kw > 0
         push!(all_techs, "Wind")
@@ -260,6 +263,24 @@ function Techs(s::Scenario)
         end
         if s.electric_heater.can_serve_process_heat
             push!(techs_can_serve_process_heat, "ElectricHeater")
+        end
+    end
+
+    if !isnothing(s.ashp)
+        push!(all_techs, "ASHP")
+        push!(heating_techs, "ASHP")
+        push!(ashp_techs, "ASHP")
+        if s.ashp.can_supply_steam_turbine
+            push!(techs_can_supply_steam_turbine, "ASHP")
+        end
+        if s.ashp.can_serve_space_heating
+            push!(techs_can_serve_space_heating, "ASHP")
+        end
+        if s.ashp.can_serve_dhw
+            push!(techs_can_serve_dhw, "ASHP")
+        end
+        if s.ashp.can_serve_process_heat
+            push!(techs_can_serve_process_heat, "ASHP")
         end
     end
 

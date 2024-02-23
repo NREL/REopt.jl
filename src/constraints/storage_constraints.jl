@@ -118,7 +118,8 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
                     )
         end
     end
-
+    
+    # # Constraint (4f)-1b: Electric Heater
     if !isempty(p.techs.electric_heater)
         for t in p.techs.electric_heater
             if !isempty(p.techs.steam_turbine) && (t in p.techs.can_supply_steam_turbine)
@@ -134,8 +135,25 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
             end
         end
     end
+    
+    # # Constraint (4f)-1c: Air-source Heat Pump (ASHP)
+    if !isempty(p.techs.ashp)
+        for t in p.techs.ashp
+            if !isempty(p.techs.steam_turbine) && (t in p.techs.can_supply_steam_turbine)
+                @constraint(m, [b in p.s.storage.types.hot, q in p.heating_loads, ts in p.time_steps],
+                        m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] + m[Symbol("dvThermalToSteamTurbine"*_n)][t,q,ts]  <=
+                        m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
+                        )
+            else
+                @constraint(m, [b in p.s.storage.types.hot, q in p.heating_loads, ts in p.time_steps],
+                        m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts]  <=
+                        m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
+                        )
+            end
+        end
+    end
 
-    # Constraint (4f)-1b: SteamTurbineTechs
+    # Constraint (4f)-1d: SteamTurbineTechs
 	if !isempty(p.techs.steam_turbine)
 		@constraint(m, SteamTurbineTechProductionFlowCon[b in p.s.storage.types.hot, t in p.techs.steam_turbine, q in p.heating_loads, ts in p.time_steps],
 			m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] <=  m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
