@@ -317,7 +317,8 @@ function Techs(s::Scenario)
         techs_can_serve_space_heating,
         techs_can_serve_dhw,
         techs_can_serve_process_heat,
-        ghp_techs
+        ghp_techs,
+        ashp_techs
     )
 end
 
