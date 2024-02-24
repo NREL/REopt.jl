@@ -1,6 +1,6 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 using CPLEX
-
+# using GAMS
 
 #=
 add a time-of-export rate that is greater than retail rate for the month of January,
@@ -183,9 +183,10 @@ end
     d["ElectricTariff"]["monthly_energy_rates"] = [0,0,0,0,0,0,0,0,0,0,0,0]
     s = Scenario(d)
     p = REoptInputs(s)
-    m = Model(GAMS.Optimizer)
-    set_optimizer_attribute(Model(GAMS.Optimizer, "OUTPUTLOG" => 0), "Solver", "CPLEX")
-    set_optimizer_attribute(Model(GAMS.Optimizer, "OUTPUTLOG" => 0), GAMS.Solver(), "CPLEX")
+    m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
+    #m = Model(GAMS.Optimizer)
+    #set_optimizer_attribute(Model(GAMS.Optimizer, "CPX_PARAM_SCRIND" => 0), "Solver", "CPLEX")
+    #set_optimizer_attribute(Model(GAMS.Optimizer, "CPX_PARAM_SCRIND" => 0), GAMS.Solver(), "CPLEX")
     results = run_reopt(m, p)
 
     annual_thermal_prod = 0.8 * 8760  #80% efficient boiler --> 0.8 MMBTU of heat load per hour
