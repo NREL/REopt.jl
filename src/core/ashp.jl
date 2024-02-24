@@ -8,7 +8,8 @@ struct ASHP <: AbstractThermalTech
     macrs_option_years::Int
     macrs_bonus_fraction::Real
     can_supply_steam_turbine::Bool
-    cop::Array{<:Real,1} = Real[]
+    #cop::Array{<:Real,1} = Real[]
+    cop::Real
     can_serve_dhw::Bool
     can_serve_space_heating::Bool
     can_serve_process_heat::Bool
@@ -46,7 +47,8 @@ function ASHP(;
         macrs_option_years::Int = 0,
         macrs_bonus_fraction::Real = 0.0,
         can_supply_steam_turbine::Union{Bool, Nothing} = nothing,
-        cop::Array{<:Real,1} = Real[],
+        #cop::Array{<:Real,1} = Real[],
+        cop::Real,
         can_serve_dhw::Bool = true,
         can_serve_space_heating::Bool = true,
         can_serve_process_heat::Bool = true
