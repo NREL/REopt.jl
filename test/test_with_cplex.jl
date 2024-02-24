@@ -163,6 +163,44 @@ end
     @test r["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ expected_demand_cost
 end
 
+@testset "ASHP" begin
+    d = JSON.parsefile("./scenarios/ashp.json")
+    d["SpaceHeatingLoad"]["annual_mmbtu"] = 0.5 * 8760
+    d["DomesticHotWaterLoad"]["annual_mmbtu"] = 0.5 * 8760
+    s = Scenario(d)
+    p = REoptInputs(s)
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, p)
+
+    #first run: Boiler produces the required heat instead of ASHP - ASHP is not purchased here
+    @test results["ASHP"]["size_mmbtu_per_hour"] ≈ 0.0 atol=0.1
+    @test results["ASHP"]["annual_thermal_production_mmbtu"] ≈ 0.0 atol=0.1
+    @test results["ASHP"]["annual_electric_consumption_kwh"] ≈ 0.0 atol=0.1
+    @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ 87600.0 atol=0.1
+    
+    d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = 100
+    d["ASHP"]["installed_cost_per_mmbtu_per_hour"] = 1.0
+    d["ElectricTariff"]["monthly_energy_rates"] = [0,0,0,0,0,0,0,0,0,0,0,0]
+    s = Scenario(d)
+    p = REoptInputs(s)
+    m = Model(GAMS.Optimizer)
+    set_optimizer_attribute(Model(GAMS.Optimizer, "OUTPUTLOG" => 0), "Solver", "CPLEX")
+    set_optimizer_attribute(Model(GAMS.Optimizer, "OUTPUTLOG" => 0), GAMS.Solver(), "CPLEX")
+    results = run_reopt(m, p)
+
+    annual_thermal_prod = 0.8 * 8760  #80% efficient boiler --> 0.8 MMBTU of heat load per hour
+    annual_ashp_consumption = annual_thermal_prod * REopt.KWH_PER_MMBTU  #1.0 COP
+    annual_energy_supplied = 87600 + annual_ashp_consumption
+
+    #Second run: ASHP produces the required heat with free electricity
+    @test results["ASHP"]["size_mmbtu_per_hour"] ≈ 0.8 atol=0.1
+    @test results["ASHP"]["annual_thermal_production_mmbtu"] ≈ annual_thermal_prod rtol=1e-4
+    @test results["ASHP"]["annual_electric_consumption_kwh"] ≈ annual_ashp_consumption rtol=1e-4
+    @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ annual_energy_supplied rtol=1e-4
+
+end
+
+
 ## equivalent REopt API Post for test 2:
 #   NOTE have to hack in API levelization_factor to get LCC within 5e-5 (Mosel tol)
 # {"Scenario": {
