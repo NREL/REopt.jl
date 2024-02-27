@@ -320,6 +320,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         if !isempty(p.techs.steam_turbine)
             add_steam_turbine_constraints(m, p)
             m[:TotalPerUnitProdOMCosts] += m[:TotalSteamTurbinePerUnitProdOMCosts]
+			#TODO: review this constraint and see if it's intended.  This matches the legacy implementation and tests pass but should the turbine be allowed to send heat to waste in order to generate electricity?
+			@constraint(m, steamTurbineNoWaste[t in p.techs.steam_turbine, q in p.heating_loads, ts in p.time_steps],
+				m[:dvProductionToWaste][t,q,ts] == 0.0
+			)
         end
 
 		if !isempty(p.techs.electrolyzer)
