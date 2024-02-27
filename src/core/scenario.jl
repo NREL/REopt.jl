@@ -596,9 +596,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             end                    
             append!(ghp_option_list, [GHP(ghpghx_response, ghp_inputs_removed_ghpghx_params)])
             # Print out ghpghx_response for loading into a future run without running GhpGhx.jl again
-            # open("scenarios/ghpghx_response.json","w") do f
-            #     JSON.print(f, ghpghx_response)
-            # end                
+            #open("scenarios/ghpghx_response.json","w") do f
+            #    JSON.print(f, ghpghx_response)
+            #end                
         end
     # If ghpghx_responses is included in inputs, do NOT run GhpGhx.jl model and use already-run ghpghx result as input to REopt
     elseif eval_ghp && get_ghpghx_from_input
