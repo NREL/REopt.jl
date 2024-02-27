@@ -35,7 +35,8 @@ function add_electric_heater_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
 		    sum(m[:dvProductionToStorage][b,"ElectricHeater",ts] for b in p.s.storage.types.hot)
             )
     else
-        ElectricHeaterToHotTESKW = zeros(length(p.time_steps))
+        @expression(m, ElectricHeaterToHotTESKW[ts in p.time_steps], 0.0)
+        @expression(m, ElectricHeaterToHotTESByQualityKW[q in p.heating_loads, ts in p.time_steps], 0.0)
     end
 	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(ElectricHeaterToHotTESKW) / KWH_PER_MMBTU, digits=3)
 
