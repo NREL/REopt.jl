@@ -429,7 +429,7 @@ function setup_tech_inputs(s::AbstractScenario)
     end
 
     if "ASHP" in techs.all
-        setup_airsource_hp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, cooling_cop)
+        setup_ashp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, cooling_cop)
     else
         heating_cop["ASHP"] = 3.0
         cooling_cop["ASHP"] = 3.0
@@ -890,12 +890,12 @@ function setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, o
 
 end
 
-function setup_airsource_hp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, cooling_cop)
+function setup_ashp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, cooling_cop)
     max_sizes["ASHP"] = s.ashp.max_kw
     min_sizes["ASHP"] = s.ashp.min_kw
     om_cost_per_kw["ASHP"] = s.ashp.om_cost_per_kw
-    heating_cop["ASHP"] = s.ashp.cop
-    cooling_cop["ASHP"] = s.ashp.cop
+    heating_cop["ASHP"] = s.ashp.heating_cop
+    cooling_cop["ASHP"] = s.ashp.cooling_cop
 
     if s.ashp.macrs_option_years in [5, 7]
         cap_cost_slope["ASHP"] = effective_cost(;

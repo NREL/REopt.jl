@@ -9,7 +9,8 @@ struct ASHP <: AbstractThermalTech
     macrs_bonus_fraction::Real
     can_supply_steam_turbine::Bool
     #cop::Array{<:Real,1} = Real[]
-    cop::Real
+    heating_cop::Real
+    cooling_cop::Real
     can_serve_dhw::Bool
     can_serve_space_heating::Bool
     can_serve_process_heat::Bool
@@ -33,6 +34,8 @@ function ASHP(;
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
     can_supply_steam_turbine::Union{Bool, nothing} = nothing # If the boiler can supply steam to the steam turbine for electric production
     cop::Array{<:Real,1} = Real[], # COP of the heating (i.e., thermal produced / electricity consumed)
+    heating_cop::Array{<:Real,1} = Real[], # COP of the heating (i.e., thermal produced / electricity consumed)
+    cooling_cop::Array{<:Real,1} = Real[], # COP of the heating (i.e., thermal produced / electricity consumed)
     can_serve_dhw::Bool = true # If ASHP can supply heat to the domestic hot water load
     can_serve_space_heating::Bool = true # If ASHP can supply heat to the space heating load
     can_serve_process_heat::Bool = true # If ASHP can supply heat to the process heating load
@@ -48,7 +51,8 @@ function ASHP(;
         macrs_bonus_fraction::Real = 0.0,
         can_supply_steam_turbine::Union{Bool, Nothing} = nothing,
         #cop::Array{<:Real,1} = Real[],
-        cop::Real,
+        heating_cop::Real,
+        cooling_cop::Real,
         can_serve_dhw::Bool = true,
         can_serve_space_heating::Bool = true,
         can_serve_process_heat::Bool = true
@@ -66,8 +70,11 @@ function ASHP(;
     if isnothing(can_supply_steam_turbine)
         can_supply_steam_turbine = defaults["can_supply_steam_turbine"]
     end
-    if isnothing(cop)
-        cop = defaults["cop"]
+    if isnothing(heating_cop)
+        heating_cop = defaults["heating_cop"]
+    end
+    if isnothing(cooling_cop)
+        cooling_cop = defaults["cooling_cop"]
     end
 
     # Convert max sizes, cost factors from mmbtu_per_hour to kw
@@ -86,7 +93,8 @@ function ASHP(;
         macrs_option_years,
         macrs_bonus_fraction,
         can_supply_steam_turbine,
-        cop,
+        heating_cop,
+        cooling_cop,
         can_serve_dhw,
         can_serve_space_heating,
         can_serve_process_heat
