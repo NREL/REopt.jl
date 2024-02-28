@@ -26,22 +26,6 @@ Classify the change according to the following categories:
 ### Changed
 - In `core/pv.jl` a change was made to make sure we are using the same assumptions as PVWatts guidelines, the default `tilt` angle for a fixed array should be 20 degrees, irrespective of it being a rooftop or ground-mounted (open-rack) system. By default the `tilt` will be set to 20 degrees for ground-mount and rooftop, and 0 degrees for axis-tracking (`array_type = 3 or 4`)
 
-> "The PVWatts® default value for the tilt angle depends on the array type: For a fixed array, the default value is 20 degrees, and for one-axis tracking the default value is zero. A common rule of thumb for fixed arrays is to set the tilt angle to the latitude of the system's location to maximize the system's total electrical output over the year. Use a lower tilt angle favor peak production in the summer months when the sun is high in the sky, or a higher tilt angle to increase output during winter months. Higher tilt angles tend to cost more for racking and mounting hardware, and may increase the risk of wind damage to the array."
-
-
-
-## Develop 2024-02-08
-### Changed
-- Changed **macrs_bonus_fraction** to from 0.80 to 0.60 (60%) for CHP, ElectricStorage, ColdThermalStorage, HotThermalStorage GHP, PV, Wind
-
-## Develop 2024-02-27
-### Fixed
-- Avoid adjusting rates twice when time_steps_per_hour > 1 
-
-## Develop 2024-02-08
-### Changed
-- Changed **macrs_bonus_fraction** to from 0.80 to 0.60 (60%) for CHP, ElectricStorage, ColdThermalStorage, HotThermalStorage GHP, PV, Wind
-
 ## Develop 2024-01-16
 ### Fixed
 - In `reopt.jl`, group objective function incentives (into **ObjectivePenalties**) and avoid directly modifying m[:Costs]. Previously, some of these were incorrectly included in the reported **Financial.lcc**. 
