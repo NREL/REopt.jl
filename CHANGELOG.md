@@ -38,6 +38,10 @@ Classify the change according to the following categories:
 ### Fixed
 - Avoid adjusting rates twice when time_steps_per_hour > 1 
 
+## Develop 2024-02-08
+### Changed
+- Changed **macrs_bonus_fraction** to from 0.80 to 0.60 (60%) for CHP, ElectricStorage, ColdThermalStorage, HotThermalStorage GHP, PV, Wind
+
 ## Develop 2024-01-16
 ### Fixed
 - In `reopt.jl`, group objective function incentives (into **ObjectivePenalties**) and avoid directly modifying m[:Costs]. Previously, some of these were incorrectly included in the reported **Financial.lcc**. 
