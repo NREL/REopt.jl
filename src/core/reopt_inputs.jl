@@ -894,8 +894,8 @@ function setup_ashp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_
     max_sizes["ASHP"] = s.ashp.max_kw
     min_sizes["ASHP"] = s.ashp.min_kw
     om_cost_per_kw["ASHP"] = s.ashp.om_cost_per_kw
-    heating_cop["ASHP"] = s.ashp.heating_cop
-    cooling_cop["ASHP"] = s.ashp.cooling_cop
+    heating_cop["ASHP"] = s.ashp.cop_heating
+    cooling_cop["ASHP"] = s.ashp.cop_cooling
 
     if s.ashp.macrs_option_years in [5, 7]
         cap_cost_slope["ASHP"] = effective_cost(;
