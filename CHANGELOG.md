@@ -23,6 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop 2024-02-08
+### Changed
+- Changed **macrs_bonus_fraction** to from 0.80 to 0.60 (60%) for CHP, ElectricStorage, ColdThermalStorage, HotThermalStorage GHP, PV, Wind
+
 ## Develop - 2023-06-26
 ### Changed
 - Changed default source for CO2 grid emissions values to NREL's Cambium 2022 Database (by default: CO2e, long-run marginal emissions rates levelized (averaged) over the analysis period, assuming start year 2024). Added new emissions inputs and call to Cambium API in `src/core/electric_utility.jl`. Included option for user to use AVERT data for CO2 using **co2_from_avert** boolian. 
