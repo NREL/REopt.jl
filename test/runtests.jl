@@ -2361,31 +2361,46 @@ else  # run HiGHS tests
             post["ElectricLoad"]["year"] = 2021 # 2021 First day is Fri
             scen = Scenario(post)
         
+            @test scen.electric_utility.avert_emissions_region == "Rocky Mountains"
+            @test scen.electric_utility.distance_to_avert_emissions_region_meters ≈ 0 atol=1e-5
             @test scen.electric_utility.cambium_emissions_region == "RMPAc"
             @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) / 8760 ≈ 0.394608 rtol=1e-3
             @test scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh[1] ≈ 0.677942 rtol=1e-4 # Should start on Friday
             @test scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh[8760] ≈ 0.6598207198 rtol=1e-5 # Should end on Friday 
             @test sum(scen.electric_utility.emissions_factor_series_lb_SO2_per_kwh) / 8760 ≈ 0.00061165 rtol=1e-5 # check avg from AVERT data for RM region
             @test scen.electric_utility.emissions_factor_CO2_decrease_fraction ≈ 0 atol=1e-5 # should be 0 with Cambium data
-        
             @test scen.electric_utility.emissions_factor_SO2_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["SO2"] # should be 2.163% for AVERT data
+            @test scen.electric_utility.emissions_factor_NOx_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["NOx"]
+            @test scen.electric_utility.emissions_factor_PM25_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["PM25"]
+
             # 2) AK location
             city = "Fairbanks"
             post["Site"]["latitude"] = cities[city][1]
             post["Site"]["longitude"] = cities[city][2]
             scen = Scenario(post)
         
+            @test scen.electric_utility.avert_emissions_region == "Alaska"
+            @test scen.electric_utility.distance_to_avert_emissions_region_meters ≈ 0 atol=1e-5
+            @test scen.electric_utility.cambium_emissions_region == "NA - Cambium data not used for climate emissions"
             @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) / 8760 ≈ 1.29199999 rtol=1e-3 # check that data from eGRID (AVERT data file) is used
-        
             @test scen.electric_utility.emissions_factor_CO2_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["CO2e"] # should get updated to this value
+            @test scen.electric_utility.emissions_factor_SO2_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["SO2"] # should be 2.163% for AVERT data
+            @test scen.electric_utility.emissions_factor_NOx_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["NOx"]
+            @test scen.electric_utility.emissions_factor_PM25_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["PM25"]        
+
             # 3) International location
             city = "Santiago"
             post["Site"]["latitude"] = cities[city][1]
             post["Site"]["longitude"] = cities[city][2]
             scen = Scenario(post)
             
+            @test scen.electric_utility.avert_emissions_region == ""
+            @test scen.electric_utility.distance_to_avert_emissions_region_meters ≈ 5.521032136418236e6 atol=1.0
+            @test scen.electric_utility.cambium_emissions_region == "NA - Cambium data not used for climate emissions"
             @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) ≈ 0 
             @test sum(scen.electric_utility.emissions_factor_series_lb_NOx_per_kwh) ≈ 0 
+            @test sum(scen.electric_utility.emissions_factor_series_lb_SO2_per_kwh) ≈ 0 
+            @test sum(scen.electric_utility.emissions_factor_series_lb_PM25_per_kwh) ≈ 0 
         
         end
 
