@@ -48,11 +48,10 @@ Classify the change according to the following categories:
 - In `test_with_xpress.jl`, updated "Emissions and Renewable Energy Percent" expected values to account for load year adjustment. 
 - In `src/core/electric_utility.jl`, error when user-provided emissions series does not match timestep per hour, as is done in other cases of incorrect user-provided data.
  
-## Develop 2024-02-08
+## v0.40.0
 ### Changed
 - Changed **macrs_bonus_fraction** to from 0.80 to 0.60 (60%) for CHP, ElectricStorage, ColdThermalStorage, HotThermalStorage GHP, PV, Wind
- 
-## Develop 2024-01-16
+
 ### Fixed
 - In `reopt.jl`, group objective function incentives (into **ObjectivePenalties**) and avoid directly modifying m[:Costs]. Previously, some of these were incorrectly included in the reported **Financial.lcc**. 
 
