@@ -23,24 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop - 2024-02-29
-### Changed
-- In `core/pv.jl` a change was made to make sure we are using the same assumptions as PVWatts guidelines, the default `tilt` angle for a fixed array should be 20 degrees, irrespective of it being a rooftop or ground-mounted (open-rack) system. By default the `tilt` will be set to 20 degrees for ground-mount and rooftop, and 0 degrees for axis-tracking (`array_type = 3 or 4`)
-
-## Develop 2024-02-08
+## v0.40.0
 ### Changed
 - Changed **macrs_bonus_fraction** to from 0.80 to 0.60 (60%) for CHP, ElectricStorage, ColdThermalStorage, HotThermalStorage GHP, PV, Wind
 
-### Added
-- In `src/REopt.jl`, added **cambium_emissions_profile** as an export for use via the REopt_API. 
-- In `src/results/electric_utility.jl` **cambium_emissions_region**
-
-### Fixed 
-- Adjust grid emissions profiles for day of week alignment with load_year.
-- In `test_with_xpress.jl`, updated "Emissions and Renewable Energy Percent" expected values to account for load year adjustment. 
-- In `src/core/electric_utility.jl`, error when user-provided emissions series does not match timestep per hour, as is done in other cases of incorrect user-provided data.
-  
-## Develop 2024-01-16
 ### Fixed
 - In `reopt.jl`, group objective function incentives (into **ObjectivePenalties**) and avoid directly modifying m[:Costs]. Previously, some of these were incorrectly included in the reported **Financial.lcc**. 
 
