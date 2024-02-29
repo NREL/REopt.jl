@@ -100,6 +100,12 @@ const FUEL_DEFAULTS = Dict(
         "diesel_oil"=>0.0
     )
 )
+const EMISSIONS_DECREASE_DEFAULTS = Dict(
+    "CO2e" => 0.02163,
+    "NOx" => 0.02163,
+    "SO2" => 0.02163,
+    "PM25" => 0.02163
+)
 
 include("logging.jl")
 
