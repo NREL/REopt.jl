@@ -27,7 +27,7 @@
     can_curtail::Bool = false
 
     macrs_option_years::Int = 0
-    macrs_bonus_fraction::Float64 = 1.0    
+    macrs_bonus_fraction::Float64 = 0.0    
 ```
 
 """
@@ -56,7 +56,7 @@ Base.@kwdef mutable struct SteamTurbine <: AbstractSteamTurbine
     can_curtail::Bool = false
 
     macrs_option_years::Int = 0
-    macrs_bonus_fraction::Float64 = 1.0   
+    macrs_bonus_fraction::Float64 = 0.0   
 end
 
 
