@@ -33,7 +33,7 @@
     emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom CO2 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour). Ensure emissions year aligns with load year.
 
     # Used with Climate Options 2 or 3: Annual percent decrease in CO2 emissions factors
-    emissions_factor_CO2_decrease_fraction::Union{Nothing, Real} = co2_from_avert || length(emissions_factor_series_lb_CO2_per_kwh) > 0  ? 0.02163 : nothing , # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase.
+    emissions_factor_CO2_decrease_fraction::Union{Nothing, Real} = co2_from_avert || length(emissions_factor_series_lb_CO2_per_kwh) > 0  ? EMISSIONS_DECREASE_DEFAULTS["CO2e"] : nothing , # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase.
 
     ### Grid Health Emissions Inputs ###
     # Health Option 1 (Default): Use health emissions data from the EPA's AVERT based on the AVERT emissions region and specify annual percent decrease
@@ -45,9 +45,9 @@
     emissions_factor_series_lb_PM25_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom PM2.5 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour). Ensure emissions year aligns with load year.
 
     # Used with Health Options 1 or 2: Annual percent decrease in health emissions factors: 
-    emissions_factor_NOx_decrease_fraction::Real = 0.02163, 
-    emissions_factor_SO2_decrease_fraction::Real = 0.02163,
-    emissions_factor_PM25_decrease_fraction::Real = 0.02163
+    emissions_factor_NOx_decrease_fraction::Real = EMISSIONS_DECREASE_DEFAULTS["NOx"], 
+    emissions_factor_SO2_decrease_fraction::Real = EMISSIONS_DECREASE_DEFAULTS["SO2"],
+    emissions_factor_PM25_decrease_fraction::Real = EMISSIONS_DECREASE_DEFAULTS["PM25"]
 ```
 
 !!! note "Outage modeling"
@@ -174,7 +174,7 @@ struct ElectricUtility
         emissions_factor_series_lb_CO2_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom CO2 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour)
 
         # Used with Climate Options 2 or 3: Annual percent decrease in CO2 emissions factors
-        emissions_factor_CO2_decrease_fraction::Union{Nothing, Real} = co2_from_avert || length(emissions_factor_series_lb_CO2_per_kwh) > 0  ? 0.02163 : nothing , # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase.
+        emissions_factor_CO2_decrease_fraction::Union{Nothing, Real} = co2_from_avert || length(emissions_factor_series_lb_CO2_per_kwh) > 0  ? EMISSIONS_DECREASE_DEFAULTS["CO2e"] : nothing , # Annual percent decrease in the total annual CO2 emissions rate of the grid. A negative value indicates an annual increase.
 
         ### Grid Health Emissions Inputs ###
         # Health Option 1 (Default): Use health emissions data from the EPA's AVERT based on the AVERT emissions region and specify annual percent decrease
@@ -186,9 +186,9 @@ struct ElectricUtility
         emissions_factor_series_lb_PM25_per_kwh::Union{Real,Array{<:Real,1}} = Float64[], # Custom PM2.5 emissions profile. Can be scalar or timeseries (aligned with time_steps_per_hour)
 
         # Used with Health Options 1 or 2: Annual percent decrease in health emissions factors: 
-        emissions_factor_NOx_decrease_fraction::Real = 0.02163, 
-        emissions_factor_SO2_decrease_fraction::Real = 0.02163,
-        emissions_factor_PM25_decrease_fraction::Real = 0.02163,
+        emissions_factor_NOx_decrease_fraction::Real = EMISSIONS_DECREASE_DEFAULTS["NOx"], 
+        emissions_factor_SO2_decrease_fraction::Real = EMISSIONS_DECREASE_DEFAULTS["SO2"],
+        emissions_factor_PM25_decrease_fraction::Real = EMISSIONS_DECREASE_DEFAULTS["PM25"],
         )
 
         is_MPC = isnothing(latitude) || isnothing(longitude)
@@ -209,7 +209,7 @@ struct ElectricUtility
             elseif !co2_from_avert && region_abbr ∈ ["AKGD","HIMS","HIOA"] && length(emissions_factor_series_lb_CO2_per_kwh) == 0
                 co2_from_avert = true # Must use "avert" data (actually eGRID) because AK and HI are not in Cambium
                 if isnothing(emissions_factor_CO2_decrease_fraction)
-                    emissions_factor_CO2_decrease_fraction = 0.02163
+                    emissions_factor_CO2_decrease_fraction = EMISSIONS_DECREASE_DEFAULTS["CO2e"]
                     @warn("Using eGRID data for region $(region_abbr) for all grid emissions factors and setting emissions_factor_CO2_decrease_fraction = $(emissions_factor_CO2_decrease_fraction).")
                 else
                     @warn("Using eGRID data for region $(region_abbr) for all grid emissions factors.")
