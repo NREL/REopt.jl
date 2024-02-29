@@ -99,6 +99,10 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     if "SteamTurbine" in p.techs.all
         add_steam_turbine_results(m, p, d; _n)
     end
+
+    if !isempty(p.techs.electric_heater)
+        add_electric_heater_results(m, p, d; _n)
+    end
     
     if !isempty(p.techs.electrolyzer)
         add_electrolyzer_results(m, p, d; _n)
@@ -142,6 +146,11 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("Financial", "lifecycle_om_costs_after_tax"),
         ("Financial", "year_one_om_costs_before_tax"),
         ("Financial", "lifecycle_fuel_costs_after_tax"),
+        ("Financial", "lifecycle_chp_standby_cost_after_tax"),
+        ("Financial", "lifecycle_elecbill_after_tax"),
+        ("Financial", "lifecycle_production_incentive_after_tax"),
+        ("Financial", "lifecycle_outage_cost"),
+        ("Financial", "lifecycle_MG_upgrade_and_fuel_cost"),
         ("ElectricTariff", "year_one_energy_cost_before_tax"),
         ("ElectricTariff", "year_one_demand_cost_before_tax"),
         ("ElectricTariff", "year_one_fixed_cost_before_tax"),

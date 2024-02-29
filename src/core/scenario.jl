@@ -24,6 +24,7 @@ struct Scenario <: AbstractScenario
     space_heating_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     steam_turbine::Union{SteamTurbine, Nothing}
+    electric_heater::Union{ElectricHeater, Nothing}
     electrolyzer::Union{Electrolyzer, Nothing}
     compressor::Union{Compressor, Nothing}
     fuel_cell::Union{FuelCell, Nothing}
@@ -53,6 +54,7 @@ A Scenario struct can contain the following keys:
 - [AbsorptionChiller](@ref) (optional)
 - [GHP](@ref) (optional, can be Array)
 - [SteamTurbine](@ref) (optional)
+- [ElectricHeater](@ref) (optional)
 - [Electrolyzer](@ref) (optional)
 - [Compressor](@ref) (optional)
 - [FuelCell](@ref) (optional)
@@ -120,6 +122,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             latitude=site.latitude, longitude=site.longitude, 
                                             CO2_emissions_reduction_min_fraction=site.CO2_emissions_reduction_min_fraction,
                                             CO2_emissions_reduction_max_fraction=site.CO2_emissions_reduction_max_fraction,
+                                            min_resil_time_steps=site.min_resil_time_steps,
                                             include_climate_in_objective=settings.include_climate_in_objective,
                                             include_health_in_objective=settings.include_health_in_objective,
                                             off_grid_flag=settings.off_grid_flag,
@@ -650,6 +653,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         end
     end
 
+    electric_heater = nothing
+    if haskey(d, "ElectricHeater") && d["ElectricHeater"]["max_mmbtu_per_hour"] > 0.0
+        electric_heater = ElectricHeater(;dictkeys_tosymbols(d["ElectricHeater"])...)
+    end
+
     return Scenario(
         settings,
         site, 
@@ -675,6 +683,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         space_heating_thermal_load_reduction_with_ghp_kw,
         cooling_thermal_load_reduction_with_ghp_kw,
         steam_turbine,
+        electric_heater,
         electrolyzer,
         compressor,
         fuel_cell

@@ -1479,7 +1479,7 @@ end
             @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.132118 atol=1e-3 # 0.1354 atol=1e-3
             # CO2 emissions - totals ≈  from grid, from fuelburn, ER, $/tCO2 breakeven
             @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.8 atol=1e-3 # 0.8
-            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 373.9 atol=1e-1
+            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 374.0 atol=1e-1
             @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 14.2 atol=1
             @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 70.99 atol=1
             @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
@@ -1706,6 +1706,41 @@ end
             @test sum(tech_to_thermal_load[tech]["steamturbine"]) == 0.0
         end
     end
+end
+
+@testset "Electric Heater" begin
+    d = JSON.parsefile("./scenarios/electric_heater.json")
+    d["SpaceHeatingLoad"]["annual_mmbtu"] = 0.5 * 8760
+    d["DomesticHotWaterLoad"]["annual_mmbtu"] = 0.5 * 8760
+    s = Scenario(d)
+    p = REoptInputs(s)
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, p)
+
+    #first run: Boiler produces the required heat instead of the electric heater - electric heater should not be purchased
+    @test results["ElectricHeater"]["size_mmbtu_per_hour"] ≈ 0.0 atol=0.1
+    @test results["ElectricHeater"]["annual_thermal_production_mmbtu"] ≈ 0.0 atol=0.1
+    @test results["ElectricHeater"]["annual_electric_consumption_kwh"] ≈ 0.0 atol=0.1
+    @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ 87600.0 atol=0.1
+    
+    d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = 100
+    d["ElectricHeater"]["installed_cost_per_mmbtu_per_hour"] = 1.0
+    d["ElectricTariff"]["monthly_energy_rates"] = [0,0,0,0,0,0,0,0,0,0,0,0]
+    s = Scenario(d)
+    p = REoptInputs(s)
+    m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+    results = run_reopt(m, p)
+
+    annual_thermal_prod = 0.8 * 8760  #80% efficient boiler --> 0.8 MMBTU of heat load per hour
+    annual_electric_heater_consumption = annual_thermal_prod * REopt.KWH_PER_MMBTU  #1.0 COP
+    annual_energy_supplied = 87600 + annual_electric_heater_consumption
+
+    #Second run: ElectricHeater produces the required heat with free electricity
+    @test results["ElectricHeater"]["size_mmbtu_per_hour"] ≈ 0.8 atol=0.1
+    @test results["ElectricHeater"]["annual_thermal_production_mmbtu"] ≈ annual_thermal_prod rtol=1e-4
+    @test results["ElectricHeater"]["annual_electric_consumption_kwh"] ≈ annual_electric_heater_consumption rtol=1e-4
+    @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ annual_energy_supplied rtol=1e-4
+
 end
 
 @testset "Custom REopt logger" begin

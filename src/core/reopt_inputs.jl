@@ -61,6 +61,7 @@ struct REoptInputs <: AbstractInputs
     tech_emissions_factors_SO2::Dict{String, <:Real} # (techs)
     tech_emissions_factors_PM25::Dict{String, <:Real} # (techs)
     techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
+    heating_cop::Dict{String, <:Real} # (techs.electric_heater)
     unavailability::Dict{String, Array{Float64,1}}  # Dict by tech of unavailability profile
 end
 ```
@@ -125,6 +126,7 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     tech_emissions_factors_SO2::Dict{String, <:Real} # (techs)
     tech_emissions_factors_PM25::Dict{String, <:Real} # (techs)
     techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
+    heating_cop::Dict{String, <:Real} # (techs.electric_heater)
     unavailability::Dict{String, Array{Float64,1}} # (techs.elec)
 end
 
@@ -160,7 +162,8 @@ function REoptInputs(s::AbstractScenario)
         production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
         seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
         tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
-        tech_emissions_factors_PM25, cop, techs_operating_reserve_req_fraction, thermal_cop, fuel_cost_per_kwh = setup_tech_inputs(s)
+        tech_emissions_factors_PM25, cop, techs_operating_reserve_req_fraction, thermal_cop, fuel_cost_per_kwh, 
+        heating_cop = setup_tech_inputs(s)
 
     pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
 
@@ -249,6 +252,7 @@ function REoptInputs(s::AbstractScenario)
         tech_emissions_factors_SO2, 
         tech_emissions_factors_PM25,
         techs_operating_reserve_req_fraction,
+        heating_cop,
         unavailability 
     )
 end
@@ -283,6 +287,7 @@ function setup_tech_inputs(s::AbstractScenario)
     cop = Dict(t => 0.0 for t in techs.cooling)
     techs_operating_reserve_req_fraction = Dict(t => 0.0 for t in techs.all)
     thermal_cop = Dict(t => 0.0 for t in techs.absorption_chiller)
+    heating_cop = Dict(t => 0.0 for t in techs.electric_heater)
 
     # export related inputs
     techs_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in s.electric_tariff.export_bins)
@@ -352,6 +357,12 @@ function setup_tech_inputs(s::AbstractScenario)
         setup_steam_turbine_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin, techs)
     end    
 
+    if "ElectricHeater" in techs.all
+        setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop)
+    else
+        heating_cop["ElectricHeater"] = 1.0
+    end
+
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
     for t in techs.elec
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
@@ -380,7 +391,7 @@ function setup_tech_inputs(s::AbstractScenario)
     production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
     seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
     tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
-    tech_emissions_factors_PM25, cop, techs_operating_reserve_req_fraction, thermal_cop, fuel_cost_per_kwh
+    tech_emissions_factors_PM25, cop, techs_operating_reserve_req_fraction, thermal_cop, fuel_cost_per_kwh, heating_cop
 end
 
 
@@ -858,6 +869,30 @@ function setup_steam_turbine_inputs(s::AbstractScenario, max_sizes, min_sizes, c
     return nothing
 end
 
+function setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop)
+    max_sizes["ElectricHeater"] = s.electric_heater.max_kw
+    min_sizes["ElectricHeater"] = s.electric_heater.min_kw
+    om_cost_per_kw["ElectricHeater"] = s.electric_heater.om_cost_per_kw
+    heating_cop["ElectricHeater"] = s.electric_heater.cop
+
+    if s.electric_heater.macrs_option_years in [5, 7]
+        cap_cost_slope["ElectricHeater"] = effective_cost(;
+            itc_basis = s.electric_heater.installed_cost_per_kw,
+            replacement_cost = 0.0,
+            replacement_year = s.financial.analysis_years,
+            discount_rate = s.financial.owner_discount_rate_fraction,
+            tax_rate = s.financial.owner_tax_rate_fraction,
+            itc = 0.0,
+            macrs_schedule = s.electric_heater.macrs_option_years == 5 ? s.financial.macrs_five_year : s.financial.macrs_seven_year,
+            macrs_bonus_fraction = s.electric_heater.macrs_bonus_fraction,
+            macrs_itc_reduction = 0.0,
+            rebate_per_kw = 0.0
+        )
+    else
+        cap_cost_slope["ElectricHeater"] = s.electric_heater.installed_cost_per_kw
+    end
+
+end
 
 function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
 

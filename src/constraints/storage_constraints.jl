@@ -150,6 +150,22 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
         end
     end
 
+    if !isempty(p.techs.electric_heater)
+        for t in p.techs.electric_heater
+            if !isempty(p.techs.steam_turbine) && (t in p.techs.can_supply_steam_turbine)
+                @constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
+                        m[Symbol("dvProductionToStorage"*_n)][b,t,ts] + m[Symbol("dvThermalToSteamTurbine"*_n)][t,ts]  <=
+                        m[Symbol("dvThermalProduction"*_n)][t,ts]
+                        )
+            else
+                @constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
+                        m[Symbol("dvProductionToStorage"*_n)][b,t,ts]  <=
+                        m[Symbol("dvThermalProduction"*_n)][t,ts]
+                        )
+            end
+        end
+    end
+
     # Constraint (4f)-1b: SteamTurbineTechs
 	if !isempty(p.techs.steam_turbine)
 		@constraint(m, SteamTurbineTechProductionFlowCon[b in p.s.storage.types.hot, t in p.techs.steam_turbine, ts in p.time_steps],

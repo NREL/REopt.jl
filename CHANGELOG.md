@@ -23,6 +23,29 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.40.0
+### Changed
+- Changed **macrs_bonus_fraction** to from 0.80 to 0.60 (60%) for CHP, ElectricStorage, ColdThermalStorage, HotThermalStorage GHP, PV, Wind
+
+### Fixed
+- In `reopt.jl`, group objective function incentives (into **ObjectivePenalties**) and avoid directly modifying m[:Costs]. Previously, some of these were incorrectly included in the reported **Financial.lcc**. 
+
+## v0.39.1
+### Changed
+- Changed testing suite from using Xpress to using HiGHS, an open-source solver.  This has led to a reduction in the number of tests due to incompatibility with indicator constraints.
+### Fixed
+- Fixed issue with running Wind on Windows: add execute permission for ssc.dll
+
+## v0.39.0
+### Added
+- Added new technology `ElectricHeater` which uses electricity as input and provides heating as output; load balancing constraints have been updated accordingly
+
+## v0.38.2
+### Added 
+- Added the following BAU outputs:  lifecycle_chp_standby_cost_after_tax, lifecycle_elecbill_after_tax, lifecycle_production_incentive_after_tax, lifecycle_outage_cost, lifecycle_MG_upgrade_and_fuel_cost
+### Fixed
+- Don't allow **Site** **min_resil_time_steps** input to be greater than the maximum value element in **ElectricUtility** **outage_durations**
+
 ## v0.38.1
 ### Fixed
 - Fix CHP standby charge modeling - bad reference to pwf_e
