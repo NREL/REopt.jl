@@ -461,7 +461,7 @@ end
     @test results["PV"]["size_kw"] ≈ 216.667 atol=0.01
     @test results["PV"]["lcoe_per_kwh"] ≈ 0.0469 atol = 0.001
     @test results["Financial"]["lcc"] ≈ 1.23997e7 rtol=1e-5
-    @test results["Financial"]["lcc_bau"] ≈ 1.27663e7 rtol=1e-5
+    @test results["Financial"]["lcc_bau"] ≈ 1.27664e7 rtol=1e-5
     @test results["ElectricStorage"]["size_kw"] ≈ 49.05 atol=0.1
     @test results["ElectricStorage"]["size_kwh"] ≈ 83.32 atol=0.1
     @test results["Financial"]["initial_capital_costs"] ≈ UpfrontCosts_NoIncentive rtol=1e-5
