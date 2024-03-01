@@ -48,6 +48,12 @@ function add_heating_tech_constraints(m, p; _n="")
     end
 end
 
+function no_existing_boiler_production(m, p; _n="")
+    for ts in p.time_steps
+        fix(m[Symbol("dvThermalProduction"*_n)]["ExistingBoiler",ts], 0.0, force=true)
+    end
+end
+
 function add_cooling_tech_constraints(m, p; _n="")
     # Constraint (7_cooling_prod_size): Production limit based on size for boiler
     @constraint(m, [t in setdiff(p.techs.cooling, p.techs.ghp), ts in p.time_steps_with_grid],
