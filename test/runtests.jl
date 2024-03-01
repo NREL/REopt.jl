@@ -5,7 +5,7 @@ using HiGHS
 using JSON
 using REopt
 using DotEnv
-DotEnv.config()
+DotEnv.load!()
 using Random
 using DelimitedFiles
 Random.seed!(42)
