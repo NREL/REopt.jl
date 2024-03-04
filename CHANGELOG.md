@@ -35,10 +35,11 @@ Classify the change according to the following categories:
         "propane"=>138.6 to 139.16,
         "diesel_oil"=>163.1 to 163.61
     )
-- Changed calculation of all `annual` emissions results (e.g. **Site.annual_emissions_tonnes_CO2**) to simple annual averages (lifecycle emissions divided by analysis_years). This is because the default climate emissions from Cambium are already levelized over the analysis horizon and therefore "year_one" emissions cannot be easily obtained.  
+- Changed calculation of all `annual` emissions results (e.g. **Site.annual_emissions_tonnes_CO2**) to simple annual averages (lifecycle emissions divided by analysis_years). This is because the default climate emissions from Cambium are already levelized over the analysis horizon and therefore "year_one" emissions cannot be easily obtained. 
+- Changed name of exported function **emissions_profiles** to **avert_emissions_profiles**
 
 ### Added
-- In `src/REopt.jl`, added **cambium_emissions_profile** as an export for use via the REopt_API. 
+- In `src/REopt.jl` and `src/electric_utility.jl`, added **cambium_emissions_profile** as an export for use via the REopt_API. 
 - In `src/REopt.jl`, added new const **EMISSIONS_DECREASE_DEFAULTS**
 - In `src/results/electric_utility.jl` **cambium_emissions_region**
 - In `test/runtests.jl` and `test/test_with_xpress.jl`, added testset **Cambium Emissions**
