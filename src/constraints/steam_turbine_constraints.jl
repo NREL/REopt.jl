@@ -10,7 +10,7 @@ function steam_turbine_thermal_input(m, p; _n="")
         )
     else
         @constraint(m, SupplySteamTurbineProductionLimit[t in p.techs.can_supply_steam_turbine, q in p.heating_loads, ts in p.time_steps],
-                    m[Symbol("dvThermalToSteamTurbine"*_n)][t,q,ts] + sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for b in p.storage.types.hot) + m[Symbol("dvProductionToWaste"*_n)][t,q,ts] <=
+                    m[Symbol("dvThermalToSteamTurbine"*_n)][t,q,ts] + sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for b in p.s.storage.types.hot) + m[Symbol("dvProductionToWaste"*_n)][t,q,ts] <=
                     m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
         )
     end
