@@ -62,6 +62,9 @@ end
     macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kwh::Float64 = 0.0
+    can_serve_dhw::Bool = true
+    can_serve_space_heating:Bool = true
+    can_serve_process_heat::Bool = false
 ```
 """
 Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults
