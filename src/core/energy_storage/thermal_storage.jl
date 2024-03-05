@@ -64,6 +64,7 @@ end
     total_rebate_per_kwh::Float64 = 0.0
     can_serve_dhw::Bool = true
     can_serve_space_heating:Bool = true
+    can_serve_process_heat::Bool = false
 ```
 """
 Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults
