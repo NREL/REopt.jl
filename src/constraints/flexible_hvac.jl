@@ -122,8 +122,6 @@ function add_flexible_hvac_constraints(m, p::REoptInputs{BAUScenario}; _n="")
     # TODO account for different tech efficiencies in following?
 
     if !isempty(p.techs.heating)
-        println("BAU CASE")
-        println(p.techs.heating)
         @constraint(m, [ts in p.time_steps],
             sum(m[Symbol("dvHeatingProduction"*_n)][t, "SpaceHeating", ts] for t in p.techs.heating) == 
             p.s.flexible_hvac.existing_boiler_kw_thermal[ts]
