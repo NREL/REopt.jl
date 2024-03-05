@@ -8,9 +8,10 @@ struct ASHP <: AbstractThermalTech
     macrs_option_years::Int
     macrs_bonus_fraction::Real
     can_supply_steam_turbine::Bool
-    #cop::Array{<:Real,1} = Real[]
-    cop_heating::Real
-    cop_cooling::Real
+    #cop_heating::Real
+    #cop_cooling::Real
+    cop_heating::Vector{<:Real}
+    cop_cooling::Vector{<:Real}
     can_serve_dhw::Bool
     can_serve_space_heating::Bool
     can_serve_process_heat::Bool
@@ -34,8 +35,8 @@ function ASHP(;
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
     can_supply_steam_turbine::Union{Bool, nothing} = nothing # If the boiler can supply steam to the steam turbine for electric production
     cop::Array{<:Real,1} = Real[], # COP of the heating (i.e., thermal produced / electricity consumed)
-    cop_heating::Array{<:Real,1} = Real[], # COP of the heating (i.e., thermal produced / electricity consumed)
-    cop_cooling::Array{<:Real,1} = Real[], # COP of the heating (i.e., thermal produced / electricity consumed)
+    cop_heating::Vector{<:Real}, # COP of the heating (i.e., thermal produced / electricity consumed)
+    cop_cooling::Vector{<:Real}, # COP of the heating (i.e., thermal produced / electricity consumed)
     can_serve_dhw::Bool = true # If ASHP can supply heat to the domestic hot water load
     can_serve_space_heating::Bool = true # If ASHP can supply heat to the space heating load
     can_serve_process_heat::Bool = true # If ASHP can supply heat to the process heating load
@@ -51,8 +52,10 @@ function ASHP(;
         macrs_bonus_fraction::Real = 0.0,
         can_supply_steam_turbine::Union{Bool, Nothing} = nothing,
         #cop::Array{<:Real,1} = Real[],
-        cop_heating::Real,
-        cop_cooling::Real,
+        #cop_heating::Real,
+        #cop_cooling::Real,
+        cop_heating::Vector{<:Real},
+        cop_cooling::Vector{<:Real},
         can_serve_dhw::Bool = true,
         can_serve_space_heating::Bool = true,
         can_serve_process_heat::Bool = true
@@ -70,12 +73,12 @@ function ASHP(;
     if isnothing(can_supply_steam_turbine)
         can_supply_steam_turbine = defaults["can_supply_steam_turbine"]
     end
-    if isnothing(cop_heating)
-        cop_heating = defaults["cop_heating"]
-    end
-    if isnothing(cop_cooling)
-        cop_cooling = defaults["cop_cooling"]
-    end
+    #if isnothing(cop_heating)
+    #    cop_heating = defaults["cop_heating"]
+    #end
+    #if isnothing(cop_cooling)
+    #    cop_cooling = defaults["cop_cooling"]
+    #end
 
     # Convert max sizes, cost factors from mmbtu_per_hour to kw
     min_kw = min_mmbtu_per_hour * KWH_PER_MMBTU

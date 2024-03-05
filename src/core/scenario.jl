@@ -629,13 +629,49 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         end
     end
 
+    # Electric Heater
     electric_heater = nothing
     if haskey(d, "ElectricHeater") && d["ElectricHeater"]["max_mmbtu_per_hour"] > 0.0
         electric_heater = ElectricHeater(;dictkeys_tosymbols(d["ElectricHeater"])...)
     end
 
-    ashp = nothing
+    # ASHP
+    #ashp = nothing
+    cop_heating = []
+    cop_cooling = []
     if haskey(d, "ASHP") && d["ASHP"]["max_mmbtu_per_hour"] > 0.0
+        # If user does not provide heating cop series then assign cop curves based on ambient temperature
+        if !haskey(d["ASHP"], "cop_heating") || !haskey(d["ASHP"], "cop_cooling")
+            # If PV is evaluated, get ambient temperature series from PVWatts and assign PV production factor
+            if !isempty(pvs)
+                for pv in pvs
+                    pv.production_factor_series, ambient_temp_celcius = call_pvwatts_api(site.latitude, site.longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
+                        array_type=pv.array_type, losses=round(pv.losses*100, digits=3), dc_ac_ratio=pv.dc_ac_ratio,
+                        gcr=pv.gcr, inv_eff=pv.inv_eff*100, timeframe="hourly", radius=pv.radius, time_steps_per_hour=settings.time_steps_per_hour)
+                end
+            else
+                # if PV is not evaluated, call PVWatts to get ambient temperature series
+                pv_prodfactor, ambient_temp_celcius = call_pvwatts_api(site.latitude, site.longitude; time_steps_per_hour=settings.time_steps_per_hour)    
+            end
+
+            if !haskey(d["ASHP"], "cop_heating")
+                cop_heating = 1e-08.*ambient_temp_celcius.^4 - 2e-05.*ambient_temp_celcius.^3 - 0.0007.*ambient_temp_celcius.^2 + 0.0897.*ambient_temp_celcius .+ 3.7696
+            else
+                cop_heating = d["ASHP"]["cop_heating"]
+            end
+
+            if !haskey(d["ASHP"], "cop_cooling") # need to update (do we have diff curve for cooling cop?)
+                cop_cooling = 1e-08.*ambient_temp_celcius.^4 - 2e-05.*ambient_temp_celcius.^3 - 0.0007.*ambient_temp_celcius.^2 + 0.0897.*ambient_temp_celcius .+ 3.7696
+            else
+                cop_cooling = d["ASHP"]["cop_cooling"]
+            end
+        else
+            # Else if the user already provide cop series, use that
+            cop_heating = d["ASHP"]["cop_heating"]
+            cop_cooling = d["ASHP"]["cop_cooling"]
+        end
+        d["ASHP"]["cop_heating"] = cop_heating
+        d["ASHP"]["cop_cooling"] = cop_cooling
         ashp = ASHP(;dictkeys_tosymbols(d["ASHP"])...)
     end
 

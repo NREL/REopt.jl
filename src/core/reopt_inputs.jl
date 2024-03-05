@@ -430,9 +430,9 @@ function setup_tech_inputs(s::AbstractScenario)
 
     if "ASHP" in techs.all
         setup_ashp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, cooling_cop)
-    else
-        heating_cop["ASHP"] = 3.0
-        cooling_cop["ASHP"] = 3.0
+    #else
+    #    heating_cop["ASHP"] = 3.0
+    #    cooling_cop["ASHP"] = 3.0
     end
 
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
