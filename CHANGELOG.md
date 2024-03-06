@@ -22,33 +22,15 @@ Classify the change according to the following categories:
     ### Fixed
     ### Deprecated
     ### Removed
-
-## Develop 2024-03-05
-### Added 
-- In `src/core/absorption_chiller.jl` struct, added field **heating_load_input** to the AbsorptionChiller struct
-- Added new variables **dvHeatToStorage** and **dvHeatFromStorage** which are indexed on `p.heating_loads` and added reconciliation constraints so that **dvProductionToStorage** and **dvDischargeFromStorage** maintain their relationship to state of charge for Hot thermal energy storage.
-- for all heating techs and CHP, added fields **can_serve_space_heating**, **can_serve_dhw**, and **can_serve_process_heat** in core structs and added new results fields **thermal_to_dhw_load_series_mmbtu_per_hour**, **thermal_to_space_heating_load_series_mmbtu_per_hour**, and **thermal_to_process_heat_load_series_mmbtu_per_hour**
-- in `src/core/techs.jl`, added new sets **ghp_techs**, **cooling_techs**, **techs_can_serve_space_heating**, **techs_can_serve_dhw**, and **techs_can_serve_process_heat**
-- in `src/core/reopt_inputs.jl`, added new fields **heating_loads**, **heating_loads_kw**, **heating_loads_served_by_tes**, and **absorption_chillers_using_heating_load** to the REoptInputs and BAUInputs structs. in the math, new set `p.heating_loads` has index q (to represent "qualities" of heat).
-- In `src/core/heating_cooling_loads.jl`, added new struct **ProcessHeatLoad**
-- In `src/core/scenario.jl`, added new field **process_heat_load**
-- In `src/mpc/inputs.jl`, added new field **heating_loads**
-
+## Develop 2024-02-21
 ### Changed
-- refactored **dvThermalProduction** to be separated in **dvCoolingProduction** and **dvHeatingProduction** with **dvHeatingProduction** now indexed on `p.heating_loads`
-- refactored heating load balance constraints so that a separate flow balance is reconciled for each heating load in `p.heating_loads`
-- renamed **dvThermalProductionYIntercept** to **dvHeatingProductionYIntercept**
-- divided **ThermalStorage** into **HotThermalStorage** and **ColdThermalStorage** as the former now has attributes related to the compatible heat loads as input or output.
-- changed technologies included **dvProductionToWaste** to all heating techs.  NOTE: this variable is forced to zero to allow steam turbine tests to pass, but I believe that waste heat should be allowed for the turbine.  A TODO is in place to review this commit (a406cc5df6e4a27b56c92815c35d04815904e495).
-- changed test values and tolerances for CHP Sizing test.
+- In `core/pv.jl` a change was made to make sure we are using the same assumptions as PVWatts guidelines, the default `tilt` angle for a fixed array should be 20 degrees, irrespective of it being a rooftop `(1)` or ground-mounted (open-rack)`(2)` system. By default the `tilt` will be set to 20 degrees for ground-mount and rooftop, and 0 degrees for axis-tracking (`array_type = (3) or (4)`)
 
-### Fixed  
-- added a constraint in `src/constraints/steam_turbine_constraints.jl` that allows for heat loads to reconcile when thermal storage is paired with a SteamTurbine. 
+> "The PVWatts® default value for the tilt angle depends on the array type: For a fixed array, the default value is 20 degrees, and for one-axis tracking the default value is zero. A common rule of thumb for fixed arrays is to set the tilt angle to the latitude of the system's location to maximize the system's total electrical output over the year. Use a lower tilt angle favor peak production in the summer months when the sun is high in the sky, or a higher tilt angle to increase output during winter months. Higher tilt angles tend to cost more for racking and mounting hardware, and may increase the risk of wind damage to the array."
 
-## v0.40.0
-### Changed
-- Changed **macrs_bonus_fraction** to from 0.80 to 0.60 (60%) for CHP, ElectricStorage, ColdThermalStorage, HotThermalStorage GHP, PV, Wind
 
+
+## Develop 2024-01-16
 ### Fixed
 - In `reopt.jl`, group objective function incentives (into **ObjectivePenalties**) and avoid directly modifying m[:Costs]. Previously, some of these were incorrectly included in the reported **Financial.lcc**. 
 
@@ -659,7 +641,7 @@ Other changes:
 - handle missing input key for `year_one_soc_series_pct` in `outage_simulator` 
 - remove erroneous `total_unserved_load = 0` output
 - `dvUnservedLoad` definition was allowing microgrid production to storage and curtailment to be double counted towards meeting critical load
-### Added
+#### Added
 - add `unserved_load_per_outage` output
 
 ## v0.4.1
