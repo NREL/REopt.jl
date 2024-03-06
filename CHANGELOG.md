@@ -30,7 +30,10 @@ Classify the change according to the following categories:
 
 
 
-## Develop 2024-01-16
+## v0.40.0
+### Changed
+- Changed **macrs_bonus_fraction** to from 0.80 to 0.60 (60%) for CHP, ElectricStorage, ColdThermalStorage, HotThermalStorage GHP, PV, Wind
+
 ### Fixed
 - In `reopt.jl`, group objective function incentives (into **ObjectivePenalties**) and avoid directly modifying m[:Costs]. Previously, some of these were incorrectly included in the reported **Financial.lcc**. 
 
