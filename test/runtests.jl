@@ -2221,7 +2221,7 @@ else  # run HiGHS tests
             @test results["ASHP"]["annual_energy_supplied_kwh"] ≈ 87600.0 atol=0.1
             
             d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = 100
-            d["ASHP"]["installed_cost_per_mmbtu_per_hour"] = 1.0
+            d["ASHP"]["installed_cost_per_mmbtu_per_hour"] = 300
             d["ElectricTariff"]["monthly_energy_rates"] = [0,0,0,0,0,0,0,0,0,0,0,0]
             s = Scenario(d)
             p = REoptInputs(s)

@@ -636,7 +636,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
 
     # ASHP
-    #ashp = nothing
+    ashp = nothing
     cop_heating = []
     cop_cooling = []
     if haskey(d, "ASHP") && d["ASHP"]["max_mmbtu_per_hour"] > 0.0
