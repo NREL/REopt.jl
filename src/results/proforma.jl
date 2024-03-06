@@ -139,7 +139,7 @@ function proforma_results(p::REoptInputs, d::Dict)
     end
 
     # Optimal Case calculations
-    electricity_bill_series = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax"])
+    electricity_bill_series = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax"] + d["CHP"]["year_one_standby_cost_before_tax"])
     export_credit_series = escalate_elec(d["ElectricTariff"]["year_one_export_benefit_before_tax"])
 
     # In the two party case the electricity and export credits are incurred by the offtaker not the developer
@@ -187,7 +187,7 @@ function proforma_results(p::REoptInputs, d::Dict)
         net_free_cashflow = r["developer_annual_free_cashflows"]
         r["developer_annual_free_cashflows"] = round.(r["developer_annual_free_cashflows"], digits=2)
 
-        electricity_bill_series = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax"])
+        electricity_bill_series = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax"] + d["CHP"]["year_one_standby_cost_before_tax"])
         electricity_bill_series_bau = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax_bau"])
 
         export_credit_series = escalate_elec(-d["ElectricTariff"]["lifecycle_export_benefit_after_tax"])
