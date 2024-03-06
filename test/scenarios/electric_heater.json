@@ -43,5 +43,8 @@
     },    
     "ElectricTariff": {
         "monthly_energy_rates": [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1]
+    },
+	"HotThermalStorage":{
+        "max_gal":2500
     }
   }

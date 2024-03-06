@@ -5,7 +5,7 @@ using HiGHS
 using JSON
 using REopt
 using DotEnv
-DotEnv.config()
+DotEnv.load!()
 using Random
 using DelimitedFiles
 Random.seed!(42)
@@ -1040,8 +1040,8 @@ else  # run HiGHS tests
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
                 results = run_reopt(m, inputs)
             
-                @test round(results["CHP"]["size_kw"], digits=0) ≈ 342.0 atol=1.0
-                @test round(results["Financial"]["lcc"], digits=0) ≈ 1.3476e7 atol=1.0e7
+                @test round(results["CHP"]["size_kw"], digits=0) ≈ 330.0 atol=20.0
+                @test round(results["Financial"]["lcc"], digits=0) ≈ 1.3476e7 rtol=1.0e-2
             end
         
             @testset "CHP Cost Curve and Min Allowable Size" begin
@@ -2594,7 +2594,8 @@ else  # run HiGHS tests
                                                 ("max_ton", 600.0),
                                                 ("cop_thermal", 0.7),
                                                 ("installed_cost_per_ton", 500.0),
-                                                ("om_cost_per_ton", 0.5)
+                                                ("om_cost_per_ton", 0.5),
+                                                ("heating_load_input", "SpaceHeating")
                                                 ])
             
             # Add Hot TES

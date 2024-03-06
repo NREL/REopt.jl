@@ -231,6 +231,18 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 				@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
 				@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
 						m[:dvProductionToStorage][b, t, ts] == 0)
+			elseif b in p.s.storage.types.hot
+				@constraint(m, [q in q in setdiff(p.heating_loads, p.heating_loads_served_by_tes[b]), ts in p.time_steps], m[:dvHeatFromStorage][b,q,ts] == 0)
+				if "DomesticHotWater" in p.heating_loads_served_by_tes[b]
+					@constraint(m, [t in setdiff(p.heating_techs, p.techs_can_serve_dhw), ts in p.time_steps], m[:dvHeatToStorage][b,"DomesticHotWater",ts] == 0)
+				else
+					@constraint(m, [t in p.heating_techs, ts in p.time_steps], m[:dvHeatToStorage][b,"DomesticHotWater",ts] == 0)
+				end
+				if "SpaceHeating" in p.heating_loads_served_by_tes[b]
+					@constraint(m, [t in setdiff(p.heating_techs, p.techs_can_serve_space_heating), ts in p.time_steps], m[:dvHeatToStorage][b,"SpaceHeating",ts] == 0)
+				else
+					@constraint(m, [t in p.heating_techs, ts in p.time_steps], m[:dvHeatToStorage][b,"SpaceHeating",ts] == 0)
+				end
 			end
 		else
 			add_storage_size_constraints(m, p, b)
@@ -320,6 +332,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         if !isempty(p.techs.steam_turbine)
             add_steam_turbine_constraints(m, p)
             m[:TotalPerUnitProdOMCosts] += m[:TotalSteamTurbinePerUnitProdOMCosts]
+			#TODO: review this constraint and see if it's intended.  This matches the legacy implementation and tests pass but should the turbine be allowed to send heat to waste in order to generate electricity?
+			@constraint(m, steamTurbineNoWaste[t in p.techs.steam_turbine, q in p.heating_loads, ts in p.time_steps],
+				m[:dvProductionToWaste][t,q,ts] == 0.0
+			)
         end
 
 		if !isempty(p.techs.electrolyzer)
@@ -662,19 +678,27 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		@variable(m, binNoGridPurchases[p.time_steps], Bin)
 	end
 
-    if !isempty(p.techs.thermal)
-        @variables m begin
-			dvThermalProduction[p.techs.thermal, p.time_steps] >= 0
-			dvSupplementaryThermalProduction[p.techs.chp, p.time_steps] >= 0
-			dvSupplementaryFiringSize[p.techs.chp] >= 0  #X^{\sigma db}_{t}: System size of CHP with supplementary firing [kW]
-		end
+    if !isempty(union(p.techs.heating, p.techs.chp))
+        @variable(m, dvHeatingProduction[union(p.techs.heating, p.techs.chp), p.heating_loads, p.time_steps] >= 0)
+		@variable(m, dvProductionToWaste[union(p.techs.heating, p.techs.chp), p.heating_loads, p.time_steps] >= 0)
         if !isempty(p.techs.chp)
-            @variable(m, dvProductionToWaste[p.techs.chp, p.time_steps] >= 0)
+			@variables m begin
+				dvSupplementaryThermalProduction[p.techs.chp, p.time_steps] >= 0
+				dvSupplementaryFiringSize[p.techs.chp] >= 0  #X^{\sigma db}_{t}: System size of CHP with supplementary firing [kW]
+			end
         end
-    end
+		if !isempty(p.s.storage.types.hot)
+			@variable(m, dvHeatToStorage[p.s.storage.types.hot, union(p.techs.heating, p.techs.chp), p.heating_loads, p.time_steps] >= 0) # Power charged to hot storage b at quality q [kW]
+			@variable(m, dvHeatFromStorage[p.s.storage.types.hot, p.heating_loads, p.time_steps] >= 0) # Power discharged from hot storage system b for load q [kW]
+    	end
+	end
+
+	if !isempty(p.techs.cooling)
+		@variable(m, dvCoolingProduction[p.techs.cooling, p.time_steps] >= 0)
+	end
 
     if !isempty(p.techs.steam_turbine)
-        @variable(m, dvThermalToSteamTurbine[p.techs.can_supply_steam_turbine, p.time_steps] >= 0)
+        @variable(m, dvThermalToSteamTurbine[p.techs.can_supply_steam_turbine, p.heating_loads, p.time_steps] >= 0)
     end
 
 	if !isempty(p.s.electric_utility.outage_durations) # add dvUnserved Load if there is at least one outage

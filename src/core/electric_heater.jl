@@ -9,6 +9,9 @@ struct ElectricHeater <: AbstractThermalTech
     macrs_bonus_fraction::Real
     can_supply_steam_turbine::Bool
     cop::Real
+    can_serve_dhw::Bool
+    can_serve_space_heating::Bool
+    can_serve_process_heat::Bool
 end
 
 
@@ -29,6 +32,9 @@ function ElectricHeater(;
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
     can_supply_steam_turbine::Union{Bool, nothing} = nothing # If the boiler can supply steam to the steam turbine for electric production
     cop::Union{Real, nothing} = nothing # COP of the heating (i.e., thermal produced / electricity consumed)
+    can_serve_dhw::Bool = true # If electric heater can supply heat to the domestic hot water load
+    can_serve_space_heating::Bool = true # If electric heater can supply heat to the space heating load
+    can_serve_process_heat::Bool = true # If electric heater can supply heat to the process heating load
 )
 ```
 """
@@ -40,7 +46,10 @@ function ElectricHeater(;
         macrs_option_years::Int = 0,
         macrs_bonus_fraction::Real = 0.0,
         can_supply_steam_turbine::Union{Bool, Nothing} = nothing,
-        cop::Union{Real, Nothing} = nothing
+        cop::Union{Real, Nothing} = nothing,
+        can_serve_dhw::Bool = true,
+        can_serve_space_heating::Bool = true,
+        can_serve_process_heat::Bool = true
     )
 
     defaults = get_electric_heater_defaults()
@@ -76,7 +85,10 @@ function ElectricHeater(;
         macrs_option_years,
         macrs_bonus_fraction,
         can_supply_steam_turbine,
-        cop
+        cop,
+        can_serve_dhw,
+        can_serve_space_heating,
+        can_serve_process_heat
     )
 end
 

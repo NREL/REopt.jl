@@ -54,6 +54,9 @@ Base.@kwdef mutable struct SteamTurbine <: AbstractSteamTurbine
     can_wholesale::Bool = false
     can_export_beyond_nem_limit::Bool = false
     can_curtail::Bool = false
+    can_serve_dhw::Bool = true
+    can_serve_space_heating::Bool = true
+    can_serve_process_heat::Bool = true
 
     macrs_option_years::Int = 0
     macrs_bonus_fraction::Float64 = 0.0   

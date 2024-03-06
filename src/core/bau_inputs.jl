@@ -127,6 +127,28 @@ function BAUInputs(p::REoptInputs)
     end
     setup_bau_emissions_inputs(p, bau_scenario, generator_fuel_use_gal)
 
+    heating_loads = Vector{String}()
+    heating_loads_kw = Dict{String, Array{Real,1}}()
+    absorption_chillers_using_heating_load = Dict{String,Array{String,1}}()
+    if !isnothing(p.s.dhw_load)
+        push!(heating_loads, "DomesticHotWater")
+        heating_loads_kw["DomesticHotWater"] = p.s.dhw_load.loads_kw
+        absorption_chillers_using_heating_load["DomesticHotWater"] = Vector{String}()
+    end
+    if !isnothing(p.s.space_heating_load)
+        push!(heating_loads, "SpaceHeating")
+        heating_loads_kw["SpaceHeating"] = p.s.space_heating_load.loads_kw
+        absorption_chillers_using_heating_load["SpaceHeating"] = Vector{String}()
+    elseif !isnothing(p.s.flexible_hvac) && !isnothing(p.s.existing_boiler)
+        push!(heating_loads, "SpaceHeating")  #add blank space heating load to add dvHeatingProduction for existing boiler
+    end
+    if !isnothing(p.s.process_heat_load)
+        push!(heating_loads, "ProcessHeat")
+        heating_loads_kw["ProcessHeat"] = p.s.process_heat_load.loads_kw
+        absorption_chillers_using_heating_load["ProcessHeat"] = Vector{String}()
+    end
+
+    heating_loads_served_by_tes = Dict{String,Array{String,1}}()
     unavailability = get_unavailability_by_tech(p.s, techs, p.time_steps)
 
     REoptInputs(
@@ -190,7 +212,11 @@ function BAUInputs(p::REoptInputs)
         tech_emissions_factors_PM25,
         p.techs_operating_reserve_req_fraction,
         heating_cop,
-        unavailability
+        heating_loads,
+        heating_loads_kw,
+        heating_loads_served_by_tes,
+        unavailability,
+        absorption_chillers_using_heating_load
     )
 end
 
