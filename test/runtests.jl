@@ -1092,13 +1092,13 @@ else  # run HiGHS tests
                 @test results["PV"]["size_kw"] ≈ p.max_sizes["PV"]
             end
 
-            @testset "Custom URDB with Sub-Hourly"
-              # Testing a 15-min post with a urdb_response with multiple n_energy_tiers
-              model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
-              p = REoptInputs("./scenarios/subhourly_with_urdb.json")
-              results = run_reopt(model, p)
-              @test length(p.s.electric_tariff.export_rates[:WHL]) ≈ 8740*4
-              @test results["PV"]["size_kw"] ≈ p.s.pvs[1].existing_kw
+            @testset "Custom URDB with Sub-Hourly" begin
+                # Testing a 15-min post with a urdb_response with multiple n_energy_tiers
+                model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
+                p = REoptInputs("./scenarios/subhourly_with_urdb.json")
+                results = run_reopt(model, p)
+                @test length(p.s.electric_tariff.export_rates[:WHL]) ≈ 8740*4
+                @test results["PV"]["size_kw"] ≈ p.s.pvs[1].existing_kw
             end
 
 
