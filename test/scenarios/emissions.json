@@ -41,10 +41,12 @@
         "outage_durations": [10]
     },
     "Generator": {
+        "installed_cost_per_kw": 500.0,
         "max_kw": 500.0,
         "fuel_avail_gal": 125.0,
         "min_turn_down_fraction": 0.0,
-        "fuel_slope_gal_per_kwh": 0.0656,
+        "electric_efficiency_full_load": 0.374543,
+        "electric_efficiency_half_load": 0.374543,    
         "om_cost_per_kw": 10.0,
         "only_runs_during_grid_outage": true,
         "sells_energy_back_to_grid": false
@@ -70,6 +72,7 @@
         "analysis_years": 20,
         "offtaker_tax_rate_fraction": 0.4,
         "owner_tax_rate_fraction": 0.4,
-        "om_cost_escalation_rate_fraction": 0.025
+        "om_cost_escalation_rate_fraction": 0.025,
+        "microgrid_upgrade_cost_fraction": 0.3
     }
 }

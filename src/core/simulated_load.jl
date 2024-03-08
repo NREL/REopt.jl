@@ -33,7 +33,7 @@ function simulated_load(d::Dict)
         else
             percent_share_list = percent_share_input
         end
-        if length(percent_share_list) != length(doe_reference_name)
+        if !(length(percent_share_list) == length(doe_reference_name))
             throw(@error("The number of percent_share entries does not match that of the number of doe_reference_name entries"))
         end
     elseif !isnothing(doe_reference_name_input) && typeof(doe_reference_name_input) <: Vector{} && isempty(percent_share_input)  # Vector of doe_reference_name but no percent_share, as needed
@@ -55,7 +55,7 @@ function simulated_load(d::Dict)
         else
             cooling_pct_share_list = cooling_pct_share_input
         end            
-        if length(cooling_pct_share_list) != length(cooling_doe_ref_name)
+        if !(length(cooling_pct_share_list) == length(cooling_doe_ref_name))
             throw(@error("The number of cooling_pct_share entries does not match that of the number of cooling_doe_ref_name entries"))
         end
     elseif typeof(cooling_doe_ref_name_input) <: Vector{} && isempty(cooling_pct_share_input)  # Vector of cooling_doe_ref_name but no cooling_pct_share_input, as needed
@@ -117,9 +117,9 @@ function simulated_load(d::Dict)
         # Monthly loads (default is empty list)
         monthly_totals_kwh = get(d, "monthly_totals_kwh", Real[])
         if !isempty(monthly_totals_kwh)
-            if length(monthly_totals_kwh != 12)
+            if !(length(monthly_totals_kwh) == 12)
                 throw(@error("monthly_totals_kwh must contain a value for each of the 12 months"))
-            end                  
+            end
             bad_index = []
             for (i, kwh) in enumerate(monthly_totals_kwh)
                 if isnothing(kwh)
@@ -222,7 +222,7 @@ function simulated_load(d::Dict)
         # Monthly loads (default is empty list)
         monthly_mmbtu = get(d, "monthly_mmbtu", Real[])
         if !isempty(monthly_mmbtu)
-            if length(monthly_mmbtu != 12)
+            if !(length(monthly_mmbtu) == 12)
                 throw(@error("monthly_mmbtu must contain a value for each of the 12 months"))
             end                   
             bad_index = []
@@ -238,7 +238,7 @@ function simulated_load(d::Dict)
         # Addressable heating load (default is 1.0)
         addressable_load_fraction = get(d, "addressable_load_fraction", 1.0)
         if typeof(addressable_load_fraction) <: Vector{}
-            if length(addressable_load_fraction != 12)
+            if !(length(addressable_load_fraction) == 12)
                 throw(@error("addressable_load_fraction must contain a value for each of the 12 months"))
             end                
             bad_index = []
@@ -266,24 +266,31 @@ function simulated_load(d::Dict)
         end
 
         # Split up the single heating fuel input for space + dhw annual_mmbtu or monthly_mmbtu into CRB profile split
+        boiler_efficiency = get(d, "boiler_efficiency", EXISTING_BOILER_EFFICIENCY)
         default_space_heating_load = SpaceHeatingLoad(; heating_load_inputs...,
                                                         latitude=latitude, 
-                                                        longitude=longitude
+                                                        longitude=longitude,
+                                                        existing_boiler_efficiency=boiler_efficiency
                                                     )
         default_dhw_load = DomesticHotWaterLoad(; heating_load_inputs...,
                                                     latitude=latitude, 
-                                                    longitude=longitude
+                                                    longitude=longitude,
+                                                    existing_boiler_efficiency=boiler_efficiency
                                                 )
         space_heating_annual_mmbtu = nothing
         dhw_annual_mmbtu = nothing
         space_heating_monthly_mmbtu = Real[]
+        space_heating_monthly_fuel_mmbtu = Real[]
         dhw_monthly_mmbtu = Real[]
+        dhw_monthly_fuel_mmbtu = Real[]
         if !isempty(monthly_mmbtu)    
-            space_heating_monthly_energy = get_monthly_energy(power_profile=default_space_heating_load.loads_kw)
-            dhw_monthly_energy = get_monthly_energy(power_profile=default_dhw_load.loads_kw)
+            space_heating_monthly_energy = get_monthly_energy(default_space_heating_load.loads_kw)
+            dhw_monthly_energy = get_monthly_energy(default_dhw_load.loads_kw)
             space_heating_fraction_monthly = space_heating_monthly_energy ./ (space_heating_monthly_energy + dhw_monthly_energy)
             space_heating_monthly_mmbtu = monthly_mmbtu .* space_heating_fraction_monthly
-            dhw_monthly_mmbtu = monthly_mmbtu .* (1 .- space_heating_monthly_mmbtu)
+            space_heating_monthly_fuel_mmbtu = space_heating_monthly_mmbtu .* addressable_load_fraction
+            dhw_monthly_mmbtu = monthly_mmbtu - space_heating_monthly_mmbtu
+            dhw_monthly_fuel_mmbtu = dhw_monthly_mmbtu .* addressable_load_fraction
         elseif !isnothing(annual_mmbtu)
             total_heating_annual_mmbtu = default_space_heating_load.annual_mmbtu + default_dhw_load.annual_mmbtu
             space_heating_fraction = default_space_heating_load.annual_mmbtu / total_heating_annual_mmbtu
@@ -297,20 +304,22 @@ function simulated_load(d::Dict)
                                                 latitude=latitude, 
                                                 longitude=longitude,
                                                 annual_mmbtu=space_heating_annual_mmbtu,
-                                                monthly_mmbtu=space_heating_monthly_mmbtu
+                                                monthly_mmbtu=space_heating_monthly_mmbtu,
+                                                existing_boiler_efficiency=boiler_efficiency
                                             )
 
         dhw_load = DomesticHotWaterLoad(; heating_load_inputs...,
                                             latitude=latitude, 
                                             longitude=longitude,
                                             annual_mmbtu=dhw_annual_mmbtu,
-                                            monthly_mmbtu=dhw_monthly_mmbtu
+                                            monthly_mmbtu=dhw_monthly_mmbtu,
+                                            existing_boiler_efficiency=boiler_efficiency
                                         )                                              
 
-        space_load_series = space_heating_load.loads_kw ./ EXISTING_BOILER_EFFICIENCY ./ KWH_PER_MMBTU
-        dhw_load_series = dhw_load.loads_kw ./ EXISTING_BOILER_EFFICIENCY ./ KWH_PER_MMBTU
+        space_load_series = space_heating_load.loads_kw ./ boiler_efficiency ./ KWH_PER_MMBTU
+        dhw_load_series = dhw_load.loads_kw ./ boiler_efficiency ./ KWH_PER_MMBTU
         total_load_series = space_load_series + dhw_load_series
-        total_heating_annual_mmbtu = (space_heating_load.annual_mmbtu + dhw_load.annual_mmbtu) / EXISTING_BOILER_EFFICIENCY
+        total_heating_annual_mmbtu = (space_heating_load.annual_mmbtu + dhw_load.annual_mmbtu) / boiler_efficiency
 
         response = Dict([
             ("loads_mmbtu_per_hour", round.(total_load_series, digits=3)),
@@ -319,15 +328,17 @@ function simulated_load(d::Dict)
             ("mean_mmbtu_per_hour", round(sum(total_load_series) / length(total_load_series), digits=3)),
             ("max_mmbtu_per_hour", round(maximum(total_load_series), digits=3)),
             ("space_loads_mmbtu_per_hour", round.(space_load_series, digits=3)),
-            ("space_annual_mmbtu", round(space_heating_load.annual_mmbtu / EXISTING_BOILER_EFFICIENCY, digits=3)),
+            ("space_annual_mmbtu", round(space_heating_load.annual_mmbtu / boiler_efficiency, digits=3)),
             ("space_min_mmbtu_per_hour", round(minimum(space_load_series), digits=3)),
             ("space_mean_mmbtu_per_hour", round(sum(space_load_series) / length(space_load_series), digits=3)),
             ("space_max_mmbtu_per_hour", round(maximum(space_load_series), digits=3)),
+            ("space_monthly_mmbtu", round.(space_heating_monthly_fuel_mmbtu, digits=3)),
             ("dhw_loads_mmbtu_per_hour", round.(dhw_load_series, digits=3)),
-            ("dhw_annual_mmbtu", round(dhw_load.annual_mmbtu / EXISTING_BOILER_EFFICIENCY, digits=3)),
+            ("dhw_annual_mmbtu", round(dhw_load.annual_mmbtu / boiler_efficiency, digits=3)),
             ("dhw_min_mmbtu_per_hour", round(minimum(dhw_load_series), digits=3)),
             ("dhw_mean_mmbtu_per_hour", round(sum(dhw_load_series) / length(dhw_load_series), digits=3)),
-            ("dhw_max_mmbtu_per_hour", round(maximum(dhw_load_series), digits=3)),  
+            ("dhw_max_mmbtu_per_hour", round(maximum(dhw_load_series), digits=3)),
+            ("dhw_monthly_mmbtu", round.(dhw_monthly_fuel_mmbtu, digits=3)),
         ])
 
         return response
@@ -363,7 +374,7 @@ function simulated_load(d::Dict)
         monthly_fraction = get(d, "monthly_fraction", Real[])
         if !isempty(monthly_fraction)
             if length(monthly_fraction) > 1
-                if length(monthly_fraction != 12)
+                if !(length(monthly_fraction) == 12)
                     throw(@error("monthly_fraction must contain a value for each of the 12 months"))
                 end                     
                 bad_index = []
@@ -398,7 +409,7 @@ function simulated_load(d::Dict)
             # Monthly loads (default is empty list)
             monthly_tonhour = get(d, "monthly_tonhour", Real[])
             if !isempty(monthly_tonhour)
-                if length(monthly_tonhour != 12)
+                if !(length(monthly_tonhour) == 12)
                     throw(@error("monthly_tonhour must contain a value for each of the 12 months"))
                 end                    
                 bad_index = []

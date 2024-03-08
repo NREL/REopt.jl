@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `ElectricLoad` is a required REopt input with the following keys and default values:
 ```julia
@@ -35,7 +7,7 @@
     doe_reference_name::String = "",
     blended_doe_reference_names::Array{String, 1} = String[],
     blended_doe_reference_percents::Array{<:Real,1} = Real[],
-    year::Int = doe_reference_name ≠ nothing && blended_doe_reference_names ≠ nothing ? 2017 : 2022, # used in ElectricTariff to align rate schedule with weekdays/weekends. DOE CRB profiles must use 2017. If providing load data, specify year of data.
+    year::Int = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : 2022, # used in ElectricTariff to align rate schedule with weekdays/weekends. DOE CRB profiles must use 2017. If providing load data, specify year of data.
     city::String = "",
     annual_kwh::Union{Real, Nothing} = nothing,
     monthly_totals_kwh::Array{<:Real,1} = Real[],
@@ -63,6 +35,7 @@
     - Helena
     - Houston
     - LosAngeles
+    - LasVegas
     - Miami
     - Minneapolis
     - Phoenix
@@ -117,7 +90,7 @@ mutable struct ElectricLoad  # mutable to adjust (critical_)loads_kw based off o
         doe_reference_name::String = "",
         blended_doe_reference_names::Array{String, 1} = String[],
         blended_doe_reference_percents::Array{<:Real,1} = Real[],
-        year::Int = doe_reference_name ≠ "" && blended_doe_reference_names ≠ String[] ? 2017 : 2022, # used in ElectricTariff to align rate schedule with weekdays/weekends. DOE CRB profiles must use 2017. If providing load data, specify year of data.
+        year::Int = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : 2022, # used in ElectricTariff to align rate schedule with weekdays/weekends. DOE CRB profiles must use 2017. If providing load data, specify year of data.
         city::String = "",
         annual_kwh::Union{Real, Nothing} = nothing,
         monthly_totals_kwh::Array{<:Real,1} = Real[],
@@ -408,6 +381,25 @@ function BuiltInElectricLoad(
             "warehouse" => 182085,
             "flatload" => 500000
         ),
+        "LasVegas" => Dict(
+            "retailstore" => 552267,
+            "largehotel" => 2751152,
+            "mediumoffice" => 959668,
+            "stripmall" => 546209,
+            "primaryschool" => 1196111,
+            "warehouse" => 235888,
+            "smalloffice" => 95801,
+            "supermarket" => 2001224,
+            "midriseapartment" => 332312,
+            "fullservicerest" => 372350,
+            "outpatient" => 1782941,
+            "fastfoodrest" => 208062,
+            "smallhotel" => 818012,
+            "largeoffice" => 6750393,
+            "secondaryschool" => 3112938,
+            "hospital" => 9011047,
+            "flatload" => 1920398
+        ),        
         "Miami" => Dict(
             "fastfoodrest" => 224494,
             "fullservicerest" => 448713,

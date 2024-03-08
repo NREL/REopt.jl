@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 module REopt
 
 export
@@ -48,7 +20,10 @@ export
     get_chp_defaults_prime_mover_size_class,
     get_steam_turbine_defaults_size_class,
     simulated_load,
-    get_absorption_chiller_defaults
+    get_absorption_chiller_defaults,
+    emissions_profiles,
+    easiur_data,
+    get_existing_chiller_default_cop
 
 import HTTP
 import JSON
@@ -71,6 +46,9 @@ global hdl = nothing
 using JLD
 using Requires
 using CoolProp
+using LinearAlgebra
+using CSV
+using DataFrames
 
 function __init__()
     @require GhpGhx="7ce85f02-24a8-4d69-a3f0-14b5daa7d30c" println("using GhpGhx module in REopt")
@@ -121,7 +99,6 @@ const FUEL_DEFAULTS = Dict(
 
 include("logging.jl")
 
-include("keys.jl")
 include("core/types.jl")
 include("core/utils.jl")
 
@@ -150,6 +127,7 @@ include("core/electric_tariff.jl")
 include("core/chp.jl")
 include("core/ghp.jl")
 include("core/steam_turbine.jl")
+include("core/electric_heater.jl")
 include("core/scenario.jl")
 include("core/bau_scenario.jl")
 include("core/reopt_inputs.jl")
@@ -204,6 +182,7 @@ include("results/chp.jl")
 include("results/flexible_hvac.jl")
 include("results/ghp.jl")
 include("results/steam_turbine.jl")
+include("results/electric_heater.jl")
 include("results/heating_cooling_load.jl")
 
 include("core/reopt.jl")

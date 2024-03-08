@@ -53,9 +53,14 @@
     "critical_load_fraction": 0.1
   },
   "Generator": {
+    "fuel_avail_gal": 660,
+    "installed_cost_per_kw": 500.0,
 	  "max_kw": 0.0
   },
   "Financial": {
-    "value_of_lost_load_per_kwh": 1.0
+    "value_of_lost_load_per_kwh": 1.0,
+    "microgrid_upgrade_cost_fraction": 0.3,
+    "elec_cost_escalation_rate_fraction": 0.019,
+    "offtaker_discount_rate_fraction": 0.0564
   }
 }

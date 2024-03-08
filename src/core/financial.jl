@@ -1,49 +1,21 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `Financial` is an optional REopt input with the following keys and default values:
 ```julia
     om_cost_escalation_rate_fraction::Real = 0.025,
-    elec_cost_escalation_rate_fraction::Real = 0.019,
-    existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.034, 
-    boiler_fuel_cost_escalation_rate_fraction::Real = 0.034,
-    chp_fuel_cost_escalation_rate_fraction::Real = 0.034,
-    generator_fuel_cost_escalation_rate_fraction::Real = 0.027,
-    offtaker_tax_rate_fraction::Real = 0.26,
-    offtaker_discount_rate_fraction::Real = 0.0564,
+    elec_cost_escalation_rate_fraction::Real = 0.017,
+    existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.015, 
+    boiler_fuel_cost_escalation_rate_fraction::Real = 0.015,
+    chp_fuel_cost_escalation_rate_fraction::Real = 0.015,
+    generator_fuel_cost_escalation_rate_fraction::Real = 0.012,
+    offtaker_tax_rate_fraction::Real = 0.26, # combined state and federal tax rate
+    offtaker_discount_rate_fraction::Real = 0.0638,
     third_party_ownership::Bool = false,
-    owner_tax_rate_fraction::Real = 0.26,
-    owner_discount_rate_fraction::Real = 0.0564,
+    owner_tax_rate_fraction::Real = 0.26, # combined state and federal tax rate
+    owner_discount_rate_fraction::Real = 0.0638,
     analysis_years::Int = 25,
     value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00, #only applies to multiple outage modeling
-    microgrid_upgrade_cost_fraction::Real = off_grid_flag ? 0.0 : 0.3, # not applicable when `off_grid_flag` is true
+    microgrid_upgrade_cost_fraction::Real = 0.0
     macrs_five_year::Array{Float64,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
     macrs_seven_year::Array{Float64,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
     offgrid_other_capital_costs::Real = 0.0, # only applicable when `off_grid_flag` is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
@@ -105,19 +77,19 @@ struct Financial
     function Financial(;
         off_grid_flag::Bool = false,
         om_cost_escalation_rate_fraction::Real = 0.025,
-        elec_cost_escalation_rate_fraction::Real = 0.019,
-        existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.034,
-        boiler_fuel_cost_escalation_rate_fraction::Real = 0.034,
-        chp_fuel_cost_escalation_rate_fraction::Real = 0.034,
-        generator_fuel_cost_escalation_rate_fraction::Real = 0.027,
-        offtaker_tax_rate_fraction::Real = 0.26,
-        offtaker_discount_rate_fraction::Real = 0.0564,
+        elec_cost_escalation_rate_fraction::Real = 0.017,
+        existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.015,
+        boiler_fuel_cost_escalation_rate_fraction::Real = 0.015,
+        chp_fuel_cost_escalation_rate_fraction::Real = 0.015,
+        generator_fuel_cost_escalation_rate_fraction::Real = 0.012,
+        offtaker_tax_rate_fraction::Real = 0.257,
+        offtaker_discount_rate_fraction::Real = 0.0638,
         third_party_ownership::Bool = false,
-        owner_tax_rate_fraction::Real = 0.26,
-        owner_discount_rate_fraction::Real = 0.0564,
+        owner_tax_rate_fraction::Real = 0.257,
+        owner_discount_rate_fraction::Real = 0.0638,
         analysis_years::Int = 25,
         value_of_lost_load_per_kwh::Union{Array{<:Real,1}, Real} = 1.00, #only applies to multiple outage modeling
-        microgrid_upgrade_cost_fraction::Real = off_grid_flag ? 0.0 : 0.3, # not applicable when `off_grid_flag` is true
+        microgrid_upgrade_cost_fraction::Real = 0.0,
         macrs_five_year::Array{<:Real,1} = [0.2, 0.32, 0.192, 0.1152, 0.1152, 0.0576],  # IRS pub 946
         macrs_seven_year::Array{<:Real,1} = [0.1429, 0.2449, 0.1749, 0.1249, 0.0893, 0.0892, 0.0893, 0.0446],
         offgrid_other_capital_costs::Real = 0.0, # only applicable when `off_grid_flag` is true. Straight-line depreciation is applied to this capex cost, reducing taxable income.
@@ -264,9 +236,9 @@ function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
     USD_2010_to_2020 = 1.246
     try
         costs_per_tonne = Dict(
-            "NOx" => EASIUR_data["NOX_Annual"][x - 1, y - 1] .* USD_2010_to_2020,
-            "SO2" => EASIUR_data["SO2_Annual"][x - 1, y - 1] .* USD_2010_to_2020,
-            "PM25" => EASIUR_data["PEC_Annual"][x - 1, y - 1] .* USD_2010_to_2020
+            "NOx" => EASIUR_data["NOX_Annual"][x, y] .* USD_2010_to_2020,
+            "SO2" => EASIUR_data["SO2_Annual"][x, y] .* USD_2010_to_2020,
+            "PM25" => EASIUR_data["PEC_Annual"][x, y] .* USD_2010_to_2020
         )
         return costs_per_tonne
     catch
@@ -400,12 +372,13 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
     end
 
     fn_2005 = joinpath(EASIUR_data_lib,"sc_8.6MVSL_$(stack)_pop2005.hdf5")
-    ret_map = JLD.load(fn_2005)
+    ret_map = JLD.load(fn_2005) 
+
     if pop_year != 2005
         fn_growth = joinpath(EASIUR_data_lib,"sc_growth_rate_pop2005_pop2040_$(stack).hdf5")
-        map_rate = JLD.load(fn_growth)
+        map_rate = JLD.load(fn_growth) 
         for (k,v) in map_rate
-            setindex!(ret_map, v .* (v.^(pop_year - 2005)), k)
+            setindex!(ret_map, ret_map[k] .* (v.^(pop_year - 2005)), k)
         end
     end
     if income_year != 2005
@@ -470,4 +443,38 @@ Convert Geodetic (lon, lat) to LCP (x, y) in CAMx 148x112 grid
 """
 function g2l(lon::Real, lat::Real; datum::String="NAD83")
     return l2g(lon, lat, inverse=true, datum=datum)
+end
+
+"""
+    easiur_data(; latitude::Real, longitude::Real, inflation::Real)
+
+This function gets NOx, SO2, and PM2.5 costs (for grid and on-site emissions) and cost escalation rates from the EASIUR dataset.
+    
+This function is used for the /easiur_costs endpoint in the REopt API, in particular 
+    for the webtool to display health emissions cost/escalation defaults before running REopt, 
+    but is also generally an external way to access EASIUR data without running REopt.
+"""
+function easiur_data(; latitude::Real, longitude::Real, inflation::Real)
+        grid_costs = easiur_costs(latitude, longitude, "grid")
+        if isnothing(grid_costs)
+            return Dict{String, Any}(
+                    "error"=>
+                    "Could not look up EASIUR health cost data from point ($latitude,$longitude). 
+                    Location is likely invalid or outside the CAMx grid."
+                )
+        end
+        onsite_costs = easiur_costs(latitude, longitude, "onsite")
+        escalation = easiur_escalation_rates(latitude, longitude, inflation)
+        response_dict = Dict{String, Any}(
+            "units_costs" => "US dollars per metric ton",
+            "description_costs" => "Health costs of emissions from the grid and on-site fuel burn, as reported by the EASIUR model.",
+            "units_escalation" => "nominal annual fraction",
+            "description_escalation" => "Annual nominal escalation rate of public health costs of emissions.",
+        )
+        for ekey in ["NOx", "SO2", "PM25"]
+            response_dict[ekey*"_grid_cost_per_tonne"] = grid_costs[ekey]
+            response_dict[ekey*"_onsite_fuelburn_cost_per_tonne"] = onsite_costs[ekey]
+            response_dict[ekey*"_cost_escalation_rate_fraction"] = escalation[ekey]
+        end
+        return response_dict
 end

@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 function annuity(years::Int, rate_escalation::Real, rate_discount::Real)
     """
         this formulation assumes cost growth in first period
@@ -166,9 +138,11 @@ end
 function dictkeys_tosymbols(d::Dict)
     d2 = Dict()
     for (k, v) in d
-        # handling some type conversions for API inputs and JSON
+        # handling array type conversions for API inputs and JSON
         if k in [
             "loads_kw", "critical_loads_kw",
+            "thermal_loads_ton",
+            "fuel_loads_mmbtu_per_hour",
             "monthly_totals_kwh",
             "production_factor_series", 
             "monthly_energy_rates", "monthly_demand_rates",
@@ -179,8 +153,12 @@ function dictkeys_tosymbols(d::Dict)
             "emissions_factor_series_lb_CO2_per_kwh",
             "emissions_factor_series_lb_NOx_per_kwh", 
             "emissions_factor_series_lb_SO2_per_kwh",
-            "emissions_factor_series_lb_PM25_per_kwh"
-            ] && !isnothing(v)
+            "emissions_factor_series_lb_PM25_per_kwh",
+            #for ERP
+            "pv_production_factor_series", "wind_production_factor_series",
+            "battery_starting_soc_series_fraction",
+            "monthly_mmbtu", "monthly_tonhour"
+        ] && !isnothing(v)
             try
                 v = convert(Array{Real, 1}, v)
             catch
@@ -215,18 +193,50 @@ function dictkeys_tosymbols(d::Dict)
             end
         end
         if k in [
-            "fuel_cost_per_mmbtu", "wholesale_rate"
-            ] && !isnothing(v)
+            "fuel_limit_is_per_generator" #for ERP
+        ]
+            if !(typeof(v) <: Bool)
+                try
+                    v = convert(Array{Bool, 1}, v)
+                catch
+                    throw(@error("Unable to convert $k to a Array{Bool, 1}"))
+                end
+            end
+        end
+        if k in [
+            "fuel_cost_per_mmbtu", "wholesale_rate",
+            # for ERP
+            "generator_size_kw", "generator_operational_availability",
+            "generator_failure_to_start", "generator_mean_time_to_failure",
+            "generator_fuel_intercept_per_hr", "generator_fuel_burn_rate_per_kwh",
+            "fuel_limit"
+        ] && !isnothing(v)
             #if not a Real try to convert to an Array{Real} 
             if !(typeof(v) <: Real)
                 try
-                    if typeof(v) <: Array
-                        v = convert(Array{Real, 1}, v)
-                    end
+                    v = convert(Array{Real, 1}, v)
                 catch
                     throw(@error("Unable to convert $k to a Array{Real, 1} or Real"))
                 end
             end
+        end
+        if k in [
+            "num_generators" #for ERP
+        ]
+            #if not a Real try to convert to an Array{Real} 
+            if !(typeof(v) <: Int)
+                try
+                    v = convert(Array{Int64, 1}, v)
+                catch
+                    throw(@error("Unable to convert $k to a Array{Int64, 1} or Int"))
+                end
+            end
+        end
+        if k in ["generator_operational_availability", "generator_failure_to_start", "generator_mean_time_to_failure", 
+                                "num_generators", "generator_size_kw", "fuel_limit", "fuel_limit_is_per_generator", 
+                                "generator_fuel_intercept_per_hr", "generator_fuel_burn_rate_per_kwh"] &&
+                                !(typeof(v) <: Array)
+            v = [v]
         end
         d2[Symbol(k)] = v
     end
@@ -316,7 +326,7 @@ function generate_year_profile_hourly(year::Int64, consecutive_periods::Abstract
 
     # Note, day = 1 is Monday, not Sunday
     day_of_week_name = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    for i in 1:length(consecutive_periods)
+    for i in eachindex(consecutive_periods)
         start_month = convert(Int,consecutive_periods[i]["month"])
         start_week_of_month = convert(Int,consecutive_periods[i]["start_week_of_month"])
         start_day_of_week = convert(Int,consecutive_periods[i]["start_day_of_week"])  # Monday - Sunday is 1 - 7
@@ -347,54 +357,58 @@ function generate_year_profile_hourly(year::Int64, consecutive_periods::Abstract
 end
 
 
-function get_ambient_temperature(latitude::Real, longitude::Real; timeframe="hourly")
-    url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
-        "&lat=", latitude , "&lon=", longitude, "&tilt=", latitude,
-        "&system_capacity=1", "&azimuth=", 180, "&module_type=", 0,
-        "&array_type=", 0, "&losses=", 14,
-        "&timeframe=", timeframe, "&dataset=nsrdb"
-    )
-
-    try
-        @info "Querying PVWatts for ambient temperature... "
-        r = HTTP.get(url)
-        response = JSON.parse(String(r.body))
-        if r.status != 200
-            throw(@error("Bad response from PVWatts: $(response["errors"])"))
+"""
+    call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimuth=180, module_type=0, array_type=1, 
+        losses=14, dc_ac_ratio=1.2, gcr=0.4, inv_eff=96, timeframe="hourly", radius=0, time_steps_per_hour=1)
+This calls the PVWatts API and returns both:
+ - PV production factor
+ - Ambient outdoor air dry bulb temperature profile [Celcius] 
+"""
+function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimuth=180, module_type=0, array_type=1, 
+    losses=14, dc_ac_ratio=1.2, gcr=0.4, inv_eff=96, timeframe="hourly", radius=0, time_steps_per_hour=1)
+    # Check if site is beyond the bounds of the NRSDB TMY dataset. If so, use the international dataset.
+    dataset = "nsrdb"
+    if longitude < -179.5 || longitude > -21.0 || latitude < -21.5 || latitude > 60.0
+        if longitude < 81.5 || longitude > 179.5 || latitude < -60.0 || latitude > 60.0 
+            if longitude < 67.0 || latitude < -40.0 || latitude > 38.0
+                dataset = "intl"
+            end
         end
-        @info "PVWatts success."
-        tamb = collect(get(response["outputs"], "tamb", []))  # Celcius
-        if length(tamb) != 8760
-            throw(@error("PVWatts did not return a valid temperature. Got $tamb"))
-        end
-        return tamb
-    catch e
-        throw(@error("Error occurred when calling PVWatts: $e"))
     end
-end
-
-
-function get_pvwatts_prodfactor(latitude::Real, longitude::Real; timeframe="hourly")
-    url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
-        "&lat=", latitude , "&lon=", longitude, "&tilt=", latitude,
-        "&system_capacity=1", "&azimuth=", 180, "&module_type=", 0,
-        "&array_type=", 0, "&losses=", 14,
-        "&timeframe=", timeframe, "&dataset=nsrdb"
-    )
+    check_api_key()
+    url = string("https://developer.nrel.gov/api/pvwatts/v8.json", "?api_key=", ENV["NREL_DEVELOPER_API_KEY"],
+        "&lat=", latitude , "&lon=", longitude, "&tilt=", tilt,
+        "&system_capacity=1", "&azimuth=", azimuth, "&module_type=", module_type,
+        "&array_type=", array_type, "&losses=", losses, "&dc_ac_ratio=", dc_ac_ratio,
+        "&gcr=", gcr, "&inv_eff=", inv_eff, "&timeframe=", timeframe, "&dataset=", dataset,
+        "&radius=", radius
+        )
 
     try
-        @info "Querying PVWatts for production factor of 1 kW system with tilt set to latitude... "
-        r = HTTP.get(url)
+        @info "Querying PVWatts for production factor and ambient air temperature... "
+        r = HTTP.get(url, keepalive=true, readtimeout=10)
         response = JSON.parse(String(r.body))
         if r.status != 200
             throw(@error("Bad response from PVWatts: $(response["errors"])"))
         end
         @info "PVWatts success."
+        # Get both possible data of interest
         watts = collect(get(response["outputs"], "ac", []) / 1000)  # scale to 1 kW system (* 1 kW / 1000 W)
+        tamb_celcius = collect(get(response["outputs"], "tamb", []))  # Celcius
+        # Validate outputs
         if length(watts) != 8760
             throw(@error("PVWatts did not return a valid prodfactor. Got $watts"))
         end
-        return watts
+        # Validate tamb_celcius
+        if length(tamb_celcius) != 8760
+            throw(@error("PVWatts did not return a valid temperature. Got $tamb_celcius"))
+        end 
+        # Upsample or downsample based on model time_steps_per_hour
+        if time_steps_per_hour > 1
+            watts = repeat(watts, inner=time_steps_per_hour)
+            tamb_celcius = repeat(tamb_celcius, inner=time_steps_per_hour)
+        end
+        return watts, tamb_celcius
     catch e
         throw(@error("Error occurred when calling PVWatts: $e"))
     end
@@ -403,14 +417,20 @@ end
 
 """
     Convert gallons of stored liquid (e.g. water, water/glycol) to kWh of stored energy in a stratefied tank
+    Note: uses the PropsSI function from the CoolProp package.  Further details on inputs used are available
+        at: http://www.coolprop.org/coolprop/HighLevelAPI.html
     :param delta_T_degF: temperature difference between the hot/warm side and the cold side
     :param rho_kg_per_m3: density of the liquid
     :param cp_kj_per_kgK: heat capacity of the liquid
     :return gal_to_kwh: stored energy, in kWh
 """
-function convert_gal_to_kwh(delta_T_degF::Real, rho_kg_per_m3::Real, cp_kj_per_kgK::Real)
-    delta_T_K = delta_T_degF * 5.0 / 9.0  # [K]
-    kj_per_m3 = rho_kg_per_m3 * cp_kj_per_kgK * delta_T_K  # [kJ/m^3]
+function get_kwh_per_gal(t_hot_degF::Real, t_cold_degF::Real, fluid::String="Water")
+    t_hot_K = convert_temp_degF_to_Kelvin(t_hot_degF)  # [K]
+    t_cold_K = convert_temp_degF_to_Kelvin(t_cold_degF)  # [K]
+    avg_t_K = (t_hot_K + t_cold_K) / 2.0
+    avg_rho_kg_per_m3 = PropsSI("D", "P", 101325.0, "T", avg_t_K, fluid)  # [kg/m^3]
+    avg_cp_kj_per_kgK = PropsSI("CPMASS", "P", 101325.0, "T", avg_t_K, fluid) / 1000  # kJ/kg-K
+    kj_per_m3 = avg_rho_kg_per_m3 * avg_cp_kj_per_kgK * (t_hot_K - t_cold_K)  # [kJ/m^3]
     kj_per_gal = kj_per_m3 / 264.172   # divide by gal/m^3 to get: [kJ/gal]
     kwh_per_gal = kj_per_gal / 3600.0  # divide by kJ/kWh, i.e., sec/hr, to get: [kWh/gal]
     return kwh_per_gal
@@ -432,4 +452,63 @@ end
 
 macro argname(arg)
     string(arg)
+end
+
+"""
+    get_monthly_time_steps(year::Int; time_steps_per_hour=1)
+
+return Array{Array{Int64,1},1}, size = (12,)
+"""
+function get_monthly_time_steps(year::Int; time_steps_per_hour=1)
+    a = Array[]
+    i = 1
+    for m in range(1, stop=12)
+        n_days = daysinmonth(Date(string(year) * "-" * string(m)))
+        stop = n_days * 24 * time_steps_per_hour + i - 1
+        if m == 2 && isleapyear(year)
+            stop -= 24 * time_steps_per_hour  # TODO support extra day in leap years?
+        end
+        steps = [step for step in range(i, stop=stop)]
+        append!(a, [steps])
+        i = stop + 1
+    end
+    return a
+end
+
+"""
+generator_fuel_slope_and_intercept(;
+                electric_efficiency_full_load::Real, [kWhe/kWht]
+                electric_efficiency_half_load::Real, [kWhe/kWht]
+                fuel_higher_heating_value_kwh_per_gal::Real
+            )
+
+return Tuple{<:Real,<:Real} where 
+    first value is diesel fuel burn slope [gal/kWhe]
+    secnod value is diesel fuel burn intercept [gal/hr]
+"""
+function generator_fuel_slope_and_intercept(;
+                        electric_efficiency_full_load::Real, 
+                        electric_efficiency_half_load::Real,
+                        fuel_higher_heating_value_kwh_per_gal::Real
+                    )
+    fuel_burn_full_load_kwht = 1.0 / electric_efficiency_full_load  # [kWe_rated/(kWhe/kWht)]
+    fuel_burn_half_load_kwht = 0.5 / electric_efficiency_half_load  # [kWe_rated/(kWhe/kWht)]
+    fuel_slope_kwht_per_kwhe = (fuel_burn_full_load_kwht - fuel_burn_half_load_kwht) / (1.0 - 0.5)  # [kWht/kWhe]
+    fuel_intercept_kwht_per_hr = fuel_burn_full_load_kwht - fuel_slope_kwht_per_kwhe * 1.0  # [kWht/hr]
+    fuel_slope_gal_per_kwhe = fuel_slope_kwht_per_kwhe / fuel_higher_heating_value_kwh_per_gal # [gal/kWhe]
+    fuel_intercept_gal_per_hr = fuel_intercept_kwht_per_hr / fuel_higher_heating_value_kwh_per_gal # [gal/hr]
+    
+    return fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr
+end
+
+function convert_temp_degF_to_Kelvin(degF::Float64)
+    return (degF - 32) * 5.0 / 9.0 + 273.15
+end
+
+function check_api_key()
+    if isempty(get(ENV, "NREL_DEVELOPER_API_KEY", ""))
+        throw(@error("No NREL Developer API Key provided when trying to call PVWatts or Wind Toolkit.
+                    Within your Julia environment, specify ENV['NREL_DEVELOPER_API_KEY']='your API key'
+                    See https://nrel.github.io/REopt.jl/dev/ for more information."))
+    end
 end

@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
     struct ElectricTariff
 
@@ -322,11 +294,11 @@ function ElectricTariff(;
     - if NEM then set ExportRate[:Nem, :] to energy_rate[tier_with_lowest_energy_rate, :]
     - user can provide either scalar wholesale rate or vector of time_steps, 
     =#
-    whl_rate = create_export_rate(wholesale_rate, length(energy_rates), time_steps_per_hour)
+    whl_rate = create_export_rate(wholesale_rate, length(energy_rates[:,1]), time_steps_per_hour)
     if !isnothing(u) && sum(u.sell_rates) < 0
         whl_rate += u.sell_rates
     end
-    exc_rate = create_export_rate(export_rate_beyond_net_metering_limit, length(energy_rates), time_steps_per_hour)
+    exc_rate = create_export_rate(export_rate_beyond_net_metering_limit, length(energy_rates[:,1]), time_steps_per_hour)
     
     if !NEM & (sum(whl_rate) >= 0) # no NEM or WHL 
         export_rates = Dict{Symbol, AbstractArray}()
@@ -389,7 +361,7 @@ function get_tier_with_lowest_energy_rate(u::URDBrate)
     """
     #TODO: can eliminate if else if confirm that u.energy_rates is always 2D
     if length(u.energy_tier_limits) > 1
-        return argmin(sum(u.energy_rates, dims=1))
+        return argmin(vec(sum(u.energy_rates, dims=1)))
     else
         return 1
     end
@@ -432,27 +404,6 @@ function create_export_rate(e::AbstractArray{<:Real, 1}, N::Int, ts_per_hour::In
     return export_rates
 end
 
-
-"""
-    get_monthly_time_steps(year::Int; time_steps_per_hour=1)
-
-return Array{Array{Int64,1},1}, size = (12,)
-"""
-function get_monthly_time_steps(year::Int; time_steps_per_hour=1)
-    a = Array[]
-    i = 1
-    for m in range(1, stop=12)
-        n_days = daysinmonth(Date(string(year) * "-" * string(m)))
-        stop = n_days * 24 * time_steps_per_hour + i - 1
-        if m == 2 && isleapyear(year)
-            stop -= 24 * time_steps_per_hour  # TODO support extra day in leap years?
-        end
-        steps = [step for step in range(i, stop=stop)]
-        append!(a, [steps])
-        i = stop + 1
-    end
-    return a
-end
 
 # TODO use this function only for URDBrate
 function remove_tiers_from_urdb_rate(u::URDBrate)

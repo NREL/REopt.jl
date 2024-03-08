@@ -1,33 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
-
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 
 function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diesel_min_turndown, batt_kwh, batt_kw,
                     batt_roundtrip_efficiency, n_time_steps, n_steps_per_hour, batt_soc_kwh, crit_load)
@@ -151,13 +122,13 @@ function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[
                      )
     n_time_steps = length(critical_loads_kw)
     n_steps_per_hour = Int(n_time_steps / 8760)
-    r = repeat([0], n_time_steps)
+    r = repeat([0.0], n_time_steps)
 
     if batt_kw == 0 || batt_kwh == 0
         init_soc = repeat([0], n_time_steps)  # default is 0
 
-        if (isempty(pv_kw_ac_hourly) || (sum(pv_kw_ac_hourly) == 0)) && diesel_kw == 0
-            # no pv, generator, nor battery --> no resilience
+        if (isempty(pv_kw_ac_hourly) || (sum(pv_kw_ac_hourly) == 0)) && (isempty(wind_kw_ac_hourly) || (sum(wind_kw_ac_hourly) == 0)) && diesel_kw == 0
+            # no pv, generator, wind, nor battery --> no resilience
             return Dict(
                 "resilience_by_time_step" => r,
                 "resilience_hours_min" => 0,
@@ -252,12 +223,12 @@ Returns a dict
 ```
 """
 function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
-    batt_roundtrip_efficiency = p.s.storage.attr["ElectricStorage"].charge_efficiency 
-                                p.s.storage.attr["ElectricStorage"].discharge_efficiency
+    batt_roundtrip_efficiency = (p.s.storage.attr["ElectricStorage"].charge_efficiency *
+                                p.s.storage.attr["ElectricStorage"].discharge_efficiency)
 
     # TODO handle generic PV names
     pv_kw_ac_hourly = zeros(length(p.time_steps))
-    if "PV" in keys(d)
+    if "PV" in keys(d) && !(microgrid_only && !Bool(get(d["Outages"], "PV_upgraded", false)))
         pv_kw_ac_hourly = (
             get(d["PV"], "electric_to_storage_series_kw", zeros(length(p.time_steps)))
           + get(d["PV"], "electric_curtailed_series_kw", zeros(length(p.time_steps)))
@@ -265,8 +236,15 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
           + get(d["PV"], "electric_to_grid_series_kw", zeros(length(p.time_steps)))
         )
     end
-    if microgrid_only && !Bool(get(d["Outages"], "PV_upgraded", false))
-        pv_kw_ac_hourly = zeros(length(p.time_steps))
+
+    wind_kw_ac_hourly = zeros(length(p.time_steps))
+    if "Wind" in keys(d) && !(microgrid_only && !Bool(get(d["Outages"], "Wind_upgraded", false)))
+        wind_kw_ac_hourly = (
+            get(d["Wind"], "electric_to_storage_series_kw", zeros(length(p.time_steps)))
+          + get(d["Wind"], "electric_curtailed_series_kw", zeros(length(p.time_steps)))
+          + get(d["Wind"], "electric_to_load_series_kw", zeros(length(p.time_steps)))
+          + get(d["Wind"], "electric_to_grid_series_kw", zeros(length(p.time_steps)))
+        )
     end
 
     batt_kwh = 0
@@ -277,7 +255,7 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
         batt_kw = get(d["ElectricStorage"], "size_kw", 0)
         init_soc = get(d["ElectricStorage"], "soc_series_fraction", zeros(length(p.time_steps)))
     end
-    if microgrid_only && !Bool(get(d["Outages"], "storage_upgraded", false))
+    if microgrid_only && !Bool(get(d["Outages"], "electric_storage_microgrid_upgraded", false))
         batt_kwh = 0
         batt_kw = 0
         init_soc = zeros(length(p.time_steps))
@@ -288,8 +266,14 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
         diesel_kw = get(d["Generator"], "size_kw", 0)
     end
     if microgrid_only
-        diesel_kw = get(d["Outages"], "Generator_mg_kw", 0)
+        diesel_kw = get(d["Outages"], "generator_microgrid_size_kw", 0)
     end
+
+	fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr = generator_fuel_slope_and_intercept(
+		electric_efficiency_full_load=p.s.generator.electric_efficiency_full_load, 
+		electric_efficiency_half_load=p.s.generator.electric_efficiency_half_load,
+        fuel_higher_heating_value_kwh_per_gal = p.s.generator.fuel_higher_heating_value_kwh_per_gal
+	)
 
     simulate_outages(;
         batt_kwh = batt_kwh, 
@@ -297,12 +281,12 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
         pv_kw_ac_hourly = pv_kw_ac_hourly,
         init_soc = init_soc, 
         critical_loads_kw = p.s.electric_load.critical_loads_kw, 
-        wind_kw_ac_hourly = [],
+        wind_kw_ac_hourly = wind_kw_ac_hourly,
         batt_roundtrip_efficiency = batt_roundtrip_efficiency,
         diesel_kw = diesel_kw, 
         fuel_available = p.s.generator.fuel_avail_gal,
-        b = p.s.generator.fuel_intercept_gal_per_hr,
-        m = p.s.generator.fuel_slope_gal_per_kwh, 
+        b = fuel_intercept_gal_per_hr,
+        m = fuel_slope_gal_per_kwhe, 
         diesel_min_turndown = p.s.generator.min_turn_down_fraction
     )
 end

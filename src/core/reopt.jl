@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 
 """
     REoptInputs(d::Dict)
@@ -172,22 +144,25 @@ function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.Abst
 		Threads.@threads for i = 1:2
 			rs[i] = run_reopt(inputs[i])
 		end
-		if typeof(rs[1]) <: Dict && typeof(rs[2]) <: Dict
-			#TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
-			open("scenarios/before_combine_results_bau.json","w") do f
-                JSON.print(f, rs[1])
-            end			
-            open("scenarios/before_combine_results_opt.json","w") do f
-                JSON.print(f, rs[2])
-            end
-            results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
+		# if typeof(rs[1]) <: Dict && typeof(rs[2]) <: Dict
+		# 	#TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
+		# 	open("scenarios/before_combine_results_bau.json","w") do f
+        #         JSON.print(f, rs[1])
+        #     end			
+        #     open("scenarios/before_combine_results_opt.json","w") do f
+        #         JSON.print(f, rs[2])
+        #     end
+        #     results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
+		if typeof(rs[1]) <: Dict && typeof(rs[2]) <: Dict && rs[1]["status"] != "error" && rs[2]["status"] != "error"
+			# TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
+			results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
 			results_dict["Financial"] = merge(results_dict["Financial"], proforma_results(p, results_dict))
 			if !isempty(p.techs.pv)
 				organize_multiple_pv_results(p, results_dict)
 			end
 			return results_dict
 		else
-			return rs
+			throw(@error("REopt scenarios solved either with errors or non-optimal solutions."))
 		end
 	catch e
 		if isnothing(e) # Error thrown by REopt
@@ -288,7 +263,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	m[:TotalCHPStandbyCharges] = 0
 	m[:OffgridOtherCapexAfterDepr] = 0.0
     m[:GHPCapCosts] = 0.0
-    m[:GHPOMCosts] = 0.0   
+    m[:GHPOMCosts] = 0.0
+	m[:AvoidedCapexByGHP] = 0.0
+	m[:ResidualGHXCapCost] = 0.0
+	m[:ObjectivePenalties] = 0.0
 
 	if !isempty(p.techs.all)
 		add_tech_size_constraints(m, p)
@@ -310,10 +288,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             m[:TotalPerUnitHourOMCosts] += m[:TotalHourlyCHPOMCosts]
 
 			if p.s.chp.standby_rate_per_kw_per_month > 1.0e-7
-				m[:TotalCHPStandbyCharges] += sum(p.s.financial.pwf_e * 12 * p.s.chp.standby_rate_per_kw_per_month * m[:dvSize][t] for t in p.techs.chp)
+				m[:TotalCHPStandbyCharges] += sum(p.pwf_e * 12 * p.s.chp.standby_rate_per_kw_per_month * m[:dvSize][t] for t in p.techs.chp)
 			end
 
 			m[:TotalTechCapCosts] += sum(p.s.chp.supplementary_firing_capital_cost_per_kw * m[:dvSupplementaryFiringSize][t] for t in p.techs.chp)
+        end
+
+        if !isempty(setdiff(p.techs.heating, p.techs.elec))
+            add_heating_tech_constraints(m, p)
         end
 
         if !isempty(p.techs.boiler)
@@ -407,7 +389,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	add_elec_utility_expressions(m, p)
 
 	if !isempty(p.s.electric_utility.outage_durations)
-		add_dv_UnservedLoad_constraints(m,p)
+        add_dv_UnservedLoad_constraints(m,p)
 		add_outage_cost_constraints(m,p)
 		add_MG_production_constraints(m,p)
 		if !isempty(p.s.storage.types.elec)
@@ -418,16 +400,27 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_cannot_have_MG_with_only_PVwind_constraints(m,p)
 		add_MG_size_constraints(m,p)
 		
-		if !isempty(p.techs.gen)
-			add_MG_fuel_burn_constraints(m,p)
+		m[:ExpectedMGFuelCost] = 0
+        if !isempty(p.techs.gen)
+			add_MG_Gen_fuel_burn_constraints(m,p)
 			add_binMGGenIsOnInTS_constraints(m,p)
 		else
-			m[:ExpectedMGFuelUsed] = 0
-			m[:ExpectedMGFuelCost] = 0
 			@constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
 				m[:binMGGenIsOnInTS][s, tz, ts] == 0
 			)
 		end
+
+		if !isempty(p.techs.chp)
+			add_MG_CHP_fuel_burn_constraints(m,p)
+			add_binMGCHPIsOnInTS_constraints(m,p)
+		else
+			@constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+				m[:binMGCHPIsOnInTS][s, tz, ts] == 0
+			)
+			@constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+				m[:dvMGCHPFuelBurnYIntercept][s, tz] == 0
+			)            
+		end        
 		
 		if p.s.site.min_resil_time_steps > 0
 			add_min_hours_crit_ld_met_constraint(m,p)
@@ -468,18 +461,16 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:TotalElecBill] * (1 - p.s.financial.offtaker_tax_rate_fraction) -
 
         # Subtract Incentives, which are taxable
-		m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_rate_fraction) +
-
-		# Comfort limit violation costs
-		#TODO: add this to objective like SOC incentive below and 
-		#don't then subtract out when setting lcc in results/financial.jl
-		m[:dvComfortLimitViolationCost] + 
+		m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_rate_fraction) + 
 
 		# Additional annual costs, tax deductible for owner (only applies when `off_grid_flag` is true)
 		p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_rate_fraction) +
 
 		# Additional capital costs, depreciable (only applies when `off_grid_flag` is true)
-		m[:OffgridOtherCapexAfterDepr]
+		m[:OffgridOtherCapexAfterDepr] -
+
+		# Subtract capital expenditures avoided by inclusion of GHP and residual present value of GHX.
+		m[:AvoidedCapexByGHP] - m[:ResidualGHXCapCost]
 
 	);
 	if !isempty(p.s.electric_utility.outage_durations)
@@ -494,36 +485,23 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_to_expression!(Costs, m[:Lifecycle_Emissions_Cost_Health])
 	end
 	
-	@expression(m, Objective,
-		m[:Costs]
-	)
-		
+	## Modify objective with incentives that are not part of the LCC
+	# 1. Comfort limit violation costs
+	m[:ObjectivePenalties] += m[:dvComfortLimitViolationCost]
+	# 2. Incentive to keep SOC high
 	if !(isempty(p.s.storage.types.elec)) && p.s.settings.add_soc_incentive
-		# Incentive to keep SOC high
-		add_to_expression!(
-			Objective, 
-			- sum(
+		m[:ObjectivePenalties] += -1 * sum(
 				m[:dvStoredEnergy][b, ts] for b in p.s.storage.types.elec, ts in p.time_steps
 			) / (8760. / p.hours_per_time_step)
-		)
 	end
+	# 3. Incentive to minimize unserved load in each outage, not just the max over outage start times
 	if !isempty(p.s.electric_utility.outage_durations)
-		# Incentive to minimize unserved load in each outage, not just the max over outage start times
-		add_to_expression!(
-			Objective, 
-			sum(sum(0.0001 * m[:dvUnservedLoad][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s]) for s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps)
-		)
+		m[:ObjectivePenalties] += sum(sum(0.0001 * m[:dvUnservedLoad][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s]) 
+			for s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps)
 	end
 
-	@objective(m, Min, m[:Objective])
-	
-	# if !(isempty(p.s.storage.types.elec)) && p.s.settings.add_soc_incentive # Keep SOC high
-	# 	@objective(m, Min, m[:Costs] - 
-	# 	sum(m[:dvStoredEnergy][b, ts] for b in p.s.storage.types.elec, ts in p.time_steps) /
-	# 		(8760. / p.hours_per_time_step)
-	# 	)
-	
-	# end
+	# Set model objective 
+	@objective(m, Min, m[:Costs] + m[:ObjectivePenalties] )
 
 	for b in p.s.storage.types.elec
 		if p.s.storage.attr[b].model_degradation
@@ -650,7 +628,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		tZeros = p.s.electric_utility.outage_start_time_steps
 		S = p.s.electric_utility.scenarios
 		# TODO: currently defining more decision variables than necessary b/c using rectangular arrays, could use dicts of decision variables instead
-		@variables m begin # if there is more than one specified outage, there can be more othan one outage start time
+        @variables m begin # if there is more than one specified outage, there can be more othan one outage start time
 			dvUnservedLoad[S, tZeros, outage_time_steps] >= 0 # unserved load not met by system
 			dvMGProductionToStorage[p.techs.elec, S, tZeros, outage_time_steps] >= 0 # Electricity going to the storage system during each time_step
 			dvMGDischargeFromStorage[S, tZeros, outage_time_steps] >= 0 # Electricity coming from the storage system during each time_step
@@ -662,13 +640,17 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 			dvMGsize[p.techs.elec] >= 0
 			
 			dvMGFuelUsed[p.techs.elec, S, tZeros] >= 0
-			dvMGMaxFuelUsage[S] >= 0
-			dvMGMaxFuelCost[S] >= 0
+            dvMGGenMaxFuelUsage[S] >= 0
+            dvMGCHPMaxFuelUsage[S] >= 0
+			dvMGGenMaxFuelCost[S] >= 0
+            dvMGCHPMaxFuelCost[S] >= 0
 			dvMGCurtail[p.techs.elec, S, tZeros, outage_time_steps] >= 0
 
 			binMGStorageUsed, Bin # 1 if MG storage battery used, 0 otherwise
 			binMGTechUsed[p.techs.elec], Bin # 1 if MG tech used, 0 otherwise
 			binMGGenIsOnInTS[S, tZeros, outage_time_steps], Bin
+            binMGCHPIsOnInTS[S, tZeros, outage_time_steps], Bin
+            dvMGCHPFuelBurnYIntercept[S, tZeros] >= 0
 		end
 	end
 

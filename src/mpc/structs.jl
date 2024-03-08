@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
     MPCElectricLoad
 
@@ -201,7 +173,7 @@ function MPCElectricTariff(d::Dict)
     if !isnothing(export_rates)
         export_rates = convert(Vector{Real}, export_rates)
     end
-    whl_rate = create_export_rate(export_rates, length(energy_rates), 1)
+    whl_rate = create_export_rate(export_rates, length(energy_rates[:,1]), 1)
 
     if !NEM & (sum(whl_rate) >= 0)
         export_rates = DenseAxisArray{Array{Float64,1}}(undef, [])
@@ -283,9 +255,10 @@ struct with inner constructor:
 function MPCGenerator(;
     size_kw::Real,
     fuel_cost_per_gallon::Real = 3.0,
-    fuel_slope_gal_per_kwh::Real = 0.076,
-    fuel_intercept_gal_per_hr::Real = 0.0,
-    fuel_avail_gal::Real = 660.0,
+    electric_efficiency_full_load::Real = 0.3233,
+    electric_efficiency_half_load::Real = electric_efficiency_full_load,
+    fuel_avail_gal::Real = 1.0e9,
+    fuel_higher_heating_value_kwh_per_gal::Real = KWH_PER_GAL_DIESEL,
     min_turn_down_fraction::Real = 0.0,  # TODO change this to non-zero value
     only_runs_during_grid_outage::Bool = true,
     sells_energy_back_to_grid::Bool = false,
@@ -297,9 +270,10 @@ struct MPCGenerator <: AbstractGenerator
     size_kw
     max_kw
     fuel_cost_per_gallon
-    fuel_slope_gal_per_kwh
-    fuel_intercept_gal_per_hr
+    electric_efficiency_full_load
+    electric_efficiency_half_load
     fuel_avail_gal
+    fuel_higher_heating_value_kwh_per_gal
     min_turn_down_fraction
     only_runs_during_grid_outage
     sells_energy_back_to_grid
@@ -308,9 +282,10 @@ struct MPCGenerator <: AbstractGenerator
     function MPCGenerator(;
         size_kw::Real,
         fuel_cost_per_gallon::Real = 3.0,
-        fuel_slope_gal_per_kwh::Real = 0.076,
-        fuel_intercept_gal_per_hr::Real = 0.0,
-        fuel_avail_gal::Real = 660.0,
+        electric_efficiency_full_load::Real = 0.3233,
+        electric_efficiency_half_load::Real = electric_efficiency_full_load,
+        fuel_avail_gal::Real = 1.0e9,
+        fuel_higher_heating_value_kwh_per_gal::Real = KWH_PER_GAL_DIESEL,
         min_turn_down_fraction::Real = 0.0,  # TODO change this to non-zero value
         only_runs_during_grid_outage::Bool = true,
         sells_energy_back_to_grid::Bool = false,
@@ -318,14 +293,15 @@ struct MPCGenerator <: AbstractGenerator
         )
 
         max_kw = size_kw
-
+        
         new(
             size_kw,
             max_kw,
             fuel_cost_per_gallon,
-            fuel_slope_gal_per_kwh,
-            fuel_intercept_gal_per_hr,
+            electric_efficiency_full_load,
+            electric_efficiency_half_load,
             fuel_avail_gal,
+            fuel_higher_heating_value_kwh_per_gal,
             min_turn_down_fraction,
             only_runs_during_grid_outage,
             sells_energy_back_to_grid,
