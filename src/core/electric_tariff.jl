@@ -93,7 +93,7 @@ function ElectricTariff(;
     urdb_response::Dict=Dict(),
     urdb_utility_name::String="",
     urdb_rate_name::String="",
-    year::Int=2022,   # Will be passed from ElectricLoad
+    year::Int=2022,   # Passed from ElectricLoad
     time_steps_per_hour::Int=1,
     NEM::Bool=false,
     wholesale_rate::T1=nothing,

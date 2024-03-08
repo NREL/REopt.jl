@@ -5,7 +5,8 @@
     },
     "ElectricUtility": {
         "outage_start_time_steps": [5100, 5200],
-        "outage_durations": [10]
+        "outage_durations": [10],
+        "co2_from_avert": true
     },
     "Generator": {
         "fuel_avail_gal": 660,
