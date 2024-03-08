@@ -25,7 +25,8 @@ export
     get_steam_turbine_defaults_size_class,
     simulated_load,
     get_absorption_chiller_defaults,
-    emissions_profiles,
+    avert_emissions_profiles,
+    cambium_emissions_profile,
     easiur_data,
     get_existing_chiller_default_cop
 

@@ -6,6 +6,9 @@
         "land_acres": 1.0,
         "node": 3
     },
+    "ElectricUtility" : {
+        "co2_from_avert" : true
+    },
     "PV": {
         "macrs_bonus_fraction": 0.4,
         "installed_cost_per_kw": 2000.0,

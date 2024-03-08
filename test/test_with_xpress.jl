@@ -382,7 +382,7 @@ check to make sure that PV does NOT export unless the site load is met first for
     data["ElectricTariff"]["wholesale_rate"] =
         append!(repeat([jan_rate + 0.1], 31 * 24), repeat([0.0], 8760 - 31*24))
     data["ElectricTariff"]["monthly_demand_rates"] = repeat([0], 12)
-    data["ElectricUtility"] = Dict("allow_simultaneous_export_import" => false)
+    data["ElectricUtility"]["allow_simultaneous_export_import"] = false
 
     s = Scenario(data)
     inputs = REoptInputs(s)
@@ -1540,9 +1540,9 @@ end
             @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.132118 atol=1e-3 # 0.1354 atol=1e-3
             # CO2 emissions - totals ≈  from grid, from fuelburn, ER, $/tCO2 breakeven
             @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.8 atol=1e-3 # 0.8
-            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 374.0 atol=1e-1
-            @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 14.2 atol=1
-            @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 70.99 atol=1
+            @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 460.7 atol=1e-1
+            @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 11.662 atol=1
+            @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 58.3095 atol=1
             @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
             @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 8401.1 atol=1
             @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 1166.19 atol=1
