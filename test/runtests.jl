@@ -1593,7 +1593,7 @@ else  # run HiGHS tests
                 model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
                 p = REoptInputs("./scenarios/subhourly_with_urdb.json")
                 results = run_reopt(model, p)
-                @test length(p.s.electric_tariff.export_rates[:WHL]) ≈ 8740*4
+                @test length(p.s.electric_tariff.export_rates[:WHL]) ≈ 8760*4
                 @test results["PV"]["size_kw"] ≈ p.s.pvs[1].existing_kw
             end
 
