@@ -18,7 +18,7 @@ Cold thermal energy storage sytem; specifically, a chilled water system used to 
     thermal_decay_rate_fraction::Float64 = 0.0004 # Thermal loss (gain) rate as a fraction of energy storage capacity, per hour (frac*energy_capacity/hr = kw_thermal)
     om_cost_per_gal::Float64 = 0.0 # Yearly fixed O&M cost dependent on storage energy size
     macrs_option_years::Int = 7
-    macrs_bonus_fraction::Float64 = 0.8
+    macrs_bonus_fraction::Float64 = 0.6
     macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kwh::Float64 = 0.0
@@ -36,7 +36,7 @@ Base.@kwdef struct ColdThermalStorageDefaults <: AbstractThermalStorageDefaults
     thermal_decay_rate_fraction::Float64 = 0.0004
     om_cost_per_gal::Float64 = 0.0
     macrs_option_years::Int = 7
-    macrs_bonus_fraction::Float64 = 0.8
+    macrs_bonus_fraction::Float64 = 0.6
     macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kwh::Float64 = 0.0
@@ -58,7 +58,7 @@ end
     thermal_decay_rate_fraction::Float64 = 0.0004
     om_cost_per_gal::Float64 = 0.0
     macrs_option_years::Int = 7
-    macrs_bonus_fraction::Float64 = 0.8
+    macrs_bonus_fraction::Float64 = 0.6
     macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kwh::Float64 = 0.0
@@ -76,7 +76,7 @@ Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults
     thermal_decay_rate_fraction::Float64 = 0.0004
     om_cost_per_gal::Float64 = 0.0
     macrs_option_years::Int = 7
-    macrs_bonus_fraction::Float64 = 0.8
+    macrs_bonus_fraction::Float64 = 0.6
     macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kwh::Float64 = 0.0
