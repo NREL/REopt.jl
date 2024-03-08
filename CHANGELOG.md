@@ -48,7 +48,9 @@ Classify the change according to the following categories:
 - Adjust grid emissions profiles for day of week alignment with load_year.
 - In `test_with_xpress.jl`, updated "Emissions and Renewable Energy Percent" expected values to account for load year adjustment. 
 - In `src/core/electric_utility.jl`, error when user-provided emissions series does not match timestep per hour, as is done in other cases of incorrect user-provided data.
- 
+- Avoid adjusting rates twice when time_steps_per_hour > 1 
+
+## Develop 2024-01-16
 ## v0.40.0
 ### Changed
 - Changed **macrs_bonus_fraction** to from 0.80 to 0.60 (60%) for CHP, ElectricStorage, ColdThermalStorage, HotThermalStorage GHP, PV, Wind
