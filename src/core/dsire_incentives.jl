@@ -103,6 +103,7 @@ function get_incentives_scenarios(reopt_inputs::Dict; state_abbr::String="", tec
         if can_net_meter
             reopt_inputs_scenarios[basis][tech]["can_net_meter"] = can_net_meter  # Just to make sure it's true even though some techs default to true
             if haskey(reopt_inputs_scenarios[basis], "ElectricUtility")
+                # TODO replace big number 1.0E9 with a practical limit like 5 MW which is the max for all states - however, this makes it harder to solve sometimes
                 reopt_inputs_scenarios[basis]["ElectricUtility"]["net_metering_limit_kw"] = 1.0E9
             else
                 reopt_inputs_scenarios[basis]["ElectricUtility"] = Dict("net_metering_limit_kw" => 1.0E9)
@@ -128,6 +129,8 @@ function get_incentive_data(db::SQLite.DB; state_abbr::String="", tech::String="
         AND (is_entire_state=1)
         AND ((end_date > $todays_date_str) OR (end_date IS NULL))") |> DataFrame
     net_metering = "Net Metering" in state_programs[!, "name"]
+    # TODO CA, AZ, and UT, as well as recently AL, TN, and SD have net billing instead of net metering, so 
+    #   ideally we'd assign a wholesale_rate equal to the avoided electricity cost credit those states would receive
     if ismissing(net_metering)
         net_metering = true
     end

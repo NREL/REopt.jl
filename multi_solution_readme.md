@@ -35,30 +35,30 @@ REopt is run with any of these three incentive options which are avaialable, and
 If REopt identified a state incentive to use, the `incentive_used` key at the top level of the `results_summary` will contain the `best_incentive_program_name` (`None` if none where found) and if net metering was enabled from the DSIRE database from `net_metering_from_dsire`. The user should verify that that incentive program is available and what the net metering capacity (kW) limit is. Because the net meter capacity limit is not retrieved from the DSIRE database, an arbitrarily large number is used for the net metering limit if net metering is available.
 
 # Example use-case for multi-solutions
-### Specify path to input file:
+#### Specify path to input file:
 `fp = "scenarios/eaton_multi.json"`
 
-### Specify fractions/ratios of size relative to the optimal size to run. The other techs will all be forced to the optimal size for each run. If you run with an empty array for size_scale, it will just run the optimal scenario.
+#### Specify fractions/ratios of size relative to the optimal size to run. The other techs will all be forced to the optimal size for each run. If you run with an empty array for size_scale, it will just run the optimal scenario.
 `size_scale = [0.8, 1.2]`
-### Need to know the maximum number of JuMP models to create, so first identify the number of technologies considered. So for the eaton_multi.json scenario with PV and Battery (ElectricStorage):
+#### Need to know the maximum number of JuMP models to create, so first identify the number of technologies considered. So for the eaton_multi.json scenario with PV and Battery (ElectricStorage):
 `n_techs = 2`
-# Incentives scenarios, max 3 for 1. capacity-based, 2. production-based, and 3. percent cost based incentives to choose from
+#### Incentives scenarios, max 3 for 1. capacity-based, 2. production-based, and 3. percent cost based incentives to choose from
 `n_incentives_scenarios = 3`
-### This equation uses 2 for optimal+BAU plus however many scenario combinations are possible:
+#### This equation uses 2 for optimal+BAU plus however many scenario combinations are possible:
 `max_models = 2 + length(size_scale) * n_techs + n_incentives_scenarios`
-### Define an array of models of length `max_models` along with the specified solver and desired parameters:
+#### Define an array of models of length `max_models` along with the specified solver and desired parameters:
 `ms = [Model(optimizer_with_attributes(HiGHS.Optimizer, 
     "output_flag" => false, "mip_rel_gap" => 0.001, "log_to_console" => true)) for _ in 1:max_models]`
 - Solver options for Cbc.jl: https://github.com/jump-dev/Cbc.jl
 - Solver options for HiGHS.jl:  https://ergo-code.github.io/HiGHS/dev/options/definitions/
 - Increasing optimality gap (ratioGap for Cbc and mip_rel_gap for HiGHS) to 0.01 (1%) is particularly useful if REopt is taking a long time to solver
-### In-series/sequential runs to reduce number of threads required to 2:
+#### In-series/sequential runs to reduce number of threads required to 2:
 `results_all, results_summary = REopt.run_reopt_multi_solutions(fp, size_scale, ms; parallel=false)`
 
-### Parallel runs with resilience, requiring multiple cores for the multiple threads (see function docstring for more information):
+#### Parallel runs with resilience, requiring multiple cores for the multiple threads (see function docstring for more information):
 `results_all, results_summary = REopt.run_reopt_multi_solutions(fp, size_scale, ms; parallel=true,  resilience=true, outage_start_hour=4000, outage_duration_hours=10, state="CO")`
 
-### Here is an example `results_summary` output for `PV` and Battery (`ElectricStorage`) with `resilience=true`:
+#### Here is an example `results_summary` output for `PV` and Battery (`ElectricStorage`) with `resilience=true`:
 ```
     "optimal": {
         "status": "optimal",
