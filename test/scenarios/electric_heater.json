@@ -7,20 +7,17 @@
         "production_type": "steam",
         "efficiency": 0.8,
         "fuel_type": "natural_gas",
-        "fuel_cost_per_mmbtu": [10,2,10,10,10,10,10,10,10,10,10,10]
+        "fuel_cost_per_mmbtu": 10
     },
-    "Boiler": {
+    "ElectricHeater": {
         "min_mmbtu_per_hour": 0.0,
-        "max_mmbtu_per_hour": 1.0E9,
-        "efficiency": 0.8,
-        "installed_cost_per_mmbtu_per_hour": 0.001,
+        "max_mmbtu_per_hour": 100000,
+        "cop": 1.0,
+        "installed_cost_per_mmbtu_per_hour": 115686,
         "om_cost_per_mmbtu_per_hour": 0.0,
-        "om_cost_per_mmbtu": 0.0,                  
-        "fuel_type": "natural_gas",
-        "fuel_cost_per_mmbtu": [5,10,5,5,5,5,5,5,5,5,5,5]
-    },
-    "ElectricUtility" : {
-        "co2_from_avert" : true
+		"macrs_option_years": 0,
+		"macrs_bonus_fraction": 0.0,
+        "can_supply_steam_turbine": false
     },
     "Financial": {
         "om_cost_escalation_rate_fraction": 0.025,
@@ -36,7 +33,7 @@
     },
     "ElectricLoad": {
         "doe_reference_name": "FlatLoad",
-        "annual_kwh": 8760000.0
+        "annual_kwh": 87600.0
     },
     "SpaceHeatingLoad": {
         "doe_reference_name": "FlatLoad"
@@ -45,10 +42,6 @@
         "doe_reference_name": "FlatLoad"
     },    
     "ElectricTariff": {
-        "urdb_utility_name": "Pacific Gas & Electric Co",
-        "urdb_rate_name": "E-20 Maximum demand of (1000 KW or more) (Secondary)",
-        "urdb_label": "5e1676e95457a3f87673e3b0",
-        "wholesale_rate": 0.04,
-        "export_rate_beyond_net_metering_limit": 0.04
+        "monthly_energy_rates": [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1]
     }
   }

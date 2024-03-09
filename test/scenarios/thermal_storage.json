@@ -23,6 +23,9 @@
     "ExistingBoiler": {
         "fuel_cost_per_mmbtu": 10.0
     },
+    "ElectricUtility" : {
+        "co2_from_avert" : true
+    },
     "AbsorptionChiller": {
         "min_ton": 0.0,
         "max_ton": 1000.0,
