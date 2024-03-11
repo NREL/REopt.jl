@@ -29,7 +29,7 @@ function add_heating_tech_constraints(m, p; _n="")
         sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads)  <= m[Symbol("dvSize"*_n)][t]
     )
     # Constraint (7_heating_load_compatability): Set production variables for incompatible heat loads to zero
-    for t in union(p.techs.heating, p.techs.chp)
+    for t in setdiff(union(p.techs.heating, p.techs.chp), p.techs.ghp)
         if !(t in p.techs.can_serve_space_heating)
             for ts in p.time_steps
                 fix(m[Symbol("dvHeatingProduction"*_n)][t,"SpaceHeating",ts], 0.0, force=true)
