@@ -2014,7 +2014,7 @@ else  # run HiGHS tests
                     end
                 end 
                 
-                # TODO: refresh tests and test values as needed after Cambium update; revised values are in test_with_xpress.jl
+                # TODO: refresh tests and test values as needed once able to uncomment; revised values are in test_with_xpress.jl
                 # if i == 1
                 #     @test results["PV"]["size_kw"] ≈ 60.12 atol=1e-1
                 #     @test results["ElectricStorage"]["size_kw"] ≈ 0.0 atol=1e-1
