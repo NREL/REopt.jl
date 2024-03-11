@@ -148,6 +148,17 @@ function BAUInputs(p::REoptInputs)
         absorption_chillers_using_heating_load["ProcessHeat"] = Vector{String}()
     end
 
+    if sum(heating_loads_kw["SpaceHeating"]) > 0.0 && isempty(techs.can_serve_space_heating) 
+        throw(@error("SpaceHeating load is nonzero and no techs can serve the load."))
+    end
+    if sum(heating_loads_kw["DomesticHotWater"]) > 0.0 && isempty(techs.can_serve_dhw) 
+        throw(@error("DomesticHotWater load is nonzero and no techs can serve the load."))
+    end
+    if sum(heating_loads_kw["ProcessHeat"]) > 0.0 && isempty(techs.can_serve_process_heat) 
+        throw(@error("ProcessHeat load is nonzero and no techs can serve the load."))
+    end
+
+
     heating_loads_served_by_tes = Dict{String,Array{String,1}}()
     unavailability = get_unavailability_by_tech(p.s, techs, p.time_steps)
 
