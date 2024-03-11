@@ -225,6 +225,11 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 				else
 					@constraint(m, [t in p.heating_techs, ts in p.time_steps], m[:dvHeatToStorage][b,"SpaceHeating",ts] == 0)
 				end
+				if "ProcessHeat" in p.heating_loads_served_by_tes[b]
+					@constraint(m, [t in setdiff(p.heating_techs, p.techs_can_serve_space_heating), ts in p.time_steps], m[:dvHeatToStorage][b,"ProcessHeat",ts] == 0)
+				else
+					@constraint(m, [t in p.heating_techs, ts in p.time_steps], m[:dvHeatToStorage][b,"ProcessHeat",ts] == 0)
+				end
 			end
 		else
 			add_storage_size_constraints(m, p, b)
