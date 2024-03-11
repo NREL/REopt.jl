@@ -218,7 +218,7 @@ function REoptInputs(s::AbstractScenario)
     elseif !isnothing(s.flexible_hvac) && !isnothing(s.existing_boiler)
         push!(heating_loads, "SpaceHeating")  #add blank space heating load to add dvHeatingProduction for existing boiler
     end
-    if !isnothing(s.space_heating_load)
+    if !isnothing(s.process_heat_load)
         push!(heating_loads, "ProcessHeat")
         heating_loads_kw["ProcessHeat"] = s.process_heat_load.loads_kw
         if !isnothing(s.absorption_chiller) && s.absorption_chiller.heating_load_input == "ProcessHeat"
@@ -228,6 +228,16 @@ function REoptInputs(s::AbstractScenario)
         end
     end
 
+    if sum(heating_loads_kw["SpaceHeating"]) > 0.0 && isempty(techs.can_serve_space_heating) 
+        throw(@error("SpaceHeating load is nonzero and no techs can serve the load."))
+    end
+    if sum(heating_loads_kw["DomesticHotWater"]) > 0.0 && isempty(techs.can_serve_dhw) 
+        throw(@error("DomesticHotWater load is nonzero and no techs can serve the load."))
+    end
+    if sum(heating_loads_kw["ProcessHeat"]) > 0.0 && isempty(techs.can_serve_process_heat) 
+        throw(@error("ProcessHeat load is nonzero and no techs can serve the load."))
+    end
+    
     heating_loads_served_by_tes = Dict{String,Array{String,1}}()
     if !isempty(s.storage.types.hot)
         for b in s.storage.types.hot
