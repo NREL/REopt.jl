@@ -10,7 +10,8 @@
     "outage_probabilities": [
       0.5,
       0.5
-    ]
+    ],
+    "co2_from_avert": true
   },
   "ElectricTariff": {
     "monthly_demand_rates": [
