@@ -11,7 +11,7 @@
 - `year_one_min_charge_adder_before_tax` minimum charge over the first year, before considering tax benefits
 - `year_one_bill_before_tax` sum of `year_one_energy_cost_before_tax`, `year_one_demand_cost_before_tax`, `year_one_fixed_cost_before_tax`, `year_one_min_charge_adder_before_tax`, and `year_one_coincident_peak_cost_before_tax`
 - `lifecycle_export_benefit_after_tax` lifecycle export credits in present value, after tax
-- `year_one_export_benefit_before_tax` export credits over the first year, before considering tax benefits
+- `year_one_export_benefit_before_tax` export credits over the first year, before considering tax benefits. A positive value indicates a benefit. 
 - `lifecycle_coincident_peak_cost_after_tax` lifecycle coincident peak charge in present value, after tax
 - `year_one_coincident_peak_cost_before_tax` coincident peak charge over the first year
 """

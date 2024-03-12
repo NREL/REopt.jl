@@ -38,7 +38,7 @@
     production_incentive_years::Int = 0,
     production_incentive_max_kw::Real = 1.0e9,
     fuel_renewable_energy_fraction::Real = 0.0,
-    emissions_factor_lb_CO2_per_gal::Real = 22.51,
+    emissions_factor_lb_CO2_per_gal::Real = 22.58, # CO2e
     emissions_factor_lb_NOx_per_gal::Real = 0.0775544,
     emissions_factor_lb_SO2_per_gal::Real = 0.040020476,
     emissions_factor_lb_PM25_per_gal::Real = 0.0,
@@ -133,7 +133,7 @@ struct Generator <: AbstractGenerator
         production_incentive_years::Int = 0,
         production_incentive_max_kw::Real = 1.0e9,
         fuel_renewable_energy_fraction::Real = 0.0,
-        emissions_factor_lb_CO2_per_gal::Real = 22.51,
+        emissions_factor_lb_CO2_per_gal::Real = 22.58, # CO2e
         emissions_factor_lb_NOx_per_gal::Real = 0.0775544,
         emissions_factor_lb_SO2_per_gal::Real = 0.040020476,
         emissions_factor_lb_PM25_per_gal::Real = 0.0,

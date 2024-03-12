@@ -9,5 +9,8 @@
     "ElectricLoad": {
         "annual_kwh": 100000.0,
         "doe_reference_name": "MidriceApartment"
+    },
+    "ElectricUtility" : {
+        "co2_from_avert" : true
     }
 }
