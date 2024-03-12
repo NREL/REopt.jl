@@ -72,6 +72,33 @@ Classify the change according to the following categories:
 - In `src/core/electric_utility.jl`, error when user-provided emissions series does not match timestep per hour, as is done in other cases of incorrect user-provided data.
 - Avoid adjusting rates twice when time_steps_per_hour > 1 
 
+## v0.41.0
+### Changed
+- Changed default source for CO2 grid emissions values to NREL's Cambium 2022 Database (by default: CO2e, long-run marginal emissions rates levelized (averaged) over the analysis period, assuming start year 2024). Added new emissions inputs and call to Cambium API in `src/core/electric_utility.jl`. Included option for user to use AVERT data for CO2 using **co2_from_avert** boolean. 
+- Updated `electric_utility` **emissions_region** to **avert_emissions_region** and **distance_to_emissions_region_meters** to **distance_to_avert_emissions_region_meters** in `src/electric_utility.jl` and `results/electric_utility.jl`. 
+- Updated default **emissions_factor_XXX_decrease_fraction** (where XXX is CO2, NOx, SO2, and PM2.5) from 0.01174 to 0.02163 based on Cambium 2022 Mid-Case scenario, LRMER CO2e (Combustion+Precombustion) 2024-2049 projected values. CO2 projected decrease defaults to 0 if Cambium data are used for CO2 (Cambium API call will levelize values).  
+- Updated AVERT emissions data to v4.1, which uses Regional Data Files (RDFs) for year 2022. Data is saved in `data/emissions/AVERT_Data`. For Alaska and Hawaii (regions AKGD, HIMS, HIOA), updated eGRID data to eGRID2021 datafile and adjusted CO2 values to CO2e values to align with default used for Cambium data. 
+- Updated default fuel emissions factors from CO2 to CO2-equivalent (CO2e) values. In `src/core/generator.jl`, updated **emissions_factor_lb_CO2_per_gal** from 22.51 to 22.58. In `src/REopt.jl` updated **emissions_factor_lb_CO2_per_mmbtu** => Dict(
+        "natural_gas"=>116.9 to 117.03,
+        "landfill_bio_gas"=>114,8 to 115.38,
+        "propane"=>138.6 to 139.16,
+        "diesel_oil"=>163.1 to 163.61
+    )
+- Changed calculation of all `annual` emissions results (e.g. **Site.annual_emissions_tonnes_CO2**) to simple annual averages (lifecycle emissions divided by analysis_years). This is because the default climate emissions from Cambium are already levelized over the analysis horizon and therefore "year_one" emissions cannot be easily obtained. 
+- Changed name of exported function **emissions_profiles** to **avert_emissions_profiles**
+
+### Added
+- In `src/REopt.jl` and `src/electric_utility.jl`, added **cambium_emissions_profile** as an export for use via the REopt_API. 
+- In `src/REopt.jl`, added new const **EMISSIONS_DECREASE_DEFAULTS**
+- In `src/results/electric_utility.jl` **cambium_emissions_region**
+- In `test/runtests.jl` and `test/test_with_xpress.jl`, added testset **Cambium Emissions**
+
+### Fixed 
+- Adjust grid emissions profiles for day of week alignment with load_year.
+- In `test_with_xpress.jl`, updated "Emissions and Renewable Energy Percent" expected values to account for load year adjustment. 
+- In `src/core/electric_utility.jl`, error when user-provided emissions series does not match timestep per hour, as is done in other cases of incorrect user-provided data.
+- Avoid adjusting rates twice when time_steps_per_hour > 1 
+
 ## v0.40.0
 ### Changed
 - Changed **macrs_bonus_fraction** to from 0.80 to 0.60 (60%) for CHP, ElectricStorage, ColdThermalStorage, HotThermalStorage GHP, PV, Wind
