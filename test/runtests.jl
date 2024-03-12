@@ -140,22 +140,22 @@ else  # run HiGHS tests
         4. Coordinate pair > 5 miles from US border
         5. Coordinate pair >> 5 miles from US border
         """
-        (r, d) = REopt.region_abbreviation(65.27661752129738, -149.59278391820223)
+        (r, d) = REopt.avert_region_abbreviation(65.27661752129738, -149.59278391820223)
         @test r == "AKGD"
-        (r, d) = REopt.region_abbreviation(21.45440792261567, -157.93648793163402)
+        (r, d) = REopt.avert_region_abbreviation(21.45440792261567, -157.93648793163402)
         @test r == "HIOA"
-        (r, d) = REopt.region_abbreviation(19.686877556659436, -155.4223641905743)
+        (r, d) = REopt.avert_region_abbreviation(19.686877556659436, -155.4223641905743)
         @test r == "HIMS"
-        (r, d) = REopt.region_abbreviation(39.86357200140234, -104.67953917092028)
+        (r, d) = REopt.avert_region_abbreviation(39.86357200140234, -104.67953917092028)
         @test r == "RM"
         @test d ≈ 0.0 atol=1
-        (r, d) = REopt.region_abbreviation(47.49137892652077, -69.3240287592685)
+        (r, d) = REopt.avert_region_abbreviation(47.49137892652077, -69.3240287592685)
         @test r == "NE"
         @test d ≈ 7986 atol=1
-        (r, d) = REopt.region_abbreviation(47.50448307102053, -69.34882434376593)
+        (r, d) = REopt.avert_region_abbreviation(47.50448307102053, -69.34882434376593)
         @test r === nothing
         @test d ≈ 10297 atol=1
-        (r, d) = REopt.region_abbreviation(55.860334445251354, -4.286554357755312)
+        (r, d) = REopt.avert_region_abbreviation(55.860334445251354, -4.286554357755312)
         @test r === nothing
     end
 
@@ -182,6 +182,7 @@ else  # run HiGHS tests
     
         @test scen.pvs[1].tilt ≈ 20
         @test scen.pvs[1].azimuth ≈ 0
+        @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) ≈ 0
 
         ## Scenario 4:Cape Town; array-type = 0 (ground); user-provided tilt (should not get overwritten)
         post["PV"]["tilt"] = 17
@@ -1124,6 +1125,16 @@ else  # run HiGHS tests
                 @test results["PV"]["size_kw"] ≈ p.max_sizes["PV"]
             end
 
+            @testset "Custom URDB with Sub-Hourly" begin
+                # Testing a 15-min post with a urdb_response with multiple n_energy_tiers
+                model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
+                p = REoptInputs("./scenarios/subhourly_with_urdb.json")
+                results = run_reopt(model, p)
+                @test length(p.s.electric_tariff.export_rates[:WHL]) ≈ 8760*4
+                @test results["PV"]["size_kw"] ≈ p.s.pvs[1].existing_kw
+            end
+
+
             # # tiered monthly demand rate  TODO: expected results?
             # m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             # data = JSON.parsefile("./scenarios/tiered_rate.json")
@@ -1864,6 +1875,82 @@ else  # run HiGHS tests
             @test calculated_ghp_capex ≈ reopt_ghp_capex atol=300
         end
 
+        @testset "Cambium Emissions" begin
+            """
+            1) Location in contiguous US
+                - Correct data from Cambium (returned location and values)
+                - Adjusted for load year vs. Cambium year (which starts on Sunday) vs. AVERT year (2022 currently)
+                - co2 pct increase should be zero
+            2) HI and AK locations
+                - Should use AVERT data and give an "info" message
+                - Adjust for load year vs. AVERT year
+                - co2 pct increase should be the default value unless user provided value 
+            3) International 
+                - all emissions should be zero unless provided
+            """
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+        
+            post_name = "cambium.json" 
+            post = JSON.parsefile("./scenarios/$post_name")
+        
+            cities = Dict(
+                "Denver" => (39.7413753050447, -104.99965032911328),
+                "Fairbanks" => (64.84053664406181, -147.71913656313163),
+                "Santiago" => (-33.44485437650408, -70.69031905547853)
+            )
+        
+            # 1) Location in contiguous US
+            city = "Denver"
+            post["Site"]["latitude"] = cities[city][1]
+            post["Site"]["longitude"] = cities[city][2]
+            post["ElectricLoad"]["loads_kw"] = [20 for i in range(1,8760)]
+            post["ElectricLoad"]["year"] = 2021 # 2021 First day is Fri
+            scen = Scenario(post)
+        
+            @test scen.electric_utility.avert_emissions_region == "Rocky Mountains"
+            @test scen.electric_utility.distance_to_avert_emissions_region_meters ≈ 0 atol=1e-5
+            @test scen.electric_utility.cambium_emissions_region == "RMPAc"
+            @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) / 8760 ≈ 0.394608 rtol=1e-3
+            @test scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh[1] ≈ 0.677942 rtol=1e-4 # Should start on Friday
+            @test scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh[8760] ≈ 0.6598207198 rtol=1e-5 # Should end on Friday 
+            @test sum(scen.electric_utility.emissions_factor_series_lb_SO2_per_kwh) / 8760 ≈ 0.00061165 rtol=1e-5 # check avg from AVERT data for RM region
+            @test scen.electric_utility.emissions_factor_CO2_decrease_fraction ≈ 0 atol=1e-5 # should be 0 with Cambium data
+            @test scen.electric_utility.emissions_factor_SO2_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["SO2"] # should be 2.163% for AVERT data
+            @test scen.electric_utility.emissions_factor_NOx_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["NOx"]
+            @test scen.electric_utility.emissions_factor_PM25_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["PM25"]
+
+            # 2) AK location
+            city = "Fairbanks"
+            post["Site"]["latitude"] = cities[city][1]
+            post["Site"]["longitude"] = cities[city][2]
+            scen = Scenario(post)
+        
+            @test scen.electric_utility.avert_emissions_region == "Alaska"
+            @test scen.electric_utility.distance_to_avert_emissions_region_meters ≈ 0 atol=1e-5
+            @test scen.electric_utility.cambium_emissions_region == "NA - Cambium data not used for climate emissions"
+            @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) / 8760 ≈ 1.29199999 rtol=1e-3 # check that data from eGRID (AVERT data file) is used
+            @test scen.electric_utility.emissions_factor_CO2_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["CO2e"] # should get updated to this value
+            @test scen.electric_utility.emissions_factor_SO2_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["SO2"] # should be 2.163% for AVERT data
+            @test scen.electric_utility.emissions_factor_NOx_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["NOx"]
+            @test scen.electric_utility.emissions_factor_PM25_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["PM25"]        
+
+            # 3) International location
+            city = "Santiago"
+            post["Site"]["latitude"] = cities[city][1]
+            post["Site"]["longitude"] = cities[city][2]
+            scen = Scenario(post)
+            
+            @test scen.electric_utility.avert_emissions_region == ""
+            @test scen.electric_utility.distance_to_avert_emissions_region_meters ≈ 5.521032136418236e6 atol=1.0
+            @test scen.electric_utility.cambium_emissions_region == "NA - Cambium data not used for climate emissions"
+            @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) ≈ 0 
+            @test sum(scen.electric_utility.emissions_factor_series_lb_NOx_per_kwh) ≈ 0 
+            @test sum(scen.electric_utility.emissions_factor_series_lb_SO2_per_kwh) ≈ 0 
+            @test sum(scen.electric_utility.emissions_factor_series_lb_PM25_per_kwh) ≈ 0 
+        
+        end
+
         @testset "Emissions and Renewable Energy Percent" begin
             #renewable energy and emissions reduction targets
             include_exported_RE_in_total = [true,false,true]
@@ -1927,6 +2014,7 @@ else  # run HiGHS tests
                     end
                 end 
                 
+                # TODO: refresh tests and test values as needed once able to uncomment; revised values are in test_with_xpress.jl
                 # if i == 1
                 #     @test results["PV"]["size_kw"] ≈ 60.12 atol=1e-1
                 #     @test results["ElectricStorage"]["size_kw"] ≈ 0.0 atol=1e-1
@@ -2012,7 +2100,7 @@ else  # run HiGHS tests
                     @test results["HotThermalStorage"]["size_gal"] ≈ 50000 atol=1e1
                     @test results["ColdThermalStorage"]["size_gal"] ≈ 30000 atol=1e1
                     yr1_nat_gas_mmbtu = results["ExistingBoiler"]["annual_fuel_consumption_mmbtu"] + results["CHP"]["annual_fuel_consumption_mmbtu"]
-                    nat_gas_emissions_lb_per_mmbtu = Dict("CO2"=>116.9, "NOx"=>0.09139, "SO2"=>0.000578592, "PM25"=>0.007328833)
+                    nat_gas_emissions_lb_per_mmbtu = Dict("CO2"=>117.03, "NOx"=>0.09139, "SO2"=>0.000578592, "PM25"=>0.007328833)
                     TONNE_PER_LB = 1/2204.62
                     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ nat_gas_emissions_lb_per_mmbtu["CO2"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1
                     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_NOx"] ≈ nat_gas_emissions_lb_per_mmbtu["NOx"] * yr1_nat_gas_mmbtu * TONNE_PER_LB atol=1e-2
