@@ -44,6 +44,9 @@ function add_electric_vehicle_constraints(m, p, b; _n="")
             for t in p.techs.elec
                 fix(m[Symbol("dvProductionToStorage"*_n)][b, t, ts], 0.0, force=true)
             end
+            for t in filter(x -> !occursin("EV", x), p.s.storage.types.elec)
+                fix(m[Symbol("dvStorageToEV"*_n)][b, t, ts], 0.0, force=true)
+            end
             fix(m[Symbol("dvGridToStorage"*_n)][b, ts], 0.0, force=true)
             fix(m[Symbol("dvDischargeFromStorage"*_n)][b,ts], 0.0, force=true)
         end
@@ -125,7 +128,8 @@ function add_ev_supply_equipment_constraints(m, p; _n="")
             for n in 1:p.s.evse.max_num[se]) 
             for (se, se_kw) in enumerate(p.s.evse.power_rating_kw))
         >=
-        sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) + 
+        sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) +
+        sum(m[Symbol("dvStorageToEV"*_n)][b, t, ts] for t in filter(x -> !occursin("EV", x), p.s.storage.types.elec)) + 
         m[Symbol("dvGridToStorage"*_n)][b, ts]
     )
 

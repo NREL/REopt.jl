@@ -144,15 +144,12 @@ function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.Abst
 		Threads.@threads for i = 1:2
 			rs[i] = run_reopt(inputs[i])
 		end
-		# if typeof(rs[1]) <: Dict && typeof(rs[2]) <: Dict
-		# 	#TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
-		# 	open("scenarios/before_combine_results_bau.json","w") do f
-        #         JSON.print(f, rs[1])
-        #     end			
-        #     open("scenarios/before_combine_results_opt.json","w") do f
-        #         JSON.print(f, rs[2])
-        #     end
-        #     results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
+		if typeof(rs[1]) <: Dict && typeof(rs[2]) <: Dict
+			#TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
+			write("before_combine_results_bau.json", JSON.json(rs[1]))
+			write("before_combine_results_opt.json", JSON.json(rs[2]))
+		end
+		@info typeof(rs[1]), typeof(rs[2]), rs[1]["status"], rs[2]["status"]
 		if typeof(rs[1]) <: Dict && typeof(rs[2]) <: Dict && rs[1]["status"] != "error" && rs[2]["status"] != "error"
 			# TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
 			results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
@@ -591,6 +588,11 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		@variables m begin
 			binGenIsOnInTS[p.techs.gen, p.time_steps], Bin  # 1 If technology t is operating in time step h; 0 otherwise
 		end
+	end
+
+	# Serve EV load from storage tech (PV already does it)
+	if !isempty(p.s.storage.types.ev)
+		@variable(m, dvStorageToEV[p.s.storage.types.ev, filter(x -> !occursin("EV", x), p.s.storage.types.elec), p.time_steps] >= 0)
 	end
 
     if !isempty(p.techs.fuel_burning)

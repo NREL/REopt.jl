@@ -53,60 +53,117 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
         # TODO RHS of this equation could be combined in electric_vehicle
         energy_drained_series = p.s.storage.attr[b].electric_vehicle.back_on_site_time_step_soc_drained * 
                                     p.s.storage.attr[b].electric_vehicle.energy_capacity_kwh
+        
+        # Constraint (4g): state-of-charge for electrical storage - with grid
+        @constraint(m, [ts in p.time_steps_with_grid],
+            m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  
+                sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec)
+                + p.s.storage.attr[b].grid_charge_efficiency * m[Symbol("dvGridToStorage"*_n)][b, ts]
+                + sum(m[Symbol("dvStorageToEV"*_n)][b, t, ts] / p.s.storage.attr[b].discharge_efficiency for t in filter(x -> !occursin("EV", x), p.s.storage.types.elec))
+                - m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.s.storage.attr[b].discharge_efficiency
+                - energy_drained_series[ts]
+            )
+        )
+
+        # Constraint (4h): state-of-charge for electrical storage - no grid
+        @constraint(m, [ts in p.time_steps_without_grid],
+            m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  
+                sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.elec) 
+                - m[Symbol("dvDischargeFromStorage"*_n)][b, ts] / p.s.storage.attr[b].discharge_efficiency
+                - energy_drained_series[ts]
+            )
+        )
+
+        # Constraint (4i)-1: Dispatch to electrical storage is no greater than power capacity
+        @constraint(m, [ts in p.time_steps],
+            m[Symbol("dvStoragePower"*_n)][b] >= 
+                sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) + m[Symbol("dvGridToStorage"*_n)][b, ts]
+                + sum(m[Symbol("dvStorageToEV"*_n)][b, t, ts] for t in filter(x -> !occursin("EV", x), p.s.storage.types.elec))
+        )
+        
+        #Constraint (4k)-alt: Dispatch to and from electrical storage is no greater than power capacity
+        @constraint(m, [ts in p.time_steps_with_grid],
+            m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] + 
+                sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) + m[Symbol("dvGridToStorage"*_n)][b, ts]
+                + sum(m[Symbol("dvStorageToEV"*_n)][b, t, ts] for t in filter(x -> !occursin("EV", x), p.s.storage.types.elec))
+        )
+
+        #Constraint (4l)-alt: Dispatch from electrical storage is no greater than power capacity (no grid connection)
+        @constraint(m, [ts in p.time_steps_without_grid],
+            m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b,ts] + 
+                sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec)
+        )
+                        
+        # Remove grid-to-storage as an option if option to grid charge is turned off
+        if !(p.s.storage.attr[b].can_grid_charge)
+            for ts in p.time_steps_with_grid
+                fix(m[Symbol("dvGridToStorage"*_n)][b, ts], 0.0, force=true)
+            end
+        end
+
+        if p.s.storage.attr[b].minimum_avg_soc_fraction > 0
+            avg_soc = sum(m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps) /
+                    (8760. / p.hours_per_time_step)
+            @constraint(m, avg_soc >= p.s.storage.attr[b].minimum_avg_soc_fraction * 
+                sum(m[Symbol("dvStorageEnergy"*_n)][b])
+            )
+        end
     else
         energy_drained_series = zeros(p.time_steps)
-    end
 
-	# Constraint (4g): state-of-charge for electrical storage - with grid
-	@constraint(m, [ts in p.time_steps_with_grid],
-        m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  
-            sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) 
-            + p.s.storage.attr[b].grid_charge_efficiency * m[Symbol("dvGridToStorage"*_n)][b, ts] 
-            - m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.s.storage.attr[b].discharge_efficiency
-            - energy_drained_series[ts]
+        # Constraint (4g): state-of-charge for electrical storage - with grid
+        @constraint(m, [ts in p.time_steps_with_grid],
+            m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  
+                sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec)
+                + p.s.storage.attr[b].grid_charge_efficiency * m[Symbol("dvGridToStorage"*_n)][b, ts]
+                - sum(m[Symbol("dvStorageToEV"*_n)][t, b, ts] / p.s.storage.attr[b].discharge_efficiency for t in p.s.storage.types.ev)
+                - m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.s.storage.attr[b].discharge_efficiency
+                - energy_drained_series[ts]
+            )
         )
-	)
 
-	# Constraint (4h): state-of-charge for electrical storage - no grid
-	@constraint(m, [ts in p.time_steps_without_grid],
-        m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  
-            sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.elec) 
-            - m[Symbol("dvDischargeFromStorage"*_n)][b, ts] / p.s.storage.attr[b].discharge_efficiency
-            - energy_drained_series[ts]
+        # Constraint (4h): state-of-charge for electrical storage - no grid
+        @constraint(m, [ts in p.time_steps_without_grid],
+            m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  
+                sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.elec) 
+                - m[Symbol("dvDischargeFromStorage"*_n)][b, ts] / p.s.storage.attr[b].discharge_efficiency
+                - energy_drained_series[ts]
+            )
         )
-    )
 
-	# Constraint (4i)-1: Dispatch to electrical storage is no greater than power capacity
-	@constraint(m, [ts in p.time_steps],
-        m[Symbol("dvStoragePower"*_n)][b] >= 
-            sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) + m[Symbol("dvGridToStorage"*_n)][b, ts]
-    )
-	
-	#Constraint (4k)-alt: Dispatch to and from electrical storage is no greater than power capacity
-	@constraint(m, [ts in p.time_steps_with_grid],
-        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] + 
-            sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) + m[Symbol("dvGridToStorage"*_n)][b, ts]
-    )
+        # Constraint (4i)-1: Dispatch to electrical storage is no greater than power capacity
+        @constraint(m, [ts in p.time_steps],
+            m[Symbol("dvStoragePower"*_n)][b] >= 
+                sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) + m[Symbol("dvGridToStorage"*_n)][b, ts]
+        )
+        
+        #Constraint (4k)-alt: Dispatch to and from electrical storage is no greater than power capacity
+        @constraint(m, [ts in p.time_steps_with_grid],
+            m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] + 
+                sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) + m[Symbol("dvGridToStorage"*_n)][b, ts]
+                + sum(m[Symbol("dvStorageToEV"*_n)][t, b, ts] for t in p.s.storage.types.ev)
+        )
 
-	#Constraint (4l)-alt: Dispatch from electrical storage is no greater than power capacity (no grid connection)
-	@constraint(m, [ts in p.time_steps_without_grid],
-        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b,ts] + 
-            sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec)
-    )
-					
-    # Remove grid-to-storage as an option if option to grid charge is turned off
-    if !(p.s.storage.attr[b].can_grid_charge)
-        for ts in p.time_steps_with_grid
-            fix(m[Symbol("dvGridToStorage"*_n)][b, ts], 0.0, force=true)
+        #Constraint (4l)-alt: Dispatch from electrical storage is no greater than power capacity (no grid connection)
+        @constraint(m, [ts in p.time_steps_without_grid],
+            m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b,ts] + 
+                sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec)
+        )
+                        
+        # Remove grid-to-storage as an option if option to grid charge is turned off
+        if !(p.s.storage.attr[b].can_grid_charge)
+            for ts in p.time_steps_with_grid
+                fix(m[Symbol("dvGridToStorage"*_n)][b, ts], 0.0, force=true)
+            end
         end
-	end
 
-    if p.s.storage.attr[b].minimum_avg_soc_fraction > 0
-        avg_soc = sum(m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps) /
-                   (8760. / p.hours_per_time_step)
-        @constraint(m, avg_soc >= p.s.storage.attr[b].minimum_avg_soc_fraction * 
-            sum(m[Symbol("dvStorageEnergy"*_n)][b])
-        )
+        if p.s.storage.attr[b].minimum_avg_soc_fraction > 0
+            avg_soc = sum(m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps) /
+                    (8760. / p.hours_per_time_step)
+            @constraint(m, avg_soc >= p.s.storage.attr[b].minimum_avg_soc_fraction * 
+                sum(m[Symbol("dvStorageEnergy"*_n)][b])
+            )
+        end
     end
 end
 

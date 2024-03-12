@@ -42,7 +42,7 @@ function add_electric_vehicle_results!(m::JuMP.AbstractModel, p::REoptInputs, d:
     # so just add the unique EV results to them
     
     # TODO this is not an EV-specific output, so make an EVSE output section heading
-    d[b]["number_evse_by_type"] = convert(Array{Int64}, value.(m[Symbol("NumberEVSEChosenByType"*_n)]))
+    d[b]["number_evse_by_type"] = convert(Array{Int64}, round.(value.(m[Symbol("NumberEVSEChosenByType"*_n)])))
 
     # Debugging info for EVSE
     if !p.s.evse.force_num_to_max

@@ -142,7 +142,8 @@ function add_monthly_peak_constraint(m, p; _n="")
     else
         @constraint(m, [mth in p.months, ts in p.s.electric_tariff.time_steps_monthly[mth]],
             sum(m[Symbol("dvPeakDemandMonth"*_n)][mth, t] for t in 1:p.s.electric_tariff.n_monthly_demand_tiers) 
-                >= sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers)
+                >= sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) +
+                sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec[findall(x -> !occursin("EV", x), p.s.storage.types.elec)])
         )
     end
 
