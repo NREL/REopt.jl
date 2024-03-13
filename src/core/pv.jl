@@ -3,7 +3,7 @@
 `PV` is an optional REopt input with the following keys and default values:
 ```julia
     array_type::Int=1, # PV Watts array type (0: Ground Mount Fixed (Open Rack); 1: Rooftop, Fixed; 2: Ground Mount 1-Axis Tracking; 3 : 1-Axis Backtracking; 4: Ground Mount, 2-Axis Tracking)
-    tilt::Real= array_type == 1 ? 10 : 20, # tilt = 10 deg for rooftop systems, 20 for ground-mount
+    tilt::Real = (array_type == 0 || array_type == 1) ? 20 : 0, # tilt = 20 for fixed rooftop arrays (1) or ground-mount (2) ; tilt = 0 for everything else (3 and 4)
     module_type::Int=0, # PV module type (0: Standard; 1: Premium; 2: Thin Film)
     losses::Real=0.14, # System losses
     azimuth::Real = latitude≥0 ? 180 : 0, # set azimuth to zero for southern hemisphere
@@ -102,7 +102,7 @@ mutable struct PV <: AbstractTech
         off_grid_flag::Bool = false,
         latitude::Real,
         array_type::Int=1, # PV Watts array type (0: Ground Mount Fixed (Open Rack); 1: Rooftop, Fixed; 2: Ground Mount 1-Axis Tracking; 3 : 1-Axis Backtracking; 4: Ground Mount, 2-Axis Tracking)
-        tilt::Real= array_type == 1 ? 10 : 20, # tilt = 10 deg for rooftop systems, 20 for ground-mount
+        tilt::Real = (array_type == 0 || array_type == 1) ? 20 : 0, # tilt = 20 for fixed rooftop arrays (1) or ground-mount (2) ; tilt = 0 for everything else (3 and 4)
         module_type::Int=0, # PV module type (0: Standard; 1: Premium; 2: Thin Film)
         losses::Real=0.14,
         azimuth::Real = latitude≥0 ? 180 : 0, # set azimuth to zero for southern hemisphere
