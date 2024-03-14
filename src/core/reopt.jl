@@ -225,6 +225,11 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 				else
 					@constraint(m, [t in p.heating_techs, ts in p.time_steps], m[:dvHeatToStorage][b,"SpaceHeating",ts] == 0)
 				end
+				if "ProcessHeat" in p.heating_loads_served_by_tes[b]
+					@constraint(m, [t in setdiff(p.heating_techs, p.techs_can_serve_space_heating), ts in p.time_steps], m[:dvHeatToStorage][b,"ProcessHeat",ts] == 0)
+				else
+					@constraint(m, [t in p.heating_techs, ts in p.time_steps], m[:dvHeatToStorage][b,"ProcessHeat",ts] == 0)
+				end
 			end
 		else
 			add_storage_size_constraints(m, p, b)
@@ -259,6 +264,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     m[:GHPOMCosts] = 0.0
 	m[:AvoidedCapexByGHP] = 0.0
 	m[:ResidualGHXCapCost] = 0.0
+	m[:ObjectivePenalties] = 0.0
 
 	if !isempty(p.techs.all)
 		add_tech_size_constraints(m, p)
@@ -311,6 +317,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         if !isempty(p.techs.steam_turbine)
             add_steam_turbine_constraints(m, p)
             m[:TotalPerUnitProdOMCosts] += m[:TotalSteamTurbinePerUnitProdOMCosts]
+			#TODO: review this constraint and see if it's intended.  This matches the legacy implementation and tests pass but should the turbine be allowed to send heat to waste in order to generate electricity?
+			@constraint(m, steamTurbineNoWaste[t in p.techs.steam_turbine, q in p.heating_loads, ts in p.time_steps],
+				m[:dvProductionToWaste][t,q,ts] == 0.0
+			)
         end
 
         if !isempty(p.techs.pbi)
@@ -453,12 +463,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:TotalElecBill] * (1 - p.s.financial.offtaker_tax_rate_fraction) -
 
         # Subtract Incentives, which are taxable
-		m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_rate_fraction) +
-
-		# Comfort limit violation costs
-		#TODO: add this to objective like SOC incentive below and 
-		#don't then subtract out when setting lcc in results/financial.jl
-		m[:dvComfortLimitViolationCost] + 
+		m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_rate_fraction) + 
 
 		# Additional annual costs, tax deductible for owner (only applies when `off_grid_flag` is true)
 		p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_rate_fraction) +
@@ -482,36 +487,23 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_to_expression!(Costs, m[:Lifecycle_Emissions_Cost_Health])
 	end
 	
-	@expression(m, Objective,
-		m[:Costs]
-	)
-		
+	## Modify objective with incentives that are not part of the LCC
+	# 1. Comfort limit violation costs
+	m[:ObjectivePenalties] += m[:dvComfortLimitViolationCost]
+	# 2. Incentive to keep SOC high
 	if !(isempty(p.s.storage.types.elec)) && p.s.settings.add_soc_incentive
-		# Incentive to keep SOC high
-		add_to_expression!(
-			Objective, 
-			- sum(
+		m[:ObjectivePenalties] += -1 * sum(
 				m[:dvStoredEnergy][b, ts] for b in p.s.storage.types.elec, ts in p.time_steps
 			) / (8760. / p.hours_per_time_step)
-		)
 	end
+	# 3. Incentive to minimize unserved load in each outage, not just the max over outage start times
 	if !isempty(p.s.electric_utility.outage_durations)
-		# Incentive to minimize unserved load in each outage, not just the max over outage start times
-		add_to_expression!(
-			Objective, 
-			sum(sum(0.0001 * m[:dvUnservedLoad][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s]) for s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps)
-		)
+		m[:ObjectivePenalties] += sum(sum(0.0001 * m[:dvUnservedLoad][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s]) 
+			for s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps)
 	end
 
-	@objective(m, Min, m[:Objective])
-	
-	# if !(isempty(p.s.storage.types.elec)) && p.s.settings.add_soc_incentive # Keep SOC high
-	# 	@objective(m, Min, m[:Costs] - 
-	# 	sum(m[:dvStoredEnergy][b, ts] for b in p.s.storage.types.elec, ts in p.time_steps) /
-	# 		(8760. / p.hours_per_time_step)
-	# 	)
-	
-	# end
+	# Set model objective 
+	@objective(m, Min, m[:Costs] + m[:ObjectivePenalties] )
 
 	for b in p.s.storage.types.elec
 		if p.s.storage.attr[b].model_degradation

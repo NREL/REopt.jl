@@ -6,7 +6,7 @@
     path_to_csv::String = "", # for csv containing loads_kw
     doe_reference_name::String = "",
     blended_doe_reference_names::Array{String, 1} = String[],
-    blended_doe_reference_percents::Array{<:Real,1} = Real[],
+    blended_doe_reference_percents::Array{<:Real,1} = Real[], # Values should be between 0-1 and sum to 1.0
     year::Int = doe_reference_name ≠ "" || blended_doe_reference_names ≠ String[] ? 2017 : 2022, # used in ElectricTariff to align rate schedule with weekdays/weekends. DOE CRB profiles must use 2017. If providing load data, specify year of data.
     city::String = "",
     annual_kwh::Union{Real, Nothing} = nothing,
