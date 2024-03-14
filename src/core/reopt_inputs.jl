@@ -62,8 +62,8 @@ struct REoptInputs <: AbstractInputs
     tech_emissions_factors_PM25::Dict{String, <:Real} # (techs)
     techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
     backup_heating_cop::Dict{String, <:Real} # (techs.electric_heater)
-    heating_cop::Dict{String, Array{Float64,1}} # (techs.ashp)
-    cooling_cop::Dict{String, Array{Float64,1}} # (techs.ashp)
+    heating_cop::Dict{String, Array{<:Real, 1}} # (techs.ashp)
+    cooling_cop::Dict{String, Array{<:Real, 1}} # (techs.ashp)
     heating_loads_kw::Dict{String, <:Real} # (heating_loads)
     unavailability::Dict{String, Array{Float64,1}}  # Dict by tech of unavailability profile
 end
@@ -130,8 +130,8 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     tech_emissions_factors_PM25::Dict{String, <:Real} # (techs)
     techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
     backup_heating_cop::Dict{String, <:Real} # (techs.electric_heater)
-    heating_cop::Dict{String, Array{Float64,1}} # (techs.ashp)
-    cooling_cop::Dict{String, Array{Float64,1}} # (techs.ashp)
+    heating_cop::Dict{String, Array{Float64,1}} # (techs.ashp, time_steps)
+    cooling_cop::Dict{String, Array{Float64,1}} # (techs.ashp, time_steps)
     heating_loads::Vector{String} # list of heating loads
     heating_loads_kw::Dict{String, Array{Real,1}} # (heating_loads)
     heating_loads_served_by_tes::Dict{String, Array{String,1}} # ("HotThermalStorage" or empty)
@@ -351,8 +351,8 @@ function setup_tech_inputs(s::AbstractScenario)
     techs_operating_reserve_req_fraction = Dict(t => 0.0 for t in techs.all)
     thermal_cop = Dict(t => 0.0 for t in techs.absorption_chiller)
     backup_heating_cop = Dict(t => 0.0 for t in techs.electric_heater)
-    heating_cop = Dict{String, Array{Float64,1}}()
-    cooling_cop = Dict{String, Array{Float64,1}}()
+    heating_cop = Dict(t => zeros(length(s.electric_load.loads_kw)) for t in techs.ashp)
+    cooling_cop = Dict(t => zeros(length(s.electric_load.loads_kw)) for t in techs.ashp)
 
     # export related inputs
     techs_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in s.electric_tariff.export_bins)
@@ -891,8 +891,8 @@ function setup_ashp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_
     max_sizes["ASHP"] = s.ashp.max_kw
     min_sizes["ASHP"] = s.ashp.min_kw
     om_cost_per_kw["ASHP"] = s.ashp.om_cost_per_kw
-    #heating_cop["ASHP"] = s.ashp.cop_heating
-    #cooling_cop["ASHP"] = s.ashp.cop_cooling
+    heating_cop["ASHP"] = s.ashp.cop_heating
+    cooling_cop["ASHP"] = s.ashp.cop_cooling
 
     if s.ashp.macrs_option_years in [5, 7]
         cap_cost_slope["ASHP"] = effective_cost(;

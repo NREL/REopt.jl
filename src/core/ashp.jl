@@ -33,8 +33,8 @@ function ASHP(;
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
     can_supply_steam_turbine::Union{Bool, nothing} = nothing # If the boiler can supply steam to the steam turbine for electric production
     cop::Array{<:Real,1} = Real[], # COP of the heating (i.e., thermal produced / electricity consumed)
-    cop_heating::Array{Float64,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
-    cop_cooling::Array{Float64,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
+    cop_heating::Array{<:Real,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
+    cop_cooling::Array{<:Real,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
     can_serve_dhw::Bool = true # If ASHP can supply heat to the domestic hot water load
     can_serve_space_heating::Bool = true # If ASHP can supply heat to the space heating load
     can_serve_process_heat::Bool = true # If ASHP can supply heat to the process heating load
@@ -49,9 +49,6 @@ function ASHP(;
         macrs_option_years::Int = 0,
         macrs_bonus_fraction::Real = 0.0,
         can_supply_steam_turbine::Union{Bool, Nothing} = nothing,
-        #cop::Array{<:Real,1} = Real[],
-        #cop_heating::Real,
-        #cop_cooling::Real,
         cop_heating::Array{Float64,1},
         cop_cooling::Array{Float64,1},
         can_serve_dhw::Bool = true,

@@ -12,7 +12,6 @@
     "ASHP": {
         "min_mmbtu_per_hour": 0.0,
         "max_mmbtu_per_hour": 100000,
-        "cop": 3.0,
         "installed_cost_per_mmbtu_per_hour": 314000,
         "om_cost_per_mmbtu_per_hour": 0.0,
 		"macrs_option_years": 0,
