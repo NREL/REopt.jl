@@ -247,7 +247,7 @@ function get_steam_turbine_defaults_size_class(;avg_boiler_fuel_load_mmbtu_per_h
         ("prime_mover", "steam_turbine"),
         ("size_class", size_class),
         ("default_inputs", steam_turbine_defaults),
-        ("chp_size_based_on_avg_heating_load_kw", st_elec_size_heuristic_kw),
+        ("chp_elec_size_heuristic_kw", st_elec_size_heuristic_kw),
         ("size_class_bounds", class_bounds)
     ])
 
