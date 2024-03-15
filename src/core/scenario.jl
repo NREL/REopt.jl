@@ -651,7 +651,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
 
     steam_turbine = nothing
-    if haskey(d, "SteamTurbine") && d["SteamTurbine"]["max_kw"] > 0.0
+    if haskey(d, "SteamTurbine")
         if !isnothing(existing_boiler)
             total_fuel_heating_load_mmbtu_per_hour = (space_heating_load.loads_kw + dhw_load.loads_kw) / existing_boiler.efficiency / KWH_PER_MMBTU
             avg_boiler_fuel_load_mmbtu_per_hour = sum(total_fuel_heating_load_mmbtu_per_hour) / length(total_fuel_heating_load_mmbtu_per_hour)
