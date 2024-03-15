@@ -20,9 +20,8 @@
 function add_ashp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
     r["size_mmbtu_per_hour"] = round(value(m[Symbol("dvSize"*_n)]["ASHP"]) / KWH_PER_MMBTU, digits=3)
-    r["cop_heating"] = Vector(p.heating_cop)
     @expression(m, ASHPElectricConsumptionSeries[ts in p.time_steps],
-        p.hours_per_time_step * sum(m[:dvHeatingProduction][t,q,ts] / p.heating_cop[t,ts] 
+        p.hours_per_time_step * sum(m[:dvHeatingProduction][t,q,ts] / p.heating_cop[t][ts] #p.heating_cop[t,ts] 
         for q in p.heating_loads, t in p.techs.ashp) 
         #+ p.hours_per_time_step * sum(m[:dvCoolingProduction][t,q,ts] / p.cooling_cop[t,ts] 
         #for q in p.cooling_loads, t in p.techs.ashp)

@@ -62,8 +62,8 @@ struct REoptInputs <: AbstractInputs
     tech_emissions_factors_PM25::Dict{String, <:Real} # (techs)
     techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
     backup_heating_cop::Dict{String, <:Real} # (techs.electric_heater)
-    heating_cop::Dict{String, Array{<:Real, 1}} # (techs.ashp)
-    cooling_cop::Dict{String, Array{<:Real, 1}} # (techs.ashp)
+    heating_cop::Dict{String, Array{<:Real, 2}} # (techs.ashp)
+    cooling_cop::Dict{String, Array{<:Real, 2}} # (techs.ashp)
     heating_loads_kw::Dict{String, <:Real} # (heating_loads)
     unavailability::Dict{String, Array{Float64,1}}  # Dict by tech of unavailability profile
 end
@@ -131,7 +131,7 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
     backup_heating_cop::Dict{String, <:Real} # (techs.electric_heater)
     heating_cop::Dict{String, Array{Float64,1}} # (techs.ashp, time_steps)
-    cooling_cop::Dict{String, Array{Float64,1}} # (techs.ashp, time_steps)
+    cooling_cop::Dict{String, Array{Float64,1}}  # (techs.ashp, time_steps)
     heating_loads::Vector{String} # list of heating loads
     heating_loads_kw::Dict{String, Array{Real,1}} # (heating_loads)
     heating_loads_served_by_tes::Dict{String, Array{String,1}} # ("HotThermalStorage" or empty)
@@ -172,7 +172,7 @@ function REoptInputs(s::AbstractScenario)
         seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
         tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
         tech_emissions_factors_PM25, cop, techs_operating_reserve_req_fraction, thermal_cop, fuel_cost_per_kwh, 
-        backup_heating_cop, heating_cop, cooling_cop = setup_tech_inputs(s)
+        backup_heating_cop, heating_cop, cooling_cop = setup_tech_inputs(s,time_steps)
 
     pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
 
@@ -336,9 +336,9 @@ end
 
 Create data arrays associated with techs necessary to build the JuMP model.
 """
-function setup_tech_inputs(s::AbstractScenario)
+function setup_tech_inputs(s::AbstractScenario, time_steps)
     #TODO: create om_cost_per_kwh in here as well as om_cost_per_kw? (Generator, CHP, SteamTurbine, and Boiler have this)
-
+    
     techs = Techs(s)
 
     boiler_efficiency = Dict{String, Float64}()
@@ -361,8 +361,8 @@ function setup_tech_inputs(s::AbstractScenario)
     techs_operating_reserve_req_fraction = Dict(t => 0.0 for t in techs.all)
     thermal_cop = Dict(t => 0.0 for t in techs.absorption_chiller)
     backup_heating_cop = Dict(t => 0.0 for t in techs.electric_heater)
-    heating_cop = Dict(t => zeros(length(s.electric_load.loads_kw)) for t in techs.ashp)
-    cooling_cop = Dict(t => zeros(length(s.electric_load.loads_kw)) for t in techs.ashp)
+    heating_cop = Dict(t => zeros(length(time_steps)) for t in techs.ashp)
+    cooling_cop = Dict(t => zeros(length(time_steps)) for t in techs.ashp)
 
     # export related inputs
     techs_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in s.electric_tariff.export_bins)
@@ -903,6 +903,8 @@ function setup_ashp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_
     om_cost_per_kw["ASHP"] = s.ashp.om_cost_per_kw
     heating_cop["ASHP"] = s.ashp.cop_heating
     cooling_cop["ASHP"] = s.ashp.cop_cooling
+    #heating_cop = s.ashp.cop_heating
+    #cooling_cop = s.ashp.cop_heating
 
     if s.ashp.macrs_option_years in [5, 7]
         cap_cost_slope["ASHP"] = effective_cost(;
