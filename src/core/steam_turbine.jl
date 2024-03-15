@@ -5,7 +5,7 @@
 ```julia
     size_class::Union{Int64, Nothing} = nothing
     min_kw::Float64 = 0.0
-    max_kw::Float64 = 0.0
+    max_kw::Float64 = 1.0e9
     electric_produced_to_thermal_consumed_ratio::Float64 = NaN
     thermal_produced_to_thermal_consumed_ratio::Float64 = NaN
     is_condensing::Bool = false
@@ -34,7 +34,7 @@
 Base.@kwdef mutable struct SteamTurbine <: AbstractSteamTurbine
     size_class::Union{Int64, Nothing} = nothing
     min_kw::Float64 = 0.0
-    max_kw::Float64 = 0.0
+    max_kw::Float64 = 1.0e9
     electric_produced_to_thermal_consumed_ratio::Float64 = NaN
     thermal_produced_to_thermal_consumed_ratio::Float64 = NaN
     is_condensing::Bool = false
