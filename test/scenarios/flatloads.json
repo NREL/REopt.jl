@@ -23,5 +23,8 @@
     "CoolingLoad": {
         "annual_tonhour": 10000.0,
         "doe_reference_name": "FlatLoad_8_5"
+    },
+    "ElectricUtility" : {
+        "co2_from_avert" : true
     }
 }

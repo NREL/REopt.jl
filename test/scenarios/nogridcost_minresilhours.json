@@ -16,7 +16,8 @@
       10,
       11,
       12
-    ]
+    ],
+    "co2_from_avert": true
   },
   "ElectricTariff": {
     "monthly_demand_rates": [
