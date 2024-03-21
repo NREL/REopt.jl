@@ -18785,7 +18785,7 @@
         ]
     },
     "status": "optimal",
-    "solver_seconds": 81.444,
+    "solver_seconds": 67.426,
     "ElectricUtility": {
         "lifecycle_emissions_tonnes_CO2_bau": 3013.61,
         "annual_emissions_tonnes_CO2_bau": 120.54440000000001,
