@@ -48,6 +48,33 @@ function add_existing_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
 		m[:dvThermalProduction]["ExistingBoiler",ts] - BoilerToHotTESKW[ts] - BoilerToSteamTurbineKW[ts]
     )
 	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(BoilerToLoadKW ./ KWH_PER_MMBTU), digits=5)
+    
+    if "DomesticHotWater" in p.heating_loads && p.s.existing_boiler.can_serve_dhw
+        @expression(m, BoilerToDHWKW[ts in p.time_steps], 
+            m[:dvHeatingProduction]["ExistingBoiler","DomesticHotWater",ts] - BoilerToHotTESByQualityKW["DomesticHotWater",ts] - BoilerToSteamTurbineByQualityKW["DomesticHotWater",ts]
+        )
+    else
+        @expression(m, BoilerToDHWKW[ts in p.time_steps], 0.0)
+    end
+    r["thermal_to_dhw_load_series_mmbtu_per_hour"] = round.(value.(BoilerToDHWKW ./ KWH_PER_MMBTU), digits=5)
+    
+    if "SpaceHeating" in p.heating_loads && p.s.existing_boiler.can_serve_space_heating
+        @expression(m, BoilerToSpaceHeatingKW[ts in p.time_steps], 
+            m[:dvHeatingProduction]["ExistingBoiler","SpaceHeating",ts] - BoilerToHotTESByQualityKW["SpaceHeating",ts] - BoilerToSteamTurbineByQualityKW["SpaceHeating",ts]
+        )
+    else
+        @expression(m, BoilerToSpaceHeatingKW[ts in p.time_steps], 0.0)
+    end
+    r["thermal_to_space_heating_load_series_mmbtu_per_hour"] = round.(value.(BoilerToSpaceHeatingKW ./ KWH_PER_MMBTU), digits=5)
+    
+    if "ProcessHeat" in p.heating_loads && p.s.existing_boiler.can_serve_process_heat
+        @expression(m, BoilerToProcessHeatKW[ts in p.time_steps], 
+            m[:dvHeatingProduction]["ExistingBoiler","ProcessHeat",ts] - BoilerToHotTESByQualityKW["ProcessHeat",ts] - BoilerToSteamTurbineByQualityKW["ProcessHeat",ts]
+        )
+    else
+        @expression(m, BoilerToProcessHeatKW[ts in p.time_steps], 0.0)
+    end
+    r["thermal_to_process_heat_load_series_mmbtu_per_hour"] = round.(value.(BoilerToProcessHeatKW ./ KWH_PER_MMBTU), digits=5)
 
     m[:TotalExistingBoilerFuelCosts] = @expression(m, p.pwf_fuel["ExistingBoiler"] *
         sum(m[:dvFuelUsage]["ExistingBoiler", ts] * p.fuel_cost_per_kwh["ExistingBoiler"][ts] for ts in p.time_steps)
