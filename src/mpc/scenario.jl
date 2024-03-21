@@ -8,6 +8,9 @@ struct MPCScenario <: AbstractScenario
     electric_utility::ElectricUtility
     financial::MPCFinancial
     generator::MPCGenerator
+    electrolyzer::MPCElectrolyzer
+    hydrogen_storage::MPCHydrogenStorage
+    fuel_cell::MPCFuelCell
     cooling_load::MPCCoolingLoad
     limits::MPCLimits
     node::Int
@@ -28,6 +31,9 @@ Method for creating the MPCScenario struct:
         electric_utility::ElectricUtility
         financial::MPCFinancial
         generator::MPCGenerator
+        electrolyzer::MPCElectrolyzer
+        hydrogen_storage::MPCHydrogenStorage
+        fuel_cell::MPCFuelCell
         cooling_load::MPCCoolingLoad
         limits::MPCLimits
         node::Int
@@ -42,6 +48,9 @@ Other options include:
     - "PV", which can contain a Dict or Dict[]
     - "ElectricStorage"
     - "Generator"
+    - "Electrolyzer"
+    - "HydrogenStorage"
+    - "FuelCell"
     - "ElectricUtility"
     - "Settings"
     - "Financial"
@@ -90,6 +99,24 @@ function MPCScenario(d::Dict)
     end
     storage = Storage(Dict{String, AbstractStorage}("ElectricStorage" => MPCElectricStorage(; storage_dict...)))
 
+    if haskey(d, "Electrolyzer")
+        electrolyzer = MPCElectrolyzer(; dictkeys_tosymbols(d["Electrolyzer"])...)
+    else
+        electrolyzer = MPCElectrolyzer(; size_kw=0)
+    end
+
+    if haskey(d, "HydrogenStorage")
+        hydrogen_storage = MPCHydrogenStorage(; dictkeys_tosymbols(d["HydrogenStorage"])...)
+    else
+        hydrogen_storage = MPCHydrogenStorage(; size_kg=0)
+    end
+
+    if haskey(d, "FuelCell")
+        fuel_cell = MPCFuelCell(; dictkeys_tosymbols(d["FuelCell"])...)
+    else
+        fuel_cell = MPCFuelCell(; size_kw=0)
+    end
+    
     electric_load = MPCElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...)
 
     electric_tariff = MPCElectricTariff(d["ElectricTariff"])
@@ -123,6 +150,9 @@ function MPCScenario(d::Dict)
         electric_utility, 
         financial,
         generator,
+        electrolyzer,
+        hydrogen_storage,
+        fuel_cell,
         cooling_load,
         limits,
         node

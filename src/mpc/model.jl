@@ -92,6 +92,20 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 	end
 
 	for b in p.s.storage.types.all
+		if b in p.s.storage.types.hydrogen
+			if p.s.storage.attr[b].max_kg == 0
+				@constraint(m, [ts in p.time_steps], m[:dvDischargeFromStorage][b, ts] == 0)
+				@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
+				@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
+					m[:dvProductionToStorage][b, t, ts] == 0)
+			else
+				add_hydrogen_storage_size_constraints(m, p, b)
+				add_general_storage_dispatch_constraints(m, p, b)
+				if b in p.s.storage.types.hydrogen_storage
+					add_lp_hydrogen_storage_dispatch_constraints(m, p, b)
+				end
+			end
+		end
 		if p.s.storage.attr[b].size_kw == 0 || p.s.storage.attr[b].size_kwh == 0
 			@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
 			@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
@@ -166,6 +180,24 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
         m[:TotalFuelCosts] += m[:TotalGenFuelCosts]
 	end
 
+	if !isempty(p.techs.electrolyzer)
+		add_electrolyzer_constraints(m, p)
+		print("Check Check Check Check Check Check Check Check Check Check")
+		m[:TotalPerUnitProdOMCosts] += @expression(m,
+			sum(p.s.electrolyzer.om_cost_per_kwh * p.hours_per_time_step *
+			m[:dvRatedProduction][t, ts] for t in p.techs.electrolyzer, ts in p.time_steps))
+	end
+
+	if !isempty(p.techs.fuel_cell)
+		add_fuel_cell_constraints(m, p)
+		m[:TotalPerUnitProdOMCosts] += @expression(m,
+			sum(p.s.fuel_cell.om_cost_per_kwh * p.hours_per_time_step *
+            m[:dvRatedProduction][t, ts] for t in p.techs.fuel_cell, ts in p.time_steps))
+	else
+		@constraint(m, [t in p.techs.fuel_cell, ts in p.time_steps],
+			m[:dvRatedProduction][t,ts] == 0)
+	end
+
 	add_elec_utility_expressions(m, p)
     add_previous_monthly_peak_constraint(m, p)
     add_previous_tou_peak_constraint(m, p)
@@ -230,10 +262,16 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 		dvCurtail[p.techs.all, p.time_steps] >= 0  # [kW]
 		dvProductionToStorage[p.s.storage.types.all, p.techs.all, p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
 		dvDischargeFromStorage[p.s.storage.types.all, p.time_steps] >= 0 # Power discharged from storage system b [kW]
+		dvProductionToElectrolyzer[p.techs.elec, p.time_steps] >= 0
+		dvProductionToCompressor[p.techs.elec, p.time_steps] >= 0
 		dvGridToStorage[p.s.storage.types.elec, p.time_steps] >= 0 # Electrical power delivered to storage by the grid [kW]
+		dvGridToElectrolyzer[p.time_steps] >= 0
+		dvGridToCompressor[p.time_steps] >= 0
 		dvStoredEnergy[p.s.storage.types.all, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
 		dvStoragePower[p.s.storage.types.all] >= 0   # Power capacity of storage system b [kW]
 		dvStorageEnergy[p.s.storage.types.all] >= 0   # Energy capacity of storage system b [kWh]
+		dvStorageToElectrolyzer[p.s.storage.types.elec, p.time_steps] >= 0
+		dvStorageToCompressor[p.s.storage.types.elec, p.time_steps] >= 0
 		# TODO rm dvStoragePower/Energy dv's
 		dvPeakDemandTOU[p.ratchets, 1:1] >= 0  # Peak electrical power demand during ratchet r [kW]
 		dvPeakDemandMonth[p.months] >= 0  # Peak electrical power demand during month m [kW]

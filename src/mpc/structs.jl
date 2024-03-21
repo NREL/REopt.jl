@@ -227,6 +227,7 @@ Base.@kwdef struct MPCElectricStorage < AbstractElectricStorage
     soc_init_fraction::Float64 = 0.5
     can_grid_charge::Bool = true
     grid_charge_efficiency::Float64 = 0.96 * 0.975^2
+    daily_leakage_fraction::Float64 = 0.03
 end
 ```
 """
@@ -242,6 +243,7 @@ Base.@kwdef struct MPCElectricStorage <: AbstractElectricStorage
     max_kw::Float64 = size_kw
     max_kwh::Float64 = size_kwh
     minimum_avg_soc_fraction::Float64 = 0.0
+    daily_leakage_fraction::Float64 = 0.03
 end
 
 
@@ -306,6 +308,60 @@ struct MPCGenerator <: AbstractGenerator
             om_cost_per_kwh,
         )
     end
+end
+
+
+"""
+    MPCElectrolyzer
+
+```julia
+Base.@kwdef struct MPCElectrolyzer < AbstractElectrolyzer
+    size_kw::Float64
+    efficiency_kwh_per_kg::Float64 =  54.3
+    om_cost_per_kwh::Float64 = 0.006
+end
+```
+"""
+Base.@kwdef struct MPCElectrolyzer <: AbstractElectrolyzer
+    size_kw::Float64
+    efficiency_kwh_per_kg::Float64 =  54.3
+    om_cost_per_kwh::Float64 = 0.006
+end
+
+"""
+    MPCHydrogenStorage
+
+```julia
+Base.@kwdef struct MPCHydrogenStorage < AbstractHydrogenStorage
+    size_kg::Float64
+    soc_min_fraction::Float64 = 0.01
+    soc_init_fraction::Float64 = 0.05
+    daily_leakage_fraction::Float64 = 0.0006667
+end
+```
+"""
+Base.@kwdef struct MPCHydrogenStorage <: AbstractHydrogenStorage
+    size_kg::Float64
+    soc_min_fraction::Float64 = 0.01
+    soc_init_fraction::Float64 = 0.05
+    daily_leakage_fraction::Float64 = 0.0006667
+end
+
+"""
+    MPCFuelCell
+
+```julia
+Base.@kwdef struct MPCFuelCell < AbstractFuelCell
+    size_kw::Float64
+    efficiency_kwh_per_kg::Float64 =  16.745
+    om_cost_per_kwh::Float64 = 0.0013
+end
+```
+"""
+Base.@kwdef struct MPCFuelCell <: AbstractFuelCell
+    size_kw::Float64
+    efficiency_kwh_per_kg::Float64 =  16.745
+    om_cost_per_kwh::Float64 = 0.0013
 end
 
 

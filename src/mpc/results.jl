@@ -44,6 +44,22 @@ function mpc_results(m::JuMP.AbstractModel, p::MPCInputs; _n="")
         add_generator_results(m, p, d; _n)
 	end
 
+    if !isempty(p.techs.electrolyzer)
+        add_electrolyzer_results(m, p, d; _n)
+    end
+
+    if !isempty(p.techs.fuel_cell)
+        add_fuel_cell_results(m, p, d; _n)
+    end
+
+    for b in p.s.storage.types.hydrogen
+        if p.s.storage.attr[b].max_kg > 0
+            if b in p.s.storage.types.hydrogen_storage
+                add_hydrogen_storage_lp_results(m, p, d, b; _n)
+            end
+        end
+    end
+
     d["Costs"] = value(m[Symbol("Costs"*_n)])
 	
 	time_elapsed = time() - tstart
