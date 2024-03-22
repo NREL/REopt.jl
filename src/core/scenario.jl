@@ -12,6 +12,7 @@ struct Scenario <: AbstractScenario
     generator::Generator
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
+    process_heat_load::ProcessHeatLoad
     cooling_load::CoolingLoad
     existing_boiler::Union{ExistingBoiler, Nothing}
     boiler::Union{Boiler, Nothing}
@@ -41,6 +42,7 @@ A Scenario struct can contain the following keys:
 - [Generator](@ref) (optional)
 - [DomesticHotWaterLoad](@ref) (optional)
 - [SpaceHeatingLoad](@ref) (optional)
+- [ProcessHeatLoad](@ref) (optional)
 - [ExistingBoiler](@ref) (optional)
 - [Boiler](@ref) (optional)
 - [CHP](@ref) (optional)
@@ -168,11 +170,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     #       (requires significant changes to constraints, variables)
     if haskey(d, "HotThermalStorage")
         params = HotThermalStorageDefaults(; dictkeys_tosymbols(d["HotThermalStorage"])...)
-        storage_structs["HotThermalStorage"] = ThermalStorage(params, financial, settings.time_steps_per_hour)
+        storage_structs["HotThermalStorage"] = HotThermalStorage(params, financial, settings.time_steps_per_hour)
     end
     if haskey(d, "ColdThermalStorage")
         params = ColdThermalStorageDefaults(; dictkeys_tosymbols(d["ColdThermalStorage"])...)
-        storage_structs["ColdThermalStorage"] = ThermalStorage(params, financial, settings.time_steps_per_hour)
+        storage_structs["ColdThermalStorage"] = ColdThermalStorage(params, financial, settings.time_steps_per_hour)
     end
     storage = Storage(storage_structs)
 
@@ -244,6 +246,18 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         )
     end
 
+    if haskey(d, "ProcessHeatLoad")
+        process_heat_load = ProcessHeatLoad(; dictkeys_tosymbols(d["ProcessHeatLoad"])...,
+            time_steps_per_hour=settings.time_steps_per_hour    
+        )
+        max_heat_demand_kw += maximum(process_heat_load.loads_kw)
+    else
+        process_heat_load = ProcessHeatLoad(;
+            heat_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
+            time_steps_per_hour=settings.time_steps_per_hour
+        )
+    end
+
     flexible_hvac = nothing
     existing_boiler = nothing
     boiler = nothing
@@ -304,6 +318,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
             if haskey(d, "DomesticHotWaterLoad")
                 @warn "Not using DomesticHotWaterLoad because FlexibleHVAC was provided."
+            end
+
+            if haskey(d, "ProcessHeatLoad")
+                @warn "Not using ProcessHeatLoad because FlexibleHVAC was provided."
             end
 
             if haskey(d, "CoolingLoad")
@@ -644,6 +662,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         generator,
         dhw_load,
         space_heating_load,
+        process_heat_load,
         cooling_load,
         existing_boiler,
         boiler,

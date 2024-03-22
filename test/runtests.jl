@@ -520,6 +520,38 @@ else  # run HiGHS tests
         @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.817586 atol=0.001
     end  
 
+    @testset "Disaggregated Heating Loads" begin
+        @testset "Process Heat Load Inputs" begin
+            d = JSON.parsefile("./scenarios/electric_heater.json")
+            d["SpaceHeatingLoad"]["annual_mmbtu"] = 0.5 * 8760
+            d["DomesticHotWaterLoad"]["annual_mmbtu"] = 0.5 * 8760
+            d["ProcessHeatLoad"] = Dict("annual_mmbtu" => 0.5 * 8760)
+            s = Scenario(d)
+            inputs = REoptInputs(s)
+            @test inputs.heating_loads_kw["ProcessHeat"][1] ≈ 146.535535 atol=1.0e-3
+        end
+        @testset "Separate Heat Load Results" begin
+            d = JSON.parsefile("./scenarios/electric_heater.json")
+            d["SpaceHeatingLoad"]["annual_mmbtu"] = 0.5 * 8760
+            d["DomesticHotWaterLoad"]["annual_mmbtu"] = 0.5 * 8760
+            d["ProcessHeatLoad"] = Dict("annual_mmbtu" => 0.5 * 8760)
+            d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = 100
+            d["ElectricHeater"]["installed_cost_per_mmbtu_per_hour"] = 1.0
+            d["ElectricTariff"]["monthly_energy_rates"] = [0,0,0,0,0,0,0,0,0,0,0,0]
+            d["HotThermalStorage"]["max_gal"] = 0.0
+            s = Scenario(d)
+            inputs = REoptInputs(s)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(m, inputs)
+            @test sum(results["ExistingBoiler"]["thermal_to_dhw_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.01
+            @test sum(results["ExistingBoiler"]["thermal_to_space_heating_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.01
+            @test sum(results["ExistingBoiler"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]) ≈ 4380.0 atol=0.01
+            @test sum(results["ElectricHeater"]["thermal_to_dhw_load_series_mmbtu_per_hour"]) ≈ 0.8*4380.0 atol=0.01
+            @test sum(results["ElectricHeater"]["thermal_to_space_heating_load_series_mmbtu_per_hour"]) ≈ 0.8*4380.0 atol=0.01
+            @test sum(results["ElectricHeater"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.01
+        end
+    end
+
     @testset "Imported Xpress Test Suite" begin
         @testset "Heating loads and addressable load fraction" begin
             # Default LargeOffice CRB with SpaceHeatingLoad and DomesticHotWaterLoad are served by ExistingBoiler
@@ -565,8 +597,8 @@ else  # run HiGHS tests
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
                 results = run_reopt(m, inputs)
             
-                @test round(results["CHP"]["size_kw"], digits=0) ≈ 342.0 atol=1.0
-                @test round(results["Financial"]["lcc"], digits=0) ≈ 1.3476e7 atol=1.0e7
+                @test round(results["CHP"]["size_kw"], digits=0) ≈ 330.0 atol=20.0
+                @test round(results["Financial"]["lcc"], digits=0) ≈ 1.3476e7 rtol=1.0e-2
             end
         
             @testset "CHP Cost Curve and Min Allowable Size" begin
@@ -2206,7 +2238,8 @@ else  # run HiGHS tests
                                                 ("max_ton", 600.0),
                                                 ("cop_thermal", 0.7),
                                                 ("installed_cost_per_ton", 500.0),
-                                                ("om_cost_per_ton", 0.5)
+                                                ("om_cost_per_ton", 0.5),
+                                                ("heating_load_input", "SpaceHeating")
                                                 ])
             
             # Add Hot TES

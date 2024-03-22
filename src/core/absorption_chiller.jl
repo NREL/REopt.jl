@@ -15,6 +15,7 @@
     cop_electric::Float64 = 14.1, # Absorption chiller electric consumption CoP from cooling tower heat rejection - conversion of electric power input to usable cooling thermal energy outpu
     macrs_option_years::Float64 = 0, # MACRS schedule for financial analysis. Set to zero to disable
     macrs_bonus_fraction::Float64 = 0 # Percent of upfront project costs to depreciate under MACRS
+    heating_load_input::Union{String, Nothing} = nothing # heating load that serves as input to absorption chiller
 ```
 
 !!! Note
@@ -36,6 +37,7 @@ Base.@kwdef mutable struct AbsorptionChiller <: AbstractThermalTech
     om_cost_per_ton::Union{Float64, Nothing} = nothing
     macrs_option_years::Float64 = 0
     macrs_bonus_fraction::Float64 = 0
+    heating_load_input::Union{String, Nothing} = nothing
     min_kw::Float64 = NaN
     max_kw::Float64 = NaN
     installed_cost_per_kw::Float64 = NaN
@@ -66,7 +68,8 @@ function AbsorptionChiller(d::Dict;
     custom_ac_inputs = Dict{Symbol, Any}(
         :installed_cost_per_ton => absorp_chl.installed_cost_per_ton,
         :cop_thermal => absorp_chl.cop_thermal,
-        :om_cost_per_ton => absorp_chl.om_cost_per_ton
+        :om_cost_per_ton => absorp_chl.om_cost_per_ton,
+        :heating_load_input => absorp_chl.heating_load_input
     )
 
     if !isnothing(cooling_load)
@@ -183,7 +186,7 @@ function get_absorption_chiller_defaults(;
         )
 
     for key in keys(acds[thermal_consumption_hot_water_or_steam])
-        if key == "cop_thermal"
+        if key == "cop_thermal" || key == "heating_load_input"
             htf_defaults[key] = acds[thermal_consumption_hot_water_or_steam][key]
         elseif key != "tech_sizes_for_cost_data"
             htf_defaults[key] = (frac_higher * acds[thermal_consumption_hot_water_or_steam][key][size_class+1] + 

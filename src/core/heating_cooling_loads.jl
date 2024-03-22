@@ -1423,3 +1423,49 @@ function BuiltInCoolingLoad(
     end
     built_in_load("cooling", city, buildingtype, year, annual_kwh, monthly_kwh)
 end
+
+"""
+`ProcessHeatLoad` is an optional REopt input with the following keys and default values:
+```julia
+    annual_mmbtu::Union{Real, Nothing} = nothing
+    heat_loads_mmbtu_per_hour::Array{<:Real,1} = Real[]
+```
+
+There are many ways in which a ProcessHeatLoad can be defined:
+1. One can provide the `fuel_loads_mmbtu_per_hour` value in the `ProcessHeatLoad` key within the `Scenario`.
+2. One can provide the `annual_mmbtu` value in the `ProcessHeatLoad` key within the `Scenario`; this assumes a flat load.
+
+!!! note "Process heat loads"
+    These loads are presented in terms of process heat required without regard to the efficiency of the input heating,
+    unlike the hot-water and space heating loads which are provided in terms of fuel input.
+
+"""
+struct ProcessHeatLoad
+    loads_kw::Array{Real, 1}
+    annual_mmbtu::Real
+
+    function ProcessHeatLoad(;
+        annual_mmbtu::Union{Real, Nothing} = nothing,
+        heat_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
+        time_steps_per_hour::Int=1
+    )
+        if length(heat_loads_mmbtu_per_hour) != 0 && length(heat_loads_mmbtu_per_hour) != 8760*time_steps_per_hour
+            @error("heat_loads_mmbtu_per_hour must have length zero or 8760*time_steps_per_hour.")
+        elseif !isnothing(annual_mmbtu) && length(heat_loads_mmbtu_per_hour) == 0
+            @warn("only annual_mmbtu was provided - assuming a flat load.")
+            loads_kw = ones(8760) * annual_mmbtu * KWH_PER_MMBTU / (8760*time_steps_per_hour) 
+        elseif isnothing(annual_mmbtu) && length(heat_loads_mmbtu_per_hour) == 8760*time_steps_per_hour
+            loads_kw = heat_loads_mmbtu_per_hour * KWH_PER_MMBTU 
+            annual_mmbtu = sum(heat_loads_mmbtu_per_hour) / time_steps_per_hour
+        elseif !isnothing(annual_mmbtu) && length(heat_loads_mmbtu_per_hour) == 8760*time_steps_per_hour
+            @warn("annual_mmbtu and sum of heat_loads_mmbtu_per_hour are both provided - using heat_loads_mmbtu_per_hour time series")
+            loads_kw = heat_loads_mmbtu_per_hour * KWH_PER_MMBTU 
+            annual_mmbtu = sum(heat_loads_mmbtu_per_hour) / time_steps_per_hour
+        else
+            @warn("annual_mmbtu not provided and length of heat_loads_mmbtu_per_hour is not equal to 8760 - returning zero load.")
+            annual_mmbtu = 0.0
+            loads_kw = zeros(8760 * time_steps_per_hour)
+        end
+        new(loads_kw, annual_mmbtu)
+    end
+end

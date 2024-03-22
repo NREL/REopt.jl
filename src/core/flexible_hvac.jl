@@ -69,7 +69,7 @@ bounds using a discrete-time simulation. The simulation assumes a dead band cont
 what the temperature would be due to the `exogenous_inputs` alone. Then, if the temperature is outside
 of the bounds the energy necessary to make the temperature 0.5 deg C within the bounds is determined.
 
-TODO? either calculate an approximate BAU cost or enforce dvThermalProduction for !binFlexHVAC in model.
+TODO? either calculate an approximate BAU cost or enforce dvCoolingProduction and dvHeatingProduction for !binFlexHVAC in model.
 The cost of the energy necessary to heat/cool the building is determined by either:
 1. The `ElectricTariff` for cooling using the `ExistingChiller`; or 
 2. the `ExistingBoiler.fuel_cost_per_mmbtu` for heating

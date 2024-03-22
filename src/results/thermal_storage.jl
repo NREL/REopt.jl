@@ -25,7 +25,7 @@ function add_hot_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict,
     	soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
         r["soc_series_fraction"] = round.(value.(soc) ./ size_kwh, digits=3)
 
-        discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
+        discharge = (sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for b in p.s.storage.types.hot, q in p.heating_loads) for ts in p.time_steps)
         r["storage_to_load_series_mmbtu_per_hour"] = round.(value.(discharge) / KWH_PER_MMBTU, digits=7)
     else
         r["soc_series_fraction"] = []

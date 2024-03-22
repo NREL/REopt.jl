@@ -24,6 +24,7 @@ struct MPCInputs <: AbstractInputs
     thermal_cop::Dict{String, Float64}  # (techs.absorption_chiller)
     ghp_options::UnitRange{Int64}  # Range of the number of GHP options
     fuel_cost_per_kwh::Dict{String, AbstractArray}  # Fuel cost array for all time_steps
+    heating_loads::Vector{String} # list of heating loads
 end
 
 
@@ -68,6 +69,7 @@ function MPCInputs(s::MPCScenario)
     cop = Dict("ExistingChiller" => s.cooling_load.cop)
     thermal_cop = Dict{String, Float64}()
     ghp_options = 1:0
+    heating_loads = Vector{String}()
 
     MPCInputs(
         s,
@@ -96,7 +98,8 @@ function MPCInputs(s::MPCScenario)
         # s.site.min_resil_time_steps,
         # s.site.mg_tech_sizes_equal_grid_sizes,
         # s.site.node,
-        fuel_cost_per_kwh
+        fuel_cost_per_kwh,
+        heating_loads
     )
 end
 

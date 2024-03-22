@@ -39,7 +39,8 @@
             20.0,
             18.0
         ],
-        "cop_thermal": 0.74
+        "cop_thermal": 0.74,
+        "heating_load_input": "DomesticHotWater"
     },
     "steam":{
         "installed_cost_per_ton": [
@@ -78,6 +79,7 @@
             23.0,
             20.0
         ],
-        "cop_thermal":1.42
+        "cop_thermal":1.42,
+        "heating_load_input": "DomesticHotWater"
     }
 }
