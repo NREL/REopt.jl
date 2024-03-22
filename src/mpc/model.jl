@@ -142,6 +142,10 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 
 	add_elec_load_balance_constraints(m, p)
 
+	if !isempty(p.techs.electric_heater)
+		add_thermal_load_constraints(m, p) 
+	end
+
 	if !isempty(p.s.limits.grid_draw_limit_kw_by_time_step)
 		add_grid_draw_limits(m, p)
 	end
@@ -278,6 +282,19 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 		# MinChargeAdder >= 0
 	end
 	# TODO: tiers in MPC tariffs and variables?
+
+	# Thermal variables
+	if !isempty(p.techs.heating)
+        @variable(m, dvHeatingProduction[p.techs.heating, p.heating_loads, p.time_steps] >= 0)
+		@variable(m, dvProductionToWaste[p.techs.heating, p.heating_loads, p.time_steps] >= 0)
+		if !isempty(p.s.storage.types.hot)
+			@variable(m, dvHeatToStorage[p.s.storage.types.hot, p.techs.heating, p.heating_loads, p.time_steps] >= 0) # Power charged to hot storage b at quality q [kW]
+			@variable(m, dvHeatFromStorage[p.s.storage.types.hot, p.heating_loads, p.time_steps] >= 0) # Power discharged from hot storage system b for load q [kW]
+    	end
+
+		# Placeholder variable for cooling
+		# @variable(m, dvCoolingProduction[p.techs.cooling, p.time_steps] >= 0)
+	end
 
 	if !isempty(p.s.electric_tariff.export_bins)
 		@variable(m, dvProductionToGrid[p.techs.elec, p.s.electric_tariff.export_bins, p.time_steps] >= 0)

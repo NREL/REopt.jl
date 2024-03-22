@@ -348,6 +348,27 @@ function Techs(s::MPCScenario)
         push!(gentechs, "Generator")
     end
 
+    heating_techs = String[]
+    electric_heaters = String[]
+    techs_can_serve_space_heating = String[]
+    techs_can_serve_dhw = String[] 
+    techs_can_serve_process_heat = String[]
+    if s.electric_heater.size_kw > 0
+        push!(all_techs, "ElectricHeater")
+        push!(heating_techs, "ElectricHeater")
+        push!(electric_heaters, "ElectricHeater")
+
+        if s.electric_heater.can_serve_space_heating
+            push!(techs_can_serve_space_heating, "ElectricHeater")
+        end
+        if s.electric_heater.can_serve_dhw
+            push!(techs_can_serve_dhw, "ElectricHeater")
+        end
+        if s.electric_heater.can_serve_process_heat
+            push!(techs_can_serve_process_heat, "ElectricHeater")
+        end
+    end
+
     Techs(
         all_techs,
         all_techs,
@@ -360,6 +381,7 @@ function Techs(s::MPCScenario)
         String[],
         techs_no_turndown,
         String[],
+        heating_techs,
         String[],
         String[],
         String[],
@@ -371,11 +393,10 @@ function Techs(s::MPCScenario)
         String[],
         String[],
         String[],
-        String[],
-        String[],
-        String[],
-        String[],
-        String[],
+        electric_heaters,
+        techs_can_serve_space_heating,
+        techs_can_serve_dhw,
+        techs_can_serve_process_heat,
         String[]
     )
 end

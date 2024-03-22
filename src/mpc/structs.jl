@@ -395,3 +395,44 @@ Base.@kwdef struct MPCLimits
     grid_draw_limit_kw_by_time_step::Vector{<:Real} = Real[]
     export_limit_kw_by_time_step::Vector{<:Real} =  Real[]
 end
+
+
+
+# THERMAL TECHS
+struct MPCProcessHeatLoad
+    loads_kw#::Union{Nothing, Array{Real,1}} = nothing
+    # production_factor_series::Union{Nothing, Array{Real,1}} = nothing
+    function MPCProcessHeatLoad(;
+        heat_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
+    )
+        loads_kw = heat_loads_mmbtu_per_hour * KWH_PER_MMBTU 
+        new(loads_kw)
+    end
+end
+
+struct MPCElectricHeater <: AbstractThermalTech
+    size_kw#::Real
+    cop#::Real
+    can_serve_dhw#::Bool
+    can_serve_space_heating#::Bool
+    can_serve_process_heat#::Bool
+
+    function MPCElectricHeater(;
+        size_mmbtu_per_hour::Real,
+        cop::Real = 1.0,
+        can_serve_dhw::Bool = true,
+        can_serve_space_heating::Bool = true,
+        can_serve_process_heat::Bool = true
+    )
+        # Convert max sizes, cost factors from mmbtu_per_hour to kw
+        size_kw = size_mmbtu_per_hour * KWH_PER_MMBTU
+        
+        new(
+            size_kw,
+            cop,
+            can_serve_dhw,
+            can_serve_space_heating,
+            can_serve_process_heat
+        )
+    end
+end

@@ -60,6 +60,11 @@ function mpc_results(m::JuMP.AbstractModel, p::MPCInputs; _n="")
         end
     end
 
+    if !isempty(p.techs.electric_heater)
+        add_heating_load_results(m, p, d; _n)
+        add_electric_heater_results(m, p, d; _n)
+    end
+
     d["Costs"] = value(m[Symbol("Costs"*_n)])
 	
 	time_elapsed = time() - tstart

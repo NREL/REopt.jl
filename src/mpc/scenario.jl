@@ -12,6 +12,9 @@ struct MPCScenario <: AbstractScenario
     hydrogen_storage::MPCHydrogenStorage
     fuel_cell::MPCFuelCell
     cooling_load::MPCCoolingLoad
+    process_heat_load::MPCProcessHeatLoad
+    electric_heater::MPCElectricHeater
+    flexible_hvac::Union{FlexibleHVAC, Nothing}
     limits::MPCLimits
     node::Int
 end
@@ -35,6 +38,8 @@ Method for creating the MPCScenario struct:
         hydrogen_storage::MPCHydrogenStorage
         fuel_cell::MPCFuelCell
         cooling_load::MPCCoolingLoad
+        process_heat_load::MPCProcessHeatLoad
+        electric_heater::MPCElectricHeater
         limits::MPCLimits
         node::Int
     end
@@ -127,6 +132,20 @@ function MPCScenario(d::Dict)
         generator = MPCGenerator(; size_kw=0)
     end
 
+    if haskey(d, "ProcessHeatLoad")
+        process_heat_load = MPCProcessHeatLoad(; dictkeys_tosymbols(d["ProcessHeatLoad"])...)
+    else
+        process_heat_load = MPCProcessHeatLoad()
+    end
+
+    if haskey(d, "ElectricHeater")
+        electric_heater = MPCElectricHeater(; dictkeys_tosymbols(d["ElectricHeater"])...)
+    else
+        electric_heater = MPCElectricHeater(; size_mmbtu_per_hour=0)
+    end
+
+    flexible_hvac = nothing
+
     # Placeholder/dummy cooling load set to zeros
     cooling_load = MPCCoolingLoad(; loads_kw_thermal = zeros(length(electric_load.loads_kw)), cop=1.0)
     if haskey(d, "Limits")
@@ -154,6 +173,9 @@ function MPCScenario(d::Dict)
         hydrogen_storage,
         fuel_cell,
         cooling_load,
+        process_heat_load,
+        electric_heater,
+        flexible_hvac,
         limits,
         node
     )

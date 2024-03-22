@@ -159,7 +159,7 @@ function add_thermal_load_constraints(m, p; _n="")
         end
 
         if !isempty(p.techs.cooling)
-            
+
             ##Constraint (5a): Cold thermal loads
             @constraint(m, [ts in p.time_steps_with_grid],
                 sum(m[Symbol("dvCoolingProduction"*_n)][t,ts] for t in p.techs.cooling)
