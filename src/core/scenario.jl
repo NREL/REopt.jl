@@ -280,6 +280,18 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         )
     end
 
+    if haskey(d, "ProcessHeatLoad")
+        process_heat_load = ProcessHeatLoad(; dictkeys_tosymbols(d["ProcessHeatLoad"])...,
+            time_steps_per_hour=settings.time_steps_per_hour    
+        )
+        max_heat_demand_kw += maximum(process_heat_load.loads_kw)
+    else
+        process_heat_load = ProcessHeatLoad(;
+            heat_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
+            time_steps_per_hour=settings.time_steps_per_hour
+        )
+    end
+
     flexible_hvac = nothing
     existing_boiler = nothing
     boiler = nothing
