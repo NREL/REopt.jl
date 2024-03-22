@@ -339,7 +339,7 @@ end
                                         is_electric_only::Bool=false)
 
 Depending on the set of inputs, different sets of outputs are determine in addition to all CHP cost and performance parameter defaults:
-    1. Inputs: existing_boiler_production_type_steam_or_hw and avg_boiler_fuel_load_mmbtu_per_hour
+    1. Inputs: hot_water_or_steam and avg_boiler_fuel_load_mmbtu_per_hour
        Outputs: prime_mover, size_class, chp_elec_size_heuristic_kw, chp_max_size_kw
     2. Inputs: prime_mover and avg_boiler_fuel_load_mmbtu_per_hour
        Outputs: size_class, chp_elec_size_heuristic_kw, chp_max_size_kw
@@ -351,7 +351,7 @@ Depending on the set of inputs, different sets of outputs are determine in addit
        Outputs: chp_elec_size_heuristic_kw, chp_max_size_kw
 
 The main purpose of this function is to communicate the following mapping of dependency of CHP defaults versus 
-    existing_boiler_production_type_steam_or_hot_water and avg_boiler_fuel_load_mmbtu_per_hour:
+    hot_water_or_steam and avg_boiler_fuel_load_mmbtu_per_hour:
 If hot_water and <= 27 MMBtu/hr avg_boiler_fuel_load_mmbtu_per_hour --> prime_mover = recip_engine of size_class X
 If hot_water and > 27 MMBtu/hr avg_boiler_fuel_load_mmbtu_per_hour --> prime_mover = combustion_turbine of size_class X
 If steam and <= 7 MMBtu/hr avg_boiler_fuel_load_mmbtu_per_hour --> prime_mover = recip_engine of size_class X
