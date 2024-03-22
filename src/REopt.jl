@@ -107,6 +107,7 @@ const EMISSIONS_DECREASE_DEFAULTS = Dict(
     "SO2" => 0.02163,
     "PM25" => 0.02163
 )
+const INDICATOR_COMPATIBLE_SOLVERS = ["Cbc","CPLEX","Xpress","SCIP"]
 
 include("logging.jl")
 
