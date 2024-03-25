@@ -51,17 +51,24 @@ function add_export_constraints(m, p; _n="")
             binNEM = @variable(m, binary = true)
             @warn "Adding binary variable for net metering choice. Some solvers are slow with binaries."
 
-            # Good to bound the benefit
+            # Good to bound the benefit - we use max_bene as a lower bound because the benefit is treated as a negative cost
             max_bene = sum([ld*rate for (ld,rate) in zip(p.s.electric_load.loads_kw, p.s.electric_tariff.export_rates[:NEM])])*10
             NEM_benefit = @variable(m, lower_bound = max_bene)
 
+            
             # If choosing to take advantage of NEM, must have total capacity less than net_metering_limit_kw
-            @constraint(m,
-                binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.net_metering_limit_kw}
-            )
-            @constraint(m,
-                !binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.interconnection_limit_kw}
-            )
+            if p.s.settings.solver_id in INDICATOR_COMPATIBLE_SOLVERS
+                @constraint(m,
+                    binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.net_metering_limit_kw}
+                )
+                @constraint(m,
+                    !binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.interconnection_limit_kw}
+                )
+            else
+                @constraint(m,
+                    sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.interconnection_limit_kw - (p.s.electric_utility.interconnection_limit_kw - p.s.electric_utility.net_metering_limit_kw)*binNEM 
+                )
+            end
 
             # binary choice for NEM benefit
             @constraint(m,
