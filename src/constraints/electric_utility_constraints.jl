@@ -71,24 +71,42 @@ function add_export_constraints(m, p; _n="")
             end
 
             # binary choice for NEM benefit
-            @constraint(m,
-                binNEM => {NEM_benefit >= p.pwf_e * p.hours_per_time_step *
-                    sum( sum(p.s.electric_tariff.export_rates[:NEM][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
-                        for t in p.techs_by_exportbin[:NEM]) for ts in p.time_steps)
-                }
-            )
-            @constraint(m, !binNEM => {NEM_benefit >= 0})
+            if p.s.settings.solver_id in INDICATOR_COMPATIBLE_SOLVERS
+                @constraint(m,
+                    binNEM => {NEM_benefit >= p.pwf_e * p.hours_per_time_step *
+                        sum( sum(p.s.electric_tariff.export_rates[:NEM][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
+                            for t in p.techs_by_exportbin[:NEM]) for ts in p.time_steps)
+                    }
+                )
+                @constraint(m, !binNEM => {NEM_benefit >= 0})
+            else
+                @constraint(m,
+                    NEM_benefit >= p.pwf_e * p.hours_per_time_step *
+                        sum( sum(p.s.electric_tariff.export_rates[:NEM][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
+                            for t in p.techs_by_exportbin[:NEM]) for ts in p.time_steps)
+                )
+                @constraint(m, NEM_benefit >= max_bene * binNEM)
+            end
 
             EXC_benefit = 0
             if :EXC in p.s.electric_tariff.export_bins
                 EXC_benefit = @variable(m, lower_bound = max_bene)
-                @constraint(m,
-                    binNEM => {EXC_benefit >= p.pwf_e * p.hours_per_time_step *
-                        sum( sum(p.s.electric_tariff.export_rates[:EXC][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :EXC, ts] 
-                            for t in p.techs_by_exportbin[:EXC]) for ts in p.time_steps)
-                    }
-                )
-                @constraint(m, !binNEM => {EXC_benefit >= 0})
+                if p.s.settings.solver_id in INDICATOR_COMPATIBLE_SOLVERS
+                    @constraint(m,
+                        binNEM => {EXC_benefit >= p.pwf_e * p.hours_per_time_step *
+                            sum( sum(p.s.electric_tariff.export_rates[:EXC][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :EXC, ts] 
+                                for t in p.techs_by_exportbin[:EXC]) for ts in p.time_steps)
+                        }
+                    )
+                    @constraint(m, !binNEM => {EXC_benefit >= 0})
+                else
+                    @constraint(m,
+                        EXC_benefit >= p.pwf_e * p.hours_per_time_step *
+                            sum( sum(p.s.electric_tariff.export_rates[:EXC][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :EXC, ts] 
+                                for t in p.techs_by_exportbin[:EXC]) for ts in p.time_steps)
+                    )
+                    @constraint(m, EXC_benefit >= max_bene * binNEM)
+                end
             end
         end
     end
@@ -108,14 +126,22 @@ function add_export_constraints(m, p; _n="")
             WHL_benefit = @variable(m, lower_bound = max_bene)
 
             @constraint(m, binNEM + binWHL == 1)  # can either NEM or WHL export, not both
-
-            @constraint(m,
-                binWHL => {WHL_benefit >= p.pwf_e * p.hours_per_time_step *
-                    sum( sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
-                            for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
-                }
-            )
-            @constraint(m, !binWHL => {WHL_benefit >= 0})
+            if p.s.settings.solver_id in INDICATOR_COMPATIBLE_SOLVERS
+                @constraint(m,
+                    binWHL => {WHL_benefit >= p.pwf_e * p.hours_per_time_step *
+                        sum( sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
+                                for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
+                    }
+                )
+                @constraint(m, !binWHL => {WHL_benefit >= 0})
+            else
+                @constraint(m,
+                    WHL_benefit >= p.pwf_e * p.hours_per_time_step *
+                        sum( sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
+                                for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
+                )
+                @constraint(m, WHL_benefit >= max_bene * binWHL)
+            end
         end
     end
 
