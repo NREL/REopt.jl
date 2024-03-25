@@ -1133,9 +1133,8 @@ else  # run HiGHS tests
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
             d = JSON.parsefile("./scenarios/wind.json")
             results = run_reopt(m, d)
-            @test occursin("not supported by the solver", string(results["Messages"]["errors"]))
-            # @test results["Wind"]["size_kw"] ≈ 3752 atol=0.1
-            # @test results["Financial"]["lcc"] ≈ 8.591017e6 rtol=1e-5
+            @test results["Wind"]["size_kw"] ≈ 3752 atol=0.1
+            @test results["Financial"]["lcc"] ≈ 8.591017e6 rtol=1e-5
             #= 
             0.5% higher LCC in this package as compared to API ? 8,591,017 vs 8,551,172
             - both have zero curtailment
@@ -1154,15 +1153,13 @@ else  # run HiGHS tests
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
             d["Site"]["land_acres"] = 60 # = 2 MW (with 0.03 acres/kW)
             results = run_reopt(m, d)
-            @test occursin("not supported by the solver", string(results["Messages"]["errors"]))
-            # @test results["Wind"]["size_kw"] == 2000.0 # Wind should be constrained by land_acres
+            @test results["Wind"]["size_kw"] == 2000.0 # Wind should be constrained by land_acres
 
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
             d["Wind"]["min_kw"] = 2001 # min_kw greater than land-constrained max should error
             results = run_reopt(m, d)
             @test "errors" ∈ keys(results["Messages"])
             @test length(results["Messages"]["errors"]) > 0
-            
         end
 
         @testset "Multiple PVs" begin
