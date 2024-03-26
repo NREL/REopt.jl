@@ -8,12 +8,13 @@ struct MPCScenario <: AbstractScenario
     electric_utility::ElectricUtility
     financial::MPCFinancial
     generator::MPCGenerator
-    electrolyzer::MPCElectrolyzer
-    hydrogen_storage::MPCHydrogenStorage
-    fuel_cell::MPCFuelCell
     cooling_load::MPCCoolingLoad
     process_heat_load::MPCProcessHeatLoad
     electric_heater::MPCElectricHeater
+    electrolyzer::MPCElectrolyzer
+    fuel_cell::MPCFuelCell
+    hydrogen_load::MPCHydrogenLoad
+    compressor::MPCCompressor
     flexible_hvac::Union{FlexibleHVAC, Nothing}
     limits::MPCLimits
     node::Int
@@ -34,12 +35,14 @@ Method for creating the MPCScenario struct:
         electric_utility::ElectricUtility
         financial::MPCFinancial
         generator::MPCGenerator
-        electrolyzer::MPCElectrolyzer
-        hydrogen_storage::MPCHydrogenStorage
-        fuel_cell::MPCFuelCell
         cooling_load::MPCCoolingLoad
         process_heat_load::MPCProcessHeatLoad
         electric_heater::MPCElectricHeater
+        electrolyzer::MPCElectrolyzer
+        fuel_cell::MPCFuelCell
+        hydrogen_load::MPCHydrogenLoad
+        compressor::MPCCompressor
+        flexible_hvac::Union{FlexibleHVAC, Nothing}
         limits::MPCLimits
         node::Int
     end
@@ -54,8 +57,11 @@ Other options include:
     - "ElectricStorage"
     - "Generator"
     - "Electrolyzer"
-    - "HydrogenStorage"
+    - "HydrogenStorageLP"
     - "FuelCell"
+    - "HydrogenLoad"
+    - "Compressor"
+    - "HydrogenStorageHP"
     - "ElectricUtility"
     - "Settings"
     - "Financial"
@@ -96,31 +102,23 @@ function MPCScenario(d::Dict)
         electric_utility = ElectricUtility()
     end
 
+    storage_structs = Dict{String, AbstractStorage}()
     if haskey(d, "ElectricStorage")
-        # only modeling electrochemical storage so far
         storage_dict = Dict(dictkeys_tosymbols(d["ElectricStorage"]))
     else
         storage_dict = Dict(:size_kw => 0.0, :size_kwh => 0.0)
     end
-    storage = Storage(Dict{String, AbstractStorage}("ElectricStorage" => MPCElectricStorage(; storage_dict...)))
+    storage_structs["ElectricStorage"] = MPCElectricStorage(; storage_dict...)
 
-    if haskey(d, "Electrolyzer")
-        electrolyzer = MPCElectrolyzer(; dictkeys_tosymbols(d["Electrolyzer"])...)
-    else
-        electrolyzer = MPCElectrolyzer(; size_kw=0)
+    if haskey(d, "HydrogenStorageLP")
+        storage_structs["HydrogenStorageLP"] = MPCHydrogenStorageLP(; dictkeys_tosymbols(d["HydrogenStorageLP"])...)
+    end
+    if haskey(d, "HydrogenStorageHP")
+        storage_structs["HydrogenStorageHP"] = MPCHydrogenStorageHP(; dictkeys_tosymbols(d["HydrogenStorageHP"])...)
     end
 
-    if haskey(d, "HydrogenStorage")
-        hydrogen_storage = MPCHydrogenStorage(; dictkeys_tosymbols(d["HydrogenStorage"])...)
-    else
-        hydrogen_storage = MPCHydrogenStorage(; size_kg=0)
-    end
+    storage = Storage(storage_structs)
 
-    if haskey(d, "FuelCell")
-        fuel_cell = MPCFuelCell(; dictkeys_tosymbols(d["FuelCell"])...)
-    else
-        fuel_cell = MPCFuelCell(; size_kw=0)
-    end
     
     electric_load = MPCElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...)
 
@@ -142,6 +140,30 @@ function MPCScenario(d::Dict)
         electric_heater = MPCElectricHeater(; dictkeys_tosymbols(d["ElectricHeater"])...)
     else
         electric_heater = MPCElectricHeater(; size_mmbtu_per_hour=0)
+    end
+
+    if haskey(d, "Electrolyzer")
+        electrolyzer = MPCElectrolyzer(; dictkeys_tosymbols(d["Electrolyzer"])...)
+    else
+        electrolyzer = MPCElectrolyzer(; size_kw=0)
+    end
+
+    if haskey(d, "FuelCell")
+        fuel_cell = MPCFuelCell(; dictkeys_tosymbols(d["FuelCell"])...)
+    else
+        fuel_cell = MPCFuelCell(; size_kw=0)
+    end
+
+    if haskey(d, "HydrogenLoad")
+        hydrogen_load = MPCHydrogenLoad(; dictkeys_tosymbols(d["HydrogenLoad"])...)
+    else
+        hydrogen_load = MPCHydrogenLoad(; loads_kg = zeros(length(electric_load.loads_kw)))
+    end
+
+    if haskey(d, "Compressor")
+        compressor = MPCCompressor(; dictkeys_tosymbols(d["Compressor"])...)
+    else
+        compressor = MPCCompressor(; size_kw=0)
     end
 
     flexible_hvac = nothing
@@ -169,12 +191,13 @@ function MPCScenario(d::Dict)
         electric_utility, 
         financial,
         generator,
-        electrolyzer,
-        hydrogen_storage,
-        fuel_cell,
         cooling_load,
         process_heat_load,
         electric_heater,
+        electrolyzer,
+        fuel_cell,
+        hydrogen_load,
+        compressor,
         flexible_hvac,
         limits,
         node

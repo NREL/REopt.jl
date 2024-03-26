@@ -68,3 +68,23 @@ function add_compressor_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; 
     d["Compressor"] = r
 
 end
+
+"""
+MPC `Compressor` results keys:
+- `hydrogen_consumed_series_kg`
+- `electric_to_storage_series_kw`
+- `electric_to_load_series_kw`
+"""
+function add_compressor_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
+    # Adds the `Compressor` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+    # Note: the node number is an empty string if evaluating a single `Site`.
+
+    r = Dict{String, Any}()
+    CompressorProduction = @expression(m, [ts in p.time_steps],
+                                sum(m[Symbol("dvProductionToStorage"*_n)]["HydrogenStorageHP", t, ts] for t in p.techs.compressor)
+                            )
+    r["hydrogen_compressed_series_kg"] = round.(value.(CompressorProduction), digits=3)         
+    
+    d["Compressor"] = r
+
+end

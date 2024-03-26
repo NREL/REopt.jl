@@ -348,6 +348,24 @@ function Techs(s::MPCScenario)
         push!(gentechs, "Generator")
     end
 
+    electrolyzer_techs = String[]
+    if s.electrolyzer.size_kw > 0
+        push!(all_techs, "Electrolyzer")
+        push!(electrolyzer_techs, "Electrolyzer")
+    end
+    
+    fuel_cell_techs = String[]
+    if s.fuel_cell.size_kw > 0
+        push!(all_techs, "FuelCell")
+        push!(fuel_cell_techs, "FuelCell")
+    end
+
+    compressor_techs = String[]
+    if s.compressor.size_kw > 0
+        push!(all_techs, "Compressor")
+        push!(compressor_techs, "Compressor")
+    end
+
     heating_techs = String[]
     electric_heaters = String[]
     techs_can_serve_space_heating = String[]
@@ -374,9 +392,9 @@ function Techs(s::MPCScenario)
         all_techs,
         pvtechs,
         gentechs,
-        String[],
-        String[],
-        String[],
+        electrolyzer_techs,
+        compressor_techs,
+        fuel_cell_techs,
         String[],
         String[],
         techs_no_turndown,

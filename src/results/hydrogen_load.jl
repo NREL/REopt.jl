@@ -56,14 +56,14 @@ function add_hydrogen_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
 end
 
 
-# function add_hydrogen_load_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
-#     # Adds the `HydrogenLoad` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
-#     # Note: the node number is an empty string if evaluating a single `Site`.
+function add_hydrogen_load_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
+    # Adds the `HydrogenLoad` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+    # Note: the node number is an empty string if evaluating a single `Site`.
 
-#     r = Dict{String, Any}()
+    r = Dict{String, Any}()
 
-#     r["load_series_kg"] = p.s.hydrogen_load.loads_kg
+    r["load_series_kg"] = p.s.hydrogen_load.loads_kg
     
-#     d["HydrogenLoad"] = r
-#     nothing
-# end
+    d["HydrogenLoad"] = r
+    nothing
+end

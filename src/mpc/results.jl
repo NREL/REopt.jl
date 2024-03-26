@@ -8,6 +8,8 @@ MPC Scenarios will return a results Dict with the following keys:
 - `ElectricUtility`
 - `PV`
 - `Generator`
+- `Electrolyzer`
+- `FuelCell`
 """
 function mpc_results(m::JuMP.AbstractModel, p::MPCInputs; _n="")
 	tstart = time()
@@ -52,10 +54,17 @@ function mpc_results(m::JuMP.AbstractModel, p::MPCInputs; _n="")
         add_fuel_cell_results(m, p, d; _n)
     end
 
+    if !isempty(p.techs.compressor)
+        add_compressor_results(m, p, d; _n)
+        add_hydrogen_load_results(m, p, d; _n)
+    end
+
     for b in p.s.storage.types.hydrogen
-        if p.s.storage.attr[b].max_kg > 0
-            if b in p.s.storage.types.hydrogen_storage
+        if p.s.storage.attr[b].size_kg > 0
+            if b in p.s.storage.types.hydrogen_lp
                 add_hydrogen_storage_lp_results(m, p, d, b; _n)
+            elseif b in p.s.storage.types.hydrogen_hp
+                add_hydrogen_storage_hp_results(m, p, d, b; _n)
             end
         end
     end

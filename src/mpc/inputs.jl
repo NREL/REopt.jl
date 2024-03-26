@@ -164,6 +164,18 @@ function setup_tech_inputs(s::MPCScenario)
         heating_cop["ElectricHeater"] = 1.0
     end
 
+    if "Electrolyzer" in techs.all
+        setup_electrolyzer_inputs(s, existing_sizes, production_factor)
+    end
+
+    if "FuelCell" in techs.all
+        setup_fuel_cell_inputs(s, existing_sizes, production_factor)
+    end
+
+    if "Compressor" in techs.all
+        setup_compressor_inputs(s, existing_sizes, production_factor)
+    end
+
     return techs, production_factor, existing_sizes, fuel_cost_per_kwh, heating_cop
 end
 
@@ -188,5 +200,23 @@ function setup_gen_inputs(s::MPCScenario, existing_sizes, production_factor, fue
     production_factor["Generator", :] = ones(length(s.electric_load.loads_kw))
     generator_fuel_cost_per_kwh = s.generator.fuel_cost_per_gallon / s.generator.fuel_higher_heating_value_kwh_per_gal
     fuel_cost_per_kwh["Generator"] = per_hour_value_to_time_series(generator_fuel_cost_per_kwh, s.settings.time_steps_per_hour, "Generator")
+    return nothing
+end
+
+function setup_electrolyzer_inputs(s::MPCScenario, existing_sizes, production_factor)
+    existing_sizes["Electrolyzer"] = s.electrolyzer.size_kw
+    production_factor["Electrolyzer", :] = ones(length(s.electric_load.loads_kw))
+    return nothing
+end
+
+function setup_fuel_cell_inputs(s::MPCScenario, existing_sizes, production_factor)
+    existing_sizes["FuelCell"] = s.fuel_cell.size_kw
+    production_factor["FuelCell", :] = ones(length(s.electric_load.loads_kw))
+    return nothing
+end
+
+function setup_compressor_inputs(s::MPCScenario, existing_sizes, production_factor)
+    existing_sizes["Compressor"] = s.compressor.size_kw
+    production_factor["Compressor", :] = ones(length(s.hydrogen_load.loads_kg))
     return nothing
 end

@@ -97,3 +97,35 @@ function add_fuel_cell_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
     d["FuelCell"] = r
 
 end
+
+"""
+MPC `FuelCell` results keys:
+- `hydrogen_consumed_series_kg`
+- `electric_to_storage_series_kw`
+- `electric_to_load_series_kw`
+"""
+function add_fuel_cell_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
+    r = Dict{String, Any}()
+    for t in p.techs.fuel_cell
+        FuelCellConsumption = @expression(m, [ts in p.time_steps],
+                                p.production_factor[t, ts] * p.levelization_factor[t] * 
+                                m[Symbol("dvRatedProduction"*_n)][t,ts] / p.s.fuel_cell.efficiency_kwh_per_kg
+                                )
+
+        r["hydrogen_consumed_series_kg"] = round.(value.(FuelCellConsumption), digits=3)
+
+        if !isempty(p.s.storage.types.elec)
+            FuelCelltoBatt = (sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) for ts in p.time_steps)
+        else
+            FuelCelltoBatt = repeat([0], length(p.time_steps))
+        end
+        r["electric_to_storage_series_kw"] = round.(value.(FuelCelltoBatt), digits=3)
+
+        FuelCelltoLoad = (m[Symbol("dvRatedProduction"*_n)][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
+                    - r["electric_to_storage_series_kw"][ts] for ts in p.time_steps
+        )
+        r["electric_to_load_series_kw"] = round.(value.(FuelCelltoLoad), digits=3)
+
+        d["FuelCell"] = r
+    end
+end

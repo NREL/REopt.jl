@@ -86,19 +86,28 @@ function add_hydrogen_storage_hp_results(m::JuMP.AbstractModel, p::REoptInputs, 
     nothing
 end
 
-# """
-# MPC `ElectricStorage` results keys:
-# - `soc_series_fraction` Vector of normalized (0-1) state of charge values over time horizon
-# """
-# function add_electric_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b::String; _n="")
-#     r = Dict{String, Any}()
+function add_hydrogen_storage_lp_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b::String; _n="")
+    r = Dict{String, Any}()
 
-#     soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
-#     r["soc_series_fraction"] = round.(value.(soc) ./ p.s.storage.attr[b].size_kwh, digits=3)
+    soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
+    r["soc_series_fraction"] = round.(value.(soc) ./ p.s.storage.attr[b].size_kg, digits=6)
 
-#     discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
-#     r["to_load_series_kw"] = round.(value.(discharge), digits=3)
+    discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
+    r["discharge_from_storage_series_kg"] = round.(value.(discharge), digits=3)
 
-#     d[b] = r
-#     nothing
-# end
+    d[b] = r
+    nothing
+end
+
+function add_hydrogen_storage_hp_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b::String; _n="")
+    r = Dict{String, Any}()
+    
+    soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
+    r["soc_series_fraction"] = round.(value.(soc) ./ p.s.storage.attr[b].size_kg, digits=3)
+
+    discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
+    r["storage_to_h2_load_series_kg"] = round.(value.(discharge), digits=3)
+
+    d[b] = r
+    nothing
+end

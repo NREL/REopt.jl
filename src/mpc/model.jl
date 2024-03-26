@@ -99,14 +99,14 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 				@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
 					m[:dvProductionToStorage][b, t, ts] == 0)
 			else
-				add_hydrogen_storage_size_constraints(m, p, b)
 				add_general_storage_dispatch_constraints(m, p, b)
-				if b in p.s.storage.types.hydrogen_storage
+				if b in p.s.storage.types.hydrogen_lp
 					add_lp_hydrogen_storage_dispatch_constraints(m, p, b)
+				elseif b in p.s.storage.types.hydrogen_hp
+					add_hp_hydrogen_storage_dispatch_constraints(m, p, b)
 				end
 			end
-		end
-		if p.s.storage.attr[b].size_kw == 0 || p.s.storage.attr[b].size_kwh == 0
+		elseif p.s.storage.attr[b].size_kw == 0 || p.s.storage.attr[b].size_kwh == 0
 			@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
 			@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
 						m[:dvProductionToStorage][b, t, ts] == 0)
@@ -128,7 +128,9 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		end
 	end
 
-	if any(size_kw->size_kw > 0, (p.s.storage.attr[b].size_kw for b in p.s.storage.types.all))
+	if any(size_kw->size_kw > 0, (p.s.storage.attr[b].size_kw for b in p.s.storage.types.elec))
+		add_storage_sum_constraints(m, p)
+	elseif any(size_kg->size_kg > 0, (p.s.storage.attr[b].size_kg for b in p.s.storage.types.hydrogen))
 		add_storage_sum_constraints(m, p)
 	end
 
@@ -186,10 +188,29 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 
 	if !isempty(p.techs.electrolyzer)
 		add_electrolyzer_constraints(m, p)
-		print("Check Check Check Check Check Check Check Check Check Check")
 		m[:TotalPerUnitProdOMCosts] += @expression(m,
 			sum(p.s.electrolyzer.om_cost_per_kwh * p.hours_per_time_step *
 			m[:dvRatedProduction][t, ts] for t in p.techs.electrolyzer, ts in p.time_steps))
+	else
+		@constraint(m, [t in p.techs.elec, ts in p.time_steps],
+				m[:dvProductionToElectrolyzer][t, ts] == 0)
+		@constraint(m, [ts in p.time_steps], m[:dvGridToElectrolyzer][ts] == 0)
+		@constraint(m, [b in p.s.storage.types.elec, ts in p.time_steps],
+				m[:dvStorageToElectrolyzer][b, ts] == 0)
+		@constraint(m, [t in p.techs.electrolyzer, ts in p.time_steps],
+				m[:dvRatedProduction][t,ts] == 0)
+		@constraint(m, [t in p.techs.electrolyzer, ts in p.time_steps],
+				m[:dvProductionToStorage]["HydrogenStorageLP",t,ts] == 0)
+
+		@constraint(m, [t in p.techs.elec, ts in p.time_steps],
+				m[:dvProductionToCompressor][t, ts] == 0)
+		@constraint(m, [ts in p.time_steps], m[:dvGridToCompressor][ts] == 0)
+		@constraint(m, [b in p.s.storage.types.elec, ts in p.time_steps],
+				m[:dvStorageToCompressor][b, ts] == 0)
+		@constraint(m, [t in p.techs.compressor, ts in p.time_steps],
+				m[:dvRatedProduction][t,ts] == 0)
+		@constraint(m, [t in p.techs.compressor, ts in p.time_steps],
+				m[:dvProductionToStorage]["HydrogenStorageHP",t,ts] == 0)
 	end
 
 	if !isempty(p.techs.fuel_cell)
@@ -200,6 +221,21 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 	else
 		@constraint(m, [t in p.techs.fuel_cell, ts in p.time_steps],
 			m[:dvRatedProduction][t,ts] == 0)
+	end
+
+	if !isempty(p.techs.compressor)
+		add_compressor_constraints(m, p)
+		add_hydrogen_load_balance_constraints(m, p)
+	else
+		@constraint(m, [t in p.techs.elec, ts in p.time_steps],
+				m[:dvProductionToCompressor][t, ts] == 0)
+		@constraint(m, [ts in p.time_steps], m[:dvGridToCompressor][ts] == 0)
+		@constraint(m, [b in p.s.storage.types.elec, ts in p.time_steps],
+				m[:dvStorageToCompressor][b, ts] == 0)
+		@constraint(m, [t in p.techs.compressor, ts in p.time_steps],
+				m[:dvRatedProduction][t,ts] == 0)
+		@constraint(m, [t in p.techs.compressor, ts in p.time_steps],
+				m[:dvProductionToStorage]["HydrogenStorageHP",t,ts] == 0)
 	end
 
 	add_elec_utility_expressions(m, p)
@@ -303,8 +339,16 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
     m[:dvSize] = p.existing_sizes
 
 	for b in p.s.storage.types.all
-		fix(m[:dvStoragePower][b], p.s.storage.attr["ElectricStorage"].size_kw, force=true)
-		fix(m[:dvStorageEnergy][b], p.s.storage.attr["ElectricStorage"].size_kwh, force=true)
+		if b in p.s.storage.types.elec
+			fix(m[:dvStoragePower][b], p.s.storage.attr["ElectricStorage"].size_kw, force=true)
+			fix(m[:dvStorageEnergy][b], p.s.storage.attr["ElectricStorage"].size_kwh, force=true)
+		elseif b in p.s.storage.types.hydrogen
+			if b in p.s.storage.types.hydrogen_lp
+				fix(m[:dvStorageEnergy][b], p.s.storage.attr["HydrogenStorageLP"].size_kg, force=true)
+			elseif b in p.s.storage.types.hydrogen_hp
+				fix(m[:dvStorageEnergy][b], p.s.storage.attr["HydrogenStorageHP"].size_kg, force=true)
+			end
+		end
 	end
 
 	# not modeling min charges since control does not affect them

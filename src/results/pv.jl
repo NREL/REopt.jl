@@ -114,11 +114,16 @@ function add_pv_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
             r["to_grid_series_kw"] = round.(value.(PVtoGrid), digits=3).data
         end
 
+        r["to_electrolyzer_series_kw"] = zeros(size(r["to_battery_series_kw"]))
+        PVtoElectrolyzer = (m[Symbol("dvProductionToElectrolyzer"*_n)][t, ts] for ts in p.time_steps)
+        r["to_electrolyzer_series_kw"] = round.(value.(PVtoElectrolyzer), digits=3)
+
 		PVtoCUR = (m[Symbol("dvCurtail"*_n)][t, ts] for ts in p.time_steps)
 		r["curtailed_production_series_kw"] = round.(value.(PVtoCUR), digits=3)
 		PVtoLoad = (m[Symbol("dvRatedProduction"*_n)][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
 					- r["curtailed_production_series_kw"][ts]
 					- r["to_grid_series_kw"][ts]
+                    - r["to_electrolyzer_series_kw"][ts]
 					- PVtoBatt[ts] for ts in p.time_steps
 		)
 		r["to_load_series_kw"] = round.(value.(PVtoLoad), digits=3)

@@ -310,7 +310,7 @@ struct MPCGenerator <: AbstractGenerator
     end
 end
 
-
+#HYDROGEN TECHS
 """
     MPCElectrolyzer
 
@@ -329,22 +329,26 @@ Base.@kwdef struct MPCElectrolyzer <: AbstractElectrolyzer
 end
 
 """
-    MPCHydrogenStorage
+    MPCHydrogenStorageLP
 
 ```julia
-Base.@kwdef struct MPCHydrogenStorage < AbstractHydrogenStorage
+Base.@kwdef struct MPCHydrogenStorageLP < AbstractHydrogenStorage
     size_kg::Float64
     soc_min_fraction::Float64 = 0.01
-    soc_init_fraction::Float64 = 0.05
+    soc_init_fraction::Float64 = 0.5
     daily_leakage_fraction::Float64 = 0.0006667
+    max_kg::Float64 = size_kg
+    minimum_avg_soc_fraction::Float64 = 0.0
 end
 ```
 """
-Base.@kwdef struct MPCHydrogenStorage <: AbstractHydrogenStorage
+Base.@kwdef struct MPCHydrogenStorageLP <: AbstractHydrogenStorage
     size_kg::Float64
     soc_min_fraction::Float64 = 0.01
-    soc_init_fraction::Float64 = 0.05
+    soc_init_fraction::Float64 = 0.5
     daily_leakage_fraction::Float64 = 0.0006667
+    max_kg::Float64 = size_kg
+    minimum_avg_soc_fraction::Float64 = 0.0
 end
 
 """
@@ -364,38 +368,56 @@ Base.@kwdef struct MPCFuelCell <: AbstractFuelCell
     om_cost_per_kwh::Float64 = 0.0013
 end
 
-
 """
-    MPCCoolingLoad
+    MPCHydrogenLoad
 
-    Base.@kwdef struct MPCCoolingLoad
-        loads_kw_thermal::Array{Real,1}
+    Base.@kwdef struct MPCHydrogenLoad
+        loads_kg::Array{Real,1}
     end
 """
-Base.@kwdef struct MPCCoolingLoad
-    loads_kw_thermal::Array{Real,1}
-    cop::Union{Real, Nothing}
+Base.@kwdef struct MPCHydrogenLoad
+    loads_kg::Array{Real,1} = Real[]
 end
 
-
 """
-    MPCLimits
+    MPCCompressor
 
-struct for MPC specific input parameters:
-- `grid_draw_limit_kw_by_time_step::Vector{<:Real}` limits for grid power consumption in each time step; length must be same as `length(loads_kw)`.
-- `export_limit_kw_by_time_step::Vector{<:Real}` limits for grid power export in each time step; length must be same as `length(loads_kw)`.
-
-!!! warn 
-    `grid_draw_limit_kw_by_time_step` and `export_limit_kw_by_time_step` values can lead to 
-    infeasible problems. For example, there is a constraint that the electric load must be met in 
-    each time step and by limiting the amount of power from the grid the load balance constraint 
-    could be infeasible.
+```julia
+Base.@kwdef struct MPCCompressor < AbstractCompressor
+    size_kw::Float64
+    efficiency_kwh_per_kg::Float64 = 3.5
+    om_cost_per_kg::Float64 = 0.0
+end
+```
 """
-Base.@kwdef struct MPCLimits
-    grid_draw_limit_kw_by_time_step::Vector{<:Real} = Real[]
-    export_limit_kw_by_time_step::Vector{<:Real} =  Real[]
+Base.@kwdef struct MPCCompressor <: AbstractCompressor
+    size_kw::Float64
+    efficiency_kwh_per_kg::Float64 = 3.5
+    om_cost_per_kg::Float64 = 0.0
 end
 
+"""
+    MPCHydrogenStorageHP
+
+```julia
+Base.@kwdef struct MPCHydrogenStorageHP < AbstractHydrogenStorage
+    size_kg::Float64
+    soc_min_fraction::Float64 = 0.01
+    soc_init_fraction::Float64 = 0.5
+    daily_leakage_fraction::Float64 = 0.0006667
+    max_kg::Float64 = size_kg
+    minimum_avg_soc_fraction::Float64 = 0.0
+end
+```
+"""
+Base.@kwdef struct MPCHydrogenStorageHP <: AbstractHydrogenStorage
+    size_kg::Float64
+    soc_min_fraction::Float64 = 0.01
+    soc_init_fraction::Float64 = 0.5
+    daily_leakage_fraction::Float64 = 0.0006667
+    max_kg::Float64 = size_kg
+    minimum_avg_soc_fraction::Float64 = 0.0
+end
 
 
 # THERMAL TECHS
@@ -435,4 +457,34 @@ struct MPCElectricHeater <: AbstractThermalTech
             can_serve_process_heat
         )
     end
+end
+
+"""
+    MPCCoolingLoad
+
+    Base.@kwdef struct MPCCoolingLoad
+        loads_kw_thermal::Array{Real,1}
+    end
+"""
+Base.@kwdef struct MPCCoolingLoad
+    loads_kw_thermal::Array{Real,1}
+    cop::Union{Real, Nothing}
+end
+
+"""
+    MPCLimits
+
+struct for MPC specific input parameters:
+- `grid_draw_limit_kw_by_time_step::Vector{<:Real}` limits for grid power consumption in each time step; length must be same as `length(loads_kw)`.
+- `export_limit_kw_by_time_step::Vector{<:Real}` limits for grid power export in each time step; length must be same as `length(loads_kw)`.
+
+!!! warn 
+    `grid_draw_limit_kw_by_time_step` and `export_limit_kw_by_time_step` values can lead to 
+    infeasible problems. For example, there is a constraint that the electric load must be met in 
+    each time step and by limiting the amount of power from the grid the load balance constraint 
+    could be infeasible.
+"""
+Base.@kwdef struct MPCLimits
+    grid_draw_limit_kw_by_time_step::Vector{<:Real} = Real[]
+    export_limit_kw_by_time_step::Vector{<:Real} =  Real[]
 end
