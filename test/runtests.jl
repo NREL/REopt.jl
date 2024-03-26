@@ -976,7 +976,7 @@ else  # run HiGHS tests
 
             # Scenario with generator, PV, wind, electric storage
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
-            results = run_reopt(m, "./scenarios/outages_gen_pv_wind_stor.json")\
+            results = run_reopt(m, "./scenarios/outages_gen_pv_wind_stor.json")
             @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
             @test value(m[:binMGTechUsed]["PV"]) ≈ 1
             @test value(m[:binMGTechUsed]["Wind"]) ≈ 1
