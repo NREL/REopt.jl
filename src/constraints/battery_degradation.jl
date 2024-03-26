@@ -107,15 +107,9 @@ function add_degradation(m, p; b="ElectricStorage")
          ElectricStorage.degradation.maintenance_strategy = \"replacement\". 
          Not all solvers support indicators and some are slow with integers."
         @variable(m, soh_indicator[days], Bin)
-        if p.s.settings.solver_name in INDICATOR_COMPATIBLE_SOLVERS
-            @constraint(m, [d in days],
-                soh_indicator[d] => {SOH[d] >= 0.8*m[:dvStorageEnergy][b]}
-            )
-        else
-            @constraint(m, [d in days],
-                SOH[d] >= 0.8*m[:dvStorageEnergy][b] - soh_indicator[d]*p.s.storage.attr[b].max_kwh
-            )
-        end
+        @constraint(m, [d in days],
+            soh_indicator[d] => {SOH[d] >= 0.8*m[:dvStorageEnergy][b]}
+        )
         @expression(m, d_0p8, sum(soh_indicator[d] for d in days))
 
         # define binaries for the finding the month that battery must be replaced
