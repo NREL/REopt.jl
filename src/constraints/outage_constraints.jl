@@ -62,7 +62,7 @@ function add_outage_cost_constraints(m,p)
                 m[:dvMGTechUpgradeCost][t] >= p.s.financial.microgrid_upgrade_cost_fraction * p.third_party_factor * 
                     sum(p.cap_cost_slope[t][s] * m[Symbol("dvSegmentSystemSize"*t)][s] + 
                         p.seg_yint[t][s] * m[Symbol("binSegment"*t)][s] for s in 1:p.n_segs_by_tech[t]) -
-                        (maximum(p.cap_cost_slope[t][:])*p.max_sizes[t]+maximum(p.seg_yint[t][:]))*(1-m[:binMGTechUsed][t])
+                        (maximum(p.cap_cost_slope[t][s] for s in 1:p.n_segs_by_tech[t]) * p.max_sizes[t] + maximum(p.seg_yint[t][s] for s in 1:p.n_segs_by_tech[t]))*(1-m[:binMGTechUsed][t])
                 )
             @constraint(m, [t in p.techs.segmented], m[:dvMGTechUpgradeCost][t] >= 0.0)
         end
@@ -324,11 +324,11 @@ function add_MG_storage_dispatch_constraints(m,p)
         )
     else
         @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-            sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.elec) <= p.s.storage_attr[b].max_kw * m[:binMGStorageUsed]
+            sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.elec) <= p.s.storage.attr["ElectricStorage"].max_kw * m[:binMGStorageUsed]
         )
         
         @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-            m[:dvMGDischargeFromStorage][s, tz, ts] <= p.s.storage_attr[b].max_kw * m[:binMGStorageUsed]
+            m[:dvMGDischargeFromStorage][s, tz, ts] <= p.s.storage.attr["ElectricStorage"].max_kw * m[:binMGStorageUsed]
         )
     end
 end
