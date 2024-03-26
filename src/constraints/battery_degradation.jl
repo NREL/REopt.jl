@@ -107,7 +107,7 @@ function add_degradation(m, p; b="ElectricStorage")
          ElectricStorage.degradation.maintenance_strategy = \"replacement\". 
          Not all solvers support indicators and some are slow with integers."
         @variable(m, soh_indicator[days], Bin)
-        if p.s.settings.solver_id in INDICATOR_COMPATIBLE_SOLVERS
+        if p.s.settings.solver_name in INDICATOR_COMPATIBLE_SOLVERS
             @constraint(m, [d in days],
                 soh_indicator[d] => {SOH[d] >= 0.8*m[:dvStorageEnergy][b]}
             )

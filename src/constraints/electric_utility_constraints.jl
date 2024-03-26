@@ -57,7 +57,7 @@ function add_export_constraints(m, p; _n="")
 
             
             # If choosing to take advantage of NEM, must have total capacity less than net_metering_limit_kw
-            if p.s.settings.solver_id in INDICATOR_COMPATIBLE_SOLVERS
+            if p.s.settings.solver_name in INDICATOR_COMPATIBLE_SOLVERS
                 @constraint(m,
                     binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.net_metering_limit_kw}
                 )
@@ -71,7 +71,7 @@ function add_export_constraints(m, p; _n="")
             end
 
             # binary choice for NEM benefit
-            if p.s.settings.solver_id in INDICATOR_COMPATIBLE_SOLVERS
+            if p.s.settings.solver_name in INDICATOR_COMPATIBLE_SOLVERS
                 @constraint(m,
                     binNEM => {NEM_benefit >= p.pwf_e * p.hours_per_time_step *
                         sum( sum(p.s.electric_tariff.export_rates[:NEM][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
@@ -91,7 +91,7 @@ function add_export_constraints(m, p; _n="")
             EXC_benefit = 0
             if :EXC in p.s.electric_tariff.export_bins
                 EXC_benefit = @variable(m, lower_bound = max_bene)
-                if p.s.settings.solver_id in INDICATOR_COMPATIBLE_SOLVERS
+                if p.s.settings.solver_name in INDICATOR_COMPATIBLE_SOLVERS
                     @constraint(m,
                         binNEM => {EXC_benefit >= p.pwf_e * p.hours_per_time_step *
                             sum( sum(p.s.electric_tariff.export_rates[:EXC][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :EXC, ts] 
@@ -126,7 +126,7 @@ function add_export_constraints(m, p; _n="")
             WHL_benefit = @variable(m, lower_bound = max_bene)
 
             @constraint(m, binNEM + binWHL == 1)  # can either NEM or WHL export, not both
-            if p.s.settings.solver_id in INDICATOR_COMPATIBLE_SOLVERS
+            if p.s.settings.solver_name in INDICATOR_COMPATIBLE_SOLVERS
                 @constraint(m,
                     binWHL => {WHL_benefit >= p.pwf_e * p.hours_per_time_step *
                         sum( sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
