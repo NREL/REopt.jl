@@ -457,7 +457,9 @@ end
 @testset "Minimize Unserved Load" begin
         
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
-    results = run_reopt(m, "./scenarios/outage.json")
+    input_data = JSON.parsefile("./scenarios/outage.json")
+    input_data["Settings"] = Dict("solver_name" => "Xpress")
+    results = run_reopt(m, input_data)
 
     @test results["Outages"]["expected_outage_cost"] ≈ 0
     @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 0
@@ -472,25 +474,33 @@ end
     - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
     =#
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt(m, "./scenarios/nogridcost_minresilhours.json")
+    input_data = JSON.parsefile("./scenarios/nogridcost_minresilhours.json")
+    input_data["Settings"] = Dict("solver_name" => "Xpress")
+    results = run_reopt(m, input_data)
     @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 12
     
     # testing dvUnserved load, which would output 100 kWh for this scenario before output fix
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt(m, "./scenarios/nogridcost_multiscenario.json")
+    input_data = JSON.parsefile("./scenarios/nogridcost_multiscenario.json")
+    input_data["Settings"] = Dict("solver_name" => "Xpress")
+    results = run_reopt(m, input_data)    
     @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 60
     @test results["Outages"]["expected_outage_cost"] ≈ 485.43270 atol=1.0e-5  #avg duration (3h) * load per time step (10) * present worth factor (16.18109)
     @test results["Outages"]["max_outage_cost_per_outage_duration"][1] ≈ 161.8109 atol=1.0e-5
 
     # Scenario with generator, PV, electric storage
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt(m, "./scenarios/outages_gen_pv_stor.json")
+    input_data = JSON.parsefile("./scenarios/outages_gen_pv_stor.json")
+    input_data["Settings"] = Dict("solver_name" => "Xpress")
+    results = run_reopt(m, input_data)
     @test results["Outages"]["expected_outage_cost"] ≈ 3.54476923e6 atol=10
     @test results["Financial"]["lcc"] ≈ 8.6413594727e7 rtol=0.001
 
     # Scenario with generator, PV, wind, electric storage
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt(m, "./scenarios/outages_gen_pv_wind_stor.json")
+    input_data = JSON.parsefile("./scenarios/outages_gen_pv_wind_stor.json")
+    input_data["Settings"] = Dict("solver_name" => "Xpress")
+    results = run_reopt(m, input_data)
     @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
     @test value(m[:binMGTechUsed]["PV"]) ≈ 1
     @test value(m[:binMGTechUsed]["Wind"]) ≈ 1
@@ -500,6 +510,7 @@ end
 
 @testset "Outages with Wind and supply-to-load no greater than critical load" begin
     input_data = JSON.parsefile("./scenarios/wind_outages.json")
+    input_data["Settings"] = Dict("solver_name" => "Xpress")
     s = Scenario(input_data)
     inputs = REoptInputs(s)
     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
