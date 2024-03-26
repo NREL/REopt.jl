@@ -1955,7 +1955,7 @@ else  # run HiGHS tests
                 m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
                 results = run_reopt([m1, m2], inputs)
 
-                if !isnothing(ER_target[i])  #TODO this is just an if statement in Xpress
+                if !isnothing(ER_target[i])  
                     ER_fraction_out = results["Site"]["lifecycle_emissions_reduction_CO2_fraction"]
                     @test ER_target[i] ≈ ER_fraction_out atol=1e-3
                     lifecycle_emissions_tonnes_CO2_out = results["Site"]["lifecycle_emissions_tonnes_CO2"]
@@ -1965,16 +1965,14 @@ else  # run HiGHS tests
                     @test ER_fraction_diff ≈ 0.0 atol=1e-2
                 end
 
-                for i in 1:3 #TODO make this block general for all i when test is restored
-                    annual_emissions_tonnes_CO2_out = results["Site"]["annual_emissions_tonnes_CO2"]
-                    yr1_fuel_emissions_tonnes_CO2_out = results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"]
-                    yr1_grid_emissions_tonnes_CO2_out = results["ElectricUtility"]["annual_emissions_tonnes_CO2"]
-                    yr1_total_emissions_calced_tonnes_CO2 = yr1_fuel_emissions_tonnes_CO2_out + yr1_grid_emissions_tonnes_CO2_out 
-                    @test annual_emissions_tonnes_CO2_out ≈ yr1_total_emissions_calced_tonnes_CO2 atol=1e-1
-                    if haskey(results["Financial"],"breakeven_cost_of_emissions_reduction_per_tonne_CO2")
-                        @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] >= 0.0
-                    end
-                end 
+                annual_emissions_tonnes_CO2_out = results["Site"]["annual_emissions_tonnes_CO2"]
+                yr1_fuel_emissions_tonnes_CO2_out = results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"]
+                yr1_grid_emissions_tonnes_CO2_out = results["ElectricUtility"]["annual_emissions_tonnes_CO2"]
+                yr1_total_emissions_calced_tonnes_CO2 = yr1_fuel_emissions_tonnes_CO2_out + yr1_grid_emissions_tonnes_CO2_out 
+                @test annual_emissions_tonnes_CO2_out ≈ yr1_total_emissions_calced_tonnes_CO2 atol=1e-1
+                if haskey(results["Financial"],"breakeven_cost_of_emissions_reduction_per_tonne_CO2")
+                    @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] >= 0.0
+                end
                 
                 if i == 1
                     @test results["PV"]["size_kw"] ≈ 60.12 atol=1e-1
@@ -2028,8 +2026,8 @@ else  # run HiGHS tests
                     inputs["ElectricStorage"]["max_kwh"] = results["ElectricStorage"]["size_kwh"]
                     inputs["Financial"]["CO2_cost_per_tonne"] = results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"]
                     inputs["Settings"]["include_climate_in_objective"] = true
-                    m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-                    m2 = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
+                    m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
+                    m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
                     results = run_reopt([m1, m2], inputs)
                     @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ inputs["Financial"]["CO2_cost_per_tonne"] atol=1e-1
                 elseif i == 3
