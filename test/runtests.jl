@@ -871,10 +871,9 @@ else  # run HiGHS tests
             s = Scenario(data)
             inputs = REoptInputs(s)
             results = run_reopt(model, inputs)
-            @test (occursin("not supported by the solver", string(results["Messages"]["errors"])) || occursin("REopt scenarios solved either with errors or non-optimal solutions", string(results["Messages"]["errors"])))
-
-            # @test all(x == 0.0 for (i,x) in enumerate(results["ElectricUtility"]["electric_to_load_series_kw"][1:744]) 
-            #         if results["PV"]["electric_to_grid_series_kw"][i] > 0)
+            
+            @test all(x == 0.0 for (i,x) in enumerate(results["ElectricUtility"]["electric_to_load_series_kw"][1:744]) 
+                    if results["PV"]["electric_to_grid_series_kw"][i] > 0)
         end
 
         @testset "Solar and ElectricStorage w/BAU and degradation" begin

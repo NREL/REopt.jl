@@ -266,7 +266,7 @@ function add_simultaneous_export_import_constraint(m, p; _n="")
             sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec) <= bigM_hourly_load*(1-m[Symbol("binNoGridPurchases"*_n)][ts])
         )
         @constraint(m, ExportOnlyAfterSiteLoadMetCon[ts in p.time_steps],
-            sum(m[Symbol("dvProductionToGrid"*_n)][t,u,ts] for t in p.techs.elec, u in p.export_bins_by_tech[t]) <= bigM_hourly_load * (1-m[Symbol("binNoGridPurchases"*_n)][ts])
+            sum(m[Symbol("dvProductionToGrid"*_n)][t,u,ts] for t in p.techs.elec, u in p.export_bins_by_tech[t]) <= bigM_hourly_load * m[Symbol("binNoGridPurchases"*_n)][ts]
         )
     end
 end
