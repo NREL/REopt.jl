@@ -341,10 +341,12 @@ function Techs(s::MPCScenario)
     end
 
     all_techs = copy(pvtechs)
+    elec = copy(pvtechs)
     techs_no_turndown = copy(pvtechs)
     gentechs = String[]
     if s.generator.size_kw > 0
         push!(all_techs, "Generator")
+        push!(elec, "Generator")
         push!(gentechs, "Generator")
     end
 
@@ -389,7 +391,7 @@ function Techs(s::MPCScenario)
 
     Techs(
         all_techs,
-        all_techs,
+        elec,
         pvtechs,
         gentechs,
         electrolyzer_techs,
