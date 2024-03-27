@@ -472,6 +472,44 @@ Base.@kwdef struct MPCCoolingLoad
 end
 
 """
+    MPCDomesticHotWaterLoad
+"""
+Base.@kwdef struct MPCDomesticHotWaterLoad
+    loads_kw_thermal::Array{Real,1}
+end
+
+"""
+    MPCSpaceHeatingLoad
+"""
+Base.@kwdef struct MPCSpaceHeatingLoad
+    loads_kw_thermal::Array{Real,1}
+end
+
+
+"""
+    MPCHighTempThermalStorage
+"""
+Base.@kwdef struct MPCHighTempThermalStorage <: AbstractThermalStorage
+    charge_limit_kw::Float64
+    discharge_limit_kw::Float64
+    size_kwh::Float64
+    charge_efficiency::Float64 = 1.0
+    discharge_efficiency::Float64 = 0.9
+    soc_min_fraction::Float64 = 0.2
+    soc_init_fraction::Float64 = 0.5
+    can_grid_charge::Bool = true
+    grid_charge_efficiency::Float64 = can_grid_charge ? charge_efficiency : 0.0
+    size_kw::Float64 = charge_limit_kw
+    max_kw::Float64 = charge_limit_kw
+    max_kwh::Float64 = size_kwh
+    minimum_avg_soc_fraction::Float64 = 0.0
+    thermal_decay_rate_fraction::Float64 = 0.0004
+    can_serve_dhw::Bool = true
+    can_serve_space_heating::Bool = true
+    can_serve_process_heat::Bool = true
+end
+
+"""
     MPCLimits
 
 struct for MPC specific input parameters:

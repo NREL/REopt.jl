@@ -9,6 +9,8 @@ struct MPCScenario <: AbstractScenario
     financial::MPCFinancial
     generator::MPCGenerator
     cooling_load::MPCCoolingLoad
+    dhw_load::MPCDomesticHotWaterLoad
+    space_heating_load::MPCSpaceHeatingLoad
     process_heat_load::MPCProcessHeatLoad
     electric_heater::MPCElectricHeater
     electrolyzer::MPCElectrolyzer
@@ -36,6 +38,8 @@ Method for creating the MPCScenario struct:
         financial::MPCFinancial
         generator::MPCGenerator
         cooling_load::MPCCoolingLoad
+        dhw_load::MPCDomesticHotWaterLoad
+        space_heating_load::MPCSpaceHeatingLoad
         process_heat_load::MPCProcessHeatLoad
         electric_heater::MPCElectricHeater
         electrolyzer::MPCElectrolyzer
@@ -56,6 +60,9 @@ Other options include:
     - "PV", which can contain a Dict or Dict[]
     - "ElectricStorage"
     - "Generator"
+    - "ProcessHeatLoad"
+    - "HighTempThermalStorage"
+    - "ElectricHeater"
     - "Electrolyzer"
     - "HydrogenStorageLP"
     - "FuelCell"
@@ -117,6 +124,10 @@ function MPCScenario(d::Dict)
         storage_structs["HydrogenStorageHP"] = MPCHydrogenStorageHP(; dictkeys_tosymbols(d["HydrogenStorageHP"])...)
     end
 
+    if haskey(d, "HighTempThermalStorage")
+       storage_structs["HighTempThermalStorage"] = MPCHighTempThermalStorage(; dictkeys_tosymbols(d["HighTempThermalStorage"])...)
+    end
+
     storage = Storage(storage_structs)
 
     
@@ -166,10 +177,12 @@ function MPCScenario(d::Dict)
         compressor = MPCCompressor(; size_kw=0)
     end
 
-    flexible_hvac = nothing
-
     # Placeholder/dummy cooling load set to zeros
     cooling_load = MPCCoolingLoad(; loads_kw_thermal = zeros(length(electric_load.loads_kw)), cop=1.0)
+    dhw_load = MPCDomesticHotWaterLoad(; loads_kw_thermal = zeros(length(electric_load.loads_kw)))
+    space_heating_load = MPCSpaceHeatingLoad(; loads_kw_thermal = zeros(length(electric_load.loads_kw)))
+    flexible_hvac = nothing
+
     if haskey(d, "Limits")
         limits = MPCLimits(; dictkeys_tosymbols(d["Limits"])...)
     else
@@ -192,6 +205,8 @@ function MPCScenario(d::Dict)
         financial,
         generator,
         cooling_load,
+        dhw_load,
+        space_heating_load,
         process_heat_load,
         electric_heater,
         electrolyzer,

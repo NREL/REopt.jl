@@ -81,8 +81,9 @@ mutable struct StorageTypes
 
                     if typeof(v) <: AbstractElectricStorage
                         push!(elec_storage, k)
-
                     elseif typeof(v) <: HotThermalStorage
+                        push!(hot_storage, k)
+                    elseif typeof(v) <: MPCHighTempThermalStorage
                         push!(hot_storage, k)
                     elseif typeof(v) <: ColdThermalStorage
                         push!(cold_storage, k)

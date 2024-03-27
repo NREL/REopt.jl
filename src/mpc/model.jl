@@ -348,6 +348,9 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 			elseif b in p.s.storage.types.hydrogen_hp
 				fix(m[:dvStorageEnergy][b], p.s.storage.attr["HydrogenStorageHP"].size_kg, force=true)
 			end
+		elseif b in p.s.storage.types.hot
+			fix(m[:dvStoragePower][b], p.s.storage.attr["HighTempThermalStorage"].size_kw, force=true)
+			fix(m[:dvStorageEnergy][b], p.s.storage.attr["HighTempThermalStorage"].size_kwh, force=true)
 		end
 	end
 
