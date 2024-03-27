@@ -71,9 +71,8 @@ end
 
 """
 MPC `Compressor` results keys:
-- `hydrogen_consumed_series_kg`
-- `electric_to_storage_series_kw`
-- `electric_to_load_series_kw`
+- `hydrogen_compressed_series_kg`
+- `electricity_consumed_series_kw`
 """
 function add_compressor_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     # Adds the `Compressor` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
@@ -83,7 +82,13 @@ function add_compressor_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n
     CompressorProduction = @expression(m, [ts in p.time_steps],
                                 sum(m[Symbol("dvProductionToStorage"*_n)]["HydrogenStorageHP", t, ts] for t in p.techs.compressor)
                             )
-    r["hydrogen_compressed_series_kg"] = round.(value.(CompressorProduction), digits=3)         
+    r["hydrogen_compressed_series_kg"] = round.(value.(CompressorProduction), digits=3)
+    
+    CompressorConsumption = @expression(m, [ts in p.time_steps],
+                                sum(p.production_factor[t, ts] * p.levelization_factor[t] * 
+                                m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.compressor)
+                            )
+    r["electricity_consumed_series_kw"] = round.(value.(CompressorConsumption), digits=3)
     
     d["Compressor"] = r
 

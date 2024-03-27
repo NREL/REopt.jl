@@ -4,6 +4,8 @@
 - `annual_energy_supplied_kwh` Total energy supplied from the grid in an average year.
 - `electric_to_load_series_kw` Vector of power drawn from the grid to serve load.
 - `electric_to_storage_series_kw` Vector of power drawn from the grid to charge the battery.
+- `electric_to_electrolyzer_series_kw` Vector of power drawn from the grid to be used by electrolyzer.
+- `electric_to_compressor_series_kw` Vector of power drawn from the grid to be used by compressor.
 - `annual_emissions_tonnes_CO2` # Total tons of CO2 emissions associated with the site's grid-purchased electricity in an average year. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
 - `annual_emissions_tonnes_NOx` # Total tons of NOx emissions associated with the site's grid-purchased electricity in an average year. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
 - `annual_emissions_tonnes_SO2` # Total tons of SO2 emissions associated with the site's grid-purchased electricity in an average year. If include_exported_elec_emissions_in_total is False, this value only reflects grid purchaes. Otherwise, it accounts for emissions offset from any export to the grid.
@@ -55,7 +57,7 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
 
     if !isempty(p.techs.electrolyzer)
         GridToElectrolyzer = (m[Symbol("dvGridToElectrolyzer"*_n)][ts] for ts in p.time_steps)
-        r["electric_to_electrolyzer_series_kw"] = round.(value.(GridToElectrolyzer), digits=6)
+        r["electric_to_electrolyzer_series_kw"] = round.(value.(GridToElectrolyzer), digits=3)
     end
 
     if !isempty(p.techs.compressor)
@@ -85,22 +87,24 @@ end
 """
 MPC `ElectricUtility` results keys:
 - `energy_supplied_kwh` 
-- `to_battery_series_kw`
-- `to_load_series_kw`
+- `electric_to_storage_series_kw`
+- `electric_to_load_series_kw`
+- `electric_to_electrolyzer_series_kw` Vector of power drawn from the grid to be used by electrolyzer.
+- `electric_to_compressor_series_kw` Vector of power drawn from the grid to be used by compressor.
 """
 function add_electric_utility_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     r = Dict{String, Any}()
 
-    Year1UtilityEnergy = p.hours_per_time_step * 
+    UtilityEnergy = p.hours_per_time_step * 
         sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for ts in p.time_steps, 
                                                          tier in 1:p.s.electric_tariff.n_energy_tiers)
-    r["energy_supplied_kwh"] = round(value(Year1UtilityEnergy), digits=2)
+    r["energy_supplied_kwh"] = round(value(UtilityEnergy), digits=2)
 
     if p.s.storage.attr["ElectricStorage"].size_kwh > 0
         GridToBatt = @expression(m, [ts in p.time_steps], 
             sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec) 
 		)
-        r["to_battery_series_kw"] = round.(value.(GridToBatt), digits=3).data
+        r["electric_to_storage_series_kw"] = round.(value.(GridToBatt), digits=3).data
     else
         GridToBatt = zeros(length(p.time_steps))
     end
@@ -108,7 +112,17 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::MPCInputs, d::Di
         sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) - 
         GridToBatt[ts]
     )
-    r["to_load_series_kw"] = round.(value.(GridToLoad), digits=3).data
+    r["electric_to_load_series_kw"] = round.(value.(GridToLoad), digits=3).data
+
+    if !isempty(p.techs.electrolyzer)
+        GridToElectrolyzer = (m[Symbol("dvGridToElectrolyzer"*_n)][ts] for ts in p.time_steps)
+        r["electric_to_electrolyzer_series_kw"] = round.(value.(GridToElectrolyzer), digits=3)
+    end
+
+    if !isempty(p.techs.compressor)
+        GridToCompressor = (m[Symbol("dvGridToCompressor"*_n)][ts] for ts in p.time_steps)
+        r["electric_to_compressor_series_kw"] = round.(value.(GridToCompressor), digits=3)
+    end
 
     d["ElectricUtility"] = r
     nothing

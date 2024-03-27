@@ -34,10 +34,15 @@
 - `year_one_fixed_om_cost_before_tax` fixed operations and maintenance cost over the first year, before considering tax benefits
 - `lifecycle_variable_om_cost_after_tax` Lifecycle variable operations and maintenance cost in present value, after tax
 - `year_one_variable_om_cost_before_tax` variable operations and maintenance cost over the first year, before considering tax benefits
-- `electric_to_storage_series_kw` Vector of power sent to battery in an average year
-- `electric_to_grid_series_kw` Vector of power sent to grid in an average year
-- `electric_to_load_series_kw` Vector of power sent to load in an average year
-- `annual_energy_produced_kwh` Average annual energy produced over analysis period
+- `hydrogen_consumed_series_kg` Vector of hydrogen consumed to produce power over the first year
+- `year_one_hydrogen_consumed_kg` Hydrogen consumed to produce power over the first year
+- `year_one_energy_produced_kwh` Hydrogen consumed to produce power over the first year
+- `electric_to_storage_series_kw` Vector of power sent to battery over the first year
+- `electric_to_grid_series_kw` Vector of power sent to grid over the first year
+- `electric_to_load_series_kw` Vector of power sent to load over the first year
+- `electric_curtailed_series_kw` Vector of power curtailed over the first year
+- `annual_energy_produced_kwh` Average annual energy produced in an average year
+- `annual_energy_exported_kwh` Average annual energy exported to grid in an average year
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
     REopt performs load balances using average annual production values for technologies that include degradation. 
@@ -90,8 +95,10 @@ function add_fuel_cell_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
         Year1FuelCellProd = (sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] for ts in p.time_steps) * p.hours_per_time_step)
         r["year_one_energy_produced_kwh"] = round(value(Year1FuelCellProd), digits=0)
         r["annual_energy_produced_kwh"] = round(r["year_one_energy_produced_kwh"] * p.levelization_factor[t], digits=2)
-        FuelCellPerUnitSizeOMCosts = p.om_cost_per_kw[t] * p.pwf_om * m[Symbol("dvSize"*_n)][t]
-        r["lifecycle_om_cost_after_tax"] = round(value(FuelCellPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_rate_fraction), digits=0)
+
+        FuelCellPerUnitSizeOMCosts = @expression(m, p.third_party_factor * p.pwf_om * sum(m[:dvSize][t] * p.om_cost_per_kw[t] for t in p.techs.fuel_cell))
+        r["year_one_fixed_om_cost_before_tax"] = round(value(FuelCellPerUnitSizeOMCosts) / (p.pwf_om * p.third_party_factor), digits=0)
+        r["lifecycle_fixed_om_cost_after_tax"] = round(value(FuelCellPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_rate_fraction), digits=0)
     end
 
     d["FuelCell"] = r

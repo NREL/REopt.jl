@@ -31,8 +31,7 @@
 `HydrogenStorageLP` and `HydrogenStorageHP` results keys:
 - `size_kg` Optimal inverter capacity
 - `soc_series_fraction` Vector of normalized (0-1) state of charge values over the first year
-- `storage_to_compressor_series_kg` Vector of power used to meet load over the first year
-- `storage_to_fuel_cell_series_kg` Vector of power used to meet load over the first year
+- `discharge_from_storage_series_kg` Vector of hydrogen discharge over the first year
 - `initial_capital_cost` Upfront capital cost for the hydrogen storage tank
 """
 function add_hydrogen_storage_lp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict, b::String; _n="")
@@ -42,8 +41,6 @@ function add_hydrogen_storage_lp_results(m::JuMP.AbstractModel, p::REoptInputs, 
     r = Dict{String, Any}()
     r["size_kg"] = round(value(m[Symbol("dvStorageEnergy"*_n)][b]), digits=2)
 
-    # if r["size_kg"] != 0
-
     soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
     r["soc_series_fraction"] = round.(value.(soc) ./ r["size_kg"], digits=6)
 
@@ -51,11 +48,6 @@ function add_hydrogen_storage_lp_results(m::JuMP.AbstractModel, p::REoptInputs, 
     r["discharge_from_storage_series_kg"] = round.(value.(discharge), digits=3)
 
     r["initial_capital_cost"] = round(r["size_kg"] * p.s.storage.attr[b].installed_cost_per_kg, digits = 2)
-
-    # else
-    #     r["soc_series_fraction"] = []
-    #     r["storage_to_compressor_series_kg"] = []
-    # end
 
     d[b] = r
     nothing
@@ -73,7 +65,7 @@ function add_hydrogen_storage_hp_results(m::JuMP.AbstractModel, p::REoptInputs, 
     r["soc_series_fraction"] = round.(value.(soc) ./ r["size_kg"], digits=3)
 
     discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
-    r["storage_to_h2_load_series_kg"] = round.(value.(discharge), digits=3)
+    r["discharge_from_storage_series_kg"] = round.(value.(discharge), digits=3)
 
     r["initial_capital_cost"] = round(r["size_kg"] * p.s.storage.attr[b].installed_cost_per_kg, digits = 2)
 
@@ -106,7 +98,7 @@ function add_hydrogen_storage_hp_results(m::JuMP.AbstractModel, p::MPCInputs, d:
     r["soc_series_fraction"] = round.(value.(soc) ./ p.s.storage.attr[b].size_kg, digits=3)
 
     discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
-    r["storage_to_h2_load_series_kg"] = round.(value.(discharge), digits=3)
+    r["discharge_from_storage_series_kg"] = round.(value.(discharge), digits=3)
 
     d[b] = r
     nothing

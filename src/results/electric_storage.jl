@@ -5,6 +5,8 @@
 - `size_kwh` Optimal storage capacity
 - `soc_series_fraction` Vector of normalized (0-1) state of charge values over the first year
 - `storage_to_load_series_kw` Vector of power used to meet load over the first year
+- `storage_to_electrolyzer_series_kw` Vector of power used by electrolyzer over the first year
+- `storage_to_compressor_series_kw` Vector of power used by compressor over the first year
 - `initial_capital_cost` Upfront capital cost for storage and inverter
 # The following results are reported if storage degradation is modeled:
 - `state_of_health`
@@ -56,6 +58,8 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
     else
         r["soc_series_fraction"] = []
         r["storage_to_load_series_kw"] = []
+        r["storage_to_electrolyzer_series_kw"] = []
+        r["storage_to_compressor_series_kw"] = []
     end
 
     d[b] = r
@@ -65,6 +69,9 @@ end
 """
 MPC `ElectricStorage` results keys:
 - `soc_series_fraction` Vector of normalized (0-1) state of charge values over time horizon
+- `storage_to_load_series_kw` Vector of power used to meet load
+- `storage_to_electrolyzer_series_kw` Vector of power used by electrolyzer
+- `storage_to_compressor_series_kw` Vector of power used by compressor
 """
 function add_electric_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b::String; _n="")
     r = Dict{String, Any}()
@@ -73,7 +80,17 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Di
     r["soc_series_fraction"] = round.(value.(soc) ./ p.s.storage.attr[b].size_kwh, digits=3)
 
     discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
-    r["to_load_series_kw"] = round.(value.(discharge), digits=3)
+    r["storage_to_load_series_kw"] = round.(value.(discharge), digits=3)
+
+    if !isempty(p.techs.electrolyzer)
+        BattToElectrolyzer = (m[Symbol("dvStorageToElectrolyzer"*_n)][b, ts] for ts in p.time_steps)
+        r["storage_to_electrolyzer_series_kw"] = round.(value.(BattToElectrolyzer), digits=3)
+    end
+
+    if !isempty(p.techs.compressor)
+        BattToCompressor = (m[Symbol("dvStorageToCompressor"*_n)][b, ts] for ts in p.time_steps)
+        r["storage_to_compressor_series_kw"] = round.(value.(BattToCompressor), digits=3)
+    end
 
     d[b] = r
     nothing
