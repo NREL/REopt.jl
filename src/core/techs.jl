@@ -359,6 +359,7 @@ function Techs(s::MPCScenario)
     fuel_cell_techs = String[]
     if s.fuel_cell.size_kw > 0
         push!(all_techs, "FuelCell")
+        push!(elec, "FuelCell")
         push!(fuel_cell_techs, "FuelCell")
     end
 
