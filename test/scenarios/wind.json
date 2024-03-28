@@ -28,6 +28,7 @@
         "monthly_energy_rates": [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2]
     },
     "ElectricUtility": {
-        "net_metering_limit_kw": 1e8
+        "net_metering_limit_kw": 1e8,
+        "co2_from_avert": true
     }
 }

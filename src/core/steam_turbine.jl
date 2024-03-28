@@ -5,7 +5,7 @@
 ```julia
     size_class::Union{Int64, Nothing} = nothing
     min_kw::Float64 = 0.0
-    max_kw::Float64 = 0.0
+    max_kw::Float64 = 1.0e9
     electric_produced_to_thermal_consumed_ratio::Float64 = NaN
     thermal_produced_to_thermal_consumed_ratio::Float64 = NaN
     is_condensing::Bool = false
@@ -34,7 +34,7 @@
 Base.@kwdef mutable struct SteamTurbine <: AbstractSteamTurbine
     size_class::Union{Int64, Nothing} = nothing
     min_kw::Float64 = 0.0
-    max_kw::Float64 = 0.0
+    max_kw::Float64 = 1.0e9
     electric_produced_to_thermal_consumed_ratio::Float64 = NaN
     thermal_produced_to_thermal_consumed_ratio::Float64 = NaN
     is_condensing::Bool = false
@@ -207,15 +207,20 @@ function get_steam_turbine_defaults_size_class(;avg_boiler_fuel_load_mmbtu_per_h
     defaults = JSON.parsefile(joinpath(dirname(@__FILE__), "..", "..", "data", "steam_turbine", "steam_turbine_default_data.json"))
     class_bounds = [(0.0, 25000.0), (0, 1000.0), (1000.0, 5000.0), (5000.0, 25000.0)]
     n_classes = length(class_bounds)
+    steam_turbine_electric_efficiency = 0.07 # Typical, steam_turbine_kwe / boiler_fuel_kwt
+    st_elec_size_heuristic_kw = nothing
     if !isnothing(size_class)
         if size_class < 0 || size_class > (n_classes-1)
             throw(@error("Invalid size_class $size_class given for steam_turbine, must be in [0,1,2,3]"))
+        end
+        if !isnothing(avg_boiler_fuel_load_mmbtu_per_hour)
+            thermal_power_in_kw = avg_boiler_fuel_load_mmbtu_per_hour * KWH_PER_MMBTU
+            st_elec_size_heuristic_kw = thermal_power_in_kw * steam_turbine_electric_efficiency
         end
     elseif !isnothing(avg_boiler_fuel_load_mmbtu_per_hour)
         if avg_boiler_fuel_load_mmbtu_per_hour <= 0
             throw(@error("avg_boiler_fuel_load_mmbtu_per_hour must be > 0.0 MMBtu/hr"))
         end
-        steam_turbine_electric_efficiency = 0.07 # Typical, steam_turbine_kwe / boiler_fuel_kwt
         thermal_power_in_kw = avg_boiler_fuel_load_mmbtu_per_hour * KWH_PER_MMBTU
         st_elec_size_heuristic_kw = thermal_power_in_kw * steam_turbine_electric_efficiency
         # With heuristic size, find the suggested size class
@@ -237,7 +242,6 @@ function get_steam_turbine_defaults_size_class(;avg_boiler_fuel_load_mmbtu_per_h
         end
     else
         size_class = 0
-        st_elec_size_heuristic_kw = nothing
     end
 
     steam_turbine_defaults = get_steam_turbine_defaults(size_class, defaults)
@@ -246,7 +250,7 @@ function get_steam_turbine_defaults_size_class(;avg_boiler_fuel_load_mmbtu_per_h
         ("prime_mover", "steam_turbine"),
         ("size_class", size_class),
         ("default_inputs", steam_turbine_defaults),
-        ("chp_size_based_on_avg_heating_load_kw", st_elec_size_heuristic_kw),
+        ("chp_elec_size_heuristic_kw", st_elec_size_heuristic_kw),
         ("size_class_bounds", class_bounds)
     ])
 

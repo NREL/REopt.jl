@@ -26,12 +26,12 @@
     NOx_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
     SO2_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
     PM25_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
-    NOx_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
-    SO2_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
-    PM25_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
-    NOx_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
-    SO2_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
-    PM25_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing
+    NOx_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing, # Default data from EASIUR based on location
+    SO2_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing, # Default data from EASIUR based on location
+    PM25_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing, # Default data from EASIUR based on location
+    NOx_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing, # Default data from EASIUR based on location
+    SO2_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing, # Default data from EASIUR based on location
+    PM25_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing # Default data from EASIUR based on location
 ```
 
 !!! note "Third party financing"

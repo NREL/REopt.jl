@@ -30,24 +30,59 @@ function add_outage_cost_constraints(m,p)
     )
    
     if !isempty(setdiff(p.techs.elec, p.techs.segmented))
-        @constraint(m, [t in setdiff(p.techs.elec, p.techs.segmented)],
-            m[:binMGTechUsed][t] => {m[:dvMGTechUpgradeCost][t] >= p.s.financial.microgrid_upgrade_cost_fraction * p.third_party_factor *
-                                    p.cap_cost_slope[t] * m[:dvMGsize][t]}
-        )
+        if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
+            @constraint(m, [t in setdiff(p.techs.elec, p.techs.segmented)],
+                m[:binMGTechUsed][t] => {m[:dvMGTechUpgradeCost][t] >= p.s.financial.microgrid_upgrade_cost_fraction * p.third_party_factor *
+                                        p.cap_cost_slope[t] * m[:dvMGsize][t]}
+            )
+        else
+            @constraint(m, [t in setdiff(p.techs.elec, p.techs.segmented)],
+                m[:dvMGTechUpgradeCost][t] >= p.s.financial.microgrid_upgrade_cost_fraction * p.third_party_factor *
+                                        p.cap_cost_slope[t] * m[:dvMGsize][t] - (
+                                            p.s.financial.microgrid_upgrade_cost_fraction * p.third_party_factor *
+                                            p.cap_cost_slope[t] * p.max_sizes[t] * (1-m[:binMGTechUsed][t])
+                                        )  #TODO: check max_sizes for quality of lower bounds (can we make a better big-M?)
+            )
+            @constraint(m, [t in setdiff(p.techs.elec, p.techs.segmented)],
+                m[:dvMGTechUpgradeCost][t] >= 0.0
+            )
+        end
     end
 
     if !isempty(p.techs.segmented)
         @warn "Adding binary variable(s) to model cost curves in stochastic outages"
-        @constraint(m, [t in p.techs.segmented],  # cannot have this for statement in sum( ... for t in ...) ???
-            m[:binMGTechUsed][t] => {m[:dvMGTechUpgradeCost][t] >= p.s.financial.microgrid_upgrade_cost_fraction * p.third_party_factor * 
-                sum(p.cap_cost_slope[t][s] * m[Symbol("dvSegmentSystemSize"*t)][s] + 
-                    p.seg_yint[t][s] * m[Symbol("binSegment"*t)][s] for s in 1:p.n_segs_by_tech[t])}
-            )
+        if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
+            @constraint(m, [t in p.techs.segmented],  # cannot have this for statement in sum( ... for t in ...) ???
+                m[:binMGTechUsed][t] => {m[:dvMGTechUpgradeCost][t] >= p.s.financial.microgrid_upgrade_cost_fraction * p.third_party_factor * 
+                    sum(p.cap_cost_slope[t][s] * m[Symbol("dvSegmentSystemSize"*t)][s] + 
+                        p.seg_yint[t][s] * m[Symbol("binSegment"*t)][s] for s in 1:p.n_segs_by_tech[t])}
+                )
+        else
+            @constraint(m, [t in p.techs.segmented],  
+                m[:dvMGTechUpgradeCost][t] >= p.s.financial.microgrid_upgrade_cost_fraction * p.third_party_factor * 
+                    sum(p.cap_cost_slope[t][s] * m[Symbol("dvSegmentSystemSize"*t)][s] + 
+                        p.seg_yint[t][s] * m[Symbol("binSegment"*t)][s] for s in 1:p.n_segs_by_tech[t]) -
+                        (maximum(p.cap_cost_slope[t][s] for s in 1:p.n_segs_by_tech[t]) * p.max_sizes[t] + maximum(p.seg_yint[t][s] for s in 1:p.n_segs_by_tech[t]))*(1-m[:binMGTechUsed][t])
+                )
+            @constraint(m, [t in p.techs.segmented], m[:dvMGTechUpgradeCost][t] >= 0.0)
+        end
     end
 
-    @constraint(m,
-        m[:binMGStorageUsed] => {m[:dvMGStorageUpgradeCost] >= p.s.financial.microgrid_upgrade_cost_fraction * m[:TotalStorageCapCosts]}
-    )
+    if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
+        @constraint(m,
+            m[:binMGStorageUsed] => {m[:dvMGStorageUpgradeCost] >= p.s.financial.microgrid_upgrade_cost_fraction * m[:TotalStorageCapCosts]}
+        )
+    else
+        @constraint(m,
+            m[:dvMGStorageUpgradeCost] >= p.s.financial.microgrid_upgrade_cost_fraction * m[:TotalStorageCapCosts] - (
+                p.s.financial.microgrid_upgrade_cost_fraction * p.third_party_factor * (
+                    sum( p.s.storage.attr[b].net_present_cost_per_kw * p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec) + 
+                    sum( p.s.storage.attr[b].net_present_cost_per_kwh * p.s.storage.attr[b].max_kwh for b in p.s.storage.types.all )
+                ) * (1-m[:binMGStorageUsed])  # Big-M is capital cost of battery with max size kw and kwh
+            )
+        )
+        @constraint(m, m[:dvMGStorageUpgradeCost] >= 0.0)
+    end
     
     @expression(m, mgTotalTechUpgradeCost,
         sum( m[:dvMGTechUpgradeCost][t] for t in p.techs.elec )
@@ -57,11 +92,11 @@ end
 
 function add_MG_size_constraints(m,p)
     @constraint(m, [t in p.techs.elec],
-        m[:binMGTechUsed][t] => {m[:dvMGsize][t] >= 1.0}  # 1 kW min size to prevent binaryMGTechUsed = 1 with zero cost
+         m[:dvMGsize][t] >= m[:binMGTechUsed][t]  # 1 kW min size to prevent binaryMGTechUsed = 1 with zero cost
     )
 
     @constraint(m, [b in p.s.storage.types.all],
-        m[:binMGStorageUsed] => {m[:dvStoragePower][b] >= 1.0} # 1 kW min size to prevent binaryMGStorageUsed = 1 with zero cost
+        m[:dvStoragePower][b] >= m[:binMGStorageUsed] # 1 kW min size to prevent binaryMGStorageUsed = 1 with zero cost
     )
     
     if p.s.site.mg_tech_sizes_equal_grid_sizes
@@ -196,14 +231,23 @@ end
 function add_binMGGenIsOnInTS_constraints(m,p)
     # The following 2 constraints define binMGGenIsOnInTS to be the binary corollary to dvMGRatedProd for generator,
     # i.e. binMGGenIsOnInTS = 1 for dvMGRatedProd > min_turn_down_fraction * dvMGsize, and binMGGenIsOnInTS = 0 for dvMGRatedProd = 0
-    @constraint(m, [t in p.techs.gen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-        !m[:binMGGenIsOnInTS][s, tz, ts] => { m[:dvMGRatedProduction][t, s, tz, ts] <= 0 }
-    )
-    @constraint(m, [t in p.techs.gen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-        m[:binMGGenIsOnInTS][s, tz, ts] => { 
-            m[:dvMGRatedProduction][t, s, tz, ts] >= p.s.generator.min_turn_down_fraction * m[:dvMGsize][t]
-        }
-    )
+    if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
+        @constraint(m, [t in p.techs.gen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+            !m[:binMGGenIsOnInTS][s, tz, ts] => { m[:dvMGRatedProduction][t, s, tz, ts] <= 0 }
+        )
+        @constraint(m, [t in p.techs.gen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+            m[:binMGGenIsOnInTS][s, tz, ts] => { 
+                m[:dvMGRatedProduction][t, s, tz, ts] >= p.s.generator.min_turn_down_fraction * m[:dvMGsize][t]
+            }
+        )
+    else
+        @constraint(m, [t in p.techs.gen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+            m[:dvMGRatedProduction][t, s, tz, ts] <= p.max_sizes[t] *  m[:binMGGenIsOnInTS][s, tz, ts]
+        )
+        @constraint(m, [t in p.techs.gen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+            m[:dvMGRatedProduction][t, s, tz, ts] >= p.s.generator.min_turn_down_fraction * m[:dvMGsize][t] - p.max_sizes[t] * (1-m[:binMGGenIsOnInTS][s, tz, ts])
+        )
+    end
     @constraint(m, [t in p.techs.gen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
         m[:binMGTechUsed][t] >= m[:binMGGenIsOnInTS][s, tz, ts]
     )
@@ -213,9 +257,15 @@ end
 function add_binMGCHPIsOnInTS_constraints(m, p; _n="")
     # The following 2 constraints define binMGCHPIsOnInTS to be the binary corollary to dvMGRatedProd for CHP,
     # i.e. binMGCHPIsOnInTS = 1 for dvMGRatedProd > min_turn_down_fraction * dvMGsize, and binMGCHPIsOnInTS = 0 for dvMGRatedProd = 0
-    @constraint(m, [t in p.techs.chp, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-        !m[:binMGCHPIsOnInTS][s, tz, ts] => { m[:dvMGRatedProduction][t, s, tz, ts] <= 0 }
-    )
+    if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
+        @constraint(m, [t in p.techs.chp, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+            !m[:binMGCHPIsOnInTS][s, tz, ts] => { m[:dvMGRatedProduction][t, s, tz, ts] <= 0 }
+        )
+    else
+        @constraint(m, [t in p.techs.chp, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+            m[:dvMGRatedProduction][t, s, tz, ts] <= p.max_sizes[t] * m[:binMGCHPIsOnInTS][s, tz, ts] 
+        )
+    end
     @constraint(m, [t in p.techs.chp, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
         m[:binMGTechUsed][t] >= m[:binMGCHPIsOnInTS][s, tz, ts]
     )
@@ -264,13 +314,23 @@ function add_MG_storage_dispatch_constraints(m,p)
         m[:dvStorageEnergy]["ElectricStorage"] >= m[:dvMGStoredEnergy][s, tz, ts]
     )
     
-    @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-        !m[:binMGStorageUsed] => { sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.elec) <= 0 }
-    )
-    
-    @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-        !m[:binMGStorageUsed] => { m[:dvMGDischargeFromStorage][s, tz, ts] <= 0 }
-    )
+    if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
+        @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+            !m[:binMGStorageUsed] => { sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.elec) <= 0 }
+        )
+        
+        @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+            !m[:binMGStorageUsed] => { m[:dvMGDischargeFromStorage][s, tz, ts] <= 0 }
+        )
+    else
+        @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+            sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.elec) <= p.s.storage.attr["ElectricStorage"].max_kw * m[:binMGStorageUsed]
+        )
+        
+        @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+            m[:dvMGDischargeFromStorage][s, tz, ts] <= p.s.storage.attr["ElectricStorage"].max_kw * m[:binMGStorageUsed]
+        )
+    end
 end
 
 
@@ -296,19 +356,28 @@ function add_cannot_have_MG_with_only_PVwind_constraints(m, p)
     renewable_techs = setdiff(p.techs.elec, dispatchable_techs)
     # can't "turn down" renewable_techs
     if !isempty(renewable_techs)
-        @constraint(m, [t in renewable_techs, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-            m[:binMGTechUsed][t] => { m[:dvMGRatedProduction][t, s, tz, ts] >= m[:dvMGsize][t] }
-        )
-        @constraint(m, [t in renewable_techs, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-            !m[:binMGTechUsed][t] => { m[:dvMGRatedProduction][t, s, tz, ts] <= 0 }
-        )
-        if !isempty(dispatchable_techs) # PV or Wind alone cannot be used for a MG
+        if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
             @constraint(m, [t in renewable_techs, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-                m[:binMGTechUsed][t] => { sum(m[:binMGTechUsed][tek] for tek in dispatchable_techs) + m[:binMGStorageUsed] >= 1 }
+                m[:binMGTechUsed][t] => { m[:dvMGRatedProduction][t, s, tz, ts] >= m[:dvMGsize][t] }
+            )
+            @constraint(m, [t in renewable_techs, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+                !m[:binMGTechUsed][t] => { m[:dvMGRatedProduction][t, s, tz, ts] <= 0 }
             )
         else
             @constraint(m, [t in renewable_techs, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-                m[:binMGTechUsed][t] => { m[:binMGStorageUsed] >= 1 }
+                m[:dvMGRatedProduction][t, s, tz, ts] >= m[:dvMGsize][t] - p.max_sizes[t] * (1-m[:binMGTechUsed][t])
+            )
+            @constraint(m, [t in renewable_techs, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+                m[:dvMGRatedProduction][t, s, tz, ts] <= p.max_sizes[t] * m[:binMGTechUsed][t]
+            )
+        end
+        if !isempty(dispatchable_techs) # PV or Wind alone cannot be used for a MG
+            @constraint(m, [t in renewable_techs, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+                sum(m[:binMGTechUsed][tek] for tek in dispatchable_techs) + m[:binMGStorageUsed] >= m[:binMGTechUsed][t]
+            )
+        else
+            @constraint(m, [t in renewable_techs, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+                m[:binMGStorageUsed] >= m[:binMGTechUsed][t]
             )
         end
     end
