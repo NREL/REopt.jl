@@ -324,6 +324,8 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
         @variable(m, dvHeatingProduction[p.techs.heating, p.heating_loads, p.time_steps] >= 0)
 		@variable(m, dvProductionToWaste[p.techs.heating, p.heating_loads, p.time_steps] >= 0)
 		if !isempty(p.s.storage.types.hot)
+			@variable(m, dvStorageChargePower[p.s.storage.types.hot] >= 0)
+			@variable(m, dvStorageDischargePower[p.s.storage.types.hot] >= 0)
 			@variable(m, dvHeatToStorage[p.s.storage.types.hot, p.techs.heating, p.heating_loads, p.time_steps] >= 0) # Power charged to hot storage b at quality q [kW]
 			@variable(m, dvHeatFromStorage[p.s.storage.types.hot, p.heating_loads, p.time_steps] >= 0) # Power discharged from hot storage system b for load q [kW]
     	end
@@ -349,7 +351,9 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 				fix(m[:dvStorageEnergy][b], p.s.storage.attr["HydrogenStorageHP"].size_kg, force=true)
 			end
 		elseif b in p.s.storage.types.hot
-			fix(m[:dvStoragePower][b], p.s.storage.attr["HighTempThermalStorage"].size_kw, force=true)
+			fix(m[:dvStorageChargePower][b], p.s.storage.attr["HighTempThermalStorage"].charge_limit_kw, force=true)
+			fix(m[:dvStorageDischargePower][b], p.s.storage.attr["HighTempThermalStorage"].discharge_limit_kw, force=true)
+			# fix(m[:dvStoragePower][b], p.s.storage.attr["HighTempThermalStorage"].size_kw, force=true)
 			fix(m[:dvStorageEnergy][b], p.s.storage.attr["HighTempThermalStorage"].size_kwh, force=true)
 		end
 	end

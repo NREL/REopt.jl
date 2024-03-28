@@ -189,6 +189,7 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
 	end
 
     # Constraint (4j)-1: Reconcile state-of-charge for (hot) thermal storage
+    # TODO : Check if solid storage thermal decay is based on size kWh or stored kWh
 	@constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
     m[Symbol("dvStoredEnergy"*_n)][b,ts] == m[Symbol("dvStoredEnergy"*_n)][b,ts-1] + (1/p.s.settings.time_steps_per_hour) * (
         p.s.storage.attr[b].charge_efficiency * sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads) -
@@ -204,6 +205,18 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
         sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp))
         for q in p.heating_loads)
     )
+
+    #Constraint (4n)-2: Dispatch to thermal storage is no greater than power capacity
+	@constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
+        m[Symbol("dvStorageChargePower"*_n)][b] >= 
+        sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads)
+    )
+
+    #Constraint (4n)-3: Dispatch from thermal storage is no greater than power capacity
+	@constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
+        m[Symbol("dvStorageDischargePower"*_n)][b] >= sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for q in p.heating_loads)
+    )
+
     # TODO missing thermal storage constraints from API ???
 
     # Constraint (4o): Discharge from storage is equal to sum of heat from storage for all qualities
