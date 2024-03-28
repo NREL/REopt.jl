@@ -192,11 +192,7 @@ function combine_results(p::REoptInputs, bau::Dict, opt::Dict, bau_scenario::BAU
         ("Site", "lifecycle_emissions_from_fuelburn_tonnes_CO2"),
         ("Site", "lifecycle_emissions_from_fuelburn_tonnes_NOx"),
         ("Site", "lifecycle_emissions_from_fuelburn_tonnes_SO2"),
-        ("Site", "lifecycle_emissions_from_fuelburn_tonnes_PM25"),
-        ("Site", "lifecycle_emissions_from_elec_grid_tonnes_CO2"),
-        ("Site", "lifecycle_emissions_from_elec_grid_tonnes_NOx"),
-        ("Site", "lifecycle_emissions_from_elec_grid_tonnes_SO2"),
-        ("Site", "lifecycle_emissions_from_elec_grid_tonnes_PM25")
+        ("Site", "lifecycle_emissions_from_fuelburn_tonnes_PM25")
     )
 
     for t in bau_outputs

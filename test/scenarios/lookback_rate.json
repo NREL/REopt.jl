@@ -5,6 +5,9 @@
     },
     "ElectricLoad": {
     },
+    "ElectricUtility" : {
+        "co2_from_avert" : true
+    },
     "ElectricTariff": {
         "urdb_label": "539f6a23ec4f024411ec8bf9"
     },

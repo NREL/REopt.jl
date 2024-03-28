@@ -23,6 +23,9 @@
         "efficiency": 0.82,
         "production_type": "hot_water"
     },
+    "ElectricUtility" : {
+        "co2_from_avert" : true
+    },
     "PV": {
         "max_kw": 0
     },    
