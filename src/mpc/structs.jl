@@ -242,6 +242,7 @@ Base.@kwdef struct MPCElectricStorage <: AbstractElectricStorage
     max_kw::Float64 = size_kw
     max_kwh::Float64 = size_kwh
     minimum_avg_soc_fraction::Float64 = 0.0
+    daily_self_discharge_fraction::Float64 = 0.0
 end
 
 
