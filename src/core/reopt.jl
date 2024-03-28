@@ -144,6 +144,12 @@ function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.Abst
 		Threads.@threads for i = 1:2
 			rs[i] = run_reopt(inputs[i])
 		end
+		if typeof(rs[1]) <: Dict && typeof(rs[2]) <: Dict
+			#TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
+			write("before_combine_results_bau.json", JSON.json(rs[1]))
+			write("before_combine_results_opt.json", JSON.json(rs[2]))
+		end
+		@info typeof(rs[1]), typeof(rs[2]), rs[1]["status"], rs[2]["status"]
 		if typeof(rs[1]) <: Dict && typeof(rs[2]) <: Dict && rs[1]["status"] != "error" && rs[2]["status"] != "error"
 			# TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
 			results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
@@ -226,8 +232,18 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			else
 				throw(@error("Invalid storage does not fall in a thermal or electrical set"))
 			end
+            if b in p.s.storage.types.ev
+                add_electric_vehicle_constraints(m, p, b)
+            end            
 		end
 	end
+
+    if !isempty(p.s.storage.types.ev)
+        add_ev_supply_equipment_constraints(m, p)
+    else
+        m[:TotalEVSEInstalledCost] = 0.0
+        m[:EVSESwitchingCost] = 0.0
+    end
 
 	if any(max_kw->max_kw > 0, (p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec))
 		add_storage_sum_constraints(m, p)
@@ -424,7 +440,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	#################################  Objective Function   ########################################
 	@expression(m, Costs,
 		# Capital Costs
-		m[:TotalTechCapCosts] + TotalStorageCapCosts + m[:GHPCapCosts] +
+		m[:TotalTechCapCosts] + TotalStorageCapCosts + m[:GHPCapCosts] + m[:TotalEVSEInstalledCost] + m[:EVSESwitchingCost] +
 
 		# Fixed O&M, tax deductible for owner
 		(TotalPerUnitSizeOMCosts + m[:GHPOMCosts]) * (1 - p.s.financial.owner_tax_rate_fraction) +
@@ -572,6 +588,11 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		@variables m begin
 			binGenIsOnInTS[p.techs.gen, p.time_steps], Bin  # 1 If technology t is operating in time step h; 0 otherwise
 		end
+	end
+
+	# Serve EV load from storage tech (PV already does it)
+	if !isempty(p.s.storage.types.ev)
+		@variable(m, dvStorageToEV[p.s.storage.types.ev, filter(x -> !occursin("EV", x), p.s.storage.types.elec), p.time_steps] >= 0)
 	end
 
     if !isempty(p.techs.fuel_burning)
