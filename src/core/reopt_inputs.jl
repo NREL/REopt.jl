@@ -192,6 +192,8 @@ function REoptInputs(s::AbstractScenario)
 
     unavailability = get_unavailability_by_tech(s, techs, time_steps)
 
+    max_sizes = get_revised_max_sizes(s, techs, max_sizes, min_sizes, cop)
+
     REoptInputs(
         s,
         techs,
@@ -1132,4 +1134,70 @@ function get_unavailability_by_tech(s::AbstractScenario, techs::Techs, time_step
         unavailability = Dict(""=>Float64[])
     end
     return unavailability
+end
+
+"""
+function get_revised_max_sizes(s::AbstractScenario, techs::Techs, max_sizes, cop)
+
+Generates new maximum tech sizes.
+This is intended to be a reasonable upper bound on size that would never be exceeded,
+but is sufficiently small to replace much larger big-M values placed as a default.
+
+Fuel-fired generators and heating and cooling technologies: maximum kW rating = 10 times the peak load (including electrification of heating/cooling options)
+Renewables with variable production: maximum kW rating = maximum monthly load
+
+To support large system sizes for applications like long-duration storage, we allow very large system sizes
+"""
+function get_revised_max_sizes(s::AbstractScenario, techs::Techs, max_sizes, min_sizes, cop)
+    # set up the total heating load
+    new_max_sizes = Dict()
+    for t in techs.boiler
+        new_max_sizes[t] = 10 * maximum(s.space_heating_load.loads_kw .+ s.dhw_load.loads_kw)
+    end
+
+    for t in techs.electric_heater
+        new_max_sizes[t] = 10 * maximum(s.space_heating_load.loads_kw .+ s.dhw_load.loads_kw)
+    end
+
+    for t in techs.cooling
+        new_max_sizes[t] = 10 * maximum(s.cooling_load.loads_kw)
+    end
+
+    for t in techs.elec
+        new_max_sizes[t] = 10 * maximum(s.electric_load.loads_kw)
+    end
+
+    for t in techs.no_turndown
+        combined_load = s.electric_load.loads_kw
+        if !isempty(techs.cooling)
+            min_cop = minimum([cop[t] for t in techs.cooling])
+            combined_load .+ (s.cooling_load.loads_kw ./ min_cop)
+        end
+        if !isempty(techs.electric_heater)
+            min_cop = minimum([heating_cop[t] for t in techs.electric_heater])
+            combined_load .+ ((s.dhw_load.loads_kw + s.space_heating_load.loads_kw) ./ min_cop)
+        end
+        new_max_sizes[t] = maximum([sum(combined_load[ts] for ts in s.electric_tariff.time_steps_monthly[mth]) for mth in 1:12]) / s.settings.time_steps_per_hour
+    end
+
+    for t in techs.chp
+        heat_size = 10 * maximum(s.space_heating_load.loads_kw .+ s.dhw_load.loads_kw)
+        elec_size = 10 * maximum(s.electric_load.loads_kw)
+        new_max_sizes[t] = max(heat_size, elec_size)
+    end
+
+    for t in keys(new_max_sizes)
+        if new_max_sizes[t] < max_sizes[t]
+            if new_max_sizes[t] < min_sizes[t]
+                max_sizes[t] = min_sizes[t]
+            else
+                max_sizes[t] = new_max_sizes[t]
+            end
+        end
+    end
+    println("Min Sizes: ", min_sizes)
+
+    println("Max Sizes: ", max_sizes)
+    return max_sizes
+
 end
