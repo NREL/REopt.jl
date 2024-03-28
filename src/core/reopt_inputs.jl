@@ -1171,7 +1171,7 @@ function get_revised_max_sizes(s::AbstractScenario, techs::Techs, max_sizes, min
         combined_load = s.electric_load.loads_kw
         if !isempty(techs.cooling)
             min_cop = minimum([cop[t] for t in techs.cooling])
-            combined_load .+ (s.cooling_load.loads_kw ./ min_cop)
+            combined_load .+ (s.cooling_load.loads_kw_thermal ./ min_cop)
         end
         if !isempty(techs.electric_heater)
             min_cop = minimum([heating_cop[t] for t in techs.electric_heater])
