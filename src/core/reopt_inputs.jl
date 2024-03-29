@@ -1160,23 +1160,25 @@ function get_revised_max_sizes(s::AbstractScenario, techs::Techs, max_sizes, min
     end
 
     for t in techs.cooling
-        new_max_sizes[t] = 10 * maximum(s.cooling_load.loads_kw)
+        new_max_sizes[t] = 10 * maximum(s.cooling_load.loads_kw_thermal)
+    end
+
+    #calculate combined electric load with full electrification
+    combined_load = copy(s.electric_load.loads_kw)
+    if !isempty(techs.cooling)
+        min_cop = minimum([cop[t] for t in techs.cooling])
+        combined_load = combined_load .+ (s.cooling_load.loads_kw_thermal ./ min_cop)
+    end
+    if !isempty(techs.electric_heater)
+        min_cop = minimum([heating_cop[t] for t in techs.electric_heater])
+        combined_load = combined_load .+ ((s.dhw_load.loads_kw + s.space_heating_load.loads_kw) ./ min_cop)
     end
 
     for t in techs.elec
-        new_max_sizes[t] = 10 * maximum(s.electric_load.loads_kw)
+        new_max_sizes[t] = 10 * maximum(combined_load)
     end
 
     for t in techs.no_turndown
-        combined_load = s.electric_load.loads_kw
-        if !isempty(techs.cooling)
-            min_cop = minimum([cop[t] for t in techs.cooling])
-            combined_load .+ (s.cooling_load.loads_kw_thermal ./ min_cop)
-        end
-        if !isempty(techs.electric_heater)
-            min_cop = minimum([heating_cop[t] for t in techs.electric_heater])
-            combined_load .+ ((s.dhw_load.loads_kw + s.space_heating_load.loads_kw) ./ min_cop)
-        end
         new_max_sizes[t] = maximum([sum(combined_load[ts] for ts in s.electric_tariff.time_steps_monthly[mth]) for mth in 1:12]) / s.settings.time_steps_per_hour
     end
 
@@ -1195,9 +1197,7 @@ function get_revised_max_sizes(s::AbstractScenario, techs::Techs, max_sizes, min
             end
         end
     end
-    println("Min Sizes: ", min_sizes)
 
-    println("Max Sizes: ", max_sizes)
     return max_sizes
 
 end
