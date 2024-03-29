@@ -32,14 +32,14 @@ function add_yr1_emissions_calcs(m,p)
 	yr1_emissions_offset_from_elec_exports_lbs_PM25 = 
 		calc_yr1_emissions_offset_from_elec_exports(m, p)
 	
-	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2] = m[:yr1_emissions_from_elec_grid_lbs_CO2] - 
-		yr1_emissions_offset_from_elec_exports_lbs_CO2
-	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx] = m[:yr1_emissions_from_elec_grid_lbs_NOx] - 
-		yr1_emissions_offset_from_elec_exports_lbs_NOx
-	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2] = m[:yr1_emissions_from_elec_grid_lbs_SO2] - 
-		yr1_emissions_offset_from_elec_exports_lbs_SO2
-	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25] = m[:yr1_emissions_from_elec_grid_lbs_PM25] - 
-		yr1_emissions_offset_from_elec_exports_lbs_PM25
+	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2] = (m[:yr1_emissions_from_elec_grid_lbs_CO2] - 
+		yr1_emissions_offset_from_elec_exports_lbs_CO2)
+	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx] = (m[:yr1_emissions_from_elec_grid_lbs_NOx] - 
+		yr1_emissions_offset_from_elec_exports_lbs_NOx)
+	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2] = (m[:yr1_emissions_from_elec_grid_lbs_SO2] - 
+		yr1_emissions_offset_from_elec_exports_lbs_SO2)
+	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25] = (m[:yr1_emissions_from_elec_grid_lbs_PM25] - 
+		yr1_emissions_offset_from_elec_exports_lbs_PM25)
 
 	m[:EmissionsYr1_Total_LbsCO2] = m[:yr1_emissions_onsite_fuel_lbs_CO2] + m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2]
 	m[:EmissionsYr1_Total_LbsNOx] = m[:yr1_emissions_onsite_fuel_lbs_NOx] + m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx]
