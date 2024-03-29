@@ -192,7 +192,7 @@ function REoptInputs(s::AbstractScenario)
 
     unavailability = get_unavailability_by_tech(s, techs, time_steps)
 
-    max_sizes = get_revised_max_sizes(s, techs, max_sizes, min_sizes, cop)
+    max_sizes = get_revised_max_sizes(s, techs, max_sizes, min_sizes, cop, heating_cop)
 
     REoptInputs(
         s,
@@ -1137,7 +1137,7 @@ function get_unavailability_by_tech(s::AbstractScenario, techs::Techs, time_step
 end
 
 """
-function get_revised_max_sizes(s::AbstractScenario, techs::Techs, max_sizes, cop)
+function get_revised_max_sizes(s::AbstractScenario, techs::Techs, max_sizes, cop, heating_cop)
 
 Generates new maximum tech sizes.
 This is intended to be a reasonable upper bound on size that would never be exceeded,
@@ -1148,7 +1148,7 @@ Renewables with variable production: maximum kW rating = maximum monthly load
 
 To support large system sizes for applications like long-duration storage, we allow very large system sizes
 """
-function get_revised_max_sizes(s::AbstractScenario, techs::Techs, max_sizes, min_sizes, cop)
+function get_revised_max_sizes(s::AbstractScenario, techs::Techs, max_sizes, min_sizes, cop, heating_cop)
     # set up the total heating load
     new_max_sizes = Dict()
     for t in techs.boiler
