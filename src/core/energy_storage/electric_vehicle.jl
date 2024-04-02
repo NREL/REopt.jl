@@ -57,60 +57,97 @@ end
 Base.@kwdef mutable struct ElectricVehicle
     energy_capacity_kwh::Float64 = NaN
     max_c_rate::Float64 = 1.0
-    ev_on_site_start_end::Array{Int64, 1} = [0,0]  # This should **maybe** be an array of arrays (meant to be array of tuples, could convert)
-    ev_on_site_series::Array{Int64, 1} = Int64[]
-    soc_used_off_site::Float64 = 0.0
-    leaving_next_time_step_soc_min::Array{Float64, 1} = Float64[]
-    back_on_site_time_step_soc_drained::Array{Float64, 1} = Float64[]
+    ev_on_site_start_end::Array{Array{Int64, 1}, 1} = [[0,0],[0,0],[0,0],[0,0]]  # This should **maybe** be an array of arrays (meant to be array of tuples, could convert)
+    ev_on_site_series::Union{Array{Int64, 1}, Nothing} = nothing
+    soc_used_off_site::Array{Array{Float64, 1}, 1} = [[0.2,0.8],[0.2,0.8],[0.2,0.8],[0.2,0.8]]
+    leaving_next_time_step_soc_min::Union{Array{Float64, 1}, Nothing} = nothing
+    back_on_site_time_step_soc_drained::Union{Array{Float64, 1}, Nothing} = nothing
 end
 
-function get_availability_series(start_end::Array{Int64, 1}, year::Int64=2017)
+# function get_availability_series(start_end::Array{Int64, 1}, year::Int64=2017)
+#     if start_end[1] < start_end[2]
+#         # EV is at the site during the day (commercial without their own EVs, just workers' EVs)
+#         profile = zeros(8760)
+#         for day in 1:365
+#             profile[24*(day-1)+start_end[1]:24*(day-1)+start_end[2]] .= 1
+#         end
+#     else
+#         # EV is at the site during the night (commercial with their own EVs, or residential)
+#         profile = ones(8760)
+#         for day in 1:365
+#             profile[24*(day-1)+start_end[2]-1:24*(day-1)+start_end[1]-1] .= 0
+#         end
+#     end
+
+#     return profile
+#     # TODO implement more options for profiles and use Dates.jl package to create profile, 
+#     #   something like generate_year_profile_hourly
+#     # # TODO get start day of the week (1-7) from the year to put in base
+#     # start_day_of_year = 7  # 2017 first day is Sunday (day=7)
+#     # entry_base = Dict([("month", 1),
+#     #                 ("start_week_of_month", 1),
+#     #                 ("start_day_of_week", start_day_of_year),
+#     #                 ("start_hour", start_end[1]),
+#     #                 ("duration_hours", start_end[2] - start_end[1])])
+#     # consecutive_periods = []
+#     # # TODO get weeks_per_month from the year (these can be partial weeks for weeks 1 or last/end)
+#     # weeks_per_month = [6,5,5,5,5,5,6,5,5,6,5,5]  # These are the total number of weeks where there's at least one day 1-7
+#     # for month in 1:12
+#     #     weeks = weeks_per_month[month]
+#     #     days = daysinmonth(Date(string(year) * "-" * string(month)))
+#     #     for week in 1:weeks
+#     #         day = 1
+#     #         if week == 1 && !(month == 1)
+#     #             start_day_of_week = 1
+#     #         elseif week == weeks_per_month[month]
+                
+#     #         while start_day <= 7 do
+#     #             entry_base["month"] = month
+#     #             entry_base["start_week_of_month"] = week
+#     #             entry_base["start_day_of_week"] = start_day
+#     #             append!(consecutive_periods, entry)
+#     #             start_day += 1
+#     #             day += 1
+#     #         end
+
+#     # profile = generate_year_profile_hourly(year, consecutive_periods)
+# end
+
+function get_availability_series(start_end::Array{Int64, 1}, cy_quarter::Int, year::Int64=2017)
+
+    if cy_quarter == 1
+        month_st = 1
+        month_en = 3
+        num_days = 31
+    elseif cy_quarter == 2
+        month_st = 4
+        month_en = 6
+        num_days = 30
+    elseif cy_quarter == 3
+        month_st = 7
+        month_en = 9
+        num_days = 30
+    else
+        month_st = 10
+        month_en = 12
+        num_days = 31
+    end
+    
+    dr = DateTime(year, month_st, 1):Dates.Minute(60):DateTime(year, month_en, num_days, 23, 59)
+
+    idxs = nothing
     if start_end[1] < start_end[2]
         # EV is at the site during the day (commercial without their own EVs, just workers' EVs)
-        profile = zeros(8760)
-        for day in 1:365
-            profile[24*(day-1)+start_end[1]:24*(day-1)+start_end[2]] .= 1
-        end
+        idxs = findall(x -> start_end[1] <= Dates.hour(x) < start_end[2], filter(x -> Dates.dayofweek(x) <= 5, dr))
     else
         # EV is at the site during the night (commercial with their own EVs, or residential)
-        profile = ones(8760)
-        for day in 1:365
-            profile[24*(day-1)+start_end[2]-1:24*(day-1)+start_end[1]-1] .= 0
-        end
+        idxs = findall(x -> Dates.hour(x) ∈ vcat([start_end[2]:23;], [0:start_end[1];]), filter(x -> Dates.dayofweek(x) <= 5, dr))
     end
 
-    return profile
-    # TODO implement more options for profiles and use Dates.jl package to create profile, 
-    #   something like generate_year_profile_hourly
-    # # TODO get start day of the week (1-7) from the year to put in base
-    # start_day_of_year = 7  # 2017 first day is Sunday (day=7)
-    # entry_base = Dict([("month", 1),
-    #                 ("start_week_of_month", 1),
-    #                 ("start_day_of_week", start_day_of_year),
-    #                 ("start_hour", start_end[1]),
-    #                 ("duration_hours", start_end[2] - start_end[1])])
-    # consecutive_periods = []
-    # # TODO get weeks_per_month from the year (these can be partial weeks for weeks 1 or last/end)
-    # weeks_per_month = [6,5,5,5,5,5,6,5,5,6,5,5]  # These are the total number of weeks where there's at least one day 1-7
-    # for month in 1:12
-    #     weeks = weeks_per_month[month]
-    #     days = daysinmonth(Date(string(year) * "-" * string(month)))
-    #     for week in 1:weeks
-    #         day = 1
-    #         if week == 1 && !(month == 1)
-    #             start_day_of_week = 1
-    #         elseif week == weeks_per_month[month]
-                
-    #         while start_day <= 7 do
-    #             entry_base["month"] = month
-    #             entry_base["start_week_of_month"] = week
-    #             entry_base["start_day_of_week"] = start_day
-    #             append!(consecutive_periods, entry)
-    #             start_day += 1
-    #             day += 1
-    #         end
+    profile = zeros(length(dr))
+    profile[idxs] .= 1
 
-    # profile = generate_year_profile_hourly(year, consecutive_periods)
+    return profile
 end
 
 function get_returned_and_required_soc(soc_used_off_site, availability_series)
@@ -118,14 +155,27 @@ function get_returned_and_required_soc(soc_used_off_site, availability_series)
     leaving_next_time_step_soc_min::Array{Float64, 1} = zeros(8760)
     # TODO this is only populating the first event, then stuck in the same "switch" state
     for ts in firstindex(availability_series)+1:lastindex(availability_series)  # eachindex or axes(availability_series, 1) starting at ts=2?
+        mth = Dates.month(ts)
+        
+        # What quarter of the calendar year?
+        if mth >= 10
+            idx = 4
+        elseif mth >= 7
+            idx = 3
+        elseif mth >= 4
+            idx = 2
+        else
+            idx = 1
+        end
+    
         if !(availability_series[ts] == availability_series[ts-1])
             if availability_series[ts] == 1
                 # Back on site
-                back_on_site_time_step_soc_drained[ts] = soc_used_off_site
+                back_on_site_time_step_soc_drained[ts] = soc_used_off_site[idx][1]
             elseif availability_series[ts] == 0
                 # Leaving next time step
                 # TODO add a "buffer"/extra charge as an input for soc above the min required soc_used_off_site (max(1,soc_used+buffer))
-                leaving_next_time_step_soc_min[ts-1] = soc_used_off_site
+                leaving_next_time_step_soc_min[ts-1] = soc_used_off_site[idx][2]
             end
         end
     end
@@ -137,9 +187,28 @@ end
 
 function ElectricVehicle(d::Dict)
     ev = ElectricVehicle(;d...)
-    ev.ev_on_site_series = get_availability_series(ev.ev_on_site_start_end)
-    ev.back_on_site_time_step_soc_drained, 
-        ev.leaving_next_time_step_soc_min = get_returned_and_required_soc(d[:soc_used_off_site], ev.ev_on_site_series)
+    # ev.ev_on_site_series = get_availability_series(ev.ev_on_site_start_end)
+    
+    # If ev_on_site_series is nothing then create availability_series using start_end input.
+    # Else we just use ev_on_site_series
+    if isnothing(ev.ev_on_site_series)
+        avail_series = []
+
+        for (idx, pair) in enumerate(ev.ev_on_site_start_end)
+            push!(avail_series, get_availability_series(pair, idx))
+        end
+
+        ev.ev_on_site_series = vcat(avail_series...)
+    end
+    
+    if isnothing(ev.leaving_next_time_step_soc_min) && isnothing(ev.back_on_site_time_step_soc_drained)
+        @info "Using 'soc_used_off_site' input to create EV SOC timeseries"
+        ev.back_on_site_time_step_soc_drained, ev.leaving_next_time_step_soc_min = get_returned_and_required_soc(d[:soc_used_off_site], ev.ev_on_site_series)
+    elseif isnothing(ev.leaving_next_time_step_soc_min) || isnothing(ev.back_on_site_time_step_soc_drained)
+        throw(@error("Either EV leaving or back on site SOC timeseries was not provided. Either both inputs must be provided or omitted from the inputs JSON"))
+    else
+        nothing
+    end
     return ev
 end
 
