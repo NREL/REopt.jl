@@ -31,6 +31,15 @@ Classify the change according to the following categories:
 ### Fixed
 - Fixed previously broken tests using HiGHS in `test/runtests.jl` due to solver incompatibility.
 
+## Develop 2024-03-26
+### Added 
+- in `src/settings.jl`, added new const **INDICATOR_COMPATIBLE_SOLVERS**
+- in `src/settings.jl`, added new member **solver_name** within the settings object.  This is currently not connected to the solver but does determine whether indicator constraints are modeled or if their big-M workarounds are used.
+- added replacements for indicator constraints with the exception of battery degradation, which is implemented in a separate model, and FlexibleHVAC.  TODO's have been added for these remaining cases.
+
+### Fixed
+- Fixed previously broken tests using HiGHS in `test/runtests.jl` due to solver incompatibility.
+
 ## v0.43.0
 ### Fixed
 - `simple_payback_years` calculation when there is export credit
