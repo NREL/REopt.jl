@@ -150,8 +150,8 @@ end
     installed_cost_per_kwh::Real = 455.0
     replace_cost_per_kw::Real = 715.0
     replace_cost_per_kwh::Real = 318.0
-    om_cost_per_kw::Real = 0.0
-    om_cost_per_kwh::Real = 0.0
+    om_cost_per_kw::Real = 0.0 # Capacity-based O&M costs in $/kW-rated/year. When including battery replacement costs, the user should ensure that O&M costs do not account for augmentation/replacement.
+    om_cost_per_kwh::Real = 0.0 # Capacity-based O&M costs in $/kWh-rated/year. When including battery replacement costs, the user should ensure that O&M costs do not account for augmentation/replacement.
     inverter_replacement_year::Int = 10
     battery_replacement_year::Int = 10
     macrs_option_years::Int = 7
@@ -166,8 +166,8 @@ end
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
-    daily_self_discharge_fraction::Float64 = 0.0
-```
+    daily_self_discharge_fraction::Float64 = 0.0 # Battery self-discharge as a fraction per day loss based on kWh stored in each timestep
+``` 
 """
 Base.@kwdef struct ElectricStorageDefaults
     off_grid_flag::Bool = false

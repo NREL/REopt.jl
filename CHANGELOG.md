@@ -23,7 +23,14 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop 2024-03-26
+## Develop 2024-04-01
+### Added
+- Added new inputs **om_cost_per_kw** and **om_cost_per_kwh** to `ElectricStorage` for modeling capacity-based O&M 
+- Added new input **daily_self_discharge_fraction** to `ElectricStorage` for modeling battery self-discharge
+- Added new outputs **lifecycle_om_cost_after_tax** and **year_one_om_cost_before_tax** to `ElectricStorage` 
+- Added testsets **Electric Storage O&M** and **Electric Storage Self-Discharge** in `test/runtests.jl`
+
+## v0.44.0
 ### Added 
 - in `src/settings.jl`, added new const **INDICATOR_COMPATIBLE_SOLVERS**
 - in `src/settings.jl`, added new member **solver_name** within the settings object.  This is currently not connected to the solver but does determine whether indicator constraints are modeled or if their big-M workarounds are used.
