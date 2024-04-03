@@ -30,7 +30,7 @@ function add_outage_cost_constraints(m,p)
     )
    
     if !isempty(setdiff(p.techs.elec, p.techs.segmented))
-        if p.s.settings.solver_name in INDICATOR_COMPATIBLE_SOLVERS
+        if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
             @constraint(m, [t in setdiff(p.techs.elec, p.techs.segmented)],
                 m[:binMGTechUsed][t] => {m[:dvMGTechUpgradeCost][t] >= p.s.financial.microgrid_upgrade_cost_fraction * p.third_party_factor *
                                         p.cap_cost_slope[t] * m[:dvMGsize][t]}
@@ -51,7 +51,7 @@ function add_outage_cost_constraints(m,p)
 
     if !isempty(p.techs.segmented)
         @warn "Adding binary variable(s) to model cost curves in stochastic outages"
-        if p.s.settings.solver_name in INDICATOR_COMPATIBLE_SOLVERS
+        if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
             @constraint(m, [t in p.techs.segmented],  # cannot have this for statement in sum( ... for t in ...) ???
                 m[:binMGTechUsed][t] => {m[:dvMGTechUpgradeCost][t] >= p.s.financial.microgrid_upgrade_cost_fraction * p.third_party_factor * 
                     sum(p.cap_cost_slope[t][s] * m[Symbol("dvSegmentSystemSize"*t)][s] + 
@@ -68,7 +68,7 @@ function add_outage_cost_constraints(m,p)
         end
     end
 
-    if p.s.settings.solver_name in INDICATOR_COMPATIBLE_SOLVERS
+    if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
         @constraint(m,
             m[:binMGStorageUsed] => {m[:dvMGStorageUpgradeCost] >= p.s.financial.microgrid_upgrade_cost_fraction * m[:TotalStorageCapCosts]}
         )
@@ -231,7 +231,7 @@ end
 function add_binMGGenIsOnInTS_constraints(m,p)
     # The following 2 constraints define binMGGenIsOnInTS to be the binary corollary to dvMGRatedProd for generator,
     # i.e. binMGGenIsOnInTS = 1 for dvMGRatedProd > min_turn_down_fraction * dvMGsize, and binMGGenIsOnInTS = 0 for dvMGRatedProd = 0
-    if p.s.settings.solver_name in INDICATOR_COMPATIBLE_SOLVERS
+    if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
         @constraint(m, [t in p.techs.gen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
             !m[:binMGGenIsOnInTS][s, tz, ts] => { m[:dvMGRatedProduction][t, s, tz, ts] <= 0 }
         )
@@ -257,7 +257,7 @@ end
 function add_binMGCHPIsOnInTS_constraints(m, p; _n="")
     # The following 2 constraints define binMGCHPIsOnInTS to be the binary corollary to dvMGRatedProd for CHP,
     # i.e. binMGCHPIsOnInTS = 1 for dvMGRatedProd > min_turn_down_fraction * dvMGsize, and binMGCHPIsOnInTS = 0 for dvMGRatedProd = 0
-    if p.s.settings.solver_name in INDICATOR_COMPATIBLE_SOLVERS
+    if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
         @constraint(m, [t in p.techs.chp, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
             !m[:binMGCHPIsOnInTS][s, tz, ts] => { m[:dvMGRatedProduction][t, s, tz, ts] <= 0 }
         )
@@ -314,7 +314,7 @@ function add_MG_storage_dispatch_constraints(m,p)
         m[:dvStorageEnergy]["ElectricStorage"] >= m[:dvMGStoredEnergy][s, tz, ts]
     )
     
-    if p.s.settings.solver_name in INDICATOR_COMPATIBLE_SOLVERS
+    if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
         @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
             !m[:binMGStorageUsed] => { sum(m[:dvMGProductionToStorage][t, s, tz, ts] for t in p.techs.elec) <= 0 }
         )
@@ -356,7 +356,7 @@ function add_cannot_have_MG_with_only_PVwind_constraints(m, p)
     renewable_techs = setdiff(p.techs.elec, dispatchable_techs)
     # can't "turn down" renewable_techs
     if !isempty(renewable_techs)
-        if p.s.settings.solver_name in INDICATOR_COMPATIBLE_SOLVERS
+        if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
             @constraint(m, [t in renewable_techs, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
                 m[:binMGTechUsed][t] => { m[:dvMGRatedProduction][t, s, tz, ts] >= m[:dvMGsize][t] }
             )
