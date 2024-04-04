@@ -63,13 +63,15 @@ function add_electric_vehicle_results!(m::JuMP.AbstractModel, p::REoptInputs, d:
     end
 
     d[b]["on_site_techs_to_ev_series_kw"] = round.(
-        value.(sum(m[Symbol("dvProductionToStorage")]["EV1", t, ts] for t in p.techs.elec) for ts in p.time_steps)
-        + value.(sum(m[Symbol("dvStorageToEV")]["EV1", t, ts] for t in filter(x -> !occursin("EV", x), p.s.storage.types.elec)) for ts in p.time_steps),
+        value.(sum(m[Symbol("dvProductionToStorage")][b, t, ts] for t in p.techs.elec) for ts in p.time_steps),
     digits=3)
-    d[b]["annual_on_site_techs_to_ev_charge_energy_kwh"] = round(sum(d[b]["on_site_techs_to_ev_series_kw"]), digits=1)
+    d[b]["on_site_storage_to_ev_series_kw"] = round.(
+        value.(sum(m[Symbol("dvStorageToEV")][b, t, ts] for t in filter(x -> !occursin("EV", x), p.s.storage.types.elec)) for ts in p.time_steps),
+    digits=3)
+    d[b]["annual_on_site_techs_to_ev_charge_energy_kwh"] = round(sum(d[b]["on_site_techs_to_ev_series_kw"]), digits=1) + round(sum(d[b]["on_site_storage_to_ev_series_kw"]), digits=1)
     d[b]["grid_to_ev_series_kw"] = round.(value.(m[Symbol("dvGridToStorage"*_n)][b, ts] for ts in p.time_steps), digits=3)
     d[b]["annual_grid_to_ev_charge_energy_kwh"] = round(sum(d[b]["grid_to_ev_series_kw"]), digits=1)
-    d[b]["annual_total_to_ev_charge_energy_kwh"] = d[b]["annual_on_site_techs_to_ev_charge_energy_kwh"] + 
+    d[b]["annual_total_to_ev_charge_energy_kwh"] =  d[b]["annual_on_site_techs_to_ev_charge_energy_kwh"] + 
                                                     d[b]["annual_grid_to_ev_charge_energy_kwh"]
 
     nothing
