@@ -140,6 +140,24 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
 		@constraint(m, SteamTurbineTechProductionFlowCon[b in p.s.storage.types.hot, t in p.techs.steam_turbine, q in p.heating_loads, ts in p.time_steps],
 			m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] <=  m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
 			)
+        @constraint(m, StorageToTurbineProductionFlowCon[b in p.s.storage.types.hot, q in p.heating_loads, ts in p.time_steps],
+            m[Symbol("dvHeatFromStorageToTurbine"*_n)][b,q,ts] <= m[Symbol("dvHeatFromStorage"*_n)][b,q,ts]
+        )
+        for b in p.s.storage.types.hot
+            if !p.s.storage.attr[b].can_supply_steam_turbine
+                for q in p.heating_loads
+                    for ts in p.time_steps
+                        fix(m[Symbol("dvHeatFromStorageToTurbine"*_n)][b,q,ts], 0.0, force=true)
+                    end
+                end
+            else
+                if p.s.storage.attr[b].supply_turbine_only
+                    @constraint(m, StorageOnlyToSteamTurbineCon[q in p.heating_loads, ts in p.time_steps],
+                        m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] ==  m[Symbol("dvHeatFromStorageToTurbine"*_n)][b,q,ts]
+                        )
+                end
+            end
+        end
 	end
 
     # # Constraint (4g): CHP Thermal production sent to storage or grid must be less than technology's rated production

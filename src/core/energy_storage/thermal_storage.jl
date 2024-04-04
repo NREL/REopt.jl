@@ -86,6 +86,7 @@ Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults
     can_serve_dhw::Bool = true
     can_serve_space_heating::Bool = true
     can_serve_process_heat::Bool = false
+    supply_turbine_only::Bool = false
 end
 
 
@@ -136,6 +137,7 @@ Base.@kwdef struct HotSensibleTesDefaults <: AbstractThermalStorageDefaults
     can_serve_dhw::Bool = false
     can_serve_space_heating::Bool = false
     can_serve_process_heat::Bool = false
+    supply_turbine_only::Bool = true
 end
 
 
@@ -254,6 +256,7 @@ struct HotThermalStorage <: AbstractThermalStorage
     can_serve_dhw::Bool
     can_serve_space_heating::Bool
     can_serve_process_heat::Bool
+    supply_turbine_only::Bool
 
     function HotThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
          
@@ -306,6 +309,7 @@ struct HotThermalStorage <: AbstractThermalStorage
             s.can_serve_dhw,
             s.can_serve_space_heating,
             s.can_serve_process_heat,
+            s.supply_turbine_only
         )
     end
 end
@@ -345,6 +349,7 @@ struct HotSensibleTes <: AbstractThermalStorage
     can_serve_dhw::Bool
     can_serve_space_heating::Bool
     can_serve_process_heat::Bool
+    supply_turbine_only::Bool
 
     function HotSensibleTes(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
          
@@ -399,6 +404,7 @@ struct HotSensibleTes <: AbstractThermalStorage
             s.can_serve_dhw,
             s.can_serve_space_heating,
             s.can_serve_process_heat,
+            s.supply_turbine_only
         )
     end
 end
