@@ -23,15 +23,15 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop 2024-04-03
+## Develop - 2024-04-05
+### Fixed 
+- Added `export_rate_beyond_net_metering_limit` to list of inputs to be converted to type Real, to avoid MethodError if type is vector of Any. 
+
+## v0.44.0
 ### Added 
 - in `src/settings.jl`, added new const **INDICATOR_COMPATIBLE_SOLVERS**
 - in `src/settings.jl`, added new member **solver_name** within the settings object.  This is currently not connected to the solver but does determine whether indicator constraints are modeled or if their big-M workarounds are used.
 - added replacements for indicator constraints with the exception of battery degradation, which is implemented in a separate model, and FlexibleHVAC.  TODO's have been added for these remaining cases.
-### Changed
-- add **ElectricStorage** input option **soc_min_applies_during_outages** (which defaults to _false_) and only apply the minimum state of charge constraint in function `add_MG_storage_dispatch_constraints` if it is _true_
-
-
 ### Fixed
 - Fixed previously broken tests using HiGHS in `test/runtests.jl` due to solver incompatibility.
 
@@ -716,7 +716,7 @@ Other changes:
 ## v0.3.0
 ### Added
 - add separate decision variables and constraints for microgrid tech capacities
-    - new Site input `mg_tech_sizes_equal_grid_sizes` (boolean), when _false_ the microgrid tech capacities are constrained to be <= the grid connected tech capacities
+    - new Site input `mg_tech_sizes_equal_grid_sizes` (boolean), when `false` the microgrid tech capacities are constrained to be <= the grid connected tech capacities
 ### Fixed
 - allow non-integer `outage_probabilities`
 - correct `total_unserved_load` output
