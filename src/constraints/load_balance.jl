@@ -2,6 +2,7 @@
 
 function add_elec_load_balance_constraints(m, p; _n="") 
 
+    # + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.ev)
 	##Constraint (8a): Electrical Load Balancing with Grid
     if isempty(p.s.electric_tariff.export_bins)
         conrefs = @constraint(m, [ts in p.time_steps_with_grid],
@@ -11,8 +12,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
             ==
             sum(sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) 
                 + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.elec)
-            + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in filter(x -> !occursin("EV", x), p.s.storage.types.elec))
-            + sum(sum(m[Symbol("dvStorageToEV"*_n)][b, t, ts] for b in p.s.storage.types.ev) for t in filter(x -> !occursin("EV", x), p.s.storage.types.elec))
+            + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec)
             + sum(m[Symbol("dvThermalProduction"*_n)][t, ts] / p.cop[t] for t in p.techs.cooling)
             + sum(m[Symbol("dvThermalProduction"*_n)][t,ts] / p.heating_cop[t] for t in p.techs.electric_heater)
             + p.s.electric_load.loads_kw[ts]

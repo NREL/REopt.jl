@@ -209,7 +209,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         end
 	end
 
-	for b in p.s.storage.types.all
+	for b in setdiff(p.s.storage.types.elec, p.s.storage.types.ev)
 		if p.s.storage.attr[b].max_kw == 0 || p.s.storage.attr[b].max_kwh == 0
 			@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
 			@constraint(m, m[:dvStorageEnergy][b] == 0)
@@ -231,11 +231,12 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 				add_cold_thermal_storage_dispatch_constraints(m, p, b)
 			else
 				throw(@error("Invalid storage does not fall in a thermal or electrical set"))
-			end
-            if b in p.s.storage.types.ev
-                add_electric_vehicle_constraints(m, p, b)
-            end            
+			end            
 		end
+	end
+
+	for b in p.s.storage.types.ev
+		add_electric_vehicle_constraints(m, p, b)
 	end
 
     if !isempty(p.s.storage.types.ev)

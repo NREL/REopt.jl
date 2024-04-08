@@ -30,6 +30,16 @@
 
 function add_electric_vehicle_constraints(m, p, b; _n="")
 
+    add_storage_size_constraints(m, p, b)
+
+    @constraint(m, [ts in p.time_steps],
+        m[Symbol("dvStoredEnergy"*_n)][b,ts] <= m[Symbol("dvStorageEnergy"*_n)][b]
+    )
+
+    @constraint(m, [ts in p.time_steps],
+        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts]
+    )
+
 	# Stored energy must be greater than minimum required for the next trip
 	@constraint(m, [ts in p.time_steps],
         m[Symbol("dvStoredEnergy"*_n)][b, ts] 
@@ -37,15 +47,43 @@ function add_electric_vehicle_constraints(m, p, b; _n="")
         p.s.storage.attr[b].electric_vehicle.leaving_next_time_step_soc_min[ts] * 
         p.s.storage.attr[b].electric_vehicle.energy_capacity_kwh
     )
+
+    for ts in p.time_steps
+        energy_drained_series = p.s.storage.attr[b].electric_vehicle.back_on_site_time_step_soc_drained*p.s.storage.attr[b].electric_vehicle.energy_capacity_kwh;
+        
+        if p.s.storage.attr[b].electric_vehicle.ev_on_site_series[ts]==1
+            @constraint(m,
+                m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (
+                    sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) 
+                    + m[Symbol("dvGridToStorage"*_n)][b, ts]
+                    + m[Symbol("dvStorageToEV"*_n)][b, "ElectricStorage", ts]
+                    + m[Symbol("dvDischargeFromStorage"*_n)][b,ts]
+                    - energy_drained_series[ts]
+                )
+            )
+        else
+            nothing
+            @constraint(m, m[Symbol("dvStoredEnergy"*_n)][b, ts] == 0)
+        end
+    
+        @constraint(m,
+            m[Symbol("dvStoredEnergy"*_n)][b, ts] >= p.s.storage.attr[b].soc_min_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
+    	)
+    end
+    
+    for ts in p.time_steps[2:end]
+        @constraint(m,
+            m[Symbol("dvStoredEnergy"*_n)][b, ts] 
+            >= p.s.storage.attr[b].electric_vehicle.back_on_site_time_step_soc_drained[ts] * 
+            p.s.storage.attr[b].electric_vehicle.energy_capacity_kwh
+        )
+    end
 	
 	# Power to and from EV is zero when it is off-site
 	for ts in p.time_steps
         if iszero(p.s.storage.attr[b].electric_vehicle.ev_on_site_series[ts])
             for t in p.techs.elec
                 fix(m[Symbol("dvProductionToStorage"*_n)][b, t, ts], 0.0, force=true)
-            end
-            for t in filter(x -> !occursin("EV", x), p.s.storage.types.elec)
-                fix(m[Symbol("dvStorageToEV"*_n)][b, t, ts], 0.0, force=true)
             end
             fix(m[Symbol("dvGridToStorage"*_n)][b, ts], 0.0, force=true)
             fix(m[Symbol("dvDischargeFromStorage"*_n)][b,ts], 0.0, force=true)

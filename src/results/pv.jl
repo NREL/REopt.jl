@@ -41,6 +41,13 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 			PVtoBatt = repeat([0], length(p.time_steps))
             PVtoEVs = repeat([0], length(p.time_steps))
 		end
+
+        if !isempty(p.s.storage.types.ev)
+            PVtoEVs = (sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.ev) for ts in p.time_steps)
+		else
+            PVtoEVs = repeat([0], length(p.time_steps))
+		end
+
 		r["electric_to_storage_series_kw"] = round.(value.(PVtoBatt), digits=3)
         r["electric_to_electricvehicle_series_kw"] = round.(value.(PVtoEVs), digits=3)
 
