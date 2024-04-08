@@ -329,7 +329,8 @@ struct ElectricStorage <: AbstractElectricStorage
             s.model_degradation,
             degr,
             s.minimum_avg_soc_fraction,
-            s.max_duration_hours
+            s.max_duration_hours,
+            s.min_duration_hours
         )
     end
 end
