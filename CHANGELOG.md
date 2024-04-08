@@ -23,6 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop 2024-04-05
+### Added
+- Add new parameters `max_duration_hours` and `min_duration_hours` to bound the energy duration of battery storage
+
 ## Develop 2024-01-16
 ### Fixed
 - In `reopt.jl`, group objective function incentives (into **ObjectivePenalties**) and avoid directly modifying m[:Costs]. Previously, some of these were incorrectly included in the reported **Financial.lcc**. 
