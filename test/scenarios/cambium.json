@@ -1,0 +1,18 @@
+{
+    "Site": {},
+    "ElectricUtility": {},
+    "PV": {
+        "array_type": 0,
+        "min_kw": 100,
+        "max_kw": 100
+    },
+    "ElectricLoad": {
+    },
+    "ElectricTariff": {
+        "urdb_label": "5ed6c1a15457a3367add15ae"
+    },
+    "Financial": {
+        "elec_cost_escalation_rate_fraction": 0.026,
+        "analysis_years": 25
+    }
+}

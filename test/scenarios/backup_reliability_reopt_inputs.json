@@ -66,6 +66,9 @@
         "min_kw": 200,
         "max_kw": 200
     },
+    "ElectricUtility" : {
+        "co2_from_avert" : true
+    },
     "ElectricStorage": {
         "min_kw": 50,
         "max_kw": 50,
