@@ -62,6 +62,7 @@ Base.@kwdef mutable struct ElectricVehicle
     soc_used_off_site::Array{Array{Float64, 1}, 1} = [[0.2,0.8],[0.2,0.8],[0.2,0.8],[0.2,0.8]]
     leaving_next_time_step_soc_min::Union{Array{Float64, 1}, Nothing} = nothing
     back_on_site_time_step_soc_drained::Union{Array{Float64, 1}, Nothing} = nothing
+    time_steps_per_hour::Int = 1
 end
 
 # function get_availability_series(start_end::Array{Int64, 1}, year::Int64=2017)
@@ -113,7 +114,7 @@ end
 #     # profile = generate_year_profile_hourly(year, consecutive_periods)
 # end
 
-function get_availability_series(start_end::Array{Int64, 1}, cy_quarter::Int, year::Int64=2017)
+function get_availability_series(start_end::Array{Int64, 1}, cy_quarter::Int, year::Int64=2017; time_steps_per_hour=1)
 
     if cy_quarter == 1
         month_st = 1
@@ -133,7 +134,7 @@ function get_availability_series(start_end::Array{Int64, 1}, cy_quarter::Int, ye
         num_days = 31
     end
     
-    dr = DateTime(year, month_st, 1):Dates.Minute(60):DateTime(year, month_en, num_days, 23, 59)
+    dr = DateTime(year, month_st, 1):Dates.Minute(Int(60/time_steps_per_hour)):DateTime(year, month_en, num_days, 23, 59)
 
     idxs = nothing
     if start_end[1] < start_end[2]
@@ -150,9 +151,9 @@ function get_availability_series(start_end::Array{Int64, 1}, cy_quarter::Int, ye
     return profile
 end
 
-function get_returned_and_required_soc(soc_used_off_site, availability_series)
-    back_on_site_time_step_soc_drained::Array{Float64, 1} = zeros(8760)
-    leaving_next_time_step_soc_min::Array{Float64, 1} = zeros(8760)
+function get_returned_and_required_soc(soc_used_off_site, availability_series; time_steps_per_hour=1)
+    back_on_site_time_step_soc_drained::Array{Float64, 1} = zeros(Int(8760*time_steps_per_hour))
+    leaving_next_time_step_soc_min::Array{Float64, 1} = zeros(Int(8760*time_steps_per_hour))
     # TODO this is only populating the first event, then stuck in the same "switch" state
     for ts in firstindex(availability_series)+1:lastindex(availability_series)  # eachindex or axes(availability_series, 1) starting at ts=2?
         mth = Dates.month(ts)
@@ -195,7 +196,7 @@ function ElectricVehicle(d::Dict)
         avail_series = []
 
         for (idx, pair) in enumerate(ev.ev_on_site_start_end)
-            push!(avail_series, get_availability_series(pair, idx))
+            push!(avail_series, get_availability_series(pair, idx; time_steps_per_hour=ev.time_steps_per_hour))
         end
 
         ev.ev_on_site_series = vcat(avail_series...)
@@ -203,7 +204,7 @@ function ElectricVehicle(d::Dict)
     
     if isnothing(ev.leaving_next_time_step_soc_min) && isnothing(ev.back_on_site_time_step_soc_drained)
         @info "Using 'soc_used_off_site' input to create EV SOC timeseries"
-        ev.back_on_site_time_step_soc_drained, ev.leaving_next_time_step_soc_min = get_returned_and_required_soc(d[:soc_used_off_site], ev.ev_on_site_series)
+        ev.back_on_site_time_step_soc_drained, ev.leaving_next_time_step_soc_min = get_returned_and_required_soc(d[:soc_used_off_site], ev.ev_on_site_series; time_steps_per_hour = ev.time_steps_per_hour)
     elseif isnothing(ev.leaving_next_time_step_soc_min) || isnothing(ev.back_on_site_time_step_soc_drained)
         throw(@error("Either EV leaving or back on site SOC timeseries was not provided. Either both inputs must be provided or omitted from the inputs JSON"))
     else

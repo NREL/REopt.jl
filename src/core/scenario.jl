@@ -175,6 +175,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             throw(@error "EV input must be Dict or Dict[].")
         end
         for (i, ev) in enumerate(d["ElectricVehicle"])
+            ev["time_steps_per_hour"] = settings.time_steps_per_hour
             ev_name_input = get(ev, "name", "")
             if isempty(ev_name_input)
                 ev["name"] = string("EV", i)
