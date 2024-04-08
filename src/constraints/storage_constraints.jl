@@ -27,6 +27,10 @@ function add_storage_size_constraints(m, p, b; _n="")
         m[Symbol("dvStorageEnergy"*_n)][b] <= m[Symbol("dvStoragePower"*_n)][b] * p.s.storage.attr[b].max_duration_hours
     )
 
+    @constraint(m,
+        m[Symbol("dvStorageEnergy"*_n)][b] >= m[Symbol("dvStoragePower"*_n)][b] * p.s.storage.attr[b].min_duration_hours
+    )
+
 end
 
 

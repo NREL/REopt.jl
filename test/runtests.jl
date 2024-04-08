@@ -13,7 +13,7 @@ Random.seed!(42)
 if "Xpress" in ARGS
     @testset "test_with_xpress" begin
         @test true  #skipping Xpress while import to HiGHS takes place
-        #include("test_with_xpress.jl")
+        include("test_with_xpress.jl")
     end
 
 elseif "CPLEX" in ARGS
@@ -298,7 +298,8 @@ else  # run HiGHS tests
                     "max_kwh" => 400000,
                     "soc_min_fraction" => 0.8,
                     "soc_init_fraction" => 0.9,
-                    "max_duration_hours" => 100
+                    "max_duration_hours" => 100,
+                    "min_duration_hours" => 0.0
                 ),
                 "ElectricLoad" => Dict(
                     "doe_reference_name" => "FlatLoad",
