@@ -25,7 +25,7 @@ Classify the change according to the following categories:
 
 ## Develop 2024-04-05
 ### Added
-- Add new parameters `max_duration_hours` and `min_duration_hours` to bound the energy duration of battery storage
+- Add new parameters **max_duration_hours** and **min_duration_hours** to bound the energy duration of battery storage
 
 ## Develop 2024-01-16
 ### Fixed
