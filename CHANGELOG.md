@@ -23,9 +23,9 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop - 2024-04-05
-### Fixed 
-- Added `export_rate_beyond_net_metering_limit` to list of inputs to be converted to type Real, to avoid MethodError if type is vector of Any. 
+## Develop 
+### Changed 
+- Changed the way we determine which dataset to utilize in the PVWatts API call. Previously, we utilized defined lat-long bounds. Now, we call the Solar Dataset Query API (v2) to determine the dataset to use. 
 
 ## v0.44.0
 ### Added 
