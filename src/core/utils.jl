@@ -360,6 +360,58 @@ function generate_year_profile_hourly(year::Int64, consecutive_periods::Abstract
     return year_profile_hourly
 end
 
+"""
+    call_solar_dataset_api(latitude::Real, longitude::Real, radius::Int)
+This calls the Solar Dataset Query API to determine the dataset to use in the PVWatts API. 
+Returns: 
+- dataset: "nsrdb" if available within 5 miles, or whichever is closer of "intl" and "tmy3"
+- dist_meters: distance in meters from the site location to the dataset station
+- datasource: Name of source of the weather data used in the simulation.
+"""
+function call_solar_dataset_api(latitude::Real, longitude::Real, radius::Int)
+
+    check_api_key()
+
+    url = string("https://developer.nrel.gov/api/solar/data_query/v2.json", "?api_key=", ENV["NREL_DEVELOPER_API_KEY"],
+        "&lat=", latitude , "&lon=", longitude, "&radius=", radius, "&all=", 0 
+        )
+    try
+        r = HTTP.get(url, keepalive=true, readtimeout=10)
+        response = JSON.parse(String(r.body))
+
+        if r.status != 200
+            throw(@error("Bad response from Solar Dataset Query: $(response["errors"])"))
+        end
+
+        nsrdb_empty = isnothing(response["outputs"]["nsrdb"])
+        intl_empty = isnothing(response["outputs"]["intl"])
+        tmy3_empty = isnothing(response["outputs"]["tmy3"])
+        
+        if nsrdb_empty && intl_empty && tmy3_empty # Check that at least one dataset is available
+            throw(@error("No solar weather_data_source is available within $radius miles of this location. Try expanding your search radius or setting radius=0."))
+        end
+
+        nsrdb_meters = nsrdb_empty ? 1e10 : response["outputs"]["nsrdb"]["distance"] # The distance in meters from the input location to the station.
+        intl_meters = intl_empty ? 1e10 : response["outputs"]["intl"]["distance"]
+        tmy3_meters = tmy3_empty ? 1e10 : response["outputs"]["tmy3"]["distance"] # AK is currently split between NSRDB and TMY3 datasets
+
+        if nsrdb_empty + intl_empty + tmy3_empty == 1 # If only 1 is available, use that one (will only be true if user specified radius)
+            dataset = !(nsrdb_empty) ? "nsrdb" : !(intl_empty) ? "intl" : "tmy3"
+        elseif nsrdb_meters < 5*1609.34 # at least 2 have data, so check if nsrdb is closer than 5 miles away. Use nsrdb if close enough, because data quality is highest (TODO: confirm this distance)
+            dataset = "nsrdb"
+        else # at least 2 have data and nsrdb is further than 5 mi away, so check which is closest
+            dataset = nsrdb_meters <= intl_meters && nsrdb_meters <= tmy3_meters ? "nsrdb" : intl_meters <= nsrdb_meters && intl_meters <= tmy3_meters ? "intl" : "tmy3"
+        end
+
+        dist_meters = response["outputs"][dataset]["distance"]
+        datasource = response["outputs"][dataset]["weather_data_source"]
+
+        return dataset, dist_meters, datasource
+    catch e
+        throw(@error("Error occurred when calling Solar Dataset Query API: $e"))
+    end
+end
+
 
 """
     call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimuth=180, module_type=0, array_type=1, 
@@ -371,15 +423,8 @@ This calls the PVWatts API and returns both:
 function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimuth=180, module_type=0, array_type=1, 
     losses=14, dc_ac_ratio=1.2, gcr=0.4, inv_eff=96, timeframe="hourly", radius=0, time_steps_per_hour=1)
     # Check if site is beyond the bounds of the NRSDB TMY dataset. If so, use the international dataset.
-    dataset = "nsrdb"
-    if longitude < -179.5 || longitude > -21.0 || latitude < -21.5 || latitude > 60.0
-        if longitude < 81.5 || longitude > 179.5 || latitude < -60.0 || latitude > 60.0 
-            if longitude < 67.0 || latitude < -40.0 || latitude > 38.0
-                dataset = "intl"
-            end
-        end
-    end
-    check_api_key()
+    dataset, dist_meters, datasource  = call_solar_dataset_api(latitude, longitude, radius)
+
     url = string("https://developer.nrel.gov/api/pvwatts/v8.json", "?api_key=", ENV["NREL_DEVELOPER_API_KEY"],
         "&lat=", latitude , "&lon=", longitude, "&tilt=", tilt,
         "&system_capacity=1", "&azimuth=", azimuth, "&module_type=", module_type,
@@ -417,7 +462,6 @@ function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimut
         throw(@error("Error occurred when calling PVWatts: $e"))
     end
 end
-
 
 """
     Convert gallons of stored liquid (e.g. water, water/glycol) to kWh of stored energy in a stratefied tank
