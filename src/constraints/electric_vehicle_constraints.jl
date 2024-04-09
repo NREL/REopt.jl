@@ -57,12 +57,10 @@ function add_electric_vehicle_constraints(m, p, b; _n="")
                     sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) 
                     + m[Symbol("dvGridToStorage"*_n)][b, ts]
                     + m[Symbol("dvStorageToEV"*_n)][b, "ElectricStorage", ts]
-                    + m[Symbol("dvDischargeFromStorage"*_n)][b,ts]
-                    - energy_drained_series[ts]
-                )
+                    - m[Symbol("dvDischargeFromStorage"*_n)][b,ts]
+                ) + energy_drained_series[ts]
             )
         else
-            nothing
             @constraint(m, m[Symbol("dvStoredEnergy"*_n)][b, ts] == 0)
         end
     
