@@ -23,9 +23,9 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop 2024-04-03
-### Changed
-- add **ElectricStorage** input option **soc_min_applies_during_outages** (which defaults to _false_) and only apply the minimum state of charge constraint in function `add_MG_storage_dispatch_constraints` if it is _true_
+## Develop - 2024-04-05
+### Fixed 
+- Added `export_rate_beyond_net_metering_limit` to list of inputs to be converted to type Real, to avoid MethodError if type is vector of Any. 
 
 ## v0.44.0
 ### Added 
@@ -716,7 +716,7 @@ Other changes:
 ## v0.3.0
 ### Added
 - add separate decision variables and constraints for microgrid tech capacities
-    - new Site input `mg_tech_sizes_equal_grid_sizes` (boolean), when _false_ the microgrid tech capacities are constrained to be <= the grid connected tech capacities
+    - new Site input `mg_tech_sizes_equal_grid_sizes` (boolean), when `false` the microgrid tech capacities are constrained to be <= the grid connected tech capacities
 ### Fixed
 - allow non-integer `outage_probabilities`
 - correct `total_unserved_load` output
