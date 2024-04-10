@@ -23,6 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2024-04-05
+### Fixed 
+- Added `export_rate_beyond_net_metering_limit` to list of inputs to be converted to type Real, to avoid MethodError if type is vector of Any. 
+
 ## v0.44.0
 ### Added 
 - in `src/settings.jl`, added new const **INDICATOR_COMPATIBLE_SOLVERS**
