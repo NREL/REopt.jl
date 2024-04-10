@@ -66,7 +66,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
         m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  
             sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.elec) 
             - m[Symbol("dvDischargeFromStorage"*_n)][b, ts] / p.s.storage.attr[b].discharge_efficiency
-            - energy_drained_series[ts]
+            - sum(m[Symbol("dvStorageToEV"*_n)][ev,b,ts] / p.s.storage.attr[b].discharge_efficiency for ev in p.s.storage.types.ev)
         )
     )
 
