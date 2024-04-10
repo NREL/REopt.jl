@@ -48,8 +48,9 @@ function add_electric_vehicle_constraints(m, p, b; _n="")
         p.s.storage.attr[b].electric_vehicle.energy_capacity_kwh
     )
 
+    energy_drained_series = p.s.storage.attr[b].electric_vehicle.back_on_site_time_step_soc_drained*p.s.storage.attr[b].electric_vehicle.energy_capacity_kwh;
+
     for ts in p.time_steps
-        energy_drained_series = p.s.storage.attr[b].electric_vehicle.back_on_site_time_step_soc_drained*p.s.storage.attr[b].electric_vehicle.energy_capacity_kwh;
         
         if p.s.storage.attr[b].electric_vehicle.ev_on_site_series[ts]==1
             @constraint(m,
@@ -69,7 +70,7 @@ function add_electric_vehicle_constraints(m, p, b; _n="")
     	)
     end
     
-    for ts in p.time_steps[2:end]
+    for ts in p.time_steps
         @constraint(m,
             m[Symbol("dvStoredEnergy"*_n)][b, ts] 
             >= p.s.storage.attr[b].electric_vehicle.back_on_site_time_step_soc_drained[ts] * 

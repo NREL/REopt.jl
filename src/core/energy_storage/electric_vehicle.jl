@@ -139,7 +139,8 @@ function get_availability_series(start_end::Array{Int64, 1}, cy_quarter::Int, ye
     idxs = nothing
     if start_end[1] < start_end[2]
         # EV is at the site during the day (commercial without their own EVs, just workers' EVs)
-        idxs = findall(x -> start_end[1] <= Dates.hour(x) < start_end[2], filter(x -> Dates.dayofweek(x) <= 5, dr))
+        # idxs = findall(x -> start_end[1] <= Dates.hour(x) < start_end[2], filter(x -> Dates.dayofweek(x) <= 5, dr))
+        idxs = findall(x -> (Dates.dayofweek(x) <= 5) && (start_end[1] <= Dates.hour(x) < start_end[2]), dr)
     else
         # EV is at the site during the night (commercial with their own EVs, or residential)
         idxs = findall(x -> Dates.hour(x) ∈ vcat([start_end[2]:23;], [0:start_end[1];]), filter(x -> Dates.dayofweek(x) <= 5, dr))
