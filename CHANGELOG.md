@@ -23,7 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop 2024-04-03
+## Develop - 2024-04-05
+### Fixed 
+- Added `export_rate_beyond_net_metering_limit` to list of inputs to be converted to type Real, to avoid MethodError if type is vector of Any. 
+- Fix blended CRB processing when one or more load types have zero annual energy
 ### Changed
 - add **ElectricStorage** input option **soc_min_applies_during_outages** (which defaults to _false_) and only apply the minimum state of charge constraint in function `add_MG_storage_dispatch_constraints` if it is _true_
 
