@@ -25,10 +25,6 @@ function Techs(p::REoptInputs, s::BAUScenario)
     steam_turbines = String[]
     techs_can_supply_steam_turbine = String[]
     electric_heaters = String[]
-    techs_can_serve_space_heating = String[]
-    techs_can_serve_dhw = String[]
-    techs_can_serve_process_heat = String[]
-    ghp_techs = String[]
 
     if p.s.generator.existing_kw > 0
         push!(all_techs, "Generator")
@@ -84,11 +80,7 @@ function Techs(p::REoptInputs, s::BAUScenario)
         absorption_chillers,
         steam_turbines,
         techs_can_supply_steam_turbine,
-        electric_heaters,
-        techs_can_serve_space_heating,
-        techs_can_serve_dhw,
-        techs_can_serve_process_heat,
-        ghp_techs
+        electric_heaters        
     )
 end
 
@@ -122,11 +114,7 @@ function Techs(s::Scenario)
     absorption_chillers = String[]
     steam_turbines = String[]
     techs_can_supply_steam_turbine = String[]
-    electric_heaters = String[]   
-    techs_can_serve_space_heating = String[]
-    techs_can_serve_dhw = String[] 
-    techs_can_serve_process_heat = String[]
-    ghp_techs = String[]
+    electric_heaters = String[]    
 
     if s.wind.max_kw > 0
         push!(all_techs, "Wind")
@@ -269,11 +257,7 @@ function Techs(s::Scenario)
         absorption_chillers,
         steam_turbines,
         techs_can_supply_steam_turbine,
-        electric_heaters,
-        techs_can_serve_space_heating,
-        techs_can_serve_dhw,
-        techs_can_serve_process_heat,
-        ghp_techs
+        electric_heaters
     )
 end
 
@@ -308,10 +292,6 @@ function Techs(s::MPCScenario)
         String[],
         String[],
         techs_no_turndown,
-        String[],
-        String[],
-        String[],
-        String[],
         String[],
         String[],
         String[],
