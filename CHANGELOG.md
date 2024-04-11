@@ -27,8 +27,6 @@ Classify the change according to the following categories:
 ### Fixed 
 - Added `export_rate_beyond_net_metering_limit` to list of inputs to be converted to type Real, to avoid MethodError if type is vector of Any. 
 - Fix blended CRB processing when one or more load types have zero annual energy
-### Changed
-- add **ElectricStorage** input option **soc_min_applies_during_outages** (which defaults to _false_) and only apply the minimum state of charge constraint in function `add_MG_storage_dispatch_constraints` if it is _true_
 
 ## v0.44.0
 ### Added 
@@ -83,6 +81,8 @@ Classify the change according to the following categories:
 
 ### Fixed
 - In `reopt.jl`, group objective function incentives (into **ObjectivePenalties**) and avoid directly modifying m[:Costs]. Previously, some of these were incorrectly included in the reported **Financial.lcc**. 
+- Changed instances of indexing using i in 1:length() paradigm to use eachindex() or axes() instead because this is more robust
+- In `src/core/urdb.jl`, ensure values from the "energyweekdayschedule" and "energyweekendschedule" arrays in the URDB response dictionary are converted to _Int_ before being used as indices
 
 ## v0.39.1
 ### Changed
@@ -691,7 +691,7 @@ Other changes:
 - handle missing input key for `year_one_soc_series_pct` in `outage_simulator` 
 - remove erroneous `total_unserved_load = 0` output
 - `dvUnservedLoad` definition was allowing microgrid production to storage and curtailment to be double counted towards meeting critical load
-#### Added
+### Added
 - add `unserved_load_per_outage` output
 
 ## v0.4.1
@@ -719,7 +719,7 @@ Other changes:
 ## v0.3.0
 ### Added
 - add separate decision variables and constraints for microgrid tech capacities
-    - new Site input `mg_tech_sizes_equal_grid_sizes` (boolean), when _false_ the microgrid tech capacities are constrained to be <= the grid connected tech capacities
+    - new Site input `mg_tech_sizes_equal_grid_sizes` (boolean), when `false` the microgrid tech capacities are constrained to be <= the grid connected tech capacities
 ### Fixed
 - allow non-integer `outage_probabilities`
 - correct `total_unserved_load` output
