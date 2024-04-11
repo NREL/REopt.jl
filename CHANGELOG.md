@@ -23,10 +23,12 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop - 2024-04-05
+## Develop - 2024-04-11
 ### Fixed 
 - Added `export_rate_beyond_net_metering_limit` to list of inputs to be converted to type Real, to avoid MethodError if type is vector of Any. 
 - Fix blended CRB processing when one or more load types have zero annual energy
+- Changed instances of indexing using i in 1:length() paradigm to use eachindex() or axes() instead because this is more robust
+- In `src/core/urdb.jl`, ensure values from the "energyweekdayschedule" and "energyweekendschedule" arrays in the URDB response dictionary are converted to _Int_ before being used as indices
 
 ## v0.44.0
 ### Added 
@@ -45,7 +47,6 @@ Classify the change according to the following categories:
 ## v0.42.0
 ### Changed
 - In `core/pv.jl` a change was made to make sure we are using the same assumptions as PVWatts guidelines, the default `tilt` angle for a fixed array should be 20 degrees, irrespective of it being a rooftop `(1)` or ground-mounted (open-rack)`(2)` system. By default the `tilt` will be set to 20 degrees for ground-mount and rooftop, and 0 degrees for axis-tracking (`array_type = (3) or (4)`)
-
 > "The PVWatts® default value for the tilt angle depends on the array type: For a fixed array, the default value is 20 degrees, and for one-axis tracking the default value is zero. A common rule of thumb for fixed arrays is to set the tilt angle to the latitude of the system's location to maximize the system's total electrical output over the year. Use a lower tilt angle favor peak production in the summer months when the sun is high in the sky, or a higher tilt angle to increase output during winter months. Higher tilt angles tend to cost more for racking and mounting hardware, and may increase the risk of wind damage to the array."
 
 ## v0.41.0
@@ -62,13 +63,11 @@ Classify the change according to the following categories:
     )
 - Changed calculation of all `annual` emissions results (e.g. **Site.annual_emissions_tonnes_CO2**) to simple annual averages (lifecycle emissions divided by analysis_years). This is because the default climate emissions from Cambium are already levelized over the analysis horizon and therefore "year_one" emissions cannot be easily obtained. 
 - Changed name of exported function **emissions_profiles** to **avert_emissions_profiles**
-
 ### Added
 - In `src/REopt.jl` and `src/electric_utility.jl`, added **cambium_emissions_profile** as an export for use via the REopt_API. 
 - In `src/REopt.jl`, added new const **EMISSIONS_DECREASE_DEFAULTS**
 - In `src/results/electric_utility.jl` **cambium_emissions_region**
 - In `test/runtests.jl` and `test/test_with_xpress.jl`, added testset **Cambium Emissions**
-
 ### Fixed 
 - Adjust grid emissions profiles for day of week alignment with load_year.
 - In `test_with_xpress.jl`, updated "Emissions and Renewable Energy Percent" expected values to account for load year adjustment. 
@@ -78,11 +77,8 @@ Classify the change according to the following categories:
 ## v0.40.0
 ### Changed
 - Changed **macrs_bonus_fraction** to from 0.80 to 0.60 (60%) for CHP, ElectricStorage, ColdThermalStorage, HotThermalStorage GHP, PV, Wind
-
 ### Fixed
 - In `reopt.jl`, group objective function incentives (into **ObjectivePenalties**) and avoid directly modifying m[:Costs]. Previously, some of these were incorrectly included in the reported **Financial.lcc**. 
-- Changed instances of indexing using i in 1:length() paradigm to use eachindex() or axes() instead because this is more robust
-- In `src/core/urdb.jl`, ensure values from the "energyweekdayschedule" and "energyweekendschedule" arrays in the URDB response dictionary are converted to _Int_ before being used as indices
 
 ## v0.39.1
 ### Changed
