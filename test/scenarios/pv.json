@@ -13,6 +13,9 @@
         "annual_kwh": 10000000.0,
         "year": 2017
     },
+    "ElectricUtility" : {
+        "co2_from_avert" : true
+    },
     "ElectricTariff": {
         "urdb_label": "5ed6c1a15457a3367add15ae"
     },

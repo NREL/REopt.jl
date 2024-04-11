@@ -21,7 +21,8 @@ export
     get_steam_turbine_defaults_size_class,
     simulated_load,
     get_absorption_chiller_defaults,
-    emissions_profiles,
+    avert_emissions_profiles,
+    cambium_emissions_profile,
     easiur_data,
     get_existing_chiller_default_cop
 
@@ -72,10 +73,10 @@ const FUEL_DEFAULTS = Dict(
         "diesel_oil"=>0.0
     ),
     "emissions_factor_lb_CO2_per_mmbtu" => Dict(
-        "natural_gas"=>116.9,
-        "landfill_bio_gas"=>114.8,
-        "propane"=>138.6,
-        "diesel_oil"=>163.1
+        "natural_gas"=>117.03,
+        "landfill_bio_gas"=>115.38,
+        "propane"=>139.16,
+        "diesel_oil"=>163.61
     ),
     "emissions_factor_lb_NOx_per_mmbtu" => Dict(
         "natural_gas"=>0.09139,
@@ -96,6 +97,13 @@ const FUEL_DEFAULTS = Dict(
         "diesel_oil"=>0.0
     )
 )
+const EMISSIONS_DECREASE_DEFAULTS = Dict(
+    "CO2e" => 0.02163,
+    "NOx" => 0.02163,
+    "SO2" => 0.02163,
+    "PM25" => 0.02163
+)
+const INDICATOR_COMPATIBLE_SOLVERS = ["CPLEX","Xpress"]
 
 include("logging.jl")
 
@@ -126,6 +134,7 @@ include("core/electric_tariff.jl")
 include("core/chp.jl")
 include("core/ghp.jl")
 include("core/steam_turbine.jl")
+include("core/electric_heater.jl")
 include("core/scenario.jl")
 include("core/bau_scenario.jl")
 include("core/reopt_inputs.jl")
@@ -178,6 +187,7 @@ include("results/chp.jl")
 include("results/flexible_hvac.jl")
 include("results/ghp.jl")
 include("results/steam_turbine.jl")
+include("results/electric_heater.jl")
 include("results/heating_cooling_load.jl")
 
 include("core/reopt.jl")

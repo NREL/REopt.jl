@@ -14,5 +14,8 @@
         "offtaker_tax_rate_fraction": 0.26,
         "elec_cost_escalation_rate_fraction": 0.026
     },
+    "ElectricUtility" : {
+        "co2_from_avert" : true
+    },
     "PV":{}
 }

@@ -218,7 +218,9 @@ function blend_and_scale_doe_profiles(
             monthly_scaler = length(blended_doe_reference_names)
         end
         for idx in 1:length(profiles)
-            profiles[idx] .*= total_kwh / annual_kwhs[idx] / monthly_scaler
+            if !(annual_kwhs[idx] == 0.0)
+                profiles[idx] .*= total_kwh / annual_kwhs[idx] / monthly_scaler
+            end
         end
     end
     for idx in 1:length(profiles)  # scale the profiles

@@ -23,6 +23,7 @@ struct Scenario <: AbstractScenario
     space_heating_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     steam_turbine::Union{SteamTurbine, Nothing}
+    electric_heater::Union{ElectricHeater, Nothing}
 end
 
 """
@@ -48,6 +49,7 @@ A Scenario struct can contain the following keys:
 - [AbsorptionChiller](@ref) (optional)
 - [GHP](@ref) (optional, can be Array)
 - [SteamTurbine](@ref) (optional)
+- [ElectricHeater](@ref) (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
 
@@ -103,9 +105,16 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                             )
     else
         financial = Financial(; latitude=site.latitude, longitude=site.longitude,
-                                off_grid_flag = settings.off_grid_flag
+                                off_grid_flag = settings.off_grid_flag,
+                                include_health_in_objective = settings.include_health_in_objective
                             )
     end
+
+    electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
+                                    latitude=site.latitude, longitude=site.longitude, 
+                                    time_steps_per_hour=settings.time_steps_per_hour,
+                                    off_grid_flag = settings.off_grid_flag
+                                )
 
     if haskey(d, "ElectricUtility") && !(settings.off_grid_flag)
         electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...,
@@ -116,11 +125,20 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             include_climate_in_objective=settings.include_climate_in_objective,
                                             include_health_in_objective=settings.include_health_in_objective,
                                             off_grid_flag=settings.off_grid_flag,
-                                            time_steps_per_hour=settings.time_steps_per_hour
+                                            time_steps_per_hour=settings.time_steps_per_hour,
+                                            analysis_years=financial.analysis_years,
+                                            load_year=electric_load.year
                                         )
     elseif !(settings.off_grid_flag)
         electric_utility = ElectricUtility(; latitude=site.latitude, longitude=site.longitude, 
-                                            time_steps_per_hour=settings.time_steps_per_hour
+                                            CO2_emissions_reduction_min_fraction=site.CO2_emissions_reduction_min_fraction,
+                                            CO2_emissions_reduction_max_fraction=site.CO2_emissions_reduction_max_fraction,
+                                            include_climate_in_objective=settings.include_climate_in_objective,
+                                            include_health_in_objective=settings.include_health_in_objective,
+                                            off_grid_flag=settings.off_grid_flag,
+                                            time_steps_per_hour=settings.time_steps_per_hour,
+                                            analysis_years=financial.analysis_years,
+                                            load_year=electric_load.year
                                         )
     elseif settings.off_grid_flag 
         if haskey(d, "ElectricUtility")
@@ -129,7 +147,12 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         electric_utility = ElectricUtility(; outage_start_time_step = 1, 
                                             outage_end_time_step = settings.time_steps_per_hour * 8760, 
                                             latitude=site.latitude, longitude=site.longitude, 
-                                            time_steps_per_hour=settings.time_steps_per_hour
+                                            time_steps_per_hour=settings.time_steps_per_hour,
+                                            off_grid_flag=settings.off_grid_flag,
+                                            emissions_factor_series_lb_CO2_per_kwh = 0,
+                                            emissions_factor_series_lb_NOx_per_kwh = 0,
+                                            emissions_factor_series_lb_SO2_per_kwh = 0,
+                                            emissions_factor_series_lb_PM25_per_kwh = 0
                                         ) 
     end
         
@@ -152,12 +175,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         storage_structs["ColdThermalStorage"] = ThermalStorage(params, financial, settings.time_steps_per_hour)
     end
     storage = Storage(storage_structs)
-
-    electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
-                                   latitude=site.latitude, longitude=site.longitude, 
-                                   time_steps_per_hour=settings.time_steps_per_hour,
-                                   off_grid_flag = settings.off_grid_flag
-                                )
 
     if !(settings.off_grid_flag) # ElectricTariff only required for on-grid                            
         electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 
@@ -598,7 +615,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
 
     steam_turbine = nothing
-    if haskey(d, "SteamTurbine") && d["SteamTurbine"]["max_kw"] > 0.0
+    if haskey(d, "SteamTurbine")
         if !isnothing(existing_boiler)
             total_fuel_heating_load_mmbtu_per_hour = (space_heating_load.loads_kw + dhw_load.loads_kw) / existing_boiler.efficiency / KWH_PER_MMBTU
             avg_boiler_fuel_load_mmbtu_per_hour = sum(total_fuel_heating_load_mmbtu_per_hour) / length(total_fuel_heating_load_mmbtu_per_hour)
@@ -607,6 +624,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         else
             steam_turbine = SteamTurbine(d["SteamTurbine"])
         end
+    end
+
+    electric_heater = nothing
+    if haskey(d, "ElectricHeater") && d["ElectricHeater"]["max_mmbtu_per_hour"] > 0.0
+        electric_heater = ElectricHeater(;dictkeys_tosymbols(d["ElectricHeater"])...)
     end
 
     return Scenario(
@@ -632,7 +654,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         ghp_option_list,
         space_heating_thermal_load_reduction_with_ghp_kw,
         cooling_thermal_load_reduction_with_ghp_kw,
-        steam_turbine
+        steam_turbine,
+        electric_heater
     )
 end
 

@@ -19,6 +19,9 @@
         "fuel_type": "natural_gas",
         "fuel_cost_per_mmbtu": [5,10,5,5,5,5,5,5,5,5,5,5]
     },
+    "ElectricUtility" : {
+        "co2_from_avert" : true
+    },
     "Financial": {
         "om_cost_escalation_rate_fraction": 0.025,
         "elec_cost_escalation_rate_fraction": 0.023,

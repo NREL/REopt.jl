@@ -14,11 +14,6 @@ function add_boiler_tech_constraints(m, p; _n="")
         )
     )
 
-    # Constraint (7_heating_prod_size): Production limit based on size for boiler
-    @constraint(m, [t in p.techs.boiler, ts in p.time_steps],
-        m[Symbol("dvThermalProduction"*_n)][t,ts] <= m[Symbol("dvSize"*_n)][t]
-    )
-
     m[:TotalBoilerPerUnitProdOMCosts] = 0.0
     if "Boiler" in p.techs.boiler  # ExistingBoiler does not have om_cost_per_kwh
         m[:TotalBoilerPerUnitProdOMCosts] = @expression(m, p.third_party_factor * p.pwf_om *
@@ -26,6 +21,13 @@ function add_boiler_tech_constraints(m, p; _n="")
             m[:dvRatedProduction]["Boiler", ts] for ts in p.time_steps)
         )
     end
+end
+
+function add_heating_tech_constraints(m, p; _n="")
+    # Constraint (7_heating_prod_size): Production limit based on size for non-electricity-producing heating techs
+    @constraint(m, [t in setdiff(p.techs.heating, p.techs.elec), ts in p.time_steps],
+        m[Symbol("dvThermalProduction"*_n)][t,ts] <= m[Symbol("dvSize"*_n)][t]
+    )
 end
 
 function add_cooling_tech_constraints(m, p; _n="")
