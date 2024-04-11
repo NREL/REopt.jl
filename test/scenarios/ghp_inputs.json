@@ -30,6 +30,9 @@
     "CoolingLoad": {
         "doe_reference_name": "Hospital"
     },
+    "ElectricUtility" : {
+        "co2_from_avert" : true
+    },
     "GHP": {
         "require_ghp_purchase": true,
         "building_sqft": 50000.0,

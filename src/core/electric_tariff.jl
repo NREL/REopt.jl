@@ -93,7 +93,7 @@ function ElectricTariff(;
     urdb_response::Dict=Dict(),
     urdb_utility_name::String="",
     urdb_rate_name::String="",
-    year::Int=2022,   # Will be passed from ElectricLoad
+    year::Int=2022,   # Passed from ElectricLoad
     time_steps_per_hour::Int=1,
     NEM::Bool=false,
     wholesale_rate::T1=nothing,
@@ -294,7 +294,7 @@ function ElectricTariff(;
     - if NEM then set ExportRate[:Nem, :] to energy_rate[tier_with_lowest_energy_rate, :]
     - user can provide either scalar wholesale rate or vector of time_steps, 
     =#
-    whl_rate = create_export_rate(wholesale_rate, length(energy_rates[:,1]), time_steps_per_hour)
+    whl_rate = create_export_rate(wholesale_rate, length(energy_rates[:,1]), time_steps_per_hour) 
     if !isnothing(u) && sum(u.sell_rates) < 0
         whl_rate += u.sell_rates
     end
@@ -369,20 +369,22 @@ end
 
 
 """
-    function create_export_rate(e::Nothing, N::Int, ts_per_hour::Int=1)
+    function create_export_rate(e::Nothing, N::Int, ts_per_hour::Int=1) 
 No export rate provided by user: set to 0 dollars/kWh for all time
+N = length(energy_rates[:,1]) and should already account for time_steps_per_hour
 """
 function create_export_rate(e::Nothing, N::Int, ts_per_hour::Int=1)
-    [0 for _ in range(1, stop=N) for ts in 1:ts_per_hour]
+    [0 for _ in range(1, stop=N)]
 end
 
 
 """
     function create_export_rate(e::T, N::Int, ts_per_hour::Int=1) where T<:Real
 Case for scaler export rate provided -> convert to array of time_steps
+N = length(energy_rates[:,1]) and should already account for time_steps_per_hour
 """
 function create_export_rate(e::T, N::Int, ts_per_hour::Int=1) where T<:Real
-    repeat([float(-1*e)], N * ts_per_hour)
+    repeat([float(-1*e)], N)
 end
 
 
