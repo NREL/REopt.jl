@@ -344,6 +344,9 @@ function simulated_load(d::Dict)
         return response
     end
 
+    if load_type = "process_heat"
+    end
+
     if load_type == "cooling"
         error_list = []
         for key in keys(d)
