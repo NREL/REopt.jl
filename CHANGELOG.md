@@ -28,7 +28,7 @@ Classify the change according to the following categories:
 - Change the way we determine which dataset to utilize in the PVWatts API call. Previously, we utilized defined lat-long bounds to determine if "nsrdb" or "intl" data should be used in PVWatts call. Now, we call the Solar Dataset Query API (v2) (https://developer.nrel.gov/docs/solar/data-query/v2/) to determine the dataset to use, and include "tmy3" as an option, as this is currently the best-available data for many locations in Alaska. 
 ### Added
 - Info to user including name of PV and/or temperature datasource used and distance from site location to datasource location
-- Warning to user if data is not from NSRDB or if data is more than 2,000 miles away 
+- Warning to user if data is not from NSRDB or if data is more than 100 miles away 
 
 ## Develop - 2024-04-05
 ### Fixed 
