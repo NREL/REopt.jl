@@ -354,7 +354,8 @@ else  # run HiGHS tests
             end
             # Make sure the EV's are not switching more than 10% above what they need to
             @test num_leave_vs_disconnect[ev]["disconnect"] <= num_leave_vs_disconnect[ev]["leave"] * 1.1
-        end        
+        end
+    end      
 
     @testset "Backup Generator Reliability" begin
 
