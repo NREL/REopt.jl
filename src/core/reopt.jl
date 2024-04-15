@@ -593,7 +593,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 
 	# Serve EV load from storage tech (PV already does it)
 	if !isempty(p.s.storage.types.ev)
-		@variable(m, dvStorageToEV[p.s.storage.types.ev, filter(x -> !occursin("EV", x), p.s.storage.types.elec), p.time_steps] >= 0)
+		@variable(m, dvStorageToEV[p.s.storage.types.ev, setdiff(p.s.storage.types.elec,p.s.storage.types.ev), p.time_steps] >= 0)
 	end
 
     if !isempty(p.techs.fuel_burning)

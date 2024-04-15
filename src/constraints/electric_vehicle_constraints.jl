@@ -48,18 +48,18 @@ function add_electric_vehicle_constraints(m, p, b; _n="")
         p.s.storage.attr[b].electric_vehicle.energy_capacity_kwh
     )
 
-    energy_drained_series = p.s.storage.attr[b].electric_vehicle.back_on_site_time_step_soc_drained*p.s.storage.attr[b].electric_vehicle.energy_capacity_kwh;
+    energy_drained_series = p.s.storage.attr[b].electric_vehicle.back_on_site_time_step_soc_drained*p.s.storage.attr[b].electric_vehicle.energy_capacity_kwh
 
     for ts in p.time_steps
         
         if p.s.storage.attr[b].electric_vehicle.ev_on_site_series[ts]==1
             @constraint(m,
-                m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (
-                    sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) 
-                    + m[Symbol("dvGridToStorage"*_n)][b, ts]
-                    + m[Symbol("dvStorageToEV"*_n)][b, "ElectricStorage", ts]
-                    - m[Symbol("dvDischargeFromStorage"*_n)][b,ts]
-                ) + energy_drained_series[ts]
+                m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1]
+                + p.hours_per_time_step*sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec)*p.s.storage.attr[b].charge_efficiency 
+                + p.hours_per_time_step*m[Symbol("dvGridToStorage"*_n)][b, ts]*p.s.storage.attr[b].charge_efficiency
+                + p.hours_per_time_step*m[Symbol("dvStorageToEV"*_n)][b, "ElectricStorage", ts]*(p.s.storage.attr[b].charge_efficiency*p.s.storage.attr["ElectricStorage"].discharge_efficiency)
+                - p.hours_per_time_step*m[Symbol("dvDischargeFromStorage"*_n)][b,ts]*p.s.storage.attr[b].discharge_efficiency
+                + energy_drained_series[ts]
             )
         else
             @constraint(m, m[Symbol("dvStoredEnergy"*_n)][b, ts] == 0)
