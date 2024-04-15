@@ -387,7 +387,7 @@ function call_solar_dataset_api(latitude::Real, longitude::Real, radius::Int)
         nsrdb_empty = isnothing(response["outputs"]["nsrdb"])
         intl_empty = isnothing(response["outputs"]["intl"])
         tmy3_empty = isnothing(response["outputs"]["tmy3"])
-        
+
         if nsrdb_empty && intl_empty && tmy3_empty # Check that at least one dataset is available
             throw(@error("No solar weather_data_source is available within $radius miles of this location. Try expanding your search radius or setting radius=0."))
         end
@@ -407,13 +407,13 @@ function call_solar_dataset_api(latitude::Real, longitude::Real, radius::Int)
         dist_meters = response["outputs"][dataset]["distance"] # meters
         datasource = response["outputs"][dataset]["weather_data_source"]
 
-        @info "The solar and/or temperature resource data used for this location is from the $weather_data_source dataset from a station or grid cell located $(distance/1609.34) miles from the site location (see PVWatts API documentation for more information)."
+        @info "The solar and/or temperature resource data used for this location is from the $datasource dataset from a station or grid cell located $(dist_meters/1609.34) miles from the site location (see PVWatts API documentation for more information)."
         # Warnings if not using NSRDB or if data is > 2,000 miles away (API only gets warnings, not info's)
         if dataset != "nsrdb"
-            @warn "The solar and/or temperature resource data used for this location is not from the NSRDB and may need to be reviewed for accuracy. The data used is from $weather_data_source dataset from a station or grid cell located $(distance/1609.34) miles from the site location."
+            @warn "The solar and/or temperature resource data used for this location is not from the NSRDB and may need to be reviewed for accuracy. The data used is from $datasource dataset from a station or grid cell located $(dist_meters/1609.34) miles from the site location."
         end
-        if distance > 2000 * 1609.34
-            @warn "The solar and/or temperature resource data used for this location ($weather_data_source) is from a station or grid cell located more than 2,000 miles ($(distance/1609.34) miles) from the site location."
+        if dist_meters > 2000 * 1609.34
+            @warn "The solar and/or temperature resource data used for this location ($datasource) is from a station or grid cell located more than 2,000 miles ($(dist_meters/1609.34) miles) from the site location."
         end
 
         return dataset, dist_meters, datasource
