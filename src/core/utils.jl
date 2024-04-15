@@ -362,10 +362,10 @@ end
 
 """
     call_solar_dataset_api(latitude::Real, longitude::Real, radius::Int)
-This calls the Solar Dataset Query API to determine the dataset to use in the PVWatts API. 
+This calls the Solar Dataset Query API to determine the dataset to use in the PVWatts API call. 
 Returns: 
 - dataset: "nsrdb" if available within 5 miles, or whichever is closer of "intl" and "tmy3"
-- dist_meters: distance in meters from the site location to the dataset station
+- dist_meters: Distance in meters from the site location to the dataset station
 - datasource: Name of source of the weather data used in the simulation.
 """
 function call_solar_dataset_api(latitude::Real, longitude::Real, radius::Int)
@@ -407,13 +407,13 @@ function call_solar_dataset_api(latitude::Real, longitude::Real, radius::Int)
         dist_meters = response["outputs"][dataset]["distance"] # meters
         datasource = response["outputs"][dataset]["weather_data_source"]
 
-        @info "The solar and/or temperature resource data used for this location is from the $datasource dataset from a station or grid cell located $(dist_meters/1609.34) miles from the site location (see PVWatts API documentation for more information)."
-        # Warnings if not using NSRDB or if data is > 2,000 miles away (API only gets warnings, not info's)
+        @info "The solar and/or temperature resource data used for this location is from the $datasource dataset from a station or grid cell located $(round(dist_meters/1609.34)) miles from the site location (see PVWatts API documentation for more information)."
+        # Warnings if not using NSRDB or if data is > 100 miles away (API only gets warnings, not info's)
         if dataset != "nsrdb"
-            @warn "The solar and/or temperature resource data used for this location is not from the NSRDB and may need to be reviewed for accuracy. The data used is from $datasource dataset from a station or grid cell located $(dist_meters/1609.34) miles from the site location."
+            @warn "The solar and/or temperature resource data used for this location is not from the NSRDB and may need to be reviewed for accuracy. The data used is from $datasource dataset from a station or grid cell located $(round(dist_meters/1609.34)) miles from the site location."
         end
-        if dist_meters > 2000 * 1609.34
-            @warn "The solar and/or temperature resource data used for this location ($datasource) is from a station or grid cell located more than 2,000 miles ($(dist_meters/1609.34) miles) from the site location."
+        if dist_meters > 100 * 1609.34
+            @warn "The solar and/or temperature resource data used for this location ($datasource) is from a station or grid cell located more than 100 miles ($(round(dist_meters/1609.34)) miles) from the site location."
         end
 
         return dataset, dist_meters, datasource
