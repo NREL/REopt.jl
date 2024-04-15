@@ -384,6 +384,7 @@ function call_solar_dataset_api(latitude::Real, longitude::Real, radius::Int)
             throw(@error("Bad response from Solar Dataset Query: $(response["errors"])"))
         end
 
+        # If they are empty, then the dataset is not available in the specified radius 
         nsrdb_empty = isnothing(response["outputs"]["nsrdb"])
         intl_empty = isnothing(response["outputs"]["intl"])
         tmy3_empty = isnothing(response["outputs"]["tmy3"])
@@ -404,8 +405,17 @@ function call_solar_dataset_api(latitude::Real, longitude::Real, radius::Int)
             dataset = nsrdb_meters <= intl_meters && nsrdb_meters <= tmy3_meters ? "nsrdb" : intl_meters <= nsrdb_meters && intl_meters <= tmy3_meters ? "intl" : "tmy3"
         end
 
-        dist_meters = response["outputs"][dataset]["distance"]
+        dist_meters = response["outputs"][dataset]["distance"] # meters
         datasource = response["outputs"][dataset]["weather_data_source"]
+
+        @info "The solar and/or temperature resource data used for this location is from the $weather_data_source dataset from a station or grid cell located $(distance/1609.34) miles from the site location (see PVWatts API documentation for more information)."
+        # Warnings if not using NSRDB or if data is > 2,000 miles away (API only gets warnings, not info's)
+        if dataset != "nsrdb"
+            @warn "The solar and/or temperature resource data used for this location is not from the NSRDB and may need to be reviewed for accuracy. The data used is from $weather_data_source dataset from a station or grid cell located $(distance/1609.34) miles from the site location."
+        end
+        if distance > 2000 * 1609.34
+            @warn "The solar and/or temperature resource data used for this location ($weather_data_source) is from a station or grid cell located more than 2,000 miles ($(distance/1609.34) miles) from the site location."
+        end
 
         return dataset, dist_meters, datasource
     catch e
@@ -419,11 +429,12 @@ end
         losses=14, dc_ac_ratio=1.2, gcr=0.4, inv_eff=96, timeframe="hourly", radius=0, time_steps_per_hour=1)
 This calls the PVWatts API and returns both:
  - PV production factor
- - Ambient outdoor air dry bulb temperature profile [Celcius] 
+ - Ambient outdoor air dry bulb temperature profile [Celcius]
 """
 function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimuth=180, module_type=0, array_type=1, 
     losses=14, dc_ac_ratio=1.2, gcr=0.4, inv_eff=96, timeframe="hourly", radius=0, time_steps_per_hour=1)
-    # Check if site is beyond the bounds of the NRSDB TMY dataset. If so, use the international dataset.
+    
+    # Determine resource dataset to use for this location
     dataset, dist_meters, datasource  = call_solar_dataset_api(latitude, longitude, radius)
 
     url = string("https://developer.nrel.gov/api/pvwatts/v8.json", "?api_key=", ENV["NREL_DEVELOPER_API_KEY"],
