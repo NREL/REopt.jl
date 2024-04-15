@@ -208,7 +208,7 @@ function dictkeys_tosymbols(d::Dict)
             end
         end
         if k in [
-            "fuel_cost_per_mmbtu", "wholesale_rate",
+            "fuel_cost_per_mmbtu", "wholesale_rate", "export_rate_beyond_net_metering_limit",
             # for ERP
             "generator_size_kw", "generator_operational_availability",
             "generator_failure_to_start", "generator_mean_time_to_failure",

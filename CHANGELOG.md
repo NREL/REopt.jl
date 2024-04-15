@@ -27,6 +27,11 @@ Classify the change according to the following categories:
 ### Changed 
 - Changed the way we determine which dataset to utilize in the PVWatts API call. Previously, we utilized defined lat-long bounds. Now, we call the Solar Dataset Query API (v2) to determine the dataset to use. 
 
+## Develop - 2024-04-05
+### Fixed 
+- Added `export_rate_beyond_net_metering_limit` to list of inputs to be converted to type Real, to avoid MethodError if type is vector of Any. 
+- Fix blended CRB processing when one or more load types have zero annual energy
+
 ## v0.44.0
 ### Added 
 - in `src/settings.jl`, added new const **INDICATOR_COMPATIBLE_SOLVERS**
