@@ -155,6 +155,11 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
                     @constraint(m, StorageOnlyToSteamTurbineCon[q in p.heating_loads, ts in p.time_steps],
                         m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] ==  m[Symbol("dvHeatFromStorageToTurbine"*_n)][b,q,ts]
                         )
+                    for t in p.techs.steam_turbine
+                        for ts in p.time_steps
+                            fix(m[Symbol("dvHeatToStorage"*_n)][b,t,"ProcessHeat",ts], 0.0, force=true)
+                        end
+                    end
                 end
             end
         end
