@@ -23,7 +23,7 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop 2024-03-12
+## Develop 2024-04-17
 ### Added 
 - In `src/core/absorption_chiller.jl` struct, added field **heating_load_input** to the AbsorptionChiller struct
 - Added new variables **dvHeatToStorage** and **dvHeatFromStorage** which are indexed on `p.heating_loads` and added reconciliation constraints so that **dvProductionToStorage** and **dvDischargeFromStorage** maintain their relationship to state of charge for Hot thermal energy storage.
@@ -44,13 +44,14 @@ Classify the change according to the following categories:
 
 ### Fixed  
 - added a constraint in `src/constraints/steam_turbine_constraints.jl` that allows for heat loads to reconcile when thermal storage is paired with a SteamTurbine. 
+- Added `export_rate_beyond_net_metering_limit` to list of inputs to be converted to type Real, to avoid MethodError if type is vector of Any. 
+- Fix blended CRB processing when one or more load types have zero annual energy
 
-## Develop 2024-03-26
+## v0.44.0
 ### Added 
 - in `src/settings.jl`, added new const **INDICATOR_COMPATIBLE_SOLVERS**
 - in `src/settings.jl`, added new member **solver_name** within the settings object.  This is currently not connected to the solver but does determine whether indicator constraints are modeled or if their big-M workarounds are used.
 - added replacements for indicator constraints with the exception of battery degradation, which is implemented in a separate model, and FlexibleHVAC.  TODO's have been added for these remaining cases.
-
 ### Fixed
 - Fixed previously broken tests using HiGHS in `test/runtests.jl` due to solver incompatibility.
 
