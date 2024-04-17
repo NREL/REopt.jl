@@ -19,6 +19,7 @@ function add_hot_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict,
     
     r = Dict{String, Any}()
     size_kwh = round(value(m[Symbol("dvStorageEnergy"*_n)][b]), digits=3)
+    r["size_kwh"] = size_kwh
     r["size_gal"] = round(size_kwh / kwh_per_gal, digits=0)
 
     if size_kwh != 0
@@ -136,6 +137,7 @@ function add_hot_sensible_storage_results(m::JuMP.AbstractModel, p::REoptInputs,
     
     r = Dict{String, Any}()
     size_kwh = round(value(m[Symbol("dvStorageEnergy"*_n)][b]), digits=3)
+    r["size_kwh"] = size_kwh
     r["size_gal"] = round(size_kwh / kwh_per_gal, digits=0)
 
     if size_kwh != 0
