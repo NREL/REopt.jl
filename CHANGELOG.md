@@ -29,7 +29,7 @@ Classify the change according to the following categories:
 - Fix blended CRB processing when one or more load types have zero annual energy
 - When calculating CHP fuel intercept and slope, use 1 for the HHV because CHP fuel measured in units of kWh, instead of using non-existent **CHP.fuel_higher_heating_value_kwh_per_gal**
 ### Changed
-- Renamed function `generator_fuel_slope_and_intercept` to `fuel_slope_and_intercept` and generalize to not be specific to diesel measured in units of gal
+- Renamed function `generator_fuel_slope_and_intercept` to `fuel_slope_and_intercept` and generalize to not be specific to diesel measured in units of gal, then use for calculating non diesel fuel slope and intercept too
 
 ## v0.44.0
 ### Added 
