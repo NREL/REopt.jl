@@ -1451,19 +1451,19 @@ struct ProcessHeatLoad
         existing_boiler_efficiency::Float64=NaN
     )
         if length(fuel_loads_mmbtu_per_hour) != 0 && length(fuel_loads_mmbtu_per_hour) != 8760*time_steps_per_hour
-            @error("fuel_loads_mmbtu_per_hour must have length zero or 8760*time_steps_per_hour.")
+            @error("fuel_loads_mmbtu_per_hour must have length zero or 8760*time_steps_per_hour for process heat load.")
         elseif !isnothing(annual_mmbtu) && length(fuel_loads_mmbtu_per_hour) == 0
-            @warn("only annual_mmbtu was provided - assuming a flat load.")
+            @warn("only annual_mmbtu was provided - assuming a flat process heat load.")
             loads_kw = ones(8760) .* (annual_mmbtu * KWH_PER_MMBTU * existing_boiler_efficiency / (8760*time_steps_per_hour) )
         elseif isnothing(annual_mmbtu) && length(fuel_loads_mmbtu_per_hour) == 8760*time_steps_per_hour
             loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * existing_boiler_efficiency)
             annual_mmbtu = sum(fuel_loads_mmbtu_per_hour) / time_steps_per_hour
         elseif !isnothing(annual_mmbtu) && length(fuel_loads_mmbtu_per_hour) == 8760*time_steps_per_hour
-            @warn("annual_mmbtu and sum of fuel_loads_mmbtu_per_hour are both provided - using fuel_loads_mmbtu_per_hour time series")
+            @warn("annual_mmbtu and sum of fuel_loads_mmbtu_per_hour are both provided - using fuel_loads_mmbtu_per_hour time series for process heat load.")
             loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * existing_boiler_efficiency)
             annual_mmbtu = sum(fuel_loads_mmbtu_per_hour) / time_steps_per_hour
         else
-            @warn("annual_mmbtu not provided and length of fuel_loads_mmbtu_per_hour is not equal to 8760 - returning zero load.")
+            @warn("annual_mmbtu not provided and length of fuel_loads_mmbtu_per_hour is not equal to 8760 - returning zero process heat load.")
             annual_mmbtu = 0.0
             loads_kw = zeros(8760 * time_steps_per_hour)
         end
