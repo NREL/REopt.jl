@@ -46,6 +46,7 @@ Classify the change according to the following categories:
 - added a constraint in `src/constraints/steam_turbine_constraints.jl` that allows for heat loads to reconcile when thermal storage is paired with a SteamTurbine. 
 - Added `export_rate_beyond_net_metering_limit` to list of inputs to be converted to type Real, to avoid MethodError if type is vector of Any. 
 - Fix blended CRB processing when one or more load types have zero annual energy
+- Handle an array of length 1 for CHP.installed_cost_per_kw which fixes the API using this parameter
 ### Changed
 - add **ElectricStorage** input option **soc_min_applies_during_outages** (which defaults to _false_) and only apply the minimum state of charge constraint in function `add_MG_storage_dispatch_constraints` if it is _true_
 
