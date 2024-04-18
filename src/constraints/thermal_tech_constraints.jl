@@ -32,8 +32,11 @@ end
 
 function no_existing_boiler_production(m, p; _n="")
     for ts in p.time_steps
-        fix(m[Symbol("dvThermalProduction"*_n)]["ExistingBoiler",ts], 0.0, force=true)
+        for q in p.heating_loads
+            fix(m[Symbol("dvHeatingProduction"*_n)]["ExistingBoiler",q,ts], 0.0, force=true)
+        end
     end
+    fix(m[Symbol("dvSize"*_n)]["ExistingBoiler"], 0.0, force=true)
 end
 
 function add_cooling_tech_constraints(m, p; _n="")
