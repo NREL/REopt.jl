@@ -254,7 +254,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         max_heat_demand_kw += maximum(process_heat_load.loads_kw)
     else
         process_heat_load = ProcessHeatLoad(;
-            heat_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
+            fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
             time_steps_per_hour=settings.time_steps_per_hour,
             existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
         )
