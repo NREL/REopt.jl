@@ -29,6 +29,9 @@ Classify the change according to the following categories:
 - Fix blended CRB processing when one or more load types have zero annual energy
 - Changed instances of indexing using i in 1:length() paradigm to use eachindex() or axes() instead because this is more robust
 - In `src/core/urdb.jl`, ensure values from the "energyweekdayschedule" and "energyweekendschedule" arrays in the URDB response dictionary are converted to _Int_ before being used as indices
+- Handle an array of length 1 for CHP.installed_cost_per_kw which fixes the API using this parameter
+### Changed
+- add **ElectricStorage** input option **soc_min_applies_during_outages** (which defaults to _false_) and only apply the minimum state of charge constraint in function `add_MG_storage_dispatch_constraints` if it is _true_
 
 ## v0.44.0
 ### Added 
@@ -715,7 +718,7 @@ Other changes:
 ## v0.3.0
 ### Added
 - add separate decision variables and constraints for microgrid tech capacities
-    - new Site input `mg_tech_sizes_equal_grid_sizes` (boolean), when `false` the microgrid tech capacities are constrained to be <= the grid connected tech capacities
+    - new Site input `mg_tech_sizes_equal_grid_sizes` (boolean), when _false_ the microgrid tech capacities are constrained to be <= the grid connected tech capacities
 ### Fixed
 - allow non-integer `outage_probabilities`
 - correct `total_unserved_load` output
