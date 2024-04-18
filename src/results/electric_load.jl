@@ -31,20 +31,20 @@ function add_electric_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
         ev_load_series_kw = zeros(lastindex(p.time_steps))
 
         for ev in p.s.storage.types.ev
-            ev_load_series_kw.+=
-                round.(value.(m[Symbol("dvGridToStorage"*_n)][ev, ts] for ts in p.time_steps), digits=3).+
-                round.(
-                    value.(
-                        sum(
-                            m[Symbol("dvStorageToEV")][ev, t, ts] for t in setdiff(p.s.storage.types.elec, p.s.storage.types.ev)
-                        ) for ts in p.time_steps),
-                    digits=3
-                ).+
-                round.(
-                    value.(
-                        sum(m[Symbol("dvProductionToStorage")][ev, t, ts] for t in p.techs.elec
-                    ) for ts in p.time_steps),
-                digits=3)
+            ev_load_series_kw.+= round.(value.(m[Symbol("dvGridToStorage"*_n)][ev, ts] for ts in p.time_steps), digits=3)
+
+            if isempty(p.techs.elec)
+                nothing
+            else
+                ev_load_series_kw .+= round.(value.(sum(m[Symbol("dvProductionToStorage")][ev, t, ts] for t in p.techs.elec) for ts in p.time_steps), digits=3)
+            end
+    
+            if isempty(setdiff(p.s.storage.types.elec, p.s.storage.types.ev))
+                nothing
+            else
+                ev_load_series_kw .+= round.(value.(sum(m[Symbol("dvStorageToEV")][ev, t, ts] for t in setdiff(p.s.storage.types.elec, p.s.storage.types.ev)) for ts in p.time_steps),digits=3)
+            end
+            
         end
 
         r["ev_load_series_kw"] = ev_load_series_kw

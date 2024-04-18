@@ -34,12 +34,10 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 		r["size_kw"] = round(value(m[Symbol("dvSize"*_n)][t]), digits=4)
 
 		# NOTE: must use anonymous expressions in this loop to overwrite values for cases with multiple PV
-		if !isempty(p.s.storage.types.elec)
-			PVtoBatt = (sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec[findall(x -> !occursin("EV", x), p.s.storage.types.elec)]) for ts in p.time_steps)
-            PVtoEVs = (sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec[findall(x -> occursin("EV", x), p.s.storage.types.elec)]) for ts in p.time_steps)
+		if !isempty(setdiff(p.s.storage.types.elec, p.s.storage.types.ev))
+			PVtoBatt = (sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in setdiff(p.s.storage.types.elec, p.s.storage.types.ev)) for ts in p.time_steps)
 		else
 			PVtoBatt = repeat([0], length(p.time_steps))
-            PVtoEVs = repeat([0], length(p.time_steps))
 		end
 
         if !isempty(p.s.storage.types.ev)

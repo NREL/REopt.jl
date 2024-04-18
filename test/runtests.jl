@@ -310,9 +310,10 @@ else  # run HiGHS tests
         results = run_reopt([m1,m2], inputs)
 
         charge_efficiency = 0.96 * 0.975^0.5
-        expected_charge_energy = 365 * (input_data["ElectricVehicle"][1]["soc_used_off_site"] * 
+        # weekends excluded for now.
+        expected_charge_energy = 260 * ((input_data["ElectricVehicle"][1]["soc_used_off_site"][1][2]-input_data["ElectricVehicle"][1]["soc_used_off_site"][1][1]) * 
                                         input_data["ElectricVehicle"][1]["energy_capacity_kwh"] + 
-                                        input_data["ElectricVehicle"][2]["soc_used_off_site"] * 
+                                        (input_data["ElectricVehicle"][1]["soc_used_off_site"][1][2]-input_data["ElectricVehicle"][1]["soc_used_off_site"][1][1]) * 
                                         input_data["ElectricVehicle"][2]["energy_capacity_kwh"]) / charge_efficiency
 
         @test sum(results["ElectricUtility"]["electric_to_storage_series_kw"]) ≈ expected_charge_energy rtol=0.01

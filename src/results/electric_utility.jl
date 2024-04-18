@@ -40,11 +40,15 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
         GridToLoad = (sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) 
                   - sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec) 
                   for ts in p.time_steps)
-        GridToBatt = (sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in setdiff(p.s.storage.types.elec, p.s.storage.types.ev)) 
-                for ts in p.time_steps)
     else
         GridToLoad = (sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) 
                   for ts in p.time_steps)
+    end
+
+    if !isempty(setdiff(p.s.storage.types.elec, p.s.storage.types.ev))
+        GridToBatt = (sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in setdiff(p.s.storage.types.elec, p.s.storage.types.ev)) 
+                for ts in p.time_steps)
+    else
         GridToBatt = zeros(length(p.time_steps))
     end
 

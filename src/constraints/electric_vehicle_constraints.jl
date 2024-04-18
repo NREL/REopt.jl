@@ -57,7 +57,7 @@ function add_electric_vehicle_constraints(m, p, b; _n="")
                 m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1]
                 + p.hours_per_time_step*sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec)*p.s.storage.attr[b].charge_efficiency 
                 + p.hours_per_time_step*m[Symbol("dvGridToStorage"*_n)][b, ts]*p.s.storage.attr[b].charge_efficiency
-                + p.hours_per_time_step*m[Symbol("dvStorageToEV"*_n)][b, "ElectricStorage", ts]*(p.s.storage.attr[b].charge_efficiency*p.s.storage.attr["ElectricStorage"].discharge_efficiency)
+                + sum(p.hours_per_time_step*m[Symbol("dvStorageToEV"*_n)][b, t, ts]*(p.s.storage.attr[b].charge_efficiency*p.s.storage.attr[t].discharge_efficiency) for t in setdiff(p.s.storage.types.elec, p.s.storage.types.ev))
                 - p.hours_per_time_step*m[Symbol("dvDischargeFromStorage"*_n)][b,ts]*p.s.storage.attr[b].discharge_efficiency
                 + energy_drained_series[ts]
             )
@@ -77,6 +77,9 @@ function add_electric_vehicle_constraints(m, p, b; _n="")
             p.s.storage.attr[b].electric_vehicle.energy_capacity_kwh
         )
     end
+
+    @constraint(m, [ts in p.time_steps_without_grid], sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) == 0.0)
+    @constraint(m, [ts in p.time_steps_without_grid], sum(m[Symbol("dvStorageToEV"*_n)][b, t, ts] for t in setdiff(p.s.storage.types.elec, p.s.storage.types.ev)) == 0.0)
 	
 	# Power to and from EV is zero when it is off-site
 	for ts in p.time_steps

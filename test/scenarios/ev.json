@@ -13,14 +13,14 @@
     "ElectricVehicle": [
         {
         "energy_capacity_kwh": 150.0,
-        "ev_on_site_start_end": [6, 18],
-        "soc_used_off_site": 0.8,
+        "ev_on_site_start_end": [[6, 18],[6, 18],[6, 18],[6, 18]],
+        "soc_used_off_site": [[0.2,1.0],[0.2,1.0],[0.2,1.0],[0.2,1.0]],
         "max_c_rate": 2.0
         },
         {
         "energy_capacity_kwh": 150.0,
-        "ev_on_site_start_end": [6, 18],
-        "soc_used_off_site": 0.8,
+        "ev_on_site_start_end": [[6, 18],[6, 18],[6, 18],[6, 18]],
+        "soc_used_off_site": [[0.2,1.0],[0.2,1.0],[0.2,1.0],[0.2,1.0]],
         "max_c_rate": 2.0
         }
     ],
