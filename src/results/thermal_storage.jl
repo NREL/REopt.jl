@@ -14,8 +14,8 @@ function add_hot_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict,
     # Adds the `HotThermalStorage` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
     # Note: the node number is an empty string if evaluating a single `Site`.
 
-    kwh_per_gal = get_kwh_per_gal(p.s.storage.attr["HotThermalStorage"].hot_water_temp_degF,
-                                    p.s.storage.attr["HotThermalStorage"].cool_water_temp_degF)
+    kwh_per_gal = get_kwh_per_gal(p.s.storage.attr[b].hot_water_temp_degF,
+                                    p.s.storage.attr[b].cool_water_temp_degF)
     
     r = Dict{String, Any}()
     size_kwh = round(value(m[Symbol("dvStorageEnergy"*_n)][b]), digits=3)
