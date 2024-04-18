@@ -1,17 +1,21 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 
 function add_emissions_constraints(m,p)
-	if !isnothing(p.s.site.CO2_emissions_reduction_min_fraction)
-		@constraint(m, MinEmissionsReductionCon, 
-			m[:Lifecycle_Emissions_Lbs_CO2] <= 
-			(1-p.s.site.CO2_emissions_reduction_min_fraction) * m[:Lifecycle_Emissions_Lbs_CO2_BAU]
-		)
-	end
-	if !isnothing(p.s.site.CO2_emissions_reduction_max_fraction)
-		@constraint(m, MaxEmissionsReductionCon, 
-			m[:Lifecycle_Emissions_Lbs_CO2] >= 
-			(1-p.s.site.CO2_emissions_reduction_max_fraction) * m[:Lifecycle_Emissions_Lbs_CO2_BAU]
-		)
+	if !isnothing(p.s.site.bau_emissions_lb_CO2_per_year)
+		if !isnothing(p.s.site.CO2_emissions_reduction_min_fraction)
+			@constraint(m, MinEmissionsReductionCon, 
+				m[:Lifecycle_Emissions_Lbs_CO2] <= 
+				(1-p.s.site.CO2_emissions_reduction_min_fraction) * m[:Lifecycle_Emissions_Lbs_CO2_BAU]
+			)
+		end
+		if !isnothing(p.s.site.CO2_emissions_reduction_max_fraction)
+			@constraint(m, MaxEmissionsReductionCon, 
+				m[:Lifecycle_Emissions_Lbs_CO2] >= 
+				(1-p.s.site.CO2_emissions_reduction_max_fraction) * m[:Lifecycle_Emissions_Lbs_CO2_BAU]
+			)
+		end
+	else
+		@warn "No emissions reduction constraints added, as BAU emissions have not been calculated."
 	end
 end
 
