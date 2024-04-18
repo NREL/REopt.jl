@@ -316,7 +316,7 @@ else  # run HiGHS tests
                                         (input_data["ElectricVehicle"][1]["soc_used_off_site"][1][2]-input_data["ElectricVehicle"][1]["soc_used_off_site"][1][1]) * 
                                         input_data["ElectricVehicle"][2]["energy_capacity_kwh"]) / charge_efficiency
 
-        @test sum(results["ElectricUtility"]["electric_to_storage_series_kw"]) ≈ expected_charge_energy rtol=0.01
+        @test sum(results["ElectricUtility"]["electric_to_electricvehicle_series_kw"]) ≈ expected_charge_energy rtol=0.01
         # println("NPV = ", results["Financial"]["npv"])
 
         # Make sure the same EV is not connected to different charger types
