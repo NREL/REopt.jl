@@ -101,6 +101,10 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
             sum(m[Symbol("dvStorageEnergy"*_n)][b])
         )
     end
+
+    if p.s.storage.attr[b].is_ldes
+        m[Symbol("dvStoragePower"*_n)][b] == m[Symbol("dvStorageEnergy"*_n)][b] / 100
+    end
 end
 
 function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
