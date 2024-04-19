@@ -18,7 +18,7 @@ function add_boiler_tech_constraints(m, p; _n="")
     if "Boiler" in p.techs.boiler  # ExistingBoiler does not have om_cost_per_kwh
         m[:TotalBoilerPerUnitProdOMCosts] = @expression(m, p.third_party_factor * p.pwf_om *
             sum(p.s.boiler.om_cost_per_kwh / p.s.settings.time_steps_per_hour *
-            m[:dvRatedProduction]["Boiler", ts] for ts in p.time_steps)
+            m[Symbol("dvHeatingProduction"*_n)]["Boiler",q,ts] for q in p.heating_loads, ts in p.time_steps)
         )
     end
 end
