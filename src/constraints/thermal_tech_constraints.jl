@@ -25,9 +25,29 @@ end
 
 function add_heating_tech_constraints(m, p; _n="")
     # Constraint (7_heating_prod_size): Production limit based on size for non-electricity-producing heating techs
-    @constraint(m, [t in setdiff(p.techs.heating, p.techs.elec), ts in p.time_steps],
-        m[Symbol("dvThermalProduction"*_n)][t,ts] <= m[Symbol("dvSize"*_n)][t]
-    )
+    if !isempty(setdiff(p.techs.heating, union(p.techs.elec, p.techs.ghp)))
+        @constraint(m, [t in setdiff(p.techs.heating, union(p.techs.elec, p.techs.ghp)), ts in p.time_steps],
+            sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads)  <= m[Symbol("dvSize"*_n)][t]
+        )
+    end
+    # Constraint (7_heating_load_compatability): Set production variables for incompatible heat loads to zero
+    for t in setdiff(union(p.techs.heating, p.techs.chp), p.techs.ghp)
+        if !(t in p.techs.can_serve_space_heating)
+            for ts in p.time_steps
+                fix(m[Symbol("dvHeatingProduction"*_n)][t,"SpaceHeating",ts], 0.0, force=true)
+            end
+        end
+        if !(t in p.techs.can_serve_dhw)
+            for ts in p.time_steps
+                fix(m[Symbol("dvHeatingProduction"*_n)][t,"DomesticHotWater",ts], 0.0, force=true)
+            end
+        end
+        if !(t in p.techs.can_serve_process_heat)
+            for ts in p.time_steps
+                fix(m[Symbol("dvHeatingProduction"*_n)][t,"ProcessHeat",ts], 0.0, force=true)
+            end
+        end
+    end
 end
 
 function no_existing_boiler_production(m, p; _n="")
