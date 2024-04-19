@@ -324,7 +324,7 @@ function ElectricTariff(;
 
     coincpeak_periods = Int64[]
     if !isempty(coincident_peak_load_charge_per_kw)
-        coincpeak_periods = collect(1:length(coincident_peak_load_charge_per_kw))
+        coincpeak_periods = collect(eachindex(coincident_peak_load_charge_per_kw))
     end
 
     ElectricTariff(
