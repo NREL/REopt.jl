@@ -257,6 +257,10 @@ struct ElectricStorage <: AbstractElectricStorage
             @warn "Battery replacement costs (per_kwh) will not be considered because battery_replacement_year >= analysis_years."
         end
 
+        if s.min_duration_hours > s.max_duration_hours
+            throw(@error("ElectricStorage min_duration_hours must be less than max_duration_hours."))
+        end
+
         net_present_cost_per_kw = effective_cost(;
             itc_basis = s.installed_cost_per_kw,
             replacement_cost = s.inverter_replacement_year >= f.analysis_years ? 0.0 : s.replace_cost_per_kw,
