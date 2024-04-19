@@ -25,9 +25,11 @@ end
 
 function add_heating_tech_constraints(m, p; _n="")
     # Constraint (7_heating_prod_size): Production limit based on size for non-electricity-producing heating techs
-    @constraint(m, [t in setdiff(p.techs.heating, union(p.techs.elec, p.techs.ghp)), ts in p.time_steps],
-        sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads)  <= m[Symbol("dvSize"*_n)][t]
-    )
+    if !isempty(setdiff(p.techs.heating, union(p.techs.elec, p.techs.ghp)))
+        @constraint(m, [t in setdiff(p.techs.heating, union(p.techs.elec, p.techs.ghp)), ts in p.time_steps],
+            sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads)  <= m[Symbol("dvSize"*_n)][t]
+        )
+    end
     # Constraint (7_heating_load_compatability): Set production variables for incompatible heat loads to zero
     for t in setdiff(union(p.techs.heating, p.techs.chp), p.techs.ghp)
         if !(t in p.techs.can_serve_space_heating)
