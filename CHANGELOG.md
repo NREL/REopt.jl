@@ -23,7 +23,14 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop - 2024-04-11
+## Develop 2024-04-19
+### Added
+- Added new inputs **om_cost_per_kw** and **om_cost_per_kwh** to `ElectricStorage` for modeling capacity-based O&M 
+- Added new input **per_timestep_self_discharge_fraction** to `ElectricStorage` for modeling battery self-discharge
+- Added new outputs **lifecycle_om_cost_after_tax** and **year_one_om_cost_before_tax** to `ElectricStorage` 
+- Added testsets **Electric Storage O&M** and **Electric Storage Self-Discharge** in `test/runtests.jl`
+
+## v0.45.0
 ### Fixed 
 - Added `export_rate_beyond_net_metering_limit` to list of inputs to be converted to type Real, to avoid MethodError if type is vector of Any. 
 - Fix blended CRB processing when one or more load types have zero annual energy
