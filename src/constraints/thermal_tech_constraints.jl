@@ -8,18 +8,18 @@ function add_boiler_tech_constraints(m, p; _n="")
     )
 
     # Constraint (1e): Total Fuel burn for Boiler
-    @constraint(m, [t in p.techs.boiler, ts in p.time_steps],
+    @constraint(m, BoilerFuelTrackingCon[t in p.techs.boiler, ts in p.time_steps],
         m[:dvFuelUsage][t,ts] == p.hours_per_time_step * (
             sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads) / p.boiler_efficiency[t]
         )
     )
-
-    m[:TotalBoilerPerUnitProdOMCosts] = 0.0
     if "Boiler" in p.techs.boiler  # ExistingBoiler does not have om_cost_per_kwh
         m[:TotalBoilerPerUnitProdOMCosts] = @expression(m, p.third_party_factor * p.pwf_om *
             sum(p.s.boiler.om_cost_per_kwh / p.s.settings.time_steps_per_hour *
             m[Symbol("dvHeatingProduction"*_n)]["Boiler",q,ts] for q in p.heating_loads, ts in p.time_steps)
         )
+    else
+        m[:TotalBoilerPerUnitProdOMCosts] = 0.0
     end
 end
 
