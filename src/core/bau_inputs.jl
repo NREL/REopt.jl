@@ -287,7 +287,7 @@ function setup_bau_emissions_inputs(p::REoptInputs, s_bau::BAUScenario, generato
 
     ## Boiler emissions
     if "ExistingBoiler" in p.techs.all
-        for heat_type in ["space_heating", "dhw"]
+        for heat_type in ["space_heating", "dhw", "process_heat"]
             # Divide by existing_boiler.efficiency because annual_mmbtu is thermal, so convert to fuel
             bau_emissions_lb_CO2_per_year += getproperty(p.s,Symbol("$(heat_type)_load")).annual_mmbtu / 
                                                 p.s.existing_boiler.efficiency * 
