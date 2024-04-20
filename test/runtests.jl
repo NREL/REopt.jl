@@ -2418,6 +2418,16 @@ else  # run HiGHS tests
             @test sum(results["ExistingBoiler"]["thermal_to_space_heating_load_series_mmbtu_per_hour"]) ≈ 70080.0 atol=0.1
             @test sum(results["ExistingBoiler"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]) ≈ 70080.0 atol=0.1
         
+            # Test 6: reduce emissions by half, get half the new boiler size
+            d["Site"]["CO2_emissions_reduction_min_fraction"] = 0.50
+            s = Scenario(d)
+            p = REoptInputs(s)
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt([m1,m2], p)
+            @test results["Boiler"]["size_mmbtu_per_hour"] ≈ 12.0 atol=0.1
+            @test results["Boiler"]["annual_thermal_production_mmbtu"] ≈ 105120.0 atol=0.1
+            @test results["ExistingBoiler"]["annual_thermal_production_mmbtu"] ≈ 105120.0 atol=0.1
         end
 
         @testset "Custom REopt logger" begin
