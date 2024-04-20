@@ -103,7 +103,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
     end
 
     if p.s.storage.attr[b].is_ldes
-        m[Symbol("dvStoragePower"*_n)][b] == m[Symbol("dvStorageEnergy"*_n)][b] / 100
+        @constraint(m, m[Symbol("dvStoragePower"*_n)][b] == m[Symbol("dvStorageEnergy"*_n)][b] / p.s.storage.attr[b].duration)
     end
 end
 
