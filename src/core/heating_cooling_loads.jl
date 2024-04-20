@@ -1457,16 +1457,16 @@ struct ProcessHeatLoad
             loads_kw = ones(8760) .* (annual_mmbtu * KWH_PER_MMBTU * existing_boiler_efficiency / (8760*time_steps_per_hour) )
         elseif isnothing(annual_mmbtu) && length(fuel_loads_mmbtu_per_hour) == 8760*time_steps_per_hour
             loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * existing_boiler_efficiency)
-            annual_mmbtu = sum(fuel_loads_mmbtu_per_hour) / time_steps_per_hour
         elseif !isnothing(annual_mmbtu) && length(fuel_loads_mmbtu_per_hour) == 8760*time_steps_per_hour
             @warn("annual_mmbtu and sum of fuel_loads_mmbtu_per_hour are both provided - using fuel_loads_mmbtu_per_hour time series for process heat load.")
             loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * existing_boiler_efficiency)
-            annual_mmbtu = sum(fuel_loads_mmbtu_per_hour) / time_steps_per_hour
         else
             @warn("annual_mmbtu not provided and length of fuel_loads_mmbtu_per_hour is not equal to 8760 - returning zero process heat load.")
-            annual_mmbtu = 0.0
             loads_kw = zeros(8760 * time_steps_per_hour)
         end
-        new(loads_kw, annual_mmbtu)
+        new(
+            loads_kw,
+            (sum(loads_kw) / time_steps_per_hour) / KWH_PER_MMBTU
+        )
     end
 end
