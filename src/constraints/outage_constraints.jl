@@ -130,10 +130,10 @@ end
 
 
 function add_MG_Gen_fuel_burn_constraints(m,p)
-	fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr = generator_fuel_slope_and_intercept(
+	fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr = fuel_slope_and_intercept(
 		electric_efficiency_full_load=p.s.generator.electric_efficiency_full_load, 
 		electric_efficiency_half_load=p.s.generator.electric_efficiency_half_load,
-        fuel_higher_heating_value_kwh_per_gal=p.s.generator.fuel_higher_heating_value_kwh_per_gal
+        fuel_higher_heating_value_kwh_per_unit=p.s.generator.fuel_higher_heating_value_kwh_per_gal
 	)
     # Define dvMGFuelUsed by summing over outage time_steps.
     @constraint(m, [t in p.techs.gen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps],
@@ -174,10 +174,11 @@ end
 
 function add_MG_CHP_fuel_burn_constraints(m, p; _n="")
     # Fuel burn slope and intercept
-    fuel_burn_full_load = 1.0 / p.s.chp.electric_efficiency_full_load  # [kWt/kWe]
-    fuel_burn_half_load = 0.5 / p.s.chp.electric_efficiency_half_load  # [kWt/kWe]
-    fuel_burn_slope = (fuel_burn_full_load - fuel_burn_half_load) / (1.0 - 0.5)  # [kWt/kWe]
-    fuel_burn_intercept = fuel_burn_full_load - fuel_burn_slope * 1.0  # [kWt/kWe_rated]
+    fuel_burn_slope, fuel_burn_intercept = fuel_slope_and_intercept(; 
+        electric_efficiency_full_load = p.s.chp.electric_efficiency_full_load, 
+        electric_efficiency_half_load = p.s.chp.electric_efficiency_half_load, 
+        fuel_higher_heating_value_kwh_per_unit=1
+    )
   
     # Conditionally add dvFuelBurnYIntercept if coefficient p.FuelBurnYIntRate is greater than ~zero
     if abs(fuel_burn_intercept) > 1.0E-7
