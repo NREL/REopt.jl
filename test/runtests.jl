@@ -558,7 +558,7 @@ else  # run HiGHS tests
 
             s = Scenario(d)
             inputs = REoptInputs(s)
-            @test inputs.heating_loads_kw["ProcessHeat"][1] ≈ 146.535535 atol=1.0e-3
+            @test inputs.heating_loads_kw["ProcessHeat"][1] ≈ 117.228428 atol=1.0e-3
         end
         @testset "Separate Heat Load Results" begin
             d = JSON.parsefile("./scenarios/electric_heater.json")
@@ -575,7 +575,7 @@ else  # run HiGHS tests
             results = run_reopt(m, inputs)
             @test sum(results["ExistingBoiler"]["thermal_to_dhw_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.01
             @test sum(results["ExistingBoiler"]["thermal_to_space_heating_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.01
-            @test sum(results["ExistingBoiler"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]) ≈ 4380.0 atol=0.01
+            @test sum(results["ExistingBoiler"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]) ≈ 0.8*4380.0 atol=0.01
             @test sum(results["ElectricHeater"]["thermal_to_dhw_load_series_mmbtu_per_hour"]) ≈ 0.8*4380.0 atol=0.01
             @test sum(results["ElectricHeater"]["thermal_to_space_heating_load_series_mmbtu_per_hour"]) ≈ 0.8*4380.0 atol=0.01
             @test sum(results["ElectricHeater"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.01
