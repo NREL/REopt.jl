@@ -34,11 +34,13 @@ Classify the change according to the following categories:
 ### Fixed 
 - Added `export_rate_beyond_net_metering_limit` to list of inputs to be converted to type Real, to avoid MethodError if type is vector of Any. 
 - Fix blended CRB processing when one or more load types have zero annual energy
+- When calculating CHP fuel intercept and slope, use 1 for the HHV because CHP fuel measured in units of kWh, instead of using non-existent **CHP.fuel_higher_heating_value_kwh_per_gal**
 - Changed instances of indexing using i in 1:length() paradigm to use eachindex() or axes() instead because this is more robust
 - In `src/core/urdb.jl`, ensure values from the "energyweekdayschedule" and "energyweekendschedule" arrays in the URDB response dictionary are converted to _Int_ before being used as indices
 - Handle an array of length 1 for CHP.installed_cost_per_kw which fixes the API using this parameter
 ### Changed
 - add **ElectricStorage** input option **soc_min_applies_during_outages** (which defaults to _false_) and only apply the minimum state of charge constraint in function `add_MG_storage_dispatch_constraints` if it is _true_
+- Renamed function `generator_fuel_slope_and_intercept` to `fuel_slope_and_intercept` and generalize to not be specific to diesel measured in units of gal, then use for calculating non diesel fuel slope and intercept too
 
 ## v0.44.0
 ### Added 

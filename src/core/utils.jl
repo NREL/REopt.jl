@@ -535,29 +535,29 @@ function get_monthly_time_steps(year::Int; time_steps_per_hour=1)
 end
 
 """
-generator_fuel_slope_and_intercept(;
+fuel_slope_and_intercept(;
                 electric_efficiency_full_load::Real, [kWhe/kWht]
                 electric_efficiency_half_load::Real, [kWhe/kWht]
-                fuel_higher_heating_value_kwh_per_gal::Real
+                fuel_higher_heating_value_kwh_per_unit::Real
             )
 
 return Tuple{<:Real,<:Real} where 
-    first value is diesel fuel burn slope [gal/kWhe]
-    secnod value is diesel fuel burn intercept [gal/hr]
+    first value is fuel burn slope [<fuel unit>/kWhe]
+    second value is fuel burn intercept [<fuel unit>/hr]
 """
-function generator_fuel_slope_and_intercept(;
+function fuel_slope_and_intercept(;
                         electric_efficiency_full_load::Real, 
                         electric_efficiency_half_load::Real,
-                        fuel_higher_heating_value_kwh_per_gal::Real
+                        fuel_higher_heating_value_kwh_per_unit::Real
                     )
     fuel_burn_full_load_kwht = 1.0 / electric_efficiency_full_load  # [kWe_rated/(kWhe/kWht)]
     fuel_burn_half_load_kwht = 0.5 / electric_efficiency_half_load  # [kWe_rated/(kWhe/kWht)]
     fuel_slope_kwht_per_kwhe = (fuel_burn_full_load_kwht - fuel_burn_half_load_kwht) / (1.0 - 0.5)  # [kWht/kWhe]
     fuel_intercept_kwht_per_hr = fuel_burn_full_load_kwht - fuel_slope_kwht_per_kwhe * 1.0  # [kWht/hr]
-    fuel_slope_gal_per_kwhe = fuel_slope_kwht_per_kwhe / fuel_higher_heating_value_kwh_per_gal # [gal/kWhe]
-    fuel_intercept_gal_per_hr = fuel_intercept_kwht_per_hr / fuel_higher_heating_value_kwh_per_gal # [gal/hr]
+    fuel_slope_unit_per_kwhe = fuel_slope_kwht_per_kwhe / fuel_higher_heating_value_kwh_per_unit # [<fuel unit>/kWhe]
+    fuel_intercept_unit_per_hr = fuel_intercept_kwht_per_hr / fuel_higher_heating_value_kwh_per_unit # [<fuel unit>/hr]
     
-    return fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr
+    return fuel_slope_unit_per_kwhe, fuel_intercept_unit_per_hr
 end
 
 function convert_temp_degF_to_Kelvin(degF::Float64)
