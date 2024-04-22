@@ -28,7 +28,7 @@ function add_hot_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict,
         discharge = (sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for q in p.heating_loads) for ts in p.time_steps)
         r["storage_to_load_series_mmbtu_per_hour"] = round.(value.(discharge) ./ KWH_PER_MMBTU, digits=7)
 
-        if "SpaceHeating" in p.heating_loads && p.s.electric_heater.can_serve_dhw
+        if "SpaceHeating" in p.heating_loads && p.s.storage.attr[b].can_serve_space_heating
             @expression(m, HotTESToSpaceHeatingKW[ts in p.time_steps], 
                 m[Symbol("dvHeatFromStorage"*_n)][b,"SpaceHeating",ts]
             )
@@ -37,7 +37,7 @@ function add_hot_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict,
         end
         r["storage_to_space_heating_load_series_mmbtu_per_hour"] = round.(value.(HotTESToSpaceHeatingKW) ./ KWH_PER_MMBTU, digits=5)
 
-        if "DomesticHotWater" in p.heating_loads && p.s.electric_heater.can_serve_dhw
+        if "DomesticHotWater" in p.heating_loads && p.s.storage.attr[b].can_serve_dhw
             @expression(m, HotTESToDHWKW[ts in p.time_steps], 
                 m[Symbol("dvHeatFromStorage"*_n)][b,"DomesticHotWater",ts]
             )
@@ -46,7 +46,7 @@ function add_hot_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict,
         end
         r["storage_to_dhw_load_series_mmbtu_per_hour"] = round.(value.(HotTESToDHWKW) ./ KWH_PER_MMBTU, digits=5)
 
-        if "ProcessHeat" in p.heating_loads && p.s.electric_heater.can_serve_dhw
+        if "ProcessHeat" in p.heating_loads && p.s.storage.attr[b].can_serve_process_heat
             @expression(m, HotTESToProcessHeatKW[ts in p.time_steps], 
                 m[Symbol("dvHeatFromStorage"*_n)][b,"ProcessHeat",ts]
             )
