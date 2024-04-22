@@ -1,10 +1,11 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 function add_chp_fuel_burn_constraints(m, p; _n="")
     # Fuel burn slope and intercept
-    fuel_burn_full_load = 1.0 / p.s.chp.electric_efficiency_full_load  # [kWt/kWe]
-    fuel_burn_half_load = 0.5 / p.s.chp.electric_efficiency_half_load  # [kWt/kWe]
-    fuel_burn_slope = (fuel_burn_full_load - fuel_burn_half_load) / (1.0 - 0.5)  # [kWt/kWe]
-    fuel_burn_intercept = fuel_burn_full_load - fuel_burn_slope * 1.0  # [kWt/kWe_rated]
+    fuel_burn_slope, fuel_burn_intercept = fuel_slope_and_intercept(; 
+        electric_efficiency_full_load = p.s.chp.electric_efficiency_full_load, 
+        electric_efficiency_half_load = p.s.chp.electric_efficiency_half_load, 
+        fuel_higher_heating_value_kwh_per_unit=1
+    )
 
     # Fuel cost
     m[:TotalCHPFuelCosts] = @expression(m, 
