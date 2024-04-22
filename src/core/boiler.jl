@@ -15,6 +15,10 @@ struct Boiler <: AbstractThermalTech
     can_serve_dhw::Bool
     can_serve_space_heating::Bool
     can_serve_process_heat::Bool
+    emissions_factor_lb_CO2_per_mmbtu::Real
+    emissions_factor_lb_NOx_per_mmbtu::Real
+    emissions_factor_lb_SO2_per_mmbtu::Real
+    emissions_factor_lb_PM25_per_mmbtu::Real
 end
 
 
@@ -42,6 +46,10 @@ function Boiler(;
     can_serve_dhw::Bool = true # If Boiler can supply heat to the domestic hot water load
     can_serve_space_heating::Bool = true # If Boiler can supply heat to the space heating load
     can_serve_process_heat::Bool = true # If Boiler can supply heat to the process heating load
+    emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0)
+    emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0)
+    emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0)
+    emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0)
 )
 ```
 """
@@ -60,8 +68,11 @@ function Boiler(;
         can_supply_steam_turbine::Bool = true,
         can_serve_dhw::Bool = true,
         can_serve_space_heating::Bool = true,
-        can_serve_process_heat::Bool = true
-        # emissions_factor_lb_CO2_per_mmbtu::Real,
+        can_serve_process_heat::Bool = true,
+        emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0),
+        emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0),
+        emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0),
+        emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0),
     )
 
     if isempty(fuel_cost_per_mmbtu)
@@ -90,6 +101,10 @@ function Boiler(;
         can_supply_steam_turbine,
         can_serve_dhw,
         can_serve_space_heating,
-        can_serve_process_heat
+        can_serve_process_heat,
+        emissions_factor_lb_CO2_per_mmbtu,
+        emissions_factor_lb_NOx_per_mmbtu,
+        emissions_factor_lb_SO2_per_mmbtu,
+        emissions_factor_lb_PM25_per_mmbtu
     )
 end

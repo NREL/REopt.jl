@@ -1428,7 +1428,7 @@ end
 `ProcessHeatLoad` is an optional REopt input with the following keys and default values:
 ```julia
     annual_mmbtu::Union{Real, Nothing} = nothing
-    heat_loads_mmbtu_per_hour::Array{<:Real,1} = Real[]
+    fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[]
 ```
 
 There are many ways in which a ProcessHeatLoad can be defined:
@@ -1446,26 +1446,27 @@ struct ProcessHeatLoad
 
     function ProcessHeatLoad(;
         annual_mmbtu::Union{Real, Nothing} = nothing,
-        heat_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
-        time_steps_per_hour::Int=1
+        fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
+        time_steps_per_hour::Int=1,
+        existing_boiler_efficiency::Float64=NaN
     )
-        if length(heat_loads_mmbtu_per_hour) != 0 && length(heat_loads_mmbtu_per_hour) != 8760*time_steps_per_hour
-            @error("heat_loads_mmbtu_per_hour must have length zero or 8760*time_steps_per_hour.")
-        elseif !isnothing(annual_mmbtu) && length(heat_loads_mmbtu_per_hour) == 0
-            @warn("only annual_mmbtu was provided - assuming a flat load.")
-            loads_kw = ones(8760) * annual_mmbtu * KWH_PER_MMBTU / (8760*time_steps_per_hour) 
-        elseif isnothing(annual_mmbtu) && length(heat_loads_mmbtu_per_hour) == 8760*time_steps_per_hour
-            loads_kw = heat_loads_mmbtu_per_hour * KWH_PER_MMBTU 
-            annual_mmbtu = sum(heat_loads_mmbtu_per_hour) / time_steps_per_hour
-        elseif !isnothing(annual_mmbtu) && length(heat_loads_mmbtu_per_hour) == 8760*time_steps_per_hour
-            @warn("annual_mmbtu and sum of heat_loads_mmbtu_per_hour are both provided - using heat_loads_mmbtu_per_hour time series")
-            loads_kw = heat_loads_mmbtu_per_hour * KWH_PER_MMBTU 
-            annual_mmbtu = sum(heat_loads_mmbtu_per_hour) / time_steps_per_hour
+        if length(fuel_loads_mmbtu_per_hour) != 0 && length(fuel_loads_mmbtu_per_hour) != 8760*time_steps_per_hour
+            @error("fuel_loads_mmbtu_per_hour must have length zero or 8760*time_steps_per_hour for process heat load.")
+        elseif !isnothing(annual_mmbtu) && length(fuel_loads_mmbtu_per_hour) == 0
+            @warn("only annual_mmbtu was provided - assuming a flat process heat load.")
+            loads_kw = ones(8760) .* (annual_mmbtu * KWH_PER_MMBTU * existing_boiler_efficiency / (8760*time_steps_per_hour) )
+        elseif isnothing(annual_mmbtu) && length(fuel_loads_mmbtu_per_hour) == 8760*time_steps_per_hour
+            loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * existing_boiler_efficiency)
+        elseif !isnothing(annual_mmbtu) && length(fuel_loads_mmbtu_per_hour) == 8760*time_steps_per_hour
+            @warn("annual_mmbtu and sum of fuel_loads_mmbtu_per_hour are both provided - using fuel_loads_mmbtu_per_hour time series for process heat load.")
+            loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * existing_boiler_efficiency)
         else
-            @warn("annual_mmbtu not provided and length of heat_loads_mmbtu_per_hour is not equal to 8760 - returning zero load.")
-            annual_mmbtu = 0.0
+            @warn("annual_mmbtu not provided and length of fuel_loads_mmbtu_per_hour is not equal to 8760 - returning zero process heat load.")
             loads_kw = zeros(8760 * time_steps_per_hour)
         end
-        new(loads_kw, annual_mmbtu)
+        new(
+            loads_kw,
+            (sum(loads_kw) / time_steps_per_hour) / KWH_PER_MMBTU
+        )
     end
 end

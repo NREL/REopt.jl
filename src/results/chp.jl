@@ -119,7 +119,7 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     end
     r["thermal_to_space_heating_load_series_mmbtu_per_hour"] = round.(value.(CHPToSpaceHeatingKW ./ KWH_PER_MMBTU), digits=5)
     
-    if "ProcessHeat" in p.heating_loads && p.s.chp.can_serve_space_heating
+    if "ProcessHeat" in p.heating_loads && p.s.chp.can_serve_process_heat
         @expression(m, CHPToProcessHeatKW[ts in p.time_steps], 
             m[:dvHeatingProduction]["CHP","ProcessHeat",ts] - CHPToHotTESByQuality["ProcessHeat",ts] - CHPToSteamTurbineByQualityKW["ProcessHeat",ts] - CHPThermalToWasteByQualityKW["ProcessHeat",ts]
         )

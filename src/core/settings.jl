@@ -9,6 +9,7 @@ Captures high-level inputs affecting the optimization.
     off_grid_flag::Bool = false # true if modeling an off-grid system, not connected to bulk power system
     include_climate_in_objective::Bool = false # true if climate costs of emissions should be included in the model's objective function
     include_health_in_objective::Bool = false # true if health costs of emissions should be included in the model's objective function
+    solver_name::String = "HiGHS" # solver used to obtain a solution to model instance. available options: ["HiGHS", "Cbc", "CPLEX", "Xpress"]
 ```
 """
 Base.@kwdef struct Settings
@@ -17,4 +18,5 @@ Base.@kwdef struct Settings
     off_grid_flag::Bool = false # true if modeling an off-grid system, not connected to bulk power system
     include_climate_in_objective::Bool = false # true if climate costs of emissions should be included in the model's objective function
     include_health_in_objective::Bool = false # true if health costs of emissions should be included in the model's objective function
+    solver_name::String = "HiGHS" # solver used to obtain a solution to model instance. available options: ["HiGHS", "Cbc", "CPLEX", "Xpress"]
 end

@@ -187,7 +187,7 @@ function CHP(d::Dict;
         end
     elseif length(chp.installed_cost_per_kw) > 1 && length(chp.installed_cost_per_kw) != length(chp.tech_sizes_for_cost_curve)
         throw(@error("To model CHP cost curve, you must provide `chp.tech_sizes_for_cost_curve` vector of equal length to `chp.installed_cost_per_kw`"))
-    elseif typeof(chp.installed_cost_per_kw) == Vector && length(chp.installed_cost_per_kw) == 1
+    elseif typeof(chp.installed_cost_per_kw) <: Array && length(chp.installed_cost_per_kw) == 1
         chp.installed_cost_per_kw = chp.installed_cost_per_kw[1]
     elseif isempty(chp.tech_sizes_for_cost_curve) && isempty(chp.installed_cost_per_kw)
         update_installed_cost_params = true
@@ -339,7 +339,7 @@ end
                                         is_electric_only::Bool=false)
 
 Depending on the set of inputs, different sets of outputs are determine in addition to all CHP cost and performance parameter defaults:
-    1. Inputs: existing_boiler_production_type_steam_or_hw and avg_boiler_fuel_load_mmbtu_per_hour
+    1. Inputs: hot_water_or_steam and avg_boiler_fuel_load_mmbtu_per_hour
        Outputs: prime_mover, size_class, chp_elec_size_heuristic_kw, chp_max_size_kw
     2. Inputs: prime_mover and avg_boiler_fuel_load_mmbtu_per_hour
        Outputs: size_class, chp_elec_size_heuristic_kw, chp_max_size_kw
@@ -351,7 +351,7 @@ Depending on the set of inputs, different sets of outputs are determine in addit
        Outputs: chp_elec_size_heuristic_kw, chp_max_size_kw
 
 The main purpose of this function is to communicate the following mapping of dependency of CHP defaults versus 
-    existing_boiler_production_type_steam_or_hot_water and avg_boiler_fuel_load_mmbtu_per_hour:
+    hot_water_or_steam and avg_boiler_fuel_load_mmbtu_per_hour:
 If hot_water and <= 27 MMBtu/hr avg_boiler_fuel_load_mmbtu_per_hour --> prime_mover = recip_engine of size_class X
 If hot_water and > 27 MMBtu/hr avg_boiler_fuel_load_mmbtu_per_hour --> prime_mover = combustion_turbine of size_class X
 If steam and <= 7 MMBtu/hr avg_boiler_fuel_load_mmbtu_per_hour --> prime_mover = recip_engine of size_class X

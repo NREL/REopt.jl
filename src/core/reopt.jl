@@ -226,7 +226,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 					@constraint(m, [t in p.heating_techs, ts in p.time_steps], m[:dvHeatToStorage][b,"SpaceHeating",ts] == 0)
 				end
 				if "ProcessHeat" in p.heating_loads_served_by_tes[b]
-					@constraint(m, [t in setdiff(p.heating_techs, p.techs_can_serve_space_heating), ts in p.time_steps], m[:dvHeatToStorage][b,"ProcessHeat",ts] == 0)
+					@constraint(m, [t in setdiff(p.heating_techs, p.techs_can_serve_process_heat), ts in p.time_steps], m[:dvHeatToStorage][b,"ProcessHeat",ts] == 0)
 				else
 					@constraint(m, [t in p.heating_techs, ts in p.time_steps], m[:dvHeatToStorage][b,"ProcessHeat",ts] == 0)
 				end
@@ -294,6 +294,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
         if !isempty(setdiff(p.techs.heating, p.techs.elec))
             add_heating_tech_constraints(m, p)
+        end
+
+        # Zero out ExistingBoiler production if retire_in_optimal; new_heating_techs avoids zeroing for BAU 
+        new_heating_techs = ["CHP", "Boiler", "ElectricHeater", "SteamTurbine"]
+        if !isempty(intersect(new_heating_techs, p.techs.all))
+            if !isnothing(p.s.existing_boiler) && p.s.existing_boiler.retire_in_optimal
+                no_existing_boiler_production(m, p)
+            end
         end
 
         if !isempty(p.techs.boiler)
