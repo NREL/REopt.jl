@@ -110,7 +110,7 @@ function add_chp_supplementary_firing_constraints(m, p; _n="")
         #There's no upper bound specified for the CHP supplementary firing, so assume the entire heat load as a reasonable maximum that wouldn't be exceeded (but might not be the best possible value). 
         max_supplementary_firing_size = maximum(p.s.dhw_load.loads_kw .+ p.s.space_heating_load.loads_kw)
         @constraint(m, NoCHPSupplementaryFireOffCon[t in p.techs.chp, ts in p.time_steps],
-                m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] <= (p.s.chp.supplementary_firing_max_steam_ratio - 1.0) * p.production_factor[t,ts] * (thermal_prod_slope * max_supplementary_firing_size + m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts])
+                m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] <= (p.s.chp.supplementary_firing_max_steam_ratio - 1.0) * p.production_factor[t,ts] * (thermal_prod_slope * max_supplementary_firing_size + m[Symbol("dvHeatingProductionYIntercept"*_n)][t,ts])
                 )
     end
 end
