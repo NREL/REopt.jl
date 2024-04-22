@@ -2298,7 +2298,7 @@ else  # run HiGHS tests
         end
 
         @testset "Process Heat Load" begin
-            d = JSON.parsefile("./scenarios/process_heat.json")'
+            d = JSON.parsefile("./scenarios/process_heat.json")
         
             # Test set 1: Boiler has free fuel, no emissions, and serves all heating load.
             d["Boiler"]["fuel_cost_per_mmbtu"] = 0.0
