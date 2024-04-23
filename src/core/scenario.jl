@@ -258,7 +258,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         process_heat_load = ProcessHeatLoad(;
             fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
             time_steps_per_hour=settings.time_steps_per_hour,
-            existing_boiler_efficiency = existing_boiler_efficiency
+            existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
         )
     end
 
