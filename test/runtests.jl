@@ -2085,41 +2085,41 @@ else  # run HiGHS tests
                 end
                 
                 if i == 1
-                    @test results["PV"]["size_kw"] ≈ 60.12 atol=1e-1
+                    @test results["PV"]["size_kw"] ≈ 59.7222 atol=1e-1
                     @test results["ElectricStorage"]["size_kw"] ≈ 0.0 atol=1e-1
                     @test results["ElectricStorage"]["size_kwh"] ≈ 0.0 atol=1e-1
-                    @test results["Generator"]["size_kw"] ≈ 21.52 atol=1e-1
+                    @test results["Generator"]["size_kw"] ≈ 9.13 atol=1e-1
                     @test results["Site"]["total_renewable_energy_fraction"] ≈ 0.8
-                    @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.147576 atol=1e-4
-                    @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.58694032 atol=1e-4
-                    @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 355.8 atol=1
-                    @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 11.64 atol=1e-2
-                    @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 7.0605
+                    @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.148375 atol=1e-4
+                    @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.57403012 atol=1e-4
+                    @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 332.4 atol=1
+                    @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 11.85 atol=1e-2
+                    @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 7.427
                     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0
-                    @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 8315.69 atol=1
-                    @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 232.85
-                    @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 141.21
+                    @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 8459.45 atol=1
+                    @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 236.95
+                    @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 148.54
                     @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0
-                    @test results["ElectricUtility"]["annual_emissions_tonnes_CO2_bau"] ≈ 28.186 atol=1e-1
-                    @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 563.72
+                    @test results["ElectricUtility"]["annual_emissions_tonnes_CO2_bau"] ≈ 27.813 atol=1e-1
+                    @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 556.26
                 elseif i == 2
                     #commented out values are results using same levelization factor as API
                     @test results["PV"]["size_kw"] ≈ 106.13 atol=1
-                    @test results["ElectricStorage"]["size_kw"] ≈ 21.58 atol=1 # 20.29
-                    @test results["ElectricStorage"]["size_kwh"] ≈ 166.29 atol=1
+                    @test results["ElectricStorage"]["size_kw"] ≈ 20.09 atol=1 # 20.29
+                    @test results["ElectricStorage"]["size_kwh"] ≈ 170.94 atol=1
                     @test !haskey(results, "Generator")
                     # Renewable energy
                     @test results["Site"]["renewable_electricity_fraction"] ≈ 0.78586 atol=1e-3
                     @test results["Site"]["renewable_electricity_fraction_bau"] ≈ 0.132118 atol=1e-3 #0.1354 atol=1e-3
-                    @test results["Site"]["annual_renewable_electricity_kwh_bau"] ≈ 13211.78 atol=10 # 13542.62 atol=10
+                    @test results["Site"]["annual_renewable_electricity_kwh_bau"] ≈ 13308.5 atol=10 # 13542.62 atol=10
                     @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.132118 atol=1e-3 # 0.1354 atol=1e-3
                     # CO2 emissions - totals ≈  from grid, from fuelburn, ER, $/tCO2 breakeven
                     @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.8 atol=1e-3 # 0.8
-                    @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 460.7 atol=1e-1
+                    @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 491.5 atol=1e-1
                     @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 11.662 atol=1
                     @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 58.3095 atol=1
                     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
-                    @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 8401.1 atol=1
+                    @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 8397.85 atol=1
                     @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 1166.19 atol=1
                     @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
                     @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0 atol=1 # 0.0
