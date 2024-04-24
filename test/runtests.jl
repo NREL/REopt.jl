@@ -973,16 +973,43 @@ else  # run HiGHS tests
         @testset "Minimize Unserved Load" begin
                 
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
-            results = run_reopt(m, "./scenarios/outage.json")
-
-            @test results["Outages"]["expected_outage_cost"] ≈ 0
-            @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 0
+            d = JSON.parsefile("./scenarios/outage.json")
+            d["ElectricLoad"]["loads_kw"] = ones(8760)*200.0
+            d["ElectricLoad"]["loads_kw"][5100:5109] .= 405.0
+            d["ElectricLoad"]["loads_kw"][5200:5209] .= 405.0
+            d["ElectricLoad"]["critical_load_fraction"] = 0.5
+            d["PV"]["existing_kw"] = 0.0
+            d["PV"]["min_kw"] = 100.0
+            d["PV"]["max_kw"] = 100.0
+            d["CHP"]["min_kw"] = 100.0
+            d["CHP"]["max_kw"] = 100.0
+            d["Generator"]["existing_kw"] = 0.0
+            d["Generator"]["min_kw"] = 100.0
+            d["Generator"]["max_kw"] = 100.0
+            d["ElectricStorage"]["min_kw"] = 20
+            d["ElectricStorage"]["max_kw"] = 20
+            d["ElectricStorage"]["min_kwh"] = 50
+            d["ElectricStorage"]["max_kwh"] = 50
+            d["Financial"]["microgrid_upgrade_cost_fraction"] = 0.0
+            s = Scenario(d)
+            p = REoptInputs(s)
+            results = run_reopt(m, p)
+        
+            @test results["Outages"]["expected_outage_cost"] ≈ 0 atol=0.1
+            @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 0 atol=0.1
             @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
             @test value(m[:binMGTechUsed]["CHP"]) ≈ 1
             @test value(m[:binMGTechUsed]["PV"]) ≈ 1
             @test value(m[:binMGStorageUsed]) ≈ 1
-            @test results["Financial"]["lcc"] ≈ 6.83633907986e7 rtol=0.01
-
+        
+            # Increase cost of microgrid upgrade, PV not used and some load not met
+            d["Financial"]["microgrid_upgrade_cost_fraction"] = 0.3
+            s = Scenario(d)
+            p = REoptInputs(s)
+            results = run_reopt(m, p)
+            @test value(m[:binMGTechUsed]["PV"]) ≈ 0
+            @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) > 0
+            
             #=
             Scenario with $0.001/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
             - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
@@ -1005,13 +1032,33 @@ else  # run HiGHS tests
             @test results["Financial"]["lcc"] ≈ 8.6413594727e7 rtol=0.001
 
             # Scenario with generator, PV, wind, electric storage
+            d = JSON.parsefile("./scenarios/outages_gen_pv_wind_stor.json")
+            d["ElectricLoad"]["loads_kw"] = ones(8760)*200.0
+            d["ElectricLoad"]["loads_kw"][5100:5119] .= 425.0
+            d["ElectricLoad"]["critical_load_fraction"] = 0.5
+            d["PV"]["existing_kw"] = 0.0
+            d["PV"]["min_kw"] = 100.0
+            d["PV"]["max_kw"] = 100.0
+            d["Wind"]["min_kw"] = 100.0
+            d["Wind"]["max_kw"] = 100.0
+            d["Generator"]["min_kw"] = 100.0
+            d["Generator"]["max_kw"] = 100.0
+            d["ElectricStorage"]["min_kw"] = 100
+            d["ElectricStorage"]["max_kw"] = 100
+            d["ElectricStorage"]["min_kwh"] = 100
+            d["ElectricStorage"]["max_kwh"] = 100
+            d["Site"]["min_resil_time_steps"] = 1
+            s = Scenario(d)
+            p = REoptInputs(s)
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
-            results = run_reopt(m, "./scenarios/outages_gen_pv_wind_stor.json")
+            results = run_reopt(m, p)
+            print(results["Messages"])
             @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
             @test value(m[:binMGTechUsed]["PV"]) ≈ 1
             @test value(m[:binMGTechUsed]["Wind"]) ≈ 1
-            @test results["Outages"]["expected_outage_cost"] ≈ 446899.75 atol=1.0
-            @test results["Financial"]["lcc"] ≈ 6.71661825335e7 rtol=0.001
+            @test results["Outages"]["expected_outage_cost"] ≈ 1.296319791276051e6 atol=1.0
+            @test results["Financial"]["lcc"] ≈ 4.8046446434e6 rtol=0.001
+            
         end
 
         @testset "Outages with Wind and supply-to-load no greater than critical load" begin
