@@ -971,12 +971,10 @@ else  # run HiGHS tests
         end
 
         @testset "Minimize Unserved Load" begin
-                
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
             d = JSON.parsefile("./scenarios/outage.json")
             d["ElectricLoad"]["loads_kw"] = ones(8760)*200.0
-            d["ElectricLoad"]["loads_kw"][5100:5109] .= 405.0
-            d["ElectricLoad"]["loads_kw"][5200:5209] .= 405.0
+            d["ElectricLoad"]["loads_kw"][5100:5109] .= 410.0
+            d["ElectricLoad"]["loads_kw"][5200:5209] .= 410.0
             d["ElectricLoad"]["critical_load_fraction"] = 0.5
             d["PV"]["existing_kw"] = 0.0
             d["PV"]["min_kw"] = 100.0
@@ -993,6 +991,7 @@ else  # run HiGHS tests
             d["Financial"]["microgrid_upgrade_cost_fraction"] = 0.0
             s = Scenario(d)
             p = REoptInputs(s)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
             results = run_reopt(m, p)
         
             @test results["Outages"]["expected_outage_cost"] ≈ 0 atol=0.1
@@ -1002,10 +1001,13 @@ else  # run HiGHS tests
             @test value(m[:binMGTechUsed]["PV"]) ≈ 1
             @test value(m[:binMGStorageUsed]) ≈ 1
         
-            # Increase cost of microgrid upgrade, PV not used and some load not met
+            # Increase cost of microgrid upgrade and PV Size, PV not used and some load not met
             d["Financial"]["microgrid_upgrade_cost_fraction"] = 0.3
+            d["PV"]["min_kw"] = 200.0
+            d["PV"]["max_kw"] = 200.0
             s = Scenario(d)
             p = REoptInputs(s)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
             results = run_reopt(m, p)
             @test value(m[:binMGTechUsed]["PV"]) ≈ 0
             @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) > 0
@@ -1052,7 +1054,6 @@ else  # run HiGHS tests
             p = REoptInputs(s)
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
             results = run_reopt(m, p)
-            print(results["Messages"])
             @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
             @test value(m[:binMGTechUsed]["PV"]) ≈ 1
             @test value(m[:binMGTechUsed]["Wind"]) ≈ 1
