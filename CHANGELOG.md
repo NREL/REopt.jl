@@ -23,14 +23,14 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop 
+## Develop 2024-04-25
 ### Changed 
 - Change the way we determine which dataset to utilize in the PVWatts API call. Previously, we utilized defined lat-long bounds to determine if "nsrdb" or "intl" data should be used in PVWatts call. Now, we call the Solar Dataset Query API (v2) (https://developer.nrel.gov/docs/solar/data-query/v2/) to determine the dataset to use, and include "tmy3" as an option, as this is currently the best-available data for many locations in Alaska. 
 ### Added
 - Info to user including name of PV and/or temperature datasource used and distance from site location to datasource location
 - Warning to user if data is not from NSRDB or if data is more than 200 miles away 
   
-## Develop - 2024-04-11
+## v0.45.0
 ### Fixed 
 - Added `export_rate_beyond_net_metering_limit` to list of inputs to be converted to type Real, to avoid MethodError if type is vector of Any. 
 - Fix blended CRB processing when one or more load types have zero annual energy
