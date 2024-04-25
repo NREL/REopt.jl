@@ -70,6 +70,19 @@ function ASHP(;
     if isnothing(can_supply_steam_turbine)
         can_supply_steam_turbine = defaults["can_supply_steam_turbine"]
     end
+    if isnothing(can_serve_dhw)
+        can_serve_dhw = defaults["can_serve_dhw"]
+    end
+    if isnothing(can_serve_space_heating)
+        can_serve_space_heating = defaults["can_serve_space_heating"]
+    end
+    if isnothing(can_serve_process_heat)
+        can_serve_process_heat = defaults["can_serve_process_heat"]
+    end
+    if isnothing(can_serve_cooling)
+        can_serve_cooling = defaults["can_serve_cooling"]
+    end
+
     #if isnothing(cop_heating)
     #    cop_heating = defaults["cop_heating"]
     #end

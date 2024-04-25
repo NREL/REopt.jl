@@ -5,5 +5,9 @@
     "macrs_bonus_fraction": 0.0,
     "can_supply_steam_turbine": false,
     "cop_heating": 3.0,
-    "cop_cooling": 3.0
+    "cop_cooling": 3.0,
+    "can_serve_process_heat": false,
+    "can_serve_dhw": false, 
+    "can_serve_space_heating": true,
+    "can_serve_cooling": true
 }
