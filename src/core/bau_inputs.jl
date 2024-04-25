@@ -25,7 +25,6 @@ function BAUInputs(p::REoptInputs)
     existing_sizes = Dict(t => 0.0 for t in techs.all)
     cap_cost_slope = Dict{String, Any}()
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
-    cop = Dict(t => 0.0 for t in techs.cooling)
     thermal_cop = Dict{String, Float64}()
     backup_heating_cop = Dict{String, Float64}()
     heating_cop = Dict{String, Array{Float64,1}}()
@@ -95,10 +94,9 @@ function BAUInputs(p::REoptInputs)
             tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh)
     end
 
+    cooling_cop["ExistingChiller"] = ones(length(time_steps))
     if "ExistingChiller" in techs.all
-        setup_existing_chiller_inputs(bau_scenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cop)
-    else
-        cop["ExistingChiller"] = 1.0
+        setup_existing_chiller_inputs(bau_scenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cooling_cop)
     end
 
     # Assign null GHP parameters for REoptInputs
@@ -172,7 +170,6 @@ function BAUInputs(p::REoptInputs)
         existing_sizes,
         cap_cost_slope,
         om_cost_per_kw,
-        cop,
         thermal_cop,
         p.time_steps,
         p.time_steps_with_grid,
