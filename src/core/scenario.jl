@@ -446,6 +446,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
 
     # GHP
+    ambient_temp_celcius = nothing
     ghp_option_list = []
     space_heating_thermal_load_reduction_with_ghp_kw = zeros(8760 * settings.time_steps_per_hour)
     cooling_thermal_load_reduction_with_ghp_kw = zeros(8760 * settings.time_steps_per_hour)
@@ -664,15 +665,17 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         # If user does not provide heating cop series then assign cop curves based on ambient temperature
         if !haskey(d["ASHP"], "cop_heating") || !haskey(d["ASHP"], "cop_cooling")
             # If PV is evaluated, get ambient temperature series from PVWatts and assign PV production factor
-            if !isempty(pvs)
-                for pv in pvs
-                    pv.production_factor_series, ambient_temp_celcius = call_pvwatts_api(site.latitude, site.longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
-                        array_type=pv.array_type, losses=round(pv.losses*100, digits=3), dc_ac_ratio=pv.dc_ac_ratio,
-                        gcr=pv.gcr, inv_eff=pv.inv_eff*100, timeframe="hourly", radius=pv.radius, time_steps_per_hour=settings.time_steps_per_hour)
+            if isnothing(ambient_temp_celcius)
+                if !isempty(pvs)
+                    for pv in pvs
+                        pv.production_factor_series, ambient_temp_celcius = call_pvwatts_api(site.latitude, site.longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
+                            array_type=pv.array_type, losses=round(pv.losses*100, digits=3), dc_ac_ratio=pv.dc_ac_ratio,
+                            gcr=pv.gcr, inv_eff=pv.inv_eff*100, timeframe="hourly", radius=pv.radius, time_steps_per_hour=settings.time_steps_per_hour)
+                    end
+                else
+                    # if PV is not evaluated, call PVWatts to get ambient temperature series
+                    pv_prodfactor, ambient_temp_celcius = call_pvwatts_api(site.latitude, site.longitude; time_steps_per_hour=settings.time_steps_per_hour)    
                 end
-            else
-                # if PV is not evaluated, call PVWatts to get ambient temperature series
-                pv_prodfactor, ambient_temp_celcius = call_pvwatts_api(site.latitude, site.longitude; time_steps_per_hour=settings.time_steps_per_hour)    
             end
 
             if !haskey(d["ASHP"], "cop_heating")
