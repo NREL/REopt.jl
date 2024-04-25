@@ -13,6 +13,7 @@ struct ASHP <: AbstractThermalTech
     can_serve_dhw::Bool
     can_serve_space_heating::Bool
     can_serve_process_heat::Bool
+    can_serve_cooling::Bool
 end
 
 
@@ -37,6 +38,7 @@ function ASHP(;
     can_serve_dhw::Union{Bool, Nothing} = nothing # If ASHP can supply heat to the domestic hot water load
     can_serve_space_heating::Union{Bool, Nothing} = nothing # If ASHP can supply heat to the space heating load
     can_serve_process_heat::Union{Bool, Nothing} = nothing # If ASHP can supply heat to the process heating load
+    can_serve_cooling::Union{Bool, Nothing} = nothing # If ASHP can supply heat to the cooling load
 )
 ```
 """
@@ -53,6 +55,7 @@ function ASHP(;
         can_serve_dhw::Union{Bool, Nothing} = nothing,
         can_serve_space_heating::Union{Bool, Nothing} = nothing,
         can_serve_process_heat::Union{Bool, Nothing} = nothing,
+        can_serve_cooling::Union{Bool, Nothing} = nothing
     )
 
     defaults = get_ashp_defaults()
@@ -94,7 +97,8 @@ function ASHP(;
         cop_cooling,
         can_serve_dhw,
         can_serve_space_heating,
-        can_serve_process_heat
+        can_serve_process_heat,
+        can_serve_cooling
     )
 end
 
