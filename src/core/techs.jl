@@ -269,6 +269,7 @@ function Techs(s::Scenario)
     if !isnothing(s.ashp)
         push!(all_techs, "ASHP")
         push!(heating_techs, "ASHP")
+        push!(electric_heater, "ASHP")
         push!(ashp_techs, "ASHP")
         if s.ashp.can_supply_steam_turbine
             push!(techs_can_supply_steam_turbine, "ASHP")
