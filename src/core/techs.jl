@@ -282,6 +282,9 @@ function Techs(s::Scenario)
         if s.ashp.can_serve_process_heat
             push!(techs_can_serve_process_heat, "ASHP")
         end
+        if s.ashp.can_serve_cooling
+            push!(cooling_techs, "ASHP")
+        end
     end
 
     if s.settings.off_grid_flag
