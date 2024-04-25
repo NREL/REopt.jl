@@ -23,9 +23,9 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## v0.46.0
-### Fixed 
-- Fixed bug in call to `GhpGhx.jl` when sizing hybrid GHP using the fractional sizing method
+## Develop 2024-04-24
+### Changed
+- Updated test sets "Emissions and Renewable Energy Percent" and "Minimize Unserved Load" to decrease computing time.
 
 ## v0.45.0
 ### Fixed 
