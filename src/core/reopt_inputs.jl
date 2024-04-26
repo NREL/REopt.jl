@@ -60,7 +60,6 @@ struct REoptInputs <: AbstractInputs
     tech_emissions_factors_SO2::Dict{String, <:Real} # (techs)
     tech_emissions_factors_PM25::Dict{String, <:Real} # (techs)
     techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
-    backup_heating_cop::Dict{String, <:Real} # (techs.electric_heater)
     heating_cop::Dict{String, Array{<:Real, 2}} # (techs.ashp)
     cooling_cop::Dict{String, Array{<:Real, 2}} # (techs.ashp)
     heating_loads_kw::Dict{String, <:Real} # (heating_loads)
@@ -170,7 +169,7 @@ function REoptInputs(s::AbstractScenario)
         seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
         tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
         tech_emissions_factors_PM25, techs_operating_reserve_req_fraction, thermal_cop, fuel_cost_per_kwh, 
-        backup_heating_cop, heating_cop, cooling_cop = setup_tech_inputs(s,time_steps)
+        heating_cop, cooling_cop = setup_tech_inputs(s,time_steps)
 
     pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
 
@@ -316,7 +315,6 @@ function REoptInputs(s::AbstractScenario)
         tech_emissions_factors_SO2, 
         tech_emissions_factors_PM25,
         techs_operating_reserve_req_fraction,
-        backup_heating_cop,
         heating_cop,
         cooling_cop,
         heating_loads,
@@ -451,7 +449,7 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
     tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
     tech_emissions_factors_PM25, techs_operating_reserve_req_fraction, thermal_cop, fuel_cost_per_kwh, 
-    backup_heating_cop, heating_cop, cooling_cop
+    heating_cop, cooling_cop
 end
 
 
@@ -898,8 +896,6 @@ function setup_ashp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_
     om_cost_per_kw["ASHP"] = s.ashp.om_cost_per_kw
     heating_cop["ASHP"] = s.ashp.cop_heating
     cooling_cop["ASHP"] = s.ashp.cop_cooling
-    #heating_cop = s.ashp.cop_heating
-    #cooling_cop = s.ashp.cop_heating
 
     if s.ashp.macrs_option_years in [5, 7]
         cap_cost_slope["ASHP"] = effective_cost(;

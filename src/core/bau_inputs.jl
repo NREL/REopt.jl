@@ -26,7 +26,6 @@ function BAUInputs(p::REoptInputs)
     cap_cost_slope = Dict{String, Any}()
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
     thermal_cop = Dict{String, Float64}()
-    backup_heating_cop = Dict{String, Float64}()
     heating_cop = Dict{String, Array{Float64,1}}()
     cooling_cop = Dict{String, Array{Float64,1}}()
     production_factor = DenseAxisArray{Float64}(undef, techs.all, p.time_steps)
@@ -221,7 +220,6 @@ function BAUInputs(p::REoptInputs)
         tech_emissions_factors_SO2, 
         tech_emissions_factors_PM25,
         p.techs_operating_reserve_req_fraction,
-        backup_heating_cop,
         heating_cop,
         cooling_cop,
         heating_loads,
