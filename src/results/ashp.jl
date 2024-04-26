@@ -23,9 +23,13 @@ function add_ashp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     @expression(m, ASHPElectricConsumptionSeries[ts in p.time_steps],
         p.hours_per_time_step * sum(m[:dvHeatingProduction][t,q,ts] / p.heating_cop[t][ts] #p.heating_cop[t,ts] 
         for q in p.heating_loads, t in p.techs.ashp) 
-        #+ p.hours_per_time_step * sum(m[:dvCoolingProduction][t,q,ts] / p.cooling_cop[t,ts] 
-        #for q in p.cooling_loads, t in p.techs.ashp)
         ) 
+    if "ASHP" in p.techs.cooling
+        add_to_expression!(m, ASHPElectricConsumptionSeries[ts in p.time_steps], 
+            p.hours_per_time_step * sum(m[:dvCoolingProduction][t,ts] / p.cooling_cop[t][ts] 
+            for t in p.techs.ashp)
+        )
+    end
     r["electric_consumption_series_kw"] = round.(value.(ASHPElectricConsumptionSeries), digits=3)
     r["annual_electric_consumption_kwh"] = sum(r["electric_consumption_series_kw"])
 
