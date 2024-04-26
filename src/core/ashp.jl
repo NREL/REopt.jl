@@ -50,8 +50,8 @@ function ASHP(;
         macrs_option_years::Int = 0,
         macrs_bonus_fraction::Real = 0.0,
         can_supply_steam_turbine::Union{Bool, Nothing} = nothing,
-        cop_heating::Array{Float64,1},
-        cop_cooling::Array{Float64,1},
+        cop_heating::Array{Float64,1} = Float64[],
+        cop_cooling::Array{Float64,1} = Float64[],
         can_serve_dhw::Union{Bool, Nothing} = nothing,
         can_serve_space_heating::Union{Bool, Nothing} = nothing,
         can_serve_process_heat::Union{Bool, Nothing} = nothing,
@@ -82,13 +82,6 @@ function ASHP(;
     if isnothing(can_serve_cooling)
         can_serve_cooling = defaults["can_serve_cooling"]
     end
-
-    #if isnothing(cop_heating)
-    #    cop_heating = defaults["cop_heating"]
-    #end
-    #if isnothing(cop_cooling)
-    #    cop_cooling = defaults["cop_cooling"]
-    #end
 
     # Convert max sizes, cost factors from mmbtu_per_hour to kw
     min_kw = min_mmbtu_per_hour * KWH_PER_MMBTU
