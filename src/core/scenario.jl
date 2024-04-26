@@ -26,7 +26,6 @@ struct Scenario <: AbstractScenario
     steam_turbine::Union{SteamTurbine, Nothing}
     electric_heater::Union{ElectricHeater, Nothing}
     ashp::Union{ASHP, Nothing}
-    #ashp::Array{Union{ASHP, Nothing}, 1}
 end
 
 """

@@ -60,8 +60,8 @@ struct REoptInputs <: AbstractInputs
     tech_emissions_factors_SO2::Dict{String, <:Real} # (techs)
     tech_emissions_factors_PM25::Dict{String, <:Real} # (techs)
     techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
-    heating_cop::Dict{String, Array{<:Real, 2}} # (techs.ashp)
-    cooling_cop::Dict{String, Array{<:Real, 2}} # (techs.ashp)
+    heating_cop::Dict{String, Array{<:Real, 1}} # (techs.ashp)
+    cooling_cop::Dict{String, Array{<:Real, 1}} # (techs.ashp)
     heating_loads_kw::Dict{String, <:Real} # (heating_loads)
     unavailability::Dict{String, Array{Float64,1}}  # Dict by tech of unavailability profile
 end
@@ -126,7 +126,6 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     tech_emissions_factors_SO2::Dict{String, <:Real} # (techs)
     tech_emissions_factors_PM25::Dict{String, <:Real} # (techs)
     techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
-    backup_heating_cop::Dict{String, <:Real} # (techs.electric_heater)
     heating_cop::Dict{String, Array{Float64,1}} # (techs.ashp, time_steps)
     cooling_cop::Dict{String, Array{Float64,1}}  # (techs.ashp, time_steps)
     heating_loads::Vector{String} # list of heating loads
@@ -411,13 +410,13 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     if "ExistingChiller" in techs.all
         setup_existing_chiller_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cooling_cop)
     else
-        cooling_cop["ExistingChiller"] .= 1.0
+        cooling_cop["ExistingChiller"] = ones(length(time_steps))
     end
 
     if "AbsorptionChiller" in techs.all
         setup_absorption_chiller_inputs(s, max_sizes, min_sizes, cap_cost_slope, cooling_cop, thermal_cop, om_cost_per_kw)
     else
-        cooling_cop["AbsorptionChiller"] .= 1.0
+        cooling_cop["AbsorptionChiller"] = ones(length(time_steps))
         thermal_cop["AbsorptionChiller"] = 1.0
     end
 
@@ -428,11 +427,13 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     if "ElectricHeater" in techs.all
         setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop)
     else
-        heating_cop["ElectricHeater"] .= 1.0
+        heating_cop["ElectricHeater"] = ones(length(time_steps))
     end
 
     if "ASHP" in techs.all
         setup_ashp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, cooling_cop)
+    else
+        heating_cop["ASHP"] = ones(length(time_steps))
     end
 
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
