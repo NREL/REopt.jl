@@ -50,6 +50,12 @@ function add_heating_tech_constraints(m, p; _n="")
     end
 end
 
+function add_ashp_heating_cooling_constraints(m, p; _n="")
+    @constraint(m, [t in intersect(p.techs.cooling, p.techs.heating), ts in p.time_steps],
+        sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads) + m[Symbol("dvCoolingProduction"*_n)][t,ts] <= m[Symbol("dvSize"*_n)][t]
+    )
+end
+
 function no_existing_boiler_production(m, p; _n="")
     for ts in p.time_steps
         for q in p.heating_loads

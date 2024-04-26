@@ -313,6 +313,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		if !isempty(p.techs.cooling)
             add_cooling_tech_constraints(m, p)
         end
+
+        if !isempty(intersect(p.techs.heating, p.techs.cooling))
+            add_ashp_heating_cooling_constraints(m, p)
+        end
     
         if !isempty(p.techs.thermal)
             add_thermal_load_constraints(m, p)  # split into heating and cooling constraints?
