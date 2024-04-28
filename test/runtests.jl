@@ -2316,7 +2316,7 @@ else  # run HiGHS tests
             #Case 2: ASHP has temperature-dependent output and serves all heating load
             d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = 100
             d["ASHP"]["installed_cost_per_mmbtu_per_hour"] = 300
-            d["ElectricTariff"]["monthly_energy_rates"] = [0,0,0,0,0,0,0,0,0,0,0,0]
+            d["ElectricTariff"]["monthly_energy_rates"] = [0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01]
             
             s = Scenario(d)
             p = REoptInputs(s)
@@ -2340,7 +2340,7 @@ else  # run HiGHS tests
             p = REoptInputs(s)
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(m, p)
-            annual_ashp_consumption += sum(0.1 * REopt.KWH_THERMAL_PER_TONHOUR / p.cooling_cop["ASHP"][ts] for ts in p.time_steps)
+            annual_ashp_consumption += 0.1 * sum(REopt.KWH_THERMAL_PER_TONHOUR / p.cooling_cop["ASHP"][ts] for ts in p.time_steps)
             annual_energy_supplied = annual_ashp_consumption + 87600 - 2*876.0*REopt.KWH_THERMAL_PER_TONHOUR
             @test results["ASHP"]["size_mmbtu_per_hour"] > 0.8  #size increases when cooling load also served
             @test results["ASHP"]["annual_electric_consumption_kwh"] ≈ annual_ashp_consumption rtol=1e-4
