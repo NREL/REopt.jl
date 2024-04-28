@@ -213,8 +213,16 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 				@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
 				@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
 						m[:dvProductionToStorage][b, t, ts] == 0)
+				@constraint(m, [ts in p.time_steps], m[Symbol("dvStorageToGrid")][ts] == 0)  # if there isn't a battery, then the battery can't export power to the grid
 			end
 		else
+			# Additional variables for exporting storage energy to the grid
+			dv = "dvBattCharge_binary" 
+			m[Symbol(dv)] = @variable(m, [0:p.time_steps[end]], base_name=dv, Bin) # Binary for battery charge
+
+			dv = "dvBattDischarge_binary"
+			m[Symbol(dv)] = @variable(m, [0:p.time_steps[end]], base_name=dv, Bin) # Binary for battery discharge
+
 			add_storage_size_constraints(m, p, b)
 			add_general_storage_dispatch_constraints(m, p, b)
 			if b in p.s.storage.types.elec
@@ -567,7 +575,10 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvPeakDemandMonth[p.months, 1:p.s.electric_tariff.n_monthly_demand_tiers] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0
         binGHP[p.ghp_options], Bin  # Can be <= 1 if require_ghp_purchase=0, and is ==1 if require_ghp_purchase=1
+		dvStorageToGrid[p.time_steps] >= 0 # TODO, add: "p.StorageSalesTiers" as well? export of energy from storage to the grid
+		
 	end
+
 
 	if !isempty(p.techs.gen)  # Problem becomes a MILP
 		@warn "Adding binary variable to model gas generator. Some solvers are very slow with integer variables."
