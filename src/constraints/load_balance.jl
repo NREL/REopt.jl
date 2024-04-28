@@ -4,7 +4,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
 
 	##Constraint (8a): Electrical Load Balancing with Grid
     if isempty(p.s.electric_tariff.export_bins)
-        @constraint(m, ElecLoadBalanceCon[ts in p.time_steps_with_grid],
+        conrefs = @constraint(m, [ts in p.time_steps_with_grid],
             sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.elec)  
             + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.elec) 
             + sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers)
@@ -18,7 +18,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
             + sum(p.ghp_electric_consumption_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
         )
     else
-        @constraint(m, ElecLoadBalanceCon[ts in p.time_steps_with_grid],
+        conrefs = @constraint(m, [ts in p.time_steps_with_grid],
             sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.elec)
             + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.elec )
             + sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers)
@@ -33,10 +33,14 @@ function add_elec_load_balance_constraints(m, p; _n="")
             + sum(p.ghp_electric_consumption_kw[g,ts] * m[Symbol("binGHP"*_n)][g] for g in p.ghp_options)
         )
     end
+
+	for (i, cr) in enumerate(conrefs)
+		JuMP.set_name(cr, "con_load_balance"*_n*string("_t", i))
+	end
 	
 	##Constraint (8b): Electrical Load Balancing without Grid
 	if !p.s.settings.off_grid_flag # load balancing constraint for grid-connected runs
-        @constraint(m, ElecLoadBalanceOffgridCon[ts in p.time_steps_without_grid],
+        @constraint(m, [ts in p.time_steps_without_grid],
             sum(p.production_factor[t,ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.elec)  
             + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.elec)
             ==
@@ -139,7 +143,7 @@ function add_thermal_load_constraints(m, p; _n="")
         if !isempty(p.techs.cooling)
             
             ##Constraint (5a): Cold thermal loads
-            @constraint(m, ColdLoadBalanceCon[ts in p.time_steps_with_grid],
+            @constraint(m, [ts in p.time_steps_with_grid],
                 sum(m[Symbol("dvCoolingProduction"*_n)][t,ts] for t in p.techs.cooling)
                 + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.cold)
                 ==
