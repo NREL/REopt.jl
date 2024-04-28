@@ -62,7 +62,7 @@ function add_ashp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	@expression(m, ASHPToLoad[ts in p.time_steps],
 		sum(m[:dvHeatingProduction]["ASHP", q, ts] for q in p.heating_loads) - ASHPToHotTESKW[ts] - ASHPToSteamTurbine[ts]
     )
-	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(ASHPToLoad) / KWH_PER_MMBTU, digits=3)
+	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(ASHPToLoad) ./ KWH_PER_MMBTU, digits=3)
 
     if "DomesticHotWater" in p.heating_loads && p.s.ashp.can_serve_dhw
         @expression(m, ASHPToDHWKW[ts in p.time_steps], 
@@ -94,23 +94,21 @@ function add_ashp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     if "ASHP" in p.techs.cooling && sum(p.s.cooling_load.loads_kw_thermal) > 0.0
 
         @expression(m, ASHPtoColdTES[ts in p.time_steps],
-            sum(m[:dvProductionToStorage][b,"ExistingChiller",ts] for b in p.s.storage.types.cold)
+            sum(m[:dvProductionToStorage][b,"ASHP",ts] for b in p.s.storage.types.cold)
         )
-        r["thermal_to_storage_series_ton"] = round.(value.(ASHPtoColdTES / KWH_THERMAL_PER_TONHOUR), digits=3)   
+        r["thermal_to_storage_series_ton"] = round.(value.(ASHPtoColdTES ./ KWH_THERMAL_PER_TONHOUR), digits=3)   
 
         @expression(m, ASHPtoColdLoad[ts in p.time_steps],
-            sum(m[:dvCoolingProduction]["ExistingChiller", ts])
-                - ASHPtoColdTES[ts]
+            sum(m[:dvCoolingProduction]["ASHP", ts]) - ASHPtoColdTES[ts]
         )
-        r["thermal_to_load_series_ton"] = round.(value.(ASHPtoColdLoad / KWH_THERMAL_PER_TONHOUR).data, digits=3)
+        r["thermal_to_load_series_ton"] = round.(value.(ASHPtoColdLoad ./ KWH_THERMAL_PER_TONHOUR), digits=3)
 
-        @expression(m, Year1ELECCHLThermalProd,
-            p.hours_per_time_step * sum(m[:dvCoolingProduction]["ExistingChiller", ts]
-                for ts in p.time_steps)
+        @expression(m, Year1ASHPColdThermalProd,
+            p.hours_per_time_step * sum(m[:dvCoolingProduction]["ASHP", ts] for ts in p.time_steps)
         )
-        r["annual_thermal_production_tonhour"] = round(value(Year1ELECCHLThermalProd / KWH_THERMAL_PER_TONHOUR), digits=3)
+        r["annual_thermal_production_tonhour"] = round(value(Year1ASHPColdThermalProd / KWH_THERMAL_PER_TONHOUR), digits=3)
         
-        add_to_expression!(m, ASHPElectricConsumptionSeries[ts in p.time_steps], 
+        @expression(m, ASHPColdElectricConsumptionSeries[ts in p.time_steps], 
             p.hours_per_time_step * sum(m[:dvCoolingProduction][t,ts] / p.cooling_cop[t][ts] 
             for t in p.techs.ashp)
         )
@@ -118,8 +116,9 @@ function add_ashp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
         r["thermal_to_storage_series_ton"] = zeros(length(p.time_steps))
         r["thermal_to_load_series_ton"] = zeros(length(p.time_steps))
         r["annual_thermal_production_tonhour"] = 0.0
+        @expression(m, ASHPColdElectricConsumptionSeries, 0.0)
     end
-    r["electric_consumption_series_kw"] = round.(value.(ASHPElectricConsumptionSeries), digits=3)
+    r["electric_consumption_series_kw"] = round.(value.(ASHPElectricConsumptionSeries .+ ASHPColdElectricConsumptionSeries), digits=3)
     r["annual_electric_consumption_kwh"] = p.hours_per_time_step * sum(r["electric_consumption_series_kw"])
 
     d["ASHP"] = r
