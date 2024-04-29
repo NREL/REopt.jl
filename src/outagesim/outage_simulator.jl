@@ -1,7 +1,8 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 
 function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diesel_min_turndown, batt_kwh, batt_kw,
-                    batt_roundtrip_efficiency, n_time_steps, n_steps_per_hour, batt_soc_kwh, crit_load)
+                    batt_roundtrip_efficiency, n_time_steps, n_steps_per_hour, batt_soc_kwh, crit_load, ev_onsite_kwh_series,
+                    sum_ev_total_kwh, max_crate_series_kw, tot_ev_rdtrp_eff)
     """
     Determine how long the critical load can be met with gas generator and energy storage.
     :param init_time_step: Int, initial time step
@@ -30,6 +31,15 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
                     batt_kw / n_steps_per_hour * batt_roundtrip_efficiency,  # inverter capacity
                     -load_kw / n_steps_per_hour * batt_roundtrip_efficiency,  # excess energy
                 ])
+            elseif ev_onsite_kwh_series[init_time_step+i] < sum_ev_total_kwh
+                ev_onsite_kwh_series[init_time_step+i+1] += minimum([
+                    ev_onsite_kwh_series[init_time_step+i] - sum_ev_total_kwh,     # room available
+                    max_crate_series_kw[init_time_step+i] / n_steps_per_hour * tot_ev_rdtrp_eff,  # inverter capacity
+                    -load_kw / n_steps_per_hour * tot_ev_rdtrp_eff,  # excess energy
+                ])
+            else
+                # no excess energy in this ts. load is positive and must be met.
+                nothing
             end
 
         else  # check if we can meet load with generator then storage
@@ -44,6 +54,15 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
                             batt_kw / n_steps_per_hour * batt_roundtrip_efficiency,  # inverter capacity
                             (diesel_min_turndown * diesel_kw - load_kw) / n_steps_per_hour * batt_roundtrip_efficiency  # excess energy
                         ])
+                    elseif ev_onsite_kwh_series[init_time_step+i] < sum_ev_total_kwh
+                        ev_onsite_kwh_series[init_time_step+i+1] += minimum([
+                            ev_onsite_kwh_series[init_time_step+i] - sum_ev_total_kwh,     # room available
+                            max_crate_series_kw[init_time_step+i] / n_steps_per_hour * tot_ev_rdtrp_eff,  # inverter capacity
+                            -load_kw / n_steps_per_hour * tot_ev_rdtrp_eff,  # excess energy
+                        ])
+                    else
+                        # no excess energy in this ts. load is positive and must be met.
+                        nothing
                     end
                 end
                 load_kw = 0
@@ -67,6 +86,11 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
                 if minimum([batt_kw, batt_soc_kwh * n_steps_per_hour]) >= load_kw  # battery can carry balance
                     # prevent battery charge from going negative
                     batt_soc_kwh = maximum([0, batt_soc_kwh - load_kw / n_steps_per_hour])
+                end
+
+                if minimum([max_crate_series_kw[init_time_step+i], ev_onsite_kwh_series[init_time_step+i] * n_steps_per_hour]) >= load_kw  # ev can carry balance
+                    # prevent battery charge from going negative
+                    ev_onsite_kwh_series[init_time_step+i] = maximum([0, ev_onsite_kwh_series[init_time_step+i] - load_kw / n_steps_per_hour])
                     load_kw = 0
                 end
             end
@@ -118,7 +142,7 @@ Returns a dict
 ```
 """
 function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[], critical_loads_kw=[], wind_kw_ac_hourly=[],
-                     batt_roundtrip_efficiency=0.829, diesel_kw=0, fuel_available=0, b=0, m=0, diesel_min_turndown=0.3,
+                     batt_roundtrip_efficiency=0.829, diesel_kw=0, fuel_available=0, b=0, m=0, diesel_min_turndown=0.3, ev_dict=Dict()
                      )
     n_time_steps = length(critical_loads_kw)
     n_steps_per_hour = Int(n_time_steps / 8760)
@@ -147,6 +171,26 @@ function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[
         wind_kw_ac_hourly = repeat([0], n_time_steps)
     end
     load_minus_der = [ld - pv - wd for (pv, wd, ld) in zip(pv_kw_ac_hourly, wind_kw_ac_hourly, critical_loads_kw)]
+
+    # total EV kWh available, can be discharged at max allowable discharge rate
+    ev_onsite_kwh_series = zeros(n_time_steps)
+    sum_ev_total_kwh = 0.0
+    max_crate_series_kw = zeros(n_time_steps)
+    tot_ev_rdtrp_eff = 0.0
+
+    if length(p.s.storage.types.ev) > 0
+        for ev in p.s.storage.types.ev
+            ev_onsite_kwh_series .+= ev_dict[ev]["ev_onsite_kwh_series"]
+            sum_ev_total_kwh += ev_dict[ev]["size_kwh"]
+            max_crate_series_kw += ev_dict[ev]["max_crate_series_kw"]
+            tot_ev_rdtrp_eff += ev_dict[ev]["roundtrip_efficiency"]
+        end
+    else
+        nothing
+    end
+
+    tot_ev_rdtrp_eff = tot_ev_rdtrp_eff/length(p.s.storage.types.ev)
+
     """
     Simulation starts here
     """
@@ -165,7 +209,11 @@ function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[
             n_time_steps = n_time_steps,
             n_steps_per_hour = n_steps_per_hour,
             batt_soc_kwh = init_soc[time_step] * batt_kwh,
-            crit_load = load_minus_der
+            crit_load = load_minus_der,
+            ev_onsite_kwh_series = ev_onsite_kwh_series,
+            sum_ev_total_kwh = sum_ev_total_kwh,
+            max_crate_series_kw = max_crate_series_kw,
+            tot_ev_rdtrp_eff = tot_ev_rdtrp_eff
         )
     end
     results = process_results(r, n_time_steps)
@@ -275,6 +323,17 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
         fuel_higher_heating_value_kwh_per_gal = p.s.generator.fuel_higher_heating_value_kwh_per_gal
 	)
 
+    # EVs will stay and charge onsite when they arrive after outage
+    ev_dict = Dict()
+
+    for ev in p.s.storage.types.ev
+        ev_dict[ev] = Dict()
+        ev_dict[ev]["roundtrip_efficiency"] = p.s.storage.attr[ev].charge_efficiency*p.s.storage.attr[ev].discharge_efficiency
+        ev_dict[ev]["ev_onsite_kwh_series"] = (p.s.storage.attr[ev].electric_vehicle.back_on_site_time_step_soc_drained.*results_dict[ev]["size_kwh"])
+        ev_dict[ev]["max_crate_series_kw"] = p.s.storage.attr["EV1"].electric_vehicle.ev_on_site_series.*d[ev]["size_kw"]
+        ev_dict[ev]["size_kwh"] = d[ev]["size_kwh"]
+    end
+
     simulate_outages(;
         batt_kwh = batt_kwh, 
         batt_kw = batt_kw, 
@@ -287,6 +346,7 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
         fuel_available = p.s.generator.fuel_avail_gal,
         b = fuel_intercept_gal_per_hr,
         m = fuel_slope_gal_per_kwhe, 
-        diesel_min_turndown = p.s.generator.min_turn_down_fraction
+        diesel_min_turndown = p.s.generator.min_turn_down_fraction,
+        ev_dict = ev_dict
     )
 end
