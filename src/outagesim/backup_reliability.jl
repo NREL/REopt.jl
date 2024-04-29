@@ -295,7 +295,7 @@ gen_battery_prob_matrix
 function shift_gen_battery_prob_matrix!(gen_battery_prob_matrix::Matrix, shift_vector::Vector{Int})
     M = size(gen_battery_prob_matrix, 1)
     
-    for i in 1:length(shift_vector) 
+    for i in eachindex(shift_vector) 
         s = shift_vector[i]
         if s < 0 
             #TODO figure out why implementation of cirshift! is working locally but not on server
@@ -787,20 +787,20 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         end
         r2[:generator_size_kw] = replace!([diesel_kw + prime_kw] ./ r2[:num_generators], Inf => 0) # at least one gen kw will be 0 because of error thrown above
         if diesel_kw > 0
-            fuel_slope, fuel_intercept = generator_fuel_slope_and_intercept(
+            fuel_slope, fuel_intercept = fuel_slope_and_intercept(
                 electric_efficiency_full_load=p.s.generator.electric_efficiency_full_load, 
                 electric_efficiency_half_load=p.s.generator.electric_efficiency_half_load,
-                fuel_higher_heating_value_kwh_per_gal=p.s.generator.fuel_higher_heating_value_kwh_per_gal
+                fuel_higher_heating_value_kwh_per_unit=p.s.generator.fuel_higher_heating_value_kwh_per_gal
 	        )
             r2[:generator_fuel_burn_rate_per_kwh] = [fuel_slope]
             r2[:generator_fuel_intercept_per_hr] = [fuel_intercept]
             r2[:fuel_limit] = [p.s.generator.fuel_avail_gal]
         end
         if prime_kw > 0
-            fuel_slope, fuel_intercept = generator_fuel_slope_and_intercept(
+            fuel_slope, fuel_intercept = fuel_slope_and_intercept(
                 electric_efficiency_full_load=p.s.chp.electric_efficiency_full_load, 
                 electric_efficiency_half_load=p.s.chp.electric_efficiency_half_load,
-                fuel_higher_heating_value_kwh_per_gal=p.s.chp.fuel_higher_heating_value_kwh_per_gal
+                fuel_higher_heating_value_kwh_per_unit=1
 	        )
             r2[:generator_fuel_burn_rate_per_kwh] = [fuel_slope]
             r2[:generator_fuel_intercept_per_hr] = [fuel_intercept]

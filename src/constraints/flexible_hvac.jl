@@ -16,6 +16,7 @@ function add_flexible_hvac_constraints(m, p::REoptInputs; _n="")
 
     if !isempty(p.techs.heating) && !isempty(p.techs.cooling)
         # space temperature evolution based on state-space model
+        # TODO: Add indicator constraint workaround for FlexibleHVAC
         @constraint(m, [n in 1:N, ts in 2:length(p.time_steps)],
             binFlexHVAC => { dvTemperature[n, ts] == dvTemperature[n, ts-1] + 
                 sum(p.s.flexible_hvac.system_matrix[n, i] * dvTemperature[i, ts-1] for i=1:N) + 

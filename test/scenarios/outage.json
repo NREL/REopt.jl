@@ -56,7 +56,8 @@
         "installed_cost_per_kw": 840.0,
         "installed_cost_per_kwh": 420.0,
         "replace_cost_per_kw": 410.0,
-        "replace_cost_per_kwh": 200.0
+        "replace_cost_per_kwh": 200.0,
+        "soc_min_applies_during_outages": true
     },
     "Financial": {
         "value_of_lost_load_per_kwh": 100.0,

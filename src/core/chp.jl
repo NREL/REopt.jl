@@ -187,7 +187,7 @@ function CHP(d::Dict;
         end
     elseif length(chp.installed_cost_per_kw) > 1 && length(chp.installed_cost_per_kw) != length(chp.tech_sizes_for_cost_curve)
         throw(@error("To model CHP cost curve, you must provide `chp.tech_sizes_for_cost_curve` vector of equal length to `chp.installed_cost_per_kw`"))
-    elseif typeof(chp.installed_cost_per_kw) == Vector && length(chp.installed_cost_per_kw) == 1
+    elseif typeof(chp.installed_cost_per_kw) <: Array && length(chp.installed_cost_per_kw) == 1
         chp.installed_cost_per_kw = chp.installed_cost_per_kw[1]
     elseif isempty(chp.tech_sizes_for_cost_curve) && isempty(chp.installed_cost_per_kw)
         update_installed_cost_params = true

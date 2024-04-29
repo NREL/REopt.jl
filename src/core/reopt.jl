@@ -296,6 +296,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             add_heating_tech_constraints(m, p)
         end
 
+        # Zero out ExistingBoiler production if retire_in_optimal; new_heating_techs avoids zeroing for BAU 
+        new_heating_techs = ["CHP", "Boiler", "ElectricHeater", "SteamTurbine"]
+        if !isempty(intersect(new_heating_techs, p.techs.all))
+            if !isnothing(p.s.existing_boiler) && p.s.existing_boiler.retire_in_optimal
+                no_existing_boiler_production(m, p)
+            end
+        end
+
         if !isempty(p.techs.boiler)
             add_boiler_tech_constraints(m, p)
 			m[:TotalPerUnitProdOMCosts] += m[:TotalBoilerPerUnitProdOMCosts]
