@@ -93,7 +93,7 @@ function BAUInputs(p::REoptInputs)
             tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh)
     end
 
-    cooling_cop["ExistingChiller"] = ones(length(time_steps))
+    cooling_cop["ExistingChiller"] = ones(length(p.time_steps))
     if "ExistingChiller" in techs.all
         setup_existing_chiller_inputs(bau_scenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cooling_cop)
     end
