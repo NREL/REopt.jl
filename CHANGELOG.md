@@ -30,6 +30,10 @@ Classify the change according to the following categories:
 - Info to user including name of PV and/or temperature datasource used and distance from site location to datasource location
 - Warning to user if data is not from NSRDB or if data is more than 200 miles away 
   
+## Develop 2024-04-30
+### Changed
+- Updated test sets "Emissions and Renewable Energy Percent" and "Minimize Unserved Load" to decrease computing time.
+
 ## v0.45.0
 ### Fixed 
 - Added `export_rate_beyond_net_metering_limit` to list of inputs to be converted to type Real, to avoid MethodError if type is vector of Any. 
