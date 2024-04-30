@@ -935,23 +935,6 @@ else  # run HiGHS tests
 
         @testset "Minimize Unserved Load" begin
             d = JSON.parsefile("./scenarios/outage.json")
-            d["ElectricLoad"]["loads_kw"] = ones(8760)*200.0
-            d["ElectricLoad"]["loads_kw"][5100:5109] .= 410.0
-            d["ElectricLoad"]["loads_kw"][5200:5209] .= 410.0
-            d["ElectricLoad"]["critical_load_fraction"] = 0.5
-            d["PV"]["existing_kw"] = 0.0
-            d["PV"]["min_kw"] = 100.0
-            d["PV"]["max_kw"] = 100.0
-            d["CHP"]["min_kw"] = 100.0
-            d["CHP"]["max_kw"] = 100.0
-            d["Generator"]["existing_kw"] = 0.0
-            d["Generator"]["min_kw"] = 100.0
-            d["Generator"]["max_kw"] = 100.0
-            d["ElectricStorage"]["min_kw"] = 20
-            d["ElectricStorage"]["max_kw"] = 20
-            d["ElectricStorage"]["min_kwh"] = 50
-            d["ElectricStorage"]["max_kwh"] = 50
-            d["Financial"]["microgrid_upgrade_cost_fraction"] = 0.0
             s = Scenario(d)
             p = REoptInputs(s)
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
@@ -998,21 +981,6 @@ else  # run HiGHS tests
 
             # Scenario with generator, PV, wind, electric storage
             d = JSON.parsefile("./scenarios/outages_gen_pv_wind_stor.json")
-            d["ElectricLoad"]["loads_kw"] = ones(8760)*200.0
-            d["ElectricLoad"]["loads_kw"][5100:5119] .= 425.0
-            d["ElectricLoad"]["critical_load_fraction"] = 0.5
-            d["PV"]["existing_kw"] = 0.0
-            d["PV"]["min_kw"] = 100.0
-            d["PV"]["max_kw"] = 100.0
-            d["Wind"]["min_kw"] = 100.0
-            d["Wind"]["max_kw"] = 100.0
-            d["Generator"]["min_kw"] = 100.0
-            d["Generator"]["max_kw"] = 100.0
-            d["ElectricStorage"]["min_kw"] = 100
-            d["ElectricStorage"]["max_kw"] = 100
-            d["ElectricStorage"]["min_kwh"] = 100
-            d["ElectricStorage"]["max_kwh"] = 100
-            d["Site"]["min_resil_time_steps"] = 1
             s = Scenario(d)
             p = REoptInputs(s)
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
