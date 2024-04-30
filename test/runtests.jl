@@ -935,10 +935,8 @@ else  # run HiGHS tests
 
         @testset "Minimize Unserved Load" begin
             d = JSON.parsefile("./scenarios/outage.json")
-            s = Scenario(d)
-            p = REoptInputs(s)
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
-            results = run_reopt(m, p)
+            results = run_reopt(m, d)
         
             @test results["Outages"]["expected_outage_cost"] ≈ 0 atol=0.1
             @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 0 atol=0.1
@@ -951,10 +949,8 @@ else  # run HiGHS tests
             d["Financial"]["microgrid_upgrade_cost_fraction"] = 0.3
             d["PV"]["min_kw"] = 200.0
             d["PV"]["max_kw"] = 200.0
-            s = Scenario(d)
-            p = REoptInputs(s)
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
-            results = run_reopt(m, p)
+            results = run_reopt(m, d)
             @test value(m[:binMGTechUsed]["PV"]) ≈ 0
             @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) > 0
             
@@ -980,11 +976,8 @@ else  # run HiGHS tests
             @test results["Financial"]["lcc"] ≈ 8.6413594727e7 rtol=0.001
 
             # Scenario with generator, PV, wind, electric storage
-            d = JSON.parsefile("./scenarios/outages_gen_pv_wind_stor.json")
-            s = Scenario(d)
-            p = REoptInputs(s)
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
-            results = run_reopt(m, p)
+            results = run_reopt(m, "./scenarios/outages_gen_pv_wind_stor.json")
             @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
             @test value(m[:binMGTechUsed]["PV"]) ≈ 1
             @test value(m[:binMGTechUsed]["Wind"]) ≈ 1
