@@ -14,8 +14,8 @@ function add_hot_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict,
     # Adds the `HotThermalStorage` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
     # Note: the node number is an empty string if evaluating a single `Site`.
 
-    kwh_per_gal = get_kwh_per_gal(p.s.storage.attr["HotThermalStorage"].hot_water_temp_degF,
-                                    p.s.storage.attr["HotThermalStorage"].cool_water_temp_degF)
+    kwh_per_gal = get_kwh_per_gal(p.s.storage.attr[b].hot_water_temp_degF,
+                                    p.s.storage.attr[b].cool_water_temp_degF)
     
     r = Dict{String, Any}()
     size_kwh = round(value(m[Symbol("dvStorageEnergy"*_n)][b]), digits=3)
@@ -25,8 +25,35 @@ function add_hot_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict,
     	soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
         r["soc_series_fraction"] = round.(value.(soc) ./ size_kwh, digits=3)
 
-        discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
-        r["storage_to_load_series_mmbtu_per_hour"] = round.(value.(discharge) / KWH_PER_MMBTU, digits=7)
+        discharge = (sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for q in p.heating_loads) for ts in p.time_steps)
+        r["storage_to_load_series_mmbtu_per_hour"] = round.(value.(discharge) ./ KWH_PER_MMBTU, digits=7)
+
+        if "SpaceHeating" in p.heating_loads && p.s.storage.attr[b].can_serve_space_heating
+            @expression(m, HotTESToSpaceHeatingKW[ts in p.time_steps], 
+                m[Symbol("dvHeatFromStorage"*_n)][b,"SpaceHeating",ts]
+            )
+        else
+            @expression(m, HotTESToSpaceHeatingKW[ts in p.time_steps], 0.0)
+        end
+        r["storage_to_space_heating_load_series_mmbtu_per_hour"] = round.(value.(HotTESToSpaceHeatingKW) ./ KWH_PER_MMBTU, digits=5)
+
+        if "DomesticHotWater" in p.heating_loads && p.s.storage.attr[b].can_serve_dhw
+            @expression(m, HotTESToDHWKW[ts in p.time_steps], 
+                m[Symbol("dvHeatFromStorage"*_n)][b,"DomesticHotWater",ts]
+            )
+        else
+            @expression(m, HotTESToDHWKW[ts in p.time_steps], 0.0)
+        end
+        r["storage_to_dhw_load_series_mmbtu_per_hour"] = round.(value.(HotTESToDHWKW) ./ KWH_PER_MMBTU, digits=5)
+
+        if "ProcessHeat" in p.heating_loads && p.s.storage.attr[b].can_serve_process_heat
+            @expression(m, HotTESToProcessHeatKW[ts in p.time_steps], 
+                m[Symbol("dvHeatFromStorage"*_n)][b,"ProcessHeat",ts]
+            )
+        else
+            @expression(m, HotTESToProcessHeatKW[ts in p.time_steps], 0.0)
+        end
+        r["storage_to_process_heat_load_series_mmbtu_per_hour"] = round.(value.(HotTESToProcessHeatKW) ./ KWH_PER_MMBTU, digits=5)
     else
         r["soc_series_fraction"] = []
         r["storage_to_load_series_mmbtu_per_hour"] = []
