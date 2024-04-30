@@ -372,6 +372,12 @@ function call_solar_dataset_api(latitude::Real, longitude::Real, radius::Int)
 
     check_api_key()
 
+    if latitude < -90 || latitude > 90
+        throw(@error("Invalid coordinates: latitude of $latitude must be between -90 and 90 degrees."))
+    elseif longitude < -180 || longitude > 180
+        throw(@error("Invalid coordinates: longitude of $longitude must be between -180 and 180 degrees."))
+    end
+
     url = string("https://developer.nrel.gov/api/solar/data_query/v2.json", "?api_key=", ENV["NREL_DEVELOPER_API_KEY"],
         "&lat=", latitude , "&lon=", longitude, "&radius=", radius, "&all=", 0 
         )
