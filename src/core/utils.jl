@@ -408,7 +408,7 @@ function call_solar_dataset_api(latitude::Real, longitude::Real, radius::Int)
         elseif nsrdb_meters < 20*1609.34 # at least 2 have data, so check if nsrdb is closer than 20 miles away. Use nsrdb if close enough, because data quality is highest
             dataset = "nsrdb"
         else # at least 2 have data and nsrdb is further than 5 mi away, so check which is closest
-            dataset = nsrdb_meters <= intl_meters && nsrdb_meters <= tmy3_meters ? "nsrdb" : intl_meters <= nsrdb_meters && intl_meters <= tmy3_meters ? "intl" : "tmy3"
+            dataset = nsrdb_meters <= intl_meters && nsrdb_meters <= tmy3_meters ? "nsrdb" : intl_meters <= tmy3_meters ? "intl" : "tmy3"
         end
 
         dist_meters = response["outputs"][dataset]["distance"] # meters
