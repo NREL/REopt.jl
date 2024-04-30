@@ -23,7 +23,7 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop 2024-04-24
+## Develop 2024-04-30
 ### Changed
 - Updated test sets "Emissions and Renewable Energy Percent" and "Minimize Unserved Load" to decrease computing time.
 
