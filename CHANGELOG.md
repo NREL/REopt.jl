@@ -29,6 +29,11 @@ Classify the change according to the following categories:
 - Updated usd conversion used for EASIUR health cost calcs from USD_2010_to_2020 = 1.246 to USD_2010_to_2024 = 1.432
 
 ## Develop - 2024-04-11
+## Develop 2024-04-30
+### Changed
+- Updated test sets "Emissions and Renewable Energy Percent" and "Minimize Unserved Load" to decrease computing time.
+
+## v0.45.0
 ### Fixed 
 - Added `export_rate_beyond_net_metering_limit` to list of inputs to be converted to type Real, to avoid MethodError if type is vector of Any. 
 - Fix blended CRB processing when one or more load types have zero annual energy
