@@ -28,6 +28,11 @@ Classify the change according to the following categories:
 - Add new parameters **max_duration_hours** and **min_duration_hours** to bound the energy duration of battery storage
 
 ## Develop - 2024-04-11
+## Develop 2024-04-30
+### Changed
+- Updated test sets "Emissions and Renewable Energy Percent" and "Minimize Unserved Load" to decrease computing time.
+
+## v0.45.0
 ### Fixed 
 - Added `export_rate_beyond_net_metering_limit` to list of inputs to be converted to type Real, to avoid MethodError if type is vector of Any. 
 - Fix blended CRB processing when one or more load types have zero annual energy
