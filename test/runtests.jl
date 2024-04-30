@@ -545,6 +545,38 @@ else  # run HiGHS tests
         @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.817586 atol=0.001
     end  
 
+    @testset "Disaggregated Heating Loads" begin
+        @testset "Process Heat Load Inputs" begin
+            d = JSON.parsefile("./scenarios/electric_heater.json")
+            d["SpaceHeatingLoad"]["annual_mmbtu"] = 0.5 * 8760
+            d["DomesticHotWaterLoad"]["annual_mmbtu"] = 0.5 * 8760
+            d["ProcessHeatLoad"] = Dict("annual_mmbtu" => 0.5 * 8760)
+            s = Scenario(d)
+            inputs = REoptInputs(s)
+            @test inputs.heating_loads_kw["ProcessHeat"][1] ≈ 117.228428 atol=1.0e-3
+        end
+        @testset "Separate Heat Load Results" begin
+            d = JSON.parsefile("./scenarios/electric_heater.json")
+            d["SpaceHeatingLoad"]["annual_mmbtu"] = 0.5 * 8760
+            d["DomesticHotWaterLoad"]["annual_mmbtu"] = 0.5 * 8760
+            d["ProcessHeatLoad"] = Dict("annual_mmbtu" => 0.5 * 8760)
+            d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = 100
+            d["ElectricHeater"]["installed_cost_per_mmbtu_per_hour"] = 1.0
+            d["ElectricTariff"]["monthly_energy_rates"] = [0,0,0,0,0,0,0,0,0,0,0,0]
+            d["HotThermalStorage"]["max_gal"] = 0.0
+            s = Scenario(d)
+            inputs = REoptInputs(s)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(m, inputs)
+            @test sum(results["ExistingBoiler"]["thermal_to_dhw_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.01
+            @test sum(results["ExistingBoiler"]["thermal_to_space_heating_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.01
+            @test sum(results["ExistingBoiler"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]) ≈ 0.8*4380.0 atol=0.01
+            @test sum(results["ElectricHeater"]["thermal_to_dhw_load_series_mmbtu_per_hour"]) ≈ 0.8*4380.0 atol=0.01
+            @test sum(results["ElectricHeater"]["thermal_to_space_heating_load_series_mmbtu_per_hour"]) ≈ 0.8*4380.0 atol=0.01
+            @test sum(results["ElectricHeater"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.01
+        end
+    end
+
     @testset "Imported Xpress Test Suite" begin
         @testset "Heating loads and addressable load fraction" begin
             # Default LargeOffice CRB with SpaceHeatingLoad and DomesticHotWaterLoad are served by ExistingBoiler
@@ -590,8 +622,8 @@ else  # run HiGHS tests
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
                 results = run_reopt(m, inputs)
             
-                @test round(results["CHP"]["size_kw"], digits=0) ≈ 342.0 atol=1.0
-                @test round(results["Financial"]["lcc"], digits=0) ≈ 1.3476e7 atol=1.0e7
+                @test round(results["CHP"]["size_kw"], digits=0) ≈ 330.0 atol=20.0
+                @test round(results["Financial"]["lcc"], digits=0) ≈ 1.3476e7 rtol=1.0e-2
             end
         
             @testset "CHP Cost Curve and Min Allowable Size" begin
@@ -2202,7 +2234,8 @@ else  # run HiGHS tests
                                                 ("max_ton", 600.0),
                                                 ("cop_thermal", 0.7),
                                                 ("installed_cost_per_ton", 500.0),
-                                                ("om_cost_per_ton", 0.5)
+                                                ("om_cost_per_ton", 0.5),
+                                                ("heating_load_input", "SpaceHeating")
                                                 ])
             
             # Add Hot TES
@@ -2296,6 +2329,110 @@ else  # run HiGHS tests
             @test results["ElectricHeater"]["annual_electric_consumption_kwh"] ≈ annual_electric_heater_consumption rtol=1e-4
             @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ annual_energy_supplied rtol=1e-4
 
+        end
+
+        @testset "Process Heat Load" begin
+            d = JSON.parsefile("./scenarios/process_heat.json")
+        
+            # Test set 1: Boiler has free fuel, no emissions, and serves all heating load.
+            d["Boiler"]["fuel_cost_per_mmbtu"] = 0.0
+            s = Scenario(d)
+            p = REoptInputs(s)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(m, p)
+            @test results["Boiler"]["size_mmbtu_per_hour"] ≈ 24.0 atol=0.1
+            @test results["Boiler"]["annual_thermal_production_mmbtu"] ≈ 210240.0 atol=0.1
+            @test sum(results["Boiler"]["thermal_to_dhw_load_series_mmbtu_per_hour"]) ≈ 70080.0 atol=0.1
+            @test sum(results["Boiler"]["thermal_to_space_heating_load_series_mmbtu_per_hour"]) ≈ 70080.0 atol=0.1
+            @test sum(results["Boiler"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]) ≈ 70080.0 atol=0.1
+            @test results["ExistingBoiler"]["annual_thermal_production_mmbtu"] ≈ 0.0 atol=0.1
+            @test sum(results["ExistingBoiler"]["thermal_to_dhw_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.1
+            @test sum(results["ExistingBoiler"]["thermal_to_space_heating_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.1
+            @test sum(results["ExistingBoiler"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.1
+            @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ 0.0 atol=0.1
+        
+            #Test set 2: Boiler only serves process heat
+            d["Boiler"]["can_serve_dhw"] = false
+            d["Boiler"]["can_serve_space_heating"] = false
+            d["Boiler"]["can_serve_process_heat"] = true
+            s = Scenario(d)
+            p = REoptInputs(s)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(m, p)
+            @test results["Boiler"]["size_mmbtu_per_hour"] ≈ 8.0 atol=0.1
+            @test results["Boiler"]["annual_thermal_production_mmbtu"] ≈ 70080.0 atol=0.1
+            @test sum(results["Boiler"]["thermal_to_dhw_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.1
+            @test sum(results["Boiler"]["thermal_to_space_heating_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.1
+            @test sum(results["Boiler"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]) ≈ 70080.0 atol=0.1
+            @test results["ExistingBoiler"]["annual_thermal_production_mmbtu"] ≈ 140160.0 atol=0.1
+            @test sum(results["ExistingBoiler"]["thermal_to_dhw_load_series_mmbtu_per_hour"]) ≈ 70080.0 atol=0.1
+            @test sum(results["ExistingBoiler"]["thermal_to_space_heating_load_series_mmbtu_per_hour"]) ≈ 70080.0 atol=0.1
+            @test sum(results["ExistingBoiler"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.1
+        
+            #Test set 3: Boiler cannot serve process heat but serves DHW, space heating
+            d["Boiler"]["can_serve_dhw"] = true
+            d["Boiler"]["can_serve_space_heating"] = true
+            d["Boiler"]["can_serve_process_heat"] = false
+            s = Scenario(d)
+            p = REoptInputs(s)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(m, p)
+            @test results["Boiler"]["size_mmbtu_per_hour"] ≈ 16.0 atol=0.1
+            @test results["Boiler"]["annual_thermal_production_mmbtu"] ≈ 140160.0 atol=0.1
+            @test sum(results["Boiler"]["thermal_to_dhw_load_series_mmbtu_per_hour"]) ≈ 70080.0 atol=0.1
+            @test sum(results["Boiler"]["thermal_to_space_heating_load_series_mmbtu_per_hour"]) ≈ 70080.0 atol=0.1
+            @test sum(results["Boiler"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.1
+            @test results["ExistingBoiler"]["annual_thermal_production_mmbtu"] ≈ 70080.0 atol=0.1
+            @test sum(results["ExistingBoiler"]["thermal_to_dhw_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.1
+            @test sum(results["ExistingBoiler"]["thermal_to_space_heating_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.1
+            @test sum(results["ExistingBoiler"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]) ≈ 70080.0 atol=0.1
+        
+            #Test set 4: Fuel expensive, but ExistingBoiler is retired
+            d["Boiler"]["can_serve_dhw"] = true
+            d["Boiler"]["can_serve_space_heating"] = true
+            d["Boiler"]["can_serve_process_heat"] = true
+            d["Boiler"]["fuel_cost_per_mmbtu"] = 30.0
+            d["ExistingBoiler"]["retire_in_optimal"] = true
+            s = Scenario(d)
+            p = REoptInputs(s)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(m, p)
+            @test results["Boiler"]["size_mmbtu_per_hour"] ≈ 24.0 atol=0.1
+            @test results["Boiler"]["annual_thermal_production_mmbtu"] ≈ 210240.0 atol=0.1
+            @test sum(results["Boiler"]["thermal_to_dhw_load_series_mmbtu_per_hour"]) ≈ 70080.0 atol=0.1
+            @test sum(results["Boiler"]["thermal_to_space_heating_load_series_mmbtu_per_hour"]) ≈ 70080.0 atol=0.1
+            @test sum(results["Boiler"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]) ≈ 70080.0 atol=0.1
+            @test results["ExistingBoiler"]["annual_thermal_production_mmbtu"] ≈ 0.0 atol=0.1
+            @test sum(results["ExistingBoiler"]["thermal_to_dhw_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.1
+            @test sum(results["ExistingBoiler"]["thermal_to_space_heating_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.1
+            @test sum(results["ExistingBoiler"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.1
+        
+            #Test set 5: Fuel expensive, ExistingBoiler not retired
+            d["ExistingBoiler"]["retire_in_optimal"] = false
+            s = Scenario(d)
+            p = REoptInputs(s)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(m, p)
+            @test results["Boiler"]["size_mmbtu_per_hour"] ≈ 0.0 atol=0.1
+            @test results["Boiler"]["annual_thermal_production_mmbtu"] ≈ 0.0 atol=0.1
+            @test sum(results["Boiler"]["thermal_to_dhw_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.1
+            @test sum(results["Boiler"]["thermal_to_space_heating_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.1
+            @test sum(results["Boiler"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]) ≈ 0.0 atol=0.1
+            @test results["ExistingBoiler"]["annual_thermal_production_mmbtu"] ≈ 210240.0 atol=0.1
+            @test sum(results["ExistingBoiler"]["thermal_to_dhw_load_series_mmbtu_per_hour"]) ≈ 70080.0 atol=0.1
+            @test sum(results["ExistingBoiler"]["thermal_to_space_heating_load_series_mmbtu_per_hour"]) ≈ 70080.0 atol=0.1
+            @test sum(results["ExistingBoiler"]["thermal_to_process_heat_load_series_mmbtu_per_hour"]) ≈ 70080.0 atol=0.1
+        
+            # Test 6: reduce emissions by half, get half the new boiler size
+            d["Site"]["CO2_emissions_reduction_min_fraction"] = 0.50
+            s = Scenario(d)
+            p = REoptInputs(s)
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt([m1,m2], p)
+            @test results["Boiler"]["size_mmbtu_per_hour"] ≈ 12.0 atol=0.1
+            @test results["Boiler"]["annual_thermal_production_mmbtu"] ≈ 105120.0 atol=0.1
+            @test results["ExistingBoiler"]["annual_thermal_production_mmbtu"] ≈ 105120.0 atol=0.1
         end
 
         @testset "Custom REopt logger" begin

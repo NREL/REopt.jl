@@ -700,7 +700,15 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 				dvSupplementaryFiringSize[p.techs.chp] >= 0  #X^{\sigma db}_{t}: System size of CHP with supplementary firing [kW]
 			end
         end
-    end
+		if !isempty(p.s.storage.types.hot)
+			@variable(m, dvHeatToStorage[p.s.storage.types.hot, union(p.techs.heating, p.techs.chp), p.heating_loads, p.time_steps] >= 0) # Power charged to hot storage b at quality q [kW]
+			@variable(m, dvHeatFromStorage[p.s.storage.types.hot, p.heating_loads, p.time_steps] >= 0) # Power discharged from hot storage system b for load q [kW]
+    	end
+	end
+
+	if !isempty(p.techs.cooling)
+		@variable(m, dvCoolingProduction[p.techs.cooling, p.time_steps] >= 0)
+	end
 
     if !isempty(p.techs.steam_turbine)
         @variable(m, dvThermalToSteamTurbine[p.techs.can_supply_steam_turbine, p.heating_loads, p.time_steps] >= 0)

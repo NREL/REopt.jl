@@ -62,36 +62,12 @@ mutable struct StorageTypes
 
                 if v.max_kg > 0.0
 
-                    push!(all_storage, k)
-
-                    if occursin("LP", k)
-                        push!(hydrogen_lp_storage, k)
-                    elseif occursin("HP", k)
-                        push!(hydrogen_hp_storage, k)
-                    else
-                        throw(@error("Hydrogen Storage not labeled as LP or HP."))
-                    end
-
-                end
-            else
-                if v.max_kw > 0.0 && v.max_kwh > 0.0
-
-                    push!(all_storage, k)
-                    push!(non_hydrogen_storage, k)
-
-                    if typeof(v) <: AbstractElectricStorage
-                        push!(elec_storage, k)
-
-                    elseif typeof(v) <: ThermalStorage
-                        if occursin("Hot", k)
-                            push!(hot_storage, k)
-                        elseif occursin("Cold", k)
-                            push!(cold_storage, k)
-                        else
-                            throw(@error("Thermal Storage not labeled as Hot or Cold."))
-                        end
-                    end
-
+                elseif typeof(v) <: HotThermalStorage
+                    push!(hot_storage, k)
+                elseif typeof(v) <: ColdThermalStorage
+                    push!(cold_storage, k)
+                else
+                    throw(@error("Storage not labeled as Hot or Cold, or Electric."))
                 end
             end
         end

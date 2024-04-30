@@ -62,6 +62,7 @@ struct REoptInputs <: AbstractInputs
     tech_emissions_factors_PM25::Dict{String, <:Real} # (techs)
     techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
     heating_cop::Dict{String, <:Real} # (techs.electric_heater)
+    heating_loads_kw::Dict{String, <:Real} # (heating_loads)
     unavailability::Dict{String, Array{Float64,1}}  # Dict by tech of unavailability profile
 end
 ```
@@ -127,6 +128,9 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     tech_emissions_factors_PM25::Dict{String, <:Real} # (techs)
     techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
     heating_cop::Dict{String, <:Real} # (techs.electric_heater)
+    heating_loads::Vector{String} # list of heating loads
+    heating_loads_kw::Dict{String, Array{Real,1}} # (heating_loads)
+    heating_loads_served_by_tes::Dict{String, Array{String,1}} # ("HotThermalStorage" or empty)
     unavailability::Dict{String, Array{Float64,1}} # (techs.elec)
     absorption_chillers_using_heating_load::Dict{String,Array{String,1}} # ("AbsorptionChiller" or empty)
 end
@@ -312,7 +316,11 @@ function REoptInputs(s::AbstractScenario)
         tech_emissions_factors_PM25,
         techs_operating_reserve_req_fraction,
         heating_cop,
-        unavailability 
+        heating_loads,
+        heating_loads_kw,
+        heating_loads_served_by_tes,
+        unavailability,
+        absorption_chillers_using_heating_load
     )
 end
 

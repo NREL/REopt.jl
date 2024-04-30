@@ -223,7 +223,11 @@ function BAUInputs(p::REoptInputs)
         tech_emissions_factors_PM25,
         p.techs_operating_reserve_req_fraction,
         heating_cop,
-        unavailability
+        heating_loads,
+        heating_loads_kw,
+        heating_loads_served_by_tes,
+        unavailability,
+        absorption_chillers_using_heating_load
     )
 end
 

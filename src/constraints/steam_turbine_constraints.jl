@@ -24,7 +24,7 @@ function steam_turbine_production_constraints(m, p; _n="")
     # Constraint Steam Turbine Electric Production
     @constraint(m, SteamTurbineElectricProductionCon[t in p.techs.steam_turbine, ts in p.time_steps],
                 m[Symbol("dvRatedProduction"*_n)][t,ts] ==
-                p.s.steam_turbine.electric_produced_to_thermal_consumed_ratio * sum(m[Symbol("dvThermalToSteamTurbine"*_n)][tst,ts] for tst in p.techs.can_supply_steam_turbine)
+                p.s.steam_turbine.electric_produced_to_thermal_consumed_ratio * sum(m[Symbol("dvThermalToSteamTurbine"*_n)][tst,q,ts] for tst in p.techs.can_supply_steam_turbine, q in p.heating_loads)
                 )
 end
 

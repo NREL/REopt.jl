@@ -10,7 +10,7 @@ function add_boiler_tech_constraints(m, p; _n="")
     # Constraint (1e): Total Fuel burn for Boiler
     @constraint(m, BoilerFuelTrackingCon[t in p.techs.boiler, ts in p.time_steps],
         m[:dvFuelUsage][t,ts] == p.hours_per_time_step * (
-            m[Symbol("dvThermalProduction"*_n)][t,ts] / p.boiler_efficiency[t]
+            sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads) / p.boiler_efficiency[t]
         )
     )
     if "Boiler" in p.techs.boiler  # ExistingBoiler does not have om_cost_per_kwh
@@ -67,7 +67,7 @@ function add_cooling_tech_constraints(m, p; _n="")
     # The load balance for cooling is only applied to time_steps_with_grid, so make sure we don't arbitrarily show cooling production for time_steps_without_grid
     for t in setdiff(p.techs.cooling, p.techs.ghp)
         for ts in p.time_steps_without_grid
-            fix(m[Symbol("dvThermalProduction"*_n)][t, ts], 0.0, force=true)
+            fix(m[Symbol("dvCoolingProduction"*_n)][t, ts], 0.0, force=true)
         end
     end
 end
