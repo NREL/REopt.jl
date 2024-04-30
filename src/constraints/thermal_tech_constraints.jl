@@ -51,7 +51,7 @@ function add_heating_tech_constraints(m, p; _n="")
 end
 
 function add_ashp_heating_cooling_constraints(m, p; _n="")
-    @constraint(m, [t in setdiff(intersect(p.techs.cooling, p.techs.heating), p.techs.ghp), ts in p.time_steps],
+    @constraint(m, [t in intersect(p.techs.cooling, p.techs.heating), ts in p.time_steps],
         sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads) + m[Symbol("dvCoolingProduction"*_n)][t,ts] <= m[Symbol("dvSize"*_n)][t]
     )
 end
