@@ -436,6 +436,11 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
         heating_cop["ASHP"] = ones(length(time_steps))
     end
 
+    if !isempty(techs.ghp)
+        cooling_cop["GHP"] = ones(length(time_steps))
+        heating_cop["GHP"] = ones(length(time_steps))
+    end
+
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
     for t in techs.elec
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]

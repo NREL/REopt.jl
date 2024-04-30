@@ -314,7 +314,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             add_cooling_tech_constraints(m, p)
         end
 
-        if !isempty(intersect(p.techs.heating, p.techs.cooling))
+        if !isempty(setdiff(intersect(p.techs.heating, p.techs.cooling), p.techs.ghp))
             add_ashp_heating_cooling_constraints(m, p)
         end
     
