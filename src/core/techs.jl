@@ -350,6 +350,12 @@ function Techs(s::MPCScenario)
         push!(gentechs, "Generator")
     end
 
+    if s.wind.size_kw > 0
+        push!(all_techs, "Wind")
+        push!(elec, "Wind")
+        append!(techs_no_turndown, ["Wind"])
+    end
+
     electrolyzer_techs = String[]
     if s.electrolyzer.size_kw > 0
         push!(all_techs, "Electrolyzer")

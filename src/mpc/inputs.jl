@@ -154,6 +154,10 @@ function setup_tech_inputs(s::MPCScenario)
         setup_pv_inputs(s, existing_sizes, production_factor)
     end
 
+    if "Wind" in techs.all
+        setup_wind_inputs(s, existing_sizes, production_factor)
+    end
+
     if "Generator" in techs.all
         setup_gen_inputs(s, existing_sizes, production_factor, fuel_cost_per_kwh)
     end
@@ -185,6 +189,12 @@ function setup_pv_inputs(s::MPCScenario, existing_sizes, production_factor)
         production_factor[pv.name, :] = pv.production_factor_series
         existing_sizes[pv.name] = pv.size_kw
     end
+    return nothing
+end
+
+function setup_wind_inputs(s::MPCScenario, existing_sizes, production_factor)
+    existing_sizes["Wind"] = s.wind.size_kw
+    production_factor["Wind", :] = s.wind.production_factor_series
     return nothing
 end
 

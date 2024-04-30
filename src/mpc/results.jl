@@ -42,6 +42,10 @@ function mpc_results(m::JuMP.AbstractModel, p::MPCInputs; _n="")
         add_pv_results(m, p, d; _n)
 	end
 
+    if "Wind" in p.techs.all
+        add_wind_results(m, p, d; _n)
+	end
+
 	if !isempty(p.techs.gen)
         add_generator_results(m, p, d; _n)
 	end

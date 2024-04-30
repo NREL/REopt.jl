@@ -42,6 +42,23 @@ Base.@kwdef struct MPCPV
 end
 
 
+"""
+    MPCWind
+```julia
+Base.@kwdef struct MPCWind
+    size_kw::Real = 0
+    production_factor_series::Union{Nothing, Array{Real,1}} = nothing
+end
+```
+"""
+Base.@kwdef struct MPCWind
+    size_kw::Real = 0
+    production_factor_series::Union{Nothing, Array{Real,1}} = nothing
+    om_cost_per_kw::Real = 0.0
+    operating_reserve_required_fraction::Real = 0.0
+end
+
+
 struct MPCElectricTariff
     energy_rates::AbstractVector{Float64}
     n_energy_tiers::Int

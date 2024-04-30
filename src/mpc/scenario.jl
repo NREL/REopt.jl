@@ -2,6 +2,7 @@
 struct MPCScenario <: AbstractScenario
     settings::Settings
     pvs::Array{MPCPV, 1}
+    wind::MPCWind
     storage::Storage
     electric_tariff::MPCElectricTariff
     electric_load::MPCElectricLoad
@@ -31,6 +32,7 @@ Method for creating the MPCScenario struct:
     struct MPCScenario <: AbstractScenario
         settings::Settings
         pvs::Array{MPCPV, 1}
+        wind::MPCWind
         storage::Storage
         electric_tariff::MPCElectricTariff
         electric_load::MPCElectricLoad
@@ -58,6 +60,7 @@ The Dict `d` must have at a minimum the keys:
 
 Other options include:
     - "PV", which can contain a Dict or Dict[]
+    - "Wind"
     - "ElectricStorage"
     - "Generator"
     - "ProcessHeatLoad"
@@ -135,6 +138,12 @@ function MPCScenario(d::Dict)
 
     electric_tariff = MPCElectricTariff(d["ElectricTariff"])
 
+    if haskey(d, "Wind")
+        wind = MPCWind(; dictkeys_tosymbols(d["Wind"])...)
+    else
+        wind = MPCWind(; size_kw=0)
+    end
+
     if haskey(d, "Generator")
         generator = MPCGenerator(; dictkeys_tosymbols(d["Generator"])...)
     else
@@ -198,6 +207,7 @@ function MPCScenario(d::Dict)
     return MPCScenario(
         settings,
         pvs, 
+        wind,
         storage, 
         electric_tariff, 
         electric_load, 
