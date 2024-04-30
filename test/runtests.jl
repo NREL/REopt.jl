@@ -216,8 +216,6 @@ else  # run HiGHS tests
     # removed Wind test for two reasons
     # 1. reduce WindToolKit calls in tests
     # 2. HiGHS does not support SOS or indicator constraints, which are needed for export constraints
-
-    # @testset "Minimize Unserved Load" is too slow with Cbc (killed after 8 hours)
     
     @testset "Simulated load function consistency with REoptInputs.s (Scenario)" begin
         """
