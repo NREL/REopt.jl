@@ -952,7 +952,7 @@ else  # run HiGHS tests
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
             results = run_reopt(m, d)
             @test value(m[:binMGTechUsed]["PV"]) ≈ 0
-            @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) > 0
+            @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 24.16 atol=0.1
             
             #=
             Scenario with $0.001/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
