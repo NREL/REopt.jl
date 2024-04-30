@@ -178,8 +178,8 @@ function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[
     max_crate_series_kw = zeros(n_time_steps)
     tot_ev_rdtrp_eff = 0.0
 
-    if length(p.s.storage.types.ev) > 0
-        for ev in p.s.storage.types.ev
+    if length(ev_dict) > 0
+        for ev in keys(ev_dict)
             ev_onsite_kwh_series .+= ev_dict[ev]["ev_onsite_kwh_series"]
             sum_ev_total_kwh += ev_dict[ev]["size_kwh"]
             max_crate_series_kw += ev_dict[ev]["max_crate_series_kw"]
@@ -189,7 +189,7 @@ function simulate_outages(;batt_kwh=0, batt_kw=0, pv_kw_ac_hourly=[], init_soc=[
         nothing
     end
 
-    tot_ev_rdtrp_eff = tot_ev_rdtrp_eff/length(p.s.storage.types.ev)
+    tot_ev_rdtrp_eff = tot_ev_rdtrp_eff/length(ev_dict)
 
     """
     Simulation starts here
@@ -329,7 +329,7 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
     for ev in p.s.storage.types.ev
         ev_dict[ev] = Dict()
         ev_dict[ev]["roundtrip_efficiency"] = p.s.storage.attr[ev].charge_efficiency*p.s.storage.attr[ev].discharge_efficiency
-        ev_dict[ev]["ev_onsite_kwh_series"] = (p.s.storage.attr[ev].electric_vehicle.back_on_site_time_step_soc_drained.*results_dict[ev]["size_kwh"])
+        ev_dict[ev]["ev_onsite_kwh_series"] = (p.s.storage.attr[ev].electric_vehicle.back_on_site_time_step_soc_drained.*d[ev]["size_kwh"])
         ev_dict[ev]["max_crate_series_kw"] = p.s.storage.attr["EV1"].electric_vehicle.ev_on_site_series.*d[ev]["size_kw"]
         ev_dict[ev]["size_kwh"] = d[ev]["size_kwh"]
     end
