@@ -216,8 +216,6 @@ else  # run HiGHS tests
     # removed Wind test for two reasons
     # 1. reduce WindToolKit calls in tests
     # 2. HiGHS does not support SOS or indicator constraints, which are needed for export constraints
-
-    # @testset "Minimize Unserved Load" is too slow with Cbc (killed after 8 hours)
     
     @testset "Simulated load function consistency with REoptInputs.s (Scenario)" begin
         """
@@ -941,18 +939,26 @@ else  # run HiGHS tests
         end
 
         @testset "Minimize Unserved Load" begin
-                
+            d = JSON.parsefile("./scenarios/outage.json")
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
-            results = run_reopt(m, "./scenarios/outage.json")
-
-            @test results["Outages"]["expected_outage_cost"] ≈ 0
-            @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 0
+            results = run_reopt(m, d)
+        
+            @test results["Outages"]["expected_outage_cost"] ≈ 0 atol=0.1
+            @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 0 atol=0.1
             @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
             @test value(m[:binMGTechUsed]["CHP"]) ≈ 1
             @test value(m[:binMGTechUsed]["PV"]) ≈ 1
             @test value(m[:binMGStorageUsed]) ≈ 1
-            @test results["Financial"]["lcc"] ≈ 6.83633907986e7 rtol=0.01
-
+        
+            # Increase cost of microgrid upgrade and PV Size, PV not used and some load not met
+            d["Financial"]["microgrid_upgrade_cost_fraction"] = 0.3
+            d["PV"]["min_kw"] = 200.0
+            d["PV"]["max_kw"] = 200.0
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
+            results = run_reopt(m, d)
+            @test value(m[:binMGTechUsed]["PV"]) ≈ 0
+            @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 24.16 atol=0.1
+            
             #=
             Scenario with $0.001/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
             - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
@@ -980,8 +986,9 @@ else  # run HiGHS tests
             @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
             @test value(m[:binMGTechUsed]["PV"]) ≈ 1
             @test value(m[:binMGTechUsed]["Wind"]) ≈ 1
-            @test results["Outages"]["expected_outage_cost"] ≈ 446899.75 atol=1.0
-            @test results["Financial"]["lcc"] ≈ 6.71661825335e7 rtol=0.001
+            @test results["Outages"]["expected_outage_cost"] ≈ 1.296319791276051e6 atol=1.0
+            @test results["Financial"]["lcc"] ≈ 4.8046446434e6 rtol=0.001
+            
         end
 
         @testset "Outages with Wind and supply-to-load no greater than critical load" begin
@@ -2007,41 +2014,41 @@ else  # run HiGHS tests
                 end
                 
                 if i == 1
-                    @test results["PV"]["size_kw"] ≈ 60.12 atol=1e-1
+                    @test results["PV"]["size_kw"] ≈ 59.7222 atol=1e-1
                     @test results["ElectricStorage"]["size_kw"] ≈ 0.0 atol=1e-1
                     @test results["ElectricStorage"]["size_kwh"] ≈ 0.0 atol=1e-1
-                    @test results["Generator"]["size_kw"] ≈ 21.52 atol=1e-1
+                    @test results["Generator"]["size_kw"] ≈ 9.13 atol=1e-1
                     @test results["Site"]["total_renewable_energy_fraction"] ≈ 0.8
-                    @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.147576 atol=1e-4
-                    @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.58694032 atol=1e-4
-                    @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 355.8 atol=1
-                    @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 11.64 atol=1e-2
-                    @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 7.0605
+                    @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.148375 atol=1e-4
+                    @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.57403012 atol=1e-4
+                    @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 332.4 atol=1
+                    @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 11.85 atol=1e-2
+                    @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 7.427
                     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0
-                    @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 8315.69 atol=1
-                    @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 232.85
-                    @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 141.21
+                    @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 8459.45 atol=1
+                    @test results["Site"]["lifecycle_emissions_tonnes_CO2"] ≈ 236.95
+                    @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 148.54
                     @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0
-                    @test results["ElectricUtility"]["annual_emissions_tonnes_CO2_bau"] ≈ 28.186 atol=1e-1
-                    @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 563.72
+                    @test results["ElectricUtility"]["annual_emissions_tonnes_CO2_bau"] ≈ 27.813 atol=1e-1
+                    @test results["ElectricUtility"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 556.26
                 elseif i == 2
                     #commented out values are results using same levelization factor as API
                     @test results["PV"]["size_kw"] ≈ 106.13 atol=1
-                    @test results["ElectricStorage"]["size_kw"] ≈ 21.58 atol=1 # 20.29
-                    @test results["ElectricStorage"]["size_kwh"] ≈ 166.29 atol=1
+                    @test results["ElectricStorage"]["size_kw"] ≈ 20.09 atol=1 # 20.29
+                    @test results["ElectricStorage"]["size_kwh"] ≈ 170.94 atol=1
                     @test !haskey(results, "Generator")
                     # Renewable energy
                     @test results["Site"]["renewable_electricity_fraction"] ≈ 0.78586 atol=1e-3
                     @test results["Site"]["renewable_electricity_fraction_bau"] ≈ 0.132118 atol=1e-3 #0.1354 atol=1e-3
-                    @test results["Site"]["annual_renewable_electricity_kwh_bau"] ≈ 13211.78 atol=10 # 13542.62 atol=10
+                    @test results["Site"]["annual_renewable_electricity_kwh_bau"] ≈ 13308.5 atol=10 # 13542.62 atol=10
                     @test results["Site"]["total_renewable_energy_fraction_bau"] ≈ 0.132118 atol=1e-3 # 0.1354 atol=1e-3
                     # CO2 emissions - totals ≈  from grid, from fuelburn, ER, $/tCO2 breakeven
                     @test results["Site"]["lifecycle_emissions_reduction_CO2_fraction"] ≈ 0.8 atol=1e-3 # 0.8
-                    @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 460.7 atol=1e-1
+                    @test results["Financial"]["breakeven_cost_of_emissions_reduction_per_tonne_CO2"] ≈ 491.5 atol=1e-1
                     @test results["Site"]["annual_emissions_tonnes_CO2"] ≈ 11.662 atol=1
                     @test results["Site"]["annual_emissions_tonnes_CO2_bau"] ≈ 58.3095 atol=1
                     @test results["Site"]["annual_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
-                    @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 8401.1 atol=1
+                    @test results["Financial"]["lifecycle_emissions_cost_climate"] ≈ 8397.85 atol=1
                     @test results["Site"]["lifecycle_emissions_tonnes_CO2_bau"] ≈ 1166.19 atol=1
                     @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2"] ≈ 0.0 atol=1 # 0.0
                     @test results["Site"]["lifecycle_emissions_from_fuelburn_tonnes_CO2_bau"] ≈ 0.0 atol=1 # 0.0

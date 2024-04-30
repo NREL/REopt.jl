@@ -23,7 +23,7 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop 2024-04-17
+## Develop 2024-04-30
 ### Added 
 - In `src/core/absorption_chiller.jl` struct, added field **heating_load_input** to the AbsorptionChiller struct
 - Added new variables **dvHeatToStorage** and **dvHeatFromStorage** which are indexed on `p.heating_loads` and added reconciliation constraints so that **dvProductionToStorage** and **dvDischargeFromStorage** maintain their relationship to state of charge for Hot thermal energy storage.
@@ -43,6 +43,7 @@ Classify the change according to the following categories:
 - divided **ThermalStorage** into **HotThermalStorage** and **ColdThermalStorage** as the former now has attributes related to the compatible heat loads as input or output.
 - changed technologies included **dvProductionToWaste** to all heating techs.  NOTE: this variable is forced to zero to allow steam turbine tests to pass, but I believe that waste heat should be allowed for the turbine.  A TODO is in place to review this commit (a406cc5df6e4a27b56c92815c35d04815904e495).
 - changed test values and tolerances for CHP Sizing test.
+- Updated test sets "Emissions and Renewable Energy Percent" and "Minimize Unserved Load" to decrease computing time.
 
 ### Fixed  
 - added a constraint in `src/constraints/steam_turbine_constraints.jl` that allows for heat loads to reconcile when thermal storage is paired with a SteamTurbine. 
