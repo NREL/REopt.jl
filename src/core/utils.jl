@@ -414,13 +414,20 @@ function call_solar_dataset_api(latitude::Real, longitude::Real, radius::Int)
         dist_meters = response["outputs"][dataset]["distance"] # meters
         datasource = response["outputs"][dataset]["weather_data_source"]
 
-        @info "The solar and/or temperature resource data used for this location is from the $datasource dataset from a station or grid cell located $(round(dist_meters/1609.34)) miles from the site location (see PVWatts API documentation for more information)."
+        warned = false
         # Warnings if not using NSRDB or if data is > 200 miles away (API only gets warnings, not info's)
-        if dataset != "nsrdb"
+        if dataset != "nsrdb" && dist_meters > 200 * 1609.34
+            @warn "The solar and/or temperature resource data used for this location is not from the NSRDB and may need to be reviewed for accuracy. The data used is from $datasource dataset from a station or grid cell located more then 200 miles ($(round(dist_meters/1609.34)) miles) from the site location."
+            warned = true
+        elseif dataset != "nsrdb"
             @warn "The solar and/or temperature resource data used for this location is not from the NSRDB and may need to be reviewed for accuracy. The data used is from $datasource dataset from a station or grid cell located $(round(dist_meters/1609.34)) miles from the site location."
-        end
-        if dist_meters > 200 * 1609.34
+            warned = true
+        elseif dist_meters > 200 * 1609.34
             @warn "The solar and/or temperature resource data used for this location ($datasource) is from a station or grid cell located more than 200 miles ($(round(dist_meters/1609.34)) miles) from the site location."
+            warned = true
+        end
+        if !warned
+            @info "The solar and/or temperature resource data used for this location is from the $datasource dataset from a station or grid cell located $(round(dist_meters/1609.34)) miles from the site location (see PVWatts API documentation for more information)."
         end
 
         return dataset, dist_meters, datasource
