@@ -220,25 +220,6 @@ function Techs(s::Scenario)
         end
     end
 
-    if !isempty(s.ghp_option_list) && !isnothing(s.ghp_option_list[1])
-        #push!(all_techs, "GHP")  #TODO: refactor GHP so that it's a part of all_techs, potentially adding in things like sizes for the binary options?
-        push!(heating_techs, "GHP")
-        push!(cooling_techs, "GHP")
-        push!(ghp_techs, "GHP")
-        if any((!isnothing(ghp) && ghp.can_supply_steam_turbine) for ghp in s.ghp_option_list)
-            push!(techs_can_supply_steam_turbine, "GHP")
-        end
-        if any(ghp.can_serve_space_heating for ghp in s.ghp_option_list)
-            push!(techs_can_serve_space_heating, "GHP")
-        end
-        if any(ghp.can_serve_dhw for ghp in s.ghp_option_list)
-            push!(techs_can_serve_dhw, "GHP")
-        end
-        if any(ghp.can_serve_process_heat for ghp in s.ghp_option_list)
-            push!(techs_can_serve_process_heat, "GHP")
-        end
-    end
-
     if !isnothing(s.existing_chiller)
         push!(all_techs, "ExistingChiller")
         push!(cooling_techs, "ExistingChiller")
