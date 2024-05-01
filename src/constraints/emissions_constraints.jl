@@ -1,17 +1,21 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 
 function add_emissions_constraints(m,p)
-	if !isnothing(p.s.site.CO2_emissions_reduction_min_fraction)
-		@constraint(m, MinEmissionsReductionCon, 
-			m[:Lifecycle_Emissions_Lbs_CO2] <= 
-			(1-p.s.site.CO2_emissions_reduction_min_fraction) * m[:Lifecycle_Emissions_Lbs_CO2_BAU]
-		)
-	end
-	if !isnothing(p.s.site.CO2_emissions_reduction_max_fraction)
-		@constraint(m, MaxEmissionsReductionCon, 
-			m[:Lifecycle_Emissions_Lbs_CO2] >= 
-			(1-p.s.site.CO2_emissions_reduction_max_fraction) * m[:Lifecycle_Emissions_Lbs_CO2_BAU]
-		)
+	if !isnothing(p.s.site.bau_emissions_lb_CO2_per_year)
+		if !isnothing(p.s.site.CO2_emissions_reduction_min_fraction)
+			@constraint(m, MinEmissionsReductionCon, 
+				m[:Lifecycle_Emissions_Lbs_CO2] <= 
+				(1-p.s.site.CO2_emissions_reduction_min_fraction) * m[:Lifecycle_Emissions_Lbs_CO2_BAU]
+			)
+		end
+		if !isnothing(p.s.site.CO2_emissions_reduction_max_fraction)
+			@constraint(m, MaxEmissionsReductionCon, 
+				m[:Lifecycle_Emissions_Lbs_CO2] >= 
+				(1-p.s.site.CO2_emissions_reduction_max_fraction) * m[:Lifecycle_Emissions_Lbs_CO2_BAU]
+			)
+		end
+	else
+		@warn "No emissions reduction constraints added, as BAU emissions have not been calculated."
 	end
 end
 
@@ -32,14 +36,19 @@ function add_yr1_emissions_calcs(m,p)
 	yr1_emissions_offset_from_elec_exports_lbs_PM25 = 
 		calc_yr1_emissions_offset_from_elec_exports(m, p)
 	
-	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2] = m[:yr1_emissions_from_elec_grid_lbs_CO2] - 
-		yr1_emissions_offset_from_elec_exports_lbs_CO2
-	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx] = m[:yr1_emissions_from_elec_grid_lbs_NOx] - 
-		yr1_emissions_offset_from_elec_exports_lbs_NOx
-	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2] = m[:yr1_emissions_from_elec_grid_lbs_SO2] - 
-		yr1_emissions_offset_from_elec_exports_lbs_SO2
-	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25] = m[:yr1_emissions_from_elec_grid_lbs_PM25] - 
-		yr1_emissions_offset_from_elec_exports_lbs_PM25
+	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2] = (m[:yr1_emissions_from_elec_grid_lbs_CO2] - 
+		yr1_emissions_offset_from_elec_exports_lbs_CO2)
+	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx] = (m[:yr1_emissions_from_elec_grid_lbs_NOx] - 
+		yr1_emissions_offset_from_elec_exports_lbs_NOx)
+	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2] = (m[:yr1_emissions_from_elec_grid_lbs_SO2] - 
+		yr1_emissions_offset_from_elec_exports_lbs_SO2)
+	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25] = (m[:yr1_emissions_from_elec_grid_lbs_PM25] - 
+		yr1_emissions_offset_from_elec_exports_lbs_PM25)
+
+	m[:EmissionsYr1_Total_LbsCO2] = m[:yr1_emissions_onsite_fuel_lbs_CO2] + m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2]
+	m[:EmissionsYr1_Total_LbsNOx] = m[:yr1_emissions_onsite_fuel_lbs_NOx] + m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx]
+	m[:EmissionsYr1_Total_LbsSO2] = m[:yr1_emissions_onsite_fuel_lbs_SO2] + m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2]
+	m[:EmissionsYr1_Total_LbsPM25] = m[:yr1_emissions_onsite_fuel_lbs_PM25] + m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25]
 	nothing
 end
 
