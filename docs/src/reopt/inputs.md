@@ -147,6 +147,11 @@ REopt.DomesticHotWaterLoad
 REopt.SpaceHeatingLoad
 ```
 
+## ProcessHeatLoad
+```@docs
+REopt.ProcessHeatLoad
+```
+
 ## FlexibleHVAC
 ```@docs
 REopt.FlexibleHVAC
@@ -165,4 +170,9 @@ REopt.GHP
 ## SteamTurbine
 ```@docs
 REopt.SteamTurbine
+```
+
+## ElectricHeater
+```@docs
+REopt.ElectricHeater
 ```
