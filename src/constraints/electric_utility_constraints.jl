@@ -65,8 +65,13 @@ function add_export_constraints(m, p; _n="")
                     !binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.interconnection_limit_kw}
                 )
             else
+                max_interconnection_size = minimum([
+                    p.s.electric_utility.interconnection_limit_kw, 
+                    sum(p.max_sizes[t] for t in NEM_techs),
+                    maximum([sum((p.s.electric_load.loads_kw[ts] + p.s.cooling_load.loads_kw_thermal[ts]/p.cop["ExistingChiller"] + sum(p.heating_loads_kw[q][ts] for q in p.heating_loads)/p.heating_cop["ElectricHeater"]) for ts in p.s.electric_tariff.time_steps_monthly[m]) for m in p.months])
+                ])
                 @constraint(m,
-                    sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.interconnection_limit_kw - (p.s.electric_utility.interconnection_limit_kw - p.s.electric_utility.net_metering_limit_kw)*binNEM 
+                    sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= max_interconnection_size - (max_interconnection_size - p.s.electric_utility.net_metering_limit_kw)*binNEM 
                 )
             end
 
@@ -149,6 +154,7 @@ function add_export_constraints(m, p; _n="")
     m[Symbol("NEM_benefit"*_n)] = NEM_benefit
     m[Symbol("EXC_benefit"*_n)] = EXC_benefit
     m[Symbol("WHL_benefit"*_n)] = WHL_benefit
+    m[Symbol("binNEM"*_n)] = binNEM
     nothing
 end
 
