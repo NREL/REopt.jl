@@ -65,6 +65,7 @@ function add_export_constraints(m, p; _n="")
                     !binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.interconnection_limit_kw}
                 )
             else
+                #leverage max system sizes for interconnect limit size, alternate is max monthly fully-electrified load in kWh
                 max_interconnection_size = minimum([
                     p.s.electric_utility.interconnection_limit_kw, 
                     sum(p.max_sizes[t] for t in NEM_techs),
