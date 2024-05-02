@@ -69,7 +69,7 @@ function add_export_constraints(m, p; _n="")
                 max_interconnection_size = minimum([
                     p.s.electric_utility.interconnection_limit_kw, 
                     sum(p.max_sizes[t] for t in NEM_techs),
-                    maximum([sum((
+                    p.hours_per_time_step * maximum([sum((
                         p.s.electric_load.loads_kw[ts] + 
                         p.s.cooling_load.loads_kw_thermal[ts]/p.cop["ExistingChiller"] + 
                         (p.s.space_heating_load.loads_kw[ts] + p.s.dhw_load.loads_kw[ts] + p.s.process_heat_load.loads_kw[ts]) # assume electric heater with COP of 1 for conversion to electriity
