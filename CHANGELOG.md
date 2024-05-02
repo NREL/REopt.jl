@@ -54,6 +54,7 @@ Classify the change according to the following categories:
 
 ### Fixed  
 - added a constraint in `src/constraints/steam_turbine_constraints.jl` that allows for heat loads to reconcile when thermal storage is paired with a SteamTurbine. 
+- fixed a bug in which net-metering system size limits could be exceeded while still obtaining the net-metering benefit due to a large "big-M".
 
 ## v0.45.0
 ### Fixed 
