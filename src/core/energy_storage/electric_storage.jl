@@ -146,6 +146,7 @@ end
     inverter_efficiency_fraction::Float64 = 0.96
     rectifier_efficiency_fraction::Float64 = 0.96
     soc_min_fraction::Float64 = 0.2
+    soc_min_applies_during_outages::Bool = false
     soc_init_fraction::Float64 = off_grid_flag ? 1.0 : 0.5
     can_grid_charge::Bool = off_grid_flag ? false : true
     installed_cost_per_kw::Real = 910.0
@@ -180,6 +181,7 @@ Base.@kwdef struct ElectricStorageDefaults
     inverter_efficiency_fraction::Float64 = 0.96
     rectifier_efficiency_fraction::Float64 = 0.96
     soc_min_fraction::Float64 = 0.2
+    soc_min_applies_during_outages::Bool = false
     soc_init_fraction::Float64 = off_grid_flag ? 1.0 : 0.5
     can_grid_charge::Bool = off_grid_flag ? false : true
     installed_cost_per_kw::Real = 910.0
@@ -220,6 +222,7 @@ struct ElectricStorage <: AbstractElectricStorage
     inverter_efficiency_fraction::Float64
     rectifier_efficiency_fraction::Float64
     soc_min_fraction::Float64
+    soc_min_applies_during_outages::Bool
     soc_init_fraction::Float64
     can_grid_charge::Bool
     installed_cost_per_kw::Real
@@ -313,6 +316,7 @@ struct ElectricStorage <: AbstractElectricStorage
             s.inverter_efficiency_fraction,
             s.rectifier_efficiency_fraction,
             s.soc_min_fraction,
+            s.soc_min_applies_during_outages,
             s.soc_init_fraction,
             s.can_grid_charge,
             s.installed_cost_per_kw,
