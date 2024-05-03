@@ -23,6 +23,12 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2024-04-22
+### Changed
+- Updated `pop_year` and `income_year` used in call to EASIUR data (`get_EASIUR2005`) each to 2024, from 2020. 
+- Updated usd conversion used for EASIUR health cost calcs from USD_2010_to_2020 = 1.246 to USD_2010_to_2024 = 1.432
+
+## Develop - 2024-04-11
 ## Develop 2024-04-25
 ### Changed 
 - Change the way we determine which dataset to utilize in the PVWatts API call. Previously, we utilized defined lat-long bounds to determine if "nsrdb" or "intl" data should be used in PVWatts call. Now, we call the Solar Dataset Query API (v2) (https://developer.nrel.gov/docs/solar/data-query/v2/) to determine the dataset to use, and include "tmy3" as an option, as this is currently the best-available data for many locations in Alaska. 
@@ -54,7 +60,6 @@ Classify the change according to the following categories:
 
 ### Fixed  
 - added a constraint in `src/constraints/steam_turbine_constraints.jl` that allows for heat loads to reconcile when thermal storage is paired with a SteamTurbine. 
-- fixed a bug in which net-metering system size limits could be exceeded while still obtaining the net-metering benefit due to a large "big-M".
 
 ## v0.45.0
 ### Fixed 
