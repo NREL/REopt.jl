@@ -28,6 +28,13 @@ Classify the change according to the following categories:
 - Add new parameters **max_duration_hours** and **min_duration_hours** to bound the energy duration of battery storage
 
 ## Develop - 2024-04-11
+## Develop 2024-04-25
+### Changed 
+- Change the way we determine which dataset to utilize in the PVWatts API call. Previously, we utilized defined lat-long bounds to determine if "nsrdb" or "intl" data should be used in PVWatts call. Now, we call the Solar Dataset Query API (v2) (https://developer.nrel.gov/docs/solar/data-query/v2/) to determine the dataset to use, and include "tmy3" as an option, as this is currently the best-available data for many locations in Alaska. 
+### Added
+- Info to user including name of PV and/or temperature datasource used and distance from site location to datasource location
+- Warning to user if data is not from NSRDB or if data is more than 200 miles away 
+  
 ## Develop 2024-04-30
 ### Added 
 - In `src/core/absorption_chiller.jl` struct, added field **heating_load_input** to the AbsorptionChiller struct
