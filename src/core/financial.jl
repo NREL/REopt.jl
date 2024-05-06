@@ -248,6 +248,7 @@ function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
 end
 
 function easiur_escalation_rates(latitude::Real, longitude::Real, inflation::Real)
+    # Calculate escalation rate as nominal compound annual growth rate in marginal emissions costs between 2020 and 2024 for this location.
     EASIUR_150m_yr2020 = nothing
     EASIUR_150m_yr2024 = nothing
     try
