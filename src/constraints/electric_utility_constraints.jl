@@ -65,8 +65,21 @@ function add_export_constraints(m, p; _n="")
                     !binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.interconnection_limit_kw}
                 )
             else
+                #leverage max system sizes for interconnect limit size, alternate is max monthly fully-electrified load in kWh
+                #assume electric heater with COP of 1 for conversion of heat to electricity
+                max_interconnection_size = minimum([
+                    p.s.electric_utility.interconnection_limit_kw, 
+                    sum(p.max_sizes[t] for t in NEM_techs),
+                    p.hours_per_time_step * maximum([sum((
+                        p.s.electric_load.loads_kw[ts] + 
+                        p.s.cooling_load.loads_kw_thermal[ts]/p.cop["ExistingChiller"] + 
+                        (p.s.space_heating_load.loads_kw[ts] + p.s.dhw_load.loads_kw[ts] + p.s.process_heat_load.loads_kw[ts]) 
+                    ) for ts in p.s.electric_tariff.time_steps_monthly[m]) for m in p.months
+                    ])
+                ])
+                
                 @constraint(m,
-                    sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.interconnection_limit_kw - (p.s.electric_utility.interconnection_limit_kw - p.s.electric_utility.net_metering_limit_kw)*binNEM 
+                    sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= max_interconnection_size - (max_interconnection_size - p.s.electric_utility.net_metering_limit_kw)*binNEM 
                 )
             end
 
