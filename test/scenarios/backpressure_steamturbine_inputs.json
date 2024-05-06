@@ -12,6 +12,9 @@
     "ElectricTariff": {
         "urdb_label": "5e1676e95457a3f87673e3b0"
     },    
+    "ElectricUtility" : {
+        "co2_from_avert" : true
+    },
     "ExistingBoiler": {
         "production_type": "steam",
         "efficiency": 0.8,

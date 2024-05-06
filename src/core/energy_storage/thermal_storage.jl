@@ -18,7 +18,7 @@ Cold thermal energy storage sytem; specifically, a chilled water system used to 
     thermal_decay_rate_fraction::Float64 = 0.0004 # Thermal loss (gain) rate as a fraction of energy storage capacity, per hour (frac*energy_capacity/hr = kw_thermal)
     om_cost_per_gal::Float64 = 0.0 # Yearly fixed O&M cost dependent on storage energy size
     macrs_option_years::Int = 7
-    macrs_bonus_fraction::Float64 = 0.8
+    macrs_bonus_fraction::Float64 = 0.6
     macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kwh::Float64 = 0.0
@@ -36,7 +36,7 @@ Base.@kwdef struct ColdThermalStorageDefaults <: AbstractThermalStorageDefaults
     thermal_decay_rate_fraction::Float64 = 0.0004
     om_cost_per_gal::Float64 = 0.0
     macrs_option_years::Int = 7
-    macrs_bonus_fraction::Float64 = 0.8
+    macrs_bonus_fraction::Float64 = 0.6
     macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kwh::Float64 = 0.0
@@ -58,10 +58,13 @@ end
     thermal_decay_rate_fraction::Float64 = 0.0004
     om_cost_per_gal::Float64 = 0.0
     macrs_option_years::Int = 7
-    macrs_bonus_fraction::Float64 = 0.8
+    macrs_bonus_fraction::Float64 = 0.6
     macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kwh::Float64 = 0.0
+    can_serve_dhw::Bool = true
+    can_serve_space_heating:Bool = true
+    can_serve_process_heat::Bool = false
 ```
 """
 Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults
@@ -76,21 +79,24 @@ Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults
     thermal_decay_rate_fraction::Float64 = 0.0004
     om_cost_per_gal::Float64 = 0.0
     macrs_option_years::Int = 7
-    macrs_bonus_fraction::Float64 = 0.8
+    macrs_bonus_fraction::Float64 = 0.6
     macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kwh::Float64 = 0.0
+    can_serve_dhw::Bool = true
+    can_serve_space_heating::Bool = true
+    can_serve_process_heat::Bool = false
 end
 
 
 
 """
-    function ThermalStorage(d::Dict, f::Financial, time_steps_per_hour::Int)
+function ColdThermalStorage(d::Dict, f::Financial, time_steps_per_hour::Int)
 
-Construct ThermalStorage struct from Dict with keys-val pairs from the 
-REopt [Hot,Cold]ThermalStorage and Financial inputs. 
+Construct ColdThermalStorage struct from Dict with keys-val pairs from the 
+REopt ColdThermalStorage and Financial inputs. 
 """
-struct ThermalStorage <: AbstractThermalStorage
+struct ColdThermalStorage <: AbstractThermalStorage
     min_gal::Float64
     max_gal::Float64
     hot_water_temp_degF::Float64
@@ -114,7 +120,93 @@ struct ThermalStorage <: AbstractThermalStorage
     net_present_cost_per_kwh::Float64
     om_cost_per_kwh::Float64
 
-    function ThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
+    function ColdThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
+         
+        kwh_per_gal = get_kwh_per_gal(s.hot_water_temp_degF, s.cool_water_temp_degF)
+        min_kwh = s.min_gal * kwh_per_gal
+        max_kwh = s.max_gal * kwh_per_gal
+        min_kw = min_kwh * time_steps_per_hour
+        max_kw = max_kwh * time_steps_per_hour
+        om_cost_per_kwh = s.om_cost_per_gal / kwh_per_gal
+    
+        charge_efficiency = s.internal_efficiency_fraction^0.5
+        discharge_efficiency = s.internal_efficiency_fraction^0.5
+        installed_cost_per_kwh = s.installed_cost_per_gal / kwh_per_gal
+      
+        net_present_cost_per_kwh = effective_cost(;
+            itc_basis = installed_cost_per_kwh,
+            replacement_cost = 0.0,
+            replacement_year = 100,
+            discount_rate = f.owner_discount_rate_fraction,
+            tax_rate = f.owner_tax_rate_fraction,
+            itc = s.total_itc_fraction,
+            macrs_schedule = s.macrs_option_years == 7 ? f.macrs_seven_year : f.macrs_five_year,
+            macrs_bonus_fraction = s.macrs_bonus_fraction,
+            macrs_itc_reduction = s.macrs_itc_reduction
+        ) - s.total_rebate_per_kwh
+    
+        return new(
+            s.min_gal,
+            s.max_gal,
+            s.hot_water_temp_degF,
+            s.cool_water_temp_degF,
+            s.internal_efficiency_fraction,
+            s.soc_min_fraction,
+            s.soc_init_fraction,
+            s.installed_cost_per_gal,
+            s.thermal_decay_rate_fraction,
+            s.om_cost_per_gal,
+            s.macrs_option_years,
+            s.macrs_bonus_fraction,
+            s.total_rebate_per_kwh,
+            min_kw,
+            max_kw,
+            min_kwh,
+            max_kwh,
+            installed_cost_per_kwh,
+            charge_efficiency,
+            discharge_efficiency,
+            net_present_cost_per_kwh,
+            om_cost_per_kwh
+        )
+    end
+end
+
+
+"""
+function HotThermalStorage(d::Dict, f::Financial, time_steps_per_hour::Int)
+
+Construct HotThermalStorage struct from Dict with keys-val pairs from the 
+REopt HotThermalStorage and Financial inputs. 
+"""
+struct HotThermalStorage <: AbstractThermalStorage
+    min_gal::Float64
+    max_gal::Float64
+    hot_water_temp_degF::Float64
+    cool_water_temp_degF::Float64
+    internal_efficiency_fraction::Float64
+    soc_min_fraction::Float64
+    soc_init_fraction::Float64
+    installed_cost_per_gal::Float64
+    thermal_decay_rate_fraction::Float64
+    om_cost_per_gal::Float64
+    macrs_option_years::Int
+    macrs_bonus_fraction::Float64
+    total_rebate_per_kwh::Float64
+    min_kw::Float64
+    max_kw::Float64
+    min_kwh::Float64
+    max_kwh::Float64
+    installed_cost_per_kwh::Float64
+    charge_efficiency::Float64
+    discharge_efficiency::Float64
+    net_present_cost_per_kwh::Float64
+    om_cost_per_kwh::Float64
+    can_serve_dhw::Bool
+    can_serve_space_heating::Bool
+    can_serve_process_heat::Bool
+
+    function HotThermalStorage(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
          
         kwh_per_gal = get_kwh_per_gal(s.hot_water_temp_degF, s.cool_water_temp_degF)
         min_kwh = s.min_gal * kwh_per_gal
@@ -162,6 +254,11 @@ struct ThermalStorage <: AbstractThermalStorage
             discharge_efficiency,
             net_present_cost_per_kwh,
             om_cost_per_kwh,
+            s.can_serve_dhw,
+            s.can_serve_space_heating,
+            s.can_serve_process_heat
         )
     end
 end
+
+   

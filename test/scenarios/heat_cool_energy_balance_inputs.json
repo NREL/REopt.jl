@@ -18,6 +18,9 @@
     "CoolingLoad": {
         "doe_reference_name": "Hospital"
     },
+    "ElectricUtility" : {
+        "co2_from_avert" : true
+    },
     "ExistingBoiler": {
         "production_type": "hot_water" ,
         "efficiency": 0.78,

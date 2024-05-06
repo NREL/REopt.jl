@@ -35,6 +35,3 @@ System Advisor Model libraries used by this package for the Wind model.
 
 ## test
 Built-in tests for several different solvers.
-
-## transcrypt
-A small executable for encrypting the xpauth.xpr license file that is used by NREL developers.

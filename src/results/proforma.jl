@@ -133,9 +133,14 @@ function proforma_results(p::REoptInputs, d::Dict)
         m.om_series_bau += escalate_om(annual_om_bau)
     end
 
+    # calculate GHP incentives, and depreciation
+    if "GHP" in keys(d) && d["GHP"]["ghp_option_chosen"] > 0
+        update_ghp_metrics(m, p, p.s.ghp_option_list[d["GHP"]["ghp_option_chosen"]], "GHP", d, third_party)
+    end
+
     # Optimal Case calculations
     electricity_bill_series = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax"])
-    export_credit_series = escalate_elec(d["ElectricTariff"]["year_one_export_benefit_before_tax"])
+    export_credit_series = escalate_elec(-d["ElectricTariff"]["year_one_export_benefit_before_tax"])
 
     # In the two party case the electricity and export credits are incurred by the offtaker not the developer
     if third_party
@@ -185,8 +190,8 @@ function proforma_results(p::REoptInputs, d::Dict)
         electricity_bill_series = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax"])
         electricity_bill_series_bau = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax_bau"])
 
-        export_credit_series = escalate_elec(-d["ElectricTariff"]["lifecycle_export_benefit_after_tax"])
-        export_credit_series_bau = escalate_elec(-d["ElectricTariff"]["lifecycle_export_benefit_after_tax_bau"])
+        export_credit_series = escalate_elec(-d["ElectricTariff"]["year_one_export_benefit_before_tax"])
+        export_credit_series_bau = escalate_elec(-d["ElectricTariff"]["year_one_export_benefit_before_tax_bau"])
 
         annual_income_from_host_series = repeat([-1 * r["annualized_payment_to_third_party"]], years)
 
@@ -220,7 +225,7 @@ function proforma_results(p::REoptInputs, d::Dict)
 
     else  # get cumulative cashflow for offtaker
         electricity_bill_series_bau = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax_bau"])
-        export_credit_series_bau = escalate_elec(-d["ElectricTariff"]["lifecycle_export_benefit_after_tax_bau"])
+        export_credit_series_bau = escalate_elec(-d["ElectricTariff"]["year_one_export_benefit_before_tax_bau"])
         total_operating_expenses_bau = electricity_bill_series_bau + export_credit_series_bau + m.om_series_bau
         total_cash_incentives_bau = m.total_pbi_bau * (1 - p.s.financial.offtaker_tax_rate_fraction)
 
@@ -359,6 +364,78 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
     nothing
 end
 
+function update_ghp_metrics(m::REopt.Metrics, p::REoptInputs, tech::REopt.AbstractTech, tech_name::String, results::Dict, third_party::Bool)
+    if tech.heat_pump_configuration == "WWHP"
+        total_heating_kw = results[tech_name]["size_wwhp_heating_pump_ton"]
+        total_cooling_kw = results[tech_name]["size_wwhp_cooling_pump_ton"]
+        new_kw = (total_heating_kw + total_cooling_kw) / 2.0  # WIP workaround, not ideal
+        capital_cost = total_heating_kw * tech.wwhp_heating_pump_installed_cost_curve[2] + 
+                        total_cooling_kw * tech.wwhp_cooling_pump_installed_cost_curve[2]
+    else
+        new_kw = results[tech_name]["size_heat_pump_ton"]
+        capital_cost = new_kw * tech.installed_cost_per_kw[2]
+    end
+
+    # building specific OM costs
+    annual_om = -1 * tech.building_sqft*tech.om_cost_per_sqft_year
+    
+    years = p.s.financial.analysis_years
+    escalate_om(val) = [val * (1 + p.s.financial.om_cost_escalation_rate_fraction)^yr for yr in 1:years]
+    m.om_series += escalate_om(annual_om)
+    m.om_series_bau += escalate_om(0)
+
+    # incentive calculations, in the spreadsheet utility incentives are applied first
+    utility_ibi = minimum([capital_cost * tech.utility_ibi_fraction, tech.utility_ibi_max])
+    utility_cbi = minimum([new_kw * tech.utility_rebate_per_kw, tech.utility_rebate_max])
+    state_ibi = minimum([(capital_cost - utility_ibi - utility_cbi) * tech.state_ibi_fraction, tech.state_ibi_max])
+    state_cbi = minimum([new_kw * tech.state_rebate_per_kw, tech.state_rebate_max])
+    federal_cbi = new_kw * tech.federal_rebate_per_kw
+    ibi = utility_ibi + state_ibi
+    cbi = utility_cbi + federal_cbi + state_cbi
+    m.total_ibi_and_cbi += ibi + cbi
+
+    # Production-based incentives
+    pbi_series = Float64[]
+    pbi_series_bau = Float64[]
+    # existing_energy_bau = third_party ? get(results[tech_name], "year_one_energy_produced_kwh_bau", 0) : 0
+    # year_one_energy = "year_one_energy_produced_kwh" in keys(results[tech_name]) ? results[tech_name]["year_one_energy_produced_kwh"] : results[tech_name]["annual_energy_produced_kwh"]
+    for yr in range(0, stop=years-1)
+        push!(pbi_series, 0.0)
+        push!(pbi_series_bau, 0.0)
+    end
+    m.total_pbi += pbi_series
+    m.total_pbi_bau += pbi_series_bau
+
+    # Federal ITC 
+    # NOTE: bug in v1 has the ITC within the `if tech.macrs_option_years in [5 ,7]` block.
+    # NOTE: bug in v1 reduces the federal_itc_basis with the federal_cbi, which is incorrect
+    federal_itc_basis = capital_cost - state_ibi - utility_ibi - state_cbi - utility_cbi
+    federal_itc_amount = tech.federal_itc_fraction * federal_itc_basis
+    m.federal_itc += federal_itc_amount
+
+    # Depreciation
+    if tech.macrs_option_years in [5 ,7]
+        schedule = []
+        if tech.macrs_option_years == 5
+            schedule = p.s.financial.macrs_five_year
+        elseif tech.macrs_option_years == 7
+            schedule = p.s.financial.macrs_seven_year
+        end
+
+        macrs_bonus_basis = federal_itc_basis - federal_itc_basis * tech.federal_itc_fraction * tech.macrs_itc_reduction
+        macrs_basis = macrs_bonus_basis * (1 - tech.macrs_bonus_fraction)
+
+        depreciation_schedule = zeros(years)
+        for (i, r) in enumerate(schedule)
+            if i < length(depreciation_schedule)
+                depreciation_schedule[i] = macrs_basis * r
+            end
+        end
+        depreciation_schedule[1] += (tech.macrs_bonus_fraction * macrs_bonus_basis)
+        m.total_depreciation += depreciation_schedule
+    end
+    nothing
+end
 
 function npv(cashflows::AbstractArray{<:Real, 1}, rate::Real)
     years = collect(0:length(cashflows)-1)

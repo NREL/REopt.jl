@@ -7,8 +7,8 @@
     "longitude": -122.45
   },
   "ExistingBoiler": {
-    "production_type": "steam",
-    "efficiency": 0.8,
+    "production_type": "hot_water",
+    "efficiency": 0.75,
     "fuel_type": "natural_gas",
     "fuel_cost_per_mmbtu": 10.0
   },
@@ -26,7 +26,10 @@
     "owner_discount_rate_fraction": 0.083,
     "analysis_years": 25,
     "value_of_lost_load_per_kwh": 100.0,
-    "microgrid_upgrade_cost_fraction": 0.0
+    "microgrid_upgrade_cost_fraction": 0.0,
+    "generator_fuel_cost_escalation_rate_fraction": 0.027,
+    "chp_fuel_cost_escalation_rate_fraction": 0.034,
+    "existing_boiler_fuel_cost_escalation_rate_fraction": 0.034
   },
   "ElectricLoad": {
     "doe_reference_name": "Hospital",
@@ -49,7 +52,8 @@
   },
   "ElectricUtility": {
     "net_metering_limit_kw": 0.0,
-    "interconnection_limit_kw": 100000000.0
+    "interconnection_limit_kw": 100000000.0,
+    "co2_from_avert": true
   },
   "PV": {
     "existing_kw": 10.0,
@@ -98,10 +102,14 @@
     "fuel_type": "natural_gas",
     "fuel_cost_per_mmbtu": 8.0,
     "can_supply_steam_turbine": true,
-    "fuel_renewable_energy_fraction": 0.3
+    "fuel_renewable_energy_fraction": 0.3,
+    "can_serve_dhw": true,
+    "can_serve_space_heating": true
   },
   "HotThermalStorage": {
     "min_gal": 50000.0,
-    "max_gal": 50000.0
+    "max_gal": 50000.0,
+    "can_serve_dhw": true,
+    "can_serve_space_heating": true
   }
 }
