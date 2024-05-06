@@ -23,14 +23,7 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop 2024-04-25
-### Changed 
-- Change the way we determine which dataset to utilize in the PVWatts API call. Previously, we utilized defined lat-long bounds to determine if "nsrdb" or "intl" data should be used in PVWatts call. Now, we call the Solar Dataset Query API (v2) (https://developer.nrel.gov/docs/solar/data-query/v2/) to determine the dataset to use, and include "tmy3" as an option, as this is currently the best-available data for many locations in Alaska. 
-### Added
-- Info to user including name of PV and/or temperature datasource used and distance from site location to datasource location
-- Warning to user if data is not from NSRDB or if data is more than 200 miles away 
-  
-## Develop 2024-04-30
+## v. 0.46.0
 ### Added 
 - In `src/core/absorption_chiller.jl` struct, added field **heating_load_input** to the AbsorptionChiller struct
 - Added new variables **dvHeatToStorage** and **dvHeatFromStorage** which are indexed on `p.heating_loads` and added reconciliation constraints so that **dvProductionToStorage** and **dvDischargeFromStorage** maintain their relationship to state of charge for Hot thermal energy storage.
@@ -42,8 +35,10 @@ Classify the change according to the following categories:
 - In `src/core/scenario.jl`, added new field **process_heat_load**
 - In `src/mpc/inputs.jl`, added new field **heating_loads**
 - In `src/core/existing_boiler.jl`, added field **retire_in_optimal** to the ExistingBoiler struct
-
+- Info to user including name of PV and/or temperature datasource used and distance from site location to datasource location
+- Warning to user if data is not from NSRDB or if data is more than 200 miles away 
 ### Changed
+- Change the way we determine which dataset to utilize in the PVWatts API call. Previously, we utilized defined lat-long bounds to determine if "nsrdb" or "intl" data should be used in PVWatts call. Now, we call the Solar Dataset Query API (v2) (https://developer.nrel.gov/docs/solar/data-query/v2/) to determine the dataset to use, and include "tmy3" as an option, as this is currently the best-available data for many locations in Alaska. 
 - refactored **dvThermalProduction** to be separated in **dvCoolingProduction** and **dvHeatingProduction** with **dvHeatingProduction** now indexed on `p.heating_loads`
 - refactored heating load balance constraints so that a separate flow balance is reconciled for each heating load in `p.heating_loads`
 - renamed **dvThermalProductionYIntercept** to **dvHeatingProductionYIntercept**
@@ -51,7 +46,6 @@ Classify the change according to the following categories:
 - changed technologies included **dvProductionToWaste** to all heating techs.  NOTE: this variable is forced to zero to allow steam turbine tests to pass, but I believe that waste heat should be allowed for the turbine.  A TODO is in place to review this commit (a406cc5df6e4a27b56c92815c35d04815904e495).
 - changed test values and tolerances for CHP Sizing test.
 - Updated test sets "Emissions and Renewable Energy Percent" and "Minimize Unserved Load" to decrease computing time.
-
 ### Fixed  
 - added a constraint in `src/constraints/steam_turbine_constraints.jl` that allows for heat loads to reconcile when thermal storage is paired with a SteamTurbine. 
 - fixed a bug in which net-metering system size limits could be exceeded while still obtaining the net-metering benefit due to a large "big-M".
