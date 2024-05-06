@@ -25,6 +25,9 @@ struct Scenario <: AbstractScenario
     space_heating_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     steam_turbine::Union{SteamTurbine, Nothing}
+    electrolyzer::Union{Electrolyzer, Nothing}
+    compressor::Union{Compressor, Nothing}
+    fuel_cell::Union{FuelCell, Nothing}
     electric_heater::Union{ElectricHeater, Nothing}
 end
 
@@ -53,6 +56,9 @@ A Scenario struct can contain the following keys:
 - [AbsorptionChiller](@ref) (optional)
 - [GHP](@ref) (optional, can be Array)
 - [SteamTurbine](@ref) (optional)
+- [Electrolyzer](@ref) (optional)
+- [Compressor](@ref) (optional)
+- [FuelCell](@ref) (optional)
 - [ElectricHeater](@ref) (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
@@ -559,6 +565,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             hybrid_ghx_sizing_method = get(ghpghx_inputs, "hybrid_ghx_sizing_method", nothing)
 
             is_ghx_hybrid = false
+            hybrid_ghx_sizing_fraction = nothing
             hybrid_sizing_flag = nothing
             is_heating_electric = nothing
 
@@ -600,7 +607,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
             elseif hybrid_ghx_sizing_method == "Fractional"
                 is_ghx_hybrid = true
-                hybrid_sizing_flag = get(ghpghx_inputs, "hybrid_ghx_sizing_fraction", 0.6)
+                hybrid_ghx_sizing_fraction = get(ghpghx_inputs, "hybrid_ghx_sizing_fraction", 0.6)
             else
                 @warn "Unknown hybrid GHX sizing model provided"
             end
@@ -617,6 +624,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             d["GHP"]["is_ghx_hybrid"] = is_ghx_hybrid
             if !isnothing(hybrid_sizing_flag)
                 ghpghx_inputs["hybrid_sizing_flag"] = hybrid_sizing_flag
+            end
+            if !isnothing(hybrid_ghx_sizing_fraction)
+                ghpghx_inputs["hybrid_ghx_sizing_fraction"] = hybrid_ghx_sizing_fraction
             end
             if !isnothing(is_heating_electric)
                 ghpghx_inputs["is_heating_electric"] = is_heating_electric
@@ -711,6 +721,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         space_heating_thermal_load_reduction_with_ghp_kw,
         cooling_thermal_load_reduction_with_ghp_kw,
         steam_turbine,
+        electrolyzer,
+        compressor,
+        fuel_cell
         electric_heater
     )
 end
