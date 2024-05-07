@@ -52,6 +52,7 @@ Classify the change according to the following categories:
 
 ## v0.45.0
 ### Fixed 
+- Fixed bug in call to `GhpGhx.jl` when sizing hybrid GHP using the fractional sizing method
 - Added `export_rate_beyond_net_metering_limit` to list of inputs to be converted to type Real, to avoid MethodError if type is vector of Any. 
 - Fix blended CRB processing when one or more load types have zero annual energy
 - When calculating CHP fuel intercept and slope, use 1 for the HHV because CHP fuel measured in units of kWh, instead of using non-existent **CHP.fuel_higher_heating_value_kwh_per_gal**
