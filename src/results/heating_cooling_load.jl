@@ -38,12 +38,15 @@ end
 `HeatingLoad` results keys:
 - `dhw_thermal_load_series_mmbtu_per_hour` vector of site domestic hot water load in every time step
 - `space_heating_thermal_load_series_mmbtu_per_hour` vector of site space heating load in every time step
+- `process_heat_thermal_load_series_mmbtu_per_hour` vector of site process heat load in every time step
 - `total_heating_thermal_load_series_mmbtu_per_hour` vector of sum heating load in every time step
 - `annual_calculated_dhw_thermal_load_mmbtu` sum of the `dhw_load_series_mmbtu_per_hour`
 - `annual_calculated_space_heating_thermal_load_mmbtu` sum of the `space_heating_thermal_load_series_mmbtu_per_hour`
+- `annual_calculated_process_heat_thermal_load_mmbtu` sum of the `process_heat_thermal_load_series_mmbtu_per_hour`
 - `annual_calculated_total_heating_thermal_load_mmbtu` sum of the `total_heating_thermal_load_series_mmbtu_per_hour`
 - `annual_calculated_dhw_boiler_fuel_load_mmbtu`
 - `annual_calculated_space_heating_boiler_fuel_load_mmbtu`
+- `annual_calculated_process_heat_boiler_fuel_load_mmbtu`
 - `annual_calculated_total_heating_boiler_fuel_load_mmbtu`
 """
 function add_heating_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
@@ -65,12 +68,12 @@ function add_heating_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict
     
     r["dhw_thermal_load_series_mmbtu_per_hour"] = dhw_load_series_kw ./ KWH_PER_MMBTU
     r["space_heating_thermal_load_series_mmbtu_per_hour"] = space_heating_load_series_kw ./ KWH_PER_MMBTU
-    r["process_heat_thermal_load_series_mmbtu_per_hour"] = process_heating_load_series_kw ./ KWH_PER_MMBTU
-    r["total_heating_thermal_load_series_mmbtu_per_hour"] = r["dhw_thermal_load_series_mmbtu_per_hour"] .+ r["space_heating_thermal_load_series_mmbtu_per_hour" .+ r["process_heat_thermal_load_series_mmbtu_per_hour"]]
+    r["process_heat_thermal_load_series_mmbtu_per_hour"] = process_heat_load_series_kw ./ KWH_PER_MMBTU
+    r["total_heating_thermal_load_series_mmbtu_per_hour"] = r["dhw_thermal_load_series_mmbtu_per_hour"] .+ r["space_heating_thermal_load_series_mmbtu_per_hour"] .+ r["process_heat_thermal_load_series_mmbtu_per_hour"]
 
     r["dhw_boiler_fuel_load_series_mmbtu_per_hour"] = dhw_load_series_kw ./ KWH_PER_MMBTU ./ existing_boiler_efficiency
     r["space_heating_boiler_fuel_load_series_mmbtu_per_hour"] = space_heating_load_series_kw ./ KWH_PER_MMBTU ./ existing_boiler_efficiency
-    r["process_heat_boiler_fuel__load_series_mmbtu_per_hour"] = process_heating_load_series_kw ./ KWH_PER_MMBTU ./ existing_boiler_efficiency
+    r["process_heat_boiler_fuel_load_series_mmbtu_per_hour"] = process_heat_load_series_kw ./ KWH_PER_MMBTU ./ existing_boiler_efficiency
     r["total_heating_boiler_fuel_load_series_mmbtu_per_hour"] = r["dhw_boiler_fuel_load_series_mmbtu_per_hour"] .+ r["space_heating_boiler_fuel_load_series_mmbtu_per_hour"] .+ r["process_heat_boiler_fuel__load_series_mmbtu_per_hour"] 
 
     r["annual_calculated_dhw_thermal_load_mmbtu"] = round(
