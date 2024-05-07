@@ -1186,6 +1186,18 @@ else  # run HiGHS tests
                 @test results["PV"]["size_kw"] ≈ p.s.pvs[1].existing_kw
             end
 
+            @testset "Tiered TOU Demand" begin
+                data = JSON.parsefile("./scenarios/tiered_tou_demand.json")
+                model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                results = run_reopt(model, data)
+                max_demand = data["ElectricLoad"]["annual_kwh"] / 8760
+                tier1_max = data["ElectricTariff"]["urdb_response"]["demandratestructure"][1][1]["max"]
+                tier1_rate = data["ElectricTariff"]["urdb_response"]["demandratestructure"][1][1]["rate"]
+                tier2_rate = data["ElectricTariff"]["urdb_response"]["demandratestructure"][1][2]["rate"]
+                expected_demand_charges = 12 * (tier1_max * tier1_rate + (max_demand - tier1_max) * tier2_rate)
+                @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ expected_demand_charges atol=1                
+            end
+
             # # tiered monthly demand rate  TODO: expected results?
             # m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             # data = JSON.parsefile("./scenarios/tiered_energy_rate.json")
