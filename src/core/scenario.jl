@@ -565,7 +565,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             hybrid_ghx_sizing_method = get(ghpghx_inputs, "hybrid_ghx_sizing_method", nothing)
 
             is_ghx_hybrid = false
-            hybrid_ghx_sizing_fraction = nothing
             hybrid_sizing_flag = nothing
             is_heating_electric = nothing
 
@@ -607,7 +606,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
             elseif hybrid_ghx_sizing_method == "Fractional"
                 is_ghx_hybrid = true
-                hybrid_ghx_sizing_fraction = get(ghpghx_inputs, "hybrid_ghx_sizing_fraction", 0.6)
+                hybrid_sizing_flag = get(ghpghx_inputs, "hybrid_ghx_sizing_fraction", 0.6)
             else
                 @warn "Unknown hybrid GHX sizing model provided"
             end
@@ -624,9 +623,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             d["GHP"]["is_ghx_hybrid"] = is_ghx_hybrid
             if !isnothing(hybrid_sizing_flag)
                 ghpghx_inputs["hybrid_sizing_flag"] = hybrid_sizing_flag
-            end
-            if !isnothing(hybrid_ghx_sizing_fraction)
-                ghpghx_inputs["hybrid_ghx_sizing_fraction"] = hybrid_ghx_sizing_fraction
             end
             if !isnothing(is_heating_electric)
                 ghpghx_inputs["is_heating_electric"] = is_heating_electric
