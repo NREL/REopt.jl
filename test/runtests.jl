@@ -1093,7 +1093,7 @@ else  # run HiGHS tests
 
             @testset "Tiered Energy" begin
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-                results = run_reopt(m, "./scenarios/tiered_rate.json")
+                results = run_reopt(m, "./scenarios/tiered_energy_rate.json")
                 @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ 2342.88
                 @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ 24000.0 atol=0.1
                 @test results["ElectricLoad"]["annual_calculated_kwh"] ≈ 24000.0 atol=0.1
@@ -1186,16 +1186,14 @@ else  # run HiGHS tests
                 @test results["PV"]["size_kw"] ≈ p.s.pvs[1].existing_kw
             end
 
-
             # # tiered monthly demand rate  TODO: expected results?
             # m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            # data = JSON.parsefile("./scenarios/tiered_rate.json")
+            # data = JSON.parsefile("./scenarios/tiered_energy_rate.json")
             # data["ElectricTariff"]["urdb_label"] = "59bc22705457a3372642da67"
             # s = Scenario(data)
             # inputs = REoptInputs(s)
             # results = run_reopt(m, inputs)
 
-            # TODO test for tiered TOU demand rates
         end
 
         @testset "EASIUR" begin
