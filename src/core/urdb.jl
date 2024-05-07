@@ -446,7 +446,7 @@ function parse_urdb_tou_demand(d::Dict; year::Int, n_tiers::Int, time_steps_per_
     n_ratchets = 0  # counter
 
     for month in range(1, stop=12)
-        for period in range(0, stop=n_periods)
+        for period in range(1, stop=n_periods)
             time_steps = get_tou_demand_steps(d, year=year, month=month, period=period-1, time_steps_per_hour=time_steps_per_hour)
             if length(time_steps) > 0  # can be zero! not every month contains same number of periods
                 n_ratchets += 1
