@@ -23,6 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.47.0
+### Fixed 
+- Fixed bug in call to `GhpGhx.jl` when sizing hybrid GHP using the fractional sizing method
+
 ## v. 0.46.0
 ### Added 
 - In `src/core/absorption_chiller.jl` struct, added field **heating_load_input** to the AbsorptionChiller struct
