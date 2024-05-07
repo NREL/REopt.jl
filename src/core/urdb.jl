@@ -457,7 +457,7 @@ function parse_urdb_tou_demand(d::Dict; year::Int, n_tiers::Int, time_steps_per_
             end
         end
     end
-    rates = reshape(rates_vec, (:, n_tiers))  # Array{Float64,2}
+    rates = reshape(rates_vec, (n_tiers, :))'  # Array{Float64,2}
     ratchet_time_steps = convert(Array{Array{Int64,1},1}, ratchet_time_steps)
     return ratchet_time_steps, rates
 end
