@@ -551,9 +551,6 @@ else  # run HiGHS tests
             d["SpaceHeatingLoad"]["annual_mmbtu"] = 0.5 * 8760
             d["DomesticHotWaterLoad"]["annual_mmbtu"] = 0.5 * 8760
             d["ProcessHeatLoad"] = Dict("annual_mmbtu" => 0.5 * 8760)
-
-            ##Change it to chemical profile as a test
-
             s = Scenario(d)
             inputs = REoptInputs(s)
             @test inputs.heating_loads_kw["ProcessHeat"][1] ≈ 117.228428 atol=1.0e-3
