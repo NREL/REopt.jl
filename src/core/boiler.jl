@@ -12,6 +12,13 @@ struct Boiler <: AbstractThermalTech
     macrs_bonus_fraction::Real
     fuel_type::String
     can_supply_steam_turbine::Bool
+    can_serve_dhw::Bool
+    can_serve_space_heating::Bool
+    can_serve_process_heat::Bool
+    emissions_factor_lb_CO2_per_mmbtu::Real
+    emissions_factor_lb_NOx_per_mmbtu::Real
+    emissions_factor_lb_SO2_per_mmbtu::Real
+    emissions_factor_lb_PM25_per_mmbtu::Real
 end
 
 
@@ -36,6 +43,13 @@ function Boiler(;
     om_cost_per_mmbtu::Real = 0.0, # Thermal energy-based variable O&M cost
     fuel_type::String = "natural_gas",  # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil", "uranium"]
     can_supply_steam_turbine::Bool = true # If the boiler can supply steam to the steam turbine for electric production
+    can_serve_dhw::Bool = true # If Boiler can supply heat to the domestic hot water load
+    can_serve_space_heating::Bool = true # If Boiler can supply heat to the space heating load
+    can_serve_process_heat::Bool = true # If Boiler can supply heat to the process heating load
+    emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0)
+    emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0)
+    emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0)
+    emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0)
 )
 ```
 """
@@ -51,8 +65,14 @@ function Boiler(;
         om_cost_per_mmbtu_per_hour::Real = 2930.0,
         om_cost_per_mmbtu::Real = 0.0,
         fuel_type::String = "natural_gas",  # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil", "uranium"]
-        can_supply_steam_turbine::Bool = true
-        # emissions_factor_lb_CO2_per_mmbtu::Real,
+        can_supply_steam_turbine::Bool = true,
+        can_serve_dhw::Bool = true,
+        can_serve_space_heating::Bool = true,
+        can_serve_process_heat::Bool = true,
+        emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0),
+        emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0),
+        emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0),
+        emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0),
     )
 
     if isempty(fuel_cost_per_mmbtu)
@@ -78,6 +98,13 @@ function Boiler(;
         macrs_option_years,
         macrs_bonus_fraction,
         fuel_type,
-        can_supply_steam_turbine
+        can_supply_steam_turbine,
+        can_serve_dhw,
+        can_serve_space_heating,
+        can_serve_process_heat,
+        emissions_factor_lb_CO2_per_mmbtu,
+        emissions_factor_lb_NOx_per_mmbtu,
+        emissions_factor_lb_SO2_per_mmbtu,
+        emissions_factor_lb_PM25_per_mmbtu
     )
 end

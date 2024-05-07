@@ -48,7 +48,7 @@
     "production_incentive_max_benefit": 0.0,
     "state_ibi_fraction": 0.0,
     "electric_efficiency_full_load": 0.349006,
-    "electric_efficiency_half_load": 0.326729,
+    "electric_efficiency_half_load": 0.349006,
     "only_runs_during_grid_outage": true,
     "state_rebate_per_kw": 0.0,
     "installed_cost_per_kw": 600.0,
@@ -83,7 +83,7 @@
     "critical_load_fraction": 0.8,
     "loads_kw_is_net": false,
     "year": 2017,
-    "doe_reference_name": "MidriseApartment",
+    "doe_reference_name": "FlatLoad",
     "annual_kwh": 100000
   },
   "ElectricStorage": {
