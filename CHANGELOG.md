@@ -23,10 +23,13 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop - 2024-04-22
-### Changed
-- Updated `pop_year` and `income_year` used in call to EASIUR data (`get_EASIUR2005`) each to 2024, from 2020. 
-- Updated usd conversion used for EASIUR health cost calcs from USD_2010_to_2020 = 1.246 to USD_2010_to_2024 = 1.432
+## Develop
+### Fixed
+- Fixed a reshape call in function `parse_urdb_tou_demand` that incorrectly assumed row major instead of column major ordering
+- Fixed a loop range in function `parse_urdb_tou_demand` that incorrectly started at 0 instead of 1
+- Added the missing tier index when accessing `p.s.electric_tariff.tou_demand_rates` in function `add_elec_utility_expressions`
+### Added
+- Test for tiered TOU demand rates in `test/runtests.jl`
 
 ## v. 0.46.0
 ### Added 
