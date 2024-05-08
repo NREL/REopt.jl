@@ -187,6 +187,7 @@ Given `blended_doe_reference_names` and `blended_doe_reference_percents` use the
     - BuiltInDomesticHotWaterLoad
     - BuiltInSpaceHeatingLoad
     - BuiltInCoolingLoad
+    - BuiltInProcessHeatLoad
 """
 function blend_and_scale_doe_profiles(
     constructor,
