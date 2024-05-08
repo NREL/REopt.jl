@@ -293,14 +293,14 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         existing_boiler_efficiency = get_existing_boiler_efficiency(d)
         process_heat_load = ProcessHeatLoad(; dictkeys_tosymbols(d["ProcessHeatLoad"])...,
             time_steps_per_hour=settings.time_steps_per_hour,
-            existing_boiler_efficiency = existing_boiler_efficiency    
+            existing_equipment_efficiency = existing_equipment_efficiency    
         )
         max_heat_demand_kw += maximum(process_heat_load.loads_kw)
     else
         process_heat_load = ProcessHeatLoad(;
             fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
             time_steps_per_hour=settings.time_steps_per_hour,
-            existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
+            existing_equipment_efficiency = EXISTING_EQUIPMENT_EFFICIENCY
         )
     end
 
@@ -403,7 +403,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d, "CHP")
         electric_only = get(d["CHP"], "is_electric_only", false) || get(d["CHP"], "thermal_efficiency_full_load", 0.5) == 0.0
         if !isnothing(existing_boiler) && !electric_only
-            total_fuel_heating_load_mmbtu_per_hour = (space_heating_load.loads_kw + dhw_load.loads_kw + process_heat_load.loads_kw) / existing_boiler.efficiency / KWH_PER_MMBTU
+            # Convert each load to MMBTU/h using the respective efficiencies
+            space_heating_fuel_mmbtu_per_hour = space_heating_load.loads_kw / (existing_boiler.efficiency * KWH_PER_MMBTU)
+            dhw_fuel_mmbtu_per_hour = dhw_load.loads_kw / (existing_boiler.efficiency * KWH_PER_MMBTU)
+            process_heat_fuel_mmbtu_per_hour = process_heat_load.loads_kw / (process_heat_load.existing_equipment_efficiency * KWH_PER_MMBTU)
+            total_fuel_heating_load_mmbtu_per_hour = space_heating_fuel_mmbtu_per_hour + dhw_fuel_mmbtu_per_hour + process_heat_fuel_mmbtu_per_hour
             avg_boiler_fuel_load_mmbtu_per_hour = sum(total_fuel_heating_load_mmbtu_per_hour) / length(total_fuel_heating_load_mmbtu_per_hour)
             chp = CHP(d["CHP"]; 
                     avg_boiler_fuel_load_mmbtu_per_hour = avg_boiler_fuel_load_mmbtu_per_hour,
@@ -677,7 +681,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     steam_turbine = nothing
     if haskey(d, "SteamTurbine")
         if !isnothing(existing_boiler)
-            total_fuel_heating_load_mmbtu_per_hour = (space_heating_load.loads_kw + dhw_load.loads_kw + process_heat_load.loads_kw) / existing_boiler.efficiency / KWH_PER_MMBTU
+            space_heating_fuel_mmbtu_per_hour = space_heating_load.loads_kw / (existing_boiler.efficiency * KWH_PER_MMBTU)
+            dhw_fuel_mmbtu_per_hour = dhw_load.loads_kw / (existing_boiler.efficiency * KWH_PER_MMBTU)
+            process_heat_fuel_mmbtu_per_hour = process_heat_load.loads_kw / (process_heat_load.existing_equipment_efficiency * KWH_PER_MMBTU)
+            total_fuel_heating_load_mmbtu_per_hour = space_heating_fuel_mmbtu_per_hour + dhw_fuel_mmbtu_per_hour + process_heat_fuel_mmbtu_per_hour
             avg_boiler_fuel_load_mmbtu_per_hour = sum(total_fuel_heating_load_mmbtu_per_hour) / length(total_fuel_heating_load_mmbtu_per_hour)
             steam_turbine = SteamTurbine(d["SteamTurbine"];  
                                         avg_boiler_fuel_load_mmbtu_per_hour = avg_boiler_fuel_load_mmbtu_per_hour)
