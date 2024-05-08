@@ -584,7 +584,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvGridPurchase[p.time_steps, 1:p.s.electric_tariff.n_energy_tiers] >= 0  # Power from grid dispatched to meet electrical load [kW]
 		dvRatedProduction[p.techs.all, p.time_steps] >= 0  # Rated production of technology t [kW]
 		dvCurtail[p.techs.all, p.time_steps] >= 0  # [kW]
-		dvProductionToStorage[p.s.storage.types.all, p.techs.all, p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
+		dvProductionToStorage[p.s.storage.types.all, union(p.techs.ghp,p.techs.all), p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
 		dvDischargeFromStorage[p.s.storage.types.all, p.time_steps] >= 0 # Power discharged from storage system b [kW]
 		dvGridToStorage[p.s.storage.types.elec, p.time_steps] >= 0 # Electrical power delivered to storage by the grid [kW]
 		dvStoredEnergy[p.s.storage.types.all, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
