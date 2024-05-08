@@ -1424,6 +1424,54 @@ function BuiltInCoolingLoad(
     built_in_load("cooling", city, buildingtype, year, annual_kwh, monthly_kwh)
 end
 
+function BuiltInProcessHeatLoad(
+    city::String,
+    process_type::String,
+    latitude::Real,
+    longitude::Real,
+    year::Int,
+    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}},    
+    annual_mmbtu::Union{Real, Nothing} = nothing,
+    monthly_mmbtu::Vector{<:Real} = Real[],
+    existing_equipment_efficiency::Union{Real, Nothing} = nothing
+    )
+    # Override the city with 'Industrial'
+    const fixed_city = "Industrial"
+
+    if !(process_type in valid_process_types)
+        throw(@error("process_type $(process_type) is not recognized for process heating."))
+    end
+
+    process_heat_annual_mmbtu = Dict(
+        "Industrial" => Dict(
+            "Chemical" => 50000,  # mid-sized chemical processes
+            "Pharma" => 25000,    # pharmaceutical manufacturing
+            "FlatLoad" => 20000,  #  continuous operations throughout the year
+            "FlatLoad_24_5" => 15000,  # 24 hours a day, 5 days a week
+            "FlatLoad_16_7" => 10000,  # 6 hours a day, 7 days a week
+            "FlatLoad_16_5" => 7500,   # 16 hours a day, 5 days a week
+            "FlatLoad_8_7" => 3500     # 8 hours a day, 7 days a week
+        )
+    )    
+
+    if isnothing(annual_mmbtu)
+        # Use a generic 'FlatLoad' value if the process type includes 'FlatLoad' and no specific data is provided
+        if occursin("FlatLoad", process_type)
+            annual_mmbtu = process_heat_annual_mmbtu[fixed_city]["FlatLoad"]
+        else
+            annual_mmbtu = process_heat_annual_mmbtu[fixed_city][process_type]
+        end
+    else
+        annual_mmbtu *= addressable_load_fraction
+    end
+
+    if length(monthly_mmbtu) == 12
+        monthly_mmbtu = monthly_mmbtu .* addressable_load_fraction
+    end
+
+    built_in_load("process_heat", fixed_city, process_type, year, annual_mmbtu, monthly_mmbtu, existing_equipment_efficiency)
+end
+
 """
 `ProcessHeatLoad` is an optional REopt input with the following keys and default values:
 ```julia
@@ -1440,30 +1488,78 @@ There are many ways in which a ProcessHeatLoad can be defined:
     unlike the hot-water and space heating loads which are provided in terms of fuel input.
 
 """
+
 struct ProcessHeatLoad
     loads_kw::Array{Real, 1}
     annual_mmbtu::Real
 
     function ProcessHeatLoad(;
+        industrial_reference_name::String = "",
+        city::String = "Industrial",  # Displayed for compatibility, but ignored in logic.
+        blended_industrial_reference_names::Array{String, 1} = String[],
+        blended_industrial_reference_percents::Array{<:Real, 1} = Real[],
         annual_mmbtu::Union{Real, Nothing} = nothing,
-        fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
-        time_steps_per_hour::Int=1,
-        existing_boiler_efficiency::Float64=NaN
+        monthly_mmbtu::Array{<:Real, 1} = Real[],
+        addressable_load_fraction::Any = 1.0,
+        fuel_loads_mmbtu_per_hour::Array{<:Real, 1} = Real[],
+        time_steps_per_hour::Int = 1,
+        latitude::Real = 0.0,
+        longitude::Real = 0.0,
+        existing_equipment_efficiency::Real = NaN
     )
-        if length(fuel_loads_mmbtu_per_hour) != 0 && length(fuel_loads_mmbtu_per_hour) != 8760*time_steps_per_hour
-            @error("fuel_loads_mmbtu_per_hour must have length zero or 8760*time_steps_per_hour for process heat load.")
-        elseif !isnothing(annual_mmbtu) && length(fuel_loads_mmbtu_per_hour) == 0
-            @warn("only annual_mmbtu was provided - assuming a flat process heat load.")
-            loads_kw = ones(8760) .* (annual_mmbtu * KWH_PER_MMBTU * existing_boiler_efficiency / (8760*time_steps_per_hour) )
-        elseif isnothing(annual_mmbtu) && length(fuel_loads_mmbtu_per_hour) == 8760*time_steps_per_hour
-            loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * existing_boiler_efficiency)
-        elseif !isnothing(annual_mmbtu) && length(fuel_loads_mmbtu_per_hour) == 8760*time_steps_per_hour
-            @warn("annual_mmbtu and sum of fuel_loads_mmbtu_per_hour are both provided - using fuel_loads_mmbtu_per_hour time series for process heat load.")
-            loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * existing_boiler_efficiency)
+        city = "Industrial"  # Ensuring city is always "Industrial" for Process Heat, regardless of user input.
+
+        # Variable mapping for internal use
+        doe_reference_name = industrial_reference_name
+        blended_doe_reference_names = blended_industrial_reference_names
+        blended_doe_reference_percents = blended_industrial_reference_percents
+        existing_boiler_efficiency = existing_equipment_efficiency
+
+        # Validate and convert addressable load fraction
+        if length(addressable_load_fraction) > 1
+            if !isempty(fuel_loads_mmbtu_per_hour) && length(addressable_load_fraction) != length(fuel_loads_mmbtu_per_hour)
+                throw(@error("`addressable_load_fraction` must be a scalar or an array of length `fuel_loads_mmbtu_per_hour`"))
+            end
+            if !isempty(monthly_mmbtu) && length(addressable_load_fraction) != 12
+                throw(@error("`addressable_load_fraction` must be a scalar or an array of length 12 if `monthly_mmbtu` is input"))
+            end
+            addressable_load_fraction = convert(Vector{Real}, addressable_load_fraction)
+        elseif typeof(addressable_load_fraction) <: Vector{}
+            addressable_load_fraction = convert(Real, addressable_load_fraction[1])
         else
-            @warn("annual_mmbtu not provided and length of fuel_loads_mmbtu_per_hour is not equal to 8760 - returning zero process heat load.")
-            loads_kw = zeros(8760 * time_steps_per_hour)
+            addressable_load_fraction = convert(Real, addressable_load_fraction)
         end
+
+        # Load calculation logic
+        if length(fuel_loads_mmbtu_per_hour) > 0
+            if !(length(fuel_loads_mmbtu_per_hour) / time_steps_per_hour ≈ 8760)
+                throw(@error("Provided process heating load does not match the time_steps_per_hour."))
+            end
+            loads_kw = fuel_loads_mmbtu_per_hour .* (KWH_PER_MMBTU * existing_boiler_efficiency) .* addressable_load_fraction
+            if !isempty(doe_reference_name) || length(blended_doe_reference_names) > 0
+                @warn "ProcessHeatLoad fuel_loads_mmbtu_per_hour was provided, so industrial_reference_name and/or blended_industrial_reference_names."
+            end
+        elseif !isempty(doe_reference_name)
+            loads_kw = BuiltInProcessHeatLoad(city, doe_reference_name, latitude, longitude, 2017, addressable_load_fraction, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency)
+            if length(blended_doe_reference_names) > 0
+                @warn "ProcessHeatLoad industrial_reference_name was provided, so blended_industrial_reference_names will be ignored."
+            end
+        elseif length(blended_doe_reference_names) > 0 && 
+            length(blended_doe_reference_names) == length(blended_doe_reference_percents)
+            loads_kw = blend_and_scale_doe_profiles(BuiltInProcessHeatLoad, latitude, longitude, 2017, 
+                                                    blended_doe_reference_names, blended_doe_reference_percents, city, 
+                                                    annual_mmbtu, monthly_mmbtu, addressable_load_fraction,
+                                                    existing_boiler_efficiency)
+        else
+            throw(@error("Cannot construct ProcessHeatLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
+                [industrial_reference_name], or [blended_industrial_reference_names, blended_industrial_reference_percents]."))
+        end
+
+        if length(loads_kw) < 8760 * time_steps_per_hour
+            loads_kw = repeat(loads_kw, inner=Int(time_steps_per_hour / (length(loads_kw) / 8760)))
+            @warn "Repeating process heating loads in each hour to match the time_steps_per_hour."
+        end
+
         new(
             loads_kw,
             (sum(loads_kw) / time_steps_per_hour) / KWH_PER_MMBTU

@@ -24,6 +24,11 @@ const default_buildings = [
     "FlatLoad_8_5"    
 ]
 
+const valid_process_types = [
+    "Chemical", "Pharmaceutical",
+    "FlatLoad", "FlatLoad_24_5", "FlatLoad_16_7", "FlatLoad_16_5",
+    "FlatLoad_8_7"
+]
 
 function find_ashrae_zone_city(lat, lon; get_zone=false)
     file_path = joinpath(@__DIR__, "..", "..", "data", "climate_cities.shp")
@@ -101,18 +106,25 @@ end
     )
 Scale a normalized Commercial Reference Building according to inputs provided and return the 8760.
 """
-function built_in_load(type::String, city::String, buildingtype::String, 
-    year::Int, annual_energy::R, monthly_energies::AbstractArray{R,1},
-    boiler_efficiency_input::Union{R,Nothing}=nothing) where {R <: Real}
 
-    @assert type in ["electric", "domestic_hot_water", "space_heating", "cooling"]
+function built_in_load(
+    type::String, 
+    city::String, 
+    buildingtype::String, 
+    year::Int, 
+    annual_energy::Real, 
+    monthly_energies::AbstractArray{Real,1},
+    boiler_efficiency_input::Union{Real,Nothing}=nothing
+    ) where {R <: Real}
+    @assert type in ["electric", "domestic_hot_water", "space_heating", "cooling", "process_heat"]
+
     monthly_scalers = ones(12)
     lib_path = joinpath(@__DIR__, "..", "..", "data", "load_profiles", type)
-
+    
     profile_path = joinpath(lib_path, string("crb8760_norm_" * city * "_" * buildingtype * ".dat"))
     if occursin("FlatLoad", buildingtype)
         normalized_profile = custom_normalized_flatload(buildingtype, year)
-    else 
+    else
         normalized_profile = vec(readdlm(profile_path, '\n', Float64, '\n'))
     end
 
@@ -129,14 +141,14 @@ function built_in_load(type::String, city::String, buildingtype::String,
                 monthly_scalers[month] = 0.0
             else
                 monthly_scalers[month] = monthly_energies[month] / month_total
-            end
+            end            
             t0 += plus_hours
         end
     end
 
     scaled_load = Float64[]
     used_kwh_per_mmbtu = 1.0  # do not convert electric loads
-    if type in ["domestic_hot_water", "space_heating"]
+    if type in ["domestic_hot_water", "space_heating", "process_heat"]
         # CRB thermal "loads" are in terms of energy input required (boiler fuel), not the actual energy demand.
         # So we multiply the fuel energy by the boiler_efficiency to get the actual energy demand.
         boiler_efficiency = isnothing(boiler_efficiency_input) ? EXISTING_BOILER_EFFICIENCY : boiler_efficiency_input
@@ -195,16 +207,19 @@ function blend_and_scale_doe_profiles(
         @debug "Changing ElectricLoad.year to 2017 because DOE reference profiles start on a Sunday."
     end
     year = 2017
-    if isempty(city)
-        city = find_ashrae_zone_city(latitude, longitude)  # avoid redundant look-ups
+    # Handle city setting specific for process heating
+    if constructor === BuiltInProcessHeatLoad
+        city = "Industrial"
+    elseif isempty(city)
+        city = find_ashrae_zone_city(latitude, longitude)  # Default city lookup based on ASHRAE zones
     end
-    profiles = Array[]  # collect the built in profiles
-    if constructor in [BuiltInSpaceHeatingLoad, BuiltInDomesticHotWaterLoad]
-        for name in blended_doe_reference_names
+    profiles = Array{Float64,1}[]  # Collect profiles for blending
+    for name in blended_doe_reference_names
+        if constructor in [BuiltInSpaceHeatingLoad, BuiltInDomesticHotWaterLoad, BuiltInProcessHeatLoad]
+            # These constructors need the boiler efficiency passed as they deal with thermal loads
             push!(profiles, constructor(city, name, latitude, longitude, year, addressable_load_fraction, annual_energy, monthly_energies, boiler_efficiency_input))
-        end
-    else
-        for name in blended_doe_reference_names
+        else
+            # For other types where boiler efficiency might not be relevant
             push!(profiles, constructor(city, name, latitude, longitude, year, annual_energy, monthly_energies))
         end
     end
