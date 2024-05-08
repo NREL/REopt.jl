@@ -277,26 +277,53 @@ function simulated_load(d::Dict)
                                                     longitude=longitude,
                                                     existing_boiler_efficiency=boiler_efficiency
                                                 )
+
+        process_heat_load_inputs = Dict(
+            :industrial_reference_name => get(heating_load_inputs, :doe_reference_name, ""),
+            :city => "Industrial",
+            :latitude => heating_load_inputs[:latitude],
+            :longitude => heating_load_inputs[:longitude],
+            :existing_equipment_efficiency => heating_load_inputs[:existing_boiler_efficiency],
+            :annual_mmbtu => heating_load_inputs[:annual_mmbtu],
+            :monthly_mmbtu => heating_load_inputs[:monthly_mmbtu],
+            :addressable_load_fraction => heating_load_inputs[:addressable_load_fraction],
+            :blended_industrial_reference_names => heating_load_inputs[:blended_doe_reference_names],
+            :blended_industrial_reference_percents => heating_load_inputs[:blended_doe_reference_percents]
+        )
+        default_process_heat_load = ProcessHeatLoad(; process_heat_load_inputs...)
+
         space_heating_annual_mmbtu = nothing
         dhw_annual_mmbtu = nothing
         space_heating_monthly_mmbtu = Real[]
         space_heating_monthly_fuel_mmbtu = Real[]
         dhw_monthly_mmbtu = Real[]
         dhw_monthly_fuel_mmbtu = Real[]
+        process_heat_annual_mmbtu = nothing
+        process_heat_monthly_mmbtu = Real[]
+        process_heat_monthly_fuel_mmbtu = Real[]
+
         if !isempty(monthly_mmbtu)    
             space_heating_monthly_energy = get_monthly_energy(default_space_heating_load.loads_kw)
             dhw_monthly_energy = get_monthly_energy(default_dhw_load.loads_kw)
-            space_heating_fraction_monthly = space_heating_monthly_energy ./ (space_heating_monthly_energy + dhw_monthly_energy)
-            space_heating_monthly_mmbtu = monthly_mmbtu .* space_heating_fraction_monthly
+            process_heat_monthly_energy = get_monthly_energy(default_process_heat_load.loads_kw) # Assuming similar method applies
+    
+            # Energy distribution calculation including process heat
+            total_monthly_energy = space_heating_monthly_energy + dhw_monthly_energy + process_heat_monthly_energy
+            space_heating_monthly_mmbtu = monthly_mmbtu .* (space_heating_monthly_energy ./ total_monthly_energy)
+            dhw_monthly_mmbtu = monthly_mmbtu .* (dhw_monthly_energy ./ total_monthly_energy)
+            process_heat_monthly_mmbtu = monthly_mmbtu .* (process_heat_monthly_energy ./ total_monthly_energy)
+    
+            # Applying addressable load fraction
             space_heating_monthly_fuel_mmbtu = space_heating_monthly_mmbtu .* addressable_load_fraction
-            dhw_monthly_mmbtu = monthly_mmbtu - space_heating_monthly_mmbtu
             dhw_monthly_fuel_mmbtu = dhw_monthly_mmbtu .* addressable_load_fraction
-        elseif !isnothing(annual_mmbtu)
-            total_heating_annual_mmbtu = default_space_heating_load.annual_mmbtu + default_dhw_load.annual_mmbtu
-            space_heating_fraction = default_space_heating_load.annual_mmbtu / total_heating_annual_mmbtu
-            space_heating_annual_mmbtu = annual_mmbtu * space_heating_fraction
-            dhw_fraction = default_dhw_load.annual_mmbtu / total_heating_annual_mmbtu
-            dhw_annual_mmbtu = annual_mmbtu * dhw_fraction
+            process_heat_monthly_fuel_mmbtu = process_heat_monthly_mmbtu .* addressable_load_fraction
+        end
+    
+        if !isnothing(annual_mmbtu)
+            total_annual_mmbtu = default_space_heating_load.annual_mmbtu + default_dhw_load.annual_mmbtu + default_process_heat_load.annual_mmbtu
+            space_heating_annual_mmbtu = annual_mmbtu * (default_space_heating_load.annual_mmbtu / total_annual_mmbtu)
+            dhw_annual_mmbtu = annual_mmbtu * (default_dhw_load.annual_mmbtu / total_annual_mmbtu)
+            process_heat_annual_mmbtu = annual_mmbtu * (default_process_heat_load.annual_mmbtu / total_annual_mmbtu)
         end
         
 
@@ -315,12 +342,21 @@ function simulated_load(d::Dict)
                                             monthly_mmbtu=dhw_monthly_mmbtu,
                                             existing_boiler_efficiency=boiler_efficiency
                                         )                                              
+        process_heat_load = ProcessHeatLoadLoad(; heating_load_inputs...,
+                                                latitude=latitude, 
+                                                longitude=longitude,
+                                                annual_mmbtu=space_heating_annual_mmbtu,
+                                                monthly_mmbtu=space_heating_monthly_mmbtu,
+                                                existing_boiler_efficiency=boiler_efficiency
+                                            )
 
         space_load_series = space_heating_load.loads_kw ./ boiler_efficiency ./ KWH_PER_MMBTU
         dhw_load_series = dhw_load.loads_kw ./ boiler_efficiency ./ KWH_PER_MMBTU
-        total_load_series = space_load_series + dhw_load_series
-        total_heating_annual_mmbtu = (space_heating_load.annual_mmbtu + dhw_load.annual_mmbtu) / boiler_efficiency
+        process_heat_load_series = process_heat_load.loads_kw ./ boiler_efficiency ./ KWH_PER_MMBTU
 
+        total_load_series = space_load_series + dhw_load_series + process_heat_load_series
+        total_heating_annual_mmbtu = (space_heating_load.annual_mmbtu + dhw_load.annual_mmbtu + process_heat_load.annual_mmbtu) / boiler_efficiency
+        
         response = Dict([
             ("loads_mmbtu_per_hour", round.(total_load_series, digits=3)),
             ("annual_mmbtu", round(total_heating_annual_mmbtu, digits=3)),
@@ -339,12 +375,15 @@ function simulated_load(d::Dict)
             ("dhw_mean_mmbtu_per_hour", round(sum(dhw_load_series) / length(dhw_load_series), digits=3)),
             ("dhw_max_mmbtu_per_hour", round(maximum(dhw_load_series), digits=3)),
             ("dhw_monthly_mmbtu", round.(dhw_monthly_fuel_mmbtu, digits=3)),
+            ("process_heat_loads_mmbtu_per_hour", round.(process_heat_load_series, digits=3)),
+            ("process_heat_annual_mmbtu", round(process_heat_annual_mmbtu / boiler_efficiency, digits=3)),
+            ("process_heat_min_mmbtu_per_hour", round(minimum(process_heat_load_series), digits=3)),
+            ("process_heat_mean_mmbtu_per_hour", round(sum(process_heat_load_series) / length(process_heat_load_series), digits=3)),
+            ("process_heat_max_mmbtu_per_hour", round(maximum(process_heat_load_series), digits=3)),
+            ("process_heat_monthly_mmbtu", round.(process_heat_monthly_fuel_mmbtu, digits=3)),
         ])
 
         return response
-    end
-
-    if load_type = "process_heat"
     end
 
     if load_type == "cooling"
