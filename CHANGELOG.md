@@ -23,13 +23,13 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop 2024-05-09
+## v0.46.1
 ### Changed
 - Updated the GHP testset .json `./test/scenarios/ghp_inputs.json` to include a nominal HotThermalStorage and ColdThermalStorage system.
 ### Fixed
 - Fixed a bug in which the model fails to build when both GHP and either Hot or Cold Thermal Storage are present.
 
-## v. 0.46.0
+## v.0.46.0
 ### Added 
 - In `src/core/absorption_chiller.jl` struct, added field **heating_load_input** to the AbsorptionChiller struct
 - Added new variables **dvHeatToStorage** and **dvHeatFromStorage** which are indexed on `p.heating_loads` and added reconciliation constraints so that **dvProductionToStorage** and **dvDischargeFromStorage** maintain their relationship to state of charge for Hot thermal energy storage.
