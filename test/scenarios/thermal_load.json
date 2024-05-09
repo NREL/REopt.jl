@@ -23,6 +23,9 @@
     "SpaceHeatingLoad": {
         "doe_reference_name": "LargeOffice"
     },
+    "ProcessHeatLoad": {
+        "process_type": "FlatLoad"
+    },
     "DomesticHotWaterLoad": {
         "doe_reference_name": "LargeOffice"
     },
