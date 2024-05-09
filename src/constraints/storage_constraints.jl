@@ -214,14 +214,8 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
 
     #Do not allow GHP to charge storage
     if !isempty(p.techs.ghp)
-        for b in p.s.storage.types.hot
-            for t in p.techs.ghp
-                for q in p.heating_loads
-                    for ts in p.time_steps
-                        fix(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts], 0.0, force=true)
-                    end
-               end
-            end
+        for b in p.s.storage.types.hot, t in p.techs.ghp, q in p.heating_loads, ts in p.time_steps
+            fix(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts], 0.0, force=true)
         end
     end
 
@@ -254,12 +248,8 @@ function add_cold_thermal_storage_dispatch_constraints(m, p, b; _n="")
 
     #Do not allow GHP to charge storage
     if !isempty(p.techs.ghp)
-        for b in p.s.storage.types.cold
-            for t in p.techs.ghp
-                for ts in p.time_steps
+        for b in p.s.storage.types.cold, t in p.techs.ghp, ts in p.time_steps
                     fix(m[Symbol("dvProductionToStorage"*_n)][b,t,ts], 0.0, force=true)
-                end
-            end
         end
     end
 end
