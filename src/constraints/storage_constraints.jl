@@ -54,11 +54,13 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
 	@constraint(m, [ts in p.time_steps_with_grid],
         m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  
             sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) 
-            + p.s.storage.attr[b].grid_charge_efficiency * m[Symbol("dvGridToStorage"*_n)][b, ts] 
-            - m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.s.storage.attr[b].discharge_efficiency
+            + p.s.storage.attr[b].grid_charge_efficiency * m[Symbol("dvGridToStorage"*_n)][b, ts]
+            +  (p.s.storage.attr[b].charge_efficiency * m[Symbol("dvHydroToStorage")][ts])
+            - ((m[Symbol("dvDischargeFromStorage"*_n)][b,ts]+m[Symbol("dvStorageToGrid")][ts])  / p.s.storage.attr[b].discharge_efficiency)
         )
 	)
 
+    # Note: Hydro to storage not added for off-grid scenarios
 	# Constraint (4h): state-of-charge for electrical storage - no grid
 	@constraint(m, [ts in p.time_steps_without_grid],
         m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  
@@ -77,6 +79,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
 	@constraint(m, [ts in p.time_steps_with_grid],
         m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] + 
             sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) + m[Symbol("dvGridToStorage"*_n)][b, ts]
+            + m[Symbol("dvStorageToGrid")][ts]
     )
 
 	#Constraint (4l)-alt: Dispatch from electrical storage is no greater than power capacity (no grid connection)
@@ -99,6 +102,24 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
             sum(m[Symbol("dvStorageEnergy"*_n)][b])
         )
     end
+
+    if p.s.storage.attr[b].is_ldes
+        @constraint(m, m[Symbol("dvStoragePower"*_n)][b] == m[Symbol("dvStorageEnergy"*_n)][b] / p.s.storage.attr[b].duration)
+    end
+
+    # Prevent charging and discharging of the battery at the same time
+    @constraint(m, [ts in p.time_steps], m[Symbol("dvBattCharge_binary")][ts] + m[Symbol("dvBattDischarge_binary")][ts] <= 1 )
+    @constraint(m, [ts in p.time_steps],
+                   m[Symbol("dvGridToStorage"*_n)][b, ts] + 
+                   sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) <=
+                   p.s.storage.attr[b].max_kw * m[Symbol("dvBattCharge_binary")][ts])
+    @constraint(m, [ts in p.time_steps], 
+                   m[Symbol("dvStorageToGrid")][ts] +
+                   m[Symbol("dvDischargeFromStorage"*_n)][b, ts] <= 
+                   p.s.storage.attr[b].max_kw * m[Symbol("dvBattDischarge_binary")][ts])
+
+
+
 end
 
 function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")

@@ -25,6 +25,7 @@ struct Scenario <: AbstractScenario
     cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     steam_turbine::Union{SteamTurbine, Nothing}
     electric_heater::Union{ElectricHeater, Nothing}
+    existing_hydropower::ExistingHydropower
 end
 
 """
@@ -177,6 +178,26 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         storage_structs["ColdThermalStorage"] = ColdThermalStorage(params, financial, settings.time_steps_per_hour)
     end
     storage = Storage(storage_structs)
+
+    # TODO: update with actual values
+    if haskey(d, "existing_hydropower")
+        existing_hydropower = ExistingHydropower(; existing_kw = 10,
+                                                    efficiency_kwh_per_cubicmeter= 10,
+                                                    water_inflow_cubic_meter_per_second= ones(8760),
+                                                    cubic_meter_maximum= 10,
+                                                    cubic_meter_minimum= 10,
+                                                    minimum_water_output_cubic_meter_per_second= 10,
+                                                    production_factor_series= ones(8760),
+                                                    can_net_meter= false,
+                                                    can_wholesale= true,
+                                                    can_export_beyond_nem_limit= false,
+                                                    can_curtail= false,
+                                                    
+                                                )
+
+    else
+        existing_hydropower = ExistingHydropower(; existing_kw = 0)
+    end 
 
     if !(settings.off_grid_flag) # ElectricTariff only required for on-grid                            
         electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 
@@ -674,7 +695,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         space_heating_thermal_load_reduction_with_ghp_kw,
         cooling_thermal_load_reduction_with_ghp_kw,
         steam_turbine,
-        electric_heater
+        electric_heater,
+        existing_hydropower
     )
 end
 

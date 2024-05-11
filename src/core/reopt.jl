@@ -318,6 +318,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             add_thermal_load_constraints(m, p)  # split into heating and cooling constraints?
         end
 
+		if !isempty(p.existing_hydropower)
+			add_existing_hydropower_constraints(m,p)
+		end
+
         if !isempty(p.ghp_options)
             add_ghp_constraints(m, p)
         end
@@ -614,6 +618,17 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 	if !(p.s.electric_utility.allow_simultaneous_export_import) & !isempty(p.s.electric_tariff.export_bins)
 		@warn "Adding binary variable to prevent simultaneous grid import/export. Some solvers are very slow with integer variables"
 		@variable(m, binNoGridPurchases[p.time_steps], Bin)
+	end
+
+	if !isempty(p.existing_hydropower)
+		@variables m begin
+			dvWaterVolume[p.time_steps] >= 0
+			dvHydroPowerOut[p.time_steps] >= 0
+			dvWaterOutFlow[p.time_steps] >= 0
+			dvHydroToGrid[p.time_steps] >= 0
+			dvHydroToStorage[p.time_steps] >= 0
+			dvHydroToLoad[p.time_steps] >= 0
+		end
 	end
 
     if !isempty(union(p.techs.heating, p.techs.chp))
