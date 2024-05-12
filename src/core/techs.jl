@@ -59,8 +59,8 @@ function Techs(p::REoptInputs, s::BAUScenario)
 
     if !isnothing(s.existing_hydropower)
         if p.s.existing_hydropower.existing_kw > 0
-            push!(all_techs, "existing_hydropower")
-            push!(elec, "existing_hydropower")
+            push!(all_techs, "ExistingHydropower")
+            push!(elec, "ExistingHydropower")
         end
     end
 
@@ -89,7 +89,12 @@ function Techs(p::REoptInputs, s::BAUScenario)
         absorption_chillers,
         steam_turbines,
         techs_can_supply_steam_turbine,
-        electric_heaters        
+        electric_heaters,
+        techs_can_serve_space_heating,
+        techs_can_serve_dhw,
+        techs_can_serve_process_heat,
+        ghp_techs,
+        existing_hydropower        
     )
 end
 
@@ -123,7 +128,12 @@ function Techs(s::Scenario)
     absorption_chillers = String[]
     steam_turbines = String[]
     techs_can_supply_steam_turbine = String[]
-    electric_heaters = String[]    
+    electric_heaters = String[]
+    techs_can_serve_space_heating = String[]
+    techs_can_serve_dhw = String[] 
+    techs_can_serve_process_heat = String[]
+    ghp_techs = String[]
+    existing_hydropower = String[]    
 
     if s.wind.max_kw > 0
         push!(all_techs, "Wind")
@@ -216,14 +226,15 @@ function Techs(s::Scenario)
             push!(techs_can_serve_process_heat, "GHP")
         end
     end
-
+    
     if !isnothing(s.existing_hydropower)
         if s.existing_hydropower.existing_kw > 0
-            push!(all_techs, "existing_hydropower")
-            push!(elec, "existing_hydropower")
+            push!(all_techs, "ExistingHydropower")
+            push!(elec, "ExistingHydropower")
+            push!(existing_hydropower, "ExistingHydropower")
         end
     end
-
+    
     if !isnothing(s.existing_chiller)
         push!(all_techs, "ExistingChiller")
         push!(cooling_techs, "ExistingChiller")
@@ -299,7 +310,12 @@ function Techs(s::Scenario)
         absorption_chillers,
         steam_turbines,
         techs_can_supply_steam_turbine,
-        electric_heaters
+        electric_heaters,
+        techs_can_serve_space_heating,
+        techs_can_serve_dhw,
+        techs_can_serve_process_heat,
+        ghp_techs,
+        existing_hydropower
     )
 end
 

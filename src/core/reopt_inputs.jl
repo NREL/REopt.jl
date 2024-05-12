@@ -64,6 +64,7 @@ struct REoptInputs <: AbstractInputs
     heating_cop::Dict{String, <:Real} # (techs.electric_heater)
     heating_loads_kw::Dict{String, <:Real} # (heating_loads)
     unavailability::Dict{String, Array{Float64,1}}  # Dict by tech of unavailability profile
+    existing_hydropower_inputs::Dict{String, Any} # consolidated dictionary for all existing hydropower inputs
 end
 ```
 """
@@ -132,8 +133,8 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     heating_loads_kw::Dict{String, Array{Real,1}} # (heating_loads)
     heating_loads_served_by_tes::Dict{String, Array{String,1}} # ("HotThermalStorage" or empty)
     unavailability::Dict{String, Array{Float64,1}} # (techs.elec)
-    existing_hydropower::Dict{String, Any}
     absorption_chillers_using_heating_load::Dict{String,Array{String,1}} # ("AbsorptionChiller" or empty)
+    existing_hydropower_inputs::Dict{String, Any} # consolidated dictionary for all existing hydropower inputs
 end
 
 
@@ -169,7 +170,7 @@ function REoptInputs(s::AbstractScenario)
         seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
         tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
         tech_emissions_factors_PM25, cop, techs_operating_reserve_req_fraction, thermal_cop, fuel_cost_per_kwh, 
-        heating_cop, existing_hydropower = setup_tech_inputs(s)
+        heating_cop, existing_hydropower_inputs = setup_tech_inputs(s) 
 
     pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
 
@@ -317,7 +318,12 @@ function REoptInputs(s::AbstractScenario)
         tech_emissions_factors_PM25,
         techs_operating_reserve_req_fraction,
         heating_cop,
-        unavailability 
+        heating_loads,
+        heating_loads_kw,
+        heating_loads_served_by_tes,
+        unavailability,
+        absorption_chillers_using_heating_load,
+        existing_hydropower_inputs
     )
 end
 
@@ -353,7 +359,7 @@ function setup_tech_inputs(s::AbstractScenario)
     thermal_cop = Dict(t => 0.0 for t in techs.absorption_chiller)
     heating_cop = Dict(t => 0.0 for t in techs.electric_heater)
 
-    existing_hydropower = Dict{String, Any}()
+    existing_hydropower_inputs = Dict{String, Any}()
 
     # export related inputs
     techs_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in s.electric_tariff.export_bins)
@@ -429,10 +435,12 @@ function setup_tech_inputs(s::AbstractScenario)
         heating_cop["ElectricHeater"] = 1.0
     end
 
-    if "existing_hydropower" in techs.all
-        setup_existing_hydropower_inputs(s, existing_hydropower, techs_by_exportbin)
+    if "ExistingHydropower" in techs.all
+        print("\n Setting up Existing Hydropower in the reopt inputs file")
+        setup_existing_hydropower_inputs(s, existing_hydropower_inputs, techs_by_exportbin)
     else
-        existing_hydropower["existing_kw"] = 0
+        print("\n Existing Hydropower is not in the techs")
+        #existing_hydropower["existing_kw"] = 0
     end
 
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
@@ -448,7 +456,7 @@ function setup_tech_inputs(s::AbstractScenario)
     production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
     seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
     tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
-    tech_emissions_factors_PM25, cop, techs_operating_reserve_req_fraction, thermal_cop, fuel_cost_per_kwh, heating_cop, existing_hydropower
+    tech_emissions_factors_PM25, cop, techs_operating_reserve_req_fraction, thermal_cop, fuel_cost_per_kwh, heating_cop, existing_hydropower_inputs
 end
 
 
@@ -641,10 +649,10 @@ function setup_wind_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_s
     return nothing
 end
 
-function setup_existing_hydropower_inputs(s::AbstractScenario, existing_hydropower, techs_by_exportbin)
-    existing_hydropower["existing_kw"] = 15 #s.existing_hydropower.existing_kw
+function setup_existing_hydropower_inputs(s::AbstractScenario, existing_hydropower_inputs, techs_by_exportbin)
+    existing_hydropower_inputs["existing_kw"] = s.existing_hydropower.existing_kw
     fillin_techs_by_exportbin(techs_by_exportbin, s.existing_hydropower, "existing_hydropower")
-    return nothing
+    return nothing 
 end
 
 function setup_gen_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes,

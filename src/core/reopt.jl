@@ -318,7 +318,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             add_thermal_load_constraints(m, p)  # split into heating and cooling constraints?
         end
 
-		if !isempty(p.existing_hydropower)
+		if !isempty(p.techs.existing_hydropower)
+			print("\n Adding existing hydropower constraints")
 			add_existing_hydropower_constraints(m,p)
 		end
 
@@ -375,9 +376,12 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         add_coincident_peak_charge_constraints(m, p)
     end
 
+
+	# Remove hydropower from the calculation:
+	NonHydroTechs = filter!(x->x != "ExistingHydropower",p.techs.all) # TODO: remove this line somehow
     if !isempty(setdiff(p.techs.all, p.techs.segmented))
         m[:TotalTechCapCosts] += p.third_party_factor *
-            sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in setdiff(p.techs.all, p.techs.segmented))
+            sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in setdiff(NonHydroTechs, p.techs.segmented))
     end
 
     if !isempty(p.techs.segmented)
@@ -598,6 +602,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvPeakDemandMonth[p.months, 1:p.s.electric_tariff.n_monthly_demand_tiers] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0
         binGHP[p.ghp_options], Bin  # Can be <= 1 if require_ghp_purchase=0, and is ==1 if require_ghp_purchase=1
+		dvStorageToGrid[p.time_steps] == 0 # Temporary line, to delete when merge with battery export *********************************
 	end
 
 	if !isempty(p.techs.gen)  # Problem becomes a MILP
@@ -620,7 +625,10 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		@variable(m, binNoGridPurchases[p.time_steps], Bin)
 	end
 
-	if !isempty(p.existing_hydropower)
+	#print("\n p.s.existing_hydropower is:")
+	#print(p.s.existing_hydropower)
+	if !isempty(p.techs.existing_hydropower)
+		print("\n Creating variables for existing hydropower")
 		@variables m begin
 			dvWaterVolume[p.time_steps] >= 0
 			dvHydroPowerOut[p.time_steps] >= 0

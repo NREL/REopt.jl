@@ -53,6 +53,8 @@ A Scenario struct can contain the following keys:
 - [GHP](@ref) (optional, can be Array)
 - [SteamTurbine](@ref) (optional)
 - [ElectricHeater](@ref) (optional)
+- [ExistingHydropower](@ref) (optional)
+- absorption_chillers_using_heating_load
 
 All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
 
@@ -179,25 +181,26 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
     storage = Storage(storage_structs)
 
-    # TODO: update with actual values
+    # TODO: update with actual values input by the user in the inputs dictionary
+    
     if haskey(d, "existing_hydropower")
         existing_hydropower = ExistingHydropower(; existing_kw = 10,
                                                     efficiency_kwh_per_cubicmeter= 10,
                                                     water_inflow_cubic_meter_per_second= ones(8760),
-                                                    cubic_meter_maximum= 10,
-                                                    cubic_meter_minimum= 10,
-                                                    minimum_water_output_cubic_meter_per_second= 10,
-                                                    production_factor_series= ones(8760),
+                                                    cubic_meter_maximum= 20,
+                                                    cubic_meter_minimum= 5,
+                                                    minimum_water_output_cubic_meter_per_second= 0,
+                                                    #hydro_production_factor_series= ones(8760),
                                                     can_net_meter= false,
                                                     can_wholesale= true,
                                                     can_export_beyond_nem_limit= false,
-                                                    can_curtail= false,
-                                                    
+                                                    can_curtail= false
                                                 )
 
     else
         existing_hydropower = ExistingHydropower(; existing_kw = 0)
     end 
+    
 
     if !(settings.off_grid_flag) # ElectricTariff only required for on-grid                            
         electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 

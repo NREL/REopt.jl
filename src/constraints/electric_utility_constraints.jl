@@ -133,7 +133,7 @@ function add_export_constraints(m, p; _n="")
                 #        for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
                 ((sum(m[Symbol("dvStorageToGrid")][ts]*p.s.electric_tariff.export_rates[:WHL][ts] for ts in p.time_steps)) + 
                    sum(sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
-                         for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
+                         for t in ["PV"]) for ts in p.time_steps) #for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps) # TODO: fix this
                 )
             )
         else
