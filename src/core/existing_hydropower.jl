@@ -2,12 +2,13 @@
 """
 `ExistingHydropower` is an optional REopt input with the following keys and default values:
 ```julia
-    existing_kw::Real=0,
+    existing_kw_per_turbine::Real=0,
     efficiency_kwh_per_cubicmeter::Real=0, # conversion factor for the water turbines
     water_inflow_cubic_meter_per_second::Array=[], # water flowing into the dam's pond
     cubic_meter_maximum::Real=0, #maximum capacity of the dam
     cubic_meter_minimum::Real=0, #minimum water level of the dam
-    minimum_water_output_cubic_meter_per_second::Real=0,
+    initial_reservoir_volume::Real=0.0  # The initial volume of water in the reservoir
+    minimum_water_output_cubic_meter_per_second_per_turbine::Real=0,
     hydro_production_factor_series::Union{Nothing, Array{<:Real,1}} = nothing, # Optional user-defined production factors. Must be normalized to units of kW-AC/kW-DC nameplate. The series must be one year (January through December) of hourly, 30-minute, or 15-minute generation data.
     can_net_meter::Bool = off_grid_flag ? false : true,
     can_wholesale::Bool = off_grid_flag ? false : true,
@@ -18,12 +19,13 @@
 # Based this code on the srv>core>pv.jl code
 mutable struct ExistingHydropower <: AbstractTech
 
-    existing_kw  #::Float64
+    existing_kw_per_turbine  #::Float64
     efficiency_kwh_per_cubicmeter  #::Float64
     water_inflow_cubic_meter_per_second  #::AbstractArray{Float64,1}
     cubic_meter_maximum  #::Float64
     cubic_meter_minimum  #::Float64
-    minimum_water_output_cubic_meter_per_second  #::Float64
+    initial_reservoir_volume 
+    minimum_water_output_cubic_meter_per_second_per_turbine  #::Float64
     hydro_production_factor_series  #::AbstractArray{Float64,1}
     can_net_meter  #::Bool
     can_wholesale  #::Bool
@@ -31,12 +33,13 @@ mutable struct ExistingHydropower <: AbstractTech
     can_curtail  #::Bool
 
     function ExistingHydropower(;
-        existing_kw::Real=0.0,
+        existing_kw_per_turbine::Real=0.0,
         efficiency_kwh_per_cubicmeter::Real=0.0, # conversion factor for the water turbines
         water_inflow_cubic_meter_per_second::Union{Nothing, Array{<:Real,1}} = nothing, # water flowing into the dam's pond
         cubic_meter_maximum::Real=0.0, #maximum capacity of the dam
         cubic_meter_minimum::Real=0.0, #minimum water level of the dam
-        minimum_water_output_cubic_meter_per_second::Real=0.0,
+        initial_reservoir_volume::Real=0.0, # the initial volume of the reservoir
+        minimum_water_output_cubic_meter_per_second_per_turbine::Real=0.0,
         hydro_production_factor_series::Union{Nothing, Array{<:Real,1}} = nothing,
         can_net_meter::Bool = false,
         can_wholesale::Bool = false,
@@ -64,12 +67,13 @@ mutable struct ExistingHydropower <: AbstractTech
         #end
 
         new(
-            existing_kw,
+            existing_kw_per_turbine,
             efficiency_kwh_per_cubicmeter,
             water_inflow_cubic_meter_per_second,
             cubic_meter_maximum,
             cubic_meter_minimum,
-            minimum_water_output_cubic_meter_per_second,
+            initial_reservoir_volume,
+            minimum_water_output_cubic_meter_per_second_per_turbine,
             hydro_production_factor_series,
             can_net_meter,
             can_wholesale,

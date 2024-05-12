@@ -631,11 +631,12 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		print("\n Creating variables for existing hydropower")
 		@variables m begin
 			dvWaterVolume[p.time_steps] >= 0
-			dvHydroPowerOut[p.time_steps] >= 0
-			dvWaterOutFlow[p.time_steps] >= 0
-			dvHydroToGrid[p.time_steps] >= 0
-			dvHydroToStorage[p.time_steps] >= 0
-			dvHydroToLoad[p.time_steps] >= 0
+			#dvHydroPowerOut[time_steps] >= 0
+			dvWaterOutFlow[p.time_steps] >= 0  #p.techs.existing_hydropower - index on this as well in the future
+			#dvHydroToGrid[p.time_steps] >= 0
+			#dvHydroToStorage[p.time_steps] >= 0
+			#dvHydroToLoad[p.time_steps] >= 0
+			# Note: the power flow from the hydropower are part of: dvRatedProduction, dvProductionToGrid, and dvProductionToStorage
 		end
 	end
 

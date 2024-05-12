@@ -184,21 +184,22 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     # TODO: update with actual values input by the user in the inputs dictionary
     
     if haskey(d, "existing_hydropower")
-        existing_hydropower = ExistingHydropower(; existing_kw = 10,
-                                                    efficiency_kwh_per_cubicmeter= 10,
-                                                    water_inflow_cubic_meter_per_second= ones(8760),
-                                                    cubic_meter_maximum= 20,
-                                                    cubic_meter_minimum= 5,
-                                                    minimum_water_output_cubic_meter_per_second= 0,
+        existing_hydropower = ExistingHydropower(; existing_kw_per_turbine = d["existing_hydropower"]["existing_kw_per_turbine"],
+                                                    efficiency_kwh_per_cubicmeter=d["existing_hydropower"]["efficiency_kwh_per_cubicmeter"] , # 10,
+                                                    water_inflow_cubic_meter_per_second=d["existing_hydropower"]["water_inflow_cubic_meter_per_second"],    #vcat(ones(1000),2*ones(5000),3*ones(1000),1.5*ones(1760)),
+                                                    cubic_meter_maximum=d["existing_hydropower"]["cubic_meter_maximum"],    #2000,
+                                                    cubic_meter_minimum=d["existing_hydropower"]["cubic_meter_minimum"],     #5,
+                                                    initial_reservoir_volume = d["existing_hydropower"]["initial_reservoir_volume"],
+                                                    minimum_water_output_cubic_meter_per_second_per_turbine =d["existing_hydropower"]["minimum_water_output_cubic_meter_per_second_per_turbine"],     #0.5,
                                                     #hydro_production_factor_series= ones(8760),
-                                                    can_net_meter= false,
-                                                    can_wholesale= true,
-                                                    can_export_beyond_nem_limit= false,
-                                                    can_curtail= false
+                                                    can_net_meter=d["existing_hydropower"]["can_net_meter"],    #false,
+                                                    can_wholesale=d["existing_hydropower"]["can_wholesale"],     #true,
+                                                    can_export_beyond_nem_limit=d["existing_hydropower"]["can_export_beyond_nem_limit"],     #false,
+                                                    can_curtail=d["existing_hydropower"]["can_curtail"],     #false
                                                 )
 
     else
-        existing_hydropower = ExistingHydropower(; existing_kw = 0)
+        existing_hydropower = ExistingHydropower(; existing_kw_per_turbine = 0)
     end 
     
 

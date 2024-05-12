@@ -8,7 +8,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
             sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.elec)  
             + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.elec) 
             + sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) 
-            + m[Symbol("dvHydroToLoad")][ts]
+            #+ m[Symbol("dvHydroToLoad")][ts]
             ==
             sum(sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) 
                 + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.elec)
@@ -24,7 +24,7 @@ function add_elec_load_balance_constraints(m, p; _n="")
             sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.elec)
             + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.elec )
             + sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers)
-            + m[Symbol("dvHydroToLoad")][ts]
+            #+ m[Symbol("dvHydroToLoad")][ts]
             ==
             sum(sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) 
                 + sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for u in p.export_bins_by_tech[t]) 

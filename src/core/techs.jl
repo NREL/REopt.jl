@@ -58,7 +58,7 @@ function Techs(p::REoptInputs, s::BAUScenario)
     end
 
     if !isnothing(s.existing_hydropower)
-        if p.s.existing_hydropower.existing_kw > 0
+        if p.s.existing_hydropower.existing_kw_per_turbine > 0
             push!(all_techs, "ExistingHydropower")
             push!(elec, "ExistingHydropower")
         end
@@ -228,7 +228,7 @@ function Techs(s::Scenario)
     end
     
     if !isnothing(s.existing_hydropower)
-        if s.existing_hydropower.existing_kw > 0
+        if s.existing_hydropower.existing_kw_per_turbine > 0
             push!(all_techs, "ExistingHydropower")
             push!(elec, "ExistingHydropower")
             push!(existing_hydropower, "ExistingHydropower")

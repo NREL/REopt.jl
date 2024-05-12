@@ -437,10 +437,10 @@ function setup_tech_inputs(s::AbstractScenario)
 
     if "ExistingHydropower" in techs.all
         print("\n Setting up Existing Hydropower in the reopt inputs file")
-        setup_existing_hydropower_inputs(s, existing_hydropower_inputs, techs_by_exportbin)
+        setup_existing_hydropower_inputs(s, existing_hydropower_inputs, techs_by_exportbin, production_factor)
     else
         print("\n Existing Hydropower is not in the techs")
-        #existing_hydropower["existing_kw"] = 0
+        #existing_hydropower["existing_kw_per_turbine"] = 0
     end
 
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
@@ -649,9 +649,10 @@ function setup_wind_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_s
     return nothing
 end
 
-function setup_existing_hydropower_inputs(s::AbstractScenario, existing_hydropower_inputs, techs_by_exportbin)
-    existing_hydropower_inputs["existing_kw"] = s.existing_hydropower.existing_kw
-    fillin_techs_by_exportbin(techs_by_exportbin, s.existing_hydropower, "existing_hydropower")
+function setup_existing_hydropower_inputs(s::AbstractScenario, existing_hydropower_inputs, techs_by_exportbin, production_factor)
+    existing_hydropower_inputs["existing_kw_per_turbine"] = s.existing_hydropower.existing_kw_per_turbine
+    production_factor["ExistingHydropower",:] = ones(8760 * s.settings.time_steps_per_hour) # get_production_factor(s.existing_hydropower; s.settings.time_steps_per_hour)
+    fillin_techs_by_exportbin(techs_by_exportbin, s.existing_hydropower, "ExistingHydropower")
     return nothing 
 end
 
