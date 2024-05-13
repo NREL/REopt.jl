@@ -1435,10 +1435,6 @@ There are many ways in which a ProcessHeatLoad can be defined:
 1. One can provide the `fuel_loads_mmbtu_per_hour` value in the `ProcessHeatLoad` key within the `Scenario`.
 2. One can provide the `annual_mmbtu` value in the `ProcessHeatLoad` key within the `Scenario`; this assumes a flat load.
 
-!!! note "Process heat loads"
-    These loads are presented in terms of process heat required without regard to the efficiency of the input heating,
-    unlike the hot-water and space heating loads which are provided in terms of fuel input.
-
 """
 struct ProcessHeatLoad
     loads_kw::Array{Real, 1}
