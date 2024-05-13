@@ -229,9 +229,15 @@ function Techs(s::Scenario)
     
     if !isnothing(s.existing_hydropower)
         if s.existing_hydropower.existing_kw_per_turbine > 0
-            push!(all_techs, "ExistingHydropower")
-            push!(elec, "ExistingHydropower")
-            push!(existing_hydropower, "ExistingHydropower")
+            # Add a tech for each turbine separately
+            #print("\n Number of turbines is ")
+            #print(s.existing_hydropower.number_of_turbines)
+            for i in 1:s.existing_hydropower.number_of_turbines
+                hydropower_name = "ExistingHydropower_Turbine"*string(i)
+                push!(all_techs, hydropower_name)
+                push!(elec, hydropower_name)
+                push!(existing_hydropower, hydropower_name)
+            end
         end
     end
     

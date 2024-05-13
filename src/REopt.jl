@@ -191,6 +191,7 @@ include("results/ghp.jl")
 include("results/steam_turbine.jl")
 include("results/electric_heater.jl")
 include("results/heating_cooling_load.jl")
+include("results/existing_hydropower.jl")
 
 include("core/reopt.jl")
 include("core/reopt_multinode.jl")

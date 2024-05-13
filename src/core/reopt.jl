@@ -378,7 +378,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 
 	# Remove hydropower from the calculation:
-	NonHydroTechs = filter!(x->x != "ExistingHydropower",p.techs.all) # TODO: remove this line somehow
+	NonHydroTechs = filter!(x->x != "ExistingHydropower_Turbine1",p.techs.all) # TODO: remove this line somehow
+	NonHydroTechs = filter!(x->x != "ExistingHydropower_Turbine2",p.techs.all) # TODO: remove this line somehow
     if !isempty(setdiff(p.techs.all, p.techs.segmented))
         m[:TotalTechCapCosts] += p.third_party_factor *
             sum( p.cap_cost_slope[t] * m[:dvPurchaseSize][t] for t in setdiff(NonHydroTechs, p.techs.segmented))
@@ -630,12 +631,9 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 	if !isempty(p.techs.existing_hydropower)
 		print("\n Creating variables for existing hydropower")
 		@variables m begin
-			dvWaterVolume[p.time_steps] >= 0
-			#dvHydroPowerOut[time_steps] >= 0
-			dvWaterOutFlow[p.time_steps] >= 0  #p.techs.existing_hydropower - index on this as well in the future
-			#dvHydroToGrid[p.time_steps] >= 0
-			#dvHydroToStorage[p.time_steps] >= 0
-			#dvHydroToLoad[p.time_steps] >= 0
+			dvWaterVolume[p.time_steps] >= 0			
+			dvWaterOutFlow[p.techs.existing_hydropower, p.time_steps] >= 0  #p.techs.existing_hydropower - index on this as well in the future
+			binTurbineActive[p.techs.existing_hydropower, p.time_steps], Bin
 			# Note: the power flow from the hydropower are part of: dvRatedProduction, dvProductionToGrid, and dvProductionToStorage
 		end
 	end

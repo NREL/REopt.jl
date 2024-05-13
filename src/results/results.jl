@@ -40,6 +40,10 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         add_wind_results(m, p, d; _n)
     end
     
+    if "ExistingHydropower_Turbine1" in p.techs.elec
+        add_existing_hydropower_results(m, p, d; _n)
+    end
+
     if "CHP" in p.techs.all
         add_chp_results(m, p, d; _n)
     end
