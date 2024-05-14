@@ -1460,11 +1460,13 @@ function BuiltInProcessHeatLoad(
 
     process_heat_annual_mmbtu = Dict(
         "Industrial" => Dict(
-            "Chemical" => 25000,  # mid-sized chemical processes
-            "Pharmaceutical" => 15000,    # pharmaceutical manufacturing
+            "Chemical" => 15000.0,  # mid-sized chemical processes
             "FlatLoad" => 10000,  #  continuous operations throughout the year
         )
-    )    
+    )
+    if isempty(city)
+        city = "Industrial"
+    end        
     if !(process_type in default_process_types)
         throw(@error("process_type $(process_type) is not recognized for process heating."))
     end
