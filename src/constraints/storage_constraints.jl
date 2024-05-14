@@ -112,6 +112,10 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
         @constraint(m, m[Symbol("dvStoragePower"*_n)][b] == m[Symbol("dvStorageEnergy"*_n)][b] / p.s.storage.attr[b].duration)
     end
 
+    if p.s.storage.attr[b].require_start_and_end_charge_to_be_equivalent
+        @constraint(m, m[:dvStoredEnergy]["ElectricStorage",maximum(p.time_steps)] == p.s.storage.attr[b].soc_init_fraction * m[Symbol("dvStorageEnergy"*_n)][b] )
+    end
+
     # Prevent charging and discharging of the battery at the same time
     @constraint(m, [ts in p.time_steps], m[Symbol("dvBattCharge_binary")][ts] + m[Symbol("dvBattDischarge_binary")][ts] <= 1 )
     @constraint(m, [ts in p.time_steps],

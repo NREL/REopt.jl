@@ -170,6 +170,7 @@ end
     per_timestep_self_discharge_fraction::Float64 = 0.0 # Battery self-discharge as a fraction per timestep loss based on kWh stored in each timestep
     is_ldes::Bool = false
     duration::Real = 100.0
+    require_start_and_end_charge_to_be_equivalent::Bool = false
 ``` 
 """
 Base.@kwdef struct ElectricStorageDefaults
@@ -208,6 +209,7 @@ Base.@kwdef struct ElectricStorageDefaults
     per_timestep_self_discharge_fraction::Float64 = 0.0
     is_ldes::Bool = false
     duration::Real = 100.0
+    require_start_and_end_charge_to_be_equivalent::Bool = false
 end
 
 
@@ -254,6 +256,7 @@ struct ElectricStorage <: AbstractElectricStorage
     per_timestep_self_discharge_fraction::Float64
     is_ldes::Bool
     duration::Real
+    require_start_and_end_charge_to_be_equivalent::Bool
 
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
@@ -346,7 +349,8 @@ struct ElectricStorage <: AbstractElectricStorage
             s.minimum_avg_soc_fraction,
             s.per_timestep_self_discharge_fraction,
             s.is_ldes,
-            s.duration
+            s.duration,
+            s.require_start_and_end_charge_to_be_equivalent
         )
     end
 end
