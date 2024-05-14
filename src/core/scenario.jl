@@ -674,13 +674,13 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             end
 
             if !haskey(d["ASHP"], "cop_heating")
-                cop_heating = round.(0.083 .*ambient_temp_celsius .+ 2.8255, digits=2)
+                cop_heating = round.(0.083 .* ambient_temp_celsius .+ 2.8255, digits=2)
             else
                 cop_heating = round.(d["ASHP"]["cop_heating"],digits=2)
             end
 
-            if !haskey(d["ASHP"], "cop_cooling") # need to update (do we have diff curve for cooling cop?)
-                cop_cooling = round.(-0.08.*ambient_temp_celsius .+ 5.4, digits=2)
+            if !haskey(d["ASHP"], "cop_cooling") # TODO review cooling COP with design docs
+                cop_cooling = round.(-0.08 .* ambient_temp_celsius .+ 5.4, digits=2)
             else
                 cop_cooling = round.(d["ASHP"]["cop_cooling"], digits=2)
             end
