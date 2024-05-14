@@ -4,7 +4,11 @@
 ```julia
     existing_kw_per_turbine::Real=0,
     number_of_turbines::Real=0,
-    efficiency_kwh_per_cubicmeter::Real=0, # conversion factor for the water turbines
+    use_average_power_conversion::String="yes",
+    average_cubic_meters_per_second_per_kw::Real=0,
+    efficiency_slope_fraction_per_cubic_meter_per_second::Real=0, # slope of efficiency plot with the cubic meter per second on the x axis and the percent efficiency on the y axis
+    efficiency_fraction_y_intercept # the y intercept of the linearized turbine efficiency plot
+    linearized_stage_storage_slope  # slope of plot with reservoir volume on the x axis and water elevation on the y axis
     water_inflow_cubic_meter_per_second::Array=[], # water flowing into the dam's pond
     cubic_meter_maximum::Real=0, #maximum capacity of the dam
     cubic_meter_minimum::Real=0, #minimum water level of the dam
@@ -23,7 +27,11 @@ mutable struct ExistingHydropower <: AbstractTech
 
     existing_kw_per_turbine  #::Float64
     number_of_turbines
-    efficiency_kwh_per_cubicmeter  #::Float64
+    use_average_power_conversion
+    average_cubic_meters_per_second_per_kw
+    efficiency_slope_fraction_per_cubic_meter_per_second  #::Float64
+    efficiency_fraction_y_intercept 
+    linearized_stage_storage_slope 
     water_inflow_cubic_meter_per_second  #::AbstractArray{Float64,1}
     cubic_meter_maximum  #::Float64
     cubic_meter_minimum  #::Float64
@@ -39,7 +47,11 @@ mutable struct ExistingHydropower <: AbstractTech
     function ExistingHydropower(;
         existing_kw_per_turbine::Real=0.0,
         number_of_turbines::Real=0,
-        efficiency_kwh_per_cubicmeter::Real=0.0, # conversion factor for the water turbines
+        use_average_power_conversion::String="yes",
+        average_cubic_meters_per_second_per_kw::Real=0.0,
+        efficiency_slope_fraction_per_cubic_meter_per_second::Real=0.0, # conversion factor for the water turbines
+        efficiency_fraction_y_intercept::Real=1.0,
+        linearized_stage_storage_slope::Real=0.0, 
         water_inflow_cubic_meter_per_second::Union{Nothing, Array{<:Real,1}} = nothing, # water flowing into the dam's pond
         cubic_meter_maximum::Real=0.0, #maximum capacity of the dam
         cubic_meter_minimum::Real=0.0, #minimum water level of the dam
@@ -75,7 +87,11 @@ mutable struct ExistingHydropower <: AbstractTech
         new(
             existing_kw_per_turbine,
             number_of_turbines,
-            efficiency_kwh_per_cubicmeter,
+            use_average_power_conversion,
+            average_cubic_meters_per_second_per_kw,
+            efficiency_slope_fraction_per_cubic_meter_per_second,
+            efficiency_fraction_y_intercept,
+            linearized_stage_storage_slope,
             water_inflow_cubic_meter_per_second,
             cubic_meter_maximum,
             cubic_meter_minimum,

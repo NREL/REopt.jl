@@ -186,7 +186,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d, "existing_hydropower")
         existing_hydropower = ExistingHydropower(; existing_kw_per_turbine = d["existing_hydropower"]["existing_kw_per_turbine"],
                                                     number_of_turbines = d["existing_hydropower"]["number_of_turbines"],
-                                                    efficiency_kwh_per_cubicmeter=d["existing_hydropower"]["efficiency_kwh_per_cubicmeter"] , # 10,
+                                                    use_average_power_conversion = d["existing_hydropower"]["use_average_power_conversion"],
+                                                    average_cubic_meters_per_second_per_kw = d["existing_hydropower"]["average_cubic_meters_per_second_per_kw"],
+                                                    efficiency_slope_fraction_per_cubic_meter_per_second=d["existing_hydropower"]["efficiency_slope_fraction_per_cubic_meter_per_second"] , # 10,
+                                                    efficiency_fraction_y_intercept = d["existing_hydropower"]["efficiency_fraction_y_intercept"],
+                                                    linearized_stage_storage_slope = d["existing_hydropower"]["linearized_stage_storage_slope"],
                                                     water_inflow_cubic_meter_per_second=d["existing_hydropower"]["water_inflow_cubic_meter_per_second"],    #vcat(ones(1000),2*ones(5000),3*ones(1000),1.5*ones(1760)),
                                                     cubic_meter_maximum=d["existing_hydropower"]["cubic_meter_maximum"],    #2000,
                                                     cubic_meter_minimum=d["existing_hydropower"]["cubic_meter_minimum"],     #5,
