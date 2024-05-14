@@ -59,7 +59,6 @@ function __init__()
     @require GhpGhx="7ce85f02-24a8-4d69-a3f0-14b5daa7d30c" println("using GhpGhx module in REopt")
 end
 
-const EXISTING_EQUIPMENT_EFFICIENCY = 1.0
 const EXISTING_BOILER_EFFICIENCY = 0.8
 const GAL_PER_M3 = 264.172  # [gal/m^3]
 const KWH_PER_GAL_DIESEL = 40.7  # [kWh/gal_diesel] higher heating value of diesel

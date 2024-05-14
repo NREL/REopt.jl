@@ -24,10 +24,15 @@ const default_buildings = [
     "FlatLoad_8_5"    
 ]
 
-const valid_process_types = [
-    "Chemical", "Pharmaceutical",
-    "FlatLoad", "FlatLoad_24_5", "FlatLoad_16_7", "FlatLoad_16_5",
-    "FlatLoad_8_7"
+const default_process_types = [
+    "Chemical", 
+    "Pharmaceutical",
+    "FlatLoad", 
+    "FlatLoad_24_5", 
+    "FlatLoad_16_7", 
+    "FlatLoad_16_5",
+    "FlatLoad_8_7",
+    "FlatLoad_8_5"
 ]
 
 function find_ashrae_zone_city(lat, lon; get_zone=false)
@@ -107,24 +112,18 @@ end
 Scale a normalized Commercial Reference Building according to inputs provided and return the 8760.
 """
 
-function built_in_load(
-    type::String, 
-    city::String, 
-    buildingtype::String, 
-    year::Int, 
-    annual_energy::Real, 
-    monthly_energies::AbstractArray{Real,1},
-    boiler_efficiency_input::Union{Real,Nothing}=nothing
-    ) where {R <: Real}
-    @assert type in ["electric", "domestic_hot_water", "space_heating", "cooling", "process_heat"]
+function built_in_load(type::String, city::String, buildingtype::String, 
+    year::Int, annual_energy::R, monthly_energies::AbstractArray{R,1},
+    boiler_efficiency_input::Union{R,Nothing}=nothing) where {R <: Real}
 
+    @assert type in ["electric", "domestic_hot_water", "space_heating", "cooling", "process_heat"]
     monthly_scalers = ones(12)
     lib_path = joinpath(@__DIR__, "..", "..", "data", "load_profiles", type)
-    
+
     profile_path = joinpath(lib_path, string("crb8760_norm_" * city * "_" * buildingtype * ".dat"))
     if occursin("FlatLoad", buildingtype)
         normalized_profile = custom_normalized_flatload(buildingtype, year)
-    else
+    else 
         normalized_profile = vec(readdlm(profile_path, '\n', Float64, '\n'))
     end
 
@@ -141,7 +140,7 @@ function built_in_load(
                 monthly_scalers[month] = 0.0
             else
                 monthly_scalers[month] = monthly_energies[month] / month_total
-            end            
+            end
             t0 += plus_hours
         end
     end
@@ -189,6 +188,7 @@ Given `blended_doe_reference_names` and `blended_doe_reference_percents` use the
     - BuiltInCoolingLoad
     - BuiltInProcessHeatLoad
 """
+
 function blend_and_scale_doe_profiles(
     constructor,
     latitude::Real,
@@ -208,19 +208,22 @@ function blend_and_scale_doe_profiles(
         @debug "Changing ElectricLoad.year to 2017 because DOE reference profiles start on a Sunday."
     end
     year = 2017
-    # Handle city setting specific for process heating
-    if constructor === BuiltInProcessHeatLoad
-        city = "Industrial"
-    elseif isempty(city)
-        city = find_ashrae_zone_city(latitude, longitude)  # Default city lookup based on ASHRAE zones
-    end
-    profiles = Array{Float64,1}[]  # Collect profiles for blending
-    for name in blended_doe_reference_names
-        if constructor in [BuiltInSpaceHeatingLoad, BuiltInDomesticHotWaterLoad, BuiltInProcessHeatLoad]
-            # These constructors need the boiler efficiency passed as they deal with thermal loads
-            push!(profiles, constructor(city, name, latitude, longitude, year, addressable_load_fraction, annual_energy, monthly_energies, boiler_efficiency_input))
+    
+    if isempty(city)
+        if constructor === BuiltInProcessHeatLoad
+            city = "Industrial"
         else
-            # For other types where boiler efficiency might not be relevant
+            city = find_ashrae_zone_city(latitude, longitude)
+        end
+    end
+
+    profiles = Array[]  # collect the built in profiles
+    if constructor in [BuiltInSpaceHeatingLoad, BuiltInDomesticHotWaterLoad, BuiltInProcessHeatLoad]
+        for name in blended_doe_reference_names
+            push!(profiles, constructor(city, name, latitude, longitude, year, addressable_load_fraction, annual_energy, monthly_energies, boiler_efficiency_input))
+        end
+    else
+        for name in blended_doe_reference_names
             push!(profiles, constructor(city, name, latitude, longitude, year, annual_energy, monthly_energies))
         end
     end
@@ -244,6 +247,7 @@ function blend_and_scale_doe_profiles(
     end
     sum(profiles)
 end
+
 
 function custom_normalized_flatload(doe_reference_name, year)
     # built in profiles are assumed to be hourly

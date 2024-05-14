@@ -41,7 +41,7 @@ end
     emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0)
     can_serve_dhw::Bool = true # If ExistingBoiler can supply heat to the domestic hot water load
     can_serve_space_heating::Bool = true # If ExistingBoiler can supply heat to the space heating load
-    can_serve_process_heat::Bool = true # If ExistingBoiler can supply heat to the space heating load
+    can_serve_process_heat::Bool = true # If ExistingBoiler can supply heat to the process heating load
 ```
 
 !!! note "Max ExistingBoiler size" 
