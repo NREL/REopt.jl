@@ -36,18 +36,22 @@ end
 
 """
 `HeatingLoad` results keys:
-- `dhw_thermal_load_series_mmbtu_per_hour` vector of site domestic hot water load in every time step
-- `space_heating_thermal_load_series_mmbtu_per_hour` vector of site space heating load in every time step
-- `process_heat_thermal_load_series_mmbtu_per_hour` vector of site process heat load in every time step
-- `total_heating_thermal_load_series_mmbtu_per_hour` vector of sum heating load in every time step
-- `annual_calculated_dhw_thermal_load_mmbtu` sum of the `dhw_load_series_mmbtu_per_hour`
+- `dhw_thermal_load_series_mmbtu_per_hour` vector of site thermal domestic hot water load in every time step 
+- `space_heating_thermal_load_series_mmbtu_per_hour` vector of site thermal space heating load in every time step
+- `process_heat_thermal_load_series_mmbtu_per_hour` vector of site thermal process heat load in every time step
+- `total_heating_thermal_load_series_mmbtu_per_hour` vector of sum thermal heating load in every time step
+- `dhw_boiler_fuel_load_series_mmbtu_per_hour` vector of site fuel domestic hot water load in every time step
+- `space_heating_boiler_fuel_load_series_mmbtu_per_hour` vector of site fuel space heating load in every time step
+- `process_heat_boiler_fuel_load_series_mmbtu_per_hour` vector of site fuel process heat load in every time step
+- `total_heating_thermal_load_series_mmbtu_per_hour` vector of sum fuel heating load in every time step
+- `annual_calculated_dhw_thermal_load_mmbtu` sum of the `dhw_thermal_load_series_mmbtu_per_hour`
 - `annual_calculated_space_heating_thermal_load_mmbtu` sum of the `space_heating_thermal_load_series_mmbtu_per_hour`
 - `annual_calculated_process_heat_thermal_load_mmbtu` sum of the `process_heat_thermal_load_series_mmbtu_per_hour`
 - `annual_calculated_total_heating_thermal_load_mmbtu` sum of the `total_heating_thermal_load_series_mmbtu_per_hour`
-- `annual_calculated_dhw_boiler_fuel_load_mmbtu`
-- `annual_calculated_space_heating_boiler_fuel_load_mmbtu`
-- `annual_calculated_process_heat_boiler_fuel_load_mmbtu`
-- `annual_calculated_total_heating_boiler_fuel_load_mmbtu`
+- `annual_calculated_dhw_boiler_fuel_load_mmbtu` sum of the `dhw_boiler_fuel_load_series_mmbtu_per_hour`
+- `annual_calculated_space_heating_boiler_fuel_load_mmbtu` sum of the `space_heating_boiler_fuel_load_series_mmbtu_per_hour`
+- `annual_calculated_process_heat_boiler_fuel_load_mmbtu` sum of the `process_heat_boiler_fuel_load_series_mmbtu_per_hour`
+- `annual_calculated_total_heating_boiler_fuel_load_mmbtu` sum of the `total_heating_boiler_fuel_load_series_mmbtu_per_hour`
 """
 function add_heating_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     # Adds the `ElectricLoad` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
