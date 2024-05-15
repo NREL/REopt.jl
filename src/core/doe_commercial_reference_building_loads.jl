@@ -26,7 +26,7 @@ const default_buildings = [
 
 const default_process_types = [
     "Chemical", 
-    "Pharmaceutical",
+    "Warehouse",
     "FlatLoad", 
     "FlatLoad_24_5", 
     "FlatLoad_16_7", 

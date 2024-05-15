@@ -54,7 +54,7 @@ end
 - `annual_calculated_total_heating_boiler_fuel_load_mmbtu` sum of the `total_heating_boiler_fuel_load_series_mmbtu_per_hour`
 """
 function add_heating_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
-    # Adds the `HeatingLoad` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
+    # Adds the `ElectricLoad` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
     # Note: the node number is an empty string if evaluating a single `Site`.
 
     r = Dict{String, Any}()
@@ -69,7 +69,7 @@ function add_heating_load_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict
     else
         existing_boiler_efficiency = p.s.existing_boiler.efficiency
     end
-
+    
     r["dhw_thermal_load_series_mmbtu_per_hour"] = dhw_load_series_kw ./ KWH_PER_MMBTU
     r["space_heating_thermal_load_series_mmbtu_per_hour"] = space_heating_load_series_kw ./ KWH_PER_MMBTU
     r["process_heat_thermal_load_series_mmbtu_per_hour"] = process_heat_load_series_kw ./ KWH_PER_MMBTU
