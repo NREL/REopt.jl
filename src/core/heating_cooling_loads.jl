@@ -1462,6 +1462,7 @@ function BuiltInProcessHeatLoad(
         "Industrial" => Dict(
             "Chemical" => 15000.0,  # mid-sized chemical processes
             "FlatLoad" => 10000,  #  continuous operations throughout the year
+            "Warehouse" => 7000
         )
     )
     if isempty(city)
