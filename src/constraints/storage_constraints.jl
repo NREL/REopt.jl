@@ -101,7 +101,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
     end
 end
 
-function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
+function add_hot_thermal_storage_dispatch_constraints(m, p; _n="")
 
     # # Constraint (4f)-1: (Hot) Thermal production sent to storage or grid must be less than technology's rated production
 	# # Constraint (4f)-1a: BoilerTechs

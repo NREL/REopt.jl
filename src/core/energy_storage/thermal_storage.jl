@@ -83,6 +83,7 @@ Base.@kwdef struct HotThermalStorageDefaults <: AbstractThermalStorageDefaults
     macrs_itc_reduction::Float64 = 0.5
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kwh::Float64 = 0.0
+    can_supply_steam_turbine = false
     can_serve_dhw::Bool = true
     can_serve_space_heating::Bool = true
     can_serve_process_heat::Bool = false
@@ -253,6 +254,7 @@ struct HotThermalStorage <: AbstractThermalStorage
     discharge_efficiency::Float64
     net_present_cost_per_kwh::Float64
     om_cost_per_kwh::Float64
+    can_supply_steam_turbine::Bool
     can_serve_dhw::Bool
     can_serve_space_heating::Bool
     can_serve_process_heat::Bool
@@ -306,6 +308,7 @@ struct HotThermalStorage <: AbstractThermalStorage
             discharge_efficiency,
             net_present_cost_per_kwh,
             om_cost_per_kwh,
+            s.can_supply_steam_turbine,
             s.can_serve_dhw,
             s.can_serve_space_heating,
             s.can_serve_process_heat,
