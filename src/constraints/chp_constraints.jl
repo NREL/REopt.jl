@@ -117,10 +117,10 @@ function add_chp_supplementary_firing_constraints(m, p; _n="")
 end
 
 function add_binCHPIsOnInTS_constraints(m, p; _n="")
-    # Note, min_turn_down_fraction for CHP is only enforced in p.time_steps_with_grid
     @constraint(m, [t in p.techs.chp, ts in p.time_steps_with_grid],
         m[Symbol("dvRatedProduction"*_n)][t, ts] <= p.s.chp.max_kw * m[Symbol("binCHPIsOnInTS"*_n)][t, ts]
     )
+    # Note, min_turn_down_fraction for CHP is only enforced in p.time_steps_with_grid
     @constraint(m, [t in p.techs.chp, ts in p.time_steps_with_grid],
         p.s.chp.min_turn_down_fraction * m[Symbol("dvSize"*_n)][t] - m[Symbol("dvRatedProduction"*_n)][t, ts] <=
         p.s.chp.max_kw * (1 - m[Symbol("binCHPIsOnInTS"*_n)][t, ts])

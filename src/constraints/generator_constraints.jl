@@ -22,7 +22,7 @@ function add_binGenIsOnInTS_constraints(m,p)
 	@constraint(m, [t in p.techs.gen, ts in p.time_steps],
 		m[:dvRatedProduction][t, ts] <= p.max_sizes[t] * m[:binGenIsOnInTS][t, ts]
 	)
-	# Note: min_turn_down_fraction is only enforced when `off_grid_flag` is true and in p.time_steps_with_grid, but not for grid outages for on-grid analyses
+	# Note: min_turn_down_fraction is only enforced in p.time_steps_with_grid or when `off_grid_flag` is true, but not for grid outages for on-grid analyses
 	if p.s.settings.off_grid_flag 
 		@constraint(m, [t in p.techs.gen, ts in p.time_steps_without_grid],
 			p.s.generator.min_turn_down_fraction * m[:dvSize][t] - m[:dvRatedProduction][t, ts] <=
