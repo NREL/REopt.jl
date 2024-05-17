@@ -507,7 +507,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	if p.s.settings.include_health_in_objective
 		add_to_expression!(Costs, m[:Lifecycle_Emissions_Cost_Health])
 	end
-	
+	if "ExistingHydropower_Turbine1" in p.techs.elec
+		print("\n Adding hydro to the objective function")
+		add_to_expression!(Costs, sum(m[:dvSpillwayWaterFlow][ts] for ts in p.time_steps)) # minimize the water that is released in the spillway
+	end
 	## Modify objective with incentives that are not part of the LCC
 	# 1. Comfort limit violation costs
 	m[:ObjectivePenalties] += m[:dvComfortLimitViolationCost]
@@ -640,6 +643,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 			binTurbineActive[p.techs.existing_hydropower, p.time_steps], Bin
 			TurbineEfficiency[p.techs.existing_hydropower, p.time_steps] >= 0
 			ReservoirHead[p.time_steps] >= 0
+			dvSpillwayWaterFlow[p.time_steps] >= 0
 			# Note: the power flow from the hydropower are part of: dvRatedProduction, dvProductionToGrid, and dvProductionToStorage
 		end
 	end

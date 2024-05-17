@@ -25,9 +25,9 @@ function add_existing_hydropower_results(m::JuMP.AbstractModel, p::REoptInputs, 
 	#GenPerUnitSizeOMCosts = @expression(m, p.third_party_factor * p.pwf_om * sum(m[:dvSize][t] * p.om_cost_per_kw[t] for t in p.techs.gen))
 
 	#GenPerUnitProdOMCosts = @expression(m, p.third_party_factor * p.pwf_om * p.hours_per_time_step *
-#		sum(m[:dvRatedProduction][t, ts] * p.production_factor[t, ts] * p.s.generator.om_cost_per_kwh
-#			for t in p.techs.gen, ts in p.time_steps)
-#	)
+ #		sum(m[:dvRatedProduction][t, ts] * p.production_factor[t, ts] * p.s.generator.om_cost_per_kwh
+ #			for t in p.techs.gen, ts in p.time_steps)
+ #	)
 	r["fixed_size_kw_per_turbine"] = p.s.existing_hydropower.existing_kw_per_turbine # round(value(sum(m[:dvSize][t] for t in p.techs.existing_hydropower)), digits=2)
 	
 	#r["lifecycle_fixed_om_cost_after_tax"] = round(value(GenPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_rate_fraction), digits=0)
@@ -76,11 +76,37 @@ function add_existing_hydropower_results(m::JuMP.AbstractModel, p::REoptInputs, 
 	)
 	r["annual_energy_produced_kwh"] = round(value(AnnualExistingHydropowerProd), digits=0)
     
+	spillway_water_flow = @expression(m, [ts in p.time_steps], m[:dvSpillwayWaterFlow][ts])
+	r["spillway_water_outflow_cubic_meters_per_second"] = round.(value.(spillway_water_flow).data, digits = 3)
+
 	for i in p.techs.existing_hydropower
 		print("\n Saving results for turbine "*string(i))
 	    r[string(i)*"_results"] = Dict([])
 		water_outflow_individual = @expression(m, [ts in p.time_steps], m[:dvWaterOutFlow][i, ts])
 		r[string(i)*"_results"]["water_outflow"] = round.(value.(water_outflow_individual).data, digits=3)
+
+		individual_turbine_power_output = @expression(m, [ts in p.time_steps], m[:dvRatedProduction][i, ts] * p.production_factor[i, ts] * p.levelization_factor[i])
+		r[string(i)*"_results"]["power_output_kw"] = round.(value.(individual_turbine_power_output).data, digits=3)
+		r[string(i)*"_results"]["turbine_on_or_off"] = value.(m[:binTurbineActive][i,:]).data
+
+
+		individual_turbine_power_to_grid = @expression(m, [ts in p.time_steps], sum(m[:dvProductionToGrid][i, u, ts] for u in p.export_bins_by_tech[i]))
+
+		if !isempty(p.s.storage.types.elec)
+			individual_turbine_power_to_batt = @expression(m, [ts in p.time_steps],
+				sum(m[:dvProductionToStorage][b, i, ts] for b in p.s.storage.types.elec))
+			else
+				individual_turbine_power_to_batt = zeros(length(p.time_steps))
+			end
+		
+
+		individual_turbine_power_to_load = @expression(m, [ts in p.time_steps], 
+		(m[:dvRatedProduction][i, ts] * p.production_factor[i, ts] * p.levelization_factor[i]) - individual_turbine_power_to_batt[ts] - individual_turbine_power_to_grid[ts])
+
+		r[string(i)*"_results"]["power_to_load_kw"] = round.(value.(individual_turbine_power_to_load).data, digits=3)
+		r[string(i)*"_results"]["power_to_battery_kw"] = round.(value.(individual_turbine_power_to_batt).data, digits=3)
+		r[string(i)*"_results"]["power_to_grid_kw"] = round.(value.(individual_turbine_power_to_grid).data, digits=3)
+
 	end
 
 	d["ExistingHydropower"] = r

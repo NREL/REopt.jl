@@ -47,7 +47,7 @@ function add_existing_hydropower_constraints(m,p)
 
 	# Water flow rate is between the maximum and minimum allowable levels
 	@constraint(m, [ts in p.time_steps], # t in p.techs.existing_hydropower],
-		 sum(m[:dvWaterOutFlow][t, ts] for t in p.techs.existing_hydropower) >= p.s.existing_hydropower.minimum_water_output_cubic_meter_per_second_total_of_all_turbines   # m[:dvWaterOutFlow][t, ts]
+		 sum(m[:dvWaterOutFlow][t, ts] for t in p.techs.existing_hydropower) + m[:dvSpillwayWaterFlow][ts] >= p.s.existing_hydropower.minimum_water_output_cubic_meter_per_second_total_of_all_turbines   # m[:dvWaterOutFlow][t, ts]
 	)
 	 
 	@constraint(m, [t in p.techs.existing_hydropower, ts in p.time_steps], 
@@ -55,7 +55,7 @@ function add_existing_hydropower_constraints(m,p)
 		)
 
 	# The total water volume changes based on the water flow rates
-	@constraint(m, [ts in p.time_steps[2:end]], m[:dvWaterVolume][ts] == m[:dvWaterVolume][ts-1] + ((3600/p.s.settings.time_steps_per_hour)* (p.s.existing_hydropower.water_inflow_cubic_meter_per_second[ts] - sum(m[:dvWaterOutFlow][t,ts] for t in p.techs.existing_hydropower)))) # m[:dvWaterOutFlow][ts]) 
+	@constraint(m, [ts in p.time_steps[2:end]], m[:dvWaterVolume][ts] == m[:dvWaterVolume][ts-1] + ((3600/p.s.settings.time_steps_per_hour)* (p.s.existing_hydropower.water_inflow_cubic_meter_per_second[ts] - m[:dvSpillwayWaterFlow][ts] - sum(m[:dvWaterOutFlow][t,ts] for t in p.techs.existing_hydropower)))) # m[:dvWaterOutFlow][ts]) 
 	@constraint(m, m[:dvWaterVolume][1] == p.s.existing_hydropower.initial_reservoir_volume) 
 	
 	# Total power out must be less than or equal to 
@@ -65,6 +65,13 @@ function add_existing_hydropower_constraints(m,p)
 
 	# Limit power output from the hydropower turbines to the existing kW capacity:
 	@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:dvRatedProduction][t,ts] <= m[:binTurbineActive][t,ts]*p.s.existing_hydropower.existing_kw_per_turbine)
+
+	# Limit the water flow through the spillway, if a value was input
+	if !isnothing(p.s.existing_hydropower.spillway_maximum_cubic_meter_per_second)
+		@constraint(m, [ts in p.time_steps], m[:dvSpillwayWaterFlow][ts] <= p.s.existing_hydropower.spillway_maximum_cubic_meter_per_second)
+	end 
+	# prevent spike in spillway use during the first time step
+	@constraint(m, [ts in p.time_steps], m[:dvSpillwayWaterFlow][1] == 1)
 
 end
 

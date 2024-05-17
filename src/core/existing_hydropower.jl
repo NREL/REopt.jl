@@ -15,6 +15,7 @@
     initial_reservoir_volume::Real=0.0  # The initial volume of water in the reservoir
     minimum_water_output_cubic_meter_per_second_total_of_all_turbines::Real=0,
     minimum_water_output_cubic_meter_per_second_per_turbine::Real=0.0,
+    spillway_maximum_cubic_meter_per_second::Real=nothing # maximum water flow that can flow out of the spillway (structure that enables water overflowing from the reservoir to pass over/through the dam)
     hydro_production_factor_series::Union{Nothing, Array{<:Real,1}} = nothing, # Optional user-defined production factors. Must be normalized to units of kW-AC/kW-DC nameplate. The series must be one year (January through December) of hourly, 30-minute, or 15-minute generation data.
     can_net_meter::Bool = off_grid_flag ? false : true,
     can_wholesale::Bool = off_grid_flag ? false : true,
@@ -38,6 +39,7 @@ mutable struct ExistingHydropower <: AbstractTech
     initial_reservoir_volume 
     minimum_water_output_cubic_meter_per_second_total_of_all_turbines  #::Float64
     minimum_water_output_cubic_meter_per_second_per_turbine
+    spillway_maximum_cubic_meter_per_second
     hydro_production_factor_series  #::AbstractArray{Float64,1}
     can_net_meter  #::Bool 
     can_wholesale  #::Bool
@@ -58,6 +60,7 @@ mutable struct ExistingHydropower <: AbstractTech
         initial_reservoir_volume::Real=0.0, # the initial volume of the reservoir
         minimum_water_output_cubic_meter_per_second_total_of_all_turbines::Real=0.0,
         minimum_water_output_cubic_meter_per_second_per_turbine::Real=0.0,
+        spillway_maximum_cubic_meter_per_second::Real=nothing, 
         hydro_production_factor_series::Union{Nothing, Array{<:Real,1}} = nothing,
         can_net_meter::Bool = false,
         can_wholesale::Bool = false,
@@ -98,6 +101,7 @@ mutable struct ExistingHydropower <: AbstractTech
             initial_reservoir_volume,
             minimum_water_output_cubic_meter_per_second_total_of_all_turbines,
             minimum_water_output_cubic_meter_per_second_per_turbine,
+            spillway_maximum_cubic_meter_per_second,
             hydro_production_factor_series,
             can_net_meter,
             can_wholesale,
