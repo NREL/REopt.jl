@@ -34,7 +34,7 @@ function add_hot_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict,
             r["storage_to_load_series_mmbtu_per_hour"] = round.(value.(discharge .- storage_to_turbine) / KWH_PER_MMBTU, digits=7)
         else
             r["storage_to_load_series_mmbtu_per_hour"] = round.(value.(discharge) / KWH_PER_MMBTU, digits=7)
-            r["storage_to_turbine_series_mmbtu_per_hour"] = []
+            r["storage_to_turbine_series_mmbtu_per_hour"] = zeros(length(p.time_steps))
         end
 
         if "SpaceHeating" in p.heating_loads && p.s.storage.attr[b].can_serve_space_heating
@@ -182,7 +182,7 @@ function add_hot_sensible_storage_results(m::JuMP.AbstractModel, p::REoptInputs,
             r["storage_to_load_series_mmbtu_per_hour"] = round.(value.(discharge .- storage_to_turbine) / KWH_PER_MMBTU, digits=7)
         else
             r["storage_to_load_series_mmbtu_per_hour"] = round.(value.(discharge) / KWH_PER_MMBTU, digits=7)
-            r["storage_to_turbine_series_mmbtu_per_hour"] = []
+            r["storage_to_turbine_series_mmbtu_per_hour"] = zeros(length(p.time_steps))
         end
     else
         r["soc_series_fraction"] = []
