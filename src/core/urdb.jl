@@ -222,7 +222,6 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
 
     rates = Float64[]
     energy_tier_limits_kwh = Float64[]
-    non_kwh_units = false
 
     for energy_tier in d["energyratestructure"][period_with_max_tiers]
         # energy_tier is a dictionary, eg. {'max': 1000, 'rate': 0.07531, 'adj': 0.0119, 'unit': 'kWh'}
@@ -232,18 +231,7 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
             append!(energy_tier_limits_kwh, energy_tier_max)
         end
 
-        if "unit" in keys(energy_tier) && string(energy_tier["unit"]) != "kWh"
-            @warn "Using average rate in tier due to exotic units of " energy_tier["unit"]
-            non_kwh_units = true
-        end
-
         append!(rates, get(energy_tier, "rate", 0) + get(energy_tier, "adj", 0))
-    end
-
-    if non_kwh_units
-        rate_average = sum(rates) / maximum([length(rates), 1])
-        n_energy_tiers = 1
-        energy_tier_limits_kwh = Float64[bigM]
     end
 
     energy_cost_vector = Float64[]
@@ -276,9 +264,7 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
                     else
                         tier_use = tier
                     end
-                    total_rate = non_kwh_units ? 
-                                rate_average : 
-                                (get(d["energyratestructure"][period][tier_use], "rate", 0) + 
+                    total_rate = (get(d["energyratestructure"][period][tier_use], "rate", 0) + 
                                 get(d["energyratestructure"][period][tier_use], "adj", 0)) 
                     sell = get(d["energyratestructure"][period][tier_use], "sell", 0)
 
