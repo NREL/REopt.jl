@@ -31,6 +31,19 @@ function steam_turbine_production_constraints(m, p; _n="")
                     sum(m[Symbol("dvHeatFromStorageToTurbine"*_n)][b,q,ts] for b in p.s.storage.types.hot, q in p.heating_loads)
                     )
                 )
+    if p.s.steam_turbine.charge_storage_only  #assume hot water TES first, hot sensible TES otherwise.
+        if "HotThermalStorage" in p.s.storage.types.hot
+            @constraint(m, TurbineToStorageOnly[t in p.techs.steam_turbine, q in p.heating_loads, ts in p.time_steps],
+                m[Symbol("dvHeatingProduction"*_n)][t,q,ts] == m[Symbol("dvHeatToStorage"*_n)]["HotThermalStorage",t,q,ts]
+            )
+        elseif "HotSensibleTes" in p.s.storage.types.hot
+            @constraint(m, TurbineToStorageOnly[t in p.techs.steam_turbine, q in p.heating_loads, ts in p.time_steps],
+                m[Symbol("dvHeatingProduction"*_n)][t,q,ts] == m[Symbol("dvHeatToStorage"*_n)]["HotSensibleTes",t,q,ts]
+            )
+        else
+            @warn "SteamTurbine.charge_storage_only is set to True, but no hot storage technologies exist."
+        end
+    end
 end
 
 function add_steam_turbine_constraints(m, p; _n="")
