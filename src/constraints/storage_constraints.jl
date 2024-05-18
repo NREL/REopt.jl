@@ -43,6 +43,7 @@ function add_general_storage_dispatch_constraints(m, p, b; _n="")
     #Constraint (4j): Dispatch from storage is no greater than power capacity
 	@constraint(m, [ts in p.time_steps],
         m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts]
+        + m[Symbol("dvStorageToGrid")][ts] # TODO: add "b" index to this decision variable
     )
 
 end
@@ -107,7 +108,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
 #    if p.s.storage.attr[b].is_ldes
 #        @constraint(m, m[Symbol("dvStoragePower"*_n)][b] == m[Symbol("dvStorageEnergy"*_n)][b] / p.s.storage.attr[b].duration)
 #    end
-    #=
+    
     # Prevent charging and discharging of the battery at the same time
     @constraint(m, [ts in p.time_steps], m[Symbol("dvBattCharge_binary")][ts] + m[Symbol("dvBattDischarge_binary")][ts] <= 1 )
     @constraint(m, [ts in p.time_steps],
@@ -118,7 +119,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
                    m[Symbol("dvStorageToGrid")][ts] +
                    m[Symbol("dvDischargeFromStorage"*_n)][b, ts] <= 
                    p.s.storage.attr[b].max_kw * m[Symbol("dvBattDischarge_binary")][ts])
-    =#
+    
 
 
 end
