@@ -39,25 +39,41 @@ function add_existing_hydropower_results(m::JuMP.AbstractModel, p::REoptInputs, 
 
 	# sum these power flows from all of the turbines
 	if !isempty(p.s.storage.types.elec)
-	hydropowerToBatt = @expression(m, [ts in p.time_steps],
-		sum(m[:dvProductionToStorage][b, t, ts] for b in p.s.storage.types.elec, t in p.techs.existing_hydropower))
+		hydropowerToBatt = @expression(m, [ts in p.time_steps],
+			sum(m[:dvProductionToStorage][b, t, ts] for b in p.s.storage.types.elec, t in p.techs.existing_hydropower))
 	else
 		hydropowerToBatt = zeros(length(p.time_steps))
 	end
 	r["electric_to_storage_series_kw_all_turbines_combined"] = round.(value.(hydropowerToBatt).data, digits=3)
 
+	# Compute the curtailed power
+	HydroCurtailment = @expression(m, [ts in p.time_steps],
+		sum(m[Symbol("dvCurtail")][t, ts] for t in p.techs.existing_hydropower))
+	
+	r["electric_curtailed_series_kw_all_turbines_combined"] = round.(value.(HydroCurtailment).data, digits=3)
+
+	# Hydropower to grid
 	hydropowerToGrid = @expression(m, [ts in p.time_steps],
 		sum(m[:dvProductionToGrid][t, u, ts] for t in p.techs.existing_hydropower, u in p.export_bins_by_tech[t])
 	)
 	r["electric_to_grid_series_kw_all_turbines_combined"] = round.(value.(hydropowerToGrid).data, digits=3)
 
+	# Hydropower to load
 	hydropowerToLoad = @expression(m, [ts in p.time_steps],
 		sum(m[:dvRatedProduction][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
 			for t in p.techs.existing_hydropower) -
-			hydropowerToBatt[ts] - hydropowerToGrid[ts]
+			hydropowerToBatt[ts] - hydropowerToGrid[ts] - HydroCurtailment[ts]
 	)
 	r["electric_to_load_series_kw_all_turbines_combined"] = round.(value.(hydropowerToLoad).data, digits=3)
-
+	
+	# Total hydropower power output
+	TotalHydropowerPowerOutput = @expression(m, [ts in p.time_steps],
+		sum(m[:dvRatedProduction][t, ts] * p.production_factor[t, ts] * p.levelization_factor[t]
+			for t in p.techs.existing_hydropower) - HydroCurtailment[ts]
+	)
+	r["total_power_output_series_kw_all_turbines_combined"] = round.(value.(TotalHydropowerPowerOutput).data, digits=3)
+	
+	# Reservoir volume
 	reservoir_volume = @expression(m, [ts in p.time_steps], m[:dvWaterVolume][ts])
 	r["reservoir_water_volume_cubic_meters"] = round.(value.(reservoir_volume).data, digits=3) 
 
@@ -74,7 +90,7 @@ function add_existing_hydropower_results(m::JuMP.AbstractModel, p::REoptInputs, 
 		p.levelization_factor[t]
 			for t in p.techs.existing_hydropower, ts in p.time_steps)
 	)
-	r["annual_energy_produced_kwh"] = round(value(AnnualExistingHydropowerProd), digits=0)
+	r["annual_energy_produced_kwh"] = round(value(AnnualExistingHydropowerProd), digits=0) # includes curtailment
     
 	spillway_water_flow = @expression(m, [ts in p.time_steps], m[:dvSpillwayWaterFlow][ts])
 	r["spillway_water_outflow_cubic_meters_per_second"] = round.(value.(spillway_water_flow).data, digits = 3)
@@ -85,7 +101,10 @@ function add_existing_hydropower_results(m::JuMP.AbstractModel, p::REoptInputs, 
 		water_outflow_individual = @expression(m, [ts in p.time_steps], m[:dvWaterOutFlow][i, ts])
 		r[string(i)*"_results"]["water_outflow"] = round.(value.(water_outflow_individual).data, digits=3)
 
-		individual_turbine_power_output = @expression(m, [ts in p.time_steps], m[:dvRatedProduction][i, ts] * p.production_factor[i, ts] * p.levelization_factor[i])
+		individual_turbine_power_curtailment = @expression(m, [ts in p.time_steps], m[Symbol("dvCurtail")][i, ts])
+		r[string(i)*"_results"]["electric_curtailed_series_kw"] = round.(value.(individual_turbine_power_curtailment), digits=3)
+
+		individual_turbine_power_output = @expression(m, [ts in p.time_steps], (m[:dvRatedProduction][i, ts] * p.production_factor[i, ts] * p.levelization_factor[i]) - individual_turbine_power_curtailment[ts])
 		r[string(i)*"_results"]["power_output_kw"] = round.(value.(individual_turbine_power_output).data, digits=3)
 		r[string(i)*"_results"]["turbine_on_or_off"] = value.(m[:binTurbineActive][i,:]).data
 
@@ -101,7 +120,7 @@ function add_existing_hydropower_results(m::JuMP.AbstractModel, p::REoptInputs, 
 		
 
 		individual_turbine_power_to_load = @expression(m, [ts in p.time_steps], 
-		(m[:dvRatedProduction][i, ts] * p.production_factor[i, ts] * p.levelization_factor[i]) - individual_turbine_power_to_batt[ts] - individual_turbine_power_to_grid[ts])
+		(m[:dvRatedProduction][i, ts] * p.production_factor[i, ts] * p.levelization_factor[i]) - individual_turbine_power_to_batt[ts] - individual_turbine_power_to_grid[ts] - individual_turbine_power_curtailment[ts])
 
 		r[string(i)*"_results"]["power_to_load_kw"] = round.(value.(individual_turbine_power_to_load).data, digits=3)
 		r[string(i)*"_results"]["power_to_battery_kw"] = round.(value.(individual_turbine_power_to_batt).data, digits=3)

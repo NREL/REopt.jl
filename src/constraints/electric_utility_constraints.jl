@@ -125,7 +125,8 @@ function add_export_constraints(m, p; _n="")
     end
 
     if !isempty(WHL_techs)
-
+        print("\n techs in wholesale export bin are: ")
+        print(p.techs_by_exportbin[:WHL])
         if typeof(binNEM) <: Real  # no need for wholesale binary
             binWHL = 1
             WHL_benefit = @expression(m, p.pwf_e * p.hours_per_time_step *
@@ -133,7 +134,7 @@ function add_export_constraints(m, p; _n="")
                 #        for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
                 ((sum(m[Symbol("dvStorageToGrid")][ts]*p.s.electric_tariff.export_rates[:WHL][ts] for ts in p.time_steps)) + 
                    sum(sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
-                         for t in ["PV"]) for ts in p.time_steps) #for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps) # TODO: fix this
+                        for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps) #for t in ["PV"]) for ts in p.time_steps) <- tested that line temporarily
                 )
             )
         else
@@ -142,12 +143,14 @@ function add_export_constraints(m, p; _n="")
             max_bene = sum([ld*rate for (ld,rate) in zip(p.s.electric_load.loads_kw, p.s.electric_tariff.export_rates[:WHL])])*10
             WHL_benefit = @variable(m, lower_bound = max_bene)
 
+
             @constraint(m, binNEM + binWHL == 1)  # can either NEM or WHL export, not both
             if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
                 @constraint(m,
                     binWHL => {WHL_benefit >= p.pwf_e * p.hours_per_time_step *
                         ((sum(m[Symbol("dvStorageToGrid")][ts]*p.s.electric_tariff.export_rates[:WHL][ts] for ts in p.time_steps)) +
-                        (sum(m[Symbol("dvHydroToGrid")][ts]*p.s.electric_tariff.export_rates[:WHL][ts] for ts in p.time_steps)) +
+                        # Hydropower is part of dvProductionToGrid
+                        #(sum(m[Symbol("dvHydroToGrid")][ts]*p.s.electric_tariff.export_rates[:WHL][ts] for ts in p.time_steps)) +
                         sum( sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
                                 for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
                         )
@@ -158,7 +161,8 @@ function add_export_constraints(m, p; _n="")
                 @constraint(m,
                     WHL_benefit >= p.pwf_e * p.hours_per_time_step *
                     ((sum(m[Symbol("dvStorageToGrid")][ts]*p.s.electric_tariff.export_rates[:WHL][ts] for ts in p.time_steps)) +
-                    (sum(m[Symbol("dvHydroToGrid")][ts]*p.s.electric_tariff.export_rates[:WHL][ts] for ts in p.time_steps)) +
+                    # Hydropower is part of dvProductionToGrid
+                    #(sum(m[Symbol("dvHydroToGrid")][ts]*p.s.electric_tariff.export_rates[:WHL][ts] for ts in p.time_steps)) +
                         sum( sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
                                 for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
                     )
