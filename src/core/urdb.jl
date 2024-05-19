@@ -220,7 +220,6 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
     period_with_max_tiers = findall(energy_tiers .== maximum(energy_tiers))[1]
     n_energy_tiers = Int(maximum(energy_tier_set))
 
-    rates = Float64[]
     energy_tier_limits_kwh = Float64[]
 
     for energy_tier in d["energyratestructure"][period_with_max_tiers]
@@ -230,8 +229,6 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
         if "rate" in keys(energy_tier) || "adj" in keys(energy_tier)  || "sell" in keys(energy_tier)
             append!(energy_tier_limits_kwh, energy_tier_max)
         end
-
-        append!(rates, get(energy_tier, "rate", 0) + get(energy_tier, "adj", 0))
     end
 
     energy_cost_vector = Float64[]
