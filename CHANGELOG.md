@@ -24,8 +24,8 @@ Classify the change according to the following categories:
     ### Removed
 
 ## Develop
-### Fixed
-- Convert `max_electric_load_kw` to _Float64_ before passing to function `get_chp_defaults_prime_mover_size_class`
+### Changed
+- When the URDB response `energyratestructure` has a "unit" value that is not "kWh", treat rates normally, assuming the units are kWh (don't average rates in each energy tier).
 
 ## v0.46.1
 ### Changed
