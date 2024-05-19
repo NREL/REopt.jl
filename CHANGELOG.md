@@ -23,6 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop
+### Changed
+- When the URDB response `energyratestructure` has a "unit" value that is not "kWh", treat rates normally, assuming the units are kWh (don't average rates in each energy tier).
+
 ## v0.46.1
 ### Changed
 - Updated the GHP testset .json `./test/scenarios/ghp_inputs.json` to include a nominal HotThermalStorage and ColdThermalStorage system.
