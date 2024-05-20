@@ -165,7 +165,11 @@ end
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
-```
+    per_timestep_self_discharge_fraction::Float64 = 0.0 # Battery self-discharge as a fraction per timestep loss based on kWh stored in each timestep
+    is_ldes::Bool = false
+    duration::Real = 100.0
+    require_start_and_end_charge_to_be_equivalent::Bool = false
+``` 
 """
 Base.@kwdef struct ElectricStorageDefaults
     off_grid_flag::Bool = false
@@ -198,6 +202,10 @@ Base.@kwdef struct ElectricStorageDefaults
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
+    per_timestep_self_discharge_fraction::Float64 = 0.0
+    is_ldes::Bool = false
+    duration::Real = 100.0
+    require_start_and_end_charge_to_be_equivalent::Bool = false
 end
 
 
@@ -223,6 +231,8 @@ struct ElectricStorage <: AbstractElectricStorage
     installed_cost_per_kwh::Real
     replace_cost_per_kw::Real
     replace_cost_per_kwh::Real
+    om_cost_per_kw::Real
+    om_cost_per_kwh::Real
     inverter_replacement_year::Int
     battery_replacement_year::Int
     macrs_option_years::Int
@@ -239,16 +249,20 @@ struct ElectricStorage <: AbstractElectricStorage
     model_degradation::Bool
     degradation::Degradation
     minimum_avg_soc_fraction::Float64
+    per_timestep_self_discharge_fraction::Float64
+    is_ldes::Bool
+    duration::Real
+    require_start_and_end_charge_to_be_equivalent::Bool
 
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
 
         if s.inverter_replacement_year >= f.analysis_years
-            @warn "Battery inverter replacement costs (per_kw) will not be considered because inverter_replacement_year is greater than or equal to analysis_years."
+            @warn "Battery inverter replacement costs (per_kw) will not be considered because inverter_replacement_year >= analysis_years."
         end
 
         if s.battery_replacement_year >= f.analysis_years
-            @warn "Battery replacement costs (per_kwh) will not be considered because battery_replacement_year is greater than or equal to analysis_years."
+            @warn "Battery replacement costs (per_kwh) will not be considered because battery_replacement_year >= analysis_years."
         end
 
         net_present_cost_per_kw = effective_cost(;
@@ -311,6 +325,8 @@ struct ElectricStorage <: AbstractElectricStorage
             s.installed_cost_per_kwh,
             replace_cost_per_kw,
             replace_cost_per_kwh,
+            s.om_cost_per_kw,
+            s.om_cost_per_kwh,
             s.inverter_replacement_year,
             s.battery_replacement_year,
             s.macrs_option_years,
@@ -326,7 +342,11 @@ struct ElectricStorage <: AbstractElectricStorage
             net_present_cost_per_kwh,
             s.model_degradation,
             degr,
-            s.minimum_avg_soc_fraction
+            s.minimum_avg_soc_fraction,
+            s.per_timestep_self_discharge_fraction,
+            s.is_ldes,
+            s.duration,
+            s.require_start_and_end_charge_to_be_equivalent
         )
     end
 end
