@@ -26,9 +26,9 @@ end
 
 function add_general_storage_dispatch_constraints(m, p, b; _n="")
     # Constraint (4a): initial state of charge
-	@constraint(m,
-        m[Symbol("dvStoredEnergy"*_n)][b, 0] == p.s.storage.attr[b].soc_init_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
-    )
+	# @constraint(m,
+    #     m[Symbol("dvStoredEnergy"*_n)][b, 0] == p.s.storage.attr[b].soc_init_fraction * m[Symbol("dvStorageEnergy"*_n)][b]
+    # )
 
     #Constraint (4n): State of charge upper bound is storage system size
     @constraint(m, [ts in p.time_steps],
@@ -113,7 +113,11 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
     end
 
     if p.s.storage.attr[b].require_start_and_end_charge_to_be_equivalent
-        @constraint(m, m[:dvStoredEnergy]["ElectricStorage",maximum(p.time_steps)] == p.s.storage.attr[b].soc_init_fraction * m[Symbol("dvStorageEnergy"*_n)][b] )
+        # @constraint(m, m[:dvStoredEnergy]["ElectricStorage",maximum(p.time_steps)] == p.s.storage.attr[b].soc_init_fraction * m[Symbol("dvStorageEnergy"*_n)][b] )
+        print("\nSetting init SOC = final SOC\n")
+        @constraint(m,
+            m[Symbol("dvStoredEnergy"*_n)][b, 0] == m[:dvStoredEnergy]["ElectricStorage", maximum(p.time_steps)]
+        )
     end
 
     # Prevent charging and discharging of the battery at the same time
