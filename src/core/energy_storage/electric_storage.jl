@@ -151,8 +151,6 @@ end
     installed_cost_per_kwh::Real = 455.0
     replace_cost_per_kw::Real = 715.0
     replace_cost_per_kwh::Real = 318.0
-    om_cost_per_kw::Real = 0.0
-    om_cost_per_kwh::Real = 0.0
     inverter_replacement_year::Int = 10
     battery_replacement_year::Int = 10
     macrs_option_years::Int = 7
@@ -186,8 +184,6 @@ Base.@kwdef struct ElectricStorageDefaults
     installed_cost_per_kwh::Real = 455.0
     replace_cost_per_kw::Real = 715.0
     replace_cost_per_kwh::Real = 318.0
-    om_cost_per_kw::Real = 0.0
-    om_cost_per_kwh::Real = 0.0
     inverter_replacement_year::Int = 10
     battery_replacement_year::Int = 10
     macrs_option_years::Int = 7
