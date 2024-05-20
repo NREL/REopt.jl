@@ -23,9 +23,9 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop
-### Changed
-- When the URDB response `energyratestructure` has a "unit" value that is not "kWh", treat rates normally, assuming the units are kWh (don't average rates in each energy tier).
+## v0.47.0
+### Fixed
+- Updated the PV O&M results output to account for the third-party factor for third-party ownership analyses.
 
 ## v0.46.1
 ### Changed
