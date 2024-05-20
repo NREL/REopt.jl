@@ -23,6 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.47.0
+### Fixed
+- Updated the PV O&M results output to account for the third-party factor for third-party ownership analyses.
+
 ## v0.46.1
 ### Changed
 - Updated the GHP testset .json `./test/scenarios/ghp_inputs.json` to include a nominal HotThermalStorage and ColdThermalStorage system.
