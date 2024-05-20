@@ -48,6 +48,13 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
 
         BattExport = (m[Symbol("dvStorageToGrid")][ts] for ts in p.time_steps)
         r["storage_to_grid_series_kw"] = round.(value.(BattExport), digits = 3)
+
+        StoragePerUnitOMCosts = p.third_party_factor * p.pwf_om * (p.s.storage.attr[b].om_cost_per_kw * m[Symbol("dvStoragePower")][b] +
+                                                                 p.s.storage.attr[b].om_cost_per_kwh * m[Symbol("dvStorageEnergy")][b])
+
+        r["lifecycle_om_cost_after_tax"] = round(value(StoragePerUnitOMCosts) * (1 - p.s.financial.owner_tax_rate_fraction), digits=0)
+        r["year_one_om_cost_before_tax"] = round(value(StoragePerUnitOMCosts) / (p.pwf_om * p.third_party_factor), digits=0)
+        
     else
         r["soc_series_fraction"] = []
         r["storage_to_load_series_kw"] = []
