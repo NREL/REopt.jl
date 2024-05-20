@@ -59,6 +59,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
             #+  (p.s.storage.attr[b].charge_efficiency * m[Symbol("dvHydroToStorage")][ts])
             - ((m[Symbol("dvDischargeFromStorage"*_n)][b,ts]+m[Symbol("dvStorageToGrid")][ts])  / p.s.storage.attr[b].discharge_efficiency)
         )
+        - (p.s.storage.attr[b].per_timestep_self_discharge_fraction * m[Symbol("dvStoredEnergy"*_n)][b, ts])
 	)
 
     # Note: Hydro to storage not added for off-grid scenarios
@@ -68,6 +69,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
             sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.elec) 
             - m[Symbol("dvDischargeFromStorage"*_n)][b, ts] / p.s.storage.attr[b].discharge_efficiency
         )
+        - (p.s.storage.attr[b].per_timestep_self_discharge_fraction * m[Symbol("dvStoredEnergy"*_n)][b, ts])
     )
 
 	# Constraint (4i)-1: Dispatch to electrical storage is no greater than power capacity
