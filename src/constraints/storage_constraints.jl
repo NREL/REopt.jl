@@ -120,7 +120,11 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
                    m[Symbol("dvDischargeFromStorage"*_n)][b, ts] <= 
                    p.s.storage.attr[b].max_kw * m[Symbol("dvBattDischarge_binary")][ts])
     
+    # Constraint requiring the battery initial and final state of charge to be the same
+    @constraint(m, m[:dvStoredEnergy]["ElectricStorage",maximum(p.time_steps)] == p.s.storage.attr[b].soc_init_fraction * m[Symbol("dvStorageEnergy"*_n)][b] )
 
+    # Temporary constraint added for 100 hr LDES duration:
+    #@constraint(m, m[Symbol("dvStoragePower"*_n)][b] == m[Symbol("dvStorageEnergy"*_n)][b]/100
 
 end
 
