@@ -126,8 +126,9 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
     @constraint(m, m[:dvStoredEnergy]["ElectricStorage",maximum(p.time_steps)] == p.s.storage.attr[b].soc_init_fraction * m[Symbol("dvStorageEnergy"*_n)][b] )
 
     # Temporary constraint added for 100 hr LDES duration:
-    #@constraint(m, m[Symbol("dvStoragePower"*_n)][b] == m[Symbol("dvStorageEnergy"*_n)][b]/100
-
+    if p.s.storage.attr[b].max_kwh >= 1
+        @constraint(m, m[Symbol("dvStoragePower"*_n)][b] == m[Symbol("dvStorageEnergy"*_n)][b]/100)
+    end
 end
 
 function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
