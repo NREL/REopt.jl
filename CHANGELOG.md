@@ -23,9 +23,9 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## v0.47.0
-### Fixed
-- Updated the PV O&M results output to account for the third-party factor for third-party ownership analyses.
+## Develop
+### Changed
+- When the URDB response `energyratestructure` has a "unit" value that is not "kWh", throw an error instead of averaging rates in each energy tier.
 
 ## v0.46.1
 ### Changed
