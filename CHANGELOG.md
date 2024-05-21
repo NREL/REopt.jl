@@ -25,7 +25,7 @@ Classify the change according to the following categories:
 
 ## Develop
 ### Changed
-- When the URDB response `energyratestructure` has a "unit" value that is not "kWh", treat rates normally, assuming the units are kWh (don't average rates in each energy tier).
+- When the URDB response `energyratestructure` has a "unit" value that is not "kWh", throw an error instead of averaging rates in each energy tier.
 
 ## v0.46.1
 ### Changed
