@@ -231,6 +231,10 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
         end
     end
 
+    if "unit" in keys(energy_tier) && string(energy_tier["unit"]) != "kWh"
+        throw(@error("URDB energy tiers have exotic units of " * energy_tier["unit"]))
+    end
+
     energy_cost_vector = Float64[]
     sell_vector = Float64[]
 
