@@ -25,7 +25,7 @@ Classify the change according to the following categories:
 
 ## Develop
 ### Fixed
-- Updated the PV O&M results output to account for the third-party factor for third-party ownership analyses.
+- Updated the PV result **lifecycle_om_cost_after_tax** to account for the third-party factor for third-party ownership analyses.
 
 ## Develop
 ### Fixed
