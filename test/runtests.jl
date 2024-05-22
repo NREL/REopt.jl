@@ -1186,6 +1186,16 @@ else  # run HiGHS tests
                 @test results["PV"]["size_kw"] ≈ p.s.pvs[1].existing_kw
             end
 
+            @testset "Multi-tier demand rates" begin
+                #This test ensures that when multiple demand regimes are included that the tier limits load appropriately
+                d = JSON.parsefile("./scenarios/no_techs.json")
+                d["ElectricTariff"] = Dict()
+                d["ElectricTariff"]["urdb_response"] = JSON.parsefile("./scenarios/multi_tier_urdb_response.json")
+                s = Scenario(d)
+                p = REoptInputs(s)
+                @test p.s.electric_tariff.tou_demand_tier_limits[1] ≈ 100.0 atol=1.0e-4
+            end
+
             @testset "Tiered TOU Demand" begin
                 data = JSON.parsefile("./scenarios/tiered_tou_demand.json")
                 model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
