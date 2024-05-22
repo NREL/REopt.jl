@@ -207,7 +207,7 @@ function CHP(d::Dict;
     # For non-heating CHP, Prime Generator, defaults require electric load metrics
     if !isempty(electric_load_series_kw)
         avg_electric_load_kw = sum(electric_load_series_kw) / length(electric_load_series_kw)
-        max_electric_load_kw = maximum(electric_load_series_kw)
+        max_electric_load_kw = convert(Float64, maximum(electric_load_series_kw))
     else
         avg_electric_load_kw = nothing
         max_electric_load_kw = nothing

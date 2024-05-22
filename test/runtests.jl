@@ -22,7 +22,7 @@ elseif "CPLEX" in ARGS
     end
 
 else  # run HiGHS tests
-
+    
     @testset "Inputs" begin
         @testset "hybrid profile" begin
             electric_load = REopt.ElectricLoad(; 
