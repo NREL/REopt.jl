@@ -23,9 +23,13 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## v0.47.0
+## Develop
 ### Fixed
 - Updated the PV O&M results output to account for the third-party factor for third-party ownership analyses.
+
+## Develop
+### Fixed
+- Convert `max_electric_load_kw` to _Float64_ before passing to function `get_chp_defaults_prime_mover_size_class`
 
 ## v0.46.1
 ### Changed
