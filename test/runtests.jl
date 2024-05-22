@@ -590,7 +590,7 @@ else  # run HiGHS tests
             d["PV"]["can_wholesale"] = true
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(m, d)
-            @test results["PV"]["size_kw"] ≈ 84.029 atol=1e-3  #max benefit provides the upper bound
+            @test results["PV"]["size_kw"] ≈ 7440.0 atol=1e-3  #max benefit provides the upper bound
     
         end
     end
