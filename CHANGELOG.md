@@ -25,43 +25,55 @@ Classify the change according to the following categories:
 
 ## Develop 2024-04-05
 ### Added
-- Add new parameters **max_duration_hours** and **min_duration_hours** to bound the energy duration of battery storage
+- Add new **ElectricStorage** parameters **max_duration_hours** and **min_duration_hours** to bound the energy duration of battery storage
 
-## Develop - 2024-04-11
-## Develop 2024-04-25
-### Changed 
-- Change the way we determine which dataset to utilize in the PVWatts API call. Previously, we utilized defined lat-long bounds to determine if "nsrdb" or "intl" data should be used in PVWatts call. Now, we call the Solar Dataset Query API (v2) (https://developer.nrel.gov/docs/solar/data-query/v2/) to determine the dataset to use, and include "tmy3" as an option, as this is currently the best-available data for many locations in Alaska. 
-### Added
-- Info to user including name of PV and/or temperature datasource used and distance from site location to datasource location
-- Warning to user if data is not from NSRDB or if data is more than 200 miles away 
-  
-## Develop 2024-04-30
+## Develop
+### Fixed
+- Convert `max_electric_load_kw` to _Float64_ before passing to function `get_chp_defaults_prime_mover_size_class`
+
+## v0.46.1
+### Changed
+- Updated the GHP testset .json `./test/scenarios/ghp_inputs.json` to include a nominal HotThermalStorage and ColdThermalStorage system.
+### Fixed
+- Fixed a bug in which the model fails to build when both GHP and either Hot or Cold Thermal Storage are present.
+
+## v.0.46.0
 ### Added 
 - In `src/core/absorption_chiller.jl` struct, added field **heating_load_input** to the AbsorptionChiller struct
 - Added new variables **dvHeatToStorage** and **dvHeatFromStorage** which are indexed on `p.heating_loads` and added reconciliation constraints so that **dvProductionToStorage** and **dvDischargeFromStorage** maintain their relationship to state of charge for Hot thermal energy storage.
 - In `src/constraints/thermal_tech_constraints.jl`, added function **no_existing_boiler_production** which prevents ExistingBoiler from producing heat in optimized (non-BAU) scenarios 
 - for all heating techs and CHP, added fields **can_serve_space_heating**, **can_serve_dhw**, and **can_serve_process_heat** in core structs and added new results fields **thermal_to_dhw_load_series_mmbtu_per_hour**, **thermal_to_space_heating_load_series_mmbtu_per_hour**, and **thermal_to_process_heat_load_series_mmbtu_per_hour**
-- in `src/core/techs.jl`, added new sets **ghp_techs**, **cooling_techs**, **techs_can_serve_space_heating**, **techs_can_serve_dhw**, and **techs_can_serve_process_heat**
-- in `src/core/reopt_inputs.jl`, added new fields **heating_loads**, **heating_loads_kw**, **heating_loads_served_by_tes**, and **absorption_chillers_using_heating_load** to the REoptInputs and BAUInputs structs. in the math, new set `p.heating_loads` has index q (to represent "qualities" of heat).
+- In `src/core/techs.jl`, added new sets **ghp_techs**, **cooling_techs**, **techs_can_serve_space_heating**, **techs_can_serve_dhw**, and **techs_can_serve_process_heat**
+- In `src/core/reopt_inputs.jl`, added new fields **heating_loads**, **heating_loads_kw**, **heating_loads_served_by_tes**, and **absorption_chillers_using_heating_load** to the REoptInputs and BAUInputs structs. in the math, new set `p.heating_loads` has index q (to represent "qualities" of heat).
 - In `src/core/heating_cooling_loads.jl`, added new struct **ProcessHeatLoad**
 - In `src/core/scenario.jl`, added new field **process_heat_load**
 - In `src/mpc/inputs.jl`, added new field **heating_loads**
 - In `src/core/existing_boiler.jl`, added field **retire_in_optimal** to the ExistingBoiler struct
-
+- Info to user including name of PV and/or temperature datasource used and distance from site location to datasource location
+- Warning to user if data is not from NSRDB or if data is more than 200 miles away
+- In `results/heating_cooling_load.jl`, added new fields **process_heat_thermal_load_series_mmbtu_per_hour**, **process_heat_boiler_fuel_load_series_mmbtu_per_hour**, **annual_calculated_process_heat_thermal_load_mmbtu**, and **annual_calculated_process_heat_boiler_fuel_load_mmbtu** to HeatingLoad results, with sum heating loads now including process heat 
 ### Changed
-- refactored **dvThermalProduction** to be separated in **dvCoolingProduction** and **dvHeatingProduction** with **dvHeatingProduction** now indexed on `p.heating_loads`
-- refactored heating load balance constraints so that a separate flow balance is reconciled for each heating load in `p.heating_loads`
-- renamed **dvThermalProductionYIntercept** to **dvHeatingProductionYIntercept**
-- divided **ThermalStorage** into **HotThermalStorage** and **ColdThermalStorage** as the former now has attributes related to the compatible heat loads as input or output.
-- changed technologies included **dvProductionToWaste** to all heating techs.  NOTE: this variable is forced to zero to allow steam turbine tests to pass, but I believe that waste heat should be allowed for the turbine.  A TODO is in place to review this commit (a406cc5df6e4a27b56c92815c35d04815904e495).
-- changed test values and tolerances for CHP Sizing test.
+- Change the way we determine which dataset to utilize in the PVWatts API call. Previously, we utilized defined lat-long bounds to determine if "nsrdb" or "intl" data should be used in PVWatts call. Now, we call the Solar Dataset Query API (v2) (https://developer.nrel.gov/docs/solar/data-query/v2/) to determine the dataset to use, and include "tmy3" as an option, as this is currently the best-available data for many locations in Alaska. 
+- Refactored **dvThermalProduction** to be separated in **dvCoolingProduction** and **dvHeatingProduction** with **dvHeatingProduction** now indexed on `p.heating_loads`
+- Refactored heating load balance constraints so that a separate flow balance is reconciled for each heating load in `p.heating_loads`
+- Renamed **dvThermalProductionYIntercept** to **dvHeatingProductionYIntercept**
+- Divided **ThermalStorage** into **HotThermalStorage** and **ColdThermalStorage** as the former now has attributes related to the compatible heat loads as input or output.
+- Changed technologies included **dvProductionToWaste** to all heating techs.  NOTE: this variable is forced to zero to allow steam turbine tests to pass, but I believe that waste heat should be allowed for the turbine.  A TODO is in place to review this commit (a406cc5df6e4a27b56c92815c35d04815904e495).
+- Changed test values and tolerances for CHP Sizing test.
 - Updated test sets "Emissions and Renewable Energy Percent" and "Minimize Unserved Load" to decrease computing time.
-
+- Test for tiered TOU demand rates in `test/runtests.jl`
+- Updated `pop_year` and `income_year` used in call to EASIUR data (`get_EASIUR2005`) each to 2024, from 2020. 
+- Updated usd conversion used for EASIUR health cost calcs from USD_2010_to_2020 = 1.246 to USD_2010_to_2024 = 1.432
 ### Fixed  
-- added a constraint in `src/constraints/steam_turbine_constraints.jl` that allows for heat loads to reconcile when thermal storage is paired with a SteamTurbine. 
+- Added a constraint in `src/constraints/steam_turbine_constraints.jl` that allows for heat loads to reconcile when thermal storage is paired with a SteamTurbine. 
+- Fixed a bug in which net-metering system size limits could be exceeded while still obtaining the net-metering benefit due to a large "big-M".
+- Fixed a reshape call in function `parse_urdb_tou_demand` that incorrectly assumed row major instead of column major ordering
+- Fixed a loop range in function `parse_urdb_tou_demand` that incorrectly started at 0 instead of 1
+- Added the missing tier index when accessing `p.s.electric_tariff.tou_demand_rates` in function `add_elec_utility_expressions`
 
 ## v0.45.0
 ### Fixed 
+- Fixed bug in call to `GhpGhx.jl` when sizing hybrid GHP using the fractional sizing method
 - Added `export_rate_beyond_net_metering_limit` to list of inputs to be converted to type Real, to avoid MethodError if type is vector of Any. 
 - Fix blended CRB processing when one or more load types have zero annual energy
 - When calculating CHP fuel intercept and slope, use 1 for the HHV because CHP fuel measured in units of kWh, instead of using non-existent **CHP.fuel_higher_heating_value_kwh_per_gal**

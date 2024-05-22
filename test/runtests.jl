@@ -22,7 +22,7 @@ elseif "CPLEX" in ARGS
     end
 
 else  # run HiGHS tests
-
+    
     @testset "Inputs" begin
         @testset "hybrid profile" begin
             electric_load = REopt.ElectricLoad(; 
@@ -579,6 +579,24 @@ else  # run HiGHS tests
         end
     end
 
+    @testset "Net Metering" begin
+        @testset "Net Metering Limit and Wholesale" begin
+            #case 1: net metering limit is met by PV
+            d = JSON.parsefile("./scenarios/net_metering.json")
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(m, d)
+            @test results["PV"]["size_kw"] ≈ 30.0 atol=1e-3
+    
+            #case 2: wholesale rate is high, big-M is met
+            d["ElectricTariff"]["wholesale_rate"] = 5.0
+            d["PV"]["can_wholesale"] = true
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(m, d)
+            @test results["PV"]["size_kw"] ≈ 84.029 atol=1e-3  #max benefit provides the upper bound
+    
+        end
+    end
+
     @testset "Imported Xpress Test Suite" begin
         @testset "Heating loads and addressable load fraction" begin
             # Default LargeOffice CRB with SpaceHeatingLoad and DomesticHotWaterLoad are served by ExistingBoiler
@@ -1077,7 +1095,7 @@ else  # run HiGHS tests
 
             @testset "Tiered Energy" begin
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-                results = run_reopt(m, "./scenarios/tiered_rate.json")
+                results = run_reopt(m, "./scenarios/tiered_energy_rate.json")
                 @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ 2342.88
                 @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ 24000.0 atol=0.1
                 @test results["ElectricLoad"]["annual_calculated_kwh"] ≈ 24000.0 atol=0.1
@@ -1170,16 +1188,26 @@ else  # run HiGHS tests
                 @test results["PV"]["size_kw"] ≈ p.s.pvs[1].existing_kw
             end
 
+            @testset "Tiered TOU Demand" begin
+                data = JSON.parsefile("./scenarios/tiered_tou_demand.json")
+                model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                results = run_reopt(model, data)
+                max_demand = data["ElectricLoad"]["annual_kwh"] / 8760
+                tier1_max = data["ElectricTariff"]["urdb_response"]["demandratestructure"][1][1]["max"]
+                tier1_rate = data["ElectricTariff"]["urdb_response"]["demandratestructure"][1][1]["rate"]
+                tier2_rate = data["ElectricTariff"]["urdb_response"]["demandratestructure"][1][2]["rate"]
+                expected_demand_charges = 12 * (tier1_max * tier1_rate + (max_demand - tier1_max) * tier2_rate)
+                @test results["ElectricTariff"]["year_one_demand_cost_before_tax"] ≈ expected_demand_charges atol=1                
+            end
 
             # # tiered monthly demand rate  TODO: expected results?
             # m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            # data = JSON.parsefile("./scenarios/tiered_rate.json")
+            # data = JSON.parsefile("./scenarios/tiered_energy_rate.json")
             # data["ElectricTariff"]["urdb_label"] = "59bc22705457a3372642da67"
             # s = Scenario(data)
             # inputs = REoptInputs(s)
             # results = run_reopt(m, inputs)
 
-            # TODO test for tiered TOU demand rates
         end
 
         @testset "EASIUR" begin
@@ -1187,7 +1215,7 @@ else  # run HiGHS tests
             d["Site"]["latitude"] = 30.2672
             d["Site"]["longitude"] = -97.7431
             scen = Scenario(d)
-            @test scen.financial.NOx_grid_cost_per_tonne ≈ 4534.032470 atol=0.1
+            @test scen.financial.NOx_grid_cost_per_tonne ≈ 5510.61 atol=0.1
         end
 
         @testset "Wind" begin
