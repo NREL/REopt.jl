@@ -44,7 +44,7 @@
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kg::Real = 0.0
     minimum_avg_soc_fraction::Float64 = 0.0
-    daily_leakage_fraction::Float64 = 0.0006667
+    soc_min_applies_during_outages::Bool = false
 ```
 """
 Base.@kwdef struct HydrogenStorageLPDefaults
@@ -61,7 +61,7 @@ Base.@kwdef struct HydrogenStorageLPDefaults
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kg::Real = 0.0
     minimum_avg_soc_fraction::Float64 = 0.0
-    daily_leakage_fraction::Float64 = 0.0006667
+    soc_min_applies_during_outages::Bool = false
 end
 
 
@@ -86,7 +86,7 @@ struct HydrogenStorageLP <: AbstractHydrogenStorage
     total_rebate_per_kg::Real
     net_present_cost_per_kg::Real
     minimum_avg_soc_fraction::Float64
-    daily_leakage_fraction::Float64
+    soc_min_applies_during_outages::Bool
 
     function HydrogenStorageLP(d::Dict, f::Financial)  
         s = HydrogenStorageLPDefaults(;d...)
@@ -124,7 +124,7 @@ struct HydrogenStorageLP <: AbstractHydrogenStorage
             s.total_rebate_per_kg,
             net_present_cost_per_kg,
             s.minimum_avg_soc_fraction,
-            s.daily_leakage_fraction
+            s.soc_min_applies_during_outages
         )
     end
 end

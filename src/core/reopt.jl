@@ -476,9 +476,15 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		else
 			fix_MG_storage_variables(m,p)
 		end
+		
+		if !isempty(p.techs.fuel_cell)
+			add_MG_hydrogen_constraints(m,p)
+		# else
+		# 	fix_MG_hydrogen_variables(m,p)
+		end
+		
 		add_cannot_have_MG_with_only_PVwind_constraints(m,p)
 		add_MG_size_constraints(m,p)
-		
 		m[:ExpectedMGFuelCost] = 0
         if !isempty(p.techs.gen)
 			add_MG_Gen_fuel_burn_constraints(m,p)
@@ -723,14 +729,14 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		# TODO: currently defining more decision variables than necessary b/c using rectangular arrays, could use dicts of decision variables instead
         @variables m begin # if there is more than one specified outage, there can be more othan one outage start time
 			dvUnservedLoad[S, tZeros, outage_time_steps] >= 0 # unserved load not met by system
-			dvMGProductionToStorage[p.techs.elec, S, tZeros, outage_time_steps] >= 0 # Electricity going to the storage system during each time_step
-			dvMGDischargeFromStorage[S, tZeros, outage_time_steps] >= 0 # Electricity coming from the storage system during each time_step
-			dvMGRatedProduction[p.techs.elec, S, tZeros, outage_time_steps]  # MG Rated Production at every time_step.  Multiply by production_factor to get actual energy
-			dvMGStoredEnergy[S, tZeros, 0:max_outage_duration] >= 0 # State of charge of the MG storage system
+			dvMGProductionToStorage[union(p.s.storage.types.elec, p.s.storage.types.hydrogen_lp), union(p.techs.elec, p.techs.electrolyzer), S, tZeros, outage_time_steps] >= 0 # Electricity going to the storage system during each time_step
+			dvMGDischargeFromStorage[union(p.s.storage.types.elec, p.s.storage.types.hydrogen_lp), S, tZeros, outage_time_steps] >= 0 # Electricity coming from the storage system during each time_step
+			dvMGRatedProduction[union(p.techs.elec, p.techs.electrolyzer), S, tZeros, outage_time_steps]  # MG Rated Production at every time_step.  Multiply by production_factor to get actual energy
+			dvMGStoredEnergy[union(p.s.storage.types.elec, p.s.storage.types.hydrogen_lp), S, tZeros, 0:max_outage_duration] >= 0 # State of charge of the MG storage system
 			dvMaxOutageCost[S] >= 0 # maximum outage cost dependent on number of outage durations
 			dvMGTechUpgradeCost[p.techs.elec] >= 0
 			dvMGStorageUpgradeCost >= 0
-			dvMGsize[p.techs.elec] >= 0
+			dvMGsize[union(p.techs.elec, p.techs.electrolyzer)] >= 0
 			
 			dvMGFuelUsed[p.techs.elec, S, tZeros] >= 0
             dvMGGenMaxFuelUsage[S] >= 0
@@ -744,6 +750,9 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 			binMGGenIsOnInTS[S, tZeros, outage_time_steps], Bin
             binMGCHPIsOnInTS[S, tZeros, outage_time_steps], Bin
             dvMGCHPFuelBurnYIntercept[S, tZeros] >= 0
+
+			dvMGProductionToElectrolyzer[p.techs.elec, S, tZeros, outage_time_steps] >= 0
+			dvMGStorageToElectrolyzer[S, tZeros, outage_time_steps] >= 0
 		end
 	end
 
