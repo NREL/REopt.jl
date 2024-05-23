@@ -93,7 +93,7 @@ function add_outage_results(m, p, d::Dict)
         end
     end
 
-	for (tech_type_name, tech_set) in [("pv", p.techs.pv), ("wind", "Wind" in p.techs.elec ? ["Wind"] : String[]), ("generator", p.techs.gen), ("chp", p.techs.chp)]
+	for (tech_type_name, tech_set) in [("pv", p.techs.pv), ("wind", "Wind" in p.techs.elec ? ["Wind"] : String[]), ("generator", p.techs.gen), ("chp", p.techs.chp), ("fuel_cell", p.techs.fuel_cell)]
 		if !isempty(tech_set)
 			r[tech_type_name * "_microgrid_size_kw"] = round(
 				sum(
@@ -112,12 +112,44 @@ function add_outage_results(m, p, d::Dict)
 			)
 			if isempty(p.s.storage.types.elec)
 				r[tech_type_name * "_to_storage_series_kw"] = []
+				r[tech_type_name * "_to_load_series_kw"] = round.(
+					sum(
+						(
+							value.(
+								m[:dvMGRatedProduction][t, s, tz, ts] * (p.production_factor[t, tz+ts-1] + p.unavailability[t][tz+ts-1]) * p.levelization_factor[t]
+								- m[:dvMGCurtail][t, s, tz, ts]
+								for s in p.s.electric_utility.scenarios,
+									tz in p.s.electric_utility.outage_start_time_steps,
+									ts in p.s.electric_utility.outage_time_steps
+							) 
+							for t in tech_set
+						)
+					), 
+					digits=3
+				)
+				
 			else
 				r[tech_type_name * "_to_storage_series_kw"] = round.(
 					sum(
 						(
 							value.(
-								m[:dvMGProductionToStorage][t, s, tz, ts] 
+								m[:dvMGProductionToStorage]["ElectricStorage", t, s, tz, ts] 
+								for s in p.s.electric_utility.scenarios,
+									tz in p.s.electric_utility.outage_start_time_steps,
+									ts in p.s.electric_utility.outage_time_steps
+							) 
+							for t in tech_set
+						)
+					), 
+					digits=3
+				)
+				r[tech_type_name * "_to_load_series_kw"] = round.(
+					sum(
+						(
+							value.(
+								m[:dvMGRatedProduction][t, s, tz, ts] * (p.production_factor[t, tz+ts-1] + p.unavailability[t][tz+ts-1]) * p.levelization_factor[t]
+								- m[:dvMGCurtail][t, s, tz, ts]
+								- m[:dvMGProductionToStorage]["ElectricStorage", t, s, tz, ts]
 								for s in p.s.electric_utility.scenarios,
 									tz in p.s.electric_utility.outage_start_time_steps,
 									ts in p.s.electric_utility.outage_time_steps
@@ -133,22 +165,6 @@ function add_outage_results(m, p, d::Dict)
 					(
 						value.(
 							m[:dvMGCurtail][t, s, tz, ts] 
-							for s in p.s.electric_utility.scenarios,
-								tz in p.s.electric_utility.outage_start_time_steps,
-								ts in p.s.electric_utility.outage_time_steps
-						) 
-						for t in tech_set
-					)
-				), 
-				digits=3
-			)
-			r[tech_type_name * "_to_load_series_kw"] = round.(
-				sum(
-					(
-						value.(
-							m[:dvMGRatedProduction][t, s, tz, ts] * (p.production_factor[t, tz+ts-1] + p.unavailability[t][tz+ts-1]) * p.levelization_factor[t]
-							- m[:dvMGCurtail][t, s, tz, ts]
-							- m[:dvMGProductionToStorage][t, s, tz, ts]
 							for s in p.s.electric_utility.scenarios,
 								tz in p.s.electric_utility.outage_start_time_steps,
 								ts in p.s.electric_utility.outage_time_steps
