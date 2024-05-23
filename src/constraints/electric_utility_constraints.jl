@@ -118,9 +118,11 @@ function add_export_constraints(m, p; _n="")
             WHL_benefit = @expression(m, p.pwf_e * p.hours_per_time_step *
                 #sum( sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
                 #        for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
-                ((sum(m[Symbol("dvStorageToGrid")][ts]*p.s.electric_tariff.export_rates[:WHL][ts] for ts in p.time_steps)) + 
-                   sum(sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
-                         for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
+                sum(p.s.electric_tariff.export_rates[:WHL][ts] *
+                    (
+                        m[Symbol("dvStorageToGrid")][ts] + 
+                        sum(m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] for t in p.techs_by_exportbin[:WHL])
+                    ) for ts in p.time_steps
                 )
             )
         else
