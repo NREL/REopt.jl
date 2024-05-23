@@ -217,8 +217,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			end
 		else
 			# Additional variables for exporting storage energy to the grid
-			dv = "binBattCharging" 
-			m[Symbol(dv)] = @variable(m, [0:p.time_steps[end]], base_name=dv, Bin) # Binary for battery charging (vs discharging)
+			m[:binBattCharging] = @variable(m, p.time_steps], base_name=dv, Bin) # Binary for battery charging (vs discharging)
 
 			add_storage_size_constraints(m, p, b)
 			add_general_storage_dispatch_constraints(m, p, b)
