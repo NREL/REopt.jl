@@ -229,7 +229,7 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
         energy_tier_max = get(energy_tier, "max", bigM)
 
         if "rate" in keys(energy_tier) || "adj" in keys(energy_tier)  || "sell" in keys(energy_tier)
-            append!(energy_tier_limits_kwh, energy_tier_max)
+            append!(energy_tier_limits_kwh, min(energy_tier_max, bigM))
         end
 
         if "unit" in keys(energy_tier) && string(energy_tier["unit"]) != "kWh"
@@ -391,7 +391,8 @@ function parse_urdb_demand_tiers(A::Array; bigM=1.0e8)
     for period in range(1, stop=length(A))
         demand_max = Float64[]
         for tier in A[period] 
-            append!(demand_max, get(tier, "max", bigM))
+            tier_max = get(tier, "max", bigM)
+            append!(demand_max, min(bigM, tier_max))
         end
         demand_tiers[period] = demand_max
         append!(demand_maxes, demand_max[end])  # TODO should this be maximum(demand_max)?
