@@ -26,10 +26,10 @@ to meet the heating load.
 
 ```julia
 function ASHP(;
-    min_mmbtu_per_hour::Real = 0.0, # Minimum thermal power size
-    max_mmbtu_per_hour::Real = BIG_NUMBER, # Maximum thermal power size
-    installed_cost_per_mmbtu_per_hour::Union{Real, nothing} = nothing, # Thermal power-based cost
-    om_cost_per_mmbtu_per_hour::Union{Real, nothing} = nothing, # Thermal power-based fixed O&M cost
+    min_ton_per_hour::Real = 0.0, # Minimum thermal power size
+    max_ton_per_hour::Real = BIG_NUMBER, # Maximum thermal power size
+    installed_cost_per_ton_per_hour::Union{Real, nothing} = nothing, # Thermal power-based cost
+    om_cost_per_ton_per_hour::Union{Real, nothing} = nothing, # Thermal power-based fixed O&M cost
     macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
     can_supply_steam_turbine::Union{Bool, nothing} = nothing # If the boiler can supply steam to the steam turbine for electric production
@@ -43,10 +43,10 @@ function ASHP(;
 ```
 """
 function ASHP(;
-        min_mmbtu_per_hour::Real = 0.0,
-        max_mmbtu_per_hour::Real = BIG_NUMBER,
-        installed_cost_per_mmbtu_per_hour::Union{Real, Nothing} = nothing,
-        om_cost_per_mmbtu_per_hour::Union{Real, Nothing} = nothing,
+        min_ton_per_hour::Real = 0.0,
+        max_ton_per_hour::Real = BIG_NUMBER,
+        installed_cost_per_ton_per_hour::Union{Real, Nothing} = nothing,
+        om_cost_per_ton_per_hour::Union{Real, Nothing} = nothing,
         macrs_option_years::Int = 0,
         macrs_bonus_fraction::Real = 0.0,
         can_supply_steam_turbine::Union{Bool, Nothing} = nothing,
@@ -61,11 +61,11 @@ function ASHP(;
     defaults = get_ashp_defaults()
 
     # populate defaults as needed
-    if isnothing(installed_cost_per_mmbtu_per_hour)
-        installed_cost_per_mmbtu_per_hour = defaults["installed_cost_per_mmbtu_per_hour"]
+    if isnothing(installed_cost_per_ton_per_hour)
+        installed_cost_per_ton_per_hour = defaults["installed_cost_per_ton_per_hour"]
     end
-    if isnothing(om_cost_per_mmbtu_per_hour)
-        om_cost_per_mmbtu_per_hour = defaults["om_cost_per_mmbtu_per_hour"]
+    if isnothing(om_cost_per_ton_per_hour)
+        om_cost_per_ton_per_hour = defaults["om_cost_per_ton_per_hour"]
     end
     if isnothing(can_supply_steam_turbine)
         can_supply_steam_turbine = defaults["can_supply_steam_turbine"]
@@ -84,11 +84,11 @@ function ASHP(;
     end
 
     # Convert max sizes, cost factors from mmbtu_per_hour to kw
-    min_kw = min_mmbtu_per_hour * KWH_PER_MMBTU
-    max_kw = max_mmbtu_per_hour * KWH_PER_MMBTU
+    min_kw = min_ton_per_hour * KWH_PER_MMBTU * 0.012
+    max_kw = max_ton_per_hour * KWH_PER_MMBTU * 0.012
 
-    installed_cost_per_kw = installed_cost_per_mmbtu_per_hour / KWH_PER_MMBTU
-    om_cost_per_kw = om_cost_per_mmbtu_per_hour / KWH_PER_MMBTU
+    installed_cost_per_kw = installed_cost_per_ton_per_hour / (KWH_PER_MMBTU * 0.012)
+    om_cost_per_kw = om_cost_per_ton_per_hour / (KWH_PER_MMBTU * 0.012)
 
     
     ASHP(

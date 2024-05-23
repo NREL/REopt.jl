@@ -656,7 +656,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     ashp = nothing
     cop_heating = []
     cop_cooling = []
-    if haskey(d, "ASHP") && d["ASHP"]["max_mmbtu_per_hour"] > 0.0
+    if haskey(d, "ASHP") && d["ASHP"]["max_ton_per_hour"] > 0.0
         # If user does not provide heating cop series then assign cop curves based on ambient temperature
         if !haskey(d["ASHP"], "cop_heating") || !haskey(d["ASHP"], "cop_cooling")
             # If PV is evaluated, get ambient temperature series from PVWatts and assign PV production factor
