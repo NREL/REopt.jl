@@ -58,12 +58,5 @@
                 "duration_hours": 0
             }
         ]
-    },
-    "PV": {
-        "max_kw": 0.0
-      },
-    "ElectricStorage": {
-        "max_kw": 0.0,
-        "max_kwh": 0.0
-    }    
+    }
 }
