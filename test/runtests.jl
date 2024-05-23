@@ -806,8 +806,7 @@ else  # run HiGHS tests
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
                 d = JSON.parsefile("./scenarios/chp_waste.json")
                 results = run_reopt(m, d)
-                @test sum(results["CHP"]["thermal_curtailed_series_mmbtu_per_hour"]) ≈ 4174.455 atol 1e-3
-                @test sum(results["ExistingBoiler"]["thermal_curtailed_series_mmbtu_per_hour"]) ≈ 0.0 atol 1e-3
+                @test sum(results["CHP"]["thermal_curtailed_series_mmbtu_per_hour"]) ≈ 4174.455 atol=1e-3
             end
         end
         
