@@ -801,6 +801,14 @@ else  # run HiGHS tests
                 @test results["CHP"]["annual_thermal_production_mmbtu"] ≈ 149136.6 rtol=1e-5
                 @test results["ElectricTariff"]["lifecycle_demand_cost_after_tax"] ≈ 5212.7 rtol=1e-5
             end
+
+            @testset "CHP to Waste Heat" begin
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
+                d = JSON.parsefile("./scenarios/chp_waste.json")
+                results = run_reopt(m, d)
+                @test sum(results["CHP"]["thermal_curtailed_series_mmbtu_per_hour"]) ≈ 4174.455 atol 1e-3
+                @test sum(results["ExistingBoiler"]["thermal_curtailed_series_mmbtu_per_hour"]) ≈ 0.0 atol 1e-3
+            end
         end
         
         @testset "FlexibleHVAC" begin
