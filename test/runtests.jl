@@ -637,7 +637,7 @@ else  # run HiGHS tests
                 data_sizing = JSON.parsefile("./scenarios/chp_sizing.json")
                 s = Scenario(data_sizing)
                 inputs = REoptInputs(s)
-                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
                 results = run_reopt(m, inputs)
             
                 @test round(results["CHP"]["size_kw"], digits=0) ≈ 330.0 atol=20.0
