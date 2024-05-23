@@ -23,12 +23,14 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop
+## Develop 2024-05-23
 ### Changed
 - When the URDB response `energyratestructure` has a "unit" value that is not "kWh", throw an error instead of averaging rates in each energy tier.
+- Refactored heating flow constraints to be in ./src/constraints/thermal_tech_constraints.jl instead of its previous separate locations in the storage and turbine constraints.
 ### Fixed
 - Updated the PV result **lifecycle_om_cost_after_tax** to account for the third-party factor for third-party ownership analyses.
 - Convert `max_electric_load_kw` to _Float64_ before passing to function `get_chp_defaults_prime_mover_size_class`
+- Fixed a bug in which excess heat from one heating technology resulted in waste heat from another technology.
 
 ## v0.46.1
 ### Changed
