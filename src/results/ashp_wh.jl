@@ -91,7 +91,7 @@ function add_ashp_wh_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n=
     end
     r["thermal_to_process_heat_load_series_mmbtu_per_hour"] = round.(value.(ASHPWHToProcessHeatKW ./ KWH_PER_MMBTU), digits=5)
     
-    r["electric_consumption_series_kw"] = round.(value.(ASHPWHElectricConsumptionSeries .+ ASHPColdElectricConsumptionSeries), digits=3)
+    r["electric_consumption_series_kw"] = round.(value.(ASHPWHElectricConsumptionSeries), digits=3)
     r["annual_electric_consumption_kwh"] = p.hours_per_time_step * sum(r["electric_consumption_series_kw"])
 
     d["ASHP_WH"] = r
