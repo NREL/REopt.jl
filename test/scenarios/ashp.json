@@ -10,10 +10,10 @@
         "fuel_cost_per_mmbtu": 10
     },
     "ASHP": {
-        "min_ton_per_hour": 0.0,
-        "max_ton_per_hour": 100000,
-        "installed_cost_per_ton_per_hour": 4050,
-        "om_cost_per_ton_per_hour": 0.0,
+        "min_ton": 0.0,
+        "max_ton": 100000,
+        "installed_cost_per_ton": 4050,
+        "om_cost_per_ton": 0.0,
 		"macrs_option_years": 0,
 		"macrs_bonus_fraction": 0.0,
         "can_supply_steam_turbine": false,

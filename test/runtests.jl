@@ -2364,13 +2364,13 @@ else  # run HiGHS tests
             d = JSON.parsefile("./scenarios/ashp.json")
             d["SpaceHeatingLoad"]["annual_mmbtu"] = 0.5 * 8760
             d["DomesticHotWaterLoad"]["annual_mmbtu"] = 0.5 * 8760
-            d["ASHP"]["installed_cost_per_ton_per_hour"] = 1050
+            d["ASHP"]["installed_cost_per_ton"] = 1050
         
             s = Scenario(d)
             p = REoptInputs(s)
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(m, p)
-            @test results["ASHP"]["size_ton_per_hour"] ≈ 0.0 atol=0.1
+            @test results["ASHP"]["size_ton"] ≈ 0.0 atol=0.1
             @test results["ASHP"]["annual_thermal_production_mmbtu"] ≈ 0.0 atol=0.1
             @test results["ASHP"]["annual_electric_consumption_kwh"] ≈ 0.0 atol=0.1
             @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ 87600.0 atol=0.1
@@ -2387,7 +2387,7 @@ else  # run HiGHS tests
             annual_thermal_prod = 0.8 * 8760  #80% efficient boiler --> 0.8 MMBTU of heat load per hour
             annual_ashp_consumption = sum(0.8 * REopt.KWH_PER_MMBTU / p.heating_cop["ASHP"][ts] for ts in p.time_steps)
             annual_energy_supplied = 87600 + annual_ashp_consumption
-            @test results["ASHP"]["size_ton_per_hour"] ≈ 0.8 atol=0.1
+            @test results["ASHP"]["size_ton"] ≈ 0.8 atol=0.1
             @test results["ASHP"]["annual_thermal_production_mmbtu"] ≈ annual_thermal_prod rtol=1e-4
             @test results["ASHP"]["annual_electric_consumption_kwh"] ≈ annual_ashp_consumption rtol=1e-4
             @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ annual_energy_supplied rtol=1e-4
@@ -2404,7 +2404,7 @@ else  # run HiGHS tests
             results = run_reopt(m, p)
             annual_ashp_consumption += 0.1 * sum(REopt.KWH_THERMAL_PER_TONHOUR / p.cooling_cop["ASHP"][ts] for ts in p.time_steps)
             annual_energy_supplied = annual_ashp_consumption + 87600 - 2*876.0*REopt.KWH_THERMAL_PER_TONHOUR
-            @test results["ASHP"]["size_ton_per_hour"] > 0.8  #size increases when cooling load also served
+            @test results["ASHP"]["size_ton"] > 0.8  #size increases when cooling load also served
             @test results["ASHP"]["annual_electric_consumption_kwh"] ≈ annual_ashp_consumption rtol=1e-4
             @test results["ASHP"]["annual_thermal_production_tonhour"] ≈ 876.0 atol=1e-4
         end
