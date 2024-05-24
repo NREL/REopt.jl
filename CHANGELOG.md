@@ -28,6 +28,7 @@ Classify the change according to the following categories:
 - Convert `max_electric_load_kw` to _Float64_ before passing to function `get_chp_defaults_prime_mover_size_class`
 - Increased the big-M bound on maximum net metering benefit to prevent artificially low export benefits
 - Fixed a bug in which tier limits did not load correctly when the number of tiers vary by period in the inputs
+- Set a limit for demand and energy tier maxes to avoid errors returned by HiGHS due to numerical limits
 
 ## v0.46.1
 ### Changed
