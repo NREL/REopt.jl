@@ -84,11 +84,11 @@ function ASHP(;
     end
 
     # Convert max sizes, cost factors from mmbtu_per_hour to kw
-    min_kw = min_ton * KWH_PER_MMBTU * 0.012
-    max_kw = max_ton * KWH_PER_MMBTU * 0.012
+    min_kw = min_ton * KWH_THERMAL_PER_TONHOUR * 0.012
+    max_kw = max_ton * KWH_THERMAL_PER_TONHOUR * 0.012
 
-    installed_cost_per_kw = installed_cost_per_ton / (KWH_PER_MMBTU * 0.012)
-    om_cost_per_kw = om_cost_per_ton / (KWH_PER_MMBTU * 0.012)
+    installed_cost_per_kw = installed_cost_per_ton / (KWH_THERMAL_PER_TONHOUR * 0.012)
+    om_cost_per_kw = om_cost_per_ton / (KWH_THERMAL_PER_TONHOUR * 0.012)
 
     
     ASHP(
