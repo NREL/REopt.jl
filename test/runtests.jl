@@ -22,7 +22,7 @@ elseif "CPLEX" in ARGS
     end
 
 else  # run HiGHS tests
-
+    
     @testset "Inputs" begin
         @testset "hybrid profile" begin
             electric_load = REopt.ElectricLoad(; 
@@ -1209,6 +1209,16 @@ else  # run HiGHS tests
             # s = Scenario(data)
             # inputs = REoptInputs(s)
             # results = run_reopt(m, inputs)
+
+            @testset "Exotic Units for Energy Rates" begin
+                d = JSON.parsefile("./scenarios/no_techs.json")
+                d["ElectricTariff"] = Dict(
+                    "urdb_label" => "6272e4ae7eb76766c247d469"
+                )
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                results = run_reopt(m, d)
+                @test occursin("URDB energy tiers have exotic units of", string(results["Messages"]))
+            end
 
         end
 

@@ -23,6 +23,13 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.46.2
+### Changed
+- When the URDB response `energyratestructure` has a "unit" value that is not "kWh", throw an error instead of averaging rates in each energy tier.
+### Fixed
+- Updated the PV result **lifecycle_om_cost_after_tax** to account for the third-party factor for third-party ownership analyses.
+- Convert `max_electric_load_kw` to _Float64_ before passing to function `get_chp_defaults_prime_mover_size_class`
+
 ## v0.46.1
 ### Changed
 - Updated the GHP testset .json `./test/scenarios/ghp_inputs.json` to include a nominal HotThermalStorage and ColdThermalStorage system.
