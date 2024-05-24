@@ -25,6 +25,7 @@ struct Scenario <: AbstractScenario
     cooling_thermal_load_reduction_with_ghp_kw::Union{Vector{Float64}, Nothing}
     steam_turbine::Union{SteamTurbine, Nothing}
     electric_heater::Union{ElectricHeater, Nothing}
+    ashp_wh::Union{ASHP_WH, Nothing}
 end
 
 """
@@ -444,6 +445,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
 
     # GHP
+    ambient_temp_celsius = nothing
     ghp_option_list = []
     space_heating_thermal_load_reduction_with_ghp_kw = zeros(8760 * settings.time_steps_per_hour)
     cooling_thermal_load_reduction_with_ghp_kw = zeros(8760 * settings.time_steps_per_hour)
@@ -649,6 +651,40 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         electric_heater = ElectricHeater(;dictkeys_tosymbols(d["ElectricHeater"])...)
     end
 
+    # ASHP Water Heater:
+    ashp_wh = nothing
+    cop_heating = []
+    if haskey(d, "ASHP_WH") && d["ASHP_WH"]["max_ton_per_hour"] > 0.0
+        # If user does not provide heating cop series then assign cop curves based on ambient temperature
+        if !haskey(d["ASHP_WH"], "cop_heating")
+            # If PV is evaluated, get ambient temperature series from PVWatts and assign PV production factor
+            if isnothing(ambient_temp_celsius)
+                if !isempty(pvs)
+                    for pv in pvs
+                        pv.production_factor_series, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
+                            array_type=pv.array_type, losses=round(pv.losses*100, digits=3), dc_ac_ratio=pv.dc_ac_ratio,
+                            gcr=pv.gcr, inv_eff=pv.inv_eff*100, timeframe="hourly", radius=pv.radius, time_steps_per_hour=settings.time_steps_per_hour)
+                    end
+                else
+                    # if PV is not evaluated, call PVWatts to get ambient temperature series
+                    pv_prodfactor, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; time_steps_per_hour=settings.time_steps_per_hour)    
+                end
+            end
+
+            if !haskey(d["ASHP_WH"], "cop_heating")
+                cop_heating = round.(0.083 .* ambient_temp_celsius .+ 2.8255, digits=2)
+            else
+                cop_heating = round.(d["ASHP_WH"]["cop_heating"],digits=2)
+            end
+
+        else
+            # Else if the user already provide cop series, use that
+            cop_heating = round.(d["ASHP_WH"]["cop_heating"],digits=2)
+        end
+        d["ASHP_WH"]["cop_heating"] = cop_heating
+        ashp_wh = ASHP_WH(;dictkeys_tosymbols(d["ASHP_WH"])...)
+    end
+
     return Scenario(
         settings,
         site, 
@@ -674,7 +710,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         space_heating_thermal_load_reduction_with_ghp_kw,
         cooling_thermal_load_reduction_with_ghp_kw,
         steam_turbine,
-        electric_heater
+        electric_heater,
+        ashp_wh
     )
 end
 

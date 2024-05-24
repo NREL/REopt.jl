@@ -32,4 +32,3 @@ function ExistingChiller(;
         max_thermal_factor_on_peak_load
     )
 end
-
