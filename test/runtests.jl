@@ -2362,6 +2362,41 @@ else  # run HiGHS tests
 
         end
 
+        @testset "ASHP_WH" begin
+            #Case 1: Boiler produces the required heat instead of ASHP_WH - ASHP_WH is not purchased
+            d = JSON.parsefile("./scenarios/ashp_wh.json")
+            d["SpaceHeatingLoad"]["annual_mmbtu"] = 0.5 * 8760
+            d["DomesticHotWaterLoad"]["annual_mmbtu"] = 0.5 * 8760
+            d["ASHP_WH"]["installed_cost_per_ton_per_hour"] = 1e8
+        
+            s = Scenario(d)
+            p = REoptInputs(s)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(m, p)
+            @test results["ASHP_WH"]["size_ton_per_hour"] ≈ 0.0 atol=0.1
+            @test results["ASHP_WH"]["annual_thermal_production_mmbtu"] ≈ 0.0 atol=0.1
+            @test results["ASHP_WH"]["annual_electric_consumption_kwh"] ≈ 0.0 atol=0.1
+            @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ 87600.0 atol=0.1
+            
+            #Case 2: ASHP_WH has temperature-dependent output and serves all DHW load
+            d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = 100
+            d["ASHP_WH"]["installed_cost_per_ton_per_hour"] = 300
+            d["ElectricTariff"]["monthly_energy_rates"] = [0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01]
+            
+            s = Scenario(d)
+            p = REoptInputs(s)
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(m, p)
+            annual_thermal_prod = 0.8 * 8760  #80% efficient boiler --> 0.8 MMBTU of heat load per hour
+            annual_ashp_consumption = sum(0.8 * REopt.KWH_PER_MMBTU / p.heating_cop["ASHP"][ts] for ts in p.time_steps)
+            annual_energy_supplied = 87600 + annual_ashp_consumption
+            @test results["ASHP_WH"]["size_ton_per_hour"] ≈ 0.8 atol=0.1
+            @test results["ASHP_WH"]["annual_thermal_production_mmbtu"] ≈ annual_thermal_prod rtol=1e-4
+            @test results["ASHP_WH"]["annual_electric_consumption_kwh"] ≈ annual_ashp_consumption rtol=1e-4
+            @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ annual_energy_supplied rtol=1e-4
+            @test results["ASHP_WH"]["annual_thermal_production_tonhour"] ≈ 0.0 atol=1e-4
+        end
+
         @testset "Process Heat Load" begin
             d = JSON.parsefile("./scenarios/process_heat.json")
         
