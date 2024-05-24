@@ -319,3 +319,4 @@ function get_monthly_energy(power_profile::AbstractArray{<:Real,1};
 
     return monthly_energy_total
 end
+

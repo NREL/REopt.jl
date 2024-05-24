@@ -150,7 +150,7 @@ function dictkeys_tosymbols(d::Dict)
             "monthly_totals_kwh",
             "production_factor_series", 
             "monthly_energy_rates", "monthly_demand_rates",
-            "blended_doe_reference_percents", "blended_industry_reference_percents",
+            "blended_doe_reference_percents",
             "coincident_peak_load_charge_per_kw",
             "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
             "outage_probabilities",
@@ -169,28 +169,36 @@ function dictkeys_tosymbols(d::Dict)
                 throw(@error("Unable to convert $k to an Array{Real, 1}"))
             end
         end
-        if k in ["blended_doe_reference_names", "blended_industry_reference_names"]
+        if k in [
+            "blended_doe_reference_names"
+        ]
             try
                 v = convert(Array{String, 1}, v)
             catch
                 throw(@error("Unable to convert $k to an Array{String, 1}"))
             end
         end
-        if k in ["coincident_peak_load_active_time_steps"]
+        if k in [
+            "coincident_peak_load_active_time_steps"
+        ]
             try
                 v = convert(Vector{Vector{Int64}}, v)
             catch
                 throw(@error("Unable to convert $k to a Vector{Vector{Int64}}"))
             end
         end
-        if k in ["outage_start_time_steps", "outage_durations"]
+        if k in [
+            "outage_start_time_steps", "outage_durations"
+        ]
             try
                 v = convert(Array{Int64, 1}, v)
             catch
                 throw(@error("Unable to convert $k to a Array{Int64, 1}"))
             end
         end
-        if k in ["fuel_limit_is_per_generator"] #for ERP
+        if k in [
+            "fuel_limit_is_per_generator" #for ERP
+        ]
             if !(typeof(v) <: Bool)
                 try
                     v = convert(Array{Bool, 1}, v)
@@ -207,6 +215,7 @@ function dictkeys_tosymbols(d::Dict)
             "generator_fuel_intercept_per_hr", "generator_fuel_burn_rate_per_kwh",
             "fuel_limit"
         ] && !isnothing(v)
+            #if not a Real try to convert to an Array{Real} 
             if !(typeof(v) <: Real)
                 try
                     v = convert(Array{Real, 1}, v)
@@ -215,7 +224,10 @@ function dictkeys_tosymbols(d::Dict)
                 end
             end
         end
-        if k in ["num_generators"] #for ERP
+        if k in [
+            "num_generators" #for ERP
+        ]
+            #if not a Real try to convert to an Array{Real} 
             if !(typeof(v) <: Int)
                 try
                     v = convert(Array{Int64, 1}, v)
@@ -224,11 +236,10 @@ function dictkeys_tosymbols(d::Dict)
                 end
             end
         end
-        if k in [
-            "generator_operational_availability", "generator_failure_to_start", "generator_mean_time_to_failure", 
-            "num_generators", "generator_size_kw", "fuel_limit", "fuel_limit_is_per_generator", 
-            "generator_fuel_intercept_per_hr", "generator_fuel_burn_rate_per_kwh"] &&
-            !(typeof(v) <: Array)
+        if k in ["generator_operational_availability", "generator_failure_to_start", "generator_mean_time_to_failure", 
+                                "num_generators", "generator_size_kw", "fuel_limit", "fuel_limit_is_per_generator", 
+                                "generator_fuel_intercept_per_hr", "generator_fuel_burn_rate_per_kwh"] &&
+                                !(typeof(v) <: Array)
             v = [v]
         end
         d2[Symbol(k)] = v

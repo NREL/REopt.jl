@@ -746,7 +746,7 @@ function BuiltInSpaceHeatingLoad(
     latitude::Real,
     longitude::Real,
     year::Int,
-    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}},    
+    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}},
     annual_mmbtu::Union{Real, Nothing}=nothing,
     monthly_mmbtu::Vector{<:Real}=Real[],
     existing_boiler_efficiency::Union{Real, Nothing}=nothing
@@ -1423,9 +1423,6 @@ function BuiltInCoolingLoad(
     end
     built_in_load("cooling", city, buildingtype, year, annual_kwh, monthly_kwh)
 end
-
-
-
 """
 `ProcessHeatLoad` is an optional REopt input with the following keys and default values:
 ```julia
@@ -1448,7 +1445,7 @@ function BuiltInProcessHeatLoad(
     latitude::Real,
     longitude::Real,
     year::Int,
-    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}},    
+    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}},
     annual_mmbtu::Union{Real, Nothing}=nothing,
     monthly_mmbtu::Vector{<:Real}=Real[],
     existing_boiler_efficiency::Union{Real, Nothing}=nothing
@@ -1483,9 +1480,10 @@ function BuiltInProcessHeatLoad(
     end
     if length(monthly_mmbtu) == 12
         monthly_mmbtu = monthly_mmbtu .* addressable_load_fraction
+        monthly_mmbtu = Real[monthly_mmbtu...]
     end
-    built_in_load("process_heat", city, buildingtype, year, annual_mmbtu, monthly_mmbtu, 
-                    existing_boiler_efficiency)
+
+    built_in_load("process_heat", city, buildingtype, year, annual_mmbtu, monthly_mmbtu, existing_boiler_efficiency)
 end
 struct ProcessHeatLoad
     loads_kw::Array{Real, 1}
@@ -1497,10 +1495,10 @@ struct ProcessHeatLoad
         blended_industry_reference_names::Array{String, 1} = String[],
         blended_industry_reference_percents::Array{<:Real, 1} = Real[],
         annual_mmbtu::Union{Real, Nothing} = nothing,
-        monthly_mmbtu::Array{<:Real, 1} = Real[],
+        monthly_mmbtu::Array{<:Real,1} = Real[],
         addressable_load_fraction::Any = 1.0,
-        fuel_loads_mmbtu_per_hour::Array{<:Real, 1} = Real[],
-        time_steps_per_hour::Int = 1,
+        fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[],
+        time_steps_per_hour::Int = 1, # corresponding to `fuel_loads_mmbtu_per_hour`
         latitude::Real = 0.0,
         longitude::Real = 0.0,
         existing_boiler_efficiency::Real = NaN
