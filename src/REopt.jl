@@ -24,7 +24,9 @@ export
     avert_emissions_profiles,
     cambium_emissions_profile,
     easiur_data,
-    get_existing_chiller_default_cop
+    get_existing_chiller_default_cop,
+    get_electric_heater_defaults,
+    get_ashp_defaults
 
 import HTTP
 import JSON
