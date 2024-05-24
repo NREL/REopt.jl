@@ -2367,7 +2367,7 @@ else  # run HiGHS tests
             d = JSON.parsefile("./scenarios/ashp_wh.json")
             d["SpaceHeatingLoad"]["annual_mmbtu"] = 0.5 * 8760
             d["DomesticHotWaterLoad"]["annual_mmbtu"] = 0.5 * 8760
-            d["ASHP_WH"]["installed_cost_per_ton_per_hour"] = 1e8
+            d["ASHP_WH"]["installed_cost_per_ton_per_hour"] = 1050
         
             s = Scenario(d)
             p = REoptInputs(s)
