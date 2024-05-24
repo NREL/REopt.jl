@@ -2377,7 +2377,7 @@ else  # run HiGHS tests
             
             #Case 2: ASHP has temperature-dependent output and serves all heating load
             d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = 100
-            d["ASHP"]["installed_cost_per_mmbtu_per_hour"] = 300
+            d["ASHP"]["installed_cost_per_ton"] = 300
             d["ElectricTariff"]["monthly_energy_rates"] = [0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01]
             
             s = Scenario(d)
