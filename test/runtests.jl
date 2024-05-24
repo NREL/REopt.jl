@@ -673,6 +673,7 @@ else  # run HiGHS tests
                     [0, init_capex_chp_expected * data_cost_curve["CHP"]["federal_itc_fraction"]])
             
                 #PV
+                data_cost_curve["PV"] = Dict()
                 data_cost_curve["PV"]["min_kw"] = 1500
                 data_cost_curve["PV"]["max_kw"] = 1500
                 data_cost_curve["PV"]["installed_cost_per_kw"] = 1600
