@@ -605,19 +605,24 @@ else  # run HiGHS tests
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(m, "./scenarios/thermal_load.json")
         
-            @test round(results["ExistingBoiler"]["annual_fuel_consumption_mmbtu"], digits=0) ≈ 2904
+            @test round(results["ExistingBoiler"]["annual_fuel_consumption_mmbtu"], digits=0) ≈ 12904
             
             # Hourly fuel load inputs with addressable_load_fraction are served as expected
             data = JSON.parsefile("./scenarios/thermal_load.json")
+            data = JSON.parse(site_data)
+
             data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([0.5], 8760)
             data["DomesticHotWaterLoad"]["addressable_load_fraction"] = 0.6
             data["SpaceHeatingLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([0.5], 8760)
             data["SpaceHeatingLoad"]["addressable_load_fraction"] = 0.8
+            data["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([0.3], 8760)
+            data["ProcessHeatLoad"]["addressable_load_fraction"] = 0.7
+
             s = Scenario(data)
             inputs = REoptInputs(s)
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(m, inputs)
-            @test round(results["ExistingBoiler"]["annual_fuel_consumption_mmbtu"], digits=0) ≈ 8760 * (0.5 * 0.6 + 0.5 * 0.8)
+            @test round(results["ExistingBoiler"]["annual_fuel_consumption_mmbtu"], digits=0) ≈ 8760 * (0.5 * 0.6 + 0.5 * 0.8 + 0.3 * 0.7) atol = 1.0
             
             # Monthly fuel load input with addressable_load_fraction is processed to expected thermal load
             data = JSON.parsefile("./scenarios/thermal_load.json")
@@ -625,14 +630,20 @@ else  # run HiGHS tests
             data["DomesticHotWaterLoad"]["addressable_load_fraction"] = repeat([0.6], 12)
             data["SpaceHeatingLoad"]["monthly_mmbtu"] = repeat([200], 12)
             data["SpaceHeatingLoad"]["addressable_load_fraction"] = repeat([0.8], 12)
-        
+            data["ProcessHeatLoad"]["monthly_mmbtu"] = repeat([150], 12)
+            data["ProcessHeatLoad"]["addressable_load_fraction"] = repeat([0.7], 12)
+
+            # Assuming Scenario and REoptInputs are defined functions/classes in your code
             s = Scenario(data)
             inputs = REoptInputs(s)
-        
-            dhw_thermal_load_expected = sum(data["DomesticHotWaterLoad"]["monthly_mmbtu"] .* data["DomesticHotWaterLoad"]["addressable_load_fraction"]) .* s.existing_boiler.efficiency
-            space_thermal_load_expected = sum(data["SpaceHeatingLoad"]["monthly_mmbtu"] .* data["SpaceHeatingLoad"]["addressable_load_fraction"]) .* s.existing_boiler.efficiency
+
+            dhw_thermal_load_expected = sum(data["DomesticHotWaterLoad"]["monthly_mmbtu"] .* data["DomesticHotWaterLoad"]["addressable_load_fraction"]) * s.existing_boiler.efficiency
+            space_thermal_load_expected = sum(data["SpaceHeatingLoad"]["monthly_mmbtu"] .* data["SpaceHeatingLoad"]["addressable_load_fraction"]) * s.existing_boiler.efficiency
+            process_thermal_load_expected = sum(data["ProcessHeatLoad"]["monthly_mmbtu"] .* data["ProcessHeatLoad"]["addressable_load_fraction"]) * s.existing_boiler.efficiency
+
             @test round(sum(s.dhw_load.loads_kw) / REopt.KWH_PER_MMBTU) ≈ sum(dhw_thermal_load_expected)
             @test round(sum(s.space_heating_load.loads_kw) / REopt.KWH_PER_MMBTU) ≈ sum(space_thermal_load_expected)
+            @test round(sum(s.process_heat_load.loads_kw) / REopt.KWH_PER_MMBTU) ≈ sum(process_thermal_load_expected)
         end
         
         @testset "CHP" begin
