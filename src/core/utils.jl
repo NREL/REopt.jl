@@ -151,6 +151,7 @@ function dictkeys_tosymbols(d::Dict)
             "production_factor_series", 
             "monthly_energy_rates", "monthly_demand_rates",
             "blended_doe_reference_percents",
+            "blended_industry_reference_percents",
             "coincident_peak_load_charge_per_kw",
             "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
             "outage_probabilities",
@@ -170,7 +171,8 @@ function dictkeys_tosymbols(d::Dict)
             end
         end
         if k in [
-            "blended_doe_reference_names"
+            "blended_doe_reference_names",
+            "blended_industry_reference_names"
         ]
             try
                 v = convert(Array{String, 1}, v)
