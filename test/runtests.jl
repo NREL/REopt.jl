@@ -257,7 +257,7 @@ else  # run HiGHS tests
         
         """
         input_data = JSON.parsefile("./scenarios/simulated_load.json")
-    
+
         input_data["ElectricLoad"] = Dict([("blended_doe_reference_names", ["Hospital", "FlatLoad_16_5"]),
                                         ("blended_doe_reference_percents", [0.2, 0.8])
                                     ])
@@ -267,7 +267,8 @@ else  # run HiGHS tests
                                     ])
         
         # Heating load from the UI will call the /simulated_load endpoint first to parse single heating mmbtu into separate Space and DHW mmbtu
-        annual_mmbtu = 10000.0
+        annual_mmbtu_hvac = 7000.0
+        annual_mmbtu_process = 3000.0
         doe_reference_name_heating = ["Warehouse", "FlatLoad"]
         percent_share_heating = [0.3, 0.7]
         
@@ -276,10 +277,15 @@ else  # run HiGHS tests
                                     ("load_type", "heating"),  # since annual_tonhour is not given
                                     ("doe_reference_name", doe_reference_name_heating),
                                     ("percent_share", percent_share_heating),
-                                    ("annual_mmbtu", annual_mmbtu)
+                                    ("annual_mmbtu", annual_mmbtu_hvac)
                                     ])
         
-        sim_load_response_heating = simulated_load(d_sim_load_heating)                        
+        sim_load_response_heating = simulated_load(d_sim_load_heating)
+        
+        d_sim_load_process = copy(d_sim_load_heating)
+        d_sim_load_process["load_type"] = "process_heat"
+        d_sim_load_process["annual_mmbtu"] = annual_mmbtu_process
+        sim_load_response_process = simulated_load(d_sim_load_process)
         
         input_data["SpaceHeatingLoad"] = Dict([("blended_doe_reference_names", doe_reference_name_heating),
                                         ("blended_doe_reference_percents", percent_share_heating),
@@ -293,9 +299,9 @@ else  # run HiGHS tests
         
         input_data["ProcessHeatLoad"] = Dict([("blended_industry_reference_names", doe_reference_name_heating),
                                         ("blended_industry_reference_percents", percent_share_heating),
-                                        ("annual_mmbtu", sim_load_response_heating["process_annual_mmbtu"])
-                                    ])
-                                    
+                                        ("annual_mmbtu", annual_mmbtu_process)
+                                    ])                            
+                        
         s = Scenario(input_data)
         inputs = REoptInputs(s)
         
@@ -313,12 +319,14 @@ else  # run HiGHS tests
         sim_electric_kw = sim_load_response_elec_and_cooling["loads_kw"]
         sim_cooling_ton = sim_load_response_elec_and_cooling["cooling_defaults"]["loads_ton"]
         
-        total_heating_fuel_load_reopt_inputs = (s.space_heating_load.loads_kw + s.dhw_load.loads_kw + s.process_heat_load.loads_kw) ./ REopt.KWH_PER_MMBTU ./ REopt.EXISTING_BOILER_EFFICIENCY
+        total_heating_thermal_load_reopt_inputs = (s.space_heating_load.loads_kw + s.dhw_load.loads_kw + s.process_heat_load.loads_kw) ./ REopt.KWH_PER_MMBTU ./ REopt.EXISTING_BOILER_EFFICIENCY
         
-        @test sim_load_response_heating["loads_mmbtu_per_hour"] ≈ round.(total_heating_fuel_load_reopt_inputs, digits=3) atol=0.5
-    
+        @test round.(sim_load_response_heating["loads_mmbtu_per_hour"] + 
+                sim_load_response_process["loads_mmbtu_per_hour"], digits=2) ≈ 
+                round.(total_heating_thermal_load_reopt_inputs, digits=2) rtol=0.02
+        
         @test sim_electric_kw ≈ s.electric_load.loads_kw atol=0.1
-        @test sim_cooling_ton ≈ s.cooling_load.loads_kw_thermal ./ REopt.KWH_THERMAL_PER_TONHOUR atol=0.1    
+        @test sim_cooling_ton ≈ s.cooling_load.loads_kw_thermal ./ REopt.KWH_THERMAL_PER_TONHOUR atol=0.1   
     end
 
     @testset "Backup Generator Reliability" begin
