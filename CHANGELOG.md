@@ -23,12 +23,16 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop
+## Develop 
+### Changed 
+- Changed default Financial **owner_tax_rate_fraction** and **oftaker_tax_rate_fraction** from 0.257 to 0.26 to align with API and user manual defaults. 
+
+## v0.46.2
+### Changed
+- When the URDB response `energyratestructure` has a "unit" value that is not "kWh", throw an error instead of averaging rates in each energy tier.
 ### Fixed
+- Updated the PV result **lifecycle_om_cost_after_tax** to account for the third-party factor for third-party ownership analyses.
 - Convert `max_electric_load_kw` to _Float64_ before passing to function `get_chp_defaults_prime_mover_size_class`
-- Increased the big-M bound on maximum net metering benefit to prevent artificially low export benefits
-- Fixed a bug in which tier limits did not load correctly when the number of tiers vary by period in the inputs
-- Set a limit for demand and energy tier maxes to avoid errors returned by HiGHS due to numerical limits
 
 ## v0.46.1
 ### Changed
