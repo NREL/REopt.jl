@@ -609,7 +609,6 @@ else  # run HiGHS tests
             
             # Hourly fuel load inputs with addressable_load_fraction are served as expected
             data = JSON.parsefile("./scenarios/thermal_load.json")
-            data = JSON.parse(site_data)
 
             data["DomesticHotWaterLoad"]["fuel_loads_mmbtu_per_hour"] = repeat([0.5], 8760)
             data["DomesticHotWaterLoad"]["addressable_load_fraction"] = 0.6
