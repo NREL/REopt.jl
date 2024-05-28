@@ -2350,8 +2350,9 @@ else  # run HiGHS tests
 
         @testset "Electric Heater" begin
             d = JSON.parsefile("./scenarios/electric_heater.json")
-            d["SpaceHeatingLoad"]["annual_mmbtu"] = 0.5 * 8760
-            d["DomesticHotWaterLoad"]["annual_mmbtu"] = 0.5 * 8760
+            d["SpaceHeatingLoad"]["annual_mmbtu"] = 0.4 * 8760
+            d["DomesticHotWaterLoad"]["annual_mmbtu"] = 0.4 * 8760
+            d["ProcessHeatLoad"]["annual_mmbtu"] = 0.2 * 8760
             s = Scenario(d)
             p = REoptInputs(s)
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
