@@ -32,15 +32,19 @@
     "existing_boiler_fuel_cost_escalation_rate_fraction": 0.034
   },
   "ElectricLoad": {
-    "doe_reference_name": "Hospital",
+    "doe_reference_name": "FlatLoad",
     "annual_kwh": 8760000.0
   },
   "SpaceHeatingLoad": {
-    "doe_reference_name": "Hospital",
+    "doe_reference_name": "FlatLoad",
     "annual_mmbtu": 14948.8
   },
   "DomesticHotWaterLoad": {
-    "doe_reference_name": "Hospital",
+    "doe_reference_name": "FlatLoad",
+    "annual_mmbtu": 14948.8
+  },
+  "ProcessHeatLoad": {
+    "industry_reference_name": "FlatLoad",
     "annual_mmbtu": 14948.8
   },
   "ElectricTariff": {
@@ -104,12 +108,14 @@
     "can_supply_steam_turbine": true,
     "fuel_renewable_energy_fraction": 0.3,
     "can_serve_dhw": true,
-    "can_serve_space_heating": true
+    "can_serve_space_heating": true,
+    "can_serve_process_heat": true
   },
   "HotThermalStorage": {
     "min_gal": 50000.0,
     "max_gal": 50000.0,
     "can_serve_dhw": true,
-    "can_serve_space_heating": true
+    "can_serve_space_heating": true,
+    "can_serve_process_heat": true
   }
 }
