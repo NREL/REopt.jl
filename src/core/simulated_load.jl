@@ -262,22 +262,17 @@ function simulated_load(d::Dict)
         end
 
         heating_load_inputs = Dict{Symbol, Any}()
-        process_heat_inputs = Dict{Symbol, Any}()
         if length(doe_reference_name) > 1
             heating_load_inputs[:blended_doe_reference_names] = doe_reference_name
             heating_load_inputs[:blended_doe_reference_percents] = percent_share_list
-            process_heat_inputs[:blended_industry_reference_names] = doe_reference_name
-            process_heat_inputs[:blended_industry_reference_percents] = percent_share_list
         else
             heating_load_inputs[:doe_reference_name] = doe_reference_name[1]
-            process_heat_inputs[:industry_reference_name] = doe_reference_name[1]
         end
         if addressable_load_fraction != 1.0
             heating_load_inputs[:addressable_load_fraction] = addressable_load_fraction
-            process_heat_inputs[:addressable_load_fraction] = addressable_load_fraction
         end
     
-        # Split up the single heating fuel input for space + dhw + process_heat annual_mmbtu or monthly_mmbtu into CRB profile split
+        # Split up the single heating fuel input for space + dhw annual_mmbtu or monthly_mmbtu into CRB profile split
         boiler_efficiency = get(d, "boiler_efficiency", EXISTING_BOILER_EFFICIENCY)
         
         default_space_heating_load = SpaceHeatingLoad(; heating_load_inputs...,
@@ -290,35 +285,24 @@ function simulated_load(d::Dict)
                                                     longitude=longitude,
                                                     existing_boiler_efficiency=boiler_efficiency
                                                 )
-        default_process_heat_load = ProcessHeatLoad(; process_heat_inputs...,
-                                                    latitude=latitude, 
-                                                    longitude=longitude,
-                                                    existing_boiler_efficiency=boiler_efficiency
-                                                    )
     
         space_heating_annual_mmbtu = nothing
         dhw_annual_mmbtu = nothing
-        process_heat_annual_mmbtu = nothing
 
         space_heating_monthly_mmbtu = Vector{Real}()
         space_heating_monthly_fuel_mmbtu = Vector{Real}()
 
         dhw_monthly_mmbtu = Vector{Real}()
         dhw_monthly_fuel_mmbtu = Vector{Real}()
-
-        process_heat_monthly_mmbtu = Vector{Real}()
-        process_heat_monthly_fuel_mmbtu = Vector{Real}()
     
         if !isempty(monthly_mmbtu)    
             space_heating_monthly_energy =   get_monthly_energy(default_space_heating_load.loads_kw)
             dhw_monthly_energy           =   get_monthly_energy(default_dhw_load.loads_kw)
-            process_heat_monthly_energy  =   get_monthly_energy(default_process_heat_load.loads_kw)
             
-            total_monthly_energy        =   space_heating_monthly_energy + dhw_monthly_energy + process_heat_monthly_energy
+            total_monthly_energy        =   space_heating_monthly_energy + dhw_monthly_energy
             
             space_heating_fraction_monthly =   space_heating_monthly_energy ./ total_monthly_energy
             dhw_fraction_monthly           =   dhw_monthly_energy ./ total_monthly_energy
-            process_heat_fraction_monthly  =   process_heat_monthly_energy ./ total_monthly_energy
     
             space_heating_monthly_mmbtu      =   monthly_mmbtu .* space_heating_fraction_monthly
             space_heating_monthly_fuel_mmbtu =   space_heating_monthly_mmbtu .* addressable_load_fraction
@@ -326,18 +310,14 @@ function simulated_load(d::Dict)
             dhw_monthly_mmbtu      =   monthly_mmbtu .* dhw_fraction_monthly
             dhw_monthly_fuel_mmbtu =   dhw_monthly_mmbtu .* addressable_load_fraction
             
-            process_heat_monthly_mmbtu      =   monthly_mmbtu .* process_heat_fraction_monthly
-            process_heat_monthly_fuel_mmbtu =   process_heat_monthly_mmbtu .* addressable_load_fraction
         elseif !isnothing(annual_mmbtu)
-            total_heating_annual_mmbtu =   default_space_heating_load.annual_mmbtu + default_dhw_load.annual_mmbtu + default_process_heat_load.annual_mmbtu
+            total_heating_annual_mmbtu =   default_space_heating_load.annual_mmbtu + default_dhw_load.annual_mmbtu
             
             space_heating_fraction =   default_space_heating_load.annual_mmbtu / total_heating_annual_mmbtu
             dhw_fraction           =   default_dhw_load.annual_mmbtu / total_heating_annual_mmbtu
-            process_heat_fraction  =   default_process_heat_load.annual_mmbtu / total_heating_annual_mmbtu
     
             space_heating_annual_mmbtu =   annual_mmbtu * space_heating_fraction
             dhw_annual_mmbtu           =   annual_mmbtu * dhw_fraction
-            process_heat_annual_mmbtu  =   annual_mmbtu * process_heat_fraction
         end
     
         space_heating_load = SpaceHeatingLoad(; heating_load_inputs...,
@@ -353,21 +333,13 @@ function simulated_load(d::Dict)
                                             annual_mmbtu=dhw_annual_mmbtu,
                                             monthly_mmbtu=dhw_monthly_mmbtu,
                                             existing_boiler_efficiency=boiler_efficiency
-                                        )  
-        process_heat_load = ProcessHeatLoad(; process_heat_inputs...,
-                                                latitude=latitude, 
-                                                longitude=longitude,
-                                                annual_mmbtu=process_heat_annual_mmbtu,
-                                                monthly_mmbtu=process_heat_monthly_mmbtu,
-                                                existing_boiler_efficiency=boiler_efficiency
-                                            )                                            
+                                        )                                             
     
         space_load_series        =   space_heating_load.loads_kw ./ boiler_efficiency ./ KWH_PER_MMBTU
         dhw_load_series          =   dhw_load.loads_kw ./ boiler_efficiency ./ KWH_PER_MMBTU
-        process_load_series      =   process_heat_load.loads_kw ./ boiler_efficiency ./ KWH_PER_MMBTU
-        total_load_series        =   space_load_series + dhw_load_series + process_load_series
+        total_load_series        =   space_load_series + dhw_load_series
         
-        total_heating_annual_mmbtu =   (space_heating_load.annual_mmbtu + dhw_load.annual_mmbtu + process_heat_load.annual_mmbtu) / boiler_efficiency
+        total_heating_annual_mmbtu =   (space_heating_load.annual_mmbtu + dhw_load.annual_mmbtu) / boiler_efficiency
     
         response = Dict([
             ("loads_mmbtu_per_hour", round.(total_load_series, digits=3)),
@@ -375,12 +347,6 @@ function simulated_load(d::Dict)
             ("min_mmbtu_per_hour", round(minimum(total_load_series), digits=3)),
             ("mean_mmbtu_per_hour", round(sum(total_load_series) / length(total_load_series), digits=3)),
             ("max_mmbtu_per_hour", round(maximum(total_load_series), digits=3)),
-            ("process_loads_mmbtu_per_hour", round.(process_load_series, digits=3)),
-            ("process_annual_mmbtu", round(process_heat_load.annual_mmbtu / boiler_efficiency, digits=3)),
-            ("process_min_mmbtu_per_hour", round(minimum(process_load_series), digits=3)),
-            ("process_mean_mmbtu_per_hour", round(sum(process_load_series) / length(process_load_series), digits=3)),
-            ("process_max_mmbtu_per_hour", round(maximum(process_load_series), digits=3)),
-            ("process_monthly_mmbtu", round.(process_heat_monthly_fuel_mmbtu, digits=3)),
             ("space_loads_mmbtu_per_hour", round.(space_load_series, digits=3)),
             ("space_annual_mmbtu", round(space_heating_load.annual_mmbtu / boiler_efficiency, digits=3)),
             ("space_min_mmbtu_per_hour", round(minimum(space_load_series), digits=3)),
