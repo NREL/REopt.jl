@@ -314,6 +314,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             add_cooling_tech_constraints(m, p)
         end
 
+		# Zero out ExistingChiller production if retire_in_optimal; setdiff avoids zeroing for BAU 
+		if (!isempty(setdiff(p.techs.cooling, ["ExistingChiller"])) && 
+				!isnothing(p.s.existing_chiller) && 
+				p.s.existing_chiller.retire_in_optimal
+		)
+			no_existing_chiller_production(m, p)
+		end
+
         if !isempty(setdiff(intersect(p.techs.heating, p.techs.cooling), p.techs.ghp))
             add_ashp_heating_cooling_constraints(m, p)
         end
