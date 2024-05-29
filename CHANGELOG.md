@@ -23,7 +23,7 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop - 2024-05-29
+## v0.47.0
 ### Added
 - In `src/core/heating_cooling_loads.jl`, added new struct **ProcessHeatLoad**.
 - In `src/core/scenario.jl`, added new field **process_heat_load**.
