@@ -7,7 +7,7 @@
         "production_type": "steam",
         "efficiency": 0.8,
         "fuel_type": "natural_gas",
-        "fuel_cost_per_mmbtu": 10
+        "fuel_cost_per_mmbtu": 5
     },
     "ASHP": {
         "min_ton": 0.0,
