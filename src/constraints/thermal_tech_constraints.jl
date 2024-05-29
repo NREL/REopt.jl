@@ -80,7 +80,7 @@ end
 
 function no_existing_chiller_production(m, p; _n="")
     for ts in p.time_steps
-        fix(m[Symbol("dvCoolingProduction"*_n)]["ExistingBoiler",ts], 0.0, force=true)
+        fix(m[Symbol("dvCoolingProduction"*_n)]["ExistingChiller",ts], 0.0, force=true)
     end
     fix(m[Symbol("dvSize"*_n)]["ExistingChiller"], 0.0, force=true)
 end
