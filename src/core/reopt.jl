@@ -296,12 +296,26 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             add_heating_tech_constraints(m, p)
         end
 
-        # Zero out ExistingBoiler production if retire_in_optimal; setdiff avoids zeroing for BAU 
-        if !isempty(setdiff(p.techs.heating, "ExistingBoiler"))
-            if !isnothing(p.s.existing_boiler) && p.s.existing_boiler.retire_in_optimal
-                no_existing_boiler_production(m, p)
+        # Zero out ExistingBoiler production if retire_in_optimal; length check avoids zeroing for BAU 
+		if !isnothing(p.s.existing_boiler) && p.s.existing_boiler.retire_in_optimal && length(p.techs.heating) > 1
+			can_retire = true
+			if !isnothing(p.s.dhw_load) && p.s.dhw_load.annual_mmbtu > 0 && isempty(setdiff(p.techs.can_serve_dhw, "ExistingBoiler"))
+				@warn "ExisitingBoiler.retire_in_optimal is true, but no other heating technologies can meet DomesticHotWater load.  ExistingBoiler will not be retired in the optimal case."
+				can_retire = false
             end
+			if !isnothing(p.s.space_heating_load) && p.s.space_heating_load.annual_mmbtu > 0 && isempty(setdiff(p.techs.can_serve_space_heating, "ExistingBoiler"))
+				@warn "ExisitingBoiler.retire_in_optimal is true, but no other heating technologies can meet SpaceHeating load.  ExistingBoiler will not be retired in the optimal case."
+				can_retire = false
+            end
+			if !isnothing(p.s.process_heat_load) && p.s.process_heat_load.annual_mmbtu > 0 && isempty(setdiff(p.techs.can_serve_process_heat, "ExistingBoiler"))
+				@warn "ExisitingBoiler.retire_in_optimal is true, but no other heating technologies can meet ProcessHeat load.  ExistingBoiler will not be retired in the optimal case."
+				can_retire = false
+            end
+			if can_retire
+				no_existing_boiler_production(m, p)
+			end
         end
+		
 
         if !isempty(p.techs.boiler)
             add_boiler_tech_constraints(m, p)
@@ -314,11 +328,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         end
 
 		# Zero out ExistingChiller production if retire_in_optimal; setdiff avoids zeroing for BAU 
-		if (!isempty(setdiff(p.techs.cooling, ["ExistingChiller"])) && 
-				!isnothing(p.s.existing_chiller) && 
-				p.s.existing_chiller.retire_in_optimal
-		)
-			no_existing_chiller_production(m, p)
+		if !isnothing(p.s.existing_chiller) && p.s.existing_chiller.retire_in_optimal
+			if !isempty(setdiff(p.techs.cooling, ["ExistingChiller"]))
+				no_existing_chiller_production(m, p)
+			end
 		end
 
         if !isempty(setdiff(intersect(p.techs.heating, p.techs.cooling), p.techs.ghp))
