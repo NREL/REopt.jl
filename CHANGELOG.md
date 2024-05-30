@@ -28,7 +28,7 @@ Classify the change according to the following categories:
 - Added new inputs **om_cost_per_kw** and **om_cost_per_kwh** to `ElectricStorage` for modeling capacity-based O&M 
 - Added new outputs **lifecycle_om_cost_after_tax** and **year_one_om_cost_before_tax** to `ElectricStorage` 
 - Added new input **self_discharge_fraction_per_timestep** to `ElectricStorage` for modeling battery self-discharge
-- Added testsets **Electric Storage O&M** and **Electric Storage Self-Discharge** in `test/runtests.jl`
+- Added testset **Electric Storage O&M and Self-Discharge** in `test/runtests.jl`
 
 ## v0.45.0
 ### Fixed 
