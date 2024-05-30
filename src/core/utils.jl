@@ -366,7 +366,7 @@ end
     call_solar_dataset_api(latitude::Real, longitude::Real, radius::Int)
 This calls the Solar Dataset Query API to determine the dataset to use in the PVWatts API call. 
 Returns: 
-- dataset: "nsrdb" if available within 20 miles, or whichever is closer of "intl" and "tmy3"
+- dataset: "nsrdb" if available within 20 miles, or whichever is closer of "nsrdb", "intl", or "tmy3"
 - dist_meters: Distance in meters from the site location to the dataset station
 - datasource: Name of source of the weather data used in the simulation.
 """
