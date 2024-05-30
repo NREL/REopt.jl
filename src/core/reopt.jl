@@ -297,16 +297,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         end
 
         # Zero out ExistingBoiler production if retire_in_optimal; length check avoids zeroing for BAU 
-		if !isnothing(p.s.existing_boiler) && p.s.existing_boiler.retire_in_optimal && length(p.techs.heating) > 1
-			if !isnothing(p.s.dhw_load) && p.s.dhw_load.annual_mmbtu > 0 && isempty(setdiff(p.techs.can_serve_dhw, "ExistingBoiler"))
-				@throw(@error("ExisitingBoiler.retire_in_optimal is true, but no other heating technologies can meet DomesticHotWater load."))
-            end
-			if !isnothing(p.s.space_heating_load) && p.s.space_heating_load.annual_mmbtu > 0 && isempty(setdiff(p.techs.can_serve_space_heating, "ExistingBoiler"))
-				@throw(@error("ExisitingBoiler.retire_in_optimal is true, but no other heating technologies can meet SpaceHeating load."))
-            end
-			if !isnothing(p.s.process_heat_load) && p.s.process_heat_load.annual_mmbtu > 0 && isempty(setdiff(p.techs.can_serve_process_heat, "ExistingBoiler"))
-				@throw(@error("ExisitingBoiler.retire_in_optimal is true, but no other heating technologies can meet ProcessHeat load."))
-            end
+		if !isnothing(p.s.existing_boiler) && p.s.existing_boiler.retire_in_optimal
 			no_existing_boiler_production(m, p)
         end
 		

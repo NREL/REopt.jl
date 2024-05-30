@@ -296,6 +296,19 @@ function Techs(s::Scenario)
     thermal_techs = union(heating_techs, boiler_techs, chp_techs, cooling_techs)
     fuel_burning_techs = union(gentechs, boiler_techs, chp_techs)
 
+    # check for ability of new technologies to meet heating loads if retire_in_optimal
+    if !isnothing(s.existing_boiler) && s.existing_boiler.retire_in_optimal
+        if !isnothing(s.dhw_load) && s.dhw_load.annual_mmbtu > 0 && isempty(setdiff(techs_can_serve_dhw, "ExistingBoiler"))
+            @throw(@error("ExisitingBoiler.retire_in_optimal is true, but no other heating technologies can meet DomesticHotWater load."))
+        end
+        if !isnothing(s.space_heating_load) && s.space_heating_load.annual_mmbtu > 0 && isempty(setdiff(techs_can_serve_space_heating, "ExistingBoiler"))
+            @throw(@error("ExisitingBoiler.retire_in_optimal is true, but no other heating technologies can meet SpaceHeating load."))
+        end
+        if !isnothing(s.process_heat_load) && s.process_heat_load.annual_mmbtu > 0 && isempty(setdiff(techs_can_serve_process_heat, "ExistingBoiler"))
+            @throw(@error("ExisitingBoiler.retire_in_optimal is true, but no other heating technologies can meet ProcessHeat load."))
+        end 
+    end
+    end 
     Techs(
         all_techs,
         elec,
