@@ -262,7 +262,7 @@ else  # run HiGHS tests
                                         ("blended_doe_reference_percents", [0.2, 0.8])
                                     ])
         
-        input_data["CoolingLoad"] = Dict([("blended_doe_reference_names", ["LargeOffice", "FlatLoad"]),
+        input_data["CoolingLoad"] = Dict([("blended_doe_reference_names", ["Warehouse", "FlatLoad"]),
                                         ("blended_doe_reference_percents", [0.5, 0.5])
                                     ])
         
