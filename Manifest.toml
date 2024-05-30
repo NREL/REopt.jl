@@ -22,6 +22,10 @@ git-tree-sha1 = "edfaf8e5f8d57cabcd98399b0b727bce22bb4d9c"
 uuid = "c9ce4bd3-c3d5-55b8-8973-c0e20141b8c3"
 version = "0.9.4"
 
+[[deps.Plots]]
+uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+version = "2.0.0"
+
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
 version = "1.1.1"

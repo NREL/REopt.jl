@@ -76,6 +76,8 @@ using CoolProp
 using LinearAlgebra
 using CSV
 using DataFrames
+using Plots
+import Plots
 
 function __init__()
     @require GhpGhx="7ce85f02-24a8-4d69-a3f0-14b5daa7d30c" println("using GhpGhx module in REopt")
