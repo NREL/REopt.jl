@@ -308,7 +308,12 @@ function Techs(s::Scenario)
             @throw(@error("ExisitingBoiler.retire_in_optimal is true, but no other heating technologies can meet ProcessHeat load."))
         end 
     end
-    end 
+    if !isnothing(s.existing_chiller) && s.existing_chiller.retire_in_optimal
+        if !isnothing(s.cooling_load) && sum(s.cooling_load.loads_kw_thermal) > 0 && isempty(setdiff(cooling_techs, "ExistingChiller"))
+            @throw(@error("ExisitingChiller.retire_in_optimal is true, but no other technologies can meet cooling load."))
+        end 
+    end
+
     Techs(
         all_techs,
         elec,
