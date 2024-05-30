@@ -527,8 +527,7 @@ else  # run HiGHS tests
         data["ElectricStorage"]["om_cost_per_kw"] = 10
         data["ElectricStorage"]["om_cost_per_kwh"] = 0
 
-        s = Scenario(data)
-        inputs = REoptInputs(s)
+        inputs = REoptInputs(data)
         results1 = run_reopt(model, inputs)
 
         @test results1["ElectricStorage"]["year_one_om_cost_before_tax"] ≈ 400 atol=1
@@ -538,8 +537,7 @@ else  # run HiGHS tests
         data["ElectricStorage"]["om_cost_per_kwh"] = 5
 
         model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-        s = Scenario(data)
-        inputs = REoptInputs(s)
+        inputs = REoptInputs(data)
         results2 = run_reopt(model, inputs)
 
         @test results2["ElectricStorage"]["year_one_om_cost_before_tax"] ≈ 800 atol=1
@@ -548,8 +546,7 @@ else  # run HiGHS tests
         
         data["ElectricStorage"]["self_discharge_fraction_per_timestep"] = 0.0025/24
         model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-        s = Scenario(data)
-        inputs = REoptInputs(s)
+        inputs = REoptInputs(data)
         results3 = run_reopt(model, inputs)
         @test sum(results2["ElectricStorage"]["storage_to_load_series_kw"]) - 
             sum(results3["ElectricStorage"]["storage_to_load_series_kw"]) ≈ 15.382 atol=0.01 
