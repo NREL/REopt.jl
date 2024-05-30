@@ -296,8 +296,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             add_heating_tech_constraints(m, p)
         end
 
-        # Zero out ExistingBoiler production if retire_in_optimal; length check avoids zeroing for BAU 
-		if !isnothing(p.s.existing_boiler) && p.s.existing_boiler.retire_in_optimal
+        # Zero out ExistingBoiler production if retire_in_optimal
+		if !isnothing(p.s.existing_boiler) && p.s.existing_boiler.retire_in_optimal && !isempty(setdiff(union(p.techs.chp,p.techs.heating), ["ExistingBoiler"]))
 			no_existing_boiler_production(m, p)
         end
 		
@@ -313,10 +313,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         end
 
 		# Zero out ExistingChiller production if retire_in_optimal; setdiff avoids zeroing for BAU 
-		if !isnothing(p.s.existing_chiller) && p.s.existing_chiller.retire_in_optimal
-			if !isempty(setdiff(p.techs.cooling, ["ExistingChiller"]))
-				no_existing_chiller_production(m, p)
-			end
+		if !isnothing(p.s.existing_chiller) && p.s.existing_chiller.retire_in_optimal && !isempty(setdiff(p.techs.cooling, ["ExistingChiller"]))
+			no_existing_chiller_production(m, p)
 		end
 
         if !isempty(setdiff(intersect(p.techs.heating, p.techs.cooling), p.techs.ghp))
