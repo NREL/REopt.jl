@@ -299,16 +299,21 @@ function Techs(s::Scenario)
     # check for ability of new technologies to meet heating loads if retire_in_optimal
     if !isnothing(s.existing_boiler) && s.existing_boiler.retire_in_optimal
         if !isnothing(s.dhw_load) && s.dhw_load.annual_mmbtu > 0 && isempty(setdiff(techs_can_serve_dhw, "ExistingBoiler"))
-            @throw(@error("ExisitingBoiler.retire_in_optimal is true, but no other heating technologies can meet DomesticHotWater load."))
+            throw(@error("ExisitingBoiler.retire_in_optimal is true, but no other heating technologies can meet DomesticHotWater load."))
         end
         if !isnothing(s.space_heating_load) && s.space_heating_load.annual_mmbtu > 0 && isempty(setdiff(techs_can_serve_space_heating, "ExistingBoiler"))
-            @throw(@error("ExisitingBoiler.retire_in_optimal is true, but no other heating technologies can meet SpaceHeating load."))
+            throw(@error("ExisitingBoiler.retire_in_optimal is true, but no other heating technologies can meet SpaceHeating load."))
         end
         if !isnothing(s.process_heat_load) && s.process_heat_load.annual_mmbtu > 0 && isempty(setdiff(techs_can_serve_process_heat, "ExistingBoiler"))
-            @throw(@error("ExisitingBoiler.retire_in_optimal is true, but no other heating technologies can meet ProcessHeat load."))
+            throw(@error("ExisitingBoiler.retire_in_optimal is true, but no other heating technologies can meet ProcessHeat load."))
         end 
     end
-    end 
+    if !isnothing(s.existing_chiller) && s.existing_chiller.retire_in_optimal
+        if !isnothing(s.cooling_load) && sum(s.cooling_load.loads_kw_thermal) > 0 && isempty(setdiff(cooling_techs, "ExistingChiller"))
+            throw(@error("ExisitingChiller.retire_in_optimal is true, but no other technologies can meet cooling load."))
+        end 
+    end
+
     Techs(
         all_techs,
         elec,
