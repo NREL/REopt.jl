@@ -5,8 +5,8 @@
 - `size_ton`  # Thermal production capacity size of the ASHP [ton/hr]
 - `electric_consumption_series_kw`  # Fuel consumption series [kW]
 - `annual_electric_consumption_kwh`  # Fuel consumed in a year [kWh]
-- `thermal_production_series_mmbtu_per_hour`  # Thermal energy production series [MMBtu/hr]
-- `annual_thermal_production_mmbtu`  # Thermal energy produced in a year [MMBtu]
+- `thermal_production_series_mmbtu_per_hour`  # Thermal heating energy production series [MMBtu/hr]
+- `annual_thermal_production_mmbtu`  # Thermal heating energy produced in a year [MMBtu]
 - `thermal_to_storage_series_mmbtu_per_hour`  # Thermal power production to TES (HotThermalStorage) series [MMBtu/hr]
 - `thermal_to_steamturbine_series_mmbtu_per_hour`  # Thermal power production to SteamTurbine series [MMBtu/hr]
 - `thermal_to_load_series_mmbtu_per_hour`  # Thermal power production to serve the heating load series [MMBtu/hr]
@@ -14,7 +14,7 @@
 - `thermal_to_load_series_ton` # Thermal production to cooling load
 - `electric_consumption_series_kw`
 - `annual_electric_consumption_kwh`
-- `annual_thermal_production_tonhour`
+- `annual_thermal_production_tonhour` Thermal cooling energy produced in a year 
 
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
