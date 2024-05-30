@@ -25,10 +25,7 @@ Classify the change according to the following categories:
 
 ## v0.47.0
 ### Added
-- In `src/core/heating_cooling_loads.jl`, added new struct **ProcessHeatLoad**.
-- In `src/core/scenario.jl`, added new field **process_heat_load**.
-- Added new results fields **process_heat_thermal_load_series_mmbtu_per_hour**, **process_heat_boiler_fuel_load_series_mmbtu_per_hour**, **annual_calculated_process_heat_thermal_load_mmbtu**, and **annual_calculated_process_heat_boiler_fuel_load_mmbtu** to HeatingLoad results, with sum heating loads now including process heat.
-
+- Added inputs options and handling for ProcessHeatLoad for scaling annual or monthly fuel consumption values with reference hourly profiles, same as other loads
 ### Changed
 - Updated `test/scenarios/thermal_load.json` to include **ProcessHeatLoad** in both hourly and monthly fuel load tests.
 - Refactored test sets in `test/runtests.jl` to include **ProcessHeatLoad** and ensure it is treated similarly to **DomesticHotWaterLoad** and **SpaceHeatingLoad**.
@@ -36,9 +33,6 @@ Classify the change according to the following categories:
 - Updated test values and expectations to include contributions from **ProcessHeatLoad**.
 - Updated `src/core/doe_commercial_reference_building_loads.jl` to include **ProcessHeatLoad** for built-in load handling.
 - Refactored various functions to ensure **ProcessHeatLoad** is processed correctly in line with other heating loads.
-
-## v0.46.2
-### Changed
 - When the URDB response `energyratestructure` has a "unit" value that is not "kWh", throw an error instead of averaging rates in each energy tier.
 - Changed default Financial **owner_tax_rate_fraction** and **offtaker_tax_rate_fraction** from 0.257 to 0.26 to align with API and user manual defaults. 
 ### Fixed
