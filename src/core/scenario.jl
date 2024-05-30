@@ -673,22 +673,27 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     pv_prodfactor, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; time_steps_per_hour=settings.time_steps_per_hour)    
                 end
             end
+            ambient_temp_fahrenheit = (9/5 .* ambient_temp_celsius) .+ 32
 
             if !haskey(d["ASHP"], "cop_heating")
-                cop_heating = round.(0.083 .* ambient_temp_celsius .+ 2.8255, digits=2)
+                cop_heating = round.(0.0462 .* ambient_temp_fahrenheit .+ 1.351, digits=3)
+                cop_heating[ambient_temp_fahrenheit .< -7.6] .= 1
+                cop_heating[ambient_temp_fahrenheit .> 79] .= 999999
             else
-                cop_heating = round.(d["ASHP"]["cop_heating"],digits=2)
+                cop_heating = round.(d["ASHP"]["cop_heating"],digits=3)
             end
 
-            if !haskey(d["ASHP"], "cop_cooling") # TODO review cooling COP with design docs
-                cop_cooling = round.(-0.08 .* ambient_temp_celsius .+ 5.4, digits=2)
+            if !haskey(d["ASHP"], "cop_cooling")
+                cop_cooling = round.(-0.044 .* ambient_temp_fahrenheit .+ 6.822, digits=3)
+                cop_cooling[ambient_temp_celsius .< 25] .= 999999
+                cop_cooling[ambient_temp_celsius .> 40] .= 1
             else
-                cop_cooling = round.(d["ASHP"]["cop_cooling"], digits=2)
+                cop_cooling = round.(d["ASHP"]["cop_cooling"], digits=3)
             end
         else
             # Else if the user already provide cop series, use that
-            cop_heating = round.(d["ASHP"]["cop_heating"],digits=2)
-            cop_cooling = round.(d["ASHP"]["cop_cooling"],digits=2)
+            cop_heating = round.(d["ASHP"]["cop_heating"],digits=3)
+            cop_cooling = round.(d["ASHP"]["cop_cooling"],digits=3)
         end
         d["ASHP"]["cop_heating"] = cop_heating
         d["ASHP"]["cop_cooling"] = cop_cooling
