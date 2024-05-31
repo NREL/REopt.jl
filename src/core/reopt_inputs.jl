@@ -442,6 +442,8 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
         setup_ashp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, cooling_cop, heating_cf, cooling_cf)
     else
         heating_cop["ASHP"] = ones(length(time_steps))
+        heating_cf["ASHP"] = ones(length(time_steps))
+        cooling_cf["ASHP"] = ones(length(time_steps))
     end
 
     if !isempty(techs.ghp)
