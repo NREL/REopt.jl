@@ -657,7 +657,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     ashp = nothing
     cop_heating = []
     cop_cooling = []
+    cf_heating = []
+    cf_cooling = []
     if haskey(d, "ASHP") && d["ASHP"]["max_ton"] > 0.0
+        # Add ASHP's COPs
         # If user does not provide heating cop series then assign cop curves based on ambient temperature
         if !haskey(d["ASHP"], "cop_heating") || !haskey(d["ASHP"], "cop_cooling")
             # If PV is evaluated, get ambient temperature series from PVWatts and assign PV production factor
@@ -697,6 +700,27 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         end
         d["ASHP"]["cop_heating"] = cop_heating
         d["ASHP"]["cop_cooling"] = cop_cooling
+
+        # Add ASHP's capacity factor curves
+        if !haskey(d["ASHP"], "cf_heating") || !haskey(d["ASHP"], "cf_cooling")
+            if !haskey(d["ASHP"], "cf_heating")
+                cf_heating = round.(0.0116 .* ambient_temp_fahrenheit .+ 0.4556, digits=3)
+            else
+                cf_heating = round.(d["ASHP"]["cf_heating"],digits=3)
+            end
+
+            if !haskey(d["ASHP"], "cf_cooling")
+                cf_cooling = round.(-0.0056 .* ambient_temp_fahrenheit .+ 1.4778, digits=3)
+            else
+                cf_cooling = round.(d["ASHP"]["cf_cooling"],digits=3)
+            end
+
+        else
+            # Else if the user already provide cf curves, use them
+            cf_heating = round.(d["ASHP"]["cf_heating"],digits=3)
+            cf_cooling = round.(d["ASHP"]["cf_cooling"],digits=3)
+        end
+
         ashp = ASHP(;dictkeys_tosymbols(d["ASHP"])...)
     end
 
