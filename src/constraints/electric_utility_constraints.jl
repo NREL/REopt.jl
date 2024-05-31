@@ -200,7 +200,7 @@ function add_monthly_peak_constraint(m, p; _n="")
         b = m[Symbol(dv)]
         # Upper bound on peak electrical power demand by month, tier; if tier is selected (0 o.w.)
         @constraint(m, [mth in p.months, tier in 1:ntiers],
-            m[Symbol("dvPeakDemandMonth"*_n)][mth, tier] <= p.s.electric_tariff.monthly_demand_tier_limits[tier] * 
+            m[Symbol("dvPeakDemandMonth"*_n)][mth, tier] <= p.s.electric_tariff.monthly_demand_tier_limits[mth, tier] * 
                 b[mth, tier]
         )
 
@@ -209,7 +209,7 @@ function add_monthly_peak_constraint(m, p; _n="")
 
         # One monthly peak electrical power demand tier must be full before next one is active
         @constraint(m, [mth in p.months, tier in 2:ntiers],
-        b[mth, tier] * p.s.electric_tariff.monthly_demand_tier_limits[tier-1] <= 
+        b[mth, tier] * p.s.electric_tariff.monthly_demand_tier_limits[mth, tier-1] <= 
             m[Symbol("dvPeakDemandMonth"*_n)][mth, tier-1]
         )
         # TODO implement NewMaxDemandMonthsInTier, which adds mth index to monthly_demand_tier_limits
@@ -233,7 +233,7 @@ function add_tou_peak_constraint(m, p; _n="")
 
         # Upper bound on peak electrical power demand by tier, by ratchet, if tier is selected (0 o.w.)
         @constraint(m, [r in p.ratchets, tier in 1:ntiers],
-            m[Symbol("dvPeakDemandTOU"*_n)][r, tier] <= p.s.electric_tariff.tou_demand_tier_limits[tier] * b[r, tier]
+            m[Symbol("dvPeakDemandTOU"*_n)][r, tier] <= p.s.electric_tariff.tou_demand_tier_limits[r, tier] * b[r, tier]
         )
 
         # Ratchet peak electrical power ratchet tier ordering
@@ -243,7 +243,7 @@ function add_tou_peak_constraint(m, p; _n="")
 
         # One ratchet peak electrical power demand tier must be full before next one is active
         @constraint(m, [r in p.ratchets, tier in 2:ntiers],
-            b[r, tier] * p.s.electric_tariff.tou_demand_tier_limits[tier-1] 
+            b[r, tier] * p.s.electric_tariff.tou_demand_tier_limits[r, tier-1] 
             <= m[Symbol("dvPeakDemandTOU"*_n)][r, tier-1]
         )
     end
