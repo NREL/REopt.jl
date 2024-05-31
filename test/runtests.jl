@@ -1223,7 +1223,7 @@ else  # run HiGHS tests
                 d["ElectricTariff"]["urdb_response"] = JSON.parsefile("./scenarios/multi_tier_urdb_response.json")
                 s = Scenario(d)
                 p = REoptInputs(s)
-                @test p.s.electric_tariff.tou_demand_tier_limits[1] ≈ 100.0 atol=1.0e-4
+                @test p.s.electric_tariff.tou_demand_tier_limits[1, 1] ≈ 100.0 atol=1.0e-4
             end
 
             @testset "Tiered TOU Demand" begin
