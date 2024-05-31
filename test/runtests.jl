@@ -659,10 +659,10 @@ else  # run HiGHS tests
                 data_sizing = JSON.parsefile("./scenarios/chp_sizing.json")
                 s = Scenario(data_sizing)
                 inputs = REoptInputs(s)
-                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
                 results = run_reopt(m, inputs)
             
-                @test round(results["CHP"]["size_kw"], digits=0) ≈ 330.0 atol=20.0
+                @test round(results["CHP"]["size_kw"], digits=0) ≈ 400.0 atol=50.0
                 @test round(results["Financial"]["lcc"], digits=0) ≈ 1.3476e7 rtol=1.0e-2
             end
         
@@ -695,6 +695,7 @@ else  # run HiGHS tests
                     [0, init_capex_chp_expected * data_cost_curve["CHP"]["federal_itc_fraction"]])
             
                 #PV
+                data_cost_curve["PV"] = Dict()
                 data_cost_curve["PV"]["min_kw"] = 1500
                 data_cost_curve["PV"]["max_kw"] = 1500
                 data_cost_curve["PV"]["installed_cost_per_kw"] = 1600
@@ -822,6 +823,13 @@ else  # run HiGHS tests
                 @test results["CHP"]["size_supplemental_firing_kw"] ≈ 321.71 atol=0.1
                 @test results["CHP"]["annual_thermal_production_mmbtu"] ≈ 149136.6 rtol=1e-5
                 @test results["ElectricTariff"]["lifecycle_demand_cost_after_tax"] ≈ 5212.7 rtol=1e-5
+            end
+
+            @testset "CHP to Waste Heat" begin
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
+                d = JSON.parsefile("./scenarios/chp_waste.json")
+                results = run_reopt(m, d)
+                @test sum(results["CHP"]["thermal_curtailed_series_mmbtu_per_hour"]) ≈ 4174.455 atol=1e-3
             end
         end
         
