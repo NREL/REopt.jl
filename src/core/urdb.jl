@@ -196,7 +196,7 @@ end
 
 
 """
-    parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM = 1.0e8)
+    parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM = 1.0e10)
 
 use URDB dict to return rates, energy_cost_vector, energy_tier_limits_kwh where:
     - rates is vector summary of rates within URDB (used for average rates when necessary)
@@ -204,7 +204,7 @@ use URDB dict to return rates, energy_cost_vector, energy_tier_limits_kwh where:
         inner vectors are costs in each time step
     - energy_tier_limits_kwh is a vector of upper kWh limits for each energy tier
 """
-function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM = 1.0e8)
+function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM = 1.0e10)
     if length(d["energyratestructure"]) == 0
         throw(@error("No energyratestructure in URDB response."))
     end
