@@ -56,6 +56,8 @@ function ASHP(;
         can_supply_steam_turbine::Union{Bool, Nothing} = nothing,
         cop_heating::Array{Float64,1} = Float64[],
         cop_cooling::Array{Float64,1} = Float64[],
+        cf_heating::Array{Float64,1} = Float64[],
+        cf_cooling::Array{Float64,1} = Float64[],
         can_serve_dhw::Union{Bool, Nothing} = nothing,
         can_serve_space_heating::Union{Bool, Nothing} = nothing,
         can_serve_process_heat::Union{Bool, Nothing} = nothing,
