@@ -62,6 +62,8 @@ struct REoptInputs <: AbstractInputs
     techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
     heating_cop::Dict{String, Array{<:Real, 1}} # (techs.ashp)
     cooling_cop::Dict{String, Array{<:Real, 1}} # (techs.ashp)
+    heating_cf::Dict{String, Array{<:Real, 1}} # (techs.ashp)
+    cooling_cf::Dict{String, Array{<:Real, 1}} # (techs.ashp)
     heating_loads_kw::Dict{String, <:Real} # (heating_loads)
     unavailability::Dict{String, Array{Float64,1}}  # Dict by tech of unavailability profile
 end
@@ -128,6 +130,8 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
     heating_cop::Dict{String, Array{Float64,1}} # (techs.ashp, time_steps)
     cooling_cop::Dict{String, Array{Float64,1}}  # (techs.ashp, time_steps)
+    heating_cf::Dict{String, Array{Float64,1}} # (techs.ashp, time_steps)
+    cooling_cf::Dict{String, Array{Float64,1}}  # (techs.ashp, time_steps)
     heating_loads::Vector{String} # list of heating loads
     heating_loads_kw::Dict{String, Array{Real,1}} # (heating_loads)
     heating_loads_served_by_tes::Dict{String, Array{String,1}} # ("HotThermalStorage" or empty)
@@ -168,7 +172,7 @@ function REoptInputs(s::AbstractScenario)
         seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
         tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
         tech_emissions_factors_PM25, techs_operating_reserve_req_fraction, thermal_cop, fuel_cost_per_kwh, 
-        heating_cop, cooling_cop = setup_tech_inputs(s,time_steps)
+        heating_cop, cooling_cop, heating_cf, cooling_cf = setup_tech_inputs(s,time_steps)
 
     pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
 
@@ -316,6 +320,8 @@ function REoptInputs(s::AbstractScenario)
         techs_operating_reserve_req_fraction,
         heating_cop,
         cooling_cop,
+        heating_cf,
+        cooling_cf,
         heating_loads,
         heating_loads_kw,
         heating_loads_served_by_tes,
@@ -354,6 +360,8 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     techs_operating_reserve_req_fraction = Dict(t => 0.0 for t in techs.all)
     thermal_cop = Dict(t => 0.0 for t in techs.absorption_chiller)
     heating_cop = Dict(t => zeros(length(time_steps)) for t in techs.electric_heater)
+    heating_cf = Dict(t => zeros(length(time_steps)) for t in techs.electric_heater)
+    cooling_cf = Dict(t => zeros(length(time_steps)) for t in techs.electric_heater)
     cooling_cop = Dict(t => zeros(length(time_steps)) for t in techs.cooling)
 
     # export related inputs
@@ -455,7 +463,7 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
     tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
     tech_emissions_factors_PM25, techs_operating_reserve_req_fraction, thermal_cop, fuel_cost_per_kwh, 
-    heating_cop, cooling_cop
+    heating_cop, cooling_cop, heating_cf, cooling_cf
 end
 
 
