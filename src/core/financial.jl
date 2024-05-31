@@ -82,10 +82,10 @@ struct Financial
         boiler_fuel_cost_escalation_rate_fraction::Real = 0.015,
         chp_fuel_cost_escalation_rate_fraction::Real = 0.015,
         generator_fuel_cost_escalation_rate_fraction::Real = 0.012,
-        offtaker_tax_rate_fraction::Real = 0.257,
+        offtaker_tax_rate_fraction::Real = 0.26,
         offtaker_discount_rate_fraction::Real = 0.0638,
         third_party_ownership::Bool = false,
-        owner_tax_rate_fraction::Real = 0.257,
+        owner_tax_rate_fraction::Real = 0.26,
         owner_discount_rate_fraction::Real = 0.0638,
         analysis_years::Int = 25,
         value_of_lost_load_per_kwh::Union{Array{<:Real,1}, Real} = 1.00, #only applies to multiple outage modeling
