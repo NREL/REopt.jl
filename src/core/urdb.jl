@@ -301,9 +301,8 @@ Parse monthly ("flat") and TOU demand rates
 function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
     if haskey(d, "flatdemandstructure")
         scrub_urdb_demand_tiers!(d["flatdemandstructure"])
-        monthly_demand_tier_limits = parse_urdb_demand_tiers(d["flatdemandstructure"]; bigM)
-        n_monthly_demand_tiers = length(monthly_demand_tier_limits)
-        monthly_demand_rates = parse_urdb_monthly_demand(d, n_monthly_demand_tiers)
+        n_monthly_demand_tiers = parse_urdb_demand_tiers(d["flatdemandstructure"])
+        monthly_demand_rates = parse_urdb_monthly_demand(d, n_monthly_demand_tiers; bigM)
     else
         monthly_demand_tier_limits = []
         n_monthly_demand_tiers = 1
@@ -312,8 +311,7 @@ function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour:
 
     if haskey(d, "demandratestructure")
         scrub_urdb_demand_tiers!(d["demandratestructure"])
-        tou_demand_tier_limits = parse_urdb_demand_tiers(d["demandratestructure"]; bigM)
-        n_tou_demand_tiers = length(tou_demand_tier_limits)
+        n_tou_demand_tiers = parse_urdb_demand_tiers(d["demandratestructure"])
         ratchet_time_steps, tou_demand_rates = parse_urdb_tou_demand(d, year=year, n_tiers=n_tou_demand_tiers, time_steps_per_hour=time_steps_per_hour)
     else
         tou_demand_tier_limits = []
@@ -375,11 +373,11 @@ end
 
 
 """
-    parse_urdb_monthly_demand(d::Dict)
+    parse_urdb_monthly_demand(d::Dict, n_tiers; bigM=1.0e8)
 
 return monthly demand rates as array{month, tier}
 """
-function parse_urdb_monthly_demand(d::Dict, n_tiers)
+function parse_urdb_monthly_demand(d::Dict, n_tiers; bigM=1.0e8)
     if !haskey(d, "flatdemandmonths")
         return []
     end
@@ -388,15 +386,17 @@ function parse_urdb_monthly_demand(d::Dict, n_tiers)
     end
 
     demand_rates = zeros(12, n_tiers)  # array(month, tier)
+    demand_tier_limits = zeros(12, n_tiers)
     for month in range(1, stop=12)
         period = d["flatdemandmonths"][month] + 1  # URDB uses zero-indexing
         rates = d["flatdemandstructure"][period]  # vector of dicts
 
         for (t, tier) in enumerate(rates)
             demand_rates[month, t] = round(get(tier, "rate", 0.0) + get(tier, "adj", 0.0), digits=6)
+            demand_tier_limits[month, t] = round(get(tier, "max", bigM), digits=6)
         end
     end
-    return demand_rates
+    return demand_rates, demand_tier_limits
 end
 
 
@@ -405,13 +405,14 @@ end
 
 return array of arrary for ratchet time steps, tou demand rates array{ratchet, tier}
 """
-function parse_urdb_tou_demand(d::Dict; year::Int, n_tiers::Int, time_steps_per_hour::Int)
+function parse_urdb_tou_demand(d::Dict; year::Int, n_tiers::Int, time_steps_per_hour::Int, bigM=1.0e8)
     if !haskey(d, "demandratestructure")
         return [], []
     end
     n_periods = length(d["demandratestructure"])
     ratchet_time_steps = Array[]
     rates_vec = Float64[]  # array(ratchet_num, tier), reshape later
+    limits_vec = Float64[] # array(ratchet_num, tier), reshape later
     n_ratchets = 0  # counter
 
     for month in range(1, stop=12)
@@ -422,13 +423,15 @@ function parse_urdb_tou_demand(d::Dict; year::Int, n_tiers::Int, time_steps_per_
                 append!(ratchet_time_steps, [time_steps])
                 for (t, tier) in enumerate(d["demandratestructure"][period])
                     append!(rates_vec, round(get(tier, "rate", 0.0) + get(tier, "adj", 0.0), digits=6))
+                    append!(limits_vec, round(get(tier, "rate", 0.0)), digits=6))
                 end
             end
         end
     end
     rates = reshape(rates_vec, (n_tiers, :))'  # Array{Float64,2}
+    limits = reshape(limits_vec, (n_tiers, :))'  # Array{Float64,2}
     ratchet_time_steps = convert(Array{Array{Int64,1},1}, ratchet_time_steps)
-    return ratchet_time_steps, rates
+    return ratchet_time_steps, rates, limits
 end
 
 
