@@ -301,7 +301,7 @@ Parse monthly ("flat") and TOU demand rates
 function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
     if haskey(d, "flatdemandstructure")
         scrub_urdb_demand_tiers!(d["flatdemandstructure"])
-        n_monthly_demand_tiers = parse_urdb_demand_tiers(d["flatdemandstructure"])
+        n_monthly_demand_tiers = get_num_demand_tiers(d["flatdemandstructure"])
         monthly_demand_rates = parse_urdb_monthly_demand(d, n_monthly_demand_tiers; bigM)
     else
         monthly_demand_tier_limits = []
@@ -311,7 +311,7 @@ function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour:
 
     if haskey(d, "demandratestructure")
         scrub_urdb_demand_tiers!(d["demandratestructure"])
-        n_tou_demand_tiers = parse_urdb_demand_tiers(d["demandratestructure"])
+        n_tou_demand_tiers = get_num_demand_tiers(d["demandratestructure"])
         ratchet_time_steps, tou_demand_rates = parse_urdb_tou_demand(d, year=year, n_tiers=n_tou_demand_tiers, time_steps_per_hour=time_steps_per_hour)
     else
         tou_demand_tier_limits = []
@@ -357,12 +357,12 @@ end
 
 
 """
-    parse_urdb_demand_tiers(d::Dict; bigM=1.0e8)
+    get_num_demand_tiers(d::Dict)
 
-set up and validate demand tiers
-    returns demand_tiers::Array{Float64, n_tiers}
+    get maximum number of demand tiers in any period from scrubbed demand rate structure
+    returns n_tiers::Int
 """
-function parse_urdb_demand_tiers(A::Array; bigM=1.0e8)
+function get_num_demand_tiers(A::Array)
     if length(A) == 0
         return 0
     end
