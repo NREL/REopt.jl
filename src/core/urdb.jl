@@ -366,31 +366,11 @@ set up and validate demand tiers
 """
 function parse_urdb_demand_tiers(A::Array; bigM=1.0e8)
     if length(A) == 0
-        return []
+        return 0
     end
     len_tiers = Int[length(r) for r in A]
     n_tiers = maximum(len_tiers)
-    period_with_max_tiers = findall(len_tiers .== maximum(len_tiers))[1]
-
-    # set up tiers and validate that the highest tier has the same value across periods
-    demand_tiers = Dict()
-    demand_maxes = Float64[]
-    for period in range(1, stop=length(A))
-        demand_max = Float64[]
-        for tier in A[period] 
-            tier_max = get(tier, "max", bigM)
-            append!(demand_max, min(bigM, tier_max))
-        end
-        demand_tiers[period] = demand_max
-        append!(demand_maxes, demand_max[end])  # TODO should this be maximum(demand_max)?
-    end
-
-    # test if the highest tier is the same across all periods
-    if length(Set(demand_maxes)) > 1
-        @warn "Demand tiers do not match across periods: using minimum limit across periods for each tier."
-    end
-    tier_limits = [minimum(demand_tiers[period][tier] for period in length(demand_tiers)) for tier in 1:length(demand_tiers[1])]
-    return tier_limits
+    return n_tiers
 end
 
 
