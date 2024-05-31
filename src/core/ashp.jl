@@ -10,6 +10,8 @@ struct ASHP <: AbstractThermalTech
     can_supply_steam_turbine::Bool
     cop_heating::Array{Float64,1}
     cop_cooling::Array{Float64,1}
+    cf_heating::Array{Float64,1}
+    cf_cooling::Array{Float64,1}
     can_serve_dhw::Bool
     can_serve_space_heating::Bool
     can_serve_process_heat::Bool
@@ -33,8 +35,10 @@ function ASHP(;
     macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
     can_supply_steam_turbine::Union{Bool, nothing} = nothing # If the boiler can supply steam to the steam turbine for electric production
-    cop_heating::Array{<:Real,2}, # COP of the heating (i.e., thermal produced / electricity consumed)
-    cop_cooling::Array{<:Real,2}, # COP of the cooling (i.e., thermal produced / electricity consumed)
+    cop_heating::Array{Float64,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
+    cop_cooling::Array{Float64,1}, # COP of the cooling (i.e., thermal produced / electricity consumed)
+    cf_heating::Array{Float64,1}, # ASHP's heating capacity factor curves
+    cf_cooling::Array{Float64,1}, # ASHP's cooling capacity factor curves
     can_serve_dhw::Union{Bool, Nothing} = nothing # If ASHP can supply heat to the domestic hot water load
     can_serve_space_heating::Union{Bool, Nothing} = nothing # If ASHP can supply heat to the space heating load
     can_serve_process_heat::Union{Bool, Nothing} = nothing # If ASHP can supply heat to the process heating load
@@ -101,6 +105,8 @@ function ASHP(;
         can_supply_steam_turbine,
         cop_heating,
         cop_cooling,
+        cf_heating,
+        cf_cooling,
         can_serve_dhw,
         can_serve_space_heating,
         can_serve_process_heat,
