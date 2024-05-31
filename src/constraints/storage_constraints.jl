@@ -83,9 +83,9 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
             + m[Symbol("dvStorageToGrid")][ts]
     )
 
-    # #Dispatch from electrical storage is no greater than power capacity 
-    # @constraint(m, [ts in p.time_steps_without_grid],
-    #     m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b,ts] + m[Symbol("dvStorageToGrid")][ts])
+    #Dispatch from electrical storage is no greater than power capacity 
+    @constraint(m, [ts in p.time_steps_without_grid],
+        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b,ts] + m[Symbol("dvStorageToGrid")][ts])
 
 	#Constraint (4l)-alt: Dispatch from electrical storage is no greater than power capacity (no grid connection)
 	@constraint(m, [ts in p.time_steps_without_grid],
