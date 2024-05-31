@@ -300,8 +300,8 @@ Parse monthly ("flat") and TOU demand rates
 """
 function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
     if haskey(d, "flatdemandstructure")
-        monthly_demand_tier_limits = parse_urdb_demand_tiers(d["flatdemandstructure"])
         scrub_urdb_demand_tiers!(d["flatdemandstructure"])
+        monthly_demand_tier_limits = parse_urdb_demand_tiers(d; bigM)
         n_monthly_demand_tiers = length(monthly_demand_tier_limits)
         monthly_demand_rates = parse_urdb_monthly_demand(d, n_monthly_demand_tiers)
     else
@@ -311,8 +311,8 @@ function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour:
     end
 
     if haskey(d, "demandratestructure")
-        tou_demand_tier_limits = parse_urdb_demand_tiers(d["demandratestructure"])
         scrub_urdb_demand_tiers!(d["demandratestructure"])
+        tou_demand_tier_limits = parse_urdb_demand_tiers(d; bigM)
         n_tou_demand_tiers = length(tou_demand_tier_limits)
         ratchet_time_steps, tou_demand_rates = parse_urdb_tou_demand(d, year=year, n_tiers=n_tou_demand_tiers, time_steps_per_hour=time_steps_per_hour)
     else
@@ -359,12 +359,13 @@ end
 
 
 """
-    parse_urdb_demand_tiers(A::Array; bigM=1.0e8)
+    parse_urdb_demand_tiers(d::Dict; bigM=1.0e8)
 
 set up and validate demand tiers
     returns demand_tiers::Array{Float64, n_tiers}
 """
-function parse_urdb_demand_tiers(A::Array; bigM=1.0e8)
+function parse_urdb_demand_tiers(d::Dict; bigM=1.0e8)
+    A = d["demandratestructure"]
     if length(A) == 0
         return []
     end
@@ -387,9 +388,10 @@ function parse_urdb_demand_tiers(A::Array; bigM=1.0e8)
 
     # test if the highest tier is the same across all periods
     if length(Set(demand_maxes)) > 1
-        @warn "Highest demand tiers do not match across periods: using max tier from largest set of tiers."
+        @warn "Demand tiers do not match across periods: using minimum limit across periods for each tier."
     end
-    return demand_tiers[period_with_max_tiers]
+    tier_limits = [minimum(demand_tiers[period][tier] for period in length(demand_tiers)) for tier in 1:length(demand_tiers[1])]
+    return tier_limits
 end
 
 
