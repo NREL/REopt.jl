@@ -201,27 +201,17 @@ use URDB dict to return rates, energy_cost_vector, energy_tier_limits_kwh where:
     - rates is vector summary of rates within URDB (used for average rates when necessary)
     - energy_cost_vector is a vector of vectors with inner vectors for each energy rate tier,
         inner vectors are costs in each time step
-    - energy_tier_limits_kwh is a vector of upper kWh limits for each energy tier
+    - energy_tier_limits_kwh is a matrix of upper kWh limits for each energy tier, for each month
 """
 function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM = 1.0e10)
     if length(d["energyratestructure"]) == 0
         throw(@error("No energyratestructure in URDB response."))
     end
-    # TODO check bigM (in multiple functions)
-    energy_tiers = Float64[]
-    for energy_rate in d["energyratestructure"]
-        append!(energy_tiers, length(energy_rate))
-    end
-    energy_tier_set = Set(energy_tiers)
-    if length(energy_tier_set) > 1
-        @warn "Energy periods contain different numbers of tiers, using limits of period with most tiers."
-    end
-    period_with_max_tiers = findall(energy_tiers .== maximum(energy_tiers))[1]
-    n_energy_tiers = Int(maximum(energy_tier_set))
-
+    scrub_urdb_tiers!(d["energyratestructure"])
+    n_energy_tiers = get_num_tiers(d["energyratestructure"])
     energy_cost_vector = Float64[]
     sell_vector = Float64[]
-    energy_limit_vector = Float64[]
+    energy_tier_limits_kwh = Array{Float64}(undef, 12, n_energy_tiers)
 
     for tier in range(1, stop=n_energy_tiers)
 
@@ -230,7 +220,7 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
             for tier in range(1, stop=n_energy_tiers)
                 # tiered energy schedules are assumed to be consistent for each month (i.e., the first hour can represent all 24 hours of the schedule).
                 tier_limit =  get(d["energyratestructure"][period][tier], "max", bigM)
-                append!(energy_limit_vector, round(tier_limit, digits=3))
+                energy_tier_limits_kwh[month, tier] = round(tier_limit, digits=3)
             end
 
             n_days = daysinmonth(Date(string(year) * "-" * string(month)))
@@ -274,7 +264,6 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
     end
     energy_rates = reshape(energy_cost_vector, (:, n_energy_tiers))
     sell_rates = reshape(sell_vector, (:, n_energy_tiers))
-    energy_tier_limits_kwh = reshape(energy_limit_vector, (:, n_energy_tiers))
     return energy_rates, energy_tier_limits_kwh, n_energy_tiers, sell_rates
 end
 
@@ -297,7 +286,7 @@ Parse monthly ("flat") and TOU demand rates
 function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
     if haskey(d, "flatdemandstructure")
         scrub_urdb_tiers!(d["flatdemandstructure"])
-        n_monthly_demand_tiers = get_num_demand_tiers(d["flatdemandstructure"])
+        n_monthly_demand_tiers = get_num_tiers(d["flatdemandstructure"])
         monthly_demand_rates, monthly_demand_tier_limits = parse_urdb_monthly_demand(d, n_monthly_demand_tiers; bigM)
     else
         monthly_demand_tier_limits = Array{Float64,2}(undef, 0, 0)
@@ -307,7 +296,7 @@ function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour:
 
     if haskey(d, "demandratestructure")
         scrub_urdb_tiers!(d["demandratestructure"])
-        n_tou_demand_tiers = get_num_demand_tiers(d["demandratestructure"])
+        n_tou_demand_tiers = get_num_tiers(d["demandratestructure"])
         ratchet_time_steps, tou_demand_rates, tou_demand_tier_limits = parse_urdb_tou_demand(d, year=year, n_tiers=n_tou_demand_tiers, time_steps_per_hour=time_steps_per_hour)
     else
         tou_demand_tier_limits = Array{Float64,2}(undef, 0, 0)
@@ -325,7 +314,6 @@ end
 """
 scrub_urdb_tiers!(A::Array)
 
-validate flatdemandstructure and demandratestructure have equal number of tiers across periods
 validate energyratestructure, flatdemandstructure and demandratestructure have equal number of tiers across periods
 """
 function scrub_urdb_tiers!(A::Array)
