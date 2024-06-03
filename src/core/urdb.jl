@@ -353,12 +353,12 @@ end
 
 
 """
-    get_num_demand_tiers(d::Dict)
+get_num_tiers(d::Dict)
 
     get maximum number of demand tiers in any period from scrubbed demand rate structure
     returns n_tiers::Int
 """
-function get_num_demand_tiers(A::Array)
+function get_num_tiers(A::Array)
     if length(A) == 0
         return 0
     end
