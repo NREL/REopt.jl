@@ -299,7 +299,7 @@ function add_energy_tier_constraints(m, p; _n="")
     ##Constraint (10a): Usage limits by pricing tier, by month
     @constraint(m, [mth in p.months, tier in 1:p.s.electric_tariff.n_energy_tiers],
         p.hours_per_time_step * sum( m[Symbol("dvGridPurchase"*_n)][ts, tier] for ts in p.s.electric_tariff.time_steps_monthly[mth] ) 
-        <= b[mth, tier] * p.s.electric_tariff.energy_tier_limits[tier]
+        <= b[mth, tier] * p.s.electric_tariff.energy_tier_limits[mth, tier]
     )
     ##Constraint (10b): Ordering of pricing tiers
     @constraint(m, [mth in p.months, tier in 2:p.s.electric_tariff.n_energy_tiers],
@@ -307,7 +307,7 @@ function add_energy_tier_constraints(m, p; _n="")
     )
     ## Constraint (10c): One tier must be full before any usage in next tier
     @constraint(m, [mth in p.months, tier in 2:p.s.electric_tariff.n_energy_tiers],
-        b[mth, tier] * p.s.electric_tariff.energy_tier_limits[tier-1] - 
+        b[mth, tier] * p.s.electric_tariff.energy_tier_limits[mth, tier-1] - 
         sum( m[Symbol("dvGridPurchase"*_n)][ts, tier-1] for ts in p.s.electric_tariff.time_steps_monthly[mth]) 
         <= 0
     )
