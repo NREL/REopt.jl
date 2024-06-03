@@ -1216,14 +1216,21 @@ else  # run HiGHS tests
                 @test results["PV"]["size_kw"] ≈ p.s.pvs[1].existing_kw
             end
 
-            @testset "Multi-tier demand rates" begin
-                #This test ensures that when multiple demand regimes are included that the tier limits load appropriately
+            @testset "Multi-tier demand and energy rates" begin
+                #This test ensures that when multiple energy or demand regimes are included, that the tier limits load appropriately
                 d = JSON.parsefile("./scenarios/no_techs.json")
                 d["ElectricTariff"] = Dict()
                 d["ElectricTariff"]["urdb_response"] = JSON.parsefile("./scenarios/multi_tier_urdb_response.json")
                 s = Scenario(d)
                 p = REoptInputs(s)
-                @test p.s.electric_tariff.tou_demand_tier_limits[1, 1] ≈ 100.0 atol=1.0e-4
+                @test p.s.electric_tariff.tou_demand_tier_limits[1, 1] ≈ 1.0e8 atol=1.0
+                @test p.s.electric_tariff.tou_demand_tier_limits[1, 2] ≈ 1.0e8 atol=1.0
+                @test p.s.electric_tariff.tou_demand_tier_limits[2, 1] ≈ 100.0 atol=1.0
+                @test p.s.electric_tariff.tou_demand_tier_limits[2, 2] ≈ 1.0e8 atol=1.0
+                @test p.s.electric_tariff.energy_tier_limits[1, 1] ≈ 1.0e10 atol=1.0
+                @test p.s.electric_tariff.energy_tier_limits[1, 2] ≈ 1.0e10 atol=1.0
+                @test p.s.electric_tariff.energy_tier_limits[6, 1] ≈ 20000.0 atol=1.0
+                @test p.s.electric_tariff.energy_tier_limits[6, 2] ≈ 1.0e10 atol=1.0
             end
 
             @testset "Tiered TOU Demand" begin
