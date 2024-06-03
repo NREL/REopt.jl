@@ -106,6 +106,7 @@ function add_degradation(m, p; b="ElectricStorage")
         @warn "Adding binary and indicator constraints for 
          ElectricStorage.degradation.maintenance_strategy = \"replacement\". 
          Not all solvers support indicators and some are slow with integers."
+        # TODO import the latest battery degradation model in the degradation branch
         @variable(m, soh_indicator[days], Bin)
         @constraint(m, [d in days],
             soh_indicator[d] => {SOH[d] >= 0.8*m[:dvStorageEnergy][b]}
