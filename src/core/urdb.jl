@@ -326,6 +326,7 @@ end
 scrub_urdb_tiers!(A::Array)
 
 validate flatdemandstructure and demandratestructure have equal number of tiers across periods
+validate energyratestructure, flatdemandstructure and demandratestructure have equal number of tiers across periods
 """
 function scrub_urdb_tiers!(A::Array)
     if length(A) == 0
@@ -336,7 +337,7 @@ function scrub_urdb_tiers!(A::Array)
     n_tiers = maximum(len_tiers_set)
 
     if length(len_tiers_set) > 1
-        @warn "Demand rate structure has varying number of tiers in periods. Making the number of tiers the same across all periods by repeating the last tier."
+        @warn "Rate structure has varying number of tiers in periods. Making the number of tiers the same across all periods by repeating the last tier."
         for (i, rate) in enumerate(A)
             n_tiers_in_period = length(rate)
             if n_tiers_in_period != n_tiers
