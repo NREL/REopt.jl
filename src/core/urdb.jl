@@ -296,7 +296,7 @@ Parse monthly ("flat") and TOU demand rates
 """
 function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
     if haskey(d, "flatdemandstructure")
-        scrub_urdb_demand_tiers!(d["flatdemandstructure"])
+        scrub_urdb_tiers!(d["flatdemandstructure"])
         n_monthly_demand_tiers = get_num_demand_tiers(d["flatdemandstructure"])
         monthly_demand_rates, monthly_demand_tier_limits = parse_urdb_monthly_demand(d, n_monthly_demand_tiers; bigM)
     else
@@ -306,7 +306,7 @@ function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour:
     end
 
     if haskey(d, "demandratestructure")
-        scrub_urdb_demand_tiers!(d["demandratestructure"])
+        scrub_urdb_tiers!(d["demandratestructure"])
         n_tou_demand_tiers = get_num_demand_tiers(d["demandratestructure"])
         ratchet_time_steps, tou_demand_rates, tou_demand_tier_limits = parse_urdb_tou_demand(d, year=year, n_tiers=n_tou_demand_tiers, time_steps_per_hour=time_steps_per_hour)
     else
@@ -323,11 +323,11 @@ end
 
 
 """
-    scrub_urdb_demand_tiers!(A::Array)
+scrub_urdb_tiers!(A::Array)
 
 validate flatdemandstructure and demandratestructure have equal number of tiers across periods
 """
-function scrub_urdb_demand_tiers!(A::Array)
+function scrub_urdb_tiers!(A::Array)
     if length(A) == 0
         return
     end
