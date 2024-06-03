@@ -12,15 +12,15 @@ Contains some of the data for ElectricTariff
 """
 struct URDBrate
     energy_rates::Array{Float64,2}  # time X tier
-    energy_tier_limits::Array{Real,1}
+    energy_tier_limits::Array{Float64,2}
     n_energy_tiers::Int
 
     n_monthly_demand_tiers::Int
-    monthly_demand_tier_limits::Array{Real,1}
+    monthly_demand_tier_limits::Array{Float64,2}
     monthly_demand_rates::Array{Float64,2}  # month X tier
 
     n_tou_demand_tiers::Int
-    tou_demand_tier_limits::Array{Real,1}
+    tou_demand_tier_limits::Array{Float64,2}
     tou_demand_rates::Array{Float64,2}  # ratchet X tier
     tou_demand_ratchet_time_steps::Array{Array{Int64,1},1}  # length = n_tou_demand_ratchets
 
@@ -87,7 +87,6 @@ function URDBrate(urdb_response::Dict, year::Int; time_steps_per_hour=1)
         parse_urdb_energy_costs(urdb_response, year; time_steps_per_hour=time_steps_per_hour)
 
     fixed_monthly_charge, annual_min_charge, min_monthly_charge = parse_urdb_fixed_charges(urdb_response)
-
 
     demand_lookback_months, demand_lookback_percent, demand_lookback_range = parse_urdb_lookback_charges(urdb_response)
 
@@ -220,27 +219,20 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
     period_with_max_tiers = findall(energy_tiers .== maximum(energy_tiers))[1]
     n_energy_tiers = Int(maximum(energy_tier_set))
 
-    energy_tier_limits_kwh = Float64[]
-
-    for energy_tier in d["energyratestructure"][period_with_max_tiers]
-        # energy_tier is a dictionary, eg. {'max': 1000, 'rate': 0.07531, 'adj': 0.0119, 'unit': 'kWh'}
-        energy_tier_max = get(energy_tier, "max", bigM)
-
-        if "rate" in keys(energy_tier) || "adj" in keys(energy_tier)  || "sell" in keys(energy_tier)
-            append!(energy_tier_limits_kwh, min(energy_tier_max, bigM))
-        end
-
-        if "unit" in keys(energy_tier) && string(energy_tier["unit"]) != "kWh"
-            throw(@error("URDB energy tiers have exotic units of " * energy_tier["unit"]))
-        end
-    end
-
     energy_cost_vector = Float64[]
     sell_vector = Float64[]
+    energy_limit_vector = Float64[]
 
     for tier in range(1, stop=n_energy_tiers)
 
         for month in range(1, stop=12)
+            period = Int(d["energyweekdayschedule"][month][1] + 1)
+            for tier in range(1, stop=n_energy_tiers)
+                # tiered energy schedules are assumed to be consistent for each month (i.e., the first hour can represent all 24 hours of the schedule).
+                tier_limit =  get(d["energyratestructure"][period][tier], "max", bigM)
+                append!(energy_limit_vector, round(tier_limit, digits=3))
+            end
+
             n_days = daysinmonth(Date(string(year) * "-" * string(month)))
             if month == 2 && isleapyear(year)
                 n_days -= 1
@@ -265,6 +257,9 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
                     else
                         tier_use = tier
                     end
+                    if "unit" in keys(d["energyratestructure"][period][tier_use]) && string(d["energyratestructure"][period][tier_use]["unit"]) != "kWh"
+                        throw(@error("URDB energy tiers have exotic units of " * d["energyratestructure"][period][tier_use]["unit"]))
+                    end
                     total_rate = (get(d["energyratestructure"][period][tier_use], "rate", 0) + 
                                 get(d["energyratestructure"][period][tier_use], "adj", 0)) 
                     sell = get(d["energyratestructure"][period][tier_use], "sell", 0)
@@ -279,6 +274,7 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
     end
     energy_rates = reshape(energy_cost_vector, (:, n_energy_tiers))
     sell_rates = reshape(sell_vector, (:, n_energy_tiers))
+    energy_tier_limits_kwh = reshape(energy_limit_vector, (:, n_energy_tiers))
     return energy_rates, energy_tier_limits_kwh, n_energy_tiers, sell_rates
 end
 
@@ -302,9 +298,9 @@ function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour:
     if haskey(d, "flatdemandstructure")
         scrub_urdb_demand_tiers!(d["flatdemandstructure"])
         n_monthly_demand_tiers = get_num_demand_tiers(d["flatdemandstructure"])
-        monthly_demand_rates = parse_urdb_monthly_demand(d, n_monthly_demand_tiers; bigM)
+        monthly_demand_rates, monthly_demand_tier_limits = parse_urdb_monthly_demand(d, n_monthly_demand_tiers; bigM)
     else
-        monthly_demand_tier_limits = []
+        monthly_demand_tier_limits = Array{Float64,2}(undef, 0, 0)
         n_monthly_demand_tiers = 1
         monthly_demand_rates = Array{Float64,2}(undef, 0, 0)
     end
@@ -312,9 +308,9 @@ function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour:
     if haskey(d, "demandratestructure")
         scrub_urdb_demand_tiers!(d["demandratestructure"])
         n_tou_demand_tiers = get_num_demand_tiers(d["demandratestructure"])
-        ratchet_time_steps, tou_demand_rates = parse_urdb_tou_demand(d, year=year, n_tiers=n_tou_demand_tiers, time_steps_per_hour=time_steps_per_hour)
+        ratchet_time_steps, tou_demand_rates, tou_demand_tier_limits = parse_urdb_tou_demand(d, year=year, n_tiers=n_tou_demand_tiers, time_steps_per_hour=time_steps_per_hour)
     else
-        tou_demand_tier_limits = []
+        tou_demand_tier_limits = Array{Float64,2}(undef, 0, 0)
         n_tou_demand_tiers = 0
         ratchet_time_steps = []
         tou_demand_rates = Array{Float64,2}(undef, 0, 0)
@@ -423,7 +419,7 @@ function parse_urdb_tou_demand(d::Dict; year::Int, n_tiers::Int, time_steps_per_
                 append!(ratchet_time_steps, [time_steps])
                 for (t, tier) in enumerate(d["demandratestructure"][period])
                     append!(rates_vec, round(get(tier, "rate", 0.0) + get(tier, "adj", 0.0), digits=6))
-                    append!(limits_vec, round(get(tier, "rate", 0.0)), digits=6))
+                    append!(limits_vec, round(get(tier, "max", bigM), digits=3))
                 end
             end
         end
