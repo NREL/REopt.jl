@@ -8,7 +8,7 @@
 """
 struct ElectricTariff
     energy_rates::AbstractArray{Float64, 2} # gets a second dim with tiers
-    energy_tier_limits::AbstractArray{Float64,1}
+    energy_tier_limits::AbstractArray{Float64,2}
     n_energy_tiers::Int
 
     monthly_demand_rates::AbstractArray{Float64, 2} # gets a second dim with tiers
@@ -120,11 +120,11 @@ function ElectricTariff(;
     # TODO remove_tiers for multinode models
     nem_rate = Float64[]
 
-    energy_tier_limits = Float64[]
+    energy_tier_limits = Array{Float64,2}(undef, 0, 0)
     n_energy_tiers = 1
-    monthly_demand_tier_limits = Float64[]
+    monthly_demand_tier_limits = Array{Float64,2}(undef, 0, 0)
     n_monthly_demand_tiers = 1
-    tou_demand_tier_limits = Float64[]
+    tou_demand_tier_limits = Array{Float64,2}(undef, 0, 0)
     n_tou_demand_tiers = 1
     time_steps_monthly = get_monthly_time_steps(year, time_steps_per_hour=time_steps_per_hour)
 
@@ -241,7 +241,7 @@ function ElectricTariff(;
         if remove_tiers
             energy_rates, monthly_demand_rates, tou_demand_rates = remove_tiers_from_urdb_rate(u)
             energy_tier_limits, monthly_demand_tier_limits, tou_demand_tier_limits = 
-                Float64[], Float64[], Float64[]
+                Array{Float64,2}(undef, 0, 0), Array{Float64,2}(undef, 0, 0), Array{Float64,2}(undef, 0, 0)
             n_energy_tiers, n_monthly_demand_tiers, n_tou_demand_tiers = 1, 1, 1
         end
 
