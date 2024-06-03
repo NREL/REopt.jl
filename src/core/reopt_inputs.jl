@@ -400,50 +400,56 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
 
     if "ExistingBoiler" in techs.all
         setup_existing_boiler_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
-            tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh)
+            tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh,
+            heating_cf)
     end
 
     if "Boiler" in techs.all
         setup_boiler_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, 
-            boiler_efficiency, production_factor, fuel_cost_per_kwh)
+            boiler_efficiency, production_factor, fuel_cost_per_kwh, heating_cf)
     end
 
     if "CHP" in techs.all
         setup_chp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, 
             production_factor, techs_by_exportbin, techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, 
             seg_yint, techs,
-            tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh)
+            tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh,
+            heating_cf)
     end
 
     if "ExistingChiller" in techs.all
-        setup_existing_chiller_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cooling_cop)
+        setup_existing_chiller_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cooling_cop, cooling_cf)
     else
         cooling_cop["ExistingChiller"] = ones(length(time_steps))
+        cooling_cf["ExistingChiller"] = zeros(length(time_steps))
     end
 
     if "AbsorptionChiller" in techs.all
-        setup_absorption_chiller_inputs(s, max_sizes, min_sizes, cap_cost_slope, cooling_cop, thermal_cop, om_cost_per_kw)
+        setup_absorption_chiller_inputs(s, max_sizes, min_sizes, cap_cost_slope, cooling_cop, thermal_cop, om_cost_per_kw, cooling_cf)
     else
         cooling_cop["AbsorptionChiller"] = ones(length(time_steps))
         thermal_cop["AbsorptionChiller"] = 1.0
+        cooling_cf["ExistingChiller"] = zeros(length(time_steps))
     end
 
     if "SteamTurbine" in techs.all
-        setup_steam_turbine_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin, techs)
+        setup_steam_turbine_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin, techs, heating_cf)
     end    
 
     if "ElectricHeater" in techs.all
-        setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop)
+        setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf)
     else
         heating_cop["ElectricHeater"] = ones(length(time_steps))
+        heating_cf["ExistingChiller"] = zeros(length(time_steps))
     end
 
     if "ASHP" in techs.all
         setup_ashp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, cooling_cop, heating_cf, cooling_cf)
     else
         heating_cop["ASHP"] = ones(length(time_steps))
-        heating_cf["ASHP"] = ones(length(time_steps))
-        cooling_cf["ASHP"] = ones(length(time_steps))
+        cooling_cop["ASHP"] = ones(length(time_steps))
+        heating_cf["ASHP"] = zeros(length(time_steps))
+        cooling_cf["ASHP"] = zeros(length(time_steps))
     end
 
     if !isempty(techs.ghp)
@@ -689,14 +695,16 @@ end
 
 """
     function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
-        tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh)
+        tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh,
+        heating_cf)
 
 Update tech-indexed data arrays necessary to build the JuMP model with the values for existing boiler.
 This version of this function, used in BAUInputs(), doesn't update renewable energy and emissions arrays.
 """
 
 function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
-    tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh)
+    tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh,
+    heating_cf)
     max_sizes["ExistingBoiler"] = s.existing_boiler.max_kw
     min_sizes["ExistingBoiler"] = 0.0
     existing_sizes["ExistingBoiler"] = 0.0
@@ -710,7 +718,7 @@ function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes,
     tech_emissions_factors_PM25["ExistingBoiler"] = s.existing_boiler.emissions_factor_lb_PM25_per_mmbtu / KWH_PER_MMBTU 
     existing_boiler_fuel_cost_per_kwh = s.existing_boiler.fuel_cost_per_mmbtu ./ KWH_PER_MMBTU
     fuel_cost_per_kwh["ExistingBoiler"] = per_hour_value_to_time_series(existing_boiler_fuel_cost_per_kwh, s.settings.time_steps_per_hour, "ExistingBoiler")   
-    heating_cf["ExistingBoiler"] .= 1.0   
+    heating_cf["ExistingBoiler"]  = ones(8760*s.settings.time_steps_per_hour)   
     return nothing
 end
 
@@ -721,7 +729,8 @@ end
 Update tech-indexed data arrays necessary to build the JuMP model with the values for (new) boiler.
 This version of this function, used in BAUInputs(), doesn't update renewable energy and emissions arrays.
 """
-function setup_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, boiler_efficiency, production_factor, fuel_cost_per_kwh)
+function setup_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, boiler_efficiency, production_factor, fuel_cost_per_kwh,
+    heating_cf)
     max_sizes["Boiler"] = s.boiler.max_kw
     min_sizes["Boiler"] = s.boiler.min_kw
     boiler_efficiency["Boiler"] = s.boiler.efficiency
@@ -750,30 +759,30 @@ function setup_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost
     production_factor["Boiler", :] = get_production_factor(s.boiler)
     boiler_fuel_cost_per_kwh = s.boiler.fuel_cost_per_mmbtu ./ KWH_PER_MMBTU
     fuel_cost_per_kwh["Boiler"] = per_hour_value_to_time_series(boiler_fuel_cost_per_kwh, s.settings.time_steps_per_hour, "Boiler")
-    heating_cf["Boiler"] .= 1.0
+    heating_cf["Boiler"]  = ones(8760*s.settings.time_steps_per_hour)
     return nothing
 end
 
 
 """
-    function setup_existing_chiller_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cooling_cop)
+    function setup_existing_chiller_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cooling_cop, cooling_cf)
 
 Update tech-indexed data arrays necessary to build the JuMP model with the values for existing chiller.
 """
-function setup_existing_chiller_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cooling_cop)
+function setup_existing_chiller_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cooling_cop, cooling_cf)
     max_sizes["ExistingChiller"] = s.existing_chiller.max_kw
     min_sizes["ExistingChiller"] = 0.0
     existing_sizes["ExistingChiller"] = 0.0
     cap_cost_slope["ExistingChiller"] = 0.0
     cooling_cop["ExistingChiller"] .= s.existing_chiller.cop
-    cooling_cf["ExistingChiller"] .= 1.0
+    cooling_cf["ExistingChiller"]  = ones(8760*s.settings.time_steps_per_hour)
     # om_cost_per_kw["ExistingChiller"] = 0.0
     return nothing
 end
 
 
 function setup_absorption_chiller_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, 
-    cooling_cop, thermal_cop, om_cost_per_kw
+    cooling_cop, thermal_cop, om_cost_per_kw, cooling_cf
     )
     max_sizes["AbsorptionChiller"] = s.absorption_chiller.max_kw
     min_sizes["AbsorptionChiller"] = s.absorption_chiller.min_kw
@@ -816,14 +825,16 @@ end
 """
     function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw,  
         production_factor, techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs,
-        tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh
+        tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh,
+        heating_cf
         )
 
 Update tech-indexed data arrays necessary to build the JuMP model with the values for CHP.
 """
 function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw,  
     production_factor, techs_by_exportbin, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs,
-    tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh
+    tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh,
+    heating_cf
     )
     max_sizes["CHP"] = s.chp.max_kw
     min_sizes["CHP"] = s.chp.min_kw
@@ -844,12 +855,12 @@ function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_sl
     tech_emissions_factors_PM25["CHP"] = s.chp.emissions_factor_lb_PM25_per_mmbtu / KWH_PER_MMBTU
     chp_fuel_cost_per_kwh = s.chp.fuel_cost_per_mmbtu ./ KWH_PER_MMBTU
     fuel_cost_per_kwh["CHP"] = per_hour_value_to_time_series(chp_fuel_cost_per_kwh, s.settings.time_steps_per_hour, "CHP")   
-    heating_cf["CHP"] .= 1.0 
+    heating_cf["CHP"] = ones(8760*s.settings.time_steps_per_hour)
     return nothing
 end
 
 function setup_steam_turbine_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, 
-    om_cost_per_kw, production_factor, techs_by_exportbin, techs
+    om_cost_per_kw, production_factor, techs_by_exportbin, techs, heating_cf
     )
 
     max_sizes["SteamTurbine"] = s.steam_turbine.max_kw
@@ -883,16 +894,17 @@ function setup_steam_turbine_inputs(s::AbstractScenario, max_sizes, min_sizes, c
         push!(techs.no_curtail, "SteamTurbine")
     end
 
-    heating_cf["SteamTurbine"] .= 1.0 
+    heating_cf["SteamTurbine"] = ones(8760*s.settings.time_steps_per_hour)
 
     return nothing
 end
 
-function setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop)
+function setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf)
     max_sizes["ElectricHeater"] = s.electric_heater.max_kw
     min_sizes["ElectricHeater"] = s.electric_heater.min_kw
     om_cost_per_kw["ElectricHeater"] = s.electric_heater.om_cost_per_kw
     heating_cop["ElectricHeater"] .= s.electric_heater.cop
+    heating_cf["ElectricHeater"] = ones(8760*s.settings.time_steps_per_hour)  #TODO: add timem series input for Electric Heater if using as AShP DHW heater? or use ASHP object?
 
     if s.electric_heater.macrs_option_years in [5, 7]
         cap_cost_slope["ElectricHeater"] = effective_cost(;
