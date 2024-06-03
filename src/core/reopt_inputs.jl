@@ -360,8 +360,8 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     techs_operating_reserve_req_fraction = Dict(t => 0.0 for t in techs.all)
     thermal_cop = Dict(t => 0.0 for t in techs.absorption_chiller)
     heating_cop = Dict(t => zeros(length(time_steps)) for t in techs.electric_heater)
-    heating_cf = Dict(t => zeros(length(time_steps)) for t in techs.electric_heater)
-    cooling_cf = Dict(t => zeros(length(time_steps)) for t in techs.electric_heater)
+    heating_cf = Dict(t => zeros(length(time_steps)) for t in union(techs.electric_heater, techs.chp))
+    cooling_cf = Dict(t => zeros(length(time_steps)) for t in techs.cooling)
     cooling_cop = Dict(t => zeros(length(time_steps)) for t in techs.cooling)
 
     # export related inputs
@@ -709,7 +709,8 @@ function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes,
     tech_emissions_factors_SO2["ExistingBoiler"] = s.existing_boiler.emissions_factor_lb_SO2_per_mmbtu / KWH_PER_MMBTU
     tech_emissions_factors_PM25["ExistingBoiler"] = s.existing_boiler.emissions_factor_lb_PM25_per_mmbtu / KWH_PER_MMBTU 
     existing_boiler_fuel_cost_per_kwh = s.existing_boiler.fuel_cost_per_mmbtu ./ KWH_PER_MMBTU
-    fuel_cost_per_kwh["ExistingBoiler"] = per_hour_value_to_time_series(existing_boiler_fuel_cost_per_kwh, s.settings.time_steps_per_hour, "ExistingBoiler")      
+    fuel_cost_per_kwh["ExistingBoiler"] = per_hour_value_to_time_series(existing_boiler_fuel_cost_per_kwh, s.settings.time_steps_per_hour, "ExistingBoiler")   
+    heating_cf["ExistingBoiler"] .= 1.0   
     return nothing
 end
 
@@ -749,6 +750,7 @@ function setup_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost
     production_factor["Boiler", :] = get_production_factor(s.boiler)
     boiler_fuel_cost_per_kwh = s.boiler.fuel_cost_per_mmbtu ./ KWH_PER_MMBTU
     fuel_cost_per_kwh["Boiler"] = per_hour_value_to_time_series(boiler_fuel_cost_per_kwh, s.settings.time_steps_per_hour, "Boiler")
+    heating_cf["Boiler"] .= 1.0
     return nothing
 end
 
@@ -764,6 +766,7 @@ function setup_existing_chiller_inputs(s::AbstractScenario, max_sizes, min_sizes
     existing_sizes["ExistingChiller"] = 0.0
     cap_cost_slope["ExistingChiller"] = 0.0
     cooling_cop["ExistingChiller"] .= s.existing_chiller.cop
+    cooling_cf["ExistingChiller"] .= 1.0
     # om_cost_per_kw["ExistingChiller"] = 0.0
     return nothing
 end
@@ -796,6 +799,7 @@ function setup_absorption_chiller_inputs(s::AbstractScenario, max_sizes, min_siz
     end
 
     cooling_cop["AbsorptionChiller"] .= s.absorption_chiller.cop_electric
+    cooling_cf["AbsorptionChiller"] .= 1.0
     if isnothing(s.chp)
         thermal_factor = 1.0
     elseif s.chp.cooling_thermal_factor == 0.0
@@ -839,7 +843,8 @@ function setup_chp_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_sl
     tech_emissions_factors_SO2["CHP"] = s.chp.emissions_factor_lb_SO2_per_mmbtu / KWH_PER_MMBTU
     tech_emissions_factors_PM25["CHP"] = s.chp.emissions_factor_lb_PM25_per_mmbtu / KWH_PER_MMBTU
     chp_fuel_cost_per_kwh = s.chp.fuel_cost_per_mmbtu ./ KWH_PER_MMBTU
-    fuel_cost_per_kwh["CHP"] = per_hour_value_to_time_series(chp_fuel_cost_per_kwh, s.settings.time_steps_per_hour, "CHP")    
+    fuel_cost_per_kwh["CHP"] = per_hour_value_to_time_series(chp_fuel_cost_per_kwh, s.settings.time_steps_per_hour, "CHP")   
+    heating_cf["CHP"] .= 1.0 
     return nothing
 end
 
@@ -877,6 +882,8 @@ function setup_steam_turbine_inputs(s::AbstractScenario, max_sizes, min_sizes, c
     if !s.steam_turbine.can_curtail
         push!(techs.no_curtail, "SteamTurbine")
     end
+
+    heating_cf["SteamTurbine"] .= 1.0 
 
     return nothing
 end
