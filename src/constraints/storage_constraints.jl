@@ -127,7 +127,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
 
     # Temporary constraint added for 100 hr LDES duration:
     if p.s.storage.attr[b].max_kwh >= 1
-        @constraint(m, m[Symbol("dvStoragePower"*_n)][b] == m[Symbol("dvStorageEnergy"*_n)][b]/100)
+        #@constraint(m, m[Symbol("dvStoragePower"*_n)][b] == m[Symbol("dvStorageEnergy"*_n)][b]/100)
     end
 end
 

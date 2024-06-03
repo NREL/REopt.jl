@@ -171,9 +171,7 @@ function REoptInputs(s::AbstractScenario)
         tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
         tech_emissions_factors_PM25, cop, techs_operating_reserve_req_fraction, thermal_cop, fuel_cost_per_kwh, 
         heating_cop, existing_hydropower_inputs = setup_tech_inputs(s) 
-    print("\n Test 6")
     pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
-    print("\n test 7a")
     months = 1:12
 
     levelization_factor, pwf_e, pwf_om, pwf_fuel, pwf_emissions_cost, pwf_grid_emissions, third_party_factor, pwf_offtaker, pwf_owner = setup_present_worth_factors(s, techs)
@@ -256,7 +254,6 @@ function REoptInputs(s::AbstractScenario)
         end
     end
     unavailability = get_unavailability_by_tech(s, techs, time_steps)
-    print("\n test 7")
     REoptInputs(
         s,
         techs,
@@ -651,7 +648,7 @@ end
 function setup_existing_hydropower_inputs(s::AbstractScenario, existing_hydropower_inputs, techs_by_exportbin, production_factor)
     existing_hydropower_inputs["existing_kw_per_turbine"] = s.existing_hydropower.existing_kw_per_turbine
      for i in 1:s.existing_hydropower.number_of_turbines
-        
+        # TODO: update so that hydropower works with 15 min and 30 min interval data too
         production_factor["ExistingHydropower_Turbine"*string(i),:] = ones(8760 * s.settings.time_steps_per_hour) # get_production_factor(s.existing_hydropower; s.settings.time_steps_per_hour)
         fillin_techs_by_exportbin(techs_by_exportbin, s.existing_hydropower, "ExistingHydropower_Turbine"*string(i))
         
@@ -1090,9 +1087,7 @@ function fillin_techs_by_exportbin(techs_by_exportbin::Dict, tech::AbstractTech,
             push!(techs_by_exportbin[:EXC], tech_name)
         end
     end
-    print("\n test 2")
     if tech.can_wholesale && :WHL in keys(techs_by_exportbin)
-        print("\n test 3")
         push!(techs_by_exportbin[:WHL], tech_name)
     end
     return nothing

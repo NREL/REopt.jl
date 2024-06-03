@@ -3,18 +3,23 @@
 `ExistingHydropower` is an optional REopt input with the following keys and default values:
 ```julia
     existing_kw_per_turbine::Real=0,
-    number_of_turbines::Real=0,
-    use_average_power_conversion::String="yes",
+    number_of_turbines::Real=0, 
+    computation_type::String="average_power_conversion",
     average_cubic_meters_per_second_per_kw::Real=0,
-    efficiency_slope_fraction_per_cubic_meter_per_second::Real=0, # slope of efficiency plot with the cubic meter per second on the x axis and the percent efficiency on the y axis
+    efficiency_slope_fraction::Real=0, # TODO: change this to a q vs. q*efficiency curve
     efficiency_fraction_y_intercept # the y intercept of the linearized turbine efficiency plot
-    linearized_stage_storage_slope  # slope of plot with reservoir volume on the x axis and water elevation on the y axis
+    linearized_stage_storage_slope_fraction::Real=0.0  # slope of plot with reservoir volume on the x axis and water elevation on the y axis (stage storage plot)
+    linearized_stage_storage_y_intercept::Real=0.0 # the y intercept of the linearized stage storage plot
+    water_levels_discretization_number::Int=1 # the number of water levels to consider when discretizing the water level range (more levels means more accuracy, but longer solve times)
+    water_outflow_rate_discretization_number::Int=1
     water_inflow_cubic_meter_per_second::Array=[], # water flowing into the dam's pond
     cubic_meter_maximum::Real=0, #maximum capacity of the dam
     cubic_meter_minimum::Real=0, #minimum water level of the dam
     initial_reservoir_volume::Real=0.0  # The initial volume of water in the reservoir
     minimum_water_output_cubic_meter_per_second_total_of_all_turbines::Real=0,
     minimum_water_output_cubic_meter_per_second_per_turbine::Real=0.0,
+    maximum_water_output_cubic_meter_per_second_per_turbine::Real=0.0,
+    minimum_operating_time_steps_individual_turbine::Real=0.0, # the minimum time (in time steps) that an invidual turbine must run for (can avoid turning a turbine on for just 15 minute, for instance)
     spillway_maximum_cubic_meter_per_second::Real=nothing # maximum water flow that can flow out of the spillway (structure that enables water overflowing from the reservoir to pass over/through the dam)
     hydro_production_factor_series::Union{Nothing, Array{<:Real,1}} = nothing, # Optional user-defined production factors. Must be normalized to units of kW-AC/kW-DC nameplate. The series must be one year (January through December) of hourly, 30-minute, or 15-minute generation data.
     can_net_meter::Bool = off_grid_flag ? false : true,
@@ -28,17 +33,22 @@ mutable struct ExistingHydropower <: AbstractTech
 
     existing_kw_per_turbine  #::Float64
     number_of_turbines
-    use_average_power_conversion
+    computation_type
     average_cubic_meters_per_second_per_kw
     efficiency_slope_fraction_per_cubic_meter_per_second  #::Float64
     efficiency_fraction_y_intercept 
-    linearized_stage_storage_slope 
+    linearized_stage_storage_slope_fraction
+    linearized_stage_storage_y_intercept
+    water_levels_discretization_number
+    water_outflow_rate_discretization_number 
     water_inflow_cubic_meter_per_second  #::AbstractArray{Float64,1}
     cubic_meter_maximum  #::Float64
     cubic_meter_minimum  #::Float64
     initial_reservoir_volume 
     minimum_water_output_cubic_meter_per_second_total_of_all_turbines  #::Float64
     minimum_water_output_cubic_meter_per_second_per_turbine
+    maximum_water_output_cubic_meter_per_second_per_turbine
+    minimum_operating_time_steps_individual_turbine
     spillway_maximum_cubic_meter_per_second
     hydro_production_factor_series  #::AbstractArray{Float64,1}
     can_net_meter  #::Bool 
@@ -49,17 +59,22 @@ mutable struct ExistingHydropower <: AbstractTech
     function ExistingHydropower(;
         existing_kw_per_turbine::Real=0.0,
         number_of_turbines::Real=0,
-        use_average_power_conversion::String="yes",
+        computation_type::String="average_power_conversion",
         average_cubic_meters_per_second_per_kw::Real=0.0,
         efficiency_slope_fraction_per_cubic_meter_per_second::Real=0.0, # conversion factor for the water turbines
         efficiency_fraction_y_intercept::Real=1.0,
-        linearized_stage_storage_slope::Real=0.0, 
+        linearized_stage_storage_slope_fraction::Real=0.0,
+        linearized_stage_storage_y_intercept::Real=0.0,
+        water_levels_discretization_number::Int=1,
+        water_outflow_rate_discretization_number::Int=1, 
         water_inflow_cubic_meter_per_second::Union{Nothing, Array{<:Real,1}} = nothing, # water flowing into the dam's pond
-        cubic_meter_maximum::Real=0.0, #maximum capacity of the dam
-        cubic_meter_minimum::Real=0.0, #minimum water level of the dam
+        cubic_meter_maximum::Real=0.0, #maximum capacity of the reservoir
+        cubic_meter_minimum::Real=0.0, #minimum water level of the reservoir
         initial_reservoir_volume::Real=0.0, # the initial volume of the reservoir
         minimum_water_output_cubic_meter_per_second_total_of_all_turbines::Real=0.0,
         minimum_water_output_cubic_meter_per_second_per_turbine::Real=0.0,
+        maximum_water_output_cubic_meter_per_second_per_turbine::Real=0.0,
+        minimum_operating_time_steps_individual_turbine::Real=1.0, 
         spillway_maximum_cubic_meter_per_second::Real=nothing, 
         hydro_production_factor_series::Union{Nothing, Array{<:Real,1}} = nothing,
         can_net_meter::Bool = false,
@@ -90,17 +105,22 @@ mutable struct ExistingHydropower <: AbstractTech
         new(
             existing_kw_per_turbine,
             number_of_turbines,
-            use_average_power_conversion,
+            computation_type,
             average_cubic_meters_per_second_per_kw,
             efficiency_slope_fraction_per_cubic_meter_per_second,
             efficiency_fraction_y_intercept,
-            linearized_stage_storage_slope,
+            linearized_stage_storage_slope_fraction,
+            linearized_stage_storage_y_intercept,
+            water_levels_discretization_number,
+            water_outflow_rate_discretization_number,
             water_inflow_cubic_meter_per_second,
             cubic_meter_maximum,
             cubic_meter_minimum,
             initial_reservoir_volume,
             minimum_water_output_cubic_meter_per_second_total_of_all_turbines,
             minimum_water_output_cubic_meter_per_second_per_turbine,
+            maximum_water_output_cubic_meter_per_second_per_turbine,
+            minimum_operating_time_steps_individual_turbine,
             spillway_maximum_cubic_meter_per_second,
             hydro_production_factor_series,
             can_net_meter,
