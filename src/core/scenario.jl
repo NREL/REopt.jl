@@ -26,6 +26,7 @@ struct Scenario <: AbstractScenario
     steam_turbine::Union{SteamTurbine, Nothing}
     electric_heater::Union{ElectricHeater, Nothing}
     ashp::Union{ASHP, Nothing}
+    ashp_wh::Union{ASHP_WH, Nothing}
 end
 
 """
@@ -724,6 +725,58 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         ashp = ASHP(;dictkeys_tosymbols(d["ASHP"])...)
     end
 
+    # ASHP Water Heater:
+    ashp_wh = nothing
+    cop_heating = []
+    cf_heating = []
+
+    if haskey(d, "ASHP_WH") && d["ASHP_WH"]["max_ton"] > 0.0
+        # Add ASHP_WH's COPs
+        # If user does not provide heating cop series then assign cop curves based on ambient temperature
+        if !haskey(d["ASHP_WH"], "cop_heating")
+            # If PV is evaluated, get ambient temperature series from PVWatts and assign PV production factor
+            if isnothing(ambient_temp_celsius)
+                if !isempty(pvs)
+                    for pv in pvs
+                        pv.production_factor_series, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
+                            array_type=pv.array_type, losses=round(pv.losses*100, digits=3), dc_ac_ratio=pv.dc_ac_ratio,
+                            gcr=pv.gcr, inv_eff=pv.inv_eff*100, timeframe="hourly", radius=pv.radius, time_steps_per_hour=settings.time_steps_per_hour)
+                    end
+                else
+                    # if PV is not evaluated, call PVWatts to get ambient temperature series
+                    pv_prodfactor, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; time_steps_per_hour=settings.time_steps_per_hour)    
+                end
+            end
+            ambient_temp_fahrenheit = (9/5 .* ambient_temp_celsius) .+ 32
+
+            if !haskey(d["ASHP_WH"], "cop_heating")
+                cop_heating = round.(0.0462 .* ambient_temp_fahrenheit .+ 1.351, digits=3)
+                cop_heating[ambient_temp_fahrenheit .< -7.6] .= 1
+                cop_heating[ambient_temp_fahrenheit .> 79] .= 999999
+            else
+                cop_heating = round.(d["ASHP_WH"]["cop_heating"],digits=3)
+            end
+        else
+            # Else if the user already provide cop series, use that
+            cop_heating = round.(d["ASHP_WH"]["cop_heating"],digits=3)
+        end
+        d["ASHP_WH"]["cop_heating"] = cop_heating
+
+        # Add ASHP_WH's capacity factor curves
+        if !haskey(d["ASHP_WH"], "cf_heating")
+            if !haskey(d["ASHP_WH"], "cf_heating")
+                cf_heating = round.(0.0116 .* ambient_temp_fahrenheit .+ 0.4556, digits=3)
+            else
+                cf_heating = round.(d["ASHP_WH"]["cf_heating"],digits=3)
+            end
+        else
+            # Else if the user already provide cf curves, use them
+            cf_heating = round.(d["ASHP_WH"]["cf_heating"],digits=3)
+        end
+        d["ASHP_WH"]["cf_heating"] = cf_heating
+        ashp_wh = ASHP_WH(;dictkeys_tosymbols(d["ASHP_WH"])...)
+    end
+
     return Scenario(
         settings,
         site, 
@@ -750,7 +803,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         cooling_thermal_load_reduction_with_ghp_kw,
         steam_turbine,
         electric_heater,
-        ashp
+        ashp,
+        ashp_wh
     )
 end
 
