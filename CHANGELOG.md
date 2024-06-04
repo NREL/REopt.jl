@@ -23,6 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.47.1
+### Fixed
+- Type issue with `CoolingLoad` monthly energy input
+- `simulated_load()` response for `annual_mmbtu` for individual heating loads (fixed to fuel instead of thermal)
 
 ## v0.47.0
 ### Added
