@@ -112,7 +112,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
         @constraint(m, m[Symbol("dvStoragePower"*_n)][b] == m[Symbol("dvStorageEnergy"*_n)][b] / p.s.storage.attr[b].fixed_duration)
     end
 
-    if p.s.storage.attr[b].require_start_and_end_charge_to_be_equal
+    if p.s.storage.attr[b] isa ElectricStorage && p.s.storage.attr[b].require_start_and_end_charge_to_be_equal
         # @constraint(m, m[:dvStoredEnergy]["ElectricStorage",maximum(p.time_steps)] == p.s.storage.attr[b].soc_init_fraction * m[Symbol("dvStorageEnergy"*_n)][b] )
         print("\nSetting initial SOC = final SOC\n")
         @constraint(m,
