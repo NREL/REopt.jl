@@ -77,4 +77,5 @@ mutable struct Techs
     can_serve_process_heat::Vector{String}
     ghp::Vector{String}
     ashp::Vector{String}
+    ashp_wh::Vector{String}
 end
