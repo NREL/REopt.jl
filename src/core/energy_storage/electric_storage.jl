@@ -165,7 +165,7 @@ end
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
-    max_duration_hours::Real = 30.0 # Maximum amount of time storage can discharge at its rated power capacity (ratio of ElectricStorage size_kwh to size_kw)
+    max_duration_hours::Real = 9999.0 # Maximum amount of time storage can discharge at its rated power capacity (ratio of ElectricStorage size_kwh to size_kw)
     min_duration_hours::Real = 0.0 # Minimum amount of time storage can discharge at its rated power capacity
 ```
 """
