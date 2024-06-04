@@ -720,7 +720,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             cf_heating = round.(d["ASHP"]["cf_heating"],digits=3)
             cf_cooling = round.(d["ASHP"]["cf_cooling"],digits=3)
         end
-
+        d["ASHP"]["cf_heating"] = cf_heating
+        d["ASHP"]["cf_cooling"] = cf_cooling
         ashp = ASHP(;dictkeys_tosymbols(d["ASHP"])...)
     end
 

@@ -27,7 +27,7 @@ function add_heating_tech_constraints(m, p; _n="")
     # Constraint (7_heating_prod_size): Production limit based on size for non-electricity-producing heating techs
     if !isempty(setdiff(p.techs.heating, union(p.techs.elec, p.techs.ghp)))
         @constraint(m, [t in setdiff(p.techs.heating, union(p.techs.elec, p.techs.ghp)), ts in p.time_steps],
-            sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads)  <= m[Symbol("dvSize"*_n)][t]*p.heating_cf[t][ts]
+            sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads)  <= m[Symbol("dvSize"*_n)][t] * p.heating_cf[t][ts]
         )
     end
     # Constraint (7_heating_load_compatability): Set production variables for incompatible heat loads to zero
@@ -52,7 +52,7 @@ end
 
 function add_ashp_heating_cooling_constraints(m, p; _n="")
     @constraint(m, [t in setdiff(intersect(p.techs.cooling, p.techs.heating), p.techs.ghp), ts in p.time_steps],
-        sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads) + m[Symbol("dvCoolingProduction"*_n)][t,ts] <= m[Symbol("dvSize"*_n)][t]*p.heating_cf[t][ts]
+        sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads) / p.heating_cf[t][ts] + m[Symbol("dvCoolingProduction"*_n)][t,ts] / p.cooling_cf[t][ts] <= m[Symbol("dvSize"*_n)][t]
     )
 end
 
@@ -68,7 +68,7 @@ end
 function add_cooling_tech_constraints(m, p; _n="")
     # Constraint (7_cooling_prod_size): Production limit based on size for boiler
     @constraint(m, [t in setdiff(p.techs.cooling, p.techs.ghp), ts in p.time_steps_with_grid],
-        m[Symbol("dvCoolingProduction"*_n)][t,ts] <= m[Symbol("dvSize"*_n)][t]*p.cooling_cf[t][ts]
+        m[Symbol("dvCoolingProduction"*_n)][t,ts] <= m[Symbol("dvSize"*_n)][t] * p.cooling_cf[t][ts]
     )
     # The load balance for cooling is only applied to time_steps_with_grid, so make sure we don't arbitrarily show cooling production for time_steps_without_grid
     for t in setdiff(p.techs.cooling, p.techs.ghp)

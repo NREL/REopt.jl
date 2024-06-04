@@ -130,8 +130,8 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
     heating_cop::Dict{String, Array{Float64,1}} # (techs.ashp, time_steps)
     cooling_cop::Dict{String, Array{Float64,1}}  # (techs.ashp, time_steps)
-    heating_cf::Dict{String, Array{Float64,1}} # (techs.ashp, time_steps)
-    cooling_cf::Dict{String, Array{Float64,1}}  # (techs.ashp, time_steps)
+    heating_cf::Dict{String, Array{Float64,1}} # (techs.heating, time_steps)
+    cooling_cf::Dict{String, Array{Float64,1}}  # (techs.cooling, time_steps)
     heating_loads::Vector{String} # list of heating loads
     heating_loads_kw::Dict{String, Array{Real,1}} # (heating_loads)
     heating_loads_served_by_tes::Dict{String, Array{String,1}} # ("HotThermalStorage" or empty)
@@ -359,8 +359,8 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     tech_emissions_factors_PM25 = Dict(t => 0.0 for t in techs.all)
     techs_operating_reserve_req_fraction = Dict(t => 0.0 for t in techs.all)
     thermal_cop = Dict(t => 0.0 for t in techs.absorption_chiller)
-    heating_cop = Dict(t => zeros(length(time_steps)) for t in techs.electric_heater)
-    heating_cf = Dict(t => zeros(length(time_steps)) for t in union(techs.electric_heater, techs.chp))
+    heating_cop = Dict(t => zeros(length(time_steps)) for t in union(techs.heating, techs.chp))
+    heating_cf = Dict(t => zeros(length(time_steps)) for t in union(techs.heating, techs.chp))
     cooling_cf = Dict(t => zeros(length(time_steps)) for t in techs.cooling)
     cooling_cop = Dict(t => zeros(length(time_steps)) for t in techs.cooling)
 
@@ -429,7 +429,7 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     else
         cooling_cop["AbsorptionChiller"] = ones(length(time_steps))
         thermal_cop["AbsorptionChiller"] = 1.0
-        cooling_cf["ExistingChiller"] = zeros(length(time_steps))
+        cooling_cf["AbsorptionChiller"] = zeros(length(time_steps))
     end
 
     if "SteamTurbine" in techs.all
@@ -440,7 +440,7 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
         setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf)
     else
         heating_cop["ElectricHeater"] = ones(length(time_steps))
-        heating_cf["ExistingChiller"] = zeros(length(time_steps))
+        heating_cf["ElectricHeater"] = zeros(length(time_steps))
     end
 
     if "ASHP" in techs.all
@@ -455,6 +455,8 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     if !isempty(techs.ghp)
         cooling_cop["GHP"] = ones(length(time_steps))
         heating_cop["GHP"] = ones(length(time_steps))
+        heating_cf["GHP"] = ones(length(time_steps))
+        cooling_cf["GHP"] = ones(length(time_steps))
     end
 
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
@@ -718,7 +720,7 @@ function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes,
     tech_emissions_factors_PM25["ExistingBoiler"] = s.existing_boiler.emissions_factor_lb_PM25_per_mmbtu / KWH_PER_MMBTU 
     existing_boiler_fuel_cost_per_kwh = s.existing_boiler.fuel_cost_per_mmbtu ./ KWH_PER_MMBTU
     fuel_cost_per_kwh["ExistingBoiler"] = per_hour_value_to_time_series(existing_boiler_fuel_cost_per_kwh, s.settings.time_steps_per_hour, "ExistingBoiler")   
-    heating_cf["ExistingBoiler"]  = ones(8760*s.settings.time_steps_per_hour)   
+    heating_cf["ExistingBoiler"] = ones(8760*s.settings.time_steps_per_hour)   
     return nothing
 end
 
