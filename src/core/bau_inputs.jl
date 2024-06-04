@@ -28,6 +28,8 @@ function BAUInputs(p::REoptInputs)
     thermal_cop = Dict{String, Float64}()
     heating_cop = Dict{String, Array{Float64,1}}()
     cooling_cop = Dict{String, Array{Float64,1}}()
+    heating_cf = Dict{String, Array{Float64,1}}() 
+    cooling_cf = Dict{String, Array{Float64,1}}() 
     production_factor = DenseAxisArray{Float64}(undef, techs.all, p.time_steps)
     tech_renewable_energy_fraction = Dict(t => 0.0 for t in techs.all)
     # !!! note: tech_emissions_factors are in lb / kWh of fuel burned (gets multiplied by kWh of fuel burned, not kWh electricity consumption, ergo the use of the HHV instead of fuel slope)
@@ -90,12 +92,13 @@ function BAUInputs(p::REoptInputs)
 
     if "ExistingBoiler" in techs.all
         setup_existing_boiler_inputs(bau_scenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
-            tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh)
+            tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh,
+            heating_cf)
     end
 
     cooling_cop["ExistingChiller"] = ones(length(p.time_steps))
     if "ExistingChiller" in techs.all
-        setup_existing_chiller_inputs(bau_scenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cooling_cop)
+        setup_existing_chiller_inputs(bau_scenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, cooling_cop, cooling_cf)
     end
 
     # Assign null GHP parameters for REoptInputs
@@ -222,6 +225,8 @@ function BAUInputs(p::REoptInputs)
         p.techs_operating_reserve_req_fraction,
         heating_cop,
         cooling_cop,
+        heating_cf,
+        cooling_cf,
         heating_loads,
         heating_loads_kw,
         heating_loads_served_by_tes,
