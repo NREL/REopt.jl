@@ -108,8 +108,8 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
         )
     end
 
-    if p.s.storage.attr[b].is_ldes
-        @constraint(m, m[Symbol("dvStoragePower"*_n)][b] == m[Symbol("dvStorageEnergy"*_n)][b] / p.s.storage.attr[b].duration)
+    if !isnothing(p.s.storage.attr[b].fixed_duration)
+        @constraint(m, m[Symbol("dvStoragePower"*_n)][b] == m[Symbol("dvStorageEnergy"*_n)][b] / p.s.storage.attr[b].fixed_duration)
     end
 
     if p.s.storage.attr[b].require_start_and_end_charge_to_be_equal
