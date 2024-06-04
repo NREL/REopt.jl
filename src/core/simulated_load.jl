@@ -452,12 +452,12 @@ function simulated_load(d::Dict)
                                     existing_boiler_efficiency=boiler_efficiency
                                 )
 
-        load_series = heating_load.loads_kw ./ boiler_efficiency ./ KWH_PER_MMBTU
+        load_series = heating_load.loads_kw ./ boiler_efficiency ./ KWH_PER_MMBTU  # [MMBtu/hr fuel]
         heating_monthly_energy = get_monthly_energy(load_series)
     
         response = Dict([
             ("loads_mmbtu_per_hour", round.(load_series, digits=3)),
-            ("annual_mmbtu", round(heating_load.annual_mmbtu, digits=3)),
+            ("annual_mmbtu", round(sum(load_series), digits=3)),
             ("monthly_mmbtu", round.(heating_monthly_energy, digits=3)),
             ("min_mmbtu_per_hour", round(minimum(load_series), digits=3)),
             ("mean_mmbtu_per_hour", round(sum(load_series) / length(load_series), digits=3)),
