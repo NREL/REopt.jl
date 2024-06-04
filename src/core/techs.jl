@@ -288,6 +288,28 @@ function Techs(s::Scenario)
         end
     end
 
+    if !isnothing(s.ashp_wh)
+        push!(all_techs, "ASHP_WH")
+        push!(heating_techs, "ASHP_WH")
+        push!(electric_heaters, "ASHP_WH")
+        push!(ashp_techs, "ASHP_WH")
+        if s.ashp_wh.can_supply_steam_turbine
+            push!(techs_can_supply_steam_turbine, "ASHP_WH")
+        end
+        if s.ashp_wh.can_serve_space_heating
+            push!(techs_can_serve_space_heating, "ASHP_WH")
+        end
+        if s.ashp_wh.can_serve_dhw
+            push!(techs_can_serve_dhw, "ASHP_WH")
+        end
+        if s.ashp_wh.can_serve_process_heat
+            push!(techs_can_serve_process_heat, "ASHP_WH")
+        end
+        if s.ashp_wh.can_serve_cooling
+            push!(cooling_techs, "ASHP_WH")
+        end
+    end
+
     if s.settings.off_grid_flag
         append!(requiring_oper_res, pvtechs)
         append!(providing_oper_res, pvtechs)
