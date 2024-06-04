@@ -105,11 +105,11 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
     end
 
     if !isempty(p.techs.ashp)
-        add_ashp_results(m, p, d; _n)
-    end
-
-    if !isempty(p.techs.ashp_wh)
-        add_ashp_wh_results(m, p, d; _n)
+        if "ASHP" in p.techs.ashp
+            add_ashp_results(m, p, d; _n)
+        elseif "ASHP_WH" in p.techs.ashp
+            add_ashp_wh_results(m, p, d; _n)
+        end
     end
     
     return d

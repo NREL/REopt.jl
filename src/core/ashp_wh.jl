@@ -9,6 +9,9 @@ struct ASHP_WH <: AbstractThermalTech
     macrs_bonus_fraction::Real
     can_supply_steam_turbine::Bool
     cop_heating::Array{Float64,1}
+    cop_cooling::Array{Float64,1}
+    cf_heating::Array{Float64,1}
+    cf_cooling::Array{Float64,1}
     can_serve_dhw::Bool
     can_serve_space_heating::Bool
     can_serve_process_heat::Bool
@@ -25,10 +28,10 @@ to meet the domestic hot water load.
 
 ```julia
 function ASHP_WH(;
-    min_ton_per_hour::Real = 0.0, # Minimum thermal power size
-    max_ton_per_hour::Real = BIG_NUMBER, # Maximum thermal power size
-    installed_cost_per_ton_per_hour::Union{Real, nothing} = nothing, # Thermal power-based cost
-    om_cost_per_ton_per_hour::Union{Real, nothing} = nothing, # Thermal power-based fixed O&M cost
+    min_ton::Real = 0.0, # Minimum thermal power size
+    max_ton::Real = BIG_NUMBER, # Maximum thermal power size
+    installed_cost_per_ton::Union{Real, nothing} = nothing, # Thermal power-based cost
+    om_cost_per_ton::Union{Real, nothing} = nothing, # Thermal power-based fixed O&M cost
     macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
     can_supply_steam_turbine::Union{Bool, nothing} = nothing # If the boiler can supply steam to the steam turbine for electric production
@@ -41,28 +44,31 @@ function ASHP_WH(;
 ```
 """
 function ASHP_WH(;
-        min_ton_per_hour::Real = 0.0,
-        max_ton_per_hour::Real = BIG_NUMBER,
-        installed_cost_per_ton_per_hour::Union{Real, Nothing} = nothing,
-        om_cost_per_ton_per_hour::Union{Real, Nothing} = nothing,
-        macrs_option_years::Int = 0,
-        macrs_bonus_fraction::Real = 0.0,
-        can_supply_steam_turbine::Union{Bool, Nothing} = nothing,
-        cop_heating::Array{Float64,1} = Float64[],
-        can_serve_dhw::Union{Bool, Nothing} = nothing,
-        can_serve_space_heating::Union{Bool, Nothing} = nothing,
-        can_serve_process_heat::Union{Bool, Nothing} = nothing,
-        can_serve_cooling::Union{Bool, Nothing} = nothing
+    min_ton::Real = 0.0,
+    max_ton::Real = BIG_NUMBER,
+    installed_cost_per_ton::Union{Real, Nothing} = nothing,
+    om_cost_per_ton::Union{Real, Nothing} = nothing,
+    macrs_option_years::Int = 0,
+    macrs_bonus_fraction::Real = 0.0,
+    can_supply_steam_turbine::Union{Bool, Nothing} = nothing,
+    cop_heating::Array{Float64,1} = Float64[],
+    cop_cooling::Array{Float64,1} = Float64[],
+    cf_heating::Array{Float64,1} = Float64[],
+    cf_cooling::Array{Float64,1} = Float64[],
+    can_serve_dhw::Union{Bool, Nothing} = nothing,
+    can_serve_space_heating::Union{Bool, Nothing} = nothing,
+    can_serve_process_heat::Union{Bool, Nothing} = nothing,
+    can_serve_cooling::Union{Bool, Nothing} = nothing
     )
 
     defaults = get_ashp_wh_defaults()
 
     # populate defaults as needed
-    if isnothing(installed_cost_per_ton_per_hour)
-        installed_cost_per_ton_per_hour = defaults["installed_cost_per_ton_per_hour"]
+    if isnothing(installed_cost_per_ton)
+        installed_cost_per_ton = defaults["installed_cost_per_ton"]
     end
-    if isnothing(om_cost_per_ton_per_hour)
-        om_cost_per_ton_per_hour = defaults["om_cost_per_ton_per_hour"]
+    if isnothing(om_cost_per_ton)
+        om_cost_per_ton = defaults["om_cost_per_ton"]
     end
     if isnothing(can_supply_steam_turbine)
         can_supply_steam_turbine = defaults["can_supply_steam_turbine"]
@@ -81,11 +87,11 @@ function ASHP_WH(;
     end
 
     # Convert max sizes, cost factors from mmbtu_per_hour to kw
-    min_kw = min_ton_per_hour * KWH_PER_MMBTU * 0.012
-    max_kw = max_ton_per_hour * KWH_PER_MMBTU * 0.012
+    min_kw = min_ton * KWH_THERMAL_PER_TONHOUR
+    max_kw = max_ton * KWH_THERMAL_PER_TONHOUR
 
-    installed_cost_per_kw = installed_cost_per_ton_per_hour / (KWH_PER_MMBTU * 0.012)
-    om_cost_per_kw = om_cost_per_ton_per_hour / (KWH_PER_MMBTU * 0.012)
+    installed_cost_per_kw = installed_cost_per_ton / KWH_THERMAL_PER_TONHOUR
+    om_cost_per_kw = om_cost_per_ton / KWH_THERMAL_PER_TONHOUR
 
     
     ASHP_WH(
@@ -97,6 +103,9 @@ function ASHP_WH(;
         macrs_bonus_fraction,
         can_supply_steam_turbine,
         cop_heating,
+        cop_cooling,
+        cf_heating,
+        cf_cooling,
         can_serve_dhw,
         can_serve_space_heating,
         can_serve_process_heat,

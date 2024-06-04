@@ -452,6 +452,13 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
         cooling_cf["ASHP"] = zeros(length(time_steps))
     end
 
+    if "ASHP_WH" in techs.all
+        setup_ashp_wh_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf)
+    else
+        heating_cop["ASHP_WH"] = ones(length(time_steps))
+        heating_cf["ASHP_WH"] = zeros(length(time_steps))
+    end
+
     if !isempty(techs.ghp)
         cooling_cop["GHP"] = ones(length(time_steps))
         heating_cop["GHP"] = ones(length(time_steps))
@@ -955,11 +962,12 @@ function setup_ashp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_
 
 end
 
-function setup_ashp_wh_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, cooling_cop)
+function setup_ashp_wh_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf)
     max_sizes["ASHP_WH"] = s.ashp_wh.max_kw
     min_sizes["ASHP_WH"] = s.ashp_wh.min_kw
     om_cost_per_kw["ASHP_WH"] = s.ashp_wh.om_cost_per_kw
     heating_cop["ASHP_WH"] = s.ashp_wh.cop_heating
+    heating_cf["ASHP_WH"] = s.ashp_wh.cf_heating
 
     if s.ashp_wh.macrs_option_years in [5, 7]
         cap_cost_slope["ASHP_WH"] = effective_cost(;
