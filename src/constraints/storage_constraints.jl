@@ -108,7 +108,7 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
         )
     end
 
-    if !isnothing(p.s.storage.attr[b].fixed_duration)
+    if p.s.storage.attr[b] isa ElectricStorage && !isnothing(p.s.storage.attr[b].fixed_duration)
         @constraint(m, m[Symbol("dvStoragePower"*_n)][b] == m[Symbol("dvStorageEnergy"*_n)][b] / p.s.storage.attr[b].fixed_duration)
     end
 
