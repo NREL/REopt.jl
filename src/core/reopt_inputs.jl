@@ -1196,7 +1196,7 @@ function setup_ghp_inputs(s::AbstractScenario, time_steps, time_steps_without_gr
                 (1 + discount_rate)^s.financial.analysis_years
             )
 
-            heating_thermal_load = s.space_heating_load.loads_kw + s.dhw_load.loads_kw
+            heating_thermal_load = s.space_heating_load.loads_kw + s.dhw_load.loads_kw + s.process_heat_load.loads_kw
             # Using minimum of thermal load and ghp-serving load to avoid small negative net loads
             for j in time_steps
                 space_heating_thermal_load_reduction_with_ghp_kw[i,j] = min(s.space_heating_thermal_load_reduction_with_ghp_kw[j], heating_thermal_load[j])
