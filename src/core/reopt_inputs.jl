@@ -955,6 +955,32 @@ function setup_ashp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_
 
 end
 
+function setup_ashp_wh_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, cooling_cop)
+    max_sizes["ASHP_WH"] = s.ashp_wh.max_kw
+    min_sizes["ASHP_WH"] = s.ashp_wh.min_kw
+    om_cost_per_kw["ASHP_WH"] = s.ashp_wh.om_cost_per_kw
+    heating_cop["ASHP_WH"] = s.ashp_wh.cop_heating
+
+    if s.ashp_wh.macrs_option_years in [5, 7]
+        cap_cost_slope["ASHP_WH"] = effective_cost(;
+            itc_basis = s.ashp_wh.installed_cost_per_kw,
+            replacement_cost = 0.0,
+            replacement_year = s.financial.analysis_years,
+            discount_rate = s.financial.owner_discount_rate_fraction,
+            tax_rate = s.financial.owner_tax_rate_fraction,
+            itc = 0.0,
+            macrs_schedule = s.ashp_wh.macrs_option_years == 5 ? s.financial.macrs_five_year : s.financial.macrs_seven_year,
+            macrs_bonus_fraction = s.ashp_wh.macrs_bonus_fraction,
+            macrs_itc_reduction = 0.0,
+            rebate_per_kw = 0.0
+        )
+    else
+        cap_cost_slope["ASHP_WH"] = s.ashp_wh.installed_cost_per_kw
+    end
+
+end
+
+
 function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
 
     lvl_factor = Dict(t => 1.0 for t in techs.all)  # default levelization_factor of 1.0
