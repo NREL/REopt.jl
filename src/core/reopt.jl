@@ -390,14 +390,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	# Include the electric storage cost constants only if the installed_cost_constant or the replace_cost_constant is not zero
 	for b in p.s.storage.types.elec
 		if p.s.storage.attr[b].installed_cost_constant != 0 || p.s.storage.attr[b].replace_cost_constant != 0
-			@warn "Adding indicator constraints for the electric storage cost constant. Not all solvers support indicators"
-			# indicator constraint to say: if the energy capacity is greater than zero, then the dvBatteryIncluded binary is 1
-			@constraint(m, [b in p.s.storage.types.elec],
-				m[:dvBatteryIncluded][b] => {m[:dvStorageEnergy][b] >= 0}) # Question: is the >= actually just a greater-than sign?
-				
-			# indicator constraint to say: if the energy capacity is zero, then the dvBatteryIncluded binary is 0
-			@constraint(m, [b in p.s.storage.types.elec],
-				!m[:dvBatteryIncluded][b] => {m[:dvStorageEnergy][b] == 0})
+			@constraint(m, [b in p.s.storage.types.elec], m[:dvStorageEnergy][b] <= p.s.storage.attr[b].max_kwh * m[:dvBatteryIncluded][b]) # if the dvBatteryIncluded binary is 1, then the storage energy capacity can be greater than 0, but then the battery cost constant is also included in the costs		
 		else
 			m[:dvBatteryIncluded][b] == 0
 		end
