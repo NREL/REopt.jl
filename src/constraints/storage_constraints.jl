@@ -121,15 +121,17 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
     end
 
     # Prevent charging and discharging of the battery at the same time
-    @constraint(m, [ts in p.time_steps],
-                   m[Symbol("dvGridToStorage"*_n)][b, ts] + 
-                   sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) <=
-                   p.s.storage.attr[b].max_kw * m[Symbol("binBattCharging")][ts])
-    @constraint(m, [ts in p.time_steps], 
-                   m[Symbol("dvStorageToGrid")][b, ts] +
-                   m[Symbol("dvDischargeFromStorage"*_n)][b, ts] <= 
-                   p.s.storage.attr[b].max_kw * (1-m[Symbol("binBattCharging")][ts]))
-
+    if !(p.s.storage.attr[b].allow_simultaneous_charge_discharge)
+        #TODO: implement indicator constraint version for solvers that support it
+        @constraint(m, [ts in p.time_steps],
+                    m[Symbol("dvGridToStorage"*_n)][b, ts] + 
+                    sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) <=
+                    p.s.storage.attr[b].max_kw * m[Symbol("binBattCharging")][ts])
+        @constraint(m, [ts in p.time_steps], 
+                    m[Symbol("dvStorageToGrid")][b, ts] +
+                    m[Symbol("dvDischargeFromStorage"*_n)][b, ts] <= 
+                    p.s.storage.attr[b].max_kw * (1-m[Symbol("binBattCharging")][ts]))
+    end
 
 
 end
