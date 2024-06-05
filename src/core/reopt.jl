@@ -213,7 +213,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 				@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
 				@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
 						m[:dvProductionToStorage][b, t, ts] == 0)
-				@constraint(m, [ts in p.time_steps], m[Symbol("dvStorageToGrid")][b, ts] == 0)  # if there isn't a battery, then the battery can't export power to the grid
+				@constraint(m, [ts in p.time_steps], m[Symbol("dvStorageToGrid"*_n)][b, ts] == 0)  # if there isn't a battery, then the battery can't export power to the grid
 			end
 		else
 			add_storage_size_constraints(m, p, b)
@@ -561,6 +561,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvProductionToStorage[p.s.storage.types.all, p.techs.all, p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
 		dvDischargeFromStorage[p.s.storage.types.all, p.time_steps] >= 0 # Power discharged from storage system b [kW]
 		dvGridToStorage[p.s.storage.types.elec, p.time_steps] >= 0 # Electrical power delivered to storage by the grid [kW]
+		dvStorageToGrid[p.s.storage.types.elec, p.time_steps] >= 0 # TODO, add: "p.StorageSalesTiers" as well? export of energy from storage to the grid
 		dvStoredEnergy[p.s.storage.types.all, 0:p.time_steps[end]] >= 0  # State of charge of storage system b
 		dvStoragePower[p.s.storage.types.all] >= 0   # Power capacity of storage system b [kW]
 		dvStorageEnergy[p.s.storage.types.all] >= 0   # Energy capacity of storage system b [kWh]
@@ -568,8 +569,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvPeakDemandMonth[p.months, 1:p.s.electric_tariff.n_monthly_demand_tiers] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0
         binGHP[p.ghp_options], Bin  # Can be <= 1 if require_ghp_purchase=0, and is ==1 if require_ghp_purchase=1
-		dvStorageToGrid[p.s.storage.types.elec, p.time_steps] >= 0 # TODO, add: "p.StorageSalesTiers" as well? export of energy from storage to the grid
-		
+				
 	end
 
 	for b in p.s.storage.types.elec
