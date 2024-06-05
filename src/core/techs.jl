@@ -89,7 +89,7 @@ function Techs(p::REoptInputs, s::BAUScenario)
         techs_can_serve_process_heat,
         ghp_techs,
         ashp_techs,
-        ashp_techs
+        ashp_wh_techs
     )
 end
 
@@ -295,7 +295,7 @@ function Techs(s::Scenario)
         push!(all_techs, "ASHP_WH")
         push!(heating_techs, "ASHP_WH")
         push!(electric_heaters, "ASHP_WH")
-        push!(ashp_techs, "ASHP_WH")
+        push!(ashp_wh_techs, "ASHP_WH")
         if s.ashp_wh.can_supply_steam_turbine
             push!(techs_can_supply_steam_turbine, "ASHP_WH")
         end
