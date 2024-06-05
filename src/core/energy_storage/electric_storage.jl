@@ -349,7 +349,7 @@ struct ElectricStorage <: AbstractElectricStorage
             s.minimum_avg_soc_fraction,
             s.self_discharge_fraction_per_timestep,
             s.fixed_duration,
-            s.require_start_and_end_charge_to_be_equal
+            s.require_start_and_end_charge_to_be_equal,
             s.allow_simultaneous_charge_discharge
         )
     end
