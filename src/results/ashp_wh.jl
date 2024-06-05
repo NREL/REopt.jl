@@ -14,7 +14,6 @@
 - `thermal_to_load_series_ton` # Thermal production to cooling load
 - `electric_consumption_series_kw`
 - `annual_electric_consumption_kwh`
-- `annual_thermal_production_tonhour` Thermal cooling energy produced in a year 
 
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
