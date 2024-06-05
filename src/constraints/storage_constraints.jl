@@ -43,8 +43,7 @@ function add_general_storage_dispatch_constraints(m, p, b; _n="")
     #Constraint (4j): Dispatch from storage is no greater than power capacity
 	@constraint(m, [ts in p.time_steps],
         m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts]
-        + m[Symbol("dvStorageToGrid")][b, ts] # TODO: add "b" index to this decision variable
-        )
+    )
 
 end
 
