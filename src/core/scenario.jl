@@ -213,14 +213,14 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
 
     max_heat_demand_kw = 0.0
+
     if haskey(d, "DomesticHotWaterLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["DomesticHotWaterLoad"])
-        # Pass in ExistingBoiler.efficiency to inform fuel to thermal conversion for heating load
         existing_boiler_efficiency = get_existing_boiler_efficiency(d)
         dhw_load = DomesticHotWaterLoad(; dictkeys_tosymbols(d["DomesticHotWaterLoad"])...,
-                                          latitude=site.latitude, longitude=site.longitude, 
-                                          time_steps_per_hour=settings.time_steps_per_hour,
-                                          existing_boiler_efficiency = existing_boiler_efficiency
+                                        latitude=site.latitude, longitude=site.longitude, 
+                                        time_steps_per_hour=settings.time_steps_per_hour,
+                                        existing_boiler_efficiency = existing_boiler_efficiency
                                         )
         max_heat_demand_kw = maximum(dhw_load.loads_kw)
     else
@@ -230,17 +230,15 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
         )
     end
-                                    
+
     if haskey(d, "SpaceHeatingLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["SpaceHeatingLoad"])
-        # Pass in ExistingBoiler.efficiency to inform fuel to thermal conversion for heating load
         existing_boiler_efficiency = get_existing_boiler_efficiency(d)
         space_heating_load = SpaceHeatingLoad(; dictkeys_tosymbols(d["SpaceHeatingLoad"])...,
-                                                latitude=site.latitude, longitude=site.longitude, 
-                                                time_steps_per_hour=settings.time_steps_per_hour,
-                                                existing_boiler_efficiency = existing_boiler_efficiency
-                                              )
-        
+                                            latitude=site.latitude, longitude=site.longitude, 
+                                            time_steps_per_hour=settings.time_steps_per_hour,
+                                            existing_boiler_efficiency = existing_boiler_efficiency
+                                            )
         max_heat_demand_kw = maximum(space_heating_load.loads_kw .+ max_heat_demand_kw)
     else
         space_heating_load = SpaceHeatingLoad(; 
@@ -250,19 +248,20 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         )
     end
 
-    if haskey(d, "ProcessHeatLoad")
-        # Pass in ExistingBoiler.efficiency to inform fuel to thermal conversion for heating load
+    if haskey(d, "ProcessHeatLoad") && !haskey(d, "FlexibleHVAC")
         existing_boiler_efficiency = get_existing_boiler_efficiency(d)
         process_heat_load = ProcessHeatLoad(; dictkeys_tosymbols(d["ProcessHeatLoad"])...,
-            time_steps_per_hour=settings.time_steps_per_hour,
-            existing_boiler_efficiency = existing_boiler_efficiency    
-        )
-        max_heat_demand_kw += maximum(process_heat_load.loads_kw)
+                                            latitude=site.latitude, longitude=site.longitude, 
+                                            time_steps_per_hour=settings.time_steps_per_hour,
+                                            existing_boiler_efficiency = existing_boiler_efficiency
+                                            )
+                                    
+        max_heat_demand_kw = maximum(process_heat_load.loads_kw .+ max_heat_demand_kw)
     else
         process_heat_load = ProcessHeatLoad(;
-            fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
-            time_steps_per_hour=settings.time_steps_per_hour,
-            existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
+                fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
+                time_steps_per_hour=settings.time_steps_per_hour,
+                existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
         )
     end
 
