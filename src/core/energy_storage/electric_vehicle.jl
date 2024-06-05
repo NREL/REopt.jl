@@ -59,7 +59,7 @@ Base.@kwdef mutable struct ElectricVehicle
     max_c_rate::Float64 = 1.0
     ev_on_site_start_end::Array{Array{Int64, 1}, 1} = [[0,0],[0,0],[0,0],[0,0]]  # This should **maybe** be an array of arrays (meant to be array of tuples, could convert)
     ev_on_site_series::Union{Array{Int64, 1}, Nothing} = nothing
-    soc_used_off_site::Array{Array{Float64, 1}, 1} = [[0.2,0.8],[0.2,0.8],[0.2,0.8],[0.2,0.8]]
+    soc_used_off_site::Array{Array{Float64, 1}, 1} = [[0.2,0.95],[0.2,0.95],[0.2,0.95],[0.2,0.95]]
     leaving_next_time_step_soc_min::Union{Array{Float64, 1}, Nothing} = nothing
     back_on_site_time_step_soc_drained::Union{Array{Float64, 1}, Nothing} = nothing
     time_steps_per_hour::Int = 1
@@ -153,10 +153,14 @@ function get_availability_series(start_end::Array{Int64, 1}, cy_quarter::Int, ye
 end
 
 function get_returned_and_required_soc(soc_used_off_site, availability_series; time_steps_per_hour=1)
+    
+    @info "Entered SOC creation function"
+
     back_on_site_time_step_soc_drained::Array{Float64, 1} = zeros(Int(8760*time_steps_per_hour))
     leaving_next_time_step_soc_min::Array{Float64, 1} = zeros(Int(8760*time_steps_per_hour))
+    
     # TODO this is only populating the first event, then stuck in the same "switch" state
-    for ts in firstindex(availability_series)+1:lastindex(availability_series)  # eachindex or axes(availability_series, 1) starting at ts=2?
+    for ts in firstindex(availability_series):lastindex(availability_series)-1  # eachindex or axes(availability_series, 1) starting at ts=2?
         mth = Dates.month(ts)
         
         # What quarter of the calendar year?
@@ -170,16 +174,20 @@ function get_returned_and_required_soc(soc_used_off_site, availability_series; t
             idx = 1
         end
     
-        if !(availability_series[ts] == availability_series[ts-1])
-            if availability_series[ts] == 1
-                # Back on site
-                back_on_site_time_step_soc_drained[ts] = soc_used_off_site[idx][1]
-            elseif availability_series[ts] == 0
-                # Leaving next time step
-                # TODO add a "buffer"/extra charge as an input for soc above the min required soc_used_off_site (max(1,soc_used+buffer))
-                leaving_next_time_step_soc_min[ts-1] = soc_used_off_site[idx][2]
-            end
+        if availability_series[ts] - availability_series[ts+1] == -1 # 0 - 1, was offsite, is onsite in next ts
+            back_on_site_time_step_soc_drained[ts+1] = soc_used_off_site[idx][1]
+        elseif availability_series[ts] - availability_series[ts+1] == 1 # 1 - 0, was onsite, is offsite in next ts
+            # Leaving next time step
+            # TODO add a "buffer"/extra charge as an input for soc above the min required soc_used_off_site (max(1,soc_used+buffer))
+            leaving_next_time_step_soc_min[ts] = soc_used_off_site[idx][2]
+        else
+            nothing
         end
+    end
+
+    # if vehicle is onsite at beginning of year:
+    if availability_series[1] == 1
+        back_on_site_time_step_soc_drained[1] = soc_used_off_site[1][1]
     end
 
     return back_on_site_time_step_soc_drained, leaving_next_time_step_soc_min
@@ -203,14 +211,21 @@ function ElectricVehicle(d::Dict)
         ev.ev_on_site_series = vcat(avail_series...)
     end
     
-    if isnothing(ev.leaving_next_time_step_soc_min) && isnothing(ev.back_on_site_time_step_soc_drained)
-        @info "Using 'soc_used_off_site' input to create EV SOC timeseries"
+    if isnothing(ev.back_on_site_time_step_soc_drained) && isnothing(ev.leaving_next_time_step_soc_min)
+        @info "Using `soc_used_off_site` input to create EV SOC timeseries"
         ev.back_on_site_time_step_soc_drained, ev.leaving_next_time_step_soc_min = get_returned_and_required_soc(d[:soc_used_off_site], ev.ev_on_site_series; time_steps_per_hour = ev.time_steps_per_hour)
-    elseif isnothing(ev.leaving_next_time_step_soc_min) || isnothing(ev.back_on_site_time_step_soc_drained)
-        throw(@error("Either EV leaving or back on site SOC timeseries was not provided. Either both inputs must be provided or omitted from the inputs JSON"))
+    elseif isnothing(ev.back_on_site_time_step_soc_drained)
+        @info "Using 'soc_used_off_site' input to create EV arrival SOC timeseries, using provided EV departure SOC timeseries"
+        ev.back_on_site_time_step_soc_drained, temp = get_returned_and_required_soc(d[:soc_used_off_site], ev.ev_on_site_series; time_steps_per_hour = ev.time_steps_per_hour)
+    elseif isnothing(ev.leaving_next_time_step_soc_min)
+        @info "Using 'soc_used_off_site' input to create EV depature SOC timeseries, using provided EV arrival SOC timeseries"
+        temp, ev.leaving_next_time_step_soc_min = get_returned_and_required_soc(d[:soc_used_off_site], ev.ev_on_site_series; time_steps_per_hour = ev.time_steps_per_hour)
+    elseif !(isnothing(ev.back_on_site_time_step_soc_drained) && isnothing(ev.leaving_next_time_step_soc_min))
+        @info "Using provided EV schedule time series"
     else
-        nothing
+        throw(@error("Either EV leaving or back on site SOC timeseries was not provided. Either both inputs must be provided or omitted from the inputs JSON"))
     end
+
     return ev
 end
 

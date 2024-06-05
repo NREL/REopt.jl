@@ -38,7 +38,7 @@ function simulate_outage(;init_time_step, diesel_kw, fuel_available, b, m, diese
             elseif sum_ev_kwh_t0 < sum_ev_total_kwh
                 sum_ev_kwh_t0 += minimum([
                     sum_ev_kwh_t0 - sum_ev_total_kwh,     # room available
-                    sum_ev_kw_t0[init_time_step+i] / n_steps_per_hour * tot_ev_rdtrp_eff,  # inverter capacity
+                    sum_ev_kw_t0 / n_steps_per_hour * tot_ev_rdtrp_eff,  # inverter capacity
                     -load_kw / n_steps_per_hour * tot_ev_rdtrp_eff,  # excess energy
                 ])
             else

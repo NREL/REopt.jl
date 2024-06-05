@@ -181,7 +181,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             ev_name_input = get(ev, "name", "")
             if isempty(ev_name_input)
                 ev["name"] = string("EV", i)
-            elseif !("EV" in ev_name_input)
+            elseif !occursin("EV", ev_name_input)
                 ev_name_change = ev_name_input * string("_EV", i)
                 ev["name"] = ev_name_change
                 @warn "Renaming ElectricVehicle name from $ev_name_input to $ev_name_change"
