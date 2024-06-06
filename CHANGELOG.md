@@ -23,6 +23,14 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2024-06-05
+### Fixed
+- Increased the big-M bound on maximum net metering benefit to prevent artificially low export benefits
+- Fixed a bug in which tier limits did not load correctly when the number of tiers vary by period in the inputs
+- Set a limit for demand and energy tier maxes to avoid errors returned by HiGHS due to numerical limits
+- Index utility rate demand and energy tier limits on month in addition to tier
+
+
 ## v0.47.1
 ### Fixed
 - Type issue with `CoolingLoad` monthly energy input
