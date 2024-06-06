@@ -216,10 +216,11 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
     for tier in range(1, stop=n_energy_tiers)
 
         for month in range(1, stop=12)
+            # NOTE: periods are zero indexed in URDB
             period = Int(d["energyweekdayschedule"][month][1] + 1)
             for tier in range(1, stop=n_energy_tiers)
                 # tiered energy schedules are assumed to be consistent for each month (i.e., the first hour can represent all 24 hours of the schedule).
-                tier_limit =  get(d["energyratestructure"][period][tier], "max", bigM)
+                tier_limit = get(d["energyratestructure"][period][tier], "max", bigM)
                 energy_tier_limits_kwh[month, tier] = round(tier_limit, digits=3)
             end
 
@@ -229,10 +230,8 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
             end
 
             for day in range(1, stop=n_days)
-
                 for hour in range(1, stop=24)
-
-                    # NOTE: periods are zero indexed
+                    # NOTE: periods are zero indexed in URDB
                     if dayofweek(Date(year, month, day)) < 6  # Monday == 1
                         period = Int(d["energyweekdayschedule"][month][hour] + 1)
                     else
@@ -248,7 +247,7 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
                         tier_use = tier
                     end
                     if "unit" in keys(d["energyratestructure"][period][tier_use]) && string(d["energyratestructure"][period][tier_use]["unit"]) != "kWh"
-                        throw(@error("URDB energy tiers have exotic units of " * d["energyratestructure"][period][tier_use]["unit"]))
+                        throw(@error("URDB energy tiers have non-standard units of " * d["energyratestructure"][period][tier_use]["unit"]))
                     end
                     total_rate = (get(d["energyratestructure"][period][tier_use], "rate", 0) + 
                                 get(d["energyratestructure"][period][tier_use], "adj", 0)) 
@@ -325,7 +324,7 @@ function scrub_urdb_tiers!(A::Array)
     n_tiers = maximum(len_tiers_set)
 
     if length(len_tiers_set) > 1
-        @warn "Rate structure has varying number of tiers in periods. Making the number of tiers the same across all periods by repeating the last tier."
+        @warn "Rate structure has varying number of tiers in periods. Making the number of tiers the same across all periods by repeating the last tier in each period."
         for (i, rate) in enumerate(A)
             n_tiers_in_period = length(rate)
             if n_tiers_in_period != n_tiers

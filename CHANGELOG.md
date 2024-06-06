@@ -23,6 +23,14 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2024-06-05
+### Fixed
+- Increased the big-M bound on maximum net metering benefit to prevent artificially low export benefits
+- Fixed a bug in which tier limits did not load correctly when the number of tiers vary by period in the inputs
+- Set a limit for demand and energy tier maxes to avoid errors returned by HiGHS due to numerical limits
+- Index utility rate demand and energy tier limits on month in addition to tier
+
+
 ## v0.47.1
 ### Fixed
 - Type issue with `CoolingLoad` monthly energy input
@@ -44,11 +52,8 @@ Classify the change according to the following categories:
 ### Fixed
 - Updated the PV result **lifecycle_om_cost_after_tax** to account for the third-party factor for third-party ownership analyses.
 - Convert `max_electric_load_kw` to _Float64_ before passing to function `get_chp_defaults_prime_mover_size_class`
-- Increased the big-M bound on maximum net metering benefit to prevent artificially low export benefits
-- Fixed a bug in which tier limits did not load correctly when the number of tiers vary by period in the inputs
-- Set a limit for demand and energy tier maxes to avoid errors returned by HiGHS due to numerical limits
-- Modified thermal waste heat constraints for heating technologies to avoid errors in waste heat results tracking.
 - Fixed a bug in which excess heat from one heating technology resulted in waste heat from another technology.
+- Modified thermal waste heat constraints for heating technologies to avoid errors in waste heat results tracking.
 
 ## v0.46.1
 ### Changed
