@@ -151,6 +151,7 @@ function dictkeys_tosymbols(d::Dict)
             "production_factor_series", 
             "monthly_energy_rates", "monthly_demand_rates",
             "blended_doe_reference_percents",
+            "blended_industry_reference_percents",
             "coincident_peak_load_charge_per_kw",
             "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
             "outage_probabilities",
@@ -170,7 +171,8 @@ function dictkeys_tosymbols(d::Dict)
             end
         end
         if k in [
-            "blended_doe_reference_names"
+            "blended_doe_reference_names",
+            "blended_industry_reference_names"
         ]
             try
                 v = convert(Array{String, 1}, v)
@@ -360,26 +362,95 @@ function generate_year_profile_hourly(year::Int64, consecutive_periods::Abstract
     return year_profile_hourly
 end
 
+"""
+    call_solar_dataset_api(latitude::Real, longitude::Real, radius::Int)
+This calls the Solar Dataset Query API to determine the dataset to use in the PVWatts API call. 
+Returns: 
+- dataset: "nsrdb" if available within 20 miles, or whichever is closer of "nsrdb", "intl", or "tmy3"
+- dist_meters: Distance in meters from the site location to the dataset station
+- datasource: Name of source of the weather data used in the simulation.
+"""
+function call_solar_dataset_api(latitude::Real, longitude::Real, radius::Int)
+
+    check_api_key()
+
+    if latitude < -90 || latitude > 90
+        throw(@error("Invalid coordinates: latitude of $latitude must be between -90 and 90 degrees."))
+    elseif longitude < -180 || longitude > 180
+        throw(@error("Invalid coordinates: longitude of $longitude must be between -180 and 180 degrees."))
+    end
+
+    url = string("https://developer.nrel.gov/api/solar/data_query/v2.json", "?api_key=", ENV["NREL_DEVELOPER_API_KEY"],
+        "&lat=", latitude , "&lon=", longitude, "&radius=", radius, "&all=", 0 
+        )
+    try
+        r = HTTP.get(url, keepalive=true, readtimeout=10)
+        response = JSON.parse(String(r.body))
+
+        if r.status != 200
+            throw(@error("Bad response from Solar Dataset Query: $(response["errors"])"))
+        end
+
+        # If they are empty, then the dataset is not available in the specified radius 
+        nsrdb_empty = isnothing(response["outputs"]["nsrdb"])
+        intl_empty = isnothing(response["outputs"]["intl"])
+        tmy3_empty = isnothing(response["outputs"]["tmy3"])
+
+        if nsrdb_empty && intl_empty && tmy3_empty # Check that at least one dataset is available
+            throw(@error("No solar weather_data_source is available within $radius miles of this location. Try expanding your search radius or setting radius=0."))
+        end
+
+        nsrdb_meters = nsrdb_empty ? 1e10 : response["outputs"]["nsrdb"]["distance"] # The distance in meters from the input location to the station.
+        intl_meters = intl_empty ? 1e10 : response["outputs"]["intl"]["distance"]
+        tmy3_meters = tmy3_empty ? 1e10 : response["outputs"]["tmy3"]["distance"] # AK is currently split between NSRDB and TMY3 datasets
+
+        if nsrdb_empty + intl_empty + tmy3_empty == 1 # If only 1 is available, use that one (will only be true if user specified radius)
+            dataset = !(nsrdb_empty) ? "nsrdb" : !(intl_empty) ? "intl" : "tmy3"
+        elseif nsrdb_meters < 20*1609.34 # at least 2 have data, so check if nsrdb is closer than 20 miles away. Use nsrdb if close enough, because data quality is highest
+            dataset = "nsrdb"
+        else # at least 2 have data and nsrdb is further than 20 mi away, so check which is closest
+            dataset = nsrdb_meters <= intl_meters && nsrdb_meters <= tmy3_meters ? "nsrdb" : intl_meters <= tmy3_meters ? "intl" : "tmy3"
+        end
+
+        dist_meters = response["outputs"][dataset]["distance"] # meters
+        datasource = response["outputs"][dataset]["weather_data_source"]
+
+        warned = false
+        # Warnings if not using NSRDB or if data is > 200 miles away (API only gets warnings, not info's)
+        if dataset != "nsrdb" && dist_meters > 200 * 1609.34
+            @warn "The solar and/or temperature resource data used for this location is not from the NSRDB and may need to be reviewed for accuracy. The data used is from $datasource dataset from a station or grid cell located more then 200 miles ($(round(dist_meters/1609.34)) miles) from the site location."
+            warned = true
+        elseif dataset != "nsrdb"
+            @warn "The solar and/or temperature resource data used for this location is not from the NSRDB and may need to be reviewed for accuracy. The data used is from $datasource dataset from a station or grid cell located $(round(dist_meters/1609.34)) miles from the site location."
+            warned = true
+        elseif dist_meters > 200 * 1609.34
+            @warn "The solar and/or temperature resource data used for this location ($datasource) is from a station or grid cell located more than 200 miles ($(round(dist_meters/1609.34)) miles) from the site location."
+            warned = true
+        end
+        if !warned
+            @info "The solar and/or temperature resource data used for this location is from the $datasource dataset from a station or grid cell located $(round(dist_meters/1609.34)) miles from the site location (see PVWatts API documentation for more information)."
+        end
+
+        return dataset, dist_meters, datasource
+    catch e
+        throw(@error("Error occurred when calling Solar Dataset Query API: $e"))
+    end
+end
+
 
 """
     call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimuth=180, module_type=0, array_type=1, 
         losses=14, dc_ac_ratio=1.2, gcr=0.4, inv_eff=96, timeframe="hourly", radius=0, time_steps_per_hour=1)
 This calls the PVWatts API and returns both:
  - PV production factor
- - Ambient outdoor air dry bulb temperature profile [Celcius] 
+ - Ambient outdoor air dry bulb temperature profile [Celcius]
 """
 function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimuth=180, module_type=0, array_type=1, 
     losses=14, dc_ac_ratio=1.2, gcr=0.4, inv_eff=96, timeframe="hourly", radius=0, time_steps_per_hour=1)
-    # Check if site is beyond the bounds of the NRSDB TMY dataset. If so, use the international dataset.
-    dataset = "nsrdb"
-    if longitude < -179.5 || longitude > -21.0 || latitude < -21.5 || latitude > 60.0
-        if longitude < 81.5 || longitude > 179.5 || latitude < -60.0 || latitude > 60.0 
-            if longitude < 67.0 || latitude < -40.0 || latitude > 38.0
-                dataset = "intl"
-            end
-        end
-    end
-    check_api_key()
+    
+    # Determine resource dataset to use for this location
+    dataset, dist_meters, datasource  = call_solar_dataset_api(latitude, longitude, radius)
+
     url = string("https://developer.nrel.gov/api/pvwatts/v8.json", "?api_key=", ENV["NREL_DEVELOPER_API_KEY"],
         "&lat=", latitude , "&lon=", longitude, "&tilt=", tilt,
         "&system_capacity=1", "&azimuth=", azimuth, "&module_type=", module_type,
@@ -417,7 +488,6 @@ function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimut
         throw(@error("Error occurred when calling PVWatts: $e"))
     end
 end
-
 
 """
     Convert gallons of stored liquid (e.g. water, water/glycol) to kWh of stored energy in a stratefied tank
@@ -480,29 +550,29 @@ function get_monthly_time_steps(year::Int; time_steps_per_hour=1)
 end
 
 """
-generator_fuel_slope_and_intercept(;
+fuel_slope_and_intercept(;
                 electric_efficiency_full_load::Real, [kWhe/kWht]
                 electric_efficiency_half_load::Real, [kWhe/kWht]
-                fuel_higher_heating_value_kwh_per_gal::Real
+                fuel_higher_heating_value_kwh_per_unit::Real
             )
 
 return Tuple{<:Real,<:Real} where 
-    first value is diesel fuel burn slope [gal/kWhe]
-    secnod value is diesel fuel burn intercept [gal/hr]
+    first value is fuel burn slope [<fuel unit>/kWhe]
+    second value is fuel burn intercept [<fuel unit>/hr]
 """
-function generator_fuel_slope_and_intercept(;
+function fuel_slope_and_intercept(;
                         electric_efficiency_full_load::Real, 
                         electric_efficiency_half_load::Real,
-                        fuel_higher_heating_value_kwh_per_gal::Real
+                        fuel_higher_heating_value_kwh_per_unit::Real
                     )
     fuel_burn_full_load_kwht = 1.0 / electric_efficiency_full_load  # [kWe_rated/(kWhe/kWht)]
     fuel_burn_half_load_kwht = 0.5 / electric_efficiency_half_load  # [kWe_rated/(kWhe/kWht)]
     fuel_slope_kwht_per_kwhe = (fuel_burn_full_load_kwht - fuel_burn_half_load_kwht) / (1.0 - 0.5)  # [kWht/kWhe]
     fuel_intercept_kwht_per_hr = fuel_burn_full_load_kwht - fuel_slope_kwht_per_kwhe * 1.0  # [kWht/hr]
-    fuel_slope_gal_per_kwhe = fuel_slope_kwht_per_kwhe / fuel_higher_heating_value_kwh_per_gal # [gal/kWhe]
-    fuel_intercept_gal_per_hr = fuel_intercept_kwht_per_hr / fuel_higher_heating_value_kwh_per_gal # [gal/hr]
+    fuel_slope_unit_per_kwhe = fuel_slope_kwht_per_kwhe / fuel_higher_heating_value_kwh_per_unit # [<fuel unit>/kWhe]
+    fuel_intercept_unit_per_hr = fuel_intercept_kwht_per_hr / fuel_higher_heating_value_kwh_per_unit # [<fuel unit>/hr]
     
-    return fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr
+    return fuel_slope_unit_per_kwhe, fuel_intercept_unit_per_hr
 end
 
 function convert_temp_degF_to_Kelvin(degF::Float64)

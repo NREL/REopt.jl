@@ -262,11 +262,11 @@ struct ElectricStorage <: AbstractElectricStorage
         s = ElectricStorageDefaults(;d...)
 
         if s.inverter_replacement_year >= f.analysis_years
-            @warn "Battery inverter replacement costs (per_kw) will not be considered because inverter_replacement_year >= analysis_years."
+            @warn "Battery inverter replacement costs (per_kw) will not be considered because inverter_replacement_year is greater than or equal to analysis_years."
         end
 
         if s.battery_replacement_year >= f.analysis_years
-            @warn "Battery replacement costs (per_kwh) will not be considered because battery_replacement_year >= analysis_years."
+            @warn "Battery replacement costs (per_kwh) will not be considered because battery_replacement_year is greater than or equal to analysis_years."
         end
 
         net_present_cost_per_kw = effective_cost(;
