@@ -140,8 +140,6 @@ end
     max_kw::Real = 1.0e4
     min_kwh::Real = 0.0
     max_kwh::Real = 1.0e6
-    max_duration_hours::Real = 100.0 # Maximum amount of time storage can discharge at its rated power capacity (ratio of ElectricStorage size_kwh to size_kw)
-    min_duration_hours::Real = 0.0 # Minimum amount of time storage can discharge at its rated power capacity
     internal_efficiency_fraction::Float64 = 0.975
     inverter_efficiency_fraction::Float64 = 0.96
     rectifier_efficiency_fraction::Float64 = 0.96
@@ -167,6 +165,8 @@ end
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
+    max_duration_hours::Real = 100.0 # Maximum amount of time storage can discharge at its rated power capacity (ratio of ElectricStorage size_kwh to size_kw)
+    min_duration_hours::Real = 0.0 # Minimum amount of time storage can discharge at its rated power capacity
 ```
 """
 Base.@kwdef struct ElectricStorageDefaults
@@ -175,8 +175,6 @@ Base.@kwdef struct ElectricStorageDefaults
     max_kw::Real = 1.0e4
     min_kwh::Real = 0.0
     max_kwh::Real = 1.0e6
-    max_duration_hours::Real = 100.0
-    min_duration_hours::Real = 0.0
     internal_efficiency_fraction::Float64 = 0.975
     inverter_efficiency_fraction::Float64 = 0.96
     rectifier_efficiency_fraction::Float64 = 0.96
@@ -202,6 +200,8 @@ Base.@kwdef struct ElectricStorageDefaults
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
+    min_duration_hours::Real = 0.0
+    max_duration_hours::Real = 100.0
 end
 
 
@@ -216,8 +216,6 @@ struct ElectricStorage <: AbstractElectricStorage
     max_kw::Real
     min_kwh::Real
     max_kwh::Real
-    max_duration_hours::Real
-    min_duration_hours::Real
     internal_efficiency_fraction::Float64
     inverter_efficiency_fraction::Float64
     rectifier_efficiency_fraction::Float64
@@ -245,6 +243,8 @@ struct ElectricStorage <: AbstractElectricStorage
     model_degradation::Bool
     degradation::Degradation
     minimum_avg_soc_fraction::Float64
+    min_duration_hours::Real
+    max_duration_hours::Real
 
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
@@ -310,8 +310,6 @@ struct ElectricStorage <: AbstractElectricStorage
             s.max_kw,
             s.min_kwh,
             s.max_kwh,
-            s.max_duration_hours,
-            s.min_duration_hours,
             s.internal_efficiency_fraction,
             s.inverter_efficiency_fraction,
             s.rectifier_efficiency_fraction,
@@ -338,7 +336,9 @@ struct ElectricStorage <: AbstractElectricStorage
             net_present_cost_per_kwh,
             s.model_degradation,
             degr,
-            s.minimum_avg_soc_fraction
+            s.minimum_avg_soc_fraction,
+            s.min_duration_hours,
+            s.max_duration_hours
         )
     end
 end
