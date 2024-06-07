@@ -23,6 +23,13 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop 2024-04-19
+### Added
+- Added new inputs **om_cost_per_kw** and **om_cost_per_kwh** to `ElectricStorage` for modeling capacity-based O&M 
+- Added new outputs **lifecycle_om_cost_after_tax** and **year_one_om_cost_before_tax** to `ElectricStorage` 
+- Added new input **self_discharge_fraction_per_timestep** to `ElectricStorage` for modeling battery self-discharge
+- Added testset **Electric Storage O&M and Self-Discharge** in `test/runtests.jl`
+
 ## v0.47.1
 ### Fixed
 - Type issue with `CoolingLoad` monthly energy input
