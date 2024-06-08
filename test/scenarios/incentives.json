@@ -9,6 +9,9 @@
         "doe_reference_name": "RetailStore", 
         "annual_kwh": 10000000.0
     },
+    "ElectricUtility" : {
+        "co2_from_avert" : true
+    },
     "PV": {
         "production_incentive_years": 1, 
         "macrs_bonus_fraction": 0.4, 

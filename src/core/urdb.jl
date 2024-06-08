@@ -1,35 +1,9 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 # https://discourse.julialang.org/t/vector-of-matrices-vs-multidimensional-arrays/9602/5
 # 5d2360465457a3f77ddc131e has TOU demand
 # 59bc22705457a3372642da67 has monthly tiered demand (no TOU demand)
+
+const urdb_api_key = get(ENV, "URDB_API_KEY", "2qt5uihpKXdywTj3uMIhBewxY9K4eNjpRje1JUPL")
 
 """
     Base.@kwdef struct URDBrate
@@ -96,10 +70,19 @@ function URDBrate(urdb_response::Dict, year::Int; time_steps_per_hour=1)
 
     demand_min = get(urdb_response, "peakkwcapacitymin", 0.0)  # TODO add check for site min demand against tariff?
 
+    # Convert matrix to array if needed
+    possible_matrix = ["demandratestructure", "flatdemandstructure", "demandweekdayschedule", 
+        "demandweekendschedule", "energyratestructure", "energyweekdayschedule", "energyweekendschedule"]
+    for param in possible_matrix
+        if typeof(get(urdb_response, param, nothing)) <: AbstractMatrix
+            urdb_response[param] = convert_matrix_to_array(urdb_response[param])
+        end
+    end
+
     n_monthly_demand_tiers, monthly_demand_tier_limits, monthly_demand_rates,
       n_tou_demand_tiers, tou_demand_tier_limits, tou_demand_rates, tou_demand_ratchet_time_steps =
       parse_demand_rates(urdb_response, year, time_steps_per_hour=time_steps_per_hour)
-
+    
     energy_rates, energy_tier_limits, n_energy_tiers, sell_rates = 
         parse_urdb_energy_costs(urdb_response, year; time_steps_per_hour=time_steps_per_hour)
 
@@ -136,7 +119,7 @@ end
 
 #TODO: refactor two download_urdb to reduce duplicated code
 function download_urdb(urdb_label::String; version::Int=8)
-    url = string("https://api.openei.org/utility_rates", "?api_key=", urdb_key,
+    url = string("https://api.openei.org/utility_rates", "?api_key=", urdb_api_key,
                 "&version=", version , "&format=json", "&detail=full",
                 "&getpage=", urdb_label
     )
@@ -165,7 +148,7 @@ end
 
 
 function download_urdb(util_name::String, rate_name::String; version::Int=8)
-    url = string("https://api.openei.org/utility_rates", "?api_key=", urdb_key,
+    url = string("https://api.openei.org/utility_rates", "?api_key=", urdb_api_key,
                 "&version=", version , "&format=json", "&detail=full",
                 "&ratesforutility=", replace(util_name, "&" => "%26")
     )
@@ -237,9 +220,7 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
     period_with_max_tiers = findall(energy_tiers .== maximum(energy_tiers))[1]
     n_energy_tiers = Int(maximum(energy_tier_set))
 
-    rates = Float64[]
     energy_tier_limits_kwh = Float64[]
-    non_kwh_units = false
 
     for energy_tier in d["energyratestructure"][period_with_max_tiers]
         # energy_tier is a dictionary, eg. {'max': 1000, 'rate': 0.07531, 'adj': 0.0119, 'unit': 'kWh'}
@@ -250,17 +231,8 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
         end
 
         if "unit" in keys(energy_tier) && string(energy_tier["unit"]) != "kWh"
-            @warn "Using average rate in tier due to exotic units of " energy_tier["unit"]
-            non_kwh_units = true
+            throw(@error("URDB energy tiers have exotic units of " * energy_tier["unit"]))
         end
-
-        append!(rates, get(energy_tier, "rate", 0) + get(energy_tier, "adj", 0))
-    end
-
-    if non_kwh_units
-        rate_average = sum(rates) / maximum([length(rates), 1])
-        n_energy_tiers = 1
-        energy_tier_limits_kwh = Float64[bigM]
     end
 
     energy_cost_vector = Float64[]
@@ -270,6 +242,9 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
 
         for month in range(1, stop=12)
             n_days = daysinmonth(Date(string(year) * "-" * string(month)))
+            if month == 2 && isleapyear(year)
+                n_days -= 1
+            end
 
             for day in range(1, stop=n_days)
 
@@ -277,9 +252,9 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
 
                     # NOTE: periods are zero indexed
                     if dayofweek(Date(year, month, day)) < 6  # Monday == 1
-                        period = d["energyweekdayschedule"][month][hour] + 1
+                        period = Int(d["energyweekdayschedule"][month][hour] + 1)
                     else
-                        period = d["energyweekendschedule"][month][hour] + 1
+                        period = Int(d["energyweekendschedule"][month][hour] + 1)
                     end
                     # workaround for cases where there are different numbers of tiers in periods
                     n_tiers_in_period = length(d["energyratestructure"][period])
@@ -290,12 +265,8 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
                     else
                         tier_use = tier
                     end
-                    if non_kwh_units
-                        rate = rate_average
-                    else
-                        rate = get(d["energyratestructure"][period][tier_use], "rate", 0)
-                    end
-                    total_rate = rate + get(d["energyratestructure"][period][tier_use], "adj", 0)
+                    total_rate = (get(d["energyratestructure"][period][tier_use], "rate", 0) + 
+                                get(d["energyratestructure"][period][tier_use], "adj", 0)) 
                     sell = get(d["energyratestructure"][period][tier_use], "sell", 0)
 
                     for step in range(1, stop=time_steps_per_hour)  # repeat hourly rates intrahour
@@ -311,6 +282,15 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
     return energy_rates, energy_tier_limits_kwh, n_energy_tiers, sell_rates
 end
 
+"""
+    convert_matrix_to_array(M::AbstractMatrix)
+
+Convert an unexpected type::Matrix from URDB into an Array
+    - Observed while using REopt.jl with PyJulia/PyCall
+"""
+function convert_matrix_to_array(M::AbstractMatrix)
+    return [M[r,:] for r in axes(M, 1)]
+end
 
 """
     parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
@@ -319,7 +299,6 @@ Parse monthly ("flat") and TOU demand rates
     can modify URDB dict when there is inconsistent numbers of tiers in rate structures
 """
 function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
-
     if haskey(d, "flatdemandstructure")
         scrub_urdb_demand_tiers!(d["flatdemandstructure"])
         monthly_demand_tier_limits = parse_urdb_demand_tiers(d["flatdemandstructure"])
@@ -370,7 +349,7 @@ function scrub_urdb_demand_tiers!(A::Array)
                 rate_new = rate
                 last_tier = rate[n_tiers_in_period]
                 for j in range(1, stop=n_tiers - n_tiers_in_period)
-                    append!(rate_new, last_tier)
+                    append!(rate_new, [last_tier])
                 end
                 A[i] = rate_new
             end
@@ -398,7 +377,7 @@ function parse_urdb_demand_tiers(A::Array; bigM=1.0e8)
     demand_maxes = Float64[]
     for period in range(1, stop=length(A))
         demand_max = Float64[]
-        for tier in A[period]
+        for tier in A[period] 
             append!(demand_max, get(tier, "max", bigM))
         end
         demand_tiers[period] = demand_max
@@ -454,7 +433,7 @@ function parse_urdb_tou_demand(d::Dict; year::Int, n_tiers::Int, time_steps_per_
     n_ratchets = 0  # counter
 
     for month in range(1, stop=12)
-        for period in range(0, stop=n_periods)
+        for period in range(1, stop=n_periods)
             time_steps = get_tou_demand_steps(d, year=year, month=month, period=period-1, time_steps_per_hour=time_steps_per_hour)
             if length(time_steps) > 0  # can be zero! not every month contains same number of periods
                 n_ratchets += 1
@@ -465,7 +444,7 @@ function parse_urdb_tou_demand(d::Dict; year::Int, n_tiers::Int, time_steps_per_
             end
         end
     end
-    rates = reshape(rates_vec, (:, n_tiers))  # Array{Float64,2}
+    rates = reshape(rates_vec, (n_tiers, :))'  # Array{Float64,2}
     ratchet_time_steps = convert(Array{Array{Int64,1},1}, ratchet_time_steps)
     return ratchet_time_steps, rates
 end

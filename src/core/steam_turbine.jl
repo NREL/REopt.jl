@@ -1,39 +1,11 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 
 """
 `SteamTurbine` is an optional REopt input with the following keys and default values:
 ```julia
     size_class::Union{Int64, Nothing} = nothing
     min_kw::Float64 = 0.0
-    max_kw::Float64 = 0.0
+    max_kw::Float64 = 1.0e9
     electric_produced_to_thermal_consumed_ratio::Float64 = NaN
     thermal_produced_to_thermal_consumed_ratio::Float64 = NaN
     is_condensing::Bool = false
@@ -53,16 +25,19 @@
     can_wholesale::Bool = false
     can_export_beyond_nem_limit::Bool = false
     can_curtail::Bool = false
+    can_serve_dhw::Bool = true
+    can_serve_space_heating::Bool = true
+    can_serve_process_heat::Bool = true
 
     macrs_option_years::Int = 0
-    macrs_bonus_fraction::Float64 = 1.0    
+    macrs_bonus_fraction::Float64 = 0.0    
 ```
 
 """
 Base.@kwdef mutable struct SteamTurbine <: AbstractSteamTurbine
     size_class::Union{Int64, Nothing} = nothing
     min_kw::Float64 = 0.0
-    max_kw::Float64 = 0.0
+    max_kw::Float64 = 1.0e9
     electric_produced_to_thermal_consumed_ratio::Float64 = NaN
     thermal_produced_to_thermal_consumed_ratio::Float64 = NaN
     is_condensing::Bool = false
@@ -82,9 +57,12 @@ Base.@kwdef mutable struct SteamTurbine <: AbstractSteamTurbine
     can_wholesale::Bool = false
     can_export_beyond_nem_limit::Bool = false
     can_curtail::Bool = false
+    can_serve_dhw::Bool = true
+    can_serve_space_heating::Bool = true
+    can_serve_process_heat::Bool = true
 
     macrs_option_years::Int = 0
-    macrs_bonus_fraction::Float64 = 1.0   
+    macrs_bonus_fraction::Float64 = 0.0   
 end
 
 
@@ -100,14 +78,19 @@ function SteamTurbine(d::Dict; avg_boiler_fuel_load_mmbtu_per_hour::Union{Float6
         :outlet_steam_pressure_psig => st.outlet_steam_pressure_psig, 
         :isentropic_efficiency => st.isentropic_efficiency, 
         :gearbox_generator_efficiency => st.gearbox_generator_efficiency,
-        :net_to_gross_electric_ratio => st.net_to_gross_electric_ratio
+        :net_to_gross_electric_ratio => st.net_to_gross_electric_ratio,
+        :size_class => st.size_class
     )
 
     # set all missing default values in custom_chp_inputs
-    defaults = get_steam_turbine_defaults_size_class(;avg_boiler_fuel_load_mmbtu_per_hour=avg_boiler_fuel_load_mmbtu_per_hour, 
+    stm_defaults_response = get_steam_turbine_defaults_size_class(;avg_boiler_fuel_load_mmbtu_per_hour=avg_boiler_fuel_load_mmbtu_per_hour, 
                                             size_class=st.size_class)
+    
+    defaults = stm_defaults_response["default_inputs"]
     for (k, v) in custom_st_inputs
-        if isnan(v)
+        if k == :size_class && isnothing(v) # size class is outside "default_inputs" key.
+            setproperty!(st, k, stm_defaults_response[string(k)])
+        elseif isnan(v)
             if !(k == :inlet_steam_temperature_degF && !isnan(st.inlet_steam_superheat_degF))
                 setproperty!(st, k, defaults[string(k)])
             else
@@ -116,7 +99,7 @@ function SteamTurbine(d::Dict; avg_boiler_fuel_load_mmbtu_per_hour::Union{Float6
         end
     end
 
-    if isnan(st.electric_produced_to_thermal_consumed_ratio) || isnan(thermal_produced_to_thermal_consumed_ratio)
+    if isnan(st.electric_produced_to_thermal_consumed_ratio) || isnan(st.thermal_produced_to_thermal_consumed_ratio)
         assign_st_elec_and_therm_prod_ratios!(st)
     end
 
@@ -227,15 +210,20 @@ function get_steam_turbine_defaults_size_class(;avg_boiler_fuel_load_mmbtu_per_h
     defaults = JSON.parsefile(joinpath(dirname(@__FILE__), "..", "..", "data", "steam_turbine", "steam_turbine_default_data.json"))
     class_bounds = [(0.0, 25000.0), (0, 1000.0), (1000.0, 5000.0), (5000.0, 25000.0)]
     n_classes = length(class_bounds)
+    steam_turbine_electric_efficiency = 0.07 # Typical, steam_turbine_kwe / boiler_fuel_kwt
+    st_elec_size_heuristic_kw = nothing
     if !isnothing(size_class)
         if size_class < 0 || size_class > (n_classes-1)
             throw(@error("Invalid size_class $size_class given for steam_turbine, must be in [0,1,2,3]"))
+        end
+        if !isnothing(avg_boiler_fuel_load_mmbtu_per_hour)
+            thermal_power_in_kw = avg_boiler_fuel_load_mmbtu_per_hour * KWH_PER_MMBTU
+            st_elec_size_heuristic_kw = thermal_power_in_kw * steam_turbine_electric_efficiency
         end
     elseif !isnothing(avg_boiler_fuel_load_mmbtu_per_hour)
         if avg_boiler_fuel_load_mmbtu_per_hour <= 0
             throw(@error("avg_boiler_fuel_load_mmbtu_per_hour must be > 0.0 MMBtu/hr"))
         end
-        steam_turbine_electric_efficiency = 0.07 # Typical, steam_turbine_kwe / boiler_fuel_kwt
         thermal_power_in_kw = avg_boiler_fuel_load_mmbtu_per_hour * KWH_PER_MMBTU
         st_elec_size_heuristic_kw = thermal_power_in_kw * steam_turbine_electric_efficiency
         # With heuristic size, find the suggested size class
@@ -257,7 +245,6 @@ function get_steam_turbine_defaults_size_class(;avg_boiler_fuel_load_mmbtu_per_h
         end
     else
         size_class = 0
-        st_elec_size_heuristic_kw = nothing
     end
 
     steam_turbine_defaults = get_steam_turbine_defaults(size_class, defaults)
@@ -266,7 +253,7 @@ function get_steam_turbine_defaults_size_class(;avg_boiler_fuel_load_mmbtu_per_h
         ("prime_mover", "steam_turbine"),
         ("size_class", size_class),
         ("default_inputs", steam_turbine_defaults),
-        ("chp_size_based_on_avg_heating_load_kw", st_elec_size_heuristic_kw),
+        ("chp_elec_size_heuristic_kw", st_elec_size_heuristic_kw),
         ("size_class_bounds", class_bounds)
     ])
 

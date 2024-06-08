@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 const default_buildings = [
     "FastFoodRest",
     "FullServiceRest",
@@ -52,6 +24,16 @@ const default_buildings = [
     "FlatLoad_8_5"    
 ]
 
+const default_process_types = [
+    "Chemical", 
+    "Warehouse",
+    "FlatLoad", 
+    "FlatLoad_24_5", 
+    "FlatLoad_16_7", 
+    "FlatLoad_16_5",
+    "FlatLoad_8_7",
+    "FlatLoad_8_5"
+]
 
 function find_ashrae_zone_city(lat, lon; get_zone=false)
     file_path = joinpath(@__DIR__, "..", "..", "data", "climate_cities.shp")
@@ -73,7 +55,7 @@ function find_ashrae_zone_city(lat, lon; get_zone=false)
 	end
     if isnothing(archgdal_city)
         @warn "Could not find latitude/longitude in U.S. Using geometrically nearest city."
-    elseif !get_zone
+    elseif !get_zone && !(archgdal_city == "LosAngeles")
         return archgdal_city
     end
     cities = [
@@ -123,16 +105,29 @@ end
 
 
 """
-    built_in_load(type::String, city::String, buildingtype::String, 
-        year::Int, annual_energy::Real, monthly_energies::AbstractArray{<:Real,1}
+    built_in_load(
+        type::String, 
+        city::String, 
+        buildingtype::String, 
+        year::Int, 
+        annual_energy::Real, 
+        monthly_energies::AbstractArray{<:Real,1},
+        boiler_efficiency_input::Union{Real,Nothing}=nothing        
     )
 Scale a normalized Commercial Reference Building according to inputs provided and return the 8760.
 """
-function built_in_load(type::String, city::String, buildingtype::String, 
-    year::Int, annual_energy::R, monthly_energies::AbstractArray{<:Real,1}
-    ) where {R <: Real}
 
-    @assert type in ["electric", "domestic_hot_water", "space_heating", "cooling"]
+function built_in_load(
+    type::String, 
+    city::String, 
+    buildingtype::String, 
+    year::Int, 
+    annual_energy::Real, 
+    monthly_energies::AbstractArray{<:Real,1},
+    boiler_efficiency_input::Union{Real,Nothing}=nothing
+    )
+
+    @assert type in ["electric", "domestic_hot_water", "space_heating", "cooling", "process_heat"]
     monthly_scalers = ones(12)
     lib_path = joinpath(@__DIR__, "..", "..", "data", "load_profiles", type)
 
@@ -162,13 +157,14 @@ function built_in_load(type::String, city::String, buildingtype::String,
     end
 
     scaled_load = Float64[]
-    boiler_efficiency = 1.0
     used_kwh_per_mmbtu = 1.0  # do not convert electric loads
-    if type in ["domestic_hot_water", "space_heating"]
+    if type in ["domestic_hot_water", "space_heating", "process_heat"]
         # CRB thermal "loads" are in terms of energy input required (boiler fuel), not the actual energy demand.
         # So we multiply the fuel energy by the boiler_efficiency to get the actual energy demand.
-        boiler_efficiency = EXISTING_BOILER_EFFICIENCY
+        boiler_efficiency = isnothing(boiler_efficiency_input) ? EXISTING_BOILER_EFFICIENCY : boiler_efficiency_input
         used_kwh_per_mmbtu = KWH_PER_MMBTU  # do convert thermal loads
+    else
+        boiler_efficiency = 1.0
     end
     datetime = DateTime(year, 1, 1, 1)
     for ld in normalized_profile
@@ -192,6 +188,7 @@ end
         city::String = "",
         annual_energy::Union{Real, Nothing} = nothing,
         monthly_energies::Array{<:Real,1} = Real[],
+        boiler_efficiency_input::Union{Real,Nothing}=nothing
     )
 
 Given `blended_doe_reference_names` and `blended_doe_reference_percents` use the `constructor` function to load in DoE 
@@ -200,7 +197,9 @@ Given `blended_doe_reference_names` and `blended_doe_reference_percents` use the
     - BuiltInDomesticHotWaterLoad
     - BuiltInSpaceHeatingLoad
     - BuiltInCoolingLoad
+    - BuiltInProcessHeatLoad
 """
+
 function blend_and_scale_doe_profiles(
     constructor,
     latitude::Real,
@@ -211,7 +210,8 @@ function blend_and_scale_doe_profiles(
     city::String = "",
     annual_energy::Union{Real, Nothing} = nothing,
     monthly_energies::Array{<:Real,1} = Real[],
-    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}} = 1.0
+    addressable_load_fraction::Union{<:Real, AbstractVector{<:Real}} = 1.0,
+    boiler_efficiency_input::Union{Real,Nothing}=nothing
     )
 
     @assert sum(blended_doe_reference_percents) ≈ 1 "The sum of the blended_doe_reference_percents must equal 1"
@@ -219,13 +219,19 @@ function blend_and_scale_doe_profiles(
         @debug "Changing ElectricLoad.year to 2017 because DOE reference profiles start on a Sunday."
     end
     year = 2017
+    
     if isempty(city)
-        city = find_ashrae_zone_city(latitude, longitude)  # avoid redundant look-ups
+        if constructor === BuiltInProcessHeatLoad
+            city = "Industrial"
+        else
+            city = find_ashrae_zone_city(latitude, longitude)
+        end
     end
+
     profiles = Array[]  # collect the built in profiles
-    if constructor in [BuiltInSpaceHeatingLoad, BuiltInDomesticHotWaterLoad]
+    if constructor in [BuiltInSpaceHeatingLoad, BuiltInDomesticHotWaterLoad, BuiltInProcessHeatLoad]
         for name in blended_doe_reference_names
-            push!(profiles, constructor(city, name, latitude, longitude, year, addressable_load_fraction, annual_energy, monthly_energies))
+            push!(profiles, constructor(city, name, latitude, longitude, year, addressable_load_fraction, annual_energy, monthly_energies, boiler_efficiency_input))
         end
     else
         for name in blended_doe_reference_names
@@ -241,15 +247,18 @@ function blend_and_scale_doe_profiles(
         if length(monthly_energies) == 12
             monthly_scaler = length(blended_doe_reference_names)
         end
-        for idx in 1:length(profiles)
-            profiles[idx] .*= total_kwh / annual_kwhs[idx] / monthly_scaler
+        for idx in eachindex(profiles)
+            if !(annual_kwhs[idx] == 0.0)
+                profiles[idx] .*= total_kwh / annual_kwhs[idx] / monthly_scaler
+            end
         end
     end
-    for idx in 1:length(profiles)  # scale the profiles
+    for idx in eachindex(profiles)  # scale the profiles
         profiles[idx] .*= blended_doe_reference_percents[idx]
     end
     sum(profiles)
 end
+
 
 function custom_normalized_flatload(doe_reference_name, year)
     # built in profiles are assumed to be hourly
@@ -321,3 +330,4 @@ function get_monthly_energy(power_profile::AbstractArray{<:Real,1};
 
     return monthly_energy_total
 end
+

@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `Boiler` results keys:
 - `size_mmbtu_per_hour`  # Thermal production capacity size of the Boiler [MMBtu/hr]
@@ -55,29 +27,60 @@ function add_boiler_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="
     r["annual_fuel_consumption_mmbtu"] = round(sum(r["fuel_consumption_series_mmbtu_per_hour"]), digits=3)
 
 	r["thermal_production_series_mmbtu_per_hour"] = 
-        round.(value.(m[:dvThermalProduction]["Boiler", ts] for ts in p.time_steps) / KWH_PER_MMBTU, digits=5)
+        round.(sum(value.(m[:dvHeatingProduction]["Boiler", q, ts] for ts in p.time_steps) for q in p.heating_loads) / KWH_PER_MMBTU, digits=5)
 	r["annual_thermal_production_mmbtu"] = round(sum(r["thermal_production_series_mmbtu_per_hour"]), digits=3)
 
 	if !isempty(p.s.storage.types.hot)
-        @expression(m, BoilerToHotTESKW[ts in p.time_steps],
-		    sum(m[:dvProductionToStorage][b,"Boiler",ts] for b in p.s.storage.types.hot)
+        @expression(m, NewBoilerToHotTESKW[ts in p.time_steps],
+		    sum(m[:dvHeatToStorage][b,"Boiler",q,ts] for b in p.s.storage.types.hot, q in p.heating_loads)
             )
+            @expression(m, NewBoilerToHotTESByQuality[q in p.heating_loads, ts in p.time_steps], m[Symbol("dvHeatToStorage"*_n)]["HotThermalStorage","Boiler",q,ts])
     else
-        BoilerToHotTESKW = zeros(length(p.time_steps))
+        NewBoilerToHotTESKW = zeros(length(p.time_steps))
+        @expression(m, NewBoilerToHotTESByQuality[q in p.heating_loads, ts in p.time_steps], 0.0)
     end
-	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(BoilerToHotTESKW / KWH_PER_MMBTU), digits=3)
+	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(NewBoilerToHotTESKW / KWH_PER_MMBTU), digits=3)
 
     if !isempty(p.techs.steam_turbine) && p.s.boiler.can_supply_steam_turbine
-        @expression(m, BoilerToSteamTurbine[ts in p.time_steps], m[:dvThermalToSteamTurbine]["Boiler",ts])
+        @expression(m, NewBoilerToSteamTurbine[ts in p.time_steps], sum(m[:dvThermalToSteamTurbine]["Boiler",q,ts] for q in p.heating_loads))
+        @expression(m, NewBoilerToSteamTurbineByQuality[q in p.heating_loads, ts in p.time_steps], m[Symbol("dvThermalToSteamTurbine"*_n)]["Boiler",q,ts])
     else
-        BoilerToSteamTurbine = zeros(length(p.time_steps))
+        NewBoilerToSteamTurbine = zeros(length(p.time_steps))
+        @expression(m, NewBoilerToSteamTurbineByQuality[q in p.heating_loads, ts in p.time_steps], 0.0)
     end
-    r["thermal_to_steamturbine_series_mmbtu_per_hour"] = round.(value.(BoilerToSteamTurbine), digits=3)
+    r["thermal_to_steamturbine_series_mmbtu_per_hour"] = round.(value.(NewBoilerToSteamTurbine), digits=3)
 
 	BoilerToLoad = @expression(m, [ts in p.time_steps],
-		m[:dvThermalProduction]["Boiler", ts] - BoilerToHotTESKW[ts] - BoilerToSteamTurbine[ts]
+		sum(value.(m[:dvHeatingProduction]["Boiler", q, ts]) for q in p.heating_loads) - NewBoilerToHotTESKW[ts] - NewBoilerToSteamTurbine[ts] 
     )
 	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(BoilerToLoad / KWH_PER_MMBTU), digits=3)
+
+    if "DomesticHotWater" in p.heating_loads && p.s.boiler.can_serve_dhw
+        @expression(m, NewBoilerToDHWKW[ts in p.time_steps], 
+            m[:dvHeatingProduction]["Boiler","DomesticHotWater",ts] - NewBoilerToHotTESByQuality["DomesticHotWater",ts] - NewBoilerToSteamTurbineByQuality["DomesticHotWater",ts]
+        )
+    else
+        @expression(m, NewBoilerToDHWKW[ts in p.time_steps], 0.0)
+    end
+    r["thermal_to_dhw_load_series_mmbtu_per_hour"] = round.(value.(NewBoilerToDHWKW ./ KWH_PER_MMBTU), digits=5)
+    
+    if "SpaceHeating" in p.heating_loads && p.s.boiler.can_serve_space_heating
+        @expression(m, NewBoilerToSpaceHeatingKW[ts in p.time_steps], 
+            m[:dvHeatingProduction]["Boiler","SpaceHeating",ts] - NewBoilerToHotTESByQuality["SpaceHeating",ts] - NewBoilerToSteamTurbineByQuality["SpaceHeating",ts]
+        )
+    else
+        @expression(m, NewBoilerToSpaceHeatingKW[ts in p.time_steps], 0.0)
+    end
+    r["thermal_to_space_heating_load_series_mmbtu_per_hour"] = round.(value.(NewBoilerToSpaceHeatingKW ./ KWH_PER_MMBTU), digits=5)
+    
+    if "ProcessHeat" in p.heating_loads && p.s.boiler.can_serve_process_heat
+        @expression(m, NewBoilerToProcessHeatKW[ts in p.time_steps], 
+            m[:dvHeatingProduction]["Boiler","ProcessHeat",ts] - NewBoilerToHotTESByQuality["ProcessHeat",ts] - NewBoilerToSteamTurbineByQuality["ProcessHeat",ts]
+        )
+    else
+        @expression(m, NewBoilerToProcessHeatKW[ts in p.time_steps], 0.0)
+    end
+    r["thermal_to_process_heat_load_series_mmbtu_per_hour"] = round.(value.(NewBoilerToProcessHeatKW ./ KWH_PER_MMBTU), digits=5)
 
     lifecycle_fuel_cost = p.pwf_fuel["Boiler"] * value(
         sum(m[:dvFuelUsage]["Boiler", ts] * p.fuel_cost_per_kwh["Boiler"][ts] for ts in p.time_steps)

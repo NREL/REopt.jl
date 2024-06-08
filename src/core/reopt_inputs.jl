@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
     REoptInputs
 
@@ -89,6 +61,9 @@ struct REoptInputs <: AbstractInputs
     tech_emissions_factors_SO2::Dict{String, <:Real} # (techs)
     tech_emissions_factors_PM25::Dict{String, <:Real} # (techs)
     techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
+    heating_cop::Dict{String, <:Real} # (techs.electric_heater)
+    heating_loads_kw::Dict{String, <:Real} # (heating_loads)
+    unavailability::Dict{String, Array{Float64,1}}  # Dict by tech of unavailability profile
 end
 ```
 """
@@ -143,12 +118,21 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     ghp_electric_consumption_kw::Array{Float64,2}  # Array of electric load profiles consumed by GHP
     ghp_installed_cost::Array{Float64,1}  # Array of installed cost for GHP options
     ghp_om_cost_year_one::Array{Float64,1}  # Array of O&M cost for GHP options
+    avoided_capex_by_ghp_present_value::Array{Float64,1} # HVAC upgrade costs avoided
+    ghx_useful_life_years::Array{Float64,1} # GHX useful life years
+    ghx_residual_value::Array{Float64,1} # Residual value of each GHX options
     tech_renewable_energy_fraction::Dict{String, <:Real} # (techs)
     tech_emissions_factors_CO2::Dict{String, <:Real} # (techs)
     tech_emissions_factors_NOx::Dict{String, <:Real} # (techs)
     tech_emissions_factors_SO2::Dict{String, <:Real} # (techs)
     tech_emissions_factors_PM25::Dict{String, <:Real} # (techs)
     techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
+    heating_cop::Dict{String, <:Real} # (techs.electric_heater)
+    heating_loads::Vector{String} # list of heating loads
+    heating_loads_kw::Dict{String, Array{Real,1}} # (heating_loads)
+    heating_loads_served_by_tes::Dict{String, Array{String,1}} # ("HotThermalStorage" or empty)
+    unavailability::Dict{String, Array{Float64,1}} # (techs.elec)
+    absorption_chillers_using_heating_load::Dict{String,Array{String,1}} # ("AbsorptionChiller" or empty)
 end
 
 
@@ -183,7 +167,8 @@ function REoptInputs(s::AbstractScenario)
         production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
         seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
         tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
-        tech_emissions_factors_PM25, cop, techs_operating_reserve_req_fraction, thermal_cop, fuel_cost_per_kwh = setup_tech_inputs(s)
+        tech_emissions_factors_PM25, cop, techs_operating_reserve_req_fraction, thermal_cop, fuel_cost_per_kwh, 
+        heating_cop = setup_tech_inputs(s)
 
     pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
 
@@ -203,11 +188,72 @@ function REoptInputs(s::AbstractScenario)
     ghp_options, require_ghp_purchase, ghp_heating_thermal_load_served_kw, 
         ghp_cooling_thermal_load_served_kw, space_heating_thermal_load_reduction_with_ghp_kw, 
         cooling_thermal_load_reduction_with_ghp_kw, ghp_electric_consumption_kw, 
-        ghp_installed_cost, ghp_om_cost_year_one = setup_ghp_inputs(s, time_steps, time_steps_without_grid)
+        ghp_installed_cost, ghp_om_cost_year_one, avoided_capex_by_ghp_present_value,
+        ghx_useful_life_years, ghx_residual_value = setup_ghp_inputs(s, time_steps, time_steps_without_grid)
 
     if any(pv.existing_kw > 0 for pv in s.pvs)
         adjust_load_profile(s, production_factor)
     end
+
+    heating_loads = Vector{String}()
+    heating_loads_kw = Dict{String, Array{Real,1}}()
+    absorption_chillers_using_heating_load = Dict{String,Array{String,1}}()
+    if !isnothing(s.dhw_load)
+        push!(heating_loads, "DomesticHotWater")
+        heating_loads_kw["DomesticHotWater"] = s.dhw_load.loads_kw
+        if !isnothing(s.absorption_chiller) && s.absorption_chiller.heating_load_input == "DomesticHotWater"
+            absorption_chillers_using_heating_load["DomesticHotWater"] = ["AbsorptionChiller"]
+        else
+            absorption_chillers_using_heating_load["DomesticHotWater"] = Vector{String}()
+        end
+    end
+    if !isnothing(s.space_heating_load)
+        push!(heating_loads, "SpaceHeating")
+        heating_loads_kw["SpaceHeating"] = s.space_heating_load.loads_kw
+        if !isnothing(s.absorption_chiller) && s.absorption_chiller.heating_load_input == "SpaceHeating"
+            absorption_chillers_using_heating_load["SpaceHeating"] = ["AbsorptionChiller"]
+        else
+            absorption_chillers_using_heating_load["SpaceHeating"] = Vector{String}()
+        end
+    elseif !isnothing(s.flexible_hvac) && !isnothing(s.existing_boiler)
+        push!(heating_loads, "SpaceHeating")  #add blank space heating load to add dvHeatingProduction for existing boiler
+    end
+    if !isnothing(s.process_heat_load)
+        push!(heating_loads, "ProcessHeat")
+        heating_loads_kw["ProcessHeat"] = s.process_heat_load.loads_kw
+        if !isnothing(s.absorption_chiller) && s.absorption_chiller.heating_load_input == "ProcessHeat"
+            absorption_chillers_using_heating_load["ProcessHeat"] = ["AbsorptionChiller"]
+        else
+            absorption_chillers_using_heating_load["ProcessHeat"] = Vector{String}()
+        end
+    end
+
+    if sum(heating_loads_kw["SpaceHeating"]) > 0.0 && isempty(techs.can_serve_space_heating) 
+        throw(@error("SpaceHeating load is nonzero and no techs can serve the load."))
+    end
+    if sum(heating_loads_kw["DomesticHotWater"]) > 0.0 && isempty(techs.can_serve_dhw) 
+        throw(@error("DomesticHotWater load is nonzero and no techs can serve the load."))
+    end
+    if sum(heating_loads_kw["ProcessHeat"]) > 0.0 && isempty(techs.can_serve_process_heat) 
+        throw(@error("ProcessHeat load is nonzero and no techs can serve the load."))
+    end
+    
+    heating_loads_served_by_tes = Dict{String,Array{String,1}}()
+    if !isempty(s.storage.types.hot)
+        for b in s.storage.types.hot
+            heating_loads_served_by_tes[b] = String[]
+            if s.storage.attr[b].can_serve_dhw && !isnothing(s.dhw_load)
+                push!(heating_loads_served_by_tes[b],"DomesticHotWater")
+            end
+            if s.storage.attr[b].can_serve_space_heating && !isnothing(s.space_heating_load)
+                push!(heating_loads_served_by_tes[b],"SpaceHeating")
+            end
+            if s.storage.attr[b].can_serve_process_heat && !isnothing(s.process_heat_load)
+                push!(heating_loads_served_by_tes[b],"ProcessHeat")
+            end
+        end
+    end
+    unavailability = get_unavailability_by_tech(s, techs, time_steps)
 
     REoptInputs(
         s,
@@ -260,12 +306,21 @@ function REoptInputs(s::AbstractScenario)
         ghp_electric_consumption_kw,
         ghp_installed_cost,
         ghp_om_cost_year_one,
+        avoided_capex_by_ghp_present_value,
+        ghx_useful_life_years,
+        ghx_residual_value,
         tech_renewable_energy_fraction, 
         tech_emissions_factors_CO2, 
         tech_emissions_factors_NOx, 
         tech_emissions_factors_SO2, 
         tech_emissions_factors_PM25,
-        techs_operating_reserve_req_fraction 
+        techs_operating_reserve_req_fraction,
+        heating_cop,
+        heating_loads,
+        heating_loads_kw,
+        heating_loads_served_by_tes,
+        unavailability,
+        absorption_chillers_using_heating_load
     )
 end
 
@@ -299,6 +354,7 @@ function setup_tech_inputs(s::AbstractScenario)
     cop = Dict(t => 0.0 for t in techs.cooling)
     techs_operating_reserve_req_fraction = Dict(t => 0.0 for t in techs.all)
     thermal_cop = Dict(t => 0.0 for t in techs.absorption_chiller)
+    heating_cop = Dict(t => 0.0 for t in techs.electric_heater)
 
     # export related inputs
     techs_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in s.electric_tariff.export_bins)
@@ -310,10 +366,10 @@ function setup_tech_inputs(s::AbstractScenario)
     seg_max_size = Dict{String, Dict{Int, Real}}()
     seg_yint = Dict{String, Dict{Int, Real}}()
 
-    # PV specific arrays
     pvlocations = [:roof, :ground, :both]
-    pv_to_location = Dict(t => Dict(loc => 0) for (t, loc) in zip(techs.pv, pvlocations))
-    maxsize_pv_locations = DenseAxisArray([1.0e5, 1.0e5, 1.0e5], pvlocations)
+    d = Dict(loc => 0 for loc in pvlocations)
+    pv_to_location = Dict(t => copy(d) for t in techs.pv)
+    maxsize_pv_locations = DenseAxisArray([1.0e9, 1.0e9, 1.0e9], pvlocations)
     # default to large max size per location. Max size by roof, ground, both
 
     if !isempty(techs.pv)
@@ -368,6 +424,12 @@ function setup_tech_inputs(s::AbstractScenario)
         setup_steam_turbine_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin, techs)
     end    
 
+    if "ElectricHeater" in techs.all
+        setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop)
+    else
+        heating_cop["ElectricHeater"] = 1.0
+    end
+
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
     for t in techs.elec
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
@@ -381,7 +443,7 @@ function setup_tech_inputs(s::AbstractScenario)
     production_factor, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, n_segs_by_tech, 
     seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
     tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
-    tech_emissions_factors_PM25, cop, techs_operating_reserve_req_fraction, thermal_cop, fuel_cost_per_kwh
+    tech_emissions_factors_PM25, cop, techs_operating_reserve_req_fraction, thermal_cop, fuel_cost_per_kwh, heating_cop
 end
 
 
@@ -471,11 +533,11 @@ function setup_pv_inputs(s::AbstractScenario, max_sizes, min_sizes,
     roof_existing_pv_kw, ground_existing_pv_kw, both_existing_pv_kw = 0.0, 0.0, 0.0
     roof_max_kw, land_max_kw = 1.0e5, 1.0e5
 
-    for pv in s.pvs
+    for pv in s.pvs        
         production_factor[pv.name, :] = get_production_factor(pv, s.site.latitude, s.site.longitude; 
             time_steps_per_hour=s.settings.time_steps_per_hour)
         for location in pvlocations
-            if pv.location == location
+            if pv.location == String(location) # Must convert symbol to string
                 pv_to_location[pv.name][location] = 1
             else
                 pv_to_location[pv.name][location] = 0
@@ -797,6 +859,30 @@ function setup_steam_turbine_inputs(s::AbstractScenario, max_sizes, min_sizes, c
     return nothing
 end
 
+function setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop)
+    max_sizes["ElectricHeater"] = s.electric_heater.max_kw
+    min_sizes["ElectricHeater"] = s.electric_heater.min_kw
+    om_cost_per_kw["ElectricHeater"] = s.electric_heater.om_cost_per_kw
+    heating_cop["ElectricHeater"] = s.electric_heater.cop
+
+    if s.electric_heater.macrs_option_years in [5, 7]
+        cap_cost_slope["ElectricHeater"] = effective_cost(;
+            itc_basis = s.electric_heater.installed_cost_per_kw,
+            replacement_cost = 0.0,
+            replacement_year = s.financial.analysis_years,
+            discount_rate = s.financial.owner_discount_rate_fraction,
+            tax_rate = s.financial.owner_tax_rate_fraction,
+            itc = 0.0,
+            macrs_schedule = s.electric_heater.macrs_option_years == 5 ? s.financial.macrs_five_year : s.financial.macrs_seven_year,
+            macrs_bonus_fraction = s.electric_heater.macrs_bonus_fraction,
+            macrs_itc_reduction = 0.0,
+            rebate_per_kw = 0.0
+        )
+    else
+        cap_cost_slope["ElectricHeater"] = s.electric_heater.installed_cost_per_kw
+    end
+
+end
 
 function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
 
@@ -855,7 +941,7 @@ function setup_present_worth_factors(s::AbstractScenario, techs::Techs)
 
     # Emissions pwfs
     pwf_emissions_cost = Dict{String, Float64}()
-    pwf_grid_emissions = Dict{String, Float64}() # used to calculate total grid CO2 lbs
+    pwf_grid_emissions = Dict{String, Float64}() # used to calculate total grid CO2, NOx, SO2, and PM2.5 lbs
     for emissions_type in ["CO2", "NOx", "SO2", "PM25"]
         merge!(pwf_emissions_cost, 
                 Dict(emissions_type*"_grid"=>annuity_two_escalation_rates(
@@ -1002,27 +1088,44 @@ function setup_ghp_inputs(s::AbstractScenario, time_steps, time_steps_without_gr
     cooling_thermal_load_reduction_with_ghp_kw = zeros(num, length(time_steps))
     ghp_cooling_thermal_load_served_kw = zeros(num, length(time_steps))        
     ghp_electric_consumption_kw = zeros(num, length(time_steps))
+    avoided_capex_by_ghp_present_value = Vector{Float64}(undef, num)
+    ghx_useful_life_years = Vector{Float64}(undef, num)
+    ghx_residual_value = Vector{Float64}(undef, num)
     if num > 0
         require_ghp_purchase = s.ghp_option_list[1].require_ghp_purchase  # This does not change with the number of options
+       
         for (i, option) in enumerate(s.ghp_option_list)
-            ghp_cap_cost_slope, ghp_cap_cost_x, ghp_cap_cost_yint, ghp_n_segments = cost_curve(option, s.financial)
-            ghp_size_ton = option.heatpump_capacity_ton
-            seg = 0
-            if ghp_size_ton <= ghp_cap_cost_x[1]
-                seg = 1
-            elseif ghp_size_ton > ghp_cap_cost_x[end]
-                seg = ghp_n_segments
-            else
-                for n in 2:(ghp_n_segments+1)
-                    if (ghp_size_ton > ghp_cap_cost_x[n-1]) && (ghp_size_ton <= ghp_cap_cost_x[n])
-                        seg = n
-                        break
-                    end
-                end
+            if option.heat_pump_configuration == "WSHP"
+                fixed_cost, variable_cost = get_ghp_installed_cost(option, s.financial, option.heatpump_capacity_ton)
+                ghp_installed_cost[i] = fixed_cost + variable_cost
+
+            elseif option.heat_pump_configuration == "WWHP"
+                temp = option.installed_cost_per_kw
+                option.installed_cost_per_kw = option.wwhp_heating_pump_installed_cost_curve
+                fixed_cost_heating, variable_cost_heating = get_ghp_installed_cost(option, s.financial, option.wwhp_heating_pump_capacity_ton)
+                ghp_installed_cost_heating = 0.5 * fixed_cost_heating + variable_cost_heating
+                
+                option.installed_cost_per_kw = option.wwhp_cooling_pump_installed_cost_curve
+                fixed_cost_cooling, variable_cost_cooling = get_ghp_installed_cost(option, s.financial, option.wwhp_cooling_pump_capacity_ton)
+                option.installed_cost_per_kw = temp
+                ghp_installed_cost_cooling = 0.5 * fixed_cost_cooling + variable_cost_cooling
+
+                ghp_installed_cost[i] = ghp_installed_cost_heating + ghp_installed_cost_cooling
             end
-            ghp_installed_cost[i] = ghp_cap_cost_yint[seg-1] + ghp_size_ton * ghp_cap_cost_slope[seg-1]
+
             ghp_om_cost_year_one[i] = option.om_cost_year_one
-            heating_thermal_load = s.space_heating_load.loads_kw + s.dhw_load.loads_kw
+            avoided_capex_by_ghp_present_value[i] = option.avoided_capex_by_ghp_present_value
+            ghx_useful_life_years[i] = option.ghx_useful_life_years
+            # ownership guided residual value determination
+            discount_rate = (1 - 1*s.financial.third_party_ownership)*s.financial.offtaker_discount_rate_fraction + s.financial.third_party_ownership*s.financial.owner_discount_rate_fraction
+            ghx_residual_value[i] = option.ghx_only_capital_cost*
+            (
+                (option.ghx_useful_life_years - s.financial.analysis_years)/option.ghx_useful_life_years
+            )/(
+                (1 + discount_rate)^s.financial.analysis_years
+            )
+
+            heating_thermal_load = s.space_heating_load.loads_kw + s.dhw_load.loads_kw + s.process_heat_load.loads_kw
             # Using minimum of thermal load and ghp-serving load to avoid small negative net loads
             for j in time_steps
                 space_heating_thermal_load_reduction_with_ghp_kw[i,j] = min(s.space_heating_thermal_load_reduction_with_ghp_kw[j], heating_thermal_load[j])
@@ -1049,7 +1152,8 @@ function setup_ghp_inputs(s::AbstractScenario, time_steps, time_steps_without_gr
     return ghp_options, require_ghp_purchase, ghp_heating_thermal_load_served_kw, 
     ghp_cooling_thermal_load_served_kw, space_heating_thermal_load_reduction_with_ghp_kw, 
     cooling_thermal_load_reduction_with_ghp_kw, ghp_electric_consumption_kw, 
-    ghp_installed_cost, ghp_om_cost_year_one
+    ghp_installed_cost, ghp_om_cost_year_one, avoided_capex_by_ghp_present_value,
+    ghx_useful_life_years, ghx_residual_value
 end
 
 function setup_operating_reserve_fraction(s::AbstractScenario, techs_operating_reserve_req_fraction)
@@ -1061,4 +1165,38 @@ function setup_operating_reserve_fraction(s::AbstractScenario, techs_operating_r
     techs_operating_reserve_req_fraction["Wind"] = s.wind.operating_reserve_required_fraction
 
     return nothing
+end
+
+function get_ghp_installed_cost(option::AbstractTech, financial::Financial, ghp_size_ton::Float64)
+
+    ghp_cap_cost_slope, ghp_cap_cost_x, ghp_cap_cost_yint, ghp_n_segments = cost_curve(option, financial)
+    seg = 0
+    if ghp_size_ton <= ghp_cap_cost_x[1]
+        seg = 2
+    elseif ghp_size_ton > ghp_cap_cost_x[end]
+        seg = ghp_n_segments+1
+    else
+        for n in 2:(ghp_n_segments+1)
+            if (ghp_size_ton > ghp_cap_cost_x[n-1]) && (ghp_size_ton <= ghp_cap_cost_x[n])
+                seg = n
+                break
+            end
+        end
+    end
+    fixed_cost = ghp_cap_cost_yint[seg-1] 
+    variable_cost = ghp_size_ton * ghp_cap_cost_slope[seg-1]
+
+    return fixed_cost, variable_cost
+end
+
+function get_unavailability_by_tech(s::AbstractScenario, techs::Techs, time_steps)
+    if !isempty(techs.elec)
+        unavailability = Dict(tech => zeros(length(time_steps)) for tech in techs.elec)
+        if !isempty(techs.chp)
+            unavailability["CHP"] = [s.chp.unavailability_hourly[i] for i in 1:8760 for _ in 1:s.settings.time_steps_per_hour]
+        end
+    else
+        unavailability = Dict(""=>Float64[])
+    end
+    return unavailability
 end

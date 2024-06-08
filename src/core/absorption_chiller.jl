@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 
 """
 `AbsorptionChiller` is an optional REopt input with the following keys and default values:
@@ -43,6 +15,7 @@
     cop_electric::Float64 = 14.1, # Absorption chiller electric consumption CoP from cooling tower heat rejection - conversion of electric power input to usable cooling thermal energy outpu
     macrs_option_years::Float64 = 0, # MACRS schedule for financial analysis. Set to zero to disable
     macrs_bonus_fraction::Float64 = 0 # Percent of upfront project costs to depreciate under MACRS
+    heating_load_input::Union{String, Nothing} = nothing # heating load that serves as input to absorption chiller
 ```
 
 !!! Note
@@ -64,6 +37,7 @@ Base.@kwdef mutable struct AbsorptionChiller <: AbstractThermalTech
     om_cost_per_ton::Union{Float64, Nothing} = nothing
     macrs_option_years::Float64 = 0
     macrs_bonus_fraction::Float64 = 0
+    heating_load_input::Union{String, Nothing} = nothing
     min_kw::Float64 = NaN
     max_kw::Float64 = NaN
     installed_cost_per_kw::Float64 = NaN
@@ -94,7 +68,8 @@ function AbsorptionChiller(d::Dict;
     custom_ac_inputs = Dict{Symbol, Any}(
         :installed_cost_per_ton => absorp_chl.installed_cost_per_ton,
         :cop_thermal => absorp_chl.cop_thermal,
-        :om_cost_per_ton => absorp_chl.om_cost_per_ton
+        :om_cost_per_ton => absorp_chl.om_cost_per_ton,
+        :heating_load_input => absorp_chl.heating_load_input
     )
 
     if !isnothing(cooling_load)
@@ -211,7 +186,7 @@ function get_absorption_chiller_defaults(;
         )
 
     for key in keys(acds[thermal_consumption_hot_water_or_steam])
-        if key == "cop_thermal"
+        if key == "cop_thermal" || key == "heating_load_input"
             htf_defaults[key] = acds[thermal_consumption_hot_water_or_steam][key]
         elseif key != "tech_sizes_for_cost_data"
             htf_defaults[key] = (frac_higher * acds[thermal_consumption_hot_water_or_steam][key][size_class+1] + 

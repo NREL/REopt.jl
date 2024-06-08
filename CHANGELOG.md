@@ -23,11 +23,324 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.47.1
+### Fixed
+- Type issue with `CoolingLoad` monthly energy input
+- `simulated_load()` response for `annual_mmbtu` for individual heating loads (fixed to fuel instead of thermal)
+
+## v0.47.0
+### Added
+- Added inputs options and handling for ProcessHeatLoad for scaling annual or monthly fuel consumption values with reference hourly profiles, same as other loads
+### Changed
+- Updated `test/scenarios/thermal_load.json` to include **ProcessHeatLoad** in both hourly and monthly fuel load tests.
+- Refactored test sets in `test/runtests.jl` to include **ProcessHeatLoad** and ensure it is treated similarly to **DomesticHotWaterLoad** and **SpaceHeatingLoad**.
+- Modified **dvHeatingProduction** to account for **ProcessHeatLoad** with relevant addressable load fractions.
+- Updated test values and expectations to include contributions from **ProcessHeatLoad**.
+- Updated `src/core/doe_commercial_reference_building_loads.jl` to include **ProcessHeatLoad** for built-in load handling.
+- Refactored various functions to ensure **ProcessHeatLoad** is processed correctly in line with other heating loads.
+- When the URDB response `energyratestructure` has a "unit" value that is not "kWh", throw an error instead of averaging rates in each energy tier.
+- Refactored heating flow constraints to be in ./src/constraints/thermal_tech_constraints.jl instead of its previous separate locations in the storage and turbine constraints.
+### Fixed
+- Updated the PV result **lifecycle_om_cost_after_tax** to account for the third-party factor for third-party ownership analyses.
+- Convert `max_electric_load_kw` to _Float64_ before passing to function `get_chp_defaults_prime_mover_size_class`
+- Fixed a bug in which excess heat from one heating technology resulted in waste heat from another technology.
+- Modified thermal waste heat constraints for heating technologies to avoid errors in waste heat results tracking.
+
+## v0.46.2
+### Changed
+- When the URDB response `energyratestructure` has a "unit" value that is not "kWh", throw an error instead of averaging rates in each energy tier.
+- Changed default Financial **owner_tax_rate_fraction** and **offtaker_tax_rate_fraction** from 0.257 to 0.26 to align with API and user manual defaults. 
+
+## v0.46.1
+### Changed
+- Updated the GHP testset .json `./test/scenarios/ghp_inputs.json` to include a nominal HotThermalStorage and ColdThermalStorage system.
+### Fixed
+- Fixed a bug in which the model fails to build when both GHP and either Hot or Cold Thermal Storage are present.
+
+## v.0.46.0
+### Added 
+- In `src/core/absorption_chiller.jl` struct, added field **heating_load_input** to the AbsorptionChiller struct
+- Added new variables **dvHeatToStorage** and **dvHeatFromStorage** which are indexed on `p.heating_loads` and added reconciliation constraints so that **dvProductionToStorage** and **dvDischargeFromStorage** maintain their relationship to state of charge for Hot thermal energy storage.
+- In `src/constraints/thermal_tech_constraints.jl`, added function **no_existing_boiler_production** which prevents ExistingBoiler from producing heat in optimized (non-BAU) scenarios 
+- for all heating techs and CHP, added fields **can_serve_space_heating**, **can_serve_dhw**, and **can_serve_process_heat** in core structs and added new results fields **thermal_to_dhw_load_series_mmbtu_per_hour**, **thermal_to_space_heating_load_series_mmbtu_per_hour**, and **thermal_to_process_heat_load_series_mmbtu_per_hour**
+- In `src/core/techs.jl`, added new sets **ghp_techs**, **cooling_techs**, **techs_can_serve_space_heating**, **techs_can_serve_dhw**, and **techs_can_serve_process_heat**
+- In `src/core/reopt_inputs.jl`, added new fields **heating_loads**, **heating_loads_kw**, **heating_loads_served_by_tes**, and **absorption_chillers_using_heating_load** to the REoptInputs and BAUInputs structs. in the math, new set `p.heating_loads` has index q (to represent "qualities" of heat).
+- In `src/core/heating_cooling_loads.jl`, added new struct **ProcessHeatLoad**
+- In `src/core/scenario.jl`, added new field **process_heat_load**
+- In `src/mpc/inputs.jl`, added new field **heating_loads**
+- In `src/core/existing_boiler.jl`, added field **retire_in_optimal** to the ExistingBoiler struct
+- Info to user including name of PV and/or temperature datasource used and distance from site location to datasource location
+- Warning to user if data is not from NSRDB or if data is more than 200 miles away
+- In `results/heating_cooling_load.jl`, added new fields **process_heat_thermal_load_series_mmbtu_per_hour**, **process_heat_boiler_fuel_load_series_mmbtu_per_hour**, **annual_calculated_process_heat_thermal_load_mmbtu**, and **annual_calculated_process_heat_boiler_fuel_load_mmbtu** to HeatingLoad results, with sum heating loads now including process heat 
+### Changed
+- Change the way we determine which dataset to utilize in the PVWatts API call. Previously, we utilized defined lat-long bounds to determine if "nsrdb" or "intl" data should be used in PVWatts call. Now, we call the Solar Dataset Query API (v2) (https://developer.nrel.gov/docs/solar/data-query/v2/) to determine the dataset to use, and include "tmy3" as an option, as this is currently the best-available data for many locations in Alaska. 
+- Refactored **dvThermalProduction** to be separated in **dvCoolingProduction** and **dvHeatingProduction** with **dvHeatingProduction** now indexed on `p.heating_loads`
+- Refactored heating load balance constraints so that a separate flow balance is reconciled for each heating load in `p.heating_loads`
+- Renamed **dvThermalProductionYIntercept** to **dvHeatingProductionYIntercept**
+- Divided **ThermalStorage** into **HotThermalStorage** and **ColdThermalStorage** as the former now has attributes related to the compatible heat loads as input or output.
+- Changed technologies included **dvProductionToWaste** to all heating techs.  NOTE: this variable is forced to zero to allow steam turbine tests to pass, but I believe that waste heat should be allowed for the turbine.  A TODO is in place to review this commit (a406cc5df6e4a27b56c92815c35d04815904e495).
+- Changed test values and tolerances for CHP Sizing test.
+- Updated test sets "Emissions and Renewable Energy Percent" and "Minimize Unserved Load" to decrease computing time.
+- Test for tiered TOU demand rates in `test/runtests.jl`
+- Updated `pop_year` and `income_year` used in call to EASIUR data (`get_EASIUR2005`) each to 2024, from 2020. 
+- Updated usd conversion used for EASIUR health cost calcs from USD_2010_to_2020 = 1.246 to USD_2010_to_2024 = 1.432
+### Fixed  
+- Added a constraint in `src/constraints/steam_turbine_constraints.jl` that allows for heat loads to reconcile when thermal storage is paired with a SteamTurbine. 
+- Fixed a bug in which net-metering system size limits could be exceeded while still obtaining the net-metering benefit due to a large "big-M".
+- Fixed a reshape call in function `parse_urdb_tou_demand` that incorrectly assumed row major instead of column major ordering
+- Fixed a loop range in function `parse_urdb_tou_demand` that incorrectly started at 0 instead of 1
+- Added the missing tier index when accessing `p.s.electric_tariff.tou_demand_rates` in function `add_elec_utility_expressions`
+
+## v0.45.0
+### Fixed 
+- Fixed bug in call to `GhpGhx.jl` when sizing hybrid GHP using the fractional sizing method
+- Added `export_rate_beyond_net_metering_limit` to list of inputs to be converted to type Real, to avoid MethodError if type is vector of Any. 
+- Fix blended CRB processing when one or more load types have zero annual energy
+- When calculating CHP fuel intercept and slope, use 1 for the HHV because CHP fuel measured in units of kWh, instead of using non-existent **CHP.fuel_higher_heating_value_kwh_per_gal**
+- Changed instances of indexing using i in 1:length() paradigm to use eachindex() or axes() instead because this is more robust
+- In `src/core/urdb.jl`, ensure values from the "energyweekdayschedule" and "energyweekendschedule" arrays in the URDB response dictionary are converted to _Int_ before being used as indices
+- Handle an array of length 1 for CHP.installed_cost_per_kw which fixes the API using this parameter
+### Changed
+- add **ElectricStorage** input option **soc_min_applies_during_outages** (which defaults to _false_) and only apply the minimum state of charge constraint in function `add_MG_storage_dispatch_constraints` if it is _true_
+- Renamed function `generator_fuel_slope_and_intercept` to `fuel_slope_and_intercept` and generalize to not be specific to diesel measured in units of gal, then use for calculating non diesel fuel slope and intercept too
+
+## v0.44.0
+### Added 
+- in `src/settings.jl`, added new const **INDICATOR_COMPATIBLE_SOLVERS**
+- in `src/settings.jl`, added new member **solver_name** within the settings object.  This is currently not connected to the solver but does determine whether indicator constraints are modeled or if their big-M workarounds are used.
+- added replacements for indicator constraints with the exception of battery degradation, which is implemented in a separate model, and FlexibleHVAC.  TODO's have been added for these remaining cases.
+### Fixed
+- Fixed previously broken tests using HiGHS in `test/runtests.jl` due to solver incompatibility.
+
+## v0.43.0
+### Fixed
+- `simple_payback_years` calculation when there is export credit
+- Issue with `SteamTurbine` heuristic size and default calculation when `size_class` was input
+- BAU emissions calculation with heating load which was using thermal instead of fuel
+
+## v0.42.0
+### Changed
+- In `core/pv.jl` a change was made to make sure we are using the same assumptions as PVWatts guidelines, the default `tilt` angle for a fixed array should be 20 degrees, irrespective of it being a rooftop `(1)` or ground-mounted (open-rack)`(2)` system. By default the `tilt` will be set to 20 degrees for ground-mount and rooftop, and 0 degrees for axis-tracking (`array_type = (3) or (4)`)
+> "The PVWatts® default value for the tilt angle depends on the array type: For a fixed array, the default value is 20 degrees, and for one-axis tracking the default value is zero. A common rule of thumb for fixed arrays is to set the tilt angle to the latitude of the system's location to maximize the system's total electrical output over the year. Use a lower tilt angle favor peak production in the summer months when the sun is high in the sky, or a higher tilt angle to increase output during winter months. Higher tilt angles tend to cost more for racking and mounting hardware, and may increase the risk of wind damage to the array."
+
+## v0.41.0
+### Changed
+- Changed default source for CO2 grid emissions values to NREL's Cambium 2022 Database (by default: CO2e, long-run marginal emissions rates levelized (averaged) over the analysis period, assuming start year 2024). Added new emissions inputs and call to Cambium API in `src/core/electric_utility.jl`. Included option for user to use AVERT data for CO2 using **co2_from_avert** boolean. 
+- Updated `electric_utility` **emissions_region** to **avert_emissions_region** and **distance_to_emissions_region_meters** to **distance_to_avert_emissions_region_meters** in `src/electric_utility.jl` and `results/electric_utility.jl`. 
+- Updated default **emissions_factor_XXX_decrease_fraction** (where XXX is CO2, NOx, SO2, and PM2.5) from 0.01174 to 0.02163 based on Cambium 2022 Mid-Case scenario, LRMER CO2e (Combustion+Precombustion) 2024-2049 projected values. CO2 projected decrease defaults to 0 if Cambium data are used for CO2 (Cambium API call will levelize values).  
+- Updated AVERT emissions data to v4.1, which uses Regional Data Files (RDFs) for year 2022. Data is saved in `data/emissions/AVERT_Data`. For Alaska and Hawaii (regions AKGD, HIMS, HIOA), updated eGRID data to eGRID2021 datafile and adjusted CO2 values to CO2e values to align with default used for Cambium data. 
+- Updated default fuel emissions factors from CO2 to CO2-equivalent (CO2e) values. In `src/core/generator.jl`, updated **emissions_factor_lb_CO2_per_gal** from 22.51 to 22.58. In `src/REopt.jl` updated **emissions_factor_lb_CO2_per_mmbtu** => Dict(
+        "natural_gas"=>116.9 to 117.03,
+        "landfill_bio_gas"=>114,8 to 115.38,
+        "propane"=>138.6 to 139.16,
+        "diesel_oil"=>163.1 to 163.61
+    )
+- Changed calculation of all `annual` emissions results (e.g. **Site.annual_emissions_tonnes_CO2**) to simple annual averages (lifecycle emissions divided by analysis_years). This is because the default climate emissions from Cambium are already levelized over the analysis horizon and therefore "year_one" emissions cannot be easily obtained. 
+- Changed name of exported function **emissions_profiles** to **avert_emissions_profiles**
+### Added
+- In `src/REopt.jl` and `src/electric_utility.jl`, added **cambium_emissions_profile** as an export for use via the REopt_API. 
+- In `src/REopt.jl`, added new const **EMISSIONS_DECREASE_DEFAULTS**
+- In `src/results/electric_utility.jl` **cambium_emissions_region**
+- In `test/runtests.jl` and `test/test_with_xpress.jl`, added testset **Cambium Emissions**
+### Fixed 
+- Adjust grid emissions profiles for day of week alignment with load_year.
+- In `test_with_xpress.jl`, updated "Emissions and Renewable Energy Percent" expected values to account for load year adjustment. 
+- In `src/core/electric_utility.jl`, error when user-provided emissions series does not match timestep per hour, as is done in other cases of incorrect user-provided data.
+- Avoid adjusting rates twice when time_steps_per_hour > 1 
+
+## v0.40.0
+### Changed
+- Changed **macrs_bonus_fraction** to from 0.80 to 0.60 (60%) for CHP, ElectricStorage, ColdThermalStorage, HotThermalStorage GHP, PV, Wind
+### Fixed
+- In `reopt.jl`, group objective function incentives (into **ObjectivePenalties**) and avoid directly modifying m[:Costs]. Previously, some of these were incorrectly included in the reported **Financial.lcc**. 
+
+## v0.39.1
+### Changed
+- Changed testing suite from using Xpress to using HiGHS, an open-source solver.  This has led to a reduction in the number of tests due to incompatibility with indicator constraints.
+### Fixed
+- Fixed issue with running Wind on Windows: add execute permission for ssc.dll
+
+## v0.39.0
+### Added
+- Added new technology `ElectricHeater` which uses electricity as input and provides heating as output; load balancing constraints have been updated accordingly
+
+## v0.38.2
+### Added 
+- Added the following BAU outputs:  lifecycle_chp_standby_cost_after_tax, lifecycle_elecbill_after_tax, lifecycle_production_incentive_after_tax, lifecycle_outage_cost, lifecycle_MG_upgrade_and_fuel_cost
+### Fixed
+- Don't allow **Site** **min_resil_time_steps** input to be greater than the maximum value element in **ElectricUtility** **outage_durations**
+
+## v0.38.1
+### Fixed
+- Fix CHP standby charge modeling - bad reference to pwf_e
+- Avoid breaking backward compatibility with type declaration of (global) const urdb_api_key
+
+## v0.38.0
+### Changed
+- Require NREL Developer API Key set as ENV["NREL_DEVELOPER_API_KEY"] = 'your API key' for PVWatts and Wind Toolkit
+
+## v0.37.5
+### Fixed
+- Fixed AVERT emissions profiles for NOx. Were previously the same as the SO2 profiles. AVERT emissions profiles are currently generated from AVERT v3.2 https://www.epa.gov/avert/download-avert. See REopt User Manual for more information.
+- Fix setting of equal demand tiers in scrub_urdb_demand_tiers!, which was previously causing an error. 
+- When calling REopt.jl from a python environment using PyJulia and PyCall, some urdb_response fields get converted from a list-of-lists to a matrix type, when REopt.jl expects an array type. This fix adds checks on the type for two urdb_response fields and converts them to an array if needed.
+- Update the outages dispatch results to align with CHP availability during outages
+
+## v0.37.4
+### Fixed
+- Include `year` in creation of electric-only CHP for unavailability profile
+
+## v0.37.3
+### Changed
+- Ignore `CHP` unavailability during stochastic, multiple outages; this is consistent with deterministic single outage
+
+## v0.37.2
+### Changed
+- Do not enforce `CHP.min_turn_down_fraction` for outages
+
+## v0.37.1
+### Fixed
+- CHP-only for multiple/stochastic outages
+- Allow negative fuel_burn and thermal_prod intercepts for CPH
+- Correct after_tax CHP results
+
+## v0.37.0
+### Added
+- Added Bool attribute `is_electric_only` to CHP; if true, default installed and O&M costs are reduced by 25% and, for the reciprocating engine and combustion turbine prime movers, the federal ITC fraction is reduced to zero.
+- Las Vegas CRB data was missing from ElectricLoad, but the climate_cities.shp file does not distinguish between Las Angeles and Las Vegas
+### Changed
+- Update `CHP.size_class` after heuristic size is determined based on size_class=0 guess (not input)
+### Fixed
+- Use the user-input `ExistingBoiler.efficiency` value for converting fuel input to thermal to preserve annual fuel energy input
+- Fix heating loads monthly_mmbtu and addressable_load_fraction handling (type issues mostly)
+- Bug fix for user-supplied 8760 WHL rates with tiered energy rate
+
+## v0.36.0
+### Changed
+- Changed default values by prime mover for CHP technologies in `data/chp/chp_defaults.json`.  See user manual for details by prime mover and size class.
+- Updated the package dependencies to be compatible with recent changes to HiGHS (for testing) and MathOptInterface
+### Fixed
+- The present worth factor for fuel (pwf_fuel) was not properly multiplying for lifecycle fuel costs
+
+## v0.35.1
+### Fixed
+- Add GHP to proforma metrics for when GHP is evaluated (should have been there)
+### Added
+- Add different BAU outputs for heating and cooling systems
+
+## v0.35.0
+### Changed
+- ANNUAL UPDATE TO DEFAULT VALUES. Changes outlined below with (old value) --> (new value). See user manual for references. 
+  - Owner Discount rate, nominal (%): : **Financial** **owner_discount_rate_fraction** 0.0564	--> 0.0638
+  - Offtaker Discount rate, nominal (%): **Financial**  **offtaker_discount_rate_fraction** 0.0564 --> 0.0638
+  - Electricity cost escalation rate, nominal (%): **Financial** **elec_cost_escalation_rate_fraction** 0.019	--> 0.017
+  - Existing boiler fuel cost escalation rate, nominal (%): **Financial**  **existing_boiler_fuel_cost_escalation_rate_fraction**	0.034	--> 0.015
+  - Boiler fuel cost escalation rate, nominal (%): **Financial** **boiler_fuel_cost_escalation_rate_fraction**	0.034	--> 0.015
+  - CHP fuel cost escalation rate, nominal (%): **Financial**  **chp_fuel_cost_escalation_rate_fraction**	0.034	--> 0.015
+  - Generator fuel cost escalation rate, nominal (%): **Financial**  **generator_fuel_cost_escalation_rate_fraction**	0.027	--> 0.012
+  - Array tilt – Ground mount, Fixed: **PV** **tilt** latitude	--> 20
+  - O&M cost ($/kW/year): **PV** **om_cost_per_kw**	17	--> 18
+  - System capital cost ($/kW): **PV** **installed_cost_per_kw**	1592	--> 1790
+  - Energy capacity cost ($/kWh): **ElectricStorage** **installed_cost_per_kwh**	388	--> 455
+  - Power capacity cost ($/kW): **ElectricStorage**	**installed_cost_per_kw**	775	--> 910
+  - Energy capacity replacement cost ($/kWh): **ElectricStorage** **replace_cost_per_kwh**	220	--> 318
+  - Power capacity replacement cost ($/kW): **ElectricStorage**	**replace_cost_per_kw**	440	--> 715
+  - Fuel burn rate by generator capacity (gal/kWh): **Generator** **fuel_slope_gal_per_kwh**	0.076	--> removed and replaced with full and half-load efficiencies
+  - Electric efficiency at 100% load (% HHV-basis): **Generator** **electric_efficiency_full_load**	N/A - new input	--> 0.322
+  - Electric efficiency at 50% load (% HHV-basis): **Generator** **electric_efficiency_half_load**	N/A - new input	--> 0.322
+  - Generator fuel higher heating value (HHV): **Generator** **fuel_higher_heating_value_kwh_per_gal**	N/A - new input	--> 40.7
+  - System capital cost ($/kW): **Generator**  **installed_cost_per_kw** 500	--> $650 if the generator only runs during outages; $800 if it is allowed to run parallel with the grid; $880 for off-grid
+  - Fixed O&M ($/kW/yr): **Generator** **om_cost_per_kw** Grid connected: 10 Off-grid: 20 --> Grid connected: 20 Off-grid: 10
+  - System capital cost ($/kW) by Class: **Wind** **size_class_to_installed_cost**	residential - 5675 commercial - 4300 medium - 2766 large - 2239 --> residential - 6339 commercial - 4760 medium - 3137 large - 2386
+  - O&M cost ($/kW/year): **Wind** **om_cost_per_kw** 35 --> 36
+ 
+## v0.34.0
+### Added
+- Ability to run hybrid GHX sizing using **GhpGhx.jl** (automatic and fractional sizing)
+- Added financial inputs for **GHP** and updated objective and results to reflect these changes
+- Added central plant **GHP**
+### Fixed
+- Fix output of `get_tier_with_lowest_energy_rate(u::URDBrate)` to return an index and not cartesian coordinates for multi-tier energy rates.
+- Updated **GHP** cost curve calculations so incentives apply to all GHP components
+### Changed
+- If a `REoptInputs` object solves with termination status infeasible, altert user and return a dictionary insteadof JuMP model
+
+## v0.33.0
+### Added
+- Functionality to evaluate scenarios with Wind can in the ERP (`backup_reliability`)
+- Dispatch data for outages: Wind, ElectricStorage SOC, and critical load
+### Fixed
+- Fix `backup_reliability_reopt_inputs(d, p, r)` so doesn't ignore `CHP` from REopt scenario
+- In `backup_reliability_reopt_inputs(d, p, r)`, get `Generator` and `CHP` fuel related values from REopt results _Dict_ d and `REoptInputs` _struct_ p, unless the user overrides the REopt results by providing **generator_size_kw**
+- Remove use of non-existent **tech_upgraded** `Outages` outputs, using **tech_microgrid_size_kw** instead
+- Added missing **electric_storage_microgrid_upgraded** to `Outages` results
+- Fix bug causing _InexactError_ in `num_battery_bins_default`
+- Update docstrings in `backup_reliability.jl`
+- Avoid supply > critical load during outages by changing load balance to ==
+### Changed
+- Updated REopt license
+- Changed `backup_reliability` results key from **fuel_outage_survival_final_time_step** to **fuel_survival_final_time_step** for consistency with other keys
+
+## v0.32.7
+### Fixed
+- Bugs in EASIUR health cost calcs
+- Type handling for CoolingLoad monthly_tonhour input
+
+## v0.32.6
+### Changed
+- Required **fuel_cost_per_mmbtu** for modeling **Boiler** tech, otherwise throw a handled error.
+### Fixed
+- Additional **SteamTurbine** defaults processing updates and bug fixes
+
+## v0.32.5
+### Changed
+- Updated `get_existing_chiller_cop` function to accept scalar values instead of vectors to allow for faster API transactions.
+- Refactored `backup_reliability.jl` to enable easier development: added conversion of all scalar generator inputs to vectors in `dictkeys_to_symbols` and reduced each functions with two versions (one with scalar and one with vector generator arguments) to a single version
+- Simplify generator sizing logic in function `backup_reliability_reopt_inputs` (if user sets `generator_size_kw` or `num_generators`to 0, don't override based on REopt solution) and add a validation error
+### Fixed
+- Steamturbine defaults processing
+- simulated_load monthly values processing
+- Fixed incorrect name when accessing result field `Outages` **generator_microgrid_size_kw** in `outag_simulator.jl`
+
+## v0.32.4
+### Changed
+- Consolidated PVWatts API calls to 1 call (previously 3 separate calls existed). API call occurs in `src/core/utils.jl/call_pvwatts_api()`. This function is called for PV in `src/core/production_factor.jl/get_production_factor(PV)` and for GHP in `src/core/scenario.jl`. If GHP and PV are evaluated together, the GHP PVWatts call for ambient temperature is also used to assign the pv.production_factor_series in Scenario.jl so that the PVWatts API does not get called again downstream in `get_production_factor(PV)`.  
+- In `src/core/utils.jl/call_pvwatts_api()`, updated NSRDB bounds used in PVWatts query (now includes southern New Zealand)
+- Updated PV Watts version from v6 to v8. PVWatts V8 updates the weather data to 2020 TMY data from the NREL NSRDB for locations covered by the database. (The NSRDB weather data used in PVWatts V6 is from around 2015.) See other differences at https://developer.nrel.gov/docs/solar/pvwatts/.
+- Made PV struct mutable: This allows for assigning pv.production_factor_series when calling PVWatts for GHP, to avoid a extra PVWatts calls later.
+- Changed unit test expected values due to update to PVWatts v8, which slightly changed expected PV production factors.
+- Changed **fuel_avail_gal** default to 1e9 for on-grid scenarios (same as off-grid)
+### Fixed
+- Issue with using a leap year with a URDB rate - the URDB rate was creating energy_rate of length 8784 instead of intended 8760
+- Don't double add adjustments to urdb rates with non-standard units
+- Corrected `Generator` **installed_cost_per_kw** from 500 to 650 if **only_runs_during_grid_outage** is _true_ or 800 if _false_
+- Corrected `SteamTurbine` defaults population from `get_steam_turbine_defaults_size_class()`
+
+## v0.32.3
+### Fixed
+- Calculate **num_battery_bins** default in `backup_reliability.jl` based on battery duration to prevent significant discretization error (and add test)
+- Account for battery (dis)charge efficiency after capping power in/out in `battery_bin_shift()`
+- Remove _try_ _catch_ in `backup_reliability(d::Dict, p::REoptInputs, r::Dict)` so can see where error was thrown
+
+## v0.32.2
+### Fixed
+- Fixed bug in multiple PVs pv_to_location dictionary creation. 
+- Fixed bug in reporting of grid purchase results when multiple energy tiers are present.
+- Fixed bug in TOU demand charge calculation when multiple demand tiers are present.
+
+## v0.32.1
+### Fixed
+- In `backup_reliability.jl`:
+    - Check if generator input is a Vector instead of has length greater than 1
+    - Correct calculation of battery SOC adjustment in `fuel_use()` function
+    - Correct outage time step survival condition in `fuel_use()` function
+- Add test to ensure `backup_reliability()` gives the same results for equivalent scenarios (1. battery only and 2. battery plus generator with no fuel) and that the survival probability decreases monotonically with outage duration
+- Add test to ensure `backup_reliability()` gives the same results as `simulate_outages()` when operational availability inputs are 1, probability of failure to run is 0, and mean time to failure is a very large number.
+
 ## v0.32.0
 ### Fixed
 - Fixed calculation of `wind_kw_ac_hourly` in `outagesim/outage_simulator.jl`
 - Add  a test of multiple outages that includes wind
-### Fixed
 - Add a timeout to PVWatts API call so that if it does not connect within 10 seconds, it will retry. It seems to always work on the first retry.
 
 ## v0.31.0
@@ -448,7 +761,7 @@ Other changes:
 - handle missing input key for `year_one_soc_series_pct` in `outage_simulator` 
 - remove erroneous `total_unserved_load = 0` output
 - `dvUnservedLoad` definition was allowing microgrid production to storage and curtailment to be double counted towards meeting critical load
-#### Added
+### Added
 - add `unserved_load_per_outage` output
 
 ## v0.4.1
@@ -476,7 +789,7 @@ Other changes:
 ## v0.3.0
 ### Added
 - add separate decision variables and constraints for microgrid tech capacities
-    - new Site input `mg_tech_sizes_equal_grid_sizes` (boolean), when `false` the microgrid tech capacities are constrained to be <= the grid connected tech capacities
+    - new Site input `mg_tech_sizes_equal_grid_sizes` (boolean), when _false_ the microgrid tech capacities are constrained to be <= the grid connected tech capacities
 ### Fixed
 - allow non-integer `outage_probabilities`
 - correct `total_unserved_load` output

@@ -12,5 +12,8 @@
         "coincident_peak_load_charge_per_kw": [10, 5],
         "blended_annual_energy_rate": 1.0,
         "blended_annual_demand_rate": 0.0
+    },
+    "ElectricUtility" : {
+        "co2_from_avert" : true
     }
 }

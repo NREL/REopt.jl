@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `CHP` results keys:
 - `size_kw` Power capacity size of the CHP system [kW]
@@ -67,8 +39,8 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["annual_electric_production_kwh"] = round(value(Year1CHPElecProd), digits=3)
 	
 	@expression(m, CHPThermalProdKW[ts in p.time_steps],
-		sum(m[Symbol("dvThermalProduction"*_n)][t,ts] + m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] - 
-			m[Symbol("dvProductionToWaste"*_n)][t,ts] for t in p.techs.chp))
+		sum(sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] - m[Symbol("dvProductionToWaste"*_n)][t,q,ts] for q in p.heating_loads) + 
+		m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] for t in p.techs.chp))
 
 	r["thermal_production_series_mmbtu_per_hour"] = round.(value.(CHPThermalProdKW) / KWH_PER_MMBTU, digits=5)
 	
@@ -98,30 +70,69 @@ function add_chp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["electric_to_load_series_kw"] = round.(value.(CHPtoLoad), digits=3)
 	# Thermal dispatch breakdown
     if !isempty(p.s.storage.types.hot)
-		@expression(m, CHPtoHotTES[ts in p.time_steps],
-			sum(m[Symbol("dvProductionToStorage"*_n)]["HotThermalStorage",t,ts] for t in p.techs.chp))
+		@expression(m, CHPToHotTES[ts in p.time_steps],
+			sum(m[Symbol("dvHeatToStorage"*_n)]["HotThermalStorage",t,q,ts] for t in p.techs.chp, q in p.heating_loads))
+			@expression(m, CHPToHotTESByQuality[q in p.heating_loads, ts in p.time_steps], sum(m[Symbol("dvHeatToStorage"*_n)]["HotThermalStorage",t,q,ts] for t in p.techs.chp))
 	else 
-		CHPtoHotTES = zeros(length(p.time_steps))
+		@expression(m, CHPToHotTES[ts in p.time_steps], 0.0)
+		@expression(m, CHPToHotTESByQuality[q in p.heating_loads, ts in p.time_steps], 0.0)
 	end
-	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(CHPtoHotTES / KWH_PER_MMBTU), digits=5)
+	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(CHPToHotTES / KWH_PER_MMBTU), digits=5)
 	@expression(m, CHPThermalToWasteKW[ts in p.time_steps],
-		sum(m[Symbol("dvProductionToWaste"*_n)][t,ts] for t in p.techs.chp))
+		sum(m[Symbol("dvProductionToWaste"*_n)][t,q,ts] for q in p.heating_loads, t in p.techs.chp))
+		@expression(m, CHPThermalToWasteByQualityKW[q in p.heating_loads, ts in p.time_steps],
+		sum(m[Symbol("dvProductionToWaste"*_n)][t,q,ts] for t in p.techs.chp))	
 	r["thermal_curtailed_series_mmbtu_per_hour"] = round.(value.(CHPThermalToWasteKW) / KWH_PER_MMBTU, digits=5)
     if !isempty(p.techs.steam_turbine) && p.s.chp.can_supply_steam_turbine
-        @expression(m, CHPToSteamTurbineKW[ts in p.time_steps], sum(m[Symbol("dvThermalToSteamTurbine"*_n)][t,ts] for t in p.techs.chp))
-    else
+        @expression(m, CHPToSteamTurbineKW[ts in p.time_steps], sum(m[Symbol("dvThermalToSteamTurbine"*_n)][t,q,ts] for t in p.techs.chp, q in p.heating_loads))
+		@expression(m, CHPToSteamTurbineByQualityKW[q in p.heating_loads, ts in p.time_steps], sum(m[Symbol("dvThermalToSteamTurbine"*_n)][t,q,ts] for t in p.techs.chp))
+	else
         CHPToSteamTurbineKW = zeros(length(p.time_steps))
+		@expression(m, CHPToSteamTurbineByQualityKW[q in p.heating_loads, ts in p.time_steps], 0.0)
     end	
     r["thermal_to_steamturbine_series_mmbtu_per_hour"] = round.(value.(CHPToSteamTurbineKW) / KWH_PER_MMBTU, digits=5)
     @expression(m, CHPThermalToLoadKW[ts in p.time_steps],
-        sum(m[Symbol("dvThermalProduction"*_n)][t,ts] + m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
-            for t in p.techs.chp) - CHPtoHotTES[ts] - CHPToSteamTurbineKW[ts] - CHPThermalToWasteKW[ts])
-    r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(CHPThermalToLoadKW) / KWH_PER_MMBTU, digits=5)
+        sum(sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads) + m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
+            for t in p.techs.chp) - CHPToHotTES[ts] - CHPToSteamTurbineKW[ts] - CHPThermalToWasteKW[ts])
+    r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(CHPThermalToLoadKW ./ KWH_PER_MMBTU), digits=5)
+
+	CHPToLoadKW = @expression(m, [ts in p.time_steps],
+		sum(value.(m[:dvHeatingProduction]["CHP",q,ts] for q in p.heating_loads)) - CHPToHotTES[ts] - CHPToSteamTurbineKW[ts]
+    )
+	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(CHPThermalToLoadKW ./ KWH_PER_MMBTU), digits=5)
+    
+    if "DomesticHotWater" in p.heating_loads && p.s.chp.can_serve_dhw
+        @expression(m, CHPToDHWKW[ts in p.time_steps], 
+            m[:dvHeatingProduction]["CHP","DomesticHotWater",ts] - CHPToHotTESByQuality["DomesticHotWater",ts] - CHPToSteamTurbineByQualityKW["DomesticHotWater",ts] - CHPThermalToWasteByQualityKW["DomesticHotWater",ts]
+        )
+    else
+        @expression(m, CHPToDHWKW[ts in p.time_steps], 0.0)
+    end
+    r["thermal_to_dhw_load_series_mmbtu_per_hour"] = round.(value.(CHPToDHWKW ./ KWH_PER_MMBTU), digits=5)
+    
+    if "SpaceHeating" in p.heating_loads && p.s.chp.can_serve_space_heating
+        @expression(m, CHPToSpaceHeatingKW[ts in p.time_steps], 
+            m[:dvHeatingProduction]["CHP","SpaceHeating",ts] - CHPToHotTESByQuality["SpaceHeating",ts] - CHPToSteamTurbineByQualityKW["SpaceHeating",ts] - CHPThermalToWasteByQualityKW["SpaceHeating",ts]
+        )
+    else
+        @expression(m, CHPToSpaceHeatingKW[ts in p.time_steps], 0.0)
+    end
+    r["thermal_to_space_heating_load_series_mmbtu_per_hour"] = round.(value.(CHPToSpaceHeatingKW ./ KWH_PER_MMBTU), digits=5)
+    
+    if "ProcessHeat" in p.heating_loads && p.s.chp.can_serve_process_heat
+        @expression(m, CHPToProcessHeatKW[ts in p.time_steps], 
+            m[:dvHeatingProduction]["CHP","ProcessHeat",ts] - CHPToHotTESByQuality["ProcessHeat",ts] - CHPToSteamTurbineByQualityKW["ProcessHeat",ts] - CHPThermalToWasteByQualityKW["ProcessHeat",ts]
+        )
+    else
+        @expression(m, CHPToProcessHeatKW[ts in p.time_steps], 0.0)
+    end
+    r["thermal_to_process_heat_load_series_mmbtu_per_hour"] = round.(value.(CHPToProcessHeatKW ./ KWH_PER_MMBTU), digits=5)
+
 	r["year_one_fuel_cost_before_tax"] = round(value(m[:TotalCHPFuelCosts] / p.pwf_fuel["CHP"]), digits=3)                
-	r["lifecycle_fuel_cost_after_tax"] = round(value(m[:TotalCHPFuelCosts]) * p.s.financial.offtaker_tax_rate_fraction, digits=3)
+	r["lifecycle_fuel_cost_after_tax"] = round(value(m[:TotalCHPFuelCosts]) * (1- p.s.financial.offtaker_tax_rate_fraction), digits=3)
 	#Standby charges and hourly O&M
 	r["year_one_standby_cost_before_tax"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) / p.pwf_e, digits=0)
-	r["lifecycle_standby_cost_after_tax"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) * p.s.financial.offtaker_tax_rate_fraction, digits=0)
+	r["lifecycle_standby_cost_after_tax"] = round(value(m[Symbol("TotalCHPStandbyCharges")]) * (1 - p.s.financial.offtaker_tax_rate_fraction), digits=0)
 
 
     d["CHP"] = r

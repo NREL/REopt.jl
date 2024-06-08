@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
     MPCElectricLoad
 
@@ -176,7 +148,7 @@ function MPCElectricTariff(d::Dict)
     energy_rates = d["energy_rates"]
 
     monthly_demand_rates = get(d, "monthly_demand_rates", [0.0])
-    time_steps_monthly = get(d, "time_steps_monthly", [collect(1:length(energy_rates))])
+    time_steps_monthly = get(d, "time_steps_monthly", [collect(eachindex(energy_rates))])
     monthly_previous_peak_demands = get(d, "monthly_previous_peak_demands", [0.0])
 
     tou_demand_rates = get(d, "tou_demand_rates", Float64[])
@@ -201,7 +173,7 @@ function MPCElectricTariff(d::Dict)
     if !isnothing(export_rates)
         export_rates = convert(Vector{Real}, export_rates)
     end
-    whl_rate = create_export_rate(export_rates, length(energy_rates), 1)
+    whl_rate = create_export_rate(export_rates, length(energy_rates[:,1]), 1)
 
     if !NEM & (sum(whl_rate) >= 0)
         export_rates = DenseAxisArray{Array{Float64,1}}(undef, [])
@@ -283,7 +255,7 @@ function MPCGenerator(;
     fuel_cost_per_gallon::Real = 3.0,
     electric_efficiency_full_load::Real = 0.3233,
     electric_efficiency_half_load::Real = electric_efficiency_full_load,
-    fuel_avail_gal::Real = 660.0,
+    fuel_avail_gal::Real = 1.0e9,
     fuel_higher_heating_value_kwh_per_gal::Real = KWH_PER_GAL_DIESEL,
     min_turn_down_fraction::Real = 0.0,  # TODO change this to non-zero value
     only_runs_during_grid_outage::Bool = true,
@@ -310,7 +282,7 @@ struct MPCGenerator <: AbstractGenerator
         fuel_cost_per_gallon::Real = 3.0,
         electric_efficiency_full_load::Real = 0.3233,
         electric_efficiency_half_load::Real = electric_efficiency_full_load,
-        fuel_avail_gal::Real = 660.0,
+        fuel_avail_gal::Real = 1.0e9,
         fuel_higher_heating_value_kwh_per_gal::Real = KWH_PER_GAL_DIESEL,
         min_turn_down_fraction::Real = 0.0,  # TODO change this to non-zero value
         only_runs_during_grid_outage::Bool = true,

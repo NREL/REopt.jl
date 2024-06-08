@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 
 """
     REoptInputs(d::Dict)
@@ -172,7 +144,7 @@ function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.Abst
 		Threads.@threads for i = 1:2
 			rs[i] = run_reopt(inputs[i])
 		end
-		if typeof(rs[1]) <: Dict && typeof(rs[2]) <: Dict
+		if typeof(rs[1]) <: Dict && typeof(rs[2]) <: Dict && rs[1]["status"] != "error" && rs[2]["status"] != "error"
 			# TODO when a model is infeasible the JuMP.Model is returned from run_reopt (and not the results Dict)
 			results_dict = combine_results(p, rs[1], rs[2], bau_inputs.s)
 			results_dict["Financial"] = merge(results_dict["Financial"], proforma_results(p, results_dict))
@@ -181,7 +153,7 @@ function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.Abst
 			end
 			return results_dict
 		else
-			return rs
+			throw(@error("REopt scenarios solved either with errors or non-optimal solutions."))
 		end
 	catch e
 		if isnothing(e) # Error thrown by REopt
@@ -241,6 +213,23 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 				@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
 				@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
 						m[:dvProductionToStorage][b, t, ts] == 0)
+			elseif b in p.s.storage.types.hot
+				@constraint(m, [q in q in setdiff(p.heating_loads, p.heating_loads_served_by_tes[b]), ts in p.time_steps], m[:dvHeatFromStorage][b,q,ts] == 0)
+				if "DomesticHotWater" in p.heating_loads_served_by_tes[b]
+					@constraint(m, [t in setdiff(p.heating_techs, p.techs_can_serve_dhw), ts in p.time_steps], m[:dvHeatToStorage][b,t,"DomesticHotWater",ts] == 0)
+				else
+					@constraint(m, [t in p.heating_techs, ts in p.time_steps], m[:dvHeatToStorage][b,t,"DomesticHotWater",ts] == 0)
+				end
+				if "SpaceHeating" in p.heating_loads_served_by_tes[b]
+					@constraint(m, [t in setdiff(p.heating_techs, p.techs_can_serve_space_heating), ts in p.time_steps], m[:dvHeatToStorage][b,t,"SpaceHeating",ts] == 0)
+				else
+					@constraint(m, [t in p.heating_techs, ts in p.time_steps], m[:dvHeatToStorage][b,t,"SpaceHeating",ts] == 0)
+				end
+				if "ProcessHeat" in p.heating_loads_served_by_tes[b]
+					@constraint(m, [t in setdiff(p.heating_techs, p.techs_can_serve_process_heat), ts in p.time_steps], m[:dvHeatToStorage][b,t,"ProcessHeat",ts] == 0)
+				else
+					@constraint(m, [t in p.heating_techs, ts in p.time_steps], m[:dvHeatToStorage][b,t,"ProcessHeat",ts] == 0)
+				end
 			end
 		else
 			add_storage_size_constraints(m, p, b)
@@ -272,7 +261,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	m[:TotalCHPStandbyCharges] = 0
 	m[:OffgridOtherCapexAfterDepr] = 0.0
     m[:GHPCapCosts] = 0.0
-    m[:GHPOMCosts] = 0.0   
+    m[:GHPOMCosts] = 0.0
+	m[:AvoidedCapexByGHP] = 0.0
+	m[:ResidualGHXCapCost] = 0.0
+	m[:ObjectivePenalties] = 0.0
 
 	if !isempty(p.techs.all)
 		add_tech_size_constraints(m, p)
@@ -294,10 +286,22 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             m[:TotalPerUnitHourOMCosts] += m[:TotalHourlyCHPOMCosts]
 
 			if p.s.chp.standby_rate_per_kw_per_month > 1.0e-7
-				m[:TotalCHPStandbyCharges] += sum(p.s.financial.pwf_e * 12 * p.s.chp.standby_rate_per_kw_per_month * m[:dvSize][t] for t in p.techs.chp)
+				m[:TotalCHPStandbyCharges] += sum(p.pwf_e * 12 * p.s.chp.standby_rate_per_kw_per_month * m[:dvSize][t] for t in p.techs.chp)
 			end
 
 			m[:TotalTechCapCosts] += sum(p.s.chp.supplementary_firing_capital_cost_per_kw * m[:dvSupplementaryFiringSize][t] for t in p.techs.chp)
+        end
+
+        if !isempty(setdiff(p.techs.heating, p.techs.elec))
+            add_heating_tech_constraints(m, p)
+        end
+
+        # Zero out ExistingBoiler production if retire_in_optimal; new_heating_techs avoids zeroing for BAU 
+        new_heating_techs = ["CHP", "Boiler", "ElectricHeater", "SteamTurbine"]
+        if !isempty(intersect(new_heating_techs, p.techs.all))
+            if !isnothing(p.s.existing_boiler) && p.s.existing_boiler.retire_in_optimal
+                no_existing_boiler_production(m, p)
+            end
         end
 
         if !isempty(p.techs.boiler)
@@ -321,6 +325,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         if !isempty(p.techs.steam_turbine)
             add_steam_turbine_constraints(m, p)
             m[:TotalPerUnitProdOMCosts] += m[:TotalSteamTurbinePerUnitProdOMCosts]
+			#TODO: review this constraint and see if it's intended.  This matches the legacy implementation and tests pass but should the turbine be allowed to send heat to waste in order to generate electricity?
+			@constraint(m, steamTurbineNoWaste[t in p.techs.steam_turbine, q in p.heating_loads, ts in p.time_steps],
+				m[:dvProductionToWaste][t,q,ts] == 0.0
+			)
         end
 
         if !isempty(p.techs.pbi)
@@ -391,7 +399,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	add_elec_utility_expressions(m, p)
 
 	if !isempty(p.s.electric_utility.outage_durations)
-		add_dv_UnservedLoad_constraints(m,p)
+        add_dv_UnservedLoad_constraints(m,p)
 		add_outage_cost_constraints(m,p)
 		add_MG_production_constraints(m,p)
 		if !isempty(p.s.storage.types.elec)
@@ -401,7 +409,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 		add_cannot_have_MG_with_only_PVwind_constraints(m,p)
 		add_MG_size_constraints(m,p)
-		0
+		
 		m[:ExpectedMGFuelCost] = 0
         if !isempty(p.techs.gen)
 			add_MG_Gen_fuel_burn_constraints(m,p)
@@ -463,18 +471,16 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:TotalElecBill] * (1 - p.s.financial.offtaker_tax_rate_fraction) -
 
         # Subtract Incentives, which are taxable
-		m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_rate_fraction) +
-
-		# Comfort limit violation costs
-		#TODO: add this to objective like SOC incentive below and 
-		#don't then subtract out when setting lcc in results/financial.jl
-		m[:dvComfortLimitViolationCost] + 
+		m[:TotalProductionIncentive] * (1 - p.s.financial.owner_tax_rate_fraction) + 
 
 		# Additional annual costs, tax deductible for owner (only applies when `off_grid_flag` is true)
 		p.s.financial.offgrid_other_annual_costs * p.pwf_om * (1 - p.s.financial.owner_tax_rate_fraction) +
 
 		# Additional capital costs, depreciable (only applies when `off_grid_flag` is true)
-		m[:OffgridOtherCapexAfterDepr]
+		m[:OffgridOtherCapexAfterDepr] -
+
+		# Subtract capital expenditures avoided by inclusion of GHP and residual present value of GHX.
+		m[:AvoidedCapexByGHP] - m[:ResidualGHXCapCost]
 
 	);
 	if !isempty(p.s.electric_utility.outage_durations)
@@ -489,36 +495,23 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		add_to_expression!(Costs, m[:Lifecycle_Emissions_Cost_Health])
 	end
 	
-	@expression(m, Objective,
-		m[:Costs]
-	)
-		
+	## Modify objective with incentives that are not part of the LCC
+	# 1. Comfort limit violation costs
+	m[:ObjectivePenalties] += m[:dvComfortLimitViolationCost]
+	# 2. Incentive to keep SOC high
 	if !(isempty(p.s.storage.types.elec)) && p.s.settings.add_soc_incentive
-		# Incentive to keep SOC high
-		add_to_expression!(
-			Objective, 
-			- sum(
+		m[:ObjectivePenalties] += -1 * sum(
 				m[:dvStoredEnergy][b, ts] for b in p.s.storage.types.elec, ts in p.time_steps
 			) / (8760. / p.hours_per_time_step)
-		)
 	end
+	# 3. Incentive to minimize unserved load in each outage, not just the max over outage start times
 	if !isempty(p.s.electric_utility.outage_durations)
-		# Incentive to minimize unserved load in each outage, not just the max over outage start times
-		add_to_expression!(
-			Objective, 
-			sum(sum(0.0001 * m[:dvUnservedLoad][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s]) for s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps)
-		)
+		m[:ObjectivePenalties] += sum(sum(0.0001 * m[:dvUnservedLoad][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s]) 
+			for s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps)
 	end
 
-	@objective(m, Min, m[:Objective])
-	
-	# if !(isempty(p.s.storage.types.elec)) && p.s.settings.add_soc_incentive # Keep SOC high
-	# 	@objective(m, Min, m[:Costs] - 
-	# 	sum(m[:dvStoredEnergy][b, ts] for b in p.s.storage.types.elec, ts in p.time_steps) /
-	# 		(8760. / p.hours_per_time_step)
-	# 	)
-	
-	# end
+	# Set model objective 
+	@objective(m, Min, m[:Costs] + m[:ObjectivePenalties] )
 
 	for b in p.s.storage.types.elec
 		if p.s.storage.attr[b].model_degradation
@@ -591,7 +584,7 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvGridPurchase[p.time_steps, 1:p.s.electric_tariff.n_energy_tiers] >= 0  # Power from grid dispatched to meet electrical load [kW]
 		dvRatedProduction[p.techs.all, p.time_steps] >= 0  # Rated production of technology t [kW]
 		dvCurtail[p.techs.all, p.time_steps] >= 0  # [kW]
-		dvProductionToStorage[p.s.storage.types.all, p.techs.all, p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
+		dvProductionToStorage[p.s.storage.types.all, union(p.techs.ghp,p.techs.all), p.time_steps] >= 0  # Power from technology t used to charge storage system b [kW]
 		dvDischargeFromStorage[p.s.storage.types.all, p.time_steps] >= 0 # Power discharged from storage system b [kW]
 		dvGridToStorage[p.s.storage.types.elec, p.time_steps] >= 0 # Electrical power delivered to storage by the grid [kW]
 		dvStorageToGrid[p.StorageSalesTiers, p.time_steps] >= 0 # export of energy from storage to the grid
@@ -635,19 +628,31 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		@variable(m, binNoGridPurchases[p.time_steps], Bin)
 	end
 
-    if !isempty(p.techs.thermal)
-        @variables m begin
-			dvThermalProduction[p.techs.thermal, p.time_steps] >= 0
-			dvSupplementaryThermalProduction[p.techs.chp, p.time_steps] >= 0
-			dvSupplementaryFiringSize[p.techs.chp] >= 0  #X^{\sigma db}_{t}: System size of CHP with supplementary firing [kW]
-		end
+    if !isempty(union(p.techs.heating, p.techs.chp))
+        @variable(m, dvHeatingProduction[union(p.techs.heating, p.techs.chp), p.heating_loads, p.time_steps] >= 0)
+		@variable(m, dvProductionToWaste[union(p.techs.heating, p.techs.chp), p.heating_loads, p.time_steps] >= 0)
         if !isempty(p.techs.chp)
-            @variable(m, dvProductionToWaste[p.techs.chp, p.time_steps] >= 0)
+			@variables m begin
+				dvSupplementaryThermalProduction[p.techs.chp, p.time_steps] >= 0
+				dvSupplementaryFiringSize[p.techs.chp] >= 0  #X^{\sigma db}_{t}: System size of CHP with supplementary firing [kW]
+			end
         end
-    end
+		if !isempty(p.s.storage.types.hot)
+			@variable(m, dvHeatToStorage[p.s.storage.types.hot, union(p.techs.heating, p.techs.chp), p.heating_loads, p.time_steps] >= 0) # Power charged to hot storage b at quality q [kW]
+			@variable(m, dvHeatFromStorage[p.s.storage.types.hot, p.heating_loads, p.time_steps] >= 0) # Power discharged from hot storage system b for load q [kW]
+    	end
+	end
+
+	if !isempty(p.techs.cooling)
+		@variable(m, dvCoolingProduction[p.techs.cooling, p.time_steps] >= 0)
+	end
 
     if !isempty(p.techs.steam_turbine)
-        @variable(m, dvThermalToSteamTurbine[p.techs.can_supply_steam_turbine, p.time_steps] >= 0)
+		if !isempty(p.techs.can_supply_steam_turbine)
+	        @variable(m, dvThermalToSteamTurbine[p.techs.can_supply_steam_turbine, p.heating_loads, p.time_steps] >= 0)
+		else
+			throw(@error("Steam turbine is present, but set p.techs.can_supply_steam_turbine is empty."))
+		end
     end
 
 	if !isempty(p.s.electric_utility.outage_durations) # add dvUnserved Load if there is at least one outage

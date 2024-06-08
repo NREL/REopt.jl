@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 const existing_boiler_efficiency_defaults = Dict(
                                                 "hot_water" => EXISTING_BOILER_EFFICIENCY,
                                                 "steam" => 0.75
@@ -39,11 +11,15 @@ struct ExistingBoiler <: AbstractThermalTech  # useful to create AbstractHeating
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}}
     fuel_type::String
     can_supply_steam_turbine::Bool
+    retire_in_optimal::Bool
     fuel_renewable_energy_fraction::Real
     emissions_factor_lb_CO2_per_mmbtu::Real
     emissions_factor_lb_NOx_per_mmbtu::Real
     emissions_factor_lb_SO2_per_mmbtu::Real
     emissions_factor_lb_PM25_per_mmbtu::Real
+    can_serve_dhw::Bool
+    can_serve_space_heating::Bool
+    can_serve_process_heat::Bool
 end
 
 
@@ -57,11 +33,15 @@ end
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [], # REQUIRED. Can be a scalar, a list of 12 monthly values, or a time series of values for every time step
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     can_supply_steam_turbine::Bool = false,
+    retire_in_optimal::Bool = false,  # Do NOT use in the optimal case (still used in BAU)
     fuel_renewable_energy_fraction::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_fraction"],fuel_type,0),
     emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0),
     emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0),
     emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0),
     emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0)
+    can_serve_dhw::Bool = true # If ExistingBoiler can supply heat to the domestic hot water load
+    can_serve_space_heating::Bool = true # If ExistingBoiler can supply heat to the space heating load
+    can_serve_process_heat::Bool = true # If ExistingBoiler can supply heat to the process heating load
 ```
 
 !!! note "Max ExistingBoiler size" 
@@ -95,12 +75,16 @@ function ExistingBoiler(;
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [], # REQUIRED. Can be a scalar, a list of 12 monthly values, or a time series of values for every time step
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     can_supply_steam_turbine::Bool = false,
+    retire_in_optimal::Bool = false,
     fuel_renewable_energy_fraction::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_fraction"],fuel_type,0),
     emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0),
     emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0),
     emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0),
     emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0),
-    time_steps_per_hour::Int = 1
+    time_steps_per_hour::Int = 1,
+    can_serve_dhw::Bool = true,
+    can_serve_space_heating::Bool = true,
+    can_serve_process_heat::Bool = true
 )
     @assert fuel_type in FUEL_TYPES
     @assert production_type in ["steam", "hot_water"]
@@ -122,10 +106,14 @@ function ExistingBoiler(;
         fuel_cost_per_mmbtu,
         fuel_type,
         can_supply_steam_turbine,
+        retire_in_optimal,
         fuel_renewable_energy_fraction,
         emissions_factor_lb_CO2_per_mmbtu,
         emissions_factor_lb_NOx_per_mmbtu,
         emissions_factor_lb_SO2_per_mmbtu,
-        emissions_factor_lb_PM25_per_mmbtu
+        emissions_factor_lb_PM25_per_mmbtu,
+        can_serve_dhw,
+        can_serve_space_heating,
+        can_serve_process_heat
     )
 end

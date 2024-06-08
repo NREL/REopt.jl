@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 function add_export_constraints(m, p; _n="")
 
     ##Constraint (8e): Production export and curtailment no greater than production
@@ -79,37 +51,75 @@ function add_export_constraints(m, p; _n="")
             binNEM = @variable(m, binary = true)
             @warn "Adding binary variable for net metering choice. Some solvers are slow with binaries."
 
-            # Good to bound the benefit
+            # Good to bound the benefit - we use max_bene as a lower bound because the benefit is treated as a negative cost
             max_bene = sum([ld*rate for (ld,rate) in zip(p.s.electric_load.loads_kw, p.s.electric_tariff.export_rates[:NEM])])*10
             NEM_benefit = @variable(m, lower_bound = max_bene)
 
+            
             # If choosing to take advantage of NEM, must have total capacity less than net_metering_limit_kw
-            @constraint(m,
-                binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.net_metering_limit_kw}
-            )
-            @constraint(m,
-                !binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.interconnection_limit_kw}
-            )
+            if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
+                @constraint(m,
+                    binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.net_metering_limit_kw}
+                )
+                @constraint(m,
+                    !binNEM => {sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= p.s.electric_utility.interconnection_limit_kw}
+                )
+            else
+                #leverage max system sizes for interconnect limit size, alternate is max monthly fully-electrified load in kWh
+                #assume electric heater with COP of 1 for conversion of heat to electricity
+                max_interconnection_size = minimum([
+                    p.s.electric_utility.interconnection_limit_kw, 
+                    sum(p.max_sizes[t] for t in NEM_techs),
+                    p.hours_per_time_step * maximum([sum((
+                        p.s.electric_load.loads_kw[ts] + 
+                        p.s.cooling_load.loads_kw_thermal[ts]/p.cop["ExistingChiller"] + 
+                        (p.s.space_heating_load.loads_kw[ts] + p.s.dhw_load.loads_kw[ts] + p.s.process_heat_load.loads_kw[ts]) 
+                    ) for ts in p.s.electric_tariff.time_steps_monthly[m]) for m in p.months
+                    ])
+                ])
+                
+                @constraint(m,
+                    sum(m[Symbol("dvSize"*_n)][t] for t in NEM_techs) <= max_interconnection_size - (max_interconnection_size - p.s.electric_utility.net_metering_limit_kw)*binNEM 
+                )
+            end
 
             # binary choice for NEM benefit
-            @constraint(m,
-                binNEM => {NEM_benefit >= p.pwf_e * p.hours_per_time_step *
-                    sum( sum(p.s.electric_tariff.export_rates[:NEM][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
-                        for t in p.techs_by_exportbin[:NEM]) for ts in p.time_steps)
-                }
-            )
-            @constraint(m, !binNEM => {NEM_benefit >= 0})
+            if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
+                @constraint(m,
+                    binNEM => {NEM_benefit >= p.pwf_e * p.hours_per_time_step *
+                        sum( sum(p.s.electric_tariff.export_rates[:NEM][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
+                            for t in p.techs_by_exportbin[:NEM]) for ts in p.time_steps)
+                    }
+                )
+                @constraint(m, !binNEM => {NEM_benefit >= 0})
+            else
+                @constraint(m,
+                    NEM_benefit >= p.pwf_e * p.hours_per_time_step *
+                        sum( sum(p.s.electric_tariff.export_rates[:NEM][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :NEM, ts] 
+                            for t in p.techs_by_exportbin[:NEM]) for ts in p.time_steps)
+                )
+                @constraint(m, NEM_benefit >= max_bene * binNEM)
+            end
 
             EXC_benefit = 0
             if :EXC in p.s.electric_tariff.export_bins
                 EXC_benefit = @variable(m, lower_bound = max_bene)
-                @constraint(m,
-                    binNEM => {EXC_benefit >= p.pwf_e * p.hours_per_time_step *
-                        sum( sum(p.s.electric_tariff.export_rates[:EXC][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :EXC, ts] 
-                            for t in p.techs_by_exportbin[:EXC]) for ts in p.time_steps)
-                    }
-                )
-                @constraint(m, !binNEM => {EXC_benefit >= 0})
+                if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
+                    @constraint(m,
+                        binNEM => {EXC_benefit >= p.pwf_e * p.hours_per_time_step *
+                            sum( sum(p.s.electric_tariff.export_rates[:EXC][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :EXC, ts] 
+                                for t in p.techs_by_exportbin[:EXC]) for ts in p.time_steps)
+                        }
+                    )
+                    @constraint(m, !binNEM => {EXC_benefit >= 0})
+                else
+                    @constraint(m,
+                        EXC_benefit >= p.pwf_e * p.hours_per_time_step *
+                            sum( sum(p.s.electric_tariff.export_rates[:EXC][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :EXC, ts] 
+                                for t in p.techs_by_exportbin[:EXC]) for ts in p.time_steps)
+                    )
+                    @constraint(m, EXC_benefit >= max_bene * binNEM)
+                end
             end
         end
     end
@@ -142,14 +152,22 @@ function add_export_constraints(m, p; _n="")
             WHL_benefit = @variable(m, lower_bound = max_bene)
 
             @constraint(m, binNEM + binWHL == 1)  # can either NEM or WHL export, not both
-
-            @constraint(m,
-                binWHL => {WHL_benefit >= p.pwf_e * p.hours_per_time_step *
-                    sum( sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
-                            for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
-                }
-            )
-            @constraint(m, !binWHL => {WHL_benefit >= 0})
+            if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
+                @constraint(m,
+                    binWHL => {WHL_benefit >= p.pwf_e * p.hours_per_time_step *
+                        sum( sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
+                                for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
+                    }
+                )
+                @constraint(m, !binWHL => {WHL_benefit >= 0})
+            else
+                @constraint(m,
+                    WHL_benefit >= p.pwf_e * p.hours_per_time_step *
+                        sum( sum(p.s.electric_tariff.export_rates[:WHL][ts] * m[Symbol("dvProductionToGrid"*_n)][t, :WHL, ts] 
+                                for t in p.techs_by_exportbin[:WHL]) for ts in p.time_steps)
+                )
+                @constraint(m, WHL_benefit >= max_bene * binWHL)
+            end
         end
     end
 
@@ -257,17 +275,28 @@ end
 
 
 function add_simultaneous_export_import_constraint(m, p; _n="")
-    @constraint(m, NoGridPurchasesBinary[ts in p.time_steps],
-        m[Symbol("binNoGridPurchases"*_n)][ts] => {
-          sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) +
-          sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec) <= 0
-        }
-    )
-    @constraint(m, ExportOnlyAfterSiteLoadMetCon[ts in p.time_steps],
-        !m[Symbol("binNoGridPurchases"*_n)][ts] => {
-            sum(m[Symbol("dvProductionToGrid"*_n)][t,u,ts] for t in p.techs.elec, u in p.export_bins_by_tech[t]) <= 0
-        }
-    )
+    if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
+        @constraint(m, NoGridPurchasesBinary[ts in p.time_steps],
+            m[Symbol("binNoGridPurchases"*_n)][ts] => {
+                sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) +
+                sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec) <= 0
+            }
+        )
+        @constraint(m, ExportOnlyAfterSiteLoadMetCon[ts in p.time_steps],
+            !m[Symbol("binNoGridPurchases"*_n)][ts] => {
+                sum(m[Symbol("dvProductionToGrid"*_n)][t,u,ts] for t in p.techs.elec, u in p.export_bins_by_tech[t]) <= 0
+            }
+        )
+    else
+        bigM_hourly_load = maximum(p.s.electric_load.loads_kw)+maximum(p.s.space_heating_load.loads_kw)+maximum(p.s.process_heat_load.loads_kw)+maximum(p.s.dhw_load.loads_kw)+maximum(p.s.cooling_load.loads_kw_thermal)
+        @constraint(m, NoGridPurchasesBinary[ts in p.time_steps],
+            sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) +
+            sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec) <= bigM_hourly_load*(1-m[Symbol("binNoGridPurchases"*_n)][ts])
+        )
+        @constraint(m, ExportOnlyAfterSiteLoadMetCon[ts in p.time_steps],
+            sum(m[Symbol("dvProductionToGrid"*_n)][t,u,ts] for t in p.techs.elec, u in p.export_bins_by_tech[t]) <= bigM_hourly_load * m[Symbol("binNoGridPurchases"*_n)][ts]
+        )
+    end
 end
 
 
@@ -371,8 +400,8 @@ function add_elec_utility_expressions(m, p; _n="")
 
     if !isempty(p.s.electric_tariff.tou_demand_rates)
         m[Symbol("DemandTOUCharges"*_n)] = @expression(m, 
-            p.pwf_e * sum( p.s.electric_tariff.tou_demand_rates[r] * m[Symbol("dvPeakDemandTOU"*_n)][r, tier] 
-            for r in p.ratchets, tier in p.s.electric_tariff.n_tou_demand_tiers)
+            p.pwf_e * sum( p.s.electric_tariff.tou_demand_rates[r, tier] * m[Symbol("dvPeakDemandTOU"*_n)][r, tier] 
+            for r in p.ratchets, tier in 1:p.s.electric_tariff.n_tou_demand_tiers)
         )
     else
         m[Symbol("DemandTOUCharges"*_n)] = 0

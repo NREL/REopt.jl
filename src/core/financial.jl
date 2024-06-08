@@ -1,46 +1,18 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `Financial` is an optional REopt input with the following keys and default values:
 ```julia
     om_cost_escalation_rate_fraction::Real = 0.025,
-    elec_cost_escalation_rate_fraction::Real = 0.019,
-    existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.034, 
-    boiler_fuel_cost_escalation_rate_fraction::Real = 0.034,
-    chp_fuel_cost_escalation_rate_fraction::Real = 0.034,
-    generator_fuel_cost_escalation_rate_fraction::Real = 0.027,
-    offtaker_tax_rate_fraction::Real = 0.26,
-    offtaker_discount_rate_fraction::Real = 0.0564,
+    elec_cost_escalation_rate_fraction::Real = 0.017,
+    existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.015, 
+    boiler_fuel_cost_escalation_rate_fraction::Real = 0.015,
+    chp_fuel_cost_escalation_rate_fraction::Real = 0.015,
+    generator_fuel_cost_escalation_rate_fraction::Real = 0.012,
+    offtaker_tax_rate_fraction::Real = 0.26, # combined state and federal tax rate
+    offtaker_discount_rate_fraction::Real = 0.0638,
     third_party_ownership::Bool = false,
-    owner_tax_rate_fraction::Real = 0.26,
-    owner_discount_rate_fraction::Real = 0.0564,
+    owner_tax_rate_fraction::Real = 0.26, # combined state and federal tax rate
+    owner_discount_rate_fraction::Real = 0.0638,
     analysis_years::Int = 25,
     value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00, #only applies to multiple outage modeling
     microgrid_upgrade_cost_fraction::Real = 0.0
@@ -54,12 +26,12 @@
     NOx_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
     SO2_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
     PM25_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
-    NOx_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
-    SO2_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
-    PM25_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
-    NOx_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
-    SO2_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
-    PM25_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing
+    NOx_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing, # Default data from EASIUR based on location
+    SO2_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing, # Default data from EASIUR based on location
+    PM25_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing, # Default data from EASIUR based on location
+    NOx_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing, # Default data from EASIUR based on location
+    SO2_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing, # Default data from EASIUR based on location
+    PM25_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing # Default data from EASIUR based on location
 ```
 
 !!! note "Third party financing"
@@ -105,16 +77,16 @@ struct Financial
     function Financial(;
         off_grid_flag::Bool = false,
         om_cost_escalation_rate_fraction::Real = 0.025,
-        elec_cost_escalation_rate_fraction::Real = 0.019,
-        existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.034,
-        boiler_fuel_cost_escalation_rate_fraction::Real = 0.034,
-        chp_fuel_cost_escalation_rate_fraction::Real = 0.034,
-        generator_fuel_cost_escalation_rate_fraction::Real = 0.027,
+        elec_cost_escalation_rate_fraction::Real = 0.017,
+        existing_boiler_fuel_cost_escalation_rate_fraction::Float64 = 0.015,
+        boiler_fuel_cost_escalation_rate_fraction::Real = 0.015,
+        chp_fuel_cost_escalation_rate_fraction::Real = 0.015,
+        generator_fuel_cost_escalation_rate_fraction::Real = 0.012,
         offtaker_tax_rate_fraction::Real = 0.26,
-        offtaker_discount_rate_fraction::Real = 0.0564,
+        offtaker_discount_rate_fraction::Real = 0.0638,
         third_party_ownership::Bool = false,
         owner_tax_rate_fraction::Real = 0.26,
-        owner_discount_rate_fraction::Real = 0.0564,
+        owner_discount_rate_fraction::Real = 0.0638,
         analysis_years::Int = 25,
         value_of_lost_load_per_kwh::Union{Array{<:Real,1}, Real} = 1.00, #only applies to multiple outage modeling
         microgrid_upgrade_cost_fraction::Real = 0.0,
@@ -248,7 +220,7 @@ function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
     end
     EASIUR_data = nothing
     try
-        EASIUR_data = get_EASIUR2005(type, pop_year=2020, income_year=2020, dollar_year=2010)
+        EASIUR_data = get_EASIUR2005(type, pop_year=2024, income_year=2024, dollar_year=2010)
     catch e
         @warn "Could not look up EASIUR health costs from point ($latitude,$longitude). {$e}"
         return nothing
@@ -260,13 +232,13 @@ function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
     coords = g2l(longitude, latitude, datum="NAD83")
     x = Int(round(coords[1]))
     y = Int(round(coords[2]))
-    # Convert from 2010$ to 2020$ (source: https://www.in2013dollars.com/us/inflation/2010?amount=100)
-    USD_2010_to_2020 = 1.246
+    # Convert from 2010$ to 2024$ (source: https://www.in2013dollars.com/us/inflation/2010?amount=100)
+    USD_2010_to_2024 = 1.432
     try
         costs_per_tonne = Dict(
-            "NOx" => EASIUR_data["NOX_Annual"][x - 1, y - 1] .* USD_2010_to_2020,
-            "SO2" => EASIUR_data["SO2_Annual"][x - 1, y - 1] .* USD_2010_to_2020,
-            "PM25" => EASIUR_data["PEC_Annual"][x - 1, y - 1] .* USD_2010_to_2020
+            "NOx" => EASIUR_data["NOX_Annual"][x, y] .* USD_2010_to_2024,
+            "SO2" => EASIUR_data["SO2_Annual"][x, y] .* USD_2010_to_2024,
+            "PM25" => EASIUR_data["PEC_Annual"][x, y] .* USD_2010_to_2024
         )
         return costs_per_tonne
     catch
@@ -276,6 +248,7 @@ function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
 end
 
 function easiur_escalation_rates(latitude::Real, longitude::Real, inflation::Real)
+    # Calculate escalation rate as nominal compound annual growth rate in marginal emissions costs between 2020 and 2024 for this location.
     EASIUR_150m_yr2020 = nothing
     EASIUR_150m_yr2024 = nothing
     try
@@ -312,7 +285,7 @@ Adapted to Julia from example Python code for EASIUR found at https://barney.ce.
 """
     get_EASIUR2005(
         stack::String, # area, p150, or p300
-        pop_year::Int64=2005, # population year
+        pop_year::Int64=2005, # population year (2000 to 2050)
         income_year::Int64=2005, # income level (1990 to 2024)
         dollar_year::Int64=2010 # dollar year (1980 to 2010)
     )
@@ -400,12 +373,13 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
     end
 
     fn_2005 = joinpath(EASIUR_data_lib,"sc_8.6MVSL_$(stack)_pop2005.hdf5")
-    ret_map = JLD.load(fn_2005)
+    ret_map = JLD.load(fn_2005) 
+
     if pop_year != 2005
         fn_growth = joinpath(EASIUR_data_lib,"sc_growth_rate_pop2005_pop2040_$(stack).hdf5")
-        map_rate = JLD.load(fn_growth)
+        map_rate = JLD.load(fn_growth) 
         for (k,v) in map_rate
-            setindex!(ret_map, v .* (v.^(pop_year - 2005)), k)
+            setindex!(ret_map, ret_map[k] .* (v.^(pop_year - 2005)), k)
         end
     end
     if income_year != 2005
@@ -415,7 +389,7 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
                 setindex!(ret_map, v .* adj, k)
             end
         catch
-            throw(@error("income year is $(income_year) but must be between 1990 to 2024"))
+            throw(@error("EASIUR income year is $(income_year) but must be between 1990 to 2024"))
             return nothing
         end
     end
@@ -426,7 +400,7 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
                 setindex!(ret_map, v .* adj, k)
             end
         catch e
-            throw(@error("Dollar year must be between 1980 to 2010"))
+            throw(@error("EASIUR dollar year must be between 1980 to 2010"))
             return nothing
         end
     end

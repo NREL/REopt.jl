@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 function add_flexible_hvac_constraints(m, p::REoptInputs; _n="") 
 
     binFlexHVAC = @variable(m, binary = true)
@@ -44,13 +16,14 @@ function add_flexible_hvac_constraints(m, p::REoptInputs; _n="")
 
     if !isempty(p.techs.heating) && !isempty(p.techs.cooling)
         # space temperature evolution based on state-space model
+        # TODO: Add indicator constraint workaround for FlexibleHVAC
         @constraint(m, [n in 1:N, ts in 2:length(p.time_steps)],
             binFlexHVAC => { dvTemperature[n, ts] == dvTemperature[n, ts-1] + 
                 sum(p.s.flexible_hvac.system_matrix[n, i] * dvTemperature[i, ts-1] for i=1:N) + 
                 sum(p.s.flexible_hvac.input_matrix[n, j] * p.s.flexible_hvac.exogenous_inputs[j, ts-1] for j=1:J) + 
                 input_vec[n] * p.s.flexible_hvac.input_matrix[n, p.s.flexible_hvac.control_node] * (
-                    sum(m[Symbol("dvThermalProduction"*_n)][t, ts-1] for t in p.techs.heating) -
-                    sum(m[Symbol("dvThermalProduction"*_n)][t, ts-1] for t in p.techs.cooling) 
+                    sum(m[Symbol("dvHeatingProduction"*_n)][t, "SpaceHeating", ts-1] for t in p.techs.heating) -
+                    sum(m[Symbol("dvCoolingProduction"*_n)][t, ts-1] for t in p.techs.cooling) 
                 )}
         )
         @constraint(m, [ts in p.time_steps], 
@@ -69,7 +42,7 @@ function add_flexible_hvac_constraints(m, p::REoptInputs; _n="")
             sum(p.s.flexible_hvac.system_matrix[n, i] * dvTemperature[i, ts-1] for i=1:N) + 
             sum(p.s.flexible_hvac.input_matrix[n, j] * p.s.flexible_hvac.exogenous_inputs[j, ts-1] for j=1:J) + 
             input_vec[n] * p.s.flexible_hvac.input_matrix[n, p.s.flexible_hvac.control_node] * (
-                sum(m[Symbol("dvThermalProduction"*_n)][t, ts-1] for t in p.techs.heating)
+                sum(m[Symbol("dvHeatingProduction"*_n)][t, "SpaceHeating", ts-1] for t in p.techs.heating)
             )}
         )
         @constraint(m, [ts in p.time_steps], 
@@ -90,7 +63,7 @@ function add_flexible_hvac_constraints(m, p::REoptInputs; _n="")
             sum(p.s.flexible_hvac.system_matrix[n, i] * dvTemperature[i, ts-1] for i=1:N) + 
             sum(p.s.flexible_hvac.input_matrix[n, j] * p.s.flexible_hvac.exogenous_inputs[j, ts-1] for j=1:J) -
             input_vec[n] * p.s.flexible_hvac.input_matrix[n, p.s.flexible_hvac.control_node] * (
-                sum(m[Symbol("dvThermalProduction"*_n)][t, ts-1] for t in p.techs.cooling) 
+                sum(m[Symbol("dvCoolingProduction"*_n)][t, ts-1] for t in p.techs.cooling) 
             )}
         )
         # when only cooling the lower temperature limit is the lowest temperature seen naturally
@@ -108,7 +81,7 @@ function add_flexible_hvac_constraints(m, p::REoptInputs; _n="")
     dvComfortLimitViolationCost = @expression(m,  
         1e9 * sum(lower_comfort_slack[ts] + upper_comfort_slack[ts] for ts in p.time_steps)
     )
-    # TODO convert dvThermalProduction units? to ? shouldn't the conversion be in input_matrix coef? COP in Xiang's test is 4-5, fan_power_ratio = 0, hp prod factor generally between 1 and 2
+    # TODO convert dvHeatingProduction and dvCoolingProduction units? to ? shouldn't the conversion be in input_matrix coef? COP in Xiang's test is 4-5, fan_power_ratio = 0, hp prod factor generally between 1 and 2
     ## TODO check eigen values / stability of system matrix?
 
 
@@ -121,13 +94,13 @@ function add_flexible_hvac_constraints(m, p::REoptInputs; _n="")
 
     if !isempty(p.techs.heating)
         @constraint(m, [ts in p.time_steps],
-            !binFlexHVAC => { sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.heating) == p.s.flexible_hvac.bau_hvac.existing_boiler_kw_thermal[ts]
+            !binFlexHVAC => { sum(m[Symbol("dvHeatingProduction"*_n)][t, "SpaceHeating", ts] for t in p.techs.heating) == p.s.flexible_hvac.bau_hvac.existing_boiler_kw_thermal[ts]
             }
         )
     end
     if !isempty(p.techs.cooling)
         @constraint(m, [ts in p.time_steps],
-            !binFlexHVAC => { sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.cooling) == p.s.flexible_hvac.bau_hvac.existing_chiller_kw_thermal[ts]
+            !binFlexHVAC => { sum(m[Symbol("dvCoolingProduction"*_n)][t, ts] for t in p.techs.cooling) == p.s.flexible_hvac.bau_hvac.existing_chiller_kw_thermal[ts]
             }
         )
     end
@@ -151,13 +124,13 @@ function add_flexible_hvac_constraints(m, p::REoptInputs{BAUScenario}; _n="")
 
     if !isempty(p.techs.heating)
         @constraint(m, [ts in p.time_steps],
-            sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.heating) == 
+            sum(m[Symbol("dvHeatingProduction"*_n)][t, "SpaceHeating", ts] for t in p.techs.heating) == 
             p.s.flexible_hvac.existing_boiler_kw_thermal[ts]
         )
     end
     if !isempty(p.techs.cooling)
         @constraint(m, [ts in p.time_steps],
-            sum(m[Symbol("dvThermalProduction"*_n)][t, ts] for t in p.techs.cooling) == 
+            sum(m[Symbol("dvCoolingProduction"*_n)][t, ts] for t in p.techs.cooling) == 
             p.s.flexible_hvac.existing_chiller_kw_thermal[ts]
         )
     end

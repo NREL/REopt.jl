@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 
 struct Boiler <: AbstractThermalTech
     min_kw::Real
@@ -40,6 +12,13 @@ struct Boiler <: AbstractThermalTech
     macrs_bonus_fraction::Real
     fuel_type::String
     can_supply_steam_turbine::Bool
+    can_serve_dhw::Bool
+    can_serve_space_heating::Bool
+    can_serve_process_heat::Bool
+    emissions_factor_lb_CO2_per_mmbtu::Real
+    emissions_factor_lb_NOx_per_mmbtu::Real
+    emissions_factor_lb_SO2_per_mmbtu::Real
+    emissions_factor_lb_PM25_per_mmbtu::Real
 end
 
 
@@ -64,6 +43,13 @@ function Boiler(;
     om_cost_per_mmbtu::Real = 0.0, # Thermal energy-based variable O&M cost
     fuel_type::String = "natural_gas",  # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil", "uranium"]
     can_supply_steam_turbine::Bool = true # If the boiler can supply steam to the steam turbine for electric production
+    can_serve_dhw::Bool = true # If Boiler can supply heat to the domestic hot water load
+    can_serve_space_heating::Bool = true # If Boiler can supply heat to the space heating load
+    can_serve_process_heat::Bool = true # If Boiler can supply heat to the process heating load
+    emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0)
+    emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0)
+    emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0)
+    emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0)
 )
 ```
 """
@@ -71,7 +57,7 @@ function Boiler(;
         min_mmbtu_per_hour::Real = 0.0,
         max_mmbtu_per_hour::Real = 0.0,
         efficiency::Real = 0.8,
-        fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = 0.0,
+        fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [], # REQUIRED. Can be a scalar, a list of 12 monthly values, or a time series of values for every time step
         time_steps_per_hour::Int = 1,  # passed from Settings
         macrs_option_years::Int = 0,
         macrs_bonus_fraction::Real = 0.0,
@@ -79,9 +65,19 @@ function Boiler(;
         om_cost_per_mmbtu_per_hour::Real = 2930.0,
         om_cost_per_mmbtu::Real = 0.0,
         fuel_type::String = "natural_gas",  # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil", "uranium"]
-        can_supply_steam_turbine::Bool = true
-        # emissions_factor_lb_CO2_per_mmbtu::Real,
+        can_supply_steam_turbine::Bool = true,
+        can_serve_dhw::Bool = true,
+        can_serve_space_heating::Bool = true,
+        can_serve_process_heat::Bool = true,
+        emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0),
+        emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0),
+        emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0),
+        emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0),
     )
+
+    if isempty(fuel_cost_per_mmbtu)
+        throw(@error("The Boiler.fuel_cost_per_mmbtu is a required input when modeling a heating load which is served by the Boiler in the optimal case"))
+    end
 
     min_kw = min_mmbtu_per_hour * KWH_PER_MMBTU
     max_kw = max_mmbtu_per_hour * KWH_PER_MMBTU
@@ -102,6 +98,13 @@ function Boiler(;
         macrs_option_years,
         macrs_bonus_fraction,
         fuel_type,
-        can_supply_steam_turbine
+        can_supply_steam_turbine,
+        can_serve_dhw,
+        can_serve_space_heating,
+        can_serve_process_heat,
+        emissions_factor_lb_CO2_per_mmbtu,
+        emissions_factor_lb_NOx_per_mmbtu,
+        emissions_factor_lb_SO2_per_mmbtu,
+        emissions_factor_lb_PM25_per_mmbtu
     )
 end

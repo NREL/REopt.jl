@@ -8,7 +8,9 @@
     "SpaceHeatingLoad": {
     },
     "DomesticHotWaterLoad": {
-    },    
+    },
+    "ProcessHeatLoad": {
+    },
     "CoolingLoad": {
     },    
     "ExistingChiller": {
@@ -20,7 +22,10 @@
     "ElectricTariff": {
         "blended_annual_energy_rate": 0.1,
         "blended_annual_demand_rate": 10
-    },    
+    },
+    "ElectricUtility" : {
+        "co2_from_avert" : true
+    },
     "PV": {
         "max_kw": 0
     },    

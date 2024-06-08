@@ -7,6 +7,7 @@
         "analysis_years": 25,
         "om_cost_escalation_rate_fraction": 0.025,
         "elec_cost_escalation_rate_fraction": 0.023,
+        "existing_boiler_fuel_cost_escalation_rate_fraction": 0.034, 
         "boiler_fuel_cost_escalation_rate_fraction": 0.034,
         "chp_fuel_cost_escalation_rate_fraction": 0.034,
         "offtaker_discount_rate_fraction": 0.083,
@@ -28,6 +29,9 @@
     "ExistingBoiler": {
         "fuel_cost_per_mmbtu": 10.0,
         "efficiency": 0.95
+    },
+    "ElectricUtility" : {
+        "co2_from_avert" : true
     },
     "CHP": {
         "prime_mover": "recip_engine",

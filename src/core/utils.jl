@@ -1,32 +1,8 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
+function solver_is_compatible_with_indicator_constraints(solver_name::String)::Bool
+    return any(lowercase.(INDICATOR_COMPATIBLE_SOLVERS) .== lowercase(solver_name))
+end
+
 function annuity(years::Int, rate_escalation::Real, rate_discount::Real)
     """
         this formulation assumes cost growth in first period
@@ -175,6 +151,7 @@ function dictkeys_tosymbols(d::Dict)
             "production_factor_series", 
             "monthly_energy_rates", "monthly_demand_rates",
             "blended_doe_reference_percents",
+            "blended_industry_reference_percents",
             "coincident_peak_load_charge_per_kw",
             "grid_draw_limit_kw_by_time_step", "export_limit_kw_by_time_step",
             "outage_probabilities",
@@ -183,7 +160,9 @@ function dictkeys_tosymbols(d::Dict)
             "emissions_factor_series_lb_SO2_per_kwh",
             "emissions_factor_series_lb_PM25_per_kwh",
             #for ERP
-            "pv_production_factor_series", "battery_starting_soc_series_fraction"
+            "pv_production_factor_series", "wind_production_factor_series",
+            "battery_starting_soc_series_fraction",
+            "monthly_mmbtu", "monthly_tonhour"
         ] && !isnothing(v)
             try
                 v = convert(Array{Real, 1}, v)
@@ -192,7 +171,8 @@ function dictkeys_tosymbols(d::Dict)
             end
         end
         if k in [
-            "blended_doe_reference_names"
+            "blended_doe_reference_names",
+            "blended_industry_reference_names"
         ]
             try
                 v = convert(Array{String, 1}, v)
@@ -230,7 +210,7 @@ function dictkeys_tosymbols(d::Dict)
             end
         end
         if k in [
-            "fuel_cost_per_mmbtu", "wholesale_rate",
+            "fuel_cost_per_mmbtu", "wholesale_rate", "export_rate_beyond_net_metering_limit",
             # for ERP
             "generator_size_kw", "generator_operational_availability",
             "generator_failure_to_start", "generator_mean_time_to_failure",
@@ -257,6 +237,12 @@ function dictkeys_tosymbols(d::Dict)
                     throw(@error("Unable to convert $k to a Array{Int64, 1} or Int"))
                 end
             end
+        end
+        if k in ["generator_operational_availability", "generator_failure_to_start", "generator_mean_time_to_failure", 
+                                "num_generators", "generator_size_kw", "fuel_limit", "fuel_limit_is_per_generator", 
+                                "generator_fuel_intercept_per_hr", "generator_fuel_burn_rate_per_kwh"] &&
+                                !(typeof(v) <: Array)
+            v = [v]
         end
         d2[Symbol(k)] = v
     end
@@ -376,60 +362,132 @@ function generate_year_profile_hourly(year::Int64, consecutive_periods::Abstract
     return year_profile_hourly
 end
 
+"""
+    call_solar_dataset_api(latitude::Real, longitude::Real, radius::Int)
+This calls the Solar Dataset Query API to determine the dataset to use in the PVWatts API call. 
+Returns: 
+- dataset: "nsrdb" if available within 20 miles, or whichever is closer of "nsrdb", "intl", or "tmy3"
+- dist_meters: Distance in meters from the site location to the dataset station
+- datasource: Name of source of the weather data used in the simulation.
+"""
+function call_solar_dataset_api(latitude::Real, longitude::Real, radius::Int)
 
-function get_ambient_temperature(latitude::Real, longitude::Real; timeframe="hourly")
-    url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
-        "&lat=", latitude , "&lon=", longitude, "&tilt=", latitude,
-        "&system_capacity=1", "&azimuth=", 180, "&module_type=", 0,
-        "&array_type=", 0, "&losses=", 14,
-        "&timeframe=", timeframe, "&dataset=nsrdb"
-    )
+    check_api_key()
 
+    if latitude < -90 || latitude > 90
+        throw(@error("Invalid coordinates: latitude of $latitude must be between -90 and 90 degrees."))
+    elseif longitude < -180 || longitude > 180
+        throw(@error("Invalid coordinates: longitude of $longitude must be between -180 and 180 degrees."))
+    end
+
+    url = string("https://developer.nrel.gov/api/solar/data_query/v2.json", "?api_key=", ENV["NREL_DEVELOPER_API_KEY"],
+        "&lat=", latitude , "&lon=", longitude, "&radius=", radius, "&all=", 0 
+        )
     try
-        @info "Querying PVWatts for ambient temperature... "
-        r = HTTP.get(url)
+        r = HTTP.get(url, keepalive=true, readtimeout=10)
         response = JSON.parse(String(r.body))
+
         if r.status != 200
-            throw(@error("Bad response from PVWatts: $(response["errors"])"))
+            throw(@error("Bad response from Solar Dataset Query: $(response["errors"])"))
         end
-        @info "PVWatts success."
-        tamb = collect(get(response["outputs"], "tamb", []))  # Celcius
-        if length(tamb) != 8760
-            throw(@error("PVWatts did not return a valid temperature. Got $tamb"))
+
+        # If they are empty, then the dataset is not available in the specified radius 
+        nsrdb_empty = isnothing(response["outputs"]["nsrdb"])
+        intl_empty = isnothing(response["outputs"]["intl"])
+        tmy3_empty = isnothing(response["outputs"]["tmy3"])
+
+        if nsrdb_empty && intl_empty && tmy3_empty # Check that at least one dataset is available
+            throw(@error("No solar weather_data_source is available within $radius miles of this location. Try expanding your search radius or setting radius=0."))
         end
-        return tamb
+
+        nsrdb_meters = nsrdb_empty ? 1e10 : response["outputs"]["nsrdb"]["distance"] # The distance in meters from the input location to the station.
+        intl_meters = intl_empty ? 1e10 : response["outputs"]["intl"]["distance"]
+        tmy3_meters = tmy3_empty ? 1e10 : response["outputs"]["tmy3"]["distance"] # AK is currently split between NSRDB and TMY3 datasets
+
+        if nsrdb_empty + intl_empty + tmy3_empty == 1 # If only 1 is available, use that one (will only be true if user specified radius)
+            dataset = !(nsrdb_empty) ? "nsrdb" : !(intl_empty) ? "intl" : "tmy3"
+        elseif nsrdb_meters < 20*1609.34 # at least 2 have data, so check if nsrdb is closer than 20 miles away. Use nsrdb if close enough, because data quality is highest
+            dataset = "nsrdb"
+        else # at least 2 have data and nsrdb is further than 20 mi away, so check which is closest
+            dataset = nsrdb_meters <= intl_meters && nsrdb_meters <= tmy3_meters ? "nsrdb" : intl_meters <= tmy3_meters ? "intl" : "tmy3"
+        end
+
+        dist_meters = response["outputs"][dataset]["distance"] # meters
+        datasource = response["outputs"][dataset]["weather_data_source"]
+
+        warned = false
+        # Warnings if not using NSRDB or if data is > 200 miles away (API only gets warnings, not info's)
+        if dataset != "nsrdb" && dist_meters > 200 * 1609.34
+            @warn "The solar and/or temperature resource data used for this location is not from the NSRDB and may need to be reviewed for accuracy. The data used is from $datasource dataset from a station or grid cell located more then 200 miles ($(round(dist_meters/1609.34)) miles) from the site location."
+            warned = true
+        elseif dataset != "nsrdb"
+            @warn "The solar and/or temperature resource data used for this location is not from the NSRDB and may need to be reviewed for accuracy. The data used is from $datasource dataset from a station or grid cell located $(round(dist_meters/1609.34)) miles from the site location."
+            warned = true
+        elseif dist_meters > 200 * 1609.34
+            @warn "The solar and/or temperature resource data used for this location ($datasource) is from a station or grid cell located more than 200 miles ($(round(dist_meters/1609.34)) miles) from the site location."
+            warned = true
+        end
+        if !warned
+            @info "The solar and/or temperature resource data used for this location is from the $datasource dataset from a station or grid cell located $(round(dist_meters/1609.34)) miles from the site location (see PVWatts API documentation for more information)."
+        end
+
+        return dataset, dist_meters, datasource
     catch e
-        throw(@error("Error occurred when calling PVWatts: $e"))
+        throw(@error("Error occurred when calling Solar Dataset Query API: $e"))
     end
 end
 
 
-function get_pvwatts_prodfactor(latitude::Real, longitude::Real; timeframe="hourly")
-    url = string("https://developer.nrel.gov/api/pvwatts/v6.json", "?api_key=", nrel_developer_key,
-        "&lat=", latitude , "&lon=", longitude, "&tilt=", latitude,
-        "&system_capacity=1", "&azimuth=", 180, "&module_type=", 0,
-        "&array_type=", 0, "&losses=", 14,
-        "&timeframe=", timeframe, "&dataset=nsrdb"
-    )
+"""
+    call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimuth=180, module_type=0, array_type=1, 
+        losses=14, dc_ac_ratio=1.2, gcr=0.4, inv_eff=96, timeframe="hourly", radius=0, time_steps_per_hour=1)
+This calls the PVWatts API and returns both:
+ - PV production factor
+ - Ambient outdoor air dry bulb temperature profile [Celcius]
+"""
+function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimuth=180, module_type=0, array_type=1, 
+    losses=14, dc_ac_ratio=1.2, gcr=0.4, inv_eff=96, timeframe="hourly", radius=0, time_steps_per_hour=1)
+    
+    # Determine resource dataset to use for this location
+    dataset, dist_meters, datasource  = call_solar_dataset_api(latitude, longitude, radius)
+
+    url = string("https://developer.nrel.gov/api/pvwatts/v8.json", "?api_key=", ENV["NREL_DEVELOPER_API_KEY"],
+        "&lat=", latitude , "&lon=", longitude, "&tilt=", tilt,
+        "&system_capacity=1", "&azimuth=", azimuth, "&module_type=", module_type,
+        "&array_type=", array_type, "&losses=", losses, "&dc_ac_ratio=", dc_ac_ratio,
+        "&gcr=", gcr, "&inv_eff=", inv_eff, "&timeframe=", timeframe, "&dataset=", dataset,
+        "&radius=", radius
+        )
 
     try
-        @info "Querying PVWatts for production factor of 1 kW system with tilt set to latitude... "
-        r = HTTP.get(url)
+        @info "Querying PVWatts for production factor and ambient air temperature... "
+        r = HTTP.get(url, keepalive=true, readtimeout=10)
         response = JSON.parse(String(r.body))
         if r.status != 200
             throw(@error("Bad response from PVWatts: $(response["errors"])"))
         end
         @info "PVWatts success."
+        # Get both possible data of interest
         watts = collect(get(response["outputs"], "ac", []) / 1000)  # scale to 1 kW system (* 1 kW / 1000 W)
+        tamb_celcius = collect(get(response["outputs"], "tamb", []))  # Celcius
+        # Validate outputs
         if length(watts) != 8760
             throw(@error("PVWatts did not return a valid prodfactor. Got $watts"))
         end
-        return watts
+        # Validate tamb_celcius
+        if length(tamb_celcius) != 8760
+            throw(@error("PVWatts did not return a valid temperature. Got $tamb_celcius"))
+        end 
+        # Upsample or downsample based on model time_steps_per_hour
+        if time_steps_per_hour > 1
+            watts = repeat(watts, inner=time_steps_per_hour)
+            tamb_celcius = repeat(tamb_celcius, inner=time_steps_per_hour)
+        end
+        return watts, tamb_celcius
     catch e
         throw(@error("Error occurred when calling PVWatts: $e"))
     end
 end
-
 
 """
     Convert gallons of stored liquid (e.g. water, water/glycol) to kWh of stored energy in a stratefied tank
@@ -492,31 +550,39 @@ function get_monthly_time_steps(year::Int; time_steps_per_hour=1)
 end
 
 """
-generator_fuel_slope_and_intercept(;
+fuel_slope_and_intercept(;
                 electric_efficiency_full_load::Real, [kWhe/kWht]
                 electric_efficiency_half_load::Real, [kWhe/kWht]
-                fuel_higher_heating_value_kwh_per_gal::Real
+                fuel_higher_heating_value_kwh_per_unit::Real
             )
 
 return Tuple{<:Real,<:Real} where 
-    first value is diesel fuel burn slope [gal/kWhe]
-    secnod value is diesel fuel burn intercept [gal/hr]
+    first value is fuel burn slope [<fuel unit>/kWhe]
+    second value is fuel burn intercept [<fuel unit>/hr]
 """
-function generator_fuel_slope_and_intercept(;
+function fuel_slope_and_intercept(;
                         electric_efficiency_full_load::Real, 
                         electric_efficiency_half_load::Real,
-                        fuel_higher_heating_value_kwh_per_gal::Real
+                        fuel_higher_heating_value_kwh_per_unit::Real
                     )
     fuel_burn_full_load_kwht = 1.0 / electric_efficiency_full_load  # [kWe_rated/(kWhe/kWht)]
     fuel_burn_half_load_kwht = 0.5 / electric_efficiency_half_load  # [kWe_rated/(kWhe/kWht)]
     fuel_slope_kwht_per_kwhe = (fuel_burn_full_load_kwht - fuel_burn_half_load_kwht) / (1.0 - 0.5)  # [kWht/kWhe]
     fuel_intercept_kwht_per_hr = fuel_burn_full_load_kwht - fuel_slope_kwht_per_kwhe * 1.0  # [kWht/hr]
-    fuel_slope_gal_per_kwhe = fuel_slope_kwht_per_kwhe / fuel_higher_heating_value_kwh_per_gal # [gal/kWhe]
-    fuel_intercept_gal_per_hr = fuel_intercept_kwht_per_hr / fuel_higher_heating_value_kwh_per_gal # [gal/hr]
+    fuel_slope_unit_per_kwhe = fuel_slope_kwht_per_kwhe / fuel_higher_heating_value_kwh_per_unit # [<fuel unit>/kWhe]
+    fuel_intercept_unit_per_hr = fuel_intercept_kwht_per_hr / fuel_higher_heating_value_kwh_per_unit # [<fuel unit>/hr]
     
-    return fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr
+    return fuel_slope_unit_per_kwhe, fuel_intercept_unit_per_hr
 end
 
 function convert_temp_degF_to_Kelvin(degF::Float64)
     return (degF - 32) * 5.0 / 9.0 + 273.15
+end
+
+function check_api_key()
+    if isempty(get(ENV, "NREL_DEVELOPER_API_KEY", ""))
+        throw(@error("No NREL Developer API Key provided when trying to call PVWatts or Wind Toolkit.
+                    Within your Julia environment, specify ENV['NREL_DEVELOPER_API_KEY']='your API key'
+                    See https://nrel.github.io/REopt.jl/dev/ for more information."))
+    end
 end

@@ -1,47 +1,20 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 function add_chp_fuel_burn_constraints(m, p; _n="")
     # Fuel burn slope and intercept
-    fuel_burn_full_load = 1.0 / p.s.chp.electric_efficiency_full_load  # [kWt/kWe]
-    fuel_burn_half_load = 0.5 / p.s.chp.electric_efficiency_half_load  # [kWt/kWe]
-    fuel_burn_slope = (fuel_burn_full_load - fuel_burn_half_load) / (1.0 - 0.5)  # [kWt/kWe]
-    fuel_burn_intercept = fuel_burn_full_load - fuel_burn_slope * 1.0  # [kWt/kWe_rated]
+    fuel_burn_slope, fuel_burn_intercept = fuel_slope_and_intercept(; 
+        electric_efficiency_full_load = p.s.chp.electric_efficiency_full_load, 
+        electric_efficiency_half_load = p.s.chp.electric_efficiency_half_load, 
+        fuel_higher_heating_value_kwh_per_unit=1
+    )
 
     # Fuel cost
-    m[:TotalCHPFuelCosts] = @expression(m, p.pwf_fuel[t] *
-        sum(m[:dvFuelUsage][t, ts] * p.fuel_cost_per_kwh[t][ts] for t in p.techs.chp, ts in p.time_steps)
+    m[:TotalCHPFuelCosts] = @expression(m, 
+        sum(p.pwf_fuel[t] * m[:dvFuelUsage][t, ts] * p.fuel_cost_per_kwh[t][ts] for t in p.techs.chp, ts in p.time_steps)
     )      
     # Conditionally add dvFuelBurnYIntercept if coefficient p.FuelBurnYIntRate is greater than ~zero
-    if fuel_burn_intercept > 1.0E-7
+    if abs(fuel_burn_intercept) > 1.0E-7
         dv = "dvFuelBurnYIntercept"*_n
-        m[Symbol(dv)] = @variable(m, [p.techs.chp, p.time_steps], base_name=dv, lower_bound=0)
+        m[Symbol(dv)] = @variable(m, [p.techs.chp, p.time_steps], base_name=dv)
 
         #Constraint (1c1): Total Fuel burn for CHP **with** y-intercept fuel burn and supplementary firing
         @constraint(m, CHPFuelBurnCon[t in p.techs.chp, ts in p.time_steps],
@@ -74,36 +47,37 @@ function add_chp_thermal_production_constraints(m, p; _n="")
     thermal_prod_slope = (thermal_prod_full_load - thermal_prod_half_load) / (1.0 - 0.5)  # [kWt/kWe]
     thermal_prod_intercept = thermal_prod_full_load - thermal_prod_slope * 1.0  # [kWt/kWe_rated
 
-    # Conditionally add dvThermalProductionYIntercept if coefficient p.s.chpThermalProdIntercept is greater than ~zero
-    if thermal_prod_intercept > 1.0E-7
-        dv = "dvThermalProductionYIntercept"*_n
-        m[Symbol(dv)] = @variable(m, [p.techs.chp, p.time_steps], base_name=dv, lower_bound=0)
+
+    # Conditionally add dvHeatingProductionYIntercept if coefficient p.s.chpThermalProdIntercept is greater than ~zero
+    if abs(thermal_prod_intercept) > 1.0E-7
+        dv = "dvHeatingProductionYIntercept"*_n
+        m[Symbol(dv)] = @variable(m, [p.techs.chp, p.time_steps], base_name=dv)
 
         #Constraint (2a-1): Upper Bounds on Thermal Production Y-Intercept
         @constraint(m, CHPYInt2a1Con[t in p.techs.chp, ts in p.time_steps],
-            m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts] <= thermal_prod_intercept * m[Symbol("dvSize"*_n)][t]
+            m[Symbol("dvHeatingProductionYIntercept"*_n)][t,ts] <= thermal_prod_intercept * m[Symbol("dvSize"*_n)][t]
         )
         # Constraint (2a-2): Upper Bounds on Thermal Production Y-Intercept
         @constraint(m, CHPYInt2a2Con[t in p.techs.chp, ts in p.time_steps],
-            m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts] <= thermal_prod_intercept * p.s.chp.max_kw 
+            m[Symbol("dvHeatingProductionYIntercept"*_n)][t,ts] <= thermal_prod_intercept * p.s.chp.max_kw 
             * m[Symbol("binCHPIsOnInTS"*_n)][t,ts]
         )
         #Constraint (2b): Lower Bounds on Thermal Production Y-Intercept
         @constraint(m, CHPYInt2bCon[t in p.techs.chp, ts in p.time_steps],
-            m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts] >= thermal_prod_intercept * m[Symbol("dvSize"*_n)][t] 
+            m[Symbol("dvHeatingProductionYIntercept"*_n)][t,ts] >= thermal_prod_intercept * m[Symbol("dvSize"*_n)][t] 
             - thermal_prod_intercept * p.s.chp.max_kw * (1 - m[Symbol("binCHPIsOnInTS"*_n)][t,ts])
         )
         # Constraint (2c): Thermal Production of CHP
         # Note: p.HotWaterAmbientFactor[t,ts] * p.HotWaterThermalFactor[t,ts] removed from this but present in math
         @constraint(m, CHPThermalProductionCon[t in p.techs.chp, ts in p.time_steps],
-            m[Symbol("dvThermalProduction"*_n)][t,ts] ==
+        sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads) ==
             thermal_prod_slope * p.production_factor[t,ts] * m[Symbol("dvRatedProduction"*_n)][t,ts] 
-            + m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts] +
+            + m[Symbol("dvHeatingProductionYIntercept"*_n)][t,ts] +
             m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
         )
     else
         @constraint(m, CHPThermalProductionConLinear[t in p.techs.chp, ts in p.time_steps],
-            m[Symbol("dvThermalProduction"*_n)][t,ts] ==
+            sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads) ==
             thermal_prod_slope * p.production_factor[t,ts] * m[Symbol("dvRatedProduction"*_n)][t,ts] +
             m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
         )        
@@ -126,12 +100,20 @@ function add_chp_supplementary_firing_constraints(m, p; _n="")
     # Constrain upper limit of dvSupplementaryThermalProduction, using auxiliary variable for (size * useSupplementaryFiring)
     @constraint(m, CHPSupplementaryFireCon[t in p.techs.chp, ts in p.time_steps],
                 m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] <=
-                (p.s.chp.supplementary_firing_max_steam_ratio - 1.0) * p.production_factor[t,ts] * (thermal_prod_slope * m[Symbol("dvSupplementaryFiringSize"*_n)][t] + m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts])
+                (p.s.chp.supplementary_firing_max_steam_ratio - 1.0) * p.production_factor[t,ts] * (thermal_prod_slope * m[Symbol("dvSupplementaryFiringSize"*_n)][t] + m[Symbol("dvHeatingProductionYIntercept"*_n)][t,ts])
                 )
-    # Constrain lower limit of 0 if CHP tech is off
-    @constraint(m, NoCHPSupplementaryFireOffCon[t in p.techs.chp, ts in p.time_steps],
+    if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
+        # Constrain lower limit of 0 if CHP tech is off
+        @constraint(m, NoCHPSupplementaryFireOffCon[t in p.techs.chp, ts in p.time_steps],
                 !m[Symbol("binCHPIsOnInTS"*_n)][t,ts] => {m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] <= 0.0}
                 )
+    else
+        #There's no upper bound specified for the CHP supplementary firing, so assume the entire heat load as a reasonable maximum that wouldn't be exceeded (but might not be the best possible value). 
+        max_supplementary_firing_size = maximum(p.s.dhw_load.loads_kw .+ p.s.space_heating_load.loads_kw)
+        @constraint(m, NoCHPSupplementaryFireOffCon[t in p.techs.chp, ts in p.time_steps],
+                m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] <= (p.s.chp.supplementary_firing_max_steam_ratio - 1.0) * p.production_factor[t,ts] * (thermal_prod_slope * max_supplementary_firing_size + m[Symbol("dvHeatingProductionYIntercept"*_n)][t,ts])
+                )
+    end
 end
 
 function add_binCHPIsOnInTS_constraints(m, p; _n="")
@@ -166,7 +148,7 @@ function add_chp_hourly_om_charges(m, p; _n="")
     #Constraint CHP-hourly-om-a: om per hour, per time step >= per_unit_size_cost * size for when on, >= zero when off
 	@constraint(m, CHPHourlyOMBySizeA[t in p.techs.chp, ts in p.time_steps],
         p.s.chp.om_cost_per_hr_per_kw_rated * m[Symbol("dvSize"*_n)][t] -
-        p.max_size[t] * p.s.chp.om_cost_per_hr_per_kw_rated * (1-m[Symbol("binCHPIsOnInTS"*_n)][t,ts])
+        p.s.chp.max_kw * p.s.chp.om_cost_per_hr_per_kw_rated * (1-m[Symbol("binCHPIsOnInTS"*_n)][t,ts])
             <= m[Symbol("dvOMByHourBySizeCHP"*_n)][t, ts]
     )
 	#Constraint CHP-hourly-om-b: om per hour, per time step <= per_unit_size_cost * size for each hour
@@ -176,7 +158,7 @@ function add_chp_hourly_om_charges(m, p; _n="")
     )
 	#Constraint CHP-hourly-om-c: om per hour, per time step <= zero when off, <= per_unit_size_cost*max_size
 	@constraint(m, CHPHourlyOMBySizeC[t in p.techs.chp, ts in p.time_steps],
-        p.max_size[t] * p.s.chp.om_cost_per_hr_per_kw_rated * m[Symbol("binCHPIsOnInTS"*_n)][t,ts]
+        p.s.chp.max_kw * p.s.chp.om_cost_per_hr_per_kw_rated * m[Symbol("binCHPIsOnInTS"*_n)][t,ts]
             >= m[Symbol("dvOMByHourBySizeCHP"*_n)][t, ts]
     )
     

@@ -7,6 +7,7 @@
         "analysis_years": 25,
         "om_cost_escalation_rate_fraction": 0.025,
         "elec_cost_escalation_rate_fraction": 0.023,
+        "existing_boiler_fuel_cost_escalation_rate_fraction": 0.034, 
         "boiler_fuel_cost_escalation_rate_fraction": 0.034,
         "chp_fuel_cost_escalation_rate_fraction": 0.034,
         "offtaker_discount_rate_fraction": 0.083,
@@ -19,7 +20,8 @@
         "urdb_label": "5e1676e95457a3f87673e3b0"
     },
     "ElectricUtility": {
-        "net_metering_limit_kw": 0.0
+        "net_metering_limit_kw": 0.0,
+        "co2_from_avert" : true
     },
     "SpaceHeatingLoad": {
         "doe_reference_name": "Hospital"

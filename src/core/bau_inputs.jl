@@ -1,32 +1,4 @@
-# *********************************************************************************
-# REopt, Copyright (c) 2019-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list
-# of conditions and the following disclaimer.
-#
-# Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or other
-# materials provided with the distribution.
-#
-# Neither the name of the copyright holder nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific
-# prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-# OF THE POSSIBILITY OF SUCH DAMAGE.
-# *********************************************************************************
+# REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
     BAUInputs(p::REoptInputs)
 
@@ -55,6 +27,7 @@ function BAUInputs(p::REoptInputs)
     om_cost_per_kw = Dict(t => 0.0 for t in techs.all)
     cop = Dict(t => 0.0 for t in techs.cooling)
     thermal_cop = Dict{String, Float64}()
+    heating_cop = Dict{String, Float64}()
     production_factor = DenseAxisArray{Float64}(undef, techs.all, p.time_steps)
     tech_renewable_energy_fraction = Dict(t => 0.0 for t in techs.all)
     # !!! note: tech_emissions_factors are in lb / kWh of fuel burned (gets multiplied by kWh of fuel burned, not kWh electricity consumption, ergo the use of the HHV instead of fuel slope)
@@ -130,7 +103,8 @@ function BAUInputs(p::REoptInputs)
     ghp_options, require_ghp_purchase, ghp_heating_thermal_load_served_kw, 
         ghp_cooling_thermal_load_served_kw, space_heating_thermal_load_reduction_with_ghp_kw, 
         cooling_thermal_load_reduction_with_ghp_kw, ghp_electric_consumption_kw, 
-        ghp_installed_cost, ghp_om_cost_year_one = setup_ghp_inputs(bau_scenario, p.time_steps, p.time_steps_without_grid)    
+        ghp_installed_cost, ghp_om_cost_year_one, avoided_capex_by_ghp_present_value,
+        ghx_useful_life_years, ghx_residual_value = setup_ghp_inputs(bau_scenario, p.time_steps, p.time_steps_without_grid)    
 
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
     for t in techs.elec
@@ -152,6 +126,41 @@ function BAUInputs(p::REoptInputs)
         generator_fuel_use_gal = 0.0
     end
     setup_bau_emissions_inputs(p, bau_scenario, generator_fuel_use_gal)
+
+    heating_loads = Vector{String}()
+    heating_loads_kw = Dict{String, Array{Real,1}}()
+    absorption_chillers_using_heating_load = Dict{String,Array{String,1}}()
+    if !isnothing(p.s.dhw_load)
+        push!(heating_loads, "DomesticHotWater")
+        heating_loads_kw["DomesticHotWater"] = p.s.dhw_load.loads_kw
+        absorption_chillers_using_heating_load["DomesticHotWater"] = Vector{String}()
+    end
+    if !isnothing(p.s.space_heating_load)
+        push!(heating_loads, "SpaceHeating")
+        heating_loads_kw["SpaceHeating"] = p.s.space_heating_load.loads_kw
+        absorption_chillers_using_heating_load["SpaceHeating"] = Vector{String}()
+    elseif !isnothing(p.s.flexible_hvac) && !isnothing(p.s.existing_boiler)
+        push!(heating_loads, "SpaceHeating")  #add blank space heating load to add dvHeatingProduction for existing boiler
+    end
+    if !isnothing(p.s.process_heat_load)
+        push!(heating_loads, "ProcessHeat")
+        heating_loads_kw["ProcessHeat"] = p.s.process_heat_load.loads_kw
+        absorption_chillers_using_heating_load["ProcessHeat"] = Vector{String}()
+    end
+
+    if sum(heating_loads_kw["SpaceHeating"]) > 0.0 && isempty(techs.can_serve_space_heating) 
+        throw(@error("SpaceHeating load is nonzero and no techs can serve the load."))
+    end
+    if sum(heating_loads_kw["DomesticHotWater"]) > 0.0 && isempty(techs.can_serve_dhw) 
+        throw(@error("DomesticHotWater load is nonzero and no techs can serve the load."))
+    end
+    if sum(heating_loads_kw["ProcessHeat"]) > 0.0 && isempty(techs.can_serve_process_heat) 
+        throw(@error("ProcessHeat load is nonzero and no techs can serve the load."))
+    end
+
+
+    heating_loads_served_by_tes = Dict{String,Array{String,1}}()
+    unavailability = get_unavailability_by_tech(p.s, techs, p.time_steps)
 
     REoptInputs(
         bau_scenario,
@@ -203,13 +212,22 @@ function BAUInputs(p::REoptInputs)
         cooling_thermal_load_reduction_with_ghp_kw,
         ghp_electric_consumption_kw,
         ghp_installed_cost,
-        ghp_om_cost_year_one,        
+        ghp_om_cost_year_one,
+        avoided_capex_by_ghp_present_value,
+        ghx_useful_life_years,
+        ghx_residual_value,
         tech_renewable_energy_fraction, 
         tech_emissions_factors_CO2, 
         tech_emissions_factors_NOx, 
         tech_emissions_factors_SO2, 
         tech_emissions_factors_PM25,
-        p.techs_operating_reserve_req_fraction
+        p.techs_operating_reserve_req_fraction,
+        heating_cop,
+        heating_loads,
+        heating_loads_kw,
+        heating_loads_served_by_tes,
+        unavailability,
+        absorption_chillers_using_heating_load
     )
 end
 
@@ -273,8 +291,11 @@ function setup_bau_emissions_inputs(p::REoptInputs, s_bau::BAUScenario, generato
 
     ## Boiler emissions
     if "ExistingBoiler" in p.techs.all
-        for heat_type in ["space_heating", "dhw"]
-            bau_emissions_lb_CO2_per_year += getproperty(p.s,Symbol("$(heat_type)_load")).annual_mmbtu * p.s.existing_boiler.emissions_factor_lb_CO2_per_mmbtu
+        for heat_type in ["space_heating", "dhw", "process_heat"]
+            # Divide by existing_boiler.efficiency because annual_mmbtu is thermal, so convert to fuel
+            bau_emissions_lb_CO2_per_year += getproperty(p.s,Symbol("$(heat_type)_load")).annual_mmbtu / 
+                                                p.s.existing_boiler.efficiency * 
+                                                p.s.existing_boiler.emissions_factor_lb_CO2_per_mmbtu
         end
     end
 
@@ -338,10 +359,10 @@ function bau_outage_check(critical_loads_kw::AbstractArray, pv_kw_series::Abstra
         if length(pv_kw_series) == 0
             pv_kw_series = zeros(length(critical_loads_kw))
         end
-        fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr = generator_fuel_slope_and_intercept(
+        fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr = fuel_slope_and_intercept(
             electric_efficiency_full_load=gen.electric_efficiency_full_load, 
             electric_efficiency_half_load=gen.electric_efficiency_half_load,
-            fuel_higher_heating_value_kwh_per_gal=gen.fuel_higher_heating_value_kwh_per_gal
+            fuel_higher_heating_value_kwh_per_unit=gen.fuel_higher_heating_value_kwh_per_gal
         )
             for (i, (load, pv)) in enumerate(zip(critical_loads_kw, pv_kw_series))
             unmet = load - pv
