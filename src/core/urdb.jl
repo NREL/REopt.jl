@@ -280,7 +280,6 @@ end
     parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
 
 Parse monthly ("flat") and TOU demand rates
-    can modify URDB dict when there is inconsistent numbers of tiers in rate structures
 """
 function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
     if haskey(d, "flatdemandstructure")
