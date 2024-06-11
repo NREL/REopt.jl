@@ -23,6 +23,14 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop - 2024-06-05
+### Fixed
+- Increased the big-M bound on maximum net metering benefit to prevent artificially low export benefits
+- Fixed a bug in which tier limits did not load correctly when the number of tiers vary by period in the inputs
+- Set a limit for demand and energy tier maxes to avoid errors returned by HiGHS due to numerical limits
+- Index utility rate demand and energy tier limits on month and/or ratchet in addition to tier.  This allows for the inclusion of multi-tiered energy and demand rates in which the rates may vary by month or ratchet, whereas previously only the maximum tier limit was used.
+
+
 ## v0.47.1
 ### Fixed
 - Type issue with `CoolingLoad` monthly energy input
@@ -40,16 +48,12 @@ Classify the change according to the following categories:
 - Refactored various functions to ensure **ProcessHeatLoad** is processed correctly in line with other heating loads.
 - When the URDB response `energyratestructure` has a "unit" value that is not "kWh", throw an error instead of averaging rates in each energy tier.
 - Refactored heating flow constraints to be in ./src/constraints/thermal_tech_constraints.jl instead of its previous separate locations in the storage and turbine constraints.
+- Changed default Financial **owner_tax_rate_fraction** and **offtaker_tax_rate_fraction** from 0.257 to 0.26 to align with API and user manual defaults. 
 ### Fixed
 - Updated the PV result **lifecycle_om_cost_after_tax** to account for the third-party factor for third-party ownership analyses.
 - Convert `max_electric_load_kw` to _Float64_ before passing to function `get_chp_defaults_prime_mover_size_class`
 - Fixed a bug in which excess heat from one heating technology resulted in waste heat from another technology.
 - Modified thermal waste heat constraints for heating technologies to avoid errors in waste heat results tracking.
-
-## v0.46.2
-### Changed
-- When the URDB response `energyratestructure` has a "unit" value that is not "kWh", throw an error instead of averaging rates in each energy tier.
-- Changed default Financial **owner_tax_rate_fraction** and **offtaker_tax_rate_fraction** from 0.257 to 0.26 to align with API and user manual defaults. 
 
 ## v0.46.1
 ### Changed
@@ -182,7 +186,7 @@ Classify the change according to the following categories:
 ## v0.37.5
 ### Fixed
 - Fixed AVERT emissions profiles for NOx. Were previously the same as the SO2 profiles. AVERT emissions profiles are currently generated from AVERT v3.2 https://www.epa.gov/avert/download-avert. See REopt User Manual for more information.
-- Fix setting of equal demand tiers in scrub_urdb_demand_tiers!, which was previously causing an error. 
+- Fix setting of equal demand tiers in `scrub_urdb_demand_tiers`, now renamed `scrub_urdb_tiers`. 
 - When calling REopt.jl from a python environment using PyJulia and PyCall, some urdb_response fields get converted from a list-of-lists to a matrix type, when REopt.jl expects an array type. This fix adds checks on the type for two urdb_response fields and converts them to an array if needed.
 - Update the outages dispatch results to align with CHP availability during outages
 
