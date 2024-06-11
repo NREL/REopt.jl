@@ -207,8 +207,7 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
     if length(d["energyratestructure"]) == 0
         throw(@error("No energyratestructure in URDB response."))
     end
-    scrub_urdb_tiers!(d["energyratestructure"])
-    n_energy_tiers = get_num_tiers(d["energyratestructure"])
+    n_energy_tiers = scrub_urdb_tiers!(d["energyratestructure"])
     energy_cost_vector = Float64[]
     sell_vector = Float64[]
     energy_tier_limits_kwh = Array{Float64}(undef, 12, n_energy_tiers)
@@ -283,8 +282,7 @@ Parse monthly ("flat") and TOU demand rates
 """
 function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
     if haskey(d, "flatdemandstructure")
-        scrub_urdb_tiers!(d["flatdemandstructure"])
-        n_monthly_demand_tiers = get_num_tiers(d["flatdemandstructure"])
+        n_monthly_demand_tiers = scrub_urdb_tiers!(d["flatdemandstructure"])
         monthly_demand_rates, monthly_demand_tier_limits = parse_urdb_monthly_demand(d, n_monthly_demand_tiers; bigM)
     else
         monthly_demand_tier_limits = Array{Float64,2}(undef, 0, 0)
@@ -293,8 +291,7 @@ function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour:
     end
 
     if haskey(d, "demandratestructure")
-        scrub_urdb_tiers!(d["demandratestructure"])
-        n_tou_demand_tiers = get_num_tiers(d["demandratestructure"])
+        n_tou_demand_tiers = scrub_urdb_tiers!(d["demandratestructure"])
         ratchet_time_steps, tou_demand_rates, tou_demand_tier_limits = parse_urdb_tou_demand(d, year=year, n_tiers=n_tou_demand_tiers, time_steps_per_hour=time_steps_per_hour)
     else
         tou_demand_tier_limits = Array{Float64,2}(undef, 0, 0)
@@ -336,21 +333,6 @@ function scrub_urdb_tiers!(A::Array)
             end
         end
     end
-end
-
-
-"""
-get_num_tiers(d::Dict)
-
-    get maximum number of demand tiers in any period from scrubbed demand rate structure
-    returns n_tiers::Int
-"""
-function get_num_tiers(A::Array)
-    if length(A) == 0
-        return 0
-    end
-    len_tiers = Int[length(r) for r in A]
-    n_tiers = maximum(len_tiers)
     return n_tiers
 end
 
