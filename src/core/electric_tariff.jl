@@ -8,17 +8,17 @@
 """
 struct ElectricTariff
     energy_rates::AbstractArray{Float64, 2} # gets a second dim with tiers
-    energy_tier_limits::AbstractArray{Float64,2}
+    energy_tier_limits::AbstractArray{Float64,2} # month X tier
     n_energy_tiers::Int
 
     monthly_demand_rates::AbstractArray{Float64, 2} # gets a second dim with tiers
     time_steps_monthly::AbstractArray{AbstractArray{Int64,1},1}  # length = 0 or 12
-    monthly_demand_tier_limits::AbstractArray{Float64,2}
+    monthly_demand_tier_limits::AbstractArray{Float64,2} # month X tier
     n_monthly_demand_tiers::Int
 
     tou_demand_rates::AbstractArray{Float64, 2} # gets a second dim with tiers
     tou_demand_ratchet_time_steps::AbstractArray{AbstractArray{Int64,1},1}  # length = n_tou_demand_ratchets
-    tou_demand_tier_limits::AbstractArray{Float64,2}
+    tou_demand_tier_limits::AbstractArray{Float64,2} # ratchet X tier
     n_tou_demand_tiers::Int
 
     demand_lookback_months::AbstractArray{Int,1}

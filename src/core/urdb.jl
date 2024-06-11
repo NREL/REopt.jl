@@ -12,15 +12,15 @@ Contains some of the data for ElectricTariff
 """
 struct URDBrate
     energy_rates::Array{Float64,2}  # time X tier
-    energy_tier_limits::Array{Float64,2}
+    energy_tier_limits::Array{Float64,2} # month X tier
     n_energy_tiers::Int
 
     n_monthly_demand_tiers::Int
-    monthly_demand_tier_limits::Array{Float64,2}
+    monthly_demand_tier_limits::Array{Float64,2} # month X tier
     monthly_demand_rates::Array{Float64,2}  # month X tier
 
     n_tou_demand_tiers::Int
-    tou_demand_tier_limits::Array{Float64,2}
+    tou_demand_tier_limits::Array{Float64,2} # ratchet X tier
     tou_demand_rates::Array{Float64,2}  # ratchet X tier
     tou_demand_ratchet_time_steps::Array{Array{Int64,1},1}  # length = n_tou_demand_ratchets
 
