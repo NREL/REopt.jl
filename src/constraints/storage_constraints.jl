@@ -162,6 +162,29 @@ function add_hot_thermal_storage_dispatch_constraints(m, p; _n="")
         end
     end
 
+    if "HotSensibleTes" in p.s.storage.types.hot
+        dv = "binStorageCharge"*_n
+        m[Symbol(dv)] = @variable(m, [p.s.storage.types.hot, p.time_steps], base_name=dv, binary=true)
+        dv = "binStorageDischarge"*_n
+        m[Symbol(dv)] = @variable(m, [p.s.storage.types.hot, p.time_steps], base_name=dv, binary=true)
+        
+        max_storage_power = min(p.s.storage.attr["HotSensibleTes"].max_kw, 
+            100 * maximum(sum(p.heating_loads_kw[q][ts] for q in p.heating_loads) for ts in p.time_steps)    
+        )
+        
+        @constraint(m, SensibleTesChargeMax[ts in p.time_steps],
+            sum(m[Symbol("dvHeatToStorage"*_n)]["HotSensibleTes",t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads) <=
+            max_storage_power * m[Symbol("binStorageCharge"*_n)]["HotSensibleTes",ts]
+        )
+        @constraint(m, SensibleTesDischargeMax[ts in p.time_steps],
+            sum(m[Symbol("dvHeatFromStorage"*_n)]["HotSensibleTes",q,ts] for q in p.heating_loads) <=
+            max_storage_power * m[Symbol("binStorageDischarge"*_n)]["HotSensibleTes",ts]
+        )
+        @constraint(m, SensibleTesFlowDirection[ts in p.time_steps],
+            m[Symbol("binStorageDischarge"*_n)]["HotSensibleTes",ts] + m[Symbol("binStorageCharge"*_n)]["HotSensibleTes",ts] <= 1
+        )
+    end
+
 end
 
 function add_cold_thermal_storage_dispatch_constraints(m, p, b; _n="")
