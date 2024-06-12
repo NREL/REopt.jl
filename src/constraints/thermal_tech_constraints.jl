@@ -92,9 +92,18 @@ function add_heating_tech_constraints(m, p; _n="")
     # If the electric heater can only provide heat to the storage system (as in PTES), then production to storage must equal total production
     if "ElectricHeater" in p.techs.electric_heater
         if p.s.electric_heater.charge_storage_only
-            @constraint(m, ElectricHeaterOnlyChargesStorageCon[q in p.heating_loads, ts in p.time_steps],
-                m[Symbol("dvHeatingProduction"*_n)]["ElectricHeater",q,ts] == sum(m[Symbol("dvHeatToStorage"*_n)][b,"ElectricHeater",q,ts] for b in p.s.storage.types.hot)
-            )
+            #assume sensible TES first, and hot water otherwise.
+            if "HotSensibleTes" in p.s.storage.types.hot
+                @constraint(m, ElectricHeaterToStorageOnly[t in p.techs.electric_heater, q in p.heating_loads, ts in p.time_steps],
+                    m[Symbol("dvHeatingProduction"*_n)][t,q,ts] == m[Symbol("dvHeatToStorage"*_n)]["HotSensibleTes",t,q,ts]
+                )
+            elseif "HotThermalStorage" in p.s.storage.types.hot
+                @constraint(m, ElectricHeaterToStorageOnly[t in p.techs.electric_heater, q in p.heating_loads, ts in p.time_steps],
+                    m[Symbol("dvHeatingProduction"*_n)][t,q,ts] == m[Symbol("dvHeatToStorage"*_n)]["HotThermalStorage",t,q,ts]
+                )
+            else
+                @warn "ElectricHeater.charge_storage_only is set to True, but no hot storage technologies exist."
+            end
         end
     end
 end
