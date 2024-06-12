@@ -10,10 +10,10 @@ function add_existing_hydropower_constraints(m,p)
 			# the 0.001 below is for W to kW conversion
 			
 			# Test 1: linear test
-			m[:dvRatedProduction][t,ts] == 9810*0.95*0.001 * m[:dvWaterOutFlow][t,ts] * 5
+			#m[:dvRatedProduction][t,ts] == 9810*0.95*0.001 * m[:dvWaterOutFlow][t,ts] * 5
 
 			# Test 2: quadratic, with reservoir head calculation
-			#m[:dvRatedProduction][t,ts] == 9810*0.95*0.001 * m[:dvWaterOutFlow][t,ts] * ((m[:dvWaterVolume][t,ts] * p.s.existing_hydropower.linearized_stage_storage_slope_fraction) + p.s.existing_hydropower.linearized_stage_storage_y_intercept)
+			m[:dvRatedProduction][t,ts] == 9810*0.95*0.001 * m[:dvWaterOutFlow][t,ts] * ((m[:dvWaterVolume][t,ts] * p.s.existing_hydropower.linearized_stage_storage_slope_fraction) + p.s.existing_hydropower.linearized_stage_storage_y_intercept)
 			
 			#=
 			# Test 3: quadratic, linear efficiency calculation
