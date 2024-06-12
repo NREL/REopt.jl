@@ -643,8 +643,8 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
     if !isempty(p.techs.steam_turbine)
 		if !isempty(p.techs.can_supply_steam_turbine)
 	        @variable(m, dvThermalToSteamTurbine[p.techs.can_supply_steam_turbine, p.heating_loads, p.time_steps] >= 0)
-		else
-			throw(@error("Steam turbine is present, but set p.techs.can_supply_steam_turbine is empty."))
+		elseif !any(p.s.storage.attr[b].can_supply_steam_turbine for b in p.s.storage.types.hot)
+			throw(@error("Steam turbine is present, but set p.techs.can_supply_steam_turbine is empty and no storage is compatible with steam turbine."))
 		end
     end
 
