@@ -106,10 +106,32 @@ function MPCScenario(d::Dict)
         financial = MPCFinancial()
     end
 
-    if haskey(d, "ElectricUtility")
+    if settings.off_grid_flag
+        if !(haskey(d["ElectricLoad"], "critical_loads_kw"))
+            d["ElectricLoad"]["critical_loads_kw"] = d["ElectricLoad"]["loads_kw"]
+        end
+    end
+
+    electric_load = MPCElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...)
+
+    if haskey(d, "ElectricUtility") && !(settings.off_grid_flag)
         electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...)
-    else
+    elseif !(settings.off_grid_flag)
         electric_utility = ElectricUtility()
+    elseif settings.off_grid_flag
+        if haskey(d, "ElectricUtility")
+            @warn "ElectricUtility inputs are not applicable when `off_grid_flag` is true and will be ignored."
+        end
+        electric_utility = ElectricUtility(; outage_start_time_step = 1, 
+                                            outage_end_time_step = length(electric_load.loads_kw), 
+                                            time_steps_per_hour=settings.time_steps_per_hour,
+                                            off_grid_flag=settings.off_grid_flag,
+                                            emissions_factor_series_lb_CO2_per_kwh = 0,
+                                            emissions_factor_series_lb_NOx_per_kwh = 0,
+                                            emissions_factor_series_lb_SO2_per_kwh = 0,
+                                            emissions_factor_series_lb_PM25_per_kwh = 0
+                                        ) 
+
     end
 
     storage_structs = Dict{String, AbstractStorage}()
@@ -132,11 +154,13 @@ function MPCScenario(d::Dict)
     end
 
     storage = Storage(storage_structs)
-
-    
-    electric_load = MPCElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...)
-
-    electric_tariff = MPCElectricTariff(d["ElectricTariff"])
+   
+    if !(settings.off_grid_flag)
+        electric_tariff = MPCElectricTariff(d["ElectricTariff"])
+    else
+        tariff_dict = Dict([("energy_rates", zeros(length(electric_load.loads_kw)))])
+        electric_tariff = MPCElectricTariff(tariff_dict)
+    end
 
     if haskey(d, "Wind")
         wind = MPCWind(; dictkeys_tosymbols(d["Wind"])...)

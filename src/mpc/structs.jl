@@ -10,6 +10,7 @@
 Base.@kwdef struct MPCElectricLoad
     loads_kw::Array{Real,1}
     critical_loads_kw::Union{Nothing, Array{Real,1}} = nothing
+    min_load_met_annual_fraction::Real = 1.0
 end
 
 
