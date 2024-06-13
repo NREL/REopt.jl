@@ -119,17 +119,20 @@ end
 
 
 """
-function get_ashp_defaults()
+function get_ashp_defaults(load_served::String="SpaceHeating")
 
 Obtains defaults for the ASHP from a JSON data file. 
 
 inputs
-None
+load_served::String -- identifier of heating load served by AHSP system
 
 returns
 ashp_defaults::Dict -- Dictionary containing defaults for ASHP
 """
-function get_ashp_defaults()
-    ashp_defaults = JSON.parsefile(joinpath(dirname(@__FILE__), "..", "..", "data", "ashp", "ashp_defaults.json"))
-    return ashp_defaults
+function get_ashp_defaults(load_served::String="SpaceHeating")
+    if !(load_served in ["SpaceHeating", "DomesticHotWater"])
+        throw(@error("Invalid inputs: argument `load_served` to function get_ashp_defaults() must be a String in the set ['SpaceHeating', 'DomesticHotWater']."))
+    end
+    all_ashp_defaults = JSON.parsefile(joinpath(dirname(@__FILE__), "..", "..", "data", "ashp", "ashp_defaults.json"))
+    return all_ashp_defaults[load_served]
 end

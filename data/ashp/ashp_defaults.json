@@ -1,11 +1,26 @@
-{
-    "installed_cost_per_ton": 4050,
-    "om_cost_per_ton": 0.00024,
-    "macrs_option_years": 0,
-    "macrs_bonus_fraction": 0.0,
-    "can_supply_steam_turbine": false,
-    "can_serve_process_heat": false,
-    "can_serve_dhw": false, 
-    "can_serve_space_heating": true,
-    "can_serve_cooling": true
+{   
+    "SpaceHeating":
+    {
+        "installed_cost_per_ton": 4050,
+        "om_cost_per_ton": 0.00024,
+        "macrs_option_years": 0,
+        "macrs_bonus_fraction": 0.0,
+        "can_supply_steam_turbine": false,
+        "can_serve_process_heat": false,
+        "can_serve_dhw": false, 
+        "can_serve_space_heating": true,
+        "can_serve_cooling": true
+    },
+    "DomesticHotWater":
+    {
+        "installed_cost_per_ton": 4050,
+        "om_cost_per_ton": 0.00024,
+        "macrs_option_years": 0,
+        "macrs_bonus_fraction": 0.0,
+        "can_supply_steam_turbine": false,
+        "can_serve_process_heat": false,
+        "can_serve_dhw": true, 
+        "can_serve_space_heating": false,
+        "can_serve_cooling": false
+    }
 }
