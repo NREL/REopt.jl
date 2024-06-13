@@ -6,18 +6,18 @@ function add_existing_hydropower_constraints(m,p)
 	if p.s.existing_hydropower.computation_type == "quadratic1" || p.s.existing_hydropower.computation_type == "quadratic2"
 		
 		if p.s.existing_hydropower.computation_type == "quadratic1"
-			@info "Adding quadratic1 constraint for power output"
+			@info "Adding quadratic1 constraint for power output, updated version"
 			@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower],
-			m[:dvRatedProduction][t,ts] == 9810*0.95*0.001 * m[:dvWaterOutFlow][t,ts] * ((m[:dvWaterVolume][t,ts] * p.s.existing_hydropower.linearized_stage_storage_slope_fraction) + p.s.existing_hydropower.linearized_stage_storage_y_intercept)
+			m[:dvRatedProduction][t,ts] == 9810*0.95*0.001 * m[:dvWaterOutFlow][t,ts] * ((m[:dvWaterVolume][ts] * p.s.existing_hydropower.linearized_stage_storage_slope_fraction) + p.s.existing_hydropower.linearized_stage_storage_y_intercept)
 			)
 		end
 		
 		if p.s.existing_hydropower.computation_type == "quadratic2"
-			@info "Adding quadratic2 constraint for power output"
+			@info "Adding quadratic2 constraint for power output, updated version"
 			@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower],
 			m[:dvRatedProduction][t,ts] == 9810*0.001 * m[:dvWaterOutFlow][t,ts] *
 											 (-0.0000973*((m[:dvWaterOutFlow][t,ts])^2) + (0.0189* m[:dvWaterOutFlow][t,ts]) + 0.0358 ) *
-											((m[:dvWaterVolume][t,ts] * p.s.existing_hydropower.linearized_stage_storage_slope_fraction) + p.s.existing_hydropower.linearized_stage_storage_y_intercept)
+											((m[:dvWaterVolume][ts] * p.s.existing_hydropower.linearized_stage_storage_slope_fraction) + p.s.existing_hydropower.linearized_stage_storage_y_intercept)
 			)
 		end
 
