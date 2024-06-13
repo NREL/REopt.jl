@@ -4,29 +4,15 @@ function add_existing_hydropower_constraints(m,p)
 	@info "Adding constraints for existing hydropower"
 		
 	if p.s.existing_hydropower.computation_type == "quadratic"
+		@info "Adding quadratic constraint for power output"
 		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower],
-			# the 0.001 below is for W to kW conversion
-			#@info "Adding quadratic constraint for power output"
 			
-			# Test 1: linear test
-			#m[:dvRatedProduction][t,ts] == 9810*0.95*0.001 * m[:dvWaterOutFlow][t,ts] * 5
-			#=
-			# Test 2: quadratic, with reservoir head calculation - this works
-			m[:dvRatedProduction][t,ts] == 9810*0.95*0.001 * m[:dvWaterOutFlow][t,ts] * ((m[:dvWaterVolume][t,ts] * p.s.existing_hydropower.linearized_stage_storage_slope_fraction) + p.s.existing_hydropower.linearized_stage_storage_y_intercept)
-			=#
-			#=
-			# Test 3: quadratic, linear efficiency calculation
-			m[:dvRatedProduction][t,ts] == 9810*0.001 * m[:dvWaterOutFlow][t,ts] *
-											 ((0.00507* m[:dvWaterOutFlow][t,ts]) + 0.338 ) *
-											((m[:dvWaterVolume][t,ts] * p.s.existing_hydropower.linearized_stage_storage_slope_fraction) + p.s.existing_hydropower.linearized_stage_storage_y_intercept)
-			=#
-
-			# Test 4: quadratic, polynomial efficiency calculation
 			m[:dvRatedProduction][t,ts] == 9810*0.001 * m[:dvWaterOutFlow][t,ts] *
 											 (-0.0000973*((m[:dvWaterOutFlow][t,ts])^2) + (0.0189* m[:dvWaterOutFlow][t,ts]) + 0.0358 ) *
 											((m[:dvWaterVolume][t,ts] * p.s.existing_hydropower.linearized_stage_storage_slope_fraction) + p.s.existing_hydropower.linearized_stage_storage_y_intercept)
 			
 		)
+		
 	#elseif p.s.existing_hydropower.computation_type == "linearized_constraints"
 		#TODO: add linearized constraints
 
