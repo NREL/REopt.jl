@@ -22,49 +22,41 @@ end
 """
 ASHP
 
-If a user provides the `ASHP` key then the optimal scenario has the option to purchase 
+If a user provides the `ASHP_SpaceHeater` key then the optimal scenario has the option to purchase 
 this new `ASHP` to meet the heating load in addition to using the `ExistingBoiler`
 to meet the heating load. 
 
 ```julia
-function ASHP(;
+function ASHP_SpaceHeater(;
     min_ton::Real = 0.0, # Minimum thermal power size
     max_ton::Real = BIG_NUMBER, # Maximum thermal power size
     installed_cost_per_ton::Union{Real, nothing} = nothing, # Thermal power-based cost
     om_cost_per_ton::Union{Real, nothing} = nothing, # Thermal power-based fixed O&M cost
     macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
-    can_supply_steam_turbine::Union{Bool, nothing} = nothing # If the boiler can supply steam to the steam turbine for electric production
     cop_heating::Array{Float64,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
     cop_cooling::Array{Float64,1}, # COP of the cooling (i.e., thermal produced / electricity consumed)
     cf_heating::Array{Float64,1}, # ASHP's heating capacity factor curves
     cf_cooling::Array{Float64,1}, # ASHP's cooling capacity factor curves
-    can_serve_dhw::Union{Bool, Nothing} = nothing # If ASHP can supply heat to the domestic hot water load
-    can_serve_space_heating::Union{Bool, Nothing} = nothing # If ASHP can supply heat to the space heating load
-    can_serve_process_heat::Union{Bool, Nothing} = nothing # If ASHP can supply heat to the process heating load
     can_serve_cooling::Union{Bool, Nothing} = nothing # If ASHP can supply heat to the cooling load
 )
 ```
 """
-function ASHP(;
+function ASHP_SpaceHeater(;
         min_ton::Real = 0.0,
         max_ton::Real = BIG_NUMBER,
         installed_cost_per_ton::Union{Real, Nothing} = nothing,
         om_cost_per_ton::Union{Real, Nothing} = nothing,
         macrs_option_years::Int = 0,
         macrs_bonus_fraction::Real = 0.0,
-        can_supply_steam_turbine::Union{Bool, Nothing} = nothing,
         cop_heating::Array{Float64,1} = Float64[],
         cop_cooling::Array{Float64,1} = Float64[],
         cf_heating::Array{Float64,1} = Float64[],
         cf_cooling::Array{Float64,1} = Float64[],
-        can_serve_dhw::Union{Bool, Nothing} = nothing,
-        can_serve_space_heating::Union{Bool, Nothing} = nothing,
-        can_serve_process_heat::Union{Bool, Nothing} = nothing,
         can_serve_cooling::Union{Bool, Nothing} = nothing
     )
 
-    defaults = get_ashp_defaults()
+    defaults = get_ashp_defaults("SpaceHeating")
 
     # populate defaults as needed
     if isnothing(installed_cost_per_ton)
@@ -73,21 +65,16 @@ function ASHP(;
     if isnothing(om_cost_per_ton)
         om_cost_per_ton = defaults["om_cost_per_ton"]
     end
-    if isnothing(can_supply_steam_turbine)
-        can_supply_steam_turbine = defaults["can_supply_steam_turbine"]
-    end
-    if isnothing(can_serve_dhw)
-        can_serve_dhw = defaults["can_serve_dhw"]
-    end
-    if isnothing(can_serve_space_heating)
-        can_serve_space_heating = defaults["can_serve_space_heating"]
-    end
-    if isnothing(can_serve_process_heat)
-        can_serve_process_heat = defaults["can_serve_process_heat"]
-    end
     if isnothing(can_serve_cooling)
         can_serve_cooling = defaults["can_serve_cooling"]
     end
+
+    #pre-set defaults that aren't mutable due to technology specifications
+    can_supply_steam_turbine = defaults["can_supply_steam_turbine"]
+    can_serve_space_heating = defaults["can_serve_space_heating"]
+    can_serve_dhw = defaults["can_serve_dhw"]
+    can_serve_process_heat = defaults["can_serve_process_heat"]
+    
 
     # Convert max sizes, cost factors from mmbtu_per_hour to kw
     min_kw = min_ton * KWH_THERMAL_PER_TONHOUR
