@@ -9,7 +9,7 @@
         "fuel_type": "natural_gas",
         "fuel_cost_per_mmbtu": 5
     },
-    "ASHP": {
+    "ASHP_SpaceHeater": {
         "min_ton": 0.0,
         "max_ton": 100000,
         "installed_cost_per_ton": 4050,

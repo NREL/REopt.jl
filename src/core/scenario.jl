@@ -26,7 +26,7 @@ struct Scenario <: AbstractScenario
     steam_turbine::Union{SteamTurbine, Nothing}
     electric_heater::Union{ElectricHeater, Nothing}
     ashp::Union{ASHP, Nothing}
-    ashp_wh::Union{ASHP_WH, Nothing}
+    ashp_wh::Union{ASHP, Nothing}
 end
 
 """
@@ -54,7 +54,8 @@ A Scenario struct can contain the following keys:
 - [GHP](@ref) (optional, can be Array)
 - [SteamTurbine](@ref) (optional)
 - [ElectricHeater](@ref) (optional)
-- [ASHP](@ref) (optional)
+- [ASHP_SpaceHeater](@ref) (optional)
+- [ASHP_WaterHeater](@ref) (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
 
@@ -659,10 +660,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     cop_cooling = []
     cf_heating = []
     cf_cooling = []
-    if haskey(d, "ASHP") && d["ASHP"]["max_ton"] > 0.0
+    if haskey(d, "ASHP_SpaceHeater") && d["ASHP_SpaceHeater"]["max_ton"] > 0.0
         # Add ASHP's COPs
         # If user does not provide heating cop series then assign cop curves based on ambient temperature
-        if !haskey(d["ASHP"], "cop_heating") || !haskey(d["ASHP"], "cop_cooling")
+        if !haskey(d["ASHP_SpaceHeater"], "cop_heating") || !haskey(d["ASHP_SpaceHeater"], "cop_cooling")
             # If PV is evaluated, get ambient temperature series from PVWatts and assign PV production factor
             if isnothing(ambient_temp_celsius)
                 if !isempty(pvs)
@@ -678,51 +679,51 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             end
             ambient_temp_fahrenheit = (9/5 .* ambient_temp_celsius) .+ 32
 
-            if !haskey(d["ASHP"], "cop_heating")
+            if !haskey(d["ASHP_SpaceHeater"], "cop_heating")
                 cop_heating = round.(0.0462 .* ambient_temp_fahrenheit .+ 1.351, digits=3)
                 cop_heating[ambient_temp_fahrenheit .< -7.6] .= 1
                 cop_heating[ambient_temp_fahrenheit .> 79] .= 999999
             else
-                cop_heating = round.(d["ASHP"]["cop_heating"],digits=3)
+                cop_heating = round.(d["ASHP_SpaceHeater"]["cop_heating"],digits=3)
             end
 
-            if !haskey(d["ASHP"], "cop_cooling")
+            if !haskey(d["ASHP_SpaceHeater"], "cop_cooling")
                 cop_cooling = round.(-0.044 .* ambient_temp_fahrenheit .+ 6.822, digits=3)
                 cop_cooling[ambient_temp_celsius .< 25] .= 999999
                 cop_cooling[ambient_temp_celsius .> 40] .= 1
             else
-                cop_cooling = round.(d["ASHP"]["cop_cooling"], digits=3)
+                cop_cooling = round.(d["ASHP_SpaceHeater"]["cop_cooling"], digits=3)
             end
         else
             # Else if the user already provide cop series, use that
-            cop_heating = round.(d["ASHP"]["cop_heating"],digits=3)
-            cop_cooling = round.(d["ASHP"]["cop_cooling"],digits=3)
+            cop_heating = round.(d["ASHP_SpaceHeater"]["cop_heating"],digits=3)
+            cop_cooling = round.(d["ASHP_SpaceHeater"]["cop_cooling"],digits=3)
         end
-        d["ASHP"]["cop_heating"] = cop_heating
-        d["ASHP"]["cop_cooling"] = cop_cooling
+        d["ASHP_SpaceHeater"]["cop_heating"] = cop_heating
+        d["ASHP_SpaceHeater"]["cop_cooling"] = cop_cooling
 
         # Add ASHP's capacity factor curves
-        if !haskey(d["ASHP"], "cf_heating") || !haskey(d["ASHP"], "cf_cooling")
-            if !haskey(d["ASHP"], "cf_heating")
+        if !haskey(d["ASHP_SpaceHeater"], "cf_heating") || !haskey(d["ASHP_SpaceHeater"], "cf_cooling")
+            if !haskey(d["ASHP_SpaceHeater"], "cf_heating")
                 cf_heating = round.(0.0116 .* ambient_temp_fahrenheit .+ 0.4556, digits=3)
             else
-                cf_heating = round.(d["ASHP"]["cf_heating"],digits=3)
+                cf_heating = round.(d["ASHP_SpaceHeater"]["cf_heating"],digits=3)
             end
 
-            if !haskey(d["ASHP"], "cf_cooling")
+            if !haskey(d["ASHP_SpaceHeater"], "cf_cooling")
                 cf_cooling = round.(-0.0056 .* ambient_temp_fahrenheit .+ 1.4778, digits=3)
             else
-                cf_cooling = round.(d["ASHP"]["cf_cooling"],digits=3)
+                cf_cooling = round.(d["ASHP_SpaceHeater"]["cf_cooling"],digits=3)
             end
 
         else
             # Else if the user already provide cf curves, use them
-            cf_heating = round.(d["ASHP"]["cf_heating"],digits=3)
-            cf_cooling = round.(d["ASHP"]["cf_cooling"],digits=3)
+            cf_heating = round.(d["ASHP_SpaceHeater"]["cf_heating"],digits=3)
+            cf_cooling = round.(d["ASHP_SpaceHeater"]["cf_cooling"],digits=3)
         end
-        d["ASHP"]["cf_heating"] = cf_heating
-        d["ASHP"]["cf_cooling"] = cf_cooling
-        ashp = ASHP(;dictkeys_tosymbols(d["ASHP"])...)
+        d["ASHP_SpaceHeater"]["cf_heating"] = cf_heating
+        d["ASHP_SpaceHeater"]["cf_cooling"] = cf_cooling
+        ashp = ASHP_SpaceHeater(;dictkeys_tosymbols(d["ASHP_SpaceHeater"])...)
     end
 
     # ASHP Water Heater:
@@ -730,10 +731,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     cop_heating = []
     cf_heating = []
 
-    if haskey(d, "ASHP_WH") && d["ASHP_WH"]["max_ton"] > 0.0
+    if haskey(d, "ASHP_WaterHeater") && d["ASHP_WaterHeater"]["max_ton"] > 0.0
         # Add ASHP_WH's COPs
         # If user does not provide heating cop series then assign cop curves based on ambient temperature
-        if !haskey(d["ASHP_WH"], "cop_heating")
+        if !haskey(d["ASHP_WaterHeater"], "cop_heating")
             # If PV is evaluated, get ambient temperature series from PVWatts and assign PV production factor
             if isnothing(ambient_temp_celsius)
                 if !isempty(pvs)
@@ -749,32 +750,32 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             end
             ambient_temp_fahrenheit = (9/5 .* ambient_temp_celsius) .+ 32
 
-            if !haskey(d["ASHP_WH"], "cop_heating")
+            if !haskey(d["ASHP_WaterHeater"], "cop_heating")
                 cop_heating = round.(0.0462 .* ambient_temp_fahrenheit .+ 1.351, digits=3)
                 cop_heating[ambient_temp_fahrenheit .< -7.6] .= 1
                 cop_heating[ambient_temp_fahrenheit .> 79] .= 999999
             else
-                cop_heating = round.(d["ASHP_WH"]["cop_heating"],digits=3)
+                cop_heating = round.(d["ASHP_WaterHeater"]["cop_heating"],digits=3)
             end
         else
             # Else if the user already provide cop series, use that
-            cop_heating = round.(d["ASHP_WH"]["cop_heating"],digits=3)
+            cop_heating = round.(d["ASHP_WaterHeater"]["cop_heating"],digits=3)
         end
-        d["ASHP_WH"]["cop_heating"] = cop_heating
+        d["ASHP_WaterHeater"]["cop_heating"] = cop_heating
 
         # Add ASHP_WH's capacity factor curves
-        if !haskey(d["ASHP_WH"], "cf_heating")
-            if !haskey(d["ASHP_WH"], "cf_heating")
+        if !haskey(d["ASHP_WaterHeater"], "cf_heating")
+            if !haskey(d["ASHP_WaterHeater"], "cf_heating")
                 cf_heating = round.(0.0116 .* ambient_temp_fahrenheit .+ 0.4556, digits=3)
             else
-                cf_heating = round.(d["ASHP_WH"]["cf_heating"],digits=3)
+                cf_heating = round.(d["ASHP_WaterHeater"]["cf_heating"],digits=3)
             end
         else
             # Else if the user already provide cf curves, use them
-            cf_heating = round.(d["ASHP_WH"]["cf_heating"],digits=3)
+            cf_heating = round.(d["ASHP_WaterHeater"]["cf_heating"],digits=3)
         end
-        d["ASHP_WH"]["cf_heating"] = cf_heating
-        ashp_wh = ASHP_WH(;dictkeys_tosymbols(d["ASHP_WH"])...)
+        d["ASHP_WaterHeater"]["cf_heating"] = cf_heating
+        ashp_wh = ASHP_WaterHeater(;dictkeys_tosymbols(d["ASHP_WaterHeater"])...)
     end
 
     return Scenario(

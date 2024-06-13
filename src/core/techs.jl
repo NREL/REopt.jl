@@ -270,46 +270,46 @@ function Techs(s::Scenario)
     end
 
     if !isnothing(s.ashp)
-        push!(all_techs, "ASHP")
-        push!(heating_techs, "ASHP")
-        push!(electric_heaters, "ASHP")
-        push!(ashp_techs, "ASHP")
+        push!(all_techs, "ASHP_SpaceHeater")
+        push!(heating_techs, "ASHP_SpaceHeater")
+        push!(electric_heaters, "ASHP_SpaceHeater")
+        push!(ashp_techs, "ASHP_SpaceHeater")
         if s.ashp.can_supply_steam_turbine
-            push!(techs_can_supply_steam_turbine, "ASHP")
+            push!(techs_can_supply_steam_turbine, "ASHP_SpaceHeater")
         end
         if s.ashp.can_serve_space_heating
-            push!(techs_can_serve_space_heating, "ASHP")
+            push!(techs_can_serve_space_heating, "ASHP_SpaceHeater")
         end
         if s.ashp.can_serve_dhw
-            push!(techs_can_serve_dhw, "ASHP")
+            push!(techs_can_serve_dhw, "ASHP_SpaceHeater")
         end
         if s.ashp.can_serve_process_heat
-            push!(techs_can_serve_process_heat, "ASHP")
+            push!(techs_can_serve_process_heat, "ASHP_SpaceHeater")
         end
         if s.ashp.can_serve_cooling
-            push!(cooling_techs, "ASHP")
+            push!(cooling_techs, "ASHP_SpaceHeater")
         end
     end
 
     if !isnothing(s.ashp_wh)
-        push!(all_techs, "ASHP_WH")
-        push!(heating_techs, "ASHP_WH")
-        push!(electric_heaters, "ASHP_WH")
-        push!(ashp_wh_techs, "ASHP_WH")
+        push!(all_techs, "ASHP_WaterHeater")
+        push!(heating_techs, "ASHP_WaterHeater")
+        push!(electric_heaters, "ASHP_WaterHeater")
+        push!(ashp_wh_techs, "ASHP_WaterHeater")
         if s.ashp_wh.can_supply_steam_turbine
-            push!(techs_can_supply_steam_turbine, "ASHP_WH")
+            push!(techs_can_supply_steam_turbine, "ASHP_WaterHeater")
         end
         if s.ashp_wh.can_serve_space_heating
-            push!(techs_can_serve_space_heating, "ASHP_WH")
+            push!(techs_can_serve_space_heating, "ASHP_WaterHeater")
         end
         if s.ashp_wh.can_serve_dhw
-            push!(techs_can_serve_dhw, "ASHP_WH")
+            push!(techs_can_serve_dhw, "ASHP_WaterHeater")
         end
         if s.ashp_wh.can_serve_process_heat
-            push!(techs_can_serve_process_heat, "ASHP_WH")
+            push!(techs_can_serve_process_heat, "ASHP_WaterHeater")
         end
         if s.ashp_wh.can_serve_cooling
-            push!(cooling_techs, "ASHP_WH")
+            push!(cooling_techs, "ASHP_WaterHeater")
         end
     end
 

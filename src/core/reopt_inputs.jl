@@ -443,20 +443,20 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
         heating_cf["ElectricHeater"] = zeros(length(time_steps))
     end
 
-    if "ASHP" in techs.all
+    if "ASHP_SpaceHeater" in techs.all
         setup_ashp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, cooling_cop, heating_cf, cooling_cf)
     else
-        heating_cop["ASHP"] = ones(length(time_steps))
-        cooling_cop["ASHP"] = ones(length(time_steps))
-        heating_cf["ASHP"] = zeros(length(time_steps))
-        cooling_cf["ASHP"] = zeros(length(time_steps))
+        heating_cop["ASHP_SpaceHeater"] = ones(length(time_steps))
+        cooling_cop["ASHP_SpaceHeater"] = ones(length(time_steps))
+        heating_cf["ASHP_SpaceHeater"] = zeros(length(time_steps))
+        cooling_cf["ASHP_SpaceHeater"] = zeros(length(time_steps))
     end
 
-    if "ASHP_WH" in techs.all
-        setup_ashp_wh_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf)
+    if "ASHP_WaterHeater" in techs.all
+        setup_ASHP_WaterHeater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf)
     else
-        heating_cop["ASHP_WH"] = ones(length(time_steps))
-        heating_cf["ASHP_WH"] = zeros(length(time_steps))
+        heating_cop["ASHP_WaterHeater"] = ones(length(time_steps))
+        heating_cf["ASHP_WaterHeater"] = zeros(length(time_steps))
     end
 
     if !isempty(techs.ghp)
@@ -935,16 +935,16 @@ function setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, o
 end
 
 function setup_ashp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, cooling_cop, heating_cf, cooling_cf)
-    max_sizes["ASHP"] = s.ashp.max_kw
-    min_sizes["ASHP"] = s.ashp.min_kw
-    om_cost_per_kw["ASHP"] = s.ashp.om_cost_per_kw
-    heating_cop["ASHP"] = s.ashp.cop_heating
-    cooling_cop["ASHP"] = s.ashp.cop_cooling
-    heating_cf["ASHP"] = s.ashp.cf_heating
-    cooling_cf["ASHP"] = s.ashp.cf_cooling
+    max_sizes["ASHP_SpaceHeater"] = s.ashp.max_kw
+    min_sizes["ASHP_SpaceHeater"] = s.ashp.min_kw
+    om_cost_per_kw["ASHP_SpaceHeater"] = s.ashp.om_cost_per_kw
+    heating_cop["ASHP_SpaceHeater"] = s.ashp.cop_heating
+    cooling_cop["ASHP_SpaceHeater"] = s.ashp.cop_cooling
+    heating_cf["ASHP_SpaceHeater"] = s.ashp.cf_heating
+    cooling_cf["ASHP_SpaceHeater"] = s.ashp.cf_cooling
 
     if s.ashp.macrs_option_years in [5, 7]
-        cap_cost_slope["ASHP"] = effective_cost(;
+        cap_cost_slope["ASHP_SpaceHeater"] = effective_cost(;
             itc_basis = s.ashp.installed_cost_per_kw,
             replacement_cost = 0.0,
             replacement_year = s.financial.analysis_years,
@@ -957,20 +957,20 @@ function setup_ashp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_
             rebate_per_kw = 0.0
         )
     else
-        cap_cost_slope["ASHP"] = s.ashp.installed_cost_per_kw
+        cap_cost_slope["ASHP_SpaceHeater"] = s.ashp.installed_cost_per_kw
     end
 
 end
 
-function setup_ashp_wh_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf)
-    max_sizes["ASHP_WH"] = s.ashp_wh.max_kw
-    min_sizes["ASHP_WH"] = s.ashp_wh.min_kw
-    om_cost_per_kw["ASHP_WH"] = s.ashp_wh.om_cost_per_kw
-    heating_cop["ASHP_WH"] = s.ashp_wh.cop_heating
-    heating_cf["ASHP_WH"] = s.ashp_wh.cf_heating
+function setup_ASHP_WaterHeater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf)
+    max_sizes["ASHP_WaterHeater"] = s.ashp_wh.max_kw
+    min_sizes["ASHP_WaterHeater"] = s.ashp_wh.min_kw
+    om_cost_per_kw["ASHP_WaterHeater"] = s.ashp_wh.om_cost_per_kw
+    heating_cop["ASHP_WaterHeater"] = s.ashp_wh.cop_heating
+    heating_cf["ASHP_WaterHeater"] = s.ashp_wh.cf_heating
 
     if s.ashp_wh.macrs_option_years in [5, 7]
-        cap_cost_slope["ASHP_WH"] = effective_cost(;
+        cap_cost_slope["ASHP_WaterHeater"] = effective_cost(;
             itc_basis = s.ashp_wh.installed_cost_per_kw,
             replacement_cost = 0.0,
             replacement_year = s.financial.analysis_years,
@@ -983,7 +983,7 @@ function setup_ashp_wh_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_p
             rebate_per_kw = 0.0
         )
     else
-        cap_cost_slope["ASHP_WH"] = s.ashp_wh.installed_cost_per_kw
+        cap_cost_slope["ASHP_WaterHeater"] = s.ashp_wh.installed_cost_per_kw
     end
 
 end
