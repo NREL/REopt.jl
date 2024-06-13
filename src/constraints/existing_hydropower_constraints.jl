@@ -3,22 +3,30 @@
 function add_existing_hydropower_constraints(m,p)
 	@info "Adding constraints for existing hydropower"
 		
-	if p.s.existing_hydropower.computation_type == "quadratic"
-		@info "Adding quadratic constraint for power output"
-		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower],
-			
+	if p.s.existing_hydropower.computation_type == "quadratic1" || p.s.existing_hydropower.computation_type == "quadratic2"
+		
+		if p.s.existing_hydropower.computation_type == "quadratic1"
+			@info "Adding quadratic1 constraint for power output"
+			@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower],
+			m[:dvRatedProduction][t,ts] == 9810*0.95*0.001 * m[:dvWaterOutFlow][t,ts] * ((m[:dvWaterVolume][t,ts] * p.s.existing_hydropower.linearized_stage_storage_slope_fraction) + p.s.existing_hydropower.linearized_stage_storage_y_intercept)
+			)
+		end
+		
+		if p.s.existing_hydropower.computation_type == "quadratic2"
+			@info "Adding quadratic2 constraint for power output"
+			@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower],
 			m[:dvRatedProduction][t,ts] == 9810*0.001 * m[:dvWaterOutFlow][t,ts] *
 											 (-0.0000973*((m[:dvWaterOutFlow][t,ts])^2) + (0.0189* m[:dvWaterOutFlow][t,ts]) + 0.0358 ) *
 											((m[:dvWaterVolume][t,ts] * p.s.existing_hydropower.linearized_stage_storage_slope_fraction) + p.s.existing_hydropower.linearized_stage_storage_y_intercept)
-			
-		)
-		
+			)
+		end
+
 	#elseif p.s.existing_hydropower.computation_type == "linearized_constraints"
 		#TODO: add linearized constraints
 
 	elseif p.s.existing_hydropower.computation_type == "average_power_conversion"
 		# This is a simplified constraint that uses an average conversion for water flow and kW output
-		@info "Adding hydropower power output constraing using the average power conversion"
+		@info "Adding hydropower power output constraint using the average power conversion"
 
 		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower],
 				m[:dvRatedProduction][t,ts] == m[:dvWaterOutFlow][t,ts] * (1/p.s.existing_hydropower.average_cubic_meters_per_second_per_kw) # convert to kW/time step, for instance: m3/15min  * kwh/m3 * (0.25 hrs/1hr)
