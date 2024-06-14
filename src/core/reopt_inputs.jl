@@ -444,7 +444,7 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     end
 
     if "ASHP_SpaceHeater" in techs.all
-        setup_ashp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, cooling_cop, heating_cf, cooling_cf)
+        setup_ashp_spaceheater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, cooling_cop, heating_cf, cooling_cf)
     else
         heating_cop["ASHP_SpaceHeater"] = ones(length(time_steps))
         cooling_cop["ASHP_SpaceHeater"] = ones(length(time_steps))
@@ -453,7 +453,7 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     end
 
     if "ASHP_WaterHeater" in techs.all
-        setup_ASHP_WaterHeater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf)
+        setup_ashp_waterheater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf)
     else
         heating_cop["ASHP_WaterHeater"] = ones(length(time_steps))
         heating_cf["ASHP_WaterHeater"] = zeros(length(time_steps))
@@ -934,7 +934,7 @@ function setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, o
 
 end
 
-function setup_ashp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, cooling_cop, heating_cf, cooling_cf)
+function setup_ashp_spaceheater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, cooling_cop, heating_cf, cooling_cf)
     max_sizes["ASHP_SpaceHeater"] = s.ashp.max_kw
     min_sizes["ASHP_SpaceHeater"] = s.ashp.min_kw
     om_cost_per_kw["ASHP_SpaceHeater"] = s.ashp.om_cost_per_kw
@@ -962,7 +962,7 @@ function setup_ashp_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_
 
 end
 
-function setup_ASHP_WaterHeater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf)
+function setup_ashp_waterheater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf)
     max_sizes["ASHP_WaterHeater"] = s.ashp_wh.max_kw
     min_sizes["ASHP_WaterHeater"] = s.ashp_wh.min_kw
     om_cost_per_kw["ASHP_WaterHeater"] = s.ashp_wh.om_cost_per_kw
