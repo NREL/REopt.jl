@@ -2400,11 +2400,10 @@ else  # run HiGHS tests
 
         end
 
-        @testset "ASHP_SpaceHeater" begin
+        @testset "ASHP Space Heater" begin
             #Case 1: Boiler and existing chiller produce the required heat and cooling - ASHP is not purchased
             d = JSON.parsefile("./scenarios/ashp.json")
-            d["SpaceHeatingLoad"]["annual_mmbtu"] = 0.5 * 8760
-            d["DomesticHotWaterLoad"]["annual_mmbtu"] = 0.5 * 8760
+            d["SpaceHeatingLoad"]["annual_mmbtu"] = 1.0 * 8760
 
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(m, d)
