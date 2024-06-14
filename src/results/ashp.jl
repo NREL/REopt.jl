@@ -27,12 +27,12 @@ function add_ashp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
     r["size_ton"] = round(value(m[Symbol("dvSize"*_n)]["ASHP_SpaceHeater"]) / KWH_THERMAL_PER_TONHOUR, digits=3)
     @expression(m, ASHPElectricConsumptionSeries[ts in p.time_steps],
-        p.hours_per_time_step * sum(m[:dvHeatingProduction][t,q,ts] / p.heating_cop[t][ts]
-        for q in p.heating_loads, t in p.techs.ashp) 
+        p.hours_per_time_step * sum(m[:dvHeatingProduction]["ASHP_SpaceHeater",q,ts] for q in p.heating_loads)
+        / p.heating_cop["ASHP_SpaceHeater"][ts]
     ) 
 
     @expression(m, ASHPThermalProductionSeries[ts in p.time_steps],
-        sum(m[:dvHeatingProduction][t,q,ts] for q in p.heating_loads, t in p.techs.ashp)) # TODO add cooling
+        sum(m[:dvHeatingProduction]["ASHP_SpaceHeater",q,ts] for q in p.heating_loads)) # TODO add cooling
 	r["thermal_production_series_mmbtu_per_hour"] = 
         round.(value.(ASHPThermalProductionSeries) / KWH_PER_MMBTU, digits=5)
 	r["annual_thermal_production_mmbtu"] = round(sum(r["thermal_production_series_mmbtu_per_hour"]), digits=3)
@@ -50,46 +50,19 @@ function add_ashp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     end
 	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(ASHPToHotTESKW) / KWH_PER_MMBTU, digits=3)
 
-    if !isempty(p.techs.steam_turbine) && p.s.ashp.can_supply_steam_turbine
-        @expression(m, ASHPToSteamTurbine[ts in p.time_steps], sum(m[:dvThermalToSteamTurbine]["ASHP_SpaceHeater",q,ts] for q in p.heating_loads))
-        @expression(m, ASHPToSteamTurbineByQuality[q in p.heating_loads, ts in p.time_steps], m[:dvThermalToSteamTurbine]["ASHP_SpaceHeater",q,ts])
-    else
-        ASHPToSteamTurbine = zeros(length(p.time_steps))
-        @expression(m, ASHPToSteamTurbineByQuality[q in p.heating_loads, ts in p.time_steps], 0.0)
-    end
-    r["thermal_to_steamturbine_series_mmbtu_per_hour"] = round.(value.(ASHPToSteamTurbine) / KWH_PER_MMBTU, digits=3)
-
 	@expression(m, ASHPToLoad[ts in p.time_steps],
-		sum(m[:dvHeatingProduction]["ASHP_SpaceHeater", q, ts] for q in p.heating_loads) - ASHPToHotTESKW[ts] - ASHPToSteamTurbine[ts]
+		sum(m[:dvHeatingProduction]["ASHP_SpaceHeater", q, ts] for q in p.heating_loads) - ASHPToHotTESKW[ts]
     )
 	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(ASHPToLoad) ./ KWH_PER_MMBTU, digits=3)
-
-    if "DomesticHotWater" in p.heating_loads && p.s.ashp.can_serve_dhw
-        @expression(m, ASHPToDHWKW[ts in p.time_steps], 
-            m[:dvHeatingProduction]["ASHP_SpaceHeater","DomesticHotWater",ts] - ASHPToHotTESByQualityKW["DomesticHotWater",ts] - ASHPToSteamTurbineByQuality["DomesticHotWater",ts]
-        )
-    else
-        @expression(m, ASHPToDHWKW[ts in p.time_steps], 0.0)
-    end
-    r["thermal_to_dhw_load_series_mmbtu_per_hour"] = round.(value.(ASHPToDHWKW ./ KWH_PER_MMBTU), digits=5)
     
     if "SpaceHeating" in p.heating_loads && p.s.ashp.can_serve_space_heating
         @expression(m, ASHPToSpaceHeatingKW[ts in p.time_steps], 
-            m[:dvHeatingProduction]["ASHP_SpaceHeater","SpaceHeating",ts] - ASHPToHotTESByQualityKW["SpaceHeating",ts] - ASHPToSteamTurbineByQuality["SpaceHeating",ts]
+            m[:dvHeatingProduction]["ASHP_SpaceHeater","SpaceHeating",ts] - ASHPToHotTESByQualityKW["SpaceHeating",ts]
         )
     else
         @expression(m, ASHPToSpaceHeatingKW[ts in p.time_steps], 0.0)
     end
     r["thermal_to_space_heating_load_series_mmbtu_per_hour"] = round.(value.(ASHPToSpaceHeatingKW ./ KWH_PER_MMBTU), digits=5)
-    
-    if "ProcessHeat" in p.heating_loads && p.s.ashp.can_serve_space_heating
-        @expression(m, ASHPToProcessHeatKW[ts in p.time_steps], 
-            m[:dvHeatingProduction]["ASHP_SpaceHeater","ProcessHeat",ts] - ASHPToHotTESByQualityKW["ProcessHeat",ts] - ASHPToSteamTurbineByQuality["ProcessHeat",ts]
-        )
-    else
-        @expression(m, ASHPToProcessHeatKW[ts in p.time_steps], 0.0)
-    end
-    r["thermal_to_process_heat_load_series_mmbtu_per_hour"] = round.(value.(ASHPToProcessHeatKW ./ KWH_PER_MMBTU), digits=5)
     
     if "ASHP_SpaceHeater" in p.techs.cooling && sum(p.s.cooling_load.loads_kw_thermal) > 0.0
 
@@ -109,8 +82,7 @@ function add_ashp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
         r["annual_thermal_production_tonhour"] = round(value(Year1ASHPColdThermalProd / KWH_THERMAL_PER_TONHOUR), digits=3)
         
         @expression(m, ASHPColdElectricConsumptionSeries[ts in p.time_steps], 
-            p.hours_per_time_step * sum(m[:dvCoolingProduction][t,ts] / p.cooling_cop[t][ts] 
-            for t in p.techs.ashp)
+            p.hours_per_time_step * m[:dvCoolingProduction]["ASHP_SpaceHeater",ts] / p.cooling_cop["ASHP_SpaceHeater"][ts] 
         )
     else
         r["thermal_to_storage_series_ton"] = zeros(length(p.time_steps))
