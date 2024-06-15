@@ -8,10 +8,10 @@ struct ASHP <: AbstractThermalTech
     macrs_option_years::Int
     macrs_bonus_fraction::Real
     can_supply_steam_turbine::Bool
-    cop_heating::Array{Float64,1}
-    cop_cooling::Array{Float64,1}
-    cf_heating::Array{Float64,1}
-    cf_cooling::Array{Float64,1}
+    heating_cop::Array{Float64,1}
+    cooling_cop::Array{Float64,1}
+    heating_cf::Array{Float64,1}
+    cooling_cf::Array{Float64,1}
     can_serve_dhw::Bool
     can_serve_space_heating::Bool
     can_serve_process_heat::Bool
@@ -35,10 +35,10 @@ function ASHP_SpaceHeater(;
     om_cost_per_ton::Union{Real, nothing} = nothing, # Thermal power-based fixed O&M cost
     macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
-    cop_heating::Array{Float64,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
-    cop_cooling::Array{Float64,1}, # COP of the cooling (i.e., thermal produced / electricity consumed)
-    cf_heating::Array{Float64,1}, # ASHP's heating capacity factor curves
-    cf_cooling::Array{Float64,1}, # ASHP's cooling capacity factor curves
+    heating_cop::Array{Float64,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
+    cooling_cop::Array{Float64,1}, # COP of the cooling (i.e., thermal produced / electricity consumed)
+    heating_cf::Array{Float64,1}, # ASHP's heating capacity factor curves
+    cooling_cf::Array{Float64,1}, # ASHP's cooling capacity factor curves
     can_serve_cooling::Union{Bool, Nothing} = nothing # If ASHP can supply heat to the cooling load
     force_into_system::Bool = false # force into system to serve all space heating loads if true
 )
@@ -51,10 +51,10 @@ function ASHP_SpaceHeater(;
         om_cost_per_ton::Union{Real, Nothing} = nothing,
         macrs_option_years::Int = 0,
         macrs_bonus_fraction::Real = 0.0,
-        cop_heating::Array{Float64,1} = Float64[],
-        cop_cooling::Array{Float64,1} = Float64[],
-        cf_heating::Array{Float64,1} = Float64[],
-        cf_cooling::Array{Float64,1} = Float64[],
+        heating_cop::Array{Float64,1} = Float64[],
+        cooling_cop::Array{Float64,1} = Float64[],
+        heating_cf::Array{Float64,1} = Float64[],
+        cooling_cf::Array{Float64,1} = Float64[],
         can_serve_cooling::Union{Bool, Nothing} = nothing,
         force_into_system::Bool = false
     )
@@ -95,10 +95,10 @@ function ASHP_SpaceHeater(;
         macrs_option_years,
         macrs_bonus_fraction,
         can_supply_steam_turbine,
-        cop_heating,
-        cop_cooling,
-        cf_heating,
-        cf_cooling,
+        heating_cop,
+        cooling_cop,
+        heating_cf,
+        cooling_cf,
         can_serve_dhw,
         can_serve_space_heating,
         can_serve_process_heat,
@@ -124,7 +124,7 @@ function ASHP_WaterHeater(;
     macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
     can_supply_steam_turbine::Union{Bool, nothing} = nothing # If the boiler can supply steam to the steam turbine for electric production
-    cop_heating::Array{<:Real,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
+    heating_cop::Array{<:Real,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
     force_into_system::Bool = false # force into system to serve all hot water loads if true
 )
 ```
@@ -136,8 +136,8 @@ function ASHP_WaterHeater(;
     om_cost_per_ton::Union{Real, Nothing} = nothing,
     macrs_option_years::Int = 0,
     macrs_bonus_fraction::Real = 0.0,
-    cop_heating::Array{Float64,1} = Float64[],
-    cf_heating::Array{Float64,1} = Float64[],
+    heating_cop::Array{Float64,1} = Float64[],
+    heating_cf::Array{Float64,1} = Float64[],
     force_into_system::Bool = false
     )
 
@@ -174,9 +174,9 @@ function ASHP_WaterHeater(;
         macrs_option_years,
         macrs_bonus_fraction,
         can_supply_steam_turbine,
-        cop_heating,
+        heating_cop,
         Float64[],
-        cf_heating,
+        heating_cf,
         Float64[],
         can_serve_dhw,
         can_serve_space_heating,
