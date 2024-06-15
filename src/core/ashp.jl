@@ -16,11 +16,12 @@ struct ASHP <: AbstractThermalTech
     can_serve_space_heating::Bool
     can_serve_process_heat::Bool
     can_serve_cooling::Bool
+    force_into_system::Bool
 end
 
 
 """
-ASHP
+ASHP_SpaceHeater
 
 If a user provides the `ASHP_SpaceHeater` key then the optimal scenario has the option to purchase 
 this new `ASHP` to meet the heating load in addition to using the `ExistingBoiler`
@@ -39,6 +40,7 @@ function ASHP_SpaceHeater(;
     cf_heating::Array{Float64,1}, # ASHP's heating capacity factor curves
     cf_cooling::Array{Float64,1}, # ASHP's cooling capacity factor curves
     can_serve_cooling::Union{Bool, Nothing} = nothing # If ASHP can supply heat to the cooling load
+    force_into_system::Bool = false # force into system to serve all space heating loads if true
 )
 ```
 """
@@ -53,7 +55,8 @@ function ASHP_SpaceHeater(;
         cop_cooling::Array{Float64,1} = Float64[],
         cf_heating::Array{Float64,1} = Float64[],
         cf_cooling::Array{Float64,1} = Float64[],
-        can_serve_cooling::Union{Bool, Nothing} = nothing
+        can_serve_cooling::Union{Bool, Nothing} = nothing,
+        force_into_system::Bool = false
     )
 
     defaults = get_ashp_defaults("SpaceHeating")
@@ -99,13 +102,14 @@ function ASHP_SpaceHeater(;
         can_serve_dhw,
         can_serve_space_heating,
         can_serve_process_heat,
-        can_serve_cooling
+        can_serve_cooling,
+        force_into_system
     )
 end
 
 
 """
-ASHP Water Heater
+ASHP Water_Heater
 
 If a user provides the `ASHP_WaterHeater` key then the optimal scenario has the option to purchase 
 this new `ASHP_WaterHeater` to meet the domestic hot water load in addition to using the `ExistingBoiler`
@@ -121,6 +125,7 @@ function ASHP_WaterHeater(;
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
     can_supply_steam_turbine::Union{Bool, nothing} = nothing # If the boiler can supply steam to the steam turbine for electric production
     cop_heating::Array{<:Real,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
+    force_into_system::Bool = false # force into system to serve all hot water loads if true
 )
 ```
 """
@@ -132,7 +137,8 @@ function ASHP_WaterHeater(;
     macrs_option_years::Int = 0,
     macrs_bonus_fraction::Real = 0.0,
     cop_heating::Array{Float64,1} = Float64[],
-    cf_heating::Array{Float64,1} = Float64[]
+    cf_heating::Array{Float64,1} = Float64[],
+    force_into_system::Bool = false
     )
 
     defaults = get_ashp_defaults("DomesticHotWater")
@@ -175,7 +181,8 @@ function ASHP_WaterHeater(;
         can_serve_dhw,
         can_serve_space_heating,
         can_serve_process_heat,
-        can_serve_cooling
+        can_serve_cooling,
+        force_into_system
     )
 end
 
