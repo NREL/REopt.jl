@@ -6,13 +6,13 @@
     number_of_turbines::Real=0, 
     computation_type::String="average_power_conversion",
     average_cubic_meters_per_second_per_kw::Real=0,
-    efficiency_slope_fraction::Real=0, # TODO: change this to a q vs. q*efficiency curve
-    efficiency_fraction_y_intercept # the y intercept of the linearized turbine efficiency plot
-    linearized_stage_storage_slope_fraction::Real=0.0  # slope of plot with reservoir volume on the x axis and water elevation on the y axis (stage storage plot)
-    linearized_stage_storage_y_intercept::Real=0.0 # the y intercept of the linearized stage storage plot
-    water_levels_discretization_number::Int=1 # the number of water levels to consider when discretizing the water level range (more levels means more accuracy, but longer solve times)
-    water_outflow_rate_discretization_number::Int=1
-    water_inflow_cubic_meter_per_second::Array=[], # water flowing into the dam's pond
+    coefficient_a_efficiency::Real=0.0,
+    coefficient_b_efficiency::Real=0.0,
+    coefficient_c_efficiency::Real=0.0,
+    coefficient_d_reservoir_head::Real=0.0,
+    coefficient_e_reservoir_head::Real=0.0,
+    coefficient_f_reservoir_head::Real=0.0,
+    water_inflow_cubic_meter_per_second::Array=[], # tributary water flowing into the dam's pond
     cubic_meter_maximum::Real=0, #maximum capacity of the dam
     cubic_meter_minimum::Real=0, #minimum water level of the dam
     initial_reservoir_volume::Real=0.0  # The initial volume of water in the reservoir
@@ -28,45 +28,45 @@
     can_curtail::Bool = true,
 ```
 """
-# Based this code on the srv>core>pv.jl code
+
 mutable struct ExistingHydropower <: AbstractTech
 
-    existing_kw_per_turbine  #::Float64
+    existing_kw_per_turbine
     number_of_turbines
     computation_type
     average_cubic_meters_per_second_per_kw
-    efficiency_slope_fraction_per_cubic_meter_per_second  #::Float64
-    efficiency_fraction_y_intercept 
-    linearized_stage_storage_slope_fraction
-    linearized_stage_storage_y_intercept
-    water_levels_discretization_number
-    water_outflow_rate_discretization_number 
-    water_inflow_cubic_meter_per_second  #::AbstractArray{Float64,1}
-    cubic_meter_maximum  #::Float64
-    cubic_meter_minimum  #::Float64
+    coefficient_a_efficiency 
+    coefficient_b_efficiency
+    coefficient_c_efficiency
+    coefficient_d_reservoir_head
+    coefficient_e_reservoir_head
+    coefficient_f_reservoir_head
+    water_inflow_cubic_meter_per_second
+    cubic_meter_maximum  
+    cubic_meter_minimum 
     initial_reservoir_volume 
-    minimum_water_output_cubic_meter_per_second_total_of_all_turbines  #::Float64
+    minimum_water_output_cubic_meter_per_second_total_of_all_turbines
     minimum_water_output_cubic_meter_per_second_per_turbine
     maximum_water_output_cubic_meter_per_second_per_turbine
     minimum_operating_time_steps_individual_turbine
     spillway_maximum_cubic_meter_per_second
-    hydro_production_factor_series  #::AbstractArray{Float64,1}
-    can_net_meter  #::Bool 
-    can_wholesale  #::Bool
-    can_export_beyond_nem_limit  #::Bool
-    can_curtail  #::Bool
+    hydro_production_factor_series 
+    can_net_meter  
+    can_wholesale  
+    can_export_beyond_nem_limit 
+    can_curtail 
 
     function ExistingHydropower(;
         existing_kw_per_turbine::Real=0.0,
         number_of_turbines::Real=0,
         computation_type::String="average_power_conversion",
         average_cubic_meters_per_second_per_kw::Real=0.0,
-        efficiency_slope_fraction_per_cubic_meter_per_second::Real=0.0, # conversion factor for the water turbines
-        efficiency_fraction_y_intercept::Real=1.0,
-        linearized_stage_storage_slope_fraction::Real=0.0,
-        linearized_stage_storage_y_intercept::Real=0.0,
-        water_levels_discretization_number::Int=1,
-        water_outflow_rate_discretization_number::Int=1, 
+        coefficient_a_efficiency::Real=0.0,
+        coefficient_b_efficiency::Real=0.0,
+        coefficient_c_efficiency::Real=0.0,
+        coefficient_d_reservoir_head::Real=0.0,
+        coefficient_e_reservoir_head::Real=0.0,
+        coefficient_f_reservoir_head::Real=0.0,
         water_inflow_cubic_meter_per_second::Union{Nothing, Array{<:Real,1}} = nothing, # water flowing into the dam's pond
         cubic_meter_maximum::Real=0.0, #maximum capacity of the reservoir
         cubic_meter_minimum::Real=0.0, #minimum water level of the reservoir
@@ -81,13 +81,13 @@ mutable struct ExistingHydropower <: AbstractTech
         can_wholesale::Bool = false,
         can_export_beyond_nem_limit::Bool = false,
         can_curtail::Bool = true
-         )
+        )
         
+        #TODO: modify and uncomment the data checks below
         #if !(off_grid_flag) && !(operating_reserve_required_fraction == 0.0)
         #    @warn "Hydropower operating_reserve_required_fraction applies only when true. Setting operating_reserve_required_fraction to 0.0 for this on-grid analysis."
         #    operating_reserve_required_fraction = 0.0
         #end
-        #TODO: activate the if statement below
         #=
         if off_grid_flag && (can_net_meter || can_wholesale || can_export_beyond_nem_limit)
             @warn "Setting Existing Hydropower can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False because `off_grid_flag` is true."
@@ -107,12 +107,12 @@ mutable struct ExistingHydropower <: AbstractTech
             number_of_turbines,
             computation_type,
             average_cubic_meters_per_second_per_kw,
-            efficiency_slope_fraction_per_cubic_meter_per_second,
-            efficiency_fraction_y_intercept,
-            linearized_stage_storage_slope_fraction,
-            linearized_stage_storage_y_intercept,
-            water_levels_discretization_number,
-            water_outflow_rate_discretization_number,
+            coefficient_a_efficiency,
+            coefficient_b_efficiency,
+            coefficient_c_efficiency,
+            coefficient_d_reservoir_head,
+            coefficient_e_reservoir_head,
+            coefficient_f_reservoir_head,
             water_inflow_cubic_meter_per_second,
             cubic_meter_maximum,
             cubic_meter_minimum,

@@ -184,36 +184,11 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     # TODO: update with actual values input by the user in the inputs dictionary
     
     if haskey(d, "existing_hydropower")
-        existing_hydropower = ExistingHydropower(;  existing_kw_per_turbine = d["existing_hydropower"]["existing_kw_per_turbine"],
-                                                    number_of_turbines = d["existing_hydropower"]["number_of_turbines"],
-                                                    computation_type = d["existing_hydropower"]["computation_type"],
-                                                    average_cubic_meters_per_second_per_kw = d["existing_hydropower"]["average_cubic_meters_per_second_per_kw"],
-                                                    efficiency_slope_fraction_per_cubic_meter_per_second=d["existing_hydropower"]["efficiency_slope_fraction_per_cubic_meter_per_second"], 
-                                                    efficiency_fraction_y_intercept = d["existing_hydropower"]["efficiency_fraction_y_intercept"],
-                                                    linearized_stage_storage_slope_fraction = d["existing_hydropower"]["linearized_stage_storage_slope_fraction"],
-                                                    linearized_stage_storage_y_intercept = d["existing_hydropower"]["linearized_stage_storage_y_intercept"],
-                                                    water_levels_discretization_number = d["existing_hydropower"]["water_levels_discretization_number"],
-                                                    water_outflow_rate_discretization_number = d["existing_hydropower"]["water_outflow_rate_discretization_number"],
-                                                    water_inflow_cubic_meter_per_second=d["existing_hydropower"]["water_inflow_cubic_meter_per_second"],  
-                                                    cubic_meter_maximum=d["existing_hydropower"]["cubic_meter_maximum"], 
-                                                    cubic_meter_minimum=d["existing_hydropower"]["cubic_meter_minimum"],   
-                                                    initial_reservoir_volume = d["existing_hydropower"]["initial_reservoir_volume"],
-                                                    minimum_water_output_cubic_meter_per_second_per_turbine = d["existing_hydropower"]["minimum_water_output_cubic_meter_per_second_per_turbine"],
-                                                    maximum_water_output_cubic_meter_per_second_per_turbine = d["existing_hydropower"]["maximum_water_output_cubic_meter_per_second_per_turbine"],
-                                                    minimum_water_output_cubic_meter_per_second_total_of_all_turbines=d["existing_hydropower"]["minimum_water_output_cubic_meter_per_second_total_of_all_turbines"],
-                                                    minimum_operating_time_steps_individual_turbine = d["existing_hydropower"]["minimum_operating_time_steps_individual_turbine"],
-                                                    spillway_maximum_cubic_meter_per_second = d["existing_hydropower"]["spillway_maximum_cubic_meter_per_second"],
-                                                    can_net_meter=d["existing_hydropower"]["can_net_meter"], 
-                                                    can_wholesale=d["existing_hydropower"]["can_wholesale"], 
-                                                    can_export_beyond_nem_limit=d["existing_hydropower"]["can_export_beyond_nem_limit"], 
-                                                    can_curtail=d["existing_hydropower"]["can_curtail"],
-                                                ) 
-                                                    #hydro_production_factor_series= ones(8760),
+        existing_hydropower = ExistingHydropower(; dictkeys_tosymbols(d["existing_hydropower"]))
     else
         existing_hydropower = ExistingHydropower(; existing_kw_per_turbine = 0)
     end 
     
-
     if !(settings.off_grid_flag) # ElectricTariff only required for on-grid                            
         electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 
                                         year=electric_load.year,

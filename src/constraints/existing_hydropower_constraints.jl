@@ -16,8 +16,8 @@ function add_existing_hydropower_constraints(m,p)
 			@info "Adding quadratic2 constraint for power output, updated version"
 			@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower],
 			m[:dvRatedProduction][t,ts] == 9810*0.001 * m[:dvWaterOutFlow][t,ts] *
-											 (-0.0000973*((m[:dvWaterOutFlow][t,ts])^2) + (0.0189* m[:dvWaterOutFlow][t,ts]) + 0.0358 ) *
-											((m[:dvWaterVolume][ts] * p.s.existing_hydropower.linearized_stage_storage_slope_fraction) + p.s.existing_hydropower.linearized_stage_storage_y_intercept)
+											 (p.s.existing_hydropower.coefficient_a_efficiency*((m[:dvWaterOutFlow][t,ts])^2) + (p.s.existing_hydropower.coefficient_b_efficiency* m[:dvWaterOutFlow][t,ts]) + p.s.existing_hydropower.coefficient_c_efficiency ) *
+											 (p.s.existing_hydropower.coefficient_d_reservoir_head*((m[:dvWaterVolume][ts])^2) + (p.s.existing_hydropower.coefficient_e_reservoir_head* m[:dvWaterVolume][ts]) + p.s.existing_hydropower.coefficient_f_reservoir_head )
 			)
 		end
 
