@@ -180,11 +180,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         storage_structs["ColdThermalStorage"] = ColdThermalStorage(params, financial, settings.time_steps_per_hour)
     end
     storage = Storage(storage_structs)
-
-    # TODO: update with actual values input by the user in the inputs dictionary
     
     if haskey(d, "existing_hydropower")
-        existing_hydropower = ExistingHydropower(; dictkeys_tosymbols(d["existing_hydropower"]))
+        existing_hydropower = ExistingHydropower(; dictkeys_tosymbols(d["existing_hydropower"])...)
     else
         existing_hydropower = ExistingHydropower(; existing_kw_per_turbine = 0)
     end 
