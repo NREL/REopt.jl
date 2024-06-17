@@ -178,7 +178,7 @@ function add_ev_supply_equipment_constraints(m, p; _n="")
         @constraint(m, [b in p.s.storage.types.ev, ts in p.time_steps],
             sum(sum(se_kw * binEVtoEVSE[se][n, b, ts] 
                 for n in 1:p.s.evse.max_num[se]) 
-                for (se, se_kw) in enumerate(p.s.evse.power_rating_kw))
+                for (se, se_kw) in enumerate(p.s.evse.power_rating_kw))*p.s.storage.attr[b].discharge_efficiency
             >=
             sum(m[Symbol("dvDischargeFromStorage"*_n)][b, ts])
         )
