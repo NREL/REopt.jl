@@ -4,15 +4,16 @@ function add_existing_hydropower_constraints(m,p)
 	@info "Adding constraints for existing hydropower"
 		
 	if p.s.existing_hydropower.computation_type == "quadratic"
-			@info "Adding quadratic1 constraint for the hydropower power output, updated version"
+			@info "Adding quadratic constraint for the hydropower power output"
 			@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower],
 			m[:dvRatedProduction][t,ts] == 9810*0.001 * m[:dvWaterOutFlow][t,ts] *
-											 (p.s.existing_hydropower.coefficient_a_efficiency*((m[:dvWaterOutFlow][t,ts]*m[:dvWaterOutFlow][t,ts])) + (p.s.existing_hydropower.coefficient_b_efficiency* m[:dvWaterOutFlow][t,ts]) + p.s.existing_hydropower.coefficient_c_efficiency ) *
-											 (p.s.existing_hydropower.coefficient_d_reservoir_head*((m[:dvWaterVolume][ts]*m[:dvWaterVolume][ts])) + (p.s.existing_hydropower.coefficient_e_reservoir_head* m[:dvWaterVolume][ts]) + p.s.existing_hydropower.coefficient_f_reservoir_head )
+											 #(p.s.existing_hydropower.coefficient_a_efficiency*((m[:dvWaterOutFlow][t,ts]*m[:dvWaterOutFlow][t,ts])) + (p.s.existing_hydropower.coefficient_b_efficiency* m[:dvWaterOutFlow][t,ts]) + p.s.existing_hydropower.coefficient_c_efficiency ) *
+											 ((p.s.existing_hydropower.coefficient_a_efficiency* m[:dvWaterOutFlow][t,ts]) + p.s.existing_hydropower.coefficient_b_efficiency ) *
+											 (p.s.existing_hydropower.coefficient_c_reservoir_head*((m[:dvWaterVolume][ts]*m[:dvWaterVolume][ts])) + (p.s.existing_hydropower.coefficient_d_reservoir_head* m[:dvWaterVolume][ts]) + p.s.existing_hydropower.coefficient_e_reservoir_head )
 			)
 	
 	elseif p.s.existing_hydropower.computation_type == "quadratic_test2"
-		@info "Adding quadratic2 constraint for the hydropower power output, updated version"
+		@info "Adding quadratic_test2 constraint for the hydropower power output, updated version"
 		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower],
 		m[:dvRatedProduction][t,ts] <= 9810*0.001 * m[:dvWaterOutFlow][t,ts] *
 										 ((p.s.existing_hydropower.coefficient_b_efficiency* m[:dvWaterOutFlow][t,ts]) + p.s.existing_hydropower.coefficient_c_efficiency ) *
