@@ -182,7 +182,35 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     storage = Storage(storage_structs)
     
     if haskey(d, "existing_hydropower")
-        existing_hydropower = ExistingHydropower(; dictkeys_tosymbols(d["existing_hydropower"])...)
+        #existing_hydropower = ExistingHydropower(; dictkeys_tosymbols(d["existing_hydropower"])...)
+        print("\n Using previous version of hydropower scenario setup code: *****\n")
+        existing_hydropower = ExistingHydropower(; 
+                existing_kw_per_turbine = d["existing_hydropower"]["existing_kw_per_turbine"],
+                number_of_turbines = d["existing_hydropower"]["number_of_turbines"],
+                computation_type = d["existing_hydropower"]["computation_type"],
+                average_cubic_meters_per_second_per_kw = d["existing_hydropower"]["average_cubic_meters_per_second_per_kw"],
+                coefficient_a_efficiency=d["existing_hydropower"]["coefficient_a_efficiency"],
+                coefficient_b_efficiency=d["existing_hydropower"]["coefficient_b_efficiency"],
+                coefficient_c_efficiency=d["existing_hydropower"]["coefficient_c_efficiency"],
+                coefficient_d_reservoir_head=d["existing_hydropower"]["coefficient_d_reservoir_head"],
+                coefficient_e_reservoir_head=d["existing_hydropower"]["coefficient_e_reservoir_head"],
+                coefficient_f_reservoir_head=d["existing_hydropower"]["coefficient_f_reservoir_head"],
+                water_inflow_cubic_meter_per_second=d["existing_hydropower"]["water_inflow_cubic_meter_per_second"],  
+                cubic_meter_maximum=d["existing_hydropower"]["cubic_meter_maximum"], 
+                cubic_meter_minimum=d["existing_hydropower"]["cubic_meter_minimum"],   
+                initial_reservoir_volume = d["existing_hydropower"]["initial_reservoir_volume"],
+                minimum_water_output_cubic_meter_per_second_per_turbine = d["existing_hydropower"]["minimum_water_output_cubic_meter_per_second_per_turbine"],
+                maximum_water_output_cubic_meter_per_second_per_turbine = d["existing_hydropower"]["maximum_water_output_cubic_meter_per_second_per_turbine"],
+                minimum_water_output_cubic_meter_per_second_total_of_all_turbines=d["existing_hydropower"]["minimum_water_output_cubic_meter_per_second_total_of_all_turbines"],
+                minimum_operating_time_steps_individual_turbine = d["existing_hydropower"]["minimum_operating_time_steps_individual_turbine"],
+                spillway_maximum_cubic_meter_per_second = d["existing_hydropower"]["spillway_maximum_cubic_meter_per_second"],
+                can_net_meter=d["existing_hydropower"]["can_net_meter"], 
+                can_wholesale=d["existing_hydropower"]["can_wholesale"], 
+                can_export_beyond_nem_limit=d["existing_hydropower"]["can_export_beyond_nem_limit"], 
+                can_curtail=d["existing_hydropower"]["can_curtail"]
+    ) 
+
+
     else
         existing_hydropower = ExistingHydropower(; existing_kw_per_turbine = 0)
     end 
