@@ -3,8 +3,8 @@
 function add_existing_hydropower_constraints(m,p)
 	@info "Adding constraints for existing hydropower"
 		
-	if p.s.existing_hydropower.computation_type == "quadratic"
-			@info "Adding quadratic constraint for the hydropower power output"
+	if p.s.existing_hydropower.computation_type == "quadratic1" # This doesn't solve
+			@info "Adding quadratic1 constraint for the hydropower power output"
 			@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower],
 			m[:dvRatedProduction][t,ts] == 9810*0.001 * m[:dvWaterOutFlow][t,ts] *
 											 #(p.s.existing_hydropower.coefficient_a_efficiency*((m[:dvWaterOutFlow][t,ts]*m[:dvWaterOutFlow][t,ts])) + (p.s.existing_hydropower.coefficient_b_efficiency* m[:dvWaterOutFlow][t,ts]) + p.s.existing_hydropower.coefficient_c_efficiency ) *
@@ -12,13 +12,52 @@ function add_existing_hydropower_constraints(m,p)
 											 (p.s.existing_hydropower.coefficient_c_reservoir_head*((m[:dvWaterVolume][ts]*m[:dvWaterVolume][ts])) + (p.s.existing_hydropower.coefficient_d_reservoir_head* m[:dvWaterVolume][ts]) + p.s.existing_hydropower.coefficient_e_reservoir_head )
 			)
 	
-	elseif p.s.existing_hydropower.computation_type == "quadratic_test2"
-		@info "Adding quadratic_test2 constraint for the hydropower power output, updated version"
+	# Linearize the reservoir head equation
+	elseif p.s.existing_hydropower.computation_type == "quadratic2" # This doesn't solve
+		@info "Adding quadratic2 constraint for the hydropower power output, updated version"
 		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower],
-		m[:dvRatedProduction][t,ts] <= 9810*0.001 * m[:dvWaterOutFlow][t,ts] *
-										 ((p.s.existing_hydropower.coefficient_b_efficiency* m[:dvWaterOutFlow][t,ts]) + p.s.existing_hydropower.coefficient_c_efficiency ) *
-										 ((p.s.existing_hydropower.coefficient_e_reservoir_head* m[:dvWaterVolume][ts]) + p.s.existing_hydropower.coefficient_f_reservoir_head )
+		m[:dvRatedProduction][t,ts] == 9810*0.001 * m[:dvWaterOutFlow][t,ts] *
+										 ((p.s.existing_hydropower.coefficient_a_efficiency* m[:dvWaterOutFlow][t,ts]) + p.s.existing_hydropower.coefficient_b_efficiency ) *
+										 ((p.s.existing_hydropower.coefficient_d_reservoir_head* m[:dvWaterVolume][ts]) + p.s.existing_hydropower.coefficient_e_reservoir_head )
 		)
+
+	# Test a basic quadratic with a fixed reservoir head
+	elseif p.s.existing_hydropower.computation_type == "quadratic3"
+		@info "Adding quadratic3 constraint for the hydropower power output"
+		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower],
+		m[:dvRatedProduction][t,ts] == 9810*0.001 * m[:dvWaterOutFlow][t,ts] *
+										 ((p.s.existing_hydropower.coefficient_a_efficiency* m[:dvWaterOutFlow][t,ts]) + p.s.existing_hydropower.coefficient_b_efficiency ) * 5
+										 
+		)		
+
+	# Test with the efficiency defined as a separate variable:	
+	elseif p.s.existing_hydropower.computation_type == "quadratic4"
+		@info "Adding quadratic4 constraint for the hydropower power output"
+		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower],
+						m[:dvRatedProduction][t,ts] == 9810*0.001 * m[:dvWaterOutFlow][t,ts] * turbine_efficiency[t, ts] * 5 # reservoir head fixed at 5m
+					)
+		@variable(m, turbine_efficiency[t in p.techs.existing_hydropower, ts in p.time_steps] >= 0)
+		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], turbine_efficiency[t, ts] == (p.s.existing_hydropower.coefficient_a_efficiency* m[:dvWaterOutFlow][t,ts]) + p.s.existing_hydropower.coefficient_b_efficiency )
+	
+	# Test with the efficiency and reservoir head defined as a separate variable:	
+	elseif p.s.existing_hydropower.computation_type == "quadratic5"
+		@info "Adding quadratic5 constraint for the hydropower power output"
+		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower],
+						m[:dvRatedProduction][t,ts] == 9810*0.001 * m[:dvWaterOutFlow][t,ts] * m[:efficiency_reservoir_head_product][t,ts]
+					)
+		@variable(m, turbine_efficiency[t in p.techs.existing_hydropower, ts in p.time_steps] >= 0)
+		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:turbine_efficiency][t, ts] <= 150) # TODO, switch this to 1
+		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:turbine_efficiency][t, ts] == (p.s.existing_hydropower.coefficient_a_efficiency* m[:dvWaterOutFlow][t,ts]) + p.s.existing_hydropower.coefficient_b_efficiency )
+		
+		@variable(m, reservoir_head[ts in p.time_steps] >= 0)
+		@constraint(m, [ts in p.time_steps], m[:reservoir_head][ts] <= 50) # TODO: enter the maximum reservoir head as an input into the model
+		@constraint(m, [ts in p.time_steps], m[:reservoir_head][ts] == (p.s.existing_hydropower.coefficient_d_reservoir_head* m[:dvWaterVolume][ts]) + p.s.existing_hydropower.coefficient_e_reservoir_head )
+		
+		# represent the product of the reservoir head and turbine efficiency as a separate variable (Gurobi can only multiply two variables together)
+		@variable(m, efficiency_reservoir_head_product[t in p.techs.existing_hydropower, ts in p.time_steps] >= 0)
+		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:efficiency_reservoir_head_product][t, ts] <= 500) # TODO, switch this to a more intentional value
+		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:efficiency_reservoir_head_product][t, ts] ==  m[:reservoir_head][ts] * m[:turbine_efficiency][t, ts])
+		
 
 	#elseif p.s.existing_hydropower.computation_type == "linearized_constraints"
 		#TODO: add linearized constraints
