@@ -60,10 +60,15 @@ function add_steam_turbine_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
 			for t in p.techs.steam_turbine) - SteamTurbinetoBatt[ts] - SteamTurbinetoGrid[ts])
 	r["electric_to_load_series_kw"] = round.(value.(SteamTurbinetoLoad), digits=3)
     if !isempty(p.s.storage.types.hot)
-		@expression(m, SteamTurbinetoHotTESKW[ts in p.time_steps],
-			sum(m[Symbol("dvHeatToStorage"*_n)]["HotThermalStorage",t,q,ts] for q in p.heating_loads, t in p.techs.steam_turbine))
-		@expression(m, SteamTurbineToHotTESByQualityKW[q in p.heating_loads, ts in p.time_steps],
-			sum(m[Symbol("dvHeatToStorage"*_n)]["HotThermalStorage",t,q,ts] for t in p.techs.steam_turbine))
+		if "HotThermalStorage" in p.s.storage.types.hot
+			@expression(m, SteamTurbinetoHotTESKW[ts in p.time_steps],
+				sum(m[Symbol("dvHeatToStorage"*_n)]["HotThermalStorage",t,q,ts] for q in p.heating_loads, t in p.techs.steam_turbine))
+			@expression(m, SteamTurbineToHotTESByQualityKW[q in p.heating_loads, ts in p.time_steps],
+				sum(m[Symbol("dvHeatToStorage"*_n)]["HotThermalStorage",t,q,ts] for t in p.techs.steam_turbine))
+		else
+			@expression(m, SteamTurbinetoHotTESKW[ts in p.time_steps], 0.0)
+			@expression(m, SteamTurbineToHotTESByQualityKW[q in p.heating_loads, ts in p.time_steps], 0.0)
+		end
 		if "HotSensibleTes" in p.s.storage.types.hot
 			@expression(m, SteamTurbineToHotSensibleTESKW[ts in p.time_steps],
 				sum(m[Symbol("dvHeatToStorage"*_n)]["HotSensibleTes",t,q,ts] for t in p.techs.steam_turbine, q in p.heating_loads)
