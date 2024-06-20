@@ -15,34 +15,34 @@ function print_results(results)
     if "PV" in keys(results)
         println(@sprintf("\tPV: %5.3f kW", results["PV"]["size_kw"]))  
     else
-        println("PV: 0 kW")
+        println("\tPV not in results.")
     end
     if "ElectricHeater" in keys(results)
         println(@sprintf("\tElectric Heater: %5.3f kW", results["ElectricHeater"]["size_mmbtu_per_hour"] * 293.07107))  # mmbtu/hr -> kW
     else
-        println("Electric Heater: 0 kW")
+        println("\tElectric Heater not in results.")
     end
     if "HotSensibleTes" in keys(results)
         println(@sprintf("\tHot Sensible TES: %5.3f m^3", results["HotSensibleTes"]["size_gal"] / 264.1725))    # gal -> m^3
     else
-        println("Hot Sensible TES not in results.")
+        println("\tHot Sensible TES not in results.")
     end
     if "HotThermalStorage" in keys(results)
         println(@sprintf("\tHot Thermal Storage: %5.3f gal", results["HotThermalStorage"]["size_gal"])) 
     else
-        println("Hot TES not in results.")
+        println("\tHot TES not in results.")
     end
     if "SteamTurbine" in keys(results)
         println(@sprintf("\tSteam Turbine: %5.3f kW", results["SteamTurbine"]["size_kw"]))
     else
-        println("Steam Turbine not in results.")
+        println("\tSteam Turbine not in results.")
     end
 
     println("Summary of Loads:")
     if "ElectricLoad" in keys(results)
         println("\tAnnual electric load: ", results["ElectricLoad"]["annual_calculated_kwh"], " kWh")
     else
-        println("No Electric Load.")
+        println("\tNo Electric Load.")
     end
     println("\tAnnual process heat load: ", results["HeatingLoad"]["annual_calculated_process_heat_thermal_load_mmbtu"], " mmbtu")
     println("\tAnnual space heating load: ", results["HeatingLoad"]["annual_calculated_space_heating_thermal_load_mmbtu"], " mmbtu")
@@ -54,13 +54,11 @@ function print_results(results)
         println("\tAnnual grid purchases: ", results["ElectricUtility"]["annual_energy_supplied_kwh"], " kWh")
         println("\tLifecyle Electrical Bill After Tax: \$", results["Financial"]["lifecycle_elecbill_after_tax"])
     else
-        println("No electricity costs in results.")
+        println("\tNo electricity costs in results.")
     end
     println("Generation:")
     if "PV" in keys(results)
         println("\tPV production: ", results["PV"]["annual_energy_produced_kwh"], " kWh")
-    else
-        println("No PV in the results.")
     end
 
     if "ExistingBoiler" in keys(results)
