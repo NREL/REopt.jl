@@ -187,7 +187,7 @@ d = JSON.parsefile("./scenarios/pv_PTES_with_process_heat_no_hot_tes.json")
 d["ProcessHeatLoad"] = Dict()
 d["ElectricTariff"] = Dict()
 d["ElectricTariff"]["tou_energy_rates_per_kwh"] = ones(8760) .* 0.5
-d["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"] = ones(8760) .* 100.0
+d["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"] = ones(8760) .* 1.0
 d["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"][1] = 0.0  #initialize so that storage may charge in the first time period
 for ts in 1:4380 #free electricity and no heat load every other hour, expect the turbine to run to meet electricity and heat (?) when possible
     d["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"][ts*2-1] = 0
@@ -210,10 +210,10 @@ d = JSON.parsefile("./scenarios/pv_PTES_with_process_heat.json")
 d["ProcessHeatLoad"] = Dict()
 d["ElectricTariff"] = Dict()
 d["ElectricTariff"]["tou_energy_rates_per_kwh"] = ones(8760) .* 0.5
-d["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"] = ones(8760) .* 100.0
+d["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"] = ones(8760) .* 1.0
 d["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"][1] = 0.0  #initialize so that storage may charge in the first time period
 for ts in 1:4380 #free electricity every other hour, expect the turbine to run to meet electricity when possible
-    # d["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"][ts*2-1] = 0
+    d["ProcessHeatLoad"]["fuel_loads_mmbtu_per_hour"][ts*2-1] = 0
     d["ElectricTariff"]["tou_energy_rates_per_kwh"][ts*2-1] = 0
 end
 d["PV"]["max_kw"] = 100000.0

@@ -21,8 +21,8 @@
         "annual_mmbtu": 876000.0
     },
     "SteamTurbine": {
-        "min_kw": 1000.0,
-        "max_kw": 10000.0,
+        "min_kw": 10.0,
+        "max_kw": 10000000.0,
         "is_condensing": false,
         "inlet_steam_pressure_psig": 220.0,
         "inlet_steam_temperature_degF": 575.0,
@@ -57,7 +57,7 @@
      },
      "HotSensibleTes": {
          "min_gal": 100.0,
-         "max_gal": 5000000.0,
+         "max_gal": 5000000000.0,
          "installed_cost_per_gal": 600.0,
          "can_supply_steam_turbine": true,
          "can_serve_dhw": false,
@@ -67,13 +67,14 @@
      },
      "HotThermalStorage": {
          "min_gal": 100.0,
-         "max_gal": 5000000.0,
+         "max_gal": 5000000000.0,
          "installed_cost_per_gal": 0.1,
          "can_supply_steam_turbine": false,
          "can_serve_dhw": false,
          "can_serve_space_heating": false,
          "can_serve_process_heat": true,
-         "supply_turbine_only": false
+         "supply_turbine_only": false,
+         "thermal_decay_rate_fraction": 0.0
      },
      "Financial": {
         "om_cost_escalation_rate_fraction": 0.025,
