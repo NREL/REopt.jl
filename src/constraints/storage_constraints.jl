@@ -123,60 +123,6 @@ end
 
 function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
 
-    # # Constraint (4f)-1: (Hot) Thermal production sent to storage or grid must be less than technology's rated production
-	# # Constraint (4f)-1a: BoilerTechs
-	for t in p.techs.boiler
-		if !isempty(p.techs.steam_turbine) && (t in p.techs.can_supply_steam_turbine)
-            @constraint(m, [b in p.s.storage.types.hot, q in p.heating_loads, ts in p.time_steps],
-                    m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] + m[Symbol("dvThermalToSteamTurbine"*_n)][t,q,ts]  <=
-                    m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
-                    )
-        else
-            @constraint(m, [b in p.s.storage.types.hot, q in p.heating_loads, ts in p.time_steps],
-                    m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts]  <=
-                    m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
-                    )
-        end
-    end
-
-    if !isempty(p.techs.electric_heater)
-        for t in p.techs.electric_heater
-            if !isempty(p.techs.steam_turbine) && (t in p.techs.can_supply_steam_turbine)
-                @constraint(m, [b in p.s.storage.types.hot, q in p.heating_loads, ts in p.time_steps],
-                        m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] + m[Symbol("dvThermalToSteamTurbine"*_n)][t,q,ts]  <=
-                        m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
-                        )
-            else
-                @constraint(m, [b in p.s.storage.types.hot, q in p.heating_loads, ts in p.time_steps],
-                        m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts]  <=
-                        m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
-                        )
-            end
-        end
-    end
-
-    # Constraint (4f)-1b: SteamTurbineTechs
-	if !isempty(p.techs.steam_turbine)
-		@constraint(m, SteamTurbineTechProductionFlowCon[b in p.s.storage.types.hot, t in p.techs.steam_turbine, q in p.heating_loads, ts in p.time_steps],
-			m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] <=  m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
-			)
-	end
-
-    # # Constraint (4g): CHP Thermal production sent to storage or grid must be less than technology's rated production
-	if !isempty(p.techs.chp)
-		if !isempty(p.techs.steam_turbine) && p.s.chp.can_supply_steam_turbine
-            @constraint(m, CHPTechProductionFlowCon[b in p.s.storage.types.hot, t in p.techs.chp, q in p.heating_loads, ts in p.time_steps],
-                    m[Symbol("dvHeatToStorage"*_n)][b,tq,ts] + m[Symbol("dvProductionToWaste"*_n)][t,q,ts] + m[Symbol("dvThermalToSteamTurbine"*_n)][t,q,ts] <=
-                    m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
-                    )
-        else
-            @constraint(m, CHPTechProductionFlowCon[b in p.s.storage.types.hot, t in p.techs.chp, q in p.heating_loads, ts in p.time_steps],
-                    m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] + m[Symbol("dvProductionToWaste"*_n)][t,q,ts]  <=
-                    m[Symbol("dvHeatingProduction"*_n)][t,q,ts]
-                    )
-        end
-	end
-
     # Constraint (4j)-1: Reconcile state-of-charge for (hot) thermal storage
 	@constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
     m[Symbol("dvStoredEnergy"*_n)][b,ts] == m[Symbol("dvStoredEnergy"*_n)][b,ts-1] + (1/p.s.settings.time_steps_per_hour) * (
@@ -200,6 +146,13 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
         m[Symbol("dvDischargeFromStorage"*_n)][b,ts] == 
         sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for q in p.heating_loads)
     )
+
+    #Do not allow GHP to charge storage
+    if !isempty(p.techs.ghp)
+        for b in p.s.storage.types.hot, t in p.techs.ghp, q in p.heating_loads, ts in p.time_steps
+            fix(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts], 0.0, force=true)
+        end
+    end
 
 end
 
@@ -227,6 +180,13 @@ function add_cold_thermal_storage_dispatch_constraints(m, p, b; _n="")
         m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b,ts] + 
         sum(m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.cooling)
     )
+
+    #Do not allow GHP to charge storage
+    if !isempty(p.techs.ghp)
+        for b in p.s.storage.types.cold, t in p.techs.ghp, ts in p.time_steps
+                    fix(m[Symbol("dvProductionToStorage"*_n)][b,t,ts], 0.0, force=true)
+        end
+    end
 end
 
 function add_elec_storage_sum_constraints(m, p; _n="")
