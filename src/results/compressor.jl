@@ -55,16 +55,17 @@ function add_compressor_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; 
     r["electricity_consumed_series_kw"] = round.(value.(CompressorConsumption), digits=3)
     r["year_one_electricity_consumed_kwh"] = round(sum(r["electricity_consumed_series_kw"]), digits=2)
 
-    CompressorProduction = @expression(m, [ts in p.time_steps],
-                                sum(m[Symbol("dvProductionToStorage"*_n)]["HydrogenStorageHP", t, ts] for t in p.techs.compressor)
-                            )
+    if p.s.electrolyzer.require_compression
+        CompressorProduction = @expression(m, [ts in p.time_steps],
+                                sum(m[Symbol("dvProductionToStorage"*_n)]["HydrogenStorage", t, ts] for t in p.techs.compressor)
+                                )
+    else
+        CompressorProduction = repeat([0], length(p.time_steps))
+    end
+
     r["hydrogen_compressed_series_kg"] = round.(value.(CompressorProduction), digits=3)
     r["year_one_hydrogen_compressed_kg"] = round(sum(r["hydrogen_compressed_series_kg"]), digits=2)                      
 
-    # PVPerUnitSizeOMCosts = p.om_cost_per_kw[t] * p.pwf_om * m[Symbol("dvSize"*_n)][t]
-    # r["lifecycle_om_cost_after_tax"] = round(value(PVPerUnitSizeOMCosts) * (1 - p.s.financial.owner_tax_rate_fraction), digits=0)
-    # r["lcoe_per_kwh"] = calculate_lcoe(p, r, get_pv_by_name(t, p.s.pvs))
-    
     d["Compressor"] = r
 
 end

@@ -896,16 +896,20 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         end
     end
 
-    if haskey(d, "HydrogenStorageLP") && haskey(d, "FuelCell") && haskey(d, "Electrolyzer") #TODO: condition on H2 upgraded into microgrid like with storage above?
-        #TODO: get efficiencies from HydrogenStorageLP, FuelCell, and Electrolyzer models
-        r2[:H2_charge_efficiency_kg_per_kwh] = 1.0/p.s.electrolyzer.efficiency_kwh_per_kg
+    if haskey(d, "HydrogenStorage") && haskey(d, "FuelCell") && haskey(d, "Electrolyzer") #TODO: condition on H2 upgraded into microgrid like with storage above?
+        #TODO: get efficiencies from HydrogenStorage, FuelCell, and Electrolyzer models
+        if p.s.electrolyzer.require_compression
+            r2[:H2_charge_efficiency_kg_per_kwh] = 1.0/(p.s.electrolyzer.efficiency_kwh_per_kg * p.s.compressor.efficiency_kwh_per_kg)
+        else
+            r2[:H2_charge_efficiency_kg_per_kwh] = 1.0/(p.s.electrolyzer.efficiency_kwh_per_kg)
+        end
         r2[:H2_discharge_efficiency_kwh_per_kg] = p.s.fuel_cell.efficiency_kwh_per_kg
         r2[:H2_fuelcell_size_kw] = get(d["FuelCell"], "size_kw", 0)
         r2[:H2_electrolyzer_size_kw] = get(d["Electrolyzer"], "size_kw", 0)
 
         #ERP tool uses effective storage size so need to subtract minimum SOC
-        H2_size_kg = get(d["HydrogenStorageLP"], "size_kg", 0)
-        init_soc = get(d["HydrogenStorageLP"], "soc_series_fraction", [])
+        H2_size_kg = get(d["HydrogenStorage"], "size_kg", 0)
+        init_soc = get(d["HydrogenStorage"], "soc_series_fraction", [])
         H2_starting_soc_kwh = init_soc .* H2_size_kg
         H2_minimum_soc_kwh = H2_size_kg * get(r2, :H2_minimum_soc_fraction, 0)
         r2[:H2_size_kg] = H2_size_kg - H2_minimum_soc_kwh

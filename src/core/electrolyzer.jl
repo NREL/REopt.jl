@@ -35,6 +35,7 @@
     installed_cost_per_kw = 1500,
     om_cost_per_kw = 12.8,
     om_cost_per_kwh = 0.006,
+    require_compression = true,
     efficiency_kwh_per_kg = 54.3,
     macrs_option_years = 7,
     macrs_bonus_fraction = 0.8,
@@ -66,6 +67,7 @@ struct Electrolyzer <: AbstractElectrolyzer
     installed_cost_per_kw::Real
     om_cost_per_kw::Real
     om_cost_per_kwh::Real
+    require_compression::Bool
     efficiency_kwh_per_kg::Real
     macrs_option_years::Int
     macrs_bonus_fraction::Real
@@ -96,6 +98,7 @@ struct Electrolyzer <: AbstractElectrolyzer
         installed_cost_per_kw = 1500,
         om_cost_per_kw = 12.8,
         om_cost_per_kwh = 0.006,
+        require_compression = true,
         efficiency_kwh_per_kg = 54.3,
         macrs_option_years = 7,
         macrs_bonus_fraction = 0.8,
@@ -127,6 +130,7 @@ struct Electrolyzer <: AbstractElectrolyzer
             installed_cost_per_kw,
             om_cost_per_kw,
             om_cost_per_kwh,
+            require_compression,
             efficiency_kwh_per_kg,
             macrs_option_years,
             macrs_bonus_fraction,

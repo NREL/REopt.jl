@@ -34,7 +34,7 @@
     max_kw = 1.0e9,
     installed_cost_per_kw = 15782.5,
     om_cost_per_kw = 631.3,
-    om_cost_per_kg = 0.0,
+    om_cost_per_kwh = 0.0,
     efficiency_kwh_per_kg = 3.5,
     macrs_option_years = 7,
     macrs_bonus_fraction = 0.0,
@@ -65,7 +65,7 @@ struct Compressor <: AbstractCompressor
     max_kw::Real
     installed_cost_per_kw::Real
     om_cost_per_kw::Real
-    om_cost_per_kg::Real
+    om_cost_per_kwh::Real
     efficiency_kwh_per_kg::Real
     macrs_option_years::Int
     macrs_bonus_fraction::Real
@@ -93,9 +93,9 @@ struct Compressor <: AbstractCompressor
     function Compressor(;
         min_kw = 0.0,
         max_kw = 1.0e9,
-        installed_cost_per_kw = 15782.5,
-        om_cost_per_kw = 631.3,
-        om_cost_per_kg = 0,
+        installed_cost_per_kw = 50,
+        om_cost_per_kw = 0,
+        om_cost_per_kwh = 0,
         efficiency_kwh_per_kg = 3.5,
         macrs_option_years = 7,
         macrs_bonus_fraction = 0.0,
@@ -126,7 +126,7 @@ struct Compressor <: AbstractCompressor
             max_kw,
             installed_cost_per_kw,
             om_cost_per_kw,
-            om_cost_per_kg,
+            om_cost_per_kwh,
             efficiency_kwh_per_kg,
             macrs_option_years,
             macrs_bonus_fraction,
