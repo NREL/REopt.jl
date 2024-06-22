@@ -51,8 +51,8 @@ function add_elec_load_balance_constraints(m, p; _n="")
             + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.elec)
             ==
             sum(sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) 
-                + sum(m[Symbol("dvProductionToElectrolyzer"*_n)][t, ts]) 
-                + sum(m[Symbol("dvProductionToCompressor"*_n)][t, ts])
+                + m[Symbol("dvProductionToElectrolyzer"*_n)][t, ts]
+                + m[Symbol("dvProductionToCompressor"*_n)][t, ts]
                 + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.elec)
             + p.s.electric_load.critical_loads_kw[ts]
         )
@@ -62,6 +62,8 @@ function add_elec_load_balance_constraints(m, p; _n="")
             + sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.elec)
             ==
             sum(sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec)
+                + m[Symbol("dvProductionToElectrolyzer"*_n)][t, ts]
+                + m[Symbol("dvProductionToCompressor"*_n)][t, ts]
                 + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.elec)
             + p.s.electric_load.critical_loads_kw[ts] * m[Symbol("dvOffgridLoadServedFraction"*_n)][ts]
         )
@@ -165,16 +167,5 @@ function add_thermal_load_constraints(m, p; _n="")
                 + sum(m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for b in p.s.storage.types.cold, t in p.techs.cooling)
             )
         end
-    end
-end
-
-function add_hydrogen_load_balance_constraints(m, p; _n="") 
-	##Constraint: Hydrogen load can only be served from high pressure storage
-    if !isempty(p.s.storage.types.hydrogen_hp)
-        @constraint(m, [ts in p.time_steps], 
-            sum(m[Symbol("dvDischargeFromStorage"*_n)][b,ts] for b in p.s.storage.types.hydrogen_hp) 
-            ==
-            p.s.hydrogen_load.loads_kg[ts]
-        )
     end
 end

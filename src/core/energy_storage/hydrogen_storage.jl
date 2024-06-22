@@ -28,15 +28,15 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 # *********************************************************************************
 """
-`HydrogenStorageHP` is an optional REopt input with the following keys and default values:
+`HydrogenStorage` is an optional REopt input with the following keys and default values:
 
 ```julia
     min_kg::Real = 0.0
-    max_kg::Real = 1.0e9
-    soc_min_fraction::Float64 = 0.05
-    soc_init_fraction::Float64 = 0.5
-    installed_cost_per_kg::Real = 1500.0
-    replace_cost_per_kg::Real = 1000.0
+    max_kg::Real = 1.0e6
+    soc_min_fraction::Float64 = 0.01
+    soc_init_fraction::Float64 = 0.05
+    installed_cost_per_kg::Real = 500.0
+    replace_cost_per_kg::Real = 300.0
     replacement_year::Int = 25
     macrs_option_years::Int = 7
     macrs_bonus_fraction::Float64 = 0.8
@@ -44,16 +44,17 @@
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kg::Real = 0.0
     minimum_avg_soc_fraction::Float64 = 0.0
-    daily_leakage_fraction::Float64 = 0.0
+    soc_min_applies_during_outages::Bool = false
+    require_start_and_end_charge_to_be_equal::Bool = false
 ```
 """
-Base.@kwdef struct HydrogenStorageHPDefaults
+Base.@kwdef struct HydrogenStorageDefaults
     min_kg::Real = 0.0
-    max_kg::Real = 1.0e9
-    soc_min_fraction::Float64 = 0.05
-    soc_init_fraction::Float64 = 0.5
-    installed_cost_per_kg::Real = 1500.0
-    replace_cost_per_kg::Real = 1000.0
+    max_kg::Real = 1.0e6
+    soc_min_fraction::Float64 = 0.01
+    soc_init_fraction::Float64 = 0.05
+    installed_cost_per_kg::Real = 500.0
+    replace_cost_per_kg::Real = 300.0
     replacement_year::Int = 25
     macrs_option_years::Int = 7
     macrs_bonus_fraction::Float64 = 0.8
@@ -61,17 +62,18 @@ Base.@kwdef struct HydrogenStorageHPDefaults
     total_itc_fraction::Float64 = 0.3
     total_rebate_per_kg::Real = 0.0
     minimum_avg_soc_fraction::Float64 = 0.0
-    daily_leakage_fraction::Float64 = 0.0
+    soc_min_applies_during_outages::Bool = false
+    require_start_and_end_charge_to_be_equal::Bool = false
 end
 
 
 """
-    function HydrogenStorageHP(d::Dict, f::Financial, settings::Settings)
+    function HydrogenStorage(d::Dict, f::Financial, settings::Settings)
 
-Construct HydrogenStorageHP struct from Dict with keys-val pairs from the 
-REopt HydrogenStorageHP and Financial inputs.
+Construct HydrogenStorage struct from Dict with keys-val pairs from the 
+REopt HydrogenStorage and Financial inputs.
 """
-struct HydrogenStorageHP <: AbstractHydrogenStorage
+struct HydrogenStorage <: AbstractHydrogenStorage
     min_kg::Real
     max_kg::Real
     soc_min_fraction::Float64
@@ -86,13 +88,14 @@ struct HydrogenStorageHP <: AbstractHydrogenStorage
     total_rebate_per_kg::Real
     net_present_cost_per_kg::Real
     minimum_avg_soc_fraction::Float64
-    daily_leakage_fraction::Float64
+    soc_min_applies_during_outages::Bool
+    require_start_and_end_charge_to_be_equal::Bool
 
-    function HydrogenStorageHP(d::Dict, f::Financial)  
-        s = HydrogenStorageHPDefaults(;d...)
+    function HydrogenStorage(d::Dict, f::Financial)  
+        s = HydrogenStorageDefaults(;d...)
 
         if s.replacement_year >= f.analysis_years
-            @warn "High pressure hydrogen storage tank replacement costs (per_kg) will not be considered because replacement_year >= analysis_years."
+            @warn "Hydrogen storage tank replacement costs (per_kg) will not be considered because replacement_year >= analysis_years."
         end
 
         net_present_cost_per_kg = effective_cost(;
@@ -124,7 +127,8 @@ struct HydrogenStorageHP <: AbstractHydrogenStorage
             s.total_rebate_per_kg,
             net_present_cost_per_kg,
             s.minimum_avg_soc_fraction,
-            s.daily_leakage_fraction
+            s.soc_min_applies_during_outages,
+            s.require_start_and_end_charge_to_be_equal
         )
     end
 end
