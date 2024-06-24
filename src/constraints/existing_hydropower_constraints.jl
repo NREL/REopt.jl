@@ -77,7 +77,7 @@ function add_existing_hydropower_constraints(m,p)
 		@constraint(m, [ts in p.time_steps], m[:reservoir_head][ts] == (p.s.existing_hydropower.coefficient_d_reservoir_head* m[:dvWaterVolume][ts]) + p.s.existing_hydropower.coefficient_e_reservoir_head )
 		
 	# Test with a discretized hydropower efficiency
-	elseif p.s.existing_hydropower.computation_type == "quadratic5"
+	elseif p.s.existing_hydropower.computation_type == "quadratic7"
 		@info "Adding quadratic7 constraint for the hydropower power output: model with with a discretized hydropower efficiency"
 
 		@variable(m, reservoir_head[ts in p.time_steps] >= 0)
