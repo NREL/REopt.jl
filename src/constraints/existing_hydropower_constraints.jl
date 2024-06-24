@@ -61,7 +61,71 @@ function add_existing_hydropower_constraints(m,p)
 		# represent the product of the reservoir head and turbine efficiency as a separate variable (Gurobi can only multiply two variables together)
 		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:efficiency_reservoir_head_product][t, ts] <= 500) # TODO, switch this to a more intentional value
 		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:efficiency_reservoir_head_product][t, ts] ==  m[:reservoir_head][ts] * m[:turbine_efficiency][t, ts])
+
+	# Test with a fixed hydropower efficiency at 85%
+	elseif p.s.existing_hydropower.computation_type == "quadratic6"
+		@info "Adding quadratic6 constraint for the hydropower power output: model with a fixed hydropower efficiency at 85%"
+
+		@variable(m, reservoir_head[ts in p.time_steps] >= 0)
+
+		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower],
+			m[:dvRatedProduction][t,ts] == 9810*0.001 * m[:dvWaterOutFlow][t,ts] * m[:reservoir_head][ts] * 0.85
+		)
+
+		@constraint(m, [ts in p.time_steps], m[:reservoir_head][ts] >= 0)
+		@constraint(m, [ts in p.time_steps], m[:reservoir_head][ts] <= 1000) # TODO: enter the maximum reservoir head as an input into the model
+		@constraint(m, [ts in p.time_steps], m[:reservoir_head][ts] == (p.s.existing_hydropower.coefficient_d_reservoir_head* m[:dvWaterVolume][ts]) + p.s.existing_hydropower.coefficient_e_reservoir_head )
 		
+	# Test with a discretized hydropower efficiency
+	elseif p.s.existing_hydropower.computation_type == "quadratic5"
+		@info "Adding quadratic7 constraint for the hydropower power output: model with with a discretized hydropower efficiency"
+
+		@variable(m, reservoir_head[ts in p.time_steps] >= 0)
+		@variable(m, turbine_efficiency[t in p.techs.existing_hydropower, ts in p.time_steps] >= 0)
+		@variable(m, efficiency_reservoir_head_product[t in p.techs.existing_hydropower, ts in p.time_steps] >= 0)
+
+
+		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower],
+			m[:dvRatedProduction][t,ts] == 9810*0.001 * m[:dvWaterOutFlow][t,ts] * m[:efficiency_reservoir_head_product][t,ts]
+		)
+
+		@constraint(m, [ts in p.time_steps], m[:reservoir_head][ts] >= 0)
+		@constraint(m, [ts in p.time_steps], m[:reservoir_head][ts] <= 1000) # TODO: enter the maximum reservoir head as an input into the model
+		@constraint(m, [ts in p.time_steps], m[:reservoir_head][ts] == (p.s.existing_hydropower.coefficient_d_reservoir_head* m[:dvWaterVolume][ts]) + p.s.existing_hydropower.coefficient_e_reservoir_head )
+		
+		# represent the product of the reservoir head and turbine efficiency as a separate variable (Gurobi can only multiply two variables together)
+		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:efficiency_reservoir_head_product][t, ts] <= 500) # TODO, switch this to a more intentional value
+		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:efficiency_reservoir_head_product][t, ts] ==  m[:reservoir_head][ts] * m[:turbine_efficiency][t, ts])
+		
+
+		# Descritization of the efficiency, based on the water flow range
+		# TODO: change these values to inputs into the model:
+		efficiency_bins = [1,2,3]
+		descritized_efficiency = [0.5, 0.75, 0.85]
+		water_flow_bin_limits = [0, 15, 30, 75]
+
+		# define a binary variable for the turbine efficiencies
+		@variable(m, waterflow_range_binary[ts in p.time_steps, t in p.techs.existing_hydropower, i in efficiency_bins], Bin)
+
+		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:turbine_efficiency][t, ts] <= 150) # TODO, switch this to 1
+		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:turbine_efficiency][t, ts] == sum(m[:waterflow_range_binary][t,ts,i]*descritized_efficiency[i] for i in efficiency_bins))                  #(p.s.existing_hydropower.coefficient_a_efficiency* m[:dvWaterOutFlow][t,ts]) + p.s.existing_hydropower.coefficient_b_efficiency )
+		
+		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower, i in efficiency_bins], m[:dvWaterOutFlow][t,ts] <= sum(m[:waterflow_range_binary][t,ts,i] * water_flow_bin_limits[i+1] for i in efficiency_bins) )
+		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower, i in efficiency_bins], m[:dvWaterOutFlow][t,ts] >= sum(m[:waterflow_range_binary][t,ts,i] * water_flow_bin_limits[i] for i in efficiency_bins) )
+
+
+		# only have one binary active at a time
+		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], sum(m[:waterflow_range_binary][t,ts,i] for i in efficiency_bins) <= 1)
+
+		#water_flow <= binary_1 * water_flow_upper_limit_1
+		#water_flow >= binary_1 * water_flow_lower_limit_1
+
+		#water_flow <= sum(binary_x[i] * water_flow_upper_limit_x[i], for i in number_of_bins)
+		#water_flow >= sum(binary_x[i] * water_flow_lower_limit_x[i], for i in number_of_bins)
+		
+		
+
+
 	#elseif p.s.existing_hydropower.computation_type == "linearized_constraints"
 		#TODO: add linearized constraints
 
