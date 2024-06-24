@@ -192,6 +192,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 coefficient_a_efficiency=d["existing_hydropower"]["coefficient_a_efficiency"],
                 coefficient_b_efficiency=d["existing_hydropower"]["coefficient_b_efficiency"],
                 coefficient_c_efficiency=d["existing_hydropower"]["coefficient_c_efficiency"],
+                number_of_efficiency_bins= d["existing_hydropower"]["number_of_efficiency_bins"],
                 coefficient_d_reservoir_head=d["existing_hydropower"]["coefficient_d_reservoir_head"],
                 coefficient_e_reservoir_head=d["existing_hydropower"]["coefficient_e_reservoir_head"],
                 coefficient_f_reservoir_head=d["existing_hydropower"]["coefficient_f_reservoir_head"],

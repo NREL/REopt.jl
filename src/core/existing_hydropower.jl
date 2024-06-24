@@ -12,6 +12,7 @@
     coefficient_d_reservoir_head::Real=0.0,
     coefficient_e_reservoir_head::Real=0.0,
     coefficient_f_reservoir_head::Real=0.0,
+    number_of_efficiency_bins::Real=3,
     water_inflow_cubic_meter_per_second::Array=[], # tributary water flowing into the dam's pond
     cubic_meter_maximum::Real=0, #maximum capacity of the dam
     cubic_meter_minimum::Real=0, #minimum water level of the dam
@@ -41,6 +42,7 @@ mutable struct ExistingHydropower <: AbstractTech
     coefficient_d_reservoir_head
     coefficient_e_reservoir_head
     coefficient_f_reservoir_head
+    number_of_efficiency_bins
     water_inflow_cubic_meter_per_second
     cubic_meter_maximum  
     cubic_meter_minimum 
@@ -67,6 +69,7 @@ mutable struct ExistingHydropower <: AbstractTech
         coefficient_d_reservoir_head::Real=0.0,
         coefficient_e_reservoir_head::Real=0.0,
         coefficient_f_reservoir_head::Real=0.0,
+        number_of_efficiency_bins::Real=3,
         water_inflow_cubic_meter_per_second::Union{Nothing, Array{<:Real,1}} = nothing, # water flowing into the dam's pond
         cubic_meter_maximum::Real=0.0, #maximum capacity of the reservoir
         cubic_meter_minimum::Real=0.0, #minimum water level of the reservoir
@@ -113,6 +116,7 @@ mutable struct ExistingHydropower <: AbstractTech
             coefficient_d_reservoir_head,
             coefficient_e_reservoir_head,
             coefficient_f_reservoir_head,
+            number_of_efficiency_bins,
             water_inflow_cubic_meter_per_second,
             cubic_meter_maximum,
             cubic_meter_minimum,
