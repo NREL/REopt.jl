@@ -108,10 +108,15 @@ function add_existing_hydropower_constraints(m,p)
 		@variable(m, waterflow_range_binary[ts in p.time_steps, t in p.techs.existing_hydropower, i in efficiency_bins], Bin)
 		print("\n Debug line 4 \n")
 		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:turbine_efficiency][t, ts] <= 150) # TODO, switch this to 1
+		
+		print("\n Debug line 4.1 \n")
 		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:turbine_efficiency][t, ts] == sum(m[:waterflow_range_binary][t,ts,i]*descritized_efficiency[i] for i in efficiency_bins))                  #(p.s.existing_hydropower.coefficient_a_efficiency* m[:dvWaterOutFlow][t,ts]) + p.s.existing_hydropower.coefficient_b_efficiency )
 		
-		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower, i in efficiency_bins], m[:dvWaterOutFlow][t,ts] <= sum(m[:waterflow_range_binary][t,ts,i] * water_flow_bin_limits[i+1] for i in efficiency_bins) )
-		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower, i in efficiency_bins], m[:dvWaterOutFlow][t,ts] >= sum(m[:waterflow_range_binary][t,ts,i] * water_flow_bin_limits[i] for i in efficiency_bins) )
+		print("\n Debug line 4.2 \n")
+		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:dvWaterOutFlow][t,ts] <= sum(m[:waterflow_range_binary][t,ts,i] * water_flow_bin_limits[i+1] for i in efficiency_bins) )
+		
+		print("\n Debug line 4.3 \n")
+		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:dvWaterOutFlow][t,ts] >= sum(m[:waterflow_range_binary][t,ts,i] * water_flow_bin_limits[i] for i in efficiency_bins) )
 
 		print("\n Debug line 5 \n")
 		# only have one binary active at a time
