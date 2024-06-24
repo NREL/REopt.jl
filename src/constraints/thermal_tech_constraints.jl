@@ -113,8 +113,8 @@ function add_ashp_heating_cooling_constraints(m, p; _n="")
         end
     end
 
-    if "ASHP_WaterHeater" in p.techs.heating && p.s.ashp.force_into_system
-        for t in setdiff(p.techs.can_serve_space_heating, ["ASHP_WaterHeater"])
+    if "ASHP_WaterHeater" in p.techs.heating && p.s.ashp_wh.force_into_system
+        for t in setdiff(p.techs.can_serve_dhw, ["ASHP_WaterHeater"])
             for ts in p.time_steps
                 fix(m[Symbol("dvHeatingProduction"*_n)][t,"DomesticHotWater",ts], 0.0, force=true)
                 fix(m[Symbol("dvProductionToWaste"*_n)][t,"DomesticHotWater",ts], 0.0, force=true)
