@@ -40,7 +40,7 @@ function ASHP_SpaceHeater(;
     heating_cf::Array{Float64,1}, # ASHP's heating capacity factor curves
     cooling_cf::Array{Float64,1}, # ASHP's cooling capacity factor curves
     can_serve_cooling::Union{Bool, Nothing} = nothing # If ASHP can supply heat to the cooling load
-    force_into_system::Bool = false # force into system to serve all space heating loads if true
+    force_into_system::Union{Bool, Nothing} = nothing # force into system to serve all space heating loads if true
 )
 ```
 """
@@ -56,7 +56,7 @@ function ASHP_SpaceHeater(;
         heating_cf::Array{Float64,1} = Float64[],
         cooling_cf::Array{Float64,1} = Float64[],
         can_serve_cooling::Union{Bool, Nothing} = nothing,
-        force_into_system::Bool = false
+        force_into_system::Union{Bool, Nothing} = nothing
     )
 
     defaults = get_ashp_defaults("SpaceHeating")
@@ -125,7 +125,7 @@ function ASHP_WaterHeater(;
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
     can_supply_steam_turbine::Union{Bool, nothing} = nothing # If the boiler can supply steam to the steam turbine for electric production
     heating_cop::Array{<:Real,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
-    force_into_system::Bool = false # force into system to serve all hot water loads if true
+    force_into_system::Union{Bool, Nothing} = nothing # force into system to serve all hot water loads if true
 )
 ```
 """
@@ -138,7 +138,7 @@ function ASHP_WaterHeater(;
     macrs_bonus_fraction::Real = 0.0,
     heating_cop::Array{Float64,1} = Float64[],
     heating_cf::Array{Float64,1} = Float64[],
-    force_into_system::Bool = false
+    force_into_system::Union{Bool, Nothing} = nothing
     )
 
     defaults = get_ashp_defaults("DomesticHotWater")

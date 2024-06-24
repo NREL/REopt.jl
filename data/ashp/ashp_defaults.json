@@ -9,7 +9,8 @@
         "can_serve_process_heat": false,
         "can_serve_dhw": false, 
         "can_serve_space_heating": true,
-        "can_serve_cooling": true
+        "can_serve_cooling": true,
+        "force_into_system": false
     },
     "DomesticHotWater":
     {
@@ -21,6 +22,7 @@
         "can_serve_process_heat": false,
         "can_serve_dhw": true, 
         "can_serve_space_heating": false,
-        "can_serve_cooling": false
+        "can_serve_cooling": false,
+        "force_into_system": false
     }
 }
