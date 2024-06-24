@@ -71,6 +71,9 @@ function ASHP_SpaceHeater(;
     if isnothing(can_serve_cooling)
         can_serve_cooling = defaults["can_serve_cooling"]
     end
+    if isnothing(force_into_system)
+        force_into_system = defaults["force_into_system"]
+    end
 
     #pre-set defaults that aren't mutable due to technology specifications
     can_supply_steam_turbine = defaults["can_supply_steam_turbine"]
@@ -149,6 +152,9 @@ function ASHP_WaterHeater(;
     end
     if isnothing(om_cost_per_ton)
         om_cost_per_ton = defaults["om_cost_per_ton"]
+    end
+    if isnothing(force_into_system)
+        force_into_system = defaults["force_into_system"]
     end
 
      #pre-set defaults that aren't mutable due to technology specifications
