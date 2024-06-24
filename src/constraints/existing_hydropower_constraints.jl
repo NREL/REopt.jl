@@ -145,7 +145,7 @@ function add_existing_hydropower_constraints(m,p)
 		print("\n Efficiency bins are: \n")
 		print(efficiency_bins)
 
-		waterflow_increments = (maximumwaterflow-minimumwaterflow)/efficiency_bins #[0, 15, 30, 75]
+		waterflow_increments = (p.s.existing_hydropower.maximum_water_output_cubic_meter_per_second_per_turbine - p.s.existing_hydropower.minimum_water_output_cubic_meter_per_second_per_turbine) / p.s.existing_hydropower.number_of_efficiency_bins #[0, 15, 30, 75]
 		print("\n Debug 3 \n")
 
 		# Generate a vector of the water flow bin limits
