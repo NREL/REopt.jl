@@ -2495,7 +2495,7 @@ else  # run HiGHS tests
                 d["CoolingLoad"] = Dict{String,Any}("thermal_loads_ton" => ones(8760)*0.1)
                 d["ExistingChiller"] = Dict{String,Any}("retire_in_optimal" => false, "cop" => 100)
                 d["ExistingBoiler"]["retire_in_optimal"] = false
-                d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = 0
+                d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = 0.001
                 d["ASHP_SpaceHeater"]["can_serve_cooling"] = true
                 d["ASHP_SpaceHeater"]["force_into_system"] = true
                 d["ASHP_WaterHeater"] = Dict{String,Any}("force_into_system" => true, "max_ton" => 100000)
@@ -2507,6 +2507,25 @@ else  # run HiGHS tests
                 @test results["ASHP_WaterHeater"]["annual_electric_consumption_kwh"] ≈ sum(0.4 * REopt.KWH_PER_MMBTU / p.heating_cop["ASHP_WaterHeater"][ts] for ts in p.time_steps) rtol=1e-4
                 @test results["ASHP_SpaceHeater"]["annual_thermal_production_mmbtu"] ≈ 0.4 * 8760 rtol=1e-4
                 @test results["ASHP_SpaceHeater"]["annual_thermal_production_tonhour"] ≈ 876.0 rtol=1e-4
+
+                d["ASHP_SpaceHeater"]["force_into_system"] = false
+                p = REoptInputs(d)
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                results = run_reopt(m, p)
+
+                @test results["ASHP_WaterHeater"]["annual_electric_consumption_kwh"] ≈ sum(0.4 * REopt.KWH_PER_MMBTU / p.heating_cop["ASHP_WaterHeater"][ts] for ts in p.time_steps) rtol=1e-4
+                @test results["ExistingBoiler"]["annual_thermal_production_mmbtu"] ≈ 0.4 * 8760 rtol=1e-4
+                @test results["ExistingChiller"]["annual_thermal_production_tonhour"] ≈ 876.0 rtol=1e-4
+
+                d["ASHP_SpaceHeater"]["force_into_system"] = true
+                d["ASHP_WaterHeater"]["force_into_system"] = false
+                p = REoptInputs(d)
+                m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                results = run_reopt(m, p)
+
+                @test results["ASHP_SpaceHeater"]["annual_thermal_production_mmbtu"] ≈ 0.4 * 8760 rtol=1e-4
+                @test results["ASHP_SpaceHeater"]["annual_thermal_production_tonhour"] ≈ 876.0 rtol=1e-4
+                @test results["ExistingBoiler"]["annual_thermal_production_mmbtu"] ≈ 0.4 * 8760 rtol=1e-4
             end
         
         end
