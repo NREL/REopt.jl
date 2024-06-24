@@ -133,47 +133,55 @@ function add_existing_hydropower_constraints(m,p)
 		@constraint(m, [ts in p.time_steps], m[:reservoir_head][ts] >= 0)
 		@constraint(m, [ts in p.time_steps], m[:reservoir_head][ts] <= 1000) # TODO: enter the maximum reservoir head as an input into the model
 		@constraint(m, [ts in p.time_steps], m[:reservoir_head][ts] == (p.s.existing_hydropower.coefficient_d_reservoir_head* m[:dvWaterVolume][ts]) + p.s.existing_hydropower.coefficient_e_reservoir_head )
-		
+		print("\n Debug 1 \n")
 		# represent the product of the reservoir head and turbine efficiency as a separate variable (Gurobi can only multiply two variables together)
 		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:efficiency_reservoir_head_product][t, ts] <= 500) # TODO, switch this to a more intentional value
 		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:efficiency_reservoir_head_product][t, ts] ==  m[:reservoir_head][ts] * m[:turbine_efficiency][t, ts])
-		
+		print("\n Debug 2 \n")
 
 		# Descritization of the efficiency, based on the water flow range
 		# TODO: change these values to inputs into the model:
 		efficiency_bins = collect(1:p.s.existing_hydropower.number_of_efficiency_bins) 
+		print("\n Efficiency bins are: \n")
+		print(efficiency_bins)
 
 		waterflow_increments = (maximumwaterflow-minimumwaterflow)/efficiency_bins #[0, 15, 30, 75]
-		
+		print("\n Debug 3 \n")
+
 		# Generate a vector of the water flow bin limits
 		water_flow_bin_limits = zeros(1 + p.s.existing_hydropower.number_of_efficiency_bins)
 		water_flow_bin_limits[1] = p.s.existing_hydropower.minimum_water_output_cubic_meter_per_second_per_turbine
+		print("\n Debug 4 \n")
 		for i in efficiency_bins
 			water_flow_bin_limits[1+i] = round(p.s.existing_hydropower.minimum_water_output_cubic_meter_per_second_per_turbine + waterflow_increments, digits=3)
 		end
+		print("\n Debug 5 \n")
 		#redefine the last bin limit as the max water flow through a turbine
 		water_flow_bin_limits[1 + p.s.existing_hydropower.number_of_efficiency_bins] = p.s.existing_hydropower.maximum_water_output_cubic_meter_per_second_per_turbine
-
+		print("\n Debug 6 \n")
+		print("\n The waterflow bin limits are: \n")
+		print(water_flow_bin_limits)
 		# Compute the average turbine efficiency for each water flow bin:
 		descritized_efficiency = zeros(p.s.existing_hydropower.number_of_efficiency_bins)
+		print("\n Debug 7 \n")
 		for i in efficiency_bins
 			# compute the efficiency at the beginning and end of the bin 
 			x1 = (p.s.existing_hydropower.coefficient_a_efficiency * water_flow_bin_limits[i] * water_flow_bin_limits[i]) + (p.s.existing_hydropower.coefficient_b_efficiency * water_flow_bin_limits[i]) + p.s.existing_hydropower.coefficient_c_efficiency
 			x2 = (p.s.existing_hydropower.coefficient_a_efficiency * water_flow_bin_limits[i+1] * water_flow_bin_limits[i+1]) + (p.s.existing_hydropower.coefficient_b_efficiency * water_flow_bin_limits[i+1]) + p.s.existing_hydropower.coefficient_c_efficiency
-			
+			print("\n Debug 8 \n")
 			# compute the average and store it in the discretized_efficiency vector
 			descritized_efficiency[i] = (x1 + x2)/2
 
 		end
-		
+		print("\n Debug 9 \n")
 		# define a binary variable for the turbine efficiencies
 		@variable(m, waterflow_range_binary[ts in p.time_steps, t in p.techs.existing_hydropower, i in efficiency_bins], Bin)
 		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:turbine_efficiency][t, ts] <= 1.0) # the maximum efficiency fraction is 100%
 		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:turbine_efficiency][t, ts] == sum(m[:waterflow_range_binary][ts,t,i]*descritized_efficiency[i] for i in efficiency_bins))                  #(p.s.existing_hydropower.coefficient_a_efficiency* m[:dvWaterOutFlow][t,ts]) + p.s.existing_hydropower.coefficient_b_efficiency )
-		
+		print("\n Debug 10 \n")
 		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:dvWaterOutFlow][t,ts] <= sum(m[:waterflow_range_binary][ts,t,i] * water_flow_bin_limits[i+1] for i in efficiency_bins) )
 		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:dvWaterOutFlow][t,ts] >= sum(m[:waterflow_range_binary][ts,t,i] * water_flow_bin_limits[i] for i in efficiency_bins) )
-
+		print("\n Debug 11 \n")
 		# only have one binary active at a time
 		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], sum(m[:waterflow_range_binary][ts,t,i] for i in efficiency_bins) <= 1)
 
