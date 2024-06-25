@@ -295,6 +295,7 @@ function Techs(s::Scenario)
         push!(all_techs, "ASHP_WaterHeater")
         push!(heating_techs, "ASHP_WaterHeater")
         push!(electric_heaters, "ASHP_WaterHeater")
+        push!(ashp_techs, "ASHP_WaterHeater")
         push!(ashp_wh_techs, "ASHP_WaterHeater")
         if s.ashp_wh.can_supply_steam_turbine
             push!(techs_can_supply_steam_turbine, "ASHP_WaterHeater")
