@@ -125,11 +125,20 @@ function add_existing_hydropower_constraints(m,p)
 		@variable(m, turbine_efficiency[t in p.techs.existing_hydropower, ts in p.time_steps] >= 0)
 		@variable(m, efficiency_reservoir_head_product[t in p.techs.existing_hydropower, ts in p.time_steps] >= 0)
 
-		
-		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower],
-			m[:dvRatedProduction][t,ts] == 9810*0.001 * m[:dvWaterOutFlow][t,ts] * m[:efficiency_reservoir_head_product][t,ts]
-		)
-		
+		Hydro_techs = p.techs.existing_hydropower
+		print("\n The hydro techs are: \n")
+		print(Hydro_techs)
+
+		for t in 1:Int(length(Hydro_techs))
+			@constraint(m, [ts in p.time_steps],
+				m[:dvRatedProduction][Hydro_techs[t],ts] == 9810*0.001 * m[:dvWaterOutFlow][Hydro_techs[t],ts] * (m[:efficiency_reservoir_head_product][Hydro_techs[t],ts] - (t/1000) )
+			)
+		end
+		# Previous constraint:
+		#@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower],
+		#		m[:dvRatedProduction][t,ts] == 9810*0.001 * m[:dvWaterOutFlow][t,ts] * m[:efficiency_reservoir_head_product][t,ts]
+		#	)
+
 		@constraint(m, [ts in p.time_steps], m[:reservoir_head][ts] >= 0)
 		@constraint(m, [ts in p.time_steps], m[:reservoir_head][ts] <= 1000) # TODO: enter the maximum reservoir head as an input into the model
 		@constraint(m, [ts in p.time_steps], m[:reservoir_head][ts] == (p.s.existing_hydropower.coefficient_d_reservoir_head* m[:dvWaterVolume][ts]) + p.s.existing_hydropower.coefficient_e_reservoir_head )
@@ -247,13 +256,13 @@ function add_existing_hydropower_constraints(m,p)
 		@constraint(m, [ts in p.time_steps], m[:dvSpillwayWaterFlow][ts] <= p.s.existing_hydropower.spillway_maximum_cubic_meter_per_second)
 	end 
 
-	# Define the order of which turbines are used:
-	Hydro_techs = p.techs.existing_hydropower
-	print("\n The hydro techs are: \n")
-	print(Hydro_techs)
-	for i in 1:(length(Hydro_techs)-1)
-		@constraint(m, [ts in p.time_steps], m[:dvRatedProduction][Hydro_techs[i],ts] >=  m[:dvRatedProduction][Hydro_techs[i+1],ts])
-	end
+	# Define the order of which turbines are used (method 1):
+	#Hydro_techs = p.techs.existing_hydropower
+	#print("\n The hydro techs are: \n")
+	#print(Hydro_techs)
+	#for i in 1:(length(Hydro_techs)-1)
+	#	@constraint(m, [ts in p.time_steps], m[:dvRatedProduction][Hydro_techs[i],ts] >=  m[:dvRatedProduction][Hydro_techs[i+1],ts])
+	#end
 
 	# Define the minimum operating time (in time steps) for the hydropower turbine
 	
