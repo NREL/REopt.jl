@@ -232,8 +232,9 @@ function add_existing_hydropower_constraints(m,p)
 	
 	# Total water volume must be the same in the beginning and the end
 	@constraint(m, m[:dvWaterVolume][1] == m[:dvWaterVolume][maximum(p.time_steps)])
-
+	
 	# Total power out must be less than or equal to 
+		# TODO: check if this constraint is necessary
 	#@constraint(m,[ts in p.time_steps, t in p.techs.existing_hydropower],
 		#m[:dvHydroPowerOut][ts] == m[:dvHydroToGrid][ts] + m[:dvHydroToStorage][ts] + m[:dvHydroToLoad][ts]
 	#)
@@ -246,12 +247,20 @@ function add_existing_hydropower_constraints(m,p)
 		@constraint(m, [ts in p.time_steps], m[:dvSpillwayWaterFlow][ts] <= p.s.existing_hydropower.spillway_maximum_cubic_meter_per_second)
 	end 
 
+	# Define the order of which turbines are used:
+	Hydro_techs = p.techs.existing_hydropower
+	print("\n The hydro techs are: \n")
+	print(Hydro_techs)
+	for i in 1:(length(Hydro_techs)-1)
+		@constraint(m, [ts in p.time_steps], m[:dvRatedProduction][Hydro_techs[i],ts] >=  m[:dvRatedProduction][Hydro_techs[i+1],ts])
+	end
+
 	# Define the minimum operating time (in time steps) for the hydropower turbine
 	
 	if p.s.existing_hydropower.minimum_operating_time_steps_individual_turbine > 1
 		print("\n Adding minimum operating time constraint \n")
 		@variable(m, indicator_min_operating_time[t in p.techs.existing_hydropower, ts in p.time_steps], Bin)
-		@constraint(m, m[:indicator_min_operating_time]["ExistingHydropower_Turbine1", 2175] == 1)
+		#@constraint(m, m[:indicator_min_operating_time]["ExistingHydropower_Turbine1", 2175] == 1)
 		for t in p.techs.existing_hydropower, ts in 1:8750 #(length(p.time_steps)- p.s.existing_hydropower.minimum_operating_time_steps_individual_turbine - 1 )
 			@constraint(m, m[:indicator_min_operating_time][t, ts] => { m[:binTurbineActive][t,ts+1] + m[:binTurbineActive][t,ts+2] + m[:binTurbineActive][t,ts+3] + m[:binTurbineActive][t,ts+4] + m[:binTurbineActive][t,ts+5] >= 5 })# { sum(m[:binTurbineActive][t,ts+i] for i in 1:p.s.existing_hydropower.minimum_operating_time_steps_individual_turbine) >= p.s.existing_hydropower.minimum_operating_time_steps_individual_turbine} )
 			@constraint(m, !m[:indicator_min_operating_time][t, ts] => { m[:binTurbineActive][t,ts+1] - m[:binTurbineActive][t,ts] <= 0  } )
