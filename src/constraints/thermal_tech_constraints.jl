@@ -91,12 +91,15 @@ function add_heating_tech_constraints(m, p; _n="")
     # Enfore
 end
 
-function add_ashp_heating_cooling_constraints(m, p; _n="")
+function add_heating_cooling_constraints(m, p; _n="")
     @constraint(m, [t in setdiff(intersect(p.techs.cooling, p.techs.heating), p.techs.ghp), ts in p.time_steps],
         sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads) / p.heating_cf[t][ts] + m[Symbol("dvCoolingProduction"*_n)][t,ts] / p.cooling_cf[t][ts] <= m[Symbol("dvSize"*_n)][t]
     )
+end
     
-    if "ASHP_SpaceHeater" in p.techs.heating && p.s.ashp.force_into_system
+
+function add_ashp_force_in_constraints(m, p; _n="")
+    if "ASHP_SpaceHeater" in p.techs.ashp && p.s.ashp.force_into_system
         for t in setdiff(p.techs.can_serve_space_heating, ["ASHP_SpaceHeater"])
             for ts in p.time_steps
                 fix(m[Symbol("dvHeatingProduction"*_n)][t,"SpaceHeating",ts], 0.0, force=true)
@@ -113,7 +116,7 @@ function add_ashp_heating_cooling_constraints(m, p; _n="")
         end
     end
 
-    if "ASHP_WaterHeater" in p.techs.heating && p.s.ashp_wh.force_into_system
+    if "ASHP_WaterHeater" in p.techs.ashp && p.s.ashp_wh.force_into_system
         for t in setdiff(p.techs.can_serve_dhw, ["ASHP_WaterHeater"])
             for ts in p.time_steps
                 fix(m[Symbol("dvHeatingProduction"*_n)][t,"DomesticHotWater",ts], 0.0, force=true)

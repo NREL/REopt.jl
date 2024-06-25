@@ -317,9 +317,13 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			no_existing_chiller_production(m, p)
 		end
 
-        if !isempty(setdiff(intersect(p.techs.heating, p.techs.cooling), p.techs.ghp))
-            add_ashp_heating_cooling_constraints(m, p)
+        if !isempty(setdiff(intersect(p.techs.cooling, p.techs.heating), p.techs.ghp))
+            add_heating_cooling_constraints(m, p)
         end
+
+		if !isempty(p.techs.ashp)
+			add_ashp_force_in_constraints(m, p)
+		end
     
         if !isempty(p.techs.thermal)
             add_thermal_load_constraints(m, p)  # split into heating and cooling constraints?
