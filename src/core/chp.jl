@@ -525,8 +525,11 @@ function get_heuristic_chp_size_kw(prime_mover_defaults_all, avg_boiler_fuel_loa
         therm_effic = thermal_efficiency
     end
     if therm_effic == 0.0
+        if prime_mover == "micro_turbine" && isnothing(size_class)
+            size_class = "any"
+        end
         throw(@error("Error trying to calculate heuristic CHP size based on average thermal load because the 
-                    thermal efficiency of prime mover $prime_mover for generating $hot_water_or_steam is 0.0"))
+                    thermal efficiency of prime_mover $prime_mover (size_class $size_class) for generating $hot_water_or_steam is 0.0"))
     end
     elec_effic = prime_mover_defaults_all[prime_mover]["electric_efficiency_full_load"][size_class+1]
     avg_heating_thermal_load_mmbtu_per_hr = avg_boiler_fuel_load_mmbtu_per_hour * boiler_effic
