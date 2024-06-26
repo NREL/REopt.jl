@@ -721,6 +721,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             heating_cf = round.(d["ASHP_SpaceHeater"]["heating_cf"],digits=3)
             cooling_cf = round.(d["ASHP_SpaceHeater"]["cooling_cf"],digits=3)
         end
+
+        heating_cf[heating_cop .== 1] .= 1
+        cooling_cf[cooling_cop .== 1] .= 1
+
         d["ASHP_SpaceHeater"]["heating_cf"] = heating_cf
         d["ASHP_SpaceHeater"]["cooling_cf"] = cooling_cf
         ashp = ASHP_SpaceHeater(;dictkeys_tosymbols(d["ASHP_SpaceHeater"])...)
@@ -761,6 +765,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             # Else if the user already provide cop series, use that
             heating_cop = round.(d["ASHP_WaterHeater"]["heating_cop"],digits=3)
         end
+            
         d["ASHP_WaterHeater"]["heating_cop"] = heating_cop
 
         # Add ASHP_WH's capacity factor curves
@@ -774,6 +779,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             # Else if the user already provide cf curves, use them
             heating_cf = round.(d["ASHP_WaterHeater"]["heating_cf"],digits=3)
         end
+
+        heating_cf[heating_cop .== 1] .= 1
+
         d["ASHP_WaterHeater"]["heating_cf"] = heating_cf
         ashp_wh = ASHP_WaterHeater(;dictkeys_tosymbols(d["ASHP_WaterHeater"])...)
     end
