@@ -723,7 +723,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         end
 
         heating_cf[heating_cop .== 1] .= 1
-        cooling_cf[cooling_cop .== 1] .= 1
 
         d["ASHP_SpaceHeater"]["heating_cf"] = heating_cf
         d["ASHP_SpaceHeater"]["cooling_cf"] = cooling_cf
