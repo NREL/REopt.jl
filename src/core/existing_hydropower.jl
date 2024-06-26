@@ -4,15 +4,16 @@
 ```julia
     existing_kw_per_turbine::Real=0,
     number_of_turbines::Real=0, 
-    computation_type::String="average_power_conversion",
-    average_cubic_meters_per_second_per_kw::Real=0,
-    coefficient_a_efficiency::Real=0.0,
+    computation_type::String="average_power_conversion", # "average_power_conversion", "quadratic_partially_discretized", "fixed_efficiency_linearized_reservoir_head", or "quadratic_unsimplified"
+    average_cubic_meters_per_second_per_kw::Real=0, # only applied when the computation_type = "average_power_conversion"
+    coefficient_a_efficiency::Real=0.0, 
     coefficient_b_efficiency::Real=0.0,
     coefficient_c_efficiency::Real=0.0,
-    coefficient_d_reservoir_head::Real=0.0,
+    coefficient_d_reservoir_head::Real=0.0, # coefficient for a quadratic term for the reservoir head equation, which is only applied when the computation_type = "quadratic_unsimplified"
     coefficient_e_reservoir_head::Real=0.0,
-    coefficient_f_reservoir_head::Real=0.0,
-    number_of_efficiency_bins::Real=3,
+    coefficient_f_reservoir_head::Real=0.0, 
+    number_of_efficiency_bins::Real=3, # only applied when the computation_type = "quadratic_partially_discretized"
+    fixed_turbine_efficiency::Real=0.9, # only applied when the computation_type = "fixed_efficiency_linearized_reservoir_head"
     water_inflow_cubic_meter_per_second::Array=[], # tributary water flowing into the dam's pond
     cubic_meter_maximum::Real=0, #maximum capacity of the dam
     cubic_meter_minimum::Real=0, #minimum water level of the dam
@@ -43,6 +44,7 @@ mutable struct ExistingHydropower <: AbstractTech
     coefficient_e_reservoir_head
     coefficient_f_reservoir_head
     number_of_efficiency_bins
+    fixed_turbine_efficiency
     water_inflow_cubic_meter_per_second
     cubic_meter_maximum  
     cubic_meter_minimum 
@@ -70,6 +72,7 @@ mutable struct ExistingHydropower <: AbstractTech
         coefficient_e_reservoir_head::Real=0.0,
         coefficient_f_reservoir_head::Real=0.0,
         number_of_efficiency_bins::Real=3,
+        fixed_turbine_efficiency::Real=0.9,
         water_inflow_cubic_meter_per_second::Union{Nothing, Array{<:Real,1}} = nothing, # water flowing into the dam's pond
         cubic_meter_maximum::Real=0.0, #maximum capacity of the reservoir
         cubic_meter_minimum::Real=0.0, #minimum water level of the reservoir
@@ -117,6 +120,7 @@ mutable struct ExistingHydropower <: AbstractTech
             coefficient_e_reservoir_head,
             coefficient_f_reservoir_head,
             number_of_efficiency_bins,
+            fixed_turbine_efficiency,
             water_inflow_cubic_meter_per_second,
             cubic_meter_maximum,
             cubic_meter_minimum,

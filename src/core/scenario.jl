@@ -183,6 +183,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     
     if haskey(d, "existing_hydropower")
         #existing_hydropower = ExistingHydropower(; dictkeys_tosymbols(d["existing_hydropower"])...)
+        # TODO: change the method for creating the ExistingHydropower input (mirror the other methods which don't require every input to be provided in the inputs dictionary into REopt)
         print("\n Using previous version of hydropower scenario setup code: *****\n")
         existing_hydropower = ExistingHydropower(; 
                 existing_kw_per_turbine = d["existing_hydropower"]["existing_kw_per_turbine"],
@@ -196,6 +197,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 coefficient_d_reservoir_head=d["existing_hydropower"]["coefficient_d_reservoir_head"],
                 coefficient_e_reservoir_head=d["existing_hydropower"]["coefficient_e_reservoir_head"],
                 coefficient_f_reservoir_head=d["existing_hydropower"]["coefficient_f_reservoir_head"],
+                fixed_turbine_efficiency = d["existing_hydropower"]["fixed_turbine_efficiency"],
                 water_inflow_cubic_meter_per_second=d["existing_hydropower"]["water_inflow_cubic_meter_per_second"],  
                 cubic_meter_maximum=d["existing_hydropower"]["cubic_meter_maximum"], 
                 cubic_meter_minimum=d["existing_hydropower"]["cubic_meter_minimum"],   

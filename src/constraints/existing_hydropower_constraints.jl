@@ -14,13 +14,13 @@ function add_existing_hydropower_constraints(m,p)
 		
 		for t in 1:Int(length(Hydro_techs))
 			@constraint(m, [ts in p.time_steps],
-				m[:dvRatedProduction][Hydro_techs[t],ts] == 9810*0.001 * m[:dvWaterOutFlow][Hydro_techs[t],ts] * (m[:efficiency_reservoir_head_product][Hydro_techs[t],ts] - (t/1000) )
+				m[:dvRatedProduction][Hydro_techs[t],ts] == 9810*0.001 * m[:dvWaterOutFlow][Hydro_techs[t],ts] * (m[:efficiency_reservoir_head_product][Hydro_techs[t],ts] - (t/1000) ) # the (t/1000) term establishes priority of turbine usage by having a slight efficiency difference for each turbine
 						)
 		end
 
 		@constraint(m, [ts in p.time_steps], m[:reservoir_head][ts] >= 0)
 		@constraint(m, [ts in p.time_steps], m[:reservoir_head][ts] <= 1000) # TODO: enter the maximum reservoir head as an input into the model
-		@constraint(m, [ts in p.time_steps], m[:reservoir_head][ts] == (p.s.existing_hydropower.coefficient_d_reservoir_head* m[:dvWaterVolume][ts]) + p.s.existing_hydropower.coefficient_e_reservoir_head )
+		@constraint(m, [ts in p.time_steps], m[:reservoir_head][ts] == (p.s.existing_hydropower.coefficient_e_reservoir_head* m[:dvWaterVolume][ts]) + p.s.existing_hydropower.coefficient_f_reservoir_head )
 		
 		# represent the product of the reservoir head and turbine efficiency as a separate variable (Gurobi can only multiply two variables together)
 		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], m[:efficiency_reservoir_head_product][t, ts] <= 500) # TODO, switch this to a more intentional value
@@ -56,7 +56,6 @@ function add_existing_hydropower_constraints(m,p)
 			x2 = (p.s.existing_hydropower.coefficient_a_efficiency * water_flow_bin_limits[i+1] * water_flow_bin_limits[i+1]) + (p.s.existing_hydropower.coefficient_b_efficiency * water_flow_bin_limits[i+1]) + p.s.existing_hydropower.coefficient_c_efficiency
 			# compute the average and store it in the discretized_efficiency vector
 			descritized_efficiency[i] = (x1 + x2)/2
-
 		end
 		
 		# define a binary variable for the turbine efficiencies
@@ -69,15 +68,34 @@ function add_existing_hydropower_constraints(m,p)
 		# only have one binary active at a time
 		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower], sum(m[:waterflow_range_binary][ts,t,i] for i in efficiency_bins) <= 1)
 
+	elseif p.s.existing_hydropower.computation_type == "fixed_efficiency_linearized_reservoir_head"
+		@info "Adding hydropower power output constraint using a fixed efficiency and linearized reservoir head"
+
+        @variable(m, reservoir_head[ts in p.time_steps] >= 0)
+
+		Hydro_techs = p.techs.existing_hydropower
+		for t in 1:Int(length(Hydro_techs))
+        @constraint(m, [ts in p.time_steps],
+            m[:dvRatedProduction][Hydro_techs[t],ts] == 9810*0.001 * m[:dvWaterOutFlow][Hydro_techs[t],ts] * m[:reservoir_head][ts] * (p.s.existing_hydropower.fixed_turbine_efficiency- (t/1000) )
+        )
+		end
+
+        @constraint(m, [ts in p.time_steps], m[:reservoir_head][ts] >= 0)
+        @constraint(m, [ts in p.time_steps], m[:reservoir_head][ts] <= 1000) # TODO: enter the maximum reservoir head as an input into the model
+        @constraint(m, [ts in p.time_steps], m[:reservoir_head][ts] == (p.s.existing_hydropower.coefficient_e_reservoir_head* m[:dvWaterVolume][ts]) + p.s.existing_hydropower.coefficient_f_reservoir_head )
+
 
 	elseif p.s.existing_hydropower.computation_type == "average_power_conversion"
 		# This is a simplified constraint that uses an average conversion for water flow and kW output
 		@info "Adding hydropower power output constraint using the average power conversion"
 
-		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower],
-				m[:dvRatedProduction][t,ts] == m[:dvWaterOutFlow][t,ts] * (1/p.s.existing_hydropower.average_cubic_meters_per_second_per_kw) # convert to kW/time step, for instance: m3/15min  * kwh/m3 * (0.25 hrs/1hr)
-					)
-	
+		Hydro_techs = p.techs.existing_hydropower
+		for t in 1:Int(length(Hydro_techs))
+			@constraint(m, [ts in p.time_steps],
+					m[:dvRatedProduction][Hydro_techs[t],ts] == m[:dvWaterOutFlow][Hydro_techs[t],ts] * (1/p.s.existing_hydropower.average_cubic_meters_per_second_per_kw)* (1- (t/1000))  # convert to kW/time step, for instance: m3/15min  * kwh/m3 * (0.25 hrs/1hr)
+						)
+		end
+
 	elseif p.s.existing_hydropower.computation_type == "quadratic_unsimplified" # This equation has not been tested directly
 		@info "Adding quadratic1 constraint for the hydropower power output"
 		@constraint(m, [ts in p.time_steps, t in p.techs.existing_hydropower],
