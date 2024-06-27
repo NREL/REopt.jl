@@ -182,9 +182,20 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     storage = Storage(storage_structs)
     
     if haskey(d, "existing_hydropower")
-        #existing_hydropower = ExistingHydropower(; dictkeys_tosymbols(d["existing_hydropower"])...)
         # TODO: change the method for creating the ExistingHydropower input (mirror the other methods which don't require every input to be provided in the inputs dictionary into REopt)
-        print("\n Using previous version of hydropower scenario setup code: *****\n")
+                
+        tribuary_flow = d["existing_hydropower"]["water_inflow_cubic_meter_per_second"]
+        tributary_flow_length = length(d["existing_hydropower"]["water_inflow_cubic_meter_per_second"])
+
+        if tributary_flow_length != 8760 && tributary_flow_length != 17520 && tributary_flow_length != 35040
+            throw(@error("Invalid length of the tributary flow vector"))
+        elseif settings.time_steps_per_hour > 1 && tributary_flow_length > 8760
+            @warn("Upscaling the tributary flow rate to match the time steps per hour")
+            tribuary_flow = repeat(tribuary_flow, inner=time_steps_per_hour)
+        else
+            print("\n No changes made to the tributary flow input vector \n")
+        end
+
         existing_hydropower = ExistingHydropower(; 
                 existing_kw_per_turbine = d["existing_hydropower"]["existing_kw_per_turbine"],
                 number_of_turbines = d["existing_hydropower"]["number_of_turbines"],

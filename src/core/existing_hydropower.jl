@@ -89,12 +89,8 @@ mutable struct ExistingHydropower <: AbstractTech
         can_curtail::Bool = true
         )
         
-        #TODO: modify and uncomment the data checks below
-        #if !(off_grid_flag) && !(operating_reserve_required_fraction == 0.0)
-        #    @warn "Hydropower operating_reserve_required_fraction applies only when true. Setting operating_reserve_required_fraction to 0.0 for this on-grid analysis."
-        #    operating_reserve_required_fraction = 0.0
-        #end
         #=
+        # TODO: implement off_grid capability for hydropower
         if off_grid_flag && (can_net_meter || can_wholesale || can_export_beyond_nem_limit)
             @warn "Setting Existing Hydropower can_net_meter, can_wholesale, and can_export_beyond_nem_limit to False because `off_grid_flag` is true."
             can_net_meter = false
@@ -102,11 +98,25 @@ mutable struct ExistingHydropower <: AbstractTech
             can_export_beyond_nem_limit = false
         end
         =#
-        # validate inputs
-        #invalid_args = String[]
-        #if !(0 <= azimuth < 360)
-        #    push!(invalid_args, "azimuth must satisfy 0 <= azimuth < 360, got $(azimuth)")
-        #end
+
+        if fixed_turbine_efficiency > 1.0
+            throw(@error("The 'fixed_turbine_efficiency' must be less than or equal to 1.0"))
+        end
+        if minimum_operating_time_steps_individual_turbine < 1
+            throw(@error("The 'minimum_operating_time_steps_individual_turbine' must be greater than or equal to 1"))
+        end
+        if number_of_efficiency_bins > 10
+            @warn("Setting the 'number_of_efficiency_bins' to a high value can increase complexity of the optimization problem and reduce solve times")
+        end
+        if number_of_turbines > 8
+            @warn("Setting the 'number_of_turbines' to a high value can increase complexity of the optimization problem and reduce solve times")
+        end
+        if cubic_meter_maximum < cubic_meter_minimum
+            throw(@error("The 'cubic_meter_maximum' must be greater than or equal to the 'cubic_meter_minimum"))
+        end
+        if initial_reservoir_volume < cubic_meter_minimum || initial_reservoir_volume > cubic_meter_maximum
+            throw(@error("The 'initial_reservoir_volume' must be between the 'cubic_meter_minimum' and 'cubic_meter_maximum' "))
+        end
 
         new(
             existing_kw_per_turbine,
