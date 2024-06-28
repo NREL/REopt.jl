@@ -218,6 +218,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 minimum_water_output_cubic_meter_per_second_total_of_all_turbines=d["existing_hydropower"]["minimum_water_output_cubic_meter_per_second_total_of_all_turbines"],
                 minimum_operating_time_steps_individual_turbine = d["existing_hydropower"]["minimum_operating_time_steps_individual_turbine"],
                 minimum_operating_time_steps_at_local_maximum_turbine_output = d["existing_hydropower"]["minimum_operating_time_steps_at_local_maximum_turbine_output"],
+                minimum_turbine_off_time_steps= d["existing_hydropower"]["minimum_turbine_off_time_steps"],
                 spillway_maximum_cubic_meter_per_second = d["existing_hydropower"]["spillway_maximum_cubic_meter_per_second"],
                 can_net_meter=d["existing_hydropower"]["can_net_meter"], 
                 can_wholesale=d["existing_hydropower"]["can_wholesale"], 

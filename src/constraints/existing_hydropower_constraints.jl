@@ -165,6 +165,14 @@ function add_existing_hydropower_constraints(m,p)
 		end
 	end
 
+	if p.s.existing_hydropower.minimum_turbine_off_time_steps > 1
+		print("\n Adding minimum off duration for the turbines \n")
+		@variable(m, indicator_turbine_turn_off[t in p.techs.existing_hydropower, ts in p.time_steps], Bin)
+		for t in p.techs.existing_hydropower, ts in 1:Int(length(p.time_steps)- p.s.existing_hydropower.minimum_turbine_off_time_steps - 1 )
+			@constraint(m, m[:indicator_turbine_turn_off][t, ts] =>  { sum(m[:binTurbineActive][t,ts+i] for i in 1:p.s.existing_hydropower.minimum_turbine_off_time_steps) <= 0 } ) 
+			@constraint(m, !m[:indicator_turbine_turn_off][t, ts] => { m[:binTurbineActive][t,ts+1] - m[:binTurbineActive][t,ts] >= 0  } )
+		end
+	end
 	# TODO: remove this constraint that prevents a spike in the spillway use during the first time step
 	@constraint(m, [ts in p.time_steps], m[:dvSpillwayWaterFlow][1] == 0)
 
