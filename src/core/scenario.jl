@@ -681,7 +681,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
             if !haskey(d["ASHP_SpaceHeater"], "heating_cop")
                 heating_cop = round.(0.0462 .* ambient_temp_fahrenheit .+ 1.351, digits=3)
-                heating_cop[ambient_temp_fahrenheit .< -7.6] .= 1
+                heating_cop[ambient_temp_fahrenheit .< 10] .= 1
                 heating_cop[ambient_temp_fahrenheit .> 79] .= 999999
             else
                 heating_cop = round.(d["ASHP_SpaceHeater"]["heating_cop"],digits=3)
