@@ -1552,7 +1552,7 @@ struct ProcessHeatLoad
                                                     existing_boiler_efficiency)
         else
             throw(@error("Cannot construct BuiltInProcessHeatLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
-                [doe_reference_name, city], or [blended_doe_reference_names, blended_doe_reference_percents, city]."))
+                [industry_reference_name, city], or [blended_industry_reference_names, blended_industry_reference_percents, city]."))
         end
 
         if length(loads_kw) < 8760*time_steps_per_hour
