@@ -105,16 +105,27 @@ end
 
 
 """
-    built_in_load(type::String, city::String, buildingtype::String, 
-        year::Int, annual_energy::Real, monthly_energies::AbstractArray{<:Real,1}
-        boiler_efficiency_input::Union{Real,Nothing}=nothing
+    built_in_load(
+        type::String, 
+        city::String, 
+        buildingtype::String, 
+        year::Int, 
+        annual_energy::Real, 
+        monthly_energies::AbstractArray{<:Real,1},
+        boiler_efficiency_input::Union{Real,Nothing}=nothing        
     )
 Scale a normalized Commercial Reference Building according to inputs provided and return the 8760.
 """
 
-function built_in_load(type::String, city::String, buildingtype::String, 
-    year::Int, annual_energy::R, monthly_energies::AbstractArray{R,1},
-    boiler_efficiency_input::Union{R,Nothing}=nothing) where {R <: Real}
+function built_in_load(
+    type::String, 
+    city::String, 
+    buildingtype::String, 
+    year::Int, 
+    annual_energy::Real, 
+    monthly_energies::AbstractArray{<:Real,1},
+    boiler_efficiency_input::Union{Real,Nothing}=nothing
+    )
 
     @assert type in ["electric", "domestic_hot_water", "space_heating", "cooling", "process_heat"]
     monthly_scalers = ones(12)
