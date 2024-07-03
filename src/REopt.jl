@@ -24,7 +24,9 @@ export
     avert_emissions_profiles,
     cambium_emissions_profile,
     easiur_data,
-    get_existing_chiller_default_cop
+    get_existing_chiller_default_cop,
+    convert_mgravens_inputs_to_reopt_inputs,
+    update_mgravens_with_reopt_results!
 
 import HTTP
 import JSON
@@ -141,6 +143,7 @@ include("core/reopt_inputs.jl")
 include("core/bau_inputs.jl")
 include("core/cost_curve.jl")
 include("core/simulated_load.jl")
+include("core/mgravens.jl")
 
 include("constraints/outage_constraints.jl")
 include("constraints/storage_constraints.jl")
