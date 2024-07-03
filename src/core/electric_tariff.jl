@@ -8,17 +8,17 @@
 """
 struct ElectricTariff
     energy_rates::AbstractArray{Float64, 2} # gets a second dim with tiers
-    energy_tier_limits::AbstractArray{Float64,1}
+    energy_tier_limits::AbstractArray{Float64,2} # month X tier
     n_energy_tiers::Int
 
     monthly_demand_rates::AbstractArray{Float64, 2} # gets a second dim with tiers
     time_steps_monthly::AbstractArray{AbstractArray{Int64,1},1}  # length = 0 or 12
-    monthly_demand_tier_limits::AbstractArray{Float64,1}
+    monthly_demand_tier_limits::AbstractArray{Float64,2} # month X tier
     n_monthly_demand_tiers::Int
 
     tou_demand_rates::AbstractArray{Float64, 2} # gets a second dim with tiers
     tou_demand_ratchet_time_steps::AbstractArray{AbstractArray{Int64,1},1}  # length = n_tou_demand_ratchets
-    tou_demand_tier_limits::AbstractArray{Float64,1}
+    tou_demand_tier_limits::AbstractArray{Float64,2} # ratchet X tier
     n_tou_demand_tiers::Int
 
     demand_lookback_months::AbstractArray{Int,1}
@@ -42,7 +42,7 @@ end
 `ElectricTariff` is a required REopt input for on-grid scenarios only (it cannot be supplied when `Settings.off_grid_flag` is true) with the following keys and default values:
 ```julia
     urdb_label::String="",
-    urdb_response::Dict=Dict(),
+    urdb_response::Dict=Dict(), # Response JSON for URDB rates. Note: if creating your own urdb_response, ensure periods are zero-indexed.
     urdb_utility_name::String="",
     urdb_rate_name::String="",
     wholesale_rate::T1=nothing, # Price of electricity sold back to the grid in absence of net metering. Can be a scalar value, which applies for all-time, or an array with time-sensitive values. If an array is input then it must have a length of 8760, 17520, or 35040. The inputed array values are up/down-sampled using mean values to match the Settings.time_steps_per_hour.
@@ -120,11 +120,11 @@ function ElectricTariff(;
     # TODO remove_tiers for multinode models
     nem_rate = Float64[]
 
-    energy_tier_limits = Float64[]
+    energy_tier_limits = Array{Float64,2}(undef, 0, 0)
     n_energy_tiers = 1
-    monthly_demand_tier_limits = Float64[]
+    monthly_demand_tier_limits = Array{Float64,2}(undef, 0, 0)
     n_monthly_demand_tiers = 1
-    tou_demand_tier_limits = Float64[]
+    tou_demand_tier_limits = Array{Float64,2}(undef, 0, 0)
     n_tou_demand_tiers = 1
     time_steps_monthly = get_monthly_time_steps(year, time_steps_per_hour=time_steps_per_hour)
 
@@ -241,7 +241,7 @@ function ElectricTariff(;
         if remove_tiers
             energy_rates, monthly_demand_rates, tou_demand_rates = remove_tiers_from_urdb_rate(u)
             energy_tier_limits, monthly_demand_tier_limits, tou_demand_tier_limits = 
-                Float64[], Float64[], Float64[]
+                Array{Float64,2}(undef, 0, 0), Array{Float64,2}(undef, 0, 0), Array{Float64,2}(undef, 0, 0)
             n_energy_tiers, n_monthly_demand_tiers, n_tou_demand_tiers = 1, 1, 1
         end
 

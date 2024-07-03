@@ -36,11 +36,10 @@ worth factor is used in two different ways, depending on the `maintenance_strate
     - `replace_cost_per_kwh`
     - `inverter_replacement_year`
     - `battery_replacement_year`
-    - `replace_cost_per_kw`
-    - `replace_cost_per_kwh`
-    - `inverter_replacement_year`
-    - `battery_replacement_year`
-    The are replaced by the `maintenance_cost_per_kwh` vector.
+    - `installed_cost_constant`
+    - `replace_cost_constant`
+    - `cost_constant_replacement_year`
+    They are replaced by the `maintenance_cost_per_kwh` vector.
 
 !!! note
     When providing the `maintenance_cost_per_kwh` it must have a length equal to `Financial.analysis_years*365`.
