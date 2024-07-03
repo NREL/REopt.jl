@@ -1,0 +1,40 @@
+{
+    "Site": {
+        "longitude": -0.0,
+        "latitude": 0.0,
+        "land_acres": 1.0E8
+    },
+    "ElectricLoad": {
+        "loads_kw": []
+    },    
+    "ElectricTariff": {
+        "tou_energy_rates_per_kwh": [],
+        "monthly_demand_rates": []
+    },
+    "ElectricUtility" : {
+    },    
+    "Financial": {
+        "analysis_years": 25
+    },
+    "Settings": {
+        "time_steps_per_hour": 1
+    },    
+    "PV": {
+        "installed_cost_per_kw": 1500.0,
+        "om_cost_per_kw": 10.0,
+        "array_type": 0,
+        "federal_itc_fraction": 0.0,     
+        "macrs_option_years": 0,        
+        "macrs_bonus_fraction": 0.0,
+        "macrs_itc_reduction": 0.0
+    },
+    "ElectricStorage": {
+        "installed_cost_per_kw": 600.0,
+        "installed_cost_per_kwh": 400.0,       
+        "can_grid_charge": true,        
+        "macrs_option_years": 0,
+        "macrs_bonus_fraction": 0.0,
+        "macrs_itc_reduction": 0.0,   
+        "total_itc_fraction": 0.0
+    }
+}
