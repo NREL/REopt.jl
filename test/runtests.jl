@@ -345,7 +345,9 @@ else  # run HiGHS tests
                     "min_kwh" => 400000,
                     "max_kwh" => 400000,
                     "soc_min_fraction" => 0.8,
-                    "soc_init_fraction" => 0.9
+                    "soc_init_fraction" => 0.9,
+                    "max_duration_hours" => 1000,
+                    "min_duration_hours" => 0.0
                 ),
                 "ElectricLoad" => Dict(
                     "doe_reference_name" => "FlatLoad",

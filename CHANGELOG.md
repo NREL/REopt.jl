@@ -39,6 +39,8 @@ Classify the change according to the following categories:
 
 ## v0.47.0
 ### Added
+- Add new **ElectricStorage** parameters **max_duration_hours** and **min_duration_hours** to bound the energy duration of battery storage
+### Added
 - Added inputs options and handling for ProcessHeatLoad for scaling annual or monthly fuel consumption values with reference hourly profiles, same as other loads
 ### Changed
 - Updated `test/scenarios/thermal_load.json` to include **ProcessHeatLoad** in both hourly and monthly fuel load tests.
