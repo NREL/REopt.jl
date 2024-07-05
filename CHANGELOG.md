@@ -23,6 +23,15 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## v0.47.2
+### Fixed
+- Increased the big-M bound on maximum net metering benefit to prevent artificially low export benefits.
+- Fixed a bug in which tier limits did not load correctly when the number of tiers vary by period in the inputs.
+- Set a limit for demand and energy tier maxes to avoid errors returned by HiGHS due to numerical limits.
+- Index utility rate demand and energy tier limits on month and/or ratchet in addition to tier.  This allows for the inclusion of multi-tiered energy and demand rates in which the rates may vary by month or ratchet, whereas previously only the maximum tier limit was used.
+### Added
+- Added thermal efficiency as input to chp defaults function.
+
 ## v0.47.1
 ### Fixed
 - Type issue with `CoolingLoad` monthly energy input
@@ -178,7 +187,7 @@ Classify the change according to the following categories:
 ## v0.37.5
 ### Fixed
 - Fixed AVERT emissions profiles for NOx. Were previously the same as the SO2 profiles. AVERT emissions profiles are currently generated from AVERT v3.2 https://www.epa.gov/avert/download-avert. See REopt User Manual for more information.
-- Fix setting of equal demand tiers in scrub_urdb_demand_tiers!, which was previously causing an error. 
+- Fix setting of equal demand tiers in `scrub_urdb_demand_tiers`, now renamed `scrub_urdb_tiers`. 
 - When calling REopt.jl from a python environment using PyJulia and PyCall, some urdb_response fields get converted from a list-of-lists to a matrix type, when REopt.jl expects an array type. This fix adds checks on the type for two urdb_response fields and converts them to an array if needed.
 - Update the outages dispatch results to align with CHP availability during outages
 
