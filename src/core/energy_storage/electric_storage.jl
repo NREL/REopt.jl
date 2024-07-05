@@ -201,7 +201,7 @@ Base.@kwdef struct ElectricStorageDefaults
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
     min_duration_hours::Real = 0.0
-    max_duration_hours::Real = 100.0
+    max_duration_hours::Real = 100000.0
 end
 
 
