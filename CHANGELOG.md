@@ -29,6 +29,8 @@ Classify the change according to the following categories:
 - Fixed a bug in which tier limits did not load correctly when the number of tiers vary by period in the inputs.
 - Set a limit for demand and energy tier maxes to avoid errors returned by HiGHS due to numerical limits.
 - Index utility rate demand and energy tier limits on month and/or ratchet in addition to tier.  This allows for the inclusion of multi-tiered energy and demand rates in which the rates may vary by month or ratchet, whereas previously only the maximum tier limit was used.
+### Added
+- Added thermal efficiency as input to chp defaults function.
 
 ## v0.47.1
 ### Fixed
