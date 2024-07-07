@@ -165,6 +165,7 @@ end
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
     daily_leakage_fraction::Float64 = 0.03
+    fixed_dispatch_series::Union{Nothing, Array{Real,1}} = nothing
 ```
 """
 Base.@kwdef struct ElectricStorageDefaults
@@ -198,6 +199,7 @@ Base.@kwdef struct ElectricStorageDefaults
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
     daily_leakage_fraction::Float64 = 0.03
+    fixed_dispatch_series::Union{Nothing, Array{Real,1}} = nothing
 end
 
 
@@ -239,6 +241,7 @@ struct ElectricStorage <: AbstractElectricStorage
     degradation::Degradation
     minimum_avg_soc_fraction::Float64
     daily_leakage_fraction::Float64
+    fixed_dispatch_series::Union{Nothing, Array{Real,1}}
 
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
@@ -326,7 +329,8 @@ struct ElectricStorage <: AbstractElectricStorage
             s.model_degradation,
             degr,
             s.minimum_avg_soc_fraction,
-            s.daily_leakage_fraction
+            s.daily_leakage_fraction,
+            s.fixed_dispatch_series
         )
     end
 end
