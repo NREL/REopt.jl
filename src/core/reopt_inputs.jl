@@ -62,6 +62,7 @@ struct REoptInputs <: AbstractInputs
     tech_emissions_factors_PM25::Dict{String, <:Real} # (techs)
     techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
     heating_cop::Dict{String, <:Real} # (techs.electric_heater)
+    heating_loads_kw::Dict{String, <:Real} # (heating_loads)
     unavailability::Dict{String, Array{Float64,1}}  # Dict by tech of unavailability profile
 end
 ```
@@ -127,7 +128,11 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     tech_emissions_factors_PM25::Dict{String, <:Real} # (techs)
     techs_operating_reserve_req_fraction::Dict{String, <:Real} # (techs.all)
     heating_cop::Dict{String, <:Real} # (techs.electric_heater)
+    heating_loads::Vector{String} # list of heating loads
+    heating_loads_kw::Dict{String, Array{Real,1}} # (heating_loads)
+    heating_loads_served_by_tes::Dict{String, Array{String,1}} # ("HotThermalStorage" or empty)
     unavailability::Dict{String, Array{Float64,1}} # (techs.elec)
+    absorption_chillers_using_heating_load::Dict{String,Array{String,1}} # ("AbsorptionChiller" or empty)
 end
 
 
@@ -190,6 +195,64 @@ function REoptInputs(s::AbstractScenario)
         adjust_load_profile(s, production_factor)
     end
 
+    heating_loads = Vector{String}()
+    heating_loads_kw = Dict{String, Array{Real,1}}()
+    absorption_chillers_using_heating_load = Dict{String,Array{String,1}}()
+    if !isnothing(s.dhw_load)
+        push!(heating_loads, "DomesticHotWater")
+        heating_loads_kw["DomesticHotWater"] = s.dhw_load.loads_kw
+        if !isnothing(s.absorption_chiller) && s.absorption_chiller.heating_load_input == "DomesticHotWater"
+            absorption_chillers_using_heating_load["DomesticHotWater"] = ["AbsorptionChiller"]
+        else
+            absorption_chillers_using_heating_load["DomesticHotWater"] = Vector{String}()
+        end
+    end
+    if !isnothing(s.space_heating_load)
+        push!(heating_loads, "SpaceHeating")
+        heating_loads_kw["SpaceHeating"] = s.space_heating_load.loads_kw
+        if !isnothing(s.absorption_chiller) && s.absorption_chiller.heating_load_input == "SpaceHeating"
+            absorption_chillers_using_heating_load["SpaceHeating"] = ["AbsorptionChiller"]
+        else
+            absorption_chillers_using_heating_load["SpaceHeating"] = Vector{String}()
+        end
+    elseif !isnothing(s.flexible_hvac) && !isnothing(s.existing_boiler)
+        push!(heating_loads, "SpaceHeating")  #add blank space heating load to add dvHeatingProduction for existing boiler
+    end
+    if !isnothing(s.process_heat_load)
+        push!(heating_loads, "ProcessHeat")
+        heating_loads_kw["ProcessHeat"] = s.process_heat_load.loads_kw
+        if !isnothing(s.absorption_chiller) && s.absorption_chiller.heating_load_input == "ProcessHeat"
+            absorption_chillers_using_heating_load["ProcessHeat"] = ["AbsorptionChiller"]
+        else
+            absorption_chillers_using_heating_load["ProcessHeat"] = Vector{String}()
+        end
+    end
+
+    if sum(heating_loads_kw["SpaceHeating"]) > 0.0 && isempty(techs.can_serve_space_heating) 
+        throw(@error("SpaceHeating load is nonzero and no techs can serve the load."))
+    end
+    if sum(heating_loads_kw["DomesticHotWater"]) > 0.0 && isempty(techs.can_serve_dhw) 
+        throw(@error("DomesticHotWater load is nonzero and no techs can serve the load."))
+    end
+    if sum(heating_loads_kw["ProcessHeat"]) > 0.0 && isempty(techs.can_serve_process_heat) 
+        throw(@error("ProcessHeat load is nonzero and no techs can serve the load."))
+    end
+    
+    heating_loads_served_by_tes = Dict{String,Array{String,1}}()
+    if !isempty(s.storage.types.hot)
+        for b in s.storage.types.hot
+            heating_loads_served_by_tes[b] = String[]
+            if s.storage.attr[b].can_serve_dhw && !isnothing(s.dhw_load)
+                push!(heating_loads_served_by_tes[b],"DomesticHotWater")
+            end
+            if s.storage.attr[b].can_serve_space_heating && !isnothing(s.space_heating_load)
+                push!(heating_loads_served_by_tes[b],"SpaceHeating")
+            end
+            if s.storage.attr[b].can_serve_process_heat && !isnothing(s.process_heat_load)
+                push!(heating_loads_served_by_tes[b],"ProcessHeat")
+            end
+        end
+    end
     unavailability = get_unavailability_by_tech(s, techs, time_steps)
 
     REoptInputs(
@@ -253,7 +316,11 @@ function REoptInputs(s::AbstractScenario)
         tech_emissions_factors_PM25,
         techs_operating_reserve_req_fraction,
         heating_cop,
-        unavailability 
+        heating_loads,
+        heating_loads_kw,
+        heating_loads_served_by_tes,
+        unavailability,
+        absorption_chillers_using_heating_load
     )
 end
 
@@ -1058,7 +1125,7 @@ function setup_ghp_inputs(s::AbstractScenario, time_steps, time_steps_without_gr
                 (1 + discount_rate)^s.financial.analysis_years
             )
 
-            heating_thermal_load = s.space_heating_load.loads_kw + s.dhw_load.loads_kw
+            heating_thermal_load = s.space_heating_load.loads_kw + s.dhw_load.loads_kw + s.process_heat_load.loads_kw
             # Using minimum of thermal load and ghp-serving load to avoid small negative net loads
             for j in time_steps
                 space_heating_thermal_load_reduction_with_ghp_kw[i,j] = min(s.space_heating_thermal_load_reduction_with_ghp_kw[j], heating_thermal_load[j])

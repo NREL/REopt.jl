@@ -36,6 +36,9 @@ conflict_res_min_allowable_fraction_of_max = 0.25
     standby_rate_per_kw_per_month::Float64 = 0.0 # Standby rate charged to CHP based on CHP electric power size
     reduces_demand_charges::Bool = true # Boolean indicator if CHP does not reduce demand charges 
     can_supply_steam_turbine::Bool=false # If CHP can supply steam to the steam turbine for electric production 
+    can_serve_dhw::Bool = true # If CHP can supply heat to the domestic hot water load
+    can_serve_space_heating::Bool = true # If CHP can supply heat to the space heating load
+    can_serve_process_heat::Bool = true # If CHP can supply heat to the process heating load
     is_electric_only::Bool = false # If CHP is a prime generator that does not supply heat
 
     macrs_option_years::Int = 5
@@ -107,6 +110,9 @@ Base.@kwdef mutable struct CHP <: AbstractCHP
     standby_rate_per_kw_per_month::Float64 = 0.0
     reduces_demand_charges::Bool = true
     can_supply_steam_turbine::Bool = false
+    can_serve_dhw::Bool = true
+    can_serve_space_heating::Bool = true
+    can_serve_process_heat::Bool = true
     is_electric_only::Bool = false
 
     macrs_option_years::Int = 5
@@ -201,7 +207,7 @@ function CHP(d::Dict;
     # For non-heating CHP, Prime Generator, defaults require electric load metrics
     if !isempty(electric_load_series_kw)
         avg_electric_load_kw = sum(electric_load_series_kw) / length(electric_load_series_kw)
-        max_electric_load_kw = maximum(electric_load_series_kw)
+        max_electric_load_kw = convert(Float64, maximum(electric_load_series_kw))
     else
         avg_electric_load_kw = nothing
         max_electric_load_kw = nothing
@@ -215,7 +221,8 @@ function CHP(d::Dict;
                                                                 boiler_efficiency=eff,
                                                                 avg_electric_load_kw=avg_electric_load_kw,
                                                                 max_electric_load_kw=max_electric_load_kw,
-                                                                is_electric_only=chp.is_electric_only)
+                                                                is_electric_only=chp.is_electric_only,
+                                                                thermal_efficiency=chp.thermal_efficiency_full_load)
     defaults = chp_defaults_response["default_inputs"]
     for (k, v) in custom_chp_inputs
         if k in [:installed_cost_per_kw, :tech_sizes_for_cost_curve]
@@ -330,7 +337,8 @@ end
                                         boiler_efficiency::Union{Float64, Nothing}=nothing,
                                         avg_electric_load_kw::Union{Float64, Nothing}=nothing,
                                         max_electric_load_kw::Union{Float64, Nothing}=nothing,
-                                        is_electric_only::Bool=false)
+                                        is_electric_only::Bool=false,
+                                        thermal_efficiency::Float64=NaN)
 
 Depending on the set of inputs, different sets of outputs are determine in addition to all CHP cost and performance parameter defaults:
     1. Inputs: hot_water_or_steam and avg_boiler_fuel_load_mmbtu_per_hour
@@ -365,7 +373,8 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
                                                 boiler_efficiency::Union{Float64, Nothing}=nothing,
                                                 avg_electric_load_kw::Union{Float64, Nothing}=nothing,
                                                 max_electric_load_kw::Union{Float64, Nothing}=nothing,
-                                                is_electric_only::Union{Bool, Nothing}=nothing)
+                                                is_electric_only::Union{Bool, Nothing}=nothing,
+                                                thermal_efficiency::Float64=NaN)
     
     prime_mover_defaults_all = JSON.parsefile(joinpath(@__DIR__, "..", "..", "data", "chp", "chp_defaults.json"))
     avg_boiler_fuel_load_under_recip_over_ct = Dict([("hot_water", 27.0), ("steam", 7.0)])  # [MMBtu/hr] Based on external calcs for size versus production by prime_mover type
@@ -428,7 +437,7 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
             boiler_effic = boiler_efficiency
         end
         chp_elec_size_heuristic_kw = get_heuristic_chp_size_kw(prime_mover_defaults_all, avg_boiler_fuel_load_mmbtu_per_hour, 
-                                        prime_mover, size_class_calc, hot_water_or_steam, boiler_effic)
+                                        prime_mover, size_class_calc, hot_water_or_steam, boiler_effic, thermal_efficiency)
         chp_max_size_kw = 2 * chp_elec_size_heuristic_kw
     # If available, calculate heuristic CHP size based on average electric load, and max size based on peak electric load
     elseif !isnothing(avg_electric_load_kw) && !isnothing(max_electric_load_kw)
@@ -476,7 +485,7 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
         while !(size_class in size_class_last)
             append!(size_class_last, size_class)
             chp_elec_size_heuristic_kw = get_heuristic_chp_size_kw(prime_mover_defaults_all, avg_boiler_fuel_load_mmbtu_per_hour, 
-            prime_mover, size_class, hot_water_or_steam, boiler_effic)
+            prime_mover, size_class, hot_water_or_steam, boiler_effic, thermal_efficiency)
             chp_max_size_kw = 2 * chp_elec_size_heuristic_kw
             size_class = get_size_class_from_size(chp_elec_size_heuristic_kw, class_bounds, n_classes)            
         end
@@ -509,11 +518,18 @@ function get_chp_defaults_prime_mover_size_class(;hot_water_or_steam::Union{Stri
 end
 
 function get_heuristic_chp_size_kw(prime_mover_defaults_all, avg_boiler_fuel_load_mmbtu_per_hour, 
-                                prime_mover, size_class, hot_water_or_steam, boiler_effic)
-    therm_effic = prime_mover_defaults_all[prime_mover]["thermal_efficiency_full_load"][hot_water_or_steam][size_class+1]
+                                prime_mover, size_class, hot_water_or_steam, boiler_effic, thermal_efficiency=NaN)
+    if isnan(thermal_efficiency)
+        therm_effic = prime_mover_defaults_all[prime_mover]["thermal_efficiency_full_load"][hot_water_or_steam][size_class+1]
+    else
+        therm_effic = thermal_efficiency
+    end
     if therm_effic == 0.0
+        if prime_mover == "micro_turbine" && isnothing(size_class)
+            size_class = "any"
+        end
         throw(@error("Error trying to calculate heuristic CHP size based on average thermal load because the 
-                    thermal efficiency of prime mover $prime_mover for generating $hot_water_or_steam is 0.0"))
+                    thermal efficiency of prime_mover $prime_mover (size_class $size_class) for generating $hot_water_or_steam is 0.0"))
     end
     elec_effic = prime_mover_defaults_all[prime_mover]["electric_efficiency_full_load"][size_class+1]
     avg_heating_thermal_load_mmbtu_per_hr = avg_boiler_fuel_load_mmbtu_per_hour * boiler_effic
