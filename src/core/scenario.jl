@@ -661,6 +661,12 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     heating_cf = []
     cooling_cf = []
     if haskey(d, "ASHP_SpaceHeater") && d["ASHP_SpaceHeater"]["max_ton"] > 0.0
+        # ASHP Space Heater's temp back_up_temp_threshold
+        if !haskey(d["ASHP_SpaceHeater"], "back_up_temp_threshold")
+            ambient_temp_thres_fahrenheit = get_ashp_defaults("SpaceHeating")["back_up_temp_threshold"]
+        else
+            ambient_temp_thres_fahrenheit = d["ASHP_SpaceHeater"]["back_up_temp_threshold"]
+        end
         # Add ASHP's COPs
         # If user does not provide heating cop series then assign cop curves based on ambient temperature
         if !haskey(d["ASHP_SpaceHeater"], "heating_cop") || !haskey(d["ASHP_SpaceHeater"], "cooling_cop")
@@ -681,7 +687,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
             if !haskey(d["ASHP_SpaceHeater"], "heating_cop")
                 heating_cop = round.(0.0462 .* ambient_temp_fahrenheit .+ 1.351, digits=3)
-                heating_cop[ambient_temp_fahrenheit .< 10] .= 1
+                heating_cop[ambient_temp_fahrenheit .< ambient_temp_thres_fahrenheit] .= 1
                 heating_cop[ambient_temp_fahrenheit .> 79] .= 999999
             else
                 heating_cop = round.(d["ASHP_SpaceHeater"]["heating_cop"],digits=3)

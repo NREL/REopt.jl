@@ -17,6 +17,7 @@ struct ASHP <: AbstractThermalTech
     can_serve_process_heat::Bool
     can_serve_cooling::Bool
     force_into_system::Bool
+    back_up_temp_threshold::Real
 end
 
 
@@ -41,6 +42,7 @@ function ASHP_SpaceHeater(;
     cooling_cf::Array{Float64,1}, # ASHP's cooling capacity factor curves
     can_serve_cooling::Union{Bool, Nothing} = nothing # If ASHP can supply heat to the cooling load
     force_into_system::Union{Bool, Nothing} = nothing # force into system to serve all space heating loads if true
+    back_up_temp_threshold::Real = 10 # Degree in F that system switches from ASHP to resistive heater 
 )
 ```
 """
@@ -56,7 +58,8 @@ function ASHP_SpaceHeater(;
         heating_cf::Array{Float64,1} = Float64[],
         cooling_cf::Array{Float64,1} = Float64[],
         can_serve_cooling::Union{Bool, Nothing} = nothing,
-        force_into_system::Union{Bool, Nothing} = nothing
+        force_into_system::Union{Bool, Nothing} = nothing,
+        back_up_temp_threshold::Real = 10.0
     )
 
     defaults = get_ashp_defaults("SpaceHeating")
@@ -73,6 +76,9 @@ function ASHP_SpaceHeater(;
     end
     if isnothing(force_into_system)
         force_into_system = defaults["force_into_system"]
+    end
+    if isnothing(back_up_temp_threshold)
+        back_up_temp_threshold = defaults["back_up_temp_threshold"]
     end
 
     #pre-set defaults that aren't mutable due to technology specifications
@@ -106,7 +112,8 @@ function ASHP_SpaceHeater(;
         can_serve_space_heating,
         can_serve_process_heat,
         can_serve_cooling,
-        force_into_system
+        force_into_system,
+        back_up_temp_threshold
     )
 end
 
@@ -129,6 +136,7 @@ function ASHP_WaterHeater(;
     can_supply_steam_turbine::Union{Bool, nothing} = nothing # If the boiler can supply steam to the steam turbine for electric production
     heating_cop::Array{<:Real,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
     force_into_system::Union{Bool, Nothing} = nothing # force into system to serve all hot water loads if true
+    back_up_temp_threshold::Real = 10
 )
 ```
 """
@@ -141,7 +149,8 @@ function ASHP_WaterHeater(;
     macrs_bonus_fraction::Real = 0.0,
     heating_cop::Array{Float64,1} = Float64[],
     heating_cf::Array{Float64,1} = Float64[],
-    force_into_system::Union{Bool, Nothing} = nothing
+    force_into_system::Union{Bool, Nothing} = nothing,
+    back_up_temp_threshold::Real = 10.0
     )
 
     defaults = get_ashp_defaults("DomesticHotWater")
@@ -155,6 +164,9 @@ function ASHP_WaterHeater(;
     end
     if isnothing(force_into_system)
         force_into_system = defaults["force_into_system"]
+    end
+    if isnothing(back_up_temp_threshold)
+        back_up_temp_threshold = defaults["back_up_temp_threshold"]
     end
 
      #pre-set defaults that aren't mutable due to technology specifications
@@ -188,7 +200,8 @@ function ASHP_WaterHeater(;
         can_serve_space_heating,
         can_serve_process_heat,
         can_serve_cooling,
-        force_into_system
+        force_into_system,
+        back_up_temp_threshold
     )
 end
 
