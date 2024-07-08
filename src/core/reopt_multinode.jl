@@ -14,6 +14,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 	dvs_idx_on_storagetypes = String[
 		"dvStoragePower",
 		"dvStorageEnergy",
+		"dvBatteryIncluded"
 	]
 	dvs_idx_on_storagetypes_time_steps = String[
 		"dvDischargeFromStorage"
@@ -66,6 +67,15 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
             m[Symbol(dv)] = @variable(m, [p.techs.elec, p.s.electric_tariff.export_bins, p.time_steps], base_name=dv, lower_bound=0)
         end
 
+		# Include the electric storage cost constants only if the installed_cost_constant or the replace_cost_constant is not zero
+		for b in p.s.storage.types.elec
+			if p.s.storage.attr[b].installed_cost_constant != 0 || p.s.storage.attr[b].replace_cost_constant != 0
+				@constraint(m, [b in p.s.storage.types.elec], m[Symbol("dvStorageEnergy"*_n)][b] <= p.s.storage.attr[b].max_kwh * m[Symbol("dvBatteryIncluded"*_n)][b]) # if the dvBatteryIncluded binary is 1, then the storage energy capacity can be greater than 0, but then the battery cost constant is also included in the costs		
+			else
+				m[Symbol("dvBatteryIncluded"*_n)][b] == 0
+			end
+		end
+
 		ex_name = "TotalTechCapCosts"*_n
 		m[Symbol(ex_name)] = @expression(m, p.third_party_factor *
 			sum( p.cap_cost_slope[t] * m[Symbol("dvPurchaseSize"*_n)][t] for t in p.techs.all ) 
@@ -75,6 +85,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 		m[Symbol(ex_name)] = @expression(m, p.third_party_factor * 
 			sum(p.s.storage.attr[b].net_present_cost_per_kw * m[Symbol("dvStoragePower"*_n)][b] for b in p.s.storage.types.elec)
 			+ sum(p.s.storage.attr[b].net_present_cost_per_kwh * m[Symbol("dvStorageEnergy"*_n)][b] for b in p.s.storage.types.all)
+			+ sum(p.s.storage.attr[b].net_present_cost_cost_constant * m[Symbol("dvBatteryIncluded"*_n)][b] for b in p.s.storage.types.elec)
 		)
 
 		ex_name = "TotalPerUnitSizeOMCosts"*_n
