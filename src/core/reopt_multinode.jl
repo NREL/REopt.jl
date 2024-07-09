@@ -137,8 +137,17 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 		
 		end	
 
-		if !isempty(p.s.electric_tariff.export_bins)  # added for testing
-            add_export_constraints(m, p; _n=_n)  # added for testing 
+		#if !isempty(p.s.electric_tariff.export_bins)  # added for testing
+        #    add_export_constraints(m, p; _n=_n)  # added for testing 
+        #end
+
+		if !isempty(p.s.electric_tariff.export_bins)
+			#if string(p.s.site.node) != p.s.settings.facilitymeter_node
+				print("\n Updated, adding export constraints to node $(p.s.site.node)")
+        		add_export_constraints(m, p; _n=_n)
+			#else
+			#	@info "Not applying the add_export_constraints to the facility meter node"
+			#end
         end
 
 		add_elec_utility_expressions(m, p; _n=_n)
@@ -215,7 +224,7 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
             add_storage_sum_constraints(m, p; _n=_n)
         end
     
-        add_production_constraints(m, p; _n=_n)
+        
     
         if !isempty(p.techs.all)
             add_tech_size_constraints(m, p; _n=_n)
@@ -228,14 +237,20 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
 		if string(p.s.site.node) != p.s.settings.facilitymeter_node  
 			print("\n Applying the electrical load balance constraint to the node: "*_n)
 			add_elec_load_balance_constraints(m, p; _n=_n)
+			add_production_constraints(m, p; _n=_n)
 		else
 			print("\n Not applying the load balance constraint to the node: "*_n)
 			print("\n Note: this node will serve as the metered node. No technologies should be applied to it")
 		end       
     
-        if !isempty(p.s.electric_tariff.export_bins)
-            add_export_constraints(m, p; _n=_n)
-        end
+        #if !isempty(p.s.electric_tariff.export_bins)
+	#		if string(p.s.site.node) != p.s.settings.facilitymeter_node
+		#		print("\n Adding export constraints to node $(p.s.site.node)")
+        #		add_export_constraints(m, p; _n=_n)
+		#	else
+		#		@info "Not applying the add_export_constraints to the facility meter node"
+		#	end
+        #end
     
         if !isempty(p.s.electric_tariff.monthly_demand_rates)
             add_monthly_peak_constraint(m, p; _n=_n)

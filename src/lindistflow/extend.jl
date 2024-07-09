@@ -28,15 +28,28 @@ end
 function add_expressions(m::JuMP.AbstractModel, ps::Array{REoptInputs{Scenario}, 1})
     for p in ps
         _n = string("_", p.s.site.node)
-        m[Symbol("TotalExport"*_n)] = @expression(m, [ts in p.time_steps],
-            sum(
-                m[Symbol("dvProductionToGrid"*_n)][t,u,ts] 
-                for t in p.techs.elec, u in p.export_bins_by_tech[t]
+        if string(p.s.site.node) != p.s.settings.facilitymeter_node
+            print("\n Applying total export equation for node $(p.s.site.node)")
+            m[Symbol("TotalExport"*_n)] = @expression(m, [ts in p.time_steps],
+                sum(
+                    m[Symbol("dvProductionToGrid"*_n)][t,u,ts] 
+                    for t in p.techs.elec, u in p.export_bins_by_tech[t]
+                )
+                + sum(m[Symbol("dvStorageToGrid"*_n)][b,ts] for b in p.s.storage.types.all )# added this line to include battery export in the total export
             )
-            + sum(m[Symbol("dvStorageToGrid"*_n)][b,ts] for b in p.s.storage.types.all )# added this line to include battery export in the total export
-
+        else
+            # set the total node export to 0 for the facility meter grid, because that node has no techs
+                # also, for that node, the dvProductionToGrid is used for the grid export benefits and set to the powerflow of the substation line when flow on that line is negative
+            print("\n Setting the total export for node $(p.s.site.node) to zero. This node is the facility meter node.")
             
-        )
+            dv = "TotalExport_"*p.s.settings.facilitymeter_node
+            m[Symbol(dv)] = @variable(m, [p.time_steps], base_name=dv, lower_bound =0)
+
+            @constraint(m, [t in p.time_steps], m[Symbol("TotalExport_"*p.s.settings.facilitymeter_node)][t] == 0)
+
+            print("\n the p.time_steps are:")
+            print(p.time_steps)
+        end
     end
 end
 
@@ -44,16 +57,16 @@ end
 function add_complementary_constraints(m::JuMP.AbstractModel, ps::Array{REoptInputs{Scenario}, 1})
     for p in ps
         _n = string("_", p.s.site.node)
-        if string(p.s.site.node) != "15"
-            print("\n Adding the complementary constraint to node $(p.s.site.node)")
+        #if string(p.s.site.node) != "15" # the complementary constraint has an affect when it is applied to the facility meter node
+            #print("\n Adding the complementary constraint to node $(p.s.site.node)")
             for (i, e) in zip(m[Symbol("dvGridPurchase"*_n)], m[Symbol("TotalExport"*_n)])
                 @constraint(m,
                     [i, e] in MOI.SOS1([1.0, 2.0])
                 )
             end
-        else
-            print("\n Not adding the complementary constraint to the facility meter node, node $(p.s.site.node)")
-        end
+        #else
+        #    print("\n Not adding the complementary constraint to the facility meter node, node $(p.s.site.node)")
+        #end
     end
 end
 
@@ -100,7 +113,6 @@ function LDF.constrain_loads(m::JuMP.AbstractModel, p::LDF.Inputs, ps::Array{REo
                 else
                     print("\n j is 15 and the j variable is: $(j)")
                     @constraint(m, [t in 1:p.Ntimesteps], Pⱼ["15",t] == 0)
-                    @constraint(m, [t in 1:p.Ntimesteps], m[Symbol("TotalExport_15")][t] == 0)
                 end
             else
                 # Power balance for nodes that have loads defined through ldf, but not in the REopt inputs

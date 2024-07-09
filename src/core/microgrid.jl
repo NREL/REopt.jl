@@ -10,12 +10,21 @@ function Microgrid_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary, 
         # 2. ldf_inputs_dictionary (for LinDistFlow)
         # 3. The REopt inputs dictionaries 
 
+    StartTime_EntireModel = now() # record the start time for the computation
     cd(Microgrid_Settings["FolderLocation"])
-    DataDictionaryForEachNode, Dictionary_LineFlow_Power_Series, Dictionary_Node_Data_Series, ldf_inputs, results, DataFrame_LineFlow_Summary, LineNominalVoltages_Summary, BusNominalVoltages_Summary, model = Microgrid_REopt_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary, REopt_dictionary) 
-    
-    StartTime_EntireModel = now()
 
-    if Microgrid_Settings["RunOutageSimulator"] == "Yes"
+    # Create a folder for the outputs if saving results
+    TimeStamp = Dates.format(now(), "mm-dd-yyyy")*"_"*Dates.format(now(), "HH-MM")
+    if Microgrid_Settings["Generate_CSV_of_outputs"] == true || Microgrid_Settings["Generate_Results_Plots"] == true
+        @info "Creating a folder for the results"
+        mkdir(Microgrid_Settings["FolderLocation"]*"/results_"*TimeStamp)
+    end
+    
+    # Run the optimization:
+    DataDictionaryForEachNode, Dictionary_LineFlow_Power_Series, Dictionary_Node_Data_Series, ldf_inputs, results, DataFrame_LineFlow_Summary, LineNominalVoltages_Summary, BusNominalVoltages_Summary, model = Microgrid_REopt_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary, REopt_dictionary, TimeStamp) 
+  
+    # Run the outage simulator if "RunOutageSimulator" is set to true
+    if Microgrid_Settings["RunOutageSimulator"] == true
         OutageLengths = Microgrid_Settings["LengthOfOutages_timesteps"] 
         TimeStepsPerHour = Microgrid_Settings["TimeStepsPerHour"] 
         NumberOfOutagesToTest = Microgrid_Settings["NumberOfOutagesToEvaluate"]
@@ -125,7 +134,7 @@ function Microgrid_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary, 
         # Add the microgrid outage results to the dataframe
         push!(DataLabels, "----Microgrid Outage Results----")
         push!(Data, "")
-        if Microgrid_Settings["RunOutageSimulator"] == "Yes"
+        if Microgrid_Settings["RunOutageSimulator"] == true
             for i in 1:length(OutageLengths)
                 OutageLength = OutageLengths[i]
                 push!(DataLabels, "--Outage Length: $(OutageLength) time steps--")
@@ -155,11 +164,12 @@ function Microgrid_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary, 
 
         # Save the dataframe as a csv document
         dataframe_results = DataFrame(Labels = DataLabels, Data = Data)
-        CSV.write(Microgrid_Settings["FolderLocation"]*"/Results/ResultsExport.csv", dataframe_results)
-
+        CSV.write(Microgrid_Settings["FolderLocation"]*"/results_"*TimeStamp*"/Results_Summary_"*TimeStamp*".csv", dataframe_results)
+        
         # Save the Line Flow summary for each line to a different csv
-        CSV.write(Microgrid_Settings["FolderLocation"]*"/Results/ResultsExport_LineFlow_Summary.csv", DataFrame_LineFlow_Summary)
+        CSV.write(Microgrid_Settings["FolderLocation"]*"/results_"*TimeStamp*"/Results_Line_Flow_Summary_"*TimeStamp*".csv", DataFrame_LineFlow_Summary)
     end 
+
     EndTime_EntireModel = now()
     ComputationTime_EntireModel = EndTime_EntireModel - StartTime_EntireModel
 
@@ -180,13 +190,13 @@ function Microgrid_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary, 
 end
 
 # Function to run the REopt analysis 
-function Microgrid_REopt_Model(JuMP_Model, Microgrid_Inputs, ldf_inputs_dictionary, REoptInputs)
+function Microgrid_REopt_Model(JuMP_Model, Microgrid_Inputs, ldf_inputs_dictionary, REoptInputs, TimeStamp)
     cd(Microgrid_Inputs["FolderLocation"])
     ldf_inputs_dictionary = ldf_inputs_dictionary
     ps = REoptInputs
     
-    #Recording the start time
-    StartTime = now()
+    StartTime = now() #Recording the start time
+    NodeList = collect(keys(ldf_inputs_dictionary["load_nodes"])) 
 
     FacilityMeter_Node = Microgrid_Inputs["FacilityMeter_Node"] 
     MicrogridType = Microgrid_Inputs["MicrogridType"]
@@ -194,17 +204,11 @@ function Microgrid_REopt_Model(JuMP_Model, Microgrid_Inputs, ldf_inputs_dictiona
     SubstationExportLimit = Microgrid_Inputs["SubstationExportLimit"]
     ElectricityCostFromSubstation_perkwh = Microgrid_Inputs["ElectricityCostFromSubstation_perkwh"]
     GeneratorFuelGallonAvailable = Microgrid_Inputs["GeneratorFuelGallonAvailable"]
-    AnalysisYears = Microgrid_Inputs["AnalysisYears"]
-    ElecCostEscalationRate = Microgrid_Inputs["ElecCostEscalationRate"]
-    HostDiscountRateFraction = Microgrid_Inputs["HostDiscountRateFraction"]
     OutageStartTimeStep = Microgrid_Inputs["SingleOutageStartTimeStep"]
     OutageStopTimeStep = Microgrid_Inputs["SingleOutageStopTimeStep"]
 
-    # used for previous energy charge computation:
-    #pwf_e_multinode = REopt.annuity(AnalysisYears, ElecCostEscalationRate, HostDiscountRateFraction)
+    TimeSteps = collect(1:(8760*Microgrid_Inputs["TimeStepsPerHour"]))
 
-    NodeList = collect(keys(ldf_inputs_dictionary["load_nodes"])) 
-    
     # Add the LDF inputs
     # this can be done using two methods:
         # 1. importing an OpenDSS file for the lines and linecodes (the method used in this script)
@@ -228,7 +232,6 @@ function Microgrid_REopt_Model(JuMP_Model, Microgrid_Inputs, ldf_inputs_dictiona
         Q_lo_bound = ldf_inputs_dictionary["Q_lo_bound_input"], 
         Ntimesteps = ldf_inputs_dictionary["T"],
         regulators = ldf_inputs_dictionary["VoltageRegulatorDictionary"]
-
     )
 
     # Determine the voltages at each line:
@@ -243,29 +246,26 @@ function Microgrid_REopt_Model(JuMP_Model, Microgrid_Inputs, ldf_inputs_dictiona
         end 
     end
 
-
-    
     m = JuMP_Model 
     @info "Building the REopt model"
     build_reopt!(m,ps)
     @info "Adding ldf constraints"
     LinDistFlow.build_ldf!(m, ldf_inputs, ps)  # The ps is an input here because this input structure for "build_ldf!" is defined in REopt's extend.jl file
-    #multinode_build_ldf!(m, ldf_inputs, ps)
 
 # FOR A BEHIND THE METER MICROGRID:
 LineFromSubstationToFacilityMeter = ldf_inputs_dictionary["SubstationLocation"] * "-" * Microgrid_Inputs["FacilityMeter_Node"]
 # Prevent power from being exported to the grid beyond the node 1 meter:
-if AllowExportBeyondSubstation == "NoExport"
-    JuMP.@constraint(m, [t in 1:8760], m[:Pᵢⱼ][LineFromSubstationToFacilityMeter,t] >= 0 ) 
+if AllowExportBeyondSubstation == false
+    JuMP.@constraint(m, [t in TimeSteps], m[:Pᵢⱼ][LineFromSubstationToFacilityMeter,t] >= 0 ) 
 else
-    JuMP.@constraint(m, [t in 1:8760], m[:Pᵢⱼ][LineFromSubstationToFacilityMeter,t] >=  ((SubstationExportLimit*1000)/ ldf_inputs.Sbase) )  
+    JuMP.@constraint(m, [t in TimeSteps], m[:Pᵢⱼ][LineFromSubstationToFacilityMeter,t] >=  -((SubstationExportLimit*1000)/ ldf_inputs.Sbase) )  
 end 
 
 #For an off-grid microgrid
 if MicrogridType == "Offgrid"
     # prevent power from flowing in from the substation
     @info "Adding constraints for an offgrid microgrid"    
-    JuMP.@constraint(m, [t in 1:8760], m[:Pᵢⱼ][LineFromSubstationToFacilityMeter,t] == 0 ) 
+    JuMP.@constraint(m, [t in TimeSteps], m[:Pᵢⱼ][LineFromSubstationToFacilityMeter,t] == 0 ) 
 end 
 
 # if an outage is modelled, prevent power from flowing into the substation at those times
@@ -288,33 +288,65 @@ if MicrogridType == "CommunityDistrict"
         #Prevent the generator from operating during non-grid outage times
         for Node in NodeList
             JuMP.@constraint(m, [t in 1:(OutageStartTimeStep-1)], m[Symbol("dvRatedProduction_"*Node)]["Generator",t] == 0 )
-            JuMP.@constraint(m, [t in (OutageStopTimeStep+1):8760], m[Symbol("dvRatedProduction_"*Node)]["Generator",t] == 0 )    
+            JuMP.@constraint(m, [t in (OutageStopTimeStep+1):length(TimeSteps)], m[Symbol("dvRatedProduction_"*Node)]["Generator",t] == 0 )    
         end
     end 
 end
 
 
-# Set the grid purchase at node 1 to be the power flowing through the line from the substation
+
 for p in ps
     if p.s.settings.facilitymeter_node != FacilityMeter_Node
         throw(@error("The facilitymeter_node input for each REopt node must equal the FacilityMeter_Node defined in the microgrid settings, which is $(FacilityMeter_Node)"))
     end
 end
 
-# TODO (low priority): eliminate the for loop and the if statement
 for p in ps
     if string(p.s.site.node) == p.s.settings.facilitymeter_node
-        @info "Setting Grid Purchase to the Line Flow for: "*string(" dvGridPurchase_", FacilityMeter_Node)*" on line "*string("0-", FacilityMeter_Node)
-        #TODO: change the conversion of the power through the power line based on user inputs
-        @constraint(m, [ts in 1:8760],
-            sum(m[Symbol("dvGridPurchase_"*FacilityMeter_Node)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) == (((m[:Pᵢⱼ]["0-"*FacilityMeter_Node,ts])*5000)/1000)
-        )
+        @info "Setting facility-level grid purchase to the power flow on line "*string("0-", FacilityMeter_Node)*", using the variable: "*string(" dvGridPurchase_", FacilityMeter_Node)
+                
+        if Microgrid_Inputs["AllowExportBeyondSubstation"] == true
+            @info "Allowing export from the facility meter, which is limited to the defined export limit"
+        
+            @variable(m, binSubstationPositivePowerFlow[ts in p.time_steps], Bin)
+            
+            print("\n The time steps are: ")
+            print(p.time_steps)
+            print("\n The length of p.time_steps is: ")
+            print(length(p.time_steps))
+
+            for ts in p.time_steps
+                @constraint(m, m[:binSubstationPositivePowerFlow][ts] => {(m[:Pᵢⱼ]["0-"*FacilityMeter_Node,ts]) >= 0 } )
+                @constraint(m, !m[:binSubstationPositivePowerFlow][ts] => {(m[:Pᵢⱼ]["0-"*FacilityMeter_Node,ts]) <= 0 } )
+            end
+
+            # Set the power flowing through the line from the substation to be the grid purchase minus the dvProductionToGrid for node 15
+            @constraint(m, [ts in p.time_steps],
+                 (((m[:Pᵢⱼ]["0-"*FacilityMeter_Node,ts])*ldf_inputs.Sbase)/1000) == sum(m[Symbol("dvGridPurchase_"*FacilityMeter_Node)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) - sum(m[Symbol("dvProductionToGrid_"*FacilityMeter_Node)]["PV", u, ts] for u in p.export_bins_by_tech["PV"])  # * binSubstationPositivePowerFlow[ts]
+            )
+            @constraint(m, [ts in p.time_steps],
+                sum(m[Symbol("dvGridPurchase_"*FacilityMeter_Node)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) <= Microgrid_Inputs["SubstationImportLimit"] * binSubstationPositivePowerFlow[ts]
+            )   
+            @constraint(m, [ts in p.time_steps],
+                sum(m[Symbol("dvProductionToGrid_"*FacilityMeter_Node)]["PV", u, ts] for u in p.export_bins_by_tech["PV"]) <= Microgrid_Inputs["SubstationExportLimit"] * (1 - binSubstationPositivePowerFlow[ts])
+            )            
+       else
+           @info "Not allowing export from the facility meter"
+
+           @constraint(m, [ts in p.time_steps],
+               sum(m[Symbol("dvGridPurchase_"*FacilityMeter_Node)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) == (((m[:Pᵢⱼ]["0-"*FacilityMeter_Node,ts])*5000)/1000)
+           )
+
+           @constraint(m, [ts in p.time_steps],
+               sum(m[Symbol("dvProductionToGrid_"*FacilityMeter_Node)]["PV", u, ts] for u in p.export_bins_by_tech["PV"]) == 0)
+        end
+        print("\n The export bins for the facility meter node are: ")
+        print(p.export_bins_by_tech["PV"])
     end
 end
 
 # Note: the objective accounts for costs of all REopt nodes input into the model
-@objective(m, Min, sum(m[Symbol(string("Costs_", p.s.site.node))] for p in ps) 
-            )
+@objective(m, Min, sum(m[Symbol(string("Costs_", p.s.site.node))] for p in ps) )
 
 @info "The optimization is starting"
 set_optimizer_attribute(m, "MIPRELSTOP", 0.02) 
@@ -327,35 +359,31 @@ results = reopt_results(m, ps)
 EndTime = now()
 ComputationTime = EndTime - StartTime
 
-# SECTION 2:  Processing results from the solution *************************************************************
-Node_Connections = [[parse(Int,i),parse(Int,j)] for j in ldf_inputs.busses for i in i_to_j(j, ldf_inputs)]
+# Process results from the solution
 
 # The variables Pᵢⱼ and Qᵢⱼ are indexed by the line value (shown in the edges variable below) in the LinDistFlow model 
 edges = [string(i*"-"*j) for j in ldf_inputs.busses for i in i_to_j(j, ldf_inputs)]
 
 # The variables Pⱼ and Qⱼ are indexed by the bus value (in the ldf_inputs) in the LinDistFlow model
-    # look at the value.(m[:Pᵢⱼ]) in the terminal to see the values and indexes
+    # Note: look at the value.(m[:Pᵢⱼ]) in the terminal to see the values and indexes
 busses = ldf_inputs.busses
 
-# compute values for each line
+# Compute values for each line and store line power flows in a dataframe and dictionary 
 DataLineFlow = zeros(3)
 DataFrame_LineFlow = DataFrame(["empty" 0 0 0], [:LineCode, :Minimum_LineFlow_kW, :Maximum_LineFlow_kW, :Average_LineFlow_kW])
 Dictionary_LineFlow_Power_Series = Dict([])
 
 for edge in edges
-    # store line power flows in a dictionary 
-    NetRealLineFlow = (value.(m[:Pᵢⱼ][edge,:]).data* ldf_inputs.Sbase)/1000 # 
+    NetRealLineFlow = (value.(m[:Pᵢⱼ][edge,:]).data* ldf_inputs.Sbase)/1000 
     NetReactiveLineFlow = (value.(m[:Qᵢⱼ][edge,:]).data*ldf_inputs.Sbase)/1000 
 
-    Dictionary_LineFlow_Power_Series_temp = Dict([
-                                                    (edge, Dict([
+    Dictionary_LineFlow_Power_Series_temp = Dict([(edge, Dict([
                                                         ("NetRealLineFlow", NetRealLineFlow),
                                                         ("NetReactiveLineFlow", NetReactiveLineFlow)
                                                     ]))
                                                     ])
     merge!(Dictionary_LineFlow_Power_Series, Dictionary_LineFlow_Power_Series_temp)
 
-    # create summary dataframe
     DataLineFlow[1] = round(minimum(NetRealLineFlow[:]), digits = 5)
     DataLineFlow[2] = round(maximum(NetRealLineFlow[:]), digits = 5)
     DataLineFlow[3] = round(mean(NetRealLineFlow[:]), digits = 5)
@@ -363,7 +391,8 @@ for edge in edges
     DataFrame_LineFlow_temp = DataFrame([("Line "*string(edge)) DataLineFlow[1] DataLineFlow[2] DataLineFlow[3]], [:LineCode, :Minimum_LineFlow_kW, :Maximum_LineFlow_kW, :Average_LineFlow_kW])
     DataFrame_LineFlow = append!(DataFrame_LineFlow,DataFrame_LineFlow_temp)
 end
-# compute values for each node:
+
+# Compute values for each node:
 Dictionary_Node_Data_Series = Dict([])
 
 for bus in busses
@@ -386,12 +415,10 @@ for bus in busses
                                         ])
 
     merge!(Dictionary_Node_Data_Series,Dictionary_Node_Data_Series_temp)
-    
 end
 
 # Compute the total power flows:
-
-TotalLoad_series = zeros(8760) # initiate the total load as 0
+TotalLoad_series = zeros(length(TimeSteps)) # initiate the total load series as zeros
 for n in NodeList
     NodeNum = parse(Int,n)
     TotalLoad_series = TotalLoad_series + results[NodeNum]["ElectricLoad"]["load_series_kw"] 
@@ -401,40 +428,40 @@ Vbase_input = ldf_inputs_dictionary["Vbase_input"]
 v_uplim_input = ldf_inputs_dictionary["v_uplim_input"]
 v_lolim_input = ldf_inputs_dictionary["v_lolim_input"] 
 
-# determine all of the nodes with PV and determine total PV output across the entire network
+# Determine all of the nodes with PV and determine total PV output across the entire network
 NodesWithPV = []
 for i in keys(results)
     if "PV" in keys(results[i])
         push!(NodesWithPV, i)
     end
 end
-PVOutput = zeros(8760)
+PVOutput = zeros(length(TimeSteps))
 for NodeNumberTemp in NodesWithPV
     PVOutput = PVOutput + results[NodeNumberTemp]["PV"]["electric_to_load_series_kw"] + results[NodeNumberTemp]["PV"]["electric_to_grid_series_kw"]
 end
 
-# determine all of the nodes with Battery
+# Determine all of the nodes with Battery
 NodesWithBattery = []
 for i in keys(results)
     if "ElectricStorage" in keys(results[i])
         push!(NodesWithBattery, i)
     end
 end
-BatteryOutput = zeros(8760)
+BatteryOutput = zeros(length(TimeSteps))
 for NodeNumberTemp in NodesWithBattery
     if results[NodeNumberTemp]["ElectricStorage"]["size_kw"] > 0  # include this if statement to prevent trying to add in empty electric storage time series vectors
         BatteryOutput = BatteryOutput + results[NodeNumberTemp]["ElectricStorage"]["storage_to_load_series_kw"] + results[NodeNumberTemp]["ElectricStorage"]["storage_to_grid_series_kw"] 
     end
 end
 
-# determine all of the nodes with generator
+# Determine all of the nodes with generator
 NodesWithGenerator = []
 for i in keys(results)
     if "Generator" in keys(results[i])
         push!(NodesWithBattery, i)
     end
 end
-GeneratorOutput = zeros(8760)
+GeneratorOutput = zeros(length(TimeSteps))
 for NodeNumberTemp in NodesWithGenerator
     GeneratorOutput = GeneratorOutput + results[NodeNumberTemp]["Generator"]["electric_to_load_series_kw"] + results[NodeNumberTemp]["Generator"]["electric_to_grid_series_kw"] + results[NodeNumberTemp]["Generator"]["electric_to_storage_series_kw"] 
 end
@@ -442,15 +469,17 @@ end
 # Generate a series of plots if the "Generate_Results_Plots" input is set to true
 if Microgrid_Inputs["Generate_Results_Plots"] == true
 
+    mkdir(Microgrid_Inputs["FolderLocation"]*"/results_"*TimeStamp*"/Voltage_at_Each_Node_Plots") 
     # Plot showing that the voltage is within defined +/- percentage of the nominal voltage
     for n in NodeList
         Plots.plot(Dictionary_Node_Data_Series[n]["VoltageMagnitude_kV"], label = "Voltage Magnitude (kV)", linewidth = 2, line = (:dash), size = (1000,400))
-        Plots.plot!((parse(Float64,BusNominalVoltages_Summary[n])*v_uplim_input*(ones(8760))/1000), label = "Upper limit (kV)")
-        Plots.plot!((parse(Float64,BusNominalVoltages_Summary[n])*v_lolim_input*(ones(8760))/1000), label = "Lower limit (kV)")
+        Plots.plot!(parse(Float64,BusNominalVoltages_Summary[n])*v_uplim_input*(ones(length(TimeSteps))/1000), label = "Upper limit (kV)")
+        Plots.plot!(parse(Float64,BusNominalVoltages_Summary[n])*v_lolim_input*(ones(length(TimeSteps))/1000), label = "Lower limit (kV)")
         Plots.xlabel!("Hour of the Year") 
         Plots.ylabel!("Voltage (kV)")
         #Plots.xlims!(4000,4100)
         display(Plots.title!("Node "*n*": Voltage"))
+        Plots.savefig(Microgrid_Inputs["FolderLocation"]*"/results_"*TimeStamp*"/Voltage_at_Each_Node_Plots/Node_$(n)_Voltage"*TimeStamp*".png")
     end 
 
     # Plot, for a defined time, how the per-unit voltage is changing through the system
@@ -467,7 +496,7 @@ if Microgrid_Inputs["Generate_Results_Plots"] == true
     end
 
     #Plot the network-wide power use 
-    days = collect(1:8760)/24
+    days = TimeSteps/(24* (length(TimeSteps)/8760))
     Plots.plot(days, TotalLoad_series, label="Total Load")
     Plots.plot!(days, PVOutput, label="Combined PV Output")
     Plots.plot!(days, BatteryOutput, label = "Combined Battery Output")
@@ -475,16 +504,17 @@ if Microgrid_Inputs["Generate_Results_Plots"] == true
     Plots.plot!(days, Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"])
 
     if (OutageStopTimeStep - OutageStartTimeStep) > 0
-        OutageStart_Line = OutageStartTimeStep/24
-        OutageStop_Line = OutageStopTimeStep/24
+        OutageStart_Line = OutageStartTimeStep/(24 * (length(TimeSteps)/8760) )
+        OutageStop_Line = OutageStopTimeStep/(24 * (length(TimeSteps)/8760) )
         Plots.plot!([OutageStart_Line, OutageStart_Line],[0,maximum(TotalLoad_series)], label= "Outage Start")
         Plots.plot!([OutageStop_Line, OutageStop_Line],[0,maximum(TotalLoad_series)], label= "Outage End")
     else
-        Plots.xlims!(4000/24,4100/24)
+        Plots.xlims!(4000/(24* (length(TimeSteps)/8760)),4100/(24* (length(TimeSteps)/8760)))
     end
     display(Plots.title!("System Wide Power Demand and Generation"))
 
     # Plot the real power load and real power injection data for each REopt node:
+    mkdir(Microgrid_Inputs["FolderLocation"]*"/results_"*TimeStamp*"/Power_Flow_at_Each_Node")
     for n in NodeList # NodeList is a list of the REopt nodes
         NodeNumberTemp = parse(Int,n) # This converst the node number string to an integer
         Plots.plot(Dictionary_Node_Data_Series[n]["NetRealPowerInjection"], label="Power Injection", linewidth = 2) #, line = (:dash, 2))  # why divide by 1000?
@@ -532,9 +562,11 @@ if Microgrid_Inputs["Generate_Results_Plots"] == true
             end
             display(Plots.xlims!(MiddleValue-50,MiddleValue+50))
         end 
+        Plots.savefig(Microgrid_Inputs["FolderLocation"]*"/results_"*TimeStamp*"/Power_Flow_at_Each_Node/Node_$(n)_PowerFlows"*TimeStamp*".png")
     end
 
     # Plot all of the real and reactive power flow through each distribution line
+    mkdir(Microgrid_Inputs["FolderLocation"]*"/results_"*TimeStamp*"/Power_Flow_through_Each_Line")
     for edge in edges
         Plots.plot(Dictionary_LineFlow_Power_Series[edge]["NetRealLineFlow"], label = "Real Power Flow" )
         Plots.plot!(Dictionary_LineFlow_Power_Series[edge]["NetReactiveLineFlow"], label = "Reactive Power Flow" )
@@ -542,6 +574,7 @@ if Microgrid_Inputs["Generate_Results_Plots"] == true
         Plots.ylabel!("Power (kW)")
         Plots.title!("Distribution Line $(edge): Power Flow")
         display(Plots.xlims!(Microgrid_Inputs["ResultPlotsStartTimeStep"],Microgrid_Inputs["ResultPlotsEndTimeStep"]))
+        Plots.savefig(Microgrid_Inputs["FolderLocation"]*"/results_"*TimeStamp*"/Power_Flow_through_Each_Line/Line_$(edge)_PowerFlows"*TimeStamp*".png")
     end
 end 
 
@@ -620,12 +653,12 @@ if Microgrid_Inputs["RunOutageSimulator"] == true
             Batterykw = results[parse(Int,NodeList[1])]["ElectricStorage"]["size_kw"]
             Batterykwh = results[parse(Int,NodeList[1])]["ElectricStorage"]["size_kwh"]
         else
-            BatteryChargekwh = 0*ones(8760)
+            BatteryChargekwh = 0*ones(length(TimeSteps))
             Batterykw = 0
             Batterykwh = 0
         end 
     else
-        BatteryChargekwh = 0*ones(8760)
+        BatteryChargekwh = 0*ones(length(TimeSteps))
         Batterykw = 0
         Batterykwh = 0
     end 
@@ -633,7 +666,7 @@ if Microgrid_Inputs["RunOutageSimulator"] == true
     if "PV" in keys(results[parse(Int,NodeList[1])])
         PVProductionProfile_results = round.(((results[parse(Int,NodeList[1])]["PV"]["production_factor_series"].data)*results[parse(Int,NodeList[1])]["PV"]["size_kw"]), digits = 3)
     else
-        PVProductionProfile_results = zeros(8760)
+        PVProductionProfile_results = zeros(length(TimeSteps))
     end
 
     if "Generator" in keys(results[parse(Int,NodeList[1])])
@@ -669,19 +702,19 @@ if Microgrid_Inputs["RunOutageSimulator"] == true
                 Batterykw_B = results[parse(Int,NodeList[i])]["ElectricStorage"]["size_kw"]
                 Batterykwh_B = results[parse(Int,NodeList[i])]["ElectricStorage"]["size_kwh"]
             else
-                BatteryChargekwh_B = 0*ones(8760)
+                BatteryChargekwh_B = 0*ones(length(TimeSteps))
                 Batterykw_B = 0
                 Batterykwh_B = 0  
             end      
         else 
-            BatteryChargekwh_B = 0*ones(8760)
+            BatteryChargekwh_B = 0*ones(length(TimeSteps))
             Batterykw_B = 0
             Batterykwh_B = 0
         end
         if "PV" in keys(results[parse(Int,NodeList[i])])
             PVProductionProfile_results_B = round.(((results[parse(Int,NodeList[i])]["PV"]["production_factor_series"].data)*results[parse(Int,NodeList[i])]["PV"]["size_kw"]), digits = 3)
         else
-            PVProductionProfile_results_B = zeros(8760)
+            PVProductionProfile_results_B = zeros(length(TimeSteps))
         end
         
         if "Generator" in keys(results[parse(Int,NodeList[i])])
@@ -719,9 +752,7 @@ end
 
 
 # Use the function below to run the outage simulator 
-
 function Microgrid_OutageSimulator(JuMP_Model, DataDictionaryForEachNode, REopt_dictionary, Microgrid_Inputs; NumberOfOutagesToTest = 15, ldf_inputs_dictionary = ldf_inputs_dictionary, TimeStepsPerHour_input = 1, OutageLength_TimeSteps_Input = 1)
-    #MultiNode_OutageSimulator(DataDictionaryForEachNode; ldf_inputs_dictionary = ldf_inputs_dictionary, TimeStepsPerHour_input = 1, OutageLength_TimeSteps_Input = 1)
 
 NodeList = collect(keys(ldf_inputs_dictionary["load_nodes"]))
 
@@ -763,7 +794,6 @@ ldf_inputs_new = LinDistFlow.Inputs(
 )
 
 # Define the outage start time steps based on the number of outages
-
 IncrementSize_ForOutageStartTimes = Int(floor(MaximumTimeStepToEvaluate_limit/NumberOfOutagesToTest))
 
 index = 0
@@ -1010,11 +1040,10 @@ print("\n Percent of outages survived: "*string(round(PercentOfOutagesSurvived, 
 return OutageLength_TimeSteps, SuccessfullySolved, RunNumber, PercentOfOutagesSurvived
 end 
 
-# end of the Multinode Outage Simulator function**************************************************
-
 
 # Function to run OpenDSS as a post processor for the data
     # NOTE: this function is still in early stages of development
+    # This function only works with hourly interval data currently
 function RunOpenDSS(REoptresults, Microgrid_Inputs)
     #REoptresults = results 
     # Step 1: Save the power flows for each node into a csv file
