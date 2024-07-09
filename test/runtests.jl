@@ -589,23 +589,33 @@ else  # run HiGHS tests
 
         data["ElectricStorage"]["soc_init_fraction"] = 1.0
         data["ElectricStorage"]["soc_min_fraction"] = 0.0
-        data["ElectricStorage"]["per_timestep_self_discharge_fraction"] = 0.0025/24
+        data["ElectricStorage"]["soc_based_per_ts_self_discharge_fraction"] = 0.0025/24
 
         s = Scenario(data)
         inputs = REoptInputs(s)
-        results_self_discharge = run_reopt(model, inputs)
+        results_soc_based_self_discharge = run_reopt(model, inputs)
 
         model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-        data["ElectricStorage"]["per_timestep_self_discharge_fraction"] = 0.0
+        data["ElectricStorage"]["soc_based_per_ts_self_discharge_fraction"] = 0.0
 
         s = Scenario(data)
         inputs = REoptInputs(s)
         results_no_self_discharge = run_reopt(model, inputs)
 
-        @test results_self_discharge["ElectricStorage"]["year_one_om_cost_before_tax"] ≈ 0 atol=0.01
-        @test results_self_discharge["ElectricStorage"]["lifecycle_om_cost_after_tax"] ≈ 0 atol=0.01 
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+        data["ElectricStorage"]["capacity_based_per_ts_self_discharge_fraction"] = 0.0025/24
+
+        s = Scenario(data)
+        inputs = REoptInputs(s)
+        results_capacity_based_self_discharge = run_reopt(model, inputs)
+
+        @test results_soc_based_self_discharge["ElectricStorage"]["year_one_om_cost_before_tax"] ≈ 0 atol=0.01
+        @test results_soc_based_self_discharge["ElectricStorage"]["lifecycle_om_cost_after_tax"] ≈ 0 atol=0.01 
         @test sum(results_no_self_discharge["ElectricStorage"]["storage_to_load_series_kw"]) - 
-              sum(results_self_discharge["ElectricStorage"]["storage_to_load_series_kw"]) ≈ 15.382 atol=0.01 
+              sum(results_soc_based_self_discharge["ElectricStorage"]["storage_to_load_series_kw"]) ≈ 15.382 atol=0.01 
+
+        calculated_output = round((80 - (80 * 0.0025/24 * 8760)) * sqrt(0.975) * 0.96, digits = 3)
+        @test sum(results_capacity_based_self_discharge["ElectricStorage"]["storage_to_load_series_kw"]) ≈ calculated_output atol=0.01 
     end
     
     @testset "Disaggregated Heating Loads" begin
