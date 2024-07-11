@@ -262,6 +262,24 @@ function Techs(s::Scenario)
             push!(techs_can_serve_process_heat, "ElectricHeater")
         end
     end
+    
+    if !isnothing(s.cst)
+        push!(all_techs, "ConcnetratingSolar")
+        push!(heating_techs, "ConcnetratingSolar")
+        push!(electric_heaters, "ConcnetratingSolar")
+        if s.cst.can_supply_steam_turbine
+            push!(techs_can_supply_steam_turbine, "ConcnetratingSolar")
+        end
+        if s.cst.can_serve_space_heating
+            push!(techs_can_serve_space_heating, "ConcnetratingSolar")
+        end
+        if s.cst.can_serve_dhw
+            push!(techs_can_serve_dhw, "ConcnetratingSolar")
+        end
+        if s.cst.can_serve_process_heat
+            push!(techs_can_serve_process_heat, "ConcnetratingSolar")
+        end
+    end
 
     if s.settings.off_grid_flag
         append!(requiring_oper_res, pvtechs)
