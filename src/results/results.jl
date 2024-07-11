@@ -17,7 +17,11 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 
     for b in p.s.storage.types.hot
         if p.s.storage.attr[b].max_kwh > 0
-            add_hot_storage_results(m, p, d, b; _n)
+            if b == "HotSensibleTes"
+                add_hot_sensible_storage_results(m, p, d, b; _n)
+            else
+                add_hot_storage_results(m, p, d, b; _n)
+            end
         end
     end
 
