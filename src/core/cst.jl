@@ -6,6 +6,7 @@ struct ConcentratingSolar <: AbstractThermalTech
     installed_cost_per_kw::Real
     om_cost_per_kw::Real
     om_cost_per_kwh::Real
+    acres_per_kw::Real
     macrs_option_years::Int
     macrs_bonus_fraction::Real
     tech_type::String
@@ -33,6 +34,7 @@ function ConcentratingSolar(;
     max_mmbtu_per_hour::Real = BIG_NUMBER, # Maximum thermal power size
     production_factor::AbstractVector{<:Real} = Float64[],  production factor
     elec_consumption_factor::AbstractVector{<:Real} = Float64[], electric consumption factor per kw TODO: (do we need? are we including parasitics?) 
+    acres_per_kw::Real = 0, # 
     macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
     installed_cost_per_kw::Real = 293000.0, # Thermal power-based cost
