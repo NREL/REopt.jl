@@ -48,6 +48,7 @@ function Microgrid_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary, 
     
     # Generate a csv file with outputs from the model if the "Generate_CSV_of_outputs" field is set to true
     if Microgrid_Settings["Generate_CSV_of_outputs"] == true
+        @info "Generating CSV of outputs"
         InputsList = Microgrid_Settings["REoptInputsList"]
         DataLabels = []
         Data = []
@@ -173,20 +174,87 @@ function Microgrid_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary, 
     EndTime_EntireModel = now()
     ComputationTime_EntireModel = EndTime_EntireModel - StartTime_EntireModel
 
-        # Compile output data into a dictionary to return from the dictionary
-        CompiledResults = Dict([
-                                ("DataDictionaryForEachNode", DataDictionaryForEachNode), 
-                                ("FromREopt_Dictionary_LineFlow_Power_Series", Dictionary_LineFlow_Power_Series), 
-                                ("FromREopt_Dictionary_Node_Data_Series", Dictionary_Node_Data_Series), 
-                                ("ldf_inputs", ldf_inputs),
-                                ("REopt_results", results),
-                                ("Outage_Results", Outage_Results),
-                                ("OpenDSSResults", OpenDSSResults),
-                                ("LineNominalVoltages_Summary", LineNominalVoltages_Summary), 
-                                ("BusNominalVoltages_Summary", BusNominalVoltages_Summary),
-                                ("ComputationTime_EntireModel", ComputationTime_EntireModel)
-                                ])
-        return CompiledResults, model  
+    #Display results if the "Display_Results" input is set to true
+    if Microgrid_Settings["Display_Results"] == true
+        print("\n-----")
+        print("\nResults:") 
+        print("\n   The computation time was: "*string(ComputationTime_EntireModel))
+    
+        print("Line Flow Results")
+        display(DataFrame_LineFlow_Summary)
+    
+        print("\nSubstation data: ")
+        LineFromSubstationToFacilityMeter = ldf_inputs_dictionary["SubstationLocation"] * "-" * Microgrid_Settings["FacilityMeter_Node"]
+        print("\n   Maximum power flow from substation: "*string(maximum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"])))
+        print("\n   Minimum power flow from substation: "*string(minimum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"])))
+        print("\n   Average power flow from substation: "*string(mean(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"])))
+    
+        # Print results for each node:
+        InputsList = Microgrid_Settings["REoptInputsList"]
+        for n in NodeList
+            NodeNumberTempB = parse(Int,n)
+            print("\nNode "*n*":")
+            
+            InputsDictionary = Dict[] # reset the inputs dictionary to an empty dictionary before redefining
+    
+            for n in InputsList
+                if n["Site"]["node"] == NodeNumberTempB
+                    InputsDictionary = n
+                end
+            end
+            if "PV" in keys(results[NodeNumberTempB])
+                print("\n   PV Size (kW): "*string(results[NodeNumberTempB]["PV"]["size_kw"]))
+                print("\n      Min and Max sizing is (input to model), kW: "*string(InputsDictionary["PV"]["min_kw"])*" and "*string(InputsDictionary["PV"]["max_kw"]))
+                print("\n      Max PV Power Curtailed: "*string(round(maximum(results[NodeNumberTempB]["PV"]["electric_curtailed_series_kw"]), digits =2)))
+                print("\n      Max PV Power Exported to Grid from node: "*string(round(maximum(results[NodeNumberTempB]["PV"]["electric_to_grid_series_kw"]), digits =2))) 
+            else
+                print("\n   No PV")
+            end 
+    
+            if "Generator" in keys(results[NodeNumberTempB])
+                print("\n  Generator size (kW): "*string(round(results[NodeNumberTempB]["Generator"]["size_kw"], digits =2)))
+                print("\n     Maximum generator power to load (kW): "*string(round(maximum(results[NodeNumberTempB]["Generator"]["electric_to_load_series_kw"].data), digits =2)))
+                print("\n       Average generator power to load (kW): "*string(round(mean(results[NodeNumberTempB]["Generator"]["electric_to_load_series_kw"].data), digits =2)))
+                print("\n     Maximum generator power to grid (kW): "*string(round(maximum(results[NodeNumberTempB]["Generator"]["electric_to_grid_series_kw"].data), digits =2)))
+                print("\n       Minimum generator power to grid (kW): "*string(round(minimum(results[NodeNumberTempB]["Generator"]["electric_to_grid_series_kw"].data), digits =2)))
+                print("\n       Average generator power to grid (kW): "*string(round(mean(results[NodeNumberTempB]["Generator"]["electric_to_grid_series_kw"].data), digits =2)))
+            else 
+                print("\n  No generator")    
+            end 
+            if "ElectricStorage" in keys(results[NodeNumberTempB])
+                if results[NodeNumberTempB]["ElectricStorage"]["size_kw"] > 0 
+                    print("\n  Battery power (kW): "*string(round(results[NodeNumberTempB]["ElectricStorage"]["size_kw"], digits =2)))
+                    print("\n    Battery capacity (kWh): "*string(round(results[NodeNumberTempB]["ElectricStorage"]["size_kwh"], digits =2)))
+                    print("\n    Average Battery SOC (fraction): "*string(round(mean(results[NodeNumberTempB]["ElectricStorage"]["soc_series_fraction"]), digits =2)))
+                    print("\n      Minimum Battery SOC (fraction): "*string(round(minimum(results[NodeNumberTempB]["ElectricStorage"]["soc_series_fraction"]), digits =2)))
+                    print("\n    Average battery to load (kW): "*string(round(mean(results[NodeNumberTempB]["ElectricStorage"]["storage_to_load_series_kw"]), digits =2)))
+                    print("\n      Maximum battery to load (kW): "*string(round(maximum(results[NodeNumberTempB]["ElectricStorage"]["storage_to_load_series_kw"]), digits =2)))
+                    print("\n    Average battery to grid (kW): "*string(round(mean(results[NodeNumberTempB]["ElectricStorage"]["storage_to_grid_series_kw"]), digits =2)))
+                    print("\n      Maximum battery to grid (kW): "*string(round(maximum(results[NodeNumberTempB]["ElectricStorage"]["storage_to_grid_series_kw"]), digits =2)))
+                else
+                    print("\n  No battery")
+                end
+            else
+                print("\n  No battery")
+            end 
+        end
+        print("\n----") 
+    end 
+
+    # Compile output data into a dictionary to return from the dictionary
+    CompiledResults = Dict([
+                            ("DataDictionaryForEachNode", DataDictionaryForEachNode), 
+                            ("FromREopt_Dictionary_LineFlow_Power_Series", Dictionary_LineFlow_Power_Series), 
+                            ("FromREopt_Dictionary_Node_Data_Series", Dictionary_Node_Data_Series), 
+                            ("ldf_inputs", ldf_inputs),
+                            ("REopt_results", results),
+                            ("Outage_Results", Outage_Results),
+                            ("OpenDSSResults", OpenDSSResults),
+                            ("LineNominalVoltages_Summary", LineNominalVoltages_Summary), 
+                            ("BusNominalVoltages_Summary", BusNominalVoltages_Summary),
+                            ("ComputationTime_EntireModel", ComputationTime_EntireModel)
+                            ])
+    return CompiledResults, model  
 end
 
 # Function to run the REopt analysis 
@@ -202,7 +270,6 @@ function Microgrid_REopt_Model(JuMP_Model, Microgrid_Inputs, ldf_inputs_dictiona
     MicrogridType = Microgrid_Inputs["MicrogridType"]
     AllowExportBeyondSubstation = Microgrid_Inputs["AllowExportBeyondSubstation"]
     SubstationExportLimit = Microgrid_Inputs["SubstationExportLimit"]
-    ElectricityCostFromSubstation_perkwh = Microgrid_Inputs["ElectricityCostFromSubstation_perkwh"]
     GeneratorFuelGallonAvailable = Microgrid_Inputs["GeneratorFuelGallonAvailable"]
     OutageStartTimeStep = Microgrid_Inputs["SingleOutageStartTimeStep"]
     OutageStopTimeStep = Microgrid_Inputs["SingleOutageStopTimeStep"]
@@ -468,7 +535,7 @@ end
 
 # Generate a series of plots if the "Generate_Results_Plots" input is set to true
 if Microgrid_Inputs["Generate_Results_Plots"] == true
-
+    @info "Generating results plots"
     mkdir(Microgrid_Inputs["FolderLocation"]*"/results_"*TimeStamp*"/Voltage_at_Each_Node_Plots") 
     # Plot showing that the voltage is within defined +/- percentage of the nominal voltage
     for n in NodeList
@@ -578,72 +645,6 @@ if Microgrid_Inputs["Generate_Results_Plots"] == true
     end
 end 
 
-# Display results if the "Display_Results" input is set to true
-if Microgrid_Inputs["Display_Results"] == true
-    print("\n-----")
-    print("\nResults:") 
-    print("\n   The optimization computation time was: "*string(ComputationTime))
-
-    print("Line Flow Results")
-    display(DataFrame_LineFlow)
-
-    print("\nSubstation data: ")
-    print("\n   Maximum power flow from substation: "*string(maximum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"])))
-    print("\n   Minimum power flow from substation: "*string(minimum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"])))
-    print("\n   Average power flow from substation: "*string(mean(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"])))
-
-    # Print results for each node:
-    InputsList = Microgrid_Inputs["REoptInputsList"]
-    for n in NodeList
-        NodeNumberTempB = parse(Int,n)
-        print("\nNode "*n*":")
-        
-        InputsDictionary = Dict[] # reset the inputs dictionary to an empty dictionary before redefining
-
-        for n in InputsList
-            if n["Site"]["node"] == NodeNumberTempB
-                InputsDictionary = n
-            end
-        end
-        if "PV" in keys(results[NodeNumberTempB])
-            print("\n   PV Size (kW): "*string(results[NodeNumberTempB]["PV"]["size_kw"]))
-            print("\n      Min and Max sizing is (input to model), kW: "*string(InputsDictionary["PV"]["min_kw"])*" and "*string(InputsDictionary["PV"]["max_kw"]))
-            print("\n      Max PV Power Curtailed: "*string(round(maximum(results[NodeNumberTempB]["PV"]["electric_curtailed_series_kw"]), digits =2)))
-            print("\n      Max PV Power Exported to Grid from node: "*string(round(maximum(results[NodeNumberTempB]["PV"]["electric_to_grid_series_kw"]), digits =2))) 
-        else
-            print("\n   No PV")
-        end 
-
-        if "Generator" in keys(results[NodeNumberTempB])
-            print("\n  Generator size (kW): "*string(round(results[NodeNumberTempB]["Generator"]["size_kw"], digits =2)))
-            print("\n     Maximum generator power to load (kW): "*string(round(maximum(results[NodeNumberTempB]["Generator"]["electric_to_load_series_kw"].data), digits =2)))
-            print("\n       Average generator power to load (kW): "*string(round(mean(results[NodeNumberTempB]["Generator"]["electric_to_load_series_kw"].data), digits =2)))
-            print("\n     Maximum generator power to grid (kW): "*string(round(maximum(results[NodeNumberTempB]["Generator"]["electric_to_grid_series_kw"].data), digits =2)))
-            print("\n       Minimum generator power to grid (kW): "*string(round(minimum(results[NodeNumberTempB]["Generator"]["electric_to_grid_series_kw"].data), digits =2)))
-            print("\n       Average generator power to grid (kW): "*string(round(mean(results[NodeNumberTempB]["Generator"]["electric_to_grid_series_kw"].data), digits =2)))
-        else 
-            print("\n  No generator")    
-        end 
-        if "ElectricStorage" in keys(results[NodeNumberTempB])
-            if results[NodeNumberTempB]["ElectricStorage"]["size_kw"] > 0 
-                print("\n  Battery power (kW): "*string(round(results[NodeNumberTempB]["ElectricStorage"]["size_kw"], digits =2)))
-                print("\n    Battery capacity (kWh): "*string(round(results[NodeNumberTempB]["ElectricStorage"]["size_kwh"], digits =2)))
-                print("\n    Average Battery SOC (fraction): "*string(round(mean(results[NodeNumberTempB]["ElectricStorage"]["soc_series_fraction"]), digits =2)))
-                print("\n      Minimum Battery SOC (fraction): "*string(round(minimum(results[NodeNumberTempB]["ElectricStorage"]["soc_series_fraction"]), digits =2)))
-                print("\n    Average battery to load (kW): "*string(round(mean(results[NodeNumberTempB]["ElectricStorage"]["storage_to_load_series_kw"]), digits =2)))
-                print("\n      Maximum battery to load (kW): "*string(round(maximum(results[NodeNumberTempB]["ElectricStorage"]["storage_to_load_series_kw"]), digits =2)))
-                print("\n    Average battery to grid (kW): "*string(round(mean(results[NodeNumberTempB]["ElectricStorage"]["storage_to_grid_series_kw"]), digits =2)))
-                print("\n      Maximum battery to grid (kW): "*string(round(maximum(results[NodeNumberTempB]["ElectricStorage"]["storage_to_grid_series_kw"]), digits =2)))
-            else
-                print("\n  No battery")
-            end
-        else
-            print("\n  No battery")
-        end 
-    end
-    print("\n----") 
-end 
-
 # Building the input dictionary for the microgrid outage simulator:
 if Microgrid_Inputs["RunOutageSimulator"] == true
     # Initiate the dictionary with data from the first node
@@ -664,7 +665,11 @@ if Microgrid_Inputs["RunOutageSimulator"] == true
     end 
 
     if "PV" in keys(results[parse(Int,NodeList[1])])
-        PVProductionProfile_results = round.(((results[parse(Int,NodeList[1])]["PV"]["production_factor_series"].data)*results[parse(Int,NodeList[1])]["PV"]["size_kw"]), digits = 3)
+        if results[parse(Int,NodeList[i])]["PV"]["size_kw"] > 0
+            PVProductionProfile_results = round.(((results[parse(Int,NodeList[1])]["PV"]["production_factor_series"])*results[parse(Int,NodeList[1])]["PV"]["size_kw"]), digits = 3)
+        else
+            PVProductionProfile_results_B = zeros(length(TimeSteps))
+        end
     else
         PVProductionProfile_results = zeros(length(TimeSteps))
     end
@@ -712,7 +717,11 @@ if Microgrid_Inputs["RunOutageSimulator"] == true
             Batterykwh_B = 0
         end
         if "PV" in keys(results[parse(Int,NodeList[i])])
-            PVProductionProfile_results_B = round.(((results[parse(Int,NodeList[i])]["PV"]["production_factor_series"].data)*results[parse(Int,NodeList[i])]["PV"]["size_kw"]), digits = 3)
+            if results[parse(Int,NodeList[i])]["PV"]["size_kw"] > 0
+                PVProductionProfile_results_B = round.(((results[parse(Int,NodeList[i])]["PV"]["production_factor_series"])*results[parse(Int,NodeList[i])]["PV"]["size_kw"]), digits = 3)
+            else
+                PVProductionProfile_results_B = zeros(length(TimeSteps))
+            end
         else
             PVProductionProfile_results_B = zeros(length(TimeSteps))
         end
@@ -744,6 +753,7 @@ if Microgrid_Inputs["RunOutageSimulator"] == true
     end 
 
 else
+    @info "Not running the outage simulator"
     DataDictionaryForEachNode = "The outage simulator was not used"
 end
 
@@ -774,9 +784,9 @@ OutageSimulator_LineFromSubstationToFacilityMeter = ldf_inputs_dictionary["Subst
 
 ldf_inputs_new = LinDistFlow.Inputs(
     ldf_inputs_dictionary["LinesFileLocation"],
-    #joinpath("data", "singlephase38lines", "master.dss"), 
     ldf_inputs_dictionary["SubstationLocation"], # this is the location of the substation bus (aka, where the power is being input into the network)
     ldf_inputs_dictionary["LineCodesFileLocation"];
+    dsstransformersfilepath = ldf_inputs_dictionary["TransformersFileLocation"],
     Pload = ldf_inputs_dictionary["load_nodes"],
     Qload = ldf_inputs_dictionary["load_nodes"], 
     Sbase = ldf_inputs_dictionary["Sbase_input"],
@@ -795,10 +805,10 @@ ldf_inputs_new = LinDistFlow.Inputs(
 
 # Define the outage start time steps based on the number of outages
 IncrementSize_ForOutageStartTimes = Int(floor(MaximumTimeStepToEvaluate_limit/NumberOfOutagesToTest))
-
+RunsTested = 0
 index = 0
 for x in 1:MaximumTimeStepToEvaluate
-
+    RunsTested = RunsTested + 1
     i = Int(x*IncrementSize_ForOutageStartTimes)
     empty!(JuMP_Model) # empties the JuMP model so that the same variables names can be applied in the new model
     m_outagesimulator = JuMP_Model
@@ -962,7 +972,7 @@ for x in 1:MaximumTimeStepToEvaluate
     @objective(m_outagesimulator, Max, sum(sum(m_outagesimulator[Symbol(string("dvPVToLoad_", n))]) for n in NodesWithPV))
    
     runresults = optimize!(m_outagesimulator)
-    print("\n The result from run #"*string(i)*" is: "*string(termination_status(m_outagesimulator)))
+    print("\n The result from run #"*string(RunsTested)*" is: "*string(termination_status(m_outagesimulator)))
 
     if string(termination_status(m_outagesimulator)) == "OPTIMAL"
         SuccessfullySolved = SuccessfullySolved + 1
@@ -1023,19 +1033,19 @@ for x in 1:MaximumTimeStepToEvaluate
     end 
 
     print("\n  Outages survived so far: "*string(SuccessfullySolved))
-    print("\n  Outages tested so far: "*string(i)) 
+    print("\n  Outages tested so far: "*string(RunsTested)) 
     print("\n")
     #For debugging (to not cycle through all possible outage times)
     #if i > 15
     #    return m_outagesimulator
     #end
 end 
-
+print("\n --- Summary of results ---")
 RunNumber = MaximumTimeStepToEvaluate 
 PercentOfOutagesSurvived = 100*(SuccessfullySolved/RunNumber)
 print("\n The length of outage tested is: "*string(OutageLength_TimeSteps)*" time steps")
 print("\n The number of outages survived is: "*string(SuccessfullySolved)*"  of  "*string(RunNumber)*" runs")
-print("\n Percent of outages survived: "*string(round(PercentOfOutagesSurvived, digits = 2))*" %")
+print("\n Percent of outages survived: "*string(round(PercentOfOutagesSurvived, digits = 2))*" % \n")
 
 return OutageLength_TimeSteps, SuccessfullySolved, RunNumber, PercentOfOutagesSurvived
 end 
