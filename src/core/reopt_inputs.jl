@@ -430,6 +430,10 @@ function setup_tech_inputs(s::AbstractScenario)
         heating_cop["ElectricHeater"] = 1.0
     end
 
+    if "ConcentratingSolar" in techs.all
+        setup_cst_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop)
+    end
+
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
     for t in techs.elec
         export_bins_by_tech[t] = [bin for (bin, ts) in techs_by_exportbin if t in ts]
@@ -880,6 +884,31 @@ function setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, o
         )
     else
         cap_cost_slope["ElectricHeater"] = s.electric_heater.installed_cost_per_kw
+    end
+
+end
+
+function setup_cst_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop)
+    max_sizes["ConcentratingSolar"] = s.cst.max_kw
+    min_sizes["ConcentratingSolar"] = s.cst.min_kw
+    om_cost_per_kw["ConcentratingSolar"] = s.cst.om_cost_per_kw
+    #heating_cop["ConcentratingSolar"] = s.cst.cop  TODO: do we need this?  If parasitics are present this is a time series, not a scalar, and we can steal from the ASHP branch.
+
+    if s.cst.macrs_option_years in [5, 7]
+        cap_cost_slope["ConcentratingSolar"] = effective_cost(;
+            itc_basis = s.cst.installed_cost_per_kw,
+            replacement_cost = 0.0,
+            replacement_year = s.financial.analysis_years,
+            discount_rate = s.financial.owner_discount_rate_fraction,
+            tax_rate = s.financial.owner_tax_rate_fraction,
+            itc = 0.0,
+            macrs_schedule = s.cst.macrs_option_years == 5 ? s.financial.macrs_five_year : s.financial.macrs_seven_year,
+            macrs_bonus_fraction = s.cst.macrs_bonus_fraction,
+            macrs_itc_reduction = 0.0,
+            rebate_per_kw = 0.0
+        )
+    else
+        cap_cost_slope["ConcentratingSolar"] = s.cst.installed_cost_per_kw
     end
 
 end
