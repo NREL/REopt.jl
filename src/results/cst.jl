@@ -1,8 +1,8 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 
 """
-`ConcnetratingSolar` results keys:
-- `size_kw`  # Thermal production capacity size of the ConcnetratingSolar [MMBtu/hr]
+`ConcentratingSolar` results keys:
+- `size_kw`  # Thermal production capacity size of the ConcentratingSolar [MMBtu/hr]
 - `electric_consumption_series_kw`  # Fuel consumption series [kW]
 - `annual_electric_consumption_kwh`  # Fuel consumed in a year [kWh]
 - `thermal_production_series_mmbtu_per_hour`  # Thermal energy production series [MMBtu/hr]
@@ -19,7 +19,7 @@
 
 function add_cst_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
-    r["size_mmbtu_per_hour"] = round(value(m[Symbol("dvSize"*_n)]["ConcnetratingSolar"]) / KWH_PER_MMBTU, digits=3)
+    r["size_mmbtu_per_hour"] = round(value(m[Symbol("dvSize"*_n)]["ConcentratingSolar"]) / KWH_PER_MMBTU, digits=3)
     # @expression(m, ConcentratingSolarElectricConsumptionSeries[ts in p.time_steps],
     #     p.hours_per_time_step * sum(m[:dvHeatingProduction][t,q,ts] / p.heating_cop[t] 
     #     for q in p.heating_loads, t in p.techs.cst))
@@ -27,7 +27,7 @@ function add_cst_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     # r["annual_electric_consumption_kwh"] = sum(r["electric_consumption_series_kw"])
 
     @expression(m, ConcentratingSolarThermalProductionSeries[ts in p.time_steps],
-        sum(m[:dvHeatingProduction]["ConcnetratingSolar",q,ts] for q in p.heating_loads))
+        sum(m[:dvHeatingProduction]["ConcentratingSolar",q,ts] for q in p.heating_loads))
 	r["thermal_production_series_mmbtu_per_hour"] = 
         round.(value.(ConcentratingSolarThermalProductionSeries) / KWH_PER_MMBTU, digits=5)
 	r["annual_thermal_production_mmbtu"] = round(sum(r["thermal_production_series_mmbtu_per_hour"]), digits=3)

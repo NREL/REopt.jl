@@ -63,7 +63,7 @@ function ConcentratingSolar(;
         installed_cost_per_kw::Real = 2000.0,
         om_cost_per_kw::Real = 39.6,  #per kw per year
         om_cost_per_kwh::Real = 0.0,   #per kwh produced
-        tech_type::String = "parabolic_trough",  # "restrict_to": ["parabolic_trough", "power_tower", "linear_fresnal", "dish_engine"]
+        tech_type::String = "parabolic_trough",  # "restrict_to": ["parabolic_trough", "power_tower", "linear_fresnal", "dish_engine"]  TODO update with Jeff's work
         can_supply_steam_turbine::Bool = true,
         can_serve_dhw::Bool = true,
         can_serve_space_heating::Bool = true,
