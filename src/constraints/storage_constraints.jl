@@ -162,7 +162,7 @@ function add_hot_thermal_storage_dispatch_constraints(m, p; _n="")
         end
     end
 
-    if "HotSensibleTes" in p.s.storage.types.hot
+    if "HotSensibleTes" in p.s.storage.types.hot && p.s.storage.attr["HotSensibleTes"].one_direction_flow
         dv = "binStorageCharge"*_n
         m[Symbol(dv)] = @variable(m, [p.s.storage.types.hot, p.time_steps], base_name=dv, binary=true)
         dv = "binStorageDischarge"*_n
