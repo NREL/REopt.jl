@@ -1240,7 +1240,7 @@ function Results_Processing(results, Outage_Results, OpenDSSResults, Microgrid_S
                 push!(DataLabels, " --Outage Length: $(OutageLength) time steps--")
                 push!(Data, "")
                 push!(DataLabels, "  Percent of Outages Survived")
-                push!(Data, Outage_Results["$(OutageLength)_timesteps_outage"]["PercentSurvived"]*" %")
+                push!(Data, string(Outage_Results["$(OutageLength)_timesteps_outage"]["PercentSurvived"])*" %")
                 push!(DataLabels, "  Total Number of Outages Tested")
                 push!(Data, Outage_Results["$(OutageLength)_timesteps_outage"]["NumberOfRuns"])
                 push!(DataLabels, "  Total Number of Outages Survived")
