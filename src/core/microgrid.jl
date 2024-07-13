@@ -1174,7 +1174,7 @@ function Results_Processing(results, Outage_Results, OpenDSSResults, Microgrid_S
             total_electric_storage_size_kwh = total_electric_storage_size_kwh + results[node_temp]["ElectricStorage"]["size_kwh"]
         end
         if "Generator" in keys(results[node_temp])
-            total_generator_size_kw = total_generator_size_kw + results["node_temp"]["Generator"]["size_kw"]
+            total_generator_size_kw = total_generator_size_kw + results[node_temp]["Generator"]["size_kw"]
         end
     end
 
