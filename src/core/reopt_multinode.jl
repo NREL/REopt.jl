@@ -23,13 +23,11 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 		_n = string("_", p.s.site.node)
 
 		# Temporary fix:
-		
 		if "ElectricStorage" in keys(p.s.storage.attr)
 			@info "** Temporary fix: Adding ElectricStorage to p.s.storage.types.all and p.s.storage.types.elec, for site node: " p.s.site.node
 			p.s.storage.types.all = ["ElectricStorage"] #[keys(p.s.storage.attr)]
 			p.s.storage.types.elec = ["ElectricStorage"]  #[keys(p.s.storage.attr)]
 		end 
-		
 		# End of temporary fix
 
 		for dv in dvs_idx_on_techs
@@ -74,17 +72,11 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 		dv = "MinChargeAdder"*_n
 		m[Symbol(dv)] = @variable(m, base_name=dv, lower_bound=0)
 
-		# Add the new variables for the generator
-
 		dv = "dvFuelUsage"*_n
 		m[Symbol(dv)] = @variable(m, [p.techs.gen, 0:p.time_steps[end]], base_name=dv, lower_bound=0)
 	
 		dv = "binGenIsOnInTS"*_n
 		m[Symbol(dv)] = @variable(m, [p.techs.gen, 0:p.time_steps[end]], base_name=dv, lower_bound=0)
-	
-		# Add the new variables to allow the battery to export to the grid
-		#dv = "dvStorageToGrid"*_n 
-		#m[Symbol(dv)] = @variable(m, [p.time_steps], base_name=dv, lower_bound=0) # export of energy from storage to the grid
 		
 		dv = "dvBattCharge_binary"*_n
 		m[Symbol(dv)] = @variable(m, [p.time_steps], base_name=dv, Bin) # Binary for battery charge
@@ -96,12 +88,17 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
             dv = "dvProductionToGrid"*_n
             m[Symbol(dv)] = @variable(m, [p.techs.elec, p.s.electric_tariff.export_bins, p.time_steps], base_name=dv, lower_bound=0)
         end
-		print("\n p.techs.elec are: ")	
+
+		# Display some information:
+		print("\n For node: ")
+		print(string(p.s.site.node))
+		print("\n   p.techs.elec are: ")	
 		print(p.techs.elec)						
-		print("\n p.techs.gen are: ")	
+		print("\n   p.techs.gen are: ")	
 		print(p.techs.gen)	
-		print("\n p.techs.all are: ")	
+		print("\n   p.techs.all are: ")	
 		print(p.techs.all)	
+		print("\n")
 
 		ex_name = "TotalTechCapCosts"*_n
 		m[Symbol(ex_name)] = @expression(m, p.third_party_factor *
@@ -132,14 +129,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
             add_gen_constraints(m, p; _n = _n )
             m[Symbol("TotalPerUnitProdOMCosts"*_n)] += m[Symbol("TotalGenPerUnitProdOMCosts"*_n)]
             m[Symbol("TotalFuelCosts"*_n)] += m[Symbol("TotalGenFuelCosts"*_n)]
-			#m[Symbol("TotalFuelCosts")] += m[Symbol("TotalGenFuelCosts"*_n)]
-			
-		
 		end	
-
-		#if !isempty(p.s.electric_tariff.export_bins)  # added for testing
-        #    add_export_constraints(m, p; _n=_n)  # added for testing 
-        #end
 
 		if !isempty(p.s.electric_tariff.export_bins)
 			#if string(p.s.site.node) != p.s.settings.facilitymeter_node
@@ -167,7 +157,7 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 
 			# Utility Bill, tax deductible for offtaker, including export benefit
 			m[Symbol("TotalElecBill"*_n)] * (1 - p.s.financial.offtaker_tax_rate_fraction)
-			#+ (sum(m[Symbol("dvStorageToGrid"*_n)][ts]*9000 for ts in p.time_steps)) # added this line temporarily for debugging purposes
+			
 		);
     end
 end
@@ -175,21 +165,11 @@ end
 
 function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) where T <: AbstractScenario
     add_variables!(m, ps)
-    @warn "Outages are not currently modeled in multinode mode. Use the multinode outage simulator instead or limit power from the substation using LinDistFlow."
-    #@warn "Diesel generators are not currently modeled in multinode mode."
-	@warn "Emissions and renewable energy fractions are not currently modeling in multinode mode."
+    @warn "Use the microgrid.jl file to model outages in multinode mode."
+	@warn "Emissions and renewable energy fractions are not currently modeled in multinode mode."
     for p in ps
         _n = string("_", p.s.site.node)
-		
-		#@info "** p.s.storage is: " p.s.storage 
-		#@info "** p.s.storage.types is: " p.s.storage.types
-		#@info "** p.s.storage.types.all is: " p.s.storage.types.all
-		#@info "** p.s.storage.types.elec is: " p.s.storage.types.elec
-		#@info "** p.s.storage.attr is: " p.s.storage.attr
-		#@info "** keys(p.s.storage.attr) is: " keys(p.s.storage.attr)
-		#@info "** p.s.storage.attr[ElectricStorage(with quotes)] is: " p.s.storage.attr["ElectricStorage"]
-
-        for b in p.s.storage.types.all
+		for b in p.s.storage.types.all
 		# Temporary fix:
 		#for b in keys(p.s.storage.attr)
 			#@info "** Applying constraints to storage type: " b

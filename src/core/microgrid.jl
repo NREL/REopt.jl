@@ -20,6 +20,9 @@ function Microgrid_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary, 
         mkdir(Microgrid_Settings["FolderLocation"]*"/results_"*TimeStamp)
     end
     
+    # Run function to check for errors in the model inputs
+    RunDataChecks(Microgrid_Settings, ldf_inputs_dictionary, REopt_dictionary)
+
     # Run the optimization:
     DataDictionaryForEachNode, Dictionary_LineFlow_Power_Series, Dictionary_Node_Data_Series, ldf_inputs, results, DataFrame_LineFlow_Summary, LineNominalVoltages_Summary, BusNominalVoltages_Summary, model = Microgrid_REopt_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary, REopt_dictionary, TimeStamp) 
   
@@ -46,203 +49,14 @@ function Microgrid_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary, 
         OpenDSSResults = "OpenDSS Not Run" 
     end
     
-    # Generate a csv file with outputs from the model if the "Generate_CSV_of_outputs" field is set to true
-    if Microgrid_Settings["Generate_CSV_of_outputs"] == true
-        @info "Generating CSV of outputs"
-        InputsList = Microgrid_Settings["REoptInputsList"]
-        DataLabels = []
-        Data = []
-        NodeList = collect(keys(ldf_inputs_dictionary["load_nodes"]))
-        push!(DataLabels, "----REopt Results for Each Node----")
-        push!(Data, "")
-        for n in NodeList
-            NodeNumberTempB = parse(Int,n)
-            InputsDictionary = Dict[] # reset the inputs dictionary to an empty dictionary before redefining
-        
-            for n in InputsList
-                if n["Site"]["node"] == NodeNumberTempB
-                    InputsDictionary = n
-                    push!(DataLabels, "--Node $(NodeNumberTempB)")
-                    push!(Data, "")
-                end 
-            end
-            if "PV" in keys(results[NodeNumberTempB])
-                push!(DataLabels, "  PV Size (kw)")
-                push!(Data, results[NodeNumberTempB]["PV"]["size_kw"])
-                push!(DataLabels, "  Min and Max PV sizing input, kW")
-                push!(Data, string(InputsDictionary["PV"]["min_kw"])*" and "*string(InputsDictionary["PV"]["max_kw"]))
-
-                push!(DataLabels, "  Max PV Power Curtailed: ") 
-                push!(Data, round(maximum(results[NodeNumberTempB]["PV"]["electric_curtailed_series_kw"]), digits =2))
-                push!(DataLabels, "  Max PV Power Exported to Grid from node: ") 
-                push!(Data,round(maximum(results[NodeNumberTempB]["PV"]["electric_to_grid_series_kw"]), digits =2))
-            else
-                push!(DataLabels, "  PV")
-                push!(Data, " None")
-            end 
-        
-            if "Generator" in keys(results[NodeNumberTempB])
-                push!(DataLabels, "  Generator (kw)")
-                push!(Data, round(results[NodeNumberTempB]["Generator"]["size_kw"], digits =2))
-                
-                push!(DataLabels, "  Maximum generator power to load (kW): ")
-                push!(Data, round(maximum(results[NodeNumberTempB]["Generator"]["electric_to_load_series_kw"].data), digits =2))
-                push!(DataLabels, "  Average generator power to load (kW): ")
-                push!(Data, round(mean(results[NodeNumberTempB]["Generator"]["electric_to_load_series_kw"].data), digits =2))
-                
-                push!(DataLabels, "  Maximum generator power to grid (kW): ")
-                push!(Data, round(maximum(results[NodeNumberTempB]["Generator"]["electric_to_grid_series_kw"].data), digits =2))
-                push!(DataLabels, "  Minimum generator power to grid (kW): ")
-                push!(Data, round(minimum(results[NodeNumberTempB]["Generator"]["electric_to_grid_series_kw"].data), digits =2))
-                
-                push!(DataLabels, "  Average generator power to grid (kW): ")
-                push!(Data, round(mean(results[NodeNumberTempB]["Generator"]["electric_to_grid_series_kw"].data), digits =2))
-            else 
-                push!(DataLabels, "  Generator")
-                push!(Data, " None")   
-            end 
-            if "ElectricStorage" in keys(results[NodeNumberTempB])
-                if results[NodeNumberTempB]["ElectricStorage"]["size_kw"] > 0 
-                    push!(DataLabels, "  Battery Power (kW)")
-                    push!(Data, round(results[NodeNumberTempB]["ElectricStorage"]["size_kw"], digits =2)) 
-                    push!(DataLabels, "  Battery Capacity (kWh)")
-                    push!(Data, round(results[NodeNumberTempB]["ElectricStorage"]["size_kwh"], digits =2))
-                    
-                    push!(DataLabels, "  Average Battery SOC (fraction): ")
-                    push!(Data, round(mean(results[NodeNumberTempB]["ElectricStorage"]["soc_series_fraction"]), digits =2))
-                    push!(DataLabels, "  Minimum Battery SOC (fraction): ")
-                    push!(Data, round(minimum(results[NodeNumberTempB]["ElectricStorage"]["soc_series_fraction"]), digits =2))
-                    
-                    push!(DataLabels, "  Average battery to load (kW): ")
-                    push!(Data, round(mean(results[NodeNumberTempB]["ElectricStorage"]["storage_to_load_series_kw"]), digits =2))
-                    push!(DataLabels, "  Maximum battery to load (kW): ")
-                    push!(Data, round(maximum(results[NodeNumberTempB]["ElectricStorage"]["storage_to_load_series_kw"]), digits =2))
-                    
-                    push!(DataLabels, "  Average battery to grid (kW): ")
-                    push!(Data, round(mean(results[NodeNumberTempB]["ElectricStorage"]["storage_to_grid_series_kw"]), digits =2))
-                    push!(DataLabels, "  Maximum battery to grid (kW): ")
-                    push!(Data, round(maximum(results[NodeNumberTempB]["ElectricStorage"]["storage_to_grid_series_kw"]), digits =2))
-                else
-                    push!(DataLabels, "  Battery")
-                    push!(Data, " None")   
-                end
-            else
-                push!(DataLabels, "  Battery")
-                push!(Data, " None")   
-            end 
-        end
-               
-        # Add the microgrid outage results to the dataframe
-        push!(DataLabels, "----Microgrid Outage Results----")
-        push!(Data, "")
-        if Microgrid_Settings["RunOutageSimulator"] == true
-            for i in 1:length(OutageLengths)
-                OutageLength = OutageLengths[i]
-                push!(DataLabels, "--Outage Length: $(OutageLength) time steps--")
-                push!(Data, "")
-                push!(DataLabels, "Percent of Outages Survived")
-                push!(Data, Outage_Results["$(OutageLength)_timesteps_outage"]["PercentSurvived"])
-                push!(DataLabels, "Total Number of Outages Tested")
-                push!(Data, Outage_Results["$(OutageLength)_timesteps_outage"]["NumberOfRuns"])
-                push!(DataLabels, "Total Number of Outages Survived")
-                push!(Data, Outage_Results["$(OutageLength)_timesteps_outage"]["NumberOfOutagesSurvived"])
-            end 
-        else 
-            push!(DataLabels,"Outage modeling was not run")
-            push!(Data,"")
-        end
-
-        # Add OpenDSS results to the results dataframe
-        if Microgrid_Settings["RunOpenDSS"] == true
-            OpenDSSSolutionConverged = OpenDSSResults
-
-            push!(DataLabels,"---OpenDSS Solution---")
-            push!(Data,"")
-
-            push!(DataLabels,"Did the solution converge?")
-            push!(Data,OpenDSSSolutionConverged)
-        end
-
-        # Save the dataframe as a csv document
-        dataframe_results = DataFrame(Labels = DataLabels, Data = Data)
-        CSV.write(Microgrid_Settings["FolderLocation"]*"/results_"*TimeStamp*"/Results_Summary_"*TimeStamp*".csv", dataframe_results)
-        
-        # Save the Line Flow summary for each line to a different csv
-        CSV.write(Microgrid_Settings["FolderLocation"]*"/results_"*TimeStamp*"/Results_Line_Flow_Summary_"*TimeStamp*".csv", DataFrame_LineFlow_Summary)
-    end 
-
     EndTime_EntireModel = now()
     ComputationTime_EntireModel = EndTime_EntireModel - StartTime_EntireModel
 
-    #Display results if the "Display_Results" input is set to true
-    if Microgrid_Settings["Display_Results"] == true
-        print("\n-----")
-        print("\nResults:") 
-        print("\n   The computation time was: "*string(ComputationTime_EntireModel))
-    
-        print("Line Flow Results")
-        display(DataFrame_LineFlow_Summary)
-    
-        print("\nSubstation data: ")
-        LineFromSubstationToFacilityMeter = ldf_inputs_dictionary["SubstationLocation"] * "-" * Microgrid_Settings["FacilityMeter_Node"]
-        print("\n   Maximum power flow from substation: "*string(maximum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"])))
-        print("\n   Minimum power flow from substation: "*string(minimum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"])))
-        print("\n   Average power flow from substation: "*string(mean(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"])))
-    
-        # Print results for each node:
-        InputsList = Microgrid_Settings["REoptInputsList"]
-        for n in NodeList
-            NodeNumberTempB = parse(Int,n)
-            print("\nNode "*n*":")
-            
-            InputsDictionary = Dict[] # reset the inputs dictionary to an empty dictionary before redefining
-    
-            for n in InputsList
-                if n["Site"]["node"] == NodeNumberTempB
-                    InputsDictionary = n
-                end
-            end
-            if "PV" in keys(results[NodeNumberTempB])
-                print("\n   PV Size (kW): "*string(results[NodeNumberTempB]["PV"]["size_kw"]))
-                print("\n      Min and Max sizing is (input to model), kW: "*string(InputsDictionary["PV"]["min_kw"])*" and "*string(InputsDictionary["PV"]["max_kw"]))
-                print("\n      Max PV Power Curtailed: "*string(round(maximum(results[NodeNumberTempB]["PV"]["electric_curtailed_series_kw"]), digits =2)))
-                print("\n      Max PV Power Exported to Grid from node: "*string(round(maximum(results[NodeNumberTempB]["PV"]["electric_to_grid_series_kw"]), digits =2))) 
-            else
-                print("\n   No PV")
-            end 
-    
-            if "Generator" in keys(results[NodeNumberTempB])
-                print("\n  Generator size (kW): "*string(round(results[NodeNumberTempB]["Generator"]["size_kw"], digits =2)))
-                print("\n     Maximum generator power to load (kW): "*string(round(maximum(results[NodeNumberTempB]["Generator"]["electric_to_load_series_kw"].data), digits =2)))
-                print("\n       Average generator power to load (kW): "*string(round(mean(results[NodeNumberTempB]["Generator"]["electric_to_load_series_kw"].data), digits =2)))
-                print("\n     Maximum generator power to grid (kW): "*string(round(maximum(results[NodeNumberTempB]["Generator"]["electric_to_grid_series_kw"].data), digits =2)))
-                print("\n       Minimum generator power to grid (kW): "*string(round(minimum(results[NodeNumberTempB]["Generator"]["electric_to_grid_series_kw"].data), digits =2)))
-                print("\n       Average generator power to grid (kW): "*string(round(mean(results[NodeNumberTempB]["Generator"]["electric_to_grid_series_kw"].data), digits =2)))
-            else 
-                print("\n  No generator")    
-            end 
-            if "ElectricStorage" in keys(results[NodeNumberTempB])
-                if results[NodeNumberTempB]["ElectricStorage"]["size_kw"] > 0 
-                    print("\n  Battery power (kW): "*string(round(results[NodeNumberTempB]["ElectricStorage"]["size_kw"], digits =2)))
-                    print("\n    Battery capacity (kWh): "*string(round(results[NodeNumberTempB]["ElectricStorage"]["size_kwh"], digits =2)))
-                    print("\n    Average Battery SOC (fraction): "*string(round(mean(results[NodeNumberTempB]["ElectricStorage"]["soc_series_fraction"]), digits =2)))
-                    print("\n      Minimum Battery SOC (fraction): "*string(round(minimum(results[NodeNumberTempB]["ElectricStorage"]["soc_series_fraction"]), digits =2)))
-                    print("\n    Average battery to load (kW): "*string(round(mean(results[NodeNumberTempB]["ElectricStorage"]["storage_to_load_series_kw"]), digits =2)))
-                    print("\n      Maximum battery to load (kW): "*string(round(maximum(results[NodeNumberTempB]["ElectricStorage"]["storage_to_load_series_kw"]), digits =2)))
-                    print("\n    Average battery to grid (kW): "*string(round(mean(results[NodeNumberTempB]["ElectricStorage"]["storage_to_grid_series_kw"]), digits =2)))
-                    print("\n      Maximum battery to grid (kW): "*string(round(maximum(results[NodeNumberTempB]["ElectricStorage"]["storage_to_grid_series_kw"]), digits =2)))
-                else
-                    print("\n  No battery")
-                end
-            else
-                print("\n  No battery")
-            end 
-        end
-        print("\n----") 
-    end 
+    # Results processing and generation of outputs:
+    system_results = Results_Processing(results, Outage_Results, OpenDSSResults, Microgrid_Settings, ldf_inputs_dictionary, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel)
 
     # Compile output data into a dictionary to return from the dictionary
-    CompiledResults = Dict([
+    CompiledResults = Dict([("System_Results", system_results),
                             ("DataDictionaryForEachNode", DataDictionaryForEachNode), 
                             ("FromREopt_Dictionary_LineFlow_Power_Series", Dictionary_LineFlow_Power_Series), 
                             ("FromREopt_Dictionary_Node_Data_Series", Dictionary_Node_Data_Series), 
@@ -346,10 +160,6 @@ end
 # FOR A COMMUNITY ISLANDED DURING A GRID OUTAGE:
 if MicrogridType == "CommunityDistrict"
     @info "Applying additional constraints for a Community District microgrid"
-    if ElectricityCostFromSubstation_perkwh != 0  # set this to zero because electricity is being charged at each node, not at the substation
-        @warn "Setting the cost per kWh of electricity from the substation to 0 because a Community District microgrid is being modelled and electricity is charged at each node"
-        ElectricityCostFromSubstation_perkwh = 0
-    end 
     
     if (OutageStopTimeStep - OutageStartTimeStep) > 0
         #Prevent the generator from operating during non-grid outage times
@@ -358,14 +168,6 @@ if MicrogridType == "CommunityDistrict"
             JuMP.@constraint(m, [t in (OutageStopTimeStep+1):length(TimeSteps)], m[Symbol("dvRatedProduction_"*Node)]["Generator",t] == 0 )    
         end
     end 
-end
-
-
-
-for p in ps
-    if p.s.settings.facilitymeter_node != FacilityMeter_Node
-        throw(@error("The facilitymeter_node input for each REopt node must equal the FacilityMeter_Node defined in the microgrid settings, which is $(FacilityMeter_Node)"))
-    end
 end
 
 for p in ps
@@ -1333,3 +1135,316 @@ function RunOpenDSS(REoptresults, Microgrid_Inputs)
     return SolutionConverged
 end
 
+function Results_Processing(results, Outage_Results, OpenDSSResults, Microgrid_Settings, ldf_inputs_dictionary, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel)
+
+    InputsList = Microgrid_Settings["REoptInputsList"]
+    LineFromSubstationToFacilityMeter = ldf_inputs_dictionary["SubstationLocation"] * "-" * Microgrid_Settings["FacilityMeter_Node"]
+    #NodeList = collect(keys(ldf_inputs_dictionary["load_nodes"]))
+
+    # Compute system-level outputs
+    system_results = Dict{String, Float64}()
+    
+    total_lifecycle_cost = 0
+    total_lifecycle_capital_cost = 0 # includes replacements and incentives
+    total_initial_capital_costs = 0
+    total_initial_capital_costs_after_incentives = 0
+    total_lifecycle_storage_capital_costs = 0
+    total_PV_size_kw = 0
+    total_PV_energy_produced_minus_curtailment_first_year = 0
+    total_electric_storage_size_kw = 0
+    total_electric_storage_size_kwh = 0
+    total_generator_size_kw = 0
+
+    for n in InputsList 
+        node_temp = n["Site"]["node"]
+
+        total_lifecycle_cost = total_lifecycle_cost + results[node_temp]["Financial"]["lcc"]
+        total_lifecycle_capital_cost = total_lifecycle_capital_cost + results[node_temp]["Financial"]["lifecycle_capital_costs"]
+        total_initial_capital_costs = total_initial_capital_costs + results[node_temp]["Financial"]["initial_capital_costs"]
+        total_initial_capital_costs_after_incentives = total_initial_capital_costs_after_incentives + results[node_temp]["Financial"]["initial_capital_costs_after_incentives"] 
+        total_lifecycle_storage_capital_costs = total_lifecycle_storage_capital_costs + results[node_temp]["Financial"]["lifecycle_storage_capital_costs"]
+
+        if "PV" in keys(results[node_temp])
+            total_PV_size_kw = total_PV_size_kw + results[node_temp]["PV"]["size_kw"]
+            total_PV_energy_produced_minus_curtailment_first_year = total_PV_energy_produced_minus_curtailment_first_year + 
+                                                                    (results[node_temp]["PV"]["year_one_energy_produced_kwh"] - sum(results[node_temp]["PV"]["electric_curtailed_series_kw"]/Microgrid_Settings["TimeStepsPerHour"]))
+        end
+        if "ElectricStorage" in keys(results[node_temp])
+            total_electric_storage_size_kw = total_electric_storage_size_kw + results[node_temp]["ElectricStorage"]["size_kw"]
+            total_electric_storage_size_kwh = total_electric_storage_size_kwh + results[node_temp]["ElectricStorage"]["size_kwh"]
+        end
+        if "Generator" in keys(results[node_temp])
+            total_generator_size_kw = total_generator_size_kw + results["node_temp"]["Generator"]["size_kw"]
+        end
+    end
+
+    system_results["total_lifecycle_cost"] = total_lifecycle_cost
+    system_results["total_lifecycle_capital_cost"] = total_lifecycle_capital_cost
+    system_results["total_initial_capital_costs"] = total_initial_capital_costs
+    system_results["total_initial_capital_costs_after_incentives"] =  total_initial_capital_costs_after_incentives
+    system_results["total_lifecycle_storage_capital_cost"] = total_lifecycle_storage_capital_costs
+    system_results["total_PV_size_kw"] = total_PV_size_kw
+    system_results["total_PV_energy_produced_minus_curtailment_first_year"] = total_PV_energy_produced_minus_curtailment_first_year
+    system_results["total_electric_storage_size_kw"] = total_electric_storage_size_kw
+    system_results["total_electric_storage_size_kwh"] = total_electric_storage_size_kwh
+    system_results["total_generator_size_kw"] = total_generator_size_kw
+
+    # Generate a csv file with outputs from the model if the "Generate_CSV_of_outputs" field is set to true
+    if Microgrid_Settings["Generate_CSV_of_outputs"] == true
+        @info "Generating CSV of outputs"
+        DataLabels = []
+        Data = []
+        
+        # Add system-level results
+        push!(DataLabels, "----System Results----")
+        push!(Data,"")
+
+        push!(DataLabels,"  Total Lifecycle Cost (LCC)")
+        push!(Data, round(system_results["total_lifecycle_cost"], digits=0))
+        push!(DataLabels,"  Total Lifecycle Capital Cost (LCCC)")
+        push!(Data, round(system_results["total_lifecycle_capital_cost"], digits=0))
+
+        push!(DataLabels,"  Total initial capital costs")
+        push!(Data, round(system_results["total_initial_capital_costs"],digits=0))
+        push!(DataLabels,"Total initial capital costs after incentives")
+        push!(Data, round(system_results["total_initial_capital_costs_after_incentives"],digits=0))
+
+        push!(DataLabels,"  Total lifecycle storage capital cost")
+        push!(Data, round(system_results["total_lifecycle_storage_capital_cost"],digits=0))
+        push!(DataLabels,"  Total PV size kw")
+        push!(Data, round(system_results["total_PV_size_kw"],digits=0))
+
+        push!(DataLabels,"  Total PV energy produced minus curtailment first year")
+        push!(Data,  round(system_results["total_PV_energy_produced_minus_curtailment_first_year"],digits=0))
+        push!(DataLabels,"  Total electric storage size kw")
+        push!(Data, round(system_results["total_electric_storage_size_kw"],digits=0))
+        
+        push!(DataLabels,"  Total electric storage size kwh")
+        push!(Data, round(system_results["total_electric_storage_size_kwh"],digits=0))
+        push!(DataLabels,"  Total generator size kw")
+        push!(Data, round(system_results["total_generator_size_kw"],digits=0))
+
+        push!(DataLabels,"  Maximum power flow from substation")
+        push!(Data, (round(maximum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"]), digits = 0)))
+        push!(DataLabels,"  Minimum power flow from substation")
+        push!(Data, (round(minimum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"]), digits = 0)))
+        push!(DataLabels,"  Average power flow from substation")
+        push!(Data, (round(mean(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"]), digits = 0)))
+
+        # Add the microgrid outage results to the dataframe
+        push!(DataLabels, "----Microgrid Outage Results----")
+        push!(Data, "")
+        if Microgrid_Settings["RunOutageSimulator"] == true
+            for i in 1:length(Microgrid_Settings["LengthOfOutages_timesteps"])
+                OutageLength = Microgrid_Settings["LengthOfOutages_timesteps"][i]
+                push!(DataLabels, " --Outage Length: $(OutageLength) time steps--")
+                push!(Data, "")
+                push!(DataLabels, "  Percent of Outages Survived")
+                push!(Data, Outage_Results["$(OutageLength)_timesteps_outage"]["PercentSurvived"]*" %")
+                push!(DataLabels, "  Total Number of Outages Tested")
+                push!(Data, Outage_Results["$(OutageLength)_timesteps_outage"]["NumberOfRuns"])
+                push!(DataLabels, "  Total Number of Outages Survived")
+                push!(Data, Outage_Results["$(OutageLength)_timesteps_outage"]["NumberOfOutagesSurvived"])
+            end 
+        else 
+            push!(DataLabels,"Outage modeling was not run")
+            push!(Data,"")
+        end
+
+        # Add results for each REopt node
+        push!(DataLabels, "----REopt Results for Each Node----")
+        push!(Data, "")
+        
+        for n in InputsList 
+            NodeNumberTempB = n["Site"]["node"]
+            InputsDictionary = Dict[] # reset the inputs dictionary to an empty dictionary before redefining
+            InputsDictionary = n
+            push!(DataLabels, "--Node $(NodeNumberTempB)")
+            push!(Data, "")
+
+            if "PV" in keys(results[NodeNumberTempB])
+                push!(DataLabels, "  PV Size (kw)")
+                push!(Data, results[NodeNumberTempB]["PV"]["size_kw"])
+                push!(DataLabels, "  Min and Max PV sizing input, kW")
+                push!(Data, string(InputsDictionary["PV"]["min_kw"])*" and "*string(InputsDictionary["PV"]["max_kw"]))
+
+                push!(DataLabels, "  Max PV Power Curtailed: ") 
+                push!(Data, round(maximum(results[NodeNumberTempB]["PV"]["electric_curtailed_series_kw"]), digits =2))
+                push!(DataLabels, "  Max PV Power Exported to Grid from node: ") 
+                push!(Data,round(maximum(results[NodeNumberTempB]["PV"]["electric_to_grid_series_kw"]), digits =2))
+            else
+                push!(DataLabels, "  PV")
+                push!(Data, " None")
+            end 
+        
+            if "Generator" in keys(results[NodeNumberTempB])
+                push!(DataLabels, "  Generator (kw)")
+                push!(Data, round(results[NodeNumberTempB]["Generator"]["size_kw"], digits =2))
+                
+                push!(DataLabels, "  Maximum generator power to load (kW): ")
+                push!(Data, round(maximum(results[NodeNumberTempB]["Generator"]["electric_to_load_series_kw"].data), digits =2))
+                push!(DataLabels, "  Average generator power to load (kW): ")
+                push!(Data, round(mean(results[NodeNumberTempB]["Generator"]["electric_to_load_series_kw"].data), digits =2))
+                
+                push!(DataLabels, "  Maximum generator power to grid (kW): ")
+                push!(Data, round(maximum(results[NodeNumberTempB]["Generator"]["electric_to_grid_series_kw"].data), digits =2))
+                push!(DataLabels, "  Minimum generator power to grid (kW): ")
+                push!(Data, round(minimum(results[NodeNumberTempB]["Generator"]["electric_to_grid_series_kw"].data), digits =2))
+                
+                push!(DataLabels, "  Average generator power to grid (kW): ")
+                push!(Data, round(mean(results[NodeNumberTempB]["Generator"]["electric_to_grid_series_kw"].data), digits =2))
+            else 
+                push!(DataLabels, "  Generator")
+                push!(Data, " None")   
+            end 
+            if "ElectricStorage" in keys(results[NodeNumberTempB])
+                if results[NodeNumberTempB]["ElectricStorage"]["size_kw"] > 0 
+                    push!(DataLabels, "  Battery Power (kW)")
+                    push!(Data, round(results[NodeNumberTempB]["ElectricStorage"]["size_kw"], digits =2)) 
+                    push!(DataLabels, "  Battery Capacity (kWh)")
+                    push!(Data, round(results[NodeNumberTempB]["ElectricStorage"]["size_kwh"], digits =2))
+                    
+                    push!(DataLabels, "  Average Battery SOC (fraction): ")
+                    push!(Data, round(mean(results[NodeNumberTempB]["ElectricStorage"]["soc_series_fraction"]), digits =2))
+                    push!(DataLabels, "  Minimum Battery SOC (fraction): ")
+                    push!(Data, round(minimum(results[NodeNumberTempB]["ElectricStorage"]["soc_series_fraction"]), digits =2))
+                    
+                    push!(DataLabels, "  Average battery to load (kW): ")
+                    push!(Data, round(mean(results[NodeNumberTempB]["ElectricStorage"]["storage_to_load_series_kw"]), digits =2))
+                    push!(DataLabels, "  Maximum battery to load (kW): ")
+                    push!(Data, round(maximum(results[NodeNumberTempB]["ElectricStorage"]["storage_to_load_series_kw"]), digits =2))
+                    
+                    push!(DataLabels, "  Average battery to grid (kW): ")
+                    push!(Data, round(mean(results[NodeNumberTempB]["ElectricStorage"]["storage_to_grid_series_kw"]), digits =2))
+                    push!(DataLabels, "  Maximum battery to grid (kW): ")
+                    push!(Data, round(maximum(results[NodeNumberTempB]["ElectricStorage"]["storage_to_grid_series_kw"]), digits =2))
+                else
+                    push!(DataLabels, "  Battery")
+                    push!(Data, " None")   
+                end
+            else
+                push!(DataLabels, "  Battery")
+                push!(Data, " None")   
+            end 
+        end
+               
+        # Add OpenDSS results to the results dataframe
+        if Microgrid_Settings["RunOpenDSS"] == true
+            OpenDSSSolutionConverged = OpenDSSResults
+
+            push!(DataLabels,"---OpenDSS Solution---")
+            push!(Data,"")
+
+            push!(DataLabels,"Did the solution converge?")
+            push!(Data,OpenDSSSolutionConverged)
+        end
+
+        # Save the dataframe as a csv document
+        dataframe_results = DataFrame(Labels = DataLabels, Data = Data)
+        CSV.write(Microgrid_Settings["FolderLocation"]*"/results_"*TimeStamp*"/Results_Summary_"*TimeStamp*".csv", dataframe_results)
+        
+        # Save the Line Flow summary for each line to a different csv
+        CSV.write(Microgrid_Settings["FolderLocation"]*"/results_"*TimeStamp*"/Results_Line_Flow_Summary_"*TimeStamp*".csv", DataFrame_LineFlow_Summary)
+    end 
+
+    #Display results if the "Display_Results" input is set to true
+    if Microgrid_Settings["Display_Results"] == true
+        print("\n-----")
+        print("\nResults:") 
+        print("\n   The computation time was: "*string(ComputationTime_EntireModel))
+    
+        print("Line Flow Results")
+        display(DataFrame_LineFlow_Summary)
+    
+        print("\nSubstation data: ")
+        print("\n   Maximum power flow from substation: "*string(maximum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"])))
+        print("\n   Minimum power flow from substation: "*string(minimum(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"])))
+        print("\n   Average power flow from substation: "*string(mean(Dictionary_LineFlow_Power_Series[LineFromSubstationToFacilityMeter]["NetRealLineFlow"])))
+    
+        # Print results for each node:
+        for n in InputsList 
+            NodeNumberTempB = n["Site"]["node"]
+            InputsDictionary = Dict[] # reset the inputs dictionary to an empty dictionary before redefining
+            InputsDictionary = n
+            print("\nNode "*string(NodeNumberTempB)*":")
+            
+            if "PV" in keys(results[NodeNumberTempB])
+                print("\n   PV Size (kW): "*string(results[NodeNumberTempB]["PV"]["size_kw"]))
+                print("\n      Min and Max sizing is (input to model), kW: "*string(InputsDictionary["PV"]["min_kw"])*" and "*string(InputsDictionary["PV"]["max_kw"]))
+                print("\n      Max PV Power Curtailed: "*string(round(maximum(results[NodeNumberTempB]["PV"]["electric_curtailed_series_kw"]), digits =2)))
+                print("\n      Max PV Power Exported to Grid from node: "*string(round(maximum(results[NodeNumberTempB]["PV"]["electric_to_grid_series_kw"]), digits =2))) 
+            else
+                print("\n   No PV")
+            end 
+    
+            if "Generator" in keys(results[NodeNumberTempB])
+                print("\n  Generator size (kW): "*string(round(results[NodeNumberTempB]["Generator"]["size_kw"], digits =2)))
+                print("\n     Maximum generator power to load (kW): "*string(round(maximum(results[NodeNumberTempB]["Generator"]["electric_to_load_series_kw"].data), digits =2)))
+                print("\n       Average generator power to load (kW): "*string(round(mean(results[NodeNumberTempB]["Generator"]["electric_to_load_series_kw"].data), digits =2)))
+                print("\n     Maximum generator power to grid (kW): "*string(round(maximum(results[NodeNumberTempB]["Generator"]["electric_to_grid_series_kw"].data), digits =2)))
+                print("\n       Minimum generator power to grid (kW): "*string(round(minimum(results[NodeNumberTempB]["Generator"]["electric_to_grid_series_kw"].data), digits =2)))
+                print("\n       Average generator power to grid (kW): "*string(round(mean(results[NodeNumberTempB]["Generator"]["electric_to_grid_series_kw"].data), digits =2)))
+            else 
+                print("\n  No generator")    
+            end 
+            if "ElectricStorage" in keys(results[NodeNumberTempB])
+                if results[NodeNumberTempB]["ElectricStorage"]["size_kw"] > 0 
+                    print("\n  Battery power (kW): "*string(round(results[NodeNumberTempB]["ElectricStorage"]["size_kw"], digits =2)))
+                    print("\n    Battery capacity (kWh): "*string(round(results[NodeNumberTempB]["ElectricStorage"]["size_kwh"], digits =2)))
+                    print("\n    Average Battery SOC (fraction): "*string(round(mean(results[NodeNumberTempB]["ElectricStorage"]["soc_series_fraction"]), digits =2)))
+                    print("\n      Minimum Battery SOC (fraction): "*string(round(minimum(results[NodeNumberTempB]["ElectricStorage"]["soc_series_fraction"]), digits =2)))
+                    print("\n    Average battery to load (kW): "*string(round(mean(results[NodeNumberTempB]["ElectricStorage"]["storage_to_load_series_kw"]), digits =2)))
+                    print("\n      Maximum battery to load (kW): "*string(round(maximum(results[NodeNumberTempB]["ElectricStorage"]["storage_to_load_series_kw"]), digits =2)))
+                    print("\n    Average battery to grid (kW): "*string(round(mean(results[NodeNumberTempB]["ElectricStorage"]["storage_to_grid_series_kw"]), digits =2)))
+                    print("\n      Maximum battery to grid (kW): "*string(round(maximum(results[NodeNumberTempB]["ElectricStorage"]["storage_to_grid_series_kw"]), digits =2)))
+                else
+                    print("\n  No battery")
+                end
+            else
+                print("\n  No battery")
+            end 
+        end
+        print("\n----") 
+    end 
+
+    return system_results    
+end
+
+# Function to check for errors in the data inputs for the model
+function RunDataChecks(Microgrid_Settings, ldf_inputs_dictionary, REopt_dictionary)
+
+    ps = REopt_dictionary
+    
+    for p in ps
+        if p.s.settings.facilitymeter_node != Microgrid_Settings["FacilityMeter_Node"]
+            throw(@error("The facilitymeter_node input for each REopt node must equal the FacilityMeter_Node defined in the microgrid settings, which is $(FacilityMeter_Node)"))
+        end
+        if p.s.settings.time_steps_per_hour != Microgrid_Settings["TimeStepsPerHour"]
+            throw(@error("The time steps per hour for each REopt node must match the time steps per hour defined in the microgrid settings dictionary"))
+        end
+        if p.s.settings.time_steps_per_hour != Int(ldf_inputs_dictionary["T"]/8760)
+            throw(@error("The number of time steps in the ldf_inputs_dictionary must correlate to the time_steps_per_hour in all REopt nodes"))
+        end
+        if string(p.s.site.node) ∉ keys(ldf_inputs_dictionary["load_nodes"]) #  ∉ is the "not in" symbol
+            node_temp = p.s.site.node
+            throw(@error("The REopt node $(node_temp) is not in the list of nodes in the ldf_inputs_dictionary"))
+        end
+    end
+
+    if ldf_inputs_dictionary["v0_input"] > ldf_inputs_dictionary["v_uplim_input"]
+        throw(@error("In the ldf_inputs_dictionary, the v0_input value must be less than the v_uplim_input value"))
+    end 
+
+    if ldf_inputs_dictionary["v0_input"] < ldf_inputs_dictionary["v_lolim_input"]
+        throw(@error("In the ldf_inputs_dictionary, the v0_input value must be greater than the v_lolim_input value"))
+    end   
+
+    if Microgrid_Settings["MicrogridType"] != "CommunityDistrict" && Microgrid_Settings["MicrogridType"] != "BehindTheMeter" && Microgrid_Settings["MicrogridType"] != "OffGrid"
+        throw(@error("An invalid microgrid type was provided in the inputs"))
+    end
+
+    if Microgrid_Settings["MicrogridType"] != "CommunityDistrict"
+        @warn("For the community district microgrid type, the electricity tariff for the facility meter node should be 0")
+    end
+   
+end
