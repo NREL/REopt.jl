@@ -69,7 +69,11 @@ function ASHP_SpaceHeater(;
         installed_cost_per_ton = defaults["installed_cost_per_ton"]
     end
     if isnothing(om_cost_per_ton)
-        om_cost_per_ton = defaults["om_cost_per_ton"]
+        if force_into_system == true
+            om_cost_per_ton = 0
+        else
+            om_cost_per_ton = defaults["om_cost_per_ton"]
+        end
     end
     if isnothing(can_serve_cooling)
         can_serve_cooling = defaults["can_serve_cooling"]
@@ -160,7 +164,11 @@ function ASHP_WaterHeater(;
         installed_cost_per_ton = defaults["installed_cost_per_ton"]
     end
     if isnothing(om_cost_per_ton)
-        om_cost_per_ton = defaults["om_cost_per_ton"]
+        if force_into_system == true
+            om_cost_per_ton = 0
+        else
+            om_cost_per_ton = defaults["om_cost_per_ton"]
+        end
     end
     if isnothing(force_into_system)
         force_into_system = defaults["force_into_system"]

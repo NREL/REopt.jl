@@ -2,7 +2,7 @@
     "SpaceHeating":
     {
         "installed_cost_per_ton": 2250,
-        "om_cost_per_ton": 0,
+        "om_cost_per_ton": 40,
         "macrs_option_years": 0,
         "macrs_bonus_fraction": 0.0,
         "can_supply_steam_turbine": false,
@@ -16,7 +16,7 @@
     "DomesticHotWater":
     {
         "installed_cost_per_ton": 2250,
-        "om_cost_per_ton": 0,
+        "om_cost_per_ton": 40,
         "macrs_option_years": 0,
         "macrs_bonus_fraction": 0.0,
         "can_supply_steam_turbine": false,
