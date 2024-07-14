@@ -1,10 +1,10 @@
 #=
 # Code for running the REopt microgrid analysis capability
 =# 
-#using OpenDSSDirect # TODO: add OpenDSSDirect to the REopt dependencies and REopt.jl file
+
 
 # The main function to run all parts of the model (the optimization, the outage simulator, and the OpenDSS post-processor)
-function Microgrid_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary, REopt_dictionary)
+function Microgrid_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary)
     # This function accepts three inputs:
         # 1. The Microgrid_Inputs
         # 2. ldf_inputs_dictionary (for LinDistFlow)
@@ -19,12 +19,75 @@ function Microgrid_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary, 
         @info "Creating a folder for the results"
         mkdir(Microgrid_Settings["FolderLocation"]*"/results_"*TimeStamp)
     end
+    if Microgrid_Settings["Generate_Results_Plots"] == true
+        mkdir(Microgrid_Settings["FolderLocation"]*"/results_"*TimeStamp*"/Outage_Simulation_Plots") 
+    end
+
+    # Prepare the electric loads
+    REopt_inputs_all_nodes = Microgrid_Settings["REoptInputsList"]
+
+    # Prepare loads for using with the outage simulator, if the fraction method is used for determining the critical load
+    if  Microgrid_Settings["Critical_Load_Method"] == "Fraction"
+        load_profiles_for_outage_sim_if_using_the_fraction_method = Dict([])
+        for REopt_inputs in REopt_inputs_all_nodes
+            load_profiles_for_outage_sim_if_using_the_fraction_method[REopt_inputs["Site"]["node"]] = deepcopy( REopt_inputs["ElectricLoad"]["loads_kw"] )
+        end
+        Microgrid_Settings["load_profiles_for_outage_sim_if_using_the_fraction_method"] = load_profiles_for_outage_sim_if_using_the_fraction_method
+    else
+        Microgrid_Settings["load_profiles_for_outage_sim_if_using_the_fraction_method"] = ""
+    end
+
+    # If outages are defined in the optimization, set the loads to the critical loads during the outages
+    if Microgrid_Settings["SingleOutageStopTimeStep"] - Microgrid_Settings["SingleOutageStartTimeStep"] > 0
+        
+        OutageStart = Microgrid_Settings["SingleOutageStartTimeStep"]
+        OutageEnd = Microgrid_Settings["SingleOutageStopTimeStep"]
+
+        for i in 1:length(Microgrid_Settings["REoptInputsList"])
+            
+            node = Microgrid_Settings["REoptInputsList"][i]["Site"]["node"]
+
+            if Microgrid_Settings["Critical_Load_Method"] == "Fraction"
+                if sum(Microgrid_Settings["REoptInputsList"][i]["ElectricLoad"]["loads_kw"]) > 0 # only apply the critical load fraction if there is a load on the node
+                    load_segment_initial = deepcopy(Microgrid_Settings["REoptInputsList"][i]["ElectricLoad"]["loads_kw"])
+                    load_segment_modified = deepcopy(load_segment_initial)
+                    load_segment_modified[OutageStart:OutageEnd] = 0.75 * load_segment_initial[OutageStart:OutageEnd]                    
+                    delete!(Microgrid_Settings["REoptInputsList"][i]["ElectricLoad"],"loads_kw")
+                    Microgrid_Settings["REoptInputsList"][i]["ElectricLoad"]["loads_kw"] = load_segment_modified
+                end 
+            elseif Microgrid_Settings["Critical_Load_Method"] == "TimeSeries"
+                if sum(Microgrid_Settings["REoptInputsList"][i]["ElectricLoad"]["loads_kw"]) > 0 
+                    load_segment_initial = deepcopy(Microgrid_Settings["REoptInputsList"][i]["ElectricLoad"]["loads_kw"])
+                    load_segment_modified = deepcopy(load_segment_initial)
+                    load_segment_modified[OutageStart:OutageEnd] = Microgrid_Settings["Critical_Load_TimeSeries"][string(node)][OutageStart:OutageEnd]                    
+                    delete!(Microgrid_Settings["REoptInputsList"][i]["ElectricLoad"],"loads_kw")
+                    Microgrid_Settings["REoptInputsList"][i]["ElectricLoad"]["loads_kw"] = load_segment_modified
+                end
+            end
+        end
+    end     
+    
+    # Generate the scenarios, REoptInputs, and list of REoptInputs
+    scenarios = Dict([])
+    for i in 1:length(Microgrid_Settings["REoptInputsList"])
+        scenarios[i] = Scenario(Microgrid_Settings["REoptInputsList"][i])
+    end
+
+    REoptInputs_dictionary = Dict([])
+    for i in 1:length(Microgrid_Settings["REoptInputsList"])
+        REoptInputs_dictionary[i] = REoptInputs(scenarios[i])
+    end
+
+    REopt_dictionary = [REoptInputs_dictionary[1]]
+    for i in 2:length(Microgrid_Settings["REoptInputsList"])
+        push!(REopt_dictionary, REoptInputs_dictionary[i])
+    end
     
     # Run function to check for errors in the model inputs
     RunDataChecks(Microgrid_Settings, ldf_inputs_dictionary, REopt_dictionary)
 
     # Run the optimization:
-    DataDictionaryForEachNode, Dictionary_LineFlow_Power_Series, Dictionary_Node_Data_Series, ldf_inputs, results, DataFrame_LineFlow_Summary, LineNominalVoltages_Summary, BusNominalVoltages_Summary, model = Microgrid_REopt_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary, REopt_dictionary, TimeStamp) 
+    DataDictionaryForEachNode, Dictionary_LineFlow_Power_Series, Dictionary_Node_Data_Series, ldf_inputs, results, DataFrame_LineFlow_Summary, LineNominalVoltages_Summary, BusNominalVoltages_Summary, model = Microgrid_REopt_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary, REopt_dictionary, TimeStamp) # ps_B, TimeStamp) #
   
     # Run the outage simulator if "RunOutageSimulator" is set to true
     if Microgrid_Settings["RunOutageSimulator"] == true
@@ -34,7 +97,7 @@ function Microgrid_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary, 
         Outage_Results = Dict([])
         for i in 1:length(OutageLengths)
             OutageLength = OutageLengths[i]
-            OutageLength_TimeSteps, SuccessfullySolved, RunNumber, PercentOfOutagesSurvived = Microgrid_OutageSimulator(JuMP_Model, DataDictionaryForEachNode, REopt_dictionary, Microgrid_Settings; NumberOfOutagesToTest = NumberOfOutagesToTest, ldf_inputs_dictionary = ldf_inputs_dictionary, TimeStepsPerHour_input = TimeStepsPerHour, OutageLength_TimeSteps_Input = OutageLength)
+            OutageLength_TimeSteps, SuccessfullySolved, RunNumber, PercentOfOutagesSurvived = Microgrid_OutageSimulator(JuMP_Model, DataDictionaryForEachNode, REopt_dictionary, Microgrid_Settings, TimeStamp; NumberOfOutagesToTest = NumberOfOutagesToTest, ldf_inputs_dictionary = ldf_inputs_dictionary, TimeStepsPerHour_input = TimeStepsPerHour, OutageLength_TimeSteps_Input = OutageLength)
             Outage_Results["$(OutageLength_TimeSteps)_timesteps_outage"] = Dict(["PercentSurvived" => PercentOfOutagesSurvived, "NumberOfRuns" => RunNumber, "NumberOfOutagesSurvived" => SuccessfullySolved ])
         end 
     else
@@ -449,6 +512,29 @@ end
 
 # Building the input dictionary for the microgrid outage simulator:
 if Microgrid_Inputs["RunOutageSimulator"] == true
+
+    # Define the critical loads
+    critical_loads_kw = Dict([])
+    if Microgrid_Inputs["Critical_Load_Method"] == "Fraction"
+        for i in 1:length(NodeList)
+            if results[parse(Int,NodeList[i])]["ElectricLoad"]["annual_calculated_kwh"] > 1
+                critical_loads_kw[NodeList[i]] = Microgrid_Inputs["Critical_Load_Fraction"][NodeList[i]] * Microgrid_Settings["load_profiles_for_outage_sim_if_using_the_fraction_method"][parse(Int,NodeList[i])]
+            else
+                critical_loads_kw[NodeList[i]] = zeros(8760*Microgrid_Inputs["TimeStepsPerHour"])
+            end
+        end
+    elseif Microgrid_Inputs["Critical_Load_Method"] == "TimeSeries"
+        for i in 1:length(NodeList)
+            if results[parse(Int,NodeList[i])]["ElectricLoad"]["annual_calculated_kwh"] > 1
+                critical_loads_kw[NodeList[i]] = Microgrid_Inputs["Critical_Load_TimeSeries"][NodeList[i]]
+            else
+                critical_loads_kw[NodeList[i]] = zeros(8760*Microgrid_Inputs["TimeStepsPerHour"])
+            end
+        end
+    else
+        throw(@error("Invalid method for generating a critical load was provided"))
+    end
+
     # Initiate the dictionary with data from the first node
     if "ElectricStorage" in keys(results[parse(Int,NodeList[1])])
         if length(results[parse(Int,NodeList[1])]["ElectricStorage"]["soc_series_fraction"]) > 0
@@ -488,9 +574,10 @@ if Microgrid_Inputs["RunOutageSimulator"] == true
         GeneratorFuelGallonAvailable = 0
     end
 
+    # Enter data into the dictionary
     DataDictionaryForEachNode = Dict([
         (NodeList[1],Dict([
-            ("loads_kw", results[parse(Int,NodeList[1])]["ElectricLoad"]["load_series_kw"] ), 
+            ("loads_kw", critical_loads_kw[NodeList[1]]), 
             ("PVproductionprofile",  PVProductionProfile_results ),
             ("GeneratorSize", GeneratorSize_results),
             ("Battery_charge_kwh",  BatteryChargekwh),
@@ -541,7 +628,7 @@ if Microgrid_Inputs["RunOutageSimulator"] == true
         end 
         DictionaryToAdd = Dict([
             (NodeList[i],Dict([
-                ("loads_kw",  results[parse(Int,NodeList[i])]["ElectricLoad"]["load_series_kw"]),
+                ("loads_kw", critical_loads_kw[NodeList[i]]),
                 ("PVproductionprofile", PVProductionProfile_results_B),
                 ("GeneratorSize", GeneratorSize_results_B),
                 ("Battery_charge_kwh", BatteryChargekwh_B),
@@ -564,7 +651,7 @@ end
 
 
 # Use the function below to run the outage simulator 
-function Microgrid_OutageSimulator(JuMP_Model, DataDictionaryForEachNode, REopt_dictionary, Microgrid_Inputs; NumberOfOutagesToTest = 15, ldf_inputs_dictionary = ldf_inputs_dictionary, TimeStepsPerHour_input = 1, OutageLength_TimeSteps_Input = 1)
+function Microgrid_OutageSimulator(JuMP_Model, DataDictionaryForEachNode, REopt_dictionary, Microgrid_Inputs, TimeStamp; NumberOfOutagesToTest = 15, ldf_inputs_dictionary = ldf_inputs_dictionary, TimeStepsPerHour_input = 1, OutageLength_TimeSteps_Input = 1)
 
 NodeList = collect(keys(ldf_inputs_dictionary["load_nodes"]))
 
@@ -586,7 +673,7 @@ OutageSimulator_LineFromSubstationToFacilityMeter = ldf_inputs_dictionary["Subst
 
 ldf_inputs_new = LinDistFlow.Inputs(
     ldf_inputs_dictionary["LinesFileLocation"],
-    ldf_inputs_dictionary["SubstationLocation"], # this is the location of the substation bus (aka, where the power is being input into the network)
+    ldf_inputs_dictionary["SubstationLocation"], 
     ldf_inputs_dictionary["LineCodesFileLocation"];
     dsstransformersfilepath = ldf_inputs_dictionary["TransformersFileLocation"],
     Pload = ldf_inputs_dictionary["load_nodes"],
@@ -610,8 +697,10 @@ IncrementSize_ForOutageStartTimes = Int(floor(MaximumTimeStepToEvaluate_limit/Nu
 RunsTested = 0
 index = 0
 for x in 1:MaximumTimeStepToEvaluate
+    print("\n Outage Simulation Run # "*string(x)*"  of  "*string(MaximumTimeStepToEvaluate)*" runs")
     RunsTested = RunsTested + 1
     i = Int(x*IncrementSize_ForOutageStartTimes)
+    TotalTimeSteps = 8760*Microgrid_Inputs["TimeStepsPerHour"]
     empty!(JuMP_Model) # empties the JuMP model so that the same variables names can be applied in the new model
     m_outagesimulator = JuMP_Model
 
@@ -622,11 +711,6 @@ for x in 1:MaximumTimeStepToEvaluate
     LinDistFlow.constrain_KVL(m_outagesimulator, ldf_inputs_new)
     LinDistFlow.constrain_bounds(m_outagesimulator, ldf_inputs_new)
   
-    print("\n *********************")
-    print("\n Outage Simulation Run # "*string(x)*"  of  "*string(MaximumTimeStepToEvaluate)*" runs")
-    print("\n *********************")
-    print("\n ")
-    
     for n in NodeList
         GenPowerRating = DataDictionaryForEachNode[n]["GeneratorSize"]  
         TimeSteps = OutageLength_TimeSteps
@@ -756,12 +840,11 @@ for x in 1:MaximumTimeStepToEvaluate
         
     LinDistFlow.constrain_loads(m_outagesimulator, ldf_inputs_new, REopt_dictionary) 
     
-    # prevent power from entering the microgrid (to represent a power outage)
+    # Prevent power from entering the microgrid (to represent a power outage)
     JuMP.@constraint(m_outagesimulator, [t in 1:OutageLength_TimeSteps], m_outagesimulator[:Pᵢⱼ][OutageSimulator_LineFromSubstationToFacilityMeter,t] .>= 0 ) 
     JuMP.@constraint(m_outagesimulator, [t in 1:OutageLength_TimeSteps], m_outagesimulator[:Pᵢⱼ][OutageSimulator_LineFromSubstationToFacilityMeter,t] .<= 0.001)
 
-    
-    # determine all of the nodes with PV
+    # Determine all of the nodes with PV
     NodesWithPV = []
     for p in NodeList 
         if maximum(DataDictionaryForEachNode[p]["PVproductionprofile"]) > 0
@@ -769,8 +852,7 @@ for x in 1:MaximumTimeStepToEvaluate
         end
     end 
 
-    # Objective function:
-        # The objective function maximizes the PV power that is used to meet the load
+    # Objective function, which is formulated to maximize the PV power that is used to meet the load
     @objective(m_outagesimulator, Max, sum(sum(m_outagesimulator[Symbol(string("dvPVToLoad_", n))]) for n in NodesWithPV))
    
     runresults = optimize!(m_outagesimulator)
@@ -779,69 +861,66 @@ for x in 1:MaximumTimeStepToEvaluate
     if string(termination_status(m_outagesimulator)) == "OPTIMAL"
         SuccessfullySolved = SuccessfullySolved + 1
 
-        # TODO: inputs in to the microgrid_inputs for when to plot the outage results
-        # Display plots for certain time steps 
-        if i > 3000 && i < 3005
-            # TODO: change the calculation of the fuel remaining so it automatically calculates the fuel left on nodes with generators
-            #print("\n the fuel left is: "*string(value.(m_outagesimulator[Symbol("FuelLeft_3")]) +
-            #value.(m_outagesimulator[Symbol("FuelLeft_4")]) +
-            #value.(m_outagesimulator[Symbol("FuelLeft_6")]) +
-            #value.(m_outagesimulator[Symbol("FuelLeft_10")])) * " gal")
-
-            # plot the dispatch for each of the REopt nodes for the outage that is being tested
-            for n in NodeList
-                Plots.plot(value.(m_outagesimulator[Symbol("dvPVToLoad_"*n)]), label = "PV to Load", linewidth = 3)
-                Plots.plot!(value.(m_outagesimulator[Symbol("dvGenToLoad_"*n)]), label = "Gen to Load", linewidth = 3)
-                Plots.plot!(value.(m_outagesimulator[Symbol("dvBatToLoad_"*n)]), label = "Battery to Load", linewidth = 3)
-                Plots.plot!(value.(m_outagesimulator[Symbol("dvGridToLoad_"*n)]), label = "Grid to Load", linewidth = 3)
-                Plots.plot!(DataDictionaryForEachNode[n]["loads_kw"][i:(i+OutageLength_TimeSteps-1)], label = "Total Load", linecolor = (:black)) # line = (:dash), linewidth = 1)
-                Plots.xlabel!("Time Step") 
-                Plots.ylabel!("Power (kW)") 
-                #Plots.xlims!(50,100) 
-                display(Plots.title!("Node "*n*": Load Balance, outage "*string(i)*" of "*string(MaximumTimeStepToEvaluate)))
-            end 
-        
-            # Power Export
-            for n in NodeList
-                Plots.plot(value.(m_outagesimulator[Symbol("dvPVToGrid_"*n)]), label = "PV to Grid")
-                Plots.plot!(value.(m_outagesimulator[Symbol("dvGenToGrid_"*n)]), label = "Gen to Grid")
-                Plots.plot!(value.(m_outagesimulator[Symbol("dvBatToGrid_"*n)]), label = "Battery to Grid")
-                Plots.xlabel!("Time Step")
-                Plots.ylabel!("Power (kW)")
-                #Plots.xlims!(50,100)
-                display(Plots.title!("Node "*n*": Power Export, outage "*string(i)*" of "*string(MaximumTimeStepToEvaluate)))
-                       
-                # plot the battery flows for a couple days
-                Plots.plot(-value.(m_outagesimulator[Symbol("dvBatToLoad_"*n)]), label = "Battery to Load")
-                Plots.plot!(-value.(m_outagesimulator[Symbol("dvBatToGrid_"*n)]), label = "Battery to Grid")
-                Plots.plot!(value.(m_outagesimulator[Symbol("dvGridToBat_"*n)]), label = "Grid to Battery")
-                Plots.plot!(value.(m_outagesimulator[Symbol("dvPVToBat_"*n)]), label = "PV to Battery")
-                Plots.xlabel!("Time Step")
-                Plots.ylabel!("Power (kW)")
-                #Plots.xlims!(50,100)
-                #Plots.ylims!(-28,28)
-                display(Plots.title!("Node "*n*": Battery Flows, outage "*string(i)*" of "*string(MaximumTimeStepToEvaluate)))
-
-                # Plot the Battery Charge:
-                Plots.plot(value.(m_outagesimulator[Symbol("BatteryCharge_"*n)]), label = "Battery Charge")
-                Plots.xlabel!("Time Step")
-                Plots.ylabel!("Charge (kWh)")
-                #Plots.ylims!(-3,3)
-                #Plots.xlims!(50,100)
-                display(Plots.title!("Node "*n*": Battery Charge, outage "*string(i)*" of "*string(MaximumTimeStepToEvaluate)))
+        # TODO: change the calculation of the fuel remaining so it automatically calculates the fuel left on nodes with generators
+        #print("\n the fuel left is: "*string(value.(m_outagesimulator[Symbol("FuelLeft_3")]) +
+        #value.(m_outagesimulator[Symbol("FuelLeft_4")]) +
+        #value.(m_outagesimulator[Symbol("FuelLeft_6")]) +
+        #value.(m_outagesimulator[Symbol("FuelLeft_10")])) * " gal")
                 
-            end
-        end 
-    end 
+        if Microgrid_Inputs["Generate_Results_Plots"] == true
+            @info "Generating results plots from the outage simulator, if the defined run numbers for creating plots survived the outage"
 
-    print("\n  Outages survived so far: "*string(SuccessfullySolved))
-    print("\n  Outages tested so far: "*string(RunsTested)) 
-    print("\n")
-    #For debugging (to not cycle through all possible outage times)
-    #if i > 15
-    #    return m_outagesimulator
-    #end
-end 
+            # Generate plots for the outage simulator run numbers defined in the Microgrid_Inputs dictionary 
+            if x in Microgrid_Inputs["RunNumbersForPlottingOutageSimulatorResults"]
+                mkdir(Microgrid_Inputs["FolderLocation"]*"/results_"*TimeStamp*"/Outage_Simulation_Plots/OutageTimeStepsLength_$(OutageLength_TimeSteps)_Simulation_Run_$(x)")
+                # plot the dispatch for each of the REopt nodes for the outage that is being tested
+                for n in NodeList
+                    Plots.plot(value.(m_outagesimulator[Symbol("dvPVToLoad_"*n)]), label = "PV to Load", linewidth = 3)
+                    Plots.plot!(value.(m_outagesimulator[Symbol("dvGenToLoad_"*n)]), label = "Gen to Load", linewidth = 3)
+                    Plots.plot!(value.(m_outagesimulator[Symbol("dvBatToLoad_"*n)]), label = "Battery to Load", linewidth = 3)
+                    Plots.plot!(value.(m_outagesimulator[Symbol("dvGridToLoad_"*n)]), label = "Grid to Load", linewidth = 3)
+                    Plots.plot!(DataDictionaryForEachNode[n]["loads_kw"][i:(i+OutageLength_TimeSteps-1)], label = "Total Load", linecolor = (:black)) # line = (:dash), linewidth = 1)
+                    Plots.xlabel!("Time Step") 
+                    Plots.ylabel!("Power (kW)") 
+                    display(Plots.title!("Node "*n*": Load Balance, outage timestep: "*string(i)*" of "*string(TotalTimeSteps)))
+                    Plots.savefig(Microgrid_Inputs["FolderLocation"]*"/results_"*TimeStamp*"/Outage_Simulation_Plots/OutageTimeStepsLength_$(OutageLength_TimeSteps)_Simulation_Run_$(x)/Node_$(n)_Timestep_$(i)_Load_Balance_"*TimeStamp*".png")
+                end 
+            
+                # Plots results for each node during the outage
+                for n in NodeList
+                    # Plot the power export
+                    Plots.plot(value.(m_outagesimulator[Symbol("dvPVToGrid_"*n)]), label = "PV to Grid")
+                    Plots.plot!(value.(m_outagesimulator[Symbol("dvGenToGrid_"*n)]), label = "Gen to Grid")
+                    Plots.plot!(value.(m_outagesimulator[Symbol("dvBatToGrid_"*n)]), label = "Battery to Grid")
+                    Plots.xlabel!("Time Step")
+                    Plots.ylabel!("Power (kW)")
+                    display(Plots.title!("Node "*n*": Power Export, outage timestep "*string(i)*" of "*string(TotalTimeSteps)))
+                    Plots.savefig(Microgrid_Inputs["FolderLocation"]*"/results_"*TimeStamp*"/Outage_Simulation_Plots/OutageTimeStepsLength_$(OutageLength_TimeSteps)_Simulation_Run_$(x)/Node_$(n)_Timestep_$(i)_Power_Export_"*TimeStamp*".png")
+                
+                    # Plot the battery flows
+                    Plots.plot(-value.(m_outagesimulator[Symbol("dvBatToLoad_"*n)]), label = "Battery to Load")
+                    Plots.plot!(-value.(m_outagesimulator[Symbol("dvBatToGrid_"*n)]), label = "Battery to Grid")
+                    Plots.plot!(value.(m_outagesimulator[Symbol("dvGridToBat_"*n)]), label = "Grid to Battery")
+                    Plots.plot!(value.(m_outagesimulator[Symbol("dvPVToBat_"*n)]), label = "PV to Battery")
+                    Plots.xlabel!("Time Step")
+                    Plots.ylabel!("Power (kW)")
+                    display(Plots.title!("Node "*n*": Battery Flows, outage "*string(i)*" of "*string(TotalTimeSteps)))
+                    Plots.savefig(Microgrid_Inputs["FolderLocation"]*"/results_"*TimeStamp*"/Outage_Simulation_Plots/OutageTimeStepsLength_$(OutageLength_TimeSteps)_Simulation_Run_$(x)/Node_$(n)_Timestep_$(i)_Battery_Flows_"*TimeStamp*".png")
+                
+                    # Plot the battery charge:
+                    Plots.plot(value.(m_outagesimulator[Symbol("BatteryCharge_"*n)]), label = "Battery Charge")
+                    Plots.xlabel!("Time Step")
+                    Plots.ylabel!("Charge (kWh)")
+                    display(Plots.title!("Node "*n*": Battery Charge, outage "*string(i)*" of "*string(TotalTimeSteps)))
+                    Plots.savefig(Microgrid_Inputs["FolderLocation"]*"/results_"*TimeStamp*"/Outage_Simulation_Plots/OutageTimeStepsLength_$(OutageLength_TimeSteps)_Simulation_Run_$(x)/Node_$(n)_Timestep_$(i)_Battery_Charge_"*TimeStamp*".png")
+                
+                end
+            end 
+        end
+    end 
+    print("\n  Outages survived so far: "*string(SuccessfullySolved)*", Outages tested so far: "*string(RunsTested))
+end
+
 print("\n --- Summary of results ---")
 RunNumber = MaximumTimeStepToEvaluate 
 PercentOfOutagesSurvived = 100*(SuccessfullySolved/RunNumber)
@@ -854,9 +933,10 @@ end
 
 
 # Function to run OpenDSS as a post processor for the data
-    # NOTE: this function is still in early stages of development
+    # NOTE: this function is still in development
     # This function only works with hourly interval data currently
 function RunOpenDSS(REoptresults, Microgrid_Inputs)
+    #using OpenDSSDirect # TODO: add OpenDSSDirect to the REopt dependencies and REopt.jl file
     #REoptresults = results 
     # Step 1: Save the power flows for each node into a csv file
     cd(Microgrid_Inputs["FolderLocation"])
@@ -1416,6 +1496,7 @@ function RunDataChecks(Microgrid_Settings, ldf_inputs_dictionary, REopt_dictiona
     ps = REopt_dictionary
     
     for p in ps
+        node_temp = p.s.site.node
         if p.s.settings.facilitymeter_node != Microgrid_Settings["FacilityMeter_Node"]
             throw(@error("The facilitymeter_node input for each REopt node must equal the FacilityMeter_Node defined in the microgrid settings, which is $(FacilityMeter_Node)"))
         end
@@ -1426,8 +1507,26 @@ function RunDataChecks(Microgrid_Settings, ldf_inputs_dictionary, REopt_dictiona
             throw(@error("The number of time steps in the ldf_inputs_dictionary must correlate to the time_steps_per_hour in all REopt nodes"))
         end
         if string(p.s.site.node) ∉ keys(ldf_inputs_dictionary["load_nodes"]) #  ∉ is the "not in" symbol
-            node_temp = p.s.site.node
             throw(@error("The REopt node $(node_temp) is not in the list of nodes in the ldf_inputs_dictionary"))
+        end
+        if Microgrid_Settings["Critical_Load_Method"] == "Fraction"
+            if string(p.s.site.node) ∉ keys(Microgrid_Settings["Critical_Load_Fraction"])
+                if sum(p.s.electric_load.loads_kw) > 0
+                    throw(@error("The REopt node $(node_temp) does not have an assigned critical load fraction in the Critical_Load_Fraction input dictionary"))
+                end
+            end
+        end
+        if Microgrid_Settings["Critical_Load_Method"] == "TimeSeries"
+            if string(p.s.site.node) ∉ keys(Microgrid_Settings["Critical_Load_TimeSeries"])
+                if sum(p.s.electric_load.loads_kw) > 0
+                    throw(@error("The REopt node $(node_temp) does not have an assigned critical load timeseries profile in the Critical_Load_TimeSeries input dictionary"))
+                end
+            end
+        end
+        # TODO: add data check to ensure that if a critical load method is defined, then there must be either a critical load fraction or a critical load timeseries dictionary   
+        
+        if Int(length(p.s.electric_load.loads_kw)) != Int(8760 * Microgrid_Settings["TimeStepsPerHour"])
+            throw(@error("At REopt node $(node_temp), the length of the electric loads vector does not correlate with the time steps per hour defined in the Microgrid_Settings dictionary"))
         end
     end
 
@@ -1438,7 +1537,7 @@ function RunDataChecks(Microgrid_Settings, ldf_inputs_dictionary, REopt_dictiona
     if ldf_inputs_dictionary["v0_input"] < ldf_inputs_dictionary["v_lolim_input"]
         throw(@error("In the ldf_inputs_dictionary, the v0_input value must be greater than the v_lolim_input value"))
     end   
-
+    
     if Microgrid_Settings["MicrogridType"] != "CommunityDistrict" && Microgrid_Settings["MicrogridType"] != "BehindTheMeter" && Microgrid_Settings["MicrogridType"] != "OffGrid"
         throw(@error("An invalid microgrid type was provided in the inputs"))
     end
@@ -1446,5 +1545,26 @@ function RunDataChecks(Microgrid_Settings, ldf_inputs_dictionary, REopt_dictiona
     if Microgrid_Settings["MicrogridType"] != "CommunityDistrict"
         @warn("For the community district microgrid type, the electricity tariff for the facility meter node should be 0")
     end
-   
+
+    if Microgrid_Settings["Generate_Results_Plots"] == true
+        for i in Microgrid_Settings["RunNumbersForPlottingOutageSimulatorResults"]
+            if i > Microgrid_Settings["NumberOfOutagesToEvaluate"]
+                throw(@error("In the Microgrid_Settings dictionary, all values for the RunNumbersForPlottingOutageSimulatorResults must be less than the NumberOfOutagesToEvaluate"))
+            end
+        end
+    end
+
+    if Microgrid_Settings["Critical_Load_Method"] == "Fraction"
+        if Microgrid_Settings["Critical_Load_Fraction"] > 5.0
+            throw(@error("The Critical_Load_Fraction load fraction should be entered as a fraction, not a percent. The model currently limits the Critical_Load_Fraction to 5.0 (or 500%) to reduce possibility of user error. "))
+        end
+    end
+
+    if Microgrid_Settings["SingleOutageStartTimeStep"] > Microgrid_Settings["SingleOutageStopTimeStep"]
+        throw(@error("In the Microgrid_Settings dictionary, the single outage start time must be a smaller value than the single outage stop time"))
+    end
+    if Microgrid_Settings["SingleOutageStopTimeStep"] > (8760 * Microgrid_Settings["TimeStepsPerHour"])
+        TotalNumberOfTimeSteps = Int(8760 * Microgrid_Settings["TimeStepsPerHour"])
+        throw(@error("In the Microgrid_Settings dictionary, the defined outage stop time must be less than the total number of time steps, which is $(TotalNumberOfTimeSteps)"))
+    end
 end
