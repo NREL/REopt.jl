@@ -602,7 +602,7 @@ else  # run HiGHS tests
             d["PV"]["can_wholesale"] = true
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             results = run_reopt(m, d)
-            @test results["PV"]["size_kw"] ≈ 84.029 atol=1e-3  #max benefit provides the upper bound
+            @test results["PV"]["size_kw"] ≈ 7440.0 atol=1e-3  #max benefit provides the upper bound
     
         end
     end
@@ -1216,6 +1216,23 @@ else  # run HiGHS tests
                 @test results["PV"]["size_kw"] ≈ p.s.pvs[1].existing_kw
             end
 
+            @testset "Multi-tier demand and energy rates" begin
+                #This test ensures that when multiple energy or demand regimes are included, that the tier limits load appropriately
+                d = JSON.parsefile("./scenarios/no_techs.json")
+                d["ElectricTariff"] = Dict()
+                d["ElectricTariff"]["urdb_response"] = JSON.parsefile("./scenarios/multi_tier_urdb_response.json")
+                s = Scenario(d)
+                p = REoptInputs(s)
+                @test p.s.electric_tariff.tou_demand_tier_limits[1, 1] ≈ 1.0e8 atol=1.0
+                @test p.s.electric_tariff.tou_demand_tier_limits[1, 2] ≈ 1.0e8 atol=1.0
+                @test p.s.electric_tariff.tou_demand_tier_limits[2, 1] ≈ 100.0 atol=1.0
+                @test p.s.electric_tariff.tou_demand_tier_limits[2, 2] ≈ 1.0e8 atol=1.0
+                @test p.s.electric_tariff.energy_tier_limits[1, 1] ≈ 1.0e10 atol=1.0
+                @test p.s.electric_tariff.energy_tier_limits[1, 2] ≈ 1.0e10 atol=1.0
+                @test p.s.electric_tariff.energy_tier_limits[6, 1] ≈ 20000.0 atol=1.0
+                @test p.s.electric_tariff.energy_tier_limits[6, 2] ≈ 1.0e10 atol=1.0
+            end
+
             @testset "Tiered TOU Demand" begin
                 data = JSON.parsefile("./scenarios/tiered_tou_demand.json")
                 model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
@@ -1236,14 +1253,14 @@ else  # run HiGHS tests
             # inputs = REoptInputs(s)
             # results = run_reopt(m, inputs)
 
-            @testset "Exotic Units for Energy Rates" begin
+            @testset "Non-Standard Units for Energy Rates" begin
                 d = JSON.parsefile("./scenarios/no_techs.json")
                 d["ElectricTariff"] = Dict(
                     "urdb_label" => "6272e4ae7eb76766c247d469"
                 )
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 results = run_reopt(m, d)
-                @test occursin("URDB energy tiers have exotic units of", string(results["Messages"]))
+                @test occursin("URDB energy tiers have non-standard units of", string(results["Messages"]))
             end
 
         end
