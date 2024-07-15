@@ -94,11 +94,7 @@ function BAUScenario(s::Scenario)
 
     # no existing GHP
     ghp_option_list = []
-    space_heating_thermal_load_reduction_with_ghp_kw = zeros(8760 * s.settings.time_steps_per_hour)
-    cooling_thermal_load_reduction_with_ghp_kw = zeros(8760 * s.settings.time_steps_per_hour)
-
-    # currently assuming no existing hydrogen assets
-    hydrogen_load = zeros(8760 * s.settings.time_steps_per_hour)
+    zero_load = zeros(8760 * s.settings.time_steps_per_hour)
 
     t0, tf = s.electric_utility.outage_start_time_step, s.electric_utility.outage_end_time_step
     #=
@@ -139,7 +135,7 @@ function BAUScenario(s::Scenario)
         s.electric_utility, 
         s.financial,
         generator,
-        hydrogen_load,
+        zero_load, # currently assuming no existing hydrogen assets
         s.dhw_load,
         s.space_heating_load,
         s.process_heat_load,
@@ -149,7 +145,7 @@ function BAUScenario(s::Scenario)
         flexible_hvac,
         s.cooling_load,
         ghp_option_list,
-        space_heating_thermal_load_reduction_with_ghp_kw,
-        cooling_thermal_load_reduction_with_ghp_kw
+        zero_load,
+        zero_load
     )
 end
