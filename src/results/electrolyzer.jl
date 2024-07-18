@@ -35,6 +35,8 @@
 - `year_one_electricity_consumed_kwh` Total energy consumed by the electrolyzer over the first year
 - `electricity_consumed_series_kw` Vector of power consumed by the electrolyzer to produce hydrogen over the first year
 - `hydrogen_produced_series_kg` Vector of hydrogen produced by the electrolyzer going into the low pressure tank 
+- `water_consumed_series_gal` Vector of water consumed by the electrolyzer to produce hydrogen 
+- `year_one_water_consumed_gal` Total water consumed by the electrolyzer to produce hydrogen 
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
     REopt performs load balances using average annual production values for technologies that include degradation. 
@@ -52,15 +54,25 @@ function add_electrolyzer_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict
                                 sum(p.production_factor[t, ts] * p.levelization_factor[t] * 
                                 m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.electrolyzer)
                             )
-    r["electricity_consumed_series_kw"] = round.(value.(ElectrolyzerConsumption), digits=3)
+    r["electricity_consumed_series_kw"] = round.(value.(ElectrolyzerConsumption).data, digits=3)
+    GridToElectrolyzer = @expression(m, [ts in p.time_steps],
+                                m[Symbol("dvGridToElectrolyzer"*_n)][ts]
+                            )
+    r["electricity_from_grid_series_kw"] = round.(value.(GridToElectrolyzer).data, digits=3)
+    FuelCellToElectrolyzer = @expression(m, [ts in p.time_steps],
+                                sum(m[Symbol("dvProductionToElectrolyzer"*_n)][t, ts] for t in p.techs.fuel_cell)
+                            )
+    r["electricity_from_fuel_cell_series_kw"] = round.(value.(FuelCellToElectrolyzer).data, digits=3)
     r["year_one_electricity_consumed_kwh"] = round(sum(r["electricity_consumed_series_kw"]), digits=2)
 
     ElectrolyzerProduction = @expression(m, [ts in p.time_steps],
                             sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.electrolyzer)
                             / p.s.electrolyzer.efficiency_kwh_per_kg
                         )
-    r["hydrogen_produced_series_kg"] = round.(value.(ElectrolyzerProduction), digits=3)
+    r["hydrogen_produced_series_kg"] = round.(value.(ElectrolyzerProduction).data, digits=3)
     r["year_one_hydrogen_produced_kg"] = round(sum(r["hydrogen_produced_series_kg"]), digits=2)
+    r["water_consumed_series_gal"] = round.(value.(ElectrolyzerProduction).data * 3.78, digits=3)
+    r["year_one_water_consumed_gal"] = round(sum(r["hydrogen_produced_series_kg"]) * 3.78, digits=2)
 
     d["Electrolyzer"] = r
 

@@ -52,18 +52,23 @@ function add_compressor_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; 
                                 sum(p.production_factor[t, ts] * p.levelization_factor[t] * 
                                 m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.compressor)
                             )
-    r["electricity_consumed_series_kw"] = round.(value.(CompressorConsumption), digits=3)
+    r["electricity_consumed_series_kw"] = round.(value.(CompressorConsumption).data, digits=3)
+    FuelCellToCompressor = @expression(m, [ts in p.time_steps],
+                                sum(m[Symbol("dvProductionToCompressor"*_n)][t, ts] for t in p.techs.fuel_cell)
+                            )
+    r["electricity_from_fuel_cell_series_kw"] = round.(value.(FuelCellToCompressor).data, digits=3)
     r["year_one_electricity_consumed_kwh"] = round(sum(r["electricity_consumed_series_kw"]), digits=2)
 
     if p.s.electrolyzer.require_compression
         CompressorProduction = @expression(m, [ts in p.time_steps],
-                                sum(m[Symbol("dvProductionToStorage"*_n)]["HydrogenStorage", t, ts] for t in p.techs.compressor)
-                                )
+                                sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.compressor)
+                                / p.s.compressor.efficiency_kwh_per_kg
+                            )
     else
         CompressorProduction = repeat([0], length(p.time_steps))
     end
 
-    r["hydrogen_compressed_series_kg"] = round.(value.(CompressorProduction), digits=3)
+    r["hydrogen_compressed_series_kg"] = round.(value.(CompressorProduction).data, digits=3)
     r["year_one_hydrogen_compressed_kg"] = round(sum(r["hydrogen_compressed_series_kg"]), digits=2)                      
 
     d["Compressor"] = r

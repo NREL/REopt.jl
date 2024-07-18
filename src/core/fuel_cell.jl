@@ -33,10 +33,10 @@
 ```julia
     min_kw = 0.0,
     max_kw = 1.0e9,
-    installed_cost_per_kw = 1320,
-    om_cost_per_kw = 12.8,
-    om_cost_per_kwh = 0.0013,
-    efficiency_kwh_per_kg = 16.745,
+    installed_cost_per_kw = 2655,
+    om_cost_per_kw = 16,
+    om_cost_per_kwh = 0.0016,
+    efficiency_kwh_per_kg = 15.98,
     macrs_option_years = 7,
     macrs_bonus_fraction = 0.8,
     macrs_itc_reduction = 0.5,
@@ -58,7 +58,7 @@
     can_wholesale = false,
     can_export_beyond_nem_limit = false,
     can_curtail= false,
-    min_turn_down_pct = 0.2
+    min_turn_down_fraction = 20.0
 ```
 """
 struct FuelCell <: AbstractFuelCell
@@ -89,15 +89,15 @@ struct FuelCell <: AbstractFuelCell
     can_wholesale::Bool
     can_export_beyond_nem_limit::Bool
     can_curtail::Bool
-    min_turn_down_pct::Real
+    min_turn_down_fraction::Real
 
     function FuelCell(;
         min_kw = 0.0,
         max_kw = 1.0e9,
-        installed_cost_per_kw = 1320,
-        om_cost_per_kw = 12.8,
-        om_cost_per_kwh = 0.0013,
-        efficiency_kwh_per_kg = 16.745,
+        installed_cost_per_kw = 2655,
+        om_cost_per_kw = 16,
+        om_cost_per_kwh = 0.0016,
+        efficiency_kwh_per_kg = 15.98,
         macrs_option_years = 7,
         macrs_bonus_fraction = 0.8,
         macrs_itc_reduction = 0.5,
@@ -119,7 +119,7 @@ struct FuelCell <: AbstractFuelCell
         can_wholesale = false,
         can_export_beyond_nem_limit = false,
         can_curtail= false,
-        min_turn_down_pct = 0.2
+        min_turn_down_fraction = 0.2
         )
       
         new(
@@ -150,7 +150,7 @@ struct FuelCell <: AbstractFuelCell
             can_wholesale,
             can_export_beyond_nem_limit,
             can_curtail,
-            min_turn_down_pct
+            min_turn_down_fraction
         )
     end
 end

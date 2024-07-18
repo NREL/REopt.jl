@@ -38,7 +38,6 @@ mutable struct StorageTypes
             String[],
             String[],
             String[],
-            String[],
             String[]
         )
     end

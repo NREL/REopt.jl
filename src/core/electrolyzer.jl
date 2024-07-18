@@ -32,11 +32,11 @@
 ```julia
     min_kw = 0.0,
     max_kw = 1.0e9,
-    installed_cost_per_kw = 1500,
-    om_cost_per_kw = 12.8,
-    om_cost_per_kwh = 0.006,
+    installed_cost_per_kw = 1413,
+    om_cost_per_kw = 66.16,
+    om_cost_per_kwh = 0.0005,
     require_compression = true,
-    efficiency_kwh_per_kg = 54.3,
+    efficiency_kwh_per_kg = 55.8,
     macrs_option_years = 7,
     macrs_bonus_fraction = 0.8,
     macrs_itc_reduction = 0.5,
@@ -58,7 +58,7 @@
     can_wholesale = false,
     can_export_beyond_nem_limit = false,
     can_curtail= false,
-    min_turn_down_fraction = 0.2
+    min_turn_down_fraction = 0.0
 ```
 """
 struct Electrolyzer <: AbstractElectrolyzer
@@ -95,11 +95,11 @@ struct Electrolyzer <: AbstractElectrolyzer
     function Electrolyzer(;
         min_kw = 0.0,
         max_kw = 1.0e9,
-        installed_cost_per_kw = 1500,
-        om_cost_per_kw = 12.8,
-        om_cost_per_kwh = 0.006,
+        installed_cost_per_kw = 1413,
+        om_cost_per_kw = 66.16,
+        om_cost_per_kwh = 0.0005,
         require_compression = true,
-        efficiency_kwh_per_kg = 54.3,
+        efficiency_kwh_per_kg = 55.8,
         macrs_option_years = 7,
         macrs_bonus_fraction = 0.8,
         macrs_itc_reduction = 0.5,
@@ -121,7 +121,7 @@ struct Electrolyzer <: AbstractElectrolyzer
         can_wholesale = false,
         can_export_beyond_nem_limit = false,
         can_curtail= false,
-        min_turn_down_fraction = 0.2
+        min_turn_down_fraction = 0.0
         )
       
         new(
