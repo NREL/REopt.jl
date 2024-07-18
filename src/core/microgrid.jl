@@ -518,7 +518,7 @@ if Microgrid_Inputs["RunOutageSimulator"] == true
     if Microgrid_Inputs["Critical_Load_Method"] == "Fraction"
         for i in 1:length(NodeList)
             if results[parse(Int,NodeList[i])]["ElectricLoad"]["annual_calculated_kwh"] > 1
-                critical_loads_kw[NodeList[i]] = Microgrid_Inputs["Critical_Load_Fraction"][NodeList[i]] * Microgrid_Settings["load_profiles_for_outage_sim_if_using_the_fraction_method"][parse(Int,NodeList[i])]
+                critical_loads_kw[NodeList[i]] = Microgrid_Inputs["Critical_Load_Fraction"][NodeList[i]] * Microgrid_Inputs["load_profiles_for_outage_sim_if_using_the_fraction_method"][parse(Int,NodeList[i])]
             else
                 critical_loads_kw[NodeList[i]] = zeros(8760*Microgrid_Inputs["TimeStepsPerHour"])
             end
@@ -1555,8 +1555,10 @@ function RunDataChecks(Microgrid_Settings, ldf_inputs_dictionary, REopt_dictiona
     end
 
     if Microgrid_Settings["Critical_Load_Method"] == "Fraction"
-        if Microgrid_Settings["Critical_Load_Fraction"] > 5.0
-            throw(@error("The Critical_Load_Fraction load fraction should be entered as a fraction, not a percent. The model currently limits the Critical_Load_Fraction to 5.0 (or 500%) to reduce possibility of user error. "))
+        for x in values(Microgrid_Settings["Critical_Load_Fraction"])
+            if x >= 5.0
+                throw(@error("The Critical_Load_Fraction load fraction should be entered as a fraction, not a percent. The model currently limits the Critical_Load_Fraction to 5.0 (or 500%) to reduce possibility of user error. "))
+            end
         end
     end
 
