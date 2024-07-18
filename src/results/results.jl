@@ -110,6 +110,9 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 
     if !isempty(p.techs.compressor)
         add_compressor_results(m, p, d; _n)
+    end
+
+    if sum(p.s.hydrogen_load.loads_kg) != 0
         add_hydrogen_load_results(m, p, d; _n)
     end
 

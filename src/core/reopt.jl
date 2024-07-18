@@ -469,13 +469,20 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		if !isempty(p.s.storage.types.elec)
 			add_MG_storage_dispatch_constraints(m,p)
 		else
-			fix_MG_storage_variables(m,p)
+			fix_MG_elec_storage_variables(m,p)
 		end
 		
 		if !isempty(p.techs.fuel_cell)
+			#Fuel cell can't curtail
+			for s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps
+				fix(m[:dvMGCurtail]["FuelCell", s, tz, ts], 0.0, force=true)
+			end
 			add_MG_hydrogen_constraints(m,p)
-		# else
-		# 	fix_MG_hydrogen_variables(m,p)
+		else
+			@constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+				m[:binMGFCIsOnInTS][s, tz, ts] == 0
+			)
+			fix_MG_hydrogen_variables(m,p)
 		end
 		
 		add_cannot_have_MG_with_only_PVwind_constraints(m,p)
@@ -575,8 +582,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			) / (8760. / p.hours_per_time_step)
 	end
 	if !(isempty(p.s.storage.types.hydrogen)) && p.s.settings.add_soc_incentive
+		hydrogen_roundtrip_efficiency = (p.s.compressor.efficiency_kwh_per_kg * p.s.electrolyzer.efficiency_kwh_per_kg *
+										p.s.fuel_cell.efficiency_kwh_per_kg)
 		m[:ObjectivePenalties] += -1 * sum(
-				m[:dvStoredEnergy][b, ts] for b in p.s.storage.types.hydrogen, ts in p.time_steps
+			hydrogen_roundtrip_efficiency * m[:dvStoredEnergy][b, ts] for b in p.s.storage.types.hydrogen, ts in p.time_steps
 			) / (8760. / p.hours_per_time_step)
 	end
 	# 3. Incentive to minimize unserved load in each outage, not just the max over outage start times
@@ -751,14 +760,15 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 
 			binMGStorageUsed, Bin # 1 if MG storage battery used, 0 otherwise
 			binMGTechUsed[p.techs.elec], Bin # 1 if MG tech used, 0 otherwise
+			binMGFCIsOnInTS[S, tZeros, outage_time_steps], Bin
 			binMGGenIsOnInTS[S, tZeros, outage_time_steps], Bin
             binMGCHPIsOnInTS[S, tZeros, outage_time_steps], Bin
             dvMGCHPFuelBurnYIntercept[S, tZeros] >= 0
 
 			dvMGProductionToElectrolyzer[p.techs.elec, S, tZeros, outage_time_steps] >= 0
 			dvMGProductionToCompressor[p.techs.elec, S, tZeros, outage_time_steps] >= 0
-			dvMGStorageToElectrolyzer[S, tZeros, outage_time_steps] >= 0
-			dvMGStorageToCompressor[S, tZeros, outage_time_steps] >= 0
+			dvMGStorageToElectrolyzer[p.s.storage.types.elec, S, tZeros, outage_time_steps] >= 0
+			dvMGStorageToCompressor[p.s.storage.types.elec, S, tZeros, outage_time_steps] >= 0
 		end
 	end
 

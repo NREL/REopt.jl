@@ -32,9 +32,15 @@ function add_electrolyzer_constraints(m, p; _n="")
 
 	if !isempty(p.techs.electrolyzer)
         
+        #TODO Check if necessary
         @constraint(m, [ts in p.time_steps_with_grid],
             sum(m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.electrolyzer) >= 
                 sum(m[Symbol("dvStoredEnergy")][b,ts] for b in p.s.storage.types.hydrogen)
+        )
+
+        #Constraint: Fuel cell cannot supply electrolyzer
+        @constraint(m, [ts in p.time_steps_with_grid], 
+            sum(m[Symbol("dvProductionToElectrolyzer"*_n)][t, ts] for t in p.techs.fuel_cell) == 0
         )
 
         #Constraint: Electricity required for production of hydrogen - with grid
@@ -91,6 +97,11 @@ function add_compressor_constraints(m, p; _n="")
             sum(m[Symbol("dvProductionToCompressor"*_n)][t, ts] for t in p.techs.elec)
             + m[Symbol("dvGridToCompressor"*_n)][ts]
             + sum(m[Symbol("dvStorageToCompressor"*_n)][b, ts] for b in p.s.storage.types.elec) 
+        )
+
+        #Constraint: Fuel cell cannot supply compressor
+        @constraint(m, [ts in p.time_steps_with_grid], 
+            sum(m[Symbol("dvProductionToCompressor"*_n)][t, ts] for t in p.techs.fuel_cell) == 0
         )
         
         #Constraint: Electricity required for compression of hydrogen produced from electrolyzer - no grid

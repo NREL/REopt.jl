@@ -104,11 +104,11 @@ function add_MG_size_constraints(m,p)
     )
     
     if p.s.site.mg_tech_sizes_equal_grid_sizes
-        @constraint(m, [t in p.techs.elec],
+        @constraint(m, [t in union(p.techs.elec, p.techs.electrolyzer, p.techs.compressor)],
             m[:dvMGsize][t] == m[:dvSize][t]
         )
     else
-        @constraint(m, [t in p.techs.elec],
+        @constraint(m, [t in union(p.techs.elec, p.techs.electrolyzer, p.techs.compressor)],
             m[:dvMGsize][t] <= m[:dvSize][t]
         )
     end
@@ -119,7 +119,11 @@ function add_MG_production_constraints(m,p)
 
 	# Electrical production sent to storage or export must be less than technology's rated production
 	@constraint(m, [t in p.techs.elec, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-		sum(m[:dvMGProductionToStorage][b, t, s, tz, ts] for b in p.s.storage.types.elec) + m[:dvMGCurtail][t, s, tz, ts] + m[:dvMGProductionToElectrolyzer][t, s, tz, ts] + m[:dvMGProductionToCompressor][t, s, tz, ts] <=
+		sum(m[:dvMGProductionToStorage][b, t, s, tz, ts] for b in p.s.storage.types.elec) 
+        + m[:dvMGCurtail][t, s, tz, ts] 
+        + m[:dvMGProductionToElectrolyzer][t, s, tz, ts] 
+        + m[:dvMGProductionToCompressor][t, s, tz, ts] 
+        <=
 		(p.production_factor[t, tz+ts-1] + p.unavailability[t][tz+ts-1]) * p.levelization_factor[t] * m[:dvMGRatedProduction][t, s, tz, ts]
     )
 
@@ -288,8 +292,8 @@ function add_MG_storage_dispatch_constraints(m,p)
         m[:dvMGStoredEnergy]["ElectricStorage", s, tz, ts] == m[:dvMGStoredEnergy]["ElectricStorage", s, tz, ts-1] + p.hours_per_time_step * (
             p.s.storage.attr["ElectricStorage"].charge_efficiency * sum(m[:dvMGProductionToStorage]["ElectricStorage", t, s, tz, ts] for t in p.techs.elec)
             - m[:dvMGDischargeFromStorage]["ElectricStorage", s, tz, ts] / p.s.storage.attr["ElectricStorage"].discharge_efficiency
-            - m[:dvMGStorageToElectrolyzer][s, tz, ts] / p.s.storage.attr["ElectricStorage"].discharge_efficiency
-            - m[:dvMGStorageToCompressor][s, tz, ts] / p.s.storage.attr["ElectricStorage"].discharge_efficiency
+            - m[:dvMGStorageToElectrolyzer]["ElectricStorage", s, tz, ts] / p.s.storage.attr["ElectricStorage"].discharge_efficiency
+            - m[:dvMGStorageToCompressor]["ElectricStorage", s, tz, ts] / p.s.storage.attr["ElectricStorage"].discharge_efficiency
         )
     )
 
@@ -310,13 +314,13 @@ function add_MG_storage_dispatch_constraints(m,p)
     # and can't discharge from storage unless binMGStorageUsed = 1
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
         m[:dvStoragePower]["ElectricStorage"] >= m[:dvMGDischargeFromStorage]["ElectricStorage", s, tz, ts] 
-        + m[:dvMGStorageToElectrolyzer][s, tz, ts] + m[:dvMGStorageToCompressor][s, tz, ts]
+        + m[:dvMGStorageToElectrolyzer]["ElectricStorage", s, tz, ts] + m[:dvMGStorageToCompressor]["ElectricStorage", s, tz, ts]
     )
     
     # Dispatch to and from electrical storage is no greater than power capacity
     @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
         m[:dvStoragePower]["ElectricStorage"] >= m[:dvMGDischargeFromStorage]["ElectricStorage", s, tz, ts] 
-        + m[:dvMGStorageToElectrolyzer][s, tz, ts] + m[:dvMGStorageToCompressor][s, tz, ts]
+        + m[:dvMGStorageToElectrolyzer]["ElectricStorage", s, tz, ts] + m[:dvMGStorageToCompressor]["ElectricStorage", s, tz, ts]
             + sum(m[:dvMGProductionToStorage]["ElectricStorage", t, s, tz, ts] for t in p.techs.elec)
     )
     
@@ -331,7 +335,11 @@ function add_MG_storage_dispatch_constraints(m,p)
         )
         
         @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-            !m[:binMGStorageUsed] => { m[:dvMGDischargeFromStorage]["ElectricStorage", s, tz, ts] + m[:dvMGStorageToElectrolyzer][s, tz, ts] + m[:dvMGStorageToCompressor][s, tz, ts] <= 0 }
+            !m[:binMGStorageUsed] => { 
+                m[:dvMGDischargeFromStorage]["ElectricStorage", s, tz, ts] +
+                m[:dvMGStorageToElectrolyzer]["ElectricStorage", s, tz, ts] +
+                m[:dvMGStorageToCompressor]["ElectricStorage", s, tz, ts] <= 0 
+            }
         )
     else
         @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
@@ -340,13 +348,14 @@ function add_MG_storage_dispatch_constraints(m,p)
         
         @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
             m[:dvMGDischargeFromStorage]["ElectricStorage", s, tz, ts] 
-                + m[:dvMGStorageToElectrolyzer][s, tz, ts] + m[:dvMGStorageToCompressor][s, tz, ts] <= p.s.storage.attr["ElectricStorage"].max_kw * m[:binMGStorageUsed]
+                + m[:dvMGStorageToElectrolyzer]["ElectricStorage", s, tz, ts] 
+                + m[:dvMGStorageToCompressor]["ElectricStorage", s, tz, ts] <= p.s.storage.attr["ElectricStorage"].max_kw * m[:binMGStorageUsed]
         )
     end
 end
 
 
-function fix_MG_storage_variables(m, p)
+function fix_MG_elec_storage_variables(m, p)
     fix(m[:dvMGStorageUpgradeCost], 0.0, force=true)
     fix(m[:binMGStorageUsed], 0, force=true)
 
@@ -356,6 +365,8 @@ function fix_MG_storage_variables(m, p)
                 for b in p.s.storage.types.elec
                     fix(m[:dvMGDischargeFromStorage][b, s, tz, ts], 0.0, force=true)
                     fix(m[:dvMGStoredEnergy][b, s, tz, ts], 0.0, force=true)
+                    fix(m[:dvMGStorageToElectrolyzer][b, s, tz, ts], 0.0, force=true)
+                    fix(m[:dvMGStorageToCompressor][b, s, tz, ts], 0.0, force=true)
                     for t in p.techs.elec
                         fix(m[:dvMGProductionToStorage][b, t, s, tz, ts], 0.0, force=true)
                     end
@@ -402,12 +413,18 @@ end
 function add_MG_hydrogen_constraints(m, p; _n="") 
 	# Electrolyzer constraints
     if !isempty(p.techs.electrolyzer)
+
+        #Fuel cell cannot supply electrolyzer
+        @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps], 
+            sum(m[:dvMGProductionToElectrolyzer][t, s, tz, ts] for t in p.techs.fuel_cell) == 0
+        )
+
         #Electricity required for production of hydrogen
         @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps], 
             sum((p.production_factor[t, tz+ts-1] + p.unavailability[t][tz+ts-1]) * p.levelization_factor[t] * m[:dvMGRatedProduction][t, s, tz, ts] for t in p.techs.electrolyzer)
             == 
             sum(m[:dvMGProductionToElectrolyzer][t, s, tz, ts] for t in p.techs.elec) 
-            + m[:dvMGStorageToElectrolyzer][s, tz, ts]
+            + sum(m[:dvMGStorageToElectrolyzer][b, s, tz, ts] for b in p.s.storage.types.elec)
         )
 
         #Dispatch hydrogen produced
@@ -430,12 +447,18 @@ function add_MG_hydrogen_constraints(m, p; _n="")
     end
         
     if !isempty(p.techs.compressor)
+        
+        #Fuel cell cannot supply compressor
+        @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps], 
+            sum(m[:dvMGProductionToCompressor][t, s, tz, ts] for t in p.techs.fuel_cell) == 0
+        )
+        
         #Electricity required for compression of hydrogen produced from electrolyzer
         @constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps], 
             sum((p.production_factor[t, tz+ts-1] + p.unavailability[t][tz+ts-1]) * p.levelization_factor[t] * m[:dvMGRatedProduction][t, s, tz, ts] for t in p.techs.compressor)
             == 
             sum(m[:dvMGProductionToCompressor][t, s, tz, ts] for t in p.techs.elec) 
-            + m[:dvMGStorageToCompressor][s, tz, ts]
+            + sum(m[:dvMGStorageToCompressor][b, s, tz, ts] for b in p.s.storage.types.elec)
         )
         
         #Constraint: Compressor charges hydrogen storage
@@ -453,26 +476,29 @@ function add_MG_hydrogen_constraints(m, p; _n="")
     if !isempty(p.techs.fuel_cell)
         if solver_is_compatible_with_indicator_constraints(p.s.settings.solver_name)
             @constraint(m, [t in p.techs.fuel_cell, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-                m[:binMGTechUsed][t] => { m[:dvMGRatedProduction][t, s, tz, ts] >= m[:dvMGsize][t] }
+                m[:binMGFCIsOnInTS][t] => { m[:dvMGRatedProduction][t, s, tz, ts] >= p.s.fuel_cell.min_turn_down_fraction * m[:dvMGsize][t] }
             )
             @constraint(m, [t in p.techs.fuel_cell, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-                !m[:binMGTechUsed][t] => { m[:dvMGRatedProduction][t, s, tz, ts] <= 0 }
+                !m[:binMGFCIsOnInTS][t] => { m[:dvMGRatedProduction][t, s, tz, ts] <= 0 }
             )
         else
             @constraint(m, [t in p.techs.fuel_cell, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-                m[:dvMGRatedProduction][t, s, tz, ts] >= m[:dvMGsize][t] - p.max_sizes[t] * (1-m[:binMGTechUsed][t])
+                m[:dvMGRatedProduction][t, s, tz, ts] >= p.s.fuel_cell.min_turn_down_fraction * m[:dvMGsize][t] - p.max_sizes[t] * (1-m[:binMGFCIsOnInTS][s, tz, ts])
             )
             @constraint(m, [t in p.techs.fuel_cell, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-                m[:dvMGRatedProduction][t, s, tz, ts] <= p.max_sizes[t] * m[:binMGTechUsed][t]
+                m[:dvMGRatedProduction][t, s, tz, ts] <= p.max_sizes[t] *  m[:binMGFCIsOnInTS][s, tz, ts]
             )
         end
+        @constraint(m, [t in p.techs.fuel_cell, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+            m[:binMGTechUsed][t] >= m[:binMGFCIsOnInTS][s, tz, ts]
+        )
     end
 
     # Hydrogen storage constraints
     # Initial SOC at start of each outage equals the grid-optimal SOC
-    @constraint(m, [b in p.s.storage.types.hydrogen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps],
-        m[:dvMGStoredEnergy][b, s, tz, 0] <= m[:dvStoredEnergy][b, tz]
-    )
+    # @constraint(m, [b in p.s.storage.types.hydrogen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps],
+    #     m[:dvMGStoredEnergy][b, s, tz, 0] <= m[:dvStoredEnergy][b, tz]
+    # )
     # Min SOC
     if p.s.storage.attr["HydrogenStorage"].soc_min_applies_during_outages
         @constraint(m, [b in p.s.storage.types.hydrogen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
@@ -525,6 +551,37 @@ function add_MG_hydrogen_constraints(m, p; _n="")
     @constraint(m, [b in p.s.storage.types.hydrogen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
         sum(m[:dvMGDischargeFromStorage][b, s, tz, ts]) == 
             (p.hours_per_time_step * sum((p.production_factor[t, tz+ts-1] + p.unavailability[t][tz+ts-1]) * p.levelization_factor[t] * 
-            m[:dvMGRatedProduction][t, s, tz, ts] for t in p.techs.fuel_cell)) / p.s.fuel_cell.efficiency_kwh_per_kg
+            m[:dvMGRatedProduction][t, s, tz, ts] / p.s.fuel_cell.efficiency_kwh_per_kg for t in p.techs.fuel_cell))
     )
 end
+
+function fix_MG_hydrogen_variables(m, p)
+    fix(m[:dvMGStorageUpgradeCost], 0.0, force=true)
+    fix(m[:binMGStorageUsed], 0, force=true)
+
+    for s in p.s.electric_utility.scenarios
+        for tz in p.s.electric_utility.outage_start_time_steps
+            for ts in p.s.electric_utility.outage_time_steps
+                for b in p.s.storage.types.hydrogen
+                    fix(m[:dvMGDischargeFromStorage][b, s, tz, ts], 0.0, force=true)
+                    fix(m[:dvMGStoredEnergy][b, s, tz, ts], 0.0, force=true)
+                    for t in p.techs.elec
+                        fix(m[:dvMGProductionToElectrolyzer][t, s, tz, ts], 0.0, force=true)
+                        fix(m[:dvMGProductionToCompressor][t, s, tz, ts], 0.0, force=true)
+                    end
+                    for t in p.techs.electrolyzer
+                        fix(m[:dvMGProductionToStorage][b, t, s, tz, ts], 0.0, force=true)
+                    end
+                    for t in p.techs.compressor
+                        fix(m[:dvMGProductionToStorage][b, t, s, tz, ts], 0.0, force=true)
+                    end
+                end
+                for b in p.s.storage.types.elec
+                    fix(m[:dvMGStorageToElectrolyzer][b, s, tz, ts], 0.0, force=true)
+                    fix(m[:dvMGStorageToCompressor][b, s, tz, ts], 0.0, force=true)
+                end
+            end
+        end
+    end
+end
+

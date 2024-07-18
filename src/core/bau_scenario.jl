@@ -23,7 +23,6 @@ struct BAUScenario <: AbstractScenario
     electric_utility::ElectricUtility
     financial::Financial
     generator::Generator
-    hydrogen_load::HydrogenLoad
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
     process_heat_load::ProcessHeatLoad
@@ -135,7 +134,6 @@ function BAUScenario(s::Scenario)
         s.electric_utility, 
         s.financial,
         generator,
-        zero_load, # currently assuming no existing hydrogen assets
         s.dhw_load,
         s.space_heating_load,
         s.process_heat_load,

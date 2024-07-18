@@ -178,7 +178,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 		if !isempty(p.s.storage.types.elec)	
 			add_MG_storage_dispatch_constraints(m,p)
 		else
-			fix_MG_storage_variables(m,p)
+			fix_MG_elec_storage_variables(m,p)
 		end
 		add_cannot_have_MG_with_only_PVwind_constraints(m,p)
 		add_MG_size_constraints(m,p)
