@@ -892,7 +892,7 @@ function setup_cst_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_k
     max_sizes["ConcentratingSolar"] = s.cst.max_kw
     min_sizes["ConcentratingSolar"] = s.cst.min_kw
     om_cost_per_kw["ConcentratingSolar"] = s.cst.om_cost_per_kw
-    #heating_cop["ConcentratingSolar"] = s.cst.cop  TODO: do we need this?  If parasitics are present this is a time series, not a scalar, and we can steal from the ASHP branch.
+    heating_cop["ConcentratingSolar"] = 1000  # TODO: merge ASHP developments to make heating_cop a time series, and import the electrical consumption from SAM.
 
     if s.cst.macrs_option_years in [5, 7]
         cap_cost_slope["ConcentratingSolar"] = effective_cost(;
