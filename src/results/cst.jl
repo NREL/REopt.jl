@@ -8,6 +8,7 @@
 - `thermal_production_series_mmbtu_per_hour`  # Thermal energy production series [MMBtu/hr]
 - `annual_thermal_production_mmbtu`  # Thermal energy produced in a year [MMBtu]
 - `thermal_to_storage_series_mmbtu_per_hour`  # Thermal power production to TES (HotThermalStorage) series [MMBtu/hr]
+- `thermal_to_hot_sensible_tes_storage_series_mmbtu_per_hour`  # Thermal power production to TES (HotThermalStorage) series [MMBtu/hr]
 - `thermal_to_steamturbine_series_mmbtu_per_hour`  # Thermal power production to SteamTurbine series [MMBtu/hr]
 - `thermal_to_load_series_mmbtu_per_hour`  # Thermal power production to serve the heating load series [MMBtu/hr]
 
@@ -17,14 +18,14 @@
 
 """
 
-function add_cst_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
+function add_concentrating_solar_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
-    r["size_mmbtu_per_hour"] = round(value(m[Symbol("dvSize"*_n)]["ConcentratingSolar"]) / KWH_PER_MMBTU, digits=3)
-    # @expression(m, ConcentratingSolarElectricConsumptionSeries[ts in p.time_steps],
-    #     p.hours_per_time_step * sum(m[:dvHeatingProduction][t,q,ts] / p.heating_cop[t] 
-    #     for q in p.heating_loads, t in p.techs.cst))
-    # r["electric_consumption_series_kw"] = round.(value.(ConcentratingSolarElectricConsumptionSeries), digits=3)
-    # r["annual_electric_consumption_kwh"] = sum(r["electric_consumption_series_kw"])
+    r["size_kw"] = round(value(m[Symbol("dvSize"*_n)]["ConcentratingSolar"]) / KWH_PER_MMBTU, digits=3)
+    @expression(m, ConcentratingSolarElectricConsumptionSeries[ts in p.time_steps],
+        p.hours_per_time_step * sum(m[:dvHeatingProduction]["ConcentratingSolar",q,ts] / p.heating_cop["ConcentratingSolar"] 
+        for q in p.heating_loads))
+    r["electric_consumption_series_kw"] = round.(value.(ConcentratingSolarElectricConsumptionSeries), digits=3)
+    r["annual_electric_consumption_kwh"] = sum(r["electric_consumption_series_kw"])
 
     @expression(m, ConcentratingSolarThermalProductionSeries[ts in p.time_steps],
         sum(m[:dvHeatingProduction]["ConcentratingSolar",q,ts] for q in p.heating_loads))
