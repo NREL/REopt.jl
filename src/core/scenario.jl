@@ -650,12 +650,12 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
 
     electric_heater = nothing
-    if haskey(d, "ElectricHeater") && d["ElectricHeater"]["max_mmbtu_per_hour"] > 0.0
+    if haskey(d, "ElectricHeater") && (!haskey(d["ElectricHeater"], "max_mmbtu_per_hour") || d["ElectricHeater"]["max_mmbtu_per_hour"] > 0.0)
         electric_heater = ElectricHeater(;dictkeys_tosymbols(d["ElectricHeater"])...)
     end
 
     cst = nothing
-    if haskey(d, "ConcentratingSolar") && d["ConcentratingSolar"]["max_kw"] > 0.0
+    if haskey(d, "ConcentratingSolar") && (!haskey(d["ConcentratingSolar"], "max_kw") || d["ConcentratingSolar"]["max_kw"] > 0.0)
         cst = ConcentratingSolar(;dictkeys_tosymbols(d["ConcentratingSolar"])...)
     end
 
@@ -684,7 +684,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         space_heating_thermal_load_reduction_with_ghp_kw,
         cooling_thermal_load_reduction_with_ghp_kw,
         steam_turbine,
-        electric_heater
+        electric_heater,
+        cst
     )
 end
 
