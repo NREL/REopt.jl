@@ -355,6 +355,7 @@ struct HotSensibleTes <: AbstractThermalStorage
     can_serve_space_heating::Bool
     can_serve_process_heat::Bool
     supply_turbine_only::Bool
+    one_direction_flow::Bool
 
     function HotSensibleTes(s::AbstractThermalStorageDefaults, f::Financial, time_steps_per_hour::Int)
          
@@ -409,7 +410,8 @@ struct HotSensibleTes <: AbstractThermalStorage
             s.can_serve_dhw,
             s.can_serve_space_heating,
             s.can_serve_process_heat,
-            s.supply_turbine_only
+            s.supply_turbine_only,
+            s.one_direction_flow
         )
     end
 end

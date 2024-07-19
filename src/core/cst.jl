@@ -45,7 +45,7 @@ function ConcentratingSolar(;
     can_serve_dhw::Bool = true # If Boiler can supply heat to the domestic hot water load
     can_serve_space_heating::Bool = true # If Boiler can supply heat to the space heating load
     can_serve_process_heat::Bool = true # If Boiler can supply heat to the process heating load
-    charge_stoarge_only::Bool = true # If ConcentratingSolar can only supply hot TES (i.e., cannot meet load directly)
+    charge_storage_only::Bool = true # If ConcentratingSolar can only supply hot TES (i.e., cannot meet load directly)
     emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0)
     emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0)
     emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0)
@@ -63,6 +63,7 @@ function ConcentratingSolar(;
         installed_cost_per_kw::Real = 2000.0,
         om_cost_per_kw::Real = 39.6,  #per kw per year
         om_cost_per_kwh::Real = 0.0,   #per kwh produced
+        acres_per_kw::Real = 0.0,
         tech_type::String = "parabolic_trough",  # "restrict_to": ["parabolic_trough", "power_tower", "linear_fresnal", "dish_engine"]  TODO update with Jeff's work
         can_supply_steam_turbine::Bool = true,
         can_serve_dhw::Bool = true,
@@ -95,12 +96,12 @@ function ConcentratingSolar(;
     ConcentratingSolar(
         min_kw,
         max_kw,
-        efficiency,
         production_factor,
         elec_consumption_factor,
         installed_cost_per_kw,
         om_cost_per_kw,
         om_cost_per_kwh,
+        acres_per_kw,
         macrs_option_years,
         macrs_bonus_fraction,
         tech_type,
@@ -108,7 +109,7 @@ function ConcentratingSolar(;
         can_serve_dhw,
         can_serve_space_heating,
         can_serve_process_heat,
-        charge_stoarge_only,
+        charge_storage_only,
         emissions_factor_lb_CO2_per_mmbtu,
         emissions_factor_lb_NOx_per_mmbtu,
         emissions_factor_lb_SO2_per_mmbtu,

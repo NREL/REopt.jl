@@ -5,6 +5,13 @@ function add_tech_size_constraints(m, p; _n="")
     @constraint(m, [loc in p.pvlocations],
         sum(m[Symbol("dvSize"*_n)][t] * p.pv_to_location[t][loc] for t in p.techs.pv) <= p.maxsize_pv_locations[loc]
     )
+    #Site ground limit for PV and CSP combined; PV max size handled separately if this isn't present
+    if "ConcentratingSolar" in p.techs.all
+        @constraint(m, LandConstraint,
+            sum(pv.acres_per_kw * (p.pv_to_location[pv.name][:ground] + p.pv_to_location[pv.name][:both]) * m[Symbol("dvSize"*_n)][pv.name] for pv in p.s.pvs) 
+                + p.s.cst.acres_per_kw * m[Symbol("dvSize"*_n)]["ConcentratingSolar"] <= p.s.site.land_acres
+        )
+    end
 
     # max size limit
     @constraint(m, [t in p.techs.all],
