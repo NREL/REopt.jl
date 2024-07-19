@@ -94,18 +94,36 @@ function add_heating_tech_constraints(m, p; _n="")
         if p.s.electric_heater.charge_storage_only
             #assume sensible TES first, and hot water otherwise.
             if "HotSensibleTes" in p.s.storage.types.hot
-                @constraint(m, ElectricHeaterToStorageOnly[t in p.techs.electric_heater, q in p.heating_loads, ts in p.time_steps],
-                    m[Symbol("dvHeatingProduction"*_n)][t,q,ts] == m[Symbol("dvHeatToStorage"*_n)]["HotSensibleTes",t,q,ts]
+                @constraint(m, ElectricHeaterToStorageOnly[q in p.heating_loads, ts in p.time_steps],
+                    m[Symbol("dvHeatingProduction"*_n)]["ElectricHeater",q,ts] == m[Symbol("dvHeatToStorage"*_n)]["HotSensibleTes","ElectricHeater",q,ts]
                 )
             elseif "HotThermalStorage" in p.s.storage.types.hot
-                @constraint(m, ElectricHeaterToStorageOnly[t in p.techs.electric_heater, q in p.heating_loads, ts in p.time_steps],
-                    m[Symbol("dvHeatingProduction"*_n)][t,q,ts] == m[Symbol("dvHeatToStorage"*_n)]["HotThermalStorage",t,q,ts]
+                @constraint(m, ElectricHeaterToStorageOnly[q in p.heating_loads, ts in p.time_steps],
+                    m[Symbol("dvHeatingProduction"*_n)]["ElectricHeater",q,ts] == m[Symbol("dvHeatToStorage"*_n)]["HotThermalStorage","ElectricHeater",q,ts]
                 )
             else
                 @warn "ElectricHeater.charge_storage_only is set to True, but no hot storage technologies exist."
             end
         end
     end
+
+    if "ConcentratingSolar" in p.techs.electric_heater
+        if p.s.cst.charge_storage_only
+            #assume sensible TES first, and hot water otherwise.
+            if "HotSensibleTes" in p.s.storage.types.hot
+                @constraint(m, ConcentratingSolarToStorageOnly[q in p.heating_loads, ts in p.time_steps],
+                    m[Symbol("dvHeatingProduction"*_n)]["ConcentratingSolar",q,ts] == m[Symbol("dvHeatToStorage"*_n)]["HotSensibleTes","ConcentratingSolar",q,ts]
+                )
+            elseif "HotThermalStorage" in p.s.storage.types.hot
+                @constraint(m, ConcentratingSolarToStorageOnly[q in p.heating_loads, ts in p.time_steps],
+                    m[Symbol("dvHeatingProduction"*_n)]["ConcentratingSolar",q,ts] == m[Symbol("dvHeatToStorage"*_n)]["HotThermalStorage","ConcentratingSolar",q,ts]
+                )
+            else
+                @warn "ConcentratingSolar.charge_storage_only is set to True, but no hot storage technologies exist."
+            end
+        end
+    end
+
 end
 
 function no_existing_boiler_production(m, p; _n="")
