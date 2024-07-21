@@ -126,6 +126,7 @@ function Microgrid_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary)
                             ("ldf_inputs", ldf_inputs),
                             ("REopt_results", results),
                             ("Outage_Results", Outage_Results),
+                            ("DataFrame_LineFlow_Summary", DataFrame_LineFlow_Summary),
                             ("OpenDSSResults", OpenDSSResults),
                             ("LineNominalVoltages_Summary", LineNominalVoltages_Summary), 
                             ("BusNominalVoltages_Summary", BusNominalVoltages_Summary),
@@ -301,14 +302,35 @@ edges = [string(i*"-"*j) for j in ldf_inputs.busses for i in i_to_j(j, ldf_input
 busses = ldf_inputs.busses
 
 # Compute values for each line and store line power flows in a dataframe and dictionary 
-DataLineFlow = zeros(3)
-DataFrame_LineFlow = DataFrame(["empty" 0 0 0], [:LineCode, :Minimum_LineFlow_kW, :Maximum_LineFlow_kW, :Average_LineFlow_kW])
+DataLineFlow = zeros(7)
+DataFrame_LineFlow = DataFrame(["empty" 0 0 0 0 0 0], [:LineCode, :Minimum_LineFlow_kW, :Maximum_LineFlow_kW, :Average_LineFlow_kW, :Line_Nominal_Amps_A, :Line_Nominal_Voltage_V, :Line_Max_Power_kW_At_Nominal_Voltage])
 Dictionary_LineFlow_Power_Series = Dict([])
 
-for edge in edges
+#for edge in edges
+  
+for j in ldf_inputs.busses
+    for i in i_to_j(j, ldf_inputs)
+    edge = string(i*"-"*j)
+    #edge_underscore = string(i*"_"*j)
+
     NetRealLineFlow = (value.(m[:Pᵢⱼ][edge,:]).data* ldf_inputs.Sbase)/1000 
     NetReactiveLineFlow = (value.(m[:Qᵢⱼ][edge,:]).data*ldf_inputs.Sbase)/1000 
 
+    linenormamps = LinDistFlow.get_ijlinenormamps(i,j,ldf_inputs)
+    LineNominalVoltage = parse(Float64,LineNominalVoltages_Summary[edge])
+    MaximumPower_AtNominalVoltage_kW = 0.001*linenormamps*LineNominalVoltage
+
+    DataLineFlow[1] = round(minimum(NetRealLineFlow[:]), digits = 5)
+    DataLineFlow[2] = round(maximum(NetRealLineFlow[:]), digits = 5)
+    DataLineFlow[3] = round(mean(NetRealLineFlow[:]), digits = 5)
+    DataLineFlow[4] = linenormamps
+    DataLineFlow[5] = LineNominalVoltage
+    DataLineFlow[6] = round(MaximumPower_AtNominalVoltage_kW, digits=0)
+
+    DataFrame_LineFlow_temp = DataFrame([("Line "*string(edge)) DataLineFlow[1] DataLineFlow[2] DataLineFlow[3] DataLineFlow[4] DataLineFlow[5] DataLineFlow[6]], [:LineCode, :Minimum_LineFlow_kW, :Maximum_LineFlow_kW, :Average_LineFlow_kW, :Line_Nominal_Amps_A, :Line_Nominal_Voltage_V, :Line_Max_Power_kW_At_Nominal_Voltage])
+    DataFrame_LineFlow = append!(DataFrame_LineFlow,DataFrame_LineFlow_temp)
+    
+    # Also create a dictionary of the line power flows
     Dictionary_LineFlow_Power_Series_temp = Dict([(edge, Dict([
                                                         ("NetRealLineFlow", NetRealLineFlow),
                                                         ("NetReactiveLineFlow", NetReactiveLineFlow)
@@ -316,12 +338,7 @@ for edge in edges
                                                     ])
     merge!(Dictionary_LineFlow_Power_Series, Dictionary_LineFlow_Power_Series_temp)
 
-    DataLineFlow[1] = round(minimum(NetRealLineFlow[:]), digits = 5)
-    DataLineFlow[2] = round(maximum(NetRealLineFlow[:]), digits = 5)
-    DataLineFlow[3] = round(mean(NetRealLineFlow[:]), digits = 5)
-
-    DataFrame_LineFlow_temp = DataFrame([("Line "*string(edge)) DataLineFlow[1] DataLineFlow[2] DataLineFlow[3]], [:LineCode, :Minimum_LineFlow_kW, :Maximum_LineFlow_kW, :Average_LineFlow_kW])
-    DataFrame_LineFlow = append!(DataFrame_LineFlow,DataFrame_LineFlow_temp)
+    end
 end
 
 # Compute values for each node:
