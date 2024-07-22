@@ -566,7 +566,7 @@ end
 
     @testset "Tiered Energy" begin
         m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        results = run_reopt(m, "./scenarios/tiered_rate.json")
+        results = run_reopt(m, "./scenarios/tiered_energy_rate.json")
         @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ 2342.88
         @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ 24000.0 atol=0.1
         @test results["ElectricLoad"]["annual_calculated_kwh"] ≈ 24000.0 atol=0.1
@@ -652,7 +652,7 @@ end
 
     # # tiered monthly demand rate  TODO: expected results?
     # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    # data = JSON.parsefile("./scenarios/tiered_rate.json")
+    # data = JSON.parsefile("./scenarios/tiered_energy_rate.json")
     # data["ElectricTariff"]["urdb_label"] = "59bc22705457a3372642da67"
     # s = Scenario(data)
     # inputs = REoptInputs(s)
@@ -666,7 +666,7 @@ end
     d["Site"]["latitude"] = 30.2672
     d["Site"]["longitude"] = -97.7431
     scen = Scenario(d)
-    @test scen.financial.NOx_grid_cost_per_tonne ≈ 4534.032470 atol=0.1
+    @test scen.financial.NOx_grid_cost_per_tonne ≈ 5510.61 atol=0.1
 end
 
 @testset "Wind" begin
@@ -1229,7 +1229,7 @@ end
     headers = cop_map_mat_header[2]
     # Generate a "records" style dictionary from the 
     cop_map_list = []
-    for i in 1:length(data[:,1])
+    for i in axes(data,1)
         dict_record = Dict(name=>data[i, col] for (col, name) in enumerate(headers))
         push!(cop_map_list, dict_record)
     end

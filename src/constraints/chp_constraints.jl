@@ -1,10 +1,11 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 function add_chp_fuel_burn_constraints(m, p; _n="")
     # Fuel burn slope and intercept
-    fuel_burn_full_load = 1.0 / p.s.chp.electric_efficiency_full_load  # [kWt/kWe]
-    fuel_burn_half_load = 0.5 / p.s.chp.electric_efficiency_half_load  # [kWt/kWe]
-    fuel_burn_slope = (fuel_burn_full_load - fuel_burn_half_load) / (1.0 - 0.5)  # [kWt/kWe]
-    fuel_burn_intercept = fuel_burn_full_load - fuel_burn_slope * 1.0  # [kWt/kWe_rated]
+    fuel_burn_slope, fuel_burn_intercept = fuel_slope_and_intercept(; 
+        electric_efficiency_full_load = p.s.chp.electric_efficiency_full_load, 
+        electric_efficiency_half_load = p.s.chp.electric_efficiency_half_load, 
+        fuel_higher_heating_value_kwh_per_unit=1
+    )
 
     # Fuel cost
     m[:TotalCHPFuelCosts] = @expression(m, 
@@ -110,7 +111,7 @@ function add_chp_supplementary_firing_constraints(m, p; _n="")
         #There's no upper bound specified for the CHP supplementary firing, so assume the entire heat load as a reasonable maximum that wouldn't be exceeded (but might not be the best possible value). 
         max_supplementary_firing_size = maximum(p.s.dhw_load.loads_kw .+ p.s.space_heating_load.loads_kw)
         @constraint(m, NoCHPSupplementaryFireOffCon[t in p.techs.chp, ts in p.time_steps],
-                m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] <= (p.s.chp.supplementary_firing_max_steam_ratio - 1.0) * p.production_factor[t,ts] * (thermal_prod_slope * max_supplementary_firing_size + m[Symbol("dvThermalProductionYIntercept"*_n)][t,ts])
+                m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts] <= (p.s.chp.supplementary_firing_max_steam_ratio - 1.0) * p.production_factor[t,ts] * (thermal_prod_slope * max_supplementary_firing_size + m[Symbol("dvHeatingProductionYIntercept"*_n)][t,ts])
                 )
     end
 end

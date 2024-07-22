@@ -218,7 +218,7 @@ function REoptInputs(s::AbstractScenario)
     elseif !isnothing(s.flexible_hvac) && !isnothing(s.existing_boiler)
         push!(heating_loads, "SpaceHeating")  #add blank space heating load to add dvHeatingProduction for existing boiler
     end
-    if !isnothing(s.space_heating_load)
+    if !isnothing(s.process_heat_load)
         push!(heating_loads, "ProcessHeat")
         heating_loads_kw["ProcessHeat"] = s.process_heat_load.loads_kw
         if !isnothing(s.absorption_chiller) && s.absorption_chiller.heating_load_input == "ProcessHeat"
@@ -228,6 +228,16 @@ function REoptInputs(s::AbstractScenario)
         end
     end
 
+    if sum(heating_loads_kw["SpaceHeating"]) > 0.0 && isempty(techs.can_serve_space_heating) 
+        throw(@error("SpaceHeating load is nonzero and no techs can serve the load."))
+    end
+    if sum(heating_loads_kw["DomesticHotWater"]) > 0.0 && isempty(techs.can_serve_dhw) 
+        throw(@error("DomesticHotWater load is nonzero and no techs can serve the load."))
+    end
+    if sum(heating_loads_kw["ProcessHeat"]) > 0.0 && isempty(techs.can_serve_process_heat) 
+        throw(@error("ProcessHeat load is nonzero and no techs can serve the load."))
+    end
+    
     heating_loads_served_by_tes = Dict{String,Array{String,1}}()
     if !isempty(s.storage.types.hot)
         for b in s.storage.types.hot
@@ -1192,7 +1202,7 @@ function setup_ghp_inputs(s::AbstractScenario, time_steps, time_steps_without_gr
                 (1 + discount_rate)^s.financial.analysis_years
             )
 
-            heating_thermal_load = s.space_heating_load.loads_kw + s.dhw_load.loads_kw
+            heating_thermal_load = s.space_heating_load.loads_kw + s.dhw_load.loads_kw + s.process_heat_load.loads_kw
             # Using minimum of thermal load and ghp-serving load to avoid small negative net loads
             for j in time_steps
                 space_heating_thermal_load_reduction_with_ghp_kw[i,j] = min(s.space_heating_thermal_load_reduction_with_ghp_kw[j], heating_thermal_load[j])

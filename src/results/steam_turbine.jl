@@ -94,7 +94,7 @@ function add_steam_turbine_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
     end
     r["thermal_to_space_heating_load_series_mmbtu_per_hour"] = round.(value.(SteamTurbineToSpaceHeatingKW ./ KWH_PER_MMBTU), digits=5)
     
-    if "ProcessHeat" in p.heating_loads && p.s.steam_turbine.can_serve_space_heating
+    if "ProcessHeat" in p.heating_loads && p.s.steam_turbine.can_serve_process_heat
         @expression(m, SteamTurbineToProcessHeatKW[ts in p.time_steps], 
             m[Symbol("dvHeatingProduction"*_n)]["SteamTurbine","ProcessHeat",ts] - SteamTurbineToHotTESByQualityKW["ProcessHeat",ts] 
         )

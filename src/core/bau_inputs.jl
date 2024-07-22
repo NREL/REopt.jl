@@ -148,6 +148,17 @@ function BAUInputs(p::REoptInputs)
         absorption_chillers_using_heating_load["ProcessHeat"] = Vector{String}()
     end
 
+    if sum(heating_loads_kw["SpaceHeating"]) > 0.0 && isempty(techs.can_serve_space_heating) 
+        throw(@error("SpaceHeating load is nonzero and no techs can serve the load."))
+    end
+    if sum(heating_loads_kw["DomesticHotWater"]) > 0.0 && isempty(techs.can_serve_dhw) 
+        throw(@error("DomesticHotWater load is nonzero and no techs can serve the load."))
+    end
+    if sum(heating_loads_kw["ProcessHeat"]) > 0.0 && isempty(techs.can_serve_process_heat) 
+        throw(@error("ProcessHeat load is nonzero and no techs can serve the load."))
+    end
+
+
     heating_loads_served_by_tes = Dict{String,Array{String,1}}()
     unavailability = get_unavailability_by_tech(p.s, techs, p.time_steps)
 
@@ -280,7 +291,7 @@ function setup_bau_emissions_inputs(p::REoptInputs, s_bau::BAUScenario, generato
 
     ## Boiler emissions
     if "ExistingBoiler" in p.techs.all
-        for heat_type in ["space_heating", "dhw"]
+        for heat_type in ["space_heating", "dhw", "process_heat"]
             # Divide by existing_boiler.efficiency because annual_mmbtu is thermal, so convert to fuel
             bau_emissions_lb_CO2_per_year += getproperty(p.s,Symbol("$(heat_type)_load")).annual_mmbtu / 
                                                 p.s.existing_boiler.efficiency * 
@@ -348,10 +359,10 @@ function bau_outage_check(critical_loads_kw::AbstractArray, pv_kw_series::Abstra
         if length(pv_kw_series) == 0
             pv_kw_series = zeros(length(critical_loads_kw))
         end
-        fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr = generator_fuel_slope_and_intercept(
+        fuel_slope_gal_per_kwhe, fuel_intercept_gal_per_hr = fuel_slope_and_intercept(
             electric_efficiency_full_load=gen.electric_efficiency_full_load, 
             electric_efficiency_half_load=gen.electric_efficiency_half_load,
-            fuel_higher_heating_value_kwh_per_gal=gen.fuel_higher_heating_value_kwh_per_gal
+            fuel_higher_heating_value_kwh_per_unit=gen.fuel_higher_heating_value_kwh_per_gal
         )
             for (i, (load, pv)) in enumerate(zip(critical_loads_kw, pv_kw_series))
             unmet = load - pv

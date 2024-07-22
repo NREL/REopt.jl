@@ -166,7 +166,7 @@ function MPCElectricTariff(d::Dict)
     energy_rates = d["energy_rates"]
 
     monthly_demand_rates = get(d, "monthly_demand_rates", [0.0])
-    time_steps_monthly = get(d, "time_steps_monthly", [collect(1:length(energy_rates))])
+    time_steps_monthly = get(d, "time_steps_monthly", [collect(eachindex(energy_rates))])
     monthly_previous_peak_demands = get(d, "monthly_previous_peak_demands", [0.0])
 
     tou_demand_rates = get(d, "tou_demand_rates", Float64[])

@@ -144,6 +144,7 @@ end
     inverter_efficiency_fraction::Float64 = 0.96
     rectifier_efficiency_fraction::Float64 = 0.96
     soc_min_fraction::Float64 = 0.2
+    soc_min_applies_during_outages::Bool = false
     soc_init_fraction::Float64 = off_grid_flag ? 1.0 : 0.5
     can_grid_charge::Bool = off_grid_flag ? false : true
     installed_cost_per_kw::Real = 910.0
@@ -178,6 +179,7 @@ Base.@kwdef struct ElectricStorageDefaults
     inverter_efficiency_fraction::Float64 = 0.96
     rectifier_efficiency_fraction::Float64 = 0.96
     soc_min_fraction::Float64 = 0.2
+    soc_min_applies_during_outages::Bool = false
     soc_init_fraction::Float64 = off_grid_flag ? 1.0 : 0.5
     can_grid_charge::Bool = off_grid_flag ? false : true
     installed_cost_per_kw::Real = 910.0
@@ -218,6 +220,7 @@ struct ElectricStorage <: AbstractElectricStorage
     inverter_efficiency_fraction::Float64
     rectifier_efficiency_fraction::Float64
     soc_min_fraction::Float64
+    soc_min_applies_during_outages::Bool
     soc_init_fraction::Float64
     can_grid_charge::Bool
     installed_cost_per_kw::Real
@@ -247,11 +250,11 @@ struct ElectricStorage <: AbstractElectricStorage
         s = ElectricStorageDefaults(;d...)
 
         if s.inverter_replacement_year >= f.analysis_years
-            @warn "Battery inverter replacement costs (per_kw) will not be considered because inverter_replacement_year >= analysis_years."
+            @warn "Battery inverter replacement costs (per_kw) will not be considered because inverter_replacement_year is greater than or equal to analysis_years."
         end
 
         if s.battery_replacement_year >= f.analysis_years
-            @warn "Battery replacement costs (per_kwh) will not be considered because battery_replacement_year >= analysis_years."
+            @warn "Battery replacement costs (per_kwh) will not be considered because battery_replacement_year is greater than or equal to analysis_years."
         end
 
         net_present_cost_per_kw = effective_cost(;
@@ -307,6 +310,7 @@ struct ElectricStorage <: AbstractElectricStorage
             s.inverter_efficiency_fraction,
             s.rectifier_efficiency_fraction,
             s.soc_min_fraction,
+            s.soc_min_applies_during_outages,
             s.soc_init_fraction,
             s.can_grid_charge,
             s.installed_cost_per_kw,
