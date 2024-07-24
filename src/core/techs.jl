@@ -137,7 +137,7 @@ function Techs(s::Scenario)
     if s.wind.max_kw > 0
         push!(all_techs, "Wind")
         push!(elec, "Wind")
-        append!(techs_no_turndown, ["Wind"])
+        push!(techs_no_turndown, "Wind")
         if s.settings.off_grid_flag
             push!(requiring_oper_res, "Wind")
             push!(providing_oper_res, "Wind")
@@ -353,7 +353,7 @@ function Techs(s::MPCScenario)
     if s.wind.size_kw > 0
         push!(all_techs, "Wind")
         push!(elec, "Wind")
-        append!(techs_no_turndown, ["Wind"])
+        push!(techs_no_turndown, "Wind")
     end
 
     electrolyzer_techs = String[]
