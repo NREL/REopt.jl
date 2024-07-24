@@ -92,23 +92,26 @@ function add_wind_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
 	end
 	r["electric_to_storage_series_kw"] = WindtoBatt
 
-	r["electric_to_grid_series_kw"] = zeros(length(p.time_steps))
 	if !isempty(p.s.electric_tariff.export_bins)
 		WindtoGrid = @expression(m, [ts in p.time_steps],
 				sum(m[Symbol("dvProductionToGrid"*_n)][t, u, ts] for u in p.export_bins_by_tech[t]))
 		r["electric_to_grid_series_kw"] = round.(value.(WindtoGrid), digits=3).data
+	else
+		r["electric_to_grid_series_kw"] = zeros(length(p.time_steps))
 	end
 
-	r["electric_to_electrolyzer_series_kw"] = zeros(length(p.time_steps))
 	if !isempty(p.techs.electrolyzer)
 		WindtoElectrolyzer = (m[Symbol("dvProductionToElectrolyzer"*_n)][t, ts] for ts in p.time_steps)
 		r["electric_to_electrolyzer_series_kw"] = round.(value.(WindtoElectrolyzer), digits=3)
+	else
+		r["electric_to_electrolyzer_series_kw"] = zeros(length(p.time_steps))
 	end
 
-	r["electric_to_compressor_series_kw"] = zeros(length(p.time_steps))
 	if !isempty(p.techs.compressor)
 		WindtoCompressor = (m[Symbol("dvProductionToCompressor"*_n)][t, ts] for ts in p.time_steps)
 		r["electric_to_compressor_series_kw"] = round.(value.(WindtoCompressor), digits=3)
+	else
+		r["electric_to_compressor_series_kw"] = zeros(length(p.time_steps))
 	end
 	
 	WindtoCUR = (m[Symbol("dvCurtail"*_n)][t, ts] for ts in p.time_steps)
