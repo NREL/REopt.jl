@@ -41,8 +41,6 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 		end
 		r["electric_to_storage_series_kw"] = round.(value.(PVtoBatt), digits=3)
 
-        r["electric_to_grid_series_kw"] = zeros(size(r["electric_to_storage_series_kw"]))
-        r["annual_energy_exported_kwh"] = 0.0
         if !isempty(p.s.electric_tariff.export_bins)
             PVtoGrid = @expression(m, [ts in p.time_steps],
                     sum(m[:dvProductionToGrid][t, u, ts] for u in p.export_bins_by_tech[t]))
@@ -50,18 +48,23 @@ function add_pv_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 
             r["annual_energy_exported_kwh"] = round(
                 sum(r["electric_to_grid_series_kw"]) * p.hours_per_time_step, digits=0)
+        else
+            r["electric_to_grid_series_kw"] = zeros(length(p.time_steps))
+            r["annual_energy_exported_kwh"] = 0.0
         end
 
-        r["electric_to_electrolyzer_series_kw"] = zeros(size(r["electric_to_storage_series_kw"]))
         if !isempty(p.techs.electrolyzer)
             PVtoElectrolyzer = (m[Symbol("dvProductionToElectrolyzer"*_n)][t, ts] for ts in p.time_steps)
             r["electric_to_electrolyzer_series_kw"] = round.(value.(PVtoElectrolyzer), digits=3)
+        else
+            r["electric_to_electrolyzer_series_kw"] = zeros(length(p.time_steps))
         end
 
-        r["electric_to_compressor_series_kw"] = zeros(size(r["electric_to_storage_series_kw"]))
         if !isempty(p.techs.compressor)
             PVtoCompressor = (m[Symbol("dvProductionToCompressor"*_n)][t, ts] for ts in p.time_steps)
             r["electric_to_compressor_series_kw"] = round.(value.(PVtoCompressor), digits=3)
+        else
+            r["electric_to_compressor_series_kw"] = zeros(length(p.time_steps))
         end
 
 		PVtoCUR = (m[Symbol("dvCurtail"*_n)][t, ts] for ts in p.time_steps)
