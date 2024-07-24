@@ -8,6 +8,7 @@ using DotEnv
 DotEnv.load!()
 using Random
 using DelimitedFiles
+using Logging
 Random.seed!(42)
 
 if "Xpress" in ARGS
@@ -1633,15 +1634,18 @@ else  # run HiGHS tests
                 @test results["PV"]["size_kw"] ≈ p.max_sizes["PV"]
             end
 
-            # Temporarily skip this test which is flooding our test logs with warnings
-            # @testset "Custom URDB with Sub-Hourly" begin
-            #     # Testing a 15-min post with a urdb_response with multiple n_energy_tiers
-            #     model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
-            #     p = REoptInputs("./scenarios/subhourly_with_urdb.json")
-            #     results = run_reopt(model, p)
-            #     @test length(p.s.electric_tariff.export_rates[:WHL]) ≈ 8760*4
-            #     @test results["PV"]["size_kw"] ≈ p.s.pvs[1].existing_kw
-            # end
+            @testset "Custom URDB with Sub-Hourly" begin
+                # Avoid excessive JuMP warning messages about += with Expressions
+                logger = SimpleLogger()
+                with_logger(logger) do
+                    # Testing a 15-min post with a urdb_response with multiple n_energy_tiers
+                    model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
+                    p = REoptInputs("./scenarios/subhourly_with_urdb.json")
+                    results = run_reopt(model, p)
+                    @test length(p.s.electric_tariff.export_rates[:WHL]) ≈ 8760*4
+                    @test results["PV"]["size_kw"] ≈ p.s.pvs[1].existing_kw
+                end
+            end
 
             @testset "Multi-tier demand and energy rates" begin
                 #This test ensures that when multiple energy or demand regimes are included, that the tier limits load appropriately
