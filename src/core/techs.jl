@@ -357,20 +357,20 @@ function Techs(s::MPCScenario)
     end
 
     electrolyzer_techs = String[]
-    if s.electrolyzer.size_kw > 0
+    if !isnothing(s.electrolyzer) && s.electrolyzer.size_kw > 0
         push!(all_techs, "Electrolyzer")
         push!(electrolyzer_techs, "Electrolyzer")
     end
     
     fuel_cell_techs = String[]
-    if s.fuel_cell.size_kw > 0
+    if !isnothing(s.fuel_cell) && s.fuel_cell.size_kw > 0
         push!(all_techs, "FuelCell")
         push!(elec, "FuelCell")
         push!(fuel_cell_techs, "FuelCell")
     end
 
     compressor_techs = String[]
-    if s.compressor.size_kw > 0
+    if !isnothing(s.compressor) && s.compressor.size_kw > 0
         push!(all_techs, "Compressor")
         push!(compressor_techs, "Compressor")
     end
@@ -380,7 +380,7 @@ function Techs(s::MPCScenario)
     techs_can_serve_space_heating = String[]
     techs_can_serve_dhw = String[] 
     techs_can_serve_process_heat = String[]
-    if s.electric_heater.size_kw > 0
+    if !isnothing(s.electric_heater) && s.electric_heater.size_kw > 0
         push!(all_techs, "ElectricHeater")
         push!(heating_techs, "ElectricHeater")
         push!(electric_heaters, "ElectricHeater")
