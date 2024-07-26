@@ -8,6 +8,7 @@ using DotEnv
 DotEnv.load!()
 using Random
 using DelimitedFiles
+using Logging
 Random.seed!(42)
 
 if "Xpress" in ARGS
@@ -1208,12 +1209,16 @@ else  # run HiGHS tests
             end
 
             @testset "Custom URDB with Sub-Hourly" begin
-                # Testing a 15-min post with a urdb_response with multiple n_energy_tiers
-                model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
-                p = REoptInputs("./scenarios/subhourly_with_urdb.json")
-                results = run_reopt(model, p)
-                @test length(p.s.electric_tariff.export_rates[:WHL]) ≈ 8760*4
-                @test results["PV"]["size_kw"] ≈ p.s.pvs[1].existing_kw
+                # Avoid excessive JuMP warning messages about += with Expressions
+                logger = SimpleLogger()
+                with_logger(logger) do
+                    # Testing a 15-min post with a urdb_response with multiple n_energy_tiers
+                    model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.1))
+                    p = REoptInputs("./scenarios/subhourly_with_urdb.json")
+                    results = run_reopt(model, p)
+                    @test length(p.s.electric_tariff.export_rates[:WHL]) ≈ 8760*4
+                    @test results["PV"]["size_kw"] ≈ p.s.pvs[1].existing_kw
+                end
             end
 
             @testset "Multi-tier demand and energy rates" begin
@@ -1307,24 +1312,27 @@ else  # run HiGHS tests
         end
 
         @testset "Multiple PVs" begin
-            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            results = run_reopt([m1,m2], "./scenarios/multiple_pvs.json")
+            logger = SimpleLogger()
+            with_logger(logger) do
+                m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                results = run_reopt([m1,m2], "./scenarios/multiple_pvs.json")
 
-            ground_pv = results["PV"][findfirst(pv -> pv["name"] == "ground", results["PV"])]
-            roof_west = results["PV"][findfirst(pv -> pv["name"] == "roof_west", results["PV"])]
-            roof_east = results["PV"][findfirst(pv -> pv["name"] == "roof_east", results["PV"])]
+                ground_pv = results["PV"][findfirst(pv -> pv["name"] == "ground", results["PV"])]
+                roof_west = results["PV"][findfirst(pv -> pv["name"] == "roof_west", results["PV"])]
+                roof_east = results["PV"][findfirst(pv -> pv["name"] == "roof_east", results["PV"])]
 
-            @test ground_pv["size_kw"] ≈ 15 atol=0.1
-            @test roof_west["size_kw"] ≈ 7 atol=0.1
-            @test roof_east["size_kw"] ≈ 4 atol=0.1
-            @test ground_pv["lifecycle_om_cost_after_tax_bau"] ≈ 782.0 atol=0.1
-            @test roof_west["lifecycle_om_cost_after_tax_bau"] ≈ 782.0 atol=0.1
-            @test ground_pv["annual_energy_produced_kwh_bau"] ≈ 8933.09 atol=0.1
-            @test roof_west["annual_energy_produced_kwh_bau"] ≈ 7656.11 atol=0.1
-            @test ground_pv["annual_energy_produced_kwh"] ≈ 26799.26 atol=0.1
-            @test roof_west["annual_energy_produced_kwh"] ≈ 10719.51 atol=0.1
-            @test roof_east["annual_energy_produced_kwh"] ≈ 6685.95 atol=0.1
+                @test ground_pv["size_kw"] ≈ 15 atol=0.1
+                @test roof_west["size_kw"] ≈ 7 atol=0.1
+                @test roof_east["size_kw"] ≈ 4 atol=0.1
+                @test ground_pv["lifecycle_om_cost_after_tax_bau"] ≈ 782.0 atol=0.1
+                @test roof_west["lifecycle_om_cost_after_tax_bau"] ≈ 782.0 atol=0.1
+                @test ground_pv["annual_energy_produced_kwh_bau"] ≈ 8933.09 atol=0.1
+                @test roof_west["annual_energy_produced_kwh_bau"] ≈ 7656.11 atol=0.1
+                @test ground_pv["annual_energy_produced_kwh"] ≈ 26799.26 atol=0.1
+                @test roof_west["annual_energy_produced_kwh"] ≈ 10719.51 atol=0.1
+                @test roof_east["annual_energy_produced_kwh"] ≈ 6685.95 atol=0.1
+            end
         end
 
         @testset "Thermal Energy Storage + Absorption Chiller" begin
