@@ -108,6 +108,7 @@ function MPCScenario(d::Dict)
 
     if settings.off_grid_flag
         if !(haskey(d["ElectricLoad"], "critical_loads_kw"))
+            @warn "ElectricLoad critical_loads_kw is overridden by loads_kw in off-grid scenarios. If you wish to alter the load profile or load met, adjust the loads_kw or min_load_met_annual_fraction."
             d["ElectricLoad"]["critical_loads_kw"] = d["ElectricLoad"]["loads_kw"]
         end
     end
