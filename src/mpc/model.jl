@@ -344,12 +344,10 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
 		if b in p.s.storage.types.elec
 			fix(m[:dvStoragePower][b], p.s.storage.attr["ElectricStorage"].size_kw, force=true)
 			fix(m[:dvStorageEnergy][b], p.s.storage.attr["ElectricStorage"].size_kwh, force=true)
-		elseif b in p.s.storage.types.hydrogen
-			if b in p.s.storage.types.hydrogen_lp
-				fix(m[:dvStorageEnergy][b], p.s.storage.attr["HydrogenStorageLP"].size_kg, force=true)
-			elseif b in p.s.storage.types.hydrogen_hp
-				fix(m[:dvStorageEnergy][b], p.s.storage.attr["HydrogenStorageHP"].size_kg, force=true)
-			end
+		elseif b in p.s.storage.types.hydrogen_lp
+			fix(m[:dvStorageEnergy][b], p.s.storage.attr["HydrogenStorageLP"].size_kg, force=true)
+		elseif b in p.s.storage.types.hydrogen_hp
+			fix(m[:dvStorageEnergy][b], p.s.storage.attr["HydrogenStorageHP"].size_kg, force=true)
 		elseif b in p.s.storage.types.hot
 			fix(m[:dvStorageChargePower][b], p.s.storage.attr["HighTempThermalStorage"].charge_limit_kw, force=true)
 			fix(m[:dvStorageDischargePower][b], p.s.storage.attr["HighTempThermalStorage"].discharge_limit_kw, force=true)
