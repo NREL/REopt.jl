@@ -164,10 +164,9 @@ function GHP(response::Dict, d::Dict)
     # Convert boolean input into an integer for the model
     if typeof(ghp.require_ghp_purchase) == Bool && ghp.require_ghp_purchase
         ghp.require_ghp_purchase = 1
-    else
+    elseif typeof(ghp.require_ghp_purchase) == Bool && ghp.require_ghp_purchase == false
         ghp.require_ghp_purchase = 0
     end
-
     return ghp
 end
 
