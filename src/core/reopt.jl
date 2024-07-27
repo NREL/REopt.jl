@@ -266,8 +266,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	m[:ResidualGHXCapCost] = 0.0
 	m[:ObjectivePenalties] = 0.0
 
-	if !isempty(p.techs.all)
-		add_tech_size_constraints(m, p)
+	if !isempty(p.techs.all) || !isempty(p.techs.ghp)
+		if !isempty(p.techs.all)
+			add_tech_size_constraints(m, p)
+		end
         
         if !isempty(p.techs.no_curtail)
             add_no_curtail_constraints(m, p)
