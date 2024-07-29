@@ -72,7 +72,7 @@ function get_production_factor(wind::Wind, latitude::Real, longitude::Real, time
             resource = []
             try
                 @info "Querying Wind Toolkit for resource data ..."
-                r = HTTP.get(url; retries=5)
+                r = HTTP.get(url, ["User-Agent" => "REopt.jl"]; retries=5)
                 if r.status != 200
                     throw(@error("Bad response from Wind Toolkit: $(response["errors"])"))
                 end
