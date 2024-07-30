@@ -115,11 +115,7 @@ function MPCScenario(d::Dict)
 
     electric_load = MPCElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...)
 
-    if haskey(d, "ElectricUtility") && !(settings.off_grid_flag)
-        electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...)
-    elseif !(settings.off_grid_flag)
-        electric_utility = ElectricUtility()
-    elseif settings.off_grid_flag
+    if settings.off_grid_flag
         if haskey(d, "ElectricUtility")
             @warn "ElectricUtility inputs are not applicable when `off_grid_flag` is true and will be ignored."
         end
@@ -132,7 +128,12 @@ function MPCScenario(d::Dict)
                                             emissions_factor_series_lb_SO2_per_kwh = 0,
                                             emissions_factor_series_lb_PM25_per_kwh = 0
                                         ) 
-
+    else
+        if haskey(d, "ElectricUtility")
+            electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...)
+        else
+            electric_utility = ElectricUtility()
+        end
     end
 
     storage_structs = Dict{String, AbstractStorage}()

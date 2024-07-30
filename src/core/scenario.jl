@@ -126,31 +126,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                     off_grid_flag = settings.off_grid_flag
                                 )
 
-    if haskey(d, "ElectricUtility") && !(settings.off_grid_flag)
-        electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...,
-                                            latitude=site.latitude, longitude=site.longitude, 
-                                            CO2_emissions_reduction_min_fraction=site.CO2_emissions_reduction_min_fraction,
-                                            CO2_emissions_reduction_max_fraction=site.CO2_emissions_reduction_max_fraction,
-                                            min_resil_time_steps=site.min_resil_time_steps,
-                                            include_climate_in_objective=settings.include_climate_in_objective,
-                                            include_health_in_objective=settings.include_health_in_objective,
-                                            off_grid_flag=settings.off_grid_flag,
-                                            time_steps_per_hour=settings.time_steps_per_hour,
-                                            analysis_years=financial.analysis_years,
-                                            load_year=electric_load.year
-                                        )
-    elseif !(settings.off_grid_flag)
-        electric_utility = ElectricUtility(; latitude=site.latitude, longitude=site.longitude, 
-                                            CO2_emissions_reduction_min_fraction=site.CO2_emissions_reduction_min_fraction,
-                                            CO2_emissions_reduction_max_fraction=site.CO2_emissions_reduction_max_fraction,
-                                            include_climate_in_objective=settings.include_climate_in_objective,
-                                            include_health_in_objective=settings.include_health_in_objective,
-                                            off_grid_flag=settings.off_grid_flag,
-                                            time_steps_per_hour=settings.time_steps_per_hour,
-                                            analysis_years=financial.analysis_years,
-                                            load_year=electric_load.year
-                                        )
-    elseif settings.off_grid_flag 
+    if settings.off_grid_flag
         if haskey(d, "ElectricUtility")
             @warn "ElectricUtility inputs are not applicable when `off_grid_flag` is true and will be ignored. For off-grid scenarios, a year-long outage will always be modeled."
         end
@@ -164,6 +140,32 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             emissions_factor_series_lb_SO2_per_kwh = 0,
                                             emissions_factor_series_lb_PM25_per_kwh = 0
                                         ) 
+    else
+        if haskey(d, "ElectricUtility")
+            electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...,
+                                            latitude=site.latitude, longitude=site.longitude, 
+                                            CO2_emissions_reduction_min_fraction=site.CO2_emissions_reduction_min_fraction,
+                                            CO2_emissions_reduction_max_fraction=site.CO2_emissions_reduction_max_fraction,
+                                            min_resil_time_steps=site.min_resil_time_steps,
+                                            include_climate_in_objective=settings.include_climate_in_objective,
+                                            include_health_in_objective=settings.include_health_in_objective,
+                                            off_grid_flag=settings.off_grid_flag,
+                                            time_steps_per_hour=settings.time_steps_per_hour,
+                                            analysis_years=financial.analysis_years,
+                                            load_year=electric_load.year
+                                        )
+        else
+            electric_utility = ElectricUtility(; latitude=site.latitude, longitude=site.longitude, 
+                                            CO2_emissions_reduction_min_fraction=site.CO2_emissions_reduction_min_fraction,
+                                            CO2_emissions_reduction_max_fraction=site.CO2_emissions_reduction_max_fraction,
+                                            include_climate_in_objective=settings.include_climate_in_objective,
+                                            include_health_in_objective=settings.include_health_in_objective,
+                                            off_grid_flag=settings.off_grid_flag,
+                                            time_steps_per_hour=settings.time_steps_per_hour,
+                                            analysis_years=financial.analysis_years,
+                                            load_year=electric_load.year
+                                        )
+        end
     end
         
     storage_structs = Dict{String, AbstractStorage}()
