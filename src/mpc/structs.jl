@@ -1,4 +1,16 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
+
+"""
+    MPCSite
+
+    Base.@kwdef struct MPCSite
+        include_exported_elec_emissions_in_total::Bool = true,
+    end
+"""
+Base.@kwdef struct MPCSite
+    include_exported_elec_emissions_in_total::Bool = true
+end
+
 """
     MPCElectricLoad
 
@@ -23,6 +35,7 @@ end
 """
 Base.@kwdef struct MPCFinancial
     value_of_lost_load_per_kwh::Union{Array{R,1}, R} where R<:Real = 1.00
+    CO2_cost_per_tonne::Real = 51.0
 end
 
 

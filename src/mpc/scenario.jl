@@ -1,6 +1,7 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 struct MPCScenario <: AbstractScenario
     settings::Settings
+    site::MPCSite
     pvs::Array{MPCPV, 1}
     wind::MPCWind
     storage::Storage
@@ -31,6 +32,7 @@ Method for creating the MPCScenario struct:
 ```julia
     struct MPCScenario <: AbstractScenario
         settings::Settings
+        site::MPCSite
         pvs::Array{MPCPV, 1}
         wind::MPCWind
         storage::Storage
@@ -76,12 +78,19 @@ Other options include:
     - "Settings"
     - "Financial"
     - "Limits"
+    - "Site"
 """
 function MPCScenario(d::Dict)
     if haskey(d, "Settings")
         settings = Settings(;dictkeys_tosymbols(d["Settings"])...)
     else
         settings = Settings()
+    end
+
+    if haskey(d, "Site")
+        site = MPCSite(;dictkeys_tosymbols(d["Site"])...)
+    else
+        site = MPCSite()
     end
     
     pvs = MPCPV[]
@@ -130,7 +139,8 @@ function MPCScenario(d::Dict)
                                         ) 
     else
         if haskey(d, "ElectricUtility")
-            electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...)
+            electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...,
+                                                 mpc_timesteps = length(d["ElectricLoad"]["loads_kw"]))
         else
             electric_utility = ElectricUtility()
         end
@@ -232,6 +242,7 @@ function MPCScenario(d::Dict)
 
     return MPCScenario(
         settings,
+        site,
         pvs, 
         wind,
         storage, 

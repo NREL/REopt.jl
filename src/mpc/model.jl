@@ -241,6 +241,7 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 	add_elec_utility_expressions(m, p)
     add_previous_monthly_peak_constraint(m, p)
     add_previous_tou_peak_constraint(m, p)
+	add_yr1_emissions_calcs(m,p)
 
     # TODO: random outages in MPC?
 	if !isempty(p.s.electric_utility.outage_durations)
@@ -286,6 +287,12 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
 	if !isempty(p.s.electric_utility.outage_durations)
 		add_to_expression!(Costs, m[:ExpectedOutageCost] + m[:mgTotalTechUpgradeCost] + m[:dvMGStorageUpgradeCost] + m[:ExpectedMGFuelCost])
 	end
+	
+	# Add climate costs
+	if p.s.settings.include_climate_in_objective # if user selects to include climate in objective
+		add_to_expression!(Costs, m[:EmissionsYr1_Total_LbsCO2] * p.s.financial.CO2_cost_per_tonne * TONNE_PER_LB) 
+	end
+
     #= Note: 0.9999*MinChargeAdder in Objective b/c when TotalMinCharge > (TotalEnergyCharges + TotalDemandCharges + TotalExportBenefit + TotalFixedCharges)
 		it is arbitrary where the min charge ends up (eg. could be in TotalDemandCharges or MinChargeAdder).
 		0.0001*MinChargeAdder is added back into LCC when writing to results.  =#

@@ -189,11 +189,15 @@ struct ElectricUtility
         emissions_factor_NOx_decrease_fraction::Real = EMISSIONS_DECREASE_DEFAULTS["NOx"], 
         emissions_factor_SO2_decrease_fraction::Real = EMISSIONS_DECREASE_DEFAULTS["SO2"],
         emissions_factor_PM25_decrease_fraction::Real = EMISSIONS_DECREASE_DEFAULTS["PM25"],
+
+        # MPC
+        mpc_timesteps::Union{Nothing,Real} = nothing
         )
 
         is_MPC = isnothing(latitude) || isnothing(longitude)
         cambium_emissions_region = "NA - Cambium data not used for climate emissions" # will be overwritten if Cambium is used
-        
+
+        meters_to_region = nothing
         if !is_MPC
             # Get AVERT emissions region
             if avert_emissions_region == ""
@@ -301,6 +305,35 @@ struct ElectricUtility
                     end
                 end
             end
+        else # Is MPC
+            emissions_series_dict = Dict{String, Union{Nothing,Array{<:Real,1}}}()
+            for (eseries, ekey) in [
+                (emissions_factor_series_lb_CO2_per_kwh, "CO2"),
+                (emissions_factor_series_lb_NOx_per_kwh, "NOx"),
+                (emissions_factor_series_lb_SO2_per_kwh, "SO2"),
+                (emissions_factor_series_lb_PM25_per_kwh, "PM25")
+            ]
+                if off_grid_flag # no grid emissions for off-grid
+                    emissions_series_dict[ekey] = zeros(Float64, mpc_timesteps)
+                elseif typeof(eseries) <: Real  # user provided scalar value
+                    emissions_series_dict[ekey] = repeat([eseries], mpc_timesteps)
+                elseif isempty(eseries)  # no user input
+                    emissions_series_dict[ekey] = zeros(Float64, mpc_timesteps)
+                    @warn("No value was entered for $(ekey) emissions, setting to zero.")
+                elseif length(eseries) == 1  # user provided array of one value
+                    emissions_series_dict[ekey] = repeat(eseries, mpc_timesteps)
+                elseif length(eseries) == mpc_timesteps  # user provided array with correct length
+                    emissions_series_dict[ekey] = eseries
+                else
+                    emissions_series_dict[ekey] = zeros(Float64, mpc_timesteps)
+                    @warn("Error found in the $(ekey) emissions input. The emissions series for $(ekey) has been set to zero.")
+                end
+            end
+
+            if isnothing(emissions_factor_CO2_decrease_fraction)
+                emissions_factor_CO2_decrease_fraction = 0.0
+            end
+
         end
         
         if !isempty(outage_durations) && min_resil_time_steps > maximum(outage_durations)
@@ -333,10 +366,10 @@ struct ElectricUtility
             is_MPC ? "" : avert_emissions_region,
             is_MPC || isnothing(meters_to_region) ? typemax(Int64) : meters_to_region,
             cambium_emissions_region,
-            is_MPC ? Float64[] : emissions_series_dict["CO2"],
-            is_MPC ? Float64[] : emissions_series_dict["NOx"],
-            is_MPC ? Float64[] : emissions_series_dict["SO2"],
-            is_MPC ? Float64[] : emissions_series_dict["PM25"],
+            emissions_series_dict["CO2"],
+            emissions_series_dict["NOx"],
+            emissions_series_dict["SO2"],
+            emissions_series_dict["PM25"],
             emissions_factor_CO2_decrease_fraction,
             emissions_factor_NOx_decrease_fraction,
             emissions_factor_SO2_decrease_fraction,
