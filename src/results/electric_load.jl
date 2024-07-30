@@ -44,6 +44,8 @@ end
 """
 MPC `ElectricLoad` results keys:
 - `load_series_kw` vector of site load in every time step
+- `offgrid_load_met_series_kw` vector of electric load met by generation techs, for off-grid scenarios only
+- `offgrid_load_met_fraction` percentage of total electric load met, for off-grid scenarios only
 """
 function add_electric_load_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n="")
     # Adds the `ElectricLoad` results to the dictionary passed back from `run_reopt` using the solved model `m` and the `REoptInputs` for node `_n`.
