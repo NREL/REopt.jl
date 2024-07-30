@@ -76,10 +76,34 @@ function MPCScenario(d::Dict)
         financial = MPCFinancial()
     end
 
-    if haskey(d, "ElectricUtility")
-        electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...)
+    if settings.off_grid_flag
+        if !(haskey(d["ElectricLoad"], "critical_loads_kw"))
+            @warn "ElectricLoad critical_loads_kw is overridden by loads_kw in off-grid scenarios. If you wish to alter the load profile or load met, adjust the loads_kw or min_load_met_annual_fraction."
+            d["ElectricLoad"]["critical_loads_kw"] = d["ElectricLoad"]["loads_kw"]
+        end
+    end
+
+    electric_load = MPCElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...)
+
+    if settings.off_grid_flag
+        if haskey(d, "ElectricUtility")
+            @warn "ElectricUtility inputs are not applicable when `off_grid_flag` is true and will be ignored."
+        end
+        electric_utility = ElectricUtility(; outage_start_time_step = 1, 
+                                            outage_end_time_step = length(electric_load.loads_kw), 
+                                            time_steps_per_hour=settings.time_steps_per_hour,
+                                            off_grid_flag=settings.off_grid_flag,
+                                            emissions_factor_series_lb_CO2_per_kwh = 0,
+                                            emissions_factor_series_lb_NOx_per_kwh = 0,
+                                            emissions_factor_series_lb_SO2_per_kwh = 0,
+                                            emissions_factor_series_lb_PM25_per_kwh = 0
+                                        ) 
     else
-        electric_utility = ElectricUtility()
+        if haskey(d, "ElectricUtility")
+            electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...)
+        else
+            electric_utility = ElectricUtility()
+        end
     end
 
     if haskey(d, "ElectricStorage")
