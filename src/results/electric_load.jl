@@ -54,6 +54,7 @@ function add_electric_load_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict;
     r = Dict{String, Any}()
 
     r["load_series_kw"] = p.s.electric_load.loads_kw
+    r["critical_load_series_kw"] = p.s.electric_load.critical_loads_kw
     
     if p.s.settings.off_grid_flag
         @expression(m, LoadMet[ts in p.time_steps_without_grid], p.s.electric_load.critical_loads_kw[ts] * m[Symbol("dvOffgridLoadServedFraction"*_n)][ts])
