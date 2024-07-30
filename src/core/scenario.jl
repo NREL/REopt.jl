@@ -685,12 +685,19 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             end
             ambient_temp_fahrenheit = (9/5 .* ambient_temp_celsius) .+ 32
 
-            if !haskey(d["ASHP_SpaceHeater"], "heating_cop")
-                heating_cop = round.(0.0462 .* ambient_temp_fahrenheit .+ 1.351, digits=3)
-                heating_cop[ambient_temp_fahrenheit .< ambient_temp_thres_fahrenheit] .= 1
-                heating_cop[ambient_temp_fahrenheit .> 79] .= 999999
+            if !haskey(d["ASHP_SpaceHeater"], "heating_cop_reference")
+                heating_cop, heating_cf = get_default_ashp_heating(
+                    ambient_temp_fahrenheit,
+                    ambient_temp_thres_fahrenheit
+                )
             else
-                heating_cop = round.(d["ASHP_SpaceHeater"]["heating_cop"],digits=3)
+                heating_cop, heating_cf = get_ashp_performance(
+                    d["ASHP_SpaceHeater"]["heating_cop_reference"],
+                    d["ASHP_SpaceHeater"]["heating_cf_reference"],
+                    d["ASHP_SpaceHeater"]["heating_reference_temps"],
+                    ambient_temp_fahrenheit,
+                    ambient_temp_thres_fahrenheit
+                )
             end
 
             if !haskey(d["ASHP_SpaceHeater"], "cooling_cop")
