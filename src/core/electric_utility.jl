@@ -324,7 +324,7 @@ struct ElectricUtility
                     emissions_series_dict[ekey] = eseries
                 else
                     emissions_series_dict[ekey] = zeros(Float64, mpc_timesteps)
-                    @warn("Error found in the $(ekey) emissions input. The emissions series for $(ekey) has been set to zero.")
+                    @warn("The $(ekey) emissions factor input must be a scalar, a 1 element array, or an array with length matching the provided loads_kw. The emissions factor series for $(ekey) has been set to zero.")
                 end
             end
 
