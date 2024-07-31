@@ -633,7 +633,7 @@ function cambium_emissions_profile(; scenario::String,
         response = JSON.parse(String(r.body)) # contains response["status"]
         output = response["message"]
         co2_emissions = output["values"] ./ 1000 # [lb / MWh] --> [lb / kWh]
-        
+
         # Align day of week of emissions and load profiles (Cambium data starts on Sundays so assuming emissions_year=2017)
         co2_emissions = align_emission_with_load_year(load_year=load_year,emissions_year=emissions_year,emissions_profile=co2_emissions) 
         
@@ -702,7 +702,7 @@ function cambium_clean_energy_fraction_profile(; scenario::String,
                                                 emissions_year::Int=2017)
 
     url = "https://scenarioviewer.nrel.gov/api/get-levelized/"  # Cambium API endpoint
-    project_uuid = "82460f06-548c-4954-b2d9-b84ba92d63e2"  # Cambium 2022 project UUID
+    project_uuid = "82460f06-548c-4954-b2d9-b84ba92d63e2"  # Cambium 2022 project UUID 
 
     # Construct the payload for the API request
     payload = Dict(
@@ -728,14 +728,14 @@ function cambium_clean_energy_fraction_profile(; scenario::String,
         response = JSON.parse(String(r.body))
         output = response["message"]
         clean_energy_fraction = output["values"]
+        clean_energy_fraction = map(x -> Real(x), clean_energy_fraction) # Convert to Float64
 
         # Align day of week of clean energy fraction profile with load year
         clean_energy_fraction = align_emission_with_load_year(load_year=load_year, emissions_year=emissions_year, emissions_profile=clean_energy_fraction)
-        
         if time_steps_per_hour > 1
             clean_energy_fraction = repeat(clean_energy_fraction, inner=time_steps_per_hour)
         end
-
+        
         # Return the clean energy fraction data in a dictionary
         response_dict = Dict{String, Any}(
             "description" => "Hourly clean energy fraction for applicable Cambium location and location_type, adjusted to align with load year $(load_year).",
@@ -751,4 +751,3 @@ function cambium_clean_energy_fraction_profile(; scenario::String,
         )
     end
 end
-

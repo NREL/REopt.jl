@@ -1,6 +1,5 @@
 .vscode
 .DS_Store
-gridRE_tests
 docs/build/
 docs/Manifest.toml
 **.log
