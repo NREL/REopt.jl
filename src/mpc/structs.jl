@@ -403,9 +403,11 @@ end
 """
     MPCHydrogenLoad
 
-    Base.@kwdef struct MPCHydrogenLoad
-        loads_kg::Array{Real,1}
-    end
+```julia
+Base.@kwdef struct MPCHydrogenLoad
+    loads_kg::Array{Real,1}
+end
+```
 """
 Base.@kwdef struct MPCHydrogenLoad
     loads_kg::Array{Real,1} = Real[]
@@ -453,6 +455,15 @@ end
 
 
 # THERMAL TECHS
+"""
+MPCCoolingLoad
+
+```julia
+Base.@kwdef struct MPCProcessHeatLoad
+    loads_kw::Union{Nothing, Array{Real,1}} = nothing
+end
+```
+"""
 struct MPCProcessHeatLoad
     loads_kw#::Union{Nothing, Array{Real,1}} = nothing
     # production_factor_series::Union{Nothing, Array{Real,1}} = nothing
@@ -464,6 +475,19 @@ struct MPCProcessHeatLoad
     end
 end
 
+"""
+    MPCCoolingLoad
+
+```julia
+Base.@kwdef struct MPCElectricHeater <: AbstractThermalTech
+    size_kw::Real
+    cop::Real
+    can_serve_dhw::Bool
+    can_serve_space_heating::Bool
+    can_serve_process_heat::Bool
+end
+```
+"""
 struct MPCElectricHeater <: AbstractThermalTech
     size_kw#::Real
     cop#::Real
@@ -494,9 +518,11 @@ end
 """
     MPCCoolingLoad
 
-    Base.@kwdef struct MPCCoolingLoad
-        loads_kw_thermal::Array{Real,1}
-    end
+```julia
+Base.@kwdef struct MPCCoolingLoad
+    loads_kw_thermal::Array{Real,1}
+end
+```
 """
 Base.@kwdef struct MPCCoolingLoad
     loads_kw_thermal::Array{Real,1}
@@ -505,6 +531,12 @@ end
 
 """
     MPCDomesticHotWaterLoad
+
+```julia
+Base.@kwdef struct MPCDomesticHotWaterLoad
+    loads_kw_thermal::Array{Real,1}
+end
+```
 """
 Base.@kwdef struct MPCDomesticHotWaterLoad
     loads_kw_thermal::Array{Real,1}
@@ -512,6 +544,12 @@ end
 
 """
     MPCSpaceHeatingLoad
+
+```julia
+Base.@kwdef struct MPCSpaceHeatingLoad
+    loads_kw_thermal::Array{Real,1}
+end
+```
 """
 Base.@kwdef struct MPCSpaceHeatingLoad
     loads_kw_thermal::Array{Real,1}
@@ -520,6 +558,28 @@ end
 
 """
     MPCHighTempThermalStorage
+
+```julia
+Base.@kwdef struct MPCHighTempThermalStorage <: AbstractThermalStorage
+    charge_limit_kw::Float64
+    discharge_limit_kw::Float64
+    size_kwh::Float64
+    charge_efficiency::Float64 = 1.0
+    discharge_efficiency::Float64 = 0.9
+    soc_min_fraction::Float64 = 0.2
+    soc_init_fraction::Float64 = 0.5
+    can_grid_charge::Bool = true
+    grid_charge_efficiency::Float64 = can_grid_charge ? charge_efficiency : 0.0
+    size_kw::Float64 = charge_limit_kw + discharge_limit_kw
+    max_kw::Float64 = min(charge_limit_kw, discharge_limit_kw)
+    max_kwh::Float64 = size_kwh
+    minimum_avg_soc_fraction::Float64 = 0.0
+    thermal_decay_rate_fraction::Float64 = 0.0004
+    can_serve_dhw::Bool = true
+    can_serve_space_heating::Bool = true
+    can_serve_process_heat::Bool = true
+end
+```
 """
 Base.@kwdef struct MPCHighTempThermalStorage <: AbstractThermalStorage
     charge_limit_kw::Float64
@@ -543,6 +603,13 @@ end
 
 """
     MPCLimits
+
+```julia
+Base.@kwdef struct MPCLimits
+    grid_draw_limit_kw_by_time_step::Vector{<:Real} = Real[]
+    export_limit_kw_by_time_step::Vector{<:Real} =  Real[]
+end
+```
 
 struct for MPC specific input parameters:
 - `grid_draw_limit_kw_by_time_step::Vector{<:Real}` limits for grid power consumption in each time step; length must be same as `length(loads_kw)`.
