@@ -315,12 +315,10 @@ struct ElectricUtility
             ]
                 if off_grid_flag # no grid emissions for off-grid
                     emissions_series_dict[ekey] = zeros(Float64, mpc_timesteps)
-                elseif typeof(eseries) <: Real  # user provided scalar value
-                    emissions_series_dict[ekey] = repeat([eseries], mpc_timesteps)
                 elseif isempty(eseries)  # no user input
                     emissions_series_dict[ekey] = zeros(Float64, mpc_timesteps)
                     @warn("No value was entered for $(ekey) emissions, setting to zero.")
-                elseif length(eseries) == 1  # user provided array of one value
+                elseif length(eseries) == 1  # user provided scalar or array of one value
                     emissions_series_dict[ekey] = repeat(eseries, mpc_timesteps)
                 elseif length(eseries) == mpc_timesteps  # user provided array with correct length
                     emissions_series_dict[ekey] = eseries
