@@ -257,7 +257,7 @@ Base.@kwdef struct MPCElectricStorage < AbstractElectricStorage
     soc_min_fraction::Float64 = 0.2
     soc_init_fraction::Float64 = 0.5
     can_grid_charge::Bool = true
-    grid_charge_efficiency::Float64 = 0.96 * 0.975^0.5
+    grid_charge_efficiency::Float64 = can_grid_charge ? charge_efficiency : 0.0
     daily_leakage_fraction::Float64 = 0.03
 end
 ```
@@ -270,7 +270,7 @@ Base.@kwdef struct MPCElectricStorage <: AbstractElectricStorage
     soc_min_fraction::Float64 = 0.2
     soc_init_fraction::Float64 = 0.5
     can_grid_charge::Bool = true
-    grid_charge_efficiency::Float64 = 0.96 * 0.975^0.5
+    grid_charge_efficiency::Float64 = can_grid_charge ? charge_efficiency : 0.0
     max_kw::Float64 = size_kw
     max_kwh::Float64 = size_kwh
     minimum_avg_soc_fraction::Float64 = 0.0
