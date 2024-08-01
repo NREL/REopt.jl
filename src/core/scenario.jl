@@ -129,7 +129,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             off_grid_flag=settings.off_grid_flag,
                                             time_steps_per_hour=settings.time_steps_per_hour,
                                             analysis_years=financial.analysis_years,
-                                            load_year=electric_load.year
+                                            load_year=electric_load.year,
+                                            clean_energy_fraction_series = Float64[]
                                         )
     elseif !(settings.off_grid_flag)
         electric_utility = ElectricUtility(; latitude=site.latitude, longitude=site.longitude, 
@@ -140,7 +141,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             off_grid_flag=settings.off_grid_flag,
                                             time_steps_per_hour=settings.time_steps_per_hour,
                                             analysis_years=financial.analysis_years,
-                                            load_year=electric_load.year
+                                            load_year=electric_load.year,
+                                            clean_energy_fraction_series = Float64[]
                                         )
     elseif settings.off_grid_flag 
         if haskey(d, "ElectricUtility")
@@ -154,7 +156,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             emissions_factor_series_lb_CO2_per_kwh = 0,
                                             emissions_factor_series_lb_NOx_per_kwh = 0,
                                             emissions_factor_series_lb_SO2_per_kwh = 0,
-                                            emissions_factor_series_lb_PM25_per_kwh = 0
+                                            emissions_factor_series_lb_PM25_per_kwh = 0,
+                                            clean_energy_fraction_series = Float64[]
                                         ) 
     end
         
