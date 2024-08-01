@@ -66,6 +66,7 @@ end
 """
 MPC `HotThermalStorage` results keys:
 - `soc_series_fraction` Vector of normalized (0-1) state of charge values over the time horizon [-]
+- `storage_to_load_series_mmbtu_per_hour` Vector of hot thermal storage dispatch to heating load
 """
 function add_hot_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict, b::String; _n="")
     #=
