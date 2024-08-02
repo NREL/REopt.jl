@@ -452,6 +452,6 @@ function irr(cashflows::AbstractArray{<:Real, 1})
     try
         rate = fzero(f, [0.0, 0.99])
     finally
-        return round(rate, digits=2)
+        return round(rate, digits=3)
     end
 end
