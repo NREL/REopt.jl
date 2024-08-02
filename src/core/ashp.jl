@@ -9,8 +9,9 @@ to meet the heating load.
 
 ASHP_SpaceHeater has the following attributes: 
 ```julia
-    min_ton::Real = 0.0, # Minimum thermal power size
-    max_ton::Real = BIG_NUMBER, # Maximum thermal power size
+    min_kw::Real = 0.0, # Minimum thermal power size
+    max_kw::Real = BIG_NUMBER, # Maximum thermal power size
+    min_allowable_kw::Real = 0.0 # Minimum nonzero thermal power size if included
     installed_cost_per_ton::Union{Real, nothing} = nothing, # Thermal power-based cost
     om_cost_per_ton::Union{Real, nothing} = nothing, # Thermal power-based fixed O&M cost
     macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
@@ -27,6 +28,7 @@ ASHP_SpaceHeater has the following attributes:
 struct ASHP <: AbstractThermalTech
     min_kw::Real
     max_kw::Real
+    min_allowable_kw::Real
     installed_cost_per_kw::Real
     om_cost_per_kw::Real
     macrs_option_years::Int
@@ -56,7 +58,7 @@ to meet the heating load.
 function ASHP_SpaceHeater(;
     min_ton::Real = 0.0, # Minimum thermal power size
     max_ton::Real = BIG_NUMBER, # Maximum thermal power size
-    installed_cost_per_ton::Union{Real, nothing} = nothing, # Thermal power-based cost
+    min_allowable_ton::Real = 0.0 # Minimum nonzero thermal power size if included
     om_cost_per_ton::Union{Real, nothing} = nothing, # Thermal power-based fixed O&M cost
     macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
@@ -82,6 +84,7 @@ function ASHP_SpaceHeater(;
 function ASHP_SpaceHeater(;
         min_ton::Real = 0.0,
         max_ton::Real = BIG_NUMBER,
+        min_allowable_ton::Union{Real, Nothing} = nothing,
         installed_cost_per_ton::Union{Real, Nothing} = nothing,
         om_cost_per_ton::Union{Real, Nothing} = nothing,
         macrs_option_years::Int = 0,
@@ -131,6 +134,11 @@ function ASHP_SpaceHeater(;
     # Convert max sizes, cost factors from mmbtu_per_hour to kw
     min_kw = min_ton * KWH_THERMAL_PER_TONHOUR
     max_kw = max_ton * KWH_THERMAL_PER_TONHOUR
+    if !isnothing(min_allowable_ton)
+        min_allowable_kw = min_allowable_ton * KWH_THERMAL_PER_TONHOUR
+    else
+        min_allowable_kw = 0.0
+    end
 
     installed_cost_per_kw = installed_cost_per_ton / KWH_THERMAL_PER_TONHOUR
     om_cost_per_kw = om_cost_per_ton / KWH_THERMAL_PER_TONHOUR
@@ -167,6 +175,7 @@ function ASHP_SpaceHeater(;
     ASHP(
         min_kw,
         max_kw,
+        min_allowable_kw,
         installed_cost_per_kw,
         om_cost_per_kw,
         macrs_option_years,
@@ -197,6 +206,7 @@ to meet the domestic hot water load.
 function ASHP_WaterHeater(;
     min_ton::Real = 0.0, # Minimum thermal power size
     max_ton::Real = BIG_NUMBER, # Maximum thermal power size
+    min_allowable_ton::Real = 0.0 # Minimum nonzero thermal power size if included
     installed_cost_per_ton::Union{Real, nothing} = nothing, # Thermal power-based cost
     om_cost_per_ton::Union{Real, nothing} = nothing, # Thermal power-based fixed O&M cost
     macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
@@ -211,6 +221,7 @@ function ASHP_WaterHeater(;
 function ASHP_WaterHeater(;
     min_ton::Real = 0.0,
     max_ton::Real = BIG_NUMBER,
+    min_allowable_ton::Union{Real, Nothing} = nothing,
     installed_cost_per_ton::Union{Real, Nothing} = nothing,
     om_cost_per_ton::Union{Real, Nothing} = nothing,
     macrs_option_years::Int = 0,
@@ -241,6 +252,11 @@ function ASHP_WaterHeater(;
     end
     if isnothing(back_up_temp_threshold_degF)
         back_up_temp_threshold_degF = defaults["back_up_temp_threshold_degF"]
+    end
+    if !isnothing(min_allowable_ton)
+        min_allowable_kw = min_allowable_ton * KWH_THERMAL_PER_TONHOUR
+    else
+        min_allowable_kw = 0.0
     end
 
      #pre-set defaults that aren't mutable due to technology specifications
@@ -273,6 +289,7 @@ function ASHP_WaterHeater(;
     ASHP(
         min_kw,
         max_kw,
+        min_allowable_kw,
         installed_cost_per_kw,
         om_cost_per_kw,
         macrs_option_years,
