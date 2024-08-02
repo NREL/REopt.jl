@@ -23,6 +23,10 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop
+### Fixed
+- In `src/results/wind.jl`, fixed line incompatible with multinode and removed extraneous code
+
 ## v0.47.2
 ### Fixed
 - Increased the big-M bound on maximum net metering benefit to prevent artificially low export benefits.
