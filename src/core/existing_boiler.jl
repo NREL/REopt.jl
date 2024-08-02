@@ -11,11 +11,15 @@ struct ExistingBoiler <: AbstractThermalTech  # useful to create AbstractHeating
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}}
     fuel_type::String
     can_supply_steam_turbine::Bool
+    retire_in_optimal::Bool
     fuel_renewable_energy_fraction::Real
     emissions_factor_lb_CO2_per_mmbtu::Real
     emissions_factor_lb_NOx_per_mmbtu::Real
     emissions_factor_lb_SO2_per_mmbtu::Real
     emissions_factor_lb_PM25_per_mmbtu::Real
+    can_serve_dhw::Bool
+    can_serve_space_heating::Bool
+    can_serve_process_heat::Bool
 end
 
 
@@ -29,11 +33,15 @@ end
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [], # REQUIRED. Can be a scalar, a list of 12 monthly values, or a time series of values for every time step
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     can_supply_steam_turbine::Bool = false,
+    retire_in_optimal::Bool = false,  # Do NOT use in the optimal case (still used in BAU)
     fuel_renewable_energy_fraction::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_fraction"],fuel_type,0),
     emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0),
     emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0),
     emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0),
     emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0)
+    can_serve_dhw::Bool = true # If ExistingBoiler can supply heat to the domestic hot water load
+    can_serve_space_heating::Bool = true # If ExistingBoiler can supply heat to the space heating load
+    can_serve_process_heat::Bool = true # If ExistingBoiler can supply heat to the process heating load
 ```
 
 !!! note "Max ExistingBoiler size" 
@@ -67,12 +75,16 @@ function ExistingBoiler(;
     fuel_cost_per_mmbtu::Union{<:Real, AbstractVector{<:Real}} = [], # REQUIRED. Can be a scalar, a list of 12 monthly values, or a time series of values for every time step
     fuel_type::String = "natural_gas", # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil"]
     can_supply_steam_turbine::Bool = false,
+    retire_in_optimal::Bool = false,
     fuel_renewable_energy_fraction::Real = get(FUEL_DEFAULTS["fuel_renewable_energy_fraction"],fuel_type,0),
     emissions_factor_lb_CO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_CO2_per_mmbtu"],fuel_type,0),
     emissions_factor_lb_NOx_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_NOx_per_mmbtu"],fuel_type,0),
     emissions_factor_lb_SO2_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_SO2_per_mmbtu"],fuel_type,0),
     emissions_factor_lb_PM25_per_mmbtu::Real = get(FUEL_DEFAULTS["emissions_factor_lb_PM25_per_mmbtu"],fuel_type,0),
-    time_steps_per_hour::Int = 1
+    time_steps_per_hour::Int = 1,
+    can_serve_dhw::Bool = true,
+    can_serve_space_heating::Bool = true,
+    can_serve_process_heat::Bool = true
 )
     @assert fuel_type in FUEL_TYPES
     @assert production_type in ["steam", "hot_water"]
@@ -94,10 +106,14 @@ function ExistingBoiler(;
         fuel_cost_per_mmbtu,
         fuel_type,
         can_supply_steam_turbine,
+        retire_in_optimal,
         fuel_renewable_energy_fraction,
         emissions_factor_lb_CO2_per_mmbtu,
         emissions_factor_lb_NOx_per_mmbtu,
         emissions_factor_lb_SO2_per_mmbtu,
-        emissions_factor_lb_PM25_per_mmbtu
+        emissions_factor_lb_PM25_per_mmbtu,
+        can_serve_dhw,
+        can_serve_space_heating,
+        can_serve_process_heat
     )
 end

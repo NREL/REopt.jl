@@ -457,7 +457,9 @@ end
 @testset "Minimize Unserved Load" begin
         
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
-    results = run_reopt(m, "./scenarios/outage.json")
+    input_data = JSON.parsefile("./scenarios/outage.json")
+    input_data["Settings"] = Dict("solver_name" => "Xpress")
+    results = run_reopt(m, input_data)
 
     @test results["Outages"]["expected_outage_cost"] ≈ 0
     @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 0
@@ -472,25 +474,33 @@ end
     - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
     =#
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt(m, "./scenarios/nogridcost_minresilhours.json")
+    input_data = JSON.parsefile("./scenarios/nogridcost_minresilhours.json")
+    input_data["Settings"] = Dict("solver_name" => "Xpress")
+    results = run_reopt(m, input_data)
     @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 12
     
     # testing dvUnserved load, which would output 100 kWh for this scenario before output fix
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt(m, "./scenarios/nogridcost_multiscenario.json")
+    input_data = JSON.parsefile("./scenarios/nogridcost_multiscenario.json")
+    input_data["Settings"] = Dict("solver_name" => "Xpress")
+    results = run_reopt(m, input_data)    
     @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 60
     @test results["Outages"]["expected_outage_cost"] ≈ 485.43270 atol=1.0e-5  #avg duration (3h) * load per time step (10) * present worth factor (16.18109)
     @test results["Outages"]["max_outage_cost_per_outage_duration"][1] ≈ 161.8109 atol=1.0e-5
 
     # Scenario with generator, PV, electric storage
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt(m, "./scenarios/outages_gen_pv_stor.json")
+    input_data = JSON.parsefile("./scenarios/outages_gen_pv_stor.json")
+    input_data["Settings"] = Dict("solver_name" => "Xpress")
+    results = run_reopt(m, input_data)
     @test results["Outages"]["expected_outage_cost"] ≈ 3.54476923e6 atol=10
     @test results["Financial"]["lcc"] ≈ 8.6413594727e7 rtol=0.001
 
     # Scenario with generator, PV, wind, electric storage
     m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    results = run_reopt(m, "./scenarios/outages_gen_pv_wind_stor.json")
+    input_data = JSON.parsefile("./scenarios/outages_gen_pv_wind_stor.json")
+    input_data["Settings"] = Dict("solver_name" => "Xpress")
+    results = run_reopt(m, input_data)
     @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
     @test value(m[:binMGTechUsed]["PV"]) ≈ 1
     @test value(m[:binMGTechUsed]["Wind"]) ≈ 1
@@ -500,6 +510,7 @@ end
 
 @testset "Outages with Wind and supply-to-load no greater than critical load" begin
     input_data = JSON.parsefile("./scenarios/wind_outages.json")
+    input_data["Settings"] = Dict("solver_name" => "Xpress")
     s = Scenario(input_data)
     inputs = REoptInputs(s)
     m1 = Model(optimizer_with_attributes(Xpress.Optimizer, "MIPRELSTOP" => 0.01, "OUTPUTLOG" => 0))
@@ -555,7 +566,7 @@ end
 
     @testset "Tiered Energy" begin
         m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-        results = run_reopt(m, "./scenarios/tiered_rate.json")
+        results = run_reopt(m, "./scenarios/tiered_energy_rate.json")
         @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ 2342.88
         @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ 24000.0 atol=0.1
         @test results["ElectricLoad"]["annual_calculated_kwh"] ≈ 24000.0 atol=0.1
@@ -641,7 +652,7 @@ end
 
     # # tiered monthly demand rate  TODO: expected results?
     # m = Model(optimizer_with_attributes(Xpress.Optimizer, "OUTPUTLOG" => 0))
-    # data = JSON.parsefile("./scenarios/tiered_rate.json")
+    # data = JSON.parsefile("./scenarios/tiered_energy_rate.json")
     # data["ElectricTariff"]["urdb_label"] = "59bc22705457a3372642da67"
     # s = Scenario(data)
     # inputs = REoptInputs(s)
@@ -655,7 +666,7 @@ end
     d["Site"]["latitude"] = 30.2672
     d["Site"]["longitude"] = -97.7431
     scen = Scenario(d)
-    @test scen.financial.NOx_grid_cost_per_tonne ≈ 4534.032470 atol=0.1
+    @test scen.financial.NOx_grid_cost_per_tonne ≈ 5510.61 atol=0.1
 end
 
 @testset "Wind" begin
@@ -1218,7 +1229,7 @@ end
     headers = cop_map_mat_header[2]
     # Generate a "records" style dictionary from the 
     cop_map_list = []
-    for i in 1:length(data[:,1])
+    for i in axes(data,1)
         dict_record = Dict(name=>data[i, col] for (col, name) in enumerate(headers))
         push!(cop_map_list, dict_record)
     end
@@ -1375,82 +1386,6 @@ end
 
     reopt_ghp_capex = results_wwhp["Financial"]["lifecycle_capital_costs"]
     @test calculated_ghp_capex ≈ reopt_ghp_capex atol=300
-end
-
-@testset "Cambium Emissions" begin
-    """
-    1) Location in contiguous US
-        - Correct data from Cambium (returned location and values)
-        - Adjusted for load year vs. Cambium year (which starts on Sunday) vs. AVERT year (2022 currently)
-        - co2 pct increase should be zero
-    2) HI and AK locations
-        - Should use AVERT data and give an "info" message
-        - Adjust for load year vs. AVERT year
-        - co2 pct increase should be the default value unless user provided value 
-    3) International 
-        - all emissions should be zero unless provided
-    """
-    m1 = Model(Xpress.Optimizer)
-    m2 = Model(Xpress.Optimizer)
-
-    post_name = "cambium.json" 
-    post = JSON.parsefile("./scenarios/$post_name")
-
-    cities = Dict(
-        "Denver" => (39.7413753050447, -104.99965032911328),
-        "Fairbanks" => (64.84053664406181, -147.71913656313163),
-        "Santiago" => (-33.44485437650408, -70.69031905547853)
-    )
-
-    # 1) Location in contiguous US
-    city = "Denver"
-    post["Site"]["latitude"] = cities[city][1]
-    post["Site"]["longitude"] = cities[city][2]
-    post["ElectricLoad"]["loads_kw"] = [20 for i in range(1,8760)]
-    post["ElectricLoad"]["year"] = 2021 # 2021 First day is Fri
-    scen = Scenario(post)
-
-    @test scen.electric_utility.avert_emissions_region == "Rocky Mountains"
-    @test scen.electric_utility.distance_to_avert_emissions_region_meters ≈ 0 atol=1e-5
-    @test scen.electric_utility.cambium_emissions_region == "RMPAc"
-    @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) / 8760 ≈ 0.394608 rtol=1e-3
-    @test scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh[1] ≈ 0.677942 rtol=1e-4 # Should start on Friday
-    @test scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh[8760] ≈ 0.6598207198 rtol=1e-5 # Should end on Friday 
-    @test sum(scen.electric_utility.emissions_factor_series_lb_SO2_per_kwh) / 8760 ≈ 0.00061165 rtol=1e-5 # check avg from AVERT data for RM region
-    @test scen.electric_utility.emissions_factor_CO2_decrease_fraction ≈ 0 atol=1e-5 # should be 0 with Cambium data
-    @test scen.electric_utility.emissions_factor_SO2_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["SO2"] # should be 2.163% for AVERT data
-    @test scen.electric_utility.emissions_factor_NOx_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["NOx"]
-    @test scen.electric_utility.emissions_factor_PM25_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["PM25"]
-
-    # 2) AK location
-    city = "Fairbanks"
-    post["Site"]["latitude"] = cities[city][1]
-    post["Site"]["longitude"] = cities[city][2]
-    scen = Scenario(post)
-
-    @test scen.electric_utility.avert_emissions_region == "Alaska"
-    @test scen.electric_utility.distance_to_avert_emissions_region_meters ≈ 0 atol=1e-5
-    @test scen.electric_utility.cambium_emissions_region == "NA - Cambium data not used for climate emissions"
-    @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) / 8760 ≈ 1.29199999 rtol=1e-3 # check that data from eGRID (AVERT data file) is used
-    @test scen.electric_utility.emissions_factor_CO2_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["CO2e"] # should get updated to this value
-    @test scen.electric_utility.emissions_factor_SO2_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["SO2"] # should be 2.163% for AVERT data
-    @test scen.electric_utility.emissions_factor_NOx_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["NOx"]
-    @test scen.electric_utility.emissions_factor_PM25_decrease_fraction ≈ REopt.EMISSIONS_DECREASE_DEFAULTS["PM25"]      
-
-    # 3) International location
-    city = "Santiago"
-    post["Site"]["latitude"] = cities[city][1]
-    post["Site"]["longitude"] = cities[city][2]
-    scen = Scenario(post)
-    
-    @test scen.electric_utility.avert_emissions_region == ""
-    @test scen.electric_utility.distance_to_avert_emissions_region_meters ≈ 5.521032136418236e6 atol=1.0
-    @test scen.electric_utility.cambium_emissions_region == "NA - Cambium data not used for climate emissions"
-    @test sum(scen.electric_utility.emissions_factor_series_lb_CO2_per_kwh) ≈ 0 
-    @test sum(scen.electric_utility.emissions_factor_series_lb_NOx_per_kwh) ≈ 0 
-    @test sum(scen.electric_utility.emissions_factor_series_lb_SO2_per_kwh) ≈ 0 
-    @test sum(scen.electric_utility.emissions_factor_series_lb_PM25_per_kwh) ≈ 0 
-
 end
 
 @testset "Emissions and Renewable Energy Percent" begin
