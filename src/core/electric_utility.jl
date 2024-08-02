@@ -26,6 +26,10 @@
     cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions will be averaged over this period.
     cambium_grid_level::String = "enduse", # Options: ["enduse", "busbar"]. Busbar refers to point where bulk generating stations connect to grid; enduse refers to point of consumption (includes distribution loss rate). 
 
+    ### Grid Clean Energy Fraction Inputs ###
+    cambium_cef_col::String = "cef_load", Options = ["cef_load", "cef_gen"] # Cef_load refers to the proportion of electricity consumed (load) that in a region that comes from clean energy sources; cef_gen refers to the proportion of electricity generated in a region that comes from clean energy sources.
+    clean_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Utilities renewable energy fraction. Can be scalar or timeseries (aligned with time_steps_per_hour).
+
     # Climate Option 2: Use CO2 emissions data from the EPA's AVERT based on the AVERT emissions region and specify annual percent decrease
     co2_from_avert::Bool = false, # Default is to use Cambium data for CO2 grid emissions. Set to `true` to instead use data from the EPA's AVERT database. 
 
@@ -82,6 +86,11 @@
 !!! note "Climate and Health Emissions Modeling" 
     Climate and health-related emissions from grid electricity come from two different data sources and have different REopt inputs as described below. 
 
+    **Grid Clean Energy Fraction**
+    - For sites in the contiguous United States: 
+        - Default clean energy fraction data comes from NREL's Cambium database (Current version: 2022)
+            - By default, REopt uses *clean energy fraction* for the region in which the site is located.
+
     **Climate Emissions**
     - For sites in the contiguous United States: 
         - Default climate-related emissions factors come from NREL's Cambium database (Current version: 2022)
@@ -126,7 +135,7 @@ struct ElectricUtility
     scenarios::Union{Nothing, UnitRange} 
     net_metering_limit_kw::Real 
     interconnection_limit_kw::Real
-    clean_energy_fraction_series::Array{<:Real,1} # Utilities renewable energy fraction.
+    clean_energy_fraction_series::Union{Real,Array{<:Real,1}} # Utilities renewable energy fraction.
 
     function ElectricUtility(;
 
@@ -203,13 +212,25 @@ struct ElectricUtility
             # Initialize clean energy fraction series
             clean_energy_series_dict = Dict{String, Union{Nothing, Array{<:Real, 1}}}()
             if typeof(clean_energy_fraction_series) <: Real  # user provided scalar value
+                if clean_energy_fraction_series < 0 || clean_energy_fraction_series > 1
+                    throw(@error("The provided ElectricUtility clean energy fraction value must be between 0 and 1."))
+                end
                 clean_energy_series_dict["cef"] = repeat([clean_energy_fraction_series], 8760*time_steps_per_hour)
             elseif length(clean_energy_fraction_series) == 1  # user provided array of one value
+                if clean_energy_fraction_series[1] < 0 || clean_energy_fraction_series[1] > 1
+                    throw(@error("The provided ElectricUtility clean energy fraction value must be between 0 and 1."))
+                end
                 clean_energy_series_dict["cef"] = repeat(clean_energy_fraction_series, 8760*time_steps_per_hour)
             elseif length(clean_energy_fraction_series) / time_steps_per_hour ≈ 8760  # user provided array with correct length
+                if any(x -> x < 0 || x > 1, clean_energy_fraction_series)
+                    throw(@error("All values in the provided ElectricUtility clean energy fraction series must be between 0 and 1."))
+                end
                 clean_energy_series_dict["cef"] = clean_energy_fraction_series
             elseif length(clean_energy_fraction_series) > 1 && !(length(clean_energy_fraction_series) / time_steps_per_hour ≈ 8760)  # user provided array with incorrect length
                 if length(clean_energy_fraction_series) == 8760
+                    if any(x -> x < 0 || x > 1, clean_energy_fraction_series)
+                        throw(@error("All values in the provided ElectricUtility clean energy fraction series must be between 0 and 1."))
+                    end
                     clean_energy_series_dict["cef"] = repeat(clean_energy_fraction_series, inner=time_steps_per_hour)
                     @warn("Clean energy fraction series has been adjusted to align with time_steps_per_hour of $(time_steps_per_hour).")
                 else
