@@ -26,6 +26,10 @@
     cambium_levelization_years::Int = analysis_years, # Expected lifetime or analysis period of the intervention being studied. Emissions will be averaged over this period.
     cambium_grid_level::String = "enduse", # Options: ["enduse", "busbar"]. Busbar refers to point where bulk generating stations connect to grid; enduse refers to point of consumption (includes distribution loss rate). 
 
+    ### Grid Clean Energy Fraction Inputs ###
+    cambium_cef_col::String = "cef_load", Options = ["cef_load", "cef_gen"] # Cef_load refers to the proportion of electricity consumed (load) that in a region that comes from clean energy sources; cef_gen refers to the proportion of electricity generated in a region that comes from clean energy sources.
+    clean_energy_fraction_series::Union{Real,Array{<:Real,1}} = Float64[], # Utilities renewable energy fraction. Can be scalar or timeseries (aligned with time_steps_per_hour).
+
     # Climate Option 2: Use CO2 emissions data from the EPA's AVERT based on the AVERT emissions region and specify annual percent decrease
     co2_from_avert::Bool = false, # Default is to use Cambium data for CO2 grid emissions. Set to `true` to instead use data from the EPA's AVERT database. 
 
@@ -82,6 +86,11 @@
 !!! note "Climate and Health Emissions Modeling" 
     Climate and health-related emissions from grid electricity come from two different data sources and have different REopt inputs as described below. 
 
+    **Grid Clean Energy Fraction**
+    - For sites in the contiguous United States: 
+        - Default clean energy fraction data comes from NREL's Cambium database (Current version: 2022)
+            - By default, REopt uses *clean energy fraction* for the region in which the site is located.
+
     **Climate Emissions**
     - For sites in the contiguous United States: 
         - Default climate-related emissions factors come from NREL's Cambium database (Current version: 2022)
@@ -125,8 +134,8 @@ struct ElectricUtility
     outage_time_steps::Union{Nothing, UnitRange} 
     scenarios::Union{Nothing, UnitRange} 
     net_metering_limit_kw::Real 
-    interconnection_limit_kw::Real 
-
+    interconnection_limit_kw::Real
+    clean_energy_fraction_series::Union{Real,Array{<:Real,1}} # Utilities renewable energy fraction.
 
     function ElectricUtility(;
 
@@ -156,6 +165,11 @@ struct ElectricUtility
         outage_probabilities::Array{<:Real,1} = isempty(outage_durations) ? Float64[] : [1/length(outage_durations) for p_i in 1:length(outage_durations)],
         outage_time_steps::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:maximum(outage_durations),
         scenarios::Union{Nothing, UnitRange} = isempty(outage_durations) ? nothing : 1:length(outage_durations),
+
+        ### Grid Renewable Energy Fraction Inputs ###
+        # Utilities renewable energy fraction. Can be scalar or timeseries (aligned with time_steps_per_hour)
+        clean_energy_fraction_series::Union{Real, Array{<:Real, 1}} = Float64[],
+        cambium_cef_col::String = "cef_load",  # Column name for clean energy fraction in Cambium database
         
         ### Grid Climate Emissions Inputs ### 
         # Climate Option 1 (Default): Use levelized emissions data from NREL's Cambium database by specifying the following fields:
@@ -195,6 +209,63 @@ struct ElectricUtility
         cambium_emissions_region = "NA - Cambium data not used for climate emissions" # will be overwritten if Cambium is used
         
         if !is_MPC
+            # Initialize clean energy fraction series
+            clean_energy_series_dict = Dict{String, Union{Nothing, Array{<:Real, 1}}}()
+            if typeof(clean_energy_fraction_series) <: Real  # user provided scalar value
+                if clean_energy_fraction_series < 0 || clean_energy_fraction_series > 1
+                    throw(@error("The provided ElectricUtility clean energy fraction value must be between 0 and 1."))
+                end
+                clean_energy_series_dict["cef"] = repeat([clean_energy_fraction_series], 8760*time_steps_per_hour)
+            elseif length(clean_energy_fraction_series) == 1  # user provided array of one value
+                if clean_energy_fraction_series[1] < 0 || clean_energy_fraction_series[1] > 1
+                    throw(@error("The provided ElectricUtility clean energy fraction value must be between 0 and 1."))
+                end
+                clean_energy_series_dict["cef"] = repeat(clean_energy_fraction_series, 8760*time_steps_per_hour)
+            elseif length(clean_energy_fraction_series) / time_steps_per_hour ≈ 8760  # user provided array with correct length
+                if any(x -> x < 0 || x > 1, clean_energy_fraction_series)
+                    throw(@error("All values in the provided ElectricUtility clean energy fraction series must be between 0 and 1."))
+                end
+                clean_energy_series_dict["cef"] = clean_energy_fraction_series
+            elseif length(clean_energy_fraction_series) > 1 && !(length(clean_energy_fraction_series) / time_steps_per_hour ≈ 8760)  # user provided array with incorrect length
+                if length(clean_energy_fraction_series) == 8760
+                    if any(x -> x < 0 || x > 1, clean_energy_fraction_series)
+                        throw(@error("All values in the provided ElectricUtility clean energy fraction series must be between 0 and 1."))
+                    end
+                    clean_energy_series_dict["cef"] = repeat(clean_energy_fraction_series, inner=time_steps_per_hour)
+                    @warn("Clean energy fraction series has been adjusted to align with time_steps_per_hour of $(time_steps_per_hour).")
+                else
+                    throw(@error("The provided ElectricUtility clean energy fraction series does not match the time_steps_per_hour."))
+                end
+            else
+                # Retrieve clean energy fraction data if not user-provided
+                if cambium_start_year < 2023 || cambium_start_year > 2050
+                    @warn("The cambium_start_year must be between 2023 and 2050. Setting cambium_start_year to 2024.")
+                    cambium_start_year = 2024 # Must update annually 
+                end
+                try
+                    clean_energy_response_dict = cambium_clean_energy_fraction_profile(
+                        scenario = cambium_scenario, 
+                        location_type = cambium_location_type, 
+                        latitude = latitude, 
+                        longitude = longitude,
+                        start_year = cambium_start_year,
+                        lifetime = cambium_levelization_years,
+                        metric_col = cambium_cef_col,
+                        grid_level = cambium_grid_level,
+                        time_steps_per_hour = time_steps_per_hour,
+                        load_year = load_year,
+                        emissions_year = 2017  # Cambium data starts on a Sunday
+                    )
+                    clean_energy_series_dict["cef"] = clean_energy_response_dict["clean_energy_fraction_series"]
+                    cambium_emissions_region = clean_energy_response_dict["location"]
+                catch
+                    @warn("Could not look up Cambium renewable energy fraction profile from point ($(latitude), $(longitude)).
+                    Location is likely outside contiguous US or something went wrong with the Cambium API request. Setting clean energy fraction to zero.")
+                    clean_energy_series_dict["cef"] = zeros(Float64, 8760*time_steps_per_hour)
+                end
+            end
+           
+
             # Get AVERT emissions region
             if avert_emissions_region == ""
                 region_abbr, meters_to_region = avert_region_abbreviation(latitude, longitude)
@@ -350,12 +421,11 @@ struct ElectricUtility
             outage_time_steps,
             scenarios,
             net_metering_limit_kw,
-            interconnection_limit_kw
+            interconnection_limit_kw,
+            is_MPC ? Float64[] : clean_energy_series_dict["cef"] 
         )
     end
 end
-
-
 
 """
 Determine the AVERT region abberviation for a given lat/lon pair.
@@ -584,7 +654,7 @@ function cambium_emissions_profile(; scenario::String,
         response = JSON.parse(String(r.body)) # contains response["status"]
         output = response["message"]
         co2_emissions = output["values"] ./ 1000 # [lb / MWh] --> [lb / kWh]
-        
+
         # Align day of week of emissions and load profiles (Cambium data starts on Sundays so assuming emissions_year=2017)
         co2_emissions = align_emission_with_load_year(load_year=load_year,emissions_year=emissions_year,emissions_profile=co2_emissions) 
         
@@ -624,4 +694,81 @@ function align_emission_with_load_year(; load_year::Int, emissions_year::Int, em
     end
 
     return emissions_profile_adj
+end
+
+"""
+    cambium_clean_energy_fraction_profile(; scenario::String, 
+                                            location_type::String, 
+                                            latitude::Real, 
+                                            longitude::Real,
+                                            start_year::Int,
+                                            lifetime::Int,
+                                            grid_level::String,
+                                            time_steps_per_hour::Int=1,
+                                            load_year::Int=2017,
+                                            emissions_year::Int=2017)
+This function constructs an API request to the Cambium database to retrieve the clean energy fraction data.
+"""
+
+function cambium_clean_energy_fraction_profile(; scenario::String, 
+                                                location_type::String, 
+                                                latitude::Real, 
+                                                longitude::Real,
+                                                start_year::Int,
+                                                lifetime::Int,
+                                                metric_col::String,
+                                                grid_level::String,
+                                                time_steps_per_hour::Int=1,
+                                                load_year::Int=2017,
+                                                emissions_year::Int=2017)
+
+    url = "https://scenarioviewer.nrel.gov/api/get-levelized/"  # Cambium API endpoint
+    project_uuid = "82460f06-548c-4954-b2d9-b84ba92d63e2"  # Cambium 2022 project UUID 
+
+    # Construct the payload for the API request
+    payload = Dict(
+        "project_uuid" => project_uuid,
+        "scenario" => scenario,
+        "location_type" => location_type,
+        "latitude" => string(round(latitude, digits=3)),
+        "longitude" => string(round(longitude, digits=3)),
+        "start_year" => string(start_year),
+        "lifetime" => string(lifetime),
+        "discount_rate" => "0.0",
+        "time_type" => "hourly",
+        "metric_col" => metric_col,  # Metric for clean energy fraction
+        "smoothing_method" => "rolling",
+        "gwp" => "100yrAR6",
+        "grid_level" => grid_level,
+        "ems_mass_units" => "lb"
+    )
+
+    try
+        # Make the API request
+        r = HTTP.get(url; query=payload)
+        response = JSON.parse(String(r.body))
+        output = response["message"]
+        clean_energy_fraction = output["values"]
+        clean_energy_fraction = map(x -> Real(x), clean_energy_fraction) # Convert to Float64
+
+        # Align day of week of clean energy fraction profile with load year
+        clean_energy_fraction = align_emission_with_load_year(load_year=load_year, emissions_year=emissions_year, emissions_profile=clean_energy_fraction)
+        if time_steps_per_hour > 1
+            clean_energy_fraction = repeat(clean_energy_fraction, inner=time_steps_per_hour)
+        end
+        
+        # Return the clean energy fraction data in a dictionary
+        response_dict = Dict{String, Any}(
+            "description" => "Hourly clean energy fraction for applicable Cambium location and location_type, adjusted to align with load year $(load_year).",
+            "units" => "Fraction of clean energy",
+            "location" => output["location"],
+            "metric_col" => output["metric_col"], 
+            "clean_energy_fraction_series" => clean_energy_fraction 
+        )
+        return response_dict
+    catch
+        return Dict{String, Any}(
+            "error" => "Could not look up Cambium clean energy fraction profile from point ($(latitude), $(longitude)). Location is likely outside contiguous US or something went wrong with the Cambium API request."
+        )
+    end
 end
