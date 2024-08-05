@@ -1,5 +1,5 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
-function add_elec_storage_size_constraints(m, p, b; _n="")
+function add_storage_size_constraints(m, p, b; _n="")
     # TODO add formal types for storage (i.e. "b")
 
 	# Constraint (4b)-1: Lower bound on Storage Energy Capacity
@@ -75,8 +75,6 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
             sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) 
             + p.s.storage.attr[b].grid_charge_efficiency * m[Symbol("dvGridToStorage"*_n)][b, ts] 
             - m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.s.storage.attr[b].discharge_efficiency
-            - m[Symbol("dvStorageToElectrolyzer"*_n)][b,ts] / p.s.storage.attr[b].discharge_efficiency
-            - m[Symbol("dvStorageToCompressor"*_n)][b,ts] / p.s.storage.attr[b].discharge_efficiency
         )
 	)
 
@@ -85,8 +83,6 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
         m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  
             sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.elec) 
             - m[Symbol("dvDischargeFromStorage"*_n)][b, ts] / p.s.storage.attr[b].discharge_efficiency
-            - m[Symbol("dvStorageToElectrolyzer"*_n)][b, ts] / p.s.storage.attr[b].discharge_efficiency
-            - m[Symbol("dvStorageToCompressor"*_n)][b, ts] / p.s.storage.attr[b].discharge_efficiency
         )
     )
 
@@ -98,16 +94,20 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
 	
 	#Constraint (4k)-alt: Dispatch to and from electrical storage is no greater than power capacity
 	@constraint(m, [ts in p.time_steps_with_grid],
-        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] 
-            + m[Symbol("dvStorageToElectrolyzer"*_n)][b, ts] + m[Symbol("dvStorageToCompressor"*_n)][b, ts] +
+        m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b, ts] +
             sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) + m[Symbol("dvGridToStorage"*_n)][b, ts]
     )
 
 	#Constraint (4l)-alt: Dispatch from electrical storage is no greater than power capacity (no grid connection)
 	@constraint(m, [ts in p.time_steps_without_grid],
         m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b,ts] + 
-            m[Symbol("dvStorageToElectrolyzer"*_n)][b, ts] + m[Symbol("dvStorageToCompressor"*_n)][b, ts] +
             sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec)
+    )
+
+    #Constraint: Discharge from electric storage
+    @constraint(m, [b in p.s.storage.types.elec, ts in p.time_steps],
+        m[Symbol("dvDischargeFromStorage"*_n)][b,ts] >= m[Symbol("dvStorageToElectrolyzer"*_n)][b, ts]
+            + m[Symbol("dvStorageToCompressor"*_n)][b, ts]
     )
 					
     # Remove grid-to-storage as an option if option to grid charge is turned off
@@ -194,20 +194,12 @@ function add_cold_thermal_storage_dispatch_constraints(m, p, b; _n="")
     end
 end
 
-function add_elec_storage_sum_constraints(m, p; _n="")
+function add_storage_sum_constraints(m, p; _n="")
 
 	##Constraint (8c): Grid-to-storage no greater than grid purchases 
 	@constraint(m, [ts in p.time_steps_with_grid],
       sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) >= 
       sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec)
-    )
-end
-
-function add_hydrogen_storage_sum_constraints(m, p; _n="")
-
-	##Constraint (8c): Grid-to-hydrogen no greater than grid purchases 
-	@constraint(m, [ts in p.time_steps_with_grid],
-      sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) >= 
       + m[Symbol("dvGridToElectrolyzer"*_n)][ts]
       + m[Symbol("dvGridToCompressor"*_n)][ts]
     )

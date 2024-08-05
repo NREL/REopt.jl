@@ -496,9 +496,9 @@ function add_MG_hydrogen_constraints(m, p; _n="")
 
     # Hydrogen storage constraints
     # Initial SOC at start of each outage equals the grid-optimal SOC
-    # @constraint(m, [b in p.s.storage.types.hydrogen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps],
-    #     m[:dvMGStoredEnergy][b, s, tz, 0] <= m[:dvStoredEnergy][b, tz]
-    # )
+    @constraint(m, [b in p.s.storage.types.hydrogen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps],
+        m[:dvMGStoredEnergy][b, s, tz, 0] <= m[:dvStoredEnergy][b, tz]
+    )
     # Min SOC
     if p.s.storage.attr["HydrogenStorage"].soc_min_applies_during_outages
         @constraint(m, [b in p.s.storage.types.hydrogen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
@@ -518,16 +518,6 @@ function add_MG_hydrogen_constraints(m, p; _n="")
                 - m[:dvMGDischargeFromStorage][b, s, tz, ts]
             )
         )
-        # Constraint: Dispatch to hydrogen storage is no greater than capacity
-        @constraint(m, [b in p.s.storage.types.hydrogen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-            m[:dvStorageEnergy][b] >= 
-                sum(m[:dvMGProductionToStorage][b, t, s, tz, ts] for t in p.techs.compressor)
-        )
-        #Constraint: Dispatch to and from hydrogen storage is no greater than capacity
-        @constraint(m, [b in p.s.storage.types.hydrogen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-            m[:dvStorageEnergy][b] >= m[:dvMGDischargeFromStorage][b, s, tz, ts] +
-                sum(m[:dvMGProductionToStorage][b, t, s, tz, ts] for t in p.techs.compressor)
-        )
     else
         # Constraint: state-of-charge for hydrogen storage
         @constraint(m, [b in p.s.storage.types.hydrogen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
@@ -535,16 +525,6 @@ function add_MG_hydrogen_constraints(m, p; _n="")
                 sum(m[:dvMGProductionToStorage][b, t, s, tz, ts] for t in p.techs.electrolyzer) 
                 - m[:dvMGDischargeFromStorage][b, s, tz, ts]
             )
-        )
-        # Constraint: Dispatch to hydrogen storage is no greater than capacity
-        @constraint(m, [b in p.s.storage.types.hydrogen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-            m[:dvStorageEnergy][b] >= 
-                sum(m[:dvMGProductionToStorage][b, t, s, tz, ts] for t in p.techs.electrolyzer)
-        )
-        #Constraint: Dispatch to and from hydrogen storage is no greater than capacity
-        @constraint(m, [b in p.s.storage.types.hydrogen, s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
-            m[:dvStorageEnergy][b] >= m[:dvMGDischargeFromStorage][b, s, tz, ts] +
-                sum(m[:dvMGProductionToStorage][b, t, s, tz, ts] for t in p.techs.electrolyzer)
         )
     end
     # Storage discharges through fuel cell 

@@ -36,7 +36,7 @@
     critical_load_fraction::Real = 0.0
 ```
 """
-struct HydrogenLoad
+mutable struct HydrogenLoad
     loads_kg::Array{Real,1}
     critical_loads_kg::Array{Real,1}
     
@@ -80,7 +80,7 @@ struct HydrogenLoad
 
         new(
             loads_kg,
-            critical_loads_kg,
+            critical_loads_kg
         )
     end
 end

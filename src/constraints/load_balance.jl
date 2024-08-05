@@ -13,7 +13,9 @@ function add_elec_load_balance_constraints(m, p; _n="")
                 + sum(m[Symbol("dvProductionToElectrolyzer"*_n)][t, ts]) 
                 + sum(m[Symbol("dvProductionToCompressor"*_n)][t, ts]) 
                 + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.elec)
-            + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec)
+            + sum(m[Symbol("dvStorageToElectrolyzer"*_n)][b, ts] 
+                + m[Symbol("dvStorageToCompressor"*_n)][b, ts] 
+                + m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec)
             + m[Symbol("dvGridToElectrolyzer"*_n)][ts]
             + m[Symbol("dvGridToCompressor"*_n)][ts]
             + sum(m[Symbol("dvCoolingProduction"*_n)][t, ts] / p.cop[t] for t in setdiff(p.techs.cooling,p.techs.ghp))
@@ -33,7 +35,9 @@ function add_elec_load_balance_constraints(m, p; _n="")
                 + sum(m[Symbol("dvProductionToElectrolyzer"*_n)][t, ts]) 
                 + sum(m[Symbol("dvProductionToCompressor"*_n)][t, ts])
                 + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.elec)
-            + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec)
+            + sum(m[Symbol("dvGridToStorage"*_n)][b, ts] 
+                + m[Symbol("dvStorageToElectrolyzer"*_n)][b, ts] 
+                + m[Symbol("dvStorageToCompressor"*_n)][b, ts] for b in p.s.storage.types.elec)
             + m[Symbol("dvGridToElectrolyzer"*_n)][ts]
             + m[Symbol("dvGridToCompressor"*_n)][ts]
             + sum(m[Symbol("dvCoolingProduction"*_n)][t, ts] / p.cop[t] for t in setdiff(p.techs.cooling,p.techs.ghp))
@@ -58,6 +62,8 @@ function add_elec_load_balance_constraints(m, p; _n="")
                 + m[Symbol("dvProductionToElectrolyzer"*_n)][t, ts]
                 + m[Symbol("dvProductionToCompressor"*_n)][t, ts]
                 + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.elec)
+            + sum(m[Symbol("dvStorageToElectrolyzer"*_n)][b, ts] 
+                + m[Symbol("dvStorageToCompressor"*_n)][b, ts] for b in p.s.storage.types.elec)
             + p.s.electric_load.critical_loads_kw[ts]
         )
     else # load balancing constraint for off-grid runs - not altering off-grid to include hydrogen
@@ -69,6 +75,8 @@ function add_elec_load_balance_constraints(m, p; _n="")
                 + m[Symbol("dvProductionToElectrolyzer"*_n)][t, ts]
                 + m[Symbol("dvProductionToCompressor"*_n)][t, ts]
                 + m[Symbol("dvCurtail"*_n)][t, ts] for t in p.techs.elec)
+            + sum(m[Symbol("dvStorageToElectrolyzer"*_n)][b, ts] 
+                + m[Symbol("dvStorageToCompressor"*_n)][b, ts] for b in p.s.storage.types.elec)
             + p.s.electric_load.critical_loads_kw[ts] * m[Symbol("dvOffgridLoadServedFraction"*_n)][ts]
         )
         ##Constraint : For off-grid scenarios, annual load served must be >= minimum percent specified

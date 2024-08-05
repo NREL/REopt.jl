@@ -58,6 +58,10 @@ function add_compressor_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; 
                             )
     r["electricity_from_fuel_cell_series_kw"] = round.(value.(FuelCellToCompressor).data, digits=3)
     r["year_one_electricity_consumed_kwh"] = round(sum(r["electricity_consumed_series_kw"]), digits=2)
+    GridToCompressor = @expression(m, [ts in p.time_steps],
+                                m[Symbol("dvGridToCompressor"*_n)][ts]
+                            )
+    r["electricity_from_grid_series_kw"] = round.(value.(GridToCompressor).data, digits=3)
 
     if p.s.electrolyzer.require_compression
         CompressorProduction = @expression(m, [ts in p.time_steps],

@@ -108,7 +108,7 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         add_electrolyzer_results(m, p, d; _n)
     end
 
-    if !isempty(p.techs.compressor)
+    if !isempty(p.techs.compressor) && p.s.electrolyzer.require_compression
         add_compressor_results(m, p, d; _n)
     end
 
