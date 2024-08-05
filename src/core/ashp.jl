@@ -123,6 +123,9 @@ function ASHP_SpaceHeater(;
     if isnothing(back_up_temp_threshold_degF)
         back_up_temp_threshold_degF = defaults["back_up_temp_threshold_degF"]
     end
+    if isnothing(max_ton)
+        max_ton = defaults["max_ton"]
+    end
 
     #pre-set defaults that aren't mutable due to technology specifications
     can_supply_steam_turbine = defaults["can_supply_steam_turbine"]
@@ -253,6 +256,11 @@ function ASHP_WaterHeater(;
     if isnothing(back_up_temp_threshold_degF)
         back_up_temp_threshold_degF = defaults["back_up_temp_threshold_degF"]
     end
+
+    if isnothing(max_ton)
+        max_ton = defaults["max_ton"]
+    end
+
     if !isnothing(min_allowable_ton)
         min_allowable_kw = min_allowable_ton * KWH_THERMAL_PER_TONHOUR
     else

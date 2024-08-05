@@ -660,32 +660,40 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     cooling_cop = []
     heating_cf = []
     cooling_cf = []
-    if haskey(d, "ASHP_SpaceHeater") && d["ASHP_SpaceHeater"]["max_ton"] > 0.0
-        # ASHP Space Heater's temp back_up_temp_threshold_degF
-        if !haskey(d["ASHP_SpaceHeater"], "back_up_temp_threshold_degF")
-            ambient_temp_thres_fahrenheit = get_ashp_defaults("SpaceHeating")["back_up_temp_threshold_degF"]
+    if haskey(d, "ASHP_SpaceHeater")
+        if !haskey(d["ASHP_SpaceHeater"], "max_ton")
+            max_ton = get_ashp_defaults("SpaceHeating")["max_ton"]
         else
-            ambient_temp_thres_fahrenheit = d["ASHP_SpaceHeater"]["back_up_temp_threshold_degF"]
+            max_ton = d["ASHP_SpaceHeater"]["max_ton"]
         end
-        
-        # If PV is evaluated, get ambient temperature series from PVWatts and assign PV production factor
-        if isnothing(ambient_temp_celsius)
-            if !isempty(pvs)
-                for pv in pvs
-                    pv.production_factor_series, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
-                        array_type=pv.array_type, losses=round(pv.losses*100, digits=3), dc_ac_ratio=pv.dc_ac_ratio,
-                        gcr=pv.gcr, inv_eff=pv.inv_eff*100, timeframe="hourly", radius=pv.radius, time_steps_per_hour=settings.time_steps_per_hour)
-                end
+
+        if max_ton > 0
+            # ASHP Space Heater's temp back_up_temp_threshold_degF
+            if !haskey(d["ASHP_SpaceHeater"], "back_up_temp_threshold_degF")
+                ambient_temp_thres_fahrenheit = get_ashp_defaults("SpaceHeating")["back_up_temp_threshold_degF"]
             else
-                # if PV is not evaluated, call PVWatts to get ambient temperature series
-                pv_prodfactor, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; time_steps_per_hour=settings.time_steps_per_hour)    
+                ambient_temp_thres_fahrenheit = d["ASHP_SpaceHeater"]["back_up_temp_threshold_degF"]
             end
-        end
-        ambient_temp_fahrenheit = (9/5 .* ambient_temp_celsius) .+ 32
+            
+            # If PV is evaluated, get ambient temperature series from PVWatts and assign PV production factor
+            if isnothing(ambient_temp_celsius)
+                if !isempty(pvs)
+                    for pv in pvs
+                        pv.production_factor_series, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
+                            array_type=pv.array_type, losses=round(pv.losses*100, digits=3), dc_ac_ratio=pv.dc_ac_ratio,
+                            gcr=pv.gcr, inv_eff=pv.inv_eff*100, timeframe="hourly", radius=pv.radius, time_steps_per_hour=settings.time_steps_per_hour)
+                    end
+                else
+                    # if PV is not evaluated, call PVWatts to get ambient temperature series
+                    pv_prodfactor, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; time_steps_per_hour=settings.time_steps_per_hour)    
+                end
+            end
+            ambient_temp_fahrenheit = (9/5 .* ambient_temp_celsius) .+ 32
 
-        d["ASHP_SpaceHeater"]["ambient_temp_degF"] = ambient_temp_fahrenheit
+            d["ASHP_SpaceHeater"]["ambient_temp_degF"] = ambient_temp_fahrenheit
 
-        ashp = ASHP_SpaceHeater(;dictkeys_tosymbols(d["ASHP_SpaceHeater"])...)
+            ashp = ASHP_SpaceHeater(;dictkeys_tosymbols(d["ASHP_SpaceHeater"])...)
+        end    
     end
 
     # ASHP Water Heater:
@@ -693,34 +701,41 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     heating_cop = []
     heating_cf = []
 
-    if haskey(d, "ASHP_WaterHeater") && d["ASHP_WaterHeater"]["max_ton"] > 0.0
-        # ASHP Space Heater's temp back_up_temp_threshold_degF
-        if !haskey(d["ASHP_WaterHeater"], "back_up_temp_threshold_degF")
-            ambient_temp_thres_fahrenheit = get_ashp_defaults("DomesticHotWater")["back_up_temp_threshold_degF"]
+    if haskey(d, "ASHP_WaterHeater")
+        if !haskey(d["ASHP_WaterHeater"], "max_ton")
+            max_ton = get_ashp_defaults("DomesticHotWater")["max_ton"]
         else
-            ambient_temp_thres_fahrenheit = d["ASHP_WaterHeater"]["back_up_temp_threshold_degF"]
+            max_ton = d["ASHP_WaterHeater"]["max_ton"]
         end
-        
-        # If PV is evaluated, get ambient temperature series from PVWatts and assign PV production factor
-        if isnothing(ambient_temp_celsius)
-            if !isempty(pvs)
-                for pv in pvs
-                    pv.production_factor_series, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
-                        array_type=pv.array_type, losses=round(pv.losses*100, digits=3), dc_ac_ratio=pv.dc_ac_ratio,
-                        gcr=pv.gcr, inv_eff=pv.inv_eff*100, timeframe="hourly", radius=pv.radius, time_steps_per_hour=settings.time_steps_per_hour)
-                end
+
+        if max_ton > 0.0
+            # ASHP Space Heater's temp back_up_temp_threshold_degF
+            if !haskey(d["ASHP_WaterHeater"], "back_up_temp_threshold_degF")
+                ambient_temp_thres_fahrenheit = get_ashp_defaults("DomesticHotWater")["back_up_temp_threshold_degF"]
             else
-                # if PV is not evaluated, call PVWatts to get ambient temperature series
-                pv_prodfactor, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; time_steps_per_hour=settings.time_steps_per_hour)    
+                ambient_temp_thres_fahrenheit = d["ASHP_WaterHeater"]["back_up_temp_threshold_degF"]
             end
+            
+            # If PV is evaluated, get ambient temperature series from PVWatts and assign PV production factor
+            if isnothing(ambient_temp_celsius)
+                if !isempty(pvs)
+                    for pv in pvs
+                        pv.production_factor_series, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
+                            array_type=pv.array_type, losses=round(pv.losses*100, digits=3), dc_ac_ratio=pv.dc_ac_ratio,
+                            gcr=pv.gcr, inv_eff=pv.inv_eff*100, timeframe="hourly", radius=pv.radius, time_steps_per_hour=settings.time_steps_per_hour)
+                    end
+                else
+                    # if PV is not evaluated, call PVWatts to get ambient temperature series
+                    pv_prodfactor, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; time_steps_per_hour=settings.time_steps_per_hour)    
+                end
+            end
+            
+            ambient_temp_fahrenheit = (9/5 .* ambient_temp_celsius) .+ 32
+
+            d["ASHP_WaterHeater"]["ambient_temp_degF"] = ambient_temp_fahrenheit
+
+            ashp_wh = ASHP_WaterHeater(;dictkeys_tosymbols(d["ASHP_WaterHeater"])...)
         end
-        
-        ambient_temp_fahrenheit = (9/5 .* ambient_temp_celsius) .+ 32
-
-        d["ASHP_WaterHeater"]["ambient_temp_degF"] = ambient_temp_fahrenheit
-
-        ashp_wh = ASHP_WaterHeater(;dictkeys_tosymbols(d["ASHP_WaterHeater"])...)
-
     end
 
     return Scenario(

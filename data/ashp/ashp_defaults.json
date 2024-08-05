@@ -1,6 +1,7 @@
 {   
     "SpaceHeating":
-    {
+    {   
+        "max_ton": 99999999,
         "installed_cost_per_ton": 2250,
         "om_cost_per_ton": 40,
         "macrs_option_years": 0,
@@ -14,7 +15,8 @@
         "back_up_temp_threshold_degF": 10.0
     },
     "DomesticHotWater":
-    {
+    {   
+        "max_ton": 99999999,
         "installed_cost_per_ton": 2250,
         "om_cost_per_ton": 40,
         "macrs_option_years": 0,
