@@ -294,6 +294,9 @@ function Techs(s::Scenario)
         push!(all_techs, "FuelCell")
         push!(elec, "FuelCell")
         push!(fuel_cell_techs, "FuelCell")
+        if s.settings.off_grid_flag
+            push!(providing_oper_res, "FuelCell")
+        end
     end
 
     Techs(

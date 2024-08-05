@@ -17,8 +17,7 @@ mutable struct StorageTypes
     hot::Vector{String}
     cold::Vector{String}
     hydrogen::Vector{String}
-    hydrogen_lp::Vector{String}
-    hydrogen_hp::Vector{String}
+    nonhydrogen::Vector{String}
 end
 ```
 """
@@ -29,13 +28,10 @@ mutable struct StorageTypes
     hot::Vector{String}
     cold::Vector{String}
     hydrogen::Vector{String}
-    hydrogen_lp::Vector{String}
-    hydrogen_hp::Vector{String}
     nonhydrogen::Vector{String}
 
     function StorageTypes()
         new(
-            String[],
             String[],
             String[],
             String[],
@@ -52,8 +48,6 @@ mutable struct StorageTypes
         hot_storage = String[]
         cold_storage = String[]
         hydrogen_storage = String[]
-        hydrogen_lp_storage = String[]
-        hydrogen_hp_storage = String[]
         non_hydrogen_storage = String[]
         
         for (k,v) in d
@@ -63,14 +57,7 @@ mutable struct StorageTypes
                 if v.max_kg > 0.0
 
                     push!(all_storage, k)
-
-                    if occursin("LP", k)
-                        push!(hydrogen_lp_storage, k)
-                    elseif occursin("HP", k)
-                        push!(hydrogen_hp_storage, k)
-                    else
-                        throw(@error("Hydrogen Storage not labeled as LP or HP."))
-                    end
+                    push!(hydrogen_storage, k)
 
                 end
             else
@@ -95,7 +82,6 @@ mutable struct StorageTypes
         end
 
         thermal_storage = union(hot_storage, cold_storage)
-        hydrogen_storage = union(hydrogen_lp_storage, hydrogen_hp_storage)
 
         new(
             all_storage,
@@ -104,8 +90,6 @@ mutable struct StorageTypes
             hot_storage,
             cold_storage,
             hydrogen_storage,
-            hydrogen_lp_storage,
-            hydrogen_hp_storage,
             non_hydrogen_storage
         )
     end

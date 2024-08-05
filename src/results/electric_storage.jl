@@ -30,9 +30,6 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
     	soc = (m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps)
         r["soc_series_fraction"] = round.(value.(soc) ./ r["size_kwh"], digits=6)
 
-        discharge = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] for ts in p.time_steps)
-        r["storage_to_load_series_kw"] = round.(value.(discharge), digits=3)
-
         r["initial_capital_cost"] = r["size_kwh"] * p.s.storage.attr[b].installed_cost_per_kwh +
             r["size_kw"] * p.s.storage.attr[b].installed_cost_per_kw
 
@@ -55,6 +52,12 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::REoptInputs, d::
             BattToCompressor = (m[Symbol("dvStorageToCompressor"*_n)][b, ts] for ts in p.time_steps)
             r["storage_to_compressor_series_kw"] = round.(value.(BattToCompressor), digits=3)
         end
+
+        BattToLoad = (m[Symbol("dvDischargeFromStorage"*_n)][b, ts] 
+                        - m[Symbol("dvStorageToElectrolyzer"*_n)][b, ts] 
+                        - m[Symbol("dvStorageToCompressor"*_n)][b, ts] for ts in p.time_steps)
+        r["storage_to_load_series_kw"] = round.(value.(BattToLoad), digits=3)
+
     else
         r["soc_series_fraction"] = []
         r["storage_to_load_series_kw"] = []

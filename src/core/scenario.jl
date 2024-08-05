@@ -60,6 +60,7 @@ A Scenario struct can contain the following keys:
 - [Electrolyzer](@ref) (optional)
 - [Compressor](@ref) (optional)
 - [FuelCell](@ref) (optional)
+- [HydrogenStorage](@ref) (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
 
@@ -82,7 +83,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     # Check that only PV, electric storage, and generator are modeled for off-grid
     if settings.off_grid_flag
-        offgrid_allowed_keys = ["PV", "Wind", "ElectricStorage", "Generator", "Settings", "Site", "Financial", "ElectricLoad", "ElectricTariff", "ElectricUtility"]
+        offgrid_allowed_keys = ["PV", "Wind", "ElectricStorage", "Generator", "Settings", "Site", "Financial", "ElectricLoad", "ElectricTariff", "ElectricUtility","Electrolyzer","Compressor","FuelCell","HydrogenStorage"]
         unallowed_keys = setdiff(keys(d), offgrid_allowed_keys) 
         if !isempty(unallowed_keys)
             throw(@error("The following key(s) are not permitted when `off_grid_flag` is true: $unallowed_keys."))
@@ -186,13 +187,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         params = ColdThermalStorageDefaults(; dictkeys_tosymbols(d["ColdThermalStorage"])...)
         storage_structs["ColdThermalStorage"] = ColdThermalStorage(params, financial, settings.time_steps_per_hour)
     end
-    if haskey(d, "HydrogenStorageLP")
-        params = dictkeys_tosymbols(d["HydrogenStorageLP"])
-        storage_structs["HydrogenStorageLP"] = HydrogenStorageLP(params, financial)
-    end
-    if haskey(d, "HydrogenStorageHP")
-        params = dictkeys_tosymbols(d["HydrogenStorageHP"])
-        storage_structs["HydrogenStorageHP"] = HydrogenStorageHP(params, financial)
+    if haskey(d, "HydrogenStorage")
+        params = dictkeys_tosymbols(d["HydrogenStorage"])
+        storage_structs["HydrogenStorage"] = HydrogenStorage(params, financial)
     end
         
     storage = Storage(storage_structs)
@@ -240,16 +237,45 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     electrolyzer = nothing
     compressor = nothing
     fuel_cell = nothing
+
+    if (haskey(d, "Compressor") || haskey(d, "FuelCell") || haskey(d, "HydrogenStorage") || haskey(d, "HydrogenLoad")) && !haskey(d, "Electrolyzer")
+        throw(@error("Must include `Electrolyzer` if `Compressor`, `FuelCell`, `HydrogenStorage`, and/or `HydrogenLoad` is included"))
+    end
+
     if haskey(d, "Electrolyzer")
         electrolyzer = Electrolyzer(; dictkeys_tosymbols(d["Electrolyzer"])...)
-    end
+        if !electrolyzer.require_compression
+            compressor = Compressor(; installed_cost_per_kw = 0.0, 
+                                      om_cost_per_kw = 0.0,
+                                      om_cost_per_kwh = 0.0,
+                                      efficiency_kwh_per_kg = 0.0
+            )
+            @warn("`Compressor` will be ignored when `Electrolyzer` input `require_compression` is false.")
+        else
+            if haskey(d, "Compressor")
+                compressor = Compressor(; dictkeys_tosymbols(d["Compressor"])...)
+            else
+                compressor_inputs = Dict{Symbol, Any}()
+                compressor = Compressor(; compressor_inputs...)
+                @warn("`Compressor` inputs not provided when `Electrolyzer` input `require_compression` is true. `Compressor` default inputs will be included.")
+            end
+        end
+        
+        if !haskey(d, "HydrogenStorage")
+            hydrogen_storage_inputs = Dict{Symbol, Any}()
+            storage_structs["HydrogenStorage"] = HydrogenStorage()
+        end
 
-    if haskey(d, "Compressor")
-        compressor = Compressor(; dictkeys_tosymbols(d["Compressor"])...)
-    end
+        if haskey(d, "FuelCell")
+            fuel_cell = FuelCell(; dictkeys_tosymbols(d["FuelCell"])...)
+        else
+            fuel_cell = FuelCell(; max_kw=0)
+        end
 
-    if haskey(d, "FuelCell")
-        fuel_cell = FuelCell(; dictkeys_tosymbols(d["FuelCell"])...)
+        if !haskey(d, "FuelCell") && !haskey(d, "HydrogenLoad")
+            @warn "`FuelCell` and `HydrogenLoad` are not included to use the hydrogen stored."
+            #TODO Included hydrogen cost ($/kg) to allow pipeline/exports if FC/load not included
+        end
     end
 
     max_heat_demand_kw = 0.0

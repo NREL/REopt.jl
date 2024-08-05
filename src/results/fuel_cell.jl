@@ -63,7 +63,7 @@ function add_fuel_cell_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
                                 m[Symbol("dvRatedProduction"*_n)][t,ts] / p.s.fuel_cell.efficiency_kwh_per_kg
                                 )
 
-        r["hydrogen_consumed_series_kg"] = round.(value.(FuelCellConsumption), digits=3)
+        r["hydrogen_consumed_series_kg"] = round.(value.(FuelCellConsumption), digits=3).data
         r["year_one_hydrogen_consumed_kg"] = round(sum(r["hydrogen_consumed_series_kg"]), digits=2)
 
         if !isempty(p.s.storage.types.elec)
@@ -92,8 +92,10 @@ function add_fuel_cell_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
                     - r["electric_to_storage_series_kw"][ts] for ts in p.time_steps
         )
         r["electric_to_load_series_kw"] = round.(value.(FuelCelltoLoad), digits=3)
-        Year1FuelCellProd = (sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts] for ts in p.time_steps) * p.hours_per_time_step)
-        r["year_one_energy_produced_kwh"] = round(value(Year1FuelCellProd), digits=0)
+        @expression(m, Year1FuelCellProd,
+		p.hours_per_time_step * sum(m[Symbol("dvRatedProduction"*_n)][t,ts] * p.production_factor[t, ts]
+			for ts in p.time_steps))
+        r["year_one_energy_produced_kwh"] = round(value(Year1FuelCellProd), digits=3)
         r["annual_energy_produced_kwh"] = round(r["year_one_energy_produced_kwh"] * p.levelization_factor[t], digits=2)
 
         FuelCellPerUnitSizeOMCosts = @expression(m, p.third_party_factor * p.pwf_om * sum(m[:dvSize][t] * p.om_cost_per_kw[t] for t in p.techs.fuel_cell))

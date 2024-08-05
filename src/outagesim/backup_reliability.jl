@@ -969,16 +969,20 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         end
     end
 
-    if haskey(d, "HydrogenStorageLP") && haskey(d, "FuelCell") && haskey(d, "Electrolyzer") #TODO: condition on H2 upgraded into microgrid like with storage above?
-        #TODO: get efficiencies from HydrogenStorageLP, FuelCell, and Electrolyzer models
-        r2[:H2_charge_efficiency_kg_per_kwh] = 1.0/p.s.electrolyzer.efficiency_kwh_per_kg
+    if haskey(d, "HydrogenStorage") && haskey(d, "FuelCell") && haskey(d, "Electrolyzer") #TODO: condition on H2 upgraded into microgrid like with storage above?
+        #TODO: get efficiencies from HydrogenStorage, FuelCell, and Electrolyzer models
+        if p.s.electrolyzer.require_compression
+            r2[:H2_charge_efficiency_kg_per_kwh] = 1.0/(p.s.electrolyzer.efficiency_kwh_per_kg * p.s.compressor.efficiency_kwh_per_kg)
+        else
+            r2[:H2_charge_efficiency_kg_per_kwh] = 1.0/(p.s.electrolyzer.efficiency_kwh_per_kg)
+        end
         r2[:H2_discharge_efficiency_kwh_per_kg] = p.s.fuel_cell.efficiency_kwh_per_kg
         r2[:H2_fuelcell_size_kw] = get(d["FuelCell"], "size_kw", 0)
         r2[:H2_electrolyzer_size_kw] = get(d["Electrolyzer"], "size_kw", 0)
 
         #ERP tool uses effective storage size so need to subtract minimum SOC
-        H2_size_kg = get(d["HydrogenStorageLP"], "size_kg", 0)
-        init_soc = get(d["HydrogenStorageLP"], "soc_series_fraction", [])
+        H2_size_kg = get(d["HydrogenStorage"], "size_kg", 0)
+        init_soc = get(d["HydrogenStorage"], "soc_series_fraction", [])
         H2_starting_soc_kwh = init_soc .* H2_size_kg
         H2_minimum_soc_kwh = H2_size_kg * get(r2, :H2_minimum_soc_fraction, 0)
         r2[:H2_size_kg] = H2_size_kg - H2_minimum_soc_kwh
@@ -1507,6 +1511,7 @@ end
     return_backup_reliability(; critical_loads_kw::Vector, battery_operational_availability::Real = 0.97,
             pv_operational_availability::Real = 0.98, wind_operational_availability::Real = 0.97,
             H2_operational_availability::Real = 0.99*0.99,
+            wind_can_dispatch_without_storage::Bool = false, 
             pv_kw_ac_time_series::Vector = [], wind_kw_ac_time_series::Vector = [],
             pv_can_dispatch_without_storage::Bool = false, wind_can_dispatch_without_storage::Bool = false, 
             battery_size_kw::Real = 0.0, battery_size_kwh::Real = 0.0, H2_electrolyzer_size_kw::Real = 0.0,
@@ -1563,14 +1568,21 @@ function return_backup_reliability(;
     else
         wind_included = false
     end
-    
-    function system_characteristics_probability(; PV::Bool, wind::Bool, battery::Bool, H2::Bool)
+
+    function system_characteristics_probability(;
+        PV::Bool, wind::Bool, battery::Bool, H2::Bool,
+        # pv_included::Bool, pv_can_dispatch_without_storage::Bool,
+        # wind_included::Bool, wind_can_dispatch_without_storage::Bool,
+        # battery_size_kwh::Real, H2_size_kg::Real,
+        # pv_operational_availability::Real, wind_operational_availability::Real,
+        # battery_operational_availability::Real, H2_operational_availability::Real
+    )
         pv_term = PV ? 
-                    (pv_included && (battery || H2 || pv_can_dispatch_without_storage)) * pv_operational_availability :
-                    ((pv_included && (battery || H2 || pv_can_dispatch_without_storage)) ? 1 - pv_operational_availability : 1)
+                    (pv_included && (battery || pv_can_dispatch_without_storage)) * pv_operational_availability :
+                    ((pv_included && (battery || pv_can_dispatch_without_storage)) ? 1 - pv_operational_availability : 1)
         wind_term = wind ?
-                    (wind_included && (battery || H2 || wind_can_dispatch_without_storage)) * wind_operational_availability :
-                    ((wind_included && (battery || H2 || wind_can_dispatch_without_storage)) ? 1 - wind_operational_availability : 1)
+                    (wind_included && (battery || wind_can_dispatch_without_storage)) * wind_operational_availability :
+                    ((wind_included && (battery || wind_can_dispatch_without_storage)) ? 1 - wind_operational_availability : 1)
         battery_term = battery ?
                     (battery_size_kwh > 0) * battery_operational_availability :
                     (battery_size_kwh > 0 ? 1 - battery_operational_availability : 1)
@@ -1710,7 +1722,7 @@ function return_backup_reliability(;
             "H2_fuelcell_size_kw" => H2_fuelcell_size_kw,
             "H2_size_kg" => H2_size_kg)
     )
-    
+
     results_no_fuel_limit = []
     for (description, system) in system_characteristics
         if system["probability"] != 0
@@ -1733,10 +1745,10 @@ function return_backup_reliability(;
     end
 
     fuel_survival, fuel_used = fuel_use(; net_critical_loads_kw = net_critical_loads_pv_wind, 
-                                    battery_size_kw=battery_size_kw, battery_size_kwh=battery_size_kwh, 
-                                    H2_electrolyzer_size_kw=H2_electrolyzer_size_kw, 
-                                    H2_fuelcell_size_kw=H2_fuelcell_size_kw, 
-                                    H2_size_kg=H2_size_kg, kwargs...)
+                                battery_size_kw=battery_size_kw, battery_size_kwh=battery_size_kwh, 
+                                H2_electrolyzer_size_kw=H2_electrolyzer_size_kw, 
+                                H2_fuelcell_size_kw=H2_fuelcell_size_kw, 
+                                H2_size_kg=H2_size_kg, kwargs...)
     return results_no_fuel_limit, fuel_survival, fuel_used
 end
 

@@ -108,8 +108,11 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         add_electrolyzer_results(m, p, d; _n)
     end
 
-    if !isempty(p.techs.compressor)
+    if !isempty(p.techs.compressor) && p.s.electrolyzer.require_compression
         add_compressor_results(m, p, d; _n)
+    end
+
+    if sum(p.s.hydrogen_load.loads_kg) != 0
         add_hydrogen_load_results(m, p, d; _n)
     end
 
@@ -119,14 +122,9 @@ function reopt_results(m::JuMP.AbstractModel, p::REoptInputs; _n="")
 
     for b in p.s.storage.types.hydrogen
         if p.s.storage.attr[b].max_kg > 0
-            if b in p.s.storage.types.hydrogen_lp
-                add_hydrogen_storage_lp_results(m, p, d, b; _n)
-            elseif b in p.s.storage.types.hydrogen_hp
-                add_hydrogen_storage_hp_results(m, p, d, b; _n)
-            end
+            add_hydrogen_storage_results(m, p, d, b; _n)
         end
     end
-
 
     return d
 end

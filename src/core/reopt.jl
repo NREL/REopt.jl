@@ -210,17 +210,12 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 				@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
 				@constraint(m, m[:dvStorageEnergy][b] == 0)
 				@constraint(m, [ts in p.time_steps], m[:dvDischargeFromStorage][b, ts] == 0)
-				@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
 				@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
 					m[:dvProductionToStorage][b, t, ts] == 0)
 			else
 				add_hydrogen_storage_size_constraints(m, p, b)
 				add_general_storage_dispatch_constraints(m, p, b)
-				if b in p.s.storage.types.hydrogen_lp
-					add_lp_hydrogen_storage_dispatch_constraints(m, p, b)
-				elseif b in p.s.storage.types.hydrogen_hp
-					add_hp_hydrogen_storage_dispatch_constraints(m, p, b)
-				end
+				add_hydrogen_storage_dispatch_constraints(m, p, b)
 			end
 		elseif p.s.storage.attr[b].max_kw == 0 || p.s.storage.attr[b].max_kwh == 0
 			@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
@@ -264,12 +259,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 	end
 
-	if any(max_kw->max_kw > 0, (p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec))
-		add_storage_sum_constraints(m, p)
-	elseif any(max_kg->max_kg > 0, (p.s.storage.attr[b].max_kg for b in p.s.storage.types.hydrogen))
-		add_storage_sum_constraints(m, p)
-	end
-
+	add_storage_sum_constraints(m, p)
 	add_production_constraints(m, p)
 
     m[:TotalTechCapCosts] = 0.0
@@ -362,9 +352,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 					m[:dvStorageToElectrolyzer][b, ts] == 0)
 			@constraint(m, [t in p.techs.electrolyzer, ts in p.time_steps],
 					m[:dvRatedProduction][t,ts] == 0)
-			@constraint(m, [t in p.techs.electrolyzer, ts in p.time_steps],
-					m[:dvProductionToStorage]["HydrogenStorageLP",t,ts] == 0)
-
 			@constraint(m, [t in p.techs.elec, ts in p.time_steps],
 					m[:dvProductionToCompressor][t, ts] == 0)
 			@constraint(m, [ts in p.time_steps], m[:dvGridToCompressor][ts] == 0)
@@ -373,12 +360,12 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			@constraint(m, [t in p.techs.compressor, ts in p.time_steps],
 					m[:dvRatedProduction][t,ts] == 0)
 			@constraint(m, [t in p.techs.compressor, ts in p.time_steps],
-					m[:dvProductionToStorage]["HydrogenStorageHP",t,ts] == 0)
+					m[:dvProductionToStorage]["HydrogenStorage",t,ts] == 0)
         end
 
 		if !isempty(p.techs.compressor)
             add_compressor_constraints(m, p)
-			add_hydrogen_load_balance_constraints(m, p)
+			m[:TotalPerUnitProdOMCosts] += m[:TotalCompressorPerUnitProdOMCosts]
 		else
 			@constraint(m, [t in p.techs.elec, ts in p.time_steps],
 					m[:dvProductionToCompressor][t, ts] == 0)
@@ -388,7 +375,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			@constraint(m, [t in p.techs.compressor, ts in p.time_steps],
 					m[:dvRatedProduction][t,ts] == 0)
 			@constraint(m, [t in p.techs.compressor, ts in p.time_steps],
-					m[:dvProductionToStorage]["HydrogenStorageHP",t,ts] == 0)
+					m[:dvProductionToStorage]["HydrogenStorage",t,ts] == 0)
         end
 
 		if !isempty(p.techs.fuel_cell)
@@ -474,11 +461,24 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		if !isempty(p.s.storage.types.elec)
 			add_MG_storage_dispatch_constraints(m,p)
 		else
-			fix_MG_storage_variables(m,p)
+			fix_MG_elec_storage_variables(m,p)
 		end
+		
+		if !isempty(p.techs.fuel_cell)
+			#Fuel cell can't curtail
+			for s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps
+				fix(m[:dvMGCurtail]["FuelCell", s, tz, ts], 0.0, force=true)
+			end
+			add_MG_hydrogen_constraints(m,p)
+		else
+			@constraint(m, [s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps, ts in p.s.electric_utility.outage_time_steps],
+				m[:binMGFCIsOnInTS][s, tz, ts] == 0
+			)
+			fix_MG_hydrogen_variables(m,p)
+		end
+		
 		add_cannot_have_MG_with_only_PVwind_constraints(m,p)
 		add_MG_size_constraints(m,p)
-		
 		m[:ExpectedMGFuelCost] = 0
         if !isempty(p.techs.gen)
 			add_MG_Gen_fuel_burn_constraints(m,p)
@@ -571,6 +571,15 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	if !(isempty(p.s.storage.types.elec)) && p.s.settings.add_soc_incentive
 		m[:ObjectivePenalties] += -1 * sum(
 				m[:dvStoredEnergy][b, ts] for b in p.s.storage.types.elec, ts in p.time_steps
+			) / (8760. / p.hours_per_time_step)
+	end
+	if !(isempty(p.s.storage.types.hydrogen)) && p.s.settings.add_soc_incentive
+		#TODO Need to test if using a roundtrip efficiency would be better for hydrogen SOC incentive
+		# hydrogen_roundtrip_efficiency = (p.s.compressor.efficiency_kwh_per_kg * p.s.electrolyzer.efficiency_kwh_per_kg *
+		# 								p.s.fuel_cell.efficiency_kwh_per_kg)
+		hydrogen_roundtrip_efficiency = 1
+		m[:ObjectivePenalties] += -1 * sum(
+				hydrogen_roundtrip_efficiency * m[:dvStoredEnergy][b, ts] for b in p.s.storage.types.hydrogen, ts in p.time_steps
 			) / (8760. / p.hours_per_time_step)
 	end
 	# 3. Incentive to minimize unserved load in each outage, not just the max over outage start times
@@ -729,14 +738,14 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		# TODO: currently defining more decision variables than necessary b/c using rectangular arrays, could use dicts of decision variables instead
         @variables m begin # if there is more than one specified outage, there can be more othan one outage start time
 			dvUnservedLoad[S, tZeros, outage_time_steps] >= 0 # unserved load not met by system
-			dvMGProductionToStorage[p.techs.elec, S, tZeros, outage_time_steps] >= 0 # Electricity going to the storage system during each time_step
-			dvMGDischargeFromStorage[S, tZeros, outage_time_steps] >= 0 # Electricity coming from the storage system during each time_step
-			dvMGRatedProduction[p.techs.elec, S, tZeros, outage_time_steps]  # MG Rated Production at every time_step.  Multiply by production_factor to get actual energy
-			dvMGStoredEnergy[S, tZeros, 0:max_outage_duration] >= 0 # State of charge of the MG storage system
+			dvMGProductionToStorage[union(p.s.storage.types.elec, p.s.storage.types.hydrogen), union(p.techs.elec, p.techs.electrolyzer, p.techs.compressor), S, tZeros, outage_time_steps] >= 0 # Electricity going to the storage system during each time_step
+			dvMGDischargeFromStorage[union(p.s.storage.types.elec, p.s.storage.types.hydrogen), S, tZeros, outage_time_steps] >= 0 # Electricity coming from the storage system during each time_step
+			dvMGRatedProduction[union(p.techs.elec, p.techs.electrolyzer, p.techs.compressor), S, tZeros, outage_time_steps]  # MG Rated Production at every time_step.  Multiply by production_factor to get actual energy
+			dvMGStoredEnergy[union(p.s.storage.types.elec, p.s.storage.types.hydrogen), S, tZeros, 0:max_outage_duration] >= 0 # State of charge of the MG storage system
 			dvMaxOutageCost[S] >= 0 # maximum outage cost dependent on number of outage durations
 			dvMGTechUpgradeCost[p.techs.elec] >= 0
 			dvMGStorageUpgradeCost >= 0
-			dvMGsize[p.techs.elec] >= 0
+			dvMGsize[union(p.techs.elec, p.techs.electrolyzer, p.techs.compressor)] >= 0
 			
 			dvMGFuelUsed[p.techs.elec, S, tZeros] >= 0
             dvMGGenMaxFuelUsage[S] >= 0
@@ -747,9 +756,15 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 
 			binMGStorageUsed, Bin # 1 if MG storage battery used, 0 otherwise
 			binMGTechUsed[p.techs.elec], Bin # 1 if MG tech used, 0 otherwise
+			binMGFCIsOnInTS[S, tZeros, outage_time_steps], Bin
 			binMGGenIsOnInTS[S, tZeros, outage_time_steps], Bin
             binMGCHPIsOnInTS[S, tZeros, outage_time_steps], Bin
             dvMGCHPFuelBurnYIntercept[S, tZeros] >= 0
+
+			dvMGProductionToElectrolyzer[p.techs.elec, S, tZeros, outage_time_steps] >= 0
+			dvMGProductionToCompressor[p.techs.elec, S, tZeros, outage_time_steps] >= 0
+			dvMGStorageToElectrolyzer[p.s.storage.types.elec, S, tZeros, outage_time_steps] >= 0
+			dvMGStorageToCompressor[p.s.storage.types.elec, S, tZeros, outage_time_steps] >= 0
 		end
 	end
 

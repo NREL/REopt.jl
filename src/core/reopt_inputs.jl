@@ -1268,7 +1268,7 @@ end
 
 function get_unavailability_by_tech(s::AbstractScenario, techs::Techs, time_steps)
     if !isempty(techs.elec)
-        unavailability = Dict(tech => zeros(length(time_steps)) for tech in techs.elec)
+        unavailability = Dict(tech => zeros(length(time_steps)) for tech in union(techs.elec, techs.electrolyzer, techs.compressor))
         if !isempty(techs.chp)
             unavailability["CHP"] = [s.chp.unavailability_hourly[i] for i in 1:8760 for _ in 1:s.settings.time_steps_per_hour]
         end
