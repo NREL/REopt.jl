@@ -210,7 +210,6 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 				@constraint(m, [ts in p.time_steps], m[:dvStoredEnergy][b, ts] == 0)
 				@constraint(m, m[:dvStorageEnergy][b] == 0)
 				@constraint(m, [ts in p.time_steps], m[:dvDischargeFromStorage][b, ts] == 0)
-				@constraint(m, [ts in p.time_steps], m[:dvGridToStorage][b, ts] == 0)
 				@constraint(m, [t in p.techs.elec, ts in p.time_steps_with_grid],
 					m[:dvProductionToStorage][b, t, ts] == 0)
 			else
@@ -246,7 +245,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 				end
 			end
 		else
-			add_elec_storage_size_constraints(m, p, b)
+			add_storage_size_constraints(m, p, b)
 			add_general_storage_dispatch_constraints(m, p, b)
 			if b in p.s.storage.types.elec
 				add_elec_storage_dispatch_constraints(m, p, b)
@@ -260,14 +259,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		end
 	end
 
-	if any(max_kw->max_kw > 0, (p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec))
-		add_elec_storage_sum_constraints(m, p)
-	end
-
-	if any(max_kg->max_kg > 0, (p.s.storage.attr[b].max_kg for b in p.s.storage.types.hydrogen))
-		add_hydrogen_storage_sum_constraints(m, p)
-	end
-
+	add_storage_sum_constraints(m, p)
 	add_production_constraints(m, p)
 
     m[:TotalTechCapCosts] = 0.0
@@ -582,10 +574,12 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			) / (8760. / p.hours_per_time_step)
 	end
 	if !(isempty(p.s.storage.types.hydrogen)) && p.s.settings.add_soc_incentive
-		hydrogen_roundtrip_efficiency = (p.s.compressor.efficiency_kwh_per_kg * p.s.electrolyzer.efficiency_kwh_per_kg *
-										p.s.fuel_cell.efficiency_kwh_per_kg)
+		#TODO Need to test if using a roundtrip efficiency would be better for hydrogen SOC incentive
+		# hydrogen_roundtrip_efficiency = (p.s.compressor.efficiency_kwh_per_kg * p.s.electrolyzer.efficiency_kwh_per_kg *
+		# 								p.s.fuel_cell.efficiency_kwh_per_kg)
+		hydrogen_roundtrip_efficiency = 1
 		m[:ObjectivePenalties] += -1 * sum(
-			hydrogen_roundtrip_efficiency * m[:dvStoredEnergy][b, ts] for b in p.s.storage.types.hydrogen, ts in p.time_steps
+				hydrogen_roundtrip_efficiency * m[:dvStoredEnergy][b, ts] for b in p.s.storage.types.hydrogen, ts in p.time_steps
 			) / (8760. / p.hours_per_time_step)
 	end
 	# 3. Incentive to minimize unserved load in each outage, not just the max over outage start times

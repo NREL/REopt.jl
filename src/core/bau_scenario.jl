@@ -26,6 +26,7 @@ struct BAUScenario <: AbstractScenario
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
     process_heat_load::ProcessHeatLoad
+    hydrogen_load::HydrogenLoad
     existing_boiler::Union{ExistingBoiler, Nothing}
     existing_chiller::Union{ExistingChiller, Nothing}
     outage_outputs::OutageOutputs
@@ -110,6 +111,10 @@ function BAUScenario(s::Scenario)
     if tf > t0 && t0 > 0
         elec_load.critical_loads_kw[t0:tf] = zeros(tf-t0+1)  # set crit load to zero 
     end
+
+    hydrogen_load = deepcopy(s.hydrogen_load)
+    hydrogen_load.loads_kg = zeros(8760 * s.settings.time_steps_per_hour)
+
     outage_outputs = OutageOutputs()
 
     flexible_hvac = nothing
@@ -137,6 +142,7 @@ function BAUScenario(s::Scenario)
         s.dhw_load,
         s.space_heating_load,
         s.process_heat_load,
+        hydrogen_load,
         s.existing_boiler,
         s.existing_chiller,
         outage_outputs,

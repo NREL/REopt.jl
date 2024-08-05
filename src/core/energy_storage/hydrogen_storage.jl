@@ -45,7 +45,7 @@
     total_rebate_per_kg::Real = 0.0
     minimum_avg_soc_fraction::Float64 = 0.0
     soc_min_applies_during_outages::Bool = false
-    require_start_and_end_charge_to_be_equal::Bool = false
+    require_start_and_end_charge_to_be_equal::Bool = true
 ```
 """
 Base.@kwdef struct HydrogenStorageDefaults
@@ -63,7 +63,7 @@ Base.@kwdef struct HydrogenStorageDefaults
     total_rebate_per_kg::Real = 0.0
     minimum_avg_soc_fraction::Float64 = 0.0
     soc_min_applies_during_outages::Bool = false
-    require_start_and_end_charge_to_be_equal::Bool = false
+    require_start_and_end_charge_to_be_equal::Bool = true
 end
 
 

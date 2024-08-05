@@ -32,14 +32,8 @@ function add_electrolyzer_constraints(m, p; _n="")
 
 	if !isempty(p.techs.electrolyzer)
         
-        #TODO Check if necessary
-        @constraint(m, [ts in p.time_steps_with_grid],
-            sum(m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.electrolyzer) >= 
-                sum(m[Symbol("dvStoredEnergy")][b,ts] for b in p.s.storage.types.hydrogen)
-        )
-
         #Constraint: Fuel cell cannot supply electrolyzer
-        @constraint(m, [ts in p.time_steps_with_grid], 
+        @constraint(m, [ts in p.time_steps], 
             sum(m[Symbol("dvProductionToElectrolyzer"*_n)][t, ts] for t in p.techs.fuel_cell) == 0
         )
 
@@ -58,6 +52,12 @@ function add_electrolyzer_constraints(m, p; _n="")
             ==
             sum(m[Symbol("dvProductionToElectrolyzer"*_n)][t, ts] for t in p.techs.elec)
             + sum(m[Symbol("dvStorageToElectrolyzer"*_n)][b, ts] for b in p.s.storage.types.elec) 
+        )
+
+        @constraint(m, [ts in p.time_steps_with_grid], 
+            (p.hours_per_time_step * sum(p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] for t in p.techs.electrolyzer)) 
+            >=
+            sum(p.s.storage.attr[b].soc_min_fraction * m[Symbol("dvStorageEnergy"*_n)][b] for b in p.s.storage.types.hydrogen)
         )
         
         #Constraint: Dispatch hydrogen produced to compressor
@@ -100,7 +100,7 @@ function add_compressor_constraints(m, p; _n="")
         )
 
         #Constraint: Fuel cell cannot supply compressor
-        @constraint(m, [ts in p.time_steps_with_grid], 
+        @constraint(m, [ts in p.time_steps], 
             sum(m[Symbol("dvProductionToCompressor"*_n)][t, ts] for t in p.techs.fuel_cell) == 0
         )
         

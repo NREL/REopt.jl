@@ -63,6 +63,10 @@ function add_electrolyzer_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict
                                 sum(m[Symbol("dvProductionToElectrolyzer"*_n)][t, ts] for t in p.techs.fuel_cell)
                             )
     r["electricity_from_fuel_cell_series_kw"] = round.(value.(FuelCellToElectrolyzer).data, digits=3)
+    PVToElectrolyzer = @expression(m, [ts in p.time_steps],
+                                sum(m[Symbol("dvProductionToElectrolyzer"*_n)][t, ts] for t in p.techs.pv)
+                            )
+    r["electricity_from_pv_series_kw"] = round.(value.(PVToElectrolyzer).data, digits=3)
     r["year_one_electricity_consumed_kwh"] = round(sum(r["electricity_consumed_series_kw"]), digits=2)
 
     ElectrolyzerProduction = @expression(m, [ts in p.time_steps],
