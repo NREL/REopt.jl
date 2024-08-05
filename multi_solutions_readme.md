@@ -35,25 +35,24 @@ For each scenario, the scaling factor only applies to one technology at a time, 
    {
     "optimal": {
         "status": "optimal",
-        "Simple payback period": 6.72,
-        "Net Present Value": 4.23378773e6,
+        "Simple payback period": 6.59,
+        "Net Present Value": 4.92684138e6,
         "status": "optimal",
-        "Net capital cost": 6.2236811914e6,
-        "Internal Rate of Return %": 12.3,
-        "Site life cycle CO2 tonnes": 5518.22
+        "Net capital cost": 8.0814042671e6,
+        "Internal Rate of Return %": 12.1,
         },        
         "PV": {
-            "Capital cost": 2.9387651486586295e6,
-            "Annual maintenance cost": 61478.709899999994,
-            "Average annual energy produced": 6.131804e6,
-            "Rated capacity": 3616.3947
+            "Capital cost": 4.36595953201539e6,
+            "Annual maintenance cost": 84643.0866,
+            "Average annual energy produced": 8.627216e6,
+            "Rated capacity": 4702.3937
         },
         "ElectricStorage": {
-            "Capital cost": 1.3586723305624602e6,
-            "Rated inverter capacity": 961.82,
-            "Rated energy capacity": 5350.36,
-            "Total replacement cost": 770532.6255763071
-        }
+            "Capital cost": 2.1694660118164606e6,
+            "Rated inverter capacity": 1424.1,
+            "Rated energy capacity": 7226.28,
+            "Total replacement cost": 1.5459786780817788e6
+        },
     "PV_size_scale_0.8": {
         "status": "optimal",        
         "Simple payback period": 6.39,
