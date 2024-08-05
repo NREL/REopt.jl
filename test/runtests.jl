@@ -2435,6 +2435,7 @@ else  # run HiGHS tests
                 d["ExistingBoiler"]["retire_in_optimal"] = false
                 d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = 100
                 d["ASHP_SpaceHeater"]["installed_cost_per_ton"] = 300
+                d["ASHP_SpaceHeater"]["min_allowable_ton"] = 80.0
                 
                 p = REoptInputs(d)            
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
@@ -2442,7 +2443,7 @@ else  # run HiGHS tests
                 annual_thermal_prod = 0.8 * 8760  #80% efficient boiler --> 0.8 MMBTU of heat load per hour
                 annual_ashp_consumption = sum(0.8 * REopt.KWH_PER_MMBTU / p.heating_cop["ASHP_SpaceHeater"][ts] for ts in p.time_steps)
                 annual_energy_supplied = 87600 + annual_ashp_consumption
-                @test results["ASHP_SpaceHeater"]["size_ton"] ≈ 74.99 atol=0.01
+                @test results["ASHP_SpaceHeater"]["size_ton"] ≈ 80.0 atol=0.01
                 @test results["ASHP_SpaceHeater"]["annual_thermal_production_mmbtu"] ≈ annual_thermal_prod rtol=1e-4
                 @test results["ASHP_SpaceHeater"]["annual_electric_consumption_kwh"] ≈ annual_ashp_consumption rtol=1e-4
                 @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ annual_energy_supplied rtol=1e-4
@@ -2459,9 +2460,9 @@ else  # run HiGHS tests
 
                 annual_ashp_consumption += 0.1 * sum(REopt.KWH_THERMAL_PER_TONHOUR / p.cooling_cop["ASHP_SpaceHeater"][ts] for ts in p.time_steps)
                 annual_energy_supplied = annual_ashp_consumption + 87600 - 2*876.0*REopt.KWH_THERMAL_PER_TONHOUR
-                @test results["ASHP_SpaceHeater"]["size_ton"] ≈ 75.07 atol=0.01 #size increases when cooling load also served
+                @test results["ASHP_SpaceHeater"]["size_ton"] ≈ 80.0 atol=0.01 #size increases when cooling load also served
                 @test results["ASHP_SpaceHeater"]["annual_electric_consumption_kwh"] ≈ annual_ashp_consumption rtol=1e-4
-                @test results["ASHP_SpaceHeater"]["annual_thermal_production_tonhour"] ≈ 873.9 atol=1e-4
+                @test results["ASHP_SpaceHeater"]["annual_thermal_production_tonhour"] ≈ 873.9 rtol=1e-4
             
                 #Case 4: ASHP used for everything because the existing boiler and chiller are retired even if efficient or free to operate
                 d["ExistingChiller"] = Dict("retire_in_optimal" => true, "cop" => 100)
