@@ -94,7 +94,7 @@ function ASHP_SpaceHeater(;
         heating_cop_reference::Array{Float64,1} = Float64[],
         heating_cf_reference::Array{Float64,1} = Float64[],
         heating_reference_temps::Array{Float64,1} = Float64[],
-        back_up_temp_threshold_degF::Real = 10.0,
+        back_up_temp_threshold_degF::Union{Real, Nothing} = nothing,
         cooling_cop_reference::Array{Float64,1} = Float64[],
         cooling_cf_reference::Array{Float64,1} = Float64[],
         cooling_reference_temps::Array{Float64,1} = Float64[],
@@ -233,7 +233,7 @@ function ASHP_WaterHeater(;
     heating_cop_reference::Array{Float64,1} = Float64[],
     heating_cf_reference::Array{Float64,1} = Float64[],
     heating_reference_temps::Array{Float64,1} = Float64[],
-    back_up_temp_threshold_degF::Real = 10.0,
+    back_up_temp_threshold_degF::Union{Real, Nothing} = nothing,
     ambient_temp_degF::Array{Float64,1} = Float64[]
     )
 
