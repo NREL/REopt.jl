@@ -386,7 +386,7 @@ function get_default_ashp_heating(ambient_temp_degF, back_up_temp_threshold_degF
     heating_cop = round.(0.0462 .* ambient_temp_degF .+ 1.351, digits=3)
     heating_cop[ambient_temp_degF .<= back_up_temp_threshold_degF] .= 1
     heating_cf = round.(0.0116 .* ambient_temp_degF .+ 0.4556, digits=3)
-    heating_cf[heating_cop .<= 1.0] .= 1.0
+    heating_cf[heating_cop .== 1.0] .= 1.0
     return heating_cop, heating_cf
 end
 
