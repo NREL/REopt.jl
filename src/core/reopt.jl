@@ -296,13 +296,11 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             add_heating_tech_constraints(m, p)
         end
 
-        # Zero out ExistingBoiler production if retire_in_optimal; new_heating_techs avoids zeroing for BAU 
-        new_heating_techs = ["CHP", "Boiler", "ElectricHeater", "SteamTurbine"]
-        if !isempty(intersect(new_heating_techs, p.techs.all))
-            if !isnothing(p.s.existing_boiler) && p.s.existing_boiler.retire_in_optimal
-                no_existing_boiler_production(m, p)
-            end
+        # Zero out ExistingBoiler production if retire_in_optimal
+		if !isnothing(p.s.existing_boiler) && p.s.existing_boiler.retire_in_optimal && !isempty(setdiff(union(p.techs.chp,p.techs.heating), ["ExistingBoiler"]))
+			no_existing_boiler_production(m, p)
         end
+		
 
         if !isempty(p.techs.boiler)
             add_boiler_tech_constraints(m, p)
@@ -313,6 +311,19 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		if !isempty(p.techs.cooling)
             add_cooling_tech_constraints(m, p)
         end
+
+		# Zero out ExistingChiller production if retire_in_optimal; setdiff avoids zeroing for BAU 
+		if !isnothing(p.s.existing_chiller) && p.s.existing_chiller.retire_in_optimal && !isempty(setdiff(p.techs.cooling, ["ExistingChiller"]))
+			no_existing_chiller_production(m, p)
+		end
+
+        if !isempty(setdiff(intersect(p.techs.cooling, p.techs.heating), p.techs.ghp))
+            add_heating_cooling_constraints(m, p)
+        end
+
+		if !isempty(p.techs.ashp)
+			add_ashp_force_in_constraints(m, p)
+		end
     
         if !isempty(p.techs.thermal)
             add_thermal_load_constraints(m, p)  # split into heating and cooling constraints?

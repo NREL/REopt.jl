@@ -176,3 +176,8 @@ REopt.SteamTurbine
 ```@docs
 REopt.ElectricHeater
 ```
+
+## ASHP
+```@docs
+REopt.ASHP
+```
