@@ -45,6 +45,7 @@
     total_rebate_per_kg::Real = 0.0
     minimum_avg_soc_fraction::Float64 = 0.0
     soc_min_applies_during_outages::Bool = false
+    daily_leakage_fraction::Float64 = 0.0
     require_start_and_end_charge_to_be_equal::Bool = true
 ```
 """
@@ -63,6 +64,7 @@ Base.@kwdef struct HydrogenStorageDefaults
     total_rebate_per_kg::Real = 0.0
     minimum_avg_soc_fraction::Float64 = 0.0
     soc_min_applies_during_outages::Bool = false
+    daily_leakage_fraction::Float64 = 0.0
     require_start_and_end_charge_to_be_equal::Bool = true
 end
 
@@ -114,7 +116,7 @@ struct HydrogenStorage <: AbstractHydrogenStorage
     
         return new(
             s.min_kg,
-            s.max_kg,
+        s.max_kg,
             s.soc_min_fraction,
             s.soc_init_fraction,
             s.installed_cost_per_kg,
@@ -128,6 +130,7 @@ struct HydrogenStorage <: AbstractHydrogenStorage
             net_present_cost_per_kg,
             s.minimum_avg_soc_fraction,
             s.soc_min_applies_during_outages,
+            s.daily_leakage_fraction,
             s.require_start_and_end_charge_to_be_equal
         )
     end

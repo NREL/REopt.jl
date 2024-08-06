@@ -165,7 +165,8 @@ end
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
-    daily_leakage_fraction::Float64 = 0.03
+    daily_leakage_fraction::Float64 = 0.0
+    fixed_dispatch_series::Union{Nothing, Array{Real,1}} = nothing
 ```
 """
 Base.@kwdef struct ElectricStorageDefaults
@@ -199,7 +200,8 @@ Base.@kwdef struct ElectricStorageDefaults
     model_degradation::Bool = false
     degradation::Dict = Dict()
     minimum_avg_soc_fraction::Float64 = 0.0
-    daily_leakage_fraction::Float64 = 0.03
+    daily_leakage_fraction::Float64 = 0.0
+    fixed_dispatch_series::Union{Nothing, Array{Real,1}} = nothing
 end
 
 
