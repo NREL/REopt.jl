@@ -91,13 +91,20 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
         m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b,ts] + 
             sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec)
     )
-					
-    # Remove grid-to-storage as an option if option to grid charge is turned off
+			
+    #Constraint (4m)-1: Remove grid-to-storage as an option if option to grid charge is turned off
     if !(p.s.storage.attr[b].can_grid_charge)
         for ts in p.time_steps_with_grid
             fix(m[Symbol("dvGridToStorage"*_n)][b, ts], 0.0, force=true)
         end
 	end
+
+    #Constraint (4m)-2: Force storage export to grid to zero if option to grid export is turned off
+    if !p.s.storage.attr[b].can_export_to_grid
+        for ts in p.time_steps
+            fix(m[Symbol("dvStorageToGrid"*_n)][b, ts], 0.0, force=true)
+        end
+    end
 
     if p.s.storage.attr[b].minimum_avg_soc_fraction > 0
         avg_soc = sum(m[Symbol("dvStoredEnergy"*_n)][b, ts] for ts in p.time_steps) /
