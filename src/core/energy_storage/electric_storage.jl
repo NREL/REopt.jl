@@ -170,7 +170,7 @@ end
     minimum_avg_soc_fraction::Float64 = 0.0
     self_discharge_fraction_per_timestep::Float64 = 0.0 # Battery self-discharge as a fraction per timestep loss based on kWh stored in each timestep
     fixed_duration::Union{Real, Nothing} = nothing
-    require_start_and_end_charge_to_be_equal::Bool = false
+    optimize_soc_init_fraction::Bool = false
     allow_simultaneous_charge_discharge::Bool = true # Simultaneous charge/discharge is typically suboptimal anyway and allowing this avoids additional binary variables (which can slow solve time)
 ``` 
 """
@@ -210,7 +210,7 @@ Base.@kwdef struct ElectricStorageDefaults
     minimum_avg_soc_fraction::Float64 = 0.0
     self_discharge_fraction_per_timestep::Float64 = 0.0
     fixed_duration::Union{Real, Nothing} = nothing
-    require_start_and_end_charge_to_be_equal::Bool = false
+    optimize_soc_init_fraction::Bool = false
     allow_simultaneous_charge_discharge::Bool = true
 end
 
@@ -258,7 +258,7 @@ struct ElectricStorage <: AbstractElectricStorage
     minimum_avg_soc_fraction::Float64
     self_discharge_fraction_per_timestep::Float64
     fixed_duration::Union{Real, Nothing}
-    require_start_and_end_charge_to_be_equal::Bool
+    optimize_soc_init_fraction::Bool
     allow_simultaneous_charge_discharge::Bool
 
     function ElectricStorage(d::Dict, f::Financial)  
@@ -353,7 +353,7 @@ struct ElectricStorage <: AbstractElectricStorage
             s.minimum_avg_soc_fraction,
             s.self_discharge_fraction_per_timestep,
             s.fixed_duration,
-            s.require_start_and_end_charge_to_be_equal,
+            s.optimize_soc_init_fraction,
             s.allow_simultaneous_charge_discharge
         )
     end
