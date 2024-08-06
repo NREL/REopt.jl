@@ -2462,7 +2462,7 @@ else  # run HiGHS tests
                 annual_energy_supplied = annual_ashp_consumption + 87600 - 2*876.0*REopt.KWH_THERMAL_PER_TONHOUR
                 @test results["ASHP_SpaceHeater"]["size_ton"] ≈ 80.0 atol=0.01 #size increases when cooling load also served
                 @test results["ASHP_SpaceHeater"]["annual_electric_consumption_kwh"] ≈ annual_ashp_consumption rtol=1e-4
-                @test results["ASHP_SpaceHeater"]["annual_thermal_production_tonhour"] ≈ 873.9 rtol=1e-4
+                @test results["ASHP_SpaceHeater"]["annual_thermal_production_tonhour"] ≈ 876.0 rtol=1e-4
             
                 #Case 4: ASHP used for everything because the existing boiler and chiller are retired even if efficient or free to operate
                 d["ExistingChiller"] = Dict("retire_in_optimal" => true, "cop" => 100)

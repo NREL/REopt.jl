@@ -342,7 +342,7 @@ function get_ashp_performance(cop_reference,
                 cf_reference,
                 reference_temps,
                 ambient_temp_degF,
-                back_up_temp_threshold = 10.0
+                back_up_temp_threshold_degF = 10.0
                 )
 """
 function get_ashp_performance(cop_reference,
