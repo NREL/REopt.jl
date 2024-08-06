@@ -63,6 +63,39 @@ else  # run HiGHS tests
             dataset, distance, datasource = REopt.call_solar_dataset_api(latitude, longitude, radius)
             @test dataset ≈ "tmy3"  
         end
+        @testset "ASHP COP and CF Profiles" begin
+            #Heating profiles
+            heating_reference_temps = [10,20,30]
+            heating_cop_reference = [1,3,4]
+            heating_cf_performance = [1.2,1.3,1.5]
+            back_up_temp_threshold_degF = 10
+            test_temps = [5,15,25,35]
+            test_cops = [1.0,2.0,3.5,4.0]
+            test_cfs = [1.0,1.25,1.4,1.5]
+            cop, cf = REopt.get_ashp_performance(heating_cop_reference,
+                heating_cf_performance,
+                heating_reference_temps,
+                ambient_temp_degF,
+                back_up_temp_threshold_degF)
+            @test all(cop .== test_cops)
+            @test all(cf .== test_cfs)
+            #Cooling profiles
+            cooling_reference_temps = [30,20,10]
+            cooling_cop_reference = [1,3,4]
+            cooling_cf_performance = [1.2,1.3,1.5]
+            back_up_temp_threshold_degF = 10
+            test_temps = [35,25,15,5]
+            test_cops = [1.0,2.0,3.5,4.0]
+            test_cfs = [1.2,1.25,1.4,1.5]
+            cop, cf = REopt.get_ashp_performance(heating_cop_reference,
+                heating_cf_performance,
+                heating_reference_temps,
+                ambient_temp_degF,
+                back_up_temp_threshold_degF)
+            @test all(cop .== test_cops)
+            @test all(cf .== test_cfs)
+
+        end
     end
 
     @testset "January Export Rates" begin
