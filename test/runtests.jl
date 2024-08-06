@@ -83,18 +83,17 @@ else  # run HiGHS tests
             cooling_reference_temps = [30,20,10]
             cooling_cop_reference = [1,3,4]
             cooling_cf_performance = [1.2,1.3,1.5]
-            back_up_temp_threshold_degF = 10
+            back_up_temp_threshold_degF = -200
             test_temps = [35,25,15,5]
             test_cops = [1.0,2.0,3.5,4.0]
             test_cfs = [1.2,1.25,1.4,1.5]
-            cop, cf = REopt.get_ashp_performance(heating_cop_reference,
-                heating_cf_performance,
-                heating_reference_temps,
+            cop, cf = REopt.get_ashp_performance(cooling_cop_reference,
+                cooling_cf_performance,
+                cooling_reference_temps,
                 test_temps,
                 back_up_temp_threshold_degF)
             @test all(cop .== test_cops)
             @test all(cf .== test_cfs)
-
         end
     end
 
