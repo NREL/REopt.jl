@@ -24,7 +24,8 @@
         "macrs_option_years": 0,
         "macrs_bonus_fraction": 0,
         "soc_init_fraction": 1.0,
-        "soc_min_fraction": 0.0
+        "soc_min_fraction": 0.0,
+        "can_export_to_grid": true
     },
     "ElectricTariff": {
         "urdb_label": "5ed6c1a15457a3367add15ae"
