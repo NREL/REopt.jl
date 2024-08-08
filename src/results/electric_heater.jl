@@ -20,6 +20,7 @@
 function add_electric_heater_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
     r["size_mmbtu_per_hour"] = round(value(m[Symbol("dvSize"*_n)]["ElectricHeater"]) / KWH_PER_MMBTU, digits=3)
+    r["initial_capital_cost"] = round(value(m[Symbol("dvSize"*_n)]["ElectricHeater"]) * p.s.electric_heater.installed_cost_per_kw, digits=3)
     @expression(m, ElectricHeaterElectricConsumptionSeries[ts in p.time_steps],
         p.hours_per_time_step * sum(m[:dvHeatingProduction][t,q,ts] / p.heating_cop[t] 
         for q in p.heating_loads, t in p.techs.electric_heater))
@@ -85,8 +86,6 @@ function add_electric_heater_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
         @expression(m, ElectricHeaterToProcessHeatKW[ts in p.time_steps], 0.0)
     end
     r["thermal_to_process_heat_load_series_mmbtu_per_hour"] = round.(value.(ElectricHeaterToProcessHeatKW ./ KWH_PER_MMBTU), digits=5)
-
-	r["initial_capital_cost"] = round(value(m[Symbol("dvSize"*_n)][t]) * p.s.electric_heater.installed_cost_per_kw, digits=3)
 
     d["ElectricHeater"] = r
 	nothing

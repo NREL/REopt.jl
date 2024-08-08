@@ -25,6 +25,7 @@ function add_steam_turbine_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
     r = Dict{String, Any}()
 
 	r["size_kw"] = round(value(sum(m[Symbol("dvSize"*_n)][t] for t in p.techs.steam_turbine)), digits=3)
+	r["initial_capital_cost"] = round(value(sum(m[Symbol("dvSize"*_n)][t] for t in p.techs.steam_turbine)) * p.s.steam_turbine.installed_cost_per_kw, digits=3)
     @expression(m, Year1SteamTurbineThermalConsumptionKWH,
 		p.hours_per_time_step * sum(m[Symbol("dvThermalToSteamTurbine"*_n)][tst,q,ts] for tst in p.techs.can_supply_steam_turbine, q in p.heating_loads, ts in p.time_steps))
     r["annual_thermal_consumption_mmbtu"] = round(value(Year1SteamTurbineThermalConsumptionKWH) / KWH_PER_MMBTU, digits=5)
@@ -99,10 +100,7 @@ function add_steam_turbine_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
         @expression(m, SteamTurbineToProcessHeatKW[ts in p.time_steps], 0.0)
     end
     r["thermal_to_process_heat_load_series_mmbtu_per_hour"] = round.(value.(SteamTurbineToProcessHeatKW ./ KWH_PER_MMBTU), digits=5)
-
 	
-	r["initial_capital_cost"] = round(value(m[Symbol("dvSize"*_n)][t]) * p.s.steam_turbine.installed_cost_per_kw, digits=3)
-
 	d["SteamTurbine"] = r
 	nothing
 end
