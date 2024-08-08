@@ -66,7 +66,7 @@ function add_wind_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
 	r["annual_energy_produced_kwh"] = round(value(AvgWindProd), digits=0)
 
     r["lcoe_per_kwh"] = calculate_lcoe(p, r, p.s.wind)
-	r["initial_capital_cost"] = value(m[Symbol("dvSize"*_n)][t]) * p.s.wind.installed_cost_per_kw
+	r["initial_capital_cost"] = round(value(m[Symbol("dvSize"*_n)][t]) * p.s.wind.installed_cost_per_kw, digits=3)
 	d[t] = r
     nothing
 end
