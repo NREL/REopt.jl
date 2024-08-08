@@ -86,6 +86,8 @@ function add_electric_heater_results(m::JuMP.AbstractModel, p::REoptInputs, d::D
     end
     r["thermal_to_process_heat_load_series_mmbtu_per_hour"] = round.(value.(ElectricHeaterToProcessHeatKW ./ KWH_PER_MMBTU), digits=5)
 
+	r["initial_capital_cost"] = round(value(m[Symbol("dvSize"*_n)][t]) * p.s.electric_heater.installed_cost_per_kw, digits=3)
+
     d["ElectricHeater"] = r
 	nothing
 end
