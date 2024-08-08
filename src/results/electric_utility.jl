@@ -137,10 +137,10 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::MPCInputs, d::Di
     end
 
     if _n=="" #only output emissions results if not a multinode model
-        r["emissions_tonnes_CO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2]*TONNE_PER_LB), digits=5)
-        r["emissions_tonnes_NOx"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx]*TONNE_PER_LB), digits=5)
-        r["emissions_tonnes_SO2"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2]*TONNE_PER_LB), digits=5)
-        r["emissions_tonnes_PM25"] = round(value(m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25]*TONNE_PER_LB), digits=5)
+        r["emissions_series_tonnes_CO2"] = round.(value.(m[:yr1_emissions_from_elec_grid_net_if_selected_series_lbs_CO2]*TONNE_PER_LB), digits=5)
+        r["emissions_series_tonnes_NOx"] = round.(value.(m[:yr1_emissions_from_elec_grid_net_if_selected_series_lbs_NOx]*TONNE_PER_LB), digits=5)
+        r["emissions_series_tonnes_SO2"] = round.(value.(m[:yr1_emissions_from_elec_grid_net_if_selected_series_lbs_SO2]*TONNE_PER_LB), digits=5)
+        r["emissions_series_tonnes_PM25"] = round.(value.(m[:yr1_emissions_from_elec_grid_net_if_selected_series_lbs_PM25]*TONNE_PER_LB), digits=5)
     end
 
     d["ElectricUtility"] = r
