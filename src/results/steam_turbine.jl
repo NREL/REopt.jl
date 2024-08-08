@@ -101,6 +101,8 @@ function add_steam_turbine_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
     r["thermal_to_process_heat_load_series_mmbtu_per_hour"] = round.(value.(SteamTurbineToProcessHeatKW ./ KWH_PER_MMBTU), digits=5)
 
 	
+	r["initial_capital_cost"] = round(value(m[Symbol("dvSize"*_n)][t]) * p.s.steam_turbine.installed_cost_per_kw, digits=3)
+
 	d["SteamTurbine"] = r
 	nothing
 end
