@@ -199,6 +199,7 @@ include("outagesim/outage_simulator.jl")
 include("outagesim/backup_reliability.jl")
 
 include("lindistflow/extend.jl")
+include("lindistflow/power_flow.jl")
 
 include("mpc/results.jl")
 include("mpc/model.jl")

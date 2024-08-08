@@ -6,9 +6,10 @@
 # The main function to run all parts of the model (the optimization, the outage simulator, and the OpenDSS post-processor)
 function Microgrid_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary)
     # This function accepts three inputs:
-        # 1. The Microgrid_Inputs
-        # 2. ldf_inputs_dictionary (for LinDistFlow)
-        # 3. The REopt inputs dictionaries 
+        # 1. The JuMP model
+        # 2. The Microgrid_Inputs
+        # 3. network_inputs_dictionary
+         
 
     StartTime_EntireModel = now() # record the start time for the computation
     cd(Microgrid_Settings["FolderLocation"])
@@ -159,7 +160,7 @@ function Microgrid_REopt_Model(JuMP_Model, Microgrid_Inputs, ldf_inputs_dictiona
         # 1. importing an OpenDSS file for the lines and linecodes (the method used in this script)
         # 2. manually building out a distribution network information
 
-    ldf_inputs = LinDistFlow.Inputs(
+    ldf_inputs = PowerFlowInputs(
         ldf_inputs_dictionary["LinesFileLocation"], 
         ldf_inputs_dictionary["SubstationLocation"], # this is the location of the substation bus (aka, where the power is being input into the network)
         ldf_inputs_dictionary["LineCodesFileLocation"];
@@ -195,7 +196,7 @@ function Microgrid_REopt_Model(JuMP_Model, Microgrid_Inputs, ldf_inputs_dictiona
     @info "Building the REopt model"
     build_reopt!(m,ps)
     @info "Adding ldf constraints"
-    LinDistFlow.build_ldf!(m, ldf_inputs, ps)  # The ps is an input here because this input structure for "build_ldf!" is defined in REopt's extend.jl file
+    build_power_flow!(m, ldf_inputs, ps)  # The ps is an input here because this input structure for "build_ldf!" is defined in REopt's extend.jl file
 
 # FOR A BEHIND THE METER MICROGRID:
 LineFromSubstationToFacilityMeter = ldf_inputs_dictionary["SubstationLocation"] * "-" * Microgrid_Inputs["FacilityMeter_Node"]
@@ -688,7 +689,7 @@ SuccessfullySolved = 0
 
 OutageSimulator_LineFromSubstationToFacilityMeter = ldf_inputs_dictionary["SubstationLocation"] * "-" * Microgrid_Inputs["FacilityMeter_Node"]
 
-ldf_inputs_new = LinDistFlow.Inputs(
+ldf_inputs_new = PowerFlowInputs(
     ldf_inputs_dictionary["LinesFileLocation"],
     ldf_inputs_dictionary["SubstationLocation"], 
     ldf_inputs_dictionary["LineCodesFileLocation"];
@@ -721,12 +722,12 @@ for x in 1:MaximumTimeStepToEvaluate
     empty!(JuMP_Model) # empties the JuMP model so that the same variables names can be applied in the new model
     m_outagesimulator = JuMP_Model
 
-    # Generate the LinDistFlow constraints
-    LinDistFlow.add_variables(m_outagesimulator, ldf_inputs_new)
-    LinDistFlow.constrain_power_balance(m_outagesimulator, ldf_inputs_new)
-    LinDistFlow.constrain_substation_voltage(m_outagesimulator, ldf_inputs_new)
-    LinDistFlow.constrain_KVL(m_outagesimulator, ldf_inputs_new)
-    LinDistFlow.constrain_bounds(m_outagesimulator, ldf_inputs_new)
+    # Generate the power flow constraints
+    power_flow_add_variables(m_outagesimulator, ldf_inputs_new)
+    constrain_power_balance(m_outagesimulator, ldf_inputs_new)
+    constrain_substation_voltage(m_outagesimulator, ldf_inputs_new)
+    constrain_KVL(m_outagesimulator, ldf_inputs_new)
+    constrain_bounds(m_outagesimulator, ldf_inputs_new)
   
     for n in NodeList
         GenPowerRating = DataDictionaryForEachNode[n]["GeneratorSize"]  
@@ -855,7 +856,8 @@ for x in 1:MaximumTimeStepToEvaluate
                                                         .== round.((DataDictionaryForEachNode[n]["loads_kw"][i:(i+OutageLength_TimeSteps-1)]), digits =2)[ts])
     end 
         
-    LinDistFlow.constrain_loads(m_outagesimulator, ldf_inputs_new, REopt_dictionary) 
+    # Constrain the loads
+    constrain_loads(m_outagesimulator, ldf_inputs_new, REopt_dictionary) 
     
     # Prevent power from entering the microgrid (to represent a power outage)
     JuMP.@constraint(m_outagesimulator, [t in 1:OutageLength_TimeSteps], m_outagesimulator[:Pᵢⱼ][OutageSimulator_LineFromSubstationToFacilityMeter,t] .>= 0 ) 
