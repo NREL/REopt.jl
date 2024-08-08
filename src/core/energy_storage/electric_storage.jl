@@ -167,6 +167,7 @@ end
     minimum_avg_soc_fraction::Float64 = 0.0
     daily_leakage_fraction::Float64 = 0.0
     fixed_dispatch_series::Union{Nothing, Array{Real,1}} = nothing
+    require_start_and_end_charge_to_be_equal::Bool = false
 ```
 """
 Base.@kwdef struct ElectricStorageDefaults
@@ -202,6 +203,7 @@ Base.@kwdef struct ElectricStorageDefaults
     minimum_avg_soc_fraction::Float64 = 0.0
     daily_leakage_fraction::Float64 = 0.0
     fixed_dispatch_series::Union{Nothing, Array{Real,1}} = nothing
+    require_start_and_end_charge_to_be_equal::Bool = false
 end
 
 
@@ -245,6 +247,7 @@ struct ElectricStorage <: AbstractElectricStorage
     minimum_avg_soc_fraction::Float64
     daily_leakage_fraction::Float64
     fixed_dispatch_series::Union{Nothing, Array{Real,1}}
+    require_start_and_end_charge_to_be_equal::Bool
 
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
@@ -334,7 +337,8 @@ struct ElectricStorage <: AbstractElectricStorage
             degr,
             s.minimum_avg_soc_fraction,
             s.daily_leakage_fraction,
-            s.fixed_dispatch_series
+            s.fixed_dispatch_series,
+            s.require_start_and_end_charge_to_be_equal
         )
     end
 end
