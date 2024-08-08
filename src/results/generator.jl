@@ -69,6 +69,8 @@ function add_generator_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _
 	)
 	r["annual_energy_produced_kwh"] = round(value(AverageGenProd), digits=0)
     
+	r["initial_capital_cost"] = round(value(m[:dvSize][t]) * p.s.generator.installed_cost_per_kw, digits=3)
+
 	d["Generator"] = r
     nothing
 end
