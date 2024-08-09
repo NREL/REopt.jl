@@ -163,7 +163,9 @@ function proforma_results(p::REoptInputs, d::Dict)
     total_cash_incentives = m.total_pbi * (1 - tax_rate_fraction)
     free_cashflow_without_year_zero = m.total_depreciation * tax_rate_fraction + total_cash_incentives + operating_expenses_after_tax
     free_cashflow_without_year_zero[1] += m.federal_itc
-    free_cashflow = append!([(-1 * d["Financial"]["initial_capital_costs"]) + m.total_ibi_and_cbi], free_cashflow_without_year_zero)
+    # Since we now have possible BAU costs from ExistingBoiler/Chiller, need to get net CapEx
+    net_initial_capital_costs = d["Financial"]["initial_capital_costs"] - d["Financial"]["lifecycle_capital_costs_bau"]
+    free_cashflow = append!([(-1 * net_initial_capital_costs) + m.total_ibi_and_cbi], free_cashflow_without_year_zero)
 
     # At this point the logic branches based on third-party ownership or not - see comments    
     if third_party  # get cumulative cashflow for developer
