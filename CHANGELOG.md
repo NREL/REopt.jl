@@ -23,6 +23,11 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
+## Develop 08-09-2024
+### Changed
+- Removed MacOS from the runner list and just run with Windows OS, since MacOS commonly freezes and gets cancelled. We have not seen Windows OS pass while other OS's fail. .
+- Suppress JuMP warning messages from 15-minute and multiple PVs test scenarios to avoid flooding the test logs with those warnings 
+
 ## v0.47.2
 ### Fixed
 - Increased the big-M bound on maximum net metering benefit to prevent artificially low export benefits.
