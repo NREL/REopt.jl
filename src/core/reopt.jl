@@ -265,6 +265,8 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	m[:AvoidedCapexByGHP] = 0.0
 	m[:ResidualGHXCapCost] = 0.0
 	m[:ObjectivePenalties] = 0.0
+	m[:ExistingBoilerCost] = 0.0
+	m[:ExistingChillerCost] = 0.0
 
 	if !isempty(p.techs.all)
 		add_tech_size_constraints(m, p)
@@ -308,10 +310,16 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
             add_boiler_tech_constraints(m, p)
 			m[:TotalPerUnitProdOMCosts] += m[:TotalBoilerPerUnitProdOMCosts]
 			m[:TotalFuelCosts] += m[:TotalBoilerFuelCosts]
+			if ("ExistingBoiler" in p.techs.boiler) && (p.s.existing_boiler.installed_cost_dollars > 0.0)
+				add_existing_boiler_capex_constraint(m, p)
+			end			
         end
 
 		if !isempty(p.techs.cooling)
             add_cooling_tech_constraints(m, p)
+			if ("ExistingChiller" in p.techs.cooling) && (p.s.existing_chiller.installed_cost_dollars > 0.0)
+				add_existing_chiller_capex_constraint(m, p)
+			end
         end
     
         if !isempty(p.techs.thermal)
@@ -453,7 +461,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	#################################  Objective Function   ########################################
 	@expression(m, Costs,
 		# Capital Costs
-		m[:TotalTechCapCosts] + TotalStorageCapCosts + m[:GHPCapCosts] +
+		m[:TotalTechCapCosts] + TotalStorageCapCosts + m[:GHPCapCosts] + m[:ExistingBoilerCost] + m[:ExistingChillerCost] +
 
 		# Fixed O&M, tax deductible for owner
 		(TotalPerUnitSizeOMCosts + m[:GHPOMCosts]) * (1 - p.s.financial.owner_tax_rate_fraction) +
@@ -508,6 +516,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 	if !isempty(p.s.electric_utility.outage_durations)
 		m[:ObjectivePenalties] += sum(sum(0.0001 * m[:dvUnservedLoad][s, tz, ts] for ts in 1:p.s.electric_utility.outage_durations[s]) 
 			for s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps)
+	end
+
+	if "ExistingBoiler" in p.techs.all
+		add_to_expression!(Costs, m[:ExistingBoilerCost])
+	end
+
+	if "ExistingChiller" in p.techs.all
+		add_to_expression!(Costs, m[:ExistingChillerCost])
 	end
 
 	# Set model objective 
@@ -594,6 +610,8 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvPeakDemandMonth[p.months, 1:p.s.electric_tariff.n_monthly_demand_tiers] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0
         binGHP[p.ghp_options], Bin  # Can be <= 1 if require_ghp_purchase=0, and is ==1 if require_ghp_purchase=1
+		binExistingBoiler, Bin  # If still using ExistingBoiler in optimal case at all, incur costs (not scaled by size)
+		binExistingChiller, Bin  # If still using ExistingChiller in optimal case, incur costs (not scaled by size)
 	end
 
 	if !isempty(p.techs.gen)  # Problem becomes a MILP
