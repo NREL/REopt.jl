@@ -1,4 +1,190 @@
-function build_power_flow!(m::JuMP.AbstractModel, p::Inputs)
+
+
+"""
+mutable struct PowerFlowInputs
+"""
+mutable struct PowerFlowInputs
+edges::Array{Tuple, 1}
+linecodes::Array{String, 1}
+linelengths::Array{Float64, 1}
+linenormamps::Array{Float64, 1}
+busses::Array{String}
+substation_bus::String
+Pload::Dict{String, AbstractArray{Real, 1}}
+Qload::Dict{String, AbstractArray{Real, 1}}
+Sbase::Real
+Vbase::Real
+Ibase::Real
+Zdict::Dict{String, Dict{String, Any}}
+v0::Real
+v_lolim::Real
+v_uplim::Real
+Zbase::Real
+Ntimesteps::Int
+Nequality_cons::Int
+Nlte_cons::Int
+pf::Float64
+Nnodes::Int
+P_up_bound::Float64
+Q_up_bound::Float64
+P_lo_bound::Float64
+Q_lo_bound::Float64
+regulators::Dict
+transformers::Dict
+end 
+
+
+function PowerFlowInputs(
+edges::Array{Tuple}, 
+linecodes::Array{String}, 
+linelengths::Array{Float64},
+linenormamps::Array{Float64},
+substation_bus::String;
+Pload, 
+Qload, 
+Sbase=1, 
+Vbase=1, 
+Zdict, 
+v0, 
+v_lolim=0.95, 
+v_uplim=1.05,
+Ntimesteps=1, 
+Nequality_cons=0, 
+Nlte_cons=0,
+P_up_bound=1e4,
+Q_up_bound=1e4,
+P_lo_bound=-1e4,
+Q_lo_bound=-1e4,
+regulators=Dict(),
+transformers=Dict()
+)
+Ibase = Sbase / (Vbase * sqrt(3))
+# Ibase^2 should be used to recover amperage from lᵢⱼ ?
+Zbase = Vbase / (Ibase * sqrt(3))
+@info "Zbase: ", Zbase
+busses = String[]
+for t in edges
+    push!(busses, t[1])
+    push!(busses, t[2])
+end
+busses = unique(busses)
+
+PowerFlowInputs(
+    edges,
+    linecodes,
+    linelengths,
+    linenormamps,
+    busses,
+    substation_bus,
+    Dict(k => v/Sbase for (k,v) in Pload),
+    Dict(k => v/Sbase for (k,v) in Qload),
+    Sbase,
+    Vbase,
+    Ibase,
+    Zdict,
+    v0,
+    v_lolim, 
+    v_uplim,
+    Zbase,
+    Ntimesteps,
+    Nequality_cons,
+    Nlte_cons,
+    0.1,  # power factor
+    length(busses),  # Nnodes
+    P_up_bound,
+    Q_up_bound,
+    P_lo_bound,
+    Q_lo_bound,
+    regulators,
+    transformers
+)
+end
+
+"""
+Inputs(
+    dsslinesfilepath::String, 
+    substation_bus::String, 
+    dsslinecodesfilepath::String;
+    Pload::AbstractDict, 
+    Qload::AbstractDict, 
+    Sbase=1, 
+    Vbase=1, 
+    v0, 
+    v_lolim=0.95, 
+    v_uplim=1.05,
+    Ntimesteps=1, 
+    Nequality_cons=0, 
+    Nlte_cons=0,
+    P_up_bound,
+    Q_up_bound,
+    P_lo_bound,
+    Q_lo_bound,
+    )
+
+Inputs constructor
+"""
+function PowerFlowInputs(
+dsslinesfilepath::String, 
+substation_bus::String, 
+dsslinecodesfilepath::String;
+dsstransformersfilepath = "None", 
+Pload::AbstractDict, 
+Qload::AbstractDict, 
+Sbase=1, 
+Vbase=1, 
+v0, 
+v_lolim=0.95, 
+v_uplim=1.05,
+Ntimesteps=1, 
+Nequality_cons=0, 
+Nlte_cons=0,
+P_up_bound=1e4,
+Q_up_bound=1e4,
+P_lo_bound=-1e4,
+Q_lo_bound=-1e4,
+regulators=Dict(),
+)
+edges, linecodes, linelengths, linenormamps = dss_parse_lines(dsslinesfilepath)
+linecodes_dict = dss_parse_line_codes(dsslinecodesfilepath, linecodes)
+
+
+if dsstransformersfilepath == "None"
+    @info "No transformers were input into the model"
+    transformers_dict = Dict(["NoTransformer","NoTransformer"])
+else
+    @info "Transformers have been input into the model"
+    transformers_dict = dss_parse_transformers(dsstransformersfilepath)
+    print("\n Transformers included are: $(transformers_dict)")
+end 
+PowerFlowInputs(
+    edges,
+    linecodes,
+    linelengths,
+    linenormamps,
+    substation_bus;
+    Pload=Pload, 
+    Qload=Qload,
+    Sbase=Sbase, 
+    Vbase=Vbase, 
+    Zdict=linecodes_dict, 
+    v0=v0,
+    v_lolim = v_lolim, 
+    v_uplim = v_uplim, 
+    Ntimesteps=Ntimesteps,
+    Nequality_cons=Nequality_cons,
+    Nlte_cons=Nlte_cons,
+    P_up_bound=P_up_bound,
+    Q_up_bound=Q_up_bound,
+    P_lo_bound=P_lo_bound,
+    Q_lo_bound=Q_lo_bound,
+    regulators = regulators,
+    transformers= transformers_dict
+)
+end
+
+
+
+function build_power_flow!(m::JuMP.AbstractModel, p::PowerFlowInputs)
 
     add_variables(m, p)
     constrain_power_balance(m, p)  # (10a)
@@ -8,7 +194,7 @@ function build_power_flow!(m::JuMP.AbstractModel, p::Inputs)
 end
 
 
-function power_flow_add_variables(m, p::Inputs)
+function power_flow_add_variables(m, p::PowerFlowInputs)
     T = 1:p.Ntimesteps
     # bus injections
     @variables m begin
@@ -32,7 +218,7 @@ function power_flow_add_variables(m, p::Inputs)
 end
 
 
-function constrain_power_balance(m, p::Inputs)
+function constrain_power_balance(m, p::PowerFlowInputs)
     Pⱼ = m[:Pⱼ]
     Qⱼ = m[:Qⱼ]
     Pᵢⱼ = m[:Pᵢⱼ]
@@ -82,7 +268,7 @@ function constrain_power_balance(m, p::Inputs)
 end
 
 
-function constrain_substation_voltage(m, p::Inputs)
+function constrain_substation_voltage(m, p::PowerFlowInputs)
     # @info "constrain_substation_voltage"
     @constraint(m, con_substationV[t in 1:p.Ntimesteps],
        m[:vsqrd][p.substation_bus, t] == p.v0^2
@@ -90,7 +276,7 @@ function constrain_substation_voltage(m, p::Inputs)
     p.Nequality_cons += p.Ntimesteps
 end
 
-function DetermineLineNominalVoltage(p::Inputs)  # new function added by TEO to determine the nominal line voltage
+function DetermineLineNominalVoltage(p::PowerFlowInputs)  # new function added by TEO to determine the nominal line voltage
     BusNominalVoltages_Summary = Dict([])
     LineNominalVoltages_Summary = Dict([])
     if p.transformers != Dict(["NoTransformer","NoTransformer"])
@@ -168,7 +354,7 @@ function DetermineLineNominalVoltage(p::Inputs)  # new function added by TEO to 
     return LineNominalVoltages_Summary, BusNominalVoltages_Summary
 end 
 
-function constrain_KVL(m, p::Inputs) 
+function constrain_KVL(m, p::PowerFlowInputs) 
     # @info "constrain_KVL"
     w = m[:vsqrd]
     P = m[:Pᵢⱼ] 
@@ -230,7 +416,7 @@ end
 - keys of Pload must match Inputs.busses. Any missing keys have load set to zero.
 - Inputs.substation_bus is unconstrained, slack bus
 """
-function constrain_loads(m, p::Inputs)
+function constrain_loads(m, p::PowerFlowInputs)
     Pⱼ = m[:Pⱼ]
     Qⱼ = m[:Qⱼ]
     
@@ -259,8 +445,8 @@ function constrain_loads(m, p::Inputs)
 end
 
 
-function constrain_bounds(m::JuMP.AbstractModel, p::Inputs)
-    @info("LinDistFlow.constrain_bounds is deprecated. Include bounds in LinDistFlow.Inputs.")
+function constrain_bounds(m::JuMP.AbstractModel, p::PowerFlowInputs)
+    @info("constrain_bounds is deprecated. Include bounds in inputs.")
     nothing
 end
 
@@ -552,7 +738,7 @@ end
     function i_to_j(j::String, p::Inputs)
 find all busses upstream of bus j
 """
-function i_to_j(j::String, p::Inputs)
+function i_to_j(j::String, p::PowerFlowInputs)
     convert(Array{String, 1}, map(x->x[1], filter(t->t[2]==j, p.edges)))
 end
 
@@ -561,12 +747,12 @@ end
     function j_to_k(j::String, p::Inputs)
 find all busses downstream of bus j
 """
-function j_to_k(j::String, p::Inputs)
+function j_to_k(j::String, p::PowerFlowInputs)
     convert(Array{String, 1}, map(x->x[2], filter(t->t[1]==j, p.edges)))
 end
 
 
-function rij(i::String, j::String, p::Inputs)
+function rij(i::String, j::String, p::PowerFlowInputs)
     linecode = get_ijlinecode(i, j, p)
     linelength = get_ijlinelength(i, j, p)
     linenominalvoltage = p.Zdict[linecode]["nominal_voltage_volts"]   # Retrieve the nominal voltage for each line
@@ -575,7 +761,7 @@ function rij(i::String, j::String, p::Inputs)
 end
 
 
-function xij(i::String, j::String, p::Inputs)
+function xij(i::String, j::String, p::PowerFlowInputs)
     linecode = get_ijlinecode(i, j, p)
     linelength = get_ijlinelength(i, j, p)
     linenominalvoltage = p.Zdict[linecode]["nominal_voltage_volts"]      
@@ -584,29 +770,29 @@ function xij(i::String, j::String, p::Inputs)
 end
 
 
-function get_ijlinelength(i::String, j::String, p::Inputs)
+function get_ijlinelength(i::String, j::String, p::PowerFlowInputs)
     ij_idxs = get_ij_idxs(i, j, p)
     return p.linelengths[ij_idxs[1]]
 end
 
 
-function get_ijlinecode(i::String, j::String, p::Inputs)
+function get_ijlinecode(i::String, j::String, p::PowerFlowInputs)
     ij_idxs = get_ij_idxs(i, j, p)
     return p.linecodes[ij_idxs[1]]
 end
 
-function get_ijlinenormamps(i::String, j::String, p::Inputs)
+function get_ijlinenormamps(i::String, j::String, p::PowerFlowInputs)
     ij_idxs = get_ij_idxs(i, j, p)
     return p.linenormamps[ij_idxs[1]]
 end
 
-function get_ijedge(i::String, j::String, p::Inputs)
+function get_ijedge(i::String, j::String, p::PowerFlowInputs)
     ij_idxs = get_ij_idxs(i, j, p)
     return p.edges[ij_idxs[1]]
 end
 
 
-function get_ij_idxs(i::String, j::String, p::Inputs)
+function get_ij_idxs(i::String, j::String, p::PowerFlowInputs)
     ij_idxs = findall(t->(t[1]==i && t[2]==j), p.edges)
     if length(ij_idxs) > 1
         error("found more than one edge for i=$i and j=$j")
@@ -618,7 +804,7 @@ function get_ij_idxs(i::String, j::String, p::Inputs)
 end
 
 
-function get_edge_values(var_prefix::String, m::JuMP.AbstractModel, p::Inputs)
+function get_edge_values(var_prefix::String, m::JuMP.AbstractModel, p::PowerFlowInputs)
     vals = Float64[]
     for edge in p.edges
         var = string(var_prefix, "[", edge[1], "-", edge[2], "]")
@@ -636,7 +822,7 @@ function get_edge_values(var_prefix::String, m::JuMP.AbstractModel, p::Inputs)
 end
 
 
-function get_bus_values(var_prefix::String, m::JuMP.AbstractModel, p::Inputs)
+function get_bus_values(var_prefix::String, m::JuMP.AbstractModel, p::PowerFlowInputs)
     vals = Float64[]
     for b in p.busses
         var = string(var_prefix,  "[", b, "]")
@@ -706,188 +892,6 @@ function recover_voltage_current(m, p::Inputs, nodetobusphase)
 end
 =#
 
-
-"""
-    mutable struct Inputs
-"""
-mutable struct Inputs
-    edges::Array{Tuple, 1}
-    linecodes::Array{String, 1}
-    linelengths::Array{Float64, 1}
-    linenormamps::Array{Float64, 1}
-    busses::Array{String}
-    substation_bus::String
-    Pload::Dict{String, AbstractArray{Real, 1}}
-    Qload::Dict{String, AbstractArray{Real, 1}}
-    Sbase::Real
-    Vbase::Real
-    Ibase::Real
-    Zdict::Dict{String, Dict{String, Any}}
-    v0::Real
-    v_lolim::Real
-    v_uplim::Real
-    Zbase::Real
-    Ntimesteps::Int
-    Nequality_cons::Int
-    Nlte_cons::Int
-    pf::Float64
-    Nnodes::Int
-    P_up_bound::Float64
-    Q_up_bound::Float64
-    P_lo_bound::Float64
-    Q_lo_bound::Float64
-    regulators::Dict
-    transformers::Dict
-end 
-
-
-function Inputs(
-    edges::Array{Tuple}, 
-    linecodes::Array{String}, 
-    linelengths::Array{Float64},
-    linenormamps::Array{Float64},
-    substation_bus::String;
-    Pload, 
-    Qload, 
-    Sbase=1, 
-    Vbase=1, 
-    Zdict, 
-    v0, 
-    v_lolim=0.95, 
-    v_uplim=1.05,
-    Ntimesteps=1, 
-    Nequality_cons=0, 
-    Nlte_cons=0,
-    P_up_bound=1e4,
-    Q_up_bound=1e4,
-    P_lo_bound=-1e4,
-    Q_lo_bound=-1e4,
-    regulators=Dict(),
-    transformers=Dict()
-    )
-    Ibase = Sbase / (Vbase * sqrt(3))
-    # Ibase^2 should be used to recover amperage from lᵢⱼ ?
-    Zbase = Vbase / (Ibase * sqrt(3))
-    @info "Zbase: ", Zbase
-    busses = String[]
-    for t in edges
-        push!(busses, t[1])
-        push!(busses, t[2])
-    end
-    busses = unique(busses)
-
-    Inputs(
-        edges,
-        linecodes,
-        linelengths,
-        linenormamps,
-        busses,
-        substation_bus,
-        Dict(k => v/Sbase for (k,v) in Pload),
-        Dict(k => v/Sbase for (k,v) in Qload),
-        Sbase,
-        Vbase,
-        Ibase,
-        Zdict,
-        v0,
-        v_lolim, 
-        v_uplim,
-        Zbase,
-        Ntimesteps,
-        Nequality_cons,
-        Nlte_cons,
-        0.1,  # power factor
-        length(busses),  # Nnodes
-        P_up_bound,
-        Q_up_bound,
-        P_lo_bound,
-        Q_lo_bound,
-        regulators,
-        transformers
-    )
-end
-
-"""
-    Inputs(
-        dsslinesfilepath::String, 
-        substation_bus::String, 
-        dsslinecodesfilepath::String;
-        Pload::AbstractDict, 
-        Qload::AbstractDict, 
-        Sbase=1, 
-        Vbase=1, 
-        v0, 
-        v_lolim=0.95, 
-        v_uplim=1.05,
-        Ntimesteps=1, 
-        Nequality_cons=0, 
-        Nlte_cons=0,
-        P_up_bound,
-        Q_up_bound,
-        P_lo_bound,
-        Q_lo_bound,
-        )
-
-Inputs constructor
-"""
-function PowerFlowInputs(
-    dsslinesfilepath::String, 
-    substation_bus::String, 
-    dsslinecodesfilepath::String;
-    dsstransformersfilepath = "None", 
-    Pload::AbstractDict, 
-    Qload::AbstractDict, 
-    Sbase=1, 
-    Vbase=1, 
-    v0, 
-    v_lolim=0.95, 
-    v_uplim=1.05,
-    Ntimesteps=1, 
-    Nequality_cons=0, 
-    Nlte_cons=0,
-    P_up_bound=1e4,
-    Q_up_bound=1e4,
-    P_lo_bound=-1e4,
-    Q_lo_bound=-1e4,
-    regulators=Dict(),
-    )
-    edges, linecodes, linelengths, linenormamps = dss_parse_lines(dsslinesfilepath)
-    linecodes_dict = dss_parse_line_codes(dsslinecodesfilepath, linecodes)
-    
-
-    if dsstransformersfilepath == "None"
-        @info "No transformers were input into the model"
-        transformers_dict = Dict(["NoTransformer","NoTransformer"])
-    else
-        @info "Transformers have been input into the model"
-        transformers_dict = dss_parse_transformers(dsstransformersfilepath)
-        print("\n Transformers included are: $(transformers_dict)")
-    end 
-    PowerFlowInputs(
-        edges,
-        linecodes,
-        linelengths,
-        linenormamps,
-        substation_bus;
-        Pload=Pload, 
-        Qload=Qload,
-        Sbase=Sbase, 
-        Vbase=Vbase, 
-        Zdict=linecodes_dict, 
-        v0=v0,
-        v_lolim = v_lolim, 
-        v_uplim = v_uplim, 
-        Ntimesteps=Ntimesteps,
-        Nequality_cons=Nequality_cons,
-        Nlte_cons=Nlte_cons,
-        P_up_bound=P_up_bound,
-        Q_up_bound=Q_up_bound,
-        P_lo_bound=P_lo_bound,
-        Q_lo_bound=Q_lo_bound,
-        regulators = regulators,
-        transformers= transformers_dict
-    )
-end
 
 
 

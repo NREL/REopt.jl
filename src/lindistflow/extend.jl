@@ -8,7 +8,7 @@ Outline:
 # TODO add complementary constraint to UL for dvProductionToGrid_ and dvGridPurchase_ (don't want it in LL s.t. it stays linear)
 
 
-function build_power_flow!(m::JuMP.AbstractModel, p::LDF.Inputs, ps::Array{REoptInputs{Scenario}, 1};
+function build_power_flow!(m::JuMP.AbstractModel, p::PowerFlowInputs, ps::Array{REoptInputs{Scenario}, 1};
         make_import_export_complementary::Bool=true
     )
     power_flow_add_variables(m, p)
@@ -71,7 +71,7 @@ function add_complementary_constraints(m::JuMP.AbstractModel, ps::Array{REoptInp
 end
 
 
-function constrain_loads(m::JuMP.AbstractModel, p::LDF.Inputs, ps::Array{REoptInputs{Scenario}, 1})
+function constrain_loads(m::JuMP.AbstractModel, p::PowerFlowInputs, ps::Array{REoptInputs{Scenario}, 1})
     
     Pⱼ = m[:Pⱼ]
     Qⱼ = m[:Qⱼ]
@@ -156,6 +156,6 @@ end
 
 # TODO add LDF results (here and in LDF package)
 
-function run_reopt(m::JuMP.AbstractModel, p::REoptInputs, ldf::LDF.Inputs)
+function run_reopt(m::JuMP.AbstractModel, p::REoptInputs, ldf::PowerFlowInputs)
 
 end

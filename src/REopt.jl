@@ -11,7 +11,6 @@ export
     simulate_outages,
     add_variables!,
     add_objective!,
-    LinDistFlow,
     MPCScenario,
     MPCInputs,
     run_mpc,
@@ -28,9 +27,6 @@ export
 
 import HTTP
 import JSON
-using LinDistFlow  # required to export LinDistFlow
-import LinDistFlow 
-const LDF = LinDistFlow
 using JuMP
 using JuMP.Containers: DenseAxisArray
 using Logging
@@ -198,8 +194,8 @@ include("core/reopt_multinode.jl")
 include("outagesim/outage_simulator.jl")
 include("outagesim/backup_reliability.jl")
 
-include("lindistflow/extend.jl")
 include("lindistflow/power_flow.jl")
+include("lindistflow/extend.jl")
 
 include("mpc/results.jl")
 include("mpc/model.jl")

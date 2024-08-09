@@ -181,7 +181,7 @@ function Microgrid_REopt_Model(JuMP_Model, Microgrid_Inputs, ldf_inputs_dictiona
     )
 
     # Determine the voltages at each line:
-    LineNominalVoltages_Summary, BusNominalVoltages_Summary = LinDistFlow.DetermineLineNominalVoltage(ldf_inputs)
+    LineNominalVoltages_Summary, BusNominalVoltages_Summary = DetermineLineNominalVoltage(ldf_inputs)
     
     # For a Community District microgrid:
         # Redefine the electricity tariff, if needed, for when the grid outage occurs - this will allow for power sharing between the nodes during an outage
@@ -295,10 +295,10 @@ ComputationTime = EndTime - StartTime
 
 # Process results from the solution
 
-# The variables Pᵢⱼ and Qᵢⱼ are indexed by the line value (shown in the edges variable below) in the LinDistFlow model 
+# The variables Pᵢⱼ and Qᵢⱼ are indexed by the line value (shown in the edges variable below) in the power_flow.jl model 
 edges = [string(i*"-"*j) for j in ldf_inputs.busses for i in i_to_j(j, ldf_inputs)]
 
-# The variables Pⱼ and Qⱼ are indexed by the bus value (in the ldf_inputs) in the LinDistFlow model
+# The variables Pⱼ and Qⱼ are indexed by the bus value (in the power_flow_inputs) in the power_flow.jl model
     # Note: look at the value.(m[:Pᵢⱼ]) in the terminal to see the values and indexes
 busses = ldf_inputs.busses
 
@@ -317,7 +317,7 @@ for j in ldf_inputs.busses
     NetRealLineFlow = (value.(m[:Pᵢⱼ][edge,:]).data* ldf_inputs.Sbase)/1000 
     NetReactiveLineFlow = (value.(m[:Qᵢⱼ][edge,:]).data*ldf_inputs.Sbase)/1000 
 
-    linenormamps = LinDistFlow.get_ijlinenormamps(i,j,ldf_inputs)
+    linenormamps = get_ijlinenormamps(i,j,ldf_inputs)
     LineNominalVoltage = parse(Float64,LineNominalVoltages_Summary[edge])
     MaximumPower_AtNominalVoltage_kW = 0.001*linenormamps*LineNominalVoltage
 
