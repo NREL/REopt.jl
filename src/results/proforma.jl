@@ -133,6 +133,9 @@ function proforma_results(p::REoptInputs, d::Dict)
         m.om_series_bau += escalate_om(annual_om_bau)
     end
 
+    # TODO do CHP and ExistingBoiler O&M and fuel cost (but not CapEx) along with incentives here
+    #   potential for DRY improvements with MACRS calcs (3x in this file) and add to update_metrics function 
+
     # calculate GHP incentives, and depreciation
     if "GHP" in keys(d) && d["GHP"]["ghp_option_chosen"] > 0
         update_ghp_metrics(m, p, p.s.ghp_option_list[d["GHP"]["ghp_option_chosen"]], "GHP", d, third_party)
@@ -163,9 +166,8 @@ function proforma_results(p::REoptInputs, d::Dict)
     total_cash_incentives = m.total_pbi * (1 - tax_rate_fraction)
     free_cashflow_without_year_zero = m.total_depreciation * tax_rate_fraction + total_cash_incentives + operating_expenses_after_tax
     free_cashflow_without_year_zero[1] += m.federal_itc
-    # Since we now have possible BAU costs from ExistingBoiler/Chiller, need to get net CapEx
-    net_initial_capital_costs = d["Financial"]["initial_capital_costs"] - d["Financial"]["lifecycle_capital_costs_bau"]
-    free_cashflow = append!([(-1 * net_initial_capital_costs) + m.total_ibi_and_cbi], free_cashflow_without_year_zero)
+    # Note, free_cashflow_bau[1] (below) now has possible non-zero costs from ExistingBoiler/Chiller
+    free_cashflow = append!([(-1 * d["Financial"]["initial_capital_costs"]) + m.total_ibi_and_cbi], free_cashflow_without_year_zero)
 
     # At this point the logic branches based on third-party ownership or not - see comments    
     if third_party  # get cumulative cashflow for developer
@@ -240,7 +242,8 @@ function proforma_results(p::REoptInputs, d::Dict)
         operating_expenses_after_tax_bau = total_operating_expenses_bau - deductable_operating_expenses_series_bau + 
                     deductable_operating_expenses_series_bau * (1 - p.s.financial.offtaker_tax_rate_fraction)
         free_cashflow_bau = operating_expenses_after_tax_bau + total_cash_incentives_bau
-        free_cashflow_bau = append!([0.0], free_cashflow_bau)
+        lifecycle_capital_costs_bau = get(d["Financial"], "lifecycle_capital_costs_bau", 0.0)
+        free_cashflow_bau = append!([-1 * lifecycle_capital_costs_bau], free_cashflow_bau)
         r["offtaker_annual_free_cashflows"] = round.(free_cashflow, digits=2)
         r["offtaker_discounted_annual_free_cashflows"] = [round(
             v / ((1 + p.s.financial.offtaker_discount_rate_fraction)^(yr-1)), 
