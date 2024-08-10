@@ -311,14 +311,14 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			m[:TotalPerUnitProdOMCosts] += m[:TotalBoilerPerUnitProdOMCosts]
 			m[:TotalFuelCosts] += m[:TotalBoilerFuelCosts]
 			if ("ExistingBoiler" in p.techs.boiler) && (p.s.existing_boiler.installed_cost_dollars > 0.0)
-				add_existing_boiler_capex_constraint(m, p)
+				add_existing_boiler_capex_constraints(m, p)
 			end			
         end
 
 		if !isempty(p.techs.cooling)
             add_cooling_tech_constraints(m, p)
 			if ("ExistingChiller" in p.techs.cooling) && (p.s.existing_chiller.installed_cost_dollars > 0.0)
-				add_existing_chiller_capex_constraint(m, p)
+				add_existing_chiller_capex_constraints(m, p)
 			end
         end
     
@@ -518,11 +518,11 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 			for s in p.s.electric_utility.scenarios, tz in p.s.electric_utility.outage_start_time_steps)
 	end
 
-	if "ExistingBoiler" in p.techs.all
+	if "ExistingBoiler" in p.techs.all && (p.s.existing_boiler.installed_cost_dollars > 0.0)
 		add_to_expression!(Costs, m[:ExistingBoilerCost])
 	end
 
-	if "ExistingChiller" in p.techs.all
+	if "ExistingChiller" in p.techs.all && (p.s.existing_chiller.installed_cost_dollars > 0.0)
 		add_to_expression!(Costs, m[:ExistingChillerCost])
 	end
 
@@ -610,8 +610,6 @@ function add_variables!(m::JuMP.AbstractModel, p::REoptInputs)
 		dvPeakDemandMonth[p.months, 1:p.s.electric_tariff.n_monthly_demand_tiers] >= 0  # Peak electrical power demand during month m [kW]
 		MinChargeAdder >= 0
         binGHP[p.ghp_options], Bin  # Can be <= 1 if require_ghp_purchase=0, and is ==1 if require_ghp_purchase=1
-		binExistingBoiler, Bin  # If still using ExistingBoiler in optimal case at all, incur costs (not scaled by size)
-		binExistingChiller, Bin  # If still using ExistingChiller in optimal case, incur costs (not scaled by size)
 	end
 
 	if !isempty(p.techs.gen)  # Problem becomes a MILP
