@@ -51,10 +51,10 @@ function add_yr1_emissions_calcs(m,p)
 	m[:yr1_emissions_onsite_fuel_lbs_SO2] = sum(yr1_emissions_onsite_fuel_series_lbs_SO2[ts] for ts in p.time_steps)
 	m[:yr1_emissions_onsite_fuel_lbs_PM25] = sum(yr1_emissions_onsite_fuel_series_lbs_PM25[ts] for ts in p.time_steps)
 
-	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2] = sum(m[:yr1_emissions_from_elec_grid_net_if_selected_series_lbs_CO2][ts] for ts in p.time_steps)
-	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx] = sum(m[:yr1_emissions_from_elec_grid_net_if_selected_series_lbs_NOx][ts] for ts in p.time_steps)
-	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2] = sum(m[:yr1_emissions_from_elec_grid_net_if_selected_series_lbs_SO2][ts] for ts in p.time_steps)
-	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25] = sum(m[:yr1_emissions_from_elec_grid_net_if_selected_series_lbs_PM25][ts] for ts in p.time_steps)
+	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2] = @expression(m, sum(m[:yr1_emissions_from_elec_grid_net_if_selected_series_lbs_CO2][ts] for ts in p.time_steps))
+	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx] = @expression(m, sum(m[:yr1_emissions_from_elec_grid_net_if_selected_series_lbs_NOx][ts] for ts in p.time_steps))
+	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_SO2] = @expression(m, sum(m[:yr1_emissions_from_elec_grid_net_if_selected_series_lbs_SO2][ts] for ts in p.time_steps))
+	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_PM25] = @expression(m, sum(m[:yr1_emissions_from_elec_grid_net_if_selected_series_lbs_PM25][ts] for ts in p.time_steps))
 
 	m[:EmissionsYr1_Total_LbsCO2] = m[:yr1_emissions_onsite_fuel_lbs_CO2] + m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2]
 	m[:EmissionsYr1_Total_LbsNOx] = m[:yr1_emissions_onsite_fuel_lbs_NOx] + m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx]
