@@ -46,10 +46,10 @@ function add_yr1_emissions_calcs(m,p)
 		yr1_emissions_from_elec_grid_series_lbs_PM25[ts] - yr1_emissions_offset_from_elec_exports_series_lbs_PM25[ts])
 	
 	# Summed variables
-	m[:yr1_emissions_onsite_fuel_lbs_CO2] = sum(yr1_emissions_onsite_fuel_series_lbs_CO2[ts] for ts in p.time_steps)
-	m[:yr1_emissions_onsite_fuel_lbs_NOx] = sum(yr1_emissions_onsite_fuel_series_lbs_NOx[ts] for ts in p.time_steps)
-	m[:yr1_emissions_onsite_fuel_lbs_SO2] = sum(yr1_emissions_onsite_fuel_series_lbs_SO2[ts] for ts in p.time_steps)
-	m[:yr1_emissions_onsite_fuel_lbs_PM25] = sum(yr1_emissions_onsite_fuel_series_lbs_PM25[ts] for ts in p.time_steps)
+	m[:yr1_emissions_onsite_fuel_lbs_CO2] = @expression(m, sum(yr1_emissions_onsite_fuel_series_lbs_CO2[ts] for ts in p.time_steps))
+	m[:yr1_emissions_onsite_fuel_lbs_NOx] = @expression(m, sum(yr1_emissions_onsite_fuel_series_lbs_NOx[ts] for ts in p.time_steps))
+	m[:yr1_emissions_onsite_fuel_lbs_SO2] = @expression(m, sum(yr1_emissions_onsite_fuel_series_lbs_SO2[ts] for ts in p.time_steps))
+	m[:yr1_emissions_onsite_fuel_lbs_PM25] = @expression(m, sum(yr1_emissions_onsite_fuel_series_lbs_PM25[ts] for ts in p.time_steps))
 
 	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_CO2] = @expression(m, sum(m[:yr1_emissions_from_elec_grid_net_if_selected_series_lbs_CO2][ts] for ts in p.time_steps))
 	m[:yr1_emissions_from_elec_grid_net_if_selected_lbs_NOx] = @expression(m, sum(m[:yr1_emissions_from_elec_grid_net_if_selected_series_lbs_NOx][ts] for ts in p.time_steps))
