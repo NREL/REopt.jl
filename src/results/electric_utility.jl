@@ -44,6 +44,10 @@ function add_electric_utility_results(m::JuMP.AbstractModel, p::AbstractInputs, 
     Year1UtilityEnergy = p.hours_per_time_step * sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] 
         for ts in p.time_steps, tier in 1:p.s.electric_tariff.n_energy_tiers)
     r["annual_energy_supplied_kwh"] = round(value(Year1UtilityEnergy), digits=2)
+
+    calc_clean_grid_kWh(m, p)
+
+    r["clean_grid_to_load_series_kw"] = round.(value.([m[:grid_clean_energy_series_kw][ts] for ts in p.time_steps]), digits=3)
     
     if !isempty(p.s.storage.types.elec)
         GridToLoad = (sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) 
