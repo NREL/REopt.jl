@@ -26,7 +26,7 @@ struct with outer constructor:
     can_serve_dhw::Bool = false
 
     macrs_option_years::Int = 5
-    macrs_bonus_fraction::Float64 = 0.8
+    macrs_bonus_fraction::Float64 = 0.6
     macrs_itc_reduction::Float64 = 0.5
     federal_itc_fraction::Float64 = 0.3
     federal_rebate_per_ton::Float64 = 0.0
@@ -77,6 +77,9 @@ Base.@kwdef mutable struct GHP <: AbstractGHP
     cooling_efficiency_thermal_factor::Float64 = NaN # Default depends on building and location
     ghpghx_response::Dict = Dict()
     can_serve_dhw::Bool = false  # If this default changes, must change conditional in scenario.jl for sending loads to GhpGhx.jl
+    can_serve_space_heating::Bool = true
+    can_serve_process_heat::Bool = false
+    can_supply_steam_turbine::Bool = false
 
     aux_heater_type::String = "electric"
     is_ghx_hybrid::Bool = false
@@ -85,7 +88,7 @@ Base.@kwdef mutable struct GHP <: AbstractGHP
     aux_unit_capacity_sizing_factor_on_peak_load::Float64 = 1.2
 
     macrs_option_years::Int = 5
-    macrs_bonus_fraction::Float64 = 0.8
+    macrs_bonus_fraction::Float64 = 0.6
     macrs_itc_reduction::Float64 = 0.5
     federal_itc_fraction::Float64 = 0.3
     federal_rebate_per_ton::Float64 = 0.0

@@ -12,6 +12,7 @@ struct Scenario <: AbstractScenario
     generator::Generator
     dhw_load::DomesticHotWaterLoad
     space_heating_load::SpaceHeatingLoad
+    process_heat_load::ProcessHeatLoad
     cooling_load::CoolingLoad
     existing_boiler::Union{ExistingBoiler, Nothing}
     boiler::Union{Boiler, Nothing}
@@ -41,6 +42,7 @@ A Scenario struct can contain the following keys:
 - [Generator](@ref) (optional)
 - [DomesticHotWaterLoad](@ref) (optional)
 - [SpaceHeatingLoad](@ref) (optional)
+- [ProcessHeatLoad](@ref) (optional)
 - [ExistingBoiler](@ref) (optional)
 - [Boiler](@ref) (optional)
 - [CHP](@ref) (optional)
@@ -105,9 +107,16 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                             )
     else
         financial = Financial(; latitude=site.latitude, longitude=site.longitude,
-                                off_grid_flag = settings.off_grid_flag
+                                off_grid_flag = settings.off_grid_flag,
+                                include_health_in_objective = settings.include_health_in_objective
                             )
     end
+
+    electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
+                                    latitude=site.latitude, longitude=site.longitude, 
+                                    time_steps_per_hour=settings.time_steps_per_hour,
+                                    off_grid_flag = settings.off_grid_flag
+                                )
 
     if haskey(d, "ElectricUtility") && !(settings.off_grid_flag)
         electric_utility = ElectricUtility(; dictkeys_tosymbols(d["ElectricUtility"])...,
@@ -118,11 +127,20 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             include_climate_in_objective=settings.include_climate_in_objective,
                                             include_health_in_objective=settings.include_health_in_objective,
                                             off_grid_flag=settings.off_grid_flag,
-                                            time_steps_per_hour=settings.time_steps_per_hour
+                                            time_steps_per_hour=settings.time_steps_per_hour,
+                                            analysis_years=financial.analysis_years,
+                                            load_year=electric_load.year
                                         )
     elseif !(settings.off_grid_flag)
         electric_utility = ElectricUtility(; latitude=site.latitude, longitude=site.longitude, 
-                                            time_steps_per_hour=settings.time_steps_per_hour
+                                            CO2_emissions_reduction_min_fraction=site.CO2_emissions_reduction_min_fraction,
+                                            CO2_emissions_reduction_max_fraction=site.CO2_emissions_reduction_max_fraction,
+                                            include_climate_in_objective=settings.include_climate_in_objective,
+                                            include_health_in_objective=settings.include_health_in_objective,
+                                            off_grid_flag=settings.off_grid_flag,
+                                            time_steps_per_hour=settings.time_steps_per_hour,
+                                            analysis_years=financial.analysis_years,
+                                            load_year=electric_load.year
                                         )
     elseif settings.off_grid_flag 
         if haskey(d, "ElectricUtility")
@@ -131,7 +149,12 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         electric_utility = ElectricUtility(; outage_start_time_step = 1, 
                                             outage_end_time_step = settings.time_steps_per_hour * 8760, 
                                             latitude=site.latitude, longitude=site.longitude, 
-                                            time_steps_per_hour=settings.time_steps_per_hour
+                                            time_steps_per_hour=settings.time_steps_per_hour,
+                                            off_grid_flag=settings.off_grid_flag,
+                                            emissions_factor_series_lb_CO2_per_kwh = 0,
+                                            emissions_factor_series_lb_NOx_per_kwh = 0,
+                                            emissions_factor_series_lb_SO2_per_kwh = 0,
+                                            emissions_factor_series_lb_PM25_per_kwh = 0
                                         ) 
     end
         
@@ -147,19 +170,13 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     #       (requires significant changes to constraints, variables)
     if haskey(d, "HotThermalStorage")
         params = HotThermalStorageDefaults(; dictkeys_tosymbols(d["HotThermalStorage"])...)
-        storage_structs["HotThermalStorage"] = ThermalStorage(params, financial, settings.time_steps_per_hour)
+        storage_structs["HotThermalStorage"] = HotThermalStorage(params, financial, settings.time_steps_per_hour)
     end
     if haskey(d, "ColdThermalStorage")
         params = ColdThermalStorageDefaults(; dictkeys_tosymbols(d["ColdThermalStorage"])...)
-        storage_structs["ColdThermalStorage"] = ThermalStorage(params, financial, settings.time_steps_per_hour)
+        storage_structs["ColdThermalStorage"] = ColdThermalStorage(params, financial, settings.time_steps_per_hour)
     end
     storage = Storage(storage_structs)
-
-    electric_load = ElectricLoad(; dictkeys_tosymbols(d["ElectricLoad"])...,
-                                   latitude=site.latitude, longitude=site.longitude, 
-                                   time_steps_per_hour=settings.time_steps_per_hour,
-                                   off_grid_flag = settings.off_grid_flag
-                                )
 
     if !(settings.off_grid_flag) # ElectricTariff only required for on-grid                            
         electric_tariff = ElectricTariff(; dictkeys_tosymbols(d["ElectricTariff"])..., 
@@ -192,14 +209,14 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
 
     max_heat_demand_kw = 0.0
+
     if haskey(d, "DomesticHotWaterLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["DomesticHotWaterLoad"])
-        # Pass in ExistingBoiler.efficiency to inform fuel to thermal conversion for heating load
         existing_boiler_efficiency = get_existing_boiler_efficiency(d)
         dhw_load = DomesticHotWaterLoad(; dictkeys_tosymbols(d["DomesticHotWaterLoad"])...,
-                                          latitude=site.latitude, longitude=site.longitude, 
-                                          time_steps_per_hour=settings.time_steps_per_hour,
-                                          existing_boiler_efficiency = existing_boiler_efficiency
+                                        latitude=site.latitude, longitude=site.longitude, 
+                                        time_steps_per_hour=settings.time_steps_per_hour,
+                                        existing_boiler_efficiency = existing_boiler_efficiency
                                         )
         max_heat_demand_kw = maximum(dhw_load.loads_kw)
     else
@@ -209,23 +226,38 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
         )
     end
-                                    
+
     if haskey(d, "SpaceHeatingLoad") && !haskey(d, "FlexibleHVAC")
         add_doe_reference_names_from_elec_to_thermal_loads(d["ElectricLoad"], d["SpaceHeatingLoad"])
-        # Pass in ExistingBoiler.efficiency to inform fuel to thermal conversion for heating load
         existing_boiler_efficiency = get_existing_boiler_efficiency(d)
         space_heating_load = SpaceHeatingLoad(; dictkeys_tosymbols(d["SpaceHeatingLoad"])...,
-                                                latitude=site.latitude, longitude=site.longitude, 
-                                                time_steps_per_hour=settings.time_steps_per_hour,
-                                                existing_boiler_efficiency = existing_boiler_efficiency
-                                              )
-        
+                                            latitude=site.latitude, longitude=site.longitude, 
+                                            time_steps_per_hour=settings.time_steps_per_hour,
+                                            existing_boiler_efficiency = existing_boiler_efficiency
+                                            )
         max_heat_demand_kw = maximum(space_heating_load.loads_kw .+ max_heat_demand_kw)
     else
         space_heating_load = SpaceHeatingLoad(; 
             fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
             time_steps_per_hour=settings.time_steps_per_hour,
             existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
+        )
+    end
+
+    if haskey(d, "ProcessHeatLoad") && !haskey(d, "FlexibleHVAC")
+        existing_boiler_efficiency = get_existing_boiler_efficiency(d)
+        process_heat_load = ProcessHeatLoad(; dictkeys_tosymbols(d["ProcessHeatLoad"])...,
+                                            latitude=site.latitude, longitude=site.longitude, 
+                                            time_steps_per_hour=settings.time_steps_per_hour,
+                                            existing_boiler_efficiency = existing_boiler_efficiency
+                                            )
+                                    
+        max_heat_demand_kw = maximum(process_heat_load.loads_kw .+ max_heat_demand_kw)
+    else
+        process_heat_load = ProcessHeatLoad(;
+                fuel_loads_mmbtu_per_hour=zeros(8760*settings.time_steps_per_hour),
+                time_steps_per_hour=settings.time_steps_per_hour,
+                existing_boiler_efficiency = EXISTING_BOILER_EFFICIENCY
         )
     end
 
@@ -291,6 +323,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                 @warn "Not using DomesticHotWaterLoad because FlexibleHVAC was provided."
             end
 
+            if haskey(d, "ProcessHeatLoad")
+                @warn "Not using ProcessHeatLoad because FlexibleHVAC was provided."
+            end
+
             if haskey(d, "CoolingLoad")
                 @warn "Not using CoolingLoad because FlexibleHVAC was provided."
             end
@@ -324,7 +360,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     if haskey(d, "CHP")
         electric_only = get(d["CHP"], "is_electric_only", false) || get(d["CHP"], "thermal_efficiency_full_load", 0.5) == 0.0
         if !isnothing(existing_boiler) && !electric_only
-            total_fuel_heating_load_mmbtu_per_hour = (space_heating_load.loads_kw + dhw_load.loads_kw) / existing_boiler.efficiency / KWH_PER_MMBTU
+            total_fuel_heating_load_mmbtu_per_hour = (space_heating_load.loads_kw + dhw_load.loads_kw + process_heat_load.loads_kw) / existing_boiler.efficiency / KWH_PER_MMBTU
             avg_boiler_fuel_load_mmbtu_per_hour = sum(total_fuel_heating_load_mmbtu_per_hour) / length(total_fuel_heating_load_mmbtu_per_hour)
             chp = CHP(d["CHP"]; 
                     avg_boiler_fuel_load_mmbtu_per_hour = avg_boiler_fuel_load_mmbtu_per_hour,
@@ -487,7 +523,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             hybrid_ghx_sizing_method = get(ghpghx_inputs, "hybrid_ghx_sizing_method", nothing)
 
             is_ghx_hybrid = false
-            hybrid_ghx_sizing_fraction = nothing
             hybrid_sizing_flag = nothing
             is_heating_electric = nothing
 
@@ -529,7 +564,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
             elseif hybrid_ghx_sizing_method == "Fractional"
                 is_ghx_hybrid = true
-                hybrid_ghx_sizing_fraction = get(ghpghx_inputs, "hybrid_ghx_sizing_fraction", 0.6)
+                hybrid_sizing_flag = get(ghpghx_inputs, "hybrid_ghx_sizing_fraction", 0.6)
             else
                 @warn "Unknown hybrid GHX sizing model provided"
             end
@@ -546,9 +581,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             d["GHP"]["is_ghx_hybrid"] = is_ghx_hybrid
             if !isnothing(hybrid_sizing_flag)
                 ghpghx_inputs["hybrid_sizing_flag"] = hybrid_sizing_flag
-            end
-            if !isnothing(hybrid_ghx_sizing_fraction)
-                ghpghx_inputs["hybrid_ghx_sizing_fraction"] = hybrid_ghx_sizing_fraction
             end
             if !isnothing(is_heating_electric)
                 ghpghx_inputs["is_heating_electric"] = is_heating_electric
@@ -601,9 +633,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     end
 
     steam_turbine = nothing
-    if haskey(d, "SteamTurbine") && d["SteamTurbine"]["max_kw"] > 0.0
+    if haskey(d, "SteamTurbine")
         if !isnothing(existing_boiler)
-            total_fuel_heating_load_mmbtu_per_hour = (space_heating_load.loads_kw + dhw_load.loads_kw) / existing_boiler.efficiency / KWH_PER_MMBTU
+            total_fuel_heating_load_mmbtu_per_hour = (space_heating_load.loads_kw + dhw_load.loads_kw + process_heat_load.loads_kw) / existing_boiler.efficiency / KWH_PER_MMBTU
             avg_boiler_fuel_load_mmbtu_per_hour = sum(total_fuel_heating_load_mmbtu_per_hour) / length(total_fuel_heating_load_mmbtu_per_hour)
             steam_turbine = SteamTurbine(d["SteamTurbine"];  
                                         avg_boiler_fuel_load_mmbtu_per_hour = avg_boiler_fuel_load_mmbtu_per_hour)
@@ -630,6 +662,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         generator,
         dhw_load,
         space_heating_load,
+        process_heat_load,
         cooling_load,
         existing_boiler,
         boiler,

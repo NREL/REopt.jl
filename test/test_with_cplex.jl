@@ -15,7 +15,7 @@ check to make sure that PV does NOT export unless the site load is met first for
     data["ElectricTariff"]["wholesale_rate"] =
         append!(repeat([jan_rate + 0.1], 31 * 24), repeat([0.0], 8760 - 31*24))
     data["ElectricTariff"]["monthly_demand_rates"] = repeat([0], 12)
-    data["ElectricUtility"] = Dict("allow_simultaneous_export_import" => false)
+    data["ElectricUtility"]["allow_simultaneous_export_import"] = false
 
     s = Scenario(data)
     inputs = REoptInputs(s)
@@ -115,7 +115,7 @@ end
 @testset "TieredRates" begin
     expected_year_one_energy_cost = 2342.88
     m = Model(optimizer_with_attributes(CPLEX.Optimizer, "CPX_PARAM_SCRIND" => 0))
-    results = run_reopt(m, "./scenarios/tiered_rate.json")
+    results = run_reopt(m, "./scenarios/tiered_energy_rate.json")
     @test results["ElectricTariff"]["year_one_energy_cost_before_tax"] ≈ 2342.88
 
     urdb_label = "59bc22705457a3372642da67"  # tiered monthly demand rate

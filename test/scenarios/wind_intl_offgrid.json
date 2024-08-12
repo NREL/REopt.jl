@@ -10,6 +10,9 @@
         "latitude": 1.5709993,
         "longitude": 127.8087693
     },
+    "ElectricUtility" : {
+        "co2_from_avert" : true
+    },
     "Wind": {
         "installed_cost_per_kw": 1874,
         "om_cost_per_kw": 35,

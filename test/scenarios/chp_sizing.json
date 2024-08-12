@@ -28,6 +28,9 @@
     "ExistingBoiler": {
         "fuel_cost_per_mmbtu": 10.0
     },
+    "ElectricUtility" : {
+        "co2_from_avert" : true
+    },
     "CHP": {
         "prime_mover": "recip_engine",
         "fuel_cost_per_mmbtu": 10.0,
@@ -55,12 +58,5 @@
                 "duration_hours": 0
             }
         ]
-    },
-    "PV": {
-        "max_kw": 0.0
-      },
-    "ElectricStorage": {
-        "max_kw": 0.0,
-        "max_kwh": 0.0
-    }    
+    }
 }

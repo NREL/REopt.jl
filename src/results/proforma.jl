@@ -140,7 +140,7 @@ function proforma_results(p::REoptInputs, d::Dict)
 
     # Optimal Case calculations
     electricity_bill_series = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax"])
-    export_credit_series = escalate_elec(d["ElectricTariff"]["year_one_export_benefit_before_tax"])
+    export_credit_series = escalate_elec(-d["ElectricTariff"]["year_one_export_benefit_before_tax"])
 
     # In the two party case the electricity and export credits are incurred by the offtaker not the developer
     if third_party
@@ -190,8 +190,8 @@ function proforma_results(p::REoptInputs, d::Dict)
         electricity_bill_series = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax"])
         electricity_bill_series_bau = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax_bau"])
 
-        export_credit_series = escalate_elec(-d["ElectricTariff"]["lifecycle_export_benefit_after_tax"])
-        export_credit_series_bau = escalate_elec(-d["ElectricTariff"]["lifecycle_export_benefit_after_tax_bau"])
+        export_credit_series = escalate_elec(-d["ElectricTariff"]["year_one_export_benefit_before_tax"])
+        export_credit_series_bau = escalate_elec(-d["ElectricTariff"]["year_one_export_benefit_before_tax_bau"])
 
         annual_income_from_host_series = repeat([-1 * r["annualized_payment_to_third_party"]], years)
 
@@ -225,7 +225,7 @@ function proforma_results(p::REoptInputs, d::Dict)
 
     else  # get cumulative cashflow for offtaker
         electricity_bill_series_bau = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax_bau"])
-        export_credit_series_bau = escalate_elec(-d["ElectricTariff"]["lifecycle_export_benefit_after_tax_bau"])
+        export_credit_series_bau = escalate_elec(-d["ElectricTariff"]["year_one_export_benefit_before_tax_bau"])
         total_operating_expenses_bau = electricity_bill_series_bau + export_credit_series_bau + m.om_series_bau
         total_cash_incentives_bau = m.total_pbi_bau * (1 - p.s.financial.offtaker_tax_rate_fraction)
 

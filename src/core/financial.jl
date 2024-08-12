@@ -26,12 +26,12 @@
     NOx_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
     SO2_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
     PM25_grid_cost_per_tonne::Union{Nothing,Real} = nothing,
-    NOx_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
-    SO2_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
-    PM25_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing,
-    NOx_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
-    SO2_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing,
-    PM25_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing
+    NOx_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing, # Default data from EASIUR based on location
+    SO2_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing, # Default data from EASIUR based on location
+    PM25_onsite_fuelburn_cost_per_tonne::Union{Nothing,Real} = nothing, # Default data from EASIUR based on location
+    NOx_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing, # Default data from EASIUR based on location
+    SO2_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing, # Default data from EASIUR based on location
+    PM25_cost_escalation_rate_fraction::Union{Nothing,Real} = nothing # Default data from EASIUR based on location
 ```
 
 !!! note "Third party financing"
@@ -82,10 +82,10 @@ struct Financial
         boiler_fuel_cost_escalation_rate_fraction::Real = 0.015,
         chp_fuel_cost_escalation_rate_fraction::Real = 0.015,
         generator_fuel_cost_escalation_rate_fraction::Real = 0.012,
-        offtaker_tax_rate_fraction::Real = 0.257,
+        offtaker_tax_rate_fraction::Real = 0.26,
         offtaker_discount_rate_fraction::Real = 0.0638,
         third_party_ownership::Bool = false,
-        owner_tax_rate_fraction::Real = 0.257,
+        owner_tax_rate_fraction::Real = 0.26,
         owner_discount_rate_fraction::Real = 0.0638,
         analysis_years::Int = 25,
         value_of_lost_load_per_kwh::Union{Array{<:Real,1}, Real} = 1.00, #only applies to multiple outage modeling
@@ -220,7 +220,7 @@ function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
     end
     EASIUR_data = nothing
     try
-        EASIUR_data = get_EASIUR2005(type, pop_year=2020, income_year=2020, dollar_year=2010)
+        EASIUR_data = get_EASIUR2005(type, pop_year=2024, income_year=2024, dollar_year=2010)
     catch e
         @warn "Could not look up EASIUR health costs from point ($latitude,$longitude). {$e}"
         return nothing
@@ -232,13 +232,13 @@ function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
     coords = g2l(longitude, latitude, datum="NAD83")
     x = Int(round(coords[1]))
     y = Int(round(coords[2]))
-    # Convert from 2010$ to 2020$ (source: https://www.in2013dollars.com/us/inflation/2010?amount=100)
-    USD_2010_to_2020 = 1.246
+    # Convert from 2010$ to 2024$ (source: https://www.in2013dollars.com/us/inflation/2010?amount=100)
+    USD_2010_to_2024 = 1.432
     try
         costs_per_tonne = Dict(
-            "NOx" => EASIUR_data["NOX_Annual"][x, y] .* USD_2010_to_2020,
-            "SO2" => EASIUR_data["SO2_Annual"][x, y] .* USD_2010_to_2020,
-            "PM25" => EASIUR_data["PEC_Annual"][x, y] .* USD_2010_to_2020
+            "NOx" => EASIUR_data["NOX_Annual"][x, y] .* USD_2010_to_2024,
+            "SO2" => EASIUR_data["SO2_Annual"][x, y] .* USD_2010_to_2024,
+            "PM25" => EASIUR_data["PEC_Annual"][x, y] .* USD_2010_to_2024
         )
         return costs_per_tonne
     catch
@@ -248,6 +248,7 @@ function easiur_costs(latitude::Real, longitude::Real, grid_or_onsite::String)
 end
 
 function easiur_escalation_rates(latitude::Real, longitude::Real, inflation::Real)
+    # Calculate escalation rate as nominal compound annual growth rate in marginal emissions costs between 2020 and 2024 for this location.
     EASIUR_150m_yr2020 = nothing
     EASIUR_150m_yr2024 = nothing
     try
@@ -284,7 +285,7 @@ Adapted to Julia from example Python code for EASIUR found at https://barney.ce.
 """
     get_EASIUR2005(
         stack::String, # area, p150, or p300
-        pop_year::Int64=2005, # population year
+        pop_year::Int64=2005, # population year (2000 to 2050)
         income_year::Int64=2005, # income level (1990 to 2024)
         dollar_year::Int64=2010 # dollar year (1980 to 2010)
     )
@@ -388,7 +389,7 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
                 setindex!(ret_map, v .* adj, k)
             end
         catch
-            throw(@error("income year is $(income_year) but must be between 1990 to 2024"))
+            throw(@error("EASIUR income year is $(income_year) but must be between 1990 to 2024"))
             return nothing
         end
     end
@@ -399,7 +400,7 @@ function get_EASIUR2005(stack::String; pop_year::Int64=2005, income_year::Int64=
                 setindex!(ret_map, v .* adj, k)
             end
         catch e
-            throw(@error("Dollar year must be between 1980 to 2010"))
+            throw(@error("EASIUR dollar year must be between 1980 to 2010"))
             return nothing
         end
     end
