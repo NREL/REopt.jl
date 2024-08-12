@@ -162,9 +162,6 @@ function BAUInputs(p::REoptInputs)
     heating_loads_served_by_tes = Dict{String,Array{String,1}}()
     unavailability = get_unavailability_by_tech(p.s, techs, p.time_steps)
 
-    # Calculate clean energy contribution (kW)
-    calculate_clean_energy_contribution(p.s.electric_utility, p.s.electric_load)
-
     REoptInputs(
         bau_scenario,
         techs,
@@ -395,10 +392,4 @@ function bau_outage_check(critical_loads_kw::AbstractArray, pv_kw_series::Abstra
     end
 
     return true, length(critical_loads_kw), generator_fuel_use_gal
-end
-
-
-function calculate_clean_energy_contribution(electric_utility::ElectricUtility, electric_load::ElectricLoad)
-    clean_energy_contribution = electric_utility.clean_energy_fraction_series .* electric_load.loads_kw
-    return clean_energy_contribution
 end
