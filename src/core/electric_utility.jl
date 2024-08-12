@@ -135,7 +135,8 @@ struct ElectricUtility
     scenarios::Union{Nothing, UnitRange} 
     net_metering_limit_kw::Real 
     interconnection_limit_kw::Real
-    clean_energy_fraction_series::Union{Real,Array{<:Real,1}} # Utilities renewable energy fraction.
+    clean_energy_fraction_series::Array{<:Real,1} # Utilities renewable energy fraction.
+    include_grid_clean_energy_in_re::Bool 
 
     function ElectricUtility(;
 
@@ -158,6 +159,7 @@ struct ElectricUtility
         outage_start_time_step::Int=0,  # for modeling a single outage, with critical load spliced into the baseline load ...
         outage_end_time_step::Int=0,  # ... utiltity production_factor = 0 during the outage
         allow_simultaneous_export_import::Bool=true,  # if true the site has two meters (in effect)
+        include_grid_clean_energy_in_re::Bool=true,  # if true, the clean energy fraction of the grid electricity is included in the renewable electricity calculations
         # next 5 variables below used for minimax the expected outage cost,
         # with max taken over outage start time, expectation taken over outage duration
         outage_start_time_steps::Array{Int,1}=Int[],  # we include in the minimization the maximum outage cost over outage start times
@@ -264,6 +266,10 @@ struct ElectricUtility
                     clean_energy_series_dict["cef"] = zeros(Float64, 8760*time_steps_per_hour)
                 end
             end
+
+            # save clean_energy_series_dict["cef"] as csv
+            # clean_energy_df = DataFrame(cef = clean_energy_series_dict["cef"])
+            # CSV.write("clean_energy_fraction_series.csv", clean_energy_df)
            
 
             # Get AVERT emissions region
@@ -422,7 +428,8 @@ struct ElectricUtility
             scenarios,
             net_metering_limit_kw,
             interconnection_limit_kw,
-            is_MPC ? Float64[] : clean_energy_series_dict["cef"] 
+            is_MPC ? Float64[] : clean_energy_series_dict["cef"],
+            include_grid_clean_energy_in_re 
         )
     end
 end
