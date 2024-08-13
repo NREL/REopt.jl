@@ -451,7 +451,7 @@ function setup_tech_inputs(s::AbstractScenario)
 
     if "FuelCell" in techs.all
         setup_fuel_cell_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, om_cost_per_kw, production_factor, 
-            techs_by_exportbin, techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs)
+            techs_by_exportbin, techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs, tech_renewable_energy_fraction)
     end
 
     return techs, pv_to_location, maxsize_pv_locations, pvlocations, 
@@ -695,8 +695,10 @@ end
 
 function setup_fuel_cell_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes,
     cap_cost_slope, om_cost_per_kw, production_factor, techs_by_exportbin,
-    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs
+    segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, techs,
+    tech_renewable_energy_fraction
     )
+    # TODO add tech_renewable_energy_fraction input for hydrogen assets; currently assumes 0
     max_sizes["FuelCell"] = s.fuel_cell.max_kw
     min_sizes["FuelCell"] = s.fuel_cell.min_kw
     existing_sizes["FuelCell"] = 0.0
@@ -704,6 +706,7 @@ function setup_fuel_cell_inputs(s::AbstractScenario, max_sizes, min_sizes, exist
     update_cost_curve!(s.fuel_cell, "FuelCell", s.financial,
         cap_cost_slope, segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint
     )
+    tech_renewable_energy_fraction["FuelCell"] = 0
     om_cost_per_kw["FuelCell"] = s.fuel_cell.om_cost_per_kw
     production_factor["FuelCell", :] = get_production_factor(s.fuel_cell; s.settings.time_steps_per_hour)
     fillin_techs_by_exportbin(techs_by_exportbin, s.fuel_cell, "FuelCell")
