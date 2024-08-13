@@ -832,6 +832,19 @@ else  # run HiGHS tests
                 results = run_reopt(m, d)
                 @test sum(results["CHP"]["thermal_curtailed_series_mmbtu_per_hour"]) ≈ 4174.455 atol=1e-3
             end
+
+            @testset "CHP Proforma Metrics" begin
+                # This test compares the resulting simple payback period (years) for CHP to a proforma spreadsheet model which has been verified
+                # All financial parameters which influence this calc have been input to avoid breaking with changing defaults
+                input_data = JSON.parsefile("./scenarios/chp_payback.json")
+                s = Scenario(input_data)
+                inputs = REoptInputs(s)
+
+                m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+                m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "mip_rel_gap" => 0.01, "output_flag" => false, "log_to_console" => false))
+                results = run_reopt([m1,m2], inputs)
+                @test abs(results["Financial"]["simple_payback_years"] - 8.12) <= 0.02
+            end
         end
         
         @testset "FlexibleHVAC" begin
