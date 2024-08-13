@@ -86,23 +86,8 @@ function proforma_results(p::REoptInputs, d::Dict)
         m.federal_itc += federal_itc_amount
 
         # Depreciation
-        if storage.macrs_option_years in [5, 7]
-            schedule = []
-            if storage.macrs_option_years == 5
-                schedule = p.s.financial.macrs_five_year
-            elseif storage.macrs_option_years == 7
-                schedule = p.s.financial.macrs_seven_year
-            end
-            macrs_bonus_basis = federal_itc_basis * (1 - storage.total_itc_fraction * storage.macrs_itc_reduction)
-            macrs_basis = macrs_bonus_basis * (1 - storage.macrs_bonus_fraction)
-
-            depreciation_schedule = zeros(years)
-            for (i, r) in enumerate(schedule)
-                if i < length(depreciation_schedule)
-                    depreciation_schedule[i] = macrs_basis * r
-                end
-            end
-            depreciation_schedule[1] += storage.macrs_bonus_fraction * macrs_bonus_basis
+        if storage.macrs_option_years in [5 ,7]
+            depreciation_schedule = get_depreciation_schedule(p, storage)
             m.total_depreciation += depreciation_schedule
         end
     end
@@ -157,8 +142,6 @@ function proforma_results(p::REoptInputs, d::Dict)
         fixed_om_bau = 0.0
         annual_om_bau = -1 * (var_om_bau + fixed_om_bau)
         m.om_series_bau += escalate_om(annual_om_bau)
-
-    
     end    
 
     # calculate (new) Boiler o+m costs and depreciation (no incentives currently)

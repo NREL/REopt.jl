@@ -334,7 +334,7 @@ end
 Get the depreciation schedule for MACRS. First check if tech.macrs_option_years in [5 ,7], then call function to return depreciation schedule
 Used in results/financial.jl and results/proformal.jl multiple times
 """
-function get_depreciation_schedule(p::REoptInputs, tech::AbstractTech, federal_itc_basis::Float64=0.0)
+function get_depreciation_schedule(p::REoptInputs, tech::Union{AbstractTech,AbstractStorage}, federal_itc_basis::Float64=0.0)
     schedule = []
     if tech.macrs_option_years == 5
         schedule = p.s.financial.macrs_five_year
