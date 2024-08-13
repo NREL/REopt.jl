@@ -663,8 +663,8 @@ else  # run HiGHS tests
                     m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
                     results = run_reopt(m, inputs)
                 
-                    @test round(results["CHP"]["size_kw"], digits=0) ≈ 350.0 atol=100.0
-                    @test round(results["Financial"]["lcc"], digits=0) ≈ 1.3476e7 rtol=0.1
+                    @test round(results["CHP"]["size_kw"], digits=0) ≈ 400.0 atol=50.0
+                    @test round(results["Financial"]["lcc"], digits=0) ≈ 1.3476e7 rtol=1.0e-2
                 end
             
                 @testset "CHP Cost Curve and Min Allowable Size" begin
