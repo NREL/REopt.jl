@@ -48,6 +48,7 @@ function proforma_results(p::REoptInputs, d::Dict)
     years = p.s.financial.analysis_years
     escalate_elec(val) = [-1 * val * (1 + p.s.financial.elec_cost_escalation_rate_fraction)^yr for yr in 1:years]
     escalate_om(val) = [val * (1 + p.s.financial.om_cost_escalation_rate_fraction)^yr for yr in 1:years]
+    escalate_fuel(val, esc_rate) = [val * (1 + esc_rate)^yr for yr in 1:years]
     third_party = p.s.financial.third_party_ownership
     
     # Create placeholder variables to store summed totals across all relevant techs
@@ -111,6 +112,7 @@ function proforma_results(p::REoptInputs, d::Dict)
         # In the two party case the developer does not include the fuel cost in their costs
         # It is assumed that the offtaker will pay for this at a rate that is not marked up
         # to cover developer profits
+        # TODO escalate fuel cost with p.s.financial.generator_fuel_cost_escalation_rate_fraction
         fixed_and_var_om = d["Generator"]["year_one_fixed_om_cost_before_tax"] + d["Generator"]["year_one_variable_om_cost_before_tax"]
         fixed_and_var_om_bau = 0.0
         year_one_fuel_cost_bau = 0.0
@@ -132,6 +134,64 @@ function proforma_results(p::REoptInputs, d::Dict)
         m.om_series += escalate_om(annual_om)
         m.om_series_bau += escalate_om(annual_om_bau)
     end
+
+    # calculate CHP o+m costs, incentives, and depreciation
+    if "CHP" in keys(d) && d["CHP"]["size_kw"] > 0
+        update_metrics(m, p, p.s.chp, "CHP", d, third_party)
+    end
+
+    # calculate (new) Boiler o+m costs (just fuel, no non-fuel operating costs currently)
+    # the optional installed_cost inputs assume net present cost so no option for MACRS or incentives
+    if "ExistingBoiler" in keys(d) && d["ExistingBoiler"]["size_mmbtu_per_hour"] > 0
+        fuel_cost = d["ExistingBoiler"]["year_one_fuel_cost_before_tax"]
+        m.om_series += escalate_fuel(-1 * fuel_cost, p.s.financial.existing_boiler_fuel_cost_escalation_rate_fraction)
+        var_om = 0.0
+        fixed_om = 0.0
+        annual_om = -1 * (var_om + fixed_om)
+        m.om_series += escalate_om(annual_om)
+        
+        # BAU ExistingBoiler
+        fuel_cost_bau = d["ExistingBoiler"]["year_one_fuel_cost_before_tax_bau"]
+        m.om_series_bau += escalate_fuel(-1 * fuel_cost_bau, p.s.financial.existing_boiler_fuel_cost_escalation_rate_fraction)
+        var_om_bau = 0.0
+        fixed_om_bau = 0.0
+        annual_om_bau = -1 * (var_om_bau + fixed_om_bau)
+        m.om_series_bau += escalate_om(annual_om_bau)
+
+    
+    end    
+
+    # calculate (new) Boiler o+m costs and depreciation (no incentives currently)
+    if "Boiler" in keys(d) && d["Boiler"]["size_mmbtu_per_hour"] > 0
+        fuel_cost = d["Boiler"]["year_one_fuel_cost_before_tax"]
+        m.om_series += escalate_fuel(-1 * fuel_cost, p.s.financial.boiler_fuel_cost_escalation_rate_fraction)
+        var_om = tech.om_cost_per_kwh * d["Boiler"]["annual_thermal_production_mmbtu"] * KWH_PER_MMBTU
+        fixed_om = tech.om_cost_per_kw * d["Boiler"]["size_mmbtu_per_hour"] * KWH_PER_MMBTU
+        annual_om = -1 * (var_om + fixed_om)
+        m.om_series += escalate_om(annual_om)
+        
+        # Depreciation
+        if tech.macrs_option_years in [5 ,7]
+            depreciation_schedule = get_depreciation_schedule(p, tech)
+            m.total_depreciation += depreciation_schedule
+        end
+    end
+
+    # calculate Absorption Chiller o+m costs and depreciation (no incentives currently)
+    if "AbsorptionChiller" in keys(d) && d["AbsorptionChiller"]["size_ton"] > 0
+        # Some thermal techs (e.g. Boiler) only have struct fields for O&M "per_kw" (converted from e.g. per_mmbtu_per_hour or per_ton)
+        #   but Absorption Chiller also has the input-style "per_ton" O&M, so no need to convert like for Boiler
+        fixed_om = tech.om_cost_per_ton * d["Absorption"]["size_ton"]
+        
+        annual_om = -1 * (fixed_om)
+        m.om_series += escalate_om(annual_om)
+        
+        # Depreciation
+        if tech.macrs_option_years in [5 ,7]
+            depreciation_schedule = get_depreciation_schedule(p, tech)
+            m.total_depreciation += depreciation_schedule
+        end
+    end    
 
     # calculate GHP incentives, and depreciation
     if "GHP" in keys(d) && d["GHP"]["ghp_option_chosen"] > 0
@@ -284,10 +344,20 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
     total_kw = results[tech_name]["size_kw"]
     existing_kw = :existing_kw in fieldnames(typeof(tech)) ? tech.existing_kw : 0
     new_kw = total_kw - existing_kw
-    capital_cost = new_kw * tech.installed_cost_per_kw
+    if tech_name == "CHP"
+        capital_cost = get_chp_initial_capex(p, results["CHP"]["size_kw"])
+    else
+        capital_cost = new_kw * tech.installed_cost_per_kw
+    end
 
-    # owner is responsible for both new and existing PV maintenance in optimal case
-    if third_party
+    # owner is responsible for both new and existing PV (or Generator) maintenance in optimal case
+    # CHP doesn't have existing CHP, and it has different O&M cost parameters
+    if tech_name == "CHP"
+        hours_operating = sum(results["CHP"]["electric_production_series_kw"] .> 0.0) / (8760 * p.s.settings.time_steps_per_hour)
+        annual_om = -1 * (results["CHP"]["annual_electric_production_kwh"] * tech.om_cost_per_kwh + 
+                            new_kw * tech.om_cost_per_kw + 
+                            new_kw * tech.om_cost_per_hr_per_kw_rated * hours_operating)
+    elseif third_party
         annual_om = -1 * new_kw * tech.om_cost_per_kw
     else
         annual_om = -1 * total_kw * tech.om_cost_per_kw
@@ -296,6 +366,12 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
     escalate_om(val) = [val * (1 + p.s.financial.om_cost_escalation_rate_fraction)^yr for yr in 1:years]
     m.om_series += escalate_om(annual_om)
     m.om_series_bau += escalate_om(-1 * existing_kw * tech.om_cost_per_kw)
+
+    if tech_name == "CHP"
+        escalate_fuel(val, esc_rate) = [val * (1 + esc_rate)^yr for yr in 1:years]
+        fuel_cost = results["CHP"]["year_one_fuel_cost_before_tax"]
+        m.om_series += escalate_fuel(-1 * fuel_cost, p.s.financial.chp_fuel_cost_escalation_rate_fraction)
+    end
 
     # incentive calculations, in the spreadsheet utility incentives are applied first
     utility_ibi = minimum([capital_cost * tech.utility_ibi_fraction, tech.utility_ibi_max])
@@ -311,7 +387,11 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
     pbi_series = Float64[]
     pbi_series_bau = Float64[]
     existing_energy_bau = third_party ? get(results[tech_name], "year_one_energy_produced_kwh_bau", 0) : 0
-    year_one_energy = "year_one_energy_produced_kwh" in keys(results[tech_name]) ? results[tech_name]["year_one_energy_produced_kwh"] : results[tech_name]["annual_energy_produced_kwh"]
+    if tech_name == "CHP"
+        year_one_energy = results[tech_name]["annual_electric_production_kwh"]
+    else
+        year_one_energy = "year_one_energy_produced_kwh" in keys(results[tech_name]) ? results[tech_name]["year_one_energy_produced_kwh"] : results[tech_name]["annual_energy_produced_kwh"]
+    end
     for yr in range(0, stop=years-1)
         if yr < tech.production_incentive_years
             degradation_fraction = :degradation_fraction in fieldnames(typeof(tech)) ? (1 - tech.degradation_fraction)^yr : 1.0
@@ -334,31 +414,13 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
     m.total_pbi_bau += pbi_series_bau
 
     # Federal ITC 
-    # NOTE: bug in v1 has the ITC within the `if tech.macrs_option_years in [5 ,7]` block.
-    # NOTE: bug in v1 reduces the federal_itc_basis with the federal_cbi, which is incorrect
     federal_itc_basis = capital_cost - state_ibi - utility_ibi - state_cbi - utility_cbi
     federal_itc_amount = tech.federal_itc_fraction * federal_itc_basis
     m.federal_itc += federal_itc_amount
 
     # Depreciation
     if tech.macrs_option_years in [5 ,7]
-        schedule = []
-        if tech.macrs_option_years == 5
-            schedule = p.s.financial.macrs_five_year
-        elseif tech.macrs_option_years == 7
-            schedule = p.s.financial.macrs_seven_year
-        end
-
-        macrs_bonus_basis = federal_itc_basis - federal_itc_basis * tech.federal_itc_fraction * tech.macrs_itc_reduction
-        macrs_basis = macrs_bonus_basis * (1 - tech.macrs_bonus_fraction)
-
-        depreciation_schedule = zeros(years)
-        for (i, r) in enumerate(schedule)
-            if i < length(depreciation_schedule)
-                depreciation_schedule[i] = macrs_basis * r
-            end
-        end
-        depreciation_schedule[1] += (tech.macrs_bonus_fraction * macrs_bonus_basis)
+        depreciation_schedule = get_depreciation_schedule(p, tech, federal_itc_basis)
         m.total_depreciation += depreciation_schedule
     end
     nothing
@@ -407,31 +469,13 @@ function update_ghp_metrics(m::REopt.Metrics, p::REoptInputs, tech::REopt.Abstra
     m.total_pbi_bau += pbi_series_bau
 
     # Federal ITC 
-    # NOTE: bug in v1 has the ITC within the `if tech.macrs_option_years in [5 ,7]` block.
-    # NOTE: bug in v1 reduces the federal_itc_basis with the federal_cbi, which is incorrect
     federal_itc_basis = capital_cost - state_ibi - utility_ibi - state_cbi - utility_cbi
     federal_itc_amount = tech.federal_itc_fraction * federal_itc_basis
     m.federal_itc += federal_itc_amount
 
     # Depreciation
     if tech.macrs_option_years in [5 ,7]
-        schedule = []
-        if tech.macrs_option_years == 5
-            schedule = p.s.financial.macrs_five_year
-        elseif tech.macrs_option_years == 7
-            schedule = p.s.financial.macrs_seven_year
-        end
-
-        macrs_bonus_basis = federal_itc_basis - federal_itc_basis * tech.federal_itc_fraction * tech.macrs_itc_reduction
-        macrs_basis = macrs_bonus_basis * (1 - tech.macrs_bonus_fraction)
-
-        depreciation_schedule = zeros(years)
-        for (i, r) in enumerate(schedule)
-            if i < length(depreciation_schedule)
-                depreciation_schedule[i] = macrs_basis * r
-            end
-        end
-        depreciation_schedule[1] += (tech.macrs_bonus_fraction * macrs_bonus_basis)
+        depreciation_schedule = get_depreciation_schedule(p, tech, federal_itc_basis)
         m.total_depreciation += depreciation_schedule
     end
     nothing
@@ -452,6 +496,6 @@ function irr(cashflows::AbstractArray{<:Real, 1})
     try
         rate = fzero(f, [0.0, 0.99])
     finally
-        return round(rate, digits=2)
+        return round(rate, digits=3)
     end
 end
