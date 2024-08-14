@@ -165,6 +165,10 @@ function initial_capex(m::JuMP.AbstractModel, p::REoptInputs; _n="")
         initial_capex += get_chp_initial_capex(p, chp_size_kw)
     end
 
+    if "SteamTurbine" in p.techs.all
+        initial_capex += p.s.steam_turbine.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["SteamTurbine"]
+    end
+
     if "Boiler" in p.techs.all
         initial_capex += p.s.boiler.installed_cost_per_kw * value.(m[Symbol("dvPurchaseSize"*_n)])["Boiler"]
     end
