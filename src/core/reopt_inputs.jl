@@ -119,7 +119,7 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     ghp_electric_consumption_kw::Array{Float64,2}  # Array of electric load profiles consumed by GHP
     ghp_installed_cost::Array{Float64,1}  # Array of installed cost for GHP options
     ghp_om_cost_year_one::Array{Float64,1}  # Array of O&M cost for GHP options
-    avoided_capex_by_ghp_present_value::Array{Float64,1} # HVAC upgrade costs avoided
+    avoided_capex_by_ghp_present_value::Array{Float64,1} # HVAC upgrade costs avoided (GHP)
     ghx_useful_life_years::Array{Float64,1} # GHX useful life years
     ghx_residual_value::Array{Float64,1} # Residual value of each GHX options
     tech_renewable_energy_fraction::Dict{String, <:Real} # (techs)
@@ -137,6 +137,7 @@ struct REoptInputs{ScenarioType <: AbstractScenario} <: AbstractInputs
     heating_loads_served_by_tes::Dict{String, Array{String,1}} # ("HotThermalStorage" or empty)
     unavailability::Dict{String, Array{Float64,1}} # (techs.elec)
     absorption_chillers_using_heating_load::Dict{String,Array{String,1}} # ("AbsorptionChiller" or empty)
+    avoided_capex_by_ashp_present_value::Dict{String, <:Real} # HVAC upgrade costs avoided (ASHP)
 end
 
 
@@ -172,7 +173,7 @@ function REoptInputs(s::AbstractScenario)
         seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
         tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
         tech_emissions_factors_PM25, techs_operating_reserve_req_fraction, thermal_cop, fuel_cost_per_kwh, 
-        heating_cop, cooling_cop, heating_cf, cooling_cf = setup_tech_inputs(s,time_steps)
+        heating_cop, cooling_cop, heating_cf, cooling_cf, avoided_capex_by_ashp_present_value = setup_tech_inputs(s,time_steps)
 
     pbi_pwf, pbi_max_benefit, pbi_max_kw, pbi_benefit_per_kwh = setup_pbi_inputs(s, techs)
 
@@ -326,7 +327,8 @@ function REoptInputs(s::AbstractScenario)
         heating_loads_kw,
         heating_loads_served_by_tes,
         unavailability,
-        absorption_chillers_using_heating_load
+        absorption_chillers_using_heating_load,
+        avoided_capex_by_ashp_present_value
     )
 end
 
@@ -363,6 +365,7 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     heating_cf = Dict(t => zeros(length(time_steps)) for t in union(techs.heating, techs.chp))
     cooling_cf = Dict(t => zeros(length(time_steps)) for t in techs.cooling)
     cooling_cop = Dict(t => zeros(length(time_steps)) for t in techs.cooling)
+    avoided_capex_by_ashp_present_value = Dict(t => 0.0 for t in techs.all)
 
     # export related inputs
     techs_by_exportbin = Dict{Symbol, AbstractArray}(k => [] for k in s.electric_tariff.export_bins)
@@ -445,7 +448,7 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
 
     if "ASHP_SpaceHeater" in techs.all
         setup_ashp_spaceheater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, cooling_cop, heating_cf, cooling_cf,
-            techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint)
+            techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, avoided_capex_by_ashp_present_value)
     else
         heating_cop["ASHP_SpaceHeater"] = ones(length(time_steps))
         cooling_cop["ASHP_SpaceHeater"] = ones(length(time_steps))
@@ -455,7 +458,7 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
 
     if "ASHP_WaterHeater" in techs.all
         setup_ashp_waterheater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf,
-            techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint)
+            techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, avoided_capex_by_ashp_present_value)
     else
         heating_cop["ASHP_WaterHeater"] = ones(length(time_steps))
         heating_cf["ASHP_WaterHeater"] = zeros(length(time_steps))
@@ -482,7 +485,7 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     seg_min_size, seg_max_size, seg_yint, techs_by_exportbin, export_bins_by_tech, boiler_efficiency,
     tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, 
     tech_emissions_factors_PM25, techs_operating_reserve_req_fraction, thermal_cop, fuel_cost_per_kwh, 
-    heating_cop, cooling_cop, heating_cf, cooling_cf
+    heating_cop, cooling_cop, heating_cf, cooling_cf, avoided_capex_by_ashp_present_value
 end
 
 
@@ -937,7 +940,7 @@ function setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, o
 end
 
 function setup_ashp_spaceheater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, cooling_cop, heating_cf, cooling_cf,
-        segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint)
+        segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, avoided_capex_by_ashp_present_value)
     max_sizes["ASHP_SpaceHeater"] = s.ashp.max_kw
     min_sizes["ASHP_SpaceHeater"] = s.ashp.min_kw
     om_cost_per_kw["ASHP_SpaceHeater"] = s.ashp.om_cost_per_kw
@@ -971,11 +974,12 @@ function setup_ashp_spaceheater_inputs(s, max_sizes, min_sizes, cap_cost_slope, 
     else
         cap_cost_slope["ASHP_SpaceHeater"] = s.ashp.installed_cost_per_kw
     end
-
+    
+    avoided_capex_by_ashp_present_value["ASHP_SpaceHeater"] = s.ashp.avoided_capex_by_ashp_present_value
 end
 
 function setup_ashp_waterheater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf,
-        segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint)
+        segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, avoided_capex_by_ashp_present_value)
     max_sizes["ASHP_WaterHeater"] = s.ashp_wh.max_kw
     min_sizes["ASHP_WaterHeater"] = s.ashp_wh.min_kw
     om_cost_per_kw["ASHP_WaterHeater"] = s.ashp_wh.om_cost_per_kw
@@ -1007,7 +1011,7 @@ function setup_ashp_waterheater_inputs(s, max_sizes, min_sizes, cap_cost_slope, 
     else
         cap_cost_slope["ASHP_WaterHeater"] = s.ashp_wh.installed_cost_per_kw
     end
-
+    avoided_capex_by_ashp_present_value["ASHP_WaterHeater"] = s.ashp_wh.avoided_capex_by_ashp_present_value
 end
 
 

@@ -263,6 +263,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
     m[:GHPCapCosts] = 0.0
     m[:GHPOMCosts] = 0.0
 	m[:AvoidedCapexByGHP] = 0.0
+	m[:AvoidedCapexByASHP] = 0.0
 	m[:ResidualGHXCapCost] = 0.0
 	m[:ObjectivePenalties] = 0.0
 
@@ -323,6 +324,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 
 		if !isempty(p.techs.ashp)
 			add_ashp_force_in_constraints(m, p)
+		end
+
+		if !isempty(p.avoided_capex_by_ashp_present_value) && !isempty(p.techs.ashp)
+			avoided_capex_by_ashp(m, p)
 		end
     
         if !isempty(p.techs.thermal)
@@ -491,7 +496,10 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
 		m[:OffgridOtherCapexAfterDepr] -
 
 		# Subtract capital expenditures avoided by inclusion of GHP and residual present value of GHX.
-		m[:AvoidedCapexByGHP] - m[:ResidualGHXCapCost]
+		m[:AvoidedCapexByGHP] - m[:ResidualGHXCapCost] - 
+
+		# Subtract capital expenditures avoided by inclusion of ASHP
+		m[:AvoidedCapexByASHP]
 
 	);
 	if !isempty(p.s.electric_utility.outage_durations)

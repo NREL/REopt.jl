@@ -44,6 +44,7 @@ struct ASHP <: AbstractThermalTech
     can_serve_cooling::Bool
     force_into_system::Bool
     back_up_temp_threshold_degF::Real
+    avoided_capex_by_ashp_present_value::Real
 end
 
 
@@ -64,6 +65,7 @@ function ASHP_SpaceHeater(;
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
     can_serve_cooling::Union{Bool, Nothing} = nothing # If ASHP can supply heat to the cooling load
     force_into_system::Union{Bool, Nothing} = nothing # force into system to serve all space heating loads if true
+    avoided_capex_by_ashp_present_value::Real = 0.0
 
     #The following inputs are used to create the attributes heating_cop and heating cf: 
     heating_cop_reference::Array{Float64,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
@@ -89,6 +91,7 @@ function ASHP_SpaceHeater(;
         om_cost_per_ton::Union{Real, Nothing} = nothing,
         macrs_option_years::Int = 0,
         macrs_bonus_fraction::Real = 0.0,
+        avoided_capex_by_ashp_present_value::Real = 0.0,
         can_serve_cooling::Union{Bool, Nothing} = nothing,
         force_into_system::Union{Bool, Nothing} = nothing,
         heating_cop_reference::Array{Float64,1} = Float64[],
@@ -193,7 +196,8 @@ function ASHP_SpaceHeater(;
         can_serve_process_heat,
         can_serve_cooling,
         force_into_system,
-        back_up_temp_threshold_degF
+        back_up_temp_threshold_degF,
+        avoided_capex_by_ashp_present_value
     )
 end
 
@@ -229,6 +233,7 @@ function ASHP_WaterHeater(;
     om_cost_per_ton::Union{Real, Nothing} = nothing,
     macrs_option_years::Int = 0,
     macrs_bonus_fraction::Real = 0.0,
+    avoided_capex_by_ashp_present_value::Real = 0.0,
     force_into_system::Union{Bool, Nothing} = nothing,
     heating_cop_reference::Array{Float64,1} = Float64[],
     heating_cf_reference::Array{Float64,1} = Float64[],
@@ -312,7 +317,8 @@ function ASHP_WaterHeater(;
         can_serve_process_heat,
         can_serve_cooling,
         force_into_system,
-        back_up_temp_threshold_degF
+        back_up_temp_threshold_degF,
+        avoided_capex_by_ashp_present_value
     )
 end
 

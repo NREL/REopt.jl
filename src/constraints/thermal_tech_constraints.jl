@@ -126,6 +126,12 @@ function add_ashp_force_in_constraints(m, p; _n="")
     end
 end
 
+function avoided_capex_by_ashp(m, p; _n="")
+    m[:AvoidedCapexByASHP] = @expression(m,
+    sum(p.avoided_capex_by_ashp_present_value[t] for t in p.techs.ashp)
+    )
+end
+
 function no_existing_boiler_production(m, p; _n="")
     for ts in p.time_steps
         for q in p.heating_loads

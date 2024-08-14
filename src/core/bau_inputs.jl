@@ -30,6 +30,7 @@ function BAUInputs(p::REoptInputs)
     cooling_cop = Dict{String, Array{Float64,1}}()
     heating_cf = Dict{String, Array{Float64,1}}() 
     cooling_cf = Dict{String, Array{Float64,1}}() 
+    avoided_capex_by_ashp_present_value = Dict(t => 0.0 for t in techs.all)
     production_factor = DenseAxisArray{Float64}(undef, techs.all, p.time_steps)
     tech_renewable_energy_fraction = Dict(t => 0.0 for t in techs.all)
     # !!! note: tech_emissions_factors are in lb / kWh of fuel burned (gets multiplied by kWh of fuel burned, not kWh electricity consumption, ergo the use of the HHV instead of fuel slope)
@@ -231,7 +232,8 @@ function BAUInputs(p::REoptInputs)
         heating_loads_kw,
         heating_loads_served_by_tes,
         unavailability,
-        absorption_chillers_using_heating_load
+        absorption_chillers_using_heating_load,
+        avoided_capex_by_ashp_present_value
     )
 end
 
