@@ -87,7 +87,7 @@ function proforma_results(p::REoptInputs, d::Dict)
 
         # Depreciation
         if storage.macrs_option_years in [5 ,7]
-            depreciation_schedule = get_depreciation_schedule(p, storage)
+            depreciation_schedule = get_depreciation_schedule(p, storage, federal_itc_basis)
             m.total_depreciation += depreciation_schedule
         end
     end
@@ -148,17 +148,31 @@ function proforma_results(p::REoptInputs, d::Dict)
     if "Boiler" in keys(d) && d["Boiler"]["size_mmbtu_per_hour"] > 0
         fuel_cost = d["Boiler"]["year_one_fuel_cost_before_tax"]
         m.om_series += escalate_fuel(-1 * fuel_cost, p.s.financial.boiler_fuel_cost_escalation_rate_fraction)
-        var_om = tech.om_cost_per_kwh * d["Boiler"]["annual_thermal_production_mmbtu"] * KWH_PER_MMBTU
-        fixed_om = tech.om_cost_per_kw * d["Boiler"]["size_mmbtu_per_hour"] * KWH_PER_MMBTU
+        var_om = p.s.boiler.om_cost_per_kwh * d["Boiler"]["annual_thermal_production_mmbtu"] * KWH_PER_MMBTU
+        fixed_om = p.s.boiler.om_cost_per_kw * d["Boiler"]["size_mmbtu_per_hour"] * KWH_PER_MMBTU
         annual_om = -1 * (var_om + fixed_om)
         m.om_series += escalate_om(annual_om)
         
         # Depreciation
-        if tech.macrs_option_years in [5 ,7]
-            depreciation_schedule = get_depreciation_schedule(p, tech)
+        if p.s.boiler.macrs_option_years in [5 ,7]
+            depreciation_schedule = get_depreciation_schedule(p, p.s.boiler)
             m.total_depreciation += depreciation_schedule
         end
     end
+
+    # calculate Steam Turbine o+m costs and depreciation (no incentives currently)
+    if "SteamTurbine" in keys(d) && get(d["SteamTurbine"], "size_kw", 0) > 0
+        fixed_om = tech.om_cost_per_kw * d["SteamTurbine"]["size_kw"]
+        var_om = tech.om_cost_per_kwh * d["SteamTurbine"]["annual_electric_production_kwh"]
+        annual_om = -1 * (fixed_om + var_om)
+        m.om_series += escalate_om(annual_om)
+        
+        # Depreciation
+        if p.s.steam_turbine.macrs_option_years in [5 ,7]
+            depreciation_schedule = get_depreciation_schedule(p, p.s.steam_turbine)
+            m.total_depreciation += depreciation_schedule
+        end
+    end     
 
     # calculate Absorption Chiller o+m costs and depreciation (no incentives currently)
     if "AbsorptionChiller" in keys(d) && d["AbsorptionChiller"]["size_ton"] > 0
@@ -170,8 +184,8 @@ function proforma_results(p::REoptInputs, d::Dict)
         m.om_series += escalate_om(annual_om)
         
         # Depreciation
-        if tech.macrs_option_years in [5 ,7]
-            depreciation_schedule = get_depreciation_schedule(p, tech)
+        if p.s.absorption_chiller.macrs_option_years in [5 ,7]
+            depreciation_schedule = get_depreciation_schedule(p, p.s.absorption_chiller)
             m.total_depreciation += depreciation_schedule
         end
     end    
