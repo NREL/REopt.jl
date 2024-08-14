@@ -991,7 +991,7 @@ else  # run HiGHS tests
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             set_optimizer_attribute(m, "mip_rel_gap", 0.01)
             r = run_reopt(m, d)
-            @test occursin("Unable to use IndicatorToMILPBridge", string(r["Messages"]["errors"]))
+            @test occursin("are not supported by the solver", string(r["Messages"]["errors"])) || occursin("Unable to use IndicatorToMILPBridge", string(r["Messages"]["errors"]))
             # #optimal SOH at end of horizon is 80\% to prevent any replacement
             # @test sum(value.(m[:bmth_BkWh])) ≈ 0 atol=0.1
             # # @test r["ElectricStorage"]["maintenance_cost"] ≈ 2972.66 atol=0.01 
@@ -1005,7 +1005,7 @@ else  # run HiGHS tests
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             set_optimizer_attribute(m, "mip_rel_gap", 0.01)
             r = run_reopt(m, d)
-            @test occursin("Unable to use IndicatorToMILPBridge", string(r["Messages"]["errors"]))
+            @test occursin("are not supported by the solver", string(r["Messages"]["errors"])) || occursin("Unable to use IndicatorToMILPBridge", string(r["Messages"]["errors"]))
             # @test round(sum(r["ElectricStorage"]["soc_series_fraction"]), digits=2) / 8760 >= 0.7199
         end
 
