@@ -162,8 +162,8 @@ function proforma_results(p::REoptInputs, d::Dict)
 
     # calculate Steam Turbine o+m costs and depreciation (no incentives currently)
     if "SteamTurbine" in keys(d) && get(d["SteamTurbine"], "size_kw", 0) > 0
-        fixed_om = tech.om_cost_per_kw * d["SteamTurbine"]["size_kw"]
-        var_om = tech.om_cost_per_kwh * d["SteamTurbine"]["annual_electric_production_kwh"]
+        fixed_om = p.s.steam_turbine.om_cost_per_kw * d["SteamTurbine"]["size_kw"]
+        var_om = p.s.steam_turbine.om_cost_per_kwh * d["SteamTurbine"]["annual_electric_production_kwh"]
         annual_om = -1 * (fixed_om + var_om)
         m.om_series += escalate_om(annual_om)
         
@@ -178,7 +178,7 @@ function proforma_results(p::REoptInputs, d::Dict)
     if "AbsorptionChiller" in keys(d) && d["AbsorptionChiller"]["size_ton"] > 0
         # Some thermal techs (e.g. Boiler) only have struct fields for O&M "per_kw" (converted from e.g. per_mmbtu_per_hour or per_ton)
         #   but Absorption Chiller also has the input-style "per_ton" O&M, so no need to convert like for Boiler
-        fixed_om = tech.om_cost_per_ton * d["Absorption"]["size_ton"]
+        fixed_om = p.s.absorption_chiller.om_cost_per_ton * d["AbsorptionChiller"]["size_ton"]
         
         annual_om = -1 * (fixed_om)
         m.om_series += escalate_om(annual_om)
