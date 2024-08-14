@@ -1947,8 +1947,8 @@ else  # run HiGHS tests
             @test abs(results["Financial"]["lifecycle_capital_costs"] - 0.7*results["Financial"]["initial_capital_costs"]) < 150.0
 
             @test abs(results["Financial"]["npv"] - 840621) < 1.0
-            @test results["Financial"]["simple_payback_years"] - 5.09 < 0.1
-            @test results["Financial"]["internal_rate_of_return"] - 0.18 < 0.01
+            @test abs(results["Financial"]["simple_payback_years"] - 3.59) < 0.1
+            @test abs(results["Financial"]["internal_rate_of_return"] - 0.258) < 0.01
 
             @test haskey(results["ExistingBoiler"], "year_one_fuel_cost_before_tax_bau")
 
