@@ -355,7 +355,7 @@ function DetermineLineNominalVoltage(p::PowerFlowInputs)  # new function added b
 end 
 
 function constrain_KVL(m, p::PowerFlowInputs) 
-    # @info "constrain_KVL"
+    
     w = m[:vsqrd]
     P = m[:Pᵢⱼ] 
     Q = m[:Qᵢⱼ]
@@ -451,59 +451,11 @@ function constrain_bounds(m::JuMP.AbstractModel, p::PowerFlowInputs)
 end
 
 
-# Inputs and outputs
-
-"""
-    dsstxt_to_sparse_array(fp::String, first_data_row::Int = 5)
-
-convert a SystemY.txt file from OpenDSS to a julia matrix.
-assumes that Y is symmetric.
-"""
-function dsstxt_to_sparse_array(fp::String, first_data_row::Int = 5)
-
-    rows = Int[]
-    cols = Int[]
-    real = Float64[]
-    imag = Float64[]
-
-    for (i, line) in enumerate(eachline(fp))
-
-        if i < first_data_row continue end
-        line = replace(line, " "=>"")  # "[1,1]=50500+j-50500"
-        N = length(line)
-        if N == 0 continue end
-
-        append!(rows, tryparse(Int64,
-                chop(line, head=findfirst("[", line)[end], tail=N-findfirst(",", line)[end]+1)
-        ))
-
-        append!(cols, tryparse(Int64,
-                chop(line, head=findfirst(",", line)[end], tail=N-findfirst("]", line)[end]+1)
-        ))
-
-        append!(real, tryparse(Float64,
-                chop(line, head=findfirst("=", line)[end], tail=N-findfirst("+", line)[end]+1)
-        ))
-
-        append!(imag, tryparse(Float64,
-                chop(line, head=findfirst("j", line)[end], tail=0)
-        ))
-    end
-    return convert(Array{Complex, 2}, Symmetric(sparse(rows, cols, complex.(real, imag)), :L))
-end
-
-# TEO added new code for transformers (based on dss_parse_lines code below)
-
 function dss_parse_transformers(fp::String)
-    BusVoltagesFromTransformers = Dict([]) #Tuple[]
-    print("\n  BusVoltageFromTransformers variable")
-    print(BusVoltagesFromTransformers)
-    print("\n")
-    #linecodes = String[]
-    #linelengths = Float64[]
+    
+    BusVoltagesFromTransformers = Dict([]) 
+   
     for line in eachline(fp)
-        print("\n Reading new line")
-        print("\n")
         N = length(line)
         if startswith(line, "New Transformer")
             name = chop(line, head=findfirst(".", line)[end], tail=N-findnext(" ", line, findfirst(".", line)[end])[1]+1)
@@ -512,43 +464,48 @@ function dss_parse_transformers(fp::String)
                 # use the findfirst and findnext functions to pull out the bus names and bus voltages from the transformer file
                 IndexFirstBus_Start = findfirst("Buses=[", line)[end]
                 IndexFirstBus_End = N - findnext(" ", line, findfirst("Buses=[", line)[end])[1]+1
-                IndexSecondBus_Start = findnext(" ", line, findfirst("Buses=[", line)[end])[1] # IndexFirstBus_End + 1
+                IndexSecondBus_Start = findnext(" ", line, findfirst("Buses=[", line)[end])[1] 
                 IndexSecondBus_End = N - findnext("]", line, IndexSecondBus_Start)[1]+1
 
                 bus1 = strip(chop(line, head=IndexFirstBus_Start, tail= IndexFirstBus_End )) 
                 bus2 = strip(chop(line, head=IndexSecondBus_Start, tail= IndexSecondBus_End))
 
-                # eliminate the .1's after the bus names
-
+                # eliminate the .1's after the bus names:
                 bus1 = chop(bus1, tail=length(bus1)-findfirst(".", bus1)[1]+1)
                 bus2 = chop(bus2, tail=length(bus2)-findfirst(".", bus2)[1]+1)
-
-                #LineCode = strip(chop(line, head=findfirst("LineCode=", line)[end], tail=N-findfirst("Length", line)[1]+1))
-                #LineLength = strip(chop(line, head=findfirst("Length=", line)[end], tail=0))
+                print("\n bus1 is $(bus1) and bus2 is $(bus2)")
+                
                 IndexFirstVoltage_Start = findfirst("kVs=[", line)[end]
                 IndexFirstVoltage_End = N-findnext(" ", line, findfirst("kVs=[", line)[end])[1]+1
                 IndexSecondVoltage_Start = findnext(" ", line, findfirst("kVs=[", line)[end])[1]
                 IndexSecondVoltage_End = N - findnext("]", line, IndexSecondVoltage_Start)[1]+1
 
-
                 VoltageBus1 = strip(chop(line, head = IndexFirstVoltage_Start, tail=IndexFirstVoltage_End) )
                 VoltageBus2 = strip(chop(line, head=IndexSecondVoltage_Start, tail=IndexSecondVoltage_End))
-                #push!(BusVoltagesFromTransformers, (name, bus1, VoltageBus1))
-                #push!(BusVoltagesFromTransformers, (name, bus2, VoltageBus2))
-                print("\n bus1 is:"*string(bus1))
-                #dict_to_add = Dict([string(bus1),string(VoltageBus1)])
-                #print("\n Dictionary to add is: ")
-                #print(dict_to_add)
-                #print("\n ")
+     
                 BusVoltagesFromTransformers = merge!(BusVoltagesFromTransformers, Dict(string(bus1) => Dict("Voltage" => string(VoltageBus1), "Transformer Name" => name, "Transformer Side" => "upstream")))
                 BusVoltagesFromTransformers = merge!(BusVoltagesFromTransformers, Dict(string(bus2) => Dict("Voltage" => string(VoltageBus2), "Transformer Name" => name, "Transformer Side" => "downstream")))
-                
-                #push!(linecodes, convert(String, LineCode))
-                #push!(linelengths, parse(Float64, LineLength))
+                 
             end 
         end
     end
-    return BusVoltagesFromTransformers   #edges, linecodes, linelengths
+
+    print("\n  BusVoltageFromTransformers variable: $(BusVoltagesFromTransformers)")
+
+    return BusVoltagesFromTransformers   
+
+    #=
+    #TODO: use the new method in the dss_parse_lines for the transformer files too 
+    b = Tables.matrix(CSV.File(fp; ignorerepeated=true, header=false, delim=' '))
+    b = replace(b, missing => "no_input")
+
+    BusVoltagesFromTransformers = Dict([])
+
+    for z in 1:length(b[:,1])
+        line_temp = b[z,:]      
+
+    return BusVoltagesFromTransformers   
+    =#
 end
 
 """
@@ -560,47 +517,12 @@ Parse a openDSS line codes file, returning
     - linelengths, an array of float
 """
 function dss_parse_lines(fp::String)
-    
-    edges = Tuple[]
-    linecodes = String[]
-    linelengths = Float64[]
-    linenormamps = Float64[]
-    for line in eachline(fp)
-        N = length(line)
-        if startswith(line, "New Line")
-            name = chop(line, head=findfirst(".", line)[end], tail=N-findfirst("  ", line)[1]+1)
-            if startswith(name, "L")
-                bus1 = strip(chop(line, head=findfirst("Bus1=", line)[end], tail=N-findfirst("Bus2", line)[1]+1))
-                bus2 = strip(chop(line, head=findfirst("Bus2=", line)[end], tail=N-findfirst("LineCode", line)[1]+1))
-                LineCode = strip(chop(line, head=findfirst("LineCode=", line)[end], tail=N-findfirst("Length", line)[1]+1))
-                LineLength = strip(chop(line, head=findfirst("Length=", line)[end], tail=N-findfirst("normamps", line)[1]+1))
-                LineNormAmps = strip(chop(line, head=findfirst("normamps=", line)[end], tail=0))
 
-                b1 = chop(bus1, tail=length(bus1)-findfirst(".", bus1)[1]+1)
-                b2 = chop(bus2, tail=length(bus2)-findfirst(".", bus2)[1]+1)
-                push!(edges, (b1, b2))
-                push!(linecodes, convert(String, LineCode))
-                push!(linelengths, parse(Float64, LineLength))
-                push!(linenormamps, parse(Float64, LineNormAmps))
-            end
-        end
-    end
-
-    print("\n ***** Line codes are:")
-    print(linecodes)
-    print("\n ***** Line lengths are:")
-    print(linelengths)
-    print("\n ***** Line norm amps are:")
-    print(linenormamps)
-    return edges, linecodes, linelengths, linenormamps
-    
-
-    # New method for reading in the dss files
-    #=
-    #function test(fp)
+    # Read in the .dss files
     a = Tables.matrix(CSV.File(fp; ignorerepeated=true, header=false, delim=' '))
     a = replace(a, missing => "no_input")
 
+    # Parse the data for each line
     edges = Tuple[]
     linecodes = String[]
     linelengths = Float64[]
@@ -641,28 +563,23 @@ function dss_parse_lines(fp::String)
                 LineDataDictionary[string(z)]["normamps"] = normamps
                 push!(linenormamps, parse(Float64, normamps))
 
-            elseif startswith(i, "switch=")
-                value = strip(chop(i, head=findfirst("switch=", i)[end], tail=0))
-                LineDataDictionary[string(z)]["switch"] = value
+            elseif startswith(i, "Switch=")
+                value = strip(chop(i, head=findfirst("Switch=", i)[end], tail=0))
+                LineDataDictionary[string(z)]["Switch"] = value
             end            
         end
         push!(edges, (LineDataDictionary[string(z)]["Bus1"], LineDataDictionary[string(z)]["Bus2"]))   
     end
 
-    print("\n ***** Line codes are:")
-    print(linecodes)
-    print("\n ***** Line lengths are:")
-    print(linelengths)
-    print("\n ***** Line norm amps are:")
-    print(linenormamps)
-
+    print("\n ***** Line codes are: $(linecodes)")
+    print("\n ***** Line lengths are: $(linelengths)")
+    print("\n ***** Line norm amps are: $(linenormamps)")
+    
     return edges, linecodes, linelengths, linenormamps, LineDataDictionary
-    #end
-    =#
-
+    
 end
 
-
+#TODO: use the new method in the dss_parse_lines for the line codes files too 
 function dss_parse_line_codes(fp::String, linecodes::Array{String, 1})
     d = Dict(c => Dict{String, Any}() for c in linecodes)
     open(fp) do io
@@ -699,44 +616,12 @@ function dss_parse_string_matrix(line::String)
     return parse(Float64, str_array[1])
 end
 
-# Previous code, which was deleted because these aren't standard entries in an OpenDSS file
-                    #=
-                    while !occursin("nominal_voltage_volts", line) || startswith(line, "!")
-                        line = readline(io) 
-                    end
-                    d[code]["nominal_voltage_volts"] = dss_parse_string_matrix(line)
-                    println("Nominal Voltage Rating in Volts is: "*string(d[code]["nominal_voltage_volts"]))
-
-                    while !occursin("RealPowerMax", line) || startswith(line, "!") 
-                        line = readline(io) 
-                    end
-                    d[code]["RealPowerMax"] = dss_parse_string_matrix(line)
-                    println("Max Power Rating is: "*string(d[code]["RealPowerMax"]))
-                    
-                    while !occursin("RealPowerMin", line) || startswith(line, "!")
-                        line = readline(io) 
-                    end
-                    d[code]["RealPowerMin"] = dss_parse_string_matrix(line)
-                    println("Min Power Rating is: "*string(d[code]["RealPowerMin"]))
-
-                    while !occursin("ReactivePowerMax", line) || startswith(line, "!")
-                        line = readline(io) 
-                    end
-                    d[code]["ReactivePowerMax"] = dss_parse_string_matrix(line)
-                    println("Max Reactive Power Rating is: "*string(d[code]["ReactivePowerMax"]))
-                    
-                    while !occursin("ReactivePowerMin", line) || startswith(line, "!")
-                        line = readline(io) 
-                    end
-                    d[code]["ReactivePowerMin"] = dss_parse_string_matrix(line)
-                    println("Min Reactive Power Rating is: "*string(d[code]["ReactivePowerMin"]))
-                    =#
 
 # Utilities
 
 """
     function i_to_j(j::String, p::Inputs)
-find all busses upstream of bus j
+        find all busses upstream of bus j
 """
 function i_to_j(j::String, p::PowerFlowInputs)
     convert(Array{String, 1}, map(x->x[1], filter(t->t[2]==j, p.edges)))
@@ -745,7 +630,7 @@ end
 
 """
     function j_to_k(j::String, p::Inputs)
-find all busses downstream of bus j
+        find all busses downstream of bus j
 """
 function j_to_k(j::String, p::PowerFlowInputs)
     convert(Array{String, 1}, map(x->x[2], filter(t->t[1]==j, p.edges)))
