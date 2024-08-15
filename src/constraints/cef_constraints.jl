@@ -32,11 +32,12 @@ Returns:
 - CleanGridToLoad: The electricity from the grid directly serving the load.
 - CleanGridToBatt: The electricity from the grid used to charge the batteries, accounting for losses.
 """
+
 function calc_grid_to_load(m, p)
     if !isempty(p.s.storage.types.elec)
         # Calculate the grid to load through the battery, accounting for the battery losses
         m[:CleanGridToBatt] = @expression(m, [
-            ts in p.time_steps], p.hours_per_time_step * sum(
+            ts in p.time_steps], sum(
             m[:dvGridToStorage][b, ts] * p.s.storage.attr[b].charge_efficiency * p.s.storage.attr[b].discharge_efficiency 
             for b in p.s.storage.types.elec)
         )
@@ -44,13 +45,9 @@ function calc_grid_to_load(m, p)
         m[:CleanGridToBatt] = zeros(length(p.time_steps))
     end
     
-    # Validating battery efficiency
-    # m[:batteryEfficiency] = @expression(m, [
-    #     b in p.s.storage.types.elec], 1 - p.s.storage.attr[b].charge_efficiency * p.s.storage.attr[b].discharge_efficiency)
-    
     # Calculate the grid serving load not through the battery
     m[:CleanGridToLoad] = @expression(m, [
-        ts in p.time_steps], p.hours_per_time_step * (
+        ts in p.time_steps], (
         sum(m[:dvGridPurchase][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) - 
         sum(m[:dvGridToStorage][b, ts] for b in p.s.storage.types.elec)
     ))
