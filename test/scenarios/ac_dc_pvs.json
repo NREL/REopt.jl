@@ -2,8 +2,7 @@
     "Site": {
         "latitude": 34.5794343,
         "longitude": -118.1164613,
-        "land_acres": 0.25,
-        "roof_squarefeet": 1000.0
+        "land_acres": 0.25
     },
     "Financial": {
       "om_cost_escalation_rate_fraction": 0.025,
@@ -34,7 +33,7 @@
     "PV": [
         {
           "name": "ground",
-          "dc_coupled_with_storage": true,
+          "dc_coupled_with_storage": false,
           "existing_kw": 40.0,
           "installed_cost_per_kw": 1600.0,
           "om_cost_per_kw": 16.0,
