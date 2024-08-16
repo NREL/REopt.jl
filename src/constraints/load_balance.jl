@@ -119,7 +119,7 @@ function add_thermal_load_constraints(m, p; _n="")
             
             if !isempty(p.techs.steam_turbine)
                 @constraint(m, HeatLoadBalanceCon[q in p.heating_loads, ts in p.time_steps_with_grid],
-                    sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for t in union(p.techs.heating, p.techs.chp))
+                    sum(p.production_factor[t,ts] * m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for t in union(p.techs.heating, p.techs.chp))
                     + sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for b in p.s.storage.types.hot)
                     ==
                     p.heating_loads_kw[q][ts]
@@ -131,7 +131,7 @@ function add_thermal_load_constraints(m, p; _n="")
                 )
             else
                 @constraint(m, HeatLoadBalanceCon[q in p.heating_loads, ts in p.time_steps_with_grid],
-                    sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for t in union(p.techs.heating, p.techs.chp))
+                    sum(p.production_factor[t,ts] * m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for t in union(p.techs.heating, p.techs.chp))
                     + sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for b in p.s.storage.types.hot)
                     ==
                     p.heating_loads_kw[q][ts]
