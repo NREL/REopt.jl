@@ -268,6 +268,21 @@ function Techs(s::Scenario)
         append!(providing_oper_res, pvtechs)
     end
 
+    if s.settings.off_grid_flag
+        append!(requiring_oper_res, pvtechs)
+        append!(providing_oper_res, pvtechs)
+    end
+
+    if sum(s.dhw_load.loads_kw) == 0.0
+        techs_can_serve_dhw = String[]
+    end
+    if sum(s.space_heating_load.loads_kw) == 0.0
+        techs_can_serve_space_heating = String[]
+    end
+    if sum(s.process_heat_load.loads_kw) == 0.0
+        techs_can_serve_process_heat = String[]
+    end
+
     thermal_techs = union(heating_techs, boiler_techs, chp_techs, cooling_techs)
     fuel_burning_techs = union(gentechs, boiler_techs, chp_techs)
 
