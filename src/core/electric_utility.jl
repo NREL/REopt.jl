@@ -617,23 +617,25 @@ end
                                 emissions_year::Int=2017,
                                 grid_level::String)
 
+This function constructs an API request to the Cambium database to retrieve either emissions data or clean energy fraction data depending on the `metric_col` provided.                                 
 This function gets levelized grid CO2 or CO2e emission rate profiles (1-year time series) from the Cambium dataset.
 The returned profiles are adjusted for day of week alignment with the provided "load_year" (Cambium profiles always start on a Sunday.)
     
 This function is also used for the /cambium_emissions_profile endpoint in the REopt API, in particular for the webtool to display grid emissions defaults before running REopt.
+
 """
-function cambium_emissions_profile(; scenario::String, 
-                                    location_type::String, 
-                                    latitude::Real, 
-                                    longitude::Real,
-                                    start_year::Int,
-                                    lifetime::Int,
-                                    metric_col::String,
-                                    grid_level::String,
-                                    time_steps_per_hour::Int=1,
-                                    load_year::Int=2017,
-                                    emissions_year::Int=2017
-                                    )
+function cambium_profile(; scenario::String, 
+                        location_type::String, 
+                        latitude::Real, 
+                        longitude::Real,
+                        start_year::Int,
+                        lifetime::Int,
+                        metric_col::String,
+                        grid_level::String,
+                        time_steps_per_hour::Int=1,
+                        load_year::Int=2017,
+                        emissions_year::Int=2017
+                        )
 
     url = "https://scenarioviewer.nrel.gov/api/get-levelized/" # Production 
     project_uuid = "82460f06-548c-4954-b2d9-b84ba92d63e2" # Cambium 2022 
@@ -660,29 +662,40 @@ function cambium_emissions_profile(; scenario::String,
         r = HTTP.get(url; query=payload) 
         response = JSON.parse(String(r.body)) # contains response["status"]
         output = response["message"]
-        co2_emissions = output["values"] ./ 1000 # [lb / MWh] --> [lb / kWh]
+        data_series = output["values"]
+        # co2_emissions = output["values"] ./ 1000 # [lb / MWh] --> [lb / kWh]
+
+        # Convert from [lb/MWh] to [lb/kWh] if the metric is emissions-related
+        if metric_col == "lrmer_co2e"
+            data_series = data_series ./ 1000
+        end
 
         # Align day of week of emissions and load profiles (Cambium data starts on Sundays so assuming emissions_year=2017)
-        co2_emissions = align_emission_with_load_year(load_year=load_year,emissions_year=emissions_year,emissions_profile=co2_emissions) 
+        data_series = align_emission_with_load_year(load_year=load_year, emissions_year=emissions_year, emissions_profile=data_series)
         
         if time_steps_per_hour > 1
-            co2_emissions = repeat(co2_emissions, inner=time_steps_per_hour)
+            data_series = repeat(data_series, inner=time_steps_per_hour)
         end
-     
+
+        description, units = if metric_col == "lrmer_co2e"
+            ("Hourly CO2 (or CO2e) grid emissions factors for applicable Cambium location and location_type, adjusted to align with load year $(load_year).", "Pounds emissions per kWh")
+        else
+            ("Hourly clean energy fraction for applicable Cambium location and location_type, adjusted to align with load year $(load_year).", "Fraction of clean energy")
+        end
+        
         response_dict = Dict{String, Any}(
-            "description" => "Hourly CO2 (or CO2e) grid emissions factors for applicable Cambium location and location_type, adjusted to align with load year $(load_year).",
-            "units" => "Pounds emissions per kWh",
+            "description" => description,
+            "units" => units,
             "location" => output["location"],
             "metric_col" => output["metric_col"], 
-            "emissions_factor_series_lb_CO2_per_kwh" => co2_emissions 
+            "data_series" => data_series 
         )
         return response_dict
     catch
         return Dict{String, Any}(
-                "error"=>
-                "Could not look up Cambium emissions profile from point ($(latitude), $(longitude)).
-                Location is likely outside contiguous US or something went wrong with the Cambium API request."
-            )
+            "error" => "Could not look up Cambium profile from point ($(latitude), $(longitude)). 
+             Location is likely outside contiguous US or something went wrong with the Cambium API request."
+        )
     end
 end
 
@@ -701,81 +714,4 @@ function align_emission_with_load_year(; load_year::Int, emissions_year::Int, em
     end
 
     return emissions_profile_adj
-end
-
-"""
-    cambium_clean_energy_fraction_profile(; scenario::String, 
-                                            location_type::String, 
-                                            latitude::Real, 
-                                            longitude::Real,
-                                            start_year::Int,
-                                            lifetime::Int,
-                                            grid_level::String,
-                                            time_steps_per_hour::Int=1,
-                                            load_year::Int=2017,
-                                            emissions_year::Int=2017)
-This function constructs an API request to the Cambium database to retrieve the clean energy fraction data.
-"""
-
-function cambium_clean_energy_fraction_profile(; scenario::String, 
-                                                location_type::String, 
-                                                latitude::Real, 
-                                                longitude::Real,
-                                                start_year::Int,
-                                                lifetime::Int,
-                                                metric_col::String,
-                                                grid_level::String,
-                                                time_steps_per_hour::Int=1,
-                                                load_year::Int=2017,
-                                                emissions_year::Int=2017)
-
-    url = "https://scenarioviewer.nrel.gov/api/get-levelized/"  # Cambium API endpoint
-    project_uuid = "82460f06-548c-4954-b2d9-b84ba92d63e2"  # Cambium 2022 project UUID 
-
-    # Construct the payload for the API request
-    payload = Dict(
-        "project_uuid" => project_uuid,
-        "scenario" => scenario,
-        "location_type" => location_type,
-        "latitude" => string(round(latitude, digits=3)),
-        "longitude" => string(round(longitude, digits=3)),
-        "start_year" => string(start_year),
-        "lifetime" => string(lifetime),
-        "discount_rate" => "0.0",
-        "time_type" => "hourly",
-        "metric_col" => metric_col,  # Metric for clean energy fraction
-        "smoothing_method" => "rolling",
-        "gwp" => "100yrAR6",
-        "grid_level" => grid_level,
-        "ems_mass_units" => "lb"
-    )
-
-    try
-        # Make the API request
-        r = HTTP.get(url; query=payload)
-        response = JSON.parse(String(r.body))
-        output = response["message"]
-        clean_energy_fraction = output["values"]
-        clean_energy_fraction = map(x -> Real(x), clean_energy_fraction) # Convert to Float64
-
-        # Align day of week of clean energy fraction profile with load year
-        clean_energy_fraction = align_emission_with_load_year(load_year=load_year, emissions_year=emissions_year, emissions_profile=clean_energy_fraction)
-        if time_steps_per_hour > 1
-            clean_energy_fraction = repeat(clean_energy_fraction, inner=time_steps_per_hour)
-        end
-        
-        # Return the clean energy fraction data in a dictionary
-        response_dict = Dict{String, Any}(
-            "description" => "Hourly clean energy fraction for applicable Cambium location and location_type, adjusted to align with load year $(load_year).",
-            "units" => "Fraction of clean energy",
-            "location" => output["location"],
-            "metric_col" => output["metric_col"], 
-            "clean_energy_fraction_series" => clean_energy_fraction 
-        )
-        return response_dict
-    catch
-        return Dict{String, Any}(
-            "error" => "Could not look up Cambium clean energy fraction profile from point ($(latitude), $(longitude)). Location is likely outside contiguous US or something went wrong with the Cambium API request."
-        )
-    end
 end
