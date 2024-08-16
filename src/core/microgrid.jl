@@ -176,10 +176,11 @@ function Microgrid_REopt_Model(JuMP_Model, Microgrid_Inputs, ldf_inputs_dictiona
         P_lo_bound = ldf_inputs_dictionary["P_lo_bound_input"],
         Q_up_bound = ldf_inputs_dictionary["Q_up_bound_input"],
         Q_lo_bound = ldf_inputs_dictionary["Q_lo_bound_input"], 
-        Ntimesteps = ldf_inputs_dictionary["T"],
-        regulators = ldf_inputs_dictionary["VoltageRegulatorDictionary"]
+        Ntimesteps = ldf_inputs_dictionary["T"]
     )
 
+    
+    
     # Determine the voltages at each line:
     LineNominalVoltages_Summary, BusNominalVoltages_Summary = DetermineLineNominalVoltage(ldf_inputs)
     
@@ -198,23 +199,24 @@ function Microgrid_REopt_Model(JuMP_Model, Microgrid_Inputs, ldf_inputs_dictiona
     @info "Adding ldf constraints"
     build_power_flow!(m, ldf_inputs, ps)  # The ps is an input here because this input structure for "build_ldf!" is defined in REopt's extend.jl file
 
-# FOR A BEHIND THE METER MICROGRID:
+# Apply additional constraints based on user inputs:
+
+# Constraints 1: For a behind-the-meter-microgrid:
 LineFromSubstationToFacilityMeter = ldf_inputs_dictionary["SubstationLocation"] * "-" * Microgrid_Inputs["FacilityMeter_Node"]
-# Prevent power from being exported to the grid beyond the node 1 meter:
-if AllowExportBeyondSubstation == false
+if AllowExportBeyondSubstation == false # Prevent power from being exported to the grid beyond the node 1 meter:
     JuMP.@constraint(m, [t in TimeSteps], m[:Pᵢⱼ][LineFromSubstationToFacilityMeter,t] >= 0 ) 
 else
     JuMP.@constraint(m, [t in TimeSteps], m[:Pᵢⱼ][LineFromSubstationToFacilityMeter,t] >=  -((SubstationExportLimit*1000)/ ldf_inputs.Sbase) )  
 end 
 
-#For an off-grid microgrid
+# Constraints 2: For an off-grid microgrid
 if MicrogridType == "Offgrid"
     # prevent power from flowing in from the substation
     @info "Adding constraints for an offgrid microgrid"    
     JuMP.@constraint(m, [t in TimeSteps], m[:Pᵢⱼ][LineFromSubstationToFacilityMeter,t] == 0 ) 
 end 
 
-# if an outage is modelled, prevent power from flowing into the substation at those times
+# Constraints 3: If an outage is modeled, prevent power from flowing into the substation at those times
 if (OutageStopTimeStep - OutageStartTimeStep) > 0
     @info "Adding an outage to the model"
     JuMP.@constraint(m, [t in OutageStartTimeStep:OutageStopTimeStep], m[:Pᵢⱼ][LineFromSubstationToFacilityMeter,t] == 0) 
@@ -222,7 +224,7 @@ else
     @info "No outage in the model"
 end
 
-# FOR A COMMUNITY ISLANDED DURING A GRID OUTAGE:
+# Constraints 4: For a community islanded during a grid outage
 if MicrogridType == "CommunityDistrict"
     @info "Applying additional constraints for a Community District microgrid"
     
@@ -235,6 +237,15 @@ if MicrogridType == "CommunityDistrict"
     end 
 end
 
+# Constraints 5: For switches
+if Microgrid_Inputs["Model_Switches"] == true 
+    for i in keys(Microgrid_Inputs["Switch_Open_Timesteps"])
+        Switch_Open_Timesteps = Microgrid_Inputs["Switch_Open_Timesteps"][i]
+        @constraint(m, [t in Switch_Open_Timesteps], m[:Pᵢⱼ][i,t] == 0 )
+    end
+end
+
+# Constraints 6: For power export to the grid
 for p in ps
     if string(p.s.site.node) == p.s.settings.facilitymeter_node
         @info "Setting facility-level grid purchase to the power flow on line "*string("0-", FacilityMeter_Node)*", using the variable: "*string(" dvGridPurchase_", FacilityMeter_Node)
@@ -706,7 +717,6 @@ ldf_inputs_new = PowerFlowInputs(
     Q_up_bound = ldf_inputs_dictionary["Q_up_bound_input"],
     Q_lo_bound = ldf_inputs_dictionary["Q_lo_bound_input"], 
     Ntimesteps = OutageLength_TimeSteps,
-    regulators = ldf_inputs_dictionary["VoltageRegulatorDictionary"]
 
 )
 

@@ -29,8 +29,8 @@ P_up_bound::Float64
 Q_up_bound::Float64
 P_lo_bound::Float64
 Q_lo_bound::Float64
-regulators::Dict
 transformers::Dict
+regulators::Dict
 end 
 
 
@@ -55,8 +55,8 @@ P_up_bound=1e4,
 Q_up_bound=1e4,
 P_lo_bound=-1e4,
 Q_lo_bound=-1e4,
-regulators=Dict(),
-transformers=Dict()
+transformers=Dict(),
+regulators=Dict()
 )
 Ibase = Sbase / (Vbase * sqrt(3))
 # Ibase^2 should be used to recover amperage from lᵢⱼ ?
@@ -95,8 +95,8 @@ PowerFlowInputs(
     Q_up_bound,
     P_lo_bound,
     Q_lo_bound,
-    regulators,
-    transformers
+    transformers,
+    regulators
 )
 end
 
@@ -141,20 +141,21 @@ Nlte_cons=0,
 P_up_bound=1e4,
 Q_up_bound=1e4,
 P_lo_bound=-1e4,
-Q_lo_bound=-1e4,
-regulators=Dict(),
+Q_lo_bound=-1e4
 )
 edges, linecodes, linelengths, linenormamps = dss_parse_lines(dsslinesfilepath)
 linecodes_dict = dss_parse_line_codes(dsslinecodesfilepath, linecodes)
 
 
 if dsstransformersfilepath == "None"
-    @info "No transformers were input into the model"
+    @info "No transformers or voltage regulators were input into the model"
     transformers_dict = Dict(["NoTransformer","NoTransformer"])
+    regulators_dict = Dict([])
 else
-    @info "Transformers have been input into the model"
-    transformers_dict = dss_parse_transformers(dsstransformersfilepath)
+    @info "Transformers and/or voltage regulators have been input into the model"
+    transformers_dict, regulators_dict = dss_parse_transformers(dsstransformersfilepath)
     print("\n Transformers included are: $(transformers_dict)")
+    print("\n Regulators included are: $(regulators_dict)")
 end 
 PowerFlowInputs(
     edges,
@@ -177,20 +178,9 @@ PowerFlowInputs(
     Q_up_bound=Q_up_bound,
     P_lo_bound=P_lo_bound,
     Q_lo_bound=Q_lo_bound,
-    regulators = regulators,
-    transformers= transformers_dict
+    transformers= transformers_dict,
+    regulators = regulators_dict
 )
-end
-
-
-
-function build_power_flow!(m::JuMP.AbstractModel, p::PowerFlowInputs)
-
-    add_variables(m, p)
-    constrain_power_balance(m, p)  # (10a)
-    constrain_substation_voltage(m, p)  # (10c)
-    constrain_KVL(m, p)  # (10e)
-    constrain_loads(m, p)
 end
 
 
@@ -370,7 +360,6 @@ function constrain_KVL(m, p::PowerFlowInputs)
             linenormamps = get_ijlinenormamps(i,j,p)
             line_code = get_ijlinecode(i,j,p) 
             LineNominalVoltage = parse(Float64,LineNominalVoltages_dict[i_j])
-            
             rmatrix = p.Zdict[line_code]["rmatrix"]
 
             print("\n For line $(i_j) and linecode $(line_code): the rmatrix is $(rmatrix), the max amperage is $(linenormamps)A and the nominal voltage is $(LineNominalVoltage)V, so the maximum power is: "*string(LineNominalVoltage*linenormamps)*" W")
@@ -379,16 +368,14 @@ function constrain_KVL(m, p::PowerFlowInputs)
             
             xᵢⱼ = p.Zdict[line_code]["xmatrix"] * linelength * p.Sbase / (LineNominalVoltage^2)
             
-            # TODO: delete this section because will handle voltage regulators as a transformer; Apply voltage change from the voltage regulator
             if (j in keys(p.regulators))
-                @constraint(m, [t in 1:p.Ntimesteps], w[j,t] == p.regulators[j])
-                print("\n  Applying voltage regulator to node: "*j)
+                @constraint(m, [t in 1:p.Ntimesteps], w[j,t] == parse(Float64, p.regulators[j]))  # If there is a voltage regulator on the node, then that voltage regulator defines the per unit voltage
+                print("\n  Applying voltage regulator to node $(j) with a per unit voltage of "*string(parse(Float64, p.regulators[j]) ))
             else 
                 vcon = @constraint(m, [t in 1:p.Ntimesteps],
                     w[j,t] == w[i,t]
                         - 2*(rᵢⱼ * P[i_j,t] +  xᵢⱼ * Q[i_j,t])    
                 )
-            
             end
 
             # Apply the amperage constraints to the line:
@@ -409,104 +396,89 @@ function constrain_KVL(m, p::PowerFlowInputs)
 end
 
 
-"""
-    constrain_loads(m, p::Inputs)
-
-- set loads to negative of Inputs.Pload, which are normalized by Sbase when creating Inputs
-- keys of Pload must match Inputs.busses. Any missing keys have load set to zero.
-- Inputs.substation_bus is unconstrained, slack bus
-"""
-function constrain_loads(m, p::PowerFlowInputs)
-    Pⱼ = m[:Pⱼ]
-    Qⱼ = m[:Qⱼ]
-    
-    for j in p.busses
-        if j in keys(p.Pload)
-            @constraint(m, [t in 1:p.Ntimesteps],
-                Pⱼ[j,t] == -p.Pload[j][t]
-            )
-        elseif j != p.substation_bus
-            @constraint(m, [t in 1:p.Ntimesteps],
-                Pⱼ[j,t] == 0
-            )
-        end
-        if j in keys(p.Qload)
-            @constraint(m, [t in 1:p.Ntimesteps],
-                Qⱼ[j,t] == -p.Qload[j][t]
-            )
-        elseif j != p.substation_bus
-            @constraint(m, [t in 1:p.Ntimesteps],
-                Qⱼ[j,t] == 0
-            )
-        end
-    end
-    
-    p.Nequality_cons += 2 * (p.Nnodes - 1) * p.Ntimesteps
-end
-
-
-function constrain_bounds(m::JuMP.AbstractModel, p::PowerFlowInputs)
-    @info("constrain_bounds is deprecated. Include bounds in inputs.")
-    nothing
-end
-
-
 function dss_parse_transformers(fp::String)
     
-    BusVoltagesFromTransformers = Dict([]) 
-   
-    for line in eachline(fp)
-        N = length(line)
-        if startswith(line, "New Transformer")
-            name = chop(line, head=findfirst(".", line)[end], tail=N-findnext(" ", line, findfirst(".", line)[end])[1]+1)
-            print("\n  Updates added")
-            if startswith(name, "T") # T identifies the start of the transformer name 
-                # use the findfirst and findnext functions to pull out the bus names and bus voltages from the transformer file
-                IndexFirstBus_Start = findfirst("Buses=[", line)[end]
-                IndexFirstBus_End = N - findnext(" ", line, findfirst("Buses=[", line)[end])[1]+1
-                IndexSecondBus_Start = findnext(" ", line, findfirst("Buses=[", line)[end])[1] 
-                IndexSecondBus_End = N - findnext("]", line, IndexSecondBus_Start)[1]+1
+    b = Tables.matrix(CSV.File(fp; ignorerepeated=true, header=false, delim=' '))
+    b = replace(b, missing => "no_input")   
 
-                bus1 = strip(chop(line, head=IndexFirstBus_Start, tail= IndexFirstBus_End )) 
-                bus2 = strip(chop(line, head=IndexSecondBus_Start, tail= IndexSecondBus_End))
+    BusVoltagesFromTransformers = Dict([])
+    Voltage_Regulators = Dict([])
 
+    for z in 1:length(b[:,1])
+        print("\n Reading the line number $(z) \n")
+        line_temp = b[z,:]
+        bus1 = NaN # ensures that the bus1 and bus2 are read before reading other data
+        bus2 = NaN
+        per_unit_voltage = 0 # reset to zero
+        VoltageBus1 = 0
+        VoltageBus2 = 0
+
+        # Build the BusVoltagesFromTransformers dictionary
+        for i in line_temp
+            if startswith(i,"Buses=")
+                N = length(i)               
+                IndexFirstBus_Start = findfirst("Buses=[", i)[end]
+                IndexFirstBus_End = findfirst(",", i)[end] 
+                IndexSecondBus_Start = IndexFirstBus_End 
+                IndexSecondBus_End = N - 1 
+                
+                bus1 = strip(chop(i, head=IndexFirstBus_Start, tail= N-IndexFirstBus_End )) 
+                bus2 = strip(chop(i, head=IndexSecondBus_Start, tail= N-IndexSecondBus_End))
+                
                 # eliminate the .1's after the bus names:
                 bus1 = chop(bus1, tail=length(bus1)-findfirst(".", bus1)[1]+1)
                 bus2 = chop(bus2, tail=length(bus2)-findfirst(".", bus2)[1]+1)
-                print("\n bus1 is $(bus1) and bus2 is $(bus2)")
-                
-                IndexFirstVoltage_Start = findfirst("kVs=[", line)[end]
-                IndexFirstVoltage_End = N-findnext(" ", line, findfirst("kVs=[", line)[end])[1]+1
-                IndexSecondVoltage_Start = findnext(" ", line, findfirst("kVs=[", line)[end])[1]
-                IndexSecondVoltage_End = N - findnext("]", line, IndexSecondVoltage_Start)[1]+1
 
-                VoltageBus1 = strip(chop(line, head = IndexFirstVoltage_Start, tail=IndexFirstVoltage_End) )
-                VoltageBus2 = strip(chop(line, head=IndexSecondVoltage_Start, tail=IndexSecondVoltage_End))
-     
-                BusVoltagesFromTransformers = merge!(BusVoltagesFromTransformers, Dict(string(bus1) => Dict("Voltage" => string(VoltageBus1), "Transformer Name" => name, "Transformer Side" => "upstream")))
-                BusVoltagesFromTransformers = merge!(BusVoltagesFromTransformers, Dict(string(bus2) => Dict("Voltage" => string(VoltageBus2), "Transformer Name" => name, "Transformer Side" => "downstream")))
-                 
-            end 
+                BusVoltagesFromTransformers = merge!(BusVoltagesFromTransformers, Dict(string(bus1) => Dict("Transformer Side" => "upstream")))
+                BusVoltagesFromTransformers = merge!(BusVoltagesFromTransformers, Dict(string(bus2) => Dict("Transformer Side" => "downstream")))
+                print(BusVoltagesFromTransformers)
+                for i in line_temp
+                    if startswith(i, "Transformer.")
+                        name = chop(i, head=findfirst("Transformer.", i)[end], tail=0) 
+                        merge!(BusVoltagesFromTransformers[string(bus1)], Dict("Transformer Name" => name))
+                        merge!(BusVoltagesFromTransformers[string(bus2)], Dict("Transformer Name" => name))
+                    else
+                    end
+                end
+            elseif startswith(i,"kVs=")
+                N = length(i)
+                IndexFirstVoltage_Start = findfirst("kVs=[", i)[end]
+                IndexFirstVoltage_End = findfirst(",", i)[end] - 1
+                IndexSecondVoltage_Start = IndexFirstVoltage_End + 1
+                IndexSecondVoltage_End = N - 1 
+
+                VoltageBus1 = strip(chop(i, head = IndexFirstVoltage_Start, tail=N-IndexFirstVoltage_End) )
+                VoltageBus2 = strip(chop(i, head=IndexSecondVoltage_Start, tail=N-IndexSecondVoltage_End))
+                
+                merge!(BusVoltagesFromTransformers[string(bus1)], Dict("Voltage" => string(VoltageBus1)))
+                merge!(BusVoltagesFromTransformers[string(bus2)], Dict("Voltage" => string(VoltageBus2)))
+      
+            elseif startswith(i, "reg=") 
+                value = chop(i, head=findfirst("reg=", i)[end], tail=0)
+                if string(value) == "true" # if the reg value was set to true, assign the designated voltage to the downstream side of the transformer
+                    for i in line_temp # find the assigned regulator per unit voltage
+                        if startswith(i,"reg_per_unit=")
+                            per_unit_voltage = chop(i, head=findfirst("reg_per_unit=", i)[end], tail=0)
+                            Voltage_Regulators[string(bus2)] = per_unit_voltage
+                        end
+                        print("\n The reg value for the $(bus1) and $(bus2) transformer was set to a per unit voltage of $(per_unit_voltage)")
+                    end
+                else
+                    print("\n The reg value was set to false for the $(bus1) and $(bus2) transformer")
+                end
+            elseif startswith(i, "kva=")
+                max_kva = chop(i, head=findfirst("kva=", i)[end], tail=0)
+                merge!(BusVoltagesFromTransformers[string(bus2)], Dict("MaximumkVa" => max_kva))
+            end
         end
     end
 
-    print("\n  BusVoltageFromTransformers variable: $(BusVoltagesFromTransformers)")
+    print("\n  The BusVoltageFromTransformers dictionary is: $(BusVoltagesFromTransformers)")
+    print("\n  The Voltage_Regulators dictionary is: $(Voltage_Regulators)")
+    
+    return BusVoltagesFromTransformers, Voltage_Regulators
+end   
 
-    return BusVoltagesFromTransformers   
-
-    #=
-    #TODO: use the new method in the dss_parse_lines for the transformer files too 
-    b = Tables.matrix(CSV.File(fp; ignorerepeated=true, header=false, delim=' '))
-    b = replace(b, missing => "no_input")
-
-    BusVoltagesFromTransformers = Dict([])
-
-    for z in 1:length(b[:,1])
-        line_temp = b[z,:]      
-
-    return BusVoltagesFromTransformers   
-    =#
-end
 
 """
     function dss_parse_lines(fp::String)

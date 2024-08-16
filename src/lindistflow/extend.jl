@@ -1,12 +1,5 @@
-"""
-Outline:
-1. Construct LDF.Inputs from openDSS file, load dict
-2. Add power flow constraints to m, 
-    - set Pⱼ's = -1 * (dvGridPurchase_j - dvProductionToGrid_j)
-3. solve model
-"""
-# TODO add complementary constraint to UL for dvProductionToGrid_ and dvGridPurchase_ (don't want it in LL s.t. it stays linear)
 
+# Additional code for interfacing between the power_flow.jl and other REopt code
 
 function build_power_flow!(m::JuMP.AbstractModel, p::PowerFlowInputs, ps::Array{REoptInputs{Scenario}, 1};
         make_import_export_complementary::Bool=true
@@ -17,14 +10,14 @@ function build_power_flow!(m::JuMP.AbstractModel, p::PowerFlowInputs, ps::Array{
     constrain_substation_voltage(m, p)
     constrain_KVL(m, p)
     constrain_loads(m, p, ps)
-    constrain_bounds(m, p)
-
+    
     if make_import_export_complementary
         add_complementary_constraints(m, ps)
     end
 end
 
-
+#2. Add power flow constraints to m, 
+#    - set Pⱼ's = -1 * (dvGridPurchase_j - dvProductionToGrid_j)
 function add_expressions(m::JuMP.AbstractModel, ps::Array{REoptInputs{Scenario}, 1})
     for p in ps
         _n = string("_", p.s.site.node)
@@ -53,7 +46,7 @@ function add_expressions(m::JuMP.AbstractModel, ps::Array{REoptInputs{Scenario},
     end
 end
 
-
+# TODO add complementary constraint to UL for dvProductionToGrid_ and dvGridPurchase_ (don't want it in LL s.t. it stays linear)
 function add_complementary_constraints(m::JuMP.AbstractModel, ps::Array{REoptInputs{Scenario}, 1})
     for p in ps
         _n = string("_", p.s.site.node)
@@ -77,30 +70,14 @@ function constrain_loads(m::JuMP.AbstractModel, p::PowerFlowInputs, ps::Array{RE
     Qⱼ = m[:Qⱼ]
     
     reopt_nodes =  [p.s.site.node for p in ps] 
-    print("\n Debugging: PRINTING DATA FROM THE CONSTRAIN_LOADS FUNCTION")
-    print("\n reopt_nodes:") 
-    print(reopt_nodes)
-    #=
-    reopt_nodes_initial =  [p.s.site.node for p in ps] 
-    print("\n Debugging: PRINTING DATA FROM THE CONSTRAIN_LOADS FUNCTION")
-    print("\n reopt_nodes_initial:") 
-    print(reopt_nodes_initial)
-
-    reopt_nodes = filter!(!=(15), reopt_nodes_initial) # remove the facility meter node from the node list and set other parameters to zero for that node
-    print("\n reopt_nodes:") 
-    print(reopt_nodes)
+    print("\n The REopt nodes being applied in extend.jl are: $(reopt_nodes) \n") 
     
-    @constraint(m, [t in 1:p.Ntimesteps], Pⱼ["15",t] == 0)
-    @constraint(m, [t in 1:p.Ntimesteps], Qⱼ["15",t] == 0)
-    @constraint(m, [t in 1:p.Ntimesteps], m[Symbol("TotalExport_15")][t] == 0)
-    =#
     # Note: positive values are injections
-    print("\n p.Pload is: ")
-    print(p.Pload)
+    #print("\n p.Pload is: $(p.Pload) ")
+    
     for j in p.busses
         if j in keys(p.Pload)
-            print("\n the j variable is: ")
-            print(j)
+            print("\n the j variable is: $(j) ")
             if parse(Int, j) in reopt_nodes
                 if j != "15" 
                     print("\n j is not 15")               
@@ -152,10 +129,29 @@ function constrain_loads(m::JuMP.AbstractModel, p::PowerFlowInputs, ps::Array{RE
         end
     end
     p.Nequality_cons += 2 * (p.Nnodes - 1) * p.Ntimesteps
+    
+    # Constrain loads on the transformers
+    P = m[:Pᵢⱼ] 
+    Q = m[:Qᵢⱼ]
+    for i in keys(p.transformers)
+        if p.transformers[i]["Transformer Side"] == "downstream"
+                
+                term = parse(Float64, p.transformers[i]["MaximumkVa"])
+                power_limit = (term*1000)/p.Sbase
+                print("\n Applying power limit of: ")
+                print(power_limit) 
+                print("\n To transformer on node: ")
+                print(i)
+                DirectlyUpstreamNode = i_to_j(i, p)  
+                transformer_internal_line = string(DirectlyUpstreamNode[1])*"-"*string(i)
+                @constraint(m, [T in 1:p.Ntimesteps], P[transformer_internal_line, T] + Q[transformer_internal_line, T] <= ((term*1000)/p.Sbase))
+                @constraint(m, [T in 1:p.Ntimesteps], P[transformer_internal_line, T] + Q[transformer_internal_line, T] >= -((term*1000)/p.Sbase))
+        end
+    end
 end
 
 # TODO add LDF results (here and in LDF package)
 
-function run_reopt(m::JuMP.AbstractModel, p::REoptInputs, ldf::PowerFlowInputs)
+#function run_reopt(m::JuMP.AbstractModel, p::REoptInputs, ldf::PowerFlowInputs)
 
-end
+#end
