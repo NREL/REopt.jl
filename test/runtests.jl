@@ -63,8 +63,8 @@ else  # run HiGHS tests
             dataset, distance, datasource = REopt.call_solar_dataset_api(latitude, longitude, radius)
             @test dataset ≈ "tmy3"  
         end
-        
-        @testset "ASHP COP and CF Profiles" begin
+
+        @testset "ASHP min allowable size and COP, CF Profiles" begin
             #Heating profiles
             heating_reference_temps = [10,20,30]
             heating_cop_reference = [1,3,4]
@@ -73,13 +73,13 @@ else  # run HiGHS tests
             test_temps = [5,15,25,35]
             test_cops = [1.0,2.0,3.5,4.0]
             test_cfs = [1.0,1.25,1.4,1.5]
-            cop, cf = REopt.get_ashp_performance(heating_cop_reference,
+            heating_cop, heating_cf = REopt.get_ashp_performance(heating_cop_reference,
                 heating_cf_performance,
                 heating_reference_temps,
                 test_temps,
                 back_up_temp_threshold_degF)
-            @test all(cop .== test_cops)
-            @test all(cf .== test_cfs)
+            @test all(heating_cop .== test_cops)
+            @test all(heating_cf .== test_cfs)
             #Cooling profiles
             cooling_reference_temps = [30,20,10]
             cooling_cop_reference = [1,3,4]
@@ -88,13 +88,20 @@ else  # run HiGHS tests
             test_temps = [35,25,15,5]
             test_cops = [1.0,2.0,3.5,4.0]
             test_cfs = [1.2,1.25,1.4,1.5]
-            cop, cf = REopt.get_ashp_performance(cooling_cop_reference,
+            cooling_cop, cooling_cf = REopt.get_ashp_performance(cooling_cop_reference,
                 cooling_cf_performance,
                 cooling_reference_temps,
                 test_temps,
                 back_up_temp_threshold_degF)
-            @test all(cop .== test_cops)
-            @test all(cf .== test_cfs)
+            @test all(cooling_cop .== test_cops)
+            @test all(cooling_cf .== test_cfs)
+            # min allowable size
+            heating_load = [10.0,10.0,10.0,10.0]
+            cooling_load = [10.0,10.0,10.0,10.0]
+            space_heating_min_allowable_size = REopt.get_ashp_default_min_allowable_size(heating_load, heating_cf, cooling_load, cooling_cf)
+            wh_min_allowable_size = REopt.get_ashp_default_min_allowable_size(heating_load, heating_cf)
+            @test space_heating_min_allowable_size ≈ 9.166666666666666 atol=1e-8
+            @test wh_min_allowable_size ≈ 5.0 atol=1e-8
         end
     end
 
