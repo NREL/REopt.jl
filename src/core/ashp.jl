@@ -387,6 +387,11 @@ end
 
 """
 function get_default_ashp_heating(ambient_temp_degF, back_up_temp_threshold_degF)
+
+Obtains the default ASHP heating COP and CF profiles.
+
+ambient_temp_degF::Vector{Float64} -- time series ambient temperature in degrees Fahrenheit
+back_up_temp_threshold::Float64 -- temperature threshold at which resistive backup heater turns on
 """
 function get_default_ashp_heating(ambient_temp_degF, back_up_temp_threshold_degF)
     heating_cop = round.(0.0462 .* ambient_temp_degF .+ 1.351, digits=3)
@@ -398,6 +403,10 @@ end
 
 """
 function get_default_ashp_cooling(ambient_temp_degF)
+
+Obtains the default ASHP cooling COP and CF profiles.
+
+ambient_temp_degF::Vector{Float64} -- time series ambient temperature in degrees Fahrenheit
 """
 function get_default_ashp_cooling(ambient_temp_degF)
     cooling_cop = round.(-0.044 .* ambient_temp_degF .+ 6.822, digits=3)
