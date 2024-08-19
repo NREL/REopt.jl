@@ -23,10 +23,16 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop 2024-07-14
+## Develop 2024-08-19
 ### Added
 - Added new file `src/core/ASHP.jl` with new technology **ASHP**, which uses electricity as input and provides heating and/or cooling as output; load balancing and technology-specific constraints have been updated and added accordingly
 - In `src/core/existing_chiller.jl`, Added new atttribute **retire_in_optimal** to the **ExistingChiller** struct
+
+### Changed
+- Improve the full test suite reporting with a verbose summary table, and update the structure to reflect long-term open-source solver usage
+- Removed MacOS from the runner list and just run with Windows OS, since MacOS commonly freezes and gets cancelled. We have not seen Windows OS pass while other OS's fail. .
+- Suppress JuMP warning messages from 15-minute and multiple PVs test scenarios to avoid flooding the test logs with those warnings
+- Updated/specified User-Agent header of "REopt.jl" for PVWatts and Wind Toolkit API requests; default before was "HTTP.jl"; this allows specific tracking of REopt.jl usage which call PVWatts and Wind Toolkit through api.data.gov.
 
 ## v0.47.2
 ### Fixed
