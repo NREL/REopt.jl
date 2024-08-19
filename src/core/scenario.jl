@@ -656,10 +656,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     # ASHP
     ashp = nothing
-    heating_cop = []
-    cooling_cop = []
-    heating_cf = []
-    cooling_cf = []
     if haskey(d, "ASHP_SpaceHeater")
         if !haskey(d["ASHP_SpaceHeater"], "max_ton")
             max_ton = get_ashp_defaults("SpaceHeating")["max_ton"]
@@ -691,6 +687,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             ambient_temp_fahrenheit = (9/5 .* ambient_temp_celsius) .+ 32
 
             d["ASHP_SpaceHeater"]["ambient_temp_degF"] = ambient_temp_fahrenheit
+            d["ASHP_SpaceHeater"]["heating_load"] = heating_load
+            d["ASHP_SpaceHeater"]["cooling_load"] = cooling_load
 
             ashp = ASHP_SpaceHeater(;dictkeys_tosymbols(d["ASHP_SpaceHeater"])...)
         end    
@@ -698,8 +696,6 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     # ASHP Water Heater:
     ashp_wh = nothing
-    heating_cop = []
-    heating_cf = []
 
     if haskey(d, "ASHP_WaterHeater")
         if !haskey(d["ASHP_WaterHeater"], "max_ton")
@@ -733,6 +729,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             ambient_temp_fahrenheit = (9/5 .* ambient_temp_celsius) .+ 32
 
             d["ASHP_WaterHeater"]["ambient_temp_degF"] = ambient_temp_fahrenheit
+            d["ASHP_SpaceHeater"]["heating_load"] = heating_load
 
             ashp_wh = ASHP_WaterHeater(;dictkeys_tosymbols(d["ASHP_WaterHeater"])...)
         end

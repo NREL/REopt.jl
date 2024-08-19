@@ -80,6 +80,8 @@ function ASHP_SpaceHeater(;
     
     #The following input is taken from the Site object:
     ambient_temp_degF::Array{Float64,1}  #time series of ambient temperature
+    heating_load::Array{Float64,1} # time series of site space heating load
+    cooling_load::Union{Array{Float64,1}, Nothing} # time series of site cooling load
 )
 ```
 """
@@ -101,7 +103,9 @@ function ASHP_SpaceHeater(;
         cooling_cop_reference::Array{Float64,1} = Float64[],
         cooling_cf_reference::Array{Float64,1} = Float64[],
         cooling_reference_temps::Array{Float64,1} = Float64[],
-        ambient_temp_degF::Array{Float64,1} = Float64[]
+        ambient_temp_degF::Array{Float64,1} = Float64[],
+        heating_load::Array{Float64,1} = Float64[],
+        cooling_load::Array{Float64,1} = Float64[]
     )
 
     defaults = get_ashp_defaults("SpaceHeating")
@@ -140,11 +144,7 @@ function ASHP_SpaceHeater(;
     # Convert max sizes, cost factors from mmbtu_per_hour to kw
     min_kw = min_ton * KWH_THERMAL_PER_TONHOUR
     max_kw = max_ton * KWH_THERMAL_PER_TONHOUR
-    if !isnothing(min_allowable_ton)
-        min_allowable_kw = min_allowable_ton * KWH_THERMAL_PER_TONHOUR
-    else
-        min_allowable_kw = 0.0
-    end
+    
 
     installed_cost_per_kw = installed_cost_per_ton / KWH_THERMAL_PER_TONHOUR
     om_cost_per_kw = om_cost_per_ton / KWH_THERMAL_PER_TONHOUR
@@ -176,6 +176,13 @@ function ASHP_SpaceHeater(;
     else
         cooling_cop = Float64[]
         cooling_cf = Float64[]
+    end
+
+    if !isnothing(min_allowable_ton)
+        min_allowable_kw = min_allowable_ton * KWH_THERMAL_PER_TONHOUR
+        @warn("user-provided minimum allowable ton is used in the place of the default; this may provided very small sizes if set to zero.")
+    else
+        min_allowable_kw = get_ashp_default_min_allowable_size(heating_load, heating_cf, cooling_load, cooling_cf)
     end
 
     ASHP(
@@ -222,6 +229,8 @@ function ASHP_WaterHeater(;
     heating_cop::Array{<:Real,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
     force_into_system::Union{Bool, Nothing} = nothing # force into system to serve all hot water loads if true
     back_up_temp_threshold_degF::Real = 10
+    ambient_temp_degF::Array{Float64,1} = Float64[]
+    heating_load::Array{Float64,1} # time series of site space heating load
 )
 ```
 """
@@ -239,7 +248,8 @@ function ASHP_WaterHeater(;
     heating_cf_reference::Array{Float64,1} = Float64[],
     heating_reference_temps::Array{Float64,1} = Float64[],
     back_up_temp_threshold_degF::Union{Real, Nothing} = nothing,
-    ambient_temp_degF::Array{Float64,1} = Float64[]
+    ambient_temp_degF::Array{Float64,1} = Float64[],
+    heating_load::Array{Float64,1} = Float64[]
     )
 
     defaults = get_ashp_defaults("DomesticHotWater")
@@ -264,12 +274,6 @@ function ASHP_WaterHeater(;
 
     if isnothing(max_ton)
         max_ton = defaults["max_ton"]
-    end
-
-    if !isnothing(min_allowable_ton)
-        min_allowable_kw = min_allowable_ton * KWH_THERMAL_PER_TONHOUR
-    else
-        min_allowable_kw = 0.0
     end
 
      #pre-set defaults that aren't mutable due to technology specifications
@@ -298,6 +302,13 @@ function ASHP_WaterHeater(;
     end
     
     heating_cf[heating_cop .== 1] .= 1
+
+    if !isnothing(min_allowable_ton)
+        min_allowable_kw = min_allowable_ton * KWH_THERMAL_PER_TONHOUR
+        @warn("user-provided minimum allowable ton is used in the place of the default; this may provided very small sizes if set to zero.")
+    else
+        min_allowable_kw = get_ashp_default_min_allowable_size(heating_load, heating_cf, Float64[], Float64[])
+    end
 
     ASHP(
         min_kw,
@@ -390,7 +401,7 @@ function get_default_ashp_heating(ambient_temp_degF, back_up_temp_threshold_degF
 
 Obtains the default ASHP heating COP and CF profiles.
 
-ambient_temp_degF::Vector{Float64} -- time series ambient temperature in degrees Fahrenheit
+ambient_temp_degF::Array{Float64,1} -- time series ambient temperature in degrees Fahrenheit
 back_up_temp_threshold::Float64 -- temperature threshold at which resistive backup heater turns on
 """
 function get_default_ashp_heating(ambient_temp_degF, back_up_temp_threshold_degF)
@@ -406,10 +417,41 @@ function get_default_ashp_cooling(ambient_temp_degF)
 
 Obtains the default ASHP cooling COP and CF profiles.
 
-ambient_temp_degF::Vector{Float64} -- time series ambient temperature in degrees Fahrenheit
+ambient_temp_degF::Array{Float64,1} -- time series ambient temperature in degrees Fahrenheit
 """
 function get_default_ashp_cooling(ambient_temp_degF)
     cooling_cop = round.(-0.044 .* ambient_temp_degF .+ 6.822, digits=3)
     cooling_cf = round.(-0.0056 .* ambient_temp_degF .+ 1.4778, digits=3)
     return cooling_cop, cooling_cf
 end
+
+"""
+function get_ashp_default_min_allowable_size(heating_load::Array{Float64},  # time series of heating load
+    heating_cf::Array{Float64,1},   # time series of capacity factor for heating
+    cooling_load::Array{Float64,1} = Float64[], # # time series of capacity factor for heating
+    cooling_cf::Array{Float64,1} = Float64[], # time series of capacity factor for heating
+    peak_load_thermal_factor::Float64 = 0.5 # peak load multiplier for minimum allowable size           
+    )
+
+Obtains the default minimum allowable size for ASHP system.  This is calculated as half of the peak site thermal load(s) addressed by the system, including the capacity factor
+"""
+function get_ashp_default_min_allowable_size(heating_load::Array{Float64}, 
+    heating_cf::Array{Float64,1}, 
+    cooling_load::Array{Float64,1} = Float64[], 
+    cooling_cf::Array{Float64,1} = Float64[],
+    peak_load_thermal_factor::Float64 = 0.5
+    )
+
+    println(heating_load)
+    println(heating_cf)
+    println(cooling_load)
+    println(cooling_cf)
+    if isempty(cooling_cf)
+        peak_load = maximum(heating_load ./ heating_cf)
+    else
+        peak_load = maximum( (heating_load ./ heating_cf) .+ (cooling_load ./ cooling_cf) )
+    end
+
+    return peak_load_thermal_factor * peak_load
+end
+
