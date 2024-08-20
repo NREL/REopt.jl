@@ -216,7 +216,42 @@ function add_outage_results(m, p, d::Dict)
 							value.(
 								m[:dvMGRatedProduction][t, s, tz, ts] * (p.production_factor[t, tz+ts-1] + p.unavailability[t][tz+ts-1]) * p.levelization_factor[t]
 								- m[:dvMGCurtail][t, s, tz, ts]
+								- m[:dvMGProductionToElectrolyzer][t, s, tz, ts]
+								- m[:dvMGProductionToCompressor][t, s, tz, ts]
 								- m[:dvMGProductionToStorage]["ElectricStorage", t, s, tz, ts]
+								for s in p.s.electric_utility.scenarios,
+									tz in p.s.electric_utility.outage_start_time_steps,
+									ts in p.s.electric_utility.outage_time_steps
+							) 
+							for t in tech_set
+						)
+					), 
+					digits=3
+				)
+			end
+			if isempty(p.s.storage.types.hydrogen)
+				r[tech_type_name * "_to_electrolyzer_series_kw"] = []
+				r[tech_type_name * "_to_compressor_series_kw"] = []				
+			else
+				r[tech_type_name * "_to_electrolyzer_series_kw"] = round.(
+					sum(
+						(
+							value.(
+								m[:dvMGProductionToElectrolyzer][t, s, tz, ts] 
+								for s in p.s.electric_utility.scenarios,
+									tz in p.s.electric_utility.outage_start_time_steps,
+									ts in p.s.electric_utility.outage_time_steps
+							) 
+							for t in tech_set
+						)
+					), 
+					digits=3
+				)
+				r[tech_type_name * "_to_compressor_series_kw"] = round.(
+					sum(
+						(
+							value.(
+								m[:dvMGProductionToCompressor][t, s, tz, ts] 
 								for s in p.s.electric_utility.scenarios,
 									tz in p.s.electric_utility.outage_start_time_steps,
 									ts in p.s.electric_utility.outage_time_steps
