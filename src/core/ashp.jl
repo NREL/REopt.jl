@@ -16,10 +16,10 @@ ASHP_SpaceHeater has the following attributes:
     om_cost_per_ton::Union{Real, nothing} = nothing, # Thermal power-based fixed O&M cost
     macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
-    heating_cop::Array{Float64,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
-    cooling_cop::Array{Float64,1}, # COP of the cooling (i.e., thermal produced / electricity consumed)
-    heating_cf::Array{Float64,1}, # ASHP's heating capacity factor curves
-    cooling_cf::Array{Float64,1}, # ASHP's cooling capacity factor curves
+    heating_cop::Array{<:Real,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
+    cooling_cop::Array{<:Real,1}, # COP of the cooling (i.e., thermal produced / electricity consumed)
+    heating_cf::Array{<:Real,1}, # ASHP's heating capacity factor curves
+    cooling_cf::Array{<:Real,1}, # ASHP's cooling capacity factor curves
     can_serve_cooling::Union{Bool, Nothing} = nothing # If ASHP can supply heat to the cooling load
     force_into_system::Union{Bool, Nothing} = nothing # force into system to serve all space heating loads if true
     back_up_temp_threshold_degF::Real = 10 # Degree in F that system switches from ASHP to resistive heater 
@@ -34,10 +34,10 @@ struct ASHP <: AbstractThermalTech
     macrs_option_years::Int
     macrs_bonus_fraction::Real
     can_supply_steam_turbine::Bool
-    heating_cop::Array{Float64,1}
-    cooling_cop::Array{Float64,1}
-    heating_cf::Array{Float64,1}
-    cooling_cf::Array{Float64,1}
+    heating_cop::Array{<:Real,1}
+    cooling_cop::Array{<:Real,1}
+    heating_cf::Array{<:Real,1}
+    cooling_cf::Array{<:Real,1}
     can_serve_dhw::Bool
     can_serve_space_heating::Bool
     can_serve_process_heat::Bool
@@ -68,18 +68,18 @@ function ASHP_SpaceHeater(;
     avoided_capex_by_ashp_present_value::Real = 0.0
 
     #The following inputs are used to create the attributes heating_cop and heating cf: 
-    heating_cop_reference::Array{Float64,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
-    heating_cf_reference::Array{Float64,1}, # ASHP's heating capacity factor curves
-    heating_reference_temps ::Array{Float64,1}, # ASHP's reference temperatures for heating COP and CF
+    heating_cop_reference::Array{<:Real,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
+    heating_cf_reference::Array{<:Real,1}, # ASHP's heating capacity factor curves
+    heating_reference_temps ::Array{<:Real,1}, # ASHP's reference temperatures for heating COP and CF
     back_up_temp_threshold_degF::Real = 10, # Degree in F that system switches from ASHP to resistive heater
     
     #The following inputs are used to create the attributes cooling_cop and cooling cf: 
-    cooling_cop::Array{Float64,1}, # COP of the cooling (i.e., thermal produced / electricity consumed)
-    cooling_cf::Array{Float64,1}, # ASHP's cooling capacity factor curves
-    heating_reference_temps ::Array{Float64,1}, # ASHP's reference temperatures for cooling COP and CF
+    cooling_cop::Array{<:Real,1}, # COP of the cooling (i.e., thermal produced / electricity consumed)
+    cooling_cf::Array{<:Real,1}, # ASHP's cooling capacity factor curves
+    heating_reference_temps ::Array{<:Real,1}, # ASHP's reference temperatures for cooling COP and CF
     
     #The following inputs are taken from the Site object:
-    ambient_temp_degF::Array{Float64,1}  #time series of ambient temperature
+    ambient_temp_degF::Array{<:Real,1}  #time series of ambient temperature
     heating_load::Array{Real,1} # time series of site space heating load
     cooling_load::Union{Array{Real,1}, Nothing} # time series of site cooling load
 )
@@ -96,16 +96,18 @@ function ASHP_SpaceHeater(;
         avoided_capex_by_ashp_present_value::Real = 0.0,
         can_serve_cooling::Union{Bool, Nothing} = nothing,
         force_into_system::Union{Bool, Nothing} = nothing,
-        heating_cop_reference::Array{Float64,1} = Float64[],
-        heating_cf_reference::Array{Float64,1} = Float64[],
-        heating_reference_temps::Array{Float64,1} = Float64[],
+        heating_cop_reference::Array{<:Real,1} = Float64[],
+        heating_cf_reference::Array{<:Real,1} = Float64[],
+        heating_reference_temps::Array{<:Real,1} = Float64[],
         back_up_temp_threshold_degF::Union{Real, Nothing} = nothing,
-        cooling_cop_reference::Array{Float64,1} = Float64[],
-        cooling_cf_reference::Array{Float64,1} = Float64[],
-        cooling_reference_temps::Array{Float64,1} = Float64[],
+        cooling_cop_reference::Array{<:Real,1} = Float64[],
+        cooling_cf_reference::Array{<:Real,1} = Float64[],
+        cooling_reference_temps::Array{<:Real,1} = Float64[],
         ambient_temp_degF::Array{Float64,1} = Float64[],
-        heating_load::Array{Real,1} = Real[],
-        cooling_load::Array{Real,1} = Real[]
+        heating_load::Array{<:Real,1} = Real[],
+        cooling_load::Array{<:Real,1} = Real[],
+        includes_heat_recovery::Bool = false, 
+        heat_recovery_cop::Union{Real, Nothing} = nothing
     )
 
     defaults = get_ashp_defaults("SpaceHeating")
@@ -233,8 +235,8 @@ function ASHP_WaterHeater(;
     back_up_temp_threshold_degF::Real = 10 # temperature threshold at which backup resistive heater is used
 
     #The following inputs are taken from the Site object:
-    ambient_temp_degF::Array{Float64,1} = Float64[] # time series of ambient temperature 
-    heating_load::Array{Float64,1} # time series of site domestic hot water load
+    ambient_temp_degF::Array{<:Real,1} = Float64[] # time series of ambient temperature 
+    heating_load::Array{<:Real,1} # time series of site domestic hot water load
 )
 ```
 """
@@ -248,12 +250,12 @@ function ASHP_WaterHeater(;
     macrs_bonus_fraction::Real = 0.0,
     avoided_capex_by_ashp_present_value::Real = 0.0,
     force_into_system::Union{Bool, Nothing} = nothing,
-    heating_cop_reference::Array{Float64,1} = Float64[],
-    heating_cf_reference::Array{Float64,1} = Float64[],
-    heating_reference_temps::Array{Float64,1} = Float64[],
+    heating_cop_reference::Array{<:Real,1} = Real[],
+    heating_cf_reference::Array{<:Real,1} = Real[],
+    heating_reference_temps::Array{<:Real,1} = Real[],
     back_up_temp_threshold_degF::Union{Real, Nothing} = nothing,
-    ambient_temp_degF::Array{Float64,1} = Float64[],
-    heating_load::Array{Real,1} = Real[]
+    ambient_temp_degF::Array{<:Real,1} = Real[],
+    heating_load::Array{<:Real,1} = Real[]
     )
 
     defaults = get_ashp_defaults("DomesticHotWater")
@@ -439,13 +441,13 @@ function get_ashp_default_min_allowable_size(heating_load::Array{Float64},  # ti
 
 Obtains the default minimum allowable size for ASHP system.  This is calculated as half of the peak site thermal load(s) addressed by the system, including the capacity factor
 """
-function get_ashp_default_min_allowable_size(heating_load::Array{Real,1}, 
-    heating_cf::Array{Float64,1}, 
-    cooling_load::Array{Real,1} = Real[], 
-    cooling_cf::Array{Float64,1} = Float64[],
-    peak_load_thermal_factor::Float64 = 0.5
+function get_ashp_default_min_allowable_size(heating_load::Array{<:Real,1}, 
+    heating_cf::Array{<:Real,1}, 
+    cooling_load::Array{<:Real,1} = Real[], 
+    cooling_cf::Array{<:Real,1} = Real[],
+    peak_load_thermal_factor::Real = 0.5
     )
-    
+
     if isempty(cooling_cf)
         peak_load = maximum(heating_load ./ heating_cf)
     else
