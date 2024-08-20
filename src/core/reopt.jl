@@ -364,6 +364,13 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         end
 
 		if !isempty(p.techs.compressor)
+			if !p.s.electrolyzer.require_compression
+				@constraint(m, [t in p.techs.elec, ts in p.time_steps],
+						m[:dvProductionToCompressor][t, ts] == 0)
+				@constraint(m, [ts in p.time_steps], m[:dvGridToCompressor][ts] == 0)
+				@constraint(m, [b in p.s.storage.types.elec, ts in p.time_steps],
+						m[:dvStorageToCompressor][b, ts] == 0)
+			end
             add_compressor_constraints(m, p)
 			m[:TotalPerUnitProdOMCosts] += m[:TotalCompressorPerUnitProdOMCosts]
 		else

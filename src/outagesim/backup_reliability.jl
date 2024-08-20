@@ -1477,11 +1477,11 @@ function return_backup_reliability(;
     
     function system_characteristics_probability(; PV::Bool, wind::Bool, battery::Bool, H2::Bool)
         pv_term = PV ? 
-                    (pv_included && (battery || H2 || pv_can_dispatch_without_storage)) * pv_operational_availability :
-                    ((pv_included && (battery || H2 || pv_can_dispatch_without_storage)) ? 1 - pv_operational_availability : 1)
+                    (pv_included && (H2 || battery || pv_can_dispatch_without_storage)) * pv_operational_availability :
+                    ((pv_included && (H2 || battery || pv_can_dispatch_without_storage)) ? 1 - pv_operational_availability : 1)
         wind_term = wind ?
-                    (wind_included && (battery || H2 || wind_can_dispatch_without_storage)) * wind_operational_availability :
-                    ((wind_included && (battery || H2 || wind_can_dispatch_without_storage)) ? 1 - wind_operational_availability : 1)
+                    (wind_included && (H2 || battery || wind_can_dispatch_without_storage)) * wind_operational_availability :
+                    ((wind_included && (H2 || battery || wind_can_dispatch_without_storage)) ? 1 - wind_operational_availability : 1)
         battery_term = battery ?
                     (battery_size_kwh > 0) * battery_operational_availability :
                     (battery_size_kwh > 0 ? 1 - battery_operational_availability : 1)
