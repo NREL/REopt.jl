@@ -96,8 +96,8 @@ else  # run HiGHS tests
             @test all(cooling_cop .== test_cops)
             @test all(cooling_cf .== test_cfs)
             # min allowable size
-            heating_load = [10.0,10.0,10.0,10.0]
-            cooling_load = [10.0,10.0,10.0,10.0]
+            heating_load = Array{Real}([10.0,10.0,10.0,10.0])
+            cooling_load = Array{Real}([10.0,10.0,10.0,10.0])
             space_heating_min_allowable_size = REopt.get_ashp_default_min_allowable_size(heating_load, heating_cf, cooling_load, cooling_cf)
             wh_min_allowable_size = REopt.get_ashp_default_min_allowable_size(heating_load, heating_cf)
             @test space_heating_min_allowable_size ≈ 9.166666666666666 atol=1e-8
