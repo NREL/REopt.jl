@@ -2468,9 +2468,10 @@ else  # run HiGHS tests
                 #Case 1: Boiler and existing chiller produce the required heat and cooling - ASHP is not purchased
                 d = JSON.parsefile("./scenarios/ashp.json")
                 d["SpaceHeatingLoad"]["annual_mmbtu"] = 1.0 * 8760
-
+                s = Scenario(d)
+                p = REoptInputs(s)
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-                results = run_reopt(m, d)
+                results = run_reopt(m, p)
                 @test results["ASHP_SpaceHeater"]["size_ton"] ≈ 0.0 atol=0.1
                 @test results["ASHP_SpaceHeater"]["annual_thermal_production_mmbtu"] ≈ 0.0 atol=0.1
                 @test results["ASHP_SpaceHeater"]["annual_electric_consumption_kwh"] ≈ 0.0 atol=0.1
@@ -2483,9 +2484,10 @@ else  # run HiGHS tests
                 d["ASHP_SpaceHeater"]["installed_cost_per_ton"] = 300
                 d["ASHP_SpaceHeater"]["min_allowable_ton"] = 80.0
                 
-                p = REoptInputs(d)            
+                s = Scenario(d)
+                p = REoptInputs(s)            
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-                results = run_reopt(m, d)
+                results = run_reopt(m, p)
                 annual_thermal_prod = 0.8 * 8760  #80% efficient boiler --> 0.8 MMBTU of heat load per hour
                 annual_ashp_consumption = sum(0.8 * REopt.KWH_PER_MMBTU / p.heating_cop["ASHP_SpaceHeater"][ts] for ts in p.time_steps)
                 annual_energy_supplied = 87600 + annual_ashp_consumption
@@ -2500,7 +2502,8 @@ else  # run HiGHS tests
                 d["ExistingChiller"] = Dict("cop" => 0.5)
                 d["ASHP_SpaceHeater"]["can_serve_cooling"] = true
 
-                p = REoptInputs(d)
+                s = Scenario(d)
+                p = REoptInputs(s)
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 results = run_reopt(m, p)
 
@@ -2514,8 +2517,10 @@ else  # run HiGHS tests
                 d["ExistingChiller"] = Dict("retire_in_optimal" => true, "cop" => 100)
                 d["ExistingBoiler"]["retire_in_optimal"] = true
                 d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = 0
+                s = Scenario(d)
+                p = REoptInputs(s)
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-                results = run_reopt(m, d)
+                results = run_reopt(m, p)
                 @test results["ASHP_SpaceHeater"]["annual_electric_consumption_kwh"] ≈ annual_ashp_consumption rtol=1e-4
                 @test results["ASHP_SpaceHeater"]["annual_thermal_production_tonhour"] ≈ 876.0 atol=1e-4
 
@@ -2526,9 +2531,10 @@ else  # run HiGHS tests
                 d = JSON.parsefile("./scenarios/ashp_wh.json")
                 d["SpaceHeatingLoad"]["annual_mmbtu"] = 0.5 * 8760
                 d["DomesticHotWaterLoad"]["annual_mmbtu"] = 0.5 * 8760
-            
+                s = Scenario(d)
+                p = REoptInputs(s)
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-                results = run_reopt(m, d)
+                results = run_reopt(m, p)
                 @test results["ASHP_WaterHeater"]["size_ton"] ≈ 0.0 atol=0.1
                 @test results["ASHP_WaterHeater"]["annual_thermal_production_mmbtu"] ≈ 0.0 atol=0.1
                 @test results["ASHP_WaterHeater"]["annual_electric_consumption_kwh"] ≈ 0.0 atol=0.1
@@ -2540,7 +2546,8 @@ else  # run HiGHS tests
                 d["ExistingBoiler"]["fuel_cost_per_mmbtu"] = 100
                 d["ASHP_WaterHeater"]["installed_cost_per_ton"] = 300
                           
-                p = REoptInputs(d)
+                s = Scenario(d)
+                p = REoptInputs(s)
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 results = run_reopt(m, p)
                 annual_thermal_prod = 0.4 * 8760  #80% efficient boiler --> 0.8 MMBTU of heat load per hour
@@ -2564,7 +2571,8 @@ else  # run HiGHS tests
                 d["ASHP_SpaceHeater"]["force_into_system"] = true
                 d["ASHP_WaterHeater"] = Dict{String,Any}("force_into_system" => true, "max_ton" => 100000)
                 
-                p = REoptInputs(d)
+                s = Scenario(d)
+                p = REoptInputs(s)
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 results = run_reopt(m, p)
             
@@ -2573,7 +2581,8 @@ else  # run HiGHS tests
                 @test results["ASHP_SpaceHeater"]["annual_thermal_production_tonhour"] ≈ 876.0 rtol=1e-4
 
                 d["ASHP_SpaceHeater"]["force_into_system"] = false
-                p = REoptInputs(d)
+                s = Scenario(d)
+                p = REoptInputs(s)
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 results = run_reopt(m, p)
 
@@ -2583,7 +2592,8 @@ else  # run HiGHS tests
 
                 d["ASHP_SpaceHeater"]["force_into_system"] = true
                 d["ASHP_WaterHeater"]["force_into_system"] = false
-                p = REoptInputs(d)
+                s = Scenario(d)
+                p = REoptInputs(s)
                 m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 results = run_reopt(m, p)
 
