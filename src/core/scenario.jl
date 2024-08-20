@@ -687,8 +687,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             ambient_temp_fahrenheit = (9/5 .* ambient_temp_celsius) .+ 32
 
             d["ASHP_SpaceHeater"]["ambient_temp_degF"] = ambient_temp_fahrenheit
-            d["ASHP_SpaceHeater"]["heating_load"] = heating_load
-            d["ASHP_SpaceHeater"]["cooling_load"] = cooling_load
+            d["ASHP_SpaceHeater"]["heating_load"] = space_heating_load.loads_kw
+            d["ASHP_SpaceHeater"]["cooling_load"] = cooling_load.loads_kw_thermal
 
             ashp = ASHP_SpaceHeater(;dictkeys_tosymbols(d["ASHP_SpaceHeater"])...)
         end    
@@ -729,7 +729,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             ambient_temp_fahrenheit = (9/5 .* ambient_temp_celsius) .+ 32
 
             d["ASHP_WaterHeater"]["ambient_temp_degF"] = ambient_temp_fahrenheit
-            d["ASHP_SpaceHeater"]["heating_load"] = heating_load
+            d["ASHP_WaterHeater"]["heating_load"] = dhw_load.loads_kw
 
             ashp_wh = ASHP_WaterHeater(;dictkeys_tosymbols(d["ASHP_WaterHeater"])...)
         end
