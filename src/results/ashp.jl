@@ -89,6 +89,8 @@ function add_ashp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
         @expression(m, ASHPColdElectricConsumptionSeries, 0.0)
     end
     r["electric_consumption_series_kw"] = round.(value.(ASHPElectricConsumptionSeries .+ ASHPColdElectricConsumptionSeries), digits=3)
+    r["electric_consumption_for_cooling_series_kw"] = round.(value.(ASHPColdElectricConsumptionSeries), digits=3)
+    r["electric_consumption_for_heating_series_kw"] = round.(value.(ASHPElectricConsumptionSeries), digits=3)
     r["annual_electric_consumption_kwh"] = p.hours_per_time_step * sum(r["electric_consumption_series_kw"])
 
     d["ASHP_SpaceHeater"] = r
