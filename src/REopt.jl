@@ -24,7 +24,9 @@ export
     avert_emissions_profiles,
     cambium_emissions_profile,
     easiur_data,
-    get_existing_chiller_default_cop
+    get_existing_chiller_default_cop,
+    get_electric_heater_defaults,
+    get_ashp_defaults
 
 import HTTP
 import JSON
@@ -136,6 +138,7 @@ include("core/ghp.jl")
 include("core/steam_turbine.jl")
 include("core/electric_heater.jl")
 include("core/cst.jl")
+include("core/ashp.jl")
 include("core/scenario.jl")
 include("core/bau_scenario.jl")
 include("core/reopt_inputs.jl")
@@ -190,6 +193,7 @@ include("results/ghp.jl")
 include("results/steam_turbine.jl")
 include("results/electric_heater.jl")
 include("results/cst.jl")
+include("results/ashp.jl")
 include("results/heating_cooling_load.jl")
 
 include("core/reopt.jl")

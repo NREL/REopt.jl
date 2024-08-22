@@ -18,8 +18,9 @@ There are many ways in which a DomesticHotWaterLoad can be defined:
 3. One can provide the `fuel_loads_mmbtu_per_hour` value in the `DomesticHotWaterLoad` key within the `Scenario`.
 
 !!! note "Hot water loads"
-    Hot water and space heating thermal "load" inputs are in terms of energy input required (boiler fuel), not the actual energy demand.
-    The fuel energy is multiplied by the boiler_efficiency to get the actual energy demand.
+    Hot water, space heating, and process heat thermal "load" inputs are in terms of energy input required (boiler fuel), 
+    not the actual energy demand. The fuel energy is multiplied by the existing_boiler_efficiency to get the actual energy 
+    demand.
 
 """
 struct DomesticHotWaterLoad
@@ -127,8 +128,9 @@ In this case the values provided for `doe_reference_name`, or  `blended_doe_refe
 `blended_doe_reference_percents` are copied from the `ElectricLoad` to the `SpaceHeatingLoad`.
 
 !!! note "Space heating loads"
-    Hot water and space heating thermal "load" inputs are in terms of energy input required (boiler fuel), not the actual energy demand.
-    The fuel energy is multiplied by the boiler_efficiency to get the actual energy demand.
+    Hot water, space heating, and process heat thermal "load" inputs are in terms of energy input required (boiler fuel), 
+    not the actual energy demand. The fuel energy is multiplied by the existing_boiler_efficiency to get the actual energy 
+    emand.
 """
 struct SpaceHeatingLoad
     loads_kw::Array{Real, 1}
@@ -1430,14 +1432,14 @@ end
     fuel_loads_mmbtu_per_hour::Array{<:Real,1} = Real[]
 ```
 
-There are many ways in which a ProcessHeatLoad can be defined:
+There are two ways in which a ProcessHeatLoad can be defined:
 1. One can provide the `fuel_loads_mmbtu_per_hour` value in the `ProcessHeatLoad` key within the `Scenario`.
 2. One can provide the `annual_mmbtu` value in the `ProcessHeatLoad` key within the `Scenario`; this assumes a flat load.
 
 !!! note "Process heat loads"
-    These loads are presented in terms of process heat required without regard to the efficiency of the input heating,
-    unlike the hot-water and space heating loads which are provided in terms of fuel input.
-
+    Hot water, space heating, and process heat thermal "load" inputs are in terms of energy input required (boiler fuel), 
+    not the actual energy demand. The fuel energy is multiplied by the existing_boiler_efficiency to get the actual energy 
+    demand.
 """
 function BuiltInProcessHeatLoad(
     sector::String,
@@ -1550,7 +1552,7 @@ struct ProcessHeatLoad
                                                     existing_boiler_efficiency)
         else
             throw(@error("Cannot construct BuiltInProcessHeatLoad. You must provide either [fuel_loads_mmbtu_per_hour], 
-                [doe_reference_name, city], or [blended_doe_reference_names, blended_doe_reference_percents, city]."))
+                [industry_reference_name, city], or [blended_industry_reference_names, blended_industry_reference_percents, city]."))
         end
 
         if length(loads_kw) < 8760*time_steps_per_hour

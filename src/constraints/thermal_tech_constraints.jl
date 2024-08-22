@@ -64,7 +64,7 @@ function add_heating_tech_constraints(m, p; _n="")
     # Constraint (7_heating_prod_size): Production limit based on size for non-electricity-producing heating techs
     if !isempty(setdiff(p.techs.heating, union(p.techs.elec, p.techs.ghp)))
         @constraint(m, [t in setdiff(p.techs.heating, union(p.techs.elec, p.techs.ghp)), ts in p.time_steps],
-            sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads)  <= m[Symbol("dvSize"*_n)][t]
+            sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads)  <= m[Symbol("dvSize"*_n)][t] * p.heating_cf[t][ts]
         )
     end
     # Constraint (7_heating_load_compatability): Set production variables for incompatible heat loads to zero
@@ -126,6 +126,47 @@ function add_heating_tech_constraints(m, p; _n="")
 
 end
 
+function add_heating_cooling_constraints(m, p; _n="")
+    @constraint(m, [t in setdiff(intersect(p.techs.cooling, p.techs.heating), p.techs.ghp), ts in p.time_steps],
+        sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads) / p.heating_cf[t][ts] + m[Symbol("dvCoolingProduction"*_n)][t,ts] / p.cooling_cf[t][ts] <= m[Symbol("dvSize"*_n)][t]
+    )
+end
+    
+
+function add_ashp_force_in_constraints(m, p; _n="")
+    if "ASHP_SpaceHeater" in p.techs.ashp && p.s.ashp.force_into_system
+        for t in setdiff(p.techs.can_serve_space_heating, ["ASHP_SpaceHeater"])
+            for ts in p.time_steps
+                fix(m[Symbol("dvHeatingProduction"*_n)][t,"SpaceHeating",ts], 0.0, force=true)
+                fix(m[Symbol("dvProductionToWaste"*_n)][t,"SpaceHeating",ts], 0.0, force=true)
+            end
+        end
+    end
+
+    if "ASHP_SpaceHeater" in p.techs.cooling && p.s.ashp.force_into_system
+        for t in setdiff(p.techs.cooling, ["ASHP_SpaceHeater"])
+            for ts in p.time_steps
+                fix(m[Symbol("dvCoolingProduction"*_n)][t,ts], 0.0, force=true)
+            end
+        end
+    end
+
+    if "ASHP_WaterHeater" in p.techs.ashp && p.s.ashp_wh.force_into_system
+        for t in setdiff(p.techs.can_serve_dhw, ["ASHP_WaterHeater"])
+            for ts in p.time_steps
+                fix(m[Symbol("dvHeatingProduction"*_n)][t,"DomesticHotWater",ts], 0.0, force=true)
+                fix(m[Symbol("dvProductionToWaste"*_n)][t,"DomesticHotWater",ts], 0.0, force=true)
+            end
+        end
+    end
+end
+
+function avoided_capex_by_ashp(m, p; _n="")
+    m[:AvoidedCapexByASHP] = @expression(m,
+    sum(p.avoided_capex_by_ashp_present_value[t] for t in p.techs.ashp)
+    )
+end
+
 function no_existing_boiler_production(m, p; _n="")
     for ts in p.time_steps
         for q in p.heating_loads
@@ -138,7 +179,7 @@ end
 function add_cooling_tech_constraints(m, p; _n="")
     # Constraint (7_cooling_prod_size): Production limit based on size for boiler
     @constraint(m, [t in setdiff(p.techs.cooling, p.techs.ghp), ts in p.time_steps_with_grid],
-        m[Symbol("dvCoolingProduction"*_n)][t,ts] <= m[Symbol("dvSize"*_n)][t]
+        m[Symbol("dvCoolingProduction"*_n)][t,ts] <= m[Symbol("dvSize"*_n)][t] * p.cooling_cf[t][ts]
     )
     # The load balance for cooling is only applied to time_steps_with_grid, so make sure we don't arbitrarily show cooling production for time_steps_without_grid
     for t in setdiff(p.techs.cooling, p.techs.ghp)
@@ -146,4 +187,11 @@ function add_cooling_tech_constraints(m, p; _n="")
             fix(m[Symbol("dvCoolingProduction"*_n)][t, ts], 0.0, force=true)
         end
     end
+end
+
+function no_existing_chiller_production(m, p; _n="")
+    for ts in p.time_steps
+        fix(m[Symbol("dvCoolingProduction"*_n)]["ExistingChiller",ts], 0.0, force=true)
+    end
+    fix(m[Symbol("dvSize"*_n)]["ExistingChiller"], 0.0, force=true)
 end
