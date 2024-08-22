@@ -82,16 +82,19 @@ function add_ashp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
         @expression(m, ASHPColdElectricConsumptionSeries[ts in p.time_steps], 
             p.hours_per_time_step * m[:dvCoolingProduction]["ASHP_SpaceHeater",ts] / p.cooling_cop["ASHP_SpaceHeater"][ts] 
         )
+        r["cooling_cop"] = p.cooling_cop["ASHP_SpaceHeater"]
     else
         r["thermal_to_storage_series_ton"] = zeros(length(p.time_steps))
         r["thermal_to_load_series_ton"] = zeros(length(p.time_steps))
         r["annual_thermal_production_tonhour"] = 0.0
         @expression(m, ASHPColdElectricConsumptionSeries, 0.0)
+        r["cooling_cop"] = zeros(length(p.time_steps))
     end
     r["electric_consumption_series_kw"] = round.(value.(ASHPElectricConsumptionSeries .+ ASHPColdElectricConsumptionSeries), digits=3)
     r["electric_consumption_for_cooling_series_kw"] = round.(value.(ASHPColdElectricConsumptionSeries), digits=3)
     r["electric_consumption_for_heating_series_kw"] = round.(value.(ASHPElectricConsumptionSeries), digits=3)
     r["annual_electric_consumption_kwh"] = p.hours_per_time_step * sum(r["electric_consumption_series_kw"])
+    r["heating_cop"] = p.heating_cop["ASHP_SpaceHeater"]
 
     d["ASHP_SpaceHeater"] = r
 	nothing
