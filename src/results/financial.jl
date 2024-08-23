@@ -273,10 +273,10 @@ function calculate_lcoe(p::REoptInputs, tech_results::Dict, tech::AbstractTech)
 
     capital_costs = new_kw * tech.installed_cost_per_kw # pre-incentive capital costs
 
-    annual_om = new_kw * tech.om_cost_per_kw # NPV of O&M charges escalated over financial life
+    annual_om = new_kw * tech.om_cost_per_kw 
 
     om_series = [annual_om * (1+p.s.financial.om_cost_escalation_rate_fraction)^yr for yr in 1:years]
-    npv_om = sum([om * (1.0/(1.0+discount_rate_fraction))^yr for (yr, om) in enumerate(om_series)])
+    npv_om = sum([om * (1.0/(1.0+discount_rate_fraction))^yr for (yr, om) in enumerate(om_series)]) # NPV of O&M charges escalated over financial life
 
     #Incentives as calculated in the spreadsheet, note utility incentives are applied before state incentives
     utility_ibi = min(capital_costs * tech.utility_ibi_fraction, tech.utility_ibi_max)
@@ -350,7 +350,7 @@ function get_depreciation_schedule(p::REoptInputs, tech::Union{AbstractTech,Abst
     try 
         federal_itc_fraction = tech.federal_itc_fraction
     catch
-        @warn "did not find tech.federal_itc_fraction so using 0.0"
+        @warn "Did not find $(tech).federal_itc_fraction so using 0.0 in calculation of depreciation_schedule."
     end
     
     macrs_bonus_basis = federal_itc_basis - federal_itc_basis * federal_itc_fraction * tech.macrs_itc_reduction
