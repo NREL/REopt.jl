@@ -24,6 +24,97 @@ elseif "CPLEX" in ARGS
 
 elseif "Debug" in ARGS
     @testset "Debug" begin
+        @testset "Thermal Energy Storage + Absorption Chiller" begin
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            data = JSON.parsefile("./scenarios/thermal_storage.json")
+            s = Scenario(data)
+            p = REoptInputs(s)
+                
+            #test for get_absorption_chiller_defaults consistency with inputs data and Scenario s.
+            htf_defaults_response = get_absorption_chiller_defaults(;
+                thermal_consumption_hot_water_or_steam=get(data["AbsorptionChiller"], "thermal_consumption_hot_water_or_steam", nothing),  
+                boiler_type=get(data["ExistingBoiler"], "production_type", nothing),
+                load_max_tons=maximum(s.cooling_load.loads_kw_thermal / REopt.KWH_THERMAL_PER_TONHOUR)
+            )
+            
+            expected_installed_cost_per_ton = htf_defaults_response["default_inputs"]["installed_cost_per_ton"]
+            expected_om_cost_per_ton = htf_defaults_response["default_inputs"]["om_cost_per_ton"]
+            
+            @test p.s.absorption_chiller.installed_cost_per_kw ≈ expected_installed_cost_per_ton / REopt.KWH_THERMAL_PER_TONHOUR atol=0.001
+            @test p.s.absorption_chiller.om_cost_per_kw ≈ expected_om_cost_per_ton / REopt.KWH_THERMAL_PER_TONHOUR atol=0.001
+            @test p.s.absorption_chiller.cop_thermal ≈ htf_defaults_response["default_inputs"]["cop_thermal"] atol=0.001
+            
+            #load test values
+            p.s.absorption_chiller.installed_cost_per_kw = 500.0 / REopt.KWH_THERMAL_PER_TONHOUR
+            p.s.absorption_chiller.om_cost_per_kw = 0.5 / REopt.KWH_THERMAL_PER_TONHOUR
+            p.s.absorption_chiller.cop_thermal = 0.7
+            
+            #Make every other hour zero fuel and electric cost; storage should charge and discharge in each period
+            for ts in p.time_steps
+                #heating and cooling loads only
+                if ts % 2 == 0  #in even periods, there is a nonzero load and energy is higher cost, and storage should discharge
+                    p.s.electric_load.loads_kw[ts] = 10
+                    p.s.dhw_load.loads_kw[ts] = 5
+                    p.s.space_heating_load.loads_kw[ts] = 5
+                    p.s.cooling_load.loads_kw_thermal[ts] = 10
+                    p.fuel_cost_per_kwh["ExistingBoiler"][ts] = 100
+                    for tier in 1:p.s.electric_tariff.n_energy_tiers
+                        p.s.electric_tariff.energy_rates[ts, tier] = 100
+                    end
+                else #in odd periods, there is no load and energy is cheaper - storage should charge 
+                    p.s.electric_load.loads_kw[ts] = 0
+                    p.s.dhw_load.loads_kw[ts] = 0
+                    p.s.space_heating_load.loads_kw[ts] = 0
+                    p.s.cooling_load.loads_kw_thermal[ts] = 0
+                    p.fuel_cost_per_kwh["ExistingBoiler"][ts] = 1
+                    for tier in 1:p.s.electric_tariff.n_energy_tiers
+                        p.s.electric_tariff.energy_rates[ts, tier] = 50
+                    end
+                end
+            end
+            
+            r = run_reopt(model, p)
+
+            open("debug_results.json","w") do f
+                JSON.print(f, r, 4)
+            end
+            # using DelimitedFiles
+            # writedlm(
+            #     "debug_results.csv",  
+            #     vcat(
+            #         reshape(["SOC"; "stor to load"; "grid to stor"; "PV to stor"], 1, :),
+            #         hcat(
+            #             r["ElectricStorage"]["soc_series_fraction"], 
+            #             r["ElectricStorage"]["storage_to_load_series_kw"], 
+            #             r["ElectricUtility"]["electric_to_storage_series_kw"],
+            #             r["PV"]["electric_to_storage_series_kw"]
+            #         )
+            #     ), 
+            #     ','
+            # )
+            # @test any(.&(
+            #         r["ElectricStorage"]["storage_to_load_series_kw"] .!= 0.0,
+            #         (
+            #             r["ElectricUtility"]["electric_to_storage_series_kw"] .+ 
+            #             r["PV"]["electric_to_storage_series_kw"]
+            #         ) .!= 0.0
+            #     )
+            #     ) ≈ false
+            
+            #dispatch to load should be 10kW every other period = 4,380 * 10
+            @test sum(r["HotThermalStorage"]["storage_to_load_series_mmbtu_per_hour"]) ≈ 149.45 atol=0.1
+            @test sum(r["ColdThermalStorage"]["storage_to_load_series_ton"]) ≈ 12454.33 atol=0.1
+            #size should be just over 10kW in gallons, accounting for efficiency losses and min SOC
+            @test r["HotThermalStorage"]["size_gal"] ≈ 233.0 atol=0.1
+            @test r["ColdThermalStorage"]["size_gal"] ≈ 378.0 atol=0.1
+            #No production from existing chiller, only absorption chiller, which is sized at ~5kW to manage electric demand charge & capital cost.
+            @test r["ExistingChiller"]["annual_thermal_production_tonhour"] ≈ 0.0 atol=0.1
+            @test r["AbsorptionChiller"]["annual_thermal_production_tonhour"] ≈ 12464.15 atol=0.1
+            @test r["AbsorptionChiller"]["size_ton"] ≈ 2.846 atol=0.01
+        end
+    end
+else  # run HiGHS tests
+    @testset verbose=true "REopt test set using HiGHS solver" begin
         @testset "Prevent simultaneous charge and discharge" begin
             logger = SimpleLogger()
             results = nothing
@@ -31,23 +122,6 @@ elseif "Debug" in ARGS
                 model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 results = run_reopt(model, "./scenarios/simultaneous_charge_discharge.json")
             end
-            open("debug_results.json","w") do f
-                JSON.print(f, results, 4)
-            end
-            using DelimitedFiles
-            writedlm(
-                "debug_results.csv",  
-                vcat(
-                    reshape(["SOC"; "stor to load"; "grid to stor"; "PV to stor"], 1, :),
-                    hcat(
-                        results["ElectricStorage"]["soc_series_fraction"], 
-                        results["ElectricStorage"]["storage_to_load_series_kw"], 
-                        results["ElectricUtility"]["electric_to_storage_series_kw"],
-                        results["PV"]["electric_to_storage_series_kw"]
-                    )
-                ), 
-                ','
-            )
             @test any(.&(
                     results["ElectricStorage"]["storage_to_load_series_kw"] .!= 0.0,
                     (
@@ -57,9 +131,6 @@ elseif "Debug" in ARGS
                 )
                 ) ≈ false
         end
-    end
-else  # run HiGHS tests
-    @testset verbose=true "REopt test set using HiGHS solver" begin
         @testset "hybrid profile" begin
             electric_load = REopt.ElectricLoad(; 
                 blended_doe_reference_percents = [0.2, 0.2, 0.2, 0.2, 0.2],
