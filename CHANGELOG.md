@@ -25,10 +25,18 @@ Classify the change according to the following categories:
 
 ## Develop 08-09-2024
 ### Changed
-- Improve the full test suite reporting with a verbose summary table, and update the structure to reflect long-term open-source solver usage
-- Removed MacOS from the runner list and just run with Windows OS, since MacOS commonly freezes and gets cancelled. We have not seen Windows OS pass while other OS's fail. .
-- Suppress JuMP warning messages from 15-minute and multiple PVs test scenarios to avoid flooding the test logs with those warnings
+- Improve the full test suite reporting with a verbose summary table, and update the structure to reflect long-term open-source solver usage.
+- Removed MacOS from the runner list and just run with Windows OS, since MacOS commonly freezes and gets cancelled. We have not seen Windows OS pass while other OS's fail.
+- Suppress JuMP warning messages from 15-minute and multiple PVs test scenarios to avoid flooding the test logs with those warnings.
 - Updated/specified User-Agent header of "REopt.jl" for PVWatts and Wind Toolkit API requests; default before was "HTTP.jl"; this allows specific tracking of REopt.jl usage which call PVWatts and Wind Toolkit through api.data.gov.
+- Improves DRY coding by replacing multiple instances of the same chunks of code for MACRS deprecation and CHP capital cost into functions that are now in financial.jl.
+- Simplifies the CHP sizing test to avoid a ~30 minute solve time, by avoiding the fuel burn y-intercept binaries which come with differences between full-load and part-load efficiency.
+### Fixed
+- Proforma calcs including "simple" payback and IRR for thermal techs/scenarios.
+  - The operating costs of fuel and O&M were missing for all thermal techs such as ExistingBoiler, CHP, and others; this adds those sections of code to properly calculate the operating costs.
+- Added a test to validate the simple payback calculation with CHP (and ExistingBoiler) and checks the REopt result value against a spreadsheet proforma calculation (see Bill's spreadsheet).
+- Added a couple of missing techs for the initial capital cost calculation in financial.jl.
+- An issue with setup_boiler_inputs in reopt_inputs.jl.
 
 ## v0.47.2
 ### Fixed
