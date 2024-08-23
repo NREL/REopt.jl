@@ -29,7 +29,7 @@ elseif "Debug" in ARGS
             results = nothing
             with_logger(logger) do
                 model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-                results = run_reopt(model, "./scenarios/simultaneous_charge_discharge3.json")
+                results = run_reopt(model, "./scenarios/simultaneous_charge_discharge.json")
             end
             open("debug_results.json","w") do f
                 JSON.print(f, results, 4)
