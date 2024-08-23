@@ -50,7 +50,7 @@ end
 
 function add_elec_storage_dispatch_constraints(m, p, b; _n="")
 				
-	# Constraint (4g): state-of-charge for electrical storage - with grid
+	# Constraint (4g)-1: state-of-charge for electrical storage - with grid
 	@constraint(m, [ts in p.time_steps_with_grid],
         m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  
             sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) 
@@ -58,12 +58,26 @@ function add_elec_storage_dispatch_constraints(m, p, b; _n="")
             - m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.s.storage.attr[b].discharge_efficiency
         )
 	)
-
-	# Constraint (4h): state-of-charge for electrical storage - no grid
+	# Constraint (4g)-2: state-of-charge for electrical storage - no grid
 	@constraint(m, [ts in p.time_steps_without_grid],
         m[Symbol("dvStoredEnergy"*_n)][b, ts] == m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  
             sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.elec) 
             - m[Symbol("dvDischargeFromStorage"*_n)][b, ts] / p.s.storage.attr[b].discharge_efficiency
+        )
+    )	
+
+	# Constraint (4h): prevent simultaneous charge and discharge by limitting charging alone to not make the SOC exceed 100%
+    # (4h)-1: with grid
+	@constraint(m, [ts in p.time_steps_with_grid],
+        m[Symbol("dvStorageEnergy"*_n)][b] >= m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  
+            sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for t in p.techs.elec) 
+            + p.s.storage.attr[b].grid_charge_efficiency * m[Symbol("dvGridToStorage"*_n)][b, ts] 
+        )
+	)
+	# (4h)-2: no grid
+	@constraint(m, [ts in p.time_steps_without_grid],
+        m[Symbol("dvStorageEnergy"*_n)][b] >= m[Symbol("dvStoredEnergy"*_n)][b, ts-1] + p.hours_per_time_step * (  
+            sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.elec) 
         )
     )
 
