@@ -22,6 +22,134 @@ elseif "CPLEX" in ARGS
         include("test_with_cplex.jl")
     end
 
+elseif "Debug" in ARGS
+    @testset "Debug" begin
+        @testset "Prevent simultaneous charge and discharge" begin
+            logger = SimpleLogger()
+            results = nothing
+            with_logger(logger) do
+                model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                results = run_reopt(model, "./scenarios/simultaneous_charge_discharge3.json")
+            end
+            open("debug_results.json","w") do f
+                JSON.print(f, results, 4)
+            end
+            using DelimitedFiles
+            writedlm(
+                "debug_results.csv",  
+                vcat(
+                    reshape(["SOC"; "stor to load"; "grid to stor"; "PV to stor"], 1, :),
+                    hcat(
+                        results["ElectricStorage"]["soc_series_fraction"], 
+                        results["ElectricStorage"]["storage_to_load_series_kw"], 
+                        results["ElectricUtility"]["electric_to_storage_series_kw"],
+                        results["PV"]["electric_to_storage_series_kw"]
+                    )
+                ), 
+                ','
+            )
+            @test any(.&(
+                    results["ElectricStorage"]["storage_to_load_series_kw"] .!= 0.0,
+                    (
+                        results["ElectricUtility"]["electric_to_storage_series_kw"] .+ 
+                        results["PV"]["electric_to_storage_series_kw"]
+                    ) .!= 0.0
+                )
+                ) ≈ false
+
+            # writedlm(
+            #     "debug_results.csv",  
+            #     vcat(
+            #         reshape(["SOC"; "stor to load"; "grid to stor"; "CHP to stor"; "PV1 to stor"; "PV2 to stor"; "PV3 to stor"; "PV4 to stor"; "PV5 to stor"], 1, :),
+            #         hcat(
+            #             results["ElectricStorage"]["soc_series_fraction"], 
+            #             results["ElectricStorage"]["storage_to_load_series_kw"], 
+            #             results["ElectricUtility"]["electric_to_storage_series_kw"],
+            #             results["CHP"]["electric_to_storage_series_kw"],
+            #             [pv["electric_to_storage_series_kw"] for pv in results["PV"]]...
+            #         )
+            #     ), 
+            #     ','
+            # )
+            # @test any(.&(
+            #         results["ElectricStorage"]["storage_to_load_series_kw"] .!= 0.0,
+            #         (
+            #             results["ElectricUtility"]["electric_to_storage_series_kw"] .+ 
+            #             results["CHP"]["electric_to_storage_series_kw"] .+
+            #             sum.([pv["electric_to_storage_series_kw"] for pv in results["PV"]]) 
+            #         ) .!= 0.0
+            #     )   
+            #     ) ≈ false
+        end
+
+        @testset "Solar and Storage" begin
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            r = run_reopt(model, "./scenarios/pv_storage.json")
+
+            @test r["PV"]["size_kw"] ≈ 216.6667 atol=0.01
+            @test r["Financial"]["lcc"] ≈ 1.2391786e7 rtol=1e-5
+            @test r["ElectricStorage"]["size_kw"] ≈ 49.0 atol=0.1
+            @test r["ElectricStorage"]["size_kwh"] ≈ 83.3 atol=0.1
+
+            @test any(.&(
+                    r["ElectricStorage"]["storage_to_load_series_kw"] .!= 0.0, 
+                    (r["ElectricUtility"]["electric_to_storage_series_kw"] .+ r["PV"]["electric_to_storage_series_kw"]) .!= 0.0
+                )) ≈ false
+        end
+
+        @testset "Complex Incentives" begin
+            """
+            This test was compared against the API test:
+                reo.tests.test_reopt_url.EntryResourceTest.test_complex_incentives
+            when using the hardcoded levelization_factor in this package's REoptInputs function.
+            The two LCC's matched within 0.00005%. (The Julia pkg LCC is 1.0971991e7)
+            """
+            model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            results = run_reopt(model, "./scenarios/incentives.json")
+            @test results["Financial"]["lcc"] ≈ 1.096852612e7 atol=1e4  
+
+            @test any(.&(
+                    results["ElectricStorage"]["storage_to_load_series_kw"] .!= 0.0, 
+                    (results["ElectricUtility"]["electric_to_storage_series_kw"] .+ results["PV"]["electric_to_storage_series_kw"]) .!= 0.0
+                )) ≈ false
+        end
+        @testset "Solar and ElectricStorage w/BAU and degradation" begin
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            d = JSON.parsefile("scenarios/pv_storage.json");
+            d["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
+            results = run_reopt([m1,m2], d)
+
+            @test results["PV"]["size_kw"] ≈ 216.6667 atol=0.01
+            @test results["PV"]["lcoe_per_kwh"] ≈ 0.0468 atol = 0.001
+            @test results["Financial"]["lcc"] ≈ 1.239179e7 rtol=1e-5
+            @test results["Financial"]["lcc_bau"] ≈ 12766397 rtol=1e-5
+            @test results["ElectricStorage"]["size_kw"] ≈ 49.02 atol=0.1
+            @test results["ElectricStorage"]["size_kwh"] ≈ 83.3 atol=0.1
+            proforma_npv = REopt.npv(results["Financial"]["offtaker_annual_free_cashflows"] - 
+                results["Financial"]["offtaker_annual_free_cashflows_bau"], 0.081)
+            @test results["Financial"]["npv"] ≈ proforma_npv rtol=0.0001
+
+            @test any(.&(
+                    results["ElectricStorage"]["storage_to_load_series_kw"] .!= 0.0, 
+                    (results["ElectricUtility"]["electric_to_storage_series_kw"] .+ results["PV"]["electric_to_storage_series_kw"]) .!= 0.0
+                )) ≈ false
+
+            # compare avg soc with and without degradation, 
+            # using default augmentation battery maintenance strategy
+            avg_soc_no_degr = sum(results["ElectricStorage"]["soc_series_fraction"]) / 8760
+            d["ElectricStorage"]["model_degradation"] = true
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            r_degr = run_reopt(m, d)
+            avg_soc_degr = sum(r_degr["ElectricStorage"]["soc_series_fraction"]) / 8760
+            @test avg_soc_no_degr > avg_soc_degr
+
+            @test any(.&(
+                    results["ElectricStorage"]["storage_to_load_series_kw"] .!= 0.0, 
+                    (results["ElectricUtility"]["electric_to_storage_series_kw"] .+ results["PV"]["electric_to_storage_series_kw"]) .!= 0.0
+                )) ≈ false
+        end
+    end
 else  # run HiGHS tests
     @testset verbose=true "REopt test set using HiGHS solver" begin
         @testset "hybrid profile" begin
@@ -219,10 +347,7 @@ else  # run HiGHS tests
             post["PV"]["tilt"] = 17
             scen = Scenario(post)
             @test scen.pvs[1].tilt ≈ 17
-        
-        
-        end    
-        
+        end
 
         @testset "AlternativeFlatLoads" begin
             input_data = JSON.parsefile("./scenarios/flatloads.json")
@@ -556,6 +681,7 @@ else  # run HiGHS tests
             @test reliability_results["mean_cumulative_survival_final_time_step"] ≈ 0.817586 atol=0.001
         end  
 
+        #candidate for hot stor
         @testset verbose=true "Disaggregated Heating Loads" begin
             @testset "Process Heat Load Inputs" begin
                 d = JSON.parsefile("./scenarios/electric_heater.json")
@@ -1011,6 +1137,7 @@ else  # run HiGHS tests
             @test simresults["resilience_hours_max"] == 11
         end
 
+        #candidate for outages
         @testset "Minimize Unserved Load" begin
             d = JSON.parsefile("./scenarios/outage.json")
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
@@ -1103,18 +1230,6 @@ else  # run HiGHS tests
             # the grid draw limit in the 10th time step is set to 90
             # without the 90 limit the grid draw is 98 in the 10th time step
             @test grid_draw[10] <= 90
-        end
-
-        @testset "Complex Incentives" begin
-            """
-            This test was compared against the API test:
-                reo.tests.test_reopt_url.EntryResourceTest.test_complex_incentives
-            when using the hardcoded levelization_factor in this package's REoptInputs function.
-            The two LCC's matched within 0.00005%. (The Julia pkg LCC is  1.0971991e7)
-            """
-            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            results = run_reopt(m, "./scenarios/incentives.json")
-            @test results["Financial"]["lcc"] ≈ 1.094596365e7 atol=5e4  
         end
 
         @testset verbose=true "Rate Structures" begin
@@ -1332,6 +1447,7 @@ else  # run HiGHS tests
             end
         end
 
+        #candidate for hot and cold stor
         @testset "Thermal Energy Storage + Absorption Chiller" begin
             model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
             data = JSON.parsefile("./scenarios/thermal_storage.json")
@@ -1395,6 +1511,7 @@ else  # run HiGHS tests
             @test r["AbsorptionChiller"]["size_ton"] ≈ 2.846 atol=0.01
         end
 
+        #condidate for hot/cold stor
         @testset "Heat and cool energy balance" begin
             """
 
@@ -1730,8 +1847,8 @@ else  # run HiGHS tests
             post_name = "off_grid.json" 
             post = JSON.parsefile("./scenarios/$post_name")
             m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-            r = run_reopt(m, post)
             scen = Scenario(post)
+            r = run_reopt(m, scen)
             
             # Test default values 
             @test scen.electric_utility.outage_start_time_step ≈ 1
