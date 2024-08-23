@@ -107,16 +107,22 @@ function proforma_results(p::REoptInputs, d::Dict)
             year_one_fuel_cost_bau = d["Generator"]["year_one_fuel_cost_before_tax_bau"]
         end
         if !third_party
-            annual_om = -1 * (fixed_and_var_om + d["Generator"]["year_one_fuel_cost_before_tax"])
-
-            annual_om_bau = -1 * (fixed_and_var_om_bau + year_one_fuel_cost_bau)
-        else
+            annual_fuel = -1 * d["Generator"]["year_one_fuel_cost_before_tax"]
             annual_om = -1 * fixed_and_var_om
 
+            annual_fuel_bau = -1 * year_one_fuel_cost_bau
+            annual_om_bau = -1 * fixed_and_var_om_bau
+        else
+            annual_fuel = 0.0
+            annual_om = -1 * fixed_and_var_om
+
+            annual_fuel_bau = 0.0
             annual_om_bau = -1 * fixed_and_var_om_bau
         end
 
+        m.om_series += escalate_fuel(annual_fuel, p.s.financial.generator_fuel_cost_escalation_rate_fraction)
         m.om_series += escalate_om(annual_om)
+        m.om_series_bau += escalate_fuel(annual_fuel_bau, p.s.financial.generator_fuel_cost_escalation_rate_fraction)
         m.om_series_bau += escalate_om(annual_om_bau)
     end
 
