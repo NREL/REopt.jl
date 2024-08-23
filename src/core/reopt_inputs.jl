@@ -947,32 +947,7 @@ function setup_cst_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_k
     max_sizes["ConcentratingSolar"] = s.cst.max_kw
     min_sizes["ConcentratingSolar"] = s.cst.min_kw
     om_cost_per_kw["ConcentratingSolar"] = s.cst.om_cost_per_kw
-    heating_cop["ConcentratingSolar"] = 1000  # TODO: merge ASHP developments to make heating_cop a time series, and import the electrical consumption from SAM.
-
-    if s.cst.macrs_option_years in [5, 7]
-        cap_cost_slope["ConcentratingSolar"] = effective_cost(;
-            itc_basis = s.cst.installed_cost_per_kw,
-            replacement_cost = 0.0,
-            replacement_year = s.financial.analysis_years,
-            discount_rate = s.financial.owner_discount_rate_fraction,
-            tax_rate = s.financial.owner_tax_rate_fraction,
-            itc = 0.0,
-            macrs_schedule = s.cst.macrs_option_years == 5 ? s.financial.macrs_five_year : s.financial.macrs_seven_year,
-            macrs_bonus_fraction = s.cst.macrs_bonus_fraction,
-            macrs_itc_reduction = 0.0,
-            rebate_per_kw = 0.0
-        )
-    else
-        cap_cost_slope["ConcentratingSolar"] = s.cst.installed_cost_per_kw
-    end
-
-end
-
-function setup_cst_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop)
-    max_sizes["ConcentratingSolar"] = s.cst.max_kw
-    min_sizes["ConcentratingSolar"] = s.cst.min_kw
-    om_cost_per_kw["ConcentratingSolar"] = s.cst.om_cost_per_kw
-    heating_cop["ConcentratingSolar"] = 1000  # TODO: merge ASHP developments to make heating_cop a time series, and import the electrical consumption from SAM.
+    heating_cop["ConcentratingSolar"] = 1000*ones(s.settings.time_steps_per_hour*8760)  # TODO: merge ASHP developments to make heating_cop a time series, and import the electrical consumption from SAM.
 
     if s.cst.macrs_option_years in [5, 7]
         cap_cost_slope["ConcentratingSolar"] = effective_cost(;
