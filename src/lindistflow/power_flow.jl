@@ -352,17 +352,33 @@ function constrain_KVL(m, p::PowerFlowInputs)
 
     LineNominalVoltages_dict, BusNominalVoltages_dict = DetermineLineNominalVoltage(p)
 
+    all_lines_temp = []
+    for j in p.busses
+        for i in i_to_j(j, p)
+            i_j = string(i*"-"*j)
+            push!(all_lines_temp, string(i_j))
+        end
+    end
+    all_lines = unique!(all_lines_temp)
+
+    #all_lines = p.edges
+    print("\n The all_lines variable is: ")
+    print(all_lines)
+    
+    print("\n Generating the line_max_amps variable")
+    @variable(m, line_max_amps[all_lines] >= 0)
+
     for j in p.busses
         for i in i_to_j(j, p)
             i_j = string(i*"-"*j)
             i_j_underscore = string(i*"_"*j)
             linelength = get_ijlinelength(i, j, p)
-            linenormamps = get_ijlinenormamps(i,j,p)
+            #linenormamps = get_ijlinenormamps(i,j,p)
             line_code = get_ijlinecode(i,j,p) 
             LineNominalVoltage = parse(Float64,LineNominalVoltages_dict[i_j])
             rmatrix = p.Zdict[line_code]["rmatrix"]
 
-            print("\n For line $(i_j) and linecode $(line_code): the rmatrix is $(rmatrix), the max amperage is $(linenormamps)A and the nominal voltage is $(LineNominalVoltage)V, so the maximum power is: "*string(LineNominalVoltage*linenormamps)*" W")
+            print("\n For line $(i_j) and linecode $(line_code): the rmatrix is $(rmatrix)") #, the max amperage is $(linenormamps)A and the nominal voltage is $(LineNominalVoltage)V, so the maximum power is: "*string(LineNominalVoltage*linenormamps)*" W")
                        
             rᵢⱼ = p.Zdict[line_code]["rmatrix"] * linelength * p.Sbase / (LineNominalVoltage^2)
             
@@ -379,17 +395,17 @@ function constrain_KVL(m, p::PowerFlowInputs)
             end
 
             # Apply the amperage constraints to the line:
-            @constraint(m, [T in 1:p.Ntimesteps], P[i_j, T] <= ((linenormamps*LineNominalVoltage)*(1/p.Sbase))) # Note: 1 instead of 1000 because not converting from kW 
-            @constraint(m, [T in 1:p.Ntimesteps], P[i_j, T] >= -((linenormamps*LineNominalVoltage)*(1/p.Sbase)))
+            @constraint(m, [T in 1:p.Ntimesteps], P[i_j, T] <= ((m[:line_max_amps][i_j]*LineNominalVoltage)*(1/p.Sbase))) # Note: 1 instead of 1000 because not converting from kW 
+            @constraint(m, [T in 1:p.Ntimesteps], P[i_j, T] >= -((m[:line_max_amps][i_j]*LineNominalVoltage)*(1/p.Sbase)))
             
-            @constraint(m, [T in 1:p.Ntimesteps], Q[i_j, T] <= ((linenormamps*LineNominalVoltage)*(1/p.Sbase)))  
-            @constraint(m, [T in 1:p.Ntimesteps], Q[i_j, T] >= -((linenormamps*LineNominalVoltage)*(1/p.Sbase)))
+            @constraint(m, [T in 1:p.Ntimesteps], Q[i_j, T] <= ((m[:line_max_amps][i_j]*LineNominalVoltage)*(1/p.Sbase)))  
+            @constraint(m, [T in 1:p.Ntimesteps], Q[i_j, T] >= -((m[:line_max_amps][i_j]*LineNominalVoltage)*(1/p.Sbase)))
         end
     end
     p.Nequality_cons += length(p.edges) * p.Ntimesteps
 
-    print("\n the line_norm_amps is:")
-    print(p.linenormamps)
+    #print("\n the line_norm_amps is:")
+    #print(p.linenormamps)
     print("\n the p.linelengths is:")
     print(p.linelengths)
 
@@ -660,7 +676,8 @@ function get_ij_idxs(i::String, j::String, p::PowerFlowInputs)
     end
 end
 
-
+# Previous code:
+#=
 function get_edge_values(var_prefix::String, m::JuMP.AbstractModel, p::PowerFlowInputs)
     vals = Float64[]
     for edge in p.edges
@@ -677,7 +694,8 @@ function get_edge_values(var_prefix::String, m::JuMP.AbstractModel, p::PowerFlow
     end
     return vals
 end
-
+=#
+#=
 
 function get_bus_values(var_prefix::String, m::JuMP.AbstractModel, p::PowerFlowInputs)
     vals = Float64[]
@@ -695,8 +713,8 @@ function get_bus_values(var_prefix::String, m::JuMP.AbstractModel, p::PowerFlowI
     end
     return vals
 end
-
-
+=#
+#=
 function get_constraints_by_variable_name(m, v::String)
     ac = ConstraintRef[]
     for tup in list_of_constraint_types(m)
@@ -704,7 +722,7 @@ function get_constraints_by_variable_name(m, v::String)
     end
     filter( cr -> occursin(v, string(cr)), ac )
 end
-
+=#
 #=
 """
     function recover_voltage_current(m, p::Inputs)

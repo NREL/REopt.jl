@@ -88,7 +88,7 @@ function Microgrid_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary)
     RunDataChecks(Microgrid_Settings, ldf_inputs_dictionary, REopt_dictionary)
 
     # Run the optimization:
-    DataDictionaryForEachNode, Dictionary_LineFlow_Power_Series, Dictionary_Node_Data_Series, ldf_inputs, results, DataFrame_LineFlow_Summary, LineNominalVoltages_Summary, BusNominalVoltages_Summary, model = Microgrid_REopt_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary, REopt_dictionary, TimeStamp) # ps_B, TimeStamp) #
+    DataDictionaryForEachNode, Dictionary_LineFlow_Power_Series, Dictionary_Node_Data_Series, ldf_inputs, results, DataFrame_LineFlow_Summary, LineNominalVoltages_Summary, BusNominalVoltages_Summary, model, line_upgrade_options, transformer_upgrade_options = Microgrid_REopt_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary, REopt_dictionary, TimeStamp) # ps_B, TimeStamp) #
   
     # Run the outage simulator if "RunOutageSimulator" is set to true
     if Microgrid_Settings["RunOutageSimulator"] == true
@@ -119,6 +119,18 @@ function Microgrid_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary)
     # Results processing and generation of outputs:
     system_results = Results_Processing(results, Outage_Results, OpenDSSResults, Microgrid_Settings, ldf_inputs_dictionary, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, TimeStamp, ComputationTime_EntireModel)
 
+    if Microgrid_Settings["Model_Transformer_Upgrades"] == true
+        transformer_upgrade_results = "N/A"
+    else
+        transformer_upgrade_results = "N/A"
+    end
+    
+    if Microgrid_Settings["Model_Transformer_Upgrades"] == true
+        line_upgrade_results = "N/A"
+    else
+        line_upgrade_results = "N/A"
+    end
+
     # Compile output data into a dictionary to return from the dictionary
     CompiledResults = Dict([("System_Results", system_results),
                             ("DataDictionaryForEachNode", DataDictionaryForEachNode), 
@@ -131,7 +143,11 @@ function Microgrid_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary)
                             ("OpenDSSResults", OpenDSSResults),
                             ("LineNominalVoltages_Summary", LineNominalVoltages_Summary), 
                             ("BusNominalVoltages_Summary", BusNominalVoltages_Summary),
-                            ("ComputationTime_EntireModel", ComputationTime_EntireModel)
+                            ("ComputationTime_EntireModel", ComputationTime_EntireModel),
+                            ("line_upgrade_options", line_upgrade_options),
+                            ("transformer_upgrade_options", transformer_upgrade_options),
+                            ("line_upgrade_results", line_upgrade_results),
+                            ("transformer_upgrade_results", transformer_upgrade_results)
                             ])
     return CompiledResults, model  
 end
@@ -290,8 +306,48 @@ for p in ps
     end
 end
 
-# Note: the objective accounts for costs of all REopt nodes input into the model
-@objective(m, Min, sum(m[Symbol(string("Costs_", p.s.site.node))] for p in ps) )
+# Constraint 7: For line upgrades
+if Microgrid_Inputs["Model_Line_Upgrades"] == true
+    line_upgrades_each_line, lines_for_upgrades = line_upgrades(m, Microgrid_Inputs, ldf_inputs)
+else
+    for j in ldf_inputs.busses
+        for i in i_to_j(j, ldf_inputs)
+            i_j = string(i*"-"*j)
+            linenormamps = get_ijlinenormamps(i,j,ldf_inputs)
+            @constraint(m, m[:line_max_amps][i_j] == linenormamps)
+        end
+    end
+    line_upgrades_each_line = Dict([])
+end
+print("\n *****************Print #2: the lines for upgrades are: ")
+print(lines_for_upgrades)
+
+# Constraint 8: For transformer upgrades
+if Microgrid_Inputs["Model_Transformer_Upgrades"] == true
+    transformer_upgrades_each_transformer = transformer_upgrades(m, Microgrid_Inputs, ldf_inputs)
+else
+    for i in keys(ldf_inputs.transformers)
+        if ldf_inputs.transformers[i]["Transformer Side"] == "downstream"           
+                maxkva = parse(Float64, ldf_inputs.transformers[i]["MaximumkVa"])
+                @constraint(m, m[:transformer_max_kva][i] == maxkva)
+        end
+    end
+    transformer_upgrades_each_transformer = Dict([])
+end
+
+# Note: the objective accounts for costs of all REopt nodes input into the model, as well as lines and transformer upgrades if upgrades are included as inputs to the model
+
+@expression(m, Costs, sum(m[Symbol(string("Costs_", p.s.site.node))] for p in ps) )
+
+if Microgrid_Inputs["Model_Line_Upgrades"] == true
+    add_to_expression!(Costs, sum(m[:line_cost][line] for line in lines_for_upgrades))
+end
+if Microgrid_Inputs["Model_Transformer_Upgrades"] == true
+    add_to_expression!(Costs, sum(m[:transformer_cost][transformer] for transformer in transformers_for_upgrades))
+end
+
+
+@objective(m, Min, m[:Costs])
 
 @info "The optimization is starting"
 set_optimizer_attribute(m, "MIPRELSTOP", 0.02) 
@@ -675,8 +731,135 @@ else
     DataDictionaryForEachNode = "The outage simulator was not used"
 end
 
-return DataDictionaryForEachNode, Dictionary_LineFlow_Power_Series, Dictionary_Node_Data_Series, ldf_inputs, results, DataFrame_LineFlow, LineNominalVoltages_Summary, BusNominalVoltages_Summary, m
+return DataDictionaryForEachNode, Dictionary_LineFlow_Power_Series, Dictionary_Node_Data_Series, ldf_inputs, results, DataFrame_LineFlow, LineNominalVoltages_Summary, BusNominalVoltages_Summary, m, line_upgrades_each_line, transformer_upgrades_each_transformer
 end 
+
+function line_upgrades(m, microgrid_inputs, powerflow_inputs)
+    # Function for modeling line upgrades
+
+    # Create a list lines that are upgradable
+    lines_for_upgrades_temp = []
+    for i in keys(microgrid_inputs["Line_Upgrade_Options"])
+        push!(lines_for_upgrades_temp, microgrid_inputs["Line_Upgrade_Options"][i]["locations"]) # *************************************** Does the push! work properly? Or does it add arrays to a second axis? Maybe the unique! function creates a vector from a 2D matrix?
+    end
+    lines_for_upgrades_temp2 = unique!(lines_for_upgrades_temp)
+    lines_for_upgrades = lines_for_upgrades_temp2[1]
+
+    p = powerflow_inputs
+    # Create a list of all of the lines
+    # all_lines = p.edges
+    all_lines_temp = []
+    for j in p.busses
+        for i in i_to_j(j, p)
+            i_j = string(i*"-"*j)
+            push!(all_lines_temp, string(i_j))
+        end
+    end
+    all_lines = unique!(all_lines_temp)
+
+    print("\n The all_lines variable in the line_upgrades function is: ")
+    print(all_lines)
+    print("\n")
+    print("\n ********** Print #1: The lines for upgrades are: ")
+    print(lines_for_upgrades)
+    print("\n ")
+
+    # Define variables for the line maximum amps and line cost
+    #@variable(m, line_max_amps[all_lines] >= 0)
+    @variable(m, line_cost[lines_for_upgrades] >= 0 )
+
+    
+    line_upgrade_options_each_line = Dict([])
+    for line_name in all_lines
+        firstnode = string(strip(chop(line_name, tail = sizeof(line_name)  -findfirst("-", line_name)[1]+1)))
+        secondnode = string(strip(chop(line_name,head= findfirst("-", line_name)[end], tail=0 )))
+        if line_name in lines_for_upgrades
+            # Generate a dictionary for the options, organized so that the keys are the lines and the values are options for each line
+            for i in keys(microgrid_inputs["Line_Upgrade_Options"]), j in microgrid_inputs["Line_Upgrade_Options"][i]["locations"]
+                if line_name == j
+                    if line_name ∉ keys(line_upgrade_options_each_line) 
+                        line_norm_amps = get_ijlinenormamps(firstnode, secondnode, p)
+                        line_upgrade_options_each_line[line_name] = Dict([("max_amperage", [line_norm_amps, microgrid_inputs["Line_Upgrade_Options"][i]["max_amps"]]),
+                                                               ("cost_per_length", [0, microgrid_inputs["Line_Upgrade_Options"][i]["cost_per_unit_length"]])
+                                                                ])
+                    else
+                        push!(line_upgrade_options_each_line[line_name]["max_amperage"], microgrid_inputs["Line_Upgrade_Options"][i]["max_amps"])
+                        push!(line_upgrade_options_each_line[line_name]["cost_per_length"], microgrid_inputs["Line_Upgrade_Options"][i]["cost_per_unit_length"])
+                    end
+                end
+            end
+            number_of_entries = length(line_upgrade_options_each_line[line_name]["max_amperage"])
+            dv = "Bin"*line_name
+            #entry_vector = collect(0:number_of_entries)
+            m[Symbol(dv)] = @variable(m, [0:number_of_entries], base_name=dv, Bin)
+
+            @constraint(m, m[:line_max_amps][line_name] == sum(m[Symbol(dv)][i]*line_upgrade_options_each_line[line_name]["max_amperage"][i] for i in 1:number_of_entries))
+            @constraint(m, m[:line_cost][line_name] == sum(m[Symbol(dv)][i]*line_upgrade_options_each_line[line_name]["cost_per_length"][i] for i in 1:number_of_entries))
+        
+            @constraint(m, sum(m[Symbol(dv)][i] for i in 1:number_of_entries) == 1)
+        else
+            line_norm_amps = get_ijlinenormamps(firstnode, secondnode, p)
+            @constraint(m, m[:line_max_amps][line_name] == line_norm_amps)
+        end
+    end
+    return line_upgrade_options_each_line, lines_for_upgrades
+end
+
+function transformer_upgrades(m, microgrid_inputs, powerflow_inputs)
+    # Function for modeling transformer upgrades
+
+    # Create list of transformers to upgrade
+        # Note: transformers are identified here by the downstream node
+    transformers_for_upgrades_temp = []
+    for i in keys(microgrid_inputs["Transformer_Upgrade_Options"])
+        append!(transformers_for_upgrades_temp, microgrid_inputs["Transformer_Upgrade_Options"][i]["downstream_node"])
+    end
+    transformers_for_upgrades_temp2 = unique!(transformers_for_upgrades_temp)     
+    transformers_for_upgrades = transformers_for_upgrades_temp2[1]
+
+    # Create list of all transformers:
+    p = powerflow_inputs
+    all_transformers = []
+    for i in keys(p.transformers) 
+        if p.transformers[i]["Transformer Side"] == "downstream"
+            push!(all_transformers, i)
+        end
+    end
+
+    # Create variables
+    #@variable(m, transformer_max_kva[all_transformers] >= 0)
+    @variable(m, transformer_upgrade_cost[transformers_for_upgrades] >= 0)
+    transformer_options_each_transformer = Dict([])
+
+    for transformer_name in all_transformers
+        if transformer_name in transformers_for_upgrades
+            for i in keys(microgrid_inputs["Transformer_Upgrade_Options"]), j in microgrid_inputs["Transformer_Upgrade_Options"][i]["downstream_node"]
+                if transformer_name == j
+                    if transformer_name ∉ keys(transformer_options_each_transformer)
+                        transformer_options_each_transformer[transformer_name] = Dict([ ("kva_max", [p.transformers[transformer_name]["MaximumkVa"] , microgrid_inputs["Transformer_Upgrade_Options"][i]["max_kva"]]),
+                                                                                        ("cost", [0, microgrid_inputs["Transformer_Upgrade_Options"][i]["cost"]])
+                                                                                        ])
+                    else
+                        push!(transformer_options_each_transformer[transformer_name]["kva_max"], microgrid_inputs["Transformer_Upgrade_Options"][i]["max_kva"])
+                        push!(transformer_options_each_transformer[transformer_name]["cost"], microgrid_inputs["Transformer_Upgrade_Options"][i]["cost"])
+                    
+                    end
+                end
+            end
+            number_of_entries = length(transformer_options_each_transformer[transformer_name]["max_kva"])
+            dv = "Bin"*transformer_name
+            m[Symbol(dv)] = @variable(m, [0:number_of_entries], base_name=dv, Bin)
+
+            @constraint(m, m[:transformer_max_kva][transformer_name] == sum(m[Symbol(dv)][i]*transformer_options_each_transformer[transformer_name]["max_kva"][i] for i in 1:number_of_entries))
+            @constraint(m, m[:transformer_upgrade_cost][transformer_name] == sum(m[Symbol(dv)][i]*transformer_options_each_transformer[transformer_name]["cost"][i] for i in 1:number_of_entries))
+            @constraint(m, sum(m[Symbol(dv)][i] for i in 1:number_of_entries) == 1)
+        else
+            @constraint(m, m[:transformer_max_kva][transformer_name] == p.transformers[transformer_name]["MaximumkVa"])
+        end
+    end
+
+    return transformer_options_each_transformer, transformers_for_upgrades
+end
 
 
 # Use the function below to run the outage simulator 

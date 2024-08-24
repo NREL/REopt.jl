@@ -133,19 +133,30 @@ function constrain_loads(m::JuMP.AbstractModel, p::PowerFlowInputs, ps::Array{RE
     # Constrain loads on the transformers
     P = m[:Pᵢⱼ] 
     Q = m[:Qᵢⱼ]
+    all_transformers = []
+    # Define decision variable for the transformer maximum kVa
     for i in keys(p.transformers)
         if p.transformers[i]["Transformer Side"] == "downstream"
-                
-                term = parse(Float64, p.transformers[i]["MaximumkVa"])
-                power_limit = (term*1000)/p.Sbase
-                print("\n Applying power limit of: ")
-                print(power_limit) 
-                print("\n To transformer on node: ")
-                print(i)
+            push!(all_transformers, i)
+        end
+    end
+    print("\n The all_transformers variable is: ")
+    print(all_transformers)
+    @variable(m, transformer_max_kva[all_transformers] >= 0)
+
+    # Apply the transformer max kva to the constraints
+    for i in keys(p.transformers)
+        if p.transformers[i]["Transformer Side"] == "downstream"           
+                #term = parse(Float64, p.transformers[i]["MaximumkVa"])
+                #power_limit = (term*1000)/p.Sbase
+                #print("\n Applying power limit of: ")
+                #print(power_limit) 
+                #print("\n To transformer on node: ")
+                #print(i)
                 DirectlyUpstreamNode = i_to_j(i, p)  
                 transformer_internal_line = string(DirectlyUpstreamNode[1])*"-"*string(i)
-                @constraint(m, [T in 1:p.Ntimesteps], P[transformer_internal_line, T] + Q[transformer_internal_line, T] <= ((term*1000)/p.Sbase))
-                @constraint(m, [T in 1:p.Ntimesteps], P[transformer_internal_line, T] + Q[transformer_internal_line, T] >= -((term*1000)/p.Sbase))
+                @constraint(m, [T in 1:p.Ntimesteps], P[transformer_internal_line, T] + Q[transformer_internal_line, T] <= ((m[:transformer_max_kva][i]*1000)/p.Sbase))
+                @constraint(m, [T in 1:p.Ntimesteps], P[transformer_internal_line, T] + Q[transformer_internal_line, T] >= -((m[:transformer_max_kva][i]*1000)/p.Sbase))
         end
     end
 end
