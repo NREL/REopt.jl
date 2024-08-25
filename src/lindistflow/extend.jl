@@ -147,12 +147,6 @@ function constrain_loads(m::JuMP.AbstractModel, p::PowerFlowInputs, ps::Array{RE
     # Apply the transformer max kva to the constraints
     for i in keys(p.transformers)
         if p.transformers[i]["Transformer Side"] == "downstream"           
-                #term = parse(Float64, p.transformers[i]["MaximumkVa"])
-                #power_limit = (term*1000)/p.Sbase
-                #print("\n Applying power limit of: ")
-                #print(power_limit) 
-                #print("\n To transformer on node: ")
-                #print(i)
                 DirectlyUpstreamNode = i_to_j(i, p)  
                 transformer_internal_line = string(DirectlyUpstreamNode[1])*"-"*string(i)
                 @constraint(m, [T in 1:p.Ntimesteps], P[transformer_internal_line, T] + Q[transformer_internal_line, T] <= ((m[:transformer_max_kva][i]*1000)/p.Sbase))
@@ -161,8 +155,3 @@ function constrain_loads(m::JuMP.AbstractModel, p::PowerFlowInputs, ps::Array{RE
     end
 end
 
-# TODO add LDF results (here and in LDF package)
-
-#function run_reopt(m::JuMP.AbstractModel, p::REoptInputs, ldf::PowerFlowInputs)
-
-#end

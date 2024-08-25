@@ -373,7 +373,7 @@ function constrain_KVL(m, p::PowerFlowInputs)
             i_j = string(i*"-"*j)
             i_j_underscore = string(i*"_"*j)
             linelength = get_ijlinelength(i, j, p)
-            #linenormamps = get_ijlinenormamps(i,j,p)
+            
             line_code = get_ijlinecode(i,j,p) 
             LineNominalVoltage = parse(Float64,LineNominalVoltages_dict[i_j])
             rmatrix = p.Zdict[line_code]["rmatrix"]
@@ -404,8 +404,6 @@ function constrain_KVL(m, p::PowerFlowInputs)
     end
     p.Nequality_cons += length(p.edges) * p.Ntimesteps
 
-    #print("\n the line_norm_amps is:")
-    #print(p.linenormamps)
     print("\n the p.linelengths is:")
     print(p.linelengths)
 
