@@ -89,16 +89,18 @@ function Microgrid_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary)
 
     # Run the optimization:
     DataDictionaryForEachNode, Dictionary_LineFlow_Power_Series, Dictionary_Node_Data_Series, ldf_inputs, results, DataFrame_LineFlow_Summary, LineNominalVoltages_Summary, BusNominalVoltages_Summary, model, line_upgrade_options, transformer_upgrade_options, line_upgrade_results, transformer_upgrade_results = Microgrid_REopt_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary, REopt_dictionary, TimeStamp) # ps_B, TimeStamp) #
-  
+    
     # Run the outage simulator if "RunOutageSimulator" is set to true
     if Microgrid_Settings["RunOutageSimulator"] == true
         OutageLengths = Microgrid_Settings["LengthOfOutages_timesteps"] 
         TimeStepsPerHour = Microgrid_Settings["TimeStepsPerHour"] 
         NumberOfOutagesToTest = Microgrid_Settings["NumberOfOutagesToEvaluate"]
+        line_max_amps = value.(model[:line_max_amps])
+        transformer_max_kva = value.(model[:transformer_max_kva])
         Outage_Results = Dict([])
         for i in 1:length(OutageLengths)
             OutageLength = OutageLengths[i]
-            OutageLength_TimeSteps, SuccessfullySolved, RunNumber, PercentOfOutagesSurvived = Microgrid_OutageSimulator(JuMP_Model, DataDictionaryForEachNode, REopt_dictionary, Microgrid_Settings, model, TimeStamp; NumberOfOutagesToTest = NumberOfOutagesToTest, ldf_inputs_dictionary = ldf_inputs_dictionary, TimeStepsPerHour_input = TimeStepsPerHour, OutageLength_TimeSteps_Input = OutageLength)
+            OutageLength_TimeSteps, SuccessfullySolved, RunNumber, PercentOfOutagesSurvived = Microgrid_OutageSimulator(JuMP_Model, DataDictionaryForEachNode, REopt_dictionary, Microgrid_Settings, line_max_amps, transformer_max_kva, TimeStamp; NumberOfOutagesToTest = NumberOfOutagesToTest, ldf_inputs_dictionary = ldf_inputs_dictionary, TimeStepsPerHour_input = TimeStepsPerHour, OutageLength_TimeSteps_Input = OutageLength)
             Outage_Results["$(OutageLength_TimeSteps)_timesteps_outage"] = Dict(["PercentSurvived" => PercentOfOutagesSurvived, "NumberOfRuns" => RunNumber, "NumberOfOutagesSurvived" => SuccessfullySolved ])
         end 
     else
@@ -300,6 +302,8 @@ end
 # Constraint 7: For line upgrades
 if Microgrid_Inputs["Model_Line_Upgrades"] == true
     line_upgrades_each_line, lines_for_upgrades = line_upgrades(m, Microgrid_Inputs, ldf_inputs)
+    print("\n The lines for upgrades are (from the second print statement): ")
+    print(lines_for_upgrades)
 else
     for j in ldf_inputs.busses
         for i in i_to_j(j, ldf_inputs)
@@ -310,8 +314,6 @@ else
     end
     line_upgrades_each_line = Dict([])
 end
-print("\n The lines for upgrades are (from the second print statement): ")
-print(lines_for_upgrades)
 
 # Constraint 8: For transformer upgrades
 if Microgrid_Inputs["Model_Transformer_Upgrades"] == true
@@ -361,31 +363,28 @@ busses = ldf_inputs.busses
 
 # Compute values for each line and store line power flows in a dataframe and dictionary 
 DataLineFlow = zeros(7)
-DataFrame_LineFlow = DataFrame(["empty" 0 0 0 0 0 0], [:LineCode, :Minimum_LineFlow_kW, :Maximum_LineFlow_kW, :Average_LineFlow_kW, :Line_Nominal_Amps_A, :Line_Nominal_Voltage_V, :Line_Max_Power_kW_At_Nominal_Voltage])
+DataFrame_LineFlow = DataFrame(fill(Any[],7), [:LineCode, :Minimum_LineFlow_kW, :Maximum_LineFlow_kW, :Average_LineFlow_kW, :Line_Nominal_Amps_A, :Line_Nominal_Voltage_V, :Line_Max_Rated_Power_kW])
 Dictionary_LineFlow_Power_Series = Dict([])
 
-#for edge in edges
-  
 for j in ldf_inputs.busses
     for i in i_to_j(j, ldf_inputs)
     edge = string(i*"-"*j)
-    #edge_underscore = string(i*"_"*j)
 
     NetRealLineFlow = (value.(m[:Pᵢⱼ][edge,:]).data* ldf_inputs.Sbase)/1000 
     NetReactiveLineFlow = (value.(m[:Qᵢⱼ][edge,:]).data*ldf_inputs.Sbase)/1000 
 
-    linenormamps = get_ijlinenormamps(i,j,ldf_inputs)
+    linenormamps = value.(m[:line_max_amps][edge]) # get_ijlinenormamps(i,j,ldf_inputs)
     LineNominalVoltage = parse(Float64,LineNominalVoltages_Summary[edge])
-    MaximumPower_AtNominalVoltage_kW = 0.001*linenormamps*LineNominalVoltage
+    MaximumRatedPower_kW = 0.001*linenormamps*LineNominalVoltage
 
     DataLineFlow[1] = round(minimum(NetRealLineFlow[:]), digits = 5)
     DataLineFlow[2] = round(maximum(NetRealLineFlow[:]), digits = 5)
     DataLineFlow[3] = round(mean(NetRealLineFlow[:]), digits = 5)
     DataLineFlow[4] = linenormamps
     DataLineFlow[5] = LineNominalVoltage
-    DataLineFlow[6] = round(MaximumPower_AtNominalVoltage_kW, digits=0)
+    DataLineFlow[6] = round(MaximumRatedPower_kW, digits=0)
 
-    DataFrame_LineFlow_temp = DataFrame([("Line "*string(edge)) DataLineFlow[1] DataLineFlow[2] DataLineFlow[3] DataLineFlow[4] DataLineFlow[5] DataLineFlow[6]], [:LineCode, :Minimum_LineFlow_kW, :Maximum_LineFlow_kW, :Average_LineFlow_kW, :Line_Nominal_Amps_A, :Line_Nominal_Voltage_V, :Line_Max_Power_kW_At_Nominal_Voltage])
+    DataFrame_LineFlow_temp = DataFrame([("Line "*string(edge)) DataLineFlow[1] DataLineFlow[2] DataLineFlow[3] DataLineFlow[4] DataLineFlow[5] DataLineFlow[6]], [:LineCode, :Minimum_LineFlow_kW, :Maximum_LineFlow_kW, :Average_LineFlow_kW, :Line_Nominal_Amps_A, :Line_Nominal_Voltage_V, :Line_Max_Rated_Power_kW])
     DataFrame_LineFlow = append!(DataFrame_LineFlow,DataFrame_LineFlow_temp)
     
     # Also create a dictionary of the line power flows
@@ -823,7 +822,7 @@ function line_upgrades(m, microgrid_inputs, powerflow_inputs)
             end
             number_of_entries = length(line_upgrade_options_each_line[line_name]["max_amperage"])
             dv = "Bin"*line_name
-            m[Symbol(dv)] = @variable(m, [0:number_of_entries], base_name=dv, Bin)
+            m[Symbol(dv)] = @variable(m, [1:number_of_entries], base_name=dv, Bin)
             line_length = get_ijlinelength(firstnode, secondnode, p)
 
             @constraint(m, m[:line_max_amps][line_name] == sum(m[Symbol(dv)][i]*line_upgrade_options_each_line[line_name]["max_amperage"][i] for i in 1:number_of_entries))
@@ -894,7 +893,7 @@ function transformer_upgrades(m, microgrid_inputs, powerflow_inputs)
 
             number_of_entries = length(transformer_options_each_transformer[transformer_name]["max_kva"])
             dv = "Bin"*transformer_name
-            m[Symbol(dv)] = @variable(m, [0:number_of_entries], base_name=dv, Bin)
+            m[Symbol(dv)] = @variable(m, [1:number_of_entries], base_name=dv, Bin)
 
             print("\n The number of entries are: $(number_of_entries)")
 
@@ -911,7 +910,7 @@ end
 
 
 # Use the function below to run the outage simulator 
-function Microgrid_OutageSimulator(JuMP_Model, DataDictionaryForEachNode, REopt_dictionary, Microgrid_Inputs, model, TimeStamp; NumberOfOutagesToTest = 15, ldf_inputs_dictionary = ldf_inputs_dictionary, TimeStepsPerHour_input = 1, OutageLength_TimeSteps_Input = 1)
+function Microgrid_OutageSimulator(JuMP_Model, DataDictionaryForEachNode, REopt_dictionary, Microgrid_Inputs, line_max_amps, transformer_max_kva, TimeStamp; NumberOfOutagesToTest = 15, ldf_inputs_dictionary = ldf_inputs_dictionary, TimeStepsPerHour_input = 1, OutageLength_TimeSteps_Input = 1)
 
 NodeList = collect(keys(ldf_inputs_dictionary["load_nodes"]))
 
@@ -968,7 +967,6 @@ for x in 1:MaximumTimeStepToEvaluate
     constrain_power_balance(m_outagesimulator, ldf_inputs_new)
     constrain_substation_voltage(m_outagesimulator, ldf_inputs_new)
     constrain_KVL(m_outagesimulator, ldf_inputs_new)
-    #constrain_bounds(m_outagesimulator, ldf_inputs_new)
   
     for n in NodeList
         GenPowerRating = DataDictionaryForEachNode[n]["GeneratorSize"]  
@@ -1104,14 +1102,17 @@ for x in 1:MaximumTimeStepToEvaluate
     for j in ldf_inputs_new.busses
         for i in i_to_j(j, ldf_inputs_new)
             i_j = string(i*"-"*j)
-            JuMP.@constraint(m_outagesimulator, m_outagesimulator[:line_max_amps][i_j] == value.(model[:line_max_amps][i_j]))
+            #print("\n The line max amps for line $(i_j) is: ")
+            #print(value.(model[:line_max_amps][i_j]))
+            #temp_value = value.(model[:line_max_amps][i_j])
+            JuMP.@constraint(m_outagesimulator, m_outagesimulator[:line_max_amps][i_j] .== line_max_amps[i_j])
         end
     end
 
     # Define the max power through the transformers
     for i in keys(ldf_inputs_new.transformers)
         if ldf_inputs_new.transformers[i]["Transformer Side"] == "downstream"
-            JuMP.@constraint(m_outagesimulator, m_outagesimulator[:transformer_max_kva][i] == value.(model[:transformer_max_kva][i]))
+            JuMP.@constraint(m_outagesimulator, m_outagesimulator[:transformer_max_kva][i] .== transformer_max_kva[i] ) #value.(model[:transformer_max_kva][i]))
         end
     end
 
