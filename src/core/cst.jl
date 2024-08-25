@@ -1,8 +1,8 @@
 struct ConcentratingSolar <: AbstractThermalTech
     min_kw::Real
     max_kw::Real
-    production_factor::AbstractVector{<:Real}
-    elec_consumption_factor::AbstractVector{<:Real}
+    production_factor_series::AbstractVector{<:Real}
+    elec_consumption_factor_series::AbstractVector{<:Real}
     installed_cost_per_kw::Real
     om_cost_per_kw::Real
     om_cost_per_kwh::Real
@@ -32,8 +32,8 @@ to meet the heating load(s).
 function ConcentratingSolar(;
     min_mmbtu_per_hour::Real = 0.0, # Minimum thermal power size
     max_mmbtu_per_hour::Real = BIG_NUMBER, # Maximum thermal power size
-    production_factor::AbstractVector{<:Real} = Float64[],  production factor
-    elec_consumption_factor::AbstractVector{<:Real} = Float64[], electric consumption factor per kw TODO: (do we need? are we including parasitics?) 
+    production_factor_series::AbstractVector{<:Real} = Float64[],  production factor
+    elec_consumption_factor_series::AbstractVector{<:Real} = Float64[], electric consumption factor per kw TODO: (do we need? are we including parasitics?) 
     acres_per_kw::Real = 0, # 
     macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
@@ -56,8 +56,8 @@ function ConcentratingSolar(;
 function ConcentratingSolar(;
         min_kw::Real = 0.0,
         max_kw::Real = BIG_NUMBER,
-        production_factor::AbstractVector{<:Real} = Float64[],
-        elec_consumption_factor::AbstractVector{<:Real} = Float64[],
+        production_factor_series::AbstractVector{<:Real} = Float64[],
+        elec_consumption_factor_series::AbstractVector{<:Real} = Float64[],
         macrs_option_years::Int = 0,
         macrs_bonus_fraction::Real = 0.0,
         installed_cost_per_kw::Real = 2000.0,
@@ -76,11 +76,11 @@ function ConcentratingSolar(;
         emissions_factor_lb_PM25_per_mmbtu::Real = 0.0,
     )
 
-    if isempty(production_factor)
-        throw(@error("The ConcentratingSolar.production_factor is a required input when modeling a heating load which is served by the ConcentratedSolar system in the optimal case"))
+    if isempty(production_factor_series)
+        throw(@error("ConcentratingSolar.production_factor_series is a required input when modeling a heating load which is served by the ConcentratedSolar system in the optimal case"))
     end
-    if isempty(elec_consumption_factor)
-        throw(@error("The ConcentratingSolar.elec_consumption_factor is a required input when modeling a heating load which is served by the ConcentratedSolar system in the optimal case"))
+    if isempty(elec_consumption_factor_series)
+        throw(@error("ConcentratingSolar.elec_consumption_factor_series is a required input when modeling a heating load which is served by the ConcentratedSolar system in the optimal case"))
     end
 
     """
@@ -96,8 +96,8 @@ function ConcentratingSolar(;
     ConcentratingSolar(
         min_kw,
         max_kw,
-        production_factor,
-        elec_consumption_factor,
+        production_factor_series,
+        elec_consumption_factor_series,
         installed_cost_per_kw,
         om_cost_per_kw,
         om_cost_per_kwh,

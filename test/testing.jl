@@ -281,12 +281,12 @@ end
 d = JSON.parsefile("./scenarios/pv_cst_PTES_with_process_heat_no_turbine.json")
 d["ConcentratingSolar"] = Dict()
 d["ConcentratingSolar"]["production_factor"] = zeros(8760)
-d["ConcentratingSolar"]["elec_consumption_factor"] = zeros(8760)
+d["ConcentratingSolar"]["elec_consumption_factor_series"] = zeros(8760)
 d["ConcentratingSolar"]["installed_cost_per_kw"] = 100.0
 d["ConcentratingSolar"]["min_kw"] = 2000
 for day in 1:365
     for h in 9:18
-        d["ConcentratingSolar"]["production_factor"][(day-1)*24+h] = 1.0
+        d["ConcentratingSolar"]["production_factor_series"][(day-1)*24+h] = 1.0
     end
 end
 d["ProcessHeatLoad"] = Dict()
