@@ -20,7 +20,7 @@
 
 function add_concentrating_solar_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
-    r["size_kw"] = round(value(m[Symbol("dvSize"*_n)]["ConcentratingSolar"]) / KWH_PER_MMBTU, digits=3)
+    r["size_kw"] = round(value(m[Symbol("dvSize"*_n)]["ConcentratingSolar"]), digits=3)
     @expression(m, ConcentratingSolarElectricConsumptionSeries[ts in p.time_steps],
         p.hours_per_time_step * sum(m[:dvHeatingProduction]["ConcentratingSolar",q,ts] / p.heating_cop["ConcentratingSolar"][ts] 
         for q in p.heating_loads))
