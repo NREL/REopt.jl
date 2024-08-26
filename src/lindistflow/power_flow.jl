@@ -266,7 +266,7 @@ function constrain_substation_voltage(m, p::PowerFlowInputs)
     p.Nequality_cons += p.Ntimesteps
 end
 
-function DetermineLineNominalVoltage(p::PowerFlowInputs)  # new function added by TEO to determine the nominal line voltage
+function DetermineLineNominalVoltage(p::PowerFlowInputs)  # determine the nominal line voltage
     BusNominalVoltages_Summary = Dict([])
     LineNominalVoltages_Summary = Dict([])
     if p.transformers != Dict(["NoTransformer","NoTransformer"])
@@ -344,13 +344,7 @@ function DetermineLineNominalVoltage(p::PowerFlowInputs)  # new function added b
     return LineNominalVoltages_Summary, BusNominalVoltages_Summary
 end 
 
-function constrain_KVL(m, p::PowerFlowInputs) 
-    
-    w = m[:vsqrd]
-    P = m[:Pᵢⱼ] 
-    Q = m[:Qᵢⱼ]
-
-    LineNominalVoltages_dict, BusNominalVoltages_dict = DetermineLineNominalVoltage(p)
+function create_line_variables(m, p::PowerFlowInputs)
 
     all_lines_temp = []
     for j in p.busses
@@ -361,12 +355,27 @@ function constrain_KVL(m, p::PowerFlowInputs)
     end
     all_lines = unique!(all_lines_temp)
 
-    #all_lines = p.edges
     print("\n The all_lines variable is: ")
     print(all_lines)
     
     print("\n Generating the line_max_amps variable")
     @variable(m, line_max_amps[all_lines] >= 0)
+
+end
+
+function constrain_KVL(m, p::PowerFlowInputs, line_upgrades_each_line, lines_for_upgrades, all_lines, Microgrid_Inputs) 
+    
+    w = m[:vsqrd]
+    P = m[:Pᵢⱼ] 
+    Q = m[:Qᵢⱼ]
+
+    LineNominalVoltages_dict, BusNominalVoltages_dict = DetermineLineNominalVoltage(p)   
+   
+    if Microgrid_Inputs["Model_Line_Upgrades"] == true
+        print("\n Generating the line_rmatrix and xmatrix variables for the upgradabe lines $(lines_for_upgrades)")
+        @variable(m, line_rmatrix[lines_for_upgrades] >= 0)
+        @variable(m, line_xmatrix[lines_for_upgrades] >= 0)
+    end
 
     for j in p.busses
         for i in i_to_j(j, p)
@@ -378,16 +387,37 @@ function constrain_KVL(m, p::PowerFlowInputs)
             LineNominalVoltage = parse(Float64,LineNominalVoltages_dict[i_j])
             rmatrix = p.Zdict[line_code]["rmatrix"]
 
-            print("\n For line $(i_j) and linecode $(line_code): the rmatrix is $(rmatrix)") #, the max amperage is $(linenormamps)A and the nominal voltage is $(LineNominalVoltage)V, so the maximum power is: "*string(LineNominalVoltage*linenormamps)*" W")
-                       
-            rᵢⱼ = p.Zdict[line_code]["rmatrix"] * linelength * p.Sbase / (LineNominalVoltage^2)
-            
-            xᵢⱼ = p.Zdict[line_code]["xmatrix"] * linelength * p.Sbase / (LineNominalVoltage^2)
-            
+            print("\n For line $(i_j) and linecode $(line_code): the rmatrix (without any upgrades) is $(rmatrix)") 
+                        
             if (j in keys(p.regulators))
-                @constraint(m, [t in 1:p.Ntimesteps], w[j,t] == parse(Float64, p.regulators[j]))  # If there is a voltage regulator on the node, then that voltage regulator defines the per unit voltage
+                # If there is a voltage regulator on the node, then that voltage regulator defines the per unit voltage
+                @constraint(m, [t in 1:p.Ntimesteps], w[j,t] == parse(Float64, p.regulators[j]))  
                 print("\n  Applying voltage regulator to node $(j) with a per unit voltage of "*string(parse(Float64, p.regulators[j]) ))
-            else 
+            
+            elseif i_j in lines_for_upgrades && Microgrid_Inputs["Nonlinear_Solver"] == true
+                # If the line is upgradable, account for how the rmatrix and xmatrix can change
+                
+                @constraint(m, m[:line_rmatrix][line_name] == sum(m[Symbol(dv)][i]*line_upgrade_options_each_line[line_name]["rmatrix"][i] for i in 1:number_of_entries))
+                @constraint(m, m[:line_xmatrix][line_name] == sum(m[Symbol(dv)][i]*line_upgrade_options_each_line[line_name]["xmatrix"][i] for i in 1:number_of_entries))
+                
+                vcon = @constraint(m, [t in 1:p.Ntimesteps],
+                    w[j,t] == w[i,t] - 2*linelength * p.Sbase * (1/(LineNominalVoltage^2)) * (m[:line_rmatrix][i_j] * P[i_j,t] +  m[:line_xmatrix][i_j] * Q[i_j,t])    )
+                
+                # For reference, this is the previous, uncondensed formulation:
+                #rᵢⱼ = m[:line_rmatrix][i_j] * linelength * p.Sbase / (LineNominalVoltage^2)
+                #xᵢⱼ = m[:line_xmatrix][i_j] * linelength * p.Sbase / (LineNominalVoltage^2)
+                #vcon = @constraint(m, [t in 1:p.Ntimesteps],
+                #    w[j,t] == w[i,t] - 2*(rᵢⱼ * P[i_j,t] +  xᵢⱼ * Q[i_j,t])    )
+                
+            else
+                # If the line is not upgradable (or if a linear solver is being used) and the line is not a voltage regulator, apply the standard voltage constraint
+                
+                linenormamps = get_ijlinenormamps(i, j, p)
+                @constraint(m, m[:line_max_amps][i_j] == linenormamps)
+                
+                rᵢⱼ = p.Zdict[line_code]["rmatrix"] * linelength * p.Sbase / (LineNominalVoltage^2)
+                xᵢⱼ = p.Zdict[line_code]["xmatrix"] * linelength * p.Sbase / (LineNominalVoltage^2)
+            
                 vcon = @constraint(m, [t in 1:p.Ntimesteps],
                     w[j,t] == w[i,t]
                         - 2*(rᵢⱼ * P[i_j,t] +  xᵢⱼ * Q[i_j,t])    

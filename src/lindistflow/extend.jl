@@ -8,9 +8,9 @@ function build_power_flow!(m::JuMP.AbstractModel, p::PowerFlowInputs, ps::Array{
     add_expressions(m, ps)
     constrain_power_balance(m, p)
     constrain_substation_voltage(m, p)
-    constrain_KVL(m, p)
+    create_line_variables(m, p)
     constrain_loads(m, p, ps)
-    
+    # Note: the constrain_KVL(m, p) function is called in the microgrid.jl file
     if make_import_export_complementary
         add_complementary_constraints(m, ps)
     end
