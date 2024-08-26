@@ -408,7 +408,17 @@ function constrain_KVL(m, p::PowerFlowInputs, line_upgrades_each_line, lines_for
                 #xᵢⱼ = m[:line_xmatrix][i_j] * linelength * p.Sbase / (LineNominalVoltage^2)
                 #vcon = @constraint(m, [t in 1:p.Ntimesteps],
                 #    w[j,t] == w[i,t] - 2*(rᵢⱼ * P[i_j,t] +  xᵢⱼ * Q[i_j,t])    )
+            elseif i_j in lines_for_upgrades && Microgrid_Inputs["Nonlinear_Solver"] == false
+                # If the solver is a linear solver, then the rmatrix and xmatrix are fixed to be that of the un-upgraded line
                 
+                rᵢⱼ = p.Zdict[line_code]["rmatrix"] * linelength * p.Sbase / (LineNominalVoltage^2)
+                xᵢⱼ = p.Zdict[line_code]["xmatrix"] * linelength * p.Sbase / (LineNominalVoltage^2)
+            
+                vcon = @constraint(m, [t in 1:p.Ntimesteps],
+                    w[j,t] == w[i,t]
+                        - 2*(rᵢⱼ * P[i_j,t] +  xᵢⱼ * Q[i_j,t])    
+                )
+
             else
                 # If the line is not upgradable (or if a linear solver is being used) and the line is not a voltage regulator, apply the standard voltage constraint
                 
