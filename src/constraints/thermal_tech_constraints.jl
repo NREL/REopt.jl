@@ -109,7 +109,7 @@ function add_heating_tech_constraints(m, p; _n="")
 
     if "ConcentratingSolar" in p.techs.electric_heater
         @constraint(m, CSTHeatProduction[ts in p.time_steps],
-            sum(m[Symbol("dvHeatingProduction"*_n)]["ConcentratingSolar",q,ts] for q in p.heating_loads) == p.production_factor["ConcentratingSolar",ts] * m[Symbol("dvSize"*_n)]["ConcentratingSolar"]
+            sum(m[Symbol("dvHeatingProduction"*_n)]["ConcentratingSolar",q,ts] for q in p.heating_loads) == p.heating_cf["ConcentratingSolar"][ts] * m[Symbol("dvSize"*_n)]["ConcentratingSolar"]
         )
         if p.s.cst.charge_storage_only
             #assume sensible TES first, and hot water otherwise.

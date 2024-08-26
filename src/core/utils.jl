@@ -149,6 +149,7 @@ function dictkeys_tosymbols(d::Dict)
             "fuel_loads_mmbtu_per_hour",
             "monthly_totals_kwh",
             "production_factor_series",
+            "capacity_factor_series",
             "elec_consumption_factor_series", 
             "monthly_energy_rates", "monthly_demand_rates",
             "blended_doe_reference_percents",

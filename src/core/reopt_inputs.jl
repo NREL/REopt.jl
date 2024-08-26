@@ -404,7 +404,7 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     if "ExistingBoiler" in techs.all
         setup_existing_boiler_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
             tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh,
-            heating_cf, production_factor)
+            heating_cf)
     end
 
     if "Boiler" in techs.all
@@ -440,7 +440,7 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     end    
 
     if "ElectricHeater" in techs.all
-        setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf, production_factor)
+        setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf)
     else
         heating_cop["ElectricHeater"] = ones(length(time_steps))
         heating_cf["ElectricHeater"] = zeros(length(time_steps))
@@ -448,7 +448,7 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
 
     if "ASHP_SpaceHeater" in techs.all
         setup_ashp_spaceheater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, cooling_cop, heating_cf, cooling_cf,
-            techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, avoided_capex_by_ashp_present_value, production_factor)
+            techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, avoided_capex_by_ashp_present_value)
     else
         heating_cop["ASHP_SpaceHeater"] = ones(length(time_steps))
         cooling_cop["ASHP_SpaceHeater"] = ones(length(time_steps))
@@ -458,7 +458,7 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
 
     if "ASHP_WaterHeater" in techs.all
         setup_ashp_waterheater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf,
-            techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, avoided_capex_by_ashp_present_value, production_factor)
+            techs.segmented, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, avoided_capex_by_ashp_present_value)
     else
         heating_cop["ASHP_WaterHeater"] = ones(length(time_steps))
         heating_cf["ASHP_WaterHeater"] = zeros(length(time_steps))
@@ -472,7 +472,7 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     end
 
     if "ConcentratingSolar" in techs.all
-        setup_cst_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, production_factor)
+        setup_cst_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf)
     end
 
     # filling export_bins_by_tech MUST be done after techs_by_exportbin has been filled in
@@ -722,7 +722,7 @@ This version of this function, used in BAUInputs(), doesn't update renewable ene
 
 function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
     tech_renewable_energy_fraction, tech_emissions_factors_CO2, tech_emissions_factors_NOx, tech_emissions_factors_SO2, tech_emissions_factors_PM25, fuel_cost_per_kwh,
-    heating_cf, production_factor)
+    heating_cf)
     max_sizes["ExistingBoiler"] = s.existing_boiler.max_kw
     min_sizes["ExistingBoiler"] = 0.0
     existing_sizes["ExistingBoiler"] = 0.0
@@ -737,7 +737,6 @@ function setup_existing_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes,
     existing_boiler_fuel_cost_per_kwh = s.existing_boiler.fuel_cost_per_mmbtu ./ KWH_PER_MMBTU
     fuel_cost_per_kwh["ExistingBoiler"] = per_hour_value_to_time_series(existing_boiler_fuel_cost_per_kwh, s.settings.time_steps_per_hour, "ExistingBoiler")   
     heating_cf["ExistingBoiler"] = ones(8760*s.settings.time_steps_per_hour)   
-    production_factor["ExistingBoiler", :] = ones(8760*s.settings.time_steps_per_hour)
     return nothing
 end
 
@@ -748,7 +747,7 @@ end
 Update tech-indexed data arrays necessary to build the JuMP model with the values for (new) boiler.
 This version of this function, used in BAUInputs(), doesn't update renewable energy and emissions arrays.
 """
-function setup_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, boiler_efficiency, production_factor, fuel_cost_per_kwh,
+function setup_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, boiler_efficiency, fuel_cost_per_kwh,
     heating_cf)
     max_sizes["Boiler"] = s.boiler.max_kw
     min_sizes["Boiler"] = s.boiler.min_kw
@@ -776,7 +775,6 @@ function setup_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost
     end
 
     om_cost_per_kw["Boiler"] = s.boiler.om_cost_per_kw
-    production_factor["Boiler", :] = get_production_factor(s.boiler)
     boiler_fuel_cost_per_kwh = s.boiler.fuel_cost_per_mmbtu ./ KWH_PER_MMBTU
     fuel_cost_per_kwh["Boiler"] = per_hour_value_to_time_series(boiler_fuel_cost_per_kwh, s.settings.time_steps_per_hour, "Boiler")
     heating_cf["Boiler"]  = ones(8760*s.settings.time_steps_per_hour)
@@ -919,13 +917,12 @@ function setup_steam_turbine_inputs(s::AbstractScenario, max_sizes, min_sizes, c
     return nothing
 end
 
-function setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf, production_factor)
+function setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf)
     max_sizes["ElectricHeater"] = s.electric_heater.max_kw
     min_sizes["ElectricHeater"] = s.electric_heater.min_kw
     om_cost_per_kw["ElectricHeater"] = s.electric_heater.om_cost_per_kw
     heating_cop["ElectricHeater"] .= s.electric_heater.cop
     heating_cf["ElectricHeater"] = ones(8760*s.settings.time_steps_per_hour)  #TODO: add timem series input for Electric Heater if using as AShP DHW heater? or use ASHP object?
-    production_factor["ElectricHeater", :] = ones(8760*s.settings.time_steps_per_hour)
 
     if s.electric_heater.macrs_option_years in [5, 7]
         cap_cost_slope["ElectricHeater"] = effective_cost(;
@@ -946,12 +943,12 @@ function setup_electric_heater_inputs(s, max_sizes, min_sizes, cap_cost_slope, o
 
 end
 
-function setup_cst_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, production_factor)
+function setup_cst_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, heating_cf)
     max_sizes["ConcentratingSolar"] = s.cst.max_kw
     min_sizes["ConcentratingSolar"] = s.cst.min_kw
     om_cost_per_kw["ConcentratingSolar"] = s.cst.om_cost_per_kw
     heating_cop["ConcentratingSolar"] = 1000*ones(s.settings.time_steps_per_hour*8760)  # TODO: merge ASHP developments to make heating_cop a time series, and import the electrical consumption from SAM.
-    production_factor["ConcentratingSolar", :] = s.cst.production_factor
+    heating_cf["ConcentratingSolar"] = s.cst.capacity_factor_series
 
     if s.cst.macrs_option_years in [5, 7]
         cap_cost_slope["ConcentratingSolar"] = effective_cost(;
@@ -973,7 +970,7 @@ function setup_cst_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_k
 end
 
 function setup_ashp_spaceheater_inputs(s, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, heating_cop, cooling_cop, heating_cf, cooling_cf,
-        segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, avoided_capex_by_ashp_present_value, production_factor)
+        segmented_techs, n_segs_by_tech, seg_min_size, seg_max_size, seg_yint, avoided_capex_by_ashp_present_value)
     max_sizes["ASHP_SpaceHeater"] = s.ashp.max_kw
     min_sizes["ASHP_SpaceHeater"] = s.ashp.min_kw
     om_cost_per_kw["ASHP_SpaceHeater"] = s.ashp.om_cost_per_kw
@@ -981,7 +978,6 @@ function setup_ashp_spaceheater_inputs(s, max_sizes, min_sizes, cap_cost_slope, 
     cooling_cop["ASHP_SpaceHeater"] = s.ashp.cooling_cop
     heating_cf["ASHP_SpaceHeater"] = s.ashp.heating_cf
     cooling_cf["ASHP_SpaceHeater"] = s.ashp.cooling_cf
-    production_factor["ASHP_SpaceHeater", :] = ones(8760*s.settings.time_steps_per_hour)
 
     if s.ashp.min_allowable_kw > 0.0
         cap_cost_slope["ASHP_SpaceHeater"] = s.ashp.installed_cost_per_kw
@@ -1019,7 +1015,6 @@ function setup_ashp_waterheater_inputs(s, max_sizes, min_sizes, cap_cost_slope, 
     om_cost_per_kw["ASHP_WaterHeater"] = s.ashp_wh.om_cost_per_kw
     heating_cop["ASHP_WaterHeater"] = s.ashp_wh.heating_cop
     heating_cf["ASHP_WaterHeater"] = s.ashp_wh.heating_cf
-    production_factor["ASHP_WaterHeater", :] = ones(8760*s.settings.time_steps_per_hour)
 
     if s.ashp_wh.min_allowable_kw > 0.0
         cap_cost_slope["ASHP_WaterHeater"] = s.ashp_wh.installed_cost_per_kw
