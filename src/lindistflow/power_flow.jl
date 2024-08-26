@@ -397,8 +397,8 @@ function constrain_KVL(m, p::PowerFlowInputs, line_upgrades_each_line, lines_for
             elseif i_j in lines_for_upgrades && Microgrid_Inputs["Nonlinear_Solver"] == true
                 # If the line is upgradable, account for how the rmatrix and xmatrix can change
                 
-                @constraint(m, m[:line_rmatrix][line_name] == sum(m[Symbol(dv)][i]*line_upgrade_options_each_line[line_name]["rmatrix"][i] for i in 1:number_of_entries))
-                @constraint(m, m[:line_xmatrix][line_name] == sum(m[Symbol(dv)][i]*line_upgrade_options_each_line[line_name]["xmatrix"][i] for i in 1:number_of_entries))
+                @constraint(m, m[:line_rmatrix][i_j] == sum(m[Symbol(dv)][i]*line_upgrade_options_each_line[i_j]["rmatrix"][i] for i in 1:number_of_entries))
+                @constraint(m, m[:line_xmatrix][i_j] == sum(m[Symbol(dv)][i]*line_upgrade_options_each_line[i_j]["xmatrix"][i] for i in 1:number_of_entries))
                 
                 vcon = @constraint(m, [t in 1:p.Ntimesteps],
                     w[j,t] == w[i,t] - 2*linelength * p.Sbase * (1/(LineNominalVoltage^2)) * (m[:line_rmatrix][i_j] * P[i_j,t] +  m[:line_xmatrix][i_j] * Q[i_j,t])    )
