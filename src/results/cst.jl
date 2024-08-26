@@ -10,6 +10,7 @@
 - `thermal_to_storage_series_mmbtu_per_hour`  # Thermal power production to TES (HotThermalStorage) series [MMBtu/hr]
 - `thermal_to_hot_sensible_tes_storage_series_mmbtu_per_hour`  # Thermal power production to TES (HotThermalStorage) series [MMBtu/hr]
 - `thermal_to_steamturbine_series_mmbtu_per_hour`  # Thermal power production to SteamTurbine series [MMBtu/hr]
+- `thermal_curtailed_series_mmbtu_per_hour` Thermal power wasted/unused/vented time-series array [MMBtu/hr]
 - `thermal_to_load_series_mmbtu_per_hour`  # Thermal power production to serve the heating load series [MMBtu/hr]
 
 !!! note "'Series' and 'Annual' energy outputs are average annual"
@@ -64,14 +65,22 @@ function add_concentrating_solar_results(m::JuMP.AbstractModel, p::REoptInputs, 
     end
     r["thermal_to_steamturbine_series_mmbtu_per_hour"] = round.(value.(ConcentratingSolarToSteamTurbine) / KWH_PER_MMBTU, digits=3)
 
+    @expression(m, ConcentratingSolarToWaste[ts in p.time_steps],
+		sum(m[:dvProductionToWaste]["ConcentratingSolar", q, ts] for q in p.heating_loads)
+    )
+    @expression(m, ConcentratingSolarToWasteByQualityKW[q in p.heating_loads, ts in p.time_steps],
+		m[:dvProductionToWaste]["ConcentratingSolar", q, ts]
+    )
+    r["thermal_curtailed_series_mmbtu_per_hour"] = round.(value.(ConcentratingSolarToWaste) / KWH_PER_MMBTU, digits=3)
+
 	@expression(m, ConcentratingSolarToLoad[ts in p.time_steps],
-		sum(m[:dvHeatingProduction]["ConcentratingSolar", q, ts] for q in p.heating_loads) - ConcentratingSolarToHotTESKW[ts] - ConcentratingSolarToSteamTurbine[ts]
+		sum(m[:dvHeatingProduction]["ConcentratingSolar", q, ts] for q in p.heating_loads) - ConcentratingSolarToHotTESKW[ts] - ConcentratingSolarToSteamTurbine[ts] - ConcentratingSolarToWaste[ts]
     )
 	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(ConcentratingSolarToLoad) / KWH_PER_MMBTU, digits=3)
 
     if "DomesticHotWater" in p.heating_loads && p.s.cst.can_serve_dhw
         @expression(m, ConcentratingSolarToDHWKW[ts in p.time_steps], 
-            m[:dvHeatingProduction]["ConcentratingSolar","DomesticHotWater",ts] - ConcentratingSolarToHotTESByQualityKW["DomesticHotWater",ts] - ConcentratingSolarToSteamTurbineByQuality["DomesticHotWater",ts]
+            m[:dvHeatingProduction]["ConcentratingSolar","DomesticHotWater",ts] - ConcentratingSolarToHotTESByQualityKW["DomesticHotWater",ts] - ConcentratingSolarToSteamTurbineByQuality["DomesticHotWater",ts] - ConcentratingSolarToWasteByQualityKW["DomesticHotWater",ts]
         )
     else
         @expression(m, ConcentratingSolarToDHWKW[ts in p.time_steps], 0.0)
@@ -80,7 +89,7 @@ function add_concentrating_solar_results(m::JuMP.AbstractModel, p::REoptInputs, 
     
     if "SpaceHeating" in p.heating_loads && p.s.cst.can_serve_space_heating
         @expression(m, ConcentratingSolarToSpaceHeatingKW[ts in p.time_steps], 
-            m[:dvHeatingProduction]["ConcentratingSolar","SpaceHeating",ts] - ConcentratingSolarToHotTESByQualityKW["SpaceHeating",ts] - ConcentratingSolarToSteamTurbineByQuality["SpaceHeating",ts]
+            m[:dvHeatingProduction]["ConcentratingSolar","SpaceHeating",ts] - ConcentratingSolarToHotTESByQualityKW["SpaceHeating",ts] - ConcentratingSolarToSteamTurbineByQuality["SpaceHeating",ts] - ConcentratingSolarToWasteByQualityKW["SpaceHeating",ts]
         )
     else
         @expression(m, ConcentratingSolarToSpaceHeatingKW[ts in p.time_steps], 0.0)
@@ -89,7 +98,7 @@ function add_concentrating_solar_results(m::JuMP.AbstractModel, p::REoptInputs, 
     
     if "ProcessHeat" in p.heating_loads && p.s.cst.can_serve_process_heat
         @expression(m, ConcentratingSolarToProcessHeatKW[ts in p.time_steps], 
-            m[:dvHeatingProduction]["ConcentratingSolar","ProcessHeat",ts] - ConcentratingSolarToHotTESByQualityKW["ProcessHeat",ts] - ConcentratingSolarToSteamTurbineByQuality["ProcessHeat",ts]
+            m[:dvHeatingProduction]["ConcentratingSolar","ProcessHeat",ts] - ConcentratingSolarToHotTESByQualityKW["ProcessHeat",ts] - ConcentratingSolarToSteamTurbineByQuality["ProcessHeat",ts] - ConcentratingSolarToWasteByQualityKW["ProcessHeat",ts]
         )
     else
         @expression(m, ConcentratingSolarToProcessHeatKW[ts in p.time_steps], 0.0)
