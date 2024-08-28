@@ -23,7 +23,7 @@
 
 function add_ashp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
-    r["size_ton"] = round(value(m[Symbol("dvSize"*_n)]["ASHPSpaceHeater"]) / KWH_THERMAL_PER_TONHOUR, digits=3)
+    r["size_ton"] = round(p.s.ashp.sizing_factor * value(m[Symbol("dvSize"*_n)]["ASHPSpaceHeater"]) / KWH_THERMAL_PER_TONHOUR, digits=3)
     @expression(m, ASHPElectricConsumptionSeries[ts in p.time_steps],
         p.hours_per_time_step * sum(m[:dvHeatingProduction]["ASHPSpaceHeater",q,ts] for q in p.heating_loads)
         / p.heating_cop["ASHPSpaceHeater"][ts]
@@ -124,7 +124,7 @@ end
 
 function add_ashp_wh_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
     r = Dict{String, Any}()
-    r["size_ton"] = p.s.ashp.sizing_factor * round(value(m[Symbol("dvSize"*_n)]["ASHPWaterHeater"]) / KWH_THERMAL_PER_TONHOUR, digits=3)
+    r["size_ton"] = round(p.s.ashp_wh.sizing_factor * value(m[Symbol("dvSize"*_n)]["ASHPWaterHeater"]) / KWH_THERMAL_PER_TONHOUR, digits=3)
     @expression(m, ASHPWHElectricConsumptionSeries[ts in p.time_steps],
         p.hours_per_time_step * sum(m[:dvHeatingProduction][t,q,ts] / p.heating_cop[t][ts]
         for q in p.heating_loads, t in p.techs.ashp_wh) 
