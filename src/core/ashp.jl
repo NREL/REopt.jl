@@ -357,7 +357,7 @@ function ASHPWaterHeater(;
         if isnothing(min_allowable_peak_load_fraction)
             min_allowable_peak_load_fraction = 0.5
         end
-        min_allowable_kw = get_ashp_default_min_allowable_size(heating_load, heating_cf, cooling_load, cooling_cf)
+        min_allowable_kw = get_ashp_default_min_allowable_size(heating_load, heating_cf, Real[], Real[], min_allowable_peak_load_fraction)
     end
 
     ASHP(
