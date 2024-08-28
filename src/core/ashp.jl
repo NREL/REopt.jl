@@ -260,6 +260,8 @@ function ASHP_WaterHeater(;
     min_ton::Real = 0.0,
     max_ton::Real = BIG_NUMBER,
     min_allowable_ton::Union{Real, Nothing} = nothing,
+    min_allowable_peak_load_fraction::Union{Real, Nothing} = nothing, 
+    sizing_factor::Union{Real, Nothing} = nothing, 
     installed_cost_per_ton::Union{Real, Nothing} = nothing,
     om_cost_per_ton::Union{Real, Nothing} = nothing,
     macrs_option_years::Int = 0,
@@ -293,7 +295,6 @@ function ASHP_WaterHeater(;
     if isnothing(back_up_temp_threshold_degF)
         back_up_temp_threshold_degF = defaults["back_up_temp_threshold_degF"]
     end
-
     if isnothing(max_ton)
         max_ton = defaults["max_ton"]
     end
@@ -341,6 +342,7 @@ function ASHP_WaterHeater(;
         min_kw,
         max_kw,
         min_allowable_kw,
+        sizing_factor,
         installed_cost_per_kw,
         om_cost_per_kw,
         macrs_option_years,
