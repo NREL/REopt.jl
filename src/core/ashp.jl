@@ -1,13 +1,13 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 
 """
-ASHP_SpaceHeater
+ASHPSpaceHeater
 
-If a user provides the `ASHP_SpaceHeater` key then the optimal scenario has the option to purchase 
+If a user provides the `ASHPSpaceHeater` key then the optimal scenario has the option to purchase 
 this new `ASHP` to meet the heating load in addition to using the `ExistingBoiler`
 to meet the heating load. 
 
-ASHP_SpaceHeater has the following attributes: 
+ASHPSpaceHeater has the following attributes: 
 ```julia
     min_kw::Real = 0.0, # Minimum thermal power size
     max_kw::Real = BIG_NUMBER, # Maximum thermal power size
@@ -51,14 +51,14 @@ end
 
 
 """
-ASHP_SpaceHeater
+ASHPSpaceHeater
 
-If a user provides the `ASHP_SpaceHeater` key then the optimal scenario has the option to purchase 
+If a user provides the `ASHPSpaceHeater` key then the optimal scenario has the option to purchase 
 this new `ASHP` to meet the heating load in addition to using the `ExistingBoiler`
 to meet the heating load. 
 
 ```julia
-function ASHP_SpaceHeater(;
+function ASHPSpaceHeater(;
     min_ton::Real = 0.0, # Minimum thermal power size
     max_ton::Real = BIG_NUMBER, # Maximum thermal power size
     min_allowable_ton::Union{Real, Nothing} = nothing, # Minimum nonzero thermal power size if included
@@ -89,7 +89,7 @@ function ASHP_SpaceHeater(;
 )
 ```
 """
-function ASHP_SpaceHeater(;
+function ASHPSpaceHeater(;
         min_ton::Real = 0.0,
         max_ton::Real = BIG_NUMBER,
         min_allowable_ton::Union{Real, Nothing} = nothing,
@@ -243,12 +243,12 @@ end
 """
 ASHP Water_Heater
 
-If a user provides the `ASHP_WaterHeater` key then the optimal scenario has the option to purchase 
-this new `ASHP_WaterHeater` to meet the domestic hot water load in addition to using the `ExistingBoiler`
+If a user provides the `ASHPWaterHeater` key then the optimal scenario has the option to purchase 
+this new `ASHPWaterHeater` to meet the domestic hot water load in addition to using the `ExistingBoiler`
 to meet the domestic hot water load. 
 
 ```julia
-function ASHP_WaterHeater(;
+function ASHPWaterHeater(;
     min_ton::Real = 0.0, # Minimum thermal power size
     max_ton::Real = BIG_NUMBER, # Maximum thermal power size
     min_allowable_ton::Real = 0.0 # Minimum nonzero thermal power size if included
@@ -269,7 +269,7 @@ function ASHP_WaterHeater(;
 )
 ```
 """
-function ASHP_WaterHeater(;
+function ASHPWaterHeater(;
     min_ton::Real = 0.0,
     max_ton::Real = BIG_NUMBER,
     min_allowable_ton::Union{Real, Nothing} = nothing,

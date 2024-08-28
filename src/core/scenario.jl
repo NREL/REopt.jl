@@ -54,8 +54,8 @@ A Scenario struct can contain the following keys:
 - [GHP](@ref) (optional, can be Array)
 - [SteamTurbine](@ref) (optional)
 - [ElectricHeater](@ref) (optional)
-- [ASHP_SpaceHeater](@ref) (optional)
-- [ASHP_WaterHeater](@ref) (optional)
+- [ASHPSpaceHeater](@ref) (optional)
+- [ASHPWaterHeater](@ref) (optional)
 
 All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
 
@@ -656,19 +656,19 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     # ASHP
     ashp = nothing
-    if haskey(d, "ASHP_SpaceHeater")
-        if !haskey(d["ASHP_SpaceHeater"], "max_ton")
+    if haskey(d, "ASHPSpaceHeater")
+        if !haskey(d["ASHPSpaceHeater"], "max_ton")
             max_ton = get_ashp_defaults("SpaceHeating")["max_ton"]
         else
-            max_ton = d["ASHP_SpaceHeater"]["max_ton"]
+            max_ton = d["ASHPSpaceHeater"]["max_ton"]
         end
 
         if max_ton > 0
             # ASHP Space Heater's temp back_up_temp_threshold_degF
-            if !haskey(d["ASHP_SpaceHeater"], "back_up_temp_threshold_degF")
+            if !haskey(d["ASHPSpaceHeater"], "back_up_temp_threshold_degF")
                 ambient_temp_thres_fahrenheit = get_ashp_defaults("SpaceHeating")["back_up_temp_threshold_degF"]
             else
-                ambient_temp_thres_fahrenheit = d["ASHP_SpaceHeater"]["back_up_temp_threshold_degF"]
+                ambient_temp_thres_fahrenheit = d["ASHPSpaceHeater"]["back_up_temp_threshold_degF"]
             end
             
             # If PV is evaluated, get ambient temperature series from PVWatts and assign PV production factor
@@ -686,30 +686,30 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             end
             ambient_temp_fahrenheit = (9/5 .* ambient_temp_celsius) .+ 32
 
-            d["ASHP_SpaceHeater"]["ambient_temp_degF"] = ambient_temp_fahrenheit
-            d["ASHP_SpaceHeater"]["heating_load"] = space_heating_load.loads_kw
-            d["ASHP_SpaceHeater"]["cooling_load"] = cooling_load.loads_kw_thermal
+            d["ASHPSpaceHeater"]["ambient_temp_degF"] = ambient_temp_fahrenheit
+            d["ASHPSpaceHeater"]["heating_load"] = space_heating_load.loads_kw
+            d["ASHPSpaceHeater"]["cooling_load"] = cooling_load.loads_kw_thermal
 
-            ashp = ASHP_SpaceHeater(;dictkeys_tosymbols(d["ASHP_SpaceHeater"])...)
+            ashp = ASHPSpaceHeater(;dictkeys_tosymbols(d["ASHPSpaceHeater"])...)
         end    
     end
 
     # ASHP Water Heater:
     ashp_wh = nothing
 
-    if haskey(d, "ASHP_WaterHeater")
-        if !haskey(d["ASHP_WaterHeater"], "max_ton")
+    if haskey(d, "ASHPWaterHeater")
+        if !haskey(d["ASHPWaterHeater"], "max_ton")
             max_ton = get_ashp_defaults("DomesticHotWater")["max_ton"]
         else
-            max_ton = d["ASHP_WaterHeater"]["max_ton"]
+            max_ton = d["ASHPWaterHeater"]["max_ton"]
         end
 
         if max_ton > 0.0
             # ASHP Space Heater's temp back_up_temp_threshold_degF
-            if !haskey(d["ASHP_WaterHeater"], "back_up_temp_threshold_degF")
+            if !haskey(d["ASHPWaterHeater"], "back_up_temp_threshold_degF")
                 ambient_temp_thres_fahrenheit = get_ashp_defaults("DomesticHotWater")["back_up_temp_threshold_degF"]
             else
-                ambient_temp_thres_fahrenheit = d["ASHP_WaterHeater"]["back_up_temp_threshold_degF"]
+                ambient_temp_thres_fahrenheit = d["ASHPWaterHeater"]["back_up_temp_threshold_degF"]
             end
             
             # If PV is evaluated, get ambient temperature series from PVWatts and assign PV production factor
@@ -728,10 +728,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             
             ambient_temp_fahrenheit = (9/5 .* ambient_temp_celsius) .+ 32
 
-            d["ASHP_WaterHeater"]["ambient_temp_degF"] = ambient_temp_fahrenheit
-            d["ASHP_WaterHeater"]["heating_load"] = dhw_load.loads_kw
+            d["ASHPWaterHeater"]["ambient_temp_degF"] = ambient_temp_fahrenheit
+            d["ASHPWaterHeater"]["heating_load"] = dhw_load.loads_kw
 
-            ashp_wh = ASHP_WaterHeater(;dictkeys_tosymbols(d["ASHP_WaterHeater"])...)
+            ashp_wh = ASHPWaterHeater(;dictkeys_tosymbols(d["ASHPWaterHeater"])...)
         end
     end
 
