@@ -448,35 +448,6 @@ function get_ashp_performance(cop_reference,
 end
 
 """
-function get_default_ashp_heating(ambient_temp_degF, back_up_temp_threshold_degF)
-
-Obtains the default ASHP heating COP and CF profiles.
-
-ambient_temp_degF::Array{Float64,1} -- time series ambient temperature in degrees Fahrenheit
-back_up_temp_threshold::Float64 -- temperature threshold at which resistive backup heater turns on
-"""
-function get_default_ashp_heating(ambient_temp_degF, back_up_temp_threshold_degF)
-    heating_cop = round.(0.0462 .* ambient_temp_degF .+ 1.351, digits=3)
-    heating_cop[ambient_temp_degF .<= back_up_temp_threshold_degF] .= 1
-    heating_cf = round.(0.0116 .* ambient_temp_degF .+ 0.4556, digits=3)
-    heating_cf[heating_cop .== 1.0] .= 1.0
-    return heating_cop, heating_cf
-end
-
-"""
-function get_default_ashp_cooling(ambient_temp_degF)
-
-Obtains the default ASHP cooling COP and CF profiles.
-
-ambient_temp_degF::Array{Float64,1} -- time series ambient temperature in degrees Fahrenheit
-"""
-function get_default_ashp_cooling(ambient_temp_degF)
-    cooling_cop = round.(-0.044 .* ambient_temp_degF .+ 6.822, digits=3)
-    cooling_cf = round.(-0.0056 .* ambient_temp_degF .+ 1.4778, digits=3)
-    return cooling_cop, cooling_cf
-end
-
-"""
 function get_ashp_default_min_allowable_size(heating_load::Array{Float64},  # time series of heating load
     heating_cf::Array{Float64,1},   # time series of capacity factor for heating
     cooling_load::Array{Float64,1} = Float64[], # # time series of capacity factor for heating
