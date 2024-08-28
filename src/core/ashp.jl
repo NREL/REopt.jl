@@ -144,7 +144,25 @@ function ASHP_SpaceHeater(;
     if isnothing(sizing_factor)
         sizing_factor = defaults["sizing_factor"]
     end
-    
+
+    if length(heating_cop_reference) != length(heating_cf_reference) || length(heating_cf_reference) != length(heating_reference_temps)
+        throw(@error("heating_cop_reference, heating_cf_reference, and heating_reference_temps must all be the same length."))
+    else
+        if length(heating_cop_reference) == 0
+            heating_cop_reference = defaults["heating_cop_reference"]
+            heating_cf_reference = defaults["heating_cf_reference"]
+            heating_reference_temps = defaults["heating_reference_temps"]
+        end
+    end
+    if length(cooling_cop_reference) != length(cooling_cf_reference) || length(cooling_cf_reference) != length(cooling_reference_temps)
+        throw(@error("cooling_cop_reference, cooling_cf_reference, and cooling_reference_temps must all be the same length."))
+    else
+        if length(cooling_cop_reference) == 0 && can_serve_cooling
+            cooling_cop_reference = defaults["cooling_cop_reference"]
+            cooling_cf_reference = defaults["cooling_cf_reference"]
+            cooling_reference_temps = defaults["cooling_reference_temps"]
+        end
+    end
 
     #pre-set defaults that aren't mutable due to technology specifications
     can_supply_steam_turbine = defaults["can_supply_steam_turbine"]
@@ -161,30 +179,22 @@ function ASHP_SpaceHeater(;
     installed_cost_per_kw = installed_cost_per_ton / KWH_THERMAL_PER_TONHOUR
     om_cost_per_kw = om_cost_per_ton / KWH_THERMAL_PER_TONHOUR
 
-    if !isempty(heating_reference_temps)
-        heating_cop, heating_cf = get_ashp_performance(heating_cop_reference,
-            heating_cf_reference,
-            heating_reference_temps,
-            ambient_temp_degF,
-            back_up_temp_threshold_degF
-            )
-    else
-        heating_cop, heating_cf = get_default_ashp_heating(ambient_temp_degF,ambient_temp_degF)
-    end
+    heating_cop, heating_cf = get_ashp_performance(heating_cop_reference,
+        heating_cf_reference,
+        heating_reference_temps,
+        ambient_temp_degF,
+        back_up_temp_threshold_degF
+        )
 
     heating_cf[heating_cop .== 1] .= 1
 
     if can_serve_cooling
-        if !isempty(cooling_reference_temps)
-            cooling_cop, cooling_cf = get_ashp_performance(cooling_cop_reference,
-                cooling_cf_reference,
-                cooling_reference_temps,
-                ambient_temp_degF,
-                -460
-                )
-        else
-            cooling_cop, cooling_cf = get_default_ashp_cooling(ambient_temp_degF)
-        end
+        cooling_cop, cooling_cf = get_ashp_performance(cooling_cop_reference,
+            cooling_cf_reference,
+            cooling_reference_temps,
+            ambient_temp_degF,
+            -460
+            )
     else
         cooling_cop = Float64[]
         cooling_cf = Float64[]
@@ -305,6 +315,16 @@ function ASHP_WaterHeater(;
         sizing_factor = defaults["sizing_factor"]
     end
 
+    if length(heating_cop_reference) != length(heating_cf_reference) || length(heating_cf_reference) != length(heating_reference_temps)
+        throw(@error("heating_cop_reference, heating_cf_reference, and heating_reference_temps must all be the same length."))
+    else
+        if length(heating_cop_reference) == 0
+            heating_cop_reference = defaults["heating_cop_reference"]
+            heating_cf_reference = defaults["heating_cf_reference"]
+            heating_reference_temps = defaults["heating_reference_temps"]
+        end
+    end
+
      #pre-set defaults that aren't mutable due to technology specifications
      can_supply_steam_turbine = defaults["can_supply_steam_turbine"]
      can_serve_space_heating = defaults["can_serve_space_heating"]
@@ -319,16 +339,12 @@ function ASHP_WaterHeater(;
     installed_cost_per_kw = installed_cost_per_ton / KWH_THERMAL_PER_TONHOUR
     om_cost_per_kw = om_cost_per_ton / KWH_THERMAL_PER_TONHOUR
 
-    if !isempty(heating_reference_temps)
-        heating_cop, heating_cf = get_ashp_performance(heating_cop_reference,
-            heating_cf_reference,
-            heating_reference_temps,
-            ambient_temp_degF,
-            back_up_temp_threshold_degF
-            )
-    else
-        heating_cop, heating_cf = get_default_ashp_heating(ambient_temp_degF,back_up_temp_threshold_degF)
-    end
+    heating_cop, heating_cf = get_ashp_performance(heating_cop_reference,
+        heating_cf_reference,
+        heating_reference_temps,
+        ambient_temp_degF,
+        back_up_temp_threshold_degF
+        )
     
     heating_cf[heating_cop .== 1] .= 1
 

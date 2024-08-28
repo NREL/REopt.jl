@@ -13,7 +13,13 @@
         "can_serve_cooling": true,
         "force_into_system": false,
         "back_up_temp_threshold_degF": 10.0,
-        "sizing_factor": 1.1
+        "sizing_factor": 1.1,
+        "heating_cop_reference": [0.427, 2.737, 5.047],
+        "heating_cf_reference": [0.2236, 0.8036, 1.3836],
+        "heating_reference_temps": [-20, 30, 80],
+        "cooling_cop_reference": [3.39, 2.466, 1.542],
+        "cooling_cf_reference": [1.041, 0.9234, 0.8058],
+        "cooling_reference_temps": [78, 99, 120]
     },
     "DomesticHotWater":
     {   
@@ -29,6 +35,9 @@
         "can_serve_cooling": false,
         "force_into_system": false,
         "back_up_temp_threshold_degF": 10.0,
-        "sizing_factor": 1.1
+        "sizing_factor": 1.1,
+        "heating_cop_reference": [0.427, 2.737, 5.047],
+        "heating_cf_reference": [0.2236, 0.8036, 1.3836],
+        "heating_reference_temps": [-20, 30, 80]
     }
 }
