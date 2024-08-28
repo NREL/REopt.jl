@@ -12,6 +12,7 @@ ASHP_SpaceHeater has the following attributes:
     min_kw::Real = 0.0, # Minimum thermal power size
     max_kw::Real = BIG_NUMBER, # Maximum thermal power size
     min_allowable_kw::Real = 0.0 # Minimum nonzero thermal power size if included
+    sizing_factor::Real = 1.1 # Size multiplier of system, relative that of the max load given by dispatch profile
     installed_cost_per_ton::Union{Real, nothing} = nothing, # Thermal power-based cost
     om_cost_per_ton::Union{Real, nothing} = nothing, # Thermal power-based fixed O&M cost
     macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
@@ -29,6 +30,7 @@ struct ASHP <: AbstractThermalTech
     min_kw::Real
     max_kw::Real
     min_allowable_kw::Real
+    sizing_factor::Real
     installed_cost_per_kw::Real
     om_cost_per_kw::Real
     macrs_option_years::Int
@@ -59,7 +61,9 @@ to meet the heating load.
 function ASHP_SpaceHeater(;
     min_ton::Real = 0.0, # Minimum thermal power size
     max_ton::Real = BIG_NUMBER, # Maximum thermal power size
-    min_allowable_ton::Real = 0.0 # Minimum nonzero thermal power size if included
+    min_allowable_ton::Union{Real, Nothing} = nothing, # Minimum nonzero thermal power size if included
+    min_allowable_peak_load_fraction::Union{Real, Nothing} = nothing, # minimum allowable fraction of peak heating + cooling load
+    sizing_factor::::Union{Real, Nothing} = nothing, # Size multiplier of system, relative that of the max load given by dispatch profile
     om_cost_per_ton::Union{Real, nothing} = nothing, # Thermal power-based fixed O&M cost
     macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
@@ -89,6 +93,8 @@ function ASHP_SpaceHeater(;
         min_ton::Real = 0.0,
         max_ton::Real = BIG_NUMBER,
         min_allowable_ton::Union{Real, Nothing} = nothing,
+        min_allowable_peak_load_fraction::Union{Real, Nothing} = nothing, 
+        sizing_factor::Union{Real, Nothing} = nothing, 
         installed_cost_per_ton::Union{Real, Nothing} = nothing,
         om_cost_per_ton::Union{Real, Nothing} = nothing,
         macrs_option_years::Int = 0,
@@ -135,6 +141,7 @@ function ASHP_SpaceHeater(;
     if isnothing(max_ton)
         max_ton = defaults["max_ton"]
     end
+    
 
     #pre-set defaults that aren't mutable due to technology specifications
     can_supply_steam_turbine = defaults["can_supply_steam_turbine"]
@@ -187,10 +194,14 @@ function ASHP_SpaceHeater(;
         min_allowable_kw = get_ashp_default_min_allowable_size(heating_load, heating_cf, cooling_load, cooling_cf)
     end
 
+    installed_cost_per_kw *= sizing_factor
+    om_cost_per_kw *= sizing_factor
+
     ASHP(
         min_kw,
         max_kw,
         min_allowable_kw,
+        sizing_factor,
         installed_cost_per_kw,
         om_cost_per_kw,
         macrs_option_years,
