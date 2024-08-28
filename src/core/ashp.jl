@@ -141,6 +141,9 @@ function ASHP_SpaceHeater(;
     if isnothing(max_ton)
         max_ton = defaults["max_ton"]
     end
+    if isnothing(sizing_factor)
+        sizing_factor = defaults["sizing_factor"]
+    end
     
 
     #pre-set defaults that aren't mutable due to technology specifications
@@ -297,6 +300,9 @@ function ASHP_WaterHeater(;
     end
     if isnothing(max_ton)
         max_ton = defaults["max_ton"]
+    end
+    if isnothing(sizing_factor)
+        sizing_factor = defaults["sizing_factor"]
     end
 
      #pre-set defaults that aren't mutable due to technology specifications
