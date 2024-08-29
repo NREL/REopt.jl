@@ -66,7 +66,7 @@ else  # run HiGHS tests
 
         @testset "ASHP min allowable size and COP, CF Profiles" begin
             #Heating profiles
-            heating_reference_temps = [10,20,30]
+            heating_reference_temps_degF = [10,20,30]
             heating_cop_reference = [1,3,4]
             heating_cf_performance = [1.2,1.3,1.5]
             back_up_temp_threshold_degF = 10
@@ -75,13 +75,13 @@ else  # run HiGHS tests
             test_cfs = [1.0,1.25,1.4,1.5]
             heating_cop, heating_cf = REopt.get_ashp_performance(heating_cop_reference,
                 heating_cf_performance,
-                heating_reference_temps,
+                heating_reference_temps_degF,
                 test_temps,
                 back_up_temp_threshold_degF)
             @test all(heating_cop .== test_cops)
             @test all(heating_cf .== test_cfs)
             #Cooling profiles
-            cooling_reference_temps = [30,20,10]
+            cooling_reference_temps_degF = [30,20,10]
             cooling_cop_reference = [1,3,4]
             cooling_cf_performance = [1.2,1.3,1.5]
             back_up_temp_threshold_degF = -200
@@ -90,7 +90,7 @@ else  # run HiGHS tests
             test_cfs = [1.2,1.25,1.4,1.5]
             cooling_cop, cooling_cf = REopt.get_ashp_performance(cooling_cop_reference,
                 cooling_cf_performance,
-                cooling_reference_temps,
+                cooling_reference_temps_degF,
                 test_temps,
                 back_up_temp_threshold_degF)
             @test all(cooling_cop .== test_cops)
