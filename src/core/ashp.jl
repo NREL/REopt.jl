@@ -74,13 +74,13 @@ function ASHPSpaceHeater(;
     #The following inputs are used to create the attributes heating_cop and heating cf: 
     heating_cop_reference::Array{<:Real,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
     heating_cf_reference::Array{<:Real,1}, # ASHP's heating capacity factor curves
-    heating_reference_temps ::Array{<:Real,1}, # ASHP's reference temperatures for heating COP and CF
+    heating_reference_temps_degF ::Array{<:Real,1}, # ASHP's reference temperatures for heating COP and CF
     back_up_temp_threshold_degF::Real = 10, # Degree in F that system switches from ASHP to resistive heater
     
     #The following inputs are used to create the attributes cooling_cop and cooling cf: 
     cooling_cop::Array{<:Real,1}, # COP of the cooling (i.e., thermal produced / electricity consumed)
     cooling_cf::Array{<:Real,1}, # ASHP's cooling capacity factor curves
-    heating_reference_temps ::Array{<:Real,1}, # ASHP's reference temperatures for cooling COP and CF
+    cooling_reference_temps_degF ::Array{<:Real,1}, # ASHP's reference temperatures for cooling COP and CF
     
     #The following inputs are taken from the Site object:
     ambient_temp_degF::Array{<:Real,1}  #time series of ambient temperature
@@ -104,16 +104,14 @@ function ASHPSpaceHeater(;
         force_into_system::Union{Bool, Nothing} = nothing,
         heating_cop_reference::Array{<:Real,1} = Float64[],
         heating_cf_reference::Array{<:Real,1} = Float64[],
-        heating_reference_temps::Array{<:Real,1} = Float64[],
+        heating_reference_temps_degF::Array{<:Real,1} = Float64[],
         back_up_temp_threshold_degF::Union{Real, Nothing} = nothing,
         cooling_cop_reference::Array{<:Real,1} = Float64[],
         cooling_cf_reference::Array{<:Real,1} = Float64[],
-        cooling_reference_temps::Array{<:Real,1} = Float64[],
+        cooling_reference_temps_degF::Array{<:Real,1} = Float64[],
         ambient_temp_degF::Array{Float64,1} = Float64[],
         heating_load::Array{<:Real,1} = Real[],
-        cooling_load::Array{<:Real,1} = Real[],
-        includes_heat_recovery::Bool = false, 
-        heat_recovery_cop::Union{Real, Nothing} = nothing
+        cooling_load::Array{<:Real,1} = Real[]
     )
 
     defaults = get_ashp_defaults("SpaceHeating")
@@ -149,22 +147,22 @@ function ASHPSpaceHeater(;
         end
     end
 
-    if length(heating_cop_reference) != length(heating_cf_reference) || length(heating_cf_reference) != length(heating_reference_temps)
-        throw(@error("heating_cop_reference, heating_cf_reference, and heating_reference_temps must all be the same length."))
+    if length(heating_cop_reference) != length(heating_cf_reference) || length(heating_cf_reference) != length(heating_reference_temps_degF)
+        throw(@error("heating_cop_reference, heating_cf_reference, and heating_reference_temps_degF must all be the same length."))
     else
         if length(heating_cop_reference) == 0
             heating_cop_reference = defaults["heating_cop_reference"]
             heating_cf_reference = defaults["heating_cf_reference"]
-            heating_reference_temps = defaults["heating_reference_temps"]
+            heating_reference_temps_degF = defaults["heating_reference_temps_degF"]
         end
     end
-    if length(cooling_cop_reference) != length(cooling_cf_reference) || length(cooling_cf_reference) != length(cooling_reference_temps)
-        throw(@error("cooling_cop_reference, cooling_cf_reference, and cooling_reference_temps must all be the same length."))
+    if length(cooling_cop_reference) != length(cooling_cf_reference) || length(cooling_cf_reference) != length(cooling_reference_temps_degF)
+        throw(@error("cooling_cop_reference, cooling_cf_reference, and cooling_reference_temps_degF must all be the same length."))
     else
         if length(cooling_cop_reference) == 0 && can_serve_cooling
             cooling_cop_reference = defaults["cooling_cop_reference"]
             cooling_cf_reference = defaults["cooling_cf_reference"]
-            cooling_reference_temps = defaults["cooling_reference_temps"]
+            cooling_reference_temps_degF = defaults["cooling_reference_temps_degF"]
         end
     end
 
@@ -185,7 +183,7 @@ function ASHPSpaceHeater(;
 
     heating_cop, heating_cf = get_ashp_performance(heating_cop_reference,
         heating_cf_reference,
-        heating_reference_temps,
+        heating_reference_temps_degF,
         ambient_temp_degF,
         back_up_temp_threshold_degF
         )
@@ -195,7 +193,7 @@ function ASHPSpaceHeater(;
     if can_serve_cooling
         cooling_cop, cooling_cf = get_ashp_performance(cooling_cop_reference,
             cooling_cf_reference,
-            cooling_reference_temps,
+            cooling_reference_temps_degF,
             ambient_temp_degF,
             -460
             )
@@ -267,7 +265,7 @@ function ASHPWaterHeater(;
     #The following inputs are used to create the attributes heating_cop and heating cf: 
     heating_cop_reference::Array{<:Real,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
     heating_cf_reference::Array{<:Real,1}, # ASHP's heating capacity factor curves
-    heating_reference_temps ::Array{<:Real,1}, # ASHP's reference temperatures for heating COP and CF
+    heating_reference_temps_degF ::Array{<:Real,1}, # ASHP's reference temperatures for heating COP and CF
     back_up_temp_threshold_degF::Real = 10 # temperature threshold at which backup resistive heater is used
 
     #The following inputs are taken from the Site object:
@@ -290,7 +288,7 @@ function ASHPWaterHeater(;
     force_into_system::Union{Bool, Nothing} = nothing,
     heating_cop_reference::Array{<:Real,1} = Real[],
     heating_cf_reference::Array{<:Real,1} = Real[],
-    heating_reference_temps::Array{<:Real,1} = Real[],
+    heating_reference_temps_degF::Array{<:Real,1} = Real[],
     back_up_temp_threshold_degF::Union{Real, Nothing} = nothing,
     ambient_temp_degF::Array{<:Real,1} = Real[],
     heating_load::Array{<:Real,1} = Real[]
@@ -326,13 +324,13 @@ function ASHPWaterHeater(;
         end
     end
 
-    if length(heating_cop_reference) != length(heating_cf_reference) || length(heating_cf_reference) != length(heating_reference_temps)
-        throw(@error("heating_cop_reference, heating_cf_reference, and heating_reference_temps must all be the same length."))
+    if length(heating_cop_reference) != length(heating_cf_reference) || length(heating_cf_reference) != length(heating_reference_temps_degF)
+        throw(@error("heating_cop_reference, heating_cf_reference, and heating_reference_temps_degF must all be the same length."))
     else
         if length(heating_cop_reference) == 0
             heating_cop_reference = defaults["heating_cop_reference"]
             heating_cf_reference = defaults["heating_cf_reference"]
-            heating_reference_temps = defaults["heating_reference_temps"]
+            heating_reference_temps_degF = defaults["heating_reference_temps_degF"]
         end
     end
 
@@ -352,7 +350,7 @@ function ASHPWaterHeater(;
 
     heating_cop, heating_cf = get_ashp_performance(heating_cop_reference,
         heating_cf_reference,
-        heating_reference_temps,
+        heating_reference_temps_degF,
         ambient_temp_degF,
         back_up_temp_threshold_degF
         )
