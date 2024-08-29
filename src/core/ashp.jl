@@ -69,7 +69,7 @@ function ASHPSpaceHeater(;
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
     can_serve_cooling::Union{Bool, Nothing} = nothing # If ASHP can supply heat to the cooling load
     force_into_system::Union{Bool, Nothing} = nothing # force into system to serve all space heating loads if true
-    avoided_capex_by_ashp_present_value::Real = 0.0
+    avoided_capex_by_ashp_present_value::Real = 0.0 # avoided capital expenditure due to presence of ASHP system vs. defaults heating and cooling techs
 
     #The following inputs are used to create the attributes heating_cop and heating cf: 
     heating_cop_reference::Array{<:Real,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
@@ -261,10 +261,13 @@ function ASHPWaterHeater(;
     macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
     macrs_bonus_fraction::Real = 0.0, # Fraction of upfront project costs to depreciate under MACRS
     can_supply_steam_turbine::Union{Bool, nothing} = nothing # If the boiler can supply steam to the steam turbine for electric production
-
-    #The following inputs are used to create the attributes heating_cop and heating cf: 
-    heating_cop::Array{<:Real,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
+    avoided_capex_by_ashp_present_value::Real = 0.0 # avoided capital expenditure due to presence of ASHP system vs. defaults heating and cooling techs
     force_into_system::Union{Bool, Nothing} = nothing # force into system to serve all hot water loads if true
+    
+    #The following inputs are used to create the attributes heating_cop and heating cf: 
+    heating_cop_reference::Array{<:Real,1}, # COP of the heating (i.e., thermal produced / electricity consumed)
+    heating_cf_reference::Array{<:Real,1}, # ASHP's heating capacity factor curves
+    heating_reference_temps ::Array{<:Real,1}, # ASHP's reference temperatures for heating COP and CF
     back_up_temp_threshold_degF::Real = 10 # temperature threshold at which backup resistive heater is used
 
     #The following inputs are taken from the Site object:
