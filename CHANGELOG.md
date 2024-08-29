@@ -23,13 +23,21 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop - 2024-06-05
-### Fixed
-- Increased the big-M bound on maximum net metering benefit to prevent artificially low export benefits
-- Fixed a bug in which tier limits did not load correctly when the number of tiers vary by period in the inputs
-- Set a limit for demand and energy tier maxes to avoid errors returned by HiGHS due to numerical limits
-- Index utility rate demand and energy tier limits on month and/or ratchet in addition to tier.  This allows for the inclusion of multi-tiered energy and demand rates in which the rates may vary by month or ratchet, whereas previously only the maximum tier limit was used.
+## Develop 08-09-2024
+### Changed
+- Improve the full test suite reporting with a verbose summary table, and update the structure to reflect long-term open-source solver usage
+- Removed MacOS from the runner list and just run with Windows OS, since MacOS commonly freezes and gets cancelled. We have not seen Windows OS pass while other OS's fail. .
+- Suppress JuMP warning messages from 15-minute and multiple PVs test scenarios to avoid flooding the test logs with those warnings
+- Updated/specified User-Agent header of "REopt.jl" for PVWatts and Wind Toolkit API requests; default before was "HTTP.jl"; this allows specific tracking of REopt.jl usage which call PVWatts and Wind Toolkit through api.data.gov.
 
+## v0.47.2
+### Fixed
+- Increased the big-M bound on maximum net metering benefit to prevent artificially low export benefits.
+- Fixed a bug in which tier limits did not load correctly when the number of tiers vary by period in the inputs.
+- Set a limit for demand and energy tier maxes to avoid errors returned by HiGHS due to numerical limits.
+- Index utility rate demand and energy tier limits on month and/or ratchet in addition to tier.  This allows for the inclusion of multi-tiered energy and demand rates in which the rates may vary by month or ratchet, whereas previously only the maximum tier limit was used.
+### Added
+- Added thermal efficiency as input to chp defaults function.
 
 ## v0.47.1
 ### Fixed
@@ -50,7 +58,7 @@ Classify the change according to the following categories:
 - Refactored various functions to ensure **ProcessHeatLoad** is processed correctly in line with other heating loads.
 - When the URDB response `energyratestructure` has a "unit" value that is not "kWh", throw an error instead of averaging rates in each energy tier.
 - Refactored heating flow constraints to be in ./src/constraints/thermal_tech_constraints.jl instead of its previous separate locations in the storage and turbine constraints.
-- Changed default Financial **owner_tax_rate_fraction** and **offtaker_tax_rate_fraction** from 0.257 to 0.26 to align with API and user manual defaults. 
+- Changed default Financial **owner_tax_rate_fraction** and **offtaker_tax_rate_fraction** from 0.257 to 0.26 to align with API and user manual defaults.
 ### Fixed
 - Updated the PV result **lifecycle_om_cost_after_tax** to account for the third-party factor for third-party ownership analyses.
 - Convert `max_electric_load_kw` to _Float64_ before passing to function `get_chp_defaults_prime_mover_size_class`

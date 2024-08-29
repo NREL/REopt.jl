@@ -461,7 +461,7 @@ function call_pvwatts_api(latitude::Real, longitude::Real; tilt=latitude, azimut
 
     try
         @info "Querying PVWatts for production factor and ambient air temperature... "
-        r = HTTP.get(url, keepalive=true, readtimeout=10)
+        r = HTTP.get(url, ["User-Agent" => "REopt.jl"]; keepalive=true, readtimeout=10)
         response = JSON.parse(String(r.body))
         if r.status != 200
             throw(@error("Bad response from PVWatts: $(response["errors"])"))
