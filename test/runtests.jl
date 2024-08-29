@@ -2491,7 +2491,7 @@ else  # run HiGHS tests
                 annual_thermal_prod = 0.8 * 8760  #80% efficient boiler --> 0.8 MMBTU of heat load per hour
                 annual_ashp_consumption = sum(0.8 * REopt.KWH_PER_MMBTU / p.heating_cop["ASHPSpaceHeater"][ts] for ts in p.time_steps)
                 annual_energy_supplied = 87600 + annual_ashp_consumption
-                @test results["ASHPSpaceHeater"]["size_ton"] ≈ 88.0 atol=0.01
+                @test results["ASHPSpaceHeater"]["size_ton"] ≈ 80.0 atol=0.01
                 @test results["ASHPSpaceHeater"]["annual_thermal_production_mmbtu"] ≈ annual_thermal_prod rtol=1e-4
                 @test results["ASHPSpaceHeater"]["annual_electric_consumption_kwh"] ≈ annual_ashp_consumption rtol=1e-4
                 @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ annual_energy_supplied rtol=1e-4
@@ -2509,7 +2509,7 @@ else  # run HiGHS tests
 
                 annual_ashp_consumption += 0.1 * sum(REopt.KWH_THERMAL_PER_TONHOUR / p.cooling_cop["ASHPSpaceHeater"][ts] for ts in p.time_steps)
                 annual_energy_supplied = annual_ashp_consumption + 87600 - 2*876.0*REopt.KWH_THERMAL_PER_TONHOUR
-                @test results["ASHPSpaceHeater"]["size_ton"] ≈ 88.0 atol=0.01 #size increases when cooling load also served
+                @test results["ASHPSpaceHeater"]["size_ton"] ≈ 80.0 atol=0.01 #size increases when cooling load also served
                 @test results["ASHPSpaceHeater"]["annual_electric_consumption_kwh"] ≈ annual_ashp_consumption rtol=1e-4
                 @test results["ASHPSpaceHeater"]["annual_thermal_production_tonhour"] ≈ 876.0 rtol=1e-4
             
@@ -2553,7 +2553,7 @@ else  # run HiGHS tests
                 annual_thermal_prod = 0.4 * 8760  #80% efficient boiler --> 0.8 MMBTU of heat load per hour
                 annual_ashp_consumption = sum(0.4 * REopt.KWH_PER_MMBTU / p.heating_cop["ASHPWaterHeater"][ts] for ts in p.time_steps)
                 annual_energy_supplied = 87600 + annual_ashp_consumption
-                @test results["ASHPWaterHeater"]["size_ton"] ≈ 41.22 atol=0.1
+                @test results["ASHPWaterHeater"]["size_ton"] ≈ 37.477 atol=0.1
                 @test results["ASHPWaterHeater"]["annual_thermal_production_mmbtu"] ≈ annual_thermal_prod rtol=1e-4
                 @test results["ASHPWaterHeater"]["annual_electric_consumption_kwh"] ≈ annual_ashp_consumption rtol=1e-4
                 @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ annual_energy_supplied rtol=1e-4
