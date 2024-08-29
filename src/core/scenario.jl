@@ -174,7 +174,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             storage_dict[:off_grid_flag] = settings.off_grid_flag
             storage_structs[storage_dict[:name]] = ElectricStorage(storage_dict, financial)
         else
-            throw(@error("PV input must be Dict or Dict[]."))
+            throw(@error("ElectricStorage input must be Dict or Dict[]."))
         end
     else
         storage_dict = Dict(:max_kw => 0.0) 
