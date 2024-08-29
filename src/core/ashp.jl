@@ -142,7 +142,11 @@ function ASHPSpaceHeater(;
         max_ton = defaults["max_ton"]
     end
     if isnothing(sizing_factor)
-        sizing_factor = defaults["sizing_factor"]
+        if force_into_system == true
+            sizing_factor = defaults["sizing_factor"]
+        else
+            sizing_factor = 1
+        end
     end
 
     if length(heating_cop_reference) != length(heating_cf_reference) || length(heating_cf_reference) != length(heating_reference_temps)
@@ -312,7 +316,11 @@ function ASHPWaterHeater(;
         max_ton = defaults["max_ton"]
     end
     if isnothing(sizing_factor)
-        sizing_factor = defaults["sizing_factor"]
+        if force_into_system == true
+            sizing_factor = defaults["sizing_factor"]
+        else
+            sizing_factor = 1
+        end
     end
 
     if length(heating_cop_reference) != length(heating_cf_reference) || length(heating_cf_reference) != length(heating_reference_temps)
