@@ -172,7 +172,6 @@ end
     fixed_duration::Union{Real, Nothing} = nothing
     optimize_soc_init_fraction::Bool = false
     allow_simultaneous_charge_discharge::Bool = true # Simultaneous charge/discharge is typically suboptimal anyway and allowing this avoids additional binary variables (which can slow solve time)
-    name::String = "ElectricStorage"
 ``` 
 """
 Base.@kwdef struct ElectricStorageDefaults
@@ -213,7 +212,6 @@ Base.@kwdef struct ElectricStorageDefaults
     fixed_duration::Union{Real, Nothing} = nothing
     optimize_soc_init_fraction::Bool = false
     allow_simultaneous_charge_discharge::Bool = true
-    name::String = "ElectricStorage"
 end
 
 
@@ -262,8 +260,6 @@ struct ElectricStorage <: AbstractElectricStorage
     fixed_duration::Union{Real, Nothing}
     optimize_soc_init_fraction::Bool
     allow_simultaneous_charge_discharge::Bool
-    name::String
-
 
     function ElectricStorage(d::Dict, f::Financial)  
         s = ElectricStorageDefaults(;d...)
@@ -358,8 +354,7 @@ struct ElectricStorage <: AbstractElectricStorage
             s.self_discharge_fraction_per_timestep,
             s.fixed_duration,
             s.optimize_soc_init_fraction,
-            s.allow_simultaneous_charge_discharge,
-            s.name
+            s.allow_simultaneous_charge_discharge
         )
     end
 end
