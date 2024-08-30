@@ -36,8 +36,8 @@
         "force_into_system": false,
         "back_up_temp_threshold_degF": 10.0,
         "sizing_factor": 1.1,
-        "heating_cop_reference": [1.1,2.1,3.5],
+        "heating_cop_reference": [1.1, 2.1, 3.5],
         "heating_cf_reference": [0.4, 0.65, 1.0],
-        "heating_reference_temps_degF": [-5, 17, 47],
+        "heating_reference_temps_degF": [-5, 17, 47]
     }
 }
