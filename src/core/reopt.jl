@@ -151,6 +151,9 @@ function run_reopt(ms::AbstractArray{T, 1}, p::REoptInputs) where T <: JuMP.Abst
 			if !isempty(p.techs.pv)
 				organize_multiple_pv_results(p, results_dict)
 			end
+			if !isempty(p.s.storage.types.elec)
+				organize_multiple_elec_stor_results(p, results_dict)
+			end
 			return results_dict
 		else
 			throw(@error("REopt scenarios solved either with errors or non-optimal solutions."))
@@ -405,7 +408,7 @@ function build_reopt!(m::JuMP.AbstractModel, p::REoptInputs)
         add_dv_UnservedLoad_constraints(m,p)
 		add_outage_cost_constraints(m,p)
 		add_MG_production_constraints(m,p)
-		
+
 		if length(p.s.storage.types.elec) > 1
 			throw(@error("REopt does not support considering multiple ElectricStorage when modelling outages."))
 		end
@@ -569,6 +572,9 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 
 		if organize_pvs && !isempty(p.techs.pv)  # do not want to organize_pvs when running BAU case in parallel b/c then proform code fails
 			organize_multiple_pv_results(p, results)
+		end
+		if !isempty(p.s.storage.types.elec)
+			organize_multiple_elec_stor_results(p, results_dict)
 		end
 
 		# add error messages (if any) and warnings to results dict

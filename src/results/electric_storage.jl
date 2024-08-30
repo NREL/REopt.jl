@@ -80,3 +80,23 @@ function add_electric_storage_results(m::JuMP.AbstractModel, p::MPCInputs, d::Di
     d[b] = r
     nothing
 end
+
+"""
+    organize_multiple_elec_stor_results(p::REoptInputs, d::Dict)
+
+The last step in results processing: if more than one ElectricStorage was modeled then move their results from the top
+level keys (that use each ElectricStorage.name) to an array of results with "ElectricStorage" as the top key in the results dict `d`.
+"""
+function organize_multiple_pv_results(p::REoptInputs, d::Dict)
+    if length(p.s.storage.types.elec) == 1 && p.s.storage.types.elec[1] == "ElectricStorage"
+        return nothing
+    end
+    stors = Dict[]
+    for storname in p.s.storage.types.elec
+        d[storname]["name"] = storname  # add name to results dict to distinguish each ElectricStorage
+        push!(stors, d[storname])
+        delete!(d, storname)
+    end
+    d["ElectricStorage"] = stors
+    nothing
+end
