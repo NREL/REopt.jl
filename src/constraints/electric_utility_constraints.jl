@@ -279,7 +279,7 @@ function add_simultaneous_export_import_constraint(m, p; _n="")
             }
         )
     else
-        bigM_hourly_load_plus_battery_power = maximum(p.s.electric_load.loads_kw)+maximum(p.s.space_heating_load.loads_kw)+maximum(p.s.process_heat_load.loads_kw)+maximum(p.s.dhw_load.loads_kw)+maximum(p.s.cooling_load.loads_kw_thermal)+sum(p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec)
+        bigM_hourly_load_plus_battery_power = maximum(p.s.electric_load.loads_kw)+maximum(p.s.space_heating_load.loads_kw)+maximum(p.s.process_heat_load.loads_kw)+maximum(p.s.dhw_load.loads_kw)+maximum(p.s.cooling_load.loads_kw_thermal)+p.s.storage.attr["ElectricStorage"].max_kw
         @constraint(m, NoGridPurchasesBinary[ts in p.time_steps],
             sum(m[Symbol("dvGridPurchase"*_n)][ts, tier] for tier in 1:p.s.electric_tariff.n_energy_tiers) +
             sum(m[Symbol("dvGridToStorage"*_n)][b, ts] for b in p.s.storage.types.elec) <= bigM_hourly_load_plus_battery_power*(1-m[Symbol("binNoGridPurchases"*_n)][ts])
