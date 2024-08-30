@@ -53,7 +53,7 @@ A Scenario struct can contain the following keys:
 - [SteamTurbine](@ref) (optional)
 - [ElectricHeater](@ref) (optional)
 
-All values of `d` are expected to be `Dicts` except for `PV`, `ElectricStorage`, and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
+All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
 
 !!! note 
     Set `flex_hvac_from_json=true` if `FlexibleHVAC` values were loaded in from JSON (necessary to 
@@ -157,29 +157,15 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                                             emissions_factor_series_lb_PM25_per_kwh = 0
                                         ) 
     end
-
+        
     storage_structs = Dict{String, AbstractStorage}()
     if haskey(d,  "ElectricStorage")
-        if typeof(d["ElectricStorage"]) <: AbstractArray
-            for (i, elecstor) in enumerate(d["ElectricStorage"])
-                if !(haskey(elecstor, "name"))
-                    elecstor["name"] = string("ElectricStorage", i)
-                end
-                storage_dict = dictkeys_tosymbols(elecstor)
-                storage_dict[:off_grid_flag] = settings.off_grid_flag
-                storage_structs[storage_dict[:name]] = ElectricStorage(storage_dict, financial)
-            end
-        elseif typeof(d["ElectricStorage"]) <: AbstractDict
-            storage_dict = dictkeys_tosymbols(d["ElectricStorage"])
-            storage_dict[:off_grid_flag] = settings.off_grid_flag
-            storage_structs[storage_dict[:name]] = ElectricStorage(storage_dict, financial)
-        else
-            throw(@error("PV input must be Dict or Dict[]."))
-        end
+        storage_dict = dictkeys_tosymbols(d["ElectricStorage"])
+        storage_dict[:off_grid_flag] = settings.off_grid_flag
     else
         storage_dict = Dict(:max_kw => 0.0) 
-        storage_structs["ElectricStorage"] = ElectricStorage(storage_dict, financial)
     end
+    storage_structs["ElectricStorage"] = ElectricStorage(storage_dict, financial)
     # TODO stop building ElectricStorage when it is not modeled by user 
     #       (requires significant changes to constraints, variables)
     if haskey(d, "HotThermalStorage")
