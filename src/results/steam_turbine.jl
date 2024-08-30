@@ -51,7 +51,7 @@ function add_steam_turbine_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dic
 	r["electric_to_grid_series_kw"] = round.(value.(SteamTurbinetoGrid), digits=3)
 	if !isempty(p.s.storage.types.elec)
 		@expression(m, SteamTurbinetoBatt[ts in p.time_steps],
-			sum(m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.steam_turbine, b in p.s.storage.types.elec))
+			sum(m[Symbol("dvProductionToStorage"*_n)]["ElectricStorage",t,ts] for t in p.techs.steam_turbine))
 	else
 		SteamTurbinetoBatt = zeros(length(p.time_steps))
 	end
