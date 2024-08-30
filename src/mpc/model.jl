@@ -171,16 +171,25 @@ function build_mpc!(m::JuMP.AbstractModel, p::MPCInputs)
     add_previous_monthly_peak_constraint(m, p)
     add_previous_tou_peak_constraint(m, p)
 
-    # TODO: random outages in MPC?
 	if !isempty(p.s.electric_utility.outage_durations)
 		add_dv_UnservedLoad_constraints(m,p)
 		add_outage_cost_constraints(m,p)
 		add_MG_production_constraints(m,p)
-		if !isempty(p.s.storage.types.elec)	
-			add_MG_storage_dispatch_constraints(m,p)
+
+		if length(p.s.storage.types.elec) > 1
+			throw(@error("REopt does not support considering multiple ElectricStorage when modelling outages."))
+		end
+		if !isempty(p.s.storage.types.elec) #length=1
+			b = p.s.storage.types.elec[1]
+			if p.s.storage.attr[b].max_kw == 0 || p.s.storage.attr[b].max_kwh == 0
+				fix_MG_storage_variables(m,p)
+			else
+				add_MG_elec_storage_dispatch_constraints(m,p,b)
+			end
 		else
 			fix_MG_storage_variables(m,p)
 		end
+		
 		add_cannot_have_MG_with_only_PVwind_constraints(m,p)
 		add_MG_size_constraints(m,p)
 		
