@@ -724,9 +724,8 @@ function backup_reliability_reopt_inputs(;d::Dict, p::REoptInputs, r::Dict = Dic
         elseif !(typeof(d["ElectricStorage"]) <: AbstractDict)
             throw(@error("Calculating resilience metrics for a REopt solution with multiple ElectricStorage is not yet supported."))
         end
-        elec_stor_name = d["ElectricStorage"]["name"]
-        r2[:battery_charge_efficiency] = p.s.storage.attr[elec_stor_name].charge_efficiency
-        r2[:battery_discharge_efficiency] = p.s.storage.attr[elec_stor_name].discharge_efficiency
+        r2[:battery_charge_efficiency] = p.s.storage.attr["ElectricStorage"].charge_efficiency
+        r2[:battery_discharge_efficiency] = p.s.storage.attr["ElectricStorage"].discharge_efficiency
         r2[:battery_size_kw] = get(d["ElectricStorage"], "size_kw", 0)
 
         #ERP tool uses effective battery size so need to subtract minimum SOC
