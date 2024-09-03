@@ -20,7 +20,27 @@ elseif "CPLEX" in ARGS
     @testset "test_with_cplex" begin
         include("test_with_cplex.jl")
     end
+elseif "Debug" in ARGS
+    @testset "Multiple Electric Storage" begin
+        model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+        r = run_reopt(model, "./scenarios/multiple_elec_storage.json")
 
+        open("debug_reopt_results.json","w") do f
+            JSON.print(f, r, 4)
+        end
+        
+        @test r["PV"]["size_kw"] ≈ 216.6667 atol=0.01
+        @test r["Financial"]["lcc"] ≈ 1.2391786e7 rtol=1e-5
+        for stor in r["ElectricStorage"]
+            if stor["name"] == "CheapElecStor"
+                @test stor["size_kw"] ≈ 49.0 atol=0.1
+                @test stor["size_kwh"] ≈ 83.3 atol=0.1
+            else
+                @test stor["size_kw"] ≈ 0 atol=0.1
+                @test stor["size_kwh"] ≈ 0 atol=0.1
+            end
+        end
+    end
 else  # run HiGHS tests
     
     @testset "Inputs" begin
