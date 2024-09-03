@@ -574,7 +574,7 @@ function run_reopt(m::JuMP.AbstractModel, p::REoptInputs; organize_pvs=true)
 			organize_multiple_pv_results(p, results)
 		end
 		if !isempty(p.s.storage.types.elec)
-			organize_multiple_elec_stor_results(p, results_dict)
+			organize_multiple_elec_stor_results(p, results)
 		end
 
 		# add error messages (if any) and warnings to results dict
