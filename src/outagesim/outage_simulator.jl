@@ -255,7 +255,7 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
         elseif !(typeof(d["ElectricStorage"]) <: AbstractDict)
             throw(@error("simulate_outages for a REopt solution with multiple ElectricStorage is not yet supported"))
         end
-        elec_stor_name = d["ElectricStorage"]["name"]
+        elec_stor_name = get(d["ElectricStorage"],"name","ElectricStorage")
         batt_kwh = get(d["ElectricStorage"], "size_kwh", 0)
         batt_kw = get(d["ElectricStorage"], "size_kw", 0)
         init_soc = get(d["ElectricStorage"], "soc_series_fraction", zeros(length(p.time_steps)))

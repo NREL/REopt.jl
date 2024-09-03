@@ -70,7 +70,7 @@ function proforma_results(p::REoptInputs, d::Dict)
         elseif !(typeof(d["ElectricStorage"]) <: AbstractDict)
             throw(@error("Pro forma results for a REopt solution with multiple ElectricStorage is not yet supported"))
         end
-        elec_stor_name = d["ElectricStorage"]["name"]
+        elec_stor_name = get(d["ElectricStorage"],"name","ElectricStorage")
         if d["ElectricStorage"]["size_kw"] > 0
             # TODO handle other types of storage
             storage = p.s.storage.attr[elec_stor_name]
