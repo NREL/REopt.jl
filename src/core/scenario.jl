@@ -172,7 +172,8 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         elseif typeof(d["ElectricStorage"]) <: AbstractDict
             storage_dict = dictkeys_tosymbols(d["ElectricStorage"])
             storage_dict[:off_grid_flag] = settings.off_grid_flag
-            storage_structs[storage_dict[:name]] = ElectricStorage(storage_dict, financial)
+            storage_struct = ElectricStorage(storage_dict, financial)
+            storage_structs[storage_struct.name] = storage_struct
         else
             throw(@error("ElectricStorage input must be Dict or Dict[]."))
         end
