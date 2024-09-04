@@ -62,7 +62,7 @@ function ASHPSpaceHeater(;
     min_ton::Real = 0.0, # Minimum thermal power size
     max_ton::Real = BIG_NUMBER, # Maximum thermal power size
     min_allowable_ton::Union{Real, Nothing} = nothing, # Minimum nonzero thermal power size if included
-    min_allowable_peak_load_fraction::Union{Real, Nothing} = nothing, # minimum allowable fraction of peak heating + cooling load
+    min_allowable_peak_capacity_fraction::Union{Real, Nothing} = nothing, # minimum allowable fraction of peak heating + cooling load
     sizing_factor::::Union{Real, Nothing} = nothing, # Size multiplier of system, relative that of the max load given by dispatch profile
     om_cost_per_ton::Union{Real, nothing} = nothing, # Thermal power-based fixed O&M cost
     macrs_option_years::Int = 0, # MACRS schedule for financial analysis. Set to zero to disable
@@ -202,14 +202,14 @@ function ASHPSpaceHeater(;
         cooling_cf = Float64[]
     end
 
-    if !isnothing(min_allowable_ton) && !isnothing(min_allowable_peak_load_fraction)
-        throw(@error("at most  one of min_allowable_ton and min_allowable_peak_load_fraction may be input."))
+    if !isnothing(min_allowable_ton) && !isnothing(min_allowable_peak_capacity_fraction)
+        throw(@error("at most  one of min_allowable_ton and min_allowable_peak_capacity_fraction may be input."))
     elseif !isnothing(min_allowable_ton)
         min_allowable_kw = min_allowable_ton * KWH_THERMAL_PER_TONHOUR
         @warn("user-provided minimum allowable ton is used in the place of the default; this may provided very small sizes if set to zero.")
     else
-        if isnothing(min_allowable_peak_load_fraction)
-            min_allowable_peak_load_fraction = 0.5
+        if isnothing(min_allowable_peak_capacity_fraction)
+            min_allowable_peak_capacity_fraction = 0.5
         end
         min_allowable_kw = get_ashp_default_min_allowable_size(heating_load, heating_cf, cooling_load, cooling_cf)
     end
@@ -357,16 +357,16 @@ function ASHPWaterHeater(;
     
     heating_cf[heating_cop .== 1] .= 1
 
-    if !isnothing(min_allowable_ton) && !isnothing(min_allowable_peak_load_fraction)
-        throw(@error("at most  one of min_allowable_ton and min_allowable_peak_load_fraction may be input."))
+    if !isnothing(min_allowable_ton) && !isnothing(min_allowable_peak_capacity_fraction)
+        throw(@error("at most  one of min_allowable_ton and min_allowable_peak_capacity_fraction may be input."))
     elseif !isnothing(min_allowable_ton)
         min_allowable_kw = min_allowable_ton * KWH_THERMAL_PER_TONHOUR
         @warn("user-provided minimum allowable ton is used in the place of the default; this may provided very small sizes if set to zero.")
     else
-        if isnothing(min_allowable_peak_load_fraction)
-            min_allowable_peak_load_fraction = 0.5
+        if isnothing(min_allowable_peak_capacity_fraction)
+            min_allowable_peak_capacity_fraction = 0.5
         end
-        min_allowable_kw = get_ashp_default_min_allowable_size(heating_load, heating_cf, Real[], Real[], min_allowable_peak_load_fraction)
+        min_allowable_kw = get_ashp_default_min_allowable_size(heating_load, heating_cf, Real[], Real[], min_allowable_peak_capacity_fraction)
     end
 
     ASHP(
