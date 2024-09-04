@@ -658,9 +658,9 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
     ashp = nothing
     if haskey(d, "ASHPSpaceHeater")
         if !haskey(d["ASHPSpaceHeater"], "max_ton")
-            max_ton = get_ashp_defaults("SpaceHeating")["max_ton"]
+            max_ton = Float64(get_ashp_defaults("SpaceHeating")["max_ton"])
         else
-            max_ton = d["ASHPSpaceHeater"]["max_ton"]
+            max_ton = Float64(d["ASHPSpaceHeater"]["max_ton"])
         end
 
         if max_ton > 0
