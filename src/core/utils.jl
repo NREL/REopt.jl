@@ -165,6 +165,7 @@ function dictkeys_tosymbols(d::Dict)
             "cooling_cop_reference",
             "cooling_cf_reference",
             "cooling_reference_temps_degF",
+            "ambient_temp_degF",
             #for ERP
             "pv_production_factor_series", "wind_production_factor_series",
             "battery_starting_soc_series_fraction",
