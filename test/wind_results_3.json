@@ -1,0 +1,22 @@
+{
+    "Messages": {
+        "errors": [
+            [
+                "core_reopt_inputs.jl_623",
+                [
+                    "User-provided minimum wind kW is greater than either wind.max_kw or calculated land-constrained kW (site.land_acres/wind.acres_per_kw). Update wind.min_kw or site.land_acres"
+                ]
+            ]
+        ],
+        "has_stacktrace": false,
+        "warnings": [
+            [
+                "core_reopt_inputs.jl_619",
+                [
+                    "User-provided maximum wind kW is greater than the calculated land-constrained kW (site.land_acres/wind.acres_per_kw). Wind max kW has been updated to land-constrained max of 2000.0 kW."
+                ]
+            ]
+        ]
+    },
+    "status": "error"
+}

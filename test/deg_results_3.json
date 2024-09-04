@@ -1,0 +1,63 @@
+{
+    "Messages": {
+        "errors": [
+            [
+                "ErrorException(\"Constraints of type MathOptInterface.VectorAffineFunction{Float64}-in-MathOptInterface.Indicator{MathOptInterface.ACTIVATE_ON_ONE, MathOptInterface.GreaterThan{Float64}} are not supported by the solver.\\n\\nIf you expected the solver to support your problem, you may have an error in your formulation. Otherwise, consider using a different solver.\\n\\nThe list of available solvers, along with the problem types they support, is available at https://jump.dev/JuMP.jl/stable/installation/#Supported-solvers.\")",
+                [
+                    "error(s::String) at error.jl:35",
+                    "_moi_add_constraint(model::MathOptInterface.Utilities.CachingOptimizer{MathOptInterface.Bridges.LazyBridgeOptimizer{HiGHS.Optimizer}, MathOptInterface.Utilities.UniversalFallback{MathOptInterface.Utilities.Model{Float64}}}, f::MathOptInterface.VectorAffineFunction{Float64}, s::MathOptInterface.Indicator{MathOptInterface.ACTIVATE_ON_ONE, MathOptInterface.GreaterThan{Float64}}) at constraints.jl:679",
+                    "add_constraint(model::Model, con::VectorConstraint{AffExpr, MathOptInterface.Indicator{MathOptInterface.ACTIVATE_ON_ONE, MathOptInterface.GreaterThan{Float64}}, VectorShape}, name::String) at constraints.jl:706",
+                    "macro expansion at macros.jl:1345 [inlined]",
+                    "(::REopt.var\"#691#702\"{String, JuMP.Containers.DenseAxisArray{VariableRef, 1, Tuple{UnitRange{Int64}}, Tuple{JuMP.Containers._AxisLookup{Tuple{Int64, Int64}}}}, JuMP.Containers.DenseAxisArray{VariableRef, 1, Tuple{UnitRange{Int64}}, Tuple{JuMP.Containers._AxisLookup{Tuple{Int64, Int64}}}}, Model})(d::Int64) at macro.jl:301",
+                    "#87 at container.jl:124 [inlined]",
+                    "iterate at generator.jl:47 [inlined]",
+                    "collect(itr::Base.Generator{JuMP.Containers.VectorizedProductIterator{Tuple{UnitRange{Int64}}}, JuMP.Containers.var\"#87#89\"{REopt.var\"#691#702\"{String, JuMP.Containers.DenseAxisArray{VariableRef, 1, Tuple{UnitRange{Int64}}, Tuple{JuMP.Containers._AxisLookup{Tuple{Int64, Int64}}}}, JuMP.Containers.DenseAxisArray{VariableRef, 1, Tuple{UnitRange{Int64}}, Tuple{JuMP.Containers._AxisLookup{Tuple{Int64, Int64}}}}, Model}}}) at array.jl:834",
+                    "map(f::Function, A::JuMP.Containers.VectorizedProductIterator{Tuple{UnitRange{Int64}}}) at abstractarray.jl:3313",
+                    "container(f::Function, indices::JuMP.Containers.VectorizedProductIterator{Tuple{UnitRange{Int64}}}, ::Type{JuMP.Containers.DenseAxisArray}, names::Vector{Any}) at container.jl:123",
+                    "container at container.jl:75 [inlined]",
+                    "macro expansion at macros.jl:1213 [inlined]",
+                    "add_degradation(m::Model, p::REoptInputs{Scenario}, b::String) at battery_degradation.jl:111",
+                    "build_reopt!(m::Model, p::REoptInputs{Scenario}) at reopt.jl:534",
+                    "run_reopt(m::Model, p::REoptInputs{Scenario}; organize_pvs::Bool) at reopt.jl:548",
+                    "run_reopt at reopt.jl:545 [inlined]",
+                    "run_reopt(m::Model, d::Dict{String, Any}) at reopt.jl:52",
+                    "macro expansion at runtests.jl:64 [inlined]",
+                    "macro expansion at Test.jl:1577 [inlined]",
+                    "macro expansion at runtests.jl:26 [inlined]",
+                    "macro expansion at Test.jl:1577 [inlined]",
+                    "top-level scope at runtests.jl:25",
+                    "eval at boot.jl:385 [inlined]",
+                    "include_string(mapexpr::typeof(identity), mod::Module, code::String, filename::String) at loading.jl:2076",
+                    "_include(mapexpr::Function, mod::Module, _path::String) at loading.jl:2136",
+                    "include(fname::String) at client.jl:489",
+                    "top-level scope at none:6",
+                    "eval at boot.jl:385 [inlined]",
+                    "exec_options(opts::Base.JLOptions) at client.jl:291",
+                    "_start() at client.jl:552"
+                ]
+            ]
+        ],
+        "has_stacktrace": true,
+        "warnings": [
+            [
+                "constraints_battery_degradation.jl_106",
+                [
+                    "Adding binary and indicator constraints for \n         ElectricStorage.degradation.maintenance_strategy = \"replacement\". \n         Not all solvers support indicators and some are slow with integers."
+                ]
+            ],
+            [
+                "energy_storage_electric_storage.jl_317",
+                [
+                    "Setting ElectricStorage replacement costs to zero. Using degradation.maintenance_cost_per_kwh instead."
+                ]
+            ],
+            [
+                "constraints_emissions_constraints.jl_18",
+                [
+                    "No emissions reduction constraints added, as BAU emissions have not been calculated."
+                ]
+            ]
+        ]
+    },
+    "status": "error"
+}

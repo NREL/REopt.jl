@@ -21,14 +21,210 @@ elseif "CPLEX" in ARGS
         include("test_with_cplex.jl")
     end
 elseif "Debug" in ARGS
+    @testset "debugging" begin
+        @testset "Solar and ElectricStorage w/BAU and degradation" begin
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            d = JSON.parsefile("scenarios/pv_storage.json");
+            d["Settings"] = Dict{Any,Any}("add_soc_incentive" => false)
+            results = run_reopt([m1,m2], d)
+
+            open("deg_results_1.json","w") do f
+                JSON.print(f, results, 4)
+            end
+
+            @test results["PV"]["size_kw"] ≈ 216.6667 atol=0.01
+            @test results["PV"]["lcoe_per_kwh"] ≈ 0.0468 atol = 0.001
+            @test results["Financial"]["lcc"] ≈ 1.239179e7 rtol=1e-5
+            @test results["Financial"]["lcc_bau"] ≈ 12766397 rtol=1e-5
+            @test results["ElectricStorage"]["size_kw"] ≈ 49.02 atol=0.1
+            @test results["ElectricStorage"]["size_kwh"] ≈ 83.3 atol=0.1
+            proforma_npv = REopt.npv(results["Financial"]["offtaker_annual_free_cashflows"] - 
+                results["Financial"]["offtaker_annual_free_cashflows_bau"], 0.081)
+            @test results["Financial"]["npv"] ≈ proforma_npv rtol=0.0001
+
+            # compare avg soc with and without degradation, 
+            # using default augmentation battery maintenance strategy
+            avg_soc_no_degr = sum(results["ElectricStorage"]["soc_series_fraction"]) / 8760
+            d["ElectricStorage"]["model_degradation"] = true
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            r_degr = run_reopt(m, d)
+
+            open("deg_results_2.json","w") do f
+                JSON.print(f, r_degr, 4)
+            end
+
+            avg_soc_degr = sum(r_degr["ElectricStorage"]["soc_series_fraction"]) / 8760
+            @test avg_soc_no_degr > avg_soc_degr
+
+            # test the replacement strategy
+            d["ElectricStorage"]["degradation"] = Dict("maintenance_strategy" => "replacement")
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            set_optimizer_attribute(m, "mip_rel_gap", 0.01)
+            r = run_reopt(m, d)
+
+            open("deg_results_3.json","w") do f
+                JSON.print(f, r, 4)
+            end
+
+            @test occursin("not supported by the solver", string(r["Messages"]["errors"]))
+            # #optimal SOH at end of horizon is 80\% to prevent any replacement
+            # @test sum(value.(m[:bmth_BkWh])) ≈ 0 atol=0.1
+            # # @test r["ElectricStorage"]["maintenance_cost"] ≈ 2972.66 atol=0.01 
+            # # the maintenance_cost comes out to 3004.39 on Actions, so we test the LCC since it should match
+            # @test r["Financial"]["lcc"] ≈ 1.240096e7  rtol=0.01
+            # @test last(value.(m[:SOH])) ≈ 66.633  rtol=0.01
+            # @test r["ElectricStorage"]["size_kwh"] ≈ 83.29  rtol=0.01
+
+            # test minimum_avg_soc_fraction
+            d["ElectricStorage"]["minimum_avg_soc_fraction"] = 0.72
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            set_optimizer_attribute(m, "mip_rel_gap", 0.01)
+            r = run_reopt(m, d)
+            
+            open("deg_results_4.json","w") do f
+                JSON.print(f, r, 4)
+            end
+
+            @test occursin("not supported by the solver", string(r["Messages"]["errors"]))
+            # @test round(sum(r["ElectricStorage"]["soc_series_fraction"]), digits=2) / 8760 >= 0.7199
+        end
+        @testset "Minimize Unserved Load" begin
+            d = JSON.parsefile("./scenarios/outage.json")
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
+            results = run_reopt(m, d)
+        
+            open("unserved_results_1.json","w") do f
+                JSON.print(f, results, 4)
+            end
+
+            @test results["Outages"]["expected_outage_cost"] ≈ 0 atol=0.1
+            @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 0 atol=0.1
+            @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
+            @test value(m[:binMGTechUsed]["CHP"]) ≈ 1
+            @test value(m[:binMGTechUsed]["PV"]) ≈ 1
+            @test value(m[:binMGStorageUsed]) ≈ 1
+        
+            # Increase cost of microgrid upgrade and PV Size, PV not used and some load not met
+            d["Financial"]["microgrid_upgrade_cost_fraction"] = 0.3
+            d["PV"]["min_kw"] = 200.0
+            d["PV"]["max_kw"] = 200.0
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
+            results = run_reopt(m, d)
+            open("unserved_results_2.json","w") do f
+                JSON.print(f, results, 4)
+            end
+            @test value(m[:binMGTechUsed]["PV"]) ≈ 0
+            @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 24.16 atol=0.1
+            
+            #=
+            Scenario with $0.001/kWh value_of_lost_load_per_kwh, 12x169 hour outages, 1kW load/hour, and min_resil_time_steps = 168
+            - should meet 168 kWh in each outage such that the total unserved load is 12 kWh
+            =#
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
+            results = run_reopt(m, "./scenarios/nogridcost_minresilhours.json")
+            open("unserved_results_3.json","w") do f
+                JSON.print(f, results, 4)
+            end
+            @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 12
+            
+            # testing dvUnserved load, which would output 100 kWh for this scenario before output fix
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
+            results = run_reopt(m, "./scenarios/nogridcost_multiscenario.json")
+            open("unserved_results_4.json","w") do f
+                JSON.print(f, results, 4)
+            end
+            @test sum(results["Outages"]["unserved_load_per_outage_kwh"]) ≈ 60
+            @test results["Outages"]["expected_outage_cost"] ≈ 485.43270 atol=1.0e-5  #avg duration (3h) * load per time step (10) * present worth factor (16.18109)
+            @test results["Outages"]["max_outage_cost_per_outage_duration"][1] ≈ 161.8109 atol=1.0e-5
+
+            # Scenario with generator, PV, electric storage
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
+            results = run_reopt(m, "./scenarios/outages_gen_pv_stor.json")
+            open("unserved_results_5.json","w") do f
+                JSON.print(f, results, 4)
+            end
+            @test results["Outages"]["expected_outage_cost"] ≈ 3.54476923e6 atol=10
+            @test results["Financial"]["lcc"] ≈ 8.6413594727e7 rtol=0.001
+
+            # Scenario with generator, PV, wind, electric storage
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
+            results = run_reopt(m, "./scenarios/outages_gen_pv_wind_stor.json")
+            open("unserved_results_6.json","w") do f
+                JSON.print(f, results, 4)
+            end
+            @test value(m[:binMGTechUsed]["Generator"]) ≈ 1
+            @test value(m[:binMGTechUsed]["PV"]) ≈ 1
+            @test value(m[:binMGTechUsed]["Wind"]) ≈ 1
+            @test results["Outages"]["expected_outage_cost"] ≈ 1.296319791276051e6 atol=1.0
+            @test results["Financial"]["lcc"] ≈ 4.8046446434e6 rtol=0.001
+            
+        end
+        @testset "Outages with Wind and supply-to-load no greater than critical load" begin
+            input_data = JSON.parsefile("./scenarios/wind_outages.json")
+            s = Scenario(input_data)
+            inputs = REoptInputs(s)
+            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
+            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
+            results = run_reopt([m1,m2], inputs)
+            open("out_wind_results.json","w") do f
+                JSON.print(f, results, 4)
+            end
+            
+            # Check that supply-to-load is equal to critical load during outages, including wind
+            supply_to_load = results["Outages"]["storage_discharge_series_kw"] .+ results["Outages"]["wind_to_load_series_kw"]
+            supply_to_load = [supply_to_load[:,:,i][1] for i in eachindex(supply_to_load)]
+            critical_load = results["Outages"]["critical_loads_per_outage_series_kw"][1,1,:]
+            check = .≈(supply_to_load, critical_load, atol=0.001)
+            @test !(0 in check)
+
+            # Check that the soc_series_fraction is the same length as the storage_discharge_series_kw
+            @test size(results["Outages"]["soc_series_fraction"]) == size(results["Outages"]["storage_discharge_series_kw"])
+        end
+        @testset "Wind" begin
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
+            d = JSON.parsefile("./scenarios/wind.json")
+            results = run_reopt(m, d)
+            open("wind_results_1.json","w") do f
+                JSON.print(f, results, 4)
+            end
+            @test results["Wind"]["size_kw"] ≈ 3752 atol=0.1
+            @test results["Financial"]["lcc"] ≈ 8.591017e6 rtol=1e-5
+            #= 
+            0.5% higher LCC in this package as compared to API ? 8,591,017 vs 8,551,172
+            - both have zero curtailment
+            - same energy to grid: 5,839,317 vs 5,839,322
+            - same energy to load: 4,160,683 vs 4,160,677
+            - same city: Boulder
+            - same total wind prod factor
+            
+            REopt.jl has:
+            - bigger turbine: 3752 vs 3735
+            - net_capital_costs_plus_om: 8,576,590 vs. 8,537,480
+
+            TODO: will these discrepancies be addressed once NMIL binaries are added?
+            =#
+
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
+            d["Site"]["land_acres"] = 60 # = 2 MW (with 0.03 acres/kW)
+            results = run_reopt(m, d)
+            open("wind_results_2.json","w") do f
+                JSON.print(f, results, 4)
+            end
+            @test results["Wind"]["size_kw"] == 2000.0 # Wind should be constrained by land_acres
+
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "presolve" => "on"))
+            d["Wind"]["min_kw"] = 2001 # min_kw greater than land-constrained max should error
+            results = run_reopt(m, d)
+            @test "errors" ∈ keys(results["Messages"])
+            @test length(results["Messages"]["errors"]) > 0
+        end
+    end
+else  # run HiGHS tests
     @testset "Multiple Electric Storage" begin
         model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
         r = run_reopt(model, "./scenarios/multiple_elec_storage.json")
 
-        open("debug_reopt_results.json","w") do f
-            JSON.print(f, r, 4)
-        end
-        
         @test r["PV"]["size_kw"] ≈ 216.6667 atol=0.01
         @test r["Financial"]["lcc"] ≈ 1.2391786e7 rtol=1e-5
         for stor in r["ElectricStorage"]
@@ -41,8 +237,6 @@ elseif "Debug" in ARGS
             end
         end
     end
-else  # run HiGHS tests
-    
     @testset "Inputs" begin
         @testset "hybrid profile" begin
             electric_load = REopt.ElectricLoad(; 
