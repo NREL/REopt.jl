@@ -102,16 +102,16 @@ function ASHPSpaceHeater(;
         avoided_capex_by_ashp_present_value::Real = 0.0,
         can_serve_cooling::Union{Bool, Nothing} = nothing,
         force_into_system::Union{Bool, Nothing} = nothing,
-        heating_cop_reference::AbstractVector{<:Real} = Real[],
-        heating_cf_reference::AbstractVector{<:Real} = Real[],
-        heating_reference_temps_degF::AbstractVector{<:Real} = Real[],
+        heating_cop_reference::Array{<:Real,1} = Real[],
+        heating_cf_reference::Array{<:Real,1} = Real[],
+        heating_reference_temps_degF::Array{<:Real,1} = Real[],
         back_up_temp_threshold_degF::Union{Real, Nothing} = nothing,
-        cooling_cop_reference::AbstractVector{<:Real} = Real[],
-        cooling_cf_reference::AbstractVector{<:Real} = Real[],
-        cooling_reference_temps_degF::AbstractVector{<:Real} = Real[],
-        ambient_temp_degF::AbstractVector{<:Real} = Real[],
-        heating_load::AbstractVector{<:Real} = Real[],
-        cooling_load::AbstractVector{<:Real} = Real[]
+        cooling_cop_reference::Array{<:Real,1} = Real[],
+        cooling_cf_reference::Array{<:Real,1} = Real[],
+        cooling_reference_temps_degF::Array{<:Real,1} = Real[],
+        ambient_temp_degF::Array{<:Real,1} = Real[],
+        heating_load::Array{<:Real,1} = Real[],
+        cooling_load::Array{<:Real,1} = Real[]
     )
 
     defaults = get_ashp_defaults("SpaceHeating")
@@ -151,18 +151,18 @@ function ASHPSpaceHeater(;
         throw(@error("heating_cop_reference, heating_cf_reference, and heating_reference_temps_degF must all be the same length."))
     else
         if length(heating_cop_reference) == 0
-            heating_cop_reference = Vector{Real}(defaults["heating_cop_reference"])
-            heating_cf_reference = Vector{Real}(defaults["heating_cf_reference"])
-            heating_reference_temps_degF = Vector{Real}(defaults["heating_reference_temps_degF"])
+            heating_cop_reference = defaults["heating_cop_reference"]
+            heating_cf_reference = defaults["heating_cf_reference"]
+            heating_reference_temps_degF = defaults["heating_reference_temps_degF"]
         end
     end
     if length(cooling_cop_reference) != length(cooling_cf_reference) || length(cooling_cf_reference) != length(cooling_reference_temps_degF)
         throw(@error("cooling_cop_reference, cooling_cf_reference, and cooling_reference_temps_degF must all be the same length."))
     else
         if length(cooling_cop_reference) == 0 && can_serve_cooling
-            cooling_cop_reference = Vector{Real}(defaults["cooling_cop_reference"])
-            cooling_cf_reference = Vector{Real}(defaults["cooling_cf_reference"])
-            cooling_reference_temps_degF = Vector{Real}(defaults["cooling_reference_temps_degF"])
+            cooling_cop_reference = defaults["cooling_cop_reference"]
+            cooling_cf_reference = defaults["cooling_cf_reference"]
+            cooling_reference_temps_degF = defaults["cooling_reference_temps_degF"]
         end
     end
 
@@ -286,9 +286,9 @@ function ASHPWaterHeater(;
     macrs_bonus_fraction::Real = 0.0,
     avoided_capex_by_ashp_present_value::Real = 0.0,
     force_into_system::Union{Bool, Nothing} = nothing,
-    heating_cop_reference::AbstractVector{<:Real} = Real[],
-    heating_cf_reference::AbstractVector{<:Real} = Real[],
-    heating_reference_temps_degF::AbstractVector{<:Real} = Real[],
+    heating_cop_reference::Array{<:Real,1} = Real[],
+    heating_cf_reference::Array{<:Real,1} = Real[],
+    heating_reference_temps_degF::Array{<:Real,1} = Real[],
     back_up_temp_threshold_degF::Union{Real, Nothing} = nothing,
     ambient_temp_degF::Array{<:Real,1} = Real[],
     heating_load::Array{<:Real,1} = Real[]
@@ -328,9 +328,9 @@ function ASHPWaterHeater(;
         throw(@error("heating_cop_reference, heating_cf_reference, and heating_reference_temps_degF must all be the same length."))
     else
         if length(heating_cop_reference) == 0
-            heating_cop_reference = Vector{Real}(defaults["heating_cop_reference"])
-            heating_cf_reference = Vector{Real}(defaults["heating_cf_reference"])
-            heating_reference_temps_degF = Vector{Real}(defaults["heating_reference_temps_degF"])
+            heating_cop_reference = defaults["heating_cop_reference"]
+            heating_cf_reference = defaults["heating_cf_reference"]
+            heating_reference_temps_degF = defaults["heating_reference_temps_degF"]
         end
     end
 
@@ -380,9 +380,9 @@ function ASHPWaterHeater(;
         macrs_bonus_fraction,
         can_supply_steam_turbine,
         heating_cop,
-        Real[],
+        Float64[],
         heating_cf,
-        Real[],
+        Float64[],
         can_serve_dhw,
         can_serve_space_heating,
         can_serve_process_heat,
@@ -415,18 +415,18 @@ function get_ashp_defaults(load_served::String="SpaceHeating")
 end
 
 """
-function get_ashp_performance(cop_reference::Array{<:Real,1},
-        cf_reference::Array{<:Real,1}, 
-        reference_temps::Array{<:Real,1},
-        ambient_temp_degF::Array{<:Real,1},
-        back_up_temp_threshold_degF::Real = 10.0
-    )
+function get_ashp_performance(cop_reference,
+                cf_reference,
+                reference_temps,
+                ambient_temp_degF,
+                back_up_temp_threshold_degF = 10.0
+                )
 """
-function get_ashp_performance(cop_reference::AbstractVector{<:Real} = Real[],
-    cf_reference::AbstractVector{<:Real} = Real[], 
-    reference_temps::AbstractVector{<:Real} = Real[],
-    ambient_temp_degF::AbstractVector{<:Real} = Real[],
-    back_up_temp_threshold_degF::Real = 10.0
+function get_ashp_performance(cop_reference,
+    cf_reference,
+    reference_temps,
+    ambient_temp_degF,
+    back_up_temp_threshold_degF = 10.0
     )
     num_timesteps = length(ambient_temp_degF)
     cop = zeros(num_timesteps)
@@ -466,10 +466,10 @@ function get_ashp_default_min_allowable_size(heating_load::Array{Float64},  # ti
 
 Obtains the default minimum allowable size for ASHP system.  This is calculated as half of the peak site thermal load(s) addressed by the system, including the capacity factor
 """
-function get_ashp_default_min_allowable_size(heating_load::AbstractVector{<:Real}, 
-    heating_cf::AbstractVector{<:Real} = Real[], 
-    cooling_load::AbstractVector{<:Real} = Real[], 
-    cooling_cf::AbstractVector{<:Real} = Real[],
+function get_ashp_default_min_allowable_size(heating_load::Array{<:Real,1}, 
+    heating_cf::Array{<:Real,1}, 
+    cooling_load::Array{<:Real,1} = Real[], 
+    cooling_cf::Array{<:Real,1} = Real[],
     peak_load_thermal_factor::Real = 0.5
     )
 
