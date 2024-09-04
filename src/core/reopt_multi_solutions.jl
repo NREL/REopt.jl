@@ -19,6 +19,7 @@ else
     so still at least need JULIA_NUM_THREADS=2
 
 """
+# TODO enable a p::REoptInputs type input instead of fp::String
 function run_reopt_multi_solutions(fp::String, size_scale::Union{Vector{Any},Vector{Float64}}, ms::AbstractVector{T}; 
                                     parallel=false) where T <: JuMP.AbstractModel
     # Load in input_data from .json to dictionary
