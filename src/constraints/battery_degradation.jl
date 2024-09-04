@@ -70,7 +70,7 @@ function add_degradation(m, p, b)
     @variable(m, SOH[days])
 
     add_degradation_variables(m, p)
-    constrain_degradation_variables(m, p, b=b)
+    constrain_degradation_variables(m, p, b)
 
     @constraint(m, [d in 2:days[end]],
         SOH[d] == SOH[d-1] - p.hours_per_time_step * (
