@@ -102,16 +102,16 @@ function ASHPSpaceHeater(;
         avoided_capex_by_ashp_present_value::Real = 0.0,
         can_serve_cooling::Union{Bool, Nothing} = nothing,
         force_into_system::Union{Bool, Nothing} = nothing,
-        heating_cop_reference::Array{<:Real,1} = Real[],
-        heating_cf_reference::Array{<:Real,1} = Real[],
-        heating_reference_temps_degF::Array{<:Real,1} = Real[],
+        heating_cop_reference::AbstractVector{<:Real} = Real[],
+        heating_cf_reference::AbstractVector{<:Real} = Real[],
+        heating_reference_temps_degF::AbstractVector{<:Real} = Real[],
         back_up_temp_threshold_degF::Union{Real, Nothing} = nothing,
-        cooling_cop_reference::Array{<:Real,1} = Real[],
-        cooling_cf_reference::Array{<:Real,1} = Real[],
-        cooling_reference_temps_degF::Array{<:Real,1} = Real[],
-        ambient_temp_degF::Array{<:Real,1} = Real[],
-        heating_load::Array{<:Real,1} = Real[],
-        cooling_load::Array{<:Real,1} = Real[]
+        cooling_cop_reference::AbstractVector{<:Real} = Real[],
+        cooling_cf_reference::AbstractVector{<:Real} = Real[],
+        cooling_reference_temps_degF::AbstractVector{<:Real} = Real[],
+        ambient_temp_degF::AbstractVector{<:Real} = Real[],
+        heating_load::AbstractVector{<:Real} = Real[],
+        cooling_load::AbstractVector{<:Real} = Real[]
     )
 
     defaults = get_ashp_defaults("SpaceHeating")
