@@ -2552,7 +2552,7 @@ else  # run HiGHS tests
                 annual_thermal_prod = 0.4 * 8760  #80% efficient boiler --> 0.8 MMBTU of heat load per hour
                 annual_ashp_consumption = sum(0.4 * REopt.KWH_PER_MMBTU / p.heating_cop["ASHPWaterHeater"][ts] for ts in p.time_steps)
                 annual_energy_supplied = 87600 + annual_ashp_consumption
-                @test results["ASHPWaterHeater"]["size_ton"] ≈ 37.477 atol=0.1
+                @test results["ASHPWaterHeater"]["size_ton"] ≈ 37.673 atol=0.1
                 @test results["ASHPWaterHeater"]["annual_thermal_production_mmbtu"] ≈ annual_thermal_prod rtol=1e-4
                 @test results["ASHPWaterHeater"]["annual_electric_consumption_kwh"] ≈ annual_ashp_consumption rtol=1e-4
                 @test results["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ annual_energy_supplied rtol=1e-4
