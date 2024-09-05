@@ -203,7 +203,7 @@ function ASHPSpaceHeater(;
     end
 
     if !isnothing(min_allowable_ton) && !isnothing(min_allowable_peak_capacity_fraction)
-        throw(@error("at most  one of min_allowable_ton and min_allowable_peak_capacity_fraction may be input."))
+        throw(@error("at most one of min_allowable_ton and min_allowable_peak_capacity_fraction may be input."))
     elseif !isnothing(min_allowable_ton)
         min_allowable_kw = min_allowable_ton * KWH_THERMAL_PER_TONHOUR
         @warn("user-provided minimum allowable ton is used in the place of the default; this may provided very small sizes if set to zero.")
@@ -211,7 +211,11 @@ function ASHPSpaceHeater(;
         if isnothing(min_allowable_peak_capacity_fraction)
             min_allowable_peak_capacity_fraction = 0.5
         end
-        min_allowable_kw = get_ashp_default_min_allowable_size(heating_load, heating_cf, cooling_load, cooling_cf)
+        min_allowable_kw = get_ashp_default_min_allowable_size(heating_load, heating_cf, cooling_load, cooling_cf, min_allowable_peak_capacity_fraction)
+    end
+
+    if min_allowable_kw > max_kw
+        throw(@error("The ASHPSpaceHeater minimum allowable size of $min_allowable_kw kW is larger than the maximum size of $max_kw kW."))
     end
 
     installed_cost_per_kw *= sizing_factor
@@ -367,6 +371,10 @@ function ASHPWaterHeater(;
             min_allowable_peak_capacity_fraction = 0.5
         end
         min_allowable_kw = get_ashp_default_min_allowable_size(heating_load, heating_cf, Real[], Real[], min_allowable_peak_capacity_fraction)
+    end
+
+    if min_allowable_kw > max_kw
+        throw(@error("The ASHPWaterHeater minimum allowable size of $min_allowable_kw kW is larger than the maximum size of $max_kw kW."))
     end
 
     ASHP(
