@@ -88,7 +88,7 @@ function add_ashp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
         r["thermal_to_storage_series_ton"] = zeros(length(p.time_steps))
         r["thermal_to_load_series_ton"] = zeros(length(p.time_steps))
         r["annual_thermal_production_tonhour"] = 0.0
-        @expression(m, ASHPColdElectricConsumptionSeries, 0.0)
+        @expression(m, ASHPColdElectricConsumptionSeries[ts in p.time_steps], 0.0)
         r["cooling_cop"] = zeros(length(p.time_steps))
         r["cooling_cf"] = zeros(length(p.time_steps))
     end
