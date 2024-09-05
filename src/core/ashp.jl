@@ -358,7 +358,7 @@ function ASHPWaterHeater(;
     heating_cf[heating_cop .== 1] .= 1
 
     if !isnothing(min_allowable_ton) && !isnothing(min_allowable_peak_capacity_fraction)
-        throw(@error("at most  one of min_allowable_ton and min_allowable_peak_capacity_fraction may be input."))
+        throw(@error("at most one of min_allowable_ton and min_allowable_peak_capacity_fraction may be input."))
     elseif !isnothing(min_allowable_ton)
         min_allowable_kw = min_allowable_ton * KWH_THERMAL_PER_TONHOUR
         @warn("user-provided minimum allowable ton is used in the place of the default; this may provided very small sizes if set to zero.")
