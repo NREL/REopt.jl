@@ -1,6 +1,7 @@
 # REopt®, Copyright (c) Alliance for Sustainable Energy, LLC. See also https://github.com/NREL/REopt.jl/blob/master/LICENSE.
 """
 `ExistingBoiler` results keys:
+- `size_mmbtu_per_hour`
 - `fuel_consumption_series_mmbtu_per_hour` 
 - `annual_fuel_consumption_mmbtu`
 - `thermal_production_series_mmbtu_per_hour`

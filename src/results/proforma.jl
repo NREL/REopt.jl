@@ -352,7 +352,7 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
         capital_cost = new_kw * tech.installed_cost_per_kw
     end
 
-    # owner is responsible for both new and existing PV (or Generator) maintenance in optimal case
+    # owner is responsible for only new technologies operating and maintenance cost in optimal case
     # CHP doesn't have existing CHP, and it has different O&M cost parameters
     if tech_name == "CHP"
         hours_operating = sum(results["CHP"]["electric_production_series_kw"] .> 0.0) / (8760 * p.s.settings.time_steps_per_hour)
