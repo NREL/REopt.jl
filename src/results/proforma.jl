@@ -97,7 +97,6 @@ function proforma_results(p::REoptInputs, d::Dict)
         # In the two party case the developer does not include the fuel cost in their costs
         # It is assumed that the offtaker will pay for this at a rate that is not marked up
         # to cover developer profits
-        # TODO escalate fuel cost with p.s.financial.generator_fuel_cost_escalation_rate_fraction
         fixed_and_var_om = d["Generator"]["year_one_fixed_om_cost_before_tax"] + d["Generator"]["year_one_variable_om_cost_before_tax"]
         fixed_and_var_om_bau = 0.0
         year_one_fuel_cost_bau = 0.0
@@ -131,7 +130,7 @@ function proforma_results(p::REoptInputs, d::Dict)
         update_metrics(m, p, p.s.chp, "CHP", d, third_party)
     end
 
-    # calculate (new) Boiler o+m costs (just fuel, no non-fuel operating costs currently)
+    # calculate ExistingBoiler o+m costs (just fuel, no non-fuel operating costs currently)
     # the optional installed_cost inputs assume net present cost so no option for MACRS or incentives
     if "ExistingBoiler" in keys(d) && d["ExistingBoiler"]["size_mmbtu_per_hour"] > 0
         fuel_cost = d["ExistingBoiler"]["year_one_fuel_cost_before_tax"]
@@ -150,7 +149,7 @@ function proforma_results(p::REoptInputs, d::Dict)
         m.om_series_bau += escalate_om(annual_om_bau)
     end    
 
-    # calculate (new) Boiler o+m costs and depreciation (no incentives currently)
+    # calculate (new) Boiler o+m costs and depreciation (no incentives currently, other than MACRS)
     if "Boiler" in keys(d) && d["Boiler"]["size_mmbtu_per_hour"] > 0
         fuel_cost = d["Boiler"]["year_one_fuel_cost_before_tax"]
         m.om_series += escalate_fuel(-1 * fuel_cost, p.s.financial.boiler_fuel_cost_escalation_rate_fraction)
@@ -166,7 +165,7 @@ function proforma_results(p::REoptInputs, d::Dict)
         end
     end
 
-    # calculate Steam Turbine o+m costs and depreciation (no incentives currently)
+    # calculate Steam Turbine o+m costs and depreciation (no incentives currently, other than MACRS)
     if "SteamTurbine" in keys(d) && get(d["SteamTurbine"], "size_kw", 0) > 0
         fixed_om = p.s.steam_turbine.om_cost_per_kw * d["SteamTurbine"]["size_kw"]
         var_om = p.s.steam_turbine.om_cost_per_kwh * d["SteamTurbine"]["annual_electric_production_kwh"]
@@ -180,7 +179,7 @@ function proforma_results(p::REoptInputs, d::Dict)
         end
     end     
 
-    # calculate Absorption Chiller o+m costs and depreciation (no incentives currently)
+    # calculate Absorption Chiller o+m costs and depreciation (no incentives currently, other than MACRS)
     if "AbsorptionChiller" in keys(d) && d["AbsorptionChiller"]["size_ton"] > 0
         # Some thermal techs (e.g. Boiler) only have struct fields for O&M "per_kw" (converted from e.g. per_mmbtu_per_hour or per_ton)
         #   but Absorption Chiller also has the input-style "per_ton" O&M, so no need to convert like for Boiler
