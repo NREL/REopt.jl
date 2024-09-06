@@ -8,6 +8,8 @@ mutable struct Metrics
     federal_itc::Float64
     om_series::Array{Float64, 1}
     om_series_bau::Array{Float64, 1}
+    fuel_cost_series::Array{Float64, 1}
+    fuel_cost_series_bau::Array{Float64, 1}
     total_pbi::Array{Float64, 1}
     total_pbi_bau::Array{Float64, 1}
     total_depreciation::Array{Float64, 1}
@@ -52,7 +54,7 @@ function proforma_results(p::REoptInputs, d::Dict)
     third_party = p.s.financial.third_party_ownership
     
     # Create placeholder variables to store summed totals across all relevant techs
-    m = Metrics(0, zeros(years), zeros(years), zeros(years), zeros(years), zeros(years), 0)
+    m = Metrics(0, zeros(years), zeros(years), zeros(years), zeros(years), zeros(years), zeros(years), zeros(years), 0)
 
     # calculate PV o+m costs, incentives, and depreciation
     for pv in p.s.pvs
@@ -119,10 +121,10 @@ function proforma_results(p::REoptInputs, d::Dict)
             annual_om_bau = -1 * fixed_and_var_om_bau
         end
 
-        m.om_series += escalate_fuel(annual_fuel, p.s.financial.generator_fuel_cost_escalation_rate_fraction)
         m.om_series += escalate_om(annual_om)
-        m.om_series_bau += escalate_fuel(annual_fuel_bau, p.s.financial.generator_fuel_cost_escalation_rate_fraction)
+        m.fuel_cost_series += escalate_fuel(annual_fuel, p.s.financial.generator_fuel_cost_escalation_rate_fraction)
         m.om_series_bau += escalate_om(annual_om_bau)
+        m.fuel_cost_series_bau += escalate_fuel(annual_fuel_bau, p.s.financial.generator_fuel_cost_escalation_rate_fraction)
     end
 
     # calculate CHP o+m costs, incentives, and depreciation
@@ -134,7 +136,7 @@ function proforma_results(p::REoptInputs, d::Dict)
     # the optional installed_cost inputs assume net present cost so no option for MACRS or incentives
     if "ExistingBoiler" in keys(d) && d["ExistingBoiler"]["size_mmbtu_per_hour"] > 0
         fuel_cost = d["ExistingBoiler"]["year_one_fuel_cost_before_tax"]
-        m.om_series += escalate_fuel(-1 * fuel_cost, p.s.financial.existing_boiler_fuel_cost_escalation_rate_fraction)
+        m.fuel_cost_series += escalate_fuel(-1 * fuel_cost, p.s.financial.existing_boiler_fuel_cost_escalation_rate_fraction)
         var_om = 0.0
         fixed_om = 0.0
         annual_om = -1 * (var_om + fixed_om)
@@ -142,7 +144,7 @@ function proforma_results(p::REoptInputs, d::Dict)
         
         # BAU ExistingBoiler
         fuel_cost_bau = d["ExistingBoiler"]["year_one_fuel_cost_before_tax_bau"]
-        m.om_series_bau += escalate_fuel(-1 * fuel_cost_bau, p.s.financial.existing_boiler_fuel_cost_escalation_rate_fraction)
+        m.fuel_cost_series_bau += escalate_fuel(-1 * fuel_cost_bau, p.s.financial.existing_boiler_fuel_cost_escalation_rate_fraction)
         var_om_bau = 0.0
         fixed_om_bau = 0.0
         annual_om_bau = -1 * (var_om_bau + fixed_om_bau)
@@ -152,7 +154,7 @@ function proforma_results(p::REoptInputs, d::Dict)
     # calculate (new) Boiler o+m costs and depreciation (no incentives currently, other than MACRS)
     if "Boiler" in keys(d) && d["Boiler"]["size_mmbtu_per_hour"] > 0
         fuel_cost = d["Boiler"]["year_one_fuel_cost_before_tax"]
-        m.om_series += escalate_fuel(-1 * fuel_cost, p.s.financial.boiler_fuel_cost_escalation_rate_fraction)
+        m.fuel_cost_series += escalate_fuel(-1 * fuel_cost, p.s.financial.boiler_fuel_cost_escalation_rate_fraction)
         var_om = p.s.boiler.om_cost_per_kwh * d["Boiler"]["annual_thermal_production_mmbtu"] * KWH_PER_MMBTU
         fixed_om = p.s.boiler.om_cost_per_kw * d["Boiler"]["size_mmbtu_per_hour"] * KWH_PER_MMBTU
         annual_om = -1 * (var_om + fixed_om)
@@ -209,7 +211,7 @@ function proforma_results(p::REoptInputs, d::Dict)
         total_operating_expenses = m.om_series
         tax_rate_fraction = p.s.financial.owner_tax_rate_fraction
     else
-        total_operating_expenses = electricity_bill_series + export_credit_series + m.om_series
+        total_operating_expenses = electricity_bill_series + export_credit_series + m.om_series + m.fuel_cost_series
         tax_rate_fraction = p.s.financial.offtaker_tax_rate_fraction
     end
 
@@ -257,20 +259,8 @@ function proforma_results(p::REoptInputs, d::Dict)
 
         annual_income_from_host_series = repeat([-1 * r["annualized_payment_to_third_party"]], years)
 
-        if "Generator" in keys(d) && d["Generator"]["size_kw"] > 0
-            generator_fuel_cost_series = escalate_om(-1 * d["Generator"]["year_one_fuel_cost_before_tax"])
-            if p.s.generator.existing_kw > 0
-                existing_genertor_fuel_cost_series = escalate_om(-1 * d["Generator"]["year_one_fuel_cost_before_tax_bau"])
-            else
-                existing_genertor_fuel_cost_series = zeros(years)
-            end
-        else
-            existing_genertor_fuel_cost_series = zeros(years)
-            generator_fuel_cost_series = zeros(years)
-        end
-        net_energy_costs = -electricity_bill_series_bau - export_credit_series_bau + electricity_bill_series + 
-                           export_credit_series + annual_income_from_host_series - existing_genertor_fuel_cost_series + 
-                           generator_fuel_cost_series
+        net_energy_costs = -electricity_bill_series_bau - export_credit_series_bau - m.fuel_cost_series_bau + electricity_bill_series + 
+                           export_credit_series + annual_income_from_host_series + m.fuel_cost_series
 
         if p.s.financial.owner_tax_rate_fraction > 0
             deductable_net_energy_costs = copy(net_energy_costs)
@@ -279,16 +269,16 @@ function proforma_results(p::REoptInputs, d::Dict)
         end
 
         r["offtaker_annual_free_cashflows"] = append!([0.0], 
-            electricity_bill_series + export_credit_series + generator_fuel_cost_series + annual_income_from_host_series
+            electricity_bill_series + export_credit_series + m.fuel_cost_series + annual_income_from_host_series
         )
         r["offtaker_annual_free_cashflows_bau"] = append!([0.0], 
-            electricity_bill_series_bau + export_credit_series_bau + existing_genertor_fuel_cost_series
+            electricity_bill_series_bau + export_credit_series_bau + m.fuel_cost_series_bau
             )
 
     else  # get cumulative cashflow for offtaker
         electricity_bill_series_bau = escalate_elec(d["ElectricTariff"]["year_one_bill_before_tax_bau"])
         export_credit_series_bau = escalate_elec(-d["ElectricTariff"]["year_one_export_benefit_before_tax_bau"])
-        total_operating_expenses_bau = electricity_bill_series_bau + export_credit_series_bau + m.om_series_bau
+        total_operating_expenses_bau = electricity_bill_series_bau + export_credit_series_bau + m.om_series_bau + m.fuel_cost_series_bau
         total_cash_incentives_bau = m.total_pbi_bau * (1 - p.s.financial.offtaker_tax_rate_fraction)
 
         if p.s.financial.offtaker_tax_rate_fraction > 0
@@ -372,7 +362,7 @@ function update_metrics(m::Metrics, p::REoptInputs, tech::AbstractTech, tech_nam
     if tech_name == "CHP"
         escalate_fuel(val, esc_rate) = [val * (1 + esc_rate)^yr for yr in 1:years]
         fuel_cost = results["CHP"]["year_one_fuel_cost_before_tax"]
-        m.om_series += escalate_fuel(-1 * fuel_cost, p.s.financial.chp_fuel_cost_escalation_rate_fraction)
+        m.fuel_cost_series += escalate_fuel(-1 * fuel_cost, p.s.financial.chp_fuel_cost_escalation_rate_fraction)
     end
 
     # incentive calculations, in the spreadsheet utility incentives are applied first
