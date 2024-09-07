@@ -23,7 +23,15 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop 08-09-2024
+## Develop 2024-09-07
+### Added
+- Added new inputs **om_cost_per_kw** and **om_cost_per_kwh** to `ElectricStorage` for modeling capacity-based O&M 
+- Added new input **soc_based_per_ts_self_discharge_fraction** to `ElectricStorage` for modeling SOC-based battery self-discharge
+- Added new input **capacity_based_per_ts_self_discharge_fraction** to `ElectricStorage` for modeling capacity-based battery self-discharge
+- Added new outputs **lifecycle_om_cost_after_tax** and **year_one_om_cost_before_tax** to `ElectricStorage` 
+- Added testsets **Electric Storage O&M** and **Electric Storage Self-Discharge** in `test/runtests.jl`
+
+## v0.47.3
 ### Changed
 - Improve the full test suite reporting with a verbose summary table, and update the structure to reflect long-term open-source solver usage
 - Removed MacOS from the runner list and just run with Windows OS, since MacOS commonly freezes and gets cancelled. We have not seen Windows OS pass while other OS's fail. .
