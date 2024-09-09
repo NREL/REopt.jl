@@ -483,7 +483,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
         # Call PVWatts for hourly dry-bulb outdoor air temperature
         ambient_temp_degF = []
         if (!haskey(d["GHP"]["ghpghx_inputs"][1], "ambient_temperature_f") || isempty(d["GHP"]["ghpghx_inputs"][1]["ambient_temperature_f"])) &&
-            isnothing(site.outdoor_air_temp_degF)
+            isnothing(site.outdoor_air_temperature_degF)
             # If PV is evaluated and we need to call PVWatts for ambient temperature, assign PV production factor here too with the same call
             # By assigning pv.production_factor_series here, it will skip the PVWatts call in get_production_factor(PV) call from reopt_input.jl
             if !isempty(pvs)
@@ -495,14 +495,14 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             else
                 pv_prodfactor, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; time_steps_per_hour=settings.time_steps_per_hour)    
             end
-            site.outdoor_air_temp_degF = ambient_temp_celsius * 1.8 .+ 32.0
-        elseif isnothing(site.outdoor_air_temp_degF)
-            site.outdoor_air_temp_degF = d["GHP"]["ghpghx_inputs"][1]["ambient_temperature_f"]
+            site.outdoor_air_temperature_degF = ambient_temp_celsius * 1.8 .+ 32.0
+        elseif isnothing(site.outdoor_air_temperature_degF)
+            site.outdoor_air_temperature_degF = d["GHP"]["ghpghx_inputs"][1]["ambient_temperature_f"]
         end
         
         for i in 1:number_of_ghpghx
             ghpghx_inputs = d["GHP"]["ghpghx_inputs"][i]
-            d["GHP"]["ghpghx_inputs"][i]["ambient_temperature_f"] = site.outdoor_air_temp_degF
+            d["GHP"]["ghpghx_inputs"][i]["ambient_temperature_f"] = site.outdoor_air_temperature_degF
             # Only SpaceHeating portion of Heating Load gets served by GHP, unless allowed by can_serve_dhw
             if get(ghpghx_inputs, "heating_thermal_load_mmbtu_per_hr", []) in [nothing, []]
                 if get(d["GHP"], "can_serve_dhw", false)  # This is assuming the default stays false
@@ -673,7 +673,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             end
             
             # If PV is evaluated, get ambient temperature series from PVWatts and assign PV production factor
-            if isnothing(site.outdoor_air_temp_degF)
+            if isnothing(site.outdoor_air_temperature_degF)
                 if !isempty(pvs)
                     for pv in pvs
                         pv.production_factor_series, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
@@ -684,10 +684,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     # if PV is not evaluated, call PVWatts to get ambient temperature series
                     pv_prodfactor, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; time_steps_per_hour=settings.time_steps_per_hour)    
                 end
-                site.outdoor_air_temp_degF = (9/5 .* ambient_temp_celsius) .+ 32
+                site.outdoor_air_temperature_degF = (9/5 .* ambient_temp_celsius) .+ 32
             end
 
-            d["ASHPSpaceHeater"]["ambient_temp_degF"] = site.outdoor_air_temp_degF
+            d["ASHPSpaceHeater"]["ambient_temp_degF"] = site.outdoor_air_temperature_degF
             d["ASHPSpaceHeater"]["heating_load"] = space_heating_load.loads_kw
             d["ASHPSpaceHeater"]["cooling_load"] = cooling_load.loads_kw_thermal
 
@@ -714,7 +714,7 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
             end
             
             # If PV is evaluated, get ambient temperature series from PVWatts and assign PV production factor
-            if isnothing(site.outdoor_air_temp_degF)
+            if isnothing(site.outdoor_air_temperature_degF)
                 if !isempty(pvs)
                     for pv in pvs
                         pv.production_factor_series, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; tilt=pv.tilt, azimuth=pv.azimuth, module_type=pv.module_type, 
@@ -725,10 +725,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
                     # if PV is not evaluated, call PVWatts to get ambient temperature series
                     pv_prodfactor, ambient_temp_celsius = call_pvwatts_api(site.latitude, site.longitude; time_steps_per_hour=settings.time_steps_per_hour)    
                 end
-                site.outdoor_air_temp_degF = (9/5 .* ambient_temp_celsius) .+ 32
+                site.outdoor_air_temperature_degF = (9/5 .* ambient_temp_celsius) .+ 32
             end
 
-            d["ASHPWaterHeater"]["ambient_temp_degF"] = site.outdoor_air_temp_degF
+            d["ASHPWaterHeater"]["ambient_temp_degF"] = site.outdoor_air_temperature_degF
             d["ASHPWaterHeater"]["heating_load"] = dhw_load.loads_kw
 
             ashp_wh = ASHPWaterHeater(;dictkeys_tosymbols(d["ASHPWaterHeater"])...)
