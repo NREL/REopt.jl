@@ -647,7 +647,7 @@ function cambium_profile(; scenario::String,
             # "location" => "Colorado", # e.g., Contiguous United States, Colorado, Kansas, p33, p34 
             "latitude" => string(round(latitude, digits=3)),
             "longitude" => string(round(longitude, digits=3)), 
-            "start_year" => string(start_year), # biennial from 2022-2050 (data year covers nominal year and years proceeding; e.g., 2040 values cover time range starting in 2036)
+            "start_year" => string(start_year), # biennial from 2022-2050 (data year covers nominal year and years proceeding; e.g., 2040 values cover time range starting in 2036) # The 2023 release has five-year time steps from 2025 through 2050
             "lifetime" => string(lifetime), # Integer 1 or greater (Default 25 yrs)
             "discount_rate" => "0.0", # Zero = simple average (a pwf with discount rate gets applied to projected CO2 costs, but not quantity.)
             "time_type" => "hourly", # hourly or annual
