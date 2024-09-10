@@ -90,7 +90,7 @@ function add_generator_results(m::JuMP.AbstractModel, p::MPCInputs, d::Dict; _n=
 	r["variable_om_cost"] = round(value(m[:TotalPerUnitProdOMCosts]), digits=0)
 	r["fuel_cost"] = round(value(m[:TotalGenFuelCosts]), digits=2)
 
-    if p.s.storage.attr["ElectricStorage"].size_kw > 0
+	if any([p.s.storage.attr[b].size_kw for b in p.s.storage.types.elec] .> 0)
         generatorToBatt = @expression(m, [ts in p.time_steps],
             sum(m[:dvProductionToStorage][b, t, ts] for b in p.s.storage.types.elec, t in p.techs.gen))
         r["to_battery_series_kw"] = round.(value.(generatorToBatt), digits=3).data
