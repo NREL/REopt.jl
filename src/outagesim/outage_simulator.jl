@@ -223,6 +223,8 @@ Returns a dict
 ```
 """
 function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
+    batt_roundtrip_efficiency = (p.s.storage.attr["ElectricStorage"].charge_efficiency *
+                                p.s.storage.attr["ElectricStorage"].discharge_efficiency)
 
     # TODO handle generic PV names
     pv_kw_ac_hourly = zeros(length(p.time_steps))
@@ -262,7 +264,6 @@ function simulate_outages(d::Dict, p::REoptInputs; microgrid_only::Bool=false)
     end
     batt_roundtrip_efficiency = (p.s.storage.attr[elec_stor_name].charge_efficiency *
                                 p.s.storage.attr[elec_stor_name].discharge_efficiency)
-
     if microgrid_only && !Bool(get(d["Outages"], "electric_storage_microgrid_upgraded", false))
         batt_kwh = 0
         batt_kw = 0

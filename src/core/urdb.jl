@@ -12,15 +12,15 @@ Contains some of the data for ElectricTariff
 """
 struct URDBrate
     energy_rates::Array{Float64,2}  # time X tier
-    energy_tier_limits::Array{Real,1}
+    energy_tier_limits::Array{Float64,2} # month X tier
     n_energy_tiers::Int
 
     n_monthly_demand_tiers::Int
-    monthly_demand_tier_limits::Array{Real,1}
+    monthly_demand_tier_limits::Array{Float64,2} # month X tier
     monthly_demand_rates::Array{Float64,2}  # month X tier
 
     n_tou_demand_tiers::Int
-    tou_demand_tier_limits::Array{Real,1}
+    tou_demand_tier_limits::Array{Float64,2} # ratchet X tier
     tou_demand_rates::Array{Float64,2}  # ratchet X tier
     tou_demand_ratchet_time_steps::Array{Array{Int64,1},1}  # length = n_tou_demand_ratchets
 
@@ -87,7 +87,6 @@ function URDBrate(urdb_response::Dict, year::Int; time_steps_per_hour=1)
         parse_urdb_energy_costs(urdb_response, year; time_steps_per_hour=time_steps_per_hour)
 
     fixed_monthly_charge, annual_min_charge, min_monthly_charge = parse_urdb_fixed_charges(urdb_response)
-
 
     demand_lookback_months, demand_lookback_percent, demand_lookback_range = parse_urdb_lookback_charges(urdb_response)
 
@@ -196,61 +195,42 @@ end
 
 
 """
-    parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM = 1.0e8)
+    parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM = 1.0e10)
 
 use URDB dict to return rates, energy_cost_vector, energy_tier_limits_kwh where:
     - rates is vector summary of rates within URDB (used for average rates when necessary)
     - energy_cost_vector is a vector of vectors with inner vectors for each energy rate tier,
         inner vectors are costs in each time step
-    - energy_tier_limits_kwh is a vector of upper kWh limits for each energy tier
+    - energy_tier_limits_kwh is a matrix of upper kWh limits for each energy tier, for each month
 """
-function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM = 1.0e8)
+function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM = 1.0e10)
     if length(d["energyratestructure"]) == 0
         throw(@error("No energyratestructure in URDB response."))
     end
-    # TODO check bigM (in multiple functions)
-    energy_tiers = Float64[]
-    for energy_rate in d["energyratestructure"]
-        append!(energy_tiers, length(energy_rate))
-    end
-    energy_tier_set = Set(energy_tiers)
-    if length(energy_tier_set) > 1
-        @warn "Energy periods contain different numbers of tiers, using limits of period with most tiers."
-    end
-    period_with_max_tiers = findall(energy_tiers .== maximum(energy_tiers))[1]
-    n_energy_tiers = Int(maximum(energy_tier_set))
-
-    energy_tier_limits_kwh = Float64[]
-
-    for energy_tier in d["energyratestructure"][period_with_max_tiers]
-        # energy_tier is a dictionary, eg. {'max': 1000, 'rate': 0.07531, 'adj': 0.0119, 'unit': 'kWh'}
-        energy_tier_max = get(energy_tier, "max", bigM)
-
-        if "rate" in keys(energy_tier) || "adj" in keys(energy_tier)  || "sell" in keys(energy_tier)
-            append!(energy_tier_limits_kwh, energy_tier_max)
-        end
-
-        if "unit" in keys(energy_tier) && string(energy_tier["unit"]) != "kWh"
-            throw(@error("URDB energy tiers have exotic units of " * energy_tier["unit"]))
-        end
-    end
-
+    n_energy_tiers = scrub_urdb_tiers!(d["energyratestructure"])
     energy_cost_vector = Float64[]
     sell_vector = Float64[]
+    energy_tier_limits_kwh = Array{Float64}(undef, 12, n_energy_tiers)
 
     for tier in range(1, stop=n_energy_tiers)
 
         for month in range(1, stop=12)
+            # NOTE: periods are zero indexed in URDB
+            period = Int(d["energyweekdayschedule"][month][1] + 1)
+            for tier in range(1, stop=n_energy_tiers)
+                # tiered energy schedules are assumed to be consistent for each month (i.e., the first hour can represent all 24 hours of the schedule).
+                tier_limit = get(d["energyratestructure"][period][tier], "max", bigM)
+                energy_tier_limits_kwh[month, tier] = round(tier_limit, digits=3)
+            end
+
             n_days = daysinmonth(Date(string(year) * "-" * string(month)))
             if month == 2 && isleapyear(year)
                 n_days -= 1
             end
 
             for day in range(1, stop=n_days)
-
                 for hour in range(1, stop=24)
-
-                    # NOTE: periods are zero indexed
+                    # NOTE: periods are zero indexed in URDB
                     if dayofweek(Date(year, month, day)) < 6  # Monday == 1
                         period = Int(d["energyweekdayschedule"][month][hour] + 1)
                     else
@@ -264,6 +244,9 @@ function parse_urdb_energy_costs(d::Dict, year::Int; time_steps_per_hour=1, bigM
                         tier_use = n_tiers_in_period
                     else
                         tier_use = tier
+                    end
+                    if "unit" in keys(d["energyratestructure"][period][tier_use]) && string(d["energyratestructure"][period][tier_use]["unit"]) != "kWh"
+                        throw(@error("URDB energy tiers have non-standard units of " * d["energyratestructure"][period][tier_use]["unit"]))
                     end
                     total_rate = (get(d["energyratestructure"][period][tier_use], "rate", 0) + 
                                 get(d["energyratestructure"][period][tier_use], "adj", 0)) 
@@ -296,27 +279,22 @@ end
     parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
 
 Parse monthly ("flat") and TOU demand rates
-    can modify URDB dict when there is inconsistent numbers of tiers in rate structures
 """
 function parse_demand_rates(d::Dict, year::Int; bigM=1.0e8, time_steps_per_hour::Int)
     if haskey(d, "flatdemandstructure")
-        scrub_urdb_demand_tiers!(d["flatdemandstructure"])
-        monthly_demand_tier_limits = parse_urdb_demand_tiers(d["flatdemandstructure"])
-        n_monthly_demand_tiers = length(monthly_demand_tier_limits)
-        monthly_demand_rates = parse_urdb_monthly_demand(d, n_monthly_demand_tiers)
+        n_monthly_demand_tiers = scrub_urdb_tiers!(d["flatdemandstructure"])
+        monthly_demand_rates, monthly_demand_tier_limits = parse_urdb_monthly_demand(d, n_monthly_demand_tiers; bigM)
     else
-        monthly_demand_tier_limits = []
+        monthly_demand_tier_limits = Array{Float64,2}(undef, 0, 0)
         n_monthly_demand_tiers = 1
         monthly_demand_rates = Array{Float64,2}(undef, 0, 0)
     end
 
     if haskey(d, "demandratestructure")
-        scrub_urdb_demand_tiers!(d["demandratestructure"])
-        tou_demand_tier_limits = parse_urdb_demand_tiers(d["demandratestructure"])
-        n_tou_demand_tiers = length(tou_demand_tier_limits)
-        ratchet_time_steps, tou_demand_rates = parse_urdb_tou_demand(d, year=year, n_tiers=n_tou_demand_tiers, time_steps_per_hour=time_steps_per_hour)
+        n_tou_demand_tiers = scrub_urdb_tiers!(d["demandratestructure"])
+        ratchet_time_steps, tou_demand_rates, tou_demand_tier_limits = parse_urdb_tou_demand(d, year=year, n_tiers=n_tou_demand_tiers, time_steps_per_hour=time_steps_per_hour)
     else
-        tou_demand_tier_limits = []
+        tou_demand_tier_limits = Array{Float64,2}(undef, 0, 0)
         n_tou_demand_tiers = 0
         ratchet_time_steps = []
         tou_demand_rates = Array{Float64,2}(undef, 0, 0)
@@ -329,11 +307,11 @@ end
 
 
 """
-    scrub_urdb_demand_tiers!(A::Array)
+scrub_urdb_tiers!(A::Array)
 
-validate flatdemandstructure and demandratestructure have equal number of tiers across periods
+validate energyratestructure, flatdemandstructure and demandratestructure have equal number of tiers across periods
 """
-function scrub_urdb_demand_tiers!(A::Array)
+function scrub_urdb_tiers!(A::Array)
     if length(A) == 0
         return
     end
@@ -342,7 +320,7 @@ function scrub_urdb_demand_tiers!(A::Array)
     n_tiers = maximum(len_tiers_set)
 
     if length(len_tiers_set) > 1
-        @warn "Demand rate structure has varying number of tiers in periods. Making the number of tiers the same across all periods by repeating the last tier."
+        @warn "Rate structure has varying number of tiers in periods. Making the number of tiers the same across all periods by repeating the last tier in each period."
         for (i, rate) in enumerate(A)
             n_tiers_in_period = length(rate)
             if n_tiers_in_period != n_tiers
@@ -355,49 +333,16 @@ function scrub_urdb_demand_tiers!(A::Array)
             end
         end
     end
+    return n_tiers
 end
 
 
 """
-    parse_urdb_demand_tiers(A::Array; bigM=1.0e8)
-
-set up and validate demand tiers
-    returns demand_tiers::Array{Float64, n_tiers}
-"""
-function parse_urdb_demand_tiers(A::Array; bigM=1.0e8)
-    if length(A) == 0
-        return []
-    end
-    len_tiers = Int[length(r) for r in A]
-    n_tiers = maximum(len_tiers)
-    period_with_max_tiers = findall(len_tiers .== maximum(len_tiers))[1]
-
-    # set up tiers and validate that the highest tier has the same value across periods
-    demand_tiers = Dict()
-    demand_maxes = Float64[]
-    for period in range(1, stop=length(A))
-        demand_max = Float64[]
-        for tier in A[period] 
-            append!(demand_max, get(tier, "max", bigM))
-        end
-        demand_tiers[period] = demand_max
-        append!(demand_maxes, demand_max[end])  # TODO should this be maximum(demand_max)?
-    end
-
-    # test if the highest tier is the same across all periods
-    if length(Set(demand_maxes)) > 1
-        @warn "Highest demand tiers do not match across periods: using max tier from largest set of tiers."
-    end
-    return demand_tiers[period_with_max_tiers]
-end
-
-
-"""
-    parse_urdb_monthly_demand(d::Dict)
+    parse_urdb_monthly_demand(d::Dict, n_tiers; bigM=1.0e8)
 
 return monthly demand rates as array{month, tier}
 """
-function parse_urdb_monthly_demand(d::Dict, n_tiers)
+function parse_urdb_monthly_demand(d::Dict, n_tiers; bigM=1.0e8)
     if !haskey(d, "flatdemandmonths")
         return []
     end
@@ -406,15 +351,17 @@ function parse_urdb_monthly_demand(d::Dict, n_tiers)
     end
 
     demand_rates = zeros(12, n_tiers)  # array(month, tier)
+    demand_tier_limits = zeros(12, n_tiers)
     for month in range(1, stop=12)
         period = d["flatdemandmonths"][month] + 1  # URDB uses zero-indexing
         rates = d["flatdemandstructure"][period]  # vector of dicts
 
         for (t, tier) in enumerate(rates)
             demand_rates[month, t] = round(get(tier, "rate", 0.0) + get(tier, "adj", 0.0), digits=6)
+            demand_tier_limits[month, t] = round(get(tier, "max", bigM), digits=6)
         end
     end
-    return demand_rates
+    return demand_rates, demand_tier_limits
 end
 
 
@@ -423,13 +370,14 @@ end
 
 return array of arrary for ratchet time steps, tou demand rates array{ratchet, tier}
 """
-function parse_urdb_tou_demand(d::Dict; year::Int, n_tiers::Int, time_steps_per_hour::Int)
+function parse_urdb_tou_demand(d::Dict; year::Int, n_tiers::Int, time_steps_per_hour::Int, bigM=1.0e8)
     if !haskey(d, "demandratestructure")
         return [], []
     end
     n_periods = length(d["demandratestructure"])
     ratchet_time_steps = Array[]
     rates_vec = Float64[]  # array(ratchet_num, tier), reshape later
+    limits_vec = Float64[] # array(ratchet_num, tier), reshape later
     n_ratchets = 0  # counter
 
     for month in range(1, stop=12)
@@ -440,13 +388,15 @@ function parse_urdb_tou_demand(d::Dict; year::Int, n_tiers::Int, time_steps_per_
                 append!(ratchet_time_steps, [time_steps])
                 for (t, tier) in enumerate(d["demandratestructure"][period])
                     append!(rates_vec, round(get(tier, "rate", 0.0) + get(tier, "adj", 0.0), digits=6))
+                    append!(limits_vec, round(get(tier, "max", bigM), digits=3))
                 end
             end
         end
     end
     rates = reshape(rates_vec, (n_tiers, :))'  # Array{Float64,2}
+    limits = reshape(limits_vec, (n_tiers, :))'  # Array{Float64,2}
     ratchet_time_steps = convert(Array{Array{Int64,1},1}, ratchet_time_steps)
-    return ratchet_time_steps, rates
+    return ratchet_time_steps, rates, limits
 end
 
 
