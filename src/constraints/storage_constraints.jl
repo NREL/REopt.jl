@@ -27,10 +27,10 @@ end
 function add_general_storage_dispatch_constraints(m, p, b; _n="")
     # Constraint (4a): initial and final state of charge
     if hasproperty(p.s.storage.attr[b], :optimize_soc_init_fraction) && p.s.storage.attr[b].optimize_soc_init_fraction
-        # @constraint(m, m[:dvStoredEnergy]["ElectricStorage",maximum(p.time_steps)] == p.s.storage.attr[b].soc_init_fraction * m[Symbol("dvStorageEnergy"*_n)][b] )
+        # @constraint(m, m[:dvStoredEnergy][b,maximum(p.time_steps)] == p.s.storage.attr[b].soc_init_fraction * m[Symbol("dvStorageEnergy"*_n)][b] )
         print("\nOptimizing "*b*" inital SOC and constraining initial SOC = final SOC\n")
         @constraint(m,
-            m[Symbol("dvStoredEnergy"*_n)][b, 0] == m[:dvStoredEnergy]["ElectricStorage", maximum(p.time_steps)]
+            m[Symbol("dvStoredEnergy"*_n)][b, 0] == m[:dvStoredEnergy][b, maximum(p.time_steps)]
         )
     else
         @constraint(m,

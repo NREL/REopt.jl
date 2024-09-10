@@ -34,10 +34,10 @@ Returns a Dict of results with keys matching those in the `MPCScenario`.
 function run_mpc(m::JuMP.AbstractModel, p::MPCInputs)
     build_mpc!(m, p)
 
-    if !p.s.settings.add_soc_incentive || !("ElectricStorage" in p.s.storage.types.elec)
+    if !p.s.settings.add_soc_incentive || isempty(p.s.storage.types.elec)
 		@objective(m, Min, m[:Costs])
 	else # Keep SOC high
-		@objective(m, Min, m[:Costs] - sum(m[:dvStoredEnergy]["ElectricStorage", ts] for ts in p.time_steps) /
+		@objective(m, Min, m[:Costs] - sum(m[:dvStoredEnergy][b, ts] for ts in p.time_steps, b in p.s.storage.types.elec) /
 									   (8760. / p.hours_per_time_step)
 		)
 	end
@@ -259,8 +259,8 @@ function add_variables!(m::JuMP.AbstractModel, p::MPCInputs)
     m[:dvSize] = p.existing_sizes
 
 	for b in p.s.storage.types.all
-		fix(m[:dvStoragePower][b], p.s.storage.attr["ElectricStorage"].size_kw, force=true)
-		fix(m[:dvStorageEnergy][b], p.s.storage.attr["ElectricStorage"].size_kwh, force=true)
+		fix(m[:dvStoragePower][b], p.s.storage.attr[b].size_kw, force=true)
+		fix(m[:dvStorageEnergy][b], p.s.storage.attr[b].size_kwh, force=true)
 	end
 
 	# not modeling min charges since control does not affect them
