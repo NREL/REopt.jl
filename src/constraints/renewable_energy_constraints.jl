@@ -50,7 +50,7 @@ function add_re_elec_calcs(m,p)
 	# 	))
 	# end
 
-	if !isnothing(p.s.fuel_cell)
+	if :fuel_cell in fieldnames(typeof(p.s)) && !isnothing(p.s.fuel_cell)
 		m[:AnnualREEleckWh] = @expression(m,p.hours_per_time_step * (
 				sum(p.production_factor[t,ts] * p.levelization_factor[t] * m[:dvRatedProduction][t,ts] * 
 					p.tech_renewable_energy_fraction[t] for t in p.techs.elec, ts in p.time_steps
