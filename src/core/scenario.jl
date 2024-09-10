@@ -53,7 +53,7 @@ A Scenario struct can contain the following keys:
 - [SteamTurbine](@ref) (optional)
 - [ElectricHeater](@ref) (optional)
 
-All values of `d` are expected to be `Dicts` except for `PV` and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
+All values of `d` are expected to be `Dicts` except for `PV`, `ElectricStorage`, and `GHP`, which can be either a `Dict` or `Dict[]` (for multiple PV arrays or GHP options).
 
 !!! note 
     Set `flex_hvac_from_json=true` if `FlexibleHVAC` values were loaded in from JSON (necessary to 
