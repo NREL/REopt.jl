@@ -31,12 +31,14 @@ Classify the change according to the following categories:
 - Updated/specified User-Agent header of "REopt.jl" for PVWatts and Wind Toolkit API requests; default before was "HTTP.jl"; this allows specific tracking of REopt.jl usage which call PVWatts and Wind Toolkit through api.data.gov.
 - Improves DRY coding by replacing multiple instances of the same chunks of code for MACRS deprecation and CHP capital cost into functions that are now in financial.jl.
 - Simplifies the CHP sizing test to avoid a ~30 minute solve time, by avoiding the fuel burn y-intercept binaries which come with differences between full-load and part-load efficiency.
+- For third party analysis proforma.jl metrics, O&M cost for existing Generator is now kept with offtaker, not the owner/developer
 ### Fixed
 - Proforma calcs including "simple" payback and IRR for thermal techs/scenarios.
   - The operating costs of fuel and O&M were missing for all thermal techs such as ExistingBoiler, CHP, and others; this adds those sections of code to properly calculate the operating costs.
 - Added a test to validate the simple payback calculation with CHP (and ExistingBoiler) and checks the REopt result value against a spreadsheet proforma calculation (see Bill's spreadsheet).
 - Added a couple of missing techs for the initial capital cost calculation in financial.jl.
 - An issue with setup_boiler_inputs in reopt_inputs.jl.
+- Fuel costs in proforma.jl were not consistent with the optimization costs, so that was corrected so that they are only added to the offtaker cashflows and not the owner/developer cashflows for third party.
 
 ## v0.47.2
 ### Fixed
