@@ -252,15 +252,6 @@ function proforma_results(p::REoptInputs, d::Dict)
 
         annual_income_from_host_series = repeat([-1 * r["annualized_payment_to_third_party"]], years)
 
-        net_energy_costs = -electricity_bill_series_bau - export_credit_series_bau - m.fuel_cost_series_bau + electricity_bill_series + 
-                           export_credit_series + annual_income_from_host_series + m.fuel_cost_series
-
-        if p.s.financial.owner_tax_rate_fraction > 0
-            deductable_net_energy_costs = copy(net_energy_costs)
-        else
-            deductable_net_energy_costs = zeros(years)
-        end
-
         r["offtaker_annual_free_cashflows"] = append!([0.0], 
             electricity_bill_series + export_credit_series + m.fuel_cost_series + annual_income_from_host_series
         )
