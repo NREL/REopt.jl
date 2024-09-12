@@ -180,8 +180,8 @@ function run_ssc(case_data::Dict)
             "mst" => ["Q_thermal","P_tower_pump","q_pb_design","solarm"],         # locked in [W]
             "lf" => ["q_dot_to_heat_sink"], # locked in [W]
             "ptc" => ["q_dot_htf_sf_out","P_loss","q_pb_design",2.5],  # locked in [MWt]
-            "swh_flatplate" => ["Q_useful","load","system_capacity",1.0],           # W
-            "swh_evactube" => ["Q_useful","load","system_capacity",1.0]           # W
+            "swh_flatplate" => ["Q_useful","P_pump","system_capacity",1.0],           # W
+            "swh_evactube" => ["Q_useful","P_pump","system_capacity",1.0]           # W
         )
         outputs = outputs_dict[model]
 
