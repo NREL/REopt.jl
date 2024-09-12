@@ -175,47 +175,58 @@ function run_ssc(case_data::Dict)
         ### Retrieve results
         len = 0
         len_ref = Ref(len)
-        ### SSC output name for the thermal production profile
+        ### SSC output names for the thermal production and electrical consumption profiles, thermal power rating and solar multiple
         outputs_dict = Dict(
-            "mst" => ["Q_thermal"],         # locked in [W]
+            "mst" => ["Q_thermal","P_tower_pump","q_pb_design","solarm"],         # locked in [W]
             "lf" => ["q_dot_to_heat_sink"], # locked in [W]
-            "ptc" => "q_dot_htf_sf_out",  # locked in [MWt]
-            "swh_flatplate" => ["Q_useful"],           # W
-            "swh_evactube" => ["Q_useful"]           # W
+            "ptc" => ["q_dot_htf_sf_out","P_loss","q_pb_design",2.5],  # locked in [MWt]
+            "swh_flatplate" => ["Q_useful","load","system_capacity",1.0],           # W
+            "swh_evactube" => ["Q_useful","load","system_capacity",1.0]           # W
         )
         outputs = outputs_dict[model]
-        thermal_production_response = @ccall hdl.ssc_data_get_array(data::Ptr{Cvoid}, outputs::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}
+
+        thermal_production_response = @ccall hdl.ssc_data_get_array(data::Ptr{Cvoid}, outputs[1]::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}
+        electrical_consumption_response = @ccall hdl.ssc_data_get_array(data::Ptr{Cvoid}, outputs[2]::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}
         thermal_production = []
+        elec_consumption = []
         for i in 1:8760
             push!(thermal_production,unsafe_load(thermal_production_response,i))  # For array type outputs
+            push!(elec_consumption,unsafe_load(electrical_consumption_response,i))  # For array type outputs
         end
-        # print(thermal_production)
-        if model == "ptc"
-            # @ccall hdl.ssc_data_get_number(data::Ptr{Cvoid}, "wind_resource_shear"::Cstring, ref::Ptr{Cdouble})::Cvoid
-            heat_sink = case_data["CST"]["SSC_Inputs"]["q_pb_design"]
-            sm = 2.5
-            rated_power = heat_sink * sm
+        if outputs[3] in keys(user_defined_inputs)
+            tpow = user_defined_inputs[outputs[3]]
+        else
+            tpow = defaults[outputs[3]]
         end
+        if typeof(outputs[4]) != String
+            mult = outputs[4]
+        elseif outputs[4] in keys(user_defined_inputs)
+            mult = user_defined_inputs[outputs[4]]
+        else
+            mult = defaults[outputs[4]]
+        end
+        println("tpow ", tpow, " mult ", mult)
+        rated_power = tpow * mult
         
         #c_response = @ccall hdl.ssc_data_get_number(data::Ptr{Cvoid}, k::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}
         # print(c_response)
-        
-        # #print(response)
         thermal_production_norm = thermal_production ./ rated_power # normalize_response(thermal_production_response,case_data,rated_power)
+        electric_consumption_norm = elec_consumption ./ rated_power
         # R[k] = response_norm
         # end
-
+        println(thermal_production_norm[1:100])
+        println(electric_consumption_norm[1:100])
         ### Free SSC
         @ccall hdl.ssc_module_free(ssc_module::Ptr{Cvoid})::Cvoid   
         @ccall hdl.ssc_data_free(data::Ptr{Cvoid})::Cvoid
-
+        R["thermal_production"] = thermal_production_norm
+        R["electric_consumption"] = electric_consumption_norm
+        ### Check for errors
+        if error == ""
+            error = "No errors found."
+        end
+        R["error"] = error
+        #return R
     end
-    
-    ### Check for errors
-    if error == ""
-        error = "No errors found."
-    end
-    R["error"] = error
-    #return R
-    return thermal_production_norm
+    return R
 end
