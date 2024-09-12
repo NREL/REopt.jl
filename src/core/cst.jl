@@ -120,3 +120,23 @@ function ConcentratingSolar(;
         emissions_factor_lb_PM25_per_mmbtu
     )
 end
+
+
+"""
+function get_cst_defaults(tech_type::String="")
+
+Obtains defaults for the ConcnetratingSolar technology type, taken from a JSON data file. 
+
+inputs
+tech_type::String -- identifier of CST technology type
+
+returns
+cst_defaults::Dict -- Dictionary containing defaults for ConcentratingSolar technology type
+"""
+function get_cst_defaults(tech_type::String="")
+    if !(tech_type in CST_TYPES)
+        throw(@error("Invalid inputs: argument `tech_type` to function get_cst_defaults() is invalid."))
+    end
+    all_cst_defaults = JSON.parsefile(joinpath(dirname(@__FILE__), "..", "..", "data", "cst", "cst_defaults.json"))
+    return all_cst_defaults[tech_type]
+end
