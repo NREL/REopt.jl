@@ -118,7 +118,7 @@ end
 function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
 
     # Constraint (4j)-1: Reconcile state-of-charge for (hot) thermal storage
-	@constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
+	@constraint(m, [ts in p.time_steps],
         m[Symbol("dvStoredEnergy"*_n)][b,ts] == m[Symbol("dvStoredEnergy"*_n)][b,ts-1] + p.hours_per_time_step * (
             p.s.storage.attr[b].charge_efficiency * sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp), q in p.heating_loads) -
             sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for q in p.heating_loads) / p.s.storage.attr[b].discharge_efficiency -
@@ -135,7 +135,7 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
     )
 
     #Constraint (4n)-1: Dispatch to and from thermal storage is no greater than power capacity
-	@constraint(m, [b in p.s.storage.types.hot, ts in p.time_steps],
+	@constraint(m, [ts in p.time_steps],
         m[Symbol("dvStoragePower"*_n)][b] >= 
         sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] + 
         sum(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts] for t in union(p.techs.heating, p.techs.chp))
@@ -144,14 +144,14 @@ function add_hot_thermal_storage_dispatch_constraints(m, p, b; _n="")
     # TODO missing thermal storage constraints from API ???
 
     # Constraint (4o): Discharge from storage is equal to sum of heat from storage for all qualities
-    @constraint(m, HeatDischargeReconciliation[b in p.s.storage.types.hot, ts in p.time_steps],
+    @constraint(m, HeatDischargeReconciliation[ts in p.time_steps],
         m[Symbol("dvDischargeFromStorage"*_n)][b,ts] == 
         sum(m[Symbol("dvHeatFromStorage"*_n)][b,q,ts] for q in p.heating_loads)
     )
 
     #Do not allow GHP to charge storage
     if !isempty(p.techs.ghp)
-        for b in p.s.storage.types.hot, t in p.techs.ghp, q in p.heating_loads, ts in p.time_steps
+        for t in p.techs.ghp, q in p.heating_loads, ts in p.time_steps
             fix(m[Symbol("dvHeatToStorage"*_n)][b,t,q,ts], 0.0, force=true)
         end
     end
@@ -162,14 +162,14 @@ function add_cold_thermal_storage_dispatch_constraints(m, p, b; _n="")
 
     # Constraint (4f)-2: (Cold) Thermal production sent to storage or grid must be less than technology's rated production
 	if !isempty(p.techs.cooling)
-		@constraint(m, CoolingTechProductionFlowCon[b in p.s.storage.types.cold, t in p.techs.cooling, ts in p.time_steps],
+		@constraint(m, CoolingTechProductionFlowCon[t in p.techs.cooling, ts in p.time_steps],
     	        m[Symbol("dvProductionToStorage"*_n)][b,t,ts]  <=
 				m[Symbol("dvCoolingProduction"*_n)][t,ts]
 				)
 	end
 
     # Constraint (4j)-2: Reconcile state-of-charge for (cold) thermal storage
-	@constraint(m, ColdTESInventoryCon[b in p.s.storage.types.cold, ts in p.time_steps],
+	@constraint(m, ColdTESInventoryCon[ts in p.time_steps],
         m[Symbol("dvStoredEnergy"*_n)][b,ts] == m[Symbol("dvStoredEnergy"*_n)][b,ts-1] + p.hours_per_time_step * (
             sum(p.s.storage.attr[b].charge_efficiency * m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.cooling) -
             m[Symbol("dvDischargeFromStorage"*_n)][b,ts]/p.s.storage.attr[b].discharge_efficiency -
@@ -186,14 +186,14 @@ function add_cold_thermal_storage_dispatch_constraints(m, p, b; _n="")
     )
 
     #Constraint (4n)-2: Dispatch to and from thermal storage is no greater than power capacity
-    @constraint(m, [b in p.s.storage.types.cold, ts in p.time_steps],
+    @constraint(m, [ts in p.time_steps],
         m[Symbol("dvStoragePower"*_n)][b] >= m[Symbol("dvDischargeFromStorage"*_n)][b,ts] + 
         sum(m[Symbol("dvProductionToStorage"*_n)][b,t,ts] for t in p.techs.cooling)
     )
 
     #Do not allow GHP to charge storage
     if !isempty(p.techs.ghp)
-        for b in p.s.storage.types.cold, t in p.techs.ghp, ts in p.time_steps
+        for t in p.techs.ghp, ts in p.time_steps
                     fix(m[Symbol("dvProductionToStorage"*_n)][b,t,ts], 0.0, force=true)
         end
     end
