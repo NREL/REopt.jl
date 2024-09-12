@@ -40,7 +40,7 @@ function ConcentratingSolar(;
     installed_cost_per_kw::Real = 293000.0, # Thermal power-based cost
     om_cost_per_kw::Real = 2930.0, # Thermal power-based fixed O&M cost
     om_cost_per_kwh::Real = 0.0, # Thermal energy-based variable O&M cost
-    fuel_type::String = "natural_gas",  # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil", "uranium"]
+    tech_type::String = "natural_gas",  # "restrict_to": ["natural_gas", "landfill_bio_gas", "propane", "diesel_oil", "uranium"]
     can_supply_steam_turbine::Bool = true # If the boiler can supply steam to the steam turbine for electric production
     can_serve_dhw::Bool = true # If Boiler can supply heat to the domestic hot water load
     can_serve_space_heating::Bool = true # If Boiler can supply heat to the space heating load
@@ -64,7 +64,7 @@ function ConcentratingSolar(;
         om_cost_per_kw::Real = 39.6,  #per kw per year
         om_cost_per_kwh::Real = 0.0,   #per kwh produced
         acres_per_kw::Real = 0.0,
-        tech_type::String = "parabolic_trough",  # "restrict_to": ["parabolic_trough", "power_tower", "linear_fresnal", "dish_engine"]  TODO update with Jeff's work
+        tech_type::Union{String,Nothing} = nothing,  # restrict to: ["ptc", "mst", "lf", "swh_evactube", "swh_flatplate"]  TODO update with Jeff's work
         can_supply_steam_turbine::Bool = true,
         can_serve_dhw::Bool = true,
         can_serve_space_heating::Bool = true,
@@ -76,6 +76,10 @@ function ConcentratingSolar(;
         emissions_factor_lb_PM25_per_mmbtu::Real = 0.0,
     )
 
+    if isnothing(tech_type)
+        throw(@error("ConcentratingSolar.tech_type is a required input but not provided."))
+    elseif !(tech_type in CST_TYPES)
+        throw(@error("ConcentratingSolar.tech_type value is invalid."))
     if isempty(capacity_factor_series)
         throw(@error("ConcentratingSolar.capacity_factor_series is a required input when modeling a heating load which is served by the ConcentratedSolar system in the optimal case"))
     end
