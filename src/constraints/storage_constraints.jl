@@ -199,7 +199,7 @@ function add_cold_thermal_storage_dispatch_constraints(m, p, b; _n="")
     end
 end
 
-function add_storage_sum_constraints(m, p; _n="")
+function add_storage_sum_grid_constraints(m, p; _n="")
 
 	##Constraint (8c): Grid-to-storage no greater than grid purchases 
 	@constraint(m, [ts in p.time_steps_with_grid],
