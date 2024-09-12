@@ -70,11 +70,12 @@ else  # run HiGHS tests
             dataset, distance, datasource = REopt.call_solar_dataset_api(latitude, longitude, radius)
             @test dataset ≈ "nsrdb"
 
-            # 3. Younde, Cameroon
-            latitude, longitude = 3.8603988398663125, 11.528880303663136
-            radius = 0
-            dataset, distance, datasource = REopt.call_solar_dataset_api(latitude, longitude, radius)
-            @test dataset ≈ "intl"
+            # TODO: find new location that should return only the "intl" dataset
+            # # 3. Younde, Cameroon
+            # latitude, longitude = 3.8603988398663125, 11.528880303663136
+            # radius = 0
+            # dataset, distance, datasource = REopt.call_solar_dataset_api(latitude, longitude, radius)
+            # @test dataset ≈ "intl"
 
             # 4. Fairbanks, AK 
             site = "Fairbanks"
