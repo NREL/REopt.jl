@@ -24,218 +24,127 @@ elseif "CPLEX" in ARGS
 
 elseif "Debug" in ARGS
     @testset "Debug" begin
-        # @testset "Thermal Energy Storage + Absorption Chiller" begin
-        #     model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-        #     data = JSON.parsefile("./scenarios/thermal_storage.json")
-        #     s = Scenario(data)
-        #     p = REoptInputs(s)
-                
-        #     #test for get_absorption_chiller_defaults consistency with inputs data and Scenario s.
-        #     htf_defaults_response = get_absorption_chiller_defaults(;
-        #         thermal_consumption_hot_water_or_steam=get(data["AbsorptionChiller"], "thermal_consumption_hot_water_or_steam", nothing),  
-        #         boiler_type=get(data["ExistingBoiler"], "production_type", nothing),
-        #         load_max_tons=maximum(s.cooling_load.loads_kw_thermal / REopt.KWH_THERMAL_PER_TONHOUR)
-        #     )
-            
-        #     expected_installed_cost_per_ton = htf_defaults_response["default_inputs"]["installed_cost_per_ton"]
-        #     expected_om_cost_per_ton = htf_defaults_response["default_inputs"]["om_cost_per_ton"]
-            
-        #     @test p.s.absorption_chiller.installed_cost_per_kw ≈ expected_installed_cost_per_ton / REopt.KWH_THERMAL_PER_TONHOUR atol=0.001
-        #     @test p.s.absorption_chiller.om_cost_per_kw ≈ expected_om_cost_per_ton / REopt.KWH_THERMAL_PER_TONHOUR atol=0.001
-        #     @test p.s.absorption_chiller.cop_thermal ≈ htf_defaults_response["default_inputs"]["cop_thermal"] atol=0.001
-            
-        #     #load test values
-        #     p.s.absorption_chiller.installed_cost_per_kw = 500.0 / REopt.KWH_THERMAL_PER_TONHOUR
-        #     p.s.absorption_chiller.om_cost_per_kw = 0.5 / REopt.KWH_THERMAL_PER_TONHOUR
-        #     p.s.absorption_chiller.cop_thermal = 0.7
-            
-        #     #Make every other hour zero fuel and electric cost; storage should charge and discharge in each period
-        #     for ts in p.time_steps
-        #         #heating and cooling loads only
-        #         if ts % 2 == 0  #in even periods, there is a nonzero load and energy is higher cost, and storage should discharge
-        #             p.s.electric_load.loads_kw[ts] = 10
-        #             p.s.dhw_load.loads_kw[ts] = 5
-        #             p.s.space_heating_load.loads_kw[ts] = 5
-        #             p.s.cooling_load.loads_kw_thermal[ts] = 10
-        #             p.fuel_cost_per_kwh["ExistingBoiler"][ts] = 100
-        #             for tier in 1:p.s.electric_tariff.n_energy_tiers
-        #                 p.s.electric_tariff.energy_rates[ts, tier] = 100
-        #             end
-        #         else #in odd periods, there is no load and energy is cheaper - storage should charge 
-        #             p.s.electric_load.loads_kw[ts] = 0
-        #             p.s.dhw_load.loads_kw[ts] = 0
-        #             p.s.space_heating_load.loads_kw[ts] = 0
-        #             p.s.cooling_load.loads_kw_thermal[ts] = 0
-        #             p.fuel_cost_per_kwh["ExistingBoiler"][ts] = 1
-        #             for tier in 1:p.s.electric_tariff.n_energy_tiers
-        #                 p.s.electric_tariff.energy_rates[ts, tier] = 50
-        #             end
-        #         end
+        # @testset "Prevent simultaneous charge and discharge" begin
+        #     logger = SimpleLogger()
+        #     results = nothing
+        #     with_logger(logger) do
+        #         model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+        #         results = run_reopt(model, "./scenarios/simultaneous_charge_discharge.json")
         #     end
-            
-        #     r = run_reopt(model, p)
-
-        #     open("chiller_results.json","w") do f
-        #         JSON.print(f, r, 4)
-        #     end
-        #     r = JSON.parsefile("./chiller_results.json")
-        #     using DelimitedFiles
-        #     writedlm(
-        #         "chiller_results.csv",  
-        #         vcat(
-        #             reshape(["Cold SOC"; "Cold stor to load"; "AbsorptionChiller to stor"; "ExistingChiller to stor"; "Hot SOC"; "Hot stor to load"; "ExistingBoiler to stor"], 1, :),
-        #             hcat(
-        #                 r["ColdThermalStorage"]["soc_series_fraction"], 
-        #                 r["ColdThermalStorage"]["storage_to_load_series_ton"], 
-        #                 r["AbsorptionChiller"]["thermal_to_storage_series_ton"], 
-        #                 r["ExistingChiller"]["thermal_to_storage_series_ton"],
-        #                 r["HotThermalStorage"]["soc_series_fraction"], 
-        #                 r["HotThermalStorage"]["storage_to_load_series_mmbtu_per_hour"], 
-        #                 r["ExistingBoiler"]["thermal_to_storage_series_mmbtu_per_hour"]
-        #             )
-        #         ), 
-        #         ','
-        #     )
         #     @test any(.&(
-        #             r["ColdThermalStorage"]["storage_to_load_series_ton"] .!= 0.0,
+        #             results["ElectricStorage"]["storage_to_load_series_kw"] .!= 0.0,
         #             (
-        #                 r["AbsorptionChiller"]["thermal_to_storage_series_ton"] .+ 
-        #                 r["ExistingChiller"]["thermal_to_storage_series_ton"]
+        #                 results["ElectricUtility"]["electric_to_storage_series_kw"] .+ 
+        #                 results["PV"]["electric_to_storage_series_kw"]
         #             ) .!= 0.0
         #         )
         #         ) ≈ false
-        #     @test any(.&(
-        #             r["HotThermalStorage"]["storage_to_load_series_mmbtu_per_hour"] .!= 0.0,
-        #             r["ExistingBoiler"]["thermal_to_storage_series_mmbtu_per_hour"] .!= 0.0
-        #         )
-        #         ) ≈ false
-            
-        #     #dispatch to load should be 10kW every other period = 4,380 * 10
-        #     @test sum(r["HotThermalStorage"]["storage_to_load_series_mmbtu_per_hour"]) ≈ 149.45 atol=0.1
-        #     @test sum(r["ColdThermalStorage"]["storage_to_load_series_ton"]) ≈ 12454.33 atol=0.1
-        #     #size should be just over 10kW in gallons, accounting for efficiency losses and min SOC
-        #     @test r["HotThermalStorage"]["size_gal"] ≈ 233.0 atol=0.1
-        #     @test r["ColdThermalStorage"]["size_gal"] ≈ 378.0 atol=0.1
-        #     #No production from existing chiller, only absorption chiller, which is sized at ~5kW to manage electric demand charge & capital cost.
-        #     @test r["ExistingChiller"]["annual_thermal_production_tonhour"] ≈ 0.0 atol=0.1
-        #     @test r["AbsorptionChiller"]["annual_thermal_production_tonhour"] ≈ 12464.15 atol=0.1
-        #     @test r["AbsorptionChiller"]["size_ton"] ≈ 2.846 atol=0.01
         # end
 
-        @testset "GHP" begin
-            """
+        @testset "OffGrid" begin
+            ## Scenario 1: Solar, Storage, Fixed Generator
+            post_name = "off_grid.json" 
+            post = JSON.parsefile("./scenarios/$post_name")
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            scen = Scenario(post)
+            r = run_reopt(m, scen)
 
-            This tests multiple unique aspects of GHP:
-            1. REopt takes the output data of GhpGhx, creates multiple GHP options, and chooses the expected one
-            2. GHP with heating and cooling "..efficiency_thermal_factors" reduces the net thermal load
-            3. GHP serves only the SpaceHeatingLoad by default unless it is allowed to serve DHW
-            4. GHP serves all the Cooling load
-            5. Input of a custom COP map for GHP and check the GHP performance to make sure it's using it correctly
-            6. Hybrid GHP capability functions as expected
-
-            """
-            # Load base inputs
-            input_data = JSON.parsefile("scenarios/ghp_inputs.json")
-            pop!(input_data["ColdThermalStorage"], "max_gal")
-            pop!(input_data["HotThermalStorage"], "max_gal")
-            
-            # Modify ["GHP"]["ghpghx_inputs"] for running GhpGhx.jl
-            # Heat pump performance maps
-            cop_map_mat_header = readdlm("scenarios/ghp_cop_map_custom.csv", ',', header=true)
-            data = cop_map_mat_header[1]
-            headers = cop_map_mat_header[2]
-            # Generate a "records" style dictionary from the 
-            cop_map_list = []
-            for i in axes(data,1)
-                dict_record = Dict(name=>data[i, col] for (col, name) in enumerate(headers))
-                push!(cop_map_list, dict_record)
+            open("debug_offgrid_1.json","w") do f
+                JSON.print(f, r, 4)
             end
-            input_data["GHP"]["ghpghx_inputs"][1]["cop_map_eft_heating_cooling"] = cop_map_list
             
-            # Due to GhpGhx not being a registered package (no OSI-approved license), 
-            # the registered REopt package cannot have GhpGhx as a "normal" dependency;
-            # Therefore, we only use a "ghpghx_response" (the output of GhpGhx) as an 
-            # input to REopt to avoid GhpGhx module calls
-            response_1 = JSON.parsefile("scenarios/ghpghx_response.json")
-            response_2 = deepcopy(response_1)
-            # Reduce the electric consumption of response 2 which should then be the chosen system
-            response_2["outputs"]["yearly_total_electric_consumption_series_kw"] *= 0.5 
-            input_data["GHP"]["ghpghx_responses"] = [response_1, response_2]
+            # Test default values 
+            @test scen.electric_utility.outage_start_time_step ≈ 1
+            @test scen.electric_utility.outage_end_time_step ≈ 8760 * scen.settings.time_steps_per_hour
+            @test scen.storage.attr["ElectricStorage"].soc_init_fraction ≈ 1
+            @test scen.storage.attr["ElectricStorage"].can_grid_charge ≈ false
+            @test scen.generator.fuel_avail_gal ≈ 1.0e9
+            @test scen.generator.min_turn_down_fraction ≈ 0.15
+            @test sum(scen.electric_load.loads_kw) - sum(scen.electric_load.critical_loads_kw) ≈ 0 # critical loads should equal loads_kw
+            @test scen.financial.microgrid_upgrade_cost_fraction ≈ 0
+
+            # Test outputs
+            @test r["ElectricUtility"]["annual_energy_supplied_kwh"] ≈ 0 # no interaction with grid
+            @test r["Financial"]["lifecycle_offgrid_other_capital_costs"] ≈ 2617.092 atol=0.01 # Check straight line depreciation calc
+            @test sum(r["ElectricLoad"]["offgrid_annual_oper_res_provided_series_kwh"]) >= sum(r["ElectricLoad"]["offgrid_annual_oper_res_required_series_kwh"]) # OR provided >= required
+            @test r["ElectricLoad"]["offgrid_load_met_fraction"] >= scen.electric_load.min_load_met_annual_fraction
+            @test r["PV"]["size_kw"] ≈ 5050.0
+            f = r["Financial"]
+            @test f["lifecycle_generation_tech_capital_costs"] + f["lifecycle_storage_capital_costs"] + f["lifecycle_om_costs_after_tax"] +
+                    f["lifecycle_fuel_costs_after_tax"] + f["lifecycle_chp_standby_cost_after_tax"] + f["lifecycle_elecbill_after_tax"] + 
+                    f["lifecycle_offgrid_other_annual_costs_after_tax"] + f["lifecycle_offgrid_other_capital_costs"] + 
+                    f["lifecycle_outage_cost"] + f["lifecycle_MG_upgrade_and_fuel_cost"] - 
+                    f["lifecycle_production_incentive_after_tax"] ≈ f["lcc"] atol=1.0
             
-            # Heating load
-            input_data["SpaceHeatingLoad"]["doe_reference_name"] = "Hospital"
-            input_data["SpaceHeatingLoad"]["monthly_mmbtu"] = fill(1000.0, 12)
-            input_data["SpaceHeatingLoad"]["monthly_mmbtu"][1] = 500.0
-            input_data["SpaceHeatingLoad"]["monthly_mmbtu"][end] = 1500.0
+            ## Scenario 2: Fixed Generator only
+            post["ElectricLoad"]["annual_kwh"] = 100.0
+            post["PV"]["max_kw"] = 0.0
+            post["ElectricStorage"]["max_kw"] = 0.0
+            post["Generator"]["min_turn_down_fraction"] = 0.0
+
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            r = run_reopt(m, post)
             
-            # Call REopt
-            s = Scenario(input_data)
-            inputs = REoptInputs(s)
-            m1 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
-            m2 = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01))
-            results = run_reopt([m1,m2], inputs)
-            
-            open("ghp_results.json","w") do f
-                JSON.print(f, results, 4)
+            open("debug_offgrid_2.json","w") do f
+                JSON.print(f, r, 4)
             end
-            using DelimitedFiles
-            writedlm(
-                "ghp_results.csv",  
-                vcat(
-                    reshape(["Cold SOC"; "Cold stor to load"; "ExistingChiller to stor"; "Hot SOC"; "Hot stor to load"; "ExistingBoiler to stor"], 1, :),
-                    hcat(
-                        results["ColdThermalStorage"]["soc_series_fraction"], 
-                        results["ColdThermalStorage"]["storage_to_load_series_ton"], 
-                        results["ExistingChiller"]["thermal_to_storage_series_ton"],
-                        results["HotThermalStorage"]["soc_series_fraction"], 
-                        results["HotThermalStorage"]["storage_to_load_series_mmbtu_per_hour"], 
-                        results["ExistingBoiler"]["thermal_to_storage_series_mmbtu_per_hour"]
-                    )
-                ), 
-                ','
-            )
-            @test any(.&(
-                    results["ColdThermalStorage"]["storage_to_load_series_ton"] .!= 0.0,
-                    results["ExistingChiller"]["thermal_to_storage_series_ton"] .!= 0.0
-                )
-                ) ≈ false
-            @test any(.&(
-                    results["HotThermalStorage"]["storage_to_load_series_mmbtu_per_hour"] .!= 0.0,
-                    results["ExistingBoiler"]["thermal_to_storage_series_mmbtu_per_hour"] .!= 0.0
-                )
-                ) ≈ false
 
-            ghp_option_chosen = results["GHP"]["ghp_option_chosen"]
-            @test ghp_option_chosen == 2
+            # Test generator outputs
+            @test r["Generator"]["annual_fuel_consumption_gal"] ≈ 7.52 # 99 kWh * 0.076 gal/kWh
+            @test r["Generator"]["annual_energy_produced_kwh"] ≈ 99.0
+            @test r["Generator"]["year_one_fuel_cost_before_tax"] ≈ 22.57
+            @test r["Generator"]["lifecycle_fuel_cost_after_tax"] ≈ 205.35 
+            @test r["Financial"]["initial_capital_costs"] ≈ 100*(700) 
+            @test r["Financial"]["lifecycle_capital_costs"] ≈ 100*(700+324.235442*(1-0.26)) atol=0.1 # replacement in yr 10 is considered tax deductible
+            @test r["Financial"]["initial_capital_costs_after_incentives"] ≈ 700*100 atol=0.1
+            @test r["Financial"]["replacements_future_cost_after_tax"] ≈ 700*100
+            @test r["Financial"]["replacements_present_cost_after_tax"] ≈ 100*(324.235442*(1-0.26)) atol=0.1 
 
-            # Test GHP heating and cooling load reduced
-            hot_load_reduced_mmbtu = sum(results["GHP"]["space_heating_thermal_load_reduction_with_ghp_mmbtu_per_hour"])
-            cold_load_reduced_tonhour = sum(results["GHP"]["cooling_thermal_load_reduction_with_ghp_ton"])
-            @test hot_load_reduced_mmbtu ≈ 1440.00 atol=0.1
-            @test cold_load_reduced_tonhour ≈ 761382.78 atol=0.1
+            ## Scenario 3: Fixed Generator that can meet load, but cannot meet load operating reserve requirement
+            ## This test ensures the load operating reserve requirement is being enforced
+            post["ElectricLoad"]["doe_reference_name"] = "FlatLoad"
+            post["ElectricLoad"]["annual_kwh"] = 876000.0 # requires 100 kW gen
+            post["ElectricLoad"]["min_load_met_annual_fraction"] = 1.0 # requires additional generator capacity
+            post["PV"]["max_kw"] = 0.0
+            post["ElectricStorage"]["max_kw"] = 0.0
+            post["Generator"]["min_turn_down_fraction"] = 0.0
 
-            # Test GHP serving space heating with VAV thermal efficiency improvements
-            heating_served_mmbtu = sum(s.ghp_option_list[ghp_option_chosen].heating_thermal_kw / REopt.KWH_PER_MMBTU)
-            expected_heating_served_mmbtu = 12000 * 0.8 * 0.85  # (fuel_mmbtu * boiler_effic * space_heating_efficiency_thermal_factor)
-            @test round(heating_served_mmbtu, digits=1) ≈ expected_heating_served_mmbtu atol=1.0
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+            r = run_reopt(m, post)
             
-            # Boiler serves all of the DHW load, no DHW thermal reduction due to GHP retrofit
-            boiler_served_mmbtu = sum(results["ExistingBoiler"]["thermal_production_series_mmbtu_per_hour"])
-            expected_boiler_served_mmbtu = 3000 * 0.8 # (fuel_mmbtu * boiler_effic)
-            @test round(boiler_served_mmbtu, digits=1) ≈ expected_boiler_served_mmbtu atol=1.0
+            open("debug_offgrid_3.json","w") do f
+                JSON.print(f, r, 4)
+            end
+
+            # Test generator outputs
+            @test typeof(r) == Model # this is true when the model is infeasible
+
+            ### Scenario 3: Indonesia. Wind (custom prod) and Generator only
+            m = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false, "mip_rel_gap" => 0.01, "presolve" => "on"))
+            post_name = "wind_intl_offgrid.json" 
+            post = JSON.parsefile("./scenarios/$post_name")
+            post["ElectricLoad"]["loads_kw"] = [10.0 for i in range(1,8760)]
+            scen = Scenario(post)
+            post["Wind"]["production_factor_series"] =  reduce(vcat, readdlm("./data/example_wind_prod_factor_kw.csv", '\n', header=true)[1])
+
+            results = run_reopt(m, post)
             
-            # LoadProfileChillerThermal cooling thermal is 1/cooling_efficiency_thermal_factor of GHP cooling thermal production
-            bau_chiller_thermal_tonhour = sum(s.cooling_load.loads_kw_thermal / REopt.KWH_THERMAL_PER_TONHOUR)
-            ghp_cooling_thermal_tonhour = sum(inputs.ghp_cooling_thermal_load_served_kw[1,:] / REopt.KWH_THERMAL_PER_TONHOUR)
-            @test round(bau_chiller_thermal_tonhour) ≈ ghp_cooling_thermal_tonhour/0.6 atol=1.0
+            open("debug_offgrid_4.json","w") do f
+                JSON.print(f, r, 4)
+            end
             
-            # Custom heat pump COP map is used properly
-            ghp_option_chosen = results["GHP"]["ghp_option_chosen"]
-            heating_cop_avg = s.ghp_option_list[ghp_option_chosen].ghpghx_response["outputs"]["heating_cop_avg"]
-            cooling_cop_avg = s.ghp_option_list[ghp_option_chosen].ghpghx_response["outputs"]["cooling_cop_avg"]
-            # Average COP which includes pump power should be lower than Heat Pump only COP specified by the map
-            @test heating_cop_avg <= 4.0
-            @test cooling_cop_avg <= 8.0
+            @test results["ElectricLoad"]["offgrid_load_met_fraction"] >= scen.electric_load.min_load_met_annual_fraction
+            f = results["Financial"]
+            @test f["lifecycle_generation_tech_capital_costs"] + f["lifecycle_storage_capital_costs"] + f["lifecycle_om_costs_after_tax"] +
+                    f["lifecycle_fuel_costs_after_tax"] + f["lifecycle_chp_standby_cost_after_tax"] + f["lifecycle_elecbill_after_tax"] + 
+                    f["lifecycle_offgrid_other_annual_costs_after_tax"] + f["lifecycle_offgrid_other_capital_costs"] + 
+                    f["lifecycle_outage_cost"] + f["lifecycle_MG_upgrade_and_fuel_cost"] - 
+                    f["lifecycle_production_incentive_after_tax"] ≈ f["lcc"] atol=1.0
+
+            windOR = sum(results["Wind"]["electric_to_load_series_kw"]  * post["Wind"]["operating_reserve_required_fraction"])
+            loadOR = sum(post["ElectricLoad"]["loads_kw"] * scen.electric_load.operating_reserve_required_fraction)
+            @test sum(results["ElectricLoad"]["offgrid_annual_oper_res_required_series_kwh"]) ≈ loadOR  + windOR atol=1.0
+
         end
     end
 else  # run HiGHS tests
