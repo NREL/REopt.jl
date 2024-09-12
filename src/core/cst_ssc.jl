@@ -173,18 +173,32 @@ function run_ssc(case_data::Dict)
         test = @ccall hdl.ssc_module_exec(ssc_module::Ptr{Cvoid}, data::Ptr{Cvoid})::Cint
         print(test)
         ### Retrieve results
-        len = 0
-        len_ref = Ref(len)
         ### SSC output names for the thermal production and electrical consumption profiles, thermal power rating and solar multiple
         outputs_dict = Dict(
             "mst" => ["Q_thermal","P_tower_pump","q_pb_design","solarm"],         # locked in [W]
             "lf" => ["q_dot_to_heat_sink"], # locked in [W]
             "ptc" => ["q_dot_htf_sf_out","P_loss","q_pb_design",2.5],  # locked in [MWt]
-            "swh_flatplate" => ["Q_useful","P_pump","system_capacity",1.0],           # W
-            "swh_evactube" => ["Q_useful","P_pump","system_capacity",1.0]           # W
+            "swh_flatplate" => ["Q_useful","P_pump","system_capacity",1.0],           # kW, kW, kW
+            "swh_evactube" => ["Q_useful","P_pump","system_capacity",1.0]           # kW, kW, kW
         )
+        thermal_conversion_factor = Dict(
+            "mst" => 1,         # locked in [W]
+            "lf" => 1, # locked in [W]
+            "ptc" => 1,  # locked in [MWt]
+            "swh_flatplate" => 1,          
+            "swh_evactube" => 1           
+        ) 
+        elec_conversion_factor = Dict(
+            "mst" => 1,   
+            "lf" => 1, 
+            "ptc" => 1,  
+            "swh_flatplate" => 1,           
+            "swh_evactube" => 1           
+        ) 
         outputs = outputs_dict[model]
-
+        
+        len = 8760
+        len_ref = Ref(len)
         thermal_production_response = @ccall hdl.ssc_data_get_array(data::Ptr{Cvoid}, outputs[1]::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}
         electrical_consumption_response = @ccall hdl.ssc_data_get_array(data::Ptr{Cvoid}, outputs[2]::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}
         thermal_production = []
@@ -208,10 +222,12 @@ function run_ssc(case_data::Dict)
         println("tpow ", tpow, " mult ", mult)
         rated_power = tpow * mult
         
+        tcf = thermal_conversion_factor[model]
+        ecf = elec_conversion_factor[model]
         #c_response = @ccall hdl.ssc_data_get_number(data::Ptr{Cvoid}, k::Cstring, len_ref::Ptr{Cvoid})::Ptr{Float64}
         # print(c_response)
-        thermal_production_norm = thermal_production ./ rated_power # normalize_response(thermal_production_response,case_data,rated_power)
-        electric_consumption_norm = elec_consumption ./ rated_power
+        thermal_production_norm = thermal_production .* tcf ./ rated_power # normalize_response(thermal_production_response,case_data,rated_power)
+        electric_consumption_norm = elec_consumption .* ecf ./ rated_power
         # R[k] = response_norm
         # end
         println(thermal_production_norm[1:100])
