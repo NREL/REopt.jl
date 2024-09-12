@@ -21,26 +21,6 @@ elseif "CPLEX" in ARGS
     @testset "test_with_cplex" begin
         include("test_with_cplex.jl")
     end
-
-elseif "Debug" in ARGS
-    @testset "Debug" begin
-        @testset "Prevent simultaneous charge and discharge" begin
-            logger = SimpleLogger()
-            results = nothing
-            with_logger(logger) do
-                model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
-                results = run_reopt(model, "./scenarios/simultaneous_charge_discharge.json")
-            end
-            @test any(.&(
-                    results["ElectricStorage"]["storage_to_load_series_kw"] .!= 0.0,
-                    (
-                        results["ElectricUtility"]["electric_to_storage_series_kw"] .+ 
-                        results["PV"]["electric_to_storage_series_kw"]
-                    ) .!= 0.0
-                )
-                ) ≈ false
-        end
-    end
 else  # run HiGHS tests
     @testset verbose=true "REopt test set using HiGHS solver" begin
         @testset "Prevent simultaneous charge and discharge" begin
