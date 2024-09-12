@@ -12,7 +12,7 @@
         "monthly_energy_rates": [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1]
     },
     "ExistingBoiler": {
-        "fuel_cost_per_mmbtu": 100.0,
+        "fuel_cost_per_mmbtu": 11.0,
         "can_serve_dhw": true,
         "can_serve_space_heating":true,
         "can_serve_process_heat":true,
