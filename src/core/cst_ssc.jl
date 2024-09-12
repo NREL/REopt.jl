@@ -96,7 +96,7 @@ function get_weatherdata(lat::Float64,lon::Float64,debug::Bool)
 end
 
 function normalize_response(response,case_data,rated_power)
-    model = case_data["ConcentratingSolar"]["type"]
+    model = case_data["ConcentratingSolar"]["tech_type"]
     if model =="ptc"
         heat_sink = case_data["ConcentratingSolar"]["q_pb_design"]
         SM = 2.5
@@ -107,7 +107,7 @@ end
 
 # function run_ssc(model::String,lat::Float64,lon::Float64,inputs::Dict,outputs::Vector)
 function run_ssc(case_data::Dict)
-    model = case_data["ConcentratingSolar"]["type"]
+    model = case_data["ConcentratingSolar"]["tech_type"]
     ### Maps STEP 1 model names to specific SSC modules
     model_ssc = Dict(
         "mst" => "tcsmolten_salt",
