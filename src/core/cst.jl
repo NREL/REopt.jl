@@ -60,20 +60,20 @@ function ConcentratingSolar(;
         elec_consumption_factor_series::AbstractVector{<:Real} = Float64[],
         macrs_option_years::Int = 0,
         macrs_bonus_fraction::Real = 0.0,
-        installed_cost_per_kw::Real = 2000.0,
-        om_cost_per_kw::Real = 39.6,  #per kw per year
-        om_cost_per_kwh::Real = 0.0,   #per kwh produced
-        acres_per_kw::Real = 0.0,
+        installed_cost_per_kw::Union{Real,Nothing} = nothing,
+        om_cost_per_kw::Union{Real,Nothing} = nothing,  #per kw per year
+        om_cost_per_kwh::Union{Real,Nothing} = nothing,   #per kwh produced
+        acres_per_kw::Union{Real,Nothing} = nothing,
         tech_type::Union{String,Nothing} = nothing,  # restrict to: ["ptc", "mst", "lf", "swh_evactube", "swh_flatplate"]  TODO update with Jeff's work
-        can_supply_steam_turbine::Bool = true,
-        can_serve_dhw::Bool = true,
-        can_serve_space_heating::Bool = true,
-        can_serve_process_heat::Bool = true,
-        charge_storage_only::Bool = true,
+        can_supply_steam_turbine::Union{Bool,Nothing} = nothing,
+        can_serve_dhw::Union{Bool,Nothing} = nothing,
+        can_serve_space_heating::Union{Bool,Nothing} = nothing,
+        can_serve_process_heat::Union{Bool,Nothing} = nothing,
+        charge_storage_only::Union{Bool,Nothing} = nothing,
         emissions_factor_lb_CO2_per_mmbtu::Real = 0.0,
         emissions_factor_lb_NOx_per_mmbtu::Real = 0.0,
         emissions_factor_lb_SO2_per_mmbtu::Real = 0.0,
-        emissions_factor_lb_PM25_per_mmbtu::Real = 0.0,
+        emissions_factor_lb_PM25_per_mmbtu::Real = 0.0
     )
 
     if isnothing(tech_type)
@@ -86,6 +86,8 @@ function ConcentratingSolar(;
     if isempty(elec_consumption_factor_series)
         throw(@error("ConcentratingSolar.elec_consumption_factor_series is a required input when modeling a heating load which is served by the ConcentratedSolar system in the optimal case"))
     end
+
+    defaults = get_cst_defaults()[tech_type]
 
     """
     min_kw = min_mmbtu_per_hour * KWH_PER_MMBTU
