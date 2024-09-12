@@ -96,9 +96,9 @@ function get_weatherdata(lat::Float64,lon::Float64,debug::Bool)
 end
 
 function normalize_response(response,case_data,rated_power)
-    model = case_data["CST"]["type"]
+    model = case_data["ConcentratingSolar"]["type"]
     if model =="ptc"
-        heat_sink = case_data["CST"]["q_pb_design"]
+        heat_sink = case_data["ConcentratingSolar"]["q_pb_design"]
         SM = 2.5
         return response ./ (SM * heat_sink)
     end
@@ -107,7 +107,7 @@ end
 
 # function run_ssc(model::String,lat::Float64,lon::Float64,inputs::Dict,outputs::Vector)
 function run_ssc(case_data::Dict)
-    model = case_data["CST"]["type"]
+    model = case_data["ConcentratingSolar"]["type"]
     ### Maps STEP 1 model names to specific SSC modules
     model_ssc = Dict(
         "mst" => "tcsmolten_salt",
@@ -137,7 +137,7 @@ function run_ssc(case_data::Dict)
         if (i == "tilt") || (i == "lat")
             user_defined_inputs[i] = lat
         else
-            user_defined_inputs[i] = case_data["CST"]["SSC_Inputs"][i]
+            user_defined_inputs[i] = case_data["ConcentratingSolar"]["SSC_Inputs"][i]
         end
     end
 
