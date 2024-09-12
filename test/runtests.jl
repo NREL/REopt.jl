@@ -30,9 +30,6 @@ else  # run HiGHS tests
                 model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
                 results = run_reopt(model, "./scenarios/simultaneous_charge_discharge.json")
             end
-            open("debug_reopt_results.json","w") do f
-                JSON.print(f, results, 4)
-            end
             @test any(.&(
                     results["ElectricStorage"]["storage_to_load_series_kw"] .!= 0.0,
                     (
