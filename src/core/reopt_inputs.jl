@@ -408,8 +408,8 @@ function setup_tech_inputs(s::AbstractScenario, time_steps)
     end
 
     if "Boiler" in techs.all
-        setup_boiler_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, 
-            boiler_efficiency, production_factor, fuel_cost_per_kwh, heating_cf)
+        setup_boiler_inputs(s, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
+                        om_cost_per_kw, production_factor, fuel_cost_per_kwh, heating_cf)
     end
 
     if "CHP" in techs.all
@@ -738,15 +738,16 @@ end
 
 """
     function setup_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
-        production_factor, fuel_cost_per_kwh)
+        om_cost_per_kw, production_factor, fuel_cost_per_kwh, heating_cf)
 
 Update tech-indexed data arrays necessary to build the JuMP model with the values for (new) boiler.
 This version of this function, used in BAUInputs(), doesn't update renewable energy and emissions arrays.
 """
-function setup_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, cap_cost_slope, om_cost_per_kw, boiler_efficiency, production_factor, fuel_cost_per_kwh,
-    heating_cf)
+function setup_boiler_inputs(s::AbstractScenario, max_sizes, min_sizes, existing_sizes, cap_cost_slope, boiler_efficiency,
+                            om_cost_per_kw, production_factor, fuel_cost_per_kwh, heating_cf)
     max_sizes["Boiler"] = s.boiler.max_kw
     min_sizes["Boiler"] = s.boiler.min_kw
+    existing_sizes["Boiler"] = 0.0
     boiler_efficiency["Boiler"] = s.boiler.efficiency
     
     # The Boiler only has a MACRS benefit, no ITC etc.
