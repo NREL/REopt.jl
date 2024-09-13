@@ -662,6 +662,10 @@ function Scenario(d::Dict; flex_hvac_from_json=false)
 
     cst = nothing
     if haskey(d, "ConcentratingSolar") && (!haskey(d["ConcentratingSolar"], "max_kw") || d["ConcentratingSolar"]["max_kw"] > 0.0)
+        cst_ssc_response = run_ssc(d)
+        cst["capacity_factor_series"] = cst_ssc_response["thermal_production"]
+        cst["elec_consumption_factor_series"] = cst_ssc_response["electric_consumption"]
+        pop!(d["ConcentratingSolar"],"SSC_Inputs")
         cst = ConcentratingSolar(;dictkeys_tosymbols(d["ConcentratingSolar"])...)
     end
 
