@@ -22,14 +22,6 @@ function add_variables!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}
 	for p in ps
 		_n = string("_", p.s.site.node)
 
-		# Temporary fix:
-		if "ElectricStorage" in keys(p.s.storage.attr)
-			@info "** Temporary fix: Adding ElectricStorage to p.s.storage.types.all and p.s.storage.types.elec, for site node: " p.s.site.node
-			p.s.storage.types.all = ["ElectricStorage"] #[keys(p.s.storage.attr)]
-			p.s.storage.types.elec = ["ElectricStorage"]  #[keys(p.s.storage.attr)]
-		end 
-		# End of temporary fix
-
 		for dv in dvs_idx_on_techs
 			x = dv*_n
 			m[Symbol(x)] = @variable(m, [p.techs.all], base_name=x, lower_bound=0)
@@ -165,16 +157,21 @@ end
 
 function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}}) where T <: AbstractScenario
     add_variables!(m, ps)
-    @warn "Use the microgrid.jl file to model outages in multinode mode."
 	@warn "Emissions and renewable energy fractions are not currently modeled in multinode mode."
+	@warn "Only electric storage can be modeled in multinode mode currently"
+
     for p in ps
         _n = string("_", p.s.site.node)
+		print("\n For node $(_n)")
+		print("\n   The p.s.storage.types.all is: ")
+		print(p.s.storage.types.all)
+		print("\n   The p.s.storage.types.elec is: ")
+		print(p.s.storage.types.elec)
+		print("\n")
+
 		for b in p.s.storage.types.all
-		# Temporary fix:
-		#for b in keys(p.s.storage.attr)
-			#@info "** Applying constraints to storage type: " b
             if p.s.storage.attr[b].max_kw == 0 || p.s.storage.attr[b].max_kwh == 0
-                #@info "** The battery input size was 0 kW or 0 kWh, so the battery will not be used"
+                @info "For node $(_n), the storage input size was 0 kW or 0 kWh, so the battery will not be used"
 				@constraint(m, [ts in p.time_steps], m[Symbol("dvStoredEnergy"*_n)][b, ts] == 0)
                 @constraint(m, m[Symbol("dvStorageEnergy"*_n)][b] == 0)
                 @constraint(m, m[Symbol("dvStoragePower"*_n)][b] == 0)
@@ -184,27 +181,16 @@ function build_reopt!(m::JuMP.AbstractModel, ps::AbstractVector{REoptInputs{T}})
                 @constraint(m, [ts in p.time_steps], m[Symbol("dvGridToStorage"*_n)][b, ts] == 0)
 				@constraint(m, [ts in p.time_steps], m[Symbol("dvStorageToGrid"*_n)][b,ts] == 0)
             else 
-				#@info "** The battery constraints are being applied"
+				@info "Adding electric storage constraints for node $(_n)"
                 add_storage_size_constraints(m, p, b; _n=_n)
-                add_general_storage_dispatch_constraints(m, p, b; _n=_n)
-				if b in p.s.storage.types.elec
-				#Temporary fix:
-				#if b == "ElectricStorage" 
-					@info "** adding electric storage dispatch constraints"
-					add_elec_storage_dispatch_constraints(m, p, b; _n=_n)
-				elseif b in p.s.storage.types.hot
-					add_hot_thermal_storage_dispatch_constraints(m, p, b; _n=_n)
-				elseif b in p.s.storage.types.cold
-					add_cold_thermal_storage_dispatch_constraints(m, p, b; _n=_n)
-				end
+                add_general_storage_dispatch_constraints(m, p, b; _n=_n)				
+				add_elec_storage_dispatch_constraints(m, p, b; _n=_n)
             end
         end
 
         if any(max_kw->max_kw > 0, (p.s.storage.attr[b].max_kw for b in p.s.storage.types.elec))
             add_storage_sum_constraints(m, p; _n=_n)
         end
-    
-        
     
         if !isempty(p.techs.all)
             add_tech_size_constraints(m, p; _n=_n)

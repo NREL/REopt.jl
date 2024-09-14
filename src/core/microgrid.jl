@@ -126,7 +126,7 @@ function Microgrid_Model(JuMP_Model, Microgrid_Settings, ldf_inputs_dictionary)
     ComputationTime_EntireModel = EndTime_EntireModel - StartTime_EntireModel
 
     # Results processing and generation of outputs:
-    system_results = Results_Processing(results, Outage_Results, OpenDSSResults, Microgrid_Settings, ldf_inputs_dictionary, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, transformer_upgrade_results, line_upgrade_results, TimeStamp, ComputationTime_EntireModel)
+    system_results = Results_Processing(results, Outage_Results, OpenDSSResults, Microgrid_Settings, ldf_inputs_dictionary, DataFrame_LineFlow_Summary, Dictionary_LineFlow_Power_Series, line_upgrade_results, transformer_upgrade_results, TimeStamp, ComputationTime_EntireModel)
 
     transformer_upgrade_options_output = transformer_upgrade_options
     transformer_upgrade_results_output = transformer_upgrade_results
@@ -1713,15 +1713,15 @@ function Results_Processing(results, Outage_Results, OpenDSSResults, Microgrid_S
         
         # Save the Line Flow summary for each line to a different csv
         CSV.write(Microgrid_Settings["FolderLocation"]*"/results_"*TimeStamp*"/Results_Line_Flow_Summary_"*TimeStamp*".csv", DataFrame_LineFlow_Summary)
-
+        
         # Save line upgrade results to a csv 
         if Microgrid_Settings["Model_Line_Upgrades"]
-            #CSV.write(Microgrid_Settings["FolderLocation"]*"/results_"*TimeStamp*"/Results_Line_Upgrade_Summary_"*TimeStamp*".csv", dataframe_line_upgrade_summary)
+            CSV.write(Microgrid_Settings["FolderLocation"]*"/results_"*TimeStamp*"/Results_Line_Upgrade_Summary_"*TimeStamp*".csv", dataframe_line_upgrade_summary)
         end
 
         # Save the transformer upgrade results to a csv
         if Microgrid_Settings["Model_Transformer_Upgrades"]
-            #CSV.write(Microgrid_Settings["FolderLocation"]*"/results_"*TimeStamp*"/Results_Transformer_Upgrade_Summary_"*TimeStamp*".csv", dataframe_transformer_upgrade_summary)
+            CSV.write(Microgrid_Settings["FolderLocation"]*"/results_"*TimeStamp*"/Results_Transformer_Upgrade_Summary_"*TimeStamp*".csv", dataframe_transformer_upgrade_summary)
         end
     end 
 

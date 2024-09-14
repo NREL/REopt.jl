@@ -138,7 +138,6 @@ function add_export_constraints(m, p; _n="")
 
         if typeof(binNEM) <: Real  # no need for wholesale binary
             binWHL = 1
-            print("\n Debugging: New wholesale rate is being applied***")
             for b in p.s.storage.types.all
                 println(b)
             end
