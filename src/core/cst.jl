@@ -87,7 +87,7 @@ function ConcentratingSolar(;
         throw(@error("ConcentratingSolar.elec_consumption_factor_series is a required input when modeling a heating load which is served by the ConcentratedSolar system in the optimal case"))
     end
 
-    defaults = get_cst_defaults()[tech_type]
+    defaults = get_cst_defaults(tech_type)
 
     """
     min_kw = min_mmbtu_per_hour * KWH_PER_MMBTU
