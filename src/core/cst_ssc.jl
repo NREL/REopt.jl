@@ -52,14 +52,14 @@ end
 
 function get_weatherdata(lat::Float64,lon::Float64,debug::Bool)
     ### Call NSRDB
-    api_jgifford = "wKt35uq0aWoNHnzuwbcUxElPhVuo0K18YPSgZ9Ph"
-    attributes_tmy = "ghi,dhi,dni,wind_speed,wind_direction,air_temperature,surface_pressure,dew_point"
+    api_jgifford = "IOEFhaZoaOxkB2l9XvkaFswXgTsJxRqob1hBbPdv"
+    # attributes_tmy_updated = "ghi,dhi,dni,wind_speed,wind_direction,air_temperature,surface_pressure,dew_point" #for tmy
+    attributes_tmy_updated = "ghi,dhi,dni,wind_speed,air_temperature,surface_pressure,dew_point" #for tmy
     url = string("http://developer.nrel.gov/api/nsrdb/v2/solar/psm3-2-2-tmy-download.csv?api_key=",api_jgifford,
-        "&wkt=POINT(",lon,"%20",lat,")&attributes=",attributes_tmy,
+        "&wkt=POINT(",lon,"%20",lat,")&attributes=",attributes_tmy_updated,
         "&names=tmy&utc=false&leap_day=true&interval=60&email=jeffrey.gifford@nrel.gov")
-    # r = HTTP.request("GET", url)
-    
-    df = DataFrame(CSV.File(HTTP.get(url).body,delim=",",silencewarnings=true))
+    r = HTTP.request("GET", url)
+    df = DataFrame(CSV.File(IOBuffer(String(r.body)), silencewarnings = true))
     
     ### Write csv file for checking (can comment out/delete when not debugging)
     debug = false
