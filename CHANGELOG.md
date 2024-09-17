@@ -40,6 +40,7 @@ Classify the change according to the following categories:
 - Removed looping over storage name in functions `add_hot_thermal_storage_dispatch_constraints` and `add_cold_thermal_storage_dispatch_constraints` because this loop is already done when calling these functions and storage name is passed in as argument `b`
 - Remove extraneous line of code in `results/wind.jl`
 - Change type of **value_of_lost_load** in **FinancialInputs** struct to fix convert error when user provides an _Int_
+- Change international location in "Solar Dataset" test set from Cameroon to Oulu because the locations in the NSRDB have been expanded significantly so there is now an NSRDB point at Cameroon
 
 
 ## v0.47.2
