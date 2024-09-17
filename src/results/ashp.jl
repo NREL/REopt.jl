@@ -47,15 +47,20 @@ function add_ashp_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n="")
         @expression(m, ASHPToHotTESByQualityKW[q in p.heating_loads, ts in p.time_steps], 0.0)
     end
 	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(ASHPToHotTESKW) / KWH_PER_MMBTU, digits=3)
-
+    @expression(m, ASHPToWaste[ts in p.time_steps],
+        sum(m[:dvProductionToWaste]["ASHPSpaceHeater", q, ts] for q in p.heating_loads) 
+    )
+    @expression(m, ASHPToWasteByQualityKW[q in p.heating_loads, ts in p.time_steps], 
+        m[:dvProductionToWaste]["ASHPSpaceHeater",q,ts]
+    )
 	@expression(m, ASHPToLoad[ts in p.time_steps],
-		sum(m[:dvHeatingProduction]["ASHPSpaceHeater", q, ts] for q in p.heating_loads) - ASHPToHotTESKW[ts]
+		sum(m[:dvHeatingProduction]["ASHPSpaceHeater", q, ts] for q in p.heating_loads) - ASHPToHotTESKW[ts] - ASHPToWaste[ts]
     )
 	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(ASHPToLoad) ./ KWH_PER_MMBTU, digits=3)
     
     if "SpaceHeating" in p.heating_loads && p.s.ashp.can_serve_space_heating
         @expression(m, ASHPToSpaceHeatingKW[ts in p.time_steps], 
-            m[:dvHeatingProduction]["ASHPSpaceHeater","SpaceHeating",ts] - ASHPToHotTESByQualityKW["SpaceHeating",ts]
+            m[:dvHeatingProduction]["ASHPSpaceHeater","SpaceHeating",ts] - ASHPToHotTESByQualityKW["SpaceHeating",ts] - ASHPToWasteByQualityKW["SpaceHeating",ts]
         )
     else
         @expression(m, ASHPToSpaceHeatingKW[ts in p.time_steps], 0.0)
@@ -148,15 +153,20 @@ function add_ashp_wh_results(m::JuMP.AbstractModel, p::REoptInputs, d::Dict; _n=
         @expression(m, ASHPWHToHotTESByQualityKW[q in p.heating_loads, ts in p.time_steps], 0.0)
     end
 	r["thermal_to_storage_series_mmbtu_per_hour"] = round.(value.(ASHPWHToHotTESKW) / KWH_PER_MMBTU, digits=3)
-
-	@expression(m, ASHPWHToLoad[ts in p.time_steps],
-		sum(m[:dvHeatingProduction]["ASHPWaterHeater", q, ts] for q in p.heating_loads) - ASHPWHToHotTESKW[ts]
+    @expression(m, ASHPWHToWaste[ts in p.time_steps],
+        sum(m[:dvProductionToWaste]["ASHPWaterHeater", q, ts] for q in p.heating_loads) 
+    )
+    @expression(m, ASHPWHToWasteByQualityKW[q in p.heating_loads, ts in p.time_steps], 
+        m[:dvProductionToWaste]["ASHPWaterHeater",q,ts]
+    )
+    @expression(m, ASHPWHToLoad[ts in p.time_steps],
+        sum(m[:dvHeatingProduction]["ASHPWaterHeater", q, ts] for q in p.heating_loads) - ASHPWHToHotTESKW[ts] - ASHPWHToWaste[ts]
     )
 	r["thermal_to_load_series_mmbtu_per_hour"] = round.(value.(ASHPWHToLoad) ./ KWH_PER_MMBTU, digits=3)
 
     if "DomesticHotWater" in p.heating_loads && p.s.ashp_wh.can_serve_dhw
         @expression(m, ASHPWHToDHWKW[ts in p.time_steps], 
-            m[:dvHeatingProduction]["ASHPWaterHeater","DomesticHotWater",ts] - ASHPWHToHotTESByQualityKW["DomesticHotWater",ts]
+            m[:dvHeatingProduction]["ASHPWaterHeater","DomesticHotWater",ts] - ASHPWHToHotTESByQualityKW["DomesticHotWater",ts] - ASHPWHToWasteByQualityKW["DomesticHotWater",ts]
         )
     else
         @expression(m, ASHPWHToDHWKW[ts in p.time_steps], 0.0)
