@@ -80,6 +80,7 @@ function ConcentratingSolar(;
         throw(@error("ConcentratingSolar.tech_type is a required input but not provided."))
     elseif !(tech_type in CST_TYPES)
         throw(@error("ConcentratingSolar.tech_type value is invalid."))
+    end
     if isempty(capacity_factor_series)
         throw(@error("ConcentratingSolar.capacity_factor_series is a required input when modeling a heating load which is served by the ConcentratedSolar system in the optimal case"))
     end
