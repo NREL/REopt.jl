@@ -3,7 +3,7 @@
 function add_operating_reserve_constraints(m, p; _n="")
     # Calculate operating reserves (OR) required 
 	# 1. Production going to load from providing_oper_res 
-	m[:ProductionToLoadOR] = @expression(m, [t in p.techs.providing_oper_res, ts in p.time_steps_without_grid],
+	m[:ProductionToLoadOR] = @expression(m, [ts in p.time_steps_without_grid, t in p.techs.providing_oper_res],
         p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvRatedProduction"*_n)][t,ts] -
         sum(m[Symbol("dvProductionToStorage"*_n)][b, t, ts] for b in p.s.storage.types.elec) -
         m[Symbol("dvCurtail"*_n)][t, ts]
@@ -14,25 +14,25 @@ function add_operating_reserve_constraints(m, p; _n="")
         + p.s.electric_load.critical_loads_kw[ts] * m[Symbol("dvOffgridLoadServedFraction"*_n)][ts] * p.s.electric_load.operating_reserve_required_fraction
     )
     # 3. Operating reserve provided - battery  
-    @constraint(m, [b in p.s.storage.types.elec, ts in p.time_steps_without_grid],
+    @constraint(m, [ts in p.time_steps_without_grid, b in p.s.storage.types.elec],
         m[Symbol("dvOpResFromBatt"*_n)][b,ts] <= (m[Symbol("dvStoredEnergy"*_n)][b, ts-1] - p.s.storage.attr[b].soc_min_fraction * m[Symbol("dvStorageEnergy"*_n)][b]) / p.hours_per_time_step 
         - (m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.s.storage.attr[b].discharge_efficiency)
     )
-    @constraint(m, [b in p.s.storage.types.elec, ts in p.time_steps_without_grid],
+    @constraint(m, [ts in p.time_steps_without_grid, b in p.s.storage.types.elec],
         m[Symbol("dvOpResFromBatt"*_n)][b,ts] <= m[Symbol("dvStoragePower"*_n)][b] - m[Symbol("dvDischargeFromStorage"*_n)][b,ts] / p.s.storage.attr[b].discharge_efficiency
     )
     # 4. Operating reserve provided - techs 
-    @constraint(m, [t in p.techs.providing_oper_res, ts in p.time_steps_without_grid],
+    @constraint(m, [ts in p.time_steps_without_grid, t in p.techs.providing_oper_res],
         m[Symbol("dvOpResFromTechs"*_n)][t,ts] <= (p.production_factor[t, ts] * p.levelization_factor[t] * m[Symbol("dvSize"*_n)][t] -
                         m[:ProductionToLoadOR][t,ts]) * (1 - p.techs_operating_reserve_req_fraction[t])
     )
     
     # 5a. Upper bound on dvOpResFromTechs (for generator techs).  Note: will need to add new constraints for each new tech that can provide operating reserves
-    @constraint(m, [t in p.techs.gen, ts in p.time_steps_without_grid],
+    @constraint(m, [ts in p.time_steps_without_grid, t in p.techs.gen],
         m[Symbol("dvOpResFromTechs"*_n)][t,ts] <= m[:binGenIsOnInTS][t, ts] * p.max_sizes[t] 
     )
     # 5b. Upper bound on dvOpResFromTechs (for pv techs)
-    @constraint(m, [t in p.techs.pv, ts in p.time_steps_without_grid],
+    @constraint(m, [ts in p.time_steps_without_grid, t in p.techs.pv],
         m[Symbol("dvOpResFromTechs"*_n)][t,ts] <= p.max_sizes[t] 
     )
 
