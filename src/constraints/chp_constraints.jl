@@ -9,7 +9,7 @@ function add_chp_fuel_burn_constraints(m, p; _n="")
 
     # Fuel cost
     m[:TotalCHPFuelCosts] = @expression(m, 
-        sum(p.pwf_fuel[t] * m[:dvFuelUsage][t, ts] * p.fuel_cost_per_kwh[t][ts] for t in p.techs.chp, ts in p.time_steps)
+        sum(p.pwf_fuel[t] * m[:dvFuelUsage][t, ts] * p.fuel_cost_per_kwh[t][ts] for ts in p.time_steps, t in p.techs.chp)
     )      
     # Conditionally add dvFuelBurnYIntercept if coefficient p.FuelBurnYIntRate is greater than ~zero
     if abs(fuel_burn_intercept) > 1.0E-7
@@ -76,7 +76,7 @@ function add_chp_thermal_production_constraints(m, p; _n="")
             m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
         )
     else
-        @constraint(m, CHPThermalProductionConLinear[t in p.techs.chp, ts in p.time_steps],
+        @constraint(m, CHPThermalProductionConLinear[ts in p.time_steps, t in p.techs.chp],
             sum(m[Symbol("dvHeatingProduction"*_n)][t,q,ts] for q in p.heating_loads) ==
             thermal_prod_slope * p.production_factor[t,ts] * m[Symbol("dvRatedProduction"*_n)][t,ts] +
             m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts]
@@ -163,7 +163,7 @@ function add_chp_hourly_om_charges(m, p; _n="")
     )
     
     m[:TotalHourlyCHPOMCosts] = @expression(m, p.third_party_factor * p.pwf_om * 
-    sum(m[Symbol(dv)][t, ts] * p.hours_per_time_step for t in p.techs.chp, ts in p.time_steps))
+    sum(m[Symbol(dv)][t, ts] * p.hours_per_time_step for ts in p.time_steps, t in p.techs.chp))
     nothing
 end
 
@@ -186,7 +186,7 @@ function add_chp_constraints(m, p; _n="")
     m[:TotalCHPFuelCosts] = 0
     m[:TotalCHPPerUnitProdOMCosts] = @expression(m, p.third_party_factor * p.pwf_om *
         sum(p.s.chp.om_cost_per_kwh * p.hours_per_time_step *
-        m[:dvRatedProduction][t, ts] for t in p.techs.chp, ts in p.time_steps)
+        m[:dvRatedProduction][t, ts] for ts in p.time_steps, t in p.techs.chp)
     )
 
     if p.s.chp.om_cost_per_hr_per_kw_rated > 1.0E-7
@@ -203,9 +203,9 @@ function add_chp_constraints(m, p; _n="")
     else
         for t in p.techs.chp
             fix(m[Symbol("dvSupplementaryFiringSize"*_n)][t], 0.0, force=true)
-            for ts in p.time_steps
-                fix(m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts], 0.0, force=true)
-            end
+        end
+        for ts in p.time_steps, t in p.techs.chp
+            fix(m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts], 0.0, force=true)
         end
     end
 end
