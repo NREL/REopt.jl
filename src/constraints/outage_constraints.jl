@@ -340,9 +340,9 @@ end
 function fix_MG_storage_variables(m, p)
     fix(m[:dvMGStorageUpgradeCost], 0.0, force=true)
     fix(m[:binMGStorageUsed], 0, force=true)
-    for s in p.s.electric_utility.scenarios
+    for ts in p.s.electric_utility.outage_time_steps
         for tz in p.s.electric_utility.outage_start_time_steps
-            for ts in p.s.electric_utility.outage_time_steps
+            for s in p.s.electric_utility.scenarios
                 fix(m[:dvMGDischargeFromStorage][s, tz, ts], 0.0, force=true)
                 fix(m[:dvMGStoredEnergy][s, tz, ts], 0.0, force=true)
                 for t in p.techs.elec
