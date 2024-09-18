@@ -21,7 +21,30 @@ elseif "CPLEX" in ARGS
     @testset "test_with_cplex" begin
         include("test_with_cplex.jl")
     end
-    
+elseif "solvetime" in ARGS
+    @testset verbose=true "Run time impacts" begin
+        using DelimitedFiles
+        scenarios = ["clean", "res"]
+        num_iterations = 10
+        run_times = zeros(num_iterations+1, 2)
+        for i in 1:num_iterations
+            for s in 1:length(scenarios)
+                in_file = "./scenarios/timing_"*scenarios[s]*".json"
+                t0 = time()
+                model = Model(optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "log_to_console" => false))
+                inputs = REoptInputs(in_file)
+                results = run_reopt(model, inputs)
+                tf = time()
+                run_times[i, s] = tf-t0
+            end
+        end
+        run_times[num_iterations+1, :] = sum(run_times, 1)
+        writedlm(
+            "run_times_current.csv",  
+            run_times, 
+            ','
+        )
+    end
 else  # run HiGHS tests
     @testset verbose=true "REopt test set using HiGHS solver" begin
         @testset "hybrid profile" begin
