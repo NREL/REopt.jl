@@ -90,7 +90,7 @@ function add_heating_tech_constraints(m, p; _n="")
     end
     
     # Enforce no waste heat for any technology that isn't both electricity- and heat-producing
-    for t in setdiff(p.techs.heating, p.techs.elec)
+    for t in setdiff(p.techs.heating, union(p.techs.elec, p.techs.ghp))
         for q in p.heating_loads
             for ts in p.time_steps
                 fix(m[Symbol("dvProductionToWaste"*_n)][t,q,ts], 0.0, force=true)
