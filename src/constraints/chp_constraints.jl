@@ -203,9 +203,10 @@ function add_chp_constraints(m, p; _n="")
     else
         for t in p.techs.chp
             fix(m[Symbol("dvSupplementaryFiringSize"*_n)][t], 0.0, force=true)
-            for ts in p.time_steps
-                fix(m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts], 0.0, force=true)
-            end
+            
+        end
+        for t in p.techs.chp, ts in p.time_steps
+            fix(m[Symbol("dvSupplementaryThermalProduction"*_n)][t,ts], 0.0, force=true)
         end
     end
 end
