@@ -23,12 +23,15 @@ Classify the change according to the following categories:
     ### Deprecated
     ### Removed
 
-## Develop 08-09-2024
+## Develop 09-17-2024
 ### Changed
 - Improve the full test suite reporting with a verbose summary table, and update the structure to reflect long-term open-source solver usage
 - Removed MacOS from the runner list and just run with Windows OS, since MacOS commonly freezes and gets cancelled. We have not seen Windows OS pass while other OS's fail. .
 - Suppress JuMP warning messages from 15-minute and multiple PVs test scenarios to avoid flooding the test logs with those warnings
 - Updated/specified User-Agent header of "REopt.jl" for PVWatts and Wind Toolkit API requests; default before was "HTTP.jl"; this allows specific tracking of REopt.jl usage which call PVWatts and Wind Toolkit through api.data.gov.
+### Fixed
+- Fixed an issue in which a warning on the wholesale benefit threshold being met is shown when that is not the case. 
+
 
 ## v0.47.2
 ### Fixed
